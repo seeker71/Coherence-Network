@@ -17,6 +17,7 @@
     {"name": "let",      "type":  9, "inst": 3, "note": "RBlock Let"},
     {"name": "if-then",  "type": 11, "inst": 1, "note": "RCond IfThen"},
     {"name": "if",       "type": 11, "inst": 2, "note": "RCond IfThenElse — full if-then-else"},
+    {"name": "match",    "type": 19, "inst": 1, "note": "RMatch Switch — scrutinee plus pattern/body pairs"},
     {"name": "fndef",    "type": 31, "inst": 1, "note": "kernel verb: \"defn\""},
     {"name": "fncall",   "type": 32, "inst": 1, "note": "default branch in kernels — no explicit case"},
     {"name": "ident",    "type": 33, "inst": 1, "note": "identifier-wrap path — no explicit case"}

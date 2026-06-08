@@ -1,0 +1,123 @@
+{
+  "date": "2026-06-07",
+  "thread_branch": "codex/native-http-stack-architecture-20260604",
+  "commit_scope": "Promote POST /api/views/ping into the BML front-door route catalog with native production persistence proof",
+  "files_owned": [
+    "deploy/front-door/api.bml",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/native_route_goal_state.json",
+    "form/form-kernel-go/server_test.go",
+    "form/form-stdlib/kernel-http.fk",
+    "form/form-stdlib/tests/kernel-http-band.fk",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/tests/kernel-http-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/kernel-http.fk form-stdlib/language-model.fk form-stdlib/tests/source-language-route-class-template-band.fk",
+      "cd form/form-kernel-go && go test ./...",
+      "python3 scripts/native_route_goal_loop.py /goal --source api --seconds 86400 --limit 2000 --write-state",
+      "ssh tunnel opened per docs/PRODUCTION-SUBSTRATE.md to local 127.0.0.1:15432 using ~/.coherence-network/secrets/form-kernel-postgres-tunnel.json",
+      "cd form/form-kernel-go && go run . serve --port 19086 --config ~/.coherence-network/secrets/form-kernel-postgres-tunnel.json --stdlib ../form-stdlib ../form-stdlib/json.fk ../../deploy/front-door/api.bml",
+      "curl -sS -i http://127.0.0.1:19086/api/views/ping -H 'Accept: application/json' -H 'Content-Type: application/json' -H 'X-Contributor-Id: codex-native-probe' -H 'X-Session-Fingerprint: codex-native-views-ping-20260607' -d '{\"asset_id\":\"codex-native-views-ping-20260607\",\"source_page\":\"/native-route-probe\"}'"
+    ],
+    "summary": "The BML front-door catalog now includes POST /api/views/ping. The handler parses the JSON ping body, reads typed HTTP request headers, writes asset_view_events, upserts asset_reads_daily, locates the newest content_view source contribution, and inserts an attention contribution when eligible. Go/Rust/TS agree on the lifted kh-header-value-or helper, the Go kernel test suite compiles and serves the BML catalog, and the native route-goal state now counts POST /api/views/ping as kernel-native-high-grammar. A curl against the local Go kernel through the production Postgres SSH tunnel returned 200 OK with X-Form-Router: native-kernel-go, route:views-ping, ok=true, read_daily_written=1, and attention_credited=false for the probe asset."
+  },
+  "known_failed_attempts": [
+    {
+      "command": "cd form && ./validate.sh form-stdlib/kernel-http.fk form-stdlib/tests/kernel-http-band.fk",
+      "output": "Failed with unbound nil? across Go/Rust/TS because the explicit core prelude was missing from the command. Reran with form-stdlib/core.fk and the band passed with verdict 132226."
+    },
+    {
+      "command": "cd form && ./validate.sh form-stdlib/json.fk form-stdlib/kernel-http.fk form-stdlib/language-model.fk form-stdlib/tests/source-language-route-class-template-band.fk",
+      "output": "Failed with unbound nil? across Go/Rust/TS because the explicit core/cache/source-compiler preludes were missing from the command. Reran with the full prelude list and the band passed with verdict 1049665."
+    },
+    {
+      "command": "cd form/form-kernel-go && go run . serve --help",
+      "output": "The Go kernel serve CLI treats unknown arguments as source file paths and attempted to read --help. Used the documented serve invocation from docs/PRODUCTION-SUBSTRATE.md instead."
+    }
+  ],
+  "ci_validation": {
+    "status": "pending",
+    "reason": "No commit, push, or PR was created in this turn."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "reason": "A local Go kernel listener hit production Postgres through the documented SSH tunnel and returned a native 200 for POST /api/views/ping. No public deployment was performed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local and production-tunnel proof passed, but CI and public deployment remain pending until the work is committed, pushed, and shipped."
+  },
+  "idea_ids": [
+    "native-route-goal-loop",
+    "form-native-runtime",
+    "views-ping-native-handler",
+    "kernel-native-api-promotion"
+  ],
+  "spec_ids": [
+    "kernel-native-api-promotion",
+    "native-route-goal-cells",
+    "views-ping-native-route"
+  ],
+  "task_ids": [
+    "promote-views-ping-to-bml",
+    "prove-views-ping-production-persistence"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "form",
+        "kernel",
+        "http",
+        "persistence",
+        "documentation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "deploy/front-door/api.bml defines api_views_ping and ViewsPingRoute for POST /api/views/ping.",
+    "form/form-stdlib/kernel-http.fk now exposes kh-header-value-or so typed handlers can read request header cells without local list-walk copies.",
+    "form/form-kernel-go/server_test.go contains TestViewsPingRouteValidatesNatively, proving the route/handler validation path runs natively without a database connection.",
+    "docs/system_audit/native_route_goal_state.json now reports POST /api/views/ping as current_grammar=BML, current_handler=api_views_ping, native_executable=true, high_grammar_native=true.",
+    "The production-tunnel curl response included X-Form-Router: native-kernel-go and X-Form-Route-Where: route:views-ping pattern:/api/views/ping request:/api/views/ping."
+  ],
+  "change_files": [
+    "deploy/front-door/api.bml",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/native_route_goal_state.json",
+    "docs/system_audit/commit_evidence_2026-06-07_views_ping_bml_route.json",
+    "form/form-kernel-go/server_test.go",
+    "form/form-stdlib/kernel-http.fk",
+    "form/form-stdlib/tests/kernel-http-band.fk",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "POST /api/views/ping can now be served by the native Go kernel from BML against production Postgres for the durable view/read/attention write path.",
+    "public_endpoints": [
+      "POST /api/views/ping",
+      "deploy/front-door/api.bml",
+      "form/form-stdlib/kernel-http.fk"
+    ],
+    "test_flows": [
+      "Go/Rust/TS kernel-http band returns 132226 with kh-header-value-or.",
+      "Go kernel test suite passes after adding TestViewsPingRouteValidatesNatively.",
+      "Native Go listener curl through the production Postgres tunnel returns 200 OK and native route headers for POST /api/views/ping.",
+      "Route-goal loop marks POST /api/views/ping as kernel-native-high-grammar and selects GET /api/graph/nodes as the next backend gap."
+    ],
+    "known_gaps": [
+      "The Python read_tracking_service also writes an in-process render-events bridge for settlement. That bridge has no durable table and should become a native persisted event cell rather than being copied into BML as process memory.",
+      "Header lookup is now reusable, but HTTP header matching remains case-sensitive in kh-header-present? and kh-header-value-or; the next kernel-http lift should canonicalize header names."
+    ]
+  }
+}

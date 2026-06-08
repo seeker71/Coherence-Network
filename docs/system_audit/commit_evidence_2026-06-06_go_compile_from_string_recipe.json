@@ -1,0 +1,117 @@
+{
+  "date": "2026-06-06",
+  "thread_branch": "codex/native-http-stack-architecture-20260604",
+  "commit_scope": "Expose generic Go kernel compile-from-string primitives and header-gated BML compiler route",
+  "files_owned": [
+    "form/form-kernel-go/main.go",
+    "form/form-kernel-go/server.go",
+    "form/form-kernel-go/server_test.go",
+    "deploy/front-door/api.bml",
+    "scripts/native_route_goal_loop.py",
+    "docs/shared/agent-start-packet.md",
+    "docs/coherence-substrate/form-language.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md",
+    "docs/system_audit/native_route_goal_state.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "python3 -m py_compile scripts/native_route_goal_loop.py",
+      "cd form/form-kernel-go && go test -count=1 ./...",
+      "python3 scripts/native_route_goal_loop.py /goal --source api --seconds 86400 --limit 2000",
+      "cd form/form-kernel-go && go run . serve --port 18180 --stdlib ../form-stdlib --upstream http://127.0.0.1:8000 ../../deploy/front-door/api.bml",
+      "curl -i -sS http://127.0.0.1:18180/api/substrate/form -H 'Content-Type: application/json' -H 'X-Form-Compiler: form.bml' -d '{\"expression\":\"add(20, 22);\",\"mode\":\"run\",\"grammar\":\"form.bml\"}'",
+      "curl -i -sS http://127.0.0.1:18180/api/substrate/form -H 'Content-Type: application/json' -d '{\"expression\":\"?lattice\",\"mode\":\"ast\"}'",
+      "python3 scripts/native_route_goal_loop.py /loop --source api --seconds 86400 --limit 2000 --write-state",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/kernel-http.fk form-stdlib/language-model.fk form-stdlib/tests/source-language-route-class-template-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-06_go_compile_from_string_recipe.json",
+      "git diff --check",
+      "make wellness"
+    ],
+    "summary": "Go now exposes compile_form_source, compile_source_section, compile_source_text, source_compile_last_error, and value_kind. Imported source-compiled recipes preserve source attribution into the destination kernel framebuffer. The BML front-door catalog has a header-gated POST /api/substrate/form compiler branch requiring X-Form-Compiler; explicit compiler requests run native and emit JSON through Form json-emit. The route goal loop marks non-Accept header-gated routes as kernel-native-header-gated so ordinary /api/substrate/form traffic remains a promotion gap."
+  },
+  "known_failed_attempts": [
+    {
+      "command": "cd form/form-kernel-go && go test ./...",
+      "status": "fixed",
+      "output": "Initial tests used a BML body `def answer() = add(20, 22); answer();`; the current section compiler returned the definition closure for that shape. The proof body was corrected to expression-form BML `add(20, 22);`, and the Go suite passed."
+    },
+    {
+      "command": "cd form && ./validate.sh form-stdlib/tests/source-language-route-class-template-band.fk",
+      "status": "fixed",
+      "output": "The stale task-card command omitted required preludes and failed with unbound `language-template-with-members`. scripts/native_route_goal_loop.py now emits the prelude-expanded command, which passed with Go/Rust/TypeScript all returning 525377."
+    }
+  ],
+  "ci_validation": {
+    "status": "pending",
+    "reason": "No commit or PR created in this turn."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No production deploy performed. Local Go front door proof ran against 127.0.0.1:18180."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed, but full form-notation /api/substrate/form parity, CI, and production deploy validation remain open."
+  },
+  "idea_ids": [
+    "native-kernel-http-front-door",
+    "form-native-runtime"
+  ],
+  "spec_ids": [
+    "form-native-http-stack"
+  ],
+  "task_ids": [
+    "go-compile-from-string-recipe",
+    "substrate-form-header-gated-native-compiler"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "unknown-agent",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "go test -count=1 ./... passed in form/form-kernel-go.",
+    "Native curl with X-Form-Compiler returned HTTP 200, X-Form-Router: native-kernel-go, kind=value, value_kind=int, value=42.",
+    "Unmarked /api/substrate/form did not hit the native handler; it attempted fanout and failed only because the local upstream was not running.",
+    "native_route_goal_loop.py /loop wrote POST /api/substrate/form as kernel-native-header-gated, not high_grammar_native."
+  ],
+  "change_files": [
+    "form/form-kernel-go/main.go",
+    "form/form-kernel-go/server.go",
+    "form/form-kernel-go/server_test.go",
+    "deploy/front-door/api.bml",
+    "scripts/native_route_goal_loop.py",
+    "docs/shared/agent-start-packet.md",
+    "docs/coherence-substrate/form-language.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md",
+    "docs/system_audit/native_route_goal_state.json",
+    "docs/system_audit/commit_evidence_2026-06-06_go_compile_from_string_recipe.json"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A caller can invoke a compiler from string source and receive a Recipe NodeID in the Go kernel. Explicit BML compiler calls to /api/substrate/form are native; ordinary form-notation calls remain bridge traffic until the notation compiler/evaluator path is native.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "Direct compile_source_section native returns a Recipe NodeID and walks to int 42.",
+      "Direct compile_source_text native compiles a source string section and walks to int 15.",
+      "Header-gated HTTP route compiles and runs a BML expression through the Go front door.",
+      "Route promotion loop keeps header-gated compiler traffic out of ordinary high-grammar coverage."
+    ]
+  }
+}

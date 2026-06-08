@@ -46,7 +46,8 @@ binds the request inputs, and dispatches by the fastest path available:
   used when a recipe doesn't split into a preloadable `(setup, body)` pair.
 - **`subprocess`** — fork+exec the `form-kernel-rust` binary on a temp `.fk`,
   for environments where the extension isn't built.
-- **`python-fallback`** — the inline-CPython twin, when no kernel is reachable.
+- **`unavailable`** — no kernel carrier is reachable. This is a fail-loud state,
+  not a Python serving path.
 
 A separate, heavier path exists for parity proof:
 [`form/scripts/pyfkb-run.sh --kernel rust`](../form/scripts/pyfkb-run.sh)
@@ -139,8 +140,8 @@ serving real traffic; that one has never fired — why is it here?"
 2. **The wellness probe guards the surface.** `sense_kernel_api()` in
    `scripts/wellness_check.py` senses the kernel-native surface across the five
    dimensions Urs named — **performance, stability, accuracy, transparency,
-   vitality** — quiet when healthy, specific on drift (a python-fallback that
-   should be inline, a parity break, a latency regression, attribution gone
+   vitality** — quiet when healthy, specific on drift (an unavailable kernel
+   carrier, a parity break, a latency regression, attribution gone
    missing). As routes are transmuted, the probe's vitality ratio climbs.
 3. **The attribution-activity view grows with coverage.**
    `scripts/kernel_attribution_report.py` runs the kernel-served recipes through
@@ -316,18 +317,18 @@ reading honest:
 - **Python RUNTIME-SHARE** — how much of a request's execution actually leaves
   CPython. On every kernel-served route the kernel is a **called subroutine
   inside a CPython request**: FastAPI routes, the params bind, Pydantic
-  validates, `serve_via_kernel` orchestrates (preload, parse, fallback), the
+  validates, `serve_via_kernel` orchestrates (preload, parse, dispatch), the
   kernel walks the recipe, and Pydantic serializes the response — only the
-  recipe walk is Form-native. The request lifecycle stays CPython by design (the
-  eligibility seam above).
+  recipe walk is Form-native. That lifecycle is current implementation to
+  release, not protected architecture.
 
 These axes move independently, sometimes in opposite directions. Transmuting a
-route raises USAGE and can ADD CPython at the same time: each one lands a FastAPI
-handler, a Pydantic response model, and a value-identical `*_py` fallback, so net
-Python LOC can grow even as more routes touch the kernel. The honest baseline at
-the live front door: the kernel is a **guest-subroutine, not the runtime or the
-router** — 0 routes are served kernel-FIRST (Traefik routes every live request to
-CPython). But the reversal is no longer hypothetical: the kernel-router manifest
+route raises USAGE while still leaving FastAPI/Pydantic lifecycle code in place.
+The route-level Python compute twins have been released; production route modules
+should stay dispatch-only. The honest baseline at the live front door: the kernel
+is a **guest-subroutine, not the runtime or the router** — 0 routes are served
+kernel-FIRST (Traefik routes every live request to CPython). But the reversal is
+no longer hypothetical: the kernel-router manifest
 (`deploy/kernel-router/production-routes.fk`) now binds native handlers that serve
 the **whole request lifecycle** in Form, proven byte-identical to the live api in
 shadow — kernel-first **CAPABLE** routes awaiting the front-door flip. Runtime-

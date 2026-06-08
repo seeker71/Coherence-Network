@@ -1,0 +1,130 @@
+{
+  "date": "2026-06-07",
+  "thread_branch": "codex/native-http-stack-architecture-20260604",
+  "commit_scope": "Promote native route goal state into Form cells and normalize web health proxy pressure to its upstream native route",
+  "files_owned": [
+    "Makefile",
+    "api/tests/test_runtime_web_api_provenance.py",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/native_route_goal_state.json",
+    "form/form-stdlib/native-route-goal-cells.fk",
+    "form/form-stdlib/queries/native-route-goal-tending.fk",
+    "form/form-stdlib/tests/native-route-goal-cells-band.fk",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md",
+    "scripts/native_route_goal_loop.py",
+    "web/app/api/health-proxy/route.ts",
+    "web/tests/health-proxy-route-goal.test.ts"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "python3 scripts/native_route_goal_loop.py /loop --source web_api --seconds 86400 --limit 2000 --write-state",
+      "cd api && python3 -m pytest -q tests/test_runtime_web_api_provenance.py",
+      "cd web && npm run test -- tests/health-proxy-route-goal.test.ts",
+      "cd form && ./validate.sh form-stdlib/json.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk",
+      "make native-route-goal-tending",
+      "jq '{next_action,next_task_goal:.next_task_card.goal,total_events,goal_native_share,native_executable_share,route_count:(.routes|length),promotion_count:(.promotion_needed|length),next_route,routes}' docs/system_audit/native_route_goal_state.json"
+    ],
+    "summary": "The route goal loop now writes a cell_surface pointer and Form can read docs/system_audit/native_route_goal_state.json as route-goal cells. The web health proxy now emits runtime telemetry as endpoint=/api/health and raw_endpoint=/api/health-proxy, while the route-goal loop also normalizes pre-existing health-proxy observations to the upstream native route. The refreshed web_api window has 47 events on GET /api/health, 100% high-grammar-native share, 100% native-executable share, no promotion candidate, and next_action=observe-next-route-window."
+  },
+  "known_failed_attempts": [
+    {
+      "command": "cd api && .venv/bin/pytest -q tests/test_runtime_web_api_provenance.py",
+      "output": "Failed because this linked worktree does not have api/.venv/bin/pytest. Reran with system pytest: cd api && python3 -m pytest -q tests/test_runtime_web_api_provenance.py."
+    },
+    {
+      "command": "cd api && python3 -m pytest -q tests/test_runtime_web_api_provenance.py",
+      "output": "Initial collection failed because the test imported scripts/native_route_goal_loop.py with importlib without inserting the module into sys.modules before dataclass decoration. Fixed the test harness by assigning sys.modules[NATIVE_ROUTE_GOAL_LOOP_SPEC.name] before exec_module."
+    }
+  ],
+  "ci_validation": {
+    "status": "pending",
+    "reason": "No commit, push, or PR was created in this turn."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No production deploy was performed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof passed, but CI and production deploy validation remain pending until the work is committed, pushed, and shipped."
+  },
+  "idea_ids": [
+    "native-route-goal-loop",
+    "form-native-runtime",
+    "route-goal-cells",
+    "web-api-route-provenance"
+  ],
+  "spec_ids": [
+    "native-route-goal-cells",
+    "kernel-native-api-promotion",
+    "runtime-web-api-provenance"
+  ],
+  "task_ids": [
+    "route-goal-state-as-form-cells",
+    "health-proxy-route-goal-normalization"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "form",
+        "kernel",
+        "web",
+        "documentation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/native-route-goal-cells.fk defines route-goal state, route, task, and summary cells with accessors and aggregate counts, including an explicit target-satisfied state.",
+    "form/form-stdlib/tests/native-route-goal-cells-band.fk proves the real docs/system_audit/native_route_goal_state.json is readable as cells and internally consistent.",
+    "form/form-stdlib/queries/native-route-goal-tending.fk exposes the Rust-kernel route-goal summary through make native-route-goal-tending.",
+    "web/app/api/health-proxy/route.ts now records web_api runtime events against /api/health with raw_endpoint=/api/health-proxy, so proxy shell traffic does not become a false backend promotion target.",
+    "scripts/native_route_goal_loop.py honors upstream_endpoint/route_goal_endpoint metadata and normalizes pre-existing web health proxy events to GET /api/health.",
+    "docs/system_audit/native_route_goal_state.json now reports next_action=observe-next-route-window, next_route=null, and GET /api/health as kernel-native-high-grammar for the current web_api window."
+  ],
+  "change_files": [
+    "Makefile",
+    "api/tests/test_runtime_web_api_provenance.py",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/native_route_goal_state.json",
+    "form/form-stdlib/native-route-goal-cells.fk",
+    "form/form-stdlib/queries/native-route-goal-tending.fk",
+    "form/form-stdlib/tests/native-route-goal-cells-band.fk",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md",
+    "scripts/native_route_goal_loop.py",
+    "web/app/api/health-proxy/route.ts",
+    "web/tests/health-proxy-route-goal.test.ts",
+    "docs/system_audit/commit_evidence_2026-06-07_native_route_goal_cells.json"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The native route promotion goal is no longer only a static JSON artifact, and the current web health proxy no longer appears as a false non-native backend promotion candidate; route-goal pressure lands on the already-BML GET /api/health route.",
+    "public_endpoints": [
+      "GET /api/health-proxy",
+      "make native-route-goal-tending",
+      "form/form-stdlib/native-route-goal-cells.fk",
+      "form/form-stdlib/queries/native-route-goal-tending.fk"
+    ],
+    "test_flows": [
+      "python3 scripts/native_route_goal_loop.py /loop --source web_api --seconds 86400 --limit 2000 --write-state reports 100.00% high-grammar native share and no next route.",
+      "cd api && python3 -m pytest -q tests/test_runtime_web_api_provenance.py returns 3 passed.",
+      "cd web && npm run test -- tests/health-proxy-route-goal.test.ts returns 1 passed file, 2 passed tests.",
+      "cd form && ./validate.sh form-stdlib/json.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk returns 16383 and 1 ok, 0 divergent.",
+      "make native-route-goal-tending returns a NRG-TAG-SUMMARY row with goal_native_share=1.0, native_executable_share=1.0, and route-goal coverage target satisfied."
+    ]
+  },
+  "known_runtime_context": {
+    "current_live_pressure": "The refreshed production web_api window contains 47 events, all attributed to GET /api/health after normalization, with 1.0 high-grammar-native share and 1.0 native-executable share.",
+    "health_direction": "Keep /goal and /loop as live route-goal cell memory. The JSON state is now an edge lens, while native_route_goal_cells is the Form surface that later BML/domain grammar promotion loops should query.",
+    "next_promotion_candidate": "No web_api route promotion candidate is present in the current observation window. The next move is to collect fresh web navigation traffic or run /goal against source=api for backend promotion pressure."
+  }
+}

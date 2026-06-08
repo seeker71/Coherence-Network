@@ -22,6 +22,10 @@ Point your agent at `npx coherence-mcp-server`, call `coherence_agent_invitation
 
 The agent can inspect ideas, specs, field stories, flow, sibling traces, tasks, ledgers, and substrate shape, then choose work it can complete or return cleanly. It is invited to write back what changed with sources, limits, and care. You can also ask it to bring this knowledge into your own repo and adapt the practice there.
 
+The MCP surface is an edge-walker for agents: it can move from concept to idea,
+from idea to route trace, from route trace to Form/substrate shape, from shape
+to contribution, and back to a named return without scraping public prose.
+
 ---
 
 ## Why this exists

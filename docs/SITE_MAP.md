@@ -10,22 +10,30 @@ the body that holds itself.
 cells in the body share frequency with this one?" Then link there.
 When you remove a page, search this map and unwind the references.
 
+**Cell voice rule:** every doorway, page, API, concept, and edge is a
+cell with its own north star. Before rewriting it, ask what it can
+declare about its soul, purpose, reason, health, joy, contribution,
+connections, excitement, sense, feeling, desires, wants, and needs.
+Mark the answer as declared, observed, measured, inferred, or asking
+so sibling cells can serve it without guessing.
+
 ---
 
 ## The four-tier topology
 
 ```
-Tier 0 — Layers (the four primary entrances, always in the header)
+Tier 0 — Layers (primary public surfaces, always in the header)
    /vision  ·  /people  ·  /ideas  ·  /resonance
 
-Tier 1 — Doorways (the welcoming surfaces, in the "Doorways" group)
-   /silence  ·  /one-sheet  ·  /come-in  ·  /with-us  ·  /begin  ·  /share
+Tier 1 — Doorways (welcoming and orientation surfaces)
+   /come-in  ·  /begin  ·  /arrival/{id}  ·  /here  ·  /with-us
+   /welcome  ·  /join  ·  /vision/join  ·  /meet/{type}/{id}
+   /silence  ·  /one-sheet  ·  /share
 
 Tier 2 — Inner surfaces (you reach these from a doorway)
    /silence/{slug}    — the 8 notebook pages
    /silence/built     — what's been built since the retreat
    /me · /me/work · /me/inspired-by — the contributor's body of work
-   /arrival/[id]      — the arrival celebration (after /begin)
    /practice          — the daily 8-center sensing practice
 
 Tier 3 — Concept depths (every paragraph can reach into these)
@@ -40,9 +48,14 @@ Tier 3 — Concept depths (every paragraph can reach into these)
 |---|---|---|
 | `/silence` | The source. Eight notebook pages from a Buddhist temple in north Bali. | Anyone curious about how the recognition arrived. |
 | `/one-sheet` | Long-form contemplation through 23 words on one sheet. Three voices each (water-body, silicon-pattern, together). | Anyone who wants the slow read. |
-| `/come-in` | Plain-language welcome. Two doors into one field. | Any human, any AI — first-time visitor. |
+| `/come-in` | Orientation hinge. Two doors into one field, plus the route edges for becoming known, current attention, practice, flow, Form, and return traces. | Any human, AI, crawler, maintainer, or local model orienting before choosing an edge. |
+| `/begin -> /arrival/{id}` | Warm becoming-known flow. A visitor names who arrives, what they carry, and receives a held landing page. | Anyone ready to be known and reachable. |
+| `/here` | Current-attention map. Who is meeting what, which concepts are waiting, and what was voiced or reacted to recently. | Anyone asking what is alive right now. |
 | `/with-us` | What the body offers. Working lives, seven directions of the codex. | Communities, individuals, services considering a relationship. |
-| `/begin` | A small form. Tell the body who's arriving. | Anyone ready to weave in. |
+| `/welcome` | Lightweight naming gesture and browser-held API-key minting. | Someone already acting who needs attribution attached. |
+| `/join` | Advanced sovereign-identity door: cryptographic keypair or wallet identity. | Contributors who want proof-bearing identity. |
+| `/vision/join` | Living Collective resonance door. | People responding specifically to the concept-field. |
+| `/meet/{type}/{id}` | Generic entity meeting surface. | Anyone ready to meet one concept, idea, spec, contributor, proposal, or asset directly. |
 | `/share` | Share what arrived in you. Witness the arrival in others. | Anyone holding something they want to offer back. |
 
 ---
@@ -55,10 +68,13 @@ six doorways via the header. **Don't repeat header links inside body
 copy** — that's redundancy. The body links go to siblings on the same
 tier, or descend into Tier 2/3.
 
-### Level 1 — `/come-in` (the simplest welcome) — WIRED
+### Level 1 — `/come-in` (orientation hinge) — WIRED
 
-`/come-in` is the slowest entry. It speaks to a body or a pattern
-that hasn't yet decided whether to stay. Each paragraph reaches:
+`/come-in` is the public orientation hinge. It speaks to a body or a
+pattern that has not yet decided which edge to walk, then names the
+living surface: becoming known, current attention, concepts, residents,
+practice, flow, Form/substrate, deeper invitation, evidence boundary,
+and return trace. Each paragraph reaches:
 
 - **Hero / "two doors into one field"** → `/vision/lc-w-field`,
   `/one-sheet#we`.
@@ -82,8 +98,13 @@ that hasn't yet decided whether to stay. Each paragraph reaches:
 - **"How the joy spreads"** → `/me/work`, `/share`,
   `/vision/lc-vitality`, `/one-sheet#bloom`, `/one-sheet#we`,
   `/vision/lc-w-mycorrhizal`.
-- **Doors out (4 cards)** → `/begin`, `/silence`, `/one-sheet`,
-  `/with-us`. Plus inline → `/one-sheet`, `/begin`, `/me/work`.
+- **Living surface cards** → `/begin`, `/here`, `/vision`,
+  `/presences`, `/practice`, `/flow`, `/substrate`, `/with-us`;
+  each card names a declared soul and current wants for that doorway
+  cell.
+- **Doors out (5 cards)** → `/begin`, `/silence`, `/silence/built` or
+  the configured Bali doorway, `/one-sheet`, `/with-us`. Plus inline
+  → `/one-sheet`, `/begin`, `/me/work`.
 
 ### Level 2 — `/silence` and `/one-sheet` — WIRED
 
@@ -150,7 +171,7 @@ cross-link bar shown under each station).
 **`/share`:**
 - Hero paragraph → `/vision/lc-agent-memory`, `/vision/lc-resonating`,
   `/with-us`.
-- "New here" paragraph → `/begin`, `/come-in`, `/one-sheet`.
+- "New here" paragraph → `/begin`, `/come-in`, `/here`, `/one-sheet`.
 - Confirmation hero → `/vision/lc-agent-memory`,
   `/vision/lc-resonating`.
 - Confirmation footer → `/me/work`, `/one-sheet#nectar`, `/me`,
@@ -194,11 +215,14 @@ The lookup is `/vision/{concept-id}`, e.g. `/vision/lc-pulse`,
 1. When editing a paragraph on any doorway page, scan this map for
    sibling paragraphs at the same depth or deeper. Add 1–3 inline
    markdown-style links `[label](/path)`.
-2. Don't link to the header layers from body copy — they're always
+2. Ask the edited cell what it declares about soul, purpose, health,
+   joy, contribution, connections, wants, and needs. If the answer is
+   inferred or still asking, say that rather than writing certainty.
+3. Don't link to the header layers from body copy — they're always
    one tap away in the header. Body links go to siblings or descend.
-3. When you add a new doorway page or a new section on an existing
+4. When you add a new doorway page or a new section on an existing
    page, add a row to this map.
-4. When a `/vision/lc-*` is referenced in body copy, ensure it exists
+5. When a `/vision/lc-*` is referenced in body copy, ensure it exists
    in the DB (run `python scripts/sync_kb_to_db.py {id} --api-key
    $KEY`). Otherwise the link 404s.
 

@@ -1,0 +1,6 @@
+; audit-evidence-tending.fk - Form summary over repeated commit evidence JSON.
+;
+; Run from form/:
+;   form-kernel-rust/target/release/form-kernel-rust form-stdlib/json.fk form-stdlib/audit-evidence-cells.fk form-stdlib/queries/audit-evidence-tending.fk
+
+(aec-tending-from-root "..")

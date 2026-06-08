@@ -1548,10 +1548,15 @@ def cached_runtime_ideas_summary_payload(
     )
 
 
-def summarize_by_endpoint(seconds: int = 3600, summary_limit: int = 500) -> list[EndpointRuntimeSummary]:
+def summarize_by_endpoint(
+    seconds: int = 3600,
+    summary_limit: int = 500,
+    source: str | None = None,
+) -> list[EndpointRuntimeSummary]:
     window_seconds = max(60, min(seconds, 60 * 60 * 24 * 30))
     cutoff = datetime.now(timezone.utc) - timedelta(seconds=window_seconds)
-    rows = list_events(limit=2000, since=cutoff)
+    source_value = str(source or "").strip().lower() or None
+    rows = list_events(limit=2000, since=cutoff, source=source_value)
 
     grouped: dict[str, list[RuntimeEvent]] = {}
     for event in rows:

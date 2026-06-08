@@ -1,0 +1,171 @@
+{
+  "date": "2026-06-06",
+  "thread_branch": "codex/native-http-stack-architecture-20260604",
+  "commit_scope": "Release remaining Python parity bodies and fallback labels from native HTTP route surface",
+  "files_owned": [
+    "api/app/routers/health.py",
+    "api/app/routers/kernel_nodeid.py",
+    "api/app/routers/kernel_scoring.py",
+    "api/app/routers/kernel_breath.py",
+    "api/app/routers/kernel_grounding.py",
+    "api/app/routers/kernel_grounded_cv.py",
+    "api/app/routers/kernel_matching.py",
+    "api/app/services/form_kernel_bridge.py",
+    "api/app/services/vitality_service.py",
+    "api/tests/test_utils_breath_balance.py",
+    "api/tests/test_utils_coherence_weight.py",
+    "api/tests/test_utils_cost_value_vector.py",
+    "api/tests/test_utils_concept_match_score.py",
+    "api/tests/test_utils_grounded_cost.py",
+    "api/tests/test_utils_grounded_value.py",
+    "api/tests/test_utils_idea_grounded_cost_sum.py",
+    "api/tests/test_utils_idea_grounding_summary.py",
+    "api/tests/test_utils_idea_marginal_from_record.py",
+    "api/tests/test_utils_nodeid_compatibility.py",
+    "api/tests/test_utils_nodeid_distance.py",
+    "api/tests/test_utils_shannon_entropy.py",
+    "api/tests/test_utils_softmax_weights.py",
+    "api/tests/test_utils_weighted_average.py",
+    "scripts/grounded_cost_endpoint_probe.py",
+    "scripts/kernel_attribution_report.py",
+    "scripts/kernel_readiness_harness.py",
+    "scripts/runtime_surface_report.py",
+    "kernels/API_KERNEL_READINESS.md",
+    "kernels/KERNEL_AS_ROUTER.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 -m py_compile api/app/routers/health.py api/app/services/form_kernel_bridge.py scripts/grounded_cost_endpoint_probe.py scripts/runtime_surface_report.py scripts/kernel_readiness_harness.py scripts/kernel_attribution_report.py api/app/routers/kernel_nodeid.py api/app/routers/kernel_scoring.py api/app/routers/kernel_breath.py api/app/routers/kernel_grounding.py api/app/routers/kernel_grounded_cv.py api/app/routers/kernel_matching.py",
+      "rg -n \"python-fallback|FastAPI Python fallback|Python fallback HTTP|run_with_fallback|fallback=|^def .*_py\\(\" api/app/routers/health.py api/app/services/form_kernel_bridge.py api/app/routers/kernel_*.py api/app/services/vitality_service.py scripts/grounded_cost_endpoint_probe.py scripts/kernel_readiness_harness.py scripts/runtime_surface_report.py scripts/kernel_attribution_report.py kernels/API_KERNEL_READINESS.md kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md kernels/KERNEL_AS_ROUTER.md api/tests/test_utils_*.py api/tests/test_kernel_inline_latency.py",
+      "python3 scripts/runtime_surface_report.py --json > /tmp/runtime_surface_release_more_python.json && python3 -m json.tool /tmp/runtime_surface_release_more_python.json >/dev/null",
+      "cd api && python3 -m pytest -q tests/test_utils_*.py tests/test_kernel_inline_latency.py tests/test_form_kernel_bridge_structure_access.py tests/test_api_dockerfile_contract.py",
+      "python3 scripts/kernel_readiness_harness.py --endpoint nodeid_distance --iters 3 --json /tmp/kernel_readiness_release_more_python.json",
+      "python3 scripts/grounded_cost_endpoint_probe.py --body-iters 3 --recipe-iters 1 --skip-http --json > /tmp/grounded_cost_release_more_python.json && python3 -m json.tool /tmp/grounded_cost_release_more_python.json >/dev/null",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "make wellness",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-06_release_route_py_bodies_and_fallback_labels.json"
+    ],
+    "summary": "Production kernel route modules no longer carry route-local *_py compute bodies. /api/health now reports inline, subprocess, or unavailable and no longer advertises python-fallback. The grounded-cost probe labels CPython comparison as source-reference timing and FastAPI as kernel-guest HTTP. Runtime-surface report reads py_parity_reference_functions_in_kernel_routers=0 and kernel_first_capable_routes=23. Focused tests passed: 113 passed, 3 skipped, 5 warnings."
+  },
+  "known_failed_attempts": [
+    {
+      "command": "cd api && python3 -m pytest -q tests/test_utils_*.py tests/test_kernel_inline_latency.py tests/test_form_kernel_bridge_structure_access.py tests/test_api_dockerfile_contract.py",
+      "status": "fixed",
+      "output": "Initial rerun failed one grounded_value anchor because the kernel returns 0.44500000000000006, not the rounded helper expectation 0.445. The test now records the committed recipe value exactly and the suite passes."
+    }
+  ],
+  "ci_validation": {
+    "status": "pending",
+    "reason": "No commit or PR created in this turn."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No production deploy performed. Local wellness did verify production deploy alignment at origin/main and local kernel-native API health for this worktree."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed, but CI and production deploy validation have not run for this uncommitted worktree."
+  },
+  "idea_ids": [
+    "native-kernel-http-front-door",
+    "form-native-runtime"
+  ],
+  "spec_ids": [
+    "form-native-http-stack"
+  ],
+  "task_ids": [
+    "release-python-route-parity-bodies",
+    "remove-python-fallback-health-labels"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "unknown-agent",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "rg scan returned no python-fallback, fallback=, run_with_fallback, or route-local def *_py matches across the edited kernel HTTP route, bridge, docs, tests, and probe surfaces.",
+    "runtime_surface_report --json returned py_parity_reference_functions_in_kernel_routers=0 and kernel_first_capable_routes=23.",
+    "kernel_readiness_harness nodeid_distance smoke matched cpython=7 and kernel=7 while loading the CPython baseline from the source example rather than a production route helper.",
+    "grounded_cost_endpoint_probe --skip-http reported source-reference-body and source-reference-endpoint-shape labels; Rust and Go recipe values matched the source-reference value.",
+    "make wellness reported production kernel_runtime 'inline'; endpoints serving via kernel (inline) — no fallback; 22/22 recipes trace and 22/22 recipes match documented value parity."
+  ],
+  "change_files": [
+    "api/app/routers/health.py",
+    "api/app/routers/kernel_nodeid.py",
+    "api/app/routers/kernel_scoring.py",
+    "api/app/routers/kernel_breath.py",
+    "api/app/routers/kernel_grounding.py",
+    "api/app/routers/kernel_grounded_cv.py",
+    "api/app/routers/kernel_matching.py",
+    "api/app/services/form_kernel_bridge.py",
+    "api/app/services/vitality_service.py",
+    "api/tests/test_utils_breath_balance.py",
+    "api/tests/test_utils_coherence_weight.py",
+    "api/tests/test_utils_cost_value_vector.py",
+    "api/tests/test_utils_concept_match_score.py",
+    "api/tests/test_utils_grounded_cost.py",
+    "api/tests/test_utils_grounded_value.py",
+    "api/tests/test_utils_idea_grounded_cost_sum.py",
+    "api/tests/test_utils_idea_grounding_summary.py",
+    "api/tests/test_utils_idea_marginal_from_record.py",
+    "api/tests/test_utils_nodeid_compatibility.py",
+    "api/tests/test_utils_nodeid_distance.py",
+    "api/tests/test_utils_shannon_entropy.py",
+    "api/tests/test_utils_softmax_weights.py",
+    "api/tests/test_utils_weighted_average.py",
+    "scripts/grounded_cost_endpoint_probe.py",
+    "scripts/kernel_attribution_report.py",
+    "scripts/kernel_readiness_harness.py",
+    "scripts/runtime_surface_report.py",
+    "kernels/API_KERNEL_READINESS.md",
+    "kernels/KERNEL_AS_ROUTER.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md",
+    "docs/system_audit/commit_evidence_2026-06-06_release_route_py_bodies_and_fallback_labels.json"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The native HTTP compatibility surface no longer presents Python fallback as a valid kernel route execution mode. Production route modules are dispatch-only wrappers around Form recipes; source-reference Python remains only in measurement/proof scripts and source examples.",
+    "public_endpoints": [
+      "GET /api/health",
+      "GET /api/utils/kernel_status",
+      "GET /api/utils/coherence_weight",
+      "GET /api/utils/nodeid_distance",
+      "GET /api/utils/nodeid_compatibility",
+      "GET /api/utils/weighted_average",
+      "GET /api/utils/breath_balance",
+      "GET /api/utils/shannon_entropy",
+      "GET /api/utils/softmax_weights",
+      "GET /api/utils/concept_match_score",
+      "GET /api/utils/cost_vector",
+      "GET /api/utils/value_vector",
+      "GET /api/utils/grounded_cost",
+      "GET /api/utils/grounded_value",
+      "GET /api/utils/idea_grounding_summary",
+      "GET /api/utils/idea_grounded_cost_sum",
+      "GET /api/utils/idea_marginal_from_record"
+    ],
+    "test_flows": [
+      "Focused utility endpoints served through inline/subprocess only in local ASGI tests.",
+      "Health route reports unavailable rather than python-fallback when active_runtime cannot be read.",
+      "Runtime-surface report counts remaining route-local *_py functions and reports zero.",
+      "Grounded-cost probe compares source-reference timing against kernel recipe/native surfaces without labeling FastAPI as Python fallback."
+    ]
+  }
+}

@@ -1,9 +1,9 @@
 """Latency sensing for the inline (PyO3) kernel path.
 
-The transmuted endpoints serve through one of three runtimes:
-``inline`` (PyO3 extension), ``subprocess`` (fork+exec the rust binary),
-or ``python-fallback``. This test exists to make the cost difference
-visible: when the inline path is hot, per-request kernel overhead drops
+The transmuted endpoints serve through a kernel carrier:
+``inline`` (PyO3 extension) or ``subprocess`` (fork+exec the rust binary).
+This test exists to make the cost difference visible: when the inline path is hot,
+per-request kernel overhead drops
 from milliseconds (process spawn) to microseconds (a C call into Rust).
 
 The assertion is deliberately soft. We pin two things:
@@ -54,7 +54,7 @@ class TestKernelInlineLatency:
             bridge.load_recipe("endpoint_coherence_weight_demo.fk")
         except FileNotFoundError:
             pytest.skip("recipe not compiled (deploy-time artifact absent) — "
-                        "endpoint serves via fallback, not inline")
+                        "endpoint cannot serve inline")
 
         # Warm-up: first call may include cold caches (FastAPI middleware
         # init, route resolution). Subsequent calls measure the steady state.
@@ -92,7 +92,7 @@ class TestKernelInlineLatency:
         res = await client.get("/api/utils/kernel_status")
         assert res.status_code == 200
         data = res.json()
-        assert data["active"] in ("inline", "subprocess", "python-fallback")
+        assert data["active"] in ("inline", "subprocess", "unavailable")
         assert "inline_available" in data
         assert "binary_available" in data
 
@@ -102,7 +102,7 @@ class TestKernelInlineLatency:
         res = await client.get("/api/health")
         assert res.status_code == 200
         data = res.json()
-        assert data["kernel_runtime"] in ("inline", "subprocess", "python-fallback")
+        assert data["kernel_runtime"] in ("inline", "subprocess", "unavailable")
 
 
 class TestRoutePreload:

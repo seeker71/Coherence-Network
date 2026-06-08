@@ -1,0 +1,330 @@
+; audit-evidence-cells.fk - commit evidence JSON promoted into Form cells.
+;
+; The JSON file remains an edge lens. The repeated evidence schema lives here
+; as a Form cell so audit proof can be counted, compared, and tended without
+; re-describing the JSON shape every time.
+
+(do
+    (let AEC-TAG-CELL 65401)
+    (let AEC-TAG-SUMMARY 65402)
+    (let AEC-TAG-CACHE 65403)
+    (let AEC-BP-EVIDENCE-CELL (bp "AEC-EVIDENCE-CELL"))
+    (let AEC-BP-EVIDENCE-INDEX (bp "AEC-EVIDENCE-INDEX"))
+
+    (defn aec-tagged? (value tag arity)
+        (if (eq (len value) arity) (eq (nth value 0) tag) false))
+
+    (defn aec-evidence-cell
+        (source-path date thread-branch commit-scope local-status command-count evidence-ref-count change-file-count phase-can-move)
+        (list
+            AEC-TAG-CELL
+            source-path
+            date
+            thread-branch
+            commit-scope
+            local-status
+            command-count
+            evidence-ref-count
+            change-file-count
+            phase-can-move))
+    (defn aec-evidence-cell? (cell) (aec-tagged? cell AEC-TAG-CELL 10))
+    (defn aec-source-path (cell) (nth cell 1))
+    (defn aec-date (cell) (nth cell 2))
+    (defn aec-thread-branch (cell) (nth cell 3))
+    (defn aec-commit-scope (cell) (nth cell 4))
+    (defn aec-local-status (cell) (nth cell 5))
+    (defn aec-command-count (cell) (nth cell 6))
+    (defn aec-evidence-ref-count (cell) (nth cell 7))
+    (defn aec-change-file-count (cell) (nth cell 8))
+    (defn aec-phase-can-move? (cell) (nth cell 9))
+
+    (defn aec-pass? (cell)
+        (str_eq (aec-local-status cell) "pass"))
+
+    (defn aec-phase-held? (cell)
+        (eq (aec-phase-can-move? cell) false))
+
+    (defn aec-load-json (read-path source-path)
+        (do
+            (let doc (parse-json source-path (read_file read-path)))
+            (let local-validation (json-object-get doc "local_validation"))
+            (let phase-gate (json-object-get doc "phase_gate"))
+            (aec-evidence-cell
+                source-path
+                (json-string-value (json-object-get doc "date"))
+                (json-string-value (json-object-get doc "thread_branch"))
+                (json-string-value (json-object-get doc "commit_scope"))
+                (json-string-value (json-object-get local-validation "status"))
+                (json-array-length (json-object-get local-validation "commands"))
+                (json-array-length (json-object-get doc "evidence_refs"))
+                (json-array-length (json-object-get doc "change_files"))
+                (node_value (json-object-get phase-gate "can_move_next_phase")))))
+
+    (defn aec-pass-count-loop (cells acc)
+        (if (eq (len cells) 0)
+            acc
+            (aec-pass-count-loop
+                (tail cells)
+                (if (aec-pass? (head cells)) (add acc 1) acc))))
+    (defn aec-pass-count (cells)
+        (aec-pass-count-loop cells 0))
+
+    (defn aec-phase-held-count-loop (cells acc)
+        (if (eq (len cells) 0)
+            acc
+            (aec-phase-held-count-loop
+                (tail cells)
+                (if (aec-phase-held? (head cells)) (add acc 1) acc))))
+    (defn aec-phase-held-count (cells)
+        (aec-phase-held-count-loop cells 0))
+
+    (defn aec-command-total-loop (cells acc)
+        (if (eq (len cells) 0)
+            acc
+            (aec-command-total-loop
+                (tail cells)
+                (add acc (aec-command-count (head cells))))))
+    (defn aec-command-total (cells)
+        (aec-command-total-loop cells 0))
+
+    (defn aec-change-file-total-loop (cells acc)
+        (if (eq (len cells) 0)
+            acc
+            (aec-change-file-total-loop
+                (tail cells)
+                (add acc (aec-change-file-count (head cells))))))
+    (defn aec-change-file-total (cells)
+        (aec-change-file-total-loop cells 0))
+
+    (defn aec-summary (surface total-json loaded-cells pass-count phase-held-count command-total change-file-total next-release)
+        (list
+            AEC-TAG-SUMMARY
+            surface
+            total-json
+            loaded-cells
+            pass-count
+            phase-held-count
+            command-total
+            change-file-total
+            next-release))
+    (defn aec-summary? (summary) (aec-tagged? summary AEC-TAG-SUMMARY 9))
+    (defn aec-summary-surface (summary) (nth summary 1))
+    (defn aec-summary-total-json (summary) (nth summary 2))
+    (defn aec-summary-loaded-cells (summary) (nth summary 3))
+    (defn aec-summary-pass-count (summary) (nth summary 4))
+    (defn aec-summary-phase-held-count (summary) (nth summary 5))
+    (defn aec-summary-command-total (summary) (nth summary 6))
+    (defn aec-summary-change-file-total (summary) (nth summary 7))
+    (defn aec-summary-next-release (summary) (nth summary 8))
+
+    (defn aec-skip-dirs ()
+        (list ".git" ".cache" ".claude" ".codex" ".cursor" ".grok"
+            ".mypy_cache" ".next" ".pytest_cache" ".ruff_cache"
+            "__pycache__" "node_modules" "target" "dist" "build" ".venv" "venv"))
+
+    (defn aec-system-audit-json-rows (root)
+        (source_inventory root ".json" (aec-skip-dirs)))
+
+    (defn aec-row-path (row) (nth row 0))
+
+    (defn aec-path-prefix? (path prefix)
+        (eq (str_find path prefix 0) 0))
+
+    (defn aec-commit-evidence-path? (path)
+        (aec-path-prefix? path "docs/system_audit/commit_evidence_"))
+
+    (defn aec-read-path (root source-path)
+        (if (or (str_eq root "") (str_eq root "."))
+            source-path
+            (str_concat root (str_concat "/" source-path))))
+
+    (defn aec-system-audit-count-loop (rows acc)
+        (if (eq (len rows) 0)
+            acc
+            (aec-system-audit-count-loop
+                (tail rows)
+                (if (eq (str_find (aec-row-path (head rows)) "docs/system_audit/" 0) 0)
+                    (add acc 1)
+                    acc))))
+    (defn aec-system-audit-count (root)
+        (aec-system-audit-count-loop (aec-system-audit-json-rows root) 0))
+
+    (defn aec-commit-evidence-rows-loop (rows acc)
+        (if (eq (len rows) 0)
+            acc
+            (do
+                (let source-path (aec-row-path (head rows)))
+                (aec-commit-evidence-rows-loop
+                    (tail rows)
+                    (if (aec-commit-evidence-path? source-path)
+                        (cons (head rows) acc)
+                        acc)))))
+
+    (defn aec-commit-evidence-rows (root)
+        (aec-commit-evidence-rows-loop (aec-system-audit-json-rows root) (list)))
+
+    (defn aec-load-cells-loop (root rows acc)
+        (if (eq (len rows) 0)
+            acc
+            (do
+                (let source-path (aec-row-path (head rows)))
+                (aec-load-cells-loop
+                    root
+                    (tail rows)
+                    (if (aec-commit-evidence-path? source-path)
+                        (cons
+                            (aec-load-json
+                                (aec-read-path root source-path)
+                                source-path)
+                            acc)
+                        acc)))))
+
+    (defn aec-load-cells-from-root (root)
+        (aec-load-cells-loop root (aec-commit-evidence-rows root) (list)))
+
+    (defn aec-find-cell-by-source-loop (cells source-path)
+        (if (eq (len cells) 0)
+            (list)
+            (if (str_eq (aec-source-path (head cells)) source-path)
+                (head cells)
+                (aec-find-cell-by-source-loop (tail cells) source-path))))
+    (defn aec-find-cell-by-source (cells source-path)
+        (aec-find-cell-by-source-loop cells source-path))
+
+    (defn aec-cell-recipe (cell)
+        (intern_node_at
+            AEC-BP-EVIDENCE-CELL
+            (list
+                (intern_trivial_string (aec-source-path cell))
+                (intern_trivial_string (aec-date cell))
+                (intern_trivial_string (aec-thread-branch cell))
+                (intern_trivial_string (aec-commit-scope cell))
+                (intern_trivial_string (aec-local-status cell))
+                (intern_trivial_int (aec-command-count cell))
+                (intern_trivial_int (aec-evidence-ref-count cell))
+                (intern_trivial_int (aec-change-file-count cell))
+                (intern_trivial_bool (aec-phase-can-move? cell)))
+            (aec-source-path cell)
+            1
+            1))
+
+    (defn aec-cell-recipe-loop (cells acc)
+        (if (eq (len cells) 0)
+            acc
+            (aec-cell-recipe-loop
+                (tail cells)
+                (cons (aec-cell-recipe (head cells)) acc))))
+
+    (defn aec-index-recipe (cells)
+        (intern_node_at
+            AEC-BP-EVIDENCE-INDEX
+            (aec-cell-recipe-loop cells (list))
+            "docs/system_audit"
+            1
+            1))
+
+    (defn aec-index-recipe-from-root (root)
+        (aec-index-recipe (aec-load-cells-from-root root)))
+
+    (defn aec-index-recipe-from-rows (root rows)
+        (aec-index-recipe (aec-load-cells-loop root rows (list))))
+
+    (defn aec-index-cache-path ()
+        "form-stdlib/.cache/audit-evidence-index.fkb")
+
+    (defn aec-write-index-cache (root cache-path)
+        (write_form_binary cache-path (aec-index-recipe-from-root root)))
+
+    (defn aec-read-index-cache (cache-path)
+        (read_form_binary cache-path))
+
+    (defn aec-max-source-mtime-loop (root rows acc)
+        (if (eq (len rows) 0)
+            acc
+            (do
+                (let mt (file_mtime (aec-read-path root (aec-row-path (head rows)))))
+                (aec-max-source-mtime-loop
+                    root
+                    (tail rows)
+                    (if (gt mt acc) mt acc)))))
+    (defn aec-max-source-mtime (root rows)
+        (aec-max-source-mtime-loop root rows 0))
+
+    (defn aec-cache-result (status cache-path bytes source-count source-max-mtime cache-mtime)
+        (list AEC-TAG-CACHE status cache-path bytes source-count source-max-mtime cache-mtime))
+    (defn aec-cache-result? (result) (aec-tagged? result AEC-TAG-CACHE 7))
+    (defn aec-cache-status (result) (nth result 1))
+    (defn aec-cache-path (result) (nth result 2))
+    (defn aec-cache-bytes (result) (nth result 3))
+    (defn aec-cache-source-count (result) (nth result 4))
+    (defn aec-cache-source-max-mtime (result) (nth result 5))
+    (defn aec-cache-mtime (result) (nth result 6))
+
+    (defn aec-index-cache-fresh-at? (cache-path source-max-mtime)
+        (and
+            (ge (file_size cache-path) 0)
+            (and
+                (gt source-max-mtime 0)
+                (ge (file_mtime cache-path) source-max-mtime))))
+
+    (defn aec-index-cache-fresh? (root cache-path rows)
+        (aec-index-cache-fresh-at? cache-path (aec-max-source-mtime root rows)))
+
+    (defn aec-ensure-index-cache (root cache-path)
+        (do
+            (let rows (aec-commit-evidence-rows root))
+            (let source-max-mtime (aec-max-source-mtime root rows))
+            (if (aec-index-cache-fresh-at? cache-path source-max-mtime)
+                (aec-cache-result
+                    "fresh"
+                    cache-path
+                    (file_size cache-path)
+                    (len rows)
+                    source-max-mtime
+                    (file_mtime cache-path))
+                (do
+                    (let bytes-written (write_form_binary cache-path (aec-index-recipe-from-rows root rows)))
+                    (aec-cache-result
+                        "write"
+                        cache-path
+                        bytes-written
+                        (len rows)
+                        source-max-mtime
+                        (file_mtime cache-path))))))
+
+    (defn aec-recipe-field (recipe index)
+        (nth (node_children recipe) index))
+    (defn aec-recipe-source-path (recipe)
+        (node_value (aec-recipe-field recipe 0)))
+    (defn aec-recipe-date (recipe)
+        (node_value (aec-recipe-field recipe 1)))
+    (defn aec-recipe-commit-scope (recipe)
+        (node_value (aec-recipe-field recipe 3)))
+    (defn aec-recipe-local-status (recipe)
+        (node_value (aec-recipe-field recipe 4)))
+    (defn aec-recipe-phase-can-move? (recipe)
+        (node_value (aec-recipe-field recipe 8)))
+
+    (defn aec-find-recipe-by-source-loop (recipes source-path)
+        (if (eq (len recipes) 0)
+            (intern_node_at AEC-BP-EVIDENCE-CELL (list) "docs/system_audit" 1 1)
+            (if (str_eq (aec-recipe-source-path (head recipes)) source-path)
+                (head recipes)
+                (aec-find-recipe-by-source-loop (tail recipes) source-path))))
+    (defn aec-find-recipe-by-source (recipes source-path)
+        (aec-find-recipe-by-source-loop recipes source-path))
+
+    (defn aec-tending-from-root (root)
+        (do
+            (let cells (aec-load-cells-from-root root))
+            (aec-summary
+                "system-audit-evidence"
+                (aec-system-audit-count root)
+                (len cells)
+                (aec-pass-count cells)
+                (aec-phase-held-count cells)
+                (aec-command-total cells)
+                (aec-change-file-total cells)
+                "persist dynamic commit evidence cell index and compress repeated proof fields")))
+
+    0)

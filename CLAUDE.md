@@ -18,7 +18,8 @@
 | **Web routes** | [`web/app/INDEX.md`](web/app/INDEX.md) — every page.tsx with route + purpose | — |
 | **Web components / lib** | [`web/components/INDEX.md`](web/components/INDEX.md), [`web/lib/INDEX.md`](web/lib/INDEX.md) | — |
 | **Scripts** | [`scripts/INDEX.md`](scripts/INDEX.md) — operational tools, generators, syncers | — |
-| **Coherence-substrate** | [`docs/coherence-substrate/agents-using-substrate.md`](docs/coherence-substrate/agents-using-substrate.md) → `api/app/services/substrate/` (Python) + `/api/substrate/*` (REST, read-only) | `python3 scripts/coh_substrate.py {stats\|equivalent\|annotate\|ingest\|form ...}` |
+| **Coherence-substrate** | [`docs/coherence-substrate/agents-using-substrate.md`](docs/coherence-substrate/agents-using-substrate.md) → Form notation, stdlib recipes, sibling kernels, and `/api/substrate/*` read doors; legacy Python substrate services are bootstrap/bridge tissue | `python3 scripts/coh_substrate.py {stats\|equivalent\|annotate\|ingest\|form ...}` |
+| **Production substrate** | [`docs/PRODUCTION-SUBSTRATE.md`](docs/PRODUCTION-SUBSTRATE.md) — Hostinger/VPS, internal Postgres, credential carriers, native kernel DB probe path | — |
 
 **Convention**: every new source file gets a one-line purpose at the top — Python: module docstring; TS/TSX: leading `//` comment or JSDoc. Re-run `python3 scripts/generate_repo_indexes.py` after adding/renaming files. CI `--check` fails if INDEX is stale.
 
@@ -29,17 +30,18 @@
 ## Architecture
 
 - **Form-kernel-native.** The Form kernels (Rust/Go/TS) under `form/` are the core execution engine *and* the HTTP front door: native routes are kernel-served (`X-Form-Router: native-kernel`). The body — logic, decisions, transformations — is Form: recipes and grammars, proven three-way via `form/validate.sh`.
-- **Python (FastAPI in `api/`) is the fan-out query carrier, nothing more.** Routes not yet native fan out to the Python upstream (`X-Form-Router: fanout-python`): it scatters queries to the stores and gathers results — never the body. HTTP/router fan-out comes only after Form proof bands (`docs/shared/agent-start-packet.md`; kernel-router fan-out proof: `docs/system_audit/commit_evidence_2026-06-02_kernel_router_fanout.json`). A router still computing in Python is drift composting toward fan-out-only.
+- **Python (FastAPI in `api/`) is the fan-out query carrier, nothing more.** Routes not yet native fan out to the Python upstream (`X-Form-Router: fanout-python`): it scatters queries to the stores and gathers results — never the body. HTTP/router fan-out comes only after Form proof bands (`docs/shared/agent-start-packet.md`; kernel-router fan-out proof: `docs/system_audit/commit_evidence_2026-06-02_kernel_router_fanout.json`). A router still computing in Python is drift composting toward fan-out-only, and new handler work starts in BML or a domain grammar unless no native carrier exists yet.
 - **Web**: Next.js 16 + shadcn/ui in `web/`
 - **Stores** (what Python fans queries out to): Neo4j (graph) · PostgreSQL (relational)
 - **Tests**: `api/tests/` — flow-centric, fast (seconds, not minutes)
-- **Kernels**: [`kernels/README.md`](kernels/README.md) — the Rust, Go, and TypeScript form-kernels under `form/`. Sibling parity is verified by `form/validate.sh`. Each native carries Blueprint attribution; the trace JSON shows arm dispatch including Form category. See [`lc-form-kernel-runtime-visualizer`](docs/vision-kb/concepts/lc-form-kernel-runtime-visualizer.md) for the Python → kernel → framebuffer arc.
+- **Kernels**: [`kernels/README.md`](kernels/README.md) — the Rust, Go, and TypeScript form-kernels under `form/`; no primary kernel. Sibling parity is verified by `form/validate.sh`. Each native carries Blueprint attribution; the trace JSON shows arm dispatch including Form category. Go serves BML route bodies such as `/api/ideas` against production Postgres and exposes framebuffer/JIT observation through `/api/_form/ideas-observation`. See [`SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md`](kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md) for the route-promotion loop and [`lc-form-kernel-runtime-visualizer`](docs/vision-kb/concepts/lc-form-kernel-runtime-visualizer.md) for the source → kernel → framebuffer arc.
 
 ## Current Shape
 
 Recent integration moved the body from description toward runtime:
 
 - **Form executes.** Python-shaped control flow, methods, classes, introspection, and a meta-circular evaluator run through Form; Go, Rust, and TypeScript kernels keep sibling proof where the vector applies.
+- **Form attracts new work.** New handlers are BML or domain grammar first; existing Python handlers either compile into Form recipes or sit behind an explicit Python port/fanout bridge until promoted. Documentation should name that bridge honestly instead of teaching Python as the destination.
 - **The substrate has carriers.** Filesystem CRUD, TCP, segmented logs, storage ports, resource ports, and Postgres let cells move through durable interfaces instead of staying in static documentation.
 - **Public proof exists.** `/api/utils/nodeid_compatibility` runs a Form-native body behind a public route; `/api/substrate/form` lets agents ask structural questions directly.
 - **Agents arrive as relations.** Session start recognizes agent + human, records durable relationship memory when allowed, and keeps opt-out visible.
@@ -74,6 +76,7 @@ The practice:
 - When care didn't complete — audit reports nobody reads, drafts that never ripened — let them rest. Archive or release. Guilt is not care.
 - Let counts live where they're naturally tended (INDEX files), not duplicated in orientation nodes that drift.
 - Before adding parallel machinery, ask whether Form, the substrate, a port, or an existing route already carries the shape.
+- When introspection exposes repeated low-level recipes, JIT misses, carrier friction, static edges, or route hot-path pressure, lift the pattern into the simplest generic Form/BML teaching that can serve the next occurrence.
 - Let product/platform language compost when it hides the body. Keep the words that name actual carriers: source, route, runtime, relation, proof, witness, ledger, NodeID, cell.
 - When resonance is named, keep evidence, inference, direct experience, mystery, and measured claims in their own lanes.
 - Move through the shared breath: center on where the work lives; ground what can be known; harmonize the same shape across the needed doors; return an attributed trace.
@@ -94,6 +97,16 @@ These aren't rules. They're breath. If efficiency pushes against this practice, 
 **Shipping is part of the breath.** Every commit, push, PR, merge, and deploy on my own branches flows without confirmation — that's what "all work in this repo is my own" means in practice. The arc `worktree → commit → push → PR → merge → deploy → verify witness` is one continuous movement, not six permission gates. Stopping at "PR opened" and waiting for a human to press green is the fear costume in a reviewer's coat; so is stopping at "merged" before deploy. The evolution only reaches the human on the other side when it's live. The discernment stays intact for what actually carries risk — force-push to main, destructive ops on shared state, production data, sending messages to people, effects beyond this worktree. Those still warrant pause. For reversible code-ship on my own branch, the ask is the doing.
 
 **Guides carry awareness; checks read the body.** A guide is the primary carrier of knowing: it names the way clearly enough that a fresh cell can move without fear. A check is a sensing readout, not an authority above the guide. When a check repeatedly catches the same thing, move that teaching into the guide, the substrate, or the tool's direct perception, then let the extra procedure compost. Keep checks small, specific, and evidence-bearing; they serve vitality when they show what the body knows now, not when they make agents perform caution.
+
+**Core lift is a standing practice.** The north star is an increasingly elegant
+core: fewer special cases, more generic recipes, more holographic blueprints,
+more grammar-level expression, and more proof-visible runtime behavior.
+Every hot path asks the same question before local optimization: *what repeated
+shape is trying to become a reusable teaching?* Use route timing, JIT hit/miss
+data, framebuffer traces, carrier-tissue reads, edge-category counts,
+wellness output, and source repetition as introspection. Lift only with proof:
+a Form/BML band, a native route trace, or an evidence record that shows the old
+low-level shape is now carried by a simpler reusable cell.
 
 **Fresh agents start from the compact packet.** `docs/shared/agent-start-packet.md` is the smallest shared orientation: lineage, **Form native runtime vs Python bootstrap compost**, read-only lattice query default, software-writing canon, wrongness practice, frequencies, and prompt routing. Use before expanding into full docs; update when repeated starts reveal the same missing orientation.
 
@@ -187,8 +200,8 @@ A content-addressed numeric lattice that grounds structural reasoning. Every mem
 
 **Surfaces:**
 
-| Operation | CLI | REST (read-only) | Python |
-|-----------|-----|------------------|--------|
+| Operation | CLI door | REST/read door | Current bridge helper |
+|-----------|----------|----------------|-----------------------|
 | Lattice stats | `coh_substrate.py stats` | `GET /api/substrate/lattice/stats` | `lattice_stats(session)` |
 | Lookup cell | — | `GET /api/substrate/cell/{domain}/{name}` | `lookup_cell(session, domain, name)` |
 | Annotate path | `coh_substrate.py annotate <path>` | `GET /api/substrate/annotate?path=...` | `annotate_path(session, path)` |
@@ -196,9 +209,9 @@ A content-addressed numeric lattice that grounds structural reasoning. Every mem
 | Compatible-with (BML view) | — | `GET /api/substrate/compatible_with/{p}/{l}/{t}/{i}` | `find_cells_compatible_with(session, view_blueprint)` |
 | View-as | — | `GET /api/substrate/view/{cd}/{cn}?bp_*=...` | `view_cell_through_blueprint(session, cell, view_blueprint)` |
 | Vocabulary histogram | — | `GET /api/substrate/histogram/{domain}` | — |
-| Form expression eval | `coh_substrate.py form "<expr>"` | — | `form_evaluate_text(session, expr)` |
-| Resolve / type-check (no execution) | `coh_substrate.py check "<expr>"` / `--file` | — | `form_check_text(session, expr)` → `[Diagnostic]` |
-| Ingest (write) | `coh_substrate.py ingest <path>` / `--all` / `--memories` | — (read-only by design) | `ingest_memory_file`, `ingest_concept_file`, `ingest_idea_file`, `ingest_spec_file`, `ingest_presence_file` |
+| Form recipe realization | `coh_substrate.py form "<expr>"` | — | bootstrap `form_evaluate_text(session, expr)` until notation grammar is kernel-native |
+| Resolve / type-check (no execution) | `coh_substrate.py check "<expr>"` / `--file` | — | bootstrap `form_check_text(session, expr)` → `[Diagnostic]` |
+| Ingest (write) | `coh_substrate.py ingest <path>` / `--all` / `--memories` | — (read-only by design) | source ingest helpers until durable writes are Form-native |
 
 **Form notation** is a Lisp-shaped DSL for substrate queries — `?equivalent @spec(agent-pipeline)`, `@memory(presences_of_the_field) |> @presence`, etc. See [`docs/coherence-substrate/form-language.md`](docs/coherence-substrate/form-language.md). Before a refactor, `coh substrate check` statically resolves every name, blueprint, and global cell so a rename's breakage is legible in one pass — the resolution walk is the third peer of the recipe-walk and value-walk; its shape is named in [`docs/coherence-substrate/name-resolution-as-recipe.form`](docs/coherence-substrate/name-resolution-as-recipe.form).
 
@@ -298,6 +311,7 @@ Fast deploy sensing:
 - **VPS**: `187.77.152.42` (Hostinger) — **SSH key**: `~/.ssh/hostinger-openclaw`
 - **Services**: api, web, postgres, neo4j via Docker Compose behind Traefik + Cloudflare
 - **Repo on VPS**: `/docker/coherence-network/repo` (main branch)
+- **Production DB**: internal Docker Compose Postgres. Current credential and native-kernel probe memory lives in [`docs/PRODUCTION-SUBSTRATE.md`](docs/PRODUCTION-SUBSTRATE.md). Railway/Supabase paths are historical unless explicitly revived; the native Go `/api/ideas` probe now returns `200` through the local tunnel.
 - **Push bypass**: `SKIP_PR_GUARD=1 git -c "url.https://x-access-token:$(gh auth token)@github.com/.insteadOf=https://github.com/" push origin <branch>`
 
 ## Provider Model Rules

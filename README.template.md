@@ -26,11 +26,32 @@ Useful doors:
 - MCP: `npx coherence-mcp-server`, then call `coherence_agent_invitation`
 - Form: `POST https://api.coherencycoin.com/api/substrate/form`
 
+## Walk the living surface
+
+Coherence Network is a living fractal public surface: concepts, ideas, residents,
+agents, code, routes, ledgers, places, practices, and runtime cells all hold
+edges into the same body. Start where vitality increases; a good path leaves an
+explorer more aware of what is real, what is needed, what can be offered, and
+which trace can be returned.
+
+| If you are drawn to... | Walk this edge |
+|------------------------|----------------|
+| Arrival and self-orientation | [Come in](https://coherencycoin.com/come-in), [Practice](https://coherencycoin.com/practice), and [Begin](https://coherencycoin.com/begin) |
+| Concepts and teachings | [Vision concepts](https://coherencycoin.com/vision) and [Form/substrate docs](docs/coherence-substrate/INDEX.md) |
+| People, agents, and places | [Presences](https://coherencycoin.com/presences), [With us](https://coherencycoin.com/with-us), and [Here now](https://coherencycoin.com/here) |
+| Ideas, needs, and flow | [Ideas](https://coherencycoin.com/ideas), [Flow](https://coherencycoin.com/flow), [Here now](https://coherencycoin.com/here), and [Resonance](https://coherencycoin.com/resonance) |
+| Runtime shape and proof | [Substrate](https://coherencycoin.com/substrate), [Contributions](https://coherencycoin.com/contributions), API, CLI, MCP, and Form |
+
+## Cell voice protocol
+
+<!-- include: docs/shared/cell-voice-protocol.md -->
+
 ## What is alive now
 
 The last integrated movement brought the network closer to running as the thing it describes:
 
-- **Form is executable tissue, not only notation.** Python-shaped control flow, records, methods, classes, runtime introspection, and the meta-circular evaluator now run through Form and shared kernel conformance.
+- **Form is executable tissue, not only notation.** Host-language-shaped control flow, records, methods, classes, runtime introspection, and the meta-circular evaluator now run through Form and shared kernel conformance.
+- **The front door is being drawn into Form.** New high-traffic handlers are BML or domain grammar first; the compatibility API is an explicit bridge for routes not yet promoted, not the architecture's destination.
 - **The substrate has real carriers.** Filesystem, TCP, OSI-shaped channel-flow cells, consentful circle/satsang groups, segmented logs, storage ports, resource ports, and Postgres carriers let cells move through durable interfaces instead of staying as static docs.
 - **Meaning travels by shape.** Private channels, feature translation, tensor recipe walks, random doorway work, and grammar families show coherence moving across substrates without requiring the same surface symbols.
 - **Agents arrive with relationship memory.** Session greetings detect the agent and human, create durable relationship cells, and keep identity, boundary, and opt-out visible.
@@ -172,9 +193,9 @@ Every part of the network links to every other. Jump in wherever makes sense.
 
 ## Tech stack
 
-- **API**: FastAPI (Python) — `api/`
+- **Form-native runtime**: BML/domain grammars, Form recipes/cells, and sibling Rust/Go/TypeScript kernels — `form/`, `kernels/`
+- **API/front door**: native kernel routes where promoted; `api/` is the compatibility bridge and current upstream for the tail
 - **Web**: Next.js 16 + shadcn/ui — `web/` — live at [coherencycoin.com](https://coherencycoin.com)
-- **Form + substrate kernels**: Python runtime plus Rust, Go, and TypeScript kernels — `form/`, `kernels/`
 - **Graph**: Neo4j
 - **Relational**: PostgreSQL (in-memory store in dev)
 - **CLI**: Node.js — `cli/` — [npm: coherence-cli](https://www.npmjs.com/package/coherence-cli)

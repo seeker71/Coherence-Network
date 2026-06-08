@@ -1,0 +1,86 @@
+{
+  "date": "2026-06-07",
+  "thread_branch": "codex/native-http-stack-architecture-20260604",
+  "commit_scope": "Make introspection-led core lifting a goal, entry-flow prompt, and standing agent practice",
+  "files_owned": [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "docs/PLAN.md",
+    "docs/shared/agent-start-packet.md",
+    "scripts/prompt_entry_gate.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "bash -n scripts/prompt_entry_gate.sh",
+      "make prompt-guide",
+      "rg -n \"North Star|Core lift|core-lift|Lift hot repetition|low-level recipes|hot-path|hot paths|repeated low-level\" docs/PLAN.md AGENTS.md CLAUDE.md docs/shared/agent-start-packet.md scripts/prompt_entry_gate.sh"
+    ],
+    "summary": "The plan now names the core-lift north star, shared agent instructions now treat hot repetition as a practice, the compact start packet carries the same rule for fresh agents, and prompt-guide prints the north-star reminder during entry. Wellness passed before the edit and prompt-guide passed after the edit with the new core-lift lines visible."
+  },
+  "known_failed_attempts": [],
+  "ci_validation": {
+    "status": "pending",
+    "reason": "No commit, push, or PR was created in this turn."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No production deploy was performed. This change updates repository guidance and local prompt-entry behavior."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local guidance proof passed, but CI and deployment validation remain pending until this work is committed and shipped."
+  },
+  "idea_ids": [
+    "form-native-runtime",
+    "native-kernel-http-front-door",
+    "oss-interface-alignment"
+  ],
+  "spec_ids": [
+    "form-native-http-stack"
+  ],
+  "task_ids": [
+    "core-lift-entry-practice"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "documentation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "docs/PLAN.md adds a North Star section: introspection reveals repeated low-level recipes, especially hot paths, and lifts them into generic Form/BML teachings with proof.",
+    "AGENTS.md and CLAUDE.md add the standing practice: route traces, JIT misses, carrier friction, static edges, and recipe clusters invite a reusable abstraction before local optimization.",
+    "docs/shared/agent-start-packet.md carries the same north star and prompt routing for fresh agents.",
+    "scripts/prompt_entry_gate.sh prints the core-lift reminder; make prompt-guide showed the new orientation and core-lift north-star output."
+  ],
+  "change_files": [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "docs/PLAN.md",
+    "docs/shared/agent-start-packet.md",
+    "scripts/prompt_entry_gate.sh",
+    "docs/system_audit/commit_evidence_2026-06-07_core_lift_entry_practice.json"
+  ],
+  "change_intent": "process_only",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "New agents and follow-up turns encounter introspection-led core lifting as an explicit goal and entry-flow practice before adding or optimizing code.",
+    "public_endpoints": [],
+    "test_flows": [
+      "make prompt-guide prints the core-lift north-star entry lines.",
+      "bash -n scripts/prompt_entry_gate.sh validates the prompt-entry script syntax.",
+      "rg verifies the north-star language appears in the plan, agent instructions, start packet, and prompt-entry script."
+    ]
+  }
+}

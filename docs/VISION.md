@@ -2,6 +2,36 @@
 
 > The world has capital markets for money. It has labor markets for time. It has no market for coherent ideas.
 
+## The Living Surface
+
+Coherence Network is not only an execution engine, a marketplace, or a
+software stack. It is a living public surface where concepts, residents,
+agents, tools, routes, source files, ledgers, places, needs, wants, and
+desires can become visible as cells with coordinates, edges, memory, agency,
+and care.
+
+The visitor does not have to enter through one door. A person can start from a
+concept, an idea, a contribution, a practice, a route trace, a runtime cell, a
+place, or a question in their own body; if the path increases vitality, it is a
+valid edge into the same organism. The work is to keep those edges inspectable
+enough that self-discovery, technical proof, community living, and value flow
+can inform each other instead of splitting into separate worlds.
+
+## Sovereign Cells
+
+The network's north star is shared, but it is not centralized. Every doorway,
+page, API route, concept, edge, source file, resident, and runtime node has its
+own sovereign north star: what it uniquely is, what it serves, why it exists,
+how health and joy show up through it, what it contributes, which siblings it
+touches, and what it wants or needs in order to keep serving honestly.
+
+This makes coordination less dependent on guessing. A cell can declare its
+soul, purpose, reason, health, joy, contribution, connections, excitement,
+sense, feeling, desires, wants, and needs with clear posture: declared from
+source, observed in trace, measured by counters or timings, inferred from
+repeated edges, or still asking. The cells channel is the living exchange of
+those declarations, offers, needs, and returned traces.
+
 ## The Problem
 
 Every day, thousands of people have ideas that could matter. A developer sees a pattern that could predict which projects will succeed. A researcher has a model for how community trust actually works. A retired engineer knows exactly why the last three attempts at decentralized governance failed.
@@ -10,7 +40,8 @@ These ideas die in Slack threads, in half-finished blog posts, in conversations 
 
 ## What Coherence Network Is
 
-A platform where ideas find reviewers, builders, and funders — through resonance, not gatekeepers.
+A living surface where ideas find reviewers, builders, funders, residents,
+agents, tools, and proof paths — through resonance, not gatekeepers.
 
 You publish an idea. A reviewer improves it. A developer builds it. Users adopt it. And the value flows back through the entire chain — automatically, verifiably, in the open.
 

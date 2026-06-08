@@ -2,6 +2,8 @@
 // blueprint-registry.json. DO NOT EDIT. Regenerate after either changes.
 
 export const BP_TABLE: Record<string, [number, number, number, number]> = {
+  "AEC-EVIDENCE-CELL": [1, 2, 99, 9],
+  "AEC-EVIDENCE-INDEX": [1, 2, 99, 14],
   "ARRIVAL": [1, 2, 99, 1870],
   "ARRIVAL-INQUIRY": [1, 2, 99, 1872],
   "ARRIVAL-OBS": [1, 2, 99, 1874],
@@ -725,6 +727,7 @@ export const BP_TABLE: Record<string, [number, number, number, number]> = {
   "le": [1, 2, 13, 4],
   "let": [1, 2, 9, 3],
   "lt": [1, 2, 13, 3],
+  "match": [1, 2, 19, 1],
   "mod": [1, 2, 12, 5],
   "mul": [1, 2, 12, 3],
   "ne": [1, 2, 13, 2],

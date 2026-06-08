@@ -1,0 +1,137 @@
+{
+  "date": "2026-06-07",
+  "thread_branch": "codex/native-http-stack-architecture-20260604",
+  "commit_scope": "Switch Form tissue reads to Rust default and rebalance source_inventory across sibling kernels",
+  "files_owned": [
+    "Makefile",
+    "docs/shared/cell-voice-protocol.md",
+    "docs/shared/agent-start-packet.md",
+    "docs/coherence-substrate/form-language.md",
+    "form/form-kernel-rust/src/main.rs",
+    "form/form-kernel-ts/src/kernel.ts",
+    "form/scripts/pyfkb-run.sh",
+    "form/form-stdlib/carrier-tissue.fk",
+    "form/form-stdlib/tests/carrier-tissue-kernel-query-band.fk",
+    "form/form-stdlib/tests/cell-voice-tissue-band.fk"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "cd form/form-kernel-rust && cargo build --release --quiet",
+      "cd form/form-kernel-go && go build -o bin-go .",
+      "cd form/form-kernel-ts && npm ci && npm run check",
+      "cd form && ./validate.sh form-stdlib/carrier-tissue.fk form-stdlib/queries/carrier-tissue-census.fk",
+      "cd form && ./validate.sh form-stdlib/carrier-tissue.fk form-stdlib/tests/carrier-tissue-kernel-query-band.fk",
+      "cd form && ./validate.sh form-stdlib/carrier-tissue.fk form-stdlib/tests/cell-voice-tissue-band.fk",
+      "make carrier-vitality",
+      "make cell-voice-tissue",
+      "python3 scripts/build_readmes.py && python3 scripts/build_readmes.py --check",
+      "git diff --check -- Makefile README.md cli/README.md mcp-server/README.md skills/coherence-network/SKILL.md docs/shared/cell-voice-protocol.md docs/shared/agent-start-packet.md docs/coherence-substrate/form-language.md docs/system_audit/commit_evidence_2026-06-07_form_cell_voice_tissue.json docs/system_audit/commit_evidence_2026-06-07_rust_default_source_inventory_rebalance.json form/form-kernel-rust/src/main.rs form/form-kernel-ts/src/kernel.ts form/scripts/pyfkb-run.sh form/form-stdlib/carrier-tissue.fk form/form-stdlib/queries/carrier-tissue-census.fk form/form-stdlib/queries/cell-voice-tissue.fk form/form-stdlib/tests/carrier-tissue-kernel-query-band.fk form/form-stdlib/tests/cell-voice-tissue-band.fk",
+      "make wellness"
+    ],
+    "summary": "Rust is now the default carrier for Makefile tissue reads. source_inventory is implemented in Rust and TypeScript to match the existing Go primitive, and the full carrier census query agrees across Go/Rust/TypeScript: [65202, false, 5329, 2062708, 739, 3865, 92, 540, 93, 501, 577, 14, 24, 819, 845, 27, 61, 604, 21]."
+  },
+  "known_failed_attempts": [
+    {
+      "command": "cd form/form-kernel-ts && npm run check",
+      "output": "Initial check failed with sh: tsc: command not found because node_modules was absent in this worktree. Resolved with npm ci && npm run check."
+    },
+    {
+      "command": "cd form && ./validate.sh form-stdlib/carrier-tissue.fk form-stdlib/queries/carrier-tissue-census.fk",
+      "output": "Initial full census parity diverged only on renderer punctuation: Go/Rust rendered the leading string label bare, TypeScript quoted it. Replaced the label with existing numeric CT-TAG-CENSUS so the query is structurally tagged and parity passes."
+    },
+    {
+      "command": "cd form && ./scripts/pyfkb-run.sh <(printf 'print(42)\\n')",
+      "output": "Rust-default smoke failed with undefined name print; explicit Go returned null. This is an unsupported Python-BMF built-in sample, not a Rust-default regression. Supported expression smoke 7 + 3 returns 10 on Rust and Go."
+    }
+  ],
+  "ci_validation": {
+    "status": "pending",
+    "reason": "No commit, push, or PR was created in this turn."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No production deploy was performed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof passed, but CI and production deploy validation remain pending until the work is committed, pushed, and shipped."
+  },
+  "idea_ids": [
+    "one-kernel-many-tongues",
+    "form-native-runtime",
+    "carrier-tissue-transmutation"
+  ],
+  "spec_ids": [
+    "kernel-sibling-parity",
+    "carrier-tissue-cell-voice",
+    "rust-default-rotation"
+  ],
+  "task_ids": [
+    "rust-default-source-inventory-rebalance"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "kernel",
+        "form",
+        "documentation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "Makefile tissue targets build and run form-kernel-rust by default.",
+    "form/form-kernel-rust/src/main.rs binds source_inventory(root, suffix, skip-dir-names) with sorted source walking and line counts.",
+    "form/form-kernel-ts/src/kernel.ts binds source_inventory with the same sorted walk and line-count row shape.",
+    "form/form-stdlib/carrier-tissue.fk uses CT-TAG-CENSUS for the census structure so sibling parity is structural, not renderer-dependent.",
+    "form/scripts/pyfkb-run.sh defaults to Rust and uses Rust for source-compile prelude preparation.",
+    "docs/shared/cell-voice-protocol.md, docs/shared/agent-start-packet.md, docs/coherence-substrate/form-language.md, and generated README surfaces no longer teach the source walk as Go-owned."
+  ],
+  "change_files": [
+    "Makefile",
+    "README.md",
+    "cli/README.md",
+    "mcp-server/README.md",
+    "skills/coherence-network/SKILL.md",
+    "docs/shared/cell-voice-protocol.md",
+    "docs/shared/agent-start-packet.md",
+    "docs/coherence-substrate/form-language.md",
+    "form/form-kernel-rust/src/main.rs",
+    "form/form-kernel-ts/src/kernel.ts",
+    "form/scripts/pyfkb-run.sh",
+    "form/form-stdlib/carrier-tissue.fk",
+    "form/form-stdlib/tests/carrier-tissue-kernel-query-band.fk",
+    "form/form-stdlib/tests/cell-voice-tissue-band.fk",
+    "docs/system_audit/commit_evidence_2026-06-07_rust_default_source_inventory_rebalance.json"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The active Form tissue read path defaults to Rust without making source_inventory a Rust-only or Go-only primitive; Go, Rust, and TypeScript agree on the full source census, and pyfkb-run uses Rust by default for supported Python-BMF expression execution.",
+    "public_endpoints": [
+      "make carrier-tissue-census",
+      "make carrier-vitality",
+      "make cell-voice-tissue",
+      "form/scripts/pyfkb-run.sh"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/carrier-tissue.fk form-stdlib/queries/carrier-tissue-census.fk returns 1 ok, 0 divergent.",
+      "make carrier-vitality returns [carrier-vitality, 65202, false, 5329, 739, 138, 4590, 3865, 92, 540, 93, 5945, lens/load: name repeated external carriers into cells].",
+      "make cell-voice-tissue returns cell-voice-tissue for 5329 files and 2062708 LOC.",
+      "cd form && ./scripts/pyfkb-run.sh <(printf '7 + 3\\n') returns 10; --kernel go returns 10 for the same sample."
+    ]
+  },
+  "known_runtime_context": {
+    "default_kernel_rotation": "Rust is the current default for Form tissue Make targets. No kernel is primary; the default can rotate again when sibling parity proof is present.",
+    "remaining_named_asymmetry": "The Go HTTP front-door listener and some JIT probes remain Go-authored route/runtime tissue from earlier work. This evidence only resolves the source_inventory and tissue-read default mismatch.",
+    "python_bmf_print_gap": "The Python-BMF harness does not model print as a built-in today. Expression and function samples are the supported smoke path; print remains a named language-feature gap rather than a Rust default blocker."
+  }
+}

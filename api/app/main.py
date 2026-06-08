@@ -471,6 +471,17 @@ def _correlation_id(request) -> str:
     return "none"
 
 
+def _runtime_event_source(request) -> str:
+    """Classify API runtime events by the front door that observed them."""
+    if (
+        request.headers.get("x-coherence-web-proxy")
+        or request.headers.get("x-page-view-id")
+        or request.headers.get("x-page-route")
+    ):
+        return "web_api"
+    return "api"
+
+
 def _safe_int_or_none(value: str | None) -> int | None:
     if not value or not value.isdigit():
         return None
@@ -981,6 +992,7 @@ async def capture_runtime_metrics(request: Request, call_next):
             )
             try:
                 metadata = {
+                    "tracking_kind": "api_route_request",
                     "method": method,
                     "route": route_label,
                     "query_count": query_count,
@@ -995,10 +1007,12 @@ async def capture_runtime_metrics(request: Request, call_next):
                     "exception": exc_name or "",
                     "page_view_id": str(request.headers.get("x-page-view-id") or "").strip(),
                     "page_route": str(request.headers.get("x-page-route") or "").strip(),
+                    "web_route": str(request.headers.get("x-web-route") or "").strip(),
+                    "web_proxy": str(request.headers.get("x-coherence-web-proxy") or "").strip(),
                 }
                 runtime_service.record_event(
                     RuntimeEventCreate(
-                        source="api",
+                        source=_runtime_event_source(request),
                         endpoint=request_path,
                         raw_endpoint=raw_path,
                         method=method,

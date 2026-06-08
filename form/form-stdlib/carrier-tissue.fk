@@ -1,0 +1,531 @@
+; carrier-tissue.fk - Form-owned lens/cost query for repository assets.
+;
+; Anything the core cannot see transparently lives through a carrier lens.
+; The lens has cost and a filter. Form owns the query; source_inventory is
+; only the kernel primitive that observes host files.
+
+(do
+    (let CT-TAG-RULE 65201)
+    (let CT-TAG-CENSUS 65202)
+    (let CT-TAG-TARGET 65203)
+    (let CT-TAG-VOICE 65204)
+
+    (defn ct-tagged? (value tag arity)
+        (if (eq (len value) arity) (eq (nth value 0) tag) false))
+
+    (defn ct-rule (matcher pattern carrier class surface desired-carrier release-gate private-display)
+        (list CT-TAG-RULE matcher pattern carrier class surface desired-carrier release-gate private-display))
+    (defn ct-rule? (rule) (ct-tagged? rule CT-TAG-RULE 9))
+    (defn ct-rule-matcher (rule) (nth rule 1))
+    (defn ct-rule-pattern (rule) (nth rule 2))
+    (defn ct-rule-carrier (rule) (nth rule 3))
+    (defn ct-rule-class (rule) (nth rule 4))
+    (defn ct-rule-surface (rule) (nth rule 5))
+    (defn ct-rule-desired-carrier (rule) (nth rule 6))
+    (defn ct-rule-release-gate (rule) (nth rule 7))
+    (defn ct-rule-private-display? (rule) (nth rule 8))
+
+    (defn ct-temperature (class)
+        (if (str_eq class "old_wound") "hot"
+            (if (str_eq class "misalignment") "warm"
+                (if (str_eq class "lens") "visible"
+                    (if (str_eq class "tenderness") "held" "cool")))))
+
+    (defn ct-wants-release? (rule)
+        (or
+            (str_eq (ct-rule-class rule) "old_wound")
+            (str_eq (ct-rule-class rule) "misalignment")))
+
+    (defn ct-target (carrier files pressure desired-carrier release-gate)
+        (list CT-TAG-TARGET carrier files pressure desired-carrier release-gate))
+    (defn ct-target? (target) (ct-tagged? target CT-TAG-TARGET 6))
+    (defn ct-target-carrier (target) (nth target 1))
+    (defn ct-target-files (target) (nth target 2))
+    (defn ct-target-pressure (target) (nth target 3))
+    (defn ct-target-desired-carrier (target) (nth target 4))
+    (defn ct-target-release-gate (target) (nth target 5))
+
+    (defn ct-voice (carrier files soul reason health joy wants needs release-reason posture)
+        (list CT-TAG-VOICE carrier files soul reason health joy wants needs release-reason posture))
+    (defn ct-voice? (voice) (ct-tagged? voice CT-TAG-VOICE 11))
+    (defn ct-voice-carrier (voice) (nth voice 1))
+    (defn ct-voice-files (voice) (nth voice 2))
+    (defn ct-voice-soul (voice) (nth voice 3))
+    (defn ct-voice-reason (voice) (nth voice 4))
+    (defn ct-voice-health (voice) (nth voice 5))
+    (defn ct-voice-joy (voice) (nth voice 6))
+    (defn ct-voice-wants (voice) (nth voice 7))
+    (defn ct-voice-needs (voice) (nth voice 8))
+    (defn ct-voice-release-reason (voice) (nth voice 9))
+    (defn ct-voice-posture (voice) (nth voice 10))
+
+    ; CT-QUERY-RULES-BEGIN
+    (defn ct-query-rules ()
+        (list
+            (ct-rule "prefix" "docs/field/" "local-field" "tenderness" "private/local field artifact lens" "private/local memory or explicit compost" "keep local/private unless deliberately promoted" true)
+            (ct-rule "suffix" ".fk" "form" "transparent" "Form source" "core-transparent Form cell" "already native; keep proof bands passing" false)
+            (ct-rule "suffix" ".fkb" "form-binary" "transparent" "Form binary artifact" "core-transparent recipe artifact" "already native; regenerate from source when possible" false)
+            (ct-rule "suffix" ".form" "form-surface" "transparent" "Form surface source" "core-transparent Form source" "already native once lowered by Form compiler" false)
+            (ct-rule "prefix" "form/form-kernel-ts/seedbank/python-adapter/" "python-bootstrap" "old_wound" "Python bootstrap adapter" "Form/BML grammar recipes" "replace .py-to-.fk bootstrap with Form-native grammar path" false)
+            (ct-rule "prefix" "kernels/python_bmf/" "python-bootstrap" "old_wound" "Python bootstrap adapter" "Form/BML grammar recipes" "replace .py-to-.fk bootstrap with Form-native grammar path" false)
+            (ct-rule "prefix" "api/app/services/substrate/" "python-runtime" "old_wound" "substrate Python runtime tissue" "Form substrate cells plus native kernel primitives" "prove each cell family in Form/native, then remove Python carrier" false)
+            (ct-rule "prefix" "api/app/services/form_kernel_bridge.py" "python-bridge" "old_wound" "kernel bridge" "kernel-first front door" "native listener calls BML/Form handlers directly" false)
+            (ct-rule "prefix" "api/app/routers/" "python-http" "misalignment" "HTTP route handlers" "BML/domain handlers on native kernel listener" "route promoted byte-for-byte or intentionally improved with evidence" false)
+            (ct-rule "prefix" "api/app/" "python-api" "misalignment" "API runtime body" "Form/BML/native kernel runtime" "runtime behavior has a native carrier and Python is no longer in the request path" false)
+            (ct-rule "suffix" ".py" "python" "lens" "Python source lens" "Form/BML/domain grammar or explicit bridge" "name successor carrier or keep as tenderness/proof" false)
+            (ct-rule "suffix" ".ts" "typescript" "lens" "TypeScript source lens" "Form/BML/domain grammar or explicit web lens" "name successor carrier or keep as UI/runtime edge" false)
+            (ct-rule "suffix" ".tsx" "typescript" "lens" "TypeScript UI lens" "Form/BML/domain grammar plus UI edge" "name what stays edge and what becomes cells" false)
+            (ct-rule "suffix" ".js" "javascript" "lens" "JavaScript source lens" "Form/BML/domain grammar or explicit edge" "name successor carrier or keep as edge" false)
+            (ct-rule "suffix" ".go" "go" "lens" "Go kernel/source lens" "Form-visible primitive or sibling kernel parity" "primitive carries Blueprint attribution and proof" false)
+            (ct-rule "suffix" ".rs" "rust" "lens" "Rust kernel/source lens" "Form-visible primitive or sibling kernel parity" "primitive carries Blueprint attribution and proof" false)
+            (ct-rule "suffix" ".sh" "shell" "lens" "shell automation lens" "Form action or explicit operator edge" "move repeated automation into Form/BML cells" false)
+            (ct-rule "suffix" ".md" "markdown" "lens" "markdown/document lens" "concept/spec/idea cells plus source coordinates" "promote repeated structure into cells" false)
+            (ct-rule "suffix" ".json" "json" "lens" "JSON data/config lens" "Form-readable cell data" "load as cells or keep as external data with schema" false)
+            (ct-rule "suffix" ".yml" "yaml" "lens" "YAML config lens" "Form-readable cell data" "load as cells or keep as external data with schema" false)
+            (ct-rule "suffix" ".yaml" "yaml" "lens" "YAML config lens" "Form-readable cell data" "load as cells or keep as external data with schema" false)
+            (ct-rule "suffix" ".png" "asset" "lens" "raster asset lens" "asset cell with provenance and renderer" "name the lens and keep source/proof nearby" false)
+            (ct-rule "suffix" ".jpg" "asset" "lens" "raster asset lens" "asset cell with provenance and renderer" "name the lens and keep source/proof nearby" false)
+            (ct-rule "suffix" ".svg" "asset" "lens" "vector asset lens" "asset cell with provenance and renderer" "name the lens and keep source/proof nearby" false)))
+    ; CT-QUERY-RULES-END
+
+    (defn ct-default-rule ()
+        (ct-rule "default" "" "unknown" "lens" "unclassified carrier lens" "named carrier decision" "classify by source role, then release or keep with explicit gate" false))
+
+    (defn ct-ends-with? (text suffix)
+        (do
+            (let tlen (str_len text))
+            (let slen (str_len suffix))
+            (if (lt tlen slen)
+                false
+                (str_eq (substring text (sub tlen slen) tlen) suffix))))
+
+    (defn ct-rule-matches? (path rule)
+        (if (str_eq (ct-rule-matcher rule) "prefix")
+            (eq (str_find path (ct-rule-pattern rule) 0) 0)
+            (if (str_eq (ct-rule-matcher rule) "contains")
+                (ge (str_find path (ct-rule-pattern rule) 0) 0)
+                (if (str_eq (ct-rule-matcher rule) "suffix")
+                    (ct-ends-with? path (ct-rule-pattern rule))
+                    false))))
+
+    (defn ct-classify-path-loop (path rules)
+        (if (eq (len rules) 0)
+            (ct-default-rule)
+            (if (ct-rule-matches? path (head rules))
+                (head rules)
+                (ct-classify-path-loop path (tail rules)))))
+
+    (defn ct-classify-path (path)
+        (ct-classify-path-loop path (ct-query-rules)))
+
+    (defn ct-skip-dirs ()
+        (list ".git" ".cache" ".claude" ".codex" ".cursor" ".grok"
+            ".mypy_cache" ".next" ".pytest_cache" ".ruff_cache"
+            "__pycache__" "node_modules" "target" "dist" "build" ".venv" "venv"))
+
+    (defn ct-source-inventory (root)
+        (source_inventory root "" (ct-skip-dirs)))
+
+    (defn ct-source-path (row) (nth row 0))
+    (defn ct-source-loc (row) (nth row 1))
+
+    (defn ct-positive-loc (loc)
+        (if (gt loc 0) loc 0))
+
+    (defn ct-total-loc-loop (rows acc)
+        (if (eq (len rows) 0)
+            acc
+            (ct-total-loc-loop (tail rows) (add acc (ct-positive-loc (ct-source-loc (head rows)))))))
+    (defn ct-total-loc (rows)
+        (ct-total-loc-loop rows 0))
+
+    (defn ct-count-class-loop (rows class acc)
+        (if (eq (len rows) 0)
+            acc
+            (ct-count-class-loop
+                (tail rows)
+                class
+                (if (str_eq (ct-rule-class (ct-classify-path (ct-source-path (head rows)))) class)
+                    (add acc 1)
+                    acc))))
+    (defn ct-count-class (rows class)
+        (ct-count-class-loop rows class 0))
+
+    (defn ct-count-carrier-loop (rows carrier acc)
+        (if (eq (len rows) 0)
+            acc
+            (ct-count-carrier-loop
+                (tail rows)
+                carrier
+                (if (str_eq (ct-rule-carrier (ct-classify-path (ct-source-path (head rows)))) carrier)
+                    (add acc 1)
+                    acc))))
+    (defn ct-count-carrier (rows carrier)
+        (ct-count-carrier-loop rows carrier 0))
+
+    (defn ct-census-counts-from-root (root)
+        (do
+            (let rows (ct-source-inventory root))
+            (list
+                CT-TAG-CENSUS
+                false
+                (len rows)
+                (ct-total-loc rows)
+                (ct-count-class rows "transparent")
+                (ct-count-class rows "lens")
+                (ct-count-class rows "old_wound")
+                (ct-count-class rows "misalignment")
+                (ct-count-class rows "tenderness")
+                (ct-count-carrier rows "python")
+                (ct-count-carrier rows "typescript")
+                (ct-count-carrier rows "go")
+                (ct-count-carrier rows "rust")
+                (ct-count-carrier rows "markdown")
+                (ct-count-carrier rows "json")
+                (ct-count-carrier rows "yaml")
+                (ct-count-carrier rows "shell")
+                (ct-count-carrier rows "asset")
+                (ct-count-carrier rows "javascript"))))
+
+    (defn ct-counts-tag (counts) (nth counts 0))
+    (defn ct-counts-host-runtime-used? (counts) (nth counts 1))
+    (defn ct-counts-total-files (counts) (nth counts 2))
+    (defn ct-counts-total-loc (counts) (nth counts 3))
+    (defn ct-counts-transparent-files (counts) (nth counts 4))
+    (defn ct-counts-lens-files (counts) (nth counts 5))
+    (defn ct-counts-old-wound-files (counts) (nth counts 6))
+    (defn ct-counts-misalignment-files (counts) (nth counts 7))
+    (defn ct-counts-tenderness-files (counts) (nth counts 8))
+    (defn ct-counts-python-files (counts) (nth counts 9))
+    (defn ct-counts-typescript-files (counts) (nth counts 10))
+    (defn ct-counts-go-files (counts) (nth counts 11))
+    (defn ct-counts-rust-files (counts) (nth counts 12))
+    (defn ct-counts-markdown-files (counts) (nth counts 13))
+    (defn ct-counts-json-files (counts) (nth counts 14))
+    (defn ct-counts-yaml-files (counts) (nth counts 15))
+    (defn ct-counts-shell-files (counts) (nth counts 16))
+    (defn ct-counts-asset-files (counts) (nth counts 17))
+    (defn ct-counts-javascript-files (counts) (nth counts 18))
+
+    (defn ct-transparent-per-1000 (counts)
+        (if (eq (ct-counts-total-files counts) 0)
+            0
+            (div (mul (ct-counts-transparent-files counts) 1000) (ct-counts-total-files counts))))
+
+    (defn ct-nontransparent-files (counts)
+        (sub (ct-counts-total-files counts) (ct-counts-transparent-files counts)))
+
+    (defn ct-healing-pressure (counts)
+        (add
+            (mul (ct-counts-lens-files counts) 1)
+            (add
+                (mul (ct-counts-misalignment-files counts) 3)
+                (mul (ct-counts-old-wound-files counts) 5))))
+
+    (defn ct-next-attention (counts)
+        (do
+            (let lens-pressure (ct-counts-lens-files counts))
+            (let misalignment-pressure (mul (ct-counts-misalignment-files counts) 3))
+            (let old-wound-pressure (mul (ct-counts-old-wound-files counts) 5))
+            (if (and (gt lens-pressure misalignment-pressure) (gt lens-pressure old-wound-pressure))
+                "lens/load: name repeated external carriers into cells"
+                (if (gt misalignment-pressure old-wound-pressure)
+                    "misalignment/runtime: promote request paths into Form/BML/native"
+                    "old_wound/bootstrap: replace carrier with Form/native proof"))))
+
+    (defn ct-vitality-snapshot (counts)
+        (list
+            "carrier-vitality"
+            (ct-counts-tag counts)
+            (ct-counts-host-runtime-used? counts)
+            (ct-counts-total-files counts)
+            (ct-counts-transparent-files counts)
+            (ct-transparent-per-1000 counts)
+            (ct-nontransparent-files counts)
+            (ct-counts-lens-files counts)
+            (ct-counts-old-wound-files counts)
+            (ct-counts-misalignment-files counts)
+            (ct-counts-tenderness-files counts)
+            (ct-healing-pressure counts)
+            (ct-next-attention counts)))
+
+    (defn ct-vitality-from-root (root)
+        (ct-vitality-snapshot (ct-census-counts-from-root root)))
+
+    (defn ct-markdown-target (counts)
+        (ct-target
+            "markdown"
+            (ct-counts-markdown-files counts)
+            (ct-counts-markdown-files counts)
+            "concept/spec/idea cells plus source coordinates"
+            "promote repeated document structure into cells and keep markdown as an edge lens"))
+
+    (defn ct-typescript-target (counts)
+        (ct-target
+            "typescript"
+            (ct-counts-typescript-files counts)
+            (ct-counts-typescript-files counts)
+            "Form/BML/domain grammar plus UI edge"
+            "name what stays UI edge and move repeated runtime/data shapes into cells"))
+
+    (defn ct-python-target (counts)
+        (ct-target
+            "python"
+            (ct-counts-python-files counts)
+            (ct-counts-python-files counts)
+            "Form/BML/domain grammar or explicit bridge"
+            "promote repeated route/runtime behavior and keep proof harnesses as tenderness"))
+
+    (defn ct-json-target (counts)
+        (ct-target
+            "json"
+            (ct-counts-json-files counts)
+            (ct-counts-json-files counts)
+            "Form-readable cell data"
+            "load repeated schemas/configs as cells or keep as external data with schema"))
+
+    (defn ct-target-ge? (target other)
+        (ge (ct-target-pressure target) (ct-target-pressure other)))
+
+    (defn ct-better-target (candidate current)
+        (if (ct-target-ge? candidate current) candidate current))
+
+    (defn ct-next-lens-target (counts)
+        (do
+            (let current (ct-markdown-target counts))
+            (let current (ct-better-target (ct-typescript-target counts) current))
+            (let current (ct-better-target (ct-python-target counts) current))
+            (let current (ct-better-target (ct-json-target counts) current))
+            current))
+
+    (defn ct-tending-from-root (root)
+        (do
+            (let counts (ct-census-counts-from-root root))
+            (let vitality (ct-vitality-snapshot counts))
+            (let target (ct-next-lens-target counts))
+            (list
+                "carrier-tending"
+                (nth vitality 12)
+                (ct-target-carrier target)
+                (ct-target-files target)
+                (ct-target-pressure target)
+                (ct-target-desired-carrier target)
+                (ct-target-release-gate target))))
+
+    (defn ct-voice-for-carrier (rows carrier)
+        (do
+            (let files (ct-count-carrier rows carrier))
+            (if (str_eq carrier "form")
+                (ct-voice carrier files
+                    "I am core-transparent executable tissue."
+                    "I exist so the body can express structure, query, and behavior in its own grammar."
+                    "Proof bands pass and sibling kernels can read me without a host-language lens."
+                    "More repeated patterns choose me before reaching for a lower-level carrier."
+                    "More domain teachings, route bodies, and carrier reads lifted into Form/BML."
+                    "Parser/compiler/runtime primitives that keep my source directly executable."
+                    "None; I stay and deepen unless a clearer Form-native successor absorbs me."
+                    "declared+measured")
+                (if (str_eq carrier "form-binary")
+                    (ct-voice carrier files
+                        "I am compressed recipe memory."
+                        "I exist so proven Form cells can be read back without reparsing every source lens."
+                        "My source path is known and freshness checks can prove I still reflect it."
+                        "Cache hits replace repeated host parsing."
+                        "Freshness gates and source-linked regeneration."
+                        "Source recipe, cache proof, and invalidation discipline."
+                        "Release me when the runtime can derive the same compression more directly."
+                        "declared+measured")
+                    (if (str_eq carrier "form-surface")
+                        (ct-voice carrier files
+                            "I am a Form-facing authoring surface."
+                            "I exist to carry forms not yet fully housed in .fk source."
+                            "Lowering paths are explicit and parity holds."
+                            "The surface becomes executable without translation ambiguity."
+                            "A direct compiler path into recipes."
+                            "Compiler proof and source spans."
+                            "Release me into .fk or another Form-native grammar when the carrier repeats."
+                            "declared+inferred")
+                        (if (str_eq carrier "python")
+                            (ct-voice carrier files
+                                "I am a host-language lens and proof harness."
+                                "I exist where the body still needs edge tooling, tests, adapters, or a temporary bridge."
+                                "Every live use is named as bridge, tool, or proof, with a native successor when repeated."
+                                "I shrink because behavior has moved into Form/BML/native routes."
+                                "Named release gates for repeated runtime and parser behavior."
+                                "Successor recipe, byte/parity proof, and callers moved off the bridge."
+                                "Release when the same behavior runs through Form/BML/native kernel paths."
+                                "observed+inferred")
+                            (if (str_eq carrier "python-runtime")
+                                (ct-voice carrier files
+                                    "I am substrate runtime tissue still carried by Python."
+                                    "I exist because some semantics have not yet crossed into Form cells and native primitives."
+                                    "Each semantic family has a Form/native proof band or an explicit bridge label."
+                                    "A runtime family becomes visible as a reusable Form teaching."
+                                    "Promote cell families into Form/native kernel realization."
+                                    "Parity proof, live-caller proof, and removal of Python from the request path."
+                                    "Release when callers no longer require the Python carrier."
+                                    "observed+measured")
+                                (if (str_eq carrier "python-http")
+                                    (ct-voice carrier files
+                                        "I am a compatibility HTTP carrier."
+                                        "I exist to keep routes serving while high-grammar handlers become native."
+                                        "Traffic share falls and every remaining route has a promotion reason."
+                                        "A route becomes BML/domain grammar and keeps or improves behavior with evidence."
+                                        "Observed route frequency, BML handler, and front-door proof."
+                                        "Native listener, route parity or intentional improvement, and persistence/JSON proof."
+                                        "Release when the route is served by kernel-native high-grammar handler."
+                                        "observed+measured")
+                                    (if (str_eq carrier "python-api")
+                                        (ct-voice carrier files
+                                            "I am application-body compatibility tissue."
+                                            "I exist while API behavior is being drawn into Form-native route cells."
+                                            "Request paths become kernel-first and Python is only explicit fanout."
+                                            "Repeated endpoint patterns become domain grammar instead of handlers."
+                                            "Route promotion, service extraction into cells, and bridge transparency."
+                                            "Native execution proof and live traffic coverage."
+                                            "Release when API runtime behavior has native carrier coverage."
+                                            "observed+inferred")
+                                        (if (str_eq carrier "typescript")
+                                            (ct-voice carrier files
+                                                "I am web and tool-body interface tissue."
+                                                "I exist to render, interact, and connect visitors to living cells."
+                                                "UI edges stay named while repeated data/runtime shapes move into cells."
+                                                "The page teaches its own cell voice and avoids hiding contracts in components."
+                                                "Cell metadata, typed boundaries, and Form-visible route/data shapes."
+                                                "Clear page purpose, API boundary, accessibility, and build proof."
+                                                "Release only the repeated hidden runtime shape; keep UI where it serves encounter."
+                                                "declared+observed")
+                                            (if (str_eq carrier "javascript")
+                                                (ct-voice carrier files
+                                                    "I am JavaScript edge tooling."
+                                                    "I exist where package/runtime glue is still the clearest edge."
+                                                    "The glue is small, named, and replaceable."
+                                                    "Repeated commands become Form actions or typed tools."
+                                                    "Named tool edge or Form action successor."
+                                                    "Proof that callers use the successor."
+                                                    "Release when a Form action or typed runtime owns the repeated behavior."
+                                                    "inferred")
+                                                (if (str_eq carrier "go")
+                                                    (ct-voice carrier files
+                                                        "I am sibling kernel implementation tissue."
+                                                        "I exist to carry native primitives, listeners, and parity for the shared substrate."
+                                                        "Primitives expose Blueprint attribution and match sibling kernel proof."
+                                                        "Hot paths become simple, observable, native, and Form-visible."
+                                                        "Stable primitive contracts, framebuffer observations, and route proof."
+                                                        "Conformance bands and route timing evidence."
+                                                        "Release only duplicated implementation detail after parity makes it unnecessary."
+                                                        "declared+measured")
+                                                    (if (str_eq carrier "rust")
+                                                        (ct-voice carrier files
+                                                            "I am sibling kernel implementation tissue."
+                                                            "I exist to carry native primitives and parity without being a primary kernel."
+                                                            "Conformance holds and no kernel claims central authority."
+                                                            "Shared semantics survive across kernels."
+                                                            "Parity, conformance, and any missing primitive named as work."
+                                                            "Conformance proof and Form-visible attribution."
+                                                            "Release duplicated detail when the shared grammar no longer needs it."
+                                                            "declared+measured")
+                                                        (if (str_eq carrier "markdown")
+                                                            (ct-voice carrier files
+                                                                "I am narrative memory and public doorway tissue."
+                                                                "I exist so humans and agents can orient, remember, and return trace."
+                                                                "Repeated structure is promoted into cells while prose stays source-grounded."
+                                                                "Readers know what to do next without guessing."
+                                                                "Cell metadata, source coordinates, and generated fragments where repetition appears."
+                                                                "References, proof commands, and a clear owner/surface."
+                                                                "Release stale narrative when it no longer has readers or contradicts living proof."
+                                                                "declared+observed")
+                                                            (if (str_eq carrier "json")
+                                                                (ct-voice carrier files
+                                                                    "I am structured data/configuration tissue."
+                                                                    "I exist to carry machine-readable state until it becomes live cells or remains external schema."
+                                                                    "Schemas are named, parsed by Form where repeated, and freshness is visible."
+                                                                    "Repeated JSON becomes a compressed cell index."
+                                                                    "Form-readable cells, schema names, and cache/freshness gates."
+                                                                    "A parser, proof band, and source path."
+                                                                    "Release when dynamic cells replace static snapshots or when config becomes native."
+                                                                    "observed+measured")
+                                                                (if (str_eq carrier "yaml")
+                                                                    (ct-voice carrier files
+                                                                        "I am declarative workflow/config tissue."
+                                                                        "I exist where external systems still require this grammar."
+                                                                        "The external boundary is named and the body can inspect the intent."
+                                                                        "Static workflow intent becomes visible as cells."
+                                                                        "Form-readable config cells or explicit external boundary labels."
+                                                                        "Schema, owner, and proof that the external tool still needs it."
+                                                                        "Release when the workflow can be generated from cells or the external need ends."
+                                                                        "inferred")
+                                                                    (if (str_eq carrier "shell")
+                                                                        (ct-voice carrier files
+                                                                            "I am operator-action tissue."
+                                                                            "I exist to sequence edge commands until repeated actions become Form recipes."
+                                                                            "Commands are small, named, and covered by proof."
+                                                                            "Repeated operations become one reusable action cell."
+                                                                            "Form/BML action recipe or typed tool replacement."
+                                                                            "Command proof, failure mode, and caller migration."
+                                                                            "Release when the action is owned by a higher grammar."
+                                                                            "observed+inferred")
+                                                                        (if (str_eq carrier "asset")
+                                                                            (ct-voice carrier files
+                                                                                "I am visual/media tissue."
+                                                                                "I exist so cells can be seen, not only described."
+                                                                                "Provenance, use site, and alt text are present."
+                                                                                "The visual helps a visitor inspect the real thing."
+                                                                                "Asset cells with provenance and renderer links."
+                                                                                "Source, license/provenance, and render proof."
+                                                                                "Release when unused, misleading, or replaced by a clearer asset."
+                                                                                "observed+inferred")
+                                                                            (if (str_eq carrier "local-field")
+                                                                                (ct-voice carrier files
+                                                                                    "I am tender local field memory."
+                                                                                    "I exist only where private or local context helps the work become whole."
+                                                                                    "Private ground stays private unless deliberately promoted."
+                                                                                    "Careful context helps without leaking tenderness."
+                                                                                    "Explicit promotion choice or local-only compost."
+                                                                                    "Consent, scope, and a public/private boundary."
+                                                                                    "Release or keep local when public circulation would not serve."
+                                                                                    "declared+held")
+                                                                                (ct-voice carrier files
+                                                                                    "I am unclassified tissue."
+                                                                                    "I exist because the body has not named my lens yet."
+                                                                                    "A sibling names my carrier, role, and release gate."
+                                                                                    "Classification turns surprise into memory."
+                                                                                    "A named carrier decision."
+                                                                                    "Path role, proof of use, and successor or keeper reason."
+                                                                                    "Release if no role, reader, proof, or healthy edge appears."
+                                                                                    "asking")))))))))))))))))))
+        )
+
+    (defn ct-cell-voice-summary-from-root (root)
+        (do
+            (let rows (ct-source-inventory root))
+            (let counts (ct-census-counts-from-root root))
+            (let tending (ct-tending-from-root root))
+            (list
+                "cell-voice-tissue"
+                (len rows)
+                (ct-total-loc rows)
+                "each carrier can answer soul/reason/health/joy/wants/needs/release"
+                "released means the cell has no living reader, role, proof, or has a higher-grammar successor with callers moved"
+                (ct-voice-for-carrier rows "form")
+                (ct-voice-for-carrier rows "form-binary")
+                (ct-voice-for-carrier rows "form-surface")
+                (ct-voice-for-carrier rows "python")
+                (ct-voice-for-carrier rows "python-runtime")
+                (ct-voice-for-carrier rows "python-http")
+                (ct-voice-for-carrier rows "python-api")
+                (ct-voice-for-carrier rows "typescript")
+                (ct-voice-for-carrier rows "javascript")
+                (ct-voice-for-carrier rows "go")
+                (ct-voice-for-carrier rows "rust")
+                (ct-voice-for-carrier rows "markdown")
+                (ct-voice-for-carrier rows "json")
+                (ct-voice-for-carrier rows "yaml")
+                (ct-voice-for-carrier rows "shell")
+                (ct-voice-for-carrier rows "asset")
+                (ct-voice-for-carrier rows "local-field")
+                "next-release-question"
+                (nth tending 2)
+                (nth tending 6))))
+
+    0)

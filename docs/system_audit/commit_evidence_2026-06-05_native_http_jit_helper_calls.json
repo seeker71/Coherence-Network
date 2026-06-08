@@ -1,0 +1,102 @@
+{
+  "date": "2026-06-05",
+  "thread_branch": "codex/native-http-stack-architecture-20260604",
+  "commit_scope": "Go native HTTP /api/ideas JIT helper-call pass and validation rebuild fix",
+  "files_owned": [
+    "form/form-kernel-go/jitabi/jitabi.go",
+    "form/form-kernel-go/jit.go",
+    "form/form-stdlib/tests/go-jit-value-helper-band.fk",
+    "form/validate.sh",
+    "docs/PRODUCTION-SUBSTRATE.md",
+    "docs/coherence-substrate/form-language.md",
+    "docs/shared/agent-start-packet.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md",
+    "kernels/KERNEL_AS_ROUTER.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "cd form/form-kernel-go && go test ./...",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/go-jit-value-helper-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/go-jit-value-list-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/go-jit-band.fk",
+      "Go-only jit-stats probe for helper-call dispatch",
+      "curl native /api/_form/ideas-observation?limit=2&sort=marginal_cc&event_limit=1&warm=40",
+      "40 request native/public timing probe"
+    ],
+    "summary": "Static Form helper families now lower through the Go value ABI with scanner/string primitives; /api/ideas warmed JIT stats moved to 11 compile-failed / 76 warming / 9 compiled / 8 dispatch-hit, and validate.sh now rebuilds Go on any .go source change."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "reason": "No commit or PR created in this turn."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "Local native kernel probe used SSH tunnel to production Postgres; no deploy performed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Runtime feature validated locally but not committed, pushed, or deployed."
+  },
+  "idea_ids": [
+    "native-kernel-http-front-door"
+  ],
+  "spec_ids": [
+    "form-native-http-stack"
+  ],
+  "task_ids": [
+    "native-http-jit-helper-call-pass"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "unknown-agent",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "documentation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "Go-only helper probe: compiled + dispatch-hit for jit-wrap-digits",
+    "warmed observation: 11 compile-failed, 76 warming, 9 compiled, 8 dispatch-hit",
+    "framebuffer_event_rows=26394 after helper-call pass",
+    "native timing p50=564.986 ms p95=601.781 ms",
+    "public FastAPI timing p50=265.967 ms p95=1090.011 ms"
+  ],
+  "change_files": [
+    "form/form-kernel-go/jitabi/jitabi.go",
+    "form/form-kernel-go/jit.go",
+    "form/form-stdlib/tests/go-jit-value-helper-band.fk",
+    "form/validate.sh",
+    "docs/PRODUCTION-SUBSTRATE.md",
+    "docs/coherence-substrate/form-language.md",
+    "docs/shared/agent-start-packet.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md",
+    "kernels/KERNEL_AS_ROUTER.md"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Static Form helper families with scanner/string primitives compile through the Go JIT value ABI and reduce warmed /api/ideas compile failures while preserving real production route output.",
+    "public_endpoints": [
+      "http://127.0.0.1:19086/api/ideas?limit=2&sort=marginal_cc",
+      "http://127.0.0.1:19086/api/_form/ideas-observation?limit=2&sort=marginal_cc&event_limit=1&warm=40",
+      "https://api.coherencycoin.com/api/ideas?limit=2&sort=marginal_cc"
+    ],
+    "test_flows": [
+      "native route against production Postgres through local SSH tunnel",
+      "same-worker warmed JIT/framebuffer observation",
+      "native/public 40 request p50/p95 timing comparison",
+      "focused sibling JIT bands plus Go-only jit-stats dispatch probe"
+    ]
+  }
+}

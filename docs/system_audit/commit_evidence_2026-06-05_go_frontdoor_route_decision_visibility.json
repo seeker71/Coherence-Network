@@ -1,0 +1,92 @@
+{
+  "date": "2026-06-05",
+  "thread_branch": "codex/native-http-stack-architecture-20260604",
+  "commit_scope": "Go native front-door route decision visibility",
+  "files_owned": [
+    "form/form-kernel-go/server.go",
+    "form/form-kernel-go/server_test.go",
+    "docs/shared/agent-start-packet.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form/form-kernel-go && gofmt -w server.go server_test.go && go test ./...",
+      "cd form/form-kernel-go && go run . serve --port 18183 --upstream https://api.coherencycoin.com --stdlib ../form-stdlib --config /Users/ursmuff/.coherence-network/secrets/form-kernel-postgres-tunnel.json ../../deploy/front-door/api.bml",
+      "curl -sS -i -H 'Accept: application/json' -H 'X-Coherence-Agent: codex-route-visibility' http://127.0.0.1:18183/api/health",
+      "curl -sS -i -H 'Accept: application/json' -H 'Content-Type: application/json' -H 'X-Coherence-Agent: codex-route-visibility' -H 'User-Agent: coherence-route-visibility-probe/1.0' -X POST http://127.0.0.1:18183/api/substrate/form -d '{\"expression\":\"?lattice\",\"mode\":\"ast\"}'"
+    ],
+    "summary": "The Go front door now stamps route decisions with X-Form-Route-How, X-Form-Route-Where, X-Form-Route-When, and X-Form-Route-Who on both native BML handlers and Python fanout bridge responses."
+  },
+  "known_failed_attempts": [
+    {
+      "command": "cd form/form-kernel-go && gofmt -w server.go server_test.go && go test ./...",
+      "reason": "Initial fanout test used a newline-bearing outbound HTTP header value; Go rejected it before upstream dispatch.",
+      "resolution": "Use a valid actor header in the live fanout test and keep newline/tab sanitization covered in TestRouteDecisionHeadersShowWhereWhenWhoHow."
+    }
+  ],
+  "ci_validation": {
+    "status": "pending",
+    "reason": "No commit or PR created in this turn."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No production deploy performed. Local listener proof used the public production API as upstream for fanout."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local tests, native curl proof, fanout curl proof, and evidence validation passed, but CI/deploy validation has not run for this uncommitted worktree."
+  },
+  "idea_ids": [
+    "native-kernel-http-front-door"
+  ],
+  "spec_ids": [
+    "form-native-http-stack"
+  ],
+  "task_ids": [
+    "go-frontdoor-route-decision-visibility"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "unknown-agent",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "documentation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "Go test proof: cd form/form-kernel-go && go test ./... passed after the live fanout header fixture used a valid outbound HTTP header value.",
+    "Native route proof: local Go listener returned HTTP/1.1 200 OK with X-Form-Router: native-kernel-go, X-Form-Route-How: native-kernel-go, X-Form-Route-Where: route:api-health pattern:/api/health request:/api/health, X-Form-Route-Who: codex-route-visibility, and a Form-native health body.",
+    "Fanout proof: local Go listener returned HTTP/1.1 200 OK with X-Form-Router: fanout-python, X-Form-Route-How: fanout-python, X-Form-Route-Where: upstream:https://api.coherencycoin.com/api/substrate/form, X-Form-Route-Who: codex-route-visibility, and the public lattice result for POST /api/substrate/form.",
+    "Architecture memory updated to state that route-decision headers are first-class visibility for native and bridge paths, while fanout still does not count as high-grammar native promotion."
+  ],
+  "change_files": [
+    "form/form-kernel-go/server.go",
+    "form/form-kernel-go/server_test.go",
+    "docs/shared/agent-start-packet.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md",
+    "docs/system_audit/commit_evidence_2026-06-05_go_frontdoor_route_decision_visibility.json"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The Go kernel listener shows where, when, who, and how every matched native route or unmatched fanout route was decided at the front door.",
+    "public_endpoints": [
+      "http://127.0.0.1:18183/api/health",
+      "http://127.0.0.1:18183/api/substrate/form",
+      "https://api.coherencycoin.com/api/substrate/form"
+    ],
+    "test_flows": [
+      "matched BML route executes natively and stamps native-kernel-go route decision headers",
+      "unmatched substrate form POST fans out to the configured production upstream and stamps fanout-python route decision headers",
+      "fanout forwards route decision headers to the upstream request and returns them to the caller"
+    ]
+  }
+}

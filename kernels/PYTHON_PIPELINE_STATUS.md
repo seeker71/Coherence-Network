@@ -1,4 +1,8 @@
-# Python → Form → Native Kernel — pipeline status
+# Source → Form → Native Kernel — pipeline status
+
+This file name is historical. Read this page as the source-language migration
+status: Python-source demos were the first proof set, but the destination is
+Form-native recipes/cells realized by sibling kernels.
 
 > Where we are on the four-bullet destination Urs named on 2026-05-21:
 > 1. ALL Python talking to substrate → native Form (primary execution pipeline)
@@ -12,11 +16,29 @@ This document is the honest map of distance covered and distance remaining. Upda
 
 A bullet-by-bullet read of the four-bullet destination, with the live artifact each one points at:
 
-1. **ALL Python talking to substrate → native Form.** *In motion.* Three FastAPI utility endpoints (`/api/utils/coherence_weight`, `nodeid_distance`, `weighted_average`) carry their bodies as Form recipes via `serve_via_kernel`; the first substrate-touching endpoint (`/api/substrate/lattice/stats`) reads through kernel-native `http_get` + `_json_to_dict`. The kernel even serves HTTP directly (proof-of-shape `form-kernel-rust serve`). PyO3 inline removes the subprocess seam — kernel calls run sub-millisecond in the API process address space. Substrate-write transmutation is the next major arc.
+1. **Compatibility code talking to substrate → native Form.** *In motion.* Three
+   utility endpoint bodies (`/api/utils/coherence_weight`, `nodeid_distance`,
+   `weighted_average`) carry their compute as Form recipes via
+   `serve_via_kernel`; the first substrate-touching endpoint
+   (`/api/substrate/lattice/stats`) reads through kernel-native `http_get` +
+   `_json_to_dict`. The kernel serves HTTP directly in the router/front-door
+   work, and Go now serves BML route catalogs against production Postgres. PyO3
+   inline removed the subprocess seam for the bridge path; the front-door goal
+   is to remove the bridge path from promoted routes entirely.
 
-2. **ALL file types parseable via Form-native BMF grammars.** *First cell sprouted.* Python arithmetic shapes (`a-b`, `x*y`, `l/r`, `p**q`) parse through `form-stdlib/grammars/python-bmf.fk` driven by the kernel — sibling-validated on Go, Rust, TypeScript (136/136 in `./validate.sh`). All five gates from [`PYTHON_BMF_CONTRACT.md`](PYTHON_BMF_CONTRACT.md) — G1 (rule dispatcher), G2 (statement grouping), G3 (precedence), G4 (closure interpreter), G5 (template-machinery overlap), G6 (binary entry-point orchestration) — are closed (PRs #2087, #2092, #2100, #2101). **CTOR Shape B** (PRs #2113, #2119, #2122) lands inter-path NodeID equality at the math-primitive layer: Python-source `+ - * / %` interns as `RBasic.MATH-12` and `== != < <= > >=` as `RBasic.COMPARE-13`, with the same Blueprint a hand-built pure-Form recipe interns to. See [`CTOR_UNIFICATION_PLAN.md`](CTOR_UNIFICATION_PLAN.md) for the full closing-shape map and the future Shape C walk that preserves dialect *articulations* over the shared identity.
+2. **ALL file types parseable via Form-native BMF grammars.** *First cell
+   sprouted.* Python arithmetic shapes (`a-b`, `x*y`, `l/r`, `p**q`) were the
+   first source-language proof through `form-stdlib/grammars/python-bmf.fk`,
+   sibling-validated on Go, Rust, TypeScript (136/136 in `./validate.sh`). All
+   gates from [`PYTHON_BMF_CONTRACT.md`](PYTHON_BMF_CONTRACT.md) are closed for
+   that proof set. The lesson generalizes: source articulations lower to shared
+   Form Blueprint/Recipe identity; Python is one articulation, not the center.
 
-3. **Compile any file → Form-recipe binary the kernel CLI runs standalone.** *Routine for the demo set.* Every demo in `parity_suite.sh` (16 entries) compiles to `.fk` and runs through `form-kernel-rust` standalone. The bootstrap emit path (`lang-python-fk.ts`) is named for compost in [`BOOTSTRAP_COMPOST_MANIFEST.md`](BOOTSTRAP_COMPOST_MANIFEST.md); the Form-native emitter is the second half of bullet 2.
+3. **Compile any file → Form-recipe binary the kernel CLI runs standalone.**
+   *Routine for the demo set.* Every demo in `parity_suite.sh` compiles to `.fk`
+   and runs through `form-kernel-rust` standalone. The bootstrap emit path is
+   named for compost in [`BOOTSTRAP_COMPOST_MANIFEST.md`](BOOTSTRAP_COMPOST_MANIFEST.md);
+   source compilers and emitters should live as Form recipes.
 
 4. **Framebuffer-driven optimization → same OOM as Python.** *Met and exceeded.* `form-kernel-rust` is 1.8× faster than CPython on the recursion workload (24.08ms vs 41.79ms per iter). Width-tagged trace dispatch is named as a separate breath.
 
@@ -33,13 +55,13 @@ The body senses both **what it's carrying** and **how much it has walked**. In s
 ## The pipeline that runs today (verified)
 
 ```
-Python source bytes
+legacy source bytes (Python demo set)
     ↓
-parsePython (TS BMF parser, lang-python.ts)
+source parser (bootstrap TS BMF parser for this demo set)
     ↓
 Form recipe tree (NodeIDs in substrate)
     ↓
-emitFk (lang-python-fk.ts) ← compiles Python CTORs to kernel-native arms
+emitFk (bootstrap path) ← compiles source CTORs to kernel-native arms
     ↓
 .fk file (S-expression Form binary, text-encoded)
     ↓
@@ -48,7 +70,7 @@ form-kernel-rust native binary (zero Python in execution path)
 result
 ```
 
-**Three runtimes produce identical results** for every demo in the parity suite:
+**Three carriers produce identical results** for every demo in the parity suite:
 - CPython
 - TS evalPython (the bootstrap evaluator)
 - form-kernel-rust native binary

@@ -45,7 +45,7 @@ WEB_ROUTES_MANIFEST_PATH = REPO_ROOT / "api" / "app" / "data" / "web_routes.json
 # Directories that carry source code and would benefit from an INDEX.
 # (path, file_glob, label)
 TARGETS: list[tuple[str, str, str]] = [
-    ("api/app/routers",   "*.py",  "API routers — every HTTP endpoint surface"),
+    ("api/app/routers",   "*.py",  "Python bridge/API routers — current endpoint carrier and upstream tail while Form-native routes are promoted"),
     ("api/app/services",  "*.py",  "API services — business logic and graph operations"),
     ("api/app/models",    "*.py",  "API models — Pydantic + ORM shapes"),
     ("api/tests",         "*.py",  "API tests — flow-centric"),
@@ -58,6 +58,7 @@ TARGETS: list[tuple[str, str, str]] = [
 # Directories that already have an INDEX. We only show them in MANIFEST.
 EXISTING_INDEXES = [
     ("CLAUDE.md", "Body tending practice + Quick Lookup table"),
+    ("docs/PRODUCTION-SUBSTRATE.md", "Current Hostinger/VPS topology, internal Postgres, and native-kernel DB probe path"),
     ("specs/INDEX.md", "All specs, grouped by parent idea (auto-generated)"),
     ("ideas/INDEX.md", "Super-ideas (16) across the 6 pillars"),
     ("docs/vision-kb/INDEX.md", "Living Collective wiki — concepts, axes, lineage"),
@@ -221,6 +222,14 @@ def render_manifest(targets: list[tuple[str, Path, list[Path]]]) -> str:
         "> An agent landing here costs ~400 tokens to know which INDEX to",
         "> drill into next, then ~1500 tokens to know which file to read.",
         "> Total cost to locate any file: under 2K tokens.",
+        "",
+        "## Agent entry (read first)",
+        "",
+        "| Doc | Purpose |",
+        "|---|---|",
+        "| [docs/shared/agent-start-packet.md](docs/shared/agent-start-packet.md) | **First file for any agent** — Form-native runtime primary surface, Python bridge/bootstrap compost, read-only query default |",
+        "| [docs/PRODUCTION-SUBSTRATE.md](docs/PRODUCTION-SUBSTRATE.md) | **Current production substrate** — Hostinger/VPS topology, internal Postgres credential carriers, native-kernel DB probe path |",
+        "| [docs/coherence-substrate/INDEX.md](docs/coherence-substrate/INDEX.md) | Substrate + Form notation drill-down |",
         "",
         "## Narrative layer (existing)",
         "",

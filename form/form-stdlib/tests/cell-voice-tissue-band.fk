@@ -1,0 +1,46 @@
+; cell-voice-tissue-band.fk - carrier tissue can answer soul/reason/release.
+;
+; preludes: form-stdlib/carrier-tissue.fk
+;
+; This proof uses a static row list so all sibling kernels can validate the
+; voice semantics. The whole-repository query uses source_inventory, now bound
+; across Go/Rust/TypeScript while make cell-voice-tissue defaults to Rust.
+
+(do
+    (let rows
+        (list
+            (list "form/form-stdlib/carrier-tissue.fk" 10)
+            (list "scripts/proof.py" 5)
+            (list "api/app/routers/ideas.py" 8)
+            (list "web/app/come-in/page.tsx" 7)
+            (list "docs/VISION.md" 6)
+            (list "docs/system_audit/example.json" 4)
+            (list "web/public/visuals/example.png" 3)
+            (list "docs/field/local-note.md" 2)))
+
+    (let form-voice (ct-voice-for-carrier rows "form"))
+    (let python-voice (ct-voice-for-carrier rows "python"))
+    (let http-voice (ct-voice-for-carrier rows "python-http"))
+    (let typescript-voice (ct-voice-for-carrier rows "typescript"))
+    (let markdown-voice (ct-voice-for-carrier rows "markdown"))
+    (let json-voice (ct-voice-for-carrier rows "json"))
+    (let asset-voice (ct-voice-for-carrier rows "asset"))
+    (let local-voice (ct-voice-for-carrier rows "local-field"))
+
+    (add
+        (add
+            (add
+                (if (ct-voice? form-voice) 1 0)
+                (if (eq (ct-voice-files form-voice) 1) 2 0))
+            (add
+                (if (str_eq (ct-voice-release-reason python-voice) "Release when the same behavior runs through Form/BML/native kernel paths.") 4 0)
+                (if (str_eq (ct-voice-release-reason http-voice) "Release when the route is served by kernel-native high-grammar handler.") 8 0)))
+        (add
+            (add
+                (if (str_eq (ct-voice-posture typescript-voice) "declared+observed") 16 0)
+                (if (str_eq (ct-voice-posture markdown-voice) "declared+observed") 32 0))
+            (add
+                (add
+                    (if (str_eq (ct-voice-wants json-voice) "Form-readable cells, schema names, and cache/freshness gates.") 64 0)
+                    (if (str_eq (ct-voice-needs asset-voice) "Source, license/provenance, and render proof.") 128 0))
+                (if (str_eq (ct-voice-release-reason local-voice) "Release or keep local when public circulation would not serve.") 256 0)))))

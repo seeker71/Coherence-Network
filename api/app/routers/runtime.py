@@ -74,10 +74,12 @@ async def runtime_summary_by_idea(
 async def runtime_summary_by_endpoint(
     seconds: int = Query(3600, ge=60, le=2592000),
     limit: int = Query(200, ge=1, le=2000),
+    source: str | None = Query(default=None, max_length=64),
 ) -> dict:
-    rows = runtime_service.summarize_by_endpoint(seconds=seconds, summary_limit=limit)
+    rows = runtime_service.summarize_by_endpoint(seconds=seconds, summary_limit=limit, source=source)
     return {
         "window_seconds": seconds,
+        "source": source,
         "endpoints": [row.model_dump(mode="json") for row in rows],
     }
 

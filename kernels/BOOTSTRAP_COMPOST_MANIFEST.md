@@ -33,6 +33,49 @@ This is the readiness map. The compost is downstream of green gates.
 
 ---
 
+## Dynamic candidate manifest vs release ledger
+
+This file is a **static release ledger**, not the whole candidate universe.
+Path-named cells declare themselves dynamically through `make wellness`:
+their file path is already a coordinate, and repeated lexical/path signals
+classify their metabolic state into source grammar/parser residue, recipe
+realization/runtime semantics, domain vocabulary/cell authoring,
+format/source frontend, substrate identity/persistence infrastructure, or
+observation/proof metabolism.
+
+Anything static that this body relies on must name its **wants_dynamic** vector.
+Static means the cell is asking for a living successor, not asking to be ignored:
+`make wellness` names the static surface, static signals, desired dynamic
+successor, and the resource reason so energy and attention can choose it when it
+is the right next spend.
+
+Static edges are prime release candidates. When the same edge repeats between
+cells, the repeated edge events compress into an embodied edge category with a
+reputation count; the body does not need to preserve every event when the count
+on the named category carries the useful signal. `make wellness` therefore
+reports `edge_reputation` for static-to-dynamic asks: source cell
+`--[wants_dynamic count=N]-->` successor cell, with `compressed_edges` naming
+which repeated categories fed the count.
+
+A cell does **not** need a hand-written row here to be a transmutation
+candidate. It appears dynamically when it has repeated bootstrap/Python/host
+signals and a measured weight. The static row is added when the work is ready
+for attestation:
+
+1. The path-named cell has a clear successor path (`.fk`, BML, domain grammar,
+   kernel primitive, native persistence contract, or native route handler).
+2. The release gate is named as a concrete proof, not a hope.
+3. The live callers/consumers are known enough to tell whether the old carrier
+   still serves something.
+4. The proof command can be run by the next agent.
+
+Release from this ledger means the replacement path is proven, live callers no
+longer require the old carrier, and the evidence record names the deletion or
+rewrite. Until then, the dynamic wellness read remains the living front door;
+this document records attested gates and lifecycle motion.
+
+---
+
 ## What the destination shape is
 
 When all phases complete:

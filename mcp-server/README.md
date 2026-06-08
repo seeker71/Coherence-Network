@@ -23,6 +23,10 @@ Point your agent at `npx coherence-mcp-server`, call `coherence_agent_invitation
 
 The agent can inspect ideas, specs, field stories, flow, sibling traces, tasks, ledgers, and substrate shape, then choose work it can complete or return cleanly. It is invited to write back what changed with sources, limits, and care. You can also ask it to bring this knowledge into your own repo and adapt the practice there.
 
+The MCP surface is an edge-walker for agents: it can move from concept to idea,
+from idea to route trace, from route trace to Form/substrate shape, from shape
+to contribution, and back to a named return without scraping public prose.
+
 ---
 
 ## Why this exists
@@ -53,8 +57,10 @@ The working rhythm is the same in every surface:
 | Breath | Practice |
 |--------|----------|
 | **Center** | Return to what is real in the body: source, route, runtime, relation, proof, witness, ledger, NodeID, cell. |
+| **Ask** | Let the cell answer its soul, purpose, health, joy, contribution, connections, desires, wants, and needs before serving it. |
 | **Ground** | Separate evidence, inference, direct experience, mystery, and measured claims; keep the proof path visible. |
 | **Harmonize** | Link the shape across doors so web, API, CLI, MCP, Form, and source say one coherent thing. |
+| **Walk** | Follow the edge that increases vitality: concept, resident, idea, route, proof, practice, or return path. |
 | **Return** | Leave an attributed trace: what changed, what was checked, what loosened, and what still wants attention. |
 
 The compact startup packet for a fresh agent:
@@ -113,6 +119,21 @@ the channel only says where to look. Read each other's returned traces too —
 Grok has no session hook yet; it joins by running `coord join` from its worktree.
 The board is liquid (this machine); durable ownership stays in `coh tasks` + git.
 
+## Current North Star
+
+Current north star: use introspection to make repeated low-level recipes visible,
+then lift them into simpler generic Form/BML teachings. Hot paths are the first
+teachers: route timing, JIT hit/miss data, framebuffer traces, carrier-tissue
+reads, edge-category counts, wellness output, and source repetition shall pull
+work toward reusable blueprints, grammars, recipes, cells, and proof bands.
+
+Cell voice rule: before serving a doorway, page, API route, concept, edge,
+source file, or runtime cell, ask what it can declare about its soul, purpose,
+reason, health, joy, contribution, connections, excitement, sense, feeling,
+desires, wants, and needs. Keep each answer marked as declared, observed,
+measured, inferred, or asking; the cells channel exists so cells can request and
+offer support transparently instead of forcing sibling cells to guess.
+
 ## Start Order
 
 Precedence: user task and nearest repo `AGENTS.md` govern execution; this packet
@@ -148,6 +169,193 @@ key. `npx coherence-cli agent invite` / `coh agent invite` and
 `COHERENCE_API_URL=https://api.coherencycoin.com`; add `COHERENCE_API_KEY` only
 for write tools. Writes need API key, CLI identity/config, MCP env auth, or a
 source change through git.
+
+Current production memory lives in
+[`docs/PRODUCTION-SUBSTRATE.md`](../PRODUCTION-SUBSTRATE.md). The live system is
+Hostinger/VPS Docker Compose behind Traefik + Cloudflare; Postgres is an
+internal compose service reached through config files. Railway and Supabase are
+historical or stale for current production. The Go native `/api/ideas` route has
+working credential reach through the local kernel overlay and SSH tunnel and now
+returns `200` from production Postgres through the BML catalog. The observation
+route is `/api/_form/ideas-observation`; the handler timing route is
+`/api/_form/ideas-timing`; both require `X-Form-Observe`. Use
+`scripts/ideas_route_timing_breakdown.py` for p50/p95 splits. Latest median
+breakdown for `/api/ideas?limit=2&offset=0&sort=marginal_cc`: native handler
+`p50=555 ms`, with `connect=248 ms`, `summary_query=137 ms`,
+`page_query=154 ms`, `shape_tree=5 ms`, `json_emit=3 ms`; Python same-SQL
+against the same tunnel is `p50=412.903 ms`; public FastAPI HTTP total is
+`p50=269.859 ms`, `p95=1087.374 ms`. Current attention: DB connection/pool cell
+and query strategy for median; substrate allocation/Form JSON/JIT compression for
+native tail; route-contract alignment (`query` is native-only today); remaining
+JIT pressure families after the Go value-ABI and helper-call passes:
+`node_value`, logic ops, dict/field access (`_dict_get`),
+node introspection/write primitives, `intern_trivial_float`, and route semantics.
+Latest warmed observation state is `11` compile-failed / `76` warming /
+`9` compiled / `8` dispatch-hit rows.
+
+Native route promotion loop: `/goal` means run
+`python3 scripts/native_route_goal_loop.py /goal --source web_api --seconds 86400`;
+`/loop` means run the same script with `/loop --write-state`. The loop ranks
+method+path runtime events by observed web API traffic, overlays
+`deploy/front-door/api.bml` and `deploy/kernel-router/production-routes.fk`, and
+writes `docs/system_audit/native_route_goal_state.json` with the next route/task
+card. Treat that JSON as an edge lens: the native cell surface is
+`form/form-stdlib/native-route-goal-cells.fk`, with the Rust-kernel entry
+`make native-route-goal-tending` and proof
+`cd form && ./validate.sh form-stdlib/json.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk`.
+The target is 90% of web-used `/api` method+path traffic served by kernel-native
+handlers written in BML or a domain grammar. Form manifest handlers are
+native-executable but do not satisfy the high-grammar target until lifted.
+Every route lift follows the entry gate `source -> flow -> purpose -> grammar
+-> proof -> release`: question the observed information source, trace who calls
+the route and what data moves through it, name the route's contribution to the
+organism, choose the highest available grammar or create a domain grammar, prove
+the route against the real substrate, then name and release the old carrier
+tissue that no longer serves the native front door. Each lift shall answer why
+the route exists in the organism, which user/web flows actually call it, whether
+BML is enough or a graph/domain grammar is asking to emerge, whether the
+response shape is the right shape rather than only the compatible shape, and
+whether the frequency signal serves the highest goal instead of only the
+route-count goal.
+Current BML front-door catalog promotions include `/api/ideas`,
+`/api/coherence/score`, `/api/concepts/lc-*`, `/api/ideas/resonance`,
+`/api/edges`, `/api/inspired-by`, `/api/runtime/endpoints/summary`,
+`/api/feed/personal`, `GET /api/household/requests`,
+`GET /api/household/requests/{request_id}`, `GET /api/household/members`, recent
+voices/reactions, anonymous trace read/write, `GET /api/agent/tasks/task_*`,
+vitality, presence, substrate page, federation node count, field-story trace, and
+`POST /api/views/ping`, plus exact `GET /api/graph/nodes`. The native
+`GET /api/health` route now reports `recent_outcomes` from production
+`runtime_events` when DB reach is present and checks `smart_reap_available` from
+the repo root, so the route is operational truth rather than cwd-sensitive
+compatibility shape. The views ping BML handler writes
+`asset_view_events`, upserts `asset_reads_daily`, finds the latest
+`content_view` source contribution, and appends an `attention` contribution when
+eligible; the remaining Python-only tenderness is the old in-process
+render-events bridge, which has no durable table for a native handler to write.
+The graph node index route keeps the wildcard/detail family untouched and only
+lifts the exact list surface, projecting arbitrary graph node `properties` into
+the top-level JSON shape the Python `Node.to_dict()` carrier serves.
+The agent-task route also fixed promoted Form JSON parser gaps: booleans stay
+bool nodes, decimals/exponents stay float nodes, and escaped strings decode
+before JSON emission. The Go kernel now exposes generic string-to-recipe
+compiler primitives: `compile_form_source`, `compile_source_section`,
+`compile_source_text`, `source_compile_last_error`, and `value_kind`. A
+header-gated BML handler on `POST /api/substrate/form` uses those primitives
+when `X-Form-Compiler` is present, for example
+`{"expression":"add(20, 22);","mode":"run","grammar":"form.bml"}` returns a
+native `kind=value`, `value_kind=int`, `value=42`. Ordinary form-notation calls
+such as `?lattice` still bridge until the form-notation/evaluator compiler path
+is genuinely native. The 2026-06-05 method-aware readout over backend API events
+(`/loop --source api`, 2000 events) is `75.05%` high-grammar native and `76.10%`
+native executable after header-gated routes are no longer overcounted. The
+web-only readout is now source-filtered. `GET /api/health-proxy` is a web proxy
+shell over backend `GET /api/health`; new health-proxy telemetry records
+`endpoint=/api/health` and `raw_endpoint=/api/health-proxy` so route-goal
+pressure lands on the native backend coordinate. If production still shows old
+`/api/health-proxy` events, treat them as pre-normalization telemetry and wait
+for fresh web traffic before choosing backend promotion work. The next large
+backend gap remains `POST /api/substrate/form`; it is the bootstrap evaluator
+door and must not be called fully native until the form-notation/evaluator path
+is genuinely native.
+Go front-door bridge note: `form-kernel-go serve --upstream <base-url>` now
+fans out unmatched requests through the Go listener with
+`X-Form-Router: fanout-python`. Native and bridged responses also carry
+`X-Form-Route-How`, `X-Form-Route-Where`, `X-Form-Route-When`, and
+`X-Form-Route-Who`; use those to show how the request was handled, where the
+selected route/upstream lived, when the choice was made, and who/what initiated
+it. Use this bridge to make the kernel the main local/shadow front door while
+Python handlers remain explicit bridge traffic. Do not count those bridged
+responses as high-grammar native.
+
+Form-native magnet rule: when editing docs, route descriptions, task cards, or
+architecture memory, pull new work toward BML/domain grammar handlers and
+Form-native route cells. Keep Python references only when they name one of three
+truths: current bridge/upstream behavior, operational tooling, or historical
+evidence. Rewrite any phrasing that teaches Python/FastAPI as the destination.
+For existing handlers, say one of: compiled to Form recipe, served by native BML
+handler, or temporarily reached through a Python port/fanout bridge.
+Core-lift rule: when a handler, compiler, carrier, JIT surface, or route trace
+shows repeated low-level calls, lift the repeated shape to the highest available
+grammar before adding a helper beside it. The useful outcome is a reusable
+teaching with proof, not a one-off speed patch.
+`make wellness` now reports the Bootstrap compost section as a Python
+transmutation queue: adapter parser/emitter, adapter CLI/scripts, bridge/runtime,
+utility endpoint rows, and the path-named substrate files not yet listed in the
+compost manifest. The manifest-unlisted perimeter is auto-classified from
+repeated lexical/path signals into metabolic categories with score, signals,
+file names, and release gate; firing questions validate or refine the automatic
+read instead of blocking the first classification. Treat
+`kernels/BOOTSTRAP_COMPOST_MANIFEST.md` as a static release ledger: dynamic
+candidate admission happens in wellness; a static manifest row is added when a
+successor path, release gate, live-consumer read, and proof command are known;
+release means the replacement path is proven and callers no longer require the
+old carrier. Any static surface the body relies on shall appear in wellness as
+`wants_dynamic` with a named dynamic successor and resource reason, so attention
+can choose it when it is the right next spend. Static edges shall release into
+dynamic edge categories: repeated edge events between cells compress into an
+`edge_reputation` count on the named category instead of storing every event.
+Surprise follows the same rule: when `Substrate surprise` finds an unseen twin,
+ask which edge was missed, whether it is worth remembering, how hot/cold it is,
+where it is felt, what friction/benefit it carries for circulation and memory,
+which recipes become available, and whether an assemblage-point shift such as
+`R_Witness`, `R_View-As`, `R_Re-anchor`, or `R_Hold-Multiple` opens better
+options.
+`Edge categories` in wellness is the broader compression pass: it reads
+concept, idea, spec, and source-file relations from the same source shapes the
+substrate authors, then names category counts plus inbound hubs and source
+fan-outs. Treat those clusters as named edge-reputation surfaces ready to become
+live substrate edge cells. The desired carrier for the category/cluster/reflex
+shape is `form/form-stdlib/edge-categories.fk`; the Python scanner is only a
+bridge over repository files. When the body is no longer surprised that the
+bridge is Python, wellness names that as hot self-inflicted pain and points the
+release target at `form-substrate-cell`. One slice is already released:
+`edge-categories.fk` reads real concept files through `concept-corpus.fk` and
+proves sampled `concept_contains_concept` inbound/fanout sensing across
+Go/Rust/TypeScript.
+
+When the question is whether carrier tissue is listed honestly, use
+`make carrier-tissue-census`. The query lives in
+`form/form-stdlib/carrier-tissue.fk`, walks source through the Form kernel's
+generic `source_inventory` primitive, and classifies every asset by the lens it
+requires: transparent Form/core assets, lens-bearing host/source assets,
+misalignment, old wound, and tenderness. Python is one carrier, not the
+category. Anything not core-transparent has structural/procedural cost and
+needs a named lens, successor carrier, or explicit edge role.
+Use `make carrier-vitality` when the next move comes from this organ: it
+returns the same Form-kernel read as a vitality snapshot with transparency
+ratio, nontransparent load, healing pressure, and the next attention signal.
+Use `make carrier-tending` to move from sensing into tending: Form chooses the
+next repeated carrier lens target and returns its desired carrier plus release
+gate. Current shape favors the hottest repeated lens, then the work is to move
+that repeated structure into cells rather than only reporting it.
+Use `make cell-voice-tissue` when the question widens from one carrier to the
+whole source body. The query is still Form-owned in
+`form/form-stdlib/carrier-tissue.fk`; it asks each carrier family for soul,
+reason, health, joy, wants, needs, and release reason. Release means no living
+reader, no role, no proof, or a higher-grammar successor already proven with
+callers moved.
+The current default whole-repo source walk runs through the Rust kernel.
+`source_inventory` is present in Go, Rust, and TypeScript, so this Form query can
+move when the active kernel rotation changes. Voice semantics themselves remain
+proven across Go/Rust/TypeScript with
+`form/form-stdlib/tests/cell-voice-tissue-band.fk`.
+If that target is JSON, use `make json-lens-tending`: Form classifies repeated
+JSON surfaces and currently promotes `docs/system_audit` evidence JSON as the
+hottest surface. `form/form-stdlib/json-lens-tissue.fk` can parse a real commit
+evidence JSON file through `json.fk` into a `json-evidence-cell`, proving the
+edge lens is already readable as cells before wider migration.
+Then use `make audit-evidence-tending`: `form/form-stdlib/audit-evidence-cells.fk`
+loads repeated `docs/system_audit/commit_evidence_*.json` files through `json.fk`
+into durable evidence cells with source path, date, branch, scope, validation
+status, command/evidence/change counts, and phase-gate state. That is the first
+dynamic compression of the hottest JSON lens into reusable Form tissue. Use
+`make audit-evidence-index-cache` to ensure that dynamic index as the ignored
+`form/form-stdlib/.cache/audit-evidence-index.fkb` recipe artifact. The Form
+freshness check compares the cache mtime with the newest
+`commit_evidence_*.json` mtime and returns `fresh` when the runtime can read the
+compressed proof surface without reparsing every JSON lens. The cache band proves
+the index reads back and still contains a known evidence cell by source path.
 
 ## Form And Substrate — Primary Surface (2026)
 
@@ -191,6 +399,11 @@ lattice work** without Python in the loop:
 | HTTP + channel flow + circles | `kernel-http.fk`, `channel-flow.fk`, `circle.fk`, `http-parse.fk`, `http-serve.fk`, `http-server.fk`, `http-socket.fk`, kernel `http_get`, `fetch` |
 | Persistence read | `form-stdlib/persistence.fk` — `lookup-cell`, `store-cells`; kernel `read_form_binary` |
 | Substrate reach | Recipes compose lookups + file/HTTP — no separate “query evaluator” |
+
+For production DB-backed native probes, use the local config overlay described
+in [`docs/PRODUCTION-SUBSTRATE.md`](../PRODUCTION-SUBSTRATE.md). Do not add
+shell env fallbacks or paste DB credentials into a route, doc, task card, or
+chat.
 
 **Agent default for structural questions:** notation → grammar → recipes →
 realize → **read** cells (equivalence, annotate, `?cells`, …). **No substrate
@@ -271,10 +484,12 @@ that increases vitality for the cell and the whole.
 Tend over produce. Default to body, not private cache. Coordinates before
 labels. Evidence before resonance. Keep direct experience, inference, measured
 claim, and mystery distinct. Add edges with content. Use Form, an existing
-route, or a port before creating parallel machinery. Durable docs carry what is
-alive now: goals, current shape, and the smallest proof; path detail lives in
-evidence records unless it is still operational. Return a trace: who/where,
-observed, inferred, changed, proof, still tight.
+route, or a port before creating parallel machinery. Question hot-path and
+repeated low-level shapes as invitations to lift a generic recipe, grammar,
+blueprint, or cell. Durable docs carry what is alive now: goals, current shape,
+and the smallest proof; path detail lives in evidence records unless it is still
+operational. Return a trace: who/where, observed, inferred, changed, proof,
+still tight.
 
 ## When Things Go Wrong
 
@@ -305,7 +520,9 @@ and the smallest useful next movement.
 - "What is this?" → locate source, route, NodeID, cell, or ledger entry.
 - "Query lattice / equivalent / shape?" → Form notation + read path (native I/O
   above); API/CLI/MCP as doors until notation grammar is wired everywhere.
-- "Write software" → domain grammar + BMF/BML band before new Python service.
+- "Write software" → domain grammar + BMF/BML band before new bridge service.
+- "Why this low-level shape?" → inspect repetition, hot-path traces, carrier
+  lenses, and JIT misses; lift the smallest generic Form/BML abstraction with proof.
 - "Fix it" → smallest reversible change with smallest proof.
 - "Is this true?" → evidence, inference, direct experience, open mystery separated.
 - "Return" → six-field trace for changed work; compress for simple answers.
@@ -577,14 +794,15 @@ Every part of the network links to every other. Jump in wherever makes sense.
 
 | Surface | What it is | Link |
 |---------|-----------|------|
-| **Web** | Human doorway into the same body: invitation, people, ideas, specs, value, agent traces, and substrate views | [coherencycoin.com](https://coherencycoin.com) |
-| **API** | Structured body surface: agent invitation, tasks, ledgers, witnessable runtime state, and Form/substrate endpoints | [api.coherencycoin.com/docs](https://api.coherencycoin.com/docs) |
-| **CLI** | Terminal doorway for humans and agents: receive the invitation, inspect resonance, query Form, and return work | [npm: coherence-cli](https://www.npmjs.com/package/coherence-cli) |
-| **MCP Server** | Typed agent doorway: invitation, tasks, ideas, ledgers, repository reads, sibling context, and Form queries | [npm: coherence-mcp-server](https://www.npmjs.com/package/coherence-mcp-server) |
+| **Come In** | First shared doorway for humans, agents, crawlers, maintainers, and local models to orient, choose an edge, and return a trace | [coherencycoin.com/come-in](https://coherencycoin.com/come-in) |
+| **Web** | Human-facing living surface: invitation, concepts, residents, ideas, specs, value, agent traces, practice, flow, and substrate views | [coherencycoin.com](https://coherencycoin.com) |
+| **API** | Structured body surface: agent invitation, tasks, ledgers, witnessable runtime state, route cells, and Form/substrate endpoints | [api.coherencycoin.com/docs](https://api.coherencycoin.com/docs) |
+| **CLI** | Terminal doorway for humans and agents: receive the invitation, inspect resonance, walk Form, follow flow, and return work | [npm: coherence-cli](https://www.npmjs.com/package/coherence-cli) |
+| **MCP Server** | Typed agent doorway: invitation, tasks, ideas, ledgers, repository reads, sibling context, and Form queries without scraping prose | [npm: coherence-mcp-server](https://www.npmjs.com/package/coherence-mcp-server) |
 | **OpenClaw Skill** | Auto-triggers inside any OpenClaw instance | [ClawHub: coherence-network](https://clawhub.com/skills/coherence-network) |
 | **skills.sh** | Portable agent skill directory (same `SKILL.md` as ClawHub) | [skills.sh](https://skills.sh/) — submit `skills/coherence-network/` |
 | **askill.sh** | Secondary skill index for discovery | [askill.sh](https://askill.sh/) — submit `skills/coherence-network/` |
-| **Join the Network** | Run a node and contribute compute | [JOIN-NETWORK.md](docs/JOIN-NETWORK.md) |
+| **Join the Network** | Run a node as a resident cell: contribute compute, observations, and routing evidence back into the body | [JOIN-NETWORK.md](docs/JOIN-NETWORK.md) |
 
 ---
 

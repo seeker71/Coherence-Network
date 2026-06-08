@@ -1,8 +1,7 @@
 """Tests for /api/utils/weighted_average — transmuted under the habit pattern.
 
-The body of this endpoint runs as a Form recipe through form-kernel-rust
-when available, with Python fallback when the binary is missing. Either
-runtime returns the same float for the same inputs — guaranteed by
+The body of this endpoint runs as a Form recipe through the kernel. The source
+example and kernel siblings return the same float for the same inputs — guaranteed by
 form/form-kernel-ts/seedbank/python-adapter/scripts/parity_suite.sh.
 
 The test verifies:
@@ -19,8 +18,6 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
-from app.routers.utils import weighted_average_py
-
 BASE = "http://test"
 
 
@@ -48,12 +45,7 @@ class TestWeightedAverageEndpoint:
         assert data["average"] == 0.8125
         assert data["values"] == [0.5, 0.75, 1.0]
         assert data["weights"] == [0.25, 0.25, 0.5]
-        assert data["runtime"] in ("inline", "subprocess", "python-fallback")
-
-    @pytest.mark.anyio
-    async def test_python_fallback_agrees_with_recipe(self):
-        """The Python body (fallback) returns the same float as the recipe."""
-        assert weighted_average_py([0.5, 0.75, 1.0], [0.25, 0.25, 0.5]) == 0.8125
+        assert data["runtime"] in ("inline", "subprocess")
 
     @pytest.mark.anyio
     async def test_equal_weights_is_arithmetic_mean(self, client: AsyncClient):

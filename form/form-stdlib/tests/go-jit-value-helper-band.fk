@@ -1,0 +1,23 @@
+; go-jit-value-helper-band.fk — value ABI proof for helper-call lowering.
+;
+; The compiled root calls a sibling Form helper that uses scanner/string
+; primitives. Go should lower the helper family through the value ABI; sibling
+; kernels may fall back while preserving the same recipe result.
+
+(do
+    (defn jit-digit-prefix (s)
+        (substring s 0 (scan_run s 0 1)))
+
+    (defn jit-wrap-digits (s)
+        (str_concat "[" (str_concat (jit-digit-prefix s) "]")))
+
+    (let r0 (jit-wrap-digits "123abc"))
+    (let compiled (jit_compile "jit-wrap-digits"))
+    (let attempted (if (ge compiled 0) 1 0))
+    (let r1 (jit-wrap-digits "123abc"))
+    (let r2 (jit-wrap-digits "42!"))
+
+    (add attempted
+         (add (if (str_eq r0 "[123]") 1 0)
+              (add (if (str_eq r1 "[123]") 1 0)
+                   (if (str_eq r2 "[42]") 1 0)))))

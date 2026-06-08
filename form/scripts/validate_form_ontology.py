@@ -52,6 +52,7 @@ CATEGORY_NAME_ALIASES: Dict[str, Set[str]] = {
     "let": {"let"},
     "if-then": {"if"},
     "if": {"if"},
+    "match": {"match"},
     "fndef": {"defn"},
     "fncall": set(),  # default branch in each kernel — no explicit case
     "ident": set(),   # identifier-wrap path — no explicit case
@@ -96,7 +97,7 @@ def parse_ontology(path: Path) -> Tuple[List[Tuple[str, int, int]], List[Tuple[s
 #
 # For each kernel we produce: dict[verb_name -> KernelEntry], where a
 # KernelEntry is (category_label, inst_int_or_None). Category label is one
-# of "math", "compare", "logic", "block", "cond", "fndef", "fncall", "ident",
+# of "math", "compare", "logic", "block", "cond", "match", "fndef", "fncall", "ident",
 # "list", or "shape" for fixed-shape cases (let, defn, etc) we don't
 # decode further.
 # ----------------------------------------------------------------------------
@@ -121,13 +122,14 @@ def parse_go(path: Path) -> Dict[str, KernelEntry]:
         # case "name":
         case_re=re.compile(r'case\s+"([^"]+)"\s*:'),
         # next non-empty content should reference the cat constructor + instance.
-        cat_call_re=re.compile(r'\b(catMath|catCompare|catLogic|catBlock|catCond|catFnDef|catFnCall|catIdent)\s*\(\s*(R\w+)?\s*\)'),
+        cat_call_re=re.compile(r'\b(catMath|catCompare|catLogic|catBlock|catCond|catMatch|catFnDef|catFnCall|catIdent)\s*\(\s*(R\w+)?\s*\)'),
         cat_to_label={
             "catMath":    "math",
             "catCompare": "compare",
             "catLogic":   "logic",
             "catBlock":   "block",
             "catCond":    "cond",
+            "catMatch":   "match",
             "catFnDef":   "fndef",
             "catFnCall":  "fncall",
             "catIdent":   "ident",
@@ -146,13 +148,14 @@ def parse_rust(path: Path) -> Dict[str, KernelEntry]:
         text=text,
         # "name" =>
         case_re=re.compile(r'"([^"]+)"\s*=>'),
-        cat_call_re=re.compile(r'\b(cat_math|cat_compare|cat_logic|cat_block|cat_cond|cat_fndef|cat_fncall|cat_ident)\s*\(\s*(R\w+)?\s*\)'),
+        cat_call_re=re.compile(r'\b(cat_math|cat_compare|cat_logic|cat_block|cat_cond|cat_match|cat_fndef|cat_fncall|cat_ident)\s*\(\s*(R\w+)?\s*\)'),
         cat_to_label={
             "cat_math":    "math",
             "cat_compare": "compare",
             "cat_logic":   "logic",
             "cat_block":   "block",
             "cat_cond":    "cond",
+            "cat_match":   "match",
             "cat_fndef":   "fndef",
             "cat_fncall":  "fncall",
             "cat_ident":   "ident",
@@ -172,6 +175,7 @@ def parse_ts(path: Path) -> Dict[str, KernelEntry]:
         "MATH":    "math",
         "COMPARE": "compare",
         "LOGIC":   "logic",
+        "MATCH":   "match",
         "BLOCK":   "block",
         "COND":    "cond",
         "FNDEF":   "fndef",

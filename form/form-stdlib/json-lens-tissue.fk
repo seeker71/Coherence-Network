@@ -1,0 +1,153 @@
+; json-lens-tissue.fk - Form-owned tending for JSON carrier lenses.
+;
+; JSON is not the problem; JSON is a lens. Repeated JSON surfaces become
+; cells when their schema, source coordinates, and release gate are named.
+
+(do
+    (let JLT-TAG-RULE 65301)
+    (let JLT-TAG-TARGET 65302)
+
+    (defn jlt-tagged? (value tag arity)
+        (if (eq (len value) arity) (eq (nth value 0) tag) false))
+
+    (defn jlt-rule (matcher pattern surface desired-carrier release-gate private-display)
+        (list JLT-TAG-RULE matcher pattern surface desired-carrier release-gate private-display))
+    (defn jlt-rule? (rule) (jlt-tagged? rule JLT-TAG-RULE 7))
+    (defn jlt-rule-matcher (rule) (nth rule 1))
+    (defn jlt-rule-pattern (rule) (nth rule 2))
+    (defn jlt-rule-surface (rule) (nth rule 3))
+    (defn jlt-rule-desired-carrier (rule) (nth rule 4))
+    (defn jlt-rule-release-gate (rule) (nth rule 5))
+    (defn jlt-rule-private-display? (rule) (nth rule 6))
+
+    (defn jlt-target (surface files desired-carrier release-gate)
+        (list JLT-TAG-TARGET surface files desired-carrier release-gate))
+    (defn jlt-target? (target) (jlt-tagged? target JLT-TAG-TARGET 5))
+    (defn jlt-target-surface (target) (nth target 1))
+    (defn jlt-target-files (target) (nth target 2))
+    (defn jlt-target-desired-carrier (target) (nth target 3))
+    (defn jlt-target-release-gate (target) (nth target 4))
+
+    ; JLT-QUERY-RULES-BEGIN
+    (defn jlt-query-rules ()
+        (list
+            (jlt-rule "prefix" "docs/system_audit/" "system-audit-evidence" "audit evidence cells" "parse evidence JSON into Form cells and compress repeated commit proof schema" false)
+            (jlt-rule "prefix" "docs/presence-content/" "presence-content-data" "presence content cells" "load repeated presence payload structure into cells" false)
+            (jlt-rule "prefix" "docs/field/" "private-field-json" "private/local field cells or explicit compost" "keep local/private unless deliberately promoted" true)
+            (jlt-rule "prefix" "api/config/" "api-config" "configuration cells" "load repeated runtime config schemas as cells" false)
+            (jlt-rule "prefix" "web/" "web-config" "UI edge configuration cells" "name what stays UI edge and what becomes shared cells" false)
+            (jlt-rule "prefix" "config/" "root-config" "configuration cells" "load repeated config schemas as cells" false)
+            (jlt-rule "contains" "package.json" "package-manifest" "dependency manifest cells" "name dependency surfaces and keep package manager lens explicit" false)
+            (jlt-rule "suffix" ".json" "json-lens" "Form-readable cell data" "load repeated schemas/configs as cells or keep as external data with schema" false)))
+    ; JLT-QUERY-RULES-END
+
+    (defn jlt-default-rule ()
+        (jlt-rule "default" "" "unclassified-json" "named JSON carrier decision" "classify by source role, then promote or keep edge lens" false))
+
+    (defn jlt-ends-with? (text suffix)
+        (do
+            (let tlen (str_len text))
+            (let slen (str_len suffix))
+            (if (lt tlen slen)
+                false
+                (str_eq (substring text (sub tlen slen) tlen) suffix))))
+
+    (defn jlt-rule-matches? (path rule)
+        (if (str_eq (jlt-rule-matcher rule) "prefix")
+            (eq (str_find path (jlt-rule-pattern rule) 0) 0)
+            (if (str_eq (jlt-rule-matcher rule) "contains")
+                (ge (str_find path (jlt-rule-pattern rule) 0) 0)
+                (if (str_eq (jlt-rule-matcher rule) "suffix")
+                    (jlt-ends-with? path (jlt-rule-pattern rule))
+                    false))))
+
+    (defn jlt-classify-path-loop (path rules)
+        (if (eq (len rules) 0)
+            (jlt-default-rule)
+            (if (jlt-rule-matches? path (head rules))
+                (head rules)
+                (jlt-classify-path-loop path (tail rules)))))
+
+    (defn jlt-classify-path (path)
+        (jlt-classify-path-loop path (jlt-query-rules)))
+
+    (defn jlt-skip-dirs ()
+        (list ".git" ".cache" ".claude" ".codex" ".cursor" ".grok"
+            ".mypy_cache" ".next" ".pytest_cache" ".ruff_cache"
+            "__pycache__" "node_modules" "target" "dist" "build" ".venv" "venv"))
+
+    (defn jlt-json-inventory (root)
+        (source_inventory root ".json" (jlt-skip-dirs)))
+
+    (defn jlt-source-path (row) (nth row 0))
+
+    (defn jlt-count-surface-loop (rows surface acc)
+        (if (eq (len rows) 0)
+            acc
+            (jlt-count-surface-loop
+                (tail rows)
+                surface
+                (if (str_eq (jlt-rule-surface (jlt-classify-path (jlt-source-path (head rows)))) surface)
+                    (add acc 1)
+                    acc))))
+    (defn jlt-count-surface (rows surface)
+        (jlt-count-surface-loop rows surface 0))
+
+    (defn jlt-better-target (candidate current)
+        (if (ge (jlt-target-files candidate) (jlt-target-files current)) candidate current))
+
+    (defn jlt-system-audit-target (rows)
+        (jlt-target
+            "system-audit-evidence"
+            (jlt-count-surface rows "system-audit-evidence")
+            "audit evidence cells"
+            "parse evidence JSON into Form cells and compress repeated commit proof schema"))
+
+    (defn jlt-presence-content-target (rows)
+        (jlt-target
+            "presence-content-data"
+            (jlt-count-surface rows "presence-content-data")
+            "presence content cells"
+            "load repeated presence payload structure into cells"))
+
+    (defn jlt-config-target (rows)
+        (jlt-target
+            "configuration-json"
+            (add
+                (jlt-count-surface rows "api-config")
+                (add
+                    (jlt-count-surface rows "root-config")
+                    (jlt-count-surface rows "web-config")))
+            "configuration cells"
+            "load repeated runtime config schemas as cells"))
+
+    (defn jlt-next-target (rows)
+        (do
+            (let current (jlt-system-audit-target rows))
+            (let current (jlt-better-target (jlt-presence-content-target rows) current))
+            (let current (jlt-better-target (jlt-config-target rows) current))
+            current))
+
+    (defn jlt-tending-from-root (root)
+        (do
+            (let rows (jlt-json-inventory root))
+            (let target (jlt-next-target rows))
+            (list
+                "json-lens-tending"
+                (len rows)
+                (jlt-target-surface target)
+                (jlt-target-files target)
+                (jlt-target-desired-carrier target)
+                (jlt-target-release-gate target))))
+
+    (defn jlt-evidence-cell (read-path source-path)
+        (do
+            (let doc (parse-json source-path (read_file read-path)))
+            (let local-validation (json-object-get doc "local_validation"))
+            (list
+                "json-evidence-cell"
+                (json-string-value (json-object-get doc "date"))
+                (json-string-value (json-object-get doc "commit_scope"))
+                (json-string-value (json-object-get local-validation "status")))))
+
+    0)
