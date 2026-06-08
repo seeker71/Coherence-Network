@@ -1,0 +1,106 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/choice-receipt-proof-20260608",
+  "commit_scope": "Add a Form-native choice receipt proof that keeps branch-prediction feedback separate from alignment, knowing, and trust while preserving compressed trace texture across sibling kernels.",
+  "files_owned": [
+    "form/form-stdlib/choice-receipt.fk",
+    "form/form-stdlib/tests/choice-receipt-band.fk",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "form/user-blueprint-registry.md",
+    "kernels/KERNEL_COMMON_GROUND.md",
+    "docs/system_audit/commit_evidence_2026-06-08_choice_receipt_proof.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 -m json.tool form/form-stdlib/blueprint-registry.json >/dev/null",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/tests/choice-receipt-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/tests/choice-receipt-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-08_choice_receipt_proof.json",
+      "git diff --check",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-08_choice_receipt_proof.json --base origin/main --head HEAD",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "Prompt guide and wellness passed. The blueprint registry is valid JSON. The choice receipt proof returns -1, the signed all-bits-set verdict equivalent to 4294967295 unsigned, in both source and binary Form validation. The proof verifies success, fail, and silence receipts; rejects a malformed success selecting none; keeps branch-prediction feedback distinct from alignment, knowing, and trust; and verifies compressed signatures preserve value buckets, attribution, coordinates, selected path, outcome, certainty bucket, candidate count bucket, and trace counters across Go, Rust, and TypeScript sibling kernels."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Pending push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "No deploy attempted yet."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Form can now express and validate trace-preserving choice receipts whose branch-prediction feedback is gated by separate alignment, knowing, and trust values before learning.",
+    "public_endpoints": [
+      "N/A - Form stdlib proof only"
+    ],
+    "test_flows": [
+      "Run source Form validation for core.fk, choice-receipt.fk, and choice-receipt-band.fk and require sibling kernels to agree on -1.",
+      "Run binary Form validation for the same files and require sibling kernels to agree on -1.",
+      "Verify the proof rejects a malformed success receipt where selected-path is none."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local focused validation passed; CI and deploy validation are pending."
+  },
+  "idea_ids": [
+    "choice-receipt",
+    "branch-prediction-feedback",
+    "trustworthy-compression"
+  ],
+  "spec_ids": [
+    "kernels/KERNEL_COMMON_GROUND.md",
+    "form/user-blueprint-registry.md"
+  ],
+  "task_ids": [
+    "choice-receipt-proof-20260608"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/choice-receipt-band.fk::cr-choice-receipt-band-score",
+    "form/form-stdlib/choice-receipt.fk::cr-choice-value-worth-learning?",
+    "form/form-stdlib/choice-receipt.fk::cr-choice-signature-preserves?"
+  ],
+  "change_files": [
+    "form/form-stdlib/choice-receipt.fk",
+    "form/form-stdlib/tests/choice-receipt-band.fk",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "form/user-blueprint-registry.md",
+    "kernels/KERNEL_COMMON_GROUND.md"
+  ],
+  "change_intent": "runtime_feature"
+}
