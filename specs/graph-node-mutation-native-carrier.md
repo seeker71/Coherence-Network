@@ -27,7 +27,7 @@ source:
 requirements:
   - "The graph-node Form port exposes create, replace, and delete mutation operations over the storage port."
   - "The mutation carrier is proven over memory and durable file storage with one shared Form band, including recreate after tombstone."
-  - "Ideas and specs name the native mutation carrier while keeping the live method-specific front-door gap explicit."
+  - "Ideas and specs name the native mutation carrier while keeping the live execution and side-effect front-door gap explicit."
 done_when:
   - 'file_contains("form/form-stdlib/graph-node-port.fk", "defn gn-create-node")'
   - 'file_contains("form/form-stdlib/graph-node-port.fk", "defn gn-delete-node")'
@@ -36,7 +36,7 @@ test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-log-store.f
 constraints:
   - "Do not flip public /api/ideas or /api/spec-registry mutation paths in this slice."
   - "Do not introduce a parallel public mutation store for live users."
-  - "Keep native auth parity and application graph table SQL parity proven before front-door binding."
+  - "Keep native auth parity, application graph table SQL parity, and live DB execution proof ahead of any ordinary-traffic front-door flip."
 ---
 
 # Spec: Graph Node Mutation Native Carrier
@@ -47,8 +47,10 @@ Ideas and specs can now leave the Python-only mutation vocabulary at the carrier
 level. This spec adds native Form graph-node create, replace, and delete
 operations over the existing storage port and proves that the same mutation
 recipe works over memory and durable file storage. The public HTTP mutation
-paths remain FastAPI until method-specific route rows bind auth, application
-table SQL, response projection, cache invalidation, and live DB execution proof.
+paths remain FastAPI by default until live DB execution, response projection,
+cache invalidation, and side effects are proven. Auth, application table SQL,
+and header-gated preview binding now exist; the default public mutation route
+still waits for live execution and side effects.
 
 ## Requirements
 
@@ -110,9 +112,11 @@ python3 scripts/validate_spec_quality.py --file specs/graph-node-mutation-native
 - GAP-GNMC2: closed by `specs/application-graph-node-sql-carrier.md`. The
   native application graph carrier now emits direct `graph_nodes`,
   `graph_edges`, and `graph_node_revisions` SQL instead of `port_kv`.
-- GAP-GNMC3 follow-up task: `method-specific-ideas-spec-mutation-routes`.
-  Once route-specific request/response projection and live DB execution proof
-  are exact, bind POST/PATCH/DELETE rows without stealing existing GET surfaces.
+- GAP-GNMC3 follow-up task: `native-graph-mutation-live-db-proof`.
+  Header-gated method-specific POST/PATCH/DELETE preview rows now exist without
+  stealing ordinary mutation traffic. Once live DB execution, result projection,
+  cache invalidation, and side effects are exact, the public mutation flip can
+  be considered.
 
 ## Risks and Assumptions
 

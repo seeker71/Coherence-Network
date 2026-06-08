@@ -67,8 +67,8 @@ defn mutate_specs_recipe() = spec_route_recipe(
         spec_route("update_spec", "PATCH", "/spec-registry/{spec_id}", "update spec", "spec_registry_service.update_spec + gn-replace-node", "SpecRegistryEntry", ["field allow-list", "graph node revision"]),
         spec_route("delete_spec", "DELETE", "/spec-registry/{spec_id}", "delete spec", "spec_registry_service.delete_spec + gn-delete-node", "204", ["API key", "edge cleanup boundary"]),
     ],
-    ["validate request", "shape graph-node mutation", "call live service carrier until front-door parity lands", "return entry or exact not-found/duplicate result"],
-    ["api/app/routers/spec_registry.py::create_spec", "api/app/routers/spec_registry.py::update_spec", "api/app/routers/spec_registry.py::delete_spec", "form/form-stdlib/graph-node-port.fk::gn-create-node", "form/form-stdlib/graph-node-port.fk::gn-replace-node", "form/form-stdlib/graph-node-port.fk::gn-delete-node"]
+    ["validate request", "shape graph-node mutation", "emit header-gated native SQL preview when invited", "call live service carrier until execution parity lands", "return entry or exact not-found/duplicate result"],
+    ["api/app/routers/spec_registry.py::create_spec", "api/app/routers/spec_registry.py::update_spec", "api/app/routers/spec_registry.py::delete_spec", "form/form-stdlib/graph-node-port.fk::gn-create-node", "form/form-stdlib/graph-node-port.fk::gn-replace-node", "form/form-stdlib/graph-node-port.fk::gn-delete-node", "deploy/kernel-router/production-routes.fk::route_specs_create_native_preview", "deploy/kernel-router/production-routes.fk::route_specs_update_native_preview", "deploy/kernel-router/production-routes.fk::route_specs_delete_native_preview"]
 );
 
 defn spec_registry_router_structure() = {
@@ -93,21 +93,28 @@ defn spec_registry_router_structure() = {
             route_source: "form/form-stdlib/tests/graph-node-mutation-carrier-band.fk",
             status: "Form-native mutable carrier proven",
             meaning: "spec create, update, and delete now have native graph-node mutation operations over the storage port",
-            boundary: "public /api/spec-registry mutation paths still fan out until method-specific route rows bind the application graph table carrier",
+            boundary: "method-specific route binding now exists as header-gated SQL preview; public /api/spec-registry mutation traffic still fans out by default until live execution parity lands",
         },
         {
             path: "form/form-stdlib/auth-port.fk::auth-require-api-key",
             route_source: "form/form-stdlib/tests/auth-port-band.fk",
             status: "Form-native auth decision carrier proven",
             meaning: "shared API keys, contributor-key hashes, missing/wrong/blank denials, and production dev-key refusal now have native decision parity",
-            boundary: "public mutable /api/spec-registry paths still wait for method-specific route binding and live DB execution proof before front-door mutation flips",
+            boundary: "public mutable /api/spec-registry paths now have method-specific route binding as preview and still wait for live DB execution proof before front-door mutation flips",
         },
         {
             path: "form/form-stdlib/application-graph-node-port.fk::agn-create-node|agn-update-node|agn-delete-node",
             route_source: "form/form-stdlib/tests/application-graph-node-port-band.fk",
             status: "Form-native application graph table carrier proven",
             meaning: "create/update/delete SQL now targets graph_nodes, graph_node_revisions, and graph_edges directly rather than port_kv",
-            boundary: "public mutable /api/spec-registry paths still wait for method-specific request/response route rows, cache invalidation, and live DB execution proof before front-door mutation flips",
+            boundary: "public mutable /api/spec-registry paths now have header-gated preview rows, but still wait for live DB execution proof before front-door mutation flips",
+        },
+        {
+            path: "POST /api/spec-registry + PATCH/DELETE /api/spec-registry/{spec_id}",
+            route_source: "deploy/kernel-router/production-routes.fk::route_specs_create_native_preview|route_specs_update_native_preview|route_specs_delete_native_preview",
+            status: "kernel-first capable preview",
+            meaning: "method-specific KernelHTTPRoute rows bind JSON request bodies to application graph SQL preview responses without CPython when X-Form-Native-Preview is present",
+            boundary: "normal public mutations without X-Form-Native-Preview still fan out to FastAPI; live DB execution, response projection, cache invalidation, and contributor-key audit side effects remain before a public front-door flip",
         },
     ],
     recipes: [
@@ -119,8 +126,9 @@ defn spec_registry_router_structure() = {
         "source index -> kernel-router native source list",
         "mutable service calls -> Form-native graph-node mutation carrier",
         "application graph table writes -> Form-native graph_nodes/revisions/edge-cleanup SQL carrier",
+        "method-specific mutation paths -> header-gated Form-native SQL preview bindings",
     ],
-    current_gap: "GAP-SR1: /api/spec-registry/source-list is kernel-first capable, graph-node-port.fk exposes native create/replace/delete, auth-port.fk preserves API-key/contributor-key decision parity, and application-graph-node-port.fk emits direct graph_nodes/graph_node_revisions/graph_edges SQL. Public mutable /api/spec-registry routes still enter through FastAPI until method-specific kernel route rows bind request bodies, response projection, cache invalidation, and live DB execution proof.",
+    current_gap: "GAP-SR1 moved: /api/spec-registry/source-list is kernel-first capable, graph-node-port.fk exposes native create/replace/delete, auth-port.fk preserves API-key/contributor-key decision parity, application-graph-node-port.fk emits direct graph_nodes/graph_node_revisions/graph_edges SQL, and POST/PATCH/DELETE /api/spec-registry now have X-Form-Native-Preview header-gated native SQL preview rows. Public mutable /api/spec-registry still enters through FastAPI by default until live DB execution, response projection, cache invalidation, and contributor-key audit side effects are proven.",
 };
 
 defn spec_registry_router_reading() = {
@@ -136,9 +144,10 @@ defn spec_registry_router_reading() = {
     measured: [
         "form/form-stdlib/tests/graph-node-mutation-carrier-band.fk",
         "api/tests/test_specs_source_native_route.py",
+        "api/tests/test_native_mutation_route_bindings.py",
     ],
     mystery: [
-        "the live auth and contributor-key boundary needs exact native parity before front-door mutation flips",
+        "the public mutation flip wants live DB execution and side-effect proof before ordinary traffic moves",
     ],
 };
 

@@ -77,13 +77,14 @@ def test_ideas_router_form_keeps_python_as_carrier_with_gap_named():
     assert 'carrier:        "api/app/routers/ideas.py"' in text
     assert "idea_service.list_ideas" in text
     assert "stake_compute_service.execute_stake" in text
-    assert "GAP-I1: /api/ideas/router-structure, /api/ideas/source-index, /api/ideas/source-portfolio, and /api/ideas/graph-projection are kernel-first capable" in text
+    assert "GAP-I1 moved: /api/ideas/router-structure, /api/ideas/source-index, /api/ideas/source-portfolio, and /api/ideas/graph-projection are kernel-first capable" in text
     assert "graph-node-port.fk exposes native get/list/count plus create/replace/delete" in text
     assert "auth-port.fk preserves API-key/contributor-key decision parity" in text
     assert "application-graph-node-port.fk emits direct graph_nodes/graph_node_revisions/graph_edges SQL" in text
     assert "ideas-graph-projection.fk emits an IdeaPortfolioResponse-shaped read" in text
-    assert "Public mutable DB-backed /api/ideas routes still enter through FastAPI" in text
-    assert "method-specific kernel route rows bind request bodies" in text
+    assert "POST/PATCH /api/ideas now have X-Form-Native-Preview header-gated native SQL preview rows" in text
+    assert "Public mutable DB-backed /api/ideas still enters through FastAPI by default" in text
+    assert "live DB execution, response projection, cache invalidation" in text
 
 
 def test_ideas_router_form_describes_live_router_carrier():
@@ -176,4 +177,6 @@ def test_ideas_router_form_names_native_mutation_carrier():
     assert "form/form-stdlib/graph-node-port.fk::gn-replace-node" in form_text
     assert "form/form-stdlib/graph-node-port.fk::gn-delete-node" in form_text
     assert "form/form-stdlib/tests/graph-node-mutation-carrier-band.fk" in form_text
-    assert "public /api/ideas mutation paths still fan out" in form_text
+    assert "POST /api/ideas + PATCH /api/ideas/{idea_id}" in form_text
+    assert "X-Form-Native-Preview" in form_text
+    assert "deploy/kernel-router/production-routes.fk::route_ideas_create_native_preview" in form_text

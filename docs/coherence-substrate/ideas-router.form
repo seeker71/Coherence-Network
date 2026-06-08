@@ -105,8 +105,8 @@ defn mutate_idea_recipe() = idea_route_recipe(
         idea_route("update_idea_slug", "PATCH", "/ideas/{idea_id}/slug", "rename slug", "idea_service.update_idea_slug", "SlugUpdateResponse", ["slug history"]),
         idea_route("put_idea_tags", "PUT", "/ideas/{idea_id}/tags", "replace tags", "idea_service.set_idea_tags", "IdeaTagUpdateResponse", ["normalized tag catalog"]),
     ],
-    ["validate request", "shape graph-node mutation", "call live service carrier until front-door parity lands", "repair reciprocal edge when needed", "return refreshed idea"],
-    ["api/app/routers/ideas.py::create_idea", "api/app/routers/ideas.py::update_idea", "form/form-stdlib/graph-node-port.fk::gn-create-node", "form/form-stdlib/graph-node-port.fk::gn-replace-node", "form/form-stdlib/graph-node-port.fk::gn-delete-node", "form/form-stdlib/tests/graph-node-mutation-carrier-band.fk"]
+    ["validate request", "shape graph-node mutation", "emit header-gated native SQL preview when invited", "call live service carrier until execution parity lands", "repair reciprocal edge when needed", "return refreshed idea"],
+    ["api/app/routers/ideas.py::create_idea", "api/app/routers/ideas.py::update_idea", "form/form-stdlib/graph-node-port.fk::gn-create-node", "form/form-stdlib/graph-node-port.fk::gn-replace-node", "form/form-stdlib/graph-node-port.fk::gn-delete-node", "form/form-stdlib/tests/graph-node-mutation-carrier-band.fk", "deploy/kernel-router/production-routes.fk::route_ideas_create_native_preview", "deploy/kernel-router/production-routes.fk::route_ideas_update_native_preview"]
 );
 
 defn question_answer_recipe() = idea_route_recipe(
@@ -230,21 +230,28 @@ defn ideas_router_structure() = {
             route_source: "form/form-stdlib/tests/graph-node-mutation-carrier-band.fk",
             status: "Form-native mutable carrier proven",
             meaning: "idea/spec create, replace, and delete now have native graph-node operations over the storage port",
-            boundary: "public /api/ideas mutation paths still fan out until method-specific route rows bind the application graph table carrier",
+            boundary: "method-specific route binding now exists as header-gated SQL preview; public /api/ideas mutation traffic still fans out by default until live execution parity lands",
         },
         {
             path: "form/form-stdlib/auth-port.fk::auth-require-api-key",
             route_source: "form/form-stdlib/tests/auth-port-band.fk",
             status: "Form-native auth decision carrier proven",
             meaning: "shared API keys, contributor-key hashes, missing/wrong/blank denials, and production dev-key refusal now have native decision parity",
-            boundary: "public mutable /api/ideas paths still wait for method-specific route binding and live DB execution proof before front-door mutation flips",
+            boundary: "public mutable /api/ideas paths now have method-specific route binding as preview and still wait for live DB execution proof before front-door mutation flips",
         },
         {
             path: "form/form-stdlib/application-graph-node-port.fk::agn-create-node|agn-update-node|agn-delete-node",
             route_source: "form/form-stdlib/tests/application-graph-node-port-band.fk",
             status: "Form-native application graph table carrier proven",
             meaning: "create/update/delete SQL now targets graph_nodes, graph_node_revisions, and graph_edges directly rather than port_kv",
-            boundary: "public mutable /api/ideas paths still wait for method-specific request/response route rows, cache invalidation, and live DB execution proof before front-door mutation flips",
+            boundary: "public mutable /api/ideas paths now have header-gated preview rows, but still wait for live DB execution proof before front-door mutation flips",
+        },
+        {
+            path: "POST /api/ideas + PATCH /api/ideas/{idea_id}",
+            route_source: "deploy/kernel-router/production-routes.fk::route_ideas_create_native_preview|route_ideas_update_native_preview",
+            status: "kernel-first capable preview",
+            meaning: "method-specific KernelHTTPRoute rows bind JSON request bodies to application graph SQL preview responses without CPython when X-Form-Native-Preview is present",
+            boundary: "normal public mutations without X-Form-Native-Preview still fan out to FastAPI; live DB execution, response projection, cache invalidation, parent/edge side effects, and contributor-key audit side effects remain before a public front-door flip",
         },
     ],
     recipes: [
@@ -270,8 +277,9 @@ defn ideas_router_structure() = {
         "graph-node projection proof -> kernel-router native graph-projection route",
         "mutable service calls -> Form-native graph-node mutation carrier",
         "application graph table writes -> Form-native graph_nodes/revisions/edge-cleanup SQL carrier",
+        "method-specific mutation paths -> header-gated Form-native SQL preview bindings",
     ],
-    current_gap: "GAP-I1: /api/ideas/router-structure, /api/ideas/source-index, /api/ideas/source-portfolio, and /api/ideas/graph-projection are kernel-first capable; graph-node-port.fk exposes native get/list/count plus create/replace/delete over the storage port, auth-port.fk preserves API-key/contributor-key decision parity, application-graph-node-port.fk emits direct graph_nodes/graph_node_revisions/graph_edges SQL, and ideas-graph-projection.fk emits an IdeaPortfolioResponse-shaped read. Public mutable DB-backed /api/ideas routes still enter through FastAPI until method-specific kernel route rows bind request bodies, response projection, cache invalidation, and live DB execution proof.",
+    current_gap: "GAP-I1 moved: /api/ideas/router-structure, /api/ideas/source-index, /api/ideas/source-portfolio, and /api/ideas/graph-projection are kernel-first capable; graph-node-port.fk exposes native get/list/count plus create/replace/delete over the storage port; auth-port.fk preserves API-key/contributor-key decision parity; application-graph-node-port.fk emits direct graph_nodes/graph_node_revisions/graph_edges SQL; ideas-graph-projection.fk emits an IdeaPortfolioResponse-shaped read; and POST/PATCH /api/ideas now have X-Form-Native-Preview header-gated native SQL preview rows. Public mutable DB-backed /api/ideas still enters through FastAPI by default until live DB execution, response projection, cache invalidation, parent/edge side effects, and contributor-key audit side effects are proven.",
 };
 
 defn ideas_router_reading() = {
@@ -286,10 +294,11 @@ defn ideas_router_reading() = {
     ],
     measured: [
         "api/tests/test_ideas_router_form.py",
+        "api/tests/test_native_mutation_route_bindings.py",
         "python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expression.md",
     ],
     mystery: [
-        "which recipe family wants to become kernel-front-door first remains a later body reading",
+        "the public mutation flip wants live DB execution and side-effect proof before ordinary traffic moves",
     ],
 };
 

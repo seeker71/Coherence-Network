@@ -82,8 +82,11 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import os
 import re
 import sys
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -119,6 +122,7 @@ _KERNEL_ROUTER_FILES = [
 # is the whole request lifecycle, a categorically deeper move than serve_via_kernel
 # (which keeps the lifecycle in CPython and calls the kernel as a guest subroutine).
 _KERNEL_ROUTER_MANIFEST = ROOT / "deploy" / "kernel-router" / "production-routes.fk"
+_DEFAULT_FRONT_DOOR_PROBE_PATH = "/api/attention/kernel-runtime"
 
 
 def kernel_first_capable_routes() -> list[str]:
@@ -141,8 +145,12 @@ def kernel_first_capable_routes() -> list[str]:
     raw ``(list "<path>" <handler>)`` rows and higher-grammar
     ``(kh-route-data-ref "<id>" <handler>)`` rows resolved through the sibling
     ``*-data.json`` file, so promoting a route into a ``RouteCell`` does not make
-    it invisible. Returns [] if the manifest is absent (the report degrades to
-    the SERVED count and says so).
+    it invisible. Path-only rows keep returning bare paths for back-compat.
+    Method-specific ``kh-route`` rows return ``"METHOD /api/path"`` so PATCH and
+    DELETE wildcard bindings sharing a path remain distinct native capabilities.
+    The ``;``-comment lines that mention ``/api/...`` paths never match the
+    binding shapes, so the scan reads bindings only. Returns [] if the manifest
+    is absent (the report degrades to the SERVED count and says so).
     """
     if not _KERNEL_ROUTER_MANIFEST.is_file():
         return []
@@ -158,16 +166,28 @@ def kernel_first_capable_routes() -> list[str]:
     route_row = re.compile(
         r'\(list\s+"(/api/[^"]+)"\s+[A-Za-z_]\w*\)'
         r'|\(kh-route-data-ref\s+"([^"]+)"\s+[A-Za-z_]\w*\)'
-        r'|\(kh-route\s+"[^"]+"\s+"[^"]+"\s+"(/api/[^"]+)"'
+        r'|\(kh-route\s+"[^"]+"\s+"([A-Z]+|ANY)"\s+"(/api/[^"]+)"'
+        r'\s+\d+\s+"[^"]+"\s+"[^"]*"\s+\d+\)'
+        r'|\(list\s+43004\s+"[^"]+"\s+"([A-Z]+|ANY)"\s+"(/api/[^"]+)"'
+        r'\s+\d+\s+"[^"]+"\s+"[^"]*"\s+\d+\)'
     )
     for match in route_row.finditer(block):
-        path = match.group(1) or match.group(3)
+        path = match.group(1)
+        route_label = path
         if path is None:
             route_id = match.group(2)
-            path = route_data.get(route_id) if route_id is not None else None
-        if path and path.startswith("/api/") and path not in seen:
-            routes.append(path)
-            seen.add(path)
+            route_label = route_data.get(route_id) if route_id is not None else None
+        if route_label is None and match.group(3) is not None and match.group(4) is not None:
+            method = match.group(3)
+            path = match.group(4)
+            route_label = path if method == "ANY" else f"{method} {path}"
+        if route_label is None and match.group(5) is not None and match.group(6) is not None:
+            method = match.group(5)
+            path = match.group(6)
+            route_label = path if method == "ANY" else f"{method} {path}"
+        if route_label and route_label not in seen:
+            routes.append(route_label)
+            seen.add(route_label)
     return routes
 
 
@@ -196,6 +216,61 @@ def _kernel_route_data_patterns(manifest: Path) -> dict[str, str]:
         if isinstance(pattern, str) and pattern.startswith("/api/"):
             out[route_id] = pattern
     return out
+
+def probe_kernel_front_door() -> dict:
+    """Read the public API front-door provenance header.
+
+    The manifest tells us which routes are kernel-first CAPABLE. The live public
+    header tells us whether Traefik is actually sending api.coherencycoin.com to
+    the kernel-router. When the probe route returns X-Form-Router: native-kernel,
+    served count is inferred from the manifest: the same router process owns the
+    manifest and will native-serve every listed handler while fanning out the tail.
+    If the probe is unreachable, the report marks the front door unread instead
+    of preserving the old pre-flip assumption as fact.
+    """
+    api = os.environ.get("COHERENCE_API_BASE", "https://api.coherencycoin.com").rstrip("/")
+    path = os.environ.get("KERNEL_FRONT_DOOR_PROBE_PATH", _DEFAULT_FRONT_DOOR_PROBE_PATH)
+    url = f"{api}{path}"
+    req = urllib.request.Request(
+        url,
+        headers={
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache",
+            "User-Agent": "runtime-surface-report/1.0",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=4) as resp:
+            body = resp.read(256).decode("utf-8", errors="replace")
+            router = resp.headers.get("X-Form-Router", "")
+            return {
+                "url": url,
+                "reachable": True,
+                "status": resp.status,
+                "x_form_router": router,
+                "kernel_front_door": router == "native-kernel",
+                "body_preview": body,
+            }
+    except urllib.error.HTTPError as exc:
+        body = exc.read(256).decode("utf-8", errors="replace")
+        router = exc.headers.get("X-Form-Router", "")
+        return {
+            "url": url,
+            "reachable": True,
+            "status": exc.code,
+            "x_form_router": router,
+            "kernel_front_door": router == "native-kernel",
+            "body_preview": body,
+        }
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        return {
+            "url": url,
+            "reachable": False,
+            "status": None,
+            "x_form_router": "",
+            "kernel_front_door": False,
+            "error": str(exc),
+        }
 
 
 def _load_attribution_module():

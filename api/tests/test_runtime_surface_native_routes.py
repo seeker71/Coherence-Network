@@ -11,10 +11,12 @@ awaiting the front-door flip).
 ``deploy/kernel-router/production-routes.fk`` as DATA. The subtle contract: the
 manifest may bind ``/api/...`` routes as raw ``(list "<path>" <handler>)`` rows
 or as higher-grammar ``kh-route-data-ref`` rows resolved through the sibling
-route-data JSON. The parser must return each route once, from its binding, never
-from a comment, and must exclude non-``/api`` probes like ``/health``. This pins
-that contract with a strange-minimal synthetic manifest plus a pin against the
-real checked-in manifest.
+route-data JSON. Path-only rows return bare paths; method-specific
+KernelHTTPRoute rows return ``"METHOD /api/path"`` so two methods can share a
+wildcard path without becoming one capability. The parser must return each route
+once, from its binding, never from a comment, and must exclude non-``/api`` probes
+like ``/health``. This pins that contract with a strange-minimal synthetic
+manifest plus a pin against the real checked-in manifest.
 """
 
 from __future__ import annotations
@@ -49,7 +51,9 @@ def test_parser_reads_bindings_not_comments(monkeypatch, tmp_path):
         "    (kh-route-data-ref \"missing-data\" MissingRoute_handle)\n"
         "    (list \"/health\"        route_health)\n"
         "    (list \"/api/real/one\"  route_one)\n"
-        "    (list \"/api/real/two\"  route_two)))\n"
+        "    (list \"/api/real/two\"  route_two)\n"
+        "    (kh-route \"real-post\" \"POST\" \"/api/real/post\" 0 \"route_post\" \"X-Preview\" 0)\n"
+        "    (list 43004 \"real-delete\" \"DELETE\" \"/api/real/two\" 0 \"route_delete\" \"\" 20)))\n"
     )
     route_data = tmp_path / "production-routes-data.json"
     route_data.write_text(
@@ -81,7 +85,13 @@ def test_parser_reads_bindings_not_comments(monkeypatch, tmp_path):
 
     routes = mod.kernel_first_capable_routes()
 
-    assert routes == ["/api/real/from-data", "/api/real/one", "/api/real/two"], routes
+    assert routes == [
+        "/api/real/from-data",
+        "/api/real/one",
+        "/api/real/two",
+        "POST /api/real/post",
+        "DELETE /api/real/two",
+    ], routes
     assert "/health" not in routes  # non-/api probe excluded
     assert not any("commented" in r for r in routes)  # comments never captured
 
@@ -104,15 +114,21 @@ def test_real_manifest_native_routes_are_served_zero_and_include_ideas_structure
 
     assert report["kernel_first_served_routes"] == 0  # no front-door flip
     capable = report["kernel_first_capable_route_names"]
+    capable_paths = {r.split(" ", 1)[1] if " " in r else r for r in capable}
     assert report["kernel_first_capable_routes"] == len(capable)
     # every CAPABLE route is a real /api path read from the manifest's bindings
     assert capable, "production manifest binds no native /api routes"
-    assert all(r.startswith("/api/") for r in capable), capable
-    assert "/api/ideas/router-structure" in capable
-    assert "/api/ideas/source-index" in capable
-    assert "/api/ideas/source-portfolio" in capable
-    assert "/api/ideas/graph-projection" in capable
-    assert "/api/spec-registry/source-list" in capable
+    assert all(path.startswith("/api/") for path in capable_paths), capable
+    assert "/api/ideas/router-structure" in capable_paths
+    assert "/api/ideas/source-index" in capable_paths
+    assert "/api/ideas/source-portfolio" in capable_paths
+    assert "/api/ideas/graph-projection" in capable_paths
+    assert "/api/spec-registry/source-list" in capable_paths
+    assert "POST /api/ideas" in capable
+    assert "PATCH /api/ideas/*" in capable
+    assert "POST /api/spec-registry" in capable
+    assert "PATCH /api/spec-registry/*" in capable
+    assert "DELETE /api/spec-registry/*" in capable
     assert len(capable) == len(set(capable)), f"duplicates: {capable}"
     # back-compat alias stays pinned to SERVED (0 at the front door)
     assert report["kernel_first_routes"] == report["kernel_first_served_routes"]

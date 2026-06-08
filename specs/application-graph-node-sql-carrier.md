@@ -21,7 +21,7 @@ requirements:
   - "Create SQL writes graph_nodes and graph_node_revisions with a __create__ revision snapshot."
   - "Update SQL merges graph node properties, advances the per-node revision number, and records fields_changed plus a full snapshot."
   - "Delete SQL clears connected graph_edges before deleting the graph_nodes row."
-  - "Ideas and specs name application graph table semantics as proven while keeping public front-door flips out of scope until method-specific route rows and live DB execution proof land."
+  - "Ideas and specs name application graph table semantics as proven while keeping public front-door flips out of scope until header-gated preview rows graduate through live DB execution proof."
 done_when:
   - 'file_contains("form/form-stdlib/application-graph-node-port.fk", "defn agn-create-node-sql")'
   - 'file_contains("form/form-stdlib/tests/application-graph-node-port-band.fk", "Band verdict: 1111")'
@@ -46,7 +46,9 @@ connected `graph_edges` cleanup on delete.
 This spec adds that missing Form carrier. It emits the SQL a native route row
 can execute through the Postgres `pg_exec` carrier, while keeping the public
 FastAPI mutation routes unchanged until method-specific request/response
-binding and live DB execution proof are present.
+binding, live DB execution proof, response projection, and side effects are
+present. A later slice added header-gated native preview rows; this carrier
+remains the SQL source for those rows.
 
 ## Requirements
 
@@ -111,10 +113,11 @@ python3 scripts/validate_spec_quality.py --file specs/application-graph-node-sql
 
 ## Gaps
 
-- GAP-AGN1 follow-up task: `method-specific-ideas-spec-mutation-routes`.
-  Auth decisions, generic graph mutation shape, and application table SQL are
-  now native. Public mutation still needs method-specific route rows that bind
-  request bodies, response projection, cache invalidation, and live DB proof.
+- GAP-AGN1 follow-up task: `native-graph-mutation-live-db-proof`.
+  Auth decisions, generic graph mutation shape, application table SQL, and
+  header-gated method-specific preview rows are now native. Public mutation
+  still needs live DB execution, response projection, cache invalidation,
+  parent/edge side effects, and contributor-key audit proof.
 - GAP-AGN2 follow-up task: `native-contributor-key-last-used-update`.
   Contributor-key allow/deny parity is native, but the audit side effect still
   belongs with a table carrier.
