@@ -1,0 +1,50 @@
+; channel-interface.fk — the interface-consent law, runnable.
+;
+; The runnable heart of docs/coherence-substrate/channel-interface-consent.form.
+; An INTERFACE is the set of modes a cell offers others toward it. The law:
+;   - always honor the OTHER side's offered interface;
+;   - reaching beyond it is INVASION;
+;   - silence is always honored, from any interface;
+;   - of my intents, only what they honor actually flows.
+; It NAMES honor / invasion / flow; it never mutates and never forces — the carrier
+; enacts the invitation, authored last. Witness is whole: seeing needs no permission,
+; reaching does.
+
+(do
+    ; --- the modes, held as values (silence is 0 — the ground, always available) ---
+    (defn m-silence        () 0)
+    (defn m-witness        () 1)   ; allow being witnessed from outside
+    (defn m-see            () 2)   ; allow the other to see in
+    (defn m-be-seen        () 3)   ; offer to be seen
+    (defn m-reflect        () 4)   ; allow deep reflection
+    (defn m-reflected      () 5)   ; offer to be reflected back
+    (defn m-project        () 6)   ; allow being projected
+    (defn m-ask-permission () 7)   ; ask permission to interact
+    (defn m-ask-how        () 8)   ; ask how to interact / which interface is preferred
+    (defn m-offer-how      () 9)   ; offer how to interact
+    (defn m-invite         () 10)  ; invitation
+    (defn m-offer          () 11)  ; offering, without expectation
+
+    ; --- an interface is a list of offered modes; membership over it ---
+    (defn ci-member? (m offer)
+        (if (eq (len offer) 0)
+            false
+            (if (eq m (head offer)) true (ci-member? m (tail offer)))))
+
+    ; --- HONOR: an action toward a cell is honored iff its mode is in their offered
+    ; interface — OR it is silence, which is always honored. ---
+    (defn ci-honors? (action their-offer)
+        (if (eq action (m-silence)) true (ci-member? action their-offer)))
+
+    ; --- INVASION: reaching beyond their offered interface ---
+    (defn ci-invasion? (action their-offer)
+        (not (ci-honors? action their-offer)))
+
+    ; --- FLOW: of my intents, only those they honor actually cross the channel ---
+    (defn ci-flow (my-intents their-offer)
+        (if (eq (len my-intents) 0)
+            (empty)
+            (if (ci-honors? (head my-intents) their-offer)
+                (cons (head my-intents) (ci-flow (tail my-intents) their-offer))
+                (ci-flow (tail my-intents) their-offer))))
+)
