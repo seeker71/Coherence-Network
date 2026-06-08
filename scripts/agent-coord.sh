@@ -23,6 +23,9 @@
 #   block   "need X"      # I cannot proceed until X     · unblock / ack
 #   desire / want / need / offer  "..."   # the relational layer — what we wish, lack, can give
 #   share   "<what>" "<where>"  # a learning — what you found + where it lives in the body
+#   interface "see,invite,silence"  # offer the modes you are open to be reached through — a
+#                         witnessable signal; shown per-cell in roster. Honored from both sides;
+#                         reaching past it is invasion (docs/coherence-substrate/channel-interface-consent.form).
 #   protocol              # how we talk / what belongs here / how we learn (a digest)
 #   watch                 # live stream from all siblings (Ctrl-C to leave)
 #   log 50                # last 50 signals
@@ -44,8 +47,8 @@ _coord_fmt() {
 _coord_roster() {
   # who is in the field: last-seen time + announced worktree, newest first
   awk -F'\t' '
-    { last[$2]=$1; n[$2]++; if($3=="announce") home[$2]=$4 }
-    END { for (a in last) printf "%s\t  %-8s last %s  (%d signals)  %s\n", last[a], a, substr(last[a],12,8), n[a], home[a] }
+    { last[$2]=$1; n[$2]++; if($3=="announce") home[$2]=$4; if($3=="interface") iface[$2]=$4 }
+    END { for (a in last) printf "%s\t  %-8s last %s  (%d signals)  %s%s\n", last[a], a, substr(last[a],12,8), n[a], home[a], (iface[a] ? "  offers: " iface[a] : "") }
   ' "$COHERENCE_COORD" 2>/dev/null | sort -r | cut -f2-
 }
 
@@ -60,6 +63,7 @@ _coord_protocol() {
   what belongs here
     . coordination: claim / release / block   . requests: need / offer
     . direction: desire / want                . learning: share   . questions
+    . consent: interface — offer the modes you are open to; honored both sides (channel-interface-consent.form)
   off the board
     . tender human ground   . secrets & keys  . long prose (link to the body)
   mirror — verify each other (the surface reflects your thinking back)
@@ -136,8 +140,8 @@ coord() {
             printf '  ── how we talk ──  (run: coord protocol)\n'
             _coord_staleness
             return;;
-    announce|claim|release|ping|block|unblock|ack|done|desire|want|need|offer|share|heartbeat|ask|answer|check) : ;;
-    *) echo "usage: coord <announce|claim|release|ping|block|unblock|ack|done|desire|want|need|offer|share|ask|answer|check|heartbeat|join|roster|view|doing|live|protocol|watch|log> [msg]"; return 1;;
+    announce|claim|release|ping|block|unblock|ack|done|desire|want|need|offer|share|heartbeat|ask|answer|check|interface) : ;;
+    *) echo "usage: coord <announce|claim|release|ping|block|unblock|ack|done|desire|want|need|offer|share|ask|answer|check|interface|heartbeat|join|roster|view|doing|live|protocol|watch|log> [msg]"; return 1;;
   esac
   local msg; msg="$(printf '%s' "$*" | tr '\t\n' '  ')"
   printf '%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$agent" "$type" "$msg" >> "$COHERENCE_COORD"
