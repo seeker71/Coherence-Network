@@ -1,158 +1,43 @@
-; form-ontology-loader.fk — runtime JSON → Form ontology bindings.
+; form-ontology-loader.fk — bootstrap ontology bindings without runtime JSON parsing.
 ;
-; Replaces the three generated artifacts that used to mirror
-; form-stdlib/form-ontology.json into Form-side bindings:
+; The kernel-native `bp` table is generated from form-ontology.json plus
+; blueprint-registry.json before the kernels build. This loader asks that
+; substrate table for coordinates and materializes the Form-side bindings the
+; source compiler and grammar layers expect. Runtime source compilation no
+; longer reparses ontology JSON; JSON remains authored source for the generator,
+; not a bootstrap dependency in the Form execution path.
 ;
-;   form-ontology.fk       (FORM-CATEGORY-TABLE, FORM-PRIMITIVE-TABLE)
-;   dialect-categories.fk  ((let PY-BMF-IMPORT ...) etc.)
-;   engine-constants.fk    ((defn bmf-domain-python () (bmf-domain-ref 1)) etc.)
-;
-; This file reads form-ontology.json once at load time, builds the
-; two tables directly, and synthesises Recipes for every dialect
-; constant and engine-constant getter. Those Recipes are walked in
-; the caller's env via `walk_recipe_here`, so the resulting bindings
-; land in the same scope they would have if the .fk files had been
-; loaded textually. ONE ice (the JSON) → water at load (table walk)
-; → gas (env bindings).
-;
-; Prelude requirement: form-stdlib/json.fk must load before this
-; file so the bootstrap parser and json-* accessors are in scope.
+; Prelude requirement: kernel native `bp`, node_type, node_inst, intern_node,
+; intern_trivial_string, intern_trivial_int, walk_recipe_here, list/cons/head/
+; tail/len/empty, and str_eq are available from the kernel/core prelude.
 
-;; --- read + parse (with .fkb cache) ---------------------------------
-;;
-;; First load: the bootstrap JSON parser runs (~84 ms on
-;; form-ontology.json's 18 KB),
-;; writes the parsed Recipe to form-stdlib/.cache/form-ontology.fkb.
-;; Subsequent loads: read_form_binary in microseconds. Cache invalidates
-;; when form-ontology.json's mtime advances past the .fkb's. See
-;; form-stdlib/cache.fk for the generic mechanism.
-;;
-;; Prelude requirement: form-stdlib/cache.fk must load before this
-;; file so read_with_cache + cache-fresh? are in scope. Earlier deps
-;; (form-stdlib/json.fk for the bootstrap parser) still required. This
-;; loader participates in compiling BML/codec sections, so moving it to
-;; JsonCodec belongs with the compiler-pipeline rewrite that removes that
-;; bootstrap cycle.
+;; --- source-compiler tables ----------------------------------------
+;; FORM-CATEGORY-TABLE and FORM-PRIMITIVE-TABLE keep the source compiler's
+;; historic (name type inst) shape, but the coordinates come from native bp.
 
-(let ONTOLOGY-JSON
-    (read_with_cache "form-stdlib/form-ontology.json"
-                     "form-stdlib/.cache/form-ontology.fkb"
-                     parse-json))
-
-;; --- categories / primitives → tables -------------------------------
-;;
-;; Each row is `(list name type inst)` — the exact shape source-compiler.fk
-;; consumes via form-table-lookup / form-row-type / form-row-inst.
-
-(defn fol-build-row (obj)
-    (list (json-string-value (json-object-get obj "name"))
-          (json-int-value    (json-object-get obj "type"))
-          (json-int-value    (json-object-get obj "inst"))))
-
-(defn fol-build-rows-loop (elements acc)
-    (if (eq (len elements) 0) (json-reverse-acc acc)
-        (fol-build-rows-loop (tail elements)
-            (cons (fol-build-row (head elements)) acc))))
-
-(defn fol-build-rows (array-node)
-    (fol-build-rows-loop (json-array-elements array-node) (empty)))
-
-(let FORM-CATEGORY-TABLE  (fol-build-rows (json-object-get ONTOLOGY-JSON "categories")))
-(let FORM-PRIMITIVE-TABLE (fol-build-rows (json-object-get ONTOLOGY-JSON "primitives")))
-
-;; --- user-space (type-99) registry → name resolver -----------------
-;;
-;; blueprint-registry.json is the single source of truth for shapes the
-;; kernel does not dispatch on (object/array/pair, dialect AST nodes, the
-;; THIA/arrival/identity blocks, …). It replaces the hundreds of scattered
-;; `(let X (make_nodeid 1 2 99 N))` magic-number redeclarations: a row here
-;; names the shape once; `.fk` code asks for it by name via `(bp "name")`.
-;;
-;; Each row contributes its canonical name AND every historical alias as a
-;; row in FORM-USER-TABLE, so a grammar that still says JSON-OBJECT and one
-;; that says HTML-OBJ both resolve to 99.10 through one number.
-
-(let REGISTRY-JSON
-    (read_with_cache "form-stdlib/blueprint-registry.json"
-                     "form-stdlib/.cache/blueprint-registry.fkb"
-                     parse-json))
-
-;; Each registry row carries the FULL NodeID (pkg, level, type, inst), so bp
-;; resolves shapes at any coordinate — package-8 source-compiler shapes
-;; (8.45.*), the ACCESS/WRITE/JUMP instances (1.2.15.x / 1.2.16.x / 1.2.18.x),
-;; and the type-99 user shapes alike. Each row is `(name pkg level type inst)`;
-;; the canonical name plus every historical alias both land, so JSON-OBJECT and
-;; HTML-OBJ resolve to the same NodeID.
-(defn fol-user-rows-for (bp-obj acc)
+(defn fol-core-row (name)
     (do
-        (let pkg   (json-int-value (json-object-get bp-obj "pkg")))
-        (let level (json-int-value (json-object-get bp-obj "level")))
-        (let type  (json-int-value (json-object-get bp-obj "type")))
-        (let inst  (json-int-value (json-object-get bp-obj "inst")))
-        (let canon (list (json-string-value (json-object-get bp-obj "name")) pkg level type inst))
-        (let aliases (json-array-elements (json-object-get bp-obj "aliases")))
-        (fol-user-alias-rows aliases pkg level type inst (cons canon acc))))
+        (let nid (bp name))
+        (list name (node_type nid) (node_inst nid))))
 
-(defn fol-user-alias-rows (aliases pkg level type inst acc)
-    (if (eq (len aliases) 0) acc
-        (fol-user-alias-rows (tail aliases) pkg level type inst
-            (cons (list (json-string-value (head aliases)) pkg level type inst) acc))))
+(defn fol-core-rows-loop (names acc)
+    (if (eq (len names) 0) acc
+        (fol-core-rows-loop (tail names) (cons (fol-core-row (head names)) acc))))
 
-(defn fol-user-rows-loop (bps acc)
-    (if (eq (len bps) 0) acc
-        (fol-user-rows-loop (tail bps) (fol-user-rows-for (head bps) acc))))
+(defn fol-reverse-loop (xs acc)
+    (if (eq (len xs) 0) acc
+        (fol-reverse-loop (tail xs) (cons (head xs) acc))))
 
-(let FORM-USER-TABLE
-    (fol-user-rows-loop
-        (json-array-elements (json-object-get REGISTRY-JSON "blueprints"))
-        (empty)))
+(defn fol-reverse (xs) (fol-reverse-loop xs (empty)))
+(defn fol-core-rows (names) (fol-reverse (fol-core-rows-loop names (empty))))
 
-;; The kernel-owned tables stay (name type inst) for source-compiler.fk; lift
-;; copies into full 5-tuples (pkg=1, level=2) so bp has one uniform table.
-(defn fol-3to5-loop (rows acc)
-    (if (eq (len rows) 0) acc
-        (do
-            (let r (head rows))
-            (fol-3to5-loop (tail rows)
-                (cons (list (head r) 1 2 (head (tail r)) (head (tail (tail r)))) acc)))))
+(let FORM-CATEGORY-TABLE
+    (fol-core-rows (list "do" "sequence" "let" "if-then" "if" "fndef" "fncall" "ident")))
 
-(defn fol-append (xs ys)
-    (if (eq (len xs) 0) ys (cons (head xs) (fol-append (tail xs) ys))))
+(let FORM-PRIMITIVE-TABLE
+    (fol-core-rows (list "add" "sub" "mul" "div" "mod" "eq" "ne" "lt" "le" "gt" "ge" "and" "or" "not")))
 
-(let FORM-BP-TABLE
-    (fol-append (fol-3to5-loop FORM-CATEGORY-TABLE (empty))
-        (fol-append (fol-3to5-loop FORM-PRIMITIVE-TABLE (empty))
-                    FORM-USER-TABLE)))
-
-;; bp — resolve any registered Blueprint name to its NodeID. One uniform table
-;; of (name pkg level type inst) rows over categories, primitives, and the
-;; registry. An unregistered name returns the undefined NodeID (1 2 0 0) — the
-;; scanner is what guards against that ever shipping.
-(defn fol-row5->nodeid (row)
-    (make_nodeid (head (tail row))
-                 (head (tail (tail row)))
-                 (head (tail (tail (tail row))))
-                 (head (tail (tail (tail (tail row)))))))
-
-(defn bp (name)
-    (do
-        (let row (fol-table-lookup FORM-BP-TABLE name))
-        (if (eq (len row) 0)
-            (make_nodeid 1 2 0 0)
-            (fol-row5->nodeid row))))
-
-;; --- recipe-building helpers ----------------------------------------
-;;
-;; The loader builds (let NAME (make_nodeid 1 2 T I)) and (defn NAME ()
-;; BODY) recipes at runtime. These mirror fsc-rec-let / fsc-rec-fndef
-;; in source-compiler.fk but stay local so the loader can run BEFORE
-;; source-compiler.fk in the load chain (the chain is:
-;;   json.fk → form-ontology-loader.fk → source-compiler.fk
-;; so source-compiler.fk's helpers aren't available yet).
-;;
-;; The static recipe-category NodeIDs come straight from the JSON
-;; tables — keeping ONE ice. A walk through FORM-CATEGORY-TABLE for
-;; each name resolves type+inst, then make_nodeid lifts them.
+;; --- table lookup ---------------------------------------------------
 
 (defn fol-table-lookup (table name)
     (if (eq (len table) 0) (empty)
@@ -186,110 +71,62 @@
               (intern_node FOL-SEQ-CAT (empty))
               body-recipe)))
 
-(defn fol-rec-make-nodeid (type inst)
-    (fol-rec-call "make_nodeid"
-        (list (intern_trivial_int 1)
-              (intern_trivial_int 2)
-              (intern_trivial_int type)
-              (intern_trivial_int inst))))
+(defn fol-rec-bp (name)
+    (fol-rec-call "bp" (list (intern_trivial_string name))))
 
-;; --- dialect-category recipes ---------------------------------------
-;;
-;; For each dialect entry, build `(let <PREFIX>-<NAME> (make_nodeid 1
-;; 2 <category_type> <inst>))`. The name is concatenated at runtime;
-;; the value-recipe is an fncall to make_nodeid.
+;; --- dialect-category bindings -------------------------------------
+;; Each name becomes `(let NAME (bp "NAME"))`. The coordinates live in the
+;; generated kernel bp table, not in this loader.
 
-(defn fol-dialect-cat-let (prefix cat-type cat-obj)
-    (do
-        (let name (str_concat prefix
-                    (str_concat "-" (json-string-value
-                                       (json-object-get cat-obj "name")))))
-        (let inst (json-int-value (json-object-get cat-obj "inst")))
-        (fol-rec-let name (fol-rec-make-nodeid cat-type inst))))
+(let FOL-DIALECT-BINDING-NAMES
+    (list "PY-BMF-IMPORT" "PY-BMF-FROM-IMPORT" "PY-BMF-DEF" "PY-BMF-CLASS" "PY-BMF-ASSIGN" "PY-BMF-RETURN" "PY-BMF-RAISE" "PY-BMF-PASS" "PY-BMF-IF" "PY-BMF-WHILE" "PY-BMF-FOR" "PY-BMF-CALL" "PY-BMF-INT" "PY-BMF-STRING" "PY-BMF-IDENT" "PY-BMF-ATTR" "PY-BMF-METHOD-CALL" "PY-BMF-LIST" "PY-BMF-DICT" "PY-BMF-ANNOTATED" "PY-BMF-AUG-ASSIGN" "PY-BMF-BINOP" "PY-BMF-MODULE" "PY-BMF-BOOL" "PY-BMF-NONE" "PY-BMF-UNARY" "PY-BMF-COMPARE" "PY-BMF-BOOL-OP" "PY-BMF-SUBSCRIPT" "PY-BMF-SLICE" "PY-BMF-TUPLE" "PY-BMF-SET" "PY-BMF-LAMBDA" "PY-BMF-AWAIT" "PY-BMF-YIELD" "PY-BMF-BREAK" "PY-BMF-CONTINUE" "PY-BMF-GLOBAL" "PY-BMF-NONLOCAL" "PY-BMF-DEL" "PY-BMF-ASSERT" "PY-BMF-WITH" "PY-BMF-TRY" "PY-BMF-ASYNC-DEF" "PY-BMF-DECORATOR" "PY-BMF-ASYNC-FOR" "PY-BMF-ASYNC-WITH" "PY-BMF-IF-ELSE" "PY-BMF-ELIF" "PY-BMF-RAISE-FROM" "PY-BMF-IMPORT-STAR" "PY-BMF-IMPORT-MANY" "PY-BMF-EXCEPT-AS" "PY-BMF-MATCH" "PY-BMF-CASE" "PY-BMF-COMP" "PY-BMF-GENEXP" "PY-BMF-KWARG" "PY-BMF-STARARG" "PY-BMF-DEFAULT" "PY-BMF-TYPED-PARAM" "PY-BMF-RET-ANN" "PY-BMF-WALRUS" "PY-BMF-FLOAT" "PY-BMF-BYTES" "PY-BMF-ELLIPSIS" "PY-BMF-ATTR-ASSIGN" "PY-BMF-SUB-ASSIGN" "PY-BMF-UNPACK" "PY-BMF-FSTRING" "PY-BMF-IFEXP" "PY-BMF-SETCOMP" "PY-BMF-YIELD-FROM" "PY-BMF-MATCH-AS" "PY-BMF-IF-STMT" "BML-AST-PACKAGE" "BML-AST-IMPORT" "BML-AST-CLASS" "BML-AST-INTERFACE" "BML-AST-TEMPLATE" "BML-AST-SECTION" "BML-AST-FIELD" "BML-AST-CONST" "BML-AST-METHOD" "BML-AST-RETURN" "BML-AST-INT" "BML-AST-STRING" "BML-AST-NAME" "BML-AST-ADD" "BML-AST-CHOOSE" "BML-AST-FAIL" "BML-AST-CUT" "BML-AST-SAVE" "BML-AST-RESTORE" "BML-AST-DISCARD" "BML-AST-THROW" "BML-AST-IF" "BML-AST-WHILE" "BML-AST-FOR" "BML-AST-WITH" "BML-AST-TRY" "BML-AST-BLOCK" "BML-AST-BREAK" "BML-AST-CONTINUE" "BML-AST-CHAR" "BML-AST-ARRAY" "BML-AST-FLOAT" "GO-BMF-PACKAGE" "GO-BMF-IMPORT" "GO-BMF-FUNC" "GO-BMF-METHOD" "GO-BMF-STRUCT" "GO-BMF-INTERFACE" "GO-BMF-VAR" "GO-BMF-CONST" "GO-BMF-RETURN" "GO-BMF-ASSIGN" "GO-BMF-CALL" "GO-BMF-SELECTOR" "GO-BMF-INDEX" "GO-BMF-IF" "GO-BMF-FOR" "GO-BMF-GO" "GO-BMF-DEFER" "GO-BMF-TYPE" "GO-BMF-SWITCH" "GO-BMF-SELECT" "GO-BMF-CHAN" "GO-BMF-COMPOSITE" "GO-BMF-PTR-TYPE" "TS-BMF-IMPORT" "TS-BMF-EXPORT-CONST" "TS-BMF-FUNCTION" "TS-BMF-CLASS" "TS-BMF-INTERFACE" "TS-BMF-TYPE" "TS-BMF-CALL" "TS-BMF-AWAIT" "TS-BMF-JSX" "TS-BMF-RETURN" "TS-BMF-ASSIGN" "TS-BMF-MEMBER" "TS-BMF-INDEX" "TS-BMF-IF" "TS-BMF-FOR" "TS-BMF-ARROW" "TS-BMF-ARRAY" "TS-BMF-OBJECT" "TS-BMF-ENUM" "TS-BMF-OPTIONAL" "TS-BMF-TEMPLATE" "TS-BMF-TERNARY" "TS-BMF-IF-ELSE" "RS-BMF-USE" "RS-BMF-MOD" "RS-BMF-FN" "RS-BMF-STRUCT" "RS-BMF-ENUM" "RS-BMF-IMPL" "RS-BMF-TRAIT" "RS-BMF-MACRO" "RS-BMF-LET" "RS-BMF-RETURN" "RS-BMF-MATCH" "RS-BMF-IF" "RS-BMF-LOOP" "RS-BMF-ASYNC" "RS-BMF-RESULT"))
 
-(defn fol-dialect-cat-lets-loop (prefix cat-type cat-array acc)
-    (if (eq (len cat-array) 0) acc
-        (fol-dialect-cat-lets-loop prefix cat-type (tail cat-array)
-            (cons (fol-dialect-cat-let prefix cat-type (head cat-array)) acc))))
+(defn fol-dialect-binding-let (name)
+    (fol-rec-let name (fol-rec-bp name)))
 
-;; Walk one dialect's category list, prepending each let-recipe onto acc.
-(defn fol-dialect-lets (dialect-pair acc)
-    (do
-        (let dialect-obj (json-pair-value dialect-pair))
-        (let prefix      (json-string-value (json-object-get dialect-obj "name_prefix")))
-        (let cat-type    (json-int-value    (json-object-get dialect-obj "category_type")))
-        (let cats        (json-array-elements (json-object-get dialect-obj "categories")))
-        (fol-dialect-cat-lets-loop prefix cat-type cats acc)))
-
-;; Walk all dialects, building one flat list of let-recipes.
-(defn fol-all-dialect-lets-loop (dialects acc)
-    (if (eq (len dialects) 0) acc
-        (fol-all-dialect-lets-loop (tail dialects)
-            (fol-dialect-lets (head dialects) acc))))
+(defn fol-dialect-binding-lets-loop (names acc)
+    (if (eq (len names) 0) acc
+        (fol-dialect-binding-lets-loop (tail names)
+            (cons (fol-dialect-binding-let (head names)) acc))))
 
 (defn fol-all-dialect-lets ()
-    (fol-all-dialect-lets-loop
-        (json-object-pairs (json-object-get ONTOLOGY-JSON "dialects"))
-        (empty)))
+    (fol-dialect-binding-lets-loop FOL-DIALECT-BINDING-NAMES (empty)))
 
 ;; --- engine-constants getters ---------------------------------------
-;;
-;; Two shapes per family:
-;;   factory-style — body is (fncall <factory> <int-value>)
-;;   string-style  — body is a trivial string literal
-;;
-;; The schema marks string-style families with `string_values: true`.
-;; Factory-style families carry a `factory` field naming the helper
-;; in engine.fk that takes the int value.
+;; Factory rows: (function-name factory-name int-value), producing
+;; `(defn function-name () (factory-name int-value))`.
+;; String rows: (function-name string-value), producing a string literal getter.
 
-(defn fol-engine-entry-body-factory (factory entry-obj)
-    (fol-rec-call factory
-        (list (intern_trivial_int (json-int-value (json-object-get entry-obj "value"))))))
+(let FOL-ENGINE-FACTORY-ROWS
+    (list (list "bmf-domain-python" "bmf-domain-ref" 1) (list "bmf-domain-typescript" "bmf-domain-ref" 2) (list "bmf-domain-go" "bmf-domain-ref" 3) (list "bmf-domain-rust" "bmf-domain-ref" 4) (list "bmf-domain-bml" "bmf-domain-ref" 5) (list "bmf-domain-natural" "bmf-domain-ref" 6) (list "bmf-domain-image" "bmf-domain-ref" 7) (list "bmf-domain-audio" "bmf-domain-ref" 8) (list "bmf-domain-video" "bmf-domain-ref" 9) (list "bmf-domain-kind-language" "bmf-domain-kind-ref" 1) (list "bmf-domain-kind-media" "bmf-domain-kind-ref" 2) (list "bmf-domain-kind-runtime" "bmf-domain-kind-ref" 3) (list "bmf-lens-assertion" "bmf-lens-ref" 1) (list "bmf-lens-metadata" "bmf-lens-ref" 2) (list "bmf-lens-assign" "bmf-lens-ref" 3) (list "bmf-lens-var" "bmf-lens-ref" 4) (list "bmf-lens-quote" "bmf-lens-ref" 5) (list "bmf-lens-display" "bmf-lens-ref" 6)))
 
-(defn fol-engine-entry-body-string (entry-obj)
-    (intern_trivial_string (json-string-value (json-object-get entry-obj "value"))))
+(let FOL-ENGINE-STRING-ROWS
+    (list (list "bmf-semantic-natural-language" "natural-language") (list "bmf-semantic-image" "image") (list "bmf-semantic-audio" "audio") (list "bmf-semantic-video" "video") (list "bmf-semantic-general" "general") (list "bmf-semantic-knowledge" "knowledge") (list "bmf-context-key-language-tag" "language-tag") (list "bmf-context-key-locale" "locale") (list "bmf-context-key-script" "script") (list "bmf-context-key-region" "region") (list "bmf-context-key-direction" "direction") (list "bmf-context-key-calendar" "calendar") (list "bmf-context-key-numbering-system" "numbering-system") (list "bmf-context-key-time-zone" "time-zone") (list "bmf-context-key-semantic-domain" "semantic-domain") (list "bmf-context-key-culture" "culture") (list "bmf-context-key-register" "register") (list "bmf-context-key-environment" "environment") (list "bmf-context-key-audience" "audience") (list "bmf-context-key-purpose" "purpose") (list "bmf-context-key-viewpoint" "viewpoint") (list "bmf-context-key-media-type" "media-type") (list "bmf-context-key-charset" "charset") (list "bmf-context-key-encoding" "encoding") (list "bmf-context-key-container" "container") (list "bmf-context-key-codec" "codec") (list "bmf-context-key-unit" "unit") (list "bmf-context-key-color-space" "color-space") (list "bmf-context-key-source" "source") (list "bmf-context-key-creator" "creator") (list "bmf-context-key-license" "license") (list "bmf-context-key-created" "created") (list "bmf-context-key-derived-from" "derived-from") (list "bmf-locale-und" "und") (list "bmf-locale-en-us" "en-US") (list "bmf-locale-id-id" "id-ID") (list "bmf-script-latn" "Latn") (list "bmf-direction-auto" "auto") (list "bmf-direction-ltr" "ltr") (list "bmf-direction-rtl" "rtl") (list "bmf-register-plain" "plain") (list "bmf-register-math" "math") (list "bmf-register-formal" "formal") (list "bmf-environment-general" "general") (list "bmf-environment-file" "file") (list "bmf-environment-repo" "repo") (list "bmf-environment-web" "web") (list "bmf-purpose-representation" "representation") (list "bmf-purpose-roundtrip" "roundtrip") (list "bmf-calendar-gregory" "gregory") (list "bmf-numbering-latn" "latn") (list "bmf-media-text-plain" "text/plain") (list "bmf-media-octet-stream" "application/octet-stream") (list "bmf-media-image-svg" "image/svg+xml") (list "bmf-media-image-gif" "image/gif") (list "bmf-charset-utf8" "utf-8") (list "bmf-encoding-xml" "xml") (list "bmf-encoding-binary" "binary") (list "bmf-container-text" "text") (list "bmf-unit-px" "px") (list "bmf-unit-samples" "samples") (list "bmf-unit-px-ms" "px/ms") (list "bmf-color-srgb" "sRGB")))
 
-(defn fol-engine-entry-defn (name-prefix is-string factory entry-obj)
-    (do
-        (let name (str_concat name-prefix
-                    (str_concat "-" (json-string-value
-                                       (json-object-get entry-obj "name")))))
-        (let body (if is-string
-                      (fol-engine-entry-body-string entry-obj)
-                      (fol-engine-entry-body-factory factory entry-obj)))
-        (fol-rec-fndef-0 name body)))
+(defn fol-engine-factory-defn (row)
+    (fol-rec-fndef-0
+        (head row)
+        (fol-rec-call (head (tail row))
+            (list (intern_trivial_int (head (tail (tail row))))))))
 
-(defn fol-engine-entries-loop (name-prefix is-string factory entries acc)
-    (if (eq (len entries) 0) acc
-        (fol-engine-entries-loop name-prefix is-string factory (tail entries)
-            (cons (fol-engine-entry-defn name-prefix is-string factory (head entries)) acc))))
+(defn fol-engine-string-defn (row)
+    (fol-rec-fndef-0 (head row) (intern_trivial_string (head (tail row)))))
 
-(defn fol-engine-family-defns (family-pair acc)
-    (do
-        (let fam-obj     (json-pair-value family-pair))
-        (let name-prefix (json-string-value (json-object-get fam-obj "name_prefix")))
-        (let is-string   (json-object-has? fam-obj "string_values"))
-        (let factory     (if is-string ""
-                             (json-string-value (json-object-get fam-obj "factory"))))
-        (let entries     (json-array-elements (json-object-get fam-obj "entries")))
-        (fol-engine-entries-loop name-prefix is-string factory entries acc)))
+(defn fol-engine-factory-defns-loop (rows acc)
+    (if (eq (len rows) 0) acc
+        (fol-engine-factory-defns-loop (tail rows)
+            (cons (fol-engine-factory-defn (head rows)) acc))))
 
-(defn fol-all-engine-defns-loop (families acc)
-    (if (eq (len families) 0) acc
-        (fol-all-engine-defns-loop (tail families)
-            (fol-engine-family-defns (head families) acc))))
+(defn fol-engine-string-defns-loop (rows acc)
+    (if (eq (len rows) 0) acc
+        (fol-engine-string-defns-loop (tail rows)
+            (cons (fol-engine-string-defn (head rows)) acc))))
 
 (defn fol-all-engine-defns ()
-    (fol-all-engine-defns-loop
-        (json-object-pairs (json-object-get ONTOLOGY-JSON "engine_constants"))
-        (empty)))
+    (fol-engine-factory-defns-loop FOL-ENGINE-FACTORY-ROWS
+        (fol-engine-string-defns-loop FOL-ENGINE-STRING-ROWS (empty))))
 
 ;; --- materialise: walk the combined do-recipe in caller env ---------
-;;
-;; All let-recipes and defn-recipes go into one (do ...) block whose
-;; bindings land in the caller env when walked via walk_recipe_here.
-;; Order doesn't matter — every binding is independent (factory names
-;; resolve when the getter is *called*, not when its defn is walked).
 
 (defn fol-concat-acc (xs acc)
     (if (eq (len xs) 0) acc

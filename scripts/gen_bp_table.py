@@ -4,8 +4,9 @@
 `bp "name"` resolves a Blueprint name to its NodeID. To make it universally
 available — no `form-ontology-loader.fk` prelude required — each kernel embeds
 this table and registers `bp` as a native. The table is generated from the two
-authored sources (form-ontology.json categories/primitives + blueprint-registry.json),
-so all three kernels carry byte-identical data and stay in parity by construction.
+authored sources (form-ontology.json categories/primitives/dialect categories +
+blueprint-registry.json), so all three kernels carry byte-identical data and
+stay in parity by construction.
 
 Emits one source file per kernel (committed; regenerate when either JSON changes,
 wired into validate.sh's build step and the post-merge hook):
@@ -45,6 +46,11 @@ def build_table() -> dict[str, tuple]:
     for items in (onto.get("categories", []), onto.get("primitives", [])):
         for r in items:
             add(r["name"], (1, 2, r["type"], r["inst"]))
+    for dialect in onto.get("dialects", {}).values():
+        prefix = dialect["name_prefix"]
+        category_type = dialect["category_type"]
+        for r in dialect.get("categories", []):
+            add(f"{prefix}-{r['name']}", (1, 2, category_type, r["inst"]))
     for r in json.loads(REGISTRY.read_text()).get("blueprints", []):
         coord = (r.get("pkg", 1), r.get("level", 2), r.get("type", 99), r["inst"])
         add(r["name"], coord)
