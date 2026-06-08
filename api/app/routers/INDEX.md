@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 145
+**Total files**: 146
 
 | File | Purpose |
 |---|---|
@@ -30,6 +30,7 @@
 | [agent_task_log_routes.py](agent_task_log_routes.py) | Agent task log route. |
 | [agent_tasks_routes.py](agent_tasks_routes.py) | Agent task CRUD and list routes. |
 | [agent_telegram.py](agent_telegram.py) | Telegram webhook routes for agent operations. |
+| [agent_telegram_format.py](agent_telegram_format.py) | Pure formatting / URL / classification helpers for the Telegram agent router. |
 | [agent_timeout_routes.py](agent_timeout_routes.py) | Agent timeout sample and recommendation routes. |
 | [agent_usage_routes.py](agent_usage_routes.py) | Agent usage, visibility, orchestration guidance, and integration routes. |
 | [assets.py](assets.py) | Assets router — backed by graph_nodes (type=asset). |
