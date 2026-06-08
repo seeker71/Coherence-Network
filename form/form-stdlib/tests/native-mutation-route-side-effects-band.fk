@@ -1,0 +1,10 @@
+; native-mutation-route-side-effects-band.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk
+;
+; Band verdict: 11111 when the native mutation route runner binds application
+; graph mutation execution to the side-effect carrier while keeping ordinary
+; public traffic unflipped.
+
+(do
+    (nmrs-route-side-effects-binding-test))

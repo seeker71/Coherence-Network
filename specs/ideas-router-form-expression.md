@@ -144,7 +144,7 @@ python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expressi
 
 ## Gaps
 
-- GAP-I1 follow-up task: `ideas-native-mutation-route-binding`. `/api/ideas/router-structure`, `/api/ideas/source-index`, `/api/ideas/source-portfolio`, and `/api/ideas/graph-projection` are kernel-first capable. `graph-node-port.fk` exposes create/replace/delete over the storage port, `auth-port.fk` preserves API-key/contributor-key decision parity, `application-graph-node-port.fk` emits direct `graph_nodes` / `graph_node_revisions` / `graph_edges` SQL, `POST/PATCH /api/ideas` have `X-Form-Native-Preview` header-gated native SQL preview rows, live DB execution is proven, Form response projection now emits `IdeaWithScore` / `SpecRegistryEntry` shaped mutation rows, the preview response carries prediction residual, side-effect intents, choice markers, and reversible gate state, and `native-mutation-side-effects-test.sh` proves parent-edge repair, contributor-key audit, cache-invalidation receipt, and rollback receipt execute natively against throwaway Postgres. Public mutable DB-backed portfolio routes still enter through FastAPI by default until the proven side-effect carrier is bound to route execution and a narrow reversible public gate has a rollback receipt.
+- GAP-I1 follow-up task: `ideas-native-mutation-public-gate`. `/api/ideas/router-structure`, `/api/ideas/source-index`, `/api/ideas/source-portfolio`, and `/api/ideas/graph-projection` are kernel-first capable. `graph-node-port.fk` exposes create/replace/delete over the storage port, `auth-port.fk` preserves API-key/contributor-key decision parity, `application-graph-node-port.fk` emits direct `graph_nodes` / `graph_node_revisions` / `graph_edges` SQL, `POST/PATCH /api/ideas` have `X-Form-Native-Preview` header-gated native SQL preview rows, live DB execution is proven, Form response projection now emits `IdeaWithScore` / `SpecRegistryEntry` shaped mutation rows, the preview response carries prediction residual, side-effect intents, choice markers, and reversible gate state, `native-mutation-side-effects-test.sh` proves parent-edge repair, contributor-key audit, cache-invalidation receipt, and rollback receipt execute natively against throwaway Postgres, and `native-mutation-route-side-effects-test.sh` proves application graph mutation plus side-effect execution are bound in one Form-native route runner. Public mutable DB-backed portfolio routes still enter through FastAPI by default until a narrow reversible public gate has a route-local rollback receipt.
 - GAP-I2 follow-up task: `ideas-live-graph-storage-carrier`. Connect `/api/ideas/graph-projection` to a live application graph storage carrier on top of `form/form-stdlib/ideas-graph-projection.fk`.
 
 ## Risks and Assumptions
@@ -152,6 +152,6 @@ python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expressi
 - The Form artifact plus native structure/source routes is not a DB-backed replacement for the full ideas router.
 - A later native route lift can consume this route recipe now that the graph-node
   read carrier, mutation carrier, auth carrier, application-table SQL carrier,
-  live DB execution proof, response projection proof, and side-effect carrier
-  proof exist; route-bound side effects and reversible public gating remain the
+  live DB execution proof, response projection proof, side-effect carrier proof,
+  and route-runner binding proof exist; reversible public gating remains the
   next boundary.

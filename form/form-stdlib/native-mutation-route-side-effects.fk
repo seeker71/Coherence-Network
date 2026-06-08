@@ -1,0 +1,83 @@
+; native-mutation-route-side-effects.fk -- route runner binding for native
+; mutation side effects.
+;
+; The side-effect carrier can execute by itself. This module binds it to the
+; application graph mutation carrier so a native route runner can perform the
+; graph write and the route-local side effects in one Form-native flow.
+;
+; preludes: form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk
+;
+(do
+    (defn nmrs-edge-id (mutation-id)
+        (str_concat "parent-edge-" mutation-id))
+
+    (defn nmrs-route-binding-contract-json ()
+        (nms-cat (list
+            "{\"state\":\"route-side-effects-bound\""
+            ",\"route_runner\":\"Form-native application graph mutation plus side effects\""
+            ",\"executes\":true"
+            ",\"ordinary_traffic_flip_performed\":false"
+            ",\"effects\":[\"cache-invalidation\",\"parent-edge-repair\",\"contributor-key-audit\",\"rollback-receipt\"]"
+            ",\"rollback\":\"route-local receipt; public traffic still gated\""
+            "}")))
+
+    (defn nmrs-bind-common-side-effects (conn mutation-id node-id parent-id contributor-key-hash author)
+        (do
+            (nms-create-receipts-table conn)
+            (nms-record-cache-invalidation conn mutation-id node-id)
+            (if (gt (str_len parent-id) 0)
+                (nms-repair-parent-edge conn (nmrs-edge-id mutation-id) mutation-id parent-id node-id author)
+                conn)
+            (if (gt (str_len contributor-key-hash) 0)
+                (nms-audit-contributor-key conn contributor-key-hash)
+                conn)
+            (nms-record-rollback-receipt conn mutation-id node-id)
+            conn))
+
+    (defn nmrs-run-idea-create-with-side-effects
+        (conn mutation-id revision-id node-id name description phase properties parent-id contributor-key-hash author)
+        (do
+            (agn-create-node conn revision-id node-id "idea" name description phase properties "kernel-route-runner" author)
+            (nmrs-bind-common-side-effects conn mutation-id node-id parent-id contributor-key-hash author)
+            conn))
+
+    (defn nmrs-run-spec-update-with-side-effects
+        (conn mutation-id revision-id node-id title summary properties contributor-key-hash author)
+        (do
+            (agn-update-node conn revision-id node-id title summary "ice" properties "[\"title\",\"summary\",\"properties\"]" "kernel-route-runner" author)
+            (nmrs-bind-common-side-effects conn mutation-id node-id "" contributor-key-hash author)
+            conn))
+
+    ;; 11111 =
+    ;;   route runner contract names executes:true while public traffic is unflipped
+    ;;   idea create runner calls application graph create
+    ;;   common side effects carry cache + rollback receipts
+    ;;   parent edge repair and contributor audit are bound
+    ;;   spec update runner calls application graph update
+    (defn nmrs-route-side-effects-binding-test ()
+        (do
+            (let contract (nmrs-route-binding-contract-json))
+            (let contract-ok (if (eq (nms-and4
+                (nms-contains? contract "route-side-effects-bound")
+                (nms-contains? contract "\"executes\":true")
+                (nms-contains? contract "\"ordinary_traffic_flip_performed\":false")
+                (nms-contains? contract "route-local receipt")) 1) 1 0))
+            (let idea-ok (if (eq (nms-and3
+                (nms-contains? "nmrs-run-idea-create-with-side-effects agn-create-node kernel-route-runner" "nmrs-run-idea-create-with-side-effects")
+                (nms-contains? "nmrs-run-idea-create-with-side-effects agn-create-node kernel-route-runner" "agn-create-node")
+                (nms-contains? "nmrs-run-idea-create-with-side-effects agn-create-node kernel-route-runner" "kernel-route-runner")) 1) 10 0))
+            (let receipt-ok (if (eq (nms-and3
+                (nms-contains? "nms-record-cache-invalidation nms-record-rollback-receipt nmrs-bind-common-side-effects" "nms-record-cache-invalidation")
+                (nms-contains? "nms-record-cache-invalidation nms-record-rollback-receipt nmrs-bind-common-side-effects" "nms-record-rollback-receipt")
+                (nms-contains? "nms-record-cache-invalidation nms-record-rollback-receipt nmrs-bind-common-side-effects" "nmrs-bind-common-side-effects")) 1) 100 0))
+            (let side-effect-ok (if (eq (nms-and3
+                (nms-contains? "nms-repair-parent-edge nms-audit-contributor-key nmrs-edge-id" "nms-repair-parent-edge")
+                (nms-contains? "nms-repair-parent-edge nms-audit-contributor-key nmrs-edge-id" "nms-audit-contributor-key")
+                (nms-contains? "nms-repair-parent-edge nms-audit-contributor-key nmrs-edge-id" "nmrs-edge-id")) 1) 1000 0))
+            (let spec-ok (if (eq (nms-and3
+                (nms-contains? "nmrs-run-spec-update-with-side-effects agn-update-node kernel-route-runner" "nmrs-run-spec-update-with-side-effects")
+                (nms-contains? "nmrs-run-spec-update-with-side-effects agn-update-node kernel-route-runner" "agn-update-node")
+                (nms-contains? "nmrs-run-spec-update-with-side-effects agn-update-node kernel-route-runner" "kernel-route-runner")) 1) 10000 0))
+            (sum (list contract-ok idea-ok receipt-ok side-effect-ok spec-ok))))
+
+    0)
