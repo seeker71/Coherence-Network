@@ -39,6 +39,7 @@
     "/contributors/[id]/portfolio/stakes/[stake_id]": "web/app/contributors/[id]/portfolio/stakes/[stake_id]/page.tsx",
     "/contributors/[id]/portfolio/tasks/[task_id]": "web/app/contributors/[id]/portfolio/tasks/[task_id]/page.tsx",
     "/creators": "web/app/creators/page.tsx",
+    "/creators/resonance": "web/app/creators/resonance/page.tsx",
     "/creators/submit": "web/app/creators/submit/page.tsx",
     "/dashboard": "web/app/dashboard/page.tsx",
     "/demo": "web/app/demo/page.tsx",

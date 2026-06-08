@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 144
+**Total files**: 145
 
 | File | Purpose |
 |---|---|
@@ -52,6 +52,7 @@
 | [contributors.py](contributors.py) | Contributors router — backed by graph_nodes (type=contributor). |
 | [contributors_portfolio.py](contributors_portfolio.py) | Contributor Portfolio API routes (spec 174). |
 | [creator_economy.py](creator_economy.py) | Creator economy router — public stats, proof cards, featured listings. |
+| [creator_resonance.py](creator_resonance.py) | Creator resonance report routes. |
 | [credentials.py](credentials.py) | API router for Repo Credentials. |
 | [data_retention.py](data_retention.py) | Data retention management API routes. |
 | [debug.py](debug.py) | Debug mode toggle — runtime log-level control and diagnostic flags. |

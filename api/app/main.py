@@ -78,6 +78,7 @@ from app.routers import graph_zoom
 from app.routers import graph_health
 from app.routers import agent_grounded_metrics_routes
 from app.routers import execution_value as execution_value_router
+from app.routers import creator_resonance as creator_resonance_router
 from app.routers import meta as meta_router
 from app.routers import verification as verification_router
 from app.routers import onboarding as onboarding_router
@@ -798,6 +799,7 @@ app.include_router(settlement_router.router, prefix="/api", tags=["settlement"])
 from app.routers import creator_economy as creator_economy_router
 app.include_router(creator_economy_router.router, prefix="/api", tags=["creator-economy"])
 app.include_router(creator_economy_router.proof_router, prefix="/api", tags=["creator-economy"])
+app.include_router(creator_resonance_router.router, prefix="/api", tags=["creator-economy"])
 app.include_router(concepts.router, prefix="/api", tags=["concepts"])
 app.include_router(substrate_router.router, prefix="/api/substrate", tags=["substrate"])
 app.include_router(agent_relationship_router.router, prefix="/api", tags=["agents"])

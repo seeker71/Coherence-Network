@@ -1,0 +1,142 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/creator-resonance-report-20260609",
+  "commit_scope": "Add a creator resonance report surface that turns artist platform snapshots into evidence-backed attention, conversion, income, proof-gap, and next-action signals.",
+  "files_owned": [
+    "MANIFEST.md",
+    "api/app/main.py",
+    "api/app/models/INDEX.md",
+    "api/app/models/creator_resonance.py",
+    "api/app/routers/INDEX.md",
+    "api/app/routers/creator_resonance.py",
+    "api/app/services/INDEX.md",
+    "api/app/services/creator_resonance_service.py",
+    "api/tests/INDEX.md",
+    "api/tests/test_creator_resonance_report.py",
+    "api/app/data/web_routes.json",
+    "web/app/INDEX.md",
+    "web/app/creators/page.tsx",
+    "web/app/creators/resonance/",
+    "web/app/creators/resonance/page.tsx",
+    "web/app/creators/resonance/_components/CreatorResonanceBuilder.tsx",
+    "specs/INDEX.md",
+    "specs/creator-resonance-report.md",
+    "docs/system_audit/commit_evidence_20260609_creator_resonance_report.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd api && python3 -m pytest -q tests/test_creator_resonance_report.py tests/test_creator_economy.py",
+      "cd api && python3 -m ruff check app/models/creator_resonance.py app/services/creator_resonance_service.py app/routers/creator_resonance.py tests/test_creator_resonance_report.py",
+      "cd web && npm ci --cache .cache/npm",
+      "cd web && npm run build",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/validate_spec_quality.py --file specs/creator-resonance-report.md",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260609_creator_resonance_report.json",
+      "cd api && python3 -m uvicorn app.main:app --host 127.0.0.1 --port 18131",
+      "curl -sS -X POST http://127.0.0.1:18131/api/creator-economy/resonance-report -H 'Content-Type: application/json' -d '<artist snapshot payload>' | python3 -m json.tool",
+      "API_PORT=18132 WEB_PORT=3112 THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh --start",
+      "Browser: opened http://127.0.0.1:3220/creators/resonance, submitted the form, verified strong proof/no HTTP errors, captured desktop and mobile screenshots",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "cd form/form-kernel-rust && cargo build --release --quiet",
+      "cd api && python3 -m pytest -q tests/test_flow_vitality.py::test_vitality_and_meeting_flow tests/test_portfolio_governance.py::test_vitality_returns_six_signals",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "notes": "Arrival gates passed in a dedicated worktree. The first focused API test run exposed incorrect test expectations around dimensional boundaries: listeners stay in attention and streams stay in conversion. The service was kept unchanged and the test totals were corrected. Ruff passed after removing one unused import. Web dependencies installed with npm ci and the full Next build passed, including the new /creators/resonance route. Local curl returned HTTP 200 with proof_quality=strong, can_validate_generation=true, can_show_income=true, resonance_score=0.3056, and net_income_usd=6.5. The repo local web verifier passed with 19 API/interface checks and all web route checks green. Browser inspection submitted the form through /creators/resonance; desktop proof found the report panel scrolled out of view, so the panel was made sticky on large screens. The follow-up browser pass showed the sticky report visible beside the lower form, and the mobile viewport had no horizontal overflow. The first full PR guard failed only because the local Rust Form kernel binary was absent; building form/form-kernel-rust release fixed the known vitality prerequisite, the two failed vitality tests passed, and the final worktree PR guard passed with ready_for_push=true. Followthrough guard passed with no open stale Codex PRs."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until the branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No deploy attempted yet. Public verification can follow PR/CI if this branch is merged."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local implementation, focused tests, web build, local curl, browser proof, repo web verification, evidence validation, spec validation, rebase, local PR guard, and followthrough guard pass. Commit, push, PR, CI, and deploy/public verification remain pending."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Creators can now POST platform snapshots to /api/creator-economy/resonance-report and receive an evidence-backed report with attention, engagement, conversion, relationship, income, confidence, proof gaps, and next-action recommendations. Web /creators/resonance provides a usable report builder and the existing /creators page links to it.",
+    "public_endpoints": [
+      "/api/creator-economy/resonance-report",
+      "/creators/resonance"
+    ],
+    "test_flows": [
+      "Pure service test proves multi-platform, multi-dimensional scoring with strong proof when baseline/current/source/value signals exist.",
+      "Pure service test proves missing baseline and revenue evidence are named as gaps.",
+      "ASGI route test proves POST /api/creator-economy/resonance-report returns the report shape.",
+      "Full web build proves /creators/resonance compiles."
+    ]
+  },
+  "idea_ids": [
+    "value-attribution",
+    "coherence-credit"
+  ],
+  "spec_ids": [
+    "creator-resonance-report",
+    "creator-economy-promotion",
+    "execution-value-income-proof"
+  ],
+  "task_ids": [
+    "creator-resonance-report-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "creator-use-case",
+        "value-generation-priority"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/app/models/creator_resonance.py defines the platform snapshot vocabulary and public report response.",
+    "api/app/services/creator_resonance_service.py separates attention, engagement, conversion, relationship, and income dimensions and names proof gaps instead of guessing missing metrics.",
+    "api/app/routers/creator_resonance.py exposes POST /api/creator-economy/resonance-report under the existing creator economy front door.",
+    "web/app/creators/resonance/_components/CreatorResonanceBuilder.tsx provides a usable manual/authorized snapshot report builder for artists.",
+    "web/app/creators/page.tsx now links creator visitors to the report builder alongside asset submission.",
+    "api/tests/test_creator_resonance_report.py covers scoring, evidence gaps, and route composition.",
+    "specs/creator-resonance-report.md documents the contract, data boundary, accepted metrics, and future adapter boundary."
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "api/app/main.py",
+    "api/app/models/INDEX.md",
+    "api/app/models/creator_resonance.py",
+    "api/app/routers/INDEX.md",
+    "api/app/routers/creator_resonance.py",
+    "api/app/services/INDEX.md",
+    "api/app/services/creator_resonance_service.py",
+    "api/tests/INDEX.md",
+    "api/tests/test_creator_resonance_report.py",
+    "api/app/data/web_routes.json",
+    "web/app/INDEX.md",
+    "web/app/creators/page.tsx",
+    "web/app/creators/resonance/",
+    "web/app/creators/resonance/page.tsx",
+    "web/app/creators/resonance/_components/CreatorResonanceBuilder.tsx",
+    "specs/INDEX.md",
+    "specs/creator-resonance-report.md"
+  ],
+  "change_intent": "runtime_feature"
+}
