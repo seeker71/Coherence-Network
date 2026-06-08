@@ -214,22 +214,27 @@ defn native_mutation_side_effect_ledger() = {
         ),
         nmsl_entry(
             "idea-valuation-audit-ledger",
-            "missing_python_parity",
+            "python_parity_effect",
             [
                 "api/app/services/idea_write_ops.py::update_idea",
                 "api/app/services/idea_write_ops.py::update_ideas_batch",
                 "api/app/services/audit_ledger_service.py::append_entry"
             ],
-            "Python writes AuditEntryType.VALUATION_CHANGE rows for idea value/status changes.",
+            "Python writes AuditEntryType.VALUATION_CHANGE rows for idea value/status changes with SYSTEM sender/receiver, metadata, previous_hash, and hash.",
             [
-                "none"
+                "form/form-stdlib/native-idea-valuation-audit-ledger.fk::nival-record-valuation-change",
+                "form/form-stdlib/native-idea-valuation-audit-ledger.fk::nival-record-batch-valuation-change",
+                "form/form-stdlib/native-idea-valuation-audit-ledger.fk::nival-run-idea-update-with-valuation-audit",
+                "form/form-stdlib/native-mutation-public-gate.fk::nmpg-run-idea-update-public-gate"
             ],
             [
-                "api/tests/test_native_mutation_side_effect_ledger.py"
+                "form/scripts/native-idea-valuation-audit-ledger-test.sh",
+                "api/tests/test_native_idea_valuation_audit_ledger.py",
+                "api/tests/test_native_mutation_public_gate.py"
             ],
-            "ordinary no-header flip blocked until carried Form-native or intentionally retired by spec",
-            "do not delete silently; either add native audit-ledger carrier or document retirement",
-            "this is the main missing mutable companion surfaced by the ledger"
+            "keep as Python parity for idea update route runners",
+            "delete only if Python idea updates stop writing VALUATION_CHANGE audit-ledger entries",
+            "idea valuation audit-ledger parity is carried Form-native; ordinary no-header traffic still waits for deployed public-gate canary evidence"
         ),
         nmsl_entry(
             "resonance-reattunement",
@@ -251,9 +256,9 @@ defn native_mutation_side_effect_ledger() = {
     ],
     counts: {
         primary_mutation: 2,
-        python_parity_effect: 4,
+        python_parity_effect: 5,
         gate_receipt: 2,
-        missing_python_parity: 1,
+        missing_python_parity: 0,
         not_carried: 1,
         unjustified_additions: 0,
     },
@@ -265,10 +270,10 @@ defn native_mutation_side_effect_recipe_shift() = {
         "rollback receipt as proof -> rollback receipt as reversible gate safety",
         "prediction residual ignored -> residual held with 0/1/silence/protocol/fail/stop/BMA markers in the gate, not used to smuggle effects",
         "unknown companion effects -> missing parity or not-carried rows",
+        "idea valuation audit-ledger missing parity -> hash-chained Form-native audit ledger carrier",
     ],
     move_next: [
-        "carry idea-valuation-audit-ledger Form-native or retire it by explicit spec",
         "observe deployed X-Form-Native-Public-Gate canary",
-        "only then consider ordinary no-header mutation movement",
+        "then consider ordinary no-header mutation movement",
     ],
 };

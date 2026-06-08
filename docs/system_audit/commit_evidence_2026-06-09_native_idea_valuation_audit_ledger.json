@@ -1,0 +1,191 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/native-idea-valuation-audit-ledger-20260609",
+  "commit_scope": "Ship Form-native idea valuation audit-ledger parity and bind it into the reversible native public gate.",
+  "files_owned": [
+    "MANIFEST.md",
+    "api/tests/INDEX.md",
+    "api/tests/test_native_idea_valuation_audit_ledger.py",
+    "api/tests/test_native_mutation_ab_observation.py",
+    "api/tests/test_native_mutation_public_gate.py",
+    "api/tests/test_native_mutation_side_effect_ledger.py",
+    "deploy/kernel-router/mutation_ab_observation_harness.py",
+    "deploy/kernel-router/production-routes.fk",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/native-mutation-side-effect-ledger.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "docs/system_audit/commit_evidence_2026-06-09_native_idea_valuation_audit_ledger.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/integration/native-idea-valuation-audit-ledger-live.fk",
+    "form/form-stdlib/integration/native-mutation-public-gate-live.fk",
+    "form/form-stdlib/native-idea-valuation-audit-ledger.fk",
+    "form/form-stdlib/native-mutation-public-gate.fk",
+    "form/form-stdlib/tests/native-idea-valuation-audit-ledger-band.fk",
+    "form/scripts/native-idea-valuation-audit-ledger-test.sh",
+    "form/scripts/native-mutation-public-gate-test.sh",
+    "specs/INDEX.md",
+    "specs/ideas-router-form-expression.md",
+    "specs/native-idea-valuation-audit-ledger.md",
+    "specs/native-mutation-public-gate.md",
+    "specs/native-mutation-route-side-effect-binding.md",
+    "specs/native-mutation-side-effect-ledger.md",
+    "specs/native-mutation-side-effects.md",
+    "specs/spec-registry-source-native.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-idea-valuation-audit-ledger.fk form-stdlib/tests/native-idea-valuation-audit-ledger-band.fk",
+      "form/scripts/native-idea-valuation-audit-ledger-test.sh",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/native-idea-valuation-audit-ledger.fk form-stdlib/native-mutation-public-gate.fk form-stdlib/tests/native-mutation-public-gate-band.fk",
+      "form/scripts/native-mutation-public-gate-test.sh",
+      "cd api && python3 -m pytest -q tests/test_native_idea_valuation_audit_ledger.py tests/test_native_mutation_side_effect_ledger.py tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py tests/test_native_mutation_route_bindings.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py",
+      "python3 deploy/kernel-router/mutation_ab_observation_harness.py --json",
+      "python3 deploy/kernel-router/mutation_public_gate_harness.py --json",
+      "cd api && python3 -m ruff check tests/test_native_idea_valuation_audit_ledger.py tests/test_native_mutation_side_effect_ledger.py tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py",
+      "python3 scripts/validate_spec_quality.py --file specs/native-idea-valuation-audit-ledger.md --file specs/native-mutation-side-effect-ledger.md --file specs/native-mutation-side-effects.md --file specs/native-mutation-route-side-effect-binding.md --file specs/native-mutation-public-gate.md --file specs/ideas-router-form-expression.md --file specs/spec-registry-source-native.md",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check",
+      "make wellness",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/codex/native-mutation-side-effect-ledger-20260609"
+    ],
+    "summary": "native-idea-valuation-audit-ledger.fk adds a Postgres audit_ledger carrier for Python-parity VALUATION_CHANGE rows with SYSTEM sender/receiver, reason, reference_id, metadata_json, previous_hash, and sha256 hash. The live proof returned 11111111 after direct append, route-runner append, graph revision readback, SQL hash recomputation, previous_hash chain verification, side-effect receipts, contributor-key audit, cleanup, and close. native-mutation-public-gate.fk now exposes nmpg-run-idea-update-public-gate over that carrier; the public-gate live proof returned 111111111. The A/B and public-gate harnesses remain confidence 1.0 with ordinary_traffic_flip_performed=false. Local PR guard passed against origin/codex/native-mutation-side-effect-ledger-20260609 with ready_for_push=True.",
+    "known_limitations": [
+      {
+        "scope": "ordinary public mutations",
+        "observed": "No ordinary no-header POST/PATCH/DELETE mutation traffic moved. No-header traffic still fans out to FastAPI."
+      },
+      {
+        "scope": "deployed canary",
+        "observed": "No deployed X-Form-Native-Public-Gate canary was run in this slice. The next boundary remains deployed header-gated canary evidence before any no-header flip."
+      },
+      {
+        "scope": "audit values",
+        "observed": "Form callers pass old and new values as JSON fragments so metadata_json matches the Python hash content shape."
+      },
+      {
+        "scope": "production database",
+        "observed": "No production application database writes were attempted."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push of this stacked branch and GitHub checks on a draft PR."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "No public deploy attempted. Ordinary no-header public mutation traffic remains on FastAPI."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Native idea update route runners can now append hash-chained VALUATION_CHANGE audit_ledger rows and the public-gate Form layer has an idea update runner over that carrier, while public no-header mutation traffic remains unchanged.",
+    "public_endpoints": [
+      "PATCH /api/ideas/{idea_id}",
+      "Header X-Form-Native-Preview",
+      "Header X-Form-Native-Public-Gate",
+      "Form nival-run-idea-update-with-valuation-audit",
+      "Form nmpg-run-idea-update-public-gate",
+      "Postgres audit_ledger"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh ... native-idea-valuation-audit-ledger-band.fk -> 111111",
+      "form/scripts/native-idea-valuation-audit-ledger-test.sh -> 11111111",
+      "cd form && ./validate.sh ... native-mutation-public-gate-band.fk -> 1111111",
+      "form/scripts/native-mutation-public-gate-test.sh -> 111111111",
+      "python3 deploy/kernel-router/mutation_ab_observation_harness.py --json -> confidence 1.0 and idea-valuation-audit-ledger intent carried",
+      "python3 deploy/kernel-router/mutation_public_gate_harness.py --json -> confidence 1.0 and public gate allowed",
+      "cd api && python3 -m pytest -q tests/test_native_idea_valuation_audit_ledger.py tests/test_native_mutation_side_effect_ledger.py tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py tests/test_native_mutation_route_bindings.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py -> 37 passed",
+      "make wellness -> maps aligned and every claimed symbol resolves"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Audit-ledger parity is carried Form-native; ordinary mutation traffic still waits for deployed X-Form-Native-Public-Gate canary evidence before any no-header flip."
+  },
+  "idea_ids": [
+    "idea-realization-engine",
+    "data-infrastructure"
+  ],
+  "spec_ids": [
+    "specs/native-idea-valuation-audit-ledger.md",
+    "specs/native-mutation-side-effect-ledger.md",
+    "specs/native-mutation-public-gate.md",
+    "specs/native-mutation-route-side-effect-binding.md",
+    "specs/native-mutation-side-effects.md",
+    "specs/ideas-router-form-expression.md",
+    "specs/spec-registry-source-native.md"
+  ],
+  "task_ids": [
+    "native-idea-valuation-audit-ledger-20260609",
+    "native-mutation-deployed-public-canary"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/native-idea-valuation-audit-ledger.fk",
+    "form/form-stdlib/integration/native-idea-valuation-audit-ledger-live.fk",
+    "form/scripts/native-idea-valuation-audit-ledger-test.sh",
+    "form/form-stdlib/native-mutation-public-gate.fk",
+    "form/form-stdlib/integration/native-mutation-public-gate-live.fk",
+    "api/tests/test_native_idea_valuation_audit_ledger.py",
+    "docs/coherence-substrate/native-mutation-side-effect-ledger.form",
+    "specs/native-idea-valuation-audit-ledger.md"
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "api/tests/INDEX.md",
+    "api/tests/test_native_idea_valuation_audit_ledger.py",
+    "api/tests/test_native_mutation_ab_observation.py",
+    "api/tests/test_native_mutation_public_gate.py",
+    "api/tests/test_native_mutation_side_effect_ledger.py",
+    "deploy/kernel-router/mutation_ab_observation_harness.py",
+    "deploy/kernel-router/production-routes.fk",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/native-mutation-side-effect-ledger.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "docs/system_audit/commit_evidence_2026-06-09_native_idea_valuation_audit_ledger.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/integration/native-idea-valuation-audit-ledger-live.fk",
+    "form/form-stdlib/integration/native-mutation-public-gate-live.fk",
+    "form/form-stdlib/native-idea-valuation-audit-ledger.fk",
+    "form/form-stdlib/native-mutation-public-gate.fk",
+    "form/form-stdlib/tests/native-idea-valuation-audit-ledger-band.fk",
+    "form/scripts/native-idea-valuation-audit-ledger-test.sh",
+    "form/scripts/native-mutation-public-gate-test.sh",
+    "specs/INDEX.md",
+    "specs/ideas-router-form-expression.md",
+    "specs/native-idea-valuation-audit-ledger.md",
+    "specs/native-mutation-public-gate.md",
+    "specs/native-mutation-route-side-effect-binding.md",
+    "specs/native-mutation-side-effect-ledger.md",
+    "specs/native-mutation-side-effects.md",
+    "specs/spec-registry-source-native.md"
+  ],
+  "change_intent": "runtime_feature"
+}
