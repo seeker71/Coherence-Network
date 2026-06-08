@@ -1,0 +1,54 @@
+; circle-band.fk — proof for consentful circle / satsang protocol cells.
+;
+; preludes: form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/kernel-http.fk form-stdlib/channel-flow.fk form-stdlib/circle.fk
+;
+; Band verdict: 1048575 when a circle is discoverable by offer, joinable only by
+; invitation, private without export consent, exportable with explicit consensus,
+; refusable on observed invasion, and able to hold satsang silence/inquiry/pointing.
+
+section [form.bml] {
+    def cc-circle-band-score() {
+        let flow = cf-http-channel-flow();
+        let circle = cc-open-cell-satsang-circle("circle:truth-room", list("cell-a", "cell-b", "cell-c"), "welcome what is alive, owned, and consented", flow);
+        let offer = cc-default-offer(circle, "cell-a", "truth room", "shared evidence stays inside unless export consent passes");
+        let invitation = cc-circle-invitation("circle:truth-room", "cell-a", "cell-b", "come if this serves your truth", "leave freely", "open");
+        let weak_invitation = cc-circle-invitation("circle:truth-room", "cell-a", "cell-c", "come if this serves your truth", "leave freely", "open");
+        let share = cc-circle-share("circle:truth-room", "cell-b", cc-share-impact(), bp("CHANNEL-FLOW"), cc-visibility-circle-only(), cc-export-consent-required());
+        let passed_consensus = cc-circle-consensus("circle:truth-room", "export-share", list("cell-a", "cell-b", "cell-c"), 3, 2, "export summary to invited sibling");
+        let weak_consensus = cc-circle-consensus("circle:truth-room", "export-share", list("cell-a", "cell-b", "cell-c"), 1, 2, "not enough agreement");
+        let export_consent = cc-circle-export-consent("circle:truth-room", share, "circle:neighbor", cc-fidelity-summary(), "share derived learning without exposing full payload", "open", passed_consensus);
+        let blocked_export_consent = cc-circle-export-consent("circle:truth-room", share, "circle:neighbor", cc-fidelity-summary(), "share derived learning without exposing full payload", "open", weak_consensus);
+        let invasive_interface = list(m-witness(), m-see(), m-invite());
+        let refusal = cc-circle-refusal("circle:truth-room", "cell-c", "cell-x", m-project(), invasive_interface, passed_consensus, "projection refused by circle");
+        let weak_refusal = cc-circle-refusal("circle:truth-room", "cell-c", "cell-x", m-project(), invasive_interface, weak_consensus, "projection observed but consensus absent");
+        let silence = cc-satsang-silence("circle:truth-room", list("cell-a", "cell-b", "cell-c"), "still and truthful", "open");
+        let inquiry = cc-satsang-inquiry("circle:truth-room", "cell-a", "what is actually here?", "circle", cc-confidential-circle-only());
+        let pointing = cc-satsang-pointing("circle:truth-room", "cell-b", "notice the shared evidence before the story", "circle", cc-strength-direct(), true);
+        let refusal_receipt = cc-circle-receipt("circle:truth-room", "cell-c", refusal, cc-action-refused(), "invasion observed and consensus passed", 0);
+        let export_receipt = cc-circle-receipt("circle:truth-room", "cell-b", share, cc-action-exported(), "summary exported by explicit consent", 1);
+        sum(list(
+            cc-bool-score(cc-circle-valid?(circle), 1),
+            cc-bool-score(cc-offer-discoverable?(offer), 2),
+            cc-bool-score(cc-joinable-by-invitation?(offer, invitation, "cell-b"), 4),
+            cc-bool-score(if cc-joinable-by-invitation?(offer, weak_invitation, "cell-b") then false else true, 8),
+            cc-bool-score(cc-share-valid?(share), 16),
+            cc-bool-score(if cc-outside-flow-allowed?(share, empty) then false else true, 32),
+            cc-bool-score(cc-consensus-passed?(passed_consensus), 64),
+            cc-bool-score(cc-export-allowed?(share, export_consent), 128),
+            cc-bool-score(if cc-export-allowed?(share, blocked_export_consent) then false else true, 256),
+            cc-bool-score(cc-refusal-valid?(refusal), 512),
+            cc-bool-score(if cc-refusal-valid?(weak_refusal) then false else true, 1024),
+            cc-bool-score(cc-satsang-silence-valid?(silence), 2048),
+            cc-bool-score(cc-satsang-inquiry-valid?(inquiry), 4096),
+            cc-bool-score(and(cc-satsang-pointing-valid?(pointing), str_eq(cc-pointing-strength(pointing), cc-strength-direct())), 8192),
+            cc-bool-score(and(cc-receipt-valid?(refusal_receipt), str_eq(cc-receipt-action(refusal_receipt), cc-action-refused())), 16384),
+            cc-bool-score(cf-channel-flow-valid?(cc-circle-carrier-flow(circle)), 32768),
+            cc-bool-score(ci-honors?(m-invite(), cc-circle-interface-offer(circle)), 65536),
+            cc-bool-score(str_eq(cc-offer-boundary(offer), "shared evidence stays inside unless export consent passes"), 131072),
+            cc-bool-score(and(cc-receipt-valid?(export_receipt), str_eq(cc-receipt-action(export_receipt), cc-action-exported())), 262144),
+            cc-bool-score(str_eq(cc-share-kind(share), cc-share-impact()), 524288)
+        ));
+    }
+
+    cc-circle-band-score();
+}

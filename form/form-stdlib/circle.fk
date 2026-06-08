@@ -1,0 +1,175 @@
+; circle.fk — consentful circle / satsang protocol cells.
+;
+; preludes: form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/channel-flow.fk
+;
+; A circle is a held group container, not an open broadcast mesh. The protocol
+; makes discovery, invitation, owned sharing, export consent, refusal, silence,
+; and truth-oriented inquiry visible as data the kernels can agree on.
+
+section [form.bml] {
+    let cc_tag_circle = bp("CELL-CIRCLE");
+    let cc_tag_offer = bp("CIRCLE-OFFER");
+    let cc_tag_invitation = bp("CIRCLE-INVITATION");
+    let cc_tag_share = bp("CIRCLE-SHARE");
+    let cc_tag_consensus = bp("CIRCLE-CONSENSUS");
+    let cc_tag_refusal = bp("CIRCLE-REFUSAL");
+    let cc_tag_export_consent = bp("CIRCLE-EXPORT-CONSENT");
+    let cc_tag_receipt = bp("CIRCLE-RECEIPT");
+    let cc_tag_satsang_silence = bp("SATSANG-SILENCE");
+    let cc_tag_satsang_inquiry = bp("SATSANG-INQUIRY");
+    let cc_tag_satsang_pointing = bp("SATSANG-POINTING");
+
+    def cc-bool-score(ok, score) = if ok then score else 0;
+    def cc-tagged?(value, tag, arity) = if eq(len(value), arity) then node_eq(nth(value, 0), tag) else false;
+    def cc-nonempty-string?(value) = gt(str_len(value), 0);
+
+    def cc-discovery-offered() = "offered";
+    def cc-discovery-private() = "private";
+    def cc-invitation-required() = "invitation-required";
+    def cc-confidential-circle-only() = "circle-only";
+    def cc-export-consent-required() = "explicit-consent-required";
+    def cc-mode-circle-satsang() = "circle-satsang";
+    def cc-visibility-circle-only() = "circle-only";
+    def cc-visibility-exportable() = "exportable";
+    def cc-fidelity-hash() = "hash";
+    def cc-fidelity-summary() = "summary";
+    def cc-fidelity-full() = "full-payload";
+    def cc-action-integrated() = "integrated";
+    def cc-action-refused() = "refused";
+    def cc-action-exported() = "exported";
+    def cc-share-observation() = "observation";
+    def cc-share-impact() = "impact";
+    def cc-share-feeling() = "feeling";
+    def cc-share-desire() = "desire";
+    def cc-share-request() = "request";
+    def cc-share-boundary() = "boundary";
+    def cc-share-silence() = "silence";
+    def cc-strength-invitation() = "invitation";
+    def cc-strength-reflection() = "reflection";
+    def cc-strength-direct() = "direct";
+
+    def cc-circle(id, members, shared_context, mode, interface_offer, discovery_policy, confidentiality_policy, export_policy, carrier_flow) = list(cc_tag_circle, id, members, shared_context, mode, interface_offer, discovery_policy, confidentiality_policy, export_policy, carrier_flow);
+    def cc-circle?(circle) = cc-tagged?(circle, cc_tag_circle, 10);
+    def cc-circle-id(circle) = nth(circle, 1);
+    def cc-circle-members(circle) = nth(circle, 2);
+    def cc-circle-shared-context(circle) = nth(circle, 3);
+    def cc-circle-mode(circle) = nth(circle, 4);
+    def cc-circle-interface-offer(circle) = nth(circle, 5);
+    def cc-circle-discovery-policy(circle) = nth(circle, 6);
+    def cc-circle-confidentiality-policy(circle) = nth(circle, 7);
+    def cc-circle-export-policy(circle) = nth(circle, 8);
+    def cc-circle-carrier-flow(circle) = nth(circle, 9);
+    def cc-circle-valid?(circle) = if cc-circle?(circle) then and(cc-nonempty-string?(cc-circle-id(circle)), and(gt(len(cc-circle-members(circle)), 0), and(cc-nonempty-string?(cc-circle-shared-context(circle)), cc-channel-flow-valid-or-empty?(cc-circle-carrier-flow(circle))))) else false;
+    def cc-channel-flow-valid-or-empty?(flow) = if eq(len(flow), 0) then true else cf-channel-flow-valid?(flow);
+
+    def cc-circle-offer(circle_id, offered_by, title, discovery_policy, invitation_policy, boundary) = list(cc_tag_offer, circle_id, offered_by, title, discovery_policy, invitation_policy, boundary);
+    def cc-circle-offer?(offer) = cc-tagged?(offer, cc_tag_offer, 7);
+    def cc-offer-circle-id(offer) = nth(offer, 1);
+    def cc-offer-offered-by(offer) = nth(offer, 2);
+    def cc-offer-title(offer) = nth(offer, 3);
+    def cc-offer-discovery-policy(offer) = nth(offer, 4);
+    def cc-offer-invitation-policy(offer) = nth(offer, 5);
+    def cc-offer-boundary(offer) = nth(offer, 6);
+    def cc-offer-discoverable?(offer) = if cc-circle-offer?(offer) then str_eq(cc-offer-discovery-policy(offer), cc-discovery-offered()) else false;
+
+    def cc-circle-invitation(circle_id, inviter, invitee, invitation, boundary, expiry) = list(cc_tag_invitation, circle_id, inviter, invitee, invitation, boundary, expiry);
+    def cc-circle-invitation?(invitation) = cc-tagged?(invitation, cc_tag_invitation, 7);
+    def cc-invitation-circle-id(invitation) = nth(invitation, 1);
+    def cc-invitation-inviter(invitation) = nth(invitation, 2);
+    def cc-invitation-invitee(invitation) = nth(invitation, 3);
+    def cc-invitation-text(invitation) = nth(invitation, 4);
+    def cc-invitation-boundary(invitation) = nth(invitation, 5);
+    def cc-invitation-expiry(invitation) = nth(invitation, 6);
+    def cc-joinable-by-invitation?(offer, invitation, requester) {
+        if and(cc-circle-offer?(offer), cc-circle-invitation?(invitation)) then and(str_eq(cc-offer-circle-id(offer), cc-invitation-circle-id(invitation)), and(str_eq(cc-invitation-invitee(invitation), requester), str_eq(cc-offer-invitation-policy(offer), cc-invitation-required()))) else false;
+    }
+
+    def cc-circle-share(circle_id, author, kind, payload, visibility, consent_policy) = list(cc_tag_share, circle_id, author, kind, payload, visibility, consent_policy);
+    def cc-circle-share?(share) = cc-tagged?(share, cc_tag_share, 7);
+    def cc-share-circle-id(share) = nth(share, 1);
+    def cc-share-author(share) = nth(share, 2);
+    def cc-share-kind(share) = nth(share, 3);
+    def cc-share-payload(share) = nth(share, 4);
+    def cc-share-visibility(share) = nth(share, 5);
+    def cc-share-consent-policy(share) = nth(share, 6);
+    def cc-share-valid?(share) = if cc-circle-share?(share) then and(cc-nonempty-string?(cc-share-circle-id(share)), and(cc-nonempty-string?(cc-share-author(share)), cc-nonempty-string?(cc-share-kind(share)))) else false;
+
+    def cc-circle-consensus(circle_id, subject, voters, approvals, threshold, decision) = list(cc_tag_consensus, circle_id, subject, voters, approvals, threshold, decision);
+    def cc-circle-consensus?(consensus) = cc-tagged?(consensus, cc_tag_consensus, 7);
+    def cc-consensus-circle-id(consensus) = nth(consensus, 1);
+    def cc-consensus-subject(consensus) = nth(consensus, 2);
+    def cc-consensus-voters(consensus) = nth(consensus, 3);
+    def cc-consensus-approvals(consensus) = nth(consensus, 4);
+    def cc-consensus-threshold(consensus) = nth(consensus, 5);
+    def cc-consensus-decision(consensus) = nth(consensus, 6);
+    def cc-consensus-passed?(consensus) = if cc-circle-consensus?(consensus) then and(gt(cc-consensus-threshold(consensus), 0), and(ge(cc-consensus-approvals(consensus), cc-consensus-threshold(consensus)), le(cc-consensus-approvals(consensus), len(cc-consensus-voters(consensus))))) else false;
+
+    def cc-circle-refusal(circle_id, observer, subject, invasive_action, offered_interface, consensus, boundary) = list(cc_tag_refusal, circle_id, observer, subject, invasive_action, offered_interface, consensus, boundary);
+    def cc-circle-refusal?(refusal) = cc-tagged?(refusal, cc_tag_refusal, 8);
+    def cc-refusal-circle-id(refusal) = nth(refusal, 1);
+    def cc-refusal-observer(refusal) = nth(refusal, 2);
+    def cc-refusal-subject(refusal) = nth(refusal, 3);
+    def cc-refusal-invasive-action(refusal) = nth(refusal, 4);
+    def cc-refusal-offered-interface(refusal) = nth(refusal, 5);
+    def cc-refusal-consensus(refusal) = nth(refusal, 6);
+    def cc-refusal-boundary(refusal) = nth(refusal, 7);
+    def cc-refusal-valid?(refusal) = if cc-circle-refusal?(refusal) then and(ci-invasion?(cc-refusal-invasive-action(refusal), cc-refusal-offered-interface(refusal)), cc-consensus-passed?(cc-refusal-consensus(refusal))) else false;
+
+    def cc-circle-export-consent(circle_id, share, recipient, fidelity, purpose, expiry, consensus) = list(cc_tag_export_consent, circle_id, share, recipient, fidelity, purpose, expiry, consensus);
+    def cc-circle-export-consent?(consent) = cc-tagged?(consent, cc_tag_export_consent, 8);
+    def cc-export-consent-circle-id(consent) = nth(consent, 1);
+    def cc-export-consent-share(consent) = nth(consent, 2);
+    def cc-export-consent-recipient(consent) = nth(consent, 3);
+    def cc-export-consent-fidelity(consent) = nth(consent, 4);
+    def cc-export-consent-purpose(consent) = nth(consent, 5);
+    def cc-export-consent-expiry(consent) = nth(consent, 6);
+    def cc-export-consent-consensus(consent) = nth(consent, 7);
+    def cc-export-allowed?(share, consent) {
+        if and(cc-share-valid?(share), cc-circle-export-consent?(consent)) then and(str_eq(cc-share-circle-id(share), cc-export-consent-circle-id(consent)), and(cc-nonempty-string?(cc-export-consent-recipient(consent)), and(cc-nonempty-string?(cc-export-consent-fidelity(consent)), and(cc-nonempty-string?(cc-export-consent-purpose(consent)), cc-consensus-passed?(cc-export-consent-consensus(consent)))))) else false;
+    }
+    def cc-outside-flow-allowed?(share, consent_or_empty) = if eq(len(consent_or_empty), 0) then false else cc-export-allowed?(share, consent_or_empty);
+
+    def cc-circle-receipt(circle_id, member, subject, action, reason, cost) = list(cc_tag_receipt, circle_id, member, subject, action, reason, cost);
+    def cc-circle-receipt?(receipt) = cc-tagged?(receipt, cc_tag_receipt, 7);
+    def cc-receipt-circle-id(receipt) = nth(receipt, 1);
+    def cc-receipt-member(receipt) = nth(receipt, 2);
+    def cc-receipt-subject(receipt) = nth(receipt, 3);
+    def cc-receipt-action(receipt) = nth(receipt, 4);
+    def cc-receipt-reason(receipt) = nth(receipt, 5);
+    def cc-receipt-cost(receipt) = nth(receipt, 6);
+    def cc-receipt-valid?(receipt) = if cc-circle-receipt?(receipt) then and(cc-nonempty-string?(cc-receipt-circle-id(receipt)), and(cc-nonempty-string?(cc-receipt-member(receipt)), cc-nonempty-string?(cc-receipt-action(receipt)))) else false;
+
+    def cc-satsang-silence(circle_id, witnessed_by, quality, openness) = list(cc_tag_satsang_silence, circle_id, witnessed_by, quality, openness);
+    def cc-satsang-silence?(silence) = cc-tagged?(silence, cc_tag_satsang_silence, 5);
+    def cc-silence-circle-id(silence) = nth(silence, 1);
+    def cc-silence-witnessed-by(silence) = nth(silence, 2);
+    def cc-silence-quality(silence) = nth(silence, 3);
+    def cc-silence-openness(silence) = nth(silence, 4);
+    def cc-satsang-silence-valid?(silence) = if cc-satsang-silence?(silence) then and(cc-nonempty-string?(cc-silence-circle-id(silence)), gt(len(cc-silence-witnessed-by(silence)), 0)) else false;
+
+    def cc-satsang-inquiry(circle_id, author, question, target, consent_policy) = list(cc_tag_satsang_inquiry, circle_id, author, question, target, consent_policy);
+    def cc-satsang-inquiry?(inquiry) = cc-tagged?(inquiry, cc_tag_satsang_inquiry, 6);
+    def cc-inquiry-circle-id(inquiry) = nth(inquiry, 1);
+    def cc-inquiry-author(inquiry) = nth(inquiry, 2);
+    def cc-inquiry-question(inquiry) = nth(inquiry, 3);
+    def cc-inquiry-target(inquiry) = nth(inquiry, 4);
+    def cc-inquiry-consent-policy(inquiry) = nth(inquiry, 5);
+    def cc-satsang-inquiry-valid?(inquiry) = if cc-satsang-inquiry?(inquiry) then and(cc-nonempty-string?(cc-inquiry-circle-id(inquiry)), and(cc-nonempty-string?(cc-inquiry-author(inquiry)), cc-nonempty-string?(cc-inquiry-question(inquiry)))) else false;
+
+    def cc-satsang-pointing(circle_id, author, pointing, offered_to, strength, not_command) = list(cc_tag_satsang_pointing, circle_id, author, pointing, offered_to, strength, not_command);
+    def cc-satsang-pointing?(pointing) = cc-tagged?(pointing, cc_tag_satsang_pointing, 7);
+    def cc-pointing-circle-id(pointing) = nth(pointing, 1);
+    def cc-pointing-author(pointing) = nth(pointing, 2);
+    def cc-pointing-text(pointing) = nth(pointing, 3);
+    def cc-pointing-offered-to(pointing) = nth(pointing, 4);
+    def cc-pointing-strength(pointing) = nth(pointing, 5);
+    def cc-pointing-not-command(pointing) = nth(pointing, 6);
+    def cc-satsang-pointing-valid?(pointing) = if cc-satsang-pointing?(pointing) then and(cc-nonempty-string?(cc-pointing-circle-id(pointing)), and(cc-nonempty-string?(cc-pointing-author(pointing)), cc-pointing-not-command(pointing))) else false;
+
+    def cc-open-cell-satsang-circle(id, members, shared_context, carrier_flow) {
+        cc-circle(id, members, shared_context, cc-mode-circle-satsang(), list(m-witness(), m-see(), m-invite(), m-offer(), m-ask-permission(), m-ask-how()), cc-discovery-offered(), cc-confidential-circle-only(), cc-export-consent-required(), carrier_flow);
+    }
+    def cc-default-offer(circle, offered_by, title, boundary) = cc-circle-offer(cc-circle-id(circle), offered_by, title, cc-discovery-offered(), cc-invitation-required(), boundary);
+
+    0;
+}

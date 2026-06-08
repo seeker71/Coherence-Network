@@ -1,0 +1,140 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/channel-flow-dialect-20260608",
+  "commit_scope": "Add an OSI-shaped native channel-flow protocol surface in BML, preserve consent-interface flow receipts, and align the public Form/channel architecture docs to it.",
+  "files_owned": [
+    "README.md",
+    "README.template.md",
+    "cli/README.md",
+    "mcp-server/README.md",
+    "skills/coherence-network/SKILL.md",
+    "docs/coherence-substrate/form-as-7-layer-protocol.form",
+    "docs/coherence-substrate/form-language.md",
+    "docs/shared/agent-start-packet.md",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-stdlib/channel-flow.fk",
+    "form/form-stdlib/tests/channel-flow-band.fk",
+    "form/user-blueprint-registry.md",
+    "docs/system_audit/commit_evidence_2026-06-08_channel_flow_osi_protocol.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/kernel-http.fk form-stdlib/channel-flow.fk form-stdlib/tests/channel-flow-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/kernel-http.fk form-stdlib/channel-flow.fk form-stdlib/tests/channel-flow-band.fk",
+      "python3 -m json.tool form/form-stdlib/blueprint-registry.json >/tmp/channel-flow-registry.json",
+      "python3 scripts/scan_form_blueprints.py --check",
+      "python3 scripts/build_readmes.py",
+      "git diff --check"
+    ],
+    "results": {
+      "prompt_guide": "pass; dedicated worktree on codex/channel-flow-dialect-20260608",
+      "wellness": "pass; production aligned with origin/main; kernel-native API reading remains 22/812 kernel-served and 23 kernel-first capable",
+      "channel_flow_source": "8388607; Go/Rust/TypeScript agree on complete seven-layer HTTP flow, phase counts, Allow header, HEAD bridge pressure, route candidate pressure, consent-interface receipts, and bilateral invasion counts",
+      "channel_flow_binary": "8388607; Go/Rust/TypeScript agree on every binary artifact",
+      "registry_json": "pass; blueprint-registry.json parses as JSON",
+      "blueprint_scan": "pass; no unregistered type-99 NodeIDs or unregistered bp names; pre-existing name-drift warnings remain visible",
+      "readme_generation": "pass; README.md, CLI README, MCP README, and coherence-network skill regenerated from source templates",
+      "diff_check": "pass"
+    }
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until this branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "notes": "No production deployment changed in this commit; behavior is covered by Form source and binary sibling-kernel validation."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_by": [
+      "remote CI pending"
+    ]
+  },
+  "idea_ids": [
+    "idea:kernel-native-api-front-door",
+    "idea:native-channel-flow-protocol"
+  ],
+  "spec_ids": [
+    "spec:native-kernel-http",
+    "spec:form-core-kernel-conformance"
+  ],
+  "task_ids": [
+    "task:channel-flow-osi-protocol"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "architecture review"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form://form-stdlib/channel-flow.fk#channel-flow-bilateral",
+    "form://form-stdlib/channel-flow.fk#cf-http-channel-flow",
+    "form://form-stdlib/channel-flow.fk#cf-osi-layer",
+    "form://form-stdlib/tests/channel-flow-band.fk#cf-channel-flow-band-score",
+    "docs/coherence-substrate/form-language.md#Form-as-7-layer-protocol",
+    "docs/coherence-substrate/form-as-7-layer-protocol.form",
+    "form/user-blueprint-registry.md#Channel-Flow-Protocol"
+  ],
+  "change_files": [
+    "README.md",
+    "README.template.md",
+    "cli/README.md",
+    "mcp-server/README.md",
+    "skills/coherence-network/SKILL.md",
+    "docs/coherence-substrate/form-as-7-layer-protocol.form",
+    "docs/coherence-substrate/form-language.md",
+    "docs/shared/agent-start-packet.md",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-stdlib/channel-flow.fk",
+    "form/form-stdlib/tests/channel-flow-band.fk",
+    "form/user-blueprint-registry.md"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The native channel surface now has a BML-authored OSI flow cell model. HTTP is represented as one application-layer channel-flow profile whose policy remains the real kernel-http kh-channel-policy, so future carriers can add profiles without forking the host router.",
+    "public_endpoints": [
+      "form://form-stdlib/channel-flow.fk",
+      "form://form-stdlib/tests/channel-flow-band.fk",
+      "docs://docs/coherence-substrate/form-language.md",
+      "docs://docs/coherence-substrate/form-as-7-layer-protocol.form"
+    ],
+    "test_flows": [
+      "Source validation proves cf-http-channel-flow has seven ordered OSI layers, gas/water/ice phase observability, delegates HTTP policy to kh-channel-policy, and keeps interface-flow honor/invasion receipts executable.",
+      "Binary validation proves the same content-addressed artifact behavior across Go/Rust/TypeScript.",
+      "Blueprint scan proves CHANNEL-OSI-LAYER and CHANNEL-FLOW are registered and visible through all generated bp tables."
+    ],
+    "gaps_found_and_closed": [
+      "The protocol docs still described channel.fk and sockets as future; updated them to current shipped shape.",
+      "The native HTTP policy previously stood alone; channel-flow now gives it an OSI L7 home while preserving policy reuse and the receiver-offer consent gate.",
+      "The human blueprint registry had channel breath cells but not the new OSI flow cells; added 1702 and 1703 with proof."
+    ]
+  }
+}
