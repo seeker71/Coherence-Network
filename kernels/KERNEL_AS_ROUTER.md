@@ -795,14 +795,17 @@ flip inserts the kernel-router *between* Traefik and api: Traefik routes
 the kernel-router is *proven* across the rungs above AND packaged as a standalone
 deployable server. The Rust binary still ships inside the api container for the
 inline-PyO3 path; alongside it there is now a **standalone kernel-router image +
-shadow manifest + compose service** that runs `cli_serve` as a front door:
+shadow manifest + production manifest + compose service** that runs `cli_serve`
+as a front door:
 
 - [`Dockerfile.kernel-router`](../Dockerfile.kernel-router) — a multi-stage image
   reusing `Dockerfile.api`'s proven `kernel-builder` (same `FROM
   rust:1.86-slim-bookworm`, same `cargo build --release --bin form-kernel-rust &&
   strip`), then a lean `debian-slim` runtime carrying ONLY the stripped binary,
-  the form-stdlib (so a source manifest can be source-compiled later), and the
-  shadow manifest. No Rust toolchain in the final image.
+  the form-stdlib, the shadow manifest, and the production manifest plus its
+  route-data JSON. No Rust toolchain in the final image. The image defaults to
+  `ROUTES_FILE=/routes/shadow-routes.fk`; switching to
+  `/routes/production-routes.fk` is runtime configuration, not a rebuild.
 - [`deploy/kernel-router/shadow-routes.fk`](../deploy/kernel-router/shadow-routes.fk)
   — the shadow manifest: an EMPTY `(let routes (list))`. `build_route_specs`
   accepts an empty list (an empty list is a valid list, not an error), so ZERO
@@ -910,13 +913,14 @@ door is FastAPI.
 - [`form/form-kernel-rust/router_header_passthrough_harness.py`](../form/form-kernel-rust/router_header_passthrough_harness.py) — the bidirectional header-passthrough proof: against a mock echo upstream, the client's end-to-end request headers (Authorization/Cookie/Accept/X-Probe/User-Agent + Content-Type on POST) reach the upstream with Host rewritten and the client Content-Length/Connection stripped, and the upstream's Set-Cookie/Cache-Control/custom headers relay back while its hop-by-hop Transfer-Encoding does not; against the REAL FastAPI app, `/api/health` relays with `Content-Type: application/json` (the upstream's real type, not text/plain) and a native route still serves text/plain in Form. Tears both upstreams down.
 - [`form/form-kernel-rust/router_real_app_harness.py`](../form/form-kernel-rust/router_real_app_harness.py) — the REAL-app proof: boots `app.main:app` under uvicorn (dev sqlite), stands the kernel-router in front of it, proves native-in-Form (value == the live app's) + GET/POST fan-out to the actual FastAPI, and measures the proxy-hop overhead vs the native-route saving. Repeatable; tears both down.
 - [`form/form-kernel-rust/examples/router-real-app-proof.fk`](../form/form-kernel-rust/examples/router-real-app-proof.fk) — the real-app manifest: one native route (`/api/utils/weighted_average`, parsing its float query args and running sum(v*w)/sum(w) in Form), the rest fanned out to the real app.
-- [`deploy/kernel-router/production-routes.fk`](../deploy/kernel-router/production-routes.fk) — the PRODUCTION manifest (the durable flip's native surface): eleven promoted `/api/utils` routes (`coherence_weight`, `nodeid_distance`, `nodeid_compatibility`, `weighted_average`, `simpson_diversity`, `idea_score`, `marginal_cc_return`, `breath_balance`, `shannon_entropy`, `softmax_weights`, `grounded_value`) served NATIVELY in Form, each emitting the FULL JSON response object byte-identical to its FastAPI twin (params parsed from the request alist via `split_commas`, JSON built with `value_str` + `str_concat`, `runtime:"inline"` matching production); everything else fans out. Float accumulators are left-associated to match CPython's `sum()` bit-for-bit; the entropy routes carry `math_log`/`round_ndigits`, `breath_balance` reproduces CPython's `-0.0` exactly, and `grounded_value` folds eleven host-derived scalars (the value/realization/confidence reduction of `compute_idea_metrics`) through `min2`/`max2`/`_plus` with the `[0.05,0.95]` confidence clamp.
-- [`form/form-kernel-rust/production_routes_harness.py`](../form/form-kernel-rust/production_routes_harness.py) — the PROMOTION proof: boots the real `app.main:app` as the CPython oracle, stands the kernel-router (production manifest) in front, and for all eleven routes over representative + edge params (48 cases, incl. adversarial floats, `-0.0`, deterministic + uniform softmax, and `grounded_value`'s confidence float-assoc artifact + clamp/zero-guards) proves the native response value-identical to the local oracle (runtime provenance normalized out) AND — with `--live` — FULL-BODY byte-identical to the live production api; measures native (~0.24 ms) vs CPython-served (~11 ms) latency, the ~45x runtime-share win. Read-only against the live api; tears the local app + router down.
+- [`deploy/kernel-router/production-routes.fk`](../deploy/kernel-router/production-routes.fk) — the PRODUCTION manifest (the durable flip's native surface): twenty-two promoted `/api/utils` routes plus `/health` and `/api/attention/kernel-runtime` served NATIVELY in Form. Each promoted utility route emits the FULL JSON response object byte-identical to its FastAPI twin in production; the attention route projects live kernel-router metrics in Form, including route-choice attempts/success/failures.
+- [`form/form-kernel-rust/production_routes_harness.py`](../form/form-kernel-rust/production_routes_harness.py) — the PROMOTION proof: boots the real `app.main:app` as the CPython oracle, stands the kernel-router (production manifest) in front, and proves promoted native responses value-identical to the local oracle (runtime provenance normalized out) and, with `--live`, full-body byte-identical to the live production api. Read-only against the live api; tears the local app + router down.
+- [`scripts/kernel_front_door_local_preflight.sh`](../scripts/kernel_front_door_local_preflight.sh) — the local front-door rehearsal: builds the release kernel, checks manifests and image packaging, boots the real local API and kernel-router, curls fan-out/native paths, and asserts native/fanout/choice metrics move before any push or production flip.
 - [`api/app/services/form_kernel_bridge.py`](../api/app/services/form_kernel_bridge.py) — `serve_via_kernel`, the guest-subroutine path this reverses.
 
 ### The deployable artifact (the kernel-router as a standalone server)
 
-- [`Dockerfile.kernel-router`](../Dockerfile.kernel-router) — the standalone serve image: stage 1 reuses `Dockerfile.api`'s proven `kernel-builder` (`FROM rust:1.86-slim-bookworm`, `cargo build --release --bin form-kernel-rust && strip`); stage 2 is a lean `debian:bookworm-slim` runtime carrying ONLY the stripped binary, the form-stdlib (for a future source manifest's `--stdlib`), the shadow manifest, and the entrypoint. `KERNEL_ROUTER_PORT` / `UPSTREAM_URL` / `ROUTES_FILE` are env-configurable. No Rust toolchain in the final image.
+- [`Dockerfile.kernel-router`](../Dockerfile.kernel-router) — the standalone serve image: stage 1 reuses `Dockerfile.api`'s proven `kernel-builder` (`FROM rust:1.86-slim-bookworm`, `cargo build --release --bin form-kernel-rust && strip`); stage 2 is a lean `debian:bookworm-slim` runtime carrying ONLY the stripped binary, the form-stdlib, the shadow manifest, the production manifest, the production route-data JSON, and the entrypoint. `KERNEL_ROUTER_PORT` / `UPSTREAM_URL` / `ROUTES_FILE` are env-configurable. No Rust toolchain in the final image.
 - [`deploy/kernel-router/shadow-routes.fk`](../deploy/kernel-router/shadow-routes.fk) — the shadow manifest: an EMPTY `(let routes (list))`. `build_route_specs` accepts an empty list, so zero routes are native and EVERYTHING fans out — a transparent proxy with `X-Form-Router: fanout-python` as live evidence.
 - [`deploy/kernel-router/entrypoint.sh`](../deploy/kernel-router/entrypoint.sh) — resolves `KERNEL_ROUTER_HOST` (default `0.0.0.0` in-container so the front door is reachable across the boundary) / `KERNEL_ROUTER_PORT` / `UPSTREAM_URL` / `ROUTES_FILE` (+ optional `STDLIB_DIR` / `KERNEL_ROUTER_WORKERS`) at run time and `exec`s `form-kernel-rust serve` — container-configurable without a rebuild.
 - [`deploy/kernel-router/docker-compose.kernel-router.yml`](../deploy/kernel-router/docker-compose.kernel-router.yml) — a DEFINED-BUT-INACTIVE overlay service (build: `Dockerfile.kernel-router`, `--upstream http://api:8000`). A SEPARATE overlay the production deploy never includes; its Traefik labels are present but COMMENTED, so merging it changes nothing about production routing. Uncommenting them (and dropping the api service's own rule) is the flip — Urs's intent.
@@ -1008,3 +1012,38 @@ step; Traefik routing was never touched.
 the one label set, drop the api service's own rule). That is the single move that
 touches live traffic; it is Urs's intent (given), staged carefully on top of this
 proven shadow.
+
+## Local front-door preflight — the gate before another flip
+
+The 2026-06-08 Hostinger API-native deploy attempt proved the missing gate:
+Traefik returned its default `404 page not found` because the live api labels were
+disabled before a running kernel-router service was observable behind the same
+public route. The absence of `X-Form-Router` on the public 404 was the signal:
+the request never reached the kernel-router or the FastAPI upstream. The rollback
+restored Traefik to `api:8000`; the front door is currently FastAPI again.
+
+Before any future production re-point, run the local rehearsal:
+
+```
+scripts/kernel_front_door_local_preflight.sh
+```
+
+What it proves locally, with the real FastAPI app as upstream:
+
+- release `form-kernel-rust` builds with no warnings;
+- `production-routes.fk` and `shadow-routes.fk` pass the manifest name gate;
+- `Dockerfile.kernel-router` bakes the stdlib, shadow manifest, production
+  manifest, and production route-data JSON;
+- `/api/version` and `/api/health` fan out byte-identically through the
+  kernel-router with `X-Form-Router: fanout-python`;
+- `/api/utils/coherence_weight` is served natively with
+  `X-Form-Router: native-kernel` and matches the local API value contract after
+  normalizing the environment-dependent `runtime` provenance field;
+- `/api/attention/kernel-runtime` is served natively and reports aggregate route
+  metrics including `total_requests`, `native_requests`, `fanout_requests`, and
+  route-choice `choice_attempts`, `choice_successes`, `choice_failures`.
+
+The remote flip shall have the same order: start kernel-router beside api, prove
+host-local fan-out and native headers through the router, prove the service is
+running and reachable from Traefik's network, then repoint Traefik. Do not
+disable the api router first.

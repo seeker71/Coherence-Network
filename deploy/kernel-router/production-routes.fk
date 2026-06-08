@@ -1378,24 +1378,19 @@
     "]"))
 
 (defn route_attention_measurements_json
-  (native_route_count observed_native_route_count observed_path_count total_requests native_requests fanout_requests fanout_path_counts)
-  (str_concat
-    (str_concat
-      (str_concat
-        (str_concat
-          (str_concat "{\"native_route_count\":" (value_str native_route_count))
-          (str_concat ",\"observed_native_route_count\":"
-                      (value_str observed_native_route_count)))
-        (str_concat ",\"observed_path_count\":"
-                    (value_str observed_path_count)))
-      (str_concat ",\"total_requests\":" (value_str total_requests)))
-    (str_concat
-      (str_concat
-        (str_concat ",\"native_requests\":" (value_str native_requests))
-        (str_concat ",\"fanout_requests\":" (value_str fanout_requests)))
-      (str_concat
-        ",\"fanout_path_counts\":"
-        (str_concat (route_attention_fanout_path_counts_json fanout_path_counts) "}")))))
+  (native_route_count observed_native_route_count observed_path_count total_requests native_requests fanout_requests choice_attempts choice_successes choice_failures fanout_path_counts)
+  (str_concat_all (list
+    "{\"native_route_count\":" (value_str native_route_count)
+    ",\"observed_native_route_count\":" (value_str observed_native_route_count)
+    ",\"observed_path_count\":" (value_str observed_path_count)
+    ",\"total_requests\":" (value_str total_requests)
+    ",\"native_requests\":" (value_str native_requests)
+    ",\"fanout_requests\":" (value_str fanout_requests)
+    ",\"choice_attempts\":" (value_str choice_attempts)
+    ",\"choice_successes\":" (value_str choice_successes)
+    ",\"choice_failures\":" (value_str choice_failures)
+    ",\"fanout_path_counts\":" (route_attention_fanout_path_counts_json fanout_path_counts)
+    "}")))
 
 (defn route_attention_matrix_json
   (native_coverage fanout_pressure unobserved_native_pressure native_pressure)
@@ -1434,6 +1429,12 @@
         (str_to_int (assoc "__router_native_requests__" q)))
   (do (let fanout_requests
         (str_to_int (assoc "__router_fanout_requests__" q)))
+  (do (let choice_attempts
+        (str_to_int (assoc "__router_choice_attempts__" q)))
+  (do (let choice_successes
+        (str_to_int (assoc "__router_choice_successes__" q)))
+  (do (let choice_failures
+        (str_to_int (assoc "__router_choice_failures__" q)))
   (do (let router_observation
         (assoc "__router_observation__" q))
   (do (let fanout_path_counts
@@ -1466,6 +1467,9 @@
                         total_requests
                         native_requests
                         fanout_requests
+                        choice_attempts
+                        choice_successes
+                        choice_failures
                         fanout_path_counts))
           (str_concat
             ",\"matrix\":"
@@ -1482,7 +1486,7 @@
               candidate_requests
               candidate_source
               candidate_pressure)
-            "}")))))))))))))))))))))
+            "}"))))))))))))))))))))))))
 
 ; ===========================================================================
 ; Source-language route class surface lowered to KernelHTTPRoute.
