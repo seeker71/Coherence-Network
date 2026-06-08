@@ -3,7 +3,9 @@ idea_id: idea-realization-engine
 status: done
 source:
   - file: form/form-stdlib/native-mutation-public-gate.fk
-    symbols: [nmpg-public-gate-header, nmpg-public-gate-rollback-receipt-sql, nmpg-run-idea-create-public-gate, nmpg-run-spec-update-public-gate, nmpg-public-gate-test]
+    symbols: [nmpg-public-gate-header, nmpg-public-gate-rollback-receipt-sql, nmpg-run-idea-create-public-gate, nmpg-run-idea-update-public-gate, nmpg-run-spec-update-public-gate, nmpg-public-gate-test]
+  - file: form/form-stdlib/native-idea-valuation-audit-ledger.fk
+    symbols: [nival-run-idea-update-with-valuation-audit]
   - file: docs/coherence-substrate/native-mutation-side-effect-ledger.form
     symbols: [native_mutation_side_effect_ledger, native_mutation_side_effect_recipe_shift]
   - file: form/form-stdlib/tests/native-mutation-public-gate-band.fk
@@ -19,7 +21,9 @@ source:
   - file: api/tests/test_native_mutation_public_gate.py
     symbols: [test_public_gate_band_executes_across_sibling_kernels, test_public_gate_live_script_runs_or_skips_when_pg_missing, test_public_gate_harness_observes_public_gate_when_kernel_available]
   - file: api/tests/test_native_mutation_side_effect_ledger.py
-    symbols: [test_gate_receipts_are_not_claimed_as_python_parity, test_missing_python_parity_blocks_ordinary_flip, test_route_forms_and_specs_link_the_ledger_boundary]
+    symbols: [test_gate_receipts_are_not_claimed_as_python_parity, test_audit_ledger_parity_is_carried_before_ordinary_flip, test_route_forms_and_specs_link_the_ledger_boundary]
+  - file: api/tests/test_native_idea_valuation_audit_ledger.py
+    symbols: [test_ledger_and_route_forms_mark_audit_parity_carried]
   - file: docs/coherence-substrate/ideas-router.form
     symbols: [ideas_router_structure]
   - file: docs/coherence-substrate/spec-registry-router.form
@@ -31,6 +35,7 @@ requirements:
   - "HTTP public-gate responses stay honest: the header gate executes and emits a rollback receipt shape, while DB execution remains proven in the Form live fixture rather than claimed by the HTTP route."
   - "The next boundary is a deployed X-Form-Native-Public-Gate canary before any ordinary no-header flip."
   - "The side-effect ledger keeps rollback receipts as gate-local safety rather than Python parity, so side-effect proof does not justify side effects."
+  - "The public-gate Form layer exposes an idea update runner over the native idea valuation audit-ledger carrier."
 done_when:
   - 'file_exists("form/form-stdlib/native-mutation-public-gate.fk")'
   - 'file_exists("deploy/kernel-router/mutation_public_gate_harness.py")'
@@ -75,6 +80,9 @@ reversible gate safety, not evidence that extra domain side effects belong.
   `route_local_gate_executes:true`.
 - [ ] **R7**: Route docs and tests link the side-effect ledger and keep
   public-gate receipts classified as gate receipts, not Python parity.
+- [ ] **R8**: `native-mutation-public-gate.fk` exposes
+  `nmpg-run-idea-update-public-gate` over the native idea valuation audit-ledger
+  carrier.
 
 ## Research Inputs
 
@@ -90,6 +98,8 @@ reversible gate safety, not evidence that extra domain side effects belong.
 
 - `form/form-stdlib/native-mutation-public-gate.fk` - public-gate receipt and
   runner recipes.
+- `form/form-stdlib/native-idea-valuation-audit-ledger.fk` - idea update
+  audit-ledger parity carrier consumed by the public gate.
 - `form/form-stdlib/tests/native-mutation-public-gate-band.fk` - sibling-kernel
   proof.
 - `form/form-stdlib/integration/native-mutation-public-gate-live.fk` - live
@@ -116,6 +126,7 @@ reversible gate safety, not evidence that extra domain side effects belong.
 - `api/tests/test_native_mutation_public_gate.py::test_production_routes_expose_public_gate_without_no_header_flip`
 - `api/tests/test_native_mutation_public_gate.py::test_public_gate_harness_observes_public_gate_when_kernel_available`
 - `api/tests/test_native_mutation_public_gate.py::test_route_forms_name_public_gate_before_deployed_canary`
+- `api/tests/test_native_idea_valuation_audit_ledger.py::test_ledger_and_route_forms_mark_audit_parity_carried`
 - `api/tests/test_native_mutation_side_effect_ledger.py::test_gate_receipts_are_not_claimed_as_python_parity`
 - `api/tests/test_native_mutation_side_effect_ledger.py::test_route_forms_and_specs_link_the_ledger_boundary`
 - Manual validation: `python3 deploy/kernel-router/mutation_public_gate_harness.py --json`
@@ -123,10 +134,10 @@ reversible gate safety, not evidence that extra domain side effects belong.
 ## Verification
 
 ```bash
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/native-mutation-public-gate.fk form-stdlib/tests/native-mutation-public-gate-band.fk
+cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/native-idea-valuation-audit-ledger.fk form-stdlib/native-mutation-public-gate.fk form-stdlib/tests/native-mutation-public-gate-band.fk
 cd .. && form/scripts/native-mutation-public-gate-test.sh
 python3 deploy/kernel-router/mutation_public_gate_harness.py --json
-cd api && python3 -m pytest -q tests/test_native_mutation_public_gate.py tests/test_native_mutation_side_effect_ledger.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py
+cd api && python3 -m pytest -q tests/test_native_mutation_public_gate.py tests/test_native_idea_valuation_audit_ledger.py tests/test_native_mutation_side_effect_ledger.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py
 python3 scripts/validate_spec_quality.py --file specs/native-mutation-public-gate.md
 ```
 
@@ -143,9 +154,9 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-public-gat
 - GAP-NMPG1 follow-up task: `native-mutation-deployed-public-canary`. Deploy and
   observe an `X-Form-Native-Public-Gate` canary before any ordinary no-header
   mutation traffic flip.
-- GAP-NMPG2 follow-up task: `native-idea-valuation-audit-ledger`. Carry or
-  explicitly retire idea valuation audit-ledger parity before ordinary
-  no-header mutation traffic flips.
+- GAP-NMPG2: closed by `specs/native-idea-valuation-audit-ledger.md`. Idea
+  valuation audit-ledger parity is now carried Form-native and bound into an
+  idea update public-gate runner.
 
 ## Risks and Assumptions
 

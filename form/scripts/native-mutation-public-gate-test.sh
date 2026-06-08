@@ -48,12 +48,12 @@ form-kernel-go/bin-go form-stdlib/json.fk form-stdlib/cache.fk \
 TEST="$SRCDIR/native-mutation-public-gate-live.fk"
 sed "s|PG_DSN_PLACEHOLDER|${PG_DSN}|" form-stdlib/integration/native-mutation-public-gate-live.fk > "$TEST"
 
-OUT="$("$RS_BIN" "$SRCDIR/core.fk" form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/native-mutation-public-gate.fk "$TEST" 2>&1 | tail -1)"
+OUT="$("$RS_BIN" "$SRCDIR/core.fk" form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/native-idea-valuation-audit-ledger.fk form-stdlib/native-mutation-public-gate.fk "$TEST" 2>&1 | tail -1)"
 echo "verdict: $OUT"
-if [[ "$OUT" == "11111111" ]]; then
-  echo "native mutation public gate: PASS - Form-native public gate persisted route-local rollback receipts in throwaway Postgres."
+if [[ "$OUT" == "111111111" ]]; then
+  echo "native mutation public gate: PASS - Form-native public gate persisted rollback receipts and idea valuation audit-ledger rows in throwaway Postgres."
   exit 0
 else
-  echo "native mutation public gate: FAIL - expected 11111111." >&2
+  echo "native mutation public gate: FAIL - expected 111111111." >&2
   exit 1
 fi

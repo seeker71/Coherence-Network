@@ -15,7 +15,7 @@ source:
   - file: api/tests/test_native_mutation_side_effects_form.py
     symbols: [test_native_side_effects_band_executes_across_sibling_kernels, test_native_side_effects_live_db_script_runs_or_skips_when_pg_missing, test_route_forms_name_side_effect_execution_carrier_before_public_flip]
   - file: api/tests/test_native_mutation_side_effect_ledger.py
-    symbols: [test_ledger_declares_anti_circular_decision_rule, test_python_parity_entries_cite_python_sources_and_form_carriers, test_gate_receipts_are_not_claimed_as_python_parity, test_missing_python_parity_blocks_ordinary_flip]
+    symbols: [test_ledger_declares_anti_circular_decision_rule, test_python_parity_entries_cite_python_sources_and_form_carriers, test_gate_receipts_are_not_claimed_as_python_parity, test_audit_ledger_parity_is_carried_before_ordinary_flip]
   - file: deploy/kernel-router/mutation_ab_observation_harness.py
     symbols: [build_gate_report]
   - file: docs/coherence-substrate/ideas-router.form
@@ -144,10 +144,9 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-side-effec
   selection.
 - GAP-NMSE3 follow-up task: `native-mutation-deployed-public-canary`. Deploy and
   observe the `X-Form-Native-Public-Gate` canary before any no-header flip.
-- GAP-NMSE4 follow-up task: `native-idea-valuation-audit-ledger`. The ledger
-  surfaces `idea_write_ops.update_idea` audit-ledger writes as missing Python
-  parity. Ordinary no-header mutation traffic stays blocked until that behavior
-  is carried Form-native or intentionally retired by spec.
+- GAP-NMSE4: closed by `specs/native-idea-valuation-audit-ledger.md`. The ledger
+  now marks `idea_write_ops.update_idea` audit-ledger writes as carried
+  Form-native parity.
 
 ## Risks and Assumptions
 
