@@ -4,6 +4,10 @@ status: done
 source:
   - file: deploy/kernel-router/production-routes.fk
     symbols: []
+  - file: docs/coherence-substrate/native-mutation-side-effect-ledger.form
+    symbols: [native_mutation_side_effect_ledger, native_mutation_side_effect_recipe_shift]
+  - file: form/form-stdlib/native-idea-valuation-audit-ledger.fk
+    symbols: [nival-run-idea-update-with-valuation-audit]
   - file: specs/INDEX.md
     symbols: []
   - file: api/app/models/spec_registry.py
@@ -28,13 +32,17 @@ source:
     symbols: []
   - file: api/tests/test_spec_registry_router_form.py
     symbols: [test_spec_registry_router_form_describes_live_and_native_carriers]
+  - file: api/tests/test_native_mutation_side_effect_ledger.py
+    symbols: [test_route_forms_and_specs_link_the_ledger_boundary]
 requirements:
   - "The kernel-router production manifest exposes a native /api/spec-registry/source-list route."
   - "The route reads specs/INDEX.md directly, without FastAPI or spec_registry_service."
   - "The route emits SpecRegistryEntry-shaped JSON rows for each source-index spec row."
   - "The production manifest binds header-gated method-specific native SQL preview rows for POST/PATCH/DELETE /api/spec-registry without changing default public behavior."
   - "The spec registry Form artifact names the trust envelope that carries prediction residual, side-effect intents, choice markers, and reversible gate state."
-  - "The spec registry Form artifact names the Form-native side-effect execution carrier while keeping route binding and ordinary public traffic movement explicit as the remaining boundary."
+  - "The spec registry Form artifact names the Form-native side-effect execution carrier, route binding, public gate, and deployed-canary boundary while keeping ordinary public traffic movement explicit."
+  - "The spec registry Form artifact links the side-effect ledger so rollback receipts remain gate-local safety rather than Python parity."
+  - "The spec registry Form artifact names the native idea valuation audit-ledger carrier as carried parity before ordinary no-header mutation movement."
 done_when:
   - 'file_contains("deploy/kernel-router/production-routes.fk", "(list \"/api/spec-registry/source-list\" route_specs_source_list)")'
   - 'file_contains("deploy/kernel-router/production-routes.fk", "read_file_slice \"specs/INDEX.md\"")'
@@ -66,6 +74,8 @@ native kernel-router route that reads `specs/INDEX.md` and emits
 - [ ] **R6**: The production manifest binds header-gated method-specific native SQL preview rows for `POST /api/spec-registry`, `PATCH /api/spec-registry/*`, and `DELETE /api/spec-registry/*`.
 - [ ] **R7**: The spec registry route Form names the native mutation trust
   envelope before any ordinary public traffic flip.
+- [ ] **R8**: The spec registry route Form links the side-effect ledger and
+  keeps carried Python parity explicit before any ordinary no-header flip.
 
 ## Research Inputs
 
@@ -83,6 +93,8 @@ native kernel-router route that reads `specs/INDEX.md` and emits
 - `api/tests/test_runtime_surface_native_routes.py` - capable-route proof includes the specs native route.
 - `api/tests/test_spec_registry_router_form.py` - trust envelope wording proof
   for the spec route surface.
+- `api/tests/test_native_mutation_side_effect_ledger.py` - ledger boundary proof
+  for ideas/spec route forms and mutation specs.
 - `specs/spec-registry-source-native.md` - this contract.
 
 ## Acceptance Tests
@@ -90,12 +102,13 @@ native kernel-router route that reads `specs/INDEX.md` and emits
 - `api/tests/test_specs_source_native_route.py::test_specs_source_native_route_is_bound_and_reads_index`
 - `api/tests/test_specs_source_native_route.py::test_specs_source_native_route_emits_spec_registry_entry_shape`
 - `api/tests/test_native_mutation_route_bindings.py::test_native_mutation_preview_routes_are_method_and_header_gated`
+- `api/tests/test_native_mutation_side_effect_ledger.py::test_route_forms_and_specs_link_the_ledger_boundary`
 - `api/tests/test_runtime_surface_native_routes.py::test_real_manifest_native_routes_are_served_zero_and_include_ideas_structure`
 
 ## Verification
 
 ```bash
-cd api && python3 -m pytest -q tests/test_specs_source_native_route.py tests/test_native_mutation_route_bindings.py tests/test_runtime_surface_native_routes.py
+cd api && python3 -m pytest -q tests/test_specs_source_native_route.py tests/test_native_mutation_side_effect_ledger.py tests/test_native_mutation_route_bindings.py tests/test_runtime_surface_native_routes.py
 python3 scripts/validate_spec_quality.py --file specs/spec-registry-source-native.md
 cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --host 127.0.0.1 --port 19186 --workers 1 --routes ../../deploy/kernel-router/production-routes.fk --stdlib ../form-stdlib --upstream http://127.0.0.1:9
 python3 - <<'PY'
@@ -114,7 +127,7 @@ PY
 
 ## Gaps
 
-- GAP-SRS1 follow-up task: `spec-registry-live-graph-storage-carrier`. The
+- GAP-SRS1 follow-up task: `spec-registry-deployed-public-canary`. The
   source-backed route is native and the Form graph-node mutation carrier now
   exposes create/replace/delete. The Form auth carrier now preserves
   API-key/contributor-key decision parity, and the Form application graph
@@ -124,13 +137,21 @@ PY
   residual, side-effect intents, choice markers, and reversible gate state.
   `native-mutation-side-effects-test.sh` proves parent-edge repair,
   contributor-key audit, cache-invalidation receipt, and rollback receipt
-  execute natively against throwaway Postgres. Public mutable DB-backed spec
-  registry behavior still enters through FastAPI by default until the proven
-  side-effect carrier is bound to route execution and a narrow reversible public
-  gate has a rollback receipt.
+  execute natively against throwaway Postgres.
+  `native-mutation-route-side-effects-test.sh` proves application graph mutation
+  plus side-effect execution are bound in one Form-native route runner.
+  `native-mutation-public-gate-test.sh` and `mutation_public_gate_harness.py`
+  prove `X-Form-Native-Public-Gate` selects rollback-receipted native public-gate
+  route rows while preserving fanout for no-header traffic. Public
+  mutable DB-backed spec registry behavior still enters through FastAPI by
+  default until a deployed header-gated public canary is observed before any
+  no-header flip.
 - GAP-SRS2 follow-up task: `spec-source-frontmatter-native-parser`. This route
   reads `specs/INDEX.md`; richer frontmatter fields remain source defaults until
   a native frontmatter parser lands.
+- GAP-SRS3: closed by `specs/native-idea-valuation-audit-ledger.md`. The
+  source-classified side-effect ledger now marks idea valuation audit-ledger
+  writes as carried Form-native parity.
 
 ## Risks and Assumptions
 

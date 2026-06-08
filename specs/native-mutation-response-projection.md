@@ -120,9 +120,13 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-response-p
 - GAP-NMRP2: closed by `specs/native-mutation-side-effects.md`. The native
   carrier now executes cache-invalidation receipt, parent-edge repair,
   contributor-key audit, and rollback receipt against throwaway Postgres.
-- GAP-NMRP3 follow-up task: `native-mutation-route-side-effect-binding`. Bind
-  the side-effect carrier to mutation route execution, then add a reversible
-  public flip gate.
+- GAP-NMRP3: closed by `specs/native-mutation-route-side-effect-binding.md`.
+  Native route runners now bind application graph mutation execution to
+  side-effect execution in throwaway Postgres.
+- GAP-NMRP4: closed by `specs/native-mutation-public-gate.md`. The public gate
+  now carries route-local rollback receipt proof.
+- GAP-NMRP5 follow-up task: `native-mutation-deployed-public-canary`. Deploy and
+  observe the `X-Form-Native-Public-Gate` canary before any no-header flip.
 
 ## Risks and Assumptions
 

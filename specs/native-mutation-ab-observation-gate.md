@@ -18,7 +18,7 @@ requirements:
   - "The native mutation flip is expressed as an A/B observation gate before any public traffic moves."
   - "Variant A proves ordinary no-header mutation requests still fan out to FastAPI."
   - "Variant B proves explicit preview-header mutation requests return native SQL previews."
-  - "The gate emits confidence, pass/fail observations, and a recommendation that can promote only to bounded native proof, not an ordinary-traffic flip."
+  - "The gate emits confidence, pass/fail observations, and a recommendation that can promote only to bounded native proof or deployed canary, not an ordinary-traffic flip."
   - "Variant B carries the trust envelope with prediction residual, choice protocol markers, side-effect intents, and reversible gate state."
 done_when:
   - 'file_exists("deploy/kernel-router/mutation_ab_observation_harness.py")'
@@ -62,9 +62,8 @@ recommend the next bounded trial when every case passes.
   `prediction_error="carried_as_residual"`, `choice_success=1`,
   silence/protocol/fail/stop/BMA markers, side-effect intents, and reversible
   gate state.
-- [ ] **R7**: When every case passes, the next evidence names route-runner
-  binding for the native side-effect execution carrier and a narrow reversible
-  public gate with rollback receipt.
+- [ ] **R7**: When every case passes, the next evidence names the deployed
+  `X-Form-Native-Public-Gate` canary before any no-header flip.
 
 ## Research Inputs
 
@@ -130,9 +129,14 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-ab-observa
   side-effect intents now have a Form-native execution carrier with throwaway
   Postgres readback for cache-invalidation receipt, parent-edge repair,
   contributor-key audit, and rollback receipt.
-- GAP-NMAOG5 follow-up task: `native-mutation-route-side-effect-binding`. Bind
-  the proven side-effect carrier to mutation route execution before ordinary
-  traffic is eligible for a reversible flip.
+- GAP-NMAOG5: closed by `specs/native-mutation-route-side-effect-binding.md`.
+  Native route runners now bind application graph mutation execution to
+  side-effect execution in throwaway Postgres.
+- GAP-NMAOG6: closed by `specs/native-mutation-public-gate.md`. The native
+  public gate now has a Form-live rollback receipt proof and a production
+  manifest header gate.
+- GAP-NMAOG7 follow-up task: `native-mutation-deployed-public-canary`. Deploy and
+  observe `X-Form-Native-Public-Gate` before ordinary no-header traffic moves.
 
 ## Risks and Assumptions
 
@@ -140,4 +144,4 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-ab-observa
   preview SQL shape. It does not prove live service semantics.
 - Confidence is strict by default: every mutation case must pass, including
   envelope checks.
-- A passing gate recommends `promote_to_live_db_trial`, not a production flip.
+- A passing gate reports `preview_confidence_complete`, not a production flip.

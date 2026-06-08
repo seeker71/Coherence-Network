@@ -1,0 +1,137 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/native-mutation-side-effect-ledger-20260609",
+  "commit_scope": "Add a source-classified native mutation side-effect ledger that separates Python parity from reversible gate receipts and names missing audit-ledger parity.",
+  "files_owned": [
+    "MANIFEST.md",
+    "api/tests/INDEX.md",
+    "api/tests/test_native_mutation_side_effect_ledger.py",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/native-mutation-side-effect-ledger.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "docs/system_audit/commit_evidence_2026-06-09_native_mutation_side_effect_ledger.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/INDEX.md",
+    "specs/ideas-router-form-expression.md",
+    "specs/native-mutation-public-gate.md",
+    "specs/native-mutation-route-side-effect-binding.md",
+    "specs/native-mutation-side-effect-ledger.md",
+    "specs/native-mutation-side-effects.md",
+    "specs/spec-registry-source-native.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd api && python3 -m pytest -q tests/test_native_mutation_side_effect_ledger.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_native_mutation_side_effects_form.py tests/test_native_mutation_route_side_effect_binding.py tests/test_native_mutation_public_gate.py",
+      "python3 scripts/validate_spec_quality.py --file specs/native-mutation-side-effect-ledger.md --file specs/native-mutation-side-effects.md --file specs/native-mutation-route-side-effect-binding.md --file specs/native-mutation-public-gate.md --file specs/ideas-router-form-expression.md --file specs/spec-registry-source-native.md",
+      "cd api && python3 -m ruff check tests/test_native_mutation_side_effect_ledger.py",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check",
+      "make wellness",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/codex/native-mutation-public-gate-20260608"
+    ],
+    "summary": "Added native-mutation-side-effect-ledger.form as a keep/delete map for mutable companions. The ledger classifies graph writes as primary mutation, parent-edge repair/spec edge cleanup/cache invalidation/contributor-key audit as Python parity effects, rollback receipts as reversible gate receipts, idea valuation audit-ledger writes as missing Python parity, and resonance reattunement as not carried. Route forms and mutation specs now state that side-effect proof does not justify side effects and that ordinary no-header mutation traffic remains blocked until the deployed public gate canary and missing audit-ledger parity are resolved. The local PR guard passed against the stacked base origin/codex/native-mutation-public-gate-20260608 with ready_for_push=True.",
+    "known_limitations": [
+      {
+        "scope": "ordinary public mutations",
+        "observed": "No ordinary no-header POST/PATCH/DELETE mutation traffic moved. No-header traffic still fans out to FastAPI."
+      },
+      {
+        "scope": "new side effects",
+        "observed": "No new domain side effects were added. Rollback receipts are classified as reversible gate safety rather than Python parity."
+      },
+      {
+        "scope": "idea valuation audit ledger",
+        "observed": "Python update_idea and update_ideas_batch audit-ledger writes remain missing Form-native parity and are now an explicit blocker before any no-header flip."
+      },
+      {
+        "scope": "production database",
+        "observed": "No production application database writes were attempted."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push of this stacked branch and GitHub checks on a draft PR."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "No public deploy attempted. Ordinary no-header public mutation traffic remains on FastAPI."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The anti-circular ledger is complete; ordinary mutation traffic still waits for a deployed public-gate canary and Form-native or explicitly retired idea valuation audit-ledger parity."
+  },
+  "idea_ids": [
+    "idea-realization-engine",
+    "data-infrastructure"
+  ],
+  "spec_ids": [
+    "specs/native-mutation-side-effect-ledger.md",
+    "specs/native-mutation-side-effects.md",
+    "specs/native-mutation-route-side-effect-binding.md",
+    "specs/native-mutation-public-gate.md",
+    "specs/ideas-router-form-expression.md",
+    "specs/spec-registry-source-native.md"
+  ],
+  "task_ids": [
+    "native-mutation-side-effect-ledger-20260609",
+    "native-idea-valuation-audit-ledger",
+    "native-mutation-deployed-public-canary"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/coherence-substrate/native-mutation-side-effect-ledger.form",
+    "api/tests/test_native_mutation_side_effect_ledger.py",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "specs/native-mutation-side-effect-ledger.md",
+    "specs/native-mutation-side-effects.md",
+    "specs/native-mutation-route-side-effect-binding.md",
+    "specs/native-mutation-public-gate.md"
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "api/tests/INDEX.md",
+    "api/tests/test_native_mutation_side_effect_ledger.py",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/native-mutation-side-effect-ledger.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "docs/system_audit/commit_evidence_2026-06-09_native_mutation_side_effect_ledger.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/INDEX.md",
+    "specs/ideas-router-form-expression.md",
+    "specs/native-mutation-public-gate.md",
+    "specs/native-mutation-route-side-effect-binding.md",
+    "specs/native-mutation-side-effect-ledger.md",
+    "specs/native-mutation-side-effects.md",
+    "specs/spec-registry-source-native.md"
+  ],
+  "change_intent": "test_only"
+}

@@ -27,7 +27,8 @@ def test_native_mutation_preview_routes_are_method_and_header_gated():
     for row in expected_rows:
         assert row in text
 
-    assert "requests without it exceed the route's pressure budget and fan out to FastAPI" in text
+    assert "Requests without either header exceed the" in text
+    assert "route's pressure budget and fan out to FastAPI" in text
 
 
 def test_native_mutation_preview_handlers_emit_application_graph_sql():

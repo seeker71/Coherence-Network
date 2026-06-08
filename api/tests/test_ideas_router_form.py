@@ -89,7 +89,9 @@ def test_ideas_router_form_keeps_python_as_carrier_with_gap_named():
     assert "trust envelope carrying prediction residual" in text
     assert "choice_success=1, silence/protocol/fail/stop/BMA markers" in text
     assert "native-mutation-side-effects-test.sh proves parent-edge repair" in text
-    assert "proven side-effect carrier is bound to route execution" in text
+    assert "native-mutation-route-side-effects-test.sh proves application graph mutation plus side-effect execution are bound" in text
+    assert "native-mutation-public-gate-test.sh plus mutation_public_gate_harness.py prove X-Form-Native-Public-Gate" in text
+    assert "deployed header-gated public canary is observed before any no-header flip" in text
 
 
 def test_ideas_router_form_describes_live_router_carrier():
