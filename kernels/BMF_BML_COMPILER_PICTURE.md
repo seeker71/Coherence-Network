@@ -195,6 +195,28 @@ cd form
 
 Expected result: `24` with `1 ok, 0 divergent`.
 
+## Choice Receipts
+
+The compiler choice path now has an optional witnessed form:
+
+- `form/form-stdlib/bmf-choice-receipts.fk` wraps the existing indexed
+  `apply-indexed-object-rule-set` path and returns a `CHOICE-RECEIPT` plus
+  `CHOICE-SIGNATURE` beside the normal match.
+- Literal-only BMF object choices are proven safe as `choose_any`; indexed BMF
+  and BML compiler rule dispatch is proven as `choose_best`.
+- The hot compiler functions keep returning the match directly. Callers ask for
+  the receipt wrapper only when they need branch-prediction feedback, alignment,
+  knowing, trust, candidate visibility, or selected-branch evidence.
+
+Proof command:
+
+```bash
+cd form
+./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/choice-receipt.fk form-stdlib/bmf-choice-receipts.fk form-stdlib/tests/bmf-choice-receipt-band.fk
+```
+
+Expected result: `67108863` with `1 ok, 0 divergent`.
+
 ## Bootstrap Boundary
 
 The target compiler code is BML. Form and s-expression code are only acceptable as the minimum bootstrap/proof carrier needed until the BML compiler can load, compile, and verify itself.

@@ -1,0 +1,140 @@
+; tests/bmf-choice-receipt-band.fk - BMF compiler choices emit receipts.
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/choice-receipt.fk form-stdlib/bmf-choice-receipts.fk
+;
+; Expected score: 67108863. This proves literal-only object choices can use
+; choose_any, indexed compiler rule dispatch uses choose_best, and BMF/BML
+; compiler choices can return valid CHOICE-RECEIPT signatures without changing
+; the matched result.
+
+(do
+    (defn bool-score (ok bit) (if ok bit 0))
+    (defn str-score (actual expected bit) (if (str_eq actual expected) bit 0))
+    (defn int-score (actual expected bit) (if (eq actual expected) bit 0))
+
+    (defn emit-captures (captures) captures)
+    (defn emit-source-span (obj) (bmf-object-source-span obj))
+    (defn result-object (match-value) (cap-get (match-caps match-value) "result"))
+    (defn result-value (match-value) (bmf-object-value (result-object match-value)))
+
+    (let direct-choice-pattern
+        (list "choice"
+              (object-lit "kw" "return")
+              (object-lit "kw" "break")
+              (object-lit "op" "{")))
+    (let mixed-choice-pattern
+        (list "choice"
+              (object-lit "kw" "return")
+              (list "sequence" (object-lit "kw" "break"))))
+
+    (let rule-set-stream
+        (list
+            (bmf-atom "kw" "break")
+            (bmf-atom "int" "9")
+            (bmf-atom "end" ".")))
+    (let no-candidate-stream
+        (list
+            (bmf-atom "kw" "continue")
+            (bmf-atom "end" ".")))
+    (let return-rule
+        (list "kw-return"
+              (list "sequence"
+                    (object-lit "kw" "return")
+                    (list "capture" "n" (object-lit "int" "")))
+              emit-captures
+              emit-source-span))
+    (let break-rule
+        (list "kw-break"
+              (list "sequence"
+                    (object-lit "kw" "break")
+                    (list "capture" "n" (object-lit "int" "")))
+              emit-captures
+              emit-source-span))
+
+    (let observed
+        (bmf-apply-object-rule-set-with-choice-receipt
+            (list return-rule break-rule)
+            rule-set-stream
+            "apply-object-rule-set(return, break)"
+            "bmf-object-rule-set"
+            "bmf-choice-receipt-band"
+            "form/form-stdlib/tests/bmf-choice-receipt-band.fk"
+            20260609))
+    (let observed-match (bmf-choice-observation-match observed))
+    (let observed-receipt (bmf-choice-observation-receipt observed))
+    (let observed-signature (bmf-choice-observation-signature observed))
+    (let observed-value (cr-receipt-value observed-receipt))
+
+    (let silence-observed
+        (bmf-apply-object-rule-set-with-choice-receipt
+            (list return-rule break-rule)
+            no-candidate-stream
+            "apply-object-rule-set(no eligible first literal)"
+            "bmf-object-rule-set"
+            "bmf-choice-receipt-band"
+            "form/form-stdlib/tests/bmf-choice-receipt-band.fk"
+            20260609))
+    (let silence-receipt (bmf-choice-observation-receipt silence-observed))
+    (let silence-signature (bmf-choice-observation-signature silence-observed))
+
+    (let bmf-compiler-observed
+        (bmf-apply-indexed-object-rule-set-with-choice-receipt
+            bmf-compiler-rule-index
+            (list (bmf-src-op "\\") (bmf-src-int "66"))
+            "apply-bmf-compiler-first-rule"
+            "bmf-compiler-first-rule"
+            "bmf-choice-receipt-band"
+            "form/form-stdlib/tests/bmf-choice-receipt-band.fk"
+            20260609))
+    (let bmf-compiler-receipt
+        (bmf-choice-observation-receipt bmf-compiler-observed))
+    (let bmf-compiler-signature
+        (bmf-choice-observation-signature bmf-compiler-observed))
+
+    (let bml-choose-stream
+        (list (bml-src-keyword "choose") (bml-src-op "{")
+              (bml-src-keyword "fail") (bml-src-op ";") (bml-src-op "}")
+              (bml-src-op ",") (bml-src-op "{")
+              (bml-src-keyword "return") (bml-src-int "8")
+              (bml-src-op ";") (bml-src-op "}")))
+    (let bml-observed
+        (bmf-apply-indexed-object-rule-set-with-choice-receipt
+            bml-bmf-rule-index
+            bml-choose-stream
+            "apply-bml-bmf-first-rule(choose)"
+            "bml-bmf-first-rule"
+            "bmf-choice-receipt-band"
+            "form/form-stdlib/tests/bmf-choice-receipt-band.fk"
+            20260609))
+    (let bml-match (bmf-choice-observation-match bml-observed))
+    (let bml-receipt (bmf-choice-observation-receipt bml-observed))
+
+    (sum
+        (list
+            (str-score (bmf-object-choice-policy (tail direct-choice-pattern)) (bmf-choice-policy-any) 1)
+            (str-score (bmf-object-choice-policy (tail mixed-choice-pattern)) (bmf-choice-policy-best) 2)
+            (bool-score (bmf-choice-observation? observed) 4)
+            (bool-score (match? observed-match) 8)
+            (str-score (bmf-object-kind (result-object observed-match)) "kw-break" 16)
+            (bool-score (cr-choice-receipt-valid? observed-receipt) 32)
+            (bool-score (cr-choice-signature-preserves? observed-receipt observed-signature) 64)
+            (str-score (cr-receipt-outcome observed-receipt) (cr-outcome-success) 128)
+            (int-score (cr-signature-candidate-count-bucket observed-signature) 2 256)
+            (int-score (cr-signature-attempts observed-signature) 1 512)
+            (int-score (cr-receipt-cost observed-receipt) 2 1024)
+            (str-score (cr-value-kind observed-value) (cr-kind-branch-feedback) 2048)
+            (int-score (cr-signature-branch-feedback-bucket observed-signature) 5 4096)
+            (bool-score (cr-choice-value-worth-learning? observed-value) 8192)
+            (bool-score (cr-choice-receipt-valid? silence-receipt) 16384)
+            (int-score (cr-signature-outcome-code silence-signature) (sub 0 1) 32768)
+            (str-score (cr-receipt-selected-path silence-receipt) "none" 65536)
+            (int-score (cr-signature-silences silence-signature) 1 131072)
+            (str-score (cr-receipt-selected-path bmf-compiler-receipt) "BMFChar-int" 262144)
+            (bool-score (cr-choice-receipt-valid? bmf-compiler-receipt) 524288)
+            (bool-score (cr-choice-signature-preserves? bmf-compiler-receipt bmf-compiler-signature) 1048576)
+            (str-score (cr-receipt-selected-path bml-receipt) "choose-fail-int" 2097152)
+            (bool-score (cr-choice-receipt-valid? bml-receipt) 4194304)
+            (int-score (bma-run-value (bml-compile-program (result-value bml-match))) 8 8388608)
+            (str-score (bmf-choice-observation-policy bml-observed) (bmf-choice-policy-best) 16777216)
+            (bool-score (cr-choice-value-worth-learning? (cr-receipt-value bml-receipt)) 33554432)))
+)
