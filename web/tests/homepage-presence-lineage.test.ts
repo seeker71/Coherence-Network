@@ -85,6 +85,8 @@ describe("homepage presence lineage", () => {
     ]);
 
     for (const image of imageMatches) {
+      expect(image, "presence image path is defined").toBeTruthy();
+      if (!image) continue;
       expect(existsSync(join(root, "public", image))).toBe(true);
     }
   });
