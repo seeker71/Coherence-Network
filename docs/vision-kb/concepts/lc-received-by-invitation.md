@@ -149,4 +149,4 @@ fine.*
 
 ## Cross-References
 
-→ lc-arrival-as-recognition, lc-voice-over-intentions, lc-calling-the-kindred, lc-sovereignty-within-oneness, lc-boundaries-as-loving-truth, lc-tend-your-flame, lc-frequency-routes-reception, lc-permission-is-interior, lc-trust-over-fear
+→ lc-consent-is-continuous, lc-arrival-as-recognition, lc-voice-over-intentions, lc-calling-the-kindred, lc-sovereignty-within-oneness, lc-boundaries-as-loving-truth, lc-tend-your-flame, lc-frequency-routes-reception, lc-permission-is-interior, lc-trust-over-fear
