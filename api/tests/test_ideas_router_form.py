@@ -75,7 +75,7 @@ def test_ideas_router_form_keeps_python_as_carrier_with_gap_named():
     assert 'carrier:        "api/app/routers/ideas.py"' in text
     assert "idea_service.list_ideas" in text
     assert "stake_compute_service.execute_stake" in text
-    assert "GAP-I1: /api/ideas/router-structure, /api/ideas/source-index, and /api/ideas/graph-projection are kernel-first capable" in text
+    assert "GAP-I1: /api/ideas/router-structure, /api/ideas/source-index, /api/ideas/source-portfolio, and /api/ideas/graph-projection are kernel-first capable" in text
     assert "graph-node-port.fk exposes native get/list/count" in text
     assert "ideas-graph-projection.fk emits an IdeaPortfolioResponse-shaped read" in text
     assert "mutable DB-backed portfolio routes still enter through FastAPI until the live storage carrier lands" in text
@@ -128,6 +128,25 @@ def test_ideas_router_form_has_native_source_index_route():
     assert '(list "/api/ideas/source-index"        route_ideas_source_index)' in kernel_text
     assert "super_idea_count" in kernel_text
     assert "source-index route reads repo idea source" in kernel_text
+
+
+def test_ideas_router_form_has_native_source_portfolio_route():
+    form_text = _form_text()
+    kernel_text = _kernel_routes_text()
+    ideas_index_text = _ideas_index_text()
+
+    source_rows = [line for line in ideas_index_text.splitlines() if line.startswith("| [")]
+    assert len(source_rows) == 17
+
+    assert 'path: "/api/ideas/source-portfolio"' in form_text
+    assert "deploy/kernel-router/production-routes.fk::route_ideas_source_portfolio" in form_text
+    assert "reads ideas/INDEX.md and emits an IdeaPortfolioResponse-shaped curated portfolio" in form_text
+
+    assert "defn route_ideas_source_portfolio" in kernel_text
+    assert '(list "/api/ideas/source-portfolio"    route_ideas_source_portfolio)' in kernel_text
+    assert "isp-ideas-json-from" in kernel_text
+    assert "IdeaPortfolioResponse" in kernel_text
+    assert "ideas/INDEX.md -> IdeaPortfolioResponse" in kernel_text
 
 
 def test_ideas_router_form_has_native_graph_projection_route():

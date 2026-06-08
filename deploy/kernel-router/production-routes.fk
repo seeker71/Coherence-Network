@@ -36,6 +36,7 @@
 ;   /api/attention/kernel-runtime     live kernel router metrics -> attention axes
 ;   /api/ideas/router-structure       Form-native ideas route structure reading
 ;   /api/ideas/source-index           Form-native read of ideas/INDEX.md
+;   /api/ideas/source-portfolio       Form-native ideas/INDEX.md -> IdeaPortfolioResponse
 ;   /api/ideas/graph-projection       Form-native graph rows -> IdeaPortfolioResponse
 ;
 ; Each native handler replicates its live route's FULL contract:
@@ -59,6 +60,7 @@
 ;   curl ':PORT/api/utils/weighted_average?values=1,1&weights=1,1' -> live-api JSON
 ;   curl ':PORT/api/ideas/router-structure'              -> native Form route reading
 ;   curl ':PORT/api/ideas/source-index'                  -> native source-index data
+;   curl ':PORT/api/ideas/source-portfolio'              -> native source portfolio data
 ;   curl ':PORT/api/ideas/graph-projection'              -> native graph projection preview
 ;   curl ':PORT/api/ideas'                               -> fan-out -> CPython upstream
 
@@ -1538,6 +1540,133 @@
         ",\"runtime\":\"inline\"}")))))
 
 ; ===========================================================================
+; /api/ideas/source-portfolio
+;   native curated portfolio route for ideas/INDEX.md. This is the source-backed
+;   sibling of /api/ideas?curated_only=true: it reads the repo idea table and
+;   emits the public portfolio response shape without FastAPI or idea_service.
+; ===========================================================================
+
+(defn isp-find-or-end (s needle start)
+  (do (let p (str_find s needle start))
+      (if (eq p -1) (str_len s) p)))
+
+(defn isp-stage-from-index (stage)
+  (if (str_eq stage "impl") "implementing"
+      (if (str_eq stage "spec") "specced" "none")))
+
+(defn isp-status-from-index (stage)
+  (if (str_eq stage "done") "validated" "partial"))
+
+(defn isp-row-title-start (row_pos) (add row_pos (str_len "\n| [")))
+(defn isp-row-title-end (text row_pos) (str_find text "](" row_pos))
+(defn isp-row-slug-start (text row_pos) (add (isp-row-title-end text row_pos) 2))
+(defn isp-row-slug-end (text row_pos) (str_find text ".md)" (isp-row-slug-start text row_pos)))
+(defn isp-row-link-end (text row_pos) (str_find text ") | " (isp-row-slug-start text row_pos)))
+(defn isp-row-pillar-start (text row_pos) (add (isp-row-link-end text row_pos) (str_len ") | ")))
+(defn isp-row-pillar-end (text row_pos) (str_find text " | " (isp-row-pillar-start text row_pos)))
+(defn isp-row-stage-start (text row_pos) (add (isp-row-pillar-end text row_pos) (str_len " | ")))
+(defn isp-row-stage-end (text row_pos) (str_find text " | " (isp-row-stage-start text row_pos)))
+(defn isp-row-specs-start (text row_pos) (add (isp-row-stage-end text row_pos) (str_len " | ")))
+(defn isp-row-specs-end (text row_pos) (str_find text " | " (isp-row-specs-start text row_pos)))
+(defn isp-row-capability-start (text row_pos) (add (isp-row-specs-end text row_pos) (str_len " | ")))
+(defn isp-row-capability-end (text row_pos) (isp-find-or-end text " |\n" (isp-row-capability-start text row_pos)))
+
+(defn isp-row-title (text row_pos)
+  (substring text (isp-row-title-start row_pos) (isp-row-title-end text row_pos)))
+
+(defn isp-row-slug (text row_pos)
+  (substring text (isp-row-slug-start text row_pos) (isp-row-slug-end text row_pos)))
+
+(defn isp-row-pillar (text row_pos)
+  (substring text (isp-row-pillar-start text row_pos) (isp-row-pillar-end text row_pos)))
+
+(defn isp-row-stage (text row_pos)
+  (substring text (isp-row-stage-start text row_pos) (isp-row-stage-end text row_pos)))
+
+(defn isp-row-specs (text row_pos)
+  (substring text (isp-row-specs-start text row_pos) (isp-row-specs-end text row_pos)))
+
+(defn isp-row-capability (text row_pos)
+  (substring text (isp-row-capability-start text row_pos) (isp-row-capability-end text row_pos)))
+
+(defn isp-idea-json (text row_pos)
+  (do (let id (isp-row-slug text row_pos))
+  (do (let stage_raw (isp-row-stage text row_pos))
+  (do (let stage (isp-stage-from-index stage_raw))
+  (do (let status (isp-status-from-index stage_raw))
+      (str_concat_all (list
+        "{\"id\":" (json_string id)
+        ",\"name\":" (json_string (isp-row-title text row_pos))
+        ",\"description\":" (json_string (isp-row-capability text row_pos))
+        ",\"potential_value\":0.0"
+        ",\"actual_value\":0.0"
+        ",\"estimated_cost\":0.0"
+        ",\"actual_cost\":0.0"
+        ",\"resistance_risk\":1.0"
+        ",\"confidence\":0.5"
+        ",\"manifestation_status\":" (json_string status)
+        ",\"interfaces\":[]"
+        ",\"open_questions\":[]"
+        ",\"idea_type\":\"super\""
+        ",\"parent_idea_id\":null"
+        ",\"child_idea_ids\":[]"
+        ",\"stage\":" (json_string stage)
+        ",\"work_type\":\"feature\""
+        ",\"lifecycle\":\"active\""
+        ",\"duplicate_of\":null"
+        ",\"last_activity_at\":null"
+        ",\"value_basis\":null"
+        ",\"cost_vector\":null"
+        ",\"value_vector\":null"
+        ",\"tags\":[]"
+        ",\"workspace_git_url\":null"
+        ",\"slug\":" (json_string id)
+        ",\"slug_history\":[]"
+        ",\"is_curated\":true"
+        ",\"pillar\":" (json_string (isp-row-pillar text row_pos))
+        ",\"workspace_id\":\"coherence-network\""
+        ",\"rollup_condition\":null"
+        ",\"free_energy_score\":0.0"
+        ",\"value_gap\":0.0"
+        ",\"content_markdown\":\"\""
+        ",\"marginal_cc_score\":0.0"
+        ",\"selection_weight\":0.0"
+        ",\"remaining_cost_cc\":0.0"
+        ",\"value_gap_cc\":0.0"
+        ",\"roi_cc\":0.0"
+        "}")))))))
+
+(defn isp-ideas-json-from (text start remaining)
+  (if (eq remaining 0)
+      ""
+      (do (let row_pos (str_find text "\n| [" start))
+          (if (eq row_pos -1)
+              ""
+              (if (eq remaining 1)
+                  (isp-idea-json text row_pos)
+                  (str_concat
+                    (str_concat (isp-idea-json text row_pos) ",")
+                    (isp-ideas-json-from text (add row_pos 1) (sub remaining 1))))))))
+
+(defn route_ideas_source_portfolio (q)
+  (do (let text (ideas_index_text))
+  (do (let total (str_count text "\n| ["))
+      (str_concat_all (list
+        "{\"ideas\":[" (isp-ideas-json-from text 0 total) "]"
+        ",\"summary\":{\"total_ideas\":" (value_str total)
+        ",\"unvalidated_ideas\":" (value_str total)
+        ",\"validated_ideas\":0"
+        ",\"total_potential_value\":0.0"
+        ",\"total_actual_value\":0.0"
+        ",\"total_value_gap\":0.0}"
+        ",\"pagination\":{\"total\":" (value_str total)
+        ",\"limit\":" (value_str (max2 total 1))
+        ",\"offset\":0"
+        ",\"returned\":" (value_str total)
+        ",\"has_more\":false}"
+        "}")))))
+
+; ===========================================================================
 ; /api/ideas/graph-projection
 ;   native projection route for graph-node-shaped rows. This binds the same
 ;   portfolio response shape proven in form-stdlib/ideas-graph-projection.fk into
@@ -1718,4 +1847,5 @@ section [form.route] {
     (list "/api/attention/kernel-runtime"  route_attention_kernel_runtime)
     (list "/api/ideas/router-structure"    route_ideas_router_structure)
     (list "/api/ideas/source-index"        route_ideas_source_index)
+    (list "/api/ideas/source-portfolio"    route_ideas_source_portfolio)
     (list "/api/ideas/graph-projection"    route_ideas_graph_projection)))
