@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 245
+**Total files**: 247
 
 | File | Purpose |
 |---|---|
@@ -109,6 +109,7 @@
 | [test_graph_layer.py](test_graph_layer.py) | Coverage for the universal node + edge data layer. |
 | [test_graph_model_boundaries.py](test_graph_model_boundaries.py) | _no top-of-file purpose_ |
 | [test_graph_node_form_port.py](test_graph_node_form_port.py) | Proof that graph_nodes have a Form-native storage-port surface. |
+| [test_graph_node_mutation_carrier_form.py](test_graph_node_mutation_carrier_form.py) | Proof that graph-node mutations have a native Form carrier. |
 | [test_grounded_cost_value_measurement.py](test_grounded_cost_value_measurement.py) | Tests for grounded cost & value measurement (spec: grounded-cost-value-measurement). |
 | [test_homepage_contrast.py](test_homepage_contrast.py) | WCAG AA contrast tests for homepage CSS palette (ux-homepage-readability). |
 | [test_household_service_board.py](test_household_service_board.py) | Flow test for the household resident-service board (api/app/routers/household.py). |
@@ -171,6 +172,7 @@
 | [test_settlement_flow.py](test_settlement_flow.py) | Tests for settlement service + router — story-protocol-integration R8. |
 | [test_smart_reaper_module_boundary.py](test_smart_reaper_module_boundary.py) | _no top-of-file purpose_ |
 | [test_source_artifact_sensing_graph.py](test_source_artifact_sensing_graph.py) | Source artifact -> sensing -> concept graph integration tests. |
+| [test_spec_registry_router_form.py](test_spec_registry_router_form.py) | Proof that the spec registry has a high-level Form expression. |
 | [test_specs_source_native_route.py](test_specs_source_native_route.py) | Proof that specs can be read from source through a native Form route. |
 | [test_stale_task_reaper.py](test_stale_task_reaper.py) | Tests for stale-task reaper — spec: stale-task-reaper. |
 | [test_story_protocol.py](test_story_protocol.py) | Pure-logic tests for the story-protocol-integration spec. |

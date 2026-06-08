@@ -1,9 +1,10 @@
 ; graph-node-port.fk -- graph_nodes as a Form-native storage-port layer.
 ;
-; This exposes the graph node functions the ideas router is waiting on:
-; put/get/exists/count/list by node type, with the same call-site shape across
-; memory, file, and future db carriers. The values are plain strings so the
-; durable file carrier can persist them without host records.
+; This exposes the graph node functions the ideas/spec routers are waiting on:
+; put/create/replace/delete/get/exists/count/list by node type, with the same
+; call-site shape across memory, file, and future db carriers. The values are
+; plain strings so the durable file carrier can persist them without host
+; records.
 ;
 ; Python contract mirrored at the boundary:
 ;   api/app/services/graph_service.py::get_node
@@ -19,6 +20,7 @@
     (defn gn-type-count-key (node-type) (str_concat "graph/count/type/" node-type))
     (defn gn-total-count-key () "graph/count/total")
     (defn gn-type-index-key (node-type) (str_concat "graph/index/type/" node-type))
+    (defn gn-deleted-type () "__deleted__")
 
     ;; String envelope for the durable carrier. This is intentionally simple:
     ;; a native route can return it as proof now, while a later JSON/Form codec
@@ -111,13 +113,18 @@
             (if (eq (storage-found? old-type-result) 1)
                 (do
                     (let old-type (storage-value old-type-result))
-                    (if (str_eq old-type node-type)
-                        store
+                    (if (str_eq old-type (gn-deleted-type))
                         (do
-                            (let s1 (gn-bump-count carrier store (gn-type-count-key old-type) (sub 0 1)))
+                            (let s1 (gn-bump-count carrier store (gn-total-count-key) 1))
                             (let s2 (gn-bump-count carrier s1 (gn-type-count-key node-type) 1))
-                            (let s3 (gn-index-remove-id carrier s2 old-type id))
-                            (gn-index-add-id carrier s3 node-type id))))
+                            (gn-index-add-id carrier s2 node-type id))
+                        (if (str_eq old-type node-type)
+                            store
+                            (do
+                                (let s1 (gn-bump-count carrier store (gn-type-count-key old-type) (sub 0 1)))
+                                (let s2 (gn-bump-count carrier s1 (gn-type-count-key node-type) 1))
+                                (let s3 (gn-index-remove-id carrier s2 old-type id))
+                                (gn-index-add-id carrier s3 node-type id)))))
                 (do
                     (let s1 (gn-bump-count carrier store (gn-total-count-key) 1))
                     (let s2 (gn-bump-count carrier s1 (gn-type-count-key node-type) 1))
@@ -131,11 +138,52 @@
                 (gn-node-value id node-type name description phase properties)))
             (storage-put carrier s2 (gn-node-type-key id) node-type)))
 
+    ;; Create refuses an already-active node, mirroring graph_service.create_node
+    ;; duplicate behavior without creating a second parallel record.
+    (defn gn-create-node (carrier store id node-type name description phase properties)
+        (if (eq (gn-node-exists? carrier store id) 1)
+            store
+            (gn-put-node carrier store id node-type name description phase properties)))
+
+    ;; Replace refuses a missing/tombstoned node. Callers that want upsert use
+    ;; gn-put-node directly; live PATCH-shaped surfaces use this stricter form.
+    (defn gn-replace-node (carrier store id node-type name description phase properties)
+        (if (eq (gn-node-exists? carrier store id) 1)
+            (gn-put-node carrier store id node-type name description phase properties)
+            store))
+
+    ;; Logical delete: the storage port has no physical delete primitive, so the
+    ;; mutation updates counts and typed indexes, then marks the node as deleted.
+    ;; Reads that respect gn-node-exists?/gn-list-nodes no longer see it.
+    (defn gn-delete-node (carrier store id)
+        (do
+            (let old-type-result (storage-get carrier store (gn-node-type-key id)))
+            (if (eq (storage-found? old-type-result) 0)
+                store
+                (do
+                    (let old-type (storage-value old-type-result))
+                    (if (str_eq old-type (gn-deleted-type))
+                        store
+                        (do
+                            (let s1 (gn-bump-count carrier store (gn-total-count-key) (sub 0 1)))
+                            (let s2 (gn-bump-count carrier s1 (gn-type-count-key old-type) (sub 0 1)))
+                            (let s3 (gn-index-remove-id carrier s2 old-type id))
+                            (let s4 (storage-put carrier s3 (gn-node-key id)
+                                (gn-node-value id (gn-deleted-type) "" "" (gn-deleted-type) "{}")))
+                            (storage-put carrier s4 (gn-node-type-key id) (gn-deleted-type))))))))
+
     (defn gn-get-node (carrier store id)
         (storage-get carrier store (gn-node-key id)))
 
+    (defn gn-node-active? (carrier store id)
+        (do
+            (let got (storage-get carrier store (gn-node-type-key id)))
+            (if (eq (storage-found? got) 0)
+                0
+                (if (str_eq (storage-value got) (gn-deleted-type)) 0 1))))
+
     (defn gn-node-exists? (carrier store id)
-        (storage-has? carrier store (gn-node-key id)))
+        (gn-node-active? carrier store id))
 
     (defn gn-count-nodes (carrier store node-type)
         (if (str_eq node-type "")
@@ -156,6 +204,39 @@
 
     (defn gn-list-nodes (carrier store node-type)
         (gn-list-nodes-by-ids carrier store (gn-list-node-ids carrier store node-type)))
+
+    ;; ---- executable mutation proof ----------------------------------------
+    ;; 1111111 = create refuses duplicate, replace changes an active node,
+    ;; delete removes it from active counts/lists, recreate restores counts, and
+    ;; missing replace/delete are no-op.
+    (defn gn-mutation-test (carrier config)
+        (do
+            (let s0 (storage-open carrier config))
+            (let s1 (gn-create-node carrier s0 "idea:mutable" "idea" "Mutable idea" "Created natively" "gas" "{}"))
+            (let s2 (gn-create-node carrier s1 "spec:mutable" "spec" "Mutable spec" "Created natively" "ice" "{}"))
+            (let s3 (gn-create-node carrier s2 "idea:mutable" "idea" "Duplicate" "Should not replace" "ice" "{}"))
+            (let s4 (gn-replace-node carrier s3 "idea:mutable" "idea" "Mutable idea revised" "Replaced natively" "water" "{\"stage\":\"implementing\"}"))
+            (let s5 (gn-delete-node carrier s4 "spec:mutable"))
+            (let s6 (gn-create-node carrier s5 "spec:restore" "spec" "Restored spec" "Created before tombstone" "ice" "{}"))
+            (let s7 (gn-delete-node carrier s6 "spec:restore"))
+            (let s8 (gn-create-node carrier s7 "spec:restore" "spec" "Restored spec" "Recreated after tombstone" "water" "{}"))
+            (let s9 (gn-replace-node carrier s8 "spec:missing" "spec" "Missing" "No write" "ice" "{}"))
+            (let s10 (gn-delete-node carrier s9 "spec:missing"))
+
+            (let duplicate-ok
+                (if (str_eq (storage-value (gn-get-node carrier s3 "idea:mutable"))
+                        (gn-node-value "idea:mutable" "idea" "Mutable idea" "Created natively" "gas" "{}"))
+                    1 0))
+            (let replace-ok
+                (if (str_eq (storage-value (gn-get-node carrier s10 "idea:mutable"))
+                        (gn-node-value "idea:mutable" "idea" "Mutable idea revised" "Replaced natively" "water" "{\"stage\":\"implementing\"}"))
+                    10 0))
+            (let delete-exists-ok (if (eq (gn-node-exists? carrier s10 "spec:mutable") 0) 100 0))
+            (let total-ok (if (eq (gn-count-nodes carrier s10 "") 2) 1000 0))
+            (let idea-count-ok (if (eq (gn-count-nodes carrier s10 "idea") 1) 10000 0))
+            (let spec-list-ok (if (eq (len (gn-list-node-ids carrier s10 "spec")) 1) 100000 0))
+            (let recreate-ok (if (eq (gn-node-exists? carrier s10 "spec:restore") 1) 1000000 0))
+            (sum (list duplicate-ok replace-ok delete-exists-ok total-ok idea-count-ok spec-list-ok recreate-ok))))
 
     ;; ---- executable proof -------------------------------------------------
     ;; 1111111 = create/update/retype/read/list/count all hold for any carrier.

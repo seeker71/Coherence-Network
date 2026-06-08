@@ -4,6 +4,10 @@ status: done
 source:
   - file: docs/coherence-substrate/ideas-router.form
     symbols: [idea_route_shape, idea_route_recipe_shape, ideas_router_structure, browse_ideas_recipe, sense_governance_recipe, choose_next_idea_recipe, mutate_idea_recipe, question_answer_recipe, link_idea_recipe, translate_idea_recipe, invest_in_idea_recipe, rollup_super_idea_recipe, inspect_idea_recipe]
+  - file: form/form-stdlib/graph-node-port.fk
+    symbols: [gn-create-node, gn-replace-node, gn-delete-node]
+  - file: form/form-stdlib/tests/graph-node-mutation-carrier-band.fk
+    symbols: []
   - file: deploy/kernel-router/production-routes.fk
     symbols: []
   - file: Dockerfile.kernel-router
@@ -13,13 +17,14 @@ source:
   - file: api/app/routers/ideas.py
     symbols: [list_ideas, create_idea, update_idea, get_idea]
   - file: api/tests/test_ideas_router_form.py
-    symbols: [test_ideas_router_form_declares_route_shapes_and_whole_structure, test_ideas_router_form_names_shifted_recipe_families, test_ideas_router_form_keeps_python_as_carrier_with_gap_named, test_ideas_router_form_describes_live_router_carrier, test_ideas_router_form_has_native_structure_route, test_ideas_router_form_has_native_source_index_route, test_ideas_router_form_has_native_source_portfolio_route, test_ideas_router_form_has_native_graph_projection_route]
+    symbols: [test_ideas_router_form_declares_route_shapes_and_whole_structure, test_ideas_router_form_names_shifted_recipe_families, test_ideas_router_form_keeps_python_as_carrier_with_gap_named, test_ideas_router_form_describes_live_router_carrier, test_ideas_router_form_has_native_structure_route, test_ideas_router_form_has_native_source_index_route, test_ideas_router_form_has_native_source_portfolio_route, test_ideas_router_form_has_native_graph_projection_route, test_ideas_router_form_names_native_mutation_carrier]
   - file: api/tests/test_runtime_surface_native_routes.py
     symbols: [test_real_manifest_native_routes_are_served_zero_and_include_ideas_structure]
 requirements:
   - "The ideas router has a high-level Form artifact naming its route shape, route recipe shape, whole structure, and shifted recipe families."
   - "The Form artifact names api/app/routers/ideas.py as the FastAPI carrier while preserving existing HTTP behavior."
   - "The kernel-router production manifest exposes native /api/ideas/router-structure, /api/ideas/source-index, /api/ideas/source-portfolio, and /api/ideas/graph-projection routes for the Form-declared router structure, repo-backed idea source index, source-backed curated portfolio, and fixture-backed graph projection preview."
+  - "The Form artifact names the native graph-node mutation carrier for create, replace, and delete while keeping the public mutable front-door gap explicit."
   - "The kernel-router image carries the ideas source directory so the source-index route is deployable when production routes are selected."
   - "The proof tests verify the Form structure, shifted recipes, Python-carrier boundary, native structure/source routes, and router-to-Form link."
 done_when:
@@ -30,6 +35,7 @@ done_when:
   - 'file_contains("deploy/kernel-router/production-routes.fk", "(list \"/api/ideas/source-index\"        route_ideas_source_index)")'
   - 'file_contains("deploy/kernel-router/production-routes.fk", "(list \"/api/ideas/source-portfolio\"    route_ideas_source_portfolio)")'
   - 'file_contains("deploy/kernel-router/production-routes.fk", "(list \"/api/ideas/graph-projection\"    route_ideas_graph_projection)")'
+  - 'file_contains("docs/coherence-substrate/ideas-router.form", "mutable service calls -> Form-native graph-node mutation carrier")'
   - 'pytest_passes("api/tests/test_ideas_router_form.py")'
 test: "cd api && python3 -m pytest -q tests/test_ideas_router_form.py tests/test_runtime_surface_native_routes.py"
 constraints:
@@ -53,7 +59,8 @@ constraints:
 - [ ] **R5**: `deploy/kernel-router/production-routes.fk` binds `/api/ideas/source-index` to a native Form handler that reads `ideas/INDEX.md` and returns source-backed idea counts.
 - [ ] **R6**: `deploy/kernel-router/production-routes.fk` binds `/api/ideas/source-portfolio` to a native Form handler that reads `ideas/INDEX.md` and returns the curated super-idea portfolio response shape.
 - [ ] **R7**: `deploy/kernel-router/production-routes.fk` binds `/api/ideas/graph-projection` to a native Form handler that returns a fixture-backed `IdeaPortfolioResponse`-shaped body.
-- [ ] **R8**: Tests prove the Form structure, recipe families, Python-carrier boundary, native structure/source/projection routes, named remaining live-storage gap, and router-to-Form link.
+- [ ] **R8**: The Form artifact names the native graph-node mutation carrier for create, replace, and delete while keeping the live-front-door auth/Postgres boundary explicit.
+- [ ] **R9**: Tests prove the Form structure, recipe families, Python-carrier boundary, native structure/source/projection routes, native mutation carrier, named remaining live-front-door gap, and router-to-Form link.
 
 ## Research Inputs
 
@@ -63,10 +70,14 @@ constraints:
 - `api/app/routers/ideas.py` - live FastAPI carrier for the ideas portfolio routes.
 - `deploy/kernel-router/production-routes.fk` - native kernel-router manifest for whole-request Form routes.
 - `ideas/INDEX.md` - canonical super-idea source index.
+- `form/form-stdlib/graph-node-port.fk` - native graph-node read and mutation carrier.
+- `form/form-stdlib/tests/graph-node-mutation-carrier-band.fk` - memory/file proof for create, replace, and delete.
 
 ## Files to Create/Modify
 
 - `docs/coherence-substrate/ideas-router.form` - high-level route expression and shifted recipe families.
+- `form/form-stdlib/graph-node-port.fk` - native graph-node mutation carrier functions.
+- `form/form-stdlib/tests/graph-node-mutation-carrier-band.fk` - native mutation proof band.
 - `deploy/kernel-router/production-routes.fk` - native structure route for the high-level ideas router reading.
 - `Dockerfile.kernel-router` - carries the production route manifest and idea source files into the kernel-router image.
 - `scripts/runtime_surface_report.py` - honest capable-route wording for native structure routes without CPython twins.
@@ -84,6 +95,7 @@ constraints:
 - `api/tests/test_ideas_router_form.py::test_ideas_router_form_has_native_source_index_route`
 - `api/tests/test_ideas_router_form.py::test_ideas_router_form_has_native_source_portfolio_route`
 - `api/tests/test_ideas_router_form.py::test_ideas_router_form_has_native_graph_projection_route`
+- `api/tests/test_ideas_router_form.py::test_ideas_router_form_names_native_mutation_carrier`
 - `api/tests/test_runtime_surface_native_routes.py::test_real_manifest_native_routes_are_served_zero_and_include_ideas_structure`
 
 ## Verification
@@ -97,14 +109,14 @@ python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expressi
 
 - Changing API response schemas or endpoint paths.
 - Moving service-layer persistence or scoring logic to a new Python module.
-- Moving mutable, DB-backed ideas data routes to native dispatch.
+- Binding public mutable, DB-backed ideas data routes to native dispatch before auth and application-table parity.
 
 ## Gaps
 
-- GAP-I1: `/api/ideas/router-structure`, `/api/ideas/source-index`, `/api/ideas/source-portfolio`, and `/api/ideas/graph-projection` are kernel-first capable in the production route manifest. Mutable DB-backed portfolio routes still enter through FastAPI until a live storage carrier replaces the fixture-backed projection route.
-- Follow-up: connect `/api/ideas/graph-projection` to a live graph storage carrier on top of `form/form-stdlib/ideas-graph-projection.fk`.
+- GAP-I1 follow-up task: `method-specific-ideas-mutation-routes`. `/api/ideas/router-structure`, `/api/ideas/source-index`, `/api/ideas/source-portfolio`, and `/api/ideas/graph-projection` are kernel-first capable, and `graph-node-port.fk` now exposes create/replace/delete over the storage port. Public mutable DB-backed portfolio routes still enter through FastAPI until method-specific route rows preserve API-key/contributor-key auth and write the application `graph_nodes` table directly.
+- GAP-I2 follow-up task: `ideas-live-graph-storage-carrier`. Connect `/api/ideas/graph-projection` to a live application graph storage carrier on top of `form/form-stdlib/ideas-graph-projection.fk`.
 
 ## Risks and Assumptions
 
 - The Form artifact plus native structure/source routes is not a DB-backed replacement for the full ideas router.
-- A later native route lift can consume this route recipe now that the graph-node read carrier and idea schema projection shapes exist; manifest binding and live storage remain the next boundary.
+- A later native route lift can consume this route recipe now that the graph-node read carrier, mutation carrier, and idea schema projection shapes exist; manifest binding, auth parity, and live application-table storage remain the next boundary.

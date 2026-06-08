@@ -65,6 +65,7 @@ def test_ideas_router_form_names_shifted_recipe_families():
         "hidden route intent -> source-backed route_trace",
         "Python ownership -> Python carrier for Form-declared choreography",
         "Form-declared choreography -> kernel-router native structure route",
+        "mutable service calls -> Form-native graph-node mutation carrier",
     ):
         assert shifted in text
 
@@ -76,9 +77,10 @@ def test_ideas_router_form_keeps_python_as_carrier_with_gap_named():
     assert "idea_service.list_ideas" in text
     assert "stake_compute_service.execute_stake" in text
     assert "GAP-I1: /api/ideas/router-structure, /api/ideas/source-index, /api/ideas/source-portfolio, and /api/ideas/graph-projection are kernel-first capable" in text
-    assert "graph-node-port.fk exposes native get/list/count" in text
+    assert "graph-node-port.fk exposes native get/list/count plus create/replace/delete" in text
     assert "ideas-graph-projection.fk emits an IdeaPortfolioResponse-shaped read" in text
-    assert "mutable DB-backed portfolio routes still enter through FastAPI until the live storage carrier lands" in text
+    assert "Public mutable DB-backed /api/ideas routes still enter through FastAPI" in text
+    assert "API-key/contributor-key auth" in text
 
 
 def test_ideas_router_form_describes_live_router_carrier():
@@ -161,3 +163,14 @@ def test_ideas_router_form_has_native_graph_projection_route():
     assert '(list "/api/ideas/graph-projection"    route_ideas_graph_projection)' in kernel_text
     assert "live DB-backed /api/ideas fan-out" in kernel_text
     assert '\\"pagination\\":{\\"total\\":' in kernel_text
+
+
+def test_ideas_router_form_names_native_mutation_carrier():
+    form_text = _form_text()
+
+    assert "mutable service calls -> Form-native graph-node mutation carrier" in form_text
+    assert "form/form-stdlib/graph-node-port.fk::gn-create-node" in form_text
+    assert "form/form-stdlib/graph-node-port.fk::gn-replace-node" in form_text
+    assert "form/form-stdlib/graph-node-port.fk::gn-delete-node" in form_text
+    assert "form/form-stdlib/tests/graph-node-mutation-carrier-band.fk" in form_text
+    assert "public /api/ideas mutation paths still fan out" in form_text

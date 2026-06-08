@@ -1,0 +1,148 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/ideas-form-rewrite-20260608",
+  "commit_scope": "Move graph-node create, replace, and delete behavior into a Form-native carrier for mutable ideas and specs.",
+  "files_owned": [
+    "MANIFEST.md",
+    "api/tests/INDEX.md",
+    "api/tests/test_graph_node_mutation_carrier_form.py",
+    "api/tests/test_ideas_router_form.py",
+    "api/tests/test_spec_registry_router_form.py",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "docs/system_audit/commit_evidence_2026-06-08_graph_node_mutation_native_carrier.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/graph-node-port.fk",
+    "form/form-stdlib/tests/graph-node-mutation-carrier-band.fk",
+    "specs/INDEX.md",
+    "specs/graph-node-mutation-native-carrier.md",
+    "specs/ideas-router-form-expression.md",
+    "specs/spec-registry-source-native.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk form-stdlib/tests/graph-node-mutation-carrier-band.fk form-stdlib/tests/graph-node-port-band.fk",
+      "cd api && python3 -m pytest -q tests/test_graph_node_mutation_carrier_form.py tests/test_spec_registry_router_form.py tests/test_ideas_router_form.py tests/test_specs_source_native_route.py tests/test_runtime_surface_native_routes.py tests/test_commit_evidence_validator.py",
+      "cd api && python3 -m ruff check tests/test_graph_node_mutation_carrier_form.py tests/test_spec_registry_router_form.py tests/test_ideas_router_form.py",
+      "python3 scripts/validate_spec_quality.py --file specs/graph-node-mutation-native-carrier.md --file specs/ideas-router-form-expression.md --file specs/spec-registry-source-native.md",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-08_graph_node_mutation_native_carrier.json",
+      "git diff --check"
+    ],
+    "summary": "form/form-stdlib/graph-node-port.fk now exposes gn-create-node, gn-replace-node, and gn-delete-node over the existing storage-port carriers. The mutation band proves create, replace, tombstone delete, recreate after tombstone, active existence, typed count updates, and durable reopen behavior for memory and file carriers. Ideas and spec registry router forms now name this native mutation carrier as the high-level mutable recipe instead of treating Python service calls as the only shape.",
+    "known_limitations": [
+      {
+        "scope": "public mutable front doors",
+        "observed": "The live /api/ideas and /api/spec-registry POST/PATCH/DELETE paths still enter FastAPI until method-specific native rows preserve API-key and contributor-key auth."
+      },
+      {
+        "scope": "application graph tables",
+        "observed": "The proven carrier writes through Form storage-port keys. Direct app graph_nodes, graph_edges, and graph_node_revisions Postgres writes remain follow-up work."
+      },
+      {
+        "scope": "delete semantics",
+        "observed": "Form storage-port has no physical delete primitive, so gn-delete-node performs a logical tombstone, removes typed index/count participation, and marks the node type as __deleted__."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push of the graph-node mutation carrier commit and GitHub checks on PR #2586."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "No public deploy attempted for this Form stdlib carrier slice."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Form can now create, replace, logically delete, and recreate tombstoned graph nodes through a carrier-agnostic mutation port. Mutable ideas/spec recipes can point at native graph-node operations, while existing public FastAPI mutation endpoints keep their current behavior until auth parity and app graph table writes are bound.",
+    "public_endpoints": [
+      "Form gn-create-node",
+      "Form gn-replace-node",
+      "Form gn-delete-node",
+      "POST /api/ideas",
+      "POST /api/spec-registry"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk form-stdlib/tests/graph-node-mutation-carrier-band.fk form-stdlib/tests/graph-node-port-band.fk -> 11111",
+      "cd api && python3 -m pytest -q tests/test_graph_node_mutation_carrier_form.py tests/test_spec_registry_router_form.py tests/test_ideas_router_form.py tests/test_specs_source_native_route.py tests/test_runtime_surface_native_routes.py tests/test_commit_evidence_validator.py -> 24 passed",
+      "python3 scripts/validate_spec_quality.py --file specs/graph-node-mutation-native-carrier.md --file specs/ideas-router-form-expression.md --file specs/spec-registry-source-native.md -> OK"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; CI and deployment validation remain pending."
+  },
+  "idea_ids": [
+    "data-infrastructure",
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "specs/graph-node-mutation-native-carrier.md",
+    "specs/ideas-router-form-expression.md",
+    "specs/spec-registry-source-native.md"
+  ],
+  "task_ids": [
+    "graph-node-mutation-native-carrier-20260608",
+    "native-api-key-contributor-key-auth-parity",
+    "native-application-graph-nodes-postgres-carrier",
+    "method-specific-ideas-spec-mutation-routes"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/graph-node-port.fk",
+    "form/form-stdlib/tests/graph-node-mutation-carrier-band.fk",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "api/tests/test_graph_node_mutation_carrier_form.py",
+    "api/tests/test_spec_registry_router_form.py",
+    "specs/graph-node-mutation-native-carrier.md",
+    "specs/ideas-router-form-expression.md",
+    "specs/spec-registry-source-native.md"
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "api/tests/INDEX.md",
+    "api/tests/test_graph_node_mutation_carrier_form.py",
+    "api/tests/test_ideas_router_form.py",
+    "api/tests/test_spec_registry_router_form.py",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "docs/system_audit/commit_evidence_2026-06-08_graph_node_mutation_native_carrier.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/graph-node-port.fk",
+    "form/form-stdlib/tests/graph-node-mutation-carrier-band.fk",
+    "specs/INDEX.md",
+    "specs/graph-node-mutation-native-carrier.md",
+    "specs/ideas-router-form-expression.md",
+    "specs/spec-registry-source-native.md"
+  ],
+  "change_intent": "runtime_feature"
+}
