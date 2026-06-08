@@ -31,4 +31,14 @@ describe("browser-facing Form kernel", () => {
     expect(LOCAL_FORM_PROOF_MARKERS).toContain("field-auto-research-bml-proof:127");
     expect(LOCAL_FORM_PROOF_MARKERS).toContain("field-auto-research-perturbation-proof:255");
   });
+
+  it("publishes the public FMF proof marker and score", () => {
+    const example = LOCAL_FORM_EXAMPLES.find((item) => item.label === "Field Model Form proof");
+
+    expect(example?.proofMarker).toBe("field-model-form-public-proof:115");
+    expect(LOCAL_FORM_PROOF_MARKERS).toContain("field-model-form-public-proof:115");
+
+    const run = runLocalFormBinary(example?.source ?? "");
+    expect(run.result).toBe("115");
+  });
 });
