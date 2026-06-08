@@ -43,12 +43,13 @@ section [form.bml] {
     // HANDLE; the recipe owns all the I/O — the kernel never pre-reads a buffer,
     // the bytes flow through Form. Loop-recv the request, run it through the pure
     // kh-serve, loop-send the response, close.
-    def kh-serve-conn(conn, routes, registry) {
+    def kh-serve-conn-with-policy(conn, routes, registry, policy) {
         let request = kh-recv-request(conn, "");
-        let response = kh-serve(routes, registry, request);
+        let response = kh-serve-with-policy(routes, registry, request, policy);
         let sent = kh-send-all(conn, response, 0);
         socket_close(conn);
     }
+    def kh-serve-conn(conn, routes, registry) = kh-serve-conn-with-policy(conn, routes, registry, kh-default-channel-policy());
 
     // the accept-loop: accept and serve `count` connections, then stop. The
     // kernel opens the port (socket_listen) and hands the listener in; Form runs
@@ -56,11 +57,12 @@ section [form.bml] {
     // listener closes); a witness passes the exact number it will send so the
     // loop terminates deterministically. The recursion advances on `count`, not
     // on any unbounded input — it is the loop, named.
-    def kh-serve-listener(listener, routes, registry, count) = if le(count, 0) then 0 else kh-serve-listener-step(listener, routes, registry, count);
-    def kh-serve-listener-step(listener, routes, registry, count) {
-        let served = kh-serve-conn(socket_accept(listener), routes, registry);
-        kh-serve-listener(listener, routes, registry, sub(count, 1));
+    def kh-serve-listener-with-policy(listener, routes, registry, count, policy) = if le(count, 0) then 0 else kh-serve-listener-step-with-policy(listener, routes, registry, count, policy);
+    def kh-serve-listener-step-with-policy(listener, routes, registry, count, policy) {
+        let served = kh-serve-conn-with-policy(socket_accept(listener), routes, registry, policy);
+        kh-serve-listener-with-policy(listener, routes, registry, sub(count, 1), policy);
     }
+    def kh-serve-listener(listener, routes, registry, count) = kh-serve-listener-with-policy(listener, routes, registry, count, kh-default-channel-policy());
 
     0;
 }

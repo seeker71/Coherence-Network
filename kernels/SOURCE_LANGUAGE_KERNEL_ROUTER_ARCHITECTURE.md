@@ -293,7 +293,11 @@ route-data carrier. The source recipe keeps class identity and handler flow. Wha
 still does not fit the final bar: most production routes still use path/closure
 rows, the type IDs are mirrored in Form and Rust instead of generated from one
 registry, and the JSON carrier is host-decoded instead of exposed as a
-Form-visible `KernelRouterConfig` cell.
+Form-visible `KernelRouterConfig` cell. The first policy tissue is now present:
+`kh-channel-policy` carries method invitation, method bridge pressure, no-body
+methods, `Allow`, and named cache/compression/stream/identity/authorization
+axes. The remaining route-data JSON and deployment/runtime tunables still need
+to move into the same config body.
 
 ## Source-Language Authoring Contract
 
@@ -594,6 +598,7 @@ Current configuration lives in three places:
 |---|---|---|---|
 | Listener and front-door wiring | CLI args: `--host`, `--port`, `--workers`, `--routes`, `--stdlib`, `--upstream` | `cli_serve` parses arguments before binding sockets or compiling routes | Keep host/process wiring at the Rust boundary, but allow a single Form router config cell to own semantic policy. |
 | Route surface | `.fk` manifest with optional `section [form.route]` blocks | Raw Form manifests go through `read_root_from_source`; source sections call `fsc-compile-section-recipe` and become `CompiledRouteProgram` object graphs | Route config is source-language/Form cells: classes, templates, request/response contracts, handlers, and source maps. |
+| Channel traffic policy | `kh-default-channel-policy()` in `kernel-http.fk`; Rust compatibility mirror exports `__router_channel_policy__` | Form recipes read allowed methods, method bridges, no-body methods, and `Allow`; Rust uses the same defaults for route validation, unmatched `OPTIONS`, and `HEAD` body suppression | Load channel policy from `KernelRouterConfig`, then make CORS/access-control, cache, compression, streaming, identity/authorization, and shape policy executed Form recipes. |
 | Host defaults | Rust constants for keep-alive, fanout deadlines, and request/response shape limits | Functions such as `fanout_connect_timeout`, `fanout_read_timeout`, `request_shape_limit`, and `response_shape_limit` return constants | Lift tunable policy into `KernelRouterConfig` as a Form value; keep only emergency host ceilings in Rust. |
 | Canonical numeric formats | Repository JSON file at `docs/coherence-substrate/numeric-formats.canonical.json` | `form/form-kernel-rust/src/formats.rs` resolves the in-repo file path from `CARGO_MANIFEST_DIR` | Keep as file-backed substrate config; expose the loaded format table as Form-visible facts where route math depends on it. |
 
@@ -623,7 +628,7 @@ Shrink candidates:
 | Compatibility alist marshalling | The host still passes the old alist as the one handler argument, with `__kernel_request__` nested inside it. | Make `KernelHTTPRequest` the primary handler argument for typed routes and keep the alist only as an explicit projection. |
 | Native response body carrier | The host now honors `KernelHTTPResponse(status, headers, body)`, but the body is still a buffered string. | Add typed body cells and streaming body carriers while keeping router-owned framing explicit. |
 | Per-worker full graph clone | Correct and serialization-free, but duplicates read-only route graph memory. | Keep worker-local mutable state while sharing immutable recipe graph structure, or add copy-on-write graph overlays. |
-| Fanout policy constants | Host defaults are fixed and invisible to Form attention. | Move deadline and shape policy into `KernelRouterConfig` cells with host ceilings as last-resort guardrails. |
+| Fanout policy constants | Host defaults for deadlines and shape limits are fixed and invisible to Form attention; channel traffic policy is visible but still default-constructed. | Move deadline, shape, upstream/fanout, and channel policy into `KernelRouterConfig` cells with host ceilings as last-resort guardrails. |
 
 ## Migration gates
 

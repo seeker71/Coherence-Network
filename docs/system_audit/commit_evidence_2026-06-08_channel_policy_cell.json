@@ -1,0 +1,96 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/channel-policy-cell-20260608",
+  "commit_scope": "Add a Form-visible channel policy cell for native HTTP method invitation and mirror it in the Rust compatibility router.",
+  "files_owned": [
+    "form/form-stdlib/kernel-http.fk",
+    "form/form-stdlib/http-server.fk",
+    "form/form-stdlib/http-socket.fk",
+    "form/form-stdlib/tests/kernel-http-band.fk",
+    "form/form-stdlib/tests/http-server-band.fk",
+    "form/form-kernel-rust/src/main.rs",
+    "kernels/KERNEL_AS_ROUTER.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/tests/kernel-http-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/http-parse.fk form-stdlib/kernel-http.fk form-stdlib/http-request.fk form-stdlib/http-render.fk form-stdlib/http-server.fk form-stdlib/tests/http-server-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/http-parse.fk form-stdlib/kernel-http.fk form-stdlib/http-request.fk form-stdlib/http-render.fk form-stdlib/http-server.fk form-stdlib/http-socket.fk form-stdlib/tests/http-socket-band.fk",
+      "cd form/form-kernel-rust && cargo fmt --check",
+      "cd form/form-kernel-rust && cargo test kernel_http --quiet",
+      "cd form/form-kernel-rust && cargo test router_context --quiet"
+    ],
+    "notes": "Form sibling kernels agree on kernel-http verdict 536965066, http-server verdict 1023, and http-socket verdict 15. Rust focused tests pass with existing unrelated dead-code warnings."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push/PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No production deploy performed in this implementation step."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local proof passed; CI and deploy validation remain pending."
+  },
+  "idea_ids": [
+    "kernel-native-front-door",
+    "form-visible-channel-policy"
+  ],
+  "spec_ids": [
+    "source-language-kernel-router",
+    "native-http-stack"
+  ],
+  "task_ids": [
+    "channel-policy-cell-20260608"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "documentation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/kernel-http-band.fk",
+    "form/form-stdlib/tests/http-server-band.fk",
+    "form/form-kernel-rust/src/main.rs::kernel_http_channel_policy_defaults_drive_protocol_invitation",
+    "form/form-kernel-rust/src/main.rs::router_context_carries_configured_upstream_parts"
+  ],
+  "change_files": [
+    "form/form-kernel-rust/src/main.rs",
+    "form/form-stdlib/http-server.fk",
+    "form/form-stdlib/http-socket.fk",
+    "form/form-stdlib/kernel-http.fk",
+    "form/form-stdlib/tests/http-server-band.fk",
+    "form/form-stdlib/tests/kernel-http-band.fk",
+    "kernels/KERNEL_AS_ROUTER.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Existing default HTTP behavior is preserved while method invitation, GET-to-HEAD pressure, no-body response policy, and Allow output are now read from a Form-visible channel policy value.",
+    "public_endpoints": [
+      "native-kernel-http-stack"
+    ],
+    "test_flows": [
+      "BML kh-channel-policy custom bridge pressure and Allow output",
+      "Rust router context exports __router_channel_policy__",
+      "Rust compatibility route validation and HEAD body suppression read channel policy defaults"
+    ]
+  }
+}
