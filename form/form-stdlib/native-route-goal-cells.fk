@@ -1,0 +1,123 @@
+; native-route-goal-cells.fk - Form-native route attention for the front-door loop.
+;
+; preludes: form-stdlib/core.fk
+;
+; Runtime sensors can feed these cells with observed request counts, latency,
+; errors, native state, and handler grammar. The next route is then a Form
+; choice over traffic-weighted pressure, not prose or static route-count.
+
+section [form.bml] {
+    let nrg_tag_route_observation = bp("NATIVE-ROUTE-OBS");
+    let nrg_tag_route_attention = bp("NATIVE-ROUTE-ATTENTION");
+    let nrg_tag_route_goal = bp("NATIVE-ROUTE-GOAL");
+
+    def nrg-bool-score(ok, score) = if ok then score else 0;
+    def nrg-tagged?(value, tag, arity) = if eq(len(value), arity) then node_eq(nth(value, 0), tag) else false;
+    def nrg-nonempty-string?(value) = gt(str_len(value), 0);
+    def nrg-path-valid?(path) = if gt(str_len(path), 0) then str_eq(char_at(path, 0), "/") else false;
+
+    def nrg-state-python() = "python";
+    def nrg-state-kernel-served() = "kernel-served";
+    def nrg-state-kernel-first-capable() = "kernel-first-capable";
+    def nrg-state-kernel-first-served() = "kernel-first-served";
+
+    def nrg-grammar-none() = "none";
+    def nrg-grammar-python() = "python";
+    def nrg-grammar-form() = "form";
+    def nrg-grammar-bml() = "bml";
+    def nrg-grammar-domain() = "domain-grammar";
+
+    def nrg-action-author-high-grammar-handler() = "author-high-grammar-handler";
+    def nrg-action-promote-native-handler() = "promote-native-handler";
+    def nrg-action-move-front-door() = "move-front-door";
+    def nrg-action-prove-byte-identity() = "prove-byte-identity";
+    def nrg-action-observe() = "observe";
+
+    def nrg-route-observation(path, method, calls, p50_ms, p95_ms, status_errors, bytes_out, native_state, grammar, handler, flow, goal_fit_bp) = list(nrg_tag_route_observation, path, method, calls, p50_ms, p95_ms, status_errors, bytes_out, native_state, grammar, handler, flow, goal_fit_bp);
+    def nrg-route-observation?(obs) = nrg-tagged?(obs, nrg_tag_route_observation, 13);
+    def nrg-route-path(obs) = nth(obs, 1);
+    def nrg-route-method(obs) = nth(obs, 2);
+    def nrg-route-calls(obs) = nth(obs, 3);
+    def nrg-route-p50-ms(obs) = nth(obs, 4);
+    def nrg-route-p95-ms(obs) = nth(obs, 5);
+    def nrg-route-status-errors(obs) = nth(obs, 6);
+    def nrg-route-bytes-out(obs) = nth(obs, 7);
+    def nrg-route-native-state(obs) = nth(obs, 8);
+    def nrg-route-grammar(obs) = nth(obs, 9);
+    def nrg-route-handler(obs) = nth(obs, 10);
+    def nrg-route-flow(obs) = nth(obs, 11);
+    def nrg-route-goal-fit-bp(obs) = nth(obs, 12);
+    def nrg-route-observation-valid?(obs) {
+        if nrg-route-observation?(obs) then and(nrg-path-valid?(nrg-route-path(obs)), and(nrg-nonempty-string?(nrg-route-method(obs)), and(ge(nrg-route-calls(obs), 0), and(ge(nrg-route-p50-ms(obs), 0), and(ge(nrg-route-p95-ms(obs), 0), and(ge(nrg-route-status-errors(obs), 0), and(ge(nrg-route-bytes-out(obs), 0), and(nrg-nonempty-string?(nrg-route-native-state(obs)), and(nrg-nonempty-string?(nrg-route-grammar(obs)), and(nrg-nonempty-string?(nrg-route-flow(obs)), and(ge(nrg-route-goal-fit-bp(obs), 0), le(nrg-route-goal-fit-bp(obs), 10000)))))))))))) else false;
+    }
+
+    def nrg-observations-valid?(observations) = if nil?(observations) then true else if nrg-route-observation-valid?(head(observations)) then nrg-observations-valid?(tail(observations)) else false;
+    def nrg-total-calls(observations) = if nil?(observations) then 0 else add(nrg-route-calls(head(observations)), nrg-total-calls(tail(observations)));
+    def nrg-basis-points(part, total) = if eq(total, 0) then 0 else div(mul(part, 10000), total);
+
+    def nrg-native-pressure(state) {
+        if str_eq(state, nrg-state-kernel-first-served()) then 0 else if str_eq(state, nrg-state-kernel-first-capable()) then 10 else if str_eq(state, nrg-state-kernel-served()) then 45 else 100;
+    }
+    def nrg-grammar-pressure(grammar) {
+        if str_eq(grammar, nrg-grammar-domain()) then 0 else if str_eq(grammar, nrg-grammar-bml()) then 5 else if str_eq(grammar, nrg-grammar-form()) then 20 else if str_eq(grammar, nrg-grammar-python()) then 80 else 100;
+    }
+    def nrg-latency-pressure(p95_ms) = if gt(p95_ms, 2000) then 80 else if gt(p95_ms, 1000) then 40 else if gt(p95_ms, 500) then 20 else 0;
+    def nrg-error-pressure(status_errors, calls) = nrg-basis-points(status_errors, calls);
+    def nrg-apply-goal-fit(base_pressure, goal_fit_bp) = div(mul(div(base_pressure, 10), goal_fit_bp), 1000);
+
+    def nrg-next-action(obs) {
+        let state = nrg-route-native-state(obs);
+        let grammar = nrg-route-grammar(obs);
+        if str_eq(state, nrg-state-kernel-first-served()) then nrg-action-observe() else if str_eq(state, nrg-state-kernel-first-capable()) then nrg-action-prove-byte-identity() else if str_eq(state, nrg-state-kernel-served()) then nrg-action-move-front-door() else if or(str_eq(grammar, nrg-grammar-none()), str_eq(grammar, nrg-grammar-python())) then nrg-action-author-high-grammar-handler() else nrg-action-promote-native-handler();
+    }
+
+    def nrg-route-attention(obs, traffic_bp, native_pressure, grammar_pressure, latency_pressure, error_pressure, total_pressure, next_action) = list(nrg_tag_route_attention, obs, traffic_bp, native_pressure, grammar_pressure, latency_pressure, error_pressure, total_pressure, next_action);
+    def nrg-route-attention?(attention) = nrg-tagged?(attention, nrg_tag_route_attention, 9);
+    def nrg-attention-observation(attention) = nth(attention, 1);
+    def nrg-attention-traffic-bp(attention) = nth(attention, 2);
+    def nrg-attention-native-pressure(attention) = nth(attention, 3);
+    def nrg-attention-grammar-pressure(attention) = nth(attention, 4);
+    def nrg-attention-latency-pressure(attention) = nth(attention, 5);
+    def nrg-attention-error-pressure(attention) = nth(attention, 6);
+    def nrg-attention-total-pressure(attention) = nth(attention, 7);
+    def nrg-attention-next-action(attention) = nth(attention, 8);
+    def nrg-route-attention-valid?(attention) = if nrg-route-attention?(attention) then and(nrg-route-observation-valid?(nrg-attention-observation(attention)), ge(nrg-attention-total-pressure(attention), 0)) else false;
+
+    def nrg-attention-for(obs, total_calls) {
+        let traffic_bp = nrg-basis-points(nrg-route-calls(obs), total_calls);
+        let native_pressure = nrg-native-pressure(nrg-route-native-state(obs));
+        let grammar_pressure = nrg-grammar-pressure(nrg-route-grammar(obs));
+        let latency_pressure = nrg-latency-pressure(nrg-route-p95-ms(obs));
+        let error_pressure = nrg-error-pressure(nrg-route-status-errors(obs), nrg-route-calls(obs));
+        let traffic_weighted_native_pressure = mul(traffic_bp, native_pressure);
+        let base_pressure = add(traffic_weighted_native_pressure, add(mul(grammar_pressure, 100), add(latency_pressure, error_pressure)));
+        let total_pressure = nrg-apply-goal-fit(base_pressure, nrg-route-goal-fit-bp(obs));
+        nrg-route-attention(obs, traffic_bp, native_pressure, grammar_pressure, latency_pressure, error_pressure, total_pressure, nrg-next-action(obs));
+    }
+    def nrg-attentions-for(observations, total_calls) = if nil?(observations) then empty else cons(nrg-attention-for(head(observations), total_calls), nrg-attentions-for(tail(observations), total_calls));
+    def nrg-attentions-valid?(attentions) = if nil?(attentions) then true else if nrg-route-attention-valid?(head(attentions)) then nrg-attentions-valid?(tail(attentions)) else false;
+
+    def nrg-best-attention-from(attentions, best) {
+        if nil?(attentions) then best else if nil?(best) then nrg-best-attention-from(tail(attentions), head(attentions)) else if gt(nrg-attention-total-pressure(head(attentions)), nrg-attention-total-pressure(best)) then nrg-best-attention-from(tail(attentions), head(attentions)) else nrg-best-attention-from(tail(attentions), best);
+    }
+    def nrg-best-attention(attentions) = nrg-best-attention-from(attentions, empty);
+
+    def nrg-route-goal(name, north_star, target_native_bp, total_routes, observations, attentions, next_attention) = list(nrg_tag_route_goal, name, north_star, target_native_bp, total_routes, observations, attentions, next_attention);
+    def nrg-route-goal?(goal) = nrg-tagged?(goal, nrg_tag_route_goal, 8);
+    def nrg-goal-name(goal) = nth(goal, 1);
+    def nrg-goal-north-star(goal) = nth(goal, 2);
+    def nrg-goal-target-native-bp(goal) = nth(goal, 3);
+    def nrg-goal-total-routes(goal) = nth(goal, 4);
+    def nrg-goal-observations(goal) = nth(goal, 5);
+    def nrg-goal-attentions(goal) = nth(goal, 6);
+    def nrg-goal-next-attention(goal) = nth(goal, 7);
+    def nrg-route-goal-valid?(goal) = if nrg-route-goal?(goal) then and(nrg-nonempty-string?(nrg-goal-name(goal)), and(gt(nrg-goal-target-native-bp(goal), 0), and(ge(nrg-goal-total-routes(goal), 0), and(nrg-observations-valid?(nrg-goal-observations(goal)), nrg-attentions-valid?(nrg-goal-attentions(goal)))))) else false;
+
+    def nrg-goal-from-observations(name, north_star, target_native_bp, total_routes, observations) {
+        let total_calls = nrg-total-calls(observations);
+        let attentions = nrg-attentions-for(observations, total_calls);
+        nrg-route-goal(name, north_star, target_native_bp, total_routes, observations, attentions, nrg-best-attention(attentions));
+    }
+
+    0;
+}

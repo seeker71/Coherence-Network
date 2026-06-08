@@ -9,17 +9,18 @@ awaiting the front-door flip).
 
 ``kernel_first_capable_routes()`` reads that CAPABLE count from the manifest
 ``deploy/kernel-router/production-routes.fk`` as DATA. The subtle contract: the
-manifest mentions the same ``/api/...`` paths in BOTH ``;``-comment lines and
-``(list "<path>" <handler>)`` bindings — the parser must return each route once,
-from its binding, never from a comment, and must exclude non-``/api`` probes like
-``/health``. This pins that contract with a strange-minimal synthetic manifest
-(a comment path before the routes block, a comment path inside it, a ``/health``
-binding, and two real bindings) plus a pin against the real checked-in manifest.
+manifest may bind ``/api/...`` routes as raw ``(list "<path>" <handler>)`` rows
+or as higher-grammar ``kh-route-data-ref`` rows resolved through the sibling
+route-data JSON. The parser must return each route once, from its binding, never
+from a comment, and must exclude non-``/api`` probes like ``/health``. This pins
+that contract with a strange-minimal synthetic manifest plus a pin against the
+real checked-in manifest.
 """
 
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -34,26 +35,53 @@ def _load_report():
 
 
 def test_parser_reads_bindings_not_comments(monkeypatch, tmp_path):
-    """One strange manifest, four boundaries: comment-before-block and
-    comment-inside-block are ignored, ``/health`` is excluded, and only the two
-    real ``/api`` bindings are returned."""
+    """One strange manifest, five boundaries: comments are ignored, ``/health``
+    is excluded, raw route rows are read, route-data refs are resolved, and
+    missing route-data refs do not create phantom routes."""
     manifest = tmp_path / "production-routes.fk"
     manifest.write_text(
         "; a comment mentioning /api/commented/before — must be ignored\n"
         "(defn route_health () \"ok\")\n"
         "(let routes\n"
         "  (list\n"
-        "    ; a comment mentioning /api/commented/inside — must be ignored\n"
+        "    ; a comment mentioning (list \"/api/commented/inside\" route_fake) — ignored\n"
+        "    (kh-route-data-ref \"real-data\" RealDataRoute_handle)\n"
+        "    (kh-route-data-ref \"missing-data\" MissingRoute_handle)\n"
         "    (list \"/health\"        route_health)\n"
         "    (list \"/api/real/one\"  route_one)\n"
         "    (list \"/api/real/two\"  route_two)))\n"
+    )
+    route_data = tmp_path / "production-routes-data.json"
+    route_data.write_text(
+        json.dumps(
+            {
+                "routes": {
+                    "real-data": {
+                        "name": "real-data",
+                        "method": "GET",
+                        "pattern": "/api/real/from-data",
+                        "priority": 0,
+                        "required_header": "",
+                        "pressure_budget": 40,
+                    },
+                    "health-data": {
+                        "name": "health-data",
+                        "method": "GET",
+                        "pattern": "/health",
+                        "priority": 0,
+                        "required_header": "",
+                        "pressure_budget": 40,
+                    },
+                }
+            }
+        )
     )
     mod = _load_report()
     monkeypatch.setattr(mod, "_KERNEL_ROUTER_MANIFEST", manifest)
 
     routes = mod.kernel_first_capable_routes()
 
-    assert routes == ["/api/real/one", "/api/real/two"], routes
+    assert routes == ["/api/real/from-data", "/api/real/one", "/api/real/two"], routes
     assert "/health" not in routes  # non-/api probe excluded
     assert not any("commented" in r for r in routes)  # comments never captured
 

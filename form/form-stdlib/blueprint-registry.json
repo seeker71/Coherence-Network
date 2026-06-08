@@ -3670,6 +3670,45 @@
       "pkg": 1,
       "level": 2,
       "type": 99,
+      "inst": 1733,
+      "name": "NATIVE-ROUTE-OBS",
+      "meaning": "one observed API route sample: path, method, calls, latency, errors, bytes, native state, grammar, handler, user flow, and north-star fit",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/native-route-goal-cells.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 1734,
+      "name": "NATIVE-ROUTE-ATTENTION",
+      "meaning": "traffic-weighted route pressure and next action for native front-door promotion",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/native-route-goal-cells.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 1735,
+      "name": "NATIVE-ROUTE-GOAL",
+      "meaning": "native-route north-star state: target share, observed routes, attentions, and next chosen movement",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/native-route-goal-cells.fk"
+      ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1740,
       "name": "CELL-V0",
       "meaning": "",

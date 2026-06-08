@@ -136,10 +136,12 @@ def kernel_first_capable_routes() -> list[str]:
 
     Read from the manifest's ``(let routes ...)`` block as DATA (the manifest is
     the one source); ``/health`` and other non-``/api`` probes are excluded so the
-    count compares apples-to-apples with the route total. The ``;``-comment lines
-    that mention ``/api/...`` paths never match the ``(list "<path>" <handler>)``
-    shape, so the scan reads bindings only. Returns [] if the manifest is absent
-    (the report degrades to the SERVED count and says so).
+    count compares apples-to-apples with the route total. The scanner sees both
+    raw ``(list "<path>" <handler>)`` rows and higher-grammar
+    ``(kh-route-data-ref "<id>" <handler>)`` rows resolved through the sibling
+    ``*-data.json`` file, so promoting a route into a ``RouteCell`` does not make
+    it invisible. Returns [] if the manifest is absent (the report degrades to
+    the SERVED count and says so).
     """
     if not _KERNEL_ROUTER_MANIFEST.is_file():
         return []
@@ -148,8 +150,51 @@ def kernel_first_capable_routes() -> list[str]:
     except OSError:
         return []
     idx = text.find("(let routes")
-    block = text[idx:] if idx != -1 else text
-    return re.findall(r'\(list\s+"(/api/[^"]+)"\s+[A-Za-z_]\w*\)', block)
+    block = _strip_form_line_comments(text[idx:] if idx != -1 else text)
+    route_data = _kernel_route_data_patterns(_KERNEL_ROUTER_MANIFEST)
+    routes: list[str] = []
+    seen: set[str] = set()
+    route_row = re.compile(
+        r'\(list\s+"(/api/[^"]+)"\s+[A-Za-z_]\w*\)'
+        r'|\(kh-route-data-ref\s+"([^"]+)"\s+[A-Za-z_]\w*\)'
+        r'|\(kh-route\s+"[^"]+"\s+"[^"]+"\s+"(/api/[^"]+)"'
+    )
+    for match in route_row.finditer(block):
+        path = match.group(1) or match.group(3)
+        if path is None:
+            route_id = match.group(2)
+            path = route_data.get(route_id) if route_id is not None else None
+        if path and path.startswith("/api/") and path not in seen:
+            routes.append(path)
+            seen.add(path)
+    return routes
+
+
+def _strip_form_line_comments(text: str) -> str:
+    """Remove Form ``;`` line comments before regex scanning route rows."""
+    return "\n".join(line.split(";", 1)[0] for line in text.splitlines())
+
+
+def _kernel_route_data_patterns(manifest: Path) -> dict[str, str]:
+    """Route-data id → path for ``RouteCell``/``kh-route-data-ref`` rows."""
+    path = manifest.with_name(f"{manifest.stem}-data.json")
+    if not path.is_file():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    routes = payload.get("routes")
+    if not isinstance(routes, dict):
+        return {}
+    out: dict[str, str] = {}
+    for route_id, row in routes.items():
+        if not isinstance(route_id, str) or not isinstance(row, dict):
+            continue
+        pattern = row.get("pattern")
+        if isinstance(pattern, str) and pattern.startswith("/api/"):
+            out[route_id] = pattern
+    return out
 
 
 def _load_attribution_module():
