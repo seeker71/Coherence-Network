@@ -101,10 +101,12 @@ python3 scripts/validate_spec_quality.py --file specs/native-graph-mutation-live
 - GAP-NGMLDB1: closed by `specs/native-mutation-response-projection.md`. Form
   now projects live mutation rows into `IdeaWithScore` and `SpecRegistryEntry`
   response shapes without FastAPI.
-- GAP-NGMLDB2 follow-up task: `native-mutation-side-effects`. Carry route cache,
-  parent/edge repair, resonance, and contributor-key audit side effects natively.
-- GAP-NGMLDB3 follow-up task: `native-mutation-public-flip-gate`. Add a
-  reversible public flip gate only after projection and side effects pass.
+- GAP-NGMLDB2: closed by `specs/native-mutation-side-effects.md`. The native
+  carrier now executes cache-invalidation receipt, parent-edge repair,
+  contributor-key audit, and rollback receipt against throwaway Postgres.
+- GAP-NGMLDB3 follow-up task: `native-mutation-route-side-effect-binding`. Bind
+  the proven side-effect carrier to mutation route execution, then add a
+  reversible public flip gate.
 
 ## Risks and Assumptions
 

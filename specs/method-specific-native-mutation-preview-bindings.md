@@ -138,10 +138,13 @@ curl -sS -i -X POST http://127.0.0.1:19215/api/spec-registry -H 'Content-Type: a
 - GAP-MSNMPB4: closed by `specs/native-mutation-trust-envelope.md`. Native
   mutation preview responses now carry prediction residual, side-effect intents,
   choice protocol markers, and reversible gate state.
-- GAP-MSNMPB5 follow-up task: `native-mutation-side-effects`. Execute carried
-  cache invalidation, parent/edge repair, resonance re-attunement,
-  contributor-key audit updates, and rollback receipt natively before public
-  mutation traffic moves.
+- GAP-MSNMPB5: closed by `specs/native-mutation-side-effects.md`. The carried
+  side-effect intents now have a Form-native execution carrier for
+  cache-invalidation receipt, parent-edge repair, contributor-key audit, and
+  rollback receipt.
+- GAP-MSNMPB6 follow-up task: `native-mutation-route-side-effect-binding`. Bind
+  the proven carrier to mutation route execution before public mutation traffic
+  moves.
 
 ## Risks and Assumptions
 

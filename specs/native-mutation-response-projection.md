@@ -23,8 +23,8 @@ requirements:
   - "Form-native projection emits SpecRegistryEntry-shaped JSON from graph row values without calling FastAPI or spec_registry_service."
   - "The projection computes free_energy_score, marginal_cc_score, remaining cost, value gap, ROI, cost vectors, and value vectors from row fields."
   - "A live DB harness creates graph rows through the Form application graph mutation carrier, reads them back through pg_query, and projects both response shapes."
-  - "The proof does not perform the public front-door flip or claim side-effect parity."
-  - "The remaining side-effect boundary is carried by the native mutation trust envelope."
+  - "The proof does not perform the public front-door flip or claim route-bound side-effect parity."
+  - "The remaining side-effect boundary is carried by the native mutation trust envelope until the separate native side-effect carrier proof binds to route execution."
 done_when:
   - 'file_exists("form/form-stdlib/application-graph-response-projection.fk")'
   - 'file_exists("form/scripts/application-graph-response-projection-test.sh")'
@@ -34,7 +34,7 @@ constraints:
   - "Use a throwaway local PostgreSQL database or caller-supplied test DSN only."
   - "Do not execute against the production application database."
   - "Do not move ordinary public mutation traffic in this slice."
-  - "Do not claim cache invalidation, parent/edge side effects, resonance re-attunement, or contributor-key audit updates are complete."
+  - "Do not claim route-bound cache invalidation, parent/edge side effects, resonance re-attunement, or contributor-key audit updates are complete."
 ---
 
 # Spec: Native Mutation Response Projection
@@ -108,21 +108,21 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-response-p
 
 - Production database writes.
 - Ordinary public front-door mutation routing changes.
-- Cache invalidation, parent/edge repair outside the live mutation wrapper's
-  delete edge cleanup, resonance re-attunement, or contributor-key audit
-  updates.
+- Route-bound cache invalidation, parent/edge repair outside the live mutation
+  wrapper's delete edge cleanup, resonance re-attunement, or contributor-key
+  audit updates.
 
 ## Gaps
 
-- GAP-NMRP1 follow-up task: `native-mutation-side-effects`. Carry route cache,
 - GAP-NMRP1: closed by `specs/native-mutation-trust-envelope.md`. Preview
   responses now carry prediction residual, side-effect intents, and reversible
   gate state around the response projection boundary.
-- GAP-NMRP2 follow-up task: `native-mutation-side-effects`. Execute route cache,
-  parent/edge repair, resonance, contributor-key audit, and rollback receipt
-  intents natively.
-- GAP-NMRP3 follow-up task: `native-mutation-public-flip-gate`. Add a reversible
-  public flip gate only after side effects pass.
+- GAP-NMRP2: closed by `specs/native-mutation-side-effects.md`. The native
+  carrier now executes cache-invalidation receipt, parent-edge repair,
+  contributor-key audit, and rollback receipt against throwaway Postgres.
+- GAP-NMRP3 follow-up task: `native-mutation-route-side-effect-binding`. Bind
+  the side-effect carrier to mutation route execution, then add a reversible
+  public flip gate.
 
 ## Risks and Assumptions
 

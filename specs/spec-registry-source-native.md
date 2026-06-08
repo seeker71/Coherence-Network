@@ -22,6 +22,10 @@ source:
     symbols: [test_route_forms_name_response_projection_before_public_flip]
   - file: form/form-stdlib/native-mutation-trust-envelope.fk
     symbols: [nmte-trust-envelope-json]
+  - file: form/form-stdlib/native-mutation-side-effects.fk
+    symbols: [nms-record-cache-invalidation, nms-repair-parent-edge, nms-audit-contributor-key, nms-record-rollback-receipt]
+  - file: form/scripts/native-mutation-side-effects-test.sh
+    symbols: []
   - file: api/tests/test_spec_registry_router_form.py
     symbols: [test_spec_registry_router_form_describes_live_and_native_carriers]
 requirements:
@@ -30,6 +34,7 @@ requirements:
   - "The route emits SpecRegistryEntry-shaped JSON rows for each source-index spec row."
   - "The production manifest binds header-gated method-specific native SQL preview rows for POST/PATCH/DELETE /api/spec-registry without changing default public behavior."
   - "The spec registry Form artifact names the trust envelope that carries prediction residual, side-effect intents, choice markers, and reversible gate state."
+  - "The spec registry Form artifact names the Form-native side-effect execution carrier while keeping route binding and ordinary public traffic movement explicit as the remaining boundary."
 done_when:
   - 'file_contains("deploy/kernel-router/production-routes.fk", "(list \"/api/spec-registry/source-list\" route_specs_source_list)")'
   - 'file_contains("deploy/kernel-router/production-routes.fk", "read_file_slice \"specs/INDEX.md\"")'
@@ -117,9 +122,12 @@ PY
   SQL. `POST/PATCH/DELETE /api/spec-registry` also have `X-Form-Native-Preview`
   header-gated native SQL preview rows, and preview responses carry prediction
   residual, side-effect intents, choice markers, and reversible gate state.
-  Public mutable DB-backed spec registry behavior still enters through FastAPI
-  by default until carried side-effect intents execute natively and a narrow
-  reversible public gate has a rollback receipt.
+  `native-mutation-side-effects-test.sh` proves parent-edge repair,
+  contributor-key audit, cache-invalidation receipt, and rollback receipt
+  execute natively against throwaway Postgres. Public mutable DB-backed spec
+  registry behavior still enters through FastAPI by default until the proven
+  side-effect carrier is bound to route execution and a narrow reversible public
+  gate has a rollback receipt.
 - GAP-SRS2 follow-up task: `spec-source-frontmatter-native-parser`. This route
   reads `specs/INDEX.md`; richer frontmatter fields remain source defaults until
   a native frontmatter parser lands.
