@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 243
+**Total files**: 244
 
 | File | Purpose |
 |---|---|
@@ -115,6 +115,7 @@
 | [test_idea_lifecycle_closure.py](test_idea_lifecycle_closure.py) | Tests for idea lifecycle closure (spec: idea-lifecycle-closure). |
 | [test_idea_scoring.py](test_idea_scoring.py) | Tests for idea_scoring (spec: ideas-prioritization). |
 | [test_idea_standing_questions.py](test_idea_standing_questions.py) | Tests for idea_standing_questions (spec: standing-questions-roi-and-next-task-generation). |
+| [test_ideas_graph_projection_form.py](test_ideas_graph_projection_form.py) | Proof that graph-node Form envelopes project to idea API read shape. |
 | [test_ideas_router_form.py](test_ideas_router_form.py) | Proof that the ideas router has a high-level Form expression. |
 | [test_import_lineage_edges.py](test_import_lineage_edges.py) | Lineage importer replays explicit graph edges from manifests. |
 | [test_inductive.py](test_inductive.py) | Tests for INDUCTIVE / CONSTRUCTOR / CHOICE — Python kernel. |

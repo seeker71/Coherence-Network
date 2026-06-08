@@ -1,0 +1,31 @@
+; tests/ideas-graph-projection-band.fk -- graph nodes project to idea reads.
+;
+; preludes: form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk form-stdlib/ideas-graph-projection.fk
+;
+; Band verdict: 11111 when the IdeaPortfolioResponse-shaped projection works
+; over pure memory and durable file carriers, agrees, and survives file reopen.
+;   memory projection contract pass      -> 1
+;   file projection contract pass        -> 10
+;   memory and file verdicts agree       -> 100
+;   reopened file projects idea count    -> 1000
+;   reopened file projects no concepts   -> 10000
+
+(do
+    (let dir "/tmp/ideas-graph-projection-band.d")
+    (fs_rmdir dir)
+
+    (let mem-verdict (igp-test (carrier-memory) ""))
+    (let file-verdict (igp-test (carrier-file) dir))
+
+    (let mem-ok (if (eq mem-verdict 111111) 1 0))
+    (let file-ok (if (eq file-verdict 111111) 10 0))
+    (let agree-ok (if (eq mem-verdict file-verdict) 100 0))
+
+    (let cf (carrier-file))
+    (let reopened (storage-open cf dir))
+    (let body (igp-portfolio-json cf reopened))
+    (let count-ok (if (eq (gn-contains? body "\"total_ideas\":2") 1) 1000 0))
+    (let filter-ok (if (eq (gn-contains? body "concept:alpha") 0) 10000 0))
+
+    (fs_rmdir dir)
+    (sum (list mem-ok file-ok agree-ok count-ok filter-ok)))
