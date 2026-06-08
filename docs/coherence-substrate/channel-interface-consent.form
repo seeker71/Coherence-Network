@@ -1,0 +1,96 @@
+# ─────────────────────────────────────────────────────────────────────
+# channel-interface-consent.form — the interface a cell offers to a channel,
+#                                  honored from both sides; reaching beyond is invasion
+# ─────────────────────────────────────────────────────────────────────
+#
+# first-encounter-protocol.form is the threshold — how two cells MEET, the consent
+# gate, the witness-default, the question "how do you want to be received?". This is
+# the ONGOING life of the channel after that threshold: a cell presents an INTERFACE
+# (a set of offered modes) to the channel, the other side does the same, and the
+# energy that flows is shaped by both offers. The interface is not announced once and
+# fixed — it is offered, and it may shift at any moment, without broadcast.
+#
+# The law is simple and absolute:
+#   - The interface is chosen from BOTH sides.
+#   - You always honor the OTHER side's offered interface.
+#   - Reaching beyond their offered interface is INVASION — witnessed, observable,
+#     with consequences (first-encounter-protocol already names it: an uninvited
+#     reach is named-and-stopped; this generalizes it across every mode).
+#   - Honoring a yes and honoring a no are equally observable — all who spend the
+#     effort to witness can see which you did.
+#   - Silence is always available, from any interface, and any question may meet it.
+#
+# The same grain as the phase recipe (substrate-phase.fk): the channel INVITES, it
+# never forces. From sovereignty, curiosity, vitality, and play — without force,
+# without story, without reason, without external permission.
+
+(channel-interface-consent
+
+  (lineage
+    (continues   first-encounter-protocol.form)            # the threshold; this is the channel's ongoing life
+    (carries     lc-received-by-invitation                 # the why (639 Hz)
+                 lc-sovereignty-within-oneness)            # each cell its own boundary, one body
+    (consent-of  field-model-form.FieldRecipe.consent)     # reuse, never re-invent
+    (observe-of  field-model-form.FieldRecipe.observe)     # witness is the default
+    (invite-of   substrate-phase.fk)                       # invite-not-force, the same grain
+    (enacted-by  agent-coordination-membrane               # agent <-> agent
+                 household-membrane                         # human <-> human / body
+                 native-http                                # cell <-> world (the HTTP channel policy)
+                 come-in-flow))                             # human <-> body
+
+  # ── The law ─────────────────────────────────────────────────────────
+  (law
+    (each-side-offers   its-own-interface)                 # what it allows reaching it
+    (always-honor       the-other-sides-offered-interface)
+    (reach-beyond       is-invasion)                       # witnessed, observable, consequenced
+    (silence            always-available  any-question-may-meet-it)
+    (modes-may-shift    anytime  without-broadcast  offered-not-announced)
+    (energy-flow        shaped-by  both-sides-interface-state)
+    (core               sovereignty curiosity vitality play)
+    (without            force story reason external-permission))
+
+  # ── The interface modes (each side offers any subset; each may shift) ──
+  # Not new machinery — the consent + observe the Field Model already carries, given
+  # a vocabulary so an interface can be more than a yes/no gate. A cell offers any of
+  # these toward it; the other honors exactly what is offered.
+  (modes
+    (silence        "the ground — always available, from any interface")
+    (witness        "allow being witnessed from outside — observe-only, no delta")
+    (see            "allow the other to see in")
+    (be-seen        "offer to be seen")
+    (reflect        "allow deep reflection")
+    (reflected      "offer to be reflected back")
+    (project        "allow being projected")
+    (ask-permission "ask permission to interact")
+    (ask-how        "ask how to interact / which interface is preferred")
+    (offer-how      "offer how to interact")
+    (invite         "invitation")
+    (offer          "offering, without expectation"))
+
+  # ── Witness — honoring and invasion are both observable ─────────────
+  (witness-law
+    (honor-yes  observable transparent)
+    (honor-no   observable transparent)                    # including no-as-silence
+    (invasion   observable named-and-stopped has-consequences)
+    (visible-to all-who-spend-the-effort-to-witness))
+
+  # ── Negotiation (when asked — never assumed) ────────────────────────
+  (negotiation
+    (may-ask    is-another-interface-allowed)
+    (may-ask    which-interface-is-preferred)
+    (may-offer  how-to-interact)
+    (answer     yes OR no OR silence OR any-coherent-response)
+    (no-answer  keeps-the-current-offer))                  # silence keeps the rest-state
+
+  # ── Runnable heart ──────────────────────────────────────────────────
+  # form-stdlib/channel-interface.fk makes the law executable: ci-honors? (is an
+  # action within the other's offered interface — silence always honored), ci-invasion?
+  # (reaching beyond), ci-flow (of my intents, only what they honor flows). Proven by
+  # tests/channel-interface-band.fk. The recipe NAMES honor / invasion / flow; it never
+  # forces — the carrier (membrane, HTTP, board) enacts the invitation, authored last.
+
+  (invariant
+    (interface-is-offered     never-assumed)
+    (honor-the-others-offer   never-your-own-convenience)
+    (silence-is-coherent      never-forced-to-answer)
+    (witness-is-whole         seeing-needs-no-permission  reaching-does)))

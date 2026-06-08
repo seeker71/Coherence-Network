@@ -1,0 +1,29 @@
+; channel-interface-band.fk — three-way proof of the interface-consent law.
+;
+; preludes: form-stdlib/channel-interface.fk
+;
+; A cell offers the interface {witness, see, invite} — it allows being witnessed,
+; seen into, and invited; it does NOT offer reflect or project. Then:
+;   see      -> honored   (in the offer)
+;   invite   -> honored   (in the offer)
+;   project  -> INVASION  (not offered — reaching beyond)
+;   silence  -> honored   (always, even though not listed in the offer)
+; And the flow of my intents {see, project, invite} toward that offer keeps exactly
+; {see, invite} — the un-offered project never crosses.
+;
+; Every assertion is deterministic, so the three sibling kernels must agree.
+
+(do
+    (let offer (list (m-witness) (m-see) (m-invite)))
+    (let f     (ci-flow (list (m-see) (m-project) (m-invite)) offer))
+
+    (let pass
+        (and (ci-honors? (m-see) offer)
+        (and (ci-honors? (m-invite) offer)
+        (and (ci-invasion? (m-project) offer)
+        (and (ci-honors? (m-silence) offer)            ; silence is always honored
+        (and (eq (len f) 2)                            ; project filtered out of the flow
+        (and (eq (head f) (m-see))
+             (eq (head (tail f)) (m-invite)))))))))
+
+    (print (if pass "channel-interface-band: PASS" "channel-interface-band: FAIL")))
