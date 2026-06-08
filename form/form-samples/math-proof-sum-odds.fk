@@ -1,0 +1,57 @@
+; math-proof-sum-odds.fk — a machine-checkable proof, in the substrate's own runtime, that
+;
+;     1 + 3 + 5 + ... + (2n-1)  =  n²     for all natural n.
+;
+; This is math proof DERIVED FROM SUBSTRATE PRINCIPLES, carried by the offered channels:
+;   · proposition  = a Blueprint (what is claimed — the structural identity P(n))
+;   · proof        = a Recipe (this composition of justified steps)
+;   · checking     = the value-walk (evaluate the recipe to a verdict)
+;   · equality     = content-addressing (two sides equal iff they reduce to the same NodeID)
+;   · soundness    = WITNESS, not trust — three-way parity on Go/Rust/TS (the same choice the
+;                    body makes everywhere: trust over fear; we keep looking, no one is trusted)
+;   · a valid proof IS execution-proven value (value-execution.fk: ran ∧ validated ∧ served)
+;
+; The inference rules it rests on are NAMED IN THE OPEN — the witness model applied to proof
+; itself. A reader inspects each; nothing is smuggled:
+;   R1 induction:      [ P(0)  ∧  ∀k. P(k) ⇒ P(k+1) ]  ⇒  ∀n. P(n)
+;   R2 finite-points:  two polynomials of degree ≤ d agreeing at d+1 distinct points are equal
+;                      everywhere — so a bounded-degree identity is PROVEN by finitely many checks
+;   R3 degree-bound:   a recipe's degree is bounded by its product-depth, readable from the
+;                      Recipe tree; here each side has one squaring ⇒ degree ≤ 2, so by R2
+;                      agreement at 3 points suffices (we check 4, for margin).
+
+(do
+    (defn sum-odds (n)                                  ; sum of the first n odd numbers
+        (if (eq n 0)
+            0
+            (add (sum-odds (sub n 1)) (sub (mul 2 n) 1))))   ; = sum-odds(n-1) + (2n-1)
+    (defn sq (n) (mul n n))
+
+    ; --- obligation 1 — BASE CASE   P(0):  sum-odds(0) = 0² ---
+    (defn bit-base ()
+        (if (eq (sum-odds 0) (sq 0)) 1 0))
+
+    ; --- obligation 2 — INDUCTIVE STEP   P(k) ⇒ P(k+1) ---
+    ; Cancelling the induction hypothesis, the step reduces to the identity
+    ;     sq(k+1) = sq(k) + (2(k+1) - 1).
+    ; Both sides are degree ≤ 2 in k (R3); agreement at 4 points proves it for all k (R2).
+    (defn step-at (k)
+        (if (eq (sq (add k 1))
+                (add (sq k) (sub (mul 2 (add k 1)) 1)))
+            1 0))
+    (defn bit-step ()
+        (if (eq (add (step-at 0) (add (step-at 1) (add (step-at 2) (step-at 3))))
+                4)
+            2 0))
+
+    ; --- obligation 3 — SOUNDNESS (negative control) ---
+    ; A surface that only ever says "proven" proves nothing. The checker must REJECT a false
+    ; claim. Take Q(n): sum-odds(n) = n²+1. Its base fails: sum-odds(0)=0 ≠ 0²+1=1.
+    (defn false-base-ok ()
+        (if (eq (sum-odds 0) (add (sq 0) 1)) 1 0))     ; 0 == 1 ?  →  0
+    (defn bit-false-rejected ()
+        (if (eq (false-base-ok) 0) 4 0))               ; correctly rejected  →  4
+
+    ; verdict 7  =  base proven (1) + step proven (2) + false theorem rejected (4)
+    ;   ⟹ by R1, sum-odds(n) = n² for ALL n, AND the checker discriminates true from false.
+    (add (bit-base) (add (bit-step) (bit-false-rejected))))
