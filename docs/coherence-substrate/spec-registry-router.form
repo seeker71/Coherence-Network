@@ -116,6 +116,13 @@ defn spec_registry_router_structure() = {
             meaning: "method-specific KernelHTTPRoute rows bind JSON request bodies to application graph SQL preview responses without CPython when X-Form-Native-Preview is present",
             boundary: "normal public mutations without X-Form-Native-Preview still fan out to FastAPI; live DB execution, response projection, cache invalidation, and contributor-key audit side effects remain before a public front-door flip",
         },
+        {
+            path: "deploy/kernel-router/mutation_ab_observation_harness.py",
+            route_source: "api/tests/test_native_mutation_ab_observation.py",
+            status: "A/B observation gate",
+            meaning: "the mutation flip is now measured as A fanout vs B native preview before any ordinary traffic moves",
+            boundary: "a passing observation gate recommends a live-DB trial only; it does not perform or allow the public front-door flip",
+        },
     ],
     recipes: [
         browse_specs_recipe(),
@@ -127,8 +134,9 @@ defn spec_registry_router_structure() = {
         "mutable service calls -> Form-native graph-node mutation carrier",
         "application graph table writes -> Form-native graph_nodes/revisions/edge-cleanup SQL carrier",
         "method-specific mutation paths -> header-gated Form-native SQL preview bindings",
+        "front-door flip -> A/B observation gate before movement",
     ],
-    current_gap: "GAP-SR1 moved: /api/spec-registry/source-list is kernel-first capable, graph-node-port.fk exposes native create/replace/delete, auth-port.fk preserves API-key/contributor-key decision parity, application-graph-node-port.fk emits direct graph_nodes/graph_node_revisions/graph_edges SQL, and POST/PATCH/DELETE /api/spec-registry now have X-Form-Native-Preview header-gated native SQL preview rows. Public mutable /api/spec-registry still enters through FastAPI by default until live DB execution, response projection, cache invalidation, and contributor-key audit side effects are proven.",
+    current_gap: "GAP-SR1 moved: /api/spec-registry/source-list is kernel-first capable, graph-node-port.fk exposes native create/replace/delete, auth-port.fk preserves API-key/contributor-key decision parity, application-graph-node-port.fk emits direct graph_nodes/graph_node_revisions/graph_edges SQL, POST/PATCH/DELETE /api/spec-registry have X-Form-Native-Preview header-gated native SQL preview rows, and mutation_ab_observation_harness.py turns the flip into A/B observation. Public mutable /api/spec-registry still enters through FastAPI by default until live DB execution, response projection, cache invalidation, and contributor-key audit side effects are proven.",
 };
 
 defn spec_registry_router_reading() = {
@@ -145,6 +153,7 @@ defn spec_registry_router_reading() = {
         "form/form-stdlib/tests/graph-node-mutation-carrier-band.fk",
         "api/tests/test_specs_source_native_route.py",
         "api/tests/test_native_mutation_route_bindings.py",
+        "api/tests/test_native_mutation_ab_observation.py",
     ],
     mystery: [
         "the public mutation flip wants live DB execution and side-effect proof before ordinary traffic moves",
