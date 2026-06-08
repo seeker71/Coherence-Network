@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 256
+**Total files**: 257
 
 | File | Purpose |
 |---|---|
@@ -146,6 +146,7 @@
 | [test_native_mutation_public_gate.py](test_native_mutation_public_gate.py) | Proof that native mutation public gates are reversible and receipt-backed. |
 | [test_native_mutation_route_bindings.py](test_native_mutation_route_bindings.py) | Proof that mutable idea/spec routes have native preview bindings. |
 | [test_native_mutation_route_side_effect_binding.py](test_native_mutation_route_side_effect_binding.py) | Proof that native mutation route runners bind side-effect execution. |
+| [test_native_mutation_side_effect_ledger.py](test_native_mutation_side_effect_ledger.py) | Proof that native mutation side effects are source-classified, not circular. |
 | [test_native_mutation_side_effects_form.py](test_native_mutation_side_effects_form.py) | Proof that native mutation side-effect intents have a Form execution carrier. |
 | [test_numeric_formats.py](test_numeric_formats.py) | Tests for the substrate-resident numeric format library (Python kernel). |
 | [test_on_demand_attunement.py](test_on_demand_attunement.py) | Flow test for on-demand attunement. |

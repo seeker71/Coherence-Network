@@ -1,0 +1,274 @@
+# native-mutation-side-effect-ledger.form -- source-classified mutation effects
+#
+# This ledger answers a narrow question: which mutable companions are Python
+# parity, which are reversible gate receipts, and which are not carried yet?
+# It is not a proof that side effects should exist. It is a keep/delete map
+# for moving ideas and specs toward Form-native execution without smuggling in
+# behavior that Python did not already carry.
+
+form native_mutation_side_effect_entry = {
+    effect_id:          ~String,
+    classification:     ~String,
+    python_source:      [~String],
+    python_observation: ~String,
+    form_native_carrier:[~String],
+    evidence:           [~String],
+    decision:           ~String,
+    deletion_rule:      ~String,
+    boundary:           ~String,
+};
+
+defn nmsl_entry(effect-id classification python-source python-observation form-native-carrier evidence decision deletion-rule boundary) =
+    native_mutation_side_effect_entry {
+        effect_id:           effect-id,
+        classification:      classification,
+        python_source:       python-source,
+        python_observation:  python-observation,
+        form_native_carrier: form-native-carrier,
+        evidence:            evidence,
+        decision:            decision,
+        deletion_rule:       deletion-rule,
+        boundary:            boundary,
+    };
+
+defn native_mutation_side_effect_ledger() = {
+    north_star: "Ideas and specs mutate through native form while every companion effect is either source-backed, gate-local, or absent.",
+    anti_circular_rule: [
+        "Side effects are not justified by side-effect proof.",
+        "A parity effect must cite existing Python behavior.",
+        "A gate receipt may have no Python source only when it is reversible gate safety.",
+        "Any other no-source effect is rejected or held as missing parity before ordinary traffic can flip.",
+    ],
+    classification_meaning: [
+        "primary_mutation: the graph write itself, not a side-effect argument",
+        "python_parity_effect: existing Python companion behavior that Form must carry before replacing Python",
+        "gate_receipt: new reversible gate evidence; transitional and not domain parity",
+        "missing_python_parity: existing Python behavior not yet carried by Form-native routes",
+        "not_carried: tempting behavior with no source-backed claim",
+    ],
+    entries: [
+        nmsl_entry(
+            "ideas-application-graph-write",
+            "primary_mutation",
+            [
+                "api/app/services/idea_write_ops.py::create_idea",
+                "api/app/services/idea_write_ops.py::update_idea",
+                "api/app/services/idea_service.py::_write_ideas",
+                "api/app/services/idea_service.py::_write_single_idea"
+            ],
+            "Python creates and updates idea records through idea persistence helpers.",
+            [
+                "form/form-stdlib/application-graph-node-port.fk::agn-create-node",
+                "form/form-stdlib/application-graph-node-port.fk::agn-update-node"
+            ],
+            [
+                "form/scripts/application-graph-live-db-test.sh",
+                "api/tests/test_application_graph_live_db_trial.py",
+                "api/tests/test_application_graph_response_projection.py"
+            ],
+            "keep as the primary mutation; do not count it as side-effect proof",
+            "delete only if ideas stop being graph-node mutations",
+            "ordinary no-header traffic still fans out until public-gate canary and missing parity are resolved"
+        ),
+        nmsl_entry(
+            "spec-registry-application-graph-write",
+            "primary_mutation",
+            [
+                "api/app/services/spec_registry_service.py::create_spec",
+                "api/app/services/spec_registry_service.py::update_spec",
+                "api/app/services/spec_registry_service.py::delete_spec",
+                "api/app/services/graph_service.py::delete_node"
+            ],
+            "Python creates, updates, and deletes spec graph nodes through graph_service.",
+            [
+                "form/form-stdlib/application-graph-node-port.fk::agn-create-node",
+                "form/form-stdlib/application-graph-node-port.fk::agn-update-node",
+                "form/form-stdlib/application-graph-node-port.fk::agn-delete-node"
+            ],
+            [
+                "form/scripts/application-graph-live-db-test.sh",
+                "api/tests/test_application_graph_live_db_trial.py",
+                "api/tests/test_specs_source_native_route.py"
+            ],
+            "keep as the primary mutation; do not count it as side-effect proof",
+            "delete only if specs stop being graph-node mutations",
+            "ordinary no-header traffic still fans out until public-gate canary and missing parity are resolved"
+        ),
+        nmsl_entry(
+            "idea-parent-edge-repair",
+            "python_parity_effect",
+            [
+                "api/app/routers/ideas.py::create_idea",
+                "api/app/routers/ideas.py::update_idea",
+                "api/app/services/idea_hierarchy.py::set_parent_idea"
+            ],
+            "Python repairs the reciprocal parent-child relation when parent_idea_id changes.",
+            [
+                "form/form-stdlib/native-mutation-side-effects.fk::nms-repair-parent-edge",
+                "form/form-stdlib/native-mutation-route-side-effects.fk::nmrs-run-idea-create-with-side-effects"
+            ],
+            [
+                "form/scripts/native-mutation-side-effects-test.sh",
+                "form/scripts/native-mutation-route-side-effects-test.sh",
+                "api/tests/test_native_mutation_route_side_effect_binding.py"
+            ],
+            "keep as Python parity",
+            "delete only if Python parent reciprocal repair is retired everywhere",
+            "not a new effect; it mirrors existing parent invariant behavior"
+        ),
+        nmsl_entry(
+            "spec-delete-edge-cleanup",
+            "python_parity_effect",
+            [
+                "api/app/services/spec_registry_service.py::delete_spec",
+                "api/app/services/graph_service.py::delete_node"
+            ],
+            "Python deletes connected graph_edges when a spec node is deleted.",
+            [
+                "form/form-stdlib/application-graph-node-port.fk::agn-delete-node"
+            ],
+            [
+                "form/scripts/application-graph-live-db-test.sh",
+                "api/tests/test_application_graph_live_db_trial.py"
+            ],
+            "keep as Python parity",
+            "delete only if graph node deletion no longer removes connected edges",
+            "edge cleanup belongs to delete parity, not to rollback-receipt proof"
+        ),
+        nmsl_entry(
+            "cache-invalidation-receipt",
+            "python_parity_effect",
+            [
+                "api/app/services/idea_service.py::_invalidate_ideas_cache",
+                "api/app/services/idea_service.py::_write_single_idea",
+                "api/app/services/spec_registry_service.py::_invalidate_spec_cache"
+            ],
+            "Python invalidates read caches after mutable writes.",
+            [
+                "form/form-stdlib/native-mutation-side-effects.fk::nms-record-cache-invalidation"
+            ],
+            [
+                "form/scripts/native-mutation-side-effects-test.sh",
+                "api/tests/test_native_mutation_side_effects_form.py"
+            ],
+            "keep as parity receipt until native cache surfaces exist",
+            "replace with native cache invalidation once there is a native cache to flush",
+            "receipt proves durable invalidation intent, not Python process memory flushing"
+        ),
+        nmsl_entry(
+            "contributor-key-audit",
+            "python_parity_effect",
+            [
+                "api/app/services/contributor_key_store.py::verify"
+            ],
+            "Python successful key verification refreshes contributor_api_keys.last_used_at.",
+            [
+                "form/form-stdlib/native-mutation-side-effects.fk::nms-audit-contributor-key"
+            ],
+            [
+                "form/scripts/native-mutation-side-effects-test.sh",
+                "api/tests/test_native_mutation_side_effects_form.py"
+            ],
+            "keep as Python parity when a contributor key hash is present",
+            "delete only if key verification no longer updates last_used_at",
+            "not every route has a contributor key; blank key hash means no audit update"
+        ),
+        nmsl_entry(
+            "rollback-receipt",
+            "gate_receipt",
+            [
+                "none: reversible gate evidence, not Python parity"
+            ],
+            "No Python domain behavior writes this receipt.",
+            [
+                "form/form-stdlib/native-mutation-side-effects.fk::nms-record-rollback-receipt"
+            ],
+            [
+                "form/scripts/native-mutation-side-effects-test.sh",
+                "api/tests/test_native_mutation_side_effects_form.py"
+            ],
+            "keep as transitional gate safety; do not cite as domain parity",
+            "delete after ordinary traffic flips and rollback evidence has another carrier",
+            "receipt is side-effect evidence for rollback discipline, not a reason to add domain side effects"
+        ),
+        nmsl_entry(
+            "public-gate-rollback-receipt",
+            "gate_receipt",
+            [
+                "none: reversible gate evidence, not Python parity"
+            ],
+            "No Python domain behavior writes this receipt.",
+            [
+                "form/form-stdlib/native-mutation-public-gate.fk::nmpg-record-public-gate-rollback-receipt",
+                "deploy/kernel-router/production-routes.fk::route_ideas_create_native_public_gate",
+                "deploy/kernel-router/production-routes.fk::route_specs_update_native_public_gate"
+            ],
+            [
+                "form/scripts/native-mutation-public-gate-test.sh",
+                "deploy/kernel-router/mutation_public_gate_harness.py",
+                "api/tests/test_native_mutation_public_gate.py"
+            ],
+            "keep as transitional public-gate safety; do not cite as domain parity",
+            "delete or narrow after deployed public-gate canary proves promotion path",
+            "receipt is reversible gating tissue; ordinary no-header traffic remains fanout"
+        ),
+        nmsl_entry(
+            "idea-valuation-audit-ledger",
+            "missing_python_parity",
+            [
+                "api/app/services/idea_write_ops.py::update_idea",
+                "api/app/services/idea_write_ops.py::update_ideas_batch",
+                "api/app/services/audit_ledger_service.py::append_entry"
+            ],
+            "Python writes AuditEntryType.VALUATION_CHANGE rows for idea value/status changes.",
+            [
+                "none"
+            ],
+            [
+                "api/tests/test_native_mutation_side_effect_ledger.py"
+            ],
+            "ordinary no-header flip blocked until carried Form-native or intentionally retired by spec",
+            "do not delete silently; either add native audit-ledger carrier or document retirement",
+            "this is the main missing mutable companion surfaced by the ledger"
+        ),
+        nmsl_entry(
+            "resonance-reattunement",
+            "not_carried",
+            [
+                "none found in ideas/spec mutation path"
+            ],
+            "No source-backed mutation behavior was observed for resonance reattunement in the inspected paths.",
+            [
+                "none"
+            ],
+            [
+                "api/tests/test_native_mutation_side_effect_ledger.py"
+            ],
+            "do not add until a Python source, spec, and route contract exist",
+            "reject any implicit addition",
+            "mystery stays named instead of becoming hidden side effect"
+        ),
+    ],
+    counts: {
+        primary_mutation: 2,
+        python_parity_effect: 4,
+        gate_receipt: 2,
+        missing_python_parity: 1,
+        not_carried: 1,
+        unjustified_additions: 0,
+    },
+};
+
+defn native_mutation_side_effect_recipe_shift() = {
+    shifted: [
+        "side-effect proof -> source-classified side-effect ledger",
+        "rollback receipt as proof -> rollback receipt as reversible gate safety",
+        "prediction residual ignored -> residual held with 0/1/silence/protocol/fail/stop/BMA markers in the gate, not used to smuggle effects",
+        "unknown companion effects -> missing parity or not-carried rows",
+    ],
+    move_next: [
+        "carry idea-valuation-audit-ledger Form-native or retire it by explicit spec",
+        "observe deployed X-Form-Native-Public-Gate canary",
+        "only then consider ordinary no-header mutation movement",
+    ],
+};
