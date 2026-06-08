@@ -1,0 +1,180 @@
+; native-mutation-side-effects.fk -- durable side-effect execution carrier.
+;
+; The trust envelope names side-effect intents. This module gives those intents
+; native execution tissue for Postgres-backed mutation flows: parent edge repair,
+; contributor-key audit refresh, and durable receipts for cache invalidation and
+; rollback. It does not claim Python in-memory cache flushing.
+;
+; preludes: form-stdlib/core.fk
+;
+(do
+    (defn nms-cat (xs)
+        (if (nil? xs) ""
+            (str_concat (head xs) (nms-cat (tail xs)))))
+
+    (defn nms-join (sep xs)
+        (if (nil? xs)
+            ""
+            (if (nil? (tail xs))
+                (head xs)
+                (str_concat (head xs) (str_concat sep (nms-join sep (tail xs)))))))
+
+    (defn nms-esc-loop (s i n acc)
+        (if (ge i n)
+            acc
+            (do
+                (let c (substring s i (add i 1)))
+                (nms-esc-loop s (add i 1) n
+                    (str_concat acc (if (str_eq c "'") "''" c))))))
+    (defn nms-esc (s) (nms-esc-loop s 0 (str_len s) ""))
+    (defn nms-quote (s) (str_concat "'" (str_concat (nms-esc s) "'")))
+    (defn nms-jsonb (s) (str_concat (nms-quote s) "::jsonb"))
+
+    (defn nms-receipts-ddl-sql ()
+        (nms-cat (list
+            "CREATE TABLE IF NOT EXISTS native_mutation_side_effect_receipts ("
+            "id VARCHAR(255) PRIMARY KEY,"
+            "mutation_id VARCHAR(255) NOT NULL,"
+            "node_id VARCHAR(255) NOT NULL,"
+            "effect_name VARCHAR(100) NOT NULL,"
+            "status VARCHAR(50) NOT NULL,"
+            "details JSONB NOT NULL DEFAULT '{}'::jsonb,"
+            "created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP"
+            ")")))
+
+    (defn nms-receipt-sql (receipt-id mutation-id node-id effect-name details)
+        (nms-join " " (list
+            "INSERT INTO native_mutation_side_effect_receipts"
+            "(id, mutation_id, node_id, effect_name, status, details)"
+            (str_concat "VALUES (" (str_concat
+                (nms-join ", " (list
+                    (nms-quote receipt-id)
+                    (nms-quote mutation-id)
+                    (nms-quote node-id)
+                    (nms-quote effect-name)
+                    (nms-quote "executed-native")
+                    (nms-jsonb details)))
+                ")"))
+            "ON CONFLICT (id) DO UPDATE SET"
+            "status = EXCLUDED.status,"
+            "details = EXCLUDED.details,"
+            "created_at = CURRENT_TIMESTAMP")))
+
+    (defn nms-cache-invalidation-receipt-sql (mutation-id node-id)
+        (nms-receipt-sql
+            (str_concat "cache-" mutation-id)
+            mutation-id
+            node-id
+            "cache-invalidation"
+            "{\"surface\":\"ideas/specs/translation-read-caches\",\"mode\":\"executed-native-receipt\"}"))
+
+    (defn nms-rollback-receipt-sql (mutation-id node-id)
+        (nms-receipt-sql
+            (str_concat "rollback-" mutation-id)
+            mutation-id
+            node-id
+            "rollback-receipt"
+            "{\"surface\":\"native-mutation-front-door\",\"rollback\":\"fanout-python remains default\",\"mode\":\"executed-native-receipt\"}"))
+
+    (defn nms-parent-edge-repair-sql (edge-id mutation-id parent-id child-id author)
+        (nms-join " " (list
+            "INSERT INTO graph_edges (id, from_id, to_id, type, properties, strength, created_by)"
+            (str_concat "VALUES (" (str_concat
+                (nms-join ", " (list
+                    (nms-quote edge-id)
+                    (nms-quote parent-id)
+                    (nms-quote child-id)
+                    (nms-quote "parent-of")
+                    (nms-jsonb (str_concat "{\"mutation_id\":\"" (str_concat mutation-id "\",\"effect\":\"parent-edge-repair\"}")))
+                    "1.0"
+                    (nms-quote author)))
+                ")"))
+            "ON CONFLICT (from_id, to_id, type) DO UPDATE SET"
+            "properties = graph_edges.properties || EXCLUDED.properties,"
+            "created_by = EXCLUDED.created_by")))
+
+    (defn nms-contributor-key-audit-sql (key-hash)
+        (nms-join " " (list
+            "UPDATE contributor_api_keys"
+            "SET last_used_at = CURRENT_TIMESTAMP::text"
+            (str_concat "WHERE id = " (nms-quote key-hash)))))
+
+    (defn nms-create-receipts-table (conn)
+        (do (pg_exec conn (nms-receipts-ddl-sql)) conn))
+
+    (defn nms-record-cache-invalidation (conn mutation-id node-id)
+        (do (pg_exec conn (nms-cache-invalidation-receipt-sql mutation-id node-id)) conn))
+
+    (defn nms-repair-parent-edge (conn edge-id mutation-id parent-id child-id author)
+        (do (pg_exec conn (nms-parent-edge-repair-sql edge-id mutation-id parent-id child-id author)) conn))
+
+    (defn nms-audit-contributor-key (conn key-hash)
+        (do (pg_exec conn (nms-contributor-key-audit-sql key-hash)) conn))
+
+    (defn nms-record-rollback-receipt (conn mutation-id node-id)
+        (do (pg_exec conn (nms-rollback-receipt-sql mutation-id node-id)) conn))
+
+    (defn nms-match-at? (s needle i j)
+        (if (eq j (str_len needle))
+            1
+            (if (ge (add i j) (str_len s))
+                0
+                (if (str_eq (char_at s (add i j)) (char_at needle j))
+                    (nms-match-at? s needle i (add j 1))
+                    0))))
+
+    (defn nms-contains-loop? (s needle i)
+        (if (gt i (sub (str_len s) (str_len needle)))
+            0
+            (if (eq (nms-match-at? s needle i 0) 1)
+                1
+                (nms-contains-loop? s needle (add i 1)))))
+
+    (defn nms-contains? (s needle)
+        (if (eq (str_len needle) 0)
+            1
+            (if (lt (str_len s) (str_len needle))
+                0
+                (nms-contains-loop? s needle 0))))
+
+    (defn nms-and2 (a b) (if (eq a 1) (if (eq b 1) 1 0) 0))
+    (defn nms-and3 (a b c) (nms-and2 (nms-and2 a b) c))
+    (defn nms-and4 (a b c d) (nms-and2 (nms-and3 a b c) d))
+
+    ;; 11111 =
+    ;;   receipt DDL + receipt rows
+    ;;   cache invalidation receipt
+    ;;   parent edge upsert
+    ;;   contributor key audit update
+    ;;   pg_exec wrapper names exposed
+    (defn nms-side-effects-sql-test ()
+        (do
+            (let ddl (nms-receipts-ddl-sql))
+            (let cache-sql (nms-cache-invalidation-receipt-sql "mut-one" "idea-one"))
+            (let edge-sql (nms-parent-edge-repair-sql "edge-one" "mut-one" "idea-parent" "idea-child" "form-native"))
+            (let key-sql (nms-contributor-key-audit-sql "key-hash-one"))
+            (let rollback-sql (nms-rollback-receipt-sql "mut-one" "idea-one"))
+            (let ddl-ok (if (eq (nms-and3
+                (nms-contains? ddl "native_mutation_side_effect_receipts")
+                (nms-contains? ddl "effect_name")
+                (nms-contains? ddl "details JSONB")) 1) 1 0))
+            (let cache-ok (if (eq (nms-and3
+                (nms-contains? cache-sql "cache-invalidation")
+                (nms-contains? cache-sql "executed-native")
+                (nms-contains? cache-sql "ON CONFLICT")) 1) 10 0))
+            (let edge-ok (if (eq (nms-and4
+                (nms-contains? edge-sql "INSERT INTO graph_edges")
+                (nms-contains? edge-sql "parent-of")
+                (nms-contains? edge-sql "parent-edge-repair")
+                (nms-contains? edge-sql "ON CONFLICT (from_id, to_id, type)")) 1) 100 0))
+            (let key-ok (if (eq (nms-and3
+                (nms-contains? key-sql "UPDATE contributor_api_keys")
+                (nms-contains? key-sql "last_used_at")
+                (nms-contains? key-sql "CURRENT_TIMESTAMP")) 1) 1000 0))
+            (let rollback-ok (if (eq (nms-and3
+                (nms-contains? rollback-sql "rollback-receipt")
+                (nms-contains? rollback-sql "fanout-python remains default")
+                (nms-contains? rollback-sql "executed-native")) 1) 10000 0))
+            (sum (list ddl-ok cache-ok edge-ok key-ok rollback-ok))))
+
+    0)

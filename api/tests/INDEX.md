@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 253
+**Total files**: 254
 
 | File | Purpose |
 |---|---|
@@ -144,6 +144,7 @@
 | [test_native_auth_parity_form.py](test_native_auth_parity_form.py) | Proof that mutation auth has a native Form parity carrier. |
 | [test_native_mutation_ab_observation.py](test_native_mutation_ab_observation.py) | Proof for the native mutation A/B observation gate. |
 | [test_native_mutation_route_bindings.py](test_native_mutation_route_bindings.py) | Proof that mutable idea/spec routes have native preview bindings. |
+| [test_native_mutation_side_effects_form.py](test_native_mutation_side_effects_form.py) | Proof that native mutation side-effect intents have a Form execution carrier. |
 | [test_numeric_formats.py](test_numeric_formats.py) | Tests for the substrate-resident numeric format library (Python kernel). |
 | [test_on_demand_attunement.py](test_on_demand_attunement.py) | Flow test for on-demand attunement. |
 | [test_onboarding.py](test_onboarding.py) | _no top-of-file purpose_ |
