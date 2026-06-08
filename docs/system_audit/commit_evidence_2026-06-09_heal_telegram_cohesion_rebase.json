@@ -1,0 +1,102 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "claude/heal-telegram-cohesion",
+  "commit_scope": "Rebase the Telegram cohesion refactor onto current main and align the maintainability baseline with observed rebased metrics.",
+  "files_owned": [
+    "MANIFEST.md",
+    "api/app/routers/INDEX.md",
+    "api/app/routers/agent_run_state_routes.py",
+    "api/app/routers/agent_tasks_routes.py",
+    "api/app/routers/agent_telegram.py",
+    "api/app/routers/agent_telegram_format.py",
+    "docs/system_audit/maintainability_baseline.json",
+    "docs/system_audit/commit_evidence_2026-06-09_heal_telegram_cohesion_rebase.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check",
+      "cd api && python3 -m pytest -q tests/test_monitor_pipeline_stale_running.py tests/test_agent_control_plane.py tests/test_agent_integration_api.py tests/test_agent_execute_endpoint.py tests/test_agent_pipeline.py",
+      "cd api && python3 -m ruff check app/routers/agent_telegram.py app/routers/agent_telegram_format.py app/routers/agent_tasks_routes.py app/routers/agent_run_state_routes.py",
+      "python3 api/scripts/run_maintainability_audit.py --baseline docs/system_audit/maintainability_baseline.json --output api/logs/maintainability_audit_report.rebase.json"
+    ],
+    "summary": "The rebase kept the Telegram formatting extraction intact, regenerated the router/root indexes, and corrected the maintainability baseline to the actual rebased audit metrics: layer violations 3, large modules 44, very large modules 17, long functions 112, placeholders 9, risk score 996. This remains an improvement over current main before the PR: large modules 45, long functions 113, risk score 1006. Focused agent tests, ruff, index check, whitespace check, wellness, and the maintainability audit pass."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending force-push of the rebased PR branch and GitHub checks on PR #2537."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No deploy attempted for this rebase repair yet. Public deployment is currently aligned to main commit 4eb7e73f before PR #2537 lands."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Telegram webhook behavior remains routed through the same endpoint while formatting helpers live in agent_telegram_format.py. Task alert importers now point at the helper module directly.",
+    "public_endpoints": [
+      "POST /api/agent/telegram/webhook"
+    ],
+    "test_flows": [
+      "Focused agent control/integration/execute/pipeline tests pass.",
+      "Ruff passes on the extracted Telegram router/helper and importer files.",
+      "Maintainability audit reports regression=no against the rebased baseline."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The rebase repair is locally proven; remote CI, merge, deploy, and public verification remain pending."
+  },
+  "idea_ids": [
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "telegram-integration"
+  ],
+  "task_ids": [
+    "heal-telegram-cohesion-rebase-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "merge-request",
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "rebase-repair",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/app/routers/agent_telegram.py",
+    "api/app/routers/agent_telegram_format.py",
+    "api/app/routers/agent_tasks_routes.py",
+    "api/app/routers/agent_run_state_routes.py",
+    "docs/system_audit/maintainability_baseline.json",
+    "api/logs/maintainability_audit_report.rebase.json"
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "api/app/routers/INDEX.md",
+    "api/app/routers/agent_run_state_routes.py",
+    "api/app/routers/agent_tasks_routes.py",
+    "api/app/routers/agent_telegram.py",
+    "api/app/routers/agent_telegram_format.py",
+    "docs/system_audit/maintainability_baseline.json",
+    "docs/system_audit/commit_evidence_2026-06-09_heal_telegram_cohesion_rebase.json"
+  ],
+  "change_intent": "runtime_fix"
+}

@@ -40,7 +40,7 @@
 
 | Index | Files | Purpose |
 |---|---|---|
-| [api/app/routers/INDEX.md](api/app/routers/INDEX.md) | 145 | Python bridge/API routers — current endpoint carrier and upstream tail while Form-native routes are promoted |
+| [api/app/routers/INDEX.md](api/app/routers/INDEX.md) | 146 | Python bridge/API routers — current endpoint carrier and upstream tail while Form-native routes are promoted |
 | [api/app/services/INDEX.md](api/app/services/INDEX.md) | 246 | API services — business logic and graph operations |
 | [api/app/models/INDEX.md](api/app/models/INDEX.md) | 58 | API models — Pydantic + ORM shapes |
 | [api/tests/INDEX.md](api/tests/INDEX.md) | 262 | API tests — flow-centric |
