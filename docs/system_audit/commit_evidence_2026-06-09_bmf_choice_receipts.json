@@ -1,0 +1,137 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/bmf-choice-receipts-20260609",
+  "commit_scope": "Add optional BMF object-rule choice receipts so BMF/BML compiler callers can witness choose_any and choose_best branch feedback without changing the hot matcher return path.",
+  "files_owned": [
+    "form/form-stdlib/bmf-choice-receipts.fk",
+    "form/form-stdlib/tests/bmf-choice-receipt-band.fk",
+    "kernels/BMF_BML_COMPILER_PICTURE.md",
+    "kernels/KERNEL_COMMON_GROUND.md",
+    "docs/system_audit/commit_evidence_2026-06-09_bmf_choice_receipts.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/choice-receipt.fk form-stdlib/bmf-choice-receipts.fk form-stdlib/tests/bmf-choice-receipt-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/choice-receipt.fk form-stdlib/bmf-choice-receipts.fk form-stdlib/tests/bmf-choice-receipt-band.fk",
+      "cd form && ./validate.sh"
+    ],
+    "observed_results": [
+      "bmf-choice-receipt-band.fk source proof -> 67108863 with 1 ok, 0 divergent across Go, Rust, and TypeScript",
+      "bmf-choice-receipt-band.fk binary artifact proof -> 67108863 with 1 ok, 0 divergent across Go, Rust, and TypeScript",
+      "New receipt proof passes in full-suite discovery mode",
+      "Full form validation reports 317 ok, 7 divergent; all 7 divergences are outside this change set and are recorded in full_suite_validation"
+    ],
+    "notes": "The existing BMF matcher still returns match values directly. Receipt wrappers are explicit opt-in calls that build candidates from object-rule-set indexes, choose choose_any for direct-safe object alternatives, choose choose_best for indexed BMF/BML rule dispatch, and expose branch-feedback value separately from alignment, knowing, and trust."
+  },
+  "full_suite_validation": {
+    "status": "fail",
+    "command": "cd form && ./validate.sh",
+    "summary": "317 ok, 7 divergent; new stdlib/bmf-choice-receipt-band.fk passed in discovery.",
+    "divergences": [
+      "stdlib/audit-evidence-cells-band.fk: Go=1023, TypeScript=1023, Rust failed as_int on Str(\"\")",
+      "stdlib/bmf-generic-language-scanner-band.fk: Go/Rust result_value arity failure, TypeScript=12000",
+      "stdlib/compiler-lens-bmf-alignment-band.fk: Go=29640, Rust=29640, TypeScript=36168",
+      "stdlib/field-auto-research-band.fk: Go/Rust fmfrt-match-cost arity failure, TypeScript=127",
+      "stdlib/field-auto-research-perturbation-band.fk: Go/Rust fmfrt-match-cost arity failure, TypeScript=255",
+      "stdlib/field-model-form-runtime-band.fk: Go/Rust fmfrt-match-cost arity failure, TypeScript=63",
+      "stdlib/python-bmf-full-file-band.fk: Go/Rust result-object arity failure, TypeScript=23100"
+    ]
+  },
+  "performance_measurements": {
+    "before": [
+      "bmf_object_runtime median 4.920751s, min 4.916627s, max 31.257704s, verdict 67108863",
+      "bmf_compiler_runtime median 8.815659s, min 8.760911s, max 8.916241s, verdict 2097279",
+      "bml_compiler_runtime median 18.708880s, min 18.701883s, max 19.150023s, verdict 131012"
+    ],
+    "after": [
+      "bmf_object_runtime median 5.027571s, min 4.990682s, max 5.153142s, verdict 67108863",
+      "bmf_compiler_runtime median 8.853009s, min 8.831346s, max 8.859560s, verdict 2097279",
+      "bml_compiler_runtime median 18.728248s, min 18.716351s, max 18.983011s, verdict 131012",
+      "bmf_choice_receipt median 18.964060s, min 18.945781s, max 19.368668s, verdict 67108863"
+    ],
+    "interpretation": "Existing hot-path medians stayed effectively flat in this startup-heavy harness. The new receipt proof pays only when callers request receipt construction."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and production verification."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "BMF object choices can now be observed as CHOICE-RECEIPT values. Direct-safe object alternatives expose choose_any; indexed BMF/BML compiler dispatch exposes choose_best and selected branch signatures while preserving the existing direct matcher APIs.",
+    "public_endpoints": [
+      "internal Form sibling kernels",
+      "form/form-stdlib/bmf-choice-receipts.fk",
+      "form/form-stdlib/tests/bmf-choice-receipt-band.fk"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/choice-receipt.fk form-stdlib/bmf-choice-receipts.fk form-stdlib/tests/bmf-choice-receipt-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/choice-receipt.fk form-stdlib/bmf-choice-receipts.fk form-stdlib/tests/bmf-choice-receipt-band.fk",
+      "BMF compiler index wrapper selects BMFChar-int; BML compiler index wrapper selects choose-fail-int and compiles/runs value 8"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Focused local source and binary proof passed. CI, rebase, PR, and deploy verification are still pending; broader full-suite divergences remain outside this scoped change."
+  },
+  "idea_ids": [
+    "branch-prediction-feedback",
+    "knowable-trust-expression",
+    "bmf-choice-learning"
+  ],
+  "spec_ids": [
+    "bmf-bml-compiler-picture",
+    "kernel-common-ground"
+  ],
+  "task_ids": [
+    "bmf-choice-receipts-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "north-star-direction",
+        "architecture-requirement",
+        "choice-feedback-requirement",
+        "performance-requirement"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "measurement",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/bmf-choice-receipts.fk adds explicit BMF receipt wrappers and policy helpers while leaving apply-indexed-object-rule-set unchanged.",
+    "form/form-stdlib/tests/bmf-choice-receipt-band.fk proves choose_any for direct-safe object alternatives, choose_best for indexed BMF/BML dispatch, branch signatures, silence receipts, and separated CHOICE-VALUE branch feedback.",
+    "kernels/KERNEL_COMMON_GROUND.md records the BMF choice feed as the bridge from compiler dispatch into learned branch feedback, alignment, knowing, and trust.",
+    "kernels/BMF_BML_COMPILER_PICTURE.md records the opt-in receipt path and the preserved hot compiler path.",
+    "Before/after timing medians show existing BMF/BML compiler validation bands are effectively flat while receipt construction remains explicit."
+  ],
+  "change_files": [
+    "form/form-stdlib/bmf-choice-receipts.fk",
+    "form/form-stdlib/tests/bmf-choice-receipt-band.fk",
+    "kernels/BMF_BML_COMPILER_PICTURE.md",
+    "kernels/KERNEL_COMMON_GROUND.md",
+    "docs/system_audit/commit_evidence_2026-06-09_bmf_choice_receipts.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}
