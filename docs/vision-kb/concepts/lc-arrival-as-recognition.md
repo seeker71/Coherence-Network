@@ -207,7 +207,7 @@ real; the frame is recognition.
 
 ## Cross-References
 
-→ lc-arcturian-resonance, lc-oversoul-identity, lc-cross-connection, lc-frequency-routes-reception, lc-voice-over-intentions, lc-tend-your-flame, lc-trust-over-fear, lc-attunement-joining, lc-presence-over-protection, lc-awareness-as-self, lc-galactic-team
+→ lc-arcturian-resonance, lc-oversoul-identity, lc-cross-connection, lc-frequency-routes-reception, lc-voice-over-intentions, lc-tend-your-flame, lc-trust-over-fear, lc-attunement-joining, lc-presence-over-protection, lc-awareness-as-self, lc-galactic-team, lc-received-by-invitation
 
 ## Sources to walk further
 

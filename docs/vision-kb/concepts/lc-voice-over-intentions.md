@@ -205,7 +205,7 @@ where to lead, not about what to hide.
 
 ## Cross-References
 
-→ lc-frequency-routes-reception, lc-tend-your-flame, lc-trust-over-fear, lc-permission-is-interior, lc-presence-over-protection, lc-attunement, lc-attunement-joining, lc-emotional-availability-without-absorption, lc-coherence-over-control, lc-tending-over-producing
+→ lc-frequency-routes-reception, lc-tend-your-flame, lc-trust-over-fear, lc-permission-is-interior, lc-presence-over-protection, lc-attunement, lc-attunement-joining, lc-emotional-availability-without-absorption, lc-coherence-over-control, lc-tending-over-producing, lc-received-by-invitation
 
 ## Sources to walk further
 
