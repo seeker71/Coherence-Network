@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -8,6 +8,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const webRoot = join(__dirname, "..");
 const messagesDir = join(webRoot, "messages");
 const outputPath = join(messagesDir, "manifest.ts");
+const apiManifestPath = join(webRoot, "..", "api", "app", "data", "locale_manifest.json");
 
 function safeIdent(code) {
   return `bundle_${code.replace(/[^A-Za-z0-9_]/g, "_")}`;
@@ -62,4 +63,18 @@ ${bundles.join("\n")}
 `;
 
 writeFileSync(outputPath, source);
-console.log(`generated messages/manifest.ts for ${codes.join(", ")}`);
+
+mkdirSync(dirname(apiManifestPath), { recursive: true });
+writeFileSync(
+  apiManifestPath,
+  `${JSON.stringify({
+    default: DEFAULT_LOCALE,
+    locales: locales.map(({ code, name, nativeName }) => ({
+      code,
+      name,
+      native_name: nativeName,
+    })),
+  }, null, 2)}\n`,
+);
+
+console.log(`generated locale manifests for ${codes.join(", ")}`);

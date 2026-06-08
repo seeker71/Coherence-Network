@@ -15,6 +15,7 @@ Covers:
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from uuid import uuid4
 
@@ -22,6 +23,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
+from app.services import translator_service
 
 BASE = "http://test"
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -71,6 +73,42 @@ async def test_list_locales_matches_installed_message_bundles():
         codes = {loc["code"] for loc in r.json()["locales"]}
         assert _installed_locale_codes().issubset(codes)
         assert r.json()["default"] == "en"
+
+
+def test_api_locale_manifest_matches_installed_message_bundles():
+    manifest_path = REPO_ROOT / "api" / "app" / "data" / "locale_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    codes = {entry["code"] for entry in manifest["locales"]}
+    assert _installed_locale_codes().issubset(codes)
+    assert manifest["default"] == "en"
+
+
+def test_api_locale_manifest_supports_production_image_fallback(tmp_path, monkeypatch):
+    manifest_path = tmp_path / "locale_manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "default": "en",
+                "locales": [
+                    {"code": "en", "name": "English", "native_name": "English"},
+                    {"code": "fr", "name": "French", "native_name": "Français"},
+                    {
+                        "code": "pt-br",
+                        "name": "Brazilian Portuguese",
+                        "native_name": "Português (Brasil)",
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(translator_service, "_WEB_MESSAGES_DIR", tmp_path / "missing")
+    monkeypatch.setattr(translator_service, "_API_LOCALE_MANIFEST", manifest_path)
+
+    locales = translator_service._discover_supported_locales()
+
+    assert list(locales) == ["en", "fr", "pt-br"]
+    assert locales["pt-br"]["native_name"] == "Português (Brasil)"
 
 
 # ---------------------------------------------------------------------------

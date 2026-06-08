@@ -26,6 +26,7 @@ from app.services import translation_cache_service as _cache
 DEFAULT_LOCALE = "en"
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _WEB_MESSAGES_DIR = _REPO_ROOT / "web" / "messages"
+_API_LOCALE_MANIFEST = Path(__file__).resolve().parents[1] / "data" / "locale_manifest.json"
 
 
 def _locale_meta(path: Path) -> dict[str, str]:
@@ -52,6 +53,9 @@ def _discover_supported_locales() -> dict[str, dict[str, str]]:
         for path in sorted(_WEB_MESSAGES_DIR.glob("*.json")):
             locales[path.stem] = _locale_meta(path)
 
+    if not locales:
+        locales = _manifest_locale_meta(_API_LOCALE_MANIFEST)
+
     if DEFAULT_LOCALE not in locales:
         return {DEFAULT_LOCALE: {"name": "English", "native_name": "English"}}
 
@@ -59,6 +63,27 @@ def _discover_supported_locales() -> dict[str, dict[str, str]]:
     for code in sorted(c for c in locales if c != DEFAULT_LOCALE):
         ordered[code] = locales[code]
     return ordered
+
+
+def _manifest_locale_meta(path: Path) -> dict[str, dict[str, str]]:
+    try:
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    raw_locales = manifest.get("locales", []) if isinstance(manifest, dict) else []
+    if not isinstance(raw_locales, list):
+        return {}
+    locales: dict[str, dict[str, str]] = {}
+    for entry in raw_locales:
+        if not isinstance(entry, dict):
+            continue
+        code = entry.get("code")
+        if not isinstance(code, str) or not code:
+            continue
+        name = entry.get("name") or code
+        native_name = entry.get("native_name") or entry.get("nativeName") or name
+        locales[code] = {"name": str(name), "native_name": str(native_name)}
+    return locales
 
 
 SUPPORTED_LOCALES: dict[str, dict[str, str]] = _discover_supported_locales()

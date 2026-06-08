@@ -1,0 +1,101 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/api-locale-manifest-20260608",
+  "commit_scope": "Package the bundle-discovered locale manifest inside the API image so public agent/API surfaces expose French and Brazilian Portuguese without hardcoded language selection.",
+  "files_owned": [
+    "api/app/data/locale_manifest.json",
+    "api/app/services/translator_service.py",
+    "api/tests/test_concept_views.py",
+    "web/scripts/generate-locale-manifest.mjs",
+    "docs/system_audit/commit_evidence_2026-06-08_api_locale_manifest.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "node web/scripts/generate-locale-manifest.mjs",
+      "cd api && python3 -m pytest -q tests/test_concept_views.py::test_api_locale_manifest_matches_installed_message_bundles tests/test_concept_views.py::test_api_locale_manifest_supports_production_image_fallback tests/test_flow_multilingual.py::test_list_locales_matches_installed_message_bundles",
+      "cd api && python3 - <<'PY' ... translator_service normal and manifest fallback discovery ... PY",
+      "make wellness",
+      "cd web && npm run build",
+      "cd api && python3 -m pytest -q tests/test_flow_multilingual.py tests/test_concept_views.py",
+      "git diff --check"
+    ],
+    "notes": "The web locale manifest generator now writes api/app/data/locale_manifest.json from installed web/messages/*.json bundles. translator_service reads that API-local manifest only when web/messages is unavailable, matching the production API image shape. Focused regression confirms fallback discovery includes en, fr, and pt-br; local smoke confirms fallback discovery includes all installed locales: en, de, es, fr, id, pt-br."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, pull request, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge, Hostinger deploy, and public verification that https://api.coherencycoin.com/api/locales includes fr and pt-br."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Public API and agent-adjacent locale discovery surfaces report the same installed locale set as the web interface, including French and Brazilian Portuguese, even when the deployed API container does not include web/messages.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/locales",
+      "https://coherencycoin.com/hati-suci?lang=fr",
+      "https://coherencycoin.com/hati-suci?lang=pt-br",
+      "https://api.coherencycoin.com/api/agent/tasks"
+    ],
+    "test_flows": [
+      "Public API /api/locales includes fr and pt-br after deploy.",
+      "Public web request with ?lang=fr renders with html lang=\"fr\".",
+      "Public web request with ?lang=pt-br renders with html lang=\"pt-br\".",
+      "Human-through-agent public interaction can create/read a verification task carrying locale context."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete. Public proof waits on PR checks, merge, deploy, and verification."
+  },
+  "idea_ids": [
+    "multilingual-web",
+    "locale-as-data"
+  ],
+  "spec_ids": [
+    "multilingual-web"
+  ],
+  "task_ids": [
+    "api-locale-manifest-20260608"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "public-deploy-request"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "deployment"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/app/data/locale_manifest.json is generated from installed web message bundles and copied by Dockerfile.api through COPY api/ ./.",
+    "api/app/services/translator_service.py falls back to the API-local manifest when web/messages is absent.",
+    "api/tests/test_concept_views.py simulates the production image fallback and verifies Brazilian Portuguese metadata.",
+    "make wellness reports locale parity aligned with en across five non-English tongues."
+  ],
+  "change_files": [
+    "api/app/data/locale_manifest.json",
+    "api/app/services/translator_service.py",
+    "api/tests/test_concept_views.py",
+    "web/scripts/generate-locale-manifest.mjs",
+    "docs/system_audit/commit_evidence_2026-06-08_api_locale_manifest.json"
+  ],
+  "change_intent": "runtime_fix"
+}
