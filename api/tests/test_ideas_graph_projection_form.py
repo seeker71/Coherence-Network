@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[2]
 PROJECTION_PATH = ROOT / "form" / "form-stdlib" / "ideas-graph-projection.fk"
 BAND_PATH = ROOT / "form" / "form-stdlib" / "tests" / "ideas-graph-projection-band.fk"
 IDEA_MODEL_PATH = ROOT / "api" / "app" / "models" / "idea.py"
+KERNEL_ROUTES_PATH = ROOT / "deploy" / "kernel-router" / "production-routes.fk"
 
 
 def _text(path: Path) -> str:
@@ -49,6 +50,9 @@ def test_ideas_graph_projection_emits_required_idea_with_score_fields():
     ):
         assert required_field in text
 
+    assert '"implementing"' in text
+    assert '"impl"' not in text
+
 
 def test_ideas_graph_projection_band_proves_memory_file_and_reopen():
     text = _text(BAND_PATH)
@@ -58,3 +62,16 @@ def test_ideas_graph_projection_band_proves_memory_file_and_reopen():
     assert "igp-test (carrier-file)" in text
     assert "storage-open cf dir" in text
     assert "igp-portfolio-json cf reopened" in text
+
+
+def test_ideas_graph_projection_is_bound_as_native_manifest_preview_route():
+    text = _text(KERNEL_ROUTES_PATH)
+
+    assert "defn route_ideas_graph_projection" in text
+    assert '(list "/api/ideas/graph-projection"    route_ideas_graph_projection)' in text
+    assert "IdeaPortfolioResponse" in text
+    assert "ideas_graph_projection_rows" in text
+    assert '"concept:carrier-boundary"' in text
+    assert "igpr-filter-idea-rows" in text
+    assert '"implementing"' in text
+    assert '"impl"' not in text

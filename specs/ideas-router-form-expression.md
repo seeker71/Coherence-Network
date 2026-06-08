@@ -13,13 +13,13 @@ source:
   - file: api/app/routers/ideas.py
     symbols: [list_ideas, create_idea, update_idea, get_idea]
   - file: api/tests/test_ideas_router_form.py
-    symbols: [test_ideas_router_form_declares_route_shapes_and_whole_structure, test_ideas_router_form_names_shifted_recipe_families, test_ideas_router_form_keeps_python_as_carrier_with_gap_named, test_ideas_router_form_describes_live_router_carrier, test_ideas_router_form_has_native_structure_route, test_ideas_router_form_has_native_source_index_route]
+    symbols: [test_ideas_router_form_declares_route_shapes_and_whole_structure, test_ideas_router_form_names_shifted_recipe_families, test_ideas_router_form_keeps_python_as_carrier_with_gap_named, test_ideas_router_form_describes_live_router_carrier, test_ideas_router_form_has_native_structure_route, test_ideas_router_form_has_native_source_index_route, test_ideas_router_form_has_native_graph_projection_route]
   - file: api/tests/test_runtime_surface_native_routes.py
     symbols: [test_real_manifest_native_routes_are_served_zero_and_include_ideas_structure]
 requirements:
   - "The ideas router has a high-level Form artifact naming its route shape, route recipe shape, whole structure, and shifted recipe families."
   - "The Form artifact names api/app/routers/ideas.py as the FastAPI carrier while preserving existing HTTP behavior."
-  - "The kernel-router production manifest exposes native /api/ideas/router-structure and /api/ideas/source-index routes for the Form-declared router structure and repo-backed idea source index."
+  - "The kernel-router production manifest exposes native /api/ideas/router-structure, /api/ideas/source-index, and /api/ideas/graph-projection routes for the Form-declared router structure, repo-backed idea source index, and fixture-backed graph projection preview."
   - "The kernel-router image carries the ideas source directory so the source-index route is deployable when production routes are selected."
   - "The proof tests verify the Form structure, shifted recipes, Python-carrier boundary, native structure/source routes, and router-to-Form link."
 done_when:
@@ -28,6 +28,7 @@ done_when:
   - 'file_contains("docs/coherence-substrate/ideas-router.form", "route_source: \"api/app/routers/ideas.py\"")'
   - 'file_contains("deploy/kernel-router/production-routes.fk", "(list \"/api/ideas/router-structure\"    route_ideas_router_structure)")'
   - 'file_contains("deploy/kernel-router/production-routes.fk", "(list \"/api/ideas/source-index\"        route_ideas_source_index)")'
+  - 'file_contains("deploy/kernel-router/production-routes.fk", "(list \"/api/ideas/graph-projection\"    route_ideas_graph_projection)")'
   - 'pytest_passes("api/tests/test_ideas_router_form.py")'
 test: "cd api && python3 -m pytest -q tests/test_ideas_router_form.py tests/test_runtime_surface_native_routes.py"
 constraints:
@@ -49,7 +50,8 @@ constraints:
 - [ ] **R3**: The Form artifact names `api/app/routers/ideas.py` as the route carrier and tests confirm the live router still carries the described route surface.
 - [ ] **R4**: `deploy/kernel-router/production-routes.fk` binds `/api/ideas/router-structure` to a native Form handler that returns the router's high-level source-backed structure.
 - [ ] **R5**: `deploy/kernel-router/production-routes.fk` binds `/api/ideas/source-index` to a native Form handler that reads `ideas/INDEX.md` and returns source-backed idea counts.
-- [ ] **R6**: Tests prove the Form structure, recipe families, Python-carrier boundary, native structure/source routes, named remaining DB data-route gap, and router-to-Form link.
+- [ ] **R6**: `deploy/kernel-router/production-routes.fk` binds `/api/ideas/graph-projection` to a native Form handler that returns a fixture-backed `IdeaPortfolioResponse`-shaped body.
+- [ ] **R7**: Tests prove the Form structure, recipe families, Python-carrier boundary, native structure/source/projection routes, named remaining live-storage gap, and router-to-Form link.
 
 ## Research Inputs
 
@@ -78,6 +80,7 @@ constraints:
 - `api/tests/test_ideas_router_form.py::test_ideas_router_form_describes_live_router_carrier`
 - `api/tests/test_ideas_router_form.py::test_ideas_router_form_has_native_structure_route`
 - `api/tests/test_ideas_router_form.py::test_ideas_router_form_has_native_source_index_route`
+- `api/tests/test_ideas_router_form.py::test_ideas_router_form_has_native_graph_projection_route`
 - `api/tests/test_runtime_surface_native_routes.py::test_real_manifest_native_routes_are_served_zero_and_include_ideas_structure`
 
 ## Verification
@@ -95,8 +98,8 @@ python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expressi
 
 ## Gaps
 
-- GAP-I1: `/api/ideas/router-structure` and `/api/ideas/source-index` are kernel-first capable in the production route manifest. Mutable DB-backed portfolio routes still enter through FastAPI until the proven `ideas-graph-projection.fk` read shape is bound into the route manifest and a live storage carrier.
-- Follow-up: lift one graph-node-backed ideas read route on top of `form/form-stdlib/ideas-graph-projection.fk`.
+- GAP-I1: `/api/ideas/router-structure`, `/api/ideas/source-index`, and `/api/ideas/graph-projection` are kernel-first capable in the production route manifest. Mutable DB-backed portfolio routes still enter through FastAPI until a live storage carrier replaces the fixture-backed projection route.
+- Follow-up: connect `/api/ideas/graph-projection` to a live graph storage carrier on top of `form/form-stdlib/ideas-graph-projection.fk`.
 
 ## Risks and Assumptions
 

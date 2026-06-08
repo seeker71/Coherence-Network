@@ -75,10 +75,10 @@ def test_ideas_router_form_keeps_python_as_carrier_with_gap_named():
     assert 'carrier:        "api/app/routers/ideas.py"' in text
     assert "idea_service.list_ideas" in text
     assert "stake_compute_service.execute_stake" in text
-    assert "GAP-I1: /api/ideas/router-structure and /api/ideas/source-index are kernel-first capable" in text
+    assert "GAP-I1: /api/ideas/router-structure, /api/ideas/source-index, and /api/ideas/graph-projection are kernel-first capable" in text
     assert "graph-node-port.fk exposes native get/list/count" in text
-    assert "ideas-graph-projection.fk now emits an IdeaPortfolioResponse-shaped read" in text
-    assert "mutable DB-backed portfolio routes still enter through FastAPI until route-manifest binding" in text
+    assert "ideas-graph-projection.fk emits an IdeaPortfolioResponse-shaped read" in text
+    assert "mutable DB-backed portfolio routes still enter through FastAPI until the live storage carrier lands" in text
 
 
 def test_ideas_router_form_describes_live_router_carrier():
@@ -128,3 +128,17 @@ def test_ideas_router_form_has_native_source_index_route():
     assert '(list "/api/ideas/source-index"        route_ideas_source_index)' in kernel_text
     assert "super_idea_count" in kernel_text
     assert "source-index route reads repo idea source" in kernel_text
+
+
+def test_ideas_router_form_has_native_graph_projection_route():
+    form_text = _form_text()
+    kernel_text = _kernel_routes_text()
+
+    assert 'path: "/api/ideas/graph-projection"' in form_text
+    assert "deploy/kernel-router/production-routes.fk::route_ideas_graph_projection" in form_text
+    assert "fixture graph rows into an IdeaPortfolioResponse-shaped body" in form_text
+
+    assert "defn route_ideas_graph_projection" in kernel_text
+    assert '(list "/api/ideas/graph-projection"    route_ideas_graph_projection)' in kernel_text
+    assert "live DB-backed /api/ideas fan-out" in kernel_text
+    assert '\\"pagination\\":{\\"total\\":' in kernel_text

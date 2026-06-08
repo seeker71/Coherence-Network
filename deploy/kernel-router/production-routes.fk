@@ -36,6 +36,7 @@
 ;   /api/attention/kernel-runtime     live kernel router metrics -> attention axes
 ;   /api/ideas/router-structure       Form-native ideas route structure reading
 ;   /api/ideas/source-index           Form-native read of ideas/INDEX.md
+;   /api/ideas/graph-projection       Form-native graph rows -> IdeaPortfolioResponse
 ;
 ; Each native handler replicates its live route's FULL contract:
 ;   - parses the SAME query params FastAPI declares (with the SAME defaults),
@@ -58,6 +59,7 @@
 ;   curl ':PORT/api/utils/weighted_average?values=1,1&weights=1,1' -> live-api JSON
 ;   curl ':PORT/api/ideas/router-structure'              -> native Form route reading
 ;   curl ':PORT/api/ideas/source-index'                  -> native source-index data
+;   curl ':PORT/api/ideas/graph-projection'              -> native graph projection preview
 ;   curl ':PORT/api/ideas'                               -> fan-out -> CPython upstream
 
 ; ===========================================================================
@@ -1539,6 +1541,124 @@
         ",\"carrier_boundary\":\"source-index route reads repo idea source; mutable DB-backed /api/ideas/count still fans out\""
         ",\"runtime\":\"inline\"}")))))
 
+; ===========================================================================
+; /api/ideas/graph-projection
+;   native projection route for graph-node-shaped rows. This binds the same
+;   portfolio response shape proven in form-stdlib/ideas-graph-projection.fk into
+;   the production manifest, while keeping live DB-backed /api/ideas fan-out.
+;   The rows here are deliberate fixture graph rows until a live carrier lands.
+; ===========================================================================
+
+(defn ideas_graph_projection_rows ()
+  (list
+    (list "idea:form-native-read" "idea" "Form-native idea read" "Projected from graph rows by the kernel-router" "water")
+    (list "idea:evidence-bound" "idea" "Evidence-bound idea" "Validated graph projection route" "ice")
+    (list "concept:carrier-boundary" "concept" "Carrier boundary" "Filtered non-idea row" "gas")))
+
+(defn igpr-row-id (row) (head row))
+(defn igpr-row-type (row) (head (tail row)))
+(defn igpr-row-name (row) (head (tail (tail row))))
+(defn igpr-row-description (row) (head (tail (tail (tail row)))))
+(defn igpr-row-phase (row) (head (tail (tail (tail (tail row))))))
+
+(defn igpr-filter-idea-rows (rows)
+  (if (eq (len rows) 0)
+      (list)
+      (if (str_eq (igpr-row-type (head rows)) "idea")
+          (cons (head rows) (igpr-filter-idea-rows (tail rows)))
+          (igpr-filter-idea-rows (tail rows)))))
+
+(defn igpr-status-from-phase (phase)
+  (if (str_eq phase "ice") "validated"
+      (if (str_eq phase "water") "partial" "none")))
+
+(defn igpr-stage-from-status (status)
+  (if (str_eq status "validated") "complete"
+      (if (str_eq status "partial") "implementing" "none")))
+
+(defn igpr-idea-json (row)
+  (do (let id (igpr-row-id row))
+  (do (let status (igpr-status-from-phase (igpr-row-phase row)))
+  (do (let stage (igpr-stage-from-status status))
+      (str_concat_all (list
+        "{\"id\":" (json_string id)
+        ",\"name\":" (json_string (igpr-row-name row))
+        ",\"description\":" (json_string (igpr-row-description row))
+        ",\"potential_value\":0.0"
+        ",\"actual_value\":0.0"
+        ",\"estimated_cost\":0.0"
+        ",\"actual_cost\":0.0"
+        ",\"resistance_risk\":1.0"
+        ",\"confidence\":0.5"
+        ",\"manifestation_status\":" (json_string status)
+        ",\"interfaces\":[]"
+        ",\"open_questions\":[]"
+        ",\"idea_type\":\"standalone\""
+        ",\"parent_idea_id\":null"
+        ",\"child_idea_ids\":[]"
+        ",\"stage\":" (json_string stage)
+        ",\"work_type\":null"
+        ",\"lifecycle\":\"active\""
+        ",\"duplicate_of\":null"
+        ",\"last_activity_at\":null"
+        ",\"value_basis\":null"
+        ",\"cost_vector\":null"
+        ",\"value_vector\":null"
+        ",\"tags\":[]"
+        ",\"workspace_git_url\":null"
+        ",\"slug\":" (json_string id)
+        ",\"slug_history\":[]"
+        ",\"is_curated\":false"
+        ",\"pillar\":null"
+        ",\"workspace_id\":\"coherence-network\""
+        ",\"rollup_condition\":null"
+        ",\"free_energy_score\":0.0"
+        ",\"value_gap\":0.0"
+        ",\"content_markdown\":\"\""
+        ",\"marginal_cc_score\":0.0"
+        ",\"selection_weight\":0.0"
+        ",\"remaining_cost_cc\":0.0"
+        ",\"value_gap_cc\":0.0"
+        ",\"roi_cc\":0.0"
+        "}"))))))
+
+(defn igpr-idea-json-list (rows)
+  (if (eq (len rows) 0)
+      ""
+      (if (eq (len rows) 1)
+          (igpr-idea-json (head rows))
+          (str_concat (igpr-idea-json (head rows))
+                      (str_concat "," (igpr-idea-json-list (tail rows)))))))
+
+(defn igpr-count-validated (rows)
+  (if (eq (len rows) 0)
+      0
+      (add (if (str_eq (igpr-status-from-phase (igpr-row-phase (head rows))) "validated") 1 0)
+           (igpr-count-validated (tail rows)))))
+
+(defn igpr-portfolio-json-from-rows (rows)
+  (do (let total (len rows))
+  (do (let validated (igpr-count-validated rows))
+  (do (let unvalidated (sub total validated))
+      (str_concat_all (list
+        "{\"ideas\":[" (igpr-idea-json-list rows) "]"
+        ",\"summary\":{\"total_ideas\":" (value_str total)
+        ",\"unvalidated_ideas\":" (value_str unvalidated)
+        ",\"validated_ideas\":" (value_str validated)
+        ",\"total_potential_value\":0.0"
+        ",\"total_actual_value\":0.0"
+        ",\"total_value_gap\":0.0}"
+        ",\"pagination\":{\"total\":" (value_str total)
+        ",\"limit\":" (value_str (max2 total 1))
+        ",\"offset\":0"
+        ",\"returned\":" (value_str total)
+        ",\"has_more\":false}"
+        "}"))))))
+
+(defn route_ideas_graph_projection (q)
+  (igpr-portfolio-json-from-rows
+    (igpr-filter-idea-rows (ideas_graph_projection_rows))))
+
 (defn route_health (q) "ok")
 
 ; ===========================================================================
@@ -1601,4 +1721,5 @@ section [form.route] {
     (list "/api/utils/concept_match_score"     route_concept_match_score)
     (list "/api/attention/kernel-runtime"  route_attention_kernel_runtime)
     (list "/api/ideas/router-structure"    route_ideas_router_structure)
-    (list "/api/ideas/source-index"        route_ideas_source_index)))
+    (list "/api/ideas/source-index"        route_ideas_source_index)
+    (list "/api/ideas/graph-projection"    route_ideas_graph_projection)))
