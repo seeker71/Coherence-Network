@@ -26,7 +26,19 @@ section [form.bml] {
     def kh-nonempty-string?(value) = gt(str_len(value), 0);
     def kh-path-valid?(path) = if gt(str_len(path), 0) then str_eq(char_at(path, 0), "/") else false;
     def kh-prefix?(text, prefix) = if gt(str_len(prefix), str_len(text)) then false else str_eq(substring(text, 0, str_len(prefix)), prefix);
-    def kh-method-known?(method) = or(str_eq(method, "GET"), or(str_eq(method, "POST"), or(str_eq(method, "PUT"), or(str_eq(method, "PATCH"), str_eq(method, "DELETE")))));
+
+    // HTTP header names are ASCII case-insensitive. Keep the normalization here
+    // in Form so route-required headers, response finalization, and handler
+    // helpers all see the same protocol truth without host-side special casing.
+    def kh-ascii-lower-char(c) {
+        let cp = ord(c);
+        if and(ge(cp, 65), le(cp, 90)) then char_at("abcdefghijklmnopqrstuvwxyz", sub(cp, 65)) else c;
+    }
+    def kh-ascii-lower-loop(text, i) = if ge(i, str_len(text)) then "" else str_concat(kh-ascii-lower-char(char_at(text, i)), kh-ascii-lower-loop(text, add(i, 1)));
+    def kh-ascii-lower(text) = kh-ascii-lower-loop(text, 0);
+    def kh-str-eq-ci?(left, right) = str_eq(kh-ascii-lower(left), kh-ascii-lower(right));
+
+    def kh-method-known?(method) = or(str_eq(method, "GET"), or(str_eq(method, "HEAD"), or(str_eq(method, "POST"), or(str_eq(method, "PUT"), or(str_eq(method, "PATCH"), or(str_eq(method, "DELETE"), str_eq(method, "OPTIONS")))))));
     def kh-route-method-valid?(method) = or(kh-method-known?(method), str_eq(method, "ANY"));
 
     def kh-header(name, value) = list(kh_tag_header, name, value);
@@ -34,8 +46,8 @@ section [form.bml] {
     def kh-header-name(header) = nth(header, 1);
     def kh-header-value(header) = nth(header, 2);
     def kh-headers-valid?(headers) = if nil?(headers) then true else if kh-header?(head(headers)) then kh-headers-valid?(tail(headers)) else false;
-    def kh-header-present?(headers, name) = if nil?(headers) then false else if str_eq(kh-header-name(head(headers)), name) then true else kh-header-present?(tail(headers), name);
-    def kh-header-value-or(headers, name, default_value) = if nil?(headers) then default_value else if str_eq(kh-header-name(head(headers)), name) then kh-header-value(head(headers)) else kh-header-value-or(tail(headers), name, default_value);
+    def kh-header-present?(headers, name) = if nil?(headers) then false else if kh-str-eq-ci?(kh-header-name(head(headers)), name) then true else kh-header-present?(tail(headers), name);
+    def kh-header-value-or(headers, name, default_value) = if nil?(headers) then default_value else if kh-str-eq-ci?(kh-header-name(head(headers)), name) then kh-header-value(head(headers)) else kh-header-value-or(tail(headers), name, default_value);
     def kh-header-observation(headers, name) = if str_eq(name, "") then "not-required" else if kh-header-present?(headers, name) then "present" else "missing";
 
     def kh-field(name, value) = list(kh_tag_field, name, value);
@@ -92,7 +104,8 @@ section [form.bml] {
 
     def kh-pattern-wildcard?(pattern) = if gt(str_len(pattern), 0) then str_eq(char_at(pattern, sub(str_len(pattern), 1)), "*") else false;
     def kh-pattern-prefix(pattern) = if kh-pattern-wildcard?(pattern) then substring(pattern, 0, sub(str_len(pattern), 1)) else pattern;
-    def kh-method-pressure(route, request) = if str_eq(kh-route-method(route), kh-request-method(request)) then 0 else if str_eq(kh-route-method(route), "ANY") then 40 else 400;
+    def kh-head-through-get?(route, request) = and(str_eq(kh-route-method(route), "GET"), str_eq(kh-request-method(request), "HEAD"));
+    def kh-method-pressure(route, request) = if str_eq(kh-route-method(route), kh-request-method(request)) then 0 else if kh-head-through-get?(route, request) then 20 else if str_eq(kh-route-method(route), "ANY") then 40 else 400;
     def kh-path-pressure(route, request) = if str_eq(kh-route-pattern(route), kh-request-path(request)) then 0 else if and(kh-pattern-wildcard?(kh-route-pattern(route)), kh-prefix?(kh-request-path(request), kh-pattern-prefix(kh-route-pattern(route)))) then 25 else 500;
     def kh-header-pressure(route, request) = if str_eq(kh-route-required-header(route), "") then 0 else if kh-header-present?(kh-request-headers(request), kh-route-required-header(route)) then 0 else 120;
     def kh-budget-pressure(total, budget) = if le(total, budget) then 0 else sub(total, budget);

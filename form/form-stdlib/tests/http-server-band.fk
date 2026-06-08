@@ -5,13 +5,14 @@
 ; Server. Proves the full dispatch — a raw HTTP/1.1 request string flows
 ; parse -> Router -> handler -> render -> wire — across every shape: two matched
 ; routes (one whose handler reads the request and declares its own content-type),
-; an unmatched path (404 naming what missed), and a matched route whose handler
-; is unregistered (500, the wiring gap made visible).
+; an unmatched path (404 naming what missed), a matched route whose handler is
+; unregistered (500, the wiring gap made visible), HEAD through GET with no body,
+; case-insensitive required headers, and a generic OPTIONS invitation.
 ;
 ; The handlers, routes, and registry are DEMO data this band supplies; the
 ; Server names none of them — it is one generic flow over data. Emits a bit-sum
-; (63 when all pass). Identical across Go/Rust/TS proves the dispatch — including
-; the first-class handler call — is correct and portable.
+; (511 when all pass). Identical across Go/Rust/TS proves the dispatch —
+; including the first-class handler call — is correct and portable.
 
 ;; demo handlers : handler(kh-request) -> kh-response. A handler reads the
 ;; request through the Request class and returns a Response; it never sees
@@ -68,10 +69,29 @@
 (let r-blocked (kh-serve demo-routes demo-registry "GET /blocked HTTP/1.1\r\nHost: x\r\n\r\n"))
 (let ok-blocked (if (ge (str_find r-blocked "HTTP/1.1 404 Not Found\r\n" 0) 0) 32 0))
 
-;; verdict — sum of the bit-weighted checks; 63 when all pass.
+;; CHECK 7 (bit 64) — HEAD /health can use the GET route, but the server sends
+;; no response body. This welcomes health probes/caches without duplicating every
+;; GET handler as a HEAD handler.
+(let r-head (kh-serve demo-routes demo-registry "HEAD /health HTTP/1.1\r\nHost: x\r\n\r\n"))
+(let ok-head (if (str_eq r-head "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 0\r\nX-Form-Router: native-kernel\r\n\r\n") 64 0))
+
+;; CHECK 8 (bit 128) — a lowercased required header still satisfies the route,
+;; matching HTTP's case-insensitive header-name rule.
+(let r-blocked-present (kh-serve demo-routes demo-registry "GET /blocked HTTP/1.1\r\nHost: x\r\nx-missing: yes\r\n\r\n"))
+(let ok-blocked-present (if (ge (str_find r-blocked-present "HTTP/1.1 200 OK\r\n" 0) 0) 128 0))
+
+;; CHECK 9 (bit 256) — unmatched OPTIONS gets a native no-body invitation with
+;; an Allow header instead of looking like an ordinary route miss.
+(let r-options (kh-serve demo-routes demo-registry "OPTIONS /nope HTTP/1.1\r\nHost: x\r\nOrigin: https://coherencycoin.com\r\n\r\n"))
+(let ok-options (if (and (ge (str_find r-options "HTTP/1.1 204 No Content\r\n" 0) 0) (ge (str_find r-options "Allow: GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS\r\n" 0) 0)) 256 0))
+
+;; verdict — sum of the bit-weighted checks; 511 when all pass.
 (add ok-health
 (add ok-echo
 (add ok-404
 (add ok-404-body
 (add ok-ghost
-     ok-blocked)))))
+(add ok-blocked
+(add ok-head
+(add ok-blocked-present
+     ok-options))))))))

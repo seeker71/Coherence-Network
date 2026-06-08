@@ -2,14 +2,18 @@
 ;
 ; preludes: form-stdlib/core.fk form-stdlib/kernel-http.fk
 ;
-; Band verdict: 536872066 when constructors/accessors, validation, pressure
-; matrices, route choice receipts, route-choice signatures, eligible route
-; candidates, and highest-score selection all agree.
+; Band verdict: 536893066 when constructors/accessors, validation, pressure
+; matrices, route choice receipts, route-choice signatures, broader method
+; invitation, header case matching, eligible route candidates, and highest-score
+; selection all agree.
 
 section [form.bml] {
     def kh-kernel-http-band-score() {
         let query = list(kh-field("limit", "20"), kh-field("source", "router"));
         let request = kh-request("GET", "/api/runtime/health", list(kh-header("Host", "api.coherencycoin.com"), kh-header("Accept", "application/json")), query, "");
+        let lower_header_request = kh-request("GET", "/api/runtime/health", list(kh-header("host", "api.coherencycoin.com"), kh-header("accept", "application/json")), query, "");
+        let head_request = kh-request("HEAD", "/api/runtime/health", list(kh-header("Accept", "application/json")), query, "");
+        let options_request = kh-request("OPTIONS", "/api/runtime/health", list(kh-header("Origin", "https://coherencycoin.com")), list(), "");
         let response = kh-response(200, list(kh-header("Content-Type", "application/json")), "body-ok");
         let exact_route = kh-route("runtime-health", "GET", "/api/runtime/health", 9, "kh-runtime-health", "Accept", 25);
         let tail_route = kh-route("api-tail", "ANY", "/api/*", 3, "kh-api-tail", "", 80);
@@ -17,12 +21,15 @@ section [form.bml] {
         let blocked_route = kh-route("blocked-runtime", "GET", "/api/runtime/health", 99, "kh-blocked-runtime", "X-Missing", 0);
         let fallback_route = kh-route("runtime-prefix", "ANY", "/api/runtime/*", 1, "kh-runtime-prefix", "", 80);
         let exact_candidate = kh-route-candidate(exact_route, request);
+        let lower_header_candidate = kh-route-candidate(exact_route, lower_header_request);
+        let head_candidate = kh-route-candidate(exact_route, head_request);
         let tail_candidate = kh-route-candidate(tail_route, request);
         let wrong_candidate = kh-route-candidate(wrong_route, request);
         let blocked_candidate = kh-route-candidate(blocked_route, request);
         let stale_candidate = list(kh_tag_route_candidate, exact_route, request, kh-route-candidate-matrix(exact_candidate), 5, kh-candidate-score-from(exact_route, 5));
         let routes = list(wrong_route, tail_route, exact_route);
         let selected = kh-select-route-candidate-for-request(routes, request);
+        let head_selected = kh-select-route-candidate-for-request(routes, head_request);
         let selected_score = kh-select-route-score(routes, request);
         let selected_name = kh-route-name(kh-route-candidate-route(selected));
         let fallback_selected = kh-select-route-candidate-for-request(list(blocked_route, fallback_route), request);
@@ -69,6 +76,9 @@ section [form.bml] {
             kh-bool-score(and(eq(kh-route-decision-signature-pressure-bucket(blocked_signature), 3), if kh-route-decision-signature-eligible?(blocked_signature) then false else true), 67108864),
             kh-bool-score(and(kh-route-decision-signature-selected?(fallback_decision_signature), eq(kh-route-decision-signature-score-bucket(fallback_decision_signature), 3)), 134217728),
             kh-bool-score(and(kh-route-decision-signature-selected?(exact_signature), eq(kh-route-decision-signature-pressure-bucket(exact_signature), 0)), 268435456),
+            kh-bool-score(and(kh-header-present?(kh-request-headers(lower_header_request), "Accept"), eq(kh-route-candidate-pressure(lower_header_candidate), 0)), 3000),
+            kh-bool-score(and(eq(kh-route-candidate-pressure(head_candidate), 20), str_eq(kh-route-name(kh-route-candidate-route(head_selected)), "runtime-health")), 7000),
+            kh-bool-score(kh-request-valid?(options_request), 11000),
             kh-route-candidate-score(selected),
             kh-route-candidate-pressure(tail_candidate)
         ));
