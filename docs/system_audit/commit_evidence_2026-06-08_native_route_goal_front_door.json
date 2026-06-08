@@ -1,0 +1,120 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/native-north-star-parallel-20260608",
+  "commit_scope": "Add Form/BML-native route-goal attention cells, lift /api/attention/kernel-runtime into the RouteCell route-data surface, and teach the runtime-surface sensor to see higher-grammar route-data refs.",
+  "files_owned": [
+    "api/tests/test_runtime_surface_native_routes.py",
+    "deploy/kernel-router/production-routes-data.json",
+    "deploy/kernel-router/production-routes.fk",
+    "docs/system_audit/commit_evidence_2026-06-08_native_route_goal_front_door.json",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/production_routes_harness.py",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-stdlib/native-route-goal-cells.fk",
+    "form/form-stdlib/tests/native-route-goal-cells-band.fk",
+    "form/user-blueprint-registry.md",
+    "scripts/runtime_surface_report.py"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/native-north-star-parallel-20260608 && make prompt-guide",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/native-north-star-parallel-20260608/form && ./validate.sh form-stdlib/core.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/native-north-star-parallel-20260608/form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/native-north-star-parallel-20260608 && python3 scripts/gen_bp_table.py && python3 -m json.tool form/form-stdlib/blueprint-registry.json >/tmp/native-route-goal-registry.json && python3 scripts/scan_form_blueprints.py --check",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/native-north-star-parallel-20260608 && pytest -q api/tests/test_runtime_surface_native_routes.py",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/native-north-star-parallel-20260608 && python3 scripts/runtime_surface_report.py --json",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/native-north-star-parallel-20260608/form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/kernel-http.fk form-stdlib/language-model.fk form-stdlib/tests/source-language-route-class-template-band.fk",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/native-north-star-parallel-20260608 && ./scripts/check_route_manifests.sh",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/native-north-star-parallel-20260608 && python3 form/form-kernel-rust/production_routes_harness.py"
+    ],
+    "notes": "Route-goal source and binary proofs both returned 65535 with 1 ok, 0 divergent. The proof uses live production runtime-event observations sampled on 2026-06-08: /api/meetings/anonymous-traces 197 calls p50 111ms p95 1082ms 66 errors; /api/workspaces/coherence-network/vitality 86 calls p50 78ms p95 262ms; /api/ideas 63 calls p50 489ms p95 1619ms; /api/household/events 64 calls p50 2ms p95 126ms; /api/substrate/form 43 calls p50 6ms p95 9ms. The route-goal band selected /api/meetings/anonymous-traces as the highest-pressure high-grammar handler candidate after north-star fit weighting. The first attempted repo-local pytest command used api/.venv/bin/pytest, but this fresh worktree has no api/.venv; the focused test was rerun with the available pytest and passed."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until this branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Production verification is pending until PR checks pass, the branch is merged, deployment completes, and public verification runs."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The native front-door loop can now rank observed API routes in Form/BML using traffic, p50/p95 latency, errors, handler grammar, native state, user flow, and north-star fit; /api/attention/kernel-runtime is authored through the higher-grammar RouteCell route-data surface and still loads as a native-kernel route.",
+    "public_endpoints": [
+      "/api/attention/kernel-runtime",
+      "/api/runtime/endpoints/summary",
+      "/api/runtime/events"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk",
+      "python3 scripts/runtime_surface_report.py --json",
+      "python3 form/form-kernel-rust/production_routes_harness.py"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local source, binary, route-surface, manifest, and production-router harness proofs pass. CI, PR review, merge, deploy, and public verification remain pending."
+  },
+  "idea_ids": [
+    "native-kernel-front-door",
+    "form-bml-native-substrate-surfaces",
+    "route-attention-observability"
+  ],
+  "spec_ids": [
+    "native-route-goal-front-door"
+  ],
+  "task_ids": [
+    "native-route-goal-front-door-2026-06-08"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/native-route-goal-cells.fk defines NATIVE-ROUTE-OBS, NATIVE-ROUTE-ATTENTION, and NATIVE-ROUTE-GOAL cells with flow and north-star fit so route promotion is not frequency-only.",
+    "form/form-stdlib/tests/native-route-goal-cells-band.fk returns 65535 across source and binary sibling-kernel execution, and includes a scaled fit calculation that avoided a TypeScript integer overflow divergence found during validation.",
+    "deploy/kernel-router/production-routes.fk now declares AttentionKernelRuntimeRoute as RouteCell<KernelHTTPRequest, KernelHTTPResponse> and binds it through kh-route-data-ref rather than the raw path/handler row.",
+    "deploy/kernel-router/production-routes-data.json carries the /api/attention/kernel-runtime route metadata for the route-data ref.",
+    "scripts/runtime_surface_report.py resolves kh-route-data-ref rows through production-routes-data.json, so lifted higher-grammar route declarations remain visible in the kernel-first capable count.",
+    "python3 scripts/runtime_surface_report.py --json reports total_routes=812, kernel_served_routes=22, kernel_first_capable_routes=23, with /api/attention/kernel-runtime visible from the route-data ref.",
+    "python3 form/form-kernel-rust/production_routes_harness.py passed after rebase: all 109 promoted utility route checks value-identical to the local CPython oracle, /api/attention/kernel-runtime returned 200 with X-Form-Router=native-kernel, fan-out /api/health still flowed, and native p50 was 0.649ms vs CPython p50 13.219ms in the final run."
+  ],
+  "change_files": [
+    "api/tests/test_runtime_surface_native_routes.py",
+    "deploy/kernel-router/production-routes-data.json",
+    "deploy/kernel-router/production-routes.fk",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/production_routes_harness.py",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-stdlib/native-route-goal-cells.fk",
+    "form/form-stdlib/tests/native-route-goal-cells-band.fk",
+    "form/user-blueprint-registry.md",
+    "scripts/runtime_surface_report.py"
+  ],
+  "change_intent": "runtime_feature"
+}
