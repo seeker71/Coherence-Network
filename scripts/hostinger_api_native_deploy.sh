@@ -22,12 +22,6 @@ need curl
 need jq
 need perl
 need gh
-need docker
-
-if ! docker compose version >/dev/null 2>&1; then
-  echo "docker compose is required" >&2
-  exit 2
-fi
 
 if [[ -z "${HOSTINGER_API_TOKEN:-}" ]]; then
   echo "HOSTINGER_API_TOKEN is required" >&2
@@ -53,8 +47,6 @@ trap 'rm -rf "$tmp_dir"' EXIT
 
 project_json="$tmp_dir/project.json"
 compose_in="$tmp_dir/docker-compose.yml"
-compose_rebased="$tmp_dir/docker-compose.rebased.yml"
-compose_overlay="$tmp_dir/docker-compose.kernel-front-door.yml"
 compose_out="$tmp_dir/docker-compose.api-native.yml"
 env_in="$tmp_dir/project.env"
 env_out="$tmp_dir/project.updated.env"
@@ -86,58 +78,7 @@ GIT_CONTEXT="$git_context" PULSE_CONTEXT="$pulse_context" perl -0pe '
   if ($_ !~ /DEPLOYED_SHA:\s*\$\{DEPLOYED_SHA\}/) {
     s{(NEXT_PUBLIC_API_URL:\s*\$\{NEXT_PUBLIC_API_URL\}\n)}{$1        DEPLOYED_SHA: \${DEPLOYED_SHA}\n};
   }
-' "$compose_in" > "$compose_rebased"
-
-cat > "$compose_overlay" <<YAML
-services:
-  api:
-    labels:
-      traefik.enable: "false"
-
-  kernel-router:
-    build:
-      context: ${git_context}
-      dockerfile: Dockerfile.kernel-router
-    image: coherence-network-kernel-router:\${DEPLOYED_SHA}
-    restart: unless-stopped
-    environment:
-      UPSTREAM_URL: http://api:8000
-      KERNEL_ROUTER_PORT: "8080"
-      ROUTES_FILE: /routes/production-routes.fk
-      STDLIB_DIR: /app/form/form-stdlib
-    depends_on:
-      - api
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.coherence-api.rule=Host(\`api.coherencycoin.com\`)"
-      - "traefik.http.routers.coherence-api.entrypoints=websecure"
-      - "traefik.http.routers.coherence-api.tls.certresolver=letsencrypt"
-      - "traefik.http.services.coherence-api.loadbalancer.server.port=8080"
-YAML
-
-docker compose \
-  --project-name "$PROJECT_NAME" \
-  -f "$compose_rebased" \
-  -f "$compose_overlay" \
-  config --no-interpolate \
-  > "$compose_out"
-
-if ! grep -q 'kernel-router:' "$compose_out"; then
-  echo "hostinger-api-native: kernel-router service missing after compose merge" >&2
-  exit 1
-fi
-if ! grep -q 'ROUTES_FILE: /routes/production-routes.fk' "$compose_out"; then
-  echo "hostinger-api-native: production routes manifest missing after compose merge" >&2
-  exit 1
-fi
-if ! grep -q 'traefik.enable=false' "$compose_out"; then
-  echo "hostinger-api-native: api service was not removed from public Traefik routing" >&2
-  exit 1
-fi
-if ! grep -q 'traefik.http.services.coherence-api.loadbalancer.server.port=8080' "$compose_out"; then
-  echo "hostinger-api-native: kernel-router Traefik service port missing after compose merge" >&2
-  exit 1
-fi
+' "$compose_in" > "$compose_out"
 
 awk -v sha="$TARGET_SHA" '
   BEGIN {
@@ -174,7 +115,7 @@ jq -n \
   '{project_name: $project_name, content: $content, environment: $environment}' \
   > "$request_json"
 
-echo "hostinger-api-native: deploying project=${PROJECT_NAME} vm=${VM_ID} target=${TARGET_SHA} front-door=kernel-router"
+echo "hostinger-api-native: deploying project=${PROJECT_NAME} vm=${VM_ID} target=${TARGET_SHA}"
 
 http_status="$(
   curl -sS -w '%{http_code}' \

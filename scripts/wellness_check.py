@@ -1642,42 +1642,24 @@ def sense_kernel_api() -> list[str]:
         # WHOLE lifecycle in Form, proven byte-identical in shadow — the CAPABLE
         # surface, read from the one source (runtime_surface_report, no duplicated
         # parse). Track runtime-share, not route-count.
-        runtime_surface = None
         n_capable = None
-        n_kernel_first = None
         rsr_path = ROOT / "scripts" / "runtime_surface_report.py"
         if rsr_path.is_file():
             try:
                 _spec = importlib.util.spec_from_file_location("runtime_surface_report", rsr_path)
                 _rsr = importlib.util.module_from_spec(_spec)  # type: ignore[arg-type]
                 _spec.loader.exec_module(_rsr)  # type: ignore[union-attr]
-                runtime_surface = _rsr.build_report()
-                n_capable = runtime_surface.get("kernel_first_capable_routes")
-                n_kernel_first = runtime_surface.get("kernel_first_served_routes")
+                n_capable = len(_rsr.kernel_first_capable_routes())
             except Exception:
                 n_capable = None
         if n_capable:
-            probe = (runtime_surface or {}).get("kernel_first_front_door_probe") or {}
-            router = probe.get("x_form_router") or "<missing>"
-            if n_kernel_first:
-                lines.append(
-                    f"  vitality: runtime-share — {n_kernel_first} routes served "
-                    f"kernel-FIRST at the live front door, inferred from "
-                    f"X-Form-Router={router}; {n_capable} routes are capable in the "
-                    "production manifest (scripts/runtime_surface_report.py)"
-                )
-            elif probe.get("reachable"):
-                lines.append(
-                    f"  vitality: runtime-share — 0 routes served kernel-FIRST at the "
-                    f"front door (probe X-Form-Router={router}); {n_capable} are "
-                    "kernel-first CAPABLE and proven in the production-route harness"
-                )
-            else:
-                lines.append(
-                    f"  vitality: runtime-share — live front-door unread; {n_capable} "
-                    "routes are kernel-first CAPABLE and proven in the production-route "
-                    "harness (scripts/runtime_surface_report.py)"
-                )
+            lines.append(
+                f"  vitality: runtime-share — 0 routes served kernel-FIRST at the front "
+                f"door (those {n_served} run the kernel as a guest-subroutine inside "
+                f"CPython), but {n_capable} are kernel-first CAPABLE: native handlers "
+                "proven byte-identical in shadow, whole lifecycle in Form, awaiting the "
+                "front-door flip (scripts/runtime_surface_report.py)"
+            )
         else:
             lines.append(
                 "  vitality: runtime-share — those routes run the kernel as a "

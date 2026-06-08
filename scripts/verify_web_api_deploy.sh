@@ -28,7 +28,6 @@ VERIFY_REQUIRE_TELEGRAM_ALERTS="${VERIFY_REQUIRE_TELEGRAM_ALERTS:-0}"
 VERIFY_REQUIRE_PROVIDER_READINESS="${VERIFY_REQUIRE_PROVIDER_READINESS:-0}"
 VERIFY_REQUIRE_API_HEALTH_SHA="${VERIFY_REQUIRE_API_HEALTH_SHA:-0}"
 VERIFY_REQUIRE_WEB_HEALTH_PROXY_SHA="${VERIFY_REQUIRE_WEB_HEALTH_PROXY_SHA:-0}"
-VERIFY_REQUIRE_KERNEL_FRONT_DOOR="${VERIFY_REQUIRE_KERNEL_FRONT_DOOR:-0}"
 PULSE_RECHECK_SECONDS="${PULSE_RECHECK_SECONDS:-30}"
 
 run_with_retries() {
@@ -434,43 +433,6 @@ check_cors() {
 
   echo "FAIL: CORS origin is not allowed or health endpoint failed"
   return 1
-}
-
-check_kernel_front_door() {
-  local probe_url="${API_URL%/}/api/attention/kernel-runtime"
-  local headers_file="$TMP_DIR/kernel_front_door.headers.txt"
-  local body_file="$TMP_DIR/kernel_front_door.body.json"
-
-  echo
-  echo "==> Kernel front-door check: ${probe_url}"
-
-  local status
-  status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -L -D "$headers_file" -o "$body_file" -w "%{http_code}" \
-    --max-time "$CURL_MAX_TIME" \
-    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
-    -H "Cache-Control: no-cache" \
-    "$probe_url" || true)"
-  local router_header
-  router_header="$(awk 'tolower($1) == "x-form-router:" { print $2 }' "$headers_file" | tail -n 1 | tr -d '\r')"
-  echo "HTTP status: ${status:-unknown}"
-  echo "X-Form-Router: ${router_header:-<missing>}"
-
-  if [[ -z "$status" || "$status" -lt 200 || "$status" -ge 400 ]]; then
-    echo "FAIL: native front-door probe endpoint unavailable"
-    head -c 300 "$body_file" || true
-    echo
-    return 1
-  fi
-
-  if [[ "$router_header" != "native-kernel" ]]; then
-    echo "FAIL: public API is not served by the kernel-router front door"
-    head -c 300 "$body_file" || true
-    echo
-    return 1
-  fi
-
-  echo "PASS"
-  return 0
 }
 
 check_persistence_contract() {
@@ -902,12 +864,6 @@ check_api_runtime_sha \
   "${API_URL%/}/api/health" \
   "${API_URL%/}/api/gates/main-head" \
   "$VERIFY_REQUIRE_API_HEALTH_SHA" || fail=1
-if [[ "$VERIFY_REQUIRE_KERNEL_FRONT_DOOR" == "1" ]]; then
-  check_kernel_front_door || fail=1
-else
-  echo
-  echo "==> Skipping kernel front-door gate (VERIFY_REQUIRE_KERNEL_FRONT_DOOR=0)"
-fi
 if [[ "$VERIFY_REQUIRE_PERSISTENCE_CHECK" == "1" ]]; then
   check_persistence_contract "${API_URL%/}/api/health/persistence" || fail=1
 else
