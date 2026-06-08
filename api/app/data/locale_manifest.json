@@ -1,0 +1,35 @@
+{
+  "default": "en",
+  "locales": [
+    {
+      "code": "en",
+      "name": "English",
+      "native_name": "English"
+    },
+    {
+      "code": "de",
+      "name": "German",
+      "native_name": "Deutsch"
+    },
+    {
+      "code": "es",
+      "name": "Spanish",
+      "native_name": "Español"
+    },
+    {
+      "code": "fr",
+      "name": "French",
+      "native_name": "Français"
+    },
+    {
+      "code": "id",
+      "name": "Indonesian",
+      "native_name": "Bahasa Indonesia"
+    },
+    {
+      "code": "pt-br",
+      "name": "Brazilian Portuguese",
+      "native_name": "Português (Brasil)"
+    }
+  ]
+}
