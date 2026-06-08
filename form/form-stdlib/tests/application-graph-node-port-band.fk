@@ -1,0 +1,61 @@
+; tests/application-graph-node-port-band.fk -- application graph table SQL.
+;
+; preludes: form-stdlib/core.fk form-stdlib/application-graph-node-port.fk
+;
+; Band verdict: 1111 when the application graph carrier proves:
+;   SQL parity cases pass              -> 1
+;   create carries idea/spec examples  -> 10
+;   update carries field-change list   -> 100
+;   delete carries edge cleanup first  -> 1000
+
+(do
+    (let parity-ok (if (eq (agn-application-graph-sql-test) 111111) 1 0))
+
+    (let idea-create (agn-create-node-sql
+        "rev-idea-create"
+        "idea:north-star"
+        "idea"
+        "North star"
+        "Mutable idea carried by application graph tables"
+        "gas"
+        "{\"stage\":\"none\",\"workspace_id\":\"coherence-network\"}"
+        "api"
+        "agent:codex"))
+    (let spec-create (agn-create-node-sql
+        "rev-spec-create"
+        "spec-native-front-door"
+        "spec"
+        "Native front door"
+        "Mutable spec carried by application graph tables"
+        "ice"
+        "{\"spec_id\":\"native-front-door\",\"workspace_id\":\"coherence-network\"}"
+        "api"
+        "agent:codex"))
+    (let examples-ok (if (eq (agn-and4
+        (agn-contains? idea-create "'idea'")
+        (agn-contains? spec-create "'spec'")
+        (agn-contains? idea-create "graph_node_revisions")
+        (agn-contains? spec-create "graph_node_revisions")) 1) 10 0))
+
+    (let update-sql (agn-update-node-sql
+        "rev-spec-update"
+        "spec-native-front-door"
+        "Native front door revised"
+        "Revision fields are explicit"
+        "water"
+        "{\"updated_by_contributor_id\":\"agent:codex\"}"
+        "[\"name\",\"description\",\"phase\",\"properties.updated_by_contributor_id\"]"
+        "web"
+        "agent:codex"))
+    (let update-ok (if (eq (agn-and3
+        (agn-contains? update-sql "fields_changed")
+        (agn-contains? update-sql "properties.updated_by_contributor_id")
+        (agn-contains? update-sql "COALESCE(max(revision_number), 0) + 1")) 1) 100 0))
+
+    (let delete-sql (agn-delete-node-sql "spec-native-front-door"))
+    (let delete-ok (if (eq (agn-and3
+        (agn-contains? delete-sql "WITH deleted_edges AS")
+        (agn-contains? delete-sql "DELETE FROM graph_edges")
+        (agn-contains? delete-sql "DELETE FROM graph_nodes")) 1) 1000 0))
+
+    (sum (list parity-ok examples-ok update-ok delete-ok)))

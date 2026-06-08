@@ -6,6 +6,10 @@ source:
     symbols: [auth-require-api-key, auth-require-api-key-from-headers, auth-contributor-key-hash, auth-contributor-key-active?, auth-parity-test]
   - file: form/form-stdlib/tests/auth-port-band.fk
     symbols: []
+  - file: form/form-stdlib/application-graph-node-port.fk
+    symbols: [agn-create-node, agn-update-node, agn-delete-node]
+  - file: form/form-stdlib/tests/application-graph-node-port-band.fk
+    symbols: []
   - file: form/form-stdlib/kernel-http.fk
     symbols: [kh-request, kh-header, kh-header-value-or]
   - file: form/form-stdlib/sha256.fk
@@ -26,7 +30,7 @@ requirements:
   - "Form has a native auth decision carrier for mutation routes that mirrors FastAPI shared API-key and contributor-key decisions."
   - "Contributor keys are compared as SHA-256 hex hashes in Form, not as raw allow-list shortcuts."
   - "The carrier proves allowed, denied, missing, blank, case-insensitive header, and production dev-key misconfiguration cases."
-  - "Ideas and specs name auth parity as proven while keeping public mutable front-door flips out of scope until application graph table writes, revision rows, and edge cleanup are native."
+  - "Ideas and specs name auth parity as proven while keeping public mutable front-door flips out of scope until method-specific route binding and live DB proof land."
 done_when:
   - 'file_contains("form/form-stdlib/auth-port.fk", "defn auth-require-api-key")'
   - 'file_contains("form/form-stdlib/tests/auth-port-band.fk", "Band verdict: 1111")'
@@ -51,8 +55,10 @@ return the same 401 detail for missing/blank/wrong keys, and return the same
 500 detail when production is configured with `dev-key`.
 
 This is not a public route flip. It closes the auth-decision gap so the next
-remaining blocker is the live application graph carrier: direct `graph_nodes`,
-`graph_node_revisions`, and edge cleanup parity.
+remaining blocker was the live application graph carrier: direct `graph_nodes`,
+`graph_node_revisions`, and edge cleanup parity. That carrier now exists as
+`application-graph-node-port.fk`; the remaining blocker is method-specific route
+binding and live DB execution proof.
 
 ## Requirements
 
@@ -67,8 +73,8 @@ remaining blocker is the live application graph carrier: direct `graph_nodes`,
   over both direct header lists and a `kh-request` wrapper, with a Python-known
   SHA-256 fixture.
 - [ ] **R5**: ideas/spec Form route readings name auth parity as proven and
-  leave public mutable front-door flips blocked on application graph table
-  writes, revision rows, and edge cleanup.
+  leave public mutable front-door flips blocked on method-specific route binding
+  and live DB execution proof.
 
 ## Research Inputs
 
@@ -117,15 +123,15 @@ python3 scripts/validate_spec_quality.py --file specs/native-auth-parity-carrier
 
 ## Gaps
 
-- GAP-NAPC1 follow-up task: `native-application-graph-nodes-postgres-carrier`.
-  Auth decisions are now native; live mutation still needs direct application
-  table writes, revision rows, and edge cleanup.
+- GAP-NAPC1: closed by `specs/application-graph-node-sql-carrier.md`. Auth
+  decisions are native, and application table SQL for direct writes, revision
+  rows, and edge cleanup is now native.
 - GAP-NAPC2 follow-up task: `native-contributor-key-last-used-update`.
   The current carrier proves allow/deny parity. The audit side effect that
   refreshes `last_used_at` should land with the application-table carrier.
 - GAP-NAPC3 follow-up task: `method-specific-ideas-spec-mutation-routes`.
-  Once graph-table parity is exact, bind method-specific native rows without
-  stealing existing read surfaces.
+  Bind method-specific native rows without stealing existing read surfaces once
+  request/response projection, cache invalidation, and live DB proof are exact.
 
 ## Risks and Assumptions
 
