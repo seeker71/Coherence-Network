@@ -1,0 +1,80 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/translation-mode-row-label-20260608",
+  "commit_scope": "Remove the remaining visible human provenance label from the translations coverage row UI.",
+  "files_owned": [
+    "docs/system_audit/commit_evidence_2026-06-08_translation_row_label_parity.json",
+    "web/app/settings/translations/page.tsx"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/validate_locale_surfaces.py",
+      "cd web && npm run build",
+      "git diff --check"
+    ],
+    "notes": "Public smoke after the prior deploy found the per-locale coverage row still rendered the API bucket label as human. The row now labels the same value as contributor while the API field name remains unchanged for compatibility."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge, deploy, and public verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The public translations coverage UI no longer displays human as a coverage bucket label; it displays contributor instead.",
+    "public_endpoints": [
+      "https://coherencycoin.com/settings/translations"
+    ],
+    "test_flows": [
+      "Fetch /settings/translations and confirm contributor appears in row labels and native voice/better translation/human bucket wording is absent."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete. Public movement waits on PR checks, merge, deploy, and public verification."
+  },
+  "idea_ids": [
+    "multilingual-web",
+    "locale-as-data"
+  ],
+  "spec_ids": [
+    "multilingual-web"
+  ],
+  "task_ids": [
+    "translation-row-label-parity-20260608"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "public-smoke-correction"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Public HTML for /settings/translations showed contributor in the tooltip/legend but human in the row count label.",
+    "web/app/settings/translations/page.tsx now renders the row count label as contributor."
+  ],
+  "change_files": [
+    "web/app/settings/translations/page.tsx"
+  ],
+  "change_intent": "runtime_fix"
+}
