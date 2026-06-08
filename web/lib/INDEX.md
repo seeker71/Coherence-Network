@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 34
+**Total files**: 35
 
 | File | Purpose |
 |---|---|
@@ -31,6 +31,7 @@
 | [named-lineage.ts](named-lineage.ts) | named-lineage — slugs of the load-bearing humans in the lineage, |
 | [public-config.ts](public-config.ts) | _no top-of-file purpose_ |
 | [pulse-server.ts](pulse-server.ts) | Server-only helper for resolving the Pulse Monitor base URL. |
+| [reception-policy.ts](reception-policy.ts) | reception-policy.ts — the frozen (ice) projection of the body's |
 | [render-session.ts](render-session.ts) | Render session — tracks lifecycle of one asset render. |
 | [renderer-resolver.ts](renderer-resolver.ts) | Renderer resolver — given a MIME type, find the renderer to use. |
 | [renderer-sdk.ts](renderer-sdk.ts) | Renderer SDK — the public interface for building compatible asset renderers. |
