@@ -104,9 +104,9 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-ab-observa
 
 ## Gaps
 
-- GAP-NMAOG1 follow-up task: `native-graph-mutation-live-db-proof`. Run the same
-  observation shape against a rollback-safe application schema and verify writes,
-  revisions, and edge cleanup.
+- GAP-NMAOG1: closed by `specs/native-graph-mutation-live-db-proof.md`. The
+  Form-native application graph mutation wrappers now run against a rollback-safe
+  throwaway Postgres and verify writes, revisions, and edge cleanup.
 - GAP-NMAOG2 follow-up task: `native-mutation-response-projection`. Add response
   projection parity to the B-side observation.
 - GAP-NMAOG3 follow-up task: `native-mutation-public-flip-gate`. Only after live
