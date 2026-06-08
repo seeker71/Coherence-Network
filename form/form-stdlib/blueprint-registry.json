@@ -3375,6 +3375,90 @@
       "pkg": 1,
       "level": 2,
       "type": 99,
+      "inst": 1704,
+      "name": "CELL-CIRCLE",
+      "meaning": "consentful group container: members, shared context, interface, discovery, confidentiality, export policy, carrier flow",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/circle.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 1705,
+      "name": "CIRCLE-OFFER",
+      "meaning": "discoverable circle offering: circle id, offered-by cell, title, discovery policy, invitation policy, boundary",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/circle.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 1706,
+      "name": "CIRCLE-INVITATION",
+      "meaning": "circle join invitation: circle id, inviter, invitee, invitation, boundary, expiry",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/circle.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 1707,
+      "name": "CIRCLE-SHARE",
+      "meaning": "owned circle share: circle id, author, kind, payload, visibility, consent policy",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/circle.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 1708,
+      "name": "CIRCLE-CONSENSUS",
+      "meaning": "circle consensus call: circle id, subject, voters, approvals, threshold, decision",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/circle.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 1709,
+      "name": "CIRCLE-REFUSAL",
+      "meaning": "consensus-backed circle refusal when invasion is observed",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/circle.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1710,
       "name": "QUERY",
       "meaning": "",
@@ -4368,6 +4452,76 @@
       "defined_in": [
         "form/form-stdlib/grammars/bml.fk",
         "form/form-stdlib/tests/bml-thesis-rule-body-execution-proof.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 1724,
+      "name": "CIRCLE-EXPORT-CONSENT",
+      "meaning": "explicit consent for evidence leaving a circle: recipient, fidelity, purpose, expiry, consensus",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/circle.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 1725,
+      "name": "CIRCLE-RECEIPT",
+      "meaning": "circle integration/refusal/export receipt: circle id, member, subject, action, reason, cost",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/circle.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 1726,
+      "name": "SATSANG-SILENCE",
+      "meaning": "circle silence event oriented toward truth and shared being",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/circle.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 1727,
+      "name": "SATSANG-INQUIRY",
+      "meaning": "truth-oriented inquiry offered inside a circle",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/circle.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 1728,
+      "name": "SATSANG-POINTING",
+      "meaning": "non-command pointing offered inside a satsang circle",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/circle.fk"
       ],
       "curated": true
     },

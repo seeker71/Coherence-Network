@@ -150,6 +150,29 @@ The channel flow protocol names the carrier itself as seven inspectable OSI laye
 
 ---
 
+## Circle / Satsang Protocol — Consentful Group Containers
+
+The circle protocol lets groups of cells communicate without falling into broadcast. A group is discoverable when offered, joinable when invited, private unless export consent passes, and refusable when invasion is observed and the circle consensus calls for refusal. Satsang enters as truth-oriented silence, inquiry, and non-command pointing inside the same held container.
+
+**Blueprints**:
+- `1.2.99.1704 CELL-CIRCLE` — members, shared context, mode, interface offer, discovery policy, confidentiality policy, export policy, carrier flow.
+- `1.2.99.1705 CIRCLE-OFFER` — circle id, offered-by cell, title, discovery policy, invitation policy, boundary.
+- `1.2.99.1706 CIRCLE-INVITATION` — circle id, inviter, invitee, invitation, boundary, expiry.
+- `1.2.99.1707 CIRCLE-SHARE` — circle id, author, owned share kind, payload, visibility, consent policy.
+- `1.2.99.1708 CIRCLE-CONSENSUS` — circle id, subject, voters, approvals, threshold, decision.
+- `1.2.99.1709 CIRCLE-REFUSAL` — consensus-backed refusal when `ci-invasion?` is observed.
+- `1.2.99.1724 CIRCLE-EXPORT-CONSENT` — evidence export recipient, fidelity, purpose, expiry, consensus.
+- `1.2.99.1725 CIRCLE-RECEIPT` — integration/refusal/export receipt.
+- `1.2.99.1726 SATSANG-SILENCE` — truth-oriented silence held in the circle.
+- `1.2.99.1727 SATSANG-INQUIRY` — inquiry offered inside the circle.
+- `1.2.99.1728 SATSANG-POINTING` — non-command pointing offered inside the circle.
+
+**Operating shape**: A cell may offer a circle. Another cell may join only when invited. A share stays inside unless `CIRCLE-EXPORT-CONSENT` names recipient, fidelity, purpose, expiry, and a passed consensus. A circle may refuse a contact only when an observed action exceeds the offered interface and consensus has passed.
+
+**Proof**: `form/form-stdlib/tests/circle-band.fk` returns `1048575` across source and binary sibling-kernel execution.
+
+---
+
 ## Arrival Protocol — Current Registered Shape
 
 **Blueprints**:

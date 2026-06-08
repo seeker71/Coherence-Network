@@ -193,7 +193,7 @@ lattice work** without Python in the loop:
 | Capability | Where |
 |------------|--------|
 | File I/O | `read_file`, `read_file_bytes`, `read_file_slice`, `write_file_*`, bands in `form-stdlib/tests/file-*` |
-| HTTP + channel flow | `kernel-http.fk`, `channel-flow.fk`, `http-parse.fk`, `http-serve.fk`, `http-server.fk`, `http-socket.fk`, kernel `http_get`, `fetch` |
+| HTTP + channel flow + circles | `kernel-http.fk`, `channel-flow.fk`, `circle.fk`, `http-parse.fk`, `http-serve.fk`, `http-server.fk`, `http-socket.fk`, kernel `http_get`, `fetch` |
 | Persistence read | `form-stdlib/persistence.fk` — `lookup-cell`, `store-cells`; kernel `read_form_binary` |
 | Substrate reach | Recipes compose lookups + file/HTTP — no separate “query evaluator” |
 
