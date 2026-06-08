@@ -1,0 +1,131 @@
+; integration/native-idea-valuation-audit-ledger-live.fk -- live Postgres proof
+; for Form-native idea valuation audit-ledger parity.
+;
+; preludes: form-stdlib/core.fk
+;           form-stdlib/application-graph-node-port.fk
+;           form-stdlib/native-mutation-side-effects.fk
+;           form-stdlib/native-idea-valuation-audit-ledger.fk
+;
+; Verdict: 11111111 when every step holds against live Postgres:
+;   connect                                -> 1
+;   create rollback-safe fixture schema    -> 10
+;   direct audit append readback            -> 100
+;   idea update route runner readback       -> 1000
+;   audit hash-chain recompute              -> 10000
+;   side-effect receipts + key audit        -> 100000
+;   drop fixture tables                     -> 1000000
+;   close connection                        -> 10000000
+
+(do
+    (let DSN "PG_DSN_PLACEHOLDER")
+
+    (let conn (pg_connect DSN))
+    (let connect-ok (if (ge conn 0) 1 0))
+
+    (pg_exec conn "DROP TABLE IF EXISTS audit_ledger")
+    (pg_exec conn "DROP TABLE IF EXISTS native_mutation_side_effect_receipts")
+    (pg_exec conn "DROP TABLE IF EXISTS graph_edges")
+    (pg_exec conn "DROP TABLE IF EXISTS graph_node_revisions")
+    (pg_exec conn "DROP TABLE IF EXISTS graph_nodes")
+    (pg_exec conn "DROP TABLE IF EXISTS contributor_api_keys")
+
+    (let nodes-ddl
+        "CREATE TABLE graph_nodes (
+            id VARCHAR(255) PRIMARY KEY,
+            type VARCHAR(50) NOT NULL,
+            name TEXT NOT NULL DEFAULT '',
+            description TEXT NOT NULL DEFAULT '',
+            properties JSONB NOT NULL DEFAULT '{}'::jsonb,
+            phase VARCHAR(20) NOT NULL DEFAULT 'water',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )")
+    (let revisions-ddl
+        "CREATE TABLE graph_node_revisions (
+            id VARCHAR(255) PRIMARY KEY,
+            node_id VARCHAR(255) NOT NULL,
+            revision_number INTEGER NOT NULL,
+            captured_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            source VARCHAR(32) NOT NULL DEFAULT 'api',
+            author VARCHAR(255) NOT NULL DEFAULT '',
+            fields_changed JSONB NOT NULL DEFAULT '[]'::jsonb,
+            snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
+            CONSTRAINT uq_node_revisions_node_rev UNIQUE (node_id, revision_number)
+        )")
+    (let keys-ddl
+        "CREATE TABLE contributor_api_keys (
+            id VARCHAR(255) PRIMARY KEY,
+            contributor_id VARCHAR(255) NOT NULL,
+            label VARCHAR(255),
+            provider VARCHAR(255),
+            provider_id VARCHAR(255),
+            scopes_json TEXT NOT NULL DEFAULT '[]',
+            created_at VARCHAR(255) NOT NULL,
+            last_used_at VARCHAR(255),
+            revoked_at VARCHAR(255)
+        )")
+    (let schema-ok (if (eq (nms-and4
+        (if (ge (pg_exec conn nodes-ddl) 0) 1 0)
+        (if (ge (pg_exec conn revisions-ddl) 0) 1 0)
+        (if (ge (pg_exec conn keys-ddl) 0) 1 0)
+        (if (ge (pg_exec conn (nival-pgcrypto-extension-sql)) 0) 1 0)) 1) 10 0))
+    (nms-create-receipts-table conn)
+    (nival-create-audit-ledger-table conn)
+
+    (pg_exec conn "INSERT INTO graph_nodes (id, type, name, description, properties, phase) VALUES ('idea-audit-native', 'idea', 'Audit Idea', 'Before audit update', '{\"actual_value\":5.0,\"confidence\":0.4,\"manifestation_status\":\"partial\"}'::jsonb, 'water')")
+    (pg_exec conn "INSERT INTO contributor_api_keys (id, contributor_id, scopes_json, created_at) VALUES ('key-audit-native', 'urs-muff', '[\"own:write\"]', '2026-06-09T00:00:00Z')")
+
+    (nival-record-valuation-change conn "idea-audit-native" "confidence" "0.4" "0.6")
+    (let direct-row (pg_query conn "SELECT entry_type || ':' || sender_id || ':' || receiver_id || ':' || reason || ':' || metadata_json FROM audit_ledger WHERE id = 1"))
+    (let direct-ok (if (str_eq direct-row "VALUATION_CHANGE:SYSTEM:SYSTEM:Updated confidence for idea idea-audit-native:{\"field\": \"confidence\", \"new_value\": 0.6, \"old_value\": 0.4}") 100 0))
+
+    (nival-run-idea-update-with-valuation-audit
+        conn
+        "mut-audit-idea"
+        "rev-audit-idea-update"
+        "idea-audit-native"
+        "Audit Idea Updated"
+        "After native audit update"
+        "ice"
+        "{\"actual_value\":7.0,\"confidence\":0.6,\"manifestation_status\":\"validated\"}"
+        "[\"actual_value\",\"confidence\",\"manifestation_status\"]"
+        "key-audit-native"
+        "form-native"
+        "actual_value"
+        "5.0"
+        "7.0")
+    (let idea-row (pg_query conn "SELECT name || ':' || phase || ':' || (properties->>'actual_value') || ':' || (properties->>'manifestation_status') FROM graph_nodes WHERE id = 'idea-audit-native'"))
+    (let idea-rev (pg_query conn "SELECT revision_number::text || ':' || source || ':' || author || ':' || (fields_changed->>0) FROM graph_node_revisions WHERE node_id = 'idea-audit-native'"))
+    (let route-ok (if (eq (nms-and3
+        (if (str_eq idea-row "Audit Idea Updated:ice:7.0:validated") 1 0)
+        (if (str_eq idea-rev "1:kernel-route-runner:form-native:actual_value") 1 0)
+        (if (str_eq (pg_query conn "SELECT count(*) FROM audit_ledger WHERE reference_id = 'idea-audit-native'") "2") 1 0)) 1) 1000 0))
+
+    (let recomputed-count (pg_query conn (nival-hash-recompute-sql)))
+    (let chain-row (pg_query conn "SELECT CASE WHEN (SELECT previous_hash FROM audit_ledger WHERE id = 2) = (SELECT hash FROM audit_ledger WHERE id = 1) THEN 'chain' ELSE 'broken' END"))
+    (let genesis-row (pg_query conn "SELECT CASE WHEN previous_hash = 'sha256:f7fda58584854be3a8fb954f44723ff9bad5efb41039ff30efccdb677a3b199f' THEN 'genesis' ELSE 'missing' END FROM audit_ledger WHERE id = 1"))
+    (let hash-ok (if (eq (nms-and3
+        (if (str_eq recomputed-count "2") 1 0)
+        (if (str_eq chain-row "chain") 1 0)
+        (if (str_eq genesis-row "genesis") 1 0)) 1) 10000 0))
+
+    (let receipt-count (pg_query conn "SELECT count(*) FROM native_mutation_side_effect_receipts"))
+    (let receipt-effects (pg_query conn "SELECT count(DISTINCT effect_name)::text FROM native_mutation_side_effect_receipts"))
+    (let key-row (pg_query conn "SELECT CASE WHEN last_used_at IS NOT NULL AND last_used_at <> '' THEN 'used' ELSE 'missing' END FROM contributor_api_keys WHERE id = 'key-audit-native'"))
+    (let side-effects-ok (if (eq (nms-and3
+        (if (str_eq receipt-count "2") 1 0)
+        (if (str_eq receipt-effects "2") 1 0)
+        (if (str_eq key-row "used") 1 0)) 1) 100000 0))
+
+    (pg_exec conn "DROP TABLE IF EXISTS audit_ledger")
+    (pg_exec conn "DROP TABLE IF EXISTS native_mutation_side_effect_receipts")
+    (pg_exec conn "DROP TABLE IF EXISTS graph_edges")
+    (pg_exec conn "DROP TABLE IF EXISTS graph_node_revisions")
+    (pg_exec conn "DROP TABLE IF EXISTS graph_nodes")
+    (pg_exec conn "DROP TABLE IF EXISTS contributor_api_keys")
+    (let cleanup-read (pg_query conn "SELECT COALESCE(to_regclass('public.audit_ledger')::text, '')"))
+    (let cleanup-ok (if (str_eq cleanup-read "") 1000000 0))
+
+    (let close-ok (if (eq (pg_close conn) 0) 10000000 0))
+
+    (sum (list connect-ok schema-ok direct-ok route-ok hash-ok side-effects-ok cleanup-ok close-ok)))

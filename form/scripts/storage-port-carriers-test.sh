@@ -10,7 +10,7 @@
 #
 # Usage:
 #   form/scripts/storage-port-carriers-test.sh                 # self-provision PG
-#   PG_DSN="host=... port=... user=... dbname=..." form/scripts/...   # existing PG
+#   PG_DSN="postgresql://postgres@127.0.0.1:5432/port_test" form/scripts/...   # existing PG
 #
 # Exit 0 on the expected verdict (111111), 1 otherwise.
 set -euo pipefail
@@ -48,7 +48,7 @@ if [[ -z "${PG_DSN:-}" ]]; then
   pg_ctl -D "$PGDIR/data" -o "-p $PGPORT -k $PGDIR" -l "$PGDIR/log" start >/dev/null 2>&1
   sleep 2
   psql -h 127.0.0.1 -p "$PGPORT" -U postgres -c "CREATE DATABASE port_test;" >/dev/null 2>&1
-  PG_DSN="host=127.0.0.1 port=$PGPORT user=postgres dbname=port_test"
+  PG_DSN="postgresql://postgres@127.0.0.1:$PGPORT/port_test"
 fi
 
 SRCDIR="$(mktemp -d "${TMPDIR:-/tmp}/spcarriers.XXXXXX")"

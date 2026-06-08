@@ -1,0 +1,224 @@
+# spec-registry-router.form -- spec_registry.py as high-level route recipes
+#
+# Companion to api/app/routers/spec_registry.py and
+# specs/spec-registry-source-native.md. The public FastAPI routes still carry
+# live mutable transport; Form now carries the source-backed read route and the
+# graph-node mutation carrier that create/update/delete will use when the live
+# front door moves.
+
+form spec_route_shape = {
+    name:             ~String,
+    method:           ~String,
+    path:             ~String,
+    movement:         ~String,
+    carrier:          ~String,
+    service_recipe:   ~String,
+    response_shape:   ~String,
+    evidence:         [~String],
+};
+
+form spec_route_recipe_shape = {
+    family:           ~String,
+    intent:           ~String,
+    routes:           [spec_route_shape],
+    route_trace:      [~String],
+    proof:            [~String],
+};
+
+defn spec_route(name, method, path, movement, service_recipe, response_shape, evidence) =
+    spec_route_shape {
+        name:           name,
+        method:         method,
+        path:           path,
+        movement:       movement,
+        carrier:        "api/app/routers/spec_registry.py",
+        service_recipe: service_recipe,
+        response_shape: response_shape,
+        evidence:       evidence,
+    };
+
+defn spec_route_recipe(family, intent, routes, route_trace, proof) =
+    spec_route_recipe_shape {
+        family:      family,
+        intent:      intent,
+        routes:      routes,
+        route_trace: route_trace,
+        proof:       proof,
+    };
+
+defn browse_specs_recipe() = spec_route_recipe(
+    "browse",
+    "Read specs as source-backed rows or graph-backed registry entries.",
+    [
+        spec_route("list_specs", "GET", "/spec-registry", "browse live specs", "spec_registry_service.list_specs", "list[SpecRegistryEntry]", ["graph node type=spec"]),
+        spec_route("list_spec_cards", "GET", "/spec-registry/cards", "browse spec cards", "spec_registry_service.build_spec_cards_feed", "dict", ["inventory cards"]),
+        spec_route("get_spec", "GET", "/spec-registry/{spec_id}", "inspect spec", "spec_registry_service.get_spec", "SpecRegistryEntry", ["graph node id lookup"]),
+        spec_route("source_list_specs", "GET", "/spec-registry/source-list", "browse source specs", "route_specs_source_list", "list[SpecRegistryEntry]", ["specs/INDEX.md"]),
+    ],
+    ["read query filters", "resolve graph/source carrier", "project optional language view", "return spec entries"],
+    ["api/app/routers/spec_registry.py::list_specs", "deploy/kernel-router/production-routes.fk::route_specs_source_list"]
+);
+
+defn mutate_specs_recipe() = spec_route_recipe(
+    "mutate",
+    "Create, replace, or delete spec graph nodes while preserving source and workspace fields.",
+    [
+        spec_route("create_spec", "POST", "/spec-registry", "create spec", "spec_registry_service.create_spec + gn-create-node", "SpecRegistryEntry", ["workspace validation", "graph node type=spec"]),
+        spec_route("update_spec", "PATCH", "/spec-registry/{spec_id}", "update spec", "spec_registry_service.update_spec + gn-replace-node", "SpecRegistryEntry", ["field allow-list", "graph node revision"]),
+        spec_route("delete_spec", "DELETE", "/spec-registry/{spec_id}", "delete spec", "spec_registry_service.delete_spec + gn-delete-node", "204", ["API key", "edge cleanup boundary"]),
+    ],
+    ["validate request", "shape graph-node mutation", "emit header-gated native SQL preview when invited", "call live service carrier until execution parity lands", "return entry or exact not-found/duplicate result"],
+    ["api/app/routers/spec_registry.py::create_spec", "api/app/routers/spec_registry.py::update_spec", "api/app/routers/spec_registry.py::delete_spec", "form/form-stdlib/graph-node-port.fk::gn-create-node", "form/form-stdlib/graph-node-port.fk::gn-replace-node", "form/form-stdlib/graph-node-port.fk::gn-delete-node", "deploy/kernel-router/production-routes.fk::route_specs_create_native_preview", "deploy/kernel-router/production-routes.fk::route_specs_update_native_preview", "deploy/kernel-router/production-routes.fk::route_specs_delete_native_preview"]
+);
+
+defn spec_registry_router_structure() = {
+    route_source: "api/app/routers/spec_registry.py",
+    form_source: "docs/coherence-substrate/spec-registry-router.form",
+    north_star: "Specs turn ideas into inspectable contracts, proof commands, and changed source.",
+    phase: {
+        blueprint: "spec_route_shape",
+        recipe: "spec_route_recipe_shape",
+        named_cell: "@router(spec-registry)",
+    },
+    native_carrier: [
+        {
+            path: "/api/spec-registry/source-list",
+            route_source: "deploy/kernel-router/production-routes.fk::route_specs_source_list",
+            status: "kernel-first capable",
+            meaning: "the kernel-router reads specs/INDEX.md and emits SpecRegistryEntry-shaped source rows without CPython",
+            boundary: "live graph-backed /api/spec-registry still fans out for mutable/read DB behavior",
+        },
+        {
+            path: "form/form-stdlib/graph-node-port.fk::gn-create-node|gn-replace-node|gn-delete-node",
+            route_source: "form/form-stdlib/tests/graph-node-mutation-carrier-band.fk",
+            status: "Form-native mutable carrier proven",
+            meaning: "spec create, update, and delete now have native graph-node mutation operations over the storage port",
+            boundary: "method-specific route binding now exists as header-gated SQL preview; public /api/spec-registry mutation traffic still fans out by default until live execution parity lands",
+        },
+        {
+            path: "form/form-stdlib/auth-port.fk::auth-require-api-key",
+            route_source: "form/form-stdlib/tests/auth-port-band.fk",
+            status: "Form-native auth decision carrier proven",
+            meaning: "shared API keys, contributor-key hashes, missing/wrong/blank denials, and production dev-key refusal now have native decision parity",
+            boundary: "public mutable /api/spec-registry paths now have method-specific route binding as preview and still wait for live DB execution proof before front-door mutation flips",
+        },
+        {
+            path: "form/form-stdlib/application-graph-node-port.fk::agn-create-node|agn-update-node|agn-delete-node",
+            route_source: "form/form-stdlib/tests/application-graph-node-port-band.fk",
+            status: "Form-native application graph table carrier proven",
+            meaning: "create/update/delete SQL now targets graph_nodes, graph_node_revisions, and graph_edges directly rather than port_kv",
+            boundary: "public mutable /api/spec-registry paths now have header-gated preview rows, but still wait for live DB execution proof before front-door mutation flips",
+        },
+        {
+            path: "POST /api/spec-registry + PATCH/DELETE /api/spec-registry/{spec_id}",
+            route_source: "deploy/kernel-router/production-routes.fk::route_specs_create_native_preview|route_specs_update_native_preview|route_specs_delete_native_preview",
+            status: "kernel-first trust envelope preview",
+            meaning: "method-specific KernelHTTPRoute rows bind JSON request bodies to application graph SQL and return a trust envelope carrying prediction residual, side-effect intents, choice_success=1, silence/protocol/fail/stop/BMA markers, and reversible gate state without CPython when X-Form-Native-Preview is present",
+            boundary: "normal public mutations without native mutation headers still fan out to FastAPI; X-Form-Native-Public-Gate now carries the narrower rollback-receipted public gate",
+        },
+        {
+            path: "deploy/kernel-router/mutation_ab_observation_harness.py",
+            route_source: "api/tests/test_native_mutation_ab_observation.py",
+            status: "A/B observation gate",
+            meaning: "the mutation flip is now measured as A fanout vs B native preview before any ordinary traffic moves",
+            boundary: "preview confidence is complete; ordinary no-header traffic remains unflipped until the deployed public-gate canary is observed",
+        },
+        {
+            path: "form/scripts/application-graph-live-db-test.sh",
+            route_source: "form/form-stdlib/integration/application-graph-live-db.fk + api/tests/test_application_graph_live_db_trial.py",
+            status: "live DB execution trial proven",
+            meaning: "Form-native application graph mutation wrappers now create, update, delete, and read back graph_nodes, graph_node_revisions, and graph_edges in a rollback-safe throwaway Postgres",
+            boundary: "this closes the local live DB execution trial and does not perform the public front-door flip; the trust envelope now carries prediction residual plus side-effect intents while ordinary traffic remains unflipped",
+        },
+        {
+            path: "form/scripts/application-graph-response-projection-test.sh",
+            route_source: "form/form-stdlib/application-graph-response-projection.fk + api/tests/test_application_graph_response_projection.py",
+            status: "response projection parity proven",
+            meaning: "Form-native projection now emits SpecRegistryEntry and IdeaWithScore-shaped mutation responses from live graph rows",
+            boundary: "this closes response projection and does not perform the public front-door flip; side-effect execution, route-runner binding, and the public-gate receipt are now proven; deployed public canary remains before ordinary traffic moves",
+        },
+        {
+            path: "form/scripts/native-mutation-side-effects-test.sh",
+            route_source: "form/form-stdlib/native-mutation-side-effects.fk + api/tests/test_native_mutation_side_effects_form.py",
+            status: "native side-effect execution carrier proven",
+            meaning: "Form-native side effects now execute parent-edge repair, contributor-key audit, cache-invalidation receipt, and rollback receipt against rollback-safe throwaway Postgres",
+            boundary: "this proves the execution carrier and does not bind side-effect execution to ordinary public traffic; route-runner binding and public-gate rollback receipt now sit above it while ordinary no-header traffic remains fanout",
+        },
+        {
+            path: "form/scripts/native-mutation-route-side-effects-test.sh",
+            route_source: "form/form-stdlib/native-mutation-route-side-effects.fk + api/tests/test_native_mutation_route_side_effect_binding.py",
+            status: "native route side-effect binding proven",
+            meaning: "application graph mutation and side-effect execution in one Form-native route runner now execute and read back against rollback-safe throwaway Postgres",
+            boundary: "this binds the proven side-effect carrier to native route-runner execution; the public gate now carries rollback receipt while ordinary no-header traffic remains fanout",
+        },
+        {
+            path: "form/scripts/native-mutation-public-gate-test.sh",
+            route_source: "form/form-stdlib/native-mutation-public-gate.fk + deploy/kernel-router/mutation_public_gate_harness.py + api/tests/test_native_mutation_public_gate.py",
+            status: "native mutation public gate proven",
+            meaning: "X-Form-Native-Public-Gate selects native public-gate route rows, emits a route-local rollback receipt, and the Form gate persists public-gate rollback receipts against rollback-safe throwaway Postgres",
+            boundary: "ordinary no-header public traffic still fans out to FastAPI; next movement is a deployed header-gated public canary before any no-header flip",
+        },
+        {
+            path: "docs/coherence-substrate/native-mutation-side-effect-ledger.form",
+            route_source: "api/tests/test_native_mutation_side_effect_ledger.py",
+            status: "source-classified side-effect ledger",
+            meaning: "side effects are separated into primary mutation, Python parity effect, reversible gate receipt, missing Python parity, and not-carried rows before any front-door move",
+            boundary: "rollback receipts are reversible gate safety, not Python parity; idea-valuation-audit-ledger is now carried Form-native while ordinary no-header traffic still waits for deployed public-gate canary evidence",
+        },
+        {
+            path: "form/scripts/native-idea-valuation-audit-ledger-test.sh",
+            route_source: "form/form-stdlib/native-idea-valuation-audit-ledger.fk + api/tests/test_native_idea_valuation_audit_ledger.py",
+            status: "native idea valuation audit ledger proven",
+            meaning: "Form-native idea update now appends hash-chained VALUATION_CHANGE rows to audit_ledger with SYSTEM sender/receiver, field metadata, previous_hash, and hash, and the public gate exposes an idea update runner over that carrier",
+            boundary: "idea valuation audit-ledger parity is carried Form-native; ordinary no-header public traffic still fans out to FastAPI until the deployed X-Form-Native-Public-Gate canary is observed",
+        },
+    ],
+    recipes: [
+        browse_specs_recipe(),
+        mutate_specs_recipe(),
+    ],
+    shifted: [
+        "Python registry service -> graph-node route recipes",
+        "source index -> kernel-router native source list",
+        "mutable service calls -> Form-native graph-node mutation carrier",
+        "application graph table writes -> Form-native graph_nodes/revisions/edge-cleanup SQL carrier",
+        "method-specific mutation paths -> header-gated Form-native SQL preview bindings",
+        "front-door flip -> A/B observation gate before movement",
+        "native SQL preview -> live DB execution trial",
+        "live graph rows -> Form-native mutation response projection",
+        "carried side-effect intents -> Form-native side-effect execution carrier",
+        "side-effect execution carrier -> Form-native mutation route-runner binding",
+        "mutation route-runner binding -> header-gated native public gate with rollback receipt",
+        "side-effect proof -> source-classified side-effect ledger",
+        "missing idea valuation audit-ledger parity -> hash-chained Form-native audit_ledger carrier",
+    ],
+    current_gap: "GAP-SR1 moved: /api/spec-registry/source-list is kernel-first capable, graph-node-port.fk exposes native create/replace/delete, auth-port.fk preserves API-key/contributor-key decision parity, application-graph-node-port.fk emits direct graph_nodes/graph_node_revisions/graph_edges SQL, POST/PATCH/DELETE /api/spec-registry have X-Form-Native-Preview header-gated native SQL preview rows with a trust envelope carrying prediction residual, side-effect intents, choice_success=1, silence/protocol/fail/stop/BMA markers, and reversible gate state, mutation_ab_observation_harness.py turns the flip into A/B observation, application-graph-live-db-test.sh proves rollback-safe live DB execution for the Form-native application graph mutation wrappers, application-graph-response-projection-test.sh proves live graph rows project into SpecRegistryEntry and IdeaWithScore-shaped mutation responses, native-mutation-side-effects-test.sh proves parent-edge repair, contributor-key audit, cache-invalidation receipt, and rollback receipt execute natively against throwaway Postgres, native-mutation-route-side-effects-test.sh proves application graph mutation plus side-effect execution are bound in one Form-native route runner, native-mutation-public-gate-test.sh plus mutation_public_gate_harness.py prove X-Form-Native-Public-Gate selects a rollback-receipted native public gate while preserving fanout for no-header traffic, native-mutation-side-effect-ledger.form proves side-effect proof does not justify side effects by separating Python parity effects from gate receipts and missing parity, and native-idea-valuation-audit-ledger-test.sh proves Python-parity hash-chained VALUATION_CHANGE audit_ledger rows for idea updates. Public mutable /api/spec-registry still enters through FastAPI by default until a deployed header-gated public canary is observed before any no-header flip.",
+};
+
+defn spec_registry_router_reading() = {
+    observed: [
+        "api/app/routers/spec_registry.py carries the live HTTP routes",
+        "spec_registry_service maps specs to graph nodes",
+        "production-routes.fk carries the native source-list read",
+    ],
+    inferred: [
+        "spec registry mutation is graph-node mutation with spec-shaped projection",
+        "the source index and live graph registry are two carriers of the same spec body",
+    ],
+    measured: [
+        "form/form-stdlib/tests/graph-node-mutation-carrier-band.fk",
+        "api/tests/test_specs_source_native_route.py",
+        "api/tests/test_native_mutation_route_bindings.py",
+        "api/tests/test_native_mutation_ab_observation.py",
+        "api/tests/test_application_graph_live_db_trial.py",
+        "api/tests/test_application_graph_response_projection.py",
+        "api/tests/test_native_mutation_public_gate.py",
+        "api/tests/test_native_mutation_side_effect_ledger.py",
+        "api/tests/test_native_idea_valuation_audit_ledger.py",
+    ],
+    mystery: [
+        "the public mutation flip wants a deployed X-Form-Native-Public-Gate canary before ordinary no-header traffic moves",
+    ],
+};
+
+defn example_spec_registry_router_structure() = spec_registry_router_structure();

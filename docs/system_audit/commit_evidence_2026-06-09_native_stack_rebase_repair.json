@@ -1,0 +1,154 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/ideas-form-rewrite-20260608",
+  "commit_scope": "Repair the merged native ideas/mutation stack after rebasing onto the current kernel contracts.",
+  "files_owned": [
+    "deploy/kernel-router/production-routes.fk",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "docs/system_audit/commit_evidence_2026-06-09_native_stack_rebase_repair.json",
+    "form/scripts/application-graph-live-db-test.sh",
+    "form/scripts/application-graph-response-projection-test.sh",
+    "form/scripts/native-idea-valuation-audit-ledger-test.sh",
+    "form/scripts/native-mutation-public-gate-test.sh",
+    "form/scripts/native-mutation-route-side-effects-test.sh",
+    "form/scripts/native-mutation-side-effects-test.sh",
+    "form/scripts/pg-carrier-test.sh",
+    "form/scripts/storage-port-carriers-test.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form/form-kernel-rust && cargo build --release",
+      "form/scripts/pg-carrier-test.sh",
+      "form/scripts/storage-port-carriers-test.sh",
+      "form/scripts/application-graph-live-db-test.sh",
+      "form/scripts/application-graph-response-projection-test.sh",
+      "form/scripts/native-mutation-side-effects-test.sh",
+      "form/scripts/native-mutation-route-side-effects-test.sh",
+      "form/scripts/native-mutation-public-gate-test.sh",
+      "form/scripts/native-idea-valuation-audit-ledger-test.sh",
+      "python3 deploy/kernel-router/mutation_ab_observation_harness.py --json",
+      "python3 deploy/kernel-router/mutation_public_gate_harness.py --json",
+      "python3 scripts/runtime_surface_report.py --json",
+      "cd api && python3 -m pytest -q tests/test_ideas_router_form.py tests/test_application_graph_live_db_trial.py tests/test_application_graph_node_port_form.py tests/test_application_graph_response_projection.py tests/test_graph_node_form_port.py tests/test_graph_node_mutation_carrier_form.py tests/test_ideas_graph_projection_form.py tests/test_native_auth_parity_form.py tests/test_native_idea_valuation_audit_ledger.py tests/test_native_mutation_ab_observation.py tests/test_native_mutation_public_gate.py tests/test_native_mutation_route_bindings.py tests/test_native_mutation_route_side_effect_binding.py tests/test_native_mutation_side_effect_ledger.py tests/test_native_mutation_side_effects_form.py tests/test_runtime_surface_native_routes.py tests/test_spec_registry_router_form.py tests/test_specs_source_native_route.py tests/test_commit_evidence_validator.py",
+      "cd api && python3 -m ruff check tests/test_ideas_router_form.py tests/test_application_graph_live_db_trial.py tests/test_application_graph_node_port_form.py tests/test_application_graph_response_projection.py tests/test_graph_node_form_port.py tests/test_graph_node_mutation_carrier_form.py tests/test_ideas_graph_projection_form.py tests/test_native_auth_parity_form.py tests/test_native_idea_valuation_audit_ledger.py tests/test_native_mutation_ab_observation.py tests/test_native_mutation_public_gate.py tests/test_native_mutation_route_bindings.py tests/test_native_mutation_route_side_effect_binding.py tests/test_native_mutation_side_effect_ledger.py tests/test_native_mutation_side_effects_form.py tests/test_runtime_surface_native_routes.py tests/test_spec_registry_router_form.py tests/test_specs_source_native_route.py tests/test_commit_evidence_validator.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check"
+    ],
+    "summary": "The stack rebase exposed two current-kernel contract shifts: pg_connect now accepts PostgreSQL URLs rather than libpq key/value DSNs, and KernelHTTPRoute handlers receive typed KernelHTTPRequest values rather than legacy alists. The repair updates self-provisioned live proof scripts to inject postgresql:// URLs, adapts the mutation manifest body/path helpers to read typed request cells with alist fallback, and restores the public-front-door-flip boundary phrase in the router forms. Form live DB proofs, A/B observation, public gate harness, runtime surface report, focused pytest, ruff, index check, and whitespace check pass.",
+    "known_limitations": [
+      {
+        "scope": "ordinary public mutations",
+        "observed": "No ordinary no-header mutation traffic moved. The harnesses still show no-header traffic fanning out to FastAPI."
+      },
+      {
+        "scope": "deployed canary",
+        "observed": "The deployed X-Form-Native-Public-Gate canary remains the next boundary before any no-header traffic flip."
+      },
+      {
+        "scope": "production database",
+        "observed": "Only throwaway local Postgres fixtures were used. No production database writes were attempted."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending force-push of the rebased root branch and GitHub checks on PR #2586."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "No public deploy attempted in this repair. Production remains at the previously aligned main deploy until PR #2586 lands and deploy verification runs."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Header-gated native mutation preview and public-gate routes now run against the typed KernelHTTPRequest carrier after rebase, while no-header traffic remains fanout-python.",
+    "public_endpoints": [
+      "POST /api/ideas",
+      "PATCH /api/ideas/{idea_id}",
+      "POST /api/spec-registry",
+      "PATCH /api/spec-registry/{spec_id}",
+      "DELETE /api/spec-registry/{spec_id}",
+      "Header X-Form-Native-Preview",
+      "Header X-Form-Native-Public-Gate"
+    ],
+    "test_flows": [
+      "form/scripts/*Postgres carrier proofs -> PASS verdicts",
+      "python3 deploy/kernel-router/mutation_ab_observation_harness.py --json -> confidence 1.0",
+      "python3 deploy/kernel-router/mutation_public_gate_harness.py --json -> confidence 1.0",
+      "cd api && python3 -m pytest -q focused native stack tests -> 84 passed",
+      "python3 scripts/runtime_surface_report.py --json -> 33 kernel-first capable routes and 0 live front-door served"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local stack repair is proven; the next phase still requires deployed X-Form-Native-Public-Gate canary evidence before any ordinary no-header mutation flip."
+  },
+  "idea_ids": [
+    "idea-realization-engine",
+    "data-infrastructure"
+  ],
+  "spec_ids": [
+    "specs/ideas-router-form-expression.md",
+    "specs/spec-registry-source-native.md",
+    "specs/native-mutation-ab-observation-gate.md",
+    "specs/native-mutation-public-gate.md",
+    "specs/native-mutation-route-side-effect-binding.md",
+    "specs/native-mutation-side-effect-ledger.md",
+    "specs/native-idea-valuation-audit-ledger.md"
+  ],
+  "task_ids": [
+    "native-stack-rebase-repair-20260609",
+    "native-mutation-deployed-public-canary"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "merge-request"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "rebase-repair",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "deploy/kernel-router/production-routes.fk::mpv-body",
+    "deploy/kernel-router/production-routes.fk::mpv-request-path",
+    "form/scripts/application-graph-live-db-test.sh",
+    "form/scripts/native-mutation-public-gate-test.sh",
+    "deploy/kernel-router/mutation_ab_observation_harness.py",
+    "deploy/kernel-router/mutation_public_gate_harness.py",
+    "api/tests/test_native_mutation_public_gate.py"
+  ],
+  "change_files": [
+    "deploy/kernel-router/production-routes.fk",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "docs/system_audit/commit_evidence_2026-06-09_native_stack_rebase_repair.json",
+    "form/scripts/application-graph-live-db-test.sh",
+    "form/scripts/application-graph-response-projection-test.sh",
+    "form/scripts/native-idea-valuation-audit-ledger-test.sh",
+    "form/scripts/native-mutation-public-gate-test.sh",
+    "form/scripts/native-mutation-route-side-effects-test.sh",
+    "form/scripts/native-mutation-side-effects-test.sh",
+    "form/scripts/pg-carrier-test.sh",
+    "form/scripts/storage-port-carriers-test.sh"
+  ],
+  "change_intent": "runtime_fix"
+}

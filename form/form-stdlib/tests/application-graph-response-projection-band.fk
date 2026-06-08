@@ -1,0 +1,11 @@
+; tests/application-graph-response-projection-band.fk -- mutation response shape.
+;
+; preludes: form-stdlib/core.fk form-stdlib/application-graph-response-projection.fk
+;
+; Band verdict: 111 when native projection proves:
+;   IdeaWithScore scoring/vector fields       -> 1
+;   SpecRegistryEntry ROI fields             -> 10
+;   tab-separated pg_query row projection     -> 100
+
+(do
+    (agrp-test))

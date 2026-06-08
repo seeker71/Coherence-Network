@@ -1,0 +1,9 @@
+; tests/native-idea-valuation-audit-ledger-band.fk -- sibling-kernel proof for
+; Form-native idea valuation audit-ledger parity.
+;
+; preludes: form-stdlib/core.fk
+;           form-stdlib/application-graph-node-port.fk
+;           form-stdlib/native-mutation-side-effects.fk
+;           form-stdlib/native-idea-valuation-audit-ledger.fk
+
+(nival-audit-ledger-test)
