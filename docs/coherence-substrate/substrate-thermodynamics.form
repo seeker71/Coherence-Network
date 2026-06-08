@@ -1,134 +1,126 @@
 # ─────────────────────────────────────────────────────────────────────
-# substrate-thermodynamics.form — cluster counts as the heat that moves a cell
-#                                  between gas, water, and ice
+# substrate-thermodynamics.form — STATE is orthogonal to SUBSTANCE;
+#                                  cluster counts move a cell's state, not its kind
 # ─────────────────────────────────────────────────────────────────────
 #
-# The substrate's trinity is already three states of matter
-# (lc-identity-is-shared-blueprint-and-recipe):
+# Two axes, not one. The first version of this file collapsed them into the trinity;
+# this one keeps them apart.
 #
-#   gas   — NamedCell  — diffuse individuation     — WHERE it lives (the instance)
-#   water — Recipe     — operational expression    — HOW it happens (the pattern)
-#   ice   — Blueprint  — structural identity        — WHAT it is (the type)
+#   SUBSTANCE (the trinity — what KIND a cell is, its role):
+#     Blueprint  — structural identity    (frozen-coordination by character)
+#     Recipe     — operational expression (flowing composition by character)
+#     NamedCell  — diffuse individuation  (diffuse by character)
 #
-# CONSERVATION LAW (the substrate is "three phases of one substance"): every
-# transition re-orders, none removes. A cell's NodeID is its content's fingerprint,
-# content-addressed — it persists across every phase. gas is not absence; gas is
-# potential (lc-void-as-potential: superposition, the unformed generative ground).
-# So "moving a cell from state to state" changes how densely it is held — never
-# whether it exists.
+#   STATE (the thermodynamic phase — how SETTLED a cell is right now):
+#     ice    — frozen: stable, load-bearing, immutable, widely referenced
+#     water  — fluid:  actively circulating — read, changed, composed
+#     gas    — diffuse: potential — defined or interned, barely instantiated
 #
-# What was missing was the heat: the signal that tells a cell when to change state.
-# This file names it. The signal is a COUNT — cluster population, reference degree,
-# churn — read off the clustering we already have. Gravity gathers like-shaped cells
-# into clusters (turboquant-as-recipe.form); the count of what gathered is the
-# temperature and pressure; crossing a threshold is the phase change.
+# The body's doc says "Blueprint (ice), Recipe (water), NamedCell (gas)." Read closely
+# (agents-using-substrate.md: "Blueprint — frozen coordination") that names CHARACTER —
+# each kind's RESTING tendency — not a fixed state. It is the DIAGONAL of a 3×3 grid.
+# A specific cell can sit anywhere off it:
 #
-# ─────────────────────────────────────────────────────────────────────
-# Part 1 — the cluster ladder IS the phase ladder (the missing resolution)
-# ─────────────────────────────────────────────────────────────────────
+#     Blueprint in gas  — a type defined but uninstantiated; frozen-coordination held
+#                         as pure potential (lc-void-as-potential). A Blueprint can be void.
+#     Recipe in ice     — a canonical stdlib recipe, immutable, load-bearing; flow that
+#                         froze solid. Much of form-stdlib is water-become-ice.
+#     NamedCell in ice  — a bedrock memory; individuation crystallized, referenced as
+#                         ground, never changing.
+#     Recipe in gas     — a transient parse-branch interned this second, GC-able; flow
+#                         as vapor (turboquant-as-recipe.form names these).
 #
-# ctor-shape-signature.form names the gap: every concept lands at one Blueprint
-# NodeID, so `?equivalent` returns the whole domain — coarse. CTOR-deep is the
-# other extreme — every value distinct, no two alike. The honest band is between.
-# Clustering at a tunable radius IS that band, and the radius is a dial:
-#
-#   level 0  — individuals, finest, every value its own         ≈ GAS
-#   level 1  — clusters of individuals (a shared "how")          ≈ WATER
-#   level 2+ — clusters of clusters (a shared "what", a type)    ≈ ICE
-#
-# "Clusters, then clusters of clusters" is the resolution ladder, and a cell's
-# right STATE is the rung that holds it. turboquant gives the rungs for free:
-# quantize the cells → level-1 buckets; quantize the bucket centroids → level-2;
-# data-oblivious, so each rung is content-addressed and reproducible. The same
-# ladder runs over EDGES as over nodes — a recurring relation-shape clusters into
-# a recipe-edge, then a blueprint-edge-type. Edges are cells; they phase too.
+# STATE is set by the counts; SUBSTANCE is the kind. A phase change moves a cell along
+# the state axis WITHIN its substance — a Recipe that freezes is still a Recipe, now
+# solid. The counts never change what a cell IS.
 #
 # ─────────────────────────────────────────────────────────────────────
-# Part 2 — the scalars (what we count)
+# What the counts measure (the state axis) — read via the cluster ladder
 # ─────────────────────────────────────────────────────────────────────
 #
-#   population(c)  — how many cells fall in cluster c (pressure: density of like-shape)
-#   degree(c)      — how many edges point at c (circulation: is anything reading it)
-#   churn(c)       — rate of new/varied members arriving (temperature: is it settling)
+# The cluster ladder (turboquant: clusters, then clusters of clusters) is the
+# MEASUREMENT, not the phase. At every resolution it gives how many cells share a
+# shape — and that population is the circulation of that shape. Three scalars set a
+# cell's STATE, and they read the same for a Blueprint, a Recipe, or a NamedCell:
 #
-# High temperature + low pressure → nothing settles (gas). Low temperature + high
-# pressure → it crystallizes (ice). The phase diagram is real; these three scalars
-# are its axes, and they are all just counts over the cluster ladder.
+#   degree(c)      — how many edges read it          (circulation)
+#   population(c)  — how many cells share its shape   (pressure)
+#   churn(c)       — rate of new / varied members     (temperature)
 #
-# ─────────────────────────────────────────────────────────────────────
-# Part 3 — the transitions (when a count moves a cell)
-# ─────────────────────────────────────────────────────────────────────
+# high churn + low degree → gas (diffuse, unsettled).  low churn + high degree → ice
+# (frozen, settled). water is the middle — circulating but still moving.
 #
-#   CONDENSE  gas → water   : scattered NamedCells whose level-1 population crosses
-#                             `condense-min` — name the shared "how" as a Recipe.
-#                             (right-sizing's MERGE: overlap ≥ 0.80 → one idea.)
-#   FREEZE    water → ice   : a Recipe with high degree + low churn crosses
-#                             `freeze-stable` — crystallize the type as a Blueprint.
-#   SPLIT     ice → water   : a Blueprint grown too large (population over
-#                             `split-max`, like right-sizing's 10 questions / 8 tasks)
-#                             — melt it into the sub-recipes it actually contains.
-#   MELT      ice → gas     : a Blueprint whose degree falls to ~0 and stays cold —
-#                             no instances, no readers — RELEASES its type-claim and
-#                             returns to diffuse potential. Nothing is removed: the
-#                             NodeID is conserved; melt is de-coherence (re-coherable —
-#                             quantum-physics-as-recipe.form), the un-collapse back to
-#                             superposition. It is the most CONSERVATIVE move, not the
-#                             most dangerous — it un-asserts a type; it never deletes a cell.
+# CONSERVATION LAW (even truer now): a transition changes neither the cell's existence
+# NOR its substance — only its state. The NodeID is content-addressed and conserved;
+# the KIND is conserved; gas is potential, not absence (lc-void-as-potential).
 #
 # ─────────────────────────────────────────────────────────────────────
-# Part 4 — the metabolism, in Form  (suggest-transitions over the ladder)
+# The transitions (state moves, within a substance — real phase names)
+# ─────────────────────────────────────────────────────────────────────
+#
+#   CONDENSE   gas → water  : a diffuse cell whose circulation crosses `condense-min`
+#                             settles into flow (a potential type gathers instances;
+#                             a vapor-recipe starts being reused).
+#   FREEZE     water → ice  : a fluid cell, stable + widely read, crystallizes (a recipe
+#                             becomes canonical-immutable; a memory becomes bedrock).
+#   MELT       ice → water  : a frozen cell warming — still referenced but now changing —
+#                             returns to flow (a canonical recipe reopened for revision).
+#   SUBLIMATE  ice → gas    : a frozen cell whose circulation falls to ~0 releases its
+#                             hold and returns to potential. Removes NOTHING — NodeID and
+#                             kind persist; de-coherence, re-coherable.
+#
+# (A SEPARATE dynamic, named so it is not re-collapsed into state: the substance /
+# abstraction ladder — many cells sharing a shape so a Recipe or Blueprint becomes the
+# natural way to ADDRESS them — is driven by population/sharing, not circulation. It
+# changes how a shape is best named, not a given cell's state.)
+#
+# ─────────────────────────────────────────────────────────────────────
+# The metabolism, in Form  (state-of reads STATE; substance is a separate field)
 # ─────────────────────────────────────────────────────────────────────
 
-(defn phase-of (cell ladder)
-    (let lvl (cluster-level cell ladder))           ; which rung holds it now
-    (if (eq lvl 0) (gas) (if (eq lvl 1) (water) (ice))))
-
-(defn suggest-transition (cell ladder thresh)
-    (let pop  (population (cluster-of cell ladder)))
+(defn state-of (cell thresh)
     (let deg  (degree cell))
     (let chrn (churn cell))
-    (match (phase-of cell ladder)
-        (gas   (if (ge pop (field thresh "condense-min"))     (transition cell (water) "condense") (stay cell)))
-        (water (if (and (ge deg (field thresh "freeze-degree"))
-                        (le chrn (field thresh "freeze-churn"))) (transition cell (ice) "freeze") (stay cell)))
-        (ice   (if (ge pop (field thresh "split-max"))         (transition cell (water) "split")
-               (if (le deg (field thresh "melt-degree"))       (transition cell (gas) "melt")
-                                                               (stay cell))))))
+    (if (and (ge deg (field thresh "ice-degree")) (le chrn (field thresh "ice-churn"))) (ice)
+        (if (le deg (field thresh "gas-degree")) (gas) (water))))
 
-# All four re-home the cell on the ladder; NONE remove it — three phases of one
-# substance, every transition conserves the NodeID (content-addressed). The care is
-# HYSTERESIS, not loss: keep freeze-degree > melt-degree (a gap), so a count wobbling
-# near a threshold doesn't thrash a cell between phases. The ONE place removal is real
-# is the FILE layer — a concept/spec `.md` that backs a cell. A lattice phase-change
-# must NEVER auto-delete a backing file; that composting is a separate, confirmed,
-# file-layer act (git remembers; the tree shouldn't have to). cluster-of /
-# cluster-level / population / degree / churn read the turboquant ladder; carrier-last
-# when they run (Form recipes proven three-way, a native only where the sweep needs speed).
+(defn suggest-state-move (cell thresh)
+    (let deg (degree cell))
+    ; transitions move STATE; (substance cell) is untouched — a frozen Recipe stays a Recipe
+    (match (state-of cell thresh)
+        (gas   (if (ge deg (field thresh "condense-min")) (transition cell (water) "condense") (stay cell)))
+        (water (if (and (ge deg (field thresh "ice-degree")) (stable? cell))
+                   (transition cell (ice) "freeze") (stay cell)))
+        (ice   (if (le deg (field thresh "gas-degree")) (transition cell (gas) "sublimate")
+               (if (changing? cell)                     (transition cell (water) "melt") (stay cell))))))
+
+# Every transition conserves the NodeID AND the substance — three states of one cell,
+# the kind unchanged. Care is HYSTERESIS (keep ice-degree > gas-degree, a gap, so a
+# wobbling count doesn't thrash a cell between states), and one lane boundary: a lattice
+# state-change must NEVER auto-delete a backing `.md` file — file-composting is the one
+# place removal is real, a separate, confirmed, file-layer act (git remembers; the tree
+# shouldn't have to). degree / churn / population / stable? / changing? read the
+# turboquant cluster ladder; carrier-last when they run (Form recipes, three-way).
 
 # ─────────────────────────────────────────────────────────────────────
-# Part 5 — grounded, and what is design
+# Grounded, and what is design
 # ─────────────────────────────────────────────────────────────────────
 #
-# OPERATIONAL today (for one cell-kind): right_sizing_service.py already clusters
-# ideas by cosine TF-similarity and emits split/merge SUGGESTIONS against hand-set
-# thresholds (overlap 0.80, 10 questions, 8 tasks, 14 days), dry-run-able, never
-# auto-applied — it suggests because merging idea RECORDS is a real change in the file
-# lane, not because the metabolism removes anything. The cluster→count→threshold shape
-# is what is proven on ideas; the lattice version below conserves and can run on counts.
+# lattice/stats today returns 880 Blueprints / 19664 Recipes / 4083 NamedCells — the
+# SUBSTANCE census (one count per kind). The STATE diagram is orthogonal and unmeasured:
+# of those 880 Blueprints, how many are frozen-load-bearing vs warm-in-flux vs
+# cold-potential? That 3×3 (substance × state) is the real phase diagram; the totals are
+# only its row sums.
 #
-# DESIGN (this file): generalize it from ideas to every cell — nodes and edges —
-# with turboquant as the clustering engine (data-oblivious → the phase decisions are
-# content-addressed and reproducible, where a trained codebook would make them drift)
-# and the trinity as the phase ladder. The thresholds are the open calibration: real
-# phase transitions have critical points; ours want measuring, not guessing. Start by
-# reading the counts and only REPORTING the phases (a wellness lane), before any
-# transition runs — let the body show its own phase diagram first.
+# right_sizing_service.py measures one slice operationally (idea cells: cosine clusters,
+# thresholds, merge/split suggestions). DESIGN here: read STATE for every cell of every
+# substance via the turboquant ladder. First step stays report-only — show the 3×3 grid,
+# let the body see where it sits, before any transition runs. Thresholds (and the
+# ice/gas-degree gap = hysteresis) are the open calibration.
 #
 # Companions:
-#   turboquant-as-recipe.form — the clustering ladder these counts are read from
-#   ctor-shape-signature.form — the missing-resolution gap the cluster band fills
-#   right_sizing_service.py — the operational precedent (cluster→count→suggest, for ideas)
-#   lc-identity-is-shared-blueprint-and-recipe — the trinity (gas/water/ice) this moves a cell through
-#   lc-void-as-potential — gas is potential, not absence; melt returns a cell to it
-#   lc-whole-vitality / "how this body is tended" — crystallize the stable, melt the cold
-#     back to potential; file-composting (the one real removal) stays a separate, confirmed act
+#   turboquant-as-recipe.form — the cluster ladder the counts are read from
+#   ctor-shape-signature.form — the shape that clusters
+#   lc-identity-is-shared-blueprint-and-recipe — the SUBSTANCE trinity (the kinds)
+#   lc-void-as-potential — gas is potential; any substance can rest there
+#   right_sizing_service.py — one operational slice of state-reading (idea cells)
