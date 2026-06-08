@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 245
+**Total files**: 246
 
 | File | Purpose |
 |---|---|
@@ -86,6 +86,7 @@
 | [contributor_service.py](contributor_service.py) | Contributor service — thin helpers used by auth_keys and other non-router code. |
 | [creations_importer.py](creations_importer.py) | Auto-import creations from a presence's known URLs. |
 | [creator_economy_service.py](creator_economy_service.py) | Creator economy service — computes public stats, proof cards, |
+| [creator_resonance_service.py](creator_resonance_service.py) | Creator resonance report scoring. |
 | [cross_instance_identity_service.py](cross_instance_identity_service.py) | Cross-instance identity — recognition by shared pubkey, not central registry. |
 | [data_retention_service.py](data_retention_service.py) | Data retention service -- tiered telemetry trimming, summarization, off-DB backup. |
 | [dif_feedback_service.py](dif_feedback_service.py) | DIF feedback instrumentation — tracks verification results for accuracy analysis. |
