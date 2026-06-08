@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 261
+**Total files**: 262
 
 | File | Purpose |
 |---|---|
@@ -57,6 +57,7 @@
 | [test_contributor_journey.py](test_contributor_journey.py) | Acceptance tests for spec: contributor-journey (idea: contributor-experience). |
 | [test_contributor_key_store.py](test_contributor_key_store.py) | DB-backed contributor API key store. |
 | [test_creator_economy.py](test_creator_economy.py) | Tests for creator-economy endpoints — spec R1, R2, R3, R4. |
+| [test_creator_resonance_report.py](test_creator_resonance_report.py) | _no top-of-file purpose_ |
 | [test_cross_instance_identity.py](test_cross_instance_identity.py) | Cross-instance identity — recognition by shared pubkey, not central registry. |
 | [test_cursor_fact_report_routing.py](test_cursor_fact_report_routing.py) | _no top-of-file purpose_ |
 | [test_developer_quick_start.py](test_developer_quick_start.py) | Acceptance tests for spec: developer-quick-start (idea: developer-experience). |
