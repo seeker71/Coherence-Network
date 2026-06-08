@@ -6,11 +6,11 @@
  *   2. COHERENCE_LOCALE environment variable
  *   3. locale field in ~/.coherence-network/config.json
  *   4. LANG / LC_ALL / LC_MESSAGES env vars (parsed for a supported locale)
- *   5. Default locale (en)
+ *   5. Default locale
  *
  * Messages live as JSON bundles in cli/lib/messages/{lang}.json so the same
  * text file can travel with the npm package. A missing key falls back to the
- * English bundle; a missing bundle falls back to English. Unknown keys
+ * default bundle; a missing bundle falls back to the default locale. Unknown keys
  * render as the key string itself — gaps stay visible rather than silent.
  */
 
@@ -135,7 +135,7 @@ function interpolate(template, params) {
 
 /**
  * Create a translator bound to a locale.
- * Returns t(key, params?) that does message lookup with English fallback.
+ * Returns t(key, params?) that does message lookup with default-locale fallback.
  */
 export function createT(lang) {
   const target = loadBundle(lang);

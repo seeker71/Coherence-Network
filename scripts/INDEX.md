@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 143
+**Total files**: 144
 
 | File | Purpose |
 |---|---|
@@ -137,6 +137,7 @@
 | [upgrade_specs_to_form_predicates.py](upgrade_specs_to_form_predicates.py) | Augment every spec's done_when with Form predicates derived from its |
 | [validate_commit_evidence.py](validate_commit_evidence.py) | Validate thread commit evidence artifacts for phase-gated process. |
 | [validate_local_api_matrix.py](validate_local_api_matrix.py) | Validate local API-backed page contracts and timing against a running API. |
+| [validate_locale_surfaces.py](validate_locale_surfaces.py) | Validate locale surfaces for default-locale parity and English-bias drift. |
 | [validate_spec_idea_traceability.py](validate_spec_idea_traceability.py) | _no top-of-file purpose_ |
 | [validate_spec_prefix_canonicalization.py](validate_spec_prefix_canonicalization.py) | Validate canonical mapping for duplicated spec numeric prefixes. |
 | [validate_spec_quality.py](validate_spec_quality.py) | Validate spec quality so implementation does not need manual follow-up gap fixes. |

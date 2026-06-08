@@ -6,8 +6,8 @@
  *   - fetchWithLocale(path, init?): a fetch that automatically appends ?lang=
  *     to every request (unless the path already has one, or lang is the default)
  *
- * Use in server components and async pages. For the DEFAULT_LOCALE (en) the
- * helper still appends the lang so the API returns the English view when one
+ * Use in server components and async pages. For the DEFAULT_LOCALE, the
+ * helper still appends the lang so the API returns that locale's view when one
  * exists (the caller can always override by passing an explicit lang in path).
  */
 

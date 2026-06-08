@@ -1,0 +1,121 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/locale-bias-validation-20260608",
+  "commit_scope": "Add a cross-surface locale validation pass and remove English-anchor wording from user-facing and tooling surfaces.",
+  "files_owned": [
+    "MANIFEST.md",
+    "cli/lib/i18n.mjs",
+    "docs/system_audit/commit_evidence_2026-06-08_locale_surface_bias_validation.json",
+    "scripts/INDEX.md",
+    "scripts/sync_kb_to_db.py",
+    "scripts/validate_locale_surfaces.py",
+    "scripts/wellness_check.py",
+    "web/lib/locale-fetch.ts",
+    "web/messages/de.json",
+    "web/messages/en.json",
+    "web/messages/es.json",
+    "web/messages/fr.json",
+    "web/messages/id.json",
+    "web/messages/pt-br.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make wellness",
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "python3 scripts/validate_locale_surfaces.py",
+      "python3 -m json.tool web/messages/fr.json",
+      "python3 -m json.tool web/messages/pt-br.json",
+      "python3 -m json.tool web/messages/en.json",
+      "rg -n 'English anchor|English bundle|falls back to English|fallback to English|seeded from the English|currently in English|en anchor' web/messages cli/lib scripts/sync_kb_to_db.py scripts/wellness_check.py web/lib/locale-fetch.ts api/app/services/localized_errors.py -g '*.json' -g '*.mjs' -g '*.py' -g '*.ts'",
+      "python3 scripts/generate_repo_indexes.py",
+      "cd api && python3 -m pytest -q tests/test_flow_multilingual.py tests/test_concept_views.py",
+      "cd web && NPM_CONFIG_CACHE=/tmp/coherence-npm-cache npm ci && npm run build",
+      "python3 scripts/validate_locale_surfaces.py --summary",
+      "make wellness | sed -n '/## Locale parity/,/## Chain/p'",
+      "git diff --check"
+    ],
+    "notes": "Initial wellness reported fr and pt-br each missing begin.receiveTitle and begin.receiveHelp. The pass adds those keys, neutralizes user-facing English-anchor phrasing to current/default anchor phrasing, adds scripts/validate_locale_surfaces.py, and wires its concise result into wellness. The first web build attempt failed because this fresh worktree lacked node_modules (next: command not found); npm ci installed dependencies and the build then passed with existing Next/Turbopack warnings."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge, Hostinger deploy, and public verification if this branch is shipped."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Locale support remains data-driven across web, API, and CLI. Future language additions are validated by installed bundle parity and manifest alignment rather than manual English-centered grep. French and Brazilian Portuguese no longer lag the current default message key set.",
+    "public_endpoints": [
+      "https://coherencycoin.com/begin?lang=fr",
+      "https://coherencycoin.com/begin?lang=pt-br",
+      "https://api.coherencycoin.com/api/locales"
+    ],
+    "test_flows": [
+      "scripts/validate_locale_surfaces.py reports web/API/CLI locale alignment.",
+      "make wellness reports every locale aligned and locale surfaces aligned.",
+      "The non-default web message bundles do not carry English-anchor wording."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete. Public movement waits on PR checks, merge, deploy, and verification."
+  },
+  "idea_ids": [
+    "multilingual-web",
+    "locale-as-data"
+  ],
+  "spec_ids": [
+    "multilingual-web"
+  ],
+  "task_ids": [
+    "locale-surface-bias-validation-20260608"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "bias-validation-request"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "scripts/validate_locale_surfaces.py compares web message bundles, web/messages/manifest.ts, api/app/data/locale_manifest.json, and cli/lib/messages/*.json.",
+    "make wellness now includes a Locale surfaces section with the validator's concise result.",
+    "web/messages/fr.json and web/messages/pt-br.json include begin.receiveTitle and begin.receiveHelp.",
+    "User-facing pending-translation copy names the current anchor view instead of an English anchor."
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "cli/lib/i18n.mjs",
+    "docs/system_audit/commit_evidence_2026-06-08_locale_surface_bias_validation.json",
+    "scripts/INDEX.md",
+    "scripts/sync_kb_to_db.py",
+    "scripts/validate_locale_surfaces.py",
+    "scripts/wellness_check.py",
+    "web/lib/locale-fetch.ts",
+    "web/messages/de.json",
+    "web/messages/en.json",
+    "web/messages/es.json",
+    "web/messages/fr.json",
+    "web/messages/id.json",
+    "web/messages/pt-br.json"
+  ],
+  "change_intent": "runtime_fix"
+}

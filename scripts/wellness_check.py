@@ -394,15 +394,16 @@ def sense_locale_parity() -> list[str]:
     """Do the body's voice speak the same body in every tongue?
 
     The web body speaks through every ``web/messages/{lang}.json``
-    translation file. English is the canonical source — new chrome strings,
-    copy refinements, and new sections land there first and are mirrored into
-    the installed locale bundles. When that mirroring lags, a visitor sees
-    half the page in their language and half falling back to English
-    mid-sentence.
+    translation file. The current default bundle is the canonical source —
+    new chrome strings, copy refinements, and new sections land there first
+    and are mirrored into the installed locale bundles. When that mirroring
+    lags, a visitor sees half the page in their language and half falling back
+    to the default locale mid-sentence.
 
-    This lens compares the key set of each locale to en's, surfacing:
-      · missing keys (en has strings the locale doesn't)
-      · extra keys (locale carries strings en no longer has)
+    This lens compares the key set of each locale to the default bundle,
+    surfacing:
+      · missing keys (the default bundle has strings the locale doesn't)
+      · extra keys (locale carries strings the default bundle no longer has)
 
     Drift is signal, not failure. A locale at 99% parity with three
     extras is a body recently moving; a locale at 70% is a body
@@ -472,6 +473,29 @@ def sense_locale_parity() -> list[str]:
     if all_aligned:
         return [f"  every locale aligned with en ({len(en_keys)} keys, {len(locales)} tongues)"]
 
+    return lines
+
+
+def sense_locale_surfaces() -> list[str]:
+    """Check that web, API, and CLI locale doors carry the same installed tongues."""
+    script = ROOT / "scripts" / "validate_locale_surfaces.py"
+    if not script.exists():
+        return ["  scripts/validate_locale_surfaces.py not found"]
+    result = subprocess.run(
+        [sys.executable, str(script), "--summary"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    output = [line for line in result.stdout.splitlines() if line.strip()]
+    if result.returncode == 0 and output:
+        return [f"  {output[0]}"]
+    lines = ["  locale surface validation wants attention"]
+    for line in output[:6]:
+        lines.append(f"    {line}")
+    if result.stderr.strip():
+        lines.append(f"    stderr: {result.stderr.strip().splitlines()[0]}")
     return lines
 
 
@@ -1844,6 +1868,7 @@ def main() -> int:
         ("Source maps — do specs point at files that exist?", sense_spec_sources()),
         ("Symbol resolution — do the named symbols still live in those files?", sense_spec_symbols()),
         ("Locale parity — does the body speak the same body in every tongue?", sense_locale_parity()),
+        ("Locale surfaces — do web, API, and CLI carry the same tongues?", sense_locale_surfaces()),
         ("Chain — does idea→spec→code→test reach end to end?", sense_chain()),
         ("Form engine — does the meta-circular evaluator cover Python dispatch?", sense_form_engine()),
         ("Form ontology — does the form-side table agree with each kernel parser?", sense_form_ontology()),
