@@ -3225,6 +3225,9 @@
                   bml-compile-file
                   bmf-identity-inverse)))
 
+    (let bml-compiler-rule-index
+        (object-rule-set-index bml-compiler-rules))
+
     (defn bml-compiler-rule-name (r) (head r))
 
     (defn bml-compiler-find-rule (rule-name rules)
@@ -3251,6 +3254,9 @@
 
     (defn apply-bml-compiler-rule (rule-name objects)
         (apply-object-rule (bml-compiler-find-rule rule-name bml-compiler-rules) objects))
+
+    (defn apply-bml-compiler-first-rule (objects)
+        (apply-indexed-object-rule-set bml-compiler-rule-index objects))
 
     ;; --- BMF rule emitters ------------------------------------------
 
@@ -3724,6 +3730,9 @@
       state-int ::= "save" ";" $value:int ";" "discard" ";" => bml-emit-state-int;
     }
 
+    (let bml-bmf-rule-index
+        (object-rule-set-index bml-bmf-rules))
+
     (defn bml-bmf-rule-name (r) (head r))
 
     (defn bml-bmf-find-rule (rule-name rules)
@@ -3734,6 +3743,9 @@
 
     (defn apply-bml-bmf-rule (rule-name objects)
         (apply-object-rule (bml-bmf-find-rule rule-name bml-bmf-rules) objects))
+
+    (defn apply-bml-bmf-first-rule (objects)
+        (apply-indexed-object-rule-set bml-bmf-rule-index objects))
 
     (defn bml-bmf-match-node (match)
         (bmf-object-value (cap-get (match-caps match) "result")))
@@ -3767,6 +3779,57 @@
               "file-import-two-star"
               "file-import-one-star"))
 
+    (defn bml-bmf-rules-by-names (rule-names)
+        (if (nil? rule-names) (empty)
+            (cons (bml-bmf-find-rule (head rule-names) bml-bmf-rules)
+                  (bml-bmf-rules-by-names (tail rule-names)))))
+
+    (let bml-source-executable-rule-index
+        (object-rule-set-index
+            (bml-bmf-rules-by-names (bml-source-executable-rules 0))))
+
+    (let bml-source-declaration-rule-index
+        (object-rule-set-index
+            (bml-bmf-rules-by-names (bml-source-declaration-rules 0))))
+
+    (defn bml-source-executable-rule-index-known-count (_x)
+        (object-rule-dispatch-index-known-count bml-source-executable-rule-index))
+
+    (defn bml-source-executable-rule-index-candidate-count (objects)
+        (object-rule-dispatch-index-candidate-count
+            bml-source-executable-rule-index
+            objects))
+
+    (defn bml-source-executable-rule-index-skip-count (objects)
+        (object-rule-dispatch-index-skip-count
+            bml-source-executable-rule-index
+            objects))
+
+    (defn bml-source-executable-rule-index-bucket-count (_x)
+        (object-rule-dispatch-index-bucket-count bml-source-executable-rule-index))
+
+    (defn bml-source-executable-rule-index-segment-count (_x)
+        (object-rule-dispatch-index-segment-count bml-source-executable-rule-index))
+
+    (defn bml-source-declaration-rule-index-known-count (_x)
+        (object-rule-dispatch-index-known-count bml-source-declaration-rule-index))
+
+    (defn bml-source-declaration-rule-index-candidate-count (objects)
+        (object-rule-dispatch-index-candidate-count
+            bml-source-declaration-rule-index
+            objects))
+
+    (defn bml-source-declaration-rule-index-skip-count (objects)
+        (object-rule-dispatch-index-skip-count
+            bml-source-declaration-rule-index
+            objects))
+
+    (defn bml-source-declaration-rule-index-bucket-count (_x)
+        (object-rule-dispatch-index-bucket-count bml-source-declaration-rule-index))
+
+    (defn bml-source-declaration-rule-index-segment-count (_x)
+        (object-rule-dispatch-index-segment-count bml-source-declaration-rule-index))
+
     (defn bml-source-parse-step (ok rule node rest)
         (list "bml-source-parse-step" ok rule node rest))
 
@@ -3790,6 +3853,19 @@
                     (bml-source-parse-executable-step-loop
                         objects
                         (tail rule-names))))))
+
+    (defn bml-source-parse-indexed-step (objects rule-index)
+        (do
+            (let m (apply-indexed-object-rule-set rule-index objects))
+            (if (match? m)
+                (do
+                    (let result (cap-get (match-caps m) "result"))
+                    (bml-source-parse-step
+                        true
+                        (bmf-object-kind result)
+                        (bmf-object-value result)
+                        (match-rest m)))
+                (bml-source-parse-step false "" (empty) objects))))
 
     (defn bml-source-token-value? (object value)
         (if (nil? object) false
@@ -4692,9 +4768,9 @@
             (bml-source-parse-step false "" (empty) objects)))
 
     (defn bml-source-parse-executable-step (objects)
-        (bml-source-parse-executable-step-loop
+        (bml-source-parse-indexed-step
             objects
-            (bml-source-executable-rules 0)))
+            bml-source-executable-rule-index))
 
     (defn bml-source-exec-parse-result (ok nodes rest rules)
         (list "bml-source-exec-parse-result" ok nodes rest rules))
@@ -4747,9 +4823,9 @@
             (bml-source-parse-balanced-class-shell objects)
             (do
                 (let step
-                    (bml-source-parse-executable-step-loop
+                    (bml-source-parse-indexed-step
                         objects
-                        (bml-source-declaration-rules 0)))
+                        bml-source-declaration-rule-index))
                 (if (bml-source-parse-step-ok? step)
                     step
                     (do

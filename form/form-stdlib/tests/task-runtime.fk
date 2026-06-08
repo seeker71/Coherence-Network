@@ -2,18 +2,25 @@
 ; Returns 91 when pending/resolved/failed task cells, await, resume, and
 ; undo all behave the same across supported kernels.
 
-section [form.action] {
-    def inc(x) = add(x, 1);
-    def b->i(b) = if b then 1 else 0;
+(do
+    (defn task-runtime-inc (x) (add x 1))
+    (defn task-runtime-bool-int (b) (if b 1 0))
 
-    let origin = list("py-await", "suspend");
-    let pending = task-pending(origin, inc);
-    let ready = task-resolve(pending, 41);
-    let rejected = task-reject(pending, list("error", "cancelled"));
-    let pending-await = task-await(pending);
+    (let origin (list "py-await" "suspend"))
+    (let pending (task-pending origin task-runtime-inc))
+    (let ready (task-resolve pending 41))
+    (let rejected (task-reject pending (list "error" "cancelled")))
+    (let pending-await (task-await pending))
 
-    let ready-score = add(task-await(ready), add(task-step(ready), len(cell-undo(ready))));
-    let state-score = add(b->i(task-ready?(ready)), add(b->i(task?(pending)), b->i(task-failed?(rejected))));
-    let undo-score = add(b->i(task?(pending-await)), len(cell-undo(rejected)));
-    add(ready-score, add(state-score, undo-score));
-}
+    (let ready-score
+        (add (task-await ready)
+             (add (task-step ready)
+                  (len (cell-undo ready)))))
+    (let state-score
+        (add (task-runtime-bool-int (task-ready? ready))
+             (add (task-runtime-bool-int (task? pending))
+                  (task-runtime-bool-int (task-failed? rejected)))))
+    (let undo-score
+        (add (task-runtime-bool-int (task? pending-await))
+             (len (cell-undo rejected))))
+    (add ready-score (add state-score undo-score)))

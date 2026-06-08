@@ -1,0 +1,148 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/choice-pool-research-20260608",
+  "commit_scope": "Add one-pass guarded direct dispatch for BMF object-pattern choices and bucketed first-literal rule-set dispatch for BMF/BML compiler and BML source-parser rule selection, expose BML source dispatch telemetry, preserve ordered matching for mixed/cut-aware alternatives, repair full-suite validation drift, and measure before/after impact.",
+  "files_owned": [
+    "form/form-stdlib/engine.fk",
+    "form/form-stdlib/compiler.fk",
+    "form/form-stdlib/grammars/bml.fk",
+    "form/form-stdlib/tests/bmf-compiler-runtime.fk",
+    "form/form-stdlib/tests/bmf-form-object-runtime-band.fk",
+    "form/form-stdlib/tests/bml-compiler-runtime.fk",
+    "form/form-stdlib/tests/source-compiler-multi-dialect-band.fk",
+    "form/form-stdlib/tests/source-corpus-roundtrip-band.fk",
+    "form/form-stdlib/tests/task-runtime.fk",
+    "docs/system_audit/commit_evidence_20260608_bmf_object_choice_direct_dispatch.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/tests/bmf-form-object-runtime-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/task-runtime.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-compiler-runtime.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-runtime.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-bml-compiler-picture-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-numeric-literals-source-proof.fk form-stdlib/tests/bml-thesis-char-escapes-source-proof.fk form-stdlib/tests/bml-thesis-float-literals-source-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-exit-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/bml.fk form-stdlib/source-compiler.fk form-stdlib/tests/source-compiler-multi-dialect-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/bml.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/tests/source-corpus-roundtrip-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/grammar-chars.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-component-runtime-exec-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-rule-body-execution-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/tests/bmf-object-runtime.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/grammar-chars.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-source-rule-to-runtime-band.fk",
+      "cd form && ./validate.sh",
+      "gh pr merge 2615 --repo seeker71/Coherence-Network --merge --delete-branch",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "cd form && ./validate.sh",
+      "benchmark: /tmp/coherence_choice_bench_20260608.fk against /tmp/coh-choice-baseline-20260608 origin/main and patched worktree, 7 warmed aggregate samples per tree",
+      "benchmark: bmf-compiler-runtime, bml-compiler-runtime, and bml-thesis-exit against origin/main and patched worktree, 5 warmed samples per workload/tree",
+      "benchmark: /tmp/coherence_rule_set_linear_20260608.fk versus /tmp/coherence_rule_set_direct_20260608.fk on the patched worktree, 7 warmed aggregate samples per path",
+      "benchmark: /tmp/coherence_rule_dispatch_linear_20260608.fk versus /tmp/coherence_rule_dispatch_entry_index_20260608.fk versus /tmp/coherence_rule_dispatch_bucketed_20260608.fk on the patched worktree, 7 warmed aggregate samples per path",
+      "benchmark: /tmp/coherence_bml_source_parse_linear_20260608.fk versus /tmp/coherence_bml_source_parse_indexed_20260608.fk on the patched worktree with prepared source-section preludes, 7 warmed Go-kernel samples per path"
+    ],
+    "notes": "A normal make prompt-guide reading now passes on this dirty continuation branch. An earlier normal make prompt-guide reading reported a sibling continuity blocker outside this worktree: /Users/ursmuff/.claude-worktrees/Coherence-Network/bml-capability-ledger-slice-20260607 branch=codex/bml-capability-ledger-slice-20260607 ahead=2 behind=25 upstream=no; that earlier in-flight turn used the gate-provided continuation bypass. make wellness passes; its current reading shows deploy aligned and witness-trace within budget. The followthrough gate initially found stale PR #2615; it was mergeable with passing checks, so it was merged before this branch was rebased onto updated origin/main. Focused BMF/BML engine, compiler, source-parser, dispatch-telemetry, and compiler-picture bands pass across Go, Rust, and TypeScript kernels. Final full validate on the rebased branch passes with 309 ok, 0 divergent. The previous full-suite drift was repaired by declaring the BML grammar preludes needed by source compiler bands and converting task-runtime.fk to native S-expression Form so it directly proves core task runtime behavior. Isolated 32-arm object-choice aggregate benchmark improved from 10.064884s mean / 10.008265s median on origin/main to 9.034380s mean / 9.027495s median on the patched worktree: 10.239% faster by mean and 9.800% faster by median. Real validation workloads were startup-heavy and effectively flat to slightly slower: bmf-compiler-runtime mean 5.257903s baseline vs 5.286527s patched (-0.544%), bml-compiler-runtime mean 5.490179s baseline vs 5.506224s patched (-0.292%), bml-thesis-exit mean 5.559805s baseline vs 5.567491s patched (-0.138%). The next slice added indexed first-literal rule-set dispatch: an on-the-fly FIRST scan was slightly slower than linear, so the carried implementation precomputes rule indexes once. The first 32-rule rule-set benchmark improved from 12.379231s mean / 12.337638s median for linear rule scan to 10.068999s mean / 10.016387s median for indexed dispatch: 18.662% faster by mean and 18.814% faster by median. The latest rule-set slice moves that index to ordered bucket segments: linear rule scan was 12.336970s mean / 12.308525s median, entry-index scan was 10.141437s mean / 10.123488s median, and bucketed dispatch was 9.947811s mean / 9.965323s median. Bucketed dispatch is 19.366% faster than linear by mean and 1.909% faster than entry-index scan by mean on a 32-rule exact-value workload. The BML source executable/declaration parser now routes through precomputed rule indexes. On the same 48-return-token stream parsed 12 times, the preserved ordered source-step loop took 5.011512s mean / 5.028754s median, while the indexed source parser took 1.333789s mean / 1.325145s median: 73.385% faster by mean and 73.649% faster by median. The BML source index counters are now named at the grammar level and proven in bml-compiler-runtime.fk: known, skipped, buckets, and segments are visible for executable and declaration parser indexes. This proves the rule-selection path wants precomputed bucket dispatch data and gives the next adaptive ordering/thread-pool work an observable surface."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until this branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No deploy attempted for this local Form runtime optimization."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Scoped runtime proof is complete. Commit, PR, CI, and any deployment validation remain pending."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "BMF object choices scan bare object-literal alternatives directly because every such alternative returns the same empty-captures/tail result shape. The first non-literal alternative falls back to the ordered linear matcher over the whole choice, so mixed alternatives and cut-aware choices retain ordered semantics. Rule-set selection can precompute ordered first-literal bucket segments and skip rules whose first object cannot match while preserving ordered matching for unknown or ambiguous FIRST sets. BML source executable and declaration parsing now uses the same indexed object-rule dispatch over preselected rule subsets.",
+    "public_endpoints": [
+      "internal Form sibling kernels"
+    ],
+    "test_flows": [
+      "bmf-form-object-runtime-band proves direct-safe literal-only choices, wildcard and duplicate literal choices, unsafe mixed literal/non-literal choices, and unchanged match behavior",
+      "bmf-form-object-runtime-band proves bucketed rule-set skip counters, ordered unknown-FIRST fallback, and no-match failure",
+      "bml-compiler-runtime and bml-thesis-exit-proof prove BML choose/choice lowering still executes correctly",
+      "BML numeric, char escape, float literal, and exit source proofs pass with executable/declaration parsing routed through precomputed rule indexes",
+      "bml-compiler-runtime proves source dispatch telemetry counters for executable and declaration indexes",
+      "bmf-compiler-runtime and bml-compiler-runtime prove whole-rule-set first-rule helpers select BMF and BML rules correctly",
+      "bmf-object-runtime, bmf-component-runtime-exec, and bmf-source-rule-to-runtime cover shared BMF compiler/object paths"
+    ]
+  },
+  "idea_ids": [
+    "parallel-choice-kernel",
+    "bmf-bml-compiler-choice-dispatch"
+  ],
+  "spec_ids": [
+    "bmf-object-runtime",
+    "bml-compiler-runtime"
+  ],
+  "task_ids": [
+    "choice-pool-research-20260608"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "architecture-review",
+        "performance-priority"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "engine.fk now classifies object-pattern choice alternatives and uses a one-pass direct scan for bare object-literal prefixes.",
+    "engine.fk now exposes object-rule-set-index and apply-indexed-object-rule-set for precomputed ordered first-literal bucket dispatch.",
+    "engine.fk now exposes dispatch counters for known rules, candidate rules, skipped rules, buckets, and segments.",
+    "compiler.fk exposes apply-bmf-compiler-first-rule over a precomputed BMF compiler rule index.",
+    "grammars/bml.fk exposes apply-bml-compiler-first-rule and apply-bml-bmf-first-rule over precomputed BML rule indexes.",
+    "grammars/bml.fk routes BML source executable and declaration parser steps through precomputed BMF rule indexes for their exact source-rule subsets.",
+    "grammars/bml.fk exposes BML source executable/declaration dispatch telemetry counters for known rules, candidates, skipped rules, buckets, and segments.",
+    "compiler.fk compiler-picture metadata now points at apply-bmf-compiler-first-rule and apply-bml-bmf-first-rule plus the indexed source parser.",
+    "Literal-only choices, including wildcard and duplicate literals, are direct-safe because bare object-literal matches are result-equivalent.",
+    "Mixed literal/non-literal choices fall back to ordered matching as soon as the direct scan reaches the first non-literal alternative.",
+    "Existing cut-aware ordered semantics remain in match-object-choice-linear and are used for all unsafe choices.",
+    "bmf-form-object-runtime-band score increased to 67108863 with direct-choice classifier, fallback, bucketed rule-set, and dispatch-counter proofs.",
+    "bmf-compiler-runtime score increased to 2097279 with BMF whole-rule-set first-rule proof.",
+    "bml-compiler-runtime score increased to 131012 with BML whole-rule-set first-rule and BML source dispatch telemetry proofs.",
+    "Focused BMF/BML compiler and runtime proof bands pass across Go, Rust, and TypeScript kernels.",
+    "Full form validation now passes on the rebased branch: 309 ok, 0 divergent.",
+    "Before/after isolated aggregate benchmark improved 10.064884s mean to 9.034380s mean across 7 warmed validate-wrapper runs.",
+    "Indexed rule-set benchmark improved 12.379231s mean linear scan to 10.068999s mean indexed dispatch across 7 warmed validate-wrapper runs.",
+    "Bucketed rule-set benchmark improved 12.336970s mean linear scan to 9.947811s mean bucketed dispatch and 10.141437s mean entry-index scan to 9.947811s mean bucketed dispatch across 7 warmed validate-wrapper runs.",
+    "BML source parse benchmark improved 5.011512s mean linear source-step loop to 1.333789s mean indexed source parser, with median improvement from 5.028754s to 1.325145s across 7 warmed Go-kernel runs using prepared source-section preludes.",
+    "Real BMF/BML proof workload timings were effectively flat to slightly slower under startup-heavy validate-wrapper measurement until the real BML source parser was routed through indexes; the source-parser path now shows an isolated end-to-end parser win."
+  ],
+  "change_files": [
+    "form/form-stdlib/engine.fk",
+    "form/form-stdlib/compiler.fk",
+    "form/form-stdlib/grammars/bml.fk",
+    "form/form-stdlib/tests/bmf-compiler-runtime.fk",
+    "form/form-stdlib/tests/bmf-form-object-runtime-band.fk",
+    "form/form-stdlib/tests/bml-compiler-runtime.fk",
+    "form/form-stdlib/tests/source-compiler-multi-dialect-band.fk",
+    "form/form-stdlib/tests/source-corpus-roundtrip-band.fk",
+    "form/form-stdlib/tests/task-runtime.fk"
+  ],
+  "change_intent": "runtime_feature"
+}
