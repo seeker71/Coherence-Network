@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 143
+**Total files**: 144
 
 | File | Purpose |
 |---|---|
@@ -64,6 +64,7 @@
 | [energy_sensing.py](energy_sensing.py) | Energy sensing — the organism sees itself as frequencies and harmonies. |
 | [entity_views.py](entity_views.py) | Generic entity-views router — one API for language views of any entity type. |
 | [evidence.py](evidence.py) | Evidence router — implementation evidence for asset CC-multiplier bonus. |
+| [execution_value.py](execution_value.py) | Routes for execution value and income proof. |
 | [explore.py](explore.py) | Explore queue — serendipitous meetings, one after another. |
 | [fallbacks.py](fallbacks.py) | Fallback visibility — read the witness of silent degradation paths. |
 | [federation.py](federation.py) | Federation API routes for cross-instance data exchange. |

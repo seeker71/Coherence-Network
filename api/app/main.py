@@ -77,6 +77,7 @@ from app.routers import graph_questions
 from app.routers import graph_zoom
 from app.routers import graph_health
 from app.routers import agent_grounded_metrics_routes
+from app.routers import execution_value as execution_value_router
 from app.routers import meta as meta_router
 from app.routers import verification as verification_router
 from app.routers import onboarding as onboarding_router
@@ -773,6 +774,7 @@ async def startup_translator_backend():
         _startup_logger.error("startup: translator_backend registration failed", exc_info=True)
 app.include_router(providers.router, prefix="/api", tags=["agent"])
 app.include_router(agent_grounded_metrics_routes.router, prefix="/api", tags=["ideas"])
+app.include_router(execution_value_router.router, prefix="/api", tags=["execution-value"])
 app.include_router(treasury.router, prefix="/api", tags=["treasury"])
 app.include_router(provider_stats.router)
 app.include_router(pipeline.router, prefix="/api", tags=["pipeline"])
