@@ -1,0 +1,162 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/ideas-form-rewrite-20260608",
+  "commit_scope": "Bind idea/spec mutation paths to header-gated Form-native SQL preview routes without moving ordinary public writes off FastAPI.",
+  "files_owned": [
+    "MANIFEST.md",
+    "api/tests/INDEX.md",
+    "api/tests/test_ideas_router_form.py",
+    "api/tests/test_native_mutation_route_bindings.py",
+    "api/tests/test_runtime_surface_native_routes.py",
+    "api/tests/test_spec_registry_router_form.py",
+    "deploy/kernel-router/production-routes.fk",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "docs/system_audit/commit_evidence_2026-06-08_method_specific_native_mutation_preview_bindings.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/runtime_surface_report.py",
+    "specs/INDEX.md",
+    "specs/application-graph-node-sql-carrier.md",
+    "specs/graph-node-mutation-native-carrier.md",
+    "specs/ideas-router-form-expression.md",
+    "specs/method-specific-native-mutation-preview-bindings.md",
+    "specs/native-auth-parity-carrier.md",
+    "specs/spec-registry-source-native.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --host 127.0.0.1 --port 19215 --workers 1 --routes ../../deploy/kernel-router/production-routes.fk --stdlib ../form-stdlib --upstream http://127.0.0.1:9",
+      "curl -sS -i -X POST http://127.0.0.1:19215/api/spec-registry -H 'Content-Type: application/json' -H 'X-Form-Native-Preview: 1' --data '{\"spec_id\":\"native-bind\",\"title\":\"Native Bind\",\"summary\":\"route proof\"}'",
+      "curl -sS -i -X POST http://127.0.0.1:19215/api/spec-registry -H 'Content-Type: application/json' --data '{\"spec_id\":\"native-bind\",\"title\":\"Native Bind\"}'",
+      "curl -sS -i -X PATCH http://127.0.0.1:19215/api/ideas/idea-123 -H 'Content-Type: application/json' -H 'X-Form-Native-Preview: 1' --data '{\"name\":\"Moved idea\",\"manifestation_status\":\"partial\"}'",
+      "curl -sS -i -X DELETE http://127.0.0.1:19215/api/spec-registry/native-bind -H 'X-Form-Native-Preview: 1'",
+      "python3 scripts/runtime_surface_report.py --json",
+      "cd api && python3 -m pytest -q tests/test_native_mutation_route_bindings.py tests/test_runtime_surface_native_routes.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_application_graph_node_port_form.py tests/test_native_auth_parity_form.py tests/test_graph_node_mutation_carrier_form.py tests/test_specs_source_native_route.py",
+      "cd api && python3 -m ruff check tests/test_native_mutation_route_bindings.py tests/test_runtime_surface_native_routes.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py",
+      "python3 scripts/validate_spec_quality.py --file specs/method-specific-native-mutation-preview-bindings.md --file specs/ideas-router-form-expression.md --file specs/spec-registry-source-native.md --file specs/application-graph-node-sql-carrier.md --file specs/native-auth-parity-carrier.md --file specs/graph-node-mutation-native-carrier.md",
+      "python3 scripts/generate_repo_indexes.py"
+    ],
+    "summary": "deploy/kernel-router/production-routes.fk now binds five method-specific KernelHTTPRoute preview rows: POST /api/ideas, PATCH /api/ideas/*, POST /api/spec-registry, PATCH /api/spec-registry/*, and DELETE /api/spec-registry/*. Each requires X-Form-Native-Preview. Matching preview requests return 202, X-Form-Router:native-kernel, executes:false, and application graph SQL over graph_nodes, graph_node_revisions, and graph_edges. Requests without the preview header fan out to FastAPI. runtime_surface_report.py now counts method-specific kh-route and raw 43004 rows and reports 33 kernel-first capable API bindings.",
+    "known_limitations": [
+      {
+        "scope": "ordinary public mutations",
+        "observed": "No-header POST/PATCH/DELETE requests still fan out to FastAPI. This slice does not flip public mutation traffic to native execution."
+      },
+      {
+        "scope": "live DB execution",
+        "observed": "Preview handlers emit SQL and mark executes:false. They do not execute against PostgreSQL."
+      },
+      {
+        "scope": "route side effects",
+        "observed": "Response projection, cache invalidation, parent/edge repair, resonance re-attunement, and contributor-key last_used_at updates remain follow-up proof."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push of this method-specific native mutation preview binding commit and GitHub checks on PR #2586."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "No public deploy attempted for this header-gated preview binding slice."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Explicit preview requests with X-Form-Native-Preview can now enter native Form handlers on the real public mutation methods and paths and receive SQL preview responses. Ordinary public mutation requests without that header continue to fan out to FastAPI.",
+    "public_endpoints": [
+      "POST /api/ideas",
+      "PATCH /api/ideas/{idea_id}",
+      "POST /api/spec-registry",
+      "PATCH /api/spec-registry/{spec_id}",
+      "DELETE /api/spec-registry/{spec_id}"
+    ],
+    "test_flows": [
+      "POST /api/spec-registry with X-Form-Native-Preview -> 202, X-Form-Router:native-kernel, INSERT INTO graph_nodes, INSERT INTO graph_node_revisions, executes:false",
+      "POST /api/spec-registry without X-Form-Native-Preview -> X-Form-Router:fanout-python",
+      "PATCH /api/ideas/idea-123 with X-Form-Native-Preview -> 202, X-Form-Router:native-kernel, UPDATE graph_nodes, graph_node_revisions next revision SQL",
+      "DELETE /api/spec-registry/native-bind with X-Form-Native-Preview -> 202, X-Form-Router:native-kernel, DELETE FROM graph_edges before DELETE FROM graph_nodes",
+      "python3 scripts/runtime_surface_report.py --json -> kernel_first_capable_routes=33 and includes POST/PATCH/DELETE method rows",
+      "cd api && python3 -m pytest -q tests/test_native_mutation_route_bindings.py tests/test_runtime_surface_native_routes.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_application_graph_node_port_form.py tests/test_native_auth_parity_form.py tests/test_graph_node_mutation_carrier_form.py tests/test_specs_source_native_route.py -> 31 passed"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Header-gated method binding is complete; ordinary public mutation flip still needs live DB execution, response projection, cache invalidation, and side-effect proof."
+  },
+  "idea_ids": [
+    "idea-realization-engine",
+    "data-infrastructure"
+  ],
+  "spec_ids": [
+    "specs/method-specific-native-mutation-preview-bindings.md",
+    "specs/ideas-router-form-expression.md",
+    "specs/spec-registry-source-native.md",
+    "specs/application-graph-node-sql-carrier.md",
+    "specs/native-auth-parity-carrier.md",
+    "specs/graph-node-mutation-native-carrier.md"
+  ],
+  "task_ids": [
+    "method-specific-ideas-spec-mutation-routes",
+    "native-graph-mutation-live-db-proof",
+    "native-mutation-response-projection",
+    "native-mutation-side-effects"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "deploy/kernel-router/production-routes.fk",
+    "scripts/runtime_surface_report.py",
+    "api/tests/test_native_mutation_route_bindings.py",
+    "api/tests/test_runtime_surface_native_routes.py",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "specs/method-specific-native-mutation-preview-bindings.md"
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "api/tests/INDEX.md",
+    "api/tests/test_ideas_router_form.py",
+    "api/tests/test_native_mutation_route_bindings.py",
+    "api/tests/test_runtime_surface_native_routes.py",
+    "api/tests/test_spec_registry_router_form.py",
+    "deploy/kernel-router/production-routes.fk",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "docs/system_audit/commit_evidence_2026-06-08_method_specific_native_mutation_preview_bindings.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/runtime_surface_report.py",
+    "specs/INDEX.md",
+    "specs/application-graph-node-sql-carrier.md",
+    "specs/graph-node-mutation-native-carrier.md",
+    "specs/ideas-router-form-expression.md",
+    "specs/method-specific-native-mutation-preview-bindings.md",
+    "specs/native-auth-parity-carrier.md",
+    "specs/spec-registry-source-native.md"
+  ],
+  "change_intent": "runtime_feature"
+}

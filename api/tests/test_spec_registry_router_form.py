@@ -52,7 +52,9 @@ def test_spec_registry_router_form_describes_live_and_native_carriers():
     assert "gn-create-node" in form_text
     assert "gn-replace-node" in form_text
     assert "gn-delete-node" in form_text
-    assert "public /api/spec-registry mutation paths still fan out" in form_text
+    assert "POST /api/spec-registry + PATCH/DELETE /api/spec-registry/{spec_id}" in form_text
+    assert "X-Form-Native-Preview" in form_text
     assert "auth-port.fk preserves API-key/contributor-key decision parity" in form_text
     assert "application-graph-node-port.fk emits direct graph_nodes/graph_node_revisions/graph_edges SQL" in form_text
-    assert "method-specific kernel route rows bind request bodies" in form_text
+    assert "header-gated native SQL preview rows" in form_text
+    assert "live DB execution, response projection, cache invalidation" in form_text

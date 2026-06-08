@@ -140,8 +140,12 @@ def kernel_first_capable_routes() -> list[str]:
     raw ``(list "<path>" <handler>)`` rows and higher-grammar
     ``(kh-route-data-ref "<id>" <handler>)`` rows resolved through the sibling
     ``*-data.json`` file, so promoting a route into a ``RouteCell`` does not make
-    it invisible. Returns [] if the manifest is absent (the report degrades to
-    the SERVED count and says so).
+    it invisible. Path-only rows keep returning bare paths for back-compat.
+    Method-specific ``kh-route`` rows return ``"METHOD /api/path"`` so PATCH and
+    DELETE wildcard bindings sharing a path remain distinct native capabilities.
+    The ``;``-comment lines that mention ``/api/...`` paths never match the
+    binding shapes, so the scan reads bindings only. Returns [] if the manifest
+    is absent (the report degrades to the SERVED count and says so).
     """
     if not _KERNEL_ROUTER_MANIFEST.is_file():
         return []
@@ -157,16 +161,28 @@ def kernel_first_capable_routes() -> list[str]:
     route_row = re.compile(
         r'\(list\s+"(/api/[^"]+)"\s+[A-Za-z_]\w*\)'
         r'|\(kh-route-data-ref\s+"([^"]+)"\s+[A-Za-z_]\w*\)'
-        r'|\(kh-route\s+"[^"]+"\s+"[^"]+"\s+"(/api/[^"]+)"'
+        r'|\(kh-route\s+"[^"]+"\s+"([A-Z]+|ANY)"\s+"(/api/[^"]+)"'
+        r'\s+\d+\s+"[^"]+"\s+"[^"]*"\s+\d+\)'
+        r'|\(list\s+43004\s+"[^"]+"\s+"([A-Z]+|ANY)"\s+"(/api/[^"]+)"'
+        r'\s+\d+\s+"[^"]+"\s+"[^"]*"\s+\d+\)'
     )
     for match in route_row.finditer(block):
-        path = match.group(1) or match.group(3)
+        path = match.group(1)
+        route_label = path
         if path is None:
             route_id = match.group(2)
-            path = route_data.get(route_id) if route_id is not None else None
-        if path and path.startswith("/api/") and path not in seen:
-            routes.append(path)
-            seen.add(path)
+            route_label = route_data.get(route_id) if route_id is not None else None
+        if route_label is None and match.group(3) is not None and match.group(4) is not None:
+            method = match.group(3)
+            path = match.group(4)
+            route_label = path if method == "ANY" else f"{method} {path}"
+        if route_label is None and match.group(5) is not None and match.group(6) is not None:
+            method = match.group(5)
+            path = match.group(6)
+            route_label = path if method == "ANY" else f"{method} {path}"
+        if route_label and route_label not in seen:
+            routes.append(route_label)
+            seen.add(route_label)
     return routes
 
 
@@ -195,8 +211,6 @@ def _kernel_route_data_patterns(manifest: Path) -> dict[str, str]:
         if isinstance(pattern, str) and pattern.startswith("/api/"):
             out[route_id] = pattern
     return out
-
-
 def probe_kernel_front_door() -> dict:
     """Read the public API front-door provenance header.
 

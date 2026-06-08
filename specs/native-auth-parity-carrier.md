@@ -30,14 +30,14 @@ requirements:
   - "Form has a native auth decision carrier for mutation routes that mirrors FastAPI shared API-key and contributor-key decisions."
   - "Contributor keys are compared as SHA-256 hex hashes in Form, not as raw allow-list shortcuts."
   - "The carrier proves allowed, denied, missing, blank, case-insensitive header, and production dev-key misconfiguration cases."
-  - "Ideas and specs name auth parity as proven while keeping public mutable front-door flips out of scope until method-specific route binding and live DB proof land."
+  - "Ideas and specs name auth parity as proven while keeping public mutable front-door flips out of scope until header-gated preview rows graduate through live DB execution proof."
 done_when:
   - 'file_contains("form/form-stdlib/auth-port.fk", "defn auth-require-api-key")'
   - 'file_contains("form/form-stdlib/tests/auth-port-band.fk", "Band verdict: 1111")'
   - 'pytest_passes("api/tests/test_native_auth_parity_form.py")'
 test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/sha256.fk form-stdlib/hex.fk form-stdlib/auth-port.fk form-stdlib/tests/auth-port-band.fk && cd ../api && python3 -m pytest -q tests/test_native_auth_parity_form.py"
 constraints:
-  - "Do not bind public /api/ideas or /api/spec-registry mutation routes in this slice."
+  - "Do not flip public /api/ideas or /api/spec-registry mutation routes to native execution for ordinary traffic in this slice."
   - "Do not store live secrets or contributor raw keys in Form source."
   - "Do not weaken contributor-key verification to header presence or raw key allow-lists."
   - "Do not write live mutations to port_kv or file storage."
@@ -57,8 +57,9 @@ return the same 401 detail for missing/blank/wrong keys, and return the same
 This is not a public route flip. It closes the auth-decision gap so the next
 remaining blocker was the live application graph carrier: direct `graph_nodes`,
 `graph_node_revisions`, and edge cleanup parity. That carrier now exists as
-`application-graph-node-port.fk`; the remaining blocker is method-specific route
-binding and live DB execution proof.
+`application-graph-node-port.fk`; header-gated method-specific preview rows now
+exist too. The remaining blocker is live DB execution, response projection, and
+side-effect proof.
 
 ## Requirements
 
@@ -73,8 +74,8 @@ binding and live DB execution proof.
   over both direct header lists and a `kh-request` wrapper, with a Python-known
   SHA-256 fixture.
 - [ ] **R5**: ideas/spec Form route readings name auth parity as proven and
-  leave public mutable front-door flips blocked on method-specific route binding
-  and live DB execution proof.
+  leave public mutable front-door flips blocked on live DB execution, response
+  projection, and side-effect proof.
 
 ## Research Inputs
 
@@ -114,8 +115,8 @@ python3 scripts/validate_spec_quality.py --file specs/native-auth-parity-carrier
 
 ## Out of Scope
 
-- Binding public `POST/PATCH/DELETE /api/ideas` or `/api/spec-registry` to
-  native kernel rows.
+- Flipping public `POST/PATCH/DELETE /api/ideas` or `/api/spec-registry` to
+  native execution for ordinary traffic.
 - Reading live API secrets from config inside Form source.
 - Updating `contributor_api_keys.last_used_at`; that side effect belongs to the
   live contributor-key table carrier.
@@ -129,9 +130,10 @@ python3 scripts/validate_spec_quality.py --file specs/native-auth-parity-carrier
 - GAP-NAPC2 follow-up task: `native-contributor-key-last-used-update`.
   The current carrier proves allow/deny parity. The audit side effect that
   refreshes `last_used_at` should land with the application-table carrier.
-- GAP-NAPC3 follow-up task: `method-specific-ideas-spec-mutation-routes`.
-  Bind method-specific native rows without stealing existing read surfaces once
-  request/response projection, cache invalidation, and live DB proof are exact.
+- GAP-NAPC3 follow-up task: `native-graph-mutation-live-db-proof`.
+  Header-gated method-specific native rows now exist without stealing existing
+  mutation traffic. The next proof is live application DB execution plus result
+  projection, cache invalidation, and side effects.
 
 ## Risks and Assumptions
 
