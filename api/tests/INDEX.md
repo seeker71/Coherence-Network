@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 257
+**Total files**: 261
 
 | File | Purpose |
 |---|---|
@@ -66,6 +66,7 @@
 | [test_edge_cases_regression.py](test_edge_cases_regression.py) | Edge-case and regression tests that catch tricky bugs flow tests miss. |
 | [test_entity_view_attribution.py](test_entity_view_attribution.py) | Entity-view attribution and attention credit tests. |
 | [test_evidence_flow.py](test_evidence_flow.py) | Flow tests for /api/evidence — story-protocol-integration R9. |
+| [test_execution_value_proof.py](test_execution_value_proof.py) | _no top-of-file purpose_ |
 | [test_external_agent_encounters.py](test_external_agent_encounters.py) | External agent encounter record tests. |
 | [test_external_presence.py](test_external_presence.py) | Acceptance tests for spec: external-presence-bots-and-news (idea: external-presence). |
 | [test_external_proof_demo.py](test_external_proof_demo.py) | _no top-of-file purpose_ |
@@ -142,6 +143,7 @@
 | [test_morning_coherence_brief.py](test_morning_coherence_brief.py) | _no top-of-file purpose_ |
 | [test_mvp_acceptance.py](test_mvp_acceptance.py) | MVP acceptance summary and judge endpoint tests. |
 | [test_native_auth_parity_form.py](test_native_auth_parity_form.py) | Proof that mutation auth has a native Form parity carrier. |
+| [test_native_idea_valuation_audit_ledger.py](test_native_idea_valuation_audit_ledger.py) | Proof that idea valuation audit-ledger parity is Form-native. |
 | [test_native_mutation_ab_observation.py](test_native_mutation_ab_observation.py) | Proof for the native mutation A/B observation gate. |
 | [test_native_mutation_public_gate.py](test_native_mutation_public_gate.py) | Proof that native mutation public gates are reversible and receipt-backed. |
 | [test_native_mutation_route_bindings.py](test_native_mutation_route_bindings.py) | Proof that mutable idea/spec routes have native preview bindings. |
@@ -178,6 +180,7 @@
 | [test_runtime_event_store_precedence.py](test_runtime_event_store_precedence.py) | Regression tests for runtime telemetry DB precedence. |
 | [test_runtime_mode_and_events.py](test_runtime_mode_and_events.py) | _no top-of-file purpose_ |
 | [test_runtime_surface_native_routes.py](test_runtime_surface_native_routes.py) | The runtime-surface instrument SEES the kernel-router's native surface. |
+| [test_runtime_web_api_provenance.py](test_runtime_web_api_provenance.py) | Runtime telemetry preserves web API provenance for route-frequency promotion. |
 | [test_session_greeting.py](test_session_greeting.py) | Session greeting — detect agent + human, greet with memory, across all agents. |
 | [test_settlement_flow.py](test_settlement_flow.py) | Tests for settlement service + router — story-protocol-integration R8. |
 | [test_smart_reaper_module_boundary.py](test_smart_reaper_module_boundary.py) | _no top-of-file purpose_ |
@@ -192,6 +195,7 @@
 | [test_substrate_auto_reactive.py](test_substrate_auto_reactive.py) | Auto-firing reactive subscriptions. |
 | [test_substrate_concept_structured.py](test_substrate_concept_structured.py) | Concept domain — structured composition discipline. |
 | [test_substrate_discovery.py](test_substrate_discovery.py) | Tests for the substrate-using commands — discover, shape-check, ingest-paths. |
+| [test_substrate_edge_categories.py](test_substrate_edge_categories.py) | Edge-category sensing over source substrate files. |
 | [test_substrate_form.py](test_substrate_form.py) | Tests for Form — the substrate-native language. |
 | [test_substrate_form_args_try_methods.py](test_substrate_form_args_try_methods.py) | Method args + try/catch + cell-method dispatch + nested ?-queries. |
 | [test_substrate_form_ast_access.py](test_substrate_form_ast_access.py) | Pin Access + MethodCall in the structural Form evaluator. |

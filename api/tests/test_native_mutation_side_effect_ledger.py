@@ -66,6 +66,13 @@ def test_python_parity_entries_cite_python_sources_and_form_carriers():
             "api/app/services/contributor_key_store.py::verify",
             "form/form-stdlib/native-mutation-side-effects.fk::nms-audit-contributor-key",
         ),
+        "idea-valuation-audit-ledger": (
+            "python_parity_effect",
+            "api/app/services/idea_write_ops.py::update_idea",
+            "api/app/services/idea_write_ops.py::update_ideas_batch",
+            "api/app/services/audit_ledger_service.py::append_entry",
+            "form/form-stdlib/native-idea-valuation-audit-ledger.fk::nival-record-valuation-change",
+        ),
     }
 
     for effect_id, required_parts in expected.items():
@@ -87,19 +94,22 @@ def test_gate_receipts_are_not_claimed_as_python_parity():
     assert "receipt is side-effect evidence for rollback discipline, not a reason to add domain side effects" in text
 
 
-def test_missing_python_parity_blocks_ordinary_flip():
+def test_audit_ledger_parity_is_carried_before_ordinary_flip():
     text = _text(LEDGER_PATH)
     entry = _entry(text, "idea-valuation-audit-ledger")
 
     for required in (
-        '"missing_python_parity"',
+        '"python_parity_effect"',
         "api/app/services/idea_write_ops.py::update_idea",
         "api/app/services/idea_write_ops.py::update_ideas_batch",
         "api/app/services/audit_ledger_service.py::append_entry",
-        "ordinary no-header flip blocked until carried Form-native or intentionally retired by spec",
-        "carry idea-valuation-audit-ledger Form-native or retire it by explicit spec",
+        "form/form-stdlib/native-idea-valuation-audit-ledger.fk::nival-run-idea-update-with-valuation-audit",
+        "form/scripts/native-idea-valuation-audit-ledger-test.sh",
+        "idea valuation audit-ledger parity is carried Form-native",
     ):
         assert required in entry or required in text
+    assert "missing_python_parity: 0" in text
+    assert "carry idea-valuation-audit-ledger Form-native or retire it by explicit spec" not in text
 
 
 def test_route_forms_and_specs_link_the_ledger_boundary():
@@ -107,7 +117,8 @@ def test_route_forms_and_specs_link_the_ledger_boundary():
         assert "docs/coherence-substrate/native-mutation-side-effect-ledger.form" in text
         assert "source-classified side-effect ledger" in text
         assert "rollback receipts are reversible gate safety, not Python parity" in text
-        assert "idea-valuation-audit-ledger remains missing Python parity before ordinary no-header flip" in text
+        assert "idea-valuation-audit-ledger is now carried Form-native" in text
+        assert "native idea valuation audit ledger proven" in text
 
     for text in (
         _text(SIDE_EFFECTS_SPEC_PATH),

@@ -10,6 +10,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 PUBLIC_GATE_PATH = ROOT / "form" / "form-stdlib" / "native-mutation-public-gate.fk"
+AUDIT_LEDGER_PATH = ROOT / "form" / "form-stdlib" / "native-idea-valuation-audit-ledger.fk"
 BAND_PATH = ROOT / "form" / "form-stdlib" / "tests" / "native-mutation-public-gate-band.fk"
 INTEGRATION_PATH = ROOT / "form" / "form-stdlib" / "integration" / "native-mutation-public-gate-live.fk"
 SCRIPT_PATH = ROOT / "form" / "scripts" / "native-mutation-public-gate-test.sh"
@@ -33,12 +34,16 @@ def test_public_gate_form_names_header_runner_and_rollback_receipt():
         "defn nmpg-public-gate-rollback-receipt-sql",
         "public-gate-rollback-receipt",
         "defn nmpg-run-idea-create-public-gate",
+        "defn nmpg-run-idea-update-public-gate",
         "defn nmpg-run-spec-update-public-gate",
         "nmrs-run-idea-create-with-side-effects",
+        "nival-run-idea-update-with-valuation-audit",
         "nmrs-run-spec-update-with-side-effects",
+        "idea valuation audit ledger",
         '\\"ordinary_traffic_flip_performed\\":false',
     ):
         assert required in text
+    assert "defn nival-record-valuation-change" in _text(AUDIT_LEDGER_PATH)
 
 
 def test_public_gate_band_executes_across_sibling_kernels():
@@ -49,6 +54,7 @@ def test_public_gate_band_executes_across_sibling_kernels():
             "form-stdlib/application-graph-node-port.fk",
             "form-stdlib/native-mutation-side-effects.fk",
             "form-stdlib/native-mutation-route-side-effects.fk",
+            "form-stdlib/native-idea-valuation-audit-ledger.fk",
             "form-stdlib/native-mutation-public-gate.fk",
             "form-stdlib/tests/native-mutation-public-gate-band.fk",
         ],
@@ -59,7 +65,7 @@ def test_public_gate_band_executes_across_sibling_kernels():
     )
 
     assert result.returncode == 0, result.stderr + result.stdout
-    assert "→ 111111" in result.stdout
+    assert "→ 1111111" in result.stdout
 
 
 def test_public_gate_live_script_runs_or_skips_when_pg_missing():
@@ -78,7 +84,7 @@ def test_public_gate_live_script_runs_or_skips_when_pg_missing():
         or "SKIP: no PG_DSN set and initdb not found" in output
     )
     if "native mutation public gate: PASS" in output:
-        assert "verdict: 11111111" in output
+        assert "verdict: 111111111" in output
 
 
 def test_public_gate_live_integration_persists_route_local_receipts():
@@ -86,12 +92,16 @@ def test_public_gate_live_integration_persists_route_local_receipts():
 
     for required in (
         "nmpg-run-idea-create-public-gate",
+        "nmpg-run-idea-update-public-gate",
         "nmpg-run-spec-update-public-gate",
+        "nival-run-idea-update-with-valuation-audit",
+        "audit_ledger",
+        "VALUATION_CHANGE",
         "public-gate-rollback-receipt",
         "route-local-rollback-receipt",
         "graph_node_revisions",
         "native_mutation_side_effect_receipts",
-        "11111111",
+        "111111111",
     ):
         assert required in text
 

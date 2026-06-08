@@ -1925,6 +1925,7 @@
     "{\"name\":\"cache-invalidation\",\"surface\":\"ideas/specs/translation-read-caches\",\"mode\":\"intent-carried\"}"
     ",{\"name\":\"parent-edge-repair\",\"surface\":\"idea-parent-child-graph\",\"mode\":\"intent-carried\"}"
     ",{\"name\":\"contributor-key-audit\",\"surface\":\"contributor_api_keys.last_used_at\",\"mode\":\"intent-carried\"}"
+    ",{\"name\":\"idea-valuation-audit-ledger\",\"surface\":\"audit_ledger.VALUATION_CHANGE\",\"mode\":\"carrier-proven\"}"
     ",{\"name\":\"rollback-receipt\",\"surface\":\"native-mutation-front-door\",\"mode\":\"intent-carried\"}"
     "]")))
 

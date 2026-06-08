@@ -4,6 +4,8 @@ status: done
 source:
   - file: form/form-stdlib/native-mutation-route-side-effects.fk
     symbols: [nmrs-bind-common-side-effects, nmrs-run-idea-create-with-side-effects, nmrs-run-spec-update-with-side-effects, nmrs-route-side-effects-binding-test]
+  - file: form/form-stdlib/native-idea-valuation-audit-ledger.fk
+    symbols: [nival-run-idea-update-with-valuation-audit]
   - file: docs/coherence-substrate/native-mutation-side-effect-ledger.form
     symbols: [native_mutation_side_effect_ledger, native_mutation_side_effect_recipe_shift]
   - file: form/form-stdlib/tests/native-mutation-route-side-effects-band.fk
@@ -15,7 +17,7 @@ source:
   - file: api/tests/test_native_mutation_route_side_effect_binding.py
     symbols: [test_route_side_effect_binding_band_executes_across_sibling_kernels, test_route_side_effect_binding_live_script_runs_or_skips_when_pg_missing, test_ab_gate_next_evidence_is_deployed_canary_after_public_gate]
   - file: api/tests/test_native_mutation_side_effect_ledger.py
-    symbols: [test_gate_receipts_are_not_claimed_as_python_parity, test_missing_python_parity_blocks_ordinary_flip]
+    symbols: [test_gate_receipts_are_not_claimed_as_python_parity, test_audit_ledger_parity_is_carried_before_ordinary_flip]
   - file: deploy/kernel-router/mutation_ab_observation_harness.py
     symbols: [build_gate_report]
   - file: docs/coherence-substrate/ideas-router.form
@@ -28,6 +30,7 @@ requirements:
   - "The A/B observation gate now names the deployed public-gate canary as the remaining boundary."
   - "Ordinary public mutation traffic remains on FastAPI and preview rows remain executes:false."
   - "The route binding consumes only source-classified side effects; side-effect proof does not justify side effects."
+  - "Idea update route-runner audit parity is carried by native-idea-valuation-audit-ledger.fk."
 done_when:
   - 'file_exists("form/form-stdlib/native-mutation-route-side-effects.fk")'
   - 'file_exists("form/scripts/native-mutation-route-side-effects-test.sh")'
@@ -49,8 +52,8 @@ between graph mutation and side-effect execution. This spec binds those two
 native pieces into route-runner functions and proves them together against live
 Postgres fixture tables. The binding is constrained by
 `native-mutation-side-effect-ledger.form`: rollback receipts are gate-local
-safety rather than Python parity, and missing Python parity blocks ordinary
-no-header movement.
+safety rather than Python parity, and the idea valuation audit ledger is now
+carried before ordinary no-header movement.
 
 ## Requirements
 
@@ -137,9 +140,9 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-route-side
   proof while no-header traffic remains fanout.
 - GAP-NMRSB2 follow-up task: `native-mutation-deployed-public-canary`. Deploy
   and observe the public-gate header path before ordinary mutable traffic moves.
-- GAP-NMRSB3 follow-up task: `native-idea-valuation-audit-ledger`. Carry
-  `idea_write_ops.update_idea` valuation audit-ledger writes Form-native or
-  explicitly retire them before ordinary no-header traffic moves.
+- GAP-NMRSB3: closed by `specs/native-idea-valuation-audit-ledger.md`. Idea
+  update valuation audit-ledger writes now have a Form-native route-runner
+  carrier.
 
 ## Risks and Assumptions
 

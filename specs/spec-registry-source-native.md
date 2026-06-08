@@ -6,6 +6,8 @@ source:
     symbols: []
   - file: docs/coherence-substrate/native-mutation-side-effect-ledger.form
     symbols: [native_mutation_side_effect_ledger, native_mutation_side_effect_recipe_shift]
+  - file: form/form-stdlib/native-idea-valuation-audit-ledger.fk
+    symbols: [nival-run-idea-update-with-valuation-audit]
   - file: specs/INDEX.md
     symbols: []
   - file: api/app/models/spec_registry.py
@@ -40,6 +42,7 @@ requirements:
   - "The spec registry Form artifact names the trust envelope that carries prediction residual, side-effect intents, choice markers, and reversible gate state."
   - "The spec registry Form artifact names the Form-native side-effect execution carrier, route binding, public gate, and deployed-canary boundary while keeping ordinary public traffic movement explicit."
   - "The spec registry Form artifact links the side-effect ledger so rollback receipts remain gate-local safety rather than Python parity."
+  - "The spec registry Form artifact names the native idea valuation audit-ledger carrier as carried parity before ordinary no-header mutation movement."
 done_when:
   - 'file_contains("deploy/kernel-router/production-routes.fk", "(list \"/api/spec-registry/source-list\" route_specs_source_list)")'
   - 'file_contains("deploy/kernel-router/production-routes.fk", "read_file_slice \"specs/INDEX.md\"")'
@@ -72,7 +75,7 @@ native kernel-router route that reads `specs/INDEX.md` and emits
 - [ ] **R7**: The spec registry route Form names the native mutation trust
   envelope before any ordinary public traffic flip.
 - [ ] **R8**: The spec registry route Form links the side-effect ledger and
-  keeps missing Python parity explicit before any ordinary no-header flip.
+  keeps carried Python parity explicit before any ordinary no-header flip.
 
 ## Research Inputs
 
@@ -146,10 +149,9 @@ PY
 - GAP-SRS2 follow-up task: `spec-source-frontmatter-native-parser`. This route
   reads `specs/INDEX.md`; richer frontmatter fields remain source defaults until
   a native frontmatter parser lands.
-- GAP-SRS3 follow-up task: `native-idea-valuation-audit-ledger`. The
-  source-classified side-effect ledger surfaces idea valuation audit-ledger
-  writes as missing Python parity before ordinary no-header mutation traffic can
-  move.
+- GAP-SRS3: closed by `specs/native-idea-valuation-audit-ledger.md`. The
+  source-classified side-effect ledger now marks idea valuation audit-ledger
+  writes as carried Form-native parity.
 
 ## Risks and Assumptions
 

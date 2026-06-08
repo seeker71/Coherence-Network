@@ -267,6 +267,7 @@ def evaluate_case(
             "cache-invalidation",
             "parent-edge-repair",
             "contributor-key-audit",
+            "idea-valuation-audit-ledger",
         }.issubset({str(item.get("name") or "") for item in side_effect_intents if isinstance(item, dict)}),
         "treatment_reversible_gate_held": (
             reversible_gate.get("default_route") == "fanout-python"

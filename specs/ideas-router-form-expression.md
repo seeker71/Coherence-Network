@@ -6,6 +6,8 @@ source:
     symbols: [idea_route_shape, idea_route_recipe_shape, ideas_router_structure, browse_ideas_recipe, sense_governance_recipe, choose_next_idea_recipe, mutate_idea_recipe, question_answer_recipe, link_idea_recipe, translate_idea_recipe, invest_in_idea_recipe, rollup_super_idea_recipe, inspect_idea_recipe]
   - file: docs/coherence-substrate/native-mutation-side-effect-ledger.form
     symbols: [native_mutation_side_effect_ledger, native_mutation_side_effect_recipe_shift]
+  - file: form/form-stdlib/native-idea-valuation-audit-ledger.fk
+    symbols: [nival-run-idea-update-with-valuation-audit]
   - file: form/form-stdlib/graph-node-port.fk
     symbols: [gn-create-node, gn-replace-node, gn-delete-node]
   - file: form/form-stdlib/auth-port.fk
@@ -53,7 +55,8 @@ requirements:
   - "The production manifest binds header-gated method-specific native SQL preview rows for POST/PATCH /api/ideas without changing default public behavior."
   - "The ideas Form artifact names the trust envelope that carries prediction residual, side-effect intents, choice markers, and reversible gate state."
   - "The ideas Form artifact names the Form-native side-effect execution carrier while keeping route binding and ordinary public traffic movement explicit as the remaining boundary."
-  - "The ideas Form artifact links the side-effect ledger so side-effect proof does not justify side effects and missing Python parity blocks ordinary no-header flips."
+  - "The ideas Form artifact links the side-effect ledger so side-effect proof does not justify side effects and carried Python parity is visible before ordinary no-header flips."
+  - "The ideas Form artifact names the native idea valuation audit-ledger carrier that closes the previous missing Python parity."
   - "The kernel-router image carries the ideas source directory so the source-index route is deployable when production routes are selected."
   - "The proof tests verify the Form structure, shifted recipes, Python-carrier boundary, native structure/source routes, and router-to-Form link."
 done_when:
@@ -155,10 +158,9 @@ python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expressi
 
 - GAP-I1 follow-up task: `ideas-native-mutation-deployed-public-canary`. `/api/ideas/router-structure`, `/api/ideas/source-index`, `/api/ideas/source-portfolio`, and `/api/ideas/graph-projection` are kernel-first capable. `graph-node-port.fk` exposes create/replace/delete over the storage port, `auth-port.fk` preserves API-key/contributor-key decision parity, `application-graph-node-port.fk` emits direct `graph_nodes` / `graph_node_revisions` / `graph_edges` SQL, `POST/PATCH /api/ideas` have `X-Form-Native-Preview` header-gated native SQL preview rows, live DB execution is proven, Form response projection now emits `IdeaWithScore` / `SpecRegistryEntry` shaped mutation rows, the preview response carries prediction residual, side-effect intents, choice markers, and reversible gate state, `native-mutation-side-effects-test.sh` proves parent-edge repair, contributor-key audit, cache-invalidation receipt, and rollback receipt execute natively against throwaway Postgres, `native-mutation-route-side-effects-test.sh` proves application graph mutation plus side-effect execution are bound in one Form-native route runner, and `native-mutation-public-gate-test.sh` plus `mutation_public_gate_harness.py` prove `X-Form-Native-Public-Gate` selects rollback-receipted native public-gate route rows. Public mutable DB-backed portfolio routes still enter through FastAPI by default until a deployed header-gated public canary is observed before any no-header flip.
 - GAP-I2 follow-up task: `ideas-live-graph-storage-carrier`. Connect `/api/ideas/graph-projection` to a live application graph storage carrier on top of `form/form-stdlib/ideas-graph-projection.fk`.
-- GAP-I3 follow-up task: `native-idea-valuation-audit-ledger`. The side-effect
-  ledger surfaces idea valuation audit-ledger writes as missing Python parity;
-  carry them Form-native or explicitly retire them before ordinary no-header
-  mutation traffic moves.
+- GAP-I3: closed by `specs/native-idea-valuation-audit-ledger.md`. The
+  side-effect ledger now classifies idea valuation audit-ledger writes as carried
+  Python parity.
 
 ## Risks and Assumptions
 

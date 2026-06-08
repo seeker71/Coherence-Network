@@ -4,17 +4,23 @@
 ; preludes: form-stdlib/core.fk form-stdlib/application-graph-node-port.fk
 ;           form-stdlib/native-mutation-side-effects.fk
 ;           form-stdlib/native-mutation-route-side-effects.fk
+;           form-stdlib/native-idea-valuation-audit-ledger.fk
 ;           form-stdlib/native-mutation-public-gate.fk
 ;
-; Verdict: 11111111 when every step holds against live Postgres:
+; The idea update public-gate runner below delegates to
+; nival-run-idea-update-with-valuation-audit, then records the public-gate
+; rollback receipt.
+;
+; Verdict: 111111111 when every step holds against live Postgres:
 ;   connect                                  -> 1
 ;   create rollback-safe fixture schema      -> 10
 ;   idea public gate runner readback         -> 100
-;   spec public gate runner readback         -> 1000
-;   public-gate rollback receipts readback   -> 10000
-;   public gate contract keeps fanout default -> 100000
-;   drop fixture tables                      -> 1000000
-;   close connection                         -> 10000000
+;   idea update audit-ledger readback         -> 1000
+;   spec public gate runner readback         -> 10000
+;   public-gate rollback receipts readback   -> 100000
+;   public gate contract keeps fanout default -> 1000000
+;   drop fixture tables                      -> 10000000
+;   close connection                         -> 100000000
 
 (do
     (let DSN "PG_DSN_PLACEHOLDER")
@@ -22,6 +28,7 @@
     (let conn (pg_connect DSN))
     (let connect-ok (if (ge conn 0) 1 0))
 
+    (pg_exec conn "DROP TABLE IF EXISTS audit_ledger")
     (pg_exec conn "DROP TABLE IF EXISTS native_mutation_side_effect_receipts")
     (pg_exec conn "DROP TABLE IF EXISTS graph_edges")
     (pg_exec conn "DROP TABLE IF EXISTS graph_node_revisions")
@@ -82,6 +89,7 @@
         (if (ge (pg_exec conn edge-index-ddl) 0) 1 0)) 1) 10 0))
     (pg_exec conn keys-ddl)
     (nms-create-receipts-table conn)
+    (nival-create-audit-ledger-table conn)
 
     (pg_exec conn "INSERT INTO graph_nodes (id, type, name, properties, phase) VALUES ('idea-public-parent', 'idea', 'Public Parent', '{\"stage\":\"validated\"}'::jsonb, 'ice')")
     (pg_exec conn "INSERT INTO contributor_api_keys (id, contributor_id, scopes_json, created_at) VALUES ('key-public-native', 'urs-muff', '[\"own:write\"]', '2026-06-08T00:00:00Z')")
@@ -105,6 +113,29 @@
         (if (str_eq idea-row "idea:Public Gate Child:water:partial") 1 0)
         (if (str_eq idea-rev "1:kernel-route-runner:form-native:__create__") 1 0)
         (if (str_eq edge-row "parent-of:form-native:parent-edge-repair:gate-public-idea") 1 0)) 1) 100 0))
+
+    (nmpg-run-idea-update-public-gate
+        conn
+        "gate-public-idea-update"
+        "rev-public-idea-update"
+        "idea-public-child"
+        "Public Gate Child Updated"
+        "Updated through native public gate"
+        "ice"
+        "{\"actual_value\":9.0,\"manifestation_status\":\"validated\",\"workspace_id\":\"coherence-network\"}"
+        "[\"actual_value\",\"manifestation_status\"]"
+        "key-public-native"
+        "form-native"
+        "actual_value"
+        "0.0"
+        "9.0")
+    (let idea-update-row (pg_query conn "SELECT name || ':' || phase || ':' || (properties->>'actual_value') || ':' || (properties->>'manifestation_status') FROM graph_nodes WHERE id = 'idea-public-child'"))
+    (let idea-audit-count (pg_query conn "SELECT count(*) FROM audit_ledger WHERE reference_id = 'idea-public-child' AND entry_type = 'VALUATION_CHANGE'"))
+    (let idea-audit-hash-count (pg_query conn (nival-hash-recompute-sql)))
+    (let idea-update-ok (if (eq (nms-and3
+        (if (str_eq idea-update-row "Public Gate Child Updated:ice:9.0:validated") 1 0)
+        (if (str_eq idea-audit-count "1") 1 0)
+        (if (str_eq idea-audit-hash-count "1") 1 0)) 1) 1000 0))
 
     (agn-create-node
         conn
@@ -133,31 +164,32 @@
     (let spec-ok (if (eq (nms-and3
         (if (str_eq spec-row "Public Gate Spec Updated:ice:validated") 1 0)
         (if (str_eq spec-rev-count "2") 1 0)
-        (if (str_eq spec-last-rev "2:kernel-route-runner:title") 1 0)) 1) 1000 0))
+        (if (str_eq spec-last-rev "2:kernel-route-runner:title") 1 0)) 1) 10000 0))
 
     (let public-receipt-count (pg_query conn "SELECT count(*) FROM native_mutation_side_effect_receipts WHERE effect_name = 'public-gate-rollback-receipt'"))
     (let public-receipt-modes (pg_query conn "SELECT count(*) FROM native_mutation_side_effect_receipts WHERE effect_name = 'public-gate-rollback-receipt' AND details->>'mode' = 'route-local-rollback-receipt'"))
     (let key-row (pg_query conn "SELECT CASE WHEN last_used_at IS NOT NULL AND last_used_at <> '' THEN 'used' ELSE 'missing' END FROM contributor_api_keys WHERE id = 'key-public-native'"))
     (let receipts-ok (if (eq (nms-and3
-        (if (str_eq public-receipt-count "2") 1 0)
-        (if (str_eq public-receipt-modes "2") 1 0)
-        (if (str_eq key-row "used") 1 0)) 1) 10000 0))
+        (if (str_eq public-receipt-count "3") 1 0)
+        (if (str_eq public-receipt-modes "3") 1 0)
+        (if (str_eq key-row "used") 1 0)) 1) 100000 0))
 
     (let contract (nmpg-public-gate-contract-json))
     (let contract-ok (if (eq (nms-and4
         (if (eq (nms-contains? contract "X-Form-Native-Public-Gate") 1) 1 0)
         (if (eq (nms-contains? contract "\"default_route\":\"fanout-python\"") 1) 1 0)
         (if (eq (nms-contains? contract "\"ordinary_traffic_flip_performed\":false") 1) 1 0)
-        (if (eq (nms-contains? contract "route_local_rollback_receipt") 1) 1 0)) 1) 100000 0))
+        (if (eq (nms-contains? contract "idea valuation audit ledger") 1) 1 0)) 1) 1000000 0))
 
+    (pg_exec conn "DROP TABLE IF EXISTS audit_ledger")
     (pg_exec conn "DROP TABLE IF EXISTS native_mutation_side_effect_receipts")
     (pg_exec conn "DROP TABLE IF EXISTS graph_edges")
     (pg_exec conn "DROP TABLE IF EXISTS graph_node_revisions")
     (pg_exec conn "DROP TABLE IF EXISTS graph_nodes")
     (pg_exec conn "DROP TABLE IF EXISTS contributor_api_keys")
     (let cleanup-read (pg_query conn "SELECT COALESCE(to_regclass('public.native_mutation_side_effect_receipts')::text, '')"))
-    (let cleanup-ok (if (str_eq cleanup-read "") 1000000 0))
+    (let cleanup-ok (if (str_eq cleanup-read "") 10000000 0))
 
-    (let close-ok (if (eq (pg_close conn) 0) 10000000 0))
+    (let close-ok (if (eq (pg_close conn) 0) 100000000 0))
 
-    (sum (list connect-ok schema-ok idea-ok spec-ok receipts-ok contract-ok cleanup-ok close-ok)))
+    (sum (list connect-ok schema-ok idea-ok idea-update-ok spec-ok receipts-ok contract-ok cleanup-ok close-ok)))

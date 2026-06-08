@@ -71,6 +71,7 @@ def test_ab_observation_case_passes_only_when_a_fanout_and_b_native_preview():
                     {"name": "cache-invalidation"},
                     {"name": "parent-edge-repair"},
                     {"name": "contributor-key-audit"},
+                    {"name": "idea-valuation-audit-ledger"},
                 ],
                 "reversible_gate": {
                     "default_route": "fanout-python",

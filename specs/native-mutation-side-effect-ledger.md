@@ -4,8 +4,14 @@ status: done
 source:
   - file: docs/coherence-substrate/native-mutation-side-effect-ledger.form
     symbols: [native_mutation_side_effect_ledger, native_mutation_side_effect_recipe_shift]
+  - file: form/form-stdlib/native-idea-valuation-audit-ledger.fk
+    symbols: [nival-record-valuation-change, nival-record-batch-valuation-change, nival-run-idea-update-with-valuation-audit]
+  - file: form/scripts/native-idea-valuation-audit-ledger-test.sh
+    symbols: []
   - file: api/tests/test_native_mutation_side_effect_ledger.py
-    symbols: [test_ledger_declares_anti_circular_decision_rule, test_python_parity_entries_cite_python_sources_and_form_carriers, test_gate_receipts_are_not_claimed_as_python_parity, test_missing_python_parity_blocks_ordinary_flip, test_route_forms_and_specs_link_the_ledger_boundary]
+    symbols: [test_ledger_declares_anti_circular_decision_rule, test_python_parity_entries_cite_python_sources_and_form_carriers, test_gate_receipts_are_not_claimed_as_python_parity, test_audit_ledger_parity_is_carried_before_ordinary_flip, test_route_forms_and_specs_link_the_ledger_boundary]
+  - file: api/tests/test_native_idea_valuation_audit_ledger.py
+    symbols: [test_ledger_and_route_forms_mark_audit_parity_carried]
   - file: docs/coherence-substrate/ideas-router.form
     symbols: [ideas_router_structure]
   - file: docs/coherence-substrate/spec-registry-router.form
@@ -20,7 +26,7 @@ requirements:
   - "A Form-native ledger classifies mutable effects as primary mutation, Python parity effect, gate receipt, missing Python parity, or not carried."
   - "The ledger states that side-effect proof does not justify side effects."
   - "Rollback receipts and public-gate rollback receipts are classified as gate-local safety rather than Python parity."
-  - "The ledger names idea valuation audit-ledger writes as missing Python parity that blocks ordinary no-header mutation flips until carried or intentionally retired."
+  - "The ledger names idea valuation audit-ledger writes as Python parity effect carried by the native audit-ledger carrier."
   - "Ideas/spec route forms and mutation specs link the ledger boundary."
 done_when:
   - 'file_exists("docs/coherence-substrate/native-mutation-side-effect-ledger.form")'
@@ -55,9 +61,8 @@ safety, missing parity, or not carried.
   Python sources and Form-native carriers.
 - [ ] **R4**: Rollback receipts and public-gate rollback receipts are classified
   as gate receipts, with no Python parity claim.
-- [ ] **R5**: Idea valuation audit-ledger writes are classified as missing
-  Python parity and block ordinary no-header mutation flips until carried
-  Form-native or intentionally retired by spec.
+- [ ] **R5**: Idea valuation audit-ledger writes are classified as Python parity
+  effect carried by `native-idea-valuation-audit-ledger.fk`.
 - [ ] **R6**: Ideas/spec route forms and native mutation specs link the ledger.
 
 ## Research Inputs
@@ -81,6 +86,10 @@ safety, missing parity, or not carried.
 - `docs/coherence-substrate/native-mutation-side-effect-ledger.form` -
   Form-native keep/delete ledger.
 - `api/tests/test_native_mutation_side_effect_ledger.py` - focused ledger proof.
+- `form/form-stdlib/native-idea-valuation-audit-ledger.fk` - native
+  audit-ledger parity carrier.
+- `api/tests/test_native_idea_valuation_audit_ledger.py` - proof that audit
+  parity is carried and the ledger reflects it.
 - `docs/coherence-substrate/ideas-router.form` - ideas route structure link.
 - `docs/coherence-substrate/spec-registry-router.form` - spec route structure
   link.
@@ -95,28 +104,27 @@ safety, missing parity, or not carried.
 - `api/tests/test_native_mutation_side_effect_ledger.py::test_ledger_declares_anti_circular_decision_rule`
 - `api/tests/test_native_mutation_side_effect_ledger.py::test_python_parity_entries_cite_python_sources_and_form_carriers`
 - `api/tests/test_native_mutation_side_effect_ledger.py::test_gate_receipts_are_not_claimed_as_python_parity`
-- `api/tests/test_native_mutation_side_effect_ledger.py::test_missing_python_parity_blocks_ordinary_flip`
+- `api/tests/test_native_mutation_side_effect_ledger.py::test_audit_ledger_parity_is_carried_before_ordinary_flip`
 - `api/tests/test_native_mutation_side_effect_ledger.py::test_route_forms_and_specs_link_the_ledger_boundary`
 
 ## Verification
 
 ```bash
-cd api && python3 -m pytest -q tests/test_native_mutation_side_effect_ledger.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py
+cd api && python3 -m pytest -q tests/test_native_mutation_side_effect_ledger.py tests/test_native_idea_valuation_audit_ledger.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py
 python3 scripts/validate_spec_quality.py --file specs/native-mutation-side-effect-ledger.md
 ```
 
 ## Out of Scope
 
 - Adding new domain side effects.
-- Carrying the idea valuation audit ledger in this slice.
 - Flipping ordinary no-header mutable ideas/spec traffic.
 
 ## Gaps
 
-- GAP-NMSEL1 follow-up task: `native-idea-valuation-audit-ledger`. Carry
+- GAP-NMSEL1: closed by `specs/native-idea-valuation-audit-ledger.md`.
   `idea_write_ops.update_idea` and `update_ideas_batch` valuation audit-ledger
-  writes Form-native or explicitly retire them by spec before ordinary no-header
-  mutation traffic moves.
+  writes now have a Form-native hash-chain carrier and idea update route-runner
+  wrapper.
 - GAP-NMSEL2 follow-up task: `native-mutation-deployed-public-canary`. Observe a
   deployed `X-Form-Native-Public-Gate` canary before any no-header flip.
 
