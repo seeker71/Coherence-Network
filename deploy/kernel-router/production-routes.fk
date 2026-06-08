@@ -38,6 +38,7 @@
 ;   /api/ideas/source-index           Form-native read of ideas/INDEX.md
 ;   /api/ideas/source-portfolio       Form-native ideas/INDEX.md -> IdeaPortfolioResponse
 ;   /api/ideas/graph-projection       Form-native graph rows -> IdeaPortfolioResponse
+;   /api/spec-registry/source-list    Form-native specs/INDEX.md -> SpecRegistryEntry[]
 ;
 ; Each native handler replicates its live route's FULL contract:
 ;   - parses the SAME query params FastAPI declares (with the SAME defaults),
@@ -62,6 +63,7 @@
 ;   curl ':PORT/api/ideas/source-index'                  -> native source-index data
 ;   curl ':PORT/api/ideas/source-portfolio'              -> native source portfolio data
 ;   curl ':PORT/api/ideas/graph-projection'              -> native graph projection preview
+;   curl ':PORT/api/spec-registry/source-list'           -> native source spec list
 ;   curl ':PORT/api/ideas'                               -> fan-out -> CPython upstream
 
 ; ===========================================================================
@@ -1784,6 +1786,86 @@
   (igpr-portfolio-json-from-rows
     (igpr-filter-idea-rows (ideas_graph_projection_rows))))
 
+; ===========================================================================
+; /api/spec-registry/source-list
+;   native source-backed spec registry list for specs/INDEX.md. This is the
+;   read-only source sibling of /api/spec-registry: it parses the generated
+;   source index and emits SpecRegistryEntry-shaped rows without Python.
+; ===========================================================================
+
+(defn specs_index_text ()
+  (do (let local_text (read_file_slice "specs/INDEX.md" 0 500000))
+      (if (gt (str_len local_text) 0)
+          local_text
+          (read_file_slice "../../specs/INDEX.md" 0 500000))))
+
+(defn ssl-row-title-start (row_pos) (add row_pos (str_len "\n- [")))
+(defn ssl-row-title-end (text row_pos) (str_find text "](" row_pos))
+(defn ssl-row-slug-start (text row_pos) (add (ssl-row-title-end text row_pos) 2))
+(defn ssl-row-slug-end (text row_pos) (str_find text ".md)" (ssl-row-slug-start text row_pos)))
+(defn ssl-row-summary-start (text row_pos) (add (ssl-row-slug-end text row_pos) (str_len ".md) — ")))
+(defn ssl-row-summary-end (text row_pos) (isp-find-or-end text "\n" (ssl-row-summary-start text row_pos)))
+
+(defn ssl-row-title (text row_pos)
+  (substring text (ssl-row-title-start row_pos) (ssl-row-title-end text row_pos)))
+
+(defn ssl-row-slug (text row_pos)
+  (substring text (ssl-row-slug-start text row_pos) (ssl-row-slug-end text row_pos)))
+
+(defn ssl-row-summary (text row_pos)
+  (substring text (ssl-row-summary-start text row_pos) (ssl-row-summary-end text row_pos)))
+
+(defn ssl-content-path (slug)
+  (str_concat (str_concat "specs/" slug) ".md"))
+
+(defn ssl-entry-json (text row_pos)
+  (do (let spec_id (ssl-row-slug text row_pos))
+  (do (let title (ssl-row-title text row_pos))
+  (do (let summary (ssl-row-summary text row_pos))
+      (str_concat_all (list
+        "{\"spec_id\":" (json_string spec_id)
+        ",\"title\":" (json_string title)
+        ",\"summary\":" (json_string summary)
+        ",\"potential_value\":0.0"
+        ",\"actual_value\":0.0"
+        ",\"estimated_cost\":0.0"
+        ",\"actual_cost\":0.0"
+        ",\"value_gap\":0.0"
+        ",\"cost_gap\":0.0"
+        ",\"estimated_roi\":0.0"
+        ",\"actual_roi\":0.0"
+        ",\"idea_id\":null"
+        ",\"process_summary\":null"
+        ",\"pseudocode_summary\":null"
+        ",\"implementation_summary\":null"
+        ",\"created_by_contributor_id\":null"
+        ",\"updated_by_contributor_id\":null"
+        ",\"created_at\":\"2026-06-08T00:00:00Z\""
+        ",\"updated_at\":\"2026-06-08T00:00:00Z\""
+        ",\"content_path\":" (json_string (ssl-content-path spec_id))
+        ",\"content_hash\":null"
+        ",\"workspace_id\":\"coherence-network\""
+        "}"))))))
+
+(defn ssl-entries-json-from (text start remaining)
+  (if (eq remaining 0)
+      ""
+      (do (let row_pos (str_find text "\n- [" start))
+          (if (eq row_pos -1)
+              ""
+              (if (eq remaining 1)
+                  (ssl-entry-json text row_pos)
+                  (str_concat
+                    (str_concat (ssl-entry-json text row_pos) ",")
+                    (ssl-entries-json-from text (add row_pos 1) (sub remaining 1))))))))
+
+(defn route_specs_source_list (q)
+  (do (let text (specs_index_text))
+  (do (let total (str_count text "\n- ["))
+      (str_concat
+        (str_concat "[" (ssl-entries-json-from text 0 total))
+        "]"))))
+
 (defn route_health (q) "ok")
 
 ; ===========================================================================
@@ -1848,4 +1930,5 @@ section [form.route] {
     (list "/api/ideas/router-structure"    route_ideas_router_structure)
     (list "/api/ideas/source-index"        route_ideas_source_index)
     (list "/api/ideas/source-portfolio"    route_ideas_source_portfolio)
-    (list "/api/ideas/graph-projection"    route_ideas_graph_projection)))
+    (list "/api/ideas/graph-projection"    route_ideas_graph_projection)
+    (list "/api/spec-registry/source-list" route_specs_source_list)))
