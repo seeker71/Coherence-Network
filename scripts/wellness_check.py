@@ -802,6 +802,313 @@ def sense_form_blueprints() -> list[str]:
     return lines
 
 
+METABOLIC_CATEGORY_RULES = [
+    {
+        "label": "source grammar/parser residue",
+        "terms": (
+            "parse", "parser", "token", "lexer", "grammar", "operator",
+            "query", "render", "decompile", "speculation", "stream", "ast",
+            "capture", "pattern",
+        ),
+        "path_terms": (
+            "form_", "grammar", "lexer", "operators", "queries", "render",
+            "decompile", "speculation", "stream",
+        ),
+        "release": (
+            "move source scan, grammar, render, decompile, and checking into "
+            "Form/BML rules with proof bands"
+        ),
+    },
+    {
+        "label": "recipe realization/runtime semantics",
+        "terms": (
+            "execute", "execution", "runtime", "eval", "evaluate", "walk",
+            "frame", "closure", "recipe", "builtin", "inductive",
+            "constructor", "choice", "quotient", "method",
+        ),
+        "path_terms": (
+            "eval", "runtime", "recipe_eval", "parallel_eval", "inductive",
+            "quotient",
+        ),
+        "release": (
+            "serve these semantics through kernel-native realization, JIT "
+            "plans, and Form-side engine cells"
+        ),
+    },
+    {
+        "label": "substrate identity/persistence infrastructure",
+        "terms": (
+            "nodeid", "node_id", "intern", "storage", "store", "database",
+            "sqlite", "postgres", "sqlalchemy", "namedcell", "blueprint",
+            "category", "atomic", "string", "persistence",
+        ),
+        "path_terms": ("orm", "kernel", "category", "substrate_strings"),
+        "release": (
+            "replace host storage helpers with a Form-native persistence "
+            "contract and kernel-owned cell store"
+        ),
+    },
+    {
+        "label": "domain vocabulary/cell authoring",
+        "terms": (
+            "resonance", "modality", "lexicon", "relationship", "agent",
+            "dimension", "edge", "vocabulary", "canonical", "author",
+            "numeric", "format", "shape",
+        ),
+        "path_terms": (
+            "resonance", "modality", "lexicon", "relationship",
+            "numeric_formats",
+        ),
+        "release": (
+            "lift repeated domain authoring patterns into domain grammars, "
+            "BML handlers, or substrate cells"
+        ),
+    },
+    {
+        "label": "format/source frontend",
+        "terms": (
+            "markdown", "frontmatter", "document", "heading", "section",
+            "parse", "render", "source", "frontend",
+        ),
+        "path_terms": ("markdown", "frontend"),
+        "release": (
+            "replace host frontends with BMF/BML format grammars and native "
+            "emitters"
+        ),
+    },
+    {
+        "label": "observation/proof metabolism",
+        "terms": (
+            "sense", "surprise", "observe", "observation", "trace", "proof",
+            "conformance", "attention", "telemetry", "metric", "parallel",
+        ),
+        "path_terms": ("sense", "surprise", "parallel", "check"),
+        "release": (
+            "feed observations into framebuffer/native proof cells so sensing "
+            "is core metabolism, not a side channel"
+        ),
+    },
+]
+
+
+STATIC_TO_DYNAMIC_SURFACES = [
+    {
+        "path": "kernels/BOOTSTRAP_COMPOST_MANIFEST.md",
+        "kind": "static release ledger",
+        "successor": "substrate:compost-release-ledger-cells",
+        "wants": (
+            "substrate-backed compost cells for candidate admission, attested "
+            "gate, live-consumer state, and release evidence"
+        ),
+        "resources": (
+            "lets attention choose transmutation work by score/category/gate "
+            "instead of hand-maintaining the whole candidate universe"
+        ),
+    },
+    {
+        "path": "kernels/PHASE_A_FIRING_QUESTIONS.md",
+        "kind": "static firing-question narrative",
+        "successor": "substrate:metabolic-attestation-cells",
+        "wants": (
+            "per-cell metabolic attestation records linked to classifier "
+            "signals, successor path, and proof command"
+        ),
+        "resources": (
+            "turns manual narrative walks into validations that can be queued, "
+            "diffed, and repeated"
+        ),
+    },
+    {
+        "path": "docs/shared/agent-start-packet.md",
+        "kind": "static compressed agent memory",
+        "successor": "substrate:generated-agent-start-packet",
+        "wants": (
+            "generated start packet sections sourced from live substrate, "
+            "wellness, route state, and release ledgers"
+        ),
+        "resources": (
+            "keeps new agents oriented without hand-refreshing long-lived memory"
+        ),
+    },
+    {
+        "path": "docs/system_audit/native_route_goal_state.json",
+        "kind": "static route-promotion snapshot",
+        "successor": "substrate:native-route-goal-cells",
+        "wants": (
+            "route-goal cells fed by runtime events, BML/front-door catalogs, "
+            "and promotion proof state"
+        ),
+        "resources": (
+            "routes attention to the next high-traffic native handler without "
+            "treating a JSON snapshot as the living queue"
+        ),
+    },
+]
+
+STATIC_SIGNAL_TERMS = (
+    "static",
+    "ledger",
+    "manifest",
+    "readiness map",
+    "hand-written",
+    "table view",
+    "snapshot",
+    "manual",
+    "hardcoded",
+    "fixed",
+)
+
+
+def _count_file_lines(path: Path) -> int:
+    try:
+        return sum(1 for _ in path.open("rb"))
+    except OSError:
+        return 0
+
+
+def _path_term_matches(term: str, rel_lower: str) -> bool:
+    stem = Path(rel_lower).stem
+    if term.endswith("_"):
+        return stem.startswith(term)
+    path_words = set(re.findall(r"[a-z0-9]+", rel_lower.replace("_", " ")))
+    stem_words = set(stem.split("_"))
+    return term == stem or term in path_words or term in stem_words
+
+
+def _metabolic_category_for_file(
+    rel: str,
+    path: Path,
+) -> tuple[str, str, int, Counter[str]]:
+    """Classify a file-cell from repeated lexical/path signals.
+
+    This is deliberately transparent rather than clever: repeated words are
+    edge attributes with numeric weight, and the top weighted category becomes
+    the current metabolic read. Runtime/framebuffer events can be added as
+    more edge sources later without changing the reporting shape.
+    """
+    try:
+        text = path.read_text(encoding="utf-8", errors="ignore").lower()
+    except OSError:
+        text = ""
+    rel_lower = rel.lower()
+
+    best_label = "unclassified metabolic surface"
+    best_release = "add more measured signals before release"
+    best_score = 0
+    best_hits: Counter[str] = Counter()
+    for rule in METABOLIC_CATEGORY_RULES:
+        hits: Counter[str] = Counter()
+        score = 0
+        for term in rule["terms"]:
+            count = len(re.findall(rf"\b{re.escape(term)}\b", text))
+            if count:
+                hits[term] += count
+                score += min(count, 24)
+        for term in rule["path_terms"]:
+            if _path_term_matches(term, rel_lower):
+                hits[term] += 1
+                score += 36
+        if score > best_score:
+            best_label = rule["label"]
+            best_release = rule["release"]
+            best_score = score
+            best_hits = hits
+
+    return best_label, best_release, best_score, best_hits
+
+
+def _metabolic_groups_for_files(paths: list[Path]) -> list[dict[str, object]]:
+    grouped: dict[str, dict[str, object]] = {}
+    for path in paths:
+        rel = str(path.relative_to(ROOT))
+        label, release, score, hits = _metabolic_category_for_file(rel, path)
+        group = grouped.setdefault(
+            label,
+            {
+                "label": label,
+                "release": release,
+                "score": 0,
+                "loc": 0,
+                "files": [],
+                "hits": Counter(),
+            },
+        )
+        group["score"] = int(group["score"]) + score
+        group["loc"] = int(group["loc"]) + _count_file_lines(path)
+        group["files"].append(rel)
+        group["hits"].update(hits)
+
+    return sorted(
+        grouped.values(),
+        key=lambda row: (int(row["loc"]), int(row["score"])),
+        reverse=True,
+    )
+
+
+def _static_signal_hits(path: Path) -> Counter[str]:
+    try:
+        text = path.read_text(encoding="utf-8", errors="ignore").lower()
+    except OSError:
+        text = ""
+    hits: Counter[str] = Counter()
+    rel_lower = str(path.relative_to(ROOT)).lower()
+    for term in STATIC_SIGNAL_TERMS:
+        count = text.count(term)
+        if term in rel_lower:
+            count += 1
+        if count:
+            hits[term] = count
+    return hits
+
+
+def sense_static_to_dynamic_wants() -> list[str]:
+    """Name static surfaces that are asking for dynamic successors.
+
+    Static is not a fault by itself; it is a named resource request. Repeated
+    static-signal occurrences are treated as edge events and compressed into
+    an edge reputation count between the static surface cell and the dynamic
+    successor cell it asks for.
+    """
+    lines: list[str] = []
+    rows: list[tuple[int, dict[str, str], Counter[str], int]] = []
+    for surface in STATIC_TO_DYNAMIC_SURFACES:
+        path = ROOT / surface["path"]
+        if not path.exists():
+            continue
+        hits = _static_signal_hits(path)
+        score = sum(hits.values())
+        rows.append((score, surface, hits, _count_file_lines(path)))
+
+    if not rows:
+        return ["  no static surfaces named yet"]
+
+    lines.append(
+        "  static is a named want, not a dead label — each row asks for a "
+        "dynamic successor"
+    )
+    for score, surface, hits, loc in sorted(rows, key=lambda row: row[0], reverse=True):
+        hit_line = ", ".join(
+            f"{name}={count}" for name, count in hits.most_common(4)
+        )
+        reputation_count = max(score, 1)
+        lines.append(
+            f"  wants_dynamic: {surface['path']} — {surface['kind']} "
+            f"({loc} LOC)"
+        )
+        lines.append(
+            f"    edge_reputation: {surface['path']} "
+            f"--[wants_dynamic count={reputation_count}]--> "
+            f"{surface['successor']}"
+        )
+        lines.append(
+            "    compressed_edges: "
+            f"{hit_line or 'path-named static surface=1'}"
+        )
+        lines.append(f"    wants: {surface['wants']}")
+        lines.append(f"    resources: {surface['resources']}")
+    return lines
+
+
 def sense_bootstrap_compost() -> list[str]:
     """How much bootstrap tissue remains, what runtime fills the parity seam,
     what compost is deferred behind which gate.
@@ -887,14 +1194,77 @@ def sense_bootstrap_compost() -> list[str]:
             f"    · Phase {phase} ({label}): {present} files, {loc} LOC{composted}"
         )
 
+    python_transmutation_groups = [
+        (
+            "adapter parser/emitter",
+            phase_files["A"][:5],
+            "Form-native .py→.fk scanner+grammar path replaces "
+            "`python-compile` in the Rust-bootstrap leg",
+        ),
+        (
+            "adapter CLI/scripts",
+            phase_files["B"][:3],
+            "kernel-native source reader + parity/perf gates call the "
+            "Form-native grammar path directly",
+        ),
+        (
+            "bridge/runtime",
+            phase_files["C"],
+            "kernel HTTP + BML/domain handlers serve the routes; Python stays "
+            "only as an explicit fanout bridge until each route is promoted",
+        ),
+    ]
+    candidate_count = 0
+    candidate_loc = 0
+    candidate_lines: list[str] = []
+    for label, paths, release_gate in python_transmutation_groups:
+        present_paths: list[str] = []
+        loc = 0
+        for rel in paths:
+            p = ROOT / rel
+            if not p.is_file():
+                continue
+            present_paths.append(rel)
+            try:
+                loc += sum(1 for _ in p.open("rb"))
+            except OSError:
+                pass
+        if not present_paths:
+            continue
+        candidate_count += len(present_paths)
+        candidate_loc += loc
+        examples = ", ".join(present_paths[:2])
+        if len(present_paths) > 2:
+            examples = f"{examples}, +{len(present_paths) - 2} more"
+        candidate_lines.append(
+            f"    · {label}: {len(present_paths)} files / {loc} LOC — {release_gate}"
+        )
+        candidate_lines.append(f"      examples: {examples}")
+
+    if candidate_lines:
+        lines.append(
+            f"  Python transmutation candidates — {candidate_count} named "
+            f"Python-dependent files / {candidate_loc} LOC still asking for "
+            "Form-native release gates"
+        )
+        lines.extend(candidate_lines)
+        utility_router = ROOT / "api" / "app" / "routers" / "utils.py"
+        if utility_router.is_file():
+            lines.append(
+                "    · utility endpoint rows: api/app/routers/utils.py — "
+                "row-level Python implementation surface; release by promoting "
+                "each utility endpoint to a Form recipe or BML/domain handler"
+            )
+
     # Wider perimeter — the substrate-Python directory carries more than
     # the manifest's Phase C names. The audit at
     # kernels/UNIVERSAL_TRANSLATOR_AUDIT.md found 16,309 LOC across 24
     # modules in api/app/services/substrate/, of which the manifest names
     # ~2,938 (form_runtime + self_host + form_rules + form_builders).
     # Surfacing the gap so the body sees its TRUE bootstrap weight,
-    # not just the named subset. Each unnamed module is a future row
-    # in the manifest waiting for its firing-question walk.
+    # not just the manifest-listed subset. These cells already have names:
+    # their paths. The gap is that they are not yet named as compost rows
+    # in the manifest.
     substrate_dir = ROOT / "api" / "app" / "services" / "substrate"
     if substrate_dir.is_dir():
         substrate_files = sorted(substrate_dir.glob("*.py"))
@@ -904,19 +1274,72 @@ def sense_bootstrap_compost() -> list[str]:
                 substrate_loc += sum(1 for _ in p.open("rb"))
             except OSError:
                 pass
-        # Manifest Phase C subset already counted in totals['C']
-        named_c_loc = totals.get("C", (0, 0, 0))[2]
-        unnamed = substrate_loc - named_c_loc
-        unnamed_files = len(substrate_files) - totals.get("C", (0, 0, 0))[0]
+        phase_c_rels = set(phase_files["C"])
+        named_substrate_paths = [
+            p for p in substrate_files
+            if str(p.relative_to(ROOT)) in phase_c_rels
+        ]
+        named_substrate_loc = sum(_count_file_lines(p) for p in named_substrate_paths)
+        unmanifested_loc = substrate_loc - named_substrate_loc
+        unmanifested_files = len(substrate_files) - len(named_substrate_paths)
         lines.append(
             f"  wider perimeter — api/app/services/substrate/ has "
             f"{len(substrate_files)} modules, {substrate_loc} LOC total"
         )
         lines.append(
-            f"    · manifest names {totals.get('C', (0, 0, 0))[0]} files / "
-            f"{named_c_loc} LOC; the remaining {unnamed_files} files / "
-            f"{unnamed} LOC are unnamed bootstrap awaiting firing-questions"
+            f"    · manifest Phase C names {totals.get('C', (0, 0, 0))[0]} "
+            f"files / {totals.get('C', (0, 0, 0))[2]} LOC total; "
+            f"{len(named_substrate_paths)} of those live in this directory "
+            f"({named_substrate_loc} LOC)"
         )
+        lines.append(
+            f"    · the remaining {unmanifested_files} path-named files / "
+            f"{unmanifested_loc} LOC are not yet manifest-listed; "
+            "classified below by metabolic signals"
+        )
+        if unmanifested_files > 0 and unmanifested_loc > 0:
+            lines.append(
+                "    · treat the path-named, manifest-unlisted perimeter as "
+                "transmutation candidates: firing questions validate or refine "
+                "the automatic read"
+            )
+            lines.append(
+                "    · dynamic admission: any path-named cell with repeated "
+                "Python/bootstrap signals appears here immediately"
+            )
+            lines.append(
+                "    · manifest admission: add a static row when the cell has "
+                "a named successor path, release gate, and proof command"
+            )
+            lines.append(
+                "    · release: replacement path is proven, live callers no "
+                "longer require the old carrier, and evidence records the drop"
+            )
+            unmanifested_paths = [
+                p for p in substrate_files
+                if str(p.relative_to(ROOT)) not in phase_c_rels
+            ]
+            groups = _metabolic_groups_for_files(unmanifested_paths)
+            if groups:
+                lines.append(
+                    "  metabolic classification — derived from repeated edge "
+                    "attributes on path-named substrate cells outside the manifest"
+                )
+                for group in groups:
+                    files = list(group["files"])
+                    hits = group["hits"]
+                    hit_line = ", ".join(
+                        f"{name}={count}"
+                        for name, count in hits.most_common(4)
+                    )
+                    names = ", ".join(Path(rel).name for rel in files)
+                    lines.append(
+                        f"    · {group['label']}: {len(files)} files / "
+                        f"{group['loc']} LOC, score={group['score']}"
+                    )
+                    lines.append(f"      signals: {hit_line or 'path-only'}")
+                    lines.append(f"      files: {names}")
+                    lines.append(f"      release: {group['release']}")
 
     # Lifecycle motion — count rows that have walked from tissue → PROVEN →
     # COMPOST READY → RELEASED. The body senses not just load but movement-
@@ -1012,6 +1435,34 @@ def sense_substrate_surprise() -> list[str]:
         return [f"  (substrate session failed: {type(exc).__name__})"]
     return format_for_wellness(touched_count, ranked)
 
+
+def sense_edge_categories() -> list[str]:
+    """Name repeated edge categories across concepts, ideas, specs, and files.
+
+    This is the edge-reputation complement to substrate surprise: instead of
+    asking which structural twin appeared unexpectedly, it asks which repeated
+    relations are already present in source tissue and should be visible as
+    named clusters.
+    """
+    api_dir = ROOT / "api"
+    if not api_dir.is_dir():
+        return ["  (api/ not present; skipping)"]
+    if str(api_dir) not in sys.path:
+        sys.path.insert(0, str(api_dir))
+
+    try:
+        from app.services.substrate.sense_edge_categories import (
+            format_edge_categories_for_wellness,
+            observe_edge_categories,
+        )
+    except Exception:
+        return ["  (edge category sensor not importable; skipping)"]
+
+    try:
+        report = observe_edge_categories(ROOT)
+    except Exception as exc:
+        return [f"  (edge category scan failed: {type(exc).__name__})"]
+    return format_edge_categories_for_wellness(report)
 
 
 def sense_contracts() -> list[str]:
@@ -1799,6 +2250,7 @@ def _wellness_attention_line(line: str) -> bool:
         "cannot verify",
         "no test:",
         "no proof",
+        "wants_dynamic:",
     )
     return any(marker in lower for marker in attention_markers)
 
@@ -1874,6 +2326,8 @@ def main() -> int:
         ("Form ontology — does the form-side table agree with each kernel parser?", sense_form_ontology()),
         ("Form blueprints — are user-space Blueprint numbers registered, not magic?", sense_form_blueprints()),
         ("Bootstrap compost — how much parser tissue still stands between us and Form-native?", sense_bootstrap_compost()),
+        ("Static-to-dynamic wants — which fixed ledgers ask for live cells?", sense_static_to_dynamic_wants()),
+        ("Edge categories — which repeated relations are becoming named clusters?", sense_edge_categories()),
         ("Substrate surprise — structural twins of recent work, unread", sense_substrate_surprise()),
         ("Cells — are the cells themselves breathing?", sense_cells()),
         ("Contracts — are the CI gates breathing? (last 7d)", sense_contracts()),

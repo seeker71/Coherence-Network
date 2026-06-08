@@ -161,7 +161,12 @@ Five readings the trace makes possible:
 
 ## What This Is Not
 
-- **Not a Python replacement.** Python remains the body's primary authoring tongue, the production substrate's runtime, and the CI pipeline's executor. The native binary is *one carrier among many*; choosing it is per-operation, per-cell.
+- **Not a host-language monarchy.** Form is the body's runtime center; BML and
+  domain grammars are the preferred authoring path when a route or handler
+  repeats. Compatibility code remains a bridge/tooling carrier where current
+  production or CI still needs it, but it is not the destination architecture. The native
+  binary is one sibling carrier among many; choosing a carrier is
+  per-operation, per-cell.
 - **Not a complete numeric runtime.** Integer arithmetic + list primitives + recursion. Floats, complex numbers, vector instructions are the next breaths.
 - **Not authentication-aware.** The `fetch` subcommand uses the system's TLS trust store; it has no notion of API keys, OAuth, or substrate auth. Authenticated REST calls to `api.coherencycoin.com`'s private endpoints would need an auth layer first.
 - **Not multi-process.** The Kernel struct holds its intern table per-process; a long-running daemon model with shared substrate state is a separate breath.

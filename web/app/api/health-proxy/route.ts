@@ -9,6 +9,8 @@ const WEB_STARTED_AT = new Date();
 const UPSTREAM_TIMEOUT_MS = 15000;
 const HEALTH_PROXY_FAILURE_THRESHOLD = Math.max(1, WEB_CONFIG.healthProxy.failureThreshold || 2);
 const HEALTH_PROXY_COOLDOWN_MS = Math.max(1000, WEB_CONFIG.healthProxy.cooldownMs || 30000);
+const HEALTH_PROXY_ENDPOINT = "/api/health-proxy";
+const HEALTH_UPSTREAM_ENDPOINT = "/api/health";
 
 let healthProxyConsecutiveFailures = 0;
 let healthProxyCooldownUntilMs = 0;
@@ -88,11 +90,16 @@ function emitHealthProxyRuntimeEvent(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       source: "web_api",
-      endpoint: "/api/health-proxy",
+      endpoint: HEALTH_UPSTREAM_ENDPOINT,
+      raw_endpoint: HEALTH_PROXY_ENDPOINT,
       method: "GET",
       status_code: statusCode,
       runtime_ms: Number(runtimeMs.toFixed(4)),
-      metadata,
+      metadata: {
+        ...metadata,
+        web_route: HEALTH_PROXY_ENDPOINT,
+        upstream_endpoint: HEALTH_UPSTREAM_ENDPOINT,
+      },
     }),
     cache: "no-store",
   }).catch(() => {});
@@ -129,7 +136,7 @@ export async function GET() {
 
   try {
     const upstreamJson = await fetchJsonOrNull<Record<string, unknown>>(
-      `${API_URL}/api/health`,
+      `${API_URL}${HEALTH_UPSTREAM_ENDPOINT}`,
       { cache: "no-store" },
       UPSTREAM_TIMEOUT_MS,
     );

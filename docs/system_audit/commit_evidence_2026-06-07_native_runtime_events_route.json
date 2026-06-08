@@ -1,0 +1,106 @@
+{
+  "date": "2026-06-07",
+  "thread_branch": "codex/native-http-stack-architecture-20260604",
+  "commit_scope": "Promote ordinary substrate compiler traffic and runtime event writes through BML-authored Go kernel routes",
+  "files_owned": [
+    "deploy/front-door/api.bml",
+    "form/form-kernel-go/server_test.go",
+    "docs/system_audit/native_route_goal_state.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form/form-kernel-go && go test -count=1 -run 'Test(SubstrateFormCompilerRouteRunsBML|RuntimeEventsCreateRouteValidatesNatively)' ./...",
+      "cd form/form-kernel-go && go test -count=1 ./...",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/kernel-http.fk form-stdlib/language-model.fk form-stdlib/tests/source-language-route-class-template-band.fk",
+      "python3 scripts/native_route_goal_loop.py /loop --source api --seconds 86400 --limit 2000 --write-state --json",
+      "ssh -i ~/.ssh/hostinger-openclaw -fN -L 15432:<production-postgres-container-ip>:5432 root@187.77.152.42",
+      "cd form/form-kernel-go && go run . serve --port 19091 --stdlib ../form-stdlib --config ~/.coherence-network/secrets/form-kernel-postgres-tunnel.json ../../deploy/front-door/api.bml",
+      "curl -sS -o /tmp/native_runtime_event_create_4.json -w '%{http_code}' http://127.0.0.1:19091/api/runtime/events -H 'Content-Type: application/json' -H 'Accept: application/json' -d '{...}'",
+      "curl -sS 'https://api.coherencycoin.com/api/runtime/events?source=api&limit=20&force_refresh=true' | jq -r '.items[]? | select(.metadata.probe == \"codex-native-runtime-events\" and .metadata.pass == \"clean-response\") | ...'",
+      "curl -i -sS http://127.0.0.1:19091/api/runtime/events -H 'Content-Type: application/json' -H 'Accept: application/json' -d '{\"source\":\"outside\",...}'"
+    ],
+    "summary": "POST /api/substrate/form is no longer gated by X-Form-Compiler; ordinary JSON compiler calls route through the Go kernel and BML handler. POST /api/runtime/events now has a BML handler that validates request JSON, normalizes endpoint/raw_endpoint, computes runtime_cost_estimate from config, writes to production Postgres through pg_exec, and emits JSON through Form json-emit. The live native curl returned 201 and public API readback found the inserted production row."
+  },
+  "known_failed_attempts": [
+    {
+      "command": "curl http://127.0.0.1:19091/api/runtime/events before opening the SSH tunnel",
+      "status": "fixed",
+      "output": "The BML route matched natively but returned 503 database unavailable because ~/.coherence-network/secrets/form-kernel-postgres-tunnel.json points to 127.0.0.1:15432 and the tunnel was closed. Opened the documented Hostinger SSH tunnel and retried successfully."
+    },
+    {
+      "command": "curl http://127.0.0.1:19091/api/runtime/events with native_observation.cost_model response field",
+      "status": "fixed",
+      "output": "A nonessential diagnostic string in a deeply nested BML response emitted malformed text or miscompiled when moved behind a helper. Removed the diagnostic field; the cost calculation still reads agent_cost.runtime_cost_per_second from config."
+    }
+  ],
+  "ci_validation": {
+    "status": "pending",
+    "reason": "No commit, push, or PR was created in this turn."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No production deploy was performed. Production database proof used the local Go front door over the documented SSH tunnel."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof and production DB write proof passed, but CI and deploy validation remain pending until this work is committed and shipped."
+  },
+  "idea_ids": [
+    "native-kernel-http-front-door",
+    "form-native-runtime",
+    "oss-interface-alignment"
+  ],
+  "spec_ids": [
+    "form-native-http-stack"
+  ],
+  "task_ids": [
+    "substrate-form-ungated-native-compiler",
+    "runtime-events-create-bml-native-route"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "native_route_goal_loop /loop --source api reports bml_routes=29, high-grammar native share=0.8390, native-executable share=0.8530, next gap GET /api/gates/main-head.",
+    "POST /api/runtime/events disappeared as a POST promotion gap; the remaining /api/runtime/events row is GET/list traffic.",
+    "Go route test proves ordinary POST /api/substrate/form returns 200, X-Form-Router=native-kernel-go, handler=api_substrate_form, and value=42.",
+    "Go route test proves POST /api/runtime/events validation returns 422 through X-Form-Router=native-kernel-go without fanout.",
+    "Live native curl through Go front door returned HTTP 201 for POST /api/runtime/events with id rt_d572fb0bbee0, endpoint /api/runtime/events, method POST, origin_idea_id oss-interface-alignment.",
+    "Public API readback found rt_d572fb0bbee0 in /api/runtime/events?source=api&limit=20&force_refresh=true.",
+    "Header proof on validation request returned X-Form-Route-Where: route:runtime-events-create pattern:/api/runtime/events request:/api/runtime/events."
+  ],
+  "change_files": [
+    "deploy/front-door/api.bml",
+    "form/form-kernel-go/server_test.go",
+    "docs/system_audit/native_route_goal_state.json",
+    "docs/system_audit/commit_evidence_2026-06-07_native_runtime_events_route.json"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "High-traffic compiler POSTs and runtime event creation can enter through the Go native front door with handlers written in BML. Runtime event creation performs a real production Postgres write without adding JSON encoding or route-specific business logic to the kernel carrier.",
+    "public_endpoints": [
+      "POST /api/substrate/form",
+      "POST /api/runtime/events"
+    ],
+    "test_flows": [
+      "Ordinary substrate compiler POST compiles and runs a BML expression through the Go kernel and returns value 42.",
+      "Runtime event POST validates malformed source through the native route without fanout.",
+      "Runtime event POST writes a real production row through the Go front door and the public API reads the same row back."
+    ]
+  }
+}

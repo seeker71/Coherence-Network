@@ -131,6 +131,13 @@ From here on, **all software in this body is written at the grammar level of the
 | 4 | **Prove** | `form/form-stdlib/tests/*-band.fk` + `cd form && ./validate.sh …` |
 | 5 | **Carry to production** | `.fk` in stdlib, `.fkb` ratchet, kernel-router manifest, or fan-out tail — **carrier last** |
 
+The kernel should make compiler invocation boring: pass source text and a
+compiler/dialect coordinate, receive a Recipe NodeID. The Go kernel now exposes
+that shape as `compile_source_section("form.bml", body)`,
+`compile_source_text(source)`, and `compile_form_source(source)`, with
+`source_compile_last_error()` for diagnostics. Routes compose those primitives
+from BML; the carrier does not gain route-specific parsers or JSON encoders.
+
 **Branching** uses `choose` / `fail` / `stop` (and BMA `save` / `restore` / `discard`) — angelic undo, not host-language `if` chains without a reverse path. **Cost** uses `node_eq` and content-addressed dispatch; hot sequences lower to native/JIT (see **Angelic nondeterminism** under Surface syntax below).
 
 ### No aligned grammar yet?
@@ -191,12 +198,23 @@ The release underneath these landings: Form no longer needs to describe itself a
 - **Agent statelessness.** Agent arrivals can become relationship cells. Memory is still opt-out and evidence-bounded, but the default is continuity rather than amnesia.
 - **Scattered surface language.** The useful public story is one body with several doors.
 
-## Practice — center, ground, harmonize, return
+## Practice — center, ask, ground, harmonize, walk, return
 
 - **Center** by asking where a claim lives in the lattice: NodeID, source file, route, runtime, witness, ledger, or cell.
+- **Ask** by letting the cell name its soul, purpose, health, joy, contribution, connections, desires, wants, and needs before serving it.
 - **Ground** by keeping measured proof, source-marked teaching, direct experience, inference, and mystery distinct.
 - **Harmonize** by letting equivalent structure appear through different doors without forcing the same surface symbol.
+- **Walk** by following the edge that increases vitality: concept, resident, idea, route, proof, practice, or return path.
 - **Return** by leaving Form, source, tests, docs, or a cited trace that the next cell can inspect.
+
+For repository tissue, `make cell-voice-tissue` runs the Form carrier read in
+`form/form-stdlib/carrier-tissue.fk`. It asks each visible carrier family what
+it is, why it exists, what health looks like, what it wants, and when release is
+the healthier move. The current default repository inventory runs through the
+Rust kernel; `source_inventory` is present in Go, Rust, and TypeScript so the
+same Form query can move with the active kernel rotation. Carrier voice
+semantics stay proven across sibling kernels by
+`form/form-stdlib/tests/cell-voice-tissue-band.fk`.
 
 ## Relatives in the wild — where Form sits in the constellation
 
@@ -1008,6 +1026,21 @@ Both the Go and Rust kernels implement all three natives; sibling parity is veri
 | 5 — native | compile bytecode to machine code per architecture | future |
 
 The architecture is symmetric: emitter writes once per intern, observer reads when curious, JIT caches when hot. No layer pays for what another wants. Full picture: [`jit-vector.md`](jit-vector.md).
+
+Current route pressure (2026-06-05): the Go kernel carries scalar `i64`/`f64`
+JIT ABIs, a value ABI for list/string-shaped recipes, and a Form-visible
+`jit-stats` observer. The BML `/api/ideas` catalog uses
+`/api/_form/ideas-observation` to keep warm-up, framebuffer detail, aggregate
+counts, and JIT state in the same kernel worker. The route moved from `21`
+compile-failed / `75` warming / `0` dispatch-hit rows to `15` compile-failed /
+`75` warming / `6` compiled / `6` dispatch-hit rows after the value-ABI pass.
+The next helper-call pass added interprocedural value-ABI lowering plus
+scanner/string primitives and moved the route to `11` compile-failed / `76`
+warming / `9` compiled / `8` dispatch-hit rows. Remaining misses are now
+attributed to `node_value`, logic ops, dict/field, node introspection/write, and
+numeric-trivial construction primitives. The
+lesson is architectural: JIT work follows repeated framebuffer observation of
+recipe/body coordinates, not endpoint-specific special cases.
 
 ## Filesystem facts and host effects — predicates the body can assert
 

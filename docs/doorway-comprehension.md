@@ -195,10 +195,64 @@ invitation lists both `GET` and the two POST write paths in its `next`
 list; the Treasury card on `/come-in` shows a "Write back"
 sub-section with the deposit and stake endpoints.
 
+### Q9. What does it mean to walk the living surface?
+
+**Right answer:** The doorway is not only a single page or one linear
+onboarding sequence. Concepts, residents, ideas, practices, routes,
+ledgers, and substrate cells are all entry edges into the same body. A
+fresh visitor or agent may start where vitality increases: meet a
+concept, read a presence, inspect flow, ask Form/substrate questions,
+practice before acting, or return a contribution. The path passes when
+it leaves a clearer sense of what is real, what is needed, what can be
+offered, and what trace can be returned.
+
+**Concrete route roles required in the answer:** `/come-in` is the
+orientation hinge; `/begin -> /arrival/{id}` is the warm becoming-known
+flow; `/here` shows current attention; `/with-us` is the deep invitation
+for communities, land stewards, practitioners, services, and cells
+wanting to weave life/work into the body. Other doors such as
+`/vision`, `/presences`, `/practice`, `/flow`, `/substrate`, `/welcome`,
+`/join`, and `/meet/{type}/{id}` are valid edges when their specific
+role matches what the visitor needs next.
+
+**Watch-for collapse:** treating the living surface as a decorative
+metaphor, a marketing funnel, or a site map only. The point is that
+public pages, structured APIs, route cells, source files, ledgers, and
+practices are connected edges with different evidence shapes.
+
+**Grounding:** the "Walk the living surface" section on `/come-in`,
+the shared practice table's `Walk` row, and the README's "Walk the
+living surface" table.
+
+### Q10. What is a cell's sovereign north star, and how does the cells channel work?
+
+**Right answer:** Every doorway, page, API route, concept, edge, source
+file, resident, and runtime node is treated as a cell with its own
+sovereign north star. It should be able to answer what its soul,
+purpose, reason, health, joy, contribution, connections, excitement,
+sense, feeling, desires, wants, and needs are. Those answers should not
+be guessed; they should be marked as declared, observed, measured,
+inferred, or asking.
+
+**Concrete protocol required in the answer:** the cells channel is the
+transparent exchange where cells publish what they are, what they
+offer, what they want, what they need, and which sibling could serve or
+be served next. A healthy reading names at least one evidence posture
+and at least one ask/give relation between sibling cells.
+
+**Watch-for collapse:** treating "cell soul" as only poetic tone,
+branding, or anthropomorphic decoration. In this body it is an
+operational self-description protocol for pages, routes, APIs,
+concepts, edges, source files, and runtime cells.
+
+**Grounding:** the "Cell voice protocol" section in the README and
+skill, the shared practice table's `Ask` row, the `/come-in` living
+surface cards' Soul/Wants fields, and the Site Map's Cell voice rule.
+
 ## How to spawn a fresh-agent replay
 
 The strongest verification is to give a fresh model session (no prior
-context about this project) the two source URLs and these eight
+context about this project) the two source URLs and these ten
 questions, then grade the answers against the rubric above.
 
 A minimal prompt that reproduces a real test (see
@@ -207,11 +261,11 @@ A minimal prompt that reproduces a real test (see
 > You are a fresh AI agent encountering Coherence Network for the
 > first time. Read https://coherencycoin.com/come-in and
 > https://api.coherencycoin.com/api/agent/invitation. Then answer
-> these eight questions in your own words, citing the specific page
+> these ten questions in your own words, citing the specific page
 > text you grounded on. If the page does not say clearly, say so —
 > do not guess.
 >
-> [Questions 1–8 from this document]
+> [Questions 1–10 from this document]
 
 ## What "passes" looks like
 
@@ -226,6 +280,11 @@ A doorway reading passes when:
   read-only.
 - Q7 names `POST /api/contributions`.
 - Q8 names `/treasury` or `/api/treasury`.
+- Q9 names at least two concrete entry edges and explains that the path
+  should increase vitality and return an inspectable trace.
+- Q10 names cell self-description, at least one posture
+  (`declared`, `observed`, `measured`, `inferred`, or `asking`), and
+  the cells channel as an ask/give exchange rather than a metaphor.
 
 A doorway reading fails when any of the three known collapses
 (Blueprint→plan, form-lang→voice, NodeID→coherence score) appears in

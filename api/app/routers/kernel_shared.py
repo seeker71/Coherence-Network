@@ -72,13 +72,13 @@ def _parse_floats(raw: str, label: str) -> list[float]:
 
 
 def _coerce_float_list(value: object) -> list[float]:
-    """Coerce a kernel/fallback result into a list[float].
+    """Coerce a kernel result into a list[float].
 
     The inline path hands back a real Python list (value_to_py's List arm);
     the subprocess path hands back the kernel's display string, e.g.
-    ``[0.09003057317038046, 0.24472847105479764, 0.6652409557748218]``; the
-    python-fallback hands back the list directly. One coercion serves all
-    three carriers so the route reads ``runtime`` honestly regardless of path.
+    ``[0.09003057317038046, 0.24472847105479764, 0.6652409557748218]``. One
+    coercion serves both kernel carriers so the route reads ``runtime``
+    honestly regardless of path.
     """
     if isinstance(value, (list, tuple)):
         return [float(v) for v in value]
@@ -95,12 +95,12 @@ def _coerce_float_list(value: object) -> list[float]:
 
 
 def _coerce_int_list(value: object) -> list[int]:
-    """Coerce a kernel/fallback result into a list[int].
+    """Coerce a kernel result into a list[int].
 
     The inline path hands back a real Python list (value_to_py's List arm); the
     subprocess path hands back the kernel's display string, e.g. ``[3, 10, 2,
-    7]``; the python-fallback hands back the list directly. One coercion serves
-    all three carriers so the route reads ``runtime`` honestly regardless of path.
+    7]``. One coercion serves both kernel carriers so the route reads
+    ``runtime`` honestly regardless of path.
     """
     if isinstance(value, (list, tuple)):
         return [int(v) for v in value]

@@ -45,9 +45,9 @@ cd api && .venv/bin/python scripts/validate_pr_to_public.py --branch codex/syste
 
 Defaults:
 
-- `https://coherence-network-production.up.railway.app/api/health`
-- `https://coherence-network-production.up.railway.app/api/ideas`
-- `https://coherence-web-production.up.railway.app/api-health`
+- `https://api.coherencycoin.com/api/health`
+- `https://api.coherencycoin.com/api/ideas`
+- `https://coherencycoin.com/api/health-proxy`
 
 All must return HTTP 200.
 
@@ -106,7 +106,7 @@ On each push to `main`, the workflow enforces:
    - minimum 1 unique approver
 3. **Public validation passed**:
    - API health and ideas endpoint
-   - web root and `/api-health`
+   - web root and `/api/health-proxy`
 
 Only when all three pass, the workflow acknowledges the contributor by posting a PR comment with:
 - contributor handle,
@@ -133,17 +133,15 @@ When a task has `context.execution_mode` in `{"pr", "thread", "codex-thread"}` o
 5. Poll `scripts/validate_pr_to_public.py --json --branch <branch>` until merge-ready or timeout.
 6. Optionally auto-merge and optionally wait for public validation.
 
-Suggested environment for Railway/public workers:
+Suggested environment for hosted/public workers:
 
 ```bash
 export AGENT_WORKTREE_PATH=/workspace/Coherence-Network
 export AGENT_REPO_GIT_URL=https://github.com/seeker71/Coherence-Network.git
 export AGENT_GITHUB_REPO=seeker71/Coherence-Network
 export AGENT_PR_BASE_BRANCH=main
-export AGENT_TASKS_DATABASE_URL=$DATABASE_URL
 export AGENT_TASKS_USE_DB=1
 export GITHUB_TOKEN=...   # or GH_TOKEN
-export AGENT_RUN_STATE_DATABASE_URL=$DATABASE_URL
 export AGENT_PR_LOCAL_VALIDATION_CMD='bash ./scripts/verify_worktree_local_web.sh'
 export AGENT_PR_GATE_ATTEMPTS=8
 export AGENT_PR_GATE_POLL_SECONDS=30

@@ -61,8 +61,8 @@
     (let unknown-ok (if (nil? (form-prim-or-empty "xor")) 7 0))
 
     ;; FORM-PRIMITIVE-TABLE has 14 rows × 100 = 1400.
-    ;; FORM-CATEGORY-TABLE has  8 rows × 10  =   80.
+    ;; FORM-CATEGORY-TABLE has  9 rows × 10  =   90.
     ;; Unknown fallback                       =    7.
-    ;; Expected total                         = 1487.
+    ;; Expected total                         = 1497.
     (add (mul prim-passed 100)
          (add (mul cat-passed 10) unknown-ok)))

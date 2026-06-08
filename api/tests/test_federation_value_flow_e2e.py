@@ -37,18 +37,13 @@ from __future__ import annotations
 import base64
 import hashlib
 from contextlib import contextmanager
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.models.federation import (
-    AssetMirrorManifest,
-    ComputeFederatedSharesRequest,
-    FederatedInstance,
-    ReadAttributionEnvelope,
-)
+from app.models.federation import FederatedInstance
 from app.routers.render_events import _reset_events_for_tests
 from app.services import (
     evidence_service,
@@ -61,8 +56,6 @@ from app.services import (
     settlement_service,
 )
 from app.services.federation_value_flow_service import (
-    SignatureRejection,
-    federated_reader_id,
     is_federated_reader_id,
     sign_read_attribution,
 )
@@ -95,6 +88,10 @@ def _iso_now() -> str:
 
 def _iso_offset(seconds: int) -> str:
     return (datetime.now(timezone.utc) + timedelta(seconds=seconds)).isoformat()
+
+
+def _utc_today():
+    return datetime.now(timezone.utc).date()
 
 
 def _sha256_hex(content: bytes) -> str:
@@ -302,7 +299,7 @@ def test_federated_full_creator_to_settlement_loop(two_instance_world, monkeypat
     origin_uuid, origin_node_id, registration = _register_asset_on_a(
         client, content=content, creator_id="contributor:creator-on-a"
     )
-    creator_payment_address = f"coherence:contributor:creator-on-a"
+    creator_payment_address = "coherence:contributor:creator-on-a"
 
     # --- Phase 2: B mirrors A's asset (acting as B) ---
     # The mirror call is B's local state; B's id is what matters for the
@@ -376,7 +373,7 @@ def test_federated_full_creator_to_settlement_loop(two_instance_world, monkeypat
     # entry surfaces under that key. The local content-delivery path
     # records under `asset:<uuid>` instead; both forms point at the same
     # asset in the graph. A cross-instance follow-up may unify these.
-    today = date.today()
+    today = _utc_today()
     settle_response = client.post(
         "/api/settlement/run", json={"batch_date": today.isoformat()}
     )
@@ -528,7 +525,7 @@ def test_federated_read_with_signature_failure_rejected(
     assert a_events == []
 
     # And a settlement run today produces no read for this asset.
-    today = date.today()
+    today = _utc_today()
     batch = client.post(
         "/api/settlement/run", json={"batch_date": today.isoformat()}
     ).json()
@@ -680,7 +677,7 @@ def test_local_reads_and_federated_reads_compose_in_settlement(
     # produces its own per-asset entry; the batch total covers all four
     # reads. Local reads carry DEFAULT_CONTENT_CC_AMOUNT (0.01) each;
     # federated reads carry the attested 1.5 each.
-    today = date.today()
+    today = _utc_today()
     batch = client.post(
         "/api/settlement/run", json={"batch_date": today.isoformat()}
     ).json()

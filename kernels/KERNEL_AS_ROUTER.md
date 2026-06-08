@@ -2,32 +2,93 @@
 
 > The reversal Urs named: **make the Form kernel the router / starting point of
 > request handling**, fanning out to CPython only for the not-yet-native tail.
-> Today CPython (FastAPI) is the runtime and the kernel is a called
-> guest-subroutine. This inverts that topology.
+> The current public compatibility carrier still runs through CPython
+> (FastAPI), where the kernel is a called guest-subroutine for promoted compute
+> cores. This inverts that topology.
 
 This is the structural complement of [`API_KERNEL_READINESS.md`](API_KERNEL_READINESS.md).
-That document holds *"FastAPI stays the doorway; the kernel serves the
-pure-compute core of eligible routes."* This one holds the inversion: **the
-kernel IS the doorway; CPython is the upstream for the routes the kernel does
-not yet serve natively.** Same body, two phases of the same arc — the readiness
-map grows the native surface; this design moves the front door onto it.
+That document holds the earlier readiness phase: FastAPI stayed the doorway
+while the kernel served the pure-compute core of eligible routes. This one holds
+the inversion: **the kernel IS the doorway; CPython is the upstream for the
+routes the kernel does not yet serve natively.** Same body, two phases of the
+same arc — the readiness map grows the native surface; this design moves the
+front door onto it.
 
-The seed already exists and is measured: `form-kernel-rust serve` (`cli_serve`
-in [`form/form-kernel-rust/src/main.rs`](../form/form-kernel-rust/src/main.rs))
-is a kernel-resident HTTP listener that loads a `routes.fk` once into a
-long-lived `Kernel + Arena`, holds the top-level `routes` binding (a list of
-`(path, handler-closure)`), and dispatches each request to the matching Form
-handler. No FastAPI, no CPython in that path. This design makes that primitive
-PRIMARY and adds the fan-out arm.
+Kernel here means the sibling kernel contract, not the Rust binary. Rust has
+carried the deepest front-door shell so far; Go is the next carrier to bring to
+the same `kh-*` stack; TypeScript remains a sibling parity surface. There is no
+primary kernel.
 
-## Today: the kernel is a guest inside a CPython request
+The seed exists in two live modes inside `form-kernel-rust serve` (`cli_serve`
+in [`form/form-kernel-rust/src/main.rs`](../form/form-kernel-rust/src/main.rs)):
+
+- **Compatibility host-router mode** (`serve`) loads route specs into
+  worker-local `Kernel + Arena` instances, then Rust reads/parses each request,
+  selects a native route, walks the Form handler, frames the response, and fans
+  unmatched paths out to FastAPI. This is the route-promotion shadow and fan-out
+  carrier.
+- **Form-native HTTP mode** (`serve --form`) still uses Rust for listener
+  binding, worker lifecycle, manifest loading, and socket handles, but hands each
+  accepted stream to `kh-serve-conn`. From there Form receives bytes, parses,
+  lifts to `kh-request`, selects a `kh-route`, dispatches the registry handler,
+  renders `kh-response`, sends the wire response, and closes the socket. No
+  FastAPI, no CPython, and no Rust parse/route/render in that path.
+
+This design makes the second mode primary for native paths while keeping the
+first mode as the compatibility fan-out bridge until `--form` grows request
+bodies, keep-alive, streaming, and deployment routing.
+
+The compatibility bridge is only one handler carrier. A native route can point
+at a handler authored in BML, a domain grammar for the endpoint's subject, a
+compiled legacy-source recipe, or a Python port call. The router sees the same
+contract in every case: `kh-request -> kh-response` plus observations and
+failures as Form values.
+
+## Timing: keep optimization inside the route body
+
+The `/api/ideas` BML route now has two diagnostic siblings:
+
+- `/api/_form/ideas-observation` for framebuffer/JIT rows.
+- `/api/_form/ideas-timing` for handler-internal timing segments.
+
+Both require `X-Form-Observe`. The reusable probe is
+`scripts/ideas_route_timing_breakdown.py`.
+
+Observed on 2026-06-05 for
+`/api/ideas?limit=2&offset=0&sort=marginal_cc` against production Postgres:
+
+| Surface | p50 | p95 |
+|---|---:|---:|
+| public FastAPI HTTP total | `269.859 ms` | `1087.374 ms` |
+| local native Go HTTP total | `547.091 ms` | `1303.667 ms` |
+| native BML handler total | `555 ms` | `1301 ms` |
+| Python same-SQL handler total | `412.903 ms` | `434.894 ms` |
+
+Native handler median split: `connect=248 ms`, `summary_query=137 ms`,
+`page_query=154 ms`, `params=1 ms`, `shape_tree=5 ms`, `json_emit=3 ms`.
+Python same-SQL median split against the same tunnel:
+`connect=215.906 ms`, `summary_query=93.528 ms`, `page_query=101.260 ms`,
+`shape_dicts=0.082 ms`, `json_dumps=0.102 ms`.
+
+That separates the work:
+
+- Median latency: DB connect/ping per request plus two SQL reads. Build a
+  Form-visible connection/pool cell or worker-owned pool before claiming JSON is
+  the median bottleneck.
+- Native tail: slow samples assign pauses to `shape_tree`, `json_emit`, or params
+  while DB segments remain near median. Treat this as substrate allocation/GC,
+  Form JSON construction/emission, and JIT primitive coverage.
+- Out of context for handler optimization: process startup, public internet,
+  Cloudflare/Traefik traversal, TCP accept, and client response download.
+
+## Compatibility State: the kernel is a guest inside a CPython request
 
 ```
    visitor
      │  HTTP
      ▼
 ┌──────────────────────────────────────────────────────────────┐
-│  FastAPI (CPython) — THE RUNTIME / FRONT DOOR                  │
+│  FastAPI (CPython) — CURRENT PUBLIC COMPATIBILITY CARRIER       │
 │    route match (path + method)                                 │
 │    Pydantic bind + validate                                    │
 │    ┌────────────────────────────────────────────┐             │
@@ -42,11 +103,11 @@ PRIMARY and adds the fan-out arm.
    visitor
 ```
 
-The kernel runs *inside* a CPython request, for the **23 compute cores**
+In this compatibility state the kernel runs *inside* a CPython request, for the **23 compute cores**
 (across 8 `kernel_*` router families) that call `serve_via_kernel`. The other
-~762 of the 785 endpoints never touch the kernel. Python owns the socket, the
-routing, the validation, the lifecycle. The kernel is reached only after
-CPython has already decided everything.
+~762 of the 785 endpoints never touch the kernel. This is not the destination:
+Python owns the socket, routing, validation, and lifecycle only for the bridge
+surface while the front door moves into Form-native route cells.
 
 ## Reversed: the kernel is the front-door router
 
@@ -55,8 +116,9 @@ CPython has already decided everything.
      │  HTTP
      ▼
 ┌──────────────────────────────────────────────────────────────┐
-│  form-kernel-rust serve — THE RUNTIME / FRONT DOOR (ROUTER)   │
-│    parse request line (method, path, query)                   │
+│  sibling Form kernel — THE RUNTIME / FRONT DOOR (ROUTER)       │
+│    compatibility mode: Rust parses/routes/frames + fans out   │
+│    --form mode: Form kh-serve-conn receives/parses/routes      │
 │    look up path in the routes.fk manifest                      │
 │                                                                │
 │    ┌── path HAS a native Form handler ──────────────┐         │
@@ -80,14 +142,18 @@ CPython has already decided everything.
               └──────────────────────────────┘    front door
 ```
 
-The kernel owns the listening socket. It decides native-vs-fan-out per request.
-Native routes never touch CPython; the tail keeps working because the kernel
-proxies it to the same FastAPI app that serves it today — unchanged.
+The kernel owns the listening socket. In compatibility mode it decides
+native-vs-fan-out per request and proxies the tail to the same FastAPI app that
+serves it today. In `--form` mode the load balancer should send only paths with
+native `kh-route` rows; a miss is a visible 404 from Form, not a fan-out
+decision. Native routes in either mode never touch CPython.
 
 ## How a route is classified: the routes.fk manifest
 
 The manifest is the single source of routing truth. A route is **native** iff
-the manifest binds a Form handler for its path; **everything else fans out**.
+the manifest binds a Form handler for its path. In compatibility mode,
+everything else fans out. In `--form`, everything else is a visible Form 404
+because fan-out is not part of that path yet.
 
 ```bml
 section [form.route] {
@@ -107,16 +173,21 @@ section [form.route] {
 }
 ```
 
-Classification is **closed-world by presence**: listed ⇒ native, absent ⇒
-fan-out. There is no per-route "fanout" declaration to drift — the absence IS
-the declaration. As a route moves from fan-out to native, it gains a line in
-the manifest and a Form handler; nothing else in the topology changes.
+Classification is **closed-world by presence**: listed means native. In the
+compatibility bridge, absent means fan-out. In the Form-native listener, absent
+means the load balancer sent a path this listener does not own, so Form returns
+404. There is no per-route "fanout" declaration to drift. As a route moves from
+fan-out to native, it gains a manifest row, a Form handler, and eventually a
+load-balancer rule to the `--form` listener when its response is byte-identical.
 
 A working manifest with three native handlers (liveness, a real float
 coherence-weight combinator, and an input-driven signal counter) lives at
 [`form/form-kernel-rust/examples/router-proof.fk`](../form/form-kernel-rust/examples/router-proof.fk).
 
-## The fan-out mechanism
+## The compatibility fan-out mechanism
+
+This section describes `serve` without `--form`. The Form-native `--form` path
+has no fan-out arm yet; the load balancer routes only known native paths to it.
 
 `cli_serve` gains a `--upstream <base-url>` flag. When set, a path with no
 native handler is forwarded to `<base-url><path>?<query>` and the upstream
@@ -548,13 +619,12 @@ JSON response object** its FastAPI twin returns — byte-for-byte. These are the
 routes whose Form computation is already parity-proven against CPython by the
 three-way kernel suite (`endpoint_<name>_demo.fk`); promotion replicates their FULL
 HTTP contract — the exact query params with the exact FastAPI defaults, the
-arithmetic in Form, and the exact response document. Fifteen routes are promoted
-today (the first four scalar/list computes, six pure-numeric scoring/entropy
-routes, `grounded_value` — the value/realization/confidence reduction of
-`compute_idea_metrics`, eleven host-derived scalars folded to four floats — then
-the grounded family: `cost_vector` / `value_vector` (CC decompositions via
-`round_ndigits`), `grounded_roi` (max-as-comparison + guarded division), and
-`idea_grounded_cost_sum` (the LEFT-folded float-field sum over parallel arrays)).
+arithmetic in Form, and the exact response document. The promoted utility set
+now spans the scalar/list computes, pure-numeric scoring/entropy routes, the
+grounded family (`cost_vector`, `value_vector`, `grounded_roi`,
+`idea_grounded_cost_sum`, `grounded_cost`, `grounded_value`), string/list
+membership routes, worldview cosine, grounding summaries, and the native
+concept-match tokenizer/scorer.
 
 | Promoted route | params | response shape |
 |----------------|--------|----------------|
@@ -580,6 +650,170 @@ the grounded family: `cost_vector` / `value_vector` (CC decompositions via
 | `/api/utils/idea_marginal_from_record` | `pv` `av` `conf` `ec` `ac` `rr` (floats) — the 6 record fields pre-extracted by the host | `{"marginal_return":<float>,"idea":{…6 floats},"runtime":"inline"}` (Method-B marginal CC, `round(_,6)`; the echoed `idea` is a fixed-shape dict[str,float] built from the params) |
 | `/api/utils/idea_grounding_summary` | `event_counts` (csv ints via `int(float(x))`), `actual_values` (csv floats) — two parallel scalar-lists | `{"spec_count":<int>,"total_event_count":<int>,"specs_with_value_count":<int>,"max_event_count":<int>,"spec_count_in":<int>,"runtime":"inline"}`, or **422 `{"detail":"…"}`** (the handler's observable "no") on a length mismatch |
 | `/api/utils/concept_match_score` | `idea_name` `idea_description` `concept_name` `concept_description` (strings), `concept_keywords` (csv strings) — ASCII text | `{"score":<float>,"keywords":["…"],"concept_keywords":["…"],"runtime":"inline"}` (the WHOLE pipeline native: the `re.findall(r"\b[a-zA-Z]{3,}\b", …)` tokenizer via `scan_run`+boundary test, 67-word stopword drop + first-seen dedup, then `_score_concept`'s bidirectional `str_find` membership fold; empty-keyword bag → `score 0.0, keywords []`) |
+
+### Complex endpoint probe: grounded_cost
+
+`/api/utils/grounded_cost` is the current complex endpoint probe because it
+exercises input parsing, paired-array failure, list-of-record computation, JSON
+output, a compiled legacy Python recipe, and a native route handler. The
+repeatable probe lives at
+[`scripts/grounded_cost_endpoint_probe.py`](../scripts/grounded_cost_endpoint_probe.py).
+
+Current local reading on 2026-06-05 with 50 specs, 40 commits, and 30 lineage
+links:
+
+- Python body: p50 `0.01000ms`, p95 `0.01250ms`, p99 `0.01750ms`.
+- Python endpoint shape without HTTP: p50 `0.01292ms`, p95 `0.01588ms`,
+  p99 `0.02083ms`.
+- Compiled recipe through fork/exec Rust kernel: p50 `6.27912ms`,
+  p95 `6.48029ms`, p99 `6.48029ms`.
+- Compiled recipe through fork/exec Go kernel: p50 `6.72892ms`,
+  p95 `6.96567ms`, p99 `6.96567ms`.
+- FastAPI kernel-guest HTTP: p50 `3.32067ms`,
+  p95 `3.93542ms`, p99 `3.98592ms`.
+- Native compatibility kernel HTTP route: p50 `8.01133ms`,
+  p95 `8.33867ms`, p99 `8.41454ms`.
+
+The native route matches the FastAPI kernel-guest value when runtime
+provenance is ignored, and its 422 body/status match the FastAPI failure shape.
+So this endpoint is functionally promoted but not performance-promoted through
+the compatibility native HTTP path. The next performance work is visible in the
+trace: 5,389 walks on the medium fixture, with `_plus`, `_get`, `len`,
+`head`/`tail`, `record_new`, and `make_nodeid` carrying the heat.
+
+The same pass added a sibling-portable BML/Form handler core:
+[`form/form-stdlib/tests/grounded-cost-record-handler-band.fk`](../form/form-stdlib/tests/grounded-cost-record-handler-band.fk).
+It avoids making the legacy Python-adapter `_dict_new`/`_get`/`_iter` carrier
+the source shape and uses `record_new`/`record_get` plus head/tail folds. This
+is the shape the Go front door should carry as the handler source:
+
+```
+cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/grounded-cost-record-handler-band.fk
+# -> [4.75, 6.75, 2.25, 0.75, 6.75, 7.75]
+```
+
+The Go JIT answer is also exact rather than aspirational. The probe now
+uses framebuffer counts for compile/fail/dispatch proof:
+
+- The legacy Python-adapter recipe now executes in Go after sibling dict carrier
+  parity. It is correct but remains a bridge source, not the desired handler
+  grammar.
+- An i64 recursive helper returns `[1, 1, 30, 110]` (`jit_compile`,
+  `jit_compiled?`, two results) and records framebuffer
+  `observe/go/jit/dispatch-hit: 2`.
+- A float helper returns `[1, 1, 2.5, 3.5]` and records framebuffer
+  `observe/go/jit/dispatch-hit: 2`, `guard-miss: 0`.
+- The endpoint helper compile pass reports 2 compile successes, 6 compile
+  fails, and 4 unbound nested loop helpers from framebuffer rows.
+- Choice is measured on the same surface: `(choose (fail) (add 40 2) (stop))`
+  returns `42` and framebuffer rows count branch attempts, branch-1 fail, and
+  branch-2 success by branch order.
+
+Required Go JIT growth is therefore the next reusable plan layer: list-fold
+lowering, dict/record field access, and string/JSON assembly coverage, all
+selected by observed recipe heat and proven by framebuffer dispatch/miss rows.
+
+### BML persistence catalog: /api/ideas
+
+`/api/ideas?query=kernel&limit=4` is now the persistence/HTTP exemplar for the
+Go carrier. The route source is
+[`deploy/front-door/api.bml`](../deploy/front-door/api.bml): a BML handler
+(`api_ideas`) plus an `IdeasIndexRoute` route class. The handler reads a typed
+`kh-request`, applies query defaults, connects through the Form-visible
+PostgreSQL port, queries `graph_nodes(type='idea')`, computes the portfolio
+scores/pagination summary, builds JSON recipe nodes, emits them through
+`json-emit`, and returns a `kh-response`.
+
+Current boundary: the catalog is read-only over the graph-backed idea store. It
+does not yet carry Python's ensure-on-read behavior or `lang` projection; those
+remain explicit next cells/ports rather than hidden Python assumptions.
+
+Route-load command:
+
+```bash
+cd form/form-kernel-go
+go run . serve --port 19086 \
+  --config ~/.coherence-network/secrets/form-kernel-postgres-tunnel.json \
+  --stdlib ../form-stdlib ../form-stdlib/json.fk ../../deploy/front-door/api.bml
+```
+
+Observed load:
+
+```text
+form-kernel-go serve: source manifest compiled via ../form-stdlib to Form recipe object
+form-kernel-go serve listening on http://127.0.0.1:19086
+```
+
+Production DB memory is current in
+[`docs/PRODUCTION-SUBSTRATE.md`](../docs/PRODUCTION-SUBSTRATE.md): Hostinger VPS,
+Docker Compose, internal Postgres, config files only. Railway and Supabase are
+not the active DB path. A direct VPS read on 2026-06-05 returned
+`coherence|public|1656` for `graph_nodes(type='idea')`; later live route probes
+in the same session returned `pagination.total=1659`, which is expected as the
+graph changes.
+
+Local native curl through the Go kernel, SSH tunnel, and local config overlay
+now reaches production Postgres:
+
+```bash
+curl -i -sS 'http://127.0.0.1:19086/api/ideas?query=kernel&limit=2&sort=marginal_cc' \
+  -H 'Accept: application/json'
+```
+
+```text
+HTTP/1.1 200 OK
+Content-Type: application/json
+X-Form-Router: native-kernel-go
+
+{"ideas":[{"id":"a86dc7ee-7810-459b-b89e-16499a8bad9c","name":"Substrate as Render Fabric",...}],"summary":{"total_ideas":5,...},"pagination":{"total":5,"limit":2,"offset":0,"returned":2,"has_more":true}}
+```
+
+This is no longer a credential or projection blocker. The remaining contract
+boundary is semantic: native BML honors `query=kernel`, while public FastAPI
+does not accept free-text `query`/`search` on `/api/ideas`. Use
+`/api/ideas?limit=2&sort=marginal_cc` for apples-to-apples timing.
+
+Observed on 2026-06-05:
+
+```text
+native_go_local_tunnel:
+  status 200, total 1659, p50 551.986 ms, p95 630.708 ms
+python_public_fastapi:
+  status 200, total 1659, p50 261.254 ms, p95 1117.920 ms
+```
+
+Native framebuffer observation is part of the BML catalog:
+
+```bash
+curl -sS -H 'Accept: application/json' -H 'X-Form-Observe: 1' \
+  'http://127.0.0.1:19086/api/_form/ideas-observation?limit=2&sort=marginal_cc&event_limit=50000'
+```
+
+The full-detail run returned `36141` event rows and `132` aggregate count rows.
+The warmed same-worker probe (`warm=40`) returned `21` JIT compile-failed bodies,
+`75` warming bodies, and `0` dispatch-hit rows. Misses are concentrated in the
+general work we need next: list ABI, string/JSON emission, node introspection,
+and dict/field access lowering.
+
+The next walked pass added the Go JIT value ABI for list/string-shaped recipes,
+TS fallback/dispatch-miss accounting for list-shaped compiled calls, and
+value-ABI-first failure attribution. The same warmed probe then reported `15`
+compile-failed rows, `75` warming rows, `6` compiled rows, and `6` dispatch-hit
+rows. The remaining misses are scanner, dict, JSON-emitter, node
+introspection/write, and numeric-trivial construction primitives. Fresh
+40-request timing after that pass: native Go local tunnel `p50=560.926 ms`,
+`p95=748.992 ms`; public FastAPI `p50=263.719 ms`, `p95=1162.181 ms`.
+Compression improved; native median latency has not moved yet.
+
+The next helper-call pass lowered static Form helper families through the Go
+value ABI and added scanner/string primitives (`scan_run`, `substring`,
+`char_at`, `ord`, `byte_to_str`, `str_eq`). The warmed route then reported
+`11` compile-failed rows, `76` warming rows, `9` compiled rows, and `8`
+dispatch-hit rows; framebuffer events fell to `26394`. Fresh timing after that
+pass: native Go local tunnel `p50=564.986 ms`, `p95=601.781 ms`; public FastAPI
+`p50=265.967 ms`, `p95=1090.011 ms`. The next pressure is now `node_value`,
+logic ops, `_dict_get`, `intern_node_at`, `intern_trivial_float`, and node
+introspection.
 
 Each handler parses its query params from the request alist (a recursive
 `split_commas` over the kernel's `str_find`/`substring`, then `str_to_int` /
@@ -895,7 +1129,7 @@ door is FastAPI.
 
 - [`API_KERNEL_READINESS.md`](API_KERNEL_READINESS.md) — the topology this inverts; the queue of native-eligible routes.
 - [`SUBSTRATE_AS_DEPLOYMENT_RUNTIME.md`](SUBSTRATE_AS_DEPLOYMENT_RUNTIME.md) — the deeper destination: the substrate as the runtime, of which the kernel-router is the request-handling face.
-- [`README.md`](README.md) — the three sibling kernels; the router is the Rust kernel's front-door face.
+- [`README.md`](README.md) — the three sibling kernels; the front door is a role any sibling carrier can serve.
 - [`lc-native-kernel-binary`](../docs/vision-kb/concepts/lc-native-kernel-binary.md) — the native binary, its serve primitive, and the per-process / concurrency honesty this build must answer.
 - [`lc-one-kernel-many-tongues`](../docs/vision-kb/concepts/lc-one-kernel-many-tongues.md), [`lc-the-kernel-knows-itself`](../docs/vision-kb/concepts/lc-the-kernel-knows-itself.md) — the kernel speaking the body's own tongue and reading its own routing.
 
@@ -913,8 +1147,8 @@ door is FastAPI.
 - [`form/form-kernel-rust/router_header_passthrough_harness.py`](../form/form-kernel-rust/router_header_passthrough_harness.py) — the bidirectional header-passthrough proof: against a mock echo upstream, the client's end-to-end request headers (Authorization/Cookie/Accept/X-Probe/User-Agent + Content-Type on POST) reach the upstream with Host rewritten and the client Content-Length/Connection stripped, and the upstream's Set-Cookie/Cache-Control/custom headers relay back while its hop-by-hop Transfer-Encoding does not; against the REAL FastAPI app, `/api/health` relays with `Content-Type: application/json` (the upstream's real type, not text/plain) and a native route still serves text/plain in Form. Tears both upstreams down.
 - [`form/form-kernel-rust/router_real_app_harness.py`](../form/form-kernel-rust/router_real_app_harness.py) — the REAL-app proof: boots `app.main:app` under uvicorn (dev sqlite), stands the kernel-router in front of it, proves native-in-Form (value == the live app's) + GET/POST fan-out to the actual FastAPI, and measures the proxy-hop overhead vs the native-route saving. Repeatable; tears both down.
 - [`form/form-kernel-rust/examples/router-real-app-proof.fk`](../form/form-kernel-rust/examples/router-real-app-proof.fk) — the real-app manifest: one native route (`/api/utils/weighted_average`, parsing its float query args and running sum(v*w)/sum(w) in Form), the rest fanned out to the real app.
-- [`deploy/kernel-router/production-routes.fk`](../deploy/kernel-router/production-routes.fk) — the PRODUCTION manifest (the durable flip's native surface): twenty-two promoted `/api/utils` routes plus `/health` and `/api/attention/kernel-runtime` served NATIVELY in Form. Each promoted utility route emits the FULL JSON response object byte-identical to its FastAPI twin in production; the attention route projects live kernel-router metrics in Form, including route-choice attempts/success/failures.
-- [`form/form-kernel-rust/production_routes_harness.py`](../form/form-kernel-rust/production_routes_harness.py) — the PROMOTION proof: boots the real `app.main:app` as the CPython oracle, stands the kernel-router (production manifest) in front, and proves promoted native responses value-identical to the local oracle (runtime provenance normalized out) and, with `--live`, full-body byte-identical to the live production api. Read-only against the live api; tears the local app + router down.
+- [`deploy/kernel-router/production-routes.fk`](../deploy/kernel-router/production-routes.fk) — the PRODUCTION manifest (the durable flip's native surface): twenty-two promoted `/api/utils` routes plus `/health` and `/api/attention/kernel-runtime` served NATIVELY in Form. Each promoted utility route emits the FULL JSON response object byte-identical to its FastAPI twin in production; the attention route projects live kernel-router metrics in Form, including route-choice attempts/success/failures. The utility handlers parse params from the request alist via `split_commas`, build JSON with `value_str` + `str_concat`, and keep compatibility where needed (`runtime:"inline"` matching production). Float accumulators are left-associated to match CPython's `sum()` bit-for-bit; the entropy routes carry `math_log`/`round_ndigits`, `breath_balance` reproduces CPython's `-0.0` exactly, and `grounded_value` folds eleven host-derived scalars through `min2`/`max2`/`_plus` with the `[0.05,0.95]` confidence clamp.
+- [`form/form-kernel-rust/production_routes_harness.py`](../form/form-kernel-rust/production_routes_harness.py) — the PROMOTION proof: boots the real `app.main:app` as the CPython oracle, stands the kernel-router (production manifest) in front, and proves promoted native responses value-identical to the local oracle (runtime provenance normalized out), including representative + edge params (adversarial floats, `-0.0`, deterministic + uniform softmax, and confidence clamp/zero-guard cases); with `--live`, it checks full-body byte-identical parity against the live production api. Read-only against the live api; tears the local app + router down.
 - [`scripts/kernel_front_door_local_preflight.sh`](../scripts/kernel_front_door_local_preflight.sh) — the local front-door rehearsal: builds the release kernel, checks manifests and image packaging, boots the real local API and kernel-router, curls fan-out/native paths, and asserts native/fanout/choice metrics move before any push or production flip.
 - [`api/app/services/form_kernel_bridge.py`](../api/app/services/form_kernel_bridge.py) — `serve_via_kernel`, the guest-subroutine path this reverses.
 

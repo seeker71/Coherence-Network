@@ -299,9 +299,9 @@
                             (fsc-bml-find-comma-loop s (add i 1) depth quoted)))
                     (if (str_eq ch "\"")
                         (fsc-bml-find-comma-loop s (add i 1) depth true)
-                        (if (str_eq ch "(")
+                        (if (or (str_eq ch "(") (str_eq ch "{"))
                             (fsc-bml-find-comma-loop s (add i 1) (add depth 1) quoted)
-                            (if (str_eq ch ")")
+                            (if (or (str_eq ch ")") (str_eq ch "}"))
                                 (fsc-bml-find-comma-loop s (add i 1) (sub depth 1) quoted)
                                 (if (and (eq depth 0) (str_eq ch ","))
                                     i
@@ -588,6 +588,7 @@
 
     (let fsc-rec-FNDEF-CAT (form-cat-node "fndef"))
     (let fsc-rec-IF3-CAT   (form-cat-node "if"))
+    (let fsc-rec-MATCH-CAT (form-cat-node "match"))
     (let fsc-rec-SEQ-CAT   (form-cat-node "sequence"))
 
     (defn fsc-rec-true ()  (make_nodeid 1 1 3 1))
@@ -595,6 +596,9 @@
 
     (defn fsc-rec-if3 (cond yes no)
         (intern_node fsc-rec-IF3-CAT (list cond yes no)))
+
+    (defn fsc-rec-match-switch (children)
+        (intern_node fsc-rec-MATCH-CAT children))
 
     ;; Param list: SEQUENCE of trivial-strings (NOT IDENT-wrapped).
     (defn fsc-rec-param-trivials (names)
@@ -813,13 +817,153 @@
                          (fsc-compile-form-bml-expr-recipe yes-text)
                          (fsc-compile-form-bml-expr-recipe no-text))))
 
+    (defn fsc-bml-find-top-eqeq-loop (s i depth quoted)
+        (if (ge i (str_len s)) (sub 0 1)
+            (do
+                (let ch (char_at s i))
+                (if quoted
+                    (if (and (str_eq ch "\\") (lt (add i 1) (str_len s)))
+                        (fsc-bml-find-top-eqeq-loop s (add i 2) depth quoted)
+                        (if (str_eq ch "\"")
+                            (fsc-bml-find-top-eqeq-loop s (add i 1) depth false)
+                            (fsc-bml-find-top-eqeq-loop s (add i 1) depth quoted)))
+                    (if (str_eq ch "\"")
+                        (fsc-bml-find-top-eqeq-loop s (add i 1) depth true)
+                        (if (or (str_eq ch "(") (str_eq ch "{"))
+                            (fsc-bml-find-top-eqeq-loop s (add i 1) (add depth 1) quoted)
+                            (if (or (str_eq ch ")") (str_eq ch "}"))
+                                (fsc-bml-find-top-eqeq-loop s (add i 1) (sub depth 1) quoted)
+                                (if (and (eq depth 0) (fsc-find-string-at? s " == " i 0))
+                                    (add i 1)
+                                    (fsc-bml-find-top-eqeq-loop s (add i 1) depth quoted)))))))))
+
+    (defn fsc-bml-find-top-eqeq (s)
+        (fsc-bml-find-top-eqeq-loop s 0 0 false))
+
+    (defn fsc-compile-form-bml-eq-recipe (expr pos)
+        (do
+            (let left-text (fsc-trim (fsc-sub expr 0 pos)))
+            (let right-text (fsc-trim (fsc-sub expr (add pos 2) (str_len expr))))
+            (fsc-rec-form-call "value_eq"
+                (list
+                    (fsc-compile-form-bml-expr-recipe left-text)
+                    (fsc-compile-form-bml-expr-recipe right-text)))))
+
+    (defn fsc-bml-find-top-brace-loop (s i depth quoted)
+        (if (ge i (str_len s)) (sub 0 1)
+            (do
+                (let ch (char_at s i))
+                (if quoted
+                    (if (and (str_eq ch "\\") (lt (add i 1) (str_len s)))
+                        (fsc-bml-find-top-brace-loop s (add i 2) depth quoted)
+                        (if (str_eq ch "\"")
+                            (fsc-bml-find-top-brace-loop s (add i 1) depth false)
+                            (fsc-bml-find-top-brace-loop s (add i 1) depth quoted)))
+                    (if (str_eq ch "\"")
+                        (fsc-bml-find-top-brace-loop s (add i 1) depth true)
+                        (if (str_eq ch "(")
+                            (fsc-bml-find-top-brace-loop s (add i 1) (add depth 1) quoted)
+                            (if (str_eq ch ")")
+                                (fsc-bml-find-top-brace-loop s (add i 1) (sub depth 1) quoted)
+                                (if (and (eq depth 0) (str_eq ch "{"))
+                                    i
+                                    (fsc-bml-find-top-brace-loop s (add i 1) depth quoted)))))))))
+
+    (defn fsc-bml-find-top-brace (s)
+        (fsc-bml-find-top-brace-loop s 0 0 false))
+
+    (defn fsc-bml-find-matching-brace-loop (s i depth quoted)
+        (if (ge i (str_len s)) (sub 0 1)
+            (do
+                (let ch (char_at s i))
+                (if quoted
+                    (if (and (str_eq ch "\\") (lt (add i 1) (str_len s)))
+                        (fsc-bml-find-matching-brace-loop s (add i 2) depth quoted)
+                        (if (str_eq ch "\"")
+                            (fsc-bml-find-matching-brace-loop s (add i 1) depth false)
+                            (fsc-bml-find-matching-brace-loop s (add i 1) depth quoted)))
+                    (if (str_eq ch "\"")
+                        (fsc-bml-find-matching-brace-loop s (add i 1) depth true)
+                        (if (str_eq ch "{")
+                            (fsc-bml-find-matching-brace-loop s (add i 1) (add depth 1) quoted)
+                            (if (str_eq ch "}")
+                                (if (eq depth 1) i
+                                    (fsc-bml-find-matching-brace-loop s (add i 1) (sub depth 1) quoted))
+                                (fsc-bml-find-matching-brace-loop s (add i 1) depth quoted))))))))
+
+    (defn fsc-bml-find-matching-brace (s open)
+        (fsc-bml-find-matching-brace-loop s open 0 false))
+
+    (defn fsc-bml-find-arrow-loop (s i end depth quoted)
+        (if (ge i end) (sub 0 1)
+            (do
+                (let ch (char_at s i))
+                (if quoted
+                    (if (and (str_eq ch "\\") (lt (add i 1) end))
+                        (fsc-bml-find-arrow-loop s (add i 2) end depth quoted)
+                        (if (str_eq ch "\"")
+                            (fsc-bml-find-arrow-loop s (add i 1) end depth false)
+                            (fsc-bml-find-arrow-loop s (add i 1) end depth quoted)))
+                    (if (str_eq ch "\"")
+                        (fsc-bml-find-arrow-loop s (add i 1) end depth true)
+                        (if (or (str_eq ch "(") (str_eq ch "{"))
+                            (fsc-bml-find-arrow-loop s (add i 1) end (add depth 1) quoted)
+                            (if (or (str_eq ch ")") (str_eq ch "}"))
+                                (fsc-bml-find-arrow-loop s (add i 1) end (sub depth 1) quoted)
+                                (if (and (eq depth 0) (fsc-find-string-at? s "=>" i 0))
+                                    i
+                                    (fsc-bml-find-arrow-loop s (add i 1) end depth quoted)))))))))
+
+    (defn fsc-bml-find-arrow (s start end)
+        (fsc-bml-find-arrow-loop s start end 0 false))
+
+    (defn fsc-compile-form-bml-match-pattern-recipe (raw)
+        (do
+            (let pattern (fsc-trim raw))
+            (if (str_eq pattern "_")
+                (fsc-rec-ident "_")
+                (fsc-compile-form-bml-expr-recipe pattern))))
+
+    (defn fsc-bml-match-arm-recipes-loop (arms i end acc)
+        (do
+            (let p (fsc-skip-spaces arms i))
+            (if (ge p end) (fsc-rev acc)
+                (do
+                    (let comma (fsc-bml-find-comma arms p))
+                    (let arm-end (if (lt comma 0) end comma))
+                    (let arrow (fsc-bml-find-arrow arms p arm-end))
+                    (let pattern-text (fsc-trim (fsc-sub arms p arrow)))
+                    (let body-text (fsc-trim (fsc-sub arms (add arrow 2) arm-end)))
+                    (let rest-start (if (lt comma 0) end (add comma 1)))
+                    (fsc-bml-match-arm-recipes-loop arms rest-start end
+                        (cons (fsc-compile-form-bml-expr-recipe body-text)
+                              (cons (fsc-compile-form-bml-match-pattern-recipe pattern-text)
+                                    acc)))))))
+
+    (defn fsc-compile-form-bml-match-recipe (expr)
+        (do
+            (let open (fsc-bml-find-top-brace expr))
+            (let close (fsc-bml-find-matching-brace expr open))
+            (let scrutinee-text (fsc-trim (fsc-sub expr 6 open)))
+            (let arms-text (fsc-sub expr (add open 1) close))
+            (let arm-recipes
+                (fsc-bml-match-arm-recipes-loop arms-text 0 (str_len arms-text) (empty)))
+            (fsc-rec-match-switch
+                (cons (fsc-compile-form-bml-expr-recipe scrutinee-text)
+                      arm-recipes))))
+
     (defn fsc-compile-form-bml-expr-recipe (raw)
         (do
             (let expr (fsc-bml-normalize-ws (fsc-strip-semi raw)))
             (let open (fsc-find-char-from expr "(" 0))
+            (let eq-pos (fsc-bml-find-top-eqeq expr))
             (if (eq (str_len expr) 0) (fsc-rec-call "empty" (empty))
             (if (fsc-prefix? expr "if ")
                 (fsc-compile-form-bml-if-recipe expr)
+            (if (fsc-prefix? expr "match ")
+                (fsc-compile-form-bml-match-recipe expr)
+            (if (ge eq-pos 0)
+                (fsc-compile-form-bml-eq-recipe expr eq-pos)
             (if (and (ge open 0) (str_eq (char_at expr (fsc-last-char-index expr)) ")"))
                 (fsc-compile-form-bml-call-recipe expr open)
             (if (str_eq expr "empty") (fsc-rec-call "empty" (empty))
@@ -831,7 +975,7 @@
             (if (str_eq (char_at expr 0) "\"")
                 (intern_trivial_string
                     (fsc-unescape-str (fsc-sub expr 1 (fsc-last-char-index expr))))
-                (fsc-rec-ident expr)))))))))))))
+                (fsc-rec-ident expr)))))))))))))))
 
     (defn fsc-compile-form-bml-def-recipe (line)
         (do
@@ -1231,13 +1375,15 @@
                                                 (fsc-source-emit-recipe
                                                     (head (tail (tail kids))))
                                                 ")"))))))
-                    (if (node_eq cat fsc-rec-IF3-CAT)
-                        (fsc-source-emit-call "if" kids)
-                    (do
-                        (let prim-name (fsc-source-primitive-name cat))
-                        (if (str_eq prim-name "")
-                            (fsc-source-emit-call "do" kids)
-                            (fsc-source-emit-call prim-name kids)))))))))))))
+	                    (if (node_eq cat fsc-rec-IF3-CAT)
+	                        (fsc-source-emit-call "if" kids)
+	                    (if (node_eq cat fsc-rec-MATCH-CAT)
+	                        (fsc-source-emit-call "match" kids)
+	                    (do
+	                        (let prim-name (fsc-source-primitive-name cat))
+	                        (if (str_eq prim-name "")
+	                            (fsc-source-emit-call "do" kids)
+	                            (fsc-source-emit-call prim-name kids))))))))))))))
 
     ;; --- compile section as executable Form source -------------------
 

@@ -1,8 +1,21 @@
 # Form Kernels — the core execution engine of the Coherence Network
 
-Three sibling kernels in three host languages — **Rust**, **Go**, **TypeScript** — that execute the Form substrate. Byte-identical NodeIDs across all three. Each one a small, honest, content-addressed walker that turns recipe trees into values, with Blueprint attribution on every native call and a trace surface that the body can read in real time.
+Three sibling kernels in three host languages — **Rust**, **Go**, **TypeScript** — that execute the Form substrate. Byte-identical NodeIDs across all three. Each one a small, honest, content-addressed walker that turns recipe trees into values, with Blueprint attribution on every native call and a trace surface that the body can read in real time. There is no primary kernel; each host is a carrier for the same substrate semantics.
 
-The kernels are the execution layer the rest of the network composes on.
+The kernels are the execution layer the rest of the network composes on. New
+runtime and route work should be drawn here first: BML/domain grammar source,
+Form recipes and cells, sibling-kernel realization, framebuffer observation.
+Python references in kernel docs should name bridge/upstream behavior,
+operational tooling, or historical evidence, not the destination architecture.
+
+For production DB-backed kernel probes, read
+[`docs/PRODUCTION-SUBSTRATE.md`](../docs/PRODUCTION-SUBSTRATE.md). Production is
+Hostinger/VPS Docker Compose with internal Postgres; Railway and Supabase are
+historical/stale for current DB reach. The Go BML `/api/ideas` route now reaches
+production Postgres through the local kernel overlay and SSH tunnel and returns
+`200` through the native Go carrier. Current attention is no longer credentials
+or SQL projection; it is route-contract alignment (`query` is native-only today),
+framebuffer/JIT compression, and list/string/JSON-native JIT coverage.
 
 ## Where they live
 
@@ -53,9 +66,15 @@ Form code can introspect attribution at runtime: `(native_blueprint "intern_node
 
 Companion teaching: [`lc-one-kernel-many-tongues`](../docs/vision-kb/concepts/lc-one-kernel-many-tongues.md), [`lc-the-kernel-knows-itself`](../docs/vision-kb/concepts/lc-the-kernel-knows-itself.md).
 
-#### 4. Python-on-Form via BMF (Becoming-Form)
+#### 4. Host languages become Form via BMF/BML
 
-Python source code interns directly into the substrate as Form recipes. The latest breath landed real Python closures (import + from-import) — see commit `fde50d3e6 — tend: BMF today, not tomorrow`. The native macOS binary executes Form recipes without a Python interpreter in the runtime (`cee6a26a2`). The path is open: arbitrary Python code → recipe tree → kernel walker → real-time observation.
+Python source code already interns directly into the substrate as Form recipes;
+that is one source-language proof, not the center. The latest breath landed real
+Python closures (import + from-import) — see commit `fde50d3e6 — tend: BMF
+today, not tomorrow`. The native macOS binary executes Form recipes without a
+Python interpreter in the runtime (`cee6a26a2`). The path is open for every
+useful source surface: domain grammar or legacy source → recipe tree → sibling
+kernel walker → real-time observation.
 
 The **emit direction** closed end-to-end on 2026-05-27: a Form recipe walks through `form/form-stdlib/emits/python-native.fk` and produces idiomatic native Python that CPython runs to the same values the Form kernel computes. See [`UNIVERSAL_TRANSLATOR_ROUNDTRIP.md`](UNIVERSAL_TRANSLATOR_ROUNDTRIP.md) for the proof-of-shape and the gap-map from "one recipe" to "the BMF compiler-compiler itself".
 
@@ -105,11 +124,15 @@ Three-digit overhead is interpreter-typical. The compiled-path (TS) closes to ~1
 
 **Serving the API from the kernel** is a distinct, measured question — see [`API_KERNEL_READINESS.md`](API_KERNEL_READINESS.md). The recipe *executes* in ~0.15 ms (competitive); the readiness gap for the transmuted `/api/utils/*` endpoints is the per-request **process spawn** (~5 ms via subprocess), not compute. The evidence (value parity ✓ on all four, p50/p95/p99 under replay, the spawn-vs-compute split) says the flip needs a **persistent/inline (PyO3) kernel**, not a per-call shell-out. Run it: `python3 scripts/kernel_readiness_harness.py`.
 
-**Reversing the topology** — making the kernel the request *front-door router* rather than a guest subroutine inside a CPython request — is designed and proven at small scale in [`KERNEL_AS_ROUTER.md`](KERNEL_AS_ROUTER.md). `form-kernel-rust serve` owns the listening socket, serves native routes entirely in Form (no CPython in the path, sub-ms), and fans out the not-yet-native tail to the FastAPI upstream over a real HTTP hop. The production flip is the live front-door — named honestly as a separate decision.
+**Reversing the topology** — making the kernel the request *front-door router* rather than a guest subroutine inside a CPython request — is designed and proven in [`KERNEL_AS_ROUTER.md`](KERNEL_AS_ROUTER.md). `form-kernel-rust serve` now has two live router modes: the compatibility host-router mode, which walks native Form handlers and fans unmatched paths out to FastAPI, and `serve --form`, which hands accepted streams to `kh-serve-conn` so Form owns parse, route, dispatch, render, send, and close for known native paths. This is not a Rust claim: the front door is a sibling-kernel contract, and the next proof moves through Go's socket ports, walker, `walk_parallel`, and a Go JIT plan/ABI layer. Go already proves i64 plugin dispatch; the HTTP hot path now needs observed f64/list/record plans, with compile-state and dispatch-state kept distinct. The production flip is the live front-door routing decision, named honestly as separate from the local proof.
 
 ## What's possible now that other frameworks struggle with
 
 - **Identity that crosses languages.** Two recipes written in Rust and TypeScript that mean the same thing get the same NodeID. No serialization, no schema, no version negotiation. The lattice IS the protocol.
+- **Branching by substrate lookup.** BML/Form `match` lowers to `MATCH.SWITCH`
+  (`@1.2.19.1`) and dispatches literal scalar arms through cached
+  `NodeID -> body` tables in Go, Rust, and TypeScript. The default arm is the
+  identifier `_`, distinct from the string literal `"_"`.
 - **Tracking that doesn't cost.** The trace surface IS the substrate's identity discipline. Every dispatch records its arm; every native records its category. No instrumentation pass, no probe injection — the structure of execution is already addressable.
 - **Visualization as a peer of execution.** The memory-as-framebuffer plane records WHO wrote each cell (NodeID), not just WHAT. A real-time visualizer can render the body breathing, colored by Form category, without a single line of telemetry glue.
 - **A path from any source language to the same lattice.** Grammars are themselves Form recipes (see [`docs/coherence-substrate/grammar.form`](../docs/coherence-substrate/grammar.form), [`docs/coherence-substrate/rust-grammar.form`](../docs/coherence-substrate/rust-grammar.form), [`docs/coherence-substrate/python-grammar.form`](../docs/coherence-substrate/python-grammar.form)). Parsing is a structural operation, not a string-munging stage prior to execution.

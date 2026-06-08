@@ -1,0 +1,13 @@
+; source-language-match-switch-band.fk — BML match lowers to Match.SWITCH.
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk
+; form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk
+;
+; Verdict: 7 when BML `match` dispatches by the Match.SWITCH recipe and keeps
+; identifier `_` as the default arm, distinct from literal string "_".
+
+section [form.bml] {
+    def choose-sort(value) = match value { "marginal_cc" => "marginal_cc", "_" => "literal_underscore", _ => "free_energy" };
+
+    sum(list(if str_eq(choose-sort("marginal_cc"), "marginal_cc") then 1 else 0, if str_eq(choose-sort("other"), "free_energy") then 2 else 0, if str_eq(choose-sort("_"), "literal_underscore") then 4 else 0));
+}

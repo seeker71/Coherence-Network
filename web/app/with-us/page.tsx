@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { EditablePageIntro, EditablePageMarkdown } from "@/components/content/EditablePageContent";
 import { loadPublicWebConfig } from "@/lib/app-config";
-import { createTranslator, type Translator } from "@/lib/i18n";
+import { createTranslator, getMessages, type Translator } from "@/lib/i18n";
 import {
   DEFAULT_LOCALE,
   isSupportedLocale,
@@ -120,16 +120,34 @@ function PracticeTile({ name, body, href }: PracticeTileProps) {
 }
 
 // Read N indexed items from a translation array.
+function readMessageValue(tree: Record<string, unknown>, key: string): unknown {
+  let current: unknown = tree;
+  for (const part of key.split(".")) {
+    if (typeof current !== "object" || current === null) return undefined;
+    current = (current as Record<string, unknown>)[part];
+  }
+  return current;
+}
+
+function messageExists(lang: LocaleCode, key: string): boolean {
+  const target = getMessages(lang) as Record<string, unknown>;
+  const fallback = getMessages(DEFAULT_LOCALE) as Record<string, unknown>;
+  return (
+    typeof readMessageValue(target, key) === "string" ||
+    typeof readMessageValue(fallback, key) === "string"
+  );
+}
+
 function readArray(
   t: Translator,
+  lang: LocaleCode,
   base: string,
   fields: string[],
   max = 12,
 ): Record<string, string>[] {
   const out: Record<string, string>[] = [];
   for (let i = 0; i < max; i++) {
-    const probe = t(`${base}.${i}.${fields[0]}`);
-    if (probe === `${base}.${i}.${fields[0]}`) break;
+    if (!messageExists(lang, `${base}.${i}.${fields[0]}`)) break;
     const entry: Record<string, string> = {};
     for (const f of fields) entry[f] = t(`${base}.${i}.${f}`);
     out.push(entry);
@@ -175,12 +193,12 @@ function IconList({ items, renderBody }: IconListProps) {
 export default async function WithUsPage() {
   const lang = await resolveLocale();
   const t = createTranslator(lang);
-  const feelTiles = readArray(t, "withUs.feelTiles", ["alt", "title", "body"]);
-  const axes = readArray(t, "withUs.axes", ["name", "essence", "href"]);
-  const spaceTiles = readArray(t, "withUs.spaceTiles", ["alt", "title", "body"]);
-  const alreadyItems = readArray(t, "withUs.alreadyItems", ["label", "body"]);
-  const practiceTiles = readArray(t, "withUs.practiceTiles", ["name", "body", "href"]);
-  const ursOfferItems = readArray(t, "withUs.ursOfferItems", ["label", "body"]);
+  const feelTiles = readArray(t, lang, "withUs.feelTiles", ["alt", "title", "body"]);
+  const axes = readArray(t, lang, "withUs.axes", ["name", "essence", "href"]);
+  const spaceTiles = readArray(t, lang, "withUs.spaceTiles", ["alt", "title", "body"]);
+  const alreadyItems = readArray(t, lang, "withUs.alreadyItems", ["label", "body"]);
+  const practiceTiles = readArray(t, lang, "withUs.practiceTiles", ["name", "body", "href"]);
+  const ursOfferItems = readArray(t, lang, "withUs.ursOfferItems", ["label", "body"]);
 
   return (
     <main id="main-content" className="bg-stone-950">

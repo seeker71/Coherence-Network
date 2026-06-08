@@ -23,27 +23,27 @@ request**, never the runtime:
     FastAPI routes the request           → CPython
     Query/path params bind + coerce       → CPython
     Pydantic validates the inputs         → CPython
-    serve_via_kernel orchestrates         → CPython  (preload, parse, fallback)
+    serve_via_kernel orchestrates         → CPython  (preload, parse, dispatch)
         └─ the kernel walks the recipe    → Form-native  ← the ONLY kernel part
     parse(value) re-wraps to a Py type    → CPython
     Pydantic builds + serializes response → CPython
 
-The kernel handles the **pure-compute core**; the entire request lifecycle —
-routing, binding, validation, orchestration, response — stays CPython by design
-(the eligibility seam in ``kernels/API_KERNEL_READINESS.md``). So "kernel-served"
+The kernel handles the **pure-compute core**; the current guest-route lifecycle —
+routing, binding, validation, orchestration, response — still runs in CPython.
+That is present implementation, not protected architecture. So "kernel-served"
 overstates how much runtime left CPython. This report states both numbers and
 the layering between them, so the move toward kernel-runtime tracks the RIGHT
 metric (runtime-share), not just the route count.
 
 The counter-intuitive truth, made concrete
 -------------------------------------------
-Transmuting a route INCREASES kernel usage but can ADD CPython: each transmuted
-route lands a FastAPI handler, a Pydantic response model, AND a value-identical
-``*_py`` fallback (run when no kernel is reachable). The computation moves to the
-kernel; the request lifecycle plus a CPython twin of the math stay in the host.
-Net Python LOC may GROW even as kernel usage grows. This report measures that
-directly: the CPython lines now sitting in the kernel-router files, and the count
-of ``*_py`` fallbacks that transmutation added.
+Transmuting a route still leaves CPython request-lifecycle code in place: each
+transmuted route lands a FastAPI handler and a Pydantic response model while the
+compute core moves to the kernel. Older passes also left value-identical
+``*_py`` parity bodies in production route files; that is now treated as dead
+weight. This report measures both: the CPython lines still required for the
+guest-route lifecycle, and the count of ``*_py`` bodies still present in kernel
+routers. The desired count is zero.
 
 What is measured vs stated (the honesty bar)
 --------------------------------------------
@@ -98,7 +98,8 @@ _ROUTE_RE = re.compile(r"@router\.(get|post|patch|put|delete)\(")
 # The CPython routers that hold the transmuted (kernel-served) endpoints. Each
 # file carries the request-lifecycle code that stays CPython on every kernel
 # request: the async handler (routing + query binding), the Pydantic response
-# model (validation + serialization), and the value-identical ``*_py`` fallback.
+# model (validation + serialization). Older passes also carried ``*_py`` parity
+# bodies here; the report keeps counting them as a regression guard.
 # These are the files whose Python LOC is the per-route CPython weight — the
 # honest counterweight to "the computation moved to the kernel". Named as DATA;
 # the set tracks the kernel_* router family in api/app/routers/.
@@ -244,14 +245,12 @@ def _code_lines(path: Path) -> int:
     return sum(1 for ln in text.splitlines() if ln.strip() and not ln.lstrip().startswith("#"))
 
 
-def _count_py_fallbacks() -> int:
-    """Count the value-identical ``*_py`` fallback functions in the kernel routers.
+def _count_py_parity_references() -> int:
+    """Count ``*_py`` functions still present in the kernel routers.
 
-    These are the CPython twins of the kernel recipes — the math, re-implemented
-    in Python, run when no kernel is reachable (fresh checkout / CI without the
-    compile step / kernel absent). They are net-NEW CPython that transmutation
-    ADDED: demonstrable evidence that kernel usage and Python-runtime-reduction
-    are different axes. ``def <name>_py(`` across the kernel-router files.
+    These used to be CPython twins of the kernel recipes. Production route
+    modules should now be dispatch-only, so this count is a regression guard.
+    ``def <name>_py(`` across the kernel-router files.
     """
     pat = re.compile(r"\bdef\s+[A-Za-z_][A-Za-z0-9_]*_py\s*\(")
     n = 0
@@ -269,7 +268,7 @@ def kernel_router_cpython_loc() -> dict:
     """The CPython LOC that lives in the kernel-served routers, per file + total.
 
     This is the per-route request-lifecycle weight that stays CPython on every
-    kernel request — handlers, Pydantic models, and ``*_py`` fallbacks. Set
+    kernel request — handlers and Pydantic models. Set
     against "22 routes serve their compute on the kernel", it is the honest
     counterweight: the computation moved; this Python did not.
     """
@@ -295,7 +294,7 @@ def build_report() -> dict:
     n_served = len(served_routes)
 
     cpy = kernel_router_cpython_loc()
-    py_fallbacks = _count_py_fallbacks()
+    py_parity_references = _count_py_parity_references()
 
     capable = kernel_first_capable_routes()
     n_capable = len(capable)
@@ -327,7 +326,8 @@ def build_report() -> dict:
         "kernel_router_cpython_loc_per_file": cpy["per_file"],
         "cpython_loc_per_kernel_route": round(loc_per_route, 1) if loc_per_route else None,
         # --- Axis 3: usage vs runtime-reduction are different axes ---
-        "py_fallback_functions_added": py_fallbacks,
+        "py_parity_reference_functions_in_kernel_routers": py_parity_references,
+        "py_parity_reference_functions_added": py_parity_references,
         # --- meta ---
         "attribution_module_available": attr_available,
     }
@@ -400,13 +400,14 @@ def render_human(r: dict) -> str:
     w("    FastAPI routes the request            → CPython")
     w("    Query/path params bind + coerce        → CPython")
     w("    Pydantic validates the inputs          → CPython")
-    w("    serve_via_kernel orchestrates          → CPython  (preload/parse/fallback)")
+    w("    serve_via_kernel orchestrates          → CPython  (preload/parse/dispatch)")
     w("        └─ the kernel walks the recipe     → Form-native  ← the ONLY kernel part")
     w("    parse(value) re-wraps to a Python type → CPython")
     w("    Pydantic builds + serializes response  → CPython")
     w("")
     w("  The kernel handles the pure-compute CORE; routing, binding, validation,")
-    w("  orchestration, and response stay CPython by design (the eligibility seam).")
+    w("  orchestration, and response still run in CPython today.")
+    w("  That is current implementation, not protected architecture.")
     w("")
     if r["kernel_router_cpython_loc"]:
         w(
@@ -417,7 +418,7 @@ def render_human(r: dict) -> str:
         if r["cpython_loc_per_kernel_route"]:
             w(
                 f"  (~{r['cpython_loc_per_kernel_route']} CPython lines per kernel-served route — "
-                "handlers + Pydantic models + fallbacks)."
+                "handlers + Pydantic models)."
             )
         w("  Each route's pure-compute core, by contrast, is ONE Form recipe expression.")
         w(
@@ -429,16 +430,17 @@ def render_human(r: dict) -> str:
     # --- Axis 3 ---
     w("## Axis 3 — kernel USAGE and Python RUNTIME-REDUCTION are different axes")
     w("")
-    w("  Adding a kernel-served route INCREASES usage but can ADD CPython.")
-    w("  Transmuting a route lands a FastAPI handler, a Pydantic response model,")
-    w("  AND a value-identical *_py fallback. The computation moves to the kernel;")
-    w("  the request lifecycle plus a CPython twin of the math stay in the host —")
-    w("  so net Python LOC may GROW even as kernel usage grows.")
+    w("  Adding a kernel-served route INCREASES usage but still leaves CPython")
+    w("  lifecycle code around the kernel call. The current direction is to keep")
+    w("  production route modules dispatch-only and move reference baselines into")
+    w("  source examples, tests, or sensing scripts.")
     w("")
     w(
-        f"  Demonstrable: {r['py_fallback_functions_added']} *_py fallback functions live in the "
-        "kernel routers — CPython the transmutation ADDED, not removed."
+        f"  Remaining *_py functions in kernel-router files: "
+        f"{r['py_parity_reference_functions_in_kernel_routers']}."
     )
+    if r["py_parity_reference_functions_in_kernel_routers"] == 0:
+        w("  Desired state holds: no production kernel route carries a Python compute twin.")
     w("")
 
     # --- Axis 4 ---

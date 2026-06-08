@@ -16,6 +16,7 @@ import {
   RCmp,
   RCond,
   RLogic,
+  RMatch,
   RMath,
   RMathWidth,
   Triv,
@@ -580,6 +581,11 @@ function buildVerb(k: Kernel, verb: string, args: NodeID[]): NodeID {
     case "not":
       return k.intern(
         { pkg: 1, level: Level.BASIC, type: RBasic.LOGIC, inst: RLogic.NOT },
+        args,
+      );
+    case "match":
+      return k.intern(
+        { pkg: 1, level: Level.BASIC, type: RBasic.MATCH, inst: RMatch.SWITCH },
         args,
       );
     case "list":

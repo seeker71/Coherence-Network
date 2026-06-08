@@ -1,0 +1,48 @@
+; tests/python-bmf-evaluator-voice-band.fk — evaluator remembers its voice.
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/python-bmf-eval.fk
+
+(do
+    (defn contains? (text needle)
+        (ge (str_find text needle 0) 0))
+
+    (let voice (py-bmf-evaluator-voice))
+    (let tag (py-bmf-evaluator-voice-tag voice))
+    (let voice-cell-name (py-bmf-evaluator-voice-cell voice))
+    (let soul (py-bmf-evaluator-voice-soul voice))
+    (let purpose (py-bmf-evaluator-voice-purpose voice))
+    (let reason (py-bmf-evaluator-voice-reason voice))
+    (let goal (py-bmf-evaluator-voice-goal voice))
+    (let health (py-bmf-evaluator-voice-health voice))
+    (let vitality (py-bmf-evaluator-voice-vitality voice))
+    (let wants (py-bmf-evaluator-voice-wants voice))
+    (let needs (py-bmf-evaluator-voice-needs voice))
+    (let attention (py-bmf-evaluator-voice-attention voice))
+    (let release (py-bmf-evaluator-voice-release voice))
+    (let posture (py-bmf-evaluator-voice-posture voice))
+
+    (add
+        (add
+            (add
+                (add
+                    (if (str_eq tag "python-bmf-evaluator-voice") 1 0)
+                    (if (str_eq voice-cell-name "python-bmf-evaluator") 2 0))
+                (add
+                    (if (contains? soul "digest Python-shaped source") 4 0)
+                    (if (contains? purpose "canonical Form/substrate execution") 8 0)))
+            (add
+                (add
+                    (if (contains? reason "without keeping Python as the destination") 16 0)
+                    (if (contains? goal "source grammar to BMF objects") 32 0))
+                (add
+                    (if (contains? health "every missing arm is named") 64 0)
+                    (if (contains? vitality "Python carrier reliance shrinks") 128 0))))
+        (add
+            (add
+                (add
+                    (if (contains? wants "ranked missing-arm pressure") 256 0)
+                    (if (contains? needs "sibling-kernel proof") 512 0))
+                (add
+                    (if (contains? attention "observed traffic") 1024 0)
+                    (if (contains? release "native Form/BML/domain successors") 2048 0)))
+            (if (str_eq posture "declared+observed") 4096 0))))

@@ -1,9 +1,9 @@
 """Tests for /api/utils/concept_match_score — the string-MEMBERSHIP scoring half
 of concept_auto_tagger._score_concept.
 
-The body runs as a Form recipe (endpoint_concept_match_score_demo.fk). The honest
-seam: the HOST tokenizes the idea + concept text (the regex _extract_keywords +
-the lowercased concept_text / idea_text assembly — text preprocessing) and the
+The body runs as a Form recipe (endpoint_concept_match_score_demo.fk). The
+request currently tokenizes the idea + concept text before dispatch (the regex
+_extract_keywords + the lowercased concept_text / idea_text assembly), and the
 KERNEL scores the already-tokenized keyword lists — forward = fraction of idea
 keywords found in concept_text via str_find membership, reverse = fraction of
 concept keywords found in idea_text, plus a 0.3 name bonus, combined
@@ -13,7 +13,7 @@ fold is Rust+TS value-exact == CPython (parity_suite gate).
 
 These tests verify the route is wired, host-tokenizes, returns the score + echoed
 keyword bags, honors the empty-keywords host guard, and — the core gate — matches
-the real _score_concept (the _py fallback) on representative + edge inputs.
+the concept service scoring shape on representative + edge inputs.
 """
 from __future__ import annotations
 
@@ -57,7 +57,7 @@ class TestConceptMatchScoreEndpoint:
         assert data["score"] == 0.825
         assert data["keywords"] == ["energy", "flow", "coherence", "xyz"]
         assert data["concept_keywords"] == ["energy", "tissue"]
-        assert data["runtime"] in ("inline", "subprocess", "python-fallback")
+        assert data["runtime"] in ("inline", "subprocess")
 
     @pytest.mark.anyio
     async def test_matches_real_score_concept(self, client: AsyncClient):
@@ -89,7 +89,7 @@ class TestConceptMatchScoreEndpoint:
         )
 
     @pytest.mark.anyio
-    async def test_partial_match_matches_fallback(self, client: AsyncClient):
+    async def test_partial_match_matches_parity_reference(self, client: AsyncClient):
         """A richer pair returns the recipe's score, matching the real _score_concept."""
         params = {
             "idea_name": "agent pipeline",
@@ -122,7 +122,7 @@ class TestConceptMatchScoreEndpoint:
         data = res.json()
         assert data["score"] == 0.0
         assert data["keywords"] == []
-        assert data["runtime"] == "python-fallback"
+        assert data["runtime"] == "host-guard"
 
     @pytest.mark.anyio
     async def test_name_bonus_present_and_absent(self, client: AsyncClient):

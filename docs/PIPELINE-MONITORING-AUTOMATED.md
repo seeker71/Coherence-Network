@@ -211,7 +211,8 @@ The watchdog runs the pipeline in a loop; every 90s it checks `api/logs/restart_
 
 ## CI/CD Gate Auto-Heal (Main Deploy Path)
 
-To reduce Railway skipped deploys caused by failed required checks on `main`, CI includes:
+To reduce skipped Hostinger deploys caused by failed required checks on `main`,
+CI includes:
 
 - Workflow: `.github/workflows/auto-heal-deploy-gates.yml`
 - Script: `api/scripts/auto_heal_deploy_gates.py`
@@ -242,11 +243,11 @@ To detect production drift even when CI checks are green:
   - Manual run (`workflow_dispatch`)
 
 Contract checks:
-1. Railway `/api/health` responds `200`.
-2. Railway `/api/gates/main-head` responds `200` and returns SHA equal to GitHub `main` head.
-3. Railway web `/gates` page responds `200`.
-4. Railway web `/api/health-proxy` responds `200`, reports `api.status=ok`, and `web.updated_at` equals GitHub `main` head.
-5. Railway value-lineage E2E transaction passes:
+1. Hostinger API `/api/health` responds `200`.
+2. Hostinger API `/api/gates/main-head` responds `200` and returns SHA equal to GitHub `main` head when runtime auth allows it.
+3. Hostinger web `/gates` page responds `200`.
+4. Hostinger web `/api/health-proxy` responds `200`, reports `api.status=ok`, and `web.updated_at` equals GitHub `main` head.
+5. Hostinger value-lineage E2E transaction passes:
    - `POST /api/value-lineage/links`
    - `POST /api/value-lineage/links/{id}/usage-events`
    - `GET /api/value-lineage/links/{id}/valuation`
@@ -254,14 +255,13 @@ Contract checks:
    - invariants validated (`measured_value_total`, payout weights/amounts).
 
 Note: if `/api/gates/main-head` is unavailable due missing GitHub auth in public runtime (401/403/502),
-the contract records a warning (`railway_gates_main_head_unavailable`) but still requires all other checks,
+the contract records a warning but still requires all other checks,
 including value-lineage E2E, to pass.
 
 If contract fails:
 - Workflow uploads `public_deploy_contract_report.json`.
 - Workflow opens or updates issue: `Public deployment contract failing on main`.
-- If Railway secrets are configured (`RAILWAY_TOKEN`, `RAILWAY_PROJECT_ID`, `RAILWAY_ENVIRONMENT`, `RAILWAY_SERVICE`), workflow triggers `railway redeploy` and re-validates with bounded retries (`PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS`, default `8`) and sleep (`PUBLIC_DEPLOY_VERIFICATION_RETRY_SECONDS`, default `60`) plus fail-fast conditions.
-- Web on Railway should use native Railway GitHub auto-deploy (service branch `main`, auto deploy enabled, and CI gate settings aligned).
+- Hostinger auto-deploy is handled by `.github/workflows/hostinger-auto-deploy.yml` and `deploy/hostinger/auto-deploy.sh`; public validation re-runs with bounded retries.
 
 Machine and human access:
 - Machine API: `GET /api/gates/public-deploy-contract`

@@ -1,9 +1,10 @@
 """Transmuted /api/utils grounding-summary + cost/value-vector endpoints (bodies run as Form recipes).
 
-Bodies live as Form recipes; the route prefers the native kernel via
-``serve_via_kernel`` and falls back to the value-identical Python ``_py``
-function. Routes decorate the shared ``/utils`` router from
-``app.routers.kernel_shared`` so every path stays ``/api/utils/...``.
+Bodies live as Form recipes; the route requires the native kernel via
+``serve_via_kernel``. This module owns request binding and response shaping;
+the endpoint arithmetic lives in the committed Form recipes. Routes decorate
+the shared ``/utils`` router from ``app.routers.kernel_shared`` so every path
+stays ``/api/utils/...``.
 """
 from __future__ import annotations
 
@@ -26,8 +27,7 @@ from app.routers.kernel_shared import (
 # Pure computation: decompose an idea's estimated_cost into CC resource
 # types — compute (60%), infrastructure (15%), human_attention (25%),
 # opportunity (0), external (0) — each rounded to 4 places, plus the
-# rounded total. Shares its body with idea_scoring._build_cost_vector (the
-# fallback). The recipe returns a LIST of the six components in struct
+# rounded total. The recipe returns a LIST of the six components in struct
 # order; this route assembles the named CostVector from the positional
 # list (same list-returning shape as softmax_weights).
 #
@@ -40,24 +40,6 @@ from app.routers.kernel_shared import (
 # estimated_cost=33.333 → ec*0.25=8.33325 → 8.3332 (NOT 8.3333) — now
 # match the bit across CPython, the Form-native walker, and form-kernel-rust.
 # ---------------------------------------------------------------------------
-
-
-def _build_cost_vector_components_py(estimated_cost: float) -> list[float]:
-    """Python fallback — the six cost components in struct order.
-
-    Mirrors idea_scoring._build_cost_vector's arithmetic exactly:
-    compute 60% / infrastructure 15% / human_attention 25% / opportunity 0 /
-    external 0, total — each round(_, 4).
-    """
-    return [
-        round(estimated_cost * 0.60, 4),
-        round(estimated_cost * 0.15, 4),
-        round(estimated_cost * 0.25, 4),
-        0.0,
-        0.0,
-        round(estimated_cost, 4),
-    ]
-
 
 class CostVectorResponse(BaseModel):
     """GET /api/utils/cost_vector response — the named CC cost breakdown."""
@@ -72,7 +54,7 @@ class CostVectorResponse(BaseModel):
     estimated_cost: Annotated[float, Field(description="Input estimated_cost, echoed back")]
     runtime: Annotated[
         str,
-        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
+        Field(description="Which kernel carrier computed the answer — 'inline' or 'subprocess'"),
     ]
 
 
@@ -89,7 +71,7 @@ class CostVectorResponse(BaseModel):
         "route to use the round_ndigits native (CPython-exact round(x, 4), "
         "PR #2320): the decimal cases the old round-half-up shim got wrong "
         "(e.g. ec=33.333 → human_attention 8.3332, not 8.3333) now match the "
-        "bit across all runtimes. Kernel-or-fallback via serve_via_kernel; "
+        "bit across all runtimes. Kernel-only via serve_via_kernel; "
         "CPython==Rust per-component value-parity is the gate."
     ),
 )
@@ -99,7 +81,6 @@ async def cost_vector(
     components, runtime = serve_via_kernel(
         "endpoint_cost_vector_demo.fk",
         bindings={"estimated_cost": estimated_cost},
-        fallback=lambda: _build_cost_vector_components_py(estimated_cost),
         parse=_coerce_float_list,
     )
     return CostVectorResponse(
@@ -119,27 +100,10 @@ async def cost_vector(
 #
 # Pure computation: decompose an idea's potential_value into CC value types
 # — adoption (50%), lineage (30%), friction_avoided (20%), revenue (0) —
-# each rounded to 4 places, plus the rounded total. Shares its body with
-# idea_scoring._build_value_vector (the fallback). Sibling of cost_vector,
+# each rounded to 4 places, plus the rounded total. Sibling of cost_vector,
 # same round_ndigits unlock; the recipe returns a LIST of the five
 # components in struct order and this route assembles the named ValueVector.
 # ---------------------------------------------------------------------------
-
-
-def _build_value_vector_components_py(potential_value: float) -> list[float]:
-    """Python fallback — the five value components in struct order.
-
-    Mirrors idea_scoring._build_value_vector's arithmetic exactly:
-    adoption 50% / lineage 30% / friction_avoided 20% / revenue 0, total —
-    each round(_, 4).
-    """
-    return [
-        round(potential_value * 0.50, 4),
-        round(potential_value * 0.30, 4),
-        round(potential_value * 0.20, 4),
-        0.0,
-        round(potential_value, 4),
-    ]
 
 
 class ValueVectorResponse(BaseModel):
@@ -154,7 +118,7 @@ class ValueVectorResponse(BaseModel):
     potential_value: Annotated[float, Field(description="Input potential_value, echoed back")]
     runtime: Annotated[
         str,
-        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
+        Field(description="Which kernel carrier computed the answer — 'inline' or 'subprocess'"),
     ]
 
 
@@ -169,7 +133,7 @@ class ValueVectorResponse(BaseModel):
         "round(_, 4), plus the rounded total. Same body as "
         "idea_scoring._build_value_vector. Sibling of cost_vector; the "
         "round_ndigits native (CPython-exact round(x, 4), PR #2320) makes "
-        "every component match CPython to the bit. Kernel-or-fallback via "
+        "every component match CPython to the bit. Kernel-only via "
         "serve_via_kernel; CPython==Rust per-component value-parity is the gate."
     ),
 )
@@ -179,7 +143,6 @@ async def value_vector(
     components, runtime = serve_via_kernel(
         "endpoint_value_vector_demo.fk",
         bindings={"potential_value": potential_value},
-        fallback=lambda: _build_value_vector_components_py(potential_value),
         parse=_coerce_float_list,
     )
     return ValueVectorResponse(
@@ -202,8 +165,7 @@ async def value_vector(
 #   value_gap_cc      = round(max(potential_value - actual_value, 0.0), 4)
 #   roi_cc            = round(value_gap_cc / remaining_cost_cc, 4)
 #                         if remaining_cost_cc > 0 else 0.0
-# Shares its body with idea_scoring._grounded_roi_components (the fallback);
-# the recipe returns a LIST of the three components in struct order and this
+# The recipe returns a LIST of the three components in struct order and this
 # route assembles the named struct (same list-returning shape as cost_vector
 # / value_vector).
 #
@@ -243,7 +205,7 @@ class GroundedRoiResponse(BaseModel):
     actual_value: Annotated[float, Field(description="Input actual_value, echoed back")]
     runtime: Annotated[
         str,
-        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
+        Field(description="Which kernel carrier computed the answer — 'inline' or 'subprocess'"),
     ]
 
 
@@ -262,7 +224,7 @@ class GroundedRoiResponse(BaseModel):
         "idea_scoring._grounded_roi_components. Folds three unlocks into one "
         "recipe: max-as-comparison, the round_ndigits native (CPython-exact "
         "round(x, 4), PR #2320), and a guarded-division conditional. "
-        "Kernel-or-fallback via serve_via_kernel; CPython==Rust per-component "
+        "Kernel-only via serve_via_kernel; CPython==Rust per-component "
         "value-parity is the gate."
     ),
 )
@@ -272,8 +234,6 @@ async def grounded_roi(
     potential_value: Annotated[float, Query(ge=0.0, description="Potential value in CC")] = 33.333,
     actual_value: Annotated[float, Query(ge=0.0, description="Actual value captured in CC")] = 8.0,
 ) -> GroundedRoiResponse:
-    from app.services.idea_scoring import _grounded_roi_components
-
     components, runtime = serve_via_kernel(
         "endpoint_grounded_roi_demo.fk",
         bindings={
@@ -282,9 +242,6 @@ async def grounded_roi(
             "potential_value": potential_value,
             "actual_value": actual_value,
         },
-        fallback=lambda: _grounded_roi_components(
-            estimated_cost, actual_cost, potential_value, actual_value
-        ),
         parse=_coerce_float_list,
     )
     return GroundedRoiResponse(
@@ -330,26 +287,6 @@ async def grounded_roi(
 # four integer signals; this route assembles the named response from it.
 # ---------------------------------------------------------------------------
 
-
-def _grounding_summary_py(specs: list[dict]) -> list[int]:
-    """Python fallback — value-identical to endpoint_idea_grounding_summary_demo.fk.
-
-    The four integer grounding signals, reduced over the list of spec records:
-    spec_count, total_event_count, specs_with_value_count, max_event_count.
-    """
-    spec_count = len(specs)
-    total_event_count = sum(int(s.get("event_count", 0) or 0) for s in specs)
-    specs_with_value_count = sum(
-        1 for s in specs if (s.get("actual_value", 0) or 0) > 0
-    )
-    max_event_count = 0
-    for s in specs:
-        ec = int(s.get("event_count", 0) or 0)
-        if ec > max_event_count:
-            max_event_count = ec
-    return [spec_count, total_event_count, specs_with_value_count, max_event_count]
-
-
 class IdeaGroundingSummaryResponse(BaseModel):
     """GET /api/utils/idea_grounding_summary response — the integer grounding signals."""
 
@@ -367,7 +304,7 @@ class IdeaGroundingSummaryResponse(BaseModel):
     spec_count_in: Annotated[int, Field(description="Number of input spec records, echoed back")]
     runtime: Annotated[
         str,
-        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
+        Field(description="Which kernel carrier computed the answer — 'inline' or 'subprocess'"),
     ]
 
 
@@ -386,7 +323,7 @@ class IdeaGroundingSummaryResponse(BaseModel):
         "fold stay CPython (named in the ledger). The bridge marshals the input "
         "list[dict|model] to a kernel list-of-records (model→dict→record "
         "normalized at the boundary), and the recipe iterates via the head/tail "
-        "fold. Kernel-or-fallback via serve_via_kernel; three-way "
+        "fold. Kernel-only via serve_via_kernel; three-way "
         "(CPython/TS/Rust) value-parity is the gate."
     ),
 )
@@ -418,7 +355,6 @@ async def idea_grounding_summary(
     signals, runtime = serve_via_kernel(
         "endpoint_idea_grounding_summary_demo.fk",
         bindings={"specs": specs},
-        fallback=lambda: _grounding_summary_py(specs),
         parse=_coerce_int_list,
     )
     return IdeaGroundingSummaryResponse(
@@ -452,23 +388,6 @@ async def idea_grounding_summary(
 # named in float-natives-band.fk is avoided by construction.
 # ---------------------------------------------------------------------------
 
-
-def _grounded_cost_sum_py(specs: list[dict]) -> list[float]:
-    """Python fallback — value-identical to endpoint_idea_grounded_cost_sum_demo.fk.
-
-    The two float grounding sums, folded over the list of spec records:
-    total_actual_cost, total_actual_value. Seeds float accumulators so the
-    fold stays on the float path (matches the recipe's 0.0 seed exactly).
-    """
-    total_cost = 0.0
-    for s in specs:
-        total_cost = total_cost + float(s.get("actual_cost", 0.0) or 0.0)
-    total_value = 0.0
-    for s in specs:
-        total_value = total_value + float(s.get("actual_value", 0.0) or 0.0)
-    return [total_cost, total_value]
-
-
 class IdeaGroundedCostSumResponse(BaseModel):
     """GET /api/utils/idea_grounded_cost_sum response — the float grounding sums."""
 
@@ -482,7 +401,7 @@ class IdeaGroundedCostSumResponse(BaseModel):
     spec_count_in: Annotated[int, Field(description="Number of input spec records, echoed back")]
     runtime: Annotated[
         str,
-        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
+        Field(description="Which kernel carrier computed the answer — 'inline' or 'subprocess'"),
     ]
 
 
@@ -500,7 +419,7 @@ class IdeaGroundedCostSumResponse(BaseModel):
         "float-field fold is value-exact across CPython / Rust / TS. The bridge "
         "marshals the input list[dict|model] to a kernel list-of-records and the "
         "recipe iterates via the head/tail fold with a float accumulator. "
-        "Kernel-or-fallback via serve_via_kernel."
+        "Kernel-only via serve_via_kernel."
     ),
 )
 async def idea_grounded_cost_sum(
@@ -531,7 +450,6 @@ async def idea_grounded_cost_sum(
     sums, runtime = serve_via_kernel(
         "endpoint_idea_grounded_cost_sum_demo.fk",
         bindings={"specs": specs},
-        fallback=lambda: _grounded_cost_sum_py(specs),
         parse=_coerce_float_list,
     )
     return IdeaGroundedCostSumResponse(

@@ -1,0 +1,121 @@
+{
+  "date": "2026-06-07",
+  "thread_branch": "codex/native-http-stack-architecture-20260604",
+  "commit_scope": "Release audit evidence cells into dynamic Form loading and fresh native cache reads",
+  "files_owned": [
+    "form/form-stdlib/audit-evidence-cells.fk",
+    "form/form-stdlib/queries/audit-evidence-tending.fk",
+    "form/form-stdlib/queries/audit-evidence-index-cache.fk",
+    "form/form-stdlib/tests/audit-evidence-cells-band.fk",
+    "form/form-stdlib/tests/audit-evidence-index-cache-band.fk",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "Makefile",
+    "docs/shared/agent-start-packet.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make audit-evidence-tending",
+      "make audit-evidence-index-cache",
+      "cd form && form-kernel-go/bin-go form-stdlib/json.fk form-stdlib/audit-evidence-cells.fk form-stdlib/tests/audit-evidence-cells-band.fk",
+      "cd form && form-kernel-go/bin-go form-stdlib/json.fk form-stdlib/audit-evidence-cells.fk form-stdlib/tests/audit-evidence-index-cache-band.fk",
+      "jq empty docs/system_audit/commit_evidence_2026-06-07_audit_evidence_cells.json",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-07_audit_evidence_cells.json",
+      "python3 scripts/scan_form_blueprints.py --check",
+      "git diff --check -- Makefile form/form-stdlib/audit-evidence-cells.fk form/form-stdlib/queries/audit-evidence-tending.fk form/form-stdlib/queries/audit-evidence-index-cache.fk form/form-stdlib/tests/audit-evidence-cells-band.fk form/form-stdlib/tests/audit-evidence-index-cache-band.fk form/form-stdlib/blueprint-registry.json form/form-kernel-go/bp_table.go form/form-kernel-rust/src/bp_table.rs form/form-kernel-ts/src/bp_table.ts docs/shared/agent-start-packet.md docs/system_audit/commit_evidence_2026-06-07_audit_evidence_cells.json"
+    ],
+    "summary": "The audit evidence cell query returned [65402, system-audit-evidence, 662, 615, 597, 615, 3458, 6823, persist dynamic commit evidence cell index and compress repeated proof fields]. The proof band returned 1023, proving that dynamic loading finds a known real commit evidence JSON by source path, preserves date/scope/status/phase-held fields, and summarizes the full commit_evidence_*.json surface with pass and phase-held attribution. The cache target returned write after this evidence file changed, then fresh on the next run with source_count=615 after comparing the cache mtime with the newest commit_evidence_*.json mtime. The cache band returned 1023 after reading the .fkb artifact back and finding the known evidence recipe by source path."
+  },
+  "known_failed_attempts": [
+    {
+      "command": "make audit-evidence-index-cache",
+      "status": "form_source_shape_fixed",
+      "output": "The first freshness patch returned 0 because one stale-branch close paren ended the audit-evidence-cells.fk do-body early. Balance was restored and the cache target returned a cache-result list."
+    }
+  ],
+  "ci_validation": {
+    "status": "pending",
+    "reason": "No commit or PR created in this turn."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "Local Form-kernel source query only; no deployment was performed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed, but no CI or deployment validation ran in this turn."
+  },
+  "idea_ids": [
+    "form-native-runtime",
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "source-artifact-sensing-graph-integration",
+    "kb-substrate-sync-discipline"
+  ],
+  "task_ids": [
+    "audit-evidence-cells"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "unknown-agent",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "json-lens-tending selected system-audit-evidence as the hottest JSON surface.",
+    "audit-evidence-cells.fk defines a durable Form cell over the repeated commit evidence schema.",
+    "audit-evidence-cells.fk dynamically loads docs/system_audit/commit_evidence_*.json rows from source_inventory.",
+    "audit-evidence-cells-band proves dynamic loading by finding a known real commit evidence JSON as a Form cell.",
+    "audit-evidence-index-cache.fk now ensures the .fkb index with a Form freshness check over commit_evidence_*.json mtimes.",
+    "audit-evidence-index-cache-band proves the warm cache path returns fresh and still contains that known evidence cell as a recipe.",
+    "AEC-EVIDENCE-CELL and AEC-EVIDENCE-INDEX are registered blueprints with regenerated Go/Rust/TypeScript bp tables."
+  ],
+  "change_files": [
+    "Makefile",
+    "form/form-stdlib/audit-evidence-cells.fk",
+    "form/form-stdlib/queries/audit-evidence-tending.fk",
+    "form/form-stdlib/queries/audit-evidence-index-cache.fk",
+    "form/form-stdlib/tests/audit-evidence-cells-band.fk",
+    "form/form-stdlib/tests/audit-evidence-index-cache-band.fk",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-07_audit_evidence_cells.json"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Release audit evidence cells into dynamic Form loading and fresh native cache reads",
+    "public_endpoints": [
+      "form/form-stdlib/audit-evidence-cells.fk",
+      "form/form-stdlib/queries/audit-evidence-tending.fk",
+      "form/form-stdlib/queries/audit-evidence-index-cache.fk",
+      "form/form-stdlib/tests/audit-evidence-cells-band.fk",
+      "form/form-stdlib/tests/audit-evidence-index-cache-band.fk",
+      "form/form-stdlib/blueprint-registry.json",
+      "form/form-kernel-go/bp_table.go",
+      "form/form-kernel-rust/src/bp_table.rs",
+      "form/form-kernel-ts/src/bp_table.ts"
+    ],
+    "test_flows": [
+      "json-lens-tending selected system-audit-evidence as the hottest JSON surface.",
+      "audit-evidence-cells.fk defines a durable Form cell over the repeated commit evidence schema.",
+      "audit-evidence-cells.fk dynamically loads docs/system_audit/commit_evidence_*.json rows from source_inventory."
+    ]
+  }
+}

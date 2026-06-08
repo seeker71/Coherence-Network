@@ -1,0 +1,157 @@
+{
+  "date": "2026-06-06",
+  "thread_branch": "codex/native-http-stack-architecture-20260604",
+  "commit_scope": "Remove Python runtime fallback from Form-kernel served utility routes",
+  "files_owned": [
+    "api/app/services/form_kernel_bridge.py",
+    "api/app/services/vitality_service.py",
+    "api/app/routers/kernel_shared.py",
+    "api/app/routers/kernel_nodeid.py",
+    "api/app/routers/kernel_scoring.py",
+    "api/app/routers/kernel_breath.py",
+    "api/app/routers/kernel_grounding.py",
+    "api/app/routers/kernel_grounded_cv.py",
+    "api/app/routers/kernel_matching.py",
+    "api/app/routers/utils.py",
+    "api/tests/test_utils_coherence_weight.py",
+    "api/tests/test_utils_nodeid_distance.py",
+    "api/tests/test_utils_nodeid_compatibility.py",
+    "api/tests/test_utils_weighted_average.py",
+    "api/tests/test_utils_breath_balance.py",
+    "api/tests/test_utils_shannon_entropy.py",
+    "api/tests/test_utils_softmax_weights.py",
+    "api/tests/test_utils_concept_match_score.py",
+    "api/tests/test_utils_cost_value_vector.py",
+    "api/tests/test_utils_grounded_cost.py",
+    "api/tests/test_utils_grounded_value.py",
+    "api/tests/test_utils_idea_grounded_cost_sum.py",
+    "api/tests/test_utils_idea_grounding_summary.py",
+    "api/tests/test_utils_idea_marginal_from_record.py",
+    "api/tests/test_kernel_inline_latency.py",
+    "api/tests/test_form_kernel_bridge_structure_access.py",
+    "api/tests/test_api_dockerfile_contract.py",
+    "scripts/runtime_surface_report.py"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 -m py_compile api/app/services/form_kernel_bridge.py api/app/routers/kernel_shared.py api/app/routers/kernel_nodeid.py api/app/routers/kernel_scoring.py api/app/routers/kernel_breath.py api/app/routers/kernel_grounding.py api/app/routers/kernel_grounded_cv.py api/app/routers/kernel_matching.py api/app/services/vitality_service.py api/tests/test_form_kernel_bridge_structure_access.py api/tests/test_kernel_inline_latency.py scripts/runtime_surface_report.py",
+      "cd api && python3 -m pytest -q tests/test_utils_*.py tests/test_kernel_inline_latency.py tests/test_form_kernel_bridge_structure_access.py tests/test_api_dockerfile_contract.py",
+      "python3 scripts/kernel_readiness_harness.py --endpoint nodeid_distance --iters 3 --json /tmp/kernel_readiness_no_fallback.json",
+      "python3 scripts/runtime_surface_report.py --json > /tmp/runtime_surface_no_fallback.json && python3 -m json.tool /tmp/runtime_surface_no_fallback.json >/dev/null",
+      "! rg -n \"fallback=|run_with_fallback|python-fallback|fallback\" api/app/services/form_kernel_bridge.py api/app/routers/kernel_*.py api/app/routers/utils.py api/app/services/vitality_service.py api/tests/test_utils_*.py api/tests/test_kernel_inline_latency.py api/tests/test_form_kernel_bridge_structure_access.py api/tests/test_api_dockerfile_contract.py scripts/runtime_surface_report.py -g '!docs/system_audit/commit_evidence_*.json'",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check -- api/app/services/form_kernel_bridge.py api/app/services/vitality_service.py api/app/routers/kernel_shared.py api/app/routers/kernel_nodeid.py api/app/routers/kernel_scoring.py api/app/routers/kernel_breath.py api/app/routers/kernel_grounding.py api/app/routers/kernel_grounded_cv.py api/app/routers/kernel_matching.py api/app/routers/utils.py api/tests/test_utils_coherence_weight.py api/tests/test_utils_nodeid_distance.py api/tests/test_utils_nodeid_compatibility.py api/tests/test_utils_weighted_average.py api/tests/test_utils_breath_balance.py api/tests/test_utils_shannon_entropy.py api/tests/test_utils_softmax_weights.py api/tests/test_utils_concept_match_score.py api/tests/test_utils_cost_value_vector.py api/tests/test_utils_grounded_cost.py api/tests/test_utils_grounded_value.py api/tests/test_utils_idea_grounded_cost_sum.py api/tests/test_utils_idea_grounding_summary.py api/tests/test_utils_idea_marginal_from_record.py api/tests/test_kernel_inline_latency.py api/tests/test_form_kernel_bridge_structure_access.py api/tests/test_api_dockerfile_contract.py scripts/runtime_surface_report.py docs/system_audit/commit_evidence_2026-06-06_kernel_routes_remove_python_fallback.json",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-06_kernel_routes_remove_python_fallback.json"
+    ],
+    "summary": "serve_via_kernel no longer accepts a fallback callable and no longer returns python-fallback. Missing recipe artifacts or missing kernel carriers now fail loudly. All Form-kernel utility route handlers call the kernel-only bridge. The focused utility/kernel suite passed: 118 passed, 3 skipped, 5 warnings. Kernel readiness smoke for nodeid_distance matched cpython=7 and kernel=7. Runtime-surface report still sees 22 kernel-served routes and 23 kernel-first capable routes, with _py functions counted as parity references rather than request-time fallbacks."
+  },
+  "known_failed_attempts": [],
+  "ci_validation": {
+    "status": "pending",
+    "reason": "No commit or PR created in this turn."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No production deploy performed. The final wellness reading could not reach https://api.coherencycoin.com/api/health and therefore sensed the kernel surface locally only."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed, but CI and production deploy validation have not run for this uncommitted worktree."
+  },
+  "idea_ids": [
+    "native-kernel-http-front-door",
+    "form-native-runtime"
+  ],
+  "spec_ids": [
+    "form-native-http-stack"
+  ],
+  "task_ids": [
+    "remove-python-runtime-fallback"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "unknown-agent",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "api/app/services/form_kernel_bridge.py exposes run_kernel and serve_via_kernel without any fallback callable or python-fallback runtime branch.",
+    "All app.routers.kernel_* serve_via_kernel call sites no longer pass fallback lambdas.",
+    "GET /api/utils/kernel_status now reports inline, subprocess, or unavailable; served route response models document only inline/subprocess as kernel carriers.",
+    "Focused utility/kernel tests passed with served-route runtime assertions narrowed to inline/subprocess.",
+    "The no-fallback scan returned no matches across the edited bridge, kernel routes, utility tests, Dockerfile contract, and runtime report surfaces.",
+    "Wellness local kernel-native API reading reported 22/22 recipes trace within envelope and 22/22 value parity; production health was unreachable during this run."
+  ],
+  "change_files": [
+    "api/app/services/form_kernel_bridge.py",
+    "api/app/services/vitality_service.py",
+    "api/app/routers/kernel_shared.py",
+    "api/app/routers/kernel_nodeid.py",
+    "api/app/routers/kernel_scoring.py",
+    "api/app/routers/kernel_breath.py",
+    "api/app/routers/kernel_grounding.py",
+    "api/app/routers/kernel_grounded_cv.py",
+    "api/app/routers/kernel_matching.py",
+    "api/app/routers/utils.py",
+    "api/tests/test_utils_coherence_weight.py",
+    "api/tests/test_utils_nodeid_distance.py",
+    "api/tests/test_utils_nodeid_compatibility.py",
+    "api/tests/test_utils_weighted_average.py",
+    "api/tests/test_utils_breath_balance.py",
+    "api/tests/test_utils_shannon_entropy.py",
+    "api/tests/test_utils_softmax_weights.py",
+    "api/tests/test_utils_concept_match_score.py",
+    "api/tests/test_utils_cost_value_vector.py",
+    "api/tests/test_utils_grounded_cost.py",
+    "api/tests/test_utils_grounded_value.py",
+    "api/tests/test_utils_idea_grounded_cost_sum.py",
+    "api/tests/test_utils_idea_grounding_summary.py",
+    "api/tests/test_utils_idea_marginal_from_record.py",
+    "api/tests/test_kernel_inline_latency.py",
+    "api/tests/test_form_kernel_bridge_structure_access.py",
+    "api/tests/test_api_dockerfile_contract.py",
+    "scripts/runtime_surface_report.py",
+    "docs/system_audit/commit_evidence_2026-06-06_kernel_routes_remove_python_fallback.json"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Form-kernel utility routes no longer have a Python runtime alternate path. If a recipe artifact or kernel carrier is missing, the route fails instead of computing through Python.",
+    "public_endpoints": [
+      "GET /api/utils/kernel_status",
+      "GET /api/utils/coherence_weight",
+      "GET /api/utils/nodeid_distance",
+      "GET /api/utils/nodeid_compatibility",
+      "GET /api/utils/weighted_average",
+      "GET /api/utils/breath_balance",
+      "GET /api/utils/shannon_entropy",
+      "GET /api/utils/softmax_weights",
+      "GET /api/utils/concept_match_score",
+      "GET /api/utils/cost_vector",
+      "GET /api/utils/value_vector",
+      "GET /api/utils/grounded_cost",
+      "GET /api/utils/grounded_value",
+      "GET /api/utils/idea_grounding_summary",
+      "GET /api/utils/idea_grounded_cost_sum",
+      "GET /api/utils/idea_marginal_from_record"
+    ],
+    "test_flows": [
+      "Focused utility endpoints served through inline/subprocess only in local ASGI tests.",
+      "Bridge structure-access tests call serve_via_kernel without fallback callables.",
+      "Dockerfile contract still verifies endpoint recipes are tracked and copied so missing artifacts fail before deploy.",
+      "Runtime-surface report parses after renaming fallback functions to parity references."
+    ]
+  }
+}

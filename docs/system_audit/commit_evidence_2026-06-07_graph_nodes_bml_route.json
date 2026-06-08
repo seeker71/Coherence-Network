@@ -1,0 +1,104 @@
+{
+  "date": "2026-06-07",
+  "thread_branch": "codex/native-http-stack-architecture-20260604",
+  "commit_scope": "Promote exact GET /api/graph/nodes into the BML front-door route catalog without shadowing graph detail routes",
+  "files_owned": [
+    "deploy/front-door/api.bml",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/native_route_goal_state.json",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form/form-kernel-go && go test -count=1 ./...",
+      "ssh tunnel opened per docs/PRODUCTION-SUBSTRATE.md to local 127.0.0.1:15432 using ~/.coherence-network/secrets/form-kernel-postgres-tunnel.json",
+      "cd form/form-kernel-go && go run . serve --port 19086 --config ~/.coherence-network/secrets/form-kernel-postgres-tunnel.json --stdlib ../form-stdlib ../form-stdlib/json.fk ../../deploy/front-door/api.bml",
+      "curl -sS -i -H 'Accept: application/json' 'http://127.0.0.1:19086/api/graph/nodes?type=contributor&limit=2'",
+      "curl -sS -H 'Accept: application/json' 'https://api.coherencycoin.com/api/graph/nodes?type=contributor&limit=2' | jq '{total, limit, offset, ids: [.items[].id]}'",
+      "python3 scripts/native_route_goal_loop.py /goal --source api --seconds 86400 --limit 2000 --write-state",
+      "make native-route-goal-tending"
+    ],
+    "summary": "The BML front-door catalog now includes exact GET /api/graph/nodes as graph-nodes-index. The handler implements the real list filters type, phase, search, limit, and offset; excludes anonymous-meeting trace rows; orders by updated_at descending; and merges arbitrary graph_nodes.properties into the top-level node JSON shape. The route intentionally does not introduce a wildcard /api/graph/nodes/* route, so detail, edge, neighbor, and subgraph paths keep fanning out until each family is lifted deliberately. Native Go production-tunnel curl for /api/graph/nodes?type=contributor&limit=2 returned 200 OK with X-Form-Router: native-kernel-go, total=168, and first ids contributor:vasudev-baba and contributor:alex-sandr, matching the public API sample."
+  },
+  "known_failed_attempts": [],
+  "ci_validation": {
+    "status": "pending",
+    "reason": "No commit, push, or PR was created in this turn."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "reason": "A local Go kernel listener hit production Postgres through the documented SSH tunnel and returned a native 200 for exact GET /api/graph/nodes. No public deployment was performed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local and production-tunnel proof passed, but CI and public deployment remain pending until the work is committed, pushed, and shipped."
+  },
+  "idea_ids": [
+    "native-route-goal-loop",
+    "form-native-runtime",
+    "graph-node-index-native-handler",
+    "kernel-native-api-promotion"
+  ],
+  "spec_ids": [
+    "kernel-native-api-promotion",
+    "native-route-goal-cells",
+    "graph-nodes-native-route"
+  ],
+  "task_ids": [
+    "promote-graph-nodes-index-to-bml",
+    "prove-graph-nodes-production-read"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "form",
+        "kernel",
+        "http",
+        "persistence",
+        "documentation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "deploy/front-door/api.bml defines api_graph_nodes and GraphNodesIndexRoute for exact GET /api/graph/nodes.",
+    "The route is exact, not wildcard, so /api/graph/nodes/{id}/edges, /neighbors, and /subgraph are not shadowed by a partial native handler.",
+    "The production-tunnel curl response included X-Form-Router: native-kernel-go and X-Form-Route-Where: route:graph-nodes-index pattern:/api/graph/nodes request:/api/graph/nodes.",
+    "docs/system_audit/native_route_goal_state.json now reports GET /api/graph/nodes as current_grammar=BML, current_handler=api_graph_nodes, native_executable=true, high_grammar_native=true.",
+    "The refreshed route-goal state selected GET /api/workspaces as the next backend gap after exact graph node index promotion."
+  ],
+  "change_files": [
+    "deploy/front-door/api.bml",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/native_route_goal_state.json",
+    "docs/system_audit/commit_evidence_2026-06-07_graph_nodes_bml_route.json",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md",
+    "form/form-kernel-go/main.go"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Exact GET /api/graph/nodes can now be served by the native Go kernel from BML against production Postgres for the list route, while nested graph routes remain on fan-out until lifted intentionally.",
+    "public_endpoints": [
+      "GET /api/graph/nodes",
+      "deploy/front-door/api.bml"
+    ],
+    "test_flows": [
+      "Go kernel test suite passes with a forced uncached run after the BML catalog change.",
+      "Native Go listener curl through the production Postgres tunnel returns 200 OK and native route headers for GET /api/graph/nodes?type=contributor&limit=2.",
+      "Public API sample for the same query returns total=168 and ids contributor:vasudev-baba, contributor:alex-sandr, matching the native sample.",
+      "Route-goal loop marks GET /api/graph/nodes as kernel-native-high-grammar and selects GET /api/workspaces as the next backend gap."
+    ],
+    "known_gaps": [
+      "Graph node detail, count, edges, neighbors, subgraph, create, patch, and delete routes are still Python fan-out unless separately lifted.",
+      "The exact list route adds native_observation to each node and the envelope; clients should tolerate this additive field, but byte-identical parity with Python is not claimed."
+    ]
+  }
+}

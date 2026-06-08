@@ -1,0 +1,85 @@
+{
+  "date": "2026-06-05",
+  "thread_branch": "codex/native-http-stack-architecture-20260604",
+  "commit_scope": "Go native front-door upstream fanout bridge for unmatched Python routes",
+  "files_owned": [
+    "form/form-kernel-go/server.go",
+    "form/form-kernel-go/server_test.go",
+    "docs/shared/agent-start-packet.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form/form-kernel-go && gofmt -w server.go server_test.go && go test ./...",
+      "cd form/form-kernel-go && go run . serve --port 18182 --upstream https://api.coherencycoin.com --stdlib ../form-stdlib --config /Users/ursmuff/.coherence-network/secrets/form-kernel-postgres-tunnel.json ../../deploy/front-door/api.bml",
+      "curl -sS -H 'Accept: application/json' -D <headers> -o <body> http://127.0.0.1:18182/api/health",
+      "curl -sS -H 'Accept: application/json' -H 'Content-Type: application/json' -H 'User-Agent: coherence-native-frontdoor-fanout-probe/1.0' -D <headers> -o <body> -X POST http://127.0.0.1:18182/api/substrate/form -d '{\"expression\":\"?lattice\",\"mode\":\"ast\"}'"
+    ],
+    "summary": "The Go native front door now accepts --upstream and explicitly fans out unmatched requests to a Python/FastAPI upstream while stamping X-Form-Router: fanout-python. Native routes still return X-Form-Router: native-kernel-go. This makes Python a bridge behind the kernel listener without claiming bridged endpoints as high-grammar native."
+  },
+  "known_failed_attempts": [],
+  "ci_validation": {
+    "status": "pending",
+    "reason": "No commit or PR created in this turn."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No production deploy performed. The bridge was validated locally against the public production API as upstream."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local tests and curl proof passed, but CI/deploy validation has not run for this uncommitted worktree."
+  },
+  "idea_ids": [
+    "native-kernel-http-front-door"
+  ],
+  "spec_ids": [
+    "form-native-http-stack"
+  ],
+  "task_ids": [
+    "go-frontdoor-fanout-bridge"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "unknown-agent",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "documentation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "Go test proof: cd form/form-kernel-go && go test ./... passed, including TestUpstreamURLPreservesPathAndQuery and TestFanoutForwardsBodyAndMarksBridge.",
+    "Native route proof: local Go listener returned HTTP/1.1 200 OK, X-Form-Router: native-kernel-go, and status=ok for GET /api/health.",
+    "Fanout proof: local Go listener returned HTTP/1.1 200 OK, X-Form-Router: fanout-python, kind=lattice, and lattice keys blueprints_total/cells_total/recipes_total for POST /api/substrate/form.",
+    "Architecture memory updated to state that fanout is an explicit bridge and does not count as high-grammar native promotion."
+  ],
+  "change_files": [
+    "form/form-kernel-go/server.go",
+    "form/form-kernel-go/server_test.go",
+    "docs/shared/agent-start-packet.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The Go kernel listener can be the single local front door while unmatched Python endpoints remain reachable as explicit fanout bridge traffic.",
+    "public_endpoints": [
+      "http://127.0.0.1:18182/api/health",
+      "http://127.0.0.1:18182/api/substrate/form",
+      "https://api.coherencycoin.com/api/substrate/form"
+    ],
+    "test_flows": [
+      "matched BML route executes natively and stamps X-Form-Router: native-kernel-go",
+      "unmatched substrate form POST fans out to the configured upstream and stamps X-Form-Router: fanout-python",
+      "fanout preserves request path, query, body, and response body in Go unit tests"
+    ]
+  }
+}

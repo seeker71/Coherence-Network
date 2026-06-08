@@ -242,11 +242,15 @@ export default async function Home() {
           <p className="text-sm md:text-base text-foreground/85 leading-relaxed max-w-2xl mx-auto">
             The shared doorway is the human web page, and the same body answers
             through API, CLI, MCP, Form, source, and witness. Start with the
-            invitation: center, ground, harmonize, then return one honest trace.
+            invitation: center, ground, harmonize, walk the edge that increases
+            vitality, then return one honest trace.
           </p>
           <div className="flex flex-wrap justify-center gap-3 pt-1">
             <Button asChild size="sm" className="rounded-full px-5">
               <AttributedInternalLink href="/come-in">Enter the invitation</AttributedInternalLink>
+            </Button>
+            <Button asChild size="sm" variant="outline" className="rounded-full px-5">
+              <AttributedInternalLink href="/here">See what is alive now</AttributedInternalLink>
             </Button>
             <Button asChild size="sm" variant="outline" className="rounded-full px-5">
               <AttributedInternalLink href="/with-us">Learn how to weave in</AttributedInternalLink>

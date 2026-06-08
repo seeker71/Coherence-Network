@@ -1,14 +1,12 @@
 """Tests for /api/utils/nodeid_compatibility — transmuted under the habit pattern.
 
-The body of this endpoint runs as a Form recipe through form-kernel-rust when
-available, with Python fallback when the binary is missing. Either runtime
-returns the same integer for the same inputs — the coordinate-agreement score
+The body of this endpoint runs as a Form recipe through the kernel. The source
+example and kernel siblings return the same integer for the same inputs — the coordinate-agreement score
 0..4 between two NodeIDs (how many of package, level, type, instance match).
 
 Sibling of test_utils_nodeid_distance: distance measures L1 separation, this
 measures coordinate agreement. The test verifies the route is wired, the score
-is correct, the runtime field reports which path served, and the Python fallback
-agrees with the recipe.
+is correct, and the runtime field reports which path served.
 """
 from __future__ import annotations
 
@@ -16,8 +14,6 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
-from app.routers.utils import nodeid_compatibility_py
-
 BASE = "http://test"
 
 
@@ -45,12 +41,7 @@ class TestNodeIdCompatibilityEndpoint:
         assert data["compatibility"] == 2
         assert data["a"] == [1, 5, 4, 1]
         assert data["b"] == [1, 4, 4, 7]
-        assert data["runtime"] in ("inline", "subprocess", "python-fallback")
-
-    @pytest.mark.anyio
-    async def test_python_fallback_agrees_with_recipe(self):
-        """The Python body (fallback) returns the same integer as the recipe."""
-        assert nodeid_compatibility_py(1, 5, 4, 1, 1, 4, 4, 7) == 2
+        assert data["runtime"] in ("inline", "subprocess")
 
     @pytest.mark.anyio
     async def test_all_coordinates_match(self, client: AsyncClient):

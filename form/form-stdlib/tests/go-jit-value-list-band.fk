@@ -1,0 +1,22 @@
+; go-jit-value-list-band.fk — value ABI proof for list-bearing Go JIT calls.
+;
+; The sibling-visible contract is semantic: walker baseline and post-compile
+; calls agree across kernels. Go-specific proof for actual dispatch comes from
+; jit-stats in the local validation command, because Rust/TS may honestly fall
+; back while preserving the recipe result.
+
+(do
+    (defn jit-list-sum (xs acc)
+        (if (nil? xs) acc
+            (jit-list-sum (tail xs) (add acc (head xs)))))
+
+    (let r0 (jit-list-sum (list 1 2 3 4 5) 0))
+    (let compiled (jit_compile "jit-list-sum"))
+    (let attempted (if (ge compiled 0) 1 0))
+    (let r1 (jit-list-sum (list 1 2 3 4 5) 0))
+    (let r2 (jit-list-sum (list 8 13 21) 0))
+
+    (add attempted
+         (add (if (eq r0 15) 1 0)
+              (add (if (eq r1 15) 1 0)
+                   (if (eq r2 42) 1 0)))))

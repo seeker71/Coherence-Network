@@ -21,12 +21,12 @@ use std::env;
 use std::fs;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::net::{TcpListener, TcpStream, ToSocketAddrs};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex, OnceLock};
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 mod bp_table;
 mod formats;
@@ -87,6 +87,15 @@ struct PgTable {
     next: i64,
 }
 
+struct VolatileCell {
+    updated_ms: i64,
+    value: Value,
+}
+
+struct VolatileCellTable {
+    cells: HashMap<String, VolatileCell>,
+}
+
 fn pg_table() -> &'static Mutex<PgTable> {
     static T: OnceLock<Mutex<PgTable>> = OnceLock::new();
     T.get_or_init(|| {
@@ -95,6 +104,16 @@ fn pg_table() -> &'static Mutex<PgTable> {
             next: 0,
         })
     })
+}
+
+fn pg_last_error_cell() -> &'static Mutex<String> {
+    static E: OnceLock<Mutex<String>> = OnceLock::new();
+    E.get_or_init(|| Mutex::new(String::new()))
+}
+
+fn pg_set_error(error: Option<String>) {
+    let mut slot = pg_last_error_cell().lock().unwrap();
+    *slot = error.unwrap_or_default();
 }
 
 fn pg_register(c: postgres::Client) -> i64 {
@@ -115,13 +134,356 @@ fn pg_drop(h: i64) -> bool {
     t.handles.remove(&h).is_some()
 }
 
+fn volatile_table() -> &'static Mutex<VolatileCellTable> {
+    static T: OnceLock<Mutex<VolatileCellTable>> = OnceLock::new();
+    T.get_or_init(|| {
+        Mutex::new(VolatileCellTable {
+            cells: HashMap::new(),
+        })
+    })
+}
+
+fn volatile_coord(namespace: &str, key: &str) -> String {
+    format!("{namespace}\0{key}")
+}
+
+fn now_unix_ms_value() -> i64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis() as i64)
+        .unwrap_or(0)
+}
+
+fn kernel_started_unix_ms_value() -> i64 {
+    static STARTED: OnceLock<i64> = OnceLock::new();
+    *STARTED.get_or_init(now_unix_ms_value)
+}
+
+fn civil_from_days(days_since_epoch: i64) -> (i64, i64, i64) {
+    let z = days_since_epoch + 719_468;
+    let era = if z >= 0 { z } else { z - 146_096 }.div_euclid(146_097);
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096).div_euclid(365);
+    let y = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2).div_euclid(153);
+    let d = doy - (153 * mp + 2).div_euclid(5) + 1;
+    let m = mp + if mp < 10 { 3 } else { -9 };
+    let year = y + if m <= 2 { 1 } else { 0 };
+    (year, m, d)
+}
+
+fn unix_ms_to_iso_utc(ms: i64) -> String {
+    let secs = ms.div_euclid(1000);
+    let days = secs.div_euclid(86_400);
+    let seconds_of_day = secs.rem_euclid(86_400);
+    let (year, month, day) = civil_from_days(days);
+    let hour = seconds_of_day / 3600;
+    let minute = (seconds_of_day % 3600) / 60;
+    let second = seconds_of_day % 60;
+    format!("{year:04}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}Z")
+}
+
+fn uptime_human(seconds: i64) -> String {
+    let seconds = seconds.max(0);
+    let days = seconds / 86_400;
+    let mut remainder = seconds % 86_400;
+    let hours = remainder / 3600;
+    remainder %= 3600;
+    let minutes = remainder / 60;
+    let secs = remainder % 60;
+    if days > 0 {
+        format!("{days}d {hours}h {minutes}m {secs}s")
+    } else if hours > 0 {
+        format!("{hours}h {minutes}m {secs}s")
+    } else if minutes > 0 {
+        format!("{minutes}m {secs}s")
+    } else {
+        format!("{secs}s")
+    }
+}
+
+fn rust_kernel_config_path_cell() -> &'static Mutex<Option<String>> {
+    static P: OnceLock<Mutex<Option<String>>> = OnceLock::new();
+    P.get_or_init(|| Mutex::new(None))
+}
+
+fn set_rust_kernel_config_path(path: String) {
+    let mut slot = rust_kernel_config_path_cell().lock().unwrap();
+    *slot = Some(path);
+}
+
+fn rust_kernel_config_path() -> Option<String> {
+    rust_kernel_config_path_cell().lock().unwrap().clone()
+}
+
+fn find_repo_root() -> Result<PathBuf, String> {
+    let mut wd = env::current_dir().map_err(|e| e.to_string())?;
+    loop {
+        if wd.join("api/config/api.json").exists() {
+            return Ok(wd);
+        }
+        if !wd.pop() {
+            break;
+        }
+    }
+    Err("could not find repo root containing api/config/api.json".to_string())
+}
+
+fn merge_json_object(
+    dst: &mut serde_json::Map<String, serde_json::Value>,
+    src: serde_json::Map<String, serde_json::Value>,
+) {
+    for (key, value) in src {
+        match (dst.get_mut(&key), value) {
+            (Some(serde_json::Value::Object(dst_child)), serde_json::Value::Object(src_child)) => {
+                merge_json_object(dst_child, src_child);
+            }
+            (_, value) => {
+                dst.insert(key, value);
+            }
+        }
+    }
+}
+
+fn merge_config_file(
+    dst: &mut serde_json::Map<String, serde_json::Value>,
+    path: &Path,
+) -> Result<(), String> {
+    let body = fs::read_to_string(path).map_err(|e| e.to_string())?;
+    let parsed: serde_json::Value = serde_json::from_str(&body).map_err(|e| e.to_string())?;
+    match parsed {
+        serde_json::Value::Object(obj) => {
+            merge_json_object(dst, obj);
+            Ok(())
+        }
+        _ => Err(format!("{} must contain a JSON object", path.display())),
+    }
+}
+
+fn home_config_path(file: &str) -> Option<PathBuf> {
+    env::var_os("HOME").map(|home| PathBuf::from(home).join(".coherence-network").join(file))
+}
+
+fn github_token_from_keys(keys: &serde_json::Map<String, serde_json::Value>) -> Option<String> {
+    if let Some(serde_json::Value::Object(github)) = keys.get("github") {
+        for key in ["token", "api_token"] {
+            if let Some(serde_json::Value::String(value)) = github.get(key) {
+                let trimmed = value.trim();
+                if !trimmed.is_empty() {
+                    return Some(trimmed.to_string());
+                }
+            }
+        }
+    }
+    if let Some(serde_json::Value::String(value)) = keys.get("github_token") {
+        let trimmed = value.trim();
+        if !trimmed.is_empty() {
+            return Some(trimmed.to_string());
+        }
+    }
+    None
+}
+
+fn merge_kernel_keys(dst: &mut serde_json::Map<String, serde_json::Value>, path: &Path) {
+    let body = match fs::read_to_string(path) {
+        Ok(body) => body,
+        Err(_) => return,
+    };
+    let parsed: serde_json::Value = match serde_json::from_str(&body) {
+        Ok(parsed) => parsed,
+        Err(_) => return,
+    };
+    let serde_json::Value::Object(keys) = parsed else {
+        return;
+    };
+    if let Some(token) = github_token_from_keys(&keys) {
+        let missing = dst
+            .get("github_token")
+            .and_then(|v| v.as_str())
+            .map(|s| s.trim().is_empty())
+            .unwrap_or(true);
+        if missing {
+            dst.insert("github_token".to_string(), serde_json::Value::String(token));
+        }
+    }
+    dst.insert("keys".to_string(), serde_json::Value::Object(keys));
+}
+
+fn load_kernel_config() -> Result<serde_json::Map<String, serde_json::Value>, String> {
+    let root = find_repo_root()?;
+    let mut merged = serde_json::Map::new();
+    merge_config_file(&mut merged, &root.join("api/config/api.json"))?;
+    if let Some(overlay) = rust_kernel_config_path() {
+        let _ = merge_config_file(&mut merged, Path::new(&overlay));
+    } else if let Some(overlay) = home_config_path("config.json") {
+        let _ = merge_config_file(&mut merged, &overlay);
+    }
+    if let Some(keys) = home_config_path("keys.json") {
+        merge_kernel_keys(&mut merged, &keys);
+    }
+    Ok(merged)
+}
+
+fn lookup_config_path<'a>(
+    config: &'a serde_json::Map<String, serde_json::Value>,
+    path: &str,
+) -> Option<&'a serde_json::Value> {
+    let mut current: Option<&serde_json::Value> = None;
+    for (idx, part) in path.split('.').enumerate() {
+        if part.is_empty() {
+            return None;
+        }
+        let obj = if idx == 0 {
+            config
+        } else {
+            current?.as_object()?
+        };
+        current = obj.get(part);
+    }
+    current
+}
+
+fn json_to_form_value(value: &serde_json::Value, default: &Value) -> Value {
+    match value {
+        serde_json::Value::String(s) => Value::Str(s.clone().into()),
+        serde_json::Value::Bool(b) => Value::Bool(*b),
+        serde_json::Value::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                Value::Int(i)
+            } else if let Some(f) = n.as_f64() {
+                Value::Float(f)
+            } else {
+                default.clone()
+            }
+        }
+        serde_json::Value::Null => default.clone(),
+        other => Value::Str(other.to_string().into()),
+    }
+}
+
+fn value_kind_name(value: &Value) -> &'static str {
+    match value {
+        Value::Null => "null",
+        Value::Int(_) => "int",
+        Value::Float(_) => "float",
+        Value::Str(_) => "string",
+        Value::Bool(_) => "bool",
+        Value::List(_) => "list",
+        Value::Closure(_) => "closure",
+        Value::Nid(_) => "node_id",
+        Value::Record(_) => "record",
+    }
+}
+
+fn load_config_value_or(path: &str, default: &Value) -> Value {
+    let config = match load_kernel_config() {
+        Ok(config) => config,
+        Err(e) => {
+            pg_set_error(Some(e));
+            return default.clone();
+        }
+    };
+    match lookup_config_path(&config, path) {
+        Some(value) => json_to_form_value(value, default),
+        None => default.clone(),
+    }
+}
+
+fn load_configured_database_url() -> Result<String, String> {
+    let config = load_kernel_config()?;
+    if let Some(serde_json::Value::Object(db)) = config.get("database") {
+        if let Some(serde_json::Value::String(url)) = db.get("url") {
+            let trimmed = url.trim();
+            if !trimmed.is_empty() {
+                return Ok(trimmed.to_string());
+            }
+        }
+    }
+    if let Some(serde_json::Value::String(url)) = config.get("database_url") {
+        let trimmed = url.trim();
+        if !trimmed.is_empty() {
+            return Ok(trimmed.to_string());
+        }
+    }
+    Err("database.url is not configured".to_string())
+}
+
+fn source_inventory_skip_set(value: &Value) -> HashSet<String> {
+    match value {
+        Value::List(items) => items
+            .iter()
+            .filter_map(|item| match item {
+                Value::Str(s) if !s.is_empty() => Some(s.to_string()),
+                _ => None,
+            })
+            .collect(),
+        _ => HashSet::new(),
+    }
+}
+
+fn count_text_lines(path: &std::path::Path) -> i64 {
+    match fs::read(path) {
+        Ok(body) => {
+            if body.is_empty() {
+                0
+            } else {
+                let newlines = body.iter().filter(|b| **b == b'\n').count() as i64;
+                if body.last() == Some(&b'\n') {
+                    newlines
+                } else {
+                    newlines + 1
+                }
+            }
+        }
+        Err(_) => -1,
+    }
+}
+
+fn source_inventory_row(rel: String, loc: i64) -> Value {
+    Value::List(vec![Value::Str(rel.into()), Value::Int(loc)].into())
+}
+
+fn source_inventory_walk(
+    root_abs: &std::path::Path,
+    dir: &std::path::Path,
+    suffix: &str,
+    skip: &HashSet<String>,
+    rows: &mut Vec<Value>,
+) -> Result<(), std::io::Error> {
+    let mut entries = fs::read_dir(dir)?.collect::<Result<Vec<_>, _>>()?;
+    entries.sort_by_key(|entry| entry.file_name());
+    for entry in entries {
+        let path = entry.path();
+        let name = entry.file_name().to_string_lossy().to_string();
+        let file_type = entry.file_type()?;
+        if file_type.is_dir() {
+            if skip.contains(&name) {
+                continue;
+            }
+            source_inventory_walk(root_abs, &path, suffix, skip, rows)?;
+        } else if file_type.is_file() {
+            if !suffix.is_empty() && !name.ends_with(suffix) {
+                continue;
+            }
+            let rel = path
+                .strip_prefix(root_abs)
+                .unwrap_or(path.as_path())
+                .to_string_lossy()
+                .replace('\\', "/");
+            rows.push(source_inventory_row(rel, count_text_lines(&path)));
+        }
+    }
+    Ok(())
+}
+
 // Render one column of a postgres row to a string, by its SQL type. Covers the
 // substrate's portable column set (text/varchar, the integer family, bool).
 // NULL → "". Unknown types → "?". try_get keeps a type mismatch from panicking.
 fn pg_cell_to_string(row: &postgres::Row, ci: usize) -> String {
     let ty = row.columns()[ci].type_().name().to_string();
     match ty.as_str() {
-        "text" | "varchar" | "bpchar" | "name" => row
+        "text" | "varchar" | "bpchar" | "name" | "json" | "jsonb" => row
             .try_get::<usize, Option<String>>(ci)
             .ok()
             .flatten()
@@ -154,6 +516,197 @@ fn pg_cell_to_string(row: &postgres::Row, ci: usize) -> String {
     }
 }
 
+fn pg_cell_to_value(row: &postgres::Row, ci: usize) -> Value {
+    let ty = row.columns()[ci].type_().name().to_string();
+    match ty.as_str() {
+        "text" | "varchar" | "bpchar" | "name" | "json" | "jsonb" => Value::Str(
+            row.try_get::<usize, Option<String>>(ci)
+                .ok()
+                .flatten()
+                .unwrap_or_default()
+                .into(),
+        ),
+        "int8" => row
+            .try_get::<usize, Option<i64>>(ci)
+            .ok()
+            .flatten()
+            .map(Value::Int)
+            .unwrap_or(Value::Null),
+        "int4" => row
+            .try_get::<usize, Option<i32>>(ci)
+            .ok()
+            .flatten()
+            .map(|v| Value::Int(v as i64))
+            .unwrap_or(Value::Null),
+        "int2" => row
+            .try_get::<usize, Option<i16>>(ci)
+            .ok()
+            .flatten()
+            .map(|v| Value::Int(v as i64))
+            .unwrap_or(Value::Null),
+        "float8" => row
+            .try_get::<usize, Option<f64>>(ci)
+            .ok()
+            .flatten()
+            .map(Value::Float)
+            .unwrap_or(Value::Null),
+        "float4" => row
+            .try_get::<usize, Option<f32>>(ci)
+            .ok()
+            .flatten()
+            .map(|v| Value::Float(v as f64))
+            .unwrap_or(Value::Null),
+        "bool" => row
+            .try_get::<usize, Option<bool>>(ci)
+            .ok()
+            .flatten()
+            .map(Value::Bool)
+            .unwrap_or(Value::Null),
+        _ => Value::Str(pg_cell_to_string(row, ci).into()),
+    }
+}
+
+fn form_sql_args(value: Option<&Value>) -> Vec<Box<dyn postgres::types::ToSql + Sync>> {
+    let Some(Value::List(items)) = value else {
+        return Vec::new();
+    };
+    let mut out: Vec<Box<dyn postgres::types::ToSql + Sync>> = Vec::with_capacity(items.len());
+    for item in items.iter() {
+        match item {
+            Value::Int(n) => out.push(Box::new(*n)),
+            Value::Float(f) => out.push(Box::new(*f)),
+            Value::Bool(b) => out.push(Box::new(*b)),
+            Value::Str(s) => out.push(Box::new(s.to_string())),
+            Value::Null => out.push(Box::new(Option::<String>::None)),
+            _ => out.push(Box::new(item.display())),
+        }
+    }
+    out
+}
+
+fn dict_value(pairs: Vec<(&str, Value)>) -> Value {
+    let mut out = Vec::with_capacity(pairs.len() * 2 + 1);
+    out.push(Value::Str("__dict__".to_string().into()));
+    for (key, value) in pairs {
+        out.push(Value::Str(key.to_string().into()));
+        out.push(value);
+    }
+    Value::List(out.into())
+}
+
+fn form_http_headers(value: Option<&Value>) -> Vec<(String, String)> {
+    let Some(Value::List(rows)) = value else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    for row in rows.iter() {
+        let Value::List(items) = row else {
+            continue;
+        };
+        if items.len() != 3 {
+            continue;
+        }
+        if !matches!(items.get(0), Some(Value::Int(tag)) if *tag == KH_TAG_HEADER) {
+            continue;
+        }
+        let (Value::Str(name), Value::Str(value)) = (&items[1], &items[2]) else {
+            continue;
+        };
+        let name = name.trim();
+        if !name.is_empty() {
+            out.push((name.to_string(), value.to_string()));
+        }
+    }
+    out
+}
+
+fn form_http_timeout(value: Option<&Value>, fallback: Duration) -> Duration {
+    let Some(value) = value else {
+        return fallback;
+    };
+    let ms = match value {
+        Value::Int(n) => *n,
+        Value::Float(f) => *f as i64,
+        _ => return fallback,
+    };
+    if ms <= 0 {
+        return fallback;
+    }
+    Duration::from_millis(ms.min(60_000) as u64)
+}
+
+fn http_header_list(response: &ureq::Response) -> Value {
+    let mut rows = Vec::new();
+    let mut names = response.headers_names();
+    names.sort();
+    for name in names {
+        if let Some(value) = response.header(&name) {
+            rows.push(Value::List(
+                vec![
+                    Value::Int(KH_TAG_HEADER),
+                    Value::Str(name.into()),
+                    Value::Str(value.to_string().into()),
+                ]
+                .into(),
+            ));
+        }
+    }
+    Value::List(rows.into())
+}
+
+fn http_get_result(
+    status_code: i64,
+    headers: Value,
+    body: String,
+    error: String,
+    duration_ms: i64,
+) -> Value {
+    dict_value(vec![
+        ("status_code", Value::Int(status_code)),
+        ("body", Value::Str(body.into())),
+        ("error", Value::Str(error.into())),
+        ("duration_ms", Value::Int(duration_ms)),
+        ("headers", headers),
+    ])
+}
+
+fn external_http_get_value(url: &str, headers: Vec<(String, String)>, timeout: Duration) -> Value {
+    let started = Instant::now();
+    let mut request = ureq::get(url).timeout(timeout);
+    for (name, value) in headers {
+        request = request.set(&name, &value);
+    }
+    match request.call() {
+        Ok(response) => {
+            let status_code = response.status() as i64;
+            let header_rows = http_header_list(&response);
+            match response.into_string() {
+                Ok(body) => http_get_result(
+                    status_code,
+                    header_rows,
+                    body,
+                    String::new(),
+                    started.elapsed().as_millis() as i64,
+                ),
+                Err(e) => http_get_result(
+                    status_code,
+                    header_rows,
+                    String::new(),
+                    e.to_string(),
+                    started.elapsed().as_millis() as i64,
+                ),
+            }
+        }
+        Err(e) => http_get_result(
+            0,
+            Value::List(Vec::new().into()),
+            String::new(),
+            e.to_string(),
+            started.elapsed().as_millis() as i64,
+        ),
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Substrate — NodeID + Recipe + intern table
 // ---------------------------------------------------------------------------
@@ -182,6 +735,7 @@ const RB_MATH: u32 = 12;
 const RB_COMPARE: u32 = 13;
 const RB_LOGIC: u32 = 14;
 const RB_ACCESS: u32 = 15; // read a property / field
+const RB_MATCH: u32 = 19; // match/switch by substrate key
 const RB_METHOD: u32 = 27; // method on a cell-like value
 const RB_TRANSMUTE: u32 = 76; // present value through Blueprint without changing identity
                               // Kernel-demo additions
@@ -278,6 +832,8 @@ const RCOND_IF_ELSE: u32 = 2;
 const RBLK_DO: u32 = 1;
 const RBLK_SEQ: u32 = 2;
 const RBLK_LET: u32 = 3;
+const RMATCH_SWITCH: u32 = 1;
+
 // The eval thread's stack. TCO (see walk) removes ITERATION depth (tail-recursive
 // Form loops run flat); this stack covers genuine DATA-nesting depth — a recursive-
 // descent parse of a deeply nested source is inherently recursion proportional to
@@ -420,6 +976,12 @@ pub(crate) struct Kernel {
     // attests. Per-kernel (a worker builds its own at load).
     maps: HashMap<i64, HashMap<NodeID, Value>>,
     next_map: i64,
+    // SWITCH recipe cache — source-level BML/Form `match` lowers to
+    // RBasic.MATCH/RMatch.SWITCH. Literal arms become direct NodeID→body edges,
+    // keyed by the substrate identity of the scrutinee value. The cache key is
+    // the match recipe's own content-addressed NodeID, so repeated evaluation
+    // pays the table build once and then dispatches by O(1) lookup.
+    switch_tables: HashMap<NodeID, SwitchTable>,
     active_roots: Vec<NodeID>,
     // Optional tracing — None for hot-path runs, Some for `trace` subcommand.
     // Hooked at the top of walk() to record per-arm dispatch counts and
@@ -443,6 +1005,10 @@ pub(crate) struct Trace {
     pub(crate) choice_attempts: u64,
     pub(crate) choice_successes: u64,
     pub(crate) choice_failures: u64,
+    pub(crate) match_lookups: u64,
+    pub(crate) match_hits: u64,
+    pub(crate) match_defaults: u64,
+    pub(crate) match_misses: u64,
 }
 
 impl Trace {
@@ -472,6 +1038,18 @@ impl Trace {
     pub(crate) fn record_choice_failure(&mut self) {
         self.choice_failures += 1;
     }
+    pub(crate) fn record_match_lookup(&mut self) {
+        self.match_lookups += 1;
+    }
+    pub(crate) fn record_match_hit(&mut self) {
+        self.match_hits += 1;
+    }
+    pub(crate) fn record_match_default(&mut self) {
+        self.match_defaults += 1;
+    }
+    pub(crate) fn record_match_miss(&mut self) {
+        self.match_misses += 1;
+    }
 
     pub(crate) fn record_route_choice(&mut self, choice: &RouteChoice<'_>) {
         for decision in &choice.decisions {
@@ -491,6 +1069,7 @@ impl Trace {
             RB_MATH => "MATH",
             RB_COMPARE => "COMPARE",
             RB_LOGIC => "LOGIC",
+            RB_MATCH => "MATCH",
             RB_IDENT => "IDENT",
             RB_FNDEF => "FNDEF",
             RB_FNCALL => "FNCALL",
@@ -567,6 +1146,10 @@ impl Trace {
                 RBLK_DO => "DO",
                 RBLK_SEQ => "SEQ",
                 RBLK_LET => "LET",
+                _ => "",
+            },
+            RB_MATCH => match arm_inst {
+                RMATCH_SWITCH => "SWITCH",
                 _ => "",
             },
             _ => "",
@@ -649,8 +1232,25 @@ impl Trace {
             "choice_success_rate": if self.choice_attempts > 0 {
                 (self.choice_successes as f64) / (self.choice_attempts as f64)
             } else { 0.0 },
+            "match_lookups":      self.match_lookups,
+            "match_hits":         self.match_hits,
+            "match_defaults":     self.match_defaults,
+            "match_misses":       self.match_misses,
         })
     }
+}
+
+#[derive(Clone)]
+struct SwitchArm {
+    pattern: NodeID,
+    body: NodeID,
+}
+
+#[derive(Clone, Default)]
+struct SwitchTable {
+    cases: HashMap<NodeID, NodeID>,
+    dynamic_arms: Vec<SwitchArm>,
+    default_body: Option<NodeID>,
 }
 
 // Arena — the mutable-during-walk runtime state. Held as `&mut Arena`
@@ -752,6 +1352,7 @@ impl Kernel {
             jit_failed: HashSet::new(),
             maps: HashMap::new(),
             next_map: 0,
+            switch_tables: HashMap::new(),
             active_roots: Vec::new(),
             trace: None,
         };
@@ -946,6 +1547,7 @@ impl Kernel {
             self.by_id.remove(nid);
             self.source_attr.remove(nid);
             self.walk_cache.remove(nid);
+            self.switch_tables.remove(nid);
         }
         self.by_shape
             .retain(|_, nid| !(nid.pkg == 0 && nid.inst >= next_mark));
@@ -1092,6 +1694,7 @@ impl Kernel {
             self.by_id.remove(nid);
             self.source_attr.remove(nid);
             self.walk_cache.remove(nid);
+            self.switch_tables.remove(nid);
         }
         self.by_shape
             .retain(|_, nid| !(nid.pkg == 0 && !live_nodes.contains(nid)));
@@ -1160,6 +1763,7 @@ impl Kernel {
             // its own copy so routing needs no lock.
             maps: self.maps.clone(),
             next_map: self.next_map,
+            switch_tables: self.switch_tables.clone(),
             active_roots: Vec::new(),
             trace: None,
         }
@@ -1176,7 +1780,7 @@ impl Kernel {
             return false;
         };
         match recipe.category.ty {
-            RB_MATH | RB_COMPARE | RB_LOGIC | RB_COND | RB_LIST => recipe
+            RB_MATH | RB_COMPARE | RB_LOGIC | RB_COND | RB_LIST | RB_MATCH => recipe
                 .children
                 .iter()
                 .all(|child| self.is_parallel_pure(*child, seen)),
@@ -2195,6 +2799,12 @@ impl Kernel {
         self.register_native("value_str", cat_method(), |_, _, args| {
             Value::Str(args[0].display().into())
         });
+        self.register_native("value_kind", cat_witness(), |_, _, args| {
+            Value::Str(value_kind_name(&args[0]).to_string().into())
+        });
+        self.register_native("value-kind", cat_witness(), |_, _, args| {
+            Value::Str(value_kind_name(&args[0]).to_string().into())
+        });
         self.register_native("source_scan_file", cat_call(), |_, _, args| {
             let body = fs::read_to_string(args[0].as_str())
                 .unwrap_or_else(|e| panic!("source_scan_file: {}", e));
@@ -3060,20 +3670,14 @@ impl Kernel {
         // structural reasoning still happens in Form code over the dict
         // values that come back.
         //
-        // http_get(url) → str|null. Blocking GET via the existing ureq
-        // dependency that already powers the `fetch` CLI subcommand. No
-        // headers, no auth, no body — the surface stays /api/substrate/*
-        // shaped (public read, no credentials). null on transport error
-        // so Form-side caller can match and decide.
+        // http_get(url, headers?, timeout_ms?) → dict. This matches the Go
+        // carrier shape used by the BML front-door catalog: status_code, body,
+        // error, duration_ms, headers. Form owns response interpretation.
         self.register_native("http_get", cat_call(), |_, _, args| {
             let url = args[0].as_str();
-            match ureq::get(url).call() {
-                Ok(resp) => match resp.into_string() {
-                    Ok(body) => Value::Str(body.into()),
-                    Err(_) => Value::Null,
-                },
-                Err(_) => Value::Null,
-            }
+            let headers = form_http_headers(args.get(1));
+            let timeout = form_http_timeout(args.get(2), Duration::from_secs(10));
+            external_http_get_value(url, headers, timeout)
         });
         // _json_get(json_str, key) → str|int|float|bool|null. Parse a top-level
         // JSON object and extract `obj[key]`. Returns null when key is missing
@@ -3366,6 +3970,28 @@ impl Kernel {
                 Err(_) => Value::Null,
             }
         });
+        // source_inventory(root, suffix, skip-dir-names) — generic source
+        // inventory primitive. Returns rows of [relative-path, line-count].
+        // Form owns classification and aggregation; the kernel only exposes
+        // filesystem walking and text line counts as primitive observation.
+        self.register_native("source_inventory", cat_call(), |_, _, args| {
+            let root = std::path::PathBuf::from(args[0].as_str());
+            let suffix = args[1].as_str().to_string();
+            let skip = source_inventory_skip_set(&args[2]);
+            let root_abs = if root.is_absolute() {
+                root
+            } else {
+                match env::current_dir() {
+                    Ok(cwd) => cwd.join(root),
+                    Err(_) => return Value::Null,
+                }
+            };
+            let mut rows = Vec::new();
+            match source_inventory_walk(&root_abs, &root_abs, &suffix, &skip, &mut rows) {
+                Ok(_) => Value::List(rows.into()),
+                Err(_) => Value::Null,
+            }
+        });
         // random_bytes(n) — open the doorway. Reads n bytes from
         // /dev/urandom every call. Different per invocation, per kernel
         // process. lc-divergence-is-the-doorway: this native intentionally
@@ -3572,6 +4198,53 @@ impl Kernel {
                 }
                 _ => Value::Int(0),
             }
+        });
+        // jit-stats -> list(kind, body-nodeid, count, detail). Sibling observer
+        // shape with Go/TS; Rust currently reports compiled, warming, and
+        // failed bodies, with an empty detail string.
+        self.register_native("jit-stats", cat_witness(), |k, _, _| {
+            let mut rows: Vec<(String, String, i64, String)> = Vec::new();
+            for body in k.jit_compiled.keys() {
+                rows.push((
+                    "compiled".to_string(),
+                    format!("{}.{}.{}.{}", body.pkg, body.level, body.ty, body.inst),
+                    0,
+                    String::new(),
+                ));
+            }
+            for (body, count) in &k.jit_hits {
+                rows.push((
+                    "warming".to_string(),
+                    format!("{}.{}.{}.{}", body.pkg, body.level, body.ty, body.inst),
+                    *count as i64,
+                    String::new(),
+                ));
+            }
+            for body in &k.jit_failed {
+                rows.push((
+                    "compile-failed".to_string(),
+                    format!("{}.{}.{}.{}", body.pkg, body.level, body.ty, body.inst),
+                    1,
+                    String::new(),
+                ));
+            }
+            rows.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
+            Value::List(
+                rows.into_iter()
+                    .map(|(kind, body, count, detail)| {
+                        Value::List(
+                            vec![
+                                Value::Str(kind.into()),
+                                Value::Str(body.into()),
+                                Value::Int(count),
+                                Value::Str(detail.into()),
+                            ]
+                            .into(),
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .into(),
+            )
         });
         // ---- content-addressed maps : O(1) dispatch tables ------------------
         // The substrate's intrinsic advantage made usable: a switch becomes a
@@ -3914,18 +4587,148 @@ impl Kernel {
             }
         });
 
+        // --- Host/runtime cells used by the native HTTP catalog --------
+        self.register_native("volatile_cell_put", cat_call(), |_, _, args| {
+            let coord = volatile_coord(args[0].as_str(), args[1].as_str());
+            let mut table = volatile_table().lock().unwrap();
+            table.cells.insert(
+                coord,
+                VolatileCell {
+                    updated_ms: now_unix_ms_value(),
+                    value: args[2].clone(),
+                },
+            );
+            Value::Int(1)
+        });
+        self.register_native("volatile_cell_get", cat_access(), |_, _, args| {
+            let coord = volatile_coord(args[0].as_str(), args[1].as_str());
+            volatile_table()
+                .lock()
+                .unwrap()
+                .cells
+                .get(&coord)
+                .map(|cell| cell.value.clone())
+                .unwrap_or(Value::Null)
+        });
+        self.register_native("volatile_cell_delete", cat_call(), |_, _, args| {
+            let coord = volatile_coord(args[0].as_str(), args[1].as_str());
+            if volatile_table()
+                .lock()
+                .unwrap()
+                .cells
+                .remove(&coord)
+                .is_some()
+            {
+                Value::Int(1)
+            } else {
+                Value::Int(0)
+            }
+        });
+        self.register_native("volatile_cell_scan_since", cat_access(), |_, _, args| {
+            let namespace = args[0].as_str();
+            let cutoff = args[1].as_int();
+            let prefix = format!("{namespace}\0");
+            let rows = volatile_table()
+                .lock()
+                .unwrap()
+                .cells
+                .iter()
+                .filter(|(coord, cell)| coord.starts_with(&prefix) && cell.updated_ms >= cutoff)
+                .map(|(_, cell)| cell.value.clone())
+                .collect::<Vec<_>>();
+            Value::List(rows.into())
+        });
+        self.register_native("volatile_cell_prune_before", cat_call(), |_, _, args| {
+            let namespace = args[0].as_str();
+            let cutoff = args[1].as_int();
+            let prefix = format!("{namespace}\0");
+            let mut table = volatile_table().lock().unwrap();
+            let before = table.cells.len();
+            table
+                .cells
+                .retain(|coord, cell| !coord.starts_with(&prefix) || cell.updated_ms >= cutoff);
+            Value::Int((before - table.cells.len()) as i64)
+        });
+        self.register_native("repo_root", cat_access(), |_, _, _| {
+            find_repo_root()
+                .map(|path| Value::Str(path.to_string_lossy().to_string().into()))
+                .unwrap_or_else(|_| Value::Str(String::new().into()))
+        });
+        self.register_native("kernel_runtime_name", cat_call(), |_, _, _| {
+            Value::Str("form-kernel-rust".to_string().into())
+        });
+        self.register_native("kernel_started_unix_ms", cat_call(), |_, _, _| {
+            Value::Int(kernel_started_unix_ms_value())
+        });
+        self.register_native("unix_ms_to_iso_utc", cat_call(), |_, _, args| {
+            Value::Str(unix_ms_to_iso_utc(args[0].as_int()).into())
+        });
+        self.register_native("uptime_human", cat_call(), |_, _, args| {
+            Value::Str(uptime_human(args[0].as_int()).into())
+        });
+        self.register_native("config_value_or", cat_call(), |_, _, args| {
+            load_config_value_or(args[0].as_str(), &args[1])
+        });
+        self.register_native("config_database_url", cat_call(), |_, _, _| {
+            match load_configured_database_url() {
+                Ok(url) => {
+                    pg_set_error(None);
+                    Value::Str(url.into())
+                }
+                Err(e) => {
+                    pg_set_error(Some(e));
+                    Value::Str(String::new().into())
+                }
+            }
+        });
+
         // --- Postgres natives — the DB carrier of the storage port ------
         // (pg_connect dsn)        → handle | -1
         // (pg_exec handle sql)    → rows-affected | -1   (DDL / INSERT / UPDATE)
-        // (pg_query handle sql)   → result-string | "ERR" (tab-separated cols,
-        //                            newline-separated rows; "" = zero rows)
+        // (pg_query handle sql params?)   → tab/newline result string | "ERR"
+        // (pg_query_rows handle sql params?) → list of __dict__ rows
         // (pg_close handle)       → 0 | -1
-        // DSN is libpq form: "host=127.0.0.1 port=5432 user=u dbname=d ...".
+        self.register_native("pg_last_error", cat_call(), |_, _, _| {
+            Value::Str(pg_last_error_cell().lock().unwrap().clone().into())
+        });
         self.register_native("pg_connect", cat_call(), |_, _, args| {
-            let dsn = args[0].as_str().to_string();
+            let dsn = args[0].as_str().trim().to_string();
+            if !dsn.starts_with("postgres://") && !dsn.starts_with("postgresql://") {
+                pg_set_error(Some(
+                    "pg_connect: database.url is not a PostgreSQL URL".to_string(),
+                ));
+                return Value::Int(-1);
+            }
             match postgres::Client::connect(&dsn, postgres::NoTls) {
-                Ok(c) => Value::Int(pg_register(c)),
-                Err(_) => Value::Int(-1),
+                Ok(c) => {
+                    pg_set_error(None);
+                    Value::Int(pg_register(c))
+                }
+                Err(e) => {
+                    pg_set_error(Some(e.to_string()));
+                    Value::Int(-1)
+                }
+            }
+        });
+        self.register_native("pg_ping", cat_call(), |_, _, args| {
+            let h = args[0].as_int();
+            let client = match pg_lookup(h) {
+                Some(c) => c,
+                None => {
+                    pg_set_error(Some("pg_ping: unknown connection handle".to_string()));
+                    return Value::Bool(false);
+                }
+            };
+            let mut g = client.lock().unwrap();
+            match g.simple_query("SELECT 1") {
+                Ok(_) => {
+                    pg_set_error(None);
+                    Value::Bool(true)
+                }
+                Err(e) => {
+                    pg_set_error(Some(e.to_string()));
+                    Value::Bool(false)
+                }
             }
         });
         self.register_native("pg_exec", cat_call(), |_, _, args| {
@@ -3933,12 +4736,26 @@ impl Kernel {
             let sql = args[1].as_str().to_string();
             let client = match pg_lookup(h) {
                 Some(c) => c,
-                None => return Value::Int(-1),
+                None => {
+                    pg_set_error(Some("pg_exec: unknown connection handle".to_string()));
+                    return Value::Int(-1);
+                }
             };
+            let params = form_sql_args(args.get(2));
+            let param_refs = params
+                .iter()
+                .map(|p| p.as_ref() as &(dyn postgres::types::ToSql + Sync))
+                .collect::<Vec<_>>();
             let mut g = client.lock().unwrap();
-            match g.execute(&sql, &[]) {
-                Ok(n) => Value::Int(n as i64),
-                Err(_) => Value::Int(-1),
+            match g.execute(&sql, &param_refs) {
+                Ok(n) => {
+                    pg_set_error(None);
+                    Value::Int(n as i64)
+                }
+                Err(e) => {
+                    pg_set_error(Some(e.to_string()));
+                    Value::Int(-1)
+                }
             }
         });
         self.register_native("pg_query", cat_call(), |_, _, args| {
@@ -3946,12 +4763,23 @@ impl Kernel {
             let sql = args[1].as_str().to_string();
             let client = match pg_lookup(h) {
                 Some(c) => c,
-                None => return Value::Str("ERR".to_string().into()),
+                None => {
+                    pg_set_error(Some("pg_query: unknown connection handle".to_string()));
+                    return Value::Str("ERR".to_string().into());
+                }
             };
+            let params = form_sql_args(args.get(2));
+            let param_refs = params
+                .iter()
+                .map(|p| p.as_ref() as &(dyn postgres::types::ToSql + Sync))
+                .collect::<Vec<_>>();
             let mut g = client.lock().unwrap();
-            let rows = match g.query(&sql, &[]) {
+            let rows = match g.query(&sql, &param_refs) {
                 Ok(r) => r,
-                Err(_) => return Value::Str("ERR".to_string().into()),
+                Err(e) => {
+                    pg_set_error(Some(e.to_string()));
+                    return Value::Str("ERR".to_string().into());
+                }
             };
             // Encode rows as tab-separated columns, newline-separated rows.
             // Columns are rendered to text via their SQL type (text/int8/bool
@@ -3968,7 +4796,44 @@ impl Kernel {
                     out.push_str(&pg_cell_to_string(row, ci));
                 }
             }
+            pg_set_error(None);
             Value::Str(out.into())
+        });
+        self.register_native("pg_query_rows", cat_call(), |_, _, args| {
+            let h = args[0].as_int();
+            let sql = args[1].as_str().to_string();
+            let client = match pg_lookup(h) {
+                Some(c) => c,
+                None => {
+                    pg_set_error(Some("pg_query_rows: unknown connection handle".to_string()));
+                    return Value::List(Vec::new().into());
+                }
+            };
+            let params = form_sql_args(args.get(2));
+            let param_refs = params
+                .iter()
+                .map(|p| p.as_ref() as &(dyn postgres::types::ToSql + Sync))
+                .collect::<Vec<_>>();
+            let mut g = client.lock().unwrap();
+            let rows = match g.query(&sql, &param_refs) {
+                Ok(r) => r,
+                Err(e) => {
+                    pg_set_error(Some(e.to_string()));
+                    return Value::List(Vec::new().into());
+                }
+            };
+            let mut out = Vec::new();
+            for row in rows.iter() {
+                let mut pairs = Vec::with_capacity(row.len() * 2 + 1);
+                pairs.push(Value::Str("__dict__".to_string().into()));
+                for (ci, col) in row.columns().iter().enumerate() {
+                    pairs.push(Value::Str(col.name().to_string().into()));
+                    pairs.push(pg_cell_to_value(row, ci));
+                }
+                out.push(Value::List(pairs.into()));
+            }
+            pg_set_error(None);
+            Value::List(out.into())
         });
         self.register_native("pg_close", cat_call(), |_, _, args| {
             let h = args[0].as_int();
@@ -3976,8 +4841,10 @@ impl Kernel {
                 return Value::Int(-1);
             }
             if pg_drop(h) {
+                pg_set_error(None);
                 Value::Int(0)
             } else {
+                pg_set_error(Some("pg_close: unknown connection handle".to_string()));
                 Value::Int(-1)
             }
         });
@@ -4496,12 +5363,7 @@ impl Kernel {
         // every kernel's int is > a recent past epoch — but the exact
         // milliseconds diverge between invocations. Bands check shape only.
         self.register_native("now_unix_ms", cat_call(), |_, _, _| {
-            use std::time::{SystemTime, UNIX_EPOCH};
-            let ms = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .map(|d| d.as_millis() as i64)
-                .unwrap_or(0);
-            Value::Int(ms)
+            Value::Int(now_unix_ms_value())
         });
 
         // No Form category claimed — `trace` is a debug surface, honest
@@ -4638,7 +5500,6 @@ impl EmittedExpr {
             EmittedExpr::Int(s) => format!("(({}) != 0i64)", s),
         }
     }
-
 }
 
 /// Tracks compile-time scope while emitting. `vars` maps NameID → Rust
@@ -5303,6 +6164,117 @@ fn jit_dispatch(jc: &JitCompiled, args: &[Value]) -> Option<Value> {
 // Walker — full RBasic dispatch
 // ---------------------------------------------------------------------------
 
+fn is_switch_default_pattern(k: &Kernel, pattern: NodeID) -> bool {
+    if pattern.level == LEVEL_TRIVIAL {
+        return false;
+    }
+    let cat = k.category(pattern);
+    cat.ty == RB_IDENT && k.name_str(k.ident_id(pattern)) == "_"
+}
+
+fn switch_table_for(k: &mut Kernel, node: NodeID, kids: &[NodeID]) -> SwitchTable {
+    if let Some(table) = k.switch_tables.get(&node) {
+        return table.clone();
+    }
+    let mut table = SwitchTable::default();
+    for i in (1..kids.len()).step_by(2) {
+        let pattern = kids[i];
+        let body = kids[i + 1];
+        if is_switch_default_pattern(k, pattern) {
+            table.default_body = Some(body);
+        } else if pattern.level == LEVEL_TRIVIAL {
+            table.cases.insert(pattern, body);
+        } else {
+            table.dynamic_arms.push(SwitchArm { pattern, body });
+        }
+    }
+    k.switch_tables.insert(node, table.clone());
+    table
+}
+
+fn switch_key_from_value(k: &mut Kernel, v: &Value) -> Option<NodeID> {
+    match v {
+        Value::Null => Some(NodeID {
+            pkg: 1,
+            level: LEVEL_TRIVIAL,
+            ty: TRIV_NULL,
+            inst: 0,
+        }),
+        Value::Int(n) => Some(k.intern_trivial_int(*n)),
+        Value::Float(f) => Some(k.intern_trivial_float64(*f)),
+        Value::Str(s) => Some(k.intern_string(s)),
+        Value::Bool(b) => Some(NodeID {
+            pkg: 1,
+            level: LEVEL_TRIVIAL,
+            ty: TRIV_BOOL,
+            inst: if *b { 1 } else { 0 },
+        }),
+        Value::Nid(nid) => Some(*nid),
+        _ => None,
+    }
+}
+
+fn value_equal(a: &Value, b: &Value) -> bool {
+    match (a, b) {
+        (Value::Null, Value::Null) => true,
+        (Value::Int(x), Value::Int(y)) => x == y,
+        (Value::Float(x), Value::Float(y)) => x == y,
+        (Value::Str(x), Value::Str(y)) => x == y,
+        (Value::Bool(x), Value::Bool(y)) => x == y,
+        (Value::Nid(x), Value::Nid(y)) => x == y,
+        (Value::List(xs), Value::List(ys)) => {
+            xs.len() == ys.len() && xs.iter().zip(ys.iter()).all(|(x, y)| value_equal(x, y))
+        }
+        _ => false,
+    }
+}
+
+fn walk_match_switch(
+    k: &mut Kernel,
+    a: &mut Arena,
+    node: NodeID,
+    kids: &[NodeID],
+    env: FrameId,
+) -> Value {
+    if kids.len() < 1 || (kids.len() - 1) % 2 != 0 {
+        panic!("match: SWITCH expects scrutinee plus pattern/body pairs");
+    }
+    if let Some(t) = &mut k.trace {
+        t.record_match_lookup();
+    }
+    let scrutinee = walk(k, a, kids[0], env);
+    let table = switch_table_for(k, node, kids);
+    if let Some(key) = switch_key_from_value(k, &scrutinee) {
+        if let Some(body) = table.cases.get(&key).copied() {
+            if let Some(t) = &mut k.trace {
+                t.record_match_hit();
+            }
+            return walk(k, a, body, env);
+        }
+    }
+    for arm in table.dynamic_arms {
+        if value_equal(&walk(k, a, arm.pattern, env), &scrutinee) {
+            if let Some(t) = &mut k.trace {
+                t.record_match_hit();
+            }
+            return walk(k, a, arm.body, env);
+        }
+    }
+    if let Some(body) = table.default_body {
+        if let Some(t) = &mut k.trace {
+            t.record_match_default();
+        }
+        return walk(k, a, body, env);
+    }
+    if let Some(t) = &mut k.trace {
+        t.record_match_miss();
+    }
+    panic!(
+        "match: exhausted without a matching arm for {}",
+        scrutinee.display()
+    );
+}
+
 // walk — public entry. Wraps walk_inner with stack-discipline frame
 // reclamation: the frames pushed during this call are popped on return, unless
 // a closure was created (it captures a FrameId, so its frames must survive).
@@ -5433,6 +6405,13 @@ fn walk_inner(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
                     continue;
                 } else {
                     Value::Null
+                }
+            }
+            RB_MATCH => {
+                if cat.inst == RMATCH_SWITCH {
+                    walk_match_switch(k, a, n, &kids, env)
+                } else {
+                    Value::Nid(n)
                 }
             }
             RB_BLOCK => {
@@ -6012,6 +6991,7 @@ fn build_verb(k: &mut Kernel, verb: &str, args: Vec<NodeID>) -> NodeID {
         "and" => k.intern(cat_logic(RLOG_AND), args),
         "or" => k.intern(cat_logic(RLOG_OR), args),
         "not" => k.intern(cat_logic(RLOG_NOT), args),
+        "match" => k.intern(cat_match(RMATCH_SWITCH), args),
         "defn" => {
             // (defn <name> (<params>...) <body>) — repackage name + params
             // as bare string trivials so the walker reads `inst` as NameID.
@@ -6083,6 +7063,14 @@ fn cat_block(inst: u32) -> NodeID {
         pkg: 1,
         level: LEVEL_BASIC,
         ty: RB_BLOCK,
+        inst,
+    }
+}
+fn cat_match(inst: u32) -> NodeID {
+    NodeID {
+        pkg: 1,
+        level: LEVEL_BASIC,
+        ty: RB_MATCH,
         inst,
     }
 }
@@ -6401,7 +7389,7 @@ Subcommands:
   query <path>                         parse any file as a Form object tree
   trace [--expr \"...\" | <file.fk>]     run with arm-dispatch tracing
   fetch <url>                          GET a URL (network resource)
-  serve --port <p> --routes <file> [--upstream <base-url>] [--stdlib <dir>]\n                                       kernel front-door router: native Form handlers\n                                       for listed paths, fan-out to the Python upstream\n                                       for the rest. --routes may be raw S-expression\n                                       Form or a source-authored `section [...]`\n                                       manifest (source-compiled at load via --stdlib,\n                                       default form-stdlib)
+  serve --port <p> --routes <file> [--upstream <base-url>] [--stdlib <dir>] [--config <path>]\n                                       kernel front-door router: native Form handlers\n                                       for listed paths, fan-out to the Python upstream\n                                       for the rest. --routes may be raw S-expression\n                                       Form or a source-authored `section [...]`\n                                       manifest (source-compiled at load via --stdlib,\n                                       default form-stdlib)
 
 Source adapter modes:
   <file.fk> [more.fk ...]              run .fk files
@@ -6465,6 +7453,7 @@ struct RouteSpec {
     required_header: String,
     pressure_budget: i64,
     handler: Arc<Closure>,
+    typed_request: bool,
 }
 
 type RouteSpecs = Vec<RouteSpec>;
@@ -6923,6 +7912,7 @@ fn parse_kernel_http_route_meta(
         required_header,
         pressure_budget,
         handler,
+        typed_request: true,
     })
 }
 
@@ -6954,6 +7944,7 @@ fn parse_kernel_http_route_data_ref(
         required_header: data.required_header.clone(),
         pressure_budget: data.pressure_budget,
         handler,
+        typed_request: true,
     })
 }
 
@@ -6990,6 +7981,7 @@ fn parse_route_spec(
                     required_header: String::new(),
                     pressure_budget: 40,
                     handler,
+                    typed_request: false,
                 })
             }
             _ => Err("route key must be a string path".to_string()),
@@ -7440,10 +8432,15 @@ fn handle_request(
                 .map(|(k, v)| Value::List(vec![Value::Str(k.clone().into()), v.clone()].into()))
                 .collect(),
         ));
+        let request_arg = if route.typed_request {
+            router_http_request_value(&selection.candidate)
+        } else {
+            q_alist
+        };
         let cl = route.handler.clone();
         let call_frame = arena.new_frame_with_capacity(Some(cl.env), cl.params.len());
         if cl.params.len() == 1 {
-            arena.bind(call_frame, cl.params[0], q_alist);
+            arena.bind(call_frame, cl.params[0], request_arg);
         } else if cl.params.len() != 0 {
             let status = "500 Internal Server Error".to_string();
             let body = format!(
@@ -7876,8 +8873,13 @@ const SOURCE_COMPILE_PRELUDES: [&str; 7] = [
 // same Form Recipe object as the manifest in this order. That keeps the runtime
 // carrier explicit: source entry plus Form stdlib language model yields one
 // executable Recipe object whose walk binds KernelHTTPRoute cells.
-const SOURCE_ROUTE_LANGUAGE_PRELUDES: [&str; 3] =
-    ["core.fk", "kernel-http.fk", "language-model.fk"];
+const SOURCE_ROUTE_LANGUAGE_PRELUDES: [&str; 5] = [
+    "json.fk",
+    "core.fk",
+    "sha256.fk",
+    "kernel-http.fk",
+    "language-model.fk",
+];
 
 // A routes manifest is source-authored (vs raw S-expression) iff it opens a
 // `section [...]` block — the source-compiler's own section marker. The check
@@ -8672,6 +9674,14 @@ fn cli_serve(args: &[String]) -> i32 {
                     return 2;
                 }
                 stdlib_dir = args[i + 1].clone();
+                i += 2;
+            }
+            "--config" => {
+                if i + 1 >= args.len() {
+                    eprintln!("serve: --config requires a path argument");
+                    return 2;
+                }
+                set_rust_kernel_config_path(args[i + 1].clone());
                 i += 2;
             }
             other => {
@@ -10125,6 +11135,7 @@ mod router_context_tests {
             required_header: required_header.to_string(),
             pressure_budget,
             handler: test_closure(priority as u32 + 1),
+            typed_request: false,
         }
     }
 
@@ -10323,6 +11334,7 @@ mod route_spec_tests {
             required_header: required_header.to_string(),
             pressure_budget,
             handler: test_closure(priority as u32 + 1),
+            typed_request: false,
         }
     }
 

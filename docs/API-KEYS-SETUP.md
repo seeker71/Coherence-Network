@@ -187,7 +187,7 @@ The provider readiness contract checks required provider configuration every 6 h
 - Required validation providers variable: `AUTOMATION_PROVIDER_VALIDATION_REQUIRED` (comma-separated)
 
 Default validation set:
-- `coherence-internal,openai-codex,github,railway,claude`
+- `coherence-internal,openai-codex,github,hostinger,claude`
 - Active-provider key policy: `AUTOMATION_REQUIRE_KEYS_FOR_ACTIVE_PROVIDERS=1` (default)
   - Any provider observed in runtime usage is treated as required and must have its API key/config present.
 
@@ -202,11 +202,9 @@ GITHUB_TOKEN=
 GITHUB_BILLING_OWNER=
 GITHUB_BILLING_SCOPE=org
 
-# Railway deploy health automation
-RAILWAY_TOKEN=
-RAILWAY_PROJECT_ID=
-RAILWAY_ENVIRONMENT=
-RAILWAY_SERVICE=
+# Hostinger deploy health automation
+HOSTINGER_API_TOKEN=
+HOSTINGER_VIRTUAL_MACHINE_ID=
 
 # OpenClaw usage tracking
 OPENCLAW_API_KEY=

@@ -11,9 +11,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 # The transmuted-endpoint recipes the live API loads at request time
 # (api/app/routers/kernel_*.py → serve_via_kernel). They are the deployable
 # artifact the prod kernel reads; if they are missing from the image,
-# load_recipe raises FileNotFoundError and the endpoints silently degrade to
-# python-fallback (correct values, but NOT kernel-served). These tests are the
-# regression guard against an image that drops the recipes.
+# load_recipe raises FileNotFoundError and the endpoint fails loudly rather
+# than executing Python. These tests are the regression guard against an image
+# that drops the recipes.
 _ENDPOINT_RECIPES = (
     "endpoint_coherence_weight_demo.fk",
     "endpoint_nodeid_distance_demo.fk",
@@ -75,8 +75,8 @@ def test_transmuted_endpoint_recipes_are_git_tracked() -> None:
     They are gitignored as a class (`*.fk`) but un-ignored individually via
     `!` negations in examples/.gitignore. If a future change drops a negation,
     the recipe falls out of version control, never reaches the image, and the
-    endpoint degrades to python-fallback. Asserting tracked-ness catches that
-    even in a CI env with no kernel to actually run them.
+    endpoint fails at request time. Asserting tracked-ness catches that even in
+    a CI env with no kernel to actually run them.
     """
     recipe_dir = REPO_ROOT / _RECIPE_DIR_REL
     tracked = set(

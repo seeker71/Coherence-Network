@@ -1,9 +1,10 @@
 """Transmuted /api/utils NodeID + coherence-weight endpoints (bodies run as Form recipes).
 
-Bodies live as Form recipes; the route prefers the native kernel via
-``serve_via_kernel`` and falls back to the value-identical Python ``_py``
-function. Routes decorate the shared ``/utils`` router from
-``app.routers.kernel_shared`` so every path stays ``/api/utils/...``.
+Bodies live as Form recipes; the route requires the native kernel via
+``serve_via_kernel``. This module owns request binding and response shaping;
+the endpoint arithmetic lives in the committed Form recipes. Routes decorate
+the shared ``/utils`` router from ``app.routers.kernel_shared`` so every path
+stays ``/api/utils/...``.
 """
 from __future__ import annotations
 
@@ -27,43 +28,11 @@ from app.routers.kernel_shared import (
 # with position-based decay (100×, 50×, 25×, then 10×) and add a 100×
 # bonus per above-threshold count.
 #
-# This Python function is the *fallback*; the *primary* runtime is the
-# Form recipe compiled from
+# The runtime path is the Form recipe compiled from
 # form/form-kernel-ts/seedbank/python-adapter/examples/
-# endpoint_coherence_weight_demo.py. The parity_suite guarantees they
-# return the same integer for the same inputs.
+# endpoint_coherence_weight_demo.py. The parity_suite anchors the canonical
+# result across the source example and kernel siblings.
 # ---------------------------------------------------------------------------
-
-
-def _weighted_score_py(value: int, position: int) -> int:
-    if position == 0:
-        return value * 100
-    if position == 1:
-        return value * 50
-    if position == 2:
-        return value * 25
-    return value * 10
-
-
-def _coherence_score_py(values: list[int], threshold: int) -> int:
-    total = 0
-    position = 0
-    for v in values:
-        if v >= threshold:
-            total = total + _weighted_score_py(v, position)
-            position = position + 1
-    return total
-
-
-def _count_above_py(values: list[int], threshold: int) -> int:
-    return sum(1 for v in values if v >= threshold)
-
-
-def coherence_weight_py(values: list[int], threshold: int) -> int:
-    """Python fallback — semantically identical to the Form recipe."""
-    above = _count_above_py(values, threshold)
-    coherence = _coherence_score_py(values, threshold)
-    return above * 100 + coherence
 
 
 class CoherenceWeightResponse(BaseModel):
@@ -75,7 +44,7 @@ class CoherenceWeightResponse(BaseModel):
     threshold: Annotated[int, Field(description="Input threshold, echoed back")]
     runtime: Annotated[
         str,
-        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
+        Field(description="Which kernel carrier computed the answer — 'inline' or 'subprocess'"),
     ]
 
 
@@ -87,10 +56,9 @@ class CoherenceWeightResponse(BaseModel):
         "First transmutation gesture: the body of this endpoint is a Form "
         "recipe compiled from "
         "form/form-kernel-ts/seedbank/python-adapter/examples/"
-        "endpoint_coherence_weight_demo.py. When form-kernel-rust is "
-        "available the request shells into the native binary; otherwise "
-        "the semantically-identical Python fallback runs. Three-way "
-        "parity (CPython, TS, Rust) is the regression gate."
+        "endpoint_coherence_weight_demo.py. The request must run through a "
+        "Form-kernel carrier. Three-way parity (source example, TS, Rust) is "
+        "the regression gate."
     ),
 )
 async def coherence_weight(
@@ -104,7 +72,6 @@ async def coherence_weight(
     weight, runtime = serve_via_kernel(
         "endpoint_coherence_weight_demo.fk",
         bindings={"values": parsed, "threshold": threshold},
-        fallback=lambda: coherence_weight_py(parsed, threshold),
         parse=int,
     )
     return CoherenceWeightResponse(
@@ -124,20 +91,6 @@ async def coherence_weight(
 # signal — useful for "what's near this cell?" without a graph traversal.
 # ---------------------------------------------------------------------------
 
-
-def nodeid_distance_py(
-    a_pkg: int, a_lvl: int, a_type: int, a_inst: int,
-    b_pkg: int, b_lvl: int, b_type: int, b_inst: int,
-) -> int:
-    """Python fallback — semantically identical to the Form recipe."""
-    return (
-        abs(a_pkg - b_pkg)
-        + abs(a_lvl - b_lvl)
-        + abs(a_type - b_type)
-        + abs(a_inst - b_inst)
-    )
-
-
 class NodeIdDistanceResponse(BaseModel):
     """GET /api/utils/nodeid_distance response."""
 
@@ -147,7 +100,7 @@ class NodeIdDistanceResponse(BaseModel):
     b: Annotated[list[int], Field(description="NodeID b as [package, level, type, instance]")]
     runtime: Annotated[
         str,
-        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
+        Field(description="Which kernel carrier computed the answer — 'inline' or 'subprocess'"),
     ]
 
 
@@ -159,7 +112,7 @@ class NodeIdDistanceResponse(BaseModel):
         "Pure-computation endpoint, body transmuted to a Form recipe. "
         "Returns sum of absolute differences across the four NodeID "
         "coordinates (package, level, type, instance). Same shape as "
-        "coherence_weight — kernel-or-fallback served by serve_via_kernel."
+        "coherence_weight — kernel-only served by serve_via_kernel."
     ),
 )
 async def nodeid_distance(
@@ -178,9 +131,6 @@ async def nodeid_distance(
             "a_pkg": a_pkg, "a_lvl": a_lvl, "a_type": a_type, "a_inst": a_inst,
             "b_pkg": b_pkg, "b_lvl": b_lvl, "b_type": b_type, "b_inst": b_inst,
         },
-        fallback=lambda: nodeid_distance_py(
-            a_pkg, a_lvl, a_type, a_inst, b_pkg, b_lvl, b_type, b_inst,
-        ),
         parse=int,
     )
     return NodeIdDistanceResponse(
@@ -202,20 +152,6 @@ async def nodeid_distance(
 # structurally interchangeable. Body transmuted to a Form recipe.
 # ---------------------------------------------------------------------------
 
-
-def nodeid_compatibility_py(
-    a_pkg: int, a_lvl: int, a_type: int, a_inst: int,
-    b_pkg: int, b_lvl: int, b_type: int, b_inst: int,
-) -> int:
-    """Python fallback — semantically identical to the Form recipe."""
-    return (
-        int(a_pkg == b_pkg)
-        + int(a_lvl == b_lvl)
-        + int(a_type == b_type)
-        + int(a_inst == b_inst)
-    )
-
-
 class NodeIdCompatibilityResponse(BaseModel):
     """GET /api/utils/nodeid_compatibility response."""
 
@@ -227,7 +163,7 @@ class NodeIdCompatibilityResponse(BaseModel):
     b: Annotated[list[int], Field(description="NodeID b as [package, level, type, instance]")]
     runtime: Annotated[
         str,
-        Field(description="Which runtime computed the answer — 'inline', 'subprocess', or 'python-fallback'"),
+        Field(description="Which kernel carrier computed the answer — 'inline' or 'subprocess'"),
     ]
 
 
@@ -239,8 +175,8 @@ class NodeIdCompatibilityResponse(BaseModel):
         "Pure-computation endpoint, body transmuted to a Form recipe. "
         "Returns how many of the four NodeID coordinates (package, level, "
         "type, instance) two cells share — the cheapest structural-"
-        "interchangeability signal. Kernel-or-fallback via serve_via_kernel; "
-        "three-way parity (CPython, TS, Rust) is the gate."
+        "interchangeability signal. Kernel-only via serve_via_kernel; "
+        "three-way parity (source example, TS, Rust) is the gate."
     ),
 )
 async def nodeid_compatibility(
@@ -259,9 +195,6 @@ async def nodeid_compatibility(
             "a_pkg": a_pkg, "a_lvl": a_lvl, "a_type": a_type, "a_inst": a_inst,
             "b_pkg": b_pkg, "b_lvl": b_lvl, "b_type": b_type, "b_inst": b_inst,
         },
-        fallback=lambda: nodeid_compatibility_py(
-            a_pkg, a_lvl, a_type, a_inst, b_pkg, b_lvl, b_type, b_inst,
-        ),
         parse=int,
     )
     return NodeIdCompatibilityResponse(

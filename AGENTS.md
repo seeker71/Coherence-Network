@@ -28,6 +28,7 @@ When the user asks to use Coherence guidance on another local or public reposito
 - **Affirmative voice.** Describe what IS in user-facing copy and content.
 - **Each breath whole.** Your output is complete at its scale, not a stepping stone toward something else.
 - **Form before parallel machinery.** When a shape wants code, check whether the substrate, Form, a port, or an existing route can carry it before adding another system beside the body.
+- **Lift hot repetition.** When introspection shows repeated low-level recipes, JIT misses, carrier friction, static edges, or route hot-path pressure, ask which generic Form/BML blueprint, grammar, recipe, or cell wants to exist so the next occurrence is simpler.
 - **Coordinate before label.** Names help humans arrive; source, NodeIDs, routes, tests, witness readings, and returned traces carry structural truth.
 - **Resonance stays honest through evidence.** Name what is observed, inferred, directly experienced, mysterious, and measured; do not flatten one into another.
 - **Shared breath.** Center on where the work lives. Ground what can be known. Harmonize the same shape across the needed doors. Return an attributed trace.
@@ -39,7 +40,7 @@ The operational guide below gives the next-command shape for shipping safely. Th
 
 ## Project Summary
 
-Coherence Network is an open intelligence organism: ideas, people, agents, source files, runtime proof, teachings, and value flows share one inspectable body. Tech stack: FastAPI (Python) API, Next.js 16 web (web/), Neo4j + PostgreSQL, plus Form/substrate kernels in Python, Rust, Go, and TypeScript.
+Coherence Network is an open intelligence organism: ideas, people, agents, source files, runtime proof, teachings, and value flows share one inspectable body. The architectural center is Form-native: grammar → recipes/cells → sibling kernels → observed route/runtime proof. Current stack: Form/substrate kernels in Rust, Go, and TypeScript, BML/domain route catalogs, Next.js 16 web (web/), Neo4j + PostgreSQL. The `api/` service is the compatibility bridge while routes and handlers are promoted into Form-native tissue.
 
 ## Workflow
 
@@ -56,6 +57,7 @@ Spec → Test → Implement → CI → Review → Merge
 - User-defined deploy flow: when the user asks to deploy, take the shortest end-to-end path that still produces proof: prompt guide, rebase, local proof, evidence validation, push/PR, checks, merge, deploy, public verify.
 - Self-heal rule: when a non-critical failure appears in the chain, repair the concrete failure, rerun the smallest proof command, and continue. Return the exact external blocker plus remediations already applied only when the chain genuinely cannot proceed.
 - Guides are the living instructions; checks are body readings. When a repeated check teaches the same correction, move that awareness into the guide or runtime and keep the check only as the smallest evidence readout that still helps.
+- Hot paths deserve the most tenderness: route traces, JIT misses, repeated carrier lenses, and low-level recipe clusters are invitations to lift a generic abstraction, then prove it with the smallest Form/BML band or native route trace.
 
 1. Worktree-only execution
    - Implementation runs in worktrees; the primary workspace stays read-only.
@@ -162,6 +164,7 @@ Spec → Test → Implement → CI → Review → Merge
 - `docs/PIPELINE-MONITORING-AUTOMATED.md` — Automated monitor: check issues, react, improve
 - `docs/META-QUESTIONS.md` — Questions to validate setup, monitoring, effectiveness; catch misconfigurations
 - `docs/RUNBOOK.md` — Log locations, restart, pipeline recovery
+- `docs/PRODUCTION-SUBSTRATE.md` — Current Hostinger/VPS topology, internal Postgres credential carriers, and native-kernel DB probe path
 - `docs/PR-CHECK-FAILURE-TRIAGE.md` — PR check failure detection, auto-retry, remediation mapping
 - `docs/DEPLOY.md` — Deploy checklist
 - `docs/GLOSSARY.md` — Terms (coherence, backlog, pipeline)
@@ -268,7 +271,7 @@ PIPELINE_AUTO_RECOVER=1 ./scripts/run_overnight_pipeline_watchdog.sh
 - Suggested full deployment flow:
   - `./scripts/verify_worktree_local_web.sh` (local API+web contract)
   - `./scripts/verify_web_api_deploy.sh` (public API+web contract + CORS)
-  - For automated long-running instances, rely on `.github/workflows/public-deploy-contract.yml` (schedule + on-push) and keep `RAILWAY_*` + `GITHUB_TOKEN` secrets set so retries and reporting survive process restarts.
+  - For automated long-running instances, rely on `.github/workflows/public-deploy-contract.yml` plus `hostinger-auto-deploy.yml`; keep Hostinger deploy secrets/vars and `GITHUB_TOKEN` configured so retries and reporting survive process restarts.
 - Keep cost pressure controlled:
   - Set per-task budget inputs where possible (`max_cost_usd`, `estimated_cost_usd`) and environment budgets (`AGENT_TASK_MAX_COST_USD`).
   - Enforce an internal rule to use <=1/3 of known 8h/week usage windows for a single loop before escalation.
@@ -398,7 +401,7 @@ Configure `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_IDS`, `TELEGRAM_ALLOWED_USER_IDS`
 
 | Service | Command | Port | Notes |
 |---------|---------|------|-------|
-| FastAPI API | `cd api && .venv/bin/uvicorn app.main:app --reload --port 8000` | 8000 | Core backend; uses in-memory store when no `DATABASE_URL` is set |
+| Python bridge API | `cd api && .venv/bin/uvicorn app.main:app --reload --port 8000` | 8000 | Compatibility upstream and current public carrier for routes not yet served by the Form-native front door; local dev can run without external DB; production config is file-backed on Hostinger |
 | Next.js Web | `cd web && npm run dev` | 3000 | Requires `NEXT_PUBLIC_API_URL=http://localhost:8000` in `web/.env.local` |
 
 ### Gotchas

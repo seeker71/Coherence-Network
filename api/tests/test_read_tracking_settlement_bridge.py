@@ -13,7 +13,7 @@ every content read without manual seeding. The four tests here cover:
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import datetime, timezone
 from decimal import Decimal
 
 import pytest
@@ -24,6 +24,10 @@ from app.services import (
     render_attribution_service,
     settlement_service,
 )
+
+
+def _utc_today():
+    return datetime.now(timezone.utc).date()
 
 
 @pytest.fixture(autouse=True)
@@ -88,7 +92,7 @@ def test_settlement_aggregates_reads_after_record_read():
             cc_amount=0.10,
         )
 
-    today = date.today()
+    today = _utc_today()
     events = list(_EVENTS.values())
     batch = settlement_service.run_daily_settlement(
         batch_date=today,

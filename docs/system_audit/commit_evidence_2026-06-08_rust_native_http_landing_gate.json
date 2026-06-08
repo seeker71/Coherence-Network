@@ -1,0 +1,156 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/native-http-stack-architecture-20260604",
+  "commit_scope": "Repair and prove the Rust native HTTP front-door gate before landing the native HTTP cutover",
+  "files_owned": [
+    ".github/workflows/thread-gates.yml",
+    "api/app/services/form_kernel_bridge.py",
+    "api/tests/test_federation_value_flow_e2e.py",
+    "api/tests/test_read_tracking_settlement_bridge.py",
+    "api/tests/test_story_protocol_e2e.py",
+    "api/tests/test_substrate_kernel_parity.py",
+    "form/form-kernel-rust/src/main.rs",
+    "form/form-stdlib/form-ontology-loader.fk",
+    "docs/system_audit/commit_evidence_2026-06-08_rust_native_http_landing_gate.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form/form-kernel-rust && cargo fmt --check",
+      "cd form/form-kernel-rust && cargo build --release",
+      "cd form/form-kernel-rust && cargo test",
+      "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --port 19108 --routes ../../deploy/front-door/api.bml --stdlib ../form-stdlib",
+      "curl -i --max-time 10 http://127.0.0.1:19108/api/health",
+      "curl -i --max-time 15 'http://127.0.0.1:19108/api/gates/main-head?repo=seeker71/Coherence-Network&branch=main&timeout_seconds=6'",
+      "cd api && COHERENCE_TEST_SUITE=full pytest -q",
+      "cd api && ruff check app/services/form_kernel_bridge.py tests/test_substrate_kernel_parity.py tests/test_read_tracking_settlement_bridge.py tests/test_story_protocol_e2e.py tests/test_federation_value_flow_e2e.py"
+    ],
+    "summary": "The first Rust serve proof failed on GET /api/health because api.bml called kernel_started_unix_ms and the Rust carrier did not register it. A second proof failed on json-node-pair because Rust did not load the same route-language preludes as Go. A third proof failed on value_kind, and /api/gates/main-head then exposed the legacy alist request binding. After rebasing onto current main, cargo test exposed a source compiler bootstrap gap: FORM-CATEGORY-TABLE did not include match even though source-compiler now binds fsc-rec-MATCH-CAT. Rust now registers the host/runtime/config/volatile-cell/DB/http_get/value_kind carrier set needed by the BML front-door catalog, loads the Go-aligned route preludes, marks KernelHTTPRoute rows as typed_request, binds a KernelHTTPRequest value for BML handlers, and includes match in the bootstrap form ontology loader. cargo test passed with 46 tests. The final release listener returned HTTP/1.1 200 OK with X-Form-Router: native-kernel for GET /api/health and GET /api/gates/main-head; health reported kernel_runtime=form-kernel-rust and main-head returned live sha d1072fbb5de40fd003b8f6677c18503fe951557a."
+  },
+  "known_failed_attempts": [
+    {
+      "command": "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --port 19104 --routes ../../deploy/front-door/api.bml --stdlib ../form-stdlib; curl http://127.0.0.1:19104/api/health",
+      "failure": "Rust listener accepted the route but dropped the connection with 'form-kernel-rust: unbound function: kernel_started_unix_ms'."
+    },
+    {
+      "command": "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --port 19104 --routes ../../deploy/front-door/api.bml --stdlib ../form-stdlib; curl http://127.0.0.1:19104/api/health",
+      "failure": "After host runtime natives were added, Rust dropped the connection with 'form-kernel-rust: unbound function: json-node-pair' because the route-language prelude set was missing json.fk."
+    },
+    {
+      "command": "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --port 19104 --routes ../../deploy/front-door/api.bml --stdlib ../form-stdlib; curl http://127.0.0.1:19104/api/health",
+      "failure": "After prelude alignment, Rust dropped the connection with 'form-kernel-rust: unbound function: value_kind'."
+    },
+    {
+      "command": "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --port 19105 --routes ../../deploy/front-door/api.bml --stdlib ../form-stdlib; curl 'http://127.0.0.1:19105/api/gates/main-head?repo=seeker71/Coherence-Network&branch=main&timeout_seconds=6'",
+      "failure": "GET /api/gates/main-head dropped the connection with 'form-kernel-rust: as_str: Null' because Rust bound the legacy alist request shape to a BML KernelHTTPRoute handler."
+    },
+    {
+      "command": "cd form/form-kernel-rust && cargo test",
+      "failure": "After rebasing onto current main, source_route_manifest_compiles_to_recipe_object_program failed with 'as_int: Null' because source-compiler.fk bound fsc-rec-MATCH-CAT but FORM-CATEGORY-TABLE did not include the match category."
+    },
+    {
+      "command": "GitHub Actions Thread Gates / Run API tests: cd api && COHERENCE_TEST_SUITE=full pytest -q",
+      "failure": "PR #2632 failed in CI because API tests now require the Rust carrier, but the workflow did not build form/form-kernel-rust/target/release/form-kernel-rust before running pytest. The workflow now builds the Rust release binary and smoke-serves GET /api/health through native-kernel before API tests."
+    },
+    {
+      "command": "GitHub Actions Thread Gates / Run API tests: cd api && COHERENCE_TEST_SUITE=full pytest -q",
+      "failure": "After the Rust carrier build/serve gate passed in CI, the full API suite exposed six legacy route calls still passing fallback= to serve_via_kernel and one stale parity assertion expecting http_get to return null on connection refusal. The bridge now accepts fallback= as a non-executed compatibility argument, and the parity test now asserts the structured status_code=0 error dict."
+    },
+    {
+      "command": "cd api && COHERENCE_TEST_SUITE=full pytest -q",
+      "failure": "The local full-suite rerun in Asia/Makassar crossed the UTC day boundary: settlement tests used local date.today() while render events are timestamped in UTC, so the batch selected the next local day and saw zero reads. The settlement e2e tests now request datetime.now(timezone.utc).date(), matching event timestamps and CI."
+    }
+  ],
+  "ci_validation": {
+    "status": "pending",
+    "reason": "Initial PR #2632 Thread Gates failed because the Rust release binary was absent in CI. .github/workflows/thread-gates.yml now builds form-kernel-rust --release and smoke-serves /api/health before running the full API suite; the amended PR rerun remains pending."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No production deploy has run yet for the landing commit. The proof is a local release Rust listener serving the BML front-door catalog."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local Rust build, tests, and native HTTP serve proof passed; CI now has an explicit Rust build/serve gate and must pass on the amended branch before merge."
+  },
+  "idea_ids": [
+    "native-kernel-http-front-door",
+    "form-native-runtime"
+  ],
+  "spec_ids": [
+    "form-native-http-stack"
+  ],
+  "task_ids": [
+    "native-http-cutover-landing",
+    "rust-native-http-serve-gate"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "landing"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "GPT-5"
+  },
+  "evidence_refs": [
+    "cargo build --release completed for form-kernel-rust with only existing dead-code warnings.",
+    "cargo test completed for form-kernel-rust: 46 passed, 0 failed.",
+    "Full API suite completed locally in CI mode: 2465 passed, 3 skipped.",
+    "GET /api/health through the Rust release listener returned 200, Content-Type application/json, X-Form-Router native-kernel, and body kernel_runtime=form-kernel-rust.",
+    "GET /api/gates/main-head through the Rust release listener returned 200, Content-Type application/json, X-Form-Router native-kernel, and body repo/branch/sha from the live GitHub branch API.",
+    "Thread Gates now builds the Rust release binary and smoke-serves GET /api/health through native-kernel before running API tests."
+  ],
+  "change_files": [
+    ".github/workflows/thread-gates.yml",
+    "api/app/services/form_kernel_bridge.py",
+    "api/tests/test_federation_value_flow_e2e.py",
+    "api/tests/test_read_tracking_settlement_bridge.py",
+    "api/tests/test_story_protocol_e2e.py",
+    "api/tests/test_substrate_kernel_parity.py",
+    "form/form-kernel-rust/src/main.rs",
+    "form/form-stdlib/form-ontology-loader.fk",
+    "docs/system_audit/commit_evidence_2026-06-08_rust_native_http_landing_gate.json",
+    "api/data/coherence.db",
+    "docs/API-KEYS-SETUP.md",
+    "docs/CURSOR-CLI.md",
+    "docs/DEPLOY.md",
+    "docs/DEPLOYMENT-CHECKLIST.md",
+    "docs/LOCAL-TOOL-GUARD.md",
+    "docs/PIPELINE-MONITORING-AUTOMATED.md",
+    "docs/PR-GATES-AND-PUBLIC-VALIDATION.md",
+    "docs/RUNBOOK.md",
+    "docs/SYSTEM-QUESTION-LEDGER.md",
+    "docs/task_card_provider_smoke_codex_paid_execution.md",
+    "docs/task_card_provider_smoke_free_provider_execution.md",
+    "form/form-kernel-go/go.mod",
+    "form/form-kernel-go/go.sum",
+    "form/form-kernel-ts/src/reader.ts",
+    "form/form-stdlib/form-ontology.json",
+    "form/form-stdlib/tests/form-ontology-parity-band.fk",
+    "form/form-stdlib/tests/grounded-cost-record-handler-band.fk",
+    "form/form-stdlib/tests/source-language-match-switch-band.fk",
+    "form/scripts/validate_form_ontology.py"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The Rust kernel can build and serve the BML native HTTP catalog in dev/CI before Python fallback carriers are removed.",
+    "public_endpoints": [
+      "GET /api/health",
+      "GET /api/gates/main-head"
+    ],
+    "test_flows": [
+      "Release Rust listener compiles deploy/front-door/api.bml through form-stdlib and serves GET /api/health natively.",
+      "Release Rust listener serves GET /api/gates/main-head natively and exercises external HTTP, typed request binding, JSON parsing, and JSON response emission."
+    ]
+  }
+}

@@ -129,13 +129,17 @@ def test_lattice_stats_kernel_parity(session, tmp_path):
     not KERNEL_BIN.exists() or shutil.which("curl") is None,
     reason="form-kernel-rust binary or curl not available",
 )
-def test_http_get_native_returns_null_on_unreachable():
-    """http_get returns null when the remote can't be reached.
+def test_http_get_native_returns_structured_error_on_unreachable():
+    """http_get returns a structured error dict when the remote can't be reached.
 
-    Documents the kernel's failure semantics so Form code that calls
-    http_get can pattern-match against null without surprise.
+    Documents the Go/Rust aligned failure semantics so Form code that calls
+    http_get can inspect status_code/body/error/headers without surprise.
     """
-    expr = '(http_get "http://127.0.0.1:1/does-not-exist")'
+    expr = (
+        '(do '
+        '(let response (http_get "http://127.0.0.1:1/does-not-exist")) '
+        '(_get response "status_code"))'
+    )
     result = subprocess.run(
         [str(KERNEL_BIN), "--expr", expr],
         capture_output=True,
@@ -143,7 +147,7 @@ def test_http_get_native_returns_null_on_unreachable():
         timeout=10,
     )
     assert result.returncode == 0
-    assert result.stdout.strip().splitlines()[-1] == "null"
+    assert result.stdout.strip().splitlines()[-1] == "0"
 
 
 def test_json_to_dict_round_trip():
