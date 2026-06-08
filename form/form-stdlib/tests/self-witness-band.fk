@@ -22,7 +22,7 @@
 ; delta drop toward zero on more corpora than just JSON. The witness
 ; this file embodies is the loss function the mutator will minimize.
 ;
-; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/i18n.fk form-stdlib/self-witness.fk
+; preludes: form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/cache.fk form-stdlib/i18n.fk form-stdlib/self-witness.fk
 
 (do
     ;; --- load en, narrow to the "common" section -------------------
