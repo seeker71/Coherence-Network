@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 243
+**Total files**: 244
 
 | File | Purpose |
 |---|---|
@@ -63,6 +63,7 @@
 | [test_edge_cases_regression.py](test_edge_cases_regression.py) | Edge-case and regression tests that catch tricky bugs flow tests miss. |
 | [test_entity_view_attribution.py](test_entity_view_attribution.py) | Entity-view attribution and attention credit tests. |
 | [test_evidence_flow.py](test_evidence_flow.py) | Flow tests for /api/evidence — story-protocol-integration R9. |
+| [test_execution_value_proof.py](test_execution_value_proof.py) | _no top-of-file purpose_ |
 | [test_external_agent_encounters.py](test_external_agent_encounters.py) | External agent encounter record tests. |
 | [test_external_presence.py](test_external_presence.py) | Acceptance tests for spec: external-presence-bots-and-news (idea: external-presence). |
 | [test_external_proof_demo.py](test_external_proof_demo.py) | _no top-of-file purpose_ |

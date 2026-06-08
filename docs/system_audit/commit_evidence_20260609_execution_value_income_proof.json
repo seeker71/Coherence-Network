@@ -1,0 +1,126 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/value-execution-income-proof-20260609",
+  "commit_scope": "Add a curlable execution value and income proof route that composes existing task metrics, grounded idea value, paid-read lineage, settlement batches, and CC exchange estimates while preserving the boundary between measured value, CC income, and spendable fiat nutrition coverage.",
+  "files_owned": [
+    "MANIFEST.md",
+    "api/app/main.py",
+    "api/app/models/INDEX.md",
+    "api/app/models/execution_value.py",
+    "api/app/routers/INDEX.md",
+    "api/app/routers/execution_value.py",
+    "api/app/services/INDEX.md",
+    "api/app/services/execution_value_proof_service.py",
+    "api/tests/INDEX.md",
+    "api/tests/test_execution_value_proof.py",
+    "specs/INDEX.md",
+    "specs/execution-value-income-proof.md",
+    "docs/system_audit/commit_evidence_20260609_execution_value_income_proof.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd api && python3 -m pytest -q tests/test_execution_value_proof.py",
+      "cd api && python3 -m ruff check app/models/execution_value.py app/services/execution_value_proof_service.py app/routers/execution_value.py tests/test_execution_value_proof.py",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/validate_spec_quality.py --file specs/execution-value-income-proof.md",
+      "cd api && python3 -m uvicorn app.main:app --port 18120 --host 127.0.0.1",
+      "curl -sS \"http://127.0.0.1:18120/api/execution/value-proof?window_days=30&daily_nutrition_usd=2\" | python3 -m json.tool",
+      "cd api && python3 -m pytest -q tests/test_execution_value_proof.py tests/test_read_tracking_lineage_backend.py tests/test_grounded_cost_value_measurement.py",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "cd form/form-kernel-rust && cargo build --release --quiet",
+      "cd api && python3 -m pytest -q tests/test_flow_vitality.py::test_vitality_and_meeting_flow tests/test_portfolio_governance.py::test_vitality_returns_six_signals",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ],
+    "notes": "Arrival gates passed in the dedicated worktree. A first focused-test attempt with `cd api && python -m pytest -q tests/test_execution_value_proof.py` failed because this shell has no `python` executable; the documented python3 command passed. Focused tests pass with 3 tests. Ruff passes for all new runtime and test files. Spec validation passes for the new spec. Local uvicorn curl to /api/execution/value-proof returned HTTP 200 and an honest empty fresh-worktree proof: no measured execution value, no paid-read income, zero spendable fiat, and CC oracle data labeled as estimated. The related test band passes with 29 tests covering the new route, paid-read lineage persistence, and grounded value measurement. The first full worktree PR guard after rebase failed because the rebased worktree lacked the Rust Form kernel binary required by existing vitality tests; building form/form-kernel-rust with cargo release fixed the missing binary, the two failing vitality tests passed, and the final worktree PR guard passed with ready_for_push=true."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until the branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No deploy attempted yet. Public verification will follow PR/CI if the branch is merged or deployed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local implementation and proof pass. Commit, push, PR, CI, and deploy/public verification remain pending."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "GET /api/execution/value-proof now composes existing execution metrics, grounded idea metrics, value-lineage paid reads, settlement batches, and CC exchange-rate estimates into one proof response. The response can prove measured execution value and CC-denominated paid-read income when signals exist, while nutrition coverage remains false unless spendable fiat evidence is observed.",
+    "public_endpoints": [
+      "/api/execution/value-proof"
+    ],
+    "test_flows": [
+      "Pure grounded value summary test proves measured cost/value/ROI come from existing grounded metrics.",
+      "Pure income summary test proves paid-read CC is income but not spendable fiat.",
+      "ASGI route test proves the public route composes measured sources and keeps nutrition coverage false when only estimated CC value exists.",
+      "Local curl against a running uvicorn process returns HTTP 200 for /api/execution/value-proof?window_days=30&daily_nutrition_usd=2."
+    ]
+  },
+  "idea_ids": [
+    "coherence-credit",
+    "value-attribution",
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "execution-value-income-proof",
+    "grounded-cost-value-measurement",
+    "story-protocol-integration"
+  ],
+  "task_ids": [
+    "value-execution-income-proof-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "architecture-review",
+        "value-proof-priority"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/app/services/execution_value_proof_service.py composes execution metrics, grounded idea metrics, paid-read lineage, settlement batches, and CC rate estimates without creating a new ledger.",
+    "api/app/models/execution_value.py defines the public response shape with answer, execution, value, income, nutrition, and source sections.",
+    "api/app/routers/execution_value.py exposes GET /api/execution/value-proof with window_days and daily_nutrition_usd query parameters.",
+    "The income summary treats paid read CC as measured CC-denominated income and keeps spendable_fiat_usd at 0.0 until an off-ramp source exists.",
+    "The nutrition summary only sets can_cover_nutrition from spendable fiat, while estimated CC value is reported separately.",
+    "tests/test_execution_value_proof.py covers grounded value math, paid-read CC classification, and the ASGI route composition.",
+    "specs/execution-value-income-proof.md documents the route purpose, money boundary, API contract, acceptance tests, and off-ramp follow-up gap.",
+    "python3 scripts/generate_repo_indexes.py updated router, service, model, test, spec, and manifest indexes so the new surface is discoverable."
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "api/app/main.py",
+    "api/app/models/INDEX.md",
+    "api/app/models/execution_value.py",
+    "api/app/routers/INDEX.md",
+    "api/app/routers/execution_value.py",
+    "api/app/services/INDEX.md",
+    "api/app/services/execution_value_proof_service.py",
+    "api/tests/INDEX.md",
+    "api/tests/test_execution_value_proof.py",
+    "specs/INDEX.md",
+    "specs/execution-value-income-proof.md"
+  ],
+  "change_intent": "runtime_feature"
+}

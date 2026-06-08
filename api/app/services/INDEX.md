@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 244
+**Total files**: 245
 
 | File | Purpose |
 |---|---|
@@ -97,6 +97,7 @@
 | [energy_goal_recipe_service.py](energy_goal_recipe_service.py) | Goal-aware recipes for energy sensing responses. |
 | [entity_view_attribution_service.py](entity_view_attribution_service.py) | Attribution bridge for editable entity views. |
 | [evidence_service.py](evidence_service.py) | Evidence service — submission, verification, and retrieval for asset implementation evidence. |
+| [execution_value_proof_service.py](execution_value_proof_service.py) | Compose execution, grounded value, and paid-read income proof. |
 | [explore_queue_service.py](explore_queue_service.py) | Explore queue — a curated stream of entities the viewer hasn't met yet. |
 | [failed_task_diagnostics_service.py](failed_task_diagnostics_service.py) | Failed-task diagnostics: error classification and completeness tracking. Spec 113. |
 | [failure_taxonomy_service.py](failure_taxonomy_service.py) | Shared failure taxonomy for consistent bucketing and signatures. |
