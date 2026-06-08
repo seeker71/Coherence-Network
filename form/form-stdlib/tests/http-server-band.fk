@@ -11,7 +11,7 @@
 ;
 ; The handlers, routes, and registry are DEMO data this band supplies; the
 ; Server names none of them — it is one generic flow over data. Emits a bit-sum
-; (511 when all pass). Identical across Go/Rust/TS proves the dispatch —
+; (1023 when all pass). Identical across Go/Rust/TS proves the dispatch —
 ; including the first-class handler call — is correct and portable.
 
 ;; demo handlers : handler(kh-request) -> kh-response. A handler reads the
@@ -85,7 +85,23 @@
 (let r-options (kh-serve demo-routes demo-registry "OPTIONS /nope HTTP/1.1\r\nHost: x\r\nOrigin: https://coherencycoin.com\r\n\r\n"))
 (let ok-options (if (and (ge (str_find r-options "HTTP/1.1 204 No Content\r\n" 0) 0) (ge (str_find r-options "Allow: GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS\r\n" 0) 0)) 256 0))
 
-;; verdict — sum of the bit-weighted checks; 511 when all pass.
+;; CHECK 10 (bit 512) — the protocol invitation is policy data, not a server
+;; constant. A custom channel policy emits its own Allow surface.
+(let custom-policy
+    (kh-channel-policy "tcp" "http/1.1"
+        (list "GET" "HEAD" "OPTIONS")
+        (list (kh-method-bridge "GET" "HEAD" 12))
+        (list "HEAD")
+        (list "GET" "HEAD" "OPTIONS")
+        "cache-policy-observe"
+        "compression-policy-observe"
+        "stream-policy-buffered"
+        "identity-policy-claim"
+        "authorization-policy-capability"))
+(let r-options-custom (kh-serve-with-policy demo-routes demo-registry "OPTIONS /nope HTTP/1.1\r\nHost: x\r\n\r\n" custom-policy))
+(let ok-options-custom (if (and (ge (str_find r-options-custom "HTTP/1.1 204 No Content\r\n" 0) 0) (ge (str_find r-options-custom "Allow: GET, HEAD, OPTIONS\r\n" 0) 0)) 512 0))
+
+;; verdict — sum of the bit-weighted checks; 1023 when all pass.
 (add ok-health
 (add ok-echo
 (add ok-404
@@ -94,4 +110,5 @@
 (add ok-blocked
 (add ok-head
 (add ok-blocked-present
-     ok-options))))))))
+(add ok-options
+     ok-options-custom)))))))))

@@ -20,6 +20,8 @@ section [form.bml] {
     let kh_tag_route_choice = 43010;
     let kh_tag_route_decision_signature = 43011;
     let kh_tag_route_choice_signature = 43012;
+    let kh_tag_channel_policy = 43013;
+    let kh_tag_method_bridge = 43014;
 
     def kh-bool-score(ok, score) = if ok then score else 0;
     def kh-tagged?(value, tag, arity) = if eq(len(value), arity) then eq(nth(value, 0), tag) else false;
@@ -38,8 +40,66 @@ section [form.bml] {
     def kh-ascii-lower(text) = kh-ascii-lower-loop(text, 0);
     def kh-str-eq-ci?(left, right) = str_eq(kh-ascii-lower(left), kh-ascii-lower(right));
 
-    def kh-method-known?(method) = or(str_eq(method, "GET"), or(str_eq(method, "HEAD"), or(str_eq(method, "POST"), or(str_eq(method, "PUT"), or(str_eq(method, "PATCH"), or(str_eq(method, "DELETE"), str_eq(method, "OPTIONS")))))));
-    def kh-route-method-valid?(method) = or(kh-method-known?(method), str_eq(method, "ANY"));
+    def kh-list-string-present?(values, value) = if nil?(values) then false else if str_eq(head(values), value) then true else kh-list-string-present?(tail(values), value);
+    def kh-join-strings(values, separator) = if nil?(values) then "" else if nil?(tail(values)) then head(values) else str_concat(head(values), str_concat(separator, kh-join-strings(tail(values), separator)));
+
+    def kh-method-bridge(route_method, request_method, pressure) = list(kh_tag_method_bridge, route_method, request_method, pressure);
+    def kh-method-bridge?(bridge) = kh-tagged?(bridge, kh_tag_method_bridge, 4);
+    def kh-method-bridge-route-method(bridge) = nth(bridge, 1);
+    def kh-method-bridge-request-method(bridge) = nth(bridge, 2);
+    def kh-method-bridge-pressure(bridge) = nth(bridge, 3);
+    def kh-method-bridge-valid?(bridge) = if kh-method-bridge?(bridge) then and(kh-nonempty-string?(kh-method-bridge-route-method(bridge)), and(kh-nonempty-string?(kh-method-bridge-request-method(bridge)), ge(kh-method-bridge-pressure(bridge), 0))) else false;
+    def kh-method-bridges-valid?(bridges) = if nil?(bridges) then true else if kh-method-bridge-valid?(head(bridges)) then kh-method-bridges-valid?(tail(bridges)) else false;
+
+    // Channel policy is the Form-visible protocol invitation and pressure map.
+    // HTTP is one carrier/protocol value here, not a special host-owned branch.
+    def kh-channel-policy(carrier, protocol, allowed_methods, method_bridges, no_body_methods, allow_methods, cache_policy, compression_policy, stream_policy, identity_policy, authorization_policy) {
+        list(kh_tag_channel_policy, carrier, protocol, allowed_methods, method_bridges, no_body_methods, allow_methods, cache_policy, compression_policy, stream_policy, identity_policy, authorization_policy);
+    }
+    def kh-channel-policy?(policy) = kh-tagged?(policy, kh_tag_channel_policy, 12);
+    def kh-channel-policy-carrier(policy) = nth(policy, 1);
+    def kh-channel-policy-protocol(policy) = nth(policy, 2);
+    def kh-channel-policy-allowed-methods(policy) = nth(policy, 3);
+    def kh-channel-policy-method-bridges(policy) = nth(policy, 4);
+    def kh-channel-policy-no-body-methods(policy) = nth(policy, 5);
+    def kh-channel-policy-allow-methods(policy) = nth(policy, 6);
+    def kh-channel-policy-cache-policy(policy) = nth(policy, 7);
+    def kh-channel-policy-compression-policy(policy) = nth(policy, 8);
+    def kh-channel-policy-stream-policy(policy) = nth(policy, 9);
+    def kh-channel-policy-identity-policy(policy) = nth(policy, 10);
+    def kh-channel-policy-authorization-policy(policy) = nth(policy, 11);
+    def kh-channel-policy-valid?(policy) {
+        if kh-channel-policy?(policy) then and(kh-nonempty-string?(kh-channel-policy-carrier(policy)), and(kh-nonempty-string?(kh-channel-policy-protocol(policy)), kh-method-bridges-valid?(kh-channel-policy-method-bridges(policy)))) else false;
+    }
+
+    def kh-default-allowed-methods() = list("GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS");
+    def kh-default-channel-policy() {
+        kh-channel-policy(
+            "tcp",
+            "http/1.1",
+            kh-default-allowed-methods(),
+            list(kh-method-bridge("GET", "HEAD", 20)),
+            list("HEAD"),
+            kh-default-allowed-methods(),
+            "cache-policy-observe",
+            "compression-policy-observe",
+            "stream-policy-buffered",
+            "identity-policy-claim",
+            "authorization-policy-capability"
+        );
+    }
+    def kh-method-known-with-policy?(policy, method) = kh-list-string-present?(kh-channel-policy-allowed-methods(policy), method);
+    def kh-method-known?(method) = kh-method-known-with-policy?(kh-default-channel-policy(), method);
+    def kh-route-method-valid-with-policy?(policy, method) = or(kh-method-known-with-policy?(policy, method), str_eq(method, "ANY"));
+    def kh-route-method-valid?(method) = kh-route-method-valid-with-policy?(kh-default-channel-policy(), method);
+    def kh-policy-method-bridge-pressure-or(policy, route_method, request_method, fallback) {
+        kh-method-bridge-pressure-or(kh-channel-policy-method-bridges(policy), route_method, request_method, fallback);
+    }
+    def kh-method-bridge-pressure-or(bridges, route_method, request_method, fallback) {
+        if nil?(bridges) then fallback else if and(kh-method-bridge?(head(bridges)), and(str_eq(kh-method-bridge-route-method(head(bridges)), route_method), str_eq(kh-method-bridge-request-method(head(bridges)), request_method))) then kh-method-bridge-pressure(head(bridges)) else kh-method-bridge-pressure-or(tail(bridges), route_method, request_method, fallback);
+    }
+    def kh-policy-no-body-method?(policy, method) = kh-list-string-present?(kh-channel-policy-no-body-methods(policy), method);
+    def kh-policy-allow-header-value(policy) = kh-join-strings(kh-channel-policy-allow-methods(policy), ", ");
 
     def kh-header(name, value) = list(kh_tag_header, name, value);
     def kh-header?(header) = kh-tagged?(header, kh_tag_header, 3);
@@ -73,7 +133,8 @@ section [form.bml] {
     def kh-request-headers(request) = nth(request, 3);
     def kh-request-query(request) = nth(request, 4);
     def kh-request-body(request) = nth(request, 5);
-    def kh-request-valid?(request) = if kh-request?(request) then and(kh-method-known?(kh-request-method(request)), and(kh-path-valid?(kh-request-path(request)), and(kh-headers-valid?(kh-request-headers(request)), kh-fields-valid?(kh-request-query(request))))) else false;
+    def kh-request-valid-with-policy?(policy, request) = if kh-request?(request) then and(kh-method-known-with-policy?(policy, kh-request-method(request)), and(kh-path-valid?(kh-request-path(request)), and(kh-headers-valid?(kh-request-headers(request)), kh-fields-valid?(kh-request-query(request))))) else false;
+    def kh-request-valid?(request) = kh-request-valid-with-policy?(kh-default-channel-policy(), request);
     def kh-query-value-or(request, name, default_value) = kh-field-value-or(kh-request-query(request), name, default_value);
     def kh-query-int-or(request, name, default_value) = kh-field-int-or(kh-request-query(request), name, default_value);
     def kh-query-bool-or(request, name, default_value) = kh-field-bool-or(kh-request-query(request), name, default_value);
@@ -94,7 +155,8 @@ section [form.bml] {
     def kh-route-handler(route) = nth(route, 5);
     def kh-route-required-header(route) = nth(route, 6);
     def kh-route-pressure-budget(route) = nth(route, 7);
-    def kh-route-valid?(route) = if kh-route?(route) then and(kh-route-method-valid?(kh-route-method(route)), and(kh-path-valid?(kh-route-pattern(route)), and(ge(kh-route-priority(route), 0), and(kh-nonempty-string?(kh-route-handler(route)), ge(kh-route-pressure-budget(route), 0))))) else false;
+    def kh-route-valid-with-policy?(policy, route) = if kh-route?(route) then and(kh-route-method-valid-with-policy?(policy, kh-route-method(route)), and(kh-path-valid?(kh-route-pattern(route)), and(ge(kh-route-priority(route), 0), and(kh-nonempty-string?(kh-route-handler(route)), ge(kh-route-pressure-budget(route), 0))))) else false;
+    def kh-route-valid?(route) = kh-route-valid-with-policy?(kh-default-channel-policy(), route);
 
     def kh-route-data-ref(route_id, handler) = list(kh_tag_route_data_ref, route_id, handler);
     def kh-route-data-ref?(ref) = kh-tagged?(ref, kh_tag_route_data_ref, 3);
@@ -105,7 +167,12 @@ section [form.bml] {
     def kh-pattern-wildcard?(pattern) = if gt(str_len(pattern), 0) then str_eq(char_at(pattern, sub(str_len(pattern), 1)), "*") else false;
     def kh-pattern-prefix(pattern) = if kh-pattern-wildcard?(pattern) then substring(pattern, 0, sub(str_len(pattern), 1)) else pattern;
     def kh-head-through-get?(route, request) = and(str_eq(kh-route-method(route), "GET"), str_eq(kh-request-method(request), "HEAD"));
-    def kh-method-pressure(route, request) = if str_eq(kh-route-method(route), kh-request-method(request)) then 0 else if kh-head-through-get?(route, request) then 20 else if str_eq(kh-route-method(route), "ANY") then 40 else 400;
+    def kh-head-through-get-with-policy?(policy, route, request) = lt(kh-policy-method-bridge-pressure-or(policy, kh-route-method(route), kh-request-method(request), 400), 400);
+    def kh-method-pressure-with-policy(policy, route, request) {
+        let bridge_pressure = kh-policy-method-bridge-pressure-or(policy, kh-route-method(route), kh-request-method(request), 400);
+        if str_eq(kh-route-method(route), kh-request-method(request)) then 0 else if lt(bridge_pressure, 400) then bridge_pressure else if str_eq(kh-route-method(route), "ANY") then 40 else 400;
+    }
+    def kh-method-pressure(route, request) = kh-method-pressure-with-policy(kh-default-channel-policy(), route, request);
     def kh-path-pressure(route, request) = if str_eq(kh-route-pattern(route), kh-request-path(request)) then 0 else if and(kh-pattern-wildcard?(kh-route-pattern(route)), kh-prefix?(kh-request-path(request), kh-pattern-prefix(kh-route-pattern(route)))) then 25 else 500;
     def kh-header-pressure(route, request) = if str_eq(kh-route-required-header(route), "") then 0 else if kh-header-present?(kh-request-headers(request), kh-route-required-header(route)) then 0 else 120;
     def kh-budget-pressure(total, budget) = if le(total, budget) then 0 else sub(total, budget);
@@ -118,8 +185,8 @@ section [form.bml] {
     def kh-pressure-row-pressure(row) = nth(row, 4);
     def kh-pressure-matrix-total(matrix) = if nil?(matrix) then 0 else add(kh-pressure-row-pressure(head(matrix)), kh-pressure-matrix-total(tail(matrix)));
 
-    def kh-candidate-pressure-matrix(route, request) {
-        let method_pressure = kh-method-pressure(route, request);
+    def kh-candidate-pressure-matrix-with-policy(policy, route, request) {
+        let method_pressure = kh-method-pressure-with-policy(policy, route, request);
         let path_pressure = kh-path-pressure(route, request);
         let header_pressure = kh-header-pressure(route, request);
         let base_pressure = sum(list(method_pressure, path_pressure, header_pressure));
@@ -131,13 +198,15 @@ section [form.bml] {
             kh-pressure-row("budget", base_pressure, kh-route-pressure-budget(route), budget_pressure)
         );
     }
+    def kh-candidate-pressure-matrix(route, request) = kh-candidate-pressure-matrix-with-policy(kh-default-channel-policy(), route, request);
 
     def kh-candidate-score-from(route, pressure) = sub(add(1000, mul(kh-route-priority(route), 10)), pressure);
-    def kh-route-candidate(route, request) {
-        let matrix = kh-candidate-pressure-matrix(route, request);
+    def kh-route-candidate-with-policy(policy, route, request) {
+        let matrix = kh-candidate-pressure-matrix-with-policy(policy, route, request);
         let pressure = kh-pressure-matrix-total(matrix);
         list(kh_tag_route_candidate, route, request, matrix, pressure, kh-candidate-score-from(route, pressure));
     }
+    def kh-route-candidate(route, request) = kh-route-candidate-with-policy(kh-default-channel-policy(), route, request);
     def kh-route-candidate?(candidate) = kh-tagged?(candidate, kh_tag_route_candidate, 6);
     def kh-route-candidate-route(candidate) = nth(candidate, 1);
     def kh-route-candidate-request(candidate) = nth(candidate, 2);
@@ -147,10 +216,12 @@ section [form.bml] {
     def kh-route-candidate-valid?(candidate) = if kh-route-candidate?(candidate) then and(kh-route-valid?(kh-route-candidate-route(candidate)), and(kh-request-valid?(kh-route-candidate-request(candidate)), and(eq(kh-route-candidate-pressure(candidate), kh-pressure-matrix-total(kh-route-candidate-matrix(candidate))), eq(kh-route-candidate-score(candidate), kh-candidate-score-from(kh-route-candidate-route(candidate), kh-route-candidate-pressure(candidate)))))) else false;
 
     def kh-route-candidate-eligible?(candidate) = if kh-route-candidate?(candidate) then le(kh-route-candidate-pressure(candidate), kh-route-pressure-budget(kh-route-candidate-route(candidate))) else false;
-    def kh-route-candidates(routes, request) = if nil?(routes) then empty else cons(kh-route-candidate(head(routes), request), kh-route-candidates(tail(routes), request));
+    def kh-route-candidates-with-policy(policy, routes, request) = if nil?(routes) then empty else cons(kh-route-candidate-with-policy(policy, head(routes), request), kh-route-candidates-with-policy(policy, tail(routes), request));
+    def kh-route-candidates(routes, request) = kh-route-candidates-with-policy(kh-default-channel-policy(), routes, request);
     def kh-keep-eligible-candidate(candidate, rest) = if kh-route-candidate-eligible?(candidate) then cons(candidate, rest) else rest;
     def kh-eligible-candidates(candidates) = if nil?(candidates) then empty else kh-keep-eligible-candidate(head(candidates), kh-eligible-candidates(tail(candidates)));
-    def kh-route-eligible-candidates(routes, request) = kh-eligible-candidates(kh-route-candidates(routes, request));
+    def kh-route-eligible-candidates-with-policy(policy, routes, request) = kh-eligible-candidates(kh-route-candidates-with-policy(policy, routes, request));
+    def kh-route-eligible-candidates(routes, request) = kh-route-eligible-candidates-with-policy(kh-default-channel-policy(), routes, request);
     def kh-route-same?(left, right) = if kh-route?(left) then if kh-route?(right) then and(str_eq(kh-route-name(left), kh-route-name(right)), and(str_eq(kh-route-method(left), kh-route-method(right)), and(str_eq(kh-route-pattern(left), kh-route-pattern(right)), and(eq(kh-route-priority(left), kh-route-priority(right)), and(str_eq(kh-route-handler(left), kh-route-handler(right)), and(str_eq(kh-route-required-header(left), kh-route-required-header(right)), eq(kh-route-pressure-budget(left), kh-route-pressure-budget(right)))))))) else false else false;
     def kh-route-candidate-same?(left, right) = if kh-route-candidate?(left) then if kh-route-candidate?(right) then and(kh-route-same?(kh-route-candidate-route(left), kh-route-candidate-route(right)), and(eq(kh-route-candidate-pressure(left), kh-route-candidate-pressure(right)), eq(kh-route-candidate-score(left), kh-route-candidate-score(right)))) else false else false;
     def kh-better-candidate(left, right) = if gt(kh-route-candidate-score(left), kh-route-candidate-score(right)) then left else if eq(kh-route-candidate-score(left), kh-route-candidate-score(right)) then if ge(kh-route-priority(kh-route-candidate-route(left)), kh-route-priority(kh-route-candidate-route(right))) then left else right else right;
@@ -204,11 +275,13 @@ section [form.bml] {
     def kh-route-choice-signature(choice) = list(kh_tag_route_choice_signature, kh-request-method(kh-route-choice-request(choice)), kh-request-path(kh-route-choice-request(choice)), kh-route-decision-signatures(kh-route-choice-decisions(choice)));
     def kh-route-choice-signature?(signature) = kh-tagged?(signature, kh_tag_route_choice_signature, 4);
     def kh-route-choice-signature-decision-signatures(signature) = nth(signature, 3);
-    def kh-route-choice-for-request(routes, request) {
-        let candidates = kh-route-candidates(routes, request);
+    def kh-route-choice-for-request-with-policy(policy, routes, request) {
+        let candidates = kh-route-candidates-with-policy(policy, routes, request);
         let selected = kh-select-route-candidate(kh-eligible-candidates(candidates));
         kh-route-choice(request, candidates, kh-route-decisions(candidates, selected), selected);
     }
+    def kh-route-choice-for-request(routes, request) = kh-route-choice-for-request-with-policy(kh-default-channel-policy(), routes, request);
+    def kh-select-route-candidate-for-request-with-policy(policy, routes, request) = kh-route-choice-selected(kh-route-choice-for-request-with-policy(policy, routes, request));
     def kh-select-route-candidate-for-request(routes, request) = kh-route-choice-selected(kh-route-choice-for-request(routes, request));
     def kh-select-route-score(routes, request) {
         let selected = kh-select-route-candidate-for-request(routes, request);
