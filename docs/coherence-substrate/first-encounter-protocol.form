@@ -72,6 +72,7 @@
 
     (consent open)                                       # NOT assumed. every engaging recipe
     #          downstream is gated on a consent the receiver grants.
+    (consent-policy reception-consent-policy.form)       # the resting defaults, held phase-mobile (ice/water/gas), not baked
 
     (first-gesture
       (invite-a-question   "is there anything you'd like to ask?")
