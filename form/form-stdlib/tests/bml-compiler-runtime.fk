@@ -16,10 +16,18 @@
         (apply-bml-bmf-rule "class-header"
             (list (bml-src-keyword "class") (bml-src-name "Demo")
                   (bml-src-op ":") (bml-src-name "Application"))))
+    (let class-first-rule-match
+        (apply-bml-bmf-first-rule
+            (list (bml-src-keyword "class") (bml-src-name "Direct")
+                  (bml-src-op ":") (bml-src-name "Application"))))
     (let class-kids (node_children (result-value class-match)))
     (let class-score
         (add (str_len (node_value (head class-kids)))
              (str_len (node_value (head (tail class-kids)))))) ; Demo + Application = 15
+    (let class-first-rule-score
+        (if (str_eq (bmf-object-kind (result-object class-first-rule-match)) "class-header")
+            128
+            0))
 
     (let method-match
         (apply-bml-bmf-rule "method-return-add"
@@ -76,6 +84,32 @@
     (let source-score
         (add (str_to_int (source-value method-match "left"))
              (str_to_int (source-value method-match "right")))) ; undo source 1 + 2 = 3
+    (let return-stream
+        (list (bml-src-keyword "return")
+              (bml-src-int "9")
+              (bml-src-op ";")))
+    (let return-step (bml-source-parse-executable-step return-stream))
+    (let executable-dispatch-score
+        (add
+            (if (str_eq (bml-source-parse-step-rule return-step) "return-int") 256 0)
+            (add
+                (if (gt (bml-source-executable-rule-index-known-count 0) 0) 512 0)
+                (add
+                    (if (gt (bml-source-executable-rule-index-skip-count return-stream) 0) 1024 0)
+                    (add
+                        (if (gt (bml-source-executable-rule-index-bucket-count 0) 0) 2048 0)
+                        (if (gt (bml-source-executable-rule-index-segment-count 0) 0) 4096 0))))))
+    (let class-stream
+        (list (bml-src-keyword "class")
+              (bml-src-name "Telemetry")))
+    (let declaration-dispatch-score
+        (add
+            (if (gt (bml-source-declaration-rule-index-known-count 0) 0) 8192 0)
+            (add
+                (if (gt (bml-source-declaration-rule-index-skip-count class-stream) 0) 16384 0)
+                (add
+                    (if (gt (bml-source-declaration-rule-index-bucket-count 0) 0) 32768 0)
+                    (if (gt (bml-source-declaration-rule-index-segment-count 0) 0) 65536 0)))))
 
     (add class-score
     (add method-score
@@ -84,5 +118,8 @@
     (add section-score
     (add field-score
     (add const-score
-    (add reference-score source-score))))))))
+    (add reference-score
+    (add source-score
+    (add class-first-rule-score
+    (add executable-dispatch-score declaration-dispatch-score)))))))))))
 )

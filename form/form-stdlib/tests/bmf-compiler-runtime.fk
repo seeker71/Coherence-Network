@@ -23,6 +23,9 @@
         (apply-bmf-compiler-rule "BMFChar-int"
             (list (bmf-src-op "\\") (bmf-src-int "65"))))
     (let char-int-object (result-object char-int-match))
+    (let first-rule-match
+        (apply-bmf-compiler-first-rule
+            (list (bmf-src-op "\\") (bmf-src-int "66"))))
 
     (let char-a-match
         (apply-bmf-compiler-rule "BMFChar-quoted"
@@ -243,5 +246,10 @@
         (add (if (eq (kind-score (result-value attr-match) "comp-bmf-attribute") 1) 262144 0)
              (if (eq (kind-score (result-value rule-match) "comp-bmf-rule") 1) 524288 0)))))))))))))))))))))
 
-    (add shape-code (add coverage-score value-score))
+    (let first-rule-score
+        (if (str_eq (bmf-object-kind (result-object first-rule-match)) "BMFChar-int")
+            1048576
+            0))
+
+    (add shape-code (add coverage-score (add value-score first-rule-score)))
 )
