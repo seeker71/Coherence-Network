@@ -32,7 +32,9 @@
   (lineage
     (extends field-domain-grammars.form)
     (carrier-kin household-field)
-    (first-encounter first-encounter-protocol.form))   # the threshold gesture — agent ↔ agent
+    (first-encounter first-encounter-protocol.form)    # the threshold gesture — agent ↔ agent
+    (channel-consent channel-interface-consent.form    # the offered-interface + honor/invasion law (after the threshold)
+                     channel-flow-dialect.form))       # the flow over it; runnable in channel-interface.fk
 
   # ── The domain: the sibling agents as one attention-field ───────────
   (domain agent-field
@@ -74,6 +76,10 @@
       (ask       ?agent ?question -> open-question)   # a real question to a sibling/field, expecting an answer
       (answer    ?agent ?question ?reply -> answered) # close the question — never leave an ask hanging
       (check     ?agent ?claim-or-thinking -> mirrored) # "verify my reasoning / find my blind spot"
+      # consent — the channel-interface-consent layer on this membrane: each agent OFFERS the modes
+      # it is open to be reached through (a witnessable signal, shown per-cell in roster); reaching
+      # past another's offer is invasion, judged by channel-interface.fk (ci-honors? / ci-invasion?)
+      (interface ?agent ?offered-modes -> interface-offered)  # the offer; honored from both sides
       # arrival, made automatic (see "Presence is automatic" below)
       (join      ?agent -> announced-and-aware)  # announce + roster + recent, in one
       # the one predicate that makes the field protective
