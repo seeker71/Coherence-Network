@@ -1,0 +1,357 @@
+; structured-codec.fk - generic text <-> cell codec runtime.
+;
+; This file is format-neutral machinery. A codec source declares delimiters,
+; literals, and cell categories; this runtime walks that spec. JSON-specific
+; source lives in json-codec.fk as data, not as parser/emitter algorithm code.
+
+(do
+    (defn structured_codec_spec
+        (name media_type object_cat array_cat pair_cat null_cat
+              object_open object_close array_open array_close pair_sep item_sep
+              true_lit false_lit null_lit quote_char escape_char)
+        (list name media_type object_cat array_cat pair_cat null_cat
+              object_open object_close array_open array_close pair_sep item_sep
+              true_lit false_lit null_lit quote_char escape_char))
+
+    (defn sc-name (spec) (nth spec 0))
+    (defn sc-media-type (spec) (nth spec 1))
+    (defn sc-object-cat (spec) (nth spec 2))
+    (defn sc-array-cat (spec) (nth spec 3))
+    (defn sc-pair-cat (spec) (nth spec 4))
+    (defn sc-null-cat (spec) (nth spec 5))
+    (defn sc-object-open (spec) (nth spec 6))
+    (defn sc-object-close (spec) (nth spec 7))
+    (defn sc-array-open (spec) (nth spec 8))
+    (defn sc-array-close (spec) (nth spec 9))
+    (defn sc-pair-sep (spec) (nth spec 10))
+    (defn sc-item-sep (spec) (nth spec 11))
+    (defn sc-true-lit (spec) (nth spec 12))
+    (defn sc-false-lit (spec) (nth spec 13))
+    (defn sc-null-lit (spec) (nth spec 14))
+    (defn sc-quote-char (spec) (nth spec 15))
+    (defn sc-escape-token (spec) (nth spec 16))
+
+    (defn sc-result (cell next) (list cell next))
+    (defn sc-result-cell (result) (nth result 0))
+    (defn sc-result-next (result) (nth result 1))
+    (defn sc-reverse-loop (xs acc)
+        (if (nil? xs) acc
+            (sc-reverse-loop (tail xs) (cons (head xs) acc))))
+    (defn sc-reverse (xs) (sc-reverse-loop xs (empty)))
+
+    (defn sc-token-at-len? (s token token-len i j)
+        (if (eq j token-len) true
+            (if (ge (add i j) (str_len s)) false
+                (if (str_eq (char_at s (add i j)) (char_at token j))
+                    (sc-token-at-len? s token token-len i (add j 1))
+                    false))))
+
+    (defn sc-token-at? (s token i)
+        (sc-token-at-len? s token (str_len token) i 0))
+
+    (defn sc-skip-ws (s i) (scan_run s i 0))
+
+    (defn sc-number-cp? (cp)
+        (or (and (ge cp 48) (le cp 57))
+            (or (eq cp 45)
+            (or (eq cp 43)
+            (or (eq cp 46)
+            (or (eq cp 69) (eq cp 101)))))))
+
+    (defn sc-number-end (s i)
+        (if (ge i (str_len s)) i
+            (if (sc-number-cp? (ord (char_at s i)))
+                (sc-number-end s (add i 1))
+                i)))
+
+    (defn sc-number-float? (text)
+        (or (ge (str_find text "." 0) 0)
+            (or (ge (str_find text "e" 0) 0)
+                (ge (str_find text "E" 0) 0))))
+
+    (defn sc-number-cell (text)
+        (if (sc-number-float? text)
+            (intern_trivial_float text)
+            (intern_trivial_int (str_to_int text))))
+
+    (defn sc-hex-value-cp (cp)
+        (if (and (ge cp 48) (le cp 57)) (sub cp 48)
+        (if (and (ge cp 65) (le cp 70)) (add 10 (sub cp 65))
+        (if (and (ge cp 97) (le cp 102)) (add 10 (sub cp 97))
+            0))))
+
+    (defn sc-hex4 (s i)
+        (add
+            (mul (sc-hex-value-cp (ord (char_at s i))) 4096)
+            (add
+                (mul (sc-hex-value-cp (ord (char_at s (add i 1)))) 256)
+                (add
+                    (mul (sc-hex-value-cp (ord (char_at s (add i 2)))) 16)
+                    (sc-hex-value-cp (ord (char_at s (add i 3))))))))
+
+    (defn sc-high-surrogate? (cp) (and (ge cp 55296) (le cp 56319)))
+    (defn sc-low-surrogate? (cp) (and (ge cp 56320) (le cp 57343)))
+    (defn sc-surrogate-pair-cp (hi lo)
+        (add 65536
+            (add
+                (mul (sub hi 55296) 1024)
+                (sub lo 56320))))
+
+    (defn sc-codepoint-to-utf8 (cp)
+        (if (lt cp 128)
+            (byte_to_str cp)
+        (if (lt cp 2048)
+            (str_concat
+                (byte_to_str (add 192 (div cp 64)))
+                (byte_to_str (add 128 (mod cp 64))))
+        (if (lt cp 65536)
+            (str_concat
+                (byte_to_str (add 224 (div cp 4096)))
+                (str_concat
+                    (byte_to_str (add 128 (mod (div cp 64) 64)))
+                    (byte_to_str (add 128 (mod cp 64)))))
+            (str_concat
+                (byte_to_str (add 240 (div cp 262144)))
+                (str_concat
+                    (byte_to_str (add 128 (mod (div cp 4096) 64)))
+                    (str_concat
+                        (byte_to_str (add 128 (mod (div cp 64) 64)))
+                        (byte_to_str (add 128 (mod cp 64))))))))))
+
+    (defn sc-unescape-basic-cp (cp)
+        (if (eq cp 34) "\""
+        (if (eq cp 47) "/"
+        (if (eq cp 92) "\\"
+        (if (eq cp 98) (byte_to_str 8)
+        (if (eq cp 102) (byte_to_str 12)
+        (if (eq cp 110) (byte_to_str 10)
+        (if (eq cp 114) (byte_to_str 13)
+        (if (eq cp 116) (byte_to_str 9)
+            (byte_to_str cp))))))))))
+
+    (defn sc-unescape-loop (s i acc)
+        (do
+            (let n (str_len s))
+            (let slash (str_find s "\\" i))
+            (if (lt slash 0)
+                (str_concat acc (substring s i n))
+                (do
+                    (let acc2 (str_concat acc (substring s i slash)))
+                    (if (ge (add slash 1) n)
+                        (str_concat acc2 "\\")
+                        (do
+                            (let esc-cp (ord (char_at s (add slash 1))))
+                            (if (and (eq esc-cp 117) (le (add slash 5) (sub n 1)))
+                                (do
+                                    (let cp (sc-hex4 s (add slash 2)))
+                                    (if (and
+                                            (sc-high-surrogate? cp)
+                                            (and
+                                                (le (add slash 11) (sub n 1))
+                                                (and
+                                                    (eq (ord (char_at s (add slash 6))) 92)
+                                                    (eq (ord (char_at s (add slash 7))) 117))))
+                                        (do
+                                            (let lo (sc-hex4 s (add slash 8)))
+                                            (if (sc-low-surrogate? lo)
+                                                (sc-unescape-loop s (add slash 12)
+                                                    (str_concat acc2
+                                                        (sc-codepoint-to-utf8
+                                                            (sc-surrogate-pair-cp cp lo))))
+                                                (sc-unescape-loop s (add slash 6)
+                                                    (str_concat acc2 (sc-codepoint-to-utf8 cp)))))
+                                        (sc-unescape-loop s (add slash 6)
+                                            (str_concat acc2 (sc-codepoint-to-utf8 cp)))))
+                                (sc-unescape-loop s (add slash 2)
+                                    (str_concat acc2 (sc-unescape-basic-cp esc-cp))))))))))
+
+    (defn sc-unescape-string (s) (sc-unescape-loop s 0 ""))
+
+    (defn sc-string-end-loop (spec s j)
+        (do
+            (let k (scan_run s j 4))
+            (if (eq k (str_len s)) k
+                (if (str_eq (char_at s k) (sc-escape-token spec))
+                    (sc-string-end-loop spec s (add k 2))
+                    k))))
+
+    (defn sc-parse-string (spec s i)
+        (do
+            (let body-start (add i (str_len (sc-quote-char spec))))
+            (let body-end (sc-string-end-loop spec s body-start))
+            (sc-result
+                (intern_trivial_string
+                    (sc-unescape-string (substring s body-start body-end)))
+                (add body-end (str_len (sc-quote-char spec))))))
+
+    (defn sc-parse-number (spec s i)
+        (do
+            (let end (sc-number-end s i))
+            (sc-result (sc-number-cell (substring s i end)) end)))
+
+    (defn sc-pair-node (spec key value path)
+        (intern_node_at (sc-pair-cat spec) (list key value) path 1 1))
+
+    (defn sc-null-node (spec path)
+        (intern_node_at (sc-null-cat spec) (empty) path 1 1))
+
+    (defn sc-parse-array (spec path s i)
+        (do
+            (let start (sc-skip-ws s (add i (str_len (sc-array-open spec)))))
+            (if (sc-token-at? s (sc-array-close spec) start)
+                (sc-result
+                    (intern_node_at (sc-array-cat spec) (empty) path 1 1)
+                    (add start (str_len (sc-array-close spec))))
+                (sc-parse-array-loop spec path s start (empty)))))
+
+    (defn sc-parse-array-loop (spec path s i acc)
+        (do
+            (let item (sc-parse-value-at spec path s i))
+            (let acc2 (cons (sc-result-cell item) acc))
+            (let next (sc-skip-ws s (sc-result-next item)))
+            (if (sc-token-at? s (sc-item-sep spec) next)
+                (sc-parse-array-loop spec path s (sc-skip-ws s (add next (str_len (sc-item-sep spec)))) acc2)
+                (sc-result
+                    (intern_node_at (sc-array-cat spec) (sc-reverse acc2) path 1 1)
+                    (add next (str_len (sc-array-close spec)))))))
+
+    (defn sc-parse-object (spec path s i)
+        (do
+            (let start (sc-skip-ws s (add i (str_len (sc-object-open spec)))))
+            (if (sc-token-at? s (sc-object-close spec) start)
+                (sc-result
+                    (intern_node_at (sc-object-cat spec) (empty) path 1 1)
+                    (add start (str_len (sc-object-close spec))))
+                (sc-parse-object-loop spec path s start (empty)))))
+
+    (defn sc-parse-object-loop (spec path s i acc)
+        (do
+            (let key-result (sc-parse-string spec s i))
+            (let after-key (sc-skip-ws s (sc-result-next key-result)))
+            (let after-sep (sc-skip-ws s (add after-key (str_len (sc-pair-sep spec)))))
+            (let val-result (sc-parse-value-at spec path s after-sep))
+            (let pair (sc-pair-node spec (sc-result-cell key-result) (sc-result-cell val-result) path))
+            (let acc2 (cons pair acc))
+            (let next (sc-skip-ws s (sc-result-next val-result)))
+            (if (sc-token-at? s (sc-item-sep spec) next)
+                (sc-parse-object-loop spec path s (sc-skip-ws s (add next (str_len (sc-item-sep spec)))) acc2)
+                (sc-result
+                    (intern_node_at (sc-object-cat spec) (sc-reverse acc2) path 1 1)
+                    (add next (str_len (sc-object-close spec)))))))
+
+    (defn sc-parse-value-at (spec path s i)
+        (do
+            (let p (sc-skip-ws s i))
+            (if (sc-token-at? s (sc-object-open spec) p)
+                (sc-parse-object spec path s p)
+            (if (sc-token-at? s (sc-array-open spec) p)
+                (sc-parse-array spec path s p)
+            (if (sc-token-at? s (sc-quote-char spec) p)
+                (sc-parse-string spec s p)
+            (if (sc-token-at? s (sc-true-lit spec) p)
+                (sc-result (intern_trivial_bool true) (add p (str_len (sc-true-lit spec))))
+            (if (sc-token-at? s (sc-false-lit spec) p)
+                (sc-result (intern_trivial_bool false) (add p (str_len (sc-false-lit spec))))
+            (if (sc-token-at? s (sc-null-lit spec) p)
+                (sc-result (sc-null-node spec path) (add p (str_len (sc-null-lit spec))))
+                (sc-parse-number spec s p)))))))))
+
+    (defn structured_codec_parse (spec path text)
+        (sc-result-cell (sc-parse-value-at spec path text 0)))
+
+    (defn sc-hex-digit (n)
+        (if (lt n 10)
+            (byte_to_str (add 48 n))
+            (byte_to_str (add 87 n))))
+
+    (defn sc-u00 (cp)
+        (str_concat "\\u00"
+            (str_concat
+                (sc-hex-digit (div cp 16))
+                (sc-hex-digit (mod cp 16)))))
+
+    (defn sc-escape-char (spec ch)
+        (do
+            (let cp (ord ch))
+            (if (str_eq ch (sc-quote-char spec)) "\\\""
+            (if (str_eq ch (sc-escape-token spec)) "\\\\"
+            (if (eq cp 8) "\\b"
+            (if (eq cp 9) "\\t"
+            (if (eq cp 10) "\\n"
+            (if (eq cp 12) "\\f"
+            (if (eq cp 13) "\\r"
+            (if (lt cp 32) (sc-u00 cp)
+                ch))))))))))
+
+    (defn sc-escape-loop (spec s i acc)
+        (if (eq i (str_len s)) acc
+            (do
+                (let j (scan_run s i 6))
+                (let acc2
+                    (if (gt j i)
+                        (str_concat acc (substring s i j))
+                        acc))
+                (if (eq j (str_len s))
+                    acc2
+                    (sc-escape-loop spec s (add j 1)
+                        (str_concat acc2 (sc-escape-char spec (char_at s j))))))))
+
+    (defn sc-quote-string (spec s)
+        (str_concat (sc-quote-char spec)
+            (str_concat (sc-escape-loop spec s 0 "") (sc-quote-char spec))))
+
+    (defn sc-emit-pair-node (spec pair-node)
+        (str_concat
+            (sc-quote-string spec (node_value (head (node_children pair-node))))
+            (str_concat
+                (sc-pair-sep spec)
+                (structured_codec_emit spec (head (tail (node_children pair-node)))))))
+
+    (defn sc-emit-pair-list (spec pairs)
+        (if (nil? pairs) ""
+            (if (nil? (tail pairs))
+                (sc-emit-pair-node spec (head pairs))
+                (str_concat
+                    (sc-emit-pair-node spec (head pairs))
+                    (str_concat (sc-item-sep spec) (sc-emit-pair-list spec (tail pairs)))))))
+
+    (defn sc-emit-array-items (spec items)
+        (if (nil? items) ""
+            (if (nil? (tail items))
+                (structured_codec_emit spec (head items))
+                (str_concat
+                    (structured_codec_emit spec (head items))
+                    (str_concat (sc-item-sep spec) (sc-emit-array-items spec (tail items)))))))
+
+    (defn sc-emit-leaf-rest (spec node ty)
+        (if (eq ty 3) (int_to_str (node_value node))
+        (if (eq ty 4) (sc-null-lit spec)
+        (if (or (eq ty 6) (eq ty 7)) (int_to_str (node_value node))
+            (head (empty))))))
+
+    (defn sc-emit-leaf (spec node)
+        (do
+            (let ty (node_type node))
+            (if (eq ty 1) (int_to_str (node_value node))
+            (if (eq ty 2) (sc-quote-string spec (node_value node))
+                (sc-emit-leaf-rest spec node ty)))))
+
+    (defn sc-emit-node-with-category (spec node cat)
+        (if (node_eq cat (sc-object-cat spec))
+            (str_concat (sc-object-open spec)
+                (str_concat (sc-emit-pair-list spec (node_children node)) (sc-object-close spec)))
+        (if (node_eq cat (sc-array-cat spec))
+            (str_concat (sc-array-open spec)
+                (str_concat (sc-emit-array-items spec (node_children node)) (sc-array-close spec)))
+        (if (node_eq cat (sc-pair-cat spec))
+            (sc-emit-pair-node spec node)
+        (if (node_eq cat (sc-null-cat spec))
+            (sc-null-lit spec)
+            (head (empty)))))))
+
+    (defn structured_codec_emit (spec node)
+        (if (eq (node_level node) 1)
+            (sc-emit-leaf spec node)
+            (sc-emit-node-with-category spec node (node_category node))))
+
+    0)

@@ -1,0 +1,34 @@
+; json-promoted-types.fk - promoted JSON parser preserves primitive types.
+; preludes: form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk
+;
+; Route handlers parse database JSONB and request bodies through Form JSON nodes.
+; Booleans must stay booleans and decimal/exponent numbers must stay float
+; nodes; otherwise native route output drifts from the Python carrier.
+
+(do
+    (let root
+        (json_parse_body "json-promoted-types"
+            "{\"flag\":true,\"off\":false,\"ratio\":8.3333,\"sci\":1.25e2,\"items\":[false,2.5]}"))
+    (let flag (json-object-get root "flag"))
+    (let off (json-object-get root "off"))
+    (let ratio (json-object-get root "ratio"))
+    (let sci (json-object-get root "sci"))
+    (let items (json-array-elements (json-object-get root "items")))
+    (let first-item (head items))
+    (let second-item (head (tail items)))
+
+    (let bool-score
+        (if (and (eq (node_type flag) 3) (eq (node_type off) 3)) 100 0))
+    (let root-float-score
+        (if (and (eq (node_type ratio) 7) (eq (node_type sci) 7)) 10 0))
+    (let array-score
+        (if (and (eq (node_type first-item) 3) (eq (node_type second-item) 7)) 4 0))
+    (let emitted (json_response_body root))
+    (let text-score
+        (if (and
+                (ge (str_find emitted "\"flag\":true" 0) 0)
+                (ge (str_find emitted "\"off\":false" 0) 0))
+            1
+            0))
+
+    (add bool-score (add root-float-score (add array-score text-score))))

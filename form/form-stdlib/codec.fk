@@ -1,0 +1,80 @@
+; codec.fk - BML-authored codec composition surface.
+;
+; A codec names the bidirectional boundary between text and cells. Parsers and
+; emitters stay ordinary Form functions, while the BML surface declares the
+; reusable generic shape that route, storage, and protocol handlers can share.
+
+section [form.bml] {
+    template Codec<TCell, TText> {
+        member parser: Parser;
+        member emitter: Emitter;
+        member media_type: String;
+    }
+
+    def codec(parser, emitter, media_type) {
+        list(parser, emitter, media_type);
+    }
+
+    def codec_parser(codec_value) {
+        nth(codec_value, 0);
+    }
+
+    def codec_emitter(codec_value) {
+        nth(codec_value, 1);
+    }
+
+    def codec_media_type(codec_value) {
+        nth(codec_value, 2);
+    }
+
+    def codec_parse_with(codec_value, path, text) {
+        let parser = codec_parser(codec_value);
+        parser(path, text);
+    }
+
+    def codec_emit_with(codec_value, cell) {
+        let emitter = codec_emitter(codec_value);
+        emitter(cell);
+    }
+
+    def codec_round_trip(codec_value, path, text) {
+        codec_emit_with(codec_value, codec_parse_with(codec_value, path, text));
+    }
+
+    def codec_entry(name, codec_value) {
+        list(name, codec_value);
+    }
+
+    def codec_entry_name(entry) {
+        nth(entry, 0);
+    }
+
+    def codec_entry_value(entry) {
+        nth(entry, 1);
+    }
+
+    def codec_for(codecs, name) {
+        if nil?(codecs) then empty() else codec_for_nonempty(codecs, name);
+    }
+
+    def codec_for_nonempty(codecs, name) {
+        let entry = head(codecs);
+        if str_eq(codec_entry_name(entry), name) then codec_entry_value(entry) else codec_for(tail(codecs), name);
+    }
+
+    def codec_missing_parse(path, text) {
+        intern_trivial_string("decoder-not-implemented");
+    }
+
+    def codec_missing_emit(cell) {
+        "encoder-not-implemented";
+    }
+
+    def codec_parse_only(parser, media_type) {
+        codec(parser, codec_missing_emit, media_type);
+    }
+
+    def codec_emit_only(emitter, media_type) {
+        codec(codec_missing_parse, emitter, media_type);
+    }
+}
