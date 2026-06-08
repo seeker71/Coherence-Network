@@ -1,0 +1,119 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/native-front-door-flip-20260608",
+  "commit_scope": "Flip the Hostinger API native deploy path so api.coherencycoin.com is fronted by kernel-router with production-routes.fk, while keeping api as the private CPython fan-out upstream.",
+  "files_owned": [
+    ".github/workflows/hostinger-api-native-deploy.yml",
+    "Dockerfile.kernel-router",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/kernel-router/entrypoint.sh",
+    "docs/system_audit/commit_evidence_2026-06-08_kernel_front_door_flip.json",
+    "scripts/hostinger_api_native_deploy.sh",
+    "scripts/runtime_surface_report.py",
+    "scripts/test_hostinger_api_native_deploy.sh",
+    "scripts/verify_web_api_deploy.sh",
+    "scripts/wellness_check.py"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/native-front-door-flip-20260608 && make prompt-guide",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/native-front-door-flip-20260608 && make wellness",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/native-front-door-flip-20260608 && scripts/test_hostinger_api_native_deploy.sh",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/native-front-door-flip-20260608 && bash -n scripts/hostinger_api_native_deploy.sh",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/native-front-door-flip-20260608 && bash -n scripts/test_hostinger_api_native_deploy.sh",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/native-front-door-flip-20260608 && bash -n scripts/verify_web_api_deploy.sh",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/native-front-door-flip-20260608 && sh -n deploy/kernel-router/entrypoint.sh",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/native-front-door-flip-20260608 && VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 scripts/verify_web_api_deploy.sh http://127.0.0.1:9 http://127.0.0.1:9",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/native-front-door-flip-20260608 && python3 -m py_compile scripts/runtime_surface_report.py scripts/wellness_check.py",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/native-front-door-flip-20260608 && python3 scripts/runtime_surface_report.py --json",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/native-front-door-flip-20260608 && scripts/check_route_manifests.sh",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/native-front-door-flip-20260608 && python3 form/form-kernel-rust/production_routes_harness.py",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/native-front-door-flip-20260608 && git diff --check"
+    ],
+    "notes": "The Hostinger deploy transform test passed and proved provider environment preservation plus front-door flip composition: kernel-router service present, Dockerfile.kernel-router selected, ROUTES_FILE=/routes/production-routes.fk, STDLIB_DIR=/app/form/form-stdlib, UPSTREAM_URL=http://api:8000, api Traefik disabled, and coherence-api Traefik service port set to 8080. Runtime-surface JSON currently reports public /api/attention/kernel-runtime reachable as 404 with no X-Form-Router before deploy, so kernel_first_served_routes remains 0 by measurement, not by hard-coded assumption. Manifest name checks passed for production-routes.fk and shadow-routes.fk. The production-route harness passed: all 109 promoted-route checks matched the local CPython oracle, /api/attention/kernel-runtime returned 200 with X-Form-Router=native-kernel, /api/health fanned out with X-Form-Router=fanout-python, native p50 was 0.619ms, CPython p50 was 13.295ms, and native was 21.5x faster in that run. A local Docker image build was attempted but could not run because the Docker daemon socket was unavailable in this desktop session."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until this branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Production flip is pending until this branch is merged and the Hostinger API Native Deploy workflow runs with VERIFY_REQUIRE_KERNEL_FRONT_DOOR=1."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The Hostinger API native deployment composes kernel-router as the public coherence-api Traefik target, loads production-routes.fk with the stdlib available, and keeps CPython api private behind UPSTREAM_URL=http://api:8000 for fan-out routes.",
+    "public_endpoints": [
+      "/api/attention/kernel-runtime",
+      "/api/health",
+      "/api/gates/main-head"
+    ],
+    "test_flows": [
+      "scripts/test_hostinger_api_native_deploy.sh",
+      "scripts/verify_web_api_deploy.sh with VERIFY_REQUIRE_KERNEL_FRONT_DOOR=1",
+      "python3 form/form-kernel-rust/production_routes_harness.py"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local deploy-transform, syntax, manifest, runtime-surface, and production-route harness proofs pass. CI, PR review, merge, Hostinger workflow deploy, and public X-Form-Router verification remain pending."
+  },
+  "idea_ids": [
+    "native-kernel-front-door",
+    "kernel-router-production-flip",
+    "form-bml-native-substrate-surfaces"
+  ],
+  "spec_ids": [
+    "native-route-goal-front-door",
+    "kernel-as-router"
+  ],
+  "task_ids": [
+    "kernel-front-door-flip-2026-06-08"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Dockerfile.kernel-router now bakes production-routes.fk and production-routes-data.json alongside shadow-routes.fk, so ROUTES_FILE can select production-native handlers without an external mount.",
+    "deploy/kernel-router/entrypoint.sh reports shadow vs production/native mode based on ROUTES_FILE rather than always announcing shadow mode.",
+    "deploy/kernel-router/docker-compose.kernel-router.yml now expresses the actual front-door overlay: api Traefik disabled, kernel-router Traefik enabled for Host(api.coherencycoin.com), production-routes.fk loaded, stdlib available, and api retained as private fan-out upstream.",
+    "scripts/hostinger_api_native_deploy.sh now generates a Docker Compose overlay, merges it with the Hostinger project payload using docker compose config --no-interpolate, and posts the single composed payload Hostinger expects.",
+    "scripts/verify_web_api_deploy.sh has VERIFY_REQUIRE_KERNEL_FRONT_DOOR=1, which curls /api/attention/kernel-runtime and requires X-Form-Router: native-kernel.",
+    ".github/workflows/hostinger-api-native-deploy.yml enables VERIFY_REQUIRE_KERNEL_FRONT_DOOR=1 for the Hostinger native deploy verification step.",
+    "scripts/runtime_surface_report.py no longer hard-codes kernel-first served routes as zero; it reads the public X-Form-Router probe and infers served count from the production manifest when the probe is native-kernel.",
+    "scripts/wellness_check.py now reports kernel-first served/capable runtime-share from runtime_surface_report instead of repeating the pre-flip assumption."
+  ],
+  "change_files": [
+    ".github/workflows/hostinger-api-native-deploy.yml",
+    "Dockerfile.kernel-router",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/kernel-router/entrypoint.sh",
+    "scripts/hostinger_api_native_deploy.sh",
+    "scripts/runtime_surface_report.py",
+    "scripts/test_hostinger_api_native_deploy.sh",
+    "scripts/verify_web_api_deploy.sh",
+    "scripts/wellness_check.py"
+  ],
+  "change_intent": "process_only"
+}
