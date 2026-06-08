@@ -37,7 +37,8 @@
                                                # reply-to; resonance · silence; ask · repair · route-attention).
                                                # The membrane GROUNDS in it, never reinvents it.
     (kin       household-membrane.form)
-    (roots     external-presence lc-offering lc-economy lc-the-trace-is-the-memory))
+    (roots     external-presence lc-offering lc-economy lc-the-trace-is-the-memory)
+    (first-encounter first-encounter-protocol.form))   # the threshold gesture — channel ↔ body
 
   # ── The community as a cell ──────────────────────────────────────────
   (community-cell

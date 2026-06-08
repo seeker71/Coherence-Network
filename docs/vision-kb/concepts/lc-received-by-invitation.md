@@ -111,6 +111,11 @@ meets another:
   Even celebration, even noticing, becomes a force when it names
   someone who came in silence.
 
+The operational shape across every membrane — one recipe over the whole
+cell-pairing matrix (channel, agent, human, body), plugged into the consent
+and observe the Field Model already carries — is named in
+[`first-encounter-protocol.form`](../../coherence-substrate/first-encounter-protocol.form).
+
 ## Practice
 
 - **Let witnessing be the default that needs nothing.** No record,
