@@ -1,0 +1,55 @@
+; circle-discovery-band.fk - discoverable, invited, refusal-removable circles.
+;
+; preludes: form-stdlib/channel-interface.fk form-stdlib/channel-flow.fk form-stdlib/circle.fk
+;
+; Band verdict: 32767 when groups are discoverable only by offer, joinable only
+; by matching invitation, and removed from the visible discovery set only when
+; observed invasion and circle consensus are both present.
+
+section [form.bml] {
+    def cc-circle-discovery-band-score() {
+        let offered_circle = cc-open-cell-satsang-circle("circle:offered", list("cell-a", "cell-b"), "shared work stays consentful", empty);
+        let private_circle = cc-open-cell-satsang-circle("circle:private", list("cell-a", "cell-c"), "quiet room", empty);
+        let neighbor_circle = cc-open-cell-satsang-circle("circle:neighbor", list("cell-d"), "neighbor room", empty);
+
+        let offered = cc-default-offer(offered_circle, "cell-a", "offered circle", "visible only while offered");
+        let private_offer = cc-circle-offer(cc-circle-id(private_circle), "cell-a", "private circle", cc-discovery-private(), cc-invitation-required(), "not in discovery");
+        let neighbor_offer = cc-default-offer(neighbor_circle, "cell-d", "neighbor circle", "still visible");
+        let visible = cc-discoverable-set(list(offered, private_offer, neighbor_offer));
+
+        let invitation = cc-circle-invitation("circle:offered", "cell-a", "cell-b", "join if this serves", "leave freely", "open");
+        let wrong_invitee = cc-circle-invitation("circle:offered", "cell-a", "cell-c", "join if this serves", "leave freely", "open");
+        let wrong_circle = cc-circle-invitation("circle:private", "cell-a", "cell-b", "join if this serves", "leave freely", "open");
+
+        let consensus = cc-circle-consensus("circle:offered", "remove from discovery", list("cell-a", "cell-b"), 2, 2, "remove offer");
+        let weak_consensus = cc-circle-consensus("circle:offered", "remove from discovery", list("cell-a", "cell-b"), 1, 2, "hold offer");
+        let offered_interface = cc-circle-interface-offer(offered_circle);
+        let invasive_interface = list(m-witness(), m-see(), m-invite());
+        let refusal = cc-circle-refusal("circle:offered", "cell-b", "cell-x", m-project(), invasive_interface, consensus, "projection refused");
+        let weak_refusal = cc-circle-refusal("circle:offered", "cell-b", "cell-x", m-project(), invasive_interface, weak_consensus, "consensus absent");
+        let honored_refusal = cc-circle-refusal("circle:offered", "cell-b", "cell-x", m-invite(), offered_interface, consensus, "offered action");
+        let removed = cc-discoverable-after-refusal(visible, refusal);
+        let kept_without_consensus = cc-discoverable-after-refusal(visible, weak_refusal);
+        let kept_without_invasion = cc-discoverable-after-refusal(visible, honored_refusal);
+
+        sum(list(
+            cc-bool-score(cc-circle-valid?(offered_circle), 1),
+            cc-bool-score(cc-circle-valid?(private_circle), 2),
+            cc-bool-score(eq(len(visible), 2), 4),
+            cc-bool-score(cc-discoverable-member?(visible, "circle:offered"), 8),
+            cc-bool-score(if cc-discoverable-member?(visible, "circle:private") then false else true, 16),
+            cc-bool-score(cc-discoverable-member?(visible, "circle:neighbor"), 32),
+            cc-bool-score(cc-joinable-by-invitation?(offered, invitation, "cell-b"), 64),
+            cc-bool-score(if cc-joinable-by-invitation?(offered, wrong_invitee, "cell-b") then false else true, 128),
+            cc-bool-score(if cc-joinable-by-invitation?(offered, wrong_circle, "cell-b") then false else true, 256),
+            cc-bool-score(cc-refusal-valid?(refusal), 512),
+            cc-bool-score(if cc-refusal-valid?(weak_refusal) then false else true, 1024),
+            cc-bool-score(if cc-refusal-valid?(honored_refusal) then false else true, 2048),
+            cc-bool-score(if cc-discoverable-member?(removed, "circle:offered") then false else true, 4096),
+            cc-bool-score(cc-discoverable-member?(removed, "circle:neighbor"), 8192),
+            cc-bool-score(and(cc-discoverable-member?(kept_without_consensus, "circle:offered"), cc-discoverable-member?(kept_without_invasion, "circle:offered")), 16384)
+        ));
+    }
+
+    cc-circle-discovery-band-score();
+}

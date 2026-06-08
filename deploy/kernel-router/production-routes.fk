@@ -1501,6 +1501,14 @@ section [form.route] {
 
         route = route_data(health, handle);
     }
+
+    class AttentionKernelRuntimeRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> {
+        def handle(request) {
+            route_attention_kernel_runtime(request);
+        }
+
+        route = route_data(attention-kernel-runtime, handle);
+    }
 }
 
 ; ===========================================================================
@@ -1511,6 +1519,7 @@ section [form.route] {
 (let routes
   (list
     (kh-route-data-ref "health" HealthRoute_handle)
+    (kh-route-data-ref "attention-kernel-runtime" AttentionKernelRuntimeRoute_handle)
     (list "/api/utils/coherence_weight"    route_coherence_weight)
     (list "/api/utils/nodeid_distance"     route_nodeid_distance)
     (list "/api/utils/nodeid_compatibility" route_nodeid_compatibility)
@@ -1532,5 +1541,4 @@ section [form.route] {
     (list "/api/utils/coherence_summary_score" route_coherence_summary_score)
     (list "/api/utils/idea_marginal_from_record" route_idea_marginal_from_record)
     (list "/api/utils/idea_grounding_summary" route_idea_grounding_summary)
-    (list "/api/utils/concept_match_score"     route_concept_match_score)
-    (list "/api/attention/kernel-runtime"  route_attention_kernel_runtime)))
+    (list "/api/utils/concept_match_score"     route_concept_match_score)))

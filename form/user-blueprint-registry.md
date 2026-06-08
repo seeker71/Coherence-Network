@@ -60,7 +60,7 @@ When you need a new user-range Blueprint:
 
 ## Registry (living)
 
-The full enumeration now lives in [`form-stdlib/blueprint-registry.json`](form-stdlib/blueprint-registry.json) — run the scanner for the current snapshot rather than reading a number that goes stale here. At the time of generation it held **292 distinct** type-99 shapes.
+The full enumeration now lives in [`form-stdlib/blueprint-registry.json`](form-stdlib/blueprint-registry.json) — run the scanner for the current snapshot rather than reading a number that goes stale here. At the time of generation it held **295 distinct** type-99 shapes.
 
 **What the scan surfaces (run `python3 scripts/scan_form_blueprints.py` for the live view):**
 - Strong healthy reuse in low numbers (the universal structural shapes — object 10, array 11, pair 12, null 13 — are each shared by ~12 grammars; this is content-addressing working as intended, and `bp` now lets every grammar reach them by one name).
@@ -170,6 +170,21 @@ The circle protocol lets groups of cells communicate without falling into broadc
 **Operating shape**: A cell may offer a circle. Another cell may join only when invited. A share stays inside unless `CIRCLE-EXPORT-CONSENT` names recipient, fidelity, purpose, expiry, and a passed consensus. A circle may refuse a contact only when an observed action exceeds the offered interface and consensus has passed.
 
 **Proof**: `form/form-stdlib/tests/circle-band.fk` returns `1048575` across source and binary sibling-kernel execution.
+
+---
+
+## Native Route Goal Cells — Current Registered Shape
+
+The native front door is not a prose promise; it is a Form-native attention loop over observed routes. Each route observation carries traffic, latency, error, payload, native-state, grammar, and handler evidence. The goal cell compares those observations and names the next route movement by pressure: author a high-grammar handler, promote an existing handler, prove byte identity, move the front door, or keep observing.
+
+**Blueprints**:
+- 1733 NATIVE-ROUTE-OBS — one observed API route sample: path, method, calls, latency, errors, bytes, native state, grammar, handler, user flow, and north-star fit.
+- 1734 NATIVE-ROUTE-ATTENTION — traffic-weighted route pressure plus the chosen next action for native front-door promotion.
+- 1735 NATIVE-ROUTE-GOAL — the north-star route state: target native share, known route count, observations, attentions, and the next chosen movement.
+
+**Operating shape**: Route selection is a content-addressed choice over measured cells, weighted by each route's named user flow and north-star fit so frequency alone does not decide the body's movement. A high-frequency Python route with no high grammar receives pressure to become BML/domain grammar; a kernel-capable route receives pressure to prove byte identity; a kernel-served route receives pressure to become the front door; a fully served route returns to observation.
+
+**Proof**: `form/form-stdlib/tests/native-route-goal-cells-band.fk` returns `65535` across source and binary sibling-kernel execution.
 
 ---
 
