@@ -14,16 +14,29 @@
  * render as the key string itself — gaps stay visible rather than silent.
  */
 
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const SUPPORTED = new Set(["en", "de", "es", "id"]);
 const DEFAULT_LOCALE = "en";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MESSAGES_DIR = join(__dirname, "messages");
+
+function discoverSupportedLocales() {
+  try {
+    const codes = readdirSync(MESSAGES_DIR)
+      .filter((file) => /^[A-Za-z][A-Za-z0-9-]*\.json$/.test(file))
+      .map((file) => file.slice(0, -5));
+    if (!codes.includes(DEFAULT_LOCALE)) codes.push(DEFAULT_LOCALE);
+    return new Set(codes);
+  } catch {
+    return new Set([DEFAULT_LOCALE]);
+  }
+}
+
+const SUPPORTED = discoverSupportedLocales();
 
 const _bundleCache = new Map();
 
@@ -46,7 +59,9 @@ function loadBundle(lang) {
 
 function parseLocaleLike(value) {
   if (!value) return null;
-  const root = String(value).trim().toLowerCase().split(/[._-]/)[0];
+  const normalized = String(value).trim().toLowerCase().replace(/_/g, "-").split(".")[0];
+  if (SUPPORTED.has(normalized)) return normalized;
+  const root = normalized.split("-")[0];
   return SUPPORTED.has(root) ? root : null;
 }
 

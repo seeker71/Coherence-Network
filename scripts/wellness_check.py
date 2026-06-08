@@ -393,12 +393,12 @@ def sense_spec_symbols() -> list[str]:
 def sense_locale_parity() -> list[str]:
     """Do the body's voice speak the same body in every tongue?
 
-    The web body speaks four languages (en, de, es, id) through
-    ``web/messages/{lang}.json`` translation files. English is the
-    canonical source — new chrome strings, copy refinements, and new
-    sections land there first and are mirrored into the other three.
-    When that mirroring lags, a German visitor sees half the page in
-    their language and half falling back to English mid-sentence.
+    The web body speaks through every ``web/messages/{lang}.json``
+    translation file. English is the canonical source — new chrome strings,
+    copy refinements, and new sections land there first and are mirrored into
+    the installed locale bundles. When that mirroring lags, a visitor sees
+    half the page in their language and half falling back to English
+    mid-sentence.
 
     This lens compares the key set of each locale to en's, surfacing:
       · missing keys (en has strings the locale doesn't)
@@ -470,7 +470,7 @@ def sense_locale_parity() -> list[str]:
         )
 
     if all_aligned:
-        return [f"  every locale aligned with en ({len(en_keys)} keys, 4 tongues)"]
+        return [f"  every locale aligned with en ({len(en_keys)} keys, {len(locales)} tongues)"]
 
     return lines
 

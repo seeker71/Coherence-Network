@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -26,9 +26,10 @@ const presenceWalk = JSON.parse(
     nodes?: Record<string, { image?: string }>;
   };
 };
-const localeFiles = ["en", "de", "es", "id"].map((locale) =>
-  join(root, `messages/${locale}.json`),
-);
+const localeFiles = readdirSync(join(root, "messages"))
+  .filter((file) => /^[A-Za-z][A-Za-z0-9-]*\.json$/.test(file))
+  .map((file) => join(root, "messages", file))
+  .sort();
 
 function messageKeys(file: string): Set<string> {
   const parsed = JSON.parse(readFileSync(file, "utf8")) as {
@@ -50,7 +51,7 @@ describe("homepage presence lineage", () => {
   it("draws home presences from presence data and trace pointers", () => {
     const homePresence = presenceWalk.homePresence;
     expect(pageSource).toContain("getHomePresenceTraceCards");
-    expect(pageSource).toContain("await getHomePresenceTraceCards");
+    expect(pageSource).toContain("getHomePresenceTraceCards(lang)");
     expect(homePresence?.order).toEqual([
       "liquid-bloom",
       "bloomurian",

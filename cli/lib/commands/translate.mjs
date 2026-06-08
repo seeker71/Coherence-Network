@@ -58,7 +58,7 @@ async function submitTranslation(args) {
     return;
   }
   if (!opts.lang) {
-    console.log(`${RED}Error:${RESET} --lang required (de, es, id, en, …)`);
+    console.log(`${RED}Error:${RESET} --lang required (installed locale code)`);
     return;
   }
   if (!opts.file) {

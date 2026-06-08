@@ -333,7 +333,7 @@ class CapabilityManifest(BaseModel):
     )
     language_coverage: list[str] = Field(
         default_factory=list,
-        description="Locale codes (en, de, es, id, ...) this instance serves translations for. Truth source: this instance's translator service.",
+        description="Locale codes this instance serves translations for. Truth source: this instance's translator service.",
     )
     substrate_canonicals: list[str] = Field(
         default_factory=list,

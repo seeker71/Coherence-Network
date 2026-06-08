@@ -34,7 +34,22 @@ from kb_common import (
 
 GLOSSARY_DIR = KB_DIR.parent / "glossary"
 IDEAS_DIR = KB_DIR.parent.parent.parent / "ideas"  # repo root /ideas
-SUPPORTED_LANGS = {"en", "de", "es", "id"}
+MESSAGES_DIR = KB_DIR.parent.parent.parent / "web" / "messages"
+
+
+def discover_supported_langs() -> set[str]:
+    if not MESSAGES_DIR.exists():
+        return {"en"}
+    langs = {
+        path.stem
+        for path in MESSAGES_DIR.glob("*.json")
+        if re.match(r"^[A-Za-z][A-Za-z0-9-]*$", path.stem)
+    }
+    langs.add("en")
+    return langs
+
+
+SUPPORTED_LANGS = discover_supported_langs()
 
 DEFAULT_WRITE_API_KEY = "dev-key"
 

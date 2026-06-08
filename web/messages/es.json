@@ -151,6 +151,8 @@
   },
   "_attunement": {
     "lang": "es",
+    "name": "Spanish",
+    "nativeName": "Español",
     "notes": "First-pass attunement from the en anchor on 2026-05-09. These keys render today and invite re-attunement from a native voice when one passes through. Re-attuning a key means: feel the meaning, speak it in your own voice, then remove the key path from `first_pass_keys` (it becomes settled). See feedback_i18n_architecture.md for the five linked practices that hold this body's voice.",
     "role": "anchor"
   },

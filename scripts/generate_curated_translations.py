@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate machine-translated locale siblings (de/es/id) for curated
+"""Generate machine-translated locale siblings for installed non-English
 /people/{slug}/en.tsx content modules — the safe-strings path.
 
 Translates: metadata.{title,description}, breadcrumbName,
@@ -29,8 +29,8 @@ import argparse, json, os, re, sys, urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent / "web" / "content" / "people"
+MESSAGES_DIR = ROOT.parent.parent / "messages"
 LT_URL = os.environ.get("LIBRETRANSLATE_URL", "http://localhost:5000")
-DEFAULT_TARGETS = ("de", "es", "id")
 
 TRANSLATABLE_FIELDS = {
     "title", "description", "breadcrumbName",
@@ -44,6 +44,18 @@ HEADER = """// ═════════════════════�
 //                  --slug {slug} --target-lang {lang} --overwrite
 // ════════════════════════════════════════════════════════════════════
 """
+
+
+def supported_targets() -> tuple[str, ...]:
+    if not MESSAGES_DIR.exists():
+        return ()
+    return tuple(
+        sorted(
+            path.stem
+            for path in MESSAGES_DIR.glob("*.json")
+            if path.stem != "en" and re.match(r"^[A-Za-z][A-Za-z0-9-]*$", path.stem)
+        )
+    )
 
 
 def translate(text: str, target_lang: str) -> str:
@@ -93,7 +105,8 @@ def update_index(slug: str) -> None:
     if not fn_match:
         return
     fn_name = fn_match.group(1)
-    available = sorted({p.stem for p in (ROOT / slug).glob("*.tsx") if p.stem in {"en", "de", "es", "id"}})
+    supported = {"en", *supported_targets()}
+    available = sorted({p.stem for p in (ROOT / slug).glob("*.tsx") if p.stem in supported})
     if "en" not in available:
         return
     non_en = [l for l in available if l != "en"]
@@ -140,7 +153,7 @@ def main() -> int:
     args = p.parse_args()
     if not args.slug and not args.all:
         p.error("specify --slug or --all")
-    targets = [args.target_lang] if args.target_lang else list(DEFAULT_TARGETS)
+    targets = [args.target_lang] if args.target_lang else list(supported_targets())
     if args.slug:
         slugs = [args.slug]
     else:
