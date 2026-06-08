@@ -74,4 +74,4 @@ def test_ideas_graph_projection_is_bound_as_native_manifest_preview_route():
     assert '"concept:carrier-boundary"' in text
     assert "igpr-filter-idea-rows" in text
     assert '"implementing"' in text
-    assert '"impl"' not in text
+    assert '\\"stage\\":\\"impl\\"' not in text

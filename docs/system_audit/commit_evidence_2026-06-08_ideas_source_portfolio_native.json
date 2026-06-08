@@ -1,0 +1,127 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/ideas-form-rewrite-20260608",
+  "commit_scope": "Clean another ideas read path from Python by binding a native source-backed curated portfolio route.",
+  "files_owned": [
+    "api/tests/test_ideas_graph_projection_form.py",
+    "api/tests/test_ideas_router_form.py",
+    "api/tests/test_runtime_surface_native_routes.py",
+    "deploy/kernel-router/production-routes.fk",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/system_audit/commit_evidence_2026-06-08_ideas_source_portfolio_native.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/ideas-router-form-expression.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/runtime_surface_report.py --json",
+      "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --host 127.0.0.1 --port 19185 --workers 1 --routes ../../deploy/kernel-router/production-routes.fk --stdlib ../form-stdlib --upstream http://127.0.0.1:9",
+      "curl -sS -i http://127.0.0.1:19185/api/ideas/source-portfolio",
+      "python3 - <<'PY'\nimport json, urllib.request\nwith urllib.request.urlopen('http://127.0.0.1:19185/api/ideas/source-portfolio') as r:\n    body = json.loads(r.read())\n    print(r.status, r.headers.get('X-Form-Router'), len(body['ideas']), body['summary']['total_ideas'], body['ideas'][0]['id'], body['ideas'][-1]['id'])\nPY",
+      "cd api && python3 -m pytest -q tests/test_ideas_router_form.py tests/test_runtime_surface_native_routes.py tests/test_ideas_graph_projection_form.py",
+      "cd api && python3 -m ruff check tests/test_ideas_router_form.py tests/test_runtime_surface_native_routes.py tests/test_ideas_graph_projection_form.py",
+      "python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expression.md --file specs/ideas-graph-projection-form.md",
+      "python3 scripts/generate_repo_indexes.py"
+    ],
+    "summary": "GET /api/ideas/source-portfolio now reads ideas/INDEX.md inside the kernel-router manifest and emits an IdeaPortfolioResponse-shaped curated portfolio for all 17 super-ideas. The route returns HTTP 200 with X-Form-Router:native-kernel and is counted as the 27th kernel-first capable /api route. The live DB-backed /api/ideas route still fans out to FastAPI.",
+    "known_limitations": [
+      {
+        "scope": "full ideas router",
+        "observed": "api/app/routers/ideas.py and idea_service still own mutable DB-backed reads, writes, language projection, scoring, and relation routes. This slice cleans the source-backed curated portfolio read path only."
+      },
+      {
+        "scope": "route-table validate",
+        "observed": "cd form && ./validate.sh ../deploy/kernel-router/production-routes.fk currently stops on the existing source-language route-class helper outside this route. The Rust kernel-router serve + HTTP assertion is the behavior proof for the new route."
+      },
+      {
+        "scope": "source defaults",
+        "observed": "ideas/INDEX.md carries title, slug, pillar, stage, spec count, and capability; fields not present in source emit conservative IdeaWithScore defaults."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push of this source-portfolio route commit and GitHub checks on PR #2586."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "No public deploy attempted for this native route slice."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "GET /api/ideas/source-portfolio is now a kernel-first capable route that reads ideas/INDEX.md and returns the curated super-idea portfolio response shape without FastAPI or idea_service. Existing /api/ideas behavior is unchanged.",
+    "public_endpoints": [
+      "GET /api/ideas/source-portfolio",
+      "GET /api/ideas",
+      "GET /api/ideas/source-index"
+    ],
+    "test_flows": [
+      "python3 runtime assertion -> 200 native-kernel 17 17 idea-realization-engine external-presence",
+      "python3 scripts/runtime_surface_report.py --json -> kernel_first_capable_routes=27 and includes /api/ideas/source-portfolio",
+      "cd api && python3 -m pytest -q tests/test_ideas_router_form.py tests/test_runtime_surface_native_routes.py tests/test_ideas_graph_projection_form.py -> 15 passed"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; CI and deployment validation remain pending."
+  },
+  "idea_ids": [
+    "idea-realization-engine",
+    "data-infrastructure"
+  ],
+  "spec_ids": [
+    "specs/ideas-router-form-expression.md",
+    "specs/ideas-graph-projection-form.md"
+  ],
+  "task_ids": [
+    "ideas-source-portfolio-native-20260608",
+    "ideas-live-graph-storage-carrier"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "deploy/kernel-router/production-routes.fk",
+    "ideas/INDEX.md",
+    "api/app/models/idea.py",
+    "api/tests/test_ideas_router_form.py",
+    "api/tests/test_runtime_surface_native_routes.py",
+    "docs/coherence-substrate/ideas-router.form",
+    "specs/ideas-router-form-expression.md"
+  ],
+  "change_files": [
+    "api/tests/test_ideas_graph_projection_form.py",
+    "api/tests/test_ideas_router_form.py",
+    "api/tests/test_runtime_surface_native_routes.py",
+    "deploy/kernel-router/production-routes.fk",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/system_audit/commit_evidence_2026-06-08_ideas_source_portfolio_native.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/ideas-router-form-expression.md"
+  ],
+  "change_intent": "runtime_feature"
+}
