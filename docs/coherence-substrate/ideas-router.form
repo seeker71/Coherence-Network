@@ -208,7 +208,14 @@ defn ideas_router_structure() = {
             route_source: "deploy/kernel-router/production-routes.fk::route_ideas_source_index",
             status: "kernel-first capable",
             meaning: "the kernel-router reads ideas/INDEX.md and returns source-backed idea counts without CPython",
-            boundary: "DB-backed /api/ideas/count still fans out until the proven ideas graph projection is bound into the production route manifest",
+            boundary: "DB-backed /api/ideas/count still fans out until the live graph storage carrier lands",
+        },
+        {
+            path: "/api/ideas/graph-projection",
+            route_source: "deploy/kernel-router/production-routes.fk::route_ideas_graph_projection",
+            status: "kernel-first capable",
+            meaning: "the kernel-router projects fixture graph rows into an IdeaPortfolioResponse-shaped body without CPython",
+            boundary: "fixture rows prove the route binding; live DB-backed /api/ideas still fans out until a live graph storage carrier lands",
         },
     ],
     recipes: [
@@ -230,8 +237,9 @@ defn ideas_router_structure() = {
         "Python ownership -> Python carrier for Form-declared choreography",
         "Form-declared choreography -> kernel-router native structure route",
         "repo idea source -> kernel-router native source-index route",
+        "graph-node projection proof -> kernel-router native graph-projection route",
     ],
-    current_gap: "GAP-I1: /api/ideas/router-structure and /api/ideas/source-index are kernel-first capable; graph-node-port.fk exposes native get/list/count and ideas-graph-projection.fk now emits an IdeaPortfolioResponse-shaped read, while mutable DB-backed portfolio routes still enter through FastAPI until route-manifest binding and live storage carrier land.",
+    current_gap: "GAP-I1: /api/ideas/router-structure, /api/ideas/source-index, and /api/ideas/graph-projection are kernel-first capable; graph-node-port.fk exposes native get/list/count and ideas-graph-projection.fk emits an IdeaPortfolioResponse-shaped read, while mutable DB-backed portfolio routes still enter through FastAPI until the live storage carrier lands.",
 };
 
 defn ideas_router_reading() = {

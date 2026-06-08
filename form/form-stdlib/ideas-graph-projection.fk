@@ -42,7 +42,7 @@
 
     (defn igp-stage-from-status (status)
         (if (str_eq status "validated") "complete"
-            (if (str_eq status "partial") "impl" "none")))
+            (if (str_eq status "partial") "implementing" "none")))
 
     (defn igp-idea-json (node)
         (do
