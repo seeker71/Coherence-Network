@@ -107,8 +107,10 @@ python3 scripts/validate_spec_quality.py --file specs/native-graph-mutation-live
 - GAP-NGMLDB3: closed by `specs/native-mutation-route-side-effect-binding.md`.
   Native route runners now bind application graph mutation execution to
   side-effect execution in throwaway Postgres.
-- GAP-NGMLDB4 follow-up task: `native-mutation-public-flip-gate`. Add a
-  reversible public flip gate with route-local rollback receipt.
+- GAP-NGMLDB4: closed by `specs/native-mutation-public-gate.md`. The public gate
+  now carries route-local rollback receipt proof.
+- GAP-NGMLDB5 follow-up task: `native-mutation-deployed-public-canary`. Deploy
+  and observe the `X-Form-Native-Public-Gate` canary before any no-header flip.
 
 ## Risks and Assumptions
 

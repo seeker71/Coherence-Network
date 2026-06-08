@@ -72,10 +72,10 @@ on the Python fanout path.
 - [ ] **R6**: `deploy/kernel-router/production-routes.fk` embeds this envelope
   in each method-specific native mutation preview response.
 - [ ] **R7**: The A/B observation harness treats the envelope as part of the B
-  arm contract and recommends side-effect execution plus a narrow reversible
-  public gate as the next evidence.
-- [ ] **R8**: The idea and spec route Form docs name the trust envelope as the
-  current mutable-route state before any public front-door flip.
+  arm contract and now names the deployed public-gate canary as the next
+  evidence.
+- [ ] **R8**: The idea and spec route Form docs name the trust envelope as part
+  of the current mutable-route state before any no-header public flip.
 
 ## Research Inputs
 
@@ -139,13 +139,15 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-trust-enve
   contributor-key audit, and rollback receipt.
 - GAP-NMTE2: closed by `specs/native-mutation-route-side-effect-binding.md`. The
   proven side-effect carrier is now bound to Form-native route-runner execution.
-- GAP-NMTE3 follow-up task: `native-mutation-public-flip-gate`. Add the narrow
-  reversible public gate with route-local rollback receipt.
+- GAP-NMTE3: closed by `specs/native-mutation-public-gate.md`. The narrow
+  public gate now carries a route-local rollback receipt.
+- GAP-NMTE4 follow-up task: `native-mutation-deployed-public-canary`. Deploy and
+  observe the `X-Form-Native-Public-Gate` canary before any no-header flip.
 
 ## Risks and Assumptions
 
 - The envelope is a JSON-shaped response contract; it is not yet persisted as a
   dedicated audit row.
-- The preview header remains the only native mutation entry point in this slice.
-- The trust envelope remains a preview response contract; execution proof is
-  separate until route binding carries the proven side-effect carrier.
+- The preview header remains a non-executing SQL preview entry point.
+- The public-gate header remains explicit and reversible; ordinary no-header
+  mutation traffic stays on FastAPI until deployment canary evidence lands.
