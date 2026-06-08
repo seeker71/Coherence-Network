@@ -1,0 +1,53 @@
+; substrate-phase-band.fk — three-way proof of the phase metabolism (substrate-phase.fk).
+;
+; preludes: form-stdlib/substrate-phase.fk
+;
+; Thresholds for the whole band: gas-deg=1, ice-deg=5, ice-churn=2, condense-min=2.
+; The gap between ice-deg (5) and gas-deg (1) is the hysteresis band.
+;
+; SEE (phase-state, counts -> state):
+;   deg=6 churn=1  -> ice    (settled: circulating + cool)
+;   deg=0 churn=9  -> gas    (diffuse: no circulation)
+;   deg=3 churn=9  -> water  (the middle)
+;
+; INVITE (phase-invite, current + counts -> the move the physics asks for):
+;   gas   deg=0            -> stay       (cold gas rests in potential)
+;   gas   deg=3            -> condense   (crossed condense-min)
+;   water deg=6 churn=1    -> freeze     (settled)
+;   water deg=3 churn=9    -> stay       (mid + warm — the hysteresis gap, no thrash)
+;   ice   deg=0            -> sublimate  (circulation gone -> back to potential)
+;   ice   deg=6 changing   -> melt       (still read, but moving -> back to flow)
+;   ice   deg=6 still      -> stay       (frozen, content)
+;
+; Every assertion is deterministic, so the three sibling kernels must agree.
+
+(do
+    (let g-deg 1) (let i-deg 5) (let i-churn 2) (let c-min 2)
+
+    ; SEE — phase-state across all three states
+    (let s-ice   (phase-state 6 1 i-deg i-churn g-deg))
+    (let s-gas   (phase-state 0 9 i-deg i-churn g-deg))
+    (let s-water (phase-state 3 9 i-deg i-churn g-deg))
+
+    ; INVITE — phase-invite across every move
+    (let i0 (phase-invite (st-gas)   0 0 false i-deg i-churn g-deg c-min))   ; stay
+    (let i1 (phase-invite (st-gas)   3 0 false i-deg i-churn g-deg c-min))   ; condense
+    (let i2 (phase-invite (st-water) 6 1 false i-deg i-churn g-deg c-min))   ; freeze
+    (let i3 (phase-invite (st-water) 3 9 false i-deg i-churn g-deg c-min))   ; stay (gap)
+    (let i4 (phase-invite (st-ice)   0 0 false i-deg i-churn g-deg c-min))   ; sublimate
+    (let i5 (phase-invite (st-ice)   6 9 true  i-deg i-churn g-deg c-min))   ; melt
+    (let i6 (phase-invite (st-ice)   6 9 false i-deg i-churn g-deg c-min))   ; stay
+
+    (let pass
+        (and (eq s-ice   (st-ice))
+        (and (eq s-gas   (st-gas))
+        (and (eq s-water (st-water))
+        (and (eq i0 (mv-stay))
+        (and (eq i1 (mv-condense))
+        (and (eq i2 (mv-freeze))
+        (and (eq i3 (mv-stay))
+        (and (eq i4 (mv-sublimate))
+        (and (eq i5 (mv-melt))
+             (eq i6 (mv-stay))))))))))))
+
+    (print (if pass "substrate-phase-band: PASS" "substrate-phase-band: FAIL")))

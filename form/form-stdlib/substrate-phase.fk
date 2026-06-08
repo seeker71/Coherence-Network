@@ -1,0 +1,50 @@
+; substrate-phase.fk — the phase metabolism as a runnable recipe.
+;
+; The runnable companion to docs/coherence-substrate/substrate-thermodynamics.form.
+; STATE (ice/water/gas) is orthogonal to SUBSTANCE (Blueprint/Recipe/NamedCell): this
+; recipe reads a cell's STATE from its counts and names the shift the physics asks for —
+; for a Blueprint, a Recipe, or a NamedCell alike. It does three things and refuses a
+; fourth:
+;   SEE    — phase-state: counts -> which state the cell is in.
+;   BE     — st-gas / st-water / st-ice: the states held as values.
+;   INVITE — phase-invite: the move the physics asks for, given where the cell IS now.
+;   (it never MUTATES — the node stays sovereign; the caller carries the invitation.)
+;
+; A phase change moves a cell along the state axis WITHIN its substance: a Recipe that
+; freezes is still a Recipe, now solid. The counts never change what a cell IS.
+
+(do
+    ; --- BE: the three states, held as values ---
+    (defn st-gas   () 0)     ; diffuse  — potential, barely instantiated
+    (defn st-water () 1)     ; fluid    — actively circulating
+    (defn st-ice   () 2)     ; frozen   — settled, load-bearing
+
+    ; --- the invitations, held as values ---
+    (defn mv-stay      () 0)
+    (defn mv-condense  () 1)  ; gas   -> water
+    (defn mv-freeze    () 2)  ; water -> ice
+    (defn mv-melt      () 3)  ; ice   -> water
+    (defn mv-sublimate () 4)  ; ice   -> gas
+
+    ; --- SEE: name a cell's state from its counts (the instantaneous read) ---
+    ; ice  = high circulation AND cool (settled).  gas = low circulation (diffuse).
+    ; water = the middle.  degree/churn are STATE, not kind — this reads any substance.
+    (defn phase-state (deg churn ice-deg ice-churn gas-deg)
+        (if (and (ge deg ice-deg) (le churn ice-churn))
+            (st-ice)
+            (if (le deg gas-deg) (st-gas) (st-water))))
+
+    ; --- INVITE: the shift the physics asks for, given where the cell IS now ---
+    ; Takes the cell's CURRENT state so the leave-threshold can differ from the
+    ; enter-threshold — the gap between ice-deg (enter ice) and gas-deg (fall to gas)
+    ; IS the hysteresis: a count wobbling in the gap returns mv-stay, no thrash.
+    ; Returns an invitation, never a mutation.
+    (defn phase-invite (current deg churn changing ice-deg ice-churn gas-deg condense-min)
+        (if (eq current (st-gas))
+            (if (ge deg condense-min) (mv-condense) (mv-stay))
+            (if (eq current (st-water))
+                (if (and (ge deg ice-deg) (le churn ice-churn)) (mv-freeze) (mv-stay))
+                ; current == ice
+                (if (le deg gas-deg) (mv-sublimate)
+                    (if changing (mv-melt) (mv-stay))))))
+)
