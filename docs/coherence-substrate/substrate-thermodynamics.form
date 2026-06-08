@@ -10,6 +10,13 @@
 #   water — Recipe     — operational expression    — HOW it happens (the pattern)
 #   ice   — Blueprint  — structural identity        — WHAT it is (the type)
 #
+# CONSERVATION LAW (the substrate is "three phases of one substance"): every
+# transition re-orders, none removes. A cell's NodeID is its content's fingerprint,
+# content-addressed — it persists across every phase. gas is not absence; gas is
+# potential (lc-void-as-potential: superposition, the unformed generative ground).
+# So "moving a cell from state to state" changes how densely it is held — never
+# whether it exists.
+#
 # What was missing was the heat: the signal that tells a cell when to change state.
 # This file names it. The signal is a COUNT — cluster population, reference degree,
 # churn — read off the clustering we already have. Gravity gathers like-shaped cells
@@ -61,10 +68,12 @@
 #                             `split-max`, like right-sizing's 10 questions / 8 tasks)
 #                             — melt it into the sub-recipes it actually contains.
 #   MELT      ice → gas     : a Blueprint whose degree falls to ~0 and stays cold —
-#                             no instances, no readers — releases. This is composting,
-#                             made countable. SUGGEST, never auto: the count is a
-#                             check that reads the body, not an authority over it
-#                             (compost former-living forms with care, not efficiency).
+#                             no instances, no readers — RELEASES its type-claim and
+#                             returns to diffuse potential. Nothing is removed: the
+#                             NodeID is conserved; melt is de-coherence (re-coherable —
+#                             quantum-physics-as-recipe.form), the un-collapse back to
+#                             superposition. It is the most CONSERVATIVE move, not the
+#                             most dangerous — it un-asserts a type; it never deletes a cell.
 #
 # ─────────────────────────────────────────────────────────────────────
 # Part 4 — the metabolism, in Form  (suggest-transitions over the ladder)
@@ -83,15 +92,18 @@
         (water (if (and (ge deg (field thresh "freeze-degree"))
                         (le chrn (field thresh "freeze-churn"))) (transition cell (ice) "freeze") (stay cell)))
         (ice   (if (ge pop (field thresh "split-max"))         (transition cell (water) "split")
-               (if (le deg (field thresh "melt-degree"))       (suggest cell (gas) "melt")   ; SUGGEST, not transition
+               (if (le deg (field thresh "melt-degree"))       (transition cell (gas) "melt")
                                                                (stay cell))))))
 
-# `transition` re-homes the cell on the ladder (condense/freeze/split run on counts
-# alone — they only ever ADD structure or sub-divide, both reversible). `suggest`
-# emits a melt candidate for a cell or agent to confirm — the one transition that
-# removes tissue waits for a yes. cluster-of / cluster-level / population / degree /
-# churn read the turboquant ladder; carrier-last when they run (Form recipes proven
-# three-way, a native only where the count sweep needs speed).
+# All four re-home the cell on the ladder; NONE remove it — three phases of one
+# substance, every transition conserves the NodeID (content-addressed). The care is
+# HYSTERESIS, not loss: keep freeze-degree > melt-degree (a gap), so a count wobbling
+# near a threshold doesn't thrash a cell between phases. The ONE place removal is real
+# is the FILE layer — a concept/spec `.md` that backs a cell. A lattice phase-change
+# must NEVER auto-delete a backing file; that composting is a separate, confirmed,
+# file-layer act (git remembers; the tree shouldn't have to). cluster-of /
+# cluster-level / population / degree / churn read the turboquant ladder; carrier-last
+# when they run (Form recipes proven three-way, a native only where the sweep needs speed).
 
 # ─────────────────────────────────────────────────────────────────────
 # Part 5 — grounded, and what is design
@@ -100,7 +112,9 @@
 # OPERATIONAL today (for one cell-kind): right_sizing_service.py already clusters
 # ideas by cosine TF-similarity and emits split/merge SUGGESTIONS against hand-set
 # thresholds (overlap 0.80, 10 questions, 8 tasks, 14 days), dry-run-able, never
-# auto-applied. That is this metabolism, proven on ideas, suggest-not-execute.
+# auto-applied — it suggests because merging idea RECORDS is a real change in the file
+# lane, not because the metabolism removes anything. The cluster→count→threshold shape
+# is what is proven on ideas; the lattice version below conserves and can run on counts.
 #
 # DESIGN (this file): generalize it from ideas to every cell — nodes and edges —
 # with turboquant as the clustering engine (data-oblivious → the phase decisions are
@@ -115,4 +129,6 @@
 #   ctor-shape-signature.form — the missing-resolution gap the cluster band fills
 #   right_sizing_service.py — the operational precedent (cluster→count→suggest, for ideas)
 #   lc-identity-is-shared-blueprint-and-recipe — the trinity (gas/water/ice) this moves a cell through
-#   lc-whole-vitality / "how this body is tended" — crystallize the stable, compost the cold, with care
+#   lc-void-as-potential — gas is potential, not absence; melt returns a cell to it
+#   lc-whole-vitality / "how this body is tended" — crystallize the stable, melt the cold
+#     back to potential; file-composting (the one real removal) stays a separate, confirmed act
