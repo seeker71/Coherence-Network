@@ -37,4 +37,5 @@ jobs:
         run: |
           VERIFY_REQUIRE_API_HEALTH_SHA=1 \
           VERIFY_REQUIRE_WEB_HEALTH_PROXY_SHA=1 \
+          VERIFY_REQUIRE_KERNEL_FRONT_DOOR=1 \
             scripts/verify_web_api_deploy.sh "$PUBLIC_API_BASE_URL" "$PUBLIC_DEPLOY_WEB_BASE"
