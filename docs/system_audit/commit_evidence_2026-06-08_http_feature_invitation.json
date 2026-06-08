@@ -1,0 +1,135 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/http-feature-invitation-20260608",
+  "commit_scope": "Broaden the native HTTP feature surface so common protocol traffic can enter the Form router without endpoint-specific special cases.",
+  "files_owned": [
+    "form/form-stdlib/kernel-http.fk",
+    "form/form-stdlib/http-render.fk",
+    "form/form-stdlib/http-server.fk",
+    "form/form-stdlib/tests/kernel-http-band.fk",
+    "form/form-stdlib/tests/http-request-band.fk",
+    "form/form-stdlib/tests/http-server-band.fk",
+    "form/form-kernel-rust/src/main.rs",
+    "kernels/KERNEL_AS_ROUTER.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md",
+    "docs/system_audit/commit_evidence_2026-06-08_http_feature_invitation.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/tests/kernel-http-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/http-parse.fk form-stdlib/http-request.fk form-stdlib/tests/http-request-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/http-parse.fk form-stdlib/kernel-http.fk form-stdlib/http-request.fk form-stdlib/http-render.fk form-stdlib/http-server.fk form-stdlib/tests/http-server-band.fk",
+      "cd form/form-kernel-rust && cargo fmt && cargo test kernel_http --quiet",
+      "cd form/form-kernel-rust && cargo test buffered_response_body_for_method_omits_head_body --quiet",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/tests/kernel-http-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/http-parse.fk form-stdlib/http-request.fk form-stdlib/tests/http-request-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/http-parse.fk form-stdlib/kernel-http.fk form-stdlib/http-request.fk form-stdlib/http-render.fk form-stdlib/http-server.fk form-stdlib/tests/http-server-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-08_http_feature_invitation.json",
+      "git diff --check"
+    ],
+    "results": {
+      "prompt_guide": "pass",
+      "wellness": "pass; production was aligned at ab0483c3 and kernel-native API growth remains the active edge",
+      "kernel_http_band": "pass across Go/Rust/TypeScript with result 536893066",
+      "http_request_band": "pass across Go/Rust/TypeScript with result 63",
+      "http_server_band": "pass across Go/Rust/TypeScript with result 511",
+      "rust_kernel_http_tests": "pass; 7 kernel_http tests passed",
+      "rust_head_body_helper": "pass; 1 targeted test passed",
+      "kernel_http_binary_band": "pass across Go/Rust/TypeScript binary artifacts with result 536893066",
+      "http_request_binary_band": "pass across Go/Rust/TypeScript binary artifacts with result 63",
+      "http_server_binary_band": "pass across Go/Rust/TypeScript binary artifacts with result 511",
+      "source_compiler_integer_boundary": "observed and avoided; kernel-http-band kept the new checks below signed 32-bit verdict pressure",
+      "commit_evidence_validation": "pass",
+      "diff_check": "pass"
+    }
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until this branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Public deploy verification is pending until merge/deploy."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_by": [
+      "remote CI pending",
+      "public deploy pending"
+    ]
+  },
+  "idea_ids": [
+    "native-http-kernel-router",
+    "source-language-first-router"
+  ],
+  "spec_ids": [
+    "canonical-route-registry-and-runtime-mapping",
+    "form-core-kernel-conformance"
+  ],
+  "task_ids": [
+    "http-feature-invitation-20260608"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form://form-stdlib/kernel-http.fk#kh-method-pressure",
+    "form://form-stdlib/kernel-http.fk#kh-header-present",
+    "form://form-stdlib/http-server.fk#kh-response-for-request",
+    "form://form-stdlib/http-server.fk#kh-options-response",
+    "rust://form-kernel-rust/src/main.rs#route_method_pressure",
+    "rust://form-kernel-rust/src/main.rs#buffered_response_body_for_method",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md#HTTP-native-function-and-choice-audit",
+    "kernels/KERNEL_AS_ROUTER.md#What-must-grow-on-the-kernel-side-for-a-REAL-front-door"
+  ],
+  "change_files": [
+    "form/form-stdlib/kernel-http.fk",
+    "form/form-stdlib/http-render.fk",
+    "form/form-stdlib/http-server.fk",
+    "form/form-stdlib/tests/kernel-http-band.fk",
+    "form/form-stdlib/tests/http-request-band.fk",
+    "form/form-stdlib/tests/http-server-band.fk",
+    "form/form-kernel-rust/src/main.rs",
+    "kernels/KERNEL_AS_ROUTER.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Native HTTP routing now welcomes a broader common protocol surface: case-insensitive header lookup, HEAD and OPTIONS method validation, low-pressure HEAD-through-GET selection, no-body HEAD responses, and generic no-body OPTIONS discovery when no native route/upstream handles it.",
+    "public_endpoints": [
+      "form://form-stdlib/kernel-http.fk",
+      "form://form-stdlib/http-server.fk",
+      "rust://form-kernel-rust/src/main.rs"
+    ],
+    "test_flows": [
+      "kernel-http-band proves header case matching, HEAD-through-GET route pressure, OPTIONS request validity, route-choice signatures, and candidate scoring",
+      "http-request-band proves parsed headers can be found case-insensitively",
+      "http-server-band proves HEAD no-body wire response, required-header casing, and unmatched OPTIONS 204 + Allow",
+      "binary validation proves the behavior survives Form artifact compilation",
+      "Rust tests prove compatibility listener validation/scoring and buffered HEAD body suppression"
+    ]
+  }
+}

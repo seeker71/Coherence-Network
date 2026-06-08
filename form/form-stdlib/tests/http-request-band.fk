@@ -7,7 +7,7 @@
 ; to kh-field, the headers to kh-header, the body — and that the assembled value
 ; is kh-request-valid?. The engine now speaks the class the Router consumes.
 ;
-; Each check contributes a distinct bit; the band emits their sum (31 when all
+; Each check contributes a distinct bit; the band emits their sum (63 when all
 ; pass). Identical across Go/Rust/TS proves the lift is correct and portable.
 
 (let raw "GET /api/utils/coherence_weight?threshold=90 HTTP/1.1\r\nHost: x\r\n\r\n")
@@ -34,14 +34,19 @@
 ;; name through kernel-http.fk's own kh-header-present?.
 (let ok-header (if (kh-header-present? (kh-request-headers req) "Host") 8 0))
 
-;; CHECK 5 (bit 16) — the assembled request satisfies kh-request-valid?: a
+;; CHECK 5 (bit 16) — header lookup follows HTTP's case-insensitive header-name
+;; rule, so proxy/client casing changes do not create route pressure.
+(let ok-header-case (if (kh-header-present? (kh-request-headers req) "host") 16 0))
+
+;; CHECK 6 (bit 32) — the assembled request satisfies kh-request-valid?: a
 ;; known method, a rooted path, every header a kh-header, every field a
 ;; kh-field. The class validates itself.
-(let ok-valid (if (kh-request-valid? req) 16 0))
+(let ok-valid (if (kh-request-valid? req) 32 0))
 
-;; verdict — sum of the bit-weighted checks; 31 when all pass.
+;; verdict — sum of the bit-weighted checks; 63 when all pass.
 (add ok-method
 (add ok-path
 (add ok-query
 (add ok-header
-     ok-valid))))
+(add ok-header-case
+     ok-valid)))))

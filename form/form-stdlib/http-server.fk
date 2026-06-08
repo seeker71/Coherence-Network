@@ -51,6 +51,9 @@ section [form.bml] {
     // client's fault — named so the gap is visible).
     def kh-not-found(request) = kh-response(404, list(), str_concat("no route for ", kh-request-path(request)));
     def kh-no-handler(name) = kh-response(500, list(), str_concat("no handler registered for ", name));
+    def kh-options-response(request) = kh-response(204, list(kh-header("Allow", "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS")), "");
+    def kh-head-response(response) = kh-response(kh-response-status(response), kh-response-headers(response), "");
+    def kh-response-for-request(request, response) = if str_eq(kh-request-method(request), "HEAD") then kh-head-response(response) else response;
 
     // ---- dispatch : a matched candidate -> the handler's kh-response -
     // Resolve the handler from the route's name; if registered (the wrapper is
@@ -80,8 +83,8 @@ section [form.bml] {
         let request = kh-request-from-raw(raw);
         let choice = kh-route-choice-for-request(routes, request);
         let candidate = kh-route-choice-selected(choice);
-        let response = if kh-candidate-matched?(candidate) then kh-dispatch(registry, candidate, request) else kh-not-found(request);
-        kh-serve-response(response);
+        let response = if kh-candidate-matched?(candidate) then kh-dispatch(registry, candidate, request) else if str_eq(kh-request-method(request), "OPTIONS") then kh-options-response(request) else kh-not-found(request);
+        kh-serve-response(kh-response-for-request(request, response));
     }
 
     0;

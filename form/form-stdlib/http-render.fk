@@ -38,7 +38,7 @@ section [form.bml] {
     // wrong — `list(` + newline becomes `list()` with the rows left raw. So the
     // rows live on one line, the body's proven idiom; iteration #7 — teaching
     // the compiler multi-line calls — is what lets this table breathe vertically.)
-    let kh-status-table = list(list(200, "OK"), list(400, "Bad Request"), list(404, "Not Found"), list(422, "Unprocessable Entity"), list(500, "Internal Server Error"));
+    let kh-status-table = list(list(200, "OK"), list(204, "No Content"), list(400, "Bad Request"), list(404, "Not Found"), list(422, "Unprocessable Entity"), list(500, "Internal Server Error"));
 
     // generic table lookup: first row whose head equals `key` -> its second
     // element; `fallback` when no row matches — the status table's lookup walk.
