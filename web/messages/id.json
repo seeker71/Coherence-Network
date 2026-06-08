@@ -1854,6 +1854,8 @@
     "lineageMoreTemplate": "Menampilkan {shown} karya · sisanya hidup di profil graf kontributor."
   },
   "begin": {
+    "receiveTitle": "Bagaimana kamu ingin diterima?",
+    "receiveHelp": "Kamu yang menentukan caranya — ubah kapan saja, atau pergi kapan pun.",
     "eyebrow": "Menjalin masuk",
     "h1": "Mulai",
     "intro": "Beri tahu tubuh siapa yang datang. Tidak ada yang harus tepat — kau bisa memperbarui semuanya nanti. Cukup agar tubuh tahu siapa kau dan bagaimana cara membalas. Jika kau ingin membaca sambutan paling lambat dahulu, [/come-in](/come-in) berbicara polos kepada manusia atau AI mana pun; kontemplasi panjang hidup di [/one-sheet](/one-sheet).",

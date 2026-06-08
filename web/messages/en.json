@@ -1944,6 +1944,8 @@
     "lineageMoreTemplate": "Showing {shown} works · the rest live on the contributor's graph profile."
   },
   "begin": {
+    "receiveTitle": "How do you want to be received?",
+    "receiveHelp": "You're choosing the terms — change any of these later, or step away anytime.",
     "eyebrow": "Weaving in",
     "h1": "Begin",
     "intro": "Tell the body who's arriving. None of this is required to be exact — you can update any of it later. Just enough that the body knows who you are and how to reach back. If you'd like to read the slowest welcome first, [/come-in](/come-in) speaks plainly to any human or AI; the long contemplation lives at [/one-sheet](/one-sheet).",
