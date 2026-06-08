@@ -224,7 +224,7 @@ def content_hash(markdown: str, title: str, description: str) -> str:
 
 
 def parse_view_file(filepath: Path) -> dict:
-    """Parse a view file: English original (lc-xxx.md) or a non-English view
+    """Parse a view file: default-locale root view (lc-xxx.md) or a locale view
     (lc-xxx.<lang>.md). Returns lang, title, description, markdown, and any
     translation metadata declared in frontmatter.
     """
@@ -246,9 +246,9 @@ def parse_view_file(filepath: Path) -> dict:
     story = extract_story_content(text) or ""
 
     # Default author_type:
-    #   - English view -> original_human (unless frontmatter says otherwise)
-    #   - non-English with translated_from -> translation_human
-    #   - non-English with no translated_from -> original_human (authored directly in that lang)
+    #   - default-locale view -> original_human (unless frontmatter says otherwise)
+    #   - locale view with translated_from -> translation_human
+    #   - locale view with no translated_from -> original_human (authored directly in that lang)
     declared_author = fm.get("author_type")
     if declared_author:
         author_type = declared_author
@@ -273,7 +273,7 @@ def parse_view_file(filepath: Path) -> dict:
 
 
 def view_files_for_concept(concept_id: str) -> list[Path]:
-    """All view files for a concept: the English original plus any <lang>.md siblings."""
+    """All view files for a concept: the root view plus any <lang>.md siblings."""
     files = []
     en = KB_DIR / f"{concept_id}.md"
     if en.exists():
@@ -291,10 +291,10 @@ def sync_views_for_concept(
     """Project every language view file for a concept into the DB.
 
     Order matters: sync the anchor-eligible (non-translated) view first so its
-    content_hash is available to the translated views for linkage. For now the
-    English file acts as the starting point if no other lang file is marked as
-    the anchor; when a non-English view is edited to become the anchor, a
-    subsequent sync pass will re-read the files and update accordingly.
+    content_hash is available to the translated views for linkage. The root
+    file acts as the starting point if no other lang file is marked as the
+    anchor; when another locale view is edited to become the anchor, a
+    subsequent sync pass re-reads the files and updates accordingly.
     """
     files = view_files_for_concept(concept_id)
     if not files:
@@ -350,7 +350,7 @@ def sync_views_for_concept(
 def parse_idea_view_file(filepath: Path) -> dict:
     """Parse ideas/<slug>.<lang>.md into a view payload.
 
-    The non-language file (ideas/agent-pipeline.md) is the English view.
+    The non-language file (ideas/agent-pipeline.md) is the default-locale view.
     Files with a .<lang>.md suffix (agent-pipeline.de.md) are translations.
     """
     text = filepath.read_text(encoding="utf-8")
