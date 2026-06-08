@@ -4,11 +4,12 @@
 # specs/ideas-router-form-expression.md.
 #
 # This file names the shape that emerged when the idea portfolio router
-# is read from Form altitude. Python still carries FastAPI transport and
-# existing services still carry persistence and business logic. The
-# route choreography lives here: the portfolio is sensed, browsed,
-# chosen from, changed, linked, translated, invested in, rolled up, and
-# inspected as one recipe family.
+# is read from Form altitude. Python still carries live FastAPI transport for
+# the public mutable paths; the native graph-node carrier now carries the
+# create/replace/delete mutation shape over injected storage. The route
+# choreography lives here: the portfolio is sensed, browsed, chosen from,
+# changed, linked, translated, invested in, rolled up, and inspected as one
+# recipe family.
 
 # ---------------------------------------------------------------------
 # Part 1 -- route and recipe shapes
@@ -104,8 +105,8 @@ defn mutate_idea_recipe() = idea_route_recipe(
         idea_route("update_idea_slug", "PATCH", "/ideas/{idea_id}/slug", "rename slug", "idea_service.update_idea_slug", "SlugUpdateResponse", ["slug history"]),
         idea_route("put_idea_tags", "PUT", "/ideas/{idea_id}/tags", "replace tags", "idea_service.set_idea_tags", "IdeaTagUpdateResponse", ["normalized tag catalog"]),
     ],
-    ["validate request", "call service carrier", "repair reciprocal edge when needed", "return refreshed idea"],
-    ["api/app/routers/ideas.py::create_idea", "api/app/routers/ideas.py::update_idea"]
+    ["validate request", "shape graph-node mutation", "call live service carrier until front-door parity lands", "repair reciprocal edge when needed", "return refreshed idea"],
+    ["api/app/routers/ideas.py::create_idea", "api/app/routers/ideas.py::update_idea", "form/form-stdlib/graph-node-port.fk::gn-create-node", "form/form-stdlib/graph-node-port.fk::gn-replace-node", "form/form-stdlib/graph-node-port.fk::gn-delete-node", "form/form-stdlib/tests/graph-node-mutation-carrier-band.fk"]
 );
 
 defn question_answer_recipe() = idea_route_recipe(
@@ -224,6 +225,13 @@ defn ideas_router_structure() = {
             meaning: "the kernel-router projects fixture graph rows into an IdeaPortfolioResponse-shaped body without CPython",
             boundary: "fixture rows prove the route binding; live DB-backed /api/ideas still fans out until a live graph storage carrier lands",
         },
+        {
+            path: "form/form-stdlib/graph-node-port.fk::gn-create-node|gn-replace-node|gn-delete-node",
+            route_source: "form/form-stdlib/tests/graph-node-mutation-carrier-band.fk",
+            status: "Form-native mutable carrier proven",
+            meaning: "idea/spec create, replace, and delete now have native graph-node operations over the storage port",
+            boundary: "public /api/ideas mutation paths still fan out until method-specific route rows, API-key parity, and application graph_nodes Postgres writes are bound",
+        },
     ],
     recipes: [
         browse_ideas_recipe(),
@@ -246,8 +254,9 @@ defn ideas_router_structure() = {
         "repo idea source -> kernel-router native source-index route",
         "repo idea source -> kernel-router native curated portfolio route",
         "graph-node projection proof -> kernel-router native graph-projection route",
+        "mutable service calls -> Form-native graph-node mutation carrier",
     ],
-    current_gap: "GAP-I1: /api/ideas/router-structure, /api/ideas/source-index, /api/ideas/source-portfolio, and /api/ideas/graph-projection are kernel-first capable; graph-node-port.fk exposes native get/list/count and ideas-graph-projection.fk emits an IdeaPortfolioResponse-shaped read, while mutable DB-backed portfolio routes still enter through FastAPI until the live storage carrier lands.",
+    current_gap: "GAP-I1: /api/ideas/router-structure, /api/ideas/source-index, /api/ideas/source-portfolio, and /api/ideas/graph-projection are kernel-first capable; graph-node-port.fk exposes native get/list/count plus create/replace/delete over the storage port, and ideas-graph-projection.fk emits an IdeaPortfolioResponse-shaped read. Public mutable DB-backed /api/ideas routes still enter through FastAPI until method-specific kernel route rows can preserve API-key/contributor-key auth and write the application graph_nodes table directly.",
 };
 
 defn ideas_router_reading() = {
