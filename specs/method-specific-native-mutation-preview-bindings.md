@@ -14,11 +14,16 @@ source:
     symbols: [test_native_mutation_preview_routes_are_method_and_header_gated, test_native_mutation_preview_handlers_emit_application_graph_sql, test_native_mutation_preview_uses_live_spec_node_id_convention, test_idea_and_spec_forms_name_method_specific_preview_bindings]
   - file: api/tests/test_runtime_surface_native_routes.py
     symbols: [test_parser_reads_bindings_not_comments, test_real_manifest_native_routes_are_served_zero_and_include_ideas_structure]
+  - file: deploy/kernel-router/mutation_ab_observation_harness.py
+    symbols: [run_observation, build_gate_report]
+  - file: api/tests/test_native_mutation_ab_observation.py
+    symbols: [test_ab_observation_cases_cover_all_native_mutation_preview_routes]
 requirements:
   - "The kernel-router production manifest binds method-specific native preview rows for idea/spec mutations."
   - "Preview rows require X-Form-Native-Preview so ordinary public mutations still fan out to FastAPI."
   - "Preview handlers bind JSON request bodies and wildcard path ids to application graph SQL for graph_nodes, graph_node_revisions, and graph_edges."
   - "Runtime-surface reporting counts method-specific KernelHTTPRoute rows without collapsing PATCH and DELETE wildcard routes into one path."
+  - "The preview binding has an A/B observation gate before any ordinary public traffic moves."
 done_when:
   - 'file_contains("deploy/kernel-router/production-routes.fk", "(kh-route \"ideas-create-native-preview\" \"POST\" \"/api/ideas\"")'
   - 'file_contains("deploy/kernel-router/production-routes.fk", "X-Form-Native-Preview")'
@@ -77,6 +82,9 @@ binding as an explicit native preview surface.
 - `scripts/runtime_surface_report.py` - method-specific route parsing.
 - `api/tests/test_native_mutation_route_bindings.py` - route binding proof.
 - `api/tests/test_runtime_surface_native_routes.py` - method route parser proof.
+- `deploy/kernel-router/mutation_ab_observation_harness.py` - A/B observation
+  gate over fanout vs native preview.
+- `api/tests/test_native_mutation_ab_observation.py` - observation gate proof.
 - `docs/coherence-substrate/ideas-router.form` - high-level ideas route state.
 - `docs/coherence-substrate/spec-registry-router.form` - high-level spec route
   state.
@@ -89,13 +97,15 @@ binding as an explicit native preview surface.
 - `api/tests/test_native_mutation_route_bindings.py::test_native_mutation_preview_uses_live_spec_node_id_convention`
 - `api/tests/test_native_mutation_route_bindings.py::test_idea_and_spec_forms_name_method_specific_preview_bindings`
 - `api/tests/test_runtime_surface_native_routes.py::test_parser_reads_bindings_not_comments`
+- `api/tests/test_native_mutation_ab_observation.py::test_ab_observation_cases_cover_all_native_mutation_preview_routes`
 - Manual validation: run the kernel-router manifest and curl one preview request
   with `X-Form-Native-Preview` plus one mutation request without it.
 
 ## Verification
 
 ```bash
-cd api && python3 -m pytest -q tests/test_native_mutation_route_bindings.py tests/test_runtime_surface_native_routes.py
+python3 deploy/kernel-router/mutation_ab_observation_harness.py --json
+cd api && python3 -m pytest -q tests/test_native_mutation_route_bindings.py tests/test_native_mutation_ab_observation.py tests/test_runtime_surface_native_routes.py
 python3 scripts/validate_spec_quality.py --file specs/method-specific-native-mutation-preview-bindings.md
 cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --host 127.0.0.1 --port 19215 --workers 1 --routes ../../deploy/kernel-router/production-routes.fk --stdlib ../form-stdlib --upstream http://127.0.0.1:9
 curl -sS -i -X POST http://127.0.0.1:19215/api/spec-registry -H 'Content-Type: application/json' -H 'X-Form-Native-Preview: 1' --data '{"spec_id":"native-bind","title":"Native Bind"}'
@@ -112,12 +122,14 @@ curl -sS -i -X POST http://127.0.0.1:19215/api/spec-registry -H 'Content-Type: a
 
 ## Gaps
 
-- GAP-MSNMPB1 follow-up task: `native-graph-mutation-live-db-proof`. Execute the
+- GAP-MSNMPB1: closed by `specs/native-mutation-ab-observation-gate.md`. The
+  preview binding now has an A/B observation gate over fanout vs native preview.
+- GAP-MSNMPB2 follow-up task: `native-graph-mutation-live-db-proof`. Execute the
   generated SQL against the application schema and prove revision rows plus edge
   cleanup.
-- GAP-MSNMPB2 follow-up task: `native-mutation-response-projection`. Project
+- GAP-MSNMPB3 follow-up task: `native-mutation-response-projection`. Project
   mutation results into `IdeaWithScore` and `SpecRegistryEntry` without FastAPI.
-- GAP-MSNMPB3 follow-up task: `native-mutation-side-effects`. Carry cache
+- GAP-MSNMPB4 follow-up task: `native-mutation-side-effects`. Carry cache
   invalidation, parent/edge repair, resonance re-attunement, and contributor-key
   audit updates natively before public mutation traffic moves.
 
