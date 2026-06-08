@@ -188,6 +188,30 @@ The native front door is not a prose promise; it is a Form-native attention loop
 
 ---
 
+## Choice Receipt Protocol — Trustworthy Branch Feedback
+
+Choice receipts keep branch-prediction feedback separate from the deeper values
+that decide whether a branch should be learned from: alignment, knowing, and
+trust. A compressed signature may shrink the receipt, but it must still preserve
+the witnessed texture: category, selected path, outcome, certainty bucket,
+value kind/buckets, witness, coordinate, and trace counters.
+
+**Blueprints**:
+- 1736 CHOICE-CANDIDATE — branch path, category, eligibility, pressure, score, and evidence.
+- 1737 CHOICE-TRACE — attempts, successes, failures, and silences.
+- 1738 CHOICE-VALUE — branch-prediction feedback plus alignment, knowing, and trust scores.
+- 1739 CHOICE-RECEIPT — expression, surface, category, candidates, selected path, outcome, certainty, value, why/who/where/when, cost, and trace.
+- 1743 CHOICE-SIGNATURE — compressed receipt signature preserving the fields needed to validate trust.
+
+**Operating shape**: `branch-prediction-feedback` is useful only when the
+receipt also carries enough alignment, knowing, and trust to learn from it.
+Silence is an outcome, not missing data.
+
+**Proof**: `form/form-stdlib/tests/choice-receipt-band.fk` returns `-1`
+(`4294967295` unsigned) across source and binary sibling-kernel execution.
+
+---
+
 ## Arrival Protocol — Current Registered Shape
 
 **Blueprints**:

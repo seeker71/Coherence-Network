@@ -1,0 +1,126 @@
+; choice-receipt-band.fk - first proof for trace-preserving choice receipts.
+;
+; preludes: form-stdlib/choice-receipt.fk
+;
+; Band verdict: -1 (4294967295 unsigned) when success, fail, and silence receipts validate;
+; branch-prediction feedback stays distinct from alignment/knowing/trust; and
+; the compressed signature still preserves category, certainty, selected path,
+; witness, coordinate, value buckets, and trace counts.
+
+section [form.bml] {
+    def cr-choice-receipt-band-score() {
+        let fast = cr-choice-candidate("choose_best.fast-path", "BMF-CHOICE", true, 0, 990, "exact object-rule bucket matched");
+        let experimental = cr-choice-candidate("choose_any.experimental-path", "BMF-CHOICE", true, 120, 720, "speculative fallback observed");
+        let rejected = cr-choice-candidate("choose_any.noisy-path", "BMF-CHOICE", false, 500, 120, "guard failed");
+        let candidates = list(fast, experimental);
+        let branch_value = cr-choice-value(cr-kind-branch-feedback(), 88, 92, 91, 90);
+        let low_trust_value = cr-choice-value(cr-kind-branch-feedback(), 95, 60, 85, 95);
+        let core_value = cr-choice-value(cr-kind-core-alignment(), 0, 96, 94, 93);
+        let success_trace = cr-choice-trace(2, 1, 1, 0);
+        let fail_trace = cr-choice-trace(2, 0, 1, 0);
+        let silence_trace = cr-choice-trace(0, 0, 0, 1);
+        let success_receipt = cr-choice-receipt(
+            "choose_best(object-rule, object-stream)",
+            "bmf-object-choice",
+            "BMF-CHOICE",
+            candidates,
+            "choose_best.fast-path",
+            cr-outcome-success(),
+            91,
+            branch_value,
+            "exact bucket beat fallback and one fallback failed",
+            "choice-receipt-band",
+            "form/form-stdlib/tests/choice-receipt-band.fk",
+            20260608,
+            3,
+            success_trace
+        );
+        let fail_receipt = cr-choice-receipt(
+            "choose_any(experimental-rule, object-stream)",
+            "bmf-object-choice",
+            "BMF-CHOICE",
+            list(experimental, rejected),
+            "choose_any.experimental-path",
+            cr-outcome-fail(),
+            68,
+            low_trust_value,
+            "branch produced feedback but core trust stayed below learning threshold",
+            "choice-receipt-band",
+            "form/form-stdlib/tests/choice-receipt-band.fk",
+            20260608,
+            5,
+            fail_trace
+        );
+        let silence_receipt = cr-choice-receipt(
+            "choose_best(no-candidates, object-stream)",
+            "bmf-object-choice",
+            "BMF-CHOICE",
+            empty,
+            "none",
+            cr-outcome-silence(),
+            0,
+            core_value,
+            "no candidate answered; silence is preserved as evidence",
+            "choice-receipt-band",
+            "form/form-stdlib/tests/choice-receipt-band.fk",
+            20260608,
+            0,
+            silence_trace
+        );
+        let malformed_receipt = cr-choice-receipt(
+            "choose_best(malformed, object-stream)",
+            "bmf-object-choice",
+            "BMF-CHOICE",
+            candidates,
+            "none",
+            cr-outcome-success(),
+            91,
+            branch_value,
+            "success cannot select none",
+            "choice-receipt-band",
+            "form/form-stdlib/tests/choice-receipt-band.fk",
+            20260608,
+            1,
+            success_trace
+        );
+        let success_signature = cr-choice-signature(success_receipt);
+        let fail_signature = cr-choice-signature(fail_receipt);
+        let silence_signature = cr-choice-signature(silence_receipt);
+        sum(list(
+            cr-bool-score(cr-choice-candidate-valid?(fast), 1),
+            cr-bool-score(cr-choice-candidates-valid?(candidates), 2),
+            cr-bool-score(cr-choice-candidate-valid?(rejected), 4),
+            cr-bool-score(cr-choice-trace-valid?(success_trace), 8),
+            cr-bool-score(eq(cr-trace-total(success_trace), 2), 16),
+            cr-bool-score(cr-choice-value-valid?(branch_value), 32),
+            cr-bool-score(cr-choice-value-worth-learning?(branch_value), 64),
+            cr-bool-score(if cr-choice-value-worth-learning?(low_trust_value) then false else true, 128),
+            cr-bool-score(cr-choice-value-worth-learning?(core_value), 256),
+            cr-bool-score(cr-choice-receipt-valid?(success_receipt), 512),
+            cr-bool-score(cr-choice-receipt-valid?(fail_receipt), 1024),
+            cr-bool-score(cr-choice-receipt-valid?(silence_receipt), 2048),
+            cr-bool-score(if cr-choice-receipt-valid?(malformed_receipt) then false else true, 4096),
+            cr-bool-score(cr-choice-signature?(success_signature), 8192),
+            cr-bool-score(cr-choice-signature?(fail_signature), 16384),
+            cr-bool-score(cr-choice-signature?(silence_signature), 32768),
+            cr-bool-score(cr-choice-signature-preserves?(success_receipt, success_signature), 65536),
+            cr-bool-score(cr-choice-signature-preserves?(fail_receipt, fail_signature), 131072),
+            cr-bool-score(cr-choice-signature-preserves?(silence_receipt, silence_signature), 262144),
+            cr-bool-score(str_eq(cr-signature-selected-path(success_signature), "choose_best.fast-path"), 524288),
+            cr-bool-score(str_eq(cr-signature-category(success_signature), "BMF-CHOICE"), 1048576),
+            cr-bool-score(eq(cr-signature-certainty-bucket(success_signature), 5), 2097152),
+            cr-bool-score(eq(cr-signature-outcome-code(fail_signature), 0), 4194304),
+            cr-bool-score(eq(cr-signature-outcome-code(silence_signature), sub(0, 1)), 8388608),
+            cr-bool-score(eq(cr-signature-candidate-count-bucket(success_signature), 2), 16777216),
+            cr-bool-score(eq(cr-signature-candidate-count-bucket(silence_signature), 0), 33554432),
+            cr-bool-score(eq(cr-signature-attempts(success_signature), 2), 67108864),
+            cr-bool-score(eq(cr-signature-failures(success_signature), 1), 134217728),
+            cr-bool-score(str_eq(cr-signature-value-kind(success_signature), cr-kind-branch-feedback()), 268435456),
+            cr-bool-score(eq(cr-signature-branch-feedback-bucket(success_signature), 4), 536870912),
+            cr-bool-score(eq(cr-signature-alignment-bucket(success_signature), 5), 1073741824),
+            cr-bool-score(and(str_eq(cr-signature-who(success_signature), "choice-receipt-band"), str_eq(cr-signature-where(success_signature), "form/form-stdlib/tests/choice-receipt-band.fk")), 2147483648)
+        ));
+    }
+
+    cr-choice-receipt-band-score();
+}

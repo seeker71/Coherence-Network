@@ -3709,6 +3709,76 @@
       "pkg": 1,
       "level": 2,
       "type": 99,
+      "inst": 1736,
+      "name": "CHOICE-CANDIDATE",
+      "meaning": "one branch candidate for a choice receipt: path, category, eligibility, pressure, score, and evidence",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/choice-receipt.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 1737,
+      "name": "CHOICE-TRACE",
+      "meaning": "choice witness counters: attempts, successes, failures, and silences",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/choice-receipt.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 1738,
+      "name": "CHOICE-VALUE",
+      "meaning": "choice value surface keeping branch-prediction feedback distinct from alignment, knowing, and trust",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/choice-receipt.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 1739,
+      "name": "CHOICE-RECEIPT",
+      "meaning": "trace-preserving choice receipt: expression, surface, category, candidates, selected path, outcome, certainty, value, why/who/where/when, cost, and trace",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/choice-receipt.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 1743,
+      "name": "CHOICE-SIGNATURE",
+      "meaning": "compressed choice receipt signature preserving category, selected path, outcome, certainty bucket, value buckets, witness, coordinate, and trace counters",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/choice-receipt.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1740,
       "name": "CELL-V0",
       "meaning": "",

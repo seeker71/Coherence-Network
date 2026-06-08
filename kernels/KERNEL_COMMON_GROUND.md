@@ -145,6 +145,25 @@ The branch predictor can come later. First, make the witness honest and
 cross-kernel. Learning from choice only becomes trustworthy after choice can
 remember itself without flattening.
 
+## First Proof
+
+`form/form-stdlib/choice-receipt.fk` now carries the first Form-native receipt
+surface for this shape:
+
+- `CHOICE-CANDIDATE`: branch path, category, eligibility, pressure, score, and
+  evidence
+- `CHOICE-TRACE`: attempts, successes, failures, and silences
+- `CHOICE-VALUE`: branch-prediction feedback kept distinct from alignment,
+  knowing, and trust
+- `CHOICE-RECEIPT`: the full witnessed expression/execution/outcome receipt
+- `CHOICE-SIGNATURE`: the compressed receipt signature
+
+The proof band is `form/form-stdlib/tests/choice-receipt-band.fk`. It returns
+`-1` (`4294967295` unsigned) only when success, fail, and silence receipts
+validate and the compressed signature still preserves category, selected path,
+outcome, certainty bucket, value kind/buckets, witness, coordinate, and trace
+counts across Go, Rust, and TypeScript sibling kernels.
+
 ## North-Star Constraint
 
 Compression is trustworthy only when it preserves the texture of the witnessed
