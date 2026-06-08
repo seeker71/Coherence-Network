@@ -17,8 +17,9 @@
 #      (the SAME load-bearing build Dockerfile.api runs; no PyO3 wheel needed here
 #      because this image serves, it is not imported by Python).
 #   2. runtime — a lean debian-slim with ONLY the stripped binary, the form-stdlib
-#      (so a BML-authored manifest can be source-compiled at load via --stdlib),
-#      and the shadow routes manifest. No Rust toolchain in the final image.
+#      (so a source-authored manifest can be source-compiled at load via
+#      --stdlib), and the shadow + production routes manifests. No Rust
+#      toolchain in the final image.
 #
 # SHADOW MODE BY DEFAULT: the baked manifest (deploy/kernel-router/shadow-routes.fk)
 # binds an EMPTY routes list, so EVERY request fans out to ${UPSTREAM_URL}
@@ -26,6 +27,11 @@
 # with the X-Form-Router: fanout-python header as live evidence the router carries
 # the traffic. Promoting a route to native = adding a (path handler) line to the
 # manifest; nothing else in the topology changes.
+#
+# The production manifest is baked beside it at /routes/production-routes.fk,
+# with route metadata at /routes/production-routes-data.json. Switching to it is
+# runtime configuration (`ROUTES_FILE=/routes/production-routes.fk`), not a
+# different image.
 #
 # THIS IMAGE DOES NOT FLIP PRODUCTION. Building and even running this container
 # changes nothing about what fronts api.coherencycoin.com — that is a Traefik
@@ -67,7 +73,8 @@ LABEL org.opencontainers.image.source="https://github.com/seeker71/Coherence-Net
 ENV DEBIAN_FRONTEND=noninteractive \
     KERNEL_ROUTER_PORT=8080 \
     UPSTREAM_URL=http://api:8000 \
-    ROUTES_FILE=/routes/shadow-routes.fk
+    ROUTES_FILE=/routes/shadow-routes.fk \
+    STDLIB_DIR=/app/form/form-stdlib
 
 # Minimal runtime deps: ca-certificates for TLS-capable upstreams, curl only for
 # the healthcheck. The kernel binary is statically-linked-enough Rust; no Python,
@@ -92,10 +99,12 @@ RUN chmod +x /app/bin/form-kernel-rust \
 # stdlib in lets a BML manifest work later without rebuilding the image.
 COPY form/form-stdlib/ /app/form/form-stdlib/
 
-# The shadow routes manifest: an EMPTY routes list -> every path fans out to the
-# upstream. This is the deployable shadow-mode default; mount/replace
-# /routes/shadow-routes.fk to promote native routes.
+# The route manifests: shadow is the deployable default; production carries the
+# current native route surface and its route metadata so promotion is a runtime
+# choice, not a rebuild-time surprise.
 COPY deploy/kernel-router/shadow-routes.fk /routes/shadow-routes.fk
+COPY deploy/kernel-router/production-routes.fk /routes/production-routes.fk
+COPY deploy/kernel-router/production-routes-data.json /routes/production-routes-data.json
 
 # The entrypoint resolves env at RUN time so PORT / UPSTREAM_URL / ROUTES_FILE
 # are container-configurable (compose env, -e flags) without rebuilding.

@@ -150,6 +150,7 @@ pub enum ArithOpCode {
 }
 
 impl ArithOpCode {
+    #[cfg(test)]
     pub fn from_str(s: &str) -> Option<Self> {
         Some(match s {
             "add" => ArithOpCode::Add,
@@ -178,18 +179,12 @@ pub const RBASIC_NUMERIC: u32 = 51;
 pub struct FormatRecipe {
     pub node_id: NodeID,
     pub name: String,
-    pub semantic_kind: u32,
-    pub encoding: u32,
     pub bits: u32,
+    #[cfg(test)]
     pub storage_hint: String,
+    #[cfg(test)]
     pub arithmetic_hint: String,
     pub arith_hint_code: u32,
-    pub mantissa_bits: Option<u32>,
-    pub exponent_bits: Option<u32>,
-    pub exponent_bias: Option<u32>,
-    pub posit_n: Option<u32>,
-    pub posit_es: Option<u32>,
-    pub lookup_values: Option<Vec<f64>>,
 }
 
 // ---------------------------------------------------------------------------
@@ -351,18 +346,12 @@ fn intern_format(k: &mut Kernel, cf: &CanonicalFormat) -> FormatRecipe {
     FormatRecipe {
         node_id,
         name: cf.name.clone(),
-        semantic_kind: sk as u32,
-        encoding: enc as u32,
         bits: cf.bits,
+        #[cfg(test)]
         storage_hint: cf.storage_hint.clone(),
+        #[cfg(test)]
         arithmetic_hint: cf.arithmetic_hint.clone(),
         arith_hint_code: hint as u32,
-        mantissa_bits: cf.mantissa_bits,
-        exponent_bits: cf.exponent_bits,
-        exponent_bias: cf.exponent_bias,
-        posit_n: cf.posit_n,
-        posit_es: cf.posit_es,
-        lookup_values: cf.lookup_values.clone(),
     }
 }
 
@@ -608,10 +597,6 @@ impl FormatTable {
         h
     }
 
-    pub fn get(&self, h: u32) -> &FormatRecipe {
-        &self.by_handle[h as usize]
-    }
-
     pub fn register_all(&mut self, lib: &FormatLibrary) {
         for r in &lib.recipes {
             self.register(r);
@@ -633,6 +618,7 @@ impl FormatTable {
 
     // apply — Pass 1 hot-path entry. Same surface as apply_arith but routes
     // through the cached handler.
+    #[cfg(test)]
     pub fn apply(&mut self, fmt: &FormatRecipe, op: u32, a: NumVal, b: NumVal) -> NumVal {
         let h = self.register(fmt);
         self.handler(h, op)(a, b)

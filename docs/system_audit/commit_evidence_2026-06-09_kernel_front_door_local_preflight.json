@@ -1,0 +1,107 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/kernel-front-door-safety-20260608",
+  "commit_scope": "Make the kernel-router front-door path locally provable before another production flip by wiring route-choice/fanout metrics into the native runtime, baking production route assets into the router image, and adding a local curl preflight.",
+  "files_owned": [
+    "Dockerfile.kernel-router",
+    "deploy/kernel-router/entrypoint.sh",
+    "deploy/kernel-router/production-routes.fk",
+    "docs/system_audit/commit_evidence_2026-06-09_kernel_front_door_local_preflight.json",
+    "form/form-kernel-rust/src/formats.rs",
+    "form/form-kernel-rust/src/main.rs",
+    "kernels/KERNEL_AS_ROUTER.md",
+    "scripts/kernel_front_door_local_preflight.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/kernel-front-door-safety-20260608 && make prompt-guide",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/kernel-front-door-safety-20260608 && make wellness",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/kernel-front-door-safety-20260608/form/form-kernel-rust && cargo build --release --bin form-kernel-rust",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/kernel-front-door-safety-20260608 && scripts/check_route_manifests.sh",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/kernel-front-door-safety-20260608 && scripts/kernel_front_door_local_preflight.sh",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/kernel-front-door-safety-20260608/form/form-kernel-rust && cargo test --release",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/kernel-front-door-safety-20260608 && bash -n scripts/kernel_front_door_local_preflight.sh deploy/kernel-router/entrypoint.sh",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/kernel-front-door-safety-20260608 && git diff --check"
+    ],
+    "notes": "Release kernel build is warning-clean. Route manifest name-check passed for production-routes.fk and shadow-routes.fk. Local front-door preflight booted the real local FastAPI app and kernel-router, proved fan-out exactness for /api/version and /api/health, proved native value-contract for /api/utils/coherence_weight, and proved /api/attention/kernel-runtime reports total_requests=4, native_requests=1, fanout_requests=3, choice_attempts=120, choice_successes=2, choice_failures=118. Rust release tests passed: 46 tests."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until this branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No production flip or deploy has been performed from this change. Public front door remains FastAPI until a separate remote shadow and Traefik re-point pass the documented gate."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local proof is complete. CI, PR review, and any production remote-shadow/flip proof remain pending."
+  },
+  "idea_ids": [
+    "native-kernel-front-door",
+    "kernel-router-shadow-first",
+    "form-native-observability"
+  ],
+  "spec_ids": [
+    "kernel-router-front-door-local-preflight",
+    "native-http-route-choice-observability"
+  ],
+  "task_ids": [
+    "kernel-front-door-safety-2026-06-08"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "proof-demand",
+        "warning-attention"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cargo build --release --bin form-kernel-rust finished with no warnings after route-choice metrics were connected and stale/test-only release surfaces were removed or cfg-gated.",
+    "scripts/check_route_manifests.sh passed: production-routes.fk and shadow-routes.fk both resolve.",
+    "scripts/kernel_front_door_local_preflight.sh passed: image-packaging check passed, fan-out exactness passed for /api/version and /api/health, native value-contract passed for /api/utils/coherence_weight, and native attention metrics moved.",
+    "cargo test --release passed: 46 Rust kernel tests.",
+    "KERNEL_AS_ROUTER.md now records the 2026-06-08 Traefik 404 lesson: start and prove kernel-router before disabling the api router."
+  ],
+  "change_files": [
+    "Dockerfile.kernel-router",
+    "deploy/kernel-router/entrypoint.sh",
+    "deploy/kernel-router/production-routes.fk",
+    "form/form-kernel-rust/src/formats.rs",
+    "form/form-kernel-rust/src/main.rs",
+    "kernels/KERNEL_AS_ROUTER.md",
+    "scripts/kernel_front_door_local_preflight.sh"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A local kernel-router front-door rehearsal now proves native and fan-out routing plus aggregate route-choice metrics before a production flip; the fan-out streaming arm also increments fanout/total route metrics.",
+    "public_endpoints": [
+      "local http://127.0.0.1:18181/api/version",
+      "local http://127.0.0.1:18181/api/health",
+      "local http://127.0.0.1:18181/api/utils/coherence_weight?values=10,20,30&threshold=15",
+      "local http://127.0.0.1:18181/api/attention/kernel-runtime"
+    ],
+    "test_flows": [
+      "scripts/kernel_front_door_local_preflight.sh"
+    ]
+  }
+}
