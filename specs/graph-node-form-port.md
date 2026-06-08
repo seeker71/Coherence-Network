@@ -87,10 +87,10 @@ python3 scripts/validate_spec_quality.py --file specs/graph-node-form-port.md
 - GAP-GN1: The port is proven over memory and file carriers. Follow-up task:
   `graph-node-form-postgres-carrier` can add a live Postgres graph-node carrier
   to the same storage-port shape.
-- GAP-GN2: Native HTTP routes still need response projection bound into the
-  production route manifest. Follow-up task:
-  `ideas-native-graph-projection-route`; the Form projection itself now lives in
-  `form/form-stdlib/ideas-graph-projection.fk`.
+- GAP-GN2: closed by `specs/ideas-graph-projection-form.md` and
+  `specs/native-mutation-response-projection.md`. Native read projection and
+  mutation response projection now have Form carriers; ordinary mutable traffic
+  still waits on side effects and reversible public gating.
 
 ## Risks and Assumptions
 

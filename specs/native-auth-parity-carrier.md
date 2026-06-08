@@ -58,8 +58,8 @@ This is not a public route flip. It closes the auth-decision gap so the next
 remaining blocker was the live application graph carrier: direct `graph_nodes`,
 `graph_node_revisions`, and edge cleanup parity. That carrier now exists as
 `application-graph-node-port.fk`; header-gated method-specific preview rows now
-exist too. The remaining blocker is live DB execution, response projection, and
-side-effect proof.
+exist too. Live DB execution and response projection are now proven; the
+remaining blocker is side-effect proof plus a reversible public gate.
 
 ## Requirements
 
@@ -74,8 +74,8 @@ side-effect proof.
   over both direct header lists and a `kh-request` wrapper, with a Python-known
   SHA-256 fixture.
 - [ ] **R5**: ideas/spec Form route readings name auth parity as proven and
-  leave public mutable front-door flips blocked on live DB execution, response
-  projection, and side-effect proof.
+  leave public mutable front-door flips blocked on side-effect proof and a
+  reversible public gate.
 
 ## Research Inputs
 
@@ -130,10 +130,11 @@ python3 scripts/validate_spec_quality.py --file specs/native-auth-parity-carrier
 - GAP-NAPC2 follow-up task: `native-contributor-key-last-used-update`.
   The current carrier proves allow/deny parity. The audit side effect that
   refreshes `last_used_at` should land with the application-table carrier.
-- GAP-NAPC3 follow-up task: `native-graph-mutation-live-db-proof`.
-  Header-gated method-specific native rows now exist without stealing existing
-  mutation traffic. The next proof is live application DB execution plus result
-  projection, cache invalidation, and side effects.
+- GAP-NAPC3: closed by `specs/native-graph-mutation-live-db-proof.md` and
+  `specs/native-mutation-response-projection.md`. Header-gated method-specific
+  native rows now exist without stealing existing mutation traffic, and live DB
+  execution plus result projection are proven. The next proof is cache
+  invalidation, side effects, and reversible public gating.
 
 ## Risks and Assumptions
 

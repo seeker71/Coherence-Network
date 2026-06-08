@@ -1,0 +1,141 @@
+; integration/application-graph-response-projection-live.fk -- live DB rows
+; projected into mutation response shapes.
+;
+; preludes:
+;   form-stdlib/core.fk
+;   form-stdlib/application-graph-node-port.fk
+;   form-stdlib/application-graph-response-projection.fk
+;
+; Driven by form/scripts/application-graph-response-projection-test.sh.
+; Verdict: 111111 when every step holds:
+;   connect                         -> 1
+;   create fixture graph tables      -> 10
+;   native mutation writes rows      -> 100
+;   idea row projects to score shape -> 1000
+;   spec row projects to entry shape -> 10000
+;   cleanup + close                  -> 100000
+
+(do
+    (let DSN "PG_DSN_PLACEHOLDER")
+    (let conn (pg_connect DSN))
+    (let connect-ok (if (ge conn 0) 1 0))
+
+    (pg_exec conn "DROP TABLE IF EXISTS graph_edges")
+    (pg_exec conn "DROP TABLE IF EXISTS graph_node_revisions")
+    (pg_exec conn "DROP TABLE IF EXISTS graph_nodes")
+
+    (let nodes-ddl
+        "CREATE TABLE graph_nodes (
+            id VARCHAR(255) PRIMARY KEY,
+            type VARCHAR(50) NOT NULL,
+            name TEXT NOT NULL DEFAULT '',
+            description TEXT NOT NULL DEFAULT '',
+            properties JSONB NOT NULL DEFAULT '{}'::jsonb,
+            phase VARCHAR(20) NOT NULL DEFAULT 'water',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )")
+    (let revisions-ddl
+        "CREATE TABLE graph_node_revisions (
+            id VARCHAR(255) PRIMARY KEY,
+            node_id VARCHAR(255) NOT NULL,
+            revision_number INTEGER NOT NULL,
+            captured_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            source VARCHAR(32) NOT NULL DEFAULT 'api',
+            author VARCHAR(255) NOT NULL DEFAULT '',
+            fields_changed JSONB NOT NULL DEFAULT '[]'::jsonb,
+            snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
+            CONSTRAINT uq_node_revisions_node_rev UNIQUE (node_id, revision_number)
+        )")
+    (let edges-ddl
+        "CREATE TABLE graph_edges (
+            id VARCHAR(255) PRIMARY KEY,
+            from_id VARCHAR(255) NOT NULL,
+            to_id VARCHAR(255) NOT NULL,
+            type VARCHAR(100) NOT NULL,
+            properties JSONB NOT NULL DEFAULT '{}'::jsonb,
+            strength DOUBLE PRECISION NOT NULL DEFAULT 1.0,
+            created_by VARCHAR(255) NOT NULL DEFAULT 'system',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )")
+    (let schema-ok (if (eq (agrp-and3
+        (if (ge (pg_exec conn nodes-ddl) 0) 1 0)
+        (if (ge (pg_exec conn revisions-ddl) 0) 1 0)
+        (if (ge (pg_exec conn edges-ddl) 0) 1 0)) 1) 10 0))
+
+    (agn-create-node
+        conn
+        "rev-projection-idea"
+        "idea-projection-native"
+        "idea"
+        "Projection Native Idea"
+        "Projected from live graph row"
+        "water"
+        "{\"potential_value\":\"8.0\",\"actual_value\":\"3.0\",\"estimated_cost\":\"4.0\",\"actual_cost\":\"1.0\",\"resistance_risk\":\"2.0\",\"confidence\":\"0.8\",\"workspace_id\":\"coherence-network\"}"
+        "kernel-response-projection"
+        "form-native")
+    (agn-create-node
+        conn
+        "rev-projection-spec"
+        "spec-projection-native"
+        "spec"
+        "Projection Native Spec"
+        "Projected from live graph row"
+        "ice"
+        "{\"spec_id\":\"projection-native\",\"potential_value\":\"9.0\",\"actual_value\":\"3.0\",\"estimated_cost\":\"3.0\",\"actual_cost\":\"1.5\",\"idea_id\":\"idea-projection-native\",\"process_summary\":\"process\",\"pseudocode_summary\":\"pseudo\",\"implementation_summary\":\"impl\",\"created_by_contributor_id\":\"agent:codex\",\"updated_by_contributor_id\":\"agent:codex\",\"content_path\":\"specs/projection-native.md\",\"content_hash\":\"hash-projection-native\",\"workspace_id\":\"coherence-network\"}"
+        "kernel-response-projection"
+        "form-native")
+    (let mutation-ok (if (str_eq (pg_query conn "SELECT count(*) FROM graph_node_revisions") "2") 100 0))
+
+    (let idea-row (pg_query conn
+        "SELECT id, name, description, phase,
+            COALESCE(properties->>'potential_value','0'),
+            COALESCE(properties->>'actual_value','0'),
+            COALESCE(properties->>'estimated_cost','0'),
+            COALESCE(properties->>'actual_cost','0'),
+            COALESCE(properties->>'resistance_risk','1.0'),
+            COALESCE(properties->>'confidence','0.5'),
+            COALESCE(properties->>'workspace_id','coherence-network')
+         FROM graph_nodes WHERE id = 'idea-projection-native'"))
+    (let idea-json (agrp-project-idea-row idea-row))
+    (let idea-ok (if (eq (agrp-and4
+        (agrp-contains? idea-json "\"free_energy_score\":1.0667")
+        (agrp-contains? idea-json "\"marginal_cc_score\":0.8")
+        (agrp-contains? idea-json "\"remaining_cost_cc\":3.0")
+        (agrp-contains? idea-json "\"manifestation_status\":\"partial\"")) 1) 1000 0))
+
+    (let spec-row (pg_query conn
+        "SELECT
+            COALESCE(properties->>'spec_id', replace(id, 'spec-', '')),
+            name,
+            description,
+            COALESCE(properties->>'potential_value','0'),
+            COALESCE(properties->>'actual_value','0'),
+            COALESCE(properties->>'estimated_cost','0'),
+            COALESCE(properties->>'actual_cost','0'),
+            COALESCE(properties->>'idea_id',''),
+            COALESCE(properties->>'process_summary',''),
+            COALESCE(properties->>'pseudocode_summary',''),
+            COALESCE(properties->>'implementation_summary',''),
+            COALESCE(properties->>'created_by_contributor_id',''),
+            COALESCE(properties->>'updated_by_contributor_id',''),
+            created_at::text,
+            updated_at::text,
+            COALESCE(properties->>'content_path',''),
+            COALESCE(properties->>'content_hash',''),
+            COALESCE(properties->>'workspace_id','coherence-network')
+         FROM graph_nodes WHERE id = 'spec-projection-native'"))
+    (let spec-json (agrp-project-spec-row spec-row))
+    (let spec-ok (if (eq (agrp-and4
+        (agrp-contains? spec-json "\"spec_id\":\"projection-native\"")
+        (agrp-contains? spec-json "\"value_gap\":6.0")
+        (agrp-contains? spec-json "\"estimated_roi\":3.0")
+        (agrp-contains? spec-json "\"actual_roi\":2.0")) 1) 10000 0))
+
+    (pg_exec conn "DROP TABLE IF EXISTS graph_edges")
+    (pg_exec conn "DROP TABLE IF EXISTS graph_node_revisions")
+    (pg_exec conn "DROP TABLE IF EXISTS graph_nodes")
+    (let cleanup-ok (if (str_eq (pg_query conn "SELECT COALESCE(to_regclass('public.graph_nodes')::text, '')") "") 100000 0))
+    (pg_close conn)
+
+    (sum (list connect-ok schema-ok mutation-ok idea-ok spec-ok cleanup-ok)))
