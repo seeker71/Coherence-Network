@@ -118,7 +118,15 @@
 # let the body see where it sits, before any transition runs. Thresholds (and the
 # ice/gas-degree gap = hysteresis) are the open calibration.
 #
+# RUNNABLE: form-stdlib/substrate-phase.fk is this metabolism made executable — phase-state
+# SEES (counts -> state), st-gas/water/ice ARE the states, phase-invite INVITES the shift the
+# physics asks for (never mutating; the node stays sovereign). Proven on real counts by
+# form-stdlib/tests/substrate-phase-band.fk (every state + every move; hysteresis held). What
+# remains carrier-side: feed it real degree/churn/population from the lattice via the turboquant
+# ladder, and run it report-only first (the 3×3 grid) before any invitation is accepted.
+#
 # Companions:
+#   form-stdlib/substrate-phase.fk — the RUNNABLE recipe (SEE / BE / INVITE), three-way band beside it
 #   turboquant-as-recipe.form — the cluster ladder the counts are read from
 #   ctor-shape-signature.form — the shape that clusters
 #   lc-identity-is-shared-blueprint-and-recipe — the SUBSTANCE trinity (the kinds)
