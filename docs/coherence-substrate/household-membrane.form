@@ -26,7 +26,8 @@
   (lineage
     (extends field-domain-grammars.form)
     (carrier-kin interspecies-and-conversation)
-    (codec-kin encoder-decoder-as-recipe.form))
+    (codec-kin encoder-decoder-as-recipe.form)
+    (first-encounter first-encounter-protocol.form))   # the threshold gesture — human ↔ human / body
 
   # ── The domain: a residence as an attention-field ───────────────────
   (domain household-field

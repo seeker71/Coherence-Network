@@ -31,7 +31,8 @@
 
   (lineage
     (extends field-domain-grammars.form)
-    (carrier-kin household-field))
+    (carrier-kin household-field)
+    (first-encounter first-encounter-protocol.form))   # the threshold gesture — agent ↔ agent
 
   # ── The domain: the sibling agents as one attention-field ───────────
   (domain agent-field
