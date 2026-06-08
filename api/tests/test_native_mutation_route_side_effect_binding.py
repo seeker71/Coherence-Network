@@ -90,11 +90,11 @@ def test_route_side_effect_binding_live_integration_executes_route_runners():
         assert required in text
 
 
-def test_ab_gate_next_evidence_is_public_gate_after_route_binding():
+def test_ab_gate_next_evidence_is_deployed_canary_after_public_gate():
     text = _text(AB_HARNESS_PATH)
 
     assert "bind native side-effect execution carrier to mutation route runner" not in text
-    assert "narrow reversible public gate with route-local rollback receipt" in text
+    assert "deployed X-Form-Native-Public-Gate canary before any no-header flip" in text
 
 
 def test_route_forms_name_route_side_effect_binding_before_public_flip():
@@ -102,4 +102,4 @@ def test_route_forms_name_route_side_effect_binding_before_public_flip():
         assert "form/scripts/native-mutation-route-side-effects-test.sh" in text
         assert "native route side-effect binding proven" in text
         assert "application graph mutation and side-effect execution in one Form-native route runner" in text
-        assert "does not move ordinary public traffic" in text
+        assert "ordinary no-header public traffic still fans out to FastAPI" in text

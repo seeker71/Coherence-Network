@@ -90,7 +90,8 @@ def test_ideas_router_form_keeps_python_as_carrier_with_gap_named():
     assert "choice_success=1, silence/protocol/fail/stop/BMA markers" in text
     assert "native-mutation-side-effects-test.sh proves parent-edge repair" in text
     assert "native-mutation-route-side-effects-test.sh proves application graph mutation plus side-effect execution are bound" in text
-    assert "narrow reversible public gate has a route-local rollback receipt" in text
+    assert "native-mutation-public-gate-test.sh plus mutation_public_gate_harness.py prove X-Form-Native-Public-Gate" in text
+    assert "deployed header-gated public canary is observed before any no-header flip" in text
 
 
 def test_ideas_router_form_describes_live_router_carrier():
