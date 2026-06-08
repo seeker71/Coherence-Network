@@ -10,7 +10,7 @@
 ;
 ; The handlers, routes, and registry are DEMO data this band supplies; the
 ; Server names none of them — it is one generic flow over data. Emits a bit-sum
-; (31 when all pass). Identical across Go/Rust/TS proves the dispatch — including
+; (63 when all pass). Identical across Go/Rust/TS proves the dispatch — including
 ; the first-class handler call — is correct and portable.
 
 ;; demo handlers : handler(kh-request) -> kh-response. A handler reads the
@@ -27,7 +27,8 @@
 (let demo-routes
     (list (kh-route "health" "GET" "/health" 0 "health" "" 100)
           (kh-route "echo"   "GET" "/echo"   0 "echo"   "" 100)
-          (kh-route "ghost"  "GET" "/ghost"  0 "ghost-handler" "" 100)))
+          (kh-route "ghost"  "GET" "/ghost"  0 "ghost-handler" "" 100)
+          (kh-route "blocked" "GET" "/blocked" 99 "health" "X-Missing" 0)))
 (let demo-registry
     (list (list "health" demo-health)
           (list "echo"   demo-echo)))
@@ -60,9 +61,17 @@
 (let r-ghost (kh-serve demo-routes demo-registry "GET /ghost HTTP/1.1\r\nHost: x\r\n\r\n"))
 (let ok-ghost (if (ge (str_find r-ghost "HTTP/1.1 500 Internal Server Error\r\n" 0) 0) 16 0))
 
-;; verdict — sum of the bit-weighted checks; 31 when all pass.
+;; CHECK 6 (bit 32) — GET /blocked has an exact high-priority route, but that
+;; route requires a missing header and has no pressure budget. Eligibility is a
+;; Form-native choice point, so the Server does NOT dispatch the route's handler;
+;; it returns the honest route miss.
+(let r-blocked (kh-serve demo-routes demo-registry "GET /blocked HTTP/1.1\r\nHost: x\r\n\r\n"))
+(let ok-blocked (if (ge (str_find r-blocked "HTTP/1.1 404 Not Found\r\n" 0) 0) 32 0))
+
+;; verdict — sum of the bit-weighted checks; 63 when all pass.
 (add ok-health
 (add ok-echo
 (add ok-404
 (add ok-404-body
-     ok-ghost))))
+(add ok-ghost
+     ok-blocked)))))

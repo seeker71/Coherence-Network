@@ -48,6 +48,7 @@ HERE = Path(__file__).resolve().parent
 BIN = HERE / "target" / "release" / "form-kernel-rust"
 # form/form-kernel-rust -> form -> repo root
 REPO = HERE.parent.parent
+STDLIB = HERE.parent / "form-stdlib"
 ROUTES = REPO / "deploy" / "kernel-router" / "production-routes.fk"
 API_DIR = REPO / "api"
 
@@ -395,7 +396,8 @@ def main() -> int:
               f"--routes production-routes.fk ...")
         router_proc = subprocess.Popen(
             [str(BIN), "serve", "--port", str(kport),
-             "--routes", str(ROUTES), "--upstream", app_base],
+             "--routes", str(ROUTES), "--stdlib", str(STDLIB),
+             "--upstream", app_base],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         )
         wait_for_port(kport)
