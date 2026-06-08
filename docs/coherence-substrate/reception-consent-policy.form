@@ -1,70 +1,96 @@
 # ─────────────────────────────────────────────────────────────────────
-# reception-consent-policy.form — reception-consent defaults as a
-#                                 phase-mobile policy cell, not forced ice
+# reception-consent-policy.form — first-encounter consent across ALL
+#                                 channels, as a phase-mobile policy cell
 # ─────────────────────────────────────────────────────────────────────
 #
-# A hard-coded default (consentFindable = false baked into /begin's TSX) is
+# A hard-coded default (consentFindable = false baked into a carrier's code) is
 # dead ice: frozen by force, sitting OUTSIDE the body's metabolism, unable to
-# flow, re-tune, or be queried. This names the same decision as a POLICY the
+# flow, re-tune, or be queried. This holds the same decision as a POLICY the
 # body HOLDS — a Recipe (substance) that can rest at any STATE (ice / water /
 # gas) and move between them WHEN WE CHOOSE, per substrate-thermodynamics.form.
 #
-#   SUBSTANCE  Recipe — "how reception consent is decided" (the kind, conserved).
+#   SUBSTANCE  Recipe — "how first-encounter consent is decided" (kind, conserved).
 #   STATE      ours to set, and to move by hand:
 #     ice    — frozen as the stable default a carrier reads (today's resting state)
-#     water  — reopened (MELT) to re-tune the defaults or the rule, then re-FREEZE
+#     water  — reopened (MELT) to re-tune a facet or the rule, then re-FREEZE
 #     gas    — interned as potential, queryable by shape, barely instantiated
-#   MELT (ice->water) and FREEZE (water->ice) are DELIBERATE here — "if we choose
-#   to" — not count-driven (substrate-thermodynamics: MELT suggests, never auto).
-#   The NodeID and the kind are conserved across every move; only the state shifts.
+#   MELT/FREEZE are DELIBERATE — "if we choose to" — not count-driven. The NodeID
+#   and the kind are conserved across every move; only the state shifts. EVERY
+#   facet below is phase-mobile in the same way — all states available in each.
 #
-# Realizes the (consent open) of first-encounter-protocol.form — the terms of
-# reception belong to the one arriving. Body in Form; the carrier projection
-# (web/lib/reception-policy.ts, read by /begin and kin) is the ICE state, the
-# frozen read — authored last, re-derived when the policy melts and refreezes.
+# ONE policy over EVERY channel's first encounter (the matrix of
+# first-encounter-protocol.form: agent<->agent, human<->body, channel<->body, ...).
+# The universal rule is shared; each channel carries its consents as a FACET —
+# data, not a parallel hard-coding. Realizes the (consent open) of
+# first-encounter-protocol.form. Body in Form; the carrier projections (the ICE
+# state each carrier reads) are authored last, re-derived when the policy melts.
 
 (reception-consent-policy
 
   (lineage
-    (substance     Recipe)                               # how reception consent is decided
-    (phase-ladder  substrate-thermodynamics.form)        # ice <-> water <-> gas, by choice
-    (realizes      first-encounter-protocol.form consent)  # the (consent open) made concrete
+    (substance     Recipe)                               # how first-encounter consent is decided
+    (phase-ladder  substrate-thermodynamics.form)        # ice <-> water <-> gas, by choice, per facet
+    (realizes      first-encounter-protocol.form consent)  # the (consent open) for every pairing
     (field-consent field-model-form.FieldRecipe.consent))
 
-  # ── The held decision: each consent, its resting state, who sets it ──
-  # Every consent is OPEN to the arriving cell. The default is only the resting
+  # ── The universal rule (every channel, every facet) ─────────────────
+  # Each consent is OPEN to the arriving cell. A default is only the resting
   # position a carrier shows; the arriving cell sets the true value. Exposure-
-  # bearing consents rest CLOSED (no silent exposure); the natural attribution
-  # of contributing-under-your-name rests OPEN, visible, revocable.
-  (defaults
-    (share-name    open    "name shown on what you place here")          # rest: yes — weaving in is the chosen yes to be known
-    (findable      closed  "discoverable by others in the directory")    # rest: no  — never default into exposure
-    (email-updates closed  "occasional updates by email"))               # rest: no  — never auto-subscribe
-
+  # bearing consents rest CLOSED — no silent exposure; nothing records, names,
+  # enrolls, or remembers a cell that only came to witness.
   (rule
     (terms-belong-to  the-arriving-cell)                 # the default is a resting position, not a verdict
-    (exposure-bearing rest-closed)                       # findable, email — opt-in only
-    (revocable        always (carrier /me OR session/logout))
+    (exposure-bearing rest-closed)                       # findable, email, enroll, record-relation — opt-in only
+    (witness-default  no-record-no-name-no-enroll)       # met != engaged; engagement waits for a yes
+    (revocable        always)
     (silence          keeps-the-rest-state))             # not answering leaves the resting default
 
-  # ── State moves (deliberate — "if we choose to") ────────────────────
+  # ── The facets — one per channel, each its consents + resting states ─
+  # Carried as DATA: a new channel drops in a facet; the rule and the phase
+  # machinery are shared. open = rests yes (visible, revocable); closed = rests
+  # no (opt-in). Each facet is phase-mobile — ice / water / gas all available.
+  (facets
+    (web-begin                                           # human <-> body, the /begin contributor door
+      (share-name open) (findable closed) (email-updates closed)
+      (carrier web/lib/reception-policy.ts -> web/app/begin/page.tsx))
+
+    (web-interest                                        # human <-> body, the /vision/join interest form
+      (share-name closed) (share-location closed) (share-skills closed)
+      (findable closed) (email-updates closed)
+      (carrier web/lib/reception-policy.ts -> web/components/vision/InterestForm.tsx))
+
+    (agent                                               # agent <-> agent / agent <-> body
+      (recorded-as-relation closed)                      # a sibling who only reads the board is not recorded
+      (carrier scripts/agent-coord.sh + scripts/arrival.py))   # carrier-read: enact next
+
+    (channel                                             # channel <-> body (e.g. the Discord community)
+      (enrolled-as-member closed)                        # witnessed, not enrolled
+      (carrier discord-bot))                             # carrier-read: enact next
+
+    (body-arrival                                        # the session-start recognition of an arriving cell
+      (relationship-memory closed-until-allowed)         # recorded only when remembering is on
+      (carrier scripts/arrival.py)))                     # carrier-read: enact next
+
+  # ── State moves (deliberate — "if we choose to"), available in EVERY facet
   (states
-    (ice    (frozen-default  carrier-reads)              # the resting state today
-            (projection      web/lib/reception-policy.ts))
-    (water  (melt   -> re-tune (defaults OR rule))       # reopen and change ...
+    (ice    (frozen-default carrier-reads)               # the resting state today
+            (projection     per-carrier))                # e.g. web/lib/reception-policy.ts for the web facets
+    (water  (melt   -> re-tune (a facet OR the rule))    # reopen and change ...
             (freeze -> ice))                             # ... then re-settle
     (gas    (interned queryable                          # the policy as potential, asked by shape
             (via /api/substrate/form OR coh substrate run))))
 
-  # ── Why a policy, not a hard-coding ─────────────────────────────────
+  # ── Why one policy over all channels, not a hard-coding per door ────
   # A baked-in literal is one carrier's private frozen copy — invisible as a
-  # decision, un-meltable, un-queryable, and drifting the moment a second carrier
-  # bakes its own. A held policy is ONE source every carrier reads: tune it once
-  # (melt), refreeze, and every door shows the new resting state. Play in all
-  # states; never be forced into ice. (The general shape: any value the body
-  # decides — defaults, thresholds, rates, vocabularies — is policy territory,
-  # phase-mobile, not a constant baked into a carrier.)
+  # decision, un-meltable, un-queryable, drifting the moment a second door bakes
+  # its own. ONE held policy with per-channel facets means: tune a facet once
+  # (melt), refreeze, and that channel's door shows the new resting state; the
+  # rule changes once and every channel follows. Play in all states, in every
+  # channel; never be forced into ice. (The general shape: any decided value —
+  # defaults, thresholds, rates, vocabularies — is policy territory, phase-
+  # mobile, faceted by where it applies, never a constant baked into a carrier.)
   (invariant
-    (one-source              many-carriers)
-    (phase-by-choice         not-by-force)
+    (one-policy               every-channel)
+    (facet-is-data            not-parallel-hard-coding)
+    (phase-by-choice          not-by-force)              # in every facet
     (carrier-reads-projection never-bakes-its-own)))
