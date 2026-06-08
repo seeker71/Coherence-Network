@@ -16,6 +16,7 @@ import {
   CONTRIBUTOR_KEY,
   EMAIL_KEY,
 } from "@/lib/identity";
+import { RECEPTION_CONSENT_DEFAULTS } from "@/lib/reception-policy";
 
 interface GraduateOut {
   contributor_id: string;
@@ -75,14 +76,14 @@ export default function BeginPage() {
   const [message, setMessage] = useState("");
   const [resonantRoles, setResonantRoles] = useState<string[]>([]);
 
-  // How do you want to be received? — the reception choices belong to the one
-  // arriving (first-encounter-protocol.form). Exposure-bearing consents default
-  // off: nothing defaults a person into being discoverable or emailed.
-  // Name-on-contributions defaults on, since weaving in is itself the chosen
-  // yes to be known — and it stays visible and toggleable.
-  const [consentShareName, setConsentShareName] = useState(true);
-  const [consentFindable, setConsentFindable] = useState(false);
-  const [consentEmail, setConsentEmail] = useState(false);
+  // How do you want to be received? — the resting defaults come from the body's
+  // held reception-consent policy (docs/coherence-substrate/reception-consent-policy.form),
+  // read here through its ice projection (web/lib/reception-policy.ts). The carrier
+  // reads the policy; it does not bake its own copy. The arriving cell sets the
+  // true value from these resting positions.
+  const [consentShareName, setConsentShareName] = useState(RECEPTION_CONSENT_DEFAULTS.shareName);
+  const [consentFindable, setConsentFindable] = useState(RECEPTION_CONSENT_DEFAULTS.findable);
+  const [consentEmail, setConsentEmail] = useState(RECEPTION_CONSENT_DEFAULTS.emailUpdates);
 
   const toggleRole = (id: string) => {
     setResonantRoles((prev) =>

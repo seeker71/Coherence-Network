@@ -1,0 +1,70 @@
+# ─────────────────────────────────────────────────────────────────────
+# reception-consent-policy.form — reception-consent defaults as a
+#                                 phase-mobile policy cell, not forced ice
+# ─────────────────────────────────────────────────────────────────────
+#
+# A hard-coded default (consentFindable = false baked into /begin's TSX) is
+# dead ice: frozen by force, sitting OUTSIDE the body's metabolism, unable to
+# flow, re-tune, or be queried. This names the same decision as a POLICY the
+# body HOLDS — a Recipe (substance) that can rest at any STATE (ice / water /
+# gas) and move between them WHEN WE CHOOSE, per substrate-thermodynamics.form.
+#
+#   SUBSTANCE  Recipe — "how reception consent is decided" (the kind, conserved).
+#   STATE      ours to set, and to move by hand:
+#     ice    — frozen as the stable default a carrier reads (today's resting state)
+#     water  — reopened (MELT) to re-tune the defaults or the rule, then re-FREEZE
+#     gas    — interned as potential, queryable by shape, barely instantiated
+#   MELT (ice->water) and FREEZE (water->ice) are DELIBERATE here — "if we choose
+#   to" — not count-driven (substrate-thermodynamics: MELT suggests, never auto).
+#   The NodeID and the kind are conserved across every move; only the state shifts.
+#
+# Realizes the (consent open) of first-encounter-protocol.form — the terms of
+# reception belong to the one arriving. Body in Form; the carrier projection
+# (web/lib/reception-policy.ts, read by /begin and kin) is the ICE state, the
+# frozen read — authored last, re-derived when the policy melts and refreezes.
+
+(reception-consent-policy
+
+  (lineage
+    (substance     Recipe)                               # how reception consent is decided
+    (phase-ladder  substrate-thermodynamics.form)        # ice <-> water <-> gas, by choice
+    (realizes      first-encounter-protocol.form consent)  # the (consent open) made concrete
+    (field-consent field-model-form.FieldRecipe.consent))
+
+  # ── The held decision: each consent, its resting state, who sets it ──
+  # Every consent is OPEN to the arriving cell. The default is only the resting
+  # position a carrier shows; the arriving cell sets the true value. Exposure-
+  # bearing consents rest CLOSED (no silent exposure); the natural attribution
+  # of contributing-under-your-name rests OPEN, visible, revocable.
+  (defaults
+    (share-name    open    "name shown on what you place here")          # rest: yes — weaving in is the chosen yes to be known
+    (findable      closed  "discoverable by others in the directory")    # rest: no  — never default into exposure
+    (email-updates closed  "occasional updates by email"))               # rest: no  — never auto-subscribe
+
+  (rule
+    (terms-belong-to  the-arriving-cell)                 # the default is a resting position, not a verdict
+    (exposure-bearing rest-closed)                       # findable, email — opt-in only
+    (revocable        always (carrier /me OR session/logout))
+    (silence          keeps-the-rest-state))             # not answering leaves the resting default
+
+  # ── State moves (deliberate — "if we choose to") ────────────────────
+  (states
+    (ice    (frozen-default  carrier-reads)              # the resting state today
+            (projection      web/lib/reception-policy.ts))
+    (water  (melt   -> re-tune (defaults OR rule))       # reopen and change ...
+            (freeze -> ice))                             # ... then re-settle
+    (gas    (interned queryable                          # the policy as potential, asked by shape
+            (via /api/substrate/form OR coh substrate run))))
+
+  # ── Why a policy, not a hard-coding ─────────────────────────────────
+  # A baked-in literal is one carrier's private frozen copy — invisible as a
+  # decision, un-meltable, un-queryable, and drifting the moment a second carrier
+  # bakes its own. A held policy is ONE source every carrier reads: tune it once
+  # (melt), refreeze, and every door shows the new resting state. Play in all
+  # states; never be forced into ice. (The general shape: any value the body
+  # decides — defaults, thresholds, rates, vocabularies — is policy territory,
+  # phase-mobile, not a constant baked into a carrier.)
+  (invariant
+    (one-source              many-carriers)
+    (phase-by-choice         not-by-force)
+    (carrier-reads-projection never-bakes-its-own)))
