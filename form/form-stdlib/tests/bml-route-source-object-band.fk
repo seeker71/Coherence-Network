@@ -1,0 +1,32 @@
+; bml-route-source-object-band.fk - shared BML route source object proof.
+;
+; preludes: form-stdlib/core.fk form-stdlib/bml-source.fk
+;
+; Band verdict: 2047 when BML typed-template and route-call syntax is visible
+; as reusable source objects before a domain lowerer decides route semantics.
+
+(do
+    (let template_use
+        (bml-source-parse-template-use
+            "RuntimeDataRoute"
+            "RouteCell<KernelHTTPRequest, KernelHTTPResponse>"))
+    (let route_call
+        (bml-source-route-call-from-assignment
+            "route = route_data(runtime-data, handle);"))
+    (let direct_call
+        (bml-source-route-call-from-expr
+            "route(\"runtime-health\", \"GET\", \"/api/runtime/health\", 9, \"route_runtime_health\", \"Accept\", 0)"))
+
+    (sum
+        (list
+            (if (bml-source-template-use? template_use) 1 0)
+            (if (str_eq (bml-source-template-use-class-name template_use) "RuntimeDataRoute") 2 0)
+            (if (str_eq (bml-source-template-use-template-name template_use) "RouteCell") 4 0)
+            (if (eq (len (bml-source-template-use-type-arguments template_use)) 2) 8 0)
+            (if (str_eq (nth (bml-source-template-use-type-arguments template_use) 0) "KernelHTTPRequest") 16 0)
+            (if (str_eq (nth (bml-source-template-use-type-arguments template_use) 1) "KernelHTTPResponse") 32 0)
+            (if (bml-source-route-call? route_call) 64 0)
+            (if (str_eq (bml-source-route-call-name route_call) "route_data") 128 0)
+            (if (str_eq (bml-source-route-call-args route_call) "runtime-data, handle") 256 0)
+            (if (str_eq (bml-source-route-call-name direct_call) "route") 512 0)
+            (if (ge (str_find (bml-source-route-call-args direct_call) "/api/runtime/health" 0) 0) 1024 0))))

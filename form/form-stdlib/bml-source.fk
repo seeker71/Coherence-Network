@@ -1,0 +1,114 @@
+; bml-source.fk - shared BML source cells.
+;
+; preludes: form-stdlib/core.fk
+;
+; This module names BML-shaped source forms before any dialect chooses what
+; they mean. A route lowerer can map these cells to KernelHTTPRoute values;
+; another domain lowerer can reuse the same source shape differently.
+
+(do
+    (defn bml-source-sub (s a b) (substring s a b))
+    (defn bml-source-find (s needle i) (str_find s needle i))
+
+    (defn bml-source-rev-into (xs acc)
+        (if (eq (len xs) 0) acc
+            (bml-source-rev-into (tail xs) (cons (head xs) acc))))
+
+    (defn bml-source-rev (xs)
+        (bml-source-rev-into xs (empty)))
+
+    (defn bml-source-space? (ch)
+        (or (str_eq ch " ") (or (str_eq ch "\n") (or (str_eq ch "\t") (str_eq ch "\r")))))
+
+    (defn bml-source-skip-spaces (s i)
+        (if (ge i (str_len s)) i
+            (if (bml-source-space? (char_at s i))
+                (bml-source-skip-spaces s (add i 1))
+                i)))
+
+    (defn bml-source-rtrim-index (s i)
+        (if (le i 0) 0
+            (if (bml-source-space? (char_at s (sub i 1)))
+                (bml-source-rtrim-index s (sub i 1))
+                i)))
+
+    (defn bml-source-trim (s)
+        (do
+            (let start (bml-source-skip-spaces s 0))
+            (let end (bml-source-rtrim-index s (str_len s)))
+            (if (ge start end) "" (bml-source-sub s start end))))
+
+    (defn bml-source-last-char-index (s)
+        (sub (str_len s) 1))
+
+    (defn bml-source-strip-semi (s)
+        (do
+            (let value (bml-source-trim s))
+            (if (eq (str_len value) 0) value
+                (if (str_eq (char_at value (bml-source-last-char-index value)) ";")
+                    (bml-source-trim (bml-source-sub value 0 (bml-source-last-char-index value)))
+                    value))))
+
+    (defn bml-source-name-list-loop (args i acc)
+        (do
+            (let p (bml-source-skip-spaces args i))
+            (if (ge p (str_len args)) (bml-source-rev acc)
+                (do
+                    (let comma (bml-source-find args "," p))
+                    (let end (if (lt comma 0) (str_len args) comma))
+                    (let name (bml-source-trim (bml-source-sub args p end)))
+                    (let rest-start (if (lt comma 0) (str_len args) (add comma 1)))
+                    (bml-source-name-list-loop args rest-start (cons name acc))))))
+
+    (defn bml-source-name-list (args)
+        (bml-source-name-list-loop args 0 (empty)))
+
+    (defn bml-source-template-use (class-name template-name type-arguments)
+        (list "bml-source-template-use" class-name template-name type-arguments))
+
+    (defn bml-source-template-use? (source)
+        (if (eq (len source) 4)
+            (str_eq (nth source 0) "bml-source-template-use")
+            false))
+
+    (defn bml-source-template-use-class-name (source) (nth source 1))
+    (defn bml-source-template-use-template-name (source) (nth source 2))
+    (defn bml-source-template-use-type-arguments (source) (nth source 3))
+
+    (defn bml-source-parse-template-use (class-name typed-template)
+        (do
+            (let type-open (bml-source-find typed-template "<" 0))
+            (let type-close (bml-source-find typed-template ">" type-open))
+            (let template-name (bml-source-trim (bml-source-sub typed-template 0 type-open)))
+            (let type-args-text (bml-source-sub typed-template (add type-open 1) type-close))
+            (let type-args (bml-source-name-list type-args-text))
+            (bml-source-template-use class-name template-name type-args)))
+
+    (defn bml-source-route-call (name args)
+        (list "bml-source-route-call" name args))
+
+    (defn bml-source-route-call? (source)
+        (if (eq (len source) 3)
+            (str_eq (nth source 0) "bml-source-route-call")
+            false))
+
+    (defn bml-source-route-call-name (source) (nth source 1))
+    (defn bml-source-route-call-args (source) (nth source 2))
+
+    (defn bml-source-route-call-from-expr (expr)
+        (do
+            (let value (bml-source-strip-semi (bml-source-trim expr)))
+            (let route-open (bml-source-find value "(" 0))
+            (let route-close (bml-source-last-char-index value))
+            (let route-call-name (bml-source-trim (bml-source-sub value 0 route-open)))
+            (let route-args (bml-source-sub value (add route-open 1) route-close))
+            (bml-source-route-call route-call-name route-args)))
+
+    (defn bml-source-route-call-from-assignment (line)
+        (do
+            (let value (bml-source-strip-semi line))
+            (let eq-pos (bml-source-find value "=" 0))
+            (bml-source-route-call-from-expr
+                (bml-source-sub value (add eq-pos 1) (str_len value)))))
+
+    0)
