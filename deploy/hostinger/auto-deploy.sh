@@ -646,21 +646,42 @@ run_substrate_ingest "$DIFF_BASE" "$TARGET_SHA"
 # Skipped only when the static-only fast path ran (no rebuild expected
 # to change the running SHA).
 if [[ "$DIFF_BASE" != "$TARGET_SHA" ]] && ! is_static_only_change "$DIFF_BASE" "$TARGET_SHA"; then
+  # The api container reaching docker "running" state does not mean uvicorn is
+  # already accepting requests on :8000. wait_for_running (and the --wait
+  # fallback when no compose healthcheck fires) can return while the app is
+  # still binding, so a single immediate curl returns an empty body, the sha
+  # parses as "", and the deploy false-FAILs even though it is advancing. Poll
+  # /api/health until it reports the target sha or the readiness budget is
+  # spent. Still honest about a genuine non-advance: the build context is
+  # rewritten to TARGET above, so GIT_COMMIT_SHA reflects the built code — a
+  # real cache-noop keeps the old sha and still fails after the budget.
   POST_SHA=""
-  POST_HEALTH="$(docker compose -f "$COMPOSE_ROOT/docker-compose.yml" exec -T api \
-      sh -lc 'curl -fsS --max-time 5 http://127.0.0.1:8000/api/health 2>/dev/null' \
-      2>/dev/null || true)"
-  if [[ -n "$POST_HEALTH" ]]; then
-    POST_SHA="$(printf '%s' "$POST_HEALTH" \
-      | python3 -c 'import sys, json
+  POST_REACHED=0
+  for ((verify_attempt = 1; verify_attempt <= 12; verify_attempt++)); do
+    POST_HEALTH="$(docker compose -f "$COMPOSE_ROOT/docker-compose.yml" exec -T api \
+        sh -lc 'curl -fsS --max-time 5 http://127.0.0.1:8000/api/health 2>/dev/null' \
+        2>/dev/null || true)"
+    if [[ -n "$POST_HEALTH" ]]; then
+      POST_REACHED=1
+      POST_SHA="$(printf '%s' "$POST_HEALTH" \
+        | python3 -c 'import sys, json
 try:
     print((json.loads(sys.stdin.read()).get("deployed_sha") or "").strip())
 except Exception:
     pass' 2>/dev/null || true)"
-  fi
+      [[ "$POST_SHA" == "$TARGET_SHA" ]] && break
+    fi
+    log "Post-deploy verify: api not ready yet (attempt ${verify_attempt}/12); waiting 5s…"
+    sleep 5
+  done
   if [[ "$POST_SHA" != "$TARGET_SHA" ]]; then
-    log "FAIL: post-deploy /api/health reports deployed_sha=${POST_SHA:0:12} but target=${TARGET_SHA:0:12}"
-    log "      the api container did not advance — build cache-noop, restart missed, or env didn't propagate"
+    if [[ "$POST_REACHED" == "0" ]]; then
+      log "FAIL: post-deploy /api/health never answered within the readiness budget (~60s)"
+      log "      the api container did not become ready — check container startup logs"
+    else
+      log "FAIL: post-deploy /api/health reports deployed_sha=${POST_SHA:0:12} but target=${TARGET_SHA:0:12}"
+      log "      the api container did not advance — build cache-noop, restart missed, or env didn't propagate"
+    fi
     exit 1
   fi
   log "Post-deploy verify: api container at ${POST_SHA:0:12} ✓"
