@@ -1,0 +1,37 @@
+; channel-flow-band.fk — three-way proof of the channel-flow walk (channel-flow.fk).
+;
+; preludes: form-stdlib/channel-interface.fk form-stdlib/channel-flow.fk
+;
+; One worked flow shows the whole dynamic: the offered interface SHAPES the flow, and
+; the same request is invasion before a shift and honored after.
+;   their offer starts {witness, see}
+;   request see       -> honored   (offered)
+;   request project   -> INVASION  (not offered — witnessed, nothing crosses)
+;   request silence   -> honored   (silence is always honored)
+;   shift -> {witness, see, project, invite}    (the offer opens, without broadcast)
+;   request project   -> honored   (now offered — same request, different interface state)
+;   request invite    -> honored
+; receipt: honored = 4, invasion = 1, final offer has 4 modes.
+;
+; Deterministic, so the three sibling kernels must agree.
+
+(do
+    (let offer0 (list (m-witness) (m-see)))
+    (let offer1 (list (m-witness) (m-see) (m-project) (m-invite)))
+
+    (let flow (list
+        (list (act-request) (m-see))         ; honored
+        (list (act-request) (m-project))     ; invasion (not yet offered)
+        (list (act-request) (m-silence))     ; honored — silence always
+        (list (act-shift)   offer1)          ; the interface opens
+        (list (act-request) (m-project))     ; honored now — the flow is shaped by the offer
+        (list (act-request) (m-invite))))    ; honored
+
+    (let r (channel-flow flow offer0))
+
+    (let pass
+        (and (eq (cf-honored r) 4)
+        (and (eq (cf-invasions r) 1)
+             (eq (len (cf-final-offer r)) 4))))
+
+    (print (if pass "channel-flow-band: PASS" "channel-flow-band: FAIL")))
