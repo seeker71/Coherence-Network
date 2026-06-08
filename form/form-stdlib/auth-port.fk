@@ -1,0 +1,121 @@
+; auth-port.fk -- FastAPI mutation auth as a Form-native decision carrier.
+;
+; Mirrors api/app/middleware/auth.py::require_api_key without binding live
+; secrets into source:
+;   - read X-API-Key case-insensitively from a kh-request/kh-header list
+;   - reject missing/blank/wrong keys with the same 401 detail
+;   - reject production dev-key configuration with the same 500 detail
+;   - allow the configured shared API key
+;   - allow active contributor keys by comparing sha256(raw-key) hex hashes
+;
+; This is the trust carrier required before mutable /api/ideas and
+; /api/spec-registry can move to native front-door rows. It deliberately does
+; not write last_used_at; that belongs to the application graph/table carrier
+; follow-up, not to the pure decision function.
+;
+; preludes: form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/sha256.fk form-stdlib/hex.fk
+;
+(do
+    (defn auth-invalid-detail () "Invalid or missing X-API-Key header")
+    (defn auth-production-dev-key-detail () "API key not configured for production")
+    (defn auth-header-name () "X-API-Key")
+
+    (defn auth-result (allowed status detail principal kind)
+        (list "auth" allowed status detail principal kind))
+    (defn auth-allowed? (result) (nth result 1))
+    (defn auth-status (result) (nth result 2))
+    (defn auth-detail (result) (nth result 3))
+    (defn auth-principal (result) (nth result 4))
+    (defn auth-kind (result) (nth result 5))
+
+    (defn auth-allow (principal kind)
+        (auth-result 1 200 "" principal kind))
+    (defn auth-deny-401 ()
+        (auth-result 0 401 (auth-invalid-detail) "" "deny"))
+    (defn auth-deny-500 ()
+        (auth-result 0 500 (auth-production-dev-key-detail) "" "misconfigured"))
+
+    (defn auth-string-bytes-loop (s i n acc)
+        (if (eq i n)
+            acc
+            (auth-string-bytes-loop s (add i 1) n
+                (append acc (list (ord (char_at s i)))))))
+    (defn auth-string-bytes (s)
+        (auth-string-bytes-loop s 0 (str_len s) (list)))
+
+    (defn auth-contributor-key-hash (raw-key)
+        (hex-encode (sha256 (auth-string-bytes raw-key))))
+
+    (defn auth-hash-member? (hash hashes)
+        (if (nil? hashes)
+            0
+            (if (str_eq hash (head hashes))
+                1
+                (auth-hash-member? hash (tail hashes)))))
+
+    (defn auth-contributor-key-active? (raw-key active-hashes)
+        (auth-hash-member? (auth-contributor-key-hash raw-key) active-hashes))
+
+    (defn auth-header-value (headers)
+        (kh-header-value-or headers (auth-header-name) ""))
+
+    (defn auth-require-api-key-from-headers (headers configured-api-key production? active-contributor-key-hashes)
+        (if (if (eq production? 1) (str_eq configured-api-key "dev-key") false)
+            (auth-deny-500)
+            (do
+                (let supplied (auth-header-value headers))
+                (if (str_eq supplied "")
+                    (auth-deny-401)
+                    (if (str_eq supplied configured-api-key)
+                        (auth-allow supplied "api-key")
+                        (if (eq (auth-contributor-key-active? supplied active-contributor-key-hashes) 1)
+                            (auth-allow supplied "contributor-key")
+                            (auth-deny-401)))))))
+
+    (defn auth-require-api-key (request configured-api-key production? active-contributor-key-hashes)
+        (auth-require-api-key-from-headers
+            (kh-request-headers request)
+            configured-api-key
+            production?
+            active-contributor-key-hashes))
+
+    ;; 1111111 =
+    ;;   shared API key allowed
+    ;;   header lookup is case-insensitive
+    ;;   active contributor key hash allowed
+    ;;   missing header denied 401
+    ;;   wrong key denied 401
+    ;;   blank header denied 401
+    ;;   production dev-key misconfiguration denied 500
+    (defn auth-parity-test ()
+        (do
+            (let shared-key "native-secret")
+            (let contributor-key "cc_alice_native_auth")
+            (let contributor-hash "25e801e022628647801c76eb9ca9a0da988a83e7699bf0a8c72dd516055adb65")
+            (let hashes (list contributor-hash))
+
+            (let api-ok (auth-require-api-key-from-headers
+                (list (kh-header "X-API-Key" shared-key)) shared-key 0 hashes))
+            (let case-ok (auth-require-api-key-from-headers
+                (list (kh-header "x-api-key" shared-key)) shared-key 0 hashes))
+            (let contributor-ok (auth-require-api-key-from-headers
+                (list (kh-header "X-API-Key" contributor-key)) shared-key 0 hashes))
+            (let missing (auth-require-api-key-from-headers
+                (list) shared-key 0 hashes))
+            (let wrong (auth-require-api-key-from-headers
+                (list (kh-header "X-API-Key" "wrong")) shared-key 0 hashes))
+            (let blank (auth-require-api-key-from-headers
+                (list (kh-header "X-API-Key" "")) shared-key 0 hashes))
+            (let prod-dev-key (auth-require-api-key-from-headers
+                (list (kh-header "X-API-Key" "dev-key")) "dev-key" 1 hashes))
+
+            (let r1 (if (if (eq (auth-allowed? api-ok) 1) (str_eq (auth-kind api-ok) "api-key") false) 1 0))
+            (let r2 (if (eq (auth-allowed? case-ok) 1) 10 0))
+            (let r3 (if (if (eq (auth-allowed? contributor-ok) 1) (str_eq (auth-kind contributor-ok) "contributor-key") false) 100 0))
+            (let r4 (if (if (eq (auth-status missing) 401) (str_eq (auth-detail missing) (auth-invalid-detail)) false) 1000 0))
+            (let r5 (if (if (eq (auth-status wrong) 401) (str_eq (auth-detail wrong) (auth-invalid-detail)) false) 10000 0))
+            (let r6 (if (if (eq (auth-status blank) 401) (str_eq (auth-detail blank) (auth-invalid-detail)) false) 100000 0))
+            (let r7 (if (if (eq (auth-status prod-dev-key) 500) (str_eq (auth-detail prod-dev-key) (auth-production-dev-key-detail)) false) 1000000 0))
+            (sum (list r1 r2 r3 r4 r5 r6 r7))))
+
+    0)

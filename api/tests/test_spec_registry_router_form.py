@@ -53,4 +53,5 @@ def test_spec_registry_router_form_describes_live_and_native_carriers():
     assert "gn-replace-node" in form_text
     assert "gn-delete-node" in form_text
     assert "public /api/spec-registry mutation paths still fan out" in form_text
-    assert "application graph_nodes Postgres writes" in form_text
+    assert "auth-port.fk preserves API-key/contributor-key decision parity" in form_text
+    assert "direct application graph_nodes Postgres writes" in form_text
