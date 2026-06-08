@@ -168,7 +168,7 @@ export default async function TranslationsCoveragePage() {
                     </span>
                     <span>
                       <span className="text-violet-400/80">{locale.coverage.human}</span>{" "}
-                      human
+                      contributor
                     </span>
                     <span>
                       <span className="text-teal-400/80">{locale.coverage.machine}</span>{" "}
