@@ -59,5 +59,6 @@ def test_spec_registry_router_form_describes_live_and_native_carriers():
     assert "header-gated native SQL preview rows" in form_text
     assert "application-graph-live-db-test.sh proves rollback-safe live DB execution" in form_text
     assert "application-graph-response-projection-test.sh proves live graph rows project into SpecRegistryEntry and IdeaWithScore-shaped mutation responses" in form_text
-    assert "cache invalidation, contributor-key audit side effects" in form_text
-    assert "reversible public flip gate" in form_text
+    assert "trust envelope carrying prediction residual" in form_text
+    assert "choice_success=1, silence/protocol/fail/stop/BMA markers" in form_text
+    assert "carried side-effect intents execute natively" in form_text

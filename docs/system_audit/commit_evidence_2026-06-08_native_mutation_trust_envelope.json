@@ -1,0 +1,161 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/ideas-form-rewrite-20260608",
+  "commit_scope": "Carry native mutation trust as a Form-native envelope with prediction residual, choice markers, side-effect intents, and reversible gate state.",
+  "files_owned": [
+    "api/tests/test_ideas_router_form.py",
+    "api/tests/test_native_mutation_ab_observation.py",
+    "api/tests/test_native_mutation_route_bindings.py",
+    "api/tests/test_spec_registry_router_form.py",
+    "deploy/kernel-router/mutation_ab_observation_harness.py",
+    "deploy/kernel-router/production-routes.fk",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "docs/system_audit/commit_evidence_2026-06-08_native_mutation_trust_envelope.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/native-mutation-trust-envelope.fk",
+    "form/form-stdlib/tests/native-mutation-trust-envelope-band.fk",
+    "specs/INDEX.md",
+    "specs/ideas-router-form-expression.md",
+    "specs/method-specific-native-mutation-preview-bindings.md",
+    "specs/native-mutation-ab-observation-gate.md",
+    "specs/native-mutation-response-projection.md",
+    "specs/native-mutation-trust-envelope.md",
+    "specs/spec-registry-source-native.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/native-mutation-trust-envelope.fk form-stdlib/tests/native-mutation-trust-envelope-band.fk",
+      "python3 deploy/kernel-router/mutation_ab_observation_harness.py --json",
+      "cd api && python3 -m pytest -q tests/test_native_mutation_route_bindings.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_application_graph_response_projection.py tests/test_specs_source_native_route.py tests/test_runtime_surface_native_routes.py",
+      "cd api && python3 -m ruff check tests/test_native_mutation_route_bindings.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_application_graph_response_projection.py tests/test_specs_source_native_route.py tests/test_runtime_surface_native_routes.py",
+      "python3 scripts/validate_spec_quality.py --file specs/native-mutation-trust-envelope.md --file specs/method-specific-native-mutation-preview-bindings.md --file specs/native-mutation-ab-observation-gate.md --file specs/native-mutation-response-projection.md --file specs/ideas-router-form-expression.md --file specs/spec-registry-source-native.md",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "make wellness"
+    ],
+    "summary": "native-mutation-trust-envelope.fk defines a reusable Form envelope that returns choice_success=1, silence/protocol/fail/stop/BMA markers, prediction_error=carried_as_residual, side-effect intents, and a reversible gate that keeps ordinary traffic unflipped. production-routes.fk embeds the same envelope in method-specific native mutation preview responses. mutation_ab_observation_harness.py now treats the envelope as part of the B-arm contract and recommends native side-effect execution plus a narrow reversible public gate as the next evidence.",
+    "known_limitations": [
+      {
+        "scope": "ordinary public mutations",
+        "observed": "No ordinary no-header POST/PATCH/DELETE mutation traffic moved. X-Form-Native-Preview remains required for the native preview arm."
+      },
+      {
+        "scope": "side-effect execution",
+        "observed": "Cache invalidation, parent-edge repair, contributor-key audit, and rollback receipt are carried as intents in the envelope; they are not executed natively in this slice."
+      },
+      {
+        "scope": "prediction residual",
+        "observed": "Prediction error is carried as response residual rather than ignored. The envelope does not claim numeric trust-model certainty."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push of the native mutation trust envelope commit and GitHub checks on PR #2586."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "No public deploy attempted. This slice intentionally keeps the public front-door flip blocked."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Explicit preview mutation responses now include a trust envelope. The public routes still fan out to FastAPI by default, while the preview arm carries residual, side-effect intent, and rollback state natively.",
+    "public_endpoints": [
+      "POST /api/ideas",
+      "PATCH /api/ideas/{idea_id}",
+      "POST /api/spec-registry",
+      "PATCH /api/spec-registry/{spec_id}",
+      "DELETE /api/spec-registry/{spec_id}"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/native-mutation-trust-envelope.fk form-stdlib/tests/native-mutation-trust-envelope-band.fk -> 11111",
+      "Variant B with X-Form-Native-Preview must include trust_envelope.prediction_error=carried_as_residual",
+      "Variant B must include choice_success=1 plus silence fanout-default, protocol X-Form-Native-Preview, fail rollback-to-fanout, stop ordinary-traffic-unflipped, and bma native-mutation-trust-envelope",
+      "Variant B must include side-effect intents for cache-invalidation, parent-edge-repair, and contributor-key-audit",
+      "Variant B must include reversible_gate default_route fanout-python and ordinary_traffic_flip_allowed/performed false",
+      "python3 deploy/kernel-router/mutation_ab_observation_harness.py --json -> 5/5 cases passed, confidence 1.0, all envelope checks true, ordinary_traffic_flip_allowed false, ordinary_traffic_flip_performed false",
+      "cd api && python3 -m pytest -q tests/test_native_mutation_route_bindings.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_application_graph_response_projection.py tests/test_specs_source_native_route.py tests/test_runtime_surface_native_routes.py -> 29 passed"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Trust envelope parity is complete for preview responses; public mutable traffic still waits for native side-effect execution and a narrow reversible gate with rollback receipt."
+  },
+  "idea_ids": [
+    "idea-realization-engine",
+    "data-infrastructure"
+  ],
+  "spec_ids": [
+    "specs/native-mutation-trust-envelope.md",
+    "specs/method-specific-native-mutation-preview-bindings.md",
+    "specs/native-mutation-ab-observation-gate.md",
+    "specs/native-mutation-response-projection.md",
+    "specs/ideas-router-form-expression.md",
+    "specs/spec-registry-source-native.md"
+  ],
+  "task_ids": [
+    "native-mutation-trust-envelope",
+    "native-mutation-side-effects",
+    "native-mutation-public-flip-gate"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/native-mutation-trust-envelope.fk",
+    "form/form-stdlib/tests/native-mutation-trust-envelope-band.fk",
+    "deploy/kernel-router/production-routes.fk",
+    "deploy/kernel-router/mutation_ab_observation_harness.py",
+    "api/tests/test_native_mutation_route_bindings.py",
+    "api/tests/test_native_mutation_ab_observation.py",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "specs/native-mutation-trust-envelope.md"
+  ],
+  "change_files": [
+    "api/tests/test_ideas_router_form.py",
+    "api/tests/test_native_mutation_ab_observation.py",
+    "api/tests/test_native_mutation_route_bindings.py",
+    "api/tests/test_spec_registry_router_form.py",
+    "deploy/kernel-router/mutation_ab_observation_harness.py",
+    "deploy/kernel-router/production-routes.fk",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "docs/system_audit/commit_evidence_2026-06-08_native_mutation_trust_envelope.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/native-mutation-trust-envelope.fk",
+    "form/form-stdlib/tests/native-mutation-trust-envelope-band.fk",
+    "specs/INDEX.md",
+    "specs/ideas-router-form-expression.md",
+    "specs/method-specific-native-mutation-preview-bindings.md",
+    "specs/native-mutation-ab-observation-gate.md",
+    "specs/native-mutation-response-projection.md",
+    "specs/native-mutation-trust-envelope.md",
+    "specs/spec-registry-source-native.md"
+  ],
+  "change_intent": "runtime_feature"
+}

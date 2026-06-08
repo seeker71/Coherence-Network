@@ -59,6 +59,26 @@ def test_ab_observation_case_passes_only_when_a_fanout_and_b_native_preview():
             "executes": False,
             "request_body": case.body,
             "sql": " ".join(case.sql_contains),
+            "trust_envelope": {
+                "choice_success": 1,
+                "silence": "fanout-default",
+                "protocol": "X-Form-Native-Preview",
+                "fail": "rollback-to-fanout",
+                "stop": "ordinary-traffic-unflipped",
+                "bma": "native-mutation-trust-envelope",
+                "prediction_error": "carried_as_residual",
+                "side_effect_intents": [
+                    {"name": "cache-invalidation"},
+                    {"name": "parent-edge-repair"},
+                    {"name": "contributor-key-audit"},
+                ],
+                "reversible_gate": {
+                    "default_route": "fanout-python",
+                    "native_route": "X-Form-Native-Preview",
+                    "ordinary_traffic_flip_allowed": False,
+                    "ordinary_traffic_flip_performed": False,
+                },
+            },
         },
     )
 
@@ -125,6 +145,10 @@ def test_ab_gate_recommends_live_db_trial_after_full_confidence():
     assert report["gate_pass"] is True
     assert report["recommendation"] == "promote_to_live_db_trial"
     assert report["ordinary_traffic_flip_performed"] is False
+    assert report["next_evidence_needed"] == [
+        "execute carried side-effect intents natively",
+        "narrow reversible public gate with rollback receipt",
+    ]
 
 
 def test_route_forms_name_the_ab_observation_gate_before_flip():

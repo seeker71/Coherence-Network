@@ -231,6 +231,15 @@ def evaluate_case(
     treatment: HTTPObservation,
 ) -> CaseObservation:
     sql = str(treatment.parsed.get("sql") or "")
+    trust_envelope = treatment.parsed.get("trust_envelope")
+    if not isinstance(trust_envelope, dict):
+        trust_envelope = {}
+    reversible_gate = trust_envelope.get("reversible_gate")
+    if not isinstance(reversible_gate, dict):
+        reversible_gate = {}
+    side_effect_intents = trust_envelope.get("side_effect_intents")
+    if not isinstance(side_effect_intents, list):
+        side_effect_intents = []
     checks = {
         "control_fanned_out": control.router == "fanout-python",
         "control_status_ok": control.status == 200,
@@ -245,6 +254,26 @@ def evaluate_case(
         "treatment_observes_only": treatment.parsed.get("executes") is False,
         "treatment_body_seen": treatment.parsed.get("request_body", "") == (case.body or "{}"),
         "treatment_sql_shape": all(part in sql for part in case.sql_contains),
+        "treatment_prediction_error_carried": trust_envelope.get("prediction_error") == "carried_as_residual",
+        "treatment_choice_protocol_carried": (
+            trust_envelope.get("choice_success") == 1
+            and trust_envelope.get("silence") == "fanout-default"
+            and trust_envelope.get("protocol") == PREVIEW_HEADER
+            and trust_envelope.get("fail") == "rollback-to-fanout"
+            and trust_envelope.get("stop") == "ordinary-traffic-unflipped"
+            and trust_envelope.get("bma") == "native-mutation-trust-envelope"
+        ),
+        "treatment_side_effect_intents_carried": {
+            "cache-invalidation",
+            "parent-edge-repair",
+            "contributor-key-audit",
+        }.issubset({str(item.get("name") or "") for item in side_effect_intents if isinstance(item, dict)}),
+        "treatment_reversible_gate_held": (
+            reversible_gate.get("default_route") == "fanout-python"
+            and reversible_gate.get("native_route") == PREVIEW_HEADER
+            and reversible_gate.get("ordinary_traffic_flip_allowed") is False
+            and reversible_gate.get("ordinary_traffic_flip_performed") is False
+        ),
     }
     return CaseObservation(
         name=case.name,
@@ -286,10 +315,8 @@ def build_gate_report(
         "ordinary_traffic_flip_performed": False,
         "ordinary_traffic_flip_allowed": False,
         "next_evidence_needed": [
-            "live DB execution with rollback-safe fixture schema",
-            "mutation response projection parity",
-            "cache invalidation and parent/edge side-effect proof",
-            "contributor-key audit side-effect proof",
+            "execute carried side-effect intents natively",
+            "narrow reversible public gate with rollback receipt",
         ],
     }
 

@@ -20,11 +20,16 @@ source:
     symbols: []
   - file: api/tests/test_application_graph_response_projection.py
     symbols: [test_route_forms_name_response_projection_before_public_flip]
+  - file: form/form-stdlib/native-mutation-trust-envelope.fk
+    symbols: [nmte-trust-envelope-json]
+  - file: api/tests/test_spec_registry_router_form.py
+    symbols: [test_spec_registry_router_form_describes_live_and_native_carriers]
 requirements:
   - "The kernel-router production manifest exposes a native /api/spec-registry/source-list route."
   - "The route reads specs/INDEX.md directly, without FastAPI or spec_registry_service."
   - "The route emits SpecRegistryEntry-shaped JSON rows for each source-index spec row."
   - "The production manifest binds header-gated method-specific native SQL preview rows for POST/PATCH/DELETE /api/spec-registry without changing default public behavior."
+  - "The spec registry Form artifact names the trust envelope that carries prediction residual, side-effect intents, choice markers, and reversible gate state."
 done_when:
   - 'file_contains("deploy/kernel-router/production-routes.fk", "(list \"/api/spec-registry/source-list\" route_specs_source_list)")'
   - 'file_contains("deploy/kernel-router/production-routes.fk", "read_file_slice \"specs/INDEX.md\"")'
@@ -54,6 +59,8 @@ native kernel-router route that reads `specs/INDEX.md` and emits
 - [ ] **R4**: The production route manifest binds `/api/spec-registry/source-list` to `route_specs_source_list`.
 - [ ] **R5**: Runtime-surface reporting counts `/api/spec-registry/source-list` as kernel-first capable.
 - [ ] **R6**: The production manifest binds header-gated method-specific native SQL preview rows for `POST /api/spec-registry`, `PATCH /api/spec-registry/*`, and `DELETE /api/spec-registry/*`.
+- [ ] **R7**: The spec registry route Form names the native mutation trust
+  envelope before any ordinary public traffic flip.
 
 ## Research Inputs
 
@@ -69,6 +76,8 @@ native kernel-router route that reads `specs/INDEX.md` and emits
 - `api/tests/test_specs_source_native_route.py` - repository proof for route binding and response shape.
 - `api/tests/test_native_mutation_route_bindings.py` - method-specific mutation preview route proof.
 - `api/tests/test_runtime_surface_native_routes.py` - capable-route proof includes the specs native route.
+- `api/tests/test_spec_registry_router_form.py` - trust envelope wording proof
+  for the spec route surface.
 - `specs/spec-registry-source-native.md` - this contract.
 
 ## Acceptance Tests
@@ -106,9 +115,11 @@ PY
   API-key/contributor-key decision parity, and the Form application graph
   carrier emits direct `graph_nodes` / `graph_node_revisions` / `graph_edges`
   SQL. `POST/PATCH/DELETE /api/spec-registry` also have `X-Form-Native-Preview`
-  header-gated native SQL preview rows. Public mutable DB-backed spec registry
-  behavior still enters through FastAPI by default until cache invalidation,
-  contributor-key audit side effects, and a reversible public gate are proven.
+  header-gated native SQL preview rows, and preview responses carry prediction
+  residual, side-effect intents, choice markers, and reversible gate state.
+  Public mutable DB-backed spec registry behavior still enters through FastAPI
+  by default until carried side-effect intents execute natively and a narrow
+  reversible public gate has a rollback receipt.
 - GAP-SRS2 follow-up task: `spec-source-frontmatter-native-parser`. This route
   reads `specs/INDEX.md`; richer frontmatter fields remain source defaults until
   a native frontmatter parser lands.

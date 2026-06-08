@@ -54,7 +54,16 @@ def test_native_mutation_preview_handlers_emit_application_graph_sql():
         assert sql_piece in text
 
     assert ',\\"executes\\":false' in text
-    assert "cache invalidation, parent/edge side effects, contributor-key audit side effects" in text
+    assert '\\"trust_envelope\\"' in text
+    assert '\\"choice_success\\":1' in text
+    assert '\\"silence\\":\\"fanout-default\\"' in text
+    assert '\\"protocol\\":\\"X-Form-Native-Preview\\"' in text
+    assert '\\"fail\\":\\"rollback-to-fanout\\"' in text
+    assert '\\"stop\\":\\"ordinary-traffic-unflipped\\"' in text
+    assert '\\"bma\\":\\"native-mutation-trust-envelope\\"' in text
+    assert '\\"prediction_error\\":\\"carried_as_residual\\"' in text
+    assert '\\"side_effect_intents\\"' in text
+    assert '\\"ordinary_traffic_flip_allowed\\":false' in text
 
 
 def test_native_mutation_preview_uses_live_spec_node_id_convention():
@@ -71,5 +80,5 @@ def test_idea_and_spec_forms_name_method_specific_preview_bindings():
         assert "X-Form-Native-Preview" in text
         assert "deploy/kernel-router/production-routes.fk::route_ideas_create_native_preview" in text or "deploy/kernel-router/production-routes.fk::route_specs_create_native_preview" in text
         assert "response projection parity proven" in text
-        assert "cache invalidation" in text
-        assert "reversible flip gate" in text
+        assert "trust envelope" in text
+        assert "prediction residual" in text

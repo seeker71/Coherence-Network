@@ -16,6 +16,8 @@ source:
     symbols: [test_parser_reads_bindings_not_comments, test_real_manifest_native_routes_are_served_zero_and_include_ideas_structure]
   - file: deploy/kernel-router/mutation_ab_observation_harness.py
     symbols: [run_observation, build_gate_report]
+  - file: form/form-stdlib/native-mutation-trust-envelope.fk
+    symbols: [nmte-trust-envelope-json]
   - file: api/tests/test_native_mutation_ab_observation.py
     symbols: [test_ab_observation_cases_cover_all_native_mutation_preview_routes]
 requirements:
@@ -24,9 +26,11 @@ requirements:
   - "Preview handlers bind JSON request bodies and wildcard path ids to application graph SQL for graph_nodes, graph_node_revisions, and graph_edges."
   - "Runtime-surface reporting counts method-specific KernelHTTPRoute rows without collapsing PATCH and DELETE wildcard routes into one path."
   - "The preview binding has an A/B observation gate before any ordinary public traffic moves."
+  - "Preview responses include a trust envelope carrying prediction residual, choice protocol markers, side-effect intents, and reversible gate state."
 done_when:
   - 'file_contains("deploy/kernel-router/production-routes.fk", "(kh-route \"ideas-create-native-preview\" \"POST\" \"/api/ideas\"")'
   - 'file_contains("deploy/kernel-router/production-routes.fk", "X-Form-Native-Preview")'
+  - 'file_contains("deploy/kernel-router/production-routes.fk", "\"trust_envelope\"")'
   - 'pytest_passes("api/tests/test_native_mutation_route_bindings.py")'
 test: "cd api && python3 -m pytest -q tests/test_native_mutation_route_bindings.py tests/test_runtime_surface_native_routes.py"
 constraints:
@@ -55,8 +59,9 @@ binding as an explicit native preview surface.
   matching explicit preview requests.
 - [ ] **R3**: Preview handlers emit application graph SQL for create, update,
   and delete over `graph_nodes`, `graph_node_revisions`, and `graph_edges`.
-- [ ] **R4**: Preview handlers return `executes:false` and name the remaining
-  live execution, cache invalidation, and audit side-effect gap.
+- [ ] **R4**: Preview handlers return `executes:false` and include a
+  `trust_envelope` carrying prediction residual, side-effect intents, choice
+  protocol markers, and reversible gate state.
 - [ ] **R5**: `scripts/runtime_surface_report.py` counts method-specific
   `kh-route` and raw `43004` route rows as kernel-first capable without reading
   comments or collapsing duplicate wildcard paths.
@@ -84,6 +89,8 @@ binding as an explicit native preview surface.
 - `deploy/kernel-router/mutation_ab_observation_harness.py` - A/B observation
   gate over fanout vs native preview.
 - `api/tests/test_native_mutation_ab_observation.py` - observation gate proof.
+- `form/form-stdlib/native-mutation-trust-envelope.fk` - reusable envelope
+  recipe for residual, side-effect intents, and reversible gate state.
 - `docs/coherence-substrate/ideas-router.form` - high-level ideas route state.
 - `docs/coherence-substrate/spec-registry-router.form` - high-level spec route
   state.
@@ -128,9 +135,13 @@ curl -sS -i -X POST http://127.0.0.1:19215/api/spec-registry -H 'Content-Type: a
 - GAP-MSNMPB3: closed by `specs/native-mutation-response-projection.md`. Form
   now projects live mutation rows into `IdeaWithScore` and `SpecRegistryEntry`
   without FastAPI.
-- GAP-MSNMPB4 follow-up task: `native-mutation-side-effects`. Carry cache
-  invalidation, parent/edge repair, resonance re-attunement, and contributor-key
-  audit updates natively before public mutation traffic moves.
+- GAP-MSNMPB4: closed by `specs/native-mutation-trust-envelope.md`. Native
+  mutation preview responses now carry prediction residual, side-effect intents,
+  choice protocol markers, and reversible gate state.
+- GAP-MSNMPB5 follow-up task: `native-mutation-side-effects`. Execute carried
+  cache invalidation, parent/edge repair, resonance re-attunement,
+  contributor-key audit updates, and rollback receipt natively before public
+  mutation traffic moves.
 
 ## Risks and Assumptions
 

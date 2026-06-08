@@ -1,0 +1,10 @@
+; tests/native-mutation-trust-envelope-band.fk -- trust residual envelope.
+;
+; preludes: form-stdlib/core.fk form-stdlib/native-mutation-trust-envelope.fk
+;
+; Band verdict: 11111 when prediction error is carried as residual,
+; side-effect intents are named, choice success is explicit, and ordinary
+; traffic remains reversible/unflipped.
+
+(do
+    (nmte-test))
