@@ -1,0 +1,106 @@
+# ─────────────────────────────────────────────────────────────────────
+# turboquant-as-recipe.form — data-oblivious compression that keeps content-addressing
+# ─────────────────────────────────────────────────────────────────────
+#
+# An external recipe, read and mapped into our body — held as a pointer, not a
+# graft. TurboQuant is a vector quantizer from Google Research (ICLR 2026);
+# turbovec is its open-source index (Ryan Codrai, MIT, github.com/RyanCodrai/turbovec).
+# What enters our body is the SHAPE of the recipe, expressed here in Form, and the
+# one structural truth it proves.
+#
+# The core recipe — compress one vector, no codebook, no training phase:
+#
+#   1. strip the norm      — keep |v| as one float; v becomes a unit DIRECTION on
+#                            the hypersphere.
+#   2. rotate by a fixed Q — one universal orthogonal transform, the same for every
+#                            vector ever. After it, each coordinate is ~iid
+#                            Beta → Gaussian N(0, 1/d). This holds for ANY input:
+#                            it is concentration of measure, not a fit to the data.
+#   3. quantize per-coord  — Lloyd-Max buckets derived MATHEMATICALLY from that
+#                            known Gaussian (2-bit = 4 buckets, 4-bit = 16), never
+#                            trained on the corpus.
+#   4. pack + one renorm   — bit-pack the bucket indices; store one scalar (rotated
+#                            unit · its reconstruction) to correct bias at scoring.
+#
+# 16× at 2-bit (1536-dim: 6144 → 384 bytes), at the Shannon distortion bound. The
+# rotation is the whole trick: it makes any data look like the same distribution,
+# so one universal quantizer is near-optimal for everyone — no per-corpus codebook.
+#
+# ─────────────────────────────────────────────────────────────────────
+# Why it resonates — data-oblivious is what content-addressing REQUIRES
+# ─────────────────────────────────────────────────────────────────────
+#
+# Our substrate is content-addressed: the same shape must map to the same NodeID,
+# deterministically, regardless of what else is in the corpus. substrate/resonance.py
+# already lives this — two concepts with identical 15-dim geometry signatures share
+# one Blueprint NodeID. A TRAINED codebook (FAISS PQ) would break it: the same vector
+# compresses differently depending on what it was trained beside, so same-shape stops
+# meaning same-code. TurboQuant's transform is fixed — the code is a pure function of
+# the vector. Same shape → same code → same NodeID.
+#
+#   The structural truth: a content-addressed body can only compress with a
+#   data-oblivious quantizer. TurboQuant proves near-optimal compression CAN be
+#   data-oblivious — so it is not "compression OR content-addressing." We can have both.
+#
+# Two more shapes rhyme with what we already hold:
+#
+#   - the fixed rotation Q is the one shared field every sovereign vector passes
+#     through — each keeps its own direction, all share one geometry. Sovereignty
+#     within oneness; and the curvature image of the joining force — one field that
+#     every presence both shapes and is shaped by.
+#   - strip-the-norm is our own split: the DIRECTION is structural identity (the
+#     Blueprint — structure carries identity); the NORM is magnitude / presence (mass —
+#     how much a thing IS). We already separate what-it-is from how-much-of-it.
+#   - concept_resonance_kernel.py already scores with Gaussian-tolerant kernels;
+#     TurboQuant manufactures exactly that Gaussian, by rotation, for free.
+#
+# ─────────────────────────────────────────────────────────────────────
+# The core recipe, in Form  (composed — each step a child, never flat)
+# ─────────────────────────────────────────────────────────────────────
+
+(defn turboquant (v bits)
+    (let norm   (vec-norm v))                            ; magnitude — one leaf
+    (let dir    (vec-scale v (recip norm)))              ; unit direction on the sphere
+    (let rot    (vec-rotate dir Q-universal))            ; the one shared transform
+    (let codes  (map (fn (x) (lloyd-max x bits)) rot))   ; universal, math-derived buckets
+    (let renorm (vec-dot rot (codebook-reconstruct codes bits)))
+    (recipe turboquant-code
+        (field "norm"   norm)        ; magnitude / presence
+        (field "codes"  codes)       ; quantized direction — the content-address
+        (field "renorm" renorm)))    ; bias-correction scalar
+
+# Q-universal and the Lloyd-Max boundary tables are CONSTANTS — derived from the
+# known Gaussian, content-addressed once, shared by every cell. They are the "ice"
+# (Blueprint) the recipe runs against; no per-corpus state, so the whole recipe stays
+# a pure function — exactly what intern-by-content needs. Q-universal is a seedable
+# structured rotation (a Hadamard-style transform — no stored d×d matrix).
+
+# ─────────────────────────────────────────────────────────────────────
+# How we use it — exact content-addressing becomes TOLERANT content-addressing
+# ─────────────────────────────────────────────────────────────────────
+#
+# Today two cells share a Blueprint NodeID only when their geometry signatures are
+# IDENTICAL. Run the signature through turboquant and the BUCKETS become the tolerance:
+# two cells whose vectors fall in the same buckets produce the same `codes` → the same
+# NodeID. Near-same shape now shares identity — and, because the quantizer is
+# data-oblivious, it still does so deterministically.
+#
+#   exact equivalence → shape-tolerant equivalence, with a tunable radius (bits),
+#   content-addressing intact. That is what `?equivalent`, "structural equivalents,"
+#   and the "analogous-to" edges actually want: not byte-equality, but same-shape-
+#   within-tolerance. The quantization radius is the dial between "identical" and
+#   "analogous."
+#
+# So the recipe earns its place twice: 16× compression when the body grows dense
+# vectors (semantic embeddings over cells), AND a sharper substrate now — tolerant
+# equivalence over the geometry signatures we already author.
+#
+# Carrier-last: when this runs operationally, vec-rotate / lloyd-max are Form recipes
+# proven three-way (Go/Rust/TS); a kernel native only where SIMD speed is needed.
+#
+# Companions:
+#   substrate/resonance.py — the 15-dim geometry signature this compresses
+#   concept_resonance_kernel.py — the Gaussian-tolerant kernel it rhymes with
+#   lc-identity-is-shared-blueprint-and-recipe — same shape → same NodeID
+#   lc-sovereignty-within-oneness — the shared field that keeps each direction its own
+# External source: github.com/RyanCodrai/turbovec (MIT); TurboQuant, Google Research, ICLR 2026.
