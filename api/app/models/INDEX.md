@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 57
+**Total files**: 58
 
 | File | Purpose |
 |---|---|
@@ -25,6 +25,7 @@
 | [contributor.py](contributor.py) | _no top-of-file purpose_ |
 | [contributor_recognition.py](contributor_recognition.py) | _no top-of-file purpose_ |
 | [creator_economy.py](creator_economy.py) | Creator economy models — public stats, proof cards, featured listings. |
+| [creator_resonance.py](creator_resonance.py) | Creator resonance report models. |
 | [credentials.py](credentials.py) | Pydantic models for Repo Credentials. |
 | [discord_vote.py](discord_vote.py) | Pydantic models for Discord reaction voting on idea open questions (spec-164). |
 | [discovery.py](discovery.py) | Discovery feed models — Serendipity Discovery service. |
