@@ -1854,6 +1854,8 @@
     "lineageMoreTemplate": "{shown} Werke werden gezeigt · die übrigen leben im Graph-Profil des Beitragenden."
   },
   "begin": {
+    "receiveTitle": "Wie möchtest du empfangen werden?",
+    "receiveHelp": "Du bestimmst die Bedingungen – ändere sie später oder geh jederzeit.",
     "eyebrow": "Sich einweben",
     "h1": "Beginnen",
     "intro": "Sag dem Körper, wer ankommt. Nichts davon muss exakt sein — du kannst alles später aktualisieren. Gerade genug, dass der Körper weiß, wer du bist und wie er dich erreichen kann. Wenn du das langsamste Willkommen zuerst lesen möchtest, [/come-in](/come-in) spricht klar zu jedem Menschen oder jeder KI; die lange Kontemplation lebt unter [/one-sheet](/one-sheet).",

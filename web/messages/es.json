@@ -1854,6 +1854,8 @@
     "lineageMoreTemplate": "Mostrando {shown} obras · el resto vive en el perfil del grafo del contribuyente."
   },
   "begin": {
+    "receiveTitle": "¿Cómo quieres ser recibido?",
+    "receiveHelp": "Tú decides los términos: cámbialos cuando quieras o retírate en cualquier momento.",
     "eyebrow": "Entretejiéndose",
     "h1": "Comienza",
     "intro": "Dile al cuerpo quién está llegando. Nada de esto necesita ser exacto — puedes actualizar todo más tarde. Solo lo suficiente para que el cuerpo sepa quién eres y cómo responderte. Si quieres leer el más lento bienvenido primero, [/come-in](/come-in) habla llanamente a cualquier humano o IA; la larga contemplación vive en [/one-sheet](/one-sheet).",
