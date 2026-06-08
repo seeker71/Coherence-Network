@@ -1,0 +1,31 @@
+; json-codec.fk - BML JSON codec declaration.
+;
+; JSON route bodies are declared here as a structured codec spec. The parse and
+; emit algorithms live in structured-codec.fk, shared by formats with the same
+; bracketed/escaped text shape; this file names JSON's categories and tokens.
+
+section [form.bml] {
+    let JsonCodecSpec = structured_codec_spec("json", "application/json", JSON-OBJECT, JSON-ARRAY, JSON-PAIR, JSON-NULL, "{", "}", "[", "]", ":", ",", "true", "false", "null", "\"", "\\");
+
+    class JsonCodec : Codec<JsonNode, JsonText> {
+        def parse(path, text) {
+            structured_codec_parse(JsonCodecSpec, path, text);
+        }
+
+        def emit(cell) {
+            structured_codec_emit(JsonCodecSpec, cell);
+        }
+    }
+
+    def json_codec() {
+        codec(JsonCodec_parse, JsonCodec_emit, "application/json");
+    }
+
+    def json_parse_body(path, text) {
+        codec_parse_with(json_codec(), path, text);
+    }
+
+    def json_response_body(cell) {
+        codec_emit_with(json_codec(), cell);
+    }
+}

@@ -1,0 +1,35 @@
+; tests/json-emitter-band.fk - route-facing JSON emission over recipe nodes.
+; preludes: form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk
+;
+; JSON output is a Form responsibility. This band builds an object/array tree as
+; JSON recipe nodes, emits it through json_response_body, and checks strings, numbers,
+; booleans, nulls, arrays, and control-character escaping across sibling kernels.
+
+(let control-text (str_concat "a" (str_concat (byte_to_str 1) "b")))
+(let doc
+    (json-node-object
+        (list
+            (json-node-pair "name" (json-node-string "A\"B"))
+            (json-node-pair "path" (json-node-string "C:\\tmp"))
+            (json-node-pair "count" (json-node-int 3))
+            (json-node-pair "score" (json-node-float-text "1.25"))
+            (json-node-pair "active" (json-node-bool true))
+            (json-node-pair "missing" (json-node-null))
+            (json-node-pair "control" (json-node-string control-text))
+            (json-node-pair "tags"
+                (json-node-array
+                    (list (json-node-string "x") (json-node-string "y")))))))
+
+(let emitted (json_response_body doc))
+(let expected
+    "{\"name\":\"A\\\"B\",\"path\":\"C:\\\\tmp\",\"count\":3,\"score\":1.25,\"active\":true,\"missing\":null,\"control\":\"a\\u0001b\",\"tags\":[\"x\",\"y\"]}")
+
+(let exact-ok (if (str_eq emitted expected) 1 0))
+(let parsed (json_parse_body "json-emitter-band" emitted))
+(let name-ok
+    (if (str_eq (json-string-value (json-object-get parsed "name")) "A\"B") 2 0))
+(let control-ok (if (ge (str_find emitted "\\u0001" 0) 0) 4 0))
+(let control-parse-ok
+    (if (str_eq (json-string-value (json-object-get parsed "control")) control-text) 8 0))
+
+(add exact-ok (add name-ok (add control-ok control-parse-ok)))
