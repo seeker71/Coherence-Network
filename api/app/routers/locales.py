@@ -28,8 +28,9 @@ async def list_locales() -> dict:
     """List supported locales and how much of the concept space is reachable
     in each. Coverage is computed as: for every concept that has any view,
     how many have a canonical view in this lang, how many of those are
-    original authoring, how many are human-attuned, how many machine-attuned,
-    and how many are currently stale relative to the anchor.
+    original authoring, how many use the legacy contributor-submitted bucket,
+    how many are machine-attuned, and how many are currently stale relative to
+    the anchor.
     """
     from sqlalchemy import select
     from collections import defaultdict

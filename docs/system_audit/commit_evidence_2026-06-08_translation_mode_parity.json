@@ -1,0 +1,125 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/translation-mode-parity-20260608",
+  "commit_scope": "Remove human-over-machine translation hierarchy wording and validate translation surfaces for provenance-based framing.",
+  "files_owned": [
+    "api/app/routers/INDEX.md",
+    "api/app/routers/concepts.py",
+    "api/app/routers/locales.py",
+    "api/app/routers/translations.py",
+    "api/app/services/translation_cache_service.py",
+    "cli/lib/commands/translate.mjs",
+    "docs/system_audit/commit_evidence_2026-06-08_translation_mode_parity.json",
+    "docs/vision-kb/INDEX.md",
+    "scripts/INDEX.md",
+    "scripts/validate_locale_surfaces.py",
+    "specs/multilingual-web.md",
+    "web/app/settings/translations/page.tsx",
+    "web/messages/de.json",
+    "web/messages/en.json",
+    "web/messages/es.json",
+    "web/messages/fr.json",
+    "web/messages/id.json",
+    "web/messages/pt-br.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make wellness",
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "python3 scripts/validate_locale_surfaces.py",
+      "cd api && python3 -m pytest -q tests/test_flow_multilingual.py tests/test_concept_views.py tests/test_translations_router.py",
+      "cd web && npm run build",
+      "cd web && NPM_CONFIG_CACHE=/tmp/coherence-npm-cache npm ci",
+      "cd web && npm run build",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check"
+    ],
+    "notes": "Locale validation now checks message bundles plus translation-facing policy surfaces for targeted hierarchy phrases. API tests passed. The first web build failed because this fresh worktree lacked node_modules (next: command not found); npm ci installed dependencies and the web build then passed with existing Next/Turbopack warnings. After rebasing onto current origin/main, the index check reported stale scripts/INDEX.md and docs/vision-kb/INDEX.md; generating indexes repaired both."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge, deploy, and public verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Translation UI and policy surfaces describe generated and contributor-submitted renderings as different provenance paths, not as a human-vs-machine quality hierarchy.",
+    "public_endpoints": [
+      "https://coherencycoin.com/settings/translations",
+      "https://coherencycoin.com/vision/lc-w-coherence?lang=fr",
+      "https://coherencycoin.com/vision/lc-w-coherence?lang=pt-br",
+      "https://api.coherencycoin.com/api/locales"
+    ],
+    "test_flows": [
+      "scripts/validate_locale_surfaces.py reports no English-anchor or translation-mode hierarchy wording.",
+      "/settings/translations labels coverage as original, contributor, machine, and stale without native-review or better-translation wording.",
+      "French and Brazilian Portuguese locale views still render with dynamic locale support while the API locales endpoint includes fr and pt-br."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete. Public movement waits on PR checks, merge, deploy, and public verification."
+  },
+  "idea_ids": [
+    "multilingual-web",
+    "locale-as-data"
+  ],
+  "spec_ids": [
+    "multilingual-web"
+  ],
+  "task_ids": [
+    "translation-mode-parity-20260608"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "translation-mode-correction"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "scripts/validate_locale_surfaces.py now scans web messages and translation-facing API/CLI/spec/UI files for targeted hierarchy phrases.",
+    "web/app/settings/translations/page.tsx labels submitted renderings as contributor provenance and generated renderings as open to attunement.",
+    "specs/multilingual-web.md states translator_type is provenance, not a quality hierarchy.",
+    "api/app/services/translation_cache_service.py documents anchor eligibility as acceptance/provenance policy, not a claim that one source type translates better."
+  ],
+  "change_files": [
+    "api/app/routers/INDEX.md",
+    "api/app/routers/concepts.py",
+    "api/app/routers/locales.py",
+    "api/app/routers/translations.py",
+    "api/app/services/translation_cache_service.py",
+    "cli/lib/commands/translate.mjs",
+    "docs/vision-kb/INDEX.md",
+    "scripts/INDEX.md",
+    "scripts/validate_locale_surfaces.py",
+    "specs/multilingual-web.md",
+    "web/app/settings/translations/page.tsx",
+    "web/messages/de.json",
+    "web/messages/en.json",
+    "web/messages/es.json",
+    "web/messages/fr.json",
+    "web/messages/id.json",
+    "web/messages/pt-br.json"
+  ],
+  "change_intent": "runtime_fix"
+}

@@ -153,7 +153,7 @@
     "lang": "de",
     "name": "German",
     "nativeName": "Deutsch",
-    "notes": "First-pass attunement from the current default anchor on 2026-05-09. These keys render today and invite re-attunement from a native voice when one passes through. Re-attuning a key means: feel the meaning, speak it in your own voice, then remove the key path from `first_pass_keys` (it becomes settled). See feedback_i18n_architecture.md for the five linked practices that hold this body's voice.",
+    "notes": "First-pass attunement from the current default anchor on 2026-05-09. These keys render today and invite re-attunement from any contributor or agent carrying the meaning differently. Re-attuning a key means: feel the meaning, render it in that voice, then remove the key path from `first_pass_keys` (it becomes settled). See feedback_i18n_architecture.md for the five linked practices that hold this body's voice.",
     "role": "anchor"
   },
   "common": {
@@ -295,10 +295,10 @@
     "levelLivingExpression": "Lebendiger Ausdruck",
     "visualExpressionsHeading": "Bildhafte Ausdrücke",
     "resonantAssetsIntro": "Jeder Ausdruck ist ein einzigartiger Beitrag. Der resonanteste steigt an die Oberfläche.",
-    "needsNativeVoice": "Braucht eine muttersprachliche Stimme – schlage eine bessere Übersetzung vor",
+    "needsAttunement": "Offen für Neuabstimmung - schlage eine andere Fassung vor",
     "pendingTranslation": "Noch keine Sicht in dieser Sprache – zeige die Anker-Sicht",
     "translationPendingTitle": "Übersetzung wird vorbereitet",
-    "translationPendingBody": "Für dieses Konzept gibt es noch keine vollständige Sicht in dieser Sprache. Die englische Ankerfassung bleibt hier verborgen, damit die Seite keine Sprachen mischt, während die Einstimmung läuft.",
+    "translationPendingBody": "Für dieses Konzept gibt es noch keine vollständige Sicht in dieser Sprache. Die aktuelle Anker-Sicht bleibt hier verborgen, damit die Seite keine Sprachen mischt, während die Einstimmung läuft.",
     "staleAwaitingReattunement": "Die Anker-Sicht hat sich bewegt – diese Sicht wartet auf Nachstimmung",
     "voicesHeading": "Stimmen aus dem Feld",
     "voicesLede": "Wie dieses Konzept im Leben klingt, erzählt von denen, die es leben.",
@@ -2462,7 +2462,7 @@
     },
     "noteEyebrow": "Eine Notiz aus diesem Körper",
     "editProfileCta": "Wie du dieses Profil beanspruchst, bearbeitest oder entfernst →",
-    "sourceLanguageDisclosure": "Hinweis: Der kuratierte Inhalt dieser Seite ist derzeit auf Englisch. Die Seitennavigation und Überschriften und der Datenbereich darunter (Werktitel, Beschreibungen, Evidenzkörper) werden automatisch in deine Sprache übersetzt; eine vom Autor kuratierte Übersetzung der längeren Prosa auf dieser Seite folgt. In der Zwischenzeit zeigt dir die eingebaute Funktion deines Browsers „Diese Seite übersetzen“ den Rest in deiner Sprache."
+    "sourceLanguageDisclosure": "Hinweis: Die längere kuratierte Prosa dieser Seite ist noch nicht für jede Sprache gerendert. Die Seitennavigation, Überschriften und der Datenbereich darunter (Werktitel, Beschreibungen, Evidenzkörper) werden automatisch in deine Sprache übersetzt; eine kuratierte Fassung der längeren Prosa auf dieser Seite folgt. In der Zwischenzeit zeigt dir die eingebaute Funktion deines Browsers „Diese Seite übersetzen“ den Rest in deiner Sprache."
   },
   "presence": {
     "location": {

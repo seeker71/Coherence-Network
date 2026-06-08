@@ -153,7 +153,7 @@
     "lang": "id",
     "name": "Indonesian",
     "nativeName": "Bahasa Indonesia",
-    "notes": "First-pass attunement from the current default anchor on 2026-05-09. These keys render today and invite re-attunement from a native voice when one passes through. Re-attuning a key means: feel the meaning, speak it in your own voice, then remove the key path from `first_pass_keys` (it becomes settled). See feedback_i18n_architecture.md for the five linked practices that hold this body's voice.",
+    "notes": "First-pass attunement from the current default anchor on 2026-05-09. These keys render today and invite re-attunement from any contributor or agent carrying the meaning differently. Re-attuning a key means: feel the meaning, render it in that voice, then remove the key path from `first_pass_keys` (it becomes settled). See feedback_i18n_architecture.md for the five linked practices that hold this body's voice.",
     "role": "anchor"
   },
   "common": {
@@ -295,10 +295,10 @@
     "levelLivingExpression": "Ekspresi Hidup",
     "visualExpressionsHeading": "Ekspresi visual",
     "resonantAssetsIntro": "Setiap ekspresi adalah sumbangan unik. Yang paling beresonansi naik ke permukaan.",
-    "needsNativeVoice": "Butuh suara penutur asli — usulkan terjemahan yang lebih baik",
+    "needsAttunement": "Terbuka untuk penyelarasan - usulkan versi lain",
     "pendingTranslation": "Belum ada pandangan dalam bahasa ini — menampilkan pandangan jangkar",
     "translationPendingTitle": "Terjemahan sedang disiapkan",
-    "translationPendingBody": "Konsep ini belum memiliki tampilan lengkap dalam bahasa ini. Versi jangkar berbahasa Inggris disembunyikan di sini agar halaman tidak mencampur bahasa saat penyelarasan berjalan.",
+    "translationPendingBody": "Konsep ini belum memiliki tampilan lengkap dalam bahasa ini. Pandangan jangkar saat ini disembunyikan di sini agar halaman tidak mencampur bahasa saat penyelarasan berjalan.",
     "staleAwaitingReattunement": "Pandangan jangkar telah berpindah — pandangan ini menunggu penyelarasan ulang",
     "voicesHeading": "Suara dari lapangan",
     "voicesLede": "Bagaimana konsep ini hidup dalam praktik, diceritakan oleh yang menjalaninya.",
@@ -2462,7 +2462,7 @@
     },
     "noteEyebrow": "Catatan dari tubuh ini",
     "editProfileCta": "Cara mengklaim, mengedit, atau menghapus profil ini →",
-    "sourceLanguageDisclosure": "Catatan: konten kuratorial halaman ini saat ini dalam bahasa Inggris. Navigasi situs (judul, label) dan lapisan data di bawah (judul karya, deskripsi, kumpulan bukti) diterjemahkan secara otomatis ke dalam bahasa Anda; terjemahan kuratorial penulis dari prosa yang lebih panjang di halaman ini akan menyusul. Sementara itu, fitur „terjemahkan halaman ini“ bawaan browser Anda akan menampilkan sisanya dalam bahasa Anda."
+    "sourceLanguageDisclosure": "Catatan: prosa kuratorial yang lebih panjang di halaman ini belum dirender untuk setiap bahasa. Navigasi situs (judul, label) dan lapisan data di bawah (judul karya, deskripsi, kumpulan bukti) diterjemahkan secara otomatis ke dalam bahasa Anda; render kuratorial untuk prosa yang lebih panjang di halaman ini akan menyusul. Sementara itu, fitur „terjemahkan halaman ini“ bawaan browser Anda akan menampilkan sisanya dalam bahasa Anda."
   },
   "presence": {
     "location": {

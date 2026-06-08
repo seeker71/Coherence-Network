@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Translations coverage — Coherence Network",
   description:
-    "Per-locale counts of original, machine-attuned, human-attuned, and stale translations across the concept space.",
+    "Per-locale counts of original, machine-attuned, contributor-attuned, and stale renderings across the concept space.",
 };
 
 type Coverage = {
@@ -52,7 +52,7 @@ function CoverageBar({ coverage }: { coverage: Coverage }) {
   return (
     <div
       className="h-2 w-full rounded overflow-hidden flex"
-      title={`${coverage.original} original · ${coverage.human} human · ${coverage.machine} machine · ${coverage.stale} stale`}
+      title={`${coverage.original} original · ${coverage.human} contributor · ${coverage.machine} machine · ${coverage.stale} stale`}
     >
       <div
         className="bg-amber-500/80"
@@ -77,8 +77,8 @@ function CoverageBar({ coverage }: { coverage: Coverage }) {
 function Legend() {
   const items = [
     { color: "bg-amber-500/80", label: "original — written in this language" },
-    { color: "bg-violet-500/80", label: "human — translation from a contributor" },
-    { color: "bg-teal-500/60", label: "machine — machine translation, awaiting native voice" },
+    { color: "bg-violet-500/80", label: "contributor — submitted rendering" },
+    { color: "bg-teal-500/60", label: "machine — generated rendering, open to attunement" },
     { color: "bg-rose-500/40", label: "stale — source has changed since translation" },
   ];
   return (
@@ -113,9 +113,9 @@ export default async function TranslationsCoveragePage() {
       <h1 className="text-3xl font-extralight text-white mb-2">Translations</h1>
       <p className="text-stone-400 mb-8 text-sm leading-relaxed">
         Per-locale coverage across concepts and other translatable entities.
-        Original authoring in a language sits alongside human and machine
-        translations; stale markers rise as source content changes and
-        translations age out.
+        Original authoring in a language sits alongside contributor and machine
+        renderings; stale markers rise as source content changes and
+        renderings age out.
       </p>
 
       {!data && (

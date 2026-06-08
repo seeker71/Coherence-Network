@@ -1,4 +1,4 @@
-"""Translations router — POST human or machine translations for any entity.
+"""Translations router — POST submitted or generated translations for any entity.
 
 Fills the spec gap in `multilingual-web` R8: anyone signed-in can
 submit a translation and it becomes canonical immediately; the prior
@@ -99,7 +99,7 @@ def _record_to_view(rec, source_contribution_id: str | None = None) -> Translati
     "",
     response_model=TranslationView,
     status_code=201,
-    summary="Submit a translation (human or machine); supersedes any prior canonical",
+    summary="Submit a translation rendering; supersedes any prior canonical",
 )
 async def submit_translation(body: TranslationSubmit) -> TranslationView:
     """Submit a translation for an entity. Becomes canonical immediately.

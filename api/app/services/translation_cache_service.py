@@ -1,20 +1,23 @@
 """Concept views — equal-status language renderings of a concept, idea, or
-contribution. No privileged source language. The anchor (freshest expression)
-is whichever view was most recently touched by a human. Stale views re-attune
-from the anchor.
+contribution. No privileged source language. The anchor (freshest accepted
+expression) is whichever anchor-eligible view was most recently accepted.
+Stale views re-attune from the anchor.
 
 Every view row carries:
   - content_hash: sha256 of its own current content (title + description + markdown)
   - translated_from_hash: the content_hash of the view this was rendered from
     (null when the view was authored directly in that language)
   - author_type: original_human | translation_human | translation_machine
+    (legacy provenance labels; not quality ranks)
 
 Anchor discovery at read time:
-  1. Consider all views whose author_type is original_human or translation_human
+  1. Consider all views whose author_type is anchor-eligible
   2. Pick the one with the latest updated_at
-  3. Ties broken by: original_human over translation_human
+  3. Ties broken by: direct original over submitted rendering
   The anchor is the living centre. Other views are stale if their
   translated_from_hash doesn't equal the anchor's current content_hash.
+  This is an acceptance/provenance policy, not a claim that one source type
+  translates better than another.
 
 History-preserving: every write creates a new row. Prior rows for the same
 (entity, lang) flip to status='superseded' but remain for the edit history.
@@ -102,7 +105,11 @@ AUTHOR_TYPE_ORIGINAL_HUMAN = "original_human"
 AUTHOR_TYPE_TRANSLATION_HUMAN = "translation_human"
 AUTHOR_TYPE_TRANSLATION_MACHINE = "translation_machine"
 
-HUMAN_AUTHOR_TYPES = {AUTHOR_TYPE_ORIGINAL_HUMAN, AUTHOR_TYPE_TRANSLATION_HUMAN}
+ANCHOR_ELIGIBLE_AUTHOR_TYPES = {
+    AUTHOR_TYPE_ORIGINAL_HUMAN,
+    AUTHOR_TYPE_TRANSLATION_HUMAN,
+}
+HUMAN_AUTHOR_TYPES = ANCHOR_ELIGIBLE_AUTHOR_TYPES  # Backward-compatible alias.
 
 STATUS_CANONICAL = "canonical"
 STATUS_SUPERSEDED = "superseded"
@@ -271,19 +278,19 @@ def all_canonical_views(entity_type: str, entity_id: str) -> list[EntityViewReco
 
 
 def find_anchor(views: list[EntityViewRecord]) -> EntityViewRecord | None:
-    """The anchor is the most recently human-touched view. Original authoring
-    wins ties with translation-human at the same updated_at.
-    """
-    humans = [v for v in views if v.author_type in HUMAN_AUTHOR_TYPES]
-    if not humans:
+    """The anchor is the most recently accepted anchor-eligible view."""
+    eligible = [
+        v for v in views if v.author_type in ANCHOR_ELIGIBLE_AUTHOR_TYPES
+    ]
+    if not eligible:
         return None
 
     def rank(v: EntityViewRecord) -> tuple:
         origin_rank = 1 if v.author_type == AUTHOR_TYPE_ORIGINAL_HUMAN else 0
         return (v.updated_at, origin_rank)
 
-    humans.sort(key=rank, reverse=True)
-    return humans[0]
+    eligible.sort(key=rank, reverse=True)
+    return eligible[0]
 
 
 def is_stale(view: EntityViewRecord, anchor: EntityViewRecord | None) -> bool:

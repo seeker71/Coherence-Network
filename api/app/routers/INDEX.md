@@ -137,7 +137,7 @@
 | [substrate.py](substrate.py) | Coherence-substrate REST API. |
 | [task_activity_routes.py](task_activity_routes.py) | Task activity endpoints — live task visibility and SSE streaming. |
 | [traceability.py](traceability.py) | spec: full-code-traceability |
-| [translations.py](translations.py) | Translations router — POST human or machine translations for any entity. |
+| [translations.py](translations.py) | Translations router — POST submitted or generated translations for any entity. |
 | [treasury.py](treasury.py) | Implements: spec-122 (crypto treasury bridge) |
 | [ui_preferences.py](ui_preferences.py) | UI Preferences router — spec ux-tabs-mobile-friendly. |
 | [utils.py](utils.py) | Utility endpoints whose bodies live as Form recipes, not Python functions. |

@@ -173,8 +173,8 @@ class ViewUpsert(BaseModel):
 
     author_type:
       - original_human: this view was authored directly in ``lang`` (no source)
-      - translation_human: this view was attuned from ``translated_from_lang``
-        by a human
+      - translation_human: this legacy label means an accepted submitted
+        rendering attuned from ``translated_from_lang``
       - translation_machine: this view was attuned by a machine backend
 
     ``translated_from_lang`` and ``translated_from_hash`` are required for the
@@ -580,7 +580,8 @@ async def update_story(concept_id: str, body: StoryPatch):
 async def upsert_concept_view(concept_id: str, body: ViewUpsert, request: Request):
     """Upsert a language view for a concept. Every language is equal — this
     endpoint accepts any installed locale on the same footing. The anchor
-    (freshest human-touched view) is discovered at read time, not hardcoded.
+    (freshest accepted anchor-eligible view) is discovered at read time, not
+    hardcoded.
 
     Called by the KB sync pass (reading ``docs/vision-kb/concepts/{id}.{lang}.md``)
     and by community contributors authoring or attuning directly. The new row
@@ -720,7 +721,7 @@ async def get_concept(
         default=None,
         description="Optional installed language view. When set, the concept is "
                     "rendered in that language view if one exists. A language_meta block "
-                    "declares which view is the anchor (freshest human-touched expression) "
+                    "declares which view is the anchor (freshest accepted expression) "
                     "and whether the returned view is stale relative to it. "
                     "If no view exists yet and an LLM backend is registered, a background "
                     "attunement is enqueued and the next request will be served from cache.",
@@ -733,7 +734,7 @@ async def get_concept(
     that view. ``language_meta`` exposes:
 
     - ``lang``: what was returned
-    - ``is_anchor``: true if this view is the most recently human-touched
+    - ``is_anchor``: true if this view is the most recently accepted anchor view
     - ``stale``: true if this view was translated from an earlier state of
       the anchor and needs re-attunement
     - ``anchor``: the anchor view's lang + updated_at, so UI can offer
