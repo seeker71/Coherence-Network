@@ -164,6 +164,24 @@ validate and the compressed signature still preserves category, selected path,
 outcome, certainty bucket, value kind/buckets, witness, coordinate, and trace
 counts across Go, Rust, and TypeScript sibling kernels.
 
+## BMF Choice Feed
+
+`form/form-stdlib/bmf-choice-receipts.fk` feeds the receipt surface from the BMF
+object-rule dispatch path without changing the fast result-only matcher:
+
+- literal-only object choices are classified as `choose_any` because every
+  matching bare object literal returns the same empty-captures/tail shape
+- indexed object-rule and BML compiler rule selection are classified as
+  `choose_best` because the dispatch index chooses the best eligible branch by
+  first-literal bucket while preserving ordered fallback where needed
+- branch-prediction feedback is stored in `CHOICE-VALUE`; alignment, knowing,
+  and trust stay separate gates for learning from that feedback
+
+The proof band is `form/form-stdlib/tests/bmf-choice-receipt-band.fk`. It returns
+`67108863` when BMF object rules, the BMF compiler first-rule path, and the BML
+`choose` compiler rule all return valid choice receipts whose signatures
+preserve the selected branch and whose matched result still executes.
+
 ## North-Star Constraint
 
 Compression is trustworthy only when it preserves the texture of the witnessed

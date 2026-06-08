@@ -1,0 +1,180 @@
+; bmf-choice-receipts.fk - BMF object choice receipt adapters.
+;
+; preludes: form-stdlib/engine.fk form-stdlib/choice-receipt.fk
+;
+; The BMF matcher keeps its fast result-only path. These adapters let callers
+; ask for the same indexed choice as a witnessed CHOICE-RECEIPT when branch
+; feedback, alignment, knowing, and trust need to be learned from.
+
+(do
+    (defn bmf-choice-policy-any () "choose_any")
+    (defn bmf-choice-policy-best () "choose_best")
+
+    (defn bmf-object-choice-policy (alternatives)
+        (if (object-choice-direct-safe? alternatives)
+            (bmf-choice-policy-any)
+            (bmf-choice-policy-best)))
+
+    (defn bmf-indexed-rule-set-choice-policy (_segments)
+        (bmf-choice-policy-best))
+
+    (defn bmf-choice-segment-entries (segment)
+        (if (nil? (object-rule-segment-unknown-entry segment))
+            (object-rule-segment-ordered-entries segment)
+            (append
+                (object-rule-segment-ordered-entries segment)
+                (list (object-rule-segment-unknown-entry segment)))))
+
+    (defn bmf-choice-index-entries (segments)
+        (if (nil? segments) (empty)
+            (append
+                (bmf-choice-segment-entries (head segments))
+                (bmf-choice-index-entries (tail segments)))))
+
+    (defn bmf-choice-entry-evidence (entry object-stream)
+        (if (nil? (object-rule-index-entry-first entry))
+            "unknown first literal; ordered fallback"
+            (if (object-rule-index-entry-candidate? entry object-stream)
+                "first literal eligible"
+                "first literal skipped")))
+
+    (defn bmf-choice-entry-pressure (entry object-stream)
+        (if (object-rule-index-entry-candidate? entry object-stream) 0 100))
+
+    (defn bmf-choice-entry-score (entry object-stream)
+        (if (object-rule-index-entry-candidate? entry object-stream)
+            (if (nil? (object-rule-index-entry-first entry)) 70 95)
+            10))
+
+    (defn bmf-choice-candidate-from-entry (entry object-stream)
+        (cr-choice-candidate
+            (rule-name (object-rule-index-entry-rule entry))
+            "BMF-CHOICE"
+            (object-rule-index-entry-candidate? entry object-stream)
+            (bmf-choice-entry-pressure entry object-stream)
+            (bmf-choice-entry-score entry object-stream)
+            (bmf-choice-entry-evidence entry object-stream)))
+
+    (defn bmf-choice-candidates-from-entries (entries object-stream)
+        (if (nil? entries) (empty)
+            (cons
+                (bmf-choice-candidate-from-entry (head entries) object-stream)
+                (bmf-choice-candidates-from-entries (tail entries) object-stream))))
+
+    (defn bmf-choice-candidates-from-index (segments object-stream)
+        (bmf-choice-candidates-from-entries
+            (bmf-choice-index-entries segments)
+            object-stream))
+
+    (defn bmf-choice-first-eligible-path (candidates)
+        (if (nil? candidates) "none"
+            (if (cr-candidate-eligible? (head candidates))
+                (cr-candidate-path (head candidates))
+                (bmf-choice-first-eligible-path (tail candidates)))))
+
+    (defn bmf-choice-outcome (match-value eligible-count)
+        (if (match? match-value)
+            (cr-outcome-success)
+            (if (gt eligible-count 0)
+                (cr-outcome-fail)
+                (cr-outcome-silence))))
+
+    (defn bmf-choice-selected-path (match-value candidates outcome)
+        (if (str_eq outcome (cr-outcome-success))
+            (bmf-object-kind (cap-get (match-caps match-value) "result"))
+            (if (str_eq outcome (cr-outcome-silence))
+                "none"
+                (bmf-choice-first-eligible-path candidates))))
+
+    (defn bmf-choice-certainty (outcome skipped-count)
+        (if (str_eq outcome (cr-outcome-success))
+            (if (gt skipped-count 0) 95 88)
+            (if (str_eq outcome (cr-outcome-fail)) 70 10)))
+
+    (defn bmf-choice-branch-feedback (outcome skipped-count)
+        (if (str_eq outcome (cr-outcome-success))
+            (if (gt skipped-count 0) 94 82)
+            (if (str_eq outcome (cr-outcome-fail)) 55 25)))
+
+    (defn bmf-choice-value (outcome skipped-count)
+        (cr-choice-value
+            (cr-kind-branch-feedback)
+            (bmf-choice-branch-feedback outcome skipped-count)
+            96
+            95
+            94))
+
+    (defn bmf-choice-trace (outcome eligible-count)
+        (if (str_eq outcome (cr-outcome-success))
+            (cr-choice-trace
+                (if (gt eligible-count 0) eligible-count 1)
+                1
+                (if (gt eligible-count 0) (sub eligible-count 1) 0)
+                0)
+            (if (str_eq outcome (cr-outcome-fail))
+                (cr-choice-trace eligible-count 0 eligible-count 0)
+                (cr-choice-trace 0 0 0 1))))
+
+    (defn bmf-choice-why (policy outcome)
+        (if (str_eq outcome (cr-outcome-success))
+            (str_concat policy " selected a BMF branch")
+            (if (str_eq outcome (cr-outcome-fail))
+                (str_concat policy " tried eligible BMF branches and failed")
+                (str_concat policy " found no eligible BMF branch"))))
+
+    (defn bmf-choice-observation (policy match-value receipt signature)
+        (list "bmf-choice-observation" policy match-value receipt signature))
+
+    (defn bmf-choice-observation? (value)
+        (and (gt (len value) 0) (str_eq (head value) "bmf-choice-observation")))
+
+    (defn bmf-choice-observation-policy (value) (nth value 1))
+    (defn bmf-choice-observation-match (value) (nth value 2))
+    (defn bmf-choice-observation-receipt (value) (nth value 3))
+    (defn bmf-choice-observation-signature (value) (nth value 4))
+
+    (defn bmf-apply-indexed-object-rule-set-with-choice-receipt
+        (segments object-stream expression surface who coordinate when-tick)
+        (do
+            (let policy (bmf-indexed-rule-set-choice-policy segments))
+            (let match-value (apply-indexed-object-rule-set segments object-stream))
+            (let candidates (bmf-choice-candidates-from-index segments object-stream))
+            (let eligible-count
+                (object-rule-dispatch-index-candidate-count segments object-stream))
+            (let skipped-count
+                (object-rule-dispatch-index-skip-count segments object-stream))
+            (let outcome (bmf-choice-outcome match-value eligible-count))
+            (let receipt
+                (cr-choice-receipt
+                    expression
+                    surface
+                    "BMF-CHOICE"
+                    candidates
+                    (bmf-choice-selected-path match-value candidates outcome)
+                    outcome
+                    (bmf-choice-certainty outcome skipped-count)
+                    (bmf-choice-value outcome skipped-count)
+                    (bmf-choice-why policy outcome)
+                    who
+                    coordinate
+                    when-tick
+                    (object-rule-dispatch-index-known-count segments)
+                    (bmf-choice-trace outcome eligible-count)))
+            (bmf-choice-observation
+                policy
+                match-value
+                receipt
+                (cr-choice-signature receipt))))
+
+    (defn bmf-apply-object-rule-set-with-choice-receipt
+        (rules object-stream expression surface who coordinate when-tick)
+        (bmf-apply-indexed-object-rule-set-with-choice-receipt
+            (object-rule-set-index rules)
+            object-stream
+            expression
+            surface
+            who
+            coordinate
+            when-tick))
+
+    0)
