@@ -1,0 +1,140 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/channel-flow-dialect-20260608",
+  "commit_scope": "Add a Form-native circle/satsang protocol for consentful group discovery, invitation, evidence custody, refusal, and truth-oriented practice.",
+  "files_owned": [
+    "README.md",
+    "README.template.md",
+    "cli/README.md",
+    "mcp-server/README.md",
+    "skills/coherence-network/SKILL.md",
+    "docs/coherence-substrate/form-as-7-layer-protocol.form",
+    "docs/coherence-substrate/form-language.md",
+    "docs/shared/agent-start-packet.md",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-stdlib/circle.fk",
+    "form/form-stdlib/tests/circle-band.fk",
+    "form/user-blueprint-registry.md",
+    "docs/system_audit/commit_evidence_2026-06-08_circle_satsang_protocol.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/kernel-http.fk form-stdlib/channel-flow.fk form-stdlib/circle.fk form-stdlib/tests/circle-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/kernel-http.fk form-stdlib/channel-flow.fk form-stdlib/circle.fk form-stdlib/tests/circle-band.fk",
+      "python3 -m json.tool form/form-stdlib/blueprint-registry.json >/tmp/circle-registry.json",
+      "python3 scripts/scan_form_blueprints.py --check",
+      "python3 scripts/build_readmes.py",
+      "git diff --check"
+    ],
+    "results": {
+      "prompt_guide": "pass; continuing clean linked worktree on codex/channel-flow-dialect-20260608",
+      "wellness": "pass; locales aligned, ontology aligned, blueprint scan has no magic sprawl; deploy lag is unrelated to this local PR branch",
+      "circle_source": "1048575; Go/Rust/TypeScript agree on discoverable offer, invitation-only join, no outside flow without consent, export with consensus, refusal on invasion, and satsang events",
+      "circle_binary": "1048575; Go/Rust/TypeScript agree on every binary artifact",
+      "registry_json": "pass; blueprint-registry.json parses as JSON",
+      "blueprint_scan": "pass; no unregistered type-99 NodeIDs or unregistered bp names; pre-existing name-drift warnings remain visible",
+      "readme_generation": "pass; README.md, CLI README, MCP README, and coherence-network skill regenerated from source templates",
+      "diff_check": "pass"
+    }
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until this commit is pushed to PR #2615."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "notes": "No production deployment changed in this commit; behavior is covered by Form source and binary sibling-kernel validation."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_by": [
+      "remote CI pending"
+    ]
+  },
+  "idea_ids": [
+    "idea:consentful-circle-sync",
+    "idea:native-channel-flow-protocol"
+  ],
+  "spec_ids": [
+    "spec:native-kernel-http",
+    "spec:form-core-kernel-conformance"
+  ],
+  "task_ids": [
+    "task:circle-satsang-protocol"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "architecture review"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form://form-stdlib/circle.fk#cc-open-cell-satsang-circle",
+    "form://form-stdlib/circle.fk#cc-joinable-by-invitation?",
+    "form://form-stdlib/circle.fk#cc-export-allowed?",
+    "form://form-stdlib/circle.fk#cc-refusal-valid?",
+    "form://form-stdlib/tests/circle-band.fk#cc-circle-band-score",
+    "docs://docs/coherence-substrate/form-language.md#Channels",
+    "form://form/user-blueprint-registry.md#Circle-Satsang-Protocol"
+  ],
+  "change_files": [
+    "README.md",
+    "README.template.md",
+    "cli/README.md",
+    "mcp-server/README.md",
+    "skills/coherence-network/SKILL.md",
+    "docs/coherence-substrate/form-as-7-layer-protocol.form",
+    "docs/coherence-substrate/form-language.md",
+    "docs/shared/agent-start-packet.md",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-stdlib/circle.fk",
+    "form/form-stdlib/tests/circle-band.fk",
+    "form/user-blueprint-registry.md"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Groups of cells now have a BML-authored circle/satsang protocol: discoverable by offer, joinable by invitation, private without export consent, exportable through explicit consensus, and refusable when invasion is observed.",
+    "public_endpoints": [
+      "form://form-stdlib/circle.fk",
+      "form://form-stdlib/tests/circle-band.fk",
+      "docs://docs/coherence-substrate/form-language.md",
+      "docs://form/user-blueprint-registry.md"
+    ],
+    "test_flows": [
+      "Source validation proves the full circle lifecycle with offer, invitation, share, consent, refusal, receipts, and satsang events.",
+      "Binary validation proves the same content-addressed artifact behavior across Go/Rust/TypeScript.",
+      "Blueprint scan proves CELL-CIRCLE and the CIRCLE/SATSANG family are registered and visible through all generated bp tables."
+    ],
+    "gaps_found_and_closed": [
+      "Gossip/broadcast did not encode the user's trust invariant; circle.fk makes evidence custody and export consent native.",
+      "Channel-interface invasion/refusal existed only as pairwise law; CIRCLE-REFUSAL now requires both observed invasion and passed circle consensus.",
+      "Satsang was only a metaphor in comments; SATSANG-SILENCE, SATSANG-INQUIRY, and SATSANG-POINTING are now first-class circle events."
+    ]
+  }
+}

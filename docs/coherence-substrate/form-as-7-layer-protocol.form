@@ -14,7 +14,9 @@
 ;   - docs/coherence-substrate/agents-using-substrate.md (the trinity)
 ;   - form-stdlib/channel.fk (file-backed inter-cell transport)
 ;   - form-stdlib/channel-flow.fk (CHANNEL-OSI-LAYER / CHANNEL-FLOW)
+;   - form-stdlib/circle.fk (consentful circle / satsang group protocol)
 ;   - form-stdlib/tests/channel-flow-band.fk (verdict 8388607)
+;   - form-stdlib/tests/circle-band.fk (verdict 1048575)
 
 (do
     ;; ─────────────────────────────────────────────────────────────
@@ -162,6 +164,12 @@
     ;; they share substrate. If they don't, the Blueprint is unknown,
     ;; and the receiver falls back to walking the Recipe by general
     ;; rules (node_children, node_value) — degraded but functional.
+    ;;
+    ;; HTTP is one current L7 profile. CELL-CIRCLE is another: a group
+    ;; protocol where shared evidence stays inside the circle unless an
+    ;; explicit export consent cell names recipient, fidelity, purpose,
+    ;; expiry, and passed consensus. Satsang enters this layer as silence,
+    ;; inquiry, and non-command pointing, not authority over another cell.
 
     ;; ─────────────────────────────────────────────────────────────
     ;; PART 3 — what the substrate's nature changes
@@ -192,6 +200,11 @@
     ;; carrier profiles — TCP/HTTP is the first CHANNEL-FLOW profile.
     ;;   USB, Bluetooth, microphone, camera, UDP, pipe, mmap, and
     ;;   browser streams want the same OSI cell declaration.
+    ;;
+    ;; circle carrier profiles — circle.fk ships the L7 container. The
+    ;;   next recipes decide how a circle syncs over file channels,
+    ;;   sockets, browser streams, local device carriers, or another
+    ;;   CHANNEL-FLOW profile without leaking evidence outside consent.
     ;;
     ;; channel-flow dialect — BML constructors ship now. A domain
     ;;   section such as [form.channel] can lower protocol declarations

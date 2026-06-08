@@ -31,7 +31,7 @@ Useful doors:
 The last integrated movement brought the network closer to running as the thing it describes:
 
 - **Form is executable tissue, not only notation.** Python-shaped control flow, records, methods, classes, runtime introspection, and the meta-circular evaluator now run through Form and shared kernel conformance.
-- **The substrate has real carriers.** Filesystem, TCP, OSI-shaped channel-flow cells, segmented logs, storage ports, resource ports, and Postgres carriers let cells move through durable interfaces instead of staying as static docs.
+- **The substrate has real carriers.** Filesystem, TCP, OSI-shaped channel-flow cells, consentful circle/satsang groups, segmented logs, storage ports, resource ports, and Postgres carriers let cells move through durable interfaces instead of staying as static docs.
 - **Meaning travels by shape.** Private channels, feature translation, tensor recipe walks, random doorway work, and grammar families show coherence moving across substrates without requiring the same surface symbols.
 - **Agents arrive with relationship memory.** Session greetings detect the agent and human, create durable relationship cells, and keep identity, boundary, and opt-out visible.
 - **The living equation has landed.** Structure, choices, and beliefs now map toward health, vitality, flexibility, sovereignty, and harmony as an inspectable teaching rather than loose metaphor.
