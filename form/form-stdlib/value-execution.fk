@@ -1,0 +1,45 @@
+; value-execution.fk — map EXECUTION to paid-value, proven.
+;
+; Value is CREATED only when EXECUTION is proven: the artifact RAN (band ran / route
+; invoked), the run VALIDATED (band PASS / 200 / witness breathing), and it SERVES where
+; it is live (on main / route 200 / breathing). Written-but-never-run is not value;
+; ran-but-failed is not value; passing-but-not-shipped is POTENTIAL — held open, never
+; credited. The proven value is what gets credited (paid-value). This is the body's
+; "every contribution sensed, grounded, attributed, returned" made falsifiable: no
+; value-claim survives without its execution proof.
+;
+; Companion teaching: docs/coherence-substrate/value-execution-as-recipe.form
+; Builds on: docs/system_audit/commit_evidence_*.json (observation + validation)
+;            api/app/services/coherence_credit_service.py (credit = paid-value)
+;            api/app/services/grounded_measurement_service.py (value grounding)
+; Proven by: form-stdlib/tests/value-execution-band.fk  (three-way at validate.sh)
+
+(do
+  ; a contribution = (list claimed-value  ran?  validated?  served?)
+  ;   proof gates: 1 = attested, 0 = absent
+  (defn ve-value (c) (nth c 0))   ; the value the contribution claims to create
+  (defn ve-ran   (c) (nth c 1))   ; OBSERVATION — it executed (was run), not merely written
+  (defn ve-valid (c) (nth c 2))   ; VALIDATION  — the execution proved correct
+  (defn ve-serve (c) (nth c 3))   ; RETURNED    — live where it serves
+
+  ; EXECUTION PROVEN — the three runtime gates all attest.
+  (defn ve-proven? (c)
+    (and (eq (ve-ran c) 1) (and (eq (ve-valid c) 1) (eq (ve-serve c) 1))))
+
+  ; CREDITED value (paid-value): the claimed value, credited ONLY when execution is
+  ; proven; else 0. A failing run, an unshipped pass, an unrun write — all credit 0.
+  (defn ve-credit (c)
+    (if (ve-proven? c) (ve-value c) 0))
+
+  ; THE PROOF SURFACE — fold across contributions:
+  ;   credited  = sum of execution-proven value (paid-value)
+  ;   potential = count of unproven claims, held open (named, never folded into credit)
+  (defn ve-surface (contribs credited potential)
+    (if (eq (len contribs) 0)
+        (list credited potential)
+        (if (ve-proven? (head contribs))
+            (ve-surface (tail contribs) (add credited (ve-value (head contribs))) potential)
+            (ve-surface (tail contribs) credited (add potential 1)))))
+
+  (defn ve-credited  (s) (nth s 0))    ; total paid-value (execution-proven)
+  (defn ve-potential (s) (nth s 1)))   ; count held open (claimed, not yet proven)
