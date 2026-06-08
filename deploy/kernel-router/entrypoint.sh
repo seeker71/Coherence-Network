@@ -44,10 +44,5 @@ if [ -n "${KERNEL_ROUTER_WORKERS:-}" ]; then
   set -- "$@" --workers "$KERNEL_ROUTER_WORKERS"
 fi
 
-MODE="production/native routes with fan-out tail"
-case "$ROUTES" in
-  *shadow-routes.fk) MODE="shadow mode: empty routes -> all fan-out" ;;
-esac
-
-echo "kernel-router: serve --host $HOST --port $PORT --routes $ROUTES --upstream $UPSTREAM ($MODE)"
+echo "kernel-router: serve --host $HOST --port $PORT --routes $ROUTES --upstream $UPSTREAM (shadow mode: empty routes -> all fan-out)"
 exec /app/bin/form-kernel-rust "$@"

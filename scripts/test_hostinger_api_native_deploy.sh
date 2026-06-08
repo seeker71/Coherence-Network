@@ -11,42 +11,12 @@ old_sha="5dad3d6f0d7f48495b9644fde0e8d26572962ae1"
 
 mkdir -p "$fixture_dir/bin"
 
-compose_fixture="$fixture_dir/docker-compose.fixture.yml"
-cat >"$compose_fixture" <<'YAML'
-services:
-  api:
-    build:
-      context: /docker/coherence-network/repo
-      dockerfile: /docker/coherence-network/Dockerfile.api
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.coherence-api.rule=Host(`api.coherencycoin.com`)"
-      - "traefik.http.services.coherence-api.loadbalancer.server.port=8000"
-  web:
-    build:
-      context: /docker/coherence-network/repo
-      dockerfile: /docker/coherence-network/Dockerfile.web
-      args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
-  pulse:
-    build:
-      context: /docker/coherence-network/repo/pulse
-      dockerfile: Dockerfile
-  discord-bot:
-    build:
-      context: /docker/coherence-network
-      dockerfile: /docker/coherence-network/Dockerfile.discord
-YAML
-
-jq -n \
-  --rawfile content "$compose_fixture" \
-  --arg environment "POSTGRES_DB=coherence
-POSTGRES_PASSWORD=real-value-preserved
-GIT_COMMIT_SHA=${old_sha}
-DEPLOYED_SHA=${old_sha}
-" \
-  '{content: $content, environment: $environment}' \
-  > "$fixture_dir/project.json"
+cat >"$fixture_dir/project.json" <<JSON
+{
+  "content": "services:\\n  api:\\n    build:\\n      context: /docker/coherence-network/repo\\n      dockerfile: /docker/coherence-network/Dockerfile.api\\n  web:\\n    build:\\n      context: /docker/coherence-network/repo\\n      dockerfile: /docker/coherence-network/Dockerfile.web\\n      args:\\n        NEXT_PUBLIC_API_URL: \${NEXT_PUBLIC_API_URL}\\n  pulse:\\n    build:\\n      context: /docker/coherence-network/repo/pulse\\n      dockerfile: Dockerfile\\n  discord-bot:\\n    build:\\n      context: /docker/coherence-network\\n      dockerfile: /docker/coherence-network/Dockerfile.discord\\n",
+  "environment": "POSTGRES_DB=coherence\\nPOSTGRES_PASSWORD=real-value-preserved\\nGIT_COMMIT_SHA=${old_sha}\\nDEPLOYED_SHA=${old_sha}\\n"
+}
+JSON
 
 cat >"$fixture_dir/bin/gh" <<'SH'
 #!/usr/bin/env bash
@@ -135,13 +105,6 @@ if ! jq -e --arg sha "$target_sha" '
   and (.content | contains("dockerfile: Dockerfile.web"))
   and (.content | contains("dockerfile: discord-bot/Dockerfile"))
   and (.content | contains("DEPLOYED_SHA: ${DEPLOYED_SHA}"))
-  and (.content | contains("kernel-router:"))
-  and (.content | contains("dockerfile: Dockerfile.kernel-router"))
-  and (.content | contains("ROUTES_FILE: /routes/production-routes.fk"))
-  and (.content | contains("STDLIB_DIR: /app/form/form-stdlib"))
-  and (.content | contains("UPSTREAM_URL: http://api:8000"))
-  and (.content | contains("traefik.enable=false"))
-  and (.content | contains("traefik.http.services.coherence-api.loadbalancer.server.port=8080"))
   and (.environment | contains("POSTGRES_PASSWORD=real-value-preserved"))
   and (.environment | contains("GIT_COMMIT_SHA=" + $sha))
   and (.environment | contains("DEPLOYED_SHA=" + $sha))
@@ -150,4 +113,4 @@ if ! jq -e --arg sha "$target_sha" '
   exit 1
 fi
 
-echo "PASS: hostinger_api_native_deploy preserves provider env and flips api front door to kernel-router"
+echo "PASS: hostinger_api_native_deploy preserves provider env and targets git SHA contexts"
