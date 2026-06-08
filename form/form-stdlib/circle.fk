@@ -71,6 +71,17 @@ section [form.bml] {
     def cc-offer-invitation-policy(offer) = nth(offer, 5);
     def cc-offer-boundary(offer) = nth(offer, 6);
     def cc-offer-discoverable?(offer) = if cc-circle-offer?(offer) then str_eq(cc-offer-discovery-policy(offer), cc-discovery-offered()) else false;
+    def cc-discoverable-set(offers) {
+        if eq(len(offers), 0) then empty else
+        if cc-offer-discoverable?(head(offers)) then
+            cons(head(offers), cc-discoverable-set(tail(offers)))
+        else cc-discoverable-set(tail(offers));
+    }
+    def cc-discoverable-member?(offers, circle_id) {
+        if eq(len(offers), 0) then false else
+        if and(cc-offer-discoverable?(head(offers)), str_eq(cc-offer-circle-id(head(offers)), circle_id)) then true
+        else cc-discoverable-member?(tail(offers), circle_id);
+    }
 
     def cc-circle-invitation(circle_id, inviter, invitee, invitation, boundary, expiry) = list(cc_tag_invitation, circle_id, inviter, invitee, invitation, boundary, expiry);
     def cc-circle-invitation?(invitation) = cc-tagged?(invitation, cc_tag_invitation, 7);
@@ -114,6 +125,18 @@ section [form.bml] {
     def cc-refusal-consensus(refusal) = nth(refusal, 6);
     def cc-refusal-boundary(refusal) = nth(refusal, 7);
     def cc-refusal-valid?(refusal) = if cc-circle-refusal?(refusal) then and(ci-invasion?(cc-refusal-invasive-action(refusal), cc-refusal-offered-interface(refusal)), cc-consensus-passed?(cc-refusal-consensus(refusal))) else false;
+    def cc-observed-invasion-consensus?(refusal) = cc-refusal-valid?(refusal);
+    def cc-remove-circle-from-set(offers, circle_id) {
+        if eq(len(offers), 0) then empty else
+        if str_eq(cc-offer-circle-id(head(offers)), circle_id) then
+            cc-remove-circle-from-set(tail(offers), circle_id)
+        else cons(head(offers), cc-remove-circle-from-set(tail(offers), circle_id));
+    }
+    def cc-discoverable-after-refusal(visible_offers, refusal) {
+        if cc-observed-invasion-consensus?(refusal) then
+            cc-remove-circle-from-set(visible_offers, cc-refusal-circle-id(refusal))
+        else visible_offers;
+    }
 
     def cc-circle-export-consent(circle_id, share, recipient, fidelity, purpose, expiry, consensus) = list(cc_tag_export_consent, circle_id, share, recipient, fidelity, purpose, expiry, consensus);
     def cc-circle-export-consent?(consent) = cc-tagged?(consent, cc_tag_export_consent, 8);

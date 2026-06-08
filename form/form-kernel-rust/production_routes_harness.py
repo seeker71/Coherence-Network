@@ -21,6 +21,9 @@ What it proves per promoted route (representative + edge params):
     in the path) is BYTE-IDENTICAL to the CPython oracle's response body, AND
     carries Content-Type: application/json (a route promoted from the upstream
     returns the same body AND type its FastAPI twin did).
+  - the live-metric route (/api/attention/kernel-runtime) answers natively with
+    the expected metric body shape (not byte-compared, because router counters
+    are intentionally live process state).
   - a non-promoted path (/api/health) FANS OUT (X-Form-Router: fanout-python) and
     relays the real app's response — promotion is per-route, the tail still flows.
   - LATENCY: native-served route latency vs the SAME route fanned out to CPython
@@ -257,6 +260,7 @@ PROMOTED: list[tuple[str, list[str]]] = [
 
 # A path the manifest does NOT promote -> must fan out to CPython.
 FANOUT_PATH = "/api/health"
+ATTENTION_PATH = "/api/attention/kernel-runtime"
 
 
 def free_port() -> int:
@@ -446,6 +450,30 @@ def main() -> int:
                     if not (ls == 200 and full_byte_match):
                         print(f"          live({ls}): {lbody}")
                         failures.append((url, "live-full-body", ks, ls, router, ctype, full_byte_match))
+
+        # The route-attention endpoint is process-live: it projects the
+        # kernel-router's in-memory counters. Prove native routing and stable body
+        # shape here; byte-identity belongs to static routes.
+        st, body, hdrs = http_get(kbase + ATTENTION_PATH)
+        router = hdrs.get("x-form-router")
+        ctype = (hdrs.get("content-type") or "").split(";")[0].strip()
+        try:
+            attention = json.loads(body)
+        except json.JSONDecodeError:
+            attention = {}
+        attention_ok = (
+            st == 200
+            and router == "native-kernel"
+            and ctype == "application/json"
+            and attention.get("source") == "kernel-router:live-metrics"
+            and isinstance(attention.get("measurements"), dict)
+            and isinstance(attention.get("matrix"), list)
+            and isinstance(attention.get("next_bml_candidate"), dict)
+        )
+        print(f"\n  [{'OK' if attention_ok else 'FAIL'}] NATIVE {ATTENTION_PATH} -> {st} "
+              f"X-Form-Router={router}  (live route metrics projected in Form)")
+        if not attention_ok:
+            failures.append((ATTENTION_PATH, "native-attention", st, body[:240], router, ctype))
 
         # Fan-out still flows: a non-promoted path is proxied to CPython.
         st, body, hdrs = http_get(kbase + FANOUT_PATH)

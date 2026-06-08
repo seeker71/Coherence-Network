@@ -7,6 +7,14 @@
       "priority": 0,
       "required_header": "",
       "pressure_budget": 40
+    },
+    "attention-kernel-runtime": {
+      "name": "attention-kernel-runtime",
+      "method": "GET",
+      "pattern": "/api/attention/kernel-runtime",
+      "priority": 0,
+      "required_header": "",
+      "pressure_budget": 40
     }
   }
 }

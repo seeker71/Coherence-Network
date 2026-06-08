@@ -1,0 +1,59 @@
+; native-route-goal-cells-band.fk - proof for Form-native route attention.
+;
+; preludes: form-stdlib/native-route-goal-cells.fk
+;
+; Band verdict: 65535 when the route goal loop ranks observed API traffic by
+; traffic-weighted native pressure, north-star fit, latency, errors, and grammar
+; state, then selects the highest-pressure high-grammar handler candidate.
+
+section [form.bml] {
+    def nrg-band-observations() {
+        list(
+            nrg-route-observation("/api/meetings/anonymous-traces", "POST", 197, 111, 1082, 66, 0, nrg-state-python(), nrg-grammar-none(), "meetings-anonymous-traces", "meeting-trace-ingest", 9000),
+            nrg-route-observation("/api/workspaces/coherence-network/vitality", "GET", 86, 78, 262, 0, 0, nrg-state-python(), nrg-grammar-python(), "workspace-vitality", "workspace-vitality-panel", 8500),
+            nrg-route-observation("/api/ideas", "GET,POST", 63, 489, 1619, 0, 0, nrg-state-python(), nrg-grammar-none(), "ideas-index", "idea-index-and-create", 10000),
+            nrg-route-observation("/api/household/events", "GET", 64, 2, 126, 0, 0, nrg-state-python(), nrg-grammar-python(), "household-events", "household-event-feed", 7000),
+            nrg-route-observation("/api/substrate/form", "POST", 43, 6, 9, 0, 0, nrg-state-python(), nrg-grammar-form(), "substrate-form", "form-substrate-bridge", 8000),
+            nrg-route-observation("/api/attention/kernel-runtime", "GET", 0, 0, 0, 0, 0, nrg-state-kernel-first-capable(), nrg-grammar-bml(), "AttentionKernelRuntimeRoute_handle", "native-front-door-attention", 9500),
+            nrg-route-observation("/api/utils/coherence_weight", "GET", 0, 0, 0, 0, 0, nrg-state-kernel-served(), nrg-grammar-form(), "route_coherence_weight", "utility-parity-probe", 5000)
+        );
+    }
+
+    def nrg-band-goal() = nrg-goal-from-observations("native-route-front-door-loop", "90% of observed API traffic served kernel-native through high-grammar handlers.", 9000, 812, nrg-band-observations());
+
+    def nrg-band-find-attention(attentions, path) {
+        if nil?(attentions) then empty else if str_eq(nrg-route-path(nrg-attention-observation(head(attentions))), path) then head(attentions) else nrg-band-find-attention(tail(attentions), path);
+    }
+
+    def nrg-route-goal-cells-band-score() {
+        let observations = nrg-band-observations();
+        let goal = nrg-band-goal();
+        let attentions = nrg-goal-attentions(goal);
+        let best = nrg-goal-next-attention(goal);
+        let idea_attention = nrg-band-find-attention(attentions, "/api/ideas");
+        let meetings_attention = nrg-band-find-attention(attentions, "/api/meetings/anonymous-traces");
+        let vitality_attention = nrg-band-find-attention(attentions, "/api/workspaces/coherence-network/vitality");
+        let runtime_attention = nrg-band-find-attention(attentions, "/api/attention/kernel-runtime");
+        let utils_attention = nrg-band-find-attention(attentions, "/api/utils/coherence_weight");
+        sum(list(
+            nrg-bool-score(nrg-route-goal-valid?(goal), 1),
+            nrg-bool-score(eq(nrg-total-calls(observations), 453), 2),
+            nrg-bool-score(eq(len(attentions), 7), 4),
+            nrg-bool-score(str_eq(nrg-route-path(nrg-attention-observation(best)), "/api/meetings/anonymous-traces"), 8),
+            nrg-bool-score(str_eq(nrg-attention-next-action(best), nrg-action-author-high-grammar-handler()), 16),
+            nrg-bool-score(eq(nrg-attention-traffic-bp(meetings_attention), 4348), 32),
+            nrg-bool-score(str_eq(nrg-attention-next-action(runtime_attention), nrg-action-prove-byte-identity()), 64),
+            nrg-bool-score(str_eq(nrg-attention-next-action(utils_attention), nrg-action-move-front-door()), 128),
+            nrg-bool-score(eq(nrg-native-pressure(nrg-state-kernel-first-served()), 0), 256),
+            nrg-bool-score(eq(nrg-grammar-pressure(nrg-grammar-domain()), 0), 512),
+            nrg-bool-score(eq(nrg-goal-target-native-bp(goal), 9000), 1024),
+            nrg-bool-score(eq(nrg-goal-total-routes(goal), 812), 2048),
+            nrg-bool-score(nrg-observations-valid?(observations), 4096),
+            nrg-bool-score(nrg-attentions-valid?(attentions), 8192),
+            nrg-bool-score(eq(nrg-attention-total-pressure(best), 403371), 16384),
+            nrg-bool-score(and(gt(nrg-attention-total-pressure(meetings_attention), nrg-attention-total-pressure(vitality_attention)), gt(nrg-attention-total-pressure(vitality_attention), nrg-attention-total-pressure(idea_attention))), 32768)
+        ));
+    }
+
+    nrg-route-goal-cells-band-score();
+}

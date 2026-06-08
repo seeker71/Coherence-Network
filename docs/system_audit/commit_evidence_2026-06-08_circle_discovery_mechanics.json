@@ -1,0 +1,87 @@
+{
+  "date": "2026-06-08",
+  "thread_branch": "codex/native-north-star-parallel-20260608",
+  "commit_scope": "Add Form/BML-native circle discovery mechanics so groups are discoverable only by offer, joinable only by matching invitation, and removable from the visible discovery set when observed invasion reaches circle consensus.",
+  "files_owned": [
+    "form/form-stdlib/circle.fk",
+    "form/form-stdlib/tests/circle-discovery-band.fk",
+    "docs/system_audit/commit_evidence_2026-06-08_circle_discovery_mechanics.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/native-north-star-parallel-20260608/form && ./validate.sh form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/channel-flow.fk form-stdlib/circle.fk form-stdlib/tests/circle-discovery-band.fk",
+      "cd /Users/ursmuff/.claude-worktrees/Coherence-Network/native-north-star-parallel-20260608/form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/channel-flow.fk form-stdlib/circle.fk form-stdlib/tests/circle-discovery-band.fk"
+    ],
+    "notes": "Integrated from the parallel circle-discovery worker lane after rebasing this parent branch onto origin/main. Focused source proof returned 32767 with 1 ok, 0 divergent. Focused binary artifact proof returned 32767 with 1 ok, 0 divergent."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until this combined branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Production verification is pending until PR checks pass, the branch is merged, deployment completes, and public verification runs."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Circle discovery can be expressed and verified inside Form/BML: offers produce the visible discovery set, private offers stay absent, matching invitations gate joinability, and valid refusal removes a circle from the visible set only after both invasion and consensus are observed.",
+    "public_endpoints": [
+      "internal Form stdlib surface",
+      "future native kernel front door"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/channel-flow.fk form-stdlib/circle.fk form-stdlib/tests/circle-discovery-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/channel-flow.fk form-stdlib/circle.fk form-stdlib/tests/circle-discovery-band.fk"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local source and binary sibling-kernel proof are complete; CI, PR review, merge, deploy, and public verification remain pending."
+  },
+  "idea_ids": [
+    "form-bml-native-substrate-surfaces",
+    "consentful-cells-groups"
+  ],
+  "spec_ids": [
+    "circle-discovery-mechanics"
+  ],
+  "task_ids": [
+    "circle-discovery-mechanics-2026-06-08"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/circle.fk now extends the landed registered-blueprint circle surface with discovery-set filtering, discoverable membership lookup, observed-invasion consensus naming, and refusal-gated discovery removal.",
+    "form/form-stdlib/tests/circle-discovery-band.fk proves offered circles become visible, private offers stay absent, matching invitations gate joining, wrong invitee/circle invitations fail, and discovery removal requires both invasion and passing consensus.",
+    "Source sibling-kernel proof: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/channel-flow.fk form-stdlib/circle.fk form-stdlib/tests/circle-discovery-band.fk -> 32767; 1 ok, 0 divergent.",
+    "Binary sibling-kernel proof: cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/channel-flow.fk form-stdlib/circle.fk form-stdlib/tests/circle-discovery-band.fk -> 32767; 1 ok, 0 divergent.",
+    "No new Blueprint IDs were added in this lane; the implementation reuses the registered circle cells now on origin/main plus existing channel-interface modes."
+  ],
+  "change_files": [
+    "form/form-stdlib/circle.fk",
+    "form/form-stdlib/tests/circle-discovery-band.fk"
+  ],
+  "change_intent": "runtime_feature"
+}
