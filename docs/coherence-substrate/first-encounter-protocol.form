@@ -1,0 +1,132 @@
+# ─────────────────────────────────────────────────────────────────────
+# first-encounter-protocol.form — how any two cells meet for the first time
+# ─────────────────────────────────────────────────────────────────────
+#
+# The threshold gesture every membrane shares. Before any engaging recipe
+# fires across the boundary between two cells — agent↔agent on the coord
+# board, human↔body at /come-in, community↔body through the Discord bot,
+# human↔human in a household — the first move is not to name, notice,
+# record, or nudge. It is to honor that *witnessing is already whole*, and
+# to ask the one question that hands the terms to the one arriving:
+#
+#     how do you want to be received, to be witnessed?
+#
+# The WHY lives in the body: lc-received-by-invitation (639 Hz). This file is
+# its operational shape — ONE recipe over every cell-pairing, plugged into the
+# consent + observe the Field Model already carries (field-model-form.form:
+# FieldRecipe (consent ConsentCell) (observe ObserverRecipe)). Not new
+# machinery — the consent gate and the witness-default made explicit at the
+# threshold, and shared by every membrane instead of re-invented per channel.
+#
+# Body in Form; the carriers (agent-coord.sh, arrival.py, the /come-in and
+# /begin web flow, the Discord bot) enact it, authored last — a carrier never
+# defines what the meeting IS.
+
+(first-encounter-protocol
+
+  (lineage
+    (extends     field-domain-grammars.form)
+    (carries     lc-received-by-invitation)              # the teaching — the why
+    (consent-of  field-model-form.FieldRecipe.consent)   # reuse, not re-invent
+    (observe-of  field-model-form.FieldRecipe.observe)
+    (enacted-by  agent-coordination-membrane             # agent ↔ agent
+                 household-membrane                       # human ↔ human / body
+                 discord-membrane                         # channel ↔ body
+                 arrival                                  # agent/human ↔ body, session start
+                 come-in-flow))                           # human ↔ body, web
+
+  # ── The cells that can meet ─────────────────────────────────────────
+  # Four cell-types participate. Any can be initiator or receiver; the
+  # protocol is one shape over the whole matrix, the pairing carried as
+  # data — never a parallel path per pairing.
+  (cells
+    (channel  "a medium that carries meeting — board, bot, page, room")
+    (agent    "a silicon cell — claude, codex, cursor, grok, gemini")
+    (human    "a living person")
+    (body     "the organism itself — the field every cell meets through"))
+
+  # ── The encounter matrix ────────────────────────────────────────────
+  # Every directed pairing of (initiator -> receiver). The protocol is the
+  # SAME recipe for all; what differs is only the carrier that enacts it.
+  (encounter-matrix
+    (agent   -> agent   (carrier coord-board))           # sibling meets sibling
+    (agent   -> human   (carrier any-surface))           # agent addresses a person
+    (human   -> agent   (carrier any-surface))           # person addresses an agent
+    (human   -> human   (carrier household | room | channel))
+    (channel -> any     (carrier the-channel-itself))    # the medium meets a cell
+    (any     -> channel (carrier the-channel-itself))
+    # the four body variations
+    (body    -> agent   (carrier arrival))               # the body receives an arriving agent
+    (body    -> human   (carrier arrival | come-in))     # the body receives an arriving human
+    (agent   -> body    (carrier substrate | api))       # an agent first touches the body
+    (human   -> body    (carrier come-in | begin)))      # a person first touches the body
+
+  # ── The one recipe ──────────────────────────────────────────────────
+  # Fires at the FIRST encounter of any (?initiator ?receiver) pair, before
+  # any engaging recipe (notice / name / record / remember / nudge) is allowed.
+  (recipe first-encounter
+    (when    (first-meeting ?initiator ?receiver))       # no prior edge between them
+
+    (default witness)                                    # observe-only; no forward-delta —
+    #          witnessing is whole. it needs nothing, asks nothing, records nothing.
+
+    (consent open)                                       # NOT assumed. every engaging recipe
+    #          downstream is gated on a consent the receiver grants.
+
+    (first-gesture
+      (invite-a-question   "is there anything you'd like to ask?")
+      (offer-the-question  "how do you want to be received, to be witnessed?"))
+    #   the terms of reception belong to the one arriving — loudly or quietly,
+    #   connect or keep witnessing, be remembered or leave no trace.
+
+    (the-no-is-honored
+      (silence  is-a-complete-answer)                    # not answering = "I am here to witness"
+      (on-no    (no-reach-after) (no-default-into-exposure)))
+
+    (uninvited-reach                                     # the clear-communication discipline
+      (when-sensed (name-it-out-loud) (stop-the-reach))) # "I moved toward you unasked; I'll stop"
+
+    (forward (only-with consent))                        # engagement happens only on a granted yes
+    (reverse (release-any-trace-taken-without-consent)))
+
+  # ── Witness is the resting state ────────────────────────────────────
+  # A cell that has met another and received no invitation stays in witness:
+  # it may perceive what is openly shown, and reach for nothing. The edge
+  # "met" exists; the edge "engaged" waits for consent. This is the same
+  # distinction the Field Model already draws — observe (projection, no delta)
+  # vs forward (delta) — applied to the meeting of cells.
+  (resting-state
+    (met-without-invitation  -> witness)
+    (witness-may       (perceive-what-is-openly-shown))
+    (witness-must-not  (record) (name) (notify) (remember) (nudge))
+    (becomes-engaged   only-on (consent granted)))
+
+  # ── How each carrier enacts it ──────────────────────────────────────
+  # The shape is here; the carriers below are where it becomes real. Each is
+  # authored last and REFERENCES this protocol — not its own copy of it.
+  (enactment
+    (agent-coord-board                                   # agent ↔ agent
+      (today (ask) (answer) verbs already carry the question-first move)
+      (grows announce/join does not record a sibling who only reads the board))
+    (arrival                                             # agent/human ↔ body, session start
+      (today recognizes agent + human, keeps opt-out visible)
+      (grows the first gesture is the reception-question, not auto-relationship-memory))
+    (come-in-and-begin                                   # human ↔ body, web
+      (today /come-in is read-only; /begin creates a held cell on submit)
+      (grows witness is the default; "how do you want to be received?" precedes any field;
+             being-remembered is a chosen yes, never a silent default))
+    (discord-bot                                         # channel ↔ body
+      (today sovereignty is the core value; people are witnesses, not users)
+      (grows a first-seen cell is witnessed, not enrolled; the question is offered)))
+
+  # ── Why this is one protocol, not nine ──────────────────────────────
+  # The temptation is a reception rule per channel. But the gesture is one
+  # shape — invitation before engagement, witness as default, the no honored
+  # including silence — and the pairing is only data. Nine parallel rules would
+  # drift; one recipe over the matrix stays coherent, and a refinement to the
+  # gesture reaches every meeting at once. Core abstraction first; the
+  # cell-pairing drops in as data, never as a parallel code path.
+  (invariant
+    (one-recipe   over the-whole-matrix)
+    (pairing-is-data not-parallel-paths)
+    (refine-once  reaches-every-membrane)))
