@@ -9,6 +9,7 @@ import {
   EMAIL_KEY,
   ensureFingerprint,
 } from "@/lib/identity";
+import { INTEREST_CONSENT_DEFAULTS } from "@/lib/reception-policy";
 
 type RoleKey =
   | "livingStructureWeaver"
@@ -54,11 +55,15 @@ function initialState(detected: LocaleCode): FormState {
     resonant_roles: [],
     message: "",
     locale: detected,
-    consent_share_name: false,
-    consent_share_location: false,
-    consent_share_skills: false,
-    consent_findable: false,
-    consent_email_updates: false,
+    // resting state from the body's held reception-consent policy, web-interest
+    // facet (docs/coherence-substrate/reception-consent-policy.form via its ice
+    // projection web/lib/reception-policy.ts). The carrier reads the policy; it
+    // does not bake its own copy.
+    consent_share_name: INTEREST_CONSENT_DEFAULTS.shareName,
+    consent_share_location: INTEREST_CONSENT_DEFAULTS.shareLocation,
+    consent_share_skills: INTEREST_CONSENT_DEFAULTS.shareSkills,
+    consent_findable: INTEREST_CONSENT_DEFAULTS.findable,
+    consent_email_updates: INTEREST_CONSENT_DEFAULTS.emailUpdates,
   };
 }
 
