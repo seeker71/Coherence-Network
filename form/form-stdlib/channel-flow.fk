@@ -38,4 +38,39 @@
     (defn cf-honored     (receipt) (head receipt))
     (defn cf-invasions   (receipt) (head (tail receipt)))
     (defn cf-final-offer (receipt) (head (tail (tail receipt))))
+
+    ; ── BILATERAL: both sides offer, both request; each direction is gated by the
+    ; RECEIVER's interface. The flow is shaped by EACH side's interface state — a
+    ; request from A toward B is honored iff B offers it; from B toward A iff A offers it.
+    ; A bilateral act is (list side tag payload); side: A=0, B=1.
+    (defn side-a () 0)
+    (defn side-b () 1)
+    (defn bact-side    (a) (head a))
+    (defn bact-tag     (a) (head (tail a)))
+    (defn bact-payload (a) (head (tail (tail a))))
+
+    ; thread BOTH offers; each request is checked against the OTHER side's offer.
+    ; receipt = (list honored invasion offer-a offer-b) — totals across both directions.
+    (defn cf-walk-bi (flow offer-a offer-b honored invasion)
+        (if (eq (len flow) 0)
+            (list honored invasion offer-a offer-b)
+            (if (eq (bact-side (head flow)) (side-a))
+                ; A acts: shift updates A's offer; request is gated by B's offer (A reaches B)
+                (if (eq (bact-tag (head flow)) (act-shift))
+                    (cf-walk-bi (tail flow) (bact-payload (head flow)) offer-b honored invasion)
+                    (if (ci-honors? (bact-payload (head flow)) offer-b)
+                        (cf-walk-bi (tail flow) offer-a offer-b (add honored 1) invasion)
+                        (cf-walk-bi (tail flow) offer-a offer-b honored (add invasion 1))))
+                ; B acts: shift updates B's offer; request is gated by A's offer (B reaches A)
+                (if (eq (bact-tag (head flow)) (act-shift))
+                    (cf-walk-bi (tail flow) offer-a (bact-payload (head flow)) honored invasion)
+                    (if (ci-honors? (bact-payload (head flow)) offer-a)
+                        (cf-walk-bi (tail flow) offer-a offer-b (add honored 1) invasion)
+                        (cf-walk-bi (tail flow) offer-a offer-b honored (add invasion 1)))))))
+
+    (defn channel-flow-bilateral (flow offer-a offer-b)
+        (cf-walk-bi flow offer-a offer-b 0 0))
+
+    (defn cf-bi-offer-a (receipt) (head (tail (tail receipt))))
+    (defn cf-bi-offer-b (receipt) (head (tail (tail (tail receipt)))))
 )
