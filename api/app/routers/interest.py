@@ -15,7 +15,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, EmailStr, field_validator
 
-from app.services import interest_service
+from app.services import interest_service, translator_service
 from app.routers.contributors import GraduateIn, graduate_contributor
 
 logger = logging.getLogger(__name__)
@@ -42,7 +42,7 @@ class RegisterInterestRequest(BaseModel):
     @classmethod
     def validate_locale(cls, v: str) -> str:
         v = (v or "").strip().lower()
-        return v if v in {"en", "de", "es", "id"} else "en"
+        return v if translator_service.is_supported(v) else translator_service.DEFAULT_LOCALE
 
     @field_validator("name")
     @classmethod

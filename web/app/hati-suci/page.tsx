@@ -9,6 +9,7 @@ import QRCode from "qrcode";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useT } from "@/components/MessagesProvider";
+import { DEFAULT_LOCALE, LOCALES, isSupportedLocale, type LocaleCode } from "@/lib/locales";
 
 type Role = "resident" | "staff" | "member";
 type Member = {
@@ -166,8 +167,8 @@ const KINDS: { key: Kind; emoji: string }[] = [
 // from one cell. Amounts use the pasar's own measures (kg, ikat = bunch,
 // sisir = comb, ons = 100 g, butir = each), never bare counts. (g4 will
 // serve this from /api/household/market so there is a single source.)
-type Lang = "en" | "id" | "de" | "es";
-type L = { en: string; id: string; de?: string; es?: string };
+type Lang = LocaleCode;
+type L = { en: string; id: string } & Partial<Record<LocaleCode, string>>;
 type MarketGroup = "fruit" | "veg" | "bumbu" | "pokok";
 type MarketItem = { id: string; e: string; g: MarketGroup; l: L; u: L; step: number; start: number };
 
@@ -305,7 +306,7 @@ export default function HatiSuciPage() {
   const [cart, setCart] = useState<Record<string, number>>({});
   const [customItems, setCustomItems] = useState<CustomItem[]>([]);
   const [customInput, setCustomInput] = useState("");
-  const [lang, setLang] = useState<Lang>("en");
+  const [lang, setLang] = useState<Lang>(DEFAULT_LOCALE);
 
   const [invRole, setInvRole] = useState<Role>("member");
   const [inviteLink, setInviteLink] = useState<{ name: string; url: string; whatsapp: string; qr: string } | null>(null);
@@ -353,7 +354,7 @@ export default function HatiSuciPage() {
   // Active tongue (drives the market labels + the board re-render).
   useEffect(() => {
     const dl = document.documentElement.lang;
-    if (dl === "en" || dl === "id" || dl === "de" || dl === "es") setLang(dl);
+    if (isSupportedLocale(dl)) setLang(dl);
   }, []);
 
   // Custom items the requester typed once — remembered as their own tiles.
@@ -809,16 +810,17 @@ export default function HatiSuciPage() {
 
   const langToggle = (
     <div className="flex gap-1 text-xs">
-      {["en", "id"].map((l) => (
+      {LOCALES.map((locale) => (
         <button
-          key={l}
+          key={locale.code}
           onClick={() => {
-            setLocaleCookie(l);
+            setLocaleCookie(locale.code);
             window.location.reload();
           }}
+          title={locale.name}
           className="rounded-md border border-border/40 px-2 py-1 uppercase text-muted-foreground hover:text-foreground hover:bg-accent/60"
         >
-          {l}
+          {locale.code}
         </button>
       ))}
     </div>

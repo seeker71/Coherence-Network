@@ -150,11 +150,11 @@
     }
   },
   "_attunement": {
-    "lang": "en",
-    "name": "English",
-    "nativeName": "English",
-    "role": "anchor",
-    "notes": "This bundle is the current anchor — keys land here as they're lifted out of components into the data layer. Other locales attune from the freshest anchor view. See feedback_i18n_architecture.md (no privileged source language: any locale can become anchor when human-touched fresher than this one)."
+    "lang": "pt-br",
+    "name": "Brazilian Portuguese",
+    "nativeName": "Português (Brasil)",
+    "role": "seed",
+    "notes": "Brazilian Portuguese is supported as a locale; this bundle is seeded from the English anchor so the key shape is complete while human attunement continues."
   },
   "common": {
     "skipToContent": "Skip to main content",

@@ -579,9 +579,8 @@ async def update_story(concept_id: str, body: StoryPatch):
 @router.post("/concepts/{concept_id}/views", summary="Upsert a language view of a concept")
 async def upsert_concept_view(concept_id: str, body: ViewUpsert, request: Request):
     """Upsert a language view for a concept. Every language is equal — this
-    endpoint accepts the view ``en``, ``de``, ``es``, ``id`` on the same
-    footing. The anchor (freshest human-touched view) is discovered at read
-    time, not hardcoded.
+    endpoint accepts any installed locale on the same footing. The anchor
+    (freshest human-touched view) is discovered at read time, not hardcoded.
 
     Called by the KB sync pass (reading ``docs/vision-kb/concepts/{id}.{lang}.md``)
     and by community contributors authoring or attuning directly. The new row
@@ -719,7 +718,7 @@ async def get_concept(
     request: Request,
     lang: str | None = Query(
         default=None,
-        description="Optional language view (en, de, es, id). When set, the concept is "
+        description="Optional installed language view. When set, the concept is "
                     "rendered in that language view if one exists. A language_meta block "
                     "declares which view is the anchor (freshest human-touched expression) "
                     "and whether the returned view is stale relative to it. "

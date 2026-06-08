@@ -5,10 +5,10 @@ in the caller's language. This module holds per-locale message bundles keyed
 by a stable code and exposes ``localize(code, lang, **params)`` for the
 routers to call when raising.
 
-Bundles live inline in this module (not as JSON files) because the set is
-small, tightly coupled to router code, and benefits from type-check-time
-visibility when a code is added. New entries land here next to the routers
-that raise them.
+Bundles live inline in this module (not as JSON files) because the messages
+are tightly coupled to router code. The supported locale set comes from the
+translator registry; locales without an inline error bundle fall back to
+English while the rest of the surface still accepts the language.
 
 Locale resolution at the raise site:
     lang = caller_lang(request)    # Accept-Language header or ?lang= query
@@ -21,9 +21,10 @@ from typing import Any
 
 from fastapi import Request
 
+from app.services import translator_service
 
-SUPPORTED_LOCALES = {"en", "de", "es", "id"}
-DEFAULT_LOCALE = "en"
+SUPPORTED_LOCALES = set(translator_service.SUPPORTED_LOCALES)
+DEFAULT_LOCALE = translator_service.DEFAULT_LOCALE
 
 
 # ---------------------------------------------------------------------------
@@ -97,6 +98,28 @@ MESSAGES: dict[str, dict[str, str]] = {
         "workspace_access_denied": "No eres miembro del espacio '{workspace}'",
         "unsupported_entity_type": "Las reacciones no están disponibles para el tipo de entidad '{entity_type}'",
     },
+    "fr": {
+        "concept_not_found": "Concept '{id}' introuvable",
+        "concept_exists": "Le concept '{id}' existe déjà",
+        "concept_no_profile": "Aucun profil pour '{id}'",
+        "concepts_not_found": "Concepts introuvables : {missing}",
+        "target_concept_not_found": "Concept cible '{id}' introuvable",
+        "idea_not_found": "Idée '{id}' introuvable",
+        "spec_not_found": "Spécification '{id}' introuvable",
+        "contributor_not_found": "Contributeur '{id}' introuvable",
+        "unsupported_locale": "Langue non prise en charge '{code}'",
+        "unsupported_entity_type": "Type d'entité non pris en charge '{type}'",
+        "invalid_author_type": "author_type non valide '{type}'",
+        "translated_from_required": "translated_from_lang et translated_from_hash sont requis sauf si author_type vaut 'original_human'",
+        "validation_failed": "Validation échouée",
+        "bad_request": "Requête incorrecte",
+        "rate_limited": "Trop de requêtes — merci de ralentir",
+        "unauthorized": "Authentification requise",
+        "forbidden": "Non autorisé",
+        "workspace_identity_required": "L'espace de travail '{workspace}' nécessite un contributeur connecté (X-Contributor-Id)",
+        "workspace_access_denied": "Vous n'êtes pas membre de l'espace de travail '{workspace}'",
+        "unsupported_entity_type": "Les réactions ne sont pas disponibles pour le type d'entité '{entity_type}'",
+    },
     "id": {
         "concept_not_found": "Gagasan konsep '{id}' tidak ditemukan",
         "concept_exists": "Konsep '{id}' sudah ada",
@@ -141,7 +164,9 @@ def caller_lang(request: Request | None, query_lang: str | None = None) -> str:
         if header:
             # Parse in order: e.g. "de-DE,de;q=0.9,en;q=0.8"
             for part in header.split(","):
-                code = part.split(";")[0].strip().lower()
+                code = part.split(";")[0].strip().lower().replace("_", "-")
+                if code in SUPPORTED_LOCALES:
+                    return code
                 # Match "de-DE" or "de"
                 root = code.split("-")[0]
                 if root in SUPPORTED_LOCALES:

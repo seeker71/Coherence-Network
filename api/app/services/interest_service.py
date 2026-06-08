@@ -26,7 +26,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from app.services import graph_service
+from app.services import graph_service, translator_service
 
 logger = logging.getLogger(__name__)
 
@@ -78,9 +78,9 @@ def register_interest(
     roles = [r for r in (resonant_roles or []) if r in VALID_ROLES]
 
     # Normalize locale to one of the supported codes; fall back to en.
-    locale_code = (locale or "en").strip().lower()
-    if locale_code not in {"en", "de", "es", "id"}:
-        locale_code = "en"
+    locale_code = (locale or translator_service.DEFAULT_LOCALE).strip().lower()
+    if not translator_service.is_supported(locale_code):
+        locale_code = translator_service.DEFAULT_LOCALE
 
     properties: dict[str, Any] = {
         "email": email,

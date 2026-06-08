@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -10,6 +10,10 @@ import {
 } from "../lib/entry-paths";
 
 const root = join(__dirname, "..");
+const localeCodes = readdirSync(join(root, "messages"))
+  .filter((file) => /^[A-Za-z][A-Za-z0-9-]*\.json$/.test(file))
+  .map((file) => file.slice(0, -5))
+  .sort();
 
 describe("Bali land design path", () => {
   it("keeps the living compound registered for the public entry surfaces", () => {
@@ -47,7 +51,7 @@ describe("Bali land design path", () => {
   });
 
   it("keeps the localized come-in door keys present", () => {
-    for (const locale of ["en", "de", "es", "id"]) {
+    for (const locale of localeCodes) {
       const messages = JSON.parse(
         readFileSync(join(root, `messages/${locale}.json`), "utf8"),
       ) as { comeIn?: Record<string, unknown> };
