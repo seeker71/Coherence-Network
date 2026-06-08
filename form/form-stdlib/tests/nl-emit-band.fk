@@ -11,7 +11,7 @@
 ; probes reuse those handles. Rust today runs Form without GC, so
 ; load-once-reuse-many is the discipline that keeps the band light.
 ;
-; preludes: form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/cache.fk form-stdlib/i18n.fk form-stdlib/nl-emit.fk
+; preludes: form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/cache.fk form-stdlib/i18n.fk form-stdlib/nl-emit.fk
 
 (do
     (let en (i18n-load "en"))

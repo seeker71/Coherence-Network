@@ -22,9 +22,10 @@
 ; each locale." Multiply across 4 locales × 2300 keys → ~9300 observed
 ; emission triples.
 ;
-; Prelude requirement: form-stdlib/json.fk, form-stdlib/cache.fk,
-; form-stdlib/codec.fk, form-stdlib/structured-codec.fk, and
-; form-stdlib/json-codec.fk must load before this file.
+; Prelude requirement: form-stdlib/language-model.fk, form-stdlib/json.fk,
+; form-stdlib/cache.fk, form-stdlib/codec.fk,
+; form-stdlib/structured-codec.fk, and form-stdlib/json-codec.fk must
+; load before this file.
 
 ;; --- locale-file paths ----------------------------------------------
 ;;

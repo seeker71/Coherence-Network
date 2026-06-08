@@ -15,7 +15,7 @@
 ; Reuses bmf-core.fk's whitespace-aware cursor (cursor-str, cur-*, skip-ws,
 ; cp-in-class?, surf-*). Emits universal Form nodes via (bp op).
 ;
-; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk
+; preludes: form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk
 
 (do
     ;; ── match result: (ok val caps cur) | (no) ───────────────────────────

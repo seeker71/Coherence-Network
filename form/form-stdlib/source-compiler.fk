@@ -323,17 +323,14 @@
     ;; Source: form/form-kernel-go/main.go parseSexp around line 1942 (DO/LET) +
     ;; 2005 (FNCALL) + 1900 (IDENT).
 
-    ;; --- Form ontology helpers — data lives in form-ontology.json --
+    ;; --- Form ontology helpers — data lives in the kernel-native bp table --
     ;;
     ;; FORM-CATEGORY-TABLE and FORM-PRIMITIVE-TABLE are bound by
     ;; form-stdlib/form-ontology-loader.fk (loaded as a prelude before
-    ;; this file). The loader reads form-stdlib/form-ontology.json at
-    ;; load time via parse-json from form-stdlib/json.fk and walks the
-    ;; categories/primitives arrays into the row shape these helpers
-    ;; consume. ONE ice (the JSON), water at load (table walk), gas
-    ;; (bindings). A new primitive or composite shape lands as one
-    ;; row in form-ontology.json and is picked up by every emit site
-    ;; through these helpers.
+    ;; this file). The loader asks the kernel-native bp table for the
+    ;; coordinates and walks them into the row shape these helpers
+    ;; consume. The authored ontology sources feed the generated bp table;
+    ;; source compilation itself does not parse JSON.
     ;;
     ;; List-walk lookup — pure head/tail, no nth/nil? (we run before
     ;; core.fk). Returns the matched row or empty list.
