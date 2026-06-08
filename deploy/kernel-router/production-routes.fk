@@ -1908,6 +1908,41 @@
       "ice"
       (if (str_eq status "partial") "water" "gas")))
 
+(defn mpv-side-effect-intents-json ()
+  (str_concat_all (list
+    "["
+    "{\"name\":\"cache-invalidation\",\"surface\":\"ideas/specs/translation-read-caches\",\"mode\":\"intent-carried\"}"
+    ",{\"name\":\"parent-edge-repair\",\"surface\":\"idea-parent-child-graph\",\"mode\":\"intent-carried\"}"
+    ",{\"name\":\"contributor-key-audit\",\"surface\":\"contributor_api_keys.last_used_at\",\"mode\":\"intent-carried\"}"
+    ",{\"name\":\"rollback-receipt\",\"surface\":\"native-mutation-front-door\",\"mode\":\"intent-carried\"}"
+    "]")))
+
+(defn mpv-reversible-gate-json ()
+  (str_concat_all (list
+    "{\"default_route\":\"fanout-python\""
+    ",\"native_route\":\"X-Form-Native-Preview\""
+    ",\"ordinary_traffic_flip_allowed\":false"
+    ",\"ordinary_traffic_flip_performed\":false"
+    ",\"rollback\":\"remove preview header or disable native route row\""
+    "}")))
+
+(defn mpv-trust-envelope-json (operation node-id)
+  (str_concat_all (list
+    "{\"state\":\"embodied-trust-preview\""
+    ",\"operation\":" (json_string operation)
+    ",\"node_id\":" (json_string node-id)
+    ",\"choice_success\":1"
+    ",\"silence\":\"fanout-default\""
+    ",\"protocol\":\"X-Form-Native-Preview\""
+    ",\"fail\":\"rollback-to-fanout\""
+    ",\"stop\":\"ordinary-traffic-unflipped\""
+    ",\"bma\":\"native-mutation-trust-envelope\""
+    ",\"prediction_error\":\"carried_as_residual\""
+    ",\"residual\":\"side-effects are named and held in the envelope while fanout remains default\""
+    ",\"side_effect_intents\":" (mpv-side-effect-intents-json)
+    ",\"reversible_gate\":" (mpv-reversible-gate-json)
+    "}")))
+
 (defn mpv-preview-response (operation node-id sql body)
   (respond 202
     (str_concat_all (list
@@ -1919,7 +1954,7 @@
       ",\"executes\":false"
       ",\"sql\":" (json_string sql)
       ",\"request_body\":" (json_string body)
-      ",\"remaining_gap\":\"cache invalidation, parent/edge side effects, contributor-key audit side effects, reversible public flip gate\""
+      ",\"trust_envelope\":" (mpv-trust-envelope-json operation node-id)
       ",\"runtime\":\"inline\"}"))))
 
 (defn route_ideas_create_native_preview (q)

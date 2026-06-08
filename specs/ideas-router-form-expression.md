@@ -30,6 +30,10 @@ source:
     symbols: [test_native_mutation_preview_routes_are_method_and_header_gated, test_native_mutation_preview_handlers_emit_application_graph_sql]
   - file: api/tests/test_application_graph_response_projection.py
     symbols: [test_route_forms_name_response_projection_before_public_flip]
+  - file: form/form-stdlib/native-mutation-trust-envelope.fk
+    symbols: [nmte-trust-envelope-json]
+  - file: api/tests/test_native_mutation_ab_observation.py
+    symbols: [test_ab_gate_recommends_live_db_trial_after_full_confidence]
   - file: api/tests/test_runtime_surface_native_routes.py
     symbols: [test_real_manifest_native_routes_are_served_zero_and_include_ideas_structure]
 requirements:
@@ -39,6 +43,7 @@ requirements:
   - "The Form artifact names the native graph-node mutation carrier for create, replace, and delete while keeping the public mutable front-door gap explicit."
   - "The Form artifact names the native auth decision carrier for API-key/contributor-key parity and the application graph table SQL carrier for graph_nodes/revisions/edge cleanup."
   - "The production manifest binds header-gated method-specific native SQL preview rows for POST/PATCH /api/ideas without changing default public behavior."
+  - "The ideas Form artifact names the trust envelope that carries prediction residual, side-effect intents, choice markers, and reversible gate state."
   - "The kernel-router image carries the ideas source directory so the source-index route is deployable when production routes are selected."
   - "The proof tests verify the Form structure, shifted recipes, Python-carrier boundary, native structure/source routes, and router-to-Form link."
 done_when:
@@ -75,7 +80,7 @@ constraints:
 - [ ] **R7**: `deploy/kernel-router/production-routes.fk` binds `/api/ideas/graph-projection` to a native Form handler that returns a fixture-backed `IdeaPortfolioResponse`-shaped body.
 - [ ] **R8**: The Form artifact names the native graph-node mutation carrier for create, replace, and delete while keeping the live-front-door auth/Postgres boundary explicit.
 - [ ] **R9**: The production manifest binds header-gated method-specific native SQL preview rows for `POST /api/ideas` and `PATCH /api/ideas/*`.
-- [ ] **R10**: Tests prove the Form structure, recipe families, Python-carrier boundary, native structure/source/projection routes, native mutation carrier, native preview binding, named remaining live-front-door gap, and router-to-Form link.
+- [ ] **R10**: Tests prove the Form structure, recipe families, Python-carrier boundary, native structure/source/projection routes, native mutation carrier, native preview binding, trust envelope, named remaining live-front-door gap, and router-to-Form link.
 
 ## Research Inputs
 
@@ -88,6 +93,8 @@ constraints:
 - `form/form-stdlib/graph-node-port.fk` - native graph-node read and mutation carrier.
 - `form/form-stdlib/tests/graph-node-mutation-carrier-band.fk` - memory/file proof for create, replace, and delete.
 - `specs/method-specific-native-mutation-preview-bindings.md` - method-specific preview route binding contract.
+- `specs/native-mutation-trust-envelope.md` - trust envelope contract for the
+  current mutable route boundary.
 
 ## Files to Create/Modify
 
@@ -131,7 +138,7 @@ python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expressi
 
 ## Gaps
 
-- GAP-I1 follow-up task: `ideas-native-mutation-side-effects`. `/api/ideas/router-structure`, `/api/ideas/source-index`, `/api/ideas/source-portfolio`, and `/api/ideas/graph-projection` are kernel-first capable. `graph-node-port.fk` exposes create/replace/delete over the storage port, `auth-port.fk` preserves API-key/contributor-key decision parity, `application-graph-node-port.fk` emits direct `graph_nodes` / `graph_node_revisions` / `graph_edges` SQL, `POST/PATCH /api/ideas` have `X-Form-Native-Preview` header-gated native SQL preview rows, live DB execution is proven, and Form response projection now emits `IdeaWithScore` / `SpecRegistryEntry` shaped mutation rows. Public mutable DB-backed portfolio routes still enter through FastAPI by default until cache invalidation, parent/edge side effects, contributor-key audit side effects, and a reversible public gate are proven.
+- GAP-I1 follow-up task: `ideas-native-mutation-side-effects`. `/api/ideas/router-structure`, `/api/ideas/source-index`, `/api/ideas/source-portfolio`, and `/api/ideas/graph-projection` are kernel-first capable. `graph-node-port.fk` exposes create/replace/delete over the storage port, `auth-port.fk` preserves API-key/contributor-key decision parity, `application-graph-node-port.fk` emits direct `graph_nodes` / `graph_node_revisions` / `graph_edges` SQL, `POST/PATCH /api/ideas` have `X-Form-Native-Preview` header-gated native SQL preview rows, live DB execution is proven, Form response projection now emits `IdeaWithScore` / `SpecRegistryEntry` shaped mutation rows, and the preview response carries prediction residual, side-effect intents, choice markers, and reversible gate state. Public mutable DB-backed portfolio routes still enter through FastAPI by default until carried side-effect intents execute natively and a narrow reversible public gate has a rollback receipt.
 - GAP-I2 follow-up task: `ideas-live-graph-storage-carrier`. Connect `/api/ideas/graph-projection` to a live application graph storage carrier on top of `form/form-stdlib/ideas-graph-projection.fk`.
 
 ## Risks and Assumptions

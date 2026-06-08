@@ -86,8 +86,9 @@ def test_ideas_router_form_keeps_python_as_carrier_with_gap_named():
     assert "application-graph-live-db-test.sh proves rollback-safe live DB execution" in text
     assert "application-graph-response-projection-test.sh proves live graph rows project into IdeaWithScore and SpecRegistryEntry-shaped mutation responses" in text
     assert "Public mutable DB-backed /api/ideas still enters through FastAPI by default" in text
-    assert "cache invalidation, parent/edge side effects, contributor-key audit side effects" in text
-    assert "reversible public flip gate" in text
+    assert "trust envelope carrying prediction residual" in text
+    assert "choice_success=1, silence/protocol/fail/stop/BMA markers" in text
+    assert "carried side-effect intents execute natively" in text
 
 
 def test_ideas_router_form_describes_live_router_carrier():
