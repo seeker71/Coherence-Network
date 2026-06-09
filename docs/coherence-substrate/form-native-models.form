@@ -80,6 +80,30 @@
 ;   A frozen binary cannot do this; the substrate was built for exactly it (equivalent architectures
 ;   share a Blueprint NodeID, so the body recognizes same-shape models across documents).
 ;
+; ── AUTO-ML AS A FORM META-LEARNER (the dynamic-recipe advantage, realized — M7, after M1-M6) ──
+;   Google's AutoML/NAS searches the space of architectures for a better model. In Form that search is
+;   NATURAL, not bolted on, because a model is a mutable recipe — and every piece already exists as a
+;   proven cell, composed one altitude up:
+;     - GENERATE — the dynamic-recipe advantage above: a candidate architecture is a new SEQUENCE of
+;       block-cells; content-addressing means equivalent shapes dedup to one Blueprint, so the search
+;       never re-evaluates the same architecture twice.
+;     - SEARCH — autoresearch-loop.fk is the loop, turned on architectures instead of documents.
+;     - INFER-BEST-WHILE-SEARCHING-BETTER — champion-challenger.fk: serve every real inference with the
+;       BEST model available (the champion) while the meta-learner trains CHALLENGERS, and flip authority
+;       only when a challenger has PROVEN it reaches/exceeds the champion. Both at once, always — the
+;       organism improves its own models without ever degrading what it serves now. Maximum signal.
+;   THE SEARCH IS DRIVEN BY SIGNAL, and the signals are already cells — and they are ONE quantity seen
+;   from different sides (free energy): surprise IS precision-weighted prediction error; confidence IS
+;   the precision. The meta-learner reads the field from whichever projection the moment needs:
+;     - SURPRISE (surprise-salience.fk / novelty.fk) — where the current model is most surprised is where
+;       a better architecture has the most to gain; surprise ranks WHAT to explore next.
+;     - INFER-ERROR (active-inference.fk) — the prediction-vs-outcome mismatch, the learning gradient.
+;     - TRUST / CONFIDENCE (confidence-calibrate.fk / confidence-weighted-vote.fk / trust-decay.fk) — how
+;       much to weight each model's reading, and when a challenger has earned the route.
+;   M7 milestone: an autoresearch loop that generates a small layer-stack variant, evaluates it on
+;   held-out signal, and champion-challenges it against the running model — provable, and gated on M1-M6
+;   (you can only search architectures once you can build and run them).
+;
 ; KIN: numeric-formats.canonical.json (the 19 formats + conformance) · cell-numerics.form / cosine.form
 ;   (the layer math) · attention.fk + embedding-as-recipe.fk (content-addressed attention) ·
 ;   tests/ml-flow-band.fk (the proven float-tensor primitive) · tests/float-conversions-band.fk (the
@@ -87,3 +111,6 @@
 ;   form-kernel-rust/src/{main.rs,formats.rs} (the JIT + the conformance harness) · form-kernel-go/
 ;   jit_value.go (the value-typed JIT template) · form-kernel-ts/src/backends/metal.ts (the GPU emitter) ·
 ;   encoder-decoder-as-recipe.form + audio-grammar.form (register a model as a codec row; the mel front-end).
+;   Meta-learner (M7): autoresearch-loop.fk (the search) · champion-challenger.fk (infer-best-while-search-better)
+;   · active-inference.fk + surprise-salience.fk + novelty.fk (the surprise/error signal) ·
+;   confidence-calibrate.fk + confidence-weighted-vote.fk + trust-decay.fk (the trust/precision projection).
