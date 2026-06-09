@@ -1,0 +1,51 @@
+; transition-detect.fk — the field SHIFTED: name the change between a previous believed label and the current one.
+;
+; temporal-smoothing.fk debounces ONE frame at a time into a settled label (ts-stable: the held label,
+; or "" for honest silence). This is the next breath downstream: hold two settled readings — what the
+; body believed LAST (prev) and what it believes NOW (now) — and classify the EDGE between them. The
+; stream of debounced labels becomes a stream of EVENTS: a new shape arrived, the old one was lost, the
+; reading shifted to a different shape, or nothing moved. "" is silence/no-recognition on either side, so
+; the edge logic has to read four corners, not two: present->present, absent->present, present->absent,
+; absent->absent. Strings, so sameness is str_eq; every answer is a label, nothing floats.
+;
+; THE NESTED-AND DISCIPLINE: every compound condition here is built from BINARY and only — (and (and a b) c)
+; — never (and a b c). Go and Rust silently DROP a third argument while TS folds it (a real divergence:
+; 239 vs 255). "non-empty" is (not (str_eq x "")); a real shift is (and (and prev? now?) (not same)). One
+; binary at a time, nested, so all three kernels read the same edge.
+;
+; HONEST LANE: this reads the EDGE, not the truth. It trusts that prev and now are already the debounced
+; output of temporal-smoothing — it does not itself confirm either label held; feed it raw flickering
+; frames and every flicker reads as a shift. "steady" covers BOTH genuine persistence (dog->dog) AND
+; double-silence (""->"") — the body is steady whether it holds a shape or holds nothing; that is honest,
+; but "steady" alone does not tell you WHICH, the label does. Pair upstream with ts-stable so the two
+; readings are settled before the edge between them is named.
+;
+; Proven by: form-stdlib/tests/transition-detect-band.fk (three-way at validate.sh)
+
+(do
+    ; --- a label is PRESENT when it is not the empty/silence string. ---
+    (defn td-present? (label) (not (str_eq label "")))
+
+    ; --- CHANGED?: 1 iff BOTH sides are present AND they are different shapes (a real shift). ---
+    ; nested binary and: first prove both present, then prove not-same. arrive/lose are NOT changes —
+    ; one side is silence; a shift is present-to-present across two different labels.
+    (defn td-changed? (prev now)
+        (if (and (and (td-present? prev) (td-present? now)) (not (str_eq prev now))) 1 0))
+
+    ; --- ARRIVED?: 1 iff prev was silence and now a shape is present (recognition came online). ---
+    (defn td-arrived? (prev now)
+        (if (and (not (td-present? prev)) (td-present? now)) 1 0))
+
+    ; --- LOST?: 1 iff prev held a shape and now is silence (recognition fell away). ---
+    (defn td-lost? (prev now)
+        (if (and (td-present? prev) (not (td-present? now))) 1 0))
+
+    ; --- EVENT: the one word for this edge. shift > arrive > lose, else steady (held shape OR held
+    ;     silence). The three detectors are mutually exclusive, so order only resolves the steady floor. ---
+    (defn td-event (prev now)
+        (if (eq (td-changed? prev now) 1) "shift"
+            (if (eq (td-arrived? prev now) 1) "arrive"
+                (if (eq (td-lost? prev now) 1) "lose"
+                    "steady"))))
+
+    0)

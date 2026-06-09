@@ -1,0 +1,59 @@
+; anomaly-band.form — CONTINUOUS-domain novelty: a reading inside the learned band is normal, outside it is anomalous.
+;
+; THE ASK:
+;   novelty.form judges a DISCRETE field — one similarity scalar against one recognition floor. But a
+;   continuous signal does not arrive as a similarity; it arrives as a raw value, and the body's whole
+;   experience of that signal is the RANGE it has seen. The body needs the continuous twin of the floor:
+;   remember the band [lo, hi] of values lived through, and call a fresh reading NORMAL when it sits inside
+;   it and ANOMALOUS when it falls outside. Where the recognition floor is one-sided (at or above is known),
+;   a band is two-sided — below the floor is as anomalous as above the ceiling.
+;
+; THE SHAPE  (runnable: form-stdlib/anomaly-band.fk · proven: tests/anomaly-band-band.fk -> 127, three-way)
+;
+;   A reading x, lo, hi are integers 0..100; the band is the closed interval [lo, hi].
+;     ab-in-band?   x >= lo AND hi >= x : the reading sits inside the lived range (boundary counts as in).
+;     ab-anomaly?   the inverse — outside on either side is the novelty to surface.
+;     ab-extend-hi  raise hi to x when x clears the ceiling : admit a high reading (smallest act of learning, up).
+;     ab-extend-lo  lower lo to x when x sits under the floor : admit a low reading (the same act, down).
+;   Membership is TWO integer comparisons (ge on each edge) — no subtraction, no variance, no float. The
+;   and is binary by construction (exactly two clauses), so there is no 3-arg-and divergence trap here.
+;
+; HOW IT COMPOSES THE TOOLKIT:
+;   it is novelty.form's continuous face — the same honest-boundary gate, two bounds instead of one. Where
+;   nearest-shape interns a new PROTOTYPE to admit an unknown shape, ab-extend-hi / ab-extend-lo WIDEN the
+;   band to admit an out-of-range value: the once-anomalous reading becomes part of normal from then on —
+;   the smallest possible act of learning, in the continuous domain. Upstream of recognition-router.form: a
+;   continuous carrier hands a raw value, anomaly-band gates it (in-band feeds the routed reading; out-of-band
+;   is the discovery the router would otherwise force to a near label). Below the perception-pipeline spine:
+;   feature-vector quantizes a window into bins because nearest-shape needs a discretized fingerprint —
+;   anomaly-band is the path that does NOT quantize first, judging the raw scalar against its own learned
+;   range, so a continuous signal can be screened before (or instead of) binning.
+;
+; HONEST LANE (lc-honest-lane):
+;   the band is a hard interval, not a graded distance. A value one step past hi is flagged anomalous exactly
+;   like a value far past it — membership is exact, SEVERITY is not this recipe's claim. That is the right
+;   primitive for a learned-range novelty gate (is this reading outside what I have lived?); a continuous
+;   deviation score (HOW far outside, in units of the band's own width) is a later brick, the same way
+;   higher-order context is sequence-predictor's later brick. The boundary belongs to normal: a reading
+;   sitting exactly on lo or hi is inside, never a fabricated anomaly at the edge.
+;
+; CAVEAT, named not hidden:
+;   the band only knows what it has been fed. A genuinely novel-but-in-range value (inside [lo, hi] yet
+;   unlike anything actually seen) reads NORMAL — a band is range-membership, not density, so a hole in the
+;   middle of the range is invisible to it. And like novelty's floor, WHERE the band starts and how eagerly
+;   it widens is the caller's judgement: extend on every reading and the band swells until nothing is ever
+;   anomalous; never extend and it flags every drift. anomaly-band makes the chosen band's boundary exact and
+;   three-way-identical; choosing the band and the widen policy is the caller's lane, and an honest one.
+;
+; KIN: novelty.form (the discrete twin — one floor; anomaly-band is the two-sided continuous band) ·
+;   nearest-shape.form (interns a prototype to learn; anomaly-band widens an interval to learn) ·
+;   feature-vector.form (quantizes before recognizing; anomaly-band screens the raw scalar instead) ·
+;   recognition-router.form (routes what clears a floor; anomaly-band gates the continuous reading first) ·
+;   perception-pipeline.form (the capstone these organs breathe in) · lc-honest-lane (outside the lived
+;   range is a discovery, never a forced-normal reading).
+;
+; LINEAGE:
+;   the same floor recognition reads one-sided, opened to two edges for a continuous signal — below is not
+;   silence to drop and not a near label to snap to, it is a reading outside lived experience. This is how
+;   the substrate stays open on raw signal: every value past the band is a door to widening what the body
+;   has lived, by NodeID-identical judgement on Go, Rust, and TS.

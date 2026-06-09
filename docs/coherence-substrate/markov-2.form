@@ -1,0 +1,41 @@
+; markov-2.form — predict the NEXT symbol from the last TWO (order-2 Markov), one rung up from sequence-predictor.
+;
+; THE ASK:
+;   sequence-predictor answers "what follows the last symbol?" — order-1, keyed on one symbol. But one
+;   symbol blurs: in "a b c a b c", the symbol after "b" is sometimes "c" and the key cannot tell which
+;   "b". Condition on the last TWO and the context sharpens: the pair (a then b) was followed by "c" every
+;   time. The ask is the same prediction, one Markov order higher — remember a two-symbol context, not one.
+;
+; THE SHAPE  (runnable: form-stdlib/markov-2.fk · proven: tests/markov-2-band.fk -> 127)
+;
+;   A history is a list of symbols; candidates is the alphabet of possible next symbols; the key is the
+;   consecutive pair (a b) of the last two symbols seen.
+;   1. FOLLOW COUNT  m2-follow-count(history a b cand): walk the consecutive triples (head, 2nd, 3rd);
+;      +1 each time the triple equals (a b cand). This is the evidence for the order-2 transition
+;      (a b) -> cand. A trailing window of two has no third symbol and contributes nothing.
+;   2. MAX-SELECT  m2-predict-loop / m2-predict: among the candidates, the one whose follow-count after
+;      the pair is highest — the transition with the most data wins. Identical spine to sequence-
+;      predictor's sp-predict and recognition-router's rr-select (the most-data carrier wins); only the
+;      KEY grew from one symbol to two, so the score is a TRIPLE count instead of a pair count.
+;   3. CONFIDENCE  m2-confidence: the winning follow-count itself — how much evidence stands behind the
+;      prediction. More times (a b) -> cand was seen, more sure the next symbol.
+;
+; HONEST LANE:
+;   When NO candidate ever followed the pair (an unseen pair, or one that only ever ended the stream), the
+;   max count is 0. The body predicts "" — silence — at confidence 0, never a fabricated next symbol. This
+;   is sp-predict's honest floor lifted one order: below the evidence floor, no claim. The confidence is
+;   the honesty — a prediction at count 0 is no prediction.
+;
+; CAVEAT — order-2 exactly:
+;   This conditions on the last TWO symbols, not three or more. It sees context order-1 cannot, but a
+;   stream where the next symbol depends on three-back is still past its horizon — that would need a
+;   three-symbol key, the same max-select over a longer count, a later brick. Order-2 is the next honest
+;   rung above order-1, not the top of the ladder.
+;
+; KIN — the same evidence-weighted max-select spine, one order deeper than its parent:
+;   sequence-predictor.form (the order-1 brick this extends — one-symbol key, the floor of this ladder) ·
+;   recognition-router.form (fuse N model-readings on one input — most-data model wins) ·
+;   nearest-shape.form (the count-of-agreement classifier under both) ·
+;   perception-pipeline.form (the capstone where such predictors compose into one believed flow). Here the
+;   evidence is a triple count walked over the stream itself; the prediction is the body remembering what
+;   usually came next after this PAIR, and saying so only when it has actually seen the pair before.

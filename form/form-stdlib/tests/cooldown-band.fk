@@ -1,0 +1,30 @@
+; preludes: form-stdlib/cooldown.fk
+;
+; cooldown-band — event rate-limit made falsifiable: after firing at 'last', stay held until k ticks pass.
+;
+; The event fired at last=10 with cooldown k=5, so the gate (earliest allowed next fire) is last+k = 15.
+; Walk the clock past it and watch restraint release exactly at the boundary:
+;   now 12 -> still HELD   (12 < 15)  : cd-suppressed? == 1, cd-ready? == 0  — too soon, do not re-fire
+;   now 16 -> READY        (16 >= 15) : cd-ready? == 1                       — the cooldown has elapsed
+;   now 15 -> READY        (15 >= 15) : cd-ready? == 1                       — the boundary tick is ready (ge, not gt)
+; and the gate and complement are exact:
+;   cd-next-fire 10 5 == 15 (the gate is an ADD forward, no countdown)
+;   at the boundary, cd-suppressed? == 0 (the precise complement of ready — same test, arms swapped)
+;
+; Verdict 63 when every claim lands:
+;   1   before the gate, the event is suppressed      (now 12 -> cd-suppressed? == 1)
+;   2   before the gate, it is not yet ready           (now 12 -> cd-ready?      == 0)
+;   4   past the gate, it is ready                      (now 16 -> cd-ready?      == 1)
+;   8   the boundary tick itself is ready (ge)          (now 15 -> cd-ready?      == 1)
+;   16  the gate is exactly last + k                    (cd-next-fire 10 5        == 15)
+;   32  at the boundary, suppressed is the complement   (now 15 -> cd-suppressed? == 0)
+(do
+    (let last 10)
+    (let k 5)
+    (let c0 (if (eq (cd-suppressed? last 12 k) 1) 1 0))
+    (let c1 (if (eq (cd-ready?      last 12 k) 0) 2 0))
+    (let c2 (if (eq (cd-ready?      last 16 k) 1) 4 0))
+    (let c3 (if (eq (cd-ready?      last 15 k) 1) 8 0))
+    (let c4 (if (eq (cd-next-fire   last k)   15) 16 0))
+    (let c5 (if (eq (cd-suppressed? last 15 k) 0) 32 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))

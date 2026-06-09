@@ -1,0 +1,43 @@
+; drift-detect.form — sense a classifier going STALE: did accuracy fall on RECENT samples vs EARLIER?
+;
+; THE ASK:
+;   classifier-eval.form answers "is this classifier good enough RIGHT NOW" against one held-out set.
+;   But a classifier that earned promotion yesterday can quietly rot as the world moves under it. The
+;   next breath after evaluation is WATCHING: hold two equal-size windows of (predicted actual) pairs —
+;   an EARLIER window and a RECENT one — and ask whether recent accuracy fell by a margin. The drop is
+;   the drift; the margin is how big a drop counts.
+;
+; THE SHAPE  (runnable: form-stdlib/drift-detect.fk · proven: tests/drift-detect-band.fk -> 63)
+;
+;   A pair = (list predicted actual): the same shape classifier-eval reads, ce-pred / ce-actual here as
+;   dd-pred / dd-actual. A window is a list of pairs; the two windows are EQUAL-SIZE so their counts
+;   compare directly — a raw count drop IS an accuracy drop when the denominators match.
+;   1. HIT  dd-hit?: one pair is correct when predicted str_eq actual (1), else 0.
+;   2. COUNT  dd-correct: fold a window by recursion, summing the hits — no subtraction, the count is
+;      independently true (never derived as total-minus-wrong).
+;   3. DRIFT GATE  dd-drifting?: earlier beat recent by AT LEAST the margin —
+;      (ge (dd-correct early) (add (dd-correct recent) margin)). Division-free: ge on integers, the same
+;      verdict on Go=Rust=TS. dd-stable? is the exact inverse — recent held within the margin, no rot.
+;
+; WHY DIVISION-FREE:
+;   an accuracy delta as a ratio (recent/total vs early/total) is a float, and eq on floats drifts
+;   between kernels — the three-way proof would diverge on rounding alone. Equal-size windows let the
+;   bar stay in integers: (early-correct >= recent-correct + margin) carries the same intent — "recent
+;   fell far enough to worry" — exactly. This is classifier-eval's division-free bar turned from one
+;   window-against-a-floor into two-windows-against-each-other.
+;
+; KIN — this composes the spine, it does not invent a new primitive:
+;   classifier-eval.form (the brick it extends — same pair shape, same ge-on-integers bar; eval gates a
+;     single set against a floor, drift-detect gates RECENT against EARLIER) ·
+;   recognition-router.form (the route whose carriers can drift — what gets watched after it ships) ·
+;   perception-pipeline.form (feature -> recognize -> route; drift-detect watches the route's output
+;     over time, the loop's outer feedback) ·
+;   declared-source.form (every counted pair traces to a witnessed prediction, never an assumed one).
+;
+; HONEST LANE / CAVEAT:
+;   drift here is a COUNT drop on equal windows, not a statistical test. It cannot distinguish a real
+;   distribution shift from one unlucky batch — raise the margin, or widen the windows, to demand more
+;   evidence before crying drift. It also ASSUMES equal-size windows: comparing a 5-sample window to a
+;   50-sample one would read the size difference as drift, not the accuracy. A drifting verdict is
+;   grounds to RE-EVALUATE (re-run classifier-eval, consider re-grounding), not proof of the cause; the
+;   margin is the encoder's bar for how loud the signal must be before the body listens.

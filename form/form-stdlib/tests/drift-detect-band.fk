@@ -1,0 +1,35 @@
+; preludes: form-stdlib/drift-detect.fk
+;
+; drift-detect-band — sense a classifier going stale, made falsifiable: recent accuracy vs earlier.
+;
+; Two equal-size windows of (predicted actual) pairs. The EARLIER window classified 5 of 5 right; the
+; RECENT window only 2 of 5 (three predictions now miss the label). A STABLE control window also got
+; 4 of 5 right — the same accuracy as a 4-of-5 earlier baseline:
+;   early5 (5/5 correct) vs recent2 (2/5 correct), margin 2 -> DRIFTING  (5 >= 2+2, the fall cleared the bar)
+;   base4  (4/5 correct) vs steady4 (4/5 correct), margin 2 -> NOT drifting (4 >= 4+2 is false — held steady)
+; The bar is division-free, the same shape classifier-eval's pass gate uses — only here it compares two
+; windows' counts instead of one window against a floor.
+;
+; Verdict 63 when every claim lands:
+;   1   recent rot is caught                       (dd-drifting? early5 recent2 2 == 1)
+;   2   the inverse stays honest                    (dd-stable? early5 recent2 2 == 0)
+;   4   a steady classifier is NOT flagged          (dd-drifting? base4 steady4 2 == 0)
+;   8   and reads as stable                         (dd-stable? base4 steady4 2 == 1)
+;   16  the earlier count is exact                  (dd-correct early5 == 5)
+;   32  the recent count is exact                   (dd-correct recent2 == 2)
+(do
+    (let early5  (list
+        (list "a" "a") (list "b" "b") (list "c" "c") (list "a" "a") (list "b" "b")))
+    (let recent2 (list
+        (list "a" "a") (list "b" "b") (list "x" "c") (list "y" "a") (list "z" "b")))
+    (let base4   (list
+        (list "a" "a") (list "b" "b") (list "c" "c") (list "a" "a") (list "z" "b")))
+    (let steady4 (list
+        (list "a" "a") (list "b" "b") (list "c" "c") (list "y" "a") (list "b" "b")))
+    (let c0 (if (eq (dd-drifting? early5 recent2 2) 1) 1 0))
+    (let c1 (if (eq (dd-stable?   early5 recent2 2) 0) 2 0))
+    (let c2 (if (eq (dd-drifting? base4 steady4 2) 0) 4 0))
+    (let c3 (if (eq (dd-stable?   base4 steady4 2) 1) 8 0))
+    (let c4 (if (eq (dd-correct early5)  5) 16 0))
+    (let c5 (if (eq (dd-correct recent2) 2) 32 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))
