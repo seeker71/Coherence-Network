@@ -1,0 +1,163 @@
+; search-harness.fk - compact state-externalized search harness.
+;
+; preludes: form-stdlib/core.fk form-stdlib/choice-receipt.fk
+;
+; Harness-1 names the right architectural pressure: keep routine search state
+; outside the policy. This Form cell carries that same pressure as one compact
+; fact ledger plus a choice receipt bridge.
+
+(do
+    (defn h1c-tag-fact () "H1C-FACT")
+    (defn h1c-tag-state () "H1C-STATE")
+    (defn h1c-tag-decision () "H1C-DECISION")
+
+    (defn h1c-kind-candidate () "candidate")
+    (defn h1c-kind-curated () "curated")
+    (defn h1c-kind-evidence () "evidence")
+    (defn h1c-kind-verification () "verification")
+    (defn h1c-kind-observation () "observation")
+    (defn h1c-kind-stop () "stop")
+
+    (defn h1c-fact (kind key value score tick)
+        (list (h1c-tag-fact) kind key value score tick))
+    (defn h1c-fact? (value)
+        (and (gt (len value) 0) (str_eq (nth value 0) (h1c-tag-fact))))
+    (defn h1c-fact-kind (fact) (nth fact 1))
+    (defn h1c-fact-key (fact) (nth fact 2))
+    (defn h1c-fact-value (fact) (nth fact 3))
+    (defn h1c-fact-score (fact) (nth fact 4))
+
+    (defn h1c-state (query facts budget)
+        (list (h1c-tag-state) query facts budget))
+    (defn h1c-state? (value)
+        (and (gt (len value) 0) (str_eq (nth value 0) (h1c-tag-state))))
+    (defn h1c-state-query (state) (nth state 1))
+    (defn h1c-state-facts (state) (nth state 2))
+    (defn h1c-state-budget (state) (nth state 3))
+
+    (defn h1c-decision (action target value score)
+        (list (h1c-tag-decision) action target value score))
+    (defn h1c-decision-action (decision) (nth decision 1))
+    (defn h1c-decision-target (decision) (nth decision 2))
+    (defn h1c-decision-value (decision) (nth decision 3))
+    (defn h1c-decision-score (decision) (nth decision 4))
+
+    (defn h1c-same-fact? (left right)
+        (and (str_eq (h1c-fact-kind left) (h1c-fact-kind right))
+             (str_eq (h1c-fact-key left) (h1c-fact-key right))))
+
+    (defn h1c-fact-in? (facts fact)
+        (if (nil? facts) false
+            (if (h1c-same-fact? (head facts) fact) true
+                (h1c-fact-in? (tail facts) fact))))
+
+    (defn h1c-remember (state fact)
+        (if (h1c-fact-in? (h1c-state-facts state) fact) state
+            (h1c-state
+                (h1c-state-query state)
+                (append (h1c-state-facts state) (list fact))
+                (h1c-state-budget state))))
+
+    (defn h1c-fact-for-decision (decision tick)
+        (do
+            (let action (h1c-decision-action decision))
+            (let target (h1c-decision-target decision))
+            (let value (h1c-decision-value decision))
+            (let score (h1c-decision-score decision))
+            (if (str_eq action "search")
+                (h1c-fact (h1c-kind-candidate) target value score tick)
+                (if (str_eq action "keep")
+                    (h1c-fact (h1c-kind-curated) target value score tick)
+                    (if (str_eq action "link")
+                        (h1c-fact (h1c-kind-evidence) target value score tick)
+                        (if (str_eq action "verify")
+                            (h1c-fact (h1c-kind-verification) target value score tick)
+                            (if (str_eq action "observe")
+                                (h1c-fact (h1c-kind-observation) target value score tick)
+                                (h1c-fact (h1c-kind-stop) target value score tick))))))))
+
+    (defn h1c-apply (state decision tick)
+        (h1c-remember state (h1c-fact-for-decision decision tick)))
+
+    (defn h1c-apply-all (state decisions tick)
+        (if (nil? decisions) state
+            (h1c-apply-all
+                (h1c-apply state (head decisions) tick)
+                (tail decisions)
+                (add tick 1))))
+
+    (defn h1c-kind-count (facts kind)
+        (if (nil? facts) 0
+            (add
+                (if (str_eq (h1c-fact-kind (head facts)) kind) 1 0)
+                (h1c-kind-count (tail facts) kind))))
+
+    (defn h1c-facts-of-kind (facts kind)
+        (if (nil? facts) (empty)
+            (if (str_eq (h1c-fact-kind (head facts)) kind)
+                (cons (head facts) (h1c-facts-of-kind (tail facts) kind))
+                (h1c-facts-of-kind (tail facts) kind))))
+
+    (defn h1c-render-context (state)
+        (take (h1c-state-budget state) (h1c-state-facts state)))
+
+    (defn h1c-candidate-to-choice (fact)
+        (cr-choice-candidate
+            (h1c-fact-key fact)
+            "SEARCH-CANDIDATE"
+            true
+            (sub 100 (h1c-fact-score fact))
+            (h1c-fact-score fact)
+            (h1c-fact-value fact)))
+
+    (defn h1c-candidate-choices (facts)
+        (if (nil? facts) (empty)
+            (cons
+                (h1c-candidate-to-choice (head facts))
+                (h1c-candidate-choices (tail facts)))))
+
+    (defn h1c-candidate-count (state)
+        (h1c-kind-count (h1c-state-facts state) (h1c-kind-candidate)))
+
+    (defn h1c-trace-for-outcome (state outcome)
+        (do
+            (let candidates (h1c-candidate-count state))
+            (if (str_eq outcome (cr-outcome-success))
+                (cr-choice-trace candidates 1 (sub candidates 1) 0)
+                (if (str_eq outcome (cr-outcome-fail))
+                    (cr-choice-trace candidates 0 candidates 0)
+                    (cr-choice-trace 0 0 0 1)))))
+
+    (defn h1c-receipt (state selected-path outcome who where tick)
+        (do
+            (let candidate-facts
+                (h1c-facts-of-kind
+                    (h1c-state-facts state)
+                    (h1c-kind-candidate)))
+            (let choices (h1c-candidate-choices candidate-facts))
+            (cr-choice-receipt
+                (h1c-state-query state)
+                "harness1-compact"
+                "SEARCH-HARNESS"
+                choices
+                selected-path
+                outcome
+                92
+                (cr-choice-value (cr-kind-branch-feedback) 91 94 93 92)
+                "policy chooses semantics; Form ledger carries recoverable state"
+                who
+                where
+                tick
+                (len (h1c-state-facts state))
+                (h1c-trace-for-outcome state outcome))))
+
+    (defn h1c-capability-vector (state)
+        (list
+            (h1c-kind-count (h1c-state-facts state) (h1c-kind-candidate))
+            (h1c-kind-count (h1c-state-facts state) (h1c-kind-curated))
+            (h1c-kind-count (h1c-state-facts state) (h1c-kind-evidence))
+            (h1c-kind-count (h1c-state-facts state) (h1c-kind-verification))
+            (h1c-kind-count (h1c-state-facts state) (h1c-kind-observation))
+            (len (h1c-render-context state))))
+
+    0)

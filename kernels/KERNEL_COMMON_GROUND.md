@@ -182,6 +182,37 @@ The proof band is `form/form-stdlib/tests/bmf-choice-receipt-band.fk`. It return
 `choose` compiler rule all return valid choice receipts whose signatures
 preserve the selected branch and whose matched result still executes.
 
+## Harness-1 Compact Search State
+
+The Harness-1 paper names a state-externalized search harness: the environment
+keeps the candidate pool, curated set, compact evidence links, verification
+records, deduplicated observations, and budget-aware context while the policy
+chooses semantic actions.
+
+`form/form-stdlib/search-harness.fk` carries the same architectural surface as a
+single compact Form fact ledger:
+
+- `H1C-FACT` rows cover candidate, curated, evidence, verification,
+  observation, and stop state
+- `H1C-DECISION` rows are the semantic policy actions: search, keep, link,
+  verify, observe, and stop
+- `h1c-remember` deduplicates by fact kind and key, so repeated observations
+  compress instead of bloating the policy transcript
+- `h1c-render-context` caps rendered working memory by the state budget
+- `h1c-receipt` turns the selected search branch into a trace-preserving
+  `CHOICE-RECEIPT`
+
+The proof band is `form/form-stdlib/tests/search-harness-compact-proof.fk`. It
+returns `16777215` across Go, Rust, and TypeScript in source and binary modes
+when all six Harness-1 state surfaces are present, duplicate observation state
+compacts, budgeted rendering caps context, and the selected search branch keeps a
+valid compressed receipt signature.
+
+Measured footprint: the compact Form harness plus proof is 229 lines / 10,182
+bytes. The local Python conformance harness plus its five JSON vectors is 1,182
+lines / 38,416 bytes. This is an architectural proof, not a claim about matching
+Harness-1 retrieval benchmark recall.
+
 ## North-Star Constraint
 
 Compression is trustworthy only when it preserves the texture of the witnessed
