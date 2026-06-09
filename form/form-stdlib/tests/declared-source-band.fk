@@ -1,0 +1,44 @@
+; preludes: form-stdlib/declared-source.fk
+;
+; declared-source-band — ask the source, don't guess; and let the answer teach the guesser.
+;
+; Scenario 1 — YouTube Music is playing. The OS declares the now-playing; two classifiers also guess:
+;   "media-session"   "Bohemian Rhapsody" 100 declared   <- the source announced it (free, true)
+;   "audio-classifier" "We Will Rock You"   70 inferred   <- our cheap listener guessed WRONG
+;   "shazam"          "Bohemian Rhapsody"   85 inferred   <- a fingerprint guessed right
+; -> route the DECLARED ("Bohemian Rhapsody", 100); SKIP the expensive classifier; the declared
+;    label is FREE ground truth, and it grades the audio-classifier's wrong guess for nothing.
+;
+; Scenario 2 — nothing is playing / the OS is silent about now-playing; only inferred readings:
+;   "audio-classifier" "rain" 65 inferred
+;   "sound-analysis"   "rain" 80 inferred
+; -> nothing declared, so the body MUST classify; fall back to the best inferred ("rain", 80).
+;
+; Verdict 127 when every claim lands:
+;   1   declared wins the route          (s1 label == Bohemian Rhapsody)
+;   2   at its declared confidence        (s1 strength == 100)
+;   4   skip the expensive classifier     (should-classify? s1 == 0)
+;   8   free perfect ground truth          (ground-truth s1 == Bohemian Rhapsody)
+;   16  it grades the cheap guess for free (audio-classifier guess disagrees with the truth)
+;   32  no declaration -> must classify     (should-classify? s2 == 1)
+;   64  fall back to the best inferred      (s2 label == rain AND strength == 80)
+(do
+    (let s1 (list
+        (list "media-session"   "Bohemian Rhapsody" 100 "declared")
+        (list "audio-classifier" "We Will Rock You"  70 "inferred")
+        (list "shazam"          "Bohemian Rhapsody"  85 "inferred")))
+    (let s2 (list
+        (list "audio-classifier" "rain" 65 "inferred")
+        (list "sound-analysis"   "rain" 80 "inferred")))
+    (let floor 40)
+    (let f1 (ds-route s1 floor))
+    (let f2 (ds-route s2 floor))
+    (let audioguess (nth s1 1))
+    (let c0 (if (str_eq (ds-flow-label f1) "Bohemian Rhapsody") 1 0))
+    (let c1 (if (eq (ds-flow-strength f1) 100) 2 0))
+    (let c2 (if (eq (ds-should-classify? s1) 0) 4 0))
+    (let c3 (if (str_eq (ds-ground-truth s1) "Bohemian Rhapsody") 8 0))
+    (let c4 (if (eq (ds-inferred-agrees? audioguess s1) 0) 16 0))
+    (let c5 (if (eq (ds-should-classify? s2) 1) 32 0))
+    (let c6 (if (and (str_eq (ds-flow-label f2) "rain") (eq (ds-flow-strength f2) 80)) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
