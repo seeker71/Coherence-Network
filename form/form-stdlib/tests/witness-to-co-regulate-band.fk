@@ -1,0 +1,36 @@
+; preludes: form-stdlib/channel-interface.fk form-stdlib/witness-to-co-regulate.fk
+;
+; witness-to-co-regulate-band — the assemblage point as selector, made falsifiable.
+;
+; The body witnesses its membrane through a channel, with an external witness it chooses,
+; to co-regulate. Two witnesses offer two interfaces; the dog (toward) and cat (near) bases
+; each select their live co-regulation set over each. The band proves the selection law.
+;
+;   witness-A (guarded) offers (witness be-seen) — you may witness me and I offer to be seen,
+;                                                  but you may not reach in (no see/reflect).
+;   witness-B (open)    offers (witness see be-seen reflect invite offer) — full reach allowed.
+;
+; Band verdict 127 when every claim lands:
+;   1   witness is whole for the dog base        (witness in the toward-base)
+;   2   witness is whole for the cat base        (witness in the near-base)
+;   4   reach DROPS at a guarded witness         (the dog's `see` does NOT flow to witness-A)
+;   8   reach FLOWS at an open witness           (the dog's `see` flows to witness-B)
+;   16  the cat co-regulates near (witness-bearing) over the guarded witness too
+;   32  co-regulation is shaped from BOTH sides  (toward-over-A is smaller than toward-over-B)
+;   64  the interior is never pierced            (wc-pierces-interior? is structurally false)
+(do
+    (let witness-A (list (m-witness) (m-be-seen)))
+    (let witness-B (list (m-witness) (m-see) (m-be-seen) (m-reflect) (m-invite) (m-offer)))
+    (let dog (wc-base-toward))
+    (let cat (wc-base-near))
+    (let dog-on-A (wc-co-regulate dog witness-A))
+    (let dog-on-B (wc-co-regulate dog witness-B))
+    (let cat-on-A (wc-co-regulate cat witness-A))
+    (let c0 (if (wc-witness-always? dog) 1 0))
+    (let c1 (if (wc-witness-always? cat) 2 0))
+    (let c2 (if (not (wc-reach-flows? dog witness-A (m-see))) 4 0))
+    (let c3 (if (wc-reach-flows? dog witness-B (m-see)) 8 0))
+    (let c4 (if (ci-member? (m-witness) cat-on-A) 16 0))
+    (let c5 (if (gt (len dog-on-B) (len dog-on-A)) 32 0))
+    (let c6 (if (not (wc-pierces-interior?)) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

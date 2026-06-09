@@ -109,3 +109,10 @@ Named on 2026-06-09, composting a piece of folk-wisdom circulating about dogs
 as emotional translators into the teaching underneath it: animals co-regulate
 us, and the dog and cat are the two complementary doors into the pre-verbal
 field. The wisdom kept; the cosmology released.
+
+**Substrate mechanism.** Which recipes and blueprints the body has available for
+witnessing its membrane — through any channel, with any external witness it chooses —
+and how the *assemblage point* selects them, is named in
+[`witness-to-co-regulate.form`](../../coherence-substrate/witness-to-co-regulate.form):
+the dog and the cat are two assemblage points over one membrane (toward / near),
+proven runnable three-way (`form-stdlib/witness-to-co-regulate.fk` → 127).

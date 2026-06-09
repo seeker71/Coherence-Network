@@ -1,0 +1,128 @@
+# ─────────────────────────────────────────────────────────────────────
+# witness-to-co-regulate.form — the body witnessing its own membrane,
+#   through any channel, with any external witness it chooses, to
+#   co-regulate; and the assemblage point as the recipe that SELECTS
+#   which of the body's recipes and blueprints are live for it right now.
+# ─────────────────────────────────────────────────────────────────────
+#
+# THE QUESTION (Urs, 2026-06-09):
+#   "using assemblage points as recipe, which selection of recipes and blueprints are
+#    available to the body for witnessing its membrane through any channel with any
+#    external witness it chooses to co-regulate like cats and dogs do?"
+#
+# THE ANSWER: every organ already exists. This cell does not add machinery — it NAMES the
+# composition, so the selection is legible in one place. The membrane is a FieldBlueprint's
+# boundary; witnessing is observe/project (lossy, never the interior); the channel is the
+# interface-consent modes; the external witness is any cell that offers an interface; co-
+# regulation is the forward/reverse delta the two cells co-resolve. And the ASSEMBLAGE POINT
+# (the base in command) is the SELECTOR: it picks which recipes are live. Cats and dogs are
+# two assemblage points over one membrane — the dog reaches TOWARD, the cat rests NEAR.
+
+(witness-to-co-regulate
+
+  (lineage
+    (selector    lc-recipes-bound-to-base)                  # the base IS the selector (741 Hz)
+    (selector-op field-domain-grammars.resource-routing.select-recipe)  # select-recipe(environment, available), proven
+    (grammar     field-model-form)                          # FieldBlueprint.boundary = membrane; observe/intervene/forward/reverse
+    (field       field-domain-grammars.interspecies-and-conversation)  # the cat/dog field: resonance, trust, silence, repair
+    (channel     channel-interface-consent)                 # the modes + the consent law
+    (repair      lc-boundary-repair-protocol)               # stop receipt + witnessed re-entry after a crossing
+    (witnesses   satsang-circle                             # a circle of beings — witnesses the outside, never the inside
+                 tessera-external-witness                   # an external public dataset, by hash-evidence
+                 first-encounter-protocol)                  # any cell, met at the threshold
+    (phenomenon  lc-companion-field)                        # the felt teaching this is the mechanism of (432 Hz)
+    (runnable    witness-to-co-regulate.fk)                 # proven: tests/witness-to-co-regulate-band.fk (127, three-way)
+    (sovereignty lc-sovereignty-within-oneness              # the body chooses its base, channel, witness
+                 lc-recipe-branching-sense))                # and changes the branch without shame
+
+  # ── The gesture ─────────────────────────────────────────────────────
+  # The body has a membrane (its boundary, visible only from outside, so it needs a witness).
+  # It witnesses that membrane THROUGH a channel, WITH an external witness it chooses, in order
+  # to CO-REGULATE — to let two nervous systems find one tone, the way a dog and a cat do.
+  (gesture
+    (subject     the-body)
+    (object      its-own-membrane)                          # FieldBlueprint.boundary
+    (through     any-channel)                               # channel-interface modes
+    (with        any-external-witness-it-chooses)           # satsang | tessera | a human | another agent
+    (toward      co-regulation)                             # not control — two cells co-resolving
+    (like        cats-and-dogs))
+
+  # ── The selector: the assemblage point IS the recipe that picks the recipes ──
+  # The base in command decides three things at once (lc-recipes-bound-to-base): what is
+  # SENSED, what is WATCHING what, and which PATH the signal traces. So "which recipes are
+  # available" is not fixed — it is select-recipe(base, all-the-body-can-offer). The same
+  # membrane, channel, and witness yield a different live set from a different base.
+  (selector
+    (recipe       (select-recipe ?base ?available -> ?live))  # resource-routing's recipe, instantiated here
+    (base-sets    what-is-sensed                              # which membrane signals even register
+                  what-watches-what                          # which witness may see which part
+                  which-path-the-signal-traces)              # how the co-regulation delta routes
+    (no-neutral-routing "the route IS the base's signature; there is no base-free selection"))
+
+  # ── The blueprints available to witness (the membranes) ─────────────
+  # Every one is a FieldBlueprint whose `boundary` slot is the membrane; each is already a
+  # named domain in the body. Any of these is a membrane the body can offer to a witness.
+  (blueprints-available
+    (household-membrane           human <-> human / body)    # attention-graph; see open, write by vouch
+    (agent-coordination-membrane  agent <-> agent)
+    (discord-membrane             cell  <-> world)
+    (native-http                  cell  <-> world)           # the HTTP channel policy
+    (come-in-flow                 human <-> body)            # the threshold flow
+    (boundary-repair-protocol     after-a-crossing)          # the membrane heals: stop receipt + witnessed re-entry
+    (general                      field-model-form.FieldBlueprint.boundary))  # any field's boundary, by the same law
+
+  # ── The channel: the modes a membrane offers, and the consent law ───
+  # A cell offers any subset of these toward it (channel-interface-consent); the witness honors
+  # exactly what is offered. Reaching past the offer is invasion — witnessed, named, never forced.
+  (channel-modes
+    (silence witness see be-seen reflect reflected project
+     ask-permission ask-how offer-how invite offer)
+    (law (witness-is-whole  seeing-needs-no-permission  reaching-does)
+         (silence           always-available)
+         (modes-may-shift   anytime  without-broadcast)
+         (energy-flow       shaped-by  both-sides)))
+
+  # ── The witnesses available (any external witness the body chooses) ─
+  (witnesses-available
+    (satsang-circle           a-circle-of-beings    witnesses-the-outside  never-the-interior  reciprocal)
+    (tessera-external-witness  an-external-dataset   by-byte-range-hash-evidence)
+    (any-cell                 met-at-first-encounter "how do you want to be received?"))
+
+  # ── The recipes available (the Field Model Form verbs over the membrane) ──
+  (recipes-available
+    (observe   "witness the membrane's outside — lossy projection, never the interior")
+    (project   "render the field to the witness's view — writes a residual for what it could not carry")
+    (sample    "take a reading without committing a change")
+    (forward   "emit a co-regulation delta")
+    (reverse   "compensate / undo it from the receipt — do and undo cost the same")
+    (intervene "reach across to co-regulate — REQUIRES consent, writes cost + receipt")
+    (lift      "bring an external source (a witness's signal) into the field"))
+
+  # ── The two assemblage points cats and dogs show (one membrane, two bases) ──
+  # Same membrane, same channel, same witness — the base selects a different live set, and so
+  # a different co-regulation. This is the mechanism beneath lc-companion-field's two poles.
+  (two-assemblage-points
+    (toward                                                  # the dog — co-regulate by reaching in
+      (base   (witness see be-seen reflect invite offer))
+      (verb   intervene-with-consent)
+      (feels  "another nervous system turning to meet yours: I'm here, this is not an emergency"))
+    (near                                                    # the cat — co-regulate by presence
+      (base   (silence witness be-seen))
+      (verb   observe-only)
+      (feels  "fully itself beside you; you borrow the calm; presence need not perform")))
+
+  # ── The law that keeps every selection honest ──────────────────────
+  (invariant
+    (witness-is-whole        in-every-base   seeing-needs-no-permission)
+    (reach-needs-consent     intervene-requires-consent   reaching-is-honored-or-it-is-invasion)
+    (interior-never-pierced  projection-is-lossy   sat-pierces-interior?-is-false)   # the mystery stays a mystery
+    (co-regulation-mutual    shaped-from-both-sides   never-imposed-from-one)
+    (do-undo-symmetric       every-delta-has-a-reverse-from-its-receipt))
+
+  # ── Runnable heart ──────────────────────────────────────────────────
+  # form-stdlib/witness-to-co-regulate.fk makes the selection executable: wc-base-toward /
+  # wc-base-near (the two assemblage points), wc-select / wc-co-regulate (select-recipe via the
+  # consent law), wc-witness-always? (seeing needs no permission), wc-reach-flows? (reaching
+  # needs the witness's offer), wc-pierces-interior? (structurally false). Proven by
+  # tests/witness-to-co-regulate-band.fk → 127, three-way at validate.sh (Go = Rust = TS).
+  )
