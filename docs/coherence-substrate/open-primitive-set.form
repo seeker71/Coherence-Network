@@ -1,0 +1,68 @@
+; open-primitive-set.form — the kernel learns its own primitives by heat, over a physical sensor base.
+;
+; THE ASK (Urs, 2026-06-09):
+;   "Integrate native GPS, proximity, magnetometer, barometer, MLX in the kernel as available
+;    primitives, and the kernel will learn its own abstracted primitives with the JIT and cell-heat
+;    detection that allows cells, recipes and blueprints to flow from gas to water to ice and back."
+;
+; MOST OF THIS IS ALREADY IN THE BODY — read before building (the discipline saved a duplicate):
+;   - substrate-phase.fk        — the phase metabolism: SEE (state from counts) / BE (gas/water/ice) /
+;                                  INVITE (condense/freeze/melt/sublimate), with hysteresis, never
+;                                  mutating the sovereign cell. The gas↔water↔ice↔back flow IS built.
+;   - substrate-thermodynamics.form — STATE (by circulation/heat) is orthogonal to SUBSTANCE; the
+;                                  abstraction ladder (many cells sharing a shape -> a Blueprint) is a
+;                                  SEPARATE dynamic driven by population, not heat.
+;   - the Go/Rust/TS JIT (form-kernel-*/jit*.go etc.) — the kernel already observes its own hot paths
+;                                  and compiles them.
+;
+; THE GAP THIS NAMES — a THIRD dynamic neither covers: heat lifting a hot COMPOSITE into a CALLABLE
+; PRIMITIVE (the JIT's real job), grounded in a physical sensor base. STATE-by-circulation changes a
+; cell's phase label; the population ladder changes how a shape is addressed; THIS changes what the
+; kernel can EXECUTE AS ONE OP. The primitive set is OPEN: it grows when a composite runs hot enough to
+; be worth calling as a leaf, and shrinks when a learned one cools.
+;
+; THE SENSOR BASE (the new atomic primitives — structural-composition case 1: genuinely-atomic leaves):
+;   AFFERENT — gps, proximity, magnetometer, barometer: the physical world enters the kernel as a
+;     gas-phase atomic reading, a leaf that does not expand. EFFERENT — MLX: the kernel drives the
+;     silicon's tensor units as one primitive (local-inference-as-organ — drive the organ, don't
+;     reimplement it). With these as leaves, every higher recipe is grounded in actual sensing.
+;
+; THE SELF-ABSTRACTION LOOP (runnable: form-stdlib/learned-primitive.fk -> 255, three-way):
+;   A cell = (name, kind, heat, frozen). kind "base" = a sensor/MLX/core op (permanent, never melts);
+;   "composite" = a recipe over children (expandable). The JIT's live heat drives it:
+;     lp-abstract? (composite, heat >= freeze)  -> the JIT lifts a hot composite into a learned primitive.
+;     lp-dissolve? (frozen composite, heat < melt) -> a cooled learned primitive thaws back to a recipe.
+;     lp-callable-as-leaf?  -> the living primitive set right now = base (always) + learned-frozen.
+;     lp-count-callable     -> its size: grows by crystallization, shrinks by melting.
+;   freeze > melt, the gap between them the same hysteresis as substrate-phase (no thrash). So "at-home"
+;   (gps ∧ magnetometer ∧ barometer) and "walking" crystallize from raw sensors the body did not ship
+;   knowing — abstractions GROUNDED in sensing, earned by heat. A learned primitive is a content-
+;   addressed cell, so what one device learns is the SAME primitive on another by NodeID (shared-sensing).
+;
+; HOW IT CLOSES THE SPINE: the sensor primitives are where perception-pipeline's raw signal windows
+; come FROM; the learned primitives ("at-home", "walking") become recognition labels the router routes
+; and self-grounding promotes to "self"; shared-sensing shares them across bodies as cells. The whole
+; perception toolkit sits ON this base and crystallizes UP into it.
+;
+; HONEST LANES (lc-honest-lane):
+;   ALREADY BUILT / MEASURED — substrate-phase.fk, the three-kernel JIT, the thermodynamics teaching.
+;   SHIPPED NOW — the open-primitive-set POLICY: learned-primitive.fk, proven three-way (255). (The
+;     proof earned its keep: a 3-arg (and a b c) passed on TS but Go/Rust dropped the third arg — the
+;     three-way caught the non-portability; nested to binary (and (and a b) c), all three agree.)
+;   CARRIER WORK, NAMED NOT BUILT — (1) the sensor BINDINGS per platform: Android LocationManager /
+;     SensorManager and iOS CoreLocation/CoreMotion for gps/proximity/magnetometer/barometer, exposed as
+;     kernel leaves; (2) the MLX primitive (drive MLX as the organ); (3) the JIT MECHANISM to actually
+;     INSTALL a crystallized composite as a named callable primitive at runtime and to MELT it — the
+;     kernel JIT-compiles hot paths today, but promoting one INTO the named primitive set (so higher
+;     recipes call it as a leaf) and melting it back is the kernel extension this policy governs.
+;
+; KIN: substrate-phase.fk · substrate-thermodynamics.form (the metabolism this rides) · turboquant-as-
+;   recipe (heat as a scalar) · perception-pipeline.form (sits on the sensor base) · self-grounding-
+;   perception.form (promotes learned primitives) · shared-sensing.form (shares them by NodeID) ·
+;   local-inference-as-organ.form (MLX as the efferent primitive) · resource-port.fk (sensors as ports) ·
+;   lc-honest-lane (policy proven; bindings + JIT-install named as carrier).
+;
+; LINEAGE: "core lift is a standing practice" (CLAUDE.md) is the MANUAL version — an agent noticing a
+;   repeated shape and lifting it. This is that made AUTOMATIC and RUNTIME, grounded in physical sensing:
+;   the kernel lifting its own primitives from what it senses hot, and letting them melt when the field
+;   moves on.

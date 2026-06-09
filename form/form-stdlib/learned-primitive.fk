@@ -1,0 +1,55 @@
+; learned-primitive.fk — the kernel's primitive set is OPEN: it learns its own primitives by heat.
+;
+; substrate-phase.fk already moves a cell through ice/water/gas by circulation; the thermodynamics
+; teaching already separates STATE (by heat) from the SUBSTANCE ladder (by population). This is the
+; THIRD dynamic neither names: heat lifting a hot COMPOSITE into a CALLABLE PRIMITIVE — the JIT's
+; real job — grounded in a physical sensor base. The set of primitives the kernel runs is not fixed;
+; it GROWS when a composite runs hot enough to be worth executing as one op, and SHRINKS when a
+; learned one cools.
+;
+; A cell = (list name kind heat frozen):
+;   kind "base"      — a permanent afferent/efferent primitive: a SENSOR (gps, proximity, magnetometer,
+;                      barometer) or MLX (efferent compute) or a core op. The world enters here. Never melts.
+;   kind "composite" — a recipe over children; expandable. When it runs hot it can crystallize into a
+;                      learned primitive (callable as one leaf, JIT-compiled); when it cools it thaws back.
+;   heat  — its live execution hotness 0..100 (the JIT's count, not a static lattice census).
+;   frozen — 1 while it is currently crystallized into a callable primitive, else 0.
+;
+; The kernel's living primitive set at any moment = base primitives (always) + learned primitives now
+; frozen. "at-home" (gps ∧ magnetometer ∧ barometer) and "walking" crystallize from the raw sensors the
+; body did not ship knowing — abstractions GROUNDED in sensing, earned by heat, the same hysteresis as
+; substrate-phase (freeze > melt, a stable gap between, no thrash). A learned primitive is a content-
+; addressed cell, so what one device learns is the SAME primitive on another by NodeID (shared-sensing).
+;
+; Proven by: form-stdlib/tests/learned-primitive-band.fk (three-way at validate.sh)
+
+(do
+    (defn lp-name    (c) (nth c 0))
+    (defn lp-kind    (c) (nth c 1))
+    (defn lp-heat    (c) (nth c 2))
+    (defn lp-frozen? (c) (nth c 3))
+    (defn lp-base?      (c) (str_eq (lp-kind c) "base"))       ; a sensor / MLX / core op — permanent
+    (defn lp-composite? (c) (str_eq (lp-kind c) "composite"))  ; a recipe over children — expandable
+
+    ; --- ABSTRACT: a hot composite earns crystallization into a learned primitive (the JIT lifts it). ---
+    (defn lp-abstract? (c freeze)
+        (if (and (lp-composite? c) (ge (lp-heat c) freeze)) 1 0))
+
+    ; --- DISSOLVE: a frozen learned primitive cooled below melt thaws back to an expandable recipe. ---
+    ; base primitives (sensors, MLX, core ops) are permanent — they never dissolve, however cold.
+    ; freeze > melt: the gap between them is the hysteresis, so a cell idling in it does not thrash.
+    ; (and is binary — nest explicitly; a 3-arg (and a b c) is NOT portable across kernels.)
+    (defn lp-dissolve? (c melt)
+        (if (and (and (lp-composite? c) (eq (lp-frozen? c) 1)) (gt melt (lp-heat c))) 1 0))
+
+    ; --- CALLABLE-AS-LEAF: the kernel's living primitive set right now = base (always) + learned-frozen. ---
+    ; what the kernel executes as ONE op, without expanding to children.
+    (defn lp-callable-as-leaf? (c)
+        (if (lp-base? c) 1 (lp-frozen? c)))
+
+    ; --- the SIZE of the living primitive set — grows by crystallization, shrinks by melting. ---
+    (defn lp-count-callable (cells)
+        (if (eq (len cells) 0) 0
+            (add (lp-callable-as-leaf? (head cells)) (lp-count-callable (tail cells)))))
+
+    0)

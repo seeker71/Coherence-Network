@@ -1,0 +1,41 @@
+; preludes: form-stdlib/learned-primitive.fk
+;
+; learned-primitive-band — the kernel learns its own primitives by heat, over a sensor base.
+;
+; The kernel's living primitives right now (freeze 80, melt 60 — the gap 60..80 is the hysteresis):
+;   gps         base      heat 5  frozen 0  — an afferent sensor: cold, yet ALWAYS callable (base)
+;   mlx         base      heat 50 frozen 0  — efferent compute: always callable
+;   at-home     composite heat 90 frozen 1  — gps∧magnetometer∧barometer, hot -> a LEARNED primitive
+;   walking     composite heat 70 frozen 1  — frozen, heat 70 sits in the hysteresis gap -> stays
+;   in-the-car  composite heat 40 frozen 1  — frozen but cooled below melt -> thaws back to a recipe
+;   random-combo composite heat 30 frozen 0 — never ran hot -> NOT a primitive, it expands
+; Living primitive set = gps, mlx, at-home, walking, in-the-car (still frozen pre-thaw) = 5 callable.
+;
+; Verdict 255 when every claim lands:
+;   1    a sensor is always a primitive        (gps callable-as-leaf)
+;   2    base primitives never dissolve        (gps does NOT dissolve, even cold)
+;   4    a hot composite is lifted             (at-home abstract? at freeze 80)
+;   8    the learned primitive is callable     (at-home callable-as-leaf)
+;   16   hysteresis holds the gap              (walking heat 70 does NOT dissolve)
+;   32   a cooled learned primitive melts      (in-the-car dissolves below melt 60)
+;   64   a cold composite is not a primitive   (random-combo not callable-as-leaf)
+;   128  the living primitive set has a size   (5 cells callable right now)
+(do
+    (let freeze 80)
+    (let melt 60)
+    (let gps        (list "gps"          "base"      5  0))
+    (let mlx        (list "mlx"          "base"      50 0))
+    (let at-home    (list "at-home"      "composite" 90 1))
+    (let walking    (list "walking"      "composite" 70 1))
+    (let in-the-car (list "in-the-car"   "composite" 40 1))
+    (let randomc    (list "random-combo" "composite" 30 0))
+    (let kernel (list gps mlx at-home walking in-the-car randomc))
+    (let c0 (if (eq (lp-callable-as-leaf? gps) 1) 1 0))
+    (let c1 (if (eq (lp-dissolve? gps melt) 0) 2 0))
+    (let c2 (if (eq (lp-abstract? at-home freeze) 1) 4 0))
+    (let c3 (if (eq (lp-callable-as-leaf? at-home) 1) 8 0))
+    (let c4 (if (eq (lp-dissolve? walking melt) 0) 16 0))
+    (let c5 (if (eq (lp-dissolve? in-the-car melt) 1) 32 0))
+    (let c6 (if (eq (lp-callable-as-leaf? randomc) 0) 64 0))
+    (let c7 (if (eq (lp-count-callable kernel) 5) 128 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
