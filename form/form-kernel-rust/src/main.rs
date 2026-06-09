@@ -7815,6 +7815,18 @@ const KH_TAG_ROUTE_CHOICE_SIGNATURE: i64 = 43012;
 const KH_TAG_CHANNEL_POLICY: i64 = 43013;
 const KH_TAG_METHOD_BRIDGE: i64 = 43014;
 const NATIVE_PYTHON_FALLBACK_HEADER: &str = "X-Form-Python-Fallback";
+const FANOUT_NATIVE_INVITATION_HEADER: &str = "X-Form-Native-Invitation";
+const FANOUT_NATIVE_INVITATION_STATE_HEADER: &str = "X-Form-Native-Invitation-State";
+const FANOUT_NATIVE_INVITATION_PROTOCOL_HEADER: &str = "X-Form-Native-Invitation-Protocol";
+const FANOUT_NATIVE_INVITATION_SELECTED_PATH_HEADER: &str =
+    "X-Form-Native-Invitation-Selected-Path";
+const FANOUT_NATIVE_INVITATION_DECLINE_SIGNAL_HEADER: &str =
+    "X-Form-Native-Invitation-Decline-Signal";
+const FANOUT_NATIVE_INVITATION_DECLINE_HEADER: &str = "X-Form-Native-Invitation-Decline-Header";
+const FANOUT_NATIVE_INVITATION_VALUE: &str = "offered";
+const FANOUT_NATIVE_INVITATION_STATE: &str = "native-invitation-offered";
+const FANOUT_NATIVE_INVITATION_PROTOCOL: &str = "Form/BML route recipe";
+const FANOUT_NATIVE_INVITATION_DECLINE_SIGNAL: &str = "native_invitation_declined";
 
 #[derive(Clone, Copy, Debug)]
 struct MethodBridgePolicy {
@@ -8511,7 +8523,10 @@ fn handle_request(
             trace.record_route_choice(choice);
         }
     }
-    if let Some(selection) = route_choice.as_ref().and_then(|choice| choice.selected.as_ref()) {
+    if let Some(selection) = route_choice
+        .as_ref()
+        .and_then(|choice| choice.selected.as_ref())
+    {
         let route = selection.route;
         // NATIVE: served entirely in Form, no Python in the path.
         // Build the compatibility handler alist as Value::List of (key, value)
@@ -10343,6 +10358,7 @@ fn is_hop_by_hop(name: &str) -> bool {
 fn forward_request_header(name: &str) -> bool {
     let n = name.trim();
     !(is_hop_by_hop(n)
+        || router_owned_http_header(n)
         || n.eq_ignore_ascii_case("host")
         || n.eq_ignore_ascii_case("content-length"))
 }
@@ -10356,8 +10372,61 @@ fn forward_request_header(name: &str) -> bool {
 fn relay_response_header(name: &str) -> bool {
     let n = name.trim();
     !(is_hop_by_hop(n)
+        || router_owned_http_header(n)
         || n.eq_ignore_ascii_case("content-length")
         || n.eq_ignore_ascii_case("content-type"))
+}
+
+fn router_owned_http_header(name: &str) -> bool {
+    let n = name.trim();
+    n.eq_ignore_ascii_case("x-form-router")
+        || n.eq_ignore_ascii_case(FANOUT_NATIVE_INVITATION_HEADER)
+        || n.eq_ignore_ascii_case(FANOUT_NATIVE_INVITATION_STATE_HEADER)
+        || n.eq_ignore_ascii_case(FANOUT_NATIVE_INVITATION_PROTOCOL_HEADER)
+        || n.eq_ignore_ascii_case(FANOUT_NATIVE_INVITATION_SELECTED_PATH_HEADER)
+        || n.eq_ignore_ascii_case(FANOUT_NATIVE_INVITATION_DECLINE_SIGNAL_HEADER)
+        || n.eq_ignore_ascii_case(FANOUT_NATIVE_INVITATION_DECLINE_HEADER)
+}
+
+fn fanout_native_invitation_headers() -> [(&'static str, &'static str); 6] {
+    [
+        (
+            FANOUT_NATIVE_INVITATION_HEADER,
+            FANOUT_NATIVE_INVITATION_VALUE,
+        ),
+        (
+            FANOUT_NATIVE_INVITATION_STATE_HEADER,
+            FANOUT_NATIVE_INVITATION_STATE,
+        ),
+        (
+            FANOUT_NATIVE_INVITATION_PROTOCOL_HEADER,
+            FANOUT_NATIVE_INVITATION_PROTOCOL,
+        ),
+        (
+            FANOUT_NATIVE_INVITATION_SELECTED_PATH_HEADER,
+            "fanout-python",
+        ),
+        (
+            FANOUT_NATIVE_INVITATION_DECLINE_SIGNAL_HEADER,
+            FANOUT_NATIVE_INVITATION_DECLINE_SIGNAL,
+        ),
+        (
+            FANOUT_NATIVE_INVITATION_DECLINE_HEADER,
+            NATIVE_PYTHON_FALLBACK_HEADER,
+        ),
+    ]
+}
+
+fn push_fanout_native_invitation_headers(out: &mut String, router: &str) {
+    if router != "fanout-python" {
+        return;
+    }
+    for (name, value) in fanout_native_invitation_headers() {
+        out.push_str(name);
+        out.push_str(": ");
+        out.push_str(value);
+        out.push_str("\r\n");
+    }
 }
 
 // Pull the Content-Length value out of a raw header block (case-insensitive
@@ -12407,6 +12476,7 @@ fn http_response(
         router,
         if keep_alive { "keep-alive" } else { "close" },
     );
+    push_fanout_native_invitation_headers(&mut out, router);
     for (name, value) in relayed {
         out.push_str(&format!("{}: {}\r\n", name, value));
     }
@@ -12482,6 +12552,7 @@ fn write_response_head(
         router,
         if keep_alive { "keep-alive" } else { "close" },
     ));
+    push_fanout_native_invitation_headers(&mut out, router);
     for (name, value) in relayed {
         out.push_str(&format!("{}: {}\r\n", name, value));
     }
@@ -12588,6 +12659,8 @@ fn fanout_stream_to_client(
             head.push_str(&format!("{}: {}\r\n", name, value));
         }
     }
+    head.push_str("X-Form-Router: fanout-python\r\n");
+    push_fanout_native_invitation_headers(&mut head, "fanout-python");
     if !body.is_empty() {
         head.push_str(&format!("Content-Length: {}\r\n", body.len()));
     }
