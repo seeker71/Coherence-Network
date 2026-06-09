@@ -1042,6 +1042,62 @@ check_inventory_flow_observation_native() {
   return 0
 }
 
+check_household_events_native() {
+  local url="${API_URL%/}/api/household/events?limit=5"
+  local headers_file="$TMP_DIR/household_events.headers.txt"
+  local body_file="$TMP_DIR/household_events.body.json"
+  local status router handler authority
+
+  echo
+  echo "==> Household events native route: ${url}"
+
+  status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -L -D "$headers_file" -o "$body_file" -w "%{http_code}" \
+    --max-time "$CURL_MAX_TIME" \
+    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+    "$url" \
+    -H "Accept: application/json" || true)"
+  router="$(awk 'tolower($1) == "x-form-router:" { print $2 }' "$headers_file" | tail -n 1 | tr -d '\r')"
+  handler="$(awk 'tolower($1) == "x-form-handler:" { print $2 }' "$headers_file" | tail -n 1 | tr -d '\r')"
+  authority="$(awk 'tolower($1) == "x-form-python-authority:" { print $2 }' "$headers_file" | tail -n 1 | tr -d '\r')"
+
+  echo "HTTP status: ${status:-unknown}"
+  echo "X-Form-Router: ${router:-<missing>}"
+  echo "X-Form-Handler: ${handler:-<missing>}"
+  echo "X-Form-Python-Authority: ${authority:-<missing>}"
+
+  if [[ -z "$status" || "$status" -lt 200 || "$status" -ge 300 ]]; then
+    echo "FAIL: household events route did not return 2xx"
+    head -c 250 "$body_file" || true
+    echo
+    return 1
+  fi
+  if [[ "$router" != "native-kernel" || "$handler" != "api_household_events" || "$authority" != "false" ]]; then
+    echo "FAIL: household events route did not return native BML proof headers"
+    head -c 250 "$body_file" || true
+    echo
+    return 1
+  fi
+
+  if command -v jq >/dev/null 2>&1; then
+    if ! jq -e 'type == "array" and length == 0' "$body_file" >/dev/null; then
+      echo "FAIL: household events body no longer matches the no-calendar empty-list contract"
+      jq '{type: type, length: length, sample: .[:2]}' "$body_file" 2>/dev/null || head -c 500 "$body_file"
+      echo
+      return 1
+    fi
+  else
+    if [[ "$(tr -d '[:space:]' <"$body_file")" != "[]" ]]; then
+      echo "FAIL: household events body no longer matches the no-calendar empty-list contract"
+      head -c 500 "$body_file" || true
+      echo
+      return 1
+    fi
+  fi
+
+  echo "PASS"
+  return 0
+}
+
 if [[ "${VERIFY_WEB_API_DEPLOY_SOURCE_ONLY:-0}" == "1" ]]; then
   return 0 2>/dev/null || exit 0
 fi
@@ -1068,6 +1124,7 @@ check_provider_readiness "${API_URL%/}/api/automation/usage/readiness" "$VERIFY_
 check_kernel_image_native_proposal || fail=1
 check_inventory_flow_native || fail=1
 check_inventory_flow_observation_native || fail=1
+check_household_events_native || fail=1
 check_url "Public web root" "${WEB_URL%/}/" || fail=1
 check_web_css_assets "${WEB_URL%/}/" || fail=1
 check_web_public_asset "logo" "/assets/logo.svg" "svg" || fail=1
