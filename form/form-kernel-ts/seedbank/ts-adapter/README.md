@@ -94,3 +94,6 @@ the kernel for the full three-way check:
 ```bash
 cd form/form-kernel-rust && cargo build --release
 ```
+
+The suite emits `examples/*.fk` as generated Rust-leg input. Those files are
+ignored and regenerated from the tracked `.ts` sources on each run.
