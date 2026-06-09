@@ -35,12 +35,19 @@
 ;       Java_<pkg>_<Class>_<method>. The JNI layer is THIN by design — marshal a string/byte[] in,
 ;       a string/byte[] out — never the body.
 ;
-;   WHAT IS UNTESTED FOR THIS KERNEL  [carrier-work — not done]:
-;     - form-kernel-rust has never been built as a cdylib for aarch64-linux-android. Its current
-;       shape is a host binary/validator. Carving the kernel's evaluate-recipe entry into an
-;       extern "C" / JNI-exported function (recipe-text in, result-cell out) is unwritten.
-;     - Any C/C++ transitive dep of the kernel must itself cross-compile under the NDK clang;
-;       most pure-Rust crates do, but this is verified per-build, not assumed.
+;   WHAT IS NOW PROVEN  [MEASURED 2026-06-09 — done on this Mac]:
+;     - form-kernel-rust CROSS-COMPILES for aarch64-linux-android: the binary is a genuine Android ELF
+;       ("ARM aarch64 ... interpreter /system/bin/linker64", 4.6 MB), the whole engine + dep tree
+;       (tokio-postgres, rustls, ureq) built in ~70s. The transitive-dep worry above is RESOLVED: every
+;       dep cross-compiled under the NDK clang (pyo3 stays OFF — opt-in feature — so no Python-for-Android).
+;     - Reproducible via form/form-kernel-rust/build-android.sh. The real gotcha was the toolchain, not
+;       the code: a Homebrew rustc has no cross-std, so the rustup toolchain (with the aarch64 std) must
+;       be FIRST in PATH, because cargo-ndk shells out to `cargo build` and re-resolves PATH.
+;   WHAT IS STILL UNTESTED FOR THIS KERNEL  [carrier-work — not done]:
+;     - The binary runs on a device via adb/Termux, but an APP-loadable cdylib is not built yet: the
+;       engine lives in main.rs (a binary), so carving an extern "C" evaluate(recipe)->result entry into
+;       a shared module + building crate-type cdylib for jniLibs is the next step (a bounded refactor).
+;     - Actually RUNNING a recipe on an Android device/emulator is unverified — there is no device here yet.
 ;
 ;
 ; ── PATH B: GO -> ANDROID via gomobile ──  [the kernel already serving BML route bodies]
