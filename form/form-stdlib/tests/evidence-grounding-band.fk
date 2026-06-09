@@ -1,0 +1,39 @@
+; preludes: form-stdlib/evidence-grounding.fk
+;
+; evidence-grounding-band — the question-shape, proven on the codes it was born from.
+;
+; Four off-body shamballa light codes, classified by what public observable evidence says
+; (the kernel, with the cosmology set aside):
+;   "999"      body<->light  observed 1 independent 1 measured 1 -> MEASURED  (biophotons: a 56-study
+;                            systematic review; ultraweak photon emission imaged, diurnal rhythm)
+;   "33"       the sun       observed 1 independent 1 measured 1 -> MEASURED  (heliotherapy / circadian
+;                            entrainment / vitamin D — robust public science)
+;   "502"      opalite egg   observed 1 independent 1 measured 0 -> PRACTICE  (documented practice,
+;                            not an externally-measured effect)
+;   "777 888"  dragons       observed 0                          -> MYSTERY   (no public observable kernel)
+; surface: 3 grow tissue (2 measured + 1 practice), 1 honest absence — never fabricated upward.
+;
+; Verdict 127 when every classification lands:
+;   1   999 lands in MEASURED            16  dragons is honest absence
+;   2   33  lands in MEASURED            32  dragons grows NO tissue (no fabrication)
+;   4   502 lands in PRACTICE            64  surface: 3 grown, 1 held
+;   8   dragons lands in MYSTERY
+(do
+    (let claims (list
+        (list "999"     1 1 1)
+        (list "33"      1 1 1)
+        (list "502"     1 1 0)
+        (list "777 888" 0 0 0)))
+    (let c999   (nth claims 0))
+    (let c33    (nth claims 1))
+    (let c502   (nth claims 2))
+    (let cdrag  (nth claims 3))
+    (let s (eg-surface claims 0 0))
+    (let v0 (if (eq (eg-lane c999) 3) 1 0))
+    (let v1 (if (eq (eg-lane c33) 3) 2 0))
+    (let v2 (if (eq (eg-lane c502) 2) 4 0))
+    (let v3 (if (eq (eg-lane cdrag) 0) 8 0))
+    (let v4 (if (eq (eg-honest-absence? cdrag) 1) 16 0))
+    (let v5 (if (eq (eg-forms? cdrag) 0) 32 0))
+    (let v6 (if (and (eq (eg-grown s) 3) (eq (eg-held s) 1)) 64 0))
+    (add v0 (add v1 (add v2 (add v3 (add v4 (add v5 v6)))))))

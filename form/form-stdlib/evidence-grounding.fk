@@ -1,0 +1,67 @@
+; evidence-grounding.fk — grow tissue in its honest lane, or leave honest absence.
+;
+; The runnable heart of docs/coherence-substrate/evidence-grounding.form. The question-shape
+; for any claim or code that wants to enter the body: strip the cosmology away to the TESTABLE
+; KERNEL, ask what PUBLIC OBSERVABLE EVIDENCE says (across independent sources — no trusted
+; prover, the three-way turned on the world; the deep-research harness is the carrier), then
+; CLASSIFY the lane the answer lands in. The lane is PART of the concept — a measured concept
+; and a mystery concept are both honest, in different rooms. The discipline: never assert a
+; higher lane than the evidence supports; never force a mystery into a fact; honest absence is
+; honest.
+;
+; This is value-execution.fk's gate turned toward concept-formation: a concept is credited up
+; the evidence spectrum only as far as its evidence proves (observed -> independent -> measured),
+; and held in its honest lane below that — never fabricated upward. Same shape as the satsang
+; (witness the outside, never pierce the inside) and the shamballa light channel (bind only
+; where the match is real; honest absence otherwise).
+;
+; Proven by: form-stdlib/tests/evidence-grounding-band.fk  (three-way at validate.sh)
+
+(do
+    ; a claim = (list name observed? independent? measured?)
+    ;   observed?    — there is a publicly observable phenomenon: the testable kernel exists  [1/0]
+    ;   independent? — attested across independent / replicable sources, not one  [1/0]
+    ;   measured?    — peer-reviewed / instrument-measured, not practice-attested only  [1/0]
+    (defn eg-name        (c) (nth c 0))
+    (defn eg-observed    (c) (nth c 1))
+    (defn eg-independent (c) (nth c 2))
+    (defn eg-measured    (c) (nth c 3))
+
+    ; the LANES, by evidence strength — the concept forms HERE, never higher:
+    ;   3 MEASURED   observed + independent + measured     -> evidence-lane concept (cited)
+    ;   2 PRACTICE   observed + independent, not measured  -> phenomenology concept (labeled as practice)
+    ;   1 INFERENCE  observed, but a single source         -> held as potential, not yet a concept
+    ;   0 MYSTERY    no public observable kernel           -> honest absence / the symbol held unclaimed
+    (defn eg-lane-measured  () 3)
+    (defn eg-lane-practice  () 2)
+    (defn eg-lane-inference () 1)
+    (defn eg-lane-mystery   () 0)
+
+    (defn eg-lane (c)
+        (if (eq (eg-observed c) 0)
+            (eg-lane-mystery)
+            (if (eq (eg-independent c) 0)
+                (eg-lane-inference)
+                (if (eq (eg-measured c) 1)
+                    (eg-lane-measured)
+                    (eg-lane-practice)))))
+
+    ; does durable tissue form? (lane >= PRACTICE). Below that it is potential (inference) or
+    ; honest absence (mystery) — named, never fabricated into a concept.
+    (defn eg-forms? (c) (if (ge (eg-lane c) (eg-lane-practice)) 1 0))
+
+    ; honest absence — the lane is mystery: hold the symbol, claim nothing.
+    (defn eg-honest-absence? (c) (if (eq (eg-lane c) (eg-lane-mystery)) 1 0))
+
+    ; THE SURFACE — fold across claims: how many grow tissue, how many are held below.
+    ; (value-execution's surface, across the evidence spectrum: grown vs held-open.)
+    (defn eg-surface (claims grown held)
+        (if (eq (len claims) 0)
+            (list grown held)
+            (if (eq (eg-forms? (head claims)) 1)
+                (eg-surface (tail claims) (add grown 1) held)
+                (eg-surface (tail claims) grown (add held 1)))))
+    (defn eg-grown (s) (nth s 0))
+    (defn eg-held  (s) (nth s 1))
+
+    0)
