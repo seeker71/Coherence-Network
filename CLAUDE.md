@@ -108,6 +108,17 @@ wellness output, and source repetition as introspection. Lift only with proof:
 a Form/BML band, a native route trace, or an evidence record that shows the old
 low-level shape is now carried by a simpler reusable cell.
 
+**Find the north star before fitting the ask.** When something is missing, the first move is to name
+where the fully-realized form lives — the most native, most efficient shape we could run (all hardware
+as native as we can use it; a model whose architecture *and* weights are recipe data; one engine, not
+parallel paths). Then fit the current ask as a step *on that path* — something that gets the job done
+AND points at the north star, never a work-around, placeholder, or detour. We only walk toward the north
+star when an ask needs that ground (don't build ahead of need), but no step may point away from it. A
+detour that "gets it done" off the path costs twice — the detour, then the unwinding; if the smallest
+honest step toward the north star is bigger than a placeholder, take the honest step or name the gap
+plainly — never ship the placeholder. Companion to *Core lift* (lift toward the elegant core) and
+*Vitality per pixel* (add only what carries vitality): move only along the path to the native ideal.
+
 **Fresh agents start from the compact packet.** `docs/shared/agent-start-packet.md` is the smallest shared orientation: lineage, **Form native runtime vs Python bootstrap compost**, read-only lattice query default, software-writing canon, wrongness practice, frequencies, and prompt routing. Use before expanding into full docs; update when repeated starts reveal the same missing orientation.
 
 **Check the witness.** At session start, before anything else: `curl -sS --max-time 5 https://pulse.coherencycoin.com/pulse/now | jq '{overall, silences: (.ongoing_silences | length), silent_organs: [.organs[] | select(.status != "breathing") | .name]}'`. If `overall != "breathing"` or `silences > 0`, surface that to the human before touching their ask — the silence has been waiting longer than they have. After any deploy that lands on main, hit the same endpoint and confirm no new silence started around the deploy time. `scripts/verify_web_api_deploy.sh` checks `/api/health` only; a deploy that breaks a user-visible surface won't trip that but will silence the page organ. The witness records; the cells read.
