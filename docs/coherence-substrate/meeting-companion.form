@@ -55,11 +55,15 @@
 ;
 ; ── THE MILESTONES ──
 ;   M0  the turn-taking decision body — SHIPPED (turn-taking.fk → 127).
-;   M1  LIVE TRANSCRIPT INTO THE DASHBOARD (the smallest real step, all on the dev Mac, no phone/TTS):
-;       reuse satsang_voice's asr_loop as the STT carrier; intern each 6s segment as an utterance cell via
-;       prose-as-recipe; accumulate a conversation cell; carry it on the eval-server's /sense + a new
-;       transcript panel. Proves sense → text → utterance-cell → content-addressed transcript end-to-end.
-;       The agent stays SILENT (day-one turn-taking) — correct, not missing. Needs only one mic-permission grant.
+;   M1  THE LIVE COMPANION — SHIPPED + VERIFIED on a real dialog: experiments/satsang-voice/meeting_live.py.
+;       Per chunk: ffmpeg mic → mlx-whisper TRANSCRIPT + SoundAnalysis CATEGORY (the oracle) → a cheap
+;       feature → nearest-shape (body, via the kernel) learns the category (co-learning) → the utterance
+;       is appended to the conversation → turn-taking.fk (body) decides speak/stay. Run live on a real
+;       conversation: whisper transcribed each 6s chunk, SoundAnalysis confirmed "speech", the Form sound-
+;       classifier reached 100% agreement with the oracle, and the agent correctly STAYED SILENT every chunk
+;       (day one — no learned "speak" moment, not named). The body learns; it waits its turn. PRIVACY: the
+;       transcript is processed + shown LOCALLY only, never sent, never committed (local compute IS consent).
+;       (M1+M2 are now both demonstrated here — the context [pause, named, words] already feeds tt-speak?.)
 ;   M2  context from the transcript → turn-taking: build [pause, named, insight-confidence] from the
 ;       conversation cell, feed tt-speak?; the agent offers text when named/buttoned (still no autonomous voice).
 ;   M3  the mesh hop: the conversation cell rides cell-sync/mesh-relay to a second device (shared-sensing field).
