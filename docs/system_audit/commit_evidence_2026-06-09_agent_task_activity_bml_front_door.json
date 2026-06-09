@@ -1,0 +1,130 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/next-python-release-2-20260609",
+  "commit_scope": "Move GET /api/agent/tasks/active and GET /api/agent/tasks/activity from Python in-memory read handlers into BML front-door native routes.",
+  "files_owned": [
+    "deploy/front-door/api.bml",
+    "deploy/hostinger/auto-deploy.sh",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "docs/system_audit/commit_evidence_2026-06-09_agent_task_activity_bml_front_door.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/native_route_goal_state.json",
+    "scripts/verify_web_api_deploy.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/native_route_goal_loop.py /loop --source web_api --seconds 86400 --write-state",
+      "cd form/form-kernel-rust && cargo build --release",
+      "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_web_api_deploy.sh",
+      "VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -c 'source scripts/verify_web_api_deploy.sh https://api.example https://web.example'",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check",
+      "form/form-kernel-rust/target/release/form-kernel-rust serve --host 127.0.0.1 --port 19185 --workers 1 --routes deploy/front-door/api.bml --stdlib form/form-stdlib --upstream http://127.0.0.1:9",
+      "curl -fsS -D /tmp/agent-active.headers -o /tmp/agent-active.body http://127.0.0.1:19185/api/agent/tasks/active -H 'Accept: application/json'",
+      "curl -fsS -D /tmp/agent-activity.headers -o /tmp/agent-activity.body 'http://127.0.0.1:19185/api/agent/tasks/activity?limit=50&offset=0' -H 'Accept: application/json'"
+    ],
+    "summary": "The BML front-door catalog now defines api_agent_tasks_active and api_agent_tasks_activity plus RouteCell rows for the two read paths. The Hostinger Traefik overlay routes both exact public paths to kernel-router-bml-front-door, and deploy verification now requires native router, handler, and python-authority headers.",
+    "observed_delta": {
+      "before_public_probe": "Production GET /api/agent/tasks/active returned [] and GET /api/agent/tasks/activity returned {items:[], total:0, limit:50, offset:0} through the FastAPI/Python path with no X-Form-Router header.",
+      "local_front_door_probe_active": "HTTP/1.1 200 OK with X-Form-Router:native-kernel, X-Form-Handler:api_agent_tasks_active, X-Form-Python-Authority:false, and body [].",
+      "local_front_door_probe_activity": "HTTP/1.1 200 OK with X-Form-Router:native-kernel, X-Form-Handler:api_agent_tasks_activity, X-Form-Python-Authority:false, and body {\"items\":[],\"total\":0,\"limit\":50,\"offset\":0}.",
+      "route_goal_state": "docs/system_audit/native_route_goal_state.json classifies both /api/agent/tasks/active and /api/agent/tasks/activity as kernel-native-high-grammar with current_source=deploy/front-door/api.bml."
+    },
+    "known_limitations": [
+      {
+        "scope": "catalog-wide check route command",
+        "observed": "form-kernel-rust check --routes deploy/front-door/api.bml still reports the same 14 unresolved full-catalog names on origin/main and on this branch. Focused local serve proof validates these handlers through the BML front-door serving path."
+      },
+      {
+        "scope": "task activity writer",
+        "observed": "POST /api/agent/tasks/{task_id}/activity and SSE/task-stream detail paths remain Python-backed. This release moves the observed public read paths; the writer-side native volatile-cell carrier is the next release surface."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com",
+      "curl -i https://api.coherencycoin.com/api/agent/tasks/active",
+      "curl -i https://api.coherencycoin.com/api/agent/tasks/activity"
+    ],
+    "notes": "Post-merge deploy must show both public routes return X-Form-Router:native-kernel and X-Form-Python-Authority:false."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Public task activity reads are invited into the native BML front door by default instead of being served by FastAPI in-memory handlers.",
+    "public_endpoints": [
+      "GET /api/agent/tasks/active",
+      "GET /api/agent/tasks/activity"
+    ],
+    "test_flows": [
+      "Run the BML front-door router locally and curl both task activity read routes.",
+      "Require native router, handler, and python-authority headers.",
+      "Require the same empty-public response shapes observed from production before the move."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete. PR checks, merge, deploy, and public verification remain before claiming public release."
+  },
+  "idea_ids": [
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "specs/node-task-visibility.md",
+    "specs/mcp-awareness-streaming.md"
+  ],
+  "task_ids": [
+    "agent-task-activity-bml-front-door-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "deploy/front-door/api.bml::api_agent_tasks_active",
+    "deploy/front-door/api.bml::api_agent_tasks_activity",
+    "deploy/front-door/api.bml::AgentTasksActiveRoute",
+    "deploy/front-door/api.bml::AgentTasksActivityRoute",
+    "deploy/kernel-router/docker-compose.kernel-router.yml::coherence-api-agent-tasks-active",
+    "deploy/kernel-router/docker-compose.kernel-router.yml::coherence-api-agent-tasks-activity",
+    "scripts/verify_web_api_deploy.sh::check_agent_tasks_activity_native",
+    "deploy/hostinger/auto-deploy.sh::BML front-door agent task activity canary"
+  ],
+  "change_files": [
+    "deploy/front-door/api.bml",
+    "deploy/hostinger/auto-deploy.sh",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "docs/system_audit/commit_evidence_2026-06-09_agent_task_activity_bml_front_door.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/native_route_goal_state.json",
+    "scripts/verify_web_api_deploy.sh"
+  ],
+  "change_intent": "runtime_feature"
+}

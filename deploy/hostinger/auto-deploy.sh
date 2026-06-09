@@ -878,6 +878,36 @@ ensure_kernel_router_canary() {
   probe_ok=0
   while (( $(date +%s) < deadline )); do
     if docker compose "${compose_args[@]}" exec -T kernel-router-bml-front-door sh -lc \
+      "curl -fsS -D /tmp/agent-tasks-active.headers -o /tmp/agent-tasks-active.body \
+        'http://127.0.0.1:8080/api/agent/tasks/active' \
+        -H 'Accept: application/json' \
+        && curl -fsS -D /tmp/agent-tasks-activity.headers -o /tmp/agent-tasks-activity.body \
+        'http://127.0.0.1:8080/api/agent/tasks/activity?limit=50&offset=0' \
+        -H 'Accept: application/json' \
+        && grep -qi '^X-Form-Router: native-kernel' /tmp/agent-tasks-active.headers \
+        && grep -qi '^X-Form-Handler: api_agent_tasks_active' /tmp/agent-tasks-active.headers \
+        && grep -qi '^X-Form-Python-Authority: false' /tmp/agent-tasks-active.headers \
+        && test \"\$(tr -d '[:space:]' </tmp/agent-tasks-active.body)\" = '[]' \
+        && grep -qi '^X-Form-Router: native-kernel' /tmp/agent-tasks-activity.headers \
+        && grep -qi '^X-Form-Handler: api_agent_tasks_activity' /tmp/agent-tasks-activity.headers \
+        && grep -qi '^X-Form-Python-Authority: false' /tmp/agent-tasks-activity.headers \
+        && grep -q '\"items\":\\[\\]' /tmp/agent-tasks-activity.body \
+        && grep -q '\"total\":0' /tmp/agent-tasks-activity.body" \
+      2>&1 | tee -a "$LOG_FILE"; then
+      probe_ok=1
+      break
+    fi
+    sleep 3
+  done
+  if [[ "$probe_ok" != "1" ]]; then
+    log "FAIL: BML front-door agent task activity routes did not return native empty-activity proof"
+    exit 1
+  fi
+
+  deadline=$(( $(date +%s) + 120 ))
+  probe_ok=0
+  while (( $(date +%s) < deadline )); do
+    if docker compose "${compose_args[@]}" exec -T kernel-router-bml-front-door sh -lc \
       "curl -fsS -D /tmp/household-events.headers -o /tmp/household-events.body \
         'http://127.0.0.1:8080/api/household/events?limit=5' \
         -H 'Accept: application/json' \
