@@ -494,7 +494,7 @@ sync_substrate_content() {
 
   # Registry submission assets the validator checks per-item. The body
   # already carries glama.json, server.json, smithery.yaml, pulsemcp.json,
-  # the MCP package README, SKILL.md, .cursor/skills/, the root README,
+  # the MCP package README, SKILL.md, .cursor/, the root README,
   # and docs/shared/ecosystem-table.md at the repo root. Inside the api
   # container these surfaces live under /app/, where the validator
   # resolves repo-root via parents[2]. Sync them so the live endpoint
@@ -507,10 +507,8 @@ sync_substrate_content() {
   if [[ -d "$REPO_DIR/skills" ]]; then
     docker compose cp "$REPO_DIR/skills" api:/app/skills 2>&1 | tee -a "$LOG_FILE"
   fi
-  if [[ -d "$REPO_DIR/.cursor/skills" ]]; then
-    docker compose exec -T api sh -lc 'mkdir -p /app/.cursor' \
-      2>&1 | tee -a "$LOG_FILE" || true
-    docker compose cp "$REPO_DIR/.cursor/skills" api:/app/.cursor/skills 2>&1 | tee -a "$LOG_FILE"
+  if [[ -d "$REPO_DIR/.cursor" ]]; then
+    docker compose cp "$REPO_DIR/.cursor" api:/app 2>&1 | tee -a "$LOG_FILE"
   fi
   if [[ -d "$REPO_DIR/docs/shared" ]]; then
     docker compose cp "$REPO_DIR/docs/shared" api:/app/docs/shared 2>&1 | tee -a "$LOG_FILE"
