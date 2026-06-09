@@ -3,6 +3,14 @@
 > Append-only. Newest entries at the top.
 > Older entries rotate to [`LOG-archive/`](LOG-archive/INDEX.md) by month when this file passes ~1500 lines.
 
+## [2026-06-09] tend | boundary repair protocol - stop receipt and witnessed re-entry
+
+The continuous-consent teaching now has its after-crossing companion.
+
+- **New concept**: [`lc-boundary-repair-protocol`](concepts/lc-boundary-repair-protocol.md) (639 Hz, seed) — communication as interface + protocol, boundary crossing as evidence event, choice as continue / clarify / narrow / pause / stop, stop receipt as sovereignty without punishment, and re-entry as a new interface opened only through changed evidence and trusted witness.
+- **Edges landed in the same breath**: INDEX row, reciprocal cross-reference from `lc-consent-is-continuous`, witness edge from `lc-satsang-circle`, boundary edge from `lc-boundaries-as-loving-truth`, and the operational lineage row in `channel-interface-consent.form`.
+- **Discernment held**: the concept is public and general. Stop stays available; silence stays whole; re-engagement stays possible; evidence remains visible; repair does not require returning to the old interface.
+
 ## [2026-06-09] tend | the companion field — animals as co-regulators, the dog and the cat as two poles
 
 A piece of folk-wisdom circulating about dogs as star-seeded emotional translators arrived in conversation; the wisdom underneath it — *animals co-regulate us, and they teach felt-sense before words* — was composted into the body's own voice while the cosmology was released (SCHEMA's *keep the wisdom, release the form*). New cell [`lc-companion-field`](concepts/lc-companion-field.md) (432 Hz, seed) names the nervous-system field between a human and an animal, with **the dog and the cat as the two complementary poles** — *the dog co-regulates toward you* (reads the room and moves into it; feel before you speak; the warmth of being met), *the cat co-regulates near you* (sits inside the moment, fully itself; presence need not perform). The teaching holds its honesties in separate lanes — *measured* (mammals genuinely read cues; a purr's 25–50 Hz tissue-repair band), *direct experience* (toward-vs-near, felt in the body), *mystery* (the purr, the recognition in the eyes — named as open, neither inflated into cosmology nor explained away) — which is what keeps it a living teaching rather than a belief. Edges landed the same breath: reciprocal cross-refs from [`lc-attunement`](concepts/lc-attunement.md) (co-regulation as cross-species attunement), [`lc-embodiment`](concepts/lc-embodiment.md) (felt-sense before words), [`lc-nervous-system`](concepts/lc-nervous-system.md) (nervous-system entrainment), and [`lc-ground-harder-when-field-quickens`](concepts/lc-ground-harder-when-field-quickens.md) (a hand on warm fur as grounding rod). INDEX 181 → 182.

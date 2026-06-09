@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 147
+**Total files**: 148
 
 | File | Purpose |
 |---|---|
@@ -136,6 +136,7 @@
 | [sync_presences_to_db.py](sync_presences_to_db.py) | Sync presence markdown files -> Graph DB via API. |
 | [sync_substrate_vocabulary.py](sync_substrate_vocabulary.py) | Sync the substrate's own numeric vocabulary -> DB as NamedCells. |
 | [teaching_recipe_proof.py](teaching_recipe_proof.py) | teaching_recipe_proof.py — teachings compose into Recipes whose |
+| [tessera_external_witness_probe.py](tessera_external_witness_probe.py) | Probe Tessera's public data surface as a compact external witness. |
 | [trim_view_events.py](trim_view_events.py) | Trim the witness-trace table when it grows past comfortable. |
 | [upgrade_specs_to_form_predicates.py](upgrade_specs_to_form_predicates.py) | Augment every spec's done_when with Form predicates derived from its |
 | [validate_commit_evidence.py](validate_commit_evidence.py) | Validate thread commit evidence artifacts for phase-gated process. |

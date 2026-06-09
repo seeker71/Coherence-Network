@@ -1,0 +1,135 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/boundary-repair-protocol-20260609",
+  "commit_scope": "Add Boundary Repair Protocol as a core Living Collective concept, linking continuous consent to stop receipts, trusted repair witness, and explicit re-entry protocol.",
+  "files_owned": [
+    "MANIFEST.md",
+    "docs/coherence-substrate/channel-interface-consent.form",
+    "docs/system_audit/commit_evidence_2026-06-09_boundary_repair_protocol_concept.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/vision-kb/INDEX.md",
+    "docs/vision-kb/LOG.md",
+    "docs/vision-kb/concepts/lc-boundaries-as-loving-truth.md",
+    "docs/vision-kb/concepts/lc-boundary-repair-protocol.md",
+    "docs/vision-kb/concepts/lc-consent-is-continuous.md",
+    "docs/vision-kb/concepts/lc-satsang-circle.md",
+    "scripts/INDEX.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "curl -sS --max-time 5 https://pulse.coherencycoin.com/pulse/now | jq '{overall, silences: (.ongoing_silences | length), silent_organs: [.organs[] | select(.status != \"breathing\") | .name]}'",
+      "./scripts/agent-coord.sh claim \"boundary repair protocol concept\"",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 - <<'PY' ... parse_concept_file + parse_crossrefs for docs/vision-kb/concepts/lc-boundary-repair-protocol.md ... PY",
+      "rg -n \"Boundary Repair Protocol|boundary -> evidence -> choice|Stop is allowed|Repair can reopen communication|lc-boundary-repair-protocol\" docs/vision-kb/concepts/lc-boundary-repair-protocol.md docs/vision-kb/INDEX.md docs/vision-kb/LOG.md docs/coherence-substrate/channel-interface-consent.form docs/vision-kb/concepts/lc-consent-is-continuous.md docs/vision-kb/concepts/lc-satsang-circle.md docs/vision-kb/concepts/lc-boundaries-as-loving-truth.md",
+      "git diff --check",
+      "make wellness",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "observed_results": [
+      "prompt-guide passed in linked worktree mode on codex/boundary-repair-protocol-20260609",
+      "initial wellness read showed vision-kb/INDEX.md aligned at 182 concepts before the new concept; post-edit wellness shows vision-kb/INDEX.md aligned at 183 concepts",
+      "initial pulse read was silent with ten organs; follow-up pulse read returned overall=breathing, silences=0",
+      "new concept parsed as id=lc-boundary-repair-protocol, hz=639, status=seed",
+      "parse_crossrefs returned lc-consent-is-continuous, lc-received-by-invitation, lc-boundaries-as-loving-truth, lc-satsang-circle, lc-sovereignty-within-oneness, lc-permission-is-interior, lc-trust-over-fear, lc-act-without-penalty, lc-observer-pays-the-trace",
+      "rg anchors found the new concept, index row, log row, consent/satsang/boundary cross-references, and channel-interface-consent lineage row",
+      "generate_repo_indexes.py updated docs/vision-kb/INDEX.md to 183 concepts and refreshed generated source indexes for scripts/INDEX.md and MANIFEST.md",
+      "generate_repo_indexes.py --check passed",
+      "git diff --check passed",
+      "post-edit wellness shows root circulation clear, source maps aligned, symbol resolution clean, locale parity clean, deploy aligned to origin/main, and 183 concepts aligned",
+      "branch rebased cleanly onto origin/main with autostash reapplied",
+      "worktree_pr_guard.py reported ready_for_push=True and local_preflight=pass",
+      "check_pr_followthrough.py reported codex_open_prs=0 and stale_codex_prs=0"
+    ],
+    "known_limitations": [
+      {
+        "scope": "runtime execution",
+        "observed": "This slice adds a durable concept and Form lineage reference only. It does not add a runnable boundary-repair Form recipe or UI form yet."
+      },
+      {
+        "scope": "production availability",
+        "observed": "Production still needs PR merge and deploy verification before the public site/API can serve the new concept from main."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh"
+    ],
+    "notes": "Pending merge and production verification."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local docs proof is complete; CI, merge, deploy, and public verification remain pending."
+  },
+  "idea_ids": [
+    "knowledge-and-resonance",
+    "knowable-trust-expression"
+  ],
+  "spec_ids": [
+    "vision-kb-concept-lift",
+    "channel-interface-consent"
+  ],
+  "task_ids": [
+    "boundary-repair-protocol-concept-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "concept-naming",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "concept-authoring",
+        "edge-tending",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/vision-kb/concepts/lc-boundary-repair-protocol.md",
+    "docs/vision-kb/INDEX.md",
+    "docs/vision-kb/LOG.md",
+    "docs/coherence-substrate/channel-interface-consent.form",
+    "make wellness",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "git diff --check"
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "docs/coherence-substrate/channel-interface-consent.form",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/vision-kb/INDEX.md",
+    "docs/vision-kb/LOG.md",
+    "docs/vision-kb/concepts/lc-boundaries-as-loving-truth.md",
+    "docs/vision-kb/concepts/lc-boundary-repair-protocol.md",
+    "docs/vision-kb/concepts/lc-consent-is-continuous.md",
+    "docs/vision-kb/concepts/lc-satsang-circle.md",
+    "scripts/INDEX.md"
+  ],
+  "change_intent": "docs_only"
+}
