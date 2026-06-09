@@ -87,4 +87,4 @@ These are not questions to close but directions to listen with:
 
 ## Connected Frequencies
 
-→ lc-sensing, lc-pulse, lc-resonating, lc-stillness, lc-v-harmonizing
+→ lc-sensing, lc-pulse, lc-resonating, lc-stillness, lc-v-harmonizing, lc-companion-field
