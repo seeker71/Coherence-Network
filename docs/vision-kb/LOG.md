@@ -3,6 +3,10 @@
 > Append-only. Newest entries at the top.
 > Older entries rotate to [`LOG-archive/`](LOG-archive/INDEX.md) by month when this file passes ~1500 lines.
 
+## [2026-06-09] tend | the body and light — the evidence-grounding shape grows its first cited concept
+
+The application of [lc-honest-lane](concepts/lc-honest-lane.md): Urs said "yes" to running the shape on the three measured-kernel shamballa codes and letting it grow real cited tissue. Live web searches found the kernels real: 999 → the body emits ultraweak photon emission (biophotons, a 56-study systematic review); 33 → morning light entrains the circadian clock (Nobel-recognized) + UVB makes vitamin D; 336 → violet/blue photobiology is measured (skin keratinocytes, retinal cells, 405nm antimicrobial) AND the early-1900s "Violet Ray" cure-all device was debunked (FDA seizures, 1951 ruling). The shape sorted each thread into its honest lane — measured kernel kept, debunked claim named as false, cosmology held as mystery — and grew ONE coherent vital concept rather than three fragments. New cell [`lc-the-body-and-light`](concepts/lc-the-body-and-light.md) (528 Hz); the three codes (999/33/336) bound to it in `shamballa-light-channel.fk` (`shamballa-light-channel-band` still 11111111 three-way) — honest absence became honest presence, gaps closed by tissue grown from evidence; reciprocal edge into lc-honest-lane.
+
 ## [2026-06-09] tend | boundary repair becomes a generic sovereign Form protocol
 
 The pulse repair proof lifted one layer deeper: stop/re-entry is no longer a pulse-specific Python rule. New Form cell [`sovereign-boundary-protocol.fk`](../../form/form-stdlib/sovereign-boundary-protocol.fk) names the reusable protocol as `allow`, `stop`, `witness`, and `re_enter` over traceable boundary evidence. New specialization [`pulse-boundary-repair.fk`](../../form/form-stdlib/pulse-boundary-repair.fk) maps pulse silences into that shape, and the bands prove it three-way: generic source verdict `16383`, pulse source/binary verdict `32767`. The BML compiler also gained a source-aware error for malformed multi-line `def` headers, so the exact line is reported instead of a host slice crash.
