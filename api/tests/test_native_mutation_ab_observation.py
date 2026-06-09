@@ -47,6 +47,8 @@ def test_ab_observation_case_passes_with_native_default_preview_and_fallback():
             "required_header": None,
             "fallback_header": "X-Form-Python-Fallback",
             "request_body": case.body,
+            "executes": True,
+            "db_execution": "performed-by-http-native-persistence",
             "sql": " ".join(case.sql_contains),
             "decision_receipt": {
                 "selected_path": "implicit-native-invitation",
@@ -100,7 +102,16 @@ def test_ab_observation_case_passes_with_native_default_preview_and_fallback():
         },
     )
 
-    observation = mod.evaluate_case(case, default, treatment, fallback)
+    observation = mod.evaluate_case(
+        case,
+        default,
+        treatment,
+        fallback,
+        default_db_checks={
+            "native_persistence_node_readback": True,
+            "native_persistence_revision_readback": True,
+        },
+    )
 
     assert observation.passed is True
     assert all(observation.checks.values())
@@ -171,8 +182,8 @@ def test_ab_gate_recommends_live_db_trial_after_full_confidence():
     assert report["ordinary_traffic_flip_performed"] is True
     assert report["python_fallback_header"] == "X-Form-Python-Fallback"
     assert report["next_evidence_needed"] == [
+        "deployed header-gated canary persists through mounted production config",
         "public Traefik default mutation routes to kernel-router",
-        "native HTTP mutation handler preserves production persistence semantics",
         "explicit X-Form-Python-Fallback refusal/control signal is counted separately",
     ]
 

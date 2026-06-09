@@ -93,6 +93,11 @@ COPY --from=kernel-builder /build/target/release/form-kernel-rust /app/bin/form-
 RUN chmod +x /app/bin/form-kernel-rust \
  && /app/bin/form-kernel-rust --expr "(add 2 3)"
 
+# Non-secret application config baseline. Rust kernel config natives first look
+# for api/config/api.json, then merge an explicit --config overlay for production
+# secrets. The overlay is mounted at runtime; this file is safe repository memory.
+COPY api/config/api.json /app/api/config/api.json
+
 # Form stdlib sources: needed only if a BML-authored manifest is used (it is
 # source-compiled at load via --stdlib). The default shadow manifest is raw
 # S-expression Form and does NOT touch the source-compiler, but baking the
