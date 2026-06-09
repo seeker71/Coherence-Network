@@ -33,6 +33,7 @@ requirements:
   - "The production route manifest exposes X-Form-Native-Public-Gate rows for mutable ideas/spec routes without changing no-header traffic."
   - "The public-gate harness observes no-header fanout, preview-header SQL preview, public-gate native selection, and public-gate priority when both headers are present."
   - "HTTP public-gate responses stay honest: the header gate executes and emits a rollback receipt shape, while DB execution remains proven in the Form live fixture rather than claimed by the HTTP route."
+  - "Each public-gate HTTP response emits a compact decision receipt naming candidates, selected path, outcome, protocol, reversibility, and a signature so the gate can contradict intent with observable state."
   - "The next boundary is a deployed X-Form-Native-Public-Gate canary before any ordinary no-header flip."
   - "The side-effect ledger keeps rollback receipts as gate-local safety rather than Python parity, so side-effect proof does not justify side effects."
   - "The public-gate Form layer exposes an idea update runner over the native idea valuation audit-ledger carrier."
@@ -83,6 +84,10 @@ reversible gate safety, not evidence that extra domain side effects belong.
 - [ ] **R8**: `native-mutation-public-gate.fk` exposes
   `nmpg-run-idea-update-public-gate` over the native idea valuation audit-ledger
   carrier.
+- [ ] **R9**: Public-gate responses carry `decision_receipt` with
+  `state=native-mutation-gate-decision-receipt`, selected path
+  `X-Form-Native-Public-Gate`, candidate outcomes for fanout/preview/public
+  gate, `can_contradict_intent=true`, and a compact signature.
 
 ## Research Inputs
 
@@ -164,6 +169,9 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-public-gat
   `executes:false`; the receipt persistence proof lives in the Form live-PG
   harness.
 - Rollback receipts are gate-local safety rather than Python parity.
+- Decision receipts are per-request gate witnesses: they record what branch was
+  selected and enough signature detail to make the gate observable before the
+  no-header flip.
 - The ledger states that rollback receipts are gate-local safety rather than Python parity.
 - Removing the public-gate header or route row is the reversible rollback for
   the header-gated canary path.

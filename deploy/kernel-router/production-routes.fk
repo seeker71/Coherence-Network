@@ -2005,6 +2005,51 @@
     ",\"rollback\":\"remove X-Form-Native-Public-Gate or disable public-gate route row\""
     "}")))
 
+(defn mpg-decision-candidates-json ()
+  (str_concat_all (list
+    "["
+    "{\"path\":\"fanout-python\",\"eligible\":true,\"selected\":false,\"outcome\":\"silence\",\"evidence\":\"no native gate header selects fanout\"}"
+    ",{\"path\":\"X-Form-Native-Preview\",\"eligible\":true,\"selected\":false,\"outcome\":\"stop\",\"evidence\":\"preview observes SQL without public gate execution\"}"
+    ",{\"path\":\"X-Form-Native-Public-Gate\",\"eligible\":true,\"selected\":true,\"outcome\":\"success\",\"evidence\":\"required public-gate header selected native-kernel route\"}"
+    "]")))
+
+(defn mpg-decision-signature-json (operation node-id)
+  (str_concat_all (list
+    "{\"category\":\"native-mutation-gate\""
+    ",\"selected_path\":\"X-Form-Native-Public-Gate\""
+    ",\"outcome_code\":1"
+    ",\"certainty_bucket\":5"
+    ",\"candidate_count\":3"
+    ",\"operation\":" (json_string operation)
+    ",\"node_id\":" (json_string node-id)
+    ",\"who\":\"form-kernel-router\""
+    ",\"where\":\"deploy/kernel-router/production-routes.fk\""
+    "}")))
+
+(defn mpg-decision-receipt-json (operation node-id)
+  (str_concat_all (list
+    "{\"state\":\"native-mutation-gate-decision-receipt\""
+    ",\"receipt_id\":" (json_string (str_concat "decision:X-Form-Native-Public-Gate:" (str_concat operation (str_concat ":" node-id))))
+    ",\"gate\":\"native_mutation_public_gate\""
+    ",\"surface\":\"mutable-ideas-specs\""
+    ",\"operation\":" (json_string operation)
+    ",\"node_id\":" (json_string node-id)
+    ",\"protocol\":\"X-Form-Native-Public-Gate\""
+    ",\"selected_path\":\"X-Form-Native-Public-Gate\""
+    ",\"outcome\":\"success\""
+    ",\"choice\":1"
+    ",\"candidates\":" (mpg-decision-candidates-json)
+    ",\"ordinary_traffic_flip_performed\":false"
+    ",\"silence\":\"fanout-default-when-no-native-header\""
+    ",\"fail\":\"rollback-to-fanout-by-removing-public-gate-header\""
+    ",\"stop\":\"ordinary-traffic-unflipped\""
+    ",\"bma\":\"native-mutation-public-gate\""
+    ",\"reversible\":true"
+    ",\"can_contradict_intent\":true"
+    ",\"proof\":\"deploy/kernel-router/mutation_public_gate_harness.py --json\""
+    ",\"signature\":" (mpg-decision-signature-json operation node-id)
+    "}")))
+
 (defn mpg-trust-envelope-json (operation node-id)
   (str_concat_all (list
     "{\"state\":\"embodied-trust-public-gate\""
@@ -2038,6 +2083,7 @@
       ",\"sql\":" (json_string sql)
       ",\"request_body\":" (json_string body)
       ",\"route_local_rollback_receipt\":" (mpg-rollback-receipt-json operation node-id)
+      ",\"decision_receipt\":" (mpg-decision-receipt-json operation node-id)
       ",\"trust_envelope\":" (mpg-trust-envelope-json operation node-id)
       ",\"runtime\":\"inline\"}"))))
 
