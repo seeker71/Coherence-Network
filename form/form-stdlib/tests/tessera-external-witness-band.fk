@@ -1,7 +1,6 @@
 ; tests/tessera-external-witness-band.fk - Tessera external witness proof.
 ;
-; preludes: form-stdlib/choice-receipt.fk form-stdlib/earth-witness-question.fk
-;           form-stdlib/tessera-external-witness.fk
+; preludes: form-stdlib/choice-receipt.fk form-stdlib/earth-witness-question.fk form-stdlib/tessera-external-witness.fk
 ;
 ; Expected score: 67108863. This proves the Tessera public witness shape keeps
 ; source, manifest, tile, byte-range hash, question answers, and compressed

@@ -42,7 +42,7 @@
         (str_eq (aec-local-status cell) "pass"))
 
     (defn aec-phase-held? (cell)
-        (eq (aec-phase-can-move? cell) false))
+        (value_eq (aec-phase-can-move? cell) false))
 
     (defn aec-load-json (read-path source-path)
         (do
