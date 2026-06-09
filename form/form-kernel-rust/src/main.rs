@@ -3920,6 +3920,27 @@ impl Kernel {
                 Value::Int(if n < 0 { -n } else { n })
             }
         });
+        // float→int conversions: the bridge between float compute and integer
+        // band verdicts / quantization codes. floor/ceil/trunc are IEEE-unambiguous
+        // (agree three-way); round is half-AWAY-from-zero (matches Go math.Round;
+        // TS uses sign*round(abs) because JS Math.round rounds half toward +Inf).
+        // An int argument passes through unchanged.
+        self.register_native("floor", cat_method(), |_, _, args| match &args[0] {
+            Value::Float(f) => Value::Int(f.floor() as i64),
+            _ => Value::Int(args[0].as_int()),
+        });
+        self.register_native("ceil", cat_method(), |_, _, args| match &args[0] {
+            Value::Float(f) => Value::Int(f.ceil() as i64),
+            _ => Value::Int(args[0].as_int()),
+        });
+        self.register_native("trunc", cat_method(), |_, _, args| match &args[0] {
+            Value::Float(f) => Value::Int(f.trunc() as i64),
+            _ => Value::Int(args[0].as_int()),
+        });
+        self.register_native("round", cat_method(), |_, _, args| match &args[0] {
+            Value::Float(f) => Value::Int(f.round() as i64),
+            _ => Value::Int(args[0].as_int()),
+        });
         // Polymorphic `+` for Python compilation: int+int→add,
         // str+str→concat, list+list→concat. The compile-time emitter
         // can't always determine operand types (variables, function
