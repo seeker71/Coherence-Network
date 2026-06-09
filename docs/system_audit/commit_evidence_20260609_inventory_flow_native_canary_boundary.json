@@ -1,0 +1,98 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/inventory-flow-native-public-canary-20260609",
+  "commit_scope": "Keep the inventory lineage BML grammar public and executable through an explicit native canary while preserving the ordinary public /api/inventory/flow route on the full existing aggregator until enrichment parity is native-proofed.",
+  "files_owned": [
+    "deploy/front-door/api.bml",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "scripts/verify_web_api_deploy.sh",
+    "api/tests/test_runtime_web_api_provenance.py",
+    "docs/system_audit/commit_evidence_20260609_inventory_flow_native_canary_boundary.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_web_api_deploy.sh",
+      "VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -c 'source scripts/verify_web_api_deploy.sh https://api.example https://web.example'",
+      "/Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest tests/test_runtime_web_api_provenance.py -q",
+      "git diff --check",
+      "form/form-kernel-rust/target/release/form-kernel-rust serve --port 19132 --routes deploy/front-door/api.bml --stdlib form/form-stdlib --upstream http://127.0.0.1:9",
+      "curl -sS -i 'http://127.0.0.1:19132/api/inventory/flow?idea_id=__native_inventory_canary__&list_item_limit=1&runtime_window_seconds=3600' -H 'Accept: application/json'"
+    ],
+    "notes": "Shell syntax, verifier source-load, focused provenance tests, and diff check passed. Local native serve compiled deploy/front-door/api.bml into 38 native routes including GET /api/inventory/flow. The canary curl returned HTTP 200, X-Form-Router: native-kernel, summary.ideas=0, items=[], native_observation.handler=api_inventory_flow, and native_observation.python_authority=false without a database connection."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until this repair branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "The previous b1fe7f19 Hostinger deploy failed because the ordinary public path-specific inventory route required the DB-backed projection during the BML service canary. This repair makes native inventory public through X-Form-Native-Inventory: 1 and keeps ordinary traffic on the existing FastAPI aggregator."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local proof passed. Commit, push, PR, CI, merge, deploy, and public verification remain."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Public native inventory proof is now explicit-header canary traffic, not an ordinary-route shadow of the full inventory flow aggregator.",
+    "public_endpoints": [
+      "GET /api/inventory/flow"
+    ],
+    "test_flows": [
+      "BML api_inventory_flow short-circuits idea_id=__native_inventory_canary__ into an empty native observation response before opening persistence.",
+      "Traefik routes GET /api/inventory/flow to coherence-api-kernel-bml-front-door only when X-Form-Native-Inventory: 1 is present.",
+      "scripts/verify_web_api_deploy.sh probes the public native canary with X-Form-Native-Inventory: 1.",
+      "Ordinary no-header GET /api/inventory/flow continues to reach the current API aggregator until full enrichment parity is native-proofed."
+    ]
+  },
+  "idea_ids": [
+    "oss-interface-alignment",
+    "inventory-lineage-grammar"
+  ],
+  "spec_ids": [
+    "inventory-lineage-grammar"
+  ],
+  "task_ids": [
+    "inventory-flow-native-public-canary-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "public-interface-release"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "deploy/front-door/api.bml defines inventory-flow-canary-response-json and api_inventory_flow short-circuits __native_inventory_canary__ before pg_connect.",
+    "deploy/kernel-router/docker-compose.kernel-router.yml requires X-Form-Native-Inventory: 1 for the BML inventory route.",
+    "scripts/verify_web_api_deploy.sh sends X-Form-Native-Inventory: 1 while checking native inventory proof.",
+    "api/tests/test_runtime_web_api_provenance.py proves the grammar and the explicit header-gated ingress rule.",
+    "Local native curl returned HTTP 200 with X-Form-Router: native-kernel and native_observation.python_authority=false."
+  ],
+  "change_files": [
+    "deploy/front-door/api.bml",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "scripts/verify_web_api_deploy.sh",
+    "api/tests/test_runtime_web_api_provenance.py",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}

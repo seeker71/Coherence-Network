@@ -138,6 +138,9 @@ def test_native_route_goal_loop_sees_workspace_and_task_routes_as_bml():
 
 def test_inventory_flow_native_route_expresses_lineage_grammar():
     route_text = (ROOT / "deploy" / "front-door" / "api.bml").read_text(encoding="utf-8")
+    ingress_text = (ROOT / "deploy" / "kernel-router" / "docker-compose.kernel-router.yml").read_text(
+        encoding="utf-8"
+    )
 
     for required in (
         'route("inventory-flow", "GET", "/api/inventory/flow"',
@@ -152,7 +155,9 @@ def test_inventory_flow_native_route_expresses_lineage_grammar():
         "inventory-flow-contributions-json",
         "inventory-flow-assets-json",
         "inventory-flow-interdependencies-json",
+        "inventory-flow-canary-response-json",
         "inventory lineage grammar core",
         'json-node-pair("python_authority", json-node-bool(false))',
     ):
         assert required in route_text
+    assert "X-Form-Native-Inventory" in ingress_text

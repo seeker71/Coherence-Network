@@ -924,12 +924,13 @@ check_inventory_flow_native() {
   local status router
 
   echo
-  echo "==> Inventory flow native route: ${url}"
+  echo "==> Inventory flow native route: ${url} (X-Form-Native-Inventory: 1)"
 
   status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -L -D "$headers_file" -o "$body_file" -w "%{http_code}" \
     --max-time "$CURL_MAX_TIME" \
     --connect-timeout "$CURL_CONNECT_TIMEOUT" \
     "$url" \
+    -H "X-Form-Native-Inventory: 1" \
     -H "Accept: application/json" || true)"
   router="$(awk 'tolower($1) == "x-form-router:" { print $2 }' "$headers_file" | tail -n 1 | tr -d '\r')"
 
