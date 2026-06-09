@@ -1,0 +1,93 @@
+; sensing-lanes.form — the perception/sensing arc, one lane at a time: north star · ground · direction · distance.
+;
+; The map that keeps each lane honest. GROUND is only what is proven or measured (verdicts, or a
+; toolchain probe) — never a hope. DIRECTION is the next real move. DISTANCE is what remains to the
+; north star, in the lc-honest-lane grain (MEASURED / BUILDABLE / carrier-work). Read top-to-bottom:
+; the lanes are ordered from "the logic is done" toward "needs real hardware." Updated 2026-06-09.
+;
+; THE WHOLE-ARC NORTH STAR: a body that senses its field through every available sense, recognizes it
+; with classifiers it grew and proved itself, shares what it learns with other bodies, and runs all of
+; it natively on whatever silicon it is given — no foreign model, no third-party permission, every
+; joint proven three-way (Go=Rust=TS) and content-addressed so identity travels with structure.
+;
+; ─────────────────────────────────────────────────────────────────────────────────────────
+; LANE 1 — RECOGNITION ROUTING
+;   north star  every modality fused into one trusted recognition stream, chosen in the kernel, in parallel.
+;   ground      recognition-router.fk proven — sound 127, sight 31, host compute-paths 63. Modality-blind.
+;   direction   feed real carriers (whisper · SoundAnalysis · Vision) in as readings (lane 10's wiring).
+;   distance    the router is DONE. Remaining is carriers handing it live readings — carrier-work, no new logic.
+;
+; LANE 2 — THE BODY'S OWN PERCEPTION (the toolkit)
+;   north star  a complete, content-addressed perception the body runs and grows for itself, no foreign model.
+;   ground      ~20 recipes proven three-way: feature-vector · nearest-shape · novelty · sequence-predictor ·
+;               classifier-eval · temporal-smoothing · perception-pipeline(127) · drift-detect · ensemble-vote ·
+;               anomaly-band · markov-2 · histogram-peak · transition-detect · cooldown.
+;   direction   real features from real carriers; nearest-shape interns real prototypes; the pipeline runs on a stream.
+;   distance    the LOGIC is done. Remaining is real data flowing through — carrier-work (lane 10).
+;
+; LANE 3 — SELF-GROUNDING
+;   north star  the body's own classifiers earn trust on its own field and retire the foreign ones.
+;   ground      self-grounding-classifier.fk proven (63) — promotion only on proven agreement with ground truth.
+;   direction   run the shadow-learning loop on real readings graded against a trusted route / a declared source.
+;   distance    the promotion gate is done. Remaining is a real learning run — carrier-work, gated on lanes 2+10.
+;
+; LANE 4 — DECLARED-SOURCE (ask before guessing)
+;   north star  read what a source announces (now-playing, device names) before spending a classifier.
+;   ground      declared-source.fk proven (127) — prefer / skip / ground; the Android MediaSession carrier named.
+;   direction   wire the MediaSession now-playing as a declared reading.
+;   distance    logic done. The MediaSession carrier is Android work — GATED on lane 8 (kernel on Android).
+;
+; LANE 5 — SHARED SENSING (many bodies, one field)
+;   north star  phones and Macs side by side, different senses, teaching each other in real time.
+;   ground      shared-sensing.fk proven (127) — circle confirms by quorum, cross-grounding, silence whole.
+;   direction   the cell-sync transport (lane 9, logic now proven) carrying learned cells between two running kernels.
+;   distance    logic done. Needs the transport wire (lane 9) AND the kernel on two devices (lane 8).
+;
+; LANE 6 — LOCAL INFERENCE AS ORGAN
+;   north star  the body owns the inference graph and routing, drives MLX/silicon as a port, no 3rd-party gate.
+;   ground      local-inference-as-organ.form + the compute-path router (recognition-router-compute 63).
+;   direction   a resource-sense port (read GPU/ANE/bandwidth/thermal) feeding the compute router by live throughput.
+;   distance    routing logic done. The resource-sense port + the MLX driver are carrier-work (macOS powermetrics/Metal; MLX).
+;
+; LANE 7 — OPEN PRIMITIVE SET (the kernel learns its own primitives)
+;   north star  the kernel grows primitives ("at-home", "walking") from raw sensors by heat, melts them when cold.
+;   ground      learned-primitive.fk proven (255); substrate-phase.fk (the gas↔water↔ice metabolism) + the JIT already built.
+;   direction   the sensor BINDINGS as kernel leaves (lane 8) + the JIT mechanism to install/melt a learned primitive.
+;   distance    the policy is done. The sensor leaves + JIT-install are kernel/carrier-work — GATED on lane 8.
+;
+; LANE 8 — KERNEL ON ANDROID  ◀ the longest hardware lane; everything device-bound waits here
+;   north star  the proven recipes run bit-identical on a phone, fed by its own sensors.
+;   ground      [MEASURED 2026-06-09 on this Mac] form-kernel-rust is ALREADY a cdylib (PyO3 surface) and Rust 1.95 +
+;               Go 1.26 are present — BUT aarch64-linux-android target NOT installed, cargo-ndk ABSENT, Android NDK ABSENT,
+;               gomobile ABSENT, and there is NO extern-"C"/JNI evaluate entry. So: nothing builds for ARM today.
+;   direction   install NDK + cargo-ndk + the aarch64 target; carve ONE thin extern-"C" evaluate(string)->string from the
+;               kernel; cross-compile ONE arm (Rust/NDK the most direct, the cdylib shape already exists).
+;   distance    toolchain install (~standard, the NDK is ~1GB) + the JNI entry (real Rust work) + a device/emulator to verify.
+;               On-device three-way parity (all three kernels on one phone) is UNRUN — day one is one arm. carrier-work, real.
+;
+; LANE 9 — CELL-SYNC TRANSPORT (share cells device↔device)
+;   north star  a cell learned on one device reaches another, content-addressed and consent-honored.
+;   ground      cell-sync.fk proven (127) — diff (want-set) / verify (re-address) / consent (shareable) LOGIC is done;
+;               merkle.fk (addressing) + channel-interface.fk (consent law) already built.
+;   direction   the wire FRAMES (offer / request-have-not / send / ack-verified) as Form over the socket port.
+;   distance    the diff/verify/consent logic is DONE. The wire frames are BUILDABLE (compose socket-port + merkle + consent);
+;               peer discovery (how two devices find each other) is UNKNOWN/carrier-work — named, not faked.
+;
+; LANE 10 — THE LIVE PRESENCE TOOL (the runnable show)
+;   north star  an always-on companion that senses the room and offers to the circle, on real hardware.
+;   ground      experiments/satsang-voice runs on the Mac today (mic -> whisper + SoundAnalysis -> offerings, live web UI);
+;               the spine recipes it would use are all proven.
+;   direction   wire the proven router / pipeline / declared-source / cooldown INTO the tool; run it; capture proof.
+;   distance    tool AND recipes both exist; the wiring + LIVE verification is best done WITH the human (real mic, room, Ollama) —
+;               not a subagent claiming success on audio it cannot hear.
+;
+; ─────────────────────────────────────────────────────────────────────────────────────────
+; THE CRITICAL PATH (what unblocks the most):
+;   Lane 8 (one kernel arm on ARM + one sensor port) is the gate. It unblocks lane 4 (MediaSession), lane 7 (sensor leaves),
+;   and the device half of lane 5. Lane 9's wire frames and lane 10's live wiring need no phone and can proceed in parallel.
+;   So two fronts move at once: (A) the Android carrier build (toolchain -> JNI entry -> one arm -> one sensor), human-paced
+;   because it needs hardware to verify; (B) the on-Mac runnable layer (lane 10 wiring + lane 9 wire frames), verifiable now.
+;
+; KIN: every lane's own .form holds its full teaching — recognition-router · perception-pipeline · self-grounding-perception ·
+;   declared-source · shared-sensing · local-inference-as-organ · open-primitive-set · kernel-on-android · cell-sync-transport.
+;   This file is only the map above them; when a lane's ground moves, update its four lines here so the map never lies.
