@@ -1,0 +1,31 @@
+; preludes: form-stdlib/active-inference.fk
+;
+; active-inference-band — the predict/observe/ERROR/update loop, made falsifiable.
+;
+; A run of 4 steps, each (list predicted actual). Three landed, one missed:
+;   ("a" "a") hit · ("b" "b") hit · ("c" "x") MISS (predicted c, world delivered x) · ("d" "d") hit
+; So total prediction error (surprise) is 1, hits are 3. The miss is the one step worth learning from;
+; the hits teach nothing new. The body is "settled" when residual surprise is within tolerance: at
+; tolerance 2 (one miss is allowed) it has learned the field; at tolerance 0 (a flawless run demanded)
+; the single miss disqualifies it — the honest gate, nothing rounds toward settled.
+;
+; Verdict 127 when every claim lands:
+;   1   total prediction error over the run is exact                 (surprise-count == 1)
+;   2   the hits the model already fits are exact                    (hit-count == 3)
+;   4   within tolerance 2 the body has learned the field            (settled == 1)
+;   8   at tolerance 0 the lone miss disqualifies it (honest gate)   (settled == 0)
+;   16  the miss is the step worth learning from                     (learn? on miss == 1)
+;   32  a step that landed teaches nothing new                       (learn? on hit == 0)
+;   64  hit and surprise are true inverses on the same miss step     (hit?==0 and surprised?==1)
+(do
+    (let miss   (list "c" "x"))
+    (let landed (list "a" "a"))
+    (let run    (list landed (list "b" "b") miss (list "d" "d")))
+    (let c0 (if (eq (ai-surprise-count run) 1) 1 0))
+    (let c1 (if (eq (ai-hit-count run) 3) 2 0))
+    (let c2 (if (eq (ai-settled? run 2) 1) 4 0))
+    (let c3 (if (eq (ai-settled? run 0) 0) 8 0))
+    (let c4 (if (eq (ai-learn? miss) 1) 16 0))
+    (let c5 (if (eq (ai-learn? landed) 0) 32 0))
+    (let c6 (if (and (eq (ai-hit? miss) 0) (eq (ai-surprised? miss) 1)) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

@@ -1,0 +1,39 @@
+; preludes: form-stdlib/body-state.fk
+;
+; body-state-band — collapse live signals into one inspectable state, made falsifiable.
+;
+; Two snapshots the dashboard would render:
+;   busy  — organs 4, peers 2, surprises 1, errors 3, samples 10
+;           four senses live, two bodies on the mesh, one thing surprised it, 3 of 10 predictions
+;           missed (so 7 landed right — net-learning). A perceiving, learning, surprised body.
+;   quiet — organs 0, peers 0, surprises 0, errors 0, samples 0
+;           nothing live, no one on the mesh, no surprises, nothing graded. A silent body.
+;
+; Each bit pins one boundary, both polarities proven so a true reading is not luck:
+;   1   busy is ALIVE                     (peers 2 > 0)
+;   2   quiet is NOT alive                (peers 0, self absent — honest silence)
+;   4   busy is NET-LEARNING              (samples 10 > errors 3 — more right than wrong)
+;   8   a wrong-heavy state is NOT learning (errors 5 >= samples 4 — the negative; gate holds)
+;   16  busy organs at min 3              (organs 4 >= 3 — enough senses to be perceiving)
+;   32  quiet is NOT busy at min 3        (organs 0 < 3 — the floor refuses an empty body)
+;   64  busy is SURPRISED and quiet is NOT (surprises 1 > 0, and 0 stays silent — both halves)
+;
+; Verdict 127 when every claim lands.
+(do
+    (let busy  (list 4 2 1 3 10))
+    (let quiet (list 0 0 0 0 0))
+    ; a state where more predictions missed than were graded — net-NOT-learning
+    (let losing (list 2 1 0 5 4))
+
+    (let c0 (if (eq (bs-alive? busy) 1) 1 0))
+    (let c1 (if (eq (bs-alive? quiet) 0) 2 0))
+    (let c2 (if (eq (bs-learning? busy) 1) 4 0))
+    (let c3 (if (eq (bs-learning? losing) 0) 8 0))
+    ; bs-busy-organs? / bs-surprised? return a bare comparison (ge / gt); consume it directly inside
+    ; `if` the way recognition-router-band consumes rr-passes? — every kernel agrees on `if (bool)`,
+    ; but they diverge on `(eq bool 1)` because the bare-boolean representation differs across kernels.
+    (let c4 (if (bs-busy-organs? busy 3) 16 0))
+    (let c5 (if (bs-busy-organs? quiet 3) 0 32))
+    (let c6 (if (bs-surprised? busy) (if (bs-surprised? quiet) 0 64) 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

@@ -1,0 +1,62 @@
+; mesh-relay.fk — a body relays a peer's message onward so it reaches bodies out of direct range.
+;
+; device-heartbeat.fk turned presence into pairwise discovery: two bodies in range find each other.
+; This is the next ring — the MESH. A body that hears a message it is not the destination for
+; REBROADCASTS it, so the message hops body-to-body across a room no single radio spans. This is
+; Bluetooth Mesh's "managed flooding": every node forwards once, the hop budget shrinks by one each
+; relay, and a node never forwards a message it has already seen. Three rules keep the flood from
+; drowning the field: forward only with hops left, forward only what is new to me, decrement on relay.
+;
+; A message = (list msg-id origin hops payload):
+;   msg-id  — unique id of THIS message ("m1", "m2", ...); the dedup key (membership = "already saw it")
+;   origin  — the body that first emitted it ("mac", "phone-7", ...)
+;   hops    — the TTL, modeled as a LIST of hop-tokens. ttl-value = its len; decrement = (tail);
+;             "still has hops" = (gt (len hops) 0). There is no sub — counting by list length is the
+;             decrement. An empty hops list is an exhausted message: it dies where it lands, no relay.
+;   payload — what the message carries (opaque to the relay logic; the mesh never reads it)
+;
+; The managed-flood rule lives in mr-relay?: rebroadcast iff hops remain AND I have not seen the id.
+; mr-forward is the decremented copy a relaying body re-emits — the SAME message, one hop spent.
+;
+; EXTENDS: device-heartbeat.fk (membership/liveness over the same beacon field; this adds the relay).
+; Proven by: form-stdlib/tests/mesh-relay-band.fk (three-way at validate.sh)
+
+(do
+    (defn mr-id      (msg) (nth msg 0))
+    (defn mr-origin  (msg) (nth msg 1))
+    (defn mr-hops    (msg) (nth msg 2))
+    (defn mr-payload (msg) (nth msg 3))
+
+    ; TTL as length-of-hops: how many forwards this message can still take.
+    (defn mr-ttl (msg) (len (mr-hops msg)))
+
+    ; membership of a msg-id in the seen-set (content-addressed "did this already pass through me").
+    ; Same shape as device-heartbeat's hb-has? — str_eq over a list of ids.
+    (defn mr-member? (id ids)
+        (if (eq (len ids) 0) 0
+            (if (str_eq id (head ids)) 1 (mr-member? id (tail ids)))))
+
+    ; have I already relayed this message? (dedup gate — drop duplicates of the same id)
+    (defn mr-seen? (msg ids) (mr-member? (mr-id msg) ids))
+
+    ; STILL REACHABLE: the message has hops left to spend (gt (len hops) 0). An exhausted message
+    ; (empty hops) is gone — it reached its TTL and stops here.
+    (defn mr-reachable? (msg) (if (gt (mr-ttl msg) 0) 1 0))
+
+    ; THE MANAGED-FLOOD RULE: rebroadcast iff it still has hops AND I have not seen it.
+    ; (and ...) is binary — both gates, nested. The (if ... 1 0) normalizes the gate to an integer
+    ; 1/0 (and's native truth value renders differently across kernels — always settle it to 0/1 the
+    ; way device-heartbeat's hb-can-connect? does). Forward once, decremented; never re-forward a seen
+    ; id; never forward a dead (0-hop) message.
+    (defn mr-relay? (msg ids)
+        (if (and (gt (mr-ttl msg) 0)
+                 (eq (mr-seen? msg ids) 0))
+            1 0))
+
+    ; FORWARD: the same message with one hop spent — decrement is (tail hops). id/origin/payload
+    ; ride along unchanged; only the hop budget shrinks. (tail of an empty list is empty, so a 0-hop
+    ; message forwards to a 0-hop message — but mr-relay? gates that case out before we get here.)
+    (defn mr-forward (msg)
+        (list (mr-id msg) (mr-origin msg) (tail (mr-hops msg)) (mr-payload msg)))
+
+    0)

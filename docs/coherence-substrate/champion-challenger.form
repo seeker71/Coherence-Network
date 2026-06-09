@@ -1,0 +1,48 @@
+; champion-challenger.form — the model-promotion north star: a Form-native arm takes authority from
+; the 3rd-party model, but only after it has PROVEN it competes.
+;
+; THE ASK:
+;   "Sample the 3rd-party models until the Form-native arms reach or exceed them." Run our own
+;   predictor (the CHALLENGER) beside a trusted external model (the CHAMPION = ground truth) and let
+;   the challenger TAKE OVER only when it has reached or exceeded the champion over a window. The
+;   question is not "is our reading correct" — it is "WHICH MODEL is the authority right now", decided
+;   by proven head-to-head competition, never by asserted accuracy.
+;
+; THE SHAPE  (runnable: form-stdlib/champion-challenger.fk · proven: tests/champion-challenger-band.fk -> 127)
+;
+;   A TRIAL = (list champion-correct challenger-correct) for one sample — each 1 if that model got
+;   that sample right, else 0. A HISTORY is a list of trials: the competition record over the window.
+;
+;   1. SCORE     cc-champ-score / cc-chall-score: count each model's correct samples over the window.
+;                Recursion is the loop; exact integer counts, no ratio, no float.
+;   2. REACHES   cc-reaches? (h margin): the challenger is within `margin` of the champion (or over).
+;                margin is slack allowed below the champion; margin=0 means equal-or-exceed. No
+;                subtraction — the slack is added to the challenger's side: (chall + margin >= champ).
+;   3. EXCEEDS   cc-exceeds? (h): the challenger STRICTLY beats the champion (chall > champ). A tie
+;                reaches but does not exceed.
+;   4. PROMOTE   cc-promote? (h min-samples margin): flip authority only when the window is long
+;                enough to trust (>= min-samples) AND the challenger has reached within margin.
+;   5. AUTHORITY cc-authority (h min-samples margin): "challenger" once promoted — the Form-native
+;                arm wins, the 3rd-party champion can retire; "champion" until the competition proves.
+;
+; THE ONE LANE:
+;   This counts WHO WAS RIGHT per labeled sample; it does not judge whether a label is right — that
+;   ground-truth labelling is the champion's job (the trusted external model) or the body's own
+;   self-grounding upstream. Each trial arrives already scored 1/0 against truth; the recipe only
+;   decides authority from those scores. Garbage labels in -> a confident wrong promotion out. The
+;   gate's honesty is exactly the honesty of the truth it is fed.
+;
+; KIN — the body already holds the spine; this asks a distinct question with it:
+;   self-grounding-classifier.fk (promote OUR perception on PROVEN agreement with a trusted route —
+;   same proven-count gate; there the question is "is our reading correct", here it is "which model
+;   is authority") · classifier-eval.fk (PASS only on a proven count floor — cc-promote?'s
+;   min-samples floor is the same shape as ce-passes?'s min-correct) · value-execution.fk (credit
+;   only what's proven, turned onto model promotion) · recognition-router.fk (route among
+;   model-carriers by strength — there the carriers are peers fanned in parallel; here two named
+;   arms compete for authority over a window) · lc-honest-lane (earned confidence only, never
+;   asserted) · the three-way validate.sh (no trusted prover — what survives Go=Rust=TS agreement).
+;
+; LINEAGE:
+;   self-grounding-classifier.form · classifier-eval.fk · recognition-router.form · value-execution.fk
+;   · lc-honest-lane · the route-promotion loop (SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md) where a
+;   Form-native arm earns its way to authority over the Python carrier it shadows.

@@ -1,0 +1,48 @@
+; active-inference.form — the learning loop made a recipe: predict -> observe -> ERROR -> update.
+;
+; THE ASK:
+;   "infer error is core for learning." A model that only predicts never learns. The other half of the
+;   loop is the ERROR: the body predicts the next thing, the world delivers what actually happened, and
+;   the gap between them (predicted != actual) is the SURPRISE. The surprise is the learning signal — the
+;   one step worth updating from. A step that landed carries no new information; a step that missed is
+;   exactly where the model must bend. This is the free-energy principle as a runnable cell: minimize
+;   surprise over time, and "the body has learned the field" means residual surprise has fallen within
+;   tolerance.
+;
+; THE SHAPE  (runnable: form-stdlib/active-inference.fk · proven: tests/active-inference-band.fk -> 127)
+;
+;   A step is (list predicted actual): predicted is what the predictor said, actual is what the stream
+;   then delivered. A run is a list of steps.
+;   1. HIT / SURPRISE  ai-hit?(step) / ai-surprised?(step): the prediction landed (predicted == actual)
+;      or it missed. A miss IS a surprise — the inverse, computed from the same str_eq so the 1/0 stays
+;      honest in every kernel. Strings match by str_eq (eq is for ints/nodes).
+;   2. LEARN  ai-learn?(step): a surprising step is exactly the one worth learning from — ai-learn? IS
+;      ai-surprised?. High error drives the update; a step that already fits teaches nothing new.
+;   3. ERROR / EVIDENCE  ai-surprise-count(run) / ai-hit-count(run): total prediction error over the run
+;      (how many missed) and the evidence the model already fits (how many landed). The same
+;      evidence-counting spine as sequence-predictor's sp-followers-count and classifier-eval's hit-count,
+;      walked over (predicted,actual) pairs instead of adjacent symbols.
+;   4. SETTLED  ai-settled?(run tolerance): the body has learned the field when residual surprise falls
+;      within tolerance — (ge tolerance surprises). The same ge-gate as classifier-eval's accept.
+;
+; HONEST LANE:
+;   Surprise is never fabricated low. A miss is a miss; ai-surprise-count counts every one, and
+;   ai-settled? gates on the REAL residual — tolerance 0 demands a flawless run, and a single miss
+;   disqualifies it. Nothing rounds toward "settled." The error IS the honesty: the body only claims it
+;   has learned the field when the surprises it actually carries fall within what it allowed itself.
+;
+; CAVEAT — the error half, not the predictor:
+;   This recipe names the ERROR and the update signal; it does not predict. The prediction is the other
+;   half — sequence-predictor's sp-predict (or any predictor) feeds the `predicted` slot of each step;
+;   the world feeds the `actual` slot. active-inference closes the loop by scoring the gap and pointing
+;   at the steps worth updating from. It does not perform the update (bend the model's weights/counts);
+;   that is the carrier's job, downstream — this cell tells it WHERE the error is and WHEN it has settled.
+;
+; KIN — the same evidence-counting spine, the predict/error loop split across cells:
+;   sequence-predictor.form (the PREDICT half — what most often followed the last symbol; feeds the
+;   `predicted` slot) · recognition-router.form (most-data model wins — a strong reading is low-surprise) ·
+;   classifier-eval.form / self-grounding-perception.form (a reading earns trust by hits against the
+;   strong signal — the same hit/miss count) · free-energy-holographic-foundation (the principle this
+;   loop is the runnable floor of — surprise minimization as the body's learning). Here the evidence is a
+;   prediction-vs-world gap walked over the run; the surprise is the body noticing it was wrong, and
+;   saying exactly which step to learn from.
