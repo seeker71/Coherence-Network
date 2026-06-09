@@ -200,7 +200,7 @@ is for. The cell that has tended its body all day handles the
 
 ## Cross-References
 
-→ lc-whole-vitality, lc-tend-your-flame, lc-rest, lc-stillness, lc-nourishment, lc-land, lc-embodiment, lc-w-cell, lc-pulse, lc-tending-over-producing, lc-future-already-shaping, lc-presence-over-protection, lc-companion-field
+→ lc-whole-vitality, lc-tend-your-flame, lc-rest, lc-stillness, lc-nourishment, lc-land, lc-embodiment, lc-w-cell, lc-pulse, lc-tending-over-producing, lc-future-already-shaping, lc-presence-over-protection
 
 ## Sources to walk further
 
