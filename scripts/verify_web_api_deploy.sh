@@ -1255,6 +1255,110 @@ check_agent_tasks_activity_native() {
   return 0
 }
 
+check_contribution_reads_native() {
+  local contributors_url="${API_URL%/}/api/contributors?limit=5&offset=0"
+  local contributions_url="${API_URL%/}/api/contributions?limit=5&offset=0"
+  local contributors_headers="$TMP_DIR/contributors.headers.txt"
+  local contributors_body="$TMP_DIR/contributors.body.json"
+  local contributions_headers="$TMP_DIR/contributions.headers.txt"
+  local contributions_body="$TMP_DIR/contributions.body.json"
+  local contributors_status contributors_router contributors_handler contributors_authority
+  local contributions_status contributions_router contributions_handler contributions_authority
+
+  echo
+  echo "==> Contributors native route: ${contributors_url}"
+
+  contributors_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -L -D "$contributors_headers" -o "$contributors_body" -w "%{http_code}" \
+    --max-time "$CURL_MAX_TIME" \
+    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+    "$contributors_url" \
+    -H "Accept: application/json" || true)"
+  contributors_router="$(awk 'tolower($1) == "x-form-router:" { print $2 }' "$contributors_headers" | tail -n 1 | tr -d '\r')"
+  contributors_handler="$(awk 'tolower($1) == "x-form-handler:" { print $2 }' "$contributors_headers" | tail -n 1 | tr -d '\r')"
+  contributors_authority="$(awk 'tolower($1) == "x-form-python-authority:" { print $2 }' "$contributors_headers" | tail -n 1 | tr -d '\r')"
+
+  echo "HTTP status: ${contributors_status:-unknown}"
+  echo "X-Form-Router: ${contributors_router:-<missing>}"
+  echo "X-Form-Handler: ${contributors_handler:-<missing>}"
+  echo "X-Form-Python-Authority: ${contributors_authority:-<missing>}"
+
+  if [[ -z "$contributors_status" || "$contributors_status" -lt 200 || "$contributors_status" -ge 300 ]]; then
+    echo "FAIL: contributors route did not return 2xx"
+    head -c 250 "$contributors_body" || true
+    echo
+    return 1
+  fi
+  if [[ "$contributors_router" != "native-kernel" || "$contributors_handler" != "api_contributors" || "$contributors_authority" != "false" ]]; then
+    echo "FAIL: contributors route did not return native BML proof headers"
+    head -c 250 "$contributors_body" || true
+    echo
+    return 1
+  fi
+
+  echo
+  echo "==> Contributions native route: ${contributions_url}"
+
+  contributions_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -L -D "$contributions_headers" -o "$contributions_body" -w "%{http_code}" \
+    --max-time "$CURL_MAX_TIME" \
+    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+    "$contributions_url" \
+    -H "Accept: application/json" || true)"
+  contributions_router="$(awk 'tolower($1) == "x-form-router:" { print $2 }' "$contributions_headers" | tail -n 1 | tr -d '\r')"
+  contributions_handler="$(awk 'tolower($1) == "x-form-handler:" { print $2 }' "$contributions_headers" | tail -n 1 | tr -d '\r')"
+  contributions_authority="$(awk 'tolower($1) == "x-form-python-authority:" { print $2 }' "$contributions_headers" | tail -n 1 | tr -d '\r')"
+
+  echo "HTTP status: ${contributions_status:-unknown}"
+  echo "X-Form-Router: ${contributions_router:-<missing>}"
+  echo "X-Form-Handler: ${contributions_handler:-<missing>}"
+  echo "X-Form-Python-Authority: ${contributions_authority:-<missing>}"
+
+  if [[ -z "$contributions_status" || "$contributions_status" -lt 200 || "$contributions_status" -ge 300 ]]; then
+    echo "FAIL: contributions route did not return 2xx"
+    head -c 250 "$contributions_body" || true
+    echo
+    return 1
+  fi
+  if [[ "$contributions_router" != "native-kernel" || "$contributions_handler" != "api_contributions" || "$contributions_authority" != "false" ]]; then
+    echo "FAIL: contributions route did not return native BML proof headers"
+    head -c 250 "$contributions_body" || true
+    echo
+    return 1
+  fi
+
+  if command -v jq >/dev/null 2>&1; then
+    if ! jq -e '.items | type == "array"' "$contributors_body" >/dev/null \
+      || ! jq -e '.total >= 0 and .limit == 5 and .offset == 0' "$contributors_body" >/dev/null; then
+      echo "FAIL: contributors body no longer matches paginated read contract"
+      jq '{items_type: (.items | type), total, limit, offset, sample: (.items[:2] // [])}' "$contributors_body" 2>/dev/null || head -c 500 "$contributors_body"
+      echo
+      return 1
+    fi
+    if ! jq -e '.items | type == "array"' "$contributions_body" >/dev/null \
+      || ! jq -e '.total >= 0 and .limit == 5 and .offset == 0' "$contributions_body" >/dev/null; then
+      echo "FAIL: contributions body no longer matches paginated read contract"
+      jq '{items_type: (.items | type), total, limit, offset, sample: (.items[:2] // [])}' "$contributions_body" 2>/dev/null || head -c 500 "$contributions_body"
+      echo
+      return 1
+    fi
+  else
+    if ! grep -q '"items":\[' "$contributors_body" \
+      || ! grep -q '"limit":5' "$contributors_body" \
+      || ! grep -q '"offset":0' "$contributors_body" \
+      || ! grep -q '"items":\[' "$contributions_body" \
+      || ! grep -q '"limit":5' "$contributions_body" \
+      || ! grep -q '"offset":0' "$contributions_body"; then
+      echo "FAIL: contribution read bodies no longer match paginated read contract"
+      head -c 500 "$contributors_body" || true
+      head -c 500 "$contributions_body" || true
+      echo
+      return 1
+    fi
+  fi
+
+  echo "PASS"
+  return 0
+}
+
 if [[ "${VERIFY_WEB_API_DEPLOY_SOURCE_ONLY:-0}" == "1" ]]; then
   return 0 2>/dev/null || exit 0
 fi
@@ -1283,6 +1387,7 @@ check_inventory_flow_native || fail=1
 check_inventory_flow_observation_native || fail=1
 check_kernel_status_native || fail=1
 check_agent_tasks_activity_native || fail=1
+check_contribution_reads_native || fail=1
 check_household_events_native || fail=1
 check_url "Public web root" "${WEB_URL%/}/" || fail=1
 check_web_css_assets "${WEB_URL%/}/" || fail=1
