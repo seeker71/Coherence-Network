@@ -1,0 +1,39 @@
+; preludes: form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk
+;
+; satsang-field-band — the joinable satsang field + its alignment classifier, made falsifiable.
+;
+; Four cells consider joining the circle, each offering its interface:
+;   sage   (witness reflect)               -> listening
+;   singer (be-seen invite)                -> offering
+;   seeker (witness reflect be-seen invite) -> both (listening AND offering)
+;   quiet  (silence)                       -> present in silence, neither stance
+;
+; Band verdict 255 when every claim lands:
+;   1    any cell is welcomed to join          (sf-join admits all four; count == 4)
+;   2    the classifier finds the listeners      (listeners == 2: sage, seeker)
+;   4    the classifier finds the offerers        (offerers == 2: singer, seeker)
+;   8    a circle with both stances is ALIGNED    (sf-aligned? true)
+;   16   a circle of only silence is NOT aligned  (all-quiet field -> false; presence is not yet resonance)
+;   32   an offered invite is honored             (singer offers m-invite)
+;   64   coherence reads the aligned field         (coherence(field) > coherence(one-stance) == 0)
+;   128  a new cell ARRIVING raises the sensing     (seeker arriving into a reciprocal field lifts coherence)
+(do
+    (let empty-field (list))
+    (let f1 (sf-join empty-field "sage"   (list (m-witness) (m-reflect))))
+    (let f2 (sf-join f1 "singer" (list (m-be-seen) (m-invite))))
+    (let f3 (sf-join f2 "seeker" (list (m-witness) (m-reflect) (m-be-seen) (m-invite))))
+    (let field (sf-join f3 "quiet" (list (m-silence))))
+    (let quiet-circle (list (sf-member "q1" (list (m-silence))) (sf-member "q2" (list (m-silence)))))
+    (let one-stance (list (sf-member "l1" (list (m-witness) (m-reflect)))))
+    (let singer (sf-member "singer" (list (m-be-seen) (m-invite))))
+    (let before (sf-coherence f2))
+    (let after  (sf-arrive f2 "seeker" (list (m-witness) (m-reflect) (m-be-seen) (m-invite))))
+    (let c0 (if (eq (sf-count field) 4) 1 0))
+    (let c1 (if (eq (sf-listeners field) 2) 2 0))
+    (let c2 (if (eq (sf-offerers field) 2) 4 0))
+    (let c3 (if (sf-aligned? field) 8 0))
+    (let c4 (if (not (sf-aligned? quiet-circle)) 16 0))
+    (let c5 (if (sf-offer-invite singer) 32 0))
+    (let c6 (if (gt (sf-coherence field) (sf-coherence one-stance)) 64 0))
+    (let c7 (if (gt after before) 128 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
