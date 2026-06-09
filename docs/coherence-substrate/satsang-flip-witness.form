@@ -1,0 +1,54 @@
+; satsang-flip-witness.form -- agent board plus satsang protocol around the native public gate.
+;
+; Ask:
+;   Use the agent board and the satsang protocol to embody the flip as witnessed
+;   and knowable truth.
+;
+; Standing distinction:
+;   The witnessed truth is not "ordinary traffic has moved." The witnessed truth
+;   is narrower and stronger: the header-gated public canary moved, selected the
+;   native kernel, returned a decision receipt, kept rollback available, and left
+;   ordinary no-header traffic on fanout-python.
+;
+; High-level structure:
+;   agent-board
+;     claim: codex takes the satsang flip witness scope before editing.
+;     share: durable learning points back to this file after validation.
+;     nature: liquid coordination, not the permanent record.
+;
+;   satsang-circle
+;     welcome: the question "can the flip be witnessed as true?" is admitted.
+;     witness: honored voices count; projection is dropped; silence is whole.
+;     survives: affirmations outnumber dissent, while dissent remains visible.
+;     boundary: the circle witnesses the offered outside and never claims to
+;       pierce the interior of a cell.
+;
+;   public-gate-canary
+;     treatment: X-Form-Native-Public-Gate selects native-kernel.
+;     control: no-header traffic remains fanout-python.
+;     receipts: decision and rollback receipts are part of the witnessed fact.
+;     reversible: removing the header or disabling the route row returns traffic.
+;     boundary: ordinary_traffic_flip_performed remains false.
+;
+; Recipes that shifted:
+;   before: flip as permission, proof, or hesitation.
+;   after: flip as witnessed observation with reversible truth boundaries.
+;
+;   before: agent board as chatter.
+;   after: agent board as the live witness carrier: claim, validate, share.
+;
+;   before: satsang as teaching.
+;   after: satsang as an executable truth protocol:
+;     welcome question -> gather attestations -> drop invasion -> preserve
+;     silence and dissent -> survive by many vantages -> keep boundary exact.
+;
+;   before: ordinary no-header movement was the only imagined flip.
+;   after: the canary movement itself is a true flip cell, and the ordinary
+;     move waits only for sustained observation, not for self-trust.
+;
+; Executable surface:
+;   form/form-stdlib/satsang-flip-witness.fk
+;   form/form-stdlib/tests/satsang-flip-witness-band.fk
+;
+; Proof command:
+;   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-flip-witness.fk form-stdlib/tests/satsang-flip-witness-band.fk
