@@ -1,0 +1,110 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/kernel-core-self-20260609",
+  "commit_scope": "Add a minimal kernel-core self source body in BML and a sibling-kernel Form proof that parses the source, builds a KERNEL-CORE-IMAGE, executes witness recipes, observes NodeID/category/children identity, and round-trips the image through .fkb.",
+  "files_owned": [
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-stdlib/bml/kernel-core.bml",
+    "form/form-stdlib/grammars/bml.fk",
+    "form/form-stdlib/tests/kernel-core-self-proof.fk",
+    "docs/system_audit/commit_evidence_20260609_kernel_core_self.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/kernel-core-self-proof.fk",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260609_kernel_core_self.json",
+      "git diff --check",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "make wellness"
+    ],
+    "notes": "Dedicated worktree prompt gate passed on codex/kernel-core-self-20260609. The branch is rebased onto origin/main. The focused kernel-core proof returns 43 with 1 ok, 0 divergent across Go, Rust, and TypeScript kernels. Evidence validation, diff check, local PR guard, followthrough guard, and wellness pass. The proof writes /tmp/kernel-core-self-image.fkb and reads it back, proving image identity without committing an ignored .cache artifact."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until this branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No deploy attempted for this Form runtime source/proof slice."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local focused proof, evidence validation, rebase, local PR guard, followthrough guard, and wellness pass. Commit, push, PR, and remote CI remain pending."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A new kernel-core self source body is expressible in BML and verifiable through Form/kernel primitives. The proof establishes the minimal core as source-observable, executable, and trustable by sibling-kernel agreement rather than by a host-language parser path.",
+    "public_endpoints": [
+      "internal Form sibling kernels"
+    ],
+    "test_flows": [
+      "BML source parser sees KernelCorePrimitive, KernelCoreImage, and KernelCoreSelf member bodies after the bounded class-body whitelist is extended.",
+      "KERNEL-CORE-IMAGE resolves through the generated bp tables in Go, Rust, and TypeScript.",
+      "The proof builds math, compare, logic, conditional, and block recipes with intern_node and executes them through walk_recipe.",
+      "The proof observes native attribution for intern_node, walk_recipe, node_children, and node_category through native_blueprint.",
+      "The proof writes and reads /tmp/kernel-core-self-image.fkb and verifies loaded NodeID/category/child values."
+    ]
+  },
+  "idea_ids": [
+    "form-kernel-self-hosting",
+    "kernel-core-self"
+  ],
+  "spec_ids": [
+    "bmf-bml-compiler-picture",
+    "form-kernel-roadmap"
+  ],
+  "task_ids": [
+    "kernel-core-self-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "architecture-review",
+        "self-hosting-priority"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/bml/kernel-core.bml names KernelCoreObservable, KernelCorePrimitive, KernelCoreImage, and KernelCoreSelf as the minimal source body.",
+    "form/form-stdlib/tests/kernel-core-self-proof.fk parses the BML source and proves the kernel-core self through 43 assertions.",
+    "form/form-stdlib/grammars/bml.fk extends the bounded source-model body whitelist to KernelCoreObservable, KernelCorePrimitive, KernelCoreImage, and KernelCoreSelf.",
+    "form/form-stdlib/blueprint-registry.json registers KERNEL-CORE-IMAGE at 1.2.99.15.",
+    "Generated bp tables in Go, Rust, and TypeScript include KERNEL-CORE-IMAGE so sibling kernels resolve the same NodeID.",
+    "Focused validation: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/kernel-core-self-proof.fk -> 43; 1 ok, 0 divergent."
+  ],
+  "change_files": [
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-stdlib/bml/kernel-core.bml",
+    "form/form-stdlib/grammars/bml.fk",
+    "form/form-stdlib/tests/kernel-core-self-proof.fk",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}

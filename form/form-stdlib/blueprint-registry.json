@@ -432,6 +432,18 @@
       "pkg": 1,
       "level": 2,
       "type": 99,
+      "inst": 15,
+      "name": "KERNEL-CORE-IMAGE",
+      "meaning": "Serialized minimal kernel-core self image: source path, image path, core name, primitive count, dispatch count, proof count, and executable witness recipes",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 9,
       "name": "AEC-EVIDENCE-CELL",
       "meaning": "",

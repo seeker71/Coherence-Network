@@ -1,0 +1,191 @@
+//////////////////////////////////////////////////////////////////////
+//
+// kernel-core.bml
+//
+// The smallest self the Form kernels must carry before higher language,
+// API, web, or persistence surfaces can be trusted. This is source, not
+// generated metadata: the proof band parses this BML, builds the same
+// core as a Form image, walks real recipes, and round-trips the image as
+// .fkb across Go, Rust, and TypeScript sibling kernels.
+//
+//////////////////////////////////////////////////////////////////////
+
+package Form.kernel;
+
+interface KernelCoreObservable [public, witness] {
+   section [public] {
+      String Name() [get];
+      String Category() [get];
+      String Blueprint() [get];
+      bool Observable() [get];
+      bool Executable() [get];
+      bool Trustable() [get];
+   }
+}
+
+class KernelCorePrimitive [public, value, kernelCore] : KernelCoreObservable {
+   section [private] {
+      String m_strName;
+      String m_strCategory;
+      String m_strBlueprint;
+      bool m_bObservable;
+      bool m_bExecutable;
+      bool m_bTrustable;
+   }
+
+   section [public] {
+      KernelCorePrimitive(
+         String strName,
+         String strCategory,
+         String strBlueprint,
+         bool bObservable,
+         bool bExecutable,
+         bool bTrustable ) {
+         m_strName = strName;
+         m_strCategory = strCategory;
+         m_strBlueprint = strBlueprint;
+         m_bObservable = bObservable;
+         m_bExecutable = bExecutable;
+         m_bTrustable = bTrustable;
+      }
+
+      String Name() [get] {
+         return m_strName;
+      }
+
+      String Category() [get] {
+         return m_strCategory;
+      }
+
+      String Blueprint() [get] {
+         return m_strBlueprint;
+      }
+
+      bool Observable() [get] {
+         return m_bObservable;
+      }
+
+      bool Executable() [get] {
+         return m_bExecutable;
+      }
+
+      bool Trustable() [get] {
+         return m_bTrustable;
+      }
+   }
+}
+
+class KernelCoreImage [public, value, image, kernelCore] {
+   section [private] {
+      String m_strSourcePath;
+      String m_strImagePath;
+      String m_strImageKind;
+      int m_nPrimitiveCount;
+      int m_nDispatchCount;
+      int m_nProofCount;
+   }
+
+   section [public] {
+      const String ImageKind = "KERNEL-CORE-IMAGE";
+      const String ImageExtension = ".fkb";
+      const String SourceAuthority = "BML source plus Form sibling proof";
+
+      KernelCoreImage(
+         String strSourcePath,
+         String strImagePath,
+         int nPrimitiveCount,
+         int nDispatchCount,
+         int nProofCount ) {
+         m_strSourcePath = strSourcePath;
+         m_strImagePath = strImagePath;
+         m_strImageKind = ImageKind;
+         m_nPrimitiveCount = nPrimitiveCount;
+         m_nDispatchCount = nDispatchCount;
+         m_nProofCount = nProofCount;
+      }
+
+      String SourcePath() [get] {
+         return m_strSourcePath;
+      }
+
+      String ImagePath() [get] {
+         return m_strImagePath;
+      }
+
+      String Kind() [get] {
+         return m_strImageKind;
+      }
+
+      int PrimitiveCount() [get] {
+         return m_nPrimitiveCount;
+      }
+
+      int DispatchCount() [get] {
+         return m_nDispatchCount;
+      }
+
+      int ProofCount() [get] {
+         return m_nProofCount;
+      }
+   }
+}
+
+class KernelCoreSelf [public, selfHosting, kernelCore, observable] {
+   section [private] {
+      KernelCorePrimitive[] m_hPrimitives;
+      KernelCoreImage m_hImage;
+   }
+
+   section [public] {
+      const String CoreName = "kernel-core-self";
+      const String MinimumSelf = "NodeID intern walk observe persist";
+      const String RuntimeFamily = "form-kernel-go form-kernel-rust form-kernel-ts";
+      const String TrustRule = "same source same NodeIDs same value same image across sibling kernels";
+      const String ImagePath = "form/form-stdlib/.cache/kernel-core.fkb";
+      const String BootstrapBoundary = "host kernels carry only primitives and I/O leaves";
+
+      KernelCoreSelf() {
+         m_hPrimitives = Array<KernelCorePrimitive>();
+      }
+
+      int RequiredPrimitiveCount() [get] {
+         return 8;
+      }
+
+      int RequiredDispatchCount() [get] {
+         return 15;
+      }
+
+      int RequiredProofCount() [get] {
+         return 6;
+      }
+
+      bool Minimal() [witness] {
+         return true;
+      }
+
+      bool Observable() [witness] {
+         return true;
+      }
+
+      bool Executable() [witness] {
+         return true;
+      }
+
+      bool Trustable() [witness] {
+         return true;
+      }
+
+      KernelCoreImage BuildImage( String strSourcePath ) {
+         m_hImage = KernelCoreImage(
+            strSourcePath,
+            ImagePath,
+            RequiredPrimitiveCount(),
+            RequiredDispatchCount(),
+            RequiredProofCount() );
+
+         return m_hImage;
+      }
+   }
+}
+
