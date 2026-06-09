@@ -92,7 +92,8 @@ def test_ideas_router_form_keeps_python_as_carrier_with_gap_named():
     assert "native-mutation-route-side-effects-test.sh proves application graph mutation plus side-effect execution are bound" in text
     assert "native-mutation-public-gate-test.sh plus mutation_public_gate_harness.py prove X-Form-Native-Public-Gate" in text
     assert "X-Form-Python-Fallback fans out as explicit refusal/control signal" in text
-    assert "until the HTTP native mutation handler preserves production persistence semantics" in text
+    assert "mutation_public_gate_harness.py now proves native HTTP mutation persistence" in text
+    assert "deployed header-gated canary verifies mounted production-config persistence" in text
 
 
 def test_ideas_router_form_describes_live_router_carrier():

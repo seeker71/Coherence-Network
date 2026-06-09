@@ -659,7 +659,9 @@ ensure_kernel_router_canary() {
     exit 1
   fi
 
-  local payload='{"id":"idea-public-canary-local","name":"Public Canary Local","description":"header-gated canary","manifestation_status":"partial"}'
+  local canary_id="idea-public-canary-local-$(date +%s)"
+  local payload
+  payload="$(printf '{"id":"%s","name":"Public Canary Local","description":"header-gated canary","manifestation_status":"partial"}' "$canary_id")"
   if ! docker compose "${compose_args[@]}" exec -T kernel-router sh -lc \
     "curl -fsS -D /tmp/kernel-canary.headers -o /tmp/kernel-canary.body \
       -X POST http://127.0.0.1:8080/api/ideas \
@@ -668,9 +670,11 @@ ensure_kernel_router_canary() {
       --data '$payload' \
       && grep -qi '^X-Form-Router: native-kernel' /tmp/kernel-canary.headers \
       && grep -q '\"decision_receipt\"' /tmp/kernel-canary.body \
+      && grep -q '\"executes\":true' /tmp/kernel-canary.body \
+      && grep -q '\"db_execution\":\"performed-by-http-native-persistence\"' /tmp/kernel-canary.body \
       && grep -q '\"ordinary_traffic_flip_performed\":true' /tmp/kernel-canary.body" \
     2>&1 | tee -a "$LOG_FILE"; then
-    log "FAIL: kernel-router canary local public-gate probe did not return native decision receipt"
+    log "FAIL: kernel-router canary local public-gate probe did not execute native persistence and return native decision receipt"
     exit 1
   fi
 

@@ -5,12 +5,15 @@ This turns the mutation flip into measurement before movement. It starts a
 local mock CPython upstream, starts the production kernel-router manifest in
 front of it, and sends each mutation shape twice:
 
-  A: no native mutation header       -> must accept native-default invitation.
+  A: no native mutation header       -> must accept native-default invitation
+                                         and execute through throwaway Postgres.
   B: X-Form-Native-Preview present   -> must return native SQL preview.
   C: X-Form-Python-Fallback present  -> must fan out as explicit control.
 
-No production database is touched. The output is a confidence report showing
-native default, preview observation, and explicit fallback as separate branches.
+No production database is touched. The harness self-provisions throwaway
+Postgres and passes it through the kernel config carrier. The output is a
+confidence report showing native default persistence, preview observation, and
+explicit fallback as separate branches.
 """
 
 from __future__ import annotations
@@ -37,6 +40,19 @@ STDLIB = REPO_ROOT / "form" / "form-stdlib"
 PREVIEW_HEADER = "X-Form-Native-Preview"
 PYTHON_FALLBACK_HEADER = "X-Form-Python-Fallback"
 IMPLICIT_NATIVE_PROTOCOL = "implicit-native-invitation"
+
+if str(HERE) not in sys.path:
+    sys.path.insert(0, str(HERE))
+
+from mutation_public_gate_harness import (  # noqa: E402
+    cleanup_kernel_config,
+    persistence_readback_checks,
+    provision_postgres,
+    reset_schema,
+    seed_case,
+    stop_postgres,
+    write_kernel_config,
+)
 
 
 @dataclass(frozen=True)
@@ -237,11 +253,21 @@ def http_request(
     return HTTPObservation(status=status, router=router, body=body, parsed=parsed)
 
 
+def default_http_request(base_url: str, case: ObservationCase, *, dsn: str) -> tuple[HTTPObservation, dict[str, bool]]:
+    reset_schema(dsn)
+    seed_case(dsn, case)
+    observation = http_request(base_url, case)
+    checks = persistence_readback_checks(dsn, case) if observation.status == 202 else {}
+    return observation, checks
+
+
 def evaluate_case(
     case: ObservationCase,
     default: HTTPObservation,
     treatment: HTTPObservation,
     fallback: HTTPObservation,
+    *,
+    default_db_checks: dict[str, bool] | None = None,
 ) -> CaseObservation:
     default_sql = str(default.parsed.get("sql") or "")
     sql = str(treatment.parsed.get("sql") or "")
@@ -266,6 +292,9 @@ def evaluate_case(
         "default_selected_path": default_decision.get("selected_path") == IMPLICIT_NATIVE_PROTOCOL,
         "default_sql_shape": all(part in default_sql for part in case.sql_contains),
         "default_body_seen": default.parsed.get("request_body", "") == (case.body or "{}"),
+        "default_executes_persistence": default.parsed.get("executes") is True,
+        "default_db_execution": default.parsed.get("db_execution")
+        == "performed-by-http-native-persistence",
         "fallback_fanned_out": fallback.router == "fanout-python",
         "fallback_status_ok": fallback.status == 200,
         "fallback_method_seen": fallback.parsed.get("method") == case.method,
@@ -302,6 +331,7 @@ def evaluate_case(
             and reversible_gate.get("ordinary_traffic_flip_allowed") is True
             and reversible_gate.get("ordinary_traffic_flip_performed") is True
         ),
+        **{f"default_{name}": ok for name, ok in (default_db_checks or {}).items()},
     }
     return CaseObservation(
         name=case.name,
@@ -347,8 +377,8 @@ def build_gate_report(
         "ordinary_traffic_flip_allowed": True,
         "python_fallback_header": PYTHON_FALLBACK_HEADER,
         "next_evidence_needed": [
+            "deployed header-gated canary persists through mounted production config",
             "public Traefik default mutation routes to kernel-router",
-            "native HTTP mutation handler preserves production persistence semantics",
             "explicit X-Form-Python-Fallback refusal/control signal is counted separately",
         ],
     }
@@ -360,6 +390,8 @@ def run_observation(min_confidence: float) -> dict[str, Any]:
     if not PRODUCTION_ROUTES.exists():
         raise RuntimeError(f"missing production routes: {PRODUCTION_ROUTES}")
 
+    pg = provision_postgres()
+    config_path = write_kernel_config(pg.dsn)
     upstream_port = free_port()
     router_port = free_port()
     upstream = http.server.ThreadingHTTPServer(
@@ -385,6 +417,8 @@ def run_observation(min_confidence: float) -> dict[str, Any]:
                 str(PRODUCTION_ROUTES),
                 "--stdlib",
                 str(STDLIB),
+                "--config",
+                str(config_path),
                 "--upstream",
                 f"http://127.0.0.1:{upstream_port}",
             ],
@@ -401,15 +435,18 @@ def run_observation(min_confidence: float) -> dict[str, Any]:
                 f"stderr={err.decode(errors='replace')}"
             )
         base_url = f"http://127.0.0.1:{router_port}"
-        observations = [
-            evaluate_case(
-                case,
-                http_request(base_url, case),
-                http_request(base_url, case, preview=True),
-                http_request(base_url, case, fallback=True),
+        observations = []
+        for case in CASES:
+            default, default_db_checks = default_http_request(base_url, case, dsn=pg.dsn)
+            observations.append(
+                evaluate_case(
+                    case,
+                    default,
+                    http_request(base_url, case, preview=True),
+                    http_request(base_url, case, fallback=True),
+                    default_db_checks=default_db_checks,
+                )
             )
-            for case in CASES
-        ]
         return build_gate_report(observations, min_confidence=min_confidence)
     finally:
         if router_proc is not None:
@@ -419,6 +456,8 @@ def run_observation(min_confidence: float) -> dict[str, Any]:
             except subprocess.TimeoutExpired:
                 router_proc.kill()
         upstream.shutdown()
+        cleanup_kernel_config(config_path)
+        stop_postgres(pg)
 
 
 def render_human(report: dict[str, Any]) -> str:
@@ -467,6 +506,18 @@ def main(argv: list[str] | None = None) -> int:
     try:
         report = run_observation(min_confidence=args.min_confidence)
     except Exception as exc:
+        if str(exc).startswith("SKIP:"):
+            report = {
+                "gate": "native_mutation_ab_observation",
+                "gate_pass": False,
+                "skipped": True,
+                "skip_reason": str(exc),
+            }
+            if args.json:
+                print(json.dumps(report, indent=2, sort_keys=True))
+            else:
+                print(str(exc))
+            return 0
         print(f"mutation A/B observation failed: {exc}", file=sys.stderr)
         return 2
 

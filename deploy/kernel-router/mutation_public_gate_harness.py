@@ -18,9 +18,11 @@ from __future__ import annotations
 import argparse
 import http.server
 import json
+import shutil
 import socket
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import urllib.error
@@ -38,6 +40,44 @@ PREVIEW_HEADER = "X-Form-Native-Preview"
 PUBLIC_GATE_HEADER = "X-Form-Native-Public-Gate"
 PYTHON_FALLBACK_HEADER = "X-Form-Python-Fallback"
 IMPLICIT_NATIVE_PROTOCOL = "implicit-native-invitation"
+
+SCHEMA_SQL = """
+DROP TABLE IF EXISTS graph_edges;
+DROP TABLE IF EXISTS graph_node_revisions;
+DROP TABLE IF EXISTS graph_nodes;
+CREATE TABLE graph_nodes (
+    id VARCHAR(255) PRIMARY KEY,
+    type VARCHAR(50) NOT NULL,
+    name TEXT NOT NULL DEFAULT '',
+    description TEXT NOT NULL DEFAULT '',
+    properties JSONB NOT NULL DEFAULT '{}'::jsonb,
+    phase VARCHAR(20) NOT NULL DEFAULT 'water',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE graph_node_revisions (
+    id VARCHAR(255) PRIMARY KEY,
+    node_id VARCHAR(255) NOT NULL,
+    revision_number INTEGER NOT NULL,
+    captured_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    source VARCHAR(32) NOT NULL DEFAULT 'api',
+    author VARCHAR(255) NOT NULL DEFAULT '',
+    fields_changed JSONB NOT NULL DEFAULT '[]'::jsonb,
+    snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
+    CONSTRAINT uq_node_revisions_node_rev UNIQUE (node_id, revision_number)
+);
+CREATE TABLE graph_edges (
+    id VARCHAR(255) PRIMARY KEY,
+    from_id VARCHAR(255) NOT NULL,
+    to_id VARCHAR(255) NOT NULL,
+    type VARCHAR(100) NOT NULL,
+    properties JSONB NOT NULL DEFAULT '{}'::jsonb,
+    strength DOUBLE PRECISION NOT NULL DEFAULT 1.0,
+    created_by VARCHAR(255) NOT NULL DEFAULT 'system',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE UNIQUE INDEX ix_graph_edges_pair ON graph_edges (from_id, to_id, type);
+"""
 
 
 @dataclass(frozen=True)
@@ -76,6 +116,13 @@ class PublicGateObservation:
     fallback_router: str
     operation: str
     node_id: str
+
+
+@dataclass(frozen=True)
+class ProvisionedPostgres:
+    dsn: str
+    directory: Path
+    port: int
 
 
 CASES: tuple[PublicGateCase, ...] = (
@@ -174,6 +221,178 @@ def wait_for_port(port: int, timeout: float = 20.0) -> None:
     raise RuntimeError(f"listener never came up on 127.0.0.1:{port}")
 
 
+def require_tool(name: str) -> str:
+    path = shutil.which(name)
+    if not path:
+        raise RuntimeError(f"SKIP: {name} not found - cannot self-provision throwaway Postgres")
+    return path
+
+
+def run_psql(dsn: str, sql: str) -> str:
+    result = subprocess.run(
+        ["psql", dsn, "-v", "ON_ERROR_STOP=1", "-Atc", sql],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"psql failed: {result.stderr.strip() or result.stdout.strip()}")
+    return result.stdout.strip()
+
+
+def provision_postgres() -> ProvisionedPostgres:
+    initdb = require_tool("initdb")
+    pg_ctl = require_tool("pg_ctl")
+    require_tool("psql")
+    directory = Path(tempfile.mkdtemp(prefix="kernel-http-mutation-pg."))
+    port = free_port()
+    data_dir = directory / "data"
+    subprocess.run(
+        [initdb, "-D", str(data_dir), "-U", "postgres", "--auth=trust"],
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    subprocess.run(
+        [
+            pg_ctl,
+            "-D",
+            str(data_dir),
+            "-o",
+            f"-p {port} -k {directory}",
+            "-l",
+            str(directory / "log"),
+            "start",
+        ],
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    maintenance_dsn = f"postgresql://postgres@127.0.0.1:{port}/postgres"
+    run_psql(maintenance_dsn, "CREATE DATABASE native_http_mutation_test;")
+    dsn = f"postgresql://postgres@127.0.0.1:{port}/native_http_mutation_test"
+    run_psql(dsn, SCHEMA_SQL)
+    return ProvisionedPostgres(dsn=dsn, directory=directory, port=port)
+
+
+def stop_postgres(pg: ProvisionedPostgres | None) -> None:
+    if pg is None:
+        return
+    pg_ctl = shutil.which("pg_ctl")
+    if pg_ctl:
+        subprocess.run(
+            [pg_ctl, "-D", str(pg.directory / "data"), "stop", "-m", "fast"],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+    shutil.rmtree(pg.directory, ignore_errors=True)
+
+
+def write_kernel_config(dsn: str) -> Path:
+    directory = Path(tempfile.mkdtemp(prefix="kernel-http-mutation-config."))
+    path = directory / "config.json"
+    path.write_text(json.dumps({"database": {"url": dsn}}), encoding="utf-8")
+    return path
+
+
+def cleanup_kernel_config(path: Path | None) -> None:
+    if path is not None:
+        shutil.rmtree(path.parent, ignore_errors=True)
+
+
+def sql_quote(value: str) -> str:
+    return "'" + value.replace("'", "''") + "'"
+
+
+def reset_schema(dsn: str) -> None:
+    run_psql(dsn, SCHEMA_SQL)
+
+
+def seed_case(dsn: str, case: PublicGateCase) -> None:
+    if not case.operation.startswith(("update-", "delete-")):
+        return
+    node_type = "spec" if case.node_id.startswith("spec-") else "idea"
+    run_psql(
+        dsn,
+        "INSERT INTO graph_nodes (id, type, name, description, properties, phase) "
+        f"VALUES ({sql_quote(case.node_id)}, {sql_quote(node_type)}, 'Seed Node', "
+        "'seeded for native HTTP mutation harness', '{}'::jsonb, 'water');",
+    )
+    if case.operation.startswith("delete-"):
+        run_psql(
+            dsn,
+            "INSERT INTO graph_nodes (id, type, name, properties, phase) "
+            "VALUES ('seed-peer', 'idea', 'Seed Peer', '{}'::jsonb, 'water'); "
+            "INSERT INTO graph_edges (id, from_id, to_id, type, properties, created_by) "
+            f"VALUES ('seed-edge', 'seed-peer', {sql_quote(case.node_id)}, 'references', "
+            "'{}'::jsonb, 'harness');",
+        )
+
+
+def expected_node_name(case: PublicGateCase) -> str:
+    if not case.body:
+        return ""
+    body = json.loads(case.body)
+    return str(body.get("title") or body.get("name") or "")
+
+
+def expected_node_phase(case: PublicGateCase) -> str:
+    if case.operation.startswith("create-spec") or case.operation.startswith("update-spec"):
+        return "ice"
+    if not case.body:
+        return "water"
+    body = json.loads(case.body)
+    return "ice" if body.get("manifestation_status") == "validated" else "water"
+
+
+def persistence_readback_checks(dsn: str, case: PublicGateCase) -> dict[str, bool]:
+    if case.operation.startswith("delete-"):
+        node_count = run_psql(
+            dsn,
+            f"SELECT count(*) FROM graph_nodes WHERE id = {sql_quote(case.node_id)};",
+        )
+        edge_count = run_psql(
+            dsn,
+            f"SELECT count(*) FROM graph_edges WHERE from_id = {sql_quote(case.node_id)} "
+            f"OR to_id = {sql_quote(case.node_id)};",
+        )
+        return {
+            "native_persistence_deleted_node": node_count == "0",
+            "native_persistence_deleted_edges": edge_count == "0",
+        }
+
+    node_type = "spec" if case.node_id.startswith("spec-") else "idea"
+    expected = f"{node_type}:{expected_node_name(case)}:{expected_node_phase(case)}"
+    row = run_psql(
+        dsn,
+        "SELECT type || ':' || name || ':' || phase FROM graph_nodes "
+        f"WHERE id = {sql_quote(case.node_id)};",
+    )
+    revisions = run_psql(
+        dsn,
+        f"SELECT count(*) FROM graph_node_revisions WHERE node_id = {sql_quote(case.node_id)};",
+    )
+    return {
+        "native_persistence_node_readback": row == expected,
+        "native_persistence_revision_readback": revisions == "1",
+    }
+
+
+def executing_http_request(
+    base_url: str,
+    case: PublicGateCase,
+    *,
+    headers: dict[str, str],
+    dsn: str,
+) -> tuple[HTTPObservation, dict[str, bool]]:
+    reset_schema(dsn)
+    seed_case(dsn, case)
+    observation = http_request(base_url, case, headers=headers)
+    checks = persistence_readback_checks(dsn, case) if observation.status == 202 else {}
+    return observation, checks
+
+
 class MockMutationUpstream(http.server.BaseHTTPRequestHandler):
     def _respond(self) -> None:
         n = int(self.headers.get("Content-Length", "0") or "0")
@@ -265,6 +484,9 @@ def _gate_checks(
     reversible_gate = trust.get("reversible_gate")
     if not isinstance(reversible_gate, dict):
         reversible_gate = {}
+    persistence = parsed.get("persistence")
+    if not isinstance(persistence, dict):
+        persistence = {}
     return {
         "public_gate_native": observation.router == "native-kernel",
         "public_gate_status": observation.status == 202,
@@ -280,7 +502,13 @@ def _gate_checks(
         "public_gate_route_binding": parsed.get("route_binding") == expected_route_binding,
         "public_gate_operation": parsed.get("operation") == case.operation,
         "public_gate_node_id": parsed.get("node_id") == case.node_id,
-        "public_gate_keeps_db_execution_honest": parsed.get("executes") is False,
+        "public_gate_executes_persistence": parsed.get("executes") is True,
+        "public_gate_db_execution": parsed.get("db_execution") == "performed-by-http-native-persistence",
+        "public_gate_persistence_carrier": persistence.get("carrier") == "config_database_url",
+        "public_gate_persistence_executed": persistence.get("executes") is True,
+        "public_gate_persistence_rows": isinstance(persistence.get("rows_affected"), int)
+        and persistence.get("rows_affected") >= 0,
+        "public_gate_persistence_closed": persistence.get("close_code") == 0,
         "public_gate_executes_gate": parsed.get("route_local_gate_executes") is True,
         "public_gate_sql_shape": all(part in sql for part in sql_contains),
         "public_gate_body_seen": parsed.get("request_body", "") == (case.body or "{}"),
@@ -370,6 +598,10 @@ def evaluate_case(
     public_gate: HTTPObservation,
     both_headers: HTTPObservation,
     fallback: HTTPObservation,
+    *,
+    default_db_checks: dict[str, bool] | None = None,
+    public_gate_db_checks: dict[str, bool] | None = None,
+    both_headers_db_checks: dict[str, bool] | None = None,
 ) -> PublicGateObservation:
     preview_checks = {
         "preview_native": preview.router == "native-kernel",
@@ -395,6 +627,7 @@ def evaluate_case(
                 ),
             ).items()
         },
+        **{f"default_{name}": ok for name, ok in (default_db_checks or {}).items()},
         "fallback_fanned_out": fallback.router == "fanout-python",
         "fallback_status_ok": fallback.status == 200,
         "fallback_method_seen": fallback.parsed.get("method") == case.method,
@@ -410,6 +643,7 @@ def evaluate_case(
             expected_required_header=PUBLIC_GATE_HEADER,
             expected_default_invitation=False,
         ),
+        **(public_gate_db_checks or {}),
         **{
             f"both_headers_{name}": ok
             for name, ok in _gate_checks(
@@ -422,6 +656,7 @@ def evaluate_case(
                 expected_default_invitation=False,
             ).items()
         },
+        **{f"both_headers_{name}": ok for name, ok in (both_headers_db_checks or {}).items()},
     }
     return PublicGateObservation(
         name=case.name,
@@ -468,13 +703,14 @@ def build_gate_report(
             if gate_pass
             else "hold_public_gate"
         ),
+        "native_http_persistence_proven": gate_pass,
         "public_gate_header_allowed": gate_pass,
         "ordinary_traffic_flip_allowed": True,
         "ordinary_traffic_flip_performed": True,
         "python_fallback_header": PYTHON_FALLBACK_HEADER,
         "next_evidence_needed": [
+            "deployed header-gated canary persists through mounted production config",
             "public Traefik default mutation routes to kernel-router",
-            "native HTTP mutation handler preserves production persistence semantics",
             "explicit X-Form-Python-Fallback refusal/control signal is counted separately",
         ],
     }
@@ -486,6 +722,8 @@ def run_observation(min_confidence: float) -> dict[str, Any]:
     if not PRODUCTION_ROUTES.exists():
         raise RuntimeError(f"missing production routes: {PRODUCTION_ROUTES}")
 
+    pg = provision_postgres()
+    config_path = write_kernel_config(pg.dsn)
     upstream_port = free_port()
     router_port = free_port()
     upstream = http.server.ThreadingHTTPServer(
@@ -511,6 +749,8 @@ def run_observation(min_confidence: float) -> dict[str, Any]:
                 str(PRODUCTION_ROUTES),
                 "--stdlib",
                 str(STDLIB),
+                "--config",
+                str(config_path),
                 "--upstream",
                 f"http://127.0.0.1:{upstream_port}",
             ],
@@ -527,21 +767,41 @@ def run_observation(min_confidence: float) -> dict[str, Any]:
                 f"stderr={err.decode(errors='replace')}"
             )
         base_url = f"http://127.0.0.1:{router_port}"
-        observations = [
-            evaluate_case(
+        observations = []
+        for case in CASES:
+            default, default_db_checks = executing_http_request(
+                base_url,
                 case,
-                http_request(base_url, case, headers={}),
-                http_request(base_url, case, headers={PREVIEW_HEADER: "1"}),
-                http_request(base_url, case, headers={PUBLIC_GATE_HEADER: "1"}),
-                http_request(
-                    base_url,
-                    case,
-                    headers={PREVIEW_HEADER: "1", PUBLIC_GATE_HEADER: "1"},
-                ),
-                http_request(base_url, case, headers={PYTHON_FALLBACK_HEADER: "1"}),
+                headers={},
+                dsn=pg.dsn,
             )
-            for case in CASES
-        ]
+            preview = http_request(base_url, case, headers={PREVIEW_HEADER: "1"})
+            public_gate, public_gate_db_checks = executing_http_request(
+                base_url,
+                case,
+                headers={PUBLIC_GATE_HEADER: "1"},
+                dsn=pg.dsn,
+            )
+            both_headers, both_headers_db_checks = executing_http_request(
+                base_url,
+                case,
+                headers={PREVIEW_HEADER: "1", PUBLIC_GATE_HEADER: "1"},
+                dsn=pg.dsn,
+            )
+            fallback = http_request(base_url, case, headers={PYTHON_FALLBACK_HEADER: "1"})
+            observations.append(
+                evaluate_case(
+                    case,
+                    default,
+                    preview,
+                    public_gate,
+                    both_headers,
+                    fallback,
+                    default_db_checks=default_db_checks,
+                    public_gate_db_checks=public_gate_db_checks,
+                    both_headers_db_checks=both_headers_db_checks,
+                )
+            )
         return build_gate_report(observations, min_confidence=min_confidence)
     finally:
         if router_proc is not None:
@@ -551,6 +811,8 @@ def run_observation(min_confidence: float) -> dict[str, Any]:
             except subprocess.TimeoutExpired:
                 router_proc.kill()
         upstream.shutdown()
+        cleanup_kernel_config(config_path)
+        stop_postgres(pg)
 
 
 def render_human(report: dict[str, Any]) -> str:
@@ -602,6 +864,18 @@ def main(argv: list[str] | None = None) -> int:
     try:
         report = run_observation(min_confidence=args.min_confidence)
     except Exception as exc:
+        if str(exc).startswith("SKIP:"):
+            report = {
+                "gate": "native_mutation_public_gate",
+                "gate_pass": False,
+                "skipped": True,
+                "skip_reason": str(exc),
+            }
+            if args.json:
+                print(json.dumps(report, indent=2, sort_keys=True))
+            else:
+                print(str(exc))
+            return 0
         print(f"mutation public gate failed: {exc}", file=sys.stderr)
         return 2
 
