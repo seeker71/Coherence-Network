@@ -14,6 +14,7 @@ from app.services.translator_backends import (
     AnthropicAttunementBackend,
     LibreTranslateBackend,
     _apply_glossary,
+    _lt_lang,
     register_default_backend,
 )
 from app.services import translator_service
@@ -122,3 +123,34 @@ def test_register_default_uses_translator_config_for_anthropic():
     assert backend.api_url == "https://anthropic.test/messages"
     assert backend.timeout_seconds == 17
     translator_service.set_backend(None)
+
+
+def test_lt_lang_strips_region_to_engine_code():
+    """Region-tagged locales map to the base code LibreTranslate loads."""
+    assert _lt_lang("pt-br") == "pt"   # the locale that was silently failing
+    assert _lt_lang("PT-BR") == "pt"   # case-insensitive
+    assert _lt_lang("fr") == "fr"      # already base — unchanged
+    assert _lt_lang("en") == "en"
+    assert _lt_lang("") == ""          # empty stays empty (no crash)
+
+
+def test_pt_br_request_calls_engine_with_pt():
+    """A pt-br attunement must hit LibreTranslate's 'pt', not 'pt-br' (which
+    the engine doesn't know and would fail-open back to English)."""
+    backend = LibreTranslateBackend(base_url="http://stub")
+    with patch("httpx.Client") as ClientCls:
+        client = MagicMock()
+        client.post = MagicMock(return_value=_mock_translate_response("O pulso"))
+        ClientCls.return_value.__enter__ = MagicMock(return_value=client)
+        ClientCls.return_value.__exit__ = MagicMock(return_value=False)
+        backend.attune(
+            source_markdown="",
+            source_title="The Pulse",
+            source_description="",
+            source_lang="en",
+            target_lang="pt-br",
+            glossary_prompt="",
+        )
+        sent_body = client.post.call_args.kwargs["json"]
+        assert sent_body["target"] == "pt"
+        assert sent_body["source"] == "en"
