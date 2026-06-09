@@ -1,0 +1,51 @@
+; turn-taking.fk — when does the agent add its voice to a conversation? A LEARNED gate.
+;
+; The agent starts almost silent: it speaks only when explicitly INVITED (named, or a button). Each
+; invitation is a ground-truth "now it was my turn" exemplar — the agent INTERNS the conversation context
+; at that moment (learning-arc style), so over time it recognizes the SHAPE of a moment where its voice
+; was wanted. Only then, and only when a LONG PAUSE opens AND it is CONFIDENT the moment resembles a
+; learned "speak" context, does it offer its voice unbidden. Cold (no exemplars) → never unbidden — the
+; honest silence at the beginning. The human's invocation is the oracle; the agent learns to anticipate it.
+;
+; A CONTEXT is a small-int feature vector of the moment (e.g. [pause-length, my-topic-mentioned,
+; insight-confidence]). EXEMPLARS is a list of (label vector) the agent has interned, label ∈ {"speak","stay"}:
+; an invited moment interns "speak"; a pause the human did NOT fill interns "stay". The recognizer is
+; nearest-shape (content-addressing as recognition) — the same classifier the body uses everywhere.
+;
+; tt-speak? returns 1 (offer voice) or 0 (stay). Three gates, in order of authority:
+;   INVITED   — named or button → always speak (the explicit turn).
+;   PAUSE     — unbidden speech requires a long pause (never talk over the room).
+;   CONFIDENT — and the moment must recognize as "speak" with strength ≥ a floor (raise the floor to stay
+;               conservative; champion-challenger can lower it once the gate has proven it predicts well).
+;
+; Self-contained gate logic; composes nearest-shape (ns-label / ns-strength). No `and`/`or` (nested `if`).
+; Proven by tests/turn-taking-band.fk.
+
+(do
+    ; explicit invitation — named OR a button press. Always the agent's turn.
+    (defn tt-invited? (named button)
+        (if (eq named 1) 1 (if (eq button 1) 1 0)))
+
+    ; the learned confidence gate: does this moment recognize as a "speak" context, strongly enough?
+    ; cold (no exemplars) → 0: the agent has learned no moment yet, so it stays silent.
+    (defn tt-confident-speak? (context exemplars floor)
+        (if (eq (len exemplars) 0) 0
+            (if (str_eq (ns-label context exemplars) "speak")
+                (if (ge (ns-strength context exemplars) floor) 1 0)
+                0)))
+
+    ; unbidden voice: only when a long pause has opened AND the moment is a confident "speak".
+    (defn tt-autonomous? (context exemplars floor pause pause-floor)
+        (if (ge pause pause-floor)
+            (tt-confident-speak? context exemplars floor)
+            0))
+
+    ; the whole decision: invited always speaks; otherwise the learned, pause-gated, confident path.
+    (defn tt-speak? (named button context exemplars floor pause pause-floor)
+        (if (eq (tt-invited? named button) 1) 1
+            (tt-autonomous? context exemplars floor pause pause-floor)))
+
+    ; learning — intern this moment's context under its label ("speak" when invited, "stay" when a pause
+    ; went unfilled). The smallest act (nearest-shape's teaching): a new exemplar, no training loop.
+    (defn tt-learn (label context exemplars) (cons (list label context) exemplars))
+    0)
