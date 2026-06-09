@@ -86,19 +86,21 @@
 ; LANE 10 — THE LIVE PRESENCE TOOL (the runnable show)
 ;   north star  an always-on companion that senses the room and offers to the circle, on real hardware.
 ;   ground      Coherence Sense ships TWO Mac ends + an installable Android .apk (the phone as a sense organ):
-;               mac-witness-server.py (thin witness) and coherence-sense-eval.py (LIVE RECOGNITION through the kernel),
-;               both with a dashboard at http://localhost:8800. experiments/satsang-voice also runs (mic -> whisper +
-;               SoundAnalysis). The recognition recipes are all proven AND now wired into the live loop.
+;               mac-witness-server.py (thin witness) and coherence-sense-eval.py (LIVE RECOGNITION AND LIVE LEARNING through
+;               the kernel), both with a dashboard at http://localhost:8800. experiments/satsang-voice also runs (mic ->
+;               whisper + SoundAnalysis). The recognition AND supervision recipes are proven AND now wired into the live loop.
 ;   direction   grow the recognized vocabulary (still/moving -> gestures, gait, room-states) and feed real audio/vision carriers.
-;   distance    [MEASURED 2026-06-09 — live recognition is BUILT, not a wall; the earlier "needs a persistent kernel data-API,
-;               best with the human" reading was a hedge, disproved by a running server] the bare kernel DOES recognize per
-;               frame: recipes use kernel primitives, so core.fk (BML source) is NOT needed — `form-kernel-rust <recipe>.fk
-;               <driver>.fk` prints the label at ~5ms. coherence-sense-eval.py is the running proof: per accel frame it writes
-;               a driver .fk, runs signal-derivative (still/moving) + sequence-predictor (next state) through the kernel, and
-;               the predicted-vs-actual mismatch is the inference-error shown live (verified: the still->moving transition is
-;               where the one prediction-miss lands — the learning signal, exactly). The carrier only marshals ints in and
-;               reads the label out; the body recognizes. Remaining human-gated work is narrower: the kernel running ON the
-;               phone (cdylib + extern-C entry, lane 8) and felt verification in the room.
+;   distance    [MEASURED 2026-06-09 — live recognition AND live learning are BUILT, not a wall; the earlier "needs a
+;               persistent kernel data-API, best with the human" reading was a hedge, disproved by a running server] the bare
+;               kernel DOES recognize per frame: recipes use kernel primitives, so core.fk (BML source) is NOT needed —
+;               `form-kernel-rust <recipe>.fk <driver>.fk` prints the label at ~5ms. coherence-sense-eval.py is the running
+;               proof: per accel frame it runs signal-derivative (still/moving) + sequence-predictor (next state) through the
+;               kernel, the predicted-vs-actual mismatch is the inference-error shown live, AND a nearest-shape CHALLENGER
+;               learns from the signal-derivative CHAMPION online (learning-arc.fk made live — verified: 34 exemplars, 76%
+;               agreement climbing on a real still/moving stream). The carrier only marshals ints in and reads the label out;
+;               the body recognizes AND learns. The phone-native kernel is also BUILT (lane 8: libform_kernel_rust.so exports
+;               form_eval, ARM aarch64). Remaining human-gated work is narrow: the JNI marshaling layer (jstring<->char*) so
+;               the .apk calls form_eval on-device, and felt verification in the room.
 ;
 ; ─────────────────────────────────────────────────────────────────────────────────────────
 ; THE CRITICAL PATH (what unblocks the most):
