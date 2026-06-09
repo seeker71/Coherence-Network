@@ -122,7 +122,9 @@ def test_native_route_goal_loop_sees_workspace_and_task_routes_as_bml():
     native_routes = native_route_goal_loop.load_native_routes()
 
     expected = ("kernel-native-high-grammar", "BML", True, True)
+    header_gated = ("kernel-native-header-gated", "BML", False, False)
     assert native_route_goal_loop.route_status("GET", "/api/inventory/flow", native_routes) == expected
+    assert native_route_goal_loop.route_status("GET", "/api/_form/inventory-flow-observation", native_routes) == header_gated
     assert native_route_goal_loop.route_status("GET", "/api/workspaces", native_routes) == expected
     assert native_route_goal_loop.route_status("GET", "/api/agent/tasks", native_routes) == expected
     assert native_route_goal_loop.route_status("GET", "/api/tasks", native_routes) == expected
@@ -144,7 +146,9 @@ def test_inventory_flow_native_route_expresses_lineage_grammar():
 
     for required in (
         'route("inventory-flow", "GET", "/api/inventory/flow"',
+        'route("inventory-flow-observation", "GET", "/api/_form/inventory-flow-observation"',
         "def api_inventory_flow(request)",
+        "def api_inventory_flow_observe(request)",
         "inventory-flow-summary-sql",
         "inventory-flow-items-sql",
         "inventory-flow-spec-json",
@@ -156,8 +160,14 @@ def test_inventory_flow_native_route_expresses_lineage_grammar():
         "inventory-flow-assets-json",
         "inventory-flow-interdependencies-json",
         "inventory-flow-canary-response-json",
+        "inventory-flow-observe-response-json",
+        "framebuffer-events",
+        "handler_total_ms",
+        "jit-stats",
         "inventory lineage grammar core",
         'json-node-pair("python_authority", json-node-bool(false))',
     ):
         assert required in route_text
     assert "X-Form-Native-Inventory" in ingress_text
+    assert "coherence-api-inventory-flow-observation" in ingress_text
+    assert "X-Form-Observe" in ingress_text

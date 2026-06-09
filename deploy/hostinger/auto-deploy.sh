@@ -822,6 +822,30 @@ ensure_kernel_router_canary() {
     exit 1
   fi
 
+  deadline=$(( $(date +%s) + 120 ))
+  probe_ok=0
+  while (( $(date +%s) < deadline )); do
+    if docker compose "${compose_args[@]}" exec -T kernel-router-bml-front-door sh -lc \
+      "curl -fsS -D /tmp/inventory-flow-observe.headers -o /tmp/inventory-flow-observe.body \
+        'http://127.0.0.1:8080/api/_form/inventory-flow-observation?idea_id=__native_inventory_canary__&list_item_limit=1&runtime_window_seconds=3600&event_limit=20&warm=1' \
+        -H 'Accept: application/json' \
+        -H 'X-Form-Observe: 1' \
+        && grep -qi '^X-Form-Router: native-kernel' /tmp/inventory-flow-observe.headers \
+        && grep -q '\"handler\":\"api_inventory_flow_observe\"' /tmp/inventory-flow-observe.body \
+        && grep -q '\"observed_handler\":\"api_inventory_flow\"' /tmp/inventory-flow-observe.body \
+        && grep -q '\"observed_canary\":true' /tmp/inventory-flow-observe.body \
+        && grep -q '\"python_authority\":false' /tmp/inventory-flow-observe.body" \
+      2>&1 | tee -a "$LOG_FILE"; then
+      probe_ok=1
+      break
+    fi
+    sleep 3
+  done
+  if [[ "$probe_ok" != "1" ]]; then
+    log "FAIL: BML front-door inventory flow observation route did not return native observation proof"
+    exit 1
+  fi
+
   ended="$(date +%s)"
   elapsed=$((ended - started))
   log "kernel-router canary: running and locally receipt-proven (${elapsed}s)"
