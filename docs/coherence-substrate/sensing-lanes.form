@@ -63,12 +63,17 @@
 ;               cargo-ndk (4.1.2) + rustup aarch64-linux-android std. pyo3 stays OFF (opt-in feature) so NO Python-for-Android.
 ;               Reproducible: form/form-kernel-rust/build-android.sh. The gotcha that cost two tries: Homebrew rustc has no
 ;               cross-std, so the rustup toolchain must be FIRST in PATH (cargo-ndk shells out to cargo, re-resolving PATH).
-;   direction   the engine is in main.rs (a binary — runnable on a device via adb/Termux today). For an APP-loadable library,
-;               extract the engine into a shared module + a #[no_mangle] extern "C" evaluate(recipe)->result entry, then build
-;               crate-type cdylib -> a per-ABI .so for jniLibs + a thin Kotlin JNI declaration.
-;   distance    the ARM BUILD is DONE (verified ELF). Remaining: the cdylib/JNI entry (a bounded refactor — engine out of
-;               main.rs) + a device/emulator to actually RUN a recipe on ARM + wire ONE sensor port. On-device three-way
-;               (all three kernels on one phone) still UNRUN — day one is one arm. The hardware lane is now SHORT, not long.
+;   direction   [MEASURED 2026-06-09 — THE APP-LOADABLE LIBRARY IS BUILT] the predicted "extract the engine out of main.rs"
+;               refactor was unnecessary: lib.rs already includes main.rs as a module (for PyO3), so the cdylib only needed a
+;               non-default `cabi` feature + a #[no_mangle] extern "C" form_eval(src)->display-text entry over the SAME
+;               kernel::run_source the CLI runs. cargo ndk -t arm64-v8a build --release --lib --features cabi emits
+;               libform_kernel_rust.so: "ELF 64-bit LSB shared object, ARM aarch64 ... exports form_eval / form_eval_free"
+;               (~4 MB, ~27s). Verified via ctypes on host: sd-moving? + ns-label recognize correctly through the C boundary.
+;               Both artifacts are reproducible: build-android.sh (bin + cdylib, each file-checked + symbol-checked).
+;   distance    the ENGINE work is DONE on both surfaces (ARM bin + JNI-callable cdylib, symbol-verified). Remaining is
+;               carrier wiring, not engine: a thin Kotlin JNI shim (external fun formEval(src): String) + the .so dropped in
+;               jniLibs/arm64-v8a + the recipes bundled as assets, then a device/emulator to RUN it on ARM, + ONE sensor port.
+;               On-device three-way (all three kernels on one phone) still UNRUN — day one is one arm. The hardware lane is SHORT.
 ;
 ; LANE 9 — CELL-SYNC TRANSPORT (share cells device↔device)
 ;   north star  a cell learned on one device reaches another, content-addressed and consent-honored.

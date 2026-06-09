@@ -42,7 +42,11 @@
 // The whole module is gated on the `pyo3` feature so building the binary
 // alone (cargo build --release) doesn't drag in PyO3 / libpython.
 
-#![cfg(feature = "pyo3")]
+// This library surface is built for either non-bin host: the PyO3 Python
+// extension (`--features pyo3`, via maturin) OR the C-ABI cdylib (`--features
+// cabi`, for Android / any host without Python). The plain bin build pulls in
+// neither, so main.rs compiles once (validate.sh / CI stay fast).
+#![cfg(any(feature = "pyo3", feature = "cabi"))]
 
 // Pull main.rs into the library as a sibling module. The bin target still
 // uses main.rs as its own entry; we re-include it here as a module so its
@@ -56,12 +60,64 @@ mod kernel;
 // and `crate::NodeID`. In the binary build those resolve because main.rs
 // is the crate root; here the kernel lives one level down, so we surface
 // its items back up.
+#[allow(unused_imports)]
 pub use kernel::*;
 
+// ──────────────────────────────────────────────────────────────────────────
+// C-ABI surface — the phone-native door. The SAME evaluator the CLI runs
+// (kernel::run_source), reachable from any language that can call C: Android
+// via JNI, embedded via FFI. No Python, no subprocess. This is the universal
+// surface; the PyO3 block below is one specialization of it for the in-process
+// Python hot path.
+// ──────────────────────────────────────────────────────────────────────────
+#[cfg(feature = "cabi")]
+mod cabi {
+    use crate::kernel;
+    use std::ffi::{CStr, CString};
+    use std::os::raw::c_char;
+    use std::panic::{catch_unwind, AssertUnwindSafe};
+
+    /// Evaluate a Form recipe source string; return the final value rendered as
+    /// the kernel's `display()` text — the exact text the CLI prints. The
+    /// returned heap C string MUST be freed with `form_eval_free`. A panic, a
+    /// null pointer, or non-UTF-8 input comes back as a string starting "ERR:"
+    /// (never a crash across the FFI boundary).
+    #[no_mangle]
+    pub extern "C" fn form_eval(src: *const c_char) -> *mut c_char {
+        let out = catch_unwind(AssertUnwindSafe(|| {
+            if src.is_null() {
+                return "ERR: null source".to_string();
+            }
+            match unsafe { CStr::from_ptr(src) }.to_str() {
+                Ok(s) => kernel::run_source(s).display(),
+                Err(_) => "ERR: source not valid UTF-8".to_string(),
+            }
+        }))
+        .unwrap_or_else(|_| "ERR: kernel panic".to_string());
+        match CString::new(out) {
+            Ok(c) => c.into_raw(),
+            Err(_) => CString::new("ERR: nul byte in output").unwrap().into_raw(),
+        }
+    }
+
+    /// Free a string returned by `form_eval`. Calling with null is a no-op.
+    #[no_mangle]
+    pub extern "C" fn form_eval_free(p: *mut c_char) {
+        if !p.is_null() {
+            unsafe { drop(CString::from_raw(p)) };
+        }
+    }
+}
+
+#[cfg(feature = "pyo3")]
 use kernel::{read_root_from_source, walk, Arena, Kernel, NodeID, Value};
+#[cfg(feature = "pyo3")]
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
+#[cfg(feature = "pyo3")]
 use pyo3::prelude::*;
+#[cfg(feature = "pyo3")]
 use pyo3::types::{PyDict, PyList};
+#[cfg(feature = "pyo3")]
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 /// Convert a kernel Value to a Python object — same surface as Value::display()
@@ -69,6 +125,7 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 /// same recursion. Closures and NodeIDs land as their display strings (the
 /// callers expecting structured types parse from the strings just as they do
 /// from the subprocess stdout).
+#[cfg(feature = "pyo3")]
 fn value_to_py(py: Python<'_>, v: &Value) -> PyResult<PyObject> {
     let obj = match v {
         Value::Null => py.None(),
@@ -78,7 +135,8 @@ fn value_to_py(py: Python<'_>, v: &Value) -> PyResult<PyObject> {
         Value::Bool(b) => b.into_py(py),
         Value::List(xs) => {
             let list = PyList::empty_bound(py);
-            for x in xs {
+            // Value::List now wraps Arc<Vec<Value>> — iterate through the Arc.
+            for x in xs.iter() {
                 list.append(value_to_py(py, x)?)?;
             }
             list.into_py(py)
@@ -103,6 +161,7 @@ fn value_to_py(py: Python<'_>, v: &Value) -> PyResult<PyObject> {
 /// a `record_new` literal on the subprocess path share the same blueprint. The
 /// recipe reads fields by name (record_get), not by blueprint, so the exact
 /// value only needs to be stable and consistent across the two carriers.
+#[cfg(feature = "pyo3")]
 const STRUCTURED_INPUT_BLUEPRINT: NodeID = NodeID {
     pkg: 1,
     level: 5,
@@ -120,6 +179,7 @@ const STRUCTURED_INPUT_BLUEPRINT: NodeID = NodeID {
 ///
 /// `kernel` is threaded so a dict's field names can intern to NameIDs exactly
 /// as the `record_new` native does — the marshalling seam for structured input.
+#[cfg(feature = "pyo3")]
 fn py_to_value(kernel: &mut Kernel, obj: &Bound<'_, PyAny>) -> PyResult<Value> {
     if let Ok(b) = obj.downcast::<pyo3::types::PyBool>() {
         return Ok(Value::Bool(b.is_true()));
@@ -131,14 +191,16 @@ fn py_to_value(kernel: &mut Kernel, obj: &Bound<'_, PyAny>) -> PyResult<Value> {
         return Ok(Value::Float(f));
     }
     if let Ok(s) = obj.extract::<String>() {
-        return Ok(Value::Str(s));
+        // Value::Str now wraps Arc<str> (String -> Arc<str> via From).
+        return Ok(Value::Str(s.into()));
     }
     if let Ok(list) = obj.downcast::<PyList>() {
         let mut xs = Vec::with_capacity(list.len());
         for item in list.iter() {
             xs.push(py_to_value(kernel, &item)?);
         }
-        return Ok(Value::List(xs));
+        // Value::List now wraps Arc<Vec<Value>> (Vec -> Arc<Vec> via From).
+        return Ok(Value::List(xs.into()));
     }
     if let Ok(dict) = obj.downcast::<PyDict>() {
         // Marshal a flat dict (string keys → scalar/list/dict values) onto a
@@ -182,6 +244,7 @@ fn py_to_value(kernel: &mut Kernel, obj: &Bound<'_, PyAny>) -> PyResult<Value> {
 /// parsed once into a NodeID held against the warm Kernel. The `defn`s that
 /// the body references were walked once into the Preloader's root frame at
 /// load, so this NodeID needs only its input names bound to walk.
+#[cfg(feature = "pyo3")]
 struct PreloadedRoute {
     body: NodeID,
 }
@@ -193,6 +256,7 @@ struct PreloadedRoute {
 /// handle returned by `load_route` is an index into `routes`; `run` looks the
 /// route up and walks its pre-parsed body with the request's bindings — no
 /// tokenize, no read_sexp, no defn-rebind per call.
+#[cfg(feature = "pyo3")]
 #[pyclass]
 struct Preloader {
     kernel: Kernel,
@@ -203,6 +267,7 @@ struct Preloader {
     routes: Vec<PreloadedRoute>,
 }
 
+#[cfg(feature = "pyo3")]
 #[pymethods]
 impl Preloader {
     #[new]
@@ -304,6 +369,7 @@ impl Preloader {
 }
 
 /// Pull a human string out of a panic payload (used by both Preloader methods).
+#[cfg(feature = "pyo3")]
 fn panic_message(p: &Box<dyn std::any::Any + Send>) -> String {
     if let Some(s) = p.downcast_ref::<&str>() {
         (*s).to_string()
@@ -317,6 +383,7 @@ fn panic_message(p: &Box<dyn std::any::Any + Send>) -> String {
 /// Compile and run a Form recipe source string, return its value as a
 /// native Python object. This is the inline-equivalent of running
 /// `form-kernel-rust <file>` and reading the last stdout line.
+#[cfg(feature = "pyo3")]
 #[pyfunction]
 fn compile_and_run(py: Python<'_>, src: &str) -> PyResult<PyObject> {
     // The kernel may panic on malformed input; turn the panic into a
@@ -339,6 +406,7 @@ fn compile_and_run(py: Python<'_>, src: &str) -> PyResult<PyObject> {
 
 /// Read a .fk file from disk and run it. Convenience for parity with
 /// `form-kernel-rust <file.fk>`.
+#[cfg(feature = "pyo3")]
 #[pyfunction]
 fn run_fk(py: Python<'_>, path: &str) -> PyResult<PyObject> {
     let src = std::fs::read_to_string(path)
@@ -346,6 +414,7 @@ fn run_fk(py: Python<'_>, path: &str) -> PyResult<PyObject> {
     compile_and_run(py, &src)
 }
 
+#[cfg(feature = "pyo3")]
 #[pymodule]
 fn form_kernel_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compile_and_run, m)?)?;
