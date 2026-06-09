@@ -528,19 +528,17 @@ export default async function Home() {
               className="group rounded-2xl border border-emerald-500/35 bg-gradient-to-b from-emerald-500/10 to-card/30 hover:from-emerald-500/15 p-5 transition-colors"
             >
               <p className="text-[11px] uppercase tracking-[0.18em] text-emerald-500/90 mb-1">
-                {baliGroundPath.copy.eyebrow}
+                {t("home.groundBaliEyebrow")}
               </p>
               <p className="text-base text-foreground font-light mb-1">
                 {baliGroundPath.copy.title}
               </p>
               <p className="text-xs text-foreground/80 leading-relaxed">
-                {baliGroundPath.copy.body}
+                {t("home.groundBaliBody")}
               </p>
-              {baliGroundPath.copy.cta && (
-                <p className="text-xs text-emerald-400/85 mt-3 group-hover:text-emerald-400 transition-colors">
-                  {baliGroundPath.copy.cta}
-                </p>
-              )}
+              <p className="text-xs text-emerald-400/85 mt-3 group-hover:text-emerald-400 transition-colors">
+                {t("home.groundBaliCta")}
+              </p>
             </AttributedInternalLink>
           )}
           <AttributedInternalLink

@@ -91,7 +91,13 @@ export default async function RootLayout({
     ? headerLang
     : DEFAULT_LOCALE;
   const messages = getMessages(lang);
-  const fallback = getMessages(DEFAULT_LOCALE);
+  // The active bundle is always complete — key parity is enforced at build by
+  // validate_locale_surfaces — so the client needs no separate English
+  // fallback. Shipping one would serialize the entire English bundle into
+  // every page's HTML (a non-English locale would carry the full en text in
+  // its source). The server-side createTranslator keeps its own en fallback
+  // for defense in depth; the client carries only the active tongue.
+  const fallback = messages;
   const t = createTranslator(lang);
   return (
     <html lang={lang} suppressHydrationWarning>
