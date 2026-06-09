@@ -9,9 +9,9 @@ section [form.action] {
     def obj(result) = fsc-scan-result-object(result);
     def next(result, dialect) = fsc-source-scan-next-dialect(fsc-scan-result-cursor(result), dialect);
     def first(source, dialect) = fsc-source-scan-next-dialect(fsc-source-cursor(source, 0, 1, 0), dialect);
-    def result_value(match) = bmf-object-value(cap-get(match-caps(match), "result"));
+    def result_value(match_value) = bmf-object-value(cap-get(match-caps(match_value), "result"));
     def node_child(node, index) = nth(node_children(node), index);
-    def score_match(match, score) = if match?(match) then score else 0;
+    def score_match(match_value, score) = if match?(match_value) then score else 0;
     def score_str(value, want, score) = if str_eq(value, want) then score else 0;
     def score_int(value, want, score) = if eq(value, want) then score else 0;
     def source_line(source_object) = head(bmf-object-source-span(source_object));

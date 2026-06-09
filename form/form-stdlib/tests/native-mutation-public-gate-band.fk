@@ -1,9 +1,6 @@
 ; native-mutation-public-gate-band.fk
 ;
-; preludes: form-stdlib/core.fk form-stdlib/application-graph-node-port.fk
-;           form-stdlib/native-mutation-side-effects.fk
-;           form-stdlib/native-mutation-route-side-effects.fk
-;           form-stdlib/native-mutation-public-gate.fk
+; preludes: form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/native-mutation-public-gate.fk
 ;
 ; Band verdict: 11111111 when the public gate carries an explicit header,
 ; persisted rollback receipt SQL, per-request decision and native-invitation

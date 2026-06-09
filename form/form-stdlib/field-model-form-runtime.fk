@@ -44,8 +44,8 @@ section [form.bml] {
     def fmfrt-cost-risk(cost) = nth(cost, 4);
     def fmfrt-cost-score(cost) = add(mul(fmfrt-cost-disturbance(cost), 1000), add(mul(fmfrt-cost-risk(cost), 100), add(mul(fmfrt-cost-attention(cost), 10), fmfrt-cost-compute(cost))));
     def fmfrt-match(bindings, cost) = list("match", bindings, cost);
-    def fmfrt-match-bindings(match) = nth(match, 1);
-    def fmfrt-match-cost(match) = nth(match, 2);
+    def fmfrt-match-bindings(match-value) = nth(match-value, 1);
+    def fmfrt-match-cost(match-value) = nth(match-value, 2);
     def fmfrt-rule(name, evidence, consent, cost, matcher, forwarder, config) = list("rule", name, evidence, consent, cost, matcher, forwarder, config);
     def fmfrt-rule-name(rule) = nth(rule, 1);
     def fmfrt-rule-evidence(rule) = nth(rule, 2);
@@ -60,7 +60,7 @@ section [form.bml] {
     def fmfrt-delta-key(delta) = nth(delta, 3);
     def fmfrt-delta-value(delta) = nth(delta, 4);
     def fmfrt-trace(rule, kind, bindings, data) = list("trace", rule, kind, bindings, data);
-    def fmfrt-candidate(rule, match) = list("candidate", rule, match, fmfrt-match-cost(match));
+    def fmfrt-candidate(rule, match-value) = list("candidate", rule, match-value, fmfrt-match-cost(match-value));
     def fmfrt-candidate-rule(candidate) = nth(candidate, 1);
     def fmfrt-candidate-match(candidate) = nth(candidate, 2);
     def fmfrt-candidate-cost(candidate) = nth(candidate, 3);
@@ -154,7 +154,7 @@ section [form.bml] {
         let count = fmfrt-count-motif(fmfrt-project-sequence(field), motif);
         if eq(count, 0) then empty else list(fmfrt-match(list(fmfrt-pair("motif", motif), fmfrt-pair("count", count)), fmfrt-rule-cost(rule)));
     }
-    def fmfrt-trace-forwarder(rule, match, field) = list(fmfrt-delta("trace", 0, "", fmfrt-trace(fmfrt-rule-name(rule), "match", fmfrt-match-bindings(match), empty)));
+    def fmfrt-trace-forwarder(rule, match-value, field) = list(fmfrt-delta("trace", 0, "", fmfrt-trace(fmfrt-rule-name(rule), "match", fmfrt-match-bindings(match-value), empty)));
     def fmfrt-sequence-window-rule(name, motif) = fmfrt-rule(name, "observed", "observe", fmfrt-cost(1, str_len(motif), 0, 0), fmfrt-sequence-window-matcher, fmfrt-trace-forwarder, motif);
     def fmfrt-public-runtime-proof-score() {
         let dna = "ATGGTGCATCTGACTCCTGAGGAGAAGTCT";
