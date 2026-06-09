@@ -128,6 +128,7 @@ def test_native_route_goal_loop_sees_workspace_and_task_routes_as_bml():
     assert native_route_goal_loop.route_status("GET", "/api/workspaces", native_routes) == expected
     assert native_route_goal_loop.route_status("GET", "/api/agent/tasks", native_routes) == expected
     assert native_route_goal_loop.route_status("GET", "/api/tasks", native_routes) == expected
+    assert native_route_goal_loop.route_status("GET", "/api/household/events", native_routes) == expected
     assert native_route_goal_loop.route_status("GET", "/api/agent/tasks/task_example", native_routes) == expected
     assert native_route_goal_loop.route_status("POST", "/api/graph/edges", native_routes) == expected
     assert (
@@ -171,3 +172,25 @@ def test_inventory_flow_native_route_expresses_lineage_grammar():
     assert "X-Form-Native-Inventory" in ingress_text
     assert "coherence-api-inventory-flow-observation" in ingress_text
     assert "X-Form-Observe" in ingress_text
+
+
+def test_household_events_native_route_releases_empty_calendar_fanout():
+    route_text = (ROOT / "deploy" / "front-door" / "api.bml").read_text(encoding="utf-8")
+    ingress_text = (ROOT / "deploy" / "kernel-router" / "docker-compose.kernel-router.yml").read_text(
+        encoding="utf-8"
+    )
+    deploy_text = (ROOT / "deploy" / "hostinger" / "auto-deploy.sh").read_text(encoding="utf-8")
+
+    for required in (
+        'route("household-events", "GET", "/api/household/events"',
+        "def api_household_events(request)",
+        "api-household-events-empty-json",
+        'kh-header("X-Form-Handler", "api_household_events")',
+        'kh-header("X-Form-Python-Authority", "false")',
+        "limit must be between 1 and 200",
+    ):
+        assert required in route_text
+
+    assert "coherence-api-household-events" in ingress_text
+    assert "Path(`/api/household/events`)" in ingress_text
+    assert "api_household_events" in deploy_text

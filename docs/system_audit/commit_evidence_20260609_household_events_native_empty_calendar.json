@@ -1,0 +1,116 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/release-non-form-tissue-20260609",
+  "commit_scope": "Release the hot empty household events read from Python fanout into a BML front-door route. Production currently has no configured iCal feeds and returns an empty list; the new native route preserves that public contract as [] while adding native proof headers and leaving full external iCal source-port ingestion as a future Form lift.",
+  "files_owned": [
+    "deploy/front-door/api.bml",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/verify_web_api_deploy.sh",
+    "api/tests/test_runtime_web_api_provenance.py",
+    "docs/system_audit/commit_evidence_20260609_household_events_native_empty_calendar.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/native_route_goal_loop.py /goal --source web_api --seconds 86400",
+      "curl -sS -D .cache/household-events.headers -o .cache/household-events.json 'https://api.coherencycoin.com/api/household/events?limit=5'",
+      "git diff --check",
+      "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_web_api_deploy.sh",
+      "VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -c 'source scripts/verify_web_api_deploy.sh https://api.example https://web.example'",
+      "/Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest tests/test_runtime_web_api_provenance.py -q",
+      "cargo build --release --bin form-kernel-rust",
+      "form/form-kernel-rust/target/release/form-kernel-rust serve --port 19137 --routes deploy/front-door/api.bml --stdlib form/form-stdlib --upstream http://127.0.0.1:9",
+      "curl -sS -D .cache/household-events-native.headers -o .cache/household-events-native.json 'http://127.0.0.1:19137/api/household/events?limit=5' -H 'Accept: application/json'",
+      "curl -sS -D .cache/household-events-native-invalid.headers -o .cache/household-events-native-invalid.json 'http://127.0.0.1:19137/api/household/events?limit=0' -H 'Accept: application/json'",
+      "git fetch origin main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "notes": "Prompt guide and wellness passed. Public production before the change returned HTTP 200 with an empty JSON list for /api/household/events?limit=5. Focused provenance tests passed (6 passed). The fresh Rust release build succeeded. Local BML serve listed 40 native routes including GET /api/household/events. The local normal request returned HTTP 200, X-Form-Router: native-kernel, X-Form-Handler: api_household_events, X-Form-Python-Authority: false, and body=[]. The invalid limit request returned native HTTP 422 with a JSON detail. The rebased route-goal read moved observed high-grammar share from 74.85% before the route to 92.20% after the route, with /api/household/events classified as kernel-native-high-grammar and no promotion route required for the 90% window target. The local PR guard and stale-followthrough check passed."
+  },
+  "known_failed_attempts": [
+    {
+      "command": "form/form-kernel-rust/target/release/form-kernel-rust check --routes deploy/front-door/api.bml --stdlib form/form-stdlib",
+      "output": "check reported pre-existing unresolved manifest names such as str_line_at, source_compile_last_error, compile_source_text, JSON-OBJECT, and older framebuffer-observe names.",
+      "resolution": "Used the deploy-equivalent serve path instead. The same manifest compiled and served successfully, listing GET /api/household/events as native, and live curls proved the new handler."
+    }
+  ],
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until this branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Public deploy verification now includes GET /api/household/events native proof headers and empty-list body contract."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local proof passed. Rebase, guard, commit, push, PR, CI, merge, deploy, and public verification remain."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Current no-calendar household events reads stop crossing the Python membrane. The response body remains the same empty list, while the route is served by native BML and carries native proof headers.",
+    "public_endpoints": [
+      "GET /api/household/events"
+    ],
+    "test_flows": [
+      "GET /api/household/events?limit=5 returns [] with X-Form-Router: native-kernel.",
+      "The BML route returns X-Form-Handler: api_household_events and X-Form-Python-Authority: false.",
+      "GET /api/household/events?limit=0 returns a native 422 instead of silently accepting an invalid limit.",
+      "scripts/verify_web_api_deploy.sh and deploy/hostinger/auto-deploy.sh both fail unless this route is native and keeps the empty-calendar contract."
+    ]
+  },
+  "idea_ids": [
+    "form-native-runtime",
+    "native-route-promotion"
+  ],
+  "spec_ids": [
+    "form-native-http-stack"
+  ],
+  "task_ids": [
+    "release-non-form-tissue-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "release-request"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "deploy/front-door/api.bml defines api_household_events and HouseholdEventsRoute.",
+    "deploy/kernel-router/docker-compose.kernel-router.yml routes GET /api/household/events to the BML front-door service.",
+    "deploy/hostinger/auto-deploy.sh probes the local BML front door for native route headers and [] body.",
+    "scripts/verify_web_api_deploy.sh checks the public native route headers and empty-list body.",
+    "api/tests/test_runtime_web_api_provenance.py asserts the route-goal loop sees GET /api/household/events as kernel-native high-grammar."
+  ],
+  "change_files": [
+    "deploy/front-door/api.bml",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/verify_web_api_deploy.sh",
+    "api/tests/test_runtime_web_api_provenance.py",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}
