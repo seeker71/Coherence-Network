@@ -1,0 +1,89 @@
+; form-native-models.form — the roadmap to real, deterministic, generatable ML in Form.
+;
+; THESIS: a real model (a transformer, a whisper-size voice transcriber, an animal-sound classifier)
+; can be Form-native — the architecture AND the weights are content-addressed recipe DATA, inference is
+; bit-identical across kernels (and constrained GPU), and because the model is a recipe rather than a
+; frozen binary the system can GENERATE and MUTATE architectures at runtime. This file is the grounded
+; path: what is already proven, the architecture, and the ordered milestones (two background spikes
+; mapped the JIT/GPU and whisper-import details — cited inline).
+;
+; ── THE PROVEN FOUNDATION (measured, in the body today) ──
+;   FLOAT COMPUTE IS DETERMINISTIC THREE-WAY. Go=Rust=TS agree bit-for-bit:
+;     - 0.1 + 0.2 -> 0.30000000000000004 (canonical IEEE fp64), 0 divergent
+;     - a fractional float dot product and a float MATVEC (2x3 weight x vector) -> 0 divergent
+;     The earlier "integer-only / floats break determinism" was a misread of the BAND-VERDICT subset
+;     (AUTHORING.md), never a kernel limit. The one real residue: whole-number floats display as 3.0
+;     (Rust/Python) vs 3 (Go/TS/JS) — a display-canonicalization bug, not a compute one.
+;   THE NUMERIC STACK IS DEFINED. docs/coherence-substrate/numeric-formats.canonical.json holds 19
+;     formats — fp64/fp32/bf16/fp8-e4m3/fp8-e5m2/fp4/nf4/i4..i64/u8../bitnet-158/log-prob — each with
+;     mantissa/exponent bits + an arithmetic_hint (native-fp, software-fp-via-fp32), plus conformance
+;     vectors. formats.rs `apply_arith` is the per-format reference arithmetic; `canonical_vectors_pass`
+;     the conformance loop (epsilon_for: 1e-12 fp64, 1e-6 fp32, 1e-2 sub-32-bit).
+;   THE LAYER MATH EXISTS. cell-numerics.form: matvec, vector_add, scalar_mul, exp_series, tanh,
+;     sigmoid, slice; cosine.form: dot_product, norm. attention.fk is content-addressed (weightless L1)
+;     and names softmax as its next composition. seedbank/emits/model.fk renders any cell as a tensor.
+;   THE TENSOR PRIMITIVE IS PROVEN. tests/ml-flow-band.fk interns a vector of REAL floats as an
+;     intern_node SEQUENCE and asserts node_eq for structurally-identical vectors — passes three-way.
+;     internNumeric (numeric.ts) carries a value WITH a format identity. So a quantized weight row is
+;     already expressible + content-addressed (identical rows dedup to one NodeID for free).
+;   THE FLOAT->INT BRIDGE SHIPPED. round/floor/ceil/trunc (all three kernels, round half-away-from-zero,
+;     0 divergent — tests/float-conversions-band.fk -> 31). This is the bridge from float compute to an
+;     integer band verdict AND to quantization codes (round(127*w/scale) for int8).
+;   THE JIT EXISTS. The Rust kernel emits Rust source -> rustc --crate-type=cdylib -> libloading
+;     (main.rs: emit_rust_source ~5979, compile_rust_cdylib ~6102, jit_dispatch ~6195; hot trigger =
+;     jit_hits >= 2000 at ~6650). Scalar-i64 only today. The Go kernel's jit_value.go is the template
+;     for a VALUE-typed plugin (carries floats + a dispatch-callback into the walker). The TS kernel
+;     already has GPU emitters: backends/metal.ts (MSL, with a simdgroup_matrix<bf16,8,8> tensor-core
+;     path), wgsl.ts, cuda.ts, mlir.ts. Host here is an M4 Max / Metal 4 -> Metal is the realistic GPU.
+;
+; ── THE ARCHITECTURE (one shape, three layers) ──
+;   RECIPE = SPEC. The model — architecture (a SEQUENCE of layer-cells) and weights (quantized number
+;     cells tagged by a format TypedTokenRef) — is content-addressed recipe data. The recipe DEFINES the
+;     reduction order and the exp/softmax approximation, so every kernel computes the same bits. This is
+;     why Form-native ML is reproducible/attestable ML, not in spite of determinism but because of it.
+;   NATIVE/GPU = CARRIER. Interpreted Form can't run 244M params live, so the hot tensor ops JIT to a
+;     native cdylib (CPU) or an MSL/WGSL kernel (GPU). Same posture as sockets/Postgres: an effectful
+;     carrier, the recipe stays the truth.
+;   CONFORMANCE = VERIFICATION. The native/GPU carrier is verified ELEMENTWISE against the recipe's
+;     reference output under the format's own epsilon. The honest cross-precision trick: a bf16 GPU
+;     matmul is checked against a CPU reference that SIMULATES bf16 (software-fp-via-fp32), not against
+;     fp64 — so the precision the recipe declares is the precision both sides are held to.
+;
+; ── THE ORDERED MILESTONES (the path; each a provable band) ──
+;   M1  format-parameterized matvec — compute the proven matvec in bf16/fp8 via apply_arith, conformance
+;        band against the fp64 reference under epsilon_for. (the stone that connects the layer math to
+;        the 19 formats.)
+;   M2  quant tensor encode/dequant — quantize_block (absmax -> int8/nf4 codes via round + the nf4
+;        16-quantile table already in the format cell) + dequant; round-trip band: dequant(encode(W)) ~ W
+;        within format epsilon; identical tensors node_eq (dedup proof). Weights become substrate cells.
+;   M3  transformer-numerics — softmax (max-subtract for stability), gelu (tanh approximation), layernorm,
+;        composed from the existing exp/tanh/matvec; each a three-way band on tiny dims.
+;   M4  one attention+FFN block — compose M1+M2+M3 into a learned-weight self-attention + FFN block,
+;        proven three-way on tiny dims (the real transformer primitive, replacing weightless attention.fk).
+;   M5  JIT matmul to native — a JitTensorCompiled carrier (slice ABI, beside the scalar JitCompiled),
+;        emit a matmul loop, reuse compile_rust_cdylib, verify bit-exact vs the apply_arith reference
+;        (add matmul conformance vectors to numeric-formats.canonical.json). Then port metal.ts -> a
+;        Metal carrier for bf16 matmul, verified under epsilon.
+;   M6  whisper-tiny block 0 — carrier loads openai/whisper-tiny safetensors (or mlx-community/whisper-tiny,
+;        already referenced in experiments/satsang-voice), encodes block-0 weights via M2, runs M4 over
+;        them, matches the HF reference activation within epsilon. First real model in the body. (Even
+;        smaller first: the mel front-end — STFT + an 80-row filterbank — matching whisper.log_mel.)
+;   Parallel, not gated on the above: the recognition-router + ensemble-vote + champion-challenger +
+;     learning-arc already run N classifiers on one chunk, compared, all learning, the router escalating
+;     to a richer recipe on events — A/B/C/D over the same samples. The deterministic Form layer is what
+;     lets that comparison be bit-exact. The work is making the "richer" arms real (M4/M6) models.
+;
+; ── THE DYNAMIC-RECIPE ADVANTAGE (why Form, not a .pt/.mlx binary) ──
+;   Because a layer stack is a SEQUENCE of block-cells (the same shape prose-as-recipe uses for words),
+;   "make a smaller/larger/different model" is editing the list — generatable, mutable, per-task
+;   synthesizable architectures (neural-architecture-search, growing a layer when a novel shape arrives).
+;   A frozen binary cannot do this; the substrate was built for exactly it (equivalent architectures
+;   share a Blueprint NodeID, so the body recognizes same-shape models across documents).
+;
+; KIN: numeric-formats.canonical.json (the 19 formats + conformance) · cell-numerics.form / cosine.form
+;   (the layer math) · attention.fk + embedding-as-recipe.fk (content-addressed attention) ·
+;   tests/ml-flow-band.fk (the proven float-tensor primitive) · tests/float-conversions-band.fk (the
+;   float->int bridge) · turboquant-as-recipe.form (data-oblivious quant for activations) ·
+;   form-kernel-rust/src/{main.rs,formats.rs} (the JIT + the conformance harness) · form-kernel-go/
+;   jit_value.go (the value-typed JIT template) · form-kernel-ts/src/backends/metal.ts (the GPU emitter) ·
+;   encoder-decoder-as-recipe.form + audio-grammar.form (register a model as a codec row; the mel front-end).
