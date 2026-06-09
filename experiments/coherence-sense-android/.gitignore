@@ -1,0 +1,11 @@
+# build outputs and machine-specific config — the wrapper jar IS committed (needed to build)
+.gradle/
+build/
+app/build/
+local.properties
+*.apk
+*.iml
+.idea/
+captures/
+.externalNativeBuild/
+.cxx/
