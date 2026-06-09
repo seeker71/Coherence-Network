@@ -16,14 +16,15 @@
 # mounted config includes database.url. The production-manifest Traefik rules
 # below are still HEADER-GATED, so mutable ordinary no-header traffic continues
 # to reach api:8000 until the public no-header flip is separately performed and
-# verified. The kernel-image proposal POST and inventory flow GET paths are the
-# explicit path-specific exceptions served by the BML catalog service below.
+# verified. The kernel-image proposal POST is a narrow public BML path. The
+# inventory flow grammar remains an explicit header-gated BML canary until the
+# full public aggregator parity is native-proofed.
 #
 # WHAT THIS IS NOT: the all-traffic flip. The full flip is pointing Traefik's
 # ordinary Host(api.coherencycoin.com) router at this service instead of at the
 # api service. This overlay keeps the existing api router in place and adds only
-# higher-priority routers for explicit canary headers, plus narrow path-specific
-# BML public routes whose contracts are already native-proofed.
+# higher-priority routers for explicit canary headers, plus narrow BML public
+# routes whose contracts are already native-proofed.
 #
 # ---------------------------------------------------------------------------
 # HOW TO RUN IT AS THE PUBLIC CANARY (NO ordinary traffic change):
@@ -123,7 +124,7 @@ services:
       traefik.http.routers.coherence-api-kernel-image-proposal.tls.certresolver: "letsencrypt"
       traefik.http.routers.coherence-api-kernel-image-proposal.priority: "1200"
       traefik.http.routers.coherence-api-kernel-image-proposal.service: "coherence-api-kernel-bml-front-door"
-      traefik.http.routers.coherence-api-inventory-flow.rule: "Host(`api.coherencycoin.com`) && Method(`GET`) && Path(`/api/inventory/flow`)"
+      traefik.http.routers.coherence-api-inventory-flow.rule: "Host(`api.coherencycoin.com`) && Method(`GET`) && Path(`/api/inventory/flow`) && Header(`X-Form-Native-Inventory`,`1`)"
       traefik.http.routers.coherence-api-inventory-flow.entrypoints: "websecure"
       traefik.http.routers.coherence-api-inventory-flow.tls.certresolver: "letsencrypt"
       traefik.http.routers.coherence-api-inventory-flow.priority: "1190"
