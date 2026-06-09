@@ -32,7 +32,9 @@ def test_public_gate_form_names_header_runner_and_rollback_receipt():
         "defn nmpg-public-gate-header",
         "X-Form-Native-Public-Gate",
         "defn nmpg-public-gate-rollback-receipt-sql",
+        "defn nmpg-decision-receipt-json",
         "public-gate-rollback-receipt",
+        "native-mutation-gate-decision-receipt",
         "defn nmpg-run-idea-create-public-gate",
         "defn nmpg-run-idea-update-public-gate",
         "defn nmpg-run-spec-update-public-gate",
@@ -65,7 +67,7 @@ def test_public_gate_band_executes_across_sibling_kernels():
     )
 
     assert result.returncode == 0, result.stderr + result.stdout
-    assert "→ 1111111" in result.stdout
+    assert "→ 11111111" in result.stdout
 
 
 def test_public_gate_live_script_runs_or_skips_when_pg_missing():
@@ -121,6 +123,9 @@ def test_production_routes_expose_public_gate_without_no_header_flip():
 
     assert '\\"native_public_gate\\":true' in text
     assert '\\"route_local_gate_executes\\":true' in text
+    assert '\\"decision_receipt\\":' in text
+    assert "native-mutation-gate-decision-receipt" in text
+    assert "can_contradict_intent" in text
     assert '\\"executes\\":false' in text
     assert "Requests without either header" in text
     assert "Ordinary no-header traffic remains fanout-python" in text
@@ -146,8 +151,16 @@ def test_public_gate_harness_observes_public_gate_when_kernel_available():
     assert report["public_gate_header_allowed"] is True
     assert report["ordinary_traffic_flip_performed"] is False
     assert report["next_evidence_needed"] == [
+        "public-gate decision receipts in deployed canary traffic",
         "deployed X-Form-Native-Public-Gate canary before any no-header flip",
     ]
+    for case in report["cases"]:
+        assert case["checks"]["decision_receipt_state"] is True
+        assert case["checks"]["decision_receipt_selected_path"] is True
+        assert case["checks"]["decision_receipt_reversible"] is True
+        assert case["checks"]["decision_receipt_signature"] is True
+        assert case["checks"]["both_headers_decision_receipt_state"] is True
+        assert case["checks"]["both_headers_decision_receipt_selected_path"] is True
 
 
 def test_route_forms_name_public_gate_before_deployed_canary():

@@ -22,8 +22,37 @@
             ",\"gate_route\":\"native-kernel\""
             ",\"route_runner\":\"Form-native application graph mutation plus side effects plus idea valuation audit ledger\""
             ",\"route_local_rollback_receipt\":\"persisted\""
+            ",\"decision_receipt\":\"per-request\""
             ",\"ordinary_traffic_flip_performed\":false"
             ",\"rollback\":\"remove X-Form-Native-Public-Gate or disable public-gate route row\""
+            "}")))
+
+    (defn nmpg-decision-receipt-json (gate-id operation node-id)
+        (nms-cat (list
+            "{\"state\":\"native-mutation-gate-decision-receipt\""
+            ",\"receipt_id\":\"decision:X-Form-Native-Public-Gate:" operation ":" node-id "\""
+            ",\"gate_id\":\"" gate-id "\""
+            ",\"gate\":\"native_mutation_public_gate\""
+            ",\"surface\":\"mutable-ideas-specs\""
+            ",\"operation\":\"" operation "\""
+            ",\"node_id\":\"" node-id "\""
+            ",\"protocol\":\"X-Form-Native-Public-Gate\""
+            ",\"selected_path\":\"X-Form-Native-Public-Gate\""
+            ",\"outcome\":\"success\""
+            ",\"choice\":1"
+            ",\"candidates\":["
+                "{\"path\":\"fanout-python\",\"eligible\":true,\"selected\":false,\"outcome\":\"silence\"},"
+                "{\"path\":\"X-Form-Native-Preview\",\"eligible\":true,\"selected\":false,\"outcome\":\"stop\"},"
+                "{\"path\":\"X-Form-Native-Public-Gate\",\"eligible\":true,\"selected\":true,\"outcome\":\"success\"}"
+            "]"
+            ",\"ordinary_traffic_flip_performed\":false"
+            ",\"silence\":\"fanout-default-when-no-native-header\""
+            ",\"fail\":\"rollback-to-fanout-by-removing-public-gate-header\""
+            ",\"stop\":\"ordinary-traffic-unflipped\""
+            ",\"bma\":\"native-mutation-public-gate\""
+            ",\"reversible\":true"
+            ",\"can_contradict_intent\":true"
+            ",\"signature\":{\"category\":\"native-mutation-gate\",\"selected_path\":\"X-Form-Native-Public-Gate\",\"outcome_code\":1,\"candidate_count\":3}"
             "}")))
 
     (defn nmpg-rollback-details-json (gate-id node-id)
@@ -74,9 +103,10 @@
             (nmpg-record-public-gate-rollback-receipt conn gate-id node-id)
             conn))
 
-    ;; 1111111 =
+    ;; 11111111 =
     ;;   public gate contract names explicit header and fanout default
     ;;   rollback receipt SQL is route-local and conflict-safe
+    ;;   per-request decision receipt records the selected branch
     ;;   idea public gate calls the route-side-effect runner
     ;;   idea update public gate calls the valuation audit-ledger runner
     ;;   spec public gate calls the route-side-effect runner
@@ -86,6 +116,7 @@
         (do
             (let contract (nmpg-public-gate-contract-json))
             (let receipt-sql (nmpg-public-gate-rollback-receipt-sql "gate-one" "idea-one"))
+            (let decision (nmpg-decision-receipt-json "gate-one" "update-idea" "idea-one"))
             (let contract-ok (if (eq (nms-and4
                 (nms-contains? contract "public-gate-installed")
                 (nms-contains? contract "X-Form-Native-Public-Gate")
@@ -96,26 +127,31 @@
                 (nms-contains? receipt-sql "route-local-rollback-receipt")
                 (nms-contains? receipt-sql "ON CONFLICT")
                 (nms-contains? receipt-sql "disable public-gate route row")) 1) 10 0))
+            (let decision-ok (if (eq (nms-and4
+                (nms-contains? decision "native-mutation-gate-decision-receipt")
+                (nms-contains? decision "\"selected_path\":\"X-Form-Native-Public-Gate\"")
+                (nms-contains? decision "\"outcome\":\"success\"")
+                (nms-contains? decision "\"can_contradict_intent\":true")) 1) 100 0))
             (let idea-ok (if (eq (nms-and3
                 (nms-contains? "nmpg-run-idea-create-public-gate nmrs-run-idea-create-with-side-effects" "nmpg-run-idea-create-public-gate")
                 (nms-contains? "nmpg-run-idea-create-public-gate nmrs-run-idea-create-with-side-effects" "nmrs-run-idea-create-with-side-effects")
-                (nms-contains? "nmpg-run-idea-create-public-gate nmrs-run-idea-create-with-side-effects" "with-side-effects")) 1) 100 0))
+                (nms-contains? "nmpg-run-idea-create-public-gate nmrs-run-idea-create-with-side-effects" "with-side-effects")) 1) 1000 0))
             (let idea-update-ok (if (eq (nms-and3
                 (nms-contains? "nmpg-run-idea-update-public-gate nival-run-idea-update-with-valuation-audit audit_ledger" "nmpg-run-idea-update-public-gate")
                 (nms-contains? "nmpg-run-idea-update-public-gate nival-run-idea-update-with-valuation-audit audit_ledger" "nival-run-idea-update-with-valuation-audit")
-                (nms-contains? "nmpg-run-idea-update-public-gate nival-run-idea-update-with-valuation-audit audit_ledger" "audit_ledger")) 1) 1000 0))
+                (nms-contains? "nmpg-run-idea-update-public-gate nival-run-idea-update-with-valuation-audit audit_ledger" "audit_ledger")) 1) 10000 0))
             (let spec-ok (if (eq (nms-and3
                 (nms-contains? "nmpg-run-spec-update-public-gate nmrs-run-spec-update-with-side-effects" "nmpg-run-spec-update-public-gate")
                 (nms-contains? "nmpg-run-spec-update-public-gate nmrs-run-spec-update-with-side-effects" "nmrs-run-spec-update-with-side-effects")
-                (nms-contains? "nmpg-run-spec-update-public-gate nmrs-run-spec-update-with-side-effects" "with-side-effects")) 1) 10000 0))
+                (nms-contains? "nmpg-run-spec-update-public-gate nmrs-run-spec-update-with-side-effects" "with-side-effects")) 1) 100000 0))
             (let function-ok (if (eq (nms-and3
                 (nms-contains? "nmpg-record-public-gate-rollback-receipt nmpg-public-gate-rollback-receipt-sql" "nmpg-record-public-gate-rollback-receipt")
                 (nms-contains? "nmpg-record-public-gate-rollback-receipt nmpg-public-gate-rollback-receipt-sql" "nmpg-public-gate-rollback-receipt-sql")
-                (nms-contains? "nmpg-record-public-gate-rollback-receipt nmpg-public-gate-rollback-receipt-sql" "rollback-receipt")) 1) 100000 0))
+                (nms-contains? "nmpg-record-public-gate-rollback-receipt nmpg-public-gate-rollback-receipt-sql" "rollback-receipt")) 1) 1000000 0))
             (let traffic-ok (if (eq (nms-and3
                 (nms-contains? contract "\"ordinary_traffic_flip_performed\":false")
                 (nms-contains? contract "remove X-Form-Native-Public-Gate")
-                (nms-contains? contract "fanout-python")) 1) 1000000 0))
-            (sum (list contract-ok receipt-ok idea-ok idea-update-ok spec-ok function-ok traffic-ok))))
+                (nms-contains? contract "fanout-python")) 1) 10000000 0))
+            (sum (list contract-ok receipt-ok decision-ok idea-ok idea-update-ok spec-ok function-ok traffic-ok))))
 
     0)
