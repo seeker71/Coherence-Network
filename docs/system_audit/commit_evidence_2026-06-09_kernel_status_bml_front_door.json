@@ -1,0 +1,112 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/native-kernel-status-front-door-20260609",
+  "commit_scope": "Move GET /api/utils/kernel_status from FastAPI public routing into the BML front-door native route service.",
+  "files_owned": [
+    "deploy/front-door/api.bml",
+    "deploy/hostinger/auto-deploy.sh",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "docs/system_audit/commit_evidence_2026-06-09_kernel_status_bml_front_door.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/verify_web_api_deploy.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "cd form/form-kernel-rust && cargo build --release",
+      "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_web_api_deploy.sh",
+      "VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -c 'source scripts/verify_web_api_deploy.sh https://api.example https://web.example'",
+      "form/form-kernel-rust/target/release/form-kernel-rust serve --host 127.0.0.1 --port 19183 --workers 1 --routes deploy/front-door/api.bml --stdlib form/form-stdlib --upstream http://127.0.0.1:9",
+      "curl -fsS -D /tmp/kernel-status-front-door.headers -o /tmp/kernel-status-front-door.body http://127.0.0.1:19183/api/utils/kernel_status -H 'Accept: application/json'"
+    ],
+    "summary": "The BML front-door catalog now defines api_kernel_status and KernelStatusRoute for GET /api/utils/kernel_status. The Hostinger Traefik overlay routes that exact public path to kernel-router-bml-front-door, and both deploy verification scripts require X-Form-Router:native-kernel, X-Form-Handler:api_kernel_status, X-Form-Python-Authority:false, and a body with active=native-kernel, router=native-kernel, python_authority=false.",
+    "observed_delta": {
+      "before_public_probe": "Production GET /api/utils/kernel_status returned FastAPI bridge JSON with active=inline and no X-Form-Router header.",
+      "local_front_door_probe": "HTTP/1.1 200 OK with X-Form-Router:native-kernel, X-Form-Handler:api_kernel_status, X-Form-Python-Authority:false, and body {\"active\":\"native-kernel\",...,\"python_authority\":false,\"runtime\":\"form-kernel-rust\"}.",
+      "public_route_binding": "docker-compose.kernel-router.yml adds a high-priority Traefik router for Host(api.coherencycoin.com) && Method(GET) && Path(/api/utils/kernel_status) to the BML front-door service."
+    },
+    "known_limitations": [
+      {
+        "scope": "catalog-wide check route command",
+        "observed": "form-kernel-rust check --routes deploy/front-door/api.bml still reports the same 14 unresolved full-catalog names on origin/main and on this branch. The focused serve proof validates this route through the same BML front-door serving path used by prior public native route slices."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com",
+      "curl -i https://api.coherencycoin.com/api/utils/kernel_status"
+    ],
+    "notes": "Post-merge deploy must show the public route no longer returns FastAPI bridge status."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Public GET /api/utils/kernel_status is invited into the native BML front door by default instead of being served by FastAPI.",
+    "public_endpoints": [
+      "GET /api/utils/kernel_status"
+    ],
+    "test_flows": [
+      "Run the BML front-door router locally and curl /api/utils/kernel_status.",
+      "Require native router, handler, and python-authority headers.",
+      "Require body-level active=native-kernel, router=native-kernel, python_authority=false."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete. PR checks, merge, deploy, and public verification remain before claiming public release."
+  },
+  "idea_ids": [
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "specs/kernel-router-fanout-native-invitation.md"
+  ],
+  "task_ids": [
+    "kernel-status-bml-front-door-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "deploy/front-door/api.bml::api_kernel_status",
+    "deploy/front-door/api.bml::KernelStatusRoute",
+    "deploy/kernel-router/docker-compose.kernel-router.yml::coherence-api-kernel-status",
+    "scripts/verify_web_api_deploy.sh::check_kernel_status_native",
+    "deploy/hostinger/auto-deploy.sh::BML front-door kernel status canary"
+  ],
+  "change_files": [
+    "deploy/front-door/api.bml",
+    "deploy/hostinger/auto-deploy.sh",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "docs/system_audit/commit_evidence_2026-06-09_kernel_status_bml_front_door.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/verify_web_api_deploy.sh"
+  ],
+  "change_intent": "runtime_feature"
+}

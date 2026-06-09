@@ -1098,6 +1098,64 @@ check_household_events_native() {
   return 0
 }
 
+check_kernel_status_native() {
+  local url="${API_URL%/}/api/utils/kernel_status"
+  local headers_file="$TMP_DIR/kernel_status.headers.txt"
+  local body_file="$TMP_DIR/kernel_status.body.json"
+  local status router handler authority
+
+  echo
+  echo "==> Kernel status native route: ${url}"
+
+  status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -L -D "$headers_file" -o "$body_file" -w "%{http_code}" \
+    --max-time "$CURL_MAX_TIME" \
+    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+    "$url" \
+    -H "Accept: application/json" || true)"
+  router="$(awk 'tolower($1) == "x-form-router:" { print $2 }' "$headers_file" | tail -n 1 | tr -d '\r')"
+  handler="$(awk 'tolower($1) == "x-form-handler:" { print $2 }' "$headers_file" | tail -n 1 | tr -d '\r')"
+  authority="$(awk 'tolower($1) == "x-form-python-authority:" { print $2 }' "$headers_file" | tail -n 1 | tr -d '\r')"
+
+  echo "HTTP status: ${status:-unknown}"
+  echo "X-Form-Router: ${router:-<missing>}"
+  echo "X-Form-Handler: ${handler:-<missing>}"
+  echo "X-Form-Python-Authority: ${authority:-<missing>}"
+
+  if [[ -z "$status" || "$status" -lt 200 || "$status" -ge 300 ]]; then
+    echo "FAIL: kernel status route did not return 2xx"
+    head -c 250 "$body_file" || true
+    echo
+    return 1
+  fi
+  if [[ "$router" != "native-kernel" || "$handler" != "api_kernel_status" || "$authority" != "false" ]]; then
+    echo "FAIL: kernel status route did not return native BML proof headers"
+    head -c 250 "$body_file" || true
+    echo
+    return 1
+  fi
+
+  if command -v jq >/dev/null 2>&1; then
+    if ! jq -e '.active == "native-kernel" and .router == "native-kernel" and .python_authority == false and .available == true' "$body_file" >/dev/null; then
+      echo "FAIL: kernel status body is missing native authority fields"
+      jq '{active, router, python_authority, available, runtime}' "$body_file" 2>/dev/null || head -c 500 "$body_file"
+      echo
+      return 1
+    fi
+  else
+    if ! grep -q '"active":"native-kernel"' "$body_file" \
+      || ! grep -q '"router":"native-kernel"' "$body_file" \
+      || ! grep -q '"python_authority":false' "$body_file"; then
+      echo "FAIL: kernel status body is missing native authority fields"
+      head -c 500 "$body_file" || true
+      echo
+      return 1
+    fi
+  fi
+
+  echo "PASS"
+  return 0
+}
+
 if [[ "${VERIFY_WEB_API_DEPLOY_SOURCE_ONLY:-0}" == "1" ]]; then
   return 0 2>/dev/null || exit 0
 fi
@@ -1124,6 +1182,7 @@ check_provider_readiness "${API_URL%/}/api/automation/usage/readiness" "$VERIFY_
 check_kernel_image_native_proposal || fail=1
 check_inventory_flow_native || fail=1
 check_inventory_flow_observation_native || fail=1
+check_kernel_status_native || fail=1
 check_household_events_native || fail=1
 check_url "Public web root" "${WEB_URL%/}/" || fail=1
 check_web_css_assets "${WEB_URL%/}/" || fail=1
