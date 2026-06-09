@@ -1,0 +1,68 @@
+; declared-source.fk — a source that announces itself is recognition at confidence 100, for free.
+;
+; The cheapest, truest reading is the one you don't have to guess. When YouTube Music plays a song,
+; Android publishes the title/artist to the OS (MediaSession now-playing — the same surface the lock
+; screen and Android Auto read). Reading that DECLARED metadata costs nothing and is authoritative;
+; running an audio fingerprint or whisper to INFER the same song costs compute and only guesses.
+;
+; So a reading carries a KIND: "declared" (the source announced it — confidence 100, near-free) or
+; "inferred" (a classifier guessed it from raw signal). This recipe makes the distinction load-
+; bearing, three ways, all composing the spine:
+;   PREFER   — a declared reading wins the route over any inferred one; the source's own word about
+;              what it is playing is ground truth, not a vote to be out-weighed.
+;   SKIP     — when something is declared, do NOT run the expensive classifier at all (the cost win).
+;   GROUND   — the declared label is FREE PERFECT GROUND TRUTH for the inferred classifier: the cheap
+;              listener shadow-learns against the now-playing, continuously, for nothing
+;              (self-grounding-classifier.fk, fed by the device itself).
+; Fall back to inference only when nothing is declared — when the OS is silent about now-playing,
+; then the body guesses.
+;
+; A reading = (list source label confidence kind), kind in {"declared","inferred"}, conf 0..100.
+;
+; Proven by: tests/declared-source-band.fk (three-way at validate.sh)
+
+(do
+    (defn ds-source (r) (nth r 0))
+    (defn ds-label  (r) (nth r 1))
+    (defn ds-conf   (r) (nth r 2))
+    (defn ds-kind   (r) (nth r 3))
+    (defn ds-declared? (r) (str_eq (ds-kind r) "declared"))
+
+    ; the source's own announcement, if any (typically one now-playing); else the empty reading.
+    (defn ds-pick-declared (rs)
+        (if (eq (len rs) 0) (empty)
+            (if (ds-declared? (head rs)) (head rs)
+                (ds-pick-declared (tail rs)))))
+    (defn ds-any-declared? (rs) (if (eq (len (ds-pick-declared rs)) 0) 0 1))
+
+    ; the best inferred guess that clears the floor — used only when nothing is declared.
+    (defn ds-best-inferred-loop (rs floor best)
+        (if (eq (len rs) 0) best
+            (if (and (not (ds-declared? (head rs))) (ge (ds-conf (head rs)) floor))
+                (if (eq (len best) 0)
+                    (ds-best-inferred-loop (tail rs) floor (head rs))
+                    (if (gt (ds-conf (head rs)) (ds-conf best))
+                        (ds-best-inferred-loop (tail rs) floor (head rs))
+                        (ds-best-inferred-loop (tail rs) floor best)))
+                (ds-best-inferred-loop (tail rs) floor best))))
+    (defn ds-best-inferred (rs floor) (ds-best-inferred-loop rs floor (empty)))
+
+    ; --- PREFER: declared wins; else the best inferred; else honest silence. ---
+    (defn ds-route (rs floor)
+        (if (eq (ds-any-declared? rs) 1)
+            (list (ds-source (ds-pick-declared rs)) (ds-label (ds-pick-declared rs)) (ds-conf (ds-pick-declared rs)))
+            (if (eq (len (ds-best-inferred rs floor)) 0)
+                (list "" "" 0)
+                (list (ds-source (ds-best-inferred rs floor)) (ds-label (ds-best-inferred rs floor)) (ds-conf (ds-best-inferred rs floor))))))
+    (defn ds-flow-label    (flow) (nth flow 1))
+    (defn ds-flow-strength (flow) (nth flow 2))
+
+    ; --- SKIP: don't pay for a classifier when the source already told us. ---
+    (defn ds-should-classify? (rs) (if (eq (ds-any-declared? rs) 1) 0 1))
+
+    ; --- GROUND: the declared label is free, perfect ground truth for the inferred classifier. ---
+    (defn ds-ground-truth (rs) (if (eq (ds-any-declared? rs) 1) (ds-label (ds-pick-declared rs)) ""))
+    ; grade one inferred reading against the free declared truth (a self-grounding sample, for free).
+    (defn ds-inferred-agrees? (r rs) (if (str_eq (ds-label r) (ds-ground-truth rs)) 1 0))
+
+    0)

@@ -1,0 +1,64 @@
+; declared-source.form — ask the source instead of guessing; the answer is cheap, true, and teaches.
+;
+; THE ASK (Urs, 2026-06-09):
+;   "When running native on Android, use native communication to ask YouTube / YouTube Music what it
+;    is currently playing, so we don't have to guess by listening — a much cheaper classifier."
+;
+; THE INSIGHT — a reading has a KIND, and one kind is nearly free and authoritative:
+;   DECLARED — the source announced what it is (the now-playing metadata a media app publishes to the
+;     OS): confidence 100, near-zero cost, and TRUE by definition (it IS what is playing).
+;   INFERRED — a classifier guessed from raw signal (audio fingerprint, whisper, vision): real cost,
+;     and only a guess.
+;   Three consequences, all composing the spine (SHIPPED + proven: declared-source.fk -> 127, three-way):
+;     PREFER  a declared reading wins the route over any inferred one (ds-route) — the source's own
+;             word is ground truth, not a vote to out-weigh.
+;     SKIP    when something is declared, the expensive classifier does not run at all (ds-should-
+;             classify? -> 0). The cheapest classifier is the one you never invoke.
+;     GROUND  the declared label is FREE, PERFECT ground truth for the inferred classifier (ds-ground-
+;             truth): the cheap listener shadow-learns against the now-playing, continuously, for
+;             nothing (self-grounding-classifier.fk fed by the device itself — the highest-quality,
+;             lowest-cost training signal there is). Infer only when nothing is declared (the OS is
+;             silent about now-playing -> then the body guesses).
+;
+; THE CARRIER (Android) — one surface, not per-app integrations (core-abstraction-first):
+;   MediaSessionManager.getActiveSessions(...) behind a NotificationListenerService permission gives
+;   a MediaController per active media session; getMetadata() yields title/artist/album, getPlayback
+;   State() yields playing/paused/position. YouTube and YouTube Music both publish here (it is how
+;   they appear on the lock screen, Android Auto, Bluetooth car displays, Wear). So the body reads the
+;   ONE now-playing surface every media app already publishes to — never a YouTube SDK + a Spotify SDK
+;   + ...; one declared-reading carrier covers them all. Consent is the notification-access permission
+;   the human grants (channel-interface.fk — a sense is a door the human opens).
+;
+; HONEST LANES (lc-honest-lane):
+;   MEASURED/standard — MediaSession now-playing is the well-trodden Android path (lock screen,
+;     Android Auto, Wear OS, car head-units all read it). Reading it is cheap and reliable.
+;   CAVEATS, named not hidden — a YouTube *video* may publish a video title rather than a clean
+;     song/artist (YouTube Music is cleaner); ads and some DRM'd content publish sparse metadata; a
+;     few apps under-populate fields. When the declaration is absent or unclean, the body falls back
+;     to the inferred classifier — declared-source degrades to honest guessing, never to a false claim.
+;   PLATFORM — this is cleanest on Android. iOS keeps now-playing (MPNowPlayingInfoCenter) system-
+;     private; a third-party app cannot freely read another app's now-playing, so on iOS the inferred
+;     path carries more of the load. Named as the real difference, not glossed.
+;
+; THE GENERAL PATTERN — declared sources are everywhere, YouTube is one instance:
+;   any MediaSession, a connected Bluetooth device's name, an NFC tag, the network SSID, a calendar
+;   event, a paired device announcing itself — each is a source that declares rather than waits to be
+;   guessed. The rule generalizes: PREFER the declaration, GROUND the inference on it, INFER only on
+;   silence. The expensive senses exist to cover what nothing announces — not to re-derive what is
+;   already published.
+;
+; THE PATH:
+;   1. declared-vs-inferred routing (prefer / skip / ground)   [SHIPPED: declared-source.fk -> 127]
+;   2. the Android MediaSession now-playing carrier (NotificationListenerService -> MediaController) [build]
+;   3. wire the declared now-playing as the free continuous ground truth into self-grounding-
+;      classifier.fk — the listener learns this field's songs from the device, for nothing   [build]
+;
+; KIN: recognition-router.form (declared is a reading at confidence 100 that wins) · self-grounding-
+;   perception.form (the declaration is the cheapest, truest ground truth) · channel-interface.fk
+;   (notification-access is a door the human opens) · resource-port.fk (the now-playing as an afferent
+;   port) · lc-honest-lane (the caveats and the platform difference, named) · shared-sensing.form
+;   (a declared reading shared across the circle grounds every body at once).
+;
+; LINEAGE: the satsang / presence listener guessed the song by fingerprint (ShazamKit, entitlement-
+;   walled); this is the cheaper, truer path — ask the source. The fingerprint stays as the fallback
+;   for what declares nothing.
