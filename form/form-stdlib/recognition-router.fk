@@ -1,0 +1,75 @@
+; recognition-router.fk — parallel multi-model recognition, routed to one coherent stream.
+;
+; The runnable heart of docs/coherence-substrate/recognition-router.form. The body's own answer
+; to "which model do I trust right now?": fan N model-carriers at one input IN PARALLEL, each
+; returns a CONFIDENCE VECTOR; compress vector->scalar (recognition strength); FAIL-FAST below a
+; floor (carry no weak signal); TRUST the strong one; SELECT the max-strength reading (the model
+; with the most data wins) into ONE coherent stream; and read CONSENSUS (do models agree?).
+; Models are DATA; the routing is Form; the carriers are thin and swappable; the whole thing is
+; kernel-executable in parallel — faster than orchestrating the choice in a foreign runtime.
+;
+; Confidences are integers on a 0..100 scale (the carrier scales its float to an int, so the
+; comparisons are exact). Kin: value-execution.fk (proof gates), turboquant-as-recipe (the
+; data-oblivious vector->scalar), lc-honest-lane (confidence IS the honesty), the three-way
+; validate.sh (no trusted prover — parallel kernels, what survives). This is that, on carriers.
+;
+; Proven by: form-stdlib/tests/recognition-router-band.fk (three-way at validate.sh)
+
+(do
+    ; a reading from one model-carrier: (list model-name confidence-vector)
+    ;   confidence-vector = list of (list label confidence) — what it recognized + how sure (0..100)
+    (defn rr-model (r) (nth r 0))
+    (defn rr-vec   (r) (nth r 1))
+
+    ; --- VECTOR -> SCALAR: a confidence-vector compresses to a recognition-strength scalar. ---
+    ; the strength = the top confidence (how surely the model recognizes its best guess).
+    (defn rr-top-loop (vec best-label best-conf)
+        (if (eq (len vec) 0)
+            (list best-label best-conf)
+            (if (gt (nth (head vec) 1) best-conf)
+                (rr-top-loop (tail vec) (nth (head vec) 0) (nth (head vec) 1))
+                (rr-top-loop (tail vec) best-label best-conf))))
+    (defn rr-top      (vec) (rr-top-loop vec "" 0))        ; -> (label conf)
+    (defn rr-label    (r) (nth (rr-top (rr-vec r)) 0))     ; the model's best label
+    (defn rr-strength (r) (nth (rr-top (rr-vec r)) 1))     ; vector -> scalar: recognition strength
+
+    ; --- FAIL-FAST: a reading passes only if its strength clears the floor. ---
+    (defn rr-passes?  (r floor) (ge (rr-strength r) floor))
+    ; --- TRUST: a reading is trusted (take it, stop waiting) at or above the trust threshold. ---
+    (defn rr-trusted? (r trust) (ge (rr-strength r) trust))
+
+    ; --- SELECT: the highest-strength reading that clears the floor (most data wins), else (). ---
+    (defn rr-select-loop (readings floor best)
+        (if (eq (len readings) 0) best
+            (if (rr-passes? (head readings) floor)
+                (if (eq (len best) 0)
+                    (rr-select-loop (tail readings) floor (head readings))
+                    (if (gt (rr-strength (head readings)) (rr-strength best))
+                        (rr-select-loop (tail readings) floor (head readings))
+                        (rr-select-loop (tail readings) floor best)))
+                (rr-select-loop (tail readings) floor best))))
+    (defn rr-select (readings floor) (rr-select-loop readings floor (empty)))
+
+    ; --- COHERENT FLOW: the routed result, or honest silence when nothing clears the floor. ---
+    ;   (list source-model label strength)  OR  (list "" "" 0) = no recognition, the body is silent
+    (defn rr-route (readings floor)
+        (if (eq (len (rr-select readings floor)) 0)
+            (list "" "" 0)
+            (list (rr-model    (rr-select readings floor))
+                  (rr-label    (rr-select readings floor))
+                  (rr-strength (rr-select readings floor)))))
+    (defn rr-source        (flow) (nth flow 0))
+    (defn rr-flow-label    (flow) (nth flow 1))
+    (defn rr-flow-strength (flow) (nth flow 2))
+    (defn rr-recognized?   (flow) (if (gt (rr-flow-strength flow) 0) 1 0))
+
+    ; --- CONSENSUS / FUSE: how many passing models agree on the routed label (more data behind it). ---
+    (defn rr-agree-count (readings floor label)
+        (if (eq (len readings) 0) 0
+            (if (and (rr-passes? (head readings) floor) (str_eq (rr-label (head readings)) label))
+                (add 1 (rr-agree-count (tail readings) floor label))
+                (rr-agree-count (tail readings) floor label))))
+    (defn rr-consensus? (readings floor flow)
+        (if (ge (rr-agree-count readings floor (rr-flow-label flow)) 2) 1 0))
+
+    0)
