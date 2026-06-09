@@ -1,0 +1,42 @@
+; preludes: form-stdlib/recognition-router.fk
+;
+; recognition-router-compute-band — the SAME router, now choosing the INFERENCE compute-path.
+;
+; The first brick of "local LLM as a Form-native organ" (docs/coherence-substrate/
+; local-inference-as-organ.form). The router that picks the most-data recognition model picks
+; the most-throughput compute-path with no change: a reading is (path, (served-model, fitness)),
+; where fitness is the carrier's measured throughput x quality, scaled 0..100 — the same
+; vector->scalar the recognition carriers do. Four candidate paths run/measured IN PARALLEL on
+; one prompt (floor = 30, a path too slow to be worth waiting on is dropped, fail-fast):
+;   "gpu-f16-7b"  (qwen-7b  92)  -> Metal GPU, full precision, 7b  — fastest viable, wins
+;   "gpu-q4-30b"  (qwen-30b 74)  -> Metal GPU, 4-bit, 30b          — smarter, heavier
+;   "ane-q4-7b"   (qwen-7b  68)  -> Neural Engine, 4-bit, 7b       — efficient fallback for 7b
+;   "cpu-q8-7b"   (qwen-7b  22)  -> CPU, 8-bit, 7b                 — too slow, FAILS the floor
+; routed flow: ("gpu-f16-7b", "qwen-7b", 92) — the path with the most tokens/sec the body can
+; trust wins; gpu-f16-7b + ane-q4-7b are two viable paths for qwen-7b = consensus (a fallback
+; organ exists if the GPU saturates). This is "multiple-path testing in parallel, route to the
+; most data, fail-fast, trust, vector->scalar" — applied to the host's own organs. Same recipe.
+;
+; Verdict 63 when every claim lands (no new routing logic — the choose-model conductor IS this):
+;   1   most-throughput path wins      (source == gpu-f16-7b)
+;   2   the served model is right      (label == qwen-7b)
+;   4   vector->scalar fitness right   (strength == 92)
+;   8   a path was selected            (recognized? == 1)
+;   16  fail-fast drops the slow path  (cpu-q8-7b does NOT clear the floor)
+;   32  consensus: a fallback organ    (>= 2 viable paths serve qwen-7b)
+(do
+    (let readings (list
+        (list "gpu-f16-7b" (list (list "qwen-7b"  92)))
+        (list "gpu-q4-30b" (list (list "qwen-30b" 74)))
+        (list "ane-q4-7b"  (list (list "qwen-7b"  68)))
+        (list "cpu-q8-7b"  (list (list "qwen-7b"  22)))))
+    (let floor 30)
+    (let flow (rr-route readings floor))
+    (let cpu (nth readings 3))
+    (let c0 (if (str_eq (rr-source flow) "gpu-f16-7b") 1 0))
+    (let c1 (if (str_eq (rr-flow-label flow) "qwen-7b") 2 0))
+    (let c2 (if (eq (rr-flow-strength flow) 92) 4 0))
+    (let c3 (if (eq (rr-recognized? flow) 1) 8 0))
+    (let c4 (if (rr-passes? cpu floor) 0 16))
+    (let c5 (if (eq (rr-consensus? readings floor flow) 1) 32 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))

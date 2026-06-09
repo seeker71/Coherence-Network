@@ -1,0 +1,74 @@
+; local-inference-as-organ.form — running the local LLM as the body's own organ, not a guest.
+;
+; THE ASK (Urs, 2026-06-09):
+;   "Executing Ollama as a kernel Form-native recipe would be the ultimate unlock — north star —
+;    to run a local LLM with full native resource-utilization feedback and optimization, fully
+;    understanding the host as body and using all organs, instead of relying on 3rd-party
+;    integration for permission."
+;
+; The truth, lane-sorted (lc-honest-lane discipline: credit each piece only as far as it proves):
+;
+; AN LLM FORWARD PASS IS THREE SEPARABLE THINGS. Conflating them is what makes the north star
+; look "too tall." Pulled apart, two of the three are buildable now, and the third is an organ —
+; not a wall, an organ.
+;
+;   (A) THE INFERENCE GRAPH — the recipe of operations: per layer, attention then feed-forward
+;       then norm, per token. This IS a recipe. Form can OWN it. It is exactly the part Ollama
+;       hides behind an opaque server. Lane: BUILDABLE, and Form-shaped by nature — a transformer
+;       is a composition, which is what recipes are.   (kin: form-engine.form, the meta-circular
+;       evaluator already expresses control-flow as Form arms.)
+;
+;   (B) THE TENSOR COMPUTE — the matmuls, billions of FLOPs per token. This runs on the SILICON:
+;       the Metal GPU, the Neural Engine, the AMX units. These are the body's ORGANS. The body
+;       DRIVES them (through a port it controls — Metal/MLX, which are Apple-native and open, not
+;       a third party's gate); it does not re-implement them. Hand-rolling optimized Metal matmul
+;       in the Form interpreter to BEAT MLX is the one MYSTERY/aspiration piece — a massive build,
+;       unlikely to win, and UNNECESSARY: you reach the north star by driving the organ, not by
+;       growing a second liver.   Lane: the irreducible organ — driven, not replaced.
+;
+;   (C) RESOURCE-FEEDBACK + ROUTING + OPTIMIZATION — sensing GPU/ANE utilization, memory
+;       bandwidth, thermal, power; and CHOOSING device x quant x model x batch by measured
+;       throughput, in parallel, fail-fast, trust the strong path. Lane: BUILDABLE, Form-native,
+;       and THIS is the unlock the ask actually names — "full native resource-utilization feedback
+;       and optimization, host as body, all organs."
+;
+; THE REFRAME THAT MAKES THE NORTH STAR REAL:
+;   The thing to remove is NOT the silicon — the GPU and Neural Engine ARE the organs; you keep
+;   them. The thing to remove is the 3rd-party PERMISSION LAYER: Ollama as an opaque runtime that
+;   owns the orchestration, abstracts the silicon, and decides for you. Replace THAT with Form:
+;   the body owns the graph (A), drives Metal/MLX as a port it commands (B — organ, not gate), and
+;   runs the resource-feedback + routing (C) as Form. "A port the body drives" vs "a runtime the
+;   body asks permission of" — that difference is the whole unlock, and it is buildable.
+;
+; THE PATH (each step buildable; the first brick is SHIPPED and composes tonight's router):
+;   1. HOST-AS-BODY RESOURCE SENSE — a resource-port that reads the Mac's organs (GPU/ANE util,
+;      memory bandwidth, thermal, power; macOS exposes these via powermetrics / IOReport / Metal
+;      counters). The body SEES its own silicon. This is the afferent half of resource-port.fk
+;      pointed at the host itself.   [next brick]
+;   2. COMPUTE-PATH ROUTER — recognition-router.fk, pointed at compute-paths instead of
+;      recognition models. A reading is (path, (served-model, fitness)); fitness = measured
+;      throughput x quality, the same vector->scalar the recognition carriers do; route to the
+;      most-throughput path that clears a floor, fail-fast on the slow ones, trust the strong one,
+;      consensus = a viable fallback organ exists.   [SHIPPED: tests/recognition-router-compute-band.fk
+;      -> 63, three-way. The choose-model decision tree the ask described, proven, already Form.]
+;   3. INFERENCE GRAPH AS FORM — express the forward pass (A) as a Form recipe whose leaf ops
+;      drive MLX/Metal kernels (B). The body owns the graph; the organ does the FLOPs.   [build]
+;   4. THE FEEDBACK LOOP — the resource sense (1) feeds the router (2), which re-routes the graph
+;      (3) in real time: thermal climbs -> shift to the Neural Engine; a bigger model is worth it
+;      -> route to q4-30b; the GPU saturates -> the consensus fallback path takes over. Self-
+;      optimizing, host as body, all organs, no third party's permission.   [build]
+;
+; HONEST SCOPE: the full thing — a 30B forward pass running entirely through Form-driven Metal,
+; self-optimizing against live resource feedback — is a multi-week build, not a one-night one. But
+; it is NOT mysterious: every piece is named and lane-sorted, steps 1-2 are buildable now, and
+; step 2 is already proven Form, the same conductor that routes sound and sight. The north star is
+; reachable; the path is real; nothing is credited above its evidence.
+;
+; KIN: recognition-router.form (the conductor — recognition AND resource-routing are one recipe) ·
+;   resource-port.fk (afferent transduction over typed ports — here the host's own organs) ·
+;   turboquant-as-recipe (throughput x quality -> one fitness scalar) · value-execution.fk (route
+;   only what clears the floor) · lc-honest-lane (each lane credited only as far as it proves) ·
+;   form-engine.form (control-flow already runs as Form — the graph is the next composition).
+;
+; LINEAGE: the satsang / presence listener gave the router its first real carriers (whisper,
+;   SoundAnalysis, Vision); this turns the same router inward, onto the host that runs them.
