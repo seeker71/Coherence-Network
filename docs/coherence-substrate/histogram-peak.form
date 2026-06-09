@@ -1,0 +1,50 @@
+; histogram-peak.form — the dominant bin (mode) of a feature-vector histogram: where the signal piled up.
+;
+; THE PLACE IN THE SPINE:
+;   feature-vector.form MAKES a histogram — a fixed-width list of bin counts, the window binned by
+;   thresholds. This READS one: it names the single bin that holds the most readings. That is the MODE
+;   of the distribution. feature-vector answers "how is the window spread across these bands?"; this
+;   answers the one-word follow-up "which band won?" — the coarsest summary of a feature vector, an
+;   integer index plus the height behind it. It is the read-side companion to the brick it extends.
+;
+; THE SHAPE  (runnable: form-stdlib/histogram-peak.fk · proven: tests/histogram-peak-band.fk -> 127)
+;
+;   hp-peak-loop (hist i best-i best-h) -> winning index
+;     the max-select spine over bin INDICES. Carry the best index and its count; replace them only on a
+;     STRICTLY-greater count (gt, not ge). Walk ascending, stop at (eq i (len hist)). The gt-not-ge choice
+;     is the whole tie policy: an equal-height later bin never displaces the earlier one.
+;
+;   hp-peak-bin (hist) -> index of the fullest bar
+;     seeds bin 0 as the incumbent (best-i 0, best-h (nth hist 0)) and walks from index 1, so bin 0 holds
+;     on any tie. The argmax of the histogram — ties to the LOWEST index.
+;
+;   hp-peak-height (hist) -> the count in the peak bin
+;     (nth hist (hp-peak-bin hist)) — read the winning bar's height. Peak bin and peak height are the
+;     coherent (where, how-much) pair, the same shape nearest-shape emits as (label, strength).
+;
+;   hp-dominates? (hist k) -> 1 or 0
+;     the floor gate: (ge (hp-peak-height hist) k). 1 when the fullest bar clears k readings, else 0 —
+;     the only honesty knob, letting a caller refuse a mode that is real but thin.
+;
+; HOW IT COMPOSES THE TOOLKIT:
+;   This is the SAME max-select walk as nearest-shape.form's ns-best-loop (most agreement wins) and
+;   sequence-predictor.form's sp-predict-loop (most followers win) — one spine, three scores: agreeing
+;   bins, follower counts, bin counts. Downstream, recognition-router.form fuses a circle of such
+;   readings, and perception-pipeline.form wires feature-vector -> recognizer into one flow; this peak
+;   read drops in anywhere a feature vector needs collapsing to its single dominant band (a cheap pre-route
+;   gate, a one-number summary of a frame). All counts and indices are integers on the same exact-
+;   comparison ground (gt / ge / eq) the rest of the spine rides — no sub, no distance, no float.
+;
+; HONEST LANE / CAVEAT:
+;   the peak is the ARGMAX of bin counts — an order-and-magnitude-blind readout of an already order-blind
+;   histogram. It says which band is fullest, NOT by how much it beats the runner-up, nor whether the
+;   distribution is genuinely peaked vs nearly flat. A near-flat histogram (3 3 1) still reports a peak
+;   (bin 0) with full confidence in the index even though the mode barely leads. hp-dominates? is the only
+;   guard: below the floor the mode is real but thin, and the caller decides whether to trust it. For
+;   "is this actually peaked?" a spread/entropy reading is the right recipe, not this one.
+;
+; KIN: feature-vector.form (makes the histogram this reads) · nearest-shape.form (same max-select spine,
+;   score = agreeing bins) · sequence-predictor.form (same spine, score = follower counts) ·
+;   recognition-router.form (fuse a circle of readings) · perception-pipeline.form (the end-to-end flow
+;   this can gate or summarize) · the three-way validate.sh (no trusted prover — parallel kernels, what
+;   survives the agreement IS the peak; proven 127 on Go=Rust=TS).

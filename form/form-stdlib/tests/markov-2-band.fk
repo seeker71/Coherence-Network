@@ -1,0 +1,32 @@
+; preludes: form-stdlib/markov-2.fk
+;
+; markov-2-band — predict the next symbol from the last TWO, made falsifiable: order-2 over a repeating cycle.
+;
+; A stream cycles: history ("a" "b" "c" "a" "b" "c" "a" "b" "c"), candidates ("a" "b" "c"). The consecutive
+; triples are (a,b,c)(b,c,a)(c,a,b)(a,b,c)(b,c,a)(c,a,b)(a,b,c) — the trailing "b" "c" has no third symbol.
+; So the order-2 keys resolve sharply:
+;   pair (a,b) -> predict "c"  (followed it 3 times: positions 0,3,6 — the transition with the most evidence)
+;   pair (b,c) -> predict "a"  (followed it 2 times: positions 1,4)
+;   pair (c,z) -> ""           (z never appears: the pair never occurred -> honest silence, confidence 0)
+; The max-select picks the most-evidence third-symbol the same way sequence-predictor picks the most-evidence
+; follower; the unseen pair routes to silence the same way an unseen prev does, one Markov order higher.
+;
+; Verdict 127 when every claim lands:
+;   1   from pair (a,b), predict the symbol that most often followed the pair   (predict == c)
+;   2   the confidence is that follow-count                                     (confidence == 3)
+;   4   from pair (b,c), the other transition wins                             (predict == a)
+;   8   its confidence is the smaller follow-count                             (confidence == 2)
+;   16  an unseen second symbol (pair never occurred) predicts nothing         (predict == "")
+;   32  that unseen pair carries zero confidence                              (confidence == 0)
+;   64  the raw triple-count is exact                                          (c after a,b == 3)
+(do
+    (let history (list "a" "b" "c" "a" "b" "c" "a" "b" "c"))
+    (let candidates (list "a" "b" "c"))
+    (let c0 (if (str_eq (m2-predict history "a" "b" candidates) "c") 1 0))
+    (let c1 (if (eq (m2-confidence history "a" "b" candidates) 3) 2 0))
+    (let c2 (if (str_eq (m2-predict history "b" "c" candidates) "a") 4 0))
+    (let c3 (if (eq (m2-confidence history "b" "c" candidates) 2) 8 0))
+    (let c4 (if (str_eq (m2-predict history "c" "z" candidates) "") 16 0))
+    (let c5 (if (eq (m2-confidence history "c" "z" candidates) 0) 32 0))
+    (let c6 (if (eq (m2-follow-count history "a" "b" "c") 3) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

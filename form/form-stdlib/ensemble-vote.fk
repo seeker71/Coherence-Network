@@ -1,0 +1,47 @@
+; ensemble-vote.fk — N peer classifiers each emit a label; the ensemble answer is the plurality (most votes).
+;
+; recognition-router.fk routes by STRENGTH (the model with the most DATA wins, one confident reading carries
+; the stream). This is the EQUAL-PEERS counterpart: every classifier gets exactly one vote, no confidence,
+; no weight — the answer is the label the MOST of them named, and the confidence is simply that vote count.
+; Where the router asks "who is most sure?", the ensemble asks "what did the most of us agree on?". Same
+; max-select spine as sequence-predictor.fk and nearest-shape.fk — only the score is a TALLY OF VOTES walked
+; over the ballots, not a follower-count or a bin-agreement. A circle of cheap weak classifiers, fused by
+; counting hands, often beats any single one (the classic bagging / majority-vote intuition), and the fusion
+; is Form: kernel-executable, three-way-identical, the carriers swappable behind the same ballot shape.
+;
+; Honest lane: this is PLURALITY (most votes), not MAJORITY (more than half) — three-way splits resolve to
+; the leader even when no label cleared 50%. A tie in the top count keeps the FIRST candidate offered (the
+; max-select uses strict gt, so a later equal-vote peer cannot displace the earlier one) — the answer is
+; stable under replay, not order-random. The ensemble carries no abstention floor here: it always names its
+; plurality leader; gating "too-split to call" below a count threshold is the router's rr-passes? lane, a
+; later compose, not this brick. Votes and counts are integers 0..N.
+;
+; Proven by: form-stdlib/tests/ensemble-vote-band.fk (three-way at validate.sh)
+
+(do
+    ; --- VOTES: how many ballots named cand. Walk the labels, +1 each str_eq match (a tally, no weight). ---
+    (defn ev-votes (labels cand)
+        (if (eq (len labels) 0) 0
+            (if (str_eq (head labels) cand)
+                (add 1 (ev-votes (tail labels) cand))
+                (ev-votes (tail labels) cand))))
+
+    ; --- MAX-SELECT: among the candidates, the one with the most votes (plurality wins). ---
+    ; Same spine as sp-predict-loop: carry the best label + best count; a STRICTLY-greater count replaces it,
+    ; so the FIRST candidate offered keeps a tie. Seed with "" 0 — any candidate with >=1 vote can lead.
+    (defn ev-winner-loop (labels candidates best-label best-count)
+        (if (eq (len candidates) 0) (list best-label best-count)
+            (if (gt (ev-votes labels (head candidates)) best-count)
+                (ev-winner-loop labels (tail candidates)
+                    (head candidates) (ev-votes labels (head candidates)))
+                (ev-winner-loop labels (tail candidates) best-label best-count))))
+
+    ; the ensemble's answer: the candidate with the most votes (its plurality leader).
+    (defn ev-winner (labels candidates)
+        (nth (ev-winner-loop labels candidates "" 0) 0))
+
+    ; the confidence in that answer = the winning vote count (how many peers stood behind it).
+    (defn ev-confidence (labels candidates)
+        (nth (ev-winner-loop labels candidates "" 0) 1))
+
+    0)

@@ -1,0 +1,32 @@
+; preludes: form-stdlib/anomaly-band.fk
+;
+; anomaly-band-band — continuous-domain novelty, made falsifiable: inside the learned band is normal, outside is anomalous.
+;
+; The body has lived through a signal and remembers its range as the band [20, 80]. Three readings arrive,
+; and the band judges each by membership alone (two integer comparisons, no distance, no float):
+;   50 -> sits inside [20, 80]              -> NORMAL    (lo <= 50 <= hi)
+;   95 -> above the ceiling                 -> ANOMALY   (95 > hi 80)
+;    5 -> below the floor                   -> ANOMALY   (5 < lo 20)  — two-sided: below is as anomalous as above
+; Then learning: ab-extend-hi raises the ceiling to admit the high reading — the band widens to [20, 95], and
+; the once-anomalous 95 is normal from then on. The boundary belongs to normal: 20 and 80 both read in-band.
+;
+; Verdict 127 when every claim lands:
+;   1   a reading inside the band is normal            (ab-in-band? 50 20 80 == 1)
+;   2   it is therefore not an anomaly                  (ab-anomaly? 50 20 80 == 0)
+;   4   a reading above the ceiling is an anomaly       (ab-anomaly? 95 20 80 == 1)
+;   8   a reading below the floor is an anomaly         (ab-anomaly? 5 20 80 == 1, two-sided)
+;   16  widening the ceiling admits the high reading    (ab-extend-hi 95 80 == 95)
+;   32  after widening, the once-anomalous value is in   (ab-in-band? 95 20 (ab-extend-hi 95 80) == 1)
+;   64  the boundary belongs to normal                   (both edges in-band: in? 20 == 1 and in? 80 == 1)
+(do
+    (let lo 20)
+    (let hi 80)
+    (let hi2 (ab-extend-hi 95 hi))
+    (let c0 (if (eq (ab-in-band? 50 lo hi) 1) 1 0))
+    (let c1 (if (eq (ab-anomaly? 50 lo hi) 0) 2 0))
+    (let c2 (if (eq (ab-anomaly? 95 lo hi) 1) 4 0))
+    (let c3 (if (eq (ab-anomaly? 5 lo hi) 1) 8 0))
+    (let c4 (if (eq hi2 95) 16 0))
+    (let c5 (if (eq (ab-in-band? 95 lo hi2) 1) 32 0))
+    (let c6 (if (and (eq (ab-in-band? lo lo hi) 1) (eq (ab-in-band? hi lo hi) 1)) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

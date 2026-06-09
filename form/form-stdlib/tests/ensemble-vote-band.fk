@@ -1,0 +1,34 @@
+; preludes: form-stdlib/ensemble-vote.fk
+;
+; ensemble-vote-band — N peer classifiers vote; the plurality wins, made falsifiable.
+;
+; Five classifiers cast their ballots on one input — labels ("dog" "dog" "cat" "dog" "bird") — over the
+; candidate set ("dog" "cat" "bird"). Counting hands: dog=3, cat=1, bird=1. So the ensemble answer is the
+; plurality leader "dog" at confidence 3 (three of five peers agreed), the same max-select that picks the
+; most-data model in recognition-router — only here every peer carries exactly one vote, no strength.
+; Two control shapes prove the lane is honest:
+;   an UNSEEN candidate "fish" — no ballot named it — tallies 0 (honest zero, not a fabricated vote).
+;   a TIE — labels ("x" "y") over candidates ("x" "y"), each one vote — must keep the FIRST candidate "x"
+;     (strict gt in the max-select; a later equal-vote peer cannot displace the earlier one, stable replay).
+;
+; Verdict 127 when every claim lands:
+;   1   the plurality leader wins                    (ev-winner -> dog)
+;   2   confidence is the winning vote count          (ev-confidence == 3)
+;   4   a minority label tallies its own votes        (cat == 1)
+;   8   another minority label tallies its own votes  (bird == 1)
+;   16  an unseen candidate tallies zero              (fish == 0, honest zero)
+;   32  a tie keeps the first candidate offered       (tie -> x, the first)
+;   64  the leader's raw vote count is exact          (dog == 3)
+(do
+    (let labels (list "dog" "dog" "cat" "dog" "bird"))
+    (let candidates (list "dog" "cat" "bird"))
+    (let tielabels (list "x" "y"))
+    (let tiecands  (list "x" "y"))
+    (let c0 (if (str_eq (ev-winner     labels candidates) "dog") 1 0))
+    (let c1 (if (eq     (ev-confidence labels candidates) 3)     2 0))
+    (let c2 (if (eq     (ev-votes labels "cat")  1)              4 0))
+    (let c3 (if (eq     (ev-votes labels "bird") 1)              8 0))
+    (let c4 (if (eq     (ev-votes labels "fish") 0)              16 0))
+    (let c5 (if (str_eq (ev-winner tielabels tiecands) "x")      32 0))
+    (let c6 (if (eq     (ev-votes labels "dog")  3)              64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

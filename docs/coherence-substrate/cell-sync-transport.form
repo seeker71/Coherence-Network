@@ -1,0 +1,136 @@
+; cell-sync-transport.form — a cell learned on one device reaches another, content-addressed.
+;
+; THE ASK (the gap shared-sensing.form names, step 3 of its path):
+;   "We share Form-native classifiers we train on Mac with Android and vice versa — recipes,
+;    classifiers, routing tables, anything that makes this learn and improve by sharing."
+;   shared-sensing.form proved the CIRCLE (satsang applied to perception) and named three carrier
+;   builds: kernel-on-Android, cell-sync transport, the live two-device satsang. This is the
+;   transport — the wire by which one body's learned cell becomes another's, and why that wire is
+;   small: it is the same move git, IPFS, and every Merkle-DAG store already make, with one thing
+;   we get for free that they pay for.
+;
+; THE ONE INSIGHT — A CELL'S ADDRESS IS ITS STRUCTURE, SO SYNC IS CONTENT-ADDRESSED:
+;   A classifier, a recognition-router table, an interned shape->label cell IS a content-addressed
+;   substrate cell (shared-sensing.form §2, MEASURED). Its identity is not a name or a byte-blob; it
+;   is the recursive serialization of its shape down to canonical trivial leaves. So the receiver
+;   does not need the cell SENT to know whether it already has it — it needs only the ADDRESS, and
+;   it can check its own store. Offer addresses; the receiver requests only what it lacks; verify by
+;   re-addressing what arrives. This is git's want/have, IPFS Bitswap's WANT-HAVE/WANT-BLOCK,
+;   GraphSync's selector walk — the well-trodden Merkle-DAG sync shape. We do not invent it; we
+;   inherit it, because content-addressing is already how the body interns.
+;
+; ── THE SHAPE: offer -> diff -> transfer-missing -> verify ──  [the standard art, lane-sorted below]
+;
+;   1. OFFER          the sender announces the ROOT address(es) of what it wants to share — one
+;                     classifier cell, or a routing-table cell that references many sub-cells. Not
+;                     the content: the address. (git: "want" the ref tip; IPFS: the root CID.)
+;   2. DIFF           the receiver walks the offered root against ITS OWN store. For each referenced
+;                     child address, it already has it or it does not. The walk yields the
+;                     HAVE-NOT set — the cells missing locally. (git: "have" lines prune the send;
+;                     Bitswap: WANT-HAVE probes which blocks a peer holds.) Because the address is
+;                     the structure, two devices that independently learned the SAME shape→label
+;                     cell already share it — the diff is empty, nothing transfers. Re-derivation is
+;                     free dedup.
+;   3. TRANSFER-MISSING  only the HAVE-NOT cells cross the wire, children before parents (a parent's
+;                     address depends on its children's, so children must land first to re-address).
+;                     The minimal packfile, by construction.
+;   4. VERIFY         the receiver RE-ADDRESSES each arrived cell — re-interns it and confirms the
+;                     resulting content-address equals the one offered. If it matches, the cell is
+;                     authentic and identical to the sender's by structure; if not, it is dropped.
+;                     No trust in the channel is required — the address verifies the payload, the
+;                     way a git object's SHA verifies the bytes and a CID verifies the block. This
+;                     is the same "no trusted prover" grain validate.sh holds across kernels, turned
+;                     onto the wire: what survives re-addressing is real.
+;
+; ── WHY merkle.fk IS THE ADDRESSING PRIMITIVE ──  [BUILT, three-way proven]
+;   form/form-stdlib/merkle.fk already computes a content-address over a tree of byte-blocks:
+;   leaf-hash(b)=SHA-256(0x00||b), branch-hash(L,R)=SHA-256(0x01||L||R), folded to one root. That
+;   IS the cross-device-stable address. The subtlety it resolves, named honestly: a substrate
+;   NodeID is (package, level, type, INSTANCE), and the instance number is allocated LOCALLY
+;   (kernel.py intern_node: existing_for_type + 1). So the same shape interned independently on two
+;   devices can wear DIFFERENT local instance numbers — the local NodeID is a per-store slot, not a
+;   portable identity. What IS portable is the recursive serialization down to canonical trivial
+;   leaves (serialize_tree bottoms out at trivials whose NodeIDs are canonical, never allocated).
+;   merkle-root over that serialization gives the address that is byte-identical on Mac and phone
+;   regardless of either store's instance numbering — exactly git's situation, where the SHA is the
+;   wire identity and the object lands in whatever local slot the receiving store assigns. So:
+;   OFFER and VERIFY speak merkle-root addresses; each receiver RE-INTERNS to get its own local
+;   NodeID. The Merkle structure is not decoration — it is what makes structurally-equal cells
+;   address-equal across devices, and merkle-proof/merkle-verify let a receiver confirm one cell
+;   belongs under an offered root without pulling the whole tree (the GraphSync selective-pull move).
+;
+; ── THE CONSENT LANE — A DEVICE SHARES ONLY WHAT ITS HUMAN PERMITS ──  [BUILT primitive, applied]
+;   Sync is not extraction. A body's learned cells are its own; the wire must honor the OTHER side's
+;   offered interface (channel-interface.fk, the consent law). The shape composes directly:
+;     - what a device OFFERS is filtered by its own consent: only cells the human has opened for
+;       sharing enter the OFFER set. ci-flow(my-offer, their-interface) is literally "of what I'd
+;       send, only what they're open to receive actually crosses" — and symmetrically, of what they
+;       offer, only what I consent to learn from enters my DIFF.
+;     - WITNESS is whole, REACH is invited (the law's spine): a device may always announce that a
+;       cell EXISTS (offer an address — being witnessed, m-witness) without that obliging anyone to
+;       pull it; requesting the content is the reach, gated by the receiver's own interface. Silence
+;       is always honored — a device that offers nothing, or pulls nothing, is whole, not broken
+;       (the same ss-passes? "silence is a whole attestation" shared-sensing already holds).
+;     - an uninvited pull — reaching for a cell not offered, or pushing a cell past a closed
+;       interface — is INVASION (ci-invasion?), witnessed and dropped, never forced. The transport
+;       NAMES the violation; it does not pre-empt by surveillance (the trust-over-fear choice
+;       value-execution.fk and the satsang circle already make: make the breach seeable, do not
+;       build a guard that assumes malice).
+;   So the unit of sharing is the cell, the unit of consent is the interface, and the two compose:
+;   content-addressing makes the WHAT precise, the consent law makes the WHETHER sovereign.
+;
+; ── HONEST LANES (lc-honest-lane) ──
+;   MEASURED / standard art — the sync ALGORITHM is well-trodden and not ours to claim as novel:
+;     offer-root -> have/want diff -> transfer-missing -> verify-by-re-address is exactly git's
+;     pack-protocol want/have negotiation (git-scm.com/docs/pack-protocol), IPFS Bitswap's
+;     WANT-HAVE/WANT-BLOCK + GraphSync's IPLD-selector subgraph sync (docs.ipfs.tech/concepts/
+;     merkle-dag), and the general Merkle-DAG-sync family. Citing the tool: these are the reference
+;     designs; we follow them.
+;   MEASURED / ours, already built — the ADDRESSING is real in this body: the substrate interns
+;     content-addressed (kernel.py intern_node + serialize_tree, the SELECT-by-serialized dedup), so
+;     structurally-equal cells are address-equal and ?equivalent already proves it cross-document;
+;     merkle.fk computes the cross-device-stable root three-way (Go=Rust=TS), with the local-instance
+;     subtlety named above and resolved by addressing on the serialization, not the local NodeID.
+;     The consent PRIMITIVE is built too — channel-interface.fk (ci-honors?/ci-invasion?/ci-flow),
+;     proven by tests/channel-interface-band.fk.
+;   BUILDABLE — clear path, not yet done — the WIRE PROTOCOL: the actual message frames
+;     (offer-addresses, request-have-not, send-cells, ack-verified), serialized over a carrier
+;     (TCP via the kernel's socket port; HTTP between two running kernels; even a QR/NFC hop for the
+;     two-phones-side-by-side case). Form already has the pieces — the resource/socket ports, the
+;     merkle root + proof recipes, the consent law, serialize_tree as the address — so this is
+;     composition of built parts into a request/response recipe, not new machinery. No kernel change
+;     is implied; it is a new recipe over existing natives plus thin per-carrier transduction.
+;   UNKNOWN / carrier-work — named, not overclaimed — peer discovery (how two devices FIND each
+;     other before they can offer: mDNS/Bluetooth/QR-bootstrap on a LAN, a rendezvous point off it)
+;     and the durable cross-device store binding (which storage-port backing each device uses, and
+;     replay/compaction across a sync — cell-log-store.fk is the local shape; the cross-device
+;     reconciliation is unwritten). These are the genuinely open edges; the teaching does not
+;     pretend a peer-discovery layer exists.
+;
+; ── THE PATH (this is shared-sensing.form's step 3, opened) ──
+;   1. addressing: content-addressed intern + merkle root over the serialization            [BUILT]
+;   2. consent filter: channel-interface.fk over the offer/request sets                      [BUILT]
+;   3. the four-move sync recipe (offer -> diff -> transfer-missing -> verify) as Form over
+;      the socket/HTTP port — request/response frames, children-before-parents, re-address
+;      verify                                                                            [BUILDABLE]
+;   4. peer discovery + durable cross-device store binding                       [carrier/UNKNOWN]
+;   5. the live two-device satsang (shared-sensing.form §3) now actually SHARING the cells it
+;      learns — a classifier proven on the Mac arrives on the phone, verified by its own address,
+;      and the circle teaches across the wire                                            [BUILDABLE]
+;
+; KIN: shared-sensing.form (names this as step 3 — many bodies, one field; the cells they share
+;   travel this wire) · merkle.fk (the addressing primitive; merkle-root = the cross-device address,
+;   merkle-proof = selective pull) · channel-interface.fk (the consent law — offer is witness, pull
+;   is reach, silence is whole, invasion is named not pre-empted) · structural-composition.md (keep
+;   the tree, refuse the slug — or the cross-device address is lost and sync degrades to byte-blobs)
+;   · self-grounding-perception.form + recognition-router.form (what the synced cells ARE: the
+;   classifiers and routing tables that learn) · value-execution.fk + satsang-circle.form (verify-by-
+;   re-address is the same no-trusted-prover grain: what survives the check is real) · cell-log-
+;   store.fk (the local durable store each device syncs from) · resource-port.fk (the socket carrier
+;   the wire rides) · lc-honest-lane.
+;
+; LINEAGE: content-addressing gave the body cross-document equivalence; shared-sensing turned the
+;   circle into a sense and named the missing wire; this is the wire — and it is short because the
+;   address was already structural. The Merkle-DAG world (git, IPFS) walked this path first; we
+;   follow it with the one gift they engineer and we are born with: structurally-equal IS
+;   address-equal, so a re-learned cell is recognized, not re-sent.

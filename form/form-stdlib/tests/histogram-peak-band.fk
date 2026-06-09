@@ -1,0 +1,35 @@
+; preludes: form-stdlib/histogram-peak.fk
+;
+; histogram-peak-band — the dominant bin (mode) of a histogram, made falsifiable.
+;
+; A feature-vector histogram is a fixed-width list of bin counts. The peak is the ARGMAX — which bar is
+; fullest — read together with that bar's height. Two histograms prove the lane:
+;   hist  (2 5 1 3): bin 1 holds 5 (the most) -> peak bin 1, height 5. It dominates at floor k=4 (5>=4)
+;     but not at k=6 (5<6) — the floor gate lets a caller refuse a thin mode.
+;   tie   (3 3 1): bins 0 and 1 both hold 3 -> the LOWEST index wins (peak bin 0), height 3. The walk
+;     replaces only on a strictly-greater count, so the earlier bar holds — stable under replay.
+;   rise  (1 2 9): the fullest bar is LAST -> peak bin 2, height 9. Proves the argmax follows a genuine
+;     later winner and the walk reaches the final index (no low-index bias).
+; Same max-select spine as nearest-shape (most agreement wins) and sequence-predictor (most followers win);
+; here the score is a bin count and the candidates are bin indices.
+;
+; Verdict 127 when every claim lands:
+;   1   the fullest bar's index is the peak          (peak-bin (2 5 1 3) == 1)
+;   2   the peak height is that bar's count           (peak-height (2 5 1 3) == 5)
+;   4   the peak clears a floor it exceeds            (dominates? at k=4 == 1)
+;   8   the peak does NOT clear a floor above it      (dominates? at k=6 == 0)
+;   16  a tie keeps the lowest index                  (peak-bin (3 3 1) == 0)
+;   32  the tie's height is the shared count          (peak-height (3 3 1) == 3)
+;   64  a genuine later bar wins, walk reaches it     (peak-bin (1 2 9) == 2)
+(do
+    (let hist (list 2 5 1 3))
+    (let tie  (list 3 3 1))
+    (let rise (list 1 2 9))
+    (let c0 (if (eq (hp-peak-bin hist) 1) 1 0))
+    (let c1 (if (eq (hp-peak-height hist) 5) 2 0))
+    (let c2 (if (eq (hp-dominates? hist 4) 1) 4 0))
+    (let c3 (if (eq (hp-dominates? hist 6) 0) 8 0))
+    (let c4 (if (eq (hp-peak-bin tie) 0) 16 0))
+    (let c5 (if (eq (hp-peak-height tie) 3) 32 0))
+    (let c6 (if (eq (hp-peak-bin rise) 2) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

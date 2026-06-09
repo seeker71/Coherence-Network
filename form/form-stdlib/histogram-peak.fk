@@ -1,0 +1,43 @@
+; histogram-peak.fk — the DOMINANT bin (mode) of a feature-vector histogram: where the signal piled up.
+;
+; feature-vector.fk MAKES a histogram (a fixed-width list of bin counts); this READS one — it names the
+; single bin that holds the most readings. That is the mode of the distribution: not "what is each band's
+; height" but "which band won". The whole body is the same max-select spine as nearest-shape.fk's ns-best
+; (most agreement wins) and sequence-predictor.fk's sp-predict (most followers win) — only here the score
+; is a BIN COUNT and the candidates are the bin INDICES, walked ascending. The peak is the transition with
+; the most evidence, exactly as everywhere else on the spine; here the evidence is "how full is this bar".
+;
+; Ties keep the LOWEST index: the walk replaces the incumbent only on a STRICTLY-GREATER count (gt, not ge),
+; so an equal-height later bin never displaces the earlier one. Two bars of equal max height resolve to the
+; first-seen (lowest) bin — the same stability-under-replay nearest-shape gives to the first-interned
+; prototype. Peak bin and peak height are read together; "dominates?" gates the peak against a floor.
+;
+; Honest lane: the peak is the ARGMAX of bin counts, an order-and-magnitude-blind readout of an already
+; order-blind histogram — it says which band is fullest, not by how much it beats the runner-up, nor whether
+; the distribution is actually peaked vs flat. A near-flat histogram (3 3 1) still reports a peak (bin 0); the
+; only honesty knob is hp-dominates?, which asks "does the fullest bar clear k readings?" — below the floor
+; the mode is real but thin, and the caller can refuse it. All counts and indices are integers 0..N.
+;
+; Proven by: form-stdlib/tests/histogram-peak-band.fk (three-way at validate.sh)
+
+(do
+    ; --- MAX-SELECT over bin INDICES: carry the best index + its count; a STRICTLY-greater count
+    ;     replaces them (gt, not ge), so on a tie the earlier/lower index stays. Walk ascending,
+    ;     stop when i reaches the width. Same spine as ns-best-loop / sp-predict-loop. ---
+    (defn hp-peak-loop (hist i best-i best-h)
+        (if (eq i (len hist)) best-i
+            (if (gt (nth hist i) best-h)
+                (hp-peak-loop hist (add i 1) i (nth hist i))
+                (hp-peak-loop hist (add i 1) best-i best-h))))
+
+    ; --- PEAK BIN: the index of the fullest bar (mode), ties to the lowest index. ---
+    ; seed with bin 0 as the incumbent, then walk from index 1 — bin 0 holds on any tie.
+    (defn hp-peak-bin (hist) (hp-peak-loop hist 1 0 (nth hist 0)))
+
+    ; --- PEAK HEIGHT: the count IN the peak bin (the height of the winning bar). ---
+    (defn hp-peak-height (hist) (nth hist (hp-peak-bin hist)))
+
+    ; --- DOMINATES?: 1 when the fullest bar clears k readings, else 0 — the floor gate. ---
+    (defn hp-dominates? (hist k) (if (ge (hp-peak-height hist) k) 1 0))
+
+    0)

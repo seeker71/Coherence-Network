@@ -1,0 +1,44 @@
+; cooldown.form — event rate-limit: the companion's restraint, so a firing cell does not spam the field.
+;
+; THE ASK:
+;   The recognition path ends with a believed label and the body is ready to ACT on it — speak, alert,
+;   nudge, fire. But the same label arrives frame after frame. Without restraint the body re-fires every
+;   tick: a strained, spammy presence. The smallest honest restraint: after firing at tick 'last', hold
+;   until at least 'k' ticks have passed. No queue, no timer thread, no foreign scheduler — just a
+;   forward gate on the integer clock the caller already counts in.
+;
+; THE SHAPE  (runnable: form-stdlib/cooldown.fk · proven: tests/cooldown-band.fk -> 63)
+;
+;   Ticks are a monotonic integer clock the caller supplies (logical ticks, frames, or epoch seconds).
+;   1. GATE  cd-next-fire(last k): the earliest tick the event may fire again = last + k. An ADD
+;      FORWARD, never a countdown subtracted down to zero — there is no sub in the toolkit and the
+;      restraint does not need one. The gate is the whole fact; the two predicates only read it.
+;   2. READY  cd-ready?(last now k): has 'now' reached the gate? 1 when now >= last+k, else 0. The
+;      boundary tick last+k is itself READY — the same meets-or-exceeds choice as feature-vector's
+;      fv-bin (ge, not gt: the boundary belongs to the released side, restraint lifts exactly on time).
+;   3. SUPPRESSED  cd-suppressed?(last now k): the exact complement — 1 while still held, 0 once ready.
+;      Computed from the same (ge now last+k) test with the arms swapped, so ready and suppressed can
+;      never disagree; suppressed is "not ready" by construction, not by a second walk.
+;
+; HOW IT COMPOSES THE TOOLKIT:
+;   This is the efferent companion to temporal-smoothing (perception-pipeline.form's ts-stable). Both
+;   are k-tick patience gates on the same integer clock, mirror images across the act: smoothing decides
+;   when to BELIEVE a label (it must persist k frames before the body trusts it); cooldown decides when
+;   to ACT on it AGAIN (the body must wait k ticks before it re-fires). Wire it onto the pipeline's tail:
+;   pp-stable hands a believed label out, cd-ready? gates whether THIS frame is allowed to fire it. The
+;   ge-boundary discipline is feature-vector's, carried to the time axis; recognition-router.form gates
+;   on a confidence FLOOR (don't act on a weak signal), cooldown gates on a tick GATE (don't act too
+;   soon) — two faces of the same restraint, "the body carries no signal it has no right to carry yet."
+;
+; HONEST LANE:
+;   cooldown gates a SINGLE event's re-fire from one prior 'last', in whatever unit the firing cell
+;   counts in; it reasons in that unit and stays integer 0..N. A stream of distinct events, or a
+;   sliding-window budget of N-fires-per-interval, is a different shape — a list walk over fire-times
+;   (a sequence-predictor-style history walk), not this one-gate compare. The one gate is the honest
+;   floor; the windowed budget is the same threshold spine over a list of timestamps, a later brick.
+;
+; KIN:
+;   temporal-smoothing / perception-pipeline.form (the k-frame belief gate it mirrors on the act side) ·
+;   feature-vector.form (the ge meets-or-exceeds boundary discipline, carried to the time axis) ·
+;   recognition-router.form (gate on a confidence floor — the companion "don't act on weak" to this
+;   "don't act too soon") · lc-honest-lane (restraint as honesty: hold until earned, then fire once).

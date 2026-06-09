@@ -1,0 +1,44 @@
+; anomaly-band.fk — CONTINUOUS-domain novelty: a reading inside the band seen so far is normal, outside it is anomalous.
+;
+; novelty.fk is the DISCRETE face: one similarity scalar against one recognition floor (a single one-sided
+; cutoff — at or above is known). This is the CONTINUOUS face. The body remembers the RANGE of values it has
+; seen as a band (lo, hi); a fresh reading x is NORMAL exactly when it sits inside that band — lo <= x <= hi —
+; and ANOMALOUS when it falls outside on either side. Where novelty has one floor, anomaly has two edges, so
+; the membership test is two-sided: below lo is as anomalous as above hi. Same honest-lane gate, two bounds.
+;
+; The band is the body's lived experience of a signal compressed to two integers; admitting a new reading that
+; lies outside is the same smallest-act-of-learning as nearest-shape interning a prototype — ab-extend-hi and
+; ab-extend-lo WIDEN the band to take x in, so the once-anomalous value becomes part of normal from then on.
+; No subtraction, no variance, no float: membership is two integer comparisons, identical on Go, Rust, and TS
+; (validate.sh parity is anomaly parity — the Mac and the phone call the same reading anomalous, by NodeID).
+;
+; A value x, lo, hi are integers 0..100. The band is the closed interval [lo, hi]. ge is meets-or-exceeds, so
+; a reading sitting exactly on an edge counts as inside (the boundary belongs to normal, not to anomaly).
+;
+; Honest lane: the band is a hard interval, not a graded distance — a value one past hi is flagged anomalous
+; the same as a value far past it (severity is the caller's lane, the membership is exact). That is the right
+; primitive for a learned-range novelty gate; a continuous deviation score (how far outside) is a later brick.
+;
+; Proven by: form-stdlib/tests/anomaly-band-band.fk (three-way at validate.sh)
+
+(do
+    ; --- MEMBERSHIP: x is in the band iff it meets-or-exceeds lo AND hi meets-or-exceeds x (two-sided). ---
+    ; ge on both edges, so the boundary belongs to normal. and is binary — exactly two clauses, no nesting needed.
+    (defn ab-in-band? (x lo hi)
+        (if (and (ge x lo) (ge hi x)) 1 0))
+
+    ; --- ANOMALY: the inverse of membership — outside the band on either side is the novelty to surface. ---
+    (defn ab-anomaly? (x lo hi)
+        (if (eq (ab-in-band? x lo hi) 1) 0 1))
+
+    ; --- WIDEN-HIGH: admit a reading above the band by raising hi to x (the smallest act of learning, up). ---
+    ; if x clears the current ceiling, the new ceiling is x; otherwise the band already covered it -> unchanged.
+    (defn ab-extend-hi (x hi)
+        (if (gt x hi) x hi))
+
+    ; --- WIDEN-LOW: admit a reading below the band by lowering lo to x (the same act, down). ---
+    ; if x sits under the current floor, the new floor is x; otherwise the band already covered it -> unchanged.
+    (defn ab-extend-lo (x lo)
+        (if (gt lo x) x lo))
+
+    0)

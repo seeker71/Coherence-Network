@@ -1,0 +1,48 @@
+; transition-detect.form — the field SHIFTED: name the change between a previous believed label and now.
+;
+; THE ASK:
+;   temporal-smoothing turns a flickering frame-stream into a settled label, one breath at a time —
+;   ts-stable emits the held shape, or "" for honest silence. But a live sense is not one frame; it is
+;   a SUCCESSION of settled readings. The body wants the next thing: not "what do I see now?" but "what
+;   CHANGED?" A new shape arrived where there was silence; the shape I held is gone; the reading moved to
+;   a different shape; or nothing moved. The stream of labels becomes a stream of EVENTS.
+;
+; THE SHAPE  (runnable: form-stdlib/transition-detect.fk · proven: tests/transition-detect-band.fk -> 127)
+;
+;   Hold two settled labels — prev (what the body believed last) and now (what it believes this breath).
+;   "" on either side is silence/no-recognition, so the edge has FOUR corners, not two.
+;   1. PRESENT?  td-present?: a label is present when it is not "" — the single primitive the rest reads.
+;   2. CHANGED?  td-changed?: 1 iff BOTH sides present AND not the same shape — a real present->present
+;      shift. arrive and lose are explicitly NOT changes; one side is silence.
+;   3. ARRIVED?  td-arrived?: silence -> present (recognition came online).
+;      LOST?     td-lost?:    present -> silence (recognition fell away).
+;   4. EVENT  td-event: the one word — "shift" | "arrive" | "lose" | "steady". The three detectors are
+;      mutually exclusive; "steady" is the floor and covers both held-shape and held-silence.
+;
+; THE NESTED-AND DISCIPLINE:
+;   Every compound condition is built from BINARY and only — (and (and a b) c) — never (and a b c). A
+;   flat three-arg and DIVERGES across kernels: Go and Rust silently drop the third argument, TS folds it
+;   (the 239-vs-255 split we hit live). "non-empty" is (not (str_eq x "")); "a real shift" is
+;   (and (and prev-present now-present) (not same)). One binary at a time, nested — so Go=Rust=TS read the
+;   identical edge, and validate.sh agreement IS the proof the corner is classified the same everywhere.
+;
+; HONEST LANE:
+;   This reads the EDGE, not the truth. It trusts prev and now are ALREADY the debounced output of
+;   temporal-smoothing; it does not itself confirm either label held. Feed it raw flickering frames and
+;   every flicker reads as a "shift" — the recipe is downstream of the debounce, not a replacement for it.
+;   And "steady" is honestly ambiguous between holding a shape (dog->dog) and holding nothing (""->""):
+;   the body is steady either way, but the EVENT word alone won't tell you which — the label carries that.
+;   Pair upstream with ts-stable so both readings are settled before the edge between them is named.
+;
+; KIN — the recognition arc, breath after breath:
+;   perception-pipeline.form (raw window -> feature-vector -> nearest-shape -> a per-frame label) ·
+;   temporal-smoothing.form (debounce that frame-stream into a settled label across TIME — the brick this
+;     extends; ts-stable's output is exactly this recipe's prev/now) · recognition-router.form &
+;     shared-sensing.form (the same max-select spine fusing a circle of models / a circle of devices in
+;     one instant). temporal-smoothing asks "did the reading HOLD?"; transition-detect asks the very next
+;     question — "and when it changed, HOW?" One is the steady-state; this is the derivative.
+;
+; LINEAGE:
+;   temporal-smoothing.fk (the settled label this consumes) · lc-honest-lane ("" is silence, never a
+;   fabricated event) · sequence-predictor.fk (the stream as evidence — there, what FOLLOWS; here, what
+;   CHANGED) · the three-way validate.sh (no trusted prover — Go=Rust=TS agreement IS the proof).

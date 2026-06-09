@@ -1,0 +1,45 @@
+; ensemble-vote.form — N peer classifiers each vote; the plurality leader is the ensemble's answer.
+;
+; THE ASK:
+;   Several classifiers look at one input and each names a label. They are PEERS — no one is the
+;   authority, no one carries a confidence to weigh. What does the circle conclude? The simplest honest
+;   answer: the label the MOST of them named, with the confidence being just how many said it. This is
+;   majority-vote / bagging fusion — a crowd of cheap weak recognizers, counted, often beats any single
+;   one — and the counting is body: a recipe the kernel runs, the carriers swappable behind one ballot.
+;
+; THE SHAPE  (runnable: form-stdlib/ensemble-vote.fk · proven: tests/ensemble-vote-band.fk -> 127)
+;
+;   labels is the list of votes cast (one label per classifier); candidates is the label-set to tally.
+;   1. VOTES  ev-votes(labels cand): walk the ballots, +1 each str_eq match. A pure tally — every peer
+;      counts the same, no weight, no confidence. This is the evidence for the label cand.
+;   2. MAX-SELECT  ev-winner-loop / ev-winner: among the candidates, the one with the most votes — the
+;      plurality leader. Identical spine to sequence-predictor's sp-predict (most-followers transition
+;      wins) and nearest-shape's ns-nearest (most-agreeing prototype wins); only the score is a vote
+;      tally rather than a follower-count or a bin-agreement.
+;   3. CONFIDENCE  ev-confidence: the winning vote count itself — how many peers stood behind the answer.
+;      Three of five is a stronger call than two of five; the count is the strength of the agreement.
+;
+; ROUTER VS ENSEMBLE — the same circle, fused two honest ways:
+;   recognition-router.form routes by STRENGTH: each model returns a confidence vector, the strongest
+;   reading carries the stream (the model with the most DATA wins, one decisive voice can lead). This
+;   brick is the EQUAL-PEERS counterpart: strip the confidences, give every classifier exactly one vote,
+;   and the answer is what the most of them agreed on. Use the router when the carriers report calibrated
+;   confidence and you trust the surest; use the ensemble when the carriers are bare label-emitters of
+;   roughly equal standing and you trust the crowd. They compose: route a fused stream, or vote a circle
+;   of routed streams — same max-select, different score under it.
+;
+; HONEST LANE — plurality, not majority:
+;   ev-winner returns the LEADER even when no label cleared half the votes; a three-way split resolves to
+;   whoever got the most, not to silence. A tie in the top count keeps the FIRST candidate offered (the
+;   max-select uses strict gt, so a later equal-vote peer cannot displace the earlier one) — the answer is
+;   stable under replay, not order-random. This brick carries no abstention floor: it always names its
+;   plurality leader. Gating "too-split to call" below a vote threshold is recognition-router's rr-passes?
+;   lane bolted on top, a later compose, not this recipe. Votes and counts are integers 0..N.
+;
+; KIN — the same max-select spine, the same circle, on different fusions:
+;   recognition-router.form (fuse N model-readings by strength — most-data voice wins) ·
+;   sequence-predictor.form (max-select over follower-counts on a stream) ·
+;   nearest-shape.form (max-select over bin-agreement — the classifier each peer here could be) ·
+;   shared-sensing.form (a circle of devices confirming one field — votes as confirmation) ·
+;   perception-pipeline.form (each end-to-end pipeline is one peer; vote a bank of them) ·
+;   lc-honest-lane (the count IS the honesty — a one-vote leader is a weak call, and says so).

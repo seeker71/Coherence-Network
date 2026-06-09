@@ -1,0 +1,32 @@
+; cooldown.fk — event RATE-LIMIT: the companion's restraint, so a firing cell does not spam the field.
+;
+; An event fired at tick 'last'. The world advances to tick 'now'. May it fire again? Only once at least
+; 'k' ticks have elapsed — once now has reached last+k. This is the same threshold spine as feature-
+; vector.fk's fv-bin (a value clears the bar at ge, not gt — the boundary belongs to the higher side):
+; cd-ready? clears at (ge now (add last k)), so the exact boundary tick last+k is already READY, not still
+; held. There is no sub in the toolkit and none is needed — restraint is an ADD forward (last + k = the
+; earliest allowed next tick) compared against now, never a countdown subtracted down to zero.
+;
+; The three readings are one fact seen from three sides: cd-next-fire names the gate (last+k); cd-ready?
+; asks if now has reached it (1/0); cd-suppressed? is the exact complement (1 when still held). The two
+; predicates are computed from the same (ge now (add last k)) test with the arms swapped, so they can
+; never disagree — suppressed is precisely "not ready", by construction, not by a separate walk.
+;
+; Honest lane: ticks are a monotonic integer clock the caller supplies (logical ticks, frames, or epoch
+; seconds — whatever the firing cell counts in); cooldown reasons in that unit and stays integer 0..N. It
+; gates a SINGLE event's re-fire from one prior 'last'; a stream of distinct events, or a sliding-window
+; budget of N-per-interval, is a different shape (a list walk over fire-times, not this one-gate compare).
+;
+; Proven by: form-stdlib/tests/cooldown-band.fk (three-way at validate.sh)
+
+(do
+    ; --- GATE: the earliest tick at which the event may fire again = last + k (an ADD forward, no countdown). ---
+    (defn cd-next-fire (last k) (add last k))
+
+    ; --- READY: has 'now' reached the gate? 1 when now >= last+k (ge: the boundary tick itself is ready), else 0. ---
+    (defn cd-ready? (last now k) (if (ge now (cd-next-fire last k)) 1 0))
+
+    ; --- SUPPRESSED: the exact complement — 1 while still held (now < last+k), 0 once ready. Same test, arms swapped. ---
+    (defn cd-suppressed? (last now k) (if (ge now (cd-next-fire last k)) 0 1))
+
+    0)

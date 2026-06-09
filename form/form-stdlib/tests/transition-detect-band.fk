@@ -1,0 +1,34 @@
+; preludes: form-stdlib/transition-detect.fk
+;
+; transition-detect-band — name the edge between two settled labels, made falsifiable.
+;
+; Two debounced readings (prev, now) arrive; the body names the EDGE between them. The four corners,
+; with "" as silence/no-recognition:
+;   (dog cat) -> shift   ; present -> present, different shape: the field moved to a new thing
+;   (dog dog) -> steady  ; present -> present, same shape: nothing moved
+;   (""  dog) -> arrive  ; silence -> present: recognition came online
+;   (dog "" ) -> lose    ; present -> silence: recognition fell away
+; The same edge logic the runnable carries — every compound condition built from nested binary and, so
+; Go=Rust=TS read the identical corner (a flat (and a b c) would diverge: Go/Rust drop c, TS folds it).
+;
+; Verdict 127 when every claim lands:
+;   1   a different shape on both sides is a shift          (td-event dog cat == "shift")
+;   2   the same shape on both sides is steady              (td-event dog dog == "steady")
+;   4   silence -> a shape is an arrival                    (td-event "" dog == "arrive")
+;   8   a shape -> silence is a loss                        (td-event dog "" == "lose")
+;   16  changed? fires only on a real present->present shift (td-changed? dog cat == 1, and dog dog == 0)
+;   32  arrived? reads the silence->present edge exactly     (td-arrived? "" dog == 1, and "" "" == 0)
+;   64  double-silence is steady, not an event              (td-event "" "" == "steady")
+(do
+    (let e-shift  (td-event "dog" "cat"))
+    (let e-steady (td-event "dog" "dog"))
+    (let e-arrive (td-event "" "dog"))
+    (let e-lose   (td-event "dog" ""))
+    (let c0 (if (str_eq e-shift  "shift")  1 0))
+    (let c1 (if (str_eq e-steady "steady") 2 0))
+    (let c2 (if (str_eq e-arrive "arrive") 4 0))
+    (let c3 (if (str_eq e-lose   "lose")   8 0))
+    (let c4 (if (and (eq (td-changed? "dog" "cat") 1) (eq (td-changed? "dog" "dog") 0)) 16 0))
+    (let c5 (if (and (eq (td-arrived? "" "dog") 1) (eq (td-arrived? "" "") 0)) 32 0))
+    (let c6 (if (str_eq (td-event "" "") "steady") 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
