@@ -465,7 +465,11 @@ def build_goal_state(
         next_task_card = source_filter_task_card(source_requested=source_requested, source_effective=source_effective)
     elif next_route:
         next_action = "promote-route"
-        next_task_card = task_card(next_route)
+        next_task_card = task_card(
+            next_route,
+            source_requested=source_requested,
+            source_effective=source_effective,
+        )
     else:
         next_action = "observe-next-route-window"
         next_task_card = target_satisfied_task_card(source_requested=source_requested, source_effective=source_effective)
@@ -559,12 +563,22 @@ def target_satisfied_task_card(*, source_requested: str | None, source_effective
     }
 
 
-def task_card(route: dict[str, Any] | None) -> dict[str, Any] | None:
+def task_card_source_arg(*, source_requested: str | None, source_effective: str | None) -> str:
+    return source_requested or source_effective or "all"
+
+
+def task_card(
+    route: dict[str, Any] | None,
+    *,
+    source_requested: str | None,
+    source_effective: str | None,
+) -> dict[str, Any] | None:
     if not route:
         return None
     endpoint = route["endpoint"]
     method = route.get("method", "GET")
     grammar = route["desired_grammar"]
+    source = task_card_source_arg(source_requested=source_requested, source_effective=source_effective)
     return {
         "goal": f"Promote {method} {endpoint} to a kernel-native high-grammar handler.",
         "files_allowed": [
@@ -576,13 +590,14 @@ def task_card(route: dict[str, Any] | None) -> dict[str, Any] | None:
         "done_when": [
             "The route has a BML or domain-grammar handler cell with real request parsing and JSON/Form response emission.",
             "The native handler parity proof compares current handler output to the kernel output for representative real inputs.",
-            "The route appears as high_grammar_native in scripts/native_route_goal_loop.py /goal.",
+            f"The route appears as high_grammar_native in scripts/native_route_goal_loop.py /goal --source {source}.",
         ],
         "commands": [
-            "python3 scripts/native_route_goal_loop.py /goal --source web_api --seconds 86400 --limit 2000",
+            f"python3 scripts/native_route_goal_loop.py /goal --source {source} --seconds 86400 --limit 2000",
             "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/kernel-http.fk form-stdlib/language-model.fk form-stdlib/tests/source-language-route-class-template-band.fk",
         ],
         "constraints": [
+            f"Current requested/effective source: {source_requested or 'all'} -> {source_effective or 'all'}.",
             f"Use the existing Python handler only as contract evidence; write the new route in {grammar}.",
             "Do not add JSON encoding to the kernel carrier; JSON emission stays Form/BML handler code.",
             "Do not add placeholder data, mock DB reads, or route-specific host hacks.",

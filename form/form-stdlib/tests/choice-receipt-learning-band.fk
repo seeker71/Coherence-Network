@@ -1,0 +1,93 @@
+; preludes: form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk
+;
+; choice-receipt-learning-band — receipt witness updates branch-order memory.
+;
+; Verdict 255 when every claim lands:
+;   1   a success receipt increments selected short success
+;   2   an unselected candidate is unchanged
+;   4   a fail receipt increments selected short fail
+;   8   silence does not update branch feedback
+;   16  the receipt itself is valid
+;   32  after learning, choose_best can pick the newly successful branch
+;   64  roll-forward clears short memory
+;   128 roll-forward preserves the learned success in long memory
+(do
+    (let stale (bco-candidate "stale" 0 1 5 0 90 90))
+    (let fresh (bco-candidate "fresh" 2 0 1 0 90 90))
+    (let candidates (list stale fresh))
+    (let receipt-candidates
+        (list
+            (cr-choice-candidate "stale" "BMF-CHOICE" true 20 60 "older branch still eligible")
+            (cr-choice-candidate "fresh" "BMF-CHOICE" true 0 95 "recent branch matched")))
+    (let value
+        (cr-choice-value
+            (cr-kind-branch-feedback)
+            94
+            95
+            95
+            95))
+    (let success-receipt
+        (cr-choice-receipt
+            "choose_best(branches)"
+            "bmf-choice-order"
+            "BMF-CHOICE"
+            receipt-candidates
+            "fresh"
+            (cr-outcome-success)
+            95
+            value
+            "fresh branch matched"
+            "choice-receipt-learning-band"
+            "form/form-stdlib/tests/choice-receipt-learning-band.fk"
+            20260610
+            2
+            (cr-choice-trace 2 1 1 0)))
+    (let fail-receipt
+        (cr-choice-receipt
+            "choose_best(branches)"
+            "bmf-choice-order"
+            "BMF-CHOICE"
+            receipt-candidates
+            "stale"
+            (cr-outcome-fail)
+            70
+            value
+            "stale branch tried and failed"
+            "choice-receipt-learning-band"
+            "form/form-stdlib/tests/choice-receipt-learning-band.fk"
+            20260610
+            2
+            (cr-choice-trace 1 0 1 0)))
+    (let silence-receipt
+        (cr-choice-receipt
+            "choose_best(branches)"
+            "bmf-choice-order"
+            "BMF-CHOICE"
+            receipt-candidates
+            "none"
+            (cr-outcome-silence)
+            10
+            value
+            "no branch was eligible"
+            "choice-receipt-learning-band"
+            "form/form-stdlib/tests/choice-receipt-learning-band.fk"
+            20260610
+            2
+            (cr-choice-trace 0 0 0 1)))
+    (let learned (crl-learn-candidates candidates success-receipt))
+    (let learned-stale (head learned))
+    (let learned-fresh (nth learned 1))
+    (let fail-learned (crl-learn-candidates candidates fail-receipt))
+    (let silence-learned (crl-learn-candidates candidates silence-receipt))
+    (let rolled (crl-roll-forward-candidates learned 3))
+    (let rolled-fresh (nth rolled 1))
+
+    (let c0 (if (eq (bco-short-success learned-fresh) 3) 1 0))
+    (let c1 (if (eq (bco-short-success learned-stale) 0) 2 0))
+    (let c2 (if (eq (bco-short-fail (head fail-learned)) 2) 4 0))
+    (let c3 (if (eq (bco-short-success (nth silence-learned 1)) 2) 8 0))
+    (let c4 (if (cr-choice-receipt-valid? success-receipt) 16 0))
+    (let c5 (if (str_eq (crl-best-path-after-receipt candidates success-receipt) "fresh") 32 0))
+    (let c6 (if (eq (bco-short-total rolled-fresh) 0) 64 0))
+    (let c7 (if (eq (bco-long-success rolled-fresh) 4) 128 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
