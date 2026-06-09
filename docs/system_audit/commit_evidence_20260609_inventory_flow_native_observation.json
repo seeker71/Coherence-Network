@@ -1,0 +1,106 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/native-inventory-observation-20260609",
+  "commit_scope": "Lift the inventory lineage grammar into its own native observation doorway. The BML front-door now exposes /api/_form/inventory-flow-observation behind X-Form-Observe, runs api_inventory_flow through the kernel, and reports handler timing, framebuffer events, JIT rows, and python_authority=false without asking Python to annotate the native surface.",
+  "files_owned": [
+    "deploy/front-door/api.bml",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/verify_web_api_deploy.sh",
+    "api/tests/test_runtime_web_api_provenance.py",
+    "docs/system_audit/commit_evidence_20260609_inventory_flow_native_observation.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_web_api_deploy.sh",
+      "VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -c 'source scripts/verify_web_api_deploy.sh https://api.example https://web.example'",
+      "/Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest tests/test_runtime_web_api_provenance.py -q",
+      "cargo build --release --bin form-kernel-rust",
+      "git diff --check",
+      "form/form-kernel-rust/target/release/form-kernel-rust serve --port 19133 --routes deploy/front-door/api.bml --stdlib form/form-stdlib --upstream http://127.0.0.1:9",
+      "curl -sS -D <headers> -o <body> -w '%{http_code}' 'http://127.0.0.1:19133/api/_form/inventory-flow-observation?idea_id=__native_inventory_canary__&list_item_limit=1&runtime_window_seconds=3600&event_limit=20&warm=1' -H 'X-Form-Observe: 1' -H 'Accept: application/json'",
+      "curl -sS -D <headers> -o <body> -w '%{http_code}' 'http://127.0.0.1:19133/api/inventory/flow?idea_id=__native_inventory_canary__&list_item_limit=1&runtime_window_seconds=3600' -H 'Accept: application/json'"
+    ],
+    "notes": "Prompt guide and wellness passed. Shell syntax, verifier source-load, focused provenance tests, Rust release build, and diff check passed. Local native serve compiled deploy/front-door/api.bml and listed 39 native routes including GET /api/_form/inventory-flow-observation. Local observation curl returned HTTP 200, X-Form-Router: native-kernel, observed_handler=api_inventory_flow, observed_canary=true, status=200, handler_total_ms=1, framebuffer_event_rows=36, events_returned=20, jit_rows=55, native_observation.handler=api_inventory_flow_observe, and python_authority=false. The underlying inventory flow curl returned its native_observation with observable_route=/api/_form/inventory-flow-observation."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until this branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Public deploy verification now includes the native inventory observation route with X-Form-Observe."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local proof passed. Commit, push, PR, CI, merge, deploy, and public verification remain."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A caller can now observe the native inventory lineage grammar through a native BML observation route instead of relying on Python-side annotation.",
+    "public_endpoints": [
+      "GET /api/_form/inventory-flow-observation",
+      "GET /api/inventory/flow"
+    ],
+    "test_flows": [
+      "GET /api/_form/inventory-flow-observation with X-Form-Observe routes to the BML front-door service.",
+      "The observation route invokes api_inventory_flow and reports observed_handler=api_inventory_flow, observed_canary=true, status=200, handler timing, framebuffer events, JIT rows, and python_authority=false.",
+      "GET /api/inventory/flow native responses now name observable_route=/api/_form/inventory-flow-observation and observation_header=X-Form-Observe.",
+      "deploy/hostinger/auto-deploy.sh and scripts/verify_web_api_deploy.sh both fail unless the native observation proof appears."
+    ]
+  },
+  "idea_ids": [
+    "oss-interface-alignment",
+    "inventory-lineage-grammar"
+  ],
+  "spec_ids": [
+    "inventory-lineage-grammar"
+  ],
+  "task_ids": [
+    "native-inventory-observation-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "public-interface-release"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "deploy/front-door/api.bml defines api_inventory_flow_observe and InventoryFlowObservationRoute.",
+    "deploy/front-door/api.bml adds observable_route and observation_header to inventory-flow-native-observation-json.",
+    "deploy/kernel-router/docker-compose.kernel-router.yml routes /api/_form/inventory-flow-observation to the BML service only when X-Form-Observe: 1 is present.",
+    "deploy/hostinger/auto-deploy.sh locally probes the BML observation route before declaring kernel-router canary proof.",
+    "scripts/verify_web_api_deploy.sh checks the public native observation route during deployment verification.",
+    "Local native curl proved X-Form-Router: native-kernel and native_observation.python_authority=false for the observation route."
+  ],
+  "change_files": [
+    "deploy/front-door/api.bml",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/verify_web_api_deploy.sh",
+    "api/tests/test_runtime_web_api_provenance.py",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}
