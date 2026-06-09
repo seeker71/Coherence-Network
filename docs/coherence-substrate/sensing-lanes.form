@@ -57,13 +57,18 @@
 ;
 ; LANE 8 — KERNEL ON ANDROID  ◀ the longest hardware lane; everything device-bound waits here
 ;   north star  the proven recipes run bit-identical on a phone, fed by its own sensors.
-;   ground      [MEASURED 2026-06-09 on this Mac] form-kernel-rust is ALREADY a cdylib (PyO3 surface) and Rust 1.95 +
-;               Go 1.26 are present — BUT aarch64-linux-android target NOT installed, cargo-ndk ABSENT, Android NDK ABSENT,
-;               gomobile ABSENT, and there is NO extern-"C"/JNI evaluate entry. So: nothing builds for ARM today.
-;   direction   install NDK + cargo-ndk + the aarch64 target; carve ONE thin extern-"C" evaluate(string)->string from the
-;               kernel; cross-compile ONE arm (Rust/NDK the most direct, the cdylib shape already exists).
-;   distance    toolchain install (~standard, the NDK is ~1GB) + the JNI entry (real Rust work) + a device/emulator to verify.
-;               On-device three-way parity (all three kernels on one phone) is UNRUN — day one is one arm. carrier-work, real.
+;   ground      [MEASURED 2026-06-09 — THE KERNEL NOW CROSS-COMPILES FOR ANDROID ARM64] form-kernel-rust builds clean for
+;               aarch64-linux-android: "ELF 64-bit LSB pie executable, ARM aarch64 ... interpreter /system/bin/linker64"
+;               (4.6 MB, the whole engine + tokio-postgres/rustls/ureq, ~70s). Toolchain installed: brew android-ndk (29) +
+;               cargo-ndk (4.1.2) + rustup aarch64-linux-android std. pyo3 stays OFF (opt-in feature) so NO Python-for-Android.
+;               Reproducible: form/form-kernel-rust/build-android.sh. The gotcha that cost two tries: Homebrew rustc has no
+;               cross-std, so the rustup toolchain must be FIRST in PATH (cargo-ndk shells out to cargo, re-resolving PATH).
+;   direction   the engine is in main.rs (a binary — runnable on a device via adb/Termux today). For an APP-loadable library,
+;               extract the engine into a shared module + a #[no_mangle] extern "C" evaluate(recipe)->result entry, then build
+;               crate-type cdylib -> a per-ABI .so for jniLibs + a thin Kotlin JNI declaration.
+;   distance    the ARM BUILD is DONE (verified ELF). Remaining: the cdylib/JNI entry (a bounded refactor — engine out of
+;               main.rs) + a device/emulator to actually RUN a recipe on ARM + wire ONE sensor port. On-device three-way
+;               (all three kernels on one phone) still UNRUN — day one is one arm. The hardware lane is now SHORT, not long.
 ;
 ; LANE 9 — CELL-SYNC TRANSPORT (share cells device↔device)
 ;   north star  a cell learned on one device reaches another, content-addressed and consent-honored.
