@@ -15,6 +15,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { getApiBase } from "@/lib/api";
+import { useT } from "@/components/MessagesProvider";
 
 type NodeID = {
   package: number;
@@ -50,6 +51,7 @@ function nodeId(n: NodeID | null | undefined): string {
 
 export function SubstrateBadge() {
   const pathname = usePathname();
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [data, setData] = useState<PageSubstrate | null>(null);
   const [loading, setLoading] = useState(false);
@@ -166,8 +168,8 @@ export function SubstrateBadge() {
       <button
         type="button"
         onClick={toggle}
-        aria-label="Substrate footprint for this page"
-        title="What cells compose this page?"
+        aria-label={t("substrate.footprintAria")}
+        title={t("substrate.footprintTooltip")}
         className={`flex h-8 w-8 items-center justify-center rounded-full border border-border/40 bg-card/60 text-base text-muted-foreground shadow-sm transition-colors hover:text-foreground hover:border-border/80 ${
           open ? "text-foreground border-border/80" : ""
         }`}

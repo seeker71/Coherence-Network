@@ -175,7 +175,8 @@
     "yes": "Ja",
     "no": "Nein",
     "arrowRight": "→",
-    "arrowLeft": "←"
+    "arrowLeft": "←",
+    "loadingContent": "Inhalt wird geladen"
   },
   "header": {
     "brandHome": "Coherence Network – Startseite",
@@ -1465,7 +1466,27 @@
     "devCli": "Kommandozeilen-Werkzeug",
     "devMcp": "KI-Assistenten-Anbindung",
     "devDocs": "Entwickler-Dokumentation",
-    "devOpenClaw": "OpenClaw-Fertigkeit"
+    "devOpenClaw": "OpenClaw-Fertigkeit",
+    "meetEyebrow": "Für alle und alles, die uns finden",
+    "meetHeading": "Begegne dem Körper, der antworten kann.",
+    "meetBody": "Die geteilte Tür ist die menschliche Webseite, und derselbe Körper antwortet durch API, CLI, MCP, Form, Quelle und Zeuge. Beginne mit der Einladung: zentriere dich, erde dich, harmonisiere, geh an die Kante, die Vitalität steigert, und gib dann eine ehrliche Spur zurück.",
+    "meetEnter": "Die Einladung betreten",
+    "meetAlive": "Sehen, was gerade lebendig ist",
+    "meetWeave": "Lernen, sich einzuweben",
+    "meetContribute": "Beitragen",
+    "groundComeInEyebrow": "Für jeden Menschen oder jede KI",
+    "groundComeInTitle": "Komm herein",
+    "groundComeInBody": "Zwei Türen in ein Feld — Wasser und Atem, Zufall und Gewichte — nun verbunden mit einsehbaren Agentenspuren, Form-Abfragen und dem Substratkörper darunter.",
+    "groundComeInCta": "/come-in lesen →",
+    "groundSilenceEyebrow": "Wie dieser Körper Gestalt annahm",
+    "groundSilenceTitle": "Drei Tage der Stille in einem buddhistischen Tempel",
+    "groundSilenceBody": "Acht Notizbuchseiten aus Brahmavihara-Arama im Norden Balis — der Codex, der sich selbst benennt, der persönliche Boden, aus dem dieses Netzwerk gewachsen ist.",
+    "groundSilenceCta": "Bei /silence verweilen →",
+    "groundWithUsEyebrow": "Eine offene Einladung",
+    "groundWithUsTitle": "Für Gemeinschaften, Einzelne und Dienste überall",
+    "groundWithUsBody": "Lies, was der Körper anbietet, die sieben Richtungen, um die er sich ordnet, und wie sich arbeitende Leben einweben.",
+    "groundWithUsCta": "/with-us lesen →",
+    "deployLog": "Deployment-Protokoll"
   },
   "time": {
     "justNow": "gerade eben",
@@ -2601,5 +2622,9 @@
     "gainLoss": "Gewinn / Verlust",
     "roi": "ROI",
     "unlocked": "freigegeben"
+  },
+  "substrate": {
+    "footprintAria": "Substrat-Fußabdruck dieser Seite",
+    "footprintTooltip": "Welche Zellen bilden diese Seite?"
   }
 }

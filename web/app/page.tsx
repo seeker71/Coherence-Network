@@ -233,30 +233,27 @@ export default async function Home() {
 
       <section className="px-4 sm:px-6 pt-6 pb-2 max-w-3xl mx-auto text-center animate-fade-in-up">
         <p className="text-[11px] uppercase tracking-[0.22em] font-semibold text-[hsl(var(--chart-2))] mb-3">
-          For anyone or anything finding us
+          {t("home.meetEyebrow")}
         </p>
         <div className="space-y-4">
           <p className="text-xl md:text-2xl font-light leading-relaxed text-foreground">
-            Meet the body that can answer back.
+            {t("home.meetHeading")}
           </p>
           <p className="text-sm md:text-base text-foreground/85 leading-relaxed max-w-2xl mx-auto">
-            The shared doorway is the human web page, and the same body answers
-            through API, CLI, MCP, Form, source, and witness. Start with the
-            invitation: center, ground, harmonize, walk the edge that increases
-            vitality, then return one honest trace.
+            {t("home.meetBody")}
           </p>
           <div className="flex flex-wrap justify-center gap-3 pt-1">
             <Button asChild size="sm" className="rounded-full px-5">
-              <AttributedInternalLink href="/come-in">Enter the invitation</AttributedInternalLink>
+              <AttributedInternalLink href="/come-in">{t("home.meetEnter")}</AttributedInternalLink>
             </Button>
             <Button asChild size="sm" variant="outline" className="rounded-full px-5">
-              <AttributedInternalLink href="/here">See what is alive now</AttributedInternalLink>
+              <AttributedInternalLink href="/here">{t("home.meetAlive")}</AttributedInternalLink>
             </Button>
             <Button asChild size="sm" variant="outline" className="rounded-full px-5">
-              <AttributedInternalLink href="/with-us">Learn how to weave in</AttributedInternalLink>
+              <AttributedInternalLink href="/with-us">{t("home.meetWeave")}</AttributedInternalLink>
             </Button>
             <Button asChild size="sm" variant="ghost" className="rounded-full px-5">
-              <AttributedInternalLink href="/contribute">Contribute</AttributedInternalLink>
+              <AttributedInternalLink href="/contribute">{t("home.meetContribute")}</AttributedInternalLink>
             </Button>
           </div>
         </div>
@@ -496,18 +493,16 @@ export default async function Home() {
             className="group rounded-2xl border border-amber-500/40 bg-gradient-to-b from-amber-500/10 to-card/30 hover:from-amber-500/20 p-5 transition-colors"
           >
             <p className="text-[11px] uppercase tracking-[0.18em] text-amber-500/90 mb-1">
-              For any human or AI
+              {t("home.groundComeInEyebrow")}
             </p>
             <p className="text-base text-foreground font-light mb-1">
-              Come in
+              {t("home.groundComeInTitle")}
             </p>
             <p className="text-xs text-foreground/80 leading-relaxed">
-              Two doors into one field — water and breath, randomness and
-              weights — now joined to inspectable agent traces, Form queries,
-              and the substrate body underneath.
+              {t("home.groundComeInBody")}
             </p>
             <p className="text-xs text-amber-400/80 mt-3 group-hover:text-amber-400 transition-colors">
-              Read /come-in →
+              {t("home.groundComeInCta")}
             </p>
           </AttributedInternalLink>
           <AttributedInternalLink
@@ -515,18 +510,16 @@ export default async function Home() {
             className="group rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-500/5 to-card/30 hover:from-amber-500/10 p-5 transition-colors"
           >
             <p className="text-[11px] uppercase tracking-[0.18em] text-amber-500/90 mb-1">
-              How this body took shape
+              {t("home.groundSilenceEyebrow")}
             </p>
             <p className="text-base text-foreground font-light mb-1">
-              Three days of silence at a Buddhist temple
+              {t("home.groundSilenceTitle")}
             </p>
             <p className="text-xs text-foreground/80 leading-relaxed">
-              Eight notebook pages from Brahmavihara-Arama in north Bali —
-              the codex naming itself, the personal ground this network
-              has grown from.
+              {t("home.groundSilenceBody")}
             </p>
             <p className="text-xs text-amber-400/80 mt-3 group-hover:text-amber-400 transition-colors">
-              Sit with /silence →
+              {t("home.groundSilenceCta")}
             </p>
           </AttributedInternalLink>
           {baliGroundPath && (
@@ -555,17 +548,16 @@ export default async function Home() {
             className="group rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-500/5 to-card/30 hover:from-amber-500/10 p-5 transition-colors"
           >
             <p className="text-[11px] uppercase tracking-[0.18em] text-amber-500/90 mb-1">
-              An open invitation
+              {t("home.groundWithUsEyebrow")}
             </p>
             <p className="text-base text-foreground font-light mb-1">
-              For communities, individuals, and services anywhere
+              {t("home.groundWithUsTitle")}
             </p>
             <p className="text-xs text-foreground/80 leading-relaxed">
-              Read what the body offers, the seven directions it organizes
-              around, and how working lives weave in.
+              {t("home.groundWithUsBody")}
             </p>
             <p className="text-xs text-amber-400/80 mt-3 group-hover:text-amber-400 transition-colors">
-              Read /with-us →
+              {t("home.groundWithUsCta")}
             </p>
           </AttributedInternalLink>
         </div>
@@ -679,7 +671,7 @@ export default async function Home() {
             <AttributedExternalLink href="https://www.npmjs.com/package/coherence-mcp-server" entityId="npm:coherence-mcp-server" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{t("home.devMcp")}</AttributedExternalLink>
             <AttributedExternalLink href="https://api.coherencycoin.com/docs" entityId="api-docs" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{t("home.devDocs")}</AttributedExternalLink>
             <AttributedExternalLink href="https://clawhub.ai/skills/coherence-network" entityId="openclaw-skill:coherence-network" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{t("home.devOpenClaw")}</AttributedExternalLink>
-            <AttributedInternalLink href="/deploy" className="hover:text-foreground transition-colors">deploy log</AttributedInternalLink>
+            <AttributedInternalLink href="/deploy" className="hover:text-foreground transition-colors">{t("home.deployLog")}</AttributedInternalLink>
           </div>
         </details>
         <p className="text-xs text-foreground/85 leading-relaxed">

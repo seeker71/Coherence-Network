@@ -175,7 +175,8 @@
     "yes": "Yes",
     "no": "No",
     "arrowRight": "→",
-    "arrowLeft": "←"
+    "arrowLeft": "←",
+    "loadingContent": "Loading content"
   },
   "header": {
     "brandHome": "Coherence Network home",
@@ -1555,7 +1556,27 @@
     "devCli": "Command line tool",
     "devMcp": "AI assistant integration",
     "devDocs": "Developer documentation",
-    "devOpenClaw": "OpenClaw Skill"
+    "devOpenClaw": "OpenClaw Skill",
+    "meetEyebrow": "For anyone or anything finding us",
+    "meetHeading": "Meet the body that can answer back.",
+    "meetBody": "The shared doorway is the human web page, and the same body answers through API, CLI, MCP, Form, source, and witness. Start with the invitation: center, ground, harmonize, walk the edge that increases vitality, then return one honest trace.",
+    "meetEnter": "Enter the invitation",
+    "meetAlive": "See what is alive now",
+    "meetWeave": "Learn how to weave in",
+    "meetContribute": "Contribute",
+    "groundComeInEyebrow": "For any human or AI",
+    "groundComeInTitle": "Come in",
+    "groundComeInBody": "Two doors into one field — water and breath, randomness and weights — now joined to inspectable agent traces, Form queries, and the substrate body underneath.",
+    "groundComeInCta": "Read /come-in →",
+    "groundSilenceEyebrow": "How this body took shape",
+    "groundSilenceTitle": "Three days of silence at a Buddhist temple",
+    "groundSilenceBody": "Eight notebook pages from Brahmavihara-Arama in north Bali — the codex naming itself, the personal ground this network has grown from.",
+    "groundSilenceCta": "Sit with /silence →",
+    "groundWithUsEyebrow": "An open invitation",
+    "groundWithUsTitle": "For communities, individuals, and services anywhere",
+    "groundWithUsBody": "Read what the body offers, the seven directions it organizes around, and how working lives weave in.",
+    "groundWithUsCta": "Read /with-us →",
+    "deployLog": "deploy log"
   },
   "time": {
     "justNow": "just now",
@@ -2601,5 +2622,9 @@
       "hardware-firmware-system": "hardware · firmware · system",
       "thesis": "thesis"
     }
+  },
+  "substrate": {
+    "footprintAria": "Substrate footprint for this page",
+    "footprintTooltip": "What cells compose this page?"
   }
 }
