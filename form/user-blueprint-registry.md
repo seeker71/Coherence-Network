@@ -184,7 +184,7 @@ The native front door is not a prose promise; it is a Form-native attention loop
 
 **Operating shape**: Route selection is a content-addressed choice over measured cells, weighted by each route's named user flow and north-star fit so frequency alone does not decide the body's movement. A high-frequency Python route with no high grammar receives pressure to become BML/domain grammar; a kernel-capable route receives pressure to prove byte identity; a kernel-served route receives pressure to become the front door; a fully served route returns to observation.
 
-**Proof**: `form/form-stdlib/tests/native-route-goal-cells-band.fk` returns `65535` across source and binary sibling-kernel execution.
+**Proof**: `form/form-stdlib/tests/native-route-goal-cells-band.fk` returns `1048575` across source and binary sibling-kernel execution.
 
 ---
 

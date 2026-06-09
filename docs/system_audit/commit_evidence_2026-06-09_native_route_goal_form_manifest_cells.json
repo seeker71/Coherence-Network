@@ -1,0 +1,129 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/release-route-goal-python-parser-20260609",
+  "commit_scope": "Move method-specific route-goal manifest classification into Form-native route cells.",
+  "files_owned": [
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-09_native_route_goal_form_manifest_cells.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/native_route_goal_state.json",
+    "form/form-stdlib/native-route-goal-cells.fk",
+    "form/form-stdlib/tests/native-route-goal-cells-band.fk",
+    "form/user-blueprint-registry.md",
+    "scripts/native_route_goal_loop.py",
+    "specs/native-mutation-public-gate.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk",
+      "python3 scripts/validate_spec_quality.py --file specs/native-mutation-public-gate.md",
+      "cd api && python3 -m pytest -q tests/test_runtime_web_api_provenance.py",
+      "python3 -m py_compile scripts/native_route_goal_loop.py",
+      "cd api && python3 -m ruff check ../scripts/native_route_goal_loop.py tests/test_runtime_web_api_provenance.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check",
+      "python3 scripts/native_route_goal_loop.py /goal --source api --seconds 604800 --limit 2000 --json"
+    ],
+    "summary": "native-route-goal-cells.fk now classifies method-specific KernelHTTPRoute cells directly. No-header kh-route rows are Form-native executable with status kernel-native-form-needs-source-lift, header-gated rows are kernel-native-header-gated for ordinary traffic, and manifest observations can be projected into NATIVE-ROUTE-OBS cells without Python owning that semantic decision.",
+    "observed_delta": {
+      "native_route_goal_cells_band": 1048575,
+      "native_route_goal_cells_band_binary": 1048575,
+      "route_goal_next_route_status": "kernel-native-form-needs-source-lift",
+      "route_goal_next_route_handler": "route_ideas_create_native_default",
+      "route_goal_form_manifest_routes": 33
+    },
+    "known_limitations": [
+      {
+        "scope": "temporary Python carrier",
+        "observed": "scripts/native_route_goal_loop.py still performs file I/O, runtime-event HTTP reads, and checked-in manifest overlay. This slice moves method-route classification into Form cells; it does not remove the Python command carrier."
+      },
+      {
+        "scope": "existing make target",
+        "observed": "make native-route-goal-tending remains a pre-existing stale direct-Rust query path: origin/main and this branch both fail on bp(\"NATIVE-ROUTE-OBS\") BML source syntax. The sibling-kernel Form band is the passing proof path for this slice."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push, PR checks, merge, and production verification."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "python3 scripts/native_route_goal_loop.py /goal --source api --seconds 604800 --limit 2000 --json"
+    ],
+    "notes": "This is a checked-in Form/source observer movement. Public deployment verification should confirm the merged SHA and route-goal observation after deploy."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Route-goal manifest truth is now expressed in Form: a method-specific no-header kh-route row is natively executable but still asks for BML/domain source lift before high-grammar credit.",
+    "public_endpoints": [
+      "POST /api/ideas",
+      "PATCH /api/ideas/*",
+      "POST /api/spec-registry",
+      "PATCH /api/spec-registry/*",
+      "DELETE /api/spec-registry/*"
+    ],
+    "test_flows": [
+      "native-route-goal-cells-band constructs kh-route rows for default, preview, and wildcard mutation routes and proves the status/executable/high-grammar split across Go/Rust/TypeScript.",
+      "native_route_goal_loop /goal observes POST /api/ideas as current_grammar=Form, current_handler=route_ideas_create_native_default, native_executable=true, high_grammar_native=false."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete. CI, merge, and post-deploy verification remain before claiming live release."
+  },
+  "idea_ids": [
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "specs/native-mutation-public-gate.md"
+  ],
+  "task_ids": [
+    "release-route-goal-python-parser-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/native-route-goal-cells.fk::nrg-manifest-route-status",
+    "form/form-stdlib/native-route-goal-cells.fk::nrg-observation-from-manifest-route",
+    "form/form-stdlib/tests/native-route-goal-cells-band.fk::nrg-route-goal-cells-band-score",
+    "specs/native-mutation-public-gate.md::R14"
+  ],
+  "change_files": [
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/native_route_goal_state.json",
+    "form/form-stdlib/native-route-goal-cells.fk",
+    "form/form-stdlib/tests/native-route-goal-cells-band.fk",
+    "form/user-blueprint-registry.md",
+    "scripts/native_route_goal_loop.py",
+    "specs/native-mutation-public-gate.md"
+  ],
+  "change_intent": "runtime_feature"
+}

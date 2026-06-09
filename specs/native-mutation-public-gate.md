@@ -42,6 +42,10 @@ source:
     symbols: [ideas_router_structure]
   - file: docs/coherence-substrate/spec-registry-router.form
     symbols: [spec_registry_router_structure]
+  - file: form/form-stdlib/native-route-goal-cells.fk
+    symbols: [nrg-manifest-route-status, nrg-observation-from-manifest-route]
+  - file: form/form-stdlib/tests/native-route-goal-cells-band.fk
+    symbols: []
   - file: scripts/native_route_goal_loop.py
     symbols: [load_form_routes, route_status, build_goal_state]
   - file: api/tests/test_runtime_web_api_provenance.py
@@ -57,7 +61,7 @@ requirements:
   - "The side-effect ledger keeps rollback receipts as gate-local safety rather than Python parity, so side-effect proof does not justify side effects."
   - "The public-gate Form layer exposes an idea update runner over the native idea valuation audit-ledger carrier."
   - "Native/default/preview mutation responses carry a `native_invitation` receipt that names the ordinary JSON received, the Form-native mutation recipe it became, execution evidence, the next native protocol, and the explicit decline signal."
-  - "The route-goal observer reads method-specific Form route cells from the production manifest so bounded ordinary mutation defaults are reported as Form-native executable instead of Python fanout."
+  - "The route-goal Form cells understand method-specific Form route cells so bounded ordinary mutation defaults are reported as Form-native executable instead of Python fanout; Python remains a temporary I/O carrier."
 done_when:
   - 'file_exists("form/form-stdlib/native-mutation-public-gate.fk")'
   - 'file_exists("deploy/kernel-router/mutation_public_gate_harness.py")'
@@ -140,10 +144,11 @@ are reversible gate safety, not evidence that extra domain side effects belong.
   `received.shape=ordinary-json-mutation`, `translated.language=Form-native
   mutation recipe`, `speak_next_time.native_protocol=Form/BML mutation recipe`,
   and `decline_signal=native_invitation_declined`.
-- [ ] **R14**: `native_route_goal_loop.py` parses `kh-route` method/path
-  cells in `production-routes.fk` and treats the no-header native-default
-  ideas/spec mutation rows as Form-native executable, while leaving them short
-  of high-grammar native until a BML/domain grammar handler exists.
+- [ ] **R14**: `native-route-goal-cells.fk` classifies `kh-route` method/path
+  cells as Form-native manifest state. No-header native-default ideas/spec
+  mutation rows are Form-native executable, header-gated preview/public-gate
+  rows are not ordinary executable, and both stay short of high-grammar native
+  until a BML/domain grammar handler exists.
 
 ## Research Inputs
 
@@ -193,6 +198,10 @@ are reversible gate safety, not evidence that extra domain side effects belong.
   that method-specific native mutation rows are not misclassified as Python
   fanout.
 - `scripts/native_route_goal_loop.py` - route-goal observation loop.
+- `form/form-stdlib/native-route-goal-cells.fk` - Form-native route manifest
+  classification and observation cells.
+- `form/form-stdlib/tests/native-route-goal-cells-band.fk` - sibling-kernel
+  proof for route-goal traffic and manifest classification.
 - `docs/coherence-substrate/ideas-router.form` - ideas route state.
 - `docs/coherence-substrate/spec-registry-router.form` - spec route state.
 - `specs/native-mutation-public-gate.md` - this contract.
@@ -207,6 +216,7 @@ are reversible gate safety, not evidence that extra domain side effects belong.
 - `api/tests/test_native_mutation_public_gate.py::test_deploy_exposes_bounded_no_header_native_mutation_flip`
 - `api/tests/test_runtime_web_api_provenance.py::test_native_route_goal_loop_sees_method_specific_form_mutation_routes`
 - `api/tests/test_runtime_web_api_provenance.py::test_native_route_goal_loop_counts_form_mutations_as_native_executable`
+- `form/form-stdlib/tests/native-route-goal-cells-band.fk`
 - `api/tests/test_native_idea_valuation_audit_ledger.py::test_ledger_and_route_forms_mark_audit_parity_carried`
 - `api/tests/test_native_mutation_side_effect_ledger.py::test_gate_receipts_are_not_claimed_as_python_parity`
 - `api/tests/test_native_mutation_side_effect_ledger.py::test_route_forms_and_specs_link_the_ledger_boundary`
@@ -222,6 +232,7 @@ python3 deploy/kernel-router/mutation_ab_observation_harness.py --json
 bash -n deploy/hostinger/auto-deploy.sh scripts/verify_kernel_canary_public_gate.sh
 cd api && python3 -m pytest -q tests/test_native_mutation_public_gate.py tests/test_native_idea_valuation_audit_ledger.py tests/test_native_mutation_side_effect_ledger.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py
 cd api && python3 -m pytest -q tests/test_runtime_web_api_provenance.py
+cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk
 python3 scripts/validate_spec_quality.py --file specs/native-mutation-public-gate.md
 ```
 
