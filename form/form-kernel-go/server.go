@@ -33,8 +33,18 @@ const (
 	headerRouteWhere     = "X-Form-Route-Where"
 	headerRouteWhen      = "X-Form-Route-When"
 	headerRouteWho       = "X-Form-Route-Who"
+	headerNativeInvite   = "X-Form-Native-Invitation"
+	headerNativeState    = "X-Form-Native-Invitation-State"
+	headerNativeProtocol = "X-Form-Native-Invitation-Protocol"
+	headerNativePath     = "X-Form-Native-Invitation-Selected-Path"
+	headerNativeDecline  = "X-Form-Native-Invitation-Decline-Signal"
+	headerNativeFallback = "X-Form-Native-Invitation-Decline-Header"
 	routeHowNative       = "native-kernel-go"
 	routeHowFanout       = "fanout-python"
+	nativeInviteValue    = "offered"
+	nativeInviteState    = "native-invitation-offered"
+	nativeInviteProtocol = "Form/BML route recipe"
+	nativeInviteDecline  = "native_invitation_declined"
 	maxDecisionHeaderLen = 240
 )
 
@@ -1568,6 +1578,7 @@ func (wkr *goServeWorker) fanout(w http.ResponseWriter, r *http.Request) {
 	who := routeDecisionWho(r)
 	where := fanoutRouteWhere(target)
 	setRouteDecisionHeaders(req.Header, routeHowFanout, where, who, when)
+	setFanoutNativeInvitationHeaders(req.Header)
 	req.Header.Set("X-Forwarded-Host", r.Host)
 	req.Header.Set("X-Forwarded-Proto", "http")
 	resp, err := wkr.program.client.Do(req)
@@ -1584,6 +1595,7 @@ func (wkr *goServeWorker) fanout(w http.ResponseWriter, r *http.Request) {
 		who,
 		when,
 	)
+	setFanoutNativeInvitationHeaders(w.Header())
 	w.WriteHeader(resp.StatusCode)
 	_, _ = io.Copy(w, io.LimitReader(resp.Body, 25<<20))
 }
@@ -1594,6 +1606,15 @@ func setRouteDecisionHeaders(headers http.Header, how, where, who, when string) 
 	headers.Set(headerRouteWhere, sanitizeDecisionHeader(where))
 	headers.Set(headerRouteWho, sanitizeDecisionHeader(who))
 	headers.Set(headerRouteWhen, sanitizeDecisionHeader(when))
+}
+
+func setFanoutNativeInvitationHeaders(headers http.Header) {
+	headers.Set(headerNativeInvite, nativeInviteValue)
+	headers.Set(headerNativeState, nativeInviteState)
+	headers.Set(headerNativeProtocol, nativeInviteProtocol)
+	headers.Set(headerNativePath, routeHowFanout)
+	headers.Set(headerNativeDecline, nativeInviteDecline)
+	headers.Set(headerNativeFallback, "X-Form-Python-Fallback")
 }
 
 func routeDecisionWhen() string {
@@ -1665,7 +1686,7 @@ func upstreamURL(base *url.URL, requestURL *url.URL) string {
 
 func copyForwardHeaders(dst, src http.Header) {
 	for key, vals := range src {
-		if hopByHopHeader(key) {
+		if hopByHopHeader(key) || routerOwnedHeader(key) {
 			continue
 		}
 		for _, val := range vals {
@@ -1676,13 +1697,27 @@ func copyForwardHeaders(dst, src http.Header) {
 
 func copyResponseHeaders(dst, src http.Header) {
 	for key, vals := range src {
-		if hopByHopHeader(key) || strings.EqualFold(key, "Content-Length") {
+		if hopByHopHeader(key) || routerOwnedHeader(key) || strings.EqualFold(key, "Content-Length") {
 			continue
 		}
 		for _, val := range vals {
 			dst.Add(key, val)
 		}
 	}
+}
+
+func routerOwnedHeader(key string) bool {
+	return strings.EqualFold(key, headerFormRouter) ||
+		strings.EqualFold(key, headerRouteHow) ||
+		strings.EqualFold(key, headerRouteWhere) ||
+		strings.EqualFold(key, headerRouteWhen) ||
+		strings.EqualFold(key, headerRouteWho) ||
+		strings.EqualFold(key, headerNativeInvite) ||
+		strings.EqualFold(key, headerNativeState) ||
+		strings.EqualFold(key, headerNativeProtocol) ||
+		strings.EqualFold(key, headerNativePath) ||
+		strings.EqualFold(key, headerNativeDecline) ||
+		strings.EqualFold(key, headerNativeFallback)
 }
 
 func hopByHopHeader(key string) bool {

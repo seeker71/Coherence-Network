@@ -204,6 +204,11 @@ selected route/upstream lived, when the choice was made, and who/what initiated
 it. Use this bridge to make the kernel the main local/shadow front door while
 Python handlers remain explicit bridge traffic. Do not count those bridged
 responses as high-grammar native.
+Rust and Go fanout bridges also carry `X-Form-Native-Invitation: offered` plus
+state/protocol/selected-path/decline headers. That means unpromoted Python
+traffic is still explicitly non-native, but it is no longer an unmarked outside:
+the response and upstream request name `Form/BML route recipe` as the offered
+native tongue and `X-Form-Python-Fallback` as the visible decline/control signal.
 
 Form-native magnet rule: when editing docs, route descriptions, task cards, or
 architecture memory, pull new work toward BML/domain grammar handlers and

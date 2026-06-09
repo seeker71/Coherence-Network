@@ -23,12 +23,36 @@ import time
 import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.client import HTTPMessage
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 BIN = HERE / "target" / "release" / "form-kernel-rust"
 ROUTES = HERE / "examples" / "routes.fk"
 ROUTES_METHOD = HERE / "examples" / "routes-method.fk"
+
+
+def assert_fanout_native_invitation(headers: HTTPMessage) -> None:
+    assert headers.get("X-Form-Native-Invitation") == "offered"
+    assert (
+        headers.get("X-Form-Native-Invitation-State")
+        == "native-invitation-offered"
+    )
+    assert (
+        headers.get("X-Form-Native-Invitation-Protocol")
+        == "Form/BML route recipe"
+    )
+    assert (
+        headers.get("X-Form-Native-Invitation-Selected-Path")
+        == "fanout-python"
+    )
+    assert (
+        headers.get("X-Form-Native-Invitation-Decline-Signal")
+        == "native_invitation_declined"
+    )
+    assert headers.get("X-Form-Native-Invitation-Decline-Header") == (
+        "X-Form-Python-Fallback"
+    )
 
 
 def free_port() -> int:
@@ -52,11 +76,38 @@ def wait_for_port(port: int, timeout: float = 5.0) -> None:
 
 
 class UpstreamHandler(BaseHTTPRequestHandler):
+    last_invitation_headers: dict[str, str] = {}
+
+    def record_invitation_headers(self) -> None:
+        UpstreamHandler.last_invitation_headers = {
+            "X-Form-Router": self.headers.get("X-Form-Router", ""),
+            "X-Form-Native-Invitation": self.headers.get(
+                "X-Form-Native-Invitation", ""
+            ),
+            "X-Form-Native-Invitation-State": self.headers.get(
+                "X-Form-Native-Invitation-State", ""
+            ),
+            "X-Form-Native-Invitation-Protocol": self.headers.get(
+                "X-Form-Native-Invitation-Protocol", ""
+            ),
+            "X-Form-Native-Invitation-Selected-Path": self.headers.get(
+                "X-Form-Native-Invitation-Selected-Path", ""
+            ),
+            "X-Form-Native-Invitation-Decline-Signal": self.headers.get(
+                "X-Form-Native-Invitation-Decline-Signal", ""
+            ),
+            "X-Form-Native-Invitation-Decline-Header": self.headers.get(
+                "X-Form-Native-Invitation-Decline-Header", ""
+            ),
+        }
+
     def do_GET(self) -> None:
+        self.record_invitation_headers()
         if self.path.startswith("/python-tail"):
             body = f"python upstream saw {self.path}".encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("X-Form-Native-Invitation", "upstream-owned")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
@@ -64,11 +115,13 @@ class UpstreamHandler(BaseHTTPRequestHandler):
             body = b"upstream missing"
             self.send_response(404)
             self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("X-Form-Native-Invitation", "upstream-owned")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
 
     def do_POST(self) -> None:
+        self.record_invitation_headers()
         # The write twin that stays on the CPython carrier. A POST that fell
         # through here (instead of 404ing at the kernel) is the proof the flip's
         # method fall-through holds.
@@ -78,6 +131,7 @@ class UpstreamHandler(BaseHTTPRequestHandler):
         body = f"python upstream POST {self.path}".encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_header("X-Form-Native-Invitation", "upstream-owned")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -86,17 +140,24 @@ class UpstreamHandler(BaseHTTPRequestHandler):
         return
 
 
-def get_response(url: str) -> tuple[int, str, str]:
+def get_response_with_headers(url: str) -> tuple[int, str, str, HTTPMessage]:
     with urllib.request.urlopen(url, timeout=2.0) as r:
         body = r.read().decode("utf-8")
-        return r.status, r.headers.get("X-Form-Router", ""), body
+        return r.status, r.headers.get("X-Form-Router", ""), body, r.headers
+
+
+def get_response(url: str) -> tuple[int, str, str]:
+    status, router, body, _headers = get_response_with_headers(url)
+    return status, router, body
 
 
 def get(url: str) -> str:
     return get_response(url)[2]
 
 
-def post_response(url: str, payload: bytes) -> tuple[int, str, str]:
+def post_response_with_headers(
+    url: str, payload: bytes
+) -> tuple[int, str, str, HTTPMessage]:
     req = urllib.request.Request(
         url,
         data=payload,
@@ -104,7 +165,17 @@ def post_response(url: str, payload: bytes) -> tuple[int, str, str]:
         headers={"Content-Type": "application/json"},
     )
     with urllib.request.urlopen(req, timeout=2.0) as r:
-        return r.status, r.headers.get("X-Form-Router", ""), r.read().decode("utf-8")
+        return (
+            r.status,
+            r.headers.get("X-Form-Router", ""),
+            r.read().decode("utf-8"),
+            r.headers,
+        )
+
+
+def post_response(url: str, payload: bytes) -> tuple[int, str, str]:
+    status, router, body, _headers = post_response_with_headers(url, payload)
+    return status, router, body
 
 
 def start_kernel(
@@ -177,11 +248,23 @@ def main() -> int:
         assert router == "native-kernel", f"fanout-mode /hello router -> {router!r}"
         assert hello == "Hello from the kernel", f"fanout-mode /hello -> {hello!r}"
 
-        status, router, tail = get_response(
+        status, router, tail, headers = get_response_with_headers(
             f"http://127.0.0.1:{router_port}/python-tail?msg=still+python"
         )
         assert status == 200, f"/python-tail status -> {status}"
         assert router == "fanout-python", f"/python-tail router -> {router!r}"
+        assert_fanout_native_invitation(headers)
+        assert UpstreamHandler.last_invitation_headers == {
+            "X-Form-Router": "fanout-python",
+            "X-Form-Native-Invitation": "offered",
+            "X-Form-Native-Invitation-State": "native-invitation-offered",
+            "X-Form-Native-Invitation-Protocol": "Form/BML route recipe",
+            "X-Form-Native-Invitation-Selected-Path": "fanout-python",
+            "X-Form-Native-Invitation-Decline-Signal": (
+                "native_invitation_declined"
+            ),
+            "X-Form-Native-Invitation-Decline-Header": "X-Form-Python-Fallback",
+        }
         assert tail == "python upstream saw /python-tail?msg=still+python", tail
 
         try:
@@ -193,6 +276,7 @@ def main() -> int:
         except urllib.error.HTTPError as e:
             assert e.code == 404, f"/upstream-missing -> {e.code}"
             assert e.headers.get("X-Form-Router") == "fanout-python"
+            assert_fanout_native_invitation(e.headers)
             assert e.read().decode("utf-8") == "upstream missing"
 
         print(
@@ -220,7 +304,7 @@ def main() -> int:
             assert router == "native-kernel", f"GET /api/items router -> {router!r}"
             assert items == "native items list", f"GET /api/items -> {items!r}"
 
-            status, router, created = post_response(
+            status, router, created, headers = post_response_with_headers(
                 f"http://127.0.0.1:{method_port}/api/items", b"{}"
             )
             assert status == 200, f"method-mismatch POST status -> {status}"
@@ -228,6 +312,7 @@ def main() -> int:
                 "POST to a GET-only native route must fan out to Python, got "
                 f"X-Form-Router={router!r} (a 404 here is the regression)"
             )
+            assert_fanout_native_invitation(headers)
             assert created == "python upstream POST /api/items", created
 
             print(
@@ -240,6 +325,33 @@ def main() -> int:
                 method_proc.wait(timeout=2.0)
             except subprocess.TimeoutExpired:
                 method_proc.kill()
+
+        # Buffered fan-out failure proof: even when the upstream cannot be
+        # reached and no upstream body exists, the bridge still invites the
+        # caller toward the native route protocol.
+        dead_upstream_port = free_port()
+        error_port = free_port()
+        error_proc = start_kernel(
+            error_port, f"http://127.0.0.1:{dead_upstream_port}", routes=ROUTES
+        )
+        try:
+            wait_for_port(error_port)
+            try:
+                urllib.request.urlopen(
+                    f"http://127.0.0.1:{error_port}/python-tail",
+                    timeout=2.0,
+                )
+                raise AssertionError("/python-tail should have 502'd")
+            except urllib.error.HTTPError as e:
+                assert e.code == 502, f"dead upstream fanout -> {e.code}"
+                assert e.headers.get("X-Form-Router") == "fanout-python"
+                assert_fanout_native_invitation(e.headers)
+        finally:
+            error_proc.terminate()
+            try:
+                error_proc.wait(timeout=2.0)
+            except subprocess.TimeoutExpired:
+                error_proc.kill()
 
         return 0
     finally:

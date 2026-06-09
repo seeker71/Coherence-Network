@@ -1,0 +1,117 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/loosen-native-invitation-boundary-20260609",
+  "commit_scope": "Loosen the kernel fanout boundary by making Rust and Go bridge traffic carry a native Form/BML invitation while preserving fanout semantics.",
+  "files_owned": [
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-09_kernel_router_fanout_native_invitation.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-kernel-go/server.go",
+    "form/form-kernel-go/server_test.go",
+    "form/form-kernel-rust/src/main.rs",
+    "form/form-kernel-rust/test_serve.py",
+    "specs/INDEX.md",
+    "specs/kernel-router-fanout-native-invitation.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form/form-kernel-rust && cargo fmt --check && cargo build --release && python3 test_serve.py",
+      "cd form/form-kernel-go && go test ./...",
+      "python3 scripts/validate_spec_quality.py --file specs/kernel-router-fanout-native-invitation.md",
+      "python3 scripts/generate_repo_indexes.py",
+      "git diff --check"
+    ],
+    "summary": "Rust and Go fanout bridges now write X-Form-Native-Invitation headers on fanout responses and upstream requests. The headers name native-invitation-offered, Form/BML route recipe, selected path fanout-python, native_invitation_declined, and X-Form-Python-Fallback. Router-owned headers are filtered before forwarding/relaying so clients or upstreams cannot clobber the bridge decision.",
+    "known_limitations": [
+      {
+        "scope": "native execution",
+        "observed": "This release does not promote any additional handler to native execution. X-Form-Router and selected path remain fanout-python for unpromoted traffic."
+      },
+      {
+        "scope": "response body",
+        "observed": "Fanout response bodies, status codes, content type, and streaming/buffered error semantics remain unchanged."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push, PR checks, merge, and production verification."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh"
+    ],
+    "notes": "Public deploy verification will run after merge/deploy. This bridge contract is primarily local kernel runtime behavior and does not add a new public route."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A request that falls through to Python is still explicitly non-native, but it now receives and forwards an offer to speak the Form/BML route recipe next time. Explicit Python fallback remains the visible decline/control signal.",
+    "public_endpoints": [
+      "Any kernel-router fanout response marked X-Form-Router: fanout-python"
+    ],
+    "test_flows": [
+      "Rust test_serve.py proved successful fanout, upstream 404 fanout, method fallthrough, and buffered upstream failure carry the invitation headers.",
+      "Go TestFanoutForwardsBodyAndMarksBridge proved response and upstream request invitation headers, including client/upstream clobber filtering."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete. CI, merge, and post-deploy verification remain before claiming this live."
+  },
+  "idea_ids": [
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "specs/kernel-router-fanout-native-invitation.md"
+  ],
+  "task_ids": [
+    "loosen-native-invitation-boundary-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-kernel-rust/src/main.rs::fanout_native_invitation_headers",
+    "form/form-kernel-rust/src/main.rs::router_owned_http_header",
+    "form/form-kernel-rust/test_serve.py::assert_fanout_native_invitation",
+    "form/form-kernel-go/server.go::setFanoutNativeInvitationHeaders",
+    "form/form-kernel-go/server.go::routerOwnedHeader",
+    "form/form-kernel-go/server_test.go::assertFanoutNativeInvitationHeaders",
+    "docs/shared/agent-start-packet.md::Go front-door bridge note"
+  ],
+  "change_files": [
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-kernel-go/server.go",
+    "form/form-kernel-go/server_test.go",
+    "form/form-kernel-rust/src/main.rs",
+    "form/form-kernel-rust/test_serve.py",
+    "specs/INDEX.md",
+    "specs/kernel-router-fanout-native-invitation.md"
+  ],
+  "change_intent": "runtime_feature"
+}
