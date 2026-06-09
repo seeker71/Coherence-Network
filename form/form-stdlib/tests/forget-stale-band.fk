@@ -1,0 +1,33 @@
+; preludes: form-stdlib/forget-stale.fk
+;
+; forget-stale-band — composting made falsifiable: a prototype old enough to judge yet never winning is dropped.
+;
+; Three prototypes have lived in the body's recognition memory. The drop-gate is min-age 30 (a prototype must
+; have seen at least 30 queries before we judge it) and max-wins 1 (at or below one win is "too few"):
+;   ("x" 0 50) -> age 50 >= 30 (judged) AND wins 0 <= 1 (too few)      -> STALE   (old, never won — drop it)
+;   ("y" 9 50) -> age 50 >= 30 (judged) but wins 9  >  1 (won plenty)  -> KEEP    (proven by winning)
+;   ("z" 0 5)  -> wins 0 <= 1 (too few) but age 5   <  30 (too soon)   -> KEEP    (fair-chance floor protects it)
+; So over the three, exactly ONE is dead weight: fs-count-stale counts 1. The floor and the win-proof are the
+; two distinct reasons keep fires — y is kept for winning, z is kept for youth; the band proves each separately.
+;
+; Verdict 127 when every claim lands:
+;   1   the wins accessor reads the record's win-count        (fs-wins ("y" 9 50) == 9)
+;   2   the age accessor reads the record's age               (fs-age  ("x" 0 50) == 50)
+;   4   old-and-never-won is stale                            (fs-stale? ("x" 0 50) 30 1 == 1)
+;   8   won-plenty is NOT stale however old                   (fs-stale? ("y" 9 50) 30 1 == 0)
+;   16  too-young is NOT stale however few its wins           (fs-stale? ("z" 0 5)  30 1 == 0)  — fair-chance floor
+;   32  keep is the exact inverse of stale (both reasons)     (keep? x == 0 AND keep? z == 1)
+;   64  counting the dead weight over all three finds one     (fs-count-stale (x y z) 30 1 == 1)
+(do
+    (let x  (list "x" 0 50))      ; old, never won            -> stale
+    (let y  (list "y" 9 50))      ; old, won plenty           -> keep (winning)
+    (let z  (list "z" 0 5))       ; young, never won (yet)    -> keep (too soon)
+    (let recs (list x y z))          ; the recognition memory: three prototypes
+    (let c0 (if (eq (fs-wins y) 9) 1 0))
+    (let c1 (if (eq (fs-age x) 50) 2 0))
+    (let c2 (if (eq (fs-stale? x 30 1) 1) 4 0))
+    (let c3 (if (eq (fs-stale? y 30 1) 0) 8 0))
+    (let c4 (if (eq (fs-stale? z 30 1) 0) 16 0))
+    (let c5 (if (and (eq (fs-keep? x 30 1) 0) (eq (fs-keep? z 30 1) 1)) 32 0))
+    (let c6 (if (eq (fs-count-stale recs 30 1) 1) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

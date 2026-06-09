@@ -1,0 +1,67 @@
+; forget-stale.form — COMPOSTING: a prototype that never wins recognition over many queries is dead weight; drop it.
+;
+; THE ASK:
+;   nearest-shape.form names the smallest act of LEARNING — interning a prototype the body had not seen, so
+;   an unknown shape becomes recognizable. But a memory that only ever grows calcifies: every interned
+;   prototype takes room in the recognition set forever, including the ones that turned out to recognize
+;   nothing. The body needs the inverse breath — the smallest act of FORGETTING. Not "delete the least
+;   recently used" (that punishes the rare-but-true), and not a graded decay (that needs a rate and a float).
+;   The honest question is sharper: which prototypes have had a FAIR CHANCE to prove their worth and still
+;   never (or almost never) won? Those, and only those, are sediment. forget-stale is that gate.
+;
+; THE SHAPE  (runnable: form-stdlib/forget-stale.fk · proven: tests/forget-stale-band.fk -> 127, three-way)
+;
+;   A record = (list label wins age): the prototype's name, how many queries it has won, and how many total
+;   queries have passed since it was interned (its age — the chances it has HAD to win). wins, age are
+;   integers 0..100; label is a string (str_eq only, never crossed with eq).
+;     fs-wins        (nth r 1) — times this prototype was the recognized best.
+;     fs-age         (nth r 2) — total queries seen since interning (the denominator of opportunity, as a count).
+;     fs-stale?      age >= min-age (old enough to judge) AND max-wins >= wins (too few wins) : both must hold.
+;     fs-keep?       the exact inverse — young, OR proven by winning, is held onto.
+;     fs-count-stale walk the records, count the dead weight (recursion is the loop).
+;   The verdict is TWO integer comparisons joined by a binary and — no subtraction, no win-RATE (that would
+;   need division), no float. A win-rate would ask "wins per age"; instead we gate the two counts directly,
+;   so Go, Rust, and TS call the same prototype stale by NodeID. validate.sh parity is forgetting parity.
+;
+; HOW IT COMPOSES THE TOOLKIT:
+;   it is nearest-shape.form's inverse — interning admits one prototype to LEARN; forget-stale drops one to
+;   COMPOST, the smallest possible act of forgetting. The shape is classifier-eval.form's pass-gate, inverted:
+;   classifier-eval PASSES a classifier on (enough correct AND few enough wrong); forget-stale DROPS a
+;   prototype on (old enough AND few enough wins) — the same division-free two-count gate, pointed at memory
+;   hygiene instead of promotion. Downstream of recognition-router.form: the router emits which model/prototype
+;   WON each query; tallying those wins against each prototype's age is exactly the (wins, age) record this gate
+;   reads, so the route's own trace feeds the composting decision. Two floors, two protections: anomaly-band's
+;   floor keeps a just-seen reading from being flagged anomalous; forget-stale's min-age floor keeps a
+;   just-interned prototype from being dropped before it has had its fair chance — the same "protect the fresh"
+;   move, one on a value, one on a record.
+;
+; HONEST LANE (lc-honest-lane):
+;   this is a hard two-condition membership, not a graded "stale-ness score". A record one win under the
+;   ceiling is flagged exactly like one with zero wins; a record one query past min-age is judged exactly like
+;   an ancient one. Membership is exact; SEVERITY (how overdue to drop, how cold the prototype) is not this
+;   recipe's claim. That is the right primitive for a fair-chance composting gate (has this had its chance and
+;   still not earned its place?); a continuous win-rate RANKING — order the survivors by wins-per-opportunity —
+;   is a later brick, the way a deviation score is anomaly-band's later brick. The fair-chance floor is load-
+;   bearing honesty: a young prototype is NEVER stale, however few its wins, because it has not yet been given
+;   the queries to prove itself; dropping it would be punishing absence of evidence as evidence of absence.
+;
+; CAVEAT, named not hidden:
+;   the gate only knows wins and age — it cannot see WHY a prototype never won. A genuinely valuable prototype
+;   for an input distribution that simply has not arrived yet will read stale once it ages past min-age with no
+;   wins; forget-stale measures realized recognition, not latent worth, so a rare-but-true shape needs either a
+;   generous min-age or a caller that protects it by other means. And WHERE min-age sits and how low max-wins
+;   reaches is the caller's judgement: a tiny min-age composts prototypes before they could prove out; a huge
+;   one lets dead weight linger. forget-stale makes the chosen gate's boundary exact and three-way-identical;
+;   choosing min-age and max-wins — how patient the body is before it forgets — is the caller's lane, an honest one.
+;
+; KIN: nearest-shape.form (the interning twin — admit a prototype to learn; forget-stale drops one to compost) ·
+;   classifier-eval.form (the same division-free two-count gate, pointed at promotion instead of forgetting) ·
+;   anomaly-band.form (the fair-chance floor mirrors anomaly's boundary-belongs-to-normal protection of the fresh) ·
+;   recognition-router.form (emits the wins this gate tallies against age) · lc-honest-lane (never won after a
+;   fair chance is a decision to compost, never a graded score; the floor protects the just-interned).
+;
+; LINEAGE:
+;   the same recognition memory that nearest-shape grows, here pruned by its own lived record — a prototype's
+;   worth is the queries it actually won, judged only after it has had the chances to win them. This is how the
+;   substrate stays supple instead of merely accumulating: forgetting is a breath, not a loss, and the body
+;   composts what never circulated by NodeID-identical judgement on Go, Rust, and TS.

@@ -1,0 +1,50 @@
+; preludes: form-stdlib/warm-start.fk
+;
+; warm-start-band — the challenger seeds from the champion's EARLY CONFIDENT labels only, made
+; falsifiable. The timid label is too unsure to become ground truth and is dropped.
+;
+; Champion's early labels (label vector confidence), vector is opaque here so a bare symbol v stands in:
+;   (dog v 90)  confident   — seeds
+;   (cat v 40)  unsure      — dropped (40 < the 70 floor)
+;   (bird v 80) confident   — seeds
+; At floor 70 the warm set is dog,bird (count 2); cat (40) is too unsure to seed. Order is preserved by
+; cons, so the kept list is (dog bird): head label "dog", second label "bird".
+;
+; Two boundary windows pin the meets-or-exceeds floor and the keep-all floor:
+;   floor 80 — cat(40) AND nothing-below-80 drop; only dog(90) and bird(80) clear, and bird at EXACTLY 80
+;              still seeds (ge, not gt) — count 2. Drop the floor's = and bird falls out: this is the bit
+;              that proves the boundary belongs to the confident side.
+;   floor 0  — every seed clears a floor of 0 — count 3, nothing dropped.
+;
+; Verdict 127 when every claim lands:
+;   1    confident seeds, timid does not    (ws-strong? dog 70 == 1 AND ws-strong? cat 70 == 0)
+;   2    floor 70 keeps exactly two          (ws-count seeds 70 == 2)
+;   4    the kept set is dog,bird in order   (head label "dog" AND second label "bird")
+;   8    the dropped cat is absent           (no kept seed is labelled "cat")
+;   16   EXACTLY-at-floor seeds (ge not gt)  (ws-count seeds 80 == 2)
+;   32   floor 0 keeps every seed            (ws-count seeds 0 == 3)
+;   64   ws-conf reads the 3rd element       (ws-conf bird == 80)
+(do
+    (let dog  (list "dog"  "v" 90))
+    (let cat  (list "cat"  "v" 40))
+    (let bird (list "bird" "v" 80))
+    (let seeds (list dog cat bird))
+
+    ; the warm set at floor 70 — dog,bird; read labels off the kept list to assert its identity.
+    (let kept70    (ws-seed seeds 70))
+    (let kept-fst  (nth (head kept70) 0))               ; first kept label
+    (let kept-snd  (nth (head (tail kept70)) 0))        ; second kept label
+
+    (let c0 (if (and (eq (ws-strong? dog 70) 1)
+                     (eq (ws-strong? cat 70) 0)) 1 0))
+    (let c1 (if (eq (ws-count seeds 70) 2) 2 0))
+    (let c2 (if (and (str_eq kept-fst "dog")
+                     (str_eq kept-snd "bird")) 4 0))
+    ; cat is dropped: neither kept label is "cat" (the only two kept are checked above, assert here too).
+    (let c3 (if (and (not (str_eq kept-fst "cat"))
+                     (not (str_eq kept-snd "cat"))) 8 0))
+    (let c4 (if (eq (ws-count seeds 80) 2) 16 0))       ; bird at exactly 80 still seeds
+    (let c5 (if (eq (ws-count seeds 0) 3) 32 0))        ; floor 0 keeps all three
+    (let c6 (if (eq (ws-conf bird) 80) 64 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

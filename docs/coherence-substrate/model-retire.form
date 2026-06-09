@@ -1,0 +1,83 @@
+; model-retire.form — the supervision endgame, told in Lisp-comment voice.
+;
+; ----------------------------------------------------------------------
+; PURPOSE
+; ----------------------------------------------------------------------
+; A borrowed third-party model rides the route as the CHAMPION while a
+; Form-native body learns the same job as the CHALLENGER. The challenger
+; trains; the scoreboard accumulates who was right. This brick answers the
+; one question that closes the loop: may we now FREE the borrowed model?
+;
+; Retirement is the supervision endgame — the moment the native body has
+; earned the route outright. It is deliberately conservative: a lucky
+; streak on a handful of samples is not a verdict. The challenger must
+; lead by a clear MARGIN over a long ENOUGH window before the champion is
+; let go.
+;
+;   scoreboard = (list champ-wins  chall-wins  samples)
+;
+; ----------------------------------------------------------------------
+; FUNCTIONS
+; ----------------------------------------------------------------------
+;   (mr-champ   sb)  → champ-wins     ; nth sb 0
+;   (mr-chall   sb)  → chall-wins     ; nth sb 1
+;   (mr-samples sb)  → samples        ; nth sb 2
+;
+;   (mr-decisive? sb min-samples margin) → 1 | 0
+;       1 iff BOTH gates hold:
+;         enough evidence   samples    >= min-samples
+;         clear lead        chall-wins >= champ-wins + margin
+;
+;   (mr-retire?        sb min-samples margin) → 1 | 0   ; == mr-decisive?
+;   (mr-keep-champion? sb min-samples margin) → 1 | 0   ; strict inverse
+;
+; mr-retire? and mr-keep-champion? partition every scoreboard: for any
+; (sb, min, margin), retire? + keep? == 1 — no gap, no overlap.
+;
+; ----------------------------------------------------------------------
+; SPINE-COMPOSITION
+; ----------------------------------------------------------------------
+; Everything is count-and-gate; the spine is the decisive predicate and
+; the two questions hang off it:
+;
+;   mr-retire?  ─┐
+;                ├─> mr-decisive?  ─> (and  gate-evidence  gate-lead)
+;   mr-keep-... ─┘                         │              │
+;                                          │              └─ (ge chall (add champ margin))
+;                                          └─ (ge samples min-samples)
+;
+;   accessors:  mr-champ / mr-chall / mr-samples  =  (nth sb {0,1,2})
+;
+; Two trap-dodges carry the whole shape:
+;
+;   - No subtraction. "Challenger beat champion by >= margin" is NOT
+;     `(ge (sub chall champ) margin)` — there is no `sub`. It is the
+;     equivalent ADD-gate `(ge chall (add champ margin))`: push the
+;     margin onto the champion's side and compare. Same arithmetic truth,
+;     only count + compare primitives — the same move classifier-eval.fk
+;     uses to turn a ratio into a proven-count gate.
+;
+;   - `and` is BINARY. The two gates are one nested `(and a b)`; a third
+;     condition would have to nest again, never `(and a b c)` (Go and Rust
+;     drop the third arm, TS folds it — a real divergence).
+;
+; mr-keep-champion? is `(if (eq (mr-decisive? ...) 1) 0 1)` rather than a
+; second independent computation, so the inverse can never drift out of
+; sync with the gate it negates — the partition invariant holds by
+; construction, and the band proves it (retire? + keep? == 1).
+;
+; ----------------------------------------------------------------------
+; ONE HONEST LANE
+; ----------------------------------------------------------------------
+; This recipe DECIDES retirement from a scoreboard of integer tallies. It
+; does not run the contest, score a single sample, or update the
+; scoreboard — those live upstream in the supervision loop. Given honest
+; integer tallies it answers deterministically and identically across the
+; Go, Rust, and TypeScript kernels.
+;
+; PROOF: form/validate.sh over
+;   form-stdlib/core.fk  form-stdlib/model-retire.fk
+;   form-stdlib/tests/model-retire-band.fk
+; → verdict 63 (six bits), 1 ok, 0 divergent — the three kernels agree on
+; the decisive win, the thin-lead keep, the exact margin boundary, the
+; one-sample-short keep, and the partition invariant from both sides.

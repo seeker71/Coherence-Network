@@ -1,0 +1,36 @@
+; preludes: form-stdlib/mesh-health.fk
+;
+; mesh-health-band — read three meshes and make every claim falsifiable.
+;
+; The meshes, each (list present-peers open-channels expected-peers):
+;   healthy (3 2 3) — everyone here, two transports open. Connected, whole, not partitioned.
+;   split   (1 0 3) — one body here, no channel, three expected. Not connected, not whole, PARTITIONED.
+;   waiting (1 1 3) — one body here, one channel still open, three expected. Missing peers, but the
+;                     door is open — so NOT partitioned. This is the strange edge that pins the `and`:
+;                     missing alone must not read as partition; partition is missing WITH the door shut.
+;
+; Each predicate returns literal 1/0, so `(eq ... 1)` / `(eq ... 0)` is safe across kernels.
+; Both polarities of all three predicates are proven, so a true reading is not luck:
+;   1   healthy is connected            (channels 2 > 0)
+;   2   split is NOT connected          (channels 0 — the door is shut)
+;   4   healthy is whole                (present 3 >= expected 3)
+;   8   split is NOT whole              (present 1 < expected 3)
+;   16  split IS partitioned            (missing AND no channel)
+;   32  healthy is NOT partitioned      (nothing missing)
+;   64  waiting is NOT partitioned      (missing, but a channel is open — the `and` gate holds)
+;
+; Verdict 127 when every claim lands.
+(do
+    (let healthy (list 3 2 3))
+    (let split   (list 1 0 3))
+    (let waiting (list 1 1 3))
+
+    (let c0 (if (eq (mh-connected?   healthy) 1) 1  0))
+    (let c1 (if (eq (mh-connected?   split)   0) 2  0))
+    (let c2 (if (eq (mh-whole?       healthy) 1) 4  0))
+    (let c3 (if (eq (mh-whole?       split)   0) 8  0))
+    (let c4 (if (eq (mh-partitioned? split)   1) 16 0))
+    (let c5 (if (eq (mh-partitioned? healthy) 0) 32 0))
+    (let c6 (if (eq (mh-partitioned? waiting) 0) 64 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

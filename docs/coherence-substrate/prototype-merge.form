@@ -1,0 +1,57 @@
+; prototype-merge.form — keep the interned prototype set lean: flag the redundant exemplar before it bloats.
+;
+; THE ASK:
+;   nearest-shape.fk GROWS a prototype set — interning a new exemplar is the smallest act of learning,
+;   adding without forgetting. That is the right move for learning and the wrong move forever: a set
+;   that only ever grows accumulates duplicates. Intern "dog" [9 1 0 7] today and "dog" [9 1 0 6]
+;   tomorrow and the recognizer carries two cells that route the same query to the same label — twice
+;   the walk, no extra discrimination. This is the complementary breath to nearest-shape: not how the
+;   set GROWS, but when two of its cells have become the SAME cell and one can be released. The flag
+;   is body, executable from the kernel; the policy of how lean to keep the set is DATA (a floor).
+;
+; THE SHAPE  (runnable: form-stdlib/prototype-merge.fk · proven: tests/prototype-merge-band.fk -> 127)
+;
+;   A prototype = (list label vector), exactly the cell nearest-shape interns. A FLOOR = the minimum
+;   agreeing-bin count that counts as "similar enough", supplied by the caller.
+;
+;   1. ACCESSORS  pm-label / pm-vec: read the label and the feature-vector off a prototype — the same
+;      (label, vector) shape the recognizer holds, so a cell flagged here is the cell routed there.
+;   2. SIMILARITY  pm-sim / pm-sim-walk: walk the two vectors in LOCKSTEP and COUNT the positions that
+;      agree. The same content-addressing count nearest-shape uses — but INLINED, owing nothing to a
+;      sibling recipe (a stdlib recipe never calls another's functions; the lockstep walk is small
+;      enough to carry its own). No subtraction, no distance, no float: how many bins match.
+;   3. REDUNDANT?  pm-redundant?: two prototypes are a duplicate when they SAY the same thing (same
+;      label, by str_eq) AND SENSE the same way (agreement ge the floor). Both halves required; the
+;      result is a 1/0 flag — settle the returned (and …) to a bit with (if … 1 0), the and-binary
+;      discipline, never let a raw (and …) escape as the value.
+;
+; WHY BOTH HALVES OF THE GATE:
+;   label-match alone is not enough: two same-label cells can be a coarse exemplar and a fine one of
+;   one shape (a sharp [9 1 0 7] and a faint [9 0 0 0]) — two honest dialects of "dog", both worth
+;   keeping. similarity alone is not enough either: an IDENTICAL vector under a DIFFERENT label is a
+;   real collision of two shapes ([9 1 0 7] as both "dog" and "cat") — keep both, a merge there would
+;   erase a shape. Only same-label-AND-similar-enough is the provable duplicate that earns the flag.
+;
+; WHY FORM-NATIVE / CONTENT-ADDRESSED:
+;   a prototype is a substrate cell; its Blueprint NodeID IS its vector's structure, identical on every
+;   kernel. "These two cells are redundant" is therefore the SAME verdict on Go, Rust, and TS — the
+;   validate.sh three-way parity is dedup parity, not a hope that three runtimes agree on a heuristic.
+;   The set the Mac prunes is the set the phone prunes, the lean cell-set verifiable by NodeID. Pruning
+;   is a predicate over pairs, not new control flow; the flag never depends on which prototypes exist,
+;   only on their labels and vectors.
+;
+; HONEST LANE / CAVEAT:
+;   redundancy is exact-bin agreement gated by a count floor (inclusive — the gate is ge, so agreement
+;   EQUAL to the floor is redundant, agreement one below it is kept). It is NOT semantic equivalence.
+;   Two vectors that mean the same shape but quantized into different bins — a coarse fingerprint and a
+;   fine one — score below the floor and are KEPT as distinct. The flag is conservative by design: it
+;   merges only provable duplicates and never collapses a shape it cannot prove identical. False-keep
+;   (an unflagged near-duplicate) is the safe failure; false-merge (erasing a real shape) is the one it
+;   refuses. Quantize first so the bins are honest, then dedup — the recipe makes no smoothness claim.
+;
+; KIN — the complementary breath of the recognizer and its neighbors:
+;   nearest-shape.form (GROWS the set — interning is the smallest learning; this PRUNES it — the
+;   smallest forgetting) · turboquant-as-recipe.form (the data-oblivious quantization that makes the
+;   "bins" honest before either grow or prune) · novelty.form / drift-detect.form (when a reading is
+;   new enough to intern vs. close enough to fold) · the three-way validate.sh (no trusted prover —
+;   parallel kernels, what survives the agreement IS the dedup verdict).

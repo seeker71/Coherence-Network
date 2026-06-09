@@ -1,0 +1,64 @@
+; alert-gate.form — the companion's restraint: alert the human only when a surprise is BOTH
+; salient enough to matter AND quiet enough not to nag. The fusion of two gates the body keeps
+; apart — a salience floor and a cooldown — into one yes/no a caller can act on.
+;
+; Proven three-way (Go · Rust · TS) by form-stdlib/tests/alert-gate-band.fk at form/validate.sh → 127.
+
+; ---------------------------------------------------------------------------
+; purpose
+; ---------------------------------------------------------------------------
+; surprise-salience.fk ranks surprises by magnitude and asks "is this one over the floor?" —
+; worth flagging at all. cooldown.fk asks "have enough ticks passed since the last fire?" — or
+; are we still inside the quiet window? Each gate alone is a half-truth. A loud surprise during
+; the quiet window should STAY quiet (the human just heard from us); a faint surprise after long
+; silence is still too faint to raise. alert-gate is the smallest cell that joins them: surface to
+; the human only when BOTH floors are cleared, stay silent the instant EITHER fails. That AND is
+; the entire restraint — two necessary conditions, neither sufficient.
+
+; ---------------------------------------------------------------------------
+; functions
+; ---------------------------------------------------------------------------
+; (ag-salient? magnitude floor)            -> 1 if magnitude meets-or-exceeds floor, else 0.
+;                                             Inlined salience floor (ss-salient? spine) so the
+;                                             recipe stands alone — its band preludes only core.fk.
+; (ag-cool? last now k)                    -> 1 if now has reached last+k (cooldown elapsed), else 0.
+;                                             Inlined cooldown spine (cd-ready?), same reason.
+; (ag-fire? magnitude floor last now k)    -> 1 to alert, 0 to stay silent. Fires only when salient
+;                                             AND cool — a single BINARY and of the two ge-tests.
+; (ag-suppress? magnitude floor last now k)-> the exact complement: 1 while held back (too faint OR
+;                                             too soon), 0 once it fires.
+
+; ---------------------------------------------------------------------------
+; spine-composition
+; ---------------------------------------------------------------------------
+; One threshold spine, used twice. ge is meets-or-exceeds, so both boundaries belong to the firing
+; side: a magnitude sitting exactly ON the floor is salient, and the exact tick last+k is already
+; cool (past the quiet window, not still inside it).
+;
+;   salient floor   :  (ge magnitude floor)            — surprise-salience.fk's ss-salient? spine
+;   cooldown gate   :  (ge now (add last k))           — cooldown.fk's cd-ready? spine, an ADD
+;                                                          forward (last+k = earliest next tick),
+;                                                          never a countdown — there is no sub.
+;   fire            :  (if (and <floor> <gate>) 1 0)   — BINARY and of exactly two predicates.
+;   suppress        :  (if (and <floor> <gate>) 0 1)   — same and, arms swapped.
+;
+; The and is binary by necessity, not by luck: ag-fire? joins EXACTLY two predicates. A third
+; condition would have to nest — (and (and a b) c) — never (and a b c), which Go and Rust silently
+; truncate while TS folds (the learned-primitive 239-vs-255 divergence). The raw (ge ...) tests
+; already return 0/1, but the (and ...) is settled back to a clean integer by the surrounding
+; (if ... 1 0), so the verdict is a value the caller can sum.
+;
+; fire and suppress are computed from the same and-of-two-ges with the result arms swapped, so they
+; are exact complements BY CONSTRUCTION: suppress is precisely "not (salient and cool)". The two can
+; never disagree about the same inputs — the complement is structural, not a separate walk.
+
+; ---------------------------------------------------------------------------
+; one honest lane
+; ---------------------------------------------------------------------------
+; alert-gate gates a SINGLE channel's next alert from one prior 'last' and one current magnitude.
+; magnitude is the raw prediction-error magnitude, an integer 0..100, never inflated to clear the
+; floor; ticks are a monotonic integer clock the caller supplies (logical ticks, frames, or epoch
+; seconds — whatever the firing cell counts in), and 'last' is the tick of the PRIOR ALERT, not the
+; prior surprise. A stream of distinct alert channels, a per-severity floor, or a sliding-window
+; budget of N-per-interval is a different shape — a list walk over fire-times, not this one fused
+; gate. All comparisons are ge/eq on integers: no float, no sub, no three-arg and.
