@@ -1,0 +1,40 @@
+; preludes: form-stdlib/shared-sensing.fk
+;
+; shared-sensing-band — many bodies witness one field; the circle confirms; the circle teaches.
+;
+; A dog barks. Three bodies witness the shared field from different sensors and models:
+;   "mac"   dog 88  -> SoundAnalysis, confident
+;   "phone" dog 72  -> a different model, also dog
+;   "watch" dog 30  -> a nascent classifier, unsure: below floor 40, contributes SILENCE not a vote
+; floor 40, quorum 2. The strongest (mac) proposes "dog"; two passing bodies agree -> the circle
+; CONFIRMS. The watch was too unsure to vote, yet its guess "dog" matches the circle's confirmed
+; recognition -> the circle GROUNDS it: one body's truth becomes the unsure body's ground truth.
+; Two control fields: a "quiet" circle (all below floor) the circle cannot confirm, and a "lone"
+; circle (one body passes) it must not confirm — one body is not a circle.
+;
+; Verdict 127 when every claim lands:
+;   1   strongest body proposes        (candidate == dog)
+;   2   the circle's witnesses counted  (agree-count dog == 2)
+;   4   plural witness -> confirmed      (confirmed? == 1)
+;   8   the unsure body stays silent    (watch does NOT pass the floor)
+;   16  the circle grounds the unsure   (watch is grounded by the confirmed recognition)
+;   32  a quiet field is not confirmed  (all-below-floor -> no shared recognition)
+;   64  one body is not a circle        (a lone passing body -> not confirmed)
+(do
+    (let circle (list
+        (list "mac"   "dog" 88)
+        (list "phone" "dog" 72)
+        (list "watch" "dog" 30)))
+    (let floor 40)
+    (let quorum 2)
+    (let quiet (list (list "mac" "dog" 20) (list "phone" "cat" 15)))
+    (let lone  (list (list "mac" "dog" 88) (list "phone" "cat" 12)))
+    (let watch (nth circle 2))
+    (let c0 (if (str_eq (ss-candidate circle) "dog") 1 0))
+    (let c1 (if (eq (ss-agree-count circle floor "dog") 2) 2 0))
+    (let c2 (if (eq (ss-confirmed? circle floor quorum) 1) 4 0))
+    (let c3 (if (ss-passes? watch floor) 0 8))
+    (let c4 (if (eq (ss-grounded? watch circle floor quorum) 1) 16 0))
+    (let c5 (if (eq (ss-confirmed? quiet floor quorum) 0) 32 0))
+    (let c6 (if (eq (ss-confirmed? lone floor quorum) 0) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
