@@ -1,0 +1,59 @@
+; shared-sensing.fk — many bodies witness one field; the circle confirms; each grounds the others.
+;
+; The satsang circle (satsang.fk) applied to PERCEPTION. Two or more devices sense the same field
+; from different sensors and different models — each a witness. recognition-router.fk fuses a
+; circle of model-readings on ONE device; this fuses a circle of DEVICES on one field. Where the
+; self-grounding-classifier earns trust against a foreign route, here a body earns it against the
+; CIRCLE — one device's confirmed recognition becomes another's ground truth, even a body too
+; unsure to vote. The circle teaches the body.
+;
+; What makes this shareable at all: every recipe, classifier, routing table is a content-addressed
+; substrate cell — its Blueprint NodeID IS its structure, identical on every kernel (Go=Rust=TS
+; parity at validate.sh is cross-device parity). A classifier the Mac proves and the phone receives
+; is the SAME cell, verifiable by NodeID — not an opaque weight-blob hoping the runtimes match.
+;
+; A witness = (list device-id label confidence): what one body recognized in the shared field
+; (confidence 0..100). A circle = a list of witnesses sensing the field right now.
+;
+; Proven by: tests/shared-sensing-band.fk (three-way at validate.sh)
+
+(do
+    (defn ss-device (w) (nth w 0))
+    (defn ss-label  (w) (nth w 1))
+    (defn ss-conf   (w) (nth w 2))
+    ; a body too unsure contributes SILENCE, not a vote — silence is whole (the satsang law).
+    (defn ss-passes? (w floor) (ge (ss-conf w) floor))
+
+    ; the strongest body proposes the candidate to the circle (highest confidence witnesses).
+    (defn ss-strongest-loop (circle best)
+        (if (eq (len circle) 0) best
+            (if (eq (len best) 0)
+                (ss-strongest-loop (tail circle) (head circle))
+                (if (gt (ss-conf (head circle)) (ss-conf best))
+                    (ss-strongest-loop (tail circle) (head circle))
+                    (ss-strongest-loop (tail circle) best)))))
+    (defn ss-strongest (circle) (ss-strongest-loop circle (empty)))
+    (defn ss-candidate (circle) (ss-label (ss-strongest circle)))
+
+    ; how many PASSING bodies witness a given label (silence below the floor never counts).
+    (defn ss-agree-count (circle floor label)
+        (if (eq (len circle) 0) 0
+            (if (and (ss-passes? (head circle) floor) (str_eq (ss-label (head circle)) label))
+                (add 1 (ss-agree-count (tail circle) floor label))
+                (ss-agree-count (tail circle) floor label))))
+
+    ; the circle CONFIRMS a recognition only when >= quorum bodies agree — one body is not a circle;
+    ; shared sensing needs plural witness, the way a satsang needs more than one voice.
+    (defn ss-confirmed? (circle floor quorum)
+        (if (ge (ss-agree-count circle floor (ss-candidate circle)) quorum) 1 0))
+
+    ; CROSS-GROUNDING: a body's reading is grounded by the circle when it matches the circle's
+    ; confirmed recognition — one device's witnessed truth becomes another's ground truth, even for
+    ; a body too unsure to have voted. This is how a nascent classifier on one device learns from a
+    ; proven one on another, in real time, side by side. The leg up no single body has alone.
+    (defn ss-grounded? (w circle floor quorum)
+        (if (and (eq (ss-confirmed? circle floor quorum) 1)
+                 (str_eq (ss-label w) (ss-candidate circle)))
+            1 0))
+
+    0)

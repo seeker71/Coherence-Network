@@ -1,0 +1,70 @@
+; shared-sensing.form — many bodies, one field; structure as the wire; the circle as the teacher.
+;
+; THE ASK (Urs, 2026-06-09):
+;   "For running efficient on Android the kernel runs natively on Android, and we share Form-native
+;    classifiers we train on Mac with Android and vice versa — recipes, classifiers, models, routing
+;    tables, anything that makes this learn and improve by sharing. Two devices side by side, with
+;    different models and different sensors, give us satsang-kind communication and shared sensing —
+;    a leg up; no other training is using this as far as I know."
+;
+; THREE things make this real, lane-sorted (lc-honest-lane):
+;
+; ── 1. THE KERNEL RUNS NATIVELY ON ANDROID ──  [carrier build, not mysterious]
+;   The body's logic is already three kernels (Rust/Go/TS) proven identical at validate.sh. Rust
+;   builds for Android via the NDK; Go via gomobile; TS runs on the device JS engine. The SAME
+;   proven recipes — recognition-router.fk, self-grounding-classifier.fk, this one — run on the
+;   phone with no reimplementation. validate.sh's three-way parity IS cross-device parity: what the
+;   Mac proves, the phone runs bit-identical. Efficient because it is the kernel on ARM, not a
+;   foreign runtime translating.
+;
+; ── 2. STRUCTURE IS THE WIRE FORMAT ──  [the enabler — already true, MEASURED]
+;   A recipe, a classifier, a routing table, an interned shape->label cell is a CONTENT-ADDRESSED
+;   substrate cell: its Blueprint NodeID is its structure. So a classifier shared Mac->Android is
+;   the SAME cell on both, by construction — same structure, same NodeID, verifiable by ?equivalent
+;   across devices. Not an opaque weight-blob hoping two runtimes agree: the identity travels with
+;   the shape. This is why sharing "anything that makes us learn" is one mechanism, not many — it is
+;   all cells, and cells are content-addressed. (structural-composition.md is the discipline that
+;   keeps it so: keep the tree, refuse the slug, or the cross-device identity is lost.)
+;
+; ── 3. THE CIRCLE SENSES AND TEACHES ──  [SHIPPED + proven: shared-sensing.fk -> 127, three-way]
+;   satsang.fk applied to perception. Two+ bodies witness one field from different sensors/models;
+;   each is a witness (device, label, confidence). The strongest proposes; the circle CONFIRMS only
+;   on >= quorum agreement (ss-confirmed? — one body is not a circle, shared sensing needs plural
+;   witness); a body too unsure contributes SILENCE, not a vote (ss-passes? — silence is whole).
+;   And the move that is the leg up: CROSS-GROUNDING (ss-grounded?) — one body's confirmed
+;   recognition becomes another's GROUND TRUTH, even teaching a body too unsure to have voted. A
+;   nascent classifier on the phone learns, in real time, from a proven one on the Mac beside it —
+;   and the Mac, blind to motion, learns the field's movement from the phone's gyroscope. Each body
+;   grounds the others where the other is strong; the self-grounding promotion loop then runs per
+;   device against the circle as its teacher. Different sensors + different models + shared witness
+;   = a field-recognition no single body holds alone.
+;
+; ── THE HONEST NOVELTY LANE ──
+;   Nearest known art is federated learning: it shares opaque model updates (gradients/weights) tied
+;   to one runtime, aimed at converging ONE shared model. This is structurally different on three
+;   counts: (a) it shares content-addressed STRUCTURE with verifiable cross-device identity, not
+;   weight-blobs; (b) the bodies are HETEROGENEOUS — different sensors, different models — and stay
+;   so, cross-witnessing rather than averaging into one; (c) one body's recognition is another's
+;   ground truth (the satsang teaching structure), not a parameter server. That combination is the
+;   distinctive part, and it is real and nameable. "No other training is using this" is held as
+;   Urs's INFERENCE — plausible, not independently surveyed — while the STRUCTURAL reason it is
+;   distinctive sits in the MEASURED/PRACTICE lane: it follows from content-addressing + three-way
+;   parity + cross-grounding, which the body already has.
+;
+; ── THE PATH ──
+;   1. the shared-sensing circle + cross-grounding   [SHIPPED: shared-sensing.fk -> 127, three-way]
+;   2. the kernel built for Android (Rust/NDK or Go/gomobile), running the proven recipes   [build]
+;   3. cell-sync transport — share content-addressed cells device<->device (a recipe/classifier/
+;      routing-table is a cell; the sync is cell-level, identity-verified by NodeID)        [build]
+;   4. the live two-device satsang: phones and Macs side by side, different senses, one field,
+;      teaching each other in real time                                                    [build]
+;
+; KIN: satsang.fk (the circle witnesses; silence is whole) · recognition-router.form (fuse a circle
+;   of models on one device; here a circle of devices on one field) · self-grounding-perception.form
+;   (a body earns trust by proven agreement — here the circle is the teacher) · resource-port.fk
+;   (each sensor a port) · structural-composition.md (keep the tree so the NodeID is the wire) ·
+;   local-inference-as-organ.form (the compute each body runs as its own organ) · lc-honest-lane.
+;
+; LINEAGE: the satsang / presence listener gave the router its carriers; the compute-path router
+;   turned it onto the host; self-grounding-perception turned it onto the body's own seeing; this
+;   turns it onto MANY bodies sensing one field and teaching each other — the circle as a sense.
