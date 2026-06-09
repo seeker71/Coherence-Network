@@ -320,7 +320,13 @@ if [[ -n "$RUNNING_SHA" ]] && git cat-file -e "${RUNNING_SHA}^{commit}" 2>/dev/n
   DIFF_BASE="$RUNNING_SHA"
 fi
 
-if [[ "$DIFF_BASE" != "$TARGET_SHA" ]] && is_static_only_change "$DIFF_BASE" "$TARGET_SHA"; then
+STATIC_FAST_PATH_ALLOWED=1
+if [[ -z "$RUNNING_SHA" ]]; then
+  STATIC_FAST_PATH_ALLOWED=0
+  log "Static-only fast path disabled: running API health unavailable"
+fi
+
+if [[ "$STATIC_FAST_PATH_ALLOWED" == "1" && "$DIFF_BASE" != "$TARGET_SHA" ]] && is_static_only_change "$DIFF_BASE" "$TARGET_SHA"; then
   log "Static-only change detected ($DIFF_BASE -> $TARGET_SHA); skipping rebuild"
   sync_web_public "$DIFF_BASE" "$TARGET_SHA"
   # The subsequent sync_field_docs / sync_repo_docs / etc. functions
@@ -630,13 +636,13 @@ ensure_kernel_router_canary() {
   started="$(date +%s)"
 
   set +e
-  docker compose "${compose_args[@]}" up -d --build --wait --wait-timeout 180 kernel-router \
+  docker compose "${compose_args[@]}" up -d --build --no-deps --wait --wait-timeout 180 kernel-router \
     2>&1 | tee -a "$LOG_FILE"
   local rc=$?
   set -e
   if [[ "$rc" -ne 0 ]]; then
-    log "kernel-router canary: compose up --wait failed; falling back to plain up -d --build"
-    docker compose "${compose_args[@]}" up -d --build kernel-router 2>&1 | tee -a "$LOG_FILE"
+    log "kernel-router canary: compose up --wait failed; falling back to plain up -d --build --no-deps"
+    docker compose "${compose_args[@]}" up -d --build --no-deps kernel-router 2>&1 | tee -a "$LOG_FILE"
   fi
 
   local deadline=$(( $(date +%s) + 180 ))

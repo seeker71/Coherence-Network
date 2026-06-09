@@ -1,0 +1,83 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/hostinger-canary-deploy-race-20260609",
+  "commit_scope": "Repair the Hostinger deploy race exposed by the kernel-router canary rollout: do not use the static-only fast path when API health is unknown, and start the canary service without rebuilding API dependencies.",
+  "files_owned": [
+    "deploy/hostinger/auto-deploy.sh",
+    "docs/system_audit/commit_evidence_2026-06-09_hostinger_canary_deploy_race.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash -n deploy/hostinger/auto-deploy.sh"
+    ],
+    "summary": "The deploy fast path now disables static-only sync when the running API SHA cannot be read, forcing the rebuild path that restores API health before static syncs. The kernel-router canary bring-up now uses docker compose up --no-deps for kernel-router, so it does not recreate the already-running API service while adding the header-gated canary.",
+    "known_limitations": [
+      {
+        "scope": "public deployment",
+        "observed": "This hotfix is not deployed until its PR merges and Hostinger Auto Deploy reruns."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending PR checks for codex/hostinger-canary-deploy-race-20260609."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com",
+      "./scripts/verify_kernel_canary_public_gate.sh https://api.coherencycoin.com"
+    ],
+    "notes": "Current public API recovered after the superseded deploy race. The fixed script still needs a fresh deploy run."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The script-level race fix is local until PR merge, CI, and a fresh deploy run prove it."
+  },
+  "idea_ids": [
+    "data-infrastructure",
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "specs/native-mutation-public-gate.md"
+  ],
+  "task_ids": [
+    "hostinger-canary-deploy-race",
+    "native-front-door-canary"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "deploy/hostinger/auto-deploy.sh",
+    "https://github.com/seeker71/Coherence-Network/actions/runs/27179509523"
+  ],
+  "change_files": [
+    "deploy/hostinger/auto-deploy.sh",
+    "docs/system_audit/commit_evidence_2026-06-09_hostinger_canary_deploy_race.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "process_only"
+}
