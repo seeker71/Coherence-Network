@@ -1,0 +1,145 @@
+; kernel-image-proposal.fk -- public kernel image proposal trust membrane.
+;
+; Public Form/BML can now propose a candidate kernel image, but this surface
+; names the membrane that keeps proposal separate from live mutation. The API
+; route carries this shape as JSON while source control, proof, review, deploy,
+; and public SHA parity remain the application path.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn kip-cat (xs)
+        (if (nil? xs) ""
+            (str_concat (head xs) (kip-cat (tail xs)))))
+
+    (defn kip-json-string-escape-loop (s i)
+        (if (ge i (str_len s))
+            ""
+            (str_concat (char_at s i) (kip-json-string-escape-loop s (add i 1)))))
+
+    (defn kip-json-string (s)
+        (str_concat "\"" (str_concat (kip-json-string-escape-loop s 0) "\"")))
+
+    (defn kip-candidate-image-json
+        (source-hash image-hash primitive-count dispatch-count proof-count)
+        (kip-cat (list
+            "{\"kind\":\"KERNEL-CORE-IMAGE\""
+            ",\"image_kind\":\"kernel-core-self\""
+            ",\"source_authority\":\"submitted BML source plus public proposal proof\""
+            ",\"source_hash\":" (kip-json-string source-hash)
+            ",\"image_hash\":" (kip-json-string image-hash)
+            ",\"primitive_count\":" (int_to_str primitive-count)
+            ",\"dispatch_count\":" (int_to_str dispatch-count)
+            ",\"proof_count\":" (int_to_str proof-count)
+            ",\"witness_recipes\":[\"add\",\"if\",\"do\"]"
+            "}")))
+
+    (defn kip-mutation-gate-json (requested-action)
+        (kip-cat (list
+            "{\"requested_action\":" (kip-json-string requested-action)
+            ",\"allowed\":false"
+            ",\"performed\":false"
+            ",\"reason\":\"public proposal preview does not mutate production\""
+            ",\"next_gate\":\"commit evidence -> PR -> CI -> deploy -> public SHA verification\""
+            "}")))
+
+    (defn kip-trust-envelope-json (source-hash image-hash proof-passed requested-action)
+        (kip-cat (list
+            "{\"state\":\"kernel-image-proposal-preview\""
+            ",\"choice_success\":" (if proof-passed "1" "0")
+            ",\"protocol\":\"POST /api/substrate/kernel-image/proposals\""
+            ",\"default_route\":\"proposal-preview\""
+            ",\"native_route\":\"Form kernel-image-proposal envelope\""
+            ",\"bma\":\"kernel-image-proposal\""
+            ",\"prediction_error\":\"carried_as_residual\""
+            ",\"residual\":\"Public source can propose a kernel image; live mutation remains behind commit, proof, review, deploy, and public SHA verification.\""
+            ",\"requested_action\":" (kip-json-string requested-action)
+            ",\"mutation_allowed\":false"
+            ",\"mutation_performed\":false"
+            ",\"candidate_image_hash\":" (kip-json-string image-hash)
+            ",\"rollback\":\"no production state changed by this route\""
+            ",\"source_hash\":" (kip-json-string source-hash)
+            "}")))
+
+    (defn kip-proposal-json
+        (proposal-id source-hash image-hash primitive-count dispatch-count proof-count requested-action)
+        (kip-cat (list
+            "{\"state\":\"kernel-image-proposal-preview\""
+            ",\"proposal_id\":" (kip-json-string proposal-id)
+            ",\"proposal_status\":\"accepted-preview\""
+            ",\"proof_passed\":true"
+            ",\"candidate_image\":"
+            (kip-candidate-image-json
+                source-hash
+                image-hash
+                primitive-count
+                dispatch-count
+                proof-count)
+            ",\"trust_envelope\":"
+            (kip-trust-envelope-json source-hash image-hash true requested-action)
+            ",\"mutation\":"
+            (kip-mutation-gate-json requested-action)
+            "}")))
+
+    (defn kip-match-at? (s needle i j)
+        (if (eq j (str_len needle))
+            1
+            (if (ge (add i j) (str_len s))
+                0
+                (if (str_eq (char_at s (add i j)) (char_at needle j))
+                    (kip-match-at? s needle i (add j 1))
+                    0))))
+
+    (defn kip-contains-loop? (s needle i)
+        (if (gt i (sub (str_len s) (str_len needle)))
+            0
+            (if (eq (kip-match-at? s needle i 0) 1)
+                1
+                (kip-contains-loop? s needle (add i 1)))))
+
+    (defn kip-contains? (s needle)
+        (if (eq (str_len needle) 0)
+            1
+            (if (lt (str_len s) (str_len needle))
+                0
+                (kip-contains-loop? s needle 0))))
+
+    (defn kip-and2 (a b) (if (eq a 1) (if (eq b 1) 1 0) 0))
+    (defn kip-and3 (a b c) (kip-and2 (kip-and2 a b) c))
+
+    ;; 11111 = image named, proof accepted, mutation refused, trust residual
+    ;; carried, and source/image hashes visible.
+    (defn kip-test ()
+        (do
+            (let proposal
+                (kip-proposal-json
+                    "kernel-proposal-demo"
+                    "sha256:source"
+                    "sha256:image"
+                    8
+                    15
+                    6
+                    "apply"))
+            (sum (list
+                (if (eq (kip-and3
+                    (kip-contains? proposal "\"kind\":\"KERNEL-CORE-IMAGE\"")
+                    (kip-contains? proposal "\"image_kind\":\"kernel-core-self\"")
+                    (kip-contains? proposal "\"witness_recipes\"")) 1) 1 0)
+                (if (eq (kip-and3
+                    (kip-contains? proposal "\"proof_passed\":true")
+                    (kip-contains? proposal "\"choice_success\":1")
+                    (kip-contains? proposal "\"proposal_status\":\"accepted-preview\"")) 1) 10 0)
+                (if (eq (kip-and3
+                    (kip-contains? proposal "\"mutation_allowed\":false")
+                    (kip-contains? proposal "\"mutation_performed\":false")
+                    (kip-contains? proposal "\"performed\":false")) 1) 100 0)
+                (if (eq (kip-and3
+                    (kip-contains? proposal "\"bma\":\"kernel-image-proposal\"")
+                    (kip-contains? proposal "\"prediction_error\":\"carried_as_residual\"")
+                    (kip-contains? proposal "\"rollback\":\"no production state changed by this route\"")) 1) 1000 0)
+                (if (eq (kip-and3
+                    (kip-contains? proposal "\"source_hash\":\"sha256:source\"")
+                    (kip-contains? proposal "\"image_hash\":\"sha256:image\"")
+                    (kip-contains? proposal "\"candidate_image_hash\":\"sha256:image\"")) 1) 10000 0)))))
+
+    0)
