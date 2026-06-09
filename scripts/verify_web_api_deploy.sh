@@ -917,6 +917,65 @@ JSON
   return 0
 }
 
+check_inventory_flow_native() {
+  local url="${API_URL%/}/api/inventory/flow?idea_id=__native_inventory_canary__&list_item_limit=1&runtime_window_seconds=3600"
+  local headers_file="$TMP_DIR/inventory_flow.headers.txt"
+  local body_file="$TMP_DIR/inventory_flow.body.json"
+  local status router
+
+  echo
+  echo "==> Inventory flow native route: ${url}"
+
+  status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -L -D "$headers_file" -o "$body_file" -w "%{http_code}" \
+    --max-time "$CURL_MAX_TIME" \
+    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+    "$url" \
+    -H "Accept: application/json" || true)"
+  router="$(awk 'tolower($1) == "x-form-router:" { print $2 }' "$headers_file" | tail -n 1 | tr -d '\r')"
+
+  echo "HTTP status: ${status:-unknown}"
+  echo "X-Form-Router: ${router:-<missing>}"
+
+  if [[ -z "$status" || "$status" -lt 200 || "$status" -ge 300 ]]; then
+    echo "FAIL: inventory flow route did not return 2xx"
+    head -c 250 "$body_file" || true
+    echo
+    return 1
+  fi
+  if [[ "$router" != "native-kernel" ]]; then
+    echo "FAIL: inventory flow route did not reach native kernel front door"
+    head -c 250 "$body_file" || true
+    echo
+    return 1
+  fi
+
+  if command -v jq >/dev/null 2>&1; then
+    if ! jq -e '
+      .native_observation.handler == "api_inventory_flow"
+      and .native_observation.python_authority == false
+      and .summary.ideas == 0
+      and (.items | length) == 0
+    ' "$body_file" >/dev/null; then
+      echo "FAIL: inventory flow body is missing native BML proof fields"
+      jq '{summary, native_observation, item_count: (.items | length)}' "$body_file" 2>/dev/null || head -c 500 "$body_file"
+      echo
+      return 1
+    fi
+  else
+    if ! grep -q '"handler":"api_inventory_flow"' "$body_file" \
+      || ! grep -q '"python_authority":false' "$body_file" \
+      || ! grep -q '"items":\\[\\]' "$body_file"; then
+      echo "FAIL: inventory flow body is missing native BML proof fields"
+      head -c 500 "$body_file" || true
+      echo
+      return 1
+    fi
+  fi
+
+  echo "PASS"
+  return 0
+}
+
 if [[ "${VERIFY_WEB_API_DEPLOY_SOURCE_ONLY:-0}" == "1" ]]; then
   return 0 2>/dev/null || exit 0
 fi
@@ -941,6 +1000,7 @@ else
 fi
 check_provider_readiness "${API_URL%/}/api/automation/usage/readiness" "$VERIFY_REQUIRE_PROVIDER_READINESS" || fail=1
 check_kernel_image_native_proposal || fail=1
+check_inventory_flow_native || fail=1
 check_url "Public web root" "${WEB_URL%/}/" || fail=1
 check_web_css_assets "${WEB_URL%/}/" || fail=1
 check_web_public_asset "logo" "/assets/logo.svg" "svg" || fail=1
