@@ -51,6 +51,19 @@ DEFAULT_TIMEOUT_SECONDS = 120
 DEFAULT_LIBRETRANSLATE_URL = "http://libretranslate:5000"
 
 
+# LibreTranslate speaks ISO-639-1 codes with no region tag; our installed
+# locales can carry one (pt-br). Map to the base code the engine loads so a
+# Brazilian-Portuguese reader is attuned via the "pt" model instead of having
+# the request fail-open back to the English anchor. Views still cache under the
+# full locale code; only the engine call is normalized.
+_LT_LANG_CODE = {"pt-br": "pt"}
+
+
+def _lt_lang(code: str) -> str:
+    c = (code or "").strip().lower()
+    return _LT_LANG_CODE.get(c, c.split("-", 1)[0])
+
+
 _logger = logging.getLogger("coherence.translator")
 
 
@@ -140,8 +153,8 @@ class LibreTranslateBackend:
             return "".join(translated_chunks)
         body: dict[str, Any] = {
             "q": text,
-            "source": source_lang,
-            "target": target_lang,
+            "source": _lt_lang(source_lang),
+            "target": _lt_lang(target_lang),
             "format": "text",
         }
         if self.api_key:
