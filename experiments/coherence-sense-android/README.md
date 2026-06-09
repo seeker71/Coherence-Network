@@ -16,9 +16,12 @@ the senses are held until then.
   (the next state) through `form-kernel-rust` (~5ms), and the dashboard shows the **real recognition**,
   the **prediction**, and the **inference-error** (predicted-vs-actual — the learning signal). The carrier
   only marshals integers in and reads the label out; the recognition is Form.
-- **v1:** *autonomy.* The kernel itself runs **on the phone** — the `aarch64-linux-android`
-  cross-compile is already proven (`form/form-kernel-rust/build-android.sh`); it needs an
-  `extern "C"` evaluate entry + a cdylib, then the phone recognizes without the Mac.
+- **v1 — phone-native kernel (cdylib BUILT):** *autonomy.* The kernel itself runs **on the phone**.
+  `form/form-kernel-rust/build-android.sh` now emits `libform_kernel_rust.so` — an ARM aarch64 shared
+  object exporting `form_eval` (the same `run_source` evaluator, behind the `cabi` feature), verified
+  via `ctypes` to recognize across the C boundary. What remains is a thin Kotlin JNI shim
+  (`external fun formEval(src): String`), the `.so` in `jniLibs/arm64-v8a`, and the recipes bundled
+  as assets — then the phone recognizes **without the Mac**.
 
 So every verb you'd want is live today: senses, share, sync, AND recognition/prediction/learning-signal —
 through the kernel, not in Python.

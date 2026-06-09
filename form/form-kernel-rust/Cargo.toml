@@ -23,6 +23,11 @@ crate-type = ["cdylib", "rlib"]
 default = []
 # Enabled by maturin when building the Python extension.
 pyo3 = ["dep:pyo3"]
+# The C-ABI cdylib surface — `extern "C" form_eval` over the same evaluator the
+# CLI runs, for hosts without Python (Android, embedded). Off by default so the
+# bin build (validate.sh / CI) never compiles main.rs twice; the Android
+# cross-compile turns it on:  cargo ndk ... build --release --features cabi.
+cabi = []
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
