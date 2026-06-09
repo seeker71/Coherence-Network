@@ -24,7 +24,8 @@ from pulse_app import __version__
 from pulse_app.analysis import (
     duration_seconds_until_now,
     latency_percentiles,
-    overall_status,
+    overall_status_with_open_silences,
+    reconcile_all_silences,
     rollup_daily,
     silence_duration,
     since_iso,
@@ -149,6 +150,7 @@ async def witness_health() -> WitnessHealth:
 async def pulse_now() -> PulseNow:
     store: Store = app.state.store
     now = datetime.now(timezone.utc)
+    reconcile_all_silences(store, (organ.name for organ in ORGANS))
 
     organ_now: list[OrganNow] = []
     statuses: list[str] = []
@@ -188,7 +190,7 @@ async def pulse_now() -> PulseNow:
     ]
 
     return PulseNow(
-        overall=overall_status(statuses),  # type: ignore[arg-type]
+        overall=overall_status_with_open_silences(statuses, ongoing_rows),  # type: ignore[arg-type]
         checked_at=iso_utc(now),
         witness_started_at=iso_utc(app.state.started_at),
         organs=organ_now,
