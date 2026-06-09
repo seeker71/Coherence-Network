@@ -824,9 +824,12 @@ type sourcePart struct {
 var sourceCompileMu sync.Mutex
 
 var sourceCompilePreludes = []string{
-	"json.fk",
-	"cache.fk",
 	"form-ontology-loader.fk",
+	"line-grammar.fk",
+	"bmf-core.fk",
+	"bmf-grammar.fk",
+	"bml.fk",
+	"bml-source.fk",
 	"source-compiler.fk",
 }
 
@@ -936,7 +939,14 @@ func sourceCompileDriver(stdlibAbs, body string) (string, error) {
 	return strings.Join(parts, "\n"), nil
 }
 
-func compileSourceSectionToRecipeNode(dialectName, body, stdlibAbs string) (*Kernel, NodeID, error) {
+func compileSourceSectionToRecipeNode(dialectName, body, stdlibAbs string) (outKernel *Kernel, outRoot NodeID, outErr error) {
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			outKernel = nil
+			outRoot = NodeID{}
+			outErr = fmt.Errorf("source compiler panic: %v", recovered)
+		}
+	}()
 	driverBody := fmt.Sprintf(
 		"(fsc-compile-section-recipe %s %s)",
 		sexpStringLiteral(dialectName),

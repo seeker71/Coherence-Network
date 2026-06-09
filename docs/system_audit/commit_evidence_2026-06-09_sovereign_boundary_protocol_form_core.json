@@ -1,0 +1,165 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/pulse-repair-form-core-20260609",
+  "commit_scope": "Lift boundary repair into a reusable Form protocol and harden BML/kernel failure handling so compiler errors surface before host crashes and sibling-kernel crashes leave source-bearing traces.",
+  "files_owned": [
+    "form/form-stdlib/sovereign-boundary-protocol.fk",
+    "form/form-stdlib/pulse-boundary-repair.fk",
+    "form/form-stdlib/tests/sovereign-boundary-protocol-band.fk",
+    "form/form-stdlib/tests/pulse-boundary-repair-band.fk",
+    "form/form-stdlib/source-compiler.fk",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-go/main.go",
+    "form/form-kernel-go/server.go",
+    "form/form-kernel-go/server_test.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-rust/src/main.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "form/form-kernel-ts/src/kernel.ts",
+    "form/form-kernel-ts/src/main.ts",
+    "specs/pulse-silence-boundary-repair.md",
+    "pulse/README.md",
+    "docs/vision-kb/concepts/lc-boundary-repair-protocol.md",
+    "docs/vision-kb/LOG.md",
+    "docs/system_audit/commit_evidence_2026-06-09_sovereign_boundary_protocol_form_core.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd pulse && python3 -m pytest -q",
+      "cd form/form-kernel-rust && cargo test --quiet",
+      "cd form/form-kernel-rust && cargo fmt --check",
+      "cd form/form-kernel-ts && npm run check",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/sovereign-boundary-protocol.fk form-stdlib/tests/sovereign-boundary-protocol-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/sovereign-boundary-protocol.fk form-stdlib/tests/sovereign-boundary-protocol-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/sovereign-boundary-protocol.fk form-stdlib/pulse-boundary-repair.fk form-stdlib/tests/pulse-boundary-repair-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/sovereign-boundary-protocol.fk form-stdlib/pulse-boundary-repair.fk form-stdlib/tests/pulse-boundary-repair-band.fk",
+      "cd form && ./validate.sh form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/bml.fk form-stdlib/bml-source.fk form-stdlib/source-compiler.fk",
+      "cd form/form-kernel-go && go test ./...",
+      "cd form/form-kernel-go && go run . --expr '(substring \"abc\" 0 9)'",
+      "cd form/form-kernel-rust && cargo run --quiet -- --expr '(substring \"abc\" 0 9)'",
+      "cd form/form-kernel-ts && npm run kernel -- --expr '(substring \"abc\" 0 9)'",
+      "jq crash-trace payload checks for Go/Rust/TypeScript mode, args, source excerpt, line count, and host stack",
+      "python3 scripts/validate_spec_quality.py --file specs/pulse-silence-boundary-repair.md",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/scan_form_blueprints.py --check",
+      "git diff --check"
+    ],
+    "observed_results": [
+      "pulse tests passed: 73 passed in 0.38s",
+      "Rust kernel tests passed: 46 passed",
+      "TypeScript kernel typecheck passed",
+      "sovereign-boundary-protocol-band.fk returned 16383 in source and binary execution with 1 ok and 0 divergent",
+      "pulse-boundary-repair-band.fk returned 32767 in source and binary execution with 1 ok and 0 divergent",
+      "source compiler prelude proof returned 0 with sibling kernels agreeing",
+      "Go kernel suite passed: ok form-kernel-go 130.581s",
+      "Go, Rust, and TypeScript intentional bad substring probes reported explicit bounds errors and wrote crash trace JSON files under .cache with source text, argv, mode, line count, and host stack",
+      "spec quality, generated-index check, blueprint registration check, whitespace check, and wellness passed"
+    ],
+    "notes": "scan_form_blueprints.py still reports pre-existing name-drift warnings, but unregistered type-99 count is 0 and the command exits cleanly. The intentional crash-probe commands exit nonzero by design; the jq trace payload checks are the passing assertion."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR creation, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and production verification."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Boundary repair now has a reusable Form source-of-truth protocol with allow, stop, witness, and re_enter choices. Pulse repair maps into that protocol. Malformed BML definition lines now surface source-aware compiler errors before host substring crashes, and uncaught CLI panics in Go, Rust, and TypeScript write source-bearing crash traces for diagnosis.",
+    "public_endpoints": [
+      "form/form-stdlib/sovereign-boundary-protocol.fk",
+      "form/form-stdlib/pulse-boundary-repair.fk",
+      "form/form-kernel-go CLI and source-compile server path",
+      "form/form-kernel-rust CLI",
+      "form/form-kernel-ts CLI"
+    ],
+    "test_flows": [
+      "Form source and binary proof bands return 16383 for generic boundary protocol and 32767 for pulse specialization across Go/Rust/TypeScript sibling kernels.",
+      "Go server test TestCompileSourceSectionNativeReportsMalformedBMLDef proves malformed BML is returned as inspectable source compiler error instead of crashing the caller.",
+      "Go/Rust/TypeScript bad substring probes prove explicit bounds errors and crash trace artifacts with source excerpts and host stacks."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local and e2e proof passed. CI, PR merge, deploy, and public verification are still pending."
+  },
+  "idea_ids": [
+    "knowable-trust-expression",
+    "boundary-repair-protocol",
+    "pulse-witness",
+    "kernel-crash-trace"
+  ],
+  "spec_ids": [
+    "pulse-silence-boundary-repair",
+    "sovereign-boundary-protocol-form-core"
+  ],
+  "task_ids": [
+    "pulse-repair-form-core-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "north-star-direction",
+        "generic-sovereign-protocol-requirement",
+        "warn-error-before-crash-requirement",
+        "crash-trace-requirement"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "debugging",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/sovereign-boundary-protocol.fk defines generic boundary evidence, choices, re-entry checks, and receipt projection.",
+    "form/form-stdlib/pulse-boundary-repair.fk maps pulse silence evidence into the generic sovereign boundary protocol.",
+    "form/form-stdlib/tests/sovereign-boundary-protocol-band.fk and form/form-stdlib/tests/pulse-boundary-repair-band.fk prove source and binary sibling-kernel agreement.",
+    "form/form-stdlib/source-compiler.fk adds source-aware BML definition and let diagnostics through form_error before substring bounds are reached.",
+    "form/form-kernel-go/main.go, form/form-kernel-rust/src/main.rs, form/form-kernel-ts/src/kernel.ts, and form/form-kernel-ts/src/main.ts add explicit bounds checks, form_error, and source-bearing crash traces.",
+    "form/form-kernel-go/server.go and form/form-kernel-go/server_test.go align BML source-compile preludes and prove malformed BML is inspectable through source_compile_last_error.",
+    "specs/pulse-silence-boundary-repair.md and docs/vision-kb/concepts/lc-boundary-repair-protocol.md record the generic protocol and diagnostic contract."
+  ],
+  "change_files": [
+    "docs/vision-kb/LOG.md",
+    "docs/vision-kb/concepts/lc-boundary-repair-protocol.md",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-go/main.go",
+    "form/form-kernel-go/server.go",
+    "form/form-kernel-go/server_test.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-rust/src/main.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "form/form-kernel-ts/src/kernel.ts",
+    "form/form-kernel-ts/src/main.ts",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-stdlib/pulse-boundary-repair.fk",
+    "form/form-stdlib/sovereign-boundary-protocol.fk",
+    "form/form-stdlib/source-compiler.fk",
+    "form/form-stdlib/tests/pulse-boundary-repair-band.fk",
+    "form/form-stdlib/tests/sovereign-boundary-protocol-band.fk",
+    "pulse/README.md",
+    "specs/pulse-silence-boundary-repair.md",
+    "docs/system_audit/commit_evidence_2026-06-09_sovereign_boundary_protocol_form_core.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}

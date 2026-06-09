@@ -85,6 +85,12 @@ The compressed Form of the primitive is:
 boundary -> evidence -> choice -> stop/continue -> repair witness -> re-entry protocol
 ```
 
+The executable Form core compresses the reusable decision to four choices:
+`allow`, `stop`, `witness`, and `re_enter`. Wider relational recipes can
+specialize those choices into continue, clarify, narrow, pause, or other
+channel-specific moves, but the kernel proof keeps the smallest reusable
+shape intact.
+
 ## Protocol Shape
 
 **Declare the interface.** A channel begins from what each side offers:
@@ -171,13 +177,21 @@ trace, and reopen only through witnessed changed evidence. In a human
 circle, it becomes a way to stay sovereign without making permanent
 enemies out of every rupture.
 
-In the pulse witness, this concept is executable. A failed organ opens
-a silence row as a stop receipt. Three consecutive breathing samples
-become repair evidence. The witness closes the row with a
-`boundary_repair_protocol` note and lets the channel re-enter the
-breathing state. If the evidence is incomplete, the silence stays open
-and the overall pulse remains strained or silent rather than pretending
-the receipt was resolved.
+In Form, this concept is executable as
+`form/form-stdlib/sovereign-boundary-protocol.fk`. The cell accepts
+boundary evidence: subject, offered interface, protocol, reach, consent,
+violation, trusted witness, repair evidence, threshold, vitality, certainty,
+and time. It returns a boundary receipt with a `CHOICE-RECEIPT`, so the
+decision can be inspected by path, trace, witness, coordinate, and time.
+
+In the pulse witness, this concept is the first specialization. A failed
+organ opens a silence row as a stop receipt. Three consecutive breathing
+samples become repair evidence. `pulse-boundary-repair.fk` maps that evidence
+into the generic Form protocol, while the deployed Python service carries the
+public runtime note. The witness closes the row with a `boundary_repair_protocol`
+note and lets the channel re-enter the breathing state. If the evidence is
+incomplete, the silence stays open and the overall pulse remains strained or
+silent rather than pretending the receipt was resolved.
 
 The core feature is not enforcement. It is legibility. Anyone willing
 to witness the trace can see how the channel moved: boundary,

@@ -1,16 +1,6 @@
 {
   "_note": "Blueprint registry \u2014 the single source of truth for every shape the kernel does not dispatch on (kernel-owned categories/primitives live in form-ontology.json). Generated from code by scripts/scan_form_blueprints.py --emit-registry, then curated. Each row carries the full NodeID (pkg, level, type, inst). form-ontology-loader.fk binds these names so .fk code references a name via (bp \"name\"), never the raw number. To add a shape: add a row here, then (bp \"name\") in code.",
   "blueprints": [
-    {"pkg": 1, "level": 2, "type": 17, "inst": 1, "name": "UE-LOOP", "meaning": "universal loop (for/while/foreach): init?, cond?, update?, body", "aliases": [], "reuse": 0, "defined_in": []},
-    {"pkg": 1, "level": 2, "type": 17, "inst": 2, "name": "UE-SWITCH", "meaning": "universal switch/select: scrutinee + case clauses", "aliases": ["UE-SELECT"], "reuse": 0, "defined_in": []},
-    {"pkg": 1, "level": 2, "type": 17, "inst": 3, "name": "UE-CASE", "meaning": "switch case clause: match values + body", "aliases": [], "reuse": 0, "defined_in": []},
-    {"pkg": 1, "level": 2, "type": 17, "inst": 4, "name": "UE-TRY", "meaning": "try block + catch clauses", "aliases": [], "reuse": 0, "defined_in": []},
-    {"pkg": 1, "level": 2, "type": 17, "inst": 5, "name": "UE-CATCH", "meaning": "catch clause: typed param + body", "aliases": [], "reuse": 0, "defined_in": []},
-    {"pkg": 1, "level": 2, "type": 17, "inst": 6, "name": "UE-THROW", "meaning": "throw/raise an expression", "aliases": ["UE-RAISE", "UE-FAIL"], "reuse": 0, "defined_in": []},
-    {"pkg": 1, "level": 2, "type": 12, "inst": 7, "name": "UE-MATH-INC", "meaning": "increment (++) prefix or postfix", "aliases": [], "reuse": 0, "defined_in": []},
-    {"pkg": 1, "level": 2, "type": 12, "inst": 8, "name": "UE-MATH-DEC", "meaning": "decrement (--) prefix or postfix", "aliases": [], "reuse": 0, "defined_in": []},
-    {"pkg": 1, "level": 2, "type": 30, "inst": 1, "name": "UE-CLASS", "meaning": "class declaration: name + type-params? + bases? + members", "aliases": [], "reuse": 0, "defined_in": []},
-    {"pkg": 1, "level": 2, "type": 30, "inst": 2, "name": "UE-INTERFACE", "meaning": "interface declaration: name + bases? + signatures", "aliases": [], "reuse": 0, "defined_in": []},
     {
       "pkg": 1,
       "level": 1,
@@ -121,6 +111,28 @@
         "form/form-stdlib/seedbank/emits/typescript.fk",
         "form/form-stdlib/seedbank/universal-emit.fk"
       ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 12,
+      "inst": 7,
+      "name": "UE-MATH-INC",
+      "meaning": "increment (++) prefix or postfix",
+      "aliases": [],
+      "reuse": 0,
+      "defined_in": []
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 12,
+      "inst": 8,
+      "name": "UE-MATH-DEC",
+      "meaning": "decrement (--) prefix or postfix",
+      "aliases": [],
+      "reuse": 0,
+      "defined_in": []
     },
     {
       "pkg": 1,
@@ -236,6 +248,77 @@
     {
       "pkg": 1,
       "level": 2,
+      "type": 17,
+      "inst": 1,
+      "name": "UE-LOOP",
+      "meaning": "universal loop (for/while/foreach): init?, cond?, update?, body",
+      "aliases": [],
+      "reuse": 0,
+      "defined_in": []
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 17,
+      "inst": 2,
+      "name": "UE-SWITCH",
+      "meaning": "universal switch/select: scrutinee + case clauses",
+      "aliases": [
+        "UE-SELECT"
+      ],
+      "reuse": 0,
+      "defined_in": []
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 17,
+      "inst": 3,
+      "name": "UE-CASE",
+      "meaning": "switch case clause: match values + body",
+      "aliases": [],
+      "reuse": 0,
+      "defined_in": []
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 17,
+      "inst": 4,
+      "name": "UE-TRY",
+      "meaning": "try block + catch clauses",
+      "aliases": [],
+      "reuse": 0,
+      "defined_in": []
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 17,
+      "inst": 5,
+      "name": "UE-CATCH",
+      "meaning": "catch clause: typed param + body",
+      "aliases": [],
+      "reuse": 0,
+      "defined_in": []
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 17,
+      "inst": 6,
+      "name": "UE-THROW",
+      "meaning": "throw/raise an expression",
+      "aliases": [
+        "UE-RAISE",
+        "UE-FAIL"
+      ],
+      "reuse": 0,
+      "defined_in": []
+    },
+    {
+      "pkg": 1,
+      "level": 2,
       "type": 18,
       "inst": 1,
       "name": "F-RET",
@@ -308,6 +391,28 @@
         "form/form-stdlib/seedbank/emits/python.fk",
         "form/form-stdlib/seedbank/universal-emit.fk"
       ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 30,
+      "inst": 1,
+      "name": "UE-CLASS",
+      "meaning": "class declaration: name + type-params? + bases? + members",
+      "aliases": [],
+      "reuse": 0,
+      "defined_in": []
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 30,
+      "inst": 2,
+      "name": "UE-INTERFACE",
+      "meaning": "interface declaration: name + bases? + signatures",
+      "aliases": [],
+      "reuse": 0,
+      "defined_in": []
     },
     {
       "pkg": 1,
@@ -426,18 +531,6 @@
       "defined_in": [
         "form/form-stdlib/tests/bml-compiler-fkb-image-proof.fk"
       ],
-      "curated": true
-    },
-    {
-      "pkg": 1,
-      "level": 2,
-      "type": 99,
-      "inst": 15,
-      "name": "KERNEL-CORE-IMAGE",
-      "meaning": "Serialized minimal kernel-core self image: source path, image path, core name, primitive count, dispatch count, proof count, and executable witness recipes",
-      "aliases": [],
-      "reuse": 1,
-      "defined_in": [],
       "curated": true
     },
     {
@@ -610,6 +703,46 @@
       "aliases": [],
       "reuse": 1,
       "defined_in": [],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 15,
+      "name": "KERNEL-CORE-IMAGE",
+      "meaning": "Serialized minimal kernel-core self image: source path, image path, core name, primitive count, dispatch count, proof count, and executable witness recipes",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 16,
+      "name": "SOVEREIGN-BOUNDARY-RECEIPT",
+      "meaning": "Generic boundary decision receipt carrying the selected allow/stop/witness/re-enter choice and its traceable CHOICE-RECEIPT.",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/sovereign-boundary-protocol.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 17,
+      "name": "SOVEREIGN-BOUNDARY-EVIDENCE",
+      "meaning": "Generic boundary evidence: subject, offered interface, protocol, reach, consent, violation, repair evidence, vitality, certainty, and time for allow/stop/witness/re-entry decisions.",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/sovereign-boundary-protocol.fk"
+      ],
       "curated": true
     },
     {
@@ -3667,6 +3800,76 @@
       "pkg": 1,
       "level": 2,
       "type": 99,
+      "inst": 1724,
+      "name": "CIRCLE-EXPORT-CONSENT",
+      "meaning": "explicit consent for evidence leaving a circle: recipient, fidelity, purpose, expiry, consensus",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/circle.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 1725,
+      "name": "CIRCLE-RECEIPT",
+      "meaning": "circle integration/refusal/export receipt: circle id, member, subject, action, reason, cost",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/circle.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 1726,
+      "name": "SATSANG-SILENCE",
+      "meaning": "circle silence event oriented toward truth and shared being",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/circle.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 1727,
+      "name": "SATSANG-INQUIRY",
+      "meaning": "truth-oriented inquiry offered inside a circle",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/circle.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 1728,
+      "name": "SATSANG-POINTING",
+      "meaning": "non-command pointing offered inside a satsang circle",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/circle.fk"
+      ],
+      "curated": true
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
       "inst": 1730,
       "name": "SYMBOL-BIND",
       "meaning": "",
@@ -3801,20 +4004,6 @@
       "pkg": 1,
       "level": 2,
       "type": 99,
-      "inst": 1743,
-      "name": "CHOICE-SIGNATURE",
-      "meaning": "compressed choice receipt signature preserving category, selected path, outcome, certainty bucket, value buckets, witness, coordinate, and trace counters",
-      "aliases": [],
-      "reuse": 1,
-      "defined_in": [
-        "form/form-stdlib/choice-receipt.fk"
-      ],
-      "curated": true
-    },
-    {
-      "pkg": 1,
-      "level": 2,
-      "type": 99,
       "inst": 1740,
       "name": "CELL-V0",
       "meaning": "",
@@ -3852,6 +4041,20 @@
       "defined_in": [
         "form/form-stdlib/verb-router.fk"
       ]
+    },
+    {
+      "pkg": 1,
+      "level": 2,
+      "type": 99,
+      "inst": 1743,
+      "name": "CHOICE-SIGNATURE",
+      "meaning": "compressed choice receipt signature preserving category, selected path, outcome, certainty bucket, value buckets, witness, coordinate, and trace counters",
+      "aliases": [],
+      "reuse": 1,
+      "defined_in": [
+        "form/form-stdlib/choice-receipt.fk"
+      ],
+      "curated": true
     },
     {
       "pkg": 1,
@@ -4597,76 +4800,6 @@
       "defined_in": [
         "form/form-stdlib/grammars/bml.fk",
         "form/form-stdlib/tests/bml-thesis-rule-body-execution-proof.fk"
-      ],
-      "curated": true
-    },
-    {
-      "pkg": 1,
-      "level": 2,
-      "type": 99,
-      "inst": 1724,
-      "name": "CIRCLE-EXPORT-CONSENT",
-      "meaning": "explicit consent for evidence leaving a circle: recipient, fidelity, purpose, expiry, consensus",
-      "aliases": [],
-      "reuse": 1,
-      "defined_in": [
-        "form/form-stdlib/circle.fk"
-      ],
-      "curated": true
-    },
-    {
-      "pkg": 1,
-      "level": 2,
-      "type": 99,
-      "inst": 1725,
-      "name": "CIRCLE-RECEIPT",
-      "meaning": "circle integration/refusal/export receipt: circle id, member, subject, action, reason, cost",
-      "aliases": [],
-      "reuse": 1,
-      "defined_in": [
-        "form/form-stdlib/circle.fk"
-      ],
-      "curated": true
-    },
-    {
-      "pkg": 1,
-      "level": 2,
-      "type": 99,
-      "inst": 1726,
-      "name": "SATSANG-SILENCE",
-      "meaning": "circle silence event oriented toward truth and shared being",
-      "aliases": [],
-      "reuse": 1,
-      "defined_in": [
-        "form/form-stdlib/circle.fk"
-      ],
-      "curated": true
-    },
-    {
-      "pkg": 1,
-      "level": 2,
-      "type": 99,
-      "inst": 1727,
-      "name": "SATSANG-INQUIRY",
-      "meaning": "truth-oriented inquiry offered inside a circle",
-      "aliases": [],
-      "reuse": 1,
-      "defined_in": [
-        "form/form-stdlib/circle.fk"
-      ],
-      "curated": true
-    },
-    {
-      "pkg": 1,
-      "level": 2,
-      "type": 99,
-      "inst": 1728,
-      "name": "SATSANG-POINTING",
-      "meaning": "non-command pointing offered inside a satsang circle",
-      "aliases": [],
-      "reuse": 1,
-      "defined_in": [
-        "form/form-stdlib/circle.fk"
       ],
       "curated": true
     },

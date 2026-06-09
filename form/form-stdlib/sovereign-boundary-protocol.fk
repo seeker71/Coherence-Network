@@ -1,0 +1,74 @@
+; sovereign-boundary-protocol.fk - reusable allow/stop/witness/re-entry rule.
+;
+; preludes: form-stdlib/core.fk form-stdlib/choice-receipt.fk
+;
+; A boundary is an offered interface plus a protocol. Observation is always
+; allowed. Communication can stop when reach passes the interface or protocol.
+; Re-entry is available when trusted repair evidence restores enough vitality.
+
+section [form.bml] {
+    let sbp_tag_evidence = bp("SOVEREIGN-BOUNDARY-EVIDENCE");
+    let sbp_tag_receipt = bp("SOVEREIGN-BOUNDARY-RECEIPT");
+
+    def sbp-category() = "SOVEREIGN-BOUNDARY-PROTOCOL";
+    def sbp-choice-allow() = "allow";
+    def sbp-choice-stop() = "stop";
+    def sbp-choice-witness() = "witness";
+    def sbp-choice-re-enter() = "re_enter";
+    def sbp-reach-within-interface() = "within_interface";
+    def sbp-reach-past-interface() = "past_interface";
+    def sbp-reach-unknown() = "unknown";
+
+    def sbp-bool-score(ok, score) = if ok then score else 0;
+    def sbp-tagged?(value, tag, arity) = if eq(len(value), arity) then node_eq(nth(value, 0), tag) else false;
+    def sbp-nonempty-string?(value) = gt(str_len(value), 0);
+
+    def sbp-evidence(subject, offered_interface, protocol, reach, consent, violation, trusted_witness, repair_evidence, repair_threshold, vitality, certainty, started_at_tick, evidence_started_at_tick, evidence_ended_at_tick) = list(sbp_tag_evidence, subject, offered_interface, protocol, reach, consent, violation, trusted_witness, repair_evidence, repair_threshold, vitality, certainty, started_at_tick, evidence_started_at_tick, evidence_ended_at_tick);
+    def sbp-evidence?(e) = sbp-tagged?(e, sbp_tag_evidence, 15);
+    def sbp-subject(e) = nth(e, 1);
+    def sbp-offered-interface(e) = nth(e, 2);
+    def sbp-protocol(e) = nth(e, 3);
+    def sbp-reach(e) = nth(e, 4);
+    def sbp-consent(e) = nth(e, 5);
+    def sbp-violation(e) = nth(e, 6);
+    def sbp-trusted-witness(e) = nth(e, 7);
+    def sbp-repair-evidence(e) = nth(e, 8);
+    def sbp-repair-threshold(e) = nth(e, 9);
+    def sbp-vitality(e) = nth(e, 10);
+    def sbp-certainty(e) = nth(e, 11);
+    def sbp-started-at(e) = nth(e, 12);
+    def sbp-evidence-started-at(e) = nth(e, 13);
+    def sbp-evidence-ended-at(e) = nth(e, 14);
+
+    def sbp-consented?(e) = eq(sbp-consent(e), 1);
+    def sbp-violation-proven?(e) = or(eq(sbp-violation(e), 1), str_eq(sbp-reach(e), sbp-reach-past-interface()));
+    def sbp-repair-trusted?(e) = and(eq(sbp-trusted-witness(e), 1), ge(sbp-repair-evidence(e), sbp-repair-threshold(e)));
+    def sbp-can-re-enter?(e) = and(sbp-violation-proven?(e), and(sbp-repair-trusted?(e), ge(sbp-vitality(e), 50)));
+    def sbp-can-allow?(e) = and(sbp-consented?(e), and(str_eq(sbp-reach(e), sbp-reach-within-interface()), if sbp-violation-proven?(e) then false else true));
+    def sbp-needs-stop?(e) = if sbp-can-re-enter?(e) then false else or(sbp-violation-proven?(e), if sbp-consented?(e) then false else true);
+
+    def sbp-choice(e) = if sbp-can-re-enter?(e) then sbp-choice-re-enter() else if sbp-needs-stop?(e) then sbp-choice-stop() else if sbp-can-allow?(e) then sbp-choice-allow() else sbp-choice-witness();
+    def sbp-note(e) = if sbp-can-re-enter?(e) then "trusted repair evidence allows re-entry" else if sbp-needs-stop?(e) then "boundary stop: reach passed interface/protocol or consent absent" else if sbp-can-allow?(e) then "within offered interface and protocol" else "witness without forcing a decision";
+
+    def sbp-candidate-allow(e) = cr-choice-candidate(sbp-choice-allow(), sbp-category(), sbp-can-allow?(e), 0, 90, "within-interface-with-consent");
+    def sbp-candidate-stop(e) = cr-choice-candidate(sbp-choice-stop(), sbp-category(), sbp-needs-stop?(e), 100, 100, "sovereign-boundary-stop");
+    def sbp-candidate-witness(e) = cr-choice-candidate(sbp-choice-witness(), sbp-category(), if sbp-needs-stop?(e) then false else if sbp-can-allow?(e) then false else true, 10, 75, "observe-without-force");
+    def sbp-candidate-re-enter(e) = cr-choice-candidate(sbp-choice-re-enter(), sbp-category(), sbp-can-re-enter?(e), 0, 100, "trusted-repair-evidence");
+    def sbp-candidates(e) = list(sbp-candidate-allow(e), sbp-candidate-stop(e), sbp-candidate-witness(e), sbp-candidate-re-enter(e));
+
+    def sbp-trace(e) = cr-choice-trace(1, 1, if sbp-violation-proven?(e) then 1 else 0, if str_eq(sbp-choice(e), sbp-choice-witness()) then 1 else 0);
+    def sbp-value(e) = cr-choice-value(cr-kind-core-alignment(), if sbp-violation-proven?(e) then 25 else 75, sbp-vitality(e), sbp-certainty(e), sbp-certainty(e));
+    def sbp-evidence-valid?(e) = if sbp-evidence?(e) then and(sbp-nonempty-string?(sbp-subject(e)), and(sbp-nonempty-string?(sbp-offered-interface(e)), and(sbp-nonempty-string?(sbp-protocol(e)), and(ge(sbp-repair-evidence(e), 0), and(ge(sbp-repair-threshold(e), 0), and(ge(sbp-vitality(e), 0), and(le(sbp-vitality(e), 100), and(ge(sbp-certainty(e), 0), le(sbp-certainty(e), 100))))))))) else false;
+
+    def sbp-choice-receipt(e, expression, who, where) = cr-choice-receipt(expression, sbp-protocol(e), sbp-category(), sbp-candidates(e), sbp-choice(e), cr-outcome-success(), sbp-certainty(e), sbp-value(e), sbp-note(e), who, where, sbp-evidence-ended-at(e), 0, sbp-trace(e));
+    def sbp-boundary-receipt(e, expression, who, where) = list(sbp_tag_receipt, sbp-choice(e), sbp-note(e), e, sbp-choice-receipt(e, expression, who, where), sbp-evidence-ended-at(e));
+    def sbp-boundary-receipt?(receipt) = sbp-tagged?(receipt, sbp_tag_receipt, 6);
+    def sbp-boundary-receipt-choice(receipt) = nth(receipt, 1);
+    def sbp-boundary-receipt-note(receipt) = nth(receipt, 2);
+    def sbp-boundary-receipt-evidence(receipt) = nth(receipt, 3);
+    def sbp-boundary-receipt-choice-receipt(receipt) = nth(receipt, 4);
+    def sbp-boundary-receipt-when(receipt) = nth(receipt, 5);
+    def sbp-boundary-receipt-valid?(receipt) = if sbp-boundary-receipt?(receipt) then and(sbp-evidence-valid?(sbp-boundary-receipt-evidence(receipt)), cr-choice-receipt-valid?(sbp-boundary-receipt-choice-receipt(receipt))) else false;
+
+    0;
+}

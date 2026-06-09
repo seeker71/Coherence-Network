@@ -155,15 +155,29 @@ to tune.
 
 ## Boundary repair proof
 
-A silence is the pulse witness's stop receipt. Re-entry is not a hidden
-state flip: when the witness has at least three consecutive breathing
-samples for the organ, it closes the silence with a
-`boundary_repair_protocol` note in the existing `silences.note` field.
-The note records the `re_enter` choice, the evidence count, and the
-sample window that supported repair.
+A silence is the pulse witness's stop receipt. The reusable rule now lives
+in Form as `form/form-stdlib/sovereign-boundary-protocol.fk`: boundary
+evidence chooses `allow`, `stop`, `witness`, or `re_enter`, and the choice
+is carried by a traceable `CHOICE-RECEIPT`. Pulse maps open silence evidence
+into that generic protocol through
+`form/form-stdlib/pulse-boundary-repair.fk`.
+
+The deployed pulse service is still the Python carrier. Re-entry is not a
+hidden state flip: when the witness has at least three consecutive breathing
+samples for the organ, it closes the silence with a `boundary_repair_protocol`
+note in the existing `silences.note` field. The note records the `re_enter`
+choice, the evidence count, and the sample window that supported repair.
 
 `GET /pulse/now` reconciles from durable samples before it reads the
 open-silence list. This keeps the current snapshot coherent: if repair
 evidence is sufficient, stale open silences close before the response; if
 repair evidence is incomplete, the silence remains visible and the
 overall witness status stays at least `strained`.
+
+Form proof:
+
+```bash
+cd ../form
+./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/sovereign-boundary-protocol.fk form-stdlib/tests/sovereign-boundary-protocol-band.fk
+./validate.sh --binary form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/sovereign-boundary-protocol.fk form-stdlib/pulse-boundary-repair.fk form-stdlib/tests/pulse-boundary-repair-band.fk
+```

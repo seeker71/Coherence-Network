@@ -236,6 +236,12 @@
     (defn fsc-prefix? (s prefix)
         (fsc-find-string-at? s prefix 0 0))
 
+    (defn fsc-compiler-error (message)
+        (form_error (str_concat "source-compile: " message)))
+
+    (defn fsc-compiler-error-line (message line)
+        (fsc-compiler-error (str_concat message (str_concat ": " line))))
+
     (defn fsc-digit? (ch)
         (do
             (let cp (ord ch))
@@ -980,21 +986,33 @@
     (defn fsc-compile-form-bml-def-recipe (line)
         (do
             (let open (fsc-find-char-from line "(" 4))
+            (if (lt open 0)
+                (fsc-compiler-error-line "form.bml def missing parameter list" line)
+            (do
             (let close (fsc-find-char-from line ")" open))
+            (if (lt close 0)
+                (fsc-compiler-error-line "form.bml def missing closing ')' on the definition line" line)
+            (do
             (let eq-pos (fsc-find-char-from line "=" close))
+            (if (lt eq-pos 0)
+                (fsc-compiler-error-line "form.bml def missing '=' before body" line)
+            (do
             (let name (fsc-trim (fsc-sub line 4 open)))
             (let args (fsc-sub line (add open 1) close))
             (let body (fsc-sub line (add eq-pos 1) (str_len line)))
             (let param-names (fsc-bml-name-list-strings-loop args 0 (empty)))
             (fsc-rec-fndef name param-names
-                           (fsc-compile-form-bml-expr-recipe body))))
+                           (fsc-compile-form-bml-expr-recipe body))))))))))
 
     (defn fsc-compile-form-bml-let-recipe (line)
         (do
             (let eq-pos (fsc-find-char-from line "=" 4))
+            (if (lt eq-pos 0)
+                (fsc-compiler-error-line "form.bml let missing '='" line)
+            (do
             (let name (fsc-trim (fsc-sub line 4 eq-pos)))
             (let body (fsc-sub line (add eq-pos 1) (str_len line)))
-            (fsc-rec-let name (fsc-compile-form-bml-expr-recipe body))))
+            (fsc-rec-let name (fsc-compile-form-bml-expr-recipe body))))))
 
     (defn fsc-compile-form-bml-template-recipe (line)
         (do

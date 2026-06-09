@@ -7,7 +7,8 @@
 //   tsx src/main.ts --bench
 //   tsx src/main.ts path/to/file.fk
 
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import {
   deserializeRecipeArtifact,
   Frame,
@@ -22,8 +23,64 @@ import { runBench } from "./bench.ts";
 import { compileNode } from "./compiler.ts";
 import { runNumericBench } from "./numeric-bench.ts";
 
+type CrashTraceContext = {
+  mode: string;
+  args: string[];
+  source: string;
+};
+
+const crashTraceContext: CrashTraceContext = {
+  mode: "startup",
+  args: [],
+  source: "",
+};
+
+function setCrashTraceContext(mode: string, args: string[], source?: string): void {
+  crashTraceContext.mode = mode;
+  crashTraceContext.args = [...args];
+  if (source !== undefined) crashTraceContext.source = source;
+}
+
+function sourceLineCount(source: string): number {
+  return source.length === 0 ? 0 : source.split("\n").length;
+}
+
+async function writeKernelCrashTrace(err: unknown): Promise<string | null> {
+  const dir = join(".cache", "form-kernel-ts");
+  try {
+    await mkdir(dir, { recursive: true });
+  } catch {
+    return null;
+  }
+  const when = new Date();
+  const safeStamp = when.toISOString().replace(/[:.]/g, "");
+  const path = join(dir, `crash-${safeStamp}-${process.pid}.json`);
+  const message = err instanceof Error ? err.message : String(err);
+  const stack = err instanceof Error ? err.stack : undefined;
+  const source = crashTraceContext.source;
+  const report = {
+    when_utc: when.toISOString(),
+    pid: process.pid,
+    mode: crashTraceContext.mode,
+    args: crashTraceContext.args,
+    error: message,
+    source_bytes: Buffer.byteLength(source, "utf8"),
+    source_line_count: sourceLineCount(source),
+    source_head: source.slice(0, 2000),
+    source_tail: source.slice(Math.max(0, source.length - 2000)),
+    js_stack: stack ?? null,
+  };
+  try {
+    await writeFile(path, `${JSON.stringify(report, null, 2)}\n`);
+    return path;
+  } catch {
+    return null;
+  }
+}
+
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
+  setCrashTraceContext("startup", args);
   if (args.length === 0) {
     console.error(
       "usage: tsx src/main.ts (--binary file.fkb | --emit-binary out.fkb file.fk... | --expr <expr> | --bench | --compiled <expr> | trace ... | <file.fk>)",
@@ -58,6 +115,7 @@ async function main(): Promise<void> {
       console.error("--binary requires a path");
       process.exit(2);
     }
+    setCrashTraceContext("binary", args);
     const root = deserializeRecipeArtifact(k, await readFile(path));
     k.setActiveRoots([root]);
     const value = walk(k, root, frame);
@@ -76,6 +134,7 @@ async function main(): Promise<void> {
     const src = (
       await Promise.all(paths.map((path) => readFile(path, "utf8")))
     ).join("\n");
+    setCrashTraceContext("emit-binary", args, src);
     const node = readAll(k, src);
     await writeFile(outPath, serializeRecipeArtifact(k, node));
     return;
@@ -87,6 +146,7 @@ async function main(): Promise<void> {
       console.error("--expr requires an argument");
       process.exit(2);
     }
+    setCrashTraceContext("expr", args, expr);
     const node = readForm(k, expr);
     k.setActiveRoots([node]);
     const value = walk(k, node, frame);
@@ -101,6 +161,7 @@ async function main(): Promise<void> {
       console.error("--compiled requires an argument");
       process.exit(2);
     }
+    setCrashTraceContext("compiled", args, expr);
     const node = readForm(k, expr);
     const compiled = compileNode(k, node);
     const value = compiled(frame);
@@ -116,6 +177,7 @@ async function main(): Promise<void> {
   const src = (
     await Promise.all(paths.map((path) => readFile(path, "utf8")))
   ).join("\n");
+  setCrashTraceContext("source", args, src);
   const node = readAll(k, src);
   k.setActiveRoots([node]);
   const value = walk(k, node, frame);
@@ -141,6 +203,7 @@ async function runTrace(args: string[]): Promise<void> {
   } else {
     src = await readFile(args[0]!, "utf8");
   }
+  setCrashTraceContext("trace", args, src);
 
   const k = new Kernel();
   // Install the Form→host-JS JIT hook so (jit_compile "name") from Form
@@ -170,9 +233,13 @@ main()
     // its net handles otherwise keep Node's event loop alive.
     shutdownSocketWorker();
   })
-  .catch((err: unknown) => {
+  .catch(async (err: unknown) => {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`form-kernel-ts: ${msg}`);
+    const tracePath = await writeKernelCrashTrace(err);
+    if (tracePath !== null) {
+      console.error(`form-kernel-ts: crash trace: ${tracePath}`);
+    }
     shutdownSocketWorker();
     process.exit(1);
   });

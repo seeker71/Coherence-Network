@@ -1327,19 +1327,35 @@ export class Kernel {
       kind: "int",
       int: argStr(args, 0).length,
     }));
-    this.registerNative("substring", catAccess(), (_k, args) => ({
-      kind: "str",
-      str: argStr(args, 0).slice(argInt(args, 1), argInt(args, 2)),
-    }));
+    this.registerNative("substring", catAccess(), (_k, args) => {
+      const s = argStr(args, 0);
+      const start = argInt(args, 1);
+      const end = argInt(args, 2);
+      if (start < 0 || end < start || end > s.length) {
+        throw new Error(
+          `substring: bounds out of range start=${start} end=${end} len=${s.length}`,
+        );
+      }
+      return { kind: "str", str: s.slice(start, end) };
+    });
     this.registerNative("char_at", catAccess(), (_k, args) => {
       const s = argStr(args, 0);
       const i = argInt(args, 1);
+      if (i < 0 || i >= s.length) {
+        throw new Error(`char_at: bounds out of range index=${i} len=${s.length}`);
+      }
       return { kind: "str", str: s[i] ?? "" };
     });
     this.registerNative("str_concat", catMethod(), (_k, args) => ({
       kind: "str",
       str: argStr(args, 0) + argStr(args, 1),
     }));
+    this.registerNative("form_error", catWitness(), (_k, args) => {
+      throw new Error(argStr(args, 0));
+    });
+    this.registerNative("form-error", catWitness(), (_k, args) => {
+      throw new Error(argStr(args, 0));
+    });
     this.registerNative("source_scan_file", catCall(), (_k, args) =>
       sourceNativeScanText(readFileSync(argStr(args, 0), "utf8"), sourceNativeLexiconFromValue(args[1]!)),
     );

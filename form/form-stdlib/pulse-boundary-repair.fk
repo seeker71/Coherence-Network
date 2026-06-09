@@ -1,0 +1,57 @@
+; pulse-boundary-repair.fk - pulse specialization of sovereign boundary repair.
+;
+; preludes: form-stdlib/core.fk form-stdlib/choice-receipt.fk
+;           form-stdlib/sovereign-boundary-protocol.fk
+;
+; Pulse does not own a private repair law. It maps open silence evidence into
+; the generic boundary protocol: stop remains visible until trusted breathing
+; evidence allows re-entry.
+
+section [form.bml] {
+    def pbr-category() = "PULSE-BOUNDARY-REPAIR";
+    def pbr-protocol() = "boundary_repair_protocol";
+    def pbr-choice-continue() = "continue";
+    def pbr-choice-stop() = "stop";
+    def pbr-choice-re-enter() = "re_enter";
+    def pbr-status-breathing() = "breathing";
+    def pbr-status-strained() = "strained";
+    def pbr-status-silent() = "silent";
+    def pbr-close-threshold() = 3;
+    def pbr-severity-strained() = 1;
+    def pbr-severity-silent() = 2;
+
+    def pbr-bool-score(ok, score) = if ok then score else 0;
+
+    def pbr-evidence(organ, open_silence, severity, consecutive_breaths, started_at_tick, evidence_started_at_tick, evidence_ended_at_tick) = sbp-evidence(organ, "pulse-public-api", pbr-protocol(), if eq(open_silence, 1) then sbp-reach-past-interface() else sbp-reach-within-interface(), 1, open_silence, 1, consecutive_breaths, pbr-close-threshold(), 96, 96, started_at_tick, evidence_started_at_tick, evidence_ended_at_tick);
+    def pbr-evidence?(e) = sbp-evidence?(e);
+    def pbr-organ(e) = sbp-subject(e);
+    def pbr-open-silence(e) = sbp-violation(e);
+    def pbr-severity(e) = if pbr-open?(e) then pbr-severity-silent() else 0;
+    def pbr-consecutive-breaths(e) = sbp-repair-evidence(e);
+    def pbr-started-at(e) = sbp-started-at(e);
+    def pbr-evidence-started-at(e) = sbp-evidence-started-at(e);
+    def pbr-evidence-ended-at(e) = sbp-evidence-ended-at(e);
+
+    def pbr-open?(e) = eq(pbr-open-silence(e), 1);
+    def pbr-evidence-valid?(e) = sbp-evidence-valid?(e);
+    def pbr-can-re-enter?(e) = sbp-can-re-enter?(e);
+    def pbr-generic-choice(e) = sbp-choice(e);
+    def pbr-choice(e) = if pbr-can-re-enter?(e) then pbr-choice-re-enter() else if pbr-open?(e) then pbr-choice-stop() else pbr-choice-continue();
+    def pbr-note(e) = if pbr-can-re-enter?(e) then "boundary_repair_protocol: choice=re_enter; evidence=three-or-more-breathing-samples" else if pbr-open?(e) then "boundary_repair_protocol: choice=stop; evidence-incomplete" else "boundary_repair_protocol: choice=continue; no-open-silence";
+
+    def pbr-overall-with-open-silences(current_status, open_count, max_severity) = if eq(open_count, 0) then current_status else if eq(max_severity, pbr-severity-silent()) then pbr-status-silent() else if str_eq(current_status, pbr-status-silent()) then pbr-status-silent() else pbr-status-strained();
+
+    def pbr-candidate-re-enter(e) = cr-choice-candidate(pbr-choice-re-enter(), pbr-category(), pbr-can-re-enter?(e), 0, 100, "three-or-more-consecutive-breathing-samples");
+    def pbr-candidate-stop(e) = cr-choice-candidate(pbr-choice-stop(), pbr-category(), pbr-open?(e), 100, 100, "open-silence-receipt-remains-visible");
+    def pbr-candidate-continue(e) = cr-choice-candidate(pbr-choice-continue(), pbr-category(), if pbr-open?(e) then false else true, 0, 100, "no-open-silence");
+    def pbr-candidates(e) = list(pbr-candidate-re-enter(e), pbr-candidate-stop(e), pbr-candidate-continue(e));
+
+    def pbr-trace(e) = if pbr-open?(e) then cr-choice-trace(pbr-consecutive-breaths(e), 1, 0, 1) else cr-choice-trace(1, 1, 0, 0);
+    def pbr-value(e) = cr-choice-value(cr-kind-core-alignment(), 0, if pbr-can-re-enter?(e) then 96 else 92, 96, 96);
+
+    def pbr-decision-receipt(e) = cr-choice-receipt("pulse-silence-boundary-repair", "pulse-witness", pbr-category(), pbr-candidates(e), pbr-choice(e), cr-outcome-success(), if pbr-can-re-enter?(e) then 96 else 88, pbr-value(e), pbr-note(e), "pulse-boundary-repair.fk", "form/form-stdlib/pulse-boundary-repair.fk", pbr-evidence-ended-at(e), 0, pbr-trace(e));
+    def pbr-boundary-receipt(e) = sbp-boundary-receipt(e, "pulse-silence-boundary-repair", "pulse-boundary-repair.fk", "form/form-stdlib/pulse-boundary-repair.fk");
+    def pbr-decision-valid?(e) = and(pbr-evidence-valid?(e), cr-choice-receipt-valid?(pbr-decision-receipt(e)));
+
+    0;
+}
