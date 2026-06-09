@@ -25,35 +25,35 @@
             "operator=="))
     (let operator-body (bml-method-body operator-method))
 
-    (let RuleBP (make_nodeid 1 2 99 9300))
-    (let ArgsBP (make_nodeid 1 2 99 9301))
+    (let ChainRuleBP (make_nodeid 1 2 99 9300))
+    (let ChainArgsBP (make_nodeid 1 2 99 9301))
     (let ProcessBP (make_nodeid 1 2 99 9302))
-    (let CallEnvBP (bml-constructor-env-blueprint 0))
+    (let ChainCallEnvBP (bml-constructor-env-blueprint 0))
     (let shared-process (record_new ProcessBP "bmlClass" "Process"))
-    (let left-args (record_new ArgsBP "Count" 1))
-    (let right-args (record_new ArgsBP "Count" 2))
+    (let left-args (record_new ChainArgsBP "Count" 1))
+    (let right-args (record_new ChainArgsBP "Count" 2))
     (let rule-instance
         (record_new
-            RuleBP
+            ChainRuleBP
             "bmlClass" "Rule"
             "m_strName" "same-name"
             "m_hProcess" shared-process
             "m_hArgs" left-args))
     (let other-rule
         (record_new
-            RuleBP
+            ChainRuleBP
             "bmlClass" "Rule"
             "Name" "same-name"
             "InternProcess" shared-process
             "Args" right-args))
-    (let direct-env (record_new CallEnvBP "hObj" other-rule "hOther" other-rule))
+    (let direct-env (record_new ChainCallEnvBP "hObj" other-rule "hOther" other-rule))
     (let direct-result
         (bml-body-source-exec-if-chain-member-neq-return-false
             operator-body
             rule-instance
             direct-env))
 
-    (let sequence-env (record_new CallEnvBP "hObj" other-rule))
+    (let sequence-env (record_new ChainCallEnvBP "hObj" other-rule))
     (let sequence-result
         (bml-body-source-exec
             operator-body
@@ -64,9 +64,9 @@
         (bml-body-source-exec
             operator-body
             self
-            (record_new CallEnvBP "hObj" hObj)))
+            (record_new ChainCallEnvBP "hObj" hObj)))
 
-    (method_define RuleBP "operator==" rule-eq-dispatch)
+    (method_define ChainRuleBP "operator==" rule-eq-dispatch)
     (let method-result (method_invoke rule-instance "operator==" other-rule))
 
     (sum

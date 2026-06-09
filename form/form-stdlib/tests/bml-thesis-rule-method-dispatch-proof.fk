@@ -26,10 +26,10 @@
             "SetProcess"))
     (let set-process-body (bml-method-body set-process-method))
 
-    (let RuleBP (make_nodeid 1 2 99 9203))
-    (let EnvBP (bml-constructor-env-blueprint 0))
+    (let DispatchRuleBP (make_nodeid 1 2 99 9203))
+    (let DispatchEnvBP (bml-constructor-env-blueprint 0))
     (let dispatch-env
-        (record_new EnvBP "DefaultProcess" "default-dispatch"))
+        (record_new DispatchEnvBP "DefaultProcess" "default-dispatch"))
 
     (defn rule-set-process-dispatch (self)
         (bml-body-source-exec-assignments
@@ -37,14 +37,14 @@
             self
             dispatch-env))
 
-    (let before-has (method_has RuleBP "SetProcess"))
-    (method_define RuleBP "SetProcess" rule-set-process-dispatch)
-    (let after-has (method_has RuleBP "SetProcess"))
+    (let before-has (method_has DispatchRuleBP "SetProcess"))
+    (method_define DispatchRuleBP "SetProcess" rule-set-process-dispatch)
+    (let after-has (method_has DispatchRuleBP "SetProcess"))
 
     (let first-rule
-        (record_new RuleBP "m_hProcess" "first-old"))
+        (record_new DispatchRuleBP "m_hProcess" "first-old"))
     (let second-rule
-        (record_new RuleBP "m_hProcess" "second-old"))
+        (record_new DispatchRuleBP "m_hProcess" "second-old"))
 
     (method_invoke first-rule "SetProcess")
     (let first-after (record_get first-rule "m_hProcess"))

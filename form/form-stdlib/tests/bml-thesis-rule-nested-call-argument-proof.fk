@@ -25,16 +25,16 @@
             "Match"))
     (let match-body (bml-method-body match-method))
 
-    (let RuleBP (make_nodeid 1 2 99 9260))
-    (let EnvBP (make_nodeid 1 2 99 9261))
-    (let CallEnvBP (bml-constructor-env-blueprint 0))
-    (let env-object (record_new EnvBP))
+    (let NestedRuleBP (make_nodeid 1 2 99 9260))
+    (let NestedEnvBP (make_nodeid 1 2 99 9261))
+    (let NestedCallEnvBP (bml-constructor-env-blueprint 0))
+    (let env-object (record_new NestedEnvBP))
     (let call-env
         (record_new
-            CallEnvBP
+            NestedCallEnvBP
             "hEnv" env-object
             "strTag" "outer-rule-tag"))
-    (let rule-instance (record_new RuleBP "m_strName" "fallback-rule-tag"))
+    (let rule-instance (record_new NestedRuleBP "m_strName" "fallback-rule-tag"))
 
     (defn rule-get-tag-dispatch (self tag)
         (if (nil? tag)
@@ -44,8 +44,8 @@
     (defn env-end-result-stack-dispatch (self tag)
         (record_set self "endedTag" tag))
 
-    (method_define RuleBP "GetTag" rule-get-tag-dispatch)
-    (method_define EnvBP "EndResultStack" env-end-result-stack-dispatch)
+    (method_define NestedRuleBP "GetTag" rule-get-tag-dispatch)
+    (method_define NestedEnvBP "EndResultStack" env-end-result-stack-dispatch)
     (let exec-result
         (bml-body-source-exec-receiver-call1-nested-implicit
             match-body
@@ -62,8 +62,8 @@
                 (bml-body-source-receiver-call1-nested-implicit-count match-body)
                 1
                 16)
-            (bool-score (method_has RuleBP "GetTag") 32)
-            (bool-score (method_has EnvBP "EndResultStack") 64)
+            (bool-score (method_has NestedRuleBP "GetTag") 32)
+            (bool-score (method_has NestedEnvBP "EndResultStack") 64)
             (str-score (method_invoke rule-instance "GetTag" "outer-rule-tag") "outer-rule-tag" 128)
             (str-score (method_invoke rule-instance "GetTag" (empty)) "fallback-rule-tag" 256)
             (str-score (record_get env-object "endedTag") "outer-rule-tag" 512)

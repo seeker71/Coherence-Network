@@ -52,8 +52,8 @@
     (let chosen (head providers))
     (let first-is-router (if (eq (reg-identity chosen) b-id) 1 0))
 
-    (let topic-nid (make_nodeid 1 2 99 8888))
-    (let query (cq-query "concepts" topic-nid (intern_trivial_string "")))
+    (let multi-hop-topic-nid (make_nodeid 1 2 99 8888))
+    (let query (cq-query "concepts" multi-hop-topic-nid (intern_trivial_string "")))
     (channel-append (reg-channel-path chosen) (channel-message query))
 
     ;; ---------- B routes ----------
