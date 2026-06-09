@@ -1,0 +1,65 @@
+; tests/earth-witness-question-band.fk - Earth witness question proof.
+;
+; preludes: form-stdlib/choice-receipt.fk form-stdlib/earth-witness-question.fk
+;
+; Expected score: 67108863. This proves a witnessed Earth-observation item can
+; answer what/where/when/who/how/why, preserve principle trace, return silence
+; for unknown questions, and bridge the selected answer into CHOICE-RECEIPT.
+
+(do
+    (defn ewq-band-score (ok bit) (if ok bit 0))
+    (defn ewq-band-int (actual expected bit) (ewq-band-score (eq actual expected) bit))
+    (defn ewq-band-str (actual expected bit) (ewq-band-score (str_eq actual expected) bit))
+
+    (let observation (ewq-tessera-observation))
+    (let what (ewq-answer-question-from observation "what"))
+    (let where-answer (ewq-answer-question-from observation "where"))
+    (let when-answer (ewq-answer-question-from observation "when"))
+    (let who-answer (ewq-answer-question-from observation "who"))
+    (let how-answer (ewq-answer-question-from observation "how"))
+    (let why-answer (ewq-answer-question-from observation "why"))
+    (let unknown-answer (ewq-answer-question-from observation "how-many"))
+    (let receipt
+        (ewq-receipt-for-answer
+            observation
+            "how"
+            "earth-witness-question-band"
+            "form/form-stdlib/tests/earth-witness-question-band.fk"
+            20260609))
+    (let silence-receipt
+        (ewq-receipt-for-answer
+            observation
+            "how-many"
+            "earth-witness-question-band"
+            "form/form-stdlib/tests/earth-witness-question-band.fk"
+            20260609))
+    (let signature (cr-choice-signature receipt))
+    (let silence-signature (cr-choice-signature silence-receipt))
+    (sum
+        (list
+            (ewq-band-score (ewq-observation-valid? observation) 1)
+            (ewq-band-int (len (ewq-observation-axes observation)) 6 2)
+            (ewq-band-int (len (ewq-observation-principles observation)) 6 4)
+            (ewq-band-int (ewq-principle-score observation) 63 8)
+            (ewq-band-str (ewq-answer-question what) "what" 16)
+            (ewq-band-str (ewq-answer-value what) "global 10m Earth observation embeddings" 32)
+            (ewq-band-str (ewq-answer-value where-answer) "global land surface" 64)
+            (ewq-band-str (ewq-answer-value when-answer) "2017-2025 annual layers; announced 2026-06-04" 128)
+            (ewq-band-str (ewq-answer-value who-answer) "ESA, University of Cambridge, and Copernicus Sentinel missions" 256)
+            (ewq-band-str (ewq-answer-value how-answer) "fuses Sentinel-2 optical and Sentinel-1 radar observations into embeddings" 512)
+            (ewq-band-str (ewq-answer-value why-answer) "open witness surface for environmental change" 1024)
+            (ewq-band-score (ewq-answered? what) 2048)
+            (ewq-band-score (ewq-answered? where-answer) 4096)
+            (ewq-band-score (ewq-answered? when-answer) 8192)
+            (ewq-band-score (ewq-answered? who-answer) 16384)
+            (ewq-band-score (ewq-answered? how-answer) 32768)
+            (ewq-band-score (ewq-answered? why-answer) 65536)
+            (ewq-band-score (if (ewq-answered? unknown-answer) false true) 131072)
+            (ewq-band-str (ewq-answer-value unknown-answer) "silence" 262144)
+            (ewq-band-score (cr-choice-receipt-valid? receipt) 524288)
+            (ewq-band-score (cr-choice-receipt-valid? silence-receipt) 1048576)
+            (ewq-band-score (cr-choice-signature-preserves? receipt signature) 2097152)
+            (ewq-band-score (cr-choice-signature-preserves? silence-receipt silence-signature) 4194304)
+            (ewq-band-str (cr-signature-selected-path signature) "how" 8388608)
+            (ewq-band-int (cr-signature-candidate-count-bucket signature) 4 16777216)
+            (ewq-band-int (cr-signature-silences silence-signature) 1 33554432))))
