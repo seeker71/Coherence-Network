@@ -172,6 +172,11 @@ services:
       traefik.http.routers.coherence-api-household-events.tls.certresolver: "letsencrypt"
       traefik.http.routers.coherence-api-household-events.priority: "1180"
       traefik.http.routers.coherence-api-household-events.service: "coherence-api-kernel-bml-front-door"
+      traefik.http.routers.coherence-api-kernel-status.rule: "Host(`api.coherencycoin.com`) && Method(`GET`) && Path(`/api/utils/kernel_status`)"
+      traefik.http.routers.coherence-api-kernel-status.entrypoints: "websecure"
+      traefik.http.routers.coherence-api-kernel-status.tls.certresolver: "letsencrypt"
+      traefik.http.routers.coherence-api-kernel-status.priority: "1185"
+      traefik.http.routers.coherence-api-kernel-status.service: "coherence-api-kernel-bml-front-door"
       traefik.http.services.coherence-api-kernel-bml-front-door.loadbalancer.server.port: "8080"
 
 # The api service is defined in the base docker-compose.yml. This overlay only
