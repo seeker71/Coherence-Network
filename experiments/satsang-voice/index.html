@@ -25,6 +25,13 @@
   .seg { color:var(--stone); }
   .seg .t { color:var(--amber-dim); font-family:ui-monospace,monospace; font-size:11px; margin-right:8px; }
   .heard-empty { color:var(--soft); font-style:italic; }
+  .snd { display:flex; align-items:center; gap:10px; margin:7px 0; }
+  .snd-label { width:140px; color:var(--stone); font-size:14px; }
+  .snd-bar { flex:1; height:7px; background:#221d18; border-radius:4px; overflow:hidden; }
+  .snd-bar i { display:block; height:100%; background:var(--amber); }
+  .snd-conf { width:44px; text-align:right; color:var(--amber-dim); font-family:ui-monospace,monospace; font-size:12px; }
+  .snd.low .snd-bar i { background:var(--amber-dim); }
+  .snd.low .snd-label { color:var(--soft); }
   .offer { border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:14px;
            background:var(--panel); }
   .offer .kind { font-size:12px; letter-spacing:.06em; color:var(--amber); margin-bottom:6px; }
@@ -46,6 +53,8 @@
   <section class="col heard">
     <div class="label">what is being heard</div>
     <div class="heard-list" id="heard"><div class="heard-empty">the room is quiet.</div></div>
+    <div class="label" style="margin-top:28px">the sonic field — named with confidence</div>
+    <div id="ambient"><div class="heard-empty">— quiet —</div></div>
   </section>
   <section class="col offers">
     <div class="label">the body offers to the circle — take it or leave it</div>
@@ -77,6 +86,14 @@
         seg.text.replace(/</g,'&lt;') + '</div>').join('');
       heard.scrollTop = heard.scrollHeight;
       for (const k of ['observation','emerging_question','inner_insight','offering']) setOffer(k, s.offerings[k]);
+      const amb = document.getElementById('ambient');
+      if (!s.ambient || !s.ambient.length) amb.innerHTML = '<div class="heard-empty">— quiet —</div>';
+      else amb.innerHTML = s.ambient.map(a => {
+        const pct = Math.round(a.confidence * 100), low = a.confidence < 0.4 ? ' low' : '';
+        return '<div class="snd' + low + '"><span class="snd-label">' + a.label.replace(/</g,'&lt;') +
+          '</span><span class="snd-bar"><i style="width:' + pct + '%"></i></span>' +
+          '<span class="snd-conf">' + a.confidence.toFixed(2) + '</span></div>';
+      }).join('');
     } catch (e) { document.getElementById('status').textContent = 'reconnecting…'; }
   }
   setInterval(tick, 2000); tick();

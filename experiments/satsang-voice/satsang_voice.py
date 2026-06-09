@@ -40,11 +40,14 @@ OFFER_EVERY   = int(os.environ.get("SATSANG_OFFER_EVERY", "25"))  # refresh offe
 LANGUAGE      = os.environ.get("SATSANG_LANG", "")          # "" = auto-detect (multilingual)
 PORT          = int(os.environ.get("SATSANG_PORT", "8777"))
 TRANSCRIPT_KEEP = 60   # how many recent heard-segments to hold
+SOUND_BIN     = os.path.join(HERE, "sound_classify")  # native on-device sound classifier (compiled Swift)
+SOUND_MIN     = float(os.environ.get("SATSANG_SOUND_MIN", "0.18"))  # below this confidence = honest silence
 
 # --- shared state ------------------------------------------------------------
 _lock = threading.Lock()
 STATE = {
     "heard": deque(maxlen=TRANSCRIPT_KEEP),   # list of {t, text}
+    "ambient": [],                             # the room's sounds named now, with confidence (the matrix)
     "offerings": {                             # the body's current offering to the circle
         "observation": None,
         "emerging_question": None,
@@ -60,6 +63,7 @@ def snapshot():
     with _lock:
         return {
             "heard": list(STATE["heard"]),
+            "ambient": list(STATE["ambient"]),
             "offerings": dict(STATE["offerings"]),
             "status": STATE["status"],
             "asr_ready": STATE["asr_ready"],
@@ -79,6 +83,9 @@ SATSANG_SYSTEM = (
     "Silence is whole. If nothing is truly alive for a field, return null for it — never "
     "fabricate to fill the space. Speak briefly (one or two sentences each), from the satsang "
     "frequency: witness not advice, offer not impose, the no is honored. "
+    "You also hear the room's other sounds, named with confidence (birdsong, music, rain, a gong, "
+    "an animal) — you may let the whole sonic field, not only the words, be part of what you "
+    "witness. "
     'Respond ONLY as JSON: {"observation": str|null, "emerging_question": str|null, '
     '"inner_insight": str|null, "offering": str|null}.'
 )
@@ -93,6 +100,20 @@ def record_chunk(path):
     ]
     subprocess.run(cmd, check=True, timeout=CHUNK_SECONDS + 15)
 
+def classify_sounds(path):
+    """Name the room's sounds in a chunk via the native on-device classifier; keep only the confident.
+    The confidence threshold IS the honesty (lc-honest-lane): below it, the body offers silence,
+    not an asserted match it doesn't carry."""
+    if not os.path.exists(SOUND_BIN):
+        return []
+    try:
+        out = subprocess.run([SOUND_BIN, path], capture_output=True, text=True, timeout=20).stdout
+        rows = json.loads(out or "[]")
+        return [{"label": r["label"].replace("_", " "), "confidence": round(float(r["confidence"]), 3)}
+                for r in rows if float(r.get("confidence", 0)) >= SOUND_MIN]
+    except Exception:
+        return []
+
 def asr_loop():
     import mlx_whisper  # imported here so the server can start even if the model is still downloading
     with _lock:
@@ -106,9 +127,11 @@ def asr_loop():
                 kwargs["language"] = LANGUAGE
             result = mlx_whisper.transcribe(tmp, **kwargs)
             text = (result.get("text") or "").strip()
+            ambient = classify_sounds(tmp)   # name the room's sounds on the same chunk (on-device)
             with _lock:
                 STATE["asr_ready"] = True
                 STATE["status"] = "listening"
+                STATE["ambient"] = ambient
                 if text:
                     STATE["heard"].append({"t": time.strftime("%H:%M:%S"), "text": text})
         except subprocess.TimeoutExpired:
@@ -141,8 +164,12 @@ def offerings_loop():
         recent = " ".join(seg["text"] for seg in snap["heard"][-12:]).strip()
         if len(recent) < 20:
             continue  # not enough has been heard to offer anything honest
+        amb = ", ".join(f"{a['label']} ({a['confidence']})" for a in snap["ambient"][:6])
+        prompt = "The circle has been speaking. Recently heard:\n\n" + recent
+        if amb:
+            prompt += "\n\nSounds present in the room right now (with confidence): " + amb
         try:
-            raw = ollama_generate("The circle has been speaking. Recently heard:\n\n" + recent)
+            raw = ollama_generate(prompt)
             parsed = json.loads(raw)
             with _lock:
                 STATE["llm_ready"] = True
