@@ -1,0 +1,127 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/tessera-external-witness-20260609",
+  "commit_scope": "Add a Tessera external witness adapter that checks the public GeoTessera/S3 surface, hashes compact tile evidence, and emits Form question/choice receipt proof.",
+  "files_owned": [
+    "form/form-stdlib/tessera-external-witness.fk",
+    "form/form-stdlib/tests/tessera-external-witness-band.fk",
+    "scripts/tessera_external_witness_probe.py",
+    "kernels/KERNEL_COMMON_GROUND.md",
+    "docs/system_audit/commit_evidence_2026-06-09_tessera_external_witness.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "curl -sS --max-time 5 https://pulse.coherencycoin.com/pulse/now | jq '{overall, silences: (.ongoing_silences | length), silent_organs: [.organs[] | select(.status != \"breathing\") | .name]}'",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/tessera_external_witness_probe.py --range-bytes 4096",
+      "python3 -m py_compile scripts/tessera_external_witness_probe.py",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/earth-witness-question.fk form-stdlib/tessera-external-witness.fk form-stdlib/tests/tessera-external-witness-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/earth-witness-question.fk form-stdlib/tessera-external-witness.fk form-stdlib/tests/tessera-external-witness-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-09_tessera_external_witness.json",
+      "git diff --check",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "observed_results": [
+      "pulse overall=breathing, silences=0",
+      "branch rebased cleanly onto origin/main with autostash reapplied",
+      "live Tessera probe returned ok=true, manifest_status=200, embedding_status=206, scale_status=200, byte_count=4096, sha256=cb992c1d4ecd93b3da28bfaa8acdcb17ab1fc46325d5b714bb31ea9028877cb2, tile=grid_0.15_52.05",
+      "tessera_external_witness_probe.py compiled",
+      "tessera-external-witness-band.fk source proof -> 67108863 with 1 ok, 0 divergent across Go, Rust, and TypeScript",
+      "tessera-external-witness-band.fk binary artifact proof -> 67108863 with 1 ok, 0 divergent across Go, Rust, and TypeScript",
+      "evidence validation passed",
+      "git diff --check passed",
+      "local PR guard ready_for_push=True and local_preflight=pass",
+      "check_pr_followthrough reported codex_open_prs=0 and stale_codex_prs=0"
+    ],
+    "notes": "The live carrier checks public anonymous S3, using the GeoTessera v1.1/cambridge 2024 sample tile and hashing only a 4096-byte range to avoid storing or downloading the full embedding tensor by default."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and production verification."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Coherence can now use Tessera as an external witness: a live public probe checks manifest/tile availability, hashes compact range evidence, and the Form proof converts that evidence into question answers plus trace-preserving CHOICE-RECEIPT signatures.",
+    "public_endpoints": [
+      "https://s3.us-west-2.amazonaws.com/tessera-embeddings/v1.1/manifest.parquet",
+      "https://s3.us-west-2.amazonaws.com/tessera-embeddings/v1.1/global_0.1_degree_representation.cambridge/2024/grid_0.15_52.05/grid_0.15_52.05.npy",
+      "https://s3.us-west-2.amazonaws.com/tessera-embeddings/v1.1/global_0.1_degree_representation.cambridge/2024/grid_0.15_52.05/grid_0.15_52.05_scales.npy",
+      "internal Form sibling kernels"
+    ],
+    "test_flows": [
+      "python3 scripts/tessera_external_witness_probe.py --range-bytes 4096",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/earth-witness-question.fk form-stdlib/tessera-external-witness.fk form-stdlib/tests/tessera-external-witness-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/earth-witness-question.fk form-stdlib/tessera-external-witness.fk form-stdlib/tests/tessera-external-witness-band.fk"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Focused local live probe and Form source/binary proofs passed. CI, rebase, PR, and deploy verification are still pending."
+  },
+  "idea_ids": [
+    "earth-witness-question-shape",
+    "external-witness-api",
+    "knowable-trust-expression"
+  ],
+  "spec_ids": [
+    "kernel-common-ground",
+    "form-question-witness",
+    "tessera-external-witness"
+  ],
+  "task_ids": [
+    "tessera-external-witness-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "north-star-direction",
+        "external-witness-requirement",
+        "tessera-api-requirement"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "live-probe",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tessera-external-witness.fk adds source, manifest, tile, byte-range hash, external witness, and receipt bridge cells.",
+    "form/form-stdlib/tests/tessera-external-witness-band.fk proves the external witness and answer receipts preserve valid signatures.",
+    "scripts/tessera_external_witness_probe.py checks public anonymous S3 and hashes compact returned embedding evidence.",
+    "kernels/KERNEL_COMMON_GROUND.md records the Tessera external witness shape beside the Earth witness question feature.",
+    "GeoTessera docs: https://geotessera.readthedocs.io/en/latest/",
+    "GeoTessera GitHub: https://github.com/ucam-eo/geotessera",
+    "Tessera project site: https://geotessera.org/",
+    "ESA Tessera article: https://www.esa.int/Applications/Observing_the_Earth/Copernicus/Tessera_AI_model_offers_accessible_way_to_view_Earth"
+  ],
+  "change_files": [
+    "form/form-stdlib/tessera-external-witness.fk",
+    "form/form-stdlib/tests/tessera-external-witness-band.fk",
+    "scripts/tessera_external_witness_probe.py",
+    "kernels/KERNEL_COMMON_GROUND.md",
+    "docs/system_audit/commit_evidence_2026-06-09_tessera_external_witness.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}

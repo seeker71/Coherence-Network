@@ -241,6 +241,33 @@ when the Tessera observation answers `what`, `where`, `when`, `who`, `how`, and
 principles, preserves silence for an unknown question, and keeps a valid
 compressed choice signature for both answered and silent questions.
 
+## Tessera External Witness
+
+`form/form-stdlib/tessera-external-witness.fk` binds the question shape to a live
+public data source instead of only a news/source fixture.
+
+The adapter names four evidence cells:
+
+- `TESSERA-EXTERNAL-SOURCE`: public source, access mode, license, base URL, docs
+- `TESSERA-MANIFEST-WITNESS`: dataset version/variant, manifest URL, status,
+  content length, ETag, and last-modified time
+- `TESSERA-TILE-WITNESS`: year, lon/lat tile coordinate, embedding/scales URLs,
+  status codes, and content lengths
+- `TESSERA-RANGE-WITNESS`: byte range and SHA-256 digest for compact tensor
+  evidence
+
+The live carrier is `scripts/tessera_external_witness_probe.py`. By default it
+uses the public v1.1/cambridge 2024 `grid_0.15_52.05` tile, reads the manifest
+and tile metadata through anonymous S3, and hashes only the first 4096 bytes of
+the embedding tile. The current witness hash for that range is
+`cb992c1d4ecd93b3da28bfaa8acdcb17ab1fc46325d5b714bb31ea9028877cb2`.
+
+The Form proof band is
+`form/form-stdlib/tests/tessera-external-witness-band.fk`. It returns `67108863`
+across Go, Rust, and TypeScript in source and binary modes when the source,
+manifest, tile, byte-range hash, question answers, external-witness receipt, and
+answer receipt all preserve valid compressed signatures.
+
 ## North-Star Constraint
 
 Compression is trustworthy only when it preserves the texture of the witnessed
