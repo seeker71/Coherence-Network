@@ -1242,10 +1242,11 @@ healthy throughout — `/api/health` ok, `deployed_sha` unchanged (production co
 never moved), the witness breathing with zero silences before and after every
 step; Traefik routing was never touched.
 
-**What remains is the flip** — pointing Traefik at the kernel-router (uncomment
-the one label set, drop the api service's own rule). That is the single move that
-touches live traffic; it is Urs's intent (given), staged carefully on top of this
-proven shadow.
+**What remains before the ordinary flip** is sustained canary evidence. The next
+public move is not another all-traffic re-point: it is a header-gated Traefik
+router that sends only explicit `X-Form-Native-Preview: 1` or
+`X-Form-Native-Public-Gate: 1` requests to kernel-router, while ordinary
+`Host(api.coherencycoin.com)` traffic still reaches api:8000 directly.
 
 ## Local front-door preflight — the gate before another flip
 
@@ -1281,3 +1282,27 @@ The remote flip shall have the same order: start kernel-router beside api, prove
 host-local fan-out and native headers through the router, prove the service is
 running and reachable from Traefik's network, then repoint Traefik. Do not
 disable the api router first.
+
+## Header-gated public canary — explicit traffic only
+
+`deploy/kernel-router/docker-compose.kernel-router.yml` now carries the
+deployment shape between local rehearsal and full flip. The service runs
+`ROUTES_FILE=/routes/production-routes.fk` and Traefik 3 header rules:
+
+- `Host(api.coherencycoin.com) && Header(X-Form-Native-Preview, 1)` routes to
+  kernel-router for native SQL preview.
+- `Host(api.coherencycoin.com) && Header(X-Form-Native-Public-Gate, 1)` routes
+  to kernel-router for rollback-receipted public-gate decisions.
+
+The base `coherence-api` router stays in place, so no-header traffic remains
+FastAPI. `deploy/hostinger/auto-deploy.sh` layers the overlay, starts
+`kernel-router`, and locally probes `POST /api/ideas` with the public-gate
+header for `202`, `X-Form-Router: native-kernel`, and `decision_receipt` before
+CI runs the public verifier through Cloudflare/Traefik:
+
+```
+scripts/verify_kernel_canary_public_gate.sh https://api.coherencycoin.com
+```
+
+Rollback for the canary is removing the overlay service/labels; rollback for the
+ordinary flip remains restoring the base api router.

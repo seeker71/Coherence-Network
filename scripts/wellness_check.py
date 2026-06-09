@@ -271,6 +271,7 @@ def sense_spec_symbols() -> list[str]:
             rf"\b(?:pub(?:\([^)]+\))?\s+)?type\s+{re.escape(sym)}\b",
             rf"\b(?:pub(?:\([^)]+\))?\s+)?union\s+{re.escape(sym)}\b",
             rf"\bmacro_rules!\s+{re.escape(sym)}\b",
+            rf"^\s*(?:function\s+)?{re.escape(sym)}\s*\(\)\s*\{{",  # shell function
             rf"^{re.escape(sym)}\s*[:=]",              # top-level assignment / type alias
             rf"\b{re.escape(sym)}\s*=\s*\(",           # arrow function / lambda binding
         ]

@@ -1,0 +1,173 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/native-front-door-canary-20260609",
+  "commit_scope": "Expose the native mutation public gate through a header-gated production canary, keep ordinary no-header traffic on the existing API route, and repair the live attention metric route so the kernel front door proves end to end.",
+  "files_owned": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    ".github/workflows/public-deploy-contract.yml",
+    "api/tests/test_ideas_router_form.py",
+    "api/tests/test_native_mutation_ab_observation.py",
+    "api/tests/test_native_mutation_public_gate.py",
+    "api/tests/test_native_mutation_route_side_effect_binding.py",
+    "api/tests/test_spec_registry_router_form.py",
+    "deploy/hostinger/auto-deploy.sh",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/kernel-router/mutation_ab_observation_harness.py",
+    "deploy/kernel-router/mutation_public_gate_harness.py",
+    "deploy/kernel-router/production-routes.fk",
+    "docs/PRODUCTION-SUBSTRATE.md",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "docs/system_audit/commit_evidence_2026-06-09_native_front_door_canary.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "kernels/KERNEL_AS_ROUTER.md",
+    "scripts/verify_kernel_canary_public_gate.sh",
+    "scripts/wellness_check.py",
+    "specs/ideas-router-form-expression.md",
+    "specs/native-mutation-public-gate.md",
+    "specs/native-mutation-side-effects.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_kernel_canary_public_gate.sh",
+      "scripts/check_route_manifests.sh",
+      "scripts/kernel_front_door_local_preflight.sh",
+      "python3 deploy/kernel-router/mutation_public_gate_harness.py --json",
+      "python3 deploy/kernel-router/mutation_ab_observation_harness.py --json",
+      "cd api && python3 -m pytest -q tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py tests/test_native_mutation_route_side_effect_binding.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py",
+      "cd api && python3 -m ruff check tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py tests/test_native_mutation_route_side_effect_binding.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py ../deploy/kernel-router/mutation_public_gate_harness.py ../deploy/kernel-router/mutation_ab_observation_harness.py",
+      "python3 -m py_compile deploy/kernel-router/mutation_public_gate_harness.py deploy/kernel-router/mutation_ab_observation_harness.py",
+      "python3 -m py_compile scripts/wellness_check.py",
+      "python3 scripts/validate_spec_quality.py --file specs/native-mutation-public-gate.md",
+      "python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expression.md",
+      "python3 scripts/validate_spec_quality.py --file specs/native-mutation-side-effects.md"
+    ],
+    "summary": "The deploy overlay now enables kernel-router only for explicit X-Form-Native-Preview: 1 and X-Form-Native-Public-Gate: 1 traffic on api.coherencycoin.com, with no host port and no ordinary no-header flip. Hostinger auto-deploy starts and locally probes the kernel canary before continuing, and CI/public deploy workflows run a public verifier that expects native decision receipts for the header treatment and non-native control for no-header traffic. Local kernel front-door preflight passed after the attention route was repaired to use structured alist router facts instead of a typed request route that cannot yet carry non-string live metrics. Wellness symbol resolution now recognizes shell function declarations so specs can truthfully claim deployed shell helpers.",
+    "known_limitations": [
+      {
+        "scope": "public production canary",
+        "observed": "The public verifier is wired but not yet observed against a deployed commit in this branch. ci_validation and deploy_validation remain pending until PR checks and Hostinger deploy complete."
+      },
+      {
+        "scope": "ordinary public mutations",
+        "observed": "No ordinary no-header POST/PATCH/DELETE mutation traffic moves in this slice. No-header traffic remains on the existing FastAPI front-door route."
+      },
+      {
+        "scope": "typed KernelHTTPRequest metrics",
+        "observed": "The typed route-data request surface currently carries string fields only, so live structured router metrics still use the compatibility alist route. This is an explicit native-form constraint for the next typed-request carrier move."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push and GitHub checks for codex/native-front-door-canary-20260609."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "./scripts/verify_kernel_canary_public_gate.sh https://api.coherencycoin.com"
+    ],
+    "notes": "The verifier is added and will run in the public deploy workflow. It should pass only after the Hostinger deploy has layered the kernel-router canary overlay."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Explicit canary-header traffic can reach native mutation public-gate decision receipts through the kernel-router front door, while ordinary no-header public traffic remains outside the native canary.",
+    "public_endpoints": [
+      "POST /api/ideas",
+      "PATCH /api/ideas/{idea_id}",
+      "POST /api/spec-registry",
+      "PATCH /api/spec-registry/{spec_id}",
+      "DELETE /api/spec-registry/{spec_id}",
+      "GET /api/attention/kernel-runtime"
+    ],
+    "test_flows": [
+      "scripts/kernel_front_door_local_preflight.sh -> PASS fanout-exact version/health, PASS native-value coherence_weight, PASS native-attention with live metrics",
+      "python3 deploy/kernel-router/mutation_public_gate_harness.py --json -> 5/5 cases passed, confidence 1.0, recommendation verify_deployed_header_canary, ordinary_traffic_flip_performed false",
+      "python3 deploy/kernel-router/mutation_ab_observation_harness.py --json -> 5/5 cases passed, confidence 1.0, ordinary_traffic_flip_performed false",
+      "cd api && python3 -m pytest -q tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py tests/test_native_mutation_route_side_effect_binding.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py -> 30 passed",
+      "scripts/verify_kernel_canary_public_gate.sh is wired for deployed treatment/control proof and intentionally remains pending until this commit deploys"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local kernel canary proof is complete, but the public canary must be deployed, verified, and observed over sustained X-Form-Native-Public-Gate traffic before any ordinary no-header flip."
+  },
+  "idea_ids": [
+    "idea-realization-engine",
+    "data-infrastructure"
+  ],
+  "spec_ids": [
+    "specs/native-mutation-public-gate.md",
+    "specs/ideas-router-form-expression.md",
+    "specs/native-mutation-side-effects.md"
+  ],
+  "task_ids": [
+    "native-front-door-canary",
+    "native-mutation-public-gate",
+    "native-mutation-sustained-canary-observation"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/verify_kernel_canary_public_gate.sh",
+    "deploy/kernel-router/production-routes.fk",
+    "deploy/kernel-router/mutation_public_gate_harness.py",
+    "deploy/kernel-router/mutation_ab_observation_harness.py",
+    "api/tests/test_native_mutation_public_gate.py",
+    "docs/PRODUCTION-SUBSTRATE.md",
+    "kernels/KERNEL_AS_ROUTER.md",
+    "specs/native-mutation-public-gate.md"
+  ],
+  "change_files": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    ".github/workflows/public-deploy-contract.yml",
+    "api/tests/test_ideas_router_form.py",
+    "api/tests/test_native_mutation_ab_observation.py",
+    "api/tests/test_native_mutation_public_gate.py",
+    "api/tests/test_native_mutation_route_side_effect_binding.py",
+    "api/tests/test_spec_registry_router_form.py",
+    "deploy/hostinger/auto-deploy.sh",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/kernel-router/mutation_ab_observation_harness.py",
+    "deploy/kernel-router/mutation_public_gate_harness.py",
+    "deploy/kernel-router/production-routes.fk",
+    "docs/PRODUCTION-SUBSTRATE.md",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "docs/system_audit/commit_evidence_2026-06-09_native_front_door_canary.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "kernels/KERNEL_AS_ROUTER.md",
+    "scripts/verify_kernel_canary_public_gate.sh",
+    "scripts/wellness_check.py",
+    "specs/ideas-router-form-expression.md",
+    "specs/native-mutation-public-gate.md",
+    "specs/native-mutation-side-effects.md"
+  ],
+  "change_intent": "runtime_feature"
+}

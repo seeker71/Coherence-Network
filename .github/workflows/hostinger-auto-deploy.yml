@@ -8,8 +8,10 @@ on:
       - 'web/**'
       - 'pulse/**'
       - 'deploy/hostinger/**'
+      - 'deploy/kernel-router/**'
       - 'docs/breath/**'
       - 'scripts/verify_web_api_deploy.sh'
+      - 'scripts/verify_kernel_canary_public_gate.sh'
       - 'scripts/.gitnexus-pin'
       - '.github/workflows/hostinger-auto-deploy.yml'
       - 'Dockerfile*'
@@ -159,3 +161,7 @@ jobs:
             sleep "$backoff"
             attempt=$((attempt + 1))
           done
+
+      - name: Verify kernel public canary
+        run: |
+          ./scripts/verify_kernel_canary_public_gate.sh "${PUBLIC_DEPLOY_API_BASE}"
