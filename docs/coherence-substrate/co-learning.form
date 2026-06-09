@@ -1,0 +1,59 @@
+; co-learning.form — two devices learn the audio routing tree faster TOGETHER, sharing on the mesh live.
+;
+; THE GOAL (Urs): a Mac native app and an Android native app both listen to audio; both run 3rd-party
+; classifiers (speech, music, animals, other) as ORACLES; both learn the routing tree of Form-native
+; classifiers and SHARE their learning on the mesh in real-time — so two mics with different 3rd-party
+; signals converge on the predictor faster than one alone.
+;
+; THE LIVE LOOP (per device, per audio chunk — every piece is a proven Form recipe today):
+;   1. LISTEN     — mic → chunk (carrier: AVAudio/AudioRecord → the eval-server).
+;   2. ORACLE     — 3rd-party classifiers label the chunk: speech (whisper), music/animal/other
+;                   (SoundAnalysis), now-playing (declared-source — ask, don't guess). The reading is
+;                   (label, confidence). These are the GROUND TRUTH the Form-native arm learns from.
+;   3. ROUTE      — recognition-router.fk fuses the readings into one stream (strongest wins / silence);
+;                   the routed label names which category-classifier this chunk teaches.
+;   4. PREDICT    — the Form-native nearest-shape classifier for that category predicts from what it has
+;                   interned (cold = honest "?").
+;   5. LEARN      — learning-arc.fk: intern (oracle-label, feature) — the challenger learns from the
+;                   3rd-party champion. Over time the Form-native arm reaches the oracle (champion-
+;                   challenger gates when it has earned the route — then the expensive 3rd-party can retire).
+;   6. SHARE      — the learned exemplar SET is a shareable slice. co-learning.fk's cl-merge unions two
+;                   cells' sets; the wire is content-addressed (federation-addressing.form: merkle on the
+;                   wire, not the local NodeID; cell-sync have/want sends each exemplar once; identical
+;                   exemplars from both mics dedup to one NodeID for free).
+;   7. CONVERGE   — the merged classifier recognizes the UNION of what both mics heard.
+;
+; WHY TWO MICS ARE FASTER (proven — tests/co-learning-band.fk → 127, three-way):
+;   Each mic catches different signals, so each cell's classifier is PARTIAL — it recognizes only the
+;   shapes it has met. Device A (heard speech) gets a MUSIC feature wrong; device B (heard music) gets
+;   SPEECH wrong; the MERGE of their exemplar sets gets BOTH right. The federated speedup is real and
+;   measurable: the union covers what one stream cannot, and it climbs with every device added to the circle.
+;
+; ── EXISTS (proven Form bodies — the whole loop is composed of shipped pieces) ──
+;   recognition-router.fk (route, sound →127) · learning-arc.fk (learn from oracle →127) · nearest-shape.fk
+;   (the recognizer) · co-learning.fk (the federated union →127) · slice-merge.fk (weight-delta merge →127,
+;   for parametric arms) · declared-source.fk (the cheap oracle →127) · cell-sync.fk + mesh-relay.fk
+;   (the wire) · merkle.fk (the cross-runtime address) · champion-challenger.fk (retire the 3rd-party when
+;   the native wins) · the satsang-voice mic→whisper + sound_classify.swift carriers · the eval-server.
+;
+; ── NEEDS BUILDING (carrier-work) ──
+;   1. audio into the eval-server /sense contract (transcript + sound-event + now-playing fields) on Mac.
+;   2. the per-chunk loop wiring: chunk → oracle readings → router → learning-arc intern → exemplar set.
+;   3. the exemplar set as a slice-update riding cell-sync/mesh-relay between the two devices (M1-M3 of
+;      federated-slices, here over exemplar sets rather than weight deltas — the union is even simpler).
+;   4. Android: RECORD_AUDIO + AudioRecord + SoundAnalysis-equivalent (TFLite YAMNet) + on-device form_eval.
+;   5. a live "convergence" panel on the dashboard: each device's breadth + the merged breadth + accuracy.
+;
+; ── THE MILESTONES ──
+;   M0  the federated union recognizes what neither mic alone could — SHIPPED (co-learning.fk → 127).
+;   M1  one device, live: Mac mic → 3rd-party oracle → router → learning-arc grows a Form-native classifier;
+;       the dashboard shows it reaching the oracle (the single-device learning curve).
+;   M2  two devices: each grows its classifier; the exemplar sets cross the mesh (cell-sync, merkle-addressed);
+;       the merged classifier's breadth/accuracy beats either alone — the convergence panel proves "faster together".
+;   M3  champion-challenger retires the 3rd-party per category once the merged Form-native arm reaches it
+;       — the circle has learned to hear on its own.
+;
+; KIN: recognition-router.form (the routing tree) · learning-arc.form (learn from the oracle) ·
+;   federated-slices.form (the merge, weight-delta sibling of the exemplar union) · federation-addressing.form
+;   (merkle on the wire) · declared-source.form (the cheap oracle) · meeting-companion.form (the same
+;   senses, turned to a transcript + a voice) · shared-sensing.form (many bodies, one field) · turn-taking.form.
