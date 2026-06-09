@@ -40,13 +40,20 @@
 ;       ("ARM aarch64 ... interpreter /system/bin/linker64", 4.6 MB), the whole engine + dep tree
 ;       (tokio-postgres, rustls, ureq) built in ~70s. The transitive-dep worry above is RESOLVED: every
 ;       dep cross-compiled under the NDK clang (pyo3 stays OFF — opt-in feature — so no Python-for-Android).
-;     - Reproducible via form/form-kernel-rust/build-android.sh. The real gotcha was the toolchain, not
-;       the code: a Homebrew rustc has no cross-std, so the rustup toolchain (with the aarch64 std) must
-;       be FIRST in PATH, because cargo-ndk shells out to `cargo build` and re-resolves PATH.
+;     - THE APP-LOADABLE CDYLIB IS BUILT. The predicted "carve the engine out of main.rs" refactor was
+;       unnecessary: lib.rs already includes main.rs as a module (the PyO3 path), so the cdylib needed only
+;       a non-default `cabi` feature + a #[no_mangle] extern "C" form_eval(src)->display-text entry over the
+;       SAME kernel::run_source the CLI runs (+ form_eval_free). `cargo ndk -t arm64-v8a build --release
+;       --lib --features cabi` emits libform_kernel_rust.so: "ELF 64-bit LSB shared object, ARM aarch64 ...
+;       exports form_eval / form_eval_free" (~4 MB, ~27s). Verified functionally via ctypes on host:
+;       sd-moving? and ns-label recognize correctly across the C boundary. Both artifacts (bin + cdylib)
+;       are file-checked AND symbol-checked by build-android.sh. The real gotcha was the toolchain, not the
+;       code: a Homebrew rustc has no cross-std, so the rustup toolchain (aarch64 std) must be FIRST in PATH.
 ;   WHAT IS STILL UNTESTED FOR THIS KERNEL  [carrier-work — not done]:
-;     - The binary runs on a device via adb/Termux, but an APP-loadable cdylib is not built yet: the
-;       engine lives in main.rs (a binary), so carving an extern "C" evaluate(recipe)->result entry into
-;       a shared module + building crate-type cdylib for jniLibs is the next step (a bounded refactor).
+;     - The .so exists + exports the entry; what remains is WIRING, not engine: a thin Kotlin JNI shim
+;       (external fun formEval(src): String), the .so in jniLibs/arm64-v8a, the recipes bundled as assets,
+;       and a device/emulator to actually run a recipe on ARM hardware (host-ctypes proves the symbol, not
+;       the phone runtime). On-device three-way (all three kernels on one phone) still UNRUN.
 ;     - Actually RUNNING a recipe on an Android device/emulator is unverified — there is no device here yet.
 ;
 ;
@@ -158,13 +165,16 @@
 ;
 ; ── THE HONEST PATH (what to build, in order) ──
 ;   1. the shared-sensing circle + cross-grounding         [SHIPPED: shared-sensing.fk -> 127, 3-way]
-;   2. ONE kernel built for ARM:                           [carrier-work — pick one, not all three]
-;        A. form-kernel-rust as cdylib via cargo-ndk + a thin JNI evaluate(string)->string, OR
+;   2. ONE kernel built for ARM as an app-loadable lib:    [DONE for Rust — A built + symbol-verified]
+;        A. form-kernel-rust as cdylib via cargo-ndk + extern "C" form_eval  [MEASURED 2026-06-09: .so
+;           exports form_eval/form_eval_free, ARM aarch64; build-android.sh]. The JNI declaration
+;           (external fun formEval(src): String) is the remaining thin shim, OR
 ;        B. form-kernel-go via gomobile bind behind a total, panic-free shim, OR
 ;        C. form-kernel-ts bundled onto QuickJS/Hermes in the NDK layer.
 ;   3. ONE sensor port wired across the FFI boundary:       [carrier-work]
 ;        accelerometer via NDK Sensor API, OR microphone via AAudio — whichever the first satsang
-;        needs — interned as a cell, handed to the proven recipe.
+;        needs — interned as a cell, handed to the proven recipe. (The phone already reads accel in
+;        the coherence-sense app via Kotlin SensorManager; the FFI step is handing that to formEval.)
 ;   4. cell-sync transport device<->device                 [build — named in shared-sensing.form §3]
 ;   5. the live two-device satsang on real hardware         [build — the payoff]
 ;
