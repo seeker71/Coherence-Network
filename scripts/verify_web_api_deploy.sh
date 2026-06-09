@@ -1156,6 +1156,105 @@ check_kernel_status_native() {
   return 0
 }
 
+check_agent_tasks_activity_native() {
+  local active_url="${API_URL%/}/api/agent/tasks/active"
+  local activity_url="${API_URL%/}/api/agent/tasks/activity?limit=50&offset=0"
+  local active_headers="$TMP_DIR/agent_tasks_active.headers.txt"
+  local active_body="$TMP_DIR/agent_tasks_active.body.json"
+  local activity_headers="$TMP_DIR/agent_tasks_activity.headers.txt"
+  local activity_body="$TMP_DIR/agent_tasks_activity.body.json"
+  local active_status active_router active_handler active_authority
+  local activity_status activity_router activity_handler activity_authority
+
+  echo
+  echo "==> Agent task active native route: ${active_url}"
+
+  active_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -L -D "$active_headers" -o "$active_body" -w "%{http_code}" \
+    --max-time "$CURL_MAX_TIME" \
+    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+    "$active_url" \
+    -H "Accept: application/json" || true)"
+  active_router="$(awk 'tolower($1) == "x-form-router:" { print $2 }' "$active_headers" | tail -n 1 | tr -d '\r')"
+  active_handler="$(awk 'tolower($1) == "x-form-handler:" { print $2 }' "$active_headers" | tail -n 1 | tr -d '\r')"
+  active_authority="$(awk 'tolower($1) == "x-form-python-authority:" { print $2 }' "$active_headers" | tail -n 1 | tr -d '\r')"
+
+  echo "HTTP status: ${active_status:-unknown}"
+  echo "X-Form-Router: ${active_router:-<missing>}"
+  echo "X-Form-Handler: ${active_handler:-<missing>}"
+  echo "X-Form-Python-Authority: ${active_authority:-<missing>}"
+
+  if [[ -z "$active_status" || "$active_status" -lt 200 || "$active_status" -ge 300 ]]; then
+    echo "FAIL: agent task active route did not return 2xx"
+    head -c 250 "$active_body" || true
+    echo
+    return 1
+  fi
+  if [[ "$active_router" != "native-kernel" || "$active_handler" != "api_agent_tasks_active" || "$active_authority" != "false" ]]; then
+    echo "FAIL: agent task active route did not return native BML proof headers"
+    head -c 250 "$active_body" || true
+    echo
+    return 1
+  fi
+
+  echo
+  echo "==> Agent task activity native route: ${activity_url}"
+
+  activity_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -L -D "$activity_headers" -o "$activity_body" -w "%{http_code}" \
+    --max-time "$CURL_MAX_TIME" \
+    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+    "$activity_url" \
+    -H "Accept: application/json" || true)"
+  activity_router="$(awk 'tolower($1) == "x-form-router:" { print $2 }' "$activity_headers" | tail -n 1 | tr -d '\r')"
+  activity_handler="$(awk 'tolower($1) == "x-form-handler:" { print $2 }' "$activity_headers" | tail -n 1 | tr -d '\r')"
+  activity_authority="$(awk 'tolower($1) == "x-form-python-authority:" { print $2 }' "$activity_headers" | tail -n 1 | tr -d '\r')"
+
+  echo "HTTP status: ${activity_status:-unknown}"
+  echo "X-Form-Router: ${activity_router:-<missing>}"
+  echo "X-Form-Handler: ${activity_handler:-<missing>}"
+  echo "X-Form-Python-Authority: ${activity_authority:-<missing>}"
+
+  if [[ -z "$activity_status" || "$activity_status" -lt 200 || "$activity_status" -ge 300 ]]; then
+    echo "FAIL: agent task activity route did not return 2xx"
+    head -c 250 "$activity_body" || true
+    echo
+    return 1
+  fi
+  if [[ "$activity_router" != "native-kernel" || "$activity_handler" != "api_agent_tasks_activity" || "$activity_authority" != "false" ]]; then
+    echo "FAIL: agent task activity route did not return native BML proof headers"
+    head -c 250 "$activity_body" || true
+    echo
+    return 1
+  fi
+
+  if command -v jq >/dev/null 2>&1; then
+    if ! jq -e 'type == "array" and length == 0' "$active_body" >/dev/null; then
+      echo "FAIL: active task body no longer matches the empty-public contract"
+      jq '{type: type, length: length, sample: .[:2]}' "$active_body" 2>/dev/null || head -c 500 "$active_body"
+      echo
+      return 1
+    fi
+    if ! jq -e '.items == [] and .total == 0 and .limit == 50 and .offset == 0' "$activity_body" >/dev/null; then
+      echo "FAIL: task activity body no longer matches the empty-public page contract"
+      jq '{items, total, limit, offset}' "$activity_body" 2>/dev/null || head -c 500 "$activity_body"
+      echo
+      return 1
+    fi
+  else
+    if [[ "$(tr -d '[:space:]' <"$active_body")" != "[]" ]] \
+      || ! grep -q '"items":\[\]' "$activity_body" \
+      || ! grep -q '"total":0' "$activity_body"; then
+      echo "FAIL: agent task activity bodies no longer match the empty-public contract"
+      head -c 500 "$active_body" || true
+      head -c 500 "$activity_body" || true
+      echo
+      return 1
+    fi
+  fi
+
+  echo "PASS"
+  return 0
+}
+
 if [[ "${VERIFY_WEB_API_DEPLOY_SOURCE_ONLY:-0}" == "1" ]]; then
   return 0 2>/dev/null || exit 0
 fi
@@ -1183,6 +1282,7 @@ check_kernel_image_native_proposal || fail=1
 check_inventory_flow_native || fail=1
 check_inventory_flow_observation_native || fail=1
 check_kernel_status_native || fail=1
+check_agent_tasks_activity_native || fail=1
 check_household_events_native || fail=1
 check_url "Public web root" "${WEB_URL%/}/" || fail=1
 check_web_css_assets "${WEB_URL%/}/" || fail=1
