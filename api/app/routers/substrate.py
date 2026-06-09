@@ -11,6 +11,10 @@ for the implementation.
 """
 from __future__ import annotations
 
+import hashlib
+import json
+import re
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
@@ -39,6 +43,12 @@ from app.services.unified_db import session as session_scope
 
 
 router = APIRouter()
+_KERNEL_CORE_BML_RELATIVE = Path("form") / "form-stdlib" / "bml" / "kernel-core.bml"
+_KERNEL_CORE_COUNTS = {
+    "primitive_count": "RequiredPrimitiveCount",
+    "dispatch_count": "RequiredDispatchCount",
+    "proof_count": "RequiredProofCount",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -927,6 +937,79 @@ class FormResultOut(BaseModel):
     value: Any | None = None
 
 
+class KernelImageProposalRequest(BaseModel):
+    expression: str = Field(
+        ...,
+        min_length=1,
+        max_length=128 * 1024,
+        description=(
+            "BML source expression for a candidate kernel core image. This route "
+            "previews and proves the proposal; it does not mutate production."
+        ),
+    )
+    grammar: str = Field(
+        default="bml",
+        pattern="^bml$",
+        description="Source grammar for this proposal. This first public gate accepts BML.",
+    )
+    requested_action: str = Field(
+        default="preview",
+        pattern="^(preview|apply)$",
+        description=(
+            "preview returns the candidate proof. apply is accepted as intent but "
+            "still refuses live mutation in this public route."
+        ),
+    )
+    source_label: str | None = Field(
+        default=None,
+        max_length=512,
+        description="Optional caller-provided provenance label for the proposal source.",
+    )
+
+
+class KernelImageProofStepOut(BaseModel):
+    name: str
+    status: str
+    detail: str
+    observed: Any | None = None
+    expected: Any | None = None
+
+
+class KernelCoreImageCandidateOut(BaseModel):
+    kind: str
+    image_kind: str
+    source_authority: str
+    primitive_count: int
+    dispatch_count: int
+    proof_count: int
+    witness_recipes: list[str]
+    image_hash: str
+
+
+class KernelImageMutationGateOut(BaseModel):
+    requested: bool
+    allowed: bool
+    performed: bool
+    reason: str
+    next_gate: str
+
+
+class KernelImageProposalOut(BaseModel):
+    state: str
+    proposal_id: str
+    proposal_status: str
+    grammar: str
+    source_label: str | None = None
+    source_hash: str
+    canonical_source_hash: str | None = None
+    proof_passed: bool
+    candidate_image: KernelCoreImageCandidateOut | None = None
+    diff: dict[str, Any]
+    proof_trace: list[KernelImageProofStepOut]
+    trust_envelope: dict[str, Any]
+    mutation: KernelImageMutationGateOut
+
+
 def _cell_view_out(v: CellView) -> CellViewOut:
     return CellViewOut(
         cell=CellOut.from_cell(v.cell),
@@ -966,6 +1049,191 @@ def _form_result_from_runtime_value(value: Any) -> FormResultOut:
         if value and all(isinstance(item, CellView) for item in value):
             return FormResultOut(kind="views", views=[_cell_view_out(item) for item in value])
     return FormResultOut(kind="value", value=_runtime_value_out(value))
+
+
+def _sha256_text(value: str) -> str:
+    return "sha256:" + hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _read_kernel_core_source() -> str | None:
+    here = Path(__file__).resolve()
+    for root in (*here.parents, Path.cwd()):
+        candidate = root / _KERNEL_CORE_BML_RELATIVE
+        if candidate.is_file():
+            return candidate.read_text(encoding="utf-8")
+    return None
+
+
+def _count_method_value(source: str, method_name: str) -> int | None:
+    pattern = re.compile(
+        rf"\bint\s+{re.escape(method_name)}\s*\(\s*\)\s*"
+        r"(?:\[[^\]]*\]\s*)?\{\s*return\s+([0-9]+)\s*;\s*\}",
+        re.DOTALL,
+    )
+    match = pattern.search(source)
+    if not match:
+        return None
+    return int(match.group(1))
+
+
+def _kernel_count_values(source: str) -> dict[str, int | None]:
+    return {
+        field: _count_method_value(source, method)
+        for field, method in _KERNEL_CORE_COUNTS.items()
+    }
+
+
+def _proof_step(
+    name: str,
+    passed: bool,
+    detail: str,
+    *,
+    observed: Any | None = None,
+    expected: Any | None = None,
+) -> KernelImageProofStepOut:
+    return KernelImageProofStepOut(
+        name=name,
+        status="pass" if passed else "fail",
+        detail=detail,
+        observed=observed,
+        expected=expected,
+    )
+
+
+def _kernel_image_proof_trace(
+    source: str,
+    counts: dict[str, int | None],
+) -> list[KernelImageProofStepOut]:
+    witness_methods = ["Minimal", "Observable", "Executable", "Trustable"]
+    return [
+        _proof_step(
+            "source-present",
+            bool(source.strip()),
+            "Submitted source is non-empty.",
+            observed=len(source),
+            expected=">0 bytes",
+        ),
+        _proof_step(
+            "grammar-bml",
+            True,
+            "This first proposal gate accepts BML source only.",
+            observed="bml",
+            expected="bml",
+        ),
+        _proof_step(
+            "kernel-core-self-class",
+            "class KernelCoreSelf" in source,
+            "Source declares the kernel self class.",
+            observed="class KernelCoreSelf" in source,
+            expected=True,
+        ),
+        _proof_step(
+            "kernel-core-image-class",
+            "class KernelCoreImage" in source,
+            "Source declares the kernel image class.",
+            observed="class KernelCoreImage" in source,
+            expected=True,
+        ),
+        _proof_step(
+            "required-counts-present",
+            all(value is not None for value in counts.values()),
+            "Source declares primitive, dispatch, and proof counts.",
+            observed=counts,
+            expected={key: "int return" for key in counts},
+        ),
+        _proof_step(
+            "witness-methods-present",
+            all(f"bool {name}()" in source for name in witness_methods),
+            "Source names the minimal observable executable trust witnesses.",
+            observed=[name for name in witness_methods if f"bool {name}()" in source],
+            expected=witness_methods,
+        ),
+    ]
+
+
+def _proof_passed(trace: list[KernelImageProofStepOut]) -> bool:
+    return all(step.status == "pass" for step in trace)
+
+
+def _kernel_image_candidate(
+    source_hash: str,
+    counts: dict[str, int | None],
+) -> KernelCoreImageCandidateOut | None:
+    if not all(isinstance(value, int) for value in counts.values()):
+        return None
+    payload = {
+        "kind": "KERNEL-CORE-IMAGE",
+        "image_kind": "kernel-core-self",
+        "source_hash": source_hash,
+        "source_authority": "submitted BML source plus public proposal proof",
+        "primitive_count": counts["primitive_count"],
+        "dispatch_count": counts["dispatch_count"],
+        "proof_count": counts["proof_count"],
+        "witness_recipes": ["add", "if", "do"],
+    }
+    image_hash = _sha256_text(json.dumps(payload, sort_keys=True, separators=(",", ":")))
+    return KernelCoreImageCandidateOut(
+        kind="KERNEL-CORE-IMAGE",
+        image_kind="kernel-core-self",
+        source_authority="submitted BML source plus public proposal proof",
+        primitive_count=int(counts["primitive_count"] or 0),
+        dispatch_count=int(counts["dispatch_count"] or 0),
+        proof_count=int(counts["proof_count"] or 0),
+        witness_recipes=["add", "if", "do"],
+        image_hash=image_hash,
+    )
+
+
+def _kernel_image_diff(
+    source_hash: str,
+    canonical_source: str | None,
+    counts: dict[str, int | None],
+) -> dict[str, Any]:
+    canonical_hash = _sha256_text(canonical_source) if canonical_source is not None else None
+    canonical_counts = (
+        _kernel_count_values(canonical_source)
+        if canonical_source is not None
+        else {key: None for key in _KERNEL_CORE_COUNTS}
+    )
+    return {
+        "same_as_current_source": source_hash == canonical_hash,
+        "count_delta": {
+            key: (
+                None
+                if counts[key] is None or canonical_counts[key] is None
+                else counts[key] - canonical_counts[key]  # type: ignore[operator]
+            )
+            for key in _KERNEL_CORE_COUNTS
+        },
+        "canonical_counts": canonical_counts,
+        "proposed_counts": counts,
+    }
+
+
+def _kernel_image_trust_envelope(
+    *,
+    proof_passed: bool,
+    requested_action: str,
+    candidate_image: KernelCoreImageCandidateOut | None,
+) -> dict[str, Any]:
+    return {
+        "state": "kernel-image-proposal-preview",
+        "choice_success": 1 if proof_passed else 0,
+        "protocol": "POST /api/substrate/kernel-image/proposals",
+        "default_route": "proposal-preview",
+        "native_route": "Form kernel-image-proposal envelope",
+        "bma": "kernel-image-proposal",
+        "prediction_error": "carried_as_residual",
+        "residual": (
+            "Public source can propose a kernel image; live mutation remains "
+            "behind commit, proof, review, deploy, and public SHA verification."
+        ),
+        "requested_action": requested_action,
+        "mutation_allowed": False,
+        "mutation_performed": False,
+        "candidate_image_hash": candidate_image.image_hash if candidate_image else None,
+        "rollback": "no production state changed by this route",
+    }
 
 
 def _is_access_bootstrap_gap(exc: TypeError) -> bool:
@@ -1085,6 +1353,63 @@ def evaluate_form(req: FormRequest) -> FormResultOut:
             status_code=500,
             detail=f"unknown FormResult.kind: {result.kind}",
         )
+
+
+@router.post(
+    "/kernel-image/proposals",
+    response_model=KernelImageProposalOut,
+    tags=["substrate"],
+)
+def propose_kernel_image(req: KernelImageProposalRequest) -> KernelImageProposalOut:
+    """Preview a public kernel-image proposal without mutating production.
+
+    The public interface can now receive BML source for the kernel core,
+    derive a candidate image summary, return source/image hashes and a
+    trust envelope, and explicitly stop before live mutation. Applying an
+    accepted proposal still belongs to the source-control proof/deploy path.
+    """
+    source = req.expression
+    source_hash = _sha256_text(source)
+    canonical_source = _read_kernel_core_source()
+    canonical_source_hash = (
+        _sha256_text(canonical_source) if canonical_source is not None else None
+    )
+    counts = _kernel_count_values(source)
+    proof_trace = _kernel_image_proof_trace(source, counts)
+    proof_passed = _proof_passed(proof_trace)
+    candidate_image = _kernel_image_candidate(source_hash, counts) if proof_passed else None
+    proposal_id = "kernel-proposal-" + source_hash.removeprefix("sha256:")[:16]
+    mutation_requested = req.requested_action == "apply"
+    trust_envelope = _kernel_image_trust_envelope(
+        proof_passed=proof_passed,
+        requested_action=req.requested_action,
+        candidate_image=candidate_image,
+    )
+
+    return KernelImageProposalOut(
+        state="kernel-image-proposal-preview",
+        proposal_id=proposal_id,
+        proposal_status="accepted-preview" if proof_passed else "rejected-preview",
+        grammar=req.grammar,
+        source_label=req.source_label,
+        source_hash=source_hash,
+        canonical_source_hash=canonical_source_hash,
+        proof_passed=proof_passed,
+        candidate_image=candidate_image,
+        diff=_kernel_image_diff(source_hash, canonical_source, counts),
+        proof_trace=proof_trace,
+        trust_envelope=trust_envelope,
+        mutation=KernelImageMutationGateOut(
+            requested=mutation_requested,
+            allowed=False,
+            performed=False,
+            reason=(
+                "This public route previews and proves the candidate image; it "
+                "does not write files, open deploys, or mutate production."
+            ),
+            next_gate="commit evidence -> PR -> CI -> deploy -> public SHA verification",
+        ),
+    )
 
 
 # ---------------------------------------------------------------------------
