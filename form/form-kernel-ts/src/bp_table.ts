@@ -564,6 +564,8 @@ export const BP_TABLE: Record<string, [number, number, number, number]> = {
   "SKILL-RECORD-EXCHANGE": [1, 2, 99, 1889],
   "SKILL-SET-BOUNDARY": [1, 2, 99, 1890],
   "SKILL-WELCOME-WITH-ORIENTATION": [1, 2, 99, 1888],
+  "SOVEREIGN-BOUNDARY-EVIDENCE": [1, 2, 99, 17],
+  "SOVEREIGN-BOUNDARY-RECEIPT": [1, 2, 99, 16],
   "SQL-ARR": [1, 2, 99, 11],
   "SQL-NULL": [1, 2, 99, 13],
   "SQL-OBJ": [1, 2, 99, 10],

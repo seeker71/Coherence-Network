@@ -16,6 +16,7 @@
 //         form-kernel-rust --bench
 //         form-kernel-rust --expr "(add 2 3)"
 
+use std::backtrace::Backtrace;
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs;
@@ -32,6 +33,81 @@ mod bp_table;
 mod formats;
 mod inductive;
 mod quotient;
+
+#[derive(Clone, Default)]
+struct CrashTraceContext {
+    mode: String,
+    args: Vec<String>,
+    source: String,
+}
+
+fn crash_trace_context() -> &'static Mutex<CrashTraceContext> {
+    static T: OnceLock<Mutex<CrashTraceContext>> = OnceLock::new();
+    T.get_or_init(|| Mutex::new(CrashTraceContext::default()))
+}
+
+fn source_excerpt_head(src: &str, max_chars: usize) -> String {
+    src.chars().take(max_chars).collect()
+}
+
+fn source_excerpt_tail(src: &str, max_chars: usize) -> String {
+    let tail_rev: String = src.chars().rev().take(max_chars).collect();
+    tail_rev.chars().rev().collect()
+}
+
+fn source_line_count(src: &str) -> usize {
+    if src.is_empty() {
+        0
+    } else {
+        src.matches('\n').count() + 1
+    }
+}
+
+fn set_crash_trace_context(mode: &str, args: &[String], source: Option<&str>) {
+    if let Ok(mut ctx) = crash_trace_context().lock() {
+        ctx.mode = mode.to_string();
+        ctx.args = args.to_vec();
+        if let Some(src) = source {
+            ctx.source = src.to_string();
+        }
+    }
+}
+
+fn write_kernel_crash_trace(message: &str, location: Option<String>) -> Option<PathBuf> {
+    let ctx = crash_trace_context()
+        .lock()
+        .map(|guard| guard.clone())
+        .unwrap_or_default();
+    let dir = PathBuf::from(".cache").join("form-kernel-rust");
+    let trace_dir = if fs::create_dir_all(&dir).is_ok() {
+        dir
+    } else {
+        env::temp_dir()
+    };
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).ok()?;
+    let path = trace_dir.join(format!(
+        "crash-{}{:09}-{}.json",
+        now.as_secs(),
+        now.subsec_nanos(),
+        std::process::id()
+    ));
+    let report = serde_json::json!({
+        "when_unix_seconds": now.as_secs(),
+        "pid": std::process::id(),
+        "mode": ctx.mode,
+        "args": ctx.args,
+        "panic": message,
+        "location": location,
+        "source_bytes": ctx.source.len(),
+        "source_line_count": source_line_count(&ctx.source),
+        "source_head": source_excerpt_head(&ctx.source, 2000),
+        "source_tail": source_excerpt_tail(&ctx.source, 2000),
+        "rust_backtrace": format!("{:?}", Backtrace::force_capture()),
+    });
+    let data = serde_json::to_vec_pretty(&report).ok()?;
+    fs::write(&path, [data, b"\n".to_vec()].concat()).ok()?;
+    Some(path)
+}
 
 // --- Socket natives — L1 physical layer (TCP) ---------------------------
 // Sibling parity with form-kernel-go + form-kernel-ts. Handles are
@@ -2773,19 +2849,39 @@ impl Kernel {
         });
         self.register_native("substring", cat_access(), |_, _, args| {
             let s = args[0].as_str();
-            let a = args[1].as_int() as usize;
-            let b = args[2].as_int() as usize;
+            let a_i = args[1].as_int();
+            let b_i = args[2].as_int();
+            if a_i < 0 || b_i < a_i || b_i as usize > s.len() {
+                panic!(
+                    "substring: bounds out of range start={} end={} len={}",
+                    a_i,
+                    b_i,
+                    s.len()
+                );
+            }
+            let a = a_i as usize;
+            let b = b_i as usize;
             Value::Str(s[a..b].to_string().into())
         });
         self.register_native("char_at", cat_access(), |_, _, args| {
             let s = args[0].as_str();
-            let i = args[1].as_int() as usize;
+            let i_i = args[1].as_int();
+            if i_i < 0 || i_i as usize >= s.len() {
+                panic!("char_at: bounds out of range index={} len={}", i_i, s.len());
+            }
+            let i = i_i as usize;
             Value::Str((s.as_bytes()[i] as char).to_string().into())
         });
         self.register_native("str_concat", cat_method(), |_, _, args| {
             let mut s = args[0].as_str().to_string();
             s.push_str(args[1].as_str());
             Value::Str(s.into())
+        });
+        self.register_native("form_error", cat_witness(), |_, _, args| {
+            panic!("{}", args[0].as_str())
+        });
+        self.register_native("form-error", cat_witness(), |_, _, args| {
+            panic!("{}", args[0].as_str())
         });
         // value_str — render ANY value as its canonical display string. The
         // companion str_concat needs for building a response document: int_to_str
@@ -2986,7 +3082,8 @@ impl Kernel {
         self.register_native("str_find", cat_access(), |_, _, args| {
             let s = args[0].as_str();
             let needle = args[1].as_str();
-            let from = args[2].as_int() as usize;
+            let from_i = args[2].as_int();
+            let from = if from_i < 0 { 0 } else { from_i as usize };
             if from > s.len() {
                 return Value::Int(-1);
             }
@@ -12894,6 +12991,7 @@ fn cli_trace(args: &[String]) -> i32 {
             }
         }
     };
+    set_crash_trace_context("trace", args, Some(&src));
 
     let start = Instant::now();
     let (value, trace) = run_source_traced(&src);
@@ -12940,6 +13038,7 @@ fn cli_binary(args: &[String]) -> i32 {
         eprintln!("usage: form-kernel-rust --binary <file.fkb>");
         return 2;
     }
+    set_crash_trace_context("binary", args, None);
     let bytes = match fs::read(&args[0]) {
         Ok(b) => b,
         Err(e) => {
@@ -12976,6 +13075,7 @@ fn cli_emit_binary(args: &[String]) -> i32 {
         }
     }
     let src = parts.join("\n");
+    set_crash_trace_context("emit-binary", args, Some(&src));
     let mut k = Kernel::new();
     let root = read_root_from_source(&mut k, &src);
     let bytes = serialize_artifact(&k, root);
@@ -12999,10 +13099,17 @@ fn install_panic_hook() {
             .or_else(|| info.payload().downcast_ref::<&str>().copied())
             .unwrap_or("unknown error");
         eprintln!("form-kernel-rust: {}", msg);
+        let location = info
+            .location()
+            .map(|loc| format!("{}:{}:{}", loc.file(), loc.line(), loc.column()));
+        if let Some(path) = write_kernel_crash_trace(msg, location) {
+            eprintln!("form-kernel-rust: crash trace: {}", path.display());
+        }
     }));
 }
 
 fn main_with_args(args: Vec<String>) -> i32 {
+    set_crash_trace_context("startup", &args, None);
     if args.is_empty() {
         cli_help();
         return 2;
@@ -13051,6 +13158,12 @@ fn main_with_args(args: Vec<String>) -> i32 {
                 }
                 parts.join("\n")
             };
+            let mode = if args[0] == "--expr" {
+                "expr"
+            } else {
+                "source"
+            };
+            set_crash_trace_context(mode, &args, Some(&src));
             let result = run_source(&src);
             println!("{}", result.display());
             0
