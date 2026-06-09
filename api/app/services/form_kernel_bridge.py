@@ -597,7 +597,6 @@ def serve_via_kernel(
     bindings: Mapping[str, Any],
     parse: Callable[[str], Any] = lambda s: s,
     timeout: float = 10.0,
-    fallback: Callable[[], Any] | None = None,
 ) -> tuple[Any, str]:
     """Load a recipe, inject inputs, and run it on the Form kernel.
 
@@ -627,11 +626,9 @@ def serve_via_kernel(
         recipe).
       - ``subprocess``   — fork+exec kernel carrier when inline is unavailable.
 
-    ``fallback`` is accepted for older route call sites during the native
-    cutover, but it is deliberately not executed. Missing or failing kernel
-    carriers remain hard failures so Python does not silently resume ownership.
+    Missing or failing kernel carriers remain hard failures so Python does not
+    silently resume ownership.
     """
-    _ = fallback
 
     # Hottest path: the recipe is parsed once into the warm Preloader and only
     # the trailing call walks per request. Falls through to inline-with-parse if

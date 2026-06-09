@@ -136,20 +136,14 @@ def _apply_lang_views(resp: IdeaPortfolioResponse, lang: str | None) -> IdeaPort
     return resp
 
 
-def _reaction_resonance_k(positive: int, negative: int, excited: int) -> int:
-    """Value-identical fallback for endpoint_reaction_resonance.fk."""
-    return positive + 2 * excited - negative
-
-
 def _reaction_resonance(positive: int, negative: int, excited: int) -> int:
     """Compose the community's reactions into a felt sense — how warmly the field
     holds a question (discord-membrane.form: compose). On the Form kernel
-    (endpoint_reaction_resonance.fk), Python the value-identical fallback."""
+    (endpoint_reaction_resonance.fk)."""
     from app.services.form_kernel_bridge import serve_via_kernel
     val, _runtime = serve_via_kernel(
         "endpoint_reaction_resonance.fk",
         bindings={"p": positive, "n": negative, "e": excited},
-        fallback=lambda: _reaction_resonance_k(positive, negative, excited),
         parse=int,
     )
     return int(val)
