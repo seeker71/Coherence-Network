@@ -290,6 +290,7 @@ var bpTable = map[string][4]uint32{
 	"JSON-PAIR": {1, 2, 99, 12},
 	"JSX-ELEMENT": {1, 2, 99, 110},
 	"JSX-TEXT": {1, 2, 99, 111},
+	"KERNEL-CORE-IMAGE": {1, 2, 99, 15},
 	"MDL-ARR": {1, 2, 99, 11},
 	"MDL-NULL": {1, 2, 99, 13},
 	"MDL-OBJ": {1, 2, 99, 10},

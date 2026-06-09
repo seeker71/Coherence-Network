@@ -4554,6 +4554,8 @@
                 "BMLSourceCarrier"
                 "BMLCompilerDeclarationLoweringStage"
                 "BMLCompilerSourceLoweringFlow"
+                "KernelCorePrimitive" "KernelCoreImage"
+                "KernelCoreSelf"
                 "CSharpLanguage" "JavaLanguage" "TypeScriptLanguage"
                 "GoLanguage" "RustLanguage" "BMLLanguage"
                 "ModernBMLCompiler")
@@ -4562,7 +4564,8 @@
     (defn bml-source-interface-body-enabled? (name)
         (bml-source-name-in-list?
             (list
-                "BMLSourceParser")
+                "BMLSourceParser"
+                "KernelCoreObservable")
             name))
 
     (defn bml-source-direct-class-parser? (objects)

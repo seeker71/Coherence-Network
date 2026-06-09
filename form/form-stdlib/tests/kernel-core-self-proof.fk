@@ -1,0 +1,174 @@
+; tests/kernel-core-self-proof.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk
+;
+; Proves the first minimal kernel-core self:
+;   - BML source names the core, image, primitive, and trust rule.
+;   - Form builds a KERNEL-CORE-IMAGE NodeID from that source.
+;   - real kernel primitives are observable through native_blueprint.
+;   - real recipes are executable through walk_recipe.
+;   - recipe identity and child/category inspection are visible.
+;   - .fkb write/read preserves the same NodeID image.
+;
+; Verdict: 43 when every assertion holds across Go, Rust, and TypeScript.
+
+(do
+    (defn score-bool (actual)
+        (if actual 1 0))
+
+    (defn score-int (actual expected)
+        (if (eq actual expected) 1 0))
+
+    (defn score-gt (actual expected)
+        (if (gt actual expected) 1 0))
+
+    (defn score-str (actual expected)
+        (if (nil? actual)
+            0
+            (if (str_eq actual expected) 1 0)))
+
+    (defn score-node (actual expected)
+        (if (node_eq actual expected) 1 0))
+
+    (defn class-field-type-score (class-component field-name expected-type)
+        (if (nil? class-component)
+            0
+            (do
+                (let field
+                    (bml-find-field
+                        (bml-class-own-fields class-component)
+                        field-name))
+                (if (nil? field)
+                    0
+                    (score-str
+                        (bml-field-type field)
+                        expected-type)))))
+
+    (defn class-method-return-score (class-component method-name expected-return)
+        (if (nil? class-component)
+            0
+            (do
+                (let method-component
+                    (bml-find-method
+                        (bml-class-own-methods class-component)
+                        method-name))
+                (if (nil? method-component)
+                    0
+                    (score-str
+                        (bml-method-return method-component)
+                        expected-return)))))
+
+    (defn class-const-value-score (class-component const-name expected-value)
+        (if (nil? class-component)
+            0
+            (do
+                (let const-component
+                    (bml-find-const
+                        (bml-class-own-constants class-component)
+                        const-name))
+                (if (nil? const-component)
+                    0
+                    (score-str
+                        (bml-const-value const-component)
+                        expected-value)))))
+
+    (let source-path "form-stdlib/bml/kernel-core.bml")
+    (let image-path "/tmp/kernel-core-self-image.fkb")
+    (let parsed (bml-source-file-parse-declarations source-path))
+    (let nodes (bml-source-exec-parse-nodes parsed))
+    (let model (bml-source-declaration-model parsed))
+    (let primitive-class
+        (bml-model-find-class model "KernelCorePrimitive"))
+    (let image-class
+        (bml-model-find-class model "KernelCoreImage"))
+    (let self-class
+        (bml-model-find-class model "KernelCoreSelf"))
+
+    (let core-blueprint (bp "KERNEL-CORE-IMAGE"))
+    (let witness-cat (make_nodeid 1 2 6 1))
+    (let math-plus (bp "add"))
+    (let math-mul (bp "mul"))
+    (let cmp-gt (bp "gt"))
+    (let logic-and (bp "and"))
+    (let cond-if (bp "if"))
+    (let block-do (bp "do"))
+
+    (let one (intern_trivial_int 1))
+    (let two (intern_trivial_int 2))
+    (let three (intern_trivial_int 3))
+    (let four (intern_trivial_int 4))
+    (let five (intern_trivial_int 5))
+    (let eight (intern_trivial_int 8))
+    (let thirteen (intern_trivial_int 13))
+
+    (let plus-recipe (intern_node math-plus (list two three)))
+    (let plus-again (intern_node math-plus (list (intern_trivial_int 2) (intern_trivial_int 3))))
+    (let mul-recipe (intern_node math-mul (list plus-recipe four)))
+    (let cmp-recipe (intern_node cmp-gt (list five three)))
+    (let logic-recipe (intern_node logic-and (list cmp-recipe cmp-recipe)))
+    (let if-recipe (intern_node cond-if (list cmp-recipe eight thirteen)))
+    (let do-recipe (intern_node block-do (list one plus-recipe mul-recipe)))
+
+    (let image
+        (intern_node
+            core-blueprint
+            (list
+                (intern_trivial_string source-path)
+                (intern_trivial_string image-path)
+                (intern_trivial_string "kernel-core-self")
+                (intern_trivial_int 8)
+                (intern_trivial_int 15)
+                (intern_trivial_int 6)
+                plus-recipe
+                if-recipe
+                do-recipe)))
+    (let bytes-written (write_form_binary image-path image))
+    (let loaded (read_form_binary image-path))
+    (let loaded-kids (node_children loaded))
+    (let plus-kids (node_children plus-recipe))
+
+    (sum
+        (list
+            (score-bool (bml-source-exec-parse-ok? parsed))
+            (score-int (len (bml-source-exec-parse-rest parsed)) 0)
+            (score-gt (len nodes) 0)
+            (score-bool (not (nil? primitive-class)))
+            (score-bool (not (nil? image-class)))
+            (score-bool (not (nil? self-class)))
+            (class-field-type-score primitive-class "m_strName" "String")
+            (class-field-type-score primitive-class "m_strCategory" "String")
+            (class-field-type-score primitive-class "m_bObservable" "bool")
+            (class-field-type-score image-class "m_nPrimitiveCount" "int")
+            (class-field-type-score image-class "m_nDispatchCount" "int")
+            (class-field-type-score image-class "m_nProofCount" "int")
+            (class-const-value-score image-class "ImageKind" "KERNEL-CORE-IMAGE")
+            (class-const-value-score image-class "ImageExtension" ".fkb")
+            (class-const-value-score self-class "CoreName" "kernel-core-self")
+            (class-const-value-score self-class "MinimumSelf" "NodeID intern walk observe persist")
+            (class-const-value-score self-class "TrustRule" "same source same NodeIDs same value same image across sibling kernels")
+            (class-method-return-score self-class "RequiredPrimitiveCount" "int")
+            (class-method-return-score self-class "RequiredDispatchCount" "int")
+            (class-method-return-score self-class "RequiredProofCount" "int")
+            (class-method-return-score self-class "Minimal" "bool")
+            (class-method-return-score self-class "Observable" "bool")
+            (class-method-return-score self-class "Executable" "bool")
+            (class-method-return-score self-class "Trustable" "bool")
+            (score-node (native_blueprint "intern_node") witness-cat)
+            (score-node (native_blueprint "walk_recipe") witness-cat)
+            (score-node (native_blueprint "node_children") witness-cat)
+            (score-node (native_blueprint "node_category") witness-cat)
+            (score-str (node_value (nth loaded-kids 0)) source-path)
+            (score-str (node_value (nth loaded-kids 1)) image-path)
+            (score-int (walk_recipe plus-recipe) 5)
+            (score-int (walk_recipe mul-recipe) 20)
+            (score-bool (walk_recipe logic-recipe))
+            (score-int (walk_recipe if-recipe) 8)
+            (score-int (walk_recipe do-recipe) 20)
+            (score-bool (node_eq plus-recipe plus-again))
+            (score-node (node_category plus-recipe) math-plus)
+            (score-int (len plus-kids) 2)
+            (score-int (walk_recipe (head plus-kids)) 2)
+            (score-gt bytes-written 0)
+            (score-bool (node_eq loaded image))
+            (score-node (node_category loaded) core-blueprint)
+            (score-str (node_value (nth loaded-kids 2)) "kernel-core-self"))))
