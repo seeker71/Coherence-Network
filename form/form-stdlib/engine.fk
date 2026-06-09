@@ -2208,14 +2208,25 @@
                         (apply-object-rule-index-entries (tail entries) object-stream))))
                 (apply-object-rule-index-entries (tail entries) object-stream))))
 
+    (defn apply-object-rule-known-candidate-entries (entries object-stream)
+        (if (nil? entries)
+            (mk-fail "no object rule matched")
+            (do
+                (let m (apply-object-rule-index-entry (head entries) object-stream))
+                (if (match? m) m
+                (if (fail-cut? m) (mk-fail (fail-reason m))
+                    (apply-object-rule-known-candidate-entries
+                        (tail entries)
+                        object-stream))))))
+
     (defn apply-object-rule-buckets (buckets object-stream)
-        (if (nil? buckets)
+        (if (or (nil? buckets) (nil? object-stream))
             (mk-fail "no object rule matched")
             (if (and (not (nil? object-stream))
                      (object-dispatch-key-matches-object?
                         (object-rule-bucket-key (head buckets))
                         (head object-stream)))
-                (apply-object-rule-index-entries
+                (apply-object-rule-known-candidate-entries
                     (object-rule-bucket-entries (head buckets))
                     object-stream)
                 (apply-object-rule-buckets (tail buckets) object-stream))))
@@ -2228,7 +2239,9 @@
                 object-stream)))
 
     (defn apply-bucketed-object-rule-segment (segment object-stream)
-        (do
+        (if (nil? object-stream)
+            (apply-object-rule-segment-unknown segment object-stream)
+            (do
             (let exact-match
                 (apply-object-rule-buckets
                     (object-rule-segment-exact-buckets segment)
@@ -2242,7 +2255,7 @@
                             object-stream))
                     (if (match? wild-match) wild-match
                     (if (fail-cut? wild-match) (mk-fail (fail-reason wild-match))
-                        (apply-object-rule-segment-unknown segment object-stream))))))))
+                        (apply-object-rule-segment-unknown segment object-stream)))))))))
 
     (defn apply-ordered-object-rule-segment (segment object-stream)
         (do
