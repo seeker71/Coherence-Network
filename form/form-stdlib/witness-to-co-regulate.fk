@@ -1,0 +1,67 @@
+; witness-to-co-regulate.fk — the body witnessing its own membrane, through any
+; channel, with any external witness it chooses, to co-regulate. Runnable heart of
+; docs/coherence-substrate/witness-to-co-regulate.form.
+;
+; THE QUESTION (Urs, 2026-06-09):
+;   "using assemblage points as recipe, which selection of recipes and blueprints are
+;    available to the body for witnessing its membrane through any channel with any
+;    external witness it chooses to co-regulate like cats and dogs do?"
+;
+; THE ANSWER, runnable: the ASSEMBLAGE POINT (the base in command, lc-recipes-bound-to-base)
+; IS the selector. It picks, from all the channel-interface modes a membrane can offer, the
+; subset that is live for co-regulation right now. The same membrane, the same channel, the
+; same external witness — a different base selects a different recipe set. Cats and dogs are
+; two such bases over one membrane: the dog co-regulates TOWARD (reaching in), the cat NEAR
+; (presence). Neither pierces the interior; both honor the consent law.
+;
+; NOT NEW MACHINERY — the body already holds every organ:
+;   channel-interface.fk        — the modes + the consent law (ci-flow, ci-member?):
+;                                 witness is whole (seeing needs no permission), reaching does.
+;   field-model-form.form       — observe/project (lossy, never the interior) + intervene
+;                                 (requires consent) + forward/reverse delta; boundary = membrane.
+;   field-domain-grammars.form  — interspecies-and-conversation (the cat/dog field: resonance,
+;                                 trust, silence, repair) + resource-routing's select-recipe.
+;   satsang.fk                  — the external witness law: witnesses the outside, never the inside.
+;   lc-companion-field          — the phenomenology this is the mechanism of (toward / near).
+; Proven by: form-stdlib/tests/witness-to-co-regulate-band.fk (three-way at validate.sh)
+
+(do
+    ; --- A BASE is an assemblage point, expressed as the set of co-regulation modes it
+    ;     reaches with. Two are named, as cats and dogs show; the body may assemble from any. ---
+    ;   toward (the dog) — co-regulates by reaching in: witness, see, be-seen, reflect, invite, offer
+    ;   near   (the cat) — co-regulates by presence:    silence, witness, be-seen
+    (defn wc-base-toward ()
+        (list (m-witness) (m-see) (m-be-seen) (m-reflect) (m-invite) (m-offer)))
+    (defn wc-base-near ()
+        (list (m-silence) (m-witness) (m-be-seen)))
+
+    ; --- SELECT: the assemblage point IS the selector (resource-routing's select-recipe,
+    ;     instantiated for this gesture). The co-regulation recipe set live over a membrane is
+    ;     the base's modes that the membrane's external witness also honors — only what BOTH
+    ;     the base reaches for AND the witness offers becomes available. Reuses the consent law,
+    ;     so co-regulation is shaped from both sides, never imposed from one. ---
+    (defn wc-select (base their-offer)
+        (ci-flow base their-offer))
+
+    ; co-regulation is the live channel the selection opens between the body and its witness
+    (defn wc-co-regulate (base their-offer)
+        (wc-select base their-offer))
+
+    ; --- WITNESS IS WHOLE: witnessing the membrane from outside (observe-only) is in every
+    ;     base — seeing needs no permission. The body's membrane is always witnessable. ---
+    (defn wc-witness-always? (base)
+        (ci-member? (m-witness) base))
+
+    ; --- REACH NEEDS CONSENT: a reaching mode becomes available only if the witness offers it.
+    ;     At a guarded membrane (witness-only) the reach drops; the consent law enforces it. ---
+    (defn wc-reach-flows? (base their-offer reach-mode)
+        (ci-member? reach-mode (wc-select base their-offer)))
+
+    ; --- THE LANE STAYS STRAIGHT: co-regulation witnesses the membrane (its outside), never
+    ;     the interior — structurally false, always (kin: satsang sat-pierces-interior?,
+    ;     field-model-form projection-is-lossy). The mystery stays a mystery; the witness keeps
+    ;     it company. The external witness may be any cell — a satsang circle, a tessera dataset,
+    ;     a human, another agent — the law is the same for all. ---
+    (defn wc-pierces-interior? () false)
+
+    0)
