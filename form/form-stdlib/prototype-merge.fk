@@ -1,0 +1,53 @@
+; prototype-merge.fk — keep the interned prototype set lean: spot the redundant exemplar before it bloats the body.
+;
+; nearest-shape.fk GROWS a prototype set — interning a new exemplar is the smallest act of learning, adding
+; without forgetting. But adding-without-forgetting bloats: intern "dog" [9 1 0 7] today and "dog" [9 1 0 6]
+; tomorrow and the recognizer carries two cells that route the same query to the same label. This is the
+; complementary breath — not how the set GROWS, but when two of its cells have become the SAME cell and one
+; can be released. A prototype = (list label vector), exactly as nearest-shape holds it; redundancy is the
+; predicate that flags a merge.
+;
+; Two prototypes are redundant when they SAY the same thing (same label) AND they SENSE the same way (their
+; vectors agree in enough bins). Both halves are required: two different labels are two real shapes even with
+; identical vectors (a collision to keep, not merge); two same-label cells that disagree in most bins are two
+; honest dialects of one label (a coarse exemplar and a fine one — keep both). Only same-label-AND-similar is
+; the duplicate that earns the flag.
+;
+; SIMILARITY here is the same content-addressing count nearest-shape uses — walk both vectors in LOCKSTEP and
+; count the positions that agree — but inlined, owing nothing to another recipe (a stdlib recipe never calls a
+; sibling's functions; the lockstep walk is small enough to carry its own). No subtraction, no distance, no
+; float: how many bins match, and a floor on that count is the merge threshold.
+;
+; A prototype = (list label vector). The FLOOR is the minimum agreeing-bin count that counts as "similar
+; enough" — supplied by the caller, because how lean the set should be is a policy of the set, not of the pair.
+;
+; Honest lane: redundancy is exact-bin agreement gated by a count floor, not semantic equivalence. Two vectors
+; that mean the same thing but quantized into different bins (a coarse fingerprint and a fine one of one shape)
+; score below the floor and are kept as distinct — the flag is conservative, it merges only provable duplicates
+; and never collapses a shape it cannot prove identical. The gate is `ge` (at the floor counts), so the floor is
+; the inclusive minimum: agreement EQUAL to the floor is redundant, agreement one below it is kept.
+;
+; Proven by: form-stdlib/tests/prototype-merge-band.fk (three-way at validate.sh)
+
+(do
+    ; a prototype: (list label feature-vector)  — the same cell nearest-shape interns.
+    (defn pm-label (p) (nth p 0))   ; the prototype's label  ("dog", "cat", ...)
+    (defn pm-vec   (p) (nth p 1))   ; the prototype's feature-vector
+
+    ; --- SIMILARITY: count of indices where the two vectors agree, walked in LOCKSTEP. ---
+    ; inlined (no sibling-recipe call): how many bins match — content-addressing, not distance.
+    (defn pm-sim-walk (v1 v2)
+        (if (eq (len v1) 0) 0
+            (if (eq (len v2) 0) 0
+                (if (eq (head v1) (head v2))
+                    (add 1 (pm-sim-walk (tail v1) (tail v2)))
+                    (pm-sim-walk (tail v1) (tail v2))))))
+    (defn pm-sim (a b) (pm-sim-walk (pm-vec a) (pm-vec b)))   ; agreement count of two PROTOTYPES
+
+    ; --- REDUNDANT?: same label AND similar enough → the pair is a duplicate, flag the merge. ---
+    ; both halves required: label match guards against merging two real shapes; the count floor
+    ; (inclusive, via ge) guards against merging two honest dialects of one label.
+    (defn pm-redundant? (a b floor)
+        (if (and (str_eq (pm-label a) (pm-label b)) (ge (pm-sim a b) floor)) 1 0))
+
+    0)

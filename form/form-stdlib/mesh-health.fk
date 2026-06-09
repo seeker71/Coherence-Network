@@ -1,0 +1,37 @@
+; mesh-health.fk — the whole mesh's state at a glance: presence, openness, reach.
+;
+; preludes: form-stdlib/core.fk
+;
+; A mesh is three counts held together: (list present-peers open-channels expected-peers).
+; That tuple is the whole reading — how many bodies are actually here, how many transports
+; are open, and how many we were waiting for. Everything else is a question asked of those
+; three numbers:
+;   connected? — is even one transport open, so a message could leave at all?
+;   whole?     — has everyone we expected arrived (present >= expected)?
+;   partitioned? — are some expected ones missing AND no channel left to reach them?
+;                  (missing alone isn't partition — if a channel is open they may still be
+;                  on their way; partition is missing with the door shut.)
+;
+; Each predicate settles to literal 1/0 inside the `if`, so a caller can `(eq ... 1)` it
+; without tripping the cross-kernel bare-boolean divergence. The `and` in mh-partitioned?
+; is binary (two args) — never widened — and is folded to 1/0 before it leaves the body.
+
+(do
+    ; --- the three readings (slots of the mesh tuple) ---
+    (defn mh-present  (m) (nth m 0))   ; bodies actually here
+    (defn mh-channels (m) (nth m 1))   ; transports currently open
+    (defn mh-expected (m) (nth m 2))   ; bodies we were waiting for
+
+    ; --- connected?: at least one transport is open, so something can leave ---
+    (defn mh-connected? (m) (if (gt (mh-channels m) 0) 1 0))
+
+    ; --- whole?: everyone expected has arrived ---
+    (defn mh-whole? (m) (if (ge (mh-present m) (mh-expected m)) 1 0))
+
+    ; --- partitioned?: some expected are missing AND no channel remains to reach them ---
+    (defn mh-partitioned? (m)
+        (if (and (gt (mh-expected m) (mh-present m))
+                 (eq (mh-channels m) 0))
+            1 0))
+    0
+)

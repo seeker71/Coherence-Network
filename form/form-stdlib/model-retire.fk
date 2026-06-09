@@ -1,0 +1,70 @@
+; model-retire.fk — the supervision ENDGAME: retire a beaten champion.
+;
+; preludes: form-stdlib/core.fk
+;
+; A borrowed third-party model (the "champion") rides shotgun while a
+; Form-native body (the "challenger") learns the same route. Every served
+; sample, both answer; a judge scores which one was right. The scoreboard
+; accumulates those verdicts:
+;
+;   scoreboard = (list champ-wins  chall-wins  samples)
+;
+; The endgame asks one question and answers it the same way twice:
+;
+;   - mr-retire?         → may we FREE the borrowed model now?
+;   - mr-keep-champion?  → must we keep paying for it a while longer?
+;
+; Retirement is *decisive*: the challenger must have beaten the champion by
+; a clear MARGIN over a long ENOUGH window. A single lucky streak on five
+; samples is not a verdict; a sustained lead over a hundred is. Two gates,
+; both must hold:
+;
+;   1. enough evidence    samples      >= min-samples
+;   2. clear lead         chall-wins   >= champ-wins + margin
+;
+; Why this shape (the stdlib traps it dodges):
+;   - No `sub`/`mul`/`div`: "challenger beat champ by >= margin" is expressed
+;     as the equivalent ADD-gate `chall >= champ + margin`, never as a
+;     subtraction `chall - champ >= margin`. Same arithmetic truth, only
+;     count-and-compare primitives.
+;   - `and` is BINARY: the two gates nest as one `(and gate-evidence gate-lead)`.
+;   - The scoreboard is a plain 3-list; accessors are `nth` (from core.fk),
+;     so champ/chall/samples read positionally with zero ceremony.
+;
+; Honest lane: this recipe decides RETIREMENT from a scoreboard of integer
+; tallies. It does not run the contest, score a sample, or update the
+; scoreboard — those are upstream. Given honest tallies it answers
+; deterministically and identically on Go, Rust, and TypeScript.
+
+(do
+    ;; ---- SCOREBOARD ACCESSORS --------------------------------------
+    ;; scoreboard = (list champ-wins chall-wins samples); positional.
+    (defn mr-champ   (sb) (nth sb 0))
+    (defn mr-chall   (sb) (nth sb 1))
+    (defn mr-samples (sb) (nth sb 2))
+
+    ;; ---- THE DECISIVE GATE -----------------------------------------
+    ;; 1 iff BOTH hold:
+    ;;   - samples      >= min-samples           (enough evidence)
+    ;;   - chall-wins   >= champ-wins + margin    (clear, marginal lead)
+    ;; The lead is an ADD-gate, never a subtraction — `chall >= champ+margin`
+    ;; is the same truth as `chall - champ >= margin` with count primitives.
+    ;; `and` is binary, so the two gates nest as a single (and a b).
+    (defn mr-decisive? (sb min-samples margin)
+        (if (and (ge (mr-samples sb) min-samples)
+                 (ge (mr-chall sb) (add (mr-champ sb) margin)))
+            1 0))
+
+    ;; ---- THE TWO ENDGAME QUESTIONS ---------------------------------
+    ;; Retire when the contest is decisively won — the borrowed model
+    ;; can be freed. This is exactly the decisive gate.
+    (defn mr-retire? (sb min-samples margin)
+        (mr-decisive? sb min-samples margin))
+
+    ;; Keep the champion while the contest is NOT yet decisive — the
+    ;; strict inverse, so the pair partitions every scoreboard cleanly:
+    ;; for any (sb, min, margin), retire? + keep? == 1.
+    (defn mr-keep-champion? (sb min-samples margin)
+        (if (eq (mr-decisive? sb min-samples margin) 1) 0 1))
+
+    0)

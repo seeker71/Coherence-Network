@@ -1,0 +1,56 @@
+; alert-gate.fk — the companion's RESTRAINT: surface a surprise to the human only when it is BOTH big
+; enough to matter AND quiet enough not to nag. The composition of two gates the body already keeps
+; apart — a salience floor and a cooldown — fused into one yes/no the caller can act on.
+;
+; surprise-salience.fk asks "is this magnitude over the floor?" (worth flagging at all). cooldown.fk asks
+; "have enough ticks passed since the last fire?" (or are we still in the quiet window?). Each alone is a
+; half-truth: a loud surprise during the quiet window should STAY quiet (the human just heard from us);
+; a faint surprise after long silence is still too faint to raise. The alert only fires when BOTH hold —
+; an AND of the two floors — and is suppressed the instant EITHER fails. That is the whole restraint: two
+; necessary conditions, neither sufficient, joined by a single binary and.
+;
+; The two ge-tests are the same threshold spine seen twice: ge is meets-or-exceeds, so a magnitude sitting
+; exactly ON the floor is salient (the boundary flags), and the exact tick last+k is already cool (the
+; boundary is past the quiet window, not still inside it). Both boundaries belong to the firing side. There
+; is no sub in the toolkit and none is needed — the cooldown gate is an ADD forward (last + k = earliest
+; allowed next tick) compared against now, never a countdown to zero; salience is a raw ge against the floor.
+;
+; The and is BINARY by necessity, not by luck: ag-fire? joins EXACTLY two predicates, (ge magnitude floor)
+; and (ge now (add last k)). A third condition would have to nest — (and (and a b) c) — never (and a b c),
+; which Go and Rust silently truncate. ag-fire? and ag-suppress? are computed from the same and-of-two-ges
+; with the arms swapped (1/0 vs 0/1), so they are exact complements by construction: suppressed is precisely
+; "not (salient and cool)", and the two can never disagree about the same inputs.
+;
+; Honest lane: magnitude is the raw prediction-error magnitude (an integer 0..100), never inflated to clear
+; the floor; ticks are a monotonic integer clock the caller supplies (logical ticks, frames, or epoch
+; seconds — whatever the firing cell counts in), and 'last' is the tick of the PRIOR alert, not the prior
+; surprise. This gates a SINGLE channel's next alert from one prior 'last' and one current magnitude; a
+; stream of distinct alert channels, a per-severity floor, or a sliding-window budget of N-per-interval is a
+; different shape (a list walk, not this one fused gate). All comparisons are ge/eq on integers — no float,
+; no sub, no three-arg and.
+;
+; Proven by: form-stdlib/tests/alert-gate-band.fk (three-way at validate.sh)
+
+(do
+    ; --- SALIENT?: is this surprise big enough to flag at all? magnitude meets-or-exceeds the floor -> 1, else 0. ---
+    ; ge is meets-or-exceeds, so a magnitude exactly on the floor counts as salient (the boundary flags). Inlined
+    ; salience floor (surprise-salience.fk's ss-salient? spine) so this recipe stands alone — preludes only core.fk.
+    (defn ag-salient? (magnitude floor) (if (ge magnitude floor) 1 0))
+
+    ; --- COOL?: have enough ticks passed since the last alert? now has reached last+k -> 1, else 0 (still nagging). ---
+    ; The gate is an ADD forward: last+k is the earliest allowed next tick; ge means the exact boundary tick is
+    ; already cool. Inlined cooldown spine (cooldown.fk's cd-ready?) so the band preludes only core.fk, never cooldown.
+    (defn ag-cool? (last now k) (if (ge now (add last k)) 1 0))
+
+    ; --- FIRE?: surface to the human only when BOTH gates hold — salient AND cool. 1 to alert, 0 to stay silent. ---
+    ; A single BINARY and of exactly two ge-tests. The raw predicates (ge ...) already return 0/1, but the and is
+    ; settled back to a clean 0/1 by the surrounding (if ... 1 0) so the verdict is an integer the caller can sum.
+    (defn ag-fire? (magnitude floor last now k)
+        (if (and (ge magnitude floor) (ge now (add last k))) 1 0))
+
+    ; --- SUPPRESS?: the exact complement — 1 while held back (either too faint OR too soon), 0 once it fires. ---
+    ; Same and-of-two-ges, arms swapped, so suppress is precisely "not (salient and cool)" by construction.
+    (defn ag-suppress? (magnitude floor last now k)
+        (if (and (ge magnitude floor) (ge now (add last k))) 0 1))
+
+    0)

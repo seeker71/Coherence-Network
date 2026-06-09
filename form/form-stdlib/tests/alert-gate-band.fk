@@ -1,0 +1,33 @@
+; preludes: form-stdlib/alert-gate.fk
+;
+; Proves alert-gate's restraint as a bit-sum verdict (127 = every claim lands). Each bit pins one falsifiable
+; fact: that it fires only when BOTH gates hold, stays silent for EITHER reason alone, that suppress is the
+; exact complement of fire, and that both ge-boundaries (exactly-on-floor, exactly-at-last+k) belong to the
+; firing side.
+(do
+    ; c0 (1): the headline positive — magnitude 80 over floor 50, AND now 20 has reached last+k=15 (cool).
+    ;         Both gates hold, so it fires (1). The one case where the human should hear from us.
+    (let c0 (if (eq (ag-fire? 80 50 10 20 5) 1) 1 0))
+
+    ; c1 (2): salient but TOO SOON — magnitude 80 clears floor 50, but now 12 < last+k=15, still in the quiet
+    ;         window. Cooldown vetoes; fire is 0. A loud surprise during the nag-window stays silent.
+    (let c1 (if (eq (ag-fire? 80 50 10 12 5) 0) 2 0))
+
+    ; c2 (4): cool but NOT SALIENT — now 20 is well past last+k=15, but magnitude 30 < floor 50. Floor vetoes;
+    ;         fire is 0. Long silence does not promote a faint surprise into an alert.
+    (let c2 (if (eq (ag-fire? 30 50 10 20 5) 0) 4 0))
+
+    ; c3 (8): suppress is the complement of c1 — for the same too-soon inputs, suppress is 1 (held back).
+    (let c3 (if (eq (ag-suppress? 80 50 10 12 5) 1) 8 0))
+
+    ; c4 (16): cooldown BOUNDARY — last 10, now 15, k 5: now is exactly last+k. ge means the boundary tick is
+    ;          already cool (1), not still held. The exact edge belongs to the firing side.
+    (let c4 (if (eq (ag-cool? 10 15 5) 1) 16 0))
+
+    ; c5 (32): salience BOUNDARY — magnitude 50 exactly on floor 50. ge means exactly-on-floor is salient (1).
+    (let c5 (if (eq (ag-salient? 50 50) 1) 32 0))
+
+    ; c6 (64): suppress is the complement of c0 — for the firing inputs, suppress is 0 (it does NOT hold back).
+    (let c6 (if (eq (ag-suppress? 80 50 10 20 5) 0) 64 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
