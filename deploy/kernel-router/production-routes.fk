@@ -1847,10 +1847,24 @@
 (defn mpv-jsonb (s)
   (str_concat (mpv-sql-quote s) "::jsonb"))
 
+(defn mpv-next-revision-number-sql (id)
+  (str_concat "(SELECT COALESCE(max(revision_number), 0) + 1 FROM graph_node_revisions WHERE node_id = " (str_concat (mpv-sql-quote id) ")")))
+
+(defn mpv-next-revision-text-sql (id)
+  (str_concat "(" (str_concat (mpv-next-revision-number-sql id) ")::text")))
+
+(defn mpv-revision-id-sql (revision-prefix row-id next-revision-text)
+  (mpv-join " || " (list
+    (mpv-sql-quote revision-prefix)
+    "':'"
+    row-id
+    "':'"
+    next-revision-text)))
+
 (defn mpv-snapshot-sql ()
   "jsonb_build_object('id', id, 'type', type, 'name', name, 'description', description, 'phase', phase, 'created_at', created_at, 'updated_at', updated_at) || properties")
 
-(defn mpv-create-node-sql (revision-id id node-type name description phase properties source author)
+(defn mpv-create-node-sql (revision-prefix id node-type name description phase properties source author)
   (mpv-join " " (list
     "WITH inserted AS ("
     "INSERT INTO graph_nodes (id, type, name, description, properties, phase)"
@@ -1867,7 +1881,7 @@
     ")"
     "INSERT INTO graph_node_revisions (id, node_id, revision_number, source, author, fields_changed, snapshot)"
     (str_concat "SELECT " (mpv-join ", " (list
-      (mpv-sql-quote revision-id)
+      (mpv-revision-id-sql revision-prefix "id" "'1'")
       "id"
       "1"
       (mpv-sql-quote source)
@@ -1876,7 +1890,7 @@
       (mpv-snapshot-sql))))
     "FROM inserted")))
 
-(defn mpv-update-node-sql (revision-id id name description phase property-patch fields-changed source author)
+(defn mpv-update-node-sql (revision-prefix id name description phase property-patch fields-changed source author)
   (mpv-join " " (list
     "WITH updated AS ("
     (str_concat "UPDATE graph_nodes SET " (mpv-join ", " (list
@@ -1890,9 +1904,9 @@
     ")"
     "INSERT INTO graph_node_revisions (id, node_id, revision_number, source, author, fields_changed, snapshot)"
     (str_concat "SELECT " (mpv-join ", " (list
-      (mpv-sql-quote revision-id)
+      (mpv-revision-id-sql revision-prefix "id" (mpv-next-revision-text-sql id))
       "id"
-      (str_concat "(SELECT COALESCE(max(revision_number), 0) + 1 FROM graph_node_revisions WHERE node_id = " (str_concat (mpv-sql-quote id) ")"))
+      (mpv-next-revision-number-sql id)
       (mpv-sql-quote source)
       (mpv-sql-quote author)
       (mpv-jsonb fields-changed)

@@ -393,6 +393,63 @@ def executing_http_request(
     return observation, checks
 
 
+def repeated_create_case(suffix: str) -> PublicGateCase:
+    node_id = f"idea-public-gate-repeat-{suffix}"
+    return PublicGateCase(
+        name=f"idea-create-repeat-{suffix}",
+        method="POST",
+        path="/api/ideas",
+        body=(
+            '{"id":"'
+            + node_id
+            + '","name":"Repeated Public Gate Idea '
+            + suffix
+            + '","description":"revision id collision probe","manifestation_status":"partial"}'
+        ),
+        operation="create-idea",
+        node_id=node_id,
+        sql_contains=(
+            "INSERT INTO graph_nodes",
+            "INSERT INTO graph_node_revisions",
+            "kernel-router-public-gate",
+            f"'{node_id}'",
+            "'water'",
+        ),
+    )
+
+
+def repeated_create_collision_checks(
+    base_url: str,
+    dsn: str,
+    *,
+    prefix: str,
+    headers: dict[str, str],
+) -> dict[str, bool]:
+    reset_schema(dsn)
+    first = repeated_create_case(prefix + "-one")
+    second = repeated_create_case(prefix + "-two")
+    first_observation = http_request(base_url, first, headers=headers)
+    second_observation = http_request(base_url, second, headers=headers)
+    revision_counts = run_psql(
+        dsn,
+        "SELECT count(*) || ':' || count(DISTINCT id) FROM graph_node_revisions "
+        f"WHERE node_id IN ({sql_quote(first.node_id)}, {sql_quote(second.node_id)});",
+    )
+    node_count = run_psql(
+        dsn,
+        "SELECT count(*) FROM graph_nodes "
+        f"WHERE id IN ({sql_quote(first.node_id)}, {sql_quote(second.node_id)});",
+    )
+    return {
+        f"{prefix}_first_create_status": first_observation.status == 202,
+        f"{prefix}_second_create_status": second_observation.status == 202,
+        f"{prefix}_first_create_router": first_observation.router == "native-kernel",
+        f"{prefix}_second_create_router": second_observation.router == "native-kernel",
+        f"{prefix}_node_rows": node_count == "2",
+        f"{prefix}_revision_rows_distinct_ids": revision_counts == "2:2",
+    }
+
+
 class MockMutationUpstream(http.server.BaseHTTPRequestHandler):
     def _respond(self) -> None:
         n = int(self.headers.get("Content-Length", "0") or "0")
@@ -681,11 +738,13 @@ def build_gate_report(
     observations: list[PublicGateObservation],
     *,
     min_confidence: float,
+    production_collision_checks: dict[str, bool],
 ) -> dict[str, Any]:
     total = len(observations)
     passed = sum(1 for obs in observations if obs.passed)
     confidence = (passed / total) if total else 0.0
-    gate_pass = confidence >= min_confidence and passed == total
+    collision_pass = all(production_collision_checks.values())
+    gate_pass = confidence >= min_confidence and passed == total and collision_pass
     return {
         "gate": "native_mutation_public_gate",
         "variant_a": "native-kernel implicit invitation without native mutation headers",
@@ -698,6 +757,8 @@ def build_gate_report(
         "confidence": round(confidence, 4),
         "min_confidence": min_confidence,
         "gate_pass": gate_pass,
+        "production_revision_id_collision_probe": production_collision_checks,
+        "production_revision_id_collision_probe_pass": collision_pass,
         "recommendation": (
             "verify_deployed_header_canary"
             if gate_pass
@@ -802,7 +863,25 @@ def run_observation(min_confidence: float) -> dict[str, Any]:
                     both_headers_db_checks=both_headers_db_checks,
                 )
             )
-        return build_gate_report(observations, min_confidence=min_confidence)
+        production_collision_checks = {
+            **repeated_create_collision_checks(
+                base_url,
+                pg.dsn,
+                prefix="default",
+                headers={},
+            ),
+            **repeated_create_collision_checks(
+                base_url,
+                pg.dsn,
+                prefix="public_gate",
+                headers={PUBLIC_GATE_HEADER: "1"},
+            ),
+        }
+        return build_gate_report(
+            observations,
+            min_confidence=min_confidence,
+            production_collision_checks=production_collision_checks,
+        )
     finally:
         if router_proc is not None:
             router_proc.terminate()
@@ -825,6 +904,8 @@ def render_human(report: dict[str, Any]) -> str:
         f"variant D: {report['variant_d']}",
         f"confidence: {report['confidence']:.4f} ({report['passed_cases']}/{report['total_cases']} cases)",
         f"gate_pass: {report['gate_pass']}",
+        "production_revision_id_collision_probe_pass: "
+        f"{report['production_revision_id_collision_probe_pass']}",
         f"recommendation: {report['recommendation']}",
         "ordinary_traffic_flip_performed: true",
         "",

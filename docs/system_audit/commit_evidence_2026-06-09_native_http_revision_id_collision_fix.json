@@ -1,0 +1,120 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/native-http-revision-id-fix-20260609",
+  "commit_scope": "Repair native HTTP mutation persistence for repeated production traffic by deriving graph_node_revisions ids from route prefix, node id, and revision number.",
+  "files_owned": [
+    "api/tests/test_native_mutation_public_gate.py",
+    "deploy/kernel-router/mutation_public_gate_harness.py",
+    "deploy/kernel-router/production-routes.fk",
+    "docs/system_audit/commit_evidence_2026-06-09_native_http_revision_id_collision_fix.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/native-mutation-public-gate.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "python3 -m py_compile deploy/kernel-router/mutation_public_gate_harness.py",
+      "form/form-kernel-rust/target/release/form-kernel-rust check --routes deploy/kernel-router/production-routes.fk --stdlib form/form-stdlib",
+      "python3 deploy/kernel-router/mutation_public_gate_harness.py --json",
+      "python3 deploy/kernel-router/mutation_ab_observation_harness.py --json",
+      "python3 -m pytest -q api/tests/test_native_mutation_public_gate.py api/tests/test_native_mutation_ab_observation.py api/tests/test_native_mutation_route_bindings.py api/tests/test_ideas_router_form.py api/tests/test_spec_registry_router_form.py",
+      "python3 -m ruff check api/tests/test_native_mutation_public_gate.py deploy/kernel-router/mutation_public_gate_harness.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-09_native_http_revision_id_collision_fix.json",
+      "python3 scripts/validate_spec_quality.py --file specs/native-mutation-public-gate.md",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "scripts/check_route_manifests.sh",
+      "make wellness",
+      "git diff --check"
+    ],
+    "summary": "The public deploy canary for PR #2670 reached native-kernel but returned 503 at persistence stage pg_exec. The response proved the kernel route and mounted config carrier were active; the SQL used fixed revision ids such as rev-native-public-gate-create-idea, which can collide under repeated production creates. The Form SQL builder now emits revision ids as route-prefix:node-id:revision-number, and the public-gate harness includes a no-reset repeated-create collision probe for no-header default and X-Form-Native-Public-Gate routes.",
+    "known_limitations": [
+      {
+        "scope": "production deploy",
+        "observed": "The repair has not yet been deployed at commit creation time. Post-merge verification must rerun scripts/verify_kernel_canary_public_gate.sh https://api.coherencycoin.com and the Hostinger Auto Deploy workflow."
+      },
+      {
+        "scope": "public Traefik no-header default",
+        "observed": "This repair keeps ordinary public no-header mutation traffic outside the kernel-router default route. It only repairs native persistence for traffic that already reaches the kernel canary/default route."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push, PR creation, and GitHub checks for codex/native-http-revision-id-fix-20260609."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "scripts/verify_kernel_canary_public_gate.sh https://api.coherencycoin.com"
+    ],
+    "notes": "Run after merge/deploy. The expected treatment result is 202 with X-Form-Router:native-kernel, executes:true, db_execution=performed-by-http-native-persistence, and persistence.executes=true."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Repeated native HTTP create requests no longer collide on graph_node_revisions.id. Local proof now runs two default creates and two public-gate creates without schema reset and verifies two node rows plus two distinct revision ids for each route family.",
+    "public_endpoints": [
+      "POST /api/ideas",
+      "Header X-Form-Native-Public-Gate"
+    ],
+    "test_flows": [
+      "python3 deploy/kernel-router/mutation_public_gate_harness.py --json -> 5/5 cases, confidence 1.0, production_revision_id_collision_probe_pass true",
+      "form-kernel-rust route check -> every name resolves"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The repeated-create production collision is fixed locally. The deployed header-gated canary must pass before any public no-header mutation flip."
+  },
+  "idea_ids": [
+    "idea-realization-engine",
+    "data-infrastructure"
+  ],
+  "spec_ids": [
+    "specs/native-mutation-public-gate.md"
+  ],
+  "task_ids": [
+    "native-http-revision-id-fix-20260609",
+    "deployed-native-http-mutation-persistence-canary"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "public-canary-triage"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "deploy/kernel-router/production-routes.fk::mpv-revision-id-sql",
+    "deploy/kernel-router/production-routes.fk::mpv-next-revision-number-sql",
+    "deploy/kernel-router/mutation_public_gate_harness.py::repeated_create_collision_checks",
+    "api/tests/test_native_mutation_public_gate.py::test_public_gate_harness_observes_public_gate_when_kernel_available",
+    "scripts/verify_kernel_canary_public_gate.sh"
+  ],
+  "change_files": [
+    "api/tests/test_native_mutation_public_gate.py",
+    "deploy/kernel-router/mutation_public_gate_harness.py",
+    "deploy/kernel-router/production-routes.fk",
+    "docs/system_audit/commit_evidence_2026-06-09_native_http_revision_id_collision_fix.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "specs/native-mutation-public-gate.md"
+  ],
+  "change_intent": "runtime_fix"
+}
