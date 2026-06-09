@@ -1,0 +1,236 @@
+; tessera-external-witness.fk - Tessera public data as an external witness.
+;
+; preludes: form-stdlib/core.fk form-stdlib/choice-receipt.fk
+;           form-stdlib/earth-witness-question.fk
+;
+; The live carrier is scripts/tessera_external_witness_probe.py. This Form cell
+; records the compact witness shape that live probe returns: public source,
+; manifest, tile coordinate, byte-range hash evidence, question answers, and
+; CHOICE-RECEIPT compression.
+
+(do
+    (defn tew-tag-source () "TESSERA-EXTERNAL-SOURCE")
+    (defn tew-tag-manifest () "TESSERA-MANIFEST-WITNESS")
+    (defn tew-tag-tile () "TESSERA-TILE-WITNESS")
+    (defn tew-tag-range () "TESSERA-RANGE-WITNESS")
+    (defn tew-tag-witness () "TESSERA-EXTERNAL-WITNESS")
+
+    (defn tew-source (name access license base-url docs-url)
+        (list (tew-tag-source) name access license base-url docs-url))
+    (defn tew-source? (source)
+        (and (eq (len source) 6) (str_eq (nth source 0) (tew-tag-source))))
+    (defn tew-source-name (source) (nth source 1))
+    (defn tew-source-access (source) (nth source 2))
+    (defn tew-source-license (source) (nth source 3))
+    (defn tew-source-base-url (source) (nth source 4))
+    (defn tew-source-docs-url (source) (nth source 5))
+
+    (defn tew-manifest (dataset-version dataset-variant manifest-url http-status content-length etag last-modified)
+        (list (tew-tag-manifest) dataset-version dataset-variant manifest-url http-status content-length etag last-modified))
+    (defn tew-manifest? (manifest)
+        (and (eq (len manifest) 8) (str_eq (nth manifest 0) (tew-tag-manifest))))
+    (defn tew-manifest-version (manifest) (nth manifest 1))
+    (defn tew-manifest-variant (manifest) (nth manifest 2))
+    (defn tew-manifest-url (manifest) (nth manifest 3))
+    (defn tew-manifest-status (manifest) (nth manifest 4))
+    (defn tew-manifest-length (manifest) (nth manifest 5))
+    (defn tew-manifest-etag (manifest) (nth manifest 6))
+    (defn tew-manifest-last-modified (manifest) (nth manifest 7))
+
+    (defn tew-tile (year lon lat tile-url scale-url embedding-status scale-status embedding-length scale-length)
+        (list (tew-tag-tile) year lon lat tile-url scale-url embedding-status scale-status embedding-length scale-length))
+    (defn tew-tile? (tile)
+        (and (eq (len tile) 10) (str_eq (nth tile 0) (tew-tag-tile))))
+    (defn tew-tile-year (tile) (nth tile 1))
+    (defn tew-tile-lon (tile) (nth tile 2))
+    (defn tew-tile-lat (tile) (nth tile 3))
+    (defn tew-tile-url (tile) (nth tile 4))
+    (defn tew-tile-scale-url (tile) (nth tile 5))
+    (defn tew-tile-embedding-status (tile) (nth tile 6))
+    (defn tew-tile-scale-status (tile) (nth tile 7))
+    (defn tew-tile-embedding-length (tile) (nth tile 8))
+    (defn tew-tile-scale-length (tile) (nth tile 9))
+
+    (defn tew-range (url range-start range-end byte-count sha256)
+        (list (tew-tag-range) url range-start range-end byte-count sha256))
+    (defn tew-range? (range)
+        (and (eq (len range) 6) (str_eq (nth range 0) (tew-tag-range))))
+    (defn tew-range-url (range) (nth range 1))
+    (defn tew-range-start (range) (nth range 2))
+    (defn tew-range-end (range) (nth range 3))
+    (defn tew-range-byte-count (range) (nth range 4))
+    (defn tew-range-sha256 (range) (nth range 5))
+
+    (defn tew-witness (source manifest tile range observation)
+        (list (tew-tag-witness) source manifest tile range observation))
+    (defn tew-witness? (witness)
+        (and (eq (len witness) 6) (str_eq (nth witness 0) (tew-tag-witness))))
+    (defn tew-witness-source (witness) (nth witness 1))
+    (defn tew-witness-manifest (witness) (nth witness 2))
+    (defn tew-witness-tile (witness) (nth witness 3))
+    (defn tew-witness-range (witness) (nth witness 4))
+    (defn tew-witness-observation (witness) (nth witness 5))
+
+    (defn tew-http-ok? (status) (eq status 200))
+    (defn tew-nonempty? (value) (gt (str_len value) 0))
+
+    (defn tew-source-valid? (source)
+        (if (tew-source? source)
+            (and (tew-nonempty? (tew-source-name source))
+                 (and (tew-nonempty? (tew-source-access source))
+                      (and (tew-nonempty? (tew-source-license source))
+                           (tew-nonempty? (tew-source-base-url source)))))
+            false))
+    (defn tew-manifest-valid? (manifest)
+        (if (tew-manifest? manifest)
+            (and (tew-http-ok? (tew-manifest-status manifest))
+                 (and (gt (tew-manifest-length manifest) 0)
+                      (and (tew-nonempty? (tew-manifest-url manifest))
+                           (tew-nonempty? (tew-manifest-etag manifest)))))
+            false))
+    (defn tew-tile-valid? (tile)
+        (if (tew-tile? tile)
+            (and (tew-http-ok? (tew-tile-embedding-status tile))
+                 (and (tew-http-ok? (tew-tile-scale-status tile))
+                      (and (gt (tew-tile-embedding-length tile) 0)
+                           (gt (tew-tile-scale-length tile) 0))))
+            false))
+    (defn tew-range-valid? (range)
+        (if (tew-range? range)
+            (and (ge (tew-range-start range) 0)
+                 (and (ge (tew-range-end range) (tew-range-start range))
+                      (and (gt (tew-range-byte-count range) 0)
+                           (gt (str_len (tew-range-sha256 range)) 16))))
+            false))
+    (defn tew-witness-valid? (witness)
+        (if (tew-witness? witness)
+            (and (tew-source-valid? (tew-witness-source witness))
+                 (and (tew-manifest-valid? (tew-witness-manifest witness))
+                      (and (tew-tile-valid? (tew-witness-tile witness))
+                           (and (tew-range-valid? (tew-witness-range witness))
+                                (ewq-observation-valid? (tew-witness-observation witness))))))
+            false))
+
+    (defn tew-source-choice (source)
+        (cr-choice-candidate
+            "public-s3"
+            "TESSERA-EXTERNAL-WITNESS"
+            true
+            4
+            96
+            (tew-source-access source)))
+    (defn tew-manifest-choice (manifest)
+        (cr-choice-candidate
+            "manifest"
+            "TESSERA-EXTERNAL-WITNESS"
+            (tew-manifest-valid? manifest)
+            6
+            94
+            (tew-manifest-url manifest)))
+    (defn tew-tile-choice (tile)
+        (cr-choice-candidate
+            "tile"
+            "TESSERA-EXTERNAL-WITNESS"
+            (tew-tile-valid? tile)
+            7
+            93
+            (tew-tile-url tile)))
+    (defn tew-range-choice (range)
+        (cr-choice-candidate
+            "range-hash"
+            "TESSERA-EXTERNAL-WITNESS"
+            (tew-range-valid? range)
+            8
+            92
+            (tew-range-sha256 range)))
+    (defn tew-choice-candidates (witness)
+        (list
+            (tew-source-choice (tew-witness-source witness))
+            (tew-manifest-choice (tew-witness-manifest witness))
+            (tew-tile-choice (tew-witness-tile witness))
+            (tew-range-choice (tew-witness-range witness))))
+
+    (defn tew-receipt (witness who where tick)
+        (cr-choice-receipt
+            "tessera-external-witness"
+            "tessera-public-s3"
+            "TESSERA-EXTERNAL-WITNESS"
+            (tew-choice-candidates witness)
+            (if (tew-witness-valid? witness) "range-hash" "none")
+            (if (tew-witness-valid? witness) (cr-outcome-success) (cr-outcome-silence))
+            (if (tew-witness-valid? witness) 94 0)
+            (cr-choice-value (cr-kind-core-alignment) 92 96 95 94)
+            "public manifest and byte-range hash give a compact external evidence anchor"
+            who
+            where
+            tick
+            (tew-range-byte-count (tew-witness-range witness))
+            (if (tew-witness-valid? witness)
+                (cr-choice-trace 4 1 3 0)
+                (cr-choice-trace 4 0 0 1))))
+
+    (defn tew-observation-from-witness (witness)
+        (ewq-observation
+            "tessera-external-witness-v1.1-cambridge-grid-0.15-52.05-2024"
+            "Tessera public external witness sample"
+            (tew-source-docs-url (tew-witness-source witness))
+            (list
+                (ewq-axis "what" "Tessera embedding tile and byte-range hash" "public S3 tile returns stable metadata and a hashed byte range" 94)
+                (ewq-axis "where" "grid_0.15_52.05 centered near Cambridge, United Kingdom" "tile coordinate is carried as lon=0.15 lat=52.05" 92)
+                (ewq-axis "when" "2024 annual embedding; checked through public manifest" "tile path and manifest carry the year 2024" 91)
+                (ewq-axis "who" "GeoTessera and University of Cambridge Tessera project" "public source and docs identify the Tessera/GeoTessera project" 90)
+                (ewq-axis "how" "anonymous S3 HEAD plus byte-range GET hash" "the live carrier reads metadata and hashes a small range instead of downloading the full tile" 93)
+                (ewq-axis "why" "external witness anchor for Form question answers" "hash evidence lets Coherence answer questions without storing the full tensor" 92))
+            (list
+                (ewq-principle "geometric-proof" "0.1 degree tile coordinate and 10m pixel grid locate the witness" 94)
+                (ewq-principle "harmony" "manifest, embedding, scale, and range evidence compose one witness" 93)
+                (ewq-principle "confidence" "HTTP status, length, ETag, and hash evidence are machine-checkable" 95)
+                (ewq-principle "vitality" "the source can be refreshed without local tensor storage" 90)
+                (ewq-principle "sovereignty" "anonymous public access keeps the observer permission-light" 92)
+                (ewq-principle "allowing-observation" "missing coverage can become silence instead of false knowledge" 91))))
+
+    (defn tew-sample-source ()
+        (tew-source
+            "Tessera GeoTessera"
+            "anonymous public S3 plus GeoTessera Python and Zarr clients"
+            "CC0 embeddings; MIT client code"
+            "https://s3.us-west-2.amazonaws.com/tessera-embeddings/"
+            "https://geotessera.readthedocs.io/en/latest/"))
+    (defn tew-sample-manifest ()
+        (tew-manifest
+            "1.1"
+            "cambridge"
+            "https://s3.us-west-2.amazonaws.com/tessera-embeddings/v1.1/manifest.parquet"
+            200
+            11209241
+            "230d346935534c83c06db90c1cf3150e"
+            "Thu, 04 Jun 2026 12:47:08 GMT"))
+    (defn tew-sample-tile ()
+        (tew-tile
+            2024
+            "0.15"
+            "52.05"
+            "https://s3.us-west-2.amazonaws.com/tessera-embeddings/v1.1/global_0.1_degree_representation.cambridge/2024/grid_0.15_52.05/grid_0.15_52.05.npy"
+            "https://s3.us-west-2.amazonaws.com/tessera-embeddings/v1.1/global_0.1_degree_representation.cambridge/2024/grid_0.15_52.05/grid_0.15_52.05_scales.npy"
+            200
+            200
+            106282496
+            3321452))
+    (defn tew-sample-range ()
+        (tew-range
+            "https://s3.us-west-2.amazonaws.com/tessera-embeddings/v1.1/global_0.1_degree_representation.cambridge/2024/grid_0.15_52.05/grid_0.15_52.05.npy"
+            0
+            4095
+            4096
+            "cb992c1d4ecd93b3da28bfaa8acdcb17ab1fc46325d5b714bb31ea9028877cb2"))
+    (defn tew-sample-witness ()
+        (do
+            (let source (tew-sample-source))
+            (let manifest (tew-sample-manifest))
+            (let tile (tew-sample-tile))
+            (let range (tew-sample-range))
+            (tew-witness source manifest tile range
+                (tew-observation-from-witness
+                    (tew-witness source manifest tile range (ewq-tessera-observation))))))
+
+    0)
