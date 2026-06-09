@@ -1,0 +1,57 @@
+; federation-addressing.form — how content-addressed cells cross runtimes that don't share an ID space.
+;
+; THE PROBLEM (Urs): the Android app and the Mac app run separate substrates. A cell's local NodeID
+; instance is assigned by a per-runtime COUNTER (kernel `intern`: inst = self.next_inst; next_inst += 1).
+; So the intern table dedups WITHIN a runtime (same shape ⇒ same NodeID locally), but ACROSS runtimes the
+; SAME content lands on a DIFFERENT instance (insertion-order-dependent). Two devices will NOT agree on a
+; local NodeID. So a node shared by its local NodeID is meaningless to the receiver.
+;
+; THE RESOLUTION: there are TWO addresses, and only one crosses the wire.
+;   LOCAL NodeID (the counter)  — a fast runtime-local HANDLE. Never portable. For ice, water, and gas alike.
+;   MERKLE ROOT (merkle.fk = sha256 of the structure) — the CONTENT address. Insertion-order-INDEPENDENT,
+;       proven deterministic three-way (tests/merkle-band.fk). The SAME structure hashes to the SAME root
+;       on every runtime. THIS is the cross-runtime address — the GUID-free federation key.
+;   The wire carries the MERKLE root, never the local NodeID. Each runtime keeps its own NodeID↔merkle
+;   handle; "re-address on receipt" = re-intern the received structure locally to get your own handle for
+;   the same content. This is exactly the IPFS / git model (content hash on the wire, local handles inside).
+;   No reservation, no GUID, no coordination — content-addressing IS the reservation-free scheme.
+;
+; ── THE TRINITY, REFINED (ice / water / gas across runtimes) ──
+;   ICE  (Blueprint, structure) — the same merkle on every runtime by definition; shared for free. Two
+;        devices recognize a shape as the same shape with no exchange. (Urs's "share ice" — exactly right.)
+;   WATER (Recipe, operational expression / model state) — HAS a structure, so it shares by RE-ADDRESSING:
+;        send the structure (or its merkle), the receiver re-interns it → its own local NodeID, same content.
+;        A model delta (federated-slices) is water crossing this way. (Urs's "water must serialize and
+;        re-address across substrate" — exactly right; merkle is the mechanism.)
+;   GAS  (NamedCell, the living "here" cell — stateful, the agency) — runtime-LOCAL by nature; its identity
+;        is "this inhabitant, here." What crosses is its STATE (water) and its SHAPE (ice), not the cell-
+;        handle. Gas is the one thing that legitimately stays local. (So it's not "different gas nodes get
+;        shared" — gas doesn't cross; its water does.)
+;
+; ── DON'T SEND IT TWICE (the have/want protocol) ──
+;   cell-sync.fk is the body's have/want: the sender OFFERS merkle roots; the receiver computes its MISSING
+;   set (cs-missing) and requests ONLY the subtrees it lacks; cs-authentic? verifies by re-addressing (a
+;   forged subtree fails its own hash, so the channel need not be trusted). This is git's smart protocol /
+;   IPFS bitswap: a Merkle-DAG sync where shared subtrees are sent once. Set-reconciliation research
+;   (Minisketch — Bitcoin; IBLT — Invertible Bloom Lookup Tables; rsync rolling-hash) optimizes the
+;   have/want EXCHANGE itself when both sides hold large overlapping sets — a known next refinement, not
+;   a new invention.
+;
+; ── WHEN RESERVATION IS ACTUALLY NEEDED (the narrow fallback) ──
+;   Only for nodes with NO stable content identity — a live socket, a session, an external handle (genuinely
+;   diffuse gas). Those can't be merkle'd (their identity is "this live thing now"). For them, Urs's idea is
+;   the right one: a block-reservation / flake-ID scheme (each runtime asks the mesh for an ID block, IDs are
+;   partitioned so they never collide — Snowflake / Hi-Lo allocator). But this is the EXCEPTION; almost
+;   everything the body shares (blueprints, recipes, model slices, transcripts) is content-addressable and
+;   uses merkle, never a reserved ID.
+;
+; ── THE HONEST GAP (buildable next, on the path) ──
+;   The merkle address is proven; cell-sync's have/want logic is proven; what is not yet an explicit cell:
+;   (1) the NodeID↔merkle handle map + the re-address-on-receipt recipe (re-intern → local handle); (2) the
+;   set-reconciliation optimization over the have/want exchange (Minisketch/IBLT as a Form recipe). Both
+;   compose from proven pieces (merkle.fk, cell-sync.fk, sha256.fk) — they are wiring, not new theory.
+;
+; KIN: merkle.fk + sha256.fk (the cross-runtime address) · cell-sync.fk + cell-sync-transport.form (the
+;   have/want wire) · cell-recipe-value.form + cell-as-namedcell.form (the trinity: which phase crosses) ·
+;   federated-slices.form (model water crossing by merkle) · mesh-relay.fk (the flood that carries it) ·
+;   prose-as-recipe.form (a transcript as content-addressed cells — same merkle when a line repeats).
