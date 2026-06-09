@@ -1,0 +1,35 @@
+; co-learning.fk — two cells learn a classifier faster TOGETHER by sharing exemplars over the mesh.
+;
+; THE GOAL (Urs): a Mac app and an Android app both listen; each runs 3rd-party classifiers (speech,
+; music, animals, other) as its ORACLE; each grows a Form-native nearest-shape classifier from what its
+; OWN mic heard. Because the two mics catch DIFFERENT signals, each cell's classifier is PARTIAL — it
+; recognizes only the shapes it has met. Share the learned exemplars on the mesh, and the merged
+; classifier recognizes what NEITHER cell alone could: the two devices point to the predictor faster.
+;
+; This is federated learning for an EXEMPLAR classifier (nearest-shape): the shareable slice is the
+; exemplar SET (each a (label vector) — already the body's prototype shape), and the merge is the UNION.
+; Two identical exemplars (same feature) share one merkle NodeID — so the union DEDUPS for free when the
+; cells are interned (federation-addressing.form): a shape both mics heard is carried once, a shape only
+; one heard is added. The classifier the merge produces is nearest-shape over the union — the SAME
+; recognizer the body uses everywhere, now fed by two streams instead of one.
+;
+; A device's KNOWLEDGE is an exemplar set: a list of (label vector). cl-merge unions two sets; cl-knows?
+; asks whether a set recognizes a query as a given label (nearest-shape). Self-contained list-union;
+; composes nearest-shape (ns-label). Proven by tests/co-learning-band.fk.
+
+(do
+    ; the federated union of two cells' learned exemplar sets (mesh-merge of what each mic taught).
+    ; cons a's exemplars onto b — over interned cells, identical exemplars collapse to one NodeID, so
+    ; the union is dedup-for-free (a shape both mics heard is carried once).
+    (defn cl-merge (a b)
+        (if (eq (len a) 0) b (cons (head a) (cl-merge (tail a) b))))
+
+    ; how many exemplars a cell has learned (the breadth of its field).
+    (defn cl-breadth (set) (len set))
+
+    ; does this exemplar set recognize the query as `label`? (nearest-shape over the set.)
+    ; cold (no exemplars) → 0: a cell that has heard nothing recognizes nothing.
+    (defn cl-knows? (query set label)
+        (if (eq (len set) 0) 0
+            (if (str_eq (ns-label query set) label) 1 0)))
+    0)

@@ -1,0 +1,32 @@
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/co-learning.fk
+;
+; co-learning-band — two mics learn faster together, proven three-way.
+;
+; Device A (Mac mic) heard SPEECH; device B (Android mic) heard MUSIC. Each learned only its own shape:
+;   A = [ ("speech", [5 0 0]) ]        B = [ ("music", [0 5 0]) ]
+; A's classifier is partial — shown a MUSIC feature it has no music exemplar, so nearest-shape routes it
+; to its only prototype (speech): WRONG. B is partial the other way. The mesh-merge (the union of what
+; both mics taught) recognizes BOTH — the federated speedup: two streams cover what one cannot.
+;
+; Verdict 127 when every claim lands:
+;   1   A alone gets MUSIC wrong         (cl-knows? music A "music" == 0 — A never heard music)
+;   2   B alone gets SPEECH wrong        (cl-knows? speech B "speech" == 0)
+;   4   the MERGE gets speech right       (cl-knows? speech A∪B "speech" == 1)
+;   8   the MERGE gets music right        (cl-knows? music  A∪B "music"  == 1)
+;   16  each cell is still right on its OWN shape   (A knows speech)
+;   32  ... and B knows music                       (sanity: the union didn't lose either)
+;   64  the union carries both exemplars            (cl-breadth A∪B == 2)
+(do
+    (let speech (list 5 0 0))
+    (let music  (list 0 5 0))
+    (let a (list (list "speech" speech)))
+    (let b (list (list "music" music)))
+    (let m (cl-merge a b))
+    (let c0 (if (eq (cl-knows? music  a "music")  0) 1 0))
+    (let c1 (if (eq (cl-knows? speech b "speech") 0) 2 0))
+    (let c2 (if (eq (cl-knows? speech m "speech") 1) 4 0))
+    (let c3 (if (eq (cl-knows? music  m "music")  1) 8 0))
+    (let c4 (if (eq (cl-knows? speech a "speech") 1) 16 0))
+    (let c5 (if (eq (cl-knows? music  b "music")  1) 32 0))
+    (let c6 (if (eq (cl-breadth m) 2) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
