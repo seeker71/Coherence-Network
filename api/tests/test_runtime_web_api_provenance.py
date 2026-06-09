@@ -122,6 +122,7 @@ def test_native_route_goal_loop_sees_workspace_and_task_routes_as_bml():
     native_routes = native_route_goal_loop.load_native_routes()
 
     expected = ("kernel-native-high-grammar", "BML", True, True)
+    assert native_route_goal_loop.route_status("GET", "/api/inventory/flow", native_routes) == expected
     assert native_route_goal_loop.route_status("GET", "/api/workspaces", native_routes) == expected
     assert native_route_goal_loop.route_status("GET", "/api/agent/tasks", native_routes) == expected
     assert native_route_goal_loop.route_status("GET", "/api/tasks", native_routes) == expected
@@ -133,3 +134,25 @@ def test_native_route_goal_loop_sees_workspace_and_task_routes_as_bml():
         )
         == expected
     )
+
+
+def test_inventory_flow_native_route_expresses_lineage_grammar():
+    route_text = (ROOT / "deploy" / "front-door" / "api.bml").read_text(encoding="utf-8")
+
+    for required in (
+        'route("inventory-flow", "GET", "/api/inventory/flow"',
+        "def api_inventory_flow(request)",
+        "inventory-flow-summary-sql",
+        "inventory-flow-items-sql",
+        "inventory-flow-spec-json",
+        "inventory-flow-process-json",
+        "inventory-flow-implementation-json",
+        "inventory-flow-validation-json",
+        "inventory-flow-contributors-json",
+        "inventory-flow-contributions-json",
+        "inventory-flow-assets-json",
+        "inventory-flow-interdependencies-json",
+        "inventory lineage grammar core",
+        'json-node-pair("python_authority", json-node-bool(false))',
+    ):
+        assert required in route_text
