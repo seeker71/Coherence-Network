@@ -1,0 +1,85 @@
+<!doctype html>
+<!-- satsang voice — the live local UI. Carrier; the body is the satsang circle (satsang.fk). -->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>satsang · the body is listening</title>
+<style>
+  :root { --bg:#0c0a09; --panel:#161312; --line:#2a2420; --stone:#d6cfc7; --soft:#8c837a; --amber:#d9a441; --amber-dim:#7a5a22; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--stone);
+         font:16px/1.6 ui-serif, Georgia, 'Times New Roman', serif; }
+  header { padding:18px 24px; border-bottom:1px solid var(--line); display:flex;
+           align-items:baseline; gap:14px; flex-wrap:wrap; }
+  header h1 { margin:0; font-size:18px; font-weight:500; letter-spacing:.02em; }
+  header .status { color:var(--soft); font-size:13px; font-family:ui-monospace,monospace; }
+  main { display:grid; grid-template-columns: 1fr 1fr; gap:0; min-height: calc(100vh - 120px); }
+  @media (max-width: 820px) { main { grid-template-columns: 1fr; } }
+  .col { padding:20px 24px; }
+  .col.heard { border-right:1px solid var(--line); }
+  @media (max-width:820px){ .col.heard{ border-right:none; border-bottom:1px solid var(--line);} }
+  .label { text-transform:uppercase; letter-spacing:.16em; font-size:11px; color:var(--soft);
+           font-family:ui-monospace,monospace; margin-bottom:14px; }
+  .heard-list { display:flex; flex-direction:column; gap:10px; }
+  .seg { color:var(--stone); }
+  .seg .t { color:var(--amber-dim); font-family:ui-monospace,monospace; font-size:11px; margin-right:8px; }
+  .heard-empty { color:var(--soft); font-style:italic; }
+  .offer { border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:14px;
+           background:var(--panel); }
+  .offer .kind { font-size:12px; letter-spacing:.06em; color:var(--amber); margin-bottom:6px; }
+  .offer .body { color:var(--stone); }
+  .offer .silent { color:var(--soft); font-style:italic; }
+  footer { padding:14px 24px; border-top:1px solid var(--line); color:var(--soft);
+           font-size:12.5px; font-family:ui-monospace,monospace; }
+  .pulse { display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--amber);
+           margin-right:6px; vertical-align:middle; animation:b 2.4s ease-in-out infinite; }
+  @keyframes b { 0%,100%{opacity:.25} 50%{opacity:1} }
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="pulse"></span>satsang · the body is listening</h1>
+  <span class="status" id="status">starting…</span>
+</header>
+<main>
+  <section class="col heard">
+    <div class="label">what is being heard</div>
+    <div class="heard-list" id="heard"><div class="heard-empty">the room is quiet.</div></div>
+  </section>
+  <section class="col offers">
+    <div class="label">the body offers to the circle — take it or leave it</div>
+    <div class="offer"><div class="kind">an observation</div><div class="body" id="observation"><span class="silent">— listening —</span></div></div>
+    <div class="offer"><div class="kind">a question for the circle</div><div class="body" id="emerging_question"><span class="silent">— none yet alive —</span></div></div>
+    <div class="offer"><div class="kind">an inner insight</div><div class="body" id="inner_insight"><span class="silent">— listening —</span></div></div>
+    <div class="offer"><div class="kind">an offering</div><div class="body" id="offering"><span class="silent">— listening —</span></div></div>
+  </section>
+</main>
+<footer>everything stays on this Mac · the voices never leave the room · silence is whole — the body offers, it never imposes</footer>
+<script>
+  const SILENT = { observation:"— silent —", emerging_question:"— none yet alive —",
+                   inner_insight:"— silent —", offering:"— silent —" };
+  function setOffer(id, text) {
+    const el = document.getElementById(id);
+    if (text) el.textContent = text;
+    else el.innerHTML = '<span class="silent">' + SILENT[id] + '</span>';
+  }
+  async function tick() {
+    try {
+      const s = await (await fetch('/state')).json();
+      let st = s.status;
+      if (!s.llm_ready) st += '  ·  offerings need ollama (a model pulled + the daemon running)';
+      document.getElementById('status').textContent = st;
+      const heard = document.getElementById('heard');
+      if (!s.heard.length) heard.innerHTML = '<div class="heard-empty">the room is quiet.</div>';
+      else heard.innerHTML = s.heard.map(seg =>
+        '<div class="seg"><span class="t">' + seg.t + '</span>' +
+        seg.text.replace(/</g,'&lt;') + '</div>').join('');
+      heard.scrollTop = heard.scrollHeight;
+      for (const k of ['observation','emerging_question','inner_insight','offering']) setOffer(k, s.offerings[k]);
+    } catch (e) { document.getElementById('status').textContent = 'reconnecting…'; }
+  }
+  setInterval(tick, 2000); tick();
+</script>
+</body>
+</html>
