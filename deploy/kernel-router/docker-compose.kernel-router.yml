@@ -162,6 +162,11 @@ services:
       traefik.http.routers.coherence-api-inventory-flow.tls.certresolver: "letsencrypt"
       traefik.http.routers.coherence-api-inventory-flow.priority: "1190"
       traefik.http.routers.coherence-api-inventory-flow.service: "coherence-api-kernel-bml-front-door"
+      traefik.http.routers.coherence-api-inventory-flow-observation.rule: "Host(`api.coherencycoin.com`) && Method(`GET`) && Path(`/api/_form/inventory-flow-observation`) && Header(`X-Form-Observe`,`1`)"
+      traefik.http.routers.coherence-api-inventory-flow-observation.entrypoints: "websecure"
+      traefik.http.routers.coherence-api-inventory-flow-observation.tls.certresolver: "letsencrypt"
+      traefik.http.routers.coherence-api-inventory-flow-observation.priority: "1195"
+      traefik.http.routers.coherence-api-inventory-flow-observation.service: "coherence-api-kernel-bml-front-door"
       traefik.http.services.coherence-api-kernel-bml-front-door.loadbalancer.server.port: "8080"
 
 # The api service is defined in the base docker-compose.yml. This overlay only
