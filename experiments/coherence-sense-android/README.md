@@ -14,8 +14,12 @@ the senses are held until then.
   Form recipes proven three-way under `form/form-stdlib` — runs **per-frame on the kernel**. Each accel
   frame, the carrier writes a driver `.fk`, runs `signal-derivative` (still/moving) + `sequence-predictor`
   (the next state) through `form-kernel-rust` (~5ms), and the dashboard shows the **real recognition**,
-  the **prediction**, and the **inference-error** (predicted-vs-actual — the learning signal). The carrier
-  only marshals integers in and reads the label out; the recognition is Form.
+  the **prediction**, and the **inference-error** (predicted-vs-actual — the learning signal). It also
+  runs the **live learning arc** (`learning-arc.fk`): a `nearest-shape` **challenger** learns from the
+  `signal-derivative` **champion** — each frame it predicts from the exemplars it has interned, is scored
+  against the champion, then learns the frame; the dashboard shows its agreement *climbing* toward the
+  champion as it accumulates exemplars (the Form-native arm reaching the reference, online, on real data).
+  The carrier only marshals integers in and reads the label out; the recognition and the learning are Form.
 - **v1 — phone-native kernel (cdylib BUILT):** *autonomy.* The kernel itself runs **on the phone**.
   `form/form-kernel-rust/build-android.sh` now emits `libform_kernel_rust.so` — an ARM aarch64 shared
   object exporting `form_eval` (the same `run_source` evaluator, behind the `cabi` feature), verified
