@@ -59,6 +59,8 @@
   <section class="col offers">
     <div class="label">the body offers to the circle — take it or leave it</div>
     <div class="offer"><div class="kind">an observation</div><div class="body" id="observation"><span class="silent">— listening —</span></div></div>
+    <div class="offer"><div class="kind">a surprise</div><div class="body" id="surprise"><span class="silent">— nothing unexpected —</span></div></div>
+    <div class="offer"><div class="kind">a trigger sensed</div><div class="body" id="trigger"><span class="silent">— the field is calm —</span></div></div>
     <div class="offer"><div class="kind">a question for the circle</div><div class="body" id="emerging_question"><span class="silent">— none yet alive —</span></div></div>
     <div class="offer"><div class="kind">an inner insight</div><div class="body" id="inner_insight"><span class="silent">— listening —</span></div></div>
     <div class="offer"><div class="kind">an offering</div><div class="body" id="offering"><span class="silent">— listening —</span></div></div>
@@ -66,8 +68,8 @@
 </main>
 <footer>everything stays on this Mac · the voices never leave the room · silence is whole — the body offers, it never imposes</footer>
 <script>
-  const SILENT = { observation:"— silent —", emerging_question:"— none yet alive —",
-                   inner_insight:"— silent —", offering:"— silent —" };
+  const SILENT = { observation:"— silent —", surprise:"— nothing unexpected —", trigger:"— the field is calm —",
+                   emerging_question:"— none yet alive —", inner_insight:"— silent —", offering:"— silent —" };
   function setOffer(id, text) {
     const el = document.getElementById(id);
     if (text) el.textContent = text;
@@ -85,7 +87,7 @@
         '<div class="seg"><span class="t">' + seg.t + '</span>' +
         seg.text.replace(/</g,'&lt;') + '</div>').join('');
       heard.scrollTop = heard.scrollHeight;
-      for (const k of ['observation','emerging_question','inner_insight','offering']) setOffer(k, s.offerings[k]);
+      for (const k of ['observation','surprise','trigger','emerging_question','inner_insight','offering']) setOffer(k, s.offerings[k]);
       const amb = document.getElementById('ambient');
       if (!s.ambient || !s.ambient.length) amb.innerHTML = '<div class="heard-empty">— quiet —</div>';
       else amb.innerHTML = s.ambient.map(a => {

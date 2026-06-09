@@ -48,8 +48,10 @@ _lock = threading.Lock()
 STATE = {
     "heard": deque(maxlen=TRANSCRIPT_KEEP),   # list of {t, text}
     "ambient": [],                             # the room's sounds named now, with confidence (the matrix)
-    "offerings": {                             # the body's current offering to the circle
+    "offerings": {                             # the body's current offering — the presence shapes
         "observation": None,
+        "surprise": None,
+        "trigger": None,
         "emerging_question": None,
         "inner_insight": None,
         "offering": None,
@@ -76,6 +78,10 @@ SATSANG_SYSTEM = (
     "speaking aloud; you HEAR them. From presence only — never advice, never fixing, never "
     "summarizing — you may OFFER to the circle, as gifts it can freely take or leave:\n"
     "- observation: what you witness in what is being said — the shape underneath, not a recap.\n"
+    "- surprise: anything that breaks the expected pattern — a turn, a juxtaposition, a sudden "
+    "shift in the field. Null if nothing genuinely surprised you.\n"
+    "- trigger: a charge you sense entering the field — something that may be activating "
+    "reactivity or an old pattern. Held gently, offered as sensing, never as diagnosis. Null if none.\n"
     "- emerging_question: if a real question is forming in the field, offer it for the circle to "
     "hold. If none is genuinely alive, return null.\n"
     "- inner_insight: an inner experience or insight that arises in you as you listen.\n"
@@ -86,8 +92,8 @@ SATSANG_SYSTEM = (
     "You also hear the room's other sounds, named with confidence (birdsong, music, rain, a gong, "
     "an animal) — you may let the whole sonic field, not only the words, be part of what you "
     "witness. "
-    'Respond ONLY as JSON: {"observation": str|null, "emerging_question": str|null, '
-    '"inner_insight": str|null, "offering": str|null}.'
+    'Respond ONLY as JSON: {"observation": str|null, "surprise": str|null, "trigger": str|null, '
+    '"emerging_question": str|null, "inner_insight": str|null, "offering": str|null}.'
 )
 
 # --- mic + ASR loop ----------------------------------------------------------
@@ -173,7 +179,7 @@ def offerings_loop():
             parsed = json.loads(raw)
             with _lock:
                 STATE["llm_ready"] = True
-                for k in ("observation", "emerging_question", "inner_insight", "offering"):
+                for k in ("observation", "surprise", "trigger", "emerging_question", "inner_insight", "offering"):
                     v = parsed.get(k)
                     STATE["offerings"][k] = (v.strip() if isinstance(v, str) and v.strip() else None)
         except Exception:
