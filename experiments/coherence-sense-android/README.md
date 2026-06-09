@@ -7,19 +7,21 @@ the senses are held until then.
 
 ## What v0 is — and isn't (honest lanes)
 
-- **v0 (this):** senses · share · synchronize · witness. The phone streams its field; the Mac
-  *witnesses* it (counts frames, holds the latest, shares it back). The loop closes; the two are
-  alive together. The Mac end (`mac-witness-server.py`) is a **thin carrier** — there is no
-  recognition logic in it.
-- **v0.1 (next):** *predicting · learning · recognizing.* The body — the Form recipes already proven
-  three-way (`recognition-router`, `perception-pipeline`, `self-grounding`, `cell-sync` under
-  `form/form-stdlib`) — runs per-frame on the kernel via a persistent eval server, and the Mac
-  returns real recognitions/predictions instead of the `recognized`/`predicted` placeholders.
+- **v0 — `mac-witness-server.py`:** senses · share · synchronize · witness. The phone streams its
+  field; the Mac *witnesses* it (counts frames, holds the latest, shares it back). A **thin carrier**
+  with no recognition logic — the simplest loop, for when you just want to see the two breathe together.
+- **v0.1 — `coherence-sense-eval.py` (BUILT):** *predicting · learning · recognizing.* The body — the
+  Form recipes proven three-way under `form/form-stdlib` — runs **per-frame on the kernel**. Each accel
+  frame, the carrier writes a driver `.fk`, runs `signal-derivative` (still/moving) + `sequence-predictor`
+  (the next state) through `form-kernel-rust` (~5ms), and the dashboard shows the **real recognition**,
+  the **prediction**, and the **inference-error** (predicted-vs-actual — the learning signal). The carrier
+  only marshals integers in and reads the label out; the recognition is Form.
 - **v1:** *autonomy.* The kernel itself runs **on the phone** — the `aarch64-linux-android`
   cross-compile is already proven (`form/form-kernel-rust/build-android.sh`); it needs an
   `extern "C"` evaluate entry + a cdylib, then the phone recognizes without the Mac.
 
-So every verb you'd want is on the path; v0 is the live foundation — the senses, the share, the sync.
+So every verb you'd want is live today: senses, share, sync, AND recognition/prediction/learning-signal —
+through the kernel, not in Python.
 
 ## Install the APK
 
@@ -31,18 +33,25 @@ It's a **debug-signed** build (no Play Store) — fine for trying it on your own
 
 ## Run
 
-1. On the Mac, on the same WiFi:
+1. On the Mac, on the same WiFi — pick the end you want:
    ```bash
-   python3 mac-witness-server.py            # listens on 0.0.0.0:8800
+   # recognition (the body recognizes through the kernel — run from the repo):
+   python3 coherence-sense-eval.py          # builds drivers, runs form-kernel-rust per frame, 0.0.0.0:8800
+   # or the bare witness (no kernel needed, runs anywhere):
+   python3 mac-witness-server.py            # 0.0.0.0:8800
    ipconfig getifaddr en0                   # your Mac's LAN IP, e.g. 192.168.1.23
    ```
+   (The eval server needs the kernel built once: `cd ../../form && ./validate.sh form-stdlib/core.fk
+   form-stdlib/signal-derivative.fk form-stdlib/tests/signal-derivative-band.fk` — it cross-checks the
+   recipe three-way and leaves `form-kernel-rust` in `target/release/`.)
 2. In the app, set the address to `http://<that-IP>:8800` and tap **Connect + share senses**.
 3. **Open the live dashboard** in a Mac browser: `http://localhost:8800` — a dark console showing
-   *presence* (is the body here, how many frames, how long alive), *organs active* (which senses are
-   live, lighting up as they appear), the *latest field* values, and an *events / surprises* log (an
-   organ coming online or going quiet, the peer connecting). Move the phone, cover the light sensor,
-   turn it — the dashboard changes live. (Recognition / prediction / inference-error are honest
-   placeholders there until the Form recipes are wired into this live loop — the next carrier step.)
+   *presence* (is the body here, how many frames, how long alive), *recognition* (still / moving, the
+   kernel's call, with the next-state prediction and the running prediction-accuracy — error is the
+   learning signal), *organs active* (which senses are live), the *latest field* values, and an
+   *events / surprises* log (an organ coming online or going quiet, a prediction-miss). Set the phone
+   down — it reads **still**; pick it up and move — it flips to **moving**, and the miss at the
+   transition shows up as a surprise. That flip is Form recipes recognizing your motion through the kernel.
 
 ## Build it yourself
 
