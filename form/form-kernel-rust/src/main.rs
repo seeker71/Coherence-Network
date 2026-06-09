@@ -5213,15 +5213,7 @@ impl Kernel {
         // Form-side function holds tagged values that may be either
         // strings or NodeIDs — e.g. domain/lens in bmf-symbol-context.
         self.register_native("value_eq", cat_compare(RCMP_EQ), |_, _, args| {
-            let eq = match (&args[0], &args[1]) {
-                (Value::Null, Value::Null) => true,
-                (Value::Int(x), Value::Int(y)) => x == y,
-                (Value::Str(x), Value::Str(y)) => x == y,
-                (Value::Bool(x), Value::Bool(y)) => x == y,
-                (Value::Nid(x), Value::Nid(y)) => x == y,
-                _ => false,
-            };
-            Value::Bool(eq)
+            Value::Bool(value_equal(&args[0], &args[1]))
         });
         // intern_node_at — intern a composite Recipe AND record its source
         // attribution. Engine.fk's parser actions call this so every emitted

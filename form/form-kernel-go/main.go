@@ -3474,26 +3474,7 @@ func (k *Kernel) registerNatives() {
 	// string literals). Avoids the str_eq/node_eq fork that previously
 	// forced callers to know which type they held.
 	k.registerNative("value_eq", catCompare(RCompareEq), func(k *Kernel, args []Value) Value {
-		a, b := args[0], args[1]
-		if a.Kind != b.Kind {
-			return Value{Kind: VBool, Bool: false}
-		}
-		var eq bool
-		switch a.Kind {
-		case VNull:
-			eq = true
-		case VInt:
-			eq = a.Int == b.Int
-		case VStr:
-			eq = a.Str == b.Str
-		case VBool:
-			eq = a.Bool == b.Bool
-		case VNodeID:
-			eq = a.Nid == b.Nid
-		default:
-			eq = false
-		}
-		return Value{Kind: VBool, Bool: eq}
+		return Value{Kind: VBool, Bool: valueEqual(args[0], args[1])}
 	})
 	// intern_node_at — intern composite + record source attribution.
 	// Engine.fk's parser actions call this so every emitted Recipe carries
@@ -4449,6 +4430,16 @@ func valueEqual(a, b Value) bool {
 		return a.Bool == b.Bool
 	case VNodeID:
 		return a.Nid == b.Nid
+	case VList:
+		if len(a.List) != len(b.List) {
+			return false
+		}
+		for i := range a.List {
+			if !valueEqual(a.List[i], b.List[i]) {
+				return false
+			}
+		}
+		return true
 	default:
 		return false
 	}
