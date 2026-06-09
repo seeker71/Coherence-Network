@@ -1,5 +1,6 @@
 """Agent invitation tests for API, CLI, web, and MCP entry surfaces."""
 
+import json
 from pathlib import Path
 
 import pytest
@@ -234,10 +235,14 @@ def test_web_come_in_links_tool_based_agent_entry() -> None:
 
 def test_homepage_invites_anyone_or_anything_to_canonical_paths() -> None:
     source = (ROOT / "web/app/page.tsx").read_text(encoding="utf-8")
+    messages = json.loads((ROOT / "web/messages/en.json").read_text(encoding="utf-8"))
+    home_messages = messages["home"]
 
-    assert "For anyone or anything finding us" in source
-    assert "shared doorway is the human web page" in source
-    assert "same body answers" in source
+    assert 't("home.meetEyebrow")' in source
+    assert 't("home.meetBody")' in source
+    assert "For anyone or anything finding us" in home_messages["meetEyebrow"]
+    assert "shared doorway is the human web page" in home_messages["meetBody"]
+    assert "same body answers" in home_messages["meetBody"]
     assert 'href="/come-in"' in source
     assert 'href="/with-us"' in source
     assert 'href="/contribute"' in source
