@@ -1,0 +1,124 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/release-next-non-form-issue-20260609",
+  "commit_scope": "Teach the route-goal observer to recognize method-specific Form-native mutation rows from the production kernel manifest.",
+  "files_owned": [
+    "api/tests/test_runtime_web_api_provenance.py",
+    "docs/system_audit/commit_evidence_2026-06-09_native_route_goal_method_form_routes.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/native_route_goal_loop.py",
+    "specs/native-mutation-public-gate.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 -m py_compile scripts/native_route_goal_loop.py",
+      "cd api && python3 -m pytest -q tests/test_runtime_web_api_provenance.py",
+      "python3 scripts/validate_spec_quality.py --file specs/native-mutation-public-gate.md",
+      "cd api && python3 -m ruff check ../scripts/native_route_goal_loop.py tests/test_runtime_web_api_provenance.py",
+      "python3 scripts/runtime_surface_report.py --json",
+      "direct native_route_goal_loop route_status check for bounded mutable ideas/spec routes"
+    ],
+    "summary": "native_route_goal_loop.py now parses kh-route and raw 43004 method route cells from deploy/kernel-router/production-routes.fk. The no-header native-default rows for POST/PATCH /api/ideas and POST/PATCH/DELETE /api/spec-registry are reported as kernel-native-form-needs-source-lift, executable=true, high_grammar_native=false instead of python-fanout.",
+    "observed_delta": {
+      "form_manifest_routes": 33,
+      "post_api_ideas_status": "kernel-native-form-needs-source-lift",
+      "post_api_ideas_current_handler": "route_ideas_create_native_default",
+      "runtime_surface_kernel_first_capable_routes": 33,
+      "runtime_surface_method_routes": [
+        "POST /api/ideas",
+        "PATCH /api/ideas/*",
+        "POST /api/spec-registry",
+        "PATCH /api/spec-registry/*",
+        "DELETE /api/spec-registry/*"
+      ]
+    },
+    "known_limitations": [
+      {
+        "scope": "high grammar",
+        "observed": "These routes remain Form-native executable, not high-grammar BML/domain grammar. The route-goal pressure stays on source lift without misclassifying execution as Python-only."
+      },
+      {
+        "scope": "live route-goal fetch",
+        "observed": "python3 scripts/native_route_goal_loop.py /goal --source api --seconds 604800 --limit 2000 --json could not complete because the public runtime summary fallback returned HTTP 404 during this slice."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push, PR checks, merge, and production verification."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "python3 scripts/native_route_goal_loop.py /goal --source api --seconds 604800 --limit 2000 --json"
+    ],
+    "notes": "The code change is local observer logic over checked-in manifests. Live observation should be rerun when the public runtime endpoint is available."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The native route goal loop stops treating bounded mutable idea/spec defaults as Python fanout. They count toward native executable traffic while still remaining below the high-grammar target.",
+    "public_endpoints": [
+      "POST /api/ideas",
+      "PATCH /api/ideas/*",
+      "POST /api/spec-registry",
+      "PATCH /api/spec-registry/*",
+      "DELETE /api/spec-registry/*"
+    ],
+    "test_flows": [
+      "test_native_route_goal_loop_sees_method_specific_form_mutation_routes proves route_status reports Form-native executable status.",
+      "test_native_route_goal_loop_counts_form_mutations_as_native_executable proves build_goal_state counts POST /api/ideas in native_executable_events without adding goal_native_events."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete. CI, merge, and post-deploy observation remain before claiming live release."
+  },
+  "idea_ids": [
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "specs/native-mutation-public-gate.md"
+  ],
+  "task_ids": [
+    "release-next-non-form-issue-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "scripts/native_route_goal_loop.py::load_form_routes",
+    "api/tests/test_runtime_web_api_provenance.py::test_native_route_goal_loop_sees_method_specific_form_mutation_routes",
+    "api/tests/test_runtime_web_api_provenance.py::test_native_route_goal_loop_counts_form_mutations_as_native_executable",
+    "specs/native-mutation-public-gate.md::R14"
+  ],
+  "change_files": [
+    "api/tests/test_runtime_web_api_provenance.py",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/native_route_goal_loop.py",
+    "specs/native-mutation-public-gate.md"
+  ],
+  "change_intent": "process_only"
+}
