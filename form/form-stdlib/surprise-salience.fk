@@ -1,0 +1,57 @@
+; surprise-salience.fk — rank surprises by HOW surprising, so the dashboard highlights what matters most.
+;
+; active-inference.fk names WHETHER a step surprised (predicted != actual -> 1, a bit). This is the next
+; brick: not the bit, the MAGNITUDE. Once the body has more surprises than it can show at once, the question
+; is not "did anything miss?" but "which miss matters most?" — and the answer is the prediction-error
+; magnitude. A surprise is (list label error-magnitude): the label is what missed, the magnitude is HOW FAR
+; off the prediction was, an integer 0..100 (label is a string, so reads of it use str_eq; the magnitude is an
+; int, compared by eq/ge/gt). The bigger the gap, the louder the signal, the higher it should
+; sit on the dashboard. ss-mag reads that magnitude; ss-salient? gates it against a floor (big enough to flag,
+; the same ge-cutoff anomaly-band and classifier-eval use); ss-peak SELECTS the single most surprising event
+; out of a run (the max-select spine of recognition-router's rr-select-loop, walked over magnitudes); and
+; ss-count-salient COUNTS how many cleared the floor (the evidence-counting spine of ai-surprise-count).
+;
+; The peak is a max-select: walk the surprises carrying the best-so-far, replace it only when a STRICTLY
+; greater magnitude appears — so on a tie the FIRST surprise keeps the crown (earliest-wins, deterministic on
+; every kernel; no float, no sub, magnitudes compared by ge/gt alone). The salient-count is a floor-gated
+; tally: +1 for each surprise whose magnitude meets-or-exceeds the floor, recursion down the tail.
+;
+; Honest lane: salience is the RAW prediction-error magnitude, never inflated to make a quiet miss look loud.
+; ss-salient? is a hard ge-cutoff — a magnitude one under the floor is not flagged, the same as one far under
+; (severity below the floor is the caller's lane; the flag is exact). ss-peak over an empty run returns ()
+; honestly rather than inventing a surprise. Whether a surprise PERSISTS across runs is a later brick; this one
+; ranks within the run the body is holding now. Magnitudes are integers 0..100.
+;
+; Proven by: form-stdlib/tests/surprise-salience-band.fk (three-way at validate.sh)
+
+(do
+    ; a surprise is (list label error-magnitude): label = what missed, magnitude = how far off (0..100).
+    ; --- MAGNITUDE: how surprising this event was. nth 1 is the error-magnitude. ---
+    (defn ss-mag (s) (nth s 1))
+
+    ; --- SALIENT?: is this surprise big enough to flag? magnitude meets-or-exceeds the floor -> 1, else 0. ---
+    ; ge is meets-or-exceeds, so a magnitude sitting exactly on the floor counts as salient (the boundary flags).
+    (defn ss-salient? (s floor)
+        (if (ge (ss-mag s) floor) 1 0))
+
+    ; --- PEAK: the single most surprising event = the surprise with the greatest magnitude (max-select). ---
+    ; Walk the surprises carrying best-so-far; replace best only on a STRICTLY greater magnitude (gt), so a tie
+    ; keeps the first-seen surprise. The rr-select-loop spine, ranked by magnitude instead of recognition-strength.
+    (defn ss-peak-loop (surprises best)
+        (if (eq (len surprises) 0) best
+            (if (eq (len best) 0)
+                (ss-peak-loop (tail surprises) (head surprises))
+                (if (gt (ss-mag (head surprises)) (ss-mag best))
+                    (ss-peak-loop (tail surprises) (head surprises))
+                    (ss-peak-loop (tail surprises) best)))))
+    ; seed best with () — an empty run honestly yields () rather than a fabricated surprise.
+    (defn ss-peak (surprises) (ss-peak-loop surprises (empty)))
+
+    ; --- COUNT-SALIENT: how many surprises cleared the floor = how many are worth flagging at all. ---
+    ; +1 (the surprise's own salient bit) per surprise, walked down the tail; the ai-surprise-count tally spine.
+    (defn ss-count-salient (surprises floor)
+        (if (eq (len surprises) 0) 0
+            (add (ss-salient? (head surprises) floor)
+                 (ss-count-salient (tail surprises) floor))))
+
+    0)

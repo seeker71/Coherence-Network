@@ -1,0 +1,42 @@
+; preludes: form-stdlib/confidence-weighted-vote.fk
+;
+; confidence-weighted-vote-band — model votes fused by trust, not by hand-count, made falsifiable.
+;
+; Four ballots arrive as (label weight): (cat 5)(dog 3)(cat 1)(bird 4) over candidates (cat dog bird).
+; Summing trust, not counting hands: cat = 5+1 = 6, dog = 3, bird = 4. So the fused answer is "cat" at
+; score 6 — and crucially cat wins on SUMMED WEIGHT (two ballots, 5 then 1) where a plain plurality would
+; also pick cat (two hands) but for the wrong reason; the next band proves weight and count part ways.
+;
+; The weight-over-count control: a single high-trust ballot (bird 9) against THREE weak cats (1 each).
+; Plain plurality counts 3 cats vs 1 bird and says cat; the weighted fusion sums cat = 3, bird = 9 and
+; says bird. One trusted model rightly outvotes a crowd of flaky ones — the whole reason to weight.
+;
+; Two more honest-lane shapes: an unseen candidate "fish" sums to 0 (no fabricated trust), and a
+; tie in summed weight — (a 2)(b 2) over (a b) — keeps the FIRST candidate "a" (strict gt in the
+; max-select; a later equal-weight candidate cannot displace the earlier one, stable under replay).
+;
+; Verdict 127 when every claim lands:
+;   1   the weighted-plurality leader wins              (cw-winner   -> cat)
+;   2   confidence is the winning summed weight          (cw-score   == 6)
+;   4   a label's weight is the SUM of its ballots        (cat == 6, i.e. 5+1, not a count of 2)
+;   8   a single-ballot label sums to its lone weight     (bird == 4)
+;   16  an unseen candidate sums to an honest zero        (fish == 0)
+;   32  one high-weight ballot outvotes a low-weight crowd (bird 9 beats three cats -> bird)
+;   64  a tie in summed weight keeps the first candidate   (tie -> a, the first)
+(do
+    (let votes      (list (list "cat" 5) (list "dog" 3) (list "cat" 1) (list "bird" 4)))
+    (let candidates (list "cat" "dog" "bird"))
+    ; weight-over-count control: 3 cats at weight 1 vs 1 bird at weight 9 — sums cat=3, bird=9.
+    (let crowd      (list (list "cat" 1) (list "cat" 1) (list "cat" 1) (list "bird" 9)))
+    (let crowdcands (list "cat" "bird"))
+    ; tie control: a and b each summed weight 2.
+    (let tievotes   (list (list "a" 2) (list "b" 2)))
+    (let tiecands   (list "a" "b"))
+    (let c0 (if (str_eq (cw-winner     votes candidates) "cat") 1 0))
+    (let c1 (if (eq     (cw-score      votes candidates) 6)     2 0))
+    (let c2 (if (eq     (cw-weight-for votes "cat")  6)         4 0))
+    (let c3 (if (eq     (cw-weight-for votes "bird") 4)         8 0))
+    (let c4 (if (eq     (cw-weight-for votes "fish") 0)         16 0))
+    (let c5 (if (str_eq (cw-winner crowd crowdcands) "bird")    32 0))
+    (let c6 (if (str_eq (cw-winner tievotes tiecands) "a")      64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

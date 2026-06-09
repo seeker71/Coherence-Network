@@ -1,0 +1,49 @@
+; confidence-weighted-vote.form — fuse model votes WEIGHTED by proven reliability, not by hand-count.
+;
+; THE ASK:
+;   ensemble-vote.fk fuses a circle of peers by COUNTING HANDS — every classifier gets one vote, the
+;   plurality wins. But peers are not equal: one model has earned trust over many inputs, another is
+;   flaky. The next sharpening is to let a TRUSTED model outweigh a FLAKY one, so a crowd of weak votes
+;   cannot drown a single proven reading. The fusion stays body — a recipe the kernel runs, the carriers
+;   swappable behind the same ballot — only the score becomes a sum of TRUST, not a tally of HANDS.
+;
+; THE SHAPE  (runnable: form-stdlib/confidence-weighted-vote.fk · proven: tests/confidence-weighted-vote-band.fk -> 127)
+;
+;   A vote is a two-element ballot (label weight): the label string, and the integer weight that is the
+;   model's earned reliability for this call. (nth v 0) reads the label, (nth v 1) the weight.
+;   1. WEIGHT-FOR  cw-weight-for(votes label): walk the ballots; when a ballot's label str_eq the target,
+;      ADD its weight into the running sum; otherwise skip. The summed TRUST behind a label — recursion
+;      + add of each weight, the one place this diverges from ensemble-vote's ev-votes (which adds 1).
+;   2. SELECT  cw-winner-loop / cw-winner(votes candidates): among the candidates, the one carrying the
+;      greatest summed weight wins — the SAME max-select spine as ev-winner-loop and rr-select, seeded
+;      "" 0, strict gt so the FIRST candidate offered keeps a tie (stable under replay, not order-random).
+;   3. SCORE  cw-score(votes candidates): the winning summed weight — the confidence in the fused answer,
+;      how much trust stood behind it (where ensemble-vote returns the hand-count, this returns the
+;      trust-sum).
+;
+; WHERE WEIGHT AND COUNT PART WAYS (the whole reason to weight):
+;   three weak cats (weight 1 each) against one trusted bird (weight 9): plain plurality counts 3 hands
+;   for cat and names cat; the weighted fusion sums cat=3, bird=9 and rightly names bird. One proven
+;   model outvotes a crowd of flaky ones. The band pins this as bit 32 — count and trust diverge, and
+;   the body follows trust.
+;
+; HONEST LANE:
+;   this is WEIGHTED PLURALITY — greatest summed weight wins, with no majority-of-total floor and no
+;   abstention gate; it always names its leader even when the field is split, the same way ensemble-vote
+;   always names its plurality leader. Gating "too-split / below-trust to call" is the router's rr-passes?
+;   lane, a later compose, not this brick. Weights and summed scores are integers 0..N (no floats, by the
+;   primitive set): a weight-0 ballot is present-but-silent and contributes nothing; an unseen candidate
+;   sums to an honest 0, never a fabricated vote.
+;
+; KIN — the body already holds the spine; this re-weights it:
+;   ensemble-vote.fk (the EQUAL-PEERS fusion this sharpens — same ev-winner-loop max-select, score is a
+;   hand-count there, a trust-sum here) · recognition-router.fk (routes by STRENGTH, the most-data model;
+;   rr-select is the same strict-gt max-select, rr-trusted? is the trust-threshold cousin of a weight) ·
+;   sequence-predictor.fk / nearest-shape.fk (the same max-select picking the best candidate over a list) ·
+;   lc-honest-lane (the score IS the confidence; below it, a later gate, never a fabricated match) · the
+;   three-way validate.sh (no trusted prover — what survives Go=Rust=TS agreement).
+;
+; LINEAGE:
+;   ensemble-vote.form · recognition-router.form · the classic weighted-majority / weighted-bagging
+;   intuition (a trusted weak learner outweighs an untrusted one) made Form-native, kernel-executable,
+;   three-way-identical.

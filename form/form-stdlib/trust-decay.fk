@@ -1,0 +1,98 @@
+; trust-decay.fk — a peer's presence-confidence decays as ticks pass without
+; a fresh heartbeat, and is restored by a new beat. A body that goes silent
+; fades from the mesh smoothly, not abruptly.
+;
+; preludes: (none — pure int + comparison primitives)
+;
+; Kin: heartbeat.fk holds the liveness TABLE — (heartbeat-record … now) /
+; (heartbeat-alive? … now threshold) answer "have we heard from this cell
+; recently?" with a hard yes/no at the threshold edge. trust-decay.fk is the
+; smoother reading OVER one such entry: instead of a single cliff it carries a
+; budget of GRACE — ticks the cell may stay quiet before the mesh stops
+; trusting its presence — and a coarse three-band sense of how far into that
+; budget the silence has travelled. The shape composes onto heartbeat's spine:
+; feed (heartbeat-entry-last-seen entry) as last-beat and the same observer
+; clock as now, and the two recipes read the same silence with different
+; resolution.
+;
+; The model — grace as ticks of an unspent budget:
+;
+;   A cell's presence-confidence is a budget of `max` ticks of grace, started
+;   fresh at its last heartbeat (`last-beat`). As the observer's clock `now`
+;   advances, grace is spent. The budget runs out exactly when
+;       now  reaches  (add last-beat max)
+;   — at and after that tick the cell is fully decayed, the mesh no longer
+;   trusts its presence. Before that tick it is still trusted. (No `sub` in
+;   the kernel set, so the decay is read by comparing `now` against the
+;   refilled edge `(add last-beat max)`, never by subtracting elapsed ticks.)
+;
+;   A NEW beat refills grace to full: td-beat simply returns `max`, the budget
+;   a fresh `last-beat` carries — the observer records the new last-beat and
+;   the whole budget is available again from there. This is the restore half
+;   of "decays without a beat, restored by a beat."
+;
+; The two edges that draw the three bands:
+;   half-edge = (add last-beat half)   — within this, the beat is recent: FRESH
+;   full-edge = (add last-beat max)    — within this (but past half): FADING
+;   past full-edge                     — grace spent: GONE
+;   `half` is the caller's chosen midpoint of the budget (a coarse "half of
+;   max" — passed in rather than divided, since the kernel set has no `div`).
+;
+; The trust verdict (td-trusted?) is exactly the full-edge gate; td-faded? is
+; its inverse; the three-band reading (td-grace-band) layers the half-edge gate
+; on top via two nested `ge` comparisons, the same nested-string-classifier
+; shape self-grounding-classifier.fk's sg-authority uses.
+;
+; Surface:
+;   (td-beat max)                          → max   (a fresh beat refills grace)
+;   (td-trusted? last-beat now max)        → 1 iff (add last-beat max) ≥ now
+;   (td-faded? last-beat now max)          → inverse of td-trusted?
+;   (td-confidence last-beat now max)      → still-trusted 1/0 (= td-trusted?)
+;   (td-grace-band last-beat now max half)  → "fresh" | "fading" | "gone"
+;
+; One honest lane: this is a coarse PRESENCE-confidence reading, not a
+; probability and not a continuous decay curve. It answers "is this peer still
+; within its grace budget, and roughly how deep into it?" in integers the three
+; kernels compare exactly — never a float confidence, never elapsed-tick
+; arithmetic the primitive set can't carry. The observer's `now` decides, the
+; same trust shape as heartbeat.fk: a cell that drops off the wire silently
+; fades as `now` advances past its refilled edge; a cell that beats refills.
+;
+; Proven by: tests/trust-decay-band.fk (three-way at validate.sh)
+
+(do
+    ;; --- BEAT: a fresh heartbeat refills grace to the full budget. -----
+    ;; The observer records a new last-beat; from there the whole `max`-tick
+    ;; budget is available again. The grace a fresh beat carries IS `max`.
+    (defn td-beat (max) max)
+
+    ;; --- TRUSTED?: still within the grace budget. ----------------------
+    ;; 1 iff now has not yet reached the refilled edge (add last-beat max).
+    ;; At now = (add last-beat max) the budget is exactly spent → 0 (faded).
+    ;; Written as a ge gate, never as a subtraction of elapsed ticks.
+    (defn td-trusted? (last-beat now max)
+        (if (ge (add last-beat max) now) 1 0))
+
+    ;; --- FADED?: the inverse of trusted — grace fully spent. -----------
+    (defn td-faded? (last-beat now max)
+        (if (eq (td-trusted? last-beat now max) 1) 0 1))
+
+    ;; --- CONFIDENCE: the still-trusted 1/0 reading. --------------------
+    ;; No sub in the kernel set, so confidence is the proven-gate form: a
+    ;; cell is either still within budget (1) or decayed (0). The coarse
+    ;; "how deep into the budget" lives in td-grace-band below.
+    (defn td-confidence (last-beat now max)
+        (td-trusted? last-beat now max))
+
+    ;; --- GRACE-BAND: coarse three-band depth into the budget. ----------
+    ;;   "fresh"  — now within the half-edge (add last-beat half): recent beat
+    ;;   "fading" — past half-edge but within full-edge (add last-beat max)
+    ;;   "gone"   — past full-edge: grace spent
+    ;; Two nested ge gates, the nested-string-classifier shape from
+    ;; self-grounding-classifier.fk's sg-authority. `half` is the caller's
+    ;; coarse midpoint of `max` (passed in, since the set has no div).
+    (defn td-grace-band (last-beat now max half)
+        (if (ge (add last-beat half) now) "fresh"
+            (if (ge (add last-beat max) now) "fading" "gone")))
+
+    0)

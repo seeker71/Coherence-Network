@@ -1,0 +1,53 @@
+; predictor-train.form — the challenger LEARNS: intern a ground-truth sample so the Form-native predictor GROWS.
+;
+; THE PLACE IN THE SPINE
+;   Three bricks form one supervision arc, all kernel-native, all three-way-identical (Go=Rust=TS):
+;     predictor-sampling.fk  — fuse a borrowed circle of 3rd-party models into ONE ground-truth label,
+;                              and gate a contested sample out (ps-confident?). The TEACHER.
+;     predictor-train.fk     — THIS brick. Intern a confident ground-truth sample into the challenger's
+;                              prototype set. The LEARNING STEP.
+;     nearest-shape.fk       — route a query to the nearest interned prototype (ns-label / ns-strength).
+;                              The RECOGNIZER that reads what training grew.
+;   The loop: sample a circle (predictor-sampling) -> if confident, train (predictor-train) -> recognize
+;   (nearest-shape). Run over a stream of inputs, this drives the Form-native challenger toward the 3rd-party
+;   champion — with no champion to copy, only ground truth to grow from. No weights, no backprop: learning is
+;   a prototype prepended to a list.
+;
+; THE SHAPE  (runnable: form-stdlib/predictor-train.fk · proven: tests/predictor-train-band.fk -> 63)
+;   A prototype = (list label feature-vector). A prototype-set = the list of prototypes interned so far.
+;
+;   pt-learn  (prototypes label vec) -> (cons (list label vec) prototypes)
+;       GROW the set. Build the prototype, prepend it; every older exemplar remains (adding without forgetting).
+;       This is the SAME prepend nearest-shape's ns-intern uses — INLINED here, not called, so the brick is
+;       self-contained (its proof band preludes only predictor-train.fk + core.fk; a cross-recipe call would
+;       crash "unbound function" on all three kernels). pt-learn never refuses — it always grows.
+;   pt-size   (prototypes) -> (len prototypes)
+;       How much the challenger has learned (the count of interned exemplars).
+;   pt-knows? (prototypes label) -> 1 iff a prototype with this label is already interned
+;       Recursion over the set; str_eq the label of each prototype (at (nth p 0)) against the query label.
+;       1 on the first match, 0 if the walk reaches the end — the honest negative, never a hallucinated member.
+;   pt-learn-new? (prototypes label) -> 1 iff NOT pt-knows?
+;       The NOVELTY gate. A stream re-emits labels already learned; growing on every repeat bloats the set
+;       with duplicates and slows every future route for no new recognition. The challenger grows on novelty
+;       — this is the one-bit gate a caller checks before spending an intern. Settled to 0/1 with an explicit
+;       (if (eq (pt-knows? ...) 0) 1 0), not (not ...) on an int.
+;
+; ACT vs POLICY — kept separable
+;   pt-learn is the ACT (it always grows); pt-learn-new? is the POLICY (whether this sample is worth growing on).
+;   The caller composes them — check pt-learn-new?, then pt-learn if true — so the grow-on-novelty discipline
+;   stays a choice at the call site, not a refusal baked into the act. A caller that wants many exemplars per
+;   class simply skips the gate and interns unconditionally; nearest-shape's max-select then chooses among them.
+;
+; HONEST LANE
+;   pt-knows? matches on LABEL ALONE, never on the feature-vector. Two samples that share a label but carry
+;   different vectors read as already-known — the gate asserts "this label-shape exists", not "this exact
+;   exemplar exists". That is the right primitive for growing ONE prototype per label (the first exemplar of a
+;   class anchors it). It is the wrong primitive when a class needs many exemplars to be recognized well — for
+;   that, intern unconditionally and let nearest-shape choose. The brick names which lane it serves and does
+;   not pretend to the other; everything is an integer count / a 0-1 gate, no floats, no subtraction.
+;
+; KIN
+;   nearest-shape.form (ns-intern — the prepend this inlines; the recognizer that reads the grown set) ·
+;   predictor-sampling.form (the teacher that produces the confident ground-truth sample this interns) ·
+;   ensemble-vote.fk (the plurality spine predictor-sampling rides) ·
+;   the three-way validate.sh — no trusted prover; what survives parallel Go=Rust=TS agreement IS the proof.

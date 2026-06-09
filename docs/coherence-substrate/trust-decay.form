@@ -1,0 +1,77 @@
+; trust-decay.form — presence-confidence that fades smoothly as a peer goes
+; silent, and is restored by a fresh beat.
+;
+; THE ASK:
+;   heartbeat.fk answers liveness with a single cliff: at the threshold edge a
+;   cell flips from alive to stale in one tick. A mesh wants a softer reading —
+;   a peer that has been quiet a little while is not the same as one long gone.
+;   So: model presence-confidence as a budget of GRACE that the silence spends,
+;   read it as a hard trust verdict AND a coarse three-band depth, and let a new
+;   beat refill the budget. A body that goes quiet fades from the mesh smoothly,
+;   not abruptly; a body that beats is whole again.
+;
+; THE SHAPE  (runnable: form-stdlib/trust-decay.fk · proven: tests/trust-decay-band.fk -> 127)
+;
+;   A cell's presence is a budget of `max` ticks of grace, started fresh at its
+;   last heartbeat `last-beat`. As the observer's clock `now` advances, grace is
+;   spent. The whole reading turns on two edges drawn from last-beat:
+;       half-edge = (add last-beat half)    — the coarse midpoint of the budget
+;       full-edge = (add last-beat max)     — where the budget runs out
+;
+;   td-beat (max) -> max
+;     a fresh beat refills grace to full — it returns the budget a new last-beat
+;     carries. The restore half of "decays without a beat, restored by a beat".
+;
+;   td-trusted? (last-beat now max) -> 1/0
+;     1 iff now has not yet reached the full-edge: (ge (add last-beat max) now).
+;     At now = full-edge the budget is exactly spent and the verdict is 0. The
+;     trust verdict IS this single gate.
+;
+;   td-faded? (last-beat now max) -> 1/0
+;     the exact inverse of td-trusted? — grace fully spent.
+;
+;   td-confidence (last-beat now max) -> 1/0
+;     the still-trusted reading, == td-trusted?. The kernel set has no `sub`, so
+;     confidence is the proven-gate form (within budget / decayed), not a curve;
+;     the coarse "how deep into the budget" lives in the band below.
+;
+;   td-grace-band (last-beat now max half) -> "fresh" | "fading" | "gone"
+;     two nested `ge` gates layered on the half-edge then the full-edge:
+;       within half-edge            -> "fresh"  (the beat is recent)
+;       past half-edge, within full -> "fading" (grace draining, still trusted)
+;       past full-edge              -> "gone"   (grace spent)
+;
+; WHY THIS COMPOSES ONTO THE SPINE:
+;   heartbeat.fk holds the liveness TABLE; trust-decay.fk is the smoother
+;   reading over ONE of its entries. Feed (heartbeat-entry-last-seen entry) as
+;   last-beat and the SAME observer clock as now, and the two recipes read the
+;   same silence at different resolution: heartbeat's (heartbeat-alive? …
+;   threshold) gives the hard yes/no at one edge; td-grace-band gives the coarse
+;   fresh/fading/gone arc across the budget. No new clock, no new state — the
+;   observer's `now` decides in both, the same trust shape: a cell that drops
+;   off the wire silently fades as `now` advances past its refilled edge; a cell
+;   that beats refills.
+;
+;   The decay is read by COMPARING now against the refilled edge
+;   (add last-beat max), never by subtracting elapsed ticks — the primitive set
+;   has no `sub`, and counting-up-to-an-edge is the honest division-free shape
+;   the toolkit uses everywhere (heartbeat's hb-fresh?, the proven-count gates
+;   in self-grounding-classifier.fk). The three-band return is the nested
+;   string-classifier shape from sg-authority — one reading, three kernels, the
+;   same word out.
+;
+; KIN — the body already holds each piece; this composes them into smooth decay:
+;   heartbeat.fk (the liveness table this reads one entry of; last-seen ->
+;   last-beat) · self-grounding-classifier.fk's sg-authority (the nested-`if`
+;   string-band shape) · the proven-count / edge-gate discipline (no float, no
+;   sub — gate on an integer edge) · the three-way validate.sh (no trusted
+;   prover — Go=Rust=TS agreeing IS the proof; this band locks at 127).
+;
+; ONE HONEST LANE:
+;   this is a COARSE presence-confidence reading, not a probability and not a
+;   continuous decay curve. It answers "is this peer still within its grace
+;   budget, and roughly how deep into it?" in integers the three kernels compare
+;   exactly. The trust verdict is binary (within budget / decayed); the depth is
+;   three bands, not a percentage. No asserted confidence, no elapsed-tick
+;   arithmetic the kernel set cannot carry — only an edge the observer's clock
+;   crosses, read identically by every sibling.

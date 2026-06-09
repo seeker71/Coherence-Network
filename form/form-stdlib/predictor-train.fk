@@ -1,0 +1,58 @@
+; predictor-train.fk — the challenger LEARNS: intern a ground-truth sample so the Form-native predictor GROWS.
+;
+; predictor-sampling.fk fuses a borrowed circle of 3rd-party models into ONE ground-truth label (and gates a
+; contested sample out). nearest-shape.fk is the recognizer that ROUTES a query to the nearest interned shape.
+; This brick is the step BETWEEN them: the TRAINING move. A confident ground-truth sample arrives as a
+; (label, feature-vector) pair; pt-learn interns it into the challenger's PROTOTYPE SET so the next query can
+; route to it. Run over a stream of samples, this is the loop that drives the Form-native challenger toward the
+; 3rd-party champion — without a champion to copy, only ground truth to grow from. Learning is the smallest
+; possible act: a prototype prepended to the set (the SAME prepend nearest-shape's ns-intern uses, INLINED here
+; so this brick is self-contained — no cross-recipe call). No weights, no backprop, no forgetting: a new
+; exemplar is a new (list label vec) at the head, and every prior exemplar remains.
+;
+; A prototype = (list label feature-vector). A prototype-set = the list of prototypes interned so far.
+;
+;   pt-learn  (prototypes label vec) -> (cons (list label vec) prototypes)   ; grow the set, no forgetting
+;   pt-size   (prototypes)           -> (len prototypes)                       ; how much the challenger has learned
+;   pt-knows? (prototypes label)     -> 1 iff a prototype with this label is already interned (str_eq on the label)
+;   pt-learn-new? (prototypes label) -> 1 iff NOT pt-knows? — only a genuinely new label-shape is worth interning,
+;                                       so the set does not bloat when the same ground-truth label repeats.
+;
+; The discipline pt-learn-new? carries: a stream of samples will re-emit labels it has already learned. Growing
+; on every repeat would bloat the set with duplicates and slow every future route for no new recognition. The
+; challenger grows on NOVELTY — pt-learn-new? is the one-bit gate a caller checks before spending an intern.
+;
+; Honest lane: pt-knows? matches on LABEL ALONE, not on the feature-vector. Two samples that share a label but
+; carry different vectors read as already-known — the gate says "this label-shape exists", not "this exact
+; exemplar exists". That is the right primitive for growing one prototype PER label (the first exemplar of a
+; class anchors it); it is the wrong primitive when a class needs many exemplars (then intern unconditionally
+; and let nearest-shape's max-select choose among them). pt-learn itself never refuses — it always grows; the
+; novelty judgment lives in pt-learn-new?, which the caller consults, so the policy stays separable from the act.
+;
+; Proven by: form-stdlib/tests/predictor-train-band.fk (three-way at validate.sh)
+
+(do
+    ; a prototype: (list label feature-vector) — label at index 0, vector at index 1.
+    (defn pt-label-of (p) (nth p 0))   ; the prototype's label  ("fox", "dog", ...)
+
+    ; --- LEARN: interning a ground-truth sample GROWS the set. The new prototype is PREPENDED (same act as
+    ;     nearest-shape's ns-intern, inlined: build (list label vec), cons it onto the set). Every older
+    ;     exemplar remains — adding without forgetting, the smallest possible act of learning, no training loop. ---
+    (defn pt-learn (prototypes label vec) (cons (list label vec) prototypes))
+
+    ; --- SIZE: how many prototypes the challenger has interned (how much it has learned so far). ---
+    (defn pt-size (prototypes) (len prototypes))
+
+    ; --- KNOWS?: is a prototype with this label already in the set? Walk the set; str_eq the label of each
+    ;     prototype against the query label. 1 on the first match, 0 if the walk reaches the end. ---
+    (defn pt-knows? (prototypes label)
+        (if (eq (len prototypes) 0) 0
+            (if (str_eq (pt-label-of (head prototypes)) label) 1
+                (pt-knows? (tail prototypes) label))))
+
+    ; --- LEARN-NEW?: 1 iff this label is genuinely new (NOT already known) — the novelty gate a caller checks
+    ;     before spending an intern, so a repeated ground-truth label does not bloat the set. Settled to 0/1. ---
+    (defn pt-learn-new? (prototypes label)
+        (if (eq (pt-knows? prototypes label) 0) 1 0))
+
+    0)

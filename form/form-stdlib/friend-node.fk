@@ -1,0 +1,55 @@
+; friend-node.fk — a powered body caches messages for a sleeping low-power peer and hands them over on wake.
+;
+; device-heartbeat.fk found peers in range; mesh-relay.fk flooded a message across a room. This is the
+; third ring — the FRIEND. Bluetooth Mesh splits bodies into two roles: a Low-Power node sleeps its radio
+; to save battery and wakes only briefly, and a FRIEND node (mains-powered, always listening) stands in for
+; it while it sleeps. The Friend CACHES every message addressed to its sleeping peer; when the peer wakes and
+; polls, the Friend hands over the whole backlog at once. So a phone that slept through a broadcast does not
+; miss the field — its Friend held the messages until it could receive them.
+;
+; A cache is a list of messages, newest at the head (cons prepends). A message = (list msg-id dest payload):
+;   msg-id  — unique id of this message ("m1", "m2", ...)
+;   dest    — the sleeping peer this message is FOR ("watch", "phone", ...); the cache key
+;   payload — what the message carries (opaque to the Friend; it only routes by dest, never reads payload)
+;
+; The Friend's four moves:
+;   fn-for?     — is THIS message destined for this peer? (str_eq over the dest field) — the routing predicate
+;   fn-store    — cache one message (cons onto the front) — the Friend accepting a message for a sleeping peer
+;   fn-deliver  — the sublist of cached messages destined for peer — the hand-off when the peer wakes and polls
+;   fn-pending  — how many are waiting for peer — (len (fn-deliver ...)) — the backlog depth before the wake
+;
+; fn-deliver is the same filter-by-recursion+cons shape as device-heartbeat's hb-shared-loop: walk the cache,
+; keep the ones that match (cons them onto the recursive result), drop the rest. fn-store is cons; fn-pending
+; is len over the delivered sublist. No sub anywhere — depth is list length, the Friend's hand counts by walking.
+;
+; EXTENDS: mesh-relay.fk / device-heartbeat.fk (same beacon/message field; this adds the cache-for-the-sleeper).
+; Proven by: form-stdlib/tests/friend-node-band.fk (three-way at validate.sh)
+
+(do
+    (defn fn-id      (msg) (nth msg 0))
+    (defn fn-dest    (msg) (nth msg 1))
+    (defn fn-payload (msg) (nth msg 2))
+
+    ; ROUTING PREDICATE: is this message destined for peer? str_eq over the dest field. Settle to 1/0
+    ; so callers can (eq ... 1) the answer the way device-heartbeat's hb-has? returns an integer truth.
+    (defn fn-for? (msg peer)
+        (if (str_eq (fn-dest msg) peer) 1 0))
+
+    ; STORE: the Friend accepts one message for a sleeping peer — cons onto the front of the cache.
+    ; Newest at the head; the cache grows by one. (Same prepend the rest of the mesh family uses.)
+    (defn fn-store (cache msg) (cons msg cache))
+
+    ; DELIVER: the hand-off. Walk the cache; keep every message whose dest matches peer (cons it onto the
+    ; recursive result), drop the rest. The returned sublist is the backlog the Friend gives the peer the
+    ; moment it wakes and polls. Empty cache -> empty hand-off. Same shape as hb-shared-loop.
+    (defn fn-deliver (cache peer)
+        (if (eq (len cache) 0) (empty)
+            (if (eq (fn-for? (head cache) peer) 1)
+                (cons (head cache) (fn-deliver (tail cache) peer))
+                (fn-deliver (tail cache) peer))))
+
+    ; PENDING: how many are waiting for peer — the depth of the hand-off backlog. len over the delivered
+    ; sublist; counting by walking, no subtraction. Zero when nothing is cached for this peer.
+    (defn fn-pending (cache peer) (len (fn-deliver cache peer)))
+
+    0)
