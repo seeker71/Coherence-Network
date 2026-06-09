@@ -1,0 +1,29 @@
+; preludes: form-stdlib/core.fk
+;
+; float-conversions-band — the float→int bridge, proven three-way (Go=Rust=TS).
+;
+; This is the pattern that unblocks float ML in proven bands: COMPUTE in float
+; (the kernel does deterministic IEEE fp64 — a fractional dot product agrees
+; bit-for-bit across kernels), then reduce the result to an INTEGER verdict via
+; round/floor/ceil/trunc and eq-compare the integer. Never eq raw floats: that is
+; the only real float trap (and whole-number floats still display inconsistently,
+; 3.0 vs 3 — a separate display bug). round is half-AWAY-from-zero on every kernel
+; (round(-2.5) == -3, not the JS -2) — the negative-half case is the parity catcher.
+;
+; Verdict 31 when every claim lands:
+;   1   a float dot product rounds to its integer verdict   (round(0.4 * 100) == 40)
+;   2   round is half-away-from-zero, not toward +Inf         (round(-2.5) == -3)
+;   4   floor goes toward -Inf                                 (floor(-2.1) == -3)
+;   8   ceil goes toward +Inf                                  (ceil(2.1) == 3)
+;   16  trunc goes toward zero                                 (trunc(-2.9) == -2)
+(do
+    (defn dot (a b)
+        (if (eq (len a) 0) 0.0
+            (add (mul (head a) (head b)) (dot (tail a) (tail b)))))
+    (let r (dot (list 0.5 0.25) (list 0.4 0.8)))   ; 0.2 + 0.2 = 0.4
+    (let c0 (if (eq (round (mul r 100.0)) 40) 1 0))
+    (let c1 (if (eq (round -2.5) -3) 2 0))
+    (let c2 (if (eq (floor -2.1) -3) 4 0))
+    (let c3 (if (eq (ceil 2.1) 3) 8 0))
+    (let c4 (if (eq (trunc -2.9) -2) 16 0))
+    (add c0 (add c1 (add c2 (add c3 c4)))))
