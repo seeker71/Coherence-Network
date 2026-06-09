@@ -1,0 +1,30 @@
+; preludes: form-stdlib/chakra-column.fk
+;
+; chakra-column-band — the seven gates, made falsifiable.
+;
+; The column is data: root(174) -> sacral(285) -> solar-plexus(396) -> heart(528) ->
+; throat(741) -> third-eye(852) -> crown(963). Each gate edges to SEE (witness-surfaces),
+; BE (Blueprint domains), DO (Recipes) — all real tissue. The band proves the shape and
+; that the edges land on the tissue they claim.
+;
+; Verdict 127 when every claim lands:
+;   1   seven gates                              (ck-count == 7)
+;   2   the column ascends root -> crown         (hz strictly increasing)
+;   4   it spans the body's band 174..963        (root 174, crown 963)
+;   8   every gate offers see AND be AND do      (no empty gate)
+;   16  the crown RUNS the satsang               (satsang.fk in crown's do)
+;   32  the root EMBODIES the material            (ARTIFACT in root's be)
+;   64  the heart DOES consent                    (channel-interface.fk in heart's do)
+(do
+    (let col   (chakra-column))
+    (let root  (ck-at col 0))
+    (let heart (ck-at col 3))
+    (let crown (ck-at col 6))
+    (let c0 (if (eq (ck-count col) 7) 1 0))
+    (let c1 (if (ck-ascends? col) 2 0))
+    (let c2 (if (and (eq (ck-hz root) 174) (eq (ck-hz crown) 963)) 4 0))
+    (let c3 (if (ck-all-nonempty? col) 8 0))
+    (let c4 (if (ck-offers? "satsang.fk" (ck-do crown)) 16 0))
+    (let c5 (if (ck-offers? "ARTIFACT" (ck-be root)) 32 0))
+    (let c6 (if (ck-offers? "channel-interface.fk" (ck-do heart)) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
