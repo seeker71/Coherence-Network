@@ -1,0 +1,93 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/hostinger-api-content-sync-parent-dir-20260609",
+  "commit_scope": "Repair Hostinger deploy content sync after PR #2704 exposed a race where .cursor/skills was copied into /app/.cursor/skills before /app/.cursor existed in the recreated API container.",
+  "files_owned": [
+    "deploy/hostinger/auto-deploy.sh",
+    "docs/system_audit/commit_evidence_20260609_hostinger_cursor_parent_dir.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "bash -n deploy/hostinger/auto-deploy.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260609_hostinger_cursor_parent_dir.json",
+      "git diff --check",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "notes": "Hostinger Auto Deploy run 27193995954 failed in Roll forward VPS because docker compose cp could not find /app/.cursor in the recreated API container while copying repo/.cursor/skills. The script now copies the repo .cursor directory into existing /app, avoiding the missing-parent race and preserving the validator assets."
+  },
+  "known_failed_attempts": [
+    {
+      "command": "Hostinger Auto Deploy run 27193995954",
+      "output": "Error response from daemon: Could not find the file /app/.cursor in container ...",
+      "resolution": "Copy repo/.cursor to api:/app instead of copying repo/.cursor/skills to api:/app/.cursor/skills."
+    }
+  ],
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI and deploy rerun are pending until this repair branch is pushed and merged."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "The next Hostinger Auto Deploy run should pass Roll forward VPS and continue to public deployment verification."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local proof pending; push, PR, CI, merge, deploy rerun, and public verification remain."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Deploy content sync no longer fails when the API container is recreated without an existing /app/.cursor parent directory.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/household/events"
+    ],
+    "test_flows": [
+      "Hostinger Auto Deploy reaches public verification after Roll forward VPS.",
+      "Public /api/household/events returns native-kernel headers after deployment."
+    ]
+  },
+  "idea_ids": [
+    "native-route-promotion"
+  ],
+  "spec_ids": [
+    "form-native-http-stack"
+  ],
+  "task_ids": [
+    "hostinger-api-content-sync-parent-dir-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "release-request"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "GitHub Actions run 27193995954 failed on docker compose cp repo/.cursor/skills to api:/app/.cursor/skills.",
+    "deploy/hostinger/auto-deploy.sh now copies repo/.cursor to api:/app so /app is the existing parent."
+  ],
+  "change_files": [
+    "deploy/hostinger/auto-deploy.sh",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix"
+}
