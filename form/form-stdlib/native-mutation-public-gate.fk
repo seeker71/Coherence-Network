@@ -26,8 +26,24 @@
             ",\"route_runner\":\"Form-native application graph mutation plus side effects plus idea valuation audit ledger\""
             ",\"route_local_rollback_receipt\":\"persisted\""
             ",\"decision_receipt\":\"per-request\""
+            ",\"native_invitation\":\"per-request\""
             ",\"ordinary_traffic_flip_performed\":true"
             ",\"rollback\":\"send X-Form-Python-Fallback, remove the default native route row, or retarget Traefik to api\""
+            "}")))
+
+    (defn nmpg-native-invitation-json (selected-path operation node-id)
+        (nms-cat (list
+            "{\"state\":\"native-invitation-contract\""
+            ",\"surface\":\"mutable-ideas-specs\""
+            ",\"offer_to_know\":true"
+            ",\"refusal_is_signal\":true"
+            ",\"received\":{\"shape\":\"ordinary-json-mutation\",\"operation\":\"" operation "\",\"node_id\":\"" node-id "\"}"
+            ",\"translated\":{\"language\":\"Form-native mutation recipe\",\"operation\":\"" operation "\",\"node_id\":\"" node-id "\",\"recipe\":\"native_mutation." operation "(" node-id ")\",\"carrier\":\"application-graph-node-port + native-mutation-route-side-effects\"}"
+            ",\"execution\":{\"selected_path\":\"" selected-path "\",\"router\":\"native-kernel\"}"
+            ",\"evidence_written\":[\"graph_nodes\",\"graph_node_revisions\",\"native_mutation_side_effect_receipts\",\"audit_ledger when valuation changes\"]"
+            ",\"speak_next_time\":{\"ordinary_json\":\"accepted and translated\",\"native_protocol\":\"Form/BML mutation recipe\",\"preview_header\":\"X-Form-Native-Preview\",\"public_gate_header\":\"X-Form-Native-Public-Gate\",\"fallback_header\":\"X-Form-Python-Fallback\"}"
+            ",\"decline_signal\":\"native_invitation_declined\""
+            ",\"decline_header\":\"X-Form-Python-Fallback\""
             "}")))
 
     (defn nmpg-decision-receipt-json (gate-id operation node-id)
@@ -121,11 +137,12 @@
             (let contract (nmpg-public-gate-contract-json))
             (let receipt-sql (nmpg-public-gate-rollback-receipt-sql "gate-one" "idea-one"))
             (let decision (nmpg-decision-receipt-json "gate-one" "update-idea" "idea-one"))
+            (let invitation (nmpg-native-invitation-json "implicit-native-invitation" "update-idea" "idea-one"))
             (let contract-ok (if (eq (nms-and4
                 (nms-contains? contract "public-gate-installed")
                 (nms-contains? contract "X-Form-Native-Public-Gate")
                 (nms-contains? contract "\"default_route\":\"native-kernel\"")
-                (nms-contains? contract "\"route_local_rollback_receipt\":\"persisted\"")) 1) 1 0))
+                (nms-contains? contract "\"native_invitation\":\"per-request\"")) 1) 1 0))
             (let receipt-ok (if (eq (nms-and4
                 (nms-contains? receipt-sql "public-gate-rollback-receipt")
                 (nms-contains? receipt-sql "route-local-rollback-receipt")
@@ -155,7 +172,7 @@
             (let traffic-ok (if (eq (nms-and3
                 (nms-contains? contract "\"ordinary_traffic_flip_performed\":true")
                 (nms-contains? contract "\"default_protocol\":\"implicit-native-invitation\"")
-                (nms-contains? contract "X-Form-Python-Fallback")) 1) 10000000 0))
+                (nms-contains? invitation "native_invitation_declined")) 1) 10000000 0))
             (sum (list contract-ok receipt-ok decision-ok idea-ok idea-update-ok spec-ok function-ok traffic-ok))))
 
     0)

@@ -30,6 +30,11 @@ with open(sys.argv[1], encoding="utf-8") as fh:
     obj = json.load(fh)
 
 decision = obj.get("decision_receipt") or {}
+invitation = obj.get("native_invitation") or {}
+invitation_received = invitation.get("received") or {}
+invitation_translated = invitation.get("translated") or {}
+invitation_execution = invitation.get("execution") or {}
+invitation_speak = invitation.get("speak_next_time") or {}
 rollback = obj.get("route_local_rollback_receipt") or {}
 trust = obj.get("trust_envelope") or {}
 reversible = trust.get("reversible_gate") or {}
@@ -52,6 +57,21 @@ checks = {
     "decision_reversible": decision.get("reversible") is True,
     "decision_contradicts": decision.get("can_contradict_intent") is True,
     "decision_native_default": decision.get("ordinary_traffic_flip_performed") is True,
+    "native_invitation_state": invitation.get("state") == "native-invitation-contract",
+    "native_invitation_offer": invitation.get("offer_to_know") is True,
+    "native_invitation_refusal_signal": invitation.get("refusal_is_signal") is True,
+    "native_invitation_received": invitation_received.get("shape") == "ordinary-json-mutation",
+    "native_invitation_translated": invitation_translated.get("language")
+    == "Form-native mutation recipe"
+    and invitation_translated.get("operation") == obj.get("operation")
+    and invitation_translated.get("node_id") == obj.get("node_id"),
+    "native_invitation_execution": invitation_execution.get("selected_path")
+    == "X-Form-Native-Public-Gate"
+    and invitation_execution.get("router") == "native-kernel",
+    "native_invitation_next": invitation_speak.get("native_protocol")
+    == "Form/BML mutation recipe"
+    and invitation_speak.get("fallback_header") == "X-Form-Python-Fallback"
+    and invitation.get("decline_signal") == "native_invitation_declined",
     "signature_compact": signature.get("category") == "native-mutation-gate"
     and signature.get("outcome_code") == 1,
     "rollback_native_default": rollback.get("ordinary_traffic_flip_performed") is True,
@@ -82,6 +102,11 @@ with open(sys.argv[1], encoding="utf-8") as fh:
     obj = json.load(fh)
 
 decision = obj.get("decision_receipt") or {}
+invitation = obj.get("native_invitation") or {}
+invitation_received = invitation.get("received") or {}
+invitation_translated = invitation.get("translated") or {}
+invitation_execution = invitation.get("execution") or {}
+invitation_speak = invitation.get("speak_next_time") or {}
 rollback = obj.get("route_local_rollback_receipt") or {}
 trust = obj.get("trust_envelope") or {}
 reversible = trust.get("reversible_gate") or {}
@@ -110,6 +135,21 @@ checks = {
     "decision_reversible": decision.get("reversible") is True,
     "decision_contradicts": decision.get("can_contradict_intent") is True,
     "decision_native_default": decision.get("ordinary_traffic_flip_performed") is True,
+    "native_invitation_state": invitation.get("state") == "native-invitation-contract",
+    "native_invitation_offer": invitation.get("offer_to_know") is True,
+    "native_invitation_refusal_signal": invitation.get("refusal_is_signal") is True,
+    "native_invitation_received": invitation_received.get("shape") == "ordinary-json-mutation",
+    "native_invitation_translated": invitation_translated.get("language")
+    == "Form-native mutation recipe"
+    and invitation_translated.get("operation") == obj.get("operation")
+    and invitation_translated.get("node_id") == obj.get("node_id"),
+    "native_invitation_execution": invitation_execution.get("selected_path")
+    == "implicit-native-invitation"
+    and invitation_execution.get("router") == "native-kernel",
+    "native_invitation_next": invitation_speak.get("native_protocol")
+    == "Form/BML mutation recipe"
+    and invitation_speak.get("fallback_header") == "X-Form-Python-Fallback"
+    and invitation.get("decline_signal") == "native_invitation_declined",
     "signature_compact": signature.get("category") == "native-mutation-gate"
     and signature.get("selected_path") == "implicit-native-invitation"
     and signature.get("outcome_code") == 1,

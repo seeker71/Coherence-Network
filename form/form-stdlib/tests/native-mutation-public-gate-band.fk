@@ -6,9 +6,9 @@
 ;           form-stdlib/native-mutation-public-gate.fk
 ;
 ; Band verdict: 11111111 when the public gate carries an explicit header,
-; persisted rollback receipt SQL, per-request decision receipt,
-; route-side-effect runner binding, default native invitation, and explicit
-; Python fallback/refusal signal.
+; persisted rollback receipt SQL, per-request decision and native-invitation
+; receipts, route-side-effect runner binding, default native invitation, and
+; explicit Python fallback/refusal signal.
 
 (do
     (nmpg-public-gate-test))
