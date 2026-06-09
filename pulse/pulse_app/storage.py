@@ -135,12 +135,19 @@ class Store:
             )
             return int(cur.lastrowid or 0)
 
-    def close_silence(self, silence_id: int, ended_at: str) -> None:
+    def close_silence(self, silence_id: int, ended_at: str, note: str | None = None) -> None:
         with self._connect() as c:
-            c.execute(
-                "UPDATE silences SET ended_at = ? WHERE id = ? AND ended_at IS NULL",
-                (ended_at, silence_id),
-            )
+            if note is None:
+                c.execute(
+                    "UPDATE silences SET ended_at = ? WHERE id = ? AND ended_at IS NULL",
+                    (ended_at, silence_id),
+                )
+            else:
+                c.execute(
+                    "UPDATE silences SET ended_at = ?, note = ? "
+                    "WHERE id = ? AND ended_at IS NULL",
+                    (ended_at, note, silence_id),
+                )
 
     def escalate_silence(self, silence_id: int, severity: str) -> None:
         with self._connect() as c:

@@ -171,10 +171,18 @@ trace, and reopen only through witnessed changed evidence. In a human
 circle, it becomes a way to stay sovereign without making permanent
 enemies out of every rupture.
 
+In the pulse witness, this concept is executable. A failed organ opens
+a silence row as a stop receipt. Three consecutive breathing samples
+become repair evidence. The witness closes the row with a
+`boundary_repair_protocol` note and lets the channel re-enter the
+breathing state. If the evidence is incomplete, the silence stays open
+and the overall pulse remains strained or silent rather than pretending
+the receipt was resolved.
+
 The core feature is not enforcement. It is legibility. Anyone willing
 to witness the trace can see how the channel moved: boundary,
 evidence, choice, receipt, repair witness, re-entry.
 
 ## Cross-References
 
--> lc-consent-is-continuous, lc-received-by-invitation, lc-boundaries-as-loving-truth, lc-satsang-circle, lc-sovereignty-within-oneness, lc-permission-is-interior, lc-trust-over-fear, lc-act-without-penalty, lc-observer-pays-the-trace
+-> lc-consent-is-continuous, lc-received-by-invitation, lc-boundaries-as-loving-truth, lc-satsang-circle, lc-sovereignty-within-oneness, lc-permission-is-interior, lc-trust-over-fear, lc-act-without-penalty, lc-observer-pays-the-trace, lc-pulse

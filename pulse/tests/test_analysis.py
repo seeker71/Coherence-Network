@@ -5,14 +5,17 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 from pulse_app.analysis import (
+    BOUNDARY_REPAIR_PROTOCOL,
     latency_percentiles,
     overall_status,
+    overall_status_with_open_silences,
+    reconcile_all_silences,
     reconcile_silences,
     rollup_daily,
     status_from_last_sample,
     uptime_percent,
 )
-from pulse_app.storage import Sample, Store, iso_utc
+from pulse_app.storage import Sample, SilenceRow, Store, iso_utc
 
 
 def _s(organ: str, ok: bool, minutes_ago: int) -> Sample:
@@ -310,6 +313,50 @@ def test_reconcile_closes_silence_after_three_successes(tmp_path):
     assert store.ongoing_silence_for_organ("api") is None
 
 
+def test_reconcile_closes_with_boundary_repair_receipt(tmp_path):
+    store = Store(str(tmp_path / "pulse.db"))
+    sid = store.open_silence("api", "2026-04-15T12:00:00Z", "silent")
+    for ts in (
+        "2026-04-15T12:05:00Z",
+        "2026-04-15T12:05:30Z",
+        "2026-04-15T12:06:00Z",
+    ):
+        store.insert_sample(
+            Sample(ts=ts, organ="api", ok=True, latency_ms=10, detail=None)
+        )
+
+    receipt = reconcile_silences(store, "api")
+
+    assert receipt is not None
+    assert receipt.silence_id == sid
+    assert receipt.protocol == BOUNDARY_REPAIR_PROTOCOL
+    assert receipt.choice == "re_enter"
+    assert receipt.ended_at == "2026-04-15T12:05:00Z"
+    closed = store.silences_since("2026-04-15T00:00:00Z")[0]
+    assert closed.ended_at == "2026-04-15T12:05:00Z"
+    assert closed.note is not None
+    assert closed.note.startswith(f"{BOUNDARY_REPAIR_PROTOCOL}:")
+    assert "3 consecutive breathing samples" in closed.note
+
+
+def test_reconcile_all_repairs_stale_open_silence_from_samples(tmp_path):
+    store = Store(str(tmp_path / "pulse.db"))
+    store.open_silence("api", "2026-04-15T12:00:00Z", "strained")
+    for ts in (
+        "2026-04-15T12:05:00Z",
+        "2026-04-15T12:05:30Z",
+        "2026-04-15T12:06:00Z",
+    ):
+        store.insert_sample(
+            Sample(ts=ts, organ="api", ok=True, latency_ms=10, detail=None)
+        )
+
+    receipts = reconcile_all_silences(store, ["api", "web"])
+
+    assert [r.organ for r in receipts] == ["api"]
+    assert store.ongoing_silence_for_organ("api") is None
+
+
 def test_reconcile_single_success_does_not_close(tmp_path):
     store = Store(str(tmp_path / "pulse.db"))
     for m in (10, 9, 8):
@@ -319,3 +366,40 @@ def test_reconcile_single_success_does_not_close(tmp_path):
     store.insert_sample(_s("api", True, 1))
     reconcile_silences(store, "api")
     assert store.ongoing_silence_for_organ("api") is not None
+
+
+def test_reconcile_all_keeps_silence_open_without_enough_reentry_evidence(tmp_path):
+    store = Store(str(tmp_path / "pulse.db"))
+    store.open_silence("api", "2026-04-15T12:00:00Z", "strained")
+    for ts in ("2026-04-15T12:05:00Z", "2026-04-15T12:05:30Z"):
+        store.insert_sample(
+            Sample(ts=ts, organ="api", ok=True, latency_ms=10, detail=None)
+        )
+
+    receipts = reconcile_all_silences(store, ["api"])
+
+    assert receipts == []
+    assert store.ongoing_silence_for_organ("api") is not None
+
+
+def test_overall_status_with_open_silences_refuses_breathing_contradiction():
+    strained = SilenceRow(
+        id=1,
+        organ="api",
+        started_at="2026-04-15T12:00:00Z",
+        ended_at=None,
+        severity="strained",
+        note=None,
+    )
+    silent = SilenceRow(
+        id=2,
+        organ="web",
+        started_at="2026-04-15T12:01:00Z",
+        ended_at=None,
+        severity="silent",
+        note=None,
+    )
+
+    assert overall_status_with_open_silences(["breathing"], []) == "breathing"
+    assert overall_status_with_open_silences(["breathing"], [strained]) == "strained"
+    assert overall_status_with_open_silences(["breathing"], [silent]) == "silent"
