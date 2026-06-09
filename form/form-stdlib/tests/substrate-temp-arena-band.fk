@@ -4,12 +4,12 @@
 ; boundary by marking before transient work and releasing after it is consumed.
 
 (do
-    (let category (make_nodeid 9 9 9 1))
+    (let temp-arena-category (make_nodeid 9 9 9 1))
     (let before (substrate_counts))
     (let mark (substrate_mark))
     (let temp-name (intern_trivial_string (str_concat "temporary-" "arena-object")))
     (let temp-int (intern_trivial_int 42))
-    (let temp-node (intern_node category (list temp-name temp-int)))
+    (let temp-node (intern_node temp-arena-category (list temp-name temp-int)))
     (let mid (substrate_counts))
     (let released (substrate_release mark))
     (let after (substrate_counts))

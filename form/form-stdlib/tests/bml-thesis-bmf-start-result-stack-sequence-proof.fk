@@ -26,23 +26,23 @@
             "StartResultStack"))
     (let start-body (bml-method-body start-method))
 
-    (let BmfBP (make_nodeid 1 2 99 9250))
-    (let StackBP (make_nodeid 1 2 99 9251))
-    (let OldBP (make_nodeid 1 2 99 9252))
-    (let EnvBP (bml-constructor-env-blueprint 0))
-    (let env (record_new EnvBP))
-    (let old-result (record_new OldBP "bmlClass" "OldResult"))
-    (let result-stack (record_new StackBP))
+    (let StackSeqBmfBP (make_nodeid 1 2 99 9250))
+    (let StackSeqStackBP (make_nodeid 1 2 99 9251))
+    (let StackSeqOldBP (make_nodeid 1 2 99 9252))
+    (let StackSeqEnvBP (bml-constructor-env-blueprint 0))
+    (let env (record_new StackSeqEnvBP))
+    (let old-result (record_new StackSeqOldBP "bmlClass" "OldResult"))
+    (let result-stack (record_new StackSeqStackBP))
     (let bmf-instance
         (record_new
-            BmfBP
+            StackSeqBmfBP
             "m_hResultStack" result-stack
             "m_hResult" old-result))
 
     (defn stack-push-dispatch (self value)
         (record_set self "pushed" value))
 
-    (method_define StackBP "Push" stack-push-dispatch)
+    (method_define StackSeqStackBP "Push" stack-push-dispatch)
     (let exec-result (bml-body-source-exec start-body bmf-instance env))
     (let pushed-result (record_get result-stack "pushed"))
     (let new-result (record_get exec-result "m_hResult"))
@@ -55,7 +55,7 @@
             (bool-score (bml-body-source-contains? start-body "ParseStack") 8)
             (int-score (bml-body-source-receiver-call1-count start-body) 1 16)
             (int-score (bml-body-source-constructor-assignment-count start-body) 1 32)
-            (bool-score (method_has StackBP "Push") 64)
+            (bool-score (method_has StackSeqStackBP "Push") 64)
             (str-score (record_get pushed-result "bmlClass") "OldResult" 128)
             (str-score (record_get new-result "bmlClass") "ParseStack" 256)
             (bool-score

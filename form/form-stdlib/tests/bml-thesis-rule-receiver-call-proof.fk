@@ -26,12 +26,12 @@
             "Match"))
     (let match-body (bml-method-body match-method))
 
-    (let RuleBP (make_nodeid 1 2 99 9230))
-    (let EnvBP (make_nodeid 1 2 99 9231))
-    (let CallEnvBP (bml-constructor-env-blueprint 0))
-    (let env-object (record_new EnvBP "started" 0))
-    (let env (record_new CallEnvBP "hEnv" env-object))
-    (let rule-instance (record_new RuleBP))
+    (let ReceiverRuleBP (make_nodeid 1 2 99 9230))
+    (let ReceiverEnvBP (make_nodeid 1 2 99 9231))
+    (let ReceiverCallEnvBP (bml-constructor-env-blueprint 0))
+    (let env-object (record_new ReceiverEnvBP "started" 0))
+    (let env (record_new ReceiverCallEnvBP "hEnv" env-object))
+    (let rule-instance (record_new ReceiverRuleBP))
 
     (defn env-start-result-stack-dispatch (self)
         (record_set self "started" 1))
@@ -43,9 +43,9 @@
         tag)
 
     (let before-started (record_get env-object "started"))
-    (method_define EnvBP "StartResultStack" env-start-result-stack-dispatch)
-    (method_define EnvBP "EndResultStack" env-end-result-stack-dispatch)
-    (method_define RuleBP "GetTag" rule-get-tag-dispatch)
+    (method_define ReceiverEnvBP "StartResultStack" env-start-result-stack-dispatch)
+    (method_define ReceiverEnvBP "EndResultStack" env-end-result-stack-dispatch)
+    (method_define ReceiverRuleBP "GetTag" rule-get-tag-dispatch)
     (let exec-result
         (bml-body-source-exec-receiver-call0
             match-body
@@ -53,10 +53,10 @@
             env))
     (let after-started (record_get env-object "started"))
 
-    (let second-env-object (record_new EnvBP "started" 0))
+    (let second-env-object (record_new ReceiverEnvBP "started" 0))
     (let second-env
         (record_new
-            CallEnvBP
+            ReceiverCallEnvBP
             "hEnv" second-env-object
             "strTag" "receiver-proof-tag"))
     (bml-body-source-exec match-body rule-instance second-env)
@@ -69,7 +69,7 @@
             (bool-score (bml-body-source-contains? match-body "hEnv") 8)
             (bool-score (bml-body-source-contains? match-body "StartResultStack") 16)
             (int-score (bml-body-source-receiver-call0-count match-body) 1 32)
-            (bool-score (method_has EnvBP "StartResultStack") 64)
+            (bool-score (method_has ReceiverEnvBP "StartResultStack") 64)
             (int-score before-started 0 128)
             (int-score after-started 1 256)
             (bool-score (record_has env-object "started") 512)

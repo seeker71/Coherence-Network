@@ -25,13 +25,13 @@
             "operator=="))
     (let operator-body (bml-method-body operator-method))
 
-    (let RuleBP (make_nodeid 1 2 99 9270))
-    (let OtherBP (make_nodeid 1 2 99 9271))
-    (let CallEnvBP (bml-constructor-env-blueprint 0))
-    (let rule-instance (record_new RuleBP "bmlClass" "Rule"))
-    (let other-object (record_new OtherBP "bmlClass" "Other"))
-    (let other-env (record_new CallEnvBP "hObj" other-object))
-    (let rule-env (record_new CallEnvBP "hObj" rule-instance))
+    (let IfInstanceofRuleBP (make_nodeid 1 2 99 9270))
+    (let IfInstanceofOtherBP (make_nodeid 1 2 99 9271))
+    (let IfInstanceofCallEnvBP (bml-constructor-env-blueprint 0))
+    (let rule-instance (record_new IfInstanceofRuleBP "bmlClass" "Rule"))
+    (let other-object (record_new IfInstanceofOtherBP "bmlClass" "Other"))
+    (let other-env (record_new IfInstanceofCallEnvBP "hObj" other-object))
+    (let rule-env (record_new IfInstanceofCallEnvBP "hObj" rule-instance))
 
     (let direct-result
         (bml-body-source-exec-if-not-instanceof-return-false
@@ -53,9 +53,9 @@
         (bml-body-source-exec
             operator-body
             self
-            (record_new CallEnvBP "hObj" hObj)))
+            (record_new IfInstanceofCallEnvBP "hObj" hObj)))
 
-    (method_define RuleBP "operator==" rule-eq-dispatch)
+    (method_define IfInstanceofRuleBP "operator==" rule-eq-dispatch)
     (let method-result (method_invoke rule-instance "operator==" other-object))
 
     (sum

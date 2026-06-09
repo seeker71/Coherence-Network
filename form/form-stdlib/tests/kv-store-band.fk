@@ -81,12 +81,12 @@
     (let found-ok (if (eq (len cells-found) 1) 1 0))
     (let k-channel (reg-channel-path (head cells-found)))
 
-    (let topic-nid (make_nodeid 1 2 99 7801))
+    (let kv-store-topic-nid (make_nodeid 1 2 99 7801))
 
     ;; --- Step 1: set "k1" → "v1" ----------------------------------
     (channel-append k-channel
         (channel-message
-            (cq-query "kv-set" topic-nid
+            (cq-query "kv-set" kv-store-topic-nid
                 (intern_node (make_nodeid 1 1 14 0)
                     (list (intern_trivial_string "k1")
                           (intern_trivial_string "v1"))))))
@@ -99,7 +99,7 @@
     ;; --- Step 2: set "k2" → "v2" ----------------------------------
     (channel-append k-channel
         (channel-message
-            (cq-query "kv-set" topic-nid
+            (cq-query "kv-set" kv-store-topic-nid
                 (intern_node (make_nodeid 1 1 14 0)
                     (list (intern_trivial_string "k2")
                           (intern_trivial_string "v2"))))))
@@ -112,7 +112,7 @@
     ;; --- Step 3: get "k1" → expect "v1" ---------------------------
     (channel-append k-channel
         (channel-message
-            (cq-query "kv-get" topic-nid
+            (cq-query "kv-get" kv-store-topic-nid
                 (intern_trivial_string "k1"))))
     (let t3 (band-step t2))
     (let r3 (channel-msg-payload
@@ -128,7 +128,7 @@
     ;; --- Step 4: get "k2" → expect "v2" ---------------------------
     (channel-append k-channel
         (channel-message
-            (cq-query "kv-get" topic-nid
+            (cq-query "kv-get" kv-store-topic-nid
                 (intern_trivial_string "k2"))))
     (let t4 (band-step t3))
     (let r4 (channel-msg-payload
@@ -144,7 +144,7 @@
     ;; --- Step 5: get "missing" → expect "not-known" --------------
     (channel-append k-channel
         (channel-message
-            (cq-query "kv-get" topic-nid
+            (cq-query "kv-get" kv-store-topic-nid
                 (intern_trivial_string "missing"))))
     (let t5 (band-step t4))
     (let r5 (channel-msg-payload
