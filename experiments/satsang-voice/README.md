@@ -21,6 +21,13 @@ offered — never imposed. See [`satsang-voice.form`](satsang-voice.form).
   `sound_classify.swift`) names the room's other sounds — animals, music, instruments,
   environment — each with a **confidence**. The threshold *is* the honesty: below it, the body
   offers silence, not an asserted match it doesn't carry.
+- **the song playing** — `shazam_song.swift` generates a Shazam signature **on-device**; the
+  full-catalog match needs the `com.apple.developer.shazamkit` entitlement (sign the binary with
+  your Apple developer account, or build a custom offline catalog). Without it ShazamKit returns
+  error 202 and the body simply offers silence on the song — honest, not broken.
+- **the offerings** — grown to the presence shapes: observation · surprise · trigger ·
+  question-for-the-circle · inner insight · offering. Speaker attribution ("who said what") stays
+  **off by default** — the consent line is a switch you hold, not a default-on.
 - **showing** — a tiny stdlib web server; open it in a browser.
 
 ## One-time setup
