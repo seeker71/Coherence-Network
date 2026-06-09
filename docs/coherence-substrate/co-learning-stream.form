@@ -1,0 +1,63 @@
+; co-learning-stream.form — the LIVE per-device learning loop as a FOLD, then the federated speedup over streams.
+;
+; THE ASK (Urs, co-learning M1):
+;   co-learning.form (M0) proved the federated UNION over exemplar sets handed to it already-learned.
+;   learning-arc.form folded ONE device's stream and measured its own online agreement curve. This is the
+;   piece between them: each device GROWS its exemplar set by folding its OWN oracle stream, and THEN the
+;   merged breadth of two devices' learned sets beats either alone. The whole "two mics learn faster
+;   together" claim, now from STREAMS rather than from pre-handed sets — the per-device learning fold plus
+;   the federated speedup proven over the stream, not assumed at the set.
+;
+; THE SHAPE  (runnable: form-stdlib/co-learning-stream.fk · proven: tests/co-learning-stream-band.fk -> 127)
+;
+;   A device's audio arrives as a STREAM of SAMPLES, each (list label feature) — the oracle's label
+;   (speech, music, ...) and the coarse feature-vector the mic sensed (small-int bins, nearest-shape's
+;   query shape). A device's learned set = a list of (label vector) — exactly nearest-shape's prototype-set.
+;
+;   1. LEARN ONE  cls-learn: intern one sample as nearest-shape's (label vector) prototype, growing the set
+;      (cons — adding without forgetting). The smallest possible act of learning, the same one nearest-shape
+;      and learning-arc teach.
+;   2. FOLD THE STREAM  cls-learn-stream (samples set): the live loop made a single fold — walk the stream
+;      in time order, interning each sample onto the set learned so far. Online, single-pass, order-
+;      respecting; cold (empty stream) leaves the set unchanged (a mic that heard nothing learned nothing).
+;      cls-device folds a whole stream onto the empty set: a device learning from scratch.
+;   3. THE FEDERATED SPEEDUP  cls-merged-breadth (stream-a stream-b): fold BOTH streams, union the two
+;      learned sets (co-learning.fk's cl-merge), and measure the breadth of the union. The merged field
+;      covers what each mic alone could not, and its breadth is the measure of that coverage.
+;   4. PARTIAL-ALONE  cls-stream-knows? (samples query label): does a device that folded `samples`
+;      recognize `query` as `label`? (cl-knows? → nearest-shape over the learned set). The handle that
+;      shows a single mic is PARTIAL — it recognizes only the shapes its own stream met.
+;
+; WHY TWO STREAMS ARE FASTER (proven — tests/co-learning-stream-band.fk -> 127, three-way Go/Rust/TS):
+;   Device A's stream heard SPEECH; device B's heard MUSIC. After each folds its own stream, A's set
+;   recognizes only speech (a music query routes to its lone speech prototype: WRONG); B's only music.
+;   The union of the two FOLDED streams recognizes BOTH — and its breadth is 2 while each device alone
+;   covers only 1. The federated speedup is real and measurable over the live stream, not just over
+;   pre-handed sets. A third 3-sample stream pins that the fold genuinely ACCUMULATES (breadth 3, not a
+;   base case).
+;
+; THE PROVEN VERDICT — tests/co-learning-stream-band.fk -> 127 (seven falsifiable bits):
+;   1   A's folded stream learned speech                 (A recognizes a speech query as "speech")
+;   2   B's folded stream learned music                  (B recognizes a music query as "music")
+;   4   A alone gets MUSIC wrong                          (A folded only speech → music query mis-routes)
+;   8   B alone gets SPEECH wrong                         (B folded only music → speech query mis-routes)
+;   16  the MERGE of the two streams gets BOTH right      (union recognizes speech AND music)
+;   32  the federated speedup number                     (merged breadth == 2 while each device alone == 1)
+;   64  the fold accumulates over a multi-sample stream  (3-sample stream → breadth 3)
+;
+; HONEST LANE:
+;   breadth is a COUNT of interned exemplars (co-learning.fk's cl-breadth = len). In the band each stream
+;   carries one distinct shape, so the raw union breadth is 2 — the speedup number is exact. Over INTERNED
+;   cells, two identical exemplars from both mics share one merkle NodeID and the union dedups for free
+;   (federation-addressing.form); the raw list-cons here does not dedup, which is why the band teaches one
+;   distinct shape per stream rather than relying on dedup to keep the count honest. Recognition is
+;   nearest-shape's exact-bin agreement (no distance, no float); replay the streams and the learned sets —
+;   and every bit of the verdict — are identical on Go, Rust, and TS (the nearest-shape parity IS the
+;   learning parity; the three-way validate.sh is the proof, there is no trusted prover).
+;
+; KIN — co-learning.form (M0: the federated union over already-learned sets; this folds the streams that
+;   feed it) · learning-arc.form (folds ONE device's stream into an online agreement curve; this folds each
+;   device's stream into a set, then federates) · nearest-shape.form (the recognizer the learned set routes
+;   through) · federation-addressing.form (merkle on the wire — the dedup that makes the union breadth honest
+;   over interned cells) · recognition-router.form (the routing tree that names which category a chunk teaches)
+;   · declared-source.form (the cheap oracle that labels a sample) · shared-sensing.form (many bodies, one field).

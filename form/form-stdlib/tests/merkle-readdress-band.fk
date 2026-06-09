@@ -1,0 +1,78 @@
+; preludes: form-stdlib/core.fk form-stdlib/sha256.fk form-stdlib/merkle.fk form-stdlib/merkle-readdress.fk
+; tests/merkle-readdress-band.fk — the re-address proof.
+;
+; The federation-addressing property, made falsifiable across the three
+; sibling kernels (Go=Rust=TS): the Merkle root of a structure is a pure
+; function of its CONTENT. The same content built along a DIFFERENT path
+; hashes to the SAME root (the cross-runtime-stable address a local NodeID
+; counter cannot give); DIFFERENT content — a different leaf, a different
+; order, an extra leaf — hashes to a DIFFERENT root.
+;
+; Two single-byte leaves keep the O(n²) sha256 recipe inside the recipe-walk
+; budget. Each bit is its own power of two, so the verdict names exactly which
+; claim held. Verdict 127 = all seven.
+
+(do
+    ;; Re-address helpers (mirrors merkle-readdress.fk, kept in-band so the
+    ;; band proves the property directly over merkle.fk's surface).
+    (defn rd-nil? (xs) (eq (len xs) 0))
+
+    (defn rebuild-bytes (bs)
+        (if (rd-nil? bs) (list)
+            (cons (head bs) (rebuild-bytes (tail bs)))))
+
+    ;; A genuinely different construction path producing an EQUAL value.
+    (defn rebuild-by-cons (blocks)
+        (if (rd-nil? blocks) (list)
+            (cons (rebuild-bytes (head blocks))
+                  (rebuild-by-cons (tail blocks)))))
+
+    (defn rd-append1 (xs x)
+        (if (rd-nil? xs) (list x) (cons (head xs) (rd-append1 (tail xs) x))))
+
+    (defn reverse-blocks (blocks)
+        (if (rd-nil? blocks) (list)
+            (rd-append1 (reverse-blocks (tail blocks)) (head blocks))))
+
+    (defn same-root? (a b)
+        (bytes-eq (merkle-root a) (merkle-root b)))
+
+    ;; The structures.
+    (let base      (list (list 1) (list 2)))   ; the canonical content
+    (let base-cons (rebuild-by-cons base))      ; same content, other path
+    (let base-rev  (reverse-blocks base))       ; same leaves, reversed order
+    (let other     (list (list 1) (list 3)))    ; one leaf differs
+    (let base-plus (list (list 1) (list 2) (list 3))) ; an extra leaf
+    (let one       (list (list 7)))             ; a single-leaf structure
+
+    ;; bit 1 (1): the address is a well-formed 32-byte digest.
+    (let c-len (if (eq (len (merkle-root base)) 32) 1 0))
+
+    ;; bit 2 (2): SAME content, DIFFERENT build path → SAME address.
+    ;; (the re-address property — the heart of federation addressing)
+    (let c-readdr (if (eq (same-root? base base-cons) 1) 2 0))
+
+    ;; bit 3 (4): pure function — the root is referentially transparent;
+    ;; computing it twice on the same content yields the same address.
+    (let c-pure (if (eq (same-root? base base) 1) 4 0))
+
+    ;; bit 4 (8): DIFFERENT content (one leaf changed) → DIFFERENT address.
+    (let c-diff (if (eq (same-root? base other) 0) 8 0))
+
+    ;; bit 5 (16): ORDER is content — reversing the leaves changes the address.
+    ;; (keeps "same structure → same root" honest: same ORDERED content only)
+    (let c-order (if (eq (same-root? base base-rev) 0) 16 0))
+
+    ;; bit 6 (32): the root commits to the WHOLE content — an extra leaf differs.
+    (let c-extra (if (eq (same-root? base base-plus) 0) 32 0))
+
+    ;; bit 7 (64): the degenerate single-leaf structure re-addresses too —
+    ;; same content, other build path, same address.
+    (let c-one (if (eq (same-root? one (rebuild-by-cons one)) 1) 64 0))
+
+    (add c-len
+        (add c-readdr
+            (add c-pure
+                (add c-diff
+                    (add c-order
+                        (add c-extra c-one)))))))

@@ -1,0 +1,64 @@
+; trust-weighted-colearning.fk — weight a device's contribution by trust BEFORE merging into the shared classifier.
+;
+; THE GOAL (Urs): co-learning.fk lets two mics union their learned exemplars so the merged classifier
+; recognizes what neither heard alone. But a naive union trusts EVERY peer equally — a device that went
+; silent ticks ago, or whose stream is stale, would still pour its exemplars into the shared field and
+; pollute it. This recipe is the gate co-learning was missing: a peer's contribution is admitted only
+; when the mesh still TRUSTS its presence. A silent / decayed peer contributes nothing; a fresh peer's
+; exemplars flow in and grow the shared breadth.
+;
+; The trust reading is NOT invented here — it is trust-decay.fk's presence-confidence, read straight off
+; the same grace budget heartbeat.fk feeds. td-grace-band (last-beat now max half) returns the coarse
+; three-band depth into the budget as a string ("fresh" | "fading" | "gone"); twc-band lifts that to the
+; numeric trust band the merge gate compares: gone → 0, fading → 1, fresh → 2. The gate is deliberately
+; coarse and honest — admit unless GONE — so a peer fading but still within its grace budget still helps,
+; and only a peer past its full-edge (grace fully spent) is refused.
+;
+; THE FEDERATION GUARD: twc-merge unions peer-b's exemplar set into the local peer-a's ONLY when b's
+; trust band admits; otherwise a is returned UNCHANGED — b's stale shapes never enter the shared
+; classifier, so a query for b's shape stays unrecognized. This is the smallest trust-weighting that
+; matters: a binary admit gate on the federated union, derived from the body's own presence-decay rather
+; than a fresh trust metric. (No weighted-average of exemplars — admission is the weight; the curated
+; band set has no div for a graded blend, and a 0/1 gate is the honest reading of a coarse trust band.)
+;
+; Surface:
+;   (twc-band last-beat now max half)   → 0 (gone) | 1 (fading) | 2 (fresh)   — numeric trust band
+;   (twc-admit? band)                   → 1 iff band is not GONE (band != 0)  — admit this peer?
+;   (twc-merge a b band)                → cl-merge of b into a iff admitted, else a unchanged
+;
+; Composes: trust-decay.fk (td-grace-band) · co-learning.fk (cl-merge) — and through cl-merge / the band's
+; cl-knows?, nearest-shape.fk. Self-contained gate logic; the union and the recognizer are the body's own.
+;
+; Honest lane: the trust weight is a BINARY admit (band != gone), not a continuous influence — a fading
+; peer counts exactly as much as a fresh one, a gone peer not at all. That is the right primitive for a
+; coarse three-band presence reading the three kernels compare exactly; a graded blend would need a
+; division and a float influence the band set deliberately keeps out of verdicts. Admission is per-merge
+; and order-stable: a's local exemplars stay at the head, so nearest-shape's "oldest exemplar wins" ties
+; keep the local peer's knowledge primary and the admitted peer's exemplars purely additive.
+;
+; Proven by: form-stdlib/tests/trust-weighted-colearning-band.fk (three-way at validate.sh)
+
+(do
+    ;; --- TRUST BAND: lift trust-decay's three-band string to a numeric band. -----
+    ;; gone → 0, fading → 1, fresh → 2. Read straight off td-grace-band so the
+    ;; trust weight IS the body's presence-decay, not a fresh metric. Two nested
+    ;; str_eq tests, the same nested-classifier shape td-grace-band itself uses.
+    (defn twc-band (last-beat now max half)
+        (if (str_eq (td-grace-band last-beat now max half) "fresh") 2
+            (if (str_eq (td-grace-band last-beat now max half) "fading") 1 0)))
+
+    ;; --- ADMIT?: should this peer's exemplars enter the shared classifier? -------
+    ;; 1 unless the peer is GONE (band 0): a fading-but-trusted peer still helps;
+    ;; only a peer past its full-edge (grace fully spent) is refused. The coarse,
+    ;; honest gate — admit unless fully decayed.
+    (defn twc-admit? (band) (if (eq band 0) 0 1))
+
+    ;; --- MERGE: union b into a ONLY if b's trust admits; else a unchanged. -------
+    ;; The federation guard. cl-merge a b keeps a's local exemplars at the head
+    ;; (additive, ties favor local). A refused (gone) peer leaves a untouched, so
+    ;; a query for that peer's shape stays unrecognized — the stale device never
+    ;; pollutes the shared field.
+    (defn twc-merge (a b band)
+        (if (eq (twc-admit? band) 1) (cl-merge a b) a))
+
+    0)

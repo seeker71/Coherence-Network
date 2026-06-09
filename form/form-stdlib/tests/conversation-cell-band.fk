@@ -1,0 +1,49 @@
+; preludes: form-stdlib/core.fk form-stdlib/conversation-cell.fk
+;
+; conversation-cell-band — a transcript made falsifiable: ordered utterance cells, queried, content-addressed.
+;
+; A short conversation is built oldest-first from three utterances (ts speaker text-key):
+;   u0 = (10 0 100)   ; tick 10, speaker 0 (human), content-key 100
+;   u1 = (20 1 200)   ; tick 20, speaker 1 (agent), content-key 200
+;   u2 = (30 0 300)   ; tick 30, speaker 0 (human), content-key 300
+; base = [u0 u1] ; then cv-append u2 grows it to [u0 u1 u2].
+;
+; The band proves each query op and the content-addressing heart:
+;   1   APPEND GROWS         — appending u2 takes the count 2 -> 3 (the transcript grew by exactly one).
+;   2   LAST IS MOST RECENT  — cv-last of the grown transcript is u2 (the tail, the latest thing said).
+;   4   COUNT IS LENGTH      — cv-count of the grown transcript is 3.
+;   8   SINCE IS INCLUSIVE   — cv-since(grown, 20) keeps {u1,u2} (ts>=20, t itself included), count 2;
+;                              the just-earlier u0 (ts 10) is correctly dropped — selection by content.
+;   16  SPEAKER SAID (yes)   — cv-speaker-said?(grown, 1) is 1: the agent did contribute (u1).
+;   32  SPEAKER SAID (no)    — cv-speaker-said?(grown, 7) is 0: speaker 7 never spoke (honest silence).
+;   64  CONTENT-ADDRESSED    — two transcripts built INDEPENDENTLY from the same utterances in the same
+;                              order are cv-eq? equal (structure carries identity; a re-send dedups),
+;                              AND a transcript with one utterance changed is NOT cv-eq? (the address moved).
+;
+; Verdict 127 when every claim lands. cv-eq? proves the dedup lane both ways — same content equal,
+; changed content not — so the heart bit cannot pass by accident.
+(do
+    (let u0 (utt 10 0 100))
+    (let u1 (utt 20 1 200))
+    (let u2 (utt 30 0 300))
+
+    (let base  (list u0 u1))            ; oldest-first; head is the first thing said
+    (let grown (cv-append u2 base))     ; append at the end -> [u0 u1 u2]
+
+    ; an independent second build of the SAME content in the SAME order (no shared structure)
+    (let twin  (cv-append (utt 30 0 300) (list (utt 10 0 100) (utt 20 1 200))))
+    ; a build with the last content-key changed (the address moved -> must NOT dedup)
+    (let moved (list (utt 10 0 100) (utt 20 1 200) (utt 30 0 999)))
+
+    (let since20 (cv-since grown 20))   ; {u1,u2}: ts>=20 inclusive
+
+    (let c0 (if (eq (cv-count grown) (add (cv-count base) 1)) 1 0))   ; append grew by one
+    (let c1 (if (eq (utt-eq? (cv-last grown) u2) 1)            2 0))   ; last is the most recent
+    (let c2 (if (eq (cv-count grown) 3)                        4 0))   ; count is length
+    (let c3 (if (eq (cv-count since20) 2)                      8 0))   ; since is inclusive, drops earlier
+    (let c4 (if (eq (cv-speaker-said? grown 1) 1)             16 0))   ; the agent contributed
+    (let c5 (if (eq (cv-speaker-said? grown 7) 0)             32 0))   ; speaker 7 stayed silent
+    (let c6 (if (and (eq (cv-eq? grown twin)  1)
+                     (eq (cv-eq? grown moved) 0))             64 0))   ; same content equal, changed not
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

@@ -1,0 +1,58 @@
+; mesh-merge-converge.form — gossip convergence: many paths, one merged value.
+;
+; THE ASK (federated-slices.form, milestone M2):
+;   "three-cell mesh merge: two cells flood a slice-update via mesh-relay (content-address dedup), the
+;    third merges both and applies it — assert mesh-merge == local-merge (gossip convergence as a proof)."
+;
+;   The fear an orchestrator answers with a coordinator: "if deltas arrive in different orders at
+;   different cells, the cells will disagree." The body's answer is that the MERGE itself is order-free,
+;   so there is nothing to coordinate. A cell that has seen the same set of deltas holds the same slice,
+;   no matter which gossip path delivered them. Convergence is a property of the recipe, not of a referee.
+;
+; THE SHAPE  (runnable: form-stdlib/mesh-merge-converge.fk · proven: tests/mesh-merge-converge-band.fk -> 127)
+;
+;   This recipe carries NO arithmetic of its own — it composes slice-merge.fk's sm-num / sm-den (the
+;   trust-weighted FedAvg + TIES sign-election merge, proven three-way -> 127) and proves ONE thing about
+;   them: their value at a coordinate is invariant under reordering of the slice list.
+;   1. PERMUTE  mm-perm: a re-cons of the same three cells — no element added or lost, only order changed.
+;      The six orderings of {A,B,C} are the six gossip paths the three deltas can arrive by.
+;   2. CONVERGED-AT  mm-converged-at?: do two orderings merge to the same value at coordinate j? The WHOLE
+;      rational must agree — numerator AND denominator (binary and, nested) — not half of it.
+;   3. ORDER-STABLE  mm-order-stable?: a→b→c merges to the same value as c→b→a (the named diagonal, full
+;      reverse) and as the other four permutations, at every coordinate. This IS gossip convergence:
+;      because slice-merge's merge is a fold of integer add over the slices, it is commutative AND
+;      associative, so the merged value is path-independent. mesh-merge == local-merge.
+;   4. GONE-PEER LAW  mm-gone-stable?: a weight-0 delta (a faded or departed cell) joins the set without
+;      moving the merged value. The safety floor of convergence — a silent peer can neither corrupt the
+;      value nor block the field from agreeing.
+;
+; WHY IT MATTERS:
+;   the convergence is integer-exact (slice-merge defers the divide), so every cell agrees on the same
+;   NUMBERS, bit-identical three-way (Go=Rust=TS) — a float-averaging PyTorch federation, where order of
+;   summation perturbs the low bits, cannot promise this. Eventual consistency without a coordinator,
+;   without a clock, without a trusted prover: the merge is the proof.
+;
+; THE PROVEN VERDICT — tests/mesh-merge-converge-band.fk -> 127, three-way, 0 divergent:
+;   A=(w2,[3,-2,5]) B=(w1,[1,4,-5]) C=(w3,[2,-1,-4]); merged coord0 = (13 6), coord1 = (-7 5), coord2 = (-17 4).
+;     1   the merge computes the right numerator         (mm-num coord0 == 13)
+;     2   the merge computes the right denominator       (mm-den coord0 == 6)
+;     4   a→b→c converges with c→b→a (full reverse, all 3 coords)
+;     8   order-stable across ALL SIX permutations of {A,B,C}   (the core gossip-convergence claim)
+;     16  sign-election survives reordering              (mm-num coord2 == -17, the elected − side, not all-+)
+;     32  a gone peer (weight 0) does not move the merge  (merging +gone == merging without, 3 coords)
+;     64  the test can DETECT divergence                 (a tampered delta does NOT converge — falsifiable, not vacuous)
+;   Falsified live: making the tampered delta identical drops bit 64 -> 63, so the negative claim is real work.
+;
+; KIN — the body already holds every piece; this proves they converge:
+;   slice-merge.fk (sm-num / sm-den — the merge whose convergence this proves; M0 -> 127) ·
+;   federated-slices.form (the M0–M5 ladder; this is M2, gossip convergence) · mesh-relay.fk (managed
+;   flooding, content-address dedup — the paths whose order this proves does not matter) · cell-sync.fk +
+;   merkle.fk (verify-by-re-address — the address is the convergence key) · confidence-weighted-vote.fk
+;   (the integer weight-sum spine slice-merge specializes) · trust-decay.fk (the per-peer weight; a
+;   gone peer's weight-0 is the grace-band floor) · cell-numerics.form (vector_add/scalar_mul apply the
+;   merged delta) · the three-way validate.sh (no trusted prover — what survives the agreement).
+;
+; LINEAGE:
+;   federated-slices.form · slice-merge.fk · mesh-relay.fk + mesh-health.fk + mesh-gradient.fk (the mesh
+;   ring) · the gossip / decentralized-SGD literature (managed-flooding + pairwise merge = gossip without
+;   ever calling it that) · CRDT eventual-consistency (a commutative-associative merge needs no coordinator).

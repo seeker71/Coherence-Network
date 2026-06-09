@@ -1,0 +1,60 @@
+; conversation-context.fk — a transcript becomes the turn-taking context vector the agent reads.
+;
+; turn-taking.fk's tt-speak? asks two things of the moment: a PAUSE (has the room gone quiet long
+; enough) and a learned CONTEXT vector (does this moment resemble one where my voice was wanted). Both
+; are facts about the *conversation so far*. This recipe is the body link from the raw transcript to
+; those facts — the upstream step feature-vector.fk is for raw sensor windows, but for turn-taking.
+;
+; A CONVERSATION is a list of utterances, most-recent-FIRST (cons-prepended, the way a live transcript
+; grows: the newest utterance is the head). An UTTERANCE is (list ts speaker named):
+;   ts      — an integer tick when it was said (monotonic; larger = more recent)
+;   speaker — an integer speaker id (who said it)
+;   named   — 1 if the agent was named/addressed in that utterance, else 0
+; The agent's own moment of deciding is "now" (an integer tick ≥ the last utterance's ts).
+;
+; Three readings, then the vector:
+;   cc-last-ts        — the tick of the most recent utterance (the head's ts). Empty transcript → 0.
+;   cc-pause          — silence since the last utterance = now − last-ts. The room's quiet measured in
+;                       ticks. (sub computes deterministically three-way; the band verdict stays integer.)
+;   cc-named-recently? — was the agent named (named=1) within the last k utterances? A fold over the
+;                       window, nested-if (never 3-arg and). 1 if named in window, else 0. This is the
+;                       "my topic is in the air / I was addressed" signal turn-taking reads.
+;   cc-context        — the integer feature vector [pause, named-recently, depth] tt-speak? consumes as
+;                       its learned-recognition context. depth = conversation length (how deep we are).
+;
+; No `and`/`or` (nested if). No `let` in a defn body (helper defns + recursion). Loop via recursion.
+; Composes nothing but core; tt-speak? consumes cc-context's output. Proven by tests/conversation-context-band.fk.
+
+(do
+    ; --- one utterance is (list ts speaker named); read its fields by position. ---
+    (defn cc-ts      (u) (nth u 0))   ; the tick it was said
+    (defn cc-speaker (u) (nth u 1))   ; who said it
+    (defn cc-named   (u) (nth u 2))   ; 1 if the agent was named in it, else 0
+
+    ; --- the most recent tick: the head's ts. Empty transcript → 0 (no last utterance). ---
+    (defn cc-last-ts (convo)
+        (if (eq (len convo) 0) 0 (cc-ts (head convo))))
+
+    ; --- the pause: silence since the last utterance, in ticks = now − last-ts. ---
+    ; sub is deterministic three-way; we keep it because the gap IS a difference of ticks.
+    (defn cc-pause (convo now)
+        (sub now (cc-last-ts convo)))
+
+    ; --- named within the last k utterances? Walk the window head-first, +recognition on named=1. ---
+    ; k counts down as we descend; stop when k hits 0 or the transcript runs out. Nested-if, never `and`.
+    (defn cc-named-in-window? (convo k)
+        (if (eq k 0) 0
+            (if (eq (len convo) 0) 0
+                (if (eq (cc-named (head convo)) 1) 1
+                    (cc-named-in-window? (tail convo) (sub k 1))))))
+    (defn cc-named-recently? (convo k) (cc-named-in-window? convo k))
+
+    ; --- the conversation depth: how many utterances have accumulated (how deep the exchange is). ---
+    (defn cc-depth (convo) (len convo))
+
+    ; --- the context vector tt-speak? reads: [pause, named-recently, depth]. All integers. ---
+    (defn cc-context (convo now k)
+        (list (cc-pause convo now)
+              (cc-named-recently? convo k)
+              (cc-depth convo)))
+    0)

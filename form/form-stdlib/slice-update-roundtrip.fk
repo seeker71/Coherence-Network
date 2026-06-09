@@ -1,0 +1,43 @@
+; slice-update-roundtrip.fk — a model-delta update survives the mesh by RE-ADDRESSING.
+;
+; federated-slices M1 (update-over-cell-sync). A model is a set of cells; an UPDATE is a model DELTA —
+; one new cell whose ADDRESS is its STRUCTURE (cell-sync's birth-gift: structurally-equal cells are
+; address-equal across devices). So an update crosses the mesh as an ADDRESS, never a blob: the sender
+; OFFERS the delta-addresses; a receiver keeps only the ones it LACKS (request-if-missing); each arrival
+; is VERIFIED by re-addressing (the recomputed address must equal the offered one — no trust in the
+; channel); and once verified the delta is APPLIED, so the receiver's HAVE set now carries that address.
+; The roundtrip closes: offered -> requested-if-missing -> verified -> now-had.
+;
+; This is the UPDATE shape stated in cell-sync's own vocabulary — it does NOT reinvent the diff/verify
+; logic, it NAMES the want-set as "deltas to request" and the re-addressing check as "is this delta
+; authentic", and adds the one piece cell-sync left open for an update: the applied-test that proves the
+; delta landed in the receiver's addresses (the roundtrip survived). Addresses are labels (strings).
+;
+; Composes: form-stdlib/cell-sync.fk (cs-missing = want-set, cs-has? = membership,
+;   cs-authentic? = re-address verify, cs-accept-count = how many arrivals survive).
+; Proven by: form-stdlib/tests/slice-update-roundtrip-band.fk (three-way at validate.sh)
+
+(do
+    ; --- REQUEST: the deltas a receiver must ask for = offered delta-addresses it does NOT already hold.
+    ; Exactly cell-sync's want-set, named for the update direction. A re-offered delta the receiver already
+    ; has is free — nothing crosses for it (structural address-equality dedups across the mesh). ---
+    (defn sur-missing (offer have) (cs-missing offer have))
+    (defn sur-request-count (offer have) (len (sur-missing offer have)))
+
+    ; does the receiver request THIS delta-address? 1 iff it is offered AND not already held. ---
+    (defn sur-request? (addr offer have)
+        (if (eq (cs-has? addr offer) 1)
+            (if (eq (cs-has? addr have) 0) 1 0)
+            0))
+
+    ; --- VERIFY: an arrived delta-item = (offered-addr recomputed-addr). Authentic iff re-addressing the
+    ; payload reproduces the address it was offered under — else it is dropped (tampered in transit). ---
+    (defn sur-verify (item) (cs-authentic? item))
+    (defn sur-accept-count (items) (cs-accept-count items))
+
+    ; --- APPLY: a verified delta lands in the receiver's addresses. have-after is the receiver's HAVE set
+    ; once the accepted deltas have been applied; the update SURVIVED iff its address is now held. This is
+    ; the roundtrip-closed test — re-addressing placed the delta where the next sync will find it had. ---
+    (defn sur-applied? (addr have-after) (cs-has? addr have-after))
+
+    0)
