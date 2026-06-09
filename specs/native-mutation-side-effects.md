@@ -64,9 +64,10 @@ classified as Python parity or reversible gate safety.
   side-effect wrapper, reading each effect back from throwaway Postgres, cleaning
   up fixture tables, and closing the connection.
 - [ ] **R4**: Route Form docs name the carrier as proven while keeping ordinary
-  public traffic on FastAPI until the deployed public-gate canary lands.
-- [ ] **R5**: The A/B observation report's next evidence now names the deployed
-  `X-Form-Native-Public-Gate` canary.
+  public traffic on FastAPI while the deployed public-gate canary gathers
+  sustained evidence.
+- [ ] **R5**: The A/B observation report's next evidence now names deployed
+  public-gate treatment/control receipts before any no-header flip.
 - [ ] **R6**: `native-mutation-side-effect-ledger.form` classifies each effect
   as primary mutation, Python parity effect, gate receipt, missing Python parity,
   or not carried, and states that rollback receipts are gate-local safety rather

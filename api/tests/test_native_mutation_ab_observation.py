@@ -147,7 +147,9 @@ def test_ab_gate_recommends_live_db_trial_after_full_confidence():
     assert report["recommendation"] == "preview_confidence_complete"
     assert report["ordinary_traffic_flip_performed"] is False
     assert report["next_evidence_needed"] == [
-        "deployed X-Form-Native-Public-Gate canary before any no-header flip",
+        "public-gate decision receipts in deployed canary traffic",
+        "no-header public control remains outside native canary",
+        "sustained X-Form-Native-Public-Gate canary evidence before any no-header flip",
     ]
 
 

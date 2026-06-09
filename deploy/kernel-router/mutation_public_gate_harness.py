@@ -391,7 +391,7 @@ def build_gate_report(
         "min_confidence": min_confidence,
         "gate_pass": gate_pass,
         "recommendation": (
-            "promote_to_deployed_header_canary"
+            "verify_deployed_header_canary"
             if gate_pass
             else "hold_public_gate"
         ),
@@ -400,7 +400,8 @@ def build_gate_report(
         "ordinary_traffic_flip_performed": False,
         "next_evidence_needed": [
             "public-gate decision receipts in deployed canary traffic",
-            "deployed X-Form-Native-Public-Gate canary before any no-header flip",
+            "no-header public control remains outside native canary",
+            "sustained X-Form-Native-Public-Gate canary evidence before any no-header flip",
         ],
     }
 

@@ -16,6 +16,16 @@ source:
     symbols: []
   - file: deploy/kernel-router/production-routes.fk
     symbols: []
+  - file: deploy/kernel-router/docker-compose.kernel-router.yml
+    symbols: []
+  - file: deploy/hostinger/auto-deploy.sh
+    symbols: [ensure_kernel_router_canary]
+  - file: scripts/verify_kernel_canary_public_gate.sh
+    symbols: []
+  - file: .github/workflows/hostinger-auto-deploy.yml
+    symbols: []
+  - file: .github/workflows/public-deploy-contract.yml
+    symbols: []
   - file: deploy/kernel-router/mutation_public_gate_harness.py
     symbols: [PublicGateCase, evaluate_case, build_gate_report, run_observation]
   - file: api/tests/test_native_mutation_public_gate.py
@@ -34,14 +44,15 @@ requirements:
   - "The public-gate harness observes no-header fanout, preview-header SQL preview, public-gate native selection, and public-gate priority when both headers are present."
   - "HTTP public-gate responses stay honest: the header gate executes and emits a rollback receipt shape, while DB execution remains proven in the Form live fixture rather than claimed by the HTTP route."
   - "Each public-gate HTTP response emits a compact decision receipt naming candidates, selected path, outcome, protocol, reversibility, and a signature so the gate can contradict intent with observable state."
-  - "The next boundary is a deployed X-Form-Native-Public-Gate canary before any ordinary no-header flip."
+  - "The deploy path exposes X-Form-Native-Public-Gate as a Traefik header-gated public canary before any ordinary no-header flip."
   - "The side-effect ledger keeps rollback receipts as gate-local safety rather than Python parity, so side-effect proof does not justify side effects."
   - "The public-gate Form layer exposes an idea update runner over the native idea valuation audit-ledger carrier."
 done_when:
   - 'file_exists("form/form-stdlib/native-mutation-public-gate.fk")'
   - 'file_exists("deploy/kernel-router/mutation_public_gate_harness.py")'
+  - 'file_exists("scripts/verify_kernel_canary_public_gate.sh")'
   - 'pytest_passes("api/tests/test_native_mutation_public_gate.py")'
-test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/native-mutation-public-gate.fk form-stdlib/tests/native-mutation-public-gate-band.fk && cd .. && form/scripts/native-mutation-public-gate-test.sh && python3 deploy/kernel-router/mutation_public_gate_harness.py --json && cd api && python3 -m pytest -q tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py"
+test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/native-mutation-public-gate.fk form-stdlib/tests/native-mutation-public-gate-band.fk && cd .. && form/scripts/native-mutation-public-gate-test.sh && python3 deploy/kernel-router/mutation_public_gate_harness.py --json && bash -n deploy/hostinger/auto-deploy.sh scripts/verify_kernel_canary_public_gate.sh && cd api && python3 -m pytest -q tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py"
 constraints:
   - "Do not execute against the production application database."
   - "Do not flip ordinary no-header public mutation traffic."
@@ -88,6 +99,14 @@ reversible gate safety, not evidence that extra domain side effects belong.
   `state=native-mutation-gate-decision-receipt`, selected path
   `X-Form-Native-Public-Gate`, candidate outcomes for fanout/preview/public
   gate, `can_contradict_intent=true`, and a compact signature.
+- [ ] **R10**: The Hostinger deploy path runs a kernel-router canary service
+  with `production-routes.fk` and Traefik header rules for
+  `X-Form-Native-Preview: 1` and `X-Form-Native-Public-Gate: 1`, while the
+  ordinary no-header `coherence-api` route remains FastAPI.
+- [ ] **R11**: Public deployment verification probes
+  `X-Form-Native-Public-Gate: 1` against `POST /api/ideas`, requires
+  `202 + X-Form-Router:native-kernel + decision_receipt`, and separately checks
+  a no-header control does not enter the native canary.
 
 ## Research Inputs
 
@@ -113,6 +132,16 @@ reversible gate safety, not evidence that extra domain side effects belong.
   harness.
 - `deploy/kernel-router/production-routes.fk` - public-gate route rows and
   response envelope.
+- `deploy/kernel-router/docker-compose.kernel-router.yml` - header-gated
+  Traefik canary overlay.
+- `deploy/hostinger/auto-deploy.sh` - deploy-time kernel-router canary bring-up
+  and local receipt probe.
+- `scripts/verify_kernel_canary_public_gate.sh` - public treatment/control
+  verifier for the deployed canary.
+- `.github/workflows/hostinger-auto-deploy.yml` - public canary deploy and
+  verification workflow.
+- `.github/workflows/public-deploy-contract.yml` - trigger coverage for
+  canary-related deploy files.
 - `deploy/kernel-router/mutation_public_gate_harness.py` - local HTTP selection
   harness.
 - `docs/coherence-substrate/native-mutation-side-effect-ledger.form` -
@@ -131,6 +160,7 @@ reversible gate safety, not evidence that extra domain side effects belong.
 - `api/tests/test_native_mutation_public_gate.py::test_production_routes_expose_public_gate_without_no_header_flip`
 - `api/tests/test_native_mutation_public_gate.py::test_public_gate_harness_observes_public_gate_when_kernel_available`
 - `api/tests/test_native_mutation_public_gate.py::test_route_forms_name_public_gate_before_deployed_canary`
+- `api/tests/test_native_mutation_public_gate.py::test_deploy_exposes_header_gated_public_canary_without_no_header_flip`
 - `api/tests/test_native_idea_valuation_audit_ledger.py::test_ledger_and_route_forms_mark_audit_parity_carried`
 - `api/tests/test_native_mutation_side_effect_ledger.py::test_gate_receipts_are_not_claimed_as_python_parity`
 - `api/tests/test_native_mutation_side_effect_ledger.py::test_route_forms_and_specs_link_the_ledger_boundary`
@@ -142,8 +172,15 @@ reversible gate safety, not evidence that extra domain side effects belong.
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/native-idea-valuation-audit-ledger.fk form-stdlib/native-mutation-public-gate.fk form-stdlib/tests/native-mutation-public-gate-band.fk
 cd .. && form/scripts/native-mutation-public-gate-test.sh
 python3 deploy/kernel-router/mutation_public_gate_harness.py --json
+bash -n deploy/hostinger/auto-deploy.sh scripts/verify_kernel_canary_public_gate.sh
 cd api && python3 -m pytest -q tests/test_native_mutation_public_gate.py tests/test_native_idea_valuation_audit_ledger.py tests/test_native_mutation_side_effect_ledger.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py
 python3 scripts/validate_spec_quality.py --file specs/native-mutation-public-gate.md
+```
+
+Public post-deploy verification:
+
+```bash
+scripts/verify_kernel_canary_public_gate.sh https://api.coherencycoin.com
 ```
 
 ## Out of Scope
@@ -156,9 +193,12 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-public-gat
 
 ## Gaps
 
-- GAP-NMPG1 follow-up task: `native-mutation-deployed-public-canary`. Deploy and
-  observe an `X-Form-Native-Public-Gate` canary before any ordinary no-header
-  mutation traffic flip.
+- GAP-NMPG1: closed by the header-gated kernel-router canary overlay and public
+  verifier. The next gap is sustained canary observation before any no-header
+  mutation flip.
+- GAP-NMPG3 follow-up task: `native-mutation-sustained-canary-observation`.
+  Collect deployed treatment/control canary observations over real rollout time
+  before any ordinary no-header mutation traffic flip.
 - GAP-NMPG2: closed by `specs/native-idea-valuation-audit-ledger.md`. Idea
   valuation audit-ledger parity is now carried Form-native and bound into an
   idea update public-gate runner.
@@ -172,8 +212,11 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-public-gat
 - Decision receipts are per-request gate witnesses: they record what branch was
   selected and enough signature detail to make the gate observable before the
   no-header flip.
+- The public canary relies on Traefik 3 `Header` matchers and explicit header
+  value `1`; other header values intentionally continue through the ordinary API
+  route until a broader canary rule is proven.
 - The ledger states that rollback receipts are gate-local safety rather than Python parity.
 - Removing the public-gate header or route row is the reversible rollback for
   the header-gated canary path.
-- No-header public mutation behavior remains FastAPI until the deployed canary
-  has evidence.
+- No-header public mutation behavior remains FastAPI while the canary gathers
+  evidence.

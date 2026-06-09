@@ -1461,14 +1461,12 @@
         (assoc "__router_observation__" q))
   (do (let fanout_path_counts
         (_dict_get router_observation "fanout_path_counts"))
-  (do (let candidate
-        (_dict_get router_observation "next_bml_candidate"))
   (do (let candidate_path
-        (_dict_get candidate "path"))
+        (assoc "__router_next_bml_candidate_path__" q))
   (do (let candidate_requests
-        (_dict_get candidate "count"))
+        (str_to_int (assoc "__router_next_bml_candidate_requests__" q)))
   (do (let candidate_source
-        (_dict_get candidate "source"))
+        (assoc "__router_next_bml_candidate_source__" q))
   (do (let native_coverage
         (attention_ratio observed_native_route_count native_route_count))
   (do (let fanout_pressure
@@ -1508,7 +1506,7 @@
               candidate_requests
               candidate_source
               candidate_pressure)
-            "}"))))))))))))))))))))))))
+            "}")))))))))))))))))))))))
 
 ; ===========================================================================
 ; /api/ideas/router-structure
@@ -1547,7 +1545,7 @@
 (defn route_ideas_source_index (q)
   (do (let text (ideas_index_text))
   (do (let super_ideas (str_count text "\n| ["))
-  (do (let source_status (if (gt (str_len text) 0) "read" "missing")))
+  (do (let source_status (if (gt (str_len text) 0) "read" "missing"))
       (str_concat_all (list
         "{\"source\":\"ideas/INDEX.md\""
         ",\"route_source\":\"deploy/kernel-router/production-routes.fk::route_ideas_source_index\""
@@ -1555,7 +1553,7 @@
         ",\"index_bytes\":" (value_str (str_len text))
         ",\"source_status\":\"" source_status "\""
         ",\"carrier_boundary\":\"source-index route reads repo idea source; mutable DB-backed /api/ideas/count still fans out\""
-        ",\"runtime\":\"inline\"}")))))
+        ",\"runtime\":\"inline\"}"))))))
 
 ; ===========================================================================
 ; /api/ideas/source-portfolio
@@ -2298,7 +2296,6 @@ section [form.route] {
 (let routes
   (list
     (kh-route-data-ref "health" HealthRoute_handle)
-    (kh-route-data-ref "attention-kernel-runtime" AttentionKernelRuntimeRoute_handle)
     (list "/api/utils/coherence_weight"    route_coherence_weight)
     (list "/api/utils/nodeid_distance"     route_nodeid_distance)
     (list "/api/utils/nodeid_compatibility" route_nodeid_compatibility)

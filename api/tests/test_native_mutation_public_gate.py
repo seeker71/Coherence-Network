@@ -16,6 +16,11 @@ INTEGRATION_PATH = ROOT / "form" / "form-stdlib" / "integration" / "native-mutat
 SCRIPT_PATH = ROOT / "form" / "scripts" / "native-mutation-public-gate-test.sh"
 PRODUCTION_ROUTES_PATH = ROOT / "deploy" / "kernel-router" / "production-routes.fk"
 PUBLIC_GATE_HARNESS_PATH = ROOT / "deploy" / "kernel-router" / "mutation_public_gate_harness.py"
+KERNEL_CANARY_COMPOSE_PATH = ROOT / "deploy" / "kernel-router" / "docker-compose.kernel-router.yml"
+HOSTINGER_AUTO_DEPLOY_PATH = ROOT / "deploy" / "hostinger" / "auto-deploy.sh"
+HOSTINGER_AUTO_DEPLOY_WORKFLOW_PATH = ROOT / ".github" / "workflows" / "hostinger-auto-deploy.yml"
+PUBLIC_DEPLOY_CONTRACT_WORKFLOW_PATH = ROOT / ".github" / "workflows" / "public-deploy-contract.yml"
+PUBLIC_CANARY_VERIFY_PATH = ROOT / "scripts" / "verify_kernel_canary_public_gate.sh"
 KERNEL_BIN = ROOT / "form" / "form-kernel-rust" / "target" / "release" / "form-kernel-rust"
 IDEAS_FORM_PATH = ROOT / "docs" / "coherence-substrate" / "ideas-router.form"
 SPECS_FORM_PATH = ROOT / "docs" / "coherence-substrate" / "spec-registry-router.form"
@@ -148,11 +153,13 @@ def test_public_gate_harness_observes_public_gate_when_kernel_available():
     assert report["gate"] == "native_mutation_public_gate"
     assert report["gate_pass"] is True
     assert report["confidence"] == 1.0
+    assert report["recommendation"] == "verify_deployed_header_canary"
     assert report["public_gate_header_allowed"] is True
     assert report["ordinary_traffic_flip_performed"] is False
     assert report["next_evidence_needed"] == [
         "public-gate decision receipts in deployed canary traffic",
-        "deployed X-Form-Native-Public-Gate canary before any no-header flip",
+        "no-header public control remains outside native canary",
+        "sustained X-Form-Native-Public-Gate canary evidence before any no-header flip",
     ]
     for case in report["cases"]:
         assert case["checks"]["decision_receipt_state"] is True
@@ -163,9 +170,44 @@ def test_public_gate_harness_observes_public_gate_when_kernel_available():
         assert case["checks"]["both_headers_decision_receipt_selected_path"] is True
 
 
-def test_route_forms_name_public_gate_before_deployed_canary():
+def test_route_forms_name_public_gate_canary_evidence_boundary():
     for text in (_text(IDEAS_FORM_PATH), _text(SPECS_FORM_PATH)):
         assert "form/scripts/native-mutation-public-gate-test.sh" in text
         assert "native mutation public gate proven" in text
         assert "X-Form-Native-Public-Gate" in text
-        assert "deployed header-gated public canary" in text
+        assert "deployed header-gated public canary gathers treatment/control evidence" in text
+        assert "sustained X-Form-Native-Public-Gate canary evidence" in text
+
+
+def test_deploy_exposes_header_gated_public_canary_without_no_header_flip():
+    compose = _text(KERNEL_CANARY_COMPOSE_PATH)
+    auto_deploy = _text(HOSTINGER_AUTO_DEPLOY_PATH)
+    hostinger_workflow = _text(HOSTINGER_AUTO_DEPLOY_WORKFLOW_PATH)
+    public_contract_workflow = _text(PUBLIC_DEPLOY_CONTRACT_WORKFLOW_PATH)
+    verify_script = _text(PUBLIC_CANARY_VERIFY_PATH)
+
+    assert 'ROUTES_FILE: "/routes/production-routes.fk"' in compose
+    assert 'traefik.enable: "true"' in compose
+    assert "coherence-api-kernel-public-gate-canary.rule" in compose
+    assert "Header(`X-Form-Native-Public-Gate`,`1`)" in compose
+    assert "coherence-api-kernel-preview-canary.rule" in compose
+    assert "Header(`X-Form-Native-Preview`,`1`)" in compose
+    assert "coherence-api-kernel-public-gate-canary.priority" in compose
+    assert "loadbalancer.server.port: \"8080\"" in compose
+    assert "ordinary no-header traffic still goes directly to api:8000" in compose
+
+    assert "ensure_kernel_router_canary" in auto_deploy
+    assert "docker-compose.kernel-router.yml" in auto_deploy
+    assert "X-Form-Native-Public-Gate: 1" in auto_deploy
+    assert '\\"decision_receipt\\"' in auto_deploy
+    assert '\\"ordinary_traffic_flip_performed\\":false' in auto_deploy
+
+    for workflow in (hostinger_workflow, public_contract_workflow):
+        assert "'deploy/kernel-router/**'" in workflow
+        assert "'scripts/verify_kernel_canary_public_gate.sh'" in workflow
+
+    assert "Verify kernel public canary" in hostinger_workflow
+    assert "./scripts/verify_kernel_canary_public_gate.sh" in hostinger_workflow
+    assert "native_public_gate" in verify_script
+    assert "control_status" in verify_script
+    assert "no-header control remains outside native canary" in verify_script

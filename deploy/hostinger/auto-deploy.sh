@@ -6,6 +6,7 @@ REPO_DIR="${REPO_DIR:-${COMPOSE_ROOT}/repo}"
 BRANCH="${BRANCH:-main}"
 TARGET_SHA="${1:-}"
 LOG_FILE="${LOG_FILE:-${COMPOSE_ROOT}/deploy.log}"
+KERNEL_CANARY_COMPOSE_FILE="${KERNEL_CANARY_COMPOSE_FILE:-${REPO_DIR}/deploy/kernel-router/docker-compose.kernel-router.yml}"
 
 timestamp() {
   date -u +%Y-%m-%dT%H:%M:%SZ
@@ -617,6 +618,61 @@ wait_for_running() {
   return 1
 }
 
+ensure_kernel_router_canary() {
+  if [[ ! -f "$KERNEL_CANARY_COMPOSE_FILE" ]]; then
+    log "kernel-router canary: overlay missing at $KERNEL_CANARY_COMPOSE_FILE (skipped)"
+    return 0
+  fi
+
+  log "kernel-router canary: ensuring header-gated production-manifest service"
+  local compose_args=(-f "$COMPOSE_ROOT/docker-compose.yml" -f "$KERNEL_CANARY_COMPOSE_FILE")
+  local started ended elapsed
+  started="$(date +%s)"
+
+  set +e
+  docker compose "${compose_args[@]}" up -d --build --wait --wait-timeout 180 kernel-router \
+    2>&1 | tee -a "$LOG_FILE"
+  local rc=$?
+  set -e
+  if [[ "$rc" -ne 0 ]]; then
+    log "kernel-router canary: compose up --wait failed; falling back to plain up -d --build"
+    docker compose "${compose_args[@]}" up -d --build kernel-router 2>&1 | tee -a "$LOG_FILE"
+  fi
+
+  local deadline=$(( $(date +%s) + 180 ))
+  local state=""
+  while (( $(date +%s) < deadline )); do
+    state="$(docker compose "${compose_args[@]}" ps --format '{{.Service}} {{.State}}' 2>/dev/null | awk '$1=="kernel-router" {print $2}')"
+    if [[ "$state" == "running" ]]; then
+      break
+    fi
+    sleep 3
+  done
+  if [[ "$state" != "running" ]]; then
+    log "FAIL: kernel-router canary did not reach running state within 180s"
+    exit 1
+  fi
+
+  local payload='{"id":"idea-public-canary-local","name":"Public Canary Local","description":"header-gated canary","manifestation_status":"partial"}'
+  if ! docker compose "${compose_args[@]}" exec -T kernel-router sh -lc \
+    "curl -fsS -D /tmp/kernel-canary.headers -o /tmp/kernel-canary.body \
+      -X POST http://127.0.0.1:8080/api/ideas \
+      -H 'Content-Type: application/json' \
+      -H 'X-Form-Native-Public-Gate: 1' \
+      --data '$payload' \
+      && grep -qi '^X-Form-Router: native-kernel' /tmp/kernel-canary.headers \
+      && grep -q '\"decision_receipt\"' /tmp/kernel-canary.body \
+      && grep -q '\"ordinary_traffic_flip_performed\":false' /tmp/kernel-canary.body" \
+    2>&1 | tee -a "$LOG_FILE"; then
+    log "FAIL: kernel-router canary local public-gate probe did not return native decision receipt"
+    exit 1
+  fi
+
+  ended="$(date +%s)"
+  elapsed=$((ended - started))
+  log "kernel-router canary: running and locally receipt-proven (${elapsed}s)"
+}
+
 if wait_for_running api; then
   log "api container running"
 else
@@ -630,6 +686,8 @@ else
   log "FAIL: web container did not reach running state within 180s"
   exit 1
 fi
+
+ensure_kernel_router_canary
 
 sync_substrate_content
 # Use DIFF_BASE (RUNNING_SHA when known) so substrate ingest catches any

@@ -316,7 +316,9 @@ def build_gate_report(
         "ordinary_traffic_flip_performed": False,
         "ordinary_traffic_flip_allowed": False,
         "next_evidence_needed": [
-            "deployed X-Form-Native-Public-Gate canary before any no-header flip",
+            "public-gate decision receipts in deployed canary traffic",
+            "no-header public control remains outside native canary",
+            "sustained X-Form-Native-Public-Gate canary evidence before any no-header flip",
         ],
     }
 
