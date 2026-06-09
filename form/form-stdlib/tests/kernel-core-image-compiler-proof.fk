@@ -1,0 +1,89 @@
+; tests/kernel-core-image-compiler-proof.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/kernel-core-self.fk
+;
+; Proves the kernel-core self image is now built through a named Form
+; compiler surface. The compiler parses the BML source, executes count
+; methods from that source, emits a KERNEL-CORE-IMAGE compiler-object, and
+; round-trips the image through .fkb while embedded witness recipes execute.
+;
+; Verdict: 34 when every assertion holds across Go, Rust, and TypeScript.
+
+(do
+    (defn score-bool (actual)
+        (if actual 1 0))
+
+    (defn score-int (actual expected)
+        (if (eq actual expected) 1 0))
+
+    (defn score-gt (actual expected)
+        (if (gt actual expected) 1 0))
+
+    (defn score-str (actual expected)
+        (if (nil? actual)
+            0
+            (if (str_eq actual expected) 1 0)))
+
+    (defn score-node (actual expected)
+        (if (node_eq actual expected) 1 0))
+
+    (let source-path (kernel-core-source-path 0))
+    (let image-path "/tmp/kernel-core-compiler-image.fkb")
+    (let compiled (kernel-core-compile-image source-path image-path))
+    (let image (kernel-core-compiled-image-node compiled))
+    (let image-kids (node_children image))
+    (let parsed (kernel-core-compiled-parse compiled))
+    (let model (kernel-core-compiled-model compiled))
+    (let self-class (kernel-core-self-class model))
+    (let flow (kernel-core-compiled-flow compiled))
+    (let stages (compiler-flow-stages flow))
+    (let plus-recipe (nth image-kids 6))
+    (let if-recipe (nth image-kids 7))
+    (let do-recipe (nth image-kids 8))
+    (let plus-kids (node_children plus-recipe))
+    (let bytes-written (kernel-core-write-compiled-image compiled))
+    (let loaded (read_form_binary image-path))
+    (let loaded-kids (node_children loaded))
+    (let primitive-count
+        (kernel-core-source-method-value self-class "RequiredPrimitiveCount"))
+    (let dispatch-count
+        (kernel-core-source-method-value self-class "RequiredDispatchCount"))
+    (let proof-count
+        (kernel-core-source-method-value self-class "RequiredProofCount"))
+
+    (sum
+        (list
+            (score-bool (compiler-object? compiled))
+            (score-str (compiler-object-kind compiled) "kernel-core-image")
+            (score-bool (bml-source-exec-parse-ok? parsed))
+            (score-int (len (bml-source-exec-parse-rest parsed)) 0)
+            (score-bool (not (nil? self-class)))
+            (score-str (kernel-core-compiled-source-path compiled) source-path)
+            (score-str (kernel-core-compiled-image-path compiled) image-path)
+            (score-str (compiler-flow-name flow) "kernel-core-image-compiler")
+            (score-int (compiler-flow-stage-count flow) 5)
+            (score-str (compiler-stage-name (head stages)) "source-scan")
+            (score-str (compiler-stage-name (nth stages 3)) "image-emit")
+            (score-str (compiler-stage-artifact (nth stages 3)) "KERNEL-CORE-IMAGE")
+            (score-node (node_category image) (bp "KERNEL-CORE-IMAGE"))
+            (score-str (node_value (nth image-kids 0)) source-path)
+            (score-str (node_value (nth image-kids 1)) image-path)
+            (score-str (node_value (nth image-kids 2)) "kernel-core-self")
+            (score-int primitive-count 8)
+            (score-int dispatch-count 15)
+            (score-int proof-count 6)
+            (score-int (node_value (nth image-kids 3)) primitive-count)
+            (score-int (node_value (nth image-kids 4)) dispatch-count)
+            (score-int (node_value (nth image-kids 5)) proof-count)
+            (score-int (walk_recipe plus-recipe) 5)
+            (score-int (walk_recipe if-recipe) 8)
+            (score-int (walk_recipe do-recipe) 20)
+            (score-node (node_category plus-recipe) (bp "add"))
+            (score-int (len plus-kids) 2)
+            (score-str (compiler-stage-proof (nth stages 1)) "bml-source-file-parse-declarations")
+            (score-node (native_blueprint "write_form_binary") (make_nodeid 1 2 10 1))
+            (score-gt bytes-written 0)
+            (score-gt (file_size image-path) 0)
+            (score-bool (node_eq loaded image))
+            (score-node (node_category loaded) (bp "KERNEL-CORE-IMAGE"))
+            (score-str (node_value (nth loaded-kids 2)) "kernel-core-self"))))
