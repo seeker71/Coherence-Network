@@ -1,0 +1,222 @@
+; earth-witness-question.fk - witnessed Earth observation questions.
+;
+; preludes: form-stdlib/core.fk form-stdlib/choice-receipt.fk
+;
+; This cell turns an open Earth-observation source into answerable question
+; axes: what, where, when, who, how, and why. Each answer carries evidence,
+; certainty, a principle trace, and an optional CHOICE-RECEIPT bridge.
+
+(do
+    (defn ewq-tag-axis () "EARTH-WITNESS-AXIS")
+    (defn ewq-tag-principle () "EARTH-WITNESS-PRINCIPLE")
+    (defn ewq-tag-observation () "EARTH-WITNESS-OBSERVATION")
+    (defn ewq-tag-answer () "EARTH-WITNESS-ANSWER")
+
+    (defn ewq-axis (name value evidence certainty)
+        (list (ewq-tag-axis) name value evidence certainty))
+    (defn ewq-axis? (axis)
+        (and (eq (len axis) 5) (str_eq (nth axis 0) (ewq-tag-axis))))
+    (defn ewq-axis-name (axis) (nth axis 1))
+    (defn ewq-axis-value (axis) (nth axis 2))
+    (defn ewq-axis-evidence (axis) (nth axis 3))
+    (defn ewq-axis-certainty (axis) (nth axis 4))
+
+    (defn ewq-principle (name evidence confidence)
+        (list (ewq-tag-principle) name evidence confidence))
+    (defn ewq-principle? (principle)
+        (and (eq (len principle) 4) (str_eq (nth principle 0) (ewq-tag-principle))))
+    (defn ewq-principle-name (principle) (nth principle 1))
+    (defn ewq-principle-evidence (principle) (nth principle 2))
+    (defn ewq-principle-confidence (principle) (nth principle 3))
+
+    (defn ewq-observation (id title source-url axes principles)
+        (list (ewq-tag-observation) id title source-url axes principles))
+    (defn ewq-observation? (observation)
+        (and (eq (len observation) 6) (str_eq (nth observation 0) (ewq-tag-observation))))
+    (defn ewq-observation-id (observation) (nth observation 1))
+    (defn ewq-observation-title (observation) (nth observation 2))
+    (defn ewq-observation-source-url (observation) (nth observation 3))
+    (defn ewq-observation-axes (observation) (nth observation 4))
+    (defn ewq-observation-principles (observation) (nth observation 5))
+
+    (defn ewq-answer (question value evidence certainty principles source-url)
+        (list (ewq-tag-answer) question value evidence certainty principles source-url))
+    (defn ewq-answer? (answer)
+        (and (eq (len answer) 7) (str_eq (nth answer 0) (ewq-tag-answer))))
+    (defn ewq-answer-question (answer) (nth answer 1))
+    (defn ewq-answer-value (answer) (nth answer 2))
+    (defn ewq-answer-evidence (answer) (nth answer 3))
+    (defn ewq-answer-certainty (answer) (nth answer 4))
+    (defn ewq-answer-principles (answer) (nth answer 5))
+    (defn ewq-answer-source-url (answer) (nth answer 6))
+
+    (defn ewq-empty-axis ()
+        (ewq-axis "" "" "" 0))
+
+    (defn ewq-axis-matches? (axis name)
+        (and (ewq-axis? axis) (str_eq (ewq-axis-name axis) name)))
+
+    (defn ewq-axis-named (axes name)
+        (if (nil? axes) (ewq-empty-axis)
+            (if (str_eq (ewq-axis-name (head axes)) name)
+                (head axes)
+                (ewq-axis-named (tail axes) name))))
+
+    (defn ewq-principle-named? (principles name)
+        (if (nil? principles) false
+            (if (str_eq (ewq-principle-name (head principles)) name)
+                true
+                (ewq-principle-named? (tail principles) name))))
+
+    (defn ewq-axes-valid? (axes)
+        (if (nil? axes) true
+            (and (ewq-axis? (head axes)) (ewq-axes-valid? (tail axes)))))
+
+    (defn ewq-principles-valid? (principles)
+        (if (nil? principles) true
+            (and (ewq-principle? (head principles)) (ewq-principles-valid? (tail principles)))))
+
+    (defn ewq-observation-valid? (observation)
+        (if (ewq-observation? observation)
+            (and (gt (str_len (ewq-observation-id observation)) 0)
+                 (and (gt (str_len (ewq-observation-title observation)) 0)
+                      (and (gt (str_len (ewq-observation-source-url observation)) 0)
+                           (and (ewq-axes-valid? (ewq-observation-axes observation))
+                                (ewq-principles-valid? (ewq-observation-principles observation))))))
+            false))
+
+    (defn ewq-answered? (answer)
+        (and (ewq-answer? answer) (gt (ewq-answer-certainty answer) 0)))
+
+    (defn ewq-question-known? (question)
+        (or (str_eq question "what")
+            (or (str_eq question "where")
+                (or (str_eq question "when")
+                    (or (str_eq question "who")
+                        (or (str_eq question "how")
+                            (str_eq question "why")))))))
+
+    (defn ewq-answer-question-from (observation question)
+        (do
+            (let axis (ewq-axis-named (ewq-observation-axes observation) question))
+            (if (ewq-axis-matches? axis question)
+                (ewq-answer
+                    question
+                    (ewq-axis-value axis)
+                    (ewq-axis-evidence axis)
+                    (ewq-axis-certainty axis)
+                    (ewq-observation-principles observation)
+                    (ewq-observation-source-url observation))
+                (ewq-answer
+                    question
+                    "silence"
+                    "no witnessed axis answered this question"
+                    0
+                    (ewq-observation-principles observation)
+                    (ewq-observation-source-url observation)))))
+
+    (defn ewq-choice-candidate-for-axis (axis)
+        (cr-choice-candidate
+            (ewq-axis-name axis)
+            "EARTH-WITNESS-QUESTION"
+            true
+            (sub 100 (ewq-axis-certainty axis))
+            (ewq-axis-certainty axis)
+            (ewq-axis-evidence axis)))
+
+    (defn ewq-choice-candidates (axes)
+        (if (nil? axes) (empty)
+            (cons
+                (ewq-choice-candidate-for-axis (head axes))
+                (ewq-choice-candidates (tail axes)))))
+
+    (defn ewq-trace-for-question (observation question)
+        (do
+            (let count (len (ewq-observation-axes observation)))
+            (if (ewq-question-known? question)
+                (cr-choice-trace count 1 (sub count 1) 0)
+                (cr-choice-trace count 0 0 1))))
+
+    (defn ewq-receipt-for-answer (observation question who where tick)
+        (do
+            (let answer (ewq-answer-question-from observation question))
+            (let outcome (if (ewq-answered? answer) (cr-outcome-success) (cr-outcome-silence)))
+            (let selected (if (ewq-answered? answer) question "none"))
+            (cr-choice-receipt
+                (str_concat "earth-witness-question:" question)
+                "earth-witness-question"
+                "EARTH-WITNESS-QUESTION"
+                (ewq-choice-candidates (ewq-observation-axes observation))
+                selected
+                outcome
+                (ewq-answer-certainty answer)
+                (cr-choice-value
+                    (cr-kind-core-alignment)
+                    (ewq-answer-certainty answer)
+                    96
+                    95
+                    94)
+                (ewq-answer-evidence answer)
+                who
+                where
+                tick
+                (len (ewq-answer-principles answer))
+                (ewq-trace-for-question observation question))))
+
+    (defn ewq-principle-score (observation)
+        (do
+            (let principles (ewq-observation-principles observation))
+            (sum
+                (list
+                    (if (ewq-principle-named? principles "geometric-proof") 1 0)
+                    (if (ewq-principle-named? principles "harmony") 2 0)
+                    (if (ewq-principle-named? principles "confidence") 4 0)
+                    (if (ewq-principle-named? principles "vitality") 8 0)
+                    (if (ewq-principle-named? principles "sovereignty") 16 0)
+                    (if (ewq-principle-named? principles "allowing-observation") 32 0)))))
+
+    (defn ewq-tessera-observation ()
+        (ewq-observation
+            "tessera-earth-observation-2026-06-04"
+            "Tessera AI model offers accessible way to view Earth"
+            "https://www.esa.int/Applications/Observing_the_Earth/Copernicus/Tessera_AI_model_offers_accessible_way_to_view_Earth"
+            (list
+                (ewq-axis
+                    "what"
+                    "global 10m Earth observation embeddings"
+                    "Tessera exposes compact embeddings from Copernicus Sentinel-1 and Sentinel-2"
+                    94)
+                (ewq-axis
+                    "where"
+                    "global land surface"
+                    "the source describes global coverage for Earth observation embeddings"
+                    91)
+                (ewq-axis
+                    "when"
+                    "2017-2025 annual layers; announced 2026-06-04"
+                    "Tessera covers annual embeddings from 2017 through 2025 and ESA published the news item on 2026-06-04"
+                    93)
+                (ewq-axis
+                    "who"
+                    "ESA, University of Cambridge, and Copernicus Sentinel missions"
+                    "ESA reports the model and names the Copernicus Sentinel-1 radar and Sentinel-2 optical sources"
+                    90)
+                (ewq-axis
+                    "how"
+                    "fuses Sentinel-2 optical and Sentinel-1 radar observations into embeddings"
+                    "the observation is made answerable by compact learned Earth-observation embeddings"
+                    92)
+                (ewq-axis
+                    "why"
+                    "open witness surface for environmental change"
+                    "ESA frames Tessera as accessible and open compared with closed Earth-observation systems"
+                    89))
+            (list
+                (ewq-principle "geometric-proof" "10m spatial cells make observation coordinate-bearing" 94)
+                (ewq-principle "harmony" "optical and radar channels combine without erasing source difference" 92)
+                (ewq-principle "confidence" "source, date, mission, and resolution are traceable" 93)
+                (ewq-principle "vitality" "annual layers reveal living environmental change over time" 90)
+                (ewq-principle "sovereignty" "open access lets observers ask without registration or permission gate" 91)
+                (ewq-principle "allowing-observation" "questions can surface truth without punishment for looking" 88))))
+
+    0)
