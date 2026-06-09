@@ -1,0 +1,100 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/inventory-flow-public-native-ingress-20260609",
+  "commit_scope": "Route public GET /api/inventory/flow through the BML front-door kernel service as a narrow path-specific native ingress. The BML service now mounts the production config carrier needed for pg_connect, and deploy verification requires native inventory observation instead of silently accepting the FastAPI payload.",
+  "files_owned": [
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/verify_web_api_deploy.sh",
+    "docs/system_audit/commit_evidence_20260609_inventory_flow_public_native_ingress.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_web_api_deploy.sh",
+      "VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -c 'source scripts/verify_web_api_deploy.sh https://api.example https://web.example'",
+      "git diff --check",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260609_inventory_flow_public_native_ingress.json"
+    ],
+    "notes": "Shell syntax, source-only verifier load, diff check, evidence validation, autostash rebase on origin/main, local PR guard, and strict followthrough guard passed. The earlier public probe after PR #2676 proved production still served /api/inventory/flow through FastAPI with no X-Form-Router and no native_observation; this change adds the missing path-specific Traefik rule and production config mount for the BML service."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until this branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Public deploy will be validated by scripts/verify_web_api_deploy.sh, which now fails unless /api/inventory/flow returns X-Form-Router: native-kernel and native_observation.handler=api_inventory_flow."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local syntax, verifier-source proof, rebase, local PR guard, and followthrough guard are pass. Commit, push, PR, CI, merge, deploy, and public verification remain."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "After deployment, ordinary public GET /api/inventory/flow should be served by the BML front-door kernel service and prove native_observation.python_authority=false.",
+    "public_endpoints": [
+      "GET /api/inventory/flow"
+    ],
+    "test_flows": [
+      "Traefik has a higher-priority path rule for Host(api.coherencycoin.com) && Method(GET) && Path(/api/inventory/flow) pointing at coherence-api-kernel-bml-front-door.",
+      "kernel-router-bml-front-door mounts /root/.coherence-network/config.json as KERNEL_ROUTER_CONFIG_FILE so api_inventory_flow can read production Postgres.",
+      "auto-deploy.sh locally probes the BML front-door inventory route for native headers, handler=api_inventory_flow, python_authority=false, and an empty canary item list.",
+      "verify_web_api_deploy.sh now probes the public inventory route and fails unless it reaches X-Form-Router: native-kernel with native inventory observation."
+    ]
+  },
+  "idea_ids": [
+    "oss-interface-alignment",
+    "inventory-lineage-grammar"
+  ],
+  "spec_ids": [
+    "inventory-lineage-grammar"
+  ],
+  "task_ids": [
+    "inventory-flow-public-native-ingress-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "public-interface-release"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "deploy/kernel-router/docker-compose.kernel-router.yml mounts KERNEL_ROUTER_CONFIG_FILE into kernel-router-bml-front-door.",
+    "deploy/kernel-router/docker-compose.kernel-router.yml routes GET /api/inventory/flow to coherence-api-kernel-bml-front-door with priority 1190.",
+    "deploy/hostinger/auto-deploy.sh locally probes the inventory route inside kernel-router-bml-front-door before declaring canary proof.",
+    "scripts/verify_web_api_deploy.sh defines check_inventory_flow_native and calls it during public deploy verification.",
+    "bash -n passed for deploy/hostinger/auto-deploy.sh and scripts/verify_web_api_deploy.sh.",
+    "VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 source load passed for scripts/verify_web_api_deploy.sh.",
+    "worktree_pr_guard local mode passed with ready_for_push=True.",
+    "check_pr_followthrough strict mode passed with stale_codex_prs=0."
+  ],
+  "change_files": [
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/verify_web_api_deploy.sh",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}
