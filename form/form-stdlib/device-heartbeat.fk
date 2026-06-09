@@ -1,0 +1,55 @@
+; device-heartbeat.fk — a body broadcasts its presence; others pick it up and find a shared channel.
+;
+; The logic under "broadcast heartbeats for other devices to pick up and connect, on any available
+; channel." A heartbeat is a presence beacon a device emits on whatever channels it has open; a peer
+; that receives it learns WHO is there, WHICH organs are live, WHICH channels they share, and WHETHER
+; they are still alive. The CHANNELS (wifi UDP-broadcast, BLE advertise/scan, audio FSK over
+; speaker/mic, video QR over screen/camera) are interchangeable CARRIERS behind a port; this recipe is
+; the channel-blind body — one heartbeat shape, one discovery, whatever carrier is open.
+;
+; A heartbeat = (list device organs channels beat):
+;   device   — the emitter's id ("mac", "phone-7", ...)
+;   organs   — the senses/effectors live right now (a list: "accel" "gyro" "mic" "camera" "screen" ...)
+;   channels — the transports it offers (a list: "wifi" "ble" "audio" "video")
+;   beat     — a monotonic liveness counter (advances each beat; silence = the body went quiet)
+;
+; Proven by: form-stdlib/tests/device-heartbeat-band.fk (three-way at validate.sh)
+
+(do
+    (defn hb-device   (hb) (nth hb 0))
+    (defn hb-organs   (hb) (nth hb 1))
+    (defn hb-channels (hb) (nth hb 2))
+    (defn hb-beat     (hb) (nth hb 3))
+
+    ; membership over a list of names (content-addressed presence-in-a-set)
+    (defn hb-has? (x lst)
+        (if (eq (len lst) 0) 0
+            (if (str_eq x (head lst)) 1 (hb-has? x (tail lst)))))
+
+    ; --- WHICH ORGANS ARE ACTIVE (the observability read: what is this body sensing with) ---
+    (defn hb-organ-active? (hb organ) (hb-has? organ (hb-organs hb)))
+    (defn hb-offers?       (hb chan)  (hb-has? chan (hb-channels hb)))
+
+    ; --- SHARED CHANNELS: the transports BOTH bodies offer — the doors they can connect through ---
+    (defn hb-shared-loop (chans theirs)
+        (if (eq (len chans) 0) (empty)
+            (if (eq (hb-offers? theirs (head chans)) 1)
+                (cons (head chans) (hb-shared-loop (tail chans) theirs))
+                (hb-shared-loop (tail chans) theirs))))
+    (defn hb-shared (mine theirs) (hb-shared-loop (hb-channels mine) theirs))
+    (defn hb-can-connect? (mine theirs) (if (gt (len (hb-shared mine theirs)) 0) 1 0))
+
+    ; --- BEST CHANNEL: the first channel in PRIORITY order that both offer (prefer fast/wide first:
+    ;     wifi > ble > audio > video). The carrier the connection should open on. ---
+    (defn hb-best-loop (prio mine theirs)
+        (if (eq (len prio) 0) ""
+            (if (and (eq (hb-offers? mine (head prio)) 1) (eq (hb-offers? theirs (head prio)) 1))
+                (head prio)
+                (hb-best-loop (tail prio) mine theirs))))
+    (defn hb-best-channel (mine theirs priority) (hb-best-loop priority mine theirs))
+
+    ; --- LIVENESS: a peer is PRESENT if we received its beat within `stale` ticks of now; else it
+    ;     went silent and is gone (silence is information — the body stopped beating). ---
+    (defn hb-present? (seen-at now stale) (if (ge (add seen-at stale) now) 1 0))
+
+    0)
