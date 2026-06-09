@@ -1,0 +1,69 @@
+; slice-merge.fk — merge model-slice deltas from many cells into one, the federated way.
+;
+; The shareable unit between cells is a task-vector DELTA (a LoRA adapter as τ = θ_local − θ_base —
+; small, content-addressed, dedup-able). When several cells offer a delta for the same base slice, the
+; body merges them with a PROVEN strategy: trust-weighted FedAvg with TIES sign-election.
+;
+;   - FedAvg (McMahan 2017): the merged value is a weight-weighted MEAN of the peers' values.
+;   - TIES-Merge (Yadav 2023): before averaging, ELECT a sign per coordinate (the side with the larger
+;     summed weight wins) and average ONLY the entries that agree with it — this stops the destructive
+;     interference plain averaging suffers when two cells learned opposing deltas.
+;   - the trust weight is per-peer (trust-decay.fk's grace-band × the local evidence count), so a faded
+;     or gone peer (weight 0) cannot move the merge.
+;
+; A SLICE is (list weight delta); a DELTA is a list of signed integer coordinates; SLICES is a list of
+; slices, all for the same base address. The merged value at a coordinate is kept as the exact rational
+; (num, den) — division is DEFERRED to apply-time, so the merge itself is integer-exact and three-way
+; identical (every cell merges to the same numbers — a deterministic federation, which a float-averaging
+; PyTorch federation cannot promise). cell-numerics.form's vector_add/scalar_mul then apply it:
+; θ_local = θ_base + (num/den)·... — task arithmetic over the merged delta.
+;
+; Self-contained (own recipes + core); the weighted-sum walk mirrors confidence-weighted-vote.fk's
+; cw-weight-for, specialized from label-match to sign-condition. Proven by tests/slice-merge-band.fk.
+
+(do
+    (defn sm-weight (s) (nth s 0))           ; a peer's trust×evidence weight
+    (defn sm-delta  (s) (nth s 1))           ; its task-vector delta
+    (defn sm-coord  (s j) (nth (sm-delta s) j))   ; delta[j] for slice s
+
+    ; TIES sign election: summed weight backing "+" vs "−" at coordinate j.
+    (defn sm-pos (slices j)
+        (if (eq (len slices) 0) 0
+            (add (if (gt (sm-coord (head slices) j) 0) (sm-weight (head slices)) 0)
+                 (sm-pos (tail slices) j))))
+    (defn sm-neg (slices j)
+        (if (eq (len slices) 0) 0
+            (add (if (gt 0 (sm-coord (head slices) j)) (sm-weight (head slices)) 0)
+                 (sm-neg (tail slices) j))))
+    ; the elected sign: 1 = "+", 0 = "−" (the larger summed weight wins; ties keep "+").
+    (defn sm-elect (slices j) (if (ge (sm-pos slices j) (sm-neg slices j)) 1 0))
+
+    ; FedAvg numerator/denominator over the sign-AGREEING entries only (disjoint merge).
+    (defn sm-num-pos (slices j)
+        (if (eq (len slices) 0) 0
+            (add (if (gt (sm-coord (head slices) j) 0)
+                     (mul (sm-weight (head slices)) (sm-coord (head slices) j)) 0)
+                 (sm-num-pos (tail slices) j))))
+    (defn sm-num-neg (slices j)
+        (if (eq (len slices) 0) 0
+            (add (if (gt 0 (sm-coord (head slices) j))
+                     (mul (sm-weight (head slices)) (sm-coord (head slices) j)) 0)
+                 (sm-num-neg (tail slices) j))))
+    (defn sm-den-pos (slices j)
+        (if (eq (len slices) 0) 0
+            (add (if (gt (sm-coord (head slices) j) 0) (sm-weight (head slices)) 0)
+                 (sm-den-pos (tail slices) j))))
+    (defn sm-den-neg (slices j)
+        (if (eq (len slices) 0) 0
+            (add (if (gt 0 (sm-coord (head slices) j)) (sm-weight (head slices)) 0)
+                 (sm-den-neg (tail slices) j))))
+
+    ; the merged coordinate's numerator and denominator (the elected side only).
+    (defn sm-num (slices j)
+        (if (eq (sm-elect slices j) 1) (sm-num-pos slices j) (sm-num-neg slices j)))
+    (defn sm-den (slices j)
+        (if (eq (sm-elect slices j) 1) (sm-den-pos slices j) (sm-den-neg slices j)))
+
+    ; the merged delta at coordinate j as the exact rational (num den) — division deferred.
+    (defn sm-merge-coord (slices j) (list (sm-num slices j) (sm-den slices j)))
+    0)
