@@ -1,0 +1,113 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/remove-non-form-tissue-20260609",
+  "commit_scope": "Actually release non-Form tissue by deleting tracked TypeScript adapter generated .fk artifacts and adding an ignore guard so parity regeneration does not return them to git.",
+  "files_owned": [
+    "form/form-kernel-ts/seedbank/ts-adapter/examples/ts_accumulator_demo.fk",
+    "form/form-kernel-ts/seedbank/ts-adapter/examples/ts_arith_demo.fk",
+    "form/form-kernel-ts/seedbank/ts-adapter/examples/ts_arrow_demo.fk",
+    "form/form-kernel-ts/seedbank/ts-adapter/examples/ts_composition_demo.fk",
+    "form/form-kernel-ts/seedbank/ts-adapter/examples/ts_recursion_demo.fk",
+    "form/form-kernel-ts/seedbank/ts-adapter/examples/.gitignore",
+    "form/form-kernel-ts/seedbank/ts-adapter/README.md",
+    "kernels/BOOTSTRAP_COMPOST_MANIFEST.md",
+    "docs/system_audit/commit_evidence_20260609_ts_adapter_fk_artifacts_removed.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cargo build --release --bin form-kernel-rust",
+      "cd form/form-kernel-ts && ./seedbank/ts-adapter/scripts/parity_suite.sh",
+      "git check-ignore --no-index -v form/form-kernel-ts/seedbank/ts-adapter/examples/ts_arith_demo.fk",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260609_ts_adapter_fk_artifacts_removed.json",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "notes": "The TypeScript adapter parity suite lists .ts sources as the live inputs and emits sibling .fk files before the Rust leg reads them. The five tracked .fk files were generated artifacts. The suite passed 5/5 after regeneration, then the regenerated files were removed again for the commit. The new examples/.gitignore prevents future parity runs from making the generated outputs return as tracked candidates."
+  },
+  "known_failed_attempts": [
+    {
+      "command": "git check-ignore -v form/form-kernel-ts/seedbank/ts-adapter/examples/ts_arith_demo.fk",
+      "output": "No output while the path was still tracked in the index.",
+      "resolution": "Use git check-ignore --no-index to prove the ignore rule independent of current tracked state; the committed deletion removes the path from the index."
+    }
+  ],
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until push and PR."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "notes": "No runtime deploy surface changes; this removes seedbank generated artifacts and updates documentation/evidence."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local proof, rebase, PR guard, and follow-through check passed; push, PR, and CI remain."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A parity run still proves all TS adapter demos while the committed tree no longer carries generated .fk outputs.",
+    "public_endpoints": [
+      "No public HTTP endpoint affected; runtime surface is form/form-kernel-ts seedbank ts-adapter parity."
+    ],
+    "test_flows": [
+      "TS parity suite regenerates ignored .fk files and reports 5 passing, 0 failing.",
+      "The committed tree deletes the generated .fk artifacts.",
+      "The ignore rule prevents regenerated .fk files from re-entering git."
+    ]
+  },
+  "idea_ids": [
+    "form-native-runtime"
+  ],
+  "spec_ids": [
+    "form-native-http-stack"
+  ],
+  "task_ids": [
+    "remove-non-form-tissue-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "release-request"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-kernel-ts/seedbank/ts-adapter/scripts/parity_suite.sh compiles each .ts demo to .fk before Rust execution.",
+    "Reference checks found no direct readers of the committed TS .fk files outside the examples directory.",
+    "The TS parity suite passed 5/5 after regenerating the outputs."
+  ],
+  "change_files": [
+    "form/form-kernel-ts/seedbank/ts-adapter/examples/ts_accumulator_demo.fk",
+    "form/form-kernel-ts/seedbank/ts-adapter/examples/ts_arith_demo.fk",
+    "form/form-kernel-ts/seedbank/ts-adapter/examples/ts_arrow_demo.fk",
+    "form/form-kernel-ts/seedbank/ts-adapter/examples/ts_composition_demo.fk",
+    "form/form-kernel-ts/seedbank/ts-adapter/examples/ts_recursion_demo.fk",
+    "form/form-kernel-ts/seedbank/ts-adapter/examples/.gitignore",
+    "form/form-kernel-ts/seedbank/ts-adapter/README.md",
+    "kernels/BOOTSTRAP_COMPOST_MANIFEST.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix"
+}

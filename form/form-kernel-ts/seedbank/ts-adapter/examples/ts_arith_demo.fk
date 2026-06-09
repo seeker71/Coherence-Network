@@ -1,1 +1,0 @@
-(do (let a 7) (let b 3) (let c (_plus (mul a b) (sub a b))) c)
