@@ -538,6 +538,21 @@ def _gate_checks(
     decision_signature = decision.get("signature")
     if not isinstance(decision_signature, dict):
         decision_signature = {}
+    invitation = parsed.get("native_invitation")
+    if not isinstance(invitation, dict):
+        invitation = {}
+    invitation_received = invitation.get("received")
+    if not isinstance(invitation_received, dict):
+        invitation_received = {}
+    invitation_translated = invitation.get("translated")
+    if not isinstance(invitation_translated, dict):
+        invitation_translated = {}
+    invitation_execution = invitation.get("execution")
+    if not isinstance(invitation_execution, dict):
+        invitation_execution = {}
+    invitation_speak = invitation.get("speak_next_time")
+    if not isinstance(invitation_speak, dict):
+        invitation_speak = {}
     reversible_gate = trust.get("reversible_gate")
     if not isinstance(reversible_gate, dict):
         reversible_gate = {}
@@ -629,6 +644,28 @@ def _gate_checks(
             and decision_signature.get("candidate_count") == 4
             and decision_signature.get("operation") == case.operation
             and decision_signature.get("node_id") == case.node_id
+        ),
+        "native_invitation_state": invitation.get("state") == "native-invitation-contract",
+        "native_invitation_offer": invitation.get("offer_to_know") is True,
+        "native_invitation_refusal_signal": invitation.get("refusal_is_signal") is True,
+        "native_invitation_received_shape": invitation_received.get("shape")
+        == "ordinary-json-mutation",
+        "native_invitation_translated_shape": (
+            invitation_translated.get("language") == "Form-native mutation recipe"
+            and invitation_translated.get("operation") == case.operation
+            and invitation_translated.get("node_id") == case.node_id
+            and str(invitation_translated.get("recipe") or "").startswith("native_mutation.")
+        ),
+        "native_invitation_execution": (
+            invitation_execution.get("selected_path") == expected_selected_path
+            and invitation_execution.get("protocol") == expected_protocol
+            and invitation_execution.get("router") == "native-kernel"
+        ),
+        "native_invitation_next_protocol": (
+            invitation_speak.get("ordinary_json") == "accepted and translated"
+            and invitation_speak.get("native_protocol") == "Form/BML mutation recipe"
+            and invitation_speak.get("fallback_header") == PYTHON_FALLBACK_HEADER
+            and invitation.get("decline_signal") == "native_invitation_declined"
         ),
         "trust_protocol": trust.get("protocol") == expected_protocol,
         "trust_selected_path": trust.get("selected_path") == expected_selected_path,

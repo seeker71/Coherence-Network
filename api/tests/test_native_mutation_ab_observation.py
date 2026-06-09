@@ -53,6 +53,22 @@ def test_ab_observation_case_passes_with_native_default_preview_and_fallback():
             "decision_receipt": {
                 "selected_path": "implicit-native-invitation",
             },
+            "native_invitation": {
+                "state": "native-invitation-contract",
+                "offer_to_know": True,
+                "refusal_is_signal": True,
+                "translated": {
+                    "language": "Form-native mutation recipe",
+                    "operation": "create-spec",
+                },
+                "execution": {
+                    "selected_path": "implicit-native-invitation",
+                },
+                "speak_next_time": {
+                    "fallback_header": "X-Form-Python-Fallback",
+                },
+                "decline_signal": "native_invitation_declined",
+            },
         },
     )
     treatment = mod.HTTPObservation(

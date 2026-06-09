@@ -2001,6 +2001,7 @@
       ",\"executes\":false"
       ",\"sql\":" (json_string sql)
       ",\"request_body\":" (json_string body)
+      ",\"native_invitation\":" (mpg-native-invitation-json "X-Form-Native-Preview" "X-Form-Native-Preview" operation node-id body)
       ",\"trust_envelope\":" (mpv-trust-envelope-json operation node-id)
       ",\"runtime\":\"inline\"}"))))
 
@@ -2091,6 +2092,34 @@
     ",\"signature\":" (mpg-decision-signature-json selected-path operation node-id)
     "}")))
 
+(defn mpg-native-recipe-label (operation node-id)
+  (str_concat "native_mutation." (str_concat operation (str_concat "(" (str_concat node-id ")")))))
+
+(defn mpg-native-invitation-json (protocol selected-path operation node-id body)
+  (str_concat_all (list
+    "{\"state\":\"native-invitation-contract\""
+    ",\"surface\":\"mutable-ideas-specs\""
+    ",\"offer_to_know\":true"
+    ",\"refusal_is_signal\":true"
+    ",\"received\":{\"shape\":\"ordinary-json-mutation\",\"body\":" (json_string body) "}"
+    ",\"translated\":{\"language\":\"Form-native mutation recipe\""
+      ",\"operation\":" (json_string operation)
+      ",\"node_id\":" (json_string node-id)
+      ",\"recipe\":" (json_string (mpg-native-recipe-label operation node-id))
+      ",\"carrier\":\"application-graph-node-port + native-mutation-route-side-effects\"}"
+    ",\"execution\":{\"selected_path\":" (json_string selected-path)
+      ",\"protocol\":" (json_string protocol)
+      ",\"router\":\"native-kernel\"}"
+    ",\"evidence_written\":[\"graph_nodes\",\"graph_node_revisions\",\"native_mutation_side_effect_receipts\",\"audit_ledger when valuation changes\"]"
+    ",\"speak_next_time\":{\"ordinary_json\":\"accepted and translated\""
+      ",\"native_protocol\":\"Form/BML mutation recipe\""
+      ",\"preview_header\":\"X-Form-Native-Preview\""
+      ",\"public_gate_header\":\"X-Form-Native-Public-Gate\""
+      ",\"fallback_header\":\"X-Form-Python-Fallback\"}"
+    ",\"decline_signal\":\"native_invitation_declined\""
+    ",\"decline_header\":\"X-Form-Python-Fallback\""
+    "}")))
+
 (defn mpg-trust-envelope-json (protocol selected-path operation node-id)
   (str_concat_all (list
     "{\"state\":\"embodied-trust-public-gate\""
@@ -2167,6 +2196,7 @@
       ",\"persistence\":" (mpg-persistence-json persistence)
       ",\"sql\":" (json_string sql)
       ",\"request_body\":" (json_string body)
+      ",\"native_invitation\":" (mpg-native-invitation-json (mpg-implicit-native-protocol) (mpg-implicit-native-protocol) operation node-id body)
       ",\"route_local_rollback_receipt\":" (mpg-rollback-receipt-json operation node-id)
       ",\"decision_receipt\":" (mpg-decision-receipt-json (mpg-implicit-native-protocol) (mpg-implicit-native-protocol) operation node-id)
       ",\"trust_envelope\":" (mpg-trust-envelope-json (mpg-implicit-native-protocol) (mpg-implicit-native-protocol) operation node-id)
@@ -2189,6 +2219,7 @@
       ",\"persistence\":" (mpg-persistence-json persistence)
       ",\"sql\":" (json_string sql)
       ",\"request_body\":" (json_string body)
+      ",\"native_invitation\":" (mpg-native-invitation-json (mpg-public-gate-header) (mpg-public-gate-header) operation node-id body)
       ",\"route_local_rollback_receipt\":" (mpg-rollback-receipt-json operation node-id)
       ",\"decision_receipt\":" (mpg-decision-receipt-json (mpg-public-gate-header) (mpg-public-gate-header) operation node-id)
       ",\"trust_envelope\":" (mpg-trust-envelope-json (mpg-public-gate-header) (mpg-public-gate-header) operation node-id)

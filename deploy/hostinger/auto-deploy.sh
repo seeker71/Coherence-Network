@@ -712,6 +712,9 @@ ensure_kernel_router_canary() {
         --data '$payload' \
         && grep -qi '^X-Form-Router: native-kernel' /tmp/kernel-canary.headers \
         && grep -q '\"decision_receipt\"' /tmp/kernel-canary.body \
+        && grep -q '\"native_invitation\"' /tmp/kernel-canary.body \
+        && grep -q '\"state\":\"native-invitation-contract\"' /tmp/kernel-canary.body \
+        && grep -q '\"native_protocol\":\"Form/BML mutation recipe\"' /tmp/kernel-canary.body \
         && grep -q '\"executes\":true' /tmp/kernel-canary.body \
         && grep -q '\"db_execution\":\"performed-by-http-native-persistence\"' /tmp/kernel-canary.body \
         && grep -q '\"ordinary_traffic_flip_performed\":true' /tmp/kernel-canary.body" \
@@ -739,6 +742,9 @@ ensure_kernel_router_canary() {
         --data '$default_payload' \
         && grep -qi '^X-Form-Router: native-kernel' /tmp/kernel-default.headers \
         && grep -q '\"native_default_invitation\":true' /tmp/kernel-default.body \
+        && grep -q '\"native_invitation\"' /tmp/kernel-default.body \
+        && grep -q '\"state\":\"native-invitation-contract\"' /tmp/kernel-default.body \
+        && grep -q '\"native_protocol\":\"Form/BML mutation recipe\"' /tmp/kernel-default.body \
         && grep -q '\"route_binding\":\"kernel-http-native-default-invitation\"' /tmp/kernel-default.body \
         && grep -q '\"selected_path\":\"implicit-native-invitation\"' /tmp/kernel-default.body \
         && grep -q '\"executes\":true' /tmp/kernel-default.body \
