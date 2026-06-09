@@ -234,7 +234,7 @@ defn native_mutation_side_effect_ledger() = {
             ],
             "keep as Python parity for idea update route runners",
             "delete only if Python idea updates stop writing VALUATION_CHANGE audit-ledger entries",
-            "idea valuation audit-ledger parity is carried Form-native; public Traefik default waits for persistence-preserving native HTTP execution"
+            "idea valuation audit-ledger parity is carried Form-native; promoted public mutable routes now use persistence-preserving native HTTP execution"
         ),
         nmsl_entry(
             "resonance-reattunement",
@@ -273,7 +273,7 @@ defn native_mutation_side_effect_recipe_shift() = {
         "idea valuation audit-ledger missing parity -> hash-chained Form-native audit ledger carrier",
     ],
     move_next: [
-        "observe deployed X-Form-Native-Public-Gate canary",
-        "then consider ordinary no-header mutation movement",
+        "observe deployed bounded native default plus explicit X-Form-Python-Fallback",
+        "promote the next route only after route-local carrier, fallback, rollback, and production evidence",
     ],
 };

@@ -5,8 +5,9 @@
 #
 # This file names the shape that emerged when the idea portfolio router
 # is read from Form altitude. Python still carries live FastAPI transport for
-# the public mutable paths; the native graph-node carrier now carries the
-# create/replace/delete mutation shape over injected storage. The route
+# non-promoted ideas paths; bounded public POST/PATCH idea mutations now enter
+# the kernel-router native default invitation, with X-Form-Python-Fallback as
+# explicit fanout. The route
 # choreography lives here: the portfolio is sensed, browsed, chosen from,
 # changed, linked, translated, invested in, rolled up, and inspected as one
 # recipe family.
@@ -105,7 +106,7 @@ defn mutate_idea_recipe() = idea_route_recipe(
         idea_route("update_idea_slug", "PATCH", "/ideas/{idea_id}/slug", "rename slug", "idea_service.update_idea_slug", "SlugUpdateResponse", ["slug history"]),
         idea_route("put_idea_tags", "PUT", "/ideas/{idea_id}/tags", "replace tags", "idea_service.set_idea_tags", "IdeaTagUpdateResponse", ["normalized tag catalog"]),
     ],
-    ["validate request", "shape graph-node mutation", "emit header-gated native SQL preview when invited", "call live service carrier until execution parity lands", "repair reciprocal edge when needed", "return refreshed idea"],
+    ["validate request", "shape graph-node mutation", "execute Form-native default for promoted public create/update", "fan out explicit Python fallback when asked", "repair reciprocal edge when carried", "return refreshed idea"],
     ["api/app/routers/ideas.py::create_idea", "api/app/routers/ideas.py::update_idea", "form/form-stdlib/graph-node-port.fk::gn-create-node", "form/form-stdlib/graph-node-port.fk::gn-replace-node", "form/form-stdlib/graph-node-port.fk::gn-delete-node", "form/form-stdlib/tests/graph-node-mutation-carrier-band.fk", "deploy/kernel-router/production-routes.fk::route_ideas_create_native_preview", "deploy/kernel-router/production-routes.fk::route_ideas_update_native_preview"]
 );
 
@@ -202,7 +203,7 @@ defn ideas_router_structure() = {
             route_source: "deploy/kernel-router/production-routes.fk::route_ideas_router_structure",
             status: "kernel-first capable",
             meaning: "the high-level ideas router structure is dispatchable by the kernel-router without CPython",
-            boundary: "mutable portfolio data routes still fan out to FastAPI until storage-backed ideas recipes lift",
+            boundary: "non-promoted ideas routes still fan out to FastAPI while promoted POST/PATCH mutations use the native default invitation",
         },
         {
             path: "/api/ideas/source-index",
@@ -216,63 +217,63 @@ defn ideas_router_structure() = {
             route_source: "deploy/kernel-router/production-routes.fk::route_ideas_source_portfolio",
             status: "kernel-first capable",
             meaning: "the kernel-router reads ideas/INDEX.md and emits an IdeaPortfolioResponse-shaped curated portfolio without CPython",
-            boundary: "source-backed curated portfolio is native; mutable DB-backed /api/ideas still fans out until a live graph storage carrier lands",
+            boundary: "source-backed curated portfolio is native; DB-backed list/read and specialized mutation routes still fan out until their carriers are promoted",
         },
         {
             path: "/api/ideas/graph-projection",
             route_source: "deploy/kernel-router/production-routes.fk::route_ideas_graph_projection",
             status: "kernel-first capable",
             meaning: "the kernel-router projects fixture graph rows into an IdeaPortfolioResponse-shaped body without CPython",
-            boundary: "fixture rows prove the route binding; live DB-backed /api/ideas still fans out until a live graph storage carrier lands",
+            boundary: "fixture rows prove the route binding; live DB-backed reads still fan out until a read carrier is promoted",
         },
         {
             path: "form/form-stdlib/graph-node-port.fk::gn-create-node|gn-replace-node|gn-delete-node",
             route_source: "form/form-stdlib/tests/graph-node-mutation-carrier-band.fk",
             status: "Form-native mutable carrier proven",
             meaning: "idea/spec create, replace, and delete now have native graph-node operations over the storage port",
-            boundary: "method-specific route binding now exists as header-gated SQL preview; public /api/ideas mutation traffic still fans out by default until live execution parity lands",
+            boundary: "method-specific route binding now exists as preview, public gate, and no-header native default for promoted /api/ideas mutations",
         },
         {
             path: "form/form-stdlib/auth-port.fk::auth-require-api-key",
             route_source: "form/form-stdlib/tests/auth-port-band.fk",
             status: "Form-native auth decision carrier proven",
             meaning: "shared API keys, contributor-key hashes, missing/wrong/blank denials, and production dev-key refusal now have native decision parity",
-            boundary: "public mutable /api/ideas paths now have method-specific route binding as preview and still wait for live DB execution proof before front-door mutation flips",
+            boundary: "public mutable /api/ideas create/update now use the native default invitation; auth parity remains a carrier for the next protected mutation promotions",
         },
         {
             path: "form/form-stdlib/application-graph-node-port.fk::agn-create-node|agn-update-node|agn-delete-node",
             route_source: "form/form-stdlib/tests/application-graph-node-port-band.fk",
             status: "Form-native application graph table carrier proven",
             meaning: "create/update/delete SQL now targets graph_nodes, graph_node_revisions, and graph_edges directly rather than port_kv",
-            boundary: "public mutable /api/ideas paths now have header-gated preview rows, but still wait for live DB execution proof before front-door mutation flips",
+            boundary: "public mutable /api/ideas create/update now have preview rows plus no-header native-default execution through the production config carrier",
         },
         {
             path: "POST /api/ideas + PATCH /api/ideas/{idea_id}",
             route_source: "deploy/kernel-router/production-routes.fk::route_ideas_create_native_preview|route_ideas_update_native_preview",
             status: "kernel-first trust envelope preview",
             meaning: "method-specific KernelHTTPRoute rows bind JSON request bodies to application graph SQL and return a trust envelope carrying prediction residual, side-effect intents, choice_success=1, silence/protocol/fail/stop/BMA markers, and reversible gate state without CPython when X-Form-Native-Preview is present",
-            boundary: "normal public mutations without native mutation headers still fan out to FastAPI; X-Form-Native-Public-Gate now carries the narrower rollback-receipted public gate",
+            boundary: "promoted public create/update accepts no-header native default; X-Form-Native-Preview and X-Form-Native-Public-Gate remain explicit higher-priority witnesses",
         },
         {
             path: "deploy/kernel-router/mutation_ab_observation_harness.py",
             route_source: "api/tests/test_native_mutation_ab_observation.py",
             status: "A/B observation gate",
-            meaning: "the mutation flip is now measured as A fanout vs B native preview before any ordinary traffic moves",
-            boundary: "preview confidence is complete; ordinary no-header traffic remains unflipped while the deployed public-gate canary gathers treatment/control evidence",
+            meaning: "the mutation flip is measured as A no-header native default, B native preview, and C explicit fallback before and after the bounded public move",
+            boundary: "the observation gate promoted only the bounded mutable public routes; broader ordinary traffic remains outside the kernel-router",
         },
         {
             path: "form/scripts/application-graph-live-db-test.sh",
             route_source: "form/form-stdlib/integration/application-graph-live-db.fk + api/tests/test_application_graph_live_db_trial.py",
             status: "live DB execution trial proven",
             meaning: "Form-native application graph mutation wrappers now create, update, delete, and read back graph_nodes, graph_node_revisions, and graph_edges in a rollback-safe throwaway Postgres",
-            boundary: "this closes the local live DB execution trial and does not perform the public front-door flip; the trust envelope now carries prediction residual plus side-effect intents while ordinary traffic remains unflipped",
+            boundary: "this closes the local live DB execution trial and supports the bounded mutable public flip; it still does not perform the all-traffic front-door flip",
         },
         {
             path: "form/scripts/application-graph-response-projection-test.sh",
             route_source: "form/form-stdlib/application-graph-response-projection.fk + api/tests/test_application_graph_response_projection.py",
             status: "response projection parity proven",
             meaning: "Form-native projection now emits IdeaWithScore and SpecRegistryEntry-shaped mutation responses from live graph rows",
-            boundary: "this closes response projection and does not perform the public front-door flip; side-effect execution, route-runner binding, and the public-gate receipt are now proven; deployed public canary carries explicit header traffic before ordinary traffic moves",
+            boundary: "this closes response projection for the promoted mutable routes; side-effect execution, route-runner binding, and public/default receipts are now proven before broader traffic moves",
         },
         {
             path: "form/scripts/native-mutation-side-effects-test.sh",
@@ -293,21 +294,21 @@ defn ideas_router_structure() = {
             route_source: "form/form-stdlib/native-mutation-public-gate.fk + deploy/kernel-router/mutation_public_gate_harness.py + api/tests/test_native_mutation_public_gate.py",
             status: "native mutation public gate proven",
             meaning: "X-Form-Native-Public-Gate selects native public-gate route rows, emits a route-local rollback receipt, and the Form gate persists public-gate rollback receipts against rollback-safe throwaway Postgres",
-            boundary: "no-header traffic that reaches the kernel now accepts the implicit native invitation; X-Form-Python-Fallback is the refusal/control signal, while public Traefik no-header default waits until HTTP native persistence semantics are carried",
+            boundary: "public Traefik now routes promoted /api/ideas mutations to the native default invitation; X-Form-Python-Fallback is the refusal/control signal",
         },
         {
             path: "docs/coherence-substrate/native-mutation-side-effect-ledger.form",
             route_source: "api/tests/test_native_mutation_side_effect_ledger.py",
             status: "source-classified side-effect ledger",
             meaning: "side effects are separated into primary mutation, Python parity effect, reversible gate receipt, missing Python parity, and not-carried rows before any front-door move",
-            boundary: "rollback receipts are reversible gate safety, not Python parity; idea-valuation-audit-ledger is now carried Form-native while ordinary no-header traffic still waits for sustained public-gate canary evidence",
+            boundary: "rollback receipts are reversible gate safety, not Python parity; idea-valuation-audit-ledger is now carried Form-native while broader unpromoted traffic stays API-backed",
         },
         {
             path: "form/scripts/native-idea-valuation-audit-ledger-test.sh",
             route_source: "form/form-stdlib/native-idea-valuation-audit-ledger.fk + api/tests/test_native_idea_valuation_audit_ledger.py",
             status: "native idea valuation audit ledger proven",
             meaning: "Form-native idea update now appends hash-chained VALUATION_CHANGE rows to audit_ledger with SYSTEM sender/receiver, field metadata, previous_hash, and hash, and the public gate exposes an idea update runner over that carrier",
-            boundary: "idea valuation audit-ledger parity is carried Form-native; the kernel manifest now defaults mutable routes to implicit native invitation, and public Traefik default waits for persistence-preserving HTTP native execution",
+            boundary: "idea valuation audit-ledger parity is carried Form-native; public Traefik now sends promoted mutable routes to persistence-preserving HTTP native execution",
         },
     ],
     recipes: [
@@ -343,8 +344,9 @@ defn ideas_router_structure() = {
         "side-effect proof -> source-classified side-effect ledger",
         "missing idea valuation audit-ledger parity -> hash-chained Form-native audit_ledger carrier",
         "fanout by silence -> implicit native invitation plus explicit X-Form-Python-Fallback signal",
+        "public Traefik no-header default -> bounded Form-native mutable method/path routers",
     ],
-    current_gap: "GAP-I1 moved: /api/ideas/router-structure, /api/ideas/source-index, /api/ideas/source-portfolio, and /api/ideas/graph-projection are kernel-first capable; graph-node-port.fk exposes native get/list/count plus create/replace/delete over the storage port; auth-port.fk preserves API-key/contributor-key decision parity; application-graph-node-port.fk emits direct graph_nodes/graph_node_revisions/graph_edges SQL; ideas-graph-projection.fk emits an IdeaPortfolioResponse-shaped read; POST/PATCH /api/ideas now have X-Form-Native-Preview header-gated native SQL preview rows with a trust envelope carrying prediction residual, side-effect intents, choice_success=1, silence/protocol/fail/stop/BMA markers, and reversible gate state; mutation_ab_observation_harness.py turns the flip into A/B observation; application-graph-live-db-test.sh proves rollback-safe live DB execution for the Form-native application graph mutation wrappers; application-graph-response-projection-test.sh proves live graph rows project into IdeaWithScore and SpecRegistryEntry-shaped mutation responses; native-mutation-side-effects-test.sh proves parent-edge repair, contributor-key audit, cache-invalidation receipt, and rollback receipt execute natively against throwaway Postgres; native-mutation-route-side-effects-test.sh proves application graph mutation plus side-effect execution are bound in one Form-native route runner; native-mutation-public-gate-test.sh plus mutation_public_gate_harness.py prove X-Form-Native-Public-Gate selects a rollback-receipted native public gate, no-header requests that reach the kernel accept the implicit native invitation, and X-Form-Python-Fallback fans out as explicit refusal/control signal; native-mutation-side-effect-ledger.form proves side-effect proof does not justify side effects by separating Python parity effects from gate receipts and missing parity; native-idea-valuation-audit-ledger-test.sh proves Python-parity hash-chained VALUATION_CHANGE audit_ledger rows for idea updates; and mutation_public_gate_harness.py now proves native HTTP mutation persistence through config_database_url -> pg_connect -> pg_exec -> pg_close with Postgres readback. Public mutable DB-backed /api/ideas Traefik no-header default still enters through FastAPI while the deployed header-gated canary verifies mounted production-config persistence before the separate public no-header flip.",
+    current_gap: "GAP-I1 moved: /api/ideas/router-structure, /api/ideas/source-index, /api/ideas/source-portfolio, and /api/ideas/graph-projection are kernel-first capable; graph-node-port.fk exposes native get/list/count plus create/replace/delete over the storage port; auth-port.fk preserves API-key/contributor-key decision parity; application-graph-node-port.fk emits direct graph_nodes/graph_node_revisions/graph_edges SQL; ideas-graph-projection.fk emits an IdeaPortfolioResponse-shaped read; POST/PATCH /api/ideas now have X-Form-Native-Preview header-gated native SQL preview rows with a trust envelope carrying prediction residual, side-effect intents, choice_success=1, silence/protocol/fail/stop/BMA markers, and reversible gate state; mutation_ab_observation_harness.py turns the flip into A/B/C observation; application-graph-live-db-test.sh proves rollback-safe live DB execution for the Form-native application graph mutation wrappers; application-graph-response-projection-test.sh proves live graph rows project into IdeaWithScore and SpecRegistryEntry-shaped mutation responses; native-mutation-side-effects-test.sh proves parent-edge repair, contributor-key audit, cache-invalidation receipt, and rollback receipt execute natively against throwaway Postgres; native-mutation-route-side-effects-test.sh proves application graph mutation plus side-effect execution are bound in one Form-native route runner; native-mutation-public-gate-test.sh plus mutation_public_gate_harness.py prove X-Form-Native-Public-Gate selects a rollback-receipted native public gate, no-header requests that reach the kernel accept the implicit native invitation, and X-Form-Python-Fallback fans out as explicit refusal/control signal; native-mutation-side-effect-ledger.form proves side-effect proof does not justify side effects by separating Python parity effects from gate receipts and missing parity; native-idea-valuation-audit-ledger-test.sh proves Python-parity hash-chained VALUATION_CHANGE audit_ledger rows for idea updates; and mutation_public_gate_harness.py now proves native HTTP mutation persistence through config_database_url -> pg_connect -> pg_exec -> pg_close with Postgres readback. Public mutable DB-backed POST/PATCH /api/ideas Traefik no-header default now enters the kernel-router native default invitation, persists through the mounted production-config carrier, and keeps X-Form-Python-Fallback as the explicit refusal/control signal; unpromoted ideas routes remain API-backed until their own native carriers are proven.",
 };
 
 defn ideas_router_reading() = {

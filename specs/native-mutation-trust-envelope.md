@@ -74,10 +74,11 @@ traffic native by default while keeping explicit Python fallback observable.
 - [ ] **R6**: `deploy/kernel-router/production-routes.fk` embeds this envelope
   in each method-specific native mutation preview response.
 - [ ] **R7**: The A/B observation harness treats the envelope as part of the B
-  arm contract and names native HTTP persistence plus public Traefik default
-  routing as the next evidence.
+  arm contract and names native HTTP persistence plus bounded public Traefik
+  method/path routing as the next evidence.
 - [ ] **R8**: The idea and spec route Form docs name the trust envelope as part
-  of the current mutable-route state before any no-header public flip.
+  of the current promoted mutable-route state after the bounded no-header public
+  move.
 
 ## Research Inputs
 
@@ -143,8 +144,11 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-trust-enve
   proven side-effect carrier is now bound to Form-native route-runner execution.
 - GAP-NMTE3: closed by `specs/native-mutation-public-gate.md`. The narrow
   public gate now carries a route-local rollback receipt.
-- GAP-NMTE4 follow-up task: `native-mutation-deployed-public-canary`. Deploy and
-  observe the `X-Form-Native-Public-Gate` canary before any no-header flip.
+- GAP-NMTE4: closed by `public-no-header-native-mutation-flip`. The deployed
+  bounded mutable method/path routes now observe native default persistence and
+  explicit `X-Form-Python-Fallback` fanout.
+- Follow-up task: None for this trust-envelope slice; future route promotions
+  require their own spec, proof, fallback signal, and rollback path.
 
 ## Risks and Assumptions
 

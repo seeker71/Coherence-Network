@@ -630,7 +630,7 @@ ensure_kernel_router_canary() {
     return 0
   fi
 
-  log "kernel-router canary: ensuring header-gated production-manifest service and BML front-door path service"
+  log "kernel-router canary: ensuring bounded mutable native production-manifest service and BML front-door path service"
   local compose_args=(-f "$COMPOSE_ROOT/docker-compose.yml" -f "$KERNEL_CANARY_COMPOSE_FILE")
   local canary_services=(kernel-router kernel-router-bml-front-door)
   local started ended elapsed
@@ -723,6 +723,55 @@ ensure_kernel_router_canary() {
   done
   if [[ "$probe_ok" != "1" ]]; then
     log "FAIL: kernel-router canary local public-gate probe did not execute native persistence and return native decision receipt"
+    exit 1
+  fi
+
+  local default_id="idea-native-default-local-$(date +%s)"
+  local default_payload
+  default_payload="$(printf '{"id":"%s","name":"Native Default Local","description":"no-header native default","manifestation_status":"partial"}' "$default_id")"
+  deadline=$(( $(date +%s) + 120 ))
+  probe_ok=0
+  while (( $(date +%s) < deadline )); do
+    if docker compose "${compose_args[@]}" exec -T kernel-router sh -lc \
+      "curl -fsS -D /tmp/kernel-default.headers -o /tmp/kernel-default.body \
+        -X POST http://127.0.0.1:8080/api/ideas \
+        -H 'Content-Type: application/json' \
+        --data '$default_payload' \
+        && grep -qi '^X-Form-Router: native-kernel' /tmp/kernel-default.headers \
+        && grep -q '\"native_default_invitation\":true' /tmp/kernel-default.body \
+        && grep -q '\"route_binding\":\"kernel-http-native-default-invitation\"' /tmp/kernel-default.body \
+        && grep -q '\"selected_path\":\"implicit-native-invitation\"' /tmp/kernel-default.body \
+        && grep -q '\"executes\":true' /tmp/kernel-default.body \
+        && grep -q '\"db_execution\":\"performed-by-http-native-persistence\"' /tmp/kernel-default.body" \
+      2>&1 | tee -a "$LOG_FILE"; then
+      probe_ok=1
+      break
+    fi
+    sleep 3
+  done
+  if [[ "$probe_ok" != "1" ]]; then
+    log "FAIL: kernel-router canary local no-header native default probe did not execute native persistence"
+    exit 1
+  fi
+
+  deadline=$(( $(date +%s) + 60 ))
+  probe_ok=0
+  while (( $(date +%s) < deadline )); do
+    if docker compose "${compose_args[@]}" exec -T kernel-router sh -lc \
+      "curl -sS -D /tmp/kernel-fallback.headers -o /tmp/kernel-fallback.body -w '%{http_code}' \
+        -X POST http://127.0.0.1:8080/api/ideas \
+        -H 'Content-Type: application/json' \
+        -H 'X-Form-Python-Fallback: 1' \
+        --data '{}' >/tmp/kernel-fallback.status \
+        && grep -qi '^X-Form-Router: fanout-python' /tmp/kernel-fallback.headers" \
+      2>&1 | tee -a "$LOG_FILE"; then
+      probe_ok=1
+      break
+    fi
+    sleep 3
+  done
+  if [[ "$probe_ok" != "1" ]]; then
+    log "FAIL: kernel-router explicit fallback did not fan out with X-Form-Router: fanout-python"
     exit 1
   fi
 

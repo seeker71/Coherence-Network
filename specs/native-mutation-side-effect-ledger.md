@@ -35,7 +35,7 @@ done_when:
 test: "cd api && python3 -m pytest -q tests/test_native_mutation_side_effect_ledger.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py"
 constraints:
   - "Do not add new domain side effects in this slice."
-  - "Do not flip ordinary no-header mutation traffic."
+  - "Do not perform the all-traffic Host(api.coherencycoin.com) front-door flip in this ledger slice."
   - "Do not treat rollback receipts as Python parity."
 ---
 
@@ -117,7 +117,7 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-side-effec
 ## Out of Scope
 
 - Adding new domain side effects.
-- Flipping ordinary no-header mutable ideas/spec traffic.
+- Flipping all unlisted public API traffic.
 
 ## Gaps
 
@@ -125,8 +125,11 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-side-effec
   `idea_write_ops.update_idea` and `update_ideas_batch` valuation audit-ledger
   writes now have a Form-native hash-chain carrier and idea update route-runner
   wrapper.
-- GAP-NMSEL2 follow-up task: `native-mutation-deployed-public-canary`. Observe a
-  deployed `X-Form-Native-Public-Gate` canary before any no-header flip.
+- GAP-NMSEL2: closed by `public-no-header-native-mutation-flip`. The deployed
+  bounded mutable method/path routes now observe native default persistence and
+  explicit `X-Form-Python-Fallback` fanout.
+- Follow-up task: None for this ledger slice; future route promotions require
+  their own spec, proof, fallback signal, and rollback path.
 
 ## Risks and Assumptions
 

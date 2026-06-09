@@ -15,11 +15,11 @@ source:
   - file: api/tests/test_native_mutation_ab_observation.py
     symbols: [test_ab_observation_cases_cover_all_native_mutation_preview_routes, test_ab_observation_case_passes_with_native_default_preview_and_fallback, test_ab_gate_blocks_flip_when_any_observation_fails, test_ab_gate_recommends_live_db_trial_after_full_confidence]
 requirements:
-  - "The native mutation flip is expressed as an A/B/C observation gate before public Traefik default moves."
+  - "The native mutation flip is expressed as an A/B/C observation gate before each bounded public Traefik default move."
   - "Variant A proves no-header mutation requests that reach the kernel accept the implicit native invitation and execute through a throwaway Postgres config carrier."
   - "Variant B proves explicit preview-header mutation requests return native SQL previews."
   - "Variant C proves X-Form-Python-Fallback fans out to FastAPI as the explicit refusal/control signal."
-  - "The gate emits confidence, pass/fail observations, and a recommendation that can promote only to deployed header-gated canary verification, not a blind public Traefik default flip."
+  - "The gate emits confidence, pass/fail observations, and a recommendation that can promote only to a bounded deployed method/path router with explicit fallback, not a blind all-traffic Traefik flip."
   - "Variant B carries the trust envelope with prediction residual, choice protocol markers, side-effect intents, and reversible gate state."
 done_when:
   - 'file_exists("deploy/kernel-router/mutation_ab_observation_harness.py")'
@@ -29,7 +29,7 @@ done_when:
   - 'pytest_passes("api/tests/test_native_mutation_ab_observation.py")'
 test: "python3 deploy/kernel-router/mutation_ab_observation_harness.py --json && cd api && python3 -m pytest -q tests/test_native_mutation_ab_observation.py"
 constraints:
-  - "Do not perform the public front-door flip in this slice."
+  - "Do not perform the all-traffic Host(api.coherencycoin.com) front-door flip in this slice."
   - "Do not execute SQL against the production application database in the local harness."
   - "Do not treat a passing preview observation as equivalent to live mutation parity."
 ---
@@ -71,10 +71,10 @@ bounded trial when every case passes.
   `prediction_error="carried_as_residual"`, `choice_success=1`,
   silence/protocol/fail/stop/BMA markers, side-effect intents, and reversible
   gate state.
-- [ ] **R8**: When every case passes, the next evidence names deployed
-  header-gated canary persistence through mounted production config, public
-  Traefik default routing to kernel-router, and separate counting for explicit
-  fallback/refusal signal.
+- [ ] **R8**: When every case passes, the next evidence names deployed public
+  persistence through mounted production config, bounded Traefik method/path
+  routing to kernel-router, and separate counting for explicit fallback/refusal
+  signal.
 
 ## Research Inputs
 
@@ -122,7 +122,7 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-ab-observa
 
 ## Out of Scope
 
-- Public Traefik front-door routing changes.
+- All-traffic public Traefik Host front-door routing changes.
 - PostgreSQL execution of preview SQL or production database writes from the
   local harness.
 - Cache invalidation, parent/edge repair, resonance re-attunement, or
@@ -151,11 +151,13 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-ab-observa
   manifest header gate.
 - GAP-NMAOG7: closed by `native-http-mutation-persistence-default`. The A arm
   now proves native HTTP mutation persistence through the kernel config carrier
-  and throwaway Postgres readback before public Traefik no-header defaults route
-  through kernel-router.
-- Follow-up task: `deployed-native-http-mutation-persistence-canary`. Verify the
-  mounted production-config header-gated canary after deploy, then decide the
-  separate public no-header Traefik flip.
+  and throwaway Postgres readback before bounded public Traefik no-header
+  defaults route through kernel-router.
+- GAP-NMAOG8: closed by `public-no-header-native-mutation-flip`. Deployed
+  production config evidence now routes promoted ideas/spec method/path defaults
+  through kernel-router and counts explicit fallback separately.
+- Follow-up task: promote the next route only after its own A/B/C observation,
+  production config proof, fallback signal, and rollback path are named.
 
 ## Risks and Assumptions
 

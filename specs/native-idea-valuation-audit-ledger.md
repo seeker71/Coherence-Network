@@ -34,7 +34,7 @@ test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-grap
 constraints:
   - "Use a throwaway local PostgreSQL database or caller-supplied test DSN only."
   - "Do not execute against the production application database."
-  - "Do not flip ordinary no-header public mutation traffic."
+  - "Do not perform the all-traffic Host(api.coherencycoin.com) front-door flip in this carrier slice."
 ---
 
 # Spec: Native Idea Valuation Audit Ledger
@@ -42,8 +42,8 @@ constraints:
 ## Purpose
 
 The side-effect ledger surfaced `idea_write_ops.update_idea` audit-ledger writes
-as the missing Python parity before ordinary mutable traffic can move. This spec
-ships that carrier in Form: idea update route runners can now append
+as the missing Python parity before promoted ordinary mutable traffic could move.
+This spec ships that carrier in Form: idea update route runners can now append
 hash-chained `VALUATION_CHANGE` rows to `audit_ledger` without calling Python
 service code.
 

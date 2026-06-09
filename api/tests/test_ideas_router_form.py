@@ -85,7 +85,7 @@ def test_ideas_router_form_keeps_python_as_carrier_with_gap_named():
     assert "POST/PATCH /api/ideas now have X-Form-Native-Preview header-gated native SQL preview rows" in text
     assert "application-graph-live-db-test.sh proves rollback-safe live DB execution" in text
     assert "application-graph-response-projection-test.sh proves live graph rows project into IdeaWithScore and SpecRegistryEntry-shaped mutation responses" in text
-    assert "Public mutable DB-backed /api/ideas Traefik no-header default still enters through FastAPI" in text
+    assert "Public mutable DB-backed POST/PATCH /api/ideas Traefik no-header default now enters the kernel-router native default invitation" in text
     assert "trust envelope carrying prediction residual" in text
     assert "choice_success=1, silence/protocol/fail/stop/BMA markers" in text
     assert "native-mutation-side-effects-test.sh proves parent-edge repair" in text
@@ -93,7 +93,8 @@ def test_ideas_router_form_keeps_python_as_carrier_with_gap_named():
     assert "native-mutation-public-gate-test.sh plus mutation_public_gate_harness.py prove X-Form-Native-Public-Gate" in text
     assert "X-Form-Python-Fallback fans out as explicit refusal/control signal" in text
     assert "mutation_public_gate_harness.py now proves native HTTP mutation persistence" in text
-    assert "deployed header-gated canary verifies mounted production-config persistence" in text
+    assert "persists through the mounted production-config carrier" in text
+    assert "unpromoted ideas routes remain API-backed" in text
 
 
 def test_ideas_router_form_describes_live_router_carrier():
@@ -125,7 +126,7 @@ def test_ideas_router_form_has_native_structure_route():
     assert "defn route_ideas_router_structure" in kernel_text
     assert '(list "/api/ideas/router-structure"    route_ideas_router_structure)' in kernel_text
     assert "docs/coherence-substrate/ideas-router.form" in kernel_text
-    assert "mutable portfolio data routes still fan out to FastAPI" in kernel_text
+    assert "non-promoted ideas routes still fan out to FastAPI" in kernel_text
 
 
 def test_ideas_router_form_has_native_source_index_route():

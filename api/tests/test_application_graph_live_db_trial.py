@@ -53,8 +53,9 @@ def test_live_db_trial_script_runs_or_skips_when_postgres_tooling_missing():
         assert "verdict: 1111111" in output
 
 
-def test_route_forms_name_live_db_trial_before_public_flip():
+def test_route_forms_name_live_db_trial_after_bounded_flip():
     for text in (_text(IDEAS_FORM_PATH), _text(SPECS_FORM_PATH)):
         assert "form/scripts/application-graph-live-db-test.sh" in text
         assert "live DB execution trial" in text
-        assert "does not perform the public front-door flip" in text
+        assert "supports the bounded mutable public flip" in text
+        assert "does not perform the all-traffic front-door flip" in text

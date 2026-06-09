@@ -23,7 +23,7 @@ source:
   - file: form/form-stdlib/tests/application-graph-node-port-band.fk
     symbols: []
   - file: api/tests/test_application_graph_response_projection.py
-    symbols: [test_route_forms_name_response_projection_before_public_flip]
+    symbols: [test_route_forms_name_response_projection_after_bounded_flip]
   - file: form/form-stdlib/native-mutation-trust-envelope.fk
     symbols: [nmte-trust-envelope-json]
   - file: form/form-stdlib/native-mutation-side-effects.fk
@@ -73,9 +73,9 @@ native kernel-router route that reads `specs/INDEX.md` and emits
 - [ ] **R5**: Runtime-surface reporting counts `/api/spec-registry/source-list` as kernel-first capable.
 - [ ] **R6**: The production manifest binds header-gated method-specific native SQL preview rows for `POST /api/spec-registry`, `PATCH /api/spec-registry/*`, and `DELETE /api/spec-registry/*`.
 - [ ] **R7**: The spec registry route Form names the native mutation trust
-  envelope before any ordinary public traffic flip.
+  envelope after the bounded ordinary public mutation route promotion.
 - [ ] **R8**: The spec registry route Form links the side-effect ledger and
-  keeps carried Python parity explicit before any ordinary no-header flip.
+  keeps carried Python parity explicit before each future route promotion.
 
 ## Research Inputs
 
@@ -142,10 +142,10 @@ PY
   plus side-effect execution are bound in one Form-native route runner.
   `native-mutation-public-gate-test.sh` and `mutation_public_gate_harness.py`
   prove `X-Form-Native-Public-Gate` selects rollback-receipted native public-gate
-  route rows while preserving fanout for no-header traffic. Public
-  mutable DB-backed spec registry behavior still enters through FastAPI by
-  default until a deployed header-gated public canary is observed before any
-  no-header flip.
+  route rows while preserving explicit `X-Form-Python-Fallback` fanout. Public
+  mutable DB-backed `POST/PATCH/DELETE /api/spec-registry` now enters the
+  kernel-router native default invitation through bounded Traefik method/path
+  routers; unpromoted spec registry routes remain API-backed.
 - GAP-SRS2 follow-up task: `spec-source-frontmatter-native-parser`. This route
   reads `specs/INDEX.md`; richer frontmatter fields remain source defaults until
   a native frontmatter parser lands.
