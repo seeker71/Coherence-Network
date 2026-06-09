@@ -1,0 +1,41 @@
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/learning-arc.fk
+;
+; learning-arc-band — the supervision arc made falsifiable: a cold challenger LEARNS to match an
+; oracle over a stream, and we assert the learning curve is identical three-way.
+;
+; Two shapes alternate, each with a fixed oracle label:
+;   A = [5 0 0] -> "still"      B = [0 0 5] -> "moving"
+;   stream ab6 = A B A B A B    (the challenger learns online, predicting on PRIOR exemplars only)
+;
+; The curve (nearest-shape's exact-bin recognition over a set that grows by one each frame):
+;   f0  A  protos []                 -> "?"      miss (cold: no exemplar yet, honest unknown)
+;   f1  B  protos [still:A]          -> "still"  miss (only exemplar is A; B routes to it)
+;   f2  A  protos [moving:B still:A] -> "still"  HIT  (A now has its own exemplar)
+;   f3  B                            -> "moving" HIT
+;   f4  A                            -> "still"  HIT
+;   f5  B                            -> "moving" HIT
+; So 4 of 6 agree; the first occurrence of each shape is the only miss — that IS learning.
+;
+; Verdict 127 when every claim lands:
+;   1   total agreements over the cold stream      (la-agreements ab6 == 4)
+;   2   warmed agreements ignore the cold start    (la-agreements-after ab6 2 == 4)
+;   4   the challenger REACHES the oracle           (la-reached? ab6 2 4 -> 1, won all 4 warmed frames)
+;   8   it does NOT claim more wins than frames     (la-reached? ab6 2 5 -> 0, honest ceiling)
+;   16  cold start is an honest unknown            (la-predict A [] == "?", never a fabricated guess)
+;   32  longer stream, more learned wins           (la-agreements ab8 == 6, only the 2 first-meets miss)
+;   64  learning is interning one exemplar          (la-intern grows the set by exactly one)
+(do
+    (let A (list 5 0 0))
+    (let B (list 0 0 5))
+    (let sa (list A "still"))
+    (let sb (list B "moving"))
+    (let ab6 (list sa sb sa sb sa sb))
+    (let ab8 (list sa sb sa sb sa sb sa sb))
+    (let c0 (if (eq (la-agreements ab6) 4) 1 0))
+    (let c1 (if (eq (la-agreements-after ab6 2) 4) 2 0))
+    (let c2 (if (la-reached? ab6 2 4) 4 0))
+    (let c3 (if (la-reached? ab6 2 5) 0 8))
+    (let c4 (if (str_eq (la-predict A (list)) "?") 16 0))
+    (let c5 (if (eq (la-agreements ab8) 6) 32 0))
+    (let c6 (if (eq (len (la-intern "x" (list 1 2) (list))) 1) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

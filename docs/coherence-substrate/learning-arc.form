@@ -1,0 +1,45 @@
+; learning-arc.form — the supervision arc made RUNNABLE: a cold Form-native challenger learns from an
+; oracle's labels over a stream, and the body watches it reach the oracle. The loop that runs the bricks.
+;
+; THE ASK:
+;   "Sample the 3rd-party models until the Form-native arms reach or exceed them." champion-challenger.fk
+;   decides WHO is the authority over a FIXED competition record; predictor-train.fk interns ONE sample;
+;   nearest-shape.fk is the classifier. This brick is the LOOP that runs them as a stream from scratch:
+;   for each (feature, oracle-label) in time order, the challenger predicts using only PRIOR exemplars,
+;   we tally whether it matched, then it learns that frame — and the agreement count IS the learning curve.
+;
+; THE SHAPE  (runnable: form-stdlib/learning-arc.fk · proven: tests/learning-arc-band.fk -> 127, composing nearest-shape.fk)
+;
+;   A SAMPLE = (list feature-vector oracle-label) — the feature a list of small-int bins, the label a string.
+;   A STREAM = a list of samples in time order. A PROTOTYPE-SET grows as (cons (list label vector) set).
+;
+;   1. PREDICT   la-predict (feature protos): the challenger's call — nearest-shape over what it has
+;                learned; COLD (no exemplars) is an honest "?", never a fabricated guess. The miss on a
+;                shape's first appearance is the price of honesty, and the only miss on a learnable oracle.
+;   2. LEARN     la-intern (label feature protos): the smallest act — prepend one (label vector) exemplar
+;                (nearest-shape's own teaching: learning is adding a prototype, no weights, no epochs).
+;   3. FOLD      la-agreements (samples): predict on current protos, tally the hit, THEN learn this frame
+;                for the next — single-pass, order-respecting. Replay the stream, the curve is identical.
+;   4. WARMED    la-agreements-after (samples k): learn from every frame but only TALLY after the first k
+;                (cold-start exemplars are training, not a fair test of what was learned).
+;   5. REACHED   la-reached? (samples k wins-needed): the promotion gate — once warmed past k, did the
+;                challenger win at least wins-needed frames? `(ge ... wins-needed)`, division-free. When
+;                yes, the Form-native arm has reached the oracle and earned the route (model-retire is next).
+;
+; THE ONE LANE:
+;   This measures the challenger's agreement with the oracle as it learns; it does not judge whether the
+;   oracle's label is right — that ground-truth is the oracle's job (a 3rd-party model via predictor-
+;   sampling, a declared-source, or a trusted in-house reference). Agreement is an EXACT label match;
+;   recognition is nearest-shape's exact-bin count — no distance, no float, no ratio. Honest wall
+;   (lc-honest-lane): one exemplar per shape recognizes repeats fast in the body's OWN field (this room,
+;   voice, motion); it is not a from-scratch beat of whisper/Vision on the open world. The win is the
+;   loop closing — the body learning online, on its own stream, with the curve provable three-way.
+;
+; KIN: champion-challenger.form (the authority gate this feeds) · predictor-sampling.form (the oracle slot)
+;   · predictor-train.form (the single-intern step this folds) · nearest-shape.form (the challenger's
+;   classifier) · self-grounding-perception.form (earn trust by proven agreement) · model-retire.form
+;   (the endgame once reached) · lc-honest-lane.
+;
+; LINEAGE: champion-challenger named the north star as a record-counting gate; predictor-train named the
+;   single intern; this is those made into a running stream — the cold start, the online learn, the warmed
+;   measure, and the line where the challenger has earned the route, all in one fold the kernels agree on.
