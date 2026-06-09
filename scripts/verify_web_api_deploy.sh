@@ -1327,7 +1327,7 @@ check_contribution_reads_native() {
 
   if command -v jq >/dev/null 2>&1; then
     if ! jq -e '.items | type == "array"' "$contributors_body" >/dev/null \
-      || ! jq -e '.total >= 0 and .limit == 5 and .offset == 0' "$contributors_body" >/dev/null; then
+      || ! jq -e '.total >= 0 and .limit == 5 and .offset == 0 and ((.total == 0 and (.items | length) == 0) or (.total > 0 and (.items | length) > 0 and (.items[0] | type) == "object"))' "$contributors_body" >/dev/null; then
       echo "FAIL: contributors body no longer matches paginated read contract"
       jq '{items_type: (.items | type), total, limit, offset, sample: (.items[:2] // [])}' "$contributors_body" 2>/dev/null || head -c 500 "$contributors_body"
       echo
@@ -1344,6 +1344,8 @@ check_contribution_reads_native() {
     if ! grep -q '"items":\[' "$contributors_body" \
       || ! grep -q '"limit":5' "$contributors_body" \
       || ! grep -q '"offset":0' "$contributors_body" \
+      || { grep -q '"total":0' "$contributors_body" && ! grep -q '"items":\[\]' "$contributors_body"; } \
+      || { ! grep -q '"total":0' "$contributors_body" && ! grep -q '"items":\[{' "$contributors_body"; } \
       || ! grep -q '"items":\[' "$contributions_body" \
       || ! grep -q '"limit":5' "$contributions_body" \
       || ! grep -q '"offset":0' "$contributions_body"; then
