@@ -1,0 +1,70 @@
+; federated-slices.form — cells share model SLICES over the mesh and merge them deterministically.
+;
+; THE NORTH STAR: a cell runs the best model it has locally; it shares small content-addressed model
+; SLICES over the mesh; other cells ingest them through a trust-weighted, proven MERGE — and because the
+; merge is a Form recipe, every cell merges to the SAME numbers (a deterministic federation, which a
+; float-averaging PyTorch federation cannot promise). The model improves across the whole field without
+; any cell ever degrading what it serves now.
+;
+; ── THE SPLIT (shared slice vs cell-local), grounded in proven research ──
+;   Three literatures converge on ONE shape: a stable shared core + small plastic shareable DELTAS.
+;     - LoRA / adapters (ΔW = B·A): the shareable unit shrinks from d·k to r·(d+k) numbers; the base
+;       never moves. The body already ships the forward: cell-numerics.form's adapter_forward(A,B,bias,x)
+;       = matvec(B, matvec(A,x)) + bias (the "Adapter forward step", :59-76, :198-242).
+;     - Task arithmetic (τ = θ_local − θ_base): a delta you carry, sum, scale. vector_sub/vector_add/
+;       scalar_mul are on-main (cell-numerics.form:35-56) — compose (θ_base + λ·τ) and forget (−λ·τ).
+;     - Complementary learning systems / CLS / EWC: the "short-term vs long-term" split is the
+;       CONSOLIDATION POLICY, not the wire unit — fast = the cell's local adapter accumulating deltas;
+;       long = the consolidated adapter it elects to SHARE once settled (active-inference.fk ai-settled?,
+;       champion-challenger.fk cc-promote? are the gate).
+;   WHY the shared slice is a LoRA/task-vector delta, not a whole short-term model: content-addressing
+;   rewards small, stable, dedup-able payloads — identical adapter rows intern to one NodeID for free, a
+;   re-derived adapter is recognized not re-sent (cell-sync.fk), and the (large, possibly private) base
+;   stays cell-local (the sovereignty grain). A whole short-term model dedups poorly — every update is a
+;   near-total retransmit, wasting the substrate's one native gift. Mergeability key: two cells can merge
+;   only where their base NodeID matches (?equivalent / merkle-root is the check).
+;
+; ── THE UPDATE OVER THE MESH (a delta as a content-addressed cell) ──
+;   slice-update = (base-addr, layer-ref, format-ref, delta-cell, n-samples, origin). It rides the mesh
+;   the body already has: cell-sync.fk offers merkle-root(delta-cell), a peer pulls only what it lacks
+;   (cs-missing) and VERIFIES BY RE-ADDRESSING (cs-authentic?) — a forged delta fails its own address, so
+;   the channel need not be trusted; mesh-relay.fk floods it (managed flooding, deduped on the content-
+;   address, not an (src,seq) pair); friend-node.fk holds it for a sleeping peer; trust-decay.fk's
+;   grace-band gives the per-peer trust weight. Gossip/decentralized-SGD IS managed-flooding + pairwise
+;   merge — the body's mesh is gossip without ever calling it that.
+;
+; ── THE MERGE (proven strategy, as a Form recipe — slice-merge.fk, PROVEN three-way → 127) ──
+;   trust-weighted FedAvg with TIES sign-election, division-free:
+;     1. ELECT a sign per coordinate — the side with the larger summed weight wins (sm-elect). This is
+;        confidence-weighted-vote.fk's integer weight-sum spine (cw-weight-for) specialized to a sign
+;        condition; it stops the destructive interference plain averaging suffers when two cells learned
+;        OPPOSING deltas.
+;     2. AVERAGE only the sign-agreeing entries (disjoint merge): num = Σ wᵢ·τᵢ[j], den = Σ wᵢ over the
+;        agreeing peers (sm-num / sm-den). The merged coordinate is the EXACT rational (num den) — the
+;        divide is DEFERRED to apply-time, so the merge itself is integer-exact and identical on every
+;        kernel. A gone peer (weight 0) cannot move it (proven: bit 64).
+;   apply: θ_local = θ_base + (num/den)·… via cell-numerics vector_add/scalar_mul. The weight is
+;   n-samples × trust-band(origin) — FedAvg's evidence count × trust-decay's freshness, kept integer.
+;   (DARE drop-and-rescale and SLERP are later refinements; TIES+FedAvg is the proven floor.)
+;   Structural deltas that are RECIPES (architecture edits, not weight nudges) use tree-diff.fk's
+;   content-addressed diff/patch; named-layer conflicts use symbols-merge.fk's SYMBOLS-CONFLICT sentinel.
+;
+; ── THE MILESTONES ──
+;   M0  merge two task-vector slices (TIES sign-election + trust-weighted FedAvg, order-stable, gone-peer
+;       excluded) — SHIPPED: slice-merge.fk + tests/slice-merge-band.fk → 127, three-way.
+;   M1  wrap the merged delta in a slice-update cell and round-trip it through cell-sync (offer → diff →
+;       verify-by-re-address) — an update survives the wire by re-addressing.
+;   M2  three-cell mesh merge: two cells flood a slice-update via mesh-relay (content-address dedup), the
+;       third merges both and applies it — assert mesh-merge NodeID == local-merge NodeID (gossip
+;       convergence as a content-addressed proof).
+;   M3  trust-weight it for real: w = n-samples × trust-decay grace-band; a silent peer's delta drops out.
+;   M4  consolidation (short→long): gate "offer this adapter as shared" on ai-settled? + cc-promote?.
+;   M5  apply on a real adapter_forward (cell-numerics) on tiny dims, output within format epsilon — the
+;       merge demonstrably changes a model's behavior. Joins form-native-models.form M4 (the real block).
+;
+; KIN: form-native-models.form (the model-as-recipe + M1-M6; this is its distributed face) ·
+;   cell-numerics.form (adapter_forward = LoRA; vector_add/sub/scalar_mul = task arithmetic) ·
+;   confidence-weighted-vote.fk (the weight-sum spine slice-merge specializes) · cell-sync.fk +
+;   mesh-relay.fk + friend-node.fk + trust-decay.fk + mesh-protocols-as-guide.form (the wire) ·
+;   tree-diff.fk + symbols-merge.fk + merkle.fk (recipe-delta + conflict + the address) ·
+;   active-inference.fk + champion-challenger.fk (settle/promote — the consolidation gate, AutoML M7).
