@@ -1,0 +1,112 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/inventory-flow-native-20260609",
+  "commit_scope": "Express GET /api/inventory/flow as an inventory lineage grammar in the BML front-door catalog. The route now has a native high-grammar handler that projects ideas through spec, process, implementation, validation, contributor, contribution, asset, and interdependency primitives while reporting native_observation.python_authority=false.",
+  "files_owned": [
+    "deploy/front-door/api.bml",
+    "api/tests/test_runtime_web_api_provenance.py",
+    "docs/system_audit/commit_evidence_20260609_inventory_lineage_grammar.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form/form-kernel-rust && cargo build --release",
+      "cd api && .venv/bin/pytest tests/test_runtime_web_api_provenance.py -q",
+      "/Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest tests/test_runtime_web_api_provenance.py -q",
+      "form/form-kernel-rust/target/release/form-kernel-rust check --routes deploy/front-door/api.bml --stdlib form/form-stdlib",
+      "git show origin/main:deploy/front-door/api.bml > /tmp/coherence-api-origin-main.bml && form/form-kernel-rust/target/release/form-kernel-rust check --routes /tmp/coherence-api-origin-main.bml --stdlib form/form-stdlib",
+      "python3 direct native_route_goal_loop route_status check for GET /api/inventory/flow",
+      "python3 -m ruff check api/tests/test_runtime_web_api_provenance.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260609_inventory_lineage_grammar.json",
+      "git diff --check",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "form/form-kernel-rust/target/release/form-kernel-rust serve --port 19131 --routes deploy/front-door/api.bml --stdlib form/form-stdlib",
+      "curl -sS -i 'http://127.0.0.1:19131/api/inventory/flow?list_item_limit=2&runtime_window_seconds=3600'"
+    ],
+    "notes": "Prompt guide and wellness passed on arrival. Rust kernel release build passed. The worktree-local pytest path was absent and failed with `zsh:1: no such file or directory: .venv/bin/pytest`; rerunning the same focused test from the existing repo venv while keeping cwd in this worktree passed: 5 passed, 7 warnings. The touched test passed ruff via python3 -m ruff. Direct route-status proof returned ('kernel-native-high-grammar', 'BML', True, True) for GET /api/inventory/flow. The full api.bml checker reports 14 unresolved names on this branch; the same command against origin/main reports the identical 14 unresolved names, so this change did not add to that baseline catalog debt. Native serve compiled the source manifest, listed 38 native routes including GET /api/inventory/flow, and curl returned X-Form-Router: native-kernel with HTTP 503 database unavailable because this local worktree has no database config. Evidence validation, diff check, autostash rebase on origin/main, local PR guard, and strict followthrough guard all passed."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until this branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No deploy attempted before PR review and merge."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local route grammar proof, rebase, local PR guard, and followthrough guard are pass. Commit, push, PR, CI, merge, deploy, and public verification remain before production release."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "GET /api/inventory/flow is now represented in the BML front-door route catalog as a native high-grammar inventory lineage projection rather than only as a Python service endpoint.",
+    "public_endpoints": [
+      "GET /api/inventory/flow"
+    ],
+    "test_flows": [
+      "native_route_goal_loop.route_status('GET', '/api/inventory/flow') returns kernel-native-high-grammar, BML, executable=true, trustable=true.",
+      "api/tests/test_runtime_web_api_provenance.py asserts the route-status classification and the presence of the inventory lineage grammar handler and primitive JSON projections.",
+      "The BML handler returns native_observation.grammar=BML, handler=api_inventory_flow, projection=inventory lineage grammar core, and python_authority=false.",
+      "The full api.bml checker unresolved-name set is unchanged from origin/main."
+    ]
+  },
+  "idea_ids": [
+    "oss-interface-alignment",
+    "inventory-lineage-grammar"
+  ],
+  "spec_ids": [
+    "inventory-lineage-grammar"
+  ],
+  "task_ids": [
+    "inventory-flow-native-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "python-authority-correction",
+        "sample-request"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "deploy/front-door/api.bml defines api_inventory_flow and InventoryFlowRoute for GET /api/inventory/flow.",
+    "deploy/front-door/api.bml declares inventory-flow-summary-sql and inventory-flow-items-sql over graph_nodes, spec_registry_entries, runtime_events, contribution_ledger, and graph_edges.",
+    "deploy/front-door/api.bml shapes spec, process, implementation, validation, contributors, contributions, assets, chain, interdependencies, queue, and idea signal JSON from native BML functions.",
+    "api/tests/test_runtime_web_api_provenance.py proves native_route_goal_loop classifies GET /api/inventory/flow as kernel-native-high-grammar BML.",
+    "Focused pytest passed: 5 passed, 7 warnings.",
+    "Focused ruff passed via python3 -m ruff.",
+    "Rust kernel release build passed.",
+    "api.bml full check unresolved-name set is unchanged from origin/main.",
+    "Native front-door serve listed GET /api/inventory/flow -> native (Form handler inventory-flow).",
+    "Local native curl returned X-Form-Router: native-kernel and 503 database unavailable, proving route execution reached native persistence boundary.",
+    "worktree_pr_guard local mode passed with ready_for_push=True.",
+    "check_pr_followthrough strict mode passed with stale_codex_prs=0."
+  ],
+  "change_files": [
+    "deploy/front-door/api.bml",
+    "api/tests/test_runtime_web_api_provenance.py",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}
