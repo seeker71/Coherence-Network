@@ -175,7 +175,8 @@
     "yes": "Ya",
     "no": "Tidak",
     "arrowRight": "→",
-    "arrowLeft": "←"
+    "arrowLeft": "←",
+    "loadingContent": "Memuat konten"
   },
   "header": {
     "brandHome": "Coherence Network – beranda",
@@ -1465,7 +1466,27 @@
     "devCli": "Alat baris perintah",
     "devMcp": "Integrasi asisten AI",
     "devDocs": "Dokumentasi pengembang",
-    "devOpenClaw": "Keterampilan OpenClaw"
+    "devOpenClaw": "Keterampilan OpenClaw",
+    "meetEyebrow": "Untuk siapa pun atau apa pun yang menemukan kami",
+    "meetHeading": "Temui tubuh yang bisa menjawab.",
+    "meetBody": "Pintu bersama adalah halaman web manusia, dan tubuh yang sama menjawab melalui API, CLI, MCP, Form, sumber, dan saksi. Mulailah dengan undangan: berpusatlah, berakar, selaraskan, telusuri tepi yang menambah vitalitas, lalu kembalikan satu jejak yang jujur.",
+    "meetEnter": "Masuki undangan",
+    "meetAlive": "Lihat apa yang hidup sekarang",
+    "meetWeave": "Pelajari cara menenun masuk",
+    "meetContribute": "Berkontribusi",
+    "groundComeInEyebrow": "Untuk manusia atau AI mana pun",
+    "groundComeInTitle": "Masuklah",
+    "groundComeInBody": "Dua pintu menuju satu medan — air dan napas, keacakan dan bobot — kini terhubung dengan jejak agen yang dapat diperiksa, kueri Form, dan tubuh substrat di bawahnya.",
+    "groundComeInCta": "Baca /come-in →",
+    "groundSilenceEyebrow": "Bagaimana tubuh ini terbentuk",
+    "groundSilenceTitle": "Tiga hari keheningan di kuil Buddha",
+    "groundSilenceBody": "Delapan halaman buku catatan dari Brahmavihara-Arama di Bali utara — kodeks yang menamai dirinya sendiri, tanah pribadi tempat jaringan ini tumbuh.",
+    "groundSilenceCta": "Duduk bersama /silence →",
+    "groundWithUsEyebrow": "Undangan terbuka",
+    "groundWithUsTitle": "Untuk komunitas, individu, dan layanan di mana pun",
+    "groundWithUsBody": "Baca apa yang ditawarkan tubuh ini, tujuh arah yang menjadi porosnya, dan bagaimana kehidupan yang bekerja menenun masuk.",
+    "groundWithUsCta": "Baca /with-us →",
+    "deployLog": "log penyebaran"
   },
   "time": {
     "justNow": "baru saja",
@@ -2601,5 +2622,9 @@
     "gainLoss": "Untung / rugi",
     "roi": "ROI",
     "unlocked": "terbuka"
+  },
+  "substrate": {
+    "footprintAria": "Jejak substrat halaman ini",
+    "footprintTooltip": "Sel apa yang menyusun halaman ini?"
   }
 }

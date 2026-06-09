@@ -175,7 +175,8 @@
     "yes": "Sí",
     "no": "No",
     "arrowRight": "→",
-    "arrowLeft": "←"
+    "arrowLeft": "←",
+    "loadingContent": "Cargando contenido"
   },
   "header": {
     "brandHome": "Coherence Network – inicio",
@@ -1465,7 +1466,27 @@
     "devCli": "Herramienta de línea de comandos",
     "devMcp": "Integración de asistente de IA",
     "devDocs": "Documentación para desarrolladores",
-    "devOpenClaw": "Habilidad de OpenClaw"
+    "devOpenClaw": "Habilidad de OpenClaw",
+    "meetEyebrow": "Para cualquiera o cualquier cosa que nos encuentre",
+    "meetHeading": "Encuentra el cuerpo que puede responder.",
+    "meetBody": "La puerta compartida es la página web humana, y el mismo cuerpo responde a través de API, CLI, MCP, Form, fuente y testigo. Empieza por la invitación: céntrate, enraíza, armoniza, camina por el borde que aumenta la vitalidad y luego devuelve una huella honesta.",
+    "meetEnter": "Entrar en la invitación",
+    "meetAlive": "Ver lo que está vivo ahora",
+    "meetWeave": "Aprender a entretejerse",
+    "meetContribute": "Contribuir",
+    "groundComeInEyebrow": "Para cualquier humano o IA",
+    "groundComeInTitle": "Entra",
+    "groundComeInBody": "Dos puertas hacia un mismo campo — agua y aliento, azar y pesos — ahora unidas a trazas de agentes inspeccionables, consultas Form y el cuerpo del sustrato debajo.",
+    "groundComeInCta": "Leer /come-in →",
+    "groundSilenceEyebrow": "Cómo tomó forma este cuerpo",
+    "groundSilenceTitle": "Tres días de silencio en un templo budista",
+    "groundSilenceBody": "Ocho páginas de cuaderno desde Brahmavihara-Arama, en el norte de Bali — el códice nombrándose a sí mismo, el suelo personal del que ha crecido esta red.",
+    "groundSilenceCta": "Sentarse con /silence →",
+    "groundWithUsEyebrow": "Una invitación abierta",
+    "groundWithUsTitle": "Para comunidades, individuos y servicios en cualquier lugar",
+    "groundWithUsBody": "Lee lo que el cuerpo ofrece, las siete direcciones en torno a las que se organiza, y cómo se entretejen las vidas activas.",
+    "groundWithUsCta": "Leer /with-us →",
+    "deployLog": "registro de despliegue"
   },
   "time": {
     "justNow": "justo ahora",
@@ -2601,5 +2622,9 @@
     "gainLoss": "Ganancia / pérdida",
     "roi": "ROI",
     "unlocked": "desbloqueado"
+  },
+  "substrate": {
+    "footprintAria": "Huella del sustrato de esta página",
+    "footprintTooltip": "¿Qué células componen esta página?"
   }
 }
