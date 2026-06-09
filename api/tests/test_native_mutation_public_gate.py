@@ -146,6 +146,10 @@ def test_production_routes_expose_public_gate_with_native_default_invitation():
     assert "pg_connect" in text
     assert "pg_exec" in text
     assert "performed-by-http-native-persistence" in text
+    assert "defn mpv-revision-id-sql" in text
+    assert "defn mpv-next-revision-number-sql" in text
+    assert '(mpv-revision-id-sql revision-prefix "id" "\'1\'")' in text
+    assert "(mpv-revision-id-sql revision-prefix \"id\" (mpv-next-revision-text-sql id))" in text
     assert '\\"decision_receipt\\":' in text
     assert "native-mutation-gate-decision-receipt" in text
     assert "can_contradict_intent" in text
@@ -176,6 +180,8 @@ def test_public_gate_harness_observes_public_gate_when_kernel_available():
     assert report["confidence"] == 1.0
     assert report["recommendation"] == "verify_deployed_header_canary"
     assert report["native_http_persistence_proven"] is True
+    assert report["production_revision_id_collision_probe_pass"] is True
+    assert all(report["production_revision_id_collision_probe"].values())
     assert report["public_gate_header_allowed"] is True
     assert report["ordinary_traffic_flip_performed"] is True
     assert report["python_fallback_header"] == "X-Form-Python-Fallback"
@@ -228,7 +234,8 @@ def test_deploy_exposes_header_gated_public_canary_without_no_header_flip():
     assert "Header(`X-Form-Native-Preview`,`1`)" in compose
     assert "coherence-api-kernel-public-gate-canary.priority" in compose
     assert "loadbalancer.server.port: \"8080\"" in compose
-    assert "public ordinary no-header traffic continues to reach api:8000" in compose
+    assert "mutable ordinary no-header traffic continues" in compose
+    assert "to reach api:8000 until the public no-header flip" in compose
     assert "X-Form-Python-Fallback is the explicit" in compose
     assert 'KERNEL_ROUTER_CONFIG_FILE: "/run/coherence-network/config.json"' in compose
     assert "/root/.coherence-network/config.json:/run/coherence-network/config.json:ro" in compose
