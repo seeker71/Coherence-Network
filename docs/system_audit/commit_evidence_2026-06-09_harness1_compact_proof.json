@@ -1,0 +1,109 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/harness1-compact-proof-20260609",
+  "commit_scope": "Prove a compact Form state-externalized search harness that carries the Harness-1 architectural surfaces with one fact ledger and a trace-preserving choice receipt.",
+  "files_owned": [
+    "form/form-stdlib/search-harness.fk",
+    "form/form-stdlib/tests/search-harness-compact-proof.fk",
+    "kernels/KERNEL_COMMON_GROUND.md",
+    "docs/AGENT-FRAMEWORKS-RESEARCH.md",
+    "docs/system_audit/commit_evidence_2026-06-09_harness1_compact_proof.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/search-harness.fk form-stdlib/tests/search-harness-compact-proof.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/search-harness.fk form-stdlib/tests/search-harness-compact-proof.fk",
+      "wc -l form/form-stdlib/search-harness.fk form/form-stdlib/tests/search-harness-compact-proof.fk scripts/verify_kernel_conformance.py api/tests/test_kernel_conformance_harness.py docs/coherence-substrate/kernel-conformance/*.json",
+      "wc -c form/form-stdlib/search-harness.fk form/form-stdlib/tests/search-harness-compact-proof.fk scripts/verify_kernel_conformance.py api/tests/test_kernel_conformance_harness.py docs/coherence-substrate/kernel-conformance/*.json"
+    ],
+    "observed_results": [
+      "search-harness-compact-proof.fk source proof -> 16777215 with 1 ok, 0 divergent across Go, Rust, and TypeScript",
+      "search-harness-compact-proof.fk binary artifact proof -> 16777215 with 1 ok, 0 divergent across Go, Rust, and TypeScript",
+      "Compact Form harness plus proof: 229 lines and 10,182 bytes",
+      "Local Python conformance harness plus five JSON vectors: 1,182 lines and 38,416 bytes"
+    ],
+    "notes": "This proves the Harness-1 architectural surface as compact external state: candidate pool, curated set, evidence links, verification records, deduped observations, budget-aware rendering, and selected-branch receipt signatures. It does not claim Harness-1 retrieval benchmark recall."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and production verification."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A Form-native state-externalized search harness now carries routine search bookkeeping outside the policy and emits a valid CHOICE-RECEIPT for the selected search branch.",
+    "public_endpoints": [
+      "internal Form sibling kernels",
+      "form/form-stdlib/search-harness.fk",
+      "form/form-stdlib/tests/search-harness-compact-proof.fk"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/search-harness.fk form-stdlib/tests/search-harness-compact-proof.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/search-harness.fk form-stdlib/tests/search-harness-compact-proof.fk",
+      "The proof verifies candidate, curated, evidence, verification, observation, stop, dedup, budget render, and receipt-signature preservation."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Focused local source and binary proof passed. CI, PR, and deploy verification are pending."
+  },
+  "idea_ids": [
+    "knowable-trust-expression",
+    "state-externalized-search",
+    "choice-feedback-learning"
+  ],
+  "spec_ids": [
+    "kernel-common-ground",
+    "agent-frameworks-research"
+  ],
+  "task_ids": [
+    "harness1-compact-proof-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "compactness-claim",
+        "architecture-comparison"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "measurement",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Harness-1 paper source consulted: https://arxiv.org/abs/2606.02373",
+    "form/form-stdlib/search-harness.fk carries one compact fact ledger plus semantic decisions and a choice receipt bridge.",
+    "form/form-stdlib/tests/search-harness-compact-proof.fk returns 16777215 only when all six state-externalized search surfaces are present, duplicate observation state compacts, budgeted rendering caps context, and receipt signatures preserve the selected branch.",
+    "kernels/KERNEL_COMMON_GROUND.md records the proof boundary and measured compactness.",
+    "docs/AGENT-FRAMEWORKS-RESEARCH.md records Harness-1 as a state-externalized search pattern and links it to the compact Form proof."
+  ],
+  "change_files": [
+    "form/form-stdlib/search-harness.fk",
+    "form/form-stdlib/tests/search-harness-compact-proof.fk",
+    "kernels/KERNEL_COMMON_GROUND.md",
+    "docs/AGENT-FRAMEWORKS-RESEARCH.md",
+    "docs/system_audit/commit_evidence_2026-06-09_harness1_compact_proof.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}

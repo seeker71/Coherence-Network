@@ -1,0 +1,66 @@
+; tests/search-harness-compact-proof.fk - compact Harness-1 architecture proof.
+;
+; preludes: form-stdlib/choice-receipt.fk form-stdlib/search-harness.fk
+;
+; Expected score: 16777215. This proves the Harness-1 state surfaces named in
+; arXiv:2606.02373 can be carried by one compact Form fact ledger plus a
+; trace-preserving choice receipt.
+
+(do
+    (defn h1c-score (ok bit) (if ok bit 0))
+    (defn h1c-int (actual expected bit) (h1c-score (eq actual expected) bit))
+    (defn h1c-str (actual expected bit)
+        (h1c-score (str_eq actual expected) bit))
+
+    (let start
+        (h1c-state "find compact state-externalized search proof" (empty) 5))
+    (let decisions
+        (list
+            (h1c-decision "search" "paper" "Harness-1 paper abstract" 96)
+            (h1c-decision "search" "repo" "Coherence Form receipt proof" 94)
+            (h1c-decision "search" "paper" "duplicate observation should compact" 96)
+            (h1c-decision "keep" "paper" "importance:state-externalizing-harness" 91)
+            (h1c-decision "link" "paper@arxiv" "arxiv:2606.02373" 90)
+            (h1c-decision "verify" "paper" "abstract names candidate pool curated set evidence verification dedup budget" 89)
+            (h1c-decision "observe" "budget-aware-render" "rendered context is capped by state budget" 88)
+            (h1c-decision "observe" "budget-aware-render" "duplicate observation should compact" 88)
+            (h1c-decision "stop" "enough" "all architectural surfaces present" 100)))
+    (let state (h1c-apply-all start decisions 20260609))
+    (let facts (h1c-state-facts state))
+    (let vector (h1c-capability-vector state))
+    (let rendered (h1c-render-context state))
+    (let receipt
+        (h1c-receipt
+            state
+            "paper"
+            (cr-outcome-success)
+            "search-harness-compact-proof"
+            "form/form-stdlib/tests/search-harness-compact-proof.fk"
+            20260609))
+    (let signature (cr-choice-signature receipt))
+    (sum
+        (list
+            (h1c-score (h1c-state? state) 1)
+            (h1c-int (len facts) 7 2)
+            (h1c-int (nth vector 0) 2 4)
+            (h1c-int (nth vector 1) 1 8)
+            (h1c-int (nth vector 2) 1 16)
+            (h1c-int (nth vector 3) 1 32)
+            (h1c-int (nth vector 4) 1 64)
+            (h1c-int (nth vector 5) 5 128)
+            (h1c-int (len rendered) (h1c-state-budget state) 256)
+            (h1c-str (h1c-fact-kind (nth facts 0)) (h1c-kind-candidate) 512)
+            (h1c-str (h1c-fact-key (nth facts 0)) "paper" 1024)
+            (h1c-str (h1c-fact-key (nth facts 1)) "repo" 2048)
+            (h1c-str (h1c-fact-kind (nth facts 2)) (h1c-kind-curated) 4096)
+            (h1c-str (h1c-fact-kind (nth facts 3)) (h1c-kind-evidence) 8192)
+            (h1c-str (h1c-fact-kind (nth facts 4)) (h1c-kind-verification) 16384)
+            (h1c-str (h1c-fact-kind (nth facts 5)) (h1c-kind-observation) 32768)
+            (h1c-str (h1c-fact-kind (nth facts 6)) (h1c-kind-stop) 65536)
+            (h1c-score (cr-choice-receipt-valid? receipt) 131072)
+            (h1c-score (cr-choice-signature-preserves? receipt signature) 262144)
+            (h1c-str (cr-receipt-category receipt) "SEARCH-HARNESS" 524288)
+            (h1c-str (cr-receipt-selected-path receipt) "paper" 1048576)
+            (h1c-int (cr-signature-candidate-count-bucket signature) 2 2097152)
+            (h1c-int (cr-signature-attempts signature) 2 4194304)
+            (h1c-int (cr-signature-failures signature) 1 8388608))))

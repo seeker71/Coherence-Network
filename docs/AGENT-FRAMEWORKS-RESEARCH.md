@@ -130,7 +130,32 @@ skill-name/
 
 ---
 
-## 5. Gap Analysis — What’s Missing to Make It Work
+## 5. Harness-1 — State-Externalized Search
+
+Harness-1 names a useful agent-harness split: routine search state belongs in
+the environment, while the policy keeps the semantic choices. The paper's
+external state includes a candidate pool, curated set, compact evidence links,
+verification records, compressed/deduplicated observations, and budget-aware
+context rendering.
+
+Coherence's compact proof is `form/form-stdlib/search-harness.fk` with
+`form/form-stdlib/tests/search-harness-compact-proof.fk`. It carries those six
+surfaces as one Form fact ledger and returns a trace-preserving choice receipt
+for the selected search branch.
+
+Measured local footprint:
+
+| Surface | Lines | Bytes |
+|---------|------:|------:|
+| Compact Form harness + proof | 229 | 10,182 |
+| Python conformance harness + five JSON vectors | 1,182 | 38,416 |
+
+Boundary: this proves the architecture and compression surface, not Harness-1's
+retrieval benchmark performance.
+
+---
+
+## 6. Gap Analysis — What’s Missing to Make It Work
 
 ### Current State
 
@@ -166,7 +191,7 @@ skill-name/
 
 ---
 
-## 6. References
+## 7. References
 
 - [Agent Zero](https://github.com/agent0ai/agent-zero) — README, docs/guides/usage.md, docs/guides/projects.md
 - [OpenClaw](https://docs.clawd.bot/) — Skills, Multi-Agent Architecture
