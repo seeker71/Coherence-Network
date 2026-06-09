@@ -1,0 +1,39 @@
+; preludes: form-stdlib/prototype-merge.fk
+;
+; prototype-merge-band — keeping the interned set lean, made falsifiable.
+;
+; The body has two "dog" prototypes that arrived a day apart, each (list label feature-vector):
+;   dogA  "dog" [9 1 0 7]
+;   dogB  "dog" [9 1 0 6]     ; agrees with dogA in bins 0,1,2 — 3 of 4 — and differs only in the last
+; With floor 3 they are SIMILAR ENOUGH and same-label, so dogB is redundant: flag the merge, keep one.
+;
+; Three control pairs prove both halves of the gate are load-bearing, and that the floor is an inclusive ge:
+;   FAINT  dogA vs dogFaint "dog" [9 0 0 0] — same label but only bin 0 agrees (1 of 4). Floor 3 is not met:
+;     two honest dialects of "dog" (a sharp exemplar and a coarse one) — KEEP both, do not merge.
+;   COLLISION  dogA vs catTwin "cat" [9 1 0 7] — IDENTICAL vector (4 of 4 agree) but a DIFFERENT label.
+;     Same fingerprint, two real shapes — KEEP both; label match is required, similarity alone never merges.
+;   FLOOR EDGE  the merge gate is ge, so agreement EQUAL to the floor counts: dogA vs dogB at floor 3 sits
+;     exactly on 3 (redundant), and the SAME pair at floor 4 sits one above the count (3 < 4) — KEPT. The
+;     floor is the inclusive minimum; one bin short of it is enough to keep the cell.
+;
+; Verdict 127 when every claim lands:
+;   1   the similarity primitive counts agreeing bins   (pm-sim dogA dogB == 3)
+;   2   same-label AND similar-enough is redundant       (pm-redundant? dogA dogB 3 == 1)
+;   4   same label, too few bins, is NOT redundant       (pm-redundant? dogA dogFaint 3 == 0)
+;   8   identical vector, different label, is NOT redundant (pm-redundant? dogA catTwin 3 == 0)
+;   16  the accessors read label and vector              (pm-label dogA == "dog" AND head(pm-vec dogA) == 9)
+;   32  the floor is inclusive — AT the floor merges      (pm-redundant? dogA dogB 3 == 1, sim sits on 3)
+;   64  one below the floor is KEPT                       (pm-redundant? dogA dogB 4 == 0, 3 < 4)
+(do
+    (let dogA     (list "dog" (list 9 1 0 7)))
+    (let dogB     (list "dog" (list 9 1 0 6)))
+    (let dogFaint (list "dog" (list 9 0 0 0)))
+    (let catTwin  (list "cat" (list 9 1 0 7)))
+    (let c0 (if (eq (pm-sim dogA dogB) 3)                1 0))
+    (let c1 (if (eq (pm-redundant? dogA dogB 3) 1)       2 0))
+    (let c2 (if (eq (pm-redundant? dogA dogFaint 3) 0)   4 0))
+    (let c3 (if (eq (pm-redundant? dogA catTwin 3) 0)    8 0))
+    (let c4 (if (and (str_eq (pm-label dogA) "dog") (eq (head (pm-vec dogA)) 9)) 16 0))
+    (let c5 (if (eq (pm-redundant? dogA dogB 3) 1)       32 0))
+    (let c6 (if (eq (pm-redundant? dogA dogB 4) 0)       64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

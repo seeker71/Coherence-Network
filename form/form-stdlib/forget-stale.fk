@@ -1,0 +1,56 @@
+; forget-stale.fk — COMPOSTING: a prototype that never wins recognition over many queries is dead weight; drop it.
+;
+; nearest-shape.fk INTERNS: the smallest act of learning is admitting a new prototype the body hadn't seen.
+; This is the inverse breath — the smallest act of FORGETTING. A prototype earns its place by being chosen;
+; one that has had ample chance to be recognized and still never (or almost never) wins is sediment, not
+; memory. forget-stale is the gate that names which prototypes have gone tight: old enough to judge fairly,
+; AND too few wins to justify the room they take. Where anomaly-band has two edges on one value, this has two
+; conditions on one record — both must hold for the verdict "stale".
+;
+; A record = (list label wins age): the prototype's name, how many queries it has won, and how many total
+; queries have passed since it was interned (its age — the chances it has HAD to win). wins and age are
+; integers 0..100; label is a string (compared by str_eq when needed, never crossed with eq).
+;
+;   fs-wins  (nth r 1)  — times this prototype was the recognized best
+;   fs-age   (nth r 2)  — total queries seen since interning (the denominator of opportunity, kept as a count)
+;
+; STALE is a two-sided AND, exactly the shape of classifier-eval's pass-gate, inverted to a drop-gate:
+;   old enough to judge   : (ge (fs-age r) min-age)     — it has had at least min-age chances
+;   too few wins          : (ge max-wins (fs-wins r))   — its wins sit at or below the max-wins ceiling
+; Both must hold. A young prototype (age below min-age) is NEVER stale — it has not had its fair chance yet,
+; so the floor protects the freshly-interned the way novelty's floor protects the just-seen. A well-won
+; prototype (wins above max-wins) is NEVER stale however old it gets — winning is the proof of worth.
+;
+; No subtraction, no ratio, no float: a win-rate would need division; instead we gate two exact integer
+; counts (ge on both), so Go, Rust, and TS call the same prototype stale by NodeID — validate.sh parity is
+; forgetting parity. fs-keep? is the exact inverse; fs-count-stale walks a list of records and counts the
+; dead weight by recursion (the loop), the way classifier-eval counts correct.
+;
+; Honest lane: this is a hard two-condition membership, not a graded "stale-ness score". A record one win
+; under the ceiling is flagged exactly like one with zero wins; a record one query past min-age is judged
+; exactly like an ancient one. Severity (how stale, how overdue to drop) is the caller's lane; the drop
+; decision here is exact. A continuous win-rate ranking is a later brick.
+;
+; Proven by: form-stdlib/tests/forget-stale-band.fk (three-way at validate.sh)
+
+(do
+    ; --- ACCESSORS: a record is (list label wins age); index 0 is the label, 1 the wins, 2 the age. ---
+    (defn fs-wins (r) (nth r 1))   ; times this prototype won recognition
+    (defn fs-age  (r) (nth r 2))   ; total queries since interning (chances it has had)
+
+    ; --- STALE: old enough to judge AND too few wins. Two clauses, and is binary — no nesting needed. ---
+    ; ge on the age (it has had at least min-age chances) AND ge max-wins over its wins (wins at or below ceiling).
+    (defn fs-stale? (r min-age max-wins)
+        (if (and (ge (fs-age r) min-age) (ge max-wins (fs-wins r))) 1 0))
+
+    ; --- KEEP: the exact inverse of stale — a prototype the body holds onto (young, or proven by winning). ---
+    (defn fs-keep? (r min-age max-wins)
+        (if (eq (fs-stale? r min-age max-wins) 1) 0 1))
+
+    ; --- COUNT-STALE: walk the records, count the dead weight (recursion is the loop; no subtraction). ---
+    (defn fs-count-stale (records min-age max-wins)
+        (if (eq (len records) 0) 0
+            (add (fs-stale? (head records) min-age max-wins)
+                 (fs-count-stale (tail records) min-age max-wins))))
+
+    0)

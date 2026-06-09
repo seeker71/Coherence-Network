@@ -1,0 +1,55 @@
+; warm-start.form — seed the Form-native CHALLENGER from the CHAMPION's EARLY CONFIDENT labels, so it
+; begins learning from real ground truth instead of cold.
+;
+; THE ASK:
+;   champion-challenger.fk flips authority to the Form-native arm only once it has PROVEN it reaches the
+;   3rd-party champion over a window. But a challenger that starts from nothing has to climb that window
+;   from a cold start — slow, noisy, and at the mercy of its first random guesses. The cheap move before
+;   the competition even begins is to hand the challenger the champion's OWN early labels as starting
+;   prototypes. The catch: a label the champion named timidly is not ground truth. Seed on it and the
+;   challenger learns the champion's guesses, not its knowledge. So the seed set is CONFIDENCE-GATED —
+;   keep the labels the champion was sure of, drop the rest. The same "credit only what's proven" gate
+;   value-execution.fk puts on promotion, moved one step earlier onto SEEDING.
+;
+; THE SHAPE  (runnable: form-stdlib/warm-start.fk · proven: tests/warm-start-band.fk -> 127)
+;
+;   A seed is a three-element record (label vector confidence): (nth s 0) the champion's label string,
+;   (nth s 1) the input vector it labelled, (nth s 2) the champion's integer confidence 0..100 in it.
+;   1. CONF  ws-conf(s): read the champion's confidence — the 3rd element of the seed record.
+;   2. STRONG?  ws-strong?(s floor): does one seed clear the confidence floor (ge, meets-or-exceeds)?
+;      Returned 0/1 explicitly — a bare comparison's boolean shape diverges across kernels, so wrap to an
+;      integer, the same way confidence-calibrate's cc-trusted? does, so the band can `eq` it.
+;   3. SEED  ws-seed(seeds floor): walk the seeds; when a seed's confidence clears the floor, CONS it onto
+;      the kept list, else skip. Recursion is the loop, cons is the builder, the (empty) base case ends
+;      it — only confident champion labels survive into the challenger's starting prototypes. The same
+;      filter spine as core.fk's filter and confidence-weighted-vote's cw-weight-for, but it KEEPS the
+;      qualifying seed rather than summing a weight.
+;   4. COUNT  ws-count(seeds floor): len of the kept list — the size of the challenger's warm starting set.
+;
+; WHERE THE FLOOR EARNS ITS KEEP:
+;   champion's early labels (label vector confidence): (dog v 90) (cat v 40) (bird v 80). At floor 70 the
+;   warm set is dog,bird (count 2); cat at confidence 40 is too unsure to seed and is dropped. The floor
+;   is meets-OR-EXCEEDS (ge, not gt): at floor 80, bird at EXACTLY 80 still seeds — the boundary belongs
+;   to the confident side (band bit 16). A floor of 0 keeps every seed; a seed at confidence 0 never
+;   clears a positive floor — an unsure champion label cannot seed.
+;
+; HONEST LANE:
+;   this is a CONFIDENCE FLOOR on the champion's labels, nothing more. It does NOT check the label is
+;   CORRECT — the champion is the ground-truth proxy, so if the champion was confidently wrong the
+;   challenger inherits that error (warm start is only as true as the champion's confident region). It
+;   does not dedupe vectors and it does not cap the seed count. The gate is a proven-count shape — keep
+;   what clears the floor, no ratio, no float, integers 0..100 by the primitive set.
+;
+; KIN — the body already holds the spine; this seeds the arm before it competes:
+;   champion-challenger.fk (the competition this warm-starts — cc flips authority on a PROVEN window; this
+;   hands the challenger confident champion labels so the window starts warm, not cold) · value-execution.fk
+;   (credit only what's proven — the same gate, here on seeding rather than promotion) · confidence-calibrate.fk
+;   (the ws-strong? 0/1 floor is its cc-trusted? gate; a calibrated champion confidence is what the floor
+;   reads) · confidence-weighted-vote.fk / core.fk filter (the same walk-and-keep spine, consing the seed
+;   instead of summing a weight) · the three-way validate.sh (no trusted prover — what survives Go=Rust=TS
+;   agreement).
+;
+; LINEAGE:
+;   champion-challenger.form · value-execution.fk · the classic warm-start / knowledge-distillation
+;   intuition (seed the student from the teacher's confident predictions) made Form-native,
+;   kernel-executable, three-way-identical (Go=Rust=TS at validate.sh -> 127).

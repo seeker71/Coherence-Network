@@ -1,0 +1,54 @@
+; warm-start.fk — seed the Form-native CHALLENGER's first prototypes from the CHAMPION's early
+; confident labels, so it begins learning from real ground truth instead of cold.
+;
+; champion-challenger.fk flips authority to the Form-native arm only once it has PROVEN it reaches the
+; 3rd-party champion over a window — but a challenger that starts from nothing has to climb that window
+; from a cold start, slow and noisy. This is the warm start that precedes the competition: before the
+; challenger casts its first vote, hand it the champion's EARLY labels — but only the ones the champion
+; named with real confidence. A timid label is not ground truth; seeding on it teaches the challenger
+; the champion's guesses. So the seed set is a CONFIDENCE-GATED selection: keep the labels whose
+; confidence clears a floor, drop the rest. Only earned champion certainty becomes the challenger's
+; starting prototypes — the same "credit only what's proven" gate value-execution.fk puts on promotion,
+; moved one step earlier onto seeding.
+;
+; A seed = (list label vector confidence): (nth s 0) the champion's label string, (nth s 1) the input
+; vector it labelled, (nth s 2) the champion's integer confidence 0..100 in that label. ws-conf reads
+; the confidence; ws-strong? gates one seed to 0/1 against a floor (meets-or-exceeds); ws-seed walks the
+; seeds and CONSES through only the confident ones (recursion is the loop, cons builds the kept list —
+; same filter spine as core.fk's filter / confidence-weighted-vote's cw-weight-for, but keeping seeds
+; rather than summing weights); ws-count is how many survived = the size of the challenger's warm
+; starting set.
+;
+; Honest lane: this is a CONFIDENCE FLOOR on the champion's labels, nothing more — it does not check the
+; label is CORRECT (the champion is the ground-truth proxy; if the champion was confidently wrong, the
+; challenger inherits that error), it does not dedupe vectors, and it does not cap the seed count. The
+; floor is meets-OR-EXCEEDS (ge, not gt): a seed exactly at the floor seeds (the boundary is confident
+; enough). Confidence is an integer 0..100 by the primitive set — a seed at confidence 0 never clears a
+; positive floor (an unsure champion label cannot seed), and a floor of 0 keeps every seed.
+;
+; Proven by: form-stdlib/tests/warm-start-band.fk (three-way at validate.sh)
+
+(do
+    ; --- CONF: the champion's confidence in this seed = the 3rd element of (label vector confidence). ---
+    (defn ws-conf (s) (nth s 2))
+
+    ; --- STRONG?: does one seed clear the confidence floor (meets-or-exceeds)? Returns 0/1 explicitly so
+    ;     the band can `eq` it — a bare comparison's boolean shape diverges across kernels, so wrap to an
+    ;     integer here, the same way confidence-calibrate's cc-trusted? does. ---
+    (defn ws-strong? (s floor) (if (ge (ws-conf s) floor) 1 0))
+
+    ; --- SEED: the sublist of seeds confident enough to start the challenger. Walk the seeds; when a
+    ;     seed's confidence clears the floor, CONS it onto the kept list, else skip it. Recursion is the
+    ;     loop, cons is the builder — only confident champion labels survive into the challenger's
+    ;     starting prototypes. (The filter spine of core.fk inlined per AUTHORING's self-contained rule —
+    ;     every function this band touches is defined right here.) ---
+    (defn ws-seed (seeds floor)
+        (if (eq (len seeds) 0) (empty)
+            (if (eq (ws-strong? (head seeds) floor) 1)
+                (cons (head seeds) (ws-seed (tail seeds) floor))
+                (ws-seed (tail seeds) floor))))
+
+    ; --- COUNT: how many seeds survived the floor = the size of the challenger's warm starting set. ---
+    (defn ws-count (seeds floor) (len (ws-seed seeds floor)))
+
+    0)

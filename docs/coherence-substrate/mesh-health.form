@@ -1,0 +1,71 @@
+; mesh-health.form — the whole mesh's state in one glance: presence, openness, reach.
+;
+; THE ASK (Urs, 2026-06-09):
+;   mesh-relay carries a message hand to hand across the field; device-heartbeat finds who is in
+;   range. But before you relay, before you trust the field, one question comes first: what state is
+;   the mesh in RIGHT NOW? How many bodies are present, how many transports are open, is the field
+;   even connected? Not the per-message decision — the standing readout a dashboard renders, the
+;   single look that says "the room is whole" or "we are split."
+;
+; THE SHAPE  (runnable: form-stdlib/mesh-health.fk · proven: tests/mesh-health-band.fk -> 127)
+;
+;   A mesh is three counts held together: (list present-peers open-channels expected-peers).
+;   That tuple IS the whole reading — how many bodies are actually here, how many transports are
+;   open, how many we were waiting for. Every health question is asked of those three numbers:
+;     mh-connected?   — is even one transport open, so a message could leave at all?
+;                       (gt channels 0) — the door is ajar.
+;     mh-whole?       — has everyone we expected arrived? (ge present expected) — the room is full.
+;     mh-partitioned? — are some expected ones missing AND no channel remains to reach them?
+;                       (and (gt expected present) (eq channels 0)) — split with the door shut.
+;
+;   The load-bearing boundary is between MISSING and PARTITIONED. Missing alone is not a partition:
+;   if a channel is still open, the absent bodies may simply be on their way. Partition is missing
+;   WITH the door shut — no transport left to close the gap. That distinction is the whole reason
+;   mh-partitioned? gates on two facts joined by `and`, not on the head-count alone.
+;
+;   Functions:
+;     mh-present  — bodies actually here          (nth m 0).
+;     mh-channels — transports currently open      (nth m 1).
+;     mh-expected — bodies we were waiting for      (nth m 2).
+;     mh-connected?   — 1 iff a transport is open.
+;     mh-whole?       — 1 iff present >= expected.
+;     mh-partitioned? — 1 iff (some missing) AND (no channel) — the two-fact gate.
+;
+; HOW IT COMPOSES THE SPINE:
+;   It is KIN to body-state.fk, which collapses live organ signals into one inspectable state with
+;   integer-settled predicates (bs-alive?, bs-learning?). mesh-health is that same move aimed at the
+;   field instead of the single body: read a tuple of counts, answer standing yes/no questions, each
+;   settled to literal 1/0. Where body-state asks "is THIS body perceiving and learning," mesh-health
+;   asks "is the FIELD of bodies present, reachable, and whole."
+;
+;   The (if (and ...) 1 0) in mh-partitioned? holds the discipline every gate in this family holds:
+;   `and`'s native truth value renders differently across kernels, so a gate destined for a `(eq ... 1)`
+;   comparison is settled to an integer before it leaves the body. `and` here is strictly binary (two
+;   facts) — never widened to three args, the divergence the authoring guide warns of. The band proves
+;   both polarities of all three predicates against a healthy mesh (3 2 3), a split one (1 0 3), and the
+;   strange edge (1 1 3) — missing peers but a channel still open, which must read NOT partitioned. That
+;   third mesh is what pins the `and`: if the gate watched the head-count alone it would falsely cry
+;   partition; watching channels too keeps it honest. All three kernels land 127.
+;
+; HONEST LANE:
+;   SHIPPED — the standing READOUT over a known snapshot, proven three-way (-> 127): connected,
+;     whole, partitioned, each a pure function of the three counts already in hand.
+;   This is the READING of the mesh's state, not the GATHERING of it. What it does NOT carry, and is
+;   honestly out of this brick's scope: WHERE the three counts come from — the carrier that polls each
+;   open channel for a heartbeat (device-heartbeat's domain) and tallies who answered is upstream of
+;   this tuple. And `expected-peers` is a HELD expectation the caller supplies, not a discovered fact;
+;   a mesh that never learns its expected size cannot tell whole from partitioned, and that learning
+;   lives outside this readout. mesh-health answers "given these three numbers, what state are we in" —
+;   it does not claim to have counted them.
+;
+; KIN: body-state.form (the sibling collapse — live signals into one inspectable state; this is that
+;   move for the field) · device-heartbeat.form (the presence beacon that discovers present-peers and
+;   open-channels — the gathering upstream of this reading) · mesh-relay.form (the per-message relay
+;   decision that trusts a connected field; mesh-health says whether it IS connected) · reachability.fk
+;   (graph reachability across a static edge set; mesh-health is reachability of the live field by
+;   open-channel count) · lc-honest-lane.
+;
+; LINEAGE: device-heartbeat proved a body can be FOUND; mesh-relay proved a message can travel PAST
+;   direct range. mesh-health is the look that comes before either is worth attempting — the single
+;   glance that reads the field's standing state from three counts, and refuses to call a still-open
+;   mesh "partitioned" just because someone has not yet arrived.

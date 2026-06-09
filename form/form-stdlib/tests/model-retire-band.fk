@@ -1,0 +1,49 @@
+; tests/model-retire-band.fk — sibling-witness band for model-retire.fk.
+;
+; preludes: form-stdlib/model-retire.fk
+;
+; Proves the retirement endgame answers identically on Go, Rust, and
+; TypeScript. Each bit pins one boundary of the decisive gate; together
+; they fence both gates from both sides plus the partition invariant.
+;
+; The two carried scoreboards (champ-wins chall-wins samples), with
+; min-samples 50 and margin 10:
+;
+;   won  = (40 55 100)  challenger leads 55 vs 40 → +15 >= margin 10,
+;                        over 100 >= 50 samples → BOTH gates hold → RETIRE.
+;   thin = (50 52 100)  challenger leads 52 vs 50 → +2  <  margin 10,
+;                        samples fine but the LEAD gate fails → KEEP.
+;
+; The strangest edges live in c2/c3: the exact margin boundary (a lead of
+; precisely +10 must retire — `ge` is inclusive) and the exact sample
+; boundary (one sample short must keep — even with a crushing lead).
+
+(do
+    ;; --- decisive win retires (both gates clear) -----------------------
+    (let won (list 40 55 100))
+    (let c0 (if (eq (mr-retire? won 50 10) 1) 1 0))
+
+    ;; --- thin lead keeps (evidence fine, lead gate fails) --------------
+    (let thin (list 50 52 100))
+    (let c1 (if (eq (mr-retire? thin 50 10) 1) 0 2))
+
+    ;; --- exact margin boundary retires (lead == champ + margin) --------
+    ;; champ 40, chall 50 → 50 >= 40+10 exactly; `ge` is inclusive.
+    (let edge (list 40 50 100))
+    (let c2 (if (eq (mr-retire? edge 50 10) 1) 4 0))
+
+    ;; --- one sample short keeps, even with a crushing lead ------------
+    ;; lead is huge (0 vs 80) but 49 < 50 → evidence gate fails → KEEP.
+    (let short (list 0 80 49))
+    (let c3 (if (eq (mr-keep-champion? short 50 10) 1) 8 0))
+
+    ;; --- partition invariant: retire? + keep? == 1 on the won board ---
+    ;; the pair must cover every scoreboard with no gap, no overlap.
+    (let parts (add (mr-retire? won 50 10) (mr-keep-champion? won 50 10)))
+    (let c4 (if (eq parts 1) 16 0))
+
+    ;; --- keep? is the true inverse on the thin board too --------------
+    (let c5 (if (eq (mr-keep-champion? thin 50 10) 1) 32 0))
+
+    ;; Verdict 63 = 1+2+4+8+16+32 when every claim lands in every kernel.
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))
