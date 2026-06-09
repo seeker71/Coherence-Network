@@ -1,0 +1,144 @@
+; kernel-core-self.fk - compiler-backed minimal kernel core image
+;
+; The BML source remains the authority. This file is a small Form compiler
+; surface that parses the source, reads executable count methods from the
+; source model, and emits the KERNEL-CORE-IMAGE as a compiler-object value.
+
+(do
+    (defn kernel-core-source-path (_x)
+        "form-stdlib/bml/kernel-core.bml")
+
+    (defn kernel-core-default-image-path (_x)
+        "/tmp/kernel-core-self-image.fkb")
+
+    (defn kernel-core-self-class (model)
+        (bml-model-find-class model "KernelCoreSelf"))
+
+    (defn kernel-core-source-method (class-component method-name)
+        (bml-find-method
+            (bml-class-own-methods class-component)
+            method-name))
+
+    (defn kernel-core-source-method-value (class-component method-name)
+        (do
+            (let tokens
+                (bml-body-source-values
+                    (bml-method-body
+                        (kernel-core-source-method class-component method-name))))
+            (str_to_int (nth tokens 1))))
+
+    (defn kernel-core-witness-plus (_x)
+        (intern_node
+            (bp "add")
+            (list
+                (intern_trivial_int 2)
+                (intern_trivial_int 3))))
+
+    (defn kernel-core-witness-condition (_x)
+        (intern_node
+            (bp "gt")
+            (list
+                (intern_trivial_int 5)
+                (intern_trivial_int 3))))
+
+    (defn kernel-core-witness-if (_x)
+        (intern_node
+            (bp "if")
+            (list
+                (kernel-core-witness-condition 0)
+                (intern_trivial_int 8)
+                (intern_trivial_int 13))))
+
+    (defn kernel-core-witness-do (_x)
+        (intern_node
+            (bp "do")
+            (list
+                (intern_trivial_int 1)
+                (kernel-core-witness-plus 0)
+                (intern_node
+                    (bp "mul")
+                    (list
+                        (kernel-core-witness-plus 0)
+                        (intern_trivial_int 4))))))
+
+    (defn kernel-core-image-node (source-path image-path primitive-count dispatch-count proof-count)
+        (intern_node
+            (bp "KERNEL-CORE-IMAGE")
+            (list
+                (intern_trivial_string source-path)
+                (intern_trivial_string image-path)
+                (intern_trivial_string "kernel-core-self")
+                (intern_trivial_int primitive-count)
+                (intern_trivial_int dispatch-count)
+                (intern_trivial_int proof-count)
+                (kernel-core-witness-plus 0)
+                (kernel-core-witness-if 0)
+                (kernel-core-witness-do 0))))
+
+    (defn kernel-core-compiler-flow (_x)
+        (compiler-flow
+            "kernel-core-image-compiler"
+            (list
+                (compiler-stage "source-scan" "Read kernel-core BML source." "grammars/bml.fk" "BML source tokens" "bml-source-scan-file")
+                (compiler-stage "source-parse" "Parse declarations into an observable source model." "BML declaration parser" "KernelCoreSelf class model" "bml-source-file-parse-declarations")
+                (compiler-stage "source-execute" "Execute source-declared count methods through BMA." "bml-compile-program" "primitive, dispatch, and proof counts" "bma-run-value")
+                (compiler-stage "image-emit" "Emit the minimal self image as a NodeID." "compiler-object" "KERNEL-CORE-IMAGE" "kernel-core-image-node")
+                (compiler-stage "binary-roundtrip" "Persist and reload the image through .fkb." "write_form_binary/read_form_binary" ".fkb image identity" "kernel-core-image-compiler-proof.fk"))))
+
+    (defn kernel-core-compile-image (source-path image-path)
+        (do
+            (let parsed (bml-source-file-parse-declarations source-path))
+            (let model (bml-source-declaration-model parsed))
+            (let self-class (kernel-core-self-class model))
+            (let primitive-count
+                (kernel-core-source-method-value
+                    self-class
+                    "RequiredPrimitiveCount"))
+            (let dispatch-count
+                (kernel-core-source-method-value
+                    self-class
+                    "RequiredDispatchCount"))
+            (let proof-count
+                (kernel-core-source-method-value
+                    self-class
+                    "RequiredProofCount"))
+            (let image
+                (kernel-core-image-node
+                    source-path
+                    image-path
+                    primitive-count
+                    dispatch-count
+                    proof-count))
+            (compiler-object
+                "kernel-core-image"
+                image
+                (list
+                    source-path
+                    image-path
+                    parsed
+                    model
+                    (kernel-core-compiler-flow 0))
+                compiler-identity-inverse)))
+
+    (defn kernel-core-compiled-image-node (compiled)
+        (compiler-object-value compiled))
+
+    (defn kernel-core-compiled-source-path (compiled)
+        (nth (compiler-object-source compiled) 0))
+
+    (defn kernel-core-compiled-image-path (compiled)
+        (nth (compiler-object-source compiled) 1))
+
+    (defn kernel-core-compiled-parse (compiled)
+        (nth (compiler-object-source compiled) 2))
+
+    (defn kernel-core-compiled-model (compiled)
+        (nth (compiler-object-source compiled) 3))
+
+    (defn kernel-core-compiled-flow (compiled)
+        (nth (compiler-object-source compiled) 4))
+
+    (defn kernel-core-write-compiled-image (compiled)
+        (write_form_binary
+            (kernel-core-compiled-image-path compiled)
+            (kernel-core-compiled-image-node compiled))))

@@ -1,0 +1,102 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/kernel-core-image-compiler-20260609",
+  "commit_scope": "Add a compiler-backed Form surface for the minimal kernel-core self image. The new Form module parses kernel-core BML source, extracts source-declared counts from KernelCoreSelf method bodies, emits KERNEL-CORE-IMAGE as a compiler-object value, and proves the image is executable and .fkb round-trippable across sibling kernels.",
+  "files_owned": [
+    "form/form-stdlib/kernel-core-self.fk",
+    "form/form-stdlib/tests/kernel-core-image-compiler-proof.fk",
+    "docs/system_audit/commit_evidence_20260609_kernel_core_image_compiler.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/context_budget.py form/form-stdlib/source-compiler.fk form/form-stdlib/compiler.fk form/form-stdlib/grammars/bml.fk form/form-stdlib/tests/kernel-core-self-proof.fk form/form-stdlib/bml/kernel-core.bml",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/kernel-core-self.fk form-stdlib/tests/kernel-core-image-compiler-proof.fk",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260609_kernel_core_image_compiler.json",
+      "git diff --check",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "make wellness"
+    ],
+    "notes": "Dedicated worktree prompt gate passed on codex/kernel-core-image-compiler-20260609. The branch is current with origin/main. Initial wellness ran during a Hostinger rollout window and caught transient public 502s, while local maps, Form ontology, and Form blueprints remained aligned. Post-guard wellness passed with deploy aligned at 1ff62d43 and kernel-native API breathing. Focused sibling-kernel validation returns 34 with 1 ok, 0 divergent across Go, Rust, and TypeScript. Evidence validation, diff check, local PR guard, and followthrough guard pass."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until this branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No deploy attempted for this Form runtime source/proof slice."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Focused proof, evidence validation, rebase freshness, local PR guard, followthrough guard, and wellness pass. Commit, push, PR, remote CI, and deploy verification remain pending."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The minimal kernel-core self image is no longer assembled only inside a proof. A named Form compiler surface now turns BML source into a KERNEL-CORE-IMAGE compiler-object, preserving source authority while producing an executable and persisted core image.",
+    "public_endpoints": [
+      "internal Form sibling kernels"
+    ],
+    "test_flows": [
+      "kernel-core-compile-image parses form-stdlib/bml/kernel-core.bml through the BML declaration parser.",
+      "kernel-core-source-method-value reads RequiredPrimitiveCount, RequiredDispatchCount, and RequiredProofCount from KernelCoreSelf BodySource method tokens.",
+      "kernel-core-image-node emits a KERNEL-CORE-IMAGE with source path, image path, core name, source-declared counts, and executable witness recipes.",
+      "kernel-core-compiler-flow exposes source-scan, source-parse, source-execute, image-emit, and binary-roundtrip stages as compiler objects.",
+      "kernel-core-image-compiler-proof executes embedded add/if/do recipes and round-trips /tmp/kernel-core-compiler-image.fkb across sibling kernels."
+    ]
+  },
+  "idea_ids": [
+    "form-kernel-self-hosting",
+    "kernel-core-self"
+  ],
+  "spec_ids": [
+    "bmf-bml-compiler-picture",
+    "form-kernel-roadmap"
+  ],
+  "task_ids": [
+    "kernel-core-image-compiler-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "architecture-review",
+        "self-hosting-priority"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/kernel-core-self.fk defines kernel-core-compile-image, kernel-core-image-node, and kernel-core-compiler-flow.",
+    "form/form-stdlib/kernel-core-self.fk derives core counts from KernelCoreSelf source method bodies via bml-body-source-values and str_to_int.",
+    "form/form-stdlib/tests/kernel-core-image-compiler-proof.fk proves the compiler object, flow stages, source parse, source-declared counts, executable witness recipes, native .fkb write attribution, and binary round-trip.",
+    "Focused validation: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/kernel-core-self.fk form-stdlib/tests/kernel-core-image-compiler-proof.fk -> 34; 1 ok, 0 divergent.",
+    "Local guard: python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main -> ready_for_push=True; local_preflight=pass.",
+    "Followthrough guard: python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict -> stale_codex_prs=0."
+  ],
+  "change_files": [
+    "form/form-stdlib/kernel-core-self.fk",
+    "form/form-stdlib/tests/kernel-core-image-compiler-proof.fk",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}
