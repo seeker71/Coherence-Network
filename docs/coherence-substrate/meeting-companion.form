@@ -67,7 +67,13 @@
 ;   M2  context from the transcript → turn-taking: build [pause, named, insight-confidence] from the
 ;       conversation cell, feed tt-speak?; the agent offers text when named/buttoned (still no autonomous voice).
 ;   M3  the mesh hop: the conversation cell rides cell-sync/mesh-relay to a second device (shared-sensing field).
-;   M4  audio out: AVSpeechSynthesizer speaks the offering when tt-speak? says so.
+;   M4  the agent's VOICE — SHIPPED + VERIFIED: experiments/satsang-voice/voice.py. turn-taking decides
+;       WHEN; this arm is the WHAT + the sound: a LOCAL LLM (Ollama, no cloud — the dialog never leaves the
+;       machine) composes ONE short grounded question/insight from the recent transcript, and `say` speaks
+;       it as audio beside the text. Verified: composed "How do we ensure AI improvements stay aligned with
+;       our goals?" from a sample context and spoke it to a 134KB audio file (to a file, not the room — the
+;       agent speaks aloud only when invited). With M1+M4, the WHOLE loop runs: listen → transcribe → classify
+;       → learn → hold the conversation → tt-speak? (WHEN) → compose (WHAT) → speak (text+audio) → learn the turn.
 ;   M5  Android audio in (RECORD_AUDIO + AudioRecord) + the now-playing declared-source; on-device form_eval.
 ;   M6  learned autonomous voice: tt-learn from real invocations; champion-challenger lowers the floor only
 ;       once it predicts the room's invitations — the companion finds its turn.
