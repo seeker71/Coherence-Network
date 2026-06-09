@@ -1,0 +1,4 @@
+# Regenerable emitter output. The TS parity suite compiles each tracked
+# `.ts` demo to a sibling `.fk` immediately before the Rust-kernel leg reads it.
+# Keep the source demos; let generated Form text stay out of git.
+*.fk

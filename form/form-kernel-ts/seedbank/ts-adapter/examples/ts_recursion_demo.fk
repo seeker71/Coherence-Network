@@ -1,1 +1,0 @@
-(do (defn fact (n) (if (lt n 2) 1 (mul n (fact (sub n 1))))) (fact 8))

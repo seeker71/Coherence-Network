@@ -1,1 +1,0 @@
-(do (defn loop (i acc) (if (ge i 10) acc (loop (_plus i 1) (_plus acc i)))) (loop 0 0))

@@ -1,1 +1,0 @@
-(do (defn _lambda_0 (x) (mul x 2)) (defn _lambda_1 (n) (mul n n)) (defn _lambda_2 (a b) (_plus a b)) (let double _lambda_0) (let sq _lambda_1) (let add _lambda_2) (add (double 5) (sq 6)))
