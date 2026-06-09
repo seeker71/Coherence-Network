@@ -852,6 +852,28 @@ ensure_kernel_router_canary() {
     exit 1
   fi
 
+  deadline=$(( $(date +%s) + 120 ))
+  probe_ok=0
+  while (( $(date +%s) < deadline )); do
+    if docker compose "${compose_args[@]}" exec -T kernel-router-bml-front-door sh -lc \
+      "curl -fsS -D /tmp/household-events.headers -o /tmp/household-events.body \
+        'http://127.0.0.1:8080/api/household/events?limit=5' \
+        -H 'Accept: application/json' \
+        && grep -qi '^X-Form-Router: native-kernel' /tmp/household-events.headers \
+        && grep -qi '^X-Form-Handler: api_household_events' /tmp/household-events.headers \
+        && grep -qi '^X-Form-Python-Authority: false' /tmp/household-events.headers \
+        && test \"\$(tr -d '[:space:]' </tmp/household-events.body)\" = '[]'" \
+      2>&1 | tee -a "$LOG_FILE"; then
+      probe_ok=1
+      break
+    fi
+    sleep 3
+  done
+  if [[ "$probe_ok" != "1" ]]; then
+    log "FAIL: BML front-door household events route did not return native empty-calendar proof"
+    exit 1
+  fi
+
   ended="$(date +%s)"
   elapsed=$((ended - started))
   log "kernel-router canary: running and locally receipt-proven (${elapsed}s)"
