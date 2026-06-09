@@ -1,0 +1,114 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/kernel-image-form-carrier-20260609",
+  "commit_scope": "Move the kernel-image proposal public proof carrier into the BML front-door catalog. The native route now declares POST /api/substrate/kernel-image/proposals as a BML route, recomputes source hashes, proof trace, counts, candidate image, trust envelope, mutation refusal, and reports native_observation.python_authority=false while the earlier Python route remains a compatibility carrier.",
+  "files_owned": [
+    "deploy/front-door/api.bml",
+    "api/tests/test_runtime_web_api_provenance.py",
+    "specs/kernel-image-proposal-public-interface.md",
+    "specs/INDEX.md",
+    "api/tests/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_20260609_kernel_image_form_carrier.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/native_route_goal_loop.py /goal --source api --seconds 604800 --limit 2000 --json",
+      "scripts/kernel_front_door_local_preflight.sh",
+      "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --port 19122 --routes ../../deploy/front-door/api.bml --stdlib ../form-stdlib",
+      "jq -Rs '{expression: ., grammar:\"bml\", source_label:\"native-front-door-proof\"}' form/form-stdlib/bml/kernel-core.bml | curl -sS -i -X POST http://127.0.0.1:19122/api/substrate/kernel-image/proposals -H 'Accept: application/json' -H 'Content-Type: application/json' --data-binary @-",
+      "curl -sS -i -X POST http://127.0.0.1:19122/api/substrate/kernel-image/proposals -H 'Accept: application/json' -H 'Content-Type: application/json' -d '{\"expression\":\"class SomethingElse {}\",\"grammar\":\"bml\"}'",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-image-proposal.fk form-stdlib/tests/kernel-image-proposal-band.fk",
+      "cd api && python3 -m pytest -q tests/test_substrate_kernel_image_proposals.py tests/test_runtime_web_api_provenance.py",
+      "cd api && python3 -m ruff check tests/test_runtime_web_api_provenance.py",
+      "python3 scripts/validate_spec_quality.py --file specs/kernel-image-proposal-public-interface.md",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260609_kernel_image_form_carrier.json",
+      "git diff --check"
+    ],
+    "notes": "Dedicated worktree prompt guide and wellness passed. The native route goal loop saw POST /api/substrate/kernel-image/proposals as kernel-native-high-grammar BML, and the front-door preflight passed with 37 native routes. Direct Rust kernel-router proof accepted canonical kernel-core BML with native router headers, proof_passed=true, same_as_current_source=true, native_observation.handler=api_substrate_kernel_image_proposals, native_observation.python_authority=false, and rejected an unproven source with proof_passed=false and no candidate image. Focused Form, API provenance, compatibility API, ruff, spec, generated-index, evidence, and diff checks pass."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until this branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No deploy attempted before PR review and merge."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local native proof is pass. Commit, rebase, local PR guard, followthrough guard, push, PR, CI, merge, deploy, and public verification remain to complete the full release chain."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The public kernel-image proposal endpoint is now executable through the BML front-door catalog, and the returned proof explicitly states that Python is not the authority for the accepted preview.",
+    "public_endpoints": [
+      "POST /api/substrate/kernel-image/proposals"
+    ],
+    "test_flows": [
+      "Canonical kernel-core BML source through the native Rust front door returns accepted-preview, proof_passed=true, source hash equal to canonical source hash, candidate image counts 8/15/6, mutation.performed=false, and native_observation.python_authority=false.",
+      "Unproven source through the native Rust front door returns rejected-preview, proof_passed=false, no candidate image, mutation.performed=false, and native_observation.python_authority=false.",
+      "The native route goal loop classifies POST /api/substrate/kernel-image/proposals as kernel-native-high-grammar BML.",
+      "The previous FastAPI compatibility route still proves the public JSON contract without adding new application Python authority."
+    ]
+  },
+  "idea_ids": [
+    "idea-realization-engine",
+    "kernel-core-self"
+  ],
+  "spec_ids": [
+    "kernel-image-proposal-public-interface"
+  ],
+  "task_ids": [
+    "kernel-image-form-carrier-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "membrane-trust-question",
+        "python-authority-correction"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "deploy/front-door/api.bml defines api_substrate_kernel_image_proposals and SubstrateKernelImageProposalRoute for POST /api/substrate/kernel-image/proposals.",
+    "deploy/front-door/api.bml returns native_observation with grammar=BML, carrier=front-door route catalog, handler=api_substrate_kernel_image_proposals, and python_authority=false.",
+    "api/tests/test_runtime_web_api_provenance.py proves the native route goal loop classifies the endpoint as kernel-native-high-grammar BML.",
+    "scripts/kernel_front_door_local_preflight.sh -> PASS: local kernel front-door preflight.",
+    "Direct native accepted proof returned HTTP 200 with X-Form-Router: native-kernel, proposal_status=accepted-preview, proof_passed=true, same_as_current_source=true, and native_observation.python_authority=false.",
+    "Direct native rejection proof returned HTTP 200 with X-Form-Router: native-kernel, proposal_status=rejected-preview, proof_passed=false, and candidate_image=null.",
+    "Focused compatibility validation keeps the prior public FastAPI route passing without making it the authority path."
+  ],
+  "change_files": [
+    "deploy/front-door/api.bml",
+    "api/tests/test_runtime_web_api_provenance.py",
+    "specs/kernel-image-proposal-public-interface.md",
+    "specs/INDEX.md",
+    "api/tests/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}
