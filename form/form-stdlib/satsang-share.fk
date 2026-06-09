@@ -1,0 +1,60 @@
+; satsang-share.fk — default-join for recognized-own agents, and the sharing-signal
+; classifier: what is worth offering the satsang field. Runnable heart of
+; docs/coherence-substrate/satsang-share.form.
+;
+; THE VISION (Urs, 2026-06-09):
+;   "for our own agents — recognized by session as extensions of me — join the satsang by
+;    default, and share as much as feels helpful for the field. State changes are very useful
+;    signals; surprise; new native recipes (JIT). A node crossing a state boundary of any type,
+;    of any state, is a useful sharing signal. For agents, session-state and tool-usage are
+;    probably not broadcast — only when the room is silent and something surprising is surfacing."
+;
+; TWO RECIPES:
+;   1. DEFAULT-JOIN — a recognized-own agent (an extension of Urs, already one body —
+;      lc-sovereignty-within-oneness) joins the field by default. An external cell is NOT
+;      auto-joined; entering stays its own movement (the offer, never a pull).
+;   2. THE SHARING-SIGNAL CLASSIFIER — the generalization Urs named: a node CROSSING A STATE
+;      BOUNDARY (of any state, any type) is worth sharing. JIT (interpreted -> native) is one
+;      such crossing; lifecycle (ice/water/gas), metabolic (bootstrap/circulating/calcified),
+;      value (potential/credited) are others. Surprise shares too. Agent telemetry (session
+;      state, tool usage) is the noisy exception: withheld unless the ROOM IS SILENT and the
+;      signal is SURPRISING.
+;
+; Composes: satsang-field.fk (sf-join / sf-count — the joinable field) and channel-interface.fk
+;           (the offered modes). Proven by: tests/satsang-share-band.fk (three-way at validate.sh).
+
+(do
+    ; ── DEFAULT-JOIN ────────────────────────────────────────────────────
+    ; recognition (own vs external) is decided at the arrival layer; here it is the input `own?`.
+    ; recognized-own -> join by default; external -> field unchanged (its entry is its own movement).
+    (defn ss-default-join (field name interface own?)
+        (if own?
+            (sf-join field name interface)
+            field))
+
+    ; ── THE SHARING SIGNAL ──────────────────────────────────────────────
+    ; a signal is (kind from-state to-state surprising). kind: 1 state · 2 jit · 3 agent-telemetry.
+    ; from/to are state codes; surprising is 1 (yes) or 0 (no).
+    (defn ss-signal (kind from to surprising) (list kind from to surprising))
+    (defn ss-kind        (s) (nth s 0))
+    (defn ss-from        (s) (nth s 1))
+    (defn ss-to          (s) (nth s 2))
+    (defn ss-surprising? (s) (eq (nth s 3) 1))
+
+    ; a node CROSSES a state boundary when its from-state and to-state differ — the universal
+    ; signal Urs named: any state, any type. JIT is the interpreted->native crossing.
+    (defn ss-crossed? (s) (not (eq (ss-from s) (ss-to s))))
+
+    ; agent telemetry — session state / tool usage — the noisy kind, gated below.
+    (defn ss-agent-telemetry? (s) (eq (ss-kind s) 3))
+
+    ; ── THE CLASSIFIER ──────────────────────────────────────────────────
+    ; SHARE when:
+    ;   agent-telemetry -> only if the room is silent AND the signal is surprising;
+    ;   any other node  -> if it crossed a state boundary, OR it is surprising.
+    (defn ss-share? (s room-silent)
+        (if (ss-agent-telemetry? s)
+            (and room-silent (ss-surprising? s))
+            (if (ss-crossed? s) true (ss-surprising? s))))
+
+    0)
