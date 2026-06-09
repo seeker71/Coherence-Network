@@ -377,8 +377,8 @@ def build_gate_report(
         "ordinary_traffic_flip_allowed": True,
         "python_fallback_header": PYTHON_FALLBACK_HEADER,
         "next_evidence_needed": [
-            "deployed header-gated canary persists through mounted production config",
-            "public Traefik default mutation routes to kernel-router",
+            "deployed bounded native default persists through mounted production config",
+            "bounded public Traefik mutable method/path routes to kernel-router",
             "explicit X-Form-Python-Fallback refusal/control signal is counted separately",
         ],
     }

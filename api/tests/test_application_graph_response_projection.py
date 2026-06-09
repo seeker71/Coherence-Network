@@ -77,8 +77,9 @@ def test_response_projection_live_db_script_runs_or_skips_when_pg_missing():
         assert "verdict: 111111" in output
 
 
-def test_route_forms_name_response_projection_before_public_flip():
+def test_route_forms_name_response_projection_after_bounded_flip():
     for text in (_text(IDEAS_FORM_PATH), _text(SPECS_FORM_PATH)):
         assert "form/scripts/application-graph-response-projection-test.sh" in text
         assert "response projection parity proven" in text
-        assert "does not perform the public front-door flip" in text
+        assert "response projection for the promoted mutable routes" in text
+        assert "public/default receipts are now proven before broader traffic moves" in text

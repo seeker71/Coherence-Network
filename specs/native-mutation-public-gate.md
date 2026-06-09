@@ -49,7 +49,7 @@ requirements:
   - "HTTP public-gate responses stay honest: the header/default gate executes native SQL through config_database_url -> pg_connect -> pg_exec -> pg_close, emits persistence readback evidence, and carries a rollback receipt shape."
   - "Native HTTP revision ids are derived from route prefix, node id, and revision number; fixed per-route revision ids are not valid for production traffic."
   - "Each public-gate HTTP response emits a compact decision receipt naming candidates, selected path, outcome, protocol, reversibility, and a signature so the gate can contradict intent with observable state."
-  - "The deploy path exposes X-Form-Native-Public-Gate as a Traefik header-gated public canary with a mounted production config carrier while public no-header Traefik default waits for the separate public flip."
+  - "The deploy path exposes X-Form-Native-Public-Gate as a higher-priority Traefik witness and routes bounded no-header mutable ideas/spec method/path traffic to the kernel-router native default invitation with a mounted production config carrier."
   - "The side-effect ledger keeps rollback receipts as gate-local safety rather than Python parity, so side-effect proof does not justify side effects."
   - "The public-gate Form layer exposes an idea update runner over the native idea valuation audit-ledger carrier."
 done_when:
@@ -60,7 +60,7 @@ done_when:
 test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/native-mutation-public-gate.fk form-stdlib/tests/native-mutation-public-gate-band.fk && cd .. && form/scripts/native-mutation-public-gate-test.sh && python3 deploy/kernel-router/mutation_public_gate_harness.py --json && python3 deploy/kernel-router/mutation_ab_observation_harness.py --json && bash -n deploy/hostinger/auto-deploy.sh scripts/verify_kernel_canary_public_gate.sh && cd api && python3 -m pytest -q tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py"
 constraints:
   - "Do not execute against the production application database from local proof harnesses."
-  - "Do not flip ordinary no-header public mutation traffic."
+  - "Do not perform the all-traffic Host(api.coherencycoin.com) front-door flip; this release only promotes bounded mutable ideas/spec method/path routers."
   - "Keep preview routes as non-executing SQL previews."
 ---
 
@@ -69,12 +69,12 @@ constraints:
 ## Purpose
 
 The native route runner can now perform graph mutations and side effects
-together. This spec adds the next reversible movement: a public-gate header that
-selects native mutation route rows and carries a route-local rollback receipt.
-No-header traffic that reaches the kernel now accepts the implicit native
+together. This spec adds the reversible public movement: a public-gate header
+that selects native mutation route rows and carries a route-local rollback
+receipt, plus bounded no-header Traefik routers for mutable ideas/spec method
+paths. No-header traffic on those promoted routes accepts the implicit native
 invitation, and `X-Form-Python-Fallback` is the explicit refusal/control signal.
-Public Traefik no-header default remains outside this spec's deploy flip while
-the deployed header-gated canary verifies mounted production-config persistence.
+The broader all-traffic Host front door remains outside this spec's deploy flip.
 The side-effect ledger is the constraint around this movement: rollback receipts
 are reversible gate safety, not evidence that extra domain side effects belong.
 
@@ -111,16 +111,20 @@ are reversible gate safety, not evidence that extra domain side effects belong.
   `X-Form-Native-Public-Gate`, candidate outcomes for implicit native
   invitation/preview/public gate/Python fallback, `can_contradict_intent=true`,
   and a compact signature.
-- [ ] **R10**: The Hostinger deploy path runs a kernel-router canary service
-  with `production-routes.fk`, a mounted config-file carrier at
-  `/run/coherence-network/config.json`, and Traefik header rules for
-  `X-Form-Native-Preview: 1` and `X-Form-Native-Public-Gate: 1`, while the
-  ordinary no-header `coherence-api` route remains FastAPI.
+- [ ] **R10**: The Hostinger deploy path runs a kernel-router service with
+  `production-routes.fk`, a mounted config-file carrier at
+  `/run/coherence-network/config.json`, Traefik header rules for
+  `X-Form-Native-Preview: 1` and `X-Form-Native-Public-Gate: 1`, and bounded
+  no-header method/path routers for `POST/PATCH /api/ideas` plus
+  `POST/PATCH/DELETE /api/spec-registry`, while unlisted ordinary routes remain
+  FastAPI-backed.
 - [ ] **R11**: Public deployment verification probes
   `X-Form-Native-Public-Gate: 1` against `POST /api/ideas`, requires
-  `202 + X-Form-Router:native-kernel + decision_receipt + executes:true`, and
-  separately checks public Traefik no-header control has not yet entered the
-  native default route.
+  `202 + X-Form-Router:native-kernel + decision_receipt + executes:true`, then
+  probes no-header `POST /api/ideas` and requires
+  `native_default_invitation=true`, selected path `implicit-native-invitation`,
+  native persistence readback, and an explicit `X-Form-Python-Fallback` probe
+  with `X-Form-Router:fanout-python`.
 - [ ] **R12**: The local public-gate harness includes a production-style
   revision-id collision probe: two no-header native-default creates and two
   `X-Form-Native-Public-Gate` creates run without schema reset and produce
@@ -150,16 +154,16 @@ are reversible gate safety, not evidence that extra domain side effects belong.
   harness.
 - `deploy/kernel-router/production-routes.fk` - public-gate route rows and
   response envelope.
-- `deploy/kernel-router/docker-compose.kernel-router.yml` - header-gated
-  Traefik canary overlay and config-file mount.
+- `deploy/kernel-router/docker-compose.kernel-router.yml` - bounded Traefik
+  native mutation routers, header witnesses, and config-file mount.
 - `Dockerfile.kernel-router` - non-secret config baseline for kernel config
   natives.
 - `deploy/kernel-router/entrypoint.sh` - optional `serve --config` carrier.
-- `deploy/hostinger/auto-deploy.sh` - deploy-time kernel-router canary bring-up
-  and local receipt probe.
-- `scripts/verify_kernel_canary_public_gate.sh` - public treatment/control
-  verifier for the deployed canary.
-- `.github/workflows/hostinger-auto-deploy.yml` - public canary deploy and
+- `deploy/hostinger/auto-deploy.sh` - deploy-time kernel-router bring-up and
+  local public/default/fallback receipt probes.
+- `scripts/verify_kernel_canary_public_gate.sh` - public treatment/default/fallback
+  verifier for the deployed bounded native default.
+- `.github/workflows/hostinger-auto-deploy.yml` - public kernel deploy and
   verification workflow.
 - `.github/workflows/public-deploy-contract.yml` - trigger coverage for
   canary-related deploy files.
@@ -178,10 +182,10 @@ are reversible gate safety, not evidence that extra domain side effects belong.
 
 - `api/tests/test_native_mutation_public_gate.py::test_public_gate_band_executes_across_sibling_kernels`
 - `api/tests/test_native_mutation_public_gate.py::test_public_gate_live_script_runs_or_skips_when_pg_missing`
-- `api/tests/test_native_mutation_public_gate.py::test_production_routes_expose_public_gate_without_no_header_flip`
+- `api/tests/test_native_mutation_public_gate.py::test_production_routes_expose_public_gate_with_native_default_invitation`
 - `api/tests/test_native_mutation_public_gate.py::test_public_gate_harness_observes_public_gate_when_kernel_available`
-- `api/tests/test_native_mutation_public_gate.py::test_route_forms_name_public_gate_before_deployed_canary`
-- `api/tests/test_native_mutation_public_gate.py::test_deploy_exposes_header_gated_public_canary_without_no_header_flip`
+- `api/tests/test_native_mutation_public_gate.py::test_route_forms_name_public_gate_default_evidence_boundary`
+- `api/tests/test_native_mutation_public_gate.py::test_deploy_exposes_bounded_no_header_native_mutation_flip`
 - `api/tests/test_native_idea_valuation_audit_ledger.py::test_ledger_and_route_forms_mark_audit_parity_carried`
 - `api/tests/test_native_mutation_side_effect_ledger.py::test_gate_receipts_are_not_claimed_as_python_parity`
 - `api/tests/test_native_mutation_side_effect_ledger.py::test_route_forms_and_specs_link_the_ledger_boundary`
@@ -208,16 +212,14 @@ scripts/verify_kernel_canary_public_gate.sh https://api.coherencycoin.com
 ## Out of Scope
 
 - Production application database writes from local proof harnesses.
-- Public Traefik no-header front-door mutation routing changes.
+- All-traffic public Traefik Host front-door routing changes.
 - Treating public-gate receipts as Python parity or domain-side-effect evidence.
 
 ## Gaps
 
-- GAP-NMPG1: closed by the header-gated kernel-router canary overlay, public
-  verifier, local default-native invitation harness, and native HTTP mutation
-  persistence harness. The next gap is deployed canary verification through the
-  mounted production config before wiring public Traefik no-header defaults to
-  kernel-router.
+- GAP-NMPG1: closed by the kernel-router overlay, public verifier, local
+  default-native invitation harness, native HTTP mutation persistence harness,
+  and bounded public no-header mutable method/path routers.
 - GAP-NMPG3: closed by `native-http-mutation-persistence-default`. The HTTP
   native mutation handler now carries production persistence semantics through
   the kernel config carrier and Form-native `pg_exec`.
@@ -229,9 +231,8 @@ scripts/verify_kernel_canary_public_gate.sh https://api.coherencycoin.com
 - GAP-NMPG2: closed by `specs/native-idea-valuation-audit-ledger.md`. Idea
   valuation audit-ledger parity is now carried Form-native and bound into an
   idea update public-gate runner.
-- Follow-up task: `deployed-native-http-mutation-persistence-canary`. Verify the
-  mounted production-config header-gated canary after deploy, then decide the
-  separate public no-header Traefik flip.
+- Follow-up task: promote the next route only after it has its own native
+  carrier, public verifier, rollback signal, and production evidence.
 
 ## Risks and Assumptions
 
@@ -241,13 +242,13 @@ scripts/verify_kernel_canary_public_gate.sh https://api.coherencycoin.com
   persistence failure instead of silently claiming a write.
 - Rollback receipts are gate-local safety rather than Python parity.
 - Decision receipts are per-request gate witnesses: they record what branch was
-  selected and enough signature detail to make the gate observable before the
-  no-header flip.
-- The public canary relies on Traefik 3 `Header` matchers and explicit header
-  value `1`; other header values intentionally continue through the ordinary API
-  route until a broader canary rule is proven.
+  selected and enough signature detail to make the bounded native default
+  observable after the no-header move.
+- The public header witnesses rely on Traefik 3 `Header` matchers and explicit
+  header value `1`; the bounded no-header routers rely on method/path matchers
+  with lower priority than the explicit header witnesses.
 - The ledger states that rollback receipts are gate-local safety rather than Python parity.
-- `X-Form-Python-Fallback`, removing the default native route row, or restoring
-  the public Traefik api route is the reversible rollback path.
-- No-header public mutation behavior remains FastAPI while the deployed
-  header-gated canary verifies mounted production-config persistence.
+- `X-Form-Python-Fallback`, removing the default native route rows, or removing
+  the bounded Traefik method/path routers is the reversible rollback path.
+- No-header public mutation behavior for promoted ideas/spec method/path routes
+  now enters native default; unpromoted public routes remain FastAPI-backed.

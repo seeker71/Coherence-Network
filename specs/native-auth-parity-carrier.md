@@ -30,7 +30,7 @@ requirements:
   - "Form has a native auth decision carrier for mutation routes that mirrors FastAPI shared API-key and contributor-key decisions."
   - "Contributor keys are compared as SHA-256 hex hashes in Form, not as raw allow-list shortcuts."
   - "The carrier proves allowed, denied, missing, blank, case-insensitive header, and production dev-key misconfiguration cases."
-  - "Ideas and specs name auth parity as proven while keeping public mutable front-door flips out of scope until header-gated preview rows graduate through live DB execution proof."
+  - "Ideas and specs name auth parity as proven while keeping all-traffic public front-door flips out of scope; bounded mutable method/path routes graduate only after preview, live DB execution, and production default proof."
 done_when:
   - 'file_contains("form/form-stdlib/auth-port.fk", "defn auth-require-api-key")'
   - 'file_contains("form/form-stdlib/tests/auth-port-band.fk", "Band verdict: 1111")'
@@ -73,9 +73,9 @@ remaining blocker is side-effect proof plus a reversible public gate.
 - [ ] **R4**: `form/form-stdlib/tests/auth-port-band.fk` executes the carrier
   over both direct header lists and a `kh-request` wrapper, with a Python-known
   SHA-256 fixture.
-- [ ] **R5**: ideas/spec Form route readings name auth parity as proven and
-  leave public mutable front-door flips blocked on side-effect proof and a
-  reversible public gate.
+- [ ] **R5**: ideas/spec Form route readings name auth parity as proven and keep
+  future public mutable route promotions blocked on route-local proof, explicit
+  fallback, and a reversible public gate.
 
 ## Research Inputs
 

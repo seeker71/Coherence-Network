@@ -35,7 +35,7 @@ source:
   - file: api/tests/test_native_mutation_route_bindings.py
     symbols: [test_native_mutation_preview_routes_are_method_and_header_gated, test_native_mutation_preview_handlers_emit_application_graph_sql]
   - file: api/tests/test_application_graph_response_projection.py
-    symbols: [test_route_forms_name_response_projection_before_public_flip]
+    symbols: [test_route_forms_name_response_projection_after_bounded_flip]
   - file: form/form-stdlib/native-mutation-trust-envelope.fk
     symbols: [nmte-trust-envelope-json]
   - file: form/form-stdlib/native-mutation-side-effects.fk
@@ -48,14 +48,14 @@ source:
     symbols: [test_real_manifest_native_routes_are_served_zero_and_include_ideas_structure]
 requirements:
   - "The ideas router has a high-level Form artifact naming its route shape, route recipe shape, whole structure, and shifted recipe families."
-  - "The Form artifact names api/app/routers/ideas.py as the FastAPI carrier while preserving existing HTTP behavior."
+  - "The Form artifact names api/app/routers/ideas.py as the FastAPI carrier for unpromoted ideas behavior while promoted POST/PATCH mutations move through the kernel-router native default invitation."
   - "The kernel-router production manifest exposes native /api/ideas/router-structure, /api/ideas/source-index, /api/ideas/source-portfolio, and /api/ideas/graph-projection routes for the Form-declared router structure, repo-backed idea source index, source-backed curated portfolio, and fixture-backed graph projection preview."
-  - "The Form artifact names the native graph-node mutation carrier for create, replace, and delete while keeping the public mutable front-door gap explicit."
+  - "The Form artifact names the native graph-node mutation carrier for create, replace, and delete while keeping the all-traffic public front-door gap explicit."
   - "The Form artifact names the native auth decision carrier for API-key/contributor-key parity and the application graph table SQL carrier for graph_nodes/revisions/edge cleanup."
-  - "The production manifest binds header-gated method-specific native SQL preview rows for POST/PATCH /api/ideas without changing default public behavior."
+  - "The production manifest binds method-specific native SQL preview rows and bounded no-header native-default rows for POST/PATCH /api/ideas."
   - "The ideas Form artifact names the trust envelope that carries prediction residual, side-effect intents, choice markers, and reversible gate state."
-  - "The ideas Form artifact names the Form-native side-effect execution carrier while keeping route binding and ordinary public traffic movement explicit as the remaining boundary."
-  - "The ideas Form artifact links the side-effect ledger so side-effect proof does not justify side effects and carried Python parity is visible before ordinary no-header flips."
+  - "The ideas Form artifact names the Form-native side-effect execution carrier while keeping unpromoted public traffic movement explicit as the remaining boundary."
+  - "The ideas Form artifact links the side-effect ledger so side-effect proof does not justify side effects and carried Python parity is visible before each future route promotion."
   - "The ideas Form artifact names the native idea valuation audit-ledger carrier that closes the previous missing Python parity."
   - "The kernel-router image carries the ideas source directory so the source-index route is deployable when production routes are selected."
   - "The proof tests verify the Form structure, shifted recipes, Python-carrier boundary, native structure/source routes, and router-to-Form link."
@@ -151,12 +151,11 @@ python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expressi
 
 - Changing API response schemas or endpoint paths.
 - Moving service-layer persistence or scoring logic to a new Python module.
-- Flipping ordinary public mutable, DB-backed ideas traffic to native execution
-  before sustained `X-Form-Native-Public-Gate` canary evidence is observed.
+- Flipping all unlisted public API traffic to native execution.
 
 ## Gaps
 
-- GAP-I1 follow-up task: `ideas-native-mutation-deployed-public-canary`. `/api/ideas/router-structure`, `/api/ideas/source-index`, `/api/ideas/source-portfolio`, and `/api/ideas/graph-projection` are kernel-first capable. `graph-node-port.fk` exposes create/replace/delete over the storage port, `auth-port.fk` preserves API-key/contributor-key decision parity, `application-graph-node-port.fk` emits direct `graph_nodes` / `graph_node_revisions` / `graph_edges` SQL, `POST/PATCH /api/ideas` have `X-Form-Native-Preview` header-gated native SQL preview rows, live DB execution is proven, Form response projection now emits `IdeaWithScore` / `SpecRegistryEntry` shaped mutation rows, the preview response carries prediction residual, side-effect intents, choice markers, and reversible gate state, `native-mutation-side-effects-test.sh` proves parent-edge repair, contributor-key audit, cache-invalidation receipt, and rollback receipt execute natively against throwaway Postgres, `native-mutation-route-side-effects-test.sh` proves application graph mutation plus side-effect execution are bound in one Form-native route runner, and `native-mutation-public-gate-test.sh` plus `mutation_public_gate_harness.py` prove `X-Form-Native-Public-Gate` selects rollback-receipted native public-gate route rows. Public mutable DB-backed portfolio routes still enter through FastAPI by default while the deployed header-gated public canary gathers treatment/control evidence before any no-header flip.
+- GAP-I1: closed by `public-no-header-native-mutation-flip`. `/api/ideas/router-structure`, `/api/ideas/source-index`, `/api/ideas/source-portfolio`, and `/api/ideas/graph-projection` are kernel-first capable. `graph-node-port.fk` exposes create/replace/delete over the storage port, `auth-port.fk` preserves API-key/contributor-key decision parity, `application-graph-node-port.fk` emits direct `graph_nodes` / `graph_node_revisions` / `graph_edges` SQL, `POST/PATCH /api/ideas` have `X-Form-Native-Preview` header-gated native SQL preview rows, live DB execution is proven, Form response projection now emits `IdeaWithScore` / `SpecRegistryEntry` shaped mutation rows, the preview response carries prediction residual, side-effect intents, choice markers, and reversible gate state, `native-mutation-side-effects-test.sh` proves parent-edge repair, contributor-key audit, cache-invalidation receipt, and rollback receipt execute natively against throwaway Postgres, `native-mutation-route-side-effects-test.sh` proves application graph mutation plus side-effect execution are bound in one Form-native route runner, `native-mutation-public-gate-test.sh` plus `mutation_public_gate_harness.py` prove `X-Form-Native-Public-Gate` selects rollback-receipted native public-gate route rows, and bounded public Traefik no-header `POST/PATCH /api/ideas` now enters the kernel-router native default invitation with `X-Form-Python-Fallback` as explicit fanout.
 - GAP-I2 follow-up task: `ideas-live-graph-storage-carrier`. Connect `/api/ideas/graph-projection` to a live application graph storage carrier on top of `form/form-stdlib/ideas-graph-projection.fk`.
 - GAP-I3: closed by `specs/native-idea-valuation-audit-ledger.md`. The
   side-effect ledger now classifies idea valuation audit-ledger writes as carried
@@ -168,6 +167,6 @@ python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expressi
 - A later native route lift can consume this route recipe now that the graph-node
   read carrier, mutation carrier, auth carrier, application-table SQL carrier,
   live DB execution proof, response projection proof, side-effect carrier proof,
-  route-runner binding proof, and public-gate rollback receipt proof exist; the
-  sustained deployed header canary evidence remains the next boundary before an
-  ordinary no-header flip.
+  route-runner binding proof, public-gate rollback receipt proof, and bounded
+  deployed native default now exist; the next boundary is promoting only routes
+  with their own carrier, evidence, fallback signal, and rollback path.

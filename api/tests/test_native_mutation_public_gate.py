@@ -178,7 +178,7 @@ def test_public_gate_harness_observes_public_gate_when_kernel_available():
     assert report["gate"] == "native_mutation_public_gate"
     assert report["gate_pass"] is True
     assert report["confidence"] == 1.0
-    assert report["recommendation"] == "verify_deployed_header_canary"
+    assert report["recommendation"] == "verify_deployed_bounded_native_default"
     assert report["native_http_persistence_proven"] is True
     assert report["production_revision_id_collision_probe_pass"] is True
     assert all(report["production_revision_id_collision_probe"].values())
@@ -186,8 +186,8 @@ def test_public_gate_harness_observes_public_gate_when_kernel_available():
     assert report["ordinary_traffic_flip_performed"] is True
     assert report["python_fallback_header"] == "X-Form-Python-Fallback"
     assert report["next_evidence_needed"] == [
-        "deployed header-gated canary persists through mounted production config",
-        "public Traefik default mutation routes to kernel-router",
+        "deployed bounded native default persists through mounted production config",
+        "bounded public Traefik mutable method/path routes to kernel-router",
         "explicit X-Form-Python-Fallback refusal/control signal is counted separately",
     ]
     for case in report["cases"]:
@@ -210,7 +210,7 @@ def test_public_gate_harness_observes_public_gate_when_kernel_available():
         assert case["checks"]["both_headers_public_gate_executes_persistence"] is True
 
 
-def test_route_forms_name_public_gate_canary_evidence_boundary():
+def test_route_forms_name_public_gate_default_evidence_boundary():
     for text in (_text(IDEAS_FORM_PATH), _text(SPECS_FORM_PATH)):
         assert "form/scripts/native-mutation-public-gate-test.sh" in text
         assert "native mutation public gate proven" in text
@@ -219,7 +219,7 @@ def test_route_forms_name_public_gate_canary_evidence_boundary():
         assert "X-Form-Python-Fallback" in text
 
 
-def test_deploy_exposes_header_gated_public_canary_without_no_header_flip():
+def test_deploy_exposes_bounded_no_header_native_mutation_flip():
     compose = _text(KERNEL_CANARY_COMPOSE_PATH)
     auto_deploy = _text(HOSTINGER_AUTO_DEPLOY_PATH)
     hostinger_workflow = _text(HOSTINGER_AUTO_DEPLOY_WORKFLOW_PATH)
@@ -234,9 +234,22 @@ def test_deploy_exposes_header_gated_public_canary_without_no_header_flip():
     assert "Header(`X-Form-Native-Preview`,`1`)" in compose
     assert "coherence-api-kernel-public-gate-canary.priority" in compose
     assert "loadbalancer.server.port: \"8080\"" in compose
-    assert "mutable ordinary no-header traffic continues" in compose
-    assert "to reach api:8000 until the public no-header flip" in compose
+    assert "bounded no-header mutation paths match this" in compose
+    assert "Unlisted ordinary requests keep matching api:8000" in compose
     assert "X-Form-Python-Fallback is the explicit" in compose
+    assert "coherence-api-kernel-ideas-create-native-default.rule" in compose
+    assert "Method(`POST`) && Path(`/api/ideas`)" in compose
+    assert "coherence-api-kernel-ideas-update-native-default.rule" in compose
+    assert "Method(`PATCH`) && PathRegexp(`^/api/ideas/[^/]+$`)" in compose
+    assert "coherence-api-kernel-specs-create-native-default.rule" in compose
+    assert "Method(`POST`) && Path(`/api/spec-registry`)" in compose
+    assert "coherence-api-kernel-specs-update-native-default.rule" in compose
+    assert "Method(`PATCH`) && PathRegexp(`^/api/spec-registry/[^/]+$`)" in compose
+    assert "coherence-api-kernel-specs-delete-native-default.rule" in compose
+    assert "Method(`DELETE`) && PathRegexp(`^/api/spec-registry/[^/]+$`)" in compose
+    assert "coherence-api-kernel-ideas-create-native-default.priority: \"900\"" in compose
+    assert "coherence-api-kernel-public-gate-canary.priority: \"1100\"" in compose
+    assert "coherence-api-kernel-preview-canary.priority: \"1000\"" in compose
     assert 'KERNEL_ROUTER_CONFIG_FILE: "/run/coherence-network/config.json"' in compose
     assert "/root/.coherence-network/config.json:/run/coherence-network/config.json:ro" in compose
 
@@ -250,6 +263,12 @@ def test_deploy_exposes_header_gated_public_canary_without_no_header_flip():
     assert '\\"executes\\":true' in auto_deploy
     assert "performed-by-http-native-persistence" in auto_deploy
     assert '\\"ordinary_traffic_flip_performed\\":true' in auto_deploy
+    assert "Native Default Local" in auto_deploy
+    assert '\\"native_default_invitation\\":true' in auto_deploy
+    assert '\\"route_binding\\":\\"kernel-http-native-default-invitation\\"' in auto_deploy
+    assert '\\"selected_path\\":\\"implicit-native-invitation\\"' in auto_deploy
+    assert "X-Form-Python-Fallback: 1" in auto_deploy
+    assert "X-Form-Router: fanout-python" in auto_deploy
 
     for workflow in (hostinger_workflow, public_contract_workflow):
         assert "'deploy/kernel-router/**'" in workflow
@@ -260,5 +279,9 @@ def test_deploy_exposes_header_gated_public_canary_without_no_header_flip():
     assert "native_public_gate" in verify_script
     assert "executes_true" in verify_script
     assert "performed-by-http-native-persistence" in verify_script
-    assert "control_status" in verify_script
-    assert "public Traefik no-header control remains outside native default route" in verify_script
+    assert "assert_native_default_body" in verify_script
+    assert "native_default_invitation" in verify_script
+    assert "implicit-native-invitation" in verify_script
+    assert "public Traefik no-header default entered native default route" in verify_script
+    assert "fallback_router" in verify_script
+    assert "fanout-python" in verify_script

@@ -94,11 +94,11 @@ def test_ab_gate_next_evidence_is_deployed_canary_after_public_gate():
     text = _text(AB_HARNESS_PATH)
 
     assert "bind native side-effect execution carrier to mutation route runner" not in text
-    assert "public Traefik default mutation routes to kernel-router" in text
+    assert "bounded public Traefik mutable method/path routes to kernel-router" in text
     assert "explicit X-Form-Python-Fallback refusal/control signal is counted separately" in text
 
 
-def test_route_forms_name_route_side_effect_binding_before_public_flip():
+def test_route_forms_name_route_side_effect_binding_after_bounded_flip():
     for text in (_text(IDEAS_FORM_PATH), _text(SPECS_FORM_PATH)):
         assert "form/scripts/native-mutation-route-side-effects-test.sh" in text
         assert "native route side-effect binding proven" in text

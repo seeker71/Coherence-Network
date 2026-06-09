@@ -13,7 +13,7 @@ source:
   - file: form/scripts/native-mutation-side-effects-test.sh
     symbols: []
   - file: api/tests/test_native_mutation_side_effects_form.py
-    symbols: [test_native_side_effects_band_executes_across_sibling_kernels, test_native_side_effects_live_db_script_runs_or_skips_when_pg_missing, test_route_forms_name_side_effect_execution_carrier_before_public_flip]
+    symbols: [test_native_side_effects_band_executes_across_sibling_kernels, test_native_side_effects_live_db_script_runs_or_skips_when_pg_missing, test_route_forms_name_side_effect_execution_carrier_after_bounded_flip]
   - file: api/tests/test_native_mutation_side_effect_ledger.py
     symbols: [test_ledger_declares_anti_circular_decision_rule, test_python_parity_entries_cite_python_sources_and_form_carriers, test_gate_receipts_are_not_claimed_as_python_parity, test_audit_ledger_parity_is_carried_before_ordinary_flip]
   - file: deploy/kernel-router/mutation_ab_observation_harness.py
@@ -63,11 +63,10 @@ classified as Python parity or reversible gate safety.
 - [ ] **R3**: The live integration returns `11111111` after executing every
   side-effect wrapper, reading each effect back from throwaway Postgres, cleaning
   up fixture tables, and closing the connection.
-- [ ] **R4**: Route Form docs name the carrier as proven while keeping ordinary
-  public traffic on FastAPI while the deployed public-gate canary gathers
-  sustained evidence.
+- [ ] **R4**: Route Form docs name the carrier as proven while keeping
+  unpromoted public traffic on FastAPI after the bounded mutable native release.
 - [ ] **R5**: The A/B observation report's next evidence now names deployed
-  public-gate treatment/control receipts before any no-header flip.
+  bounded native-default persistence and explicit fallback/refusal receipts.
 - [ ] **R6**: `native-mutation-side-effect-ledger.form` classifies each effect
   as primary mutation, Python parity effect, gate receipt, missing Python parity,
   or not carried, and states that rollback receipts are gate-local safety rather
@@ -112,7 +111,7 @@ classified as Python parity or reversible gate safety.
 
 - `api/tests/test_native_mutation_side_effects_form.py::test_native_side_effects_band_executes_across_sibling_kernels`
 - `api/tests/test_native_mutation_side_effects_form.py::test_native_side_effects_live_db_script_runs_or_skips_when_pg_missing`
-- `api/tests/test_native_mutation_side_effects_form.py::test_route_forms_name_side_effect_execution_carrier_before_public_flip`
+- `api/tests/test_native_mutation_side_effects_form.py::test_route_forms_name_side_effect_execution_carrier_after_bounded_flip`
 - `api/tests/test_native_mutation_side_effect_ledger.py::test_ledger_declares_anti_circular_decision_rule`
 - `api/tests/test_native_mutation_side_effect_ledger.py::test_gate_receipts_are_not_claimed_as_python_parity`
 - `api/tests/test_native_mutation_ab_observation.py::test_ab_gate_recommends_live_db_trial_after_full_confidence`
@@ -143,11 +142,14 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-side-effec
 - GAP-NMSE2: closed by `specs/native-mutation-public-gate.md`. The public gate
   now carries a route-local rollback receipt in Form and production route
   selection.
-- GAP-NMSE3 follow-up task: `native-mutation-deployed-public-canary`. Deploy and
-  observe the `X-Form-Native-Public-Gate` canary before any no-header flip.
+- GAP-NMSE3: closed by `public-no-header-native-mutation-flip`. The deployed
+  bounded mutable method/path routes now observe native default persistence and
+  explicit `X-Form-Python-Fallback` fanout.
 - GAP-NMSE4: closed by `specs/native-idea-valuation-audit-ledger.md`. The ledger
   now marks `idea_write_ops.update_idea` audit-ledger writes as carried
   Form-native parity.
+- Follow-up task: None for this side-effect carrier slice; future route
+  promotions require their own spec, proof, fallback signal, and rollback path.
 
 ## Risks and Assumptions
 

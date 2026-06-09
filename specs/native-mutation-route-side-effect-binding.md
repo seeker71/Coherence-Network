@@ -27,8 +27,8 @@ source:
 requirements:
   - "A Form-native route runner composes application graph mutation execution with native side-effect execution."
   - "The route-runner proof executes idea and spec mutation shapes against rollback-safe throwaway Postgres."
-  - "The A/B observation gate now names the deployed public-gate canary as the remaining boundary."
-  - "Ordinary public mutation traffic remains on FastAPI and preview rows remain executes:false."
+  - "The A/B observation gate now names deployed bounded native-default persistence as the release boundary."
+  - "Promoted ordinary public mutation traffic uses native default and preview rows remain executes:false."
   - "The route binding consumes only source-classified side effects; side-effect proof does not justify side effects."
   - "Idea update route-runner audit parity is carried by native-idea-valuation-audit-ledger.fk."
 done_when:

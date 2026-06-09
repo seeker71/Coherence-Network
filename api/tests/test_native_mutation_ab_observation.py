@@ -182,16 +182,16 @@ def test_ab_gate_recommends_live_db_trial_after_full_confidence():
     assert report["ordinary_traffic_flip_performed"] is True
     assert report["python_fallback_header"] == "X-Form-Python-Fallback"
     assert report["next_evidence_needed"] == [
-        "deployed header-gated canary persists through mounted production config",
-        "public Traefik default mutation routes to kernel-router",
+        "deployed bounded native default persists through mounted production config",
+        "bounded public Traefik mutable method/path routes to kernel-router",
         "explicit X-Form-Python-Fallback refusal/control signal is counted separately",
     ]
 
 
-def test_route_forms_name_the_ab_observation_gate_before_flip():
+def test_route_forms_name_the_ab_observation_gate_after_bounded_flip():
     for path in (IDEAS_FORM_PATH, SPECS_FORM_PATH):
         text = path.read_text(encoding="utf-8")
         assert "front-door flip -> A/B observation gate before movement" in text
         assert "deploy/kernel-router/mutation_ab_observation_harness.py" in text
-        assert "preview confidence is complete" in text
+        assert "observation gate promoted only the bounded mutable public routes" in text
         assert "implicit native invitation" in text
