@@ -13,7 +13,7 @@ source:
   - file: api/tests/test_native_mutation_route_bindings.py
     symbols: [test_native_mutation_preview_handlers_emit_application_graph_sql]
   - file: api/tests/test_native_mutation_ab_observation.py
-    symbols: [test_ab_observation_case_passes_only_when_a_fanout_and_b_native_preview, test_ab_gate_recommends_live_db_trial_after_full_confidence]
+    symbols: [test_ab_observation_case_passes_with_native_default_preview_and_fallback, test_ab_gate_recommends_live_db_trial_after_full_confidence]
   - file: api/tests/test_ideas_router_form.py
     symbols: [test_ideas_router_form_names_native_mutation_carrier]
   - file: api/tests/test_spec_registry_router_form.py
@@ -27,7 +27,7 @@ requirements:
   - "The trust envelope carries prediction error as residual, not as ignored uncertainty."
   - "The envelope exposes choice_success=1 plus silence, protocol, fail, stop, and BMA markers for the reversible preview choice."
   - "The envelope carries side-effect intents for cache invalidation, parent-edge repair, contributor-key audit, and rollback receipt."
-  - "The reversible gate keeps ordinary_traffic_flip_allowed=false and ordinary_traffic_flip_performed=false while default traffic remains fanout-python."
+  - "The reversible gate names native-kernel default, implicit native invitation, and X-Form-Python-Fallback as the explicit rollback/control signal."
 done_when:
   - 'file_exists("form/form-stdlib/native-mutation-trust-envelope.fk")'
   - 'file_contains("deploy/kernel-router/production-routes.fk", "\"choice_success\":1")'
@@ -48,8 +48,8 @@ The native mutation preview had route bindings, SQL, live DB proof, response
 projection, and A/B observation, but the remaining boundary was still named as a
 generic gap. This spec makes the boundary form-native: every preview response
 returns a trust envelope that names the successful choice, the carried residual,
-the deferred side effects, and the reversible gate that keeps ordinary traffic
-on the Python fanout path.
+the deferred side effects, and the reversible gate that makes no-header kernel
+traffic native by default while keeping explicit Python fallback observable.
 
 ## Requirements
 
@@ -57,23 +57,25 @@ on the Python fanout path.
   reusable envelope recipe that returns JSON with operation, node id, state, and
   `choice_success=1`.
 - [ ] **R2**: The envelope carries `prediction_error="carried_as_residual"` and
-	  a residual sentence naming that side effects are held as intent while fanout
-	  remains default.
+  a residual sentence naming that side effects are held as intent while
+  no-header kernel traffic accepts native by default.
 - [ ] **R3**: The envelope carries the choice protocol markers:
-  `silence="fanout-default"`, `protocol="X-Form-Native-Preview"`,
-  `fail="rollback-to-fanout"`, `stop="ordinary-traffic-unflipped"`, and
+  `silence="not-knowing-is-native-invitation"`,
+  `protocol="X-Form-Native-Preview"`, `fail="explicit-python-fallback"`,
+  `stop="native-default-observed"`, and
   `bma="native-mutation-trust-envelope"`.
 - [ ] **R4**: The envelope carries side-effect intents for cache invalidation,
   parent-edge repair, contributor-key audit, and rollback receipt.
 - [ ] **R5**: The envelope carries a reversible gate with default route
-  `fanout-python`, native route `X-Form-Native-Preview`,
-  `ordinary_traffic_flip_allowed=false`, and
-  `ordinary_traffic_flip_performed=false`.
+  `native-kernel`, default protocol `implicit-native-invitation`, native route
+  `X-Form-Native-Preview`, fallback route `X-Form-Python-Fallback`,
+  `ordinary_traffic_flip_allowed=true`, and
+  `ordinary_traffic_flip_performed=true`.
 - [ ] **R6**: `deploy/kernel-router/production-routes.fk` embeds this envelope
   in each method-specific native mutation preview response.
 - [ ] **R7**: The A/B observation harness treats the envelope as part of the B
-  arm contract and now names the deployed public-gate canary as the next
-  evidence.
+  arm contract and names native HTTP persistence plus public Traefik default
+  routing as the next evidence.
 - [ ] **R8**: The idea and spec route Form docs name the trust envelope as part
   of the current mutable-route state before any no-header public flip.
 
@@ -84,7 +86,7 @@ on the Python fanout path.
 - `specs/method-specific-native-mutation-preview-bindings.md` - preview route
   binding contract.
 - `specs/native-mutation-ab-observation-gate.md` - A/B gate before public
-  mutation traffic moves.
+  mutation traffic moved into native-default invitation.
 - `specs/native-mutation-response-projection.md` - Form response projection
   after live DB mutation readback.
 
@@ -110,7 +112,7 @@ on the Python fanout path.
 - `form/form-stdlib/tests/native-mutation-trust-envelope-band.fk` returns
   `11111` across sibling kernels.
 - `api/tests/test_native_mutation_route_bindings.py::test_native_mutation_preview_handlers_emit_application_graph_sql`
-- `api/tests/test_native_mutation_ab_observation.py::test_ab_observation_case_passes_only_when_a_fanout_and_b_native_preview`
+- `api/tests/test_native_mutation_ab_observation.py::test_ab_observation_case_passes_with_native_default_preview_and_fallback`
 - `api/tests/test_native_mutation_ab_observation.py::test_ab_gate_recommends_live_db_trial_after_full_confidence`
 - `api/tests/test_ideas_router_form.py::test_ideas_router_form_names_native_mutation_carrier`
 - `api/tests/test_spec_registry_router_form.py::test_spec_registry_router_form_describes_live_and_native_carriers`
@@ -125,7 +127,7 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-trust-enve
 
 ## Out of Scope
 
-- Ordinary public traffic flip for mutable idea/spec routes.
+- Public Traefik default flip for mutable idea/spec routes.
 - Native execution of cache invalidation, parent-edge repair, contributor-key
   audit updates, or rollback receipt persistence; that proof lives in
   `specs/native-mutation-side-effects.md`.

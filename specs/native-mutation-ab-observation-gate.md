@@ -13,12 +13,13 @@ source:
   - file: docs/coherence-substrate/spec-registry-router.form
     symbols: [spec_registry_router_structure]
   - file: api/tests/test_native_mutation_ab_observation.py
-    symbols: [test_ab_observation_cases_cover_all_native_mutation_preview_routes, test_ab_observation_case_passes_only_when_a_fanout_and_b_native_preview, test_ab_gate_blocks_flip_when_any_observation_fails, test_ab_gate_recommends_live_db_trial_after_full_confidence]
+    symbols: [test_ab_observation_cases_cover_all_native_mutation_preview_routes, test_ab_observation_case_passes_with_native_default_preview_and_fallback, test_ab_gate_blocks_flip_when_any_observation_fails, test_ab_gate_recommends_live_db_trial_after_full_confidence]
 requirements:
-  - "The native mutation flip is expressed as an A/B observation gate before any public traffic moves."
-  - "Variant A proves ordinary no-header mutation requests still fan out to FastAPI."
+  - "The native mutation flip is expressed as an A/B/C observation gate before public Traefik default moves."
+  - "Variant A proves no-header mutation requests that reach the kernel accept the implicit native invitation."
   - "Variant B proves explicit preview-header mutation requests return native SQL previews."
-  - "The gate emits confidence, pass/fail observations, and a recommendation that can promote only to bounded native proof or deployed canary, not an ordinary-traffic flip."
+  - "Variant C proves X-Form-Python-Fallback fans out to FastAPI as the explicit refusal/control signal."
+  - "The gate emits confidence, pass/fail observations, and a recommendation that can promote only to persistence-preserving native HTTP execution, not a blind public Traefik default flip."
   - "Variant B carries the trust envelope with prediction residual, choice protocol markers, side-effect intents, and reversible gate state."
 done_when:
   - 'file_exists("deploy/kernel-router/mutation_ab_observation_harness.py")'
@@ -38,8 +39,9 @@ constraints:
 
 The mutation flip wants confidence, not bravery. This spec turns the public
 front-door move into an observation loop: run each mutation shape as A
-`fanout-python` and B `native-kernel` preview, score the evidence, and only
-recommend the next bounded trial when every case passes.
+no-header native-default invitation, B `native-kernel` preview, and C explicit
+`X-Form-Python-Fallback` fanout, score the evidence, and only recommend the next
+bounded trial when every case passes.
 
 ## Requirements
 
@@ -49,21 +51,28 @@ recommend the next bounded trial when every case passes.
 - [ ] **R2**: The observation corpus covers all native mutation preview shapes:
   `POST /api/ideas`, `PATCH /api/ideas/*`, `POST /api/spec-registry`,
   `PATCH /api/spec-registry/*`, and `DELETE /api/spec-registry/*`.
-- [ ] **R3**: For each case, variant A omits `X-Form-Native-Preview` and must
-  return `X-Form-Router: fanout-python` from the mock upstream with the same
-  method, path, and body.
+- [ ] **R3**: For each case, variant A omits native mutation headers and must
+  return `X-Form-Router: native-kernel`, `status=202`,
+  `native_default_invitation=true`, `required_header=null`, selected path
+  `implicit-native-invitation`, and SQL carrying the required application graph
+  table semantics.
 - [ ] **R4**: For each case, variant B sends `X-Form-Native-Preview` and must
   return `X-Form-Router: native-kernel`, `status=202`, `executes:false`, the
   expected operation/node id, and SQL carrying the required application graph
   table semantics.
-- [ ] **R5**: The gate report computes confidence and explicitly leaves
-  `ordinary_traffic_flip_performed=false` and `ordinary_traffic_flip_allowed=false`.
-- [ ] **R6**: Variant B must include a trust envelope carrying
+- [ ] **R5**: Variant C sends `X-Form-Python-Fallback` and must return
+  `X-Form-Router: fanout-python` from the mock upstream with the same method,
+  path, and body.
+- [ ] **R6**: The gate report computes confidence and carries
+  `ordinary_traffic_flip_performed=true`, `ordinary_traffic_flip_allowed=true`,
+  and `python_fallback_header=X-Form-Python-Fallback` when every case passes.
+- [ ] **R7**: Variant B must include a trust envelope carrying
   `prediction_error="carried_as_residual"`, `choice_success=1`,
   silence/protocol/fail/stop/BMA markers, side-effect intents, and reversible
   gate state.
-- [ ] **R7**: When every case passes, the next evidence names the deployed
-  `X-Form-Native-Public-Gate` canary before any no-header flip.
+- [ ] **R8**: When every case passes, the next evidence names public Traefik
+  default routing to kernel-router, native HTTP mutation persistence semantics,
+  and separate counting for explicit fallback/refusal signal.
 
 ## Research Inputs
 
@@ -77,6 +86,8 @@ recommend the next bounded trial when every case passes.
   contract.
 - `2026-06-08` - User direction: A/B test until confidence and turn the flip
   into observation before performing it.
+- `2026-06-09` - User direction: not knowing becomes an offer to know, and
+  refusal to speak native is signal.
 
 ## Files to Create/Modify
 
@@ -93,10 +104,10 @@ recommend the next bounded trial when every case passes.
 ## Acceptance Tests
 
 - `api/tests/test_native_mutation_ab_observation.py::test_ab_observation_cases_cover_all_native_mutation_preview_routes`
-- `api/tests/test_native_mutation_ab_observation.py::test_ab_observation_case_passes_only_when_a_fanout_and_b_native_preview`
+- `api/tests/test_native_mutation_ab_observation.py::test_ab_observation_case_passes_with_native_default_preview_and_fallback`
 - `api/tests/test_native_mutation_ab_observation.py::test_ab_gate_blocks_flip_when_any_observation_fails`
 - `api/tests/test_native_mutation_ab_observation.py::test_ab_gate_recommends_live_db_trial_after_full_confidence`
-- `api/tests/test_native_mutation_ab_observation.py::test_ab_observation_case_passes_only_when_a_fanout_and_b_native_preview`
+- `api/tests/test_native_mutation_ab_observation.py::test_ab_observation_case_passes_with_native_default_preview_and_fallback`
 - Manual validation: `python3 deploy/kernel-router/mutation_ab_observation_harness.py --json`
 
 ## Verification
@@ -109,7 +120,7 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-ab-observa
 
 ## Out of Scope
 
-- Public front-door routing changes.
+- Public Traefik front-door routing changes.
 - PostgreSQL execution of preview SQL.
 - Cache invalidation, parent/edge repair, resonance re-attunement, or
   contributor-key audit side effects.
@@ -135,8 +146,9 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-ab-observa
 - GAP-NMAOG6: closed by `specs/native-mutation-public-gate.md`. The native
   public gate now has a Form-live rollback receipt proof and a production
   manifest header gate.
-- GAP-NMAOG7 follow-up task: `native-mutation-deployed-public-canary`. Deploy and
-  observe `X-Form-Native-Public-Gate` before ordinary no-header traffic moves.
+- GAP-NMAOG7 follow-up task: `native-http-mutation-persistence-default`. Carry
+  production persistence semantics in the HTTP native mutation handler before
+  public Traefik no-header default routes through kernel-router.
 
 ## Risks and Assumptions
 
@@ -144,4 +156,5 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-ab-observa
   preview SQL shape. It does not prove live service semantics.
 - Confidence is strict by default: every mutation case must pass, including
   envelope checks.
-- A passing gate reports `preview_confidence_complete`, not a production flip.
+- A passing gate reports `preview_confidence_complete`, not a public Traefik
+  production default flip.

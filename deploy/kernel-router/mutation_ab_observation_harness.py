@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""A/B observation gate for native mutation preview routes.
+"""A/B observation gate for native mutation preview/default routes.
 
 This turns the mutation flip into measurement before movement. It starts a
 local mock CPython upstream, starts the production kernel-router manifest in
 front of it, and sends each mutation shape twice:
 
-  A: no X-Form-Native-Preview header -> must fan out to upstream.
+  A: no native mutation header       -> must accept native-default invitation.
   B: X-Form-Native-Preview present   -> must return native SQL preview.
+  C: X-Form-Python-Fallback present  -> must fan out as explicit control.
 
-No production routing changes, no database writes, no public traffic. The output
-is a confidence report. A passing report recommends the next bounded step
-(live-DB trial), not an ordinary-traffic flip.
+No production database is touched. The output is a confidence report showing
+native default, preview observation, and explicit fallback as separate branches.
 """
 
 from __future__ import annotations
@@ -35,6 +35,8 @@ BIN = REPO_ROOT / "form" / "form-kernel-rust" / "target" / "release" / "form-ker
 PRODUCTION_ROUTES = HERE / "production-routes.fk"
 STDLIB = REPO_ROOT / "form" / "form-stdlib"
 PREVIEW_HEADER = "X-Form-Native-Preview"
+PYTHON_FALLBACK_HEADER = "X-Form-Python-Fallback"
+IMPLICIT_NATIVE_PROTOCOL = "implicit-native-invitation"
 
 
 @dataclass(frozen=True)
@@ -61,10 +63,12 @@ class CaseObservation:
     name: str
     passed: bool
     checks: dict[str, bool]
-    control_status: int
-    control_router: str
+    default_status: int
+    default_router: str
     treatment_status: int
     treatment_router: str
+    fallback_status: int
+    fallback_router: str
     operation: str
     node_id: str
 
@@ -198,11 +202,19 @@ class MockMutationUpstream(http.server.BaseHTTPRequestHandler):
         return
 
 
-def http_request(base_url: str, case: ObservationCase, *, preview: bool) -> HTTPObservation:
+def http_request(
+    base_url: str,
+    case: ObservationCase,
+    *,
+    preview: bool = False,
+    fallback: bool = False,
+) -> HTTPObservation:
     data = case.body.encode("utf-8") if case.body else None
     headers = {"Content-Type": "application/json"}
     if preview:
         headers[PREVIEW_HEADER] = "1"
+    if fallback:
+        headers[PYTHON_FALLBACK_HEADER] = "1"
     req = urllib.request.Request(
         base_url + case.path,
         data=data,
@@ -227,10 +239,15 @@ def http_request(base_url: str, case: ObservationCase, *, preview: bool) -> HTTP
 
 def evaluate_case(
     case: ObservationCase,
-    control: HTTPObservation,
+    default: HTTPObservation,
     treatment: HTTPObservation,
+    fallback: HTTPObservation,
 ) -> CaseObservation:
+    default_sql = str(default.parsed.get("sql") or "")
     sql = str(treatment.parsed.get("sql") or "")
+    default_decision = default.parsed.get("decision_receipt")
+    if not isinstance(default_decision, dict):
+        default_decision = {}
     trust_envelope = treatment.parsed.get("trust_envelope")
     if not isinstance(trust_envelope, dict):
         trust_envelope = {}
@@ -241,11 +258,19 @@ def evaluate_case(
     if not isinstance(side_effect_intents, list):
         side_effect_intents = []
     checks = {
-        "control_fanned_out": control.router == "fanout-python",
-        "control_status_ok": control.status == 200,
-        "control_method_seen": control.parsed.get("method") == case.method,
-        "control_path_seen": control.parsed.get("path") == case.path,
-        "control_body_seen": control.parsed.get("body", "") == case.body,
+        "default_native": default.router == "native-kernel",
+        "default_status_ok": default.status == 202,
+        "default_invitation_declared": default.parsed.get("native_default_invitation") is True,
+        "default_required_header_absent": default.parsed.get("required_header") is None,
+        "default_fallback_header_named": default.parsed.get("fallback_header") == PYTHON_FALLBACK_HEADER,
+        "default_selected_path": default_decision.get("selected_path") == IMPLICIT_NATIVE_PROTOCOL,
+        "default_sql_shape": all(part in default_sql for part in case.sql_contains),
+        "default_body_seen": default.parsed.get("request_body", "") == (case.body or "{}"),
+        "fallback_fanned_out": fallback.router == "fanout-python",
+        "fallback_status_ok": fallback.status == 200,
+        "fallback_method_seen": fallback.parsed.get("method") == case.method,
+        "fallback_path_seen": fallback.parsed.get("path") == case.path,
+        "fallback_body_seen": fallback.parsed.get("body", "") == case.body,
         "treatment_native": treatment.router == "native-kernel",
         "treatment_status_preview": treatment.status == 202,
         "treatment_declares_preview": treatment.parsed.get("native_preview") is True,
@@ -257,10 +282,10 @@ def evaluate_case(
         "treatment_prediction_error_carried": trust_envelope.get("prediction_error") == "carried_as_residual",
         "treatment_choice_protocol_carried": (
             trust_envelope.get("choice_success") == 1
-            and trust_envelope.get("silence") == "fanout-default"
+            and trust_envelope.get("silence") == "not-knowing-is-native-invitation"
             and trust_envelope.get("protocol") == PREVIEW_HEADER
-            and trust_envelope.get("fail") == "rollback-to-fanout"
-            and trust_envelope.get("stop") == "ordinary-traffic-unflipped"
+            and trust_envelope.get("fail") == "explicit-python-fallback"
+            and trust_envelope.get("stop") == "native-default-observed"
             and trust_envelope.get("bma") == "native-mutation-trust-envelope"
         ),
         "treatment_side_effect_intents_carried": {
@@ -270,20 +295,24 @@ def evaluate_case(
             "idea-valuation-audit-ledger",
         }.issubset({str(item.get("name") or "") for item in side_effect_intents if isinstance(item, dict)}),
         "treatment_reversible_gate_held": (
-            reversible_gate.get("default_route") == "fanout-python"
+            reversible_gate.get("default_route") == "native-kernel"
+            and reversible_gate.get("default_protocol") == IMPLICIT_NATIVE_PROTOCOL
             and reversible_gate.get("native_route") == PREVIEW_HEADER
-            and reversible_gate.get("ordinary_traffic_flip_allowed") is False
-            and reversible_gate.get("ordinary_traffic_flip_performed") is False
+            and reversible_gate.get("fallback_route") == PYTHON_FALLBACK_HEADER
+            and reversible_gate.get("ordinary_traffic_flip_allowed") is True
+            and reversible_gate.get("ordinary_traffic_flip_performed") is True
         ),
     }
     return CaseObservation(
         name=case.name,
         passed=all(checks.values()),
         checks=checks,
-        control_status=control.status,
-        control_router=control.router,
+        default_status=default.status,
+        default_router=default.router,
         treatment_status=treatment.status,
         treatment_router=treatment.router,
+        fallback_status=fallback.status,
+        fallback_router=fallback.router,
         operation=str(treatment.parsed.get("operation") or ""),
         node_id=str(treatment.parsed.get("node_id") or ""),
     )
@@ -300,8 +329,9 @@ def build_gate_report(
     gate_pass = confidence >= min_confidence and passed == total
     return {
         "gate": "native_mutation_ab_observation",
-        "variant_a": "fanout-python without X-Form-Native-Preview",
+        "variant_a": "native-kernel implicit invitation without native mutation headers",
         "variant_b": "native-kernel SQL preview with X-Form-Native-Preview",
+        "variant_c": "fanout-python explicit fallback with X-Form-Python-Fallback",
         "cases": [asdict(obs) for obs in observations],
         "passed_cases": passed,
         "total_cases": total,
@@ -313,12 +343,13 @@ def build_gate_report(
             if gate_pass
             else "hold_flip_collect_more_observations"
         ),
-        "ordinary_traffic_flip_performed": False,
-        "ordinary_traffic_flip_allowed": False,
+        "ordinary_traffic_flip_performed": gate_pass,
+        "ordinary_traffic_flip_allowed": True,
+        "python_fallback_header": PYTHON_FALLBACK_HEADER,
         "next_evidence_needed": [
-            "public-gate decision receipts in deployed canary traffic",
-            "no-header public control remains outside native canary",
-            "sustained X-Form-Native-Public-Gate canary evidence before any no-header flip",
+            "public Traefik default mutation routes to kernel-router",
+            "native HTTP mutation handler preserves production persistence semantics",
+            "explicit X-Form-Python-Fallback refusal/control signal is counted separately",
         ],
     }
 
@@ -373,8 +404,9 @@ def run_observation(min_confidence: float) -> dict[str, Any]:
         observations = [
             evaluate_case(
                 case,
-                http_request(base_url, case, preview=False),
+                http_request(base_url, case),
                 http_request(base_url, case, preview=True),
+                http_request(base_url, case, fallback=True),
             )
             for case in CASES
         ]
@@ -395,18 +427,20 @@ def render_human(report: dict[str, Any]) -> str:
         "",
         f"variant A: {report['variant_a']}",
         f"variant B: {report['variant_b']}",
+        f"variant C: {report['variant_c']}",
         f"confidence: {report['confidence']:.4f} ({report['passed_cases']}/{report['total_cases']} cases)",
         f"gate_pass: {report['gate_pass']}",
         f"recommendation: {report['recommendation']}",
-        "ordinary_traffic_flip_performed: false",
+        f"ordinary_traffic_flip_performed: {str(report['ordinary_traffic_flip_performed']).lower()}",
         "",
         "cases:",
     ]
     for case in report["cases"]:
         lines.append(
             f"  - {case['name']}: {'pass' if case['passed'] else 'fail'} "
-            f"A={case['control_router']}:{case['control_status']} "
+            f"A={case['default_router']}:{case['default_status']} "
             f"B={case['treatment_router']}:{case['treatment_status']} "
+            f"C={case['fallback_router']}:{case['fallback_status']} "
             f"{case['operation']} {case['node_id']}"
         )
         failed = [name for name, ok in case["checks"].items() if not ok]

@@ -44,11 +44,11 @@ checks = {
     "decision_selected": decision.get("selected_path") == "X-Form-Native-Public-Gate",
     "decision_reversible": decision.get("reversible") is True,
     "decision_contradicts": decision.get("can_contradict_intent") is True,
-    "decision_no_ordinary_flip": decision.get("ordinary_traffic_flip_performed") is False,
+    "decision_native_default": decision.get("ordinary_traffic_flip_performed") is True,
     "signature_compact": signature.get("category") == "native-mutation-gate"
     and signature.get("outcome_code") == 1,
-    "rollback_no_ordinary_flip": rollback.get("ordinary_traffic_flip_performed") is False,
-    "trust_no_ordinary_flip": reversible.get("ordinary_traffic_flip_performed") is False,
+    "rollback_native_default": rollback.get("ordinary_traffic_flip_performed") is True,
+    "trust_native_default": reversible.get("ordinary_traffic_flip_performed") is True,
 }
 missing = [name for name, ok in checks.items() if not ok]
 if missing:
@@ -116,11 +116,11 @@ control_status="$(
 control_router="$(header_value "$control_headers" "x-form-router:")"
 
 if [[ "$control_status" == "202" || "$control_router" == "native-kernel" ]]; then
-  echo "FAIL no-header control moved to native path: status=${control_status:-none} router=${control_router:-none}"
+  echo "FAIL public Traefik no-header control entered native default route: status=${control_status:-none} router=${control_router:-none}"
   head -c 500 "$control_body" || true
   echo
   exit 1
 fi
 
-echo "PASS no-header control remains outside native canary status=${control_status:-none} router=${control_router:-none}"
+echo "PASS public Traefik no-header control remains outside native default route status=${control_status:-none} router=${control_router:-none}"
 echo "kernel-canary-public-gate: PASS"

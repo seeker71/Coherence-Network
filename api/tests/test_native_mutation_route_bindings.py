@@ -27,8 +27,8 @@ def test_native_mutation_preview_routes_are_method_and_header_gated():
     for row in expected_rows:
         assert row in text
 
-    assert "Requests without either header exceed the" in text
-    assert "route's pressure budget and fan out to FastAPI" in text
+    assert "implicit native invitation path" in text
+    assert "X-Form-Python-Fallback is the explicit refusal/control signal" in text
 
 
 def test_native_mutation_preview_handlers_emit_application_graph_sql():
@@ -57,14 +57,15 @@ def test_native_mutation_preview_handlers_emit_application_graph_sql():
     assert ',\\"executes\\":false' in text
     assert '\\"trust_envelope\\"' in text
     assert '\\"choice_success\\":1' in text
-    assert '\\"silence\\":\\"fanout-default\\"' in text
+    assert '\\"silence\\":\\"not-knowing-is-native-invitation\\"' in text
     assert '\\"protocol\\":\\"X-Form-Native-Preview\\"' in text
-    assert '\\"fail\\":\\"rollback-to-fanout\\"' in text
-    assert '\\"stop\\":\\"ordinary-traffic-unflipped\\"' in text
+    assert '\\"fail\\":\\"explicit-python-fallback\\"' in text
+    assert '\\"stop\\":\\"native-default-observed\\"' in text
     assert '\\"bma\\":\\"native-mutation-trust-envelope\\"' in text
     assert '\\"prediction_error\\":\\"carried_as_residual\\"' in text
     assert '\\"side_effect_intents\\"' in text
-    assert '\\"ordinary_traffic_flip_allowed\\":false' in text
+    assert '\\"ordinary_traffic_flip_allowed\\":true' in text
+    assert '\\"fallback_route\\":\\"X-Form-Python-Fallback\\"' in text
 
 
 def test_native_mutation_preview_uses_live_spec_node_id_convention():

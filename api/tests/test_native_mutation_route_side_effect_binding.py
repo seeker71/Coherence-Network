@@ -94,8 +94,8 @@ def test_ab_gate_next_evidence_is_deployed_canary_after_public_gate():
     text = _text(AB_HARNESS_PATH)
 
     assert "bind native side-effect execution carrier to mutation route runner" not in text
-    assert "public-gate decision receipts in deployed canary traffic" in text
-    assert "sustained X-Form-Native-Public-Gate canary evidence before any no-header flip" in text
+    assert "public Traefik default mutation routes to kernel-router" in text
+    assert "explicit X-Form-Python-Fallback refusal/control signal is counted separately" in text
 
 
 def test_route_forms_name_route_side_effect_binding_before_public_flip():
@@ -103,4 +103,4 @@ def test_route_forms_name_route_side_effect_binding_before_public_flip():
         assert "form/scripts/native-mutation-route-side-effects-test.sh" in text
         assert "native route side-effect binding proven" in text
         assert "application graph mutation and side-effect execution in one Form-native route runner" in text
-        assert "ordinary no-header public traffic still fans out to FastAPI" in text
+        assert "implicit native invitation" in text

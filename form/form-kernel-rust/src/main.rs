@@ -7717,6 +7717,7 @@ const KH_TAG_ROUTE_DECISION_SIGNATURE: i64 = 43011;
 const KH_TAG_ROUTE_CHOICE_SIGNATURE: i64 = 43012;
 const KH_TAG_CHANNEL_POLICY: i64 = 43013;
 const KH_TAG_METHOD_BRIDGE: i64 = 43014;
+const NATIVE_PYTHON_FALLBACK_HEADER: &str = "X-Form-Python-Fallback";
 
 #[derive(Clone, Copy, Debug)]
 struct MethodBridgePolicy {
@@ -8041,6 +8042,10 @@ fn route_path_pressure(route: &RouteSpec, path: &str) -> i64 {
 
 fn route_header_present(headers: &[(String, String)], name: &str) -> bool {
     headers.iter().any(|(h, _)| h.eq_ignore_ascii_case(name))
+}
+
+fn route_python_fallback_requested(headers: &[(String, String)]) -> bool {
+    route_header_present(headers, NATIVE_PYTHON_FALLBACK_HEADER)
 }
 
 fn route_header_pressure(route: &RouteSpec, headers: &[(String, String)]) -> i64 {
@@ -8391,19 +8396,25 @@ fn handle_request(
     // headers; the router owns all framing on those arms.
     let mut resp_content_type = String::new();
     let mut resp_headers: Vec<(String, String)> = Vec::new();
-    let route_choice = route_choice_for_request(
-        route_specs,
-        &method,
-        &path,
-        &req_headers,
-        &query_data,
-        &request_body,
-    );
-    record_router_choice_metrics(router_metrics, &route_choice);
-    if let Some(trace) = &mut k.trace {
-        trace.record_route_choice(&route_choice);
+    let route_choice = if route_python_fallback_requested(&req_headers) {
+        None
+    } else {
+        Some(route_choice_for_request(
+            route_specs,
+            &method,
+            &path,
+            &req_headers,
+            &query_data,
+            &request_body,
+        ))
+    };
+    if let Some(choice) = route_choice.as_ref() {
+        record_router_choice_metrics(router_metrics, choice);
+        if let Some(trace) = &mut k.trace {
+            trace.record_route_choice(choice);
+        }
     }
-    if let Some(selection) = route_choice.selected.as_ref() {
+    if let Some(selection) = route_choice.as_ref().and_then(|choice| choice.selected.as_ref()) {
         let route = selection.route;
         // NATIVE: served entirely in Form, no Python in the path.
         // Build the compatibility handler alist as Value::List of (key, value)
@@ -8419,7 +8430,7 @@ fn handle_request(
             &path,
             upstream,
             &metrics_snapshot,
-            Some(&route_choice),
+            route_choice.as_ref(),
         );
         handler_data.extend(
             request_data

@@ -142,21 +142,21 @@ defn spec_registry_router_structure() = {
             route_source: "form/form-stdlib/native-mutation-side-effects.fk + api/tests/test_native_mutation_side_effects_form.py",
             status: "native side-effect execution carrier proven",
             meaning: "Form-native side effects now execute parent-edge repair, contributor-key audit, cache-invalidation receipt, and rollback receipt against rollback-safe throwaway Postgres",
-            boundary: "this proves the execution carrier and does not bind side-effect execution to ordinary public traffic; route-runner binding and public-gate rollback receipt now sit above it while ordinary no-header traffic remains fanout",
+            boundary: "this proves the execution carrier and does not bind side-effect execution to public Traefik default traffic; the kernel manifest now carries native default invitation above it",
         },
         {
             path: "form/scripts/native-mutation-route-side-effects-test.sh",
             route_source: "form/form-stdlib/native-mutation-route-side-effects.fk + api/tests/test_native_mutation_route_side_effect_binding.py",
             status: "native route side-effect binding proven",
             meaning: "application graph mutation and side-effect execution in one Form-native route runner now execute and read back against rollback-safe throwaway Postgres",
-            boundary: "this binds the proven side-effect carrier to native route-runner execution; the public gate now carries rollback receipt while ordinary no-header traffic remains fanout",
+            boundary: "this binds the proven side-effect carrier to native route-runner execution; public-gate rollback receipt and implicit native invitation now sit above it",
         },
         {
             path: "form/scripts/native-mutation-public-gate-test.sh",
             route_source: "form/form-stdlib/native-mutation-public-gate.fk + deploy/kernel-router/mutation_public_gate_harness.py + api/tests/test_native_mutation_public_gate.py",
             status: "native mutation public gate proven",
             meaning: "X-Form-Native-Public-Gate selects native public-gate route rows, emits a route-local rollback receipt, and the Form gate persists public-gate rollback receipts against rollback-safe throwaway Postgres",
-            boundary: "ordinary no-header public traffic still fans out to FastAPI; the deployed header-gated public canary is the evidence path before any no-header flip",
+            boundary: "no-header traffic that reaches the kernel now accepts the implicit native invitation; X-Form-Python-Fallback is the refusal/control signal, while public Traefik no-header default waits until HTTP native persistence semantics are carried",
         },
         {
             path: "docs/coherence-substrate/native-mutation-side-effect-ledger.form",
@@ -170,7 +170,7 @@ defn spec_registry_router_structure() = {
             route_source: "form/form-stdlib/native-idea-valuation-audit-ledger.fk + api/tests/test_native_idea_valuation_audit_ledger.py",
             status: "native idea valuation audit ledger proven",
             meaning: "Form-native idea update now appends hash-chained VALUATION_CHANGE rows to audit_ledger with SYSTEM sender/receiver, field metadata, previous_hash, and hash, and the public gate exposes an idea update runner over that carrier",
-            boundary: "idea valuation audit-ledger parity is carried Form-native; ordinary no-header public traffic still fans out to FastAPI while the deployed X-Form-Native-Public-Gate canary gathers evidence",
+            boundary: "idea valuation audit-ledger parity is carried Form-native; the kernel manifest now defaults mutable routes to implicit native invitation, and public Traefik default waits for persistence-preserving HTTP native execution",
         },
     ],
     recipes: [
@@ -192,8 +192,9 @@ defn spec_registry_router_structure() = {
         "side-effect proof -> source-classified side-effect ledger",
         "missing idea valuation audit-ledger parity -> hash-chained Form-native audit_ledger carrier",
         "public-gate canary evidence -> agent-board plus satsang witnessed truth cell",
+        "fanout by silence -> implicit native invitation plus explicit X-Form-Python-Fallback signal",
     ],
-    current_gap: "GAP-SR1 moved: /api/spec-registry/source-list is kernel-first capable, graph-node-port.fk exposes native create/replace/delete, auth-port.fk preserves API-key/contributor-key decision parity, application-graph-node-port.fk emits direct graph_nodes/graph_node_revisions/graph_edges SQL, POST/PATCH/DELETE /api/spec-registry have X-Form-Native-Preview header-gated native SQL preview rows with a trust envelope carrying prediction residual, side-effect intents, choice_success=1, silence/protocol/fail/stop/BMA markers, and reversible gate state, mutation_ab_observation_harness.py turns the flip into A/B observation, application-graph-live-db-test.sh proves rollback-safe live DB execution for the Form-native application graph mutation wrappers, application-graph-response-projection-test.sh proves live graph rows project into SpecRegistryEntry and IdeaWithScore-shaped mutation responses, native-mutation-side-effects-test.sh proves parent-edge repair, contributor-key audit, cache-invalidation receipt, and rollback receipt execute natively against throwaway Postgres, native-mutation-route-side-effects-test.sh proves application graph mutation plus side-effect execution are bound in one Form-native route runner, native-mutation-public-gate-test.sh plus mutation_public_gate_harness.py prove X-Form-Native-Public-Gate selects a rollback-receipted native public gate while preserving fanout for no-header traffic, native-mutation-side-effect-ledger.form proves side-effect proof does not justify side effects by separating Python parity effects from gate receipts and missing parity, native-idea-valuation-audit-ledger-test.sh proves Python-parity hash-chained VALUATION_CHANGE audit_ledger rows for idea updates, and satsang-flip-witness-band.fk binds the public-gate canary to agent-board plus satsang witness semantics: treatment native, control fanout, rollback receipts, dissent/silence visible, ordinary traffic unflipped. Public mutable /api/spec-registry still enters through FastAPI by default while the deployed header-gated public canary gathers treatment/control evidence before any no-header flip.",
+    current_gap: "GAP-SR1 moved: /api/spec-registry/source-list is kernel-first capable, graph-node-port.fk exposes native create/replace/delete, auth-port.fk preserves API-key/contributor-key decision parity, application-graph-node-port.fk emits direct graph_nodes/graph_node_revisions/graph_edges SQL, POST/PATCH/DELETE /api/spec-registry have X-Form-Native-Preview header-gated native SQL preview rows with a trust envelope carrying prediction residual, side-effect intents, choice_success=1, silence/protocol/fail/stop/BMA markers, and reversible gate state, mutation_ab_observation_harness.py turns the flip into A/B observation, application-graph-live-db-test.sh proves rollback-safe live DB execution for the Form-native application graph mutation wrappers, application-graph-response-projection-test.sh proves live graph rows project into SpecRegistryEntry and IdeaWithScore-shaped mutation responses, native-mutation-side-effects-test.sh proves parent-edge repair, contributor-key audit, cache-invalidation receipt, and rollback receipt execute natively against throwaway Postgres, native-mutation-route-side-effects-test.sh proves application graph mutation plus side-effect execution are bound in one Form-native route runner, native-mutation-public-gate-test.sh plus mutation_public_gate_harness.py prove X-Form-Native-Public-Gate selects a rollback-receipted native public gate, no-header requests that reach the kernel accept the implicit native invitation, and X-Form-Python-Fallback fans out as explicit refusal/control signal, native-mutation-side-effect-ledger.form proves side-effect proof does not justify side effects by separating Python parity effects from gate receipts and missing parity, native-idea-valuation-audit-ledger-test.sh proves Python-parity hash-chained VALUATION_CHANGE audit_ledger rows for idea updates, and satsang-flip-witness-band.fk binds the public-gate canary to agent-board plus satsang witness semantics: treatment native, fallback refusal visible, rollback receipts, dissent/silence visible, and kernel default native. Public mutable /api/spec-registry Traefik no-header default still enters through FastAPI until the HTTP native mutation handler preserves production persistence semantics.",
 };
 
 defn spec_registry_router_reading() = {
@@ -219,7 +220,7 @@ defn spec_registry_router_reading() = {
         "form/form-stdlib/tests/satsang-flip-witness-band.fk",
     ],
     mystery: [
-        "the public mutation flip wants sustained X-Form-Native-Public-Gate canary evidence before ordinary no-header traffic moves",
+        "the public Traefik default mutation flip waits for HTTP native persistence semantics rather than a non-executing receipt response",
     ],
 };
 

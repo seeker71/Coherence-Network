@@ -85,13 +85,14 @@ def test_ideas_router_form_keeps_python_as_carrier_with_gap_named():
     assert "POST/PATCH /api/ideas now have X-Form-Native-Preview header-gated native SQL preview rows" in text
     assert "application-graph-live-db-test.sh proves rollback-safe live DB execution" in text
     assert "application-graph-response-projection-test.sh proves live graph rows project into IdeaWithScore and SpecRegistryEntry-shaped mutation responses" in text
-    assert "Public mutable DB-backed /api/ideas still enters through FastAPI by default" in text
+    assert "Public mutable DB-backed /api/ideas Traefik no-header default still enters through FastAPI" in text
     assert "trust envelope carrying prediction residual" in text
     assert "choice_success=1, silence/protocol/fail/stop/BMA markers" in text
     assert "native-mutation-side-effects-test.sh proves parent-edge repair" in text
     assert "native-mutation-route-side-effects-test.sh proves application graph mutation plus side-effect execution are bound" in text
     assert "native-mutation-public-gate-test.sh plus mutation_public_gate_harness.py prove X-Form-Native-Public-Gate" in text
-    assert "deployed header-gated public canary gathers treatment/control evidence before any no-header flip" in text
+    assert "X-Form-Python-Fallback fans out as explicit refusal/control signal" in text
+    assert "until the HTTP native mutation handler preserves production persistence semantics" in text
 
 
 def test_ideas_router_form_describes_live_router_carrier():

@@ -66,8 +66,8 @@ service code.
 - [ ] **R6**: `native-mutation-public-gate.fk` exposes
   `nmpg-run-idea-update-public-gate` over the audit-ledger carrier.
 - [ ] **R7**: Route docs and the side-effect ledger name the audit ledger as
-  carried Python parity, leaving the deployed public-gate canary as the remaining
-  ordinary-traffic boundary.
+  carried Python parity, leaving persistence-preserving HTTP native execution as
+  the remaining public Traefik default boundary.
 
 ## Research Inputs
 
@@ -78,8 +78,8 @@ service code.
   `AuditEntryType.VALUATION_CHANGE` entries for changed idea fields.
 - `api/app/services/audit_ledger_service.py` - Python `compute_entry_hash` and
   `append_entry` hash-chain shape.
-- `specs/native-mutation-public-gate.md` - reversible header gate that remains
-  no-header fanout until canary evidence.
+- `specs/native-mutation-public-gate.md` - reversible native mutation gate with
+  implicit native invitation and explicit `X-Form-Python-Fallback`.
 
 ## Files to Create/Modify
 
