@@ -1486,7 +1486,10 @@
     "groundWithUsTitle": "Für Gemeinschaften, Einzelne und Dienste überall",
     "groundWithUsBody": "Lies, was der Körper anbietet, die sieben Richtungen, um die er sich ordnet, und wie sich arbeitende Leben einweben.",
     "groundWithUsCta": "/with-us lesen →",
-    "deployLog": "Deployment-Protokoll"
+    "deployLog": "Deployment-Protokoll",
+    "groundBaliEyebrow": "Gemeinschaftsort auf Bali",
+    "groundBaliBody": "Eine direkte Tür für Landhüter zum Bali-Wohnort-Entwurf: Quellskizze, Klimalogik, geteilte Räume, private Nester, Materialien und das nächste baubare Paket.",
+    "groundBaliCta": "/silence/built durchgehen →"
   },
   "time": {
     "justNow": "gerade eben",
