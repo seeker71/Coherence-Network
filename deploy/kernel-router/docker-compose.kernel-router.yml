@@ -177,6 +177,16 @@ services:
       traefik.http.routers.coherence-api-kernel-status.tls.certresolver: "letsencrypt"
       traefik.http.routers.coherence-api-kernel-status.priority: "1185"
       traefik.http.routers.coherence-api-kernel-status.service: "coherence-api-kernel-bml-front-door"
+      traefik.http.routers.coherence-api-agent-tasks-active.rule: "Host(`api.coherencycoin.com`) && Method(`GET`) && Path(`/api/agent/tasks/active`)"
+      traefik.http.routers.coherence-api-agent-tasks-active.entrypoints: "websecure"
+      traefik.http.routers.coherence-api-agent-tasks-active.tls.certresolver: "letsencrypt"
+      traefik.http.routers.coherence-api-agent-tasks-active.priority: "1184"
+      traefik.http.routers.coherence-api-agent-tasks-active.service: "coherence-api-kernel-bml-front-door"
+      traefik.http.routers.coherence-api-agent-tasks-activity.rule: "Host(`api.coherencycoin.com`) && Method(`GET`) && Path(`/api/agent/tasks/activity`)"
+      traefik.http.routers.coherence-api-agent-tasks-activity.entrypoints: "websecure"
+      traefik.http.routers.coherence-api-agent-tasks-activity.tls.certresolver: "letsencrypt"
+      traefik.http.routers.coherence-api-agent-tasks-activity.priority: "1184"
+      traefik.http.routers.coherence-api-agent-tasks-activity.service: "coherence-api-kernel-bml-front-door"
       traefik.http.services.coherence-api-kernel-bml-front-door.loadbalancer.server.port: "8080"
 
 # The api service is defined in the base docker-compose.yml. This overlay only
