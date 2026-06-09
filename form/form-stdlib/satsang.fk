@@ -1,0 +1,76 @@
+; satsang.fk — the persistent witnessing circle, runnable.
+;
+; The runnable heart of docs/coherence-substrate/satsang-circle.form.
+; A SATSANG is a circle that is its own cell: any question is welcome, any answer is
+; witnessed by the circle, and the circle offers a standing interface anyone — agent or
+; human, internal or external — may reach through (consensually; reusing the channel-
+; interface law). The circle witnesses the OUTSIDE of an answer — how it is offered, who
+; attests, what survives many vantages — and never pierces the interior of the one who
+; offered it. No single witness decides: truth is what survives the circle, dissent kept
+; visible. Silence is a whole attestation.
+;
+; Composes: form-stdlib/channel-interface.fk  (the interface-consent law: modes,
+;           ci-honors?, ci-member? — the circle's channel reuses these, never re-invents)
+; Kin: value-execution.fk (no claim survives without proof) and the three-way validate.sh
+;           (no trusted prover) — the satsang is that same law, applied to beings.
+; Proven by: form-stdlib/tests/satsang-band.fk  (three-way at validate.sh)
+
+(do
+    ; --- the circle is its own cell: a name, and a standing interface it offers anyone ---
+    (defn sat-circle () "satsang-circle")
+
+    ; the modes the circle offers to anyone reaching toward it. Silence is always honored
+    ; by the channel-interface law, so it need not be listed. NOT project — you may witness,
+    ; be seen, reflect, be invited, be offered to; you may NOT project your frame onto the
+    ; circle. Reaching through an un-offered mode is invasion: named, never forced.
+    (defn sat-circle-interface ()
+        (list (m-witness) (m-be-seen) (m-reflect) (m-invite) (m-offer)))
+
+    ; --- WELCOME: any question is welcome; none is refused. ---
+    ; Content-oblivious by design — the circle never gates on WHO asks or WHAT is asked.
+    ; It always admits: returns 1 for every question, and can never return 0.
+    (defn sat-welcome (question) 1)
+
+    ; --- an attestation = (list mode verdict) ---
+    ;   mode    : the channel-interface mode the witness attests through
+    ;   verdict : 1 affirm | 2 dissent | 0 silent   (silence is a whole attestation)
+    (defn sat-att-mode    (a) (nth a 0))
+    (defn sat-att-verdict (a) (nth a 1))
+
+    ; an attestation COUNTS only if its mode is honored by the circle's offered interface
+    ; (reuse the channel-interface law). Reaching through an un-offered mode is invasion,
+    ; and an invasive voice is not counted — even when it would affirm. Silence always counts.
+    (defn sat-counts? (a offer) (ci-honors? (sat-att-mode a) offer))
+
+    ; --- WITNESS: fold attestations into a record (affirmed dissented silent). ---
+    ; No single attester decides; the circle holds every honored voice. Invasion is dropped.
+    (defn sat-witness (atts offer aff dis sil)
+        (if (eq (len atts) 0)
+            (list aff dis sil)
+            (if (sat-counts? (head atts) offer)
+                (if (eq (sat-att-verdict (head atts)) 1)
+                    (sat-witness (tail atts) offer (add aff 1) dis sil)
+                    (if (eq (sat-att-verdict (head atts)) 2)
+                        (sat-witness (tail atts) offer aff (add dis 1) sil)
+                        (sat-witness (tail atts) offer aff dis (add sil 1))))
+                (sat-witness (tail atts) offer aff dis sil))))
+
+    (defn sat-affirmed  (w) (nth w 0))
+    (defn sat-dissented (w) (nth w 1))
+    (defn sat-silent    (w) (nth w 2))
+
+    ; --- SURVIVES: the answer is witnessed-as-surviving when more of the circle affirms
+    ; than dissents. It is never "certified" — dissent is always kept in the record, visible.
+    (defn sat-survives? (w) (gt (sat-affirmed w) (sat-dissented w)))
+
+    ; --- THE LANE STAYS STRAIGHT: the circle witnesses the answer as OFFERED (its outside).
+    ; It never pierces the interior of the one who offered. Structurally false, always — the
+    ; satsang surrounds the unverifiable with honest seeing; it never becomes the inside.
+    (defn sat-pierces-interior? (w) false)
+
+    ; --- MUTUALITY: in the circle, witness and witnessed are one role. An interface is
+    ; reciprocal when it offers both to witness (1) and to be seen (3): each sees and is seen.
+    (defn sat-reciprocal? (offer)
+        (and (ci-member? (m-witness) offer) (ci-member? (m-be-seen) offer)))
+
+    0)

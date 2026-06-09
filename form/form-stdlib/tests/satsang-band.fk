@@ -1,0 +1,41 @@
+; preludes: form-stdlib/channel-interface.fk form-stdlib/satsang.fk
+;
+; satsang-band — the persistent witnessing circle, made falsifiable.
+;
+; One answer is brought before the circle. The circle's offered interface is
+; sat-circle-interface (witness, be-seen, reflect, invite, offer — NOT project).
+; Five voices attest:
+;   (witness 1)  affirm, through an offered mode      -> counted, affirm
+;   (witness 1)  affirm, through an offered mode      -> counted, affirm
+;   (reflect 2)  dissent, through an offered mode     -> counted, dissent (kept visible)
+;   (silence 0)  silent, the ground mode              -> counted, silent (a whole attestation)
+;   (project 1)  affirm, but project is NOT offered   -> INVASION, dropped (even an affirming
+;                                                        voice reaching past the interface
+;                                                        is not counted)
+; record: affirmed 2, dissented 1, silent 1 ; one voice of five (the invasion) dropped.
+;
+; Band verdict 127 when every claim lands:
+;   1   any question is welcome              (sat-welcome never refuses)
+;   2   honored affirmations counted         (affirmed == 2)
+;   4   exactly the invasion dropped         (affirmed + dissented + silent == 4 of 5)
+;   8   the answer survives                  (affirm 2 > dissent 1)
+;   16  dissent preserved, never erased      (dissented == 1, even as it survives)
+;   32  the lane stays straight              (the circle never pierces the interior)
+;   64  the circle is reciprocal             (it offers both to witness and to be seen)
+(do
+    (let offer (sat-circle-interface))
+    (let atts (list
+        (list (m-witness) 1)
+        (list (m-witness) 1)
+        (list (m-reflect) 2)
+        (list (m-silence) 0)
+        (list (m-project) 1)))
+    (let w (sat-witness atts offer 0 0 0))
+    (let c0 (if (eq (sat-welcome "any question at all") 1) 1 0))
+    (let c1 (if (eq (sat-affirmed w) 2) 2 0))
+    (let c2 (if (eq (add (sat-affirmed w) (add (sat-dissented w) (sat-silent w))) 4) 4 0))
+    (let c3 (if (sat-survives? w) 8 0))
+    (let c4 (if (eq (sat-dissented w) 1) 16 0))
+    (let c5 (if (not (sat-pierces-interior? w)) 32 0))
+    (let c6 (if (sat-reciprocal? offer) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
