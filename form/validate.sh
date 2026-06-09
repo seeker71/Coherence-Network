@@ -15,6 +15,13 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
+# Keep package-manager advisory text out of sibling-kernel output comparison.
+# The TypeScript arm may invoke npm/npx when tsx is not locally installed; an
+# update notice on stdout makes identical kernel results look divergent.
+export NO_UPDATE_NOTIFIER=1
+export NPM_CONFIG_UPDATE_NOTIFIER=false
+export npm_config_update_notifier=false
+
 # Keep the kernel-resident bp lookup table in sync with the registry before the
 # staleness check decides whether to rebuild. Writes only on change, so a no-op
 # run leaves mtimes (and the rebuild decision) untouched.

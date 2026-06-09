@@ -1,0 +1,35 @@
+; preludes: form-stdlib/branch-choice-order.fk
+;
+; branch-choice-order-band — learned branch ordering from short + long receipts.
+;
+; Verdict 511 when every claim lands:
+;   1   short-term wins over stale long confidence after recent failures
+;   2   choose-any keeps the cheap unordered lane available
+;   4   low core alignment gates out a hot branch
+;   8   success updates short-term success
+;   16  failure updates short-term failure
+;   32  promotion is ready at the threshold
+;   64  promotion moves short success into long success
+;   128 promotion moves short failure into long failure
+;   256 empty best choice is honest none
+(do
+    (let stale (bco-candidate "stale" 0 2 6 0 95 95))
+    (let fresh (bco-candidate "fresh" 3 0 1 0 80 80))
+    (let hot-but-unaligned (bco-candidate "misaligned" 9 0 9 0 40 95))
+    (let candidates (list stale fresh hot-but-unaligned))
+    (let won (bco-choose-best candidates))
+    (let any (bco-choose-any candidates))
+    (let after-success (bco-note-success fresh))
+    (let after-fail (bco-note-fail fresh))
+    (let promoted (bco-promote fresh))
+
+    (let c0 (if (str_eq (bco-path won) "fresh") 1 0))
+    (let c1 (if (str_eq (bco-path any) "stale") 2 0))
+    (let c2 (if (eq (bco-score hot-but-unaligned) 0) 4 0))
+    (let c3 (if (eq (bco-short-success after-success) 4) 8 0))
+    (let c4 (if (eq (bco-short-fail after-fail) 1) 16 0))
+    (let c5 (if (eq (bco-promote-ready? fresh 3) 1) 32 0))
+    (let c6 (if (eq (bco-long-success promoted) 4) 64 0))
+    (let c7 (if (eq (bco-long-fail promoted) 0) 128 0))
+    (let c8 (if (str_eq (bco-choose-best-path (empty)) "none") 256 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 c8)))))))))
