@@ -34,6 +34,7 @@
 ;   /api/utils/idea_grounding_summary  int grounding signals over two parallel CSV
 ;                                       scalar-lists (422 on len mismatch)
 ;   /api/attention/kernel-runtime     live kernel router metrics -> attention axes
+;   /api/utils/kernel_status          native kernel status, no Python authority
 ;   /api/ideas/router-structure       Form-native ideas route structure reading
 ;   /api/ideas/source-index           Form-native read of ideas/INDEX.md
 ;   /api/ideas/source-portfolio       Form-native ideas/INDEX.md -> IdeaPortfolioResponse
@@ -1514,6 +1515,29 @@
             "}")))))))))))))))))))))))
 
 ; ===========================================================================
+; /api/utils/kernel_status
+;   native status route. The previous FastAPI row described whether the bridge
+;   could reach the kernel. This route is served by the kernel itself, so the
+;   answer names native authority directly and carries live router measurements
+;   from the same request context as /api/attention/kernel-runtime.
+; ===========================================================================
+
+(defn route_kernel_status (q)
+  (str_concat_all (list
+    "{\"active\":\"native-kernel\""
+    ",\"inline_available\":false"
+    ",\"binary_available\":true"
+    ",\"available\":true"
+    ",\"binary_path\":\"form-kernel-rust\""
+    ",\"router\":\"native-kernel\""
+    ",\"python_authority\":false"
+    ",\"native_route_count\":" (value_str (str_to_int (assoc "__router_native_route_count__" q)))
+    ",\"total_requests\":" (value_str (str_to_int (assoc "__router_total_requests__" q)))
+    ",\"native_requests\":" (value_str (str_to_int (assoc "__router_native_requests__" q)))
+    ",\"fanout_requests\":" (value_str (str_to_int (assoc "__router_fanout_requests__" q)))
+    ",\"runtime\":\"native-kernel\"}")))
+
+; ===========================================================================
 ; /api/ideas/router-structure
 ;   native structure route for the high-level ideas router Form expression.
 ;   This is the first ideas-family row that the kernel-router can dispatch
@@ -2506,6 +2530,7 @@ section [form.route] {
     (list "/api/utils/idea_grounding_summary" route_idea_grounding_summary)
     (list "/api/utils/concept_match_score"     route_concept_match_score)
     (list "/api/attention/kernel-runtime"  route_attention_kernel_runtime)
+    (list "/api/utils/kernel_status"       route_kernel_status)
     (list "/api/ideas/router-structure"    route_ideas_router_structure)
     (list "/api/ideas/source-index"        route_ideas_source_index)
     (list "/api/ideas/source-portfolio"    route_ideas_source_portfolio)

@@ -21,9 +21,9 @@ What it proves per promoted route (representative + edge params):
     in the path) is BYTE-IDENTICAL to the CPython oracle's response body, AND
     carries Content-Type: application/json (a route promoted from the upstream
     returns the same body AND type its FastAPI twin did).
-  - the live-metric route (/api/attention/kernel-runtime) answers natively with
-    the expected metric body shape (not byte-compared, because router counters
-    are intentionally live process state).
+  - the live-metric route (/api/attention/kernel-runtime) and the status route
+    (/api/utils/kernel_status) answer natively with expected body shape (not
+    byte-compared, because router counters are intentionally live process state).
   - a non-promoted path (/api/health) FANS OUT (X-Form-Router: fanout-python) and
     relays the real app's response — promotion is per-route, the tail still flows.
   - LATENCY: native-served route latency vs the SAME route fanned out to CPython
@@ -261,6 +261,7 @@ PROMOTED: list[tuple[str, list[str]]] = [
 # A path the manifest does NOT promote -> must fan out to CPython.
 FANOUT_PATH = "/api/health"
 ATTENTION_PATH = "/api/attention/kernel-runtime"
+STATUS_PATH = "/api/utils/kernel_status"
 
 
 def free_port() -> int:
@@ -474,6 +475,31 @@ def main() -> int:
               f"X-Form-Router={router}  (live route metrics projected in Form)")
         if not attention_ok:
             failures.append((ATTENTION_PATH, "native-attention", st, body[:240], router, ctype))
+
+        # Kernel status should be answered by the kernel itself. The old FastAPI
+        # bridge row may still exist for fan-out/dev, but the promoted route must
+        # expose native authority directly.
+        st, body, hdrs = http_get(kbase + STATUS_PATH)
+        router = hdrs.get("x-form-router")
+        ctype = (hdrs.get("content-type") or "").split(";")[0].strip()
+        try:
+            status = json.loads(body)
+        except json.JSONDecodeError:
+            status = {}
+        status_ok = (
+            st == 200
+            and router == "native-kernel"
+            and ctype == "application/json"
+            and status.get("active") == "native-kernel"
+            and status.get("router") == "native-kernel"
+            and status.get("python_authority") is False
+            and status.get("available") is True
+            and isinstance(status.get("native_route_count"), int)
+        )
+        print(f"\n  [{'OK' if status_ok else 'FAIL'}] NATIVE {STATUS_PATH} -> {st} "
+              f"X-Form-Router={router}  (kernel status served without Python authority)")
+        if not status_ok:
+            failures.append((STATUS_PATH, "native-status", st, body[:240], router, ctype))
 
         # Fan-out still flows: a non-promoted path is proxied to CPython.
         st, body, hdrs = http_get(kbase + FANOUT_PATH)
