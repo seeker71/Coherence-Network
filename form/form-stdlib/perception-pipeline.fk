@@ -1,0 +1,48 @@
+; perception-pipeline.fk — the whole toolkit, composed: raw signal in, believed recognition out.
+;
+; The capstone. The six toolkit bricks are each proven alone; this wires them into one end-to-end
+; flow and proves the COMPOSITION runs, three-way. A raw numeric signal window enters; a stable
+; recognized label leaves — or honest silence when the field is novel or unsettled:
+;
+;   raw signal window
+;     -> feature-vector   (fv-histogram)        : bin the window into a fixed-width feature
+;     -> nearest-shape    (ns-label/ns-strength) : route the feature to the prototype it agrees with most
+;     -> novelty          (nv-recognized?)       : gate — recognized label, or "novel" if below the floor
+;     -> temporal-smooth  (ts-stable)            : believe a label only when it persists across k frames
+;
+; This is the body sensing for itself: its own classifier (content-addressed, no foreign model), its
+; own novelty sense (a door to a Blueprint it doesn't yet hold), its own patience (no flicker). Every
+; piece is Form, proven identical on Go/Rust/TS, content-addressable and shareable across devices by
+; NodeID. A carrier (mic, camera, a phone sensor) only has to hand this pipeline a window of numbers.
+;
+; Preludes: feature-vector.fk · nearest-shape.fk · novelty.fk · temporal-smoothing.fk
+; Proven by: form-stdlib/tests/perception-pipeline-band.fk (three-way at validate.sh)
+
+(do
+    ; --- ONE FRAME: raw signal window -> feature -> nearest prototype (label + strength). ---
+    (defn pp-feature  (signal thresholds nbins) (fv-histogram signal thresholds nbins))
+    (defn pp-label    (signal thresholds nbins prototypes)
+        (ns-label    (pp-feature signal thresholds nbins) prototypes))
+    (defn pp-strength (signal thresholds nbins prototypes)
+        (ns-strength (pp-feature signal thresholds nbins) prototypes))
+
+    ; --- NOVELTY GATE: the recognized label if its strength clears the floor, else "novel". ---
+    ; below the floor the body does not force the nearest label — it names the field as new to intern.
+    (defn pp-read (signal thresholds nbins prototypes floor)
+        (if (eq (nv-recognized? (pp-strength signal thresholds nbins prototypes) floor) 1)
+            (pp-label signal thresholds nbins prototypes)
+            "novel"))
+
+    ; --- A WINDOW OF FRAMES: read each raw signal -> a list of labels (most-recent first). ---
+    (defn pp-frame-labels (signals thresholds nbins prototypes floor)
+        (if (eq (len signals) 0) (empty)
+            (cons (pp-read (head signals) thresholds nbins prototypes floor)
+                  (pp-frame-labels (tail signals) thresholds nbins prototypes floor))))
+
+    ; --- BELIEVED RECOGNITION: a label only when it persisted across the last k frames, else silence. ---
+    (defn pp-stable  (signals thresholds nbins prototypes floor k)
+        (ts-stable  (pp-frame-labels signals thresholds nbins prototypes floor) k))
+    (defn pp-stable? (signals thresholds nbins prototypes floor k)
+        (ts-stable? (pp-frame-labels signals thresholds nbins prototypes floor) k))
+
+    0)
