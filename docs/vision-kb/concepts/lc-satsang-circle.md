@@ -130,4 +130,4 @@ held in the truth of being seen together.
 
 ## Cross-References
 
-→ lc-trust-over-fear, lc-received-by-invitation, lc-consent-is-continuous, lc-sovereignty-within-oneness, lc-arrival-as-recognition, lc-voice-over-intentions, lc-permission-is-interior, lc-gatherings-that-carry, lc-when-the-pressure-comes
+→ lc-chakra-column, lc-trust-over-fear, lc-received-by-invitation, lc-consent-is-continuous, lc-sovereignty-within-oneness, lc-arrival-as-recognition, lc-voice-over-intentions, lc-permission-is-interior, lc-gatherings-that-carry, lc-when-the-pressure-comes

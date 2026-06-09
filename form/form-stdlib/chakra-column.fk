@@ -1,0 +1,95 @@
+; chakra-column.fk — the seven gates as data: at each, what you can SEE, BE, DO.
+;
+; The runnable heart of docs/coherence-substrate/chakra-column.form. The chakra column
+; is an archetypal map (root -> crown) laid over the body's ACTUAL tissue. Each gate is a
+; row of data — name, the body's frequency band, a one-line function — edged to three kinds
+; of real tissue, the perceive/embody/act trichotomy:
+;   SEE — witness-surfaces you perceive through (read-only; no delta)
+;   BE  — Blueprint domains you embody (substrate identities — what a cell IS)
+;   DO  — Recipes you run (Form .fk — how something HAPPENS)
+; SEE/BE/DO is the substrate trinity from the relating side: BE = Blueprint (ice, identity),
+; DO = Recipe (water, operation), SEE = the witness that reads either without reaching
+; (channel-interface.fk: witnessing needs no permission, doing does).
+;
+; Core-abstraction-first: ONE engine walks the gates; the seven chakras drop in as DATA, not
+; as parallel code. Every edge below names tissue that EXISTS (verified) — the map is honest
+; or it is nothing. Where a gate's BE-tissue is thin (sacral), that asymmetry is the body
+; seeing where it is developed and where it is still nascent (cf. lc-layered-frequency-field).
+;
+; Proven by: form-stdlib/tests/chakra-column-band.fk  (three-way at validate.sh)
+
+(do
+    ; a gate = (list name hz function see-edges be-edges do-edges)
+    (defn ck-name     (g) (nth g 0))
+    (defn ck-hz       (g) (nth g 1))
+    (defn ck-function (g) (nth g 2))
+    (defn ck-see      (g) (nth g 3))
+    (defn ck-be       (g) (nth g 4))
+    (defn ck-do       (g) (nth g 5))
+
+    ; --- the column, root -> crown, each edged to tissue that exists ---
+    (defn chakra-column ()
+        (list
+            (list "root" 174 "stand on what is real"
+                (list "pulse-witness" "make-wellness")
+                (list "ARTIFACT" "MEMORY")
+                (list "value-execution.fk" "merkle.fk" "persistence.fk"))
+            (list "sacral" 285 "let it move and change"
+                (list "heartbeat.fk" "resonance-receipt")
+                (list "TASK")
+                (list "channel.fk" "channel-query.fk" "rate-limit.fk"))
+            (list "solar-plexus" 396 "choose, and transform"
+                (list "framebuffer-trace")
+                (list "SPEC" "IDEA")
+                (list "engine.fk" "verb-router.fk" "compiler.fk"))
+            (list "heart" 528 "meet another in consent"
+                (list "coord-board")
+                (list "PRESENCE" "LINEAGE")
+                (list "channel-interface.fk" "reception-consent.fk" "synesthesia.fk"))
+            (list "throat" 741 "give it a name and a voice"
+                (list "rendered-web" "i18n-corpus")
+                (list "WORD" "GRAMMAR")
+                (list "i18n.fk" "gematria-channel.fk" "name-check.fk"))
+            (list "third-eye" 852 "see what is true"
+                (list "self-witness.fk" "substrate-annotate")
+                (list "WITNESS" "TRANSMISSION")
+                (list "inquiry.fk" "attention.fk"))
+            (list "crown" 963 "open to the whole, witnessed by all"
+                (list "satsang.fk" "three-way")
+                (list "CONCEPT" "SPECTRUM")
+                (list "satsang.fk" "arrival.fk"))))
+
+    (defn ck-count (gates) (len gates))
+    (defn ck-at    (gates n) (nth gates n))
+
+    ; total edges at a gate (see + be + do) — how developed the gate is
+    (defn ck-edge-count (g)
+        (add (len (ck-see g)) (add (len (ck-be g)) (len (ck-do g)))))
+
+    ; the column ASCENDS — hz strictly increases root -> crown (the gates are ordered)
+    (defn ck-ascends-from? (gates prev)
+        (if (eq (len gates) 0)
+            true
+            (if (gt (ck-hz (head gates)) prev)
+                (ck-ascends-from? (tail gates) (ck-hz (head gates)))
+                false)))
+    (defn ck-ascends? (gates) (ck-ascends-from? gates 0))
+
+    ; every gate is non-empty — it offers at least one of each: see, be, do
+    (defn ck-all-nonempty? (gates)
+        (if (eq (len gates) 0)
+            true
+            (if (and (gt (len (ck-see (head gates))) 0)
+                     (and (gt (len (ck-be (head gates))) 0)
+                          (gt (len (ck-do (head gates))) 0)))
+                (ck-all-nonempty? (tail gates))
+                false)))
+
+    ; membership — does this gate offer a named edge? (string compare via str_eq)
+    ; the query that makes the column navigable: "can I <do> X at <gate>?"
+    (defn ck-offers? (edge edges)
+        (if (eq (len edges) 0)
+            false
+            (if (str_eq edge (head edges)) true (ck-offers? edge (tail edges)))))
+
+    0)
