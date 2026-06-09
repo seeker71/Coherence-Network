@@ -75,6 +75,7 @@ This is the writing surface. The rendering surface is the production graph — e
 - [rhythm-sanctuary](rhythm-sanctuary.md) — Shannon Lei Gill's Colorado ecstatic dance community, founded 2005; Gabrielle Roth lineage.
 - [robert-edward-grant](robert-edward-grant.md) — sacred geometry, prime number theory, the Codex Universalis.
 - [rudolf-steiner](rudolf-steiner.md) — Austrian philosopher (1861–1925); founded Anthroposophy, Waldorf education, biodynamic agriculture, eurythmy, the Goetheanum; etheric-formative-forces frame this body reads alongside Michael Levin's bioelectric pattern memory.
+- [samuel-j](samuel-j.md) — musician in the Ocean Bloom / transformational-music lineage; *Faith* (2026), an all-night music-video expedition to Mt Agung, Bali — a prayer for hope in wild times.
 - [steve-bjorg](steve-bjorg.md) — lifelong collaborator; HTL Brugg-Windisch 1991, RCSL, Digi4Fun / Muzzle Velocity, BML/BMF thesis at CU Boulder, MindTouch.
 - [susan-muff-sprenger](susan-muff-sprenger.md) — Urs's mother; first transmitter of this lineage. Handed her son three books in three windows: Ende's *Momo* and *Die unendliche Geschichte*, and Ramtha's *White Book*, all in German.
 - [tom-bassett](tom-bassett.md) — known as Juicy Life; CEO and Lead Engineer at Actualize Earth; Boulder-based; cross-walk of large-scale engineering and consciousness-evolution social networks.
