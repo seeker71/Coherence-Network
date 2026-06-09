@@ -1,0 +1,49 @@
+; cell-sync.fk — a cell learned on one device reaches another, content-addressed, consent-honored.
+;
+; The runnable heart of docs/coherence-substrate/cell-sync-transport.form. That teaching named the
+; shape — offer -> diff -> transfer-missing -> verify — as BUILDABLE; this is the diff/verify/consent
+; LOGIC made real and proven, the part that is pure Form. (The wire frames over a socket/HTTP carrier,
+; and peer discovery, remain carrier-work — named in the teaching, not claimed here.)
+;
+; The one gift the substrate is born with that git/IPFS engineer: a cell's ADDRESS is its STRUCTURE,
+; so structurally-equal cells are address-equal across devices. Sync therefore moves addresses, not
+; blobs: the sender OFFERS addresses; the receiver keeps only the ones it lacks (the want-set); each
+; arrival is VERIFIED by re-addressing (the recomputed address must equal the offered one — no trust
+; in the channel, the same no-trusted-prover grain validate.sh holds across kernels); and a device
+; OFFERS only what its human has opened (consent). Addresses are modeled here as labels (strings).
+;
+; Proven by: form-stdlib/tests/cell-sync-band.fk (three-way at validate.sh)
+
+(do
+    ; --- HAVE?: does this store already hold this address? (content-addressed membership) ---
+    (defn cs-has? (addr have)
+        (if (eq (len have) 0) 0
+            (if (str_eq addr (head have)) 1 (cs-has? addr (tail have)))))
+
+    ; --- DIFF: the want-set = offered addresses the receiver does NOT already hold. ---
+    ; structurally-equal cells are address-equal, so a re-learned cell is already had — free dedup,
+    ; nothing transfers for it. Only the genuinely-absent addresses cross the wire.
+    (defn cs-missing (offered have)
+        (if (eq (len offered) 0) (empty)
+            (if (eq (cs-has? (head offered) have) 1)
+                (cs-missing (tail offered) have)
+                (cons (head offered) (cs-missing (tail offered) have)))))
+    (defn cs-want-count (offered have) (len (cs-missing offered have)))
+
+    ; --- VERIFY: a transferred item = (offered-addr recomputed-addr). Authentic iff they match —
+    ; re-addressing the payload reproduces the address it was offered under, or it is dropped. ---
+    (defn cs-authentic? (item) (if (str_eq (nth item 0) (nth item 1)) 1 0))
+    (defn cs-accept-count (items)            ; how many arrivals survive re-addressing
+        (if (eq (len items) 0) 0
+            (add (cs-authentic? (head items)) (cs-accept-count (tail items)))))
+
+    ; --- CONSENT: only addresses the human has opened for sharing may be offered (channel-interface
+    ; is the full law; this is its filter over the offer-set — a device shares what it permits, no more). ---
+    (defn cs-shareable (mine permitted)
+        (if (eq (len mine) 0) (empty)
+            (if (eq (cs-has? (head mine) permitted) 1)
+                (cons (head mine) (cs-shareable (tail mine) permitted))
+                (cs-shareable (tail mine) permitted))))
+    (defn cs-share-count (mine permitted) (len (cs-shareable mine permitted)))
+
+    0)
