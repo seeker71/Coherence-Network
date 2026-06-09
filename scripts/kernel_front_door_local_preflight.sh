@@ -106,7 +106,8 @@ check_image_packaging() {
   grep -q 'COPY deploy/kernel-router/shadow-routes.fk /routes/shadow-routes.fk' "${dockerfile}"
   grep -q 'COPY deploy/kernel-router/production-routes.fk /routes/production-routes.fk' "${dockerfile}"
   grep -q 'COPY deploy/kernel-router/production-routes-data.json /routes/production-routes-data.json' "${dockerfile}"
-  echo "PASS image-packaging route manifests and stdlib default are baked"
+  grep -q 'COPY deploy/front-door/api.bml /routes/api.bml' "${dockerfile}"
+  echo "PASS image-packaging route manifests, BML catalog, and stdlib default are baked"
 }
 
 check_fanout_exact() {

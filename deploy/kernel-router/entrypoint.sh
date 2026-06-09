@@ -57,6 +57,7 @@ MODE="selected routes manifest"
 case "$ROUTES" in
   */shadow-routes.fk) MODE="shadow mode: empty routes -> all fan-out" ;;
   */production-routes.fk) MODE="production route manifest: native routes + fan-out tail" ;;
+  */api.bml) MODE="BML front-door route catalog: source-compiled native routes + fan-out tail" ;;
 esac
 
 echo "kernel-router: serve --host $HOST --port $PORT --routes $ROUTES --upstream $UPSTREAM ($MODE)"

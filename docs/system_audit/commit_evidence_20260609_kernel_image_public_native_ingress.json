@@ -1,0 +1,117 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/kernel-image-public-native-ingress-20260609",
+  "commit_scope": "Bind the public kernel-image proposal POST path to a BML front-door kernel-router service. The route catalog is baked into the router image, Hostinger starts a path-specific BML service, deploy-local proof checks the native proposal response, and public verification now fails if the endpoint fans out to Python.",
+  "files_owned": [
+    "Dockerfile.kernel-router",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/kernel-router/entrypoint.sh",
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/kernel_front_door_local_preflight.sh",
+    "scripts/verify_web_api_deploy.sh",
+    "specs/kernel-image-proposal-public-interface.md",
+    "specs/INDEX.md",
+    "docs/system_audit/commit_evidence_20260609_kernel_image_public_native_ingress.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "bash -n deploy/hostinger/auto-deploy.sh deploy/kernel-router/entrypoint.sh scripts/kernel_front_door_local_preflight.sh scripts/verify_web_api_deploy.sh",
+      "cd form/form-kernel-rust && cargo build --release",
+      "python3 scripts/validate_spec_quality.py --file specs/kernel-image-proposal-public-interface.md",
+      "docker compose -f /tmp/coherence-base-compose.yml -f deploy/kernel-router/docker-compose.kernel-router.yml config",
+      "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --port 19123 --routes ../../deploy/front-door/api.bml --stdlib ../form-stdlib",
+      "curl -sS -i -X POST http://127.0.0.1:19123/api/substrate/kernel-image/proposals -H 'Accept: application/json' -H 'Content-Type: application/json' --data-binary @/tmp/kernel-image-minimal-request.json",
+      "scripts/kernel_front_door_local_preflight.sh",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260609_kernel_image_public_native_ingress.json",
+      "jq -e . docs/system_audit/model_executor_runs.jsonl >/dev/null",
+      "git fetch origin main && git rebase origin/main",
+      "git diff --check"
+    ],
+    "notes": "Prompt guide and wellness passed in a clean dedicated worktree that started on origin/main at 79107642, then rebased onto origin/main at a049029f after native HTTP mutation persistence merged. The production deployment was aligned, but a public POST probe before this slice proved the endpoint still fanned out to Python. The overlay renders with both main's config-backed kernel-router service and this slice's kernel-router-bml-front-door, ROUTES_FILE=/routes/api.bml, and the path-specific Traefik rule for POST /api/substrate/kernel-image/proposals. Local BML front-door proof returned X-Form-Router=native-kernel, proposal_status=accepted-preview, handler=api_substrate_kernel_image_proposals, python_authority=false, and mutation_performed=false. Existing kernel front-door preflight still passes against production-routes.fk."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until this branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Public deployment verification will run after merge. The verifier now includes the kernel-image proposal native-route check and will fail if the endpoint is served by Python fanout."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local source, shell, compose-render, BML route, preflight, spec, generated-index, evidence, JSONL, and diff checks pass. Push, PR, CI, merge, deploy, and public verification remain."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A public POST to /api/substrate/kernel-image/proposals is routed to a BML front-door kernel service and must return native-kernel provenance plus native_observation.python_authority=false.",
+    "public_endpoints": [
+      "POST /api/substrate/kernel-image/proposals"
+    ],
+    "test_flows": [
+      "Before this slice, production accepted the proposal through the compatibility API but returned no X-Form-Router and no native_observation, proving Python fanout.",
+      "Local BML front-door route returns X-Form-Router=native-kernel with proposal_status=accepted-preview, proof_passed=true, handler=api_substrate_kernel_image_proposals, python_authority=false, and mutation.performed=false.",
+      "Hostinger deploy-local proof posts the same minimal BML source inside kernel-router-bml-front-door and greps for native-kernel provenance and python_authority=false.",
+      "Public deploy verification now posts to the endpoint and fails if X-Form-Router is missing, not native-kernel, or if the BML proof fields are missing."
+    ]
+  },
+  "idea_ids": [
+    "idea-realization-engine",
+    "kernel-core-self"
+  ],
+  "spec_ids": [
+    "kernel-image-proposal-public-interface"
+  ],
+  "task_ids": [
+    "kernel-image-public-native-ingress-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "python-authority-correction",
+        "public-interface-trust-question"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Dockerfile.kernel-router copies deploy/front-door/api.bml to /routes/api.bml and keeps STDLIB_DIR available for source compilation.",
+    "deploy/kernel-router/docker-compose.kernel-router.yml defines kernel-router-bml-front-door with ROUTES_FILE=/routes/api.bml and a higher-priority Traefik rule for Host(api.coherencycoin.com) && Method(POST) && Path(/api/substrate/kernel-image/proposals).",
+    "deploy/hostinger/auto-deploy.sh starts kernel-router and kernel-router-bml-front-door, then locally proves the BML route returns X-Form-Router: native-kernel and python_authority=false.",
+    "scripts/verify_web_api_deploy.sh defines check_kernel_image_native_proposal and runs it as part of the public deployment contract.",
+    "Local direct BML proof returned native-kernel provenance and api_substrate_kernel_image_proposals handler for the kernel-image proposal POST path.",
+    "scripts/kernel_front_door_local_preflight.sh still passes, proving the existing production manifest canary surface remains intact."
+  ],
+  "change_files": [
+    "Dockerfile.kernel-router",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/kernel-router/entrypoint.sh",
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/kernel_front_door_local_preflight.sh",
+    "scripts/verify_web_api_deploy.sh",
+    "specs/kernel-image-proposal-public-interface.md",
+    "specs/INDEX.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}
