@@ -1,0 +1,144 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/bmf-choice-path-perf-20260609",
+  "commit_scope": "Confirm BMF choice policy boundaries and speed the indexed object-rule path by skipping duplicate candidate checks after an exact or wildcard bucket has already proven eligibility.",
+  "files_owned": [
+    "form/form-stdlib/engine.fk",
+    "kernels/BMF_BML_COMPILER_PICTURE.md",
+    "docs/system_audit/commit_evidence_20260609_bmf_choice_path_perf.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "git fetch origin main && git rebase origin/main",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/choice-receipt.fk form-stdlib/bmf-choice-receipts.fk form-stdlib/tests/bmf-choice-receipt-band.fk",
+      "cd form && /usr/bin/time -p ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-runtime.fk",
+      "cd form && /usr/bin/time -p ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/tests/python-bmf-full-file-band.fk",
+      "cd form && /usr/bin/time -p ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-bmf-compile-source-proof.fk",
+      "cd form && mkdir -p ../.cache/bmf-choice-path-perf && bash -o pipefail -c '/usr/bin/time -p ./validate.sh 2>&1 | tee ../.cache/bmf-choice-path-perf/validate_full_20260609.txt'"
+    ],
+    "summary": "The BMF choice surface was already correctly split: literal-only object alternatives can use choose_any, while indexed compiler rule dispatch uses choose_best. The implementation now avoids rechecking object-rule-index-entry-candidate? for entries in an exact/wild bucket selected by apply-object-rule-buckets; ordered and unknown fallback paths keep candidate checks. Rebased focused sibling-kernel proofs pass.",
+    "timing_observations": {
+      "bmf_choice_receipt_band": {
+        "before_real_seconds": 19.38,
+        "after_real_seconds": 19.56,
+        "result": "67108863; 1 ok, 0 divergent",
+        "interpretation": "neutral; small band dominated by validator orchestration"
+      },
+      "bml_compiler_runtime": {
+        "before_real_seconds": 20.30,
+        "after_rebased_real_seconds": 19.04,
+        "delta_percent": -6.21,
+        "result": "131012; 1 ok, 0 divergent"
+      },
+      "python_bmf_full_file": {
+        "before_real_seconds": 40.53,
+        "after_rebased_real_seconds": 33.16,
+        "delta_percent": -18.18,
+        "result": "23100; 1 ok, 0 divergent",
+        "interpretation": "largest wall-clock signal; user/sys movement is smaller, so keep measuring before treating this as stable throughput"
+      },
+      "bml_thesis_bmf_compile_source_proof": {
+        "before_real_seconds": 31.44,
+        "after_rebased_real_seconds": 32.23,
+        "delta_percent": 2.51,
+        "result": "16777215; 1 ok, 0 divergent",
+        "interpretation": "roughly neutral/slightly slower in this sample"
+      },
+      "full_form_suite": {
+        "after_rebased_real_seconds": 4921.28,
+        "user_seconds": 2499.37,
+        "sys_seconds": 1096.68,
+        "result": "398 ok, 0 divergent",
+        "artifact": ".cache/bmf-choice-path-perf/validate_full_20260609.txt"
+      }
+    },
+    "known_limitations": [
+      "The timing commands are end-to-end sibling-kernel validation samples, not isolated kernel microbenchmarks.",
+      "The exploratory bench mode was not used as pass evidence because TypeScript bench mode reported a pre-existing sum1000 mismatch.",
+      "Raw direct-kernel trace/timing attempts were not used as pass evidence because the source-compile workload shape differs from validate.sh's prepared-source path."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until this branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No public deploy attempted yet for this internal Form kernel hot-path change."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local focused proof and performance samples pass on the rebased branch. Commit, PR, CI, merge, and post-deploy verification remain pending."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "BMF/BML compiler rule dispatch keeps choose_best semantics while exact/wild indexed buckets execute known-candidate entries without a second candidate predicate pass. Literal-only object choices remain choose_any through the existing object-choice-direct-safe? boundary.",
+    "public_endpoints": [
+      "internal Form sibling kernels"
+    ],
+    "test_flows": [
+      "BMF choice receipt proof returns 67108863 across Go, Rust, and TypeScript.",
+      "BML compiler runtime proof returns 131012 across Go, Rust, and TypeScript.",
+      "Python BMF full-file proof returns 23100 across Go, Rust, and TypeScript.",
+      "BML thesis BMF compile-source proof returns 16777215 across Go, Rust, and TypeScript."
+    ]
+  },
+  "idea_ids": [
+    "bmf-choice-compiler-speed",
+    "kernel-core-trust-primitives",
+    "branch-prediction-feedback"
+  ],
+  "spec_ids": [
+    "bmf-bml-compiler-picture",
+    "form-kernel-roadmap"
+  ],
+  "task_ids": [
+    "bmf-choice-path-perf-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-priority",
+        "performance-demand"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "research",
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "kernels/BMF_BML_COMPILER_PICTURE.md::Choice Receipts",
+    "kernels/BMF_BML_COMPILER_PICTURE.md::Branch Prediction Reading For Choice Ordering",
+    "form/form-stdlib/bmf-choice-receipts.fk::bmf-object-choice-policy",
+    "form/form-stdlib/bmf-choice-receipts.fk::bmf-indexed-rule-set-choice-policy",
+    "form/form-stdlib/engine.fk::apply-object-rule-known-candidate-entries",
+    "Yeh/Patt two-level adaptive branch prediction: https://american.cs.ucdavis.edu/academic/readings/papers/yeh91twolevel.pdf",
+    "McFarling combined predictors: https://ftp.zx.net.nz/pub/archive/ftp.digital.com/pub/DEC/WRL/research-reports/WRL-TN-36.pdf",
+    "Jimenez/Lin perceptron branch prediction: https://www.cs.utexas.edu/~lin/papers/hpca01.pdf",
+    "Seznec/Michaud TAGE: https://jilp.org/vol8/v8paper1.pdf"
+  ],
+  "change_files": [
+    "form/form-stdlib/engine.fk",
+    "kernels/BMF_BML_COMPILER_PICTURE.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix"
+}

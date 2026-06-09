@@ -217,6 +217,49 @@ cd form
 
 Expected result: `67108863` with `1 ok, 0 divergent`.
 
+### Branch Prediction Reading For Choice Ordering
+
+The branch-prediction literature points to a staged policy rather than one global
+reordering rule:
+
+- [Yeh and Patt's two-level adaptive predictor](https://american.cs.ucdavis.edu/academic/readings/papers/yeh91twolevel.pdf)
+  shows that short runtime history and per-pattern outcome tables can adapt
+  without an offline profile.
+- [McFarling's combined predictors](https://ftp.zx.net.nz/pub/archive/ftp.digital.com/pub/DEC/WRL/research-reports/WRL-TN-36.pdf)
+  show that different branches favor different predictors, so a chooser can beat
+  a single fixed predictor.
+- [Jimenez and Lin's perceptron predictor](https://www.cs.utexas.edu/~lin/papers/hpca01.pdf)
+  shows that long-history correlations can help when the branch behavior is
+  linearly separable, and that confidence is useful evidence rather than just a
+  yes/no answer.
+- [Seznec and Michaud's TAGE predictor](https://jilp.org/vol8/v8paper1.pdf)
+  shows the value of multiple geometric history lengths plus tags to reduce
+  aliasing between unrelated histories.
+
+For BMF choice, the semantic boundary comes first:
+
+- `choose_any` remains valid only for alternatives that are order-insensitive,
+  such as literal-only object choices proven by `object-choice-direct-safe?`.
+- `choose_best` remains the default for compiler rule dispatch, cut/stop
+  semantics, ordered fallbacks, and any branch where reordering can change the
+  observed parse.
+- Learned ordering can only move among semantics-equivalent candidates. The
+  receipt should record policy, context key, candidate count, selected path,
+  success/fail/silence, skipped count, certainty, and elapsed/pressure evidence.
+- Short-term feedback should be cheap and reactive, for example a small
+  saturating counter or EMA keyed by choice signature and leading literal. Long-
+  term feedback should receive promoted summaries only after repeated confidence,
+  with decay when the short-term window disagrees.
+- The open questions are aliasing between grammar contexts, phase changes across
+  source corpora, observation overhead, and how much evidence is enough before a
+  learned preference becomes trusted.
+
+The first safe optimization is below the policy layer: after the object-rule
+index has selected an exact or wildcard bucket, every entry in that bucket is
+already a candidate for the current first object, so the hot path can execute
+those entries directly and keep candidate re-checking for ordered/unknown
+fallbacks and receipt visibility.
+
 ## Bootstrap Boundary
 
 The target compiler code is BML. Form and s-expression code are only acceptable as the minimum bootstrap/proof carrier needed until the BML compiler can load, compile, and verify itself.
