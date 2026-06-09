@@ -2038,7 +2038,7 @@ impl Value {
         match self {
             Value::Null => "null".to_string(),
             Value::Int(n) => n.to_string(),
-            Value::Float(f) => format_float_python(*f),
+            Value::Float(f) => format_float(*f),
             Value::Str(s) => s.to_string(),
             Value::Bool(b) => {
                 if *b {
@@ -2398,31 +2398,28 @@ fn source_native_scan_text(src: &str, lex: &SourceNativeLexicon) -> Value {
     Value::List(out.into())
 }
 
-// format_float_python — render an f64 the way CPython's `print(float)`
-// renders it. Rust's default `{}` format drops the trailing zero for
-// integer-valued floats (`1.0` → `"1"`); CPython keeps it (`"1.0"`).
-// The parity suite compares stdout strings, so we match Python's format
-// at the kernel's render boundary. NaN and ±Inf also follow CPython.
-fn format_float_python(f: f64) -> String {
+// format_float — the canonical kernel float display, shared THREE-WAY. JS /
+// ECMAScript `String(number)` style: integer-valued floats render WITHOUT a
+// trailing ".0" (`1.0` → `"1"`), NaN → "NaN", ±Inf → "Infinity"/"-Infinity".
+// This matches Go's `core.FormatFloatJS` (strconv.FormatFloat 'g' -1 64), the
+// TS kernel's native `String()`, AND the Go API's JSON float output — so
+// Go=Rust=TS agree on every float at the parity boundary (whole-number floats
+// were the one latent divergence: Rust alone rendered Python-style "3.0").
+// One standard, chosen for the JS majority (2 of 3 kernels + the API already
+// did it), so Rust was the only kernel to move. Rust's `{}` is shortest
+// round-trip, matching strconv 'g' -1 / JS String() for every finite value.
+fn format_float(f: f64) -> String {
     if f.is_nan() {
-        return "nan".to_string();
+        return "NaN".to_string();
     }
     if f.is_infinite() {
         return if f > 0.0 {
-            "inf".to_string()
+            "Infinity".to_string()
         } else {
-            "-inf".to_string()
+            "-Infinity".to_string()
         };
     }
-    // Rust's `{}` produces "1", "1.5", "0.125", "5e-10" etc. Add a trailing
-    // ".0" iff the rendered form has neither a "." nor an exponent — that
-    // matches CPython's repr/print behaviour for integer-valued floats.
-    let s = format!("{}", f);
-    if s.contains('.') || s.contains('e') || s.contains('E') {
-        s
-    } else {
-        format!("{}.0", s)
-    }
+    format!("{}", f)
 }
 
 // round_ndigits_decimal — CPython `round(x, n)` for a finite double, n >= 0.
@@ -2887,7 +2884,7 @@ impl Kernel {
         // companion str_concat needs for building a response document: int_to_str
         // truncates a Float to an int (its `_ => as_int()` arm), and str_concat's
         // as_str() panics on a non-Str. value_str routes through Value::display(),
-        // so a Float renders Python-style (format_float_python: 0.8125, 1.0), an
+        // so a Float renders Python-style (format_float: 0.8125, 1.0), an
         // Int as its digits, a List as [a, b], a Bool as true/false. This is the
         // float-correct leaf a JSON-emitting native handler concatenates into the
         // response body (e.g. production-routes.fk's /api/utils handlers). One
@@ -3198,7 +3195,7 @@ impl Kernel {
                 "false".to_string().into()
             }),
             Value::Null => Value::Str("null".to_string().into()),
-            Value::Float(f) => Value::Str(format_float_python(*f).into()),
+            Value::Float(f) => Value::Str(format_float(*f).into()),
             _ => Value::Str(args[0].as_int().to_string().into()),
         });
         self.register_native("str_to_int", cat_method(), |_, _, args| {
@@ -3970,11 +3967,11 @@ impl Kernel {
                 }
                 (Value::Str(a), Value::Float(b)) => {
                     let mut s = a.to_string();
-                    s.push_str(&format_float_python(*b));
+                    s.push_str(&format_float(*b));
                     Value::Str(s.into())
                 }
                 (Value::Float(a), Value::Str(b)) => {
-                    let mut s = format_float_python(*a);
+                    let mut s = format_float(*a);
                     s.push_str(b);
                     Value::Str(s.into())
                 }
