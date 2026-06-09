@@ -1,0 +1,43 @@
+; preludes: form-stdlib/classifier-eval.fk
+;
+; classifier-eval-band — test a classifier against labeled truth; pass only on a proven bar.
+;
+; A ten-sample held-out set runs through the classifier; nine predictions match the actual label,
+; one (cat predicted, dog actual) is wrong:
+;   dog/dog cat/cat bird/bird dog/dog frog/frog cat/cat dog/dog bird/bird cat/dog frog/frog
+;   -> 9 correct, 1 wrong, 10 total.
+; Bar: min-correct 8, max-wrong 2. 9 >= 8 AND 2 >= 1 -> the classifier PASSES. A separate weak set
+; of three (two correct, one wrong) cannot clear min-correct 8 -> it FAILS the same bar. Counts are
+; exact: no ratio, no float, the same integers on every kernel.
+;
+; Verdict 63 when every claim lands:
+;   1   correct counted exactly      (ce-correct == 9)
+;   2   wrong counted exactly        (ce-wrong == 1)
+;   4   total is the set size        (ce-total == 10)
+;   8   a strong set passes the bar  (ce-passes? == 1)
+;   16  a weak set fails the bar     (ce-passes? == 0)
+;   32  one wrong pair is not a hit  (ce-hit? on cat/dog == 0)
+(do
+    (let evalset (list
+        (list "dog"  "dog")
+        (list "cat"  "cat")
+        (list "bird" "bird")
+        (list "dog"  "dog")
+        (list "frog" "frog")
+        (list "cat"  "cat")
+        (list "dog"  "dog")
+        (list "bird" "bird")
+        (list "cat"  "dog")
+        (list "frog" "frog")))
+    (let weak (list
+        (list "dog" "dog")
+        (list "cat" "cat")
+        (list "bird" "frog")))
+    (let miss (nth evalset 8))
+    (let c0 (if (eq (ce-correct evalset) 9) 1 0))
+    (let c1 (if (eq (ce-wrong evalset) 1) 2 0))
+    (let c2 (if (eq (ce-total evalset) 10) 4 0))
+    (let c3 (if (eq (ce-passes? evalset 8 2) 1) 8 0))
+    (let c4 (if (eq (ce-passes? weak 8 2) 0) 16 0))
+    (let c5 (if (eq (ce-hit? miss) 0) 32 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))

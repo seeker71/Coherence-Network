@@ -1,0 +1,31 @@
+; preludes: form-stdlib/novelty.fk
+;
+; novelty-band — recognition's other face, made falsifiable: known is carried, novel is interned.
+;
+; nearest-shape handed us a similarity for each of two fields, floor 50 (the recognition cutoff):
+;   a field most like the known cell "birdsong" at similarity 80 -> clears the floor: KNOWN
+;   a field most like the known cell "thunder"  at similarity 30 -> below the floor:  NOVEL
+;   a field sitting exactly on the floor, similarity 50, nearest "rain" -> boundary counts as KNOWN
+; The known decision carries the matched label and its strength; the novel decision blanks the label
+; (there is no honest match) so the substrate mints a fresh cell; the intern-new gate fires on novel
+; only. A weak best-match is a discovery, not a forced label — the floor refuses the hallucination.
+;
+; Verdict 63 when every claim lands:
+;   1   high similarity is recognized      (nv-recognized? 80 == 1, nv-novel? 80 == 0)
+;   2   the known decision carries label    (nv-decide 80 -> verdict "known", label "birdsong")
+;   4   low similarity is novel            (nv-novel? 30 == 1)
+;   8   the novel decision blanks the label (nv-decide 30 -> verdict "novel", label "")
+;   16  the boundary at the floor is known  (nv-recognized? 50 == 1, decide -> "known", score 50)
+;   32  intern-new fires on novel only      (intern-new? novel == 1, intern-new? known == 0)
+(do
+    (let floor 50)
+    (let known (nv-decide 80 "birdsong" floor))
+    (let novel (nv-decide 30 "thunder" floor))
+    (let edge  (nv-decide 50 "rain" floor))
+    (let c0 (if (and (eq (nv-recognized? 80 floor) 1) (eq (nv-novel? 80 floor) 0)) 1 0))
+    (let c1 (if (and (str_eq (nv-verdict known) "known") (str_eq (nv-label known) "birdsong")) 2 0))
+    (let c2 (if (eq (nv-novel? 30 floor) 1) 4 0))
+    (let c3 (if (and (str_eq (nv-verdict novel) "novel") (str_eq (nv-label novel) "")) 8 0))
+    (let c4 (if (and (eq (nv-recognized? 50 floor) 1) (and (str_eq (nv-verdict edge) "known") (eq (nv-score edge) 50))) 16 0))
+    (let c5 (if (and (eq (nv-intern-new? novel) 1) (eq (nv-intern-new? known) 0)) 32 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))

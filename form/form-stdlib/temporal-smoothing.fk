@@ -1,0 +1,69 @@
+; temporal-smoothing.fk — debounce a noisy reading stream so a live sense doesn't flicker.
+;
+; recognition-router.fk fuses a circle of models in ONE instant; shared-sensing.fk fuses a circle
+; of devices in one instant. This is the THIRD axis: the same body across TIME. A live classifier
+; emits a label every frame; raw, it stutters — "dog" "dog" "cat" "dog" — one bad frame and the
+; UI flickers. Debounce: a label is ACCEPTED only when it PERSISTS across the last k frames. One
+; leaked frame inside the window withholds the verdict; the body stays honestly silent (the empty
+; label "") rather than commit to a reading that hasn't held. This is the satsang law on the
+; time-axis: a single dissenting frame is enough to refuse the quorum.
+;
+; A recent-labels list is most-recent-first: (head) is this frame, deeper is older. k is the
+; window — how many consecutive frames a label must hold to be trusted. Labels are strings, so
+; sameness is str_eq; the window count k is an integer; nothing here floats.
+;
+; THE NO-SUB SHAPE: core has no sub and no list-grower (no cons). So we never MATERIALIZE the
+; window into a new list — we WALK the recent list in place with an ASCENDING index that stops at
+; (eq i k), counting UP to k rather than down from it. ts-window-same? is the spine: it walks the
+; first k frames of recent, demanding each str_eq the head, and (because it must reach i==k) also
+; proves the window FILLED — a too-short stream runs out of list before i==k and reads unstable.
+;
+; HONEST LANE: this only confirms PERSISTENCE, not correctness. A wrong label held for k frames is
+; still accepted — temporal stability is a debounce, not a ground-truth check. Pair it with
+; recognition-router (per-frame confidence) and shared-sensing (cross-device quorum) for a reading
+; that is confident, witnessed, AND stable. A window longer than the stream (k > len) can never
+; fill, so it is honestly unstable — never silently true on too little history.
+;
+; Proven by: form-stdlib/tests/temporal-smoothing-band.fk (three-way at validate.sh)
+
+(do
+    ; --- ALL-SAME?: 1 if every label in a (real, flat) list str_eq the head, else 0. ---
+    ; an empty list is vacuously same (1). This reads a window once it is already a list (e.g. a
+    ; literal recent window); the live spine that avoids materializing is ts-window-same? below.
+    (defn ts-same-rest? (labels first)
+        (if (eq (len labels) 0)
+            1
+            (if (str_eq (head labels) first)
+                (ts-same-rest? (tail labels) first)
+                0)))
+    (defn ts-all-same? (labels)
+        (if (eq (len labels) 0)
+            1
+            (ts-same-rest? labels (head labels))))
+
+    ; --- WINDOW-SAME?: walk the first k frames of recent in place against a fixed target. ---
+    ; ascending index i stops at (eq i k) = window FILLED and all matched -> 1. If recent runs out
+    ; first (a short stream) we never reach i==k -> 0. One mismatch short-circuits -> 0.
+    (defn ts-window-same-loop (recent target k i)
+        (if (eq i k)
+            1
+            (if (eq (len recent) 0)
+                0
+                (if (str_eq (head recent) target)
+                    (ts-window-same-loop (tail recent) target k (add i 1))
+                    0))))
+    (defn ts-window-same? (recent k)
+        (if (eq (len recent) 0)
+            0
+            (ts-window-same-loop recent (head recent) k 0)))
+
+    ; --- STABLE?: 1 when the last k frames all hold the head label (filled AND uniform). ---
+    (defn ts-stable? (recent k) (ts-window-same? recent k))
+
+    ; --- STABLE: the head label when stable, else "" — honest silence until the reading holds. ---
+    (defn ts-stable (recent k)
+        (if (eq (ts-stable? recent k) 1)
+            (head recent)
+            ""))
+
+    0)
