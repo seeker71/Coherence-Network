@@ -90,6 +90,30 @@ def load_form_routes() -> dict[str, NativeRoute]:
             source_file=str(PRODUCTION_ROUTES.relative_to(ROOT)),
             handler=handler,
         )
+    method_route_pattern = re.compile(
+        r'\(kh-route\s+"[^"]+"\s+"([A-Z]+)"\s+"(/api/[^"]+)"\s+\d+\s+"([^"]+)"\s+"([^"]*)"\s+\d+\)'
+    )
+    for method, endpoint, handler, required_header in method_route_pattern.findall(text):
+        routes[_route_key(method, endpoint)] = NativeRoute(
+            endpoint=endpoint,
+            method=method,
+            grammar="Form",
+            source_file=str(PRODUCTION_ROUTES.relative_to(ROOT)),
+            handler=handler,
+            required_header=required_header,
+        )
+    raw_route_pattern = re.compile(
+        r'\(list\s+43004\s+"[^"]+"\s+"([A-Z]+)"\s+"(/api/[^"]+)"\s+\d+\s+"([^"]+)"\s+"([^"]*)"\s+\d+\)'
+    )
+    for method, endpoint, handler, required_header in raw_route_pattern.findall(text):
+        routes[_route_key(method, endpoint)] = NativeRoute(
+            endpoint=endpoint,
+            method=method,
+            grammar="Form",
+            source_file=str(PRODUCTION_ROUTES.relative_to(ROOT)),
+            handler=handler,
+            required_header=required_header,
+        )
     return routes
 
 
