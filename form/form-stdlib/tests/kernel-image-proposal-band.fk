@@ -1,0 +1,10 @@
+; tests/kernel-image-proposal-band.fk -- public proposal trust membrane.
+;
+; preludes: form-stdlib/core.fk form-stdlib/kernel-image-proposal.fk
+;
+; Band verdict: 11111 when the public kernel-image proposal shape names a
+; candidate image, accepts proof only as preview, refuses mutation, carries the
+; residual, and exposes source/image hashes.
+
+(do
+    (kip-test))

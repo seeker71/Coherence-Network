@@ -1,0 +1,120 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/kernel-image-proposal-20260609",
+  "commit_scope": "Add a preview-only public kernel-image proposal interface. The public substrate route accepts BML source, derives a candidate KERNEL-CORE-IMAGE summary, returns source/image hashes, count deltas, proof trace, and a trust envelope, and carries apply intent without mutating production.",
+  "files_owned": [
+    "api/app/routers/substrate.py",
+    "api/tests/test_substrate_kernel_image_proposals.py",
+    "form/form-stdlib/kernel-image-proposal.fk",
+    "form/form-stdlib/tests/kernel-image-proposal-band.fk",
+    "specs/kernel-image-proposal-public-interface.md",
+    "specs/INDEX.md",
+    "api/tests/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_20260609_kernel_image_proposal_public_interface.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "scripts/agent-coord.sh claim \"kernel-image-proposal public proof route\"",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/context_budget.py --token-budget 50000 api/app/routers/substrate.py api/tests/test_substrate_kernel_image_proposals.py form/form-stdlib/kernel-image-proposal.fk form/form-stdlib/tests/kernel-image-proposal-band.fk specs/kernel-image-proposal-public-interface.md",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-image-proposal.fk form-stdlib/tests/kernel-image-proposal-band.fk",
+      "cd api && python3 -m pytest -q tests/test_substrate_kernel_image_proposals.py",
+      "cd api && python3 -m ruff check app/routers/substrate.py tests/test_substrate_kernel_image_proposals.py",
+      "python3 scripts/validate_spec_quality.py --file specs/kernel-image-proposal-public-interface.md",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check",
+      "git fetch origin main && git rebase origin/main",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "make wellness"
+    ],
+    "notes": "Dedicated worktree prompt gate passed on codex/kernel-image-proposal-20260609. Initial wellness passed local maps, source maps, symbol resolution, locale parity, Form ontology, and Form blueprint checks; public endpoint probes reported transient 404s during the read but the command exited successfully and named kernel-native API promotion as the growth edge. The plain rebase command failed because task changes were intentionally unstaged; the branch was then cleanly rebased with --autostash on the named codex branch. Focused API tests passed 3/3. Sibling Form validation returned 11111 with 1 ok, 0 divergent. Ruff, spec quality, generated-index check, diff check, followthrough guard, local PR guard, and post-edit wellness passed. Local PR guard reported ready_for_push=True and local_preflight=pass. Post-edit wellness reported deploy aligned at 7bd233cc and kernel-native API breathing."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until this branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No deploy attempted before PR review and merge."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Focused proof, route tests, lint, spec validation, generated-index check, diff check, evidence validation, rebase freshness via --autostash repair, local PR guard, followthrough guard, and wellness pass. Local proof is ready_for_push=True, but commit, push, PR, remote CI, merge, and deploy verification remain pending."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The public interface can now receive BML kernel-core source and return an observable candidate kernel image proposal without production mutation.",
+    "public_endpoints": [
+      "POST /api/substrate/kernel-image/proposals"
+    ],
+    "test_flows": [
+      "Canonical kernel-core BML source returns accepted-preview with source hash equal to canonical source hash, zero count deltas, candidate KERNEL-CORE-IMAGE counts 8/15/6, image hash, trust envelope, and mutation_performed=false.",
+      "requested_action=apply is carried in the response but mutation.allowed=false and mutation.performed=false.",
+      "Unproven source returns rejected-preview with failed proof trace and no candidate image.",
+      "Form sibling proof returns 11111 for image naming, proof preview acceptance, mutation refusal, carried residual, and source/image hash exposure."
+    ]
+  },
+  "idea_ids": [
+    "idea-realization-engine",
+    "kernel-core-self"
+  ],
+  "spec_ids": [
+    "kernel-image-proposal-public-interface"
+  ],
+  "task_ids": [
+    "kernel-image-proposal-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "public-self-update-protocol"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/app/routers/substrate.py defines KernelImageProposalRequest, KernelImageProposalOut, and propose_kernel_image.",
+    "api/tests/test_substrate_kernel_image_proposals.py proves accepted canonical source, apply-intent refusal, and rejected unproven source.",
+    "form/form-stdlib/kernel-image-proposal.fk defines the preview-only trust envelope and mutation gate in Form.",
+    "form/form-stdlib/tests/kernel-image-proposal-band.fk returns 11111 across sibling kernels.",
+    "Focused validation: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-image-proposal.fk form-stdlib/tests/kernel-image-proposal-band.fk -> 11111; 1 ok, 0 divergent.",
+    "Focused validation: cd api && python3 -m pytest -q tests/test_substrate_kernel_image_proposals.py -> 3 passed.",
+    "Lint: cd api && python3 -m ruff check app/routers/substrate.py tests/test_substrate_kernel_image_proposals.py -> All checks passed.",
+    "Local guard: python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main -> ready_for_push=True; local_preflight=pass.",
+    "Followthrough guard: python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict -> stale_codex_prs=0."
+  ],
+  "change_files": [
+    "api/app/routers/substrate.py",
+    "api/tests/test_substrate_kernel_image_proposals.py",
+    "form/form-stdlib/kernel-image-proposal.fk",
+    "form/form-stdlib/tests/kernel-image-proposal-band.fk",
+    "specs/kernel-image-proposal-public-interface.md",
+    "specs/INDEX.md",
+    "api/tests/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}

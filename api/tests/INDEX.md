@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 262
+**Total files**: 263
 
 | File | Purpose |
 |---|---|
@@ -226,6 +226,7 @@
 | [test_substrate_form_streaming.py](test_substrate_form_streaming.py) | Streaming parser — `tokenize_iter`, `tokenize_chunks`, `parse_chunks`. |
 | [test_substrate_form_string_interp.py](test_substrate_form_string_interp.py) | String interpolation and multiline strings. |
 | [test_substrate_grammar.py](test_substrate_grammar.py) | Tests for substrate-resident grammar — the BMF-shaped seed. |
+| [test_substrate_kernel_image_proposals.py](test_substrate_kernel_image_proposals.py) | Public kernel-image proposal preview contract. |
 | [test_substrate_kernel_parity.py](test_substrate_kernel_parity.py) | Substrate ↔ kernel parity — the kernel reaches the lattice and agrees. |
 | [test_substrate_numeric_schema.py](test_substrate_numeric_schema.py) | Numeric schema sentinels for the coherence-substrate vocabulary. |
 | [test_substrate_parallel_eval.py](test_substrate_parallel_eval.py) | Parallel kernel execution — Python and Form agree on every supported expression. |
