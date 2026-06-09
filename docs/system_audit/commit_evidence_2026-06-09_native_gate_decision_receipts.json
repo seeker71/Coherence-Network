@@ -1,0 +1,124 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/native-gate-decision-receipts-20260609",
+  "commit_scope": "Add compact per-request decision receipts to the native mutation public gate so the gate is observable before any no-header flip.",
+  "files_owned": [
+    "api/tests/test_native_mutation_public_gate.py",
+    "deploy/kernel-router/mutation_public_gate_harness.py",
+    "deploy/kernel-router/production-routes.fk",
+    "docs/system_audit/commit_evidence_2026-06-09_native_gate_decision_receipts.json",
+    "form/form-stdlib/native-mutation-public-gate.fk",
+    "form/form-stdlib/tests/native-mutation-public-gate-band.fk",
+    "specs/native-mutation-public-gate.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/native-idea-valuation-audit-ledger.fk form-stdlib/native-mutation-public-gate.fk form-stdlib/tests/native-mutation-public-gate-band.fk",
+      "form/scripts/native-mutation-public-gate-test.sh",
+      "python3 deploy/kernel-router/mutation_public_gate_harness.py --json",
+      "cd api && python3 -m pytest -q tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py",
+      "python3 -m py_compile deploy/kernel-router/mutation_public_gate_harness.py",
+      "python3 scripts/validate_spec_quality.py --file specs/native-mutation-public-gate.md",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check"
+    ],
+    "summary": "The public-gate response now carries decision_receipt alongside the rollback receipt and trust envelope. The receipt names the candidate paths (fanout, preview, public gate), selected path, success outcome, protocol, operation, node, ordinary_traffic_flip_performed=false, reversible rollback, can_contradict_intent=true, and a compact signature. The public-gate harness now fails unless each public-gate request and both-header priority request carries that coherent receipt. Form validation returns 11111111, the throwaway Postgres public-gate fixture returns 111111111, the HTTP harness passes 5/5 cases at confidence 1.0, focused pytest passes 23 tests, and spec/index/whitespace checks pass.",
+    "known_limitations": [
+      {
+        "scope": "ordinary public mutations",
+        "observed": "No ordinary no-header mutation traffic moved. No-header traffic still fans out to FastAPI."
+      },
+      {
+        "scope": "deployed canary",
+        "observed": "The next proof boundary is deployed X-Form-Native-Public-Gate traffic that emits public-gate decision receipts before any no-header flip."
+      },
+      {
+        "scope": "production database",
+        "observed": "No production application database writes were attempted."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "No public deploy attempted in this commit. Production remains aligned to the current main until this branch lands."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A header-gated native public mutation response now exposes a compact decision receipt that makes the gate's selected branch and rollback posture observable.",
+    "public_endpoints": [
+      "POST /api/ideas",
+      "PATCH /api/ideas/{idea_id}",
+      "POST /api/spec-registry",
+      "PATCH /api/spec-registry/{spec_id}",
+      "DELETE /api/spec-registry/{spec_id}",
+      "Header X-Form-Native-Public-Gate"
+    ],
+    "test_flows": [
+      "Form sibling-kernel band proves the decision receipt contract.",
+      "HTTP harness proves public-gate and both-header priority responses carry coherent decision receipts.",
+      "No-header control observations remain fanout-python."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local receipt proof is complete; deployed public-gate canary receipt evidence remains required before any no-header mutation flip."
+  },
+  "idea_ids": [
+    "idea-realization-engine",
+    "data-infrastructure"
+  ],
+  "spec_ids": [
+    "specs/native-mutation-public-gate.md"
+  ],
+  "task_ids": [
+    "native-gate-decision-receipts-20260609",
+    "native-mutation-deployed-public-canary"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "trust-boundary"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "deploy/kernel-router/production-routes.fk::mpg-decision-receipt-json",
+    "form/form-stdlib/native-mutation-public-gate.fk::nmpg-decision-receipt-json",
+    "deploy/kernel-router/mutation_public_gate_harness.py::_gate_checks",
+    "api/tests/test_native_mutation_public_gate.py::test_public_gate_harness_observes_public_gate_when_kernel_available"
+  ],
+  "change_files": [
+    "api/tests/test_native_mutation_public_gate.py",
+    "deploy/kernel-router/mutation_public_gate_harness.py",
+    "deploy/kernel-router/production-routes.fk",
+    "docs/system_audit/commit_evidence_2026-06-09_native_gate_decision_receipts.json",
+    "form/form-stdlib/native-mutation-public-gate.fk",
+    "form/form-stdlib/tests/native-mutation-public-gate-band.fk",
+    "specs/native-mutation-public-gate.md"
+  ],
+  "change_intent": "runtime_fix"
+}

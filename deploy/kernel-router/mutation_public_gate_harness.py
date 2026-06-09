@@ -238,6 +238,15 @@ def _gate_checks(case: PublicGateCase, observation: HTTPObservation) -> dict[str
     trust = parsed.get("trust_envelope")
     if not isinstance(trust, dict):
         trust = {}
+    decision = parsed.get("decision_receipt")
+    if not isinstance(decision, dict):
+        decision = {}
+    decision_candidates = decision.get("candidates")
+    if not isinstance(decision_candidates, list):
+        decision_candidates = []
+    decision_signature = decision.get("signature")
+    if not isinstance(decision_signature, dict):
+        decision_signature = {}
     reversible_gate = trust.get("reversible_gate")
     if not isinstance(reversible_gate, dict):
         reversible_gate = {}
@@ -257,6 +266,54 @@ def _gate_checks(case: PublicGateCase, observation: HTTPObservation) -> dict[str
         "rollback_receipt_state": receipt.get("state") == "route-local-rollback-receipt",
         "rollback_receipt_node": receipt.get("node_id") == case.node_id,
         "rollback_receipt_rollback": "remove X-Form-Native-Public-Gate" in str(receipt.get("rollback") or ""),
+        "decision_receipt_state": decision.get("state") == "native-mutation-gate-decision-receipt",
+        "decision_receipt_gate": decision.get("gate") == "native_mutation_public_gate",
+        "decision_receipt_protocol": decision.get("protocol") == PUBLIC_GATE_HEADER,
+        "decision_receipt_operation": decision.get("operation") == case.operation,
+        "decision_receipt_node": decision.get("node_id") == case.node_id,
+        "decision_receipt_selected_path": decision.get("selected_path") == PUBLIC_GATE_HEADER,
+        "decision_receipt_outcome": decision.get("outcome") == "success",
+        "decision_receipt_choice": decision.get("choice") == 1,
+        "decision_receipt_candidates": (
+            len(decision_candidates) == 3
+            and any(
+                candidate.get("path") == "fanout-python"
+                and candidate.get("outcome") == "silence"
+                and candidate.get("selected") is False
+                for candidate in decision_candidates
+                if isinstance(candidate, dict)
+            )
+            and any(
+                candidate.get("path") == PREVIEW_HEADER
+                and candidate.get("outcome") == "stop"
+                and candidate.get("selected") is False
+                for candidate in decision_candidates
+                if isinstance(candidate, dict)
+            )
+            and any(
+                candidate.get("path") == PUBLIC_GATE_HEADER
+                and candidate.get("outcome") == "success"
+                and candidate.get("selected") is True
+                for candidate in decision_candidates
+                if isinstance(candidate, dict)
+            )
+        ),
+        "decision_receipt_reversible": (
+            decision.get("ordinary_traffic_flip_performed") is False
+            and decision.get("reversible") is True
+            and decision.get("can_contradict_intent") is True
+            and decision.get("fail") == "rollback-to-fanout-by-removing-public-gate-header"
+            and decision.get("stop") == "ordinary-traffic-unflipped"
+            and decision.get("bma") == "native-mutation-public-gate"
+        ),
+        "decision_receipt_signature": (
+            decision_signature.get("category") == "native-mutation-gate"
+            and decision_signature.get("selected_path") == PUBLIC_GATE_HEADER
+            and decision_signature.get("outcome_code") == 1
+            and decision_signature.get("candidate_count") == 3
+            and decision_signature.get("operation") == case.operation
+            and decision_signature.get("node_id") == case.node_id
+        ),
         "trust_protocol": trust.get("protocol") == PUBLIC_GATE_HEADER,
         "trust_choice_success": trust.get("choice_success") == 1,
         "trust_fail": trust.get("fail") == "rollback-to-fanout-by-removing-public-gate-header",
@@ -342,6 +399,7 @@ def build_gate_report(
         "ordinary_traffic_flip_allowed": False,
         "ordinary_traffic_flip_performed": False,
         "next_evidence_needed": [
+            "public-gate decision receipts in deployed canary traffic",
             "deployed X-Form-Native-Public-Gate canary before any no-header flip",
         ],
     }
