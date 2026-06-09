@@ -5,11 +5,13 @@ The witness server (mac-witness-server.py) only watched. This one RECOGNIZES and
 accelerometer stream is fed, per frame, through the proven Form recipes RUN BY THE KERNEL —
 signal-derivative says still vs moving, sequence-predictor calls the next state, and the mismatch
 between the call and the actual next state is the INFERENCE ERROR (the learning signal). It also runs
-the supervision arc live (learning-arc.fk): a nearest-shape CHALLENGER learns from the signal-derivative
-CHAMPION — predicting from interned exemplars, scored against the champion, then learning each frame, its
-agreement climbing toward the champion as it accumulates exemplars (the Form-native arm reaching the
-reference, online). All of it is the body (Form recipes); this server is only the thin carrier that
-marshals numbers in and reads the label out. ~5ms per recognition through the kernel.
+the learning-arc.fk MECHANISM live: a nearest-shape CHALLENGER interns the signal-derivative CHAMPION's
+labels and recognizes the nearest exemplar, agreement shown on the dashboard. HONEST SCOPE: this is the
+mechanism (intern -> recognize-nearest), not learning that generalizes — still/moving is a single
+threshold the champion already computes, and there is no held-out test. Measured on the real UCI-HAR
+benchmark (../har-benchmark/), nearest-shape is a weak non-parametric memorizer (~81% vs ~96% SOTA). All
+of it is the body (Form recipes); this server is only the thin carrier that marshals numbers in and reads
+the label out. ~5ms per recognition through the kernel.
 
 Run from the repo (it needs the kernel binary + form-stdlib):
     cd experiments/coherence-sense-android && python3 coherence-sense-eval.py

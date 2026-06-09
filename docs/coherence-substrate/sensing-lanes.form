@@ -96,11 +96,15 @@
 ;               `form-kernel-rust <recipe>.fk <driver>.fk` prints the label at ~5ms. coherence-sense-eval.py is the running
 ;               proof: per accel frame it runs signal-derivative (still/moving) + sequence-predictor (next state) through the
 ;               kernel, the predicted-vs-actual mismatch is the inference-error shown live, AND a nearest-shape CHALLENGER
-;               learns from the signal-derivative CHAMPION online (learning-arc.fk made live — verified: 34 exemplars, 76%
-;               agreement climbing on a real still/moving stream). The carrier only marshals ints in and reads the label out;
-;               the body recognizes AND learns. The phone-native kernel is also BUILT (lane 8: libform_kernel_rust.so exports
-;               form_eval, ARM aarch64). Remaining human-gated work is narrow: the JNI marshaling layer (jstring<->char*) so
-;               the .apk calls form_eval on-device, and felt verification in the room.
+;               runs the learning-arc.fk MECHANISM (intern an exemplar, recognize the nearest). HONEST SCOPE [experiments/
+;               har-benchmark]: that live demo is the mechanism, NOT learning that generalizes — still/moving is a single
+;               threshold (signal-derivative computes it by hand), the demo had no held-out test, 34 samples ~ 24s. On the
+;               real UCI-HAR benchmark nearest-shape reaches ~81% (vs 18% floor, ~96% SOTA) but is a NON-PARAMETRIC memorizer
+;               (model = the whole dataset). The "small model matches SOTA" prize (logistic reg: 3,372 params, 96%) needs a
+;               PARAMETRIC model = integer `mul` in Form + quantized-int inference; that is the real lane, not nearest-shape.
+;               The phone-native kernel is also BUILT (lane 8: libform_kernel_rust.so exports form_eval, ARM aarch64).
+;               Remaining human-gated work is narrow: the JNI marshaling layer (jstring<->char*) so the .apk calls form_eval
+;               on-device, and felt verification in the room.
 ;
 ; ─────────────────────────────────────────────────────────────────────────────────────────
 ; THE CRITICAL PATH (what unblocks the most):

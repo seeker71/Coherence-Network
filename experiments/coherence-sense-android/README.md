@@ -15,11 +15,14 @@ the senses are held until then.
   frame, the carrier writes a driver `.fk`, runs `signal-derivative` (still/moving) + `sequence-predictor`
   (the next state) through `form-kernel-rust` (~5ms), and the dashboard shows the **real recognition**,
   the **prediction**, and the **inference-error** (predicted-vs-actual — the learning signal). It also
-  runs the **live learning arc** (`learning-arc.fk`): a `nearest-shape` **challenger** learns from the
-  `signal-derivative` **champion** — each frame it predicts from the exemplars it has interned, is scored
-  against the champion, then learns the frame; the dashboard shows its agreement *climbing* toward the
-  champion as it accumulates exemplars (the Form-native arm reaching the reference, online, on real data).
-  The carrier only marshals integers in and reads the label out; the recognition and the learning are Form.
+  runs the **live learning-arc mechanism** (`learning-arc.fk`): a `nearest-shape` **challenger** interns
+  the `signal-derivative` **champion**'s labels and recognizes the nearest exemplar; the dashboard shows
+  its agreement with the champion. **Honest scope:** this is the *mechanism* (intern → recognize-nearest),
+  not learning that generalizes — still/moving is a single threshold the champion already computes by hand,
+  and there's no held-out test. Measured on the real UCI-HAR benchmark (`../har-benchmark/`), nearest-shape
+  is a weak **non-parametric memorizer** (~81% vs ~96% SOTA; "model" = the whole dataset). The "small model
+  matches SOTA" prize needs a *parametric* model (integer `mul` + quantized inference) — see the benchmark.
+  The carrier only marshals integers in and reads the label out; the recognition is Form, via the kernel.
 - **v1 — phone-native kernel (cdylib BUILT):** *autonomy.* The kernel itself runs **on the phone**.
   `form/form-kernel-rust/build-android.sh` now emits `libform_kernel_rust.so` — an ARM aarch64 shared
   object exporting `form_eval` (the same `run_source` evaluator, behind the `cabi` feature), verified
