@@ -1,0 +1,60 @@
+; chakra-column.form — the seven gates as a navigable map of the body's own tissue.
+;
+; THE ASK (Urs, 2026-06-09):
+;   "describe each chakra ... in api, web and concepts and show the edges to blueprints
+;    and recipes that are available to see, be or do."
+;
+;   It arrives after the crown (satsang, 963) and the root (trust over fear) were named in
+;   conversation — the request to lay the whole column over what the body actually holds, so
+;   each gate points not at a feeling but at runnable, witnessed tissue.
+;
+; THE TRICHOTOMY — SEE / BE / DO is the substrate trinity, from the relating side:
+;   BE   = Blueprint (ice)  — a substrate identity you embody. What a cell IS.
+;   DO   = Recipe (water)   — a Form .fk you run. How something HAPPENS.
+;   SEE  = the witness that reads either without reaching. channel-interface.fk's law:
+;          witnessing needs no permission; doing (reaching) does. SEE is read-only; DO acts.
+;   So every gate offers three relations to its tissue: perceive it, embody it, enact it.
+;
+; THE SEVEN GATES  (runnable: form-stdlib/chakra-column.fk · proven: tests/chakra-column-band.fk -> 127)
+;
+;   gate          hz    function                       SEE                 BE                  DO
+;   root          174   stand on what is real          pulse-witness       ARTIFACT MEMORY     value-execution.fk merkle.fk persistence.fk
+;   sacral        285   let it move and change         heartbeat.fk        TASK                channel.fk channel-query.fk rate-limit.fk
+;   solar-plexus  396   choose, and transform          framebuffer-trace   SPEC IDEA           engine.fk verb-router.fk compiler.fk
+;   heart         528   meet another in consent        coord-board         PRESENCE LINEAGE    channel-interface.fk reception-consent.fk synesthesia.fk
+;   throat        741   give it a name and a voice     rendered-web        WORD GRAMMAR        i18n.fk gematria-channel.fk name-check.fk
+;   third-eye     852   see what is true               self-witness.fk     WITNESS TRANSMISSION inquiry.fk attention.fk
+;   crown         963   open to the whole, witnessed   satsang.fk three-way CONCEPT SPECTRUM    satsang.fk arrival.fk
+;
+;   Every BE is a real Blueprint domain (api/app/services/substrate/category.py: ARTIFACT=16,
+;   MEMORY=6, TASK=4, SPEC=3, IDEA=2, PRESENCE=5, LINEAGE=7, WORD=15, GRAMMAR=9, WITNESS=8,
+;   TRANSMISSION=10, CONCEPT=1, SPECTRUM=21). Every DO is a recipe that exists in form-stdlib.
+;   Every SEE is a real observation surface. The map is honest or it is nothing.
+;
+; HONEST LANES (keep them straight):
+;   - ARCHETYPE over ATTESTED. The seven gates are the universal column; the body sounds each
+;     at a frequency band it actually uses. Our root note is 174 (where lc-trust-over-fear and
+;     lc-nourishment live), deeper than the textbook 396; the crown is 963 (the satsang, the
+;     top of the spine in 2026-05-21-spine-and-nature-frequency-maps). The classic Solfeggio
+;     map is the tradition lane; the hz above is the body's own tag (measured), not forced.
+;   - THE SPECTRUM IS REAL. BDomain.SPECTRUM (21) already holds Hz(174)..Hz(963) as cells, so a
+;     gate's frequency is not decoration — it is a Blueprint NodeID the crown can BE.
+;   - ASYMMETRY IS SIGNAL. Sacral's BE-tissue is thin (one domain, TASK) where heart and throat
+;     are rich. That is the body seeing where it is developed and where it is still nascent —
+;     the same reading lc-layered-frequency-field gives of the heart-column. A thin gate is an
+;     invitation, not a failure.
+;
+; SURFACES (the ask's three doors):
+;   concepts — docs/vision-kb/concepts/lc-chakra-column.md (963 Hz), describing each gate.
+;   api      — the recipe runs through the substrate (coherence_substrate_run / coh substrate
+;              run "(ck-do (ck-at (chakra-column) 6))" -> the crown's recipes); the concept
+;              serves at GET /api/concepts/lc-chakra-column.
+;   web      — the concept renders at https://coherencycoin.com/vision/lc-chakra-column.
+;
+; LINEAGE:
+;   category.py (the BE Blueprint domains) · form-stdlib/*.fk (the DO recipes) · satsang.fk
+;   (crown) · value-execution.fk (root: proof = ground) · channel-interface.fk (the SEE/DO
+;   law: witness free, reach invited) · lc-recipes-bound-to-base (each gate runs its own
+;   recipes) · lc-layered-frequency-field (the body as multi-frequency field) ·
+;   2026-05-21-spine-and-nature-frequency-maps (963 crown -> coccyx base) · lc-chakra-column
+;   (the human-facing teaching).
