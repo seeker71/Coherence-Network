@@ -1,0 +1,35 @@
+; preludes: form-stdlib/confidence-calibrate.fk
+;
+; confidence-calibrate-band — map a raw score to a calibrated bucket, made falsifiable.
+;
+; Shared ascending thresholds [40 70] cut every score into three calibrated buckets (below 40 · [40,70)
+; · at-or-above 70), named low · mid · high. The boundary is meets-or-exceeds: 70 lands in bucket 2
+; because (ge 70 70) holds — equal-to-threshold belongs to the higher bucket (ge, not gt).
+;   80 -> bucket 2 -> "high"   50 -> bucket 1 -> "mid"   30 -> bucket 0 -> "low"   70 -> bucket 2 (the boundary)
+; Trust is a proven-count gate against a floor: 80 clears floor 70, 50 does not.
+;
+; Each bit pins one boundary, both polarities proven so a true reading is not luck:
+;   1   a strong score's bucket          (80 -> bucket 2, the top)
+;   2   that bucket reads "high"         (level names the top bucket)
+;   4   a middle score's bucket          (50 -> bucket 1)
+;   8   that bucket reads "mid"          (level names the middle bucket)
+;   16  the floor: below all thresholds  (30 -> bucket 0 AND level "low" — the low end, both)
+;   32  the trust gate, both polarities  (80 clears floor 70 -> 1, AND 50 below it -> 0)
+;   64  the boundary is meets-or-exceeds (70 -> bucket 2, proving ge not gt)
+;
+; Verdict 127 when every claim lands.
+(do
+    (let thresholds (list 40 70))
+
+    (let c0 (if (eq (cc-bucket 80 thresholds) 2) 1 0))
+    (let c1 (if (str_eq (cc-level 80 thresholds) "high") 2 0))
+    (let c2 (if (eq (cc-bucket 50 thresholds) 1) 4 0))
+    (let c3 (if (str_eq (cc-level 50 thresholds) "mid") 8 0))
+    ; the low end, both halves: a score under every threshold buckets to 0 and reads "low".
+    (let c4 (if (eq (cc-bucket 30 thresholds) 0) (if (str_eq (cc-level 30 thresholds) "low") 16 0) 0))
+    ; the trust gate proven both ways: trusted above the floor, refused below it.
+    (let c5 (if (eq (cc-trusted? 80 70) 1) (if (eq (cc-trusted? 50 70) 0) 32 0) 0))
+    ; the strange boundary: a score exactly on a threshold clears it (ge, not gt) -> the higher bucket.
+    (let c6 (if (eq (cc-bucket 70 thresholds) 2) 64 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

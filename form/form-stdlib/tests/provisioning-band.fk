@@ -1,0 +1,35 @@
+; preludes: form-stdlib/provisioning.fk
+;
+; provisioning-band — consent-to-join made falsifiable: admit iff a shared wire AND the human's yes.
+;
+; The field:
+;   phone — join-request from "phone", offers (wifi ble). We speak (wifi audio): wifi is the shared
+;           wire. The human's allowlist holds (phone): the door is open. Both consents hold -> admit.
+;   ghost — join-request from "ghost", offers (zigbee) only. We speak none of that: NO shared wire.
+;           The human DID open the door to it (allowlist (ghost)), but capability without a usable
+;           transport is an invitation to a body we cannot reach -> NOT admitted.
+;   phone against an allowlist that does NOT name it ((watch)) — a real shared wire, but the human
+;           never opened the door -> NOT admitted. (isolates: capability alone does not admit.)
+;
+; Verdict 127 when every claim lands:
+;   1   a shared-wire AND allowlisted device IS admitted     (pv-admit? phone (wifi audio) (phone) = 1)
+;   2   an un-allowlisted device is NOT admitted             (the human's-yes gate drops it -> 0)
+;   4   a no-shared-channel device is NOT admitted           (the capability gate drops it -> 0)
+;   8   the shared-wire spine finds the overlap              (pv-shares-channel? phone (wifi audio) = 1)
+;   16  the allowlist recognizes the joiner's id             (pv-allowed? phone (phone) = 1)
+;   32  membership stays honest about a wire NOT offered      (pv-offers? phone "audio" = 0; phone
+;                                                              offers wifi/ble, audio is ours alone)
+;   64  capability alone is not consent                       (phone shares wifi yet pv-allowed? against
+;                                                              (watch) = 0 -> that is why bit 2 dropped)
+(do
+    (let phone (list "phone" (list "wifi" "ble")))
+    (let ghost (list "ghost" (list "zigbee")))
+    (let mine  (list "wifi" "audio"))
+    (let c0 (if (eq (pv-admit? phone mine (list "phone")) 1) 1 0))
+    (let c1 (if (eq (pv-admit? phone mine (list "watch")) 0) 2 0))
+    (let c2 (if (eq (pv-admit? ghost mine (list "ghost")) 0) 4 0))
+    (let c3 (if (eq (pv-shares-channel? phone mine) 1) 8 0))
+    (let c4 (if (eq (pv-allowed? phone (list "phone")) 1) 16 0))
+    (let c5 (if (eq (pv-offers? phone "audio") 0) 32 0))
+    (let c6 (if (eq (pv-allowed? phone (list "watch")) 0) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

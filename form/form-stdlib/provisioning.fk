@@ -1,0 +1,65 @@
+; provisioning.fk — a new device JOINS the mesh, and the join is admitted only with CONSENT.
+;
+; device-heartbeat.fk let two bodies find each other and a shared channel; mesh-relay.fk let a body
+; pass a message onward across the room. This is the door BEFORE either: a device that wants in has to
+; be ADMITTED first. Admission is two consents that must BOTH hold, never one:
+;   1. the joiner offers a channel WE already speak — there is a real wire to talk over (capability);
+;   2. the HUMAN has opened the door — the joiner's id is on the allowlist (the chosen yes).
+; Capability without the human's yes is a stranger that happens to share wifi; the human's yes without
+; a shared channel is an invitation to a body we cannot actually reach. Neither alone admits. This is
+; the pairing-consent shape every mesh needs: a radio match is not permission, and permission is not a
+; radio match — the join needs both, expressed as a nested binary AND settled to 0/1.
+;
+; A join-request = (list device channels):
+;   device   — the joiner's id ("phone", "watch-2", ...); this is what the human's allowlist names
+;   channels — the transports the joiner OFFERS (a list: "wifi" "ble" "audio" ...); the wires it brings
+;
+; The two facts the admitting body already holds:
+;   my-channels — the transports WE speak (a list); intersection with the joiner's = a usable wire
+;   allowlist   — the device ids the HUMAN has opened the door to (a list); membership = consent given
+;
+; Membership is the spine (offers?, allowed?), inlined as str_eq-over-a-list recursion the way
+; device-heartbeat's hb-has? is. pv-shares-channel? folds that membership across the joiner's wires to
+; ask "is there ANY wire we both speak"; pv-admit? gates capability AND consent together.
+;
+; EXTENDS: device-heartbeat.fk (shared-channel discovery) — this adds the human-consent gate on top.
+; Proven by: form-stdlib/tests/provisioning-band.fk (three-way at validate.sh)
+
+(do
+    (defn pv-device   (req) (nth req 0))
+    (defn pv-channels (req) (nth req 1))
+
+    ; DOES THE JOINER OFFER `chan`? — membership of chan in the request's channel list, INLINED:
+    ; str_eq down the offered-channels list (content-addressed "is this wire on the table").
+    ; Empty offer list -> 0 (offers nothing).
+    (defn pv-offers? (req chan)
+        (if (eq (len (pv-channels req)) 0) 0
+            (if (str_eq chan (head (pv-channels req))) 1
+                (pv-offers? (list (pv-device req) (tail (pv-channels req))) chan))))
+
+    ; IS THERE A WIRE WE BOTH SPEAK? — walk MY channels; the joiner offering ANY one of them means a
+    ; usable transport exists (some pv-offers? holds). First match short-circuits to 1; exhausting my
+    ; channels with no match is 0 (no shared wire — we cannot actually reach this body).
+    (defn pv-shares-channel? (req my-channels)
+        (if (eq (len my-channels) 0) 0
+            (if (eq (pv-offers? req (head my-channels)) 1) 1
+                (pv-shares-channel? req (tail my-channels)))))
+
+    ; HAS THE HUMAN OPENED THE DOOR? — membership of the joiner's device id in the allowlist. The
+    ; allowlist is the human's chosen yes; an id not on it is a stranger, no matter what it offers.
+    ; Empty allowlist -> 0 (the door has been opened to no one).
+    (defn pv-allowed? (req allowlist)
+        (if (eq (len allowlist) 0) 0
+            (if (str_eq (pv-device req) (head allowlist)) 1
+                (pv-allowed? req (tail allowlist)))))
+
+    ; ADMIT? — BOTH consents must hold: a shared channel (capability) AND on the allowlist (the human's
+    ; yes). (and ...) is binary; each side is settled to 0/1 first, then the AND is settled to 0/1 by
+    ; the outer (if ... 1 0) — and's native truth value renders differently across kernels, so we never
+    ; return it raw. One gate without the other = no admission.
+    (defn pv-admit? (req my-channels allowlist)
+        (if (and (eq (pv-shares-channel? req my-channels) 1)
+                 (eq (pv-allowed? req allowlist) 1))
+            1 0))
+
+    0)

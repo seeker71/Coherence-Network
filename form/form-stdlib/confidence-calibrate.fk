@@ -1,0 +1,48 @@
+; confidence-calibrate.fk — map a raw recognition strength to a CALIBRATED confidence bucket, so "70" means the same trust everywhere.
+;
+; A classifier emits a raw strength 0..100, but raw strengths are not comparable across models: one
+; model's 70 is timid, another's 70 is brash. A bucket cut by shared ascending thresholds is. This
+; recipe is the one-value sibling of feature-vector.fk: there a window of readings is binned into a
+; histogram; here a single score is binned into one calibrated level. Same thresholds + same score =>
+; same bucket on every device, so the calibration is a content-addressed substrate cell like
+; everything else (Go=Rust=TS parity at validate.sh is cross-device parity — the Mac and the phone
+; calibrate the identical score, verifiable by NodeID, not a hopeful match).
+;
+; The defining choice is meets-OR-EXCEEDS, exactly as feature-vector.fk's bin: the bucket is how many
+; ascending thresholds the score clears at (ge score threshold). A score equal to a threshold counts
+; (ge, not gt) — the boundary belongs to the higher bucket. Ascending thresholds [t0 t1 ... t(k-1)]
+; give k+1 buckets (0..k): bucket 0 is below t0, bucket k is at-or-above the last threshold. The level
+; name is a thin reading of the bucket (0 low · 1 mid · else high), and trust is a single proven-count
+; gate (ge score floor) — no ratio, no float, the way AUTHORING's proven-count rule asks.
+;
+; Kin: feature-vector.fk (the histogram this is the one-value bucket of), recognition-router.fk
+; (routes the calibrated confidence vectors a model already produced), declared-source.fk (a declared
+; reading is calibrated to 100 for free). Models/classifiers are DATA upstream; the calibration is
+; Form, kernel-executable, three-way-identical.
+;
+; Proven by: form-stdlib/tests/confidence-calibrate-band.fk (three-way at validate.sh)
+
+(do
+    ; --- BUCKET: which calibrated bucket a raw score lands in = how many ascending thresholds it
+    ;     meets-or-exceeds. Recurse the thresholds, +1 per (ge score threshold); score below all -> 0,
+    ;     at-or-above all -> k. (The same shape as feature-vector's fv-bin, inlined per AUTHORING's
+    ;     self-contained rule — every function this band touches is defined right here.) ---
+    (defn cc-bucket (score thresholds)
+        (if (eq (len thresholds) 0) 0
+            (if (ge score (head thresholds))
+                (add 1 (cc-bucket score (tail thresholds)))
+                (cc-bucket score (tail thresholds)))))
+
+    ; --- LEVEL: a thin name for the bucket so a human reads trust at a glance. bucket 0 -> "low",
+    ;     bucket 1 -> "mid", every higher bucket -> "high". Nested binary if (no 3-arg cond). ---
+    (defn cc-level (score thresholds)
+        (if (eq (cc-bucket score thresholds) 0) "low"
+            (if (eq (cc-bucket score thresholds) 1) "mid"
+                "high")))
+
+    ; --- TRUSTED?: a single proven-count gate — the score clears the trust floor (meets-or-exceeds).
+    ;     Returns 0/1 explicitly so the band can `eq` it; a bare comparison's boolean shape diverges
+    ;     across kernels, so wrap to an integer here. ---
+    (defn cc-trusted? (score floor) (if (ge score floor) 1 0))
+
+    0)

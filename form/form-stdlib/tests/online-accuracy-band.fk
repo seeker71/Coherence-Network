@@ -1,0 +1,51 @@
+; preludes: form-stdlib/online-accuracy.fk
+;
+; online-accuracy-band — a predictor's RUNNING accuracy over a live stream; good-enough only on a
+; proven bar.
+;
+; A ten-step stream has run; the predictor called eight shots that the world confirmed and missed two
+; (up/down and rain/sun are the misses):
+;   up/up down/down up/up up/up down/down up/down up/up down/down rain/sun up/up
+;   -> 8 correct, 2 wrong, 10 total. Bar: min-correct 8, max-wrong 2. 8 >= 8 AND 2 >= 2 -> the
+;   predictor MEETS the bar right now. A weaker stream of ten (five right, five wrong) clears neither
+;   leg (5 < 8 correct, 5 > 2 wrong) -> it FAILS the same bar. Counts are exact: no ratio, no float,
+;   the same integers on every kernel.
+;
+; Verdict 63 when every claim lands:
+;   1   hits counted exactly         (oa-correct == 8)
+;   2   misses counted exactly       (oa-wrong == 2)
+;   4   total is the stream length   (oa-total == 10)
+;   8   a strong stream meets the bar (oa-meets? == 1)
+;   16  a weak stream fails the bar   (oa-meets? == 0)
+;   32  one missed step is not a hit  (oa-hit? on rain/sun == 0)
+(do
+    (let stream (list
+        (list "up"   "up")
+        (list "down" "down")
+        (list "up"   "up")
+        (list "up"   "up")
+        (list "down" "down")
+        (list "up"   "down")
+        (list "up"   "up")
+        (list "down" "down")
+        (list "rain" "sun")
+        (list "up"   "up")))
+    (let weak (list
+        (list "up"   "up")
+        (list "down" "down")
+        (list "up"   "up")
+        (list "down" "down")
+        (list "up"   "up")
+        (list "up"   "down")
+        (list "down" "up")
+        (list "up"   "down")
+        (list "down" "up")
+        (list "up"   "down")))
+    (let miss (nth stream 8))
+    (let c0 (if (eq (oa-correct stream) 8) 1 0))
+    (let c1 (if (eq (oa-wrong stream) 2) 2 0))
+    (let c2 (if (eq (oa-total stream) 10) 4 0))
+    (let c3 (if (eq (oa-meets? stream 8 2) 1) 8 0))
+    (let c4 (if (eq (oa-meets? weak 8 2) 0) 16 0))
+    (let c5 (if (eq (oa-hit? miss) 0) 32 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))

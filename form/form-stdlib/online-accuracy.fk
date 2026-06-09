@@ -1,0 +1,40 @@
+; online-accuracy.fk — a predictor's running accuracy over a stream of outcomes, so the body knows
+;                       how good it is RIGHT NOW.
+;
+; classifier-eval.fk holds a classifier against a held-out set ONCE — a finished exam. A predictor in
+; flight needs the same honesty turned live: every step it calls a shot (predicted) and the world
+; answers (actual), and the body wants its current standing — am I right enough, right now, to keep
+; routing on this prediction? That standing is two exact integer counts, never a float ratio: how many
+; the predictor got right across the stream so far, how many it missed. The gate is the same
+; division-free bar classifier-eval and self-grounding-classifier earn promotion on — enough hits AND
+; few enough misses — so the verdict is the same on Go=Rust=TS.
+;
+; A step = (list predicted actual): what the predictor said, what the world returned, for one tick.
+; A stream is a list of steps, oldest-to-newest — the running record. min-correct / max-wrong are the
+; live bar the body holds the predictor to.
+;
+; Proven by: tests/online-accuracy-band.fk (three-way at validate.sh)
+
+(do
+    (defn oa-pred   (s) (nth s 0))   ; what the predictor called this step
+    (defn oa-actual (s) (nth s 1))   ; what the world returned this step
+    (defn oa-hit?   (s) (if (str_eq (oa-pred s) (oa-actual s)) 1 0))
+
+    ; --- count hits / misses across the running stream (recursion is the loop; no subtraction) ---
+    (defn oa-correct (stream)
+        (if (eq (len stream) 0) 0
+            (add (oa-hit? (head stream)) (oa-correct (tail stream)))))
+    (defn oa-wrong (stream)
+        (if (eq (len stream) 0) 0
+            (if (eq (oa-hit? (head stream)) 0)
+                (add 1 (oa-wrong (tail stream)))
+                (oa-wrong (tail stream)))))
+    (defn oa-total (stream) (len stream))
+
+    ; --- LIVE GATE: the predictor is good-enough-right-now only when its running counts cleared
+    ;     enough hits AND stayed under the miss ceiling — proven counts, never an asserted accuracy.
+    ;     Division-free (ge on integers) so the standing is exact and identical across kernels. ---
+    (defn oa-meets? (stream min-correct max-wrong)
+        (if (and (ge (oa-correct stream) min-correct) (ge max-wrong (oa-wrong stream))) 1 0))
+
+    0)
