@@ -5,7 +5,7 @@
 ; from roots; explicit release remains only a scoped/resource fast path.
 
 (do
-    (let category (make_nodeid 9 9 9 2))
+    (let substrate-gc-category (make_nodeid 9 9 9 2))
     (let temp-name (intern_trivial_string (str_concat "temporary-" "gc-object")))
-    (let temp-node (intern_node category (list temp-name (intern_trivial_int 7))))
+    (let temp-node (intern_node substrate-gc-category (list temp-name (intern_trivial_int 7))))
     (if (gt (head (substrate_gc (empty))) 0) 1000 0))

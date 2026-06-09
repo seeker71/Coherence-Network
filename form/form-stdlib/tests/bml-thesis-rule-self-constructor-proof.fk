@@ -29,17 +29,17 @@
     (let strargs-args (bml-body-source-self-args strargs-body))
     (let array-args (bml-body-source-self-args array-body))
 
-    (let RuleBP (make_nodeid 1 2 99 9201))
-    (let EnvBP (bml-constructor-env-blueprint 0))
+    (let SelfCtorRuleBP (make_nodeid 1 2 99 9201))
+    (let SelfCtorEnvBP (bml-constructor-env-blueprint 0))
 
     (let env-strargs
         (record_new
-            EnvBP
+            SelfCtorEnvBP
             "hSyntax" "syntax-self"
             "strName" "name-self"
             "strArgs" "args-self"
             "hItem" "item-self"))
-    (let self-strargs (record_new RuleBP))
+    (let self-strargs (record_new SelfCtorRuleBP))
     (bml-exec-constructor
         constructors
         strargs-constructor
@@ -48,12 +48,12 @@
 
     (let env-array
         (record_new
-            EnvBP
+            SelfCtorEnvBP
             "hSyntax" "syntax-array"
             "strName" "name-array"
             "hItem" "item-array"
             "hProcess" "process-array"))
-    (let self-array (record_new RuleBP))
+    (let self-array (record_new SelfCtorRuleBP))
     (bml-exec-constructor
         constructors
         array-constructor

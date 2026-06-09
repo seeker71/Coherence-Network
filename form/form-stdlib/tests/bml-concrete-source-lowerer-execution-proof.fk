@@ -149,43 +149,43 @@
         (bml-body-source-constructor-blueprint "BMLCompilerDeclarationLoweringStage"))
     (let FlowBP
         (bml-body-source-constructor-blueprint "BMLCompilerSourceLoweringFlow"))
-    (let EnvBP (bml-constructor-env-blueprint 0))
+    (let LowererEnvBP (bml-constructor-env-blueprint 0))
 
     (defn source-kind-dispatch (self)
         (bml-body-source-exec-return
             source-kind-body
             self
-            (record_new EnvBP)))
+            (record_new LowererEnvBP)))
 
     (defn source-name-dispatch (self)
         (bml-body-source-exec-return
             source-name-body
             self
-            (record_new EnvBP)))
+            (record_new LowererEnvBP)))
 
     (defn parsed-parser-parse-dispatch (self source-path)
         (bml-body-source-exec-return
             parser-parse-body
             self
-            (record_new EnvBP "strSourcePath" source-path)))
+            (record_new LowererEnvBP "strSourcePath" source-path)))
 
     (defn carrier-source-dispatch (self)
         (bml-body-source-exec-return
             carrier-source-body
             self
-            (record_new EnvBP)))
+            (record_new LowererEnvBP)))
 
     (defn stage-declaration-kind-dispatch (self hDeclaration)
         (bml-body-source-exec-return
             declaration-kind-body
             self
-            (record_new EnvBP "hDeclaration" hDeclaration)))
+            (record_new LowererEnvBP "hDeclaration" hDeclaration)))
 
     (defn stage-declaration-name-dispatch (self hDeclaration)
         (bml-body-source-exec-return
             declaration-name-body
             self
-            (record_new EnvBP "hDeclaration" hDeclaration)))
+            (record_new LowererEnvBP "hDeclaration" hDeclaration)))
 
     (defn stage-build-carrier-dispatch
         (self strKind strName hDeclaration)
@@ -193,7 +193,7 @@
             build-carrier-body
             self
             (record_new
-                EnvBP
+                LowererEnvBP
                 "strKind"
                 strKind
                 "strName"
@@ -205,31 +205,31 @@
         (bml-body-source-exec-return
             carrier-source-stage-body
             self
-            (record_new EnvBP "hCarrier" hCarrier)))
+            (record_new LowererEnvBP "hCarrier" hCarrier)))
 
     (defn flow-is-template-dispatch (self hDeclaration)
         (bml-body-source-exec-return
             is-template-body
             self
-            (record_new EnvBP "hDeclaration" hDeclaration)))
+            (record_new LowererEnvBP "hDeclaration" hDeclaration)))
 
     (defn flow-is-language-dispatch (self hDeclaration)
         (bml-body-source-exec-return
             is-language-body
             self
-            (record_new EnvBP "hDeclaration" hDeclaration)))
+            (record_new LowererEnvBP "hDeclaration" hDeclaration)))
 
     (defn flow-is-bootstrap-dispatch (self hDeclaration)
         (bml-body-source-exec-return
             is-bootstrap-body
             self
-            (record_new EnvBP "hDeclaration" hDeclaration)))
+            (record_new LowererEnvBP "hDeclaration" hDeclaration)))
 
     (defn flow-is-known-dispatch (self strName)
         (bml-body-source-exec-if-local-eq-string-return-true-loop
             (bml-body-source-values is-known-body)
             self
-            (record_new EnvBP "strName" strName)))
+            (record_new LowererEnvBP "strName" strName)))
 
     (method_define SourceDeclarationBP "Kind" source-kind-dispatch)
     (method_define SourceDeclarationBP "Name" source-name-dispatch)

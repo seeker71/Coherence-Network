@@ -25,18 +25,18 @@
             "operator=="))
     (let operator-body (bml-method-body operator-method))
 
-    (let RuleBP (make_nodeid 1 2 99 9290))
-    (let CallEnvBP (bml-constructor-env-blueprint 0))
-    (let rule-instance (record_new RuleBP "bmlClass" "Rule" "m_strName" "left"))
-    (let other-rule (record_new RuleBP "bmlClass" "Rule" "Name" "right"))
-    (let direct-env (record_new CallEnvBP "hObj" other-rule "hOther" other-rule))
+    (let MemberRuleBP (make_nodeid 1 2 99 9290))
+    (let MemberCallEnvBP (bml-constructor-env-blueprint 0))
+    (let rule-instance (record_new MemberRuleBP "bmlClass" "Rule" "m_strName" "left"))
+    (let other-rule (record_new MemberRuleBP "bmlClass" "Rule" "Name" "right"))
+    (let direct-env (record_new MemberCallEnvBP "hObj" other-rule "hOther" other-rule))
     (let direct-result
         (bml-body-source-exec-if-member-neq-return-false
             operator-body
             rule-instance
             direct-env))
 
-    (let sequence-env (record_new CallEnvBP "hObj" other-rule))
+    (let sequence-env (record_new MemberCallEnvBP "hObj" other-rule))
     (let sequence-result
         (bml-body-source-exec
             operator-body
@@ -47,9 +47,9 @@
         (bml-body-source-exec
             operator-body
             self
-            (record_new CallEnvBP "hObj" hObj)))
+            (record_new MemberCallEnvBP "hObj" hObj)))
 
-    (method_define RuleBP "operator==" rule-eq-dispatch)
+    (method_define MemberRuleBP "operator==" rule-eq-dispatch)
     (let method-result (method_invoke rule-instance "operator==" other-rule))
 
     (sum

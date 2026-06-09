@@ -68,10 +68,10 @@
     ;; "%2"  — '%' followed by only one char, no room for two hex digits.
     ;; "%2G" — even length, but 'G' isn't a hex digit.
     ;; "%G2" — first char after '%' isn't a hex digit.
-    (let SENTINEL (make_nodeid 1 2 99 1771))
-    (let err-short (if (value_eq (url-decode "%2")  SENTINEL) 1 0))
-    (let err-tail  (if (value_eq (url-decode "%2G") SENTINEL) 1 0))
-    (let err-head  (if (value_eq (url-decode "%G2") SENTINEL) 1 0))
+    (let URL-DECODE-ERROR-SENTINEL (make_nodeid 1 2 99 1771))
+    (let err-short (if (value_eq (url-decode "%2")  URL-DECODE-ERROR-SENTINEL) 1 0))
+    (let err-tail  (if (value_eq (url-decode "%2G") URL-DECODE-ERROR-SENTINEL) 1 0))
+    (let err-head  (if (value_eq (url-decode "%G2") URL-DECODE-ERROR-SENTINEL) 1 0))
 
     ;; Band verdict: 16 when every check passes
     ;;   6 encode + 6 decode + 1 round-trip + 3 error = 16

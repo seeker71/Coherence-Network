@@ -29,12 +29,12 @@
             "SetProcess"))
     (let set-process-body (bml-method-body set-process-method))
 
-    (let RuleBP (make_nodeid 1 2 99 9201))
-    (let EnvBP (make_nodeid 1 2 99 9202))
+    (let BodyRuleBP (make_nodeid 1 2 99 9201))
+    (let BodyEnvBP (make_nodeid 1 2 99 9202))
 
     (let env
         (record_new
-            EnvBP
+            BodyEnvBP
             "hSyntax" "syntax-object"
             "strName" "rule-name"
             "hArgs" "args-array"
@@ -42,11 +42,11 @@
             "hProcess" "process-object"
             "DefaultProcess" "default-process"))
 
-    (let rule-instance (record_new RuleBP))
+    (let rule-instance (record_new BodyRuleBP))
     (bml-body-source-exec-assignments full-body rule-instance env)
 
     (let process-instance
-        (record_new RuleBP "m_hProcess" "old-process"))
+        (record_new BodyRuleBP "m_hProcess" "old-process"))
     (bml-body-source-exec-assignments
         set-process-body
         process-instance

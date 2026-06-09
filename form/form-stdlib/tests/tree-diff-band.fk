@@ -35,8 +35,8 @@
 ;   any-empty-replace      1   diff-empty? of a diff-replace = 0
 
 (do
-    (let CAT-PLUS  (make_nodeid 1 2 99 7700))
-    (let CAT-MINUS (make_nodeid 1 2 99 7701))
+    (let TREE-CAT-PLUS  (make_nodeid 1 2 99 7700))
+    (let TREE-CAT-MINUS (make_nodeid 1 2 99 7701))
     (let CAT-N     (make_nodeid 1 2 99 7702))
     (let CAT-M     (make_nodeid 1 2 99 7703))
 
@@ -44,16 +44,16 @@
     (defn b2i (p) (if p 1 0))
 
     ;; ---- identical trees ------------------------------------------
-    (let a-eq (intern_node CAT-PLUS (list (leaf CAT-N) (leaf CAT-M))))
-    (let b-eq (intern_node CAT-PLUS (list (leaf CAT-N) (leaf CAT-M))))
+    (let a-eq (intern_node TREE-CAT-PLUS (list (leaf CAT-N) (leaf CAT-M))))
+    (let b-eq (intern_node TREE-CAT-PLUS (list (leaf CAT-N) (leaf CAT-M))))
     (let d-eq (tree-diff a-eq b-eq))
     (let eq-then-eq        (b2i (node_eq (node_category d-eq) DIFF-EQUAL)))
     (let eq-then-empty     (diff-empty? d-eq))
     (let eq-then-patch-eq-b (b2i (node_eq (tree-patch a-eq d-eq) b-eq)))
 
     ;; ---- leaf substitution at root's child ------------------------
-    (let a-leaf (intern_node CAT-PLUS (list (leaf CAT-N) (leaf CAT-N))))
-    (let b-leaf (intern_node CAT-PLUS (list (leaf CAT-N) (leaf CAT-M))))
+    (let a-leaf (intern_node TREE-CAT-PLUS (list (leaf CAT-N) (leaf CAT-N))))
+    (let b-leaf (intern_node TREE-CAT-PLUS (list (leaf CAT-N) (leaf CAT-M))))
     (let d-leaf (tree-diff a-leaf b-leaf))
     (let leaf-children-cat
         (b2i (node_eq (node_category d-leaf) DIFF-CHILDREN)))
@@ -66,12 +66,12 @@
     ;; The diff descends into the first child (which is itself a PLUS
     ;; subtree), and within that subtree replaces the second N with M.
     (let a-nest
-        (intern_node CAT-PLUS
-            (list (intern_node CAT-PLUS (list (leaf CAT-N) (leaf CAT-N)))
+        (intern_node TREE-CAT-PLUS
+            (list (intern_node TREE-CAT-PLUS (list (leaf CAT-N) (leaf CAT-N)))
                   (leaf CAT-N))))
     (let b-nest
-        (intern_node CAT-PLUS
-            (list (intern_node CAT-PLUS (list (leaf CAT-N) (leaf CAT-M)))
+        (intern_node TREE-CAT-PLUS
+            (list (intern_node TREE-CAT-PLUS (list (leaf CAT-N) (leaf CAT-M)))
                   (leaf CAT-N))))
     (let d-nest (tree-diff a-nest b-nest))
     (let d-nest-kid0 (head (node_children d-nest)))
@@ -81,8 +81,8 @@
         (b2i (node_eq (tree-patch a-nest d-nest) b-nest)))
 
     ;; ---- root category differs ------------------------------------
-    (let a-cat (intern_node CAT-PLUS  (list (leaf CAT-N) (leaf CAT-N))))
-    (let b-cat (intern_node CAT-MINUS (list (leaf CAT-N) (leaf CAT-N))))
+    (let a-cat (intern_node TREE-CAT-PLUS  (list (leaf CAT-N) (leaf CAT-N))))
+    (let b-cat (intern_node TREE-CAT-MINUS (list (leaf CAT-N) (leaf CAT-N))))
     (let d-cat (tree-diff a-cat b-cat))
     (let cat-replace    (b2i (node_eq (node_category d-cat) DIFF-REPLACE)))
     (let cat-patch-eq-b (b2i (node_eq (tree-patch a-cat d-cat) b-cat)))
@@ -90,9 +90,9 @@
     ;; ---- same cat, different arity -------------------------------
     ;; Both PLUS but a has 2 children, b has 3. The descent path is
     ;; refused (arity mismatch) and the diff collapses to replace.
-    (let a-ar (intern_node CAT-PLUS (list (leaf CAT-N) (leaf CAT-N))))
+    (let a-ar (intern_node TREE-CAT-PLUS (list (leaf CAT-N) (leaf CAT-N))))
     (let b-ar
-        (intern_node CAT-PLUS
+        (intern_node TREE-CAT-PLUS
             (list (leaf CAT-N) (leaf CAT-N) (leaf CAT-M))))
     (let d-ar (tree-diff a-ar b-ar))
     (let arity-replace    (b2i (node_eq (node_category d-ar) DIFF-REPLACE)))

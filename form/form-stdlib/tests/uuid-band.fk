@@ -73,24 +73,24 @@
 
     ;; --- ERROR sentinel --------------------------------------------
     ;; UUID-PARSE-ERROR = NodeID(1, 2, 99, 1871)
-    (let SENTINEL (make_nodeid 1 2 99 1871))
+    (let UUID-PARSE-ERROR-SENTINEL (make_nodeid 1 2 99 1871))
 
     ;; Wrong length (too short)
     (let err-short
-        (if (value_eq (uuid-parse "00000000-0000-4000-8000-00000000000") SENTINEL) 1 0))
+        (if (value_eq (uuid-parse "00000000-0000-4000-8000-00000000000") UUID-PARSE-ERROR-SENTINEL) 1 0))
 
     ;; Wrong length (too long)
     (let err-long
-        (if (value_eq (uuid-parse "00000000-0000-4000-8000-0000000000000") SENTINEL) 1 0))
+        (if (value_eq (uuid-parse "00000000-0000-4000-8000-0000000000000") UUID-PARSE-ERROR-SENTINEL) 1 0))
 
     ;; Hyphen missing — "00000000_0000_4000_8000_000000000000" has the right
     ;; length but underscores where hyphens belong.
     (let err-sep
-        (if (value_eq (uuid-parse "00000000_0000_4000_8000_000000000000") SENTINEL) 1 0))
+        (if (value_eq (uuid-parse "00000000_0000_4000_8000_000000000000") UUID-PARSE-ERROR-SENTINEL) 1 0))
 
     ;; Non-hex char in data position
     (let err-hex
-        (if (value_eq (uuid-parse "0000000z-0000-4000-8000-000000000000") SENTINEL) 1 0))
+        (if (value_eq (uuid-parse "0000000z-0000-4000-8000-000000000000") UUID-PARSE-ERROR-SENTINEL) 1 0))
 
     ;; --- VALID PARSE ROUND-TRIP ------------------------------------
     ;; A well-formed UUID (uppercase too) round-trips through parse.

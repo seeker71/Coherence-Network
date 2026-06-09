@@ -25,23 +25,23 @@
             "Main"))
     (let main-body (bml-method-body main-method))
 
-    (let BmfBP (make_nodeid 1 2 99 9220))
-    (let EnvBP (bml-constructor-env-blueprint 0))
-    (let env (record_new EnvBP "hArgs" "argv-vector"))
+    (let MainCallBmfBP (make_nodeid 1 2 99 9220))
+    (let MainCallEnvBP (bml-constructor-env-blueprint 0))
+    (let env (record_new MainCallEnvBP "hArgs" "argv-vector"))
 
     (defn bmf-handle-args-dispatch (self hArgs)
         (record_set self "handledArgs" hArgs))
 
-    (method_define BmfBP "HandleArgs" bmf-handle-args-dispatch)
+    (method_define MainCallBmfBP "HandleArgs" bmf-handle-args-dispatch)
 
-    (let app (record_new BmfBP))
+    (let app (record_new MainCallBmfBP))
     (let exec-result
         (bml-body-source-exec-implicit-call1
             main-body
             app
             env))
 
-    (let second-app (record_new BmfBP))
+    (let second-app (record_new MainCallBmfBP))
     (bml-body-source-exec main-body second-app env)
 
     (sum
@@ -53,7 +53,7 @@
             (bool-score (bml-body-source-contains? main-body "HandleArgs") 16)
             (bool-score (bml-body-source-contains? main-body "hArgs") 32)
             (int-score (bml-body-source-implicit-call1-count main-body) 1 64)
-            (bool-score (method_has BmfBP "HandleArgs") 128)
+            (bool-score (method_has MainCallBmfBP "HandleArgs") 128)
             (bool-score (record_has exec-result "handledArgs") 256)
             (str-score (record_get app "handledArgs") "argv-vector" 512)
             (str-score (record_get second-app "handledArgs") "argv-vector" 1024))))

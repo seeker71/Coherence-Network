@@ -26,15 +26,15 @@
             "operator=="))
     (let operator-body (bml-method-body operator-method))
 
-    (let RuleBP (make_nodeid 1 2 99 9310))
-    (let ArgsBP (make_nodeid 1 2 99 9311))
-    (let CallEnvBP (bml-constructor-env-blueprint 0))
+    (let FinalReturnRuleBP (make_nodeid 1 2 99 9310))
+    (let FinalReturnArgsBP (make_nodeid 1 2 99 9311))
+    (let FinalReturnCallEnvBP (bml-constructor-env-blueprint 0))
     (let shared-process "same-process")
-    (let left-args (record_new ArgsBP "Count" 2))
-    (let right-args (record_new ArgsBP "Count" 2))
+    (let left-args (record_new FinalReturnArgsBP "Count" 2))
+    (let right-args (record_new FinalReturnArgsBP "Count" 2))
     (let matching-rule
         (record_new
-            RuleBP
+            FinalReturnRuleBP
             "bmlClass" "Rule"
             "m_strName" "same-name"
             "m_hProcess" shared-process
@@ -42,7 +42,7 @@
             "m_hItem" "same-item"))
     (let matching-other
         (record_new
-            RuleBP
+            FinalReturnRuleBP
             "bmlClass" "Rule"
             "Name" "same-name"
             "InternProcess" shared-process
@@ -50,7 +50,7 @@
             "Item" "same-item"))
     (let direct-env
         (record_new
-            CallEnvBP
+            FinalReturnCallEnvBP
             "hObj" matching-other
             "hOther" matching-other))
     (let direct-result
@@ -59,7 +59,7 @@
             matching-rule
             direct-env))
 
-    (let sequence-env (record_new CallEnvBP "hObj" matching-other))
+    (let sequence-env (record_new FinalReturnCallEnvBP "hObj" matching-other))
     (let sequence-result
         (bml-body-source-exec
             operator-body
@@ -68,13 +68,13 @@
 
     (let different-other
         (record_new
-            RuleBP
+            FinalReturnRuleBP
             "bmlClass" "Rule"
             "Name" "same-name"
             "InternProcess" shared-process
             "Args" right-args
             "Item" "different-item"))
-    (let different-env (record_new CallEnvBP "hObj" different-other))
+    (let different-env (record_new FinalReturnCallEnvBP "hObj" different-other))
     (let different-result
         (bml-body-source-exec
             operator-body
@@ -85,9 +85,9 @@
         (bml-body-source-exec
             operator-body
             self
-            (record_new CallEnvBP "hObj" hObj)))
+            (record_new FinalReturnCallEnvBP "hObj" hObj)))
 
-    (method_define RuleBP "operator==" rule-eq-dispatch)
+    (method_define FinalReturnRuleBP "operator==" rule-eq-dispatch)
     (let method-match (method_invoke matching-rule "operator==" matching-other))
     (let method-different (method_invoke matching-rule "operator==" different-other))
 

@@ -1,0 +1,148 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/resolve-blueprint-name-drift-20260609",
+  "commit_scope": "Resolve Form Blueprint scanner name-drift warnings by giving reused test-local NodeID bindings proof-specific names while preserving each NodeID coordinate and test behavior.",
+  "files_owned": [
+    "form/form-stdlib/tests/bml-concrete-source-lowerer-execution-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-bmf-compile-source-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-bmf-main-call-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-bmf-start-result-stack-constructor-assignment-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-bmf-start-result-stack-sequence-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-rule-body-execution-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-rule-hashcode-return-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-rule-method-dispatch-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-rule-nested-call-argument-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-rule-operator-cast-binding-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-rule-operator-chain-member-compare-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-rule-operator-final-return-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-rule-operator-if-instanceof-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-rule-operator-member-compare-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-rule-receiver-call-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-rule-self-constructor-proof.fk",
+    "form/form-stdlib/tests/channel-query-band.fk",
+    "form/form-stdlib/tests/hex-band.fk",
+    "form/form-stdlib/tests/kv-store-band.fk",
+    "form/form-stdlib/tests/multi-hop-band.fk",
+    "form/form-stdlib/tests/record-band.fk",
+    "form/form-stdlib/tests/substrate-cell-gc-band.fk",
+    "form/form-stdlib/tests/substrate-core-band.fk",
+    "form/form-stdlib/tests/substrate-gc-band.fk",
+    "form/form-stdlib/tests/substrate-temp-arena-band.fk",
+    "form/form-stdlib/tests/tree-diff-band.fk",
+    "form/form-stdlib/tests/url-encode-band.fk",
+    "form/form-stdlib/tests/uuid-band.fk",
+    "docs/system_audit/commit_evidence_2026-06-09_blueprint_name_drift_resolution.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/scan_form_blueprints.py --check",
+      "cd form && ./validate.sh",
+      "git diff --check"
+    ],
+    "notes": "Blueprint scan now reports 196 make_nodeid literals, 113 distinct NodeIDs, 402 registered rows, 0 unregistered type-99 entries, and no name-drift warning block. Wellness passes and reports the Form blueprint surface clean. Full sibling-kernel validation reached every touched band and each touched band passed: bml-concrete-source-lowerer-execution-proof=34, bml-thesis-bmf-compile-source-proof=16777215, bml-thesis-bmf-main-call-proof=2047, bml-thesis-bmf-start-result-stack-constructor-assignment-proof=2047, bml-thesis-bmf-start-result-stack-sequence-proof=2047, bml-thesis-rule-body-execution-proof=4095, bml-thesis-rule-hashcode-return-proof=16383, bml-thesis-rule-method-dispatch-proof=1023, bml-thesis-rule-nested-call-argument-proof=4095, bml-thesis-rule-operator-cast-binding-proof=4095, bml-thesis-rule-operator-chain-member-compare-proof=4095, bml-thesis-rule-operator-final-return-proof=16319, bml-thesis-rule-operator-if-instanceof-proof=4095, bml-thesis-rule-operator-member-compare-proof=4095, bml-thesis-rule-receiver-call-proof=2047, bml-thesis-rule-self-constructor-proof=131071, channel-query-band=5, hex-band=14, kv-store-band=7, multi-hop-band=11, record-band=176, substrate-cell-gc-band=5000, substrate-core-band=11111, substrate-gc-band=1000, substrate-temp-arena-band=15000, tree-diff-band=13, url-encode-band=16, uuid-band=15. The full validate command still exits nonzero with 339 ok and 11 unrelated divergent unchanged bands; those failures are outside this rename-only scope."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI pending until branch push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No deployment attempted for this Form test-local symbol hygiene change."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Task-local proof is complete. Commit, PR, remote CI, and any merge/deploy follow-through remain pending."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The Form Blueprint scanner no longer reports one local symbol bound to multiple NodeIDs. Runtime behavior is unchanged because only local binding names in tests changed; every touched band still returns its prior proof value across Go, Rust, and TypeScript sibling kernels.",
+    "public_endpoints": [
+      "internal Form sibling kernels"
+    ],
+    "test_flows": [
+      "Form Blueprint scanner check confirms no name-drift warning remains.",
+      "Full Form sibling validation reached and passed every renamed BML proof band.",
+      "Full Form sibling validation reached and passed every renamed channel, sentinel, record, substrate, and tree-diff band."
+    ]
+  },
+  "idea_ids": [
+    "form-blueprint-name-drift-hygiene",
+    "kernel-trace-diagnosis"
+  ],
+  "spec_ids": [
+    "form-blueprint-registry",
+    "form-sibling-kernel-parity"
+  ],
+  "task_ids": [
+    "resolve-blueprint-name-drift-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "quality-priority",
+        "workflow-stewardship"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Generic reused BML local bindings were renamed to proof-specific symbols such as CompileBmfBP, StackSeqBmfBP, BodyRuleBP, ReceiverRuleBP, and FinalReturnArgsBP.",
+    "Generic non-BML test-local bindings were renamed to proof-specific symbols such as channel-query-topic-nid, kv-store-topic-nid, HEX-DECODE-ERROR-SENTINEL, URL-DECODE-ERROR-SENTINEL, UUID-PARSE-ERROR-SENTINEL, and substrate-cell-gc-category.",
+    "All renamed bindings preserve the original make_nodeid coordinates.",
+    "python3 scripts/scan_form_blueprints.py --check now prints no name drift block.",
+    "make wellness now reports every Form Blueprint number registered with no magic sprawl.",
+    "Full form validation proved every touched band unchanged across sibling kernels.",
+    "The remaining full-suite divergences are unchanged bands outside the files owned by this task."
+  ],
+  "change_files": [
+    "form/form-stdlib/tests/bml-concrete-source-lowerer-execution-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-bmf-compile-source-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-bmf-main-call-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-bmf-start-result-stack-constructor-assignment-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-bmf-start-result-stack-sequence-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-rule-body-execution-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-rule-hashcode-return-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-rule-method-dispatch-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-rule-nested-call-argument-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-rule-operator-cast-binding-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-rule-operator-chain-member-compare-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-rule-operator-final-return-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-rule-operator-if-instanceof-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-rule-operator-member-compare-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-rule-receiver-call-proof.fk",
+    "form/form-stdlib/tests/bml-thesis-rule-self-constructor-proof.fk",
+    "form/form-stdlib/tests/channel-query-band.fk",
+    "form/form-stdlib/tests/hex-band.fk",
+    "form/form-stdlib/tests/kv-store-band.fk",
+    "form/form-stdlib/tests/multi-hop-band.fk",
+    "form/form-stdlib/tests/record-band.fk",
+    "form/form-stdlib/tests/substrate-cell-gc-band.fk",
+    "form/form-stdlib/tests/substrate-core-band.fk",
+    "form/form-stdlib/tests/substrate-gc-band.fk",
+    "form/form-stdlib/tests/substrate-temp-arena-band.fk",
+    "form/form-stdlib/tests/tree-diff-band.fk",
+    "form/form-stdlib/tests/url-encode-band.fk",
+    "form/form-stdlib/tests/uuid-band.fk",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix"
+}

@@ -48,9 +48,9 @@
     ;; --- ERROR sentinel --------------------------------------------
     ;; "xx" — even length, invalid chars   → sentinel
     ;; "abc" — odd length, valid chars     → sentinel
-    (let SENTINEL (make_nodeid 1 2 99 1770))
-    (let err-xx  (if (value_eq (hex-decode "xx")  SENTINEL) 1 0))
-    (let err-odd (if (value_eq (hex-decode "abc") SENTINEL) 1 0))
+    (let HEX-DECODE-ERROR-SENTINEL (make_nodeid 1 2 99 1770))
+    (let err-xx  (if (value_eq (hex-decode "xx")  HEX-DECODE-ERROR-SENTINEL) 1 0))
+    (let err-odd (if (value_eq (hex-decode "abc") HEX-DECODE-ERROR-SENTINEL) 1 0))
 
     ;; --- hex-valid? ------------------------------------------------
     (let v0 (if (eq (hex-valid? "deadbeef") 1) 1 0))

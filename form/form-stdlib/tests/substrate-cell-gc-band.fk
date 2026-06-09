@@ -4,11 +4,11 @@
 ; GC walks those cells and then marks the recipe graph they reference.
 
 (do
-    (let category (make_nodeid 9 9 9 3))
+    (let substrate-cell-gc-category (make_nodeid 9 9 9 3))
     (let temp-name (intern_trivial_string "temporary-cell-root"))
-    (let temp-node (intern_node category (list temp-name (intern_trivial_int 11))))
+    (let temp-node (intern_node substrate-cell-gc-category (list temp-name (intern_trivial_int 11))))
     (let kept-cell (list temp-node))
     (substrate_gc kept-cell)
     (sum (list
-        (if (node_eq (node_category temp-node) category) 2000 0)
+        (if (node_eq (node_category temp-node) substrate-cell-gc-category) 2000 0)
         (if (eq (len (node_children temp-node)) 2) 3000 0))))
