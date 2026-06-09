@@ -1,0 +1,46 @@
+; sequence-predictor.fk — predict the NEXT symbol in a stream by what most often followed the last one (Markov-1).
+;
+; A stream is a list of symbols; given the last symbol 'prev', the prediction is the candidate that
+; most often IMMEDIATELY FOLLOWED prev in the history. The whole body is the same max-select spine as
+; recognition-router.fk (the model with the most data wins) and shared-sensing.fk (the strongest body
+; proposes) — only here the "score" is a FOLLOWER COUNT walked over adjacent pairs, not a confidence
+; vector. The history IS the data; the prediction is the transition with the most evidence behind it.
+;
+; Honest lane: when no candidate ever followed prev (unseen prev, or prev only ever ended the stream),
+; the max count is 0 — the body predicts "" (silence) at confidence 0, never a fabricated next symbol.
+; This mirrors rr-route's honest silence: below the evidence floor, no claim. Counts are integers 0..N.
+;
+; Proven by: form-stdlib/tests/sequence-predictor-band.fk (three-way at validate.sh)
+
+(do
+    ; --- FOLLOWER COUNT: how many times cand immediately followed prev in history. ---
+    ; Walk adjacent pairs (head, head-of-tail): +1 each time the first is prev and the second is cand.
+    ; Stop when fewer than two symbols remain — a lone trailing symbol has no follower.
+    (defn sp-followers-count (history prev cand)
+        (if (eq (len history) 0) 0
+            (if (eq (len (tail history)) 0) 0
+                (if (and (str_eq (head history) prev) (str_eq (head (tail history)) cand))
+                    (add 1 (sp-followers-count (tail history) prev cand))
+                    (sp-followers-count (tail history) prev cand)))))
+
+    ; --- MAX-SELECT: among the candidates, the one with the highest follower-count after prev. ---
+    ; The same spine as rr-select-loop: carry the best label + best count; a strictly-greater count
+    ; replaces it. A candidate that never followed prev scores 0 and cannot win unless all do.
+    (defn sp-predict-loop (history prev candidates best-label best-count)
+        (if (eq (len candidates) 0) (list best-label best-count)
+            (if (gt (sp-followers-count history prev (head candidates)) best-count)
+                (sp-predict-loop history prev (tail candidates)
+                    (head candidates) (sp-followers-count history prev (head candidates)))
+                (sp-predict-loop history prev (tail candidates) best-label best-count))))
+
+    ; the predicted next symbol, or "" when nothing ever followed prev (max count 0 = honest silence).
+    (defn sp-predict (history prev candidates)
+        (if (eq (nth (sp-predict-loop history prev candidates "" 0) 1) 0)
+            ""
+            (nth (sp-predict-loop history prev candidates "" 0) 0)))
+
+    ; the confidence in that prediction = the winning follower-count (how much evidence stands behind it).
+    (defn sp-confidence (history prev candidates)
+        (nth (sp-predict-loop history prev candidates "" 0) 1))
+
+    0)

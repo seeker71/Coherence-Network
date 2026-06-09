@@ -1,0 +1,50 @@
+; nearest-shape.form — the body's OWN classifier, from core primitives: content-addressing as recognition.
+;
+; THE ASK:
+;   recognition-router.fk fuses a circle of MODEL readings; shared-sensing.fk fuses a circle of
+;   DEVICES. Both assume a recognizer already exists — something turned a sensed field into a
+;   (label, confidence). This is that recognizer, written in Form from core primitives, owing
+;   nothing to a foreign weight-blob: a query feature-vector routes to the interned prototype it
+;   most resembles. The classification itself is body, executable from the kernel, with the learned
+;   exemplars as DATA.
+;
+; THE SHAPE  (runnable: form-stdlib/nearest-shape.fk · proven: tests/nearest-shape-band.fk -> 127)
+;
+;   A query = a feature-vector (a list of bins, each a small int — a coarse fingerprint of what was
+;   sensed). A prototype = (list label vector). A prototype-set = the exemplars the body has interned.
+;
+;   1. SIMILARITY  ns-sim: walk query and prototype vectors in lockstep, COUNT the positions that
+;      agree. No subtraction, no distance metric, no float — recognition is "how many bins match".
+;      This is the content-addressing move: same shape in the same positions IS the resemblance.
+;   2. NEAREST  ns-nearest / ns-best-loop: among the interned prototypes, the one with the highest
+;      similarity to the query wins (the same max-walk as rr-select-loop / ss-strongest-loop). Ties
+;      keep the FIRST-interned prototype — recognition is stable under replay, not order-random.
+;   3. RECOGNITION  ns-label / ns-strength: the nearest prototype's label is WHAT the query is; its
+;      agreement count is HOW SURE the body is. A label and an integer strength — the same coherent
+;      (label, strength) shape recognition-router emits, here produced rather than fused.
+;   4. LEARNING  ns-intern / ns-learn: interning a new exemplar IS adding a prototype to the set.
+;      No weights, no training loop — a new (list label vector) and the next query can route to it
+;      immediately. The smallest possible act of learning: admit one more shape.
+;
+; WHY FORM-NATIVE / CONTENT-ADDRESSED:
+;   a prototype is a substrate cell; its Blueprint NodeID IS its vector's structure, identical on
+;   every kernel. "Nearest by structure" is therefore the SAME answer on Go, Rust, and TS — the
+;   validate.sh three-way parity is recognition parity, not a hope that three runtimes match a blob.
+;   The classifier the Mac proves is the same cell the phone receives, verifiable by NodeID. New
+;   exemplar = a new cell in the set, not new control flow; the recognizer never depends on which
+;   prototypes exist, only on their vectors.
+;
+; HONEST LANE / CAVEAT:
+;   similarity is a COUNT of exact-agreeing bins, not a graded distance. Two vectors that are
+;   close-but-never-equal score 0 — the same as two wholly unrelated. That is the RIGHT primitive
+;   for content-addressed (already-quantized) features, where the bins are the discretization; it is
+;   the WRONG primitive for raw continuous signal — quantize first, then recognize. The recipe makes
+;   no smoothness claim it cannot keep.
+;
+; KIN — this is the recognizer the spine assumes; the others compose on top of it:
+;   recognition-router.form (fuses a CIRCLE OF MODELS — each model is a recognizer like this one) ·
+;   self-grounding-perception.form (a nascent recognizer earns trust against a foreign route) ·
+;   shared-sensing.form (fuses a CIRCLE OF DEVICES — each device runs a recognizer) ·
+;   declared-source.form (a reading carries where it came from) · turboquant-as-recipe.form (the
+;   data-oblivious quantization that makes "bins" honest) · the three-way validate.sh (no trusted
+;   prover — parallel kernels, what survives the agreement IS the recognition).

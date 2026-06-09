@@ -1,0 +1,47 @@
+; preludes: form-stdlib/nearest-shape.fk
+;
+; nearest-shape-band — the body's own classifier, made falsifiable: content-addressing as recognition.
+;
+; The body has interned three PROTOTYPES, each (list label feature-vector) — a coarse fingerprint of a
+; sensed shape (bins are small ints):
+;   "dog"  [9 1 0 7]
+;   "cat"  [2 8 0 3]
+;   "bird" [0 0 9 5]
+; A query feature-vector arrives and routes to the prototype it AGREES with in the most bins (SIMILARITY
+; = a COUNT of matching positions, no distance, no float):
+;   qdog [9 1 0 7] -> dog (4 of 4 bins agree)   ; vs cat=1, vs bird=0  — exact recognition
+;   qcat [2 8 0 9] -> cat (3 of 4 bins agree)   ; vs dog=1, vs bird=0  — a different shape, a different strength
+; Two control shapes prove the lane is honest:
+;   a TIE — alpha [5 9] and beta [9 5], query [5 5] agrees with each in exactly one bin — must route to
+;     the FIRST-interned prototype (oldest exemplar wins, recognition stable under replay).
+;   LEARNING — interning a new exemplar ("fox" [1 2 3]) GROWS the set; the next query routes to fox AND a
+;     prior query still routes to dog — adding without forgetting, no training loop.
+;
+; Verdict 127 when every claim lands:
+;   1   nearest routes to the right label       (qdog -> dog)
+;   2   strength is the agreement count          (qdog strength == 4)
+;   4   a different query -> a different label    (qcat -> cat)
+;   8   that strength is its own count           (qcat strength == 3)
+;   16  the similarity primitive is exact        (ns-sim qdog dog-vec == 4)
+;   32  a tie keeps the oldest exemplar          (tie query -> alpha, the first interned)
+;   64  learning grows without forgetting         (after interning fox: qfox -> fox AND qdog -> dog)
+(do
+    (let protos (list
+        (list "dog"  (list 9 1 0 7))
+        (list "cat"  (list 2 8 0 3))
+        (list "bird" (list 0 0 9 5))))
+    (let qdog (list 9 1 0 7))
+    (let qcat (list 2 8 0 9))
+    (let dogvec (list 9 1 0 7))
+    (let tieset (list (list "alpha" (list 5 9)) (list "beta" (list 9 5))))
+    (let tieq   (list 5 5))
+    (let learned (ns-intern protos "fox" (list 1 2 3)))
+    (let qfox (list 1 2 3))
+    (let c0 (if (str_eq (ns-label    qdog protos) "dog") 1 0))
+    (let c1 (if (eq     (ns-strength qdog protos) 4)     2 0))
+    (let c2 (if (str_eq (ns-label    qcat protos) "cat") 4 0))
+    (let c3 (if (eq     (ns-strength qcat protos) 3)     8 0))
+    (let c4 (if (eq     (ns-sim qdog dogvec) 4)          16 0))
+    (let c5 (if (str_eq (ns-label tieq tieset) "alpha")  32 0))
+    (let c6 (if (and (str_eq (ns-label qfox learned) "fox") (str_eq (ns-label qdog learned) "dog")) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

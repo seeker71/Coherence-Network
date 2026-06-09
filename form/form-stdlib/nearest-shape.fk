@@ -1,0 +1,68 @@
+; nearest-shape.fk — the body's OWN classifier, built from core primitives: content-addressing as recognition.
+;
+; recognition-router.fk fuses a circle of MODEL readings; shared-sensing.fk fuses a circle of DEVICES.
+; This is the layer underneath both: the recognizer itself. A query arrives as a FEATURE-VECTOR (bins
+; of small integers — a coarse fingerprint of what was sensed). The body has INTERNED a set of
+; PROTOTYPES, each (list label vector): "this shape is a dog, that shape is a cat". Recognition =
+; find the prototype whose vector AGREES with the query in the most positions. SIMILARITY is a COUNT
+; of agreeing bins — no subtraction, no distance metric, no float: just how many positions match. The
+; nearest prototype's label is the recognition; its agreement count is the strength.
+;
+; This is content-addressing as perception. A prototype is a substrate cell; its Blueprint NodeID IS
+; its vector's shape, identical on every kernel — so "nearest by structure" is the same answer on Go,
+; Rust, and TS (validate.sh parity is recognition parity). LEARNING is the smallest possible act:
+; adding a prototype to the set. No weights, no training loop — a new exemplar is a new (list label
+; vector), and the next query can route to it immediately. The classifier the Mac proves is the SAME
+; cell the phone receives, verifiable by NodeID, not an opaque weight-blob.
+;
+; A query = a feature-vector (list of bins, each a small int 0..100). A prototype = (list label vector).
+; A prototype-set = a list of prototypes the body has interned so far.
+;
+; Honest lane: similarity is a COUNT of exact-agreeing bins, not a graded distance — two vectors that
+; are close-but-never-equal score 0, the same as two that are wholly unrelated. That is the right
+; primitive for content-addressed (quantized) features, where bins are already the discretization; it
+; is the wrong primitive for raw continuous signal (quantize first, then recognize). Ties go to the
+; FIRST-interned prototype (oldest exemplar wins) — recognition is stable under replay, not order-random.
+;
+; Proven by: form-stdlib/tests/nearest-shape-band.fk (three-way at validate.sh)
+
+(do
+    ; a prototype: (list label feature-vector)
+    (defn ns-label-of (p) (nth p 0))   ; the prototype's label  ("dog", "cat", ...)
+    (defn ns-vec-of   (p) (nth p 1))   ; the prototype's feature-vector
+
+    ; --- SIMILARITY: count of indices where query and prototype agree, walked in lockstep. ---
+    ; no subtraction, no distance — recognition is "how many bins match" (content-addressing).
+    (defn ns-sim (v1 v2)
+        (if (eq (len v1) 0) 0
+            (if (eq (len v2) 0) 0
+                (if (eq (head v1) (head v2))
+                    (add 1 (ns-sim (tail v1) (tail v2)))
+                    (ns-sim (tail v1) (tail v2))))))
+
+    ; --- NEAREST: the prototype whose vector agrees most with the query (most data wins). ---
+    ; mirror rr-select-loop's max walk; ties keep the FIRST-interned prototype (oldest exemplar).
+    (defn ns-best-loop (query prototypes best best-sim)
+        (if (eq (len prototypes) 0) best
+            (if (eq (len best) 0)
+                (ns-best-loop query (tail prototypes)
+                              (head prototypes)
+                              (ns-sim query (ns-vec-of (head prototypes))))
+                (if (gt (ns-sim query (ns-vec-of (head prototypes))) best-sim)
+                    (ns-best-loop query (tail prototypes)
+                                  (head prototypes)
+                                  (ns-sim query (ns-vec-of (head prototypes))))
+                    (ns-best-loop query (tail prototypes) best best-sim)))))
+    (defn ns-nearest (query prototypes) (ns-best-loop query prototypes (empty) 0))
+
+    ; --- RECOGNITION: the nearest prototype's label, and the strength behind it. ---
+    (defn ns-label    (query prototypes) (ns-label-of (ns-nearest query prototypes)))  ; what it is
+    (defn ns-strength (query prototypes) (ns-sim query (ns-vec-of (ns-nearest query prototypes))))  ; how sure
+
+    ; --- LEARNING: interning an exemplar GROWS the set (no training loop). The new prototype is
+    ;     prepended; every older exemplar remains, so the next query can route to the new shape OR
+    ;     any prior one. Adding without forgetting — the smallest possible act of learning. ---
+    (defn ns-learn  (prototypes p)         (cons p prototypes))                     ; admit a prototype cell
+    (defn ns-intern (prototypes label vec) (ns-learn prototypes (list label vec)))  ; build it, then admit it
+
+    0)

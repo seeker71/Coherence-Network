@@ -1,0 +1,49 @@
+; feature-vector.form — a raw numeric signal window, binned into a fixed-width histogram feature vector.
+;
+; THE PLACE IN THE SPINE:
+;   recognition-router.form routes a CONFIDENCE VECTOR a model already produced. This is the step
+;   upstream — it MAKES the vector. A classifier never eats raw readings; it eats a fixed-width
+;   feature. The histogram is the simplest honest feature: bin the window by thresholds, count per
+;   bin. Models and classifiers are DATA downstream; the feature extraction is Form, kernel-native,
+;   three-way-identical — so the same window yields the same vector on the Mac and the phone, a
+;   content-addressed substrate cell verifiable by NodeID, not a weight-blob hoping runtimes match.
+;
+; THE SHAPE  (runnable: form-stdlib/feature-vector.fk · proven: tests/feature-vector-band.fk -> 127)
+;
+;   fv-bin (value thresholds) -> bin index
+;     how many ascending thresholds the value meets-or-exceeds. Recurse, +1 per (ge value threshold).
+;     Below all thresholds -> 0; at-or-above the last -> k. The boundary is ge, not gt: a value
+;     equal to a threshold belongs to the HIGHER bin. That single choice is the feature's identity.
+;
+;   fv-count-in-bin (values thresholds b) -> bar height
+;     how many readings in the window land in bin b — the height of one histogram bar.
+;
+;   fv-histogram (values thresholds nbins) -> (count0 count1 ... count(nbins-1))
+;     the fixed-width feature vector. There is no sub in the primitive set, so fv-hist-loop drives
+;     an ascending bin index 0..nbins-1 and stops at (eq b nbins), cons-ing one bar per bin. Width
+;     is fixed at nbins regardless of how many readings the window holds — that fixedness is what
+;     makes it a feature a classifier of fixed input shape can consume.
+;
+;   fv-bar / fv-width — read one bar, read the vector width.
+;
+; HOW IT COMPOSES THE SPINE:
+;   feature-vector (make the vector) -> recognition-router (route confidence vectors models produce
+;   from such features) -> shared-sensing (the same feature/recognition across many bodies). Ascending
+;   thresholds [t0..t(k-1)] give k+1 bins; every reading lands in exactly one bin, so the histogram
+;   CONSERVES the window (sum of bars == len values) — nothing is lost or double-counted. All values
+;   and counts are integers on the same exact-comparison ground the rest of the spine rides.
+;
+; HONEST LANE / CAVEAT:
+;   This is a HISTOGRAM feature — order-oblivious and magnitude-bucketed by design. It answers
+;   "how is the window distributed across these bands?", not "what is the sequence?" Temporal shape,
+;   ordering, and inter-sample structure are deliberately discarded; a window and its shuffle bin
+;   identically. That is the right primitive for amplitude/level features and the wrong one when the
+;   sequence carries the signal — there a different recipe (n-gram, edge, transition counts) is the
+;   feature. The thresholds are the feature designer's choice, supplied as data, not learned here;
+;   bad thresholds make a useless-but-honest vector. The general data-oblivious quantization this is
+;   one instance of is turboquant-as-recipe.
+;
+; KIN: recognition-router.form (consumes the vector this makes) · self-grounding-perception.form ·
+;      shared-sensing.form (the same feature on many bodies) · declared-source.form ·
+;      turboquant-as-recipe (the data-oblivious quantization) · value-execution.fk (count only what
+;      clears the bar) · the three-way validate.sh (no trusted prover — parallel kernels, what survives).

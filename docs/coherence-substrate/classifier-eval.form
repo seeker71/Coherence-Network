@@ -1,0 +1,42 @@
+; classifier-eval.form — TEST a classifier against known-correct labels; pass only on a proven bar.
+;
+; THE ASK:
+;   Before the body routes on a perception, it must EARN that trust. self-grounding-classifier
+;   promotes our own seeing by counting agreement with a route we already trust. But promotion
+;   needs a measurement, and the measurement must be as honest as the gate it feeds: count what
+;   the classifier got RIGHT against held-out truth, count what it got WRONG, and pass only on a
+;   bar that compares exact integers — no asserted accuracy, no float ratio the kernels round apart.
+;
+; THE SHAPE  (runnable: form-stdlib/classifier-eval.fk · proven: tests/classifier-eval-band.fk -> 63)
+;
+;   A pair = (list predicted actual): what the classifier said, what the label says, for one input.
+;   A set is a list of pairs — the held-out evaluation record.
+;   1. HIT  ce-hit?: one pair is correct when predicted str_eq actual (1), else 0.
+;   2. COUNT  ce-correct / ce-wrong / ce-total: fold the set by recursion — ce-correct sums the
+;      hits, ce-wrong sums the misses, ce-total is the set size. No subtraction: wrong is counted
+;      directly, never derived as total-minus-correct, so the two counts are independently true.
+;   3. PASS GATE  ce-passes?: the classifier passes only when it cleared enough correct AND stayed
+;      under the wrong ceiling — (and (ge correct min-correct) (ge max-wrong wrong)). Division-free:
+;      ge on integers, the same verdict on Go=Rust=TS. This is the measurement self-grounding's
+;      promotion gate consumes — the same bar shape, here turned outward onto a labeled test.
+;
+; WHY DIVISION-FREE:
+;   an accuracy ratio (correct/total) is a float, and eq on floats drifts between kernels — the
+;   three-way proof would diverge on rounding alone. A proven-count bar (min-correct, max-wrong)
+;   carries the same intent — "right enough, wrong rarely enough" — in integers the kernels compare
+;   exactly. The gate is honest in the same way value-execution.fk is: it credits only what's proven,
+;   never an asserted number, and silence (a fail) below the bar is whole, never a fabricated pass.
+;
+; KIN — this composes the spine, it does not invent a new primitive:
+;   recognition-router.form (route among model-carriers — what gets tested before it routes) ·
+;   self-grounding-perception.form / self-grounding-classifier.fk (the promotion this measurement
+;   feeds — same (predicted/our, actual/truth) pair shape, same division-free bar) ·
+;   shared-sensing.form (the circle that confirms when no single label-set is enough) ·
+;   declared-source.form (every count traces to a witnessed pair, never an assumed one).
+;
+; HONEST LANE / CAVEAT:
+;   the verdict is exactly as honest as the labels. ce-passes? proves the classifier matched the
+;   ACTUAL column on this held-out set — not that the labels are right, and not that an unseen
+;   sample will hold. A passing set is grounds to PROMOTE (let self-grounding route on its own),
+;   not a claim of universal accuracy. min-correct / max-wrong are the encoder's bar; raising them
+;   is how the body asks for more proof before it trusts its own seeing.

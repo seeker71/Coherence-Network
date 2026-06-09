@@ -1,0 +1,31 @@
+; preludes: form-stdlib/sequence-predictor.fk
+;
+; sequence-predictor-band — predict the next symbol by what most often followed the last one, made falsifiable.
+;
+; A stream alternates: history ("a" "b" "a" "b" "a" "b"), candidates ("a" "b"). The adjacent pairs are
+; (a,b)(b,a)(a,b)(b,a)(a,b): a is followed by b three times, b is followed by a twice. So:
+;   prev "a" -> predict "b"  (3 followers, the transition with the most evidence)
+;   prev "b" -> predict "a"  (2 followers)
+;   prev "z" -> ""           (unseen prev: nothing ever followed it -> honest silence, confidence 0)
+; The max-select picks the most-evidence transition the same way recognition-router picks the most-data
+; model; the unseen prev routes to silence the same way an all-weak circle does.
+;
+; Verdict 127 when every claim lands:
+;   1   from "a", predict the symbol that most often followed it   (predict == b)
+;   2   the confidence is the follower-count                        (confidence == 3)
+;   4   from "b", the other transition wins                         (predict == a)
+;   8   its confidence is the smaller follower-count                (confidence == 2)
+;   16  an unseen prev predicts nothing                             (predict == "")
+;   32  unseen prev carries zero confidence                         (confidence == 0)
+;   64  the raw follower-count is exact                             (b after a == 3)
+(do
+    (let history (list "a" "b" "a" "b" "a" "b"))
+    (let candidates (list "a" "b"))
+    (let c0 (if (str_eq (sp-predict history "a" candidates) "b") 1 0))
+    (let c1 (if (eq (sp-confidence history "a" candidates) 3) 2 0))
+    (let c2 (if (str_eq (sp-predict history "b" candidates) "a") 4 0))
+    (let c3 (if (eq (sp-confidence history "b" candidates) 2) 8 0))
+    (let c4 (if (str_eq (sp-predict history "z" candidates) "") 16 0))
+    (let c5 (if (eq (sp-confidence history "z" candidates) 0) 32 0))
+    (let c6 (if (eq (sp-followers-count history "a" "b") 3) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

@@ -1,0 +1,41 @@
+; novelty.fk — flag what the body does NOT recognize, so the field's new thing can be interned as NEW.
+;
+; The other face of recognition. nearest-shape.fk asks "what known cell is this most like?" and returns
+; a best similarity (0..100); the recognition floor says how like is like enough to count as the same.
+; This recipe reads that one number against the floor and makes the BOUNDARY load-bearing: at or above
+; the floor the field is KNOWN (the body already holds its shape — carry the matched label); below the
+; floor it is NOVEL (nothing the body holds is close enough — do not fabricate a match, intern it as new).
+;
+; This is lc-honest-lane on the recognition edge: a weak best-match is not a match, it is a discovery.
+; Forcing the nearest label onto a novel field is the hallucination the floor exists to refuse; emitting
+; "novel" with a blank label is the honest move that lets the substrate mint a fresh cell.
+;
+; Self-contained by design: it composes nearest-shape's OUTPUT (a similarity scalar) but never loads it —
+; the similarity is just an integer, so novelty is the same decision whatever produced the number.
+;
+; A similarity is an integer 0..100 (how like the nearest known cell). floor is the recognition cutoff.
+; A decision = (list verdict label score): ("novel" "" 0) when novel, ("known" matched-label sim) when known.
+;
+; Proven by: tests/novelty-band.fk (three-way at validate.sh)
+
+(do
+    ; --- THE BOUNDARY: below the floor is novel; at or above it is recognized. ---
+    ; novel? — the nearest known shape is too far; nothing held is close enough to be the same.
+    (defn nv-novel?      (best-sim floor) (if (gt floor best-sim) 1 0))
+    ; recognized? — the nearest shape clears the floor; the body already holds this (boundary == known).
+    (defn nv-recognized? (best-sim floor) (if (ge best-sim floor) 1 0))
+
+    ; --- DECIDE: emit the honest verdict, carrying the matched label only when it is real. ---
+    ;   novel -> ("novel" "" 0): blank the label (there is no honest match) so it interns as NEW.
+    ;   known -> ("known" label best-sim): carry the matched label and the strength that earned it.
+    (defn nv-decide (best-sim label floor)
+        (if (eq (nv-novel? best-sim floor) 1)
+            (list "novel" "" 0)
+            (list "known" label best-sim)))
+    (defn nv-verdict (decision) (nth decision 0))
+    (defn nv-label   (decision) (nth decision 1))
+    (defn nv-score   (decision) (nth decision 2))
+    ; the decision says novel — a thin predicate over the verdict, for the intern-as-new gate.
+    (defn nv-intern-new? (decision) (if (str_eq (nv-verdict decision) "novel") 1 0))
+
+    0)
