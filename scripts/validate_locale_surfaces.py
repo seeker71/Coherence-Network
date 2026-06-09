@@ -13,6 +13,11 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_LOCALE = "en"
+# A non-anchor bundle whose phrase values stay this identical to the anchor is
+# an untranslated seed copy: key parity passes but the surface renders in
+# English. Real attunement brings divergence well past this line (current
+# bundles sit at <=1% identical); the original fr/pt-br seed copies sat at 98%.
+SEED_COPY_RATIO_LIMIT = 0.5
 WEB_MESSAGES_DIR = ROOT / "web" / "messages"
 CLI_MESSAGES_DIR = ROOT / "cli" / "lib" / "messages"
 WEB_MANIFEST = WEB_MESSAGES_DIR / "manifest.ts"
@@ -138,6 +143,30 @@ def validate() -> list[str]:
             errors.append(f"web/messages/{code}.json missing keys: {', '.join(missing[:8])}")
         if extra:
             errors.append(f"web/messages/{code}.json extra keys: {', '.join(extra[:8])}")
+
+    # Seed-copy guard — does each tongue actually carry meaning, or just the
+    # anchor's keys? Compares multi-word phrase values (skipping brand tokens,
+    # numbers, single words that legitimately stay identical) against en.
+    anchor_phrases = {
+        key: value.strip()
+        for key, value in _flatten(default_bundle).items()
+        if isinstance(value, str) and " " in value and re.search(r"[A-Za-z]{4,}", value)
+    }
+    for code, bundle in web_bundles.items():
+        if code == DEFAULT_LOCALE:
+            continue
+        flat = _flatten(bundle)
+        considered = [k for k in anchor_phrases if isinstance(flat.get(k), str)]
+        if len(considered) < 50:
+            continue
+        identical = sum(1 for k in considered if flat[k].strip() == anchor_phrases[k])
+        ratio = identical / len(considered)
+        if ratio > SEED_COPY_RATIO_LIMIT:
+            errors.append(
+                f"web/messages/{code}.json appears untranslated: "
+                f"{round(ratio * 100)}% of phrase values identical to {DEFAULT_LOCALE} "
+                f"(seed copy awaiting attunement — key parity hides this)"
+            )
 
     manifest_codes = _web_manifest_codes()
     if manifest_codes != web_codes:
