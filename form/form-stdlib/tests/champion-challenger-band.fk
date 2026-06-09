@@ -1,0 +1,45 @@
+; preludes: form-stdlib/champion-challenger.fk
+;
+; champion-challenger-band — the Form-native arm takes authority from the 3rd-party model only on
+; PROVEN head-to-head competition, made falsifiable.
+;
+; Two windows of trials = (list champion-correct challenger-correct) per sample:
+;   even       — 10 trials, champion 9 right / challenger 9 right. The challenger REACHES the champion
+;                at margin 0 (9 >= 9), the window is long enough (>= 10), so it is PROMOTED and
+;                authority flips to "challenger" — the 3rd-party model can retire. A tie does NOT
+;                EXCEED (9 is not strictly > 9), so cc-exceeds? stays silent.
+;   champ-wins — 10 trials, champion 8 right / challenger 5 right. The challenger is behind at margin 0
+;                (5 < 8), so it is NOT promoted and the "champion" keeps authority. But the margin
+;                slack is real: allow slack 3 and 5+3 >= 8 — it reaches. Slack is load-bearing.
+;   strong     — 3 trials, champion 2 right / challenger 3 right. The challenger STRICTLY beats the
+;                champion, so cc-exceeds? fires.
+; Counts are exact: no ratio, no float — the same integers on every kernel.
+;
+; Verdict 127 when every claim lands:
+;   1    champion scored exactly over the window     (cc-champ-score even == 9)
+;   2    challenger scored exactly over the window    (cc-chall-score even == 9)
+;   4    a tie REACHES at margin 0                     (cc-reaches? even 0 == 1)
+;   8    proven + long window -> promoted, authority flips (promote? == 1 AND authority == "challenger")
+;   16   behind at margin 0 -> champion keeps authority (promote? == 0 AND authority == "champion")
+;   32   strict beat fires, tie stays silent           (cc-exceeds? strong == 1 AND cc-exceeds? even == 0)
+;   64   margin slack is load-bearing                  (reaches? champ-wins 3 == 1 AND reaches? champ-wins 0 == 0)
+(do
+    (let even (list
+        (list 1 1) (list 1 1) (list 1 1) (list 1 1) (list 1 1)
+        (list 1 1) (list 1 1) (list 1 1) (list 1 1) (list 0 0)))
+    (let champ-wins (list
+        (list 1 1) (list 1 1) (list 1 1) (list 1 1) (list 1 1)
+        (list 1 0) (list 1 0) (list 1 0) (list 0 0) (list 0 0)))
+    (let strong (list (list 1 1) (list 0 1) (list 1 1)))
+    (let c0 (if (eq (cc-champ-score even) 9) 1 0))
+    (let c1 (if (eq (cc-chall-score even) 9) 2 0))
+    (let c2 (if (eq (cc-reaches? even 0) 1) 4 0))
+    (let c3 (if (and (eq (cc-promote? even 10 0) 1)
+                     (str_eq (cc-authority even 10 0) "challenger")) 8 0))
+    (let c4 (if (and (eq (cc-promote? champ-wins 10 0) 0)
+                     (str_eq (cc-authority champ-wins 10 0) "champion")) 16 0))
+    (let c5 (if (and (eq (cc-exceeds? strong) 1)
+                     (eq (cc-exceeds? even) 0)) 32 0))
+    (let c6 (if (and (eq (cc-reaches? champ-wins 3) 1)
+                     (eq (cc-reaches? champ-wins 0) 0)) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

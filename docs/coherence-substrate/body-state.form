@@ -1,0 +1,55 @@
+; body-state.form — collapse the body's live signals into one inspectable state a dashboard can show.
+;
+; THE ASK (device-heartbeat.form, OBSERVABILITY lane):
+;   "running in a way I can SEE what it is doing, what state it is in, which organs are active,
+;    surprise events, infer error (core for learning)."
+;
+;   device-heartbeat.form lane-sorted that ask: observability is a CARRIER (the live view); the things
+;   it shows are BODY, mostly already proven. This recipe is that carrier surface, runnable — the fold
+;   that gathers the already-proven live signals into one readable STATE cell the dashboard renders.
+;   It computes nothing new; it makes the body's own answer legible at a glance.
+;
+; THE SHAPE  (runnable: form-stdlib/body-state.fk · proven: tests/body-state-band.fk -> 127)
+;
+;   A state = (list organs-active present-peers surprise-count error-count sample-count) — five plain
+;   non-negative ints, one frame of the body's vitals:
+;
+;   ACCESSORS  bs-organs / bs-peers / bs-surprises / bs-errors / bs-samples — pull each count out (nth).
+;
+;   bs-alive?       peers > 0 — is anyone on the mesh? self counts as 1, so present means alive. The
+;                   peers come from hb-present? over received beacons (device-heartbeat).
+;   bs-busy-organs? organs >= min — enough senses live to call the body perceiving. Organs come straight
+;                   from hb-organs / hb-organ-active? per device (device-heartbeat).
+;   bs-surprised?   surprises > 0 — something did not fit; a thing for the view to highlight. Surprises
+;                   are novelty.fk readings below the recognition floor / anomaly-band outside-band.
+;   bs-learning?    samples > errors — net-learning, more right than wrong so far. Errors are the
+;                   prediction misses (sequence-predictor PREDICT, then predicted != actual, counted by
+;                   drift-detect.fk, graded by self-grounding-classifier.fk). The TRUE learning signal is
+;                   error-count FALLING, but that is invisible in one snapshot — so this reads net, a
+;                   proven-COUNT GATE, not a ratio (no division, per AUTHORING's count-gate rule).
+;
+; HOW IT COMPOSES THE SPINE — it invents no signal, it folds existing ones:
+;   organs   <- device-heartbeat.fk (hb-organs / hb-organ-active?)
+;   peers    <- device-heartbeat.fk (hb-present? over beacons)
+;   surprises<- novelty.fk (below-floor) + anomaly-band.fk (outside-band)
+;   errors   <- sequence-predictor.fk (predict) + drift-detect.fk (predicted != actual count)
+;   samples  <- the graded denominator self-grounding-classifier.fk already tracks
+;   The band passes the counts directly (self-contained — it preludes only body-state.fk + core), but
+;   in the live system those numbers arrive from the kin recipes above. This is the dashboard's
+;   framebuffer: the recipes upstream make the signals real, this fold makes them readable.
+;
+; ── HONEST LANE ──
+;   A state is ONE FRAME — a snapshot, not a trend. bs-learning? is therefore deliberately crude: it
+;   reads "net right" (samples > errors), not "improving." Whether error-count is actually FALLING over
+;   time needs a sequence of frames (drift-detect over a window), which this single-frame fold cannot
+;   see and does not claim. The view shows the present vitals honestly; the trend lives elsewhere.
+;
+; KIN: device-heartbeat.form (organs + present-peers — the heartbeat this state reads) · novelty.form +
+;   anomaly-band.form (the surprises it counts) · drift-detect.form + sequence-predictor (the inference-
+;   errors it counts) · self-grounding-perception.form (the graded samples) · recognition-router.form
+;   (the same band trick — consume a bare ge/gt inside `if`, never via eq, so kernels agree) ·
+;   lc-honest-lane (one frame claims only what one frame can see).
+;
+; LINEAGE: device-heartbeat.form named observability as a carrier over signals the body already proves;
+;   this is that carrier's read — the smallest state a human (or the Mac/app dashboard) needs to answer
+;   "what is it doing, who is here, did something surprise it, is it net-learning?" in a single glance.

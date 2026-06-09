@@ -1,0 +1,48 @@
+; predictor-sampling.form — fuse the 3rd-party predictors we can sample into one GROUND-TRUTH label.
+;
+; THE ASK:
+;   We are growing a Form-native challenger — our own classifier, built from the body's primitives. To
+;   train and grade it we need ground truth, and the cheapest honest ground truth we have is the circle of
+;   3rd-party models already available to us (the predictors we can SAMPLE but do not own). Ask all of them
+;   on one input, and where they AGREE is a supervising label. But borrowed agreement is not an oracle, so
+;   the load-bearing second question is "how strongly did they agree?" — because a sample the models barely
+;   split on is a WEAK teacher and must not be fed to the challenger as if it were settled.
+;
+; THE SHAPE  (runnable: form-stdlib/predictor-sampling.fk · proven: tests/predictor-sampling-band.fk -> 127)
+;
+;   A SAMPLE = one list of labels, one per 3rd-party model, for one input. candidates is the label-set to
+;   tally over. predictor-sampling reads ensemble-vote's fusion through a supervision intent:
+;   1. VOTES  ps-votes(labels cand): how many of the sampled models named cand — the evidence for cand as
+;      ground truth. (Reuses ev-votes: a pure tally, every model counts the same, no weight.)
+;   2. TRUTH  ps-truth(labels candidates): the fused ground-truth label = the candidate the most models
+;      agreed on. This is the supervising label the challenger trains/grades against. (Reuses ev-winner.)
+;   3. AGREEMENT  ps-agreement(labels candidates): the winning vote count = how many models stood behind the
+;      ground truth = the CONFIDENCE in it. Three of five is a stronger teacher than two of five. (ev-confidence.)
+;   4. CONFIDENT?  ps-confident?(labels candidates quorum): trust this sample only when enough models agreed —
+;      (ge agreement quorum) -> 1, else 0. A contested sample is gated OUT of the training set. This is the
+;      one new move on top of ensemble-vote: the quorum that keeps a split borrowed circle from teaching.
+;
+; ENSEMBLE-VOTE VS PREDICTOR-SAMPLING — the same count, two intents:
+;   ensemble-vote.form ends at the plurality leader: "what did the circle conclude?" — the fusion IS the
+;   answer we serve. predictor-sampling does not serve the leader to a user; it reads the same fusion as a
+;   ground-truth SAMPLE to supervise a challenger we are growing, and so it adds the confidence-in-the-truth
+;   reading and the quorum gate. Same max-select spine, same ballot shape; the difference is what the answer
+;   is FOR — a served prediction vs a teacher for our own model. The gate is the whole point of the reframe.
+;
+; HONEST LANE — borrowed plurality, gated by its own count:
+;   ps-truth is a PLURALITY of 3rd-party models, not an oracle — only as good as the circle sampled, and
+;   ps-confident? is the honesty that says when to trust it. Plurality not majority: the leader is named even
+;   when no label cleared half; a tie keeps the FIRST candidate offered (strict gt in the max-select, stable
+;   replay). The quorum is a RAW COUNT, not a ratio — the same division-free proven-count gate that
+;   self-grounding-classifier.fk uses to credit our perception only on proven agreement; no floats, all
+;   integers 0..N (the number of models sampled). A split sample is not wrong, it is WEAK — gated, not denied.
+;
+; KIN — the same circle and count, on the supervision side of the loop:
+;   ensemble-vote.form (the plurality fusion this composes — the count is already proven) ·
+;   self-grounding-classifier.fk (the challenger this teaches — its proven-count credit gate is the same shape) ·
+;   self-grounding-perception.form (the A/B-ground-truth promotion loop predictor-sampling feeds) ·
+;   declared-source.form (when a source DECLARES the label, that is free perfect ground truth — prefer it,
+;     sample the predictors only when nothing is declared) ·
+;   shared-sensing.form (a circle confirming a field on quorum — votes as confirmation, same gate) ·
+;   recognition-router.form (the strength-routed sibling fusion) · lc-honest-lane (the count IS the honesty —
+;     a barely-agreed sample says so, and stays out of the training set).

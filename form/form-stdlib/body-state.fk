@@ -1,0 +1,45 @@
+; body-state.fk — collapse the body's live signals into one inspectable STATE a dashboard can show.
+;
+; The observability read named in device-heartbeat.form's OBSERVABILITY lane, made runnable. The body
+; already produces the signals — organs live (hb-organs / hb-organ-active?), surprises (novelty.fk: a
+; reading below the recognition floor), inference-errors (drift-detect.fk: predicted != actual). This
+; recipe gathers the COUNTS of those signals into one STATE cell so a thin live view can answer, at a
+; glance: "what is it doing, which organs active, is anyone on the mesh, is it learning?" It computes
+; nothing the spine doesn't already prove — it is the carrier surface, a fold of live counts into one
+; readable shape. State is the framebuffer the dashboard renders; the recipes upstream make it real.
+;
+; A state = (list organs-active present-peers surprise-count error-count sample-count):
+;   organs-active — how many senses/effectors are live right now (from hb-organs across devices)
+;   present-peers — how many bodies are alive on the mesh, self included (from hb-present? beacons)
+;   surprise-count — how many readings did not fit (novelty.fk below-floor / anomaly-band outside-band)
+;   error-count    — how many predictions missed (drift-detect predicted != actual)
+;   sample-count   — how many observations have been graded so far (the denominator under learning)
+;
+; All fields are plain non-negative ints; the reads are accessors + integer gates (no float, no
+; division — net-learning is a count gate, more right than wrong, per AUTHORING's proven-count rule).
+;
+; Proven by: form-stdlib/tests/body-state-band.fk (three-way at validate.sh)
+
+(do
+    ; --- ACCESSORS: pull each live count out of the state cell ---
+    (defn bs-organs    (state) (nth state 0))
+    (defn bs-peers     (state) (nth state 1))
+    (defn bs-surprises (state) (nth state 2))
+    (defn bs-errors    (state) (nth state 3))
+    (defn bs-samples   (state) (nth state 4))
+
+    ; --- ALIVE: is anyone on the mesh? self counts as 1, so peers>0 means the body is present. ---
+    (defn bs-alive? (state) (if (gt (bs-peers state) 0) 1 0))
+
+    ; --- LEARNING (crude, one-snapshot): error-count FALLING is the real learning signal but it is
+    ;     invisible in a single frame; instead read net-learning — more observations landed right than
+    ;     wrong so far (samples > errors). A proven-count gate, not a ratio (no division). ---
+    (defn bs-learning? (state) (if (gt (bs-samples state) (bs-errors state)) 1 0))
+
+    ; --- BUSY ORGANS: enough senses live to call the body perceiving (organs >= min). ---
+    (defn bs-busy-organs? (state min) (ge (bs-organs state) min))
+
+    ; --- SURPRISED: something unexpected happened — a thing for the dashboard to highlight. ---
+    (defn bs-surprised? (state) (gt (bs-surprises state) 0))
+
+    0)

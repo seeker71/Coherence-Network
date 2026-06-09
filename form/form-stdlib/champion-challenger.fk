@@ -1,0 +1,54 @@
+; champion-challenger.fk — the model-promotion north star: a Form-native CHALLENGER runs beside a
+; trusted 3rd-party CHAMPION (ground truth) and TAKES OVER only when it has PROVEN it reaches or
+; exceeds the champion over a window. "Sample the 3rd-party models until the Form-native arms reach
+; or exceed them" — made executable.
+;
+; self-grounding-classifier.fk promotes OUR perception by counting agreement with a trusted route;
+; classifier-eval.fk gates PASS on a proven count. This composes that same proven-count spine but
+; asks a distinct question: not "is our reading correct" but "WHICH MODEL is the authority right now",
+; decided by proven head-to-head competition. The champion is the incumbent 3rd-party model; the
+; challenger is the Form-native arm. Authority flips to the challenger only on earned competition,
+; never on asserted accuracy — value-execution.fk's credit gate turned onto model promotion. No
+; ratio, no float: the kernels compare exact integer counts, so the verdict is identical on Go=Rust=TS.
+;
+; A trial = (list champion-correct challenger-correct) for ONE sample — each 1 if that model got
+; that sample right, else 0. A history is a list of trials — the competition record over the window.
+;
+; Proven by: tests/champion-challenger-band.fk (three-way at validate.sh)
+
+(do
+    (defn cc-champ  (t) (nth t 0))   ; 1 if the 3rd-party champion was correct on this sample
+    (defn cc-chall  (t) (nth t 1))   ; 1 if the Form-native challenger was correct on this sample
+
+    ; --- score each model over the window: count correct (recursion is the loop; no subtraction) ---
+    (defn cc-champ-score (h)
+        (if (eq (len h) 0) 0
+            (add (cc-champ (head h)) (cc-champ-score (tail h)))))
+    (defn cc-chall-score (h)
+        (if (eq (len h) 0) 0
+            (add (cc-chall (head h)) (cc-chall-score (tail h)))))
+
+    ; --- REACHES: the challenger is within `margin` of the champion (or over it). margin is slack
+    ;     allowed below the champion; margin=0 means the challenger must equal-or-exceed. No sub:
+    ;     instead of (chall >= champ - margin) we add the slack to the challenger's side. ---
+    (defn cc-reaches? (h margin)
+        (if (ge (add (cc-chall-score h) margin) (cc-champ-score h)) 1 0))
+
+    ; --- EXCEEDS: the challenger STRICTLY beats the champion over the window. ---
+    (defn cc-exceeds? (h)
+        (if (gt (cc-chall-score h) (cc-champ-score h)) 1 0))
+
+    ; --- PROMOTE: flip authority to the challenger only when the window is long enough to trust
+    ;     (>= min-samples) AND the challenger has reached the champion within margin. Proven
+    ;     competition, never asserted — the long-window floor is the same shape as classifier-eval's
+    ;     min-correct gate. ---
+    (defn cc-promote? (h min-samples margin)
+        (if (and (ge (len h) min-samples) (eq (cc-reaches? h margin) 1)) 1 0))
+
+    ; --- AUTHORITY: which model the body routes on right now. "challenger" once promoted — the
+    ;     Form-native arm wins and the 3rd-party champion can retire; "champion" until the
+    ;     competition is proven. ---
+    (defn cc-authority (h min-samples margin)
+        (if (eq (cc-promote? h min-samples margin) 1) "challenger" "champion"))
+
+    0)

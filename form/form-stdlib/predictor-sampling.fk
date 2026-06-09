@@ -1,0 +1,55 @@
+; predictor-sampling.fk — fuse N 3rd-party predictors on one input into a single GROUND-TRUTH label.
+;
+; ensemble-vote.fk counts a circle of peer classifiers and names their plurality leader. This brick reads
+; that SAME fusion through a different intent: the peers here are the 3rd-party models available to us
+; (the predictors we can sample but do not own), and their agreement is not an end — it is a GROUND-TRUTH
+; SAMPLE. A sample = one list of labels, one per model, for one input. Fused, it becomes the supervising
+; label that TRAINS or GRADES the Form-native challenger we are growing. So the load-bearing extra question
+; is not "who won?" but "how strongly did the models agree?" — the CONFIDENCE in this ground truth — because
+; a contested sample is a weak teacher: a label only a bare plurality of borrowed models endorse should not
+; be fed to the challenger as if it were settled. ps-confident? is the quorum gate that keeps a split sample
+; out of the training set. Same max-select spine as ensemble-vote / recognition-router; the score is a vote
+; tally; the framing is supervision-from-a-borrowed-circle, kernel-executable and three-way-identical.
+;
+; Same plurality-by-max-select shape as ensemble-vote.fk / recognition-router, kept self-contained here;
+; predictor-sampling's own contribution is the ground-truth READING (a sample becomes a supervising label)
+; and the quorum gate (ps-confident?) that keeps a contested sample out of the challenger's training set.
+;
+; Honest lane: the truth is a PLURALITY of borrowed models, not an oracle — it is only as good as the circle
+; sampled, and ps-confident? is the honesty that says when to trust it. Plurality not majority: ps-truth names
+; the leader even when no label cleared half; a tie keeps the FIRST candidate offered (strict gt in the
+; max-select, stable replay). All votes, agreements, and quorums are integers 0..N (model count); no floats,
+; no ratios — the quorum is a raw count, the same proven-count gate self-grounding-classifier.fk uses.
+;
+; Proven by: form-stdlib/tests/predictor-sampling-band.fk (three-way at validate.sh)
+
+(do
+    ; --- VOTES: how many of the sampled 3rd-party models named cand for this input (a tally over the sample). ---
+    ; The evidence for cand as ground truth = the count of models that emitted it.
+    (defn ps-votes (labels cand)
+        (if (eq (len labels) 0) 0
+            (if (str_eq (head labels) cand)
+                (add 1 (ps-votes (tail labels) cand))
+                (ps-votes (tail labels) cand))))
+
+    ; --- TRUTH: the fused ground-truth label = the candidate the most models agreed on (plurality leader). ---
+    ; The supervising label the challenger trains/grades against. Max-select over the candidates; STRICT gt,
+    ; so a tie keeps the FIRST candidate offered (stable under replay).
+    (defn ps-truth-loop (labels cands best best-count)
+        (if (eq (len cands) 0) best
+            (if (gt (ps-votes labels (head cands)) best-count)
+                (ps-truth-loop labels (tail cands) (head cands) (ps-votes labels (head cands)))
+                (ps-truth-loop labels (tail cands) best best-count))))
+    (defn ps-truth (labels candidates) (ps-truth-loop labels candidates "" 0))
+
+    ; --- AGREEMENT: the winning vote count = how many models stood behind the ground truth (its confidence). ---
+    ; Three of five agreeing is a stronger teacher than two of five; the count IS the ground-truth confidence.
+    (defn ps-agreement (labels candidates) (ps-votes labels (ps-truth labels candidates)))
+
+    ; --- CONFIDENT?: trust this sample as ground truth only when enough models agreed (quorum reached). ---
+    ; A proven-count gate (ge agreement quorum), not a ratio — a contested sample is a weak teacher and is
+    ; gated out of the training set. 1 when the sample is settled enough to supervise, 0 when too split to use.
+    (defn ps-confident? (labels candidates quorum)
+        (if (ge (ps-agreement labels candidates) quorum) 1 0))
+
+    0)

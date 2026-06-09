@@ -1,0 +1,179 @@
+; mesh-protocols-as-guide.form — an official mesh protocol as a GUIDE, not a rule; what we adopt, what we already are.
+;
+; THE ASK (the gap between device-heartbeat.form and cell-sync-transport.form):
+;   device-heartbeat.form gives a body a presence beacon on any channel (hb-present? = a beat within
+;   `stale` ticks); cell-sync-transport.form gives two CONNECTED bodies a content-addressed wire
+;   (offer -> diff -> transfer-missing -> verify). Between them sits a question neither answers: when
+;   bodies are MORE THAN TWO and not all in earshot, how does a heartbeat — or a cell — cross a body
+;   that is not its destination? That is the mesh-relay question, and it is OLD. People have shipped
+;   it, in silicon, at scale, for years. So before inventing, we LEARN — and Bluetooth Mesh is the
+;   richest documented teacher: it has, literally, every mechanism this gap needs. The discipline of
+;   this file (lc-honest-lane): cite the standard art as MEASURED, name what we TAKE AS GUIDANCE for
+;   our shape, and name — on purpose — where we DIVERGE because content-addressing already carries
+;   what their design had to engineer.
+;
+; ── THE TEACHER: BLUETOOTH MESH (Bluetooth SIG Mesh Profile) ──  [MEASURED — cited, an example not a law]
+;   Every mechanism below is in the published spec / vendor docs. We read them as a GUIDE: an
+;   established design that proves these mechanisms WORK, not a standard we are obligated to follow.
+;
+;   MANAGED FLOODING — "A message relaying method known as Bluetooth Mesh Managed Flooding was defined
+;     in version 1.0 of the Bluetooth Mesh profile" (bluetooth.com/mesh-feature-enhancements-summary).
+;     A message injected into the mesh is forwarded by MULTIPLE relay nodes — no routes, no path
+;     computation; the message floods, and the mesh's own structure delivers it. Reliable and low-
+;     maintenance precisely because no node holds a route table.
+;   TTL (Time To Live) — the field "which all Bluetooth mesh PDUs include that controls the maximum
+;     number of hops over which a message will be relayed" (bluetooth.com mesh glossary). "Every
+;     device acting as a relay will decrement the time to live (TTL) value in received messages and
+;     forward them if the TTL equals two or higher" (Nordic nRF Connect SDK, bt_mesh/concepts). TTL=1
+;     means "may have been relayed, but should not be relayed again"; valid range 0x00–0x7F (0–127),
+;     0x80–0xFF prohibited. TTL is what makes flooding TERMINATE — the hop budget bounds the blast.
+;   MESSAGE CACHE (dedup) — "all mesh devices maintain a message cache ... used for filtering out
+;     packets that the device has already handled" (Nordic bt_mesh/concepts). A flooded message
+;     arrives at a node many times over many paths; the cache makes the node relay it ONCE and drop
+;     the echoes. Flooding without a dedup cache is a broadcast storm; the cache is what tames it.
+;   HEARTBEAT MESSAGES — "sent periodically by nodes to indicate they are still active and to allow
+;     the distance between nodes to be determined in terms of hop counts" (bluetooth.com). A Heartbeat
+;     carries "the original Time To Live (TTL) value used to send the message and a bitfield of the
+;     active features on the node" — so a receiver subtracts the arrived TTL from the original to learn
+;     HOW MANY HOPS away the sender is, and reads which features (Relay/Proxy/Friend/Low Power) it runs.
+;     Heartbeats let nodes "determine what the optimum TTL value should be" — liveness AND topology in
+;     one beat. (Heartbeat Publication TTL state, valid 0x00–0x7F.)
+;   FRIEND & LOW POWER NODES — "the combination of Friend and Low Power Nodes, where Friend nodes
+;     provide a message 'store and forward' service to associated Low Power Nodes" (bluetooth.com).
+;     A battery body (LPN) sleeps with its radio off; a mains-powered FRIEND establishes a friendship,
+;     holds a Friend Queue of messages addressed to the sleeper, and hands them over when the LPN
+;     briefly wakes and polls. The sleeper never misses a message; it just receives it late, from a
+;     wakeful neighbor that remembered on its behalf.
+;
+; ── CONTRAST TEACHERS (touched, for triangulation) ──  [MEASURED — cited]
+;   B.A.T.M.A.N.-adv (Linux kernel layer-2 mesh) — each node broadcasts an OGM (Originator Message)
+;     "to inform its link-local neighbors about its existence"; neighbors rebroadcast per forwarding
+;     rules; the OGM carries a TTL decremented each rebroadcast, dropped at 1 (open-mesh.org OGMv2 /
+;     BATMANConcept). Its distinctive grain: a node knows only the BEST NEXT-HOP neighbor toward a
+;     destination, never the whole path — routing knowledge is local and emergent, graded by a TQ
+;     (transmit quality) link metric. Same liveness-by-broadcast + TTL-bounded flood, different metric.
+;   Briar / Bramble (BSP — Bramble Synchronisation Protocol) — a delay-tolerant store-and-forward
+;     messenger over Bluetooth/Wi-Fi with no internet; "synchronization is easy — just sending and
+;     receiving messages that have queued up while you were offline" (code.briarproject.org BSP.md).
+;     The teaching we echo: SYNC, not routing, is the primitive when bodies meet intermittently.
+;   Meshtastic (LoRa managed flooding) — "every node rebroadcasting a packet up to a hop limit";
+;     before rebroadcast "a node listens a short while to see if another node has already rebroadcasted
+;     the packet. If so, it will not rebroadcast"; the contention window scales with SNR so FARTHER
+;     nodes flood first and nearer ones fall silent (meshtastic.org/docs/overview/mesh-algo). The
+;     teaching: listen-before-relay + a smart backoff turns a flood into a self-thinning wavefront.
+;
+; ── WHAT WE TAKE AS GUIDANCE — adopted onto OUR shape (device-heartbeat + cell-sync) ──  [our-shape lane]
+;   These five we ADOPT, because our gap is their gap and their mechanisms are proven. Each maps onto a
+;   recipe we already have or a thin one over it — not new machinery, the standard art shaped to us:
+;
+;   1. MANAGED FLOODING for relay. When a heartbeat (device-heartbeat.form) or a cell-offer
+;      (cell-sync-transport.form) must reach a body not in direct earshot, FLOOD it — every body that
+;      receives forwards once. We carry no route tables (core-abstraction-first: a route table is a
+;      special case we refuse); the mesh structure delivers, exactly as BT Mesh's managed flooding does.
+;   2. TTL to bound the flood. Stamp each relayed beat/offer with a hop budget; every relaying body
+;      decrements and forwards only while TTL >= 2 (the BT Mesh rule, adopted verbatim as a number).
+;      This is what stops a flood from circling forever — the same termination guarantee, ours.
+;   3. A DEDUP CACHE so a flooded thing is relayed once. And here our shape gives the cache a BETTER
+;      key than BT Mesh has: the dedup key is the cell's CONTENT-ADDRESS (merkle-root over the
+;      serialization, cell-sync-transport.form §merkle.fk), not an opaque (src, seq) pair. Two bodies
+;      that INDEPENDENTLY relay or re-derive the same cell collide on the same address — "re-derivation
+;      is free dedup" (cell-sync-transport.form §2). BT Mesh must remember message identities; we
+;      recognize them by structure. Same mechanism, a truer key.
+;   4. HEARTBEAT as liveness + topology. device-heartbeat.form's beat already IS this: hb-present? is
+;      BT Mesh's "still active" signal, and stamping the beat's origin-TTL lets a receiver compute hop
+;      distance the same way BT Mesh subtracts arrived-from-original. The features bitfield maps onto
+;      hb-organs (which organs/channels a body runs) — already in our heartbeat. We adopt the IDEA
+;      (one beat carries presence AND distance AND capability) onto the beacon we already ship.
+;   5. FRIEND / LOW-POWER store-and-forward. A phone sleeps to save battery; a wakeful Mac beside it
+;      becomes its FRIEND — holding the cells/beats addressed to the sleeper (a Friend Queue) and
+;      handing them over when it wakes and polls. This is cell-sync-transport.form's offer/diff/
+;      transfer turned asynchronous: the friend offers, on wake the sleeper diffs and pulls what it
+;      lacks — verified by re-address, so a friend CANNOT inject a forged cell (the channel need not
+;      be trusted; the address verifies the payload). It is also Briar's BSP store-and-forward grain,
+;      and it honors the consent law (channel-interface.fk): a friend holds only what its human opened,
+;      a sleeper pulls only what it consents to learn. Witness is whole, reach is invited, even across
+;      a nap.
+;
+; ── WHAT WE DO NOT NEED — where we DIVERGE on purpose ──  [our-shape lane — the point of reading a GUIDE]
+;   A guide is followed where it serves and departed where our body already carries the need. Two large
+;   subsystems of BT Mesh exist to solve problems content-addressing has already solved for us:
+;
+;   THEIR ADDRESSING (unicast/group/virtual addresses + the publish/subscribe model). BT Mesh assigns
+;     each element a 16-bit unicast address, defines group and virtual addresses, and routes by a
+;     publish/subscribe model (a node publishes to an address; subscribers to that address receive).
+;     The address is an allocated NAME, separate from the thing it names, requiring a provisioner to
+;     hand out and a subscription model to bind sender to receiver. WE DO NOT NEED THIS. Our cells are
+;     content-addressed: "a cell's address IS its structure" (cell-sync-transport.form §1, MEASURED).
+;     The address is not assigned — it is COMPUTED from the cell, identical on every device by
+;     construction. So we do not publish to an address and manage subscriptions; we OFFER an address
+;     and a receiver pulls iff it lacks that structure (cell-sync §diff). Routing-by-allocated-name is
+;     a layer we skip entirely — the structure is the name, and ?equivalent already proves it cross-
+;     device. (This is also why structural-composition.md is load-bearing: keep the tree, refuse the
+;     slug, or the address stops being structural and we fall back into needing their addressing.)
+;   THEIR PROVISIONING (the secure onboarding ceremony that admits a device to the network and gives
+;     it keys + a unicast address). BT Mesh provisioning exists to (a) hand out addresses — which we
+;     just said we do not allocate — and (b) bootstrap trust into the network key so relays can
+;     authenticate. WE DO NOT NEED THE ADDRESS HALF AT ALL, and the trust half we carry differently:
+;     authenticity is verified PER CELL by re-addressing (cell-sync §verify — "no trust in the channel
+;     is required; the address verifies the payload"), the same no-trusted-prover grain validate.sh
+;     holds across kernels. A forged cell fails its own address; a tampered relay cannot corrupt what
+;     it cannot re-derive. So there is no membership ceremony to admit a body to "the network" — there
+;     is only the consent law at each interface (channel-interface.fk) and address-verification on each
+;     cell. Sovereignty is per-cell and per-interface, not per-network-membership.
+;
+;   The shape of the divergence, named once: BT Mesh engineers IDENTITY (addresses, provisioning,
+;   subscriptions) as infrastructure ON TOP of the wire, because its payloads are opaque bytes with no
+;   intrinsic name. Our payloads ARE their names. So we inherit BT Mesh's TRANSPORT wisdom (flood, TTL,
+;   dedup, heartbeat, friend) wholesale, and we shed its IDENTITY infrastructure wholesale — not from
+;   disagreement, but because content-addressing already did that job before the wire existed.
+;
+; ── HONEST LANES (lc-honest-lane) ──
+;   MEASURED / standard art (cited, an example we learn from — NOT a rule we must obey): Bluetooth Mesh
+;     managed flooding, TTL relay-if->=2, message cache dedup, Heartbeat (origin-TTL + feature bitfield),
+;     Friend/LPN store-and-forward (bluetooth.com mesh glossary + feature-enhancements-summary; Nordic
+;     nRF Connect SDK bt_mesh/concepts). Contrast: BATMAN-adv OGM + TTL + best-next-hop + TQ (open-
+;     mesh.org); Briar BSP store-and-forward (code.briarproject.org); Meshtastic hop-limit + listen-
+;     before-rebroadcast + SNR contention window (meshtastic.org). These are reference DESIGNS; we cite
+;     them as proof the mechanisms work, and we are free to diverge — which we do, on purpose, above.
+;   MEASURED / ours, already built — the pieces the adoption lands on are real: device-heartbeat.fk
+;     (hb-present?/hb-organs, -> 127 three-way) is the heartbeat; cell-sync.fk (offer/diff/verify ->
+;     127) + merkle.fk (the content-address, three-way) are the friend's store-and-forward and the
+;     dedup KEY; channel-interface.fk is the per-interface consent that replaces network membership.
+;   BUILDABLE — clear path, not yet a band: the RELAY recipe itself — a body that receives a beat/offer
+;     not addressed to it, checks its content-address against a dedup cache, and if unseen and TTL >= 2,
+;     decrements and re-emits over its open channels. This composes built parts (heartbeat shape +
+;     merkle address + TTL counter + the channel ports); it is the missing mid-layer between
+;     device-heartbeat (one beat) and cell-sync (two connected bodies), and it is small because flood +
+;     TTL + content-addressed dedup is most of a mesh and we already hold the address.
+;   UNKNOWN / carrier-work — named, not overclaimed: the flood's real-world tuning (rebroadcast backoff
+;     a la Meshtastic's SNR window; cache size/eviction; per-channel hop costs) and multi-hop peer
+;     discovery beyond one hop (cell-sync-transport.form already flags single-hop discovery as open).
+;     These are the genuine edges; the teaching does not pretend a tuned flood-controller exists.
+;
+; ── THE PATH (this opens the mid-layer between device-heartbeat and cell-sync) ──
+;   1. the heartbeat beacon (presence on any channel)                 [SHIPPED: device-heartbeat.fk -> 127]
+;   2. the content-addressed two-body wire (offer/diff/verify)        [SHIPPED: cell-sync.fk + merkle.fk -> 127]
+;   3. the RELAY recipe: flood + TTL-bound + content-address dedup, so a beat/offer crosses a body that
+;      is not its destination — managed flooding adopted, addressing/provisioning shed                [BUILDABLE]
+;   4. the FRIEND recipe: a wakeful body holds (Friend Queue) cells/beats for a sleeping one, handing
+;      them over on poll — cell-sync turned asynchronous, BSP/BT-Mesh store-and-forward, consent-honored [BUILDABLE]
+;   5. the live multi-body satsang (shared-sensing.form): more than two bodies, not all in earshot, one
+;      field — relayed beats find them, friended cells reach the sleepers, the circle teaches across hops [BUILDABLE]
+;
+; KIN: device-heartbeat.form (the beat this relays — hb-present? IS the heartbeat liveness BT Mesh
+;   sends; hb-organs IS the feature bitfield) · cell-sync-transport.form (the wire this floods and the
+;   friend stores; its content-address is the dedup KEY and the reason we shed BT Mesh's addressing) ·
+;   merkle.fk (the content-address — cross-device-stable, the truer dedup key) · channel-interface.fk
+;   (the consent law that replaces network membership/provisioning — witness whole, reach invited,
+;   even across a sleeper's nap) · shared-sensing.form (the multi-body field these relays/friends serve)
+;   · structural-composition.md (keep the tree so the address stays structural — or we fall back into
+;   needing their addressing) · value-execution.fk + satsang-circle.form (verify-by-re-address is the
+;   no-trusted-prover grain, so a relay/friend cannot forge) · core-abstraction-first (no route tables;
+;   flood + TTL is the one generic shape) · lc-honest-lane.
+;
+; LINEAGE: device-heartbeat gave a body presence on any channel; cell-sync gave two bodies a content-
+;   addressed wire; the multi-body mesh between them is OLD, and Bluetooth Mesh is its best-documented
+;   teacher. We read it as a guide — taking its flood, TTL, dedup, heartbeat, and friend wholesale, and
+;   leaving its addressing and provisioning behind, because the gift it engineers (a stable identity for
+;   each payload) we were born with: structurally-equal IS address-equal, so the mesh needs no names
+;   but the ones the cells already are.

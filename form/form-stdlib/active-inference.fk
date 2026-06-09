@@ -1,0 +1,57 @@
+; active-inference.fk — the learning loop made a recipe: predict -> observe -> ERROR -> update.
+;
+; Inference error is the core of learning. The body predicts the next thing; the world delivers what
+; actually happened; the gap between them (predicted != actual) is the SURPRISE, and the surprise is the
+; learning signal — the one step worth updating from. A step that landed (predicted == actual) carries no
+; new information; a step that missed is exactly where the model must bend. This is the free-energy loop:
+; minimize surprise over time, and "the body has learned the field" means residual surprise has fallen
+; within tolerance.
+;
+; This COMPOSES sequence-predictor: there the body PREDICTS the next symbol (sp-predict). Here we name the
+; other half of the loop explicitly — the ERROR. A step is (list predicted actual): predicted is what
+; sp-predict (or any predictor) said, actual is what the stream then delivered. A run is a list of steps.
+; The surprise-count over a run is the total prediction error — the same evidence-counting spine as
+; sequence-predictor's sp-followers-count and classifier-eval's hit-count, walked over (predicted,actual)
+; pairs instead of adjacent symbols. Strings, so the match is str_eq (eq is for ints/nodes).
+;
+; Honest lane: surprise is never fabricated low. A miss is a miss; ai-surprise-count counts every one, and
+; ai-settled? gates on the real residual (ge tolerance surprises) — the body only claims it has learned the
+; field when the surprises it actually carries fall within tolerance. tolerance 0 demands a perfect run;
+; nothing is rounded toward "settled." Counts are integers 0..N.
+;
+; Proven by: form-stdlib/tests/active-inference-band.fk (three-way at validate.sh)
+
+(do
+    ; --- HIT: the prediction landed. predicted == actual -> 1, else 0. ---
+    ; step is (list predicted actual); nth 0 is the prediction, nth 1 is what the world delivered.
+    (defn ai-hit? (step)
+        (if (str_eq (nth step 0) (nth step 1)) 1 0))
+
+    ; --- SURPRISE: the inverse of a hit. A miss (predicted != actual) IS a surprise -> 1, else 0. ---
+    ; Computed from the same str_eq, not by negating ai-hit?'s integer — keeps the 1/0 honest in every kernel.
+    (defn ai-surprised? (step)
+        (if (str_eq (nth step 0) (nth step 1)) 0 1))
+
+    ; --- LEARN: a surprising step is exactly the one worth learning from. ---
+    ; High error drives the update; a step that already landed teaches nothing new. ai-learn? IS ai-surprised?.
+    (defn ai-learn? (step)
+        (ai-surprised? step))
+
+    ; --- SURPRISE-COUNT: total prediction error over the run = how many steps missed. ---
+    ; Walk the steps, +1 (the step's surprise) each; the same evidence-counting spine as sp-followers-count.
+    (defn ai-surprise-count (run)
+        (if (eq (len run) 0) 0
+            (add (ai-surprised? (head run)) (ai-surprise-count (tail run)))))
+
+    ; --- HIT-COUNT: how many steps landed = the evidence the model already fits. ---
+    (defn ai-hit-count (run)
+        (if (eq (len run) 0) 0
+            (add (ai-hit? (head run)) (ai-hit-count (tail run)))))
+
+    ; --- SETTLED: the body has learned the field when residual surprise falls within tolerance. ---
+    ; (ge tolerance surprises) -> 1 = settled (low residual error); else 0 = still learning. The honest gate:
+    ; tolerance 0 demands a flawless run; nothing rounds toward settled. Same ge-gate as classifier-eval's accept.
+    (defn ai-settled? (run tolerance)
+        (if (ge tolerance (ai-surprise-count run)) 1 0))
+
+    0)

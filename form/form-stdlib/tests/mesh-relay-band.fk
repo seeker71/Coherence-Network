@@ -1,0 +1,31 @@
+; preludes: form-stdlib/mesh-relay.fk
+;
+; mesh-relay-band — managed flooding made falsifiable: forward what is new and has hops, drop the rest.
+;
+; The field:
+;   fresh — msg "m1" from "phone", 3 hops (the hop budget is a 3-token list), payload "ping". No body
+;           has relayed it yet (seen = empty).
+;   dead  — msg "m9" from "mac", 0 hops (empty hop list): its TTL is spent, it dies where it lands.
+;   seen  — the seen-set already holds "m1" (this body relayed it once before).
+; mr-forward spends one hop: fresh's 3-token budget becomes a 2-token budget, same id/origin/payload.
+;
+; Verdict 127 when every claim lands:
+;   1   a fresh in-range message relays         (3 hops, never seen -> mr-relay? = 1)
+;   2   a duplicate does NOT relay              (id already in seen -> dedup drops it, mr-relay? = 0)
+;   4   an exhausted message does NOT relay     (0 hops -> TTL gate drops it, mr-relay? = 0)
+;   8   forwarding spends exactly one hop       (ttl 3 -> 2 after mr-forward)
+;   16  a live message reads as reachable       (mr-reachable? fresh = 1)
+;   32  a dead message reads as unreachable     (mr-reachable? dead = 0)
+;   64  forwarding preserves the dedup id       (mr-id survives mr-forward — same message, fewer hops)
+(do
+    (let fresh (list "m1" "phone" (list "h" "h" "h") "ping"))
+    (let dead  (list "m9" "mac"   (empty)            "ping"))
+    (let seen  (list "m1"))
+    (let c0 (if (eq (mr-relay? fresh (empty)) 1) 1 0))
+    (let c1 (if (eq (mr-relay? fresh seen) 0) 2 0))
+    (let c2 (if (eq (mr-relay? dead (empty)) 0) 4 0))
+    (let c3 (if (eq (mr-ttl (mr-forward fresh)) 2) 8 0))
+    (let c4 (if (eq (mr-reachable? fresh) 1) 16 0))
+    (let c5 (if (eq (mr-reachable? dead) 0) 32 0))
+    (let c6 (if (str_eq (mr-id (mr-forward fresh)) "m1") 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
