@@ -156,4 +156,4 @@ to offer and to move, moment to moment, and no is always whole.*
 
 ## Cross-References
 
-→ lc-received-by-invitation, lc-sovereignty-within-oneness, lc-boundaries-as-loving-truth, lc-permission-is-interior, lc-trust-over-fear, lc-tend-your-flame
+→ lc-received-by-invitation, lc-boundary-repair-protocol, lc-sovereignty-within-oneness, lc-boundaries-as-loving-truth, lc-permission-is-interior, lc-trust-over-fear, lc-tend-your-flame
