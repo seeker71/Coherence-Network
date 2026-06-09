@@ -1,0 +1,33 @@
+; preludes: form-stdlib/self-grounding-classifier.fk
+;
+; self-grounding-classifier-band — our own perception earns the route, or waits, made falsifiable.
+;
+; Our audio classifier shadow-learns against the SoundAnalysis route on "dog bark". Two histories:
+;   mature — 9 agreements, 1 miss over 10 samples -> proven enough; our classifier is promoted,
+;            the foreign carrier can retire, authority = "self".
+;   early  — 2 right, 1 wrong over 3 samples -> not yet proven; ground truth still routes,
+;            authority = "ground-truth".
+; Gate: min-correct 8, max-wrong 2. The promotion is earned agreement, never asserted confidence.
+;
+; Verdict 63 when every claim lands:
+;   1   agreement counted right        (sg-correct mature == 9)
+;   2   disagreement counted right     (sg-wrong mature == 1)
+;   4   proven enough -> promoted       (sg-promoted? mature == 1)
+;   8   our perception routes           (sg-authority mature == "self")
+;   16  early on, NOT yet promoted      (sg-promoted? early == 0)
+;   32  until proven, ground truth routes (sg-authority early == "ground-truth")
+(do
+    (let mature (list
+        (list "dog" "dog") (list "dog" "dog") (list "dog" "dog") (list "dog" "dog")
+        (list "dog" "dog") (list "dog" "dog") (list "dog" "dog") (list "dog" "dog")
+        (list "dog" "dog") (list "cat" "dog")))
+    (let early (list (list "dog" "dog") (list "cat" "dog") (list "dog" "dog")))
+    (let min-correct 8)
+    (let max-wrong 2)
+    (let c0 (if (eq (sg-correct mature) 9) 1 0))
+    (let c1 (if (eq (sg-wrong mature) 1) 2 0))
+    (let c2 (if (eq (sg-promoted? mature min-correct max-wrong) 1) 4 0))
+    (let c3 (if (str_eq (sg-authority mature min-correct max-wrong) "self") 8 0))
+    (let c4 (if (eq (sg-promoted? early min-correct max-wrong) 0) 16 0))
+    (let c5 (if (str_eq (sg-authority early min-correct max-wrong) "ground-truth") 32 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))
