@@ -1,0 +1,36 @@
+; preludes: form-stdlib/friend-node.fk
+;
+; friend-node-band — the Friend's cache made falsifiable: hold the sleeper's messages, hand over the right ones.
+;
+; The field — a Friend caching for two sleeping peers:
+;   m1 — id "m1", dest "watch", payload "tick"   (for the watch)
+;   m2 — id "m2", dest "phone", payload "ring"   (for the phone)
+;   m3 — id "m3", dest "watch", payload "tock"   (for the watch)
+;   cache = (m1 m2 m3) — three messages held while both peers sleep: two for "watch", one for "phone".
+; fn-store adds m4 (dest "watch") to the front: the Friend accepting one more while the watch still sleeps.
+;
+; Verdict 127 when every claim lands:
+;   1   a watch message reads as FOR the watch      (fn-for? m1 "watch" = 1 — the routing predicate hits)
+;   2   that same message is NOT for the phone      (fn-for? m1 "phone" = 0 — routing stays specific)
+;   4   two messages are pending for the watch      (fn-pending cache "watch" = 2 — the watch's backlog depth)
+;   8   delivery hands over BOTH watch messages      (fn-deliver: len 2 AND both elements dest "watch")
+;   16  one message is pending for the phone         (fn-pending cache "phone" = 1 — the phone's backlog depth)
+;   32  storing one grows the cache by exactly one   (len 3 -> 4 after fn-store)
+;   64  an empty cache has nothing pending           (fn-pending empty "watch" = 0 — a sleeper with no backlog)
+(do
+    (let m1 (list "m1" "watch" "tick"))
+    (let m2 (list "m2" "phone" "ring"))
+    (let m3 (list "m3" "watch" "tock"))
+    (let cache (list m1 m2 m3))
+    (let watch-bag (fn-deliver cache "watch"))
+    (let c0 (if (eq (fn-for? m1 "watch") 1) 1 0))
+    (let c1 (if (eq (fn-for? m1 "phone") 0) 2 0))
+    (let c2 (if (eq (fn-pending cache "watch") 2) 4 0))
+    (let c3 (if (and (eq (len watch-bag) 2)
+                     (and (str_eq (fn-dest (nth watch-bag 0)) "watch")
+                          (str_eq (fn-dest (nth watch-bag 1)) "watch")))
+                8 0))
+    (let c4 (if (eq (fn-pending cache "phone") 1) 16 0))
+    (let c5 (if (eq (len (fn-store cache m1)) 4) 32 0))
+    (let c6 (if (eq (fn-pending (empty) "watch") 0) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

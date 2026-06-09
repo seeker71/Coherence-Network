@@ -1,0 +1,59 @@
+; field-fusion.form — fuse several sensor modalities into ONE field feature vector by concatenation.
+;
+; THE PLACE IN THE SPINE:
+;   feature-vector.form MAKES one modality's histogram — accel, light, sound — each a fixed-width
+;   list of bin-counts. But one modality is a thin slice of the field. A classifier that sees only
+;   the accel vector cannot tell a door-slam (loud + still) from a footstep (quiet + moving); the
+;   axis that separates them isn't in its input. Fusion is the step BESIDE feature-vector, before
+;   recognition-router: it lays the modality vectors end to end into one wide vector so the
+;   classifier sees the whole field at once. Concatenation, not averaging — no bin lost, every
+;   modality keeps its own bars at a known offset. Same modalities in the same order => same fused
+;   vector on every body, so the field feature is a content-addressed substrate cell like its parts:
+;   Go=Rust=TS parity at validate.sh is cross-device parity — the Mac and the phone fuse to the
+;   identical wide vector, verifiable by NodeID, not a hopeful match of two runtimes.
+;
+; THE SHAPE  (runnable: form-stdlib/field-fusion.fk · proven: tests/field-fusion-band.fk -> 127)
+;
+;   ff-concat (a b) -> a ++ b
+;     append two feature vectors, modality a's bars first then all of b. Recurse a, re-cons each bar
+;     onto b; when a is exhausted the tail IS b, so nothing is lost and order is preserved. This is
+;     the two-vector fusion every wider fusion is built from — (1 2) ++ (3 4) = (1 2 3 4).
+;
+;   ff-fuse (mods) -> one wide field vector
+;     fold ff-concat over a LIST of modality vectors. Empty modality list -> empty vector; else
+;     concat the head modality onto the fusion of the rest. The fold is associative, so the layout
+;     is [A | B | C] regardless of how the nesting falls — accel's bars, then light's, then sound's.
+;
+;   ff-width (fused) -> (len fused)
+;     the fused width is the SUM of the part widths, because append loses nothing. ((1 2)(3)(4 5 6))
+;     fuses to width 6 = 2+1+3 — width conservation is how you know no bar was dropped or merged.
+;
+;   ff-bar (fused i) -> (nth fused i)
+;     read one fused bin. Because the layout is stable, bar i is always the same field reading: in
+;     the band, bar 3 of (1 2 3 4 5 6) is sound's first bar (== 4), at the offset where sound begins.
+;
+; HOW IT COMPOSES THE SPINE:
+;   feature-vector (make each modality vector) -> field-fusion (lay them end to end into the field
+;   vector) -> recognition-router (route the confidence vector a model produces from the wide input).
+;   shared-sensing is the sibling axis: it is the same feature across many BODIES; field-fusion is
+;   the same field across many MODALITIES on one body. The band preludes only this recipe + core, so
+;   ff-concat is DEFINED here, not borrowed from core's append — the brick stands alone and the spine
+;   stays inlinable. All bars are integers on the same exact-comparison ground the rest of the spine
+;   rides; there is no averaging, no division, no float — pure structural concatenation.
+;
+; HONEST LANE / CAVEAT:
+;   Fusion concatenates; it does NOT align, normalize, or weight. The modality vectors are assumed
+;   already commensurate — same windowing discipline, comparable bin scales — and supplied in a
+;   FIXED order; reorder the modalities and bar i means a different reading, so the fused vector is
+;   only content-addressable when the modality order is itself part of the contract. It cannot
+;   recover a modality that wasn't sensed: a missing sensor is a missing slice, not a zero-filled
+;   one, unless the caller pads it. And a wide concatenated vector says nothing about CROSS-modal
+;   correlation by itself — it gives the classifier both axes in one row, but the joint structure is
+;   learned downstream, not computed here. Right primitive for "show the whole field at once"; the
+;   wrong place to look for alignment, imputation, or learned cross-modal weighting.
+;
+; KIN: feature-vector.form (makes the per-modality vectors this fuses) · shared-sensing.form (the
+;      same feature on many bodies — fusion is the same field across many modalities on one body) ·
+;      recognition-router.form (consumes the wide vector downstream) · core.fk append/foldr (the list
+;      spine this inlines) · the three-way validate.sh (no trusted prover — parallel kernels, what
+;      survives across Go, Rust, TS).

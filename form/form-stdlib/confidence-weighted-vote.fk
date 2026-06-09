@@ -1,0 +1,58 @@
+; confidence-weighted-vote.fk — fuse model votes WEIGHTED by each model's proven reliability, so a
+; trusted model outweighs a flaky one (a sharper fusion than plain plurality).
+;
+; ensemble-vote.fk is the EQUAL-PEERS fusion: every classifier gets exactly one vote, the answer is the
+; label the MOST of them named, confidence is the raw HAND-COUNT. This is the WEIGHTED counterpart: each
+; ballot arrives as (label weight), and the score of a label is the SUM of the weights of every ballot
+; that named it — not a count of hands but a count of trust. A circle of five cheap classifiers where one
+; has earned weight 9 can be outvoted by it even when four weak ones (weight 1 each) name something else;
+; conversely many small trusted votes accumulate. Same max-select spine as ensemble-vote.fk's ev-winner
+; and recognition-router.fk's rr-select — only the per-label score is a WEIGHT-SUM walked over the
+; ballots (recursion + add of each weight), not a +1 tally and not a follower-count. The fusion is Form:
+; kernel-executable, three-way-identical, the carriers swappable behind the same (label weight) ballot.
+;
+; A vote is a two-element list (label weight): (nth v 0) is the label string, (nth v 1) the integer weight.
+; cw-weight-for sums the weights of the votes whose label matches; cw-winner picks the label with the
+; greatest summed weight (ties keep the first candidate offered); cw-score returns that winning sum.
+;
+; Honest lane: this is WEIGHTED PLURALITY — the greatest summed weight wins, with no majority-of-total
+; floor and no abstention gate; it always names its leader even when the field is split, the same way
+; ensemble-vote always names its plurality leader (gating "too-split / below-trust to call" is the
+; router's rr-passes? lane, a later compose, not this brick). A tie in the top summed weight keeps the
+; FIRST candidate offered — the max-select uses strict gt, so a later equal-weight candidate cannot
+; displace the earlier one; the answer is stable under replay, not order-random. Weights and summed
+; scores are integers 0..N (no floats, by the primitive set); a weight of 0 is a present-but-silent
+; ballot and contributes nothing, an unseen candidate sums to an honest 0.
+;
+; Proven by: form-stdlib/tests/confidence-weighted-vote-band.fk (three-way at validate.sh)
+
+(do
+    ; --- WEIGHT-FOR: the summed trust behind a label. Walk the votes; when a vote's label str_eq the
+    ; target, ADD its weight (nth v 1) into the running sum; otherwise skip. A SUM of weights, not a
+    ; tally of hands — this is the one place the weighted fusion diverges from ensemble-vote's ev-votes. ---
+    (defn cw-weight-for (votes label)
+        (if (eq (len votes) 0) 0
+            (if (str_eq (nth (head votes) 0) label)
+                (add (nth (head votes) 1) (cw-weight-for (tail votes) label))
+                (cw-weight-for (tail votes) label))))
+
+    ; --- MAX-SELECT: among the candidates, the one with the greatest summed weight (weighted plurality). ---
+    ; Same spine as ev-winner-loop / rr-select: carry the best candidate + its best summed weight; a
+    ; STRICTLY-greater sum replaces it, so the FIRST candidate offered keeps a tie. Seed with "" 0 — any
+    ; candidate whose summed weight is >= 1 can take the lead off the seed.
+    (defn cw-winner-loop (votes candidates best-label best-score)
+        (if (eq (len candidates) 0) (list best-label best-score)
+            (if (gt (cw-weight-for votes (head candidates)) best-score)
+                (cw-winner-loop votes (tail candidates)
+                    (head candidates) (cw-weight-for votes (head candidates)))
+                (cw-winner-loop votes (tail candidates) best-label best-score))))
+
+    ; the fused answer: the candidate carrying the greatest summed weight (its weighted-plurality leader).
+    (defn cw-winner (votes candidates)
+        (nth (cw-winner-loop votes candidates "" 0) 0))
+
+    ; the confidence in that answer = the winning summed weight (how much trust stood behind it).
+    (defn cw-score (votes candidates)
+        (nth (cw-winner-loop votes candidates "" 0) 1))
+
+    0)

@@ -1,0 +1,45 @@
+; field-fusion.fk — fuse several sensor modalities into ONE field feature vector by concatenation.
+;
+; feature-vector.fk MAKES one modality's histogram (accel, light, sound — each a list of bin-counts).
+; A single modality is a thin slice of the field; a classifier that sees only accel cannot tell a
+; door-slam (loud + still) from a footstep (quiet + moving). Fusion lays the modality vectors end to
+; end into one wide vector so the classifier sees the whole field at once — the door-slam and the
+; footstep separate because both axes are present in the same input row. Concatenation, not averaging:
+; no bin is lost, every modality keeps its own bars at a known offset, and the fused width is just the
+; sum of the parts. Same modalities in the same order => same fused vector on every body, so the field
+; feature is a content-addressed substrate cell like its parts (Go=Rust=TS parity at validate.sh is
+; cross-device parity — the Mac and the phone fuse to the identical wide vector, verifiable by NodeID).
+;
+; The defining choice is ORDER-PRESERVING APPEND: ff-concat walks the first vector and re-conses each
+; bar onto the second, so modality A's bars come first, then B's, then C's — a stable layout where
+; bar k of the fused vector is always the same field reading. ff-fuse folds that append right-to-left
+; over a LIST of modality vectors (empty list -> empty vector; the fold is associative, so the layout
+; is [A | B | C] regardless of how the fold nests). Width is conserved: (len fused) == sum of the part
+; widths, because append loses nothing. All bars and counts are integers; there is no averaging, no
+; division, no float — pure structural concatenation.
+;
+; Kin: feature-vector.fk (makes the per-modality vectors this fuses), shared-sensing.fk (the same
+; feature on many bodies — fusion is the same feature across many MODALITIES on one body), core.fk's
+; append/foldr (the list spine this inlines; the band preludes only this recipe + core, so ff-concat
+; is defined here, not borrowed). recognition-router.fk consumes the wide vector downstream.
+;
+; Proven by: form-stdlib/tests/field-fusion-band.fk (three-way at validate.sh)
+
+(do
+    ; --- CONCAT: append two feature vectors, modality a's bars first, then all of b. ---
+    ; recurse a; when a is exhausted the tail IS b, so nothing is lost and order is preserved.
+    (defn ff-concat (a b)
+        (if (eq (len a) 0) b
+            (cons (head a) (ff-concat (tail a) b))))
+
+    ; --- FUSE: fold ff-concat over a LIST of modality vectors into one wide field vector. ---
+    ; empty modality list -> empty vector; else concat the head modality onto the fusion of the rest.
+    (defn ff-fuse (mods)
+        (if (eq (len mods) 0) (empty)
+            (ff-concat (head mods) (ff-fuse (tail mods)))))
+
+    ; --- read the field: width is the sum of the part widths; bar i reads one fused bin. ---
+    (defn ff-width (fused)   (len fused))
+    (defn ff-bar   (fused i) (nth fused i))
+
+    0)
