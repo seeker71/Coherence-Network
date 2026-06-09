@@ -630,34 +630,37 @@ ensure_kernel_router_canary() {
     return 0
   fi
 
-  log "kernel-router canary: ensuring header-gated production-manifest service"
+  log "kernel-router canary: ensuring header-gated production-manifest service and BML front-door path service"
   local compose_args=(-f "$COMPOSE_ROOT/docker-compose.yml" -f "$KERNEL_CANARY_COMPOSE_FILE")
   local started ended elapsed
   started="$(date +%s)"
 
   set +e
-  docker compose "${compose_args[@]}" up -d --build --no-deps --wait --wait-timeout 180 kernel-router \
+  docker compose "${compose_args[@]}" up -d --build --no-deps --wait --wait-timeout 180 kernel-router kernel-router-bml-front-door \
     2>&1 | tee -a "$LOG_FILE"
   local rc=$?
   set -e
   if [[ "$rc" -ne 0 ]]; then
     log "kernel-router canary: compose up --wait failed; falling back to plain up -d --build --no-deps"
-    docker compose "${compose_args[@]}" up -d --build --no-deps kernel-router 2>&1 | tee -a "$LOG_FILE"
+    docker compose "${compose_args[@]}" up -d --build --no-deps kernel-router kernel-router-bml-front-door 2>&1 | tee -a "$LOG_FILE"
   fi
 
-  local deadline=$(( $(date +%s) + 180 ))
-  local state=""
-  while (( $(date +%s) < deadline )); do
-    state="$(docker compose "${compose_args[@]}" ps --format '{{.Service}} {{.State}}' 2>/dev/null | awk '$1=="kernel-router" {print $2}')"
-    if [[ "$state" == "running" ]]; then
-      break
+  local service deadline state
+  for service in kernel-router kernel-router-bml-front-door; do
+    deadline=$(( $(date +%s) + 180 ))
+    state=""
+    while (( $(date +%s) < deadline )); do
+      state="$(docker compose "${compose_args[@]}" ps --format '{{.Service}} {{.State}}' 2>/dev/null | awk -v service="$service" '$1==service {print $2}')"
+      if [[ "$state" == "running" ]]; then
+        break
+      fi
+      sleep 3
+    done
+    if [[ "$state" != "running" ]]; then
+      log "FAIL: $service did not reach running state within 180s"
+      exit 1
     fi
-    sleep 3
   done
-  if [[ "$state" != "running" ]]; then
-    log "FAIL: kernel-router canary did not reach running state within 180s"
-    exit 1
-  fi
 
   local canary_id="idea-public-canary-local-$(date +%s)"
   local payload
@@ -675,6 +678,22 @@ ensure_kernel_router_canary() {
       && grep -q '\"ordinary_traffic_flip_performed\":true' /tmp/kernel-canary.body" \
     2>&1 | tee -a "$LOG_FILE"; then
     log "FAIL: kernel-router canary local public-gate probe did not execute native persistence and return native decision receipt"
+    exit 1
+  fi
+
+  local kernel_image_payload='{"expression":"class KernelCoreSelf { int RequiredPrimitiveCount() [get] { return 8; } int RequiredDispatchCount() [get] { return 15; } int RequiredProofCount() [get] { return 6; } bool Minimal() { return true; } bool Observable() { return true; } bool Executable() { return true; } bool Trustable() { return true; } } class KernelCoreImage {}","grammar":"bml","source_label":"deploy-bml-front-door-canary"}'
+  if ! docker compose "${compose_args[@]}" exec -T kernel-router-bml-front-door sh -lc \
+    "curl -fsS -D /tmp/kernel-image.headers -o /tmp/kernel-image.body \
+      -X POST http://127.0.0.1:8080/api/substrate/kernel-image/proposals \
+      -H 'Accept: application/json' \
+      -H 'Content-Type: application/json' \
+      --data '$kernel_image_payload' \
+      && grep -qi '^X-Form-Router: native-kernel' /tmp/kernel-image.headers \
+      && grep -q '\"proposal_status\":\"accepted-preview\"' /tmp/kernel-image.body \
+      && grep -q '\"handler\":\"api_substrate_kernel_image_proposals\"' /tmp/kernel-image.body \
+      && grep -q '\"python_authority\":false' /tmp/kernel-image.body" \
+    2>&1 | tee -a "$LOG_FILE"; then
+    log "FAIL: BML front-door kernel-image route did not return native proposal proof"
     exit 1
   fi
 
