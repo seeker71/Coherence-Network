@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """coherence-sense-eval.py — the Mac end with LIVE RECOGNITION through the kernel.
 
-The witness server (mac-witness-server.py) only watched. This one RECOGNIZES: the phone's
+The witness server (mac-witness-server.py) only watched. This one RECOGNIZES and LEARNS: the phone's
 accelerometer stream is fed, per frame, through the proven Form recipes RUN BY THE KERNEL —
 signal-derivative says still vs moving, sequence-predictor calls the next state, and the mismatch
-between the call and the actual next state is the INFERENCE ERROR (the learning signal). All of it
-is the body (Form recipes); this server is only the thin carrier that marshals numbers in and reads
-the label out. ~5ms per recognition through the kernel.
+between the call and the actual next state is the INFERENCE ERROR (the learning signal). It also runs
+the supervision arc live (learning-arc.fk): a nearest-shape CHALLENGER learns from the signal-derivative
+CHAMPION — predicting from interned exemplars, scored against the champion, then learning each frame, its
+agreement climbing toward the champion as it accumulates exemplars (the Form-native arm reaching the
+reference, online). All of it is the body (Form recipes); this server is only the thin carrier that
+marshals numbers in and reads the label out. ~5ms per recognition through the kernel.
 
 Run from the repo (it needs the kernel binary + form-stdlib):
     cd experiments/coherence-sense-android && python3 coherence-sense-eval.py
@@ -14,6 +17,7 @@ Open the dashboard:  http://localhost:8800     Point the phone at:  http://<mac-
 """
 import json
 import os
+import re
 import subprocess
 import tempfile
 import time
@@ -25,19 +29,26 @@ PORT = 8800
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 FORM = os.path.join(REPO, "form")
 KERNEL = os.path.join(FORM, "form-kernel-rust", "target", "release", "form-kernel-rust")
-SD = "form-stdlib/signal-derivative.fk"          # still vs moving (rate of change)
+SD = "form-stdlib/signal-derivative.fk"          # still vs moving (rate of change) — the CHAMPION/reference
 SP = "form-stdlib/sequence-predictor.fk"          # predict the next state
+FV = "form-stdlib/feature-vector.fk"              # bin the window into a feature — the challenger's input
+NS = "form-stdlib/nearest-shape.fk"               # the body's own classifier — the CHALLENGER
 WINDOW = 8                                        # frames of accel held for the derivative
 ACTIVITY_FLOOR = 3                                # >= this many rises+falls in the window = moving
+CHAL_THRESHOLDS = "15 25 35"                      # magnitude bins for the challenger's feature
+CHAL_NBINS = 4
+PROTO_MAX = 60                                    # bounded exemplar memory (the learned model)
 
 state = {
     "device": None, "frames": 0, "first_ts": None, "last_ts": None,
     "organs": [], "latest": {}, "events": [], "present": False,
     "recognized": "—", "predicted": "—", "errors": 0, "checks": 0, "kernel_ok": os.path.exists(KERNEL),
+    "challenger": "—", "chal_agree": 0, "chal_checks": 0, "protos": 0,   # the live learning arc
 }
 accel_window = deque(maxlen=WINDOW)   # rounded vertical-ish accel magnitude per frame
 state_history = deque(maxlen=12)       # recent still/moving labels (oldest -> newest)
 _pending_prediction = {"next": None}   # what we predicted the next state would be
+proto_set = []                          # the challenger's learned exemplars: [(champion_label, feature), ...]
 
 
 def _event(kind, detail):
@@ -45,21 +56,45 @@ def _event(kind, detail):
     del state["events"][60:]
 
 
-def kernel_eval(recipe, expr):
-    """Run one Form expression through the kernel against a recipe. Returns the printed value (str)."""
+def kernel_eval(recipes, expr):
+    """Run one Form expression through the kernel against one or more recipes. Returns the printed value (str)."""
     if not state["kernel_ok"]:
         return None
+    if isinstance(recipes, str):
+        recipes = [recipes]
     with tempfile.NamedTemporaryFile("w", suffix=".fk", dir="/tmp", delete=False) as f:
         f.write(expr)
         drv = f.name
     try:
-        out = subprocess.run([KERNEL, recipe, drv], cwd=FORM, capture_output=True, text=True, timeout=3)
+        out = subprocess.run([KERNEL, *recipes, drv], cwd=FORM, capture_output=True, text=True, timeout=3)
         line = (out.stdout or out.stderr).strip().splitlines()
         return line[-1].strip() if line else None
     except Exception:
         return None
     finally:
         os.unlink(drv)
+
+
+def kernel_feature(window):
+    """Bin the window into a feature-vector via the kernel (fv-histogram). Returns a list of ints."""
+    win = " ".join(str(v) for v in window)
+    out = kernel_eval(FV, f"(do (fv-histogram (list {win}) (list {CHAL_THRESHOLDS}) {CHAL_NBINS}))")
+    nums = re.findall(r"-?\d+", out) if out else None
+    return [int(n) for n in nums] if nums else None
+
+
+def _proto_literal(protos):
+    """Build the Form prototype-set literal: (list (list "still" (list 3 2 0 1)) ...)."""
+    items = " ".join(
+        f'(list "{lbl}" (list {" ".join(str(x) for x in feat)}))' for lbl, feat in protos
+    )
+    return f"(list {items})"
+
+
+def kernel_challenger(feature, protos):
+    """The challenger's call (Form, via kernel): ns-label the feature against the learned prototypes."""
+    feat = " ".join(str(x) for x in feature)
+    return kernel_eval(NS, f"(do (ns-label (list {feat}) {_proto_literal(protos)}))")
 
 
 def recognize(snap):
@@ -95,6 +130,26 @@ def recognize(snap):
         predicted = kernel_eval(SP, f'(do (sp-predict (list {hist}) {last} (list "still" "moving")))')
         predicted = predicted.strip('"') if predicted else "—"
     _pending_prediction["next"] = predicted if predicted in ("still", "moving") else None
+
+    # THE LEARNING ARC, LIVE (learning-arc.fk made real on the stream): a nearest-shape CHALLENGER
+    # learns to match the signal-derivative CHAMPION. Each frame: the challenger predicts from what it
+    # has interned (cold = no guess), we score it against the champion, THEN it learns this frame. Its
+    # agreement climbing IS the body learning online — the Form-native arm reaching the reference.
+    if recognized in ("still", "moving"):
+        feature = kernel_feature(accel_window)
+        if feature:
+            if proto_set:
+                chal = kernel_challenger(feature, proto_set)
+                if chal in ("still", "moving"):
+                    state["challenger"] = chal
+                    state["chal_checks"] += 1
+                    if chal == recognized:
+                        state["chal_agree"] += 1
+            # learn: intern this (champion-label, feature) — the smallest act (nearest-shape's teaching)
+            proto_set.append((recognized, feature))
+            if len(proto_set) > PROTO_MAX:
+                proto_set.pop(0)
+            state["protos"] = len(proto_set)
     return recognized, predicted
 
 
@@ -169,6 +224,7 @@ DASHBOARD = """<!doctype html><html><head><meta charset=utf-8><title>Coherence S
 <div class=grid>
  <div class=card><h2>presence</h2><div class=big id=presence>&mdash;</div><div class=dim id=frames></div></div>
  <div class=card><h2>recognition (kernel)</h2><div class=big id=recog>&mdash;</div><div class=dim>predicts next: <span class=accent id=pred>&mdash;</span></div><div class=dim id=err></div></div>
+ <div class=card><h2>learning — challenger vs champion</h2><div class=big id=chal>&mdash;</div><div class=dim id=chalrate></div></div>
  <div class=card><h2>organs active</h2><div id=organs></div></div>
  <div class=card><h2>events / surprises</h2><div id=events></div></div>
  <div class=card style="grid-column:1/3"><h2>field (latest)</h2><table id=field></table></div>
@@ -186,6 +242,9 @@ async function tick(){
  document.getElementById("pred").textContent=s.predicted||"—";
  const rate=s.checks?Math.round(100*(s.checks-s.errors)/s.checks):0;
  document.getElementById("err").textContent=s.checks?("prediction right "+rate+"%  ("+(s.checks-s.errors)+"/"+s.checks+")  — error is the learning signal"):"learning…";
+ const crate=s.chal_checks?Math.round(100*s.chal_agree/s.chal_checks):0;
+ document.getElementById("chal").textContent=s.challenger||"—";
+ document.getElementById("chalrate").textContent=s.chal_checks?("agrees with champion "+crate+"%  ("+s.chal_agree+"/"+s.chal_checks+")  · "+(s.protos||0)+" exemplars learned"):("learning… ("+(s.protos||0)+" exemplars)");
  document.getElementById("organs").innerHTML=ALL.map(o=>'<span class="organ'+(s.organs&&s.organs.includes(o)?"":" off")+'">'+o+'</span>').join("");
  const f=s.latest||{}; document.getElementById("field").innerHTML=ALL.filter(o=>o in f).map(o=>'<tr><td class=k>'+o+'</td><td>'+vec(f[o])+'</td></tr>').join("")||'<tr><td class=dim>no field yet</td></tr>';
  document.getElementById("events").innerHTML=(s.events||[]).map(e=>'<div class="ev '+e.kind+'"><span class=t>'+e.t+'</span> '+e.detail+'</div>').join("")||'<div class=dim>waiting…</div>';
