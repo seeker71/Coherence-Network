@@ -101,7 +101,10 @@
         ;; --- gaps closed by allowing new cells IN (concepts born from the gap) ---
         (slv-binding "1212"              "gratitude"     "lc-gratitude")
         (slv-binding "333"               "calling-in"    "lc-calling-the-kindred")
-        (slv-binding "333 172"           "calling-in"    "lc-calling-the-kindred")))
+        (slv-binding "333 172"           "calling-in"    "lc-calling-the-kindred")
+        ;; --- gap closed by tissue grown LATER: the chakra column (2026-06-09) gave the
+        ;; verticality/spine code its first home — root 174 = earth, crown 963 = sky ---
+        (slv-binding "33333"             "verticality"   "lc-chakra-column")))
 
 (defn slv-resolve-loop (bs code)
     (if (nil? bs) (empty)
