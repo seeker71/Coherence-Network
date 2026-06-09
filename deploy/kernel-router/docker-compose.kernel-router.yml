@@ -11,9 +11,11 @@
 # native rows while fanning out the tail to api:8000. Inside the production
 # manifest, mutable ideas/specs no-header traffic that reaches the kernel accepts
 # the implicit native invitation; X-Form-Python-Fallback is the explicit
-# refusal/control signal. The Traefik rules below are still HEADER-GATED, so
-# public ordinary no-header traffic continues to reach api:8000 until the HTTP
-# native mutation handler preserves production persistence semantics.
+# refusal/control signal. The native mutation handler reads the same production
+# config-file carrier as the API and performs pg_exec inside Form when the
+# mounted config includes database.url. The Traefik rules below are still
+# HEADER-GATED, so public ordinary no-header traffic continues to reach api:8000
+# until the public no-header flip is separately performed and verified.
 #
 # WHAT THIS IS NOT: the all-traffic flip. The full flip is pointing Traefik's
 # ordinary Host(api.coherencycoin.com) router at this service instead of at the
@@ -60,10 +62,18 @@ services:
       UPSTREAM_URL: "http://api:8000"
       KERNEL_ROUTER_PORT: "8080"
       ROUTES_FILE: "/routes/production-routes.fk"
+      KERNEL_ROUTER_CONFIG_FILE: "/run/coherence-network/config.json"
       # KERNEL_ROUTER_WORKERS: "4"   # optional pool size; default = host parallelism
+    volumes:
+      # Runtime-only production config overlay. This file is documented in
+      # docs/PRODUCTION-SUBSTRATE.md and is not repository memory.
+      - /root/.coherence-network/config.json:/run/coherence-network/config.json:ro
     depends_on:
       # The fan-out upstream must exist; the router proxies to it.
       - api
+      # Header-gated native mutation canaries execute through production
+      # Postgres when the config overlay carries database.url.
+      - postgres
 
     # ----------------------------------------------------------------------
     # TRAEFIK LABELS — ACTIVE HEADER-GATED CANARY. The live VPS runs Traefik

@@ -7,6 +7,8 @@
 #   KERNEL_ROUTER_HOST  the interface the router binds    (default 0.0.0.0)
 #   UPSTREAM_URL        the CPython fan-out target        (default http://api:8000)
 #   ROUTES_FILE         the routes manifest               (default /routes/shadow-routes.fk)
+#   KERNEL_ROUTER_CONFIG_FILE
+#                       optional JSON config overlay passed to serve --config
 #
 # HOST binding: the kernel's `serve` defaults to 127.0.0.1 (loopback) — correct
 # for a same-host proof harness, but UNREACHABLE across the container boundary
@@ -36,6 +38,13 @@ set -- serve --host "$HOST" --port "$PORT" --routes "$ROUTES" --upstream "$UPSTR
 # STDLIB_DIR is set, so the raw-S-expression shadow default stays untouched.
 if [ -n "${STDLIB_DIR:-}" ]; then
   set -- "$@" --stdlib "$STDLIB_DIR"
+fi
+
+# Optional: production persistence carrier. The Form handler still calls
+# config_database_url()/pg_connect()/pg_exec(); the host only carries the config
+# file path into the kernel process.
+if [ -n "${KERNEL_ROUTER_CONFIG_FILE:-}" ]; then
+  set -- "$@" --config "$KERNEL_ROUTER_CONFIG_FILE"
 fi
 
 # Optional: size the worker pool (default: host parallelism). Exposed so a

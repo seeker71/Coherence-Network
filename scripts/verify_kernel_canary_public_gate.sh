@@ -11,7 +11,7 @@ CURL_CONNECT_TIMEOUT="${CURL_CONNECT_TIMEOUT:-5}"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-payload='{"id":"idea-public-canary","name":"Public Canary","description":"header-gated public canary","manifestation_status":"partial"}'
+RUN_ID="$(date +%s)-$$"
 
 header_value() {
   local headers_file="$1"
@@ -34,11 +34,18 @@ rollback = obj.get("route_local_rollback_receipt") or {}
 trust = obj.get("trust_envelope") or {}
 reversible = trust.get("reversible_gate") or {}
 signature = decision.get("signature") or {}
+persistence = obj.get("persistence") or {}
 
 checks = {
     "native_public_gate": obj.get("native_public_gate") is True,
     "native_preview_false": obj.get("native_preview") is False,
-    "executes_false": obj.get("executes") is False,
+    "executes_true": obj.get("executes") is True,
+    "db_execution_performed": obj.get("db_execution") == "performed-by-http-native-persistence",
+    "persistence_carrier": persistence.get("carrier") == "config_database_url",
+    "persistence_executed": persistence.get("executes") is True,
+    "persistence_rows": isinstance(persistence.get("rows_affected"), int)
+    and persistence.get("rows_affected") >= 0,
+    "persistence_closed": persistence.get("close_code") == 0,
     "route_local_gate_executes": obj.get("route_local_gate_executes") is True,
     "decision_state": decision.get("state") == "native-mutation-gate-decision-receipt",
     "decision_selected": decision.get("selected_path") == "X-Form-Native-Public-Gate",
@@ -68,6 +75,7 @@ PY
 echo "kernel-canary-public-gate: probing ${API_URL}/api/ideas"
 
 for attempt in $(seq 1 "$ATTEMPTS"); do
+  payload="$(printf '{"id":"idea-public-canary-%s-%s","name":"Public Canary","description":"header-gated public canary","manifestation_status":"partial"}' "$RUN_ID" "$attempt")"
   headers_file="$TMP_DIR/public-gate.headers"
   body_file="$TMP_DIR/public-gate.body"
   status="$(
@@ -104,13 +112,14 @@ done
 
 control_headers="$TMP_DIR/control.headers"
 control_body="$TMP_DIR/control.body"
+control_payload="$(printf '{"id":"idea-public-control-%s","name":"Public Canary Control","description":"no-header public control","manifestation_status":"partial"}' "$RUN_ID")"
 control_status="$(
   curl -sS -D "$control_headers" -o "$control_body" -w "%{http_code}" \
     --max-time "$CURL_MAX_TIME" \
     --connect-timeout "$CURL_CONNECT_TIMEOUT" \
     -X POST "${API_URL}/api/ideas" \
     -H "Content-Type: application/json" \
-    --data "$payload" \
+    --data "$control_payload" \
     || true
 )"
 control_router="$(header_value "$control_headers" "x-form-router:")"

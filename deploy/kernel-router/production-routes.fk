@@ -1819,11 +1819,12 @@
 ; absence.
 ;
 ; The SQL shape mirrors form/form-stdlib/application-graph-node-port.fk. The
-; preview response intentionally does not execute. Live DB execution, response
-; projection, side-effect execution, route-runner side-effect binding, and
-; public-gate rollback receipts are proven in Form. Public Traefik still decides
-; which ordinary requests reach this kernel manifest; once they do, the manifest
-; default is native.
+; preview response intentionally does not execute. The public-gate and default
+; invitation arms execute through the kernel config carrier when database.url is
+; configured. Response projection, side-effect execution, route-runner
+; side-effect binding, and public-gate rollback receipts are proven in Form.
+; Public Traefik still decides which ordinary requests reach this kernel
+; manifest; once they do, the manifest default is native.
 ; ===========================================================================
 
 (defn mpv-join (sep xs)
@@ -2094,8 +2095,47 @@
     ",\"reversible_gate\":" (mpg-reversible-gate-json)
     "}")))
 
+(defn mpg-persistence-result (sql)
+  (do (let database-url (config_database_url))
+  (if (eq (str_len database-url) 0)
+      (list 0 -1 -1 "config_database_url" (pg_last_error))
+      (do (let conn (pg_connect database-url))
+      (if (lt conn 0)
+          (list 0 -1 -1 "pg_connect" (pg_last_error))
+          (do (let rows (pg_exec conn sql))
+          (do (let err (pg_last_error))
+          (do (let closed (pg_close conn))
+              (if (ge rows 0)
+                  (list 1 rows closed "pg_exec" "")
+                  (list 0 rows closed "pg_exec" err))))))))))
+
+(defn mpg-persistence-ok? (result)
+  (eq (nth result 0) 1))
+
+(defn mpg-persistence-status (result)
+  (if (mpg-persistence-ok? result) 202 503))
+
+(defn mpg-persistence-executes-json (result)
+  (if (mpg-persistence-ok? result) "true" "false"))
+
+(defn mpg-persistence-db-execution (result)
+  (if (mpg-persistence-ok? result)
+      "performed-by-http-native-persistence"
+      "blocked-by-http-native-persistence-carrier"))
+
+(defn mpg-persistence-json (result)
+  (str_concat_all (list
+    "{\"carrier\":\"config_database_url\""
+    ",\"executes\":" (mpg-persistence-executes-json result)
+    ",\"rows_affected\":" (value_str (nth result 1))
+    ",\"close_code\":" (value_str (nth result 2))
+    ",\"stage\":" (json_string (nth result 3))
+    ",\"error\":" (json_string (nth result 4))
+    "}")))
+
 (defn mpg-native-default-response (operation node-id sql body)
-  (respond 202
+  (do (let persistence (mpg-persistence-result sql))
+  (respond (mpg-persistence-status persistence)
     (str_concat_all (list
       "{\"native_default_invitation\":true"
       ",\"native_public_gate\":true"
@@ -2107,18 +2147,20 @@
       ",\"public_gate_header\":\"X-Form-Native-Public-Gate\""
       ",\"operation\":" (json_string operation)
       ",\"node_id\":" (json_string node-id)
-      ",\"executes\":false"
+      ",\"executes\":" (mpg-persistence-executes-json persistence)
       ",\"route_local_gate_executes\":true"
-      ",\"db_execution\":\"proven-by-form-native-public-gate-live-fixture\""
+      ",\"db_execution\":" (json_string (mpg-persistence-db-execution persistence))
+      ",\"persistence\":" (mpg-persistence-json persistence)
       ",\"sql\":" (json_string sql)
       ",\"request_body\":" (json_string body)
       ",\"route_local_rollback_receipt\":" (mpg-rollback-receipt-json operation node-id)
       ",\"decision_receipt\":" (mpg-decision-receipt-json (mpg-implicit-native-protocol) (mpg-implicit-native-protocol) operation node-id)
       ",\"trust_envelope\":" (mpg-trust-envelope-json (mpg-implicit-native-protocol) (mpg-implicit-native-protocol) operation node-id)
-      ",\"runtime\":\"inline\"}"))))
+      ",\"runtime\":\"inline\"}")))))
 
 (defn mpg-public-gate-response (operation node-id sql body)
-  (respond 202
+  (do (let persistence (mpg-persistence-result sql))
+  (respond (mpg-persistence-status persistence)
     (str_concat_all (list
       "{\"native_public_gate\":true"
       ",\"native_preview\":false"
@@ -2127,15 +2169,16 @@
       ",\"preview_header\":\"X-Form-Native-Preview\""
       ",\"operation\":" (json_string operation)
       ",\"node_id\":" (json_string node-id)
-      ",\"executes\":false"
+      ",\"executes\":" (mpg-persistence-executes-json persistence)
       ",\"route_local_gate_executes\":true"
-      ",\"db_execution\":\"proven-by-form-native-public-gate-live-fixture\""
+      ",\"db_execution\":" (json_string (mpg-persistence-db-execution persistence))
+      ",\"persistence\":" (mpg-persistence-json persistence)
       ",\"sql\":" (json_string sql)
       ",\"request_body\":" (json_string body)
       ",\"route_local_rollback_receipt\":" (mpg-rollback-receipt-json operation node-id)
       ",\"decision_receipt\":" (mpg-decision-receipt-json (mpg-public-gate-header) (mpg-public-gate-header) operation node-id)
       ",\"trust_envelope\":" (mpg-trust-envelope-json (mpg-public-gate-header) (mpg-public-gate-header) operation node-id)
-      ",\"runtime\":\"inline\"}"))))
+      ",\"runtime\":\"inline\"}")))))
 
 (defn route_ideas_create_native_preview (q)
   (do (let body (mpv-body q))

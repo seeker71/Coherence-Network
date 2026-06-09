@@ -1,0 +1,167 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/native-http-mutation-persistence-default-20260609",
+  "commit_scope": "Move native mutable HTTP routes from receipt-only SQL previews to Form-native persistence execution through the kernel config carrier.",
+  "files_owned": [
+    "Dockerfile.kernel-router",
+    "api/tests/test_ideas_router_form.py",
+    "api/tests/test_native_mutation_ab_observation.py",
+    "api/tests/test_native_mutation_public_gate.py",
+    "api/tests/test_spec_registry_router_form.py",
+    "deploy/hostinger/auto-deploy.sh",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/kernel-router/entrypoint.sh",
+    "deploy/kernel-router/mutation_ab_observation_harness.py",
+    "deploy/kernel-router/mutation_public_gate_harness.py",
+    "deploy/kernel-router/production-routes.fk",
+    "docs/PRODUCTION-SUBSTRATE.md",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "docs/system_audit/commit_evidence_2026-06-09_native_http_mutation_persistence_default.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/verify_kernel_canary_public_gate.sh",
+    "specs/native-mutation-ab-observation-gate.md",
+    "specs/native-mutation-public-gate.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "COORD_AGENT=codex scripts/agent-coord.sh claim \"native HTTP mutation persistence default\"",
+      "cd form/form-kernel-rust && cargo build --release --bin form-kernel-rust",
+      "form/form-kernel-rust/target/release/form-kernel-rust check --routes deploy/kernel-router/production-routes.fk --stdlib form/form-stdlib",
+      "python3 deploy/kernel-router/mutation_public_gate_harness.py --json",
+      "python3 deploy/kernel-router/mutation_ab_observation_harness.py --json",
+      "python3 -m pytest -q api/tests/test_native_mutation_public_gate.py api/tests/test_native_mutation_ab_observation.py api/tests/test_native_mutation_route_bindings.py api/tests/test_ideas_router_form.py api/tests/test_spec_registry_router_form.py",
+      "python3 -m ruff check api/tests/test_native_mutation_public_gate.py api/tests/test_native_mutation_ab_observation.py api/tests/test_native_mutation_route_bindings.py api/tests/test_ideas_router_form.py api/tests/test_spec_registry_router_form.py deploy/kernel-router/mutation_public_gate_harness.py deploy/kernel-router/mutation_ab_observation_harness.py",
+      "python3 scripts/validate_spec_quality.py --file specs/native-mutation-public-gate.md --file specs/native-mutation-ab-observation-gate.md",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "scripts/check_route_manifests.sh",
+      "form/scripts/native-mutation-public-gate-test.sh",
+      "sh -n deploy/kernel-router/entrypoint.sh",
+      "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_kernel_canary_public_gate.sh form/scripts/native-mutation-public-gate-test.sh",
+      "python3 -m py_compile deploy/kernel-router/mutation_public_gate_harness.py deploy/kernel-router/mutation_ab_observation_harness.py",
+      "git diff --check"
+    ],
+    "summary": "Native default and public-gate HTTP mutation responses now execute SQL in Form through config_database_url, pg_connect, pg_exec, and pg_close when a kernel config carrier supplies database.url. The public-gate harness self-provisions throwaway Postgres and observed 5/5 cases passing with confidence 1.0, including no-header default, public-gate, both-header priority, preview, fallback, and DB readback. The older A/B harness now uses the same config carrier for its A branch and also passes at confidence 1.0.",
+    "known_limitations": [
+      {
+        "scope": "production deploy",
+        "observed": "This commit has not yet been deployed. Public canary verification must run after merge/deploy with scripts/verify_kernel_canary_public_gate.sh."
+      },
+      {
+        "scope": "public Traefik no-header default",
+        "observed": "The deploy overlay remains header-gated. Ordinary public no-header mutation traffic remains on FastAPI until the deployed header-gated persistence canary is verified and the separate no-header flip is performed."
+      },
+      {
+        "scope": "production credential carrier",
+        "observed": "The kernel-router overlay mounts /root/.coherence-network/config.json as /run/coherence-network/config.json:ro and passes it through KERNEL_ROUTER_CONFIG_FILE. Missing or invalid config answers as an observable persistence failure instead of a silent write claim."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push, PR creation, and GitHub checks for codex/native-http-mutation-persistence-default-20260609."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "scripts/verify_kernel_canary_public_gate.sh https://api.coherencycoin.com"
+    ],
+    "notes": "Run after merge/deploy. The verifier now requires X-Form-Router:native-kernel, decision_receipt, executes:true, and db_execution=performed-by-http-native-persistence for the header-gated treatment while confirming no-header public control remains outside the native default route."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Local kernel-router mutable paths now observe native persistence execution for A=no-header default, C=public gate, and both-header public-gate priority; B=preview remains executes:false; D=X-Form-Python-Fallback remains fanout-python.",
+    "public_endpoints": [
+      "POST /api/ideas",
+      "PATCH /api/ideas/{idea_id}",
+      "POST /api/spec-registry",
+      "PATCH /api/spec-registry/{spec_id}",
+      "DELETE /api/spec-registry/{spec_id}",
+      "Header X-Form-Native-Preview",
+      "Header X-Form-Native-Public-Gate",
+      "Header X-Form-Python-Fallback"
+    ],
+    "test_flows": [
+      "python3 deploy/kernel-router/mutation_public_gate_harness.py --json -> 5/5 cases, confidence 1.0, native_http_persistence_proven true",
+      "python3 deploy/kernel-router/mutation_ab_observation_harness.py --json -> 5/5 cases, confidence 1.0, default_executes_persistence true",
+      "form/scripts/native-mutation-public-gate-test.sh -> verdict 111111111",
+      "python3 -m pytest focused native mutation/router-form tests -> 28 passed"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local native HTTP mutation persistence is proven. Public no-header mutation traffic should move only after the deployed header-gated canary verifies mounted production-config persistence."
+  },
+  "idea_ids": [
+    "idea-realization-engine",
+    "data-infrastructure"
+  ],
+  "spec_ids": [
+    "specs/native-mutation-public-gate.md",
+    "specs/native-mutation-ab-observation-gate.md",
+    "specs/ideas-router-form-expression.md",
+    "specs/spec-registry-source-native.md"
+  ],
+  "task_ids": [
+    "native-http-mutation-persistence-default-20260609",
+    "deployed-native-http-mutation-persistence-canary"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "deploy/kernel-router/production-routes.fk::mpg-persistence-result",
+    "deploy/kernel-router/production-routes.fk::mpg-native-default-response",
+    "deploy/kernel-router/production-routes.fk::mpg-public-gate-response",
+    "deploy/kernel-router/mutation_public_gate_harness.py::provision_postgres",
+    "deploy/kernel-router/mutation_public_gate_harness.py::persistence_readback_checks",
+    "deploy/kernel-router/mutation_ab_observation_harness.py::default_http_request",
+    "deploy/kernel-router/entrypoint.sh::KERNEL_ROUTER_CONFIG_FILE",
+    "scripts/verify_kernel_canary_public_gate.sh"
+  ],
+  "change_files": [
+    "Dockerfile.kernel-router",
+    "api/tests/test_ideas_router_form.py",
+    "api/tests/test_native_mutation_ab_observation.py",
+    "api/tests/test_native_mutation_public_gate.py",
+    "api/tests/test_spec_registry_router_form.py",
+    "deploy/hostinger/auto-deploy.sh",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/kernel-router/entrypoint.sh",
+    "deploy/kernel-router/mutation_ab_observation_harness.py",
+    "deploy/kernel-router/mutation_public_gate_harness.py",
+    "deploy/kernel-router/production-routes.fk",
+    "docs/PRODUCTION-SUBSTRATE.md",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "docs/system_audit/commit_evidence_2026-06-09_native_http_mutation_persistence_default.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/verify_kernel_canary_public_gate.sh",
+    "specs/native-mutation-ab-observation-gate.md",
+    "specs/native-mutation-public-gate.md"
+  ],
+  "change_intent": "runtime_feature"
+}
