@@ -1,0 +1,31 @@
+; preludes: form-stdlib/temporal-smoothing.fk
+;
+; temporal-smoothing-band — debounce a flickering reading stream over time, made falsifiable.
+;
+; A live classifier emits one label per frame; the recent-labels list is most-recent-first. The
+; stream recent = ("dog" "dog" "dog" "cat") — three "dog" frames then an older "cat":
+;   k=3  the last 3 frames are all "dog" -> STABLE on "dog" (the body commits)
+;   k=4  the 4th frame is "cat" -> a leaked frame refuses the quorum -> NOT stable -> "" (silence)
+; A genuinely mixed window ("dog" "cat" "dog") never holds -> "". A too-short stream ("dog" "dog")
+; asked for k=3 runs out of frames before the window fills -> honestly unstable, never silently
+; true on thin history. win3 is the held window read directly as all-same.
+;
+; Verdict 63 when every claim lands:
+;   1   a held window commits          (stable "dog" at k=3 == "dog")
+;   2   one leaked frame refuses         (NOT stable? at k=4)
+;   4   refusal speaks as silence        (stable label at k=4 == "")
+;   8   a mixed window never holds        (NOT stable? on dog/cat/dog)
+;   16  too-short history stays unstable  (k > len -> NOT stable?)
+;   32  a uniform window reads all-same   (all-same? of three "dog" == 1)
+(do
+    (let recent (list "dog" "dog" "dog" "cat"))
+    (let mixed  (list "dog" "cat" "dog"))
+    (let short  (list "dog" "dog"))
+    (let win3   (list "dog" "dog" "dog"))
+    (let c0 (if (str_eq (ts-stable recent 3) "dog") 1 0))
+    (let c1 (if (eq (ts-stable? recent 4) 0) 2 0))
+    (let c2 (if (str_eq (ts-stable recent 4) "") 4 0))
+    (let c3 (if (eq (ts-stable? mixed 3) 0) 8 0))
+    (let c4 (if (eq (ts-stable? short 3) 0) 16 0))
+    (let c5 (if (eq (ts-all-same? win3) 1) 32 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))

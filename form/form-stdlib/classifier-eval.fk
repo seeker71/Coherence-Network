@@ -1,0 +1,37 @@
+; classifier-eval.fk — TEST a classifier against known-correct labels; pass only on a proven bar.
+;
+; self-grounding-classifier.fk PROMOTES our own perception by counting agreement with a trusted
+; route, sample after sample. This is the evaluation that earns that promotion: hold a classifier
+; against a labeled set — pairs of (predicted, actual) — count CORRECT and WRONG exactly, and gate
+; PASS on a division-free bar (enough right AND few enough wrong). value-execution.fk credits only
+; what's proven; here a classifier passes only what it got right, never an asserted accuracy. No
+; ratio, no float: the kernels compare exact integer counts, so the verdict is the same on Go=Rust=TS.
+;
+; A pair = (list predicted actual): what the classifier said, what the label says, for one input.
+; A set is a list of pairs — the held-out evaluation record. min-correct / max-wrong are the bar.
+;
+; Proven by: tests/classifier-eval-band.fk (three-way at validate.sh)
+
+(do
+    (defn ce-pred   (p) (nth p 0))   ; what the classifier predicted
+    (defn ce-actual (p) (nth p 1))   ; the known-correct label
+    (defn ce-hit?   (p) (if (str_eq (ce-pred p) (ce-actual p)) 1 0))
+
+    ; --- count correct / wrong over the evaluation set (recursion is the loop; no subtraction) ---
+    (defn ce-correct (pairs)
+        (if (eq (len pairs) 0) 0
+            (add (ce-hit? (head pairs)) (ce-correct (tail pairs)))))
+    (defn ce-wrong (pairs)
+        (if (eq (len pairs) 0) 0
+            (if (eq (ce-hit? (head pairs)) 0)
+                (add 1 (ce-wrong (tail pairs)))
+                (ce-wrong (tail pairs)))))
+    (defn ce-total (pairs) (len pairs))
+
+    ; --- PASS GATE: the classifier passes only when it cleared enough correct AND stayed under the
+    ;     wrong ceiling — proven counts, never asserted accuracy. Division-free (ge on integers) so
+    ;     the gate is exact and identical across kernels, like self-grounding's promotion gate. ---
+    (defn ce-passes? (pairs min-correct max-wrong)
+        (if (and (ge (ce-correct pairs) min-correct) (ge max-wrong (ce-wrong pairs))) 1 0))
+
+    0)

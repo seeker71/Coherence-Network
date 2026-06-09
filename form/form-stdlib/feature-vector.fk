@@ -1,0 +1,53 @@
+; feature-vector.fk — a raw numeric signal window, binned into a fixed-width histogram feature vector.
+;
+; The input every classifier consumes. recognition-router.fk routes confidence VECTORS a model
+; already produced; this is one step upstream — it MAKES the vector. A window of raw numeric
+; readings (amplitudes, intervals, sensor samples) is data-oblivious until it is shaped: bin each
+; value by ascending thresholds, count the values per bin, emit a fixed-width histogram. Same
+; thresholds + same window => same vector on every device, so the feature is a content-addressed
+; substrate cell like everything else (Go=Rust=TS parity at validate.sh is cross-device parity —
+; the Mac and the phone extract the identical feature, verifiable by NodeID, not a hopeful match).
+;
+; The defining choice is meets-OR-EXCEEDS: a value lands in bin = how many thresholds it clears at
+; (ge value threshold). A value equal to a threshold counts (ge, not gt) — the boundary belongs to
+; the higher bin. Ascending thresholds [t0 t1 ... t(k-1)] give k+1 bins (0..k): bin 0 is below t0,
+; bin k is at-or-above the last threshold. Every value lands in exactly one bin, so the histogram
+; conserves the window (sum of counts == len values). All values and counts are integers.
+;
+; Kin: recognition-router.fk (consumes the vector this makes), turboquant-as-recipe (the data-
+; oblivious quantization this is a histogram instance of), shared-sensing.fk (the same feature on
+; many bodies), value-execution.fk (count only what clears the bar). Models/classifiers are DATA
+; downstream; the feature extraction is Form, kernel-executable, three-way-identical.
+;
+; Proven by: form-stdlib/tests/feature-vector-band.fk (three-way at validate.sh)
+
+(do
+    ; --- BIN: which bin a value lands in = how many ascending thresholds it meets-or-exceeds. ---
+    ; recurse the thresholds, +1 per (ge value threshold). value below all -> 0; at-or-above all -> k.
+    (defn fv-bin (value thresholds)
+        (if (eq (len thresholds) 0) 0
+            (if (ge value (head thresholds))
+                (add 1 (fv-bin value (tail thresholds)))
+                (fv-bin value (tail thresholds)))))
+
+    ; --- COUNT: how many values in the window land in bin b (the height of one histogram bar). ---
+    (defn fv-count-in-bin (values thresholds b)
+        (if (eq (len values) 0) 0
+            (if (eq (fv-bin (head values) thresholds) b)
+                (add 1 (fv-count-in-bin (tail values) thresholds b))
+                (fv-count-in-bin (tail values) thresholds b))))
+
+    ; --- HISTOGRAM: walk bins 0..nbins-1 ascending, one bar each -> the fixed-width feature vector. ---
+    ; there is no sub, so an explicit ascending loop drives the bin index and stops at (eq b nbins).
+    (defn fv-hist-loop (values thresholds b nbins)
+        (if (eq b nbins) (empty)
+            (cons (fv-count-in-bin values thresholds b)
+                  (fv-hist-loop values thresholds (add b 1) nbins))))
+    (defn fv-histogram (values thresholds nbins)
+        (fv-hist-loop values thresholds 0 nbins))
+
+    ; --- read one bar; the vector width is fixed at nbins regardless of the window. ---
+    (defn fv-bar   (hist b) (nth hist b))
+    (defn fv-width (hist)   (len hist))
+
+    0)

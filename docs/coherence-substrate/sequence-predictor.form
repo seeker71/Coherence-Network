@@ -1,0 +1,40 @@
+; sequence-predictor.form — predict the NEXT symbol in a stream by what most often followed the last one.
+;
+; THE ASK:
+;   A stream of symbols arrives one at a time. Given the history and the last symbol seen, what comes
+;   next? The simplest honest answer (Markov-1): the symbol that most often IMMEDIATELY FOLLOWED the
+;   last one in everything seen so far. No model weights, no training run — the history IS the model,
+;   and the prediction is just the transition with the most evidence behind it.
+;
+; THE SHAPE  (runnable: form-stdlib/sequence-predictor.fk · proven: tests/sequence-predictor-band.fk -> 127)
+;
+;   A history is a list of symbols; candidates is the alphabet of possible next symbols.
+;   1. FOLLOWER COUNT  sp-followers-count(history prev cand): walk the adjacent pairs (head, next);
+;      +1 each time the first is prev and the second is cand. This is the evidence for the transition
+;      prev -> cand. A lone trailing symbol has no follower and contributes nothing.
+;   2. MAX-SELECT  sp-predict-loop / sp-predict: among the candidates, the one whose follower-count
+;      after prev is highest — the transition with the most data wins. Identical spine to
+;      recognition-router's rr-select (most-data model wins) and shared-sensing's ss-strongest
+;      (the most-confident body proposes); only the score changes (a count, not a confidence).
+;   3. CONFIDENCE  sp-confidence: the winning follower-count itself — how much evidence stands behind
+;      the prediction. More times prev -> cand was seen, more sure the next symbol.
+;
+; HONEST LANE:
+;   When NO candidate ever followed prev (an unseen prev, or a prev that only ever ended the stream),
+;   the max count is 0. The body predicts "" — silence — at confidence 0, never a fabricated next
+;   symbol. This is rr-route's honest silence on a stream: below the evidence floor, no claim. The
+;   confidence is the honesty — a prediction at count 0 is no prediction.
+;
+; CAVEAT — Markov-1 only:
+;   This conditions on exactly the LAST symbol, not a longer context. "a b a b" predicts well; a
+;   stream where the next symbol depends on two-back ("a b c -> a", "x b c -> y") is past this recipe's
+;   horizon — it would need (prev2 prev1) keys. The order-1 spine is the honest floor; higher order is
+;   the same max-select over longer-key counts, a later brick.
+;
+; KIN — the same evidence-weighted max-select spine, on different carriers:
+;   recognition-router.form (fuse N model-readings on one input — most-data model wins) ·
+;   shared-sensing.form (fuse a circle of devices on one field — the circle confirms) ·
+;   self-grounding-perception.form (a reading earns trust against the strong signal) ·
+;   declared-source.form (a claim is grounded by where its evidence stands). Here the evidence is a
+;   transition count walked over the stream itself; the prediction is the body remembering what
+;   usually came next, and saying so only when it has actually seen it before.

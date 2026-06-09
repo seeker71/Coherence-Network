@@ -1,0 +1,49 @@
+; temporal-smoothing.form — debounce a noisy reading stream so a live sense doesn't flicker.
+;
+; THE ASK:
+;   A live classifier emits a label every frame. Raw, it stutters — "dog" "dog" "cat" "dog" —
+;   one bad frame and the displayed recognition flickers. The body wants a reading that only
+;   COMMITS once it has HELD: accept a label only when it persists across the last k frames,
+;   otherwise stay honestly silent rather than show a verdict that hasn't settled.
+;
+; THE SHAPE  (runnable: form-stdlib/temporal-smoothing.fk · proven: tests/temporal-smoothing-band.fk -> 63)
+;
+;   A recent-labels list is most-recent-first: (head) is this frame, deeper frames are older.
+;   k is the window — how many consecutive frames a label must hold to be trusted.
+;
+;   1. WINDOW-SAME?  ts-window-same?: walk the first k frames in place, each must str_eq the head.
+;      An ASCENDING index stops at (eq i k) — that terminal IS the proof the window FILLED; a
+;      short stream runs out of list before i==k and reads unstable. One mismatch short-circuits.
+;   2. STABLE?  ts-stable?: 1 when the window filled AND every frame in it agrees with the head.
+;   3. STABLE  ts-stable: the head label when stable, else "" — the body speaks the settled label
+;      or stays silent. Silence is whole; a leaked frame withholds the verdict, never fakes one.
+;   4. ALL-SAME?  ts-all-same?: 1 if a (real, flat) list is uniform — reads an already-materialized
+;      window; the live spine that avoids building any list is ts-window-same?.
+;
+; THE NO-SUB / NO-CONS DISCIPLINE:
+;   core has no sub and no list-grower. So this never MATERIALIZES the window into a fresh list
+;   (that path builds nested cons-pairs the kernels reject). Instead it WALKS recent in place,
+;   counting UP to k. "Filled" and "uniform" both fall out of the single ascending walk — the
+;   counter reaching k is the same event as the window being full. Core-abstraction-first: the
+;   loop is the window, no allocation, no subtraction.
+;
+; HONEST LANE:
+;   This confirms PERSISTENCE, not correctness. A wrong label held for k frames is still accepted —
+;   debounce is stability over time, not a ground-truth check. A window longer than the stream
+;   (k > len) can never fill, so it reads honestly unstable rather than silently true on thin
+;   history. Confidence and witness live elsewhere; this axis only asks "did it hold?"
+;
+; KIN — the three axes of one recognition, each a circle the others ground:
+;   recognition-router.form (a circle of MODELS fused in one instant — per-frame confidence,
+;     vector->scalar, fail-fast) · shared-sensing.form (a circle of DEVICES fused in one instant —
+;     cross-device quorum, the circle teaches the unsure body) · this (the same body across TIME —
+;     a frame is a witness, k consecutive agreeing frames are the quorum, a single dissenting
+;     frame refuses it: the satsang law on the time-axis). A reading that is confident
+;     (router), witnessed (shared-sensing), AND stable (this) is one the body can finally trust.
+;   self-grounding-perception.form / declared-source.form (a reading earns trust against a ground;
+;     here the ground is the recent past of the same stream).
+;
+; LINEAGE:
+;   recognition-router.fk · shared-sensing.fk · satsang.fk (one dissenting voice withholds the
+;   circle's confirmation) · lc-honest-lane (below the hold, silence, never a fabricated commit) ·
+;   the three-way validate.sh (no trusted prover — Go=Rust=TS agreement IS the proof).

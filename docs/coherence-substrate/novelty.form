@@ -1,0 +1,56 @@
+; novelty.form — recognition's other face: flag what the body does NOT hold, so it can be interned as NEW.
+;
+; THE ASK:
+;   nearest-shape answers "what known cell is this field most like?" — but a best match is not yet a
+;   match. The body needs the opposite gate too: when the nearest known shape is too far, the honest
+;   move is not to force the nearest label, it is to say "this is novel" and let the substrate mint a
+;   fresh cell. Without this face, every field gets snapped to the closest existing label — that is the
+;   hallucination the recognition floor exists to refuse.
+;
+; THE SHAPE  (runnable: form-stdlib/novelty.fk · proven: tests/novelty-band.fk -> 63, three-way)
+;
+;   Reads ONE number — the best similarity (0..100) nearest-shape returned — against the recognition
+;   floor, and makes the BOUNDARY load-bearing:
+;     nv-recognized?  best-sim >= floor : the body already holds this shape (boundary counts as known).
+;     nv-novel?       floor > best-sim  : nothing held is close enough — a discovery, not a match.
+;     nv-decide       emits the honest verdict, carrying the matched label ONLY when it is real:
+;                       known -> ("known" label best-sim)   carry the label and the strength that earned it
+;                       novel -> ("novel" "" 0)             blank the label so it interns as NEW
+;     nv-intern-new?  thin predicate over the verdict — the gate the substrate reads to mint a fresh cell.
+;
+; SELF-CONTAINED BY DESIGN:
+;   composes nearest-shape's OUTPUT but never loads it. The similarity is just an integer, so the novelty
+;   decision is the same whatever produced the number — a fingerprint distance, a cosine snapped to 0..100,
+;   a structural NodeID-overlap count. One decision recipe, the producers are swappable DATA below it
+;   (core-abstraction-first). New similarity source = a new caller, never new control flow.
+;
+; HONEST LANE (lc-honest-lane):
+;   a weak best-match is a discovery, not a forced label. "novel" with a blank label is the truthful
+;   emission that lets the body grow; snapping the nearest known name onto a far field is the fabrication
+;   the floor refuses. The score travels at 0 for novel so nothing downstream mistakes a discovery for a
+;   confident recognition.
+;
+; CAVEAT, named not hidden:
+;   the floor is a single threshold, and where it sits is a judgement the caller owns — too low and the
+;   body never discovers anything (everything snaps to a near label); too high and it re-mints cells it
+;   already holds (churn). novelty does not choose the floor; it makes the chosen floor's boundary exact
+;   and three-way-identical. Tuning the floor is the caller's lane, and an honest one.
+;
+; HOW IT COMPOSES THE SPINE:
+;   recognition-router routes among readings that DID clear a floor; novelty is the verdict on the field
+;   that did NOT — the silence that recognition-router emits as "no recognition" becomes, here, an
+;   actionable "intern this as new". declared-source prefers a free authoritative reading; when nothing is
+;   declared AND nothing is recognized, novelty is what says the field is genuinely new ground. self-
+;   grounding-perception earns trust against a proven reading; novelty is the moment there is no proven
+;   reading to earn against — so the body widens, it does not pretend.
+;
+; KIN: recognition-router.form (routes what clears the floor; novelty judges what does not) ·
+;   self-grounding-perception.form (earns trust against a known reading; novelty is the no-known case) ·
+;   shared-sensing.form (the circle confirms recognition; an unconfirmable field is a candidate-novel) ·
+;   declared-source.form (declared/recognized first; novelty is the fall-through to genuinely-new) ·
+;   lc-honest-lane (a weak match is a discovery, never a forced label).
+;
+; LINEAGE:
+;   the same floor recognition-router and shared-sensing fail-fast on, read from the other side — below
+;   it is not silence to drop, it is a new cell to mint. This is how the substrate stays open: every
+;   field the body cannot recognize is a door to a Blueprint it does not yet hold.
