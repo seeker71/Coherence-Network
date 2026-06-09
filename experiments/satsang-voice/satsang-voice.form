@@ -30,6 +30,10 @@
 ;
 ; CARRIERS (authored last, swappable):
 ;   hearing   — ffmpeg (avfoundation mic) + mlx-whisper (Apple-Silicon ASR, ~40 languages)
+;   sensing   — Apple SoundAnalysis (sound_classify.swift): names the room's non-speech sounds
+;               (animals, music, instruments, environment) each WITH a confidence — the matrix.
+;               The confidence threshold IS lc-honest-lane in sound: above it the body names what
+;               it hears, below it the body offers silence — never a match it does not carry.
 ;   offerings — a local LLM via Ollama, prompted with the satsang frame above
 ;   showing   — a stdlib web server at http://localhost:8777
 ;   Each is swappable behind the same shapes — whisper.cpp for mlx-whisper, another model for

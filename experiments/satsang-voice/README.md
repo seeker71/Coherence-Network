@@ -17,6 +17,10 @@ offered — never imposed. See [`satsang-voice.form`](satsang-voice.form).
 - **hearing** — `ffmpeg` captures the mic; `mlx-whisper` (Apple-Silicon-native)
   transcribes, ~40 languages, auto-detected.
 - **offerings** — a local LLM via **Ollama**, grounded in the satsang frame.
+- **the sonic field** — Apple's built-in on-device **SoundAnalysis** classifier (compiled
+  `sound_classify.swift`) names the room's other sounds — animals, music, instruments,
+  environment — each with a **confidence**. The threshold *is* the honesty: below it, the body
+  offers silence, not an asserted match it doesn't carry.
 - **showing** — a tiny stdlib web server; open it in a browser.
 
 ## One-time setup
