@@ -1,0 +1,34 @@
+; preludes: form-stdlib/recognition-router.fk
+;
+; recognition-router-vision-band — the SAME router, now on VIDEO readings. Of course.
+;
+; recognition-router.fk routes readings (model, confidence-vector). It has no idea whether the
+; carrier HEARD or SAW the input — a reading is a reading. This band feeds it sight instead of
+; sound: a person in frame, seen by three vision carriers IN PARALLEL (0..100):
+;   "apple-vision" [(person 92)(indoor 40)]  -> strength 92  passes, trusted
+;   "yolo"         [(person 78)(chair 30)]    -> strength 78  passes
+;   "clip"         [(human 35)]               -> strength 35  passes
+;   "blur"         [(nothing 12)]             -> strength 12  FAILS the floor (dropped, fail-fast)
+; routed flow: ("apple-vision", "person", 92) — most data wins; apple-vision + yolo agree on
+; "person" = consensus. The identical recipe that routes a dog barking routes a person in frame.
+;
+; Verdict 31 when every claim lands (no new routing logic — same rr-* the sound band proves):
+;   1   most-data vision model wins   (source == apple-vision)
+;   2   routed label is right         (label == person)
+;   4   vector->scalar strength right (strength == 92)
+;   8   it is recognized              (recognized? == 1)
+;   16  consensus: two models agree   (>= 2 on "person")
+(do
+    (let readings (list
+        (list "apple-vision" (list (list "person" 92) (list "indoor" 40)))
+        (list "yolo"         (list (list "person" 78) (list "chair" 30)))
+        (list "clip"         (list (list "human" 35)))
+        (list "blur"         (list (list "nothing" 12)))))
+    (let floor 20)
+    (let flow (rr-route readings floor))
+    (let c0 (if (str_eq (rr-source flow) "apple-vision") 1 0))
+    (let c1 (if (str_eq (rr-flow-label flow) "person") 2 0))
+    (let c2 (if (eq (rr-flow-strength flow) 92) 4 0))
+    (let c3 (if (eq (rr-recognized? flow) 1) 8 0))
+    (let c4 (if (eq (rr-consensus? readings floor flow) 1) 16 0))
+    (add c0 (add c1 (add c2 (add c3 c4)))))

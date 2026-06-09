@@ -1,8 +1,4 @@
-# local, machine-specific — recreated per the README, never committed
-.venv/
-__pycache__/
-*.pyc
+*.o
+vision_classify
 sound_classify
-*.aiff
-*.wav
 shazam_song
