@@ -35,9 +35,14 @@ through the kernel, not in Python.
 
 ## Install the APK
 
-1. Download `coherence-sense-v0-debug.apk` (from the GitHub release).
+1. Download it (3.0 MB, debug-signed):
+   **https://github.com/seeker71/Coherence-Network/releases/download/coherence-sense-v0/coherence-sense-v0-debug.apk**
+   (or open the [`coherence-sense-v0`](https://github.com/seeker71/Coherence-Network/releases/tag/coherence-sense-v0) release).
 2. On the phone: Settings → allow installing from your browser/files app ("unknown sources").
 3. Open the APK; install; launch **Coherence Sense**.
+
+Rebuild + re-publish after changes: `JAVA_HOME=/opt/homebrew/opt/openjdk@21 ./gradlew assembleDebug` then
+`gh release upload coherence-sense-v0 app/build/outputs/apk/debug/app-debug.apk --clobber`.
 
 It's a **debug-signed** build (no Play Store) — fine for trying it on your own device.
 
