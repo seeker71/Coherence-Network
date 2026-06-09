@@ -1,0 +1,56 @@
+; learning-trend.form — is the body's prediction error FALLING across successive windows (is it actually learning)?
+;
+; THE ASK:
+;   champion-challenger.form decides WHICH model is the authority by counting head-to-head wins over a
+;   window; anomaly-band.form decides whether ONE reading sits inside the range the body has lived. Both
+;   ask a question of a static snapshot. But "is the body LEARNING?" is temporal: it is not a property of
+;   any single window, it is a relation BETWEEN windows. Hold the count of predictions that MISSED in each
+;   window; if this window missed fewer times than the one before, error fell and the body learned; if it
+;   missed more, the body drifted; if the same, it is steady. The body needs a direction across time, read
+;   from its own error history.
+;
+; THE SHAPE  (runnable: form-stdlib/learning-trend.fk · proven: tests/learning-trend-band.fk -> 127, three-way)
+;
+;   The input is a list of per-window error COUNTS, MOST RECENT FIRST. (2 5 8) reads "this window 2 misses,
+;   the one before 5, the one before that 8" — error has been falling. Counts are integers 0..N.
+;     lt-recent     (head errors)        : this window's miss count — the now.
+;     lt-prior      (head (tail errors)) : the window just before — one step back in time.
+;     lt-improving? prior > recent : the older window had MORE misses, so error fell — the body is learning.
+;     lt-worsening? recent > prior : now has more misses than before, so error rose — the body drifted.
+;     lt-steady?    recent == prior : the two windows missed the same number of times — no movement.
+;   The trend is ONE integer comparison of the two newest counts — no subtraction, no slope, no float. gt is
+;   strict, eq is the tie: the three predicates partition every (recent, prior) pair exactly once, so each
+;   direction is both its own positive (it fires) and the other two's negative (they stay silent).
+;
+; HOW IT COMPOSES THE SPINE:
+;   it is the same honest-count spine read across TIME instead of across models or across a range. Its
+;   closest sibling is drift-detect.form: drift-detect counts correct-on-recent vs correct-on-earlier and
+;   fires when accuracy FELL (the bad direction — error rising on equal windows); learning-trend reads the
+;   per-window MISS COUNT history and fires when error fell (the good direction — the body learning). The
+;   same two-window temporal-error question, the two directions of it: drift-detect produces exactly the
+;   per-window miss counts that learning-trend's history folds, so the two compose end to end (each window's
+;   drift-detect miss count, prepended most-recent-first, IS a learning-trend input). champion-challenger
+;   counts correct samples to decide authority NOW; learning-trend reads the misses at two successive nows
+;   to decide whether that authority is improving. anomaly-band's per-window error gate is the upstream that
+;   PRODUCES a miss/hit; active-inference minimizes prediction error inside one step — learning-trend is the
+;   after-the-fact proof, over the history those produce, that error actually went down window over window.
+;
+; HONEST LANE (lc-honest-lane):
+;   this is a DIRECTION, not a RATE. (10 5) and (2 1) both read "improving" though one fell by five misses
+;   and the other by one — the SIGN of the change is exact, the MAGNITUDE is the caller's lane. Only the two
+;   most recent windows decide the trend; the rest of the list is the body's longer error history, carried
+;   for a later brick (a falling-streak count would fold the whole tail; a "how much faster is it learning"
+;   deviation score is the graded later brick). The tie belongs to steady alone — gt is strict, so 4 vs 4 is
+;   neither improving nor worsening, never a fabricated direction at the boundary. And the trend only knows
+;   the counts it is fed: if the miss/hit labelling upstream is wrong, a confident "improving" comes out of
+;   garbage in — the gate's honesty is exactly the honesty of the error counts it reads.
+;
+; KIN: drift-detect.form (the closest sibling — same two-window temporal-error spine, the OTHER direction:
+;   it fires when accuracy fell, learning-trend fires when error fell; drift-detect's per-window miss counts
+;   ARE learning-trend's input) · champion-challenger.form (counts wins to pick authority NOW; learning-trend
+;   reads misses across two nows to see if authority is improving) · anomaly-band.form (the per-window error
+;   gate upstream that produces each miss; learning-trend folds those misses into a direction) ·
+;   active-inference.form (minimizes prediction error in the step; learning-trend is the after-the-fact proof
+;   the minimization worked) · classifier-eval.form (PASS on a proven count floor — the same exact-integer-
+;   count honesty, read as a trend instead of a threshold) · lc-honest-lane (the sign is earned, the
+;   magnitude is not claimed) · the three-way validate.sh (no trusted prover — what survives Go=Rust=TS).

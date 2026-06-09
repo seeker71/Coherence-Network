@@ -1,0 +1,59 @@
+; confidence-calibrate.form — map a raw recognition strength to a calibrated bucket, so "70" means the same trust everywhere.
+;
+; THE PLACE IN THE SPINE:
+;   feature-vector.form bins a WINDOW of readings into a histogram; recognition-router.form routes
+;   the CONFIDENCE VECTOR a model already produced. This is the one-value sibling of the histogram:
+;   a single raw strength 0..100 binned into one calibrated level. Raw strengths are not comparable
+;   across models — one model's 70 is timid, another's 70 is brash — but a bucket cut by SHARED
+;   ascending thresholds is. So "70" stops meaning "whatever this model felt" and starts meaning a
+;   fixed level of trust the router, the fuser, and the human all read the same way. Models are DATA
+;   upstream; the calibration is Form, kernel-native, three-way-identical — the same score yields the
+;   same bucket on the Mac and the phone, a content-addressed substrate cell verifiable by NodeID.
+;
+; THE SHAPE  (runnable: form-stdlib/confidence-calibrate.fk · proven: tests/confidence-calibrate-band.fk -> 127)
+;
+;   cc-bucket (score thresholds) -> bucket index
+;     how many ascending thresholds the score meets-or-exceeds. Recurse the thresholds, +1 per
+;     (ge score threshold). Below all -> 0; at-or-above the last -> k. The boundary is ge, not gt:
+;     a score equal to a threshold belongs to the HIGHER bucket. This is feature-vector's fv-bin
+;     exactly — inlined here, not called, per AUTHORING's self-contained rule (a band preludes only
+;     this recipe + core, so every function it touches lives in this file). The bucket IS the
+;     calibration: it composes the same content-addressed spine as the histogram bin upstream.
+;
+;   cc-level (score thresholds) -> "low" | "mid" | "high"
+;     a thin NAME for the bucket so a human reads trust at a glance: bucket 0 -> "low", bucket 1 ->
+;     "mid", every higher bucket -> "high". Nested binary if — and/or are binary in this primitive
+;     set, so a three-way choice is two stacked ifs, never a flat cond. The name is a reading of the
+;     bucket, never a second source of truth; change the thresholds and both the bucket and its name
+;     move together.
+;
+;   cc-trusted? (score floor) -> 0 | 1
+;     a single proven-count gate — does the score clear the trust floor (ge, meets-or-exceeds). No
+;     ratio, no mean, no float: the same proven-count rule classifier-eval.fk and recognition-router's
+;     rr-trusted? ride. Returns 0/1 explicitly because a bare comparison's boolean shape diverges
+;     across kernels (Go/Rust/TS represent it differently), so it is wrapped to an integer the band
+;     can `eq` — the body-state.fk lesson, carried.
+;
+; HOW IT COMPOSES THE SPINE:
+;   feature-vector (make the vector) -> a classifier emits a raw strength -> confidence-calibrate
+;   (calibrate that strength to a shared bucket) -> recognition-router (route/fuse the now-comparable
+;   confidences). Same thresholds + same score => same bucket everywhere, so two models calibrated
+;   against one threshold list become directly comparable: the router's "highest strength wins" is
+;   only honest once the strengths share a scale, and this is where they get it. A declared reading
+;   (declared-source.form) skips the classifier and arrives calibrated to 100 for free.
+;
+; HONEST LANE / CAVEAT:
+;   This calibrates the SCALE, not the model. It makes a 70 mean the same level of trust across
+;   models; it does NOT make a model's 70 correct. A confidently-wrong classifier calibrates to
+;   "high" and is high-confidence wrong — calibration aligns the ruler, it does not measure truth.
+;   The thresholds are the designer's choice, supplied as data, not learned here; bad thresholds make
+;   a consistent-but-useless bucketing (every score collapses to one level). The score is assumed an
+;   integer 0..100 on the same exact-comparison ground the rest of the spine rides — no float, no
+;   negative. Whether a 70 DESERVES trust is grounded elsewhere (self-grounding against declared
+;   ground truth); this recipe only guarantees that wherever a 70 appears, it is the same 70.
+;
+; KIN: feature-vector.form (the histogram this is the one-value bucket of) · recognition-router.form
+;      (routes the calibrated confidences) · declared-source.form (a declared reading is calibrated
+;      to 100 for free) · turboquant-as-recipe (the data-oblivious quantization both this and the
+;      histogram instance) · value-execution.fk (count/gate only what clears the bar) ·
+;      the three-way validate.sh (no trusted prover — parallel kernels, what survives the agreement).

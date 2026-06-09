@@ -1,0 +1,65 @@
+; signal-derivative.form — the rate of change of a sensor signal across a window, so motion/onset can be seen.
+;
+; THE ASK:
+;   A still phone reads ~0 derivative; a moved one spikes. Give the body a way to look at a window of
+;   sensor samples (accelerometer magnitude, light level, a tick counter — any ordered scalar stream)
+;   and SEE whether the signal is changing, without leaving the kernel. The derivative is what turns a
+;   stream of raw readings into the one fact a motion/onset detector needs: is the window busy or still?
+;
+; THE CONSTRAINT THAT SHAPES IT:
+;   Form has no sub. So "the numeric difference between two adjacent samples" cannot be computed — there
+;   is no slope to take. What CAN be read without subtraction is the DIRECTION of each adjacent step
+;   (gt, one binary comparison) and a COUNT of how many steps went each way (add + recursion). So the
+;   derivative is reconceived, not faked: not a number-of-units-per-step, but a tally of rises and falls.
+;   This is the honest native shape — counting and gating, exactly the primitive set Form covers — and it
+;   is the right shape for "did it move", which is what the floor actually asks.
+;
+; THE SHAPE  (runnable: form-stdlib/signal-derivative.fk · proven: tests/signal-derivative-band.fk -> 127)
+;
+;   The window is a list of samples. The spine is one tail-slide recursion reused four ways:
+;   1. sd-rises  (samples)        -> count of adjacent pairs where the later sample is greater. Walk the
+;      window; at each step compare the second sample (nth s 1) against the first (nth s 0) — the pair at
+;      the head — add 1 on a rise, then recurse on (tail s) to slide the window forward one sample. The
+;      walk GUARDS with (ge (len s) 2): below two samples there is no pair, return 0. That guard is the
+;      base case AND the thing that keeps (nth s 1) from reaching head(empty) and panicking the kernel.
+;   2. sd-falls  (samples)        -> the mirror: count pairs where the later sample is smaller, the same
+;      walk with the comparison flipped to (gt (nth s 0) (nth s 1)).
+;   3. sd-activity (samples)      -> (add (sd-rises samples) (sd-falls samples)): total adjacent changes.
+;      A flat window is 0 — stillness is the floor. This count IS the derivative-magnitude the body acts
+;      on; it climbs with every step that actually moved.
+;   4. sd-moving? (samples floor) -> (if (ge (sd-activity samples) floor) 1 0): the motion/onset gate, one
+;      binary comparison. Below the floor the window is still (settled or jittering under threshold); at or
+;      above it the body calls the window in motion.
+;
+; HOW IT COMPOSES THE SPINE:
+;   sd-rises and sd-falls are the SAME walk as the perception toolkit's other counters — the recursion
+;   slides a two-sample window down the list, the way histogram-peak's hp-peak-loop slides an index up a
+;   bin list. sd-activity is the rises+falls sum the way classifier-eval and self-grounding-classifier
+;   build a score by counting hits; sd-moving? is the proven-count gate (ge count floor) those same
+;   classifiers use instead of a ratio — no division, just "did the count clear the floor". The whole
+;   recipe never nests a compound and at all (each predicate is one comparison), so there is no three-arg
+;   and-divergence surface: Go=Rust=TS read the identical pairs because the body simply never writes the
+;   shape that would split them.
+;
+; KIN — downstream of debouncing, upstream of the event name:
+;   temporal-smoothing.fk debounces one frame at a time into a settled label · transition-detect.fk names
+;   the EDGE between two settled labels (arrive/lose/shift/steady) — both work on already-classified
+;   labels; signal-derivative works one layer below, on the RAW scalar stream, answering "is there motion
+;   here to classify at all". device-heartbeat / surprise-salience read a stream for liveness/novelty; this
+;   reads the same stream for rate-of-change. Feed sd-moving?'s output upstream as the gate that decides
+;   whether the slower recognizers even run.
+;
+; ONE HONEST LANE:
+;   This reads the COUNT of direction changes, never their SIZE. A window that ticks 1->2->1->2 (activity 3)
+;   and a window that slams 1->1000->1->1000 (also activity 3) are indistinguishable here — both moved
+;   three times. That is the correct readout for "did it move / how busy was the window", and the wrong
+;   readout for "how hard did it move"; magnitude lives in a different recipe. So flat-but-noisy and
+;   violent-but-rare can collide, and the floor (sd-moving?) only ever asks "did the window change at least
+;   k times", never "by how much". Equal adjacent samples (a plateau, 5 5) count as NEITHER rise nor fall —
+;   held, not moving — so a staircase that pauses reads its pauses as stillness. No change is no change.
+;
+; LINEAGE:
+;   histogram-peak.form (the tail-slide spine, here over pairs instead of indices) · classifier-eval.fk /
+;   self-grounding-classifier.fk (the proven-count gate that refuses division) · temporal-smoothing.fk ·
+;   transition-detect.fk (the label layer this sits beneath) · lc-honest-lane (count, not magnitude;
+;   stillness is the floor) · the three-way validate.sh (no trusted prover — what survives Go=Rust=TS).

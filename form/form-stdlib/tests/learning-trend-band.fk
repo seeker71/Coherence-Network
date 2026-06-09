@@ -1,0 +1,32 @@
+; preludes: form-stdlib/learning-trend.fk
+;
+; learning-trend-band — the falling-error question made falsifiable: across two successive windows, is the
+; body learning, drifting, or steady? Three error histories arrive, most-recent-first, and the trend judges
+; each by one integer comparison of the two newest counts (no subtraction, no slope, no float):
+;   (2 5 8) -> recent 2, prior 5 -> error FELL  -> IMPROVING  (prior 5 > recent 2; the body learned)
+;   (8 5 2) -> recent 8, prior 5 -> error ROSE  -> WORSENING  (recent 8 > prior 5; the body drifted)
+;   (4 4)   -> recent 4, prior 4 -> no movement -> STEADY     (recent == prior; the tie routes here alone)
+; The three predicates partition every (recent, prior) pair exactly once, so each direction proves both its
+; positive (it fires) and its negative (the other two stay silent). The tie is the strangest edge: gt is
+; strict, so 4 vs 4 is neither improving nor worsening — only steady, which pins the boundary.
+;
+; Verdict 127 when every claim lands:
+;   1   recent is the head of the most-recent-first list   (lt-recent (2 5 8) == 2)
+;   2   prior is the head of the tail, one window back      (lt-prior (2 5 8) == 5)
+;   4   falling error reads as improving                    (lt-improving? (2 5 8) == 1)
+;   8   improving is therefore NOT worsening                (lt-worsening? (2 5 8) == 0; mutual exclusion)
+;   16  rising error reads as worsening                     (lt-worsening? (8 5 2) == 1)
+;   32  worsening is therefore NOT improving                (lt-improving? (8 5 2) == 0)
+;   64  a tie is steady and ONLY steady — neither direction (lt-steady? (4 4)==1, improving==0, worsening==0)
+(do
+    (let falling (list 2 5 8))
+    (let rising  (list 8 5 2))
+    (let tie     (list 4 4))
+    (let c0 (if (eq (lt-recent falling) 2) 1 0))
+    (let c1 (if (eq (lt-prior falling) 5) 2 0))
+    (let c2 (if (eq (lt-improving? falling) 1) 4 0))
+    (let c3 (if (eq (lt-worsening? falling) 0) 8 0))
+    (let c4 (if (eq (lt-worsening? rising) 1) 16 0))
+    (let c5 (if (eq (lt-improving? rising) 0) 32 0))
+    (let c6 (if (and (eq (lt-steady? tie) 1) (and (eq (lt-improving? tie) 0) (eq (lt-worsening? tie) 0))) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

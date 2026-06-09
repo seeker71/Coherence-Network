@@ -1,0 +1,33 @@
+; preludes: form-stdlib/mesh-gradient.fk
+;
+; mesh-gradient-band — gradient routing made falsifiable: descend toward the dest, or stay silent.
+;
+; The field — a node at hop-distance 4 from the destination, looking at its neighbors:
+;   nbrs   — ((a 3) (b 1) (c 2)): all three are closer than me (dist 4); b is the closest (dist 1).
+;   none   — ((a 4) (b 5)): a is sideways (same dist as me), b is uphill — NO neighbor descends.
+;   tie    — ((a 2) (b 2)): two neighbors tie for closest; the earlier-seen (a) wins deterministically.
+;   sides  — (x 4): a lone neighbor at my own distance — sideways, never a downhill candidate.
+;   down   — (b 1): a lone downhill neighbor, strictly closer than me.
+;
+; Verdict 127 when every claim lands:
+;   1   next-hop picks the closest downhill neighbor   (nbrs, my-dist 4 -> "b": dist 1, closest + closer)
+;   2   sideways is NOT closer                         (mg-closer? (x 4) 4 = 0 — equal distance fails)
+;   4   a strictly-closer neighbor IS closer           (mg-closer? (b 1) 4 = 1 — downhill passes)
+;   8   at the destination, reached                    (mg-reached? 0 = 1 — my own distance is zero)
+;   16  away from the destination, not reached         (mg-reached? 4 = 0 — still has ground to cover)
+;   32  no downhill neighbor -> honest silence ""       (none, my-dist 4 -> "" — local minimum, no hop)
+;   64  a tie picks the earlier-seen closest           (tie, my-dist 4 -> "a" — deterministic min-select)
+(do
+    (let nbrs  (list (list "a" 3) (list "b" 1) (list "c" 2)))
+    (let none  (list (list "a" 4) (list "b" 5)))
+    (let tie   (list (list "a" 2) (list "b" 2)))
+    (let sides (list "x" 4))
+    (let down  (list "b" 1))
+    (let c0 (if (str_eq (mg-next-hop nbrs 4) "b") 1 0))
+    (let c1 (if (eq (mg-closer? sides 4) 0) 2 0))
+    (let c2 (if (eq (mg-closer? down 4) 1) 4 0))
+    (let c3 (if (eq (mg-reached? 0) 1) 8 0))
+    (let c4 (if (eq (mg-reached? 4) 0) 16 0))
+    (let c5 (if (str_eq (mg-next-hop none 4) "") 32 0))
+    (let c6 (if (str_eq (mg-next-hop tie 4) "a") 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

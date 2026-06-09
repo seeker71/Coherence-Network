@@ -1,0 +1,62 @@
+; mesh-gradient.fk — directed mesh routing BEYOND flooding: forward toward a destination by hop-distance.
+;
+; mesh-relay.fk floods — a body rebroadcasts every new message that still has hops, so it reaches the
+; whole room with no idea where the destination is. This is the next ring: DIRECTED routing. Each node
+; knows its own hop-DISTANCE to the destination, and each of its neighbors knows theirs. Instead of
+; flooding outward, a node forwards the message to ONE neighbor — the one strictly CLOSER to the dest
+; than itself, with the smallest distance of all such neighbors. The message walks DOWN the gradient
+; toward the destination, one best step at a time, touching far fewer bodies than a flood. This is
+; distance-vector / gradient routing: the hop-distance field IS the map, the descent IS the route.
+;
+; A neighbor = (list id distance-to-dest):
+;   id       — the neighbor body's id ("a", "b", "c", ...); what mg-next-hop returns to forward to
+;   distance — that neighbor's hop-distance to the destination (an integer; 0 means IT is the dest)
+;
+; The gradient rule lives in mg-closer?: a neighbor is a candidate iff its distance is STRICTLY less
+; than mine — descending the gradient, never sideways (equal distance) or uphill (greater distance).
+; mg-next-hop is a min-select over the candidates: among neighbors strictly closer than me, the one
+; with the smallest distance (deepest step toward the dest). No candidate -> "" (no forward; either I
+; am the destination, or the gradient is broken / I am a local minimum and the message stops here).
+;
+; Why no sub/mul/div: distances are compared, never differenced. "Closer" is (gt my-dist its-dist) —
+; a comparison, not a subtraction. The min-select carries the best neighbor as a value, not an index.
+;
+; EXTENDS: mesh-relay.fk (same body-to-body hop field; this swaps blind flooding for gradient descent).
+; Proven by: form-stdlib/tests/mesh-gradient-band.fk (three-way at validate.sh)
+
+(do
+    ; a neighbor = (list id distance-to-dest); these are its two readings.
+    (defn mg-id   (n) (nth n 0))
+    (defn mg-dist (n) (nth n 1))
+
+    ; --- THE GRADIENT RULE: a neighbor is downhill iff its distance is STRICTLY less than mine. ---
+    ; strictly closer to the destination — equal distance (sideways) and greater (uphill) both fail.
+    ; settle the comparison to 1/0 so the gate reads identically across kernels.
+    (defn mg-closer? (neighbor my-dist)
+        (if (gt my-dist (mg-dist neighbor)) 1 0))
+
+    ; --- AT THE DESTINATION: my own distance is 0; no hop is needed, the message has arrived. ---
+    (defn mg-reached? (my-dist)
+        (if (eq my-dist 0) 1 0))
+
+    ; --- MIN-SELECT (inlined): among neighbors strictly closer than me, carry the one with the
+    ; smallest distance. `best` is that neighbor so far, or (empty) before any candidate is seen.
+    ; On a tie (equal distance) the earlier-seen best is kept — (gt (mg-dist best) ...) is strict, so
+    ; the walk is deterministic and identical across the three kernels.
+    (defn mg-best-loop (neighbors my-dist best)
+        (if (eq (len neighbors) 0)
+            (if (eq (len best) 0) "" (mg-id best))
+            (if (eq (mg-closer? (head neighbors) my-dist) 1)
+                (if (eq (len best) 0)
+                    (mg-best-loop (tail neighbors) my-dist (head neighbors))
+                    (if (gt (mg-dist best) (mg-dist (head neighbors)))
+                        (mg-best-loop (tail neighbors) my-dist (head neighbors))
+                        (mg-best-loop (tail neighbors) my-dist best)))
+                (mg-best-loop (tail neighbors) my-dist best))))
+
+    ; --- NEXT HOP: the id of the closest downhill neighbor, or "" when none descends the gradient
+    ; (I am the destination, or a local minimum / the field is broken — the message stops here).
+    (defn mg-next-hop (neighbors my-dist)
+        (mg-best-loop neighbors my-dist (empty)))
+
+    0)

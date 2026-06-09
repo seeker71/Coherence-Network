@@ -1,0 +1,49 @@
+; learning-trend.fk — is the body's prediction error FALLING across successive windows (is it actually learning)?
+;
+; champion-challenger.fk asks WHICH model is the authority by counting head-to-head wins over a window;
+; anomaly-band.fk asks whether ONE reading sits inside the range lived so far. This brick asks a third,
+; temporal question of the same honest-count spine: across two successive windows, is the body's error
+; getting SMALLER? Error is the count of predictions that missed in a window — fewer misses than last
+; window means the body learned something; more misses means it drifted; the same count means it is steady.
+;
+; The input is a list of per-window error COUNTS, most recent first: (2 5 8) reads "this window 2 misses,
+; the one before 5, the one before that 8" — error has been falling, the body is learning. lt-recent is the
+; head (now); lt-prior is the head of the tail (just before). The trend is a single integer comparison of
+; those two counts — no subtraction, no slope, no float: improving is exactly prior > recent (the older
+; window had MORE misses), worsening is recent > prior, steady is recent == prior. Three mutually exclusive
+; verdicts from one pair of counts, identical on Go, Rust, and TS (validate.sh parity is trend parity — the
+; Mac and the phone call the same body "learning", by NodeID).
+;
+; Only the two most recent windows decide the trend; the rest of the list is the body's longer error history,
+; carried for a later brick (a falling-streak count would fold the whole tail). Error counts are integers
+; 0..N. gt is strict, so a tie is neither improving nor worsening — it routes to steady alone, and the three
+; predicates partition every (recent, prior) pair exactly once.
+;
+; Honest lane: this is a DIRECTION, not a RATE. (10 5) and (2 1) both read "improving" though one fell by
+; five misses and the other by one — magnitude is the caller's lane, the direction is exact. A graded
+; "how much faster is it learning" deviation score is a later brick; what is proven here is the sign.
+;
+; Proven by: form-stdlib/tests/learning-trend-band.fk (three-way at validate.sh)
+
+(do
+    ; --- RECENT: this window's miss count — the head of the most-recent-first list. ---
+    (defn lt-recent (errors) (head errors))
+
+    ; --- PRIOR: the window just before — the head of the tail (one step back in time). ---
+    (defn lt-prior (errors) (head (tail errors)))
+
+    ; --- IMPROVING: the older window had MORE misses than now, so error fell — the body is learning.
+    ;     prior > recent is the whole test (no subtraction; a strict comparison of two counts). ---
+    (defn lt-improving? (errors)
+        (if (gt (lt-prior errors) (lt-recent errors)) 1 0))
+
+    ; --- WORSENING: now has MORE misses than before, so error rose — the inverse direction. ---
+    (defn lt-worsening? (errors)
+        (if (gt (lt-recent errors) (lt-prior errors)) 1 0))
+
+    ; --- STEADY: the two windows missed the same number of times — no movement either way. eq, not gt,
+    ;     so the tie belongs to steady alone (improving and worsening are both strict and both 0 here). ---
+    (defn lt-steady? (errors)
+        (if (eq (lt-recent errors) (lt-prior errors)) 1 0))
+
+    0)
