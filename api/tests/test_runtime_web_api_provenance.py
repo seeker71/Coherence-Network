@@ -139,6 +139,45 @@ def test_native_route_goal_loop_sees_workspace_and_task_routes_as_bml():
     )
 
 
+def test_native_route_goal_loop_sees_method_specific_form_mutation_routes():
+    native_routes = native_route_goal_loop.load_native_routes()
+
+    expected = ("kernel-native-form-needs-source-lift", "Form", True, False)
+    assert native_route_goal_loop.route_status("POST", "/api/ideas", native_routes) == expected
+    assert native_route_goal_loop.route_status("PATCH", "/api/ideas/idea-one", native_routes) == expected
+    assert native_route_goal_loop.route_status("POST", "/api/spec-registry", native_routes) == expected
+    assert native_route_goal_loop.route_status("PATCH", "/api/spec-registry/spec-one", native_routes) == expected
+    assert native_route_goal_loop.route_status("DELETE", "/api/spec-registry/spec-one", native_routes) == expected
+
+
+def test_native_route_goal_loop_counts_form_mutations_as_native_executable():
+    state = native_route_goal_loop.build_goal_state(
+        payload={
+            "measurement_source": "test",
+            "endpoints": [
+                {
+                    "endpoint": "/api/ideas",
+                    "method": "POST",
+                    "event_count": 2,
+                    "total_runtime_ms": 10.0,
+                    "average_runtime_ms": 5.0,
+                    "by_source": {"api": 2},
+                }
+            ],
+        },
+        source_requested="api",
+        source_effective="api",
+        seconds=3600,
+        target_share=0.9,
+    )
+
+    assert state["routes"][0]["status"] == "kernel-native-form-needs-source-lift"
+    assert state["routes"][0]["current_handler"] == "route_ideas_create_native_default"
+    assert state["native_executable_events"] == 2
+    assert state["native_executable_share"] == 1.0
+    assert state["goal_native_events"] == 0
+
+
 def test_inventory_flow_native_route_expresses_lineage_grammar():
     route_text = (ROOT / "deploy" / "front-door" / "api.bml").read_text(encoding="utf-8")
     ingress_text = (ROOT / "deploy" / "kernel-router" / "docker-compose.kernel-router.yml").read_text(
