@@ -27,6 +27,26 @@ section [form.bml] {
     def nrg-grammar-bml() = "bml";
     def nrg-grammar-domain() = "domain-grammar";
 
+    def nrg-status-form-needs-source-lift() = "kernel-native-form-needs-source-lift";
+    def nrg-status-header-gated() = "kernel-native-header-gated";
+    def nrg-status-python-fanout() = "python-fanout";
+
+    def nrg-kh-route-tag() = 43004;
+    def nrg-kh-route?(route) = if eq(len(route), 8) then eq(nth(route, 0), nrg-kh-route-tag()) else false;
+    def nrg-kh-route-name(route) = nth(route, 1);
+    def nrg-kh-route-method(route) = nth(route, 2);
+    def nrg-kh-route-pattern(route) = nth(route, 3);
+    def nrg-kh-route-handler(route) = nth(route, 5);
+    def nrg-kh-route-required-header(route) = nth(route, 6);
+    def nrg-manifest-route-native-executable?(route) = if nrg-kh-route?(route) then str_eq(nrg-kh-route-required-header(route), "") else false;
+    def nrg-manifest-route-high-grammar?(route) = false;
+    def nrg-manifest-route-status(route) {
+        if nrg-kh-route?(route) then if nrg-manifest-route-native-executable?(route) then nrg-status-form-needs-source-lift() else nrg-status-header-gated() else nrg-status-python-fanout();
+    }
+    def nrg-observation-from-manifest-route(route, calls, p50_ms, p95_ms, status_errors, bytes_out, flow, goal_fit_bp) {
+        nrg-route-observation(nrg-kh-route-pattern(route), nrg-kh-route-method(route), calls, p50_ms, p95_ms, status_errors, bytes_out, nrg-state-kernel-first-capable(), nrg-grammar-form(), nrg-kh-route-handler(route), flow, goal_fit_bp);
+    }
+
     def nrg-action-author-high-grammar-handler() = "author-high-grammar-handler";
     def nrg-action-promote-native-handler() = "promote-native-handler";
     def nrg-action-move-front-door() = "move-front-door";

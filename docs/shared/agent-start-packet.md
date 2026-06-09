@@ -154,7 +154,7 @@ writes `docs/system_audit/native_route_goal_state.json` with the next route/task
 card. Treat that JSON as an edge lens: the native cell surface is
 `form/form-stdlib/native-route-goal-cells.fk`, with the Rust-kernel entry
 `make native-route-goal-tending` and proof
-`cd form && ./validate.sh form-stdlib/json.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk`.
+`cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk`.
 The target is 90% of web-used `/api` method+path traffic served by kernel-native
 handlers written in BML or a domain grammar. Form manifest handlers are
 native-executable but do not satisfy the high-grammar target until lifted.

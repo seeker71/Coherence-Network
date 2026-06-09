@@ -2,7 +2,7 @@
   "cell_surface": {
     "form": "form/form-stdlib/native-route-goal-cells.fk",
     "make_target": "make native-route-goal-tending",
-    "proof": "cd form && ./validate.sh form-stdlib/json.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk",
+    "proof": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk",
     "query": "form/form-stdlib/queries/native-route-goal-tending.fk"
   },
   "generated_at": "2026-06-09T03:12:47.199466+00:00",

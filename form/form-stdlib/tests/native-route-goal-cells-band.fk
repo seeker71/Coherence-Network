@@ -1,10 +1,11 @@
 ; native-route-goal-cells-band.fk - proof for Form-native route attention.
 ;
-; preludes: form-stdlib/native-route-goal-cells.fk
+; preludes: form-stdlib/kernel-http.fk form-stdlib/native-route-goal-cells.fk
 ;
-; Band verdict: 65535 when the route goal loop ranks observed API traffic by
-; traffic-weighted native pressure, north-star fit, latency, errors, and grammar
-; state, then selects the highest-pressure high-grammar handler candidate.
+; Band verdict: 1048575 when the route goal loop ranks observed API traffic by
+; traffic-weighted native pressure, north-star fit, latency, errors, grammar
+; state, and Form-native kh-route manifest state, then selects the
+; highest-pressure high-grammar handler candidate.
 
 section [form.bml] {
     def nrg-band-observations() {
@@ -35,6 +36,10 @@ section [form.bml] {
         let vitality_attention = nrg-band-find-attention(attentions, "/api/workspaces/coherence-network/vitality");
         let runtime_attention = nrg-band-find-attention(attentions, "/api/attention/kernel-runtime");
         let utils_attention = nrg-band-find-attention(attentions, "/api/utils/coherence_weight");
+        let idea_default_route = kh-route("ideas-create-native-default", "POST", "/api/ideas", 0, "route_ideas_create_native_default", "", 0);
+        let idea_preview_route = kh-route("ideas-create-native-preview", "POST", "/api/ideas", 0, "route_ideas_create_native_preview", "X-Form-Native-Preview", 0);
+        let specs_delete_default_route = kh-route("specs-delete-native-default", "DELETE", "/api/spec-registry/*", 0, "route_specs_delete_native_default", "", 25);
+        let idea_manifest_observation = nrg-observation-from-manifest-route(idea_default_route, 14, 762, 1200, 0, 0, "idea-mutation-default", 10000);
         sum(list(
             nrg-bool-score(nrg-route-goal-valid?(goal), 1),
             nrg-bool-score(eq(nrg-total-calls(observations), 453), 2),
@@ -51,7 +56,11 @@ section [form.bml] {
             nrg-bool-score(nrg-observations-valid?(observations), 4096),
             nrg-bool-score(nrg-attentions-valid?(attentions), 8192),
             nrg-bool-score(eq(nrg-attention-total-pressure(best), 403371), 16384),
-            nrg-bool-score(and(gt(nrg-attention-total-pressure(meetings_attention), nrg-attention-total-pressure(vitality_attention)), gt(nrg-attention-total-pressure(vitality_attention), nrg-attention-total-pressure(idea_attention))), 32768)
+            nrg-bool-score(and(gt(nrg-attention-total-pressure(meetings_attention), nrg-attention-total-pressure(vitality_attention)), gt(nrg-attention-total-pressure(vitality_attention), nrg-attention-total-pressure(idea_attention))), 32768),
+            nrg-bool-score(and(nrg-kh-route?(idea_default_route), nrg-manifest-route-native-executable?(idea_default_route)), 65536),
+            nrg-bool-score(and(str_eq(nrg-manifest-route-status(idea_default_route), nrg-status-form-needs-source-lift()), if nrg-manifest-route-high-grammar?(idea_default_route) then false else true), 131072),
+            nrg-bool-score(and(str_eq(nrg-manifest-route-status(idea_preview_route), nrg-status-header-gated()), if nrg-manifest-route-native-executable?(idea_preview_route) then false else true), 262144),
+            nrg-bool-score(and(str_eq(nrg-route-path(idea_manifest_observation), "/api/ideas"), and(str_eq(nrg-route-method(idea_manifest_observation), "POST"), and(str_eq(nrg-route-handler(idea_manifest_observation), "route_ideas_create_native_default"), and(str_eq(nrg-route-grammar(idea_manifest_observation), nrg-grammar-form()), and(str_eq(nrg-manifest-route-status(specs_delete_default_route), nrg-status-form-needs-source-lift()), str_eq(nrg-kh-route-pattern(specs_delete_default_route), "/api/spec-registry/*")))))), 524288)
         ));
     }
 

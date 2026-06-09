@@ -492,7 +492,7 @@ def build_goal_state(
             "form": "form/form-stdlib/native-route-goal-cells.fk",
             "query": "form/form-stdlib/queries/native-route-goal-tending.fk",
             "make_target": "make native-route-goal-tending",
-            "proof": "cd form && ./validate.sh form-stdlib/json.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk",
+            "proof": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk",
         },
         "promotion_needed": promotion_rows,
         "next_route": next_route,
