@@ -1,0 +1,40 @@
+; drift-detect.fk — sense a classifier going STALE: did accuracy fall on RECENT samples vs EARLIER ones?
+;
+; classifier-eval.fk asks "is this classifier good enough RIGHT NOW" against one held-out set. This is
+; the next breath: the world moves, and a classifier that passed yesterday can quietly rot. Hold TWO
+; equal-size windows of (predicted actual) pairs — an EARLIER window and a RECENT one — count correct in
+; each, and ask whether recent accuracy fell by a margin. Same pair shape as ce-pred/ce-actual, same
+; division-free integer bar: drift is (ge early-correct (add recent-correct margin)) — earlier beat
+; recent by at least the margin. No ratio, no float, so the verdict is the same on Go=Rust=TS.
+;
+; A pair = (list predicted actual). A window is a list of pairs. The two windows are equal-size so the
+; counts compare directly — a raw count drop IS an accuracy drop when the denominators match.
+;
+; Honest lane: drift here is a COUNT drop on equal windows, not a statistical test — it cannot tell a
+; real distribution shift from one unlucky batch (raise margin, or widen the windows, to demand more
+; evidence). It also assumes equal-size windows; comparing a 5-sample window to a 50-sample one would
+; read the size difference as drift, not the accuracy. Counts are integers 0..N; margin is the encoder's
+; bar for how big a fall counts as drift.
+;
+; Proven by: form-stdlib/tests/drift-detect-band.fk (three-way at validate.sh)
+
+(do
+    (defn dd-pred   (p) (nth p 0))   ; what the classifier predicted for one input
+    (defn dd-actual (p) (nth p 1))   ; the known-correct label for that input
+    (defn dd-hit?   (p) (if (str_eq (dd-pred p) (dd-actual p)) 1 0))
+
+    ; --- COUNT CORRECT over a window (recursion is the loop; sum the hits, no subtraction). ---
+    (defn dd-correct (pairs)
+        (if (eq (len pairs) 0) 0
+            (add (dd-hit? (head pairs)) (dd-correct (tail pairs)))))
+
+    ; --- DRIFTING?: earlier beat recent by AT LEAST the margin (equal-size windows). ---
+    ; division-free integer bar — (ge early (add recent margin)) is exact and identical across kernels.
+    (defn dd-drifting? (early recent margin)
+        (if (ge (dd-correct early) (add (dd-correct recent) margin)) 1 0))
+
+    ; --- STABLE?: the inverse — recent held within the margin of earlier, no rot detected. ---
+    (defn dd-stable? (early recent margin)
+        (if (eq (dd-drifting? early recent margin) 1) 0 1))
+
+    0)

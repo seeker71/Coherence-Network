@@ -1,0 +1,184 @@
+; kernel-on-android.form — the concrete path to run the Form kernel natively on Android.
+;
+; THE ASK (shared-sensing.form, carried forward):
+;   "For running efficient on Android the kernel runs natively on Android." shared-sensing.form
+;   names this as step 2 of its path and marks it [build]. This is that build, written honestly:
+;   the three kernel paths, what each actually needs, the FFI boundary a sensor primitive crosses,
+;   how validate.sh's three-way parity becomes cross-DEVICE parity, and the lanes kept clean —
+;   what is standard Android practice (MEASURED) vs what is untested for THIS kernel (carrier-work).
+;
+;   The thing NOT to overclaim: nobody has run the Coherence Form kernel on a phone yet. Every
+;   "standard Android practice" claim below is a real, documented path. Every "for our kernel"
+;   claim is a build that has not been done. The honesty is in keeping those two apart.
+;
+; ── WHAT IS ALREADY TRUE (the ground this stands on) ── [MEASURED — in the body]
+;   form/validate.sh proves three kernels identical: form/form-kernel-rust, form-kernel-go,
+;   form-kernel-ts. The recipes that would run on the phone — recognition-router.fk,
+;   shared-sensing.fk, self-grounding-classifier.fk, satsang.fk — are SHIPPED and three-way green
+;   (recognition-router-band -> 127, shared-sensing.fk -> 127). So "the kernel on Android" is not
+;   "port the logic"; the logic is done and proven. It is "carry one of three existing kernels onto
+;   ARM and feed it the device's senses." That is a build, not a research question.
+;
+;
+; ── PATH A: RUST -> ANDROID via the NDK ──  [the carrier most of this stands on]
+;
+;   STANDARD ANDROID PRACTICE  [MEASURED — cargo-ndk, well-trodden]:
+;     - rustup adds the target: aarch64-linux-android (arm64-v8a, the only one modern phones need;
+;       armv7/x86_64 optional for old devices + emulator).
+;     - cargo-ndk (github.com/bbqsrc/cargo-ndk) sets every NDK env var and emits the jniLibs tree:
+;         cargo ndk -t arm64-v8a -o ./jniLibs build --release
+;       It finds the NDK from Android Studio's install or ANDROID_NDK_HOME. This is the boring,
+;       documented path; thousands of crates ship this way.
+;     - The crate is built as a cdylib (a .so). It loads into the app via System.loadLibrary.
+;     - The bridge to the JVM is JNI: a thin extern "C" surface (the `jni` crate gives Rust the
+;       JNIEnv/JObject types). Java/Kotlin declares `external fun`; Rust exports
+;       Java_<pkg>_<Class>_<method>. The JNI layer is THIN by design — marshal a string/byte[] in,
+;       a string/byte[] out — never the body.
+;
+;   WHAT IS UNTESTED FOR THIS KERNEL  [carrier-work — not done]:
+;     - form-kernel-rust has never been built as a cdylib for aarch64-linux-android. Its current
+;       shape is a host binary/validator. Carving the kernel's evaluate-recipe entry into an
+;       extern "C" / JNI-exported function (recipe-text in, result-cell out) is unwritten.
+;     - Any C/C++ transitive dep of the kernel must itself cross-compile under the NDK clang;
+;       most pure-Rust crates do, but this is verified per-build, not assumed.
+;
+;
+; ── PATH B: GO -> ANDROID via gomobile ──  [the kernel already serving BML route bodies]
+;
+;   STANDARD ANDROID PRACTICE  [MEASURED — gomobile bind, official x/mobile]:
+;     - `gomobile bind -target=android ./pkg` produces a .aar: compiled .so for each ABI + generated
+;       Java stub classes (via gobind, invoked internally — you don't call gobind directly). Drop the
+;       .aar into Android Studio; call the Go funcs as Java methods. (pkg.go.dev/.../cmd/gomobile)
+;
+;     - REAL CONSTRAINT, name it honestly  [MEASURED limitation, not a guess]:
+;       gomobile bind only exports a NARROW type set across the boundary — signed int & float,
+;       string, bool, []byte; functions returning (), (T), or (T, error); structs/interfaces whose
+;       exported methods use only those types. Slice mutation across the boundary is not supported.
+;       And the sharp edge: a Go panic or unhandled exception crossing the boundary EXITS THE
+;       PROCESS — it does not become a catchable Java exception. So the Go kernel's public Android
+;       surface must be a small, total, panic-free shim: recipe-text (string) in, result (string or
+;       []byte) out, errors returned as the second value, never panicked. The rich Recipe tree stays
+;       INSIDE Go; only its serialized shape crosses.
+;
+;   WHY THIS PATH IS TEMPTING  [BUILDABLE]:
+;     form-kernel-go already serves /api/ideas route bodies against production Postgres (CLAUDE.md).
+;     It is the kernel most exercised on real I/O. A gomobile .aar of its evaluate entry is the
+;     shortest line from "serves a route" to "runs on a phone" — but only behind the total shim
+;     above. UNTESTED for this kernel: no gomobile bind of form-kernel-go has been built.
+;
+;
+; ── PATH C: TYPESCRIPT -> ON-DEVICE JS ENGINE ──  [the kernel that needs no compile, but a host]
+;
+;   STANDARD ANDROID PRACTICE  [MEASURED — three real engines]:
+;     - Hermes: the default React Native engine (RN 2025 runs entirely on the New Architecture —
+;       JSI/TurboModules/Fabric — with Hermes preferred). C++ embedders make a runtime via
+;       facebook::hermes::makeHermesRuntime() and drive it through JSI (the C++ embedding API).
+;       HONEST EDGE: Hermes' primary target IS React Native; there is no official doc for embedding
+;       it in a plain C++/NDK app outside RN (facebook/hermes issue #43, #326). Static Hermes
+;       (compile JS->C->native) is an emerging alternative, not a settled path.
+;     - JavaScriptCore: the historical RN engine; still embeddable, larger footprint than Hermes.
+;     - QuickJS: a few embeddable C files, no external deps — the easiest to compile directly with
+;       the NDK and call from C++/JNI, with bytecode-module loading for standalone apps. Wrappers
+;       exist (quickjs-android, square's, HarlonWang/quickjs-wrapper). Smallest code footprint;
+;       best fit for "just embed a JS engine in our NDK lib," at lower raw throughput than Hermes.
+;
+;   WHAT THIS PATH ACTUALLY MEANS FOR US  [BUILDABLE, with an honest caveat]:
+;     form-kernel-ts is TypeScript. On Android it does not "compile to ARM"; it RUNS on one of these
+;     engines hosted in the app. The realistic shape: bundle the kernel to JS, embed QuickJS (or
+;     Hermes via JSI) in the NDK layer, evaluate the bundle, expose one evaluate(recipeText)->string
+;     function across JSI/JNI. This keeps TS in the three-way circle on-device, at the cost of
+;     carrying a JS engine and its startup. UNTESTED: no such embedding of form-kernel-ts exists.
+;     The TS kernel's own socket shim already does real blocking TCP via worker-thread + Atomics —
+;     that machinery is Node-shaped and would NOT survive into a bare QuickJS/Hermes host unchanged;
+;     on-device TS is for the PURE recipe evaluation path, not the kernel's networking tissue.
+;
+;
+; ── THE FFI/JNI BOUNDARY A SENSOR PRIMITIVE CROSSES ── [the load-bearing detail]
+;
+;   recognition-router.form and resource-port.fk model each sensor as a typed PORT — afferent
+;   transduction into the body. On Android that port has a concrete floor:
+;
+;   STANDARD ANDROID PRACTICE  [MEASURED — Android NDK Sensor API]:
+;     - The NDK Sensor API (developer.android.com/ndk/reference/group/sensor) reads accelerometer,
+;       gyroscope, magnetometer, light, proximity, barometer directly in native C — an
+;       ASensorEventQueue delivering ASensorEvent structs. The Mac-blind-to-motion / phone-has-a-
+;       gyroscope leg up of shared-sensing.form rides exactly this.
+;     - SHARP EDGE, name it: the camera, fingerprint, MICROPHONE, and GPS are NOT part of the sensor
+;       framework — each has its own API. Audio comes through AAudio (the Oboe C++ wrapper, API 26+),
+;       not the sensor queue. So the satsang/presence listener's microphone carrier is an AAudio
+;       port, a DIFFERENT boundary than the accelerometer port. One sensor abstraction, two real
+;       Android doors underneath.
+;     - SECOND SHARP EDGE  [MEASURED]: on Android 9+ (API 28+), continuous sensors (accel, gyro)
+;       deliver NO events to a backgrounded app. Shared sensing that must run with the screen off
+;       requires a foreground service. This is a real constraint on "two phones sensing a field," not
+;       an implementation detail to discover later.
+;
+;   THE CROSSING (the shape, identical across A/B/C)  [BUILDABLE]:
+;     device sensor (C: ASensorEvent / AAudio buffer)
+;       --> kernel FFI entry (Rust extern "C" | Go exported func | JS engine host call)
+;       --> a substrate cell: the reading interned as a content-addressed Recipe
+;       --> recognition-router.fk / shared-sensing.fk run UNCHANGED (proven recipes, MEASURED)
+;       --> result-cell serialized back across the boundary to the UI / cell-sync transport.
+;     The kernel never learns it is on a phone. The port hands it a cell; the recipe runs; a cell
+;     comes back. The platform-specific tissue is ENTIRELY in the thin transduction layer — exactly
+;     the resource-port.fk discipline, with Android's sensor/AAudio APIs as the concrete carriers.
+;
+;
+; ── HOW THREE-WAY PARITY BECOMES CROSS-DEVICE PARITY ── [why this is worth the build]
+;
+;   [MEASURED, structural — follows from what the body already has]:
+;     validate.sh proves Rust=Go=TS on one host today. The cross-device claim is the SAME proof read
+;     differently: because a recipe/classifier/routing-table is a CONTENT-ADDRESSED cell
+;     (shared-sensing.form §2; structural-composition.md the discipline that keeps it so), the cell
+;     that runs on the Mac and the cell shipped to the phone are THE SAME cell by NodeID — verifiable
+;     by ?equivalent across devices. So:
+;       - Mac (any of three kernels) proves recipe R three-way green.
+;       - Phone runs R via PATH A/B/C above.
+;       - R is the same content-addressed cell on both — not a re-implementation hoping to agree.
+;     What validate.sh certifies on the Mac is what the phone runs, because identity travels with
+;     STRUCTURE, not with a binary. This is the honest reason "what the Mac proves, the phone runs"
+;     is a structural guarantee and not a hope — and it is the distinctive thing federated learning
+;     (opaque weight-blobs tied to one runtime) does not have.
+;
+;   [carrier-work — the part that is genuinely UNKNOWN until built]:
+;     On-DEVICE three-way parity (Rust .so AND Go .aar AND a JS engine all on the same phone, agreeing)
+;     has never been run. The Mac proves three-way; the phone, in the first build, runs ONE arm
+;     (whichever of A/B/C ships first — likely Rust/NDK for footprint or Go/gomobile for reuse). Full
+;     on-device three-way is a later band, not a day-one claim. Until a kernel is actually built for
+;     ARM and a sensor port actually feeds it, every number here is the documented Android path, not a
+;     measured Coherence result.
+;
+;
+; ── THE HONEST PATH (what to build, in order) ──
+;   1. the shared-sensing circle + cross-grounding         [SHIPPED: shared-sensing.fk -> 127, 3-way]
+;   2. ONE kernel built for ARM:                           [carrier-work — pick one, not all three]
+;        A. form-kernel-rust as cdylib via cargo-ndk + a thin JNI evaluate(string)->string, OR
+;        B. form-kernel-go via gomobile bind behind a total, panic-free shim, OR
+;        C. form-kernel-ts bundled onto QuickJS/Hermes in the NDK layer.
+;   3. ONE sensor port wired across the FFI boundary:       [carrier-work]
+;        accelerometer via NDK Sensor API, OR microphone via AAudio — whichever the first satsang
+;        needs — interned as a cell, handed to the proven recipe.
+;   4. cell-sync transport device<->device                 [build — named in shared-sensing.form §3]
+;   5. the live two-device satsang on real hardware         [build — the payoff]
+;
+; ── THE LANE DISCIPLINE (lc-honest-lane, why this doc is shaped this way) ──
+;   MEASURED = a documented, standard Android path (cargo-ndk, gomobile bind, NDK Sensor API, AAudio,
+;     Hermes JSI, QuickJS) OR a structural fact the body already holds (validate.sh three-way,
+;     content-addressed cells). BUILDABLE = a clear composition of MEASURED pieces, not yet assembled
+;     for this kernel. carrier-work / UNKNOWN = named honestly: no kernel arm has been built for ARM,
+;     no sensor port wired, on-device three-way parity unrun, Hermes-outside-RN undocumented, gomobile
+;     panic-crossing and background-sensor limits are real walls. The value of the doc is that a fresh
+;     cell can tell, at every line, which lane it is reading — and never mistakes a documented Android
+;     path for a thing Coherence has already shipped on a phone.
+;
+; KIN: shared-sensing.form (names this build as its step 2; the circle this feeds) ·
+;   recognition-router.form (the choice that runs on the phone, models as data) ·
+;   self-grounding-perception.form (each device earns trust by proven agreement) ·
+;   resource-port.fk (each sensor a typed port — here Android's Sensor API / AAudio as carriers) ·
+;   local-inference-as-organ.form (the compute each body runs as its own organ) ·
+;   structural-composition.md (keep the tree so the NodeID is the cross-device wire) · lc-honest-lane.
+;
+; LINEAGE: shared-sensing.form turned the router onto many bodies and marked "kernel on Android" as
+;   [build]; this is that build made concrete and lane-sorted — the three carriers, the FFI floor a
+;   sensor crosses, and the line between Android's well-trodden paths and what this body has yet to
+;   run on real hardware.
