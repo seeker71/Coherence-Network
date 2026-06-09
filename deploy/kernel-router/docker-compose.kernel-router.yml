@@ -13,14 +13,17 @@
 # the implicit native invitation; X-Form-Python-Fallback is the explicit
 # refusal/control signal. The native mutation handler reads the same production
 # config-file carrier as the API and performs pg_exec inside Form when the
-# mounted config includes database.url. The Traefik rules below are still
-# HEADER-GATED, so public ordinary no-header traffic continues to reach api:8000
-# until the public no-header flip is separately performed and verified.
+# mounted config includes database.url. The production-manifest Traefik rules
+# below are still HEADER-GATED, so mutable ordinary no-header traffic continues
+# to reach api:8000 until the public no-header flip is separately performed and
+# verified. The preview-only kernel-image proposal POST path is the explicit
+# path-specific exception served by the BML catalog service below.
 #
 # WHAT THIS IS NOT: the all-traffic flip. The full flip is pointing Traefik's
 # ordinary Host(api.coherencycoin.com) router at this service instead of at the
 # api service. This overlay keeps the existing api router in place and adds only
-# higher-priority routers for explicit canary headers.
+# higher-priority routers for explicit canary headers, plus one path-specific
+# preview-only public route whose body contract refuses production mutation.
 #
 # ---------------------------------------------------------------------------
 # HOW TO RUN IT AS THE PUBLIC CANARY (NO ordinary traffic change):
@@ -31,7 +34,8 @@
 #     -f repo/deploy/kernel-router/docker-compose.kernel-router.yml \
 #     up -d --build kernel-router
 #
-#   # Ordinary public calls still match the api service's existing router.
+#   # Ordinary public calls still match the api service's existing router,
+#   # except the preview-only kernel-image proposal POST path below.
 #   # Explicit canary calls match coherence-api-kernel-public-gate-canary:
 #   curl -i -X POST https://api.coherencycoin.com/api/ideas \
 #     -H 'Content-Type: application/json' \
@@ -95,6 +99,28 @@ services:
       traefik.http.routers.coherence-api-kernel-public-gate-canary.service: "coherence-api-kernel-canary"
       traefik.http.services.coherence-api-kernel-canary.loadbalancer.server.port: "8080"
 
+  kernel-router-bml-front-door:
+    build:
+      context: ./repo
+      dockerfile: Dockerfile.kernel-router
+    image: coherence-network-kernel-router:latest
+    restart: unless-stopped
+    environment:
+      UPSTREAM_URL: "http://api:8000"
+      KERNEL_ROUTER_PORT: "8080"
+      ROUTES_FILE: "/routes/api.bml"
+      STDLIB_DIR: "/app/form/form-stdlib"
+    depends_on:
+      - api
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.coherence-api-kernel-image-proposal.rule: "Host(`api.coherencycoin.com`) && Method(`POST`) && Path(`/api/substrate/kernel-image/proposals`)"
+      traefik.http.routers.coherence-api-kernel-image-proposal.entrypoints: "websecure"
+      traefik.http.routers.coherence-api-kernel-image-proposal.tls.certresolver: "letsencrypt"
+      traefik.http.routers.coherence-api-kernel-image-proposal.priority: "1200"
+      traefik.http.routers.coherence-api-kernel-image-proposal.service: "coherence-api-kernel-bml-front-door"
+      traefik.http.services.coherence-api-kernel-bml-front-door.loadbalancer.server.port: "8080"
+
 # The api service is defined in the base docker-compose.yml. This overlay only
-# adds/overrides the kernel-router service and its header-gated Traefik routers.
-# It does NOT remove or replace the api service's ordinary router.
+# adds/overrides kernel-router services and narrow higher-priority Traefik
+# routers. It does NOT remove or replace the api service's ordinary router.

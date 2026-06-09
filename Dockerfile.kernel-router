@@ -29,13 +29,15 @@
 # manifest; nothing else in the topology changes.
 #
 # The production manifest is baked beside it at /routes/production-routes.fk,
-# with route metadata at /routes/production-routes-data.json. Switching to it is
-# runtime configuration (`ROUTES_FILE=/routes/production-routes.fk`), not a
-# different image.
+# with route metadata at /routes/production-routes-data.json. The BML front-door
+# catalog is also baked at /routes/api.bml for path-specific public ingress
+# slices that should be carried by the language-form compiler. Switching routes
+# is runtime configuration (`ROUTES_FILE=/routes/...`), not a different image.
 #
-# THIS IMAGE DOES NOT FLIP PRODUCTION. Building and even running this container
-# changes nothing about what fronts api.coherencycoin.com — that is a Traefik
-# re-point (one label), Urs's intent, a SEPARATE step. See
+# THIS IMAGE DOES NOT FLIP PRODUCTION BY ITSELF. Building it changes nothing
+# about what fronts api.coherencycoin.com. The Hostinger overlay can point a
+# narrow preview-only path at a BML catalog service; the all-traffic front-door
+# flip remains a separate Traefik re-point. See
 # deploy/kernel-router/docker-compose.kernel-router.yml and KERNEL_AS_ROUTER.md.
 
 # -----------------------------------------------------------------------------
@@ -110,6 +112,7 @@ COPY form/form-stdlib/ /app/form/form-stdlib/
 COPY deploy/kernel-router/shadow-routes.fk /routes/shadow-routes.fk
 COPY deploy/kernel-router/production-routes.fk /routes/production-routes.fk
 COPY deploy/kernel-router/production-routes-data.json /routes/production-routes-data.json
+COPY deploy/front-door/api.bml /routes/api.bml
 
 # Source-backed native routes read the canonical idea markdown index directly.
 # This is not the mutable DB-backed registry; it is the repo source surface that

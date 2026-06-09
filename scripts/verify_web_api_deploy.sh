@@ -848,6 +848,75 @@ check_web_runtime_sha() {
   return 0
 }
 
+check_kernel_image_native_proposal() {
+  local url="${API_URL%/}/api/substrate/kernel-image/proposals"
+  local headers_file="$TMP_DIR/kernel_image_proposal.headers.txt"
+  local body_file="$TMP_DIR/kernel_image_proposal.body.json"
+  local payload_file="$TMP_DIR/kernel_image_proposal.request.json"
+  local status router
+
+  echo
+  echo "==> Kernel image proposal native route: ${url}"
+
+  cat >"$payload_file" <<'JSON'
+{"expression":"class KernelCoreSelf { int RequiredPrimitiveCount() [get] { return 8; } int RequiredDispatchCount() [get] { return 15; } int RequiredProofCount() [get] { return 6; } bool Minimal() { return true; } bool Observable() { return true; } bool Executable() { return true; } bool Trustable() { return true; } } class KernelCoreImage {}","grammar":"bml","source_label":"public-deploy-contract"}
+JSON
+
+  status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -L -D "$headers_file" -o "$body_file" -w "%{http_code}" \
+    --max-time "$CURL_MAX_TIME" \
+    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+    -X POST "$url" \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
+    --data-binary "@$payload_file" || true)"
+  router="$(awk 'tolower($1) == "x-form-router:" { print $2 }' "$headers_file" | tail -n 1 | tr -d '\r')"
+
+  echo "HTTP status: ${status:-unknown}"
+  echo "X-Form-Router: ${router:-<missing>}"
+
+  if [[ -z "$status" || "$status" -lt 200 || "$status" -ge 300 ]]; then
+    echo "FAIL: kernel image proposal route did not return 2xx"
+    head -c 250 "$body_file" || true
+    echo
+    return 1
+  fi
+  if [[ "$router" != "native-kernel" ]]; then
+    echo "FAIL: kernel image proposal route did not reach native kernel front door"
+    head -c 250 "$body_file" || true
+    echo
+    return 1
+  fi
+
+  if command -v jq >/dev/null 2>&1; then
+    if ! jq -e '
+      .proposal_status == "accepted-preview"
+      and .proof_passed == true
+      and .native_observation.handler == "api_substrate_kernel_image_proposals"
+      and .native_observation.python_authority == false
+      and .mutation.performed == false
+    ' "$body_file" >/dev/null; then
+      echo "FAIL: kernel image proposal body is missing native BML proof fields"
+      jq '{proposal_status, proof_passed, native_observation, mutation}' "$body_file" 2>/dev/null || head -c 500 "$body_file"
+      echo
+      return 1
+    fi
+  else
+    if ! grep -q '"proposal_status":"accepted-preview"' "$body_file" \
+      || ! grep -q '"proof_passed":true' "$body_file" \
+      || ! grep -q '"handler":"api_substrate_kernel_image_proposals"' "$body_file" \
+      || ! grep -q '"python_authority":false' "$body_file" \
+      || ! grep -q '"performed":false' "$body_file"; then
+      echo "FAIL: kernel image proposal body is missing native BML proof fields"
+      head -c 500 "$body_file" || true
+      echo
+      return 1
+    fi
+  fi
+
+  echo "PASS"
+  return 0
+}
+
 if [[ "${VERIFY_WEB_API_DEPLOY_SOURCE_ONLY:-0}" == "1" ]]; then
   return 0 2>/dev/null || exit 0
 fi
@@ -871,6 +940,7 @@ else
   echo "==> Skipping API persistence contract check (VERIFY_REQUIRE_PERSISTENCE_CHECK=0)"
 fi
 check_provider_readiness "${API_URL%/}/api/automation/usage/readiness" "$VERIFY_REQUIRE_PROVIDER_READINESS" || fail=1
+check_kernel_image_native_proposal || fail=1
 check_url "Public web root" "${WEB_URL%/}/" || fail=1
 check_web_css_assets "${WEB_URL%/}/" || fail=1
 check_web_public_asset "logo" "/assets/logo.svg" "svg" || fail=1
