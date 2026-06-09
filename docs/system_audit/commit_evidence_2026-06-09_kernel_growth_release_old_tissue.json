@@ -1,0 +1,116 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/kernel-growth-release-old-tissue-20260609",
+  "commit_scope": "Promote workspace index, agent task list, observed task-list alias, and graph-edge creation into the BML front-door route catalog.",
+  "files_owned": [
+    "deploy/front-door/api.bml",
+    "api/tests/test_runtime_web_api_provenance.py",
+    "docs/system_audit/native_route_goal_state.json",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md",
+    "scripts/validate_commit_evidence.py",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/kernel-http.fk form-stdlib/language-model.fk form-stdlib/tests/source-language-route-class-template-band.fk",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_runtime_web_api_provenance.py",
+      "python3 scripts/native_route_goal_loop.py /goal --source api --seconds 604800 --limit 2000 --write-state --json",
+      "python3 - <<'PY' ... load native_route_goal_loop.py and assert GET /api/workspaces, GET /api/agent/tasks, GET /api/tasks, and POST /api/graph/edges are kernel-native-high-grammar BML ... PY",
+      "cd form/form-kernel-rust && cargo build --release",
+      "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --port 19120 --routes ../../deploy/front-door/api.bml --stdlib ../form-stdlib",
+      "curl -sS -i http://127.0.0.1:19120/api/health",
+      "curl -sS -i http://127.0.0.1:19120/api/workspaces",
+      "curl -sS -i 'http://127.0.0.1:19120/api/agent/tasks?status=pending&limit=2&offset=0'",
+      "curl -sS -i 'http://127.0.0.1:19120/api/tasks?status=pending&limit=2&offset=0'",
+      "curl -sS -i -X POST http://127.0.0.1:19120/api/graph/edges -H 'Content-Type: application/json' -d '{\"from_id\":\"a\",\"to_id\":\"b\",\"type\":\"inspires\",\"properties\":{\"proof\":\"native-smoke\"},\"strength\":0.7,\"created_by\":\"codex\"}'",
+      "curl -sS -i -X POST http://127.0.0.1:19120/api/graph/edges -H 'Content-Type: application/json' -d '{\"from_id\":\"a\",\"to_id\":\"a\",\"type\":\"inspires\"}'",
+      "python3 -m py_compile scripts/validate_commit_evidence.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-09_kernel_growth_release_old_tissue.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "make wellness"
+    ],
+    "notes": [
+      "Rust carrier loaded the BML manifest as source and reported 36 native routes.",
+      "New GET routes and the valid graph-edge POST returned X-Form-Router: native-kernel and reached the expected local database-unavailable boundary.",
+      "Self-loop graph-edge POST returned native 422 before persistence, proving BML validation is active.",
+      "Local PR guard returned ready_for_push=True after rebasing onto origin/main.",
+      "Followthrough guard found 0 stale Codex PRs, and wellness reported deploy aligned with origin/main."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": [
+      "CI has not run until this branch is pushed and opened as a PR."
+    ]
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": [
+      "Public deployment verification has not run from this branch."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local native-route evidence passed; CI and public deploy validation remain pending until PR/deploy."
+  },
+  "idea_ids": [
+    "native-route-goal-loop",
+    "form-native-front-door",
+    "kernel-growth-release-old-tissue"
+  ],
+  "spec_ids": [
+    "native-route-goal",
+    "source-language-kernel-router"
+  ],
+  "task_ids": [
+    "kernel-growth-release-old-tissue-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5-codex",
+    "worktree": "/Users/ursmuff/.claude-worktrees/Coherence-Network/kernel-growth-release-old-tissue-20260609"
+  },
+  "evidence_refs": [
+    "docs/system_audit/native_route_goal_state.json",
+    "api/tests/test_runtime_web_api_provenance.py",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "deploy/front-door/api.bml",
+    "api/tests/test_runtime_web_api_provenance.py",
+    "docs/system_audit/native_route_goal_state.json",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md",
+    "scripts/validate_commit_evidence.py",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The native front door can now classify and execute workspace index, agent task list, observed task-list alias, and graph-edge creation routes from BML instead of treating them as Python-only pressure.",
+    "public_endpoints": [
+      "GET /api/workspaces",
+      "GET /api/agent/tasks",
+      "GET /api/tasks",
+      "POST /api/graph/edges"
+    ],
+    "test_flows": [
+      "Rust native carrier loaded 36 BML routes from deploy/front-door/api.bml.",
+      "GET /api/workspaces, GET /api/agent/tasks, and GET /api/tasks returned X-Form-Router: native-kernel and the expected local persistence boundary.",
+      "POST /api/graph/edges returned X-Form-Router: native-kernel for valid DB-bound input and native 422 for a self-loop validation failure."
+    ]
+  }
+}

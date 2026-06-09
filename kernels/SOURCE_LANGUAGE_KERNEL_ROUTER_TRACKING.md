@@ -146,6 +146,18 @@ exponent numbers as float nodes, and decodes string escapes including `\n` and
 `task_2a2bc37d105848d2` is semantically equal to the public Python carrier, and
 the missing-id path returns native `404 {"detail":"Task not found"}`.
 
+The next pressure cells have moved from static Python route tissue into the BML
+front-door catalog. `GET /api/workspaces` now reads workspace-shaped
+`graph_nodes` rows and projects the public workspace index shape. `GET
+/api/agent/tasks` and the observed runtime alias `GET /api/tasks` now share a
+BML list projection over `agent_tasks` with DB-backed filters for status, type,
+workspace, limit, and offset. `POST /api/graph/edges` is now a BML mutation
+with canonical edge-type validation, self-loop protection, JSON-object property
+validation, generated edge ids, and the same conflict behavior that updates
+existing edge strength. The 2026-06-09 route-goal state now sees 36 BML routes,
+0.893 native-executable share, and the next measured route pressure at `GET
+/api/automation/usage/readiness`.
+
 The route goal loop is now method-aware and uses `runtime_events` first, not
 endpoint summaries. This is a structural correction: `GET /api/household/requests`
 is native, but `POST /api/household/requests` remains a separate gap when it
