@@ -1,0 +1,144 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/fix-form-suite-divergences-20260609",
+  "commit_scope": "Resolve the 11 active Form sibling-kernel full-suite divergences by aligning deep value_eq semantics, making audit evidence boolean comparison kind-aware, avoiding reserved match parameter names in BML-authored helpers, and restoring missing one-line test preludes.",
+  "files_owned": [
+    "form/form-kernel-go/main.go",
+    "form/form-kernel-rust/src/main.rs",
+    "form/form-stdlib/audit-evidence-cells.fk",
+    "form/form-stdlib/field-model-form-runtime.fk",
+    "form/form-stdlib/tests/bmf-generic-language-scanner-band.fk",
+    "form/form-stdlib/tests/native-idea-valuation-audit-ledger-band.fk",
+    "form/form-stdlib/tests/native-mutation-public-gate-band.fk",
+    "form/form-stdlib/tests/native-mutation-side-effects-band.fk",
+    "form/form-stdlib/tests/python-bmf-full-file-band.fk",
+    "form/form-stdlib/tests/tessera-external-witness-band.fk",
+    "docs/system_audit/commit_evidence_20260609_form_suite_divergence_repair.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "curl -sS --max-time 5 https://pulse.coherencycoin.com/pulse/now | jq '{overall, silences: (.ongoing_silences | length), silent_organs: [.organs[] | select(.status != \"breathing\") | .name]}'",
+      "COORD_AGENT=codex scripts/agent-coord.sh claim \"fix Form full-suite divergences\"",
+      "cd form && ./validate.sh",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/audit-evidence-cells.fk form-stdlib/tests/audit-evidence-cells-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler-lens.fk form-stdlib/tests/compiler-lens-bmf-alignment-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/rust-bmf.fk form-stdlib/tests/bmf-generic-language-scanner-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/field-model-form-runtime-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-perturbation-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/tests/python-bmf-full-file-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-idea-valuation-audit-ledger.fk form-stdlib/tests/native-idea-valuation-audit-ledger-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/native-mutation-public-gate.fk form-stdlib/tests/native-mutation-public-gate-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/tests/native-mutation-side-effects-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/earth-witness-question.fk form-stdlib/tessera-external-witness.fk form-stdlib/tests/tessera-external-witness-band.fk",
+      "cd form && bash -o pipefail -c '/usr/bin/time -p ./validate.sh 2>&1 | tee ../.cache/form-suite/validate_after_20260609.txt'",
+      "git fetch origin main && git rebase origin/main",
+      "cd form && bash -o pipefail -c '/usr/bin/time -p ./validate.sh 2>&1 | tee ../.cache/form-suite/validate_rebased_20260609.txt'",
+      "git fetch origin main && git rebase origin/main",
+      "cd form && bash -o pipefail -c '/usr/bin/time -p ./validate.sh 2>&1 | tee ../.cache/form-suite/validate_final_20260609.txt'",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260609_form_suite_divergence_repair.json",
+      "git diff --check",
+      "make wellness",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "notes": "Baseline full Form sibling validation on current task branch returned 341 ok / 11 divergent. Focused repairs made every former divergent workload agree. The first full after-run returned 352 ok / 0 divergent with real 4833.90, user 2424.28, sys 1051.61. After rebasing onto a newer origin/main, the full suite returned 386 ok / 0 divergent with real 4595.96, user 2387.97, sys 969.05. After origin/main advanced again, the final rebased full suite returned 398 ok / 0 divergent with real 4585.72, user 2398.08, sys 965.53. Final local gates passed: evidence validation, git diff --check, make wellness, worktree_pr_guard local preflight, and check_pr_followthrough strict."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until this branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No public deploy attempted yet for this internal Form sibling-kernel repair."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local focused and full Form validation pass on the current origin/main base. Evidence validation, wellness, local PR guard, and followthrough guard pass. Remote CI, deploy validation, and merge remain pending."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The Form sibling-kernel validation suite no longer carries the 11 known divergent workloads. Go, Rust, and TypeScript agree on audit evidence cells, BMF generic language scanning, compiler-lens BMF alignment, Field Model Form runtime and auto-research bands, native mutation witness bands, Python BMF full-file parsing, and Tessera external witness proof.",
+    "public_endpoints": [
+      "internal Form sibling kernels"
+    ],
+    "test_flows": [
+      "Full before-run recorded 341 ok / 11 divergent.",
+      "Focused validation proved each former divergent band individually.",
+      "Full after-run recorded 352 ok / 0 divergent.",
+      "Rebased full after-run recorded 386 ok / 0 divergent.",
+      "Final rebased full after-run recorded 398 ok / 0 divergent.",
+      "Deep value_eq list equality now agrees across Go, Rust, and TypeScript.",
+      "BML helpers avoid parameter names that compile to the reserved match verb in Go/Rust readers."
+    ]
+  },
+  "idea_ids": [
+    "form-kernel-sibling-parity",
+    "bmf-choice-compiler-speed",
+    "kernel-core-trust-primitives"
+  ],
+  "spec_ids": [
+    "form-kernel-roadmap",
+    "bmf-bml-compiler-picture"
+  ],
+  "task_ids": [
+    "fix-form-suite-divergences-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-priority",
+        "validation-demand"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Before full suite: cd form && ./validate.sh -> 341 ok, 11 divergent.",
+    "After full suite: cd form && bash -o pipefail -c '/usr/bin/time -p ./validate.sh 2>&1 | tee ../.cache/form-suite/validate_after_20260609.txt' -> 352 ok, 0 divergent; real 4833.90.",
+    "Rebased full suite: cd form && bash -o pipefail -c '/usr/bin/time -p ./validate.sh 2>&1 | tee ../.cache/form-suite/validate_rebased_20260609.txt' -> 386 ok, 0 divergent; real 4595.96.",
+    "Final rebased full suite: cd form && bash -o pipefail -c '/usr/bin/time -p ./validate.sh 2>&1 | tee ../.cache/form-suite/validate_final_20260609.txt' -> 398 ok, 0 divergent; real 4585.72.",
+    "Local gate: python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main -> local_preflight=pass, ready_for_push=True.",
+    "Local gate: python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict -> codex_open_prs=0, stale_codex_prs=0.",
+    "Focused audit evidence cells proof -> 1023; 1 ok, 0 divergent.",
+    "Focused compiler-lens BMF alignment proof -> 36168; 1 ok, 0 divergent.",
+    "Focused BMF generic language scanner proof -> 12000; 1 ok, 0 divergent.",
+    "Focused Field Model Form runtime proofs -> 63, 127, 255; each 1 ok, 0 divergent.",
+    "Focused native mutation and Tessera proofs -> 111111, 11111111, 11111, 67108863; each 1 ok, 0 divergent.",
+    "Focused Python BMF full-file proof -> 23100; 1 ok, 0 divergent."
+  ],
+  "change_files": [
+    "form/form-kernel-go/main.go",
+    "form/form-kernel-rust/src/main.rs",
+    "form/form-stdlib/audit-evidence-cells.fk",
+    "form/form-stdlib/field-model-form-runtime.fk",
+    "form/form-stdlib/tests/bmf-generic-language-scanner-band.fk",
+    "form/form-stdlib/tests/native-idea-valuation-audit-ledger-band.fk",
+    "form/form-stdlib/tests/native-mutation-public-gate-band.fk",
+    "form/form-stdlib/tests/native-mutation-side-effects-band.fk",
+    "form/form-stdlib/tests/python-bmf-full-file-band.fk",
+    "form/form-stdlib/tests/tessera-external-witness-band.fk",
+    "docs/system_audit/commit_evidence_20260609_form_suite_divergence_repair.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix"
+}
