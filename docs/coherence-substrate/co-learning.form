@@ -46,8 +46,12 @@
 ;
 ; ── THE MILESTONES ──
 ;   M0  the federated union recognizes what neither mic alone could — SHIPPED (co-learning.fk → 127).
-;   M1  one device, live: Mac mic → 3rd-party oracle → router → learning-arc grows a Form-native classifier;
-;       the dashboard shows it reaching the oracle (the single-device learning curve).
+;   M1  one device, live — SHIPPED + VERIFIED on the Mac mic: experiments/satsang-voice/co_learning_live.py.
+;       ffmpeg mic + generated audio → SoundAnalysis ORACLE (speech/music/animal/other) → a cheap energy
+;       feature → nearest-shape (the body, via the kernel) predicts then learns the oracle's label →
+;       agreement with the oracle climbed 0% → 91% over 12 chunks (cold "?" → one miss → recognizing every
+;       repeat) — the Form-native arm reaching the 3rd-party classifier, LIVE, on real audio. The body is
+;       Form (nearest-shape); the carrier only marshals (ffmpeg, the swift SoundAnalysis oracle, the feature).
 ;   M2  two devices: each grows its classifier; the exemplar sets cross the mesh (cell-sync, merkle-addressed);
 ;       the merged classifier's breadth/accuracy beats either alone — the convergence panel proves "faster together".
 ;   M3  champion-challenger retires the 3rd-party per category once the merged Form-native arm reaches it
