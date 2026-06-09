@@ -72,6 +72,66 @@ print(
 PY
 }
 
+assert_native_default_body() {
+  local body_file="$1"
+  python3 - "$body_file" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as fh:
+    obj = json.load(fh)
+
+decision = obj.get("decision_receipt") or {}
+rollback = obj.get("route_local_rollback_receipt") or {}
+trust = obj.get("trust_envelope") or {}
+reversible = trust.get("reversible_gate") or {}
+signature = decision.get("signature") or {}
+persistence = obj.get("persistence") or {}
+
+checks = {
+    "native_default_invitation": obj.get("native_default_invitation") is True,
+    "native_public_gate": obj.get("native_public_gate") is True,
+    "native_preview_false": obj.get("native_preview") is False,
+    "route_binding": obj.get("route_binding") == "kernel-http-native-default-invitation",
+    "required_header_absent": obj.get("required_header") is None,
+    "fallback_header": obj.get("fallback_header") == "X-Form-Python-Fallback",
+    "public_gate_header": obj.get("public_gate_header") == "X-Form-Native-Public-Gate",
+    "executes_true": obj.get("executes") is True,
+    "db_execution_performed": obj.get("db_execution") == "performed-by-http-native-persistence",
+    "persistence_carrier": persistence.get("carrier") == "config_database_url",
+    "persistence_executed": persistence.get("executes") is True,
+    "persistence_rows": isinstance(persistence.get("rows_affected"), int)
+    and persistence.get("rows_affected") >= 0,
+    "persistence_closed": persistence.get("close_code") == 0,
+    "route_local_gate_executes": obj.get("route_local_gate_executes") is True,
+    "decision_state": decision.get("state") == "native-mutation-gate-decision-receipt",
+    "decision_selected": decision.get("selected_path") == "implicit-native-invitation",
+    "decision_protocol": decision.get("protocol") == "implicit-native-invitation",
+    "decision_reversible": decision.get("reversible") is True,
+    "decision_contradicts": decision.get("can_contradict_intent") is True,
+    "decision_native_default": decision.get("ordinary_traffic_flip_performed") is True,
+    "signature_compact": signature.get("category") == "native-mutation-gate"
+    and signature.get("selected_path") == "implicit-native-invitation"
+    and signature.get("outcome_code") == 1,
+    "rollback_native_default": rollback.get("ordinary_traffic_flip_performed") is True,
+    "trust_selected": trust.get("selected_path") == "implicit-native-invitation",
+    "trust_native_default": reversible.get("ordinary_traffic_flip_performed") is True,
+}
+missing = [name for name, ok in checks.items() if not ok]
+if missing:
+    raise SystemExit("native default body failed checks: " + ", ".join(missing))
+
+print(
+    "default_decision={state} selected={selected} operation={operation} node_id={node_id}".format(
+        state=decision.get("state"),
+        selected=decision.get("selected_path"),
+        operation=decision.get("operation"),
+        node_id=decision.get("node_id"),
+    )
+)
+PY
+}
+
 echo "kernel-canary-public-gate: probing ${API_URL}/api/ideas"
 
 for attempt in $(seq 1 "$ATTEMPTS"); do
@@ -110,26 +170,61 @@ for attempt in $(seq 1 "$ATTEMPTS"); do
   sleep "$SLEEP_SECONDS"
 done
 
-control_headers="$TMP_DIR/control.headers"
-control_body="$TMP_DIR/control.body"
-control_payload="$(printf '{"id":"idea-public-control-%s","name":"Public Canary Control","description":"no-header public control","manifestation_status":"partial"}' "$RUN_ID")"
-control_status="$(
-  curl -sS -D "$control_headers" -o "$control_body" -w "%{http_code}" \
+for attempt in $(seq 1 "$ATTEMPTS"); do
+  default_headers="$TMP_DIR/default.headers"
+  default_body="$TMP_DIR/default.body"
+  default_payload="$(printf '{"id":"idea-public-default-%s-%s","name":"Public Native Default","description":"no-header native default invitation","manifestation_status":"partial"}' "$RUN_ID" "$attempt")"
+  default_status="$(
+    curl -sS -D "$default_headers" -o "$default_body" -w "%{http_code}" \
+      --max-time "$CURL_MAX_TIME" \
+      --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+      -X POST "${API_URL}/api/ideas" \
+      -H "Content-Type: application/json" \
+      --data "$default_payload" \
+      || true
+  )"
+  default_router="$(header_value "$default_headers" "x-form-router:")"
+
+  if [[ "$default_status" == "202" && "$default_router" == "native-kernel" ]]; then
+    if assert_native_default_body "$default_body"; then
+      echo "PASS public Traefik no-header default entered native default route status=${default_status} router=${default_router}"
+      break
+    fi
+  fi
+
+  if [[ "$attempt" -ge "$ATTEMPTS" ]]; then
+    echo "FAIL public Traefik no-header default did not enter native default route after ${ATTEMPTS} attempts"
+    echo "last_status=${default_status:-none} last_router=${default_router:-none}"
+    echo "body preview:"
+    head -c 500 "$default_body" || true
+    echo
+    exit 1
+  fi
+
+  echo "WAIT no-header default attempt ${attempt}/${ATTEMPTS}: status=${default_status:-none} router=${default_router:-none}"
+  sleep "$SLEEP_SECONDS"
+done
+
+fallback_headers="$TMP_DIR/fallback.headers"
+fallback_body="$TMP_DIR/fallback.body"
+fallback_status="$(
+  curl -sS -D "$fallback_headers" -o "$fallback_body" -w "%{http_code}" \
     --max-time "$CURL_MAX_TIME" \
     --connect-timeout "$CURL_CONNECT_TIMEOUT" \
     -X POST "${API_URL}/api/ideas" \
     -H "Content-Type: application/json" \
-    --data "$control_payload" \
+    -H "X-Form-Python-Fallback: 1" \
+    --data '{}' \
     || true
 )"
-control_router="$(header_value "$control_headers" "x-form-router:")"
+fallback_router="$(header_value "$fallback_headers" "x-form-router:")"
 
-if [[ "$control_status" == "202" || "$control_router" == "native-kernel" ]]; then
-  echo "FAIL public Traefik no-header control entered native default route: status=${control_status:-none} router=${control_router:-none}"
-  head -c 500 "$control_body" || true
+if [[ "$fallback_router" != "fanout-python" ]]; then
+  echo "FAIL public explicit fallback did not fan out through kernel-router: status=${fallback_status:-none} router=${fallback_router:-none}"
+  head -c 500 "$fallback_body" || true
   echo
   exit 1
 fi
 
-echo "PASS public Traefik no-header control remains outside native default route status=${control_status:-none} router=${control_router:-none}"
+echo "PASS public explicit fallback remains observable status=${fallback_status:-none} router=${fallback_router}"
 echo "kernel-canary-public-gate: PASS"

@@ -21,7 +21,7 @@ requirements:
   - "Create SQL writes graph_nodes and graph_node_revisions with a __create__ revision snapshot."
   - "Update SQL merges graph node properties, advances the per-node revision number, and records fields_changed plus a full snapshot."
   - "Delete SQL clears connected graph_edges before deleting the graph_nodes row."
-  - "Ideas and specs name application graph table semantics as proven while keeping public front-door flips out of scope until header-gated preview rows graduate through live DB execution proof."
+  - "Ideas and specs name application graph table semantics as proven while keeping all-traffic public front-door flips out of scope; bounded mutable method/path routes graduate only after preview, live DB execution, and production default proof."
 done_when:
   - 'file_contains("form/form-stdlib/application-graph-node-port.fk", "defn agn-create-node-sql")'
   - 'file_contains("form/form-stdlib/tests/application-graph-node-port-band.fk", "Band verdict: 1111")'

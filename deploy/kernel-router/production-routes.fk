@@ -1517,8 +1517,8 @@
 ; /api/ideas/router-structure
 ;   native structure route for the high-level ideas router Form expression.
 ;   This is the first ideas-family row that the kernel-router can dispatch
-;   without CPython. It does NOT claim the mutable portfolio data routes have
-;   moved yet; those remain fan-out until their storage-backed recipes lift.
+;   without CPython. It names that promoted POST/PATCH idea mutations now have a
+;   native default route, while non-promoted ideas routes still fan out.
 ; ===========================================================================
 
 (defn route_ideas_router_structure (q)
@@ -1529,7 +1529,7 @@
     ",\"native_path\":\"/api/ideas/router-structure\""
     ",\"families\":[\"browse\",\"sense\",\"choose\",\"mutate\",\"question-answer\",\"link\",\"translate\",\"invest\",\"rollup\",\"inspect\"]"
     ",\"shifted\":[\"endpoint list -> recipe family lattice\",\"Python carrier -> Form-declared choreography\",\"Form declaration -> kernel-router native structure route\"]"
-    ",\"carrier_boundary\":\"mutable portfolio data routes still fan out to FastAPI until storage-backed ideas recipes lift\""
+    ",\"carrier_boundary\":\"non-promoted ideas routes still fan out to FastAPI while promoted POST/PATCH mutations use the native default invitation\""
     ",\"runtime\":\"inline\"}")))
 
 (defn str_count_from (s needle start)

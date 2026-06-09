@@ -11,7 +11,7 @@ source:
   - file: form/scripts/application-graph-response-projection-test.sh
     symbols: []
   - file: api/tests/test_application_graph_response_projection.py
-    symbols: [test_response_projection_names_idea_and_spec_response_shapes, test_response_projection_band_executes_across_sibling_kernels, test_response_projection_live_db_script_runs_or_skips_when_pg_missing, test_route_forms_name_response_projection_before_public_flip]
+    symbols: [test_response_projection_names_idea_and_spec_response_shapes, test_response_projection_band_executes_across_sibling_kernels, test_response_projection_live_db_script_runs_or_skips_when_pg_missing, test_route_forms_name_response_projection_after_bounded_flip]
   - file: form/form-stdlib/native-mutation-trust-envelope.fk
     symbols: [nmte-trust-envelope-json]
   - file: docs/coherence-substrate/ideas-router.form
@@ -92,7 +92,7 @@ Python service code.
 - `api/tests/test_application_graph_response_projection.py::test_response_projection_names_idea_and_spec_response_shapes`
 - `api/tests/test_application_graph_response_projection.py::test_response_projection_band_executes_across_sibling_kernels`
 - `api/tests/test_application_graph_response_projection.py::test_response_projection_live_db_script_runs_or_skips_when_pg_missing`
-- `api/tests/test_application_graph_response_projection.py::test_route_forms_name_response_projection_before_public_flip`
+- `api/tests/test_application_graph_response_projection.py::test_route_forms_name_response_projection_after_bounded_flip`
 - Manual validation: `form/scripts/application-graph-response-projection-test.sh`
 
 ## Verification
@@ -125,13 +125,17 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-response-p
   side-effect execution in throwaway Postgres.
 - GAP-NMRP4: closed by `specs/native-mutation-public-gate.md`. The public gate
   now carries route-local rollback receipt proof.
-- GAP-NMRP5 follow-up task: `native-mutation-deployed-public-canary`. Deploy and
-  observe the `X-Form-Native-Public-Gate` canary before any no-header flip.
+- GAP-NMRP5: closed by `public-no-header-native-mutation-flip`. The deployed
+  bounded mutable method/path routes now observe native default persistence and
+  explicit `X-Form-Python-Fallback` fanout.
+- Follow-up task: None for this response-projection slice; future route
+  promotions require their own spec, proof, fallback signal, and rollback path.
 
 ## Risks and Assumptions
 
-- The projection emits JSON-shaped strings for native response proof. It does
-  not yet bind those strings to the ordinary public mutation routes.
+- The projection emits JSON-shaped strings for native response proof. Promoted
+  ideas/spec method/path mutation routes now consume that proof through bounded
+  native default routing; unpromoted public routes remain API-backed.
 - The live harness uses throwaway Postgres when available. In environments
   without `initdb`, it exits as SKIP rather than claiming live DB proof.
 - The response projection mirrors current model/service formulas; future Python

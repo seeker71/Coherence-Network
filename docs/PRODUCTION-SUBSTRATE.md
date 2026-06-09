@@ -20,14 +20,16 @@ old deployment checklists.
 Postgres is not publicly exposed. It lives on the internal Docker Compose
 network and is reached by production services through config files.
 
-The normal API front door remains Traefik → `api:8000`. A header-gated
-kernel-router canary is layered beside it: requests to `api.coherencycoin.com`
-with `X-Form-Native-Preview: 1` or `X-Form-Native-Public-Gate: 1` route to the
-`kernel-router` service, which runs `production-routes.fk`, reads the mounted
-production config overlay at `/run/coherence-network/config.json`, executes
-public-gate/default mutable SQL through Form-native `pg_exec` when
-`database.url` is present, and fans out the tail to `api:8000`. No-header
-traffic stays on the ordinary API route. Verify the public gate with:
+The normal API front door remains Traefik → `api:8000` for unlisted routes. A
+bounded kernel-router overlay is layered beside it: requests to
+`api.coherencycoin.com` with `X-Form-Native-Preview: 1` or
+`X-Form-Native-Public-Gate: 1`, plus no-header mutable `POST/PATCH /api/ideas`
+and `POST/PATCH/DELETE /api/spec-registry`, route to the `kernel-router`
+service. It runs `production-routes.fk`, reads the mounted production config
+overlay at `/run/coherence-network/config.json`, executes public-gate/default
+mutable SQL through Form-native `pg_exec` when `database.url` is present, and
+fans out the tail to `api:8000`. `X-Form-Python-Fallback: 1` is the explicit
+fallback/refusal signal. Verify the public gate and bounded default with:
 
 ```bash
 scripts/verify_kernel_canary_public_gate.sh https://api.coherencycoin.com

@@ -9,7 +9,7 @@ source:
   - file: form/scripts/application-graph-live-db-test.sh
     symbols: []
   - file: api/tests/test_application_graph_live_db_trial.py
-    symbols: [test_live_db_trial_form_uses_application_graph_pg_wrappers, test_live_db_trial_script_runs_or_skips_when_postgres_tooling_missing, test_route_forms_name_live_db_trial_before_public_flip]
+    symbols: [test_live_db_trial_form_uses_application_graph_pg_wrappers, test_live_db_trial_script_runs_or_skips_when_postgres_tooling_missing, test_route_forms_name_live_db_trial_after_bounded_flip]
   - file: docs/coherence-substrate/ideas-router.form
     symbols: [ideas_router_structure]
   - file: docs/coherence-substrate/spec-registry-router.form
@@ -78,7 +78,7 @@ the resulting graph rows.
 
 - `api/tests/test_application_graph_live_db_trial.py::test_live_db_trial_form_uses_application_graph_pg_wrappers`
 - `api/tests/test_application_graph_live_db_trial.py::test_live_db_trial_script_runs_or_skips_when_postgres_tooling_missing`
-- `api/tests/test_application_graph_live_db_trial.py::test_route_forms_name_live_db_trial_before_public_flip`
+- `api/tests/test_application_graph_live_db_trial.py::test_route_forms_name_live_db_trial_after_bounded_flip`
 - Manual validation: `form/scripts/application-graph-live-db-test.sh`
 
 ## Verification
@@ -109,8 +109,11 @@ python3 scripts/validate_spec_quality.py --file specs/native-graph-mutation-live
   side-effect execution in throwaway Postgres.
 - GAP-NGMLDB4: closed by `specs/native-mutation-public-gate.md`. The public gate
   now carries route-local rollback receipt proof.
-- GAP-NGMLDB5 follow-up task: `native-mutation-deployed-public-canary`. Deploy
-  and observe the `X-Form-Native-Public-Gate` canary before any no-header flip.
+- GAP-NGMLDB5: closed by `public-no-header-native-mutation-flip`. The deployed
+  bounded mutable method/path routes now observe native default persistence and
+  explicit `X-Form-Python-Fallback` fanout.
+- Follow-up task: None for this live DB proof slice; future route promotions
+  require their own spec, proof, fallback signal, and rollback path.
 
 ## Risks and Assumptions
 

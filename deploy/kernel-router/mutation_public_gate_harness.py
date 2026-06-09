@@ -760,7 +760,7 @@ def build_gate_report(
         "production_revision_id_collision_probe": production_collision_checks,
         "production_revision_id_collision_probe_pass": collision_pass,
         "recommendation": (
-            "verify_deployed_header_canary"
+            "verify_deployed_bounded_native_default"
             if gate_pass
             else "hold_public_gate"
         ),
@@ -770,8 +770,8 @@ def build_gate_report(
         "ordinary_traffic_flip_performed": True,
         "python_fallback_header": PYTHON_FALLBACK_HEADER,
         "next_evidence_needed": [
-            "deployed header-gated canary persists through mounted production config",
-            "public Traefik default mutation routes to kernel-router",
+            "deployed bounded native default persists through mounted production config",
+            "bounded public Traefik mutable method/path routes to kernel-router",
             "explicit X-Form-Python-Fallback refusal/control signal is counted separately",
         ],
     }
