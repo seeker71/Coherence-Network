@@ -47,6 +47,7 @@ requirements:
   - "The production route manifest exposes X-Form-Native-Public-Gate rows plus no-header native-default invitation rows for mutable ideas/spec routes; X-Form-Python-Fallback is the explicit refusal/control signal."
   - "The public-gate harness observes no-header native-default invitation, preview-header SQL preview, public-gate native selection, public-gate priority when both headers are present, and explicit Python fallback fanout."
   - "HTTP public-gate responses stay honest: the header/default gate executes native SQL through config_database_url -> pg_connect -> pg_exec -> pg_close, emits persistence readback evidence, and carries a rollback receipt shape."
+  - "Native HTTP revision ids are derived from route prefix, node id, and revision number; fixed per-route revision ids are not valid for production traffic."
   - "Each public-gate HTTP response emits a compact decision receipt naming candidates, selected path, outcome, protocol, reversibility, and a signature so the gate can contradict intent with observable state."
   - "The deploy path exposes X-Form-Native-Public-Gate as a Traefik header-gated public canary with a mounted production config carrier while public no-header Traefik default waits for the separate public flip."
   - "The side-effect ledger keeps rollback receipts as gate-local safety rather than Python parity, so side-effect proof does not justify side effects."
@@ -120,6 +121,10 @@ are reversible gate safety, not evidence that extra domain side effects belong.
   `202 + X-Form-Router:native-kernel + decision_receipt + executes:true`, and
   separately checks public Traefik no-header control has not yet entered the
   native default route.
+- [ ] **R12**: The local public-gate harness includes a production-style
+  revision-id collision probe: two no-header native-default creates and two
+  `X-Form-Native-Public-Gate` creates run without schema reset and produce
+  distinct graph-node revision ids.
 
 ## Research Inputs
 
@@ -216,6 +221,11 @@ scripts/verify_kernel_canary_public_gate.sh https://api.coherencycoin.com
 - GAP-NMPG3: closed by `native-http-mutation-persistence-default`. The HTTP
   native mutation handler now carries production persistence semantics through
   the kernel config carrier and Form-native `pg_exec`.
+- GAP-NMPG4: closed by `native-http-revision-id-fix`. Public deploy canary
+  exposed that fixed route-level revision ids collide under repeated production
+  creates. `production-routes.fk` now derives revision ids from route prefix,
+  node id, and revision number, and `mutation_public_gate_harness.py` proves
+  repeated no-header/default and public-gate creates without schema reset.
 - GAP-NMPG2: closed by `specs/native-idea-valuation-audit-ledger.md`. Idea
   valuation audit-ledger parity is now carried Form-native and bound into an
   idea update public-gate runner.
