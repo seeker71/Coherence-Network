@@ -51,6 +51,12 @@ plus `defn · let · do`. (Read `form/form-stdlib/core.fk` — it is the whole v
   (see `feature-vector.fk`'s `fv-hist-loop`).
 - `empty` **constructs** the empty list (`(empty)`, no args) — it is the absence value, **not a
   predicate**. Test emptiness with `(eq (len x) 0)`. See trap 6.
+- This is the **curated band-verdict subset, not the kernel's limit.** `mul`/`sub`/`div` and full IEEE
+  floats all work and **compute deterministically three-way** (proven: integer `mul`, `0.1+0.2`, and a
+  float matvec all → 0 divergent). The kernel is a full numeric engine reading
+  `docs/coherence-substrate/numeric-formats.canonical.json` (19 formats incl. bf16/fp8/nf4/int8/bitnet-158).
+  These are kept out of *bands* only because verdicts stay integer for clean `eq`-parity. For numeric/ML
+  recipes use the full engine, and reduce a float result to an integer verdict with `round`/`floor`/`ceil`/`trunc`.
 
 ## The traps (each one cost a real debugging cycle)
 
@@ -65,7 +71,12 @@ plus `defn · let · do`. (Read `form/form-stdlib/core.fk` — it is the whole v
      the way `classifier-eval.fk` and `self-grounding-classifier.fk` do. Most perception logic is
      counting, selection, and gating — which the primitive set covers exactly.
 
-3. **No floats.** All scores/counts are integers `0..100` — `eq` on floats is unreliable across kernels.
+3. **Float COMPUTE is deterministic; raw-float EQ is the trap.** A fractional float result agrees
+   bit-for-bit three-way (proven); what's unreliable is `eq` on raw floats — and whole-number floats
+   still display inconsistently (`3.0` vs `3`). So compute in float, then reduce to an INTEGER verdict —
+   `(eq (round (mul r 100.0)) 40)` — and `eq` the integer. `round` is half-AWAY-from-zero on every kernel;
+   see `tests/float-conversions-band.fk`. Band SCORES still default to integers `0..100`; floats are the
+   numeric/ML payload, not the verdict.
 
 4. **No `let` inside a `defn` body.** Use nested `defn`s or extra parameters. (`let` is fine only at
    the top level of the band's `(do ...)`.)

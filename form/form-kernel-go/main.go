@@ -2419,6 +2419,34 @@ func (k *Kernel) registerNatives() {
 		}
 		return Value{Kind: VInt, Int: n}
 	})
+	// float→int conversions: bridge float compute to integer band verdicts /
+	// quantization codes. floor/ceil/trunc are IEEE-unambiguous; round is
+	// half-away-from-zero (math.Round) to match Rust f64::round and the TS
+	// sign*round(abs) impl. An int argument passes through unchanged.
+	k.registerNative("floor", catMethod(), func(_ *Kernel, args []Value) Value {
+		if args[0].Kind == VFloat {
+			return Value{Kind: VInt, Int: int64(math.Floor(args[0].Float))}
+		}
+		return Value{Kind: VInt, Int: args[0].Int}
+	})
+	k.registerNative("ceil", catMethod(), func(_ *Kernel, args []Value) Value {
+		if args[0].Kind == VFloat {
+			return Value{Kind: VInt, Int: int64(math.Ceil(args[0].Float))}
+		}
+		return Value{Kind: VInt, Int: args[0].Int}
+	})
+	k.registerNative("trunc", catMethod(), func(_ *Kernel, args []Value) Value {
+		if args[0].Kind == VFloat {
+			return Value{Kind: VInt, Int: int64(math.Trunc(args[0].Float))}
+		}
+		return Value{Kind: VInt, Int: args[0].Int}
+	})
+	k.registerNative("round", catMethod(), func(_ *Kernel, args []Value) Value {
+		if args[0].Kind == VFloat {
+			return Value{Kind: VInt, Int: int64(math.Round(args[0].Float))}
+		}
+		return Value{Kind: VInt, Int: args[0].Int}
+	})
 	// Polymorphic `+` for Python: int+int=add, str+str=concat,
 	// list+list=concat, with float promotion on numeric mixes.
 	// Sibling-parity with Rust + TS kernels.
