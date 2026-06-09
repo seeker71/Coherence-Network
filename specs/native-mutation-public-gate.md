@@ -3,7 +3,7 @@ idea_id: idea-realization-engine
 status: done
 source:
   - file: form/form-stdlib/native-mutation-public-gate.fk
-    symbols: [nmpg-public-gate-header, nmpg-public-gate-rollback-receipt-sql, nmpg-run-idea-create-public-gate, nmpg-run-idea-update-public-gate, nmpg-run-spec-update-public-gate, nmpg-public-gate-test]
+    symbols: [nmpg-public-gate-header, nmpg-native-invitation-json, nmpg-public-gate-rollback-receipt-sql, nmpg-run-idea-create-public-gate, nmpg-run-idea-update-public-gate, nmpg-run-spec-update-public-gate, nmpg-public-gate-test]
   - file: form/form-stdlib/native-idea-valuation-audit-ledger.fk
     symbols: [nival-run-idea-update-with-valuation-audit]
   - file: docs/coherence-substrate/native-mutation-side-effect-ledger.form
@@ -52,6 +52,7 @@ requirements:
   - "The deploy path exposes X-Form-Native-Public-Gate as a higher-priority Traefik witness and routes bounded no-header mutable ideas/spec method/path traffic to the kernel-router native default invitation with a mounted production config carrier."
   - "The side-effect ledger keeps rollback receipts as gate-local safety rather than Python parity, so side-effect proof does not justify side effects."
   - "The public-gate Form layer exposes an idea update runner over the native idea valuation audit-ledger carrier."
+  - "Native/default/preview mutation responses carry a `native_invitation` receipt that names the ordinary JSON received, the Form-native mutation recipe it became, execution evidence, the next native protocol, and the explicit decline signal."
 done_when:
   - 'file_exists("form/form-stdlib/native-mutation-public-gate.fk")'
   - 'file_exists("deploy/kernel-router/mutation_public_gate_harness.py")'
@@ -129,6 +130,11 @@ are reversible gate safety, not evidence that extra domain side effects belong.
   revision-id collision probe: two no-header native-default creates and two
   `X-Form-Native-Public-Gate` creates run without schema reset and produce
   distinct graph-node revision ids.
+- [ ] **R13**: Default, preview, and public-gate HTTP responses carry
+  `native_invitation.state=native-invitation-contract`, `offer_to_know=true`,
+  `received.shape=ordinary-json-mutation`, `translated.language=Form-native
+  mutation recipe`, `speak_next_time.native_protocol=Form/BML mutation recipe`,
+  and `decline_signal=native_invitation_declined`.
 
 ## Research Inputs
 
@@ -153,7 +159,7 @@ are reversible gate safety, not evidence that extra domain side effects belong.
 - `form/scripts/native-mutation-public-gate-test.sh` - throwaway Postgres
   harness.
 - `deploy/kernel-router/production-routes.fk` - public-gate route rows and
-  response envelope.
+  response envelope plus native invitation receipt.
 - `deploy/kernel-router/docker-compose.kernel-router.yml` - bounded Traefik
   native mutation routers, header witnesses, and config-file mount.
 - `Dockerfile.kernel-router` - non-secret config baseline for kernel config
@@ -162,13 +168,13 @@ are reversible gate safety, not evidence that extra domain side effects belong.
 - `deploy/hostinger/auto-deploy.sh` - deploy-time kernel-router bring-up and
   local public/default/fallback receipt probes.
 - `scripts/verify_kernel_canary_public_gate.sh` - public treatment/default/fallback
-  verifier for the deployed bounded native default.
+  verifier for the deployed bounded native default and invitation contract.
 - `.github/workflows/hostinger-auto-deploy.yml` - public kernel deploy and
   verification workflow.
 - `.github/workflows/public-deploy-contract.yml` - trigger coverage for
   canary-related deploy files.
 - `deploy/kernel-router/mutation_public_gate_harness.py` - local HTTP selection
-  harness.
+  harness and invitation receipt checker.
 - `docs/coherence-substrate/native-mutation-side-effect-ledger.form` -
   source-classified keep/delete ledger for mutable side effects.
 - `api/tests/test_native_mutation_public_gate.py` - repository proof.

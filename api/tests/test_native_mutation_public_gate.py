@@ -38,8 +38,12 @@ def test_public_gate_form_names_header_runner_and_rollback_receipt():
         "X-Form-Native-Public-Gate",
         "defn nmpg-public-gate-rollback-receipt-sql",
         "defn nmpg-decision-receipt-json",
+        "defn nmpg-native-invitation-json",
         "public-gate-rollback-receipt",
         "native-mutation-gate-decision-receipt",
+        "native-invitation-contract",
+        "native_invitation_declined",
+        "Form/BML mutation recipe",
         "defn nmpg-run-idea-create-public-gate",
         "defn nmpg-run-idea-update-public-gate",
         "defn nmpg-run-spec-update-public-gate",
@@ -151,7 +155,12 @@ def test_production_routes_expose_public_gate_with_native_default_invitation():
     assert '(mpv-revision-id-sql revision-prefix "id" "\'1\'")' in text
     assert "(mpv-revision-id-sql revision-prefix \"id\" (mpv-next-revision-text-sql id))" in text
     assert '\\"decision_receipt\\":' in text
+    assert '\\"native_invitation\\":' in text
     assert "native-mutation-gate-decision-receipt" in text
+    assert "native-invitation-contract" in text
+    assert "native_invitation_declined" in text
+    assert "Form/BML mutation recipe" in text
+    assert "accepted and translated" in text
     assert "can_contradict_intent" in text
     assert '\\"executes\\":' in text
     assert '\\"executes\\":false' in text
@@ -203,6 +212,9 @@ def test_public_gate_harness_observes_public_gate_when_kernel_available():
         assert case["checks"]["decision_receipt_selected_path"] is True
         assert case["checks"]["decision_receipt_reversible"] is True
         assert case["checks"]["decision_receipt_signature"] is True
+        assert case["checks"]["native_invitation_state"] is True
+        assert case["checks"]["native_invitation_translated_shape"] is True
+        assert case["checks"]["native_invitation_next_protocol"] is True
         assert case["checks"]["public_gate_executes_persistence"] is True
         assert case["checks"]["public_gate_persistence_closed"] is True
         assert case["checks"]["both_headers_decision_receipt_state"] is True
@@ -216,6 +228,8 @@ def test_route_forms_name_public_gate_default_evidence_boundary():
         assert "native mutation public gate proven" in text
         assert "X-Form-Native-Public-Gate" in text
         assert "implicit native invitation" in text
+        assert "native_invitation receipt" in text
+        assert "Form-native mutation recipe" in text
         assert "X-Form-Python-Fallback" in text
 
 
@@ -260,6 +274,9 @@ def test_deploy_exposes_bounded_no_header_native_mutation_flip():
     assert "$service listener did not accept local HTTP within 90s" in auto_deploy
     assert "X-Form-Native-Public-Gate: 1" in auto_deploy
     assert '\\"decision_receipt\\"' in auto_deploy
+    assert '\\"native_invitation\\"' in auto_deploy
+    assert '\\"state\\":\\"native-invitation-contract\\"' in auto_deploy
+    assert '\\"native_protocol\\":\\"Form/BML mutation recipe\\"' in auto_deploy
     assert '\\"executes\\":true' in auto_deploy
     assert "performed-by-http-native-persistence" in auto_deploy
     assert '\\"ordinary_traffic_flip_performed\\":true' in auto_deploy
@@ -281,6 +298,9 @@ def test_deploy_exposes_bounded_no_header_native_mutation_flip():
     assert "performed-by-http-native-persistence" in verify_script
     assert "assert_native_default_body" in verify_script
     assert "native_default_invitation" in verify_script
+    assert "native_invitation_state" in verify_script
+    assert "Form/BML mutation recipe" in verify_script
+    assert "native_invitation_declined" in verify_script
     assert "implicit-native-invitation" in verify_script
     assert "public Traefik no-header default entered native default route" in verify_script
     assert "fallback_router" in verify_script

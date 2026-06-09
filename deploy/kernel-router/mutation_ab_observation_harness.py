@@ -274,6 +274,18 @@ def evaluate_case(
     default_decision = default.parsed.get("decision_receipt")
     if not isinstance(default_decision, dict):
         default_decision = {}
+    default_invitation = default.parsed.get("native_invitation")
+    if not isinstance(default_invitation, dict):
+        default_invitation = {}
+    default_invitation_translated = default_invitation.get("translated")
+    if not isinstance(default_invitation_translated, dict):
+        default_invitation_translated = {}
+    default_invitation_execution = default_invitation.get("execution")
+    if not isinstance(default_invitation_execution, dict):
+        default_invitation_execution = {}
+    default_invitation_speak = default_invitation.get("speak_next_time")
+    if not isinstance(default_invitation_speak, dict):
+        default_invitation_speak = {}
     trust_envelope = treatment.parsed.get("trust_envelope")
     if not isinstance(trust_envelope, dict):
         trust_envelope = {}
@@ -290,6 +302,16 @@ def evaluate_case(
         "default_required_header_absent": default.parsed.get("required_header") is None,
         "default_fallback_header_named": default.parsed.get("fallback_header") == PYTHON_FALLBACK_HEADER,
         "default_selected_path": default_decision.get("selected_path") == IMPLICIT_NATIVE_PROTOCOL,
+        "default_native_invitation_receipt": (
+            default_invitation.get("state") == "native-invitation-contract"
+            and default_invitation.get("offer_to_know") is True
+            and default_invitation.get("refusal_is_signal") is True
+            and default_invitation_translated.get("language") == "Form-native mutation recipe"
+            and default_invitation_translated.get("operation") == case.operation
+            and default_invitation_execution.get("selected_path") == IMPLICIT_NATIVE_PROTOCOL
+            and default_invitation_speak.get("fallback_header") == PYTHON_FALLBACK_HEADER
+            and default_invitation.get("decline_signal") == "native_invitation_declined"
+        ),
         "default_sql_shape": all(part in default_sql for part in case.sql_contains),
         "default_body_seen": default.parsed.get("request_body", "") == (case.body or "{}"),
         "default_executes_persistence": default.parsed.get("executes") is True,
