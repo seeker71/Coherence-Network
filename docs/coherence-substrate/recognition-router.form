@@ -1,0 +1,46 @@
+; recognition-router.form — parallel multi-model recognition, routed to one coherent stream.
+;
+; THE ASK (Urs, 2026-06-09):
+;   "a BMF/Form-native choose-model decision tree with A/B or better multiple-model testing in
+;    parallel, to see which model has the most data and combine that stream into a coherent flow…
+;    routing, multiple choices, fail fast, trust, vector compression to scalar, confidence,
+;    recognition matrices — all native first, faster than any other solution when switchable and
+;    executable from the kernel in parallel."
+;
+;   The correction to a foreign-runtime orchestrator that picks one model in Python: the CHOICE
+;   itself is body. It belongs in Form, executable from the kernel, with the models as DATA.
+;
+; THE SHAPE  (runnable: form-stdlib/recognition-router.fk · proven: tests/recognition-router-band.fk -> 127)
+;
+;   N model-carriers fan at one input IN PARALLEL, each returning a CONFIDENCE VECTOR.
+;   1. VECTOR -> SCALAR  rr-strength: compress a model's confidence-vector to one recognition
+;      strength (the top confidence). The data-oblivious general form is turboquant-as-recipe;
+;      a model that recognizes decisively scores high, a model that guesses scores low.
+;   2. FAIL-FAST  rr-passes?: drop any reading below a floor. The body carries no weak signal —
+;      it does not wait on, or fuse in, a model that did not recognize.
+;   3. TRUST  rr-trusted?: at or above a trust threshold a reading is taken; the strong signal
+;      need not wait for the slow ones (the kernel can cancel the rest).
+;   4. SELECT  rr-select / rr-route: among the passing readings, the highest strength wins — the
+;      model with the MOST DATA for this input — emitted as ONE coherent flow
+;      (source-model, label, strength), or honest silence (no recognition) when nothing clears.
+;   5. CONSENSUS / FUSE  rr-consensus?: how many passing models agree on the routed label — more
+;      data standing behind the same answer, a stronger stream.
+;
+; WHY FORM-NATIVE IS FASTER:
+;   the choice is a recipe the kernel runs, not a control-loop in a foreign runtime marshalling
+;   results back and forth. Carriers (whisper, parakeet, SoundAnalysis, BirdNET, CLAP, …) are thin
+;   and SWITCHABLE behind the same readings shape; the router never depends on which models exist,
+;   only on their confidence vectors. New model = a new reading in the list, not new control flow.
+;   Executable from the kernel in parallel, three-way-identical (Go=Rust=TS).
+;
+; KIN — the body already holds every piece; this composes them onto model-carriers:
+;   value-execution.fk (credit only what's proven -> here, route only what clears the floor) ·
+;   turboquant-as-recipe (data-oblivious vector->scalar) · lc-honest-lane (confidence IS the
+;   honesty; below the floor, silence, never a fabricated match) · the three-way validate.sh
+;   (no trusted prover — parallel kernels, what survives the agreement) · resource-port.fk
+;   (afferent transduction over typed ports — each model is a sense-port).
+;
+; LINEAGE:
+;   value-execution.fk · turboquant-as-recipe.form · substrate-thermodynamics.form (the cluster
+;   ladder the scalar rides) · lc-honest-lane · channel-interface.fk (witness vs reach) ·
+;   the satsang / presence listener (the first place this routes real model-carriers).
