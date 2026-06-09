@@ -1,0 +1,106 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/next-python-release-20260609",
+  "commit_scope": "Release /api/utils/kernel_status from Python authority by serving it from the native kernel-router manifest.",
+  "files_owned": [
+    "deploy/kernel-router/production-routes.fk",
+    "docs/system_audit/commit_evidence_2026-06-09_native_kernel_status_route.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-kernel-rust/production_routes_harness.py"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form/form-kernel-rust && cargo build --release",
+      "cd form/form-kernel-rust && python3 production_routes_harness.py",
+      "python3 scripts/runtime_surface_report.py --json"
+    ],
+    "summary": "The production kernel-router manifest now includes a Form-native /api/utils/kernel_status handler. The handler reports active=native-kernel, router=native-kernel, python_authority=false, and live router counters from the same request context that feeds /api/attention/kernel-runtime.",
+    "observed_delta": {
+      "new_native_route": "/api/utils/kernel_status",
+      "runtime_surface_report": "kernel_first_capable_routes increased to 34 and includes /api/utils/kernel_status",
+      "harness_observation": "NATIVE /api/utils/kernel_status -> 200 X-Form-Router=native-kernel; body includes python_authority=false",
+      "promotion_safety": "Existing promoted compute-route parity remains green: 109 route/query checks value-identical to the local CPython oracle; /api/health still fans out with X-Form-Router=fanout-python."
+    },
+    "known_limitations": [
+      {
+        "scope": "FastAPI compatibility row",
+        "observed": "api/app/routers/utils.py still exposes the bridge status endpoint for dev/fanout contexts. This slice removes Python authority when the production kernel-router manifest serves the route; it does not delete the compatibility row yet."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "curl -i https://api.coherencycoin.com/api/utils/kernel_status"
+    ],
+    "notes": "Post-merge deploy validation should confirm X-Form-Router:native-kernel and python_authority:false publicly."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "GET /api/utils/kernel_status is now kernel-first capable in the production route manifest and can be served without asking FastAPI/Python whether the kernel is available.",
+    "public_endpoints": [
+      "GET /api/utils/kernel_status"
+    ],
+    "test_flows": [
+      "Boot the real FastAPI app as oracle and the kernel-router with deploy/kernel-router/production-routes.fk.",
+      "Call /api/utils/kernel_status through the kernel-router and require HTTP 200, X-Form-Router:native-kernel, Content-Type:application/json, active:native-kernel, router:native-kernel, python_authority:false.",
+      "Confirm /api/health still fans out so the promoted route does not erase explicit Python fallback for unpromoted paths."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete. CI, merge, deploy, and public observation remain before claiming public release."
+  },
+  "idea_ids": [
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "specs/kernel-router-fanout-native-invitation.md"
+  ],
+  "task_ids": [
+    "native-kernel-status-route-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "deploy/kernel-router/production-routes.fk::route_kernel_status",
+    "deploy/kernel-router/production-routes.fk::routes",
+    "form/form-kernel-rust/production_routes_harness.py::STATUS_PATH",
+    "scripts/runtime_surface_report.py --json"
+  ],
+  "change_files": [
+    "deploy/kernel-router/production-routes.fk",
+    "docs/system_audit/commit_evidence_2026-06-09_native_kernel_status_route.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-kernel-rust/production_routes_harness.py"
+  ],
+  "change_intent": "runtime_feature"
+}
