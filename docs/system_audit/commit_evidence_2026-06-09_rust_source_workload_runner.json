@@ -1,0 +1,106 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/release-kernel-router-deploy-gate-20260609",
+  "commit_scope": "Expose Rust kernel source-compiled workload execution for BML-authored Form tending cells.",
+  "files_owned": [
+    "Makefile",
+    "docs/system_audit/commit_evidence_2026-06-09_rust_source_workload_runner.json",
+    "form/form-kernel-rust/src/main.rs"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "make native-route-goal-tending",
+      "cd form/form-kernel-rust && cargo fmt --check && cargo build --release",
+      "cd form/form-kernel-rust && cargo test source_compiled_workload_executes_bml_tending_cells --release"
+    ],
+    "summary": "The Rust kernel now has a `run --stdlib <dir> <file.fk...>` binding that lowers section-authored Form/BML files through the existing Form source compiler and executes the resulting Form object directly. `make native-route-goal-tending` no longer uses the stale raw Rust parse path; it executes the route-goal cells through the native source-aware workload runner.",
+    "observed_delta": {
+      "previous_failure": "make native-route-goal-tending failed with `form-kernel-rust: parse error ... got STRING \"NATIVE-ROUTE-OBS\"` because the target handed BML source directly to the raw S-expression reader.",
+      "new_native_command": "form-kernel-rust run --stdlib form-stdlib form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/native-route-goal-cells.fk form-stdlib/queries/native-route-goal-tending.fk",
+      "route_goal_result_contains": [
+        "native-route-front-door-loop",
+        "author-high-grammar-handler",
+        "prove-byte-identity"
+      ]
+    },
+    "known_limitations": [
+      {
+        "scope": "source compilation",
+        "observed": "The new Rust binding reuses the existing Form source compiler and stdlib bootstrap. It does not replace the source compiler itself; it exposes the missing native workload entry so tending commands do not fall back to raw parse or Python glue."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "make native-route-goal-tending"
+    ],
+    "notes": "No public endpoint behavior changes. Post-merge deploy validation should confirm production remains aligned."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A BML-authored Form tending workload that previously failed in the Rust CLI now runs natively through the Rust kernel's source-compiled workload path and returns the native route-goal attention object.",
+    "public_endpoints": [
+      "local kernel CLI: form-kernel-rust run --stdlib"
+    ],
+    "test_flows": [
+      "Run `make native-route-goal-tending` and observe a NATIVE-ROUTE-GOAL value instead of a raw parser error.",
+      "Run the targeted Rust test `source_compiled_workload_executes_bml_tending_cells` to prove the binding over the real route-goal cell files."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete. CI, merge, and post-deploy observation remain before claiming release."
+  },
+  "idea_ids": [
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "specs/native-mutation-public-gate.md"
+  ],
+  "task_ids": [
+    "rust-source-workload-runner-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-kernel-rust/src/main.rs::cli_run",
+    "form/form-kernel-rust/src/main.rs::source_compile_file_workload_recipe_object",
+    "form/form-kernel-rust/src/main.rs::source_compiled_workload_executes_bml_tending_cells",
+    "Makefile::native-route-goal-tending"
+  ],
+  "change_files": [
+    "Makefile",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-kernel-rust/src/main.rs"
+  ],
+  "change_intent": "runtime_feature"
+}
