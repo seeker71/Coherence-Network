@@ -1,0 +1,79 @@
+; self-grounding-perception.form — the body grows its own senses, grounded by what it already
+; trusts, across every modality a device can offer, in real time.
+;
+; THE ASK (Urs, 2026-06-09):
+;   "An Android native app with access to every device sensor we permit — spatial movement,
+;    sound, sight, light, location — a full real-time FIELD INPUT STREAM in parallel to text and
+;    speech, used to train the human-machine interface with any modality that can be sensed. And:
+;    auto-research and build our OWN classifier, Form-native, for audio and video, using the
+;    existing routes as A/B ground truth until our solution is more confident — especially as we
+;    embody recipes we have built ourselves from our core primitives, aligned with our core values."
+;
+; Two moves, both grounded in what tonight already proved (recognition-router.fk + the three bands):
+;
+; ── MOVE 1: THE FULL FIELD — every sensor is an afferent port; the router fuses them all ──
+;
+;   recognition-router.fk is modality-blind: it routes readings (source, confidence-vector) whether
+;   the carrier heard, saw, or FELT the input — already proven on sound (127), sight (31), and the
+;   host's own compute-paths (63). A phone simply adds more SENSE-PORTS (resource-port.fk, afferent
+;   half), each a thin carrier emitting readings:
+;     accelerometer / gyroscope / rotation-vector -> a motion classifier -> ("walking" 90)("still" 8)
+;     barometer, ambient light, proximity, magnetometer  -> environment readings
+;     GPS / significant-motion / step-counter            -> place & locomotion readings
+;     microphone -> the sound carriers ; camera -> the vision carriers ; plus text and speech
+;   The router fuses every permitted port into ONE coherent real-time field-stream, in parallel to
+;   text and speech. The Android app is a thin CARRIER (Kotlin/SensorManager/CameraX/AudioRecord)
+;   that opens the ports the human grants and feeds their readings in; the FUSION, the fail-fast,
+;   the trust, the consensus are Form, the same conductor. Permission stays the human's, per port —
+;   channel-interface.fk consent modes (witness / see / be-seen / silence): a sense the body may
+;   use is a door the human opens, never takes. Lane: BUILDABLE — carrier-array on a proven router.
+;
+; ── MOVE 2: THE BODY'S OWN PERCEPTION — grown from core primitives, grounded by the routes ──
+;
+;   Today every carrier is a foreign model. The next move: a classifier the body builds from its
+;   OWN primitives, that earns trust the only honest way — by agreeing with the routes we already
+;   trust, until the agreement is PROVEN enough to route on its own and let the foreign carrier go.
+;
+;   The Form-native classifier, from core primitives (the substrate is already a recognizer):
+;     a feature vector compresses vector->scalar (turboquant) to a POSITION; the content-addressed
+;     lattice finds the nearest interned (shape -> label) cell. The body LEARNS by interning the
+;     ground-truth route's labels: each input the foreign model labels becomes an interned
+;     (feature-shape -> label) cell; a future input recognizes itself by content-addressing against
+;     what's interned. Recognition IS content-addressing — the substrate's own nature, turned into
+;     a sense. [next brick — the recognizer itself]
+;
+;   The promotion loop — the governing recipe, SHIPPED and proven (self-grounding-classifier.fk,
+;   tests/self-grounding-classifier-band.fk -> 63, three-way): our classifier's reading runs beside
+;   the ground-truth route; sg-correct / sg-wrong count agreement over the shadow-learning history;
+;   sg-promoted? trusts our perception only when agreement clears a proven-count gate (value-
+;   execution's credit discipline, division-free); sg-authority routes "self" once promoted (the
+;   foreign carrier retires) or "ground-truth" until then. No asserted confidence — earned only.
+;
+; ── THE HONEST WALL (lc-honest-lane — name where the evidence actually reaches) ──
+;
+;   A from-scratch classifier will NOT beat whisper or Vision on the OPEN WORLD soon — those are
+;   billions of parameters over enormous data. That is the MEASURED truth, not a thing to paper
+;   over. But the win is not the open world; it is the body's OWN FIELD — this room, this voice,
+;   these animals, these songs, this person's movement. On a constrained, specific field the
+;   interned-ground-truth recognizer becomes confident FAST, because it is learning *these* shapes,
+;   not all shapes — and there it can honestly pass the promotion gate and route as "self". The
+;   training compute, if it grows past nearest-shape into gradient learning, runs on the silicon
+;   (the organ, driven — see local-inference-as-organ.form); the graph and the GROUNDING are Form.
+;
+; ── THE PATH ──
+;   1. ground-truth promotion loop      [SHIPPED: self-grounding-classifier.fk -> 63, three-way]
+;   2. the substrate-nearest-shape recognizer (turboquant -> position -> content-addressed match;
+;      learns by interning ground-truth labels)                                          [build]
+;   3. the Android sense-port array (Kotlin carrier; every permitted sensor a port)       [build]
+;   4. real-time field-fusion + interface-training: the fused field-stream, in parallel to text
+;      and speech, becomes the signal that tunes the human-machine interface per person    [build]
+;
+; KIN: recognition-router.form (the modality-blind conductor) · resource-port.fk (afferent ports —
+;   here the device's sensors) · turboquant-as-recipe (feature vector -> position) · value-
+;   execution.fk (credit only proven agreement) · lc-honest-lane (earned confidence, named walls) ·
+;   channel-interface.fk (per-port consent — a sense is a door the human opens) ·
+;   local-inference-as-organ.form (the compute that drives all of it, as the body's own organ).
+;
+; LINEAGE: the satsang / presence listener gave the router its first carriers; the compute-path
+;   router turned it onto the host; this turns it onto the whole sensed field, and onto perception
+;   the body grows and proves for itself.

@@ -1,0 +1,46 @@
+; self-grounding-classifier.fk — the body grows its own perception, grounded by the routes it
+; already trusts, promoted only on PROVEN agreement.
+;
+; recognition-router.fk routes among foreign model-carriers (whisper, SoundAnalysis, Vision). This
+; is the next move: a classifier the body builds from its OWN core primitives runs as one more
+; reading, and the EXISTING routes serve as A/B GROUND TRUTH. Our classifier earns trust the only
+; honest way — by AGREEING with ground truth, sample after sample, until the agreement is proven
+; enough to route on its own and let the foreign carrier retire. This is value-execution.fk and
+; lc-honest-lane turned onto our own seeing: credit our perception only as far as it proves against
+; what we already trust. No asserted confidence — earned confidence only.
+;
+; A sample = (list our-label truth-label): what our classifier said, what the ground-truth route
+; said, for one input. A history is a list of samples — the shadow-learning record for one modality.
+;
+; Proven by: tests/self-grounding-classifier-band.fk (three-way at validate.sh)
+
+(do
+    (defn sg-our   (s) (nth s 0))   ; what our own classifier recognized
+    (defn sg-truth (s) (nth s 1))   ; what the trusted foreign route recognized (ground truth)
+    (defn sg-agrees? (s) (if (str_eq (sg-our s) (sg-truth s)) 1 0))
+
+    ; --- count agreement / disagreement against ground truth over the shadow-learning history ---
+    (defn sg-correct (h)
+        (if (eq (len h) 0) 0
+            (add (sg-agrees? (head h)) (sg-correct (tail h)))))
+    (defn sg-wrong (h)
+        (if (eq (len h) 0) 0
+            (if (eq (sg-agrees? (head h)) 0)
+                (add 1 (sg-wrong (tail h)))
+                (sg-wrong (tail h)))))
+    (defn sg-total (h) (len h))
+
+    ; --- PROMOTION GATE: our classifier is trusted only when it has agreed with ground truth
+    ;     enough times AND disagreed few enough times — proven agreement, never asserted confidence.
+    ;     (proven-count floor, like value-execution's credit gate; division-free so the kernels
+    ;      compare exact integers.)
+    (defn sg-promoted? (h min-correct max-wrong)
+        (if (and (ge (sg-correct h) min-correct) (ge max-wrong (sg-wrong h))) 1 0))
+
+    ; --- AUTHORITY: who the body routes on for this modality right now.
+    ;     "self" once promoted — the foreign carrier can retire, the perception is ours, aligned
+    ;     with our own primitives and values; "ground-truth" until the agreement is proven.
+    (defn sg-authority (h min-correct max-wrong)
+        (if (eq (sg-promoted? h min-correct max-wrong) 1) "self" "ground-truth"))
+
+    0)
