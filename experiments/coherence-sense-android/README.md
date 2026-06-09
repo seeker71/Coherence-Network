@@ -37,10 +37,12 @@ It's a **debug-signed** build (no Play Store) — fine for trying it on your own
    ipconfig getifaddr en0                   # your Mac's LAN IP, e.g. 192.168.1.23
    ```
 2. In the app, set the address to `http://<that-IP>:8800` and tap **Connect + share senses**.
-3. Watch: the status shows `synced ✓ witnessed N frames`, and the feed scrolls one line per
-   snapshot — which senses are present, the field the Mac shares back. Move the phone, cover the
-   light sensor, turn it — the field changes live. Open `http://<that-IP>:8800` in a Mac browser to
-   see the shared field from the other side.
+3. **Open the live dashboard** in a Mac browser: `http://localhost:8800` — a dark console showing
+   *presence* (is the body here, how many frames, how long alive), *organs active* (which senses are
+   live, lighting up as they appear), the *latest field* values, and an *events / surprises* log (an
+   organ coming online or going quiet, the peer connecting). Move the phone, cover the light sensor,
+   turn it — the dashboard changes live. (Recognition / prediction / inference-error are honest
+   placeholders there until the Form recipes are wired into this live loop — the next carrier step.)
 
 ## Build it yourself
 
