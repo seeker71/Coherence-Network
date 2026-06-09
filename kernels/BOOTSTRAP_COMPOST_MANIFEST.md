@@ -255,6 +255,12 @@ side becomes a thin client (or disappears).
 | `api/app/services/substrate/form_builders.py` | 441 | Template primitives (Build, CaptureRef, Const, MapBuild) as Python recipe constructors | Each primitive becomes a Form CTOR in `form-grammar/templates.fk` | Form-native template primitives prove convergence with the Python primitives via NodeID identity |
 | `api/app/routers/utils.py` (Python-implementation rows) | added/grew through #2056, #2058 | Each utility endpoint (`coherence_weight`, `nodeid_distance`, `weighted_average`) carries both a Python implementation and a Form-recipe call site behind a feature flag | The Form recipe IS the endpoint; the Python fallback row composts | Three-way parity stable for the endpoint AND the kernel-listener path serves it without subprocess |
 
+**Phase C release slice (2026-06-09).** The `serve_via_kernel`
+compatibility `fallback` hook and the remaining route-local Python fallback
+bodies for household/idea decisions have composted. The affected FastAPI
+handlers still bind HTTP request/response shape, but the decisions now require
+the Form kernel carrier and fail loudly if no kernel is present.
+
 **Phase C total: 2938 LOC of Python runtime + bridge tissue (form_runtime + self_host + form_rules + form_builders), plus the growing utility-router Python rows.**
 
 **Note on `form_runtime.py`:** the body has carried this through nearly every breath. Compost with care — it taught the body what Form is. It composts only after Breath 7, and the manifest names it here so the destination shape is visible from the start.

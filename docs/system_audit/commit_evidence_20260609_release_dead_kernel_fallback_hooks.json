@@ -1,0 +1,131 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/release-python-api-bootstrap-tissue-20260609",
+  "commit_scope": "Release dead Python fallback hooks from Form-kernel served API decisions.",
+  "files_owned": [
+    "api/app/services/form_kernel_bridge.py",
+    "api/app/routers/household.py",
+    "api/app/routers/ideas.py",
+    "api/tests/test_agent_invitation.py",
+    "kernels/BOOTSTRAP_COMPOST_MANIFEST.md",
+    "docs/system_audit/commit_evidence_20260609_release_dead_kernel_fallback_hooks.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 -m py_compile api/app/services/form_kernel_bridge.py api/app/routers/ideas.py api/app/routers/household.py",
+      "rg -n -U 'serve_via_kernel\\([^)]*fallback\\s*=' api scripts docs",
+      "rg -n 'fallback=lambda|value-identical fallback|Python the value-identical fallback|python-fallback|run_with_fallback|fallback: Callable|fallback is accepted|_ = fallback' api/app/services/form_kernel_bridge.py api/app/routers api/tests scripts/runtime_surface_report.py scripts/kernel_readiness_harness.py scripts/kernel_attribution_report.py -g '!docs/system_audit/commit_evidence_*.json'",
+      "cargo build --release --bin form-kernel-rust",
+      "cd api && python3 -m pytest -q tests/test_form_kernel_bridge_structure_access.py tests/test_kernel_inline_latency.py tests/test_household_service_board.py tests/test_discord_votes_heard.py tests/test_idea_standing_questions.py",
+      "cd api && python3 -m pytest -q tests/test_agent_invitation.py::test_homepage_invites_anyone_or_anything_to_canonical_paths",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260609_release_dead_kernel_fallback_hooks.json",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "The bridge no longer accepts a fallback callable, and household/ideas route-local Python fallback bodies were removed. The focused API suite passed after building the required Rust kernel carrier: 39 passed, 3 skipped."
+  },
+  "known_failed_attempts": [
+    {
+      "command": "cd api && .venv/bin/python -m pytest -q tests/test_form_kernel_bridge_structure_access.py tests/test_kernel_inline_latency.py tests/test_household_service_board.py tests/test_discord_votes_heard.py tests/test_idea_standing_questions.py",
+      "status": "environment-missing",
+      "output": "zsh:1: no such file or directory: .venv/bin/python",
+      "resolution": "Used the available python3 runner for the same test set."
+    },
+    {
+      "command": "cd api && python3 -m pytest -q tests/test_form_kernel_bridge_structure_access.py tests/test_kernel_inline_latency.py tests/test_household_service_board.py tests/test_discord_votes_heard.py tests/test_idea_standing_questions.py",
+      "status": "fixed",
+      "output": "6 failed, 27 passed, 9 skipped; failing endpoints raised RuntimeError because form-kernel-rust binary was absent.",
+      "resolution": "Built form-kernel-rust with cargo build --release --bin form-kernel-rust, then reran the same suite successfully."
+    },
+    {
+      "command": "GitHub Thread Gates / validate-thread-process",
+      "status": "fixed",
+      "output": "tests/test_agent_invitation.py::test_homepage_invites_anyone_or_anything_to_canonical_paths failed because the test searched web/app/page.tsx for English copy that now lives in web/messages/en.json.",
+      "resolution": "Updated the test to prove the page calls the translation keys and the English message catalog still carries the canonical invitation copy; focused pytest passes."
+    }
+  ],
+  "ci_validation": {
+    "status": "pending",
+    "reason": "Initial Thread Gates failed on a localized homepage source assertion; the focused failing test now passes locally and remote CI needs rerun after amended push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No production deploy has run for this branch yet."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is passing; push, PR checks, merge, deploy, and public verification remain."
+  },
+  "idea_ids": [
+    "form-native-runtime",
+    "native-kernel-http-front-door"
+  ],
+  "spec_ids": [
+    "form-native-http-stack"
+  ],
+  "task_ids": [
+    "release-python-api-bootstrap-tissue-20260609",
+    "release-dead-kernel-fallback-hooks"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "release-request"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "serve_via_kernel no longer exposes a fallback parameter or accepts route-local fallback callables.",
+    "Household and ideas helper bodies that only existed as ignored Python fallbacks were removed.",
+    "Focused route tests fail without the kernel carrier and pass once form-kernel-rust is built, proving the endpoint decisions require the kernel.",
+    "The homepage invitation test observes translated copy in web/messages/en.json instead of pinning localized text to the page component source."
+  ],
+  "change_files": [
+    "api/app/services/form_kernel_bridge.py",
+    "api/app/routers/household.py",
+    "api/app/routers/ideas.py",
+    "api/tests/test_agent_invitation.py",
+    "kernels/BOOTSTRAP_COMPOST_MANIFEST.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Dead Python fallback hooks are gone; affected endpoint decisions continue to work only when the Form kernel carrier is available.",
+    "public_endpoints": [
+      "POST /api/household/requests/{request_id}/acknowledge",
+      "GET /api/household/requests/{request_id}/trace",
+      "GET /api/household/gatherings",
+      "GET /api/household/places/nearest",
+      "GET /api/ideas/{idea_id}"
+    ],
+    "test_flows": [
+      "Household request lifecycle, trace, gathering visibility, place lookup, and presence scan tests passed with the built kernel carrier.",
+      "Discord vote resonance reaches the idea cell through endpoint_reaction_resonance.fk.",
+      "Bridge structure-access and kernel latency/status tests passed without any fallback callable surface.",
+      "Homepage invitation source test passes against translated page wiring and English message content."
+    ]
+  }
+}
