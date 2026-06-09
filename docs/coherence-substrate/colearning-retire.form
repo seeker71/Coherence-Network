@@ -1,0 +1,65 @@
+; colearning-retire.form — co-learning M3, the ENDGAME: retire the 3rd-party oracle per category once
+; the merged Form-native arm has PROVEN it reaches it. The circle has learned to hear on its own.
+;
+; THE ASK (Urs, the co-learning arc):
+;   co-learning.form names M3 as the close of the loop — "champion-challenger retires the 3rd-party per
+;   category once the merged Form-native arm reaches it — the circle has learned to hear on its own."
+;   This makes that milestone an executable, proven recipe. Each category (speech / music / animals /
+;   other) carries its own 3rd-party oracle riding shotgun while the mesh-merged native arm learns; the
+;   moment the native arm has REACHED that oracle over a long-enough window, the expensive 3rd-party
+;   classifier can STOP RUNNING for that category. Per-category, independent: each oracle retires when
+;   ITS native arm reaches it, not all at once.
+;
+; THE SHAPE  (runnable: form-stdlib/colearning-retire.fk · proven: tests/colearning-retire-band.fk -> 127)
+;
+;   A HISTORY is champion-challenger's competition record for ONE category's window — a list of trials,
+;   each (list champion-correct challenger-correct), champion = the 3rd-party oracle, challenger = the
+;   merged Form-native nearest-shape arm grown from the circle's mics. The endgame asks one question and
+;   answers it the same way twice, the way model-retire.fk partitions its scoreboard:
+;
+;   1. RETIRE?         clr-retire? (history min-samples margin): may the 3rd-party oracle stop running
+;                      for this category now? This IS champion-challenger's cc-promote? — composed, not
+;                      re-derived: 1 iff the native arm has REACHED the oracle within margin over a window
+;                      of at least min-samples. Proven head-to-head, never asserted accuracy; the
+;                      long-window floor is the safety against a lucky streak retiring a category early.
+;   2. KEEP-3RD-PARTY? clr-keep-3rd-party? (...): must the expensive 3rd-party classifier keep running?
+;                      The strict inverse of retire, so the pair partitions every history cleanly —
+;                      retire? + keep? == 1. This is the live COST question: while it answers 1 the body
+;                      is still paying the oracle for this category.
+;   3. AUTHORITY       clr-authority (...): which arm the body routes this category on right now.
+;                      "native" once the oracle has retired (the merged Form-native arm carries the
+;                      category alone); "third-party" until the competition proves over a long-enough
+;                      window. cc-authority's shape with the per-category-oracle vocabulary.
+;
+; THE PROVEN VERDICT (tests/colearning-retire-band.fk -> 127, three-way Go=Rust=TS):
+;   reached (12 trials, oracle 10 / native 10) — the native arm REACHES at margin 0 (a tie reaches:
+;     equal-or-exceed; the native need not BEAT the oracle to free it, only catch it) over a window past
+;     the 12-sample floor -> RETIRE, authority "native".  behind (oracle 9 / native 6) -> NOT retired,
+;     "third-party" keeps authority and the body keeps paying — yet slack 3 makes 6+3 >= 9 reach, so the
+;     margin is load-bearing.  few (5 trials, native 5 / oracle 1) — far ahead but below the floor -> KEPT:
+;     a lucky streak is not a verdict. Seven falsifiable bits: 1 retire-on-reach · 2 authority-flips ·
+;     4 hold-when-behind · 8 third-party-keeps-authority · 16 too-few-blocks-retirement ·
+;     32 keep-is-strict-inverse (partition) · 64 margin-slack-is-load-bearing.  Sum 127.
+;   Exact integer counts inherited from champion-challenger — no ratio, no float; identical on every kernel.
+;
+; THE ONE LANE:
+;   This decides RETIREMENT from a category's competition history. It does not run the oracle, score a
+;   sample, merge exemplars, or label ground truth — those are upstream (co-learning.fk's federated union,
+;   the carriers, the oracle). Given an honest history it answers deterministically: retire only on earned,
+;   long-window competition. The gate's honesty is exactly the honesty of the trials it is fed.
+;
+; KIN — the body already holds the spine; this closes the loop with it:
+;   champion-challenger.form (the proven head-to-head; clr-retire? composes cc-promote? directly — the
+;   retirement verdict IS the promotion verdict) · co-learning.form (M0-M3; this ships its M3 — the merged
+;   native arm earning the category) · model-retire.form (the sibling endgame: retire? + keep? partition a
+;   scoreboard; same shape, this one over a trial-history rather than a tally) · recognition-router.form
+;   (the routing tree the retired category drops out of — once native, the oracle carrier is no longer
+;   fanned in) · classifier-eval.fk (the min-correct floor — cc-promote?'s min-samples is the same gate) ·
+;   value-execution.fk (credit only what's proven, turned onto oracle retirement) · lc-honest-lane
+;   (earned confidence only) · the three-way validate.sh (no trusted prover — what survives Go=Rust=TS).
+;
+; LINEAGE:
+;   champion-challenger.form · co-learning.form · model-retire.form · recognition-router.form ·
+;   learning-arc.form (the per-chunk learn-from-oracle that fills the history) · value-execution.fk ·
+;   lc-honest-lane · the route-promotion loop (SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md) where a
+;   Form-native arm earns its way to authority over the carrier it shadows.

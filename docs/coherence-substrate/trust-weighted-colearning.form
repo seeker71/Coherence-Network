@@ -1,0 +1,48 @@
+; trust-weighted-colearning.form — weight a device's contribution by trust BEFORE it merges into the shared classifier.
+;
+; THE GAP co-learning LEFT: co-learning.fk unions two mics' learned exemplar sets so the merged
+; classifier recognizes what neither heard alone (cl-merge, proven →127). But a naive union trusts every
+; peer equally. A device that went silent ticks ago — or whose stream is stale — would still pour its
+; exemplars into the shared field and pollute the federation. The mesh needs a gate: contribute only
+; while still trusted.
+;
+; THE SHAPE: the trust reading is not invented here — it is trust-decay.fk's presence-confidence, read
+; straight off the same grace budget heartbeat.fk feeds. The chain, end to end:
+;   td-grace-band (last-beat now max half)  → "fresh" | "fading" | "gone"   (depth into the grace budget)
+;   twc-band                                → 2 | 1 | 0                      (the string lifted to a number)
+;   twc-admit? band                         → 1 iff band != 0               (admit unless fully decayed)
+;   twc-merge a b band                      → cl-merge a b iff admitted, else a UNCHANGED
+; A peer past its full-edge (grace fully spent → band 0 → gone) is refused; its stale shapes never enter
+; the shared classifier, so a query for that shape stays unrecognized. A fresh peer's exemplars flow in
+; and grow the shared breadth. The local peer A's exemplars stay at the head of the union, so
+; nearest-shape's "oldest exemplar wins" ties keep local knowledge primary and the admitted peer purely
+; additive.
+;
+; THE FEDERATION GUARD, PROVEN (tests/trust-weighted-colearning-band.fk → 127, three-way):
+;   A local peer A learned SPEECH. A FRESH peer F (now=12 on a max=10 budget) learned MUSIC; a GONE peer
+;   G (now=25, grace spent) learned ANIMAL. The bands are read from td-grace-band itself, not hand-fed.
+;     1   twc-band reads FRESH as 2                                    (band exact, positive)
+;     2   twc-band reads GONE  as 0                                    (band exact, negative)
+;     4   twc-admit? ADMITS the fresh peer (band 2 → 1)                (gate, positive)
+;     8   twc-admit? REFUSES the gone peer (band 0 → 0)                (gate, negative)
+;     16  merging F GROWS breadth 1 → 2                                (guard at breadth, positive)
+;     32  merging G leaves breadth UNCHANGED at 1                      (guard at breadth, negative)
+;     64  after merge a MUSIC query IS recognized "music", and an ANIMAL query is NOT "animal"
+;                                                                      (guard at recognition, both ways)
+;   Seven falsifiable claims, each pinning the trust gate positive AND negative. Verdict locks at 127 on
+;   Go, Rust, and TS — three kernels agreeing IS the proof. A stale device can grow neither the shared
+;   field's breadth nor its recognition; a trusted device's shape is learned.
+;
+; HONEST LANE: the trust weight is a BINARY admit (band != gone), not a continuous influence — a fading
+; peer counts exactly as much as a fresh one, a gone peer not at all. That is the right primitive for a
+; coarse three-band presence reading the three kernels compare exactly; a graded blend of exemplars would
+; need a div and a float influence the curated band set keeps out of verdicts. Admission is per-merge and
+; order-stable. This is the smallest trust-weighting that matters, derived from the body's own
+; presence-decay rather than a fresh trust metric.
+;
+; KIN: co-learning.form (the federated union this gates) · trust-decay.form (the grace budget the trust
+;   band reads) · heartbeat.fk (the liveness table the budget rides on) · nearest-shape.form (the
+;   recognizer the merge feeds) · federation-addressing.form (merkle on the wire — what crosses the mesh
+;   between trusted peers) · cell-sync.form + mesh-relay.form (the wire itself) · shared-sensing.form
+;   (many bodies, one field — the circle this guard keeps clean) · champion-challenger.form (retire the
+;   oracle once the trusted-merged arm has earned the route).

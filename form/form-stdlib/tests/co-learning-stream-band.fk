@@ -1,0 +1,57 @@
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk
+;
+; co-learning-stream-band — the LIVE per-device learning FOLD + the federated speedup over streams, three-way.
+;
+; co-learning-band (M0) handed each device an already-learned exemplar set. Here each device GROWS its set by
+; FOLDING its own oracle stream (cls-learn-stream), then the merged breadth beats either alone.
+;
+;   Device A's stream (Mac mic) heard SPEECH:  sa = [ ("speech", [5 0 0]) ]
+;   Device B's stream (Android mic) heard MUSIC: sb = [ ("music",  [0 5 0]) ]
+; After folding, A's learned set = [("speech",[5 0 0])], B's = [("music",[0 5 0])]. A is PARTIAL — shown a
+; music feature it has no music exemplar, nearest-shape routes it to its only prototype (speech): WRONG.
+; B is partial the other way. The union of the two folded streams (cl-merge) recognizes BOTH — the federated
+; speedup, now from STREAMS: merged breadth == 2 while each device alone covers only 1.
+; A third stream s3 of three samples proves the FOLD genuinely accumulates (breadth 3, not just a base case).
+;
+; Verdict 127 when every claim lands:
+;   1   A's folded stream learned speech            (A recognizes a speech query as "speech")
+;   2   B's folded stream learned music             (B recognizes a music query as "music")
+;   4   A alone gets MUSIC wrong                     (A folded only speech → music query mis-routes: knows? == 0)
+;   8   B alone gets SPEECH wrong                    (B folded only music → speech query mis-routes: knows? == 0)
+;   16  the MERGE of the two streams gets BOTH right (union recognizes speech AND music)
+;   32  the federated speedup number                (merged breadth == 2 while each device alone == 1)
+;   64  the fold accumulates over a multi-sample stream (3-sample stream → breadth 3, a real fold not a base case)
+(do
+    ; cls-* recipes inlined here so the band stays self-contained (preludes core + nearest-shape + co-learning).
+    (defn cls-label   (sample) (nth sample 0))
+    (defn cls-feature (sample) (nth sample 1))
+    (defn cls-learn (sample set) (cons (list (cls-label sample) (cls-feature sample)) set))
+    (defn cls-learn-stream (samples set)
+        (if (eq (len samples) 0) set
+            (cls-learn-stream (tail samples) (cls-learn (head samples) set))))
+    (defn cls-device (samples) (cls-learn-stream samples (empty)))
+    (defn cls-merged-breadth (stream-a stream-b)
+        (cl-breadth (cl-merge (cls-device stream-a) (cls-device stream-b))))
+    (defn cls-stream-knows? (samples query label) (cl-knows? query (cls-device samples) label))
+
+    (let speechq (list 5 0 0))
+    (let musicq  (list 0 5 0))
+    (let sa (list (list "speech" speechq)))               ; device A's stream: one speech sample
+    (let sb (list (list "music"  musicq)))                ; device B's stream: one music sample
+    (let s3 (list (list "a" (list 1 0 0))                 ; a 3-sample stream — proves the fold accumulates
+                  (list "b" (list 0 1 0))
+                  (list "c" (list 0 0 1))))
+    (let da (cls-device sa))
+    (let db (cls-device sb))
+
+    (let c0 (if (eq (cls-stream-knows? sa speechq "speech") 1) 1 0))   ; A learned speech
+    (let c1 (if (eq (cls-stream-knows? sb musicq  "music")  1) 2 0))   ; B learned music
+    (let c2 (if (eq (cls-stream-knows? sa musicq  "music")  0) 4 0))   ; A alone: music WRONG (partial)
+    (let c3 (if (eq (cls-stream-knows? sb speechq "speech") 0) 8 0))   ; B alone: speech WRONG (partial)
+    (let c4 (if (and (eq (cl-knows? speechq (cl-merge da db) "speech") 1)
+                     (eq (cl-knows? musicq  (cl-merge da db) "music")  1)) 16 0))  ; merge: BOTH right
+    (let c5 (if (and (and (eq (cls-merged-breadth sa sb) 2)
+                          (eq (cl-breadth da) 1))
+                     (eq (cl-breadth db) 1)) 32 0))        ; speedup: merged 2 while each alone 1
+    (let c6 (if (eq (cl-breadth (cls-device s3)) 3) 64 0)) ; the fold accumulates over a multi-sample stream
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

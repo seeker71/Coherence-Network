@@ -1,0 +1,36 @@
+; preludes: form-stdlib/core.fk form-stdlib/cell-sync.fk form-stdlib/slice-update-roundtrip.fk
+;
+; slice-update-roundtrip-band — a model-delta update crosses the mesh by re-addressing, made falsifiable.
+;
+; A model gains a new slice — a delta at content-address "d2". The sender OFFERS the delta-addresses
+; (d1 d2). Receiver R1 already HAS (d0 d1) — it lacks d2, so it must request EXACTLY d2 and nothing else.
+; Receiver R2 already HAS (d1 d2) — everything offered is already held, so it requests nothing (a re-sent
+; update is free; structural address-equality dedups it). Two delta-items then arrive at R1:
+; "d2" re-addresses to "d2" (authentic), but "d1" arrives re-addressing to "z" (tampered in transit) —
+; verify keeps d2, drops the tampered one. Once the verified d2 is applied, R1's HAVE-after is (d0 d1 d2):
+; the update SURVIVED — its address is now held, the roundtrip closed.
+;
+; Verdict 127 when every claim lands:
+;   1   R1 requests the missing delta              (sur-request? d2 over offer,(d0 d1) == 1)
+;   2   R1 does NOT request an already-had delta   (sur-request? d1 over offer,(d0 d1) == 0)
+;   4   R1's request-set is exactly the absent one (request-count (d1 d2) over (d0 d1) == 1)
+;   8   the requested delta is named correctly     (d2 is in R1's want-set)
+;   16  R2, already current, requests nothing      (request-count (d1 d2) over (d1 d2) == 0)
+;   32  re-addressing accepts the authentic delta  (accept-count == 1 — only d2 survives) and drops tamper
+;   64  the applied delta survived the roundtrip   (sur-applied? d2 in HAVE-after (d0 d1 d2) == 1)
+(do
+    (let offer      (list "d1" "d2"))           ; the sender offers two delta-addresses
+    (let have-r1    (list "d0" "d1"))           ; R1 lacks d2
+    (let have-r2    (list "d1" "d2"))           ; R2 already current
+    (let want-r1    (sur-missing offer have-r1))
+    (let items      (list (list "d2" "d2") (list "d1" "z")))  ; (offered, recomputed): d2 true, d1 tampered
+    (let have-after (list "d0" "d1" "d2"))      ; R1 after applying the verified d2
+
+    (let c0 (if (eq (sur-request? "d2" offer have-r1) 1) 1 0))
+    (let c1 (if (eq (sur-request? "d1" offer have-r1) 0) 2 0))
+    (let c2 (if (eq (sur-request-count offer have-r1) 1) 4 0))
+    (let c3 (if (eq (cs-has? "d2" want-r1) 1) 8 0))
+    (let c4 (if (eq (sur-request-count offer have-r2) 0) 16 0))
+    (let c5 (if (eq (sur-accept-count items) 1) 32 0))
+    (let c6 (if (eq (sur-applied? "d2" have-after) 1) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

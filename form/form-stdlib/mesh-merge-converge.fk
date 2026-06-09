@@ -1,0 +1,62 @@
+; mesh-merge-converge.fk — gossip convergence: merging the same deltas in ANY order yields one value.
+;
+; federated-slices.form's M2: two cells flood a slice-update over mesh-relay (managed flooding, deduped
+; on the content-address), a third cell merges BOTH and applies it — and the field only federates if the
+; third cell's merged value is the SAME whether the deltas arrived A→B→C, C→B→A, or by any other path.
+; This is the gossip-convergence (eventual-consistency) property: a commutative, associative merge is
+; ORDER-INDEPENDENT, so every cell that has seen the same set of deltas holds the same merged slice,
+; no matter which gossip path delivered them. That is what "mesh-merge == local-merge" means as a value
+; proof — and because slice-merge's merge is integer-exact (the divide is deferred), the convergence is
+; bit-identical three-way, which a float-averaging federation cannot promise.
+;
+; This recipe carries NO arithmetic of its own. It composes slice-merge.fk's sm-num / sm-den (the trust-
+; weighted FedAvg + TIES sign-election merge, PROVEN three-way → 127) and asserts only one thing about
+; them: their value at a coordinate is invariant under reordering of the slice list. The merge does the
+; math; this proves the math converges. A SLICE is (list weight delta), exactly slice-merge's shape.
+;
+; The six orderings of a three-slice list are built from primitives (no sub, no mutation): a permutation
+; is just a re-cons of the same three cells. mm-converged-at? is the per-coordinate agreement (both the
+; numerator AND the denominator match — the full merged rational, not half of it). The gone-peer law is
+; the federation's safety floor: a weight-0 delta (a faded or departed cell) joins the set without moving
+; the merged value, so a silent peer can neither corrupt nor block convergence.
+;
+; Composes: form-stdlib/slice-merge.fk (sm-num / sm-den — prelude it). Proven by tests/mesh-merge-converge-band.fk.
+
+(do
+    ; a permutation is a re-cons of the same three cells — no element added or lost, only order changed.
+    (defn mm-perm (a b c) (list a b c))
+
+    ; the merged coordinate's numerator / denominator, delegated entirely to slice-merge's proven merge.
+    (defn mm-num (slices j) (sm-num slices j))
+    (defn mm-den (slices j) (sm-den slices j))
+
+    ; do two orderings of the SAME deltas merge to the same value at coordinate j?
+    ; convergence is the WHOLE rational: numerator AND denominator must both agree (binary and — nested).
+    (defn mm-converged-at? (xs ys j)
+        (and (eq (mm-num xs j) (mm-num ys j))
+             (eq (mm-den xs j) (mm-den ys j))))
+
+    ; converged across all three coordinates of a 3-dim delta (j = 0,1,2)?
+    (defn mm-converged-3d? (xs ys)
+        (and (and (mm-converged-at? xs ys 0)
+                  (mm-converged-at? xs ys 1))
+             (mm-converged-at? xs ys 2)))
+
+    ; gossip convergence over the six paths a three-delta set can arrive by: every permutation of
+    ; (a b c) merges to the same value as the canonical (a b c) order, at every coordinate.
+    ; The named diagonal is a→b→c vs c→b→a (full reverse); the other four close the orbit.
+    (defn mm-order-stable? (a b c)
+        (and (and (and (mm-converged-3d? (mm-perm a b c) (mm-perm a c b))
+                       (mm-converged-3d? (mm-perm a b c) (mm-perm b a c)))
+                  (and (mm-converged-3d? (mm-perm a b c) (mm-perm b c a))
+                       (mm-converged-3d? (mm-perm a b c) (mm-perm c a b))))
+             (mm-converged-3d? (mm-perm a b c) (mm-perm c b a))))
+
+    ; the gone-peer law: a weight-0 delta gone (a departed/faded cell) leaves the merge unchanged —
+    ; merging (a b c gone) equals merging (a b c) at every coordinate. Safety floor of convergence:
+    ; a silent peer neither corrupts the value nor blocks the field from agreeing.
+    (defn mm-gone-stable? (a b c gone)
+        (and (and (mm-converged-at? (list a b c) (list a b c gone) 0)
+                  (mm-converged-at? (list a b c) (list a b c gone) 1))
+             (mm-converged-at? (list a b c) (list a b c gone) 2)))
+    0)

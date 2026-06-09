@@ -1,0 +1,50 @@
+; merkle-readdress.form — the re-address proof: same content → same address, regardless of build path.
+;
+; THE GAP THIS CLOSES (named in federation-addressing.form, line 48-52):
+;   federation-addressing.form establishes that the MERKLE ROOT is the cross-runtime address — the
+;   GUID-free federation key that a per-runtime NodeID counter can never be. It points at
+;   tests/merkle-band.fk for "proven deterministic three-way." But merkle-band proves root WELL-FORMEDNESS
+;   and PROOF VERIFICATION; it does not prove the RE-ADDRESS property itself. That property — the actual
+;   load-bearing claim of federation addressing — is what this band pins:
+;
+;     the Merkle root is a PURE FUNCTION OF CONTENT, so the SAME structure built along a DIFFERENT path
+;     hashes to the SAME root, and DIFFERENT content hashes to a DIFFERENT root.
+;
+;   "Re-address on receipt" (federation-addressing.form, line 14-16) only works if rebuilding a received
+;   structure on another runtime — a different intern order, a freshly-consed list, no structure-sharing —
+;   lands on the byte-identical root. That is exactly bit 2 below. Without this proof the federation key is
+;   asserted; with it, it is falsifiable.
+;
+; THE SHAPE  (runnable: form-stdlib/merkle-readdress.fk · proven: tests/merkle-readdress-band.fk → 127)
+;
+;   composes form-stdlib/merkle.fk (merkle-root, bytes-eq) over form-stdlib/sha256.fk.
+;   (rebuild-by-cons blocks) — the SAME content rebuilt along another path (each block and each byte
+;       re-consed onto a fresh tail; no sharing with the input). This is what a second runtime's ingest,
+;       or a different build order, produces. The re-address leg.
+;   (reverse-blocks blocks)  — the same leaves in reverse ORDER. Merkle is an ORDERED structure, so this
+;       is DIFFERENT content and must give a different root.
+;   (same-root? a b)         — bytes-eq(merkle-root a, merkle-root b): 1 = same address, 0 = different.
+;
+; THE SEVEN CLAIMS (each a distinct power of two, so the verdict names which held — all seven = 127):
+;   1  (1)  the address is a well-formed 32-byte digest.
+;   2  (2)  SAME content, DIFFERENT build path → SAME address.   ← the re-address property, the heart of it
+;   3  (4)  PURE function: computing the root twice on the same content yields the same address.
+;   4  (8)  DIFFERENT content (one leaf changed) → DIFFERENT address.
+;   5  (16) ORDER is content: reversing the leaves changes the address (keeps claim 2 honest — same
+;           ORDERED content only; never a set-equality overclaim).
+;   6  (32) the root commits to the WHOLE content: an extra leaf changes the address.
+;   7  (64) the degenerate single-leaf structure re-addresses too.
+;
+; WHY ORDER-SENSITIVE AND STILL "INSERTION-ORDER-INDEPENDENT":
+;   federation-addressing.form calls the address "insertion-order-INDEPENDENT" — that is the intern
+;   COUNTER's arrival order (which device saw the cell first), which the root ignores. The root is still
+;   sensitive to the LEAF SEQUENCE of the structure itself. Claim 2 (re-address, build-order-independent)
+;   and claim 5 (leaf-order is content) are the two halves that keep this distinction exact: the federation
+;   key is independent of HOW/WHEN you built the list value, dependent on WHAT ordered content it holds.
+;
+; KIN: federation-addressing.form (the address this proves — closes its honest gap, line 48) ·
+;   merkle.fk + sha256.fk (the content address it composes) · tests/merkle-band.fk (root well-formedness +
+;   proof verification — the sibling band; this one proves the re-address property merkle-band does not) ·
+;   cell-sync.fk (cs-authentic? re-addresses to verify — this is why a forged subtree fails its own hash) ·
+;   federated-slices.form (model water crossing by merkle — re-addressed on receipt) ·
+;   lc-federation-as-freedom (the freedom this content-addressing buys: no central GUID authority).

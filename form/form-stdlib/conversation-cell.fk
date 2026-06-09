@@ -1,0 +1,104 @@
+; conversation-cell.fk — a transcript as a content-addressable sequence of utterance cells.
+;
+; A conversation is not a blob of prose; it is an ORDERED SEQUENCE of utterances, each itself a small
+; structured cell. This recipe holds that shape in pure list ops — the same list the Mac builds is the
+; list the phone receives, identical by structure on every kernel (validate.sh parity is transcript
+; parity). No mutation, no database: a transcript is a value you grow with cons and query by walking.
+;
+; An UTTERANCE = (list ts speaker text-key):
+;   ts        — a small-int timestamp (logical clock tick; when it was said)
+;   speaker   — a small-int speaker id (who said it; 0 = human, 1 = agent, 2.. = others)
+;   text-key  — a small-int CONTENT KEY standing in for the prose-recipe address. The prose itself
+;               interns elsewhere as a R_Block.SEQUENCE of word-cells (prose-as-recipe.form); here the
+;               utterance carries the content-ADDRESS, not the bytes. Same prose → same key → same cell.
+; A CONVERSATION = a list of utterances, OLDEST FIRST (head is the first thing said, last is the most
+; recent). cv-append adds to the end, so order is the lived order; cv-last reads the tail.
+;
+; The content-addressing claim is the heart: two conversations built from the SAME utterances in the
+; SAME order are STRUCTURALLY IDENTICAL — element-for-element equal all the way down to the leaf ints.
+; That is what lets a content-addressed store DEDUP a re-sent transcript: it is not "a copy of" the
+; original, it IS the original by structure. We prove that here as list-equality (cv-eq?) of two
+; independent same-content builds — no interning machinery needed, the structure already carries identity.
+;
+; cv-eq? is exact structural equality at the two real levels of the shape: utt-eq? compares two
+; utterances by their three leaf ints (ts, speaker, text-key), and cv-eq? walks two transcripts in
+; lockstep, requiring equal length and every utterance agreeing. The content-addressing primitive
+; expressed in the curated band set. No new kernel primitive: utterances are lists, queries are walks,
+; equality is a recursion.
+;
+; Honest lane: ts/speaker/text-key are small ints (logical, not wall-clock); cv-since compares ts with
+; ge (so t itself is included — "since" is inclusive). cv-eq? is EXACT structural equality (same shape,
+; same leaves), the right primitive for content-addressed dedup; it is not fuzzy/semantic similarity.
+;
+; Proven by: form-stdlib/tests/conversation-cell-band.fk (three-way at validate.sh, verdict 127).
+
+(do
+    ; --- the utterance cell: (list ts speaker text-key), and its accessors ---
+    (defn utt        (ts spk key) (list ts spk key))  ; build one utterance
+    (defn utt-ts     (u) (nth u 0))                   ; when it was said
+    (defn utt-spk    (u) (nth u 1))                   ; who said it
+    (defn utt-key    (u) (nth u 2))                   ; the content address (prose-recipe stand-in)
+
+    ; --- APPEND: grow the transcript at the END (oldest-first order preserved). ---
+    ; pure list ops: walk to the tail and cons the new utterance after the last existing one.
+    (defn cv-append (u conv)
+        (if (eq (len conv) 0)
+            (list u)
+            (cons (head conv) (cv-append u (tail conv)))))
+
+    ; --- COUNT: how many utterances the transcript holds. ---
+    (defn cv-count (conv) (len conv))
+
+    ; --- LAST: the most recent utterance (the tail of an oldest-first list). ---
+    ; empty transcript → the absence value (empty); a content-addressed store reads "nothing said yet".
+    (defn cv-last (conv)
+        (if (eq (len conv) 0)
+            (empty)
+            (if (eq (len conv) 1)
+                (head conv)
+                (cv-last (tail conv)))))
+
+    ; --- SINCE: the utterances with ts >= t (inclusive), order preserved. ---
+    ; selection by content of each cell — read ts, keep or drop, recurse. No subtraction, just ge.
+    (defn cv-since (conv t)
+        (if (eq (len conv) 0)
+            (empty)
+            (if (ge (utt-ts (head conv)) t)
+                (cons (head conv) (cv-since (tail conv) t))
+                (cv-since (tail conv) t))))
+
+    ; --- SPEAKER-SAID?: did this speaker contribute at least one utterance? 1 / 0. ---
+    ; existential walk over the transcript, matching the speaker id of each cell.
+    (defn cv-speaker-said? (conv speaker)
+        (if (eq (len conv) 0)
+            0
+            (if (eq (utt-spk (head conv)) speaker)
+                1
+                (cv-speaker-said? (tail conv) speaker))))
+
+    ; --- CONTENT-ADDRESSING: exact structural equality, at the two real levels of the shape. ---
+    ; the dedup primitive — two same-content builds are the SAME cell by structure, not "a copy".
+    ; the shape has exactly two structured levels (utterance = 3 leaf ints; conversation = list of
+    ; utterances), so equality is two honest walks, no leaf/list ambiguity to resolve at runtime.
+
+    ; an utterance equals another when all three leaves (ts, speaker, text-key) agree — pure int eq.
+    (defn utt-eq? (x y)
+        (if (eq (utt-ts x)  (utt-ts y))
+            (if (eq (utt-spk x) (utt-spk y))
+                (if (eq (utt-key x) (utt-key y)) 1 0)
+                0)
+            0))
+
+    ; two transcripts are equal when same length and every utterance agrees in lockstep order.
+    ; both empty → equal; one empty → not; otherwise heads utt-eq? AND tails cv-eq? — content carries
+    ; identity, so the re-sent transcript dedups to the original rather than duplicating it.
+    (defn cv-eq? (a b)
+        (if (eq (len a) 0)
+            (if (eq (len b) 0) 1 0)
+            (if (eq (len b) 0)
+                0
+                (if (eq (utt-eq? (head a) (head b)) 1)
+                    (cv-eq? (tail a) (tail b))
+                    0))))
+
+    0)

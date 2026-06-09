@@ -1,0 +1,87 @@
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/co-learning.fk form-stdlib/trust-decay.fk form-stdlib/trust-weighted-colearning.fk
+;
+; trust-weighted-colearning-band — a peer's contribution is weighted by trust before it merges, proven three-way.
+;
+; The federation: a local peer A (Mac mic) has learned SPEECH. Two other peers want to contribute their
+; learned exemplars over the mesh:
+;   F = a FRESH peer (Android, last beat recent) that learned MUSIC  → should be admitted
+;   G = a GONE peer  (a device long silent)        that learned ANIMAL → should be refused
+;
+; The trust bands are NOT hand-fed integers — they are read straight off trust-decay.fk's grace budget
+; with concrete clocks (last-beat=10, max=10, half=5; full-edge at 20, half-edge at 15):
+;   now=12 → within half-edge          → td-grace-band "fresh" → twc-band 2  (F)
+;   now=25 → well past full-edge        → td-grace-band "gone"  → twc-band 0  (G)
+; So the trust weight the merge gate reads IS the body's own presence-decay, end to end.
+;
+; Verdict 127 when every claim lands — each pins the trust gate positive AND negative:
+;   1   twc-band reads FRESH correctly          (twc-band 10 12 10 5 == 2)
+;   2   twc-band reads GONE correctly           (twc-band 10 25 10 5 == 0)
+;   4   twc-admit? ADMITS the fresh peer        (twc-admit? 2 == 1)
+;   8   twc-admit? REFUSES the gone peer        (twc-admit? 0 == 0)
+;   16  merging the FRESH peer GROWS breadth    (cl-breadth (twc-merge A F fresh) == 2, was 1)
+;   32  merging the GONE peer leaves breadth UNCHANGED (cl-breadth (twc-merge A G gone) == 1)
+;   64  the fresh peer's shape becomes RECOGNIZABLE after merge, and the gone peer's does NOT
+;       (cl-knows? music (A∪F) "music" == 1  AND  cl-knows? animal (A only) "animal" == 0)
+;
+; Bits 16/32 are the federation guard at the breadth level (a stale device can't grow the field); bit 64
+; is the same guard at the recognition level (a stale device's shape stays unrecognized while a trusted
+; one is learned). Any divergence across kernels is a kernel bug; any wrong-but-agreeing verdict is a
+; false claim — fixed in the recipe or the claim, never weakened to pass.
+
+(do
+    ;; ---------- THE FIELD ----------------------------------------
+    ;; Local peer A learned speech; the two candidate contributors learned music (F) and animal (G).
+    ;; Each exemplar is (label feature-vector) — the body's prototype shape, the same nearest-shape eats.
+    (let speech (list 5 0 0))
+    (let music  (list 0 5 0))
+    (let animal (list 0 0 5))
+    (let a (list (list "speech" speech)))
+    (let f (list (list "music"  music)))
+    (let g (list (list "animal" animal)))
+
+    ;; ---------- TRUST BANDS, READ FROM THE GRACE BUDGET ----------
+    ;; Not hand-fed: td-grace-band reads the presence-decay, twc-band lifts it to 0/1/2.
+    ;; F's clock (now=12) is fresh; G's clock (now=25) is gone.
+    (let fresh-band (twc-band 10 12 10 5))
+    (let gone-band  (twc-band 10 25 10 5))
+
+    ;; ---------- BAND READING IS EXACT ----------------------------
+    ;; The numeric band must read 2 for the fresh peer and 0 for the gone peer — the
+    ;; ground the whole gate stands on. Pinning both ends catches a mis-mapped band.
+    (let band-fresh-ok (if (eq fresh-band 2) 1 0))
+    (let band-gone-ok  (if (eq gone-band  0) 2 0))
+
+    ;; ---------- THE ADMIT GATE, BOTH SIDES -----------------------
+    ;; A fresh (band 2) peer is admitted; a gone (band 0) peer is refused. The binary
+    ;; trust weight: admit unless fully decayed.
+    (let admit-fresh-ok (if (eq (twc-admit? fresh-band) 1) 4 0))
+    (let admit-gone-ok  (if (eq (twc-admit? gone-band)  0) 8 0))
+
+    ;; ---------- BREADTH: TRUSTED GROWS, STALE DOESN'T ------------
+    ;; Merging the FRESH peer unions its exemplar in → breadth climbs 1 → 2.
+    ;; Merging the GONE peer is refused → breadth stays 1. The federation guard,
+    ;; measured as the breadth of the shared field: a stale device cannot grow it.
+    (let merged-fresh (twc-merge a f fresh-band))
+    (let merged-gone  (twc-merge a g gone-band))
+    (let breadth-grows-ok    (if (eq (cl-breadth merged-fresh) 2) 16 0))
+    (let breadth-unchanged-ok (if (eq (cl-breadth merged-gone)  1) 32 0))
+
+    ;; ---------- RECOGNITION: TRUSTED LEARNED, STALE NOT ---------
+    ;; After admitting the fresh peer, a MUSIC query is recognized as "music" (the shared
+    ;; classifier learned what A alone never heard). After refusing the gone peer, an ANIMAL
+    ;; query is NOT recognized as "animal" (the stale shape never entered the field). Chained
+    ;; so the bit lands only if BOTH the positive and the negative hold.
+    (let recog-ok
+        (if (eq (cl-knows? music  merged-fresh "music")  1)
+            (if (eq (cl-knows? animal merged-gone  "animal") 0) 64 0)
+            0))
+
+    ;; ---------- VERDICT ------------------------------------------
+    ;; 127 when every claim lands: bands read exact, admit gate both sides, breadth grows
+    ;; for trusted / unchanged for stale, and recognition follows admission both ways.
+    (add band-fresh-ok
+        (add band-gone-ok
+            (add admit-fresh-ok
+                (add admit-gone-ok
+                    (add breadth-grows-ok
+                        (add breadth-unchanged-ok recog-ok)))))))

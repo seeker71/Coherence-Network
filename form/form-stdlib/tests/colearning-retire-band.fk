@@ -1,0 +1,51 @@
+; preludes: form-stdlib/core.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk
+;
+; colearning-retire-band — co-learning M3, the endgame: the 3rd-party oracle for a category retires only
+; when the merged Form-native arm has PROVEN it reaches it over a long-enough window. Made falsifiable.
+;
+; A history = a list of trials = (list champion-correct challenger-correct) per sample, for ONE category's
+; competition window. champion = the 3rd-party oracle (speech / music / animals / other); challenger = the
+; merged Form-native nearest-shape arm grown from the mesh of mics. Each entry is 1 if that arm got that
+; sample right, else 0. Three categories, three windows:
+;
+;   reached — 12 trials, oracle 10 right / native 10 right. The native arm REACHES the oracle at margin 0
+;             (10 >= 10) over a window past the 12-sample floor, so the oracle RETIRES for this category
+;             and authority flips to "native": the circle hears this category on its own. A tie reaches
+;             (equal-or-exceed), which is the whole point — the native arm need not BEAT the oracle to free
+;             it, only catch it.
+;   behind  — 12 trials, oracle 9 right / native 6 right. The native arm is behind at margin 0 (6 < 9), so
+;             the oracle is NOT retired and "third-party" keeps authority — the body still pays for it. But
+;             the margin slack is real: allow slack 3 and 6+3 >= 9 — it reaches. Slack is load-bearing.
+;   few     — 5 trials, oracle 1 right / native 5 right. The native arm is far ahead, but five samples is a
+;             lucky streak, not a verdict: below the 12-sample floor the oracle is KEPT. The long-window
+;             floor is the safety against premature retirement — the core of the endgame.
+;
+; Counts are exact: no ratio, no float — the same integers on Go=Rust=TS. clr-* is composed from
+; champion-challenger.fk's proven promotion gate, so the retirement verdict IS the proven head-to-head.
+;
+; Verdict 127 when every claim lands:
+;   1    native reached the oracle over a long window -> RETIRE      (clr-retire? reached 12 0 == 1)
+;   2    ... and authority flips to the native arm                   (clr-authority reached 12 0 == "native")
+;   4    native still behind -> do NOT retire the oracle             (clr-retire? behind 12 0 == 0)
+;   8    ... and the 3rd-party oracle keeps authority                (clr-authority behind 12 0 == "third-party")
+;   16   too few samples blocks retirement even when far ahead       (clr-retire? few 12 0 == 0)
+;   32   keep-3rd-party? is the strict inverse (partition holds)     (keep reached == 0 AND keep behind == 1)
+;   64   margin slack is load-bearing                                (clr-retire? behind 12 3 == 1 AND clr-retire? behind 12 0 == 0)
+(do
+    (let reached (list
+        (list 1 1) (list 1 1) (list 1 1) (list 1 1) (list 1 1) (list 1 1)
+        (list 1 1) (list 1 1) (list 1 1) (list 1 1) (list 0 0) (list 0 0)))
+    (let behind (list
+        (list 1 1) (list 1 1) (list 1 1) (list 1 1) (list 1 1) (list 1 1)
+        (list 1 0) (list 1 0) (list 1 0) (list 0 0) (list 0 0) (list 0 0)))
+    (let few (list (list 0 1) (list 0 1) (list 0 1) (list 0 1) (list 1 1)))
+    (let c0 (if (eq (clr-retire? reached 12 0) 1) 1 0))
+    (let c1 (if (str_eq (clr-authority reached 12 0) "native") 2 0))
+    (let c2 (if (eq (clr-retire? behind 12 0) 0) 4 0))
+    (let c3 (if (str_eq (clr-authority behind 12 0) "third-party") 8 0))
+    (let c4 (if (eq (clr-retire? few 12 0) 0) 16 0))
+    (let c5 (if (and (eq (clr-keep-3rd-party? reached 12 0) 0)
+                     (eq (clr-keep-3rd-party? behind 12 0) 1)) 32 0))
+    (let c6 (if (and (eq (clr-retire? behind 12 3) 1)
+                     (eq (clr-retire? behind 12 0) 0)) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

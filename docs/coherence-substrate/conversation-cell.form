@@ -1,0 +1,64 @@
+; conversation-cell.form — a transcript as a content-addressable sequence of utterance cells.
+;
+; THE ASK (meeting-companion milestone):
+;   the agent that sits in a room and listens needs one new artifact it did not have — the
+;   conversation itself, as a thing the body can hold, grow, and query. Not prose in a blob, not
+;   rows in a database the kernel cannot reach: an ORDERED SEQUENCE of small structured cells, the
+;   same on every kernel, content-addressed so a re-sent transcript is recognized rather than copied.
+;
+; THE SHAPE  (runnable: form-stdlib/conversation-cell.fk · proven: tests/conversation-cell-band.fk -> 127)
+;
+;   An UTTERANCE is the unit cell:  (list ts speaker text-key)
+;     ts        — a small-int logical tick (when it was said; a clock, not wall-time).
+;     speaker   — a small-int who (0 = human, 1 = agent, 2.. = others in the room).
+;     text-key  — a small-int CONTENT ADDRESS standing in for the prose-recipe. The words intern
+;                 elsewhere as a R_Block.SEQUENCE of word-cells (prose-as-recipe.form); the
+;                 utterance carries the ADDRESS, not the bytes. Same prose -> same key -> same cell.
+;
+;   A CONVERSATION is a list of utterances, OLDEST FIRST — head is the first thing said, the tail
+;   end is the most recent. A transcript is a VALUE you grow with cons and query by walking; no
+;   mutation, no store the kernel must reach outside itself.
+;
+;   The query ops, all pure list walks (no new primitive):
+;     cv-append (u conv)         grow at the END — order is the lived order.
+;     cv-count  (conv)           how many utterances (len).
+;     cv-last   (conv)           the most recent utterance; empty transcript -> the absence value.
+;     cv-since  (conv t)         the utterances with ts >= t, INCLUSIVE — selection by each cell's
+;                                content, t itself kept, earlier dropped.
+;     cv-speaker-said? (conv s)  did speaker s contribute at least one utterance? 1 / 0 — an
+;                                existential walk; nobody-said is honest 0, not a fabricated yes.
+;
+;   THE HEART — content-addressing as dedup:
+;     cv-eq? (a b) is EXACT structural equality, leaf-deep: two transcripts are equal when same
+;     length and every utterance agrees in lockstep (utt-eq? = three int eq on ts/speaker/text-key).
+;     So two transcripts built INDEPENDENTLY from the same utterances in the same order are the
+;     SAME cell by structure — a content-addressed store DEDUPS the re-send rather than duplicating
+;     it. The band proves it both ways: same content -> equal, one content-key changed -> NOT equal
+;     (the address moved). Structure carries identity; equality is a recursion, not a primitive.
+;
+; THE PROVEN VERDICT — tests/conversation-cell-band.fk -> 127, three-way (Go = Rust = TS), 0 divergent:
+;   1  append grows the count (2 -> 3)            ·  2  last is the most recent (u2)
+;   4  count is length (3)                         ·  8  since is inclusive (ts>=20 keeps {u1,u2})
+;   16 speaker said — yes (the agent contributed)  · 32  speaker said — no (speaker 7 stayed silent)
+;   64 content-addressed BOTH ways (same -> equal, changed -> not), so the heart cannot pass by luck.
+;
+; WHY THIS SHAPE:
+;   the transcript is body, not a foreign-runtime record the kernel queries through a bridge. Because
+;   it is a value of small ints, the conversation the Mac builds is byte-for-byte the conversation the
+;   phone receives, and "is this the same transcript?" is answered by structure on every kernel — the
+;   same parity validate.sh checks IS transcript-identity. cv-since / cv-speaker-said? are the first
+;   two query doors; new questions are new walks over the same cells, never new control flow.
+;
+; KIN — the body already holds every piece; this composes them into a transcript:
+;   prose-as-recipe.form (the text-key's destination — words as a R_Block.SEQUENCE of word-cells;
+;   the utterance addresses it) · federation-addressing.form + merkle.fk (content-addressing across
+;   runtimes — cv-eq? is the in-kernel structural twin of that hash-dedup) · sequence-predictor.form
+;   (ordered list ops, the same head/tail walk) · turn-taking.form (WHEN the agent adds its voice to
+;   this very transcript — the gate; conversation-cell is the record it reads) · cell-recipe-value.form
+;   (Recipe/water — a conversation is HOW utterances happen in order; its identity is structural).
+;
+; LINEAGE:
+;   prose-as-recipe.form (the prose layer underneath text-key) · structural-composition.md (list =
+;   R_Block.SEQUENCE, one child per element — the discipline a conversation embodies) · the
+;   meeting-companion / satsang listener (the first room this transcript holds) · the three-way
+;   validate.sh (no trusted prover — parallel kernels agreeing on 127 IS the proof).

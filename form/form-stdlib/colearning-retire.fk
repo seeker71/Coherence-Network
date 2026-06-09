@@ -1,0 +1,51 @@
+; colearning-retire.fk — co-learning M3, the endgame: retire the 3rd-party oracle per category once the
+; merged Form-native classifier has PROVEN it reaches it. The circle learns to hear on its own.
+;
+; preludes: form-stdlib/core.fk form-stdlib/champion-challenger.fk
+;
+; THE ARC (Urs): each cell runs 3rd-party classifiers (speech / music / animals / other) as its ORACLE
+; and grows a Form-native nearest-shape arm from what its own mic heard (co-learning.fk M1). The cells
+; share exemplars on the mesh so the MERGED native classifier recognizes what no single mic could (the
+; federated speedup). M2 runs the native arm as a CHALLENGER beside the 3rd-party CHAMPION and scores the
+; head-to-head competition per sample (champion-challenger.fk). M3 — here — closes the loop: once the
+; merged native arm has REACHED the 3rd-party champion for a category over a long-enough window, the
+; expensive 3rd-party classifier can STOP RUNNING for that category. The circle now hears that category on
+; its own. This is per-category: each oracle retires when ITS native arm reaches it, independently.
+;
+; The decision is champion-challenger's PROVEN-competition spine, re-asked as a retirement question. A
+; history is a list of trials = (list champion-correct challenger-correct) for the category's window —
+; champion = the 3rd-party oracle, challenger = the merged Form-native arm. We do not re-derive the count
+; or the reaches/promote gate; we COMPOSE cc-promote? / cc-reaches? from champion-challenger.fk so the
+; retirement verdict is the same proven head-to-head, never a fresh assertion. No ratio, no float — exact
+; integer counts, identical on Go=Rust=TS.
+;
+; Honest lane: this recipe decides RETIREMENT from a category's competition history. It does not run the
+; oracle, score a sample, or merge exemplars — those are upstream (co-learning.fk, the carriers). Given an
+; honest history it answers deterministically: retire only on earned, long-window competition.
+;
+; Proven by: tests/colearning-retire-band.fk (three-way at validate.sh) -> 127
+
+(do
+    ; --- RETIRE? — may the 3rd-party oracle stop running for this category now? 1 iff the merged native
+    ;     arm (the challenger) has REACHED the 3rd-party oracle (the champion) within `margin` over a window
+    ;     of at least `min-samples` trials. This is exactly champion-challenger's promotion gate — proven
+    ;     competition, never asserted accuracy — so retirement inherits the same long-window floor and the
+    ;     same reaches-within-margin test. Composed, not re-derived. ---
+    (defn clr-retire? (history min-samples margin)
+        (cc-promote? history min-samples margin))
+
+    ; --- KEEP-3RD-PARTY? — must the expensive 3rd-party classifier keep running for this category? The
+    ;     strict inverse of retire, so the pair partitions every history cleanly: for any
+    ;     (history, min-samples, margin), retire? + keep-3rd-party? == 1. This is the live COST question —
+    ;     while it answers 1 the body is still paying the 3rd-party oracle for this category. ---
+    (defn clr-keep-3rd-party? (history min-samples margin)
+        (if (eq (clr-retire? history min-samples margin) 1) 0 1))
+
+    ; --- AUTHORITY — which arm the body routes this category on right now. "native" once the oracle has
+    ;     retired (the merged Form-native arm carries the category alone); "third-party" until the
+    ;     competition is proven over a long-enough window. Mirrors cc-authority with the per-category-oracle
+    ;     vocabulary: the endgame names the WINNER as the body that keeps hearing. ---
+    (defn clr-authority (history min-samples margin)
+        (if (eq (clr-retire? history min-samples margin) 1) "native" "third-party"))
+
+    0)

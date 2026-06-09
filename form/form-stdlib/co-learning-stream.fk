@@ -1,0 +1,55 @@
+; co-learning-stream.fk — the LIVE per-device learning loop as a FOLD, then the federated speedup over streams.
+;
+; co-learning.fk (M0) proved the federated UNION over exemplar sets that were handed to it already-learned;
+; learning-arc.fk folded ONE device's stream and measured its own online agreement curve. This brick is the
+; piece between them — co-learning M1: each device GROWS its exemplar set by folding its OWN oracle stream,
+; and THEN the merged breadth of two devices' learned sets beats either alone. The whole "two mics learn
+; faster together" claim, now from STREAMS rather than from pre-handed sets.
+;
+; A device's audio arrives as a stream of SAMPLES, each (list label feature) — the oracle's label (speech,
+; music, ...) and the coarse feature-vector that was sensed (small-int bins, nearest-shape's query shape).
+; LEARNING is the smallest act (nearest-shape.fk / learning-arc.fk): intern one exemplar. The exemplar IS
+; nearest-shape's prototype shape (list label vector) — so (cons (list label feature) set) grows the set and
+; the next query can route to it. cls-learn-stream FOLDS the whole stream into the device's set; the fold is
+; online, single-pass, order-respecting — replay the stream, get the identical set on Go, Rust, and TS.
+;
+; THE FEDERATED SPEEDUP OVER STREAMS: device A's stream teaches {speech}, device B's teaches {music}. After
+; each folds its own stream, A's set recognizes only speech (a music query routes wrong — partial), B's only
+; music. cls-merged-breadth folds BOTH streams and unions the learned sets (cl-merge); the union recognizes
+; BOTH, and its breadth is the sum of what each mic alone could cover. Two streams cover what one cannot.
+;
+; A sample  = (list label feature-vector). A stream = a list of samples, in time order.
+; A device's learned set = a list of (label vector) — exactly nearest-shape's prototype-set.
+;
+; Composes: nearest-shape.fk (ns-label, via cl-knows?) + co-learning.fk (cl-merge, cl-breadth, cl-knows?).
+; Proven by: form-stdlib/tests/co-learning-stream-band.fk (three-way at validate.sh).
+
+(do
+    ; --- a sample's parts: the oracle's label, and the feature the mic sensed. ---
+    (defn cls-label   (sample) (nth sample 0))   ; "speech" / "music" / ...
+    (defn cls-feature (sample) (nth sample 1))   ; the coarse feature-vector (nearest-shape query shape)
+
+    ; --- LEARN one sample: intern it as nearest-shape's (label vector) prototype, growing the set. ---
+    ; the exemplar prepends; every prior exemplar remains (adding without forgetting).
+    (defn cls-learn (sample set) (cons (list (cls-label sample) (cls-feature sample)) set))
+
+    ; --- THE LIVE LOOP AS A FOLD: walk the stream in time order, interning each sample into the set. ---
+    ; (samples set) — fold the remaining stream onto the set learned so far; base case returns the set.
+    ; cold (empty stream) → the set unchanged: a device that heard nothing learned nothing.
+    (defn cls-learn-stream (samples set)
+        (if (eq (len samples) 0) set
+            (cls-learn-stream (tail samples) (cls-learn (head samples) set))))
+
+    ; --- A DEVICE learns from scratch: fold its whole stream onto the empty set. ---
+    (defn cls-device (samples) (cls-learn-stream samples (empty)))
+
+    ; --- THE FEDERATED SPEEDUP: breadth of the UNION of two devices' learned sets (cl-merge over the
+    ;     two folded streams). The merged field covers what each mic alone could not — and its breadth
+    ;     is the measure of that coverage. cl-breadth/cl-merge are co-learning.fk's. ---
+    (defn cls-merged-breadth (stream-a stream-b)
+        (cl-breadth (cl-merge (cls-device stream-a) (cls-device stream-b))))
+
+    ; --- does a device that folded `samples` recognize `query` as `label`? (cl-knows? over the learned
+    ;     set — nearest-shape under the hood). The handle the band uses to show A-alone is PARTIAL. ---
+    (defn cls-stream-knows? (samples query label) (cl-knows? query (cls-device samples) label))
+    0)
