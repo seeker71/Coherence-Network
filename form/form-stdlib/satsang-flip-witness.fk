@@ -7,9 +7,10 @@
 ; This cell binds those two surfaces to the native public-gate canary. The
 ; knowable truth is intentionally exact:
 ;   - X-Form-Native-Public-Gate treatment selects native-kernel.
-;   - no-header control remains fanout-python.
+;   - kernel no-header default accepts the implicit native invitation.
+;   - public Traefik no-header control remains outside the native default route.
 ;   - decision and rollback receipts are present.
-;   - ordinary traffic has not been flipped.
+;   - X-Form-Python-Fallback remains visible as refusal/control.
 ; That is movement, not permission-seeking, and it stays reversible.
 
 (do
@@ -34,7 +35,7 @@
             202
             "native-kernel"
             422
-            "fanout-python"
+            "fastapi-public-control"
             1
             1
             1
@@ -51,10 +52,10 @@
             (eq (sfw-treatment-status r) 202)
             (str_eq (sfw-treatment-router r) "native-kernel")))
 
-    (defn sfw-control-fanout? (r)
+    (defn sfw-public-control-outside-native? (r)
         (and
             (eq (sfw-control-status r) 422)
-            (str_eq (sfw-control-default-route r) "fanout-python")))
+            (str_eq (sfw-control-default-route r) "fastapi-public-control")))
 
     (defn sfw-reversible? (r)
         (and
@@ -73,7 +74,7 @@
         (sfw-and4
             (sfw-board-protocol? r)
             (sfw-treatment-native? r)
-            (sfw-control-fanout? r)
+            (sfw-public-control-outside-native? r)
             (and
                 (sfw-reversible? r)
                 (and
@@ -141,7 +142,7 @@
 
     (defn sfw-ordinary-flip-state (r)
         (if (sfw-ordinary-boundary-kept? r)
-            "ordinary-traffic-unflipped"
-            "ordinary-traffic-moved"))
+            "public-traefik-default-held"
+            "public-traefik-default-moved"))
 
     0)

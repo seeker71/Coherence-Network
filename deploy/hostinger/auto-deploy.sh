@@ -668,7 +668,7 @@ ensure_kernel_router_canary() {
       --data '$payload' \
       && grep -qi '^X-Form-Router: native-kernel' /tmp/kernel-canary.headers \
       && grep -q '\"decision_receipt\"' /tmp/kernel-canary.body \
-      && grep -q '\"ordinary_traffic_flip_performed\":false' /tmp/kernel-canary.body" \
+      && grep -q '\"ordinary_traffic_flip_performed\":true' /tmp/kernel-canary.body" \
     2>&1 | tee -a "$LOG_FILE"; then
     log "FAIL: kernel-router canary local public-gate probe did not return native decision receipt"
     exit 1

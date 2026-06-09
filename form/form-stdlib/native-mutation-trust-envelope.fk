@@ -30,11 +30,13 @@
 
     (defn nmte-reversible-gate-json ()
         (nmte-cat (list
-            "{\"default_route\":\"fanout-python\""
+            "{\"default_route\":\"native-kernel\""
+            ",\"default_protocol\":\"implicit-native-invitation\""
             ",\"native_route\":\"X-Form-Native-Preview\""
-            ",\"ordinary_traffic_flip_allowed\":false"
-            ",\"ordinary_traffic_flip_performed\":false"
-            ",\"rollback\":\"remove preview header or disable native route row\""
+            ",\"fallback_route\":\"X-Form-Python-Fallback\""
+            ",\"ordinary_traffic_flip_allowed\":true"
+            ",\"ordinary_traffic_flip_performed\":true"
+            ",\"rollback\":\"send X-Form-Python-Fallback, remove the default native route row, or retarget Traefik to api\""
             "}")))
 
     (defn nmte-trust-envelope-json (operation node-id)
@@ -43,13 +45,13 @@
             ",\"operation\":" (nmte-json-string operation)
             ",\"node_id\":" (nmte-json-string node-id)
             ",\"choice_success\":1"
-            ",\"silence\":\"fanout-default\""
+            ",\"silence\":\"not-knowing-is-native-invitation\""
             ",\"protocol\":\"X-Form-Native-Preview\""
-            ",\"fail\":\"rollback-to-fanout\""
-            ",\"stop\":\"ordinary-traffic-unflipped\""
+            ",\"fail\":\"explicit-python-fallback\""
+            ",\"stop\":\"native-default-observed\""
             ",\"bma\":\"native-mutation-trust-envelope\""
             ",\"prediction_error\":\"carried_as_residual\""
-            ",\"residual\":\"side-effects are named and held in the envelope while fanout remains default\""
+            ",\"residual\":\"side effects are named while no-header kernel traffic accepts native by default; explicit fallback remains observable\""
             ",\"side_effect_intents\":" (nmte-side-effect-intents-json)
             ",\"reversible_gate\":" (nmte-reversible-gate-json)
             "}")))
@@ -81,7 +83,7 @@
     (defn nmte-and3 (a b c) (nmte-and2 (nmte-and2 a b) c))
 
     ;; 1111 = residual carried, side-effect intents named, reversible gate held,
-    ;; and ordinary traffic explicitly unflipped.
+    ;; and ordinary traffic explicitly native-default/reversible.
     (defn nmte-test ()
         (do
             (let envelope (nmte-trust-envelope-json "update-idea" "idea-trust"))
@@ -92,15 +94,15 @@
                     (nmte-contains? envelope "\"parent-edge-repair\"")
                     (nmte-contains? envelope "\"contributor-key-audit\"")) 1) 10 0)
                 (if (eq (nmte-and3
-                    (nmte-contains? envelope "\"default_route\":\"fanout-python\"")
+                    (nmte-contains? envelope "\"default_route\":\"native-kernel\"")
                     (nmte-contains? envelope "\"native_route\":\"X-Form-Native-Preview\"")
                     (nmte-contains? envelope "\"rollback\"")) 1) 100 0)
                 (if (eq (nmte-and2
-                    (nmte-contains? envelope "\"ordinary_traffic_flip_allowed\":false")
-                    (nmte-contains? envelope "\"ordinary_traffic_flip_performed\":false")) 1) 1000 0)
+                    (nmte-contains? envelope "\"ordinary_traffic_flip_allowed\":true")
+                    (nmte-contains? envelope "\"ordinary_traffic_flip_performed\":true")) 1) 1000 0)
                 (if (eq (nmte-and3
                     (nmte-contains? envelope "\"choice_success\":1")
-                    (nmte-contains? envelope "\"stop\":\"ordinary-traffic-unflipped\"")
+                    (nmte-contains? envelope "\"stop\":\"native-default-observed\"")
                     (nmte-contains? envelope "\"bma\":\"native-mutation-trust-envelope\"")) 1) 10000 0)))))
 
     0)

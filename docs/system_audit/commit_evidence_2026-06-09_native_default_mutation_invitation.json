@@ -1,0 +1,191 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/native-default-mutation-invitation-20260609",
+  "commit_scope": "Move mutable ideas/spec kernel routes from silence-as-fanout to implicit native invitation, with X-Form-Python-Fallback as the explicit refusal/control signal.",
+  "files_owned": [
+    "api/tests/test_ideas_router_form.py",
+    "api/tests/test_native_idea_valuation_audit_ledger.py",
+    "api/tests/test_native_mutation_ab_observation.py",
+    "api/tests/test_native_mutation_public_gate.py",
+    "api/tests/test_native_mutation_route_bindings.py",
+    "api/tests/test_native_mutation_route_side_effect_binding.py",
+    "api/tests/test_spec_registry_router_form.py",
+    "deploy/hostinger/auto-deploy.sh",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/kernel-router/mutation_ab_observation_harness.py",
+    "deploy/kernel-router/mutation_public_gate_harness.py",
+    "deploy/kernel-router/production-routes.fk",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/native-mutation-side-effect-ledger.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "docs/system_audit/commit_evidence_2026-06-09_native_default_mutation_invitation.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-kernel-rust/src/main.rs",
+    "form/form-stdlib/integration/native-mutation-public-gate-live.fk",
+    "form/form-stdlib/native-mutation-public-gate.fk",
+    "form/form-stdlib/native-mutation-trust-envelope.fk",
+    "form/form-stdlib/satsang-flip-witness.fk",
+    "form/form-stdlib/tests/native-mutation-public-gate-band.fk",
+    "form/form-stdlib/tests/native-mutation-trust-envelope-band.fk",
+    "form/form-stdlib/tests/satsang-flip-witness-band.fk",
+    "scripts/verify_kernel_canary_public_gate.sh",
+    "specs/native-idea-valuation-audit-ledger.md",
+    "specs/native-mutation-ab-observation-gate.md",
+    "specs/native-mutation-public-gate.md",
+    "specs/native-mutation-route-side-effect-binding.md",
+    "specs/native-mutation-trust-envelope.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "COORD_AGENT=codex scripts/agent-coord.sh claim \"native-default mutation invitation: no-header writes choose kernel path\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/native-mutation-trust-envelope.fk form-stdlib/tests/native-mutation-trust-envelope-band.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/native-idea-valuation-audit-ledger.fk form-stdlib/native-mutation-public-gate.fk form-stdlib/tests/native-mutation-public-gate-band.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-flip-witness.fk form-stdlib/tests/satsang-flip-witness-band.fk",
+      "cd form/form-kernel-rust && cargo build --release",
+      "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_kernel_canary_public_gate.sh",
+      "python3 deploy/kernel-router/mutation_public_gate_harness.py --json",
+      "python3 deploy/kernel-router/mutation_ab_observation_harness.py --json",
+      "scripts/check_route_manifests.sh",
+      "form/scripts/native-mutation-public-gate-test.sh",
+      "form/scripts/native-idea-valuation-audit-ledger-test.sh",
+      "cd api && python3 -m pytest -q tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py tests/test_native_mutation_route_bindings.py tests/test_native_mutation_route_side_effect_binding.py tests/test_native_mutation_side_effect_ledger.py tests/test_native_idea_valuation_audit_ledger.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py",
+      "cd api && python3 -m ruff check tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py tests/test_native_mutation_route_bindings.py tests/test_native_mutation_route_side_effect_binding.py tests/test_native_mutation_side_effect_ledger.py tests/test_native_idea_valuation_audit_ledger.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py ../deploy/kernel-router/mutation_public_gate_harness.py ../deploy/kernel-router/mutation_ab_observation_harness.py",
+      "python3 scripts/validate_spec_quality.py --file specs/native-mutation-ab-observation-gate.md --file specs/native-mutation-public-gate.md --file specs/native-mutation-trust-envelope.md --file specs/native-idea-valuation-audit-ledger.md --file specs/native-mutation-route-side-effect-binding.md",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 -m py_compile deploy/kernel-router/mutation_ab_observation_harness.py deploy/kernel-router/mutation_public_gate_harness.py",
+      "git diff --check"
+    ],
+    "summary": "No-header mutable ideas/spec requests that reach the kernel-router now select native default invitation rows, emit native_default_invitation receipts, and use implicit-native-invitation in decision/trust envelopes. X-Form-Python-Fallback bypasses native route selection and fans out as an explicit refusal/control signal. Preview and public-gate receipts now name native-kernel default, explicit fallback, and candidate_count=4. Public Traefik no-header default remains on FastAPI until HTTP native mutation execution preserves production persistence semantics.",
+    "known_limitations": [
+      {
+        "scope": "HTTP mutation persistence",
+        "observed": "Kernel HTTP mutation responses still keep executes:false; live persistence is proven through throwaway Postgres Form scripts, not production HTTP DB writes."
+      },
+      {
+        "scope": "public Traefik default",
+        "observed": "The deploy overlay remains header-gated for public traffic. Public no-header Traefik default is intentionally held until persistence-preserving native HTTP execution is wired."
+      },
+      {
+        "scope": "fallback semantics",
+        "observed": "X-Form-Python-Fallback is a universal Rust router bypass signal in this change, so any request carrying it fans out instead of selecting native routes."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push, PR creation, and GitHub checks for codex/native-default-mutation-invitation-20260609."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "No production deploy attempted before PR merge. Public verification should run after merge/deploy with scripts/verify_kernel_canary_public_gate.sh."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Local kernel-router mutable paths now observe A=no-header native default invitation, B=X-Form-Native-Preview SQL preview, C=X-Form-Native-Public-Gate public-gate receipt, and D=X-Form-Python-Fallback fanout.",
+    "public_endpoints": [
+      "POST /api/ideas",
+      "PATCH /api/ideas/{idea_id}",
+      "POST /api/spec-registry",
+      "PATCH /api/spec-registry/{spec_id}",
+      "DELETE /api/spec-registry/{spec_id}",
+      "Header X-Form-Native-Preview",
+      "Header X-Form-Native-Public-Gate",
+      "Header X-Form-Python-Fallback"
+    ],
+    "test_flows": [
+      "python3 deploy/kernel-router/mutation_ab_observation_harness.py --json -> confidence 1.0, native default + preview + fallback",
+      "python3 deploy/kernel-router/mutation_public_gate_harness.py --json -> confidence 1.0, native default + preview + public gate + fallback",
+      "form/scripts/native-mutation-public-gate-test.sh -> verdict 111111111",
+      "form/scripts/native-idea-valuation-audit-ledger-test.sh -> verdict 11111111",
+      "cd api && python3 -m pytest -q focused native mutation tests -> 44 passed"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local native-default invitation is proven. Public Traefik no-header default should move only after the HTTP native mutation handler preserves production persistence semantics instead of returning non-executing receipt previews."
+  },
+  "idea_ids": [
+    "idea-realization-engine",
+    "data-infrastructure"
+  ],
+  "spec_ids": [
+    "specs/native-mutation-public-gate.md",
+    "specs/native-mutation-trust-envelope.md",
+    "specs/native-mutation-ab-observation-gate.md",
+    "specs/native-mutation-route-side-effect-binding.md",
+    "specs/native-idea-valuation-audit-ledger.md",
+    "specs/ideas-router-form-expression.md",
+    "specs/spec-registry-source-native.md"
+  ],
+  "task_ids": [
+    "native-default-mutation-invitation-20260609",
+    "native-http-mutation-persistence-default"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "deploy/kernel-router/production-routes.fk::route_ideas_create_native_default",
+    "deploy/kernel-router/production-routes.fk::mpg-native-default-response",
+    "deploy/kernel-router/mutation_public_gate_harness.py::build_gate_report",
+    "deploy/kernel-router/mutation_ab_observation_harness.py::build_gate_report",
+    "form/form-kernel-rust/src/main.rs::route_python_fallback_requested",
+    "scripts/verify_kernel_canary_public_gate.sh"
+  ],
+  "change_files": [
+    "api/tests/test_ideas_router_form.py",
+    "api/tests/test_native_idea_valuation_audit_ledger.py",
+    "api/tests/test_native_mutation_ab_observation.py",
+    "api/tests/test_native_mutation_public_gate.py",
+    "api/tests/test_native_mutation_route_bindings.py",
+    "api/tests/test_native_mutation_route_side_effect_binding.py",
+    "api/tests/test_spec_registry_router_form.py",
+    "deploy/hostinger/auto-deploy.sh",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/kernel-router/mutation_ab_observation_harness.py",
+    "deploy/kernel-router/mutation_public_gate_harness.py",
+    "deploy/kernel-router/production-routes.fk",
+    "docs/coherence-substrate/ideas-router.form",
+    "docs/coherence-substrate/native-mutation-side-effect-ledger.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "docs/system_audit/commit_evidence_2026-06-09_native_default_mutation_invitation.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-kernel-rust/src/main.rs",
+    "form/form-stdlib/integration/native-mutation-public-gate-live.fk",
+    "form/form-stdlib/native-mutation-public-gate.fk",
+    "form/form-stdlib/native-mutation-trust-envelope.fk",
+    "form/form-stdlib/satsang-flip-witness.fk",
+    "form/form-stdlib/tests/native-mutation-public-gate-band.fk",
+    "form/form-stdlib/tests/native-mutation-trust-envelope-band.fk",
+    "form/form-stdlib/tests/satsang-flip-witness-band.fk",
+    "scripts/verify_kernel_canary_public_gate.sh",
+    "specs/native-idea-valuation-audit-ledger.md",
+    "specs/native-mutation-ab-observation-gate.md",
+    "specs/native-mutation-public-gate.md",
+    "specs/native-mutation-route-side-effect-binding.md",
+    "specs/native-mutation-trust-envelope.md"
+  ],
+  "change_intent": "runtime_feature"
+}

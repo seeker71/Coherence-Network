@@ -39,16 +39,21 @@
 ;   /api/ideas/source-portfolio       Form-native ideas/INDEX.md -> IdeaPortfolioResponse
 ;   /api/ideas/graph-projection       Form-native graph rows -> IdeaPortfolioResponse
 ;   /api/spec-registry/source-list    Form-native specs/INDEX.md -> SpecRegistryEntry[]
+;   POST   /api/ideas                 Native mutation default invitation
+;   PATCH  /api/ideas/*               Native mutation default invitation
+;   POST   /api/spec-registry         Native mutation default invitation
+;   PATCH  /api/spec-registry/*       Native mutation default invitation
+;   DELETE /api/spec-registry/*       Native mutation default invitation
 ;   POST   /api/ideas                 Header-gated native mutation SQL preview
 ;   PATCH  /api/ideas/*               Header-gated native mutation SQL preview
 ;   POST   /api/spec-registry         Header-gated native mutation SQL preview
 ;   PATCH  /api/spec-registry/*       Header-gated native mutation SQL preview
 ;   DELETE /api/spec-registry/*       Header-gated native mutation SQL preview
-;   POST   /api/ideas                 Header-gated native mutation public gate
-;   PATCH  /api/ideas/*               Header-gated native mutation public gate
-;   POST   /api/spec-registry         Header-gated native mutation public gate
-;   PATCH  /api/spec-registry/*       Header-gated native mutation public gate
-;   DELETE /api/spec-registry/*       Header-gated native mutation public gate
+;   POST   /api/ideas                 Header-gated explicit native public gate
+;   PATCH  /api/ideas/*               Header-gated explicit native public gate
+;   POST   /api/spec-registry         Header-gated explicit native public gate
+;   PATCH  /api/spec-registry/*       Header-gated explicit native public gate
+;   DELETE /api/spec-registry/*       Header-gated explicit native public gate
 ;
 ; Each native handler replicates its live route's FULL contract:
 ;   - parses the SAME query params FastAPI declares (with the SAME defaults),
@@ -1801,20 +1806,24 @@
     (igpr-filter-idea-rows (ideas_graph_projection_rows))))
 
 ; ===========================================================================
-; Header-gated native mutation preview and public-gate bindings.
+; Native mutation invitation, preview, and public-gate bindings.
 ;
 ; These rows bind the real public mutable paths and HTTP methods into
-; KernelHTTPRoute without stealing ordinary production mutations. The required
-; X-Form-Native-Preview header gives a native preview arm for explicit probes;
-; X-Form-Native-Public-Gate gives a narrower reversible public-gate arm with a
-; route-local rollback receipt. Requests without either header exceed the
-; route's pressure budget and fan out to FastAPI.
+; KernelHTTPRoute. No-header requests that reach the kernel-router select the
+; implicit native invitation path: not knowing the native protocol still lands in
+; the more trustworthy native tongue. X-Form-Native-Preview keeps the native
+; SQL-preview arm for explicit probes; X-Form-Native-Public-Gate keeps the
+; narrower explicit public-gate arm with a route-local rollback receipt.
+; X-Form-Python-Fallback is the explicit refusal/control signal; the Rust router
+; observes it and fans out to FastAPI rather than silently treating refusal as
+; absence.
 ;
 ; The SQL shape mirrors form/form-stdlib/application-graph-node-port.fk. The
-; preview response intentionally does not move ordinary traffic. Live DB
-; execution, response projection, side-effect execution, route-runner
-; side-effect binding, and public-gate rollback receipts are proven in Form.
-; Ordinary no-header traffic remains fanout-python until a deployed canary moves.
+; preview response intentionally does not execute. Live DB execution, response
+; projection, side-effect execution, route-runner side-effect binding, and
+; public-gate rollback receipts are proven in Form. Public Traefik still decides
+; which ordinary requests reach this kernel manifest; once they do, the manifest
+; default is native.
 ; ===========================================================================
 
 (defn mpv-join (sep xs)
@@ -1940,11 +1949,13 @@
 
 (defn mpv-reversible-gate-json ()
   (str_concat_all (list
-    "{\"default_route\":\"fanout-python\""
+    "{\"default_route\":\"native-kernel\""
+    ",\"default_protocol\":\"implicit-native-invitation\""
     ",\"native_route\":\"X-Form-Native-Preview\""
-    ",\"ordinary_traffic_flip_allowed\":false"
-    ",\"ordinary_traffic_flip_performed\":false"
-    ",\"rollback\":\"remove preview header or disable native route row\""
+    ",\"fallback_route\":\"X-Form-Python-Fallback\""
+    ",\"ordinary_traffic_flip_allowed\":true"
+    ",\"ordinary_traffic_flip_performed\":true"
+    ",\"rollback\":\"send X-Form-Python-Fallback, remove the default native route row, or retarget Traefik to api\""
     "}")))
 
 (defn mpv-trust-envelope-json (operation node-id)
@@ -1953,13 +1964,13 @@
     ",\"operation\":" (json_string operation)
     ",\"node_id\":" (json_string node-id)
     ",\"choice_success\":1"
-    ",\"silence\":\"fanout-default\""
+    ",\"silence\":\"not-knowing-is-native-invitation\""
     ",\"protocol\":\"X-Form-Native-Preview\""
-    ",\"fail\":\"rollback-to-fanout\""
-    ",\"stop\":\"ordinary-traffic-unflipped\""
+    ",\"fail\":\"explicit-python-fallback\""
+    ",\"stop\":\"native-default-observed\""
     ",\"bma\":\"native-mutation-trust-envelope\""
     ",\"prediction_error\":\"carried_as_residual\""
-    ",\"residual\":\"side-effects are named and held in the envelope while fanout remains default\""
+    ",\"residual\":\"side effects are named while no-header kernel traffic accepts native by default; explicit fallback remains observable\""
     ",\"side_effect_intents\":" (mpv-side-effect-intents-json)
     ",\"reversible_gate\":" (mpv-reversible-gate-json)
     "}")))
@@ -1979,6 +1990,8 @@
       ",\"runtime\":\"inline\"}"))))
 
 (defn mpg-public-gate-header () "X-Form-Native-Public-Gate")
+(defn mpg-python-fallback-header () "X-Form-Python-Fallback")
+(defn mpg-implicit-native-protocol () "implicit-native-invitation")
 
 (defn mpg-rollback-receipt-json (operation node-id)
   (str_concat_all (list
@@ -1986,84 +1999,123 @@
     ",\"receipt_id\":" (json_string (str_concat "public-gate-rollback:" (str_concat operation (str_concat ":" node-id))))
     ",\"operation\":" (json_string operation)
     ",\"node_id\":" (json_string node-id)
-    ",\"rollback\":\"remove X-Form-Native-Public-Gate or disable public-gate route row\""
-    ",\"ordinary_traffic_flip_performed\":false"
+    ",\"rollback\":\"send X-Form-Python-Fallback, remove the default native route row, or retarget Traefik to api\""
+    ",\"ordinary_traffic_flip_performed\":true"
     ",\"persistence\":\"proven-in-form-pg-fixture\""
     ",\"proof\":\"form/scripts/native-mutation-public-gate-test.sh\""
     "}")))
 
 (defn mpg-reversible-gate-json ()
   (str_concat_all (list
-    "{\"default_route\":\"fanout-python\""
+    "{\"default_route\":\"native-kernel\""
+    ",\"default_protocol\":\"implicit-native-invitation\""
     ",\"preview_route\":\"X-Form-Native-Preview\""
     ",\"public_gate_route\":\"X-Form-Native-Public-Gate\""
+    ",\"fallback_route\":\"X-Form-Python-Fallback\""
     ",\"public_gate_allowed\":true"
-    ",\"ordinary_traffic_flip_allowed\":false"
-    ",\"ordinary_traffic_flip_performed\":false"
-    ",\"rollback\":\"remove X-Form-Native-Public-Gate or disable public-gate route row\""
+    ",\"ordinary_traffic_flip_allowed\":true"
+    ",\"ordinary_traffic_flip_performed\":true"
+    ",\"rollback\":\"send X-Form-Python-Fallback, remove the default native route row, or retarget Traefik to api\""
     "}")))
 
-(defn mpg-decision-candidates-json ()
+(defn mpg-candidate-json (path selected outcome evidence)
+  (str_concat_all (list
+    "{\"path\":" (json_string path)
+    ",\"eligible\":true"
+    ",\"selected\":" (if selected "true" "false")
+    ",\"outcome\":" (json_string outcome)
+    ",\"evidence\":" (json_string evidence)
+    "}")))
+
+(defn mpg-decision-candidates-json (selected-path)
   (str_concat_all (list
     "["
-    "{\"path\":\"fanout-python\",\"eligible\":true,\"selected\":false,\"outcome\":\"silence\",\"evidence\":\"no native gate header selects fanout\"}"
-    ",{\"path\":\"X-Form-Native-Preview\",\"eligible\":true,\"selected\":false,\"outcome\":\"stop\",\"evidence\":\"preview observes SQL without public gate execution\"}"
-    ",{\"path\":\"X-Form-Native-Public-Gate\",\"eligible\":true,\"selected\":true,\"outcome\":\"success\",\"evidence\":\"required public-gate header selected native-kernel route\"}"
+    (mpg-candidate-json "implicit-native-invitation" (str_eq selected-path "implicit-native-invitation") "success" "no header accepts the native invitation by default")
+    ","
+    (mpg-candidate-json "X-Form-Native-Preview" (str_eq selected-path "X-Form-Native-Preview") "preview" "explicit preview observes SQL without public gate execution")
+    ","
+    (mpg-candidate-json "X-Form-Native-Public-Gate" (str_eq selected-path "X-Form-Native-Public-Gate") "success" "explicit public-gate header selected native-kernel route")
+    ","
+    (mpg-candidate-json "X-Form-Python-Fallback" (str_eq selected-path "X-Form-Python-Fallback") "refusal-signal" "explicit fallback header asks not to speak the native route")
     "]")))
 
-(defn mpg-decision-signature-json (operation node-id)
+(defn mpg-decision-signature-json (selected-path operation node-id)
   (str_concat_all (list
     "{\"category\":\"native-mutation-gate\""
-    ",\"selected_path\":\"X-Form-Native-Public-Gate\""
+    ",\"selected_path\":" (json_string selected-path)
     ",\"outcome_code\":1"
     ",\"certainty_bucket\":5"
-    ",\"candidate_count\":3"
+    ",\"candidate_count\":4"
     ",\"operation\":" (json_string operation)
     ",\"node_id\":" (json_string node-id)
     ",\"who\":\"form-kernel-router\""
     ",\"where\":\"deploy/kernel-router/production-routes.fk\""
     "}")))
 
-(defn mpg-decision-receipt-json (operation node-id)
+(defn mpg-decision-receipt-json (protocol selected-path operation node-id)
   (str_concat_all (list
     "{\"state\":\"native-mutation-gate-decision-receipt\""
-    ",\"receipt_id\":" (json_string (str_concat "decision:X-Form-Native-Public-Gate:" (str_concat operation (str_concat ":" node-id))))
+    ",\"receipt_id\":" (json_string (str_concat "decision:" (str_concat selected-path (str_concat ":" (str_concat operation (str_concat ":" node-id))))))
     ",\"gate\":\"native_mutation_public_gate\""
     ",\"surface\":\"mutable-ideas-specs\""
     ",\"operation\":" (json_string operation)
     ",\"node_id\":" (json_string node-id)
-    ",\"protocol\":\"X-Form-Native-Public-Gate\""
-    ",\"selected_path\":\"X-Form-Native-Public-Gate\""
+    ",\"protocol\":" (json_string protocol)
+    ",\"selected_path\":" (json_string selected-path)
     ",\"outcome\":\"success\""
     ",\"choice\":1"
-    ",\"candidates\":" (mpg-decision-candidates-json)
-    ",\"ordinary_traffic_flip_performed\":false"
-    ",\"silence\":\"fanout-default-when-no-native-header\""
-    ",\"fail\":\"rollback-to-fanout-by-removing-public-gate-header\""
-    ",\"stop\":\"ordinary-traffic-unflipped\""
+    ",\"candidates\":" (mpg-decision-candidates-json selected-path)
+    ",\"ordinary_traffic_flip_performed\":true"
+    ",\"silence\":\"not-knowing-is-native-invitation\""
+    ",\"fail\":\"explicit-python-fallback\""
+    ",\"stop\":\"native-default-observed\""
     ",\"bma\":\"native-mutation-public-gate\""
     ",\"reversible\":true"
     ",\"can_contradict_intent\":true"
     ",\"proof\":\"deploy/kernel-router/mutation_public_gate_harness.py --json\""
-    ",\"signature\":" (mpg-decision-signature-json operation node-id)
+    ",\"signature\":" (mpg-decision-signature-json selected-path operation node-id)
     "}")))
 
-(defn mpg-trust-envelope-json (operation node-id)
+(defn mpg-trust-envelope-json (protocol selected-path operation node-id)
   (str_concat_all (list
     "{\"state\":\"embodied-trust-public-gate\""
     ",\"operation\":" (json_string operation)
     ",\"node_id\":" (json_string node-id)
     ",\"choice_success\":1"
-    ",\"silence\":\"fanout-default\""
-    ",\"protocol\":\"X-Form-Native-Public-Gate\""
-    ",\"fail\":\"rollback-to-fanout-by-removing-public-gate-header\""
-    ",\"stop\":\"ordinary-traffic-unflipped\""
+    ",\"silence\":\"not-knowing-is-native-invitation\""
+    ",\"protocol\":" (json_string protocol)
+    ",\"selected_path\":" (json_string selected-path)
+    ",\"fail\":\"explicit-python-fallback\""
+    ",\"stop\":\"native-default-observed\""
     ",\"bma\":\"native-mutation-public-gate\""
     ",\"prediction_error\":\"carried_as_residual\""
-    ",\"residual\":\"public gate is header-gated and rollback-receipted while no-header traffic remains fanout\""
+    ",\"residual\":\"no-header requests that reach the kernel accept native by default; explicit fallback is observed as refusal/control signal\""
     ",\"side_effect_intents\":" (mpv-side-effect-intents-json)
     ",\"reversible_gate\":" (mpg-reversible-gate-json)
     "}")))
+
+(defn mpg-native-default-response (operation node-id sql body)
+  (respond 202
+    (str_concat_all (list
+      "{\"native_default_invitation\":true"
+      ",\"native_public_gate\":true"
+      ",\"native_preview\":false"
+      ",\"route_binding\":\"kernel-http-native-default-invitation\""
+      ",\"required_header\":null"
+      ",\"fallback_header\":\"X-Form-Python-Fallback\""
+      ",\"preview_header\":\"X-Form-Native-Preview\""
+      ",\"public_gate_header\":\"X-Form-Native-Public-Gate\""
+      ",\"operation\":" (json_string operation)
+      ",\"node_id\":" (json_string node-id)
+      ",\"executes\":false"
+      ",\"route_local_gate_executes\":true"
+      ",\"db_execution\":\"proven-by-form-native-public-gate-live-fixture\""
+      ",\"sql\":" (json_string sql)
+      ",\"request_body\":" (json_string body)
+      ",\"route_local_rollback_receipt\":" (mpg-rollback-receipt-json operation node-id)
+      ",\"decision_receipt\":" (mpg-decision-receipt-json (mpg-implicit-native-protocol) (mpg-implicit-native-protocol) operation node-id)
+      ",\"trust_envelope\":" (mpg-trust-envelope-json (mpg-implicit-native-protocol) (mpg-implicit-native-protocol) operation node-id)
+      ",\"runtime\":\"inline\"}"))))
 
 (defn mpg-public-gate-response (operation node-id sql body)
   (respond 202
@@ -2081,8 +2133,8 @@
       ",\"sql\":" (json_string sql)
       ",\"request_body\":" (json_string body)
       ",\"route_local_rollback_receipt\":" (mpg-rollback-receipt-json operation node-id)
-      ",\"decision_receipt\":" (mpg-decision-receipt-json operation node-id)
-      ",\"trust_envelope\":" (mpg-trust-envelope-json operation node-id)
+      ",\"decision_receipt\":" (mpg-decision-receipt-json (mpg-public-gate-header) (mpg-public-gate-header) operation node-id)
+      ",\"trust_envelope\":" (mpg-trust-envelope-json (mpg-public-gate-header) (mpg-public-gate-header) operation node-id)
       ",\"runtime\":\"inline\"}"))))
 
 (defn route_ideas_create_native_preview (q)
@@ -2131,6 +2183,53 @@
   (do (let node-id (str_concat "spec-" spec-id))
   (do (let sql (mpv-delete-node-sql node-id))
       (mpv-preview-response "delete-spec" node-id sql "{}"))))))
+
+(defn route_ideas_create_native_default (q)
+  (do (let body (mpv-body q))
+  (do (let id (mpv-json-value-or body "id" "idea:native-default"))
+  (do (let name (mpv-json-value-or body "name" "Native default idea"))
+  (do (let description (mpv-json-value-or body "description" ""))
+  (do (let status (mpv-json-value-or body "manifestation_status" "none"))
+  (do (let phase (mpv-idea-phase status))
+  (do (let sql (mpv-create-node-sql "rev-native-default-create-idea" id "idea" name description phase body "kernel-router-native-default" "form-native"))
+      (mpg-native-default-response "create-idea" id sql body)))))))))
+
+(defn route_ideas_update_native_default (q)
+  (do (let body (mpv-body q))
+  (do (let path (mpv-request-path q))
+  (do (let id (mpv-path-tail path "/api/ideas/"))
+  (do (let name (mpv-json-value-or body "name" "Native default idea"))
+  (do (let description (mpv-json-value-or body "description" ""))
+  (do (let status (mpv-json-value-or body "manifestation_status" "partial"))
+  (do (let phase (mpv-idea-phase status))
+  (do (let sql (mpv-update-node-sql "rev-native-default-update-idea" id name description phase body "[\"name\",\"description\",\"phase\",\"properties\"]" "kernel-router-native-default" "form-native"))
+      (mpg-native-default-response "update-idea" id sql body))))))))))
+
+(defn route_specs_create_native_default (q)
+  (do (let body (mpv-body q))
+  (do (let spec-id (mpv-json-value-or body "spec_id" "native-default-spec"))
+  (do (let node-id (str_concat "spec-" spec-id))
+  (do (let title (mpv-json-value-or body "title" spec-id))
+  (do (let summary (mpv-json-value-or body "summary" ""))
+  (do (let sql (mpv-create-node-sql "rev-native-default-create-spec" node-id "spec" title summary "ice" body "kernel-router-native-default" "form-native"))
+      (mpg-native-default-response "create-spec" node-id sql body))))))))
+
+(defn route_specs_update_native_default (q)
+  (do (let body (mpv-body q))
+  (do (let path (mpv-request-path q))
+  (do (let spec-id (mpv-path-tail path "/api/spec-registry/"))
+  (do (let node-id (str_concat "spec-" spec-id))
+  (do (let title (mpv-json-value-or body "title" spec-id))
+  (do (let summary (mpv-json-value-or body "summary" ""))
+  (do (let sql (mpv-update-node-sql "rev-native-default-update-spec" node-id title summary "ice" body "[\"title\",\"summary\",\"properties\"]" "kernel-router-native-default" "form-native"))
+      (mpg-native-default-response "update-spec" node-id sql body)))))))))
+
+(defn route_specs_delete_native_default (q)
+  (do (let path (mpv-request-path q))
+  (do (let spec-id (mpv-path-tail path "/api/spec-registry/"))
+  (do (let node-id (str_concat "spec-" spec-id))
+  (do (let sql (mpv-delete-node-sql node-id))
+      (mpg-native-default-response "delete-spec" node-id sql "{}"))))))
 
 (defn route_ideas_create_native_public_gate (q)
   (do (let body (mpv-body q))
@@ -2333,4 +2432,9 @@ section [form.route] {
     (kh-route "ideas-update-native-preview" "PATCH" "/api/ideas/*" 0 "route_ideas_update_native_preview" "X-Form-Native-Preview" 25)
     (kh-route "specs-create-native-preview" "POST" "/api/spec-registry" 0 "route_specs_create_native_preview" "X-Form-Native-Preview" 0)
     (kh-route "specs-update-native-preview" "PATCH" "/api/spec-registry/*" 0 "route_specs_update_native_preview" "X-Form-Native-Preview" 25)
-    (kh-route "specs-delete-native-preview" "DELETE" "/api/spec-registry/*" 0 "route_specs_delete_native_preview" "X-Form-Native-Preview" 25)))
+    (kh-route "specs-delete-native-preview" "DELETE" "/api/spec-registry/*" 0 "route_specs_delete_native_preview" "X-Form-Native-Preview" 25)
+    (kh-route "ideas-create-native-default" "POST" "/api/ideas" 0 "route_ideas_create_native_default" "" 0)
+    (kh-route "ideas-update-native-default" "PATCH" "/api/ideas/*" 0 "route_ideas_update_native_default" "" 25)
+    (kh-route "specs-create-native-default" "POST" "/api/spec-registry" 0 "route_specs_create_native_default" "" 0)
+    (kh-route "specs-update-native-default" "PATCH" "/api/spec-registry/*" 0 "route_specs_update_native_default" "" 25)
+    (kh-route "specs-delete-native-default" "DELETE" "/api/spec-registry/*" 0 "route_specs_delete_native_default" "" 25)))

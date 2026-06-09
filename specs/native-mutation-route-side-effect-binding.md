@@ -152,6 +152,6 @@ python3 scripts/validate_spec_quality.py --file specs/native-mutation-route-side
 - Route-runner binding uses the side-effect ledger as constraint: rollback
   receipts are reversible gate safety, not domain parity.
 - The ledger states that rollback receipts are gate-local safety rather than Python parity.
-- The public manifest remains no-header fanout by default, so ordinary clients
-  do not observe native mutation execution until a deployed public-gate canary
-  lands and is explicitly promoted.
+- The kernel manifest is no-header native-default for mutable routes; public
+  Traefik no-header default stays on FastAPI until HTTP native mutation
+  execution preserves production persistence semantics.

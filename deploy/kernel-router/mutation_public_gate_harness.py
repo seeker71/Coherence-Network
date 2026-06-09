@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""Observation gate for the native mutation public-gate header.
+"""Observation gate for native mutation default invitation and public gate.
 
-This is the narrow movement after A/B preview confidence:
+This is the movement after A/B preview confidence:
 
-  A: no mutation gate header -> must fan out to upstream.
+  A: no mutation gate header -> must accept the implicit native invitation.
   B: X-Form-Native-Preview -> must remain a non-executing native SQL preview.
   C: X-Form-Native-Public-Gate -> must select the public-gate native route and
      carry a route-local rollback receipt.
+  D: X-Form-Python-Fallback -> explicit refusal/control signal, fanned out.
 
-No ordinary no-header traffic moves, no production database is touched, and the
-HTTP route does not claim DB execution. The live Postgres receipt proof lives in
-form/scripts/native-mutation-public-gate-test.sh.
+The HTTP native route still keeps DB execution honest in its response. The live
+Postgres receipt proof lives in form/scripts/native-mutation-public-gate-test.sh.
 """
 
 from __future__ import annotations
@@ -36,6 +36,8 @@ PRODUCTION_ROUTES = HERE / "production-routes.fk"
 STDLIB = REPO_ROOT / "form" / "form-stdlib"
 PREVIEW_HEADER = "X-Form-Native-Preview"
 PUBLIC_GATE_HEADER = "X-Form-Native-Public-Gate"
+PYTHON_FALLBACK_HEADER = "X-Form-Python-Fallback"
+IMPLICIT_NATIVE_PROTOCOL = "implicit-native-invitation"
 
 
 @dataclass(frozen=True)
@@ -62,14 +64,16 @@ class PublicGateObservation:
     name: str
     passed: bool
     checks: dict[str, bool]
-    control_status: int
-    control_router: str
+    default_status: int
+    default_router: str
     preview_status: int
     preview_router: str
     public_gate_status: int
     public_gate_router: str
     both_headers_status: int
     both_headers_router: str
+    fallback_status: int
+    fallback_router: str
     operation: str
     node_id: str
 
@@ -229,9 +233,20 @@ def http_request(base_url: str, case: PublicGateCase, *, headers: dict[str, str]
     return HTTPObservation(status=status, router=router, body=body, parsed=parsed)
 
 
-def _gate_checks(case: PublicGateCase, observation: HTTPObservation) -> dict[str, bool]:
+def _gate_checks(
+    case: PublicGateCase,
+    observation: HTTPObservation,
+    *,
+    expected_protocol: str,
+    expected_selected_path: str,
+    expected_route_binding: str,
+    expected_required_header: str | None,
+    expected_default_invitation: bool,
+    expected_sql_contains: tuple[str, ...] | None = None,
+) -> dict[str, bool]:
     parsed = observation.parsed
     sql = str(parsed.get("sql") or "")
+    sql_contains = expected_sql_contains or case.sql_contains
     receipt = parsed.get("route_local_rollback_receipt")
     if not isinstance(receipt, dict):
         receipt = {}
@@ -254,87 +269,107 @@ def _gate_checks(case: PublicGateCase, observation: HTTPObservation) -> dict[str
         "public_gate_native": observation.router == "native-kernel",
         "public_gate_status": observation.status == 202,
         "public_gate_declared": parsed.get("native_public_gate") is True,
+        "default_invitation_declared": (
+            parsed.get("native_default_invitation") is True
+            if expected_default_invitation
+            else parsed.get("native_default_invitation") is not True
+        ),
         "public_gate_not_preview": parsed.get("native_preview") is False,
-        "public_gate_required_header": parsed.get("required_header") == PUBLIC_GATE_HEADER,
-        "public_gate_route_binding": parsed.get("route_binding") == "kernel-http-public-rollback-gated",
+        "public_gate_required_header": parsed.get("required_header") == expected_required_header,
+        "public_gate_fallback_header": parsed.get("fallback_header") in (None, PYTHON_FALLBACK_HEADER),
+        "public_gate_route_binding": parsed.get("route_binding") == expected_route_binding,
         "public_gate_operation": parsed.get("operation") == case.operation,
         "public_gate_node_id": parsed.get("node_id") == case.node_id,
         "public_gate_keeps_db_execution_honest": parsed.get("executes") is False,
         "public_gate_executes_gate": parsed.get("route_local_gate_executes") is True,
-        "public_gate_sql_shape": all(part in sql for part in case.sql_contains),
+        "public_gate_sql_shape": all(part in sql for part in sql_contains),
         "public_gate_body_seen": parsed.get("request_body", "") == (case.body or "{}"),
         "rollback_receipt_state": receipt.get("state") == "route-local-rollback-receipt",
         "rollback_receipt_node": receipt.get("node_id") == case.node_id,
-        "rollback_receipt_rollback": "remove X-Form-Native-Public-Gate" in str(receipt.get("rollback") or ""),
+        "rollback_receipt_rollback": (
+            PYTHON_FALLBACK_HEADER in str(receipt.get("rollback") or "")
+            and "default native route row" in str(receipt.get("rollback") or "")
+        ),
         "decision_receipt_state": decision.get("state") == "native-mutation-gate-decision-receipt",
         "decision_receipt_gate": decision.get("gate") == "native_mutation_public_gate",
-        "decision_receipt_protocol": decision.get("protocol") == PUBLIC_GATE_HEADER,
+        "decision_receipt_protocol": decision.get("protocol") == expected_protocol,
         "decision_receipt_operation": decision.get("operation") == case.operation,
         "decision_receipt_node": decision.get("node_id") == case.node_id,
-        "decision_receipt_selected_path": decision.get("selected_path") == PUBLIC_GATE_HEADER,
+        "decision_receipt_selected_path": decision.get("selected_path") == expected_selected_path,
         "decision_receipt_outcome": decision.get("outcome") == "success",
         "decision_receipt_choice": decision.get("choice") == 1,
         "decision_receipt_candidates": (
-            len(decision_candidates) == 3
+            len(decision_candidates) == 4
             and any(
-                candidate.get("path") == "fanout-python"
-                and candidate.get("outcome") == "silence"
-                and candidate.get("selected") is False
+                candidate.get("path") == IMPLICIT_NATIVE_PROTOCOL
+                and candidate.get("outcome") == "success"
+                and candidate.get("selected") is (expected_selected_path == IMPLICIT_NATIVE_PROTOCOL)
                 for candidate in decision_candidates
                 if isinstance(candidate, dict)
             )
             and any(
                 candidate.get("path") == PREVIEW_HEADER
-                and candidate.get("outcome") == "stop"
-                and candidate.get("selected") is False
+                and candidate.get("outcome") == "preview"
+                and candidate.get("selected") is (expected_selected_path == PREVIEW_HEADER)
                 for candidate in decision_candidates
                 if isinstance(candidate, dict)
             )
             and any(
                 candidate.get("path") == PUBLIC_GATE_HEADER
                 and candidate.get("outcome") == "success"
-                and candidate.get("selected") is True
+                and candidate.get("selected") is (expected_selected_path == PUBLIC_GATE_HEADER)
+                for candidate in decision_candidates
+                if isinstance(candidate, dict)
+            )
+            and any(
+                candidate.get("path") == PYTHON_FALLBACK_HEADER
+                and candidate.get("outcome") == "refusal-signal"
+                and candidate.get("selected") is (expected_selected_path == PYTHON_FALLBACK_HEADER)
                 for candidate in decision_candidates
                 if isinstance(candidate, dict)
             )
         ),
         "decision_receipt_reversible": (
-            decision.get("ordinary_traffic_flip_performed") is False
+            decision.get("ordinary_traffic_flip_performed") is True
             and decision.get("reversible") is True
             and decision.get("can_contradict_intent") is True
-            and decision.get("fail") == "rollback-to-fanout-by-removing-public-gate-header"
-            and decision.get("stop") == "ordinary-traffic-unflipped"
+            and decision.get("fail") == "explicit-python-fallback"
+            and decision.get("stop") == "native-default-observed"
             and decision.get("bma") == "native-mutation-public-gate"
         ),
         "decision_receipt_signature": (
             decision_signature.get("category") == "native-mutation-gate"
-            and decision_signature.get("selected_path") == PUBLIC_GATE_HEADER
+            and decision_signature.get("selected_path") == expected_selected_path
             and decision_signature.get("outcome_code") == 1
-            and decision_signature.get("candidate_count") == 3
+            and decision_signature.get("candidate_count") == 4
             and decision_signature.get("operation") == case.operation
             and decision_signature.get("node_id") == case.node_id
         ),
-        "trust_protocol": trust.get("protocol") == PUBLIC_GATE_HEADER,
+        "trust_protocol": trust.get("protocol") == expected_protocol,
+        "trust_selected_path": trust.get("selected_path") == expected_selected_path,
         "trust_choice_success": trust.get("choice_success") == 1,
-        "trust_fail": trust.get("fail") == "rollback-to-fanout-by-removing-public-gate-header",
-        "trust_stop": trust.get("stop") == "ordinary-traffic-unflipped",
+        "trust_fail": trust.get("fail") == "explicit-python-fallback",
+        "trust_stop": trust.get("stop") == "native-default-observed",
         "trust_bma": trust.get("bma") == "native-mutation-public-gate",
         "trust_reversible_gate": (
-            reversible_gate.get("default_route") == "fanout-python"
+            reversible_gate.get("default_route") == "native-kernel"
+            and reversible_gate.get("default_protocol") == IMPLICIT_NATIVE_PROTOCOL
             and reversible_gate.get("preview_route") == PREVIEW_HEADER
             and reversible_gate.get("public_gate_route") == PUBLIC_GATE_HEADER
+            and reversible_gate.get("fallback_route") == PYTHON_FALLBACK_HEADER
             and reversible_gate.get("public_gate_allowed") is True
-            and reversible_gate.get("ordinary_traffic_flip_performed") is False
+            and reversible_gate.get("ordinary_traffic_flip_performed") is True
         ),
     }
 
 
 def evaluate_case(
     case: PublicGateCase,
-    control: HTTPObservation,
+    default: HTTPObservation,
     preview: HTTPObservation,
     public_gate: HTTPObservation,
     both_headers: HTTPObservation,
+    fallback: HTTPObservation,
 ) -> PublicGateObservation:
     preview_checks = {
         "preview_native": preview.router == "native-kernel",
@@ -344,27 +379,64 @@ def evaluate_case(
         "preview_protocol": (preview.parsed.get("trust_envelope") or {}).get("protocol") == PREVIEW_HEADER,
     }
     checks = {
-        "control_fanned_out": control.router == "fanout-python",
-        "control_status_ok": control.status == 200,
-        "control_method_seen": control.parsed.get("method") == case.method,
-        "control_path_seen": control.parsed.get("path") == case.path,
-        "control_body_seen": control.parsed.get("body", "") == case.body,
+        **{
+            f"default_{name}": ok
+            for name, ok in _gate_checks(
+                case,
+                default,
+                expected_protocol=IMPLICIT_NATIVE_PROTOCOL,
+                expected_selected_path=IMPLICIT_NATIVE_PROTOCOL,
+                expected_route_binding="kernel-http-native-default-invitation",
+                expected_required_header=None,
+                expected_default_invitation=True,
+                expected_sql_contains=tuple(
+                    part.replace("kernel-router-public-gate", "kernel-router-native-default")
+                    for part in case.sql_contains
+                ),
+            ).items()
+        },
+        "fallback_fanned_out": fallback.router == "fanout-python",
+        "fallback_status_ok": fallback.status == 200,
+        "fallback_method_seen": fallback.parsed.get("method") == case.method,
+        "fallback_path_seen": fallback.parsed.get("path") == case.path,
+        "fallback_body_seen": fallback.parsed.get("body", "") == case.body,
         **{f"preview_{name}": ok for name, ok in preview_checks.items()},
-        **_gate_checks(case, public_gate),
-        **{f"both_headers_{name}": ok for name, ok in _gate_checks(case, both_headers).items()},
+        **_gate_checks(
+            case,
+            public_gate,
+            expected_protocol=PUBLIC_GATE_HEADER,
+            expected_selected_path=PUBLIC_GATE_HEADER,
+            expected_route_binding="kernel-http-public-rollback-gated",
+            expected_required_header=PUBLIC_GATE_HEADER,
+            expected_default_invitation=False,
+        ),
+        **{
+            f"both_headers_{name}": ok
+            for name, ok in _gate_checks(
+                case,
+                both_headers,
+                expected_protocol=PUBLIC_GATE_HEADER,
+                expected_selected_path=PUBLIC_GATE_HEADER,
+                expected_route_binding="kernel-http-public-rollback-gated",
+                expected_required_header=PUBLIC_GATE_HEADER,
+                expected_default_invitation=False,
+            ).items()
+        },
     }
     return PublicGateObservation(
         name=case.name,
         passed=all(checks.values()),
         checks=checks,
-        control_status=control.status,
-        control_router=control.router,
+        default_status=default.status,
+        default_router=default.router,
         preview_status=preview.status,
         preview_router=preview.router,
         public_gate_status=public_gate.status,
         public_gate_router=public_gate.router,
         both_headers_status=both_headers.status,
         both_headers_router=both_headers.router,
+        fallback_status=fallback.status,
+        fallback_router=fallback.router,
         operation=str(public_gate.parsed.get("operation") or ""),
         node_id=str(public_gate.parsed.get("node_id") or ""),
     )
@@ -381,9 +453,10 @@ def build_gate_report(
     gate_pass = confidence >= min_confidence and passed == total
     return {
         "gate": "native_mutation_public_gate",
-        "variant_a": "fanout-python without native mutation headers",
+        "variant_a": "native-kernel implicit invitation without native mutation headers",
         "variant_b": "native-kernel SQL preview with X-Form-Native-Preview",
         "variant_c": "native-kernel public gate with X-Form-Native-Public-Gate",
+        "variant_d": "fanout-python explicit fallback with X-Form-Python-Fallback",
         "cases": [asdict(obs) for obs in observations],
         "passed_cases": passed,
         "total_cases": total,
@@ -396,12 +469,13 @@ def build_gate_report(
             else "hold_public_gate"
         ),
         "public_gate_header_allowed": gate_pass,
-        "ordinary_traffic_flip_allowed": False,
-        "ordinary_traffic_flip_performed": False,
+        "ordinary_traffic_flip_allowed": True,
+        "ordinary_traffic_flip_performed": True,
+        "python_fallback_header": PYTHON_FALLBACK_HEADER,
         "next_evidence_needed": [
-            "public-gate decision receipts in deployed canary traffic",
-            "no-header public control remains outside native canary",
-            "sustained X-Form-Native-Public-Gate canary evidence before any no-header flip",
+            "public Traefik default mutation routes to kernel-router",
+            "native HTTP mutation handler preserves production persistence semantics",
+            "explicit X-Form-Python-Fallback refusal/control signal is counted separately",
         ],
     }
 
@@ -464,6 +538,7 @@ def run_observation(min_confidence: float) -> dict[str, Any]:
                     case,
                     headers={PREVIEW_HEADER: "1", PUBLIC_GATE_HEADER: "1"},
                 ),
+                http_request(base_url, case, headers={PYTHON_FALLBACK_HEADER: "1"}),
             )
             for case in CASES
         ]
@@ -485,20 +560,22 @@ def render_human(report: dict[str, Any]) -> str:
         f"variant A: {report['variant_a']}",
         f"variant B: {report['variant_b']}",
         f"variant C: {report['variant_c']}",
+        f"variant D: {report['variant_d']}",
         f"confidence: {report['confidence']:.4f} ({report['passed_cases']}/{report['total_cases']} cases)",
         f"gate_pass: {report['gate_pass']}",
         f"recommendation: {report['recommendation']}",
-        "ordinary_traffic_flip_performed: false",
+        "ordinary_traffic_flip_performed: true",
         "",
         "cases:",
     ]
     for case in report["cases"]:
         lines.append(
             f"  - {case['name']}: {'pass' if case['passed'] else 'fail'} "
-            f"A={case['control_router']}:{case['control_status']} "
+            f"A={case['default_router']}:{case['default_status']} "
             f"B={case['preview_router']}:{case['preview_status']} "
             f"C={case['public_gate_router']}:{case['public_gate_status']} "
             f"both={case['both_headers_router']}:{case['both_headers_status']} "
+            f"D={case['fallback_router']}:{case['fallback_status']} "
             f"{case['operation']} {case['node_id']}"
         )
         failed = [name for name, ok in case["checks"].items() if not ok]

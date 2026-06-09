@@ -8,8 +8,12 @@
 # WHAT THIS IS: the deployable shadow step of the flip in
 # kernels/KERNEL_AS_ROUTER.md. The kernel-router (form-kernel-rust serve) sits in
 # front of the api service and, with the production manifest, serves explicit
-# native rows while fanning out the tail to api:8000. The Traefik rules below are
-# HEADER-GATED, so ordinary no-header traffic still goes directly to api:8000.
+# native rows while fanning out the tail to api:8000. Inside the production
+# manifest, mutable ideas/specs no-header traffic that reaches the kernel accepts
+# the implicit native invitation; X-Form-Python-Fallback is the explicit
+# refusal/control signal. The Traefik rules below are still HEADER-GATED, so
+# public ordinary no-header traffic continues to reach api:8000 until the HTTP
+# native mutation handler preserves production persistence semantics.
 #
 # WHAT THIS IS NOT: the all-traffic flip. The full flip is pointing Traefik's
 # ordinary Host(api.coherencycoin.com) router at this service instead of at the

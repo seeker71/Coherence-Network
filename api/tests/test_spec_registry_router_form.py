@@ -64,4 +64,5 @@ def test_spec_registry_router_form_describes_live_and_native_carriers():
     assert "native-mutation-side-effects-test.sh proves parent-edge repair" in form_text
     assert "native-mutation-route-side-effects-test.sh proves application graph mutation plus side-effect execution are bound" in form_text
     assert "native-mutation-public-gate-test.sh plus mutation_public_gate_harness.py prove X-Form-Native-Public-Gate" in form_text
-    assert "deployed header-gated public canary gathers treatment/control evidence before any no-header flip" in form_text
+    assert "X-Form-Python-Fallback fans out as explicit refusal/control signal" in form_text
+    assert "until the HTTP native mutation handler preserves production persistence semantics" in form_text

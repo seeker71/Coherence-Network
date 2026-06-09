@@ -123,4 +123,4 @@ def test_ledger_and_route_forms_mark_audit_parity_carried():
     for text in (_text(IDEAS_FORM_PATH), _text(SPECS_FORM_PATH)):
         assert "native idea valuation audit ledger proven" in text
         assert "idea valuation audit-ledger parity is carried Form-native" in text
-        assert "deployed header-gated public canary" in text
+        assert "public Traefik default waits for persistence-preserving HTTP native execution" in text

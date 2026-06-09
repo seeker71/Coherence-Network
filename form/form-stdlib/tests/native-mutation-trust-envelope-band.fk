@@ -4,7 +4,7 @@
 ;
 ; Band verdict: 11111 when prediction error is carried as residual,
 ; side-effect intents are named, choice success is explicit, and ordinary
-; traffic remains reversible/unflipped.
+; traffic is native-default while explicit fallback stays reversible.
 
 (do
     (nmte-test))

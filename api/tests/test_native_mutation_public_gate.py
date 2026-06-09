@@ -47,7 +47,9 @@ def test_public_gate_form_names_header_runner_and_rollback_receipt():
         "nival-run-idea-update-with-valuation-audit",
         "nmrs-run-spec-update-with-side-effects",
         "idea valuation audit ledger",
-        '\\"ordinary_traffic_flip_performed\\":false',
+        '\\"ordinary_traffic_flip_performed\\":true',
+        "implicit-native-invitation",
+        "X-Form-Python-Fallback",
     ):
         assert required in text
     assert "defn nival-record-valuation-change" in _text(AUDIT_LEDGER_PATH)
@@ -113,7 +115,7 @@ def test_public_gate_live_integration_persists_route_local_receipts():
         assert required in text
 
 
-def test_production_routes_expose_public_gate_without_no_header_flip():
+def test_production_routes_expose_public_gate_with_native_default_invitation():
     text = _text(PRODUCTION_ROUTES_PATH)
 
     expected_rows = (
@@ -125,15 +127,26 @@ def test_production_routes_expose_public_gate_without_no_header_flip():
     )
     for row in expected_rows:
         assert row in text
+    for row in (
+        '(kh-route "ideas-create-native-default" "POST" "/api/ideas" 0 "route_ideas_create_native_default" "" 0)',
+        '(kh-route "ideas-update-native-default" "PATCH" "/api/ideas/*" 0 "route_ideas_update_native_default" "" 25)',
+        '(kh-route "specs-create-native-default" "POST" "/api/spec-registry" 0 "route_specs_create_native_default" "" 0)',
+        '(kh-route "specs-update-native-default" "PATCH" "/api/spec-registry/*" 0 "route_specs_update_native_default" "" 25)',
+        '(kh-route "specs-delete-native-default" "DELETE" "/api/spec-registry/*" 0 "route_specs_delete_native_default" "" 25)',
+    ):
+        assert row in text
 
     assert '\\"native_public_gate\\":true' in text
+    assert '\\"native_default_invitation\\":true' in text
+    assert '\\"route_binding\\":\\"kernel-http-native-default-invitation\\"' in text
+    assert '\\"fallback_header\\":\\"X-Form-Python-Fallback\\"' in text
     assert '\\"route_local_gate_executes\\":true' in text
     assert '\\"decision_receipt\\":' in text
     assert "native-mutation-gate-decision-receipt" in text
     assert "can_contradict_intent" in text
     assert '\\"executes\\":false' in text
-    assert "Requests without either header" in text
-    assert "Ordinary no-header traffic remains fanout-python" in text
+    assert "implicit native invitation path" in text
+    assert "X-Form-Python-Fallback is the explicit refusal/control signal" in text
 
 
 def test_public_gate_harness_observes_public_gate_when_kernel_available():
@@ -155,13 +168,17 @@ def test_public_gate_harness_observes_public_gate_when_kernel_available():
     assert report["confidence"] == 1.0
     assert report["recommendation"] == "verify_deployed_header_canary"
     assert report["public_gate_header_allowed"] is True
-    assert report["ordinary_traffic_flip_performed"] is False
+    assert report["ordinary_traffic_flip_performed"] is True
+    assert report["python_fallback_header"] == "X-Form-Python-Fallback"
     assert report["next_evidence_needed"] == [
-        "public-gate decision receipts in deployed canary traffic",
-        "no-header public control remains outside native canary",
-        "sustained X-Form-Native-Public-Gate canary evidence before any no-header flip",
+        "public Traefik default mutation routes to kernel-router",
+        "native HTTP mutation handler preserves production persistence semantics",
+        "explicit X-Form-Python-Fallback refusal/control signal is counted separately",
     ]
     for case in report["cases"]:
+        assert case["checks"]["default_decision_receipt_selected_path"] is True
+        assert case["checks"]["default_trust_selected_path"] is True
+        assert case["checks"]["fallback_fanned_out"] is True
         assert case["checks"]["decision_receipt_state"] is True
         assert case["checks"]["decision_receipt_selected_path"] is True
         assert case["checks"]["decision_receipt_reversible"] is True
@@ -175,8 +192,8 @@ def test_route_forms_name_public_gate_canary_evidence_boundary():
         assert "form/scripts/native-mutation-public-gate-test.sh" in text
         assert "native mutation public gate proven" in text
         assert "X-Form-Native-Public-Gate" in text
-        assert "deployed header-gated public canary gathers treatment/control evidence" in text
-        assert "sustained X-Form-Native-Public-Gate canary evidence" in text
+        assert "implicit native invitation" in text
+        assert "X-Form-Python-Fallback" in text
 
 
 def test_deploy_exposes_header_gated_public_canary_without_no_header_flip():
@@ -194,13 +211,14 @@ def test_deploy_exposes_header_gated_public_canary_without_no_header_flip():
     assert "Header(`X-Form-Native-Preview`,`1`)" in compose
     assert "coherence-api-kernel-public-gate-canary.priority" in compose
     assert "loadbalancer.server.port: \"8080\"" in compose
-    assert "ordinary no-header traffic still goes directly to api:8000" in compose
+    assert "public ordinary no-header traffic continues to reach api:8000" in compose
+    assert "X-Form-Python-Fallback is the explicit" in compose
 
     assert "ensure_kernel_router_canary" in auto_deploy
     assert "docker-compose.kernel-router.yml" in auto_deploy
     assert "X-Form-Native-Public-Gate: 1" in auto_deploy
     assert '\\"decision_receipt\\"' in auto_deploy
-    assert '\\"ordinary_traffic_flip_performed\\":false' in auto_deploy
+    assert '\\"ordinary_traffic_flip_performed\\":true' in auto_deploy
 
     for workflow in (hostinger_workflow, public_contract_workflow):
         assert "'deploy/kernel-router/**'" in workflow
@@ -210,4 +228,4 @@ def test_deploy_exposes_header_gated_public_canary_without_no_header_flip():
     assert "./scripts/verify_kernel_canary_public_gate.sh" in hostinger_workflow
     assert "native_public_gate" in verify_script
     assert "control_status" in verify_script
-    assert "no-header control remains outside native canary" in verify_script
+    assert "public Traefik no-header control remains outside native default route" in verify_script
