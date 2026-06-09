@@ -147,24 +147,13 @@ def _member_by_token(token: str | None) -> dict | None:
     return None
 
 
-def _is_placeholder_name_k(name: str) -> int:
-    """Value-identical fallback for endpoint_placeholder_name.fk."""
-    if len(name) == 0:
-        return 1
-    if len(name) < 4:
-        return 0
-    return 1 if name[0:4] == "New " else 0
-
-
 def _is_placeholder_name(name: str) -> bool:
     """A role-only invite carries 'New {role}' until the newcomer claims it
     with their own name on first open — the self-name half of `bind`. The
-    decision runs on the Form kernel (endpoint_placeholder_name.fk),
-    Python the value-identical fallback."""
+    decision runs on the Form kernel (endpoint_placeholder_name.fk)."""
     val, _runtime = serve_via_kernel(
         "endpoint_placeholder_name.fk",
         bindings={"name": name},
-        fallback=lambda: _is_placeholder_name_k(name),
         parse=int,
     )
     return bool(val)
@@ -270,18 +259,12 @@ async def whoami(
     return _member_private(node)
 
 
-def _is_active_k(status: str) -> int:
-    """Value-identical fallback for endpoint_member_active.fk."""
-    return 1 if status == "active" else 0
-
-
 def _is_active(status: str) -> bool:
     """The see-lock decision (Form: see open-to active-member) — on the kernel
-    (endpoint_member_active.fk), Python the value-identical fallback."""
+    (endpoint_member_active.fk)."""
     val, _runtime = serve_via_kernel(
         "endpoint_member_active.fk",
         bindings={"status": status},
-        fallback=lambda: _is_active_k(status),
         parse=int,
     )
     return bool(val)
@@ -461,26 +444,13 @@ def _apply(request_id: str, updates: dict[str, Any]) -> RequestResponse:
 
 # ── The request lifecycle, as a Form recipe ───────────────────────────
 # advance(status, verb) — the membrane's state machine — runs on the Form
-# kernel (endpoint_household_advance.fk) with a value-identical Python
-# fallback. This is the first household rule to leave the Python if-tree and
-# execute as Form; the carrier here only encodes/decodes and does the I/O.
+# kernel (endpoint_household_advance.fk). This is the first household rule to
+# leave the Python if-tree and execute as Form; the carrier here only
+# encodes/decodes and does the I/O.
 # (household-membrane.form, recipes: acknowledge / tend / complete.)
 _STATUS_CODE = {"open": 0, "acknowledged": 1, "in_progress": 2, "completed": 3, "cancelled": 4}
 _CODE_STATUS = {v: k for k, v in _STATUS_CODE.items()}
 _VERB_CODE = {"acknowledge": 0, "start": 1, "complete": 2, "cancel": 3}
-
-
-def _advance_py(status: int, verb: int) -> int:
-    """Value-identical fallback for endpoint_household_advance.fk."""
-    if verb == 0:
-        return 1 if status == 0 else -1
-    if verb == 1:
-        return 2 if status < 2 else -1
-    if verb == 2:
-        return 3 if status < 3 else -1
-    if verb == 3:
-        return 4 if status < 3 else -1
-    return -1
 
 
 def _advance_status(current: str, verb: str) -> str:
@@ -490,7 +460,6 @@ def _advance_status(current: str, verb: str) -> str:
     code, _runtime = serve_via_kernel(
         "endpoint_household_advance.fk",
         bindings={"status": s, "verb": v},
-        fallback=lambda: _advance_py(s, v),
         parse=int,
     )
     nxt = _CODE_STATUS.get(int(code))
@@ -663,25 +632,15 @@ async def pay_request(request_id: str, body: ActorBody) -> RequestResponse:
 _COST_CODE = {"none": 0, "recorded": 1, "paid": 2}
 
 
-def _request_progress_k(status_code: int, cost_code: int) -> int:
-    """Value-identical fallback for endpoint_request_progress.fk."""
-    if status_code == 4:                          # cancelled — off the path
-        return 0
-    if status_code == 3 and cost_code == 2:       # completed + paid = settled
-        return 5
-    return status_code + 1                         # open=1 ack=2 tending=3 completed=4
-
-
 def _request_progress(status: str, cost_status: str) -> int:
     """Where in its life a request is (0 cancelled · 1 open · 2 acknowledged ·
     3 tending · 4 completed · 5 settled) — on the Form kernel
-    (endpoint_request_progress.fk), Python the value-identical fallback."""
+    (endpoint_request_progress.fk)."""
     s = _STATUS_CODE.get(status, 0)
     c = _COST_CODE.get(cost_status, 0)
     val, _runtime = serve_via_kernel(
         "endpoint_request_progress.fk",
         bindings={"s": s, "c": c},
-        fallback=lambda: _request_progress_k(s, c),
         parse=int,
     )
     return int(val)
@@ -772,62 +731,35 @@ async def request_trace(request_id: str, token: str | None = Query(default=None)
 # every answer with its name and the live tally. An event-kind question also
 # carries a place, a moment, and a status. (household-membrane.form: gathering.)
 #
-# Two decisions run on the Form kernel, value-identical Python the fallback:
-# who a question is VISIBLE to (the audience predicate) and how many HEADS one
-# answer is worth (yes-plus-one = 2). The carrier does only I/O and the fold.
+# Two decisions run on the Form kernel: who a question is VISIBLE to (the
+# audience predicate) and how many HEADS one answer is worth (yes-plus-one = 2).
+# The carrier does only I/O and the fold.
 # --------------------------------------------------------------------------
 _GATHERING_TYPE = "household_gathering"
 _GROUPS = {"staff", "resident", "friend"}
 
 
-def _gathering_visible_k(akind: str, aval: str, author: str, viewer: str, vrole: str) -> int:
-    """Value-identical fallback for endpoint_gathering_visible.fk."""
-    if viewer == author:
-        return 1
-    if akind == "everyone":
-        return 1
-    if akind == "person":
-        return 1 if viewer == aval else 0
-    if akind == "group":
-        if aval == "friend":
-            return 1
-        return 1 if aval == vrole else 0
-    return 0
-
-
 def _gathering_visible(akind: str, aval: str, author: str, viewer: str, vrole: str) -> bool:
     """The audience predicate (household-membrane.form: visible-to) — on the
-    Form kernel (endpoint_gathering_visible.fk), Python the value-identical
-    fallback. A cell sees a question when it authored it, when it's for
-    everyone, when it's named (person), or when its group matches (friend =
-    any member; resident/staff = role)."""
+    Form kernel (endpoint_gathering_visible.fk). A cell sees a question when it
+    authored it, when it's for everyone, when it's named (person), or when its
+    group matches (friend = any member; resident/staff = role)."""
     akind, aval, author, viewer, vrole = (str(x or "") for x in (akind, aval, author, viewer, vrole))
     val, _runtime = serve_via_kernel(
         "endpoint_gathering_visible.fk",
         bindings={"akind": akind, "aval": aval, "author": author, "viewer": viewer, "vrole": vrole},
-        fallback=lambda: _gathering_visible_k(akind, aval, author, viewer, vrole),
         parse=int,
     )
     return bool(val)
 
 
-def _head_value_k(choice: str) -> int:
-    """Value-identical fallback for endpoint_gathering_head_value.fk."""
-    if choice == "yes-plus-one":
-        return 2
-    if choice == "yes":
-        return 1
-    return 0
-
-
 def _head_value(choice: str) -> int:
     """How many heads one answer is worth (yes-plus-one = 2) — on the Form
-    kernel (endpoint_gathering_head_value.fk), Python the value-identical
-    fallback. (household-membrane.form: tally.)"""
+    kernel (endpoint_gathering_head_value.fk). (household-membrane.form:
+    tally.)"""
     val, _runtime = serve_via_kernel(
         "endpoint_gathering_head_value.fk",
         bindings={"choice": choice},
-        fallback=lambda: _head_value_k(choice),
         parse=int,
     )
     return int(val)
@@ -1059,18 +991,12 @@ _HATI_SUCI_PLACES: list[tuple[str, str, str]] = [
 ]
 
 
-def _place_distance_k(clat: int, clon: int, plat: int, plon: int) -> int:
-    """Value-identical fallback for endpoint_place_distance.fk."""
-    return abs(clat - plat) + abs(clon - plon)
-
-
 def _place_distance(clat: int, clon: int, plat: int, plon: int) -> int:
     """Manhattan proximity in micro-degrees (the by-pin brain) — on the Form
-    kernel (endpoint_place_distance.fk), Python the value-identical fallback."""
+    kernel (endpoint_place_distance.fk)."""
     val, _runtime = serve_via_kernel(
         "endpoint_place_distance.fk",
         bindings={"clat": clat, "clon": clon, "plat": plat, "plon": plon},
-        fallback=lambda: _place_distance_k(clat, clon, plat, plon),
         parse=int,
     )
     return int(val)
@@ -1292,19 +1218,13 @@ def _ical_unescape(v: str) -> str:
             .replace("\\;", ";").replace("\\\\", "\\"))
 
 
-def _ical_is_allday_k(value: str, params: str) -> int:
-    """Value-identical fallback for endpoint_ical_allday.fk."""
-    return 1 if ("VALUE=DATE" in params or (len(value) == 8 and "T" not in value)) else 0
-
-
 def _ical_is_allday(value: str, params: str) -> bool:
     """The all-day vs timed-event DECISION — on the Form kernel
-    (endpoint_ical_allday.fk), Python the value-identical fallback. The
-    date-param recipe the iCal field recipe promised would follow."""
+    (endpoint_ical_allday.fk). The date-param recipe the iCal field recipe
+    promised would follow."""
     val, _runtime = serve_via_kernel(
         "endpoint_ical_allday.fk",
         bindings={"value": value, "params": params},
-        fallback=lambda: _ical_is_allday_k(value, params),
         parse=int,
     )
     return bool(val)
@@ -1325,32 +1245,13 @@ def _parse_ical_dt(value: str, params: str) -> tuple[datetime | None, bool]:
         return None, False
 
 
-def _ical_field_py(line: str, name: str) -> str:
-    """Value-identical fallback for endpoint_ical_field.fk — given one
-    unfolded iCal line and a field name, the value if the line carries that
-    field (handling the NAME[;params]:value shape), else ''."""
-    colon = line.find(":")
-    semi = line.find(";")
-    if colon < 0:
-        end = -1
-    elif semi < 0 or semi >= colon:
-        end = colon
-    else:
-        end = semi
-    if end < 0 or line[:end] != name:
-        return ""
-    return line[colon + 1:]
-
-
 def _ical_field(line: str, name: str) -> str:
     """The per-line iCal parsing DECISION + extraction — on the Form kernel
-    (endpoint_ical_field.fk), Python the value-identical fallback. The
-    first piece of the parser to leave the if-tree and execute as Form; the
-    date-param + whole-text recipes follow."""
+    (endpoint_ical_field.fk). The first piece of the parser to leave the
+    if-tree and execute as Form; the date-param + whole-text recipes follow."""
     val, _runtime = serve_via_kernel(
         "endpoint_ical_field.fk",
         bindings={"line": line, "name": name},
-        fallback=lambda: _ical_field_py(line, name),
         parse=str,
     )
     return val
