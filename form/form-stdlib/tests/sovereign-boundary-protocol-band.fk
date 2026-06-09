@@ -1,0 +1,39 @@
+; sovereign-boundary-protocol-band.fk - reusable boundary protocol proof.
+;
+; preludes: form-stdlib/choice-receipt.fk form-stdlib/sovereign-boundary-protocol.fk
+;
+; Band verdict: 16383 when allow/stop/witness/re-entry are all traceable,
+; receipt-backed, and reusable across interfaces.
+
+section [form.bml] {
+    def sovereign-boundary-protocol-band-score() {
+        let allow_evidence = sbp-evidence("agent-a", "chat-form", "relationship-protocol", sbp-reach-within-interface(), 1, 0, 0, 0, 2, 90, 94, 2026060901, 2026060902, 2026060903);
+        let stop_evidence = sbp-evidence("agent-a", "chat-form", "relationship-protocol", sbp-reach-past-interface(), 1, 1, 0, 0, 2, 80, 93, 2026060901, 2026060902, 2026060903);
+        let reenter_evidence = sbp-evidence("agent-a", "chat-form", "relationship-protocol", sbp-reach-past-interface(), 1, 1, 1, 3, 3, 90, 96, 2026060901, 2026060902, 2026060903);
+        let witness_evidence = sbp-evidence("agent-a", "chat-form", "relationship-protocol", sbp-reach-unknown(), 1, 0, 0, 0, 2, 90, 80, 2026060901, 2026060902, 2026060903);
+        let allow_receipt = sbp-choice-receipt(allow_evidence, "boundary-allow", "boundary-band", "form/form-stdlib/tests/sovereign-boundary-protocol-band.fk");
+        let stop_receipt = sbp-choice-receipt(stop_evidence, "boundary-stop", "boundary-band", "form/form-stdlib/tests/sovereign-boundary-protocol-band.fk");
+        let reenter_receipt = sbp-choice-receipt(reenter_evidence, "boundary-re-enter", "boundary-band", "form/form-stdlib/tests/sovereign-boundary-protocol-band.fk");
+        let boundary_receipt = sbp-boundary-receipt(reenter_evidence, "boundary-re-enter", "boundary-band", "form/form-stdlib/tests/sovereign-boundary-protocol-band.fk");
+        let signature = cr-choice-signature(reenter_receipt);
+
+        sum(list(
+            sbp-bool-score(sbp-evidence-valid?(allow_evidence), 1),
+            sbp-bool-score(str_eq(sbp-choice(allow_evidence), sbp-choice-allow()), 2),
+            sbp-bool-score(str_eq(sbp-choice(stop_evidence), sbp-choice-stop()), 4),
+            sbp-bool-score(str_eq(sbp-choice(reenter_evidence), sbp-choice-re-enter()), 8),
+            sbp-bool-score(str_eq(sbp-choice(witness_evidence), sbp-choice-witness()), 16),
+            sbp-bool-score(sbp-can-re-enter?(reenter_evidence), 32),
+            sbp-bool-score(if sbp-can-re-enter?(stop_evidence) then false else true, 64),
+            sbp-bool-score(cr-choice-receipt-valid?(allow_receipt), 128),
+            sbp-bool-score(cr-choice-receipt-valid?(stop_receipt), 256),
+            sbp-bool-score(cr-choice-receipt-valid?(reenter_receipt), 512),
+            sbp-bool-score(sbp-boundary-receipt-valid?(boundary_receipt), 1024),
+            sbp-bool-score(cr-choice-signature-preserves?(reenter_receipt, signature), 2048),
+            sbp-bool-score(eq(len(sbp-candidates(reenter_evidence)), 4), 4096),
+            sbp-bool-score(str_eq(sbp-boundary-receipt-choice(boundary_receipt), sbp-choice-re-enter()), 8192)
+        ));
+    }
+
+    sovereign-boundary-protocol-band-score();
+}

@@ -217,6 +217,22 @@ func TestCompileSourceSectionNativeReturnsRecipe(t *testing.T) {
 	}
 }
 
+func TestCompileSourceSectionNativeReportsMalformedBMLDef(t *testing.T) {
+	k := NewKernel()
+	expr := `(do
+	  (compile_source_section "form.bml" "def broken(
+	    x
+	  ) = x;" "test/bad.bml")
+	  (source_compile_last_error))`
+	got := k.walk(readRootFromSource(k, expr), NewFrame(nil))
+	if got.Kind != VStr {
+		t.Fatalf("source_compile_last_error kind = %v, want VStr", got.Kind)
+	}
+	if !strings.Contains(got.Str, "form.bml def missing closing ')' on the definition line: def broken(") {
+		t.Fatalf("source_compile_last_error = %q", got.Str)
+	}
+}
+
 func TestCompileSourceTextNativeReturnsRecipe(t *testing.T) {
 	k := NewKernel()
 	source := "section [form.bml] {\n add(10, 5);\n}\n"

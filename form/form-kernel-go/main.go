@@ -28,6 +28,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"sort"
 	"strconv"
 	"strings"
@@ -1792,13 +1793,35 @@ func (k *Kernel) registerNatives() {
 		return Value{Kind: VInt, Int: int64(len(args[0].Str))}
 	})
 	k.registerNative("substring", catAccess(), func(_ *Kernel, args []Value) Value {
-		return Value{Kind: VStr, Str: args[0].Str[args[1].Int:args[2].Int]}
+		s := args[0].Str
+		a := args[1].Int
+		b := args[2].Int
+		if a < 0 || b < a || b > int64(len(s)) {
+			panic(fmt.Sprintf(
+				"substring: bounds out of range start=%d end=%d len=%d",
+				a,
+				b,
+				len(s),
+			))
+		}
+		return Value{Kind: VStr, Str: s[a:b]}
 	})
 	k.registerNative("char_at", catAccess(), func(_ *Kernel, args []Value) Value {
-		return Value{Kind: VStr, Str: string(args[0].Str[args[1].Int])}
+		s := args[0].Str
+		i := args[1].Int
+		if i < 0 || i >= int64(len(s)) {
+			panic(fmt.Sprintf("char_at: bounds out of range index=%d len=%d", i, len(s)))
+		}
+		return Value{Kind: VStr, Str: string(s[i])}
 	})
 	k.registerNative("str_concat", catMethod(), func(_ *Kernel, args []Value) Value {
 		return Value{Kind: VStr, Str: args[0].Str + args[1].Str}
+	})
+	k.registerNative("form_error", catWitness(), func(_ *Kernel, args []Value) Value {
+		panic(args[0].Str)
+	})
+	k.registerNative("form-error", catWitness(), func(_ *Kernel, args []Value) Value {
+		panic(args[0].Str)
 	})
 	k.registerNative("source_scan_file", catCall(), func(_ *Kernel, args []Value) Value {
 		body, err := os.ReadFile(args[0].Str)
@@ -4870,12 +4893,100 @@ func readRootFromSource(k *Kernel, src string) NodeID {
 	return root
 }
 
+func kernelSourceExcerpt(src string, maxLen int) string {
+	if len(src) <= maxLen {
+		return src
+	}
+	return src[:maxLen]
+}
+
+func kernelSourceLineCount(src string) int {
+	if src == "" {
+		return 0
+	}
+	return strings.Count(src, "\n") + 1
+}
+
+func kernelModeFromArgs(args []string) string {
+	if len(args) == 0 {
+		return "startup"
+	}
+	switch args[0] {
+	case "--expr":
+		return "expr"
+	case "--emit-binary":
+		return "emit-binary"
+	case "--binary":
+		return "binary"
+	case "--bench":
+		return "bench"
+	case "--numeric-bench":
+		return "numeric-bench"
+	case "trace":
+		return "trace"
+	case "serve":
+		return "serve"
+	default:
+		return "source"
+	}
+}
+
+func writeKernelCrashTrace(args []string, src string, recovered any) string {
+	dir := filepath.Join(".cache", "form-kernel-go")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		dir = os.TempDir()
+	}
+	path := filepath.Join(
+		dir,
+		fmt.Sprintf("crash-%s-%d.json", time.Now().UTC().Format("20060102T150405Z"), os.Getpid()),
+	)
+	tailStart := len(src) - 2000
+	if tailStart < 0 {
+		tailStart = 0
+	}
+	report := map[string]any{
+		"when_utc":          time.Now().UTC().Format(time.RFC3339Nano),
+		"pid":               os.Getpid(),
+		"mode":              kernelModeFromArgs(args),
+		"args":              args,
+		"panic":             fmt.Sprint(recovered),
+		"source_bytes":      len(src),
+		"source_line_count": kernelSourceLineCount(src),
+		"source_head":       kernelSourceExcerpt(src, 2000),
+		"source_tail":       src[tailStart:],
+		"go_stack":          string(debug.Stack()),
+	}
+	data, err := json.MarshalIndent(report, "", "  ")
+	if err != nil {
+		return ""
+	}
+	if err := os.WriteFile(path, append(data, '\n'), 0644); err != nil {
+		return ""
+	}
+	return path
+}
+
 func main() {
 	args := os.Args[1:]
 	if len(args) == 0 {
 		fmt.Fprintln(os.Stderr, "usage: form-kernel-go <file.fk> [more.fk ...] | --binary file.fkb | --emit-binary out.fkb file.fk... | --expr \"...\" | --bench | --numeric-bench | trace ... | serve --port 18080 <route-prelude.fk...>")
 		os.Exit(2)
 	}
+
+	var src string
+
+	// Catch parse-time and walk-time panics and convert them to clean error
+	// output. The trace file keeps the host stack and source excerpt for
+	// backtracking without making Form authors read a host runtime dump first.
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(os.Stderr, "form-kernel-go: %v\n", r)
+			if tracePath := writeKernelCrashTrace(args, src, r); tracePath != "" {
+				fmt.Fprintf(os.Stderr, "form-kernel-go: crash trace: %s\n", tracePath)
+			}
+			os.Exit(1)
+		}
+	}()
 
 	if args[0] == "--bench" {
 		runBench()
@@ -4919,7 +5030,6 @@ func main() {
 		return
 	}
 
-	var src string
 	if args[0] == "--emit-binary" {
 		if len(args) < 3 {
 			fmt.Fprintln(os.Stderr, "--emit-binary requires an output path and one or more .fk files")
@@ -4959,17 +5069,6 @@ func main() {
 	}
 
 	k := NewKernel()
-
-	// Catch parse-time panics and convert to clean error output. Without
-	// this, Go's default runtime panic also dumps the kernel's internal
-	// stack — useful for kernel devs, noise for Form authors.
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Fprintf(os.Stderr, "form-kernel-go: %v\n", r)
-			os.Exit(1)
-		}
-	}()
-
 	root := readRootFromSource(k, src)
 	if args[0] == "--emit-binary" {
 		if err := os.WriteFile(args[1], serializeArtifact(k, root), 0644); err != nil {

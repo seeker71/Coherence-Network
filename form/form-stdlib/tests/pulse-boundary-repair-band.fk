@@ -1,0 +1,53 @@
+; pulse-boundary-repair-band.fk - Form-native proof for pulse silence repair.
+;
+; preludes: form-stdlib/choice-receipt.fk form-stdlib/sovereign-boundary-protocol.fk form-stdlib/pulse-boundary-repair.fk
+;
+; Band verdict: 32767 when the pulse repair rule is carried by generic Form:
+;   1    the close threshold is three breathing samples
+;   2    three breathing samples choose re_enter
+;   4    incomplete evidence keeps stop
+;   8    no open silence continues
+;   16   the repair note names boundary_repair_protocol
+;   32   the stop note preserves the open receipt
+;   64   breathing plus open strained silence becomes strained
+;   128  breathing plus open silent silence becomes silent
+;   256  repaired evidence returns breathing when no silence remains
+;   512  re-entry decision receipt validates
+;   1024 stop decision receipt validates
+;   2048 continue decision receipt validates
+;   4096 compressed signature preserves the re-entry receipt
+;   8192 pulse re-entry maps to generic re-entry
+;   16384 generic boundary receipt validates
+
+section [form.bml] {
+    def pulse-boundary-repair-band-score() {
+        let reenter_evidence = pbr-evidence("api", 1, pbr-severity-silent(), 3, 2026060901, 2026060902, 2026060903);
+        let stop_evidence = pbr-evidence("api", 1, pbr-severity-strained(), 2, 2026060901, 2026060902, 2026060903);
+        let continue_evidence = pbr-evidence("api", 0, 0, 0, 2026060901, 2026060902, 2026060903);
+        let reenter_receipt = pbr-decision-receipt(reenter_evidence);
+        let stop_receipt = pbr-decision-receipt(stop_evidence);
+        let continue_receipt = pbr-decision-receipt(continue_evidence);
+        let boundary_receipt = pbr-boundary-receipt(reenter_evidence);
+        let reenter_signature = cr-choice-signature(reenter_receipt);
+
+        sum(list(
+            pbr-bool-score(eq(pbr-close-threshold(), 3), 1),
+            pbr-bool-score(str_eq(pbr-choice(reenter_evidence), pbr-choice-re-enter()), 2),
+            pbr-bool-score(str_eq(pbr-choice(stop_evidence), pbr-choice-stop()), 4),
+            pbr-bool-score(str_eq(pbr-choice(continue_evidence), pbr-choice-continue()), 8),
+            pbr-bool-score(str_eq(pbr-note(reenter_evidence), "boundary_repair_protocol: choice=re_enter; evidence=three-or-more-breathing-samples"), 16),
+            pbr-bool-score(str_eq(pbr-note(stop_evidence), "boundary_repair_protocol: choice=stop; evidence-incomplete"), 32),
+            pbr-bool-score(str_eq(pbr-overall-with-open-silences(pbr-status-breathing(), 1, pbr-severity-strained()), pbr-status-strained()), 64),
+            pbr-bool-score(str_eq(pbr-overall-with-open-silences(pbr-status-breathing(), 1, pbr-severity-silent()), pbr-status-silent()), 128),
+            pbr-bool-score(str_eq(pbr-overall-with-open-silences(pbr-status-breathing(), 0, 0), pbr-status-breathing()), 256),
+            pbr-bool-score(pbr-decision-valid?(reenter_evidence), 512),
+            pbr-bool-score(pbr-decision-valid?(stop_evidence), 1024),
+            pbr-bool-score(pbr-decision-valid?(continue_evidence), 2048),
+            pbr-bool-score(cr-choice-signature-preserves?(reenter_receipt, reenter_signature), 4096),
+            pbr-bool-score(str_eq(pbr-generic-choice(reenter_evidence), sbp-choice-re-enter()), 8192),
+            pbr-bool-score(sbp-boundary-receipt-valid?(boundary_receipt), 16384)
+        ));
+    }
+
+    pulse-boundary-repair-band-score();
+}
