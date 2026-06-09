@@ -49,7 +49,8 @@ plus `defn · let · do`. (Read `form/form-stdlib/core.fk` — it is the whole v
 - `eq` compares **integers and nodes**; `str_eq` compares **strings**. Don't cross them.
 - `cons` prepends: `(cons x xs)` → a list with `x` at the head. Build lists with `cons` + recursion
   (see `feature-vector.fk`'s `fv-hist-loop`).
-- `empty` is the empty list/absence; `(eq (len x) 0)` tests it.
+- `empty` **constructs** the empty list (`(empty)`, no args) — it is the absence value, **not a
+  predicate**. Test emptiness with `(eq (len x) 0)`. See trap 6.
 
 ## The traps (each one cost a real debugging cycle)
 
@@ -71,6 +72,12 @@ plus `defn · let · do`. (Read `form/form-stdlib/core.fk` — it is the whole v
 
 5. **Loop via recursion** — there is no loop form. The max-select shape (pick the best candidate over
    a list) is in `sequence-predictor.fk` / `recognition-router.fk`'s `rr-select-loop`; copy it.
+
+6. **`(empty x)` is NOT "is x empty?".** `empty` constructs the absence value; `(empty anything)`
+   returns `[]`, which `if` treats as **truthy** — so `(if (empty xs) A B)` **always** takes branch A.
+   The failure is silent: 0 divergent, just a wrong verdict (a recursion that never recurses, a guard
+   that never guards). Test emptiness with `(eq (len x) 0)` — the idiom every recipe uses
+   (`nearest-shape.fk`, `sequence-predictor.fk`). Cost a cycle in `learning-arc.fk` (verdict 88, not 127).
 
 ## Prove it three-way
 

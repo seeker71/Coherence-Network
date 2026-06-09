@@ -1,0 +1,70 @@
+; learning-arc.fk — the supervision ENDGAME made runnable: a Form-native CHALLENGER learns from an
+; ORACLE's labels over a stream, and the body measures it REACHING the oracle. This is "sample the
+; 3rd-party models until the Form-native arms reach or exceed them" as a single fold.
+;
+; champion-challenger.fk asks WHICH model is the authority by counting head-to-head wins over a fixed
+; window; predictor-train.fk interns ONE ground-truth sample. This brick is the loop that runs them as
+; a stream: for each (feature, oracle-label) in order, the challenger PREDICTS using only what it has
+; learned from PRIOR frames (no peeking at the current label), then LEARNS that frame, then moves on.
+; The body's own classifier is nearest-shape (content-addressing as recognition); LEARNING is the
+; smallest possible act — interning one (label vector) exemplar (nearest-shape.fk's own teaching). So
+; the challenger starts COLD (no prototypes → an honest "?" → a miss), and warms as exemplars
+; accumulate: the first time it meets a shape it misses, every repeat it nails. The agreement count
+; over the stream IS the learning curve — high on a learnable oracle, low on a random one.
+;
+; The oracle slot is where a 3rd-party model (recognition-router's arms, a cloud classifier, a
+; declared-source) plugs in as ground truth. The challenger is ours. When the challenger's warmed
+; agreement reaches a win-count, it has earned the route — model-retire.fk is the next step.
+;
+; A sample  = (list feature-vector oracle-label) — the feature is a list of small-int bins; the label a string.
+; A stream  = a list of samples, in time order.
+; A prototype-set grows as (cons (list label vector) set) — exactly nearest-shape's prototype shape.
+;
+; Honest lane: "agreement" is an EXACT label match (str_eq), not a graded score; the challenger's
+; recognition is nearest-shape's exact-bin agreement (no distance, no float). Online, single-pass,
+; order-respecting: replay the same stream and the curve is identical — on Go, Rust, and TS (the
+; nearest-shape parity IS the learning parity). No weights, no epochs: an exemplar set that grows once.
+;
+; Composes: nearest-shape.fk (ns-label). Proven by: form-stdlib/tests/learning-arc-band.fk (three-way).
+
+(do
+    (defn la-feature (sample) (nth sample 0))   ; the frame's feature-vector
+    (defn la-oracle  (sample) (nth sample 1))   ; the oracle's (ground-truth) label
+
+    ; the challenger's call: cold (no exemplars) is an honest unknown, never a fabricated guess.
+    (defn la-predict (feature protos)
+        (if (eq (len protos) 0) "?" (ns-label feature protos)))
+
+    ; the learning act — intern one exemplar in nearest-shape's (label vector) shape.
+    (defn la-intern (label feature protos) (cons (list label feature) protos))
+
+    ; did the challenger (on PRIOR exemplars) match the oracle this frame?
+    (defn la-hit (sample protos)
+        (if (str_eq (la-predict (la-feature sample) protos) (la-oracle sample)) 1 0))
+
+    ; fold the stream: predict on current protos, tally, then learn this frame for the next.
+    (defn la-fold (samples protos agree)
+        (if (eq (len samples) 0) agree
+            (la-fold (tail samples)
+                     (la-intern (la-oracle (head samples)) (la-feature (head samples)) protos)
+                     (add agree (la-hit (head samples) protos)))))
+
+    ; total frames the challenger agreed with the oracle, learning online from scratch.
+    (defn la-agreements (samples) (la-fold samples (list) 0))
+
+    ; the warmed fold: LEARN from every frame, but only TALLY agreement after the first k frames
+    ; (the cold-start exemplars are training, not a fair test of what was learned).
+    (defn la-fold-after (samples protos agree k idx)
+        (if (eq (len samples) 0) agree
+            (la-fold-after (tail samples)
+                           (la-intern (la-oracle (head samples)) (la-feature (head samples)) protos)
+                           (if (ge idx k) (add agree (la-hit (head samples) protos)) agree)
+                           k (add idx 1))))
+
+    ; agreements counting only the warmed frames (idx >= k).
+    (defn la-agreements-after (samples k) (la-fold-after samples (list) 0 k 0))
+
+    ; the promotion gate: has the challenger, once warmed past k frames, won at least wins-needed
+    ; of them? When yes, the Form-native arm has reached the oracle and earned the route.
+    (defn la-reached? (samples k wins-needed) (ge (la-agreements-after samples k) wins-needed))
+    0)
