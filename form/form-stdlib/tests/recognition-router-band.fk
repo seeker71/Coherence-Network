@@ -1,0 +1,41 @@
+; preludes: form-stdlib/recognition-router.fk
+;
+; recognition-router-band — parallel multi-model recognition, made falsifiable.
+;
+; Four model-carriers run IN PARALLEL on one input (a dog barking), each returning a confidence
+; vector (0..100). floor=20 (fail-fast), trust=80:
+;   "sound-analysis" [(dog 90)(wolf 10)]  -> strength 90  passes, trusted
+;   "yamnet"         [(dog 60)(cat 30)]   -> strength 60  passes
+;   "clap"           [(animal 40)]        -> strength 40  passes
+;   "weak"           [(noise 10)]         -> strength 10  FAILS the floor (dropped, fail-fast)
+; routed flow: ("sound-analysis", "dog", 90) — the model with the most data wins; two models
+; (sound-analysis + yamnet) agree on "dog" = consensus. A separate all-weak set routes to
+; honest silence (no recognition).
+;
+; Verdict 127 when every claim lands:
+;   1   the most-data model wins         (source == sound-analysis)
+;   2   the routed label is right        (label == dog)
+;   4   vector->scalar strength is right (strength == 90)
+;   8   it is recognized                 (recognized? == 1)
+;   16  fail-fast drops the weak signal  (weak does NOT pass the floor)
+;   32  consensus: two models agree      (>= 2 on "dog")
+;   64  all-weak -> honest silence        (no recognition)
+(do
+    (let readings (list
+        (list "sound-analysis" (list (list "dog" 90) (list "wolf" 10)))
+        (list "yamnet"         (list (list "dog" 60) (list "cat" 30)))
+        (list "clap"           (list (list "animal" 40)))
+        (list "weak"           (list (list "noise" 10)))))
+    (let floor 20)
+    (let flow (rr-route readings floor))
+    (let weak (nth readings 3))
+    (let quiet (list (list "a" (list (list "x" 8))) (list "b" (list (list "y" 5)))))
+    (let qflow (rr-route quiet floor))
+    (let c0 (if (str_eq (rr-source flow) "sound-analysis") 1 0))
+    (let c1 (if (str_eq (rr-flow-label flow) "dog") 2 0))
+    (let c2 (if (eq (rr-flow-strength flow) 90) 4 0))
+    (let c3 (if (eq (rr-recognized? flow) 1) 8 0))
+    (let c4 (if (rr-passes? weak floor) 0 16))
+    (let c5 (if (eq (rr-consensus? readings floor flow) 1) 32 0))
+    (let c6 (if (eq (rr-recognized? qflow) 0) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
