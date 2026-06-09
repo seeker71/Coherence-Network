@@ -1,5 +1,9 @@
 ; cell-sync-transport.form — a cell learned on one device reaches another, content-addressed.
 ;
+; RUNNABLE HEART: form-stdlib/cell-sync.fk proves the diff/verify/consent LOGIC three-way (cs-missing =
+; the want-set · cs-accept-count = re-address verify · cs-shareable = the consent filter; band -> 127).
+; The wire FRAMES over a carrier and peer discovery remain BUILDABLE/carrier-work, named below.
+;
 ; THE ASK (the gap shared-sensing.form names, step 3 of its path):
 ;   "We share Form-native classifiers we train on Mac with Android and vice versa — recipes,
 ;    classifiers, routing tables, anything that makes this learn and improve by sharing."

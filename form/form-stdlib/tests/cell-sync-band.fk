@@ -1,0 +1,33 @@
+; preludes: form-stdlib/cell-sync.fk
+;
+; cell-sync-band — share a learned cell device-to-device, content-addressed, made falsifiable.
+;
+; A sender OFFERS four cell-addresses (a b c d); the receiver already HAS (a c). So the want-set is
+; (b d) — only the absent cells cross, structurally-had cells dedup for free. Two cells then arrive:
+; "b" re-addresses to "b" (authentic), but "d" arrives re-addressing to "x" (tampered in transit) —
+; verify keeps b, drops d. Separately, consent: of the sender's own cells (p q r) the human has opened
+; only (p r); q stays home.
+;
+; Verdict 127 when every claim lands:
+;   1   the receiver holds what it holds        (cs-has? a == 1)
+;   2   and lacks what it lacks                  (cs-has? b == 0)
+;   4   the diff is exactly the absent set       (want-count (a b c d) over (a c) == 2)
+;   8   the want-set names the right cell        (b is in the want-set)
+;   16  re-addressing accepts the authentic      (accept-count == 1 — only b survives)
+;   32  re-addressing drops the tampered         (x != d, so d is not accepted)
+;   64  consent withholds the unopened cell      (share-count (p q r) over (p r) == 2, q withheld)
+(do
+    (let offered (list "a" "b" "c" "d"))
+    (let have    (list "a" "c"))
+    (let want    (cs-missing offered have))
+    (let items   (list (list "b" "b") (list "d" "x")))   ; (offered, recomputed): b true, d tampered
+    (let mine      (list "p" "q" "r"))
+    (let permitted (list "p" "r"))
+    (let c0 (if (eq (cs-has? "a" have) 1) 1 0))
+    (let c1 (if (eq (cs-has? "b" have) 0) 2 0))
+    (let c2 (if (eq (cs-want-count offered have) 2) 4 0))
+    (let c3 (if (eq (cs-has? "b" want) 1) 8 0))
+    (let c4 (if (eq (cs-accept-count items) 1) 16 0))
+    (let c5 (if (eq (cs-authentic? (list "d" "x")) 0) 32 0))
+    (let c6 (if (eq (cs-share-count mine permitted) 2) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
