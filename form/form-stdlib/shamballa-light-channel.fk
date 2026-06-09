@@ -104,7 +104,13 @@
         (slv-binding "333 172"           "calling-in"    "lc-calling-the-kindred")
         ;; --- gap closed by tissue grown LATER: the chakra column (2026-06-09) gave the
         ;; verticality/spine code its first home — root 174 = earth, crown 963 = sky ---
-        (slv-binding "33333"             "verticality"   "lc-chakra-column")))
+        (slv-binding "33333"             "verticality"   "lc-chakra-column")
+        ;; --- gaps closed by the evidence-grounding sweep (2026-06-09): three codes pointing at
+        ;; LIGHT, grown into one cited concept (lc-the-body-and-light) — the measured kernel kept,
+        ;; the cosmology held in its own lane (lc-honest-lane). Was honest absence; now honest presence. ---
+        (slv-binding "999"               "light-emission" "lc-the-body-and-light")
+        (slv-binding "33"                "light-tuning"   "lc-the-body-and-light")
+        (slv-binding "336"               "light-color"    "lc-the-body-and-light")))
 
 (defn slv-resolve-loop (bs code)
     (if (nil? bs) (empty)
