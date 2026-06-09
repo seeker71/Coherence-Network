@@ -1,0 +1,46 @@
+; preludes: form-stdlib/feature-vector.fk form-stdlib/nearest-shape.fk form-stdlib/novelty.fk form-stdlib/temporal-smoothing.fk form-stdlib/perception-pipeline.fk
+;
+; perception-pipeline-band — the whole toolkit, end to end, made falsifiable.
+;
+; thresholds [10 20 30] cut every window into 4 bins (<10 · [10,20) · [20,30) · >=30). The body has
+; interned three prototypes (each a histogram shape):  dog [2 1 0 1]  cat [0 1 2 1]  bird [1 0 0 3].
+; Recognition floor 3 (a frame must agree in >=3 of 4 bins to be recognized, else it is "novel").
+;
+; Raw signal windows flow through fv-histogram -> ns -> nv -> ts:
+;   dogwin  [5 8 15 35]      -> hist [2 1 0 1] -> nearest dog, strength 4 -> recognized "dog"
+;   catwin  [15 25 28 35]    -> hist [0 1 2 1] -> nearest cat, strength 4 -> recognized "cat"
+;   noisewin [50 60 70 80]   -> hist [0 0 0 4] -> nearest bird, strength 2 -> below floor -> "novel"
+; Over a window of frames, ts-stable believes a label only when the last k=3 agree:
+;   three dog frames           -> stable "dog"   (the body commits)
+;   a noise frame just arrived  -> stable ""       (honest silence until the noise ages out)
+;
+; Verdict 127 when every claim lands, each one walking the FULL pipeline:
+;   1   raw signal -> classified            (pp-label dogwin -> dog)
+;   2   strength survives the composition   (pp-strength dogwin == 4)
+;   4   the novelty gate passes a known     (pp-read dogwin -> dog)
+;   8   the novelty gate flags the unknown  (pp-read noisewin -> novel)
+;   16  a different signal -> different read (pp-label catwin -> cat)
+;   32  persistence is believed             (3 dog frames -> stable dog)
+;   64  one bad frame breaks belief         (noise + dog frames -> stable "")
+(do
+    (let thresholds (list 10 20 30))
+    (let nbins 4)
+    (let prototypes (list
+        (list "dog"  (list 2 1 0 1))
+        (list "cat"  (list 0 1 2 1))
+        (list "bird" (list 1 0 0 3))))
+    (let floor 3)
+    (let k 3)
+    (let dogwin   (list 5 8 15 35))
+    (let catwin   (list 15 25 28 35))
+    (let noisewin (list 50 60 70 80))
+    (let steady (list dogwin dogwin dogwin))
+    (let broken (list noisewin dogwin dogwin dogwin))
+    (let c0 (if (str_eq (pp-label    dogwin thresholds nbins prototypes) "dog") 1 0))
+    (let c1 (if (eq     (pp-strength dogwin thresholds nbins prototypes) 4) 2 0))
+    (let c2 (if (str_eq (pp-read dogwin   thresholds nbins prototypes floor) "dog")   4 0))
+    (let c3 (if (str_eq (pp-read noisewin thresholds nbins prototypes floor) "novel") 8 0))
+    (let c4 (if (str_eq (pp-label catwin thresholds nbins prototypes) "cat") 16 0))
+    (let c5 (if (str_eq (pp-stable steady thresholds nbins prototypes floor k) "dog") 32 0))
+    (let c6 (if (str_eq (pp-stable broken thresholds nbins prototypes floor k) "") 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

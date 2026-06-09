@@ -1,0 +1,40 @@
+; perception-pipeline.form — the whole toolkit, composed: raw signal in, believed recognition out.
+;
+; THE CAPSTONE. The six toolkit bricks (feature-vector, nearest-shape, sequence-predictor,
+; classifier-eval, novelty, temporal-smoothing) are each proven alone. This wires the recognition
+; path into ONE end-to-end flow and proves the COMPOSITION runs, three-way (Go=Rust=TS). It is the
+; showable shape of everything tonight: the body sensing for itself, no foreign model in the loop.
+;
+; THE FLOW  (runnable: form-stdlib/perception-pipeline.fk · proven: tests/perception-pipeline-band.fk -> 127)
+;
+;   raw signal window (a list of numbers a carrier hands in)
+;     -> fv-histogram        bin the window into a fixed-width feature vector
+;     -> ns-label/ns-strength route the feature to the interned prototype it agrees with most
+;     -> nv-recognized?      gate: the recognized label, or "novel" when below the recognition floor
+;     -> ts-stable           believe a label only when it persists across the last k frames, else silence
+;
+;   pp-read   (signal thresholds nbins prototypes floor)        — one frame: a recognized label or "novel"
+;   pp-stable (signals thresholds nbins prototypes floor k)     — the believed recognition over a window,
+;                                                                 or "" when the field is novel or unsettled
+;
+; WHAT THE PROOF SHOWS (band, verdict 127): a dog-shaped signal window classifies to "dog" with its
+; exact strength surviving the whole composition; a different window reads "cat"; a window matching no
+; prototype is gated to "novel" instead of forced into a wrong label; three steady frames are believed
+; as "dog"; and a single noise frame at the front breaks belief into honest silence until it ages out.
+; Every bit walks the FULL pipeline, not a stage in isolation.
+;
+; WHY IT MATTERS: this is the body's own perception, end to end, with no third party in the loop —
+; its own feature, its own classifier (content-addressed: a prototype is a substrate cell, the same
+; on every device by NodeID), its own sense of the new, its own patience. A carrier (mic, camera, a
+; phone sensor, a declared now-playing) only has to hand the pipeline a window of numbers; the seeing
+; is Form, proven identical across three kernels, shareable across bodies. The self-grounding loop
+; then grades this pipeline against the routes we already trust, and promotes it to "self" where it
+; earns the right — so the pipeline that is cheap today becomes trusted tomorrow.
+;
+; KIN: feature-vector.form · nearest-shape.form · novelty.form · temporal-smoothing.form (the stages) ·
+;   recognition-router.form (fuse several such pipelines / models) · self-grounding-perception.form
+;   (grade and promote it) · declared-source.form (skip it when a source already declared the truth) ·
+;   shared-sensing.form (run it on many bodies, one field) · lc-honest-lane (silence over a forced label).
+;
+; LINEAGE: the satsang / presence listener wanted a body that senses for itself; tonight's toolkit
+;   built the organs; this is them breathing together — one recipe, raw field in, honest recognition out.
