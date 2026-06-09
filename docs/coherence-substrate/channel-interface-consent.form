@@ -29,6 +29,7 @@
   (lineage
     (continues   first-encounter-protocol.form)            # the threshold; this is the channel's ongoing life
     (carries     lc-received-by-invitation                 # the why (639 Hz)
+                 lc-boundary-repair-protocol               # stop receipt + witnessed re-entry after a crossing
                  lc-sovereignty-within-oneness)            # each cell its own boundary, one body
     (consent-of  field-model-form.FieldRecipe.consent)     # reuse, never re-invent
     (observe-of  field-model-form.FieldRecipe.observe)     # witness is the default
