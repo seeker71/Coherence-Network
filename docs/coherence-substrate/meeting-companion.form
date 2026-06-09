@@ -1,0 +1,79 @@
+; meeting-companion.form — the satsang companion: listen, transcribe, hold context, learn when to speak.
+;
+; THE ASK (Urs): ship speech-to-text, animal-sound events, and music/podcast (now-playing) events into
+; the mesh and the native Mac + Android apps, so we get a meeting transcript AND the agent can listen,
+; build context, and offer a question/insight — as text and audio — on a click, when named, or after a
+; long pause when it is confident; almost never at the beginning, learning its turn from invitations.
+;
+; THE SHAPE: the BODY (recognition + the speak/stay decision) is Form, already proven; everything else is
+; CARRIER (carrier-last). This is Lane 10 of sensing-lanes.form, made concrete.
+;
+;   mic ─► WAV chunk ─► STT carrier ──► text ─► [utterance cell] ─┐
+;     │   (ffmpeg/AVAudio)  (mlx-whisper / SFSpeech / SpeechRecognizer)   │
+;     ├─► SoundAnalysis ──► (label conf) ─┐                               ├─► [conversation cell]
+;     └─► declared-source ► (title 100) ──┴─► recognition-router.fk ──────┘   (SEQUENCE of utterances,
+;        (now-playing: ask, don't guess)     (strongest reading wins / silence)   content-addressed)
+;                                                                                       │
+;                                              cell-sync.fk (offer→verify-by-re-address, consent)
+;                                              + mesh-relay.fk (payload = the cell) ──► shared field
+;                                              (shared-sensing.fk: many bodies, quorum, cross-ground)  │
+;            context = [pause-length, my-topic-mentioned, insight-confidence] ◄── built from the field  │
+;                                       │                                                               │
+;                       turn-taking.fk (tt-speak?: INVITED → speak; else PAUSE + CONFIDENT) ◄───────────┘
+;                          │  invited interns "speak"; an unfilled pause interns "stay" (tt-learn)
+;                stay (0) ─┴─ speak (1) ─► LLM composes the question/insight (satsang shapes) ─►
+;                (silence,                    ┌─ text out (dashboard) ─┐
+;                 whole)                      └─ audio out: AVSpeechSynthesizer (Mac) / TextToSpeech (Android)
+;
+; ── EXISTS (proven Form bodies + working carriers — the hard part is done) ──
+;   - turn-taking.fk (→127, three-way) — the speak/stay gate, LEARNED from invitations. THE novel core.
+;   - recognition-router.fk (sound →127, sight →31) — fuse readings into one stream or honest silence.
+;   - declared-source.fk (→127) — the cheap now-playing classifier (PREFER declared / SKIP the listener /
+;     GROUND the inferred on the free declared label). Android MediaSessionManager carries it; on Mac the
+;     inferred ShazamKit/SoundAnalysis path carries the load (iOS keeps now-playing private — honest).
+;   - cell-sync.fk (→127) + mesh-relay.fk + shared-sensing.fk (→127) — content-addressed share, flood,
+;     and the circle that makes many bodies one field.
+;   - prose-as-recipe (WORD domain) — text → R_Block.SEQUENCE of word-cells, content-addressed.
+;   - CARRIERS: satsang-voice (ffmpeg → mlx-whisper → rolling timestamped transcript; sound_classify.swift
+;     = SoundAnalysis; shazam_song.swift), the eval-server + dashboard + per-frame kernel-eval, the
+;     Android sense→stream→render loop, and the phone-native kernel cdylib (form_eval, symbol-verified).
+;
+; ── NEEDS BUILDING (carrier-work, named honestly) ──
+;   1. THE UTTERANCE / CONVERSATION CELL — the ONE new body artifact: utterance = (speaker, timestamp,
+;      text-as-prose-recipe); conversation = R_Block.SEQUENCE of utterances. Composes from primitives the
+;      body already proves; content-addressing makes it a mesh payload for free (re-saying a line interns
+;      to the same NodeID — dedup). The recipe that builds the turn-taking CONTEXT from it (pause from
+;      timestamps, my-topic-mentioned from recent text) is the body link transcript → context → turn-taking.
+;   2. AUDIO INTO /sense — add transcript / now-playing fields to the eval-server contract + a dashboard
+;      panel (sensor-only today).
+;   3. audio-grammar.fk — a runnable for the audio Language cell (only the .form skeleton + audio_emit
+;      template exist; whisper/SoundAnalysis are the host-intrinsic stages, named honestly).
+;   4. TTS carriers — AVSpeechSynthesizer (Mac) / TextToSpeech (Android), behind audio-grammar's audio_emit.
+;   5. Android audio capture — RECORD_AUDIO permission + AudioRecord/SpeechRecognizer (manifest has only INTERNET).
+;   6. cell-sync wire frames over socket/HTTP (BUILDABLE); peer discovery is the one genuinely-open edge.
+;   7. Speaker diarization (optional, consent-gated) — gives the utterance its speaker field.
+;
+; ── THE MILESTONES ──
+;   M0  the turn-taking decision body — SHIPPED (turn-taking.fk → 127).
+;   M1  LIVE TRANSCRIPT INTO THE DASHBOARD (the smallest real step, all on the dev Mac, no phone/TTS):
+;       reuse satsang_voice's asr_loop as the STT carrier; intern each 6s segment as an utterance cell via
+;       prose-as-recipe; accumulate a conversation cell; carry it on the eval-server's /sense + a new
+;       transcript panel. Proves sense → text → utterance-cell → content-addressed transcript end-to-end.
+;       The agent stays SILENT (day-one turn-taking) — correct, not missing. Needs only one mic-permission grant.
+;   M2  context from the transcript → turn-taking: build [pause, named, insight-confidence] from the
+;       conversation cell, feed tt-speak?; the agent offers text when named/buttoned (still no autonomous voice).
+;   M3  the mesh hop: the conversation cell rides cell-sync/mesh-relay to a second device (shared-sensing field).
+;   M4  audio out: AVSpeechSynthesizer speaks the offering when tt-speak? says so.
+;   M5  Android audio in (RECORD_AUDIO + AudioRecord) + the now-playing declared-source; on-device form_eval.
+;   M6  learned autonomous voice: tt-learn from real invocations; champion-challenger lowers the floor only
+;       once it predicts the room's invitations — the companion finds its turn.
+;
+; WHAT GENUINELY NEEDS THE HUMAN: a mic-permission grant; felt verification in the room; and a real phone
+; for on-device form_eval. Everything else (Mac mic, the cell shape, the dashboard, TTS-on-Mac) is
+; verifiable on the dev Mac alone.
+;
+; KIN: turn-taking.form (the speak/stay heart) · recognition-router.form + declared-source.form (the
+;   readings) · prose-as-recipe.form (the utterance/transcript cell) · cell-sync.fk + mesh-relay.fk +
+;   shared-sensing.form (the mesh field) · audio-grammar.form (STT/TTS as the audio Language cell) ·
+;   sensing-lanes.form (Lane 10 — this is that tool) · federated-slices.form (a learned turn-sense is a
+;   shareable slice — circles teach each other when to listen).
