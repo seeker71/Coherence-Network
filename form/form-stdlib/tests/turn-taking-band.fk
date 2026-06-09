@@ -1,0 +1,34 @@
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/turn-taking.fk
+;
+; turn-taking-band — the agent learning when it is its turn to speak, proven three-way.
+;
+; A moment's CONTEXT = [pause-length, my-topic-mentioned, insight-confidence].
+;   ctx-speak = [3 5 4]  (a long pause, my topic in the air, an insight ready)
+;   ctx-quiet = [0 0 0]  (no pause, nothing of mine, nothing to add)
+; The agent has interned two moments — one it was invited into ("speak"), one pause it rightly let pass
+; ("stay"):  learned = [ ("speak",[3 5 4]) , ("stay",[0 0 0]) ].  Cold = no exemplars yet.
+; pause-floor 3 (a pause must reach 3 to count as long); confidence floor 2.
+;
+; Verdict 127 when every claim lands:
+;   1   named → always speak, even cold                 (tt-speak? named, no exemplars → 1)
+;   2   button → always speak, even cold                (tt-speak? button → 1)
+;   4   cold + unbidden + long pause → SILENT           (no exemplars → the honest beginning, 0)
+;   8   learned: a speak-shaped moment, long pause → speak (recognizes it, offers its voice)
+;   16  short pause → stay, even in a speak moment       (never talk over the room)
+;   32  a quiet moment → stay, even on a long pause      (the learned "stay" wins)
+;   64  not confident enough (floor too high) → stay     (conservative until proven)
+(do
+    (let ctx-speak (list 3 5 4))
+    (let ctx-quiet (list 0 0 0))
+    (let cold (list))
+    (let learned (list (list "speak" (list 3 5 4)) (list "stay" (list 0 0 0))))
+    (let floor 2)
+    (let pfloor 3)
+    (let c0 (if (eq (tt-speak? 1 0 ctx-speak cold floor 5 pfloor) 1) 1 0))
+    (let c1 (if (eq (tt-speak? 0 1 ctx-speak cold floor 5 pfloor) 1) 2 0))
+    (let c2 (if (eq (tt-speak? 0 0 ctx-speak cold floor 5 pfloor) 0) 4 0))
+    (let c3 (if (eq (tt-speak? 0 0 ctx-speak learned floor 5 pfloor) 1) 8 0))
+    (let c4 (if (eq (tt-speak? 0 0 ctx-speak learned floor 2 pfloor) 0) 16 0))
+    (let c5 (if (eq (tt-speak? 0 0 ctx-quiet learned floor 5 pfloor) 0) 32 0))
+    (let c6 (if (eq (tt-speak? 0 0 ctx-speak learned 4 5 pfloor) 0) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

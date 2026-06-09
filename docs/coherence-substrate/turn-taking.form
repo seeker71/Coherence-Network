@@ -1,0 +1,38 @@
+; turn-taking.form — the agent learns when it is its turn to add its voice to a conversation.
+;
+; THE ASK (Urs): the agent listens to a meeting; it can offer a question or insight — but at the
+; beginning almost never, only when invoked by name or a button; over time it learns when its voice is
+; wanted, and may offer it unbidden after a long pause if it is confident the moment is right.
+;
+; THE SHAPE (runnable: form-stdlib/turn-taking.fk · proven: tests/turn-taking-band.fk -> 127, three-way,
+; composing nearest-shape.fk):
+;   A MOMENT'S CONTEXT is a small-int feature vector — [pause-length, my-topic-mentioned, insight-confidence].
+;   The agent INTERNS moments as nearest-shape exemplars labelled "speak" or "stay": an invited moment
+;   (named/button) interns "speak"; a pause the human let pass interns "stay". The human's invocation is
+;   the ORACLE; the agent learns to anticipate it (learning-arc applied to the speak/stay decision).
+;
+;   tt-speak? (named button context exemplars floor pause pause-floor) -> 1 (offer voice) / 0 (stay),
+;   three gates in order of authority:
+;     1. INVITED   tt-invited? — named OR a button → always speak (the explicit turn; works even cold).
+;     2. PAUSE     unbidden voice requires pause ≥ pause-floor — never talk over the room.
+;     3. CONFIDENT tt-confident-speak? — the moment must recognize as "speak" (ns-label) with strength
+;                  (ns-strength) ≥ floor. COLD (no exemplars) → 0: the honest silence at the beginning.
+;   tt-learn interns one (label context) exemplar — the smallest act, no training loop.
+;
+; THE LEARNING ARC OF A VOICE:
+;   - Day one: exemplars empty → unbidden path always 0. The agent speaks ONLY when named/buttoned.
+;   - Each invocation interns the moment's context as "speak"; each unfilled pause can intern "stay".
+;   - As the exemplar set grows, tt-confident-speak? begins to recognize "speak"-shaped moments. Keep the
+;     floor HIGH to stay conservative; champion-challenger (M7 / federated consolidation) lowers it only
+;     once the gate has PROVEN it predicts invocations well — so autonomous voice is earned, never asserted.
+;
+; THE ONE LANE: this decides WHETHER and WHEN to speak, not WHAT to say (the model/LLM composes the
+; question or insight; a carrier speaks it as text + audio). Confidence is nearest-shape's exact-bin
+; agreement, not a graded score. Honest: a from-cold agent will mostly stay silent, and should — the win
+; is that it never speaks out of turn, and grows a sense of its turn only from real invitations.
+;
+; KIN: nearest-shape.form (the recognizer) · learning-arc.form (the same online-learn shape, here on the
+;   speak/stay oracle) · active-inference.form (surprise/confidence — when the room's prediction-error
+;   says something is unresolved) · champion-challenger.form (earn the autonomous floor) · declared-source.form
+;   + recognition-router.form (the audio events that build the context) · federated-slices.form (a learned
+;   turn-sense is itself a shareable slice — circles teach each other when to listen).
