@@ -113,4 +113,4 @@ unreal* or *believe it whole*:
 
 ## Cross-References
 
-→ lc-the-body-and-light, lc-codes-as-depth-not-dictionary, lc-trust-over-fear, lc-observable-resonance-flow, lc-satsang-circle, lc-assemblage-point, lc-frequency-routes-reception, lc-chakra-column
+→ lc-codes-as-depth-not-dictionary, lc-trust-over-fear, lc-observable-resonance-flow, lc-satsang-circle, lc-assemblage-point, lc-frequency-routes-reception, lc-chakra-column
