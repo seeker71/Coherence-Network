@@ -1,0 +1,34 @@
+; preludes: form-stdlib/predictor-train.fk
+;
+; predictor-train-band — the challenger LEARNS, made falsifiable: interning grows the set, novelty gates the intern.
+;
+; The challenger starts with three interned prototypes, each (list label feature-vector):
+;   "dog" [9 1 0 7]   "cat" [2 8 0 3]   "bird" [0 0 9 5]
+; A confident ground-truth sample for a NEW label arrives — "fox" [1 2 3] — and is interned:
+;   pt-learn grows the set 3 -> 4 (adding without forgetting), and pt-knows? "fox" now reads 1 (it routes here next).
+; The novelty gate is proven both ways over the ORIGINAL set:
+;   "dog" is already interned       -> pt-learn-new? 0  (a repeated label is a weak reason to grow; gated out)
+;   "owl" was never sampled         -> pt-learn-new? 1  (a genuinely new label-shape is worth the intern)
+; And the honest negative: pt-knows? on an unseen label before any learning stays silent (0) — the gate does not
+; hallucinate membership.
+;
+; Verdict 63 when every claim lands:
+;   1   interning grows the set                  (pt-size after pt-learn fox == 4)
+;   2   a freshly interned label is now known     (pt-knows? fox in the grown set == 1)
+;   4   a known label is NOT worth re-interning   (pt-learn-new? "dog" over the original == 0)
+;   8   a genuinely new label IS worth interning  (pt-learn-new? "owl" over the original == 1)
+;   16  the starting size is what was interned    (pt-size original == 3)
+;   32  the gate stays silent on the unseen        (pt-knows? "owl" over the original == 0)
+(do
+    (let protos (list
+        (list "dog"  (list 9 1 0 7))
+        (list "cat"  (list 2 8 0 3))
+        (list "bird" (list 0 0 9 5))))
+    (let grown (pt-learn protos "fox" (list 1 2 3)))
+    (let c0 (if (eq     (pt-size grown)                4) 1  0))
+    (let c1 (if (eq     (pt-knows? grown "fox")        1) 2  0))
+    (let c2 (if (eq     (pt-learn-new? protos "dog")   0) 4  0))
+    (let c3 (if (eq     (pt-learn-new? protos "owl")   1) 8  0))
+    (let c4 (if (eq     (pt-size protos)               3) 16 0))
+    (let c5 (if (eq     (pt-knows? protos "owl")       0) 32 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))

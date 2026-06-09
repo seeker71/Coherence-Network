@@ -1,0 +1,61 @@
+; friend-node.form — a powered body caches a sleeping peer's messages and hands them over on wake.
+;
+; THE ASK (Urs, 2026-06-09):
+;   mesh-relay carried a message across a room no single radio spans. But a low-power body — a phone,
+;   a watch — sleeps its radio to save battery and is deaf while it sleeps. The next ring: a body WITH
+;   power stands in for the sleeper. It CACHES every message addressed to the sleeping peer, and when
+;   the peer wakes and polls, hands the whole backlog over at once. So a phone that slept through a
+;   broadcast does not miss the field — its Friend held the messages until it could receive them. This
+;   is Bluetooth Mesh's Friend / Low-Power node pair, the piece mesh-protocols-as-guide named as
+;   guidance-to-adopt; here it becomes runtime.
+;
+; THE SHAPE  (runnable: form-stdlib/friend-node.fk · proven: tests/friend-node-band.fk -> 127)
+;
+;   A cache is a list of messages, newest at the head. A message = (list msg-id dest payload):
+;     msg-id  — unique id of the message.
+;     dest    — the sleeping peer it is FOR; the cache key the Friend routes by.
+;     payload — what it carries; opaque to the Friend, which routes by dest and never reads it.
+;   The Friend has four moves and no mutation — every move returns a new value over the same field:
+;     fn-for?    — is this message destined for this peer? str_eq over the dest field, settled to 1/0.
+;     fn-store   — accept one message for a sleeping peer: cons it onto the front of the cache.
+;     fn-deliver — the hand-off: the sublist of cached messages destined for peer, the whole backlog.
+;     fn-pending — how many wait for peer: (len (fn-deliver cache peer)) — the backlog depth.
+;
+;   Functions:
+;     fn-id / fn-dest / fn-payload — accessors over the message tuple.
+;     fn-for?     — routing predicate: 1 iff this message's dest is peer.
+;     fn-store    — cache one message (cons; newest at head); the Friend accepting for the sleeper.
+;     fn-deliver  — filter the cache to peer's messages (recursion + cons); the wake-time hand-off.
+;     fn-pending  — backlog depth for peer (len of the delivered sublist).
+;
+; COUNTING WITHOUT SUBTRACTION — the same representation discipline the family holds:
+;   There is no `sub` in the primitive set, so depth is never an integer that counts down. fn-pending is
+;   the LENGTH of the delivered sublist — the Friend's hand counts the backlog by walking it, not by
+;   arithmetic. fn-store grows the cache by one via cons; fn-deliver shrinks the walk one element at a
+;   time via tail. Length is the count; tail is the step; cons is the accept. The absence of subtraction
+;   shaped the moves, not a workaround bolted on — the same choice mesh-relay made for its TTL.
+;
+; HOW IT COMPOSES THE SPINE:
+;   It EXTENDS mesh-relay.fk and device-heartbeat.fk directly. fn-deliver is the SAME filter-by-
+;   recursion+cons shape as device-heartbeat's hb-shared-loop: walk a list, cons the matches onto the
+;   recursive result, drop the rest — here keeping messages-for-this-peer instead of channels-both-offer.
+;   fn-for?'s str_eq-over-the-dest is the routing twin of mesh-relay's mr-seen? membership; the heartbeat
+;   found WHO is in range, the relay carried a message PAST who is in range, and the Friend HOLDS a
+;   message FOR a peer that is in range but asleep. fn-store is the same cons the whole mesh family uses
+;   to grow a set, and fn-pending's (len ...) is the same count-by-walking as mr-ttl.
+;
+; HONEST LANE:
+;   SHIPPED — the Friend's four moves over its cache, proven three-way (-> 127): the routing predicate,
+;     the accept (store), the wake-time hand-off (deliver), the backlog depth (pending).
+;   This is the BODY of one Friend's caching choice. What it does NOT carry yet, honestly out of this
+;   brick's scope: the cache's LIFETIME and eviction (a real Friend bounds its queue and drops oldest
+;   under pressure; here the cache grows unbounded and the caller holds it), the FRIENDSHIP handshake
+;   (Low-Power node requesting a Friend, the poll-timeout that ends the relationship), and the carrier
+;   that actually re-emits the delivered backlog on the wake-up channel — that is the channel-port layer
+;   device-heartbeat.form already lane-sorts as BUILDABLE, not this decision recipe.
+;
+; KIN: mesh-relay.form (the flood this caches for — relay carries past who is awake, this holds for who
+;   is asleep) · device-heartbeat.form (the presence beacon both extend; hb-shared-loop is fn-deliver's
+;   twin) · mesh-protocols-as-guide.form (named Friend/Low-Power nodes + message caching as guidance;
+;   this is that realization) · shared-sensing.form (the field of many bodies these messages cross) ·
+;   cell-sync.fk (what flows once a woken peer reconciles the backlog) · lc-honest-lane

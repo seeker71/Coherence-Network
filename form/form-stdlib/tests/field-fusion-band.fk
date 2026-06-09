@@ -1,0 +1,33 @@
+; preludes: form-stdlib/field-fusion.fk
+;
+; field-fusion-band — several modality vectors fused into one wide field vector, made falsifiable.
+;
+; Three modalities, each already a per-modality histogram from feature-vector.fk:
+;   accel = (1 2)   light = (3)   sound = (4 5 6)
+; Fusing the LIST ((1 2) (3) (4 5 6)) lays them end to end, order-preserving:
+;   fused = (1 2 3 4 5 6)   width 6 == 2+1+3 (no bar lost, no averaging)
+; Each modality keeps its bars at a known offset: accel at 0..1, light at 2, sound at 3..5. So
+; bar 3 of the fused vector is sound's first bar (== 4) — the spine the classifier reads as "the
+; whole field at once". ff-concat is the two-vector append fusion is built from: (1 2) ++ (3 4) =
+; (1 2 3 4), b's tail (4) intact at the end. The empty modality list fuses to the empty vector.
+;
+; Verdict 127 when every claim lands:
+;   1   fused bar 0 == 1            (accel's first bar leads — append starts with vector A)
+;   2   fused bar 2 == 3            (light follows accel at offset 2 — order preserved across modalities)
+;   4   fused bar 3 == 4            (sound's first bar at offset 3 — the spec's bar)
+;   8   fused bar 5 == 6            (sound's last bar is the tail — full concat, nothing dropped)
+;   16  fused width == 6           (conserved: sum of the part widths 2+1+3, append loses nothing)
+;   32  ff-concat (1 2)(3 4) bar 3 (two-vector append: b's tail 4 intact at the end of a ++ b)
+;   64  ff-fuse () width == 0      (empty modality list fuses to the empty vector — the silent edge)
+(do
+    (let mods (list (list 1 2) (list 3) (list 4 5 6)))
+    (let fused (ff-fuse mods))
+    (let pair (ff-concat (list 1 2) (list 3 4)))
+    (let c0 (if (eq (ff-bar fused 0) 1) 1 0))
+    (let c1 (if (eq (ff-bar fused 2) 3) 2 0))
+    (let c2 (if (eq (ff-bar fused 3) 4) 4 0))
+    (let c3 (if (eq (ff-bar fused 5) 6) 8 0))
+    (let c4 (if (eq (ff-width fused) 6) 16 0))
+    (let c5 (if (eq (ff-bar pair 3) 4) 32 0))
+    (let c6 (if (eq (ff-width (ff-fuse (empty))) 0) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

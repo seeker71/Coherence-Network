@@ -1,0 +1,49 @@
+; surprise-salience.form — rank surprises by HOW surprising, so the dashboard highlights what matters most.
+;
+; THE SHAPE  (runnable: form-stdlib/surprise-salience.fk · proven: tests/surprise-salience-band.fk -> 127, three-way)
+;
+;   active-inference.fk answers WHETHER a step surprised — predicted != actual is a bit, a 1. That bit
+;   is enough to count total error over a run; it is not enough to rank. Once the body carries more
+;   surprises than a dashboard can show at once, the live question stops being "did anything miss?" and
+;   becomes "which miss matters MOST?" — and the honest answer is the prediction-error MAGNITUDE. A
+;   surprise that missed by 80 should sit above one that missed by 10. This brick turns the surprise-bit
+;   into a surprise-RANK.
+;
+;   A surprise is (list label error-magnitude): label = what missed, magnitude = how far off the
+;   prediction was, an integer 0..100. Four functions, each one spine of the toolkit:
+;
+;   1. ss-mag (s) -> nth s 1
+;      how surprising this event was — read the prediction-error magnitude straight off the surprise.
+;
+;   2. ss-salient? (s floor) -> (ge (ss-mag s) floor)  settled to 1/0
+;      is it big enough to flag? a hard ge-cutoff — meets-or-exceeds the floor is salient, below is not.
+;      The SAME one-sided floor anomaly-band's ab-in-band? and classifier-eval's accept-gate use; the
+;      boundary belongs to salient (a magnitude exactly on the floor flags).
+;
+;   3. ss-peak (surprises) -> the single most surprising event (greatest magnitude)
+;      a MAX-SELECT over magnitudes: the rr-select-loop spine of recognition-router, ranked by ss-mag
+;      instead of recognition-strength. ss-peak-loop walks the run carrying best-so-far and replaces it
+;      only on a STRICTLY greater magnitude (gt) — so on a tie the FIRST-seen surprise keeps the crown
+;      (earliest-wins, deterministic on every kernel). Seeded with () so an empty run yields () honestly.
+;
+;   4. ss-count-salient (surprises floor) -> how many cleared the floor
+;      a floor-gated TALLY: +1 per surprise whose magnitude meets-or-exceeds the floor, recursion down
+;      the tail. The same evidence-counting spine as active-inference's ai-surprise-count and
+;      sequence-predictor's sp-followers-count — walked over magnitudes against a cutoff.
+;
+; HOW IT COMPOSES THE SPINE — every piece already lives in the body; this ranks surprises with it:
+;   active-inference.fk (the surprise-bit this brick gives a magnitude to; ai-surprise-count is the
+;   tally spine ss-count-salient reuses) · recognition-router.fk (rr-select-loop is the max-select
+;   ss-peak-loop reuses, ranked by magnitude not strength) · anomaly-band.fk / classifier-eval.fk
+;   (the ge floor-cutoff — meets-or-exceeds flags, below stays silent) · the three-way validate.sh
+;   (no trusted prover — Go, Rust, TS rank the same surprise highest, by NodeID).
+;
+;   No new control flow, no float, no sub: magnitudes are integers compared by ge/gt alone, the peak is
+;   selection, the count is a gated tally. New surprise = a new (label magnitude) in the list.
+;
+; ONE HONEST LANE:
+;   salience is the RAW prediction-error magnitude, never inflated to make a quiet miss look loud.
+;   ss-salient? is a hard cutoff — a magnitude one under the floor is unflagged the same as one far
+;   under (severity below the floor is the caller's lane; the flag is exact). ss-peak over an empty run
+;   returns () rather than inventing a surprise. Whether a surprise PERSISTS across runs — the other
+;   half of "important" — is a later brick; this one ranks within the run the body is holding now.

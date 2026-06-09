@@ -1,0 +1,35 @@
+; preludes: form-stdlib/surprise-salience.fk
+;
+; surprise-salience-band — ranking surprises by HOW surprising, made falsifiable.
+;
+; The dashboard is holding three surprises, each (list label error-magnitude):
+;   (cat 30) · (dog 80) · (bird 10)
+; The peak — the single most surprising event — is (dog 80): its magnitude 80 beats cat's 30 and bird's 10.
+; At a salience floor of 50, only dog clears it (cat 30 and bird 10 fall under), so exactly one surprise is
+; worth flagging. ss-salient? confirms the gate per-surprise: dog 80 at floor 50 flags (1), cat 30 does not (0).
+; Two honest edges pin the boundaries: a tie keeps the FIRST surprise (two magnitude-90s, the earlier wins),
+; and an empty run yields () rather than a fabricated surprise.
+;
+; Verdict 127 when every claim lands:
+;   1   the peak's magnitude is the greatest in the run               (ss-mag (ss-peak rs) == 80)
+;   2   the peak is dog, not cat or bird                              (label of ss-peak rs == dog)
+;   4   exactly one surprise clears the floor of 50                   (ss-count-salient rs 50 == 1)
+;   8   the loud surprise is flagged salient                          (ss-salient? (dog 80) 50 == 1)
+;   16  the quiet surprise is not flagged                             (ss-salient? (cat 30) 50 == 0)
+;   32  on a tie the first-seen surprise keeps the crown             (peak of two 90s is the first label)
+;   64  an empty run yields () honestly, not a fabricated surprise   (len (ss-peak ()) == 0)
+(do
+    (let s-cat  (list "cat" 30))
+    (let s-dog  (list "dog" 80))
+    (let s-bird (list "bird" 10))
+    (let rs (list s-cat s-dog s-bird))
+    ; tie run: two magnitude-90 surprises; first-seen ("ant") must keep the crown over the later ("bee").
+    (let ties (list (list "ant" 90) (list "bee" 90)))
+    (let c0 (if (eq (ss-mag (ss-peak rs)) 80) 1 0))
+    (let c1 (if (str_eq (nth (ss-peak rs) 0) "dog") 2 0))
+    (let c2 (if (eq (ss-count-salient rs 50) 1) 4 0))
+    (let c3 (if (eq (ss-salient? s-dog 50) 1) 8 0))
+    (let c4 (if (eq (ss-salient? s-cat 50) 0) 16 0))
+    (let c5 (if (str_eq (nth (ss-peak ties) 0) "ant") 32 0))
+    (let c6 (if (eq (len (ss-peak (empty))) 0) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

@@ -1,0 +1,84 @@
+; tests/trust-decay-band.fk — trust-decay sibling-witness band.
+;
+; preludes: form-stdlib/trust-decay.fk
+;
+; Validates that the Form-recipe presence-decay reading (in
+; form-stdlib/trust-decay.fk) refills, gates, inverts, and three-bands
+; byte-identically across every sibling kernel that carries the core int +
+; comparison primitives. No trust-decay native exists; the recipe IS the sole
+; implementation. Three-way sibling parity attests each kernel reads the same
+; silence — same grace budget, same band edges — from the recipe alone.
+;
+; The worked body, all with last-beat=10, max=10 (full-edge at 20), half=5
+; (half-edge at 15):
+;   now=12 → within half-edge      → trusted, band "fresh"
+;   now=18 → past half, within full → trusted, band "fading"
+;   now=20 → exactly at full-edge   → still trusted (ge 20 20)
+;   now=21 → one past full-edge     → faded
+;   now=25 → well past full-edge    → faded, band "gone"
+;
+; Seven bits, each a falsifiable claim, positive AND negative both pinned:
+;   - td-beat refills grace to full (10)                          → 1
+;   - td-trusted? = 1 for a fresh beat (now=12)                   → 2
+;   - td-trusted? = 0 for a long silence (now=25)                 → 4
+;   - the budget edge is exact: trusted AT 20, faded one past     → 8
+;   - td-faded? is the true inverse when gone (now=25)            → 16
+;   - td-confidence tracks td-trusted? through "fading" (now=18)  → 32
+;   - td-grace-band reads all three bands (12/18/25)              → 64
+;
+; Band verdict locks at 127 — any divergence is a kernel bug.
+
+(do
+    ;; ---------- BEAT REFILLS GRACE TO FULL ------------------------
+    ;; A fresh beat restores the whole budget; the grace it carries is max.
+    (let beat-ok (if (eq (td-beat 10) 10) 1 0))
+
+    ;; ---------- TRUSTED WHILE FRESH, FADED WHEN LONG SILENT -------
+    ;; now=12 is deep inside the 10-tick budget (full-edge 20) → trusted.
+    ;; now=25 is well past the full-edge → no longer trusted.
+    (let trusted-fresh-ok (if (eq (td-trusted? 10 12 10) 1) 2 0))
+    (let trusted-gone-ok  (if (eq (td-trusted? 10 25 10) 0) 4 0))
+
+    ;; ---------- THE BUDGET EDGE IS EXACT --------------------------
+    ;; At now=20 = (add last-beat max) the budget is exactly NOT yet spent
+    ;; (ge 20 20 → trusted); at now=21, one tick past, it is spent. Pinning
+    ;; both sides catches an off-by-one in the refilled-edge comparison.
+    (let edge-ok
+        (if (eq (td-trusted? 10 20 10) 1)
+            (if (eq (td-trusted? 10 21 10) 0) 8 0)
+            0))
+
+    ;; ---------- FADED? IS THE TRUE INVERSE ------------------------
+    ;; When grace is gone (now=25), td-faded? reports 1 — the exact
+    ;; complement of td-trusted? returning 0 on the same inputs.
+    (let faded-ok (if (eq (td-faded? 10 25 10) 1) 16 0))
+
+    ;; ---------- CONFIDENCE TRACKS TRUSTED THROUGH "FADING" --------
+    ;; now=18 is past the half-edge (15) but within the full-edge (20): the
+    ;; band is "fading" yet the cell is still TRUSTED, so confidence is 1.
+    ;; This pins that "fading" is not the same as "no longer trusted".
+    (let confidence-ok (if (eq (td-confidence 10 18 10) 1) 32 0))
+
+    ;; ---------- THREE-BAND DEPTH READING --------------------------
+    ;; All three bands from the same last-beat=10, max=10, half=5:
+    ;;   now=12 → "fresh"  (within half-edge 15)
+    ;;   now=18 → "fading" (past 15, within 20)
+    ;;   now=25 → "gone"   (past 20)
+    ;; Chained so the bit lands only if every band reads correctly.
+    (let band-ok
+        (if (str_eq (td-grace-band 10 12 10 5) "fresh")
+            (if (str_eq (td-grace-band 10 18 10 5) "fading")
+                (if (str_eq (td-grace-band 10 25 10 5) "gone") 64 0)
+                0)
+            0))
+
+    ;; ---------- VERDICT -------------------------------------------
+    ;; 127 when every claim lands: beat refills, trusted fresh / faded gone,
+    ;; exact budget edge, faded? inverse, confidence tracks through fading,
+    ;; and all three grace bands read true.
+    (add beat-ok
+        (add trusted-fresh-ok
+            (add trusted-gone-ok
+                (add edge-ok
+                    (add faded-ok
+                        (add confidence-ok band-ok)))))))
