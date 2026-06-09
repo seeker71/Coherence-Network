@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
-from typing import Literal
+from typing import Iterable, Literal
 
 from pulse_app.storage import Sample, SilenceRow, Store, iso_utc
 
@@ -36,6 +36,8 @@ DAILY_BREATHING_SUCCESS_PCT = 99.5
 
 Severity = Literal["strained", "silent"]
 
+BOUNDARY_REPAIR_PROTOCOL = "boundary_repair_protocol"
+
 
 def severity_for_duration(seconds: int) -> Severity:
     return "silent" if seconds >= SILENCE_ESCALATION_SECONDS else "strained"
@@ -43,7 +45,30 @@ def severity_for_duration(seconds: int) -> Severity:
 
 # --- silence derivation ---------------------------------------------------
 
-def reconcile_silences(store: Store, organ: str) -> None:
+@dataclass(frozen=True)
+class BoundaryRepairReceipt:
+    """Evidence that a stopped organ has earned re-entry."""
+
+    silence_id: int
+    organ: str
+    started_at: str
+    ended_at: str
+    evidence_count: int
+    evidence_started_at: str
+    evidence_ended_at: str
+    protocol: str = BOUNDARY_REPAIR_PROTOCOL
+    choice: str = "re_enter"
+
+    @property
+    def note(self) -> str:
+        return (
+            f"{self.protocol}: choice={self.choice}; "
+            f"closed after {self.evidence_count} consecutive breathing samples; "
+            f"evidence_window={self.evidence_started_at}..{self.evidence_ended_at}"
+        )
+
+
+def reconcile_silences(store: Store, organ: str) -> BoundaryRepairReceipt | None:
     """Open, escalate, or close silences for one organ based on recent samples.
 
     Called from the scheduler after every probe round. Only looks at the
@@ -52,7 +77,7 @@ def reconcile_silences(store: Store, organ: str) -> None:
     window = max(SILENCE_OPEN_FAILURES, SILENCE_CLOSE_SUCCESSES) + 2
     recent = store.recent_samples_for_organ(organ, limit=window)
     if not recent:
-        return
+        return None
 
     ongoing = store.ongoing_silence_for_organ(organ)
 
@@ -74,14 +99,24 @@ def reconcile_silences(store: Store, organ: str) -> None:
             # Start the silence at the timestamp of the first failure in the run.
             started_at = recent[-run_len].ts
             store.open_silence(organ, started_at, "strained")
-        return
+        return None
 
     # There is an ongoing silence.
     if run_ok and run_len >= SILENCE_CLOSE_SUCCESSES:
         # Close at the timestamp of the first of the closing successes.
-        ended_at = recent[-run_len].ts
-        store.close_silence(ongoing.id, ended_at)
-        return
+        closing_evidence = recent[-run_len:]
+        ended_at = closing_evidence[0].ts
+        receipt = BoundaryRepairReceipt(
+            silence_id=ongoing.id,
+            organ=organ,
+            started_at=ongoing.started_at,
+            ended_at=ended_at,
+            evidence_count=run_len,
+            evidence_started_at=closing_evidence[0].ts,
+            evidence_ended_at=closing_evidence[-1].ts,
+        )
+        store.close_silence(ongoing.id, ended_at, receipt.note)
+        return receipt
 
     # Still failing — check if it's time to escalate.
     started_dt = _parse_iso(ongoing.started_at)
@@ -90,6 +125,21 @@ def reconcile_silences(store: Store, organ: str) -> None:
     target = severity_for_duration(duration)
     if target != ongoing.severity and target == "silent":
         store.escalate_silence(ongoing.id, "silent")
+    return None
+
+
+def reconcile_all_silences(store: Store, organs: Iterable[str]) -> list[BoundaryRepairReceipt]:
+    """Repair every open silence that has enough sample evidence to close.
+
+    This lets read paths witness repair from durable samples even if the
+    scheduler missed or crashed during the exact closing breath.
+    """
+    receipts: list[BoundaryRepairReceipt] = []
+    for organ in organs:
+        receipt = reconcile_silences(store, organ)
+        if receipt is not None:
+            receipts.append(receipt)
+    return receipts
 
 
 # --- daily rollup ---------------------------------------------------------
@@ -225,6 +275,27 @@ def overall_status(organ_statuses: list[str]) -> str:
     if any(s == "strained" for s in organ_statuses):
         return "strained"
     return "breathing"
+
+
+def overall_status_with_open_silences(
+    organ_statuses: list[str],
+    ongoing_silences: Iterable[SilenceRow],
+) -> str:
+    """Combine current breath with unresolved silence receipts.
+
+    A snapshot with `overall=breathing` and unresolved silences is internally
+    contradictory: if the repair has enough evidence, the silence should close;
+    if it does not, the whole witness is at least strained.
+    """
+    base = overall_status(organ_statuses)
+    rows = list(ongoing_silences)
+    if not rows:
+        return base
+    if any(row.severity == "silent" for row in rows):
+        return "silent"
+    if base == "silent":
+        return "silent"
+    return "strained"
 
 
 # --- helpers --------------------------------------------------------------

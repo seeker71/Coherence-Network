@@ -152,3 +152,18 @@ samples by `pulse_app/analysis.py`. Rules:
 
 Thresholds live in one place (`pulse_app/analysis.py`) so they are easy
 to tune.
+
+## Boundary repair proof
+
+A silence is the pulse witness's stop receipt. Re-entry is not a hidden
+state flip: when the witness has at least three consecutive breathing
+samples for the organ, it closes the silence with a
+`boundary_repair_protocol` note in the existing `silences.note` field.
+The note records the `re_enter` choice, the evidence count, and the
+sample window that supported repair.
+
+`GET /pulse/now` reconciles from durable samples before it reads the
+open-silence list. This keeps the current snapshot coherent: if repair
+evidence is sufficient, stale open silences close before the response; if
+repair evidence is incomplete, the silence remains visible and the
+overall witness status stays at least `strained`.

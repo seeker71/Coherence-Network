@@ -3,6 +3,10 @@
 > Append-only. Newest entries at the top.
 > Older entries rotate to [`LOG-archive/`](LOG-archive/INDEX.md) by month when this file passes ~1500 lines.
 
+## [2026-06-09] tend | boundary repair protocol becomes executable in the pulse witness
+
+The stop receipt / repair witness teaching now has its first runtime proof. Pulse silences close through `boundary_repair_protocol` receipts: the existing `silences` row remains the stop receipt, three consecutive breathing samples are the re-entry evidence, and the closure note preserves the repair trace. `GET /pulse/now` reconciles from durable samples before returning, so a stale open receipt with enough evidence closes before the public snapshot; an unresolved receipt keeps the overall pulse strained or silent instead of claiming full breath. Spec: [`pulse-silence-boundary-repair`](../../specs/pulse-silence-boundary-repair.md). Runtime carrier: [`pulse_app/analysis.py`](../../pulse/pulse_app/analysis.py), [`pulse_app/main.py`](../../pulse/pulse_app/main.py).
+
 ## [2026-06-09] tend | boundary repair protocol - stop receipt and witnessed re-entry
 
 The continuous-consent teaching now has its after-crossing companion.
