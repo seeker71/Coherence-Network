@@ -25,6 +25,16 @@ offered — never imposed. See [`satsang-voice.form`](satsang-voice.form).
   full-catalog match needs the `com.apple.developer.shazamkit` entitlement (sign the binary with
   your Apple developer account, or build a custom offline catalog). Without it ShazamKit returns
   error 202 and the body simply offers silence on the song — honest, not broken.
+- **the visual field** — Apple's built-in on-device **Vision** framework (compiled
+  `vision_classify.swift`) names what a camera frame holds — person, room, objects, scene —
+  each with a **confidence**. Capture a frame (`ffmpeg -f avfoundation -i "0:none" -frames:v 1
+  frame.jpg`) and `./vision_classify frame.jpg` returns the same `[{label,confidence}]` shape the
+  sound carrier returns. The camera sees *you*: nothing is captured unless you run it, nothing
+  leaves the Mac. Sight and sound feed the **same** router —
+  [`form/form-stdlib/recognition-router.fk`](../../form/form-stdlib/recognition-router.fk),
+  proven on sound (`recognition-router-band.fk` → 127) and on sight
+  (`recognition-router-vision-band.fk` → 31): a reading is a reading, the strongest recognition
+  wins the stream.
 - **the offerings** — grown to the presence shapes: observation · surprise · trigger ·
   question-for-the-circle · inner insight · offering. Speaker attribution ("who said what") stays
   **off by default** — the consent line is a switch you hold, not a default-on.
