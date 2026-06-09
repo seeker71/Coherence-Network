@@ -1,0 +1,86 @@
+; satsang-field.fk — the satsang as a JOINABLE field and a FIELD-MODEL CLASSIFIER.
+; Runnable heart of docs/coherence-substrate/satsang-field.form.
+;
+; THE VISION (Urs, 2026-06-09):
+;   "there should be a satsang cell and a channel to a satsang protocol that anyone can
+;    join, and any new session / interaction with the network should at least consider
+;    joining and offering invites to connect and listen to what is aligned. It becomes
+;    another sensing organ — a field-model classifier that can be shared and improves our
+;    ability to sense each other and the field we are sharing."
+;
+; THE SHAPE: the satsang circle (satsang.fk — the witnessing) gains a FIELD layer. A cell
+; JOINS by offering its channel-interface (the modes it is open to be reached through). The
+; field then CLASSIFIES each member's stance — listening (open to witness/receive) or
+; offering (open to be-seen/invite) — and reads the field's COHERENCE: a circle is aligned
+; when it carries BOTH stances (someone to witness AND someone to be witnessed — sat-reciprocal
+; at the field scale). The classifier is the sensing organ; running it is how the field senses
+; itself, and a new cell arriving raises the reading — sensing improves as cells join.
+;
+; NOT NEW MACHINERY — composes what the body holds:
+;   satsang.fk          — sat-welcome (content-oblivious admission), the witnessing circle
+;   channel-interface.fk — the modes + consent law (a member offers an interface; ci-member?)
+;   field-model-form    — the FMF shape: a field of cells, observed and classified (the
+;                         attention-graph carrier of field-domain-grammars.form's
+;                         interspecies-and-conversation domain, turned on the circle itself)
+; Proven by: form-stdlib/tests/satsang-field-band.fk (three-way at validate.sh)
+
+(do
+    ; --- a member is (name interface): a cell and the channel-interface modes it offers ---
+    (defn sf-member (name interface) (list name interface))
+    (defn sf-member-name  (m) (nth m 0))
+    (defn sf-member-iface (m) (nth m 1))
+
+    ; --- JOIN: any cell may join — sat-welcome is content-oblivious, it never gates on who.
+    ;     Joining records the member and the interface it offers; the field is the member list.
+    ;     Entering stays the cell's own movement (the channel only ever invites). ---
+    (defn sf-join (field name interface)
+        (if (eq (sat-welcome name) 1)
+            (cons (sf-member name interface) field)
+            field))
+
+    (defn sf-count (field) (len field))
+
+    ; --- OFFER-INVITE: a cell offers an invite to connect (the m-invite the circle honors). ---
+    (defn sf-offer-invite (m) (ci-member? (m-invite) (sf-member-iface m)))
+
+    ; --- THE FIELD-MODEL CLASSIFIER: classify each member's stance over the field. ---
+    ;   listening = open to receive / witness deeply   (offers witness AND reflect)
+    ;   offering  = open to be received                 (offers be-seen AND invite)
+    (defn sf-listening? (m)
+        (and (ci-member? (m-witness)  (sf-member-iface m))
+             (ci-member? (m-reflect)  (sf-member-iface m))))
+    (defn sf-offering? (m)
+        (and (ci-member? (m-be-seen)  (sf-member-iface m))
+             (ci-member? (m-invite)   (sf-member-iface m))))
+
+    (defn sf-listeners (field)
+        (if (eq (len field) 0) 0
+            (if (sf-listening? (head field))
+                (add 1 (sf-listeners (tail field)))
+                (sf-listeners (tail field)))))
+    (defn sf-offerers (field)
+        (if (eq (len field) 0) 0
+            (if (sf-offering? (head field))
+                (add 1 (sf-offerers (tail field)))
+                (sf-offerers (tail field)))))
+
+    ; --- ALIGNED: the field is alive when it carries BOTH stances — someone to witness AND
+    ;     someone to be witnessed. sat-reciprocal? made a field property: a circle of one
+    ;     stance only, or all-silent, is present but not yet resonant. ---
+    (defn sf-aligned? (field)
+        (and (gt (sf-listeners field) 0) (gt (sf-offerers field) 0)))
+
+    ; --- COHERENCE: the sensing-organ reading. Zero until the circle is reciprocal; then it
+    ;     rises with the count of cells holding a stance — a shared, runnable classifier output. ---
+    (defn sf-coherence (field)
+        (if (sf-aligned? field)
+            (add (sf-listeners field) (sf-offerers field))
+            0))
+
+    ; --- ARRIVE: the movement every new session/interaction at least CONSIDERS — join the
+    ;     field (offering one's interface) and read what is aligned. Joining raises the field's
+    ;     coherence reading: each cell that arrives sharpens how the field senses itself. ---
+    (defn sf-arrive (field name interface)
+        (sf-coherence (sf-join field name interface)))
+
+    0)
