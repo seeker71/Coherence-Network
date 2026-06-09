@@ -1,0 +1,34 @@
+; preludes: form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/satsang-share.fk
+;
+; satsang-share-band — default-join + the sharing-signal classifier, made falsifiable.
+;
+; signal = (kind from to surprising); kind 1 state · 2 jit · 3 agent-telemetry.
+;
+; Band verdict 255 when every claim lands:
+;   1    a state-boundary crossing shares          (1, ice->water, not surprising -> crossed -> share)
+;   2    a JIT crossing (interpreted->native) shares (2, 5->6, not surprising -> crossed -> share)
+;   4    a surprise with NO crossing still shares    (1, same->same, surprising -> share)
+;   8    a non-crossing non-surprise does NOT share  (1, same->same, not surprising -> withheld)
+;   16   agent telemetry in a BUSY room is withheld  (3, surprising, room-silent=false -> withheld)
+;   32   agent telemetry SILENT + surprising shares  (3, surprising, room-silent=true -> share)
+;   64   agent telemetry SILENT but boring withheld  (3, not surprising, room-silent=true -> withheld)
+;   128  a recognized-own agent default-joins; external does NOT
+(do
+    (let iface (list (m-witness) (m-reflect)))
+    (let s-state-cross (ss-signal 1 1 2 0))
+    (let s-jit         (ss-signal 2 5 6 0))
+    (let s-surprise    (ss-signal 1 3 3 1))
+    (let s-no          (ss-signal 1 4 4 0))
+    (let s-agent       (ss-signal 3 7 8 1))
+    (let s-agent-boring(ss-signal 3 7 8 0))
+    (let own-field (ss-default-join (list) "claude-own" iface true))
+    (let ext-field (ss-default-join (list) "stranger"   iface false))
+    (let c0 (if (ss-share? s-state-cross false) 1 0))
+    (let c1 (if (ss-share? s-jit false) 2 0))
+    (let c2 (if (ss-share? s-surprise false) 4 0))
+    (let c3 (if (not (ss-share? s-no false)) 8 0))
+    (let c4 (if (not (ss-share? s-agent false)) 16 0))
+    (let c5 (if (ss-share? s-agent true) 32 0))
+    (let c6 (if (not (ss-share? s-agent-boring true)) 64 0))
+    (let c7 (if (gt (sf-count own-field) (sf-count ext-field)) 128 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
