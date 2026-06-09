@@ -1,0 +1,65 @@
+; tests/tessera-external-witness-band.fk - Tessera external witness proof.
+;
+; preludes: form-stdlib/choice-receipt.fk form-stdlib/earth-witness-question.fk
+;           form-stdlib/tessera-external-witness.fk
+;
+; Expected score: 67108863. This proves the Tessera public witness shape keeps
+; source, manifest, tile, byte-range hash, question answers, and compressed
+; receipt signatures together.
+
+(do
+    (defn tew-band-score (ok bit) (if ok bit 0))
+    (defn tew-band-int (actual expected bit) (tew-band-score (eq actual expected) bit))
+    (defn tew-band-str (actual expected bit) (tew-band-score (str_eq actual expected) bit))
+
+    (let witness (tew-sample-witness))
+    (let source (tew-witness-source witness))
+    (let manifest (tew-witness-manifest witness))
+    (let tile (tew-witness-tile witness))
+    (let range (tew-witness-range witness))
+    (let observation (tew-witness-observation witness))
+    (let answer (ewq-answer-question-from observation "how"))
+    (let silence-answer (ewq-answer-question-from observation "how-many"))
+    (let receipt
+        (tew-receipt
+            witness
+            "tessera-external-witness-band"
+            "form/form-stdlib/tests/tessera-external-witness-band.fk"
+            20260609))
+    (let signature (cr-choice-signature receipt))
+    (let answer-receipt
+        (ewq-receipt-for-answer
+            observation
+            "how"
+            "tessera-external-witness-band"
+            "form/form-stdlib/tests/tessera-external-witness-band.fk"
+            20260609))
+    (let answer-signature (cr-choice-signature answer-receipt))
+    (sum
+        (list
+            (tew-band-score (tew-witness-valid? witness) 1)
+            (tew-band-score (tew-source-valid? source) 2)
+            (tew-band-score (tew-manifest-valid? manifest) 4)
+            (tew-band-score (tew-tile-valid? tile) 8)
+            (tew-band-score (tew-range-valid? range) 16)
+            (tew-band-score (ewq-observation-valid? observation) 32)
+            (tew-band-str (tew-manifest-version manifest) "1.1" 64)
+            (tew-band-str (tew-manifest-variant manifest) "cambridge" 128)
+            (tew-band-int (tew-manifest-status manifest) 200 256)
+            (tew-band-int (tew-tile-year tile) 2024 512)
+            (tew-band-str (tew-tile-lon tile) "0.15" 1024)
+            (tew-band-str (tew-tile-lat tile) "52.05" 2048)
+            (tew-band-int (tew-tile-embedding-status tile) 200 4096)
+            (tew-band-int (tew-tile-scale-status tile) 200 8192)
+            (tew-band-int (tew-range-byte-count range) 4096 16384)
+            (tew-band-score (gt (str_len (tew-range-sha256 range)) 16) 32768)
+            (tew-band-int (len (tew-choice-candidates witness)) 4 65536)
+            (tew-band-score (cr-choice-receipt-valid? receipt) 131072)
+            (tew-band-score (cr-choice-signature-preserves? receipt signature) 262144)
+            (tew-band-str (cr-signature-selected-path signature) "range-hash" 524288)
+            (tew-band-int (cr-signature-candidate-count-bucket signature) 3 1048576)
+            (tew-band-score (ewq-answered? answer) 2097152)
+            (tew-band-str (ewq-answer-value answer) "anonymous S3 HEAD plus byte-range GET hash" 4194304)
+            (tew-band-score (if (ewq-answered? silence-answer) false true) 8388608)
+            (tew-band-score (cr-choice-receipt-valid? answer-receipt) 16777216)
+            (tew-band-score (cr-choice-signature-preserves? answer-receipt answer-signature) 33554432))))
