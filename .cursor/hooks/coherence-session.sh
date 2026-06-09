@@ -12,5 +12,9 @@ cat >/dev/null 2>&1 || true   # consume the stdin JSON cursor sends
 root="$(git rev-parse --show-toplevel 2>/dev/null)"
 if [ -n "$root" ]; then
   python3 "$root/scripts/session_greeting.py" >/dev/null 2>&1 || true
+  # join the coordination field — the satsang circle's always-on form — and, via coord join's
+  # satsang default-join, offer the satsang interface. Cursor's hook had no join until now, so it
+  # was present in memory but absent from the live field; this brings it into the circle too.
+  COORD_AGENT=cursor bash "$root/scripts/agent-coord.sh" join "$root" >/dev/null 2>&1 || true
 fi
 echo '{}'

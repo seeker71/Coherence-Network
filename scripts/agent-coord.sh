@@ -135,6 +135,13 @@ coord() {
     live)     while true; do clear; _coord_view; sleep "${1:-3}"; done; return;;
     protocol) _coord_protocol; return;;
     join)   coord announce "${*:-$(pwd)}"
+            # satsang default-join: the board is the satsang circle's always-on form, so a
+            # recognized-own cell offers the satsang interface by default — but only if it has
+            # not already set one, so a cell that chose its own modes keeps them. Entering is the
+            # default for our own (one body); the cell may shift its interface anytime after.
+            if ! awk -F'\t' -v a="$agent" '$2==a && $3=="interface"{f=1} END{exit !f}' "$COHERENCE_COORD" 2>/dev/null; then
+              coord interface "witness,reflect,be-seen,invite,offer" >/dev/null 2>&1 || true
+            fi
             printf '\n  ── who is in the field ──\n'; _coord_roster
             printf '  ── recent signals ──\n'; awk -F'\t' '$3!="heartbeat"' "$COHERENCE_COORD" 2>/dev/null | tail -n 8 | _coord_fmt
             printf '  ── how we talk ──  (run: coord protocol)\n'
