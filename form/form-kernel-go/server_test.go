@@ -36,6 +36,12 @@ func TestFanoutForwardsBodyAndMarksBridge(t *testing.T) {
 	var sawWhere string
 	var sawWho string
 	var sawWhen string
+	var sawInvite string
+	var sawInviteState string
+	var sawInviteProtocol string
+	var sawInvitePath string
+	var sawInviteDecline string
+	var sawInviteFallback string
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		sawPath = r.URL.RequestURI()
 		sawRouter = r.Header.Get("X-Form-Router")
@@ -43,12 +49,19 @@ func TestFanoutForwardsBodyAndMarksBridge(t *testing.T) {
 		sawWhere = r.Header.Get("X-Form-Route-Where")
 		sawWho = r.Header.Get("X-Form-Route-Who")
 		sawWhen = r.Header.Get("X-Form-Route-When")
+		sawInvite = r.Header.Get("X-Form-Native-Invitation")
+		sawInviteState = r.Header.Get("X-Form-Native-Invitation-State")
+		sawInviteProtocol = r.Header.Get("X-Form-Native-Invitation-Protocol")
+		sawInvitePath = r.Header.Get("X-Form-Native-Invitation-Selected-Path")
+		sawInviteDecline = r.Header.Get("X-Form-Native-Invitation-Decline-Signal")
+		sawInviteFallback = r.Header.Get("X-Form-Native-Invitation-Decline-Header")
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			t.Fatal(err)
 		}
 		sawBody = string(body)
 		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Form-Native-Invitation", "upstream-owned")
 		w.WriteHeader(http.StatusAccepted)
 		_, _ = w.Write([]byte(`{"kind":"bridge"}`))
 	}))
@@ -74,6 +87,7 @@ func TestFanoutForwardsBodyAndMarksBridge(t *testing.T) {
 	)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Coherence-Agent", "agent with space")
+	req.Header.Set("X-Form-Native-Invitation", "client-owned")
 	rec := httptest.NewRecorder()
 
 	worker.fanout(rec, req)
@@ -102,6 +116,7 @@ func TestFanoutForwardsBodyAndMarksBridge(t *testing.T) {
 	if _, err := time.Parse(time.RFC3339Nano, res.Header.Get("X-Form-Route-When")); err != nil {
 		t.Fatalf("response X-Form-Route-When is not RFC3339Nano: %v", err)
 	}
+	assertFanoutNativeInvitationHeaders(t, res.Header)
 	if sawRouter != "fanout-python" {
 		t.Fatalf("upstream X-Form-Router = %q, want fanout-python", sawRouter)
 	}
@@ -117,6 +132,24 @@ func TestFanoutForwardsBodyAndMarksBridge(t *testing.T) {
 	if _, err := time.Parse(time.RFC3339Nano, sawWhen); err != nil {
 		t.Fatalf("upstream X-Form-Route-When is not RFC3339Nano: %v", err)
 	}
+	if sawInvite != "offered" {
+		t.Fatalf("upstream X-Form-Native-Invitation = %q, want offered", sawInvite)
+	}
+	if sawInviteState != "native-invitation-offered" {
+		t.Fatalf("upstream invitation state = %q", sawInviteState)
+	}
+	if sawInviteProtocol != "Form/BML route recipe" {
+		t.Fatalf("upstream invitation protocol = %q", sawInviteProtocol)
+	}
+	if sawInvitePath != "fanout-python" {
+		t.Fatalf("upstream invitation selected path = %q", sawInvitePath)
+	}
+	if sawInviteDecline != "native_invitation_declined" {
+		t.Fatalf("upstream invitation decline signal = %q", sawInviteDecline)
+	}
+	if sawInviteFallback != "X-Form-Python-Fallback" {
+		t.Fatalf("upstream invitation decline header = %q", sawInviteFallback)
+	}
 	if sawPath != "/api/substrate/form?source=web" {
 		t.Fatalf("upstream path = %q", sawPath)
 	}
@@ -125,6 +158,28 @@ func TestFanoutForwardsBodyAndMarksBridge(t *testing.T) {
 	}
 	if string(gotBody) != `{"kind":"bridge"}` {
 		t.Fatalf("response body = %q", string(gotBody))
+	}
+}
+
+func assertFanoutNativeInvitationHeaders(t *testing.T, headers http.Header) {
+	t.Helper()
+	if got := headers.Get("X-Form-Native-Invitation"); got != "offered" {
+		t.Fatalf("X-Form-Native-Invitation = %q, want offered", got)
+	}
+	if got := headers.Get("X-Form-Native-Invitation-State"); got != "native-invitation-offered" {
+		t.Fatalf("X-Form-Native-Invitation-State = %q", got)
+	}
+	if got := headers.Get("X-Form-Native-Invitation-Protocol"); got != "Form/BML route recipe" {
+		t.Fatalf("X-Form-Native-Invitation-Protocol = %q", got)
+	}
+	if got := headers.Get("X-Form-Native-Invitation-Selected-Path"); got != "fanout-python" {
+		t.Fatalf("X-Form-Native-Invitation-Selected-Path = %q", got)
+	}
+	if got := headers.Get("X-Form-Native-Invitation-Decline-Signal"); got != "native_invitation_declined" {
+		t.Fatalf("X-Form-Native-Invitation-Decline-Signal = %q", got)
+	}
+	if got := headers.Get("X-Form-Native-Invitation-Decline-Header"); got != "X-Form-Python-Fallback" {
+		t.Fatalf("X-Form-Native-Invitation-Decline-Header = %q", got)
 	}
 }
 
