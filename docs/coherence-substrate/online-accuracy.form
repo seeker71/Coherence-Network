@@ -1,0 +1,51 @@
+; online-accuracy.form — a predictor's RUNNING accuracy over a live stream, so the body knows how
+;                         good it is right now.
+;
+; THE ASK:
+;   classifier-eval holds a classifier against a held-out set ONCE — a finished exam, graded after the
+;   fact. A predictor in flight needs that honesty turned live: at every tick it calls a shot
+;   (predicted) and the world answers (actual), and the body wants its current standing — am I right
+;   enough, right now, to keep routing on what this predictor says? The standing must be as honest as
+;   the gate it feeds: count what the stream got RIGHT, count what it got WRONG, and answer on a bar
+;   that compares exact integers — no asserted accuracy, no float ratio the kernels round apart.
+;
+; THE SHAPE  (runnable: form-stdlib/online-accuracy.fk · proven: tests/online-accuracy-band.fk -> 63)
+;
+;   A step = (list predicted actual): what the predictor said, what the world returned, for one tick.
+;   A stream is a list of steps, oldest-to-newest — the running record.
+;   1. HIT  oa-hit?: one step lands when predicted str_eq actual (1), else 0.
+;   2. COUNT  oa-correct / oa-wrong / oa-total: fold the stream by recursion — oa-correct sums the
+;      hits, oa-wrong sums the misses, oa-total is the stream length. No subtraction: misses are
+;      counted directly, never derived as total-minus-correct, so the two counts are independently
+;      true. "Drop the oldest step" is the list tail, not an arithmetic decrement.
+;   3. LIVE GATE  oa-meets?: the predictor is good-enough-right-now only when its running counts
+;      cleared enough hits AND stayed under the miss ceiling —
+;      (and (ge (oa-correct stream) min-correct) (ge max-wrong (oa-wrong stream))). Division-free: ge
+;      on integers, the same verdict on Go=Rust=TS. This is classifier-eval's exam bar made live —
+;      the same (predicted, actual) step shape, the same proven-count gate, asked every tick instead
+;      of once.
+;
+; WHY DIVISION-FREE:
+;   a running-accuracy ratio (correct/total) is a float, and eq on floats drifts between kernels — the
+;   three-way proof would diverge on rounding alone. A proven-count bar (min-correct, max-wrong)
+;   carries the same intent — "right enough, wrong rarely enough" — in integers the kernels compare
+;   exactly. The single `and` here is binary by construction (one ge AND one ge); it never grows a
+;   third arm, so it never trips the drop-the-third-argument divergence.
+;
+; HOW IT COMPOSES THE SPINE — this is the live face of an exam the spine already runs:
+;   classifier-eval.form (the held-out exam this turns live — same step shape, same division-free bar,
+;   graded once instead of every tick) · self-grounding-classifier.fk (the promotion a sustained
+;   standing earns — let our own seeing route once it has been right enough, long enough) ·
+;   recognition-router.form (what routes on the prediction once oa-meets? says it is trustworthy now) ·
+;   declared-source.form (every counted step traces to a witnessed (predicted, actual) tick, never an
+;   assumed one).
+;
+; HONEST LANE / CAVEAT:
+;   the standing is exactly as honest as the stream behind it, and it is a window, not a verdict on
+;   the future. oa-meets? proves the predictor matched the ACTUAL column across the steps it has seen
+;   — not that the next tick will land, and not that a quiet run won't turn. A meeting stream is
+;   grounds to keep routing now; a failing one is whole silence, never a fabricated pass. min-correct
+;   / max-wrong are the encoder's live bar — raising them is how the body asks a predictor to stay
+;   right more often before it keeps its trust. (This recipe counts a given stream; WHICH steps form
+;   the window — all of history, or only the recent tail — is the caller's choice of what list to
+;   pass, and the tail is just `tail`.)

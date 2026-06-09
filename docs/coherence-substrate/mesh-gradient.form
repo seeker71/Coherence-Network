@@ -1,0 +1,72 @@
+; mesh-gradient.form — directed mesh routing: forward toward a destination by hop-distance gradient.
+;
+; THE ASK (Urs, 2026-06-09):
+;   mesh-relay carried a message across a room by FLOODING — every body forwards every new message
+;   that still has hops, with no idea where the destination is. Managed flooding reaches everyone, but
+;   it touches everyone. The next ring is DIRECTION: if each body knows its own hop-distance to the
+;   destination, the message need not flood — it can DESCEND the gradient, stepping body-to-body toward
+;   the dest, touching only the path and not the whole room. The distance field IS the map.
+;
+; THE SHAPE  (runnable: form-stdlib/mesh-gradient.fk · proven: tests/mesh-gradient-band.fk -> 127)
+;
+;   A neighbor = (list id distance-to-dest). Each body knows its own hop-distance (my-dist) and reads
+;   each neighbor's distance. Routing is gradient descent over those distances —
+;     1. DOWNHILL ONLY   mg-closer?: a neighbor is a candidate IFF its distance is STRICTLY less than
+;                        mine. Sideways (equal distance) and uphill (greater) both fail — the message
+;                        only ever moves nearer the destination, never in a circle.
+;     2. STEEPEST STEP   mg-next-hop: among the downhill candidates, take the one with the SMALLEST
+;                        distance — the deepest single step toward the dest. A min-select carried as a
+;                        value, not an index.
+;     3. ARRIVED         mg-reached?: my own distance is 0 — I am the destination, no hop is needed.
+;   The decision is mg-next-hop — the id of the closest downhill neighbor, or "" when none descends.
+;
+;   Functions:
+;     mg-id / mg-dist  — accessors over a neighbor tuple (id, distance-to-dest).
+;     mg-closer?       — the gradient rule: 1 iff this neighbor is STRICTLY closer than me (downhill).
+;     mg-reached?      — 1 iff my own distance is 0 (I am the destination; the walk ends here).
+;     mg-best-loop     — the inlined min-select: carry the smallest-distance downhill neighbor so far.
+;     mg-next-hop      — the id to forward to, or "" when no neighbor descends the gradient.
+;
+; COMPARISON WITHOUT SUBTRACTION — the load-bearing representation choice:
+;   There is no `sub` in the primitive set, but the gradient never needs a difference. "Closer" is a
+;   COMPARISON, not a subtraction: mg-closer? is (gt my-dist its-dist) — strictly nearer the dest. The
+;   min-select carries the best NEIGHBOR as a value through the recursion (mg-best-loop's `best`), never
+;   an index or a running difference. Counting and comparison cover the whole route; the absence of
+;   arithmetic shaped the recipe to compare-and-carry, not a workaround bolted onto it.
+;
+; HOW IT COMPOSES THE SPINE:
+;   It EXTENDS mesh-relay.fk over the same body-to-body hop field, swapping blind flooding for directed
+;   descent. mesh-relay's law was "forward what is new and has hops" (managed flooding, dest unknown);
+;   mesh-gradient's law is "forward to the one neighbor closest to the dest" (gradient descent, dest
+;   known by distance). The min-select in mg-best-loop is the same carry-the-best-candidate shape as
+;   recognition-router's rr-select-loop — there the best is the strongest reading; here the best is the
+;   nearest neighbor; both walk a list keeping one winner and return honest absence when none qualifies.
+;   The (if (gt ...) 1 0) settle in mg-closer? and mg-reached? is the same gate discipline mesh-relay's
+;   mr-relay? holds: a comparison destined to be tested against 0/1 is settled to an integer first, so
+;   the three kernels read it identically (the raw-gate divergence mesh-relay caught live, avoided here).
+;
+; HONEST LANE:
+;   SHIPPED — one node's next-hop choice from a known distance field, proven three-way (-> 127):
+;     strict downhill selection, the steepest-step min-select, arrival at distance 0, and honest "" when
+;     no neighbor descends (a local minimum, or the node is itself the destination).
+;   This is the BODY of one node's forwarding decision for one message. What it does NOT carry yet, and
+;   is honestly out of this brick's scope: how the distance field is BUILT and kept fresh (the classic
+;   distance-vector exchange — neighbors advertising "my distance is d", each node taking min(neighbor)+1;
+;   that is its own recipe), and the actual emit of the message on the chosen neighbor's channel (the
+;   channel-port carrier mesh-relay.form already lane-sorts as BUILDABLE). A "" from a non-destination
+;   node is a real local minimum — gradient routing stalls there; a fuller router falls back to flooding,
+;   which mesh-relay already carries. The two are companions: flood to learn the field, descend to use it.
+;
+; KIN: mesh-relay.form (the flooding sibling this extends — reach everyone vs. reach the destination) ·
+;   reachability.fk (graph reachability — mesh-gradient is reachability WITH a direction, descending a
+;   distance field rather than just testing whether an edge path exists) · recognition-router.form (the
+;   same min-select shape: carry one best candidate over a list, honest absence when none qualifies) ·
+;   device-heartbeat.form (the presence beacon under both — who is in range; the distances ride on it) ·
+;   shared-sensing.form (the field of many bodies these messages cross) · lc-honest-lane (the "" is the
+;   honesty — a stalled gradient says so rather than guessing a hop).
+;
+; LINEAGE: mesh-relay proved a message can cross a room hand to hand, blind, by flooding. mesh-gradient
+;   is that same field given a sense of direction — each body knowing how far it is from where the
+;   message is going, and lending the one step that gets it closest. The mesh is not a new organ; it is
+;   the heartbeat field learning to point, so a message walks toward its destination instead of toward
+;   everywhere at once.

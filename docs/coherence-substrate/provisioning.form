@@ -1,0 +1,67 @@
+; provisioning.form — a new device JOINS the mesh, admitted only with consent: a shared wire AND the human's yes.
+;
+; THE ASK (Urs, 2026-06-09):
+;   device-heartbeat let two bodies in radio range find each other and a shared channel; mesh-relay let
+;   a body pass a message past the edge of any one link. Both assume the bodies already belong to the
+;   mesh. This is the door BEFORE either of them: a NEW device wants in, and joining must take CONSENT.
+;   A radio match is not permission, and permission is not a radio match. A join is admitted only when
+;   BOTH hold: the joiner offers a channel we already speak (a real wire), AND the human has opened the
+;   door to that device (its id is on the allowlist). Either alone is refused.
+;
+; THE SHAPE  (runnable: form-stdlib/provisioning.fk · proven: tests/provisioning-band.fk -> 127)
+;
+;   A join-request = (list device channels). The admitting body already holds two facts: my-channels
+;   (the transports WE speak) and allowlist (the device ids the HUMAN opened the door to). Admission is
+;   two consents ANDed, never one —
+;     1. CAPABILITY   pv-shares-channel?: is there ANY wire we both speak? (intersection is non-empty)
+;     2. THE HUMAN'S YES   pv-allowed?: is the joiner's id on the allowlist? (the chosen consent)
+;   The decision is pv-admit? — admit IFF (a shared wire) AND (on the allowlist). That single gate is
+;   the whole pairing-consent law; everything else is membership and the fold that finds the overlap.
+;
+;   Functions:
+;     pv-device / pv-channels   — accessors over the (device, channels) request tuple.
+;     pv-offers?     — does the joiner offer THIS channel? (membership of chan in its offered list).
+;     pv-shares-channel? — is there a wire we BOTH speak? (some pv-offers? holds across my-channels).
+;     pv-allowed?    — has the human opened the door to this id? (membership in the allowlist).
+;     pv-admit?      — the consent gate: 1 iff (a shared wire AND on the allowlist).
+;
+; MEMBERSHIP IS THE SPINE — the load-bearing shape, inlined twice:
+;   Both gates are the same content-addressed str_eq-over-a-list walk — device-heartbeat's hb-has?,
+;   inlined here rather than borrowed (a band preludes only its own recipe + core, so the membership
+;   lives in pv-offers? and pv-allowed? directly, never called across recipes). pv-shares-channel? is
+;   that membership FOLDED: walk my channels, the joiner offering any one means a usable transport
+;   exists, first match short-circuits to 1. CAPABILITY is "membership had a hit"; CONSENT is
+;   "membership had a hit" against a different list. The same primitive shape carries both halves of
+;   the join; only the list it reads changes.
+;
+; AND SETTLED TO 0/1 — the discipline mesh-relay and device-heartbeat hold:
+;   pv-admit? is (if (and gateA gateB) 1 0). `and` is BINARY and its native truth value renders
+;   differently across kernels, so each gate is settled to an integer (eq ... 1) first and the AND is
+;   settled by the outer (if ... 1 0). Never return a raw `and`. The band proved 127 with 0 divergent
+;   on the first run — the two-gate logic carried clean across Go, Rust, and TS.
+;
+; HOW IT COMPOSES THE SPINE:
+;   It EXTENDS device-heartbeat.fk — pv-shares-channel? is hb-shared's intersection question reduced to
+;   its yes/no (is the overlap non-empty), and pv-offers? / pv-allowed? are hb-has? inlined. The
+;   heartbeat found WHO is in range and which wires they share; this adds the HUMAN-CONSENT gate on top,
+;   so being reachable is no longer the same as being admitted. It is the join-time companion to
+;   reception-consent: reception-consent names what rests open or closed for a cell ALREADY present;
+;   provisioning names whether a NEW device crosses the threshold at all.
+;
+; HONEST LANE:
+;   SHIPPED — the per-request admission DECISION, proven three-way (-> 127): the shared-wire test, the
+;     allowlist test, and the AND of the two, with both negatives pinned (un-allowlisted device refused,
+;     no-shared-channel device refused, a wire the joiner does not offer reads honestly as not-offered).
+;   This is the BODY of one admitting node's yes/no for one join-request. What it does NOT carry, and is
+;   honestly out of this brick's scope: WHO edits the allowlist and how the human's yes is captured (a
+;   UI/consent-capture surface, not this decision); the actual key exchange / session bring-up AFTER
+;   admission (the carrier that opens the wire pv-shares-channel? confirmed exists); and revocation over
+;   time (here the allowlist is the caller's current snapshot — a real mesh ages a device off when the
+;   human withdraws the yes, the same lifetime concern mesh-relay's seen-set names).
+;
+; KIN: device-heartbeat.form (the presence beacon this extends — who is in range; this gates who gets
+;   IN) · mesh-relay.form (what an admitted body then does — carry messages past the edge of one link) ·
+;   reception-consent-policy.form (the resting consents for a cell already present; provisioning is the
+;   threshold before that) · channel-interface.fk (the per-channel consent law a joined device's traffic
+;   still rides) · reachability.fk (graph reachability — provisioning is admission to the edge set
+;   reachability later walks) · recognition-router.form (routing once the joiner is one of us).
