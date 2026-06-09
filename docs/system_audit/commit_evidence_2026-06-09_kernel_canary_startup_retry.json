@@ -1,0 +1,102 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/kernel-canary-startup-retry-20260609",
+  "commit_scope": "Make the Hostinger kernel-router canary startup path recover stale compose containers and wait for local listeners before receipt probes.",
+  "files_owned": [
+    "api/tests/test_native_mutation_public_gate.py",
+    "deploy/hostinger/auto-deploy.sh",
+    "docs/system_audit/commit_evidence_2026-06-09_kernel_canary_startup_retry.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash -n deploy/hostinger/auto-deploy.sh",
+      "python3 -m pytest -q api/tests/test_native_mutation_public_gate.py",
+      "python3 -m ruff check api/tests/test_native_mutation_public_gate.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-09_kernel_canary_startup_retry.json",
+      "git diff --check"
+    ],
+    "summary": "Hostinger Auto Deploy for merge 76f56026 failed during Roll forward VPS before public verification. The log showed stale canary container-name conflicts, a fallback recreate, and an immediate local public-gate probe against 127.0.0.1:8080 before the kernel-router listener accepted connections. The canary startup path now clears stale kernel-router containers, retries with --force-recreate, falls back to compose rm plus clean up, waits for each local listener, and retries both local receipt probes for a bounded window.",
+    "known_limitations": [
+      {
+        "scope": "production deploy",
+        "observed": "The repair must be merged and the Hostinger Auto Deploy workflow rerun before the public kernel canary can prove native persistence on the live host."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push, PR creation, and GitHub checks for codex/kernel-canary-startup-retry-20260609."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "Hostinger Auto Deploy workflow",
+      "scripts/verify_kernel_canary_public_gate.sh https://api.coherencycoin.com"
+    ],
+    "notes": "The deployment proof must reach the Verify kernel public canary step after the startup retry lands."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The canary services should recover from stale compose containers and only run receipt probes after local HTTP listeners answer.",
+    "public_endpoints": [
+      "POST /api/ideas with X-Form-Native-Public-Gate",
+      "POST /api/substrate/kernel-image/proposals"
+    ],
+    "test_flows": [
+      "bash -n deploy/hostinger/auto-deploy.sh",
+      "python3 -m pytest -q api/tests/test_native_mutation_public_gate.py"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Deploy canary startup is repaired locally, but production must rerun and pass before public no-header mutation traffic moves."
+  },
+  "idea_ids": [
+    "idea-realization-engine",
+    "data-infrastructure"
+  ],
+  "spec_ids": [
+    "specs/native-mutation-public-gate.md"
+  ],
+  "task_ids": [
+    "kernel-canary-startup-retry-20260609",
+    "deployed-native-http-mutation-persistence-canary"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "deploy-triage"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "deploy/hostinger/auto-deploy.sh::ensure_kernel_router_canary",
+    "api/tests/test_native_mutation_public_gate.py::test_deploy_exposes_header_gated_public_canary_without_no_header_flip"
+  ],
+  "change_files": [
+    "api/tests/test_native_mutation_public_gate.py",
+    "deploy/hostinger/auto-deploy.sh",
+    "docs/system_audit/commit_evidence_2026-06-09_kernel_canary_startup_retry.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "process_only"
+}

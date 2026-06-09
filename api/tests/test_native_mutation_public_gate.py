@@ -242,6 +242,9 @@ def test_deploy_exposes_header_gated_public_canary_without_no_header_flip():
 
     assert "ensure_kernel_router_canary" in auto_deploy
     assert "docker-compose.kernel-router.yml" in auto_deploy
+    assert "clearing stale containers for ${service}" in auto_deploy
+    assert "up -d --build --no-deps --force-recreate" in auto_deploy
+    assert "$service listener did not accept local HTTP within 90s" in auto_deploy
     assert "X-Form-Native-Public-Gate: 1" in auto_deploy
     assert '\\"decision_receipt\\"' in auto_deploy
     assert '\\"executes\\":true' in auto_deploy
