@@ -7478,6 +7478,8 @@ Subcommands:
   query <path>                         parse any file as a Form object tree
   trace [--expr \"...\" | <file.fk>]     run with arm-dispatch tracing
   fetch <url>                          GET a URL (network resource)
+  run [--stdlib <dir>] <file.fk...>     source-compile section-authored files
+                                       through Form stdlib, then execute
   serve --port <p> --routes <file> [--upstream <base-url>] [--stdlib <dir>] [--config <path>]\n                                       kernel front-door router: native Form handlers\n                                       for listed paths, fan-out to the Python upstream\n                                       for the rest. --routes may be raw S-expression\n                                       Form or a source-authored `section [...]`\n                                       manifest (source-compiled at load via --stdlib,\n                                       default form-stdlib)
 
 Source adapter modes:
@@ -9378,6 +9380,75 @@ fn source_compile_manifest_recipe_object(
 
     // Restore cwd before propagating any compile error, so a failed compile never
     // leaves the process in the stdlib's parent.
+    let _ = env::set_current_dir(&prev_cwd);
+    compile_result
+}
+
+// Source-compile an ordinary workload file list to one executable Form Recipe
+// object. This is the non-router sibling of source_compile_manifest_recipe_object:
+// caller-provided files load in order, `section [...]` blocks lower through the
+// Form source compiler, and raw S-expression segments stay raw.
+fn source_compile_file_workload_recipe_object(
+    paths: &[String],
+    stdlib_dir: &str,
+) -> Result<CompiledRouteProgram, String> {
+    let _cwd_guard = source_compile_cwd_lock()
+        .lock()
+        .map_err(|_| "source-compile: cwd lock poisoned".to_string())?;
+    let stdlib_path = std::path::Path::new(stdlib_dir);
+    let stdlib_abs = stdlib_path
+        .canonicalize()
+        .map_err(|e| format!("source-compile: --stdlib {}: {}", stdlib_dir, e))?;
+    let stdlib_parent = stdlib_abs
+        .parent()
+        .ok_or_else(|| format!("source-compile: --stdlib {} has no parent dir", stdlib_dir))?
+        .to_path_buf();
+    let stdlib_name = stdlib_abs
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| "form-stdlib".to_string());
+    if stdlib_name != "form-stdlib" {
+        return Err(format!(
+            "source-compile: --stdlib must point at a directory named 'form-stdlib'; got {}",
+            stdlib_abs.display()
+        ));
+    }
+    let input_paths: Result<Vec<PathBuf>, String> = paths
+        .iter()
+        .map(|path| {
+            std::path::Path::new(path)
+                .canonicalize()
+                .map_err(|e| format!("source-compile: input {}: {}", path, e))
+        })
+        .collect();
+    let input_paths = input_paths?;
+
+    let prev_cwd = env::current_dir().map_err(|e| format!("source-compile: read cwd: {}", e))?;
+    env::set_current_dir(&stdlib_parent)
+        .map_err(|e| format!("source-compile: chdir {}: {}", stdlib_parent.display(), e))?;
+
+    let compile_result = (|| {
+        let mut k = Kernel::new();
+        let mut roots = Vec::new();
+        for source_path in &input_paths {
+            let source = fs::read_to_string(source_path)
+                .map_err(|e| format!("source-compile: read {}: {}", source_path.display(), e))?;
+            compile_route_source_into_recipe(
+                &mut k,
+                &mut roots,
+                &source_path.to_string_lossy(),
+                &source,
+                &stdlib_abs,
+            )?;
+        }
+        let root = if roots.len() == 1 {
+            roots[0]
+        } else {
+            k.intern(cat_block(RBLK_DO), roots)
+        };
+        Ok(CompiledRouteProgram { kernel: k, root })
+    })();
+
     let _ = env::set_current_dir(&prev_cwd);
     compile_result
 }
@@ -11675,6 +11746,23 @@ mod route_spec_tests {
     }
 
     #[test]
+    fn source_compiled_workload_executes_bml_tending_cells() {
+        let paths = vec![
+            "../form-stdlib/core.fk".to_string(),
+            "../form-stdlib/kernel-http.fk".to_string(),
+            "../form-stdlib/native-route-goal-cells.fk".to_string(),
+            "../form-stdlib/queries/native-route-goal-tending.fk".to_string(),
+        ];
+        let mut compiled = source_compile_file_workload_recipe_object(&paths, "../form-stdlib")
+            .expect("source-authored workload compiles");
+        let value = execute_root(&mut compiled.kernel, compiled.root);
+        let rendered = value.display();
+        assert!(rendered.contains("native-route-front-door-loop"));
+        assert!(rendered.contains("author-high-grammar-handler"));
+        assert!(rendered.contains("prove-byte-identity"));
+    }
+
+    #[test]
     fn kernel_http_route_row_requires_bound_handler_closure() {
         let src = r#"
             (let routes
@@ -13098,6 +13186,43 @@ fn cli_fetch(args: &[String]) -> i32 {
     }
 }
 
+fn cli_run(args: &[String]) -> i32 {
+    let mut stdlib_dir: String = "form-stdlib".to_string();
+    let mut paths: Vec<String> = Vec::new();
+    let mut i = 0;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--stdlib" => {
+                if i + 1 >= args.len() {
+                    eprintln!("run: --stdlib requires a directory argument");
+                    return 2;
+                }
+                stdlib_dir = args[i + 1].clone();
+                i += 2;
+            }
+            other => {
+                paths.push(other.to_string());
+                i += 1;
+            }
+        }
+    }
+    if paths.is_empty() {
+        eprintln!("usage: form-kernel-rust run [--stdlib <dir>] <file.fk> [more.fk ...]");
+        return 2;
+    }
+    set_crash_trace_context("run", args, None);
+    let mut prog = match source_compile_file_workload_recipe_object(&paths, &stdlib_dir) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("run: {}", e);
+            return 1;
+        }
+    };
+    let value = execute_root(&mut prog.kernel, prog.root);
+    println!("{}", value.display());
+    0
+}
+
 fn cli_binary(args: &[String]) -> i32 {
     if args.is_empty() {
         eprintln!("usage: form-kernel-rust --binary <file.fkb>");
@@ -13200,6 +13325,7 @@ fn main_with_args(args: Vec<String>) -> i32 {
         "query" => cli_query(&args[1..]),
         "trace" => cli_trace(&args[1..]),
         "fetch" => cli_fetch(&args[1..]),
+        "run" => cli_run(&args[1..]),
         "serve" => cli_serve(&args[1..]),
         "check" => cli_check(&args[1..]),
         _ => {
