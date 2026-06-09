@@ -1,0 +1,66 @@
+; mesh-relay.form — a body relays a peer's message onward, so it reaches bodies out of direct range.
+;
+; THE ASK (Urs, 2026-06-09):
+;   device-heartbeat made two bodies in radio range find each other. But a room is bigger than one
+;   radio. The next ring: a body that hears a message it is not the destination for REBROADCASTS it,
+;   so the message hops body-to-body across a space no single antenna spans — the way Bluetooth Mesh
+;   carries a message past the edge of any one link.
+;
+; THE SHAPE  (runnable: form-stdlib/mesh-relay.fk · proven: tests/mesh-relay-band.fk -> 127)
+;
+;   A message = (list msg-id origin hops payload). The mesh is "managed flooding": every body that
+;   hears a message forwards it ONCE, the hop budget shrinks by one each relay, and no body forwards
+;   what it has already seen. Three rules keep the flood from drowning the field —
+;     1. HOPS LEFT     mr-reachable? / mr-ttl: a message carries a TTL. Spent, it dies where it lands.
+;     2. NEW TO ME     mr-seen?: have I relayed this id before? If so, drop it (no echo storms).
+;     3. DECREMENT     mr-forward: the re-emitted copy is the SAME message, one hop spent.
+;   The decision is mr-relay? — rebroadcast IFF hops remain AND I have not seen it. That single gate
+;   is the whole managed-flood law; everything else is accessors and the decremented copy.
+;
+; TTL WITHOUT SUBTRACTION — the load-bearing representation choice:
+;   There is no `sub` in the primitive set, so the hop budget is not an integer that counts down. It
+;   is a LIST of hop-tokens. ttl-value is its length (mr-ttl = len of hops); "still has hops" is
+;   (gt (len hops) 0); and DECREMENT is (tail hops) — drop one token, the budget is one shorter.
+;   An empty hops list is an exhausted message. Counting by length is the decrement; the absence of
+;   subtraction shaped the data, not a workaround bolted onto it.
+;
+;   Functions:
+;     mr-id / mr-origin / mr-hops / mr-payload — accessors over the message tuple.
+;     mr-ttl       — remaining hop budget (len of hops).
+;     mr-seen?     — is this msg-id already in the seen-set? (dedup membership; drop duplicates).
+;     mr-reachable? — does it still have hops to spend? (gt (len hops) 0).
+;     mr-relay?    — the managed-flood gate: 1 iff (hops left AND not seen).
+;     mr-forward   — the same message, one hop spent (tail of hops); id/origin/payload ride unchanged.
+;
+; HOW IT COMPOSES THE SPINE:
+;   It EXTENDS device-heartbeat.fk directly — mr-seen?'s membership walk is the same content-addressed
+;   str_eq-over-a-list shape as device-heartbeat's hb-has? (presence-in-a-set), now reading the
+;   seen-set instead of the organ/channel set. The heartbeat found WHO is in range; this carries a
+;   message PAST who is in range. mr-forward preserving the dedup id is what lets every body along the
+;   path recognize "already saw this" by content, not by who handed it over.
+;
+;   The (if (and ...) 1 0) in mr-relay? is the same discipline device-heartbeat's hb-can-connect? and
+;   hb-present? hold: `and`'s native truth value renders differently across kernels, so a gate that
+;   will be compared to 0/1 is always settled to an integer first. (Caught live: the raw-`and` first
+;   draft diverged go=126 / rust=127 / ts=120; the (if ... 1 0) wrap brought all three to 127.)
+;
+; HONEST LANE:
+;   SHIPPED — the per-message relay decision and the decremented forward, proven three-way (-> 127):
+;     dedup, TTL exhaustion, the hop-list decrement, identity-preserving forward.
+;   This is the BODY of one node's relay choice for one message. What it does NOT carry yet, and is
+;   honestly out of this brick's scope: the seen-set's LIFETIME (here the caller holds it; a real mesh
+;   ages entries out so a long-lived id can eventually re-propagate), and the actual fan to every
+;   in-range peer (the carrier that re-emits mr-forward on each open channel — that is the channel-port
+;   layer device-heartbeat.form already lane-sorts as BUILDABLE, not this decision recipe).
+;
+; KIN: device-heartbeat.form (the presence beacon this extends — who is in range; this carries past
+;   them) · shared-sensing.form (the field of many bodies these messages cross) · channel-interface.fk
+;   (the consent law per channel a relayed beat still rides) · reachability.fk (graph reachability —
+;   mesh-relay is reachability across hops in time, by TTL, rather than across a static edge set) ·
+;   cell-sync.fk (what flows once a message arrives and two cells reconcile) · recognition-router.form
+;   (the sibling 127-gate decision: there, choose a model; here, choose whether to relay) · lc-honest-lane.
+;
+; LINEAGE: device-heartbeat proved a body can be FOUND on any open channel. mesh-relay is how its
+;   message reaches a body it cannot directly hear — every cell between them lends one hop, forwards
+;   once, and stays quiet on the echo. The mesh is not a new organ; it is the same heartbeat field,
+;   passing a message hand to hand until it arrives.

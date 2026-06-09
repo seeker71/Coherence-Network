@@ -1,0 +1,34 @@
+; preludes: form-stdlib/ensemble-vote.fk form-stdlib/predictor-sampling.fk
+;
+; predictor-sampling-band — fuse a circle of 3rd-party predictors into a ground-truth sample, made falsifiable.
+;
+; CLEAR sample: five borrowed models label one input ("cat" "cat" "dog" "cat" "bird") over the candidate set
+; ("cat" "dog" "bird"). Counting: cat=3, dog=1, bird=1 — the ground truth is "cat" at agreement 3. With a
+; quorum of 3 the sample is settled enough to supervise: ps-confident? -> 1, this label trains the challenger.
+;
+; SPLIT sample: ("cat" "dog" "cat" "dog" "bird") over the same candidates — cat=2, dog=2, bird=1. The plurality
+; leader is still "cat" (the tie at 2 keeps the FIRST candidate offered, strict gt in the max-select, stable
+; replay), but agreement is only 2. At quorum 3 this contested sample is a WEAK teacher: ps-confident? -> 0,
+; gated out of the training set. The negative is the whole point — a borrowed circle that barely agreed must
+; not be fed to the challenger as if it were settled.
+;
+; Verdict 127 when every claim lands:
+;   1   the fused ground-truth label is the plurality leader   (ps-truth clear   -> cat)
+;   2   agreement is how many models stood behind it           (ps-agreement clear == 3)
+;   4   a sampled candidate tallies its own votes              (ps-votes clear "dog" == 1)
+;   8   a clear sample at/above quorum IS confident            (ps-confident? clear q3 == 1)
+;   16  a split sample's truth still resolves (tie -> first)   (ps-truth split   -> cat)
+;   32  a split sample's agreement is the lower count          (ps-agreement split == 2)
+;   64  a split sample below quorum is NOT confident (gated)   (ps-confident? split q3 == 0)
+(do
+    (let clear (list "cat" "cat" "dog" "cat" "bird"))
+    (let split (list "cat" "dog" "cat" "dog" "bird"))
+    (let candidates (list "cat" "dog" "bird"))
+    (let c0 (if (str_eq (ps-truth      clear candidates)    "cat") 1 0))
+    (let c1 (if (eq     (ps-agreement  clear candidates)    3)     2 0))
+    (let c2 (if (eq     (ps-votes      clear "dog")         1)     4 0))
+    (let c3 (if (eq     (ps-confident? clear candidates 3)  1)     8 0))
+    (let c4 (if (str_eq (ps-truth      split candidates)    "cat") 16 0))
+    (let c5 (if (eq     (ps-agreement  split candidates)    2)     32 0))
+    (let c6 (if (eq     (ps-confident? split candidates 3)  0)     64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
