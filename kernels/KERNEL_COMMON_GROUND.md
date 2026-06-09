@@ -213,6 +213,34 @@ bytes. The local Python conformance harness plus its five JSON vectors is 1,182
 lines / 38,416 bytes. This is an architectural proof, not a claim about matching
 Harness-1 retrieval benchmark recall.
 
+## Earth Witness Question Shape
+
+`form/form-stdlib/earth-witness-question.fk` turns an open Earth-observation
+source into answerable Form cells:
+
+- `EARTH-WITNESS-AXIS`: one question axis with value, evidence, and certainty
+- `EARTH-WITNESS-PRINCIPLE`: a named principle with evidence and confidence
+- `EARTH-WITNESS-OBSERVATION`: the source item plus its axes and principles
+- `EARTH-WITNESS-ANSWER`: the answer returned for `what`, `where`, `when`,
+  `who`, `how`, or `why`
+
+The first fixture is ESA's Tessera announcement: an accessible Earth-observation
+model built from Copernicus Sentinel-1 and Sentinel-2 signals. The Form feature
+does not claim private meaning from the news. It makes the witnessed public facts
+answerable through the same shape every observer can inspect: axis, evidence,
+certainty, source URL, principle trace, and silence when no axis answers.
+
+`ewq-receipt-for-answer` bridges each selected axis back into
+`CHOICE-RECEIPT`, so the answer can be compressed without losing selected path,
+outcome, value kind, certainty bucket, witness, coordinate, and trace counts.
+
+The proof band is `form/form-stdlib/tests/earth-witness-question-band.fk`. It
+returns `67108863` across Go, Rust, and TypeScript in source and binary modes
+when the Tessera observation answers `what`, `where`, `when`, `who`, `how`, and
+`why`, carries geometric-proof/harmony/confidence/vitality/sovereignty/allowing
+principles, preserves silence for an unknown question, and keeps a valid
+compressed choice signature for both answered and silent questions.
+
 ## North-Star Constraint
 
 Compression is trustworthy only when it preserves the texture of the witnessed

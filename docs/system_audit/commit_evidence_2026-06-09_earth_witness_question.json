@@ -1,0 +1,115 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/earth-witness-question-20260609",
+  "commit_scope": "Add a Form-native Earth witness question feature that turns an open Earth-observation source into answerable what/where/when/who/how/why cells with principle trace and choice receipts.",
+  "files_owned": [
+    "form/form-stdlib/earth-witness-question.fk",
+    "form/form-stdlib/tests/earth-witness-question-band.fk",
+    "kernels/KERNEL_COMMON_GROUND.md",
+    "docs/system_audit/commit_evidence_2026-06-09_earth_witness_question.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/earth-witness-question.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/earth-witness-question.fk form-stdlib/tests/earth-witness-question-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/earth-witness-question.fk form-stdlib/tests/earth-witness-question-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-09_earth_witness_question.json",
+      "git diff --check",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "observed_results": [
+      "branch rebased cleanly onto origin/main with autostash reapplied",
+      "earth-witness-question.fk source load -> 0 with 1 ok, 0 divergent across Go, Rust, and TypeScript",
+      "earth-witness-question-band.fk source proof -> 67108863 with 1 ok, 0 divergent across Go, Rust, and TypeScript",
+      "earth-witness-question-band.fk binary artifact proof -> 67108863 with 1 ok, 0 divergent across Go, Rust, and TypeScript",
+      "evidence validation passed",
+      "git diff --check passed",
+      "local PR guard ready_for_push=True and local_preflight=pass",
+      "check_pr_followthrough reported codex_open_prs=0 and stale_codex_prs=0"
+    ],
+    "notes": "The feature uses direct Form syntax and bridges answered and silent question outcomes into the existing CHOICE-RECEIPT/CHOICE-SIGNATURE surface."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and production verification."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A public Earth-observation source can now be represented as a Form witness that answers what, where, when, who, how, and why with evidence, certainty, principles, source URL, silence for unknown questions, and trace-preserving choice receipts.",
+    "public_endpoints": [
+      "internal Form sibling kernels",
+      "form/form-stdlib/earth-witness-question.fk",
+      "form/form-stdlib/tests/earth-witness-question-band.fk"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/earth-witness-question.fk form-stdlib/tests/earth-witness-question-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/earth-witness-question.fk form-stdlib/tests/earth-witness-question-band.fk",
+      "The proof answers six axes, scores all six principles, rejects an unknown how-many question into silence, validates answered and silent CHOICE-RECEIPT values, and verifies signature preservation."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Focused local source and binary proof passed. CI, rebase, PR, and deploy verification are still pending."
+  },
+  "idea_ids": [
+    "knowable-trust-expression",
+    "language-encoding-time-space",
+    "earth-witness-question-shape"
+  ],
+  "spec_ids": [
+    "kernel-common-ground",
+    "form-question-witness"
+  ],
+  "task_ids": [
+    "earth-witness-question-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "north-star-direction",
+        "question-shape-requirement",
+        "witness-principle-requirement"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/earth-witness-question.fk adds Earth witness axes, principles, observations, answers, silence handling, and receipt bridging.",
+    "form/form-stdlib/tests/earth-witness-question-band.fk proves the Tessera fixture answers what/where/when/who/how/why and preserves answered plus silent receipt signatures.",
+    "kernels/KERNEL_COMMON_GROUND.md records the Earth witness question shape as a Form feature beside the choice receipt and compact search harness surfaces.",
+    "ESA Tessera source: https://www.esa.int/Applications/Observing_the_Earth/Copernicus/Tessera_AI_model_offers_accessible_way_to_view_Earth",
+    "TESSERA project source: https://geotessera.org/about/"
+  ],
+  "change_files": [
+    "form/form-stdlib/earth-witness-question.fk",
+    "form/form-stdlib/tests/earth-witness-question-band.fk",
+    "kernels/KERNEL_COMMON_GROUND.md",
+    "docs/system_audit/commit_evidence_2026-06-09_earth_witness_question.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}
