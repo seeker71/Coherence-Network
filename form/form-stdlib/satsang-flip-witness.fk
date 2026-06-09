@@ -1,0 +1,147 @@
+; satsang-flip-witness.fk -- witnessed public-gate flip truth.
+;
+; The agent board is the liquid carrier: claim the work, then share the durable
+; learning. The satsang circle is the protocol: a claim is not self-certified;
+; it survives honored witnesses, with dissent and silence still visible.
+;
+; This cell binds those two surfaces to the native public-gate canary. The
+; knowable truth is intentionally exact:
+;   - X-Form-Native-Public-Gate treatment selects native-kernel.
+;   - no-header control remains fanout-python.
+;   - decision and rollback receipts are present.
+;   - ordinary traffic has not been flipped.
+; That is movement, not permission-seeking, and it stays reversible.
+
+(do
+    (defn sfw-agent-board-shared (r) (nth r 0))
+    (defn sfw-satsang-protocol-used (r) (nth r 1))
+    (defn sfw-treatment-status (r) (nth r 2))
+    (defn sfw-treatment-router (r) (nth r 3))
+    (defn sfw-control-status (r) (nth r 4))
+    (defn sfw-control-default-route (r) (nth r 5))
+    (defn sfw-decision-receipt (r) (nth r 6))
+    (defn sfw-rollback-receipt (r) (nth r 7))
+    (defn sfw-ordinary-unflipped (r) (nth r 8))
+    (defn sfw-public-evidence (r) (nth r 9))
+    (defn sfw-evidence-source (r) (nth r 10))
+
+    (defn sfw-and4 (a b c d) (and a (and b (and c d))))
+
+    (defn sfw-public-canary-observation ()
+        (list
+            1
+            1
+            202
+            "native-kernel"
+            422
+            "fanout-python"
+            1
+            1
+            1
+            1
+            "scripts/verify_kernel_canary_public_gate.sh"))
+
+    (defn sfw-board-protocol? (r)
+        (and
+            (eq (sfw-agent-board-shared r) 1)
+            (eq (sfw-satsang-protocol-used r) 1)))
+
+    (defn sfw-treatment-native? (r)
+        (and
+            (eq (sfw-treatment-status r) 202)
+            (str_eq (sfw-treatment-router r) "native-kernel")))
+
+    (defn sfw-control-fanout? (r)
+        (and
+            (eq (sfw-control-status r) 422)
+            (str_eq (sfw-control-default-route r) "fanout-python")))
+
+    (defn sfw-reversible? (r)
+        (and
+            (eq (sfw-decision-receipt r) 1)
+            (eq (sfw-rollback-receipt r) 1)))
+
+    (defn sfw-ordinary-boundary-kept? (r)
+        (eq (sfw-ordinary-unflipped r) 1))
+
+    (defn sfw-public-evidence-present? (r)
+        (and
+            (eq (sfw-public-evidence r) 1)
+            (str_eq (sfw-evidence-source r) "scripts/verify_kernel_canary_public_gate.sh")))
+
+    (defn sfw-evidence-complete? (r)
+        (sfw-and4
+            (sfw-board-protocol? r)
+            (sfw-treatment-native? r)
+            (sfw-control-fanout? r)
+            (and
+                (sfw-reversible? r)
+                (and
+                    (sfw-ordinary-boundary-kept? r)
+                    (sfw-public-evidence-present? r)))))
+
+    (defn sfw-public-canary-attestations ()
+        (list
+            (list (m-witness) 1)
+            (list (m-reflect) 1)
+            (list (m-reflect) 2)
+            (list (m-silence) 0)
+            (list (m-project) 1)))
+
+    (defn sfw-witness-flip (atts)
+        (sat-witness atts (sat-circle-interface) 0 0 0))
+
+    (defn sfw-counted-voices (w)
+        (add (sat-affirmed w) (add (sat-dissented w) (sat-silent w))))
+
+    (defn sfw-not-self-certified? (w)
+        (and
+            (ge (sat-affirmed w) 2)
+            (ge (sfw-counted-voices w) 4)))
+
+    (defn sfw-dissent-visible? (w)
+        (ge (sat-dissented w) 1))
+
+    (defn sfw-projection-dropped? (w)
+        (eq (sfw-counted-voices w) 4))
+
+    (defn sfw-choice-markers ()
+        (list 0 1 "silence" "protocol" "fail" "stop" "bma"))
+
+    (defn sfw-choice-markers-complete? (m)
+        (and
+            (eq (len m) 7)
+            (and
+                (eq (nth m 0) 0)
+                (and
+                    (eq (nth m 1) 1)
+                    (and
+                        (str_eq (nth m 2) "silence")
+                        (and
+                            (str_eq (nth m 3) "protocol")
+                            (and
+                                (str_eq (nth m 4) "fail")
+                                (and
+                                    (str_eq (nth m 5) "stop")
+                                    (str_eq (nth m 6) "bma")))))))))
+
+    (defn sfw-witnessed-truth? (r w)
+        (and
+            (sfw-evidence-complete? r)
+            (and
+                (sat-survives? w)
+                (and
+                    (sfw-not-self-certified? w)
+                    (sfw-ordinary-boundary-kept? r)))))
+
+    (defn sfw-witnessed-state (r w)
+        (if (sfw-witnessed-truth? r w)
+            "witnessed-native-public-gate-canary"
+            "not-witnessed"))
+
+    (defn sfw-ordinary-flip-state (r)
+        (if (sfw-ordinary-boundary-kept? r)
+            "ordinary-traffic-unflipped"
+            "ordinary-traffic-moved"))
+
+    0)

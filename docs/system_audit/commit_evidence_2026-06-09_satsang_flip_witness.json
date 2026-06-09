@@ -1,0 +1,119 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/satsang-flip-witness-20260609",
+  "commit_scope": "Add a Form-native satsang flip witness cell that binds the agent board, satsang protocol, public-gate canary evidence, rollback receipts, dissent, silence, and ordinary-traffic boundary into one executable proof.",
+  "files_owned": [
+    "form/form-stdlib/satsang-flip-witness.fk",
+    "form/form-stdlib/tests/satsang-flip-witness-band.fk",
+    "docs/coherence-substrate/satsang-flip-witness.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "docs/system_audit/commit_evidence_2026-06-09_satsang_flip_witness.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "COORD_AGENT=codex scripts/agent-coord.sh protocol",
+      "COORD_AGENT=codex scripts/agent-coord.sh view",
+      "COORD_AGENT=codex scripts/agent-coord.sh claim \"satsang flip witness: form/form-stdlib/satsang.fk docs/coherence-substrate/satsang-circle.form evidence\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-flip-witness.fk form-stdlib/tests/satsang-flip-witness-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-flip-witness.fk form-stdlib/tests/satsang-flip-witness-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-09_satsang_flip_witness.json",
+      "git diff --check",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "observed_results": [
+      "agent board protocol printed the claim/share discipline and satsang circle was already present as a live body cell",
+      "first focused source proof exposed a sibling-kernel divergence: Go returned 4031 while Rust and TypeScript returned 4095",
+      "the divergence was caused by using numeric sat-welcome directly in an and expression; making it an explicit equality check aligned all kernels",
+      "satsang-flip-witness-band.fk source proof returned 4095 with 1 ok and 0 divergent across Go, Rust, and TypeScript",
+      "satsang-flip-witness-band.fk binary artifact proof returned 4095 with 1 ok and 0 divergent across Go, Rust, and TypeScript",
+      "evidence validation, whitespace check, rebase, local PR guard, and stale PR checks passed locally"
+    ],
+    "notes": "The proof makes the canary flip knowable as a witnessed native public-gate movement while preserving the exact boundary that ordinary no-header public traffic remains unflipped."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and production verification."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The native public-gate canary now has an executable Form witness recipe that uses the agent board and satsang protocol to distinguish treatment native routing, no-header fanout control, decision and rollback receipts, visible dissent/silence, 0/1/protocol/fail/stop/BMA markers, and an ordinary-traffic-unflipped boundary.",
+    "public_endpoints": [
+      "internal Form sibling kernels",
+      "form/form-stdlib/satsang-flip-witness.fk",
+      "form/form-stdlib/tests/satsang-flip-witness-band.fk",
+      "scripts/verify_kernel_canary_public_gate.sh"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-flip-witness.fk form-stdlib/tests/satsang-flip-witness-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-flip-witness.fk form-stdlib/tests/satsang-flip-witness-band.fk",
+      "The band returns 4095 only when board protocol, treatment, control, rollback, ordinary-unflipped boundary, satsang survival, non-self-certification, visible dissent, dropped projection, choice markers, and witnessed canary state are all present."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Focused local source and binary proof passed. CI, PR, and deploy verification are still pending."
+  },
+  "idea_ids": [
+    "knowable-trust-expression",
+    "satsang-circle",
+    "native-public-gate-canary"
+  ],
+  "spec_ids": [
+    "spec-registry-source-native",
+    "native-mutation-public-gate",
+    "satsang-flip-witness"
+  ],
+  "task_ids": [
+    "satsang-flip-witness-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "north-star-direction",
+        "agent-board-and-satsang-requirement",
+        "witnessed-truth-requirement"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/satsang-flip-witness.fk defines the canary observation, board protocol check, satsang witness fold, non-self-certification, reversible gate, ordinary boundary, and choice markers.",
+    "form/form-stdlib/tests/satsang-flip-witness-band.fk proves the witness returns 4095 across source and binary sibling-kernel execution.",
+    "docs/coherence-substrate/satsang-flip-witness.form records the high-level structure and recipes shifted by using the board plus satsang protocol.",
+    "docs/coherence-substrate/spec-registry-router.form links the public-gate canary evidence to the witnessed truth cell.",
+    "Prior public canary proof path: scripts/verify_kernel_canary_public_gate.sh observed X-Form-Native-Public-Gate treatment selecting native-kernel while no-header control remained fanout-python."
+  ],
+  "change_files": [
+    "form/form-stdlib/satsang-flip-witness.fk",
+    "form/form-stdlib/tests/satsang-flip-witness-band.fk",
+    "docs/coherence-substrate/satsang-flip-witness.form",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "docs/system_audit/commit_evidence_2026-06-09_satsang_flip_witness.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}
