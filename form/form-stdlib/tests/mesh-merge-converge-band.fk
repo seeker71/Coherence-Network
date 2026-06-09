@@ -1,0 +1,42 @@
+; preludes: form-stdlib/core.fk form-stdlib/slice-merge.fk form-stdlib/mesh-merge-converge.fk
+;
+; mesh-merge-converge-band — gossip convergence as a value proof: the same deltas merge to ONE value
+; no matter which path the mesh delivers them by (federated-slices.form M2, three-way).
+;
+; Three cells offer deltas for the same base slice:
+;   A = weight 2, delta [ 3  -2   5]
+;   B = weight 1, delta [ 1   4  -5]
+;   C = weight 3, delta [ 2  -1  -4]
+; Coordinate by coordinate (slice-merge's TIES sign-election + trust-weighted FedAvg):
+;   j=0: all "+"            -> elect +;  num = 2·3 + 1·1 + 3·2 = 13,  den = 2+1+3 = 6
+;   j=1: A:-2(w2) B:+4(w1) C:-1(w3) -> "−" wins (5 ≥ 1) -> elect −;  num = 2·(−2) + 3·(−1) = −7, den = 2+3 = 5
+;   j=2: A:+5(w2) B:-5(w1) C:-4(w3) -> "−" wins (4 ≥ 2) -> elect −;  num = 1·(−5) + 3·(−4) = −17, den = 1+3 = 4
+; The merge is a fold of integer add over the slice list, so it is commutative AND associative — the
+; merged value is identical across ALL SIX orderings of {A,B,C} (A→B→C, C→B→A, and the four others), and
+; a weight-0 gone peer joins without moving it. That is gossip convergence: mesh-merge == local-merge.
+;
+; Verdict 127 when every claim lands:
+;   1   the merge computes the right numerator   (mm-num coord0 == 13)
+;   2   the merge computes the right denominator (mm-den coord0 == 6)
+;   4   a→b→c converges with c→b→a (full reverse, the named diagonal — 3 coords agree)
+;   8   order-stable across ALL SIX permutations of {A,B,C}  (the core gossip-convergence claim)
+;   16  sign-election survives reordering         (mm-num coord2 == −17, the elected − side, not all-+)
+;   32  a gone peer (weight 0) does not move the merge  (merging +gone == merging without, 3 coords)
+;   64  the test can DETECT divergence            (a tampered delta does NOT converge — not vacuously true)
+(do
+    (let A (list 2 (list 3 -2 5)))
+    (let B (list 1 (list 1 4 -5)))
+    (let C (list 3 (list 2 -1 -4)))
+    (let gone (list 0 (list 9 9 9)))
+    (let abc (list A B C))
+    ; a tampered third cell (coord2 delta flipped +9) — a DIFFERENT multiset, must NOT converge with abc.
+    (let Cx  (list 3 (list 2 -1 9)))
+    (let abcx (list A B Cx))
+    (let c0 (if (eq (mm-num abc 0) 13) 1 0))
+    (let c1 (if (eq (mm-den abc 0) 6) 2 0))
+    (let c2 (if (mm-converged-3d? abc (list C B A)) 4 0))
+    (let c3 (if (mm-order-stable? A B C) 8 0))
+    (let c4 (if (eq (mm-num abc 2) -17) 16 0))
+    (let c5 (if (mm-gone-stable? A B C gone) 32 0))
+    (let c6 (if (mm-converged-3d? abc abcx) 0 64))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

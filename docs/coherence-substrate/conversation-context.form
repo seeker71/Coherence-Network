@@ -1,0 +1,52 @@
+; conversation-context.form — a transcript becomes the turn-taking context the agent reads.
+;
+; THE ASK (meeting-companion M2): turn-taking.fk's tt-speak? decides WHETHER the agent speaks by reading
+; two facts about the moment — a PAUSE (has the room gone quiet long enough) and a learned CONTEXT vector
+; (does this moment resemble one where my voice was wanted). Both are facts about the conversation so far.
+; This is the body link that turns the raw transcript into exactly those facts — the upstream step, the
+; way feature-vector.fk is upstream of a classifier, but shaped for the speak/stay decision.
+;
+; THE SHAPE (runnable: form-stdlib/conversation-context.fk · proven: tests/conversation-context-band.fk
+; -> 127, three-way, composing only core):
+;   A CONVERSATION is a list of utterances, most-recent-FIRST — the way a live transcript grows: the newest
+;   utterance is cons-prepended to the head. An UTTERANCE is (list ts speaker named):
+;     ts      — an integer tick when it was said (monotonic; larger = more recent)
+;     speaker — an integer speaker id (who said it)
+;     named   — 1 if the agent was named / addressed in that utterance, else 0
+;   The agent decides at "now" — an integer tick at or after the last utterance's ts.
+;
+;   cc-last-ts (convo)         -> the tick of the most recent utterance (the head's ts). Empty → 0.
+;   cc-pause (convo now)       -> the silence since the last utterance = now − last-ts, in ticks. The
+;                                 room's quiet, measured. (sub computes deterministically three-way; the
+;                                 band verdict stays integer.) This is tt-speak?'s pause argument.
+;   cc-named-recently? (convo k) -> 1 if the agent was named (named=1) within the last k utterances, else 0.
+;                                 A fold over the window, head-first, k counting down — nested-if, never a
+;                                 3-arg `and`. The "I was addressed / my topic is in the air" signal.
+;   cc-context (convo now k)   -> the integer feature vector [pause, named-recently, depth] that tt-speak?
+;                                 consumes as its learned-recognition context. depth = conversation length
+;                                 (how deep the exchange is). Same transcript + same k → same vector on every
+;                                 kernel, so the context is a content-addressed cell like everything else.
+;
+; THE PROVEN VERDICT (tests/conversation-context-band.fk -> 127, 0 divergent across Go/Rust/TS), seven
+; falsifiable claims, each pinned positive AND negative on the strangest small edge:
+;   1   cc-last-ts of a live transcript = the head's ts        (most recent tick = 12)
+;   2   cc-last-ts of an empty transcript = 0                  (no last utterance — the boundary)
+;   4   cc-pause computed correctly = now − last-ts            (20 − 12 = 8)
+;   8   cc-named-recently? TRUE when named within the window   (named at the head, k=2 → 1)
+;   16  cc-named-recently? FALSE when the named turn is OUTSIDE (named only at idx 2, k=2 → 0 — the window
+;                                                                actually bounds; not "named ever")
+;   32  cc-context well-formed = [pause, named-recently, depth] ([8 1 3], length 3 — the vector tt-speak? reads)
+;   64  cc-named-recently? on an empty transcript = 0          (never named — the honest 0, no head to panic on)
+;
+; THE ONE LANE: this only SHAPES the transcript into pause + context + depth. It does not decide whether to
+; speak (turn-taking.fk's gates do) and does not transcribe audio into utterances (a carrier / ASR upstream
+; does). named=1 is a fact the caller supplies — declared, the way declared-source asks rather than guesses;
+; this recipe never infers who was addressed, it reads the bit it was given. Honest: depth and pause are raw
+; integers, named-recently is a 0/1 window fact — the recognizer (nearest-shape, via tt-speak?) decides what
+; the vector MEANS; this recipe only makes it, identically, on every body.
+;
+; KIN: turn-taking.form (tt-speak? consumes cc-context's vector and cc-pause's gap — the downstream decision)
+;   · feature-vector.form (the same transcript→vector move for raw sensor windows; this is its turn-taking
+;   sibling) · nearest-shape.form (the recognizer the context vector is matched against) · declared-source.form
+;   (named is asked of the source, not inferred) · learning-arc.form (each interned moment carries a context
+;   this recipe shaped) · shared-sensing.form (one transcript, many bodies, one identical context vector).

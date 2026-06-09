@@ -1,0 +1,57 @@
+; slice-update-roundtrip.form — a model-delta UPDATE survives the mesh by re-addressing.
+;
+; RUNNABLE HEART: form-stdlib/slice-update-roundtrip.fk proves the update roundtrip three-way over
+; cell-sync's own logic (sur-missing = the deltas to request · sur-verify = re-address check ·
+; sur-applied? = the delta is now held). Band -> 127, 0 divergent (Go · Rust · TS).
+;
+; federated-slices M1 (update-over-cell-sync). cell-sync-transport.form proved that a learned cell
+; reaches another device content-addressed: offer addresses, request only what is missing, verify by
+; re-addressing. This is that move pointed at an UPDATE — a model is a set of cells; an update is a
+; model DELTA, one new cell. It does NOT reinvent the diff/verify; it states cell-sync's vocabulary in
+; the update direction and adds the one piece an update needs that a first-sync did not: the
+; applied-test that proves the delta landed in the receiver's addresses, closing the roundtrip.
+;
+; THE ONE INSIGHT — A DELTA IS A CELL, SO AN UPDATE IS RE-ADDRESSING, NOT A PATCH:
+;   A model delta is itself a content-addressed substrate cell — its identity is its structure, not a
+;   diff-against-version. So an update crosses the mesh as the delta's ADDRESS, and the receiver knows
+;   whether it already has that delta by checking its own store. No version vector, no patch-apply,
+;   no merge-conflict: a delta the receiver already derived is the same address, so it is already
+;   applied — re-sending it is free. The only thing that moves is a delta-address the receiver lacks.
+;
+; ── THE SHAPE: offer -> request-if-missing -> verify -> applied ──
+;
+;   1. OFFER             the sender announces the delta-address(es) — the content-address of each new
+;                        slice. Not the blob: the address.
+;   2. REQUEST-IF-MISSING  the receiver keeps only the offered deltas it does NOT already hold
+;                        (sur-missing = cell-sync's want-set, named for the update). A re-offered delta
+;                        the receiver already has is dropped — structural address-equality dedups it,
+;                        an already-current receiver requests nothing.
+;   3. VERIFY            each arrived delta-item (offered-addr, recomputed-addr) is authentic iff
+;                        re-addressing the payload reproduces the address it was offered under
+;                        (sur-verify = cs-authentic?). A tampered delta re-addresses to something else
+;                        and is dropped — no trust in the channel, the same no-trusted-prover grain
+;                        validate.sh holds across kernels.
+;   4. APPLIED          a verified delta lands in the receiver's HAVE set; the update SURVIVED iff its
+;                        address is now held (sur-applied?). The roundtrip closes — re-addressing placed
+;                        the delta where the next sync will find it had.
+;
+; ── PROVEN (tests/slice-update-roundtrip-band.fk -> 127, 0 divergent) ──
+;   A model gains a slice at address d2. Sender offers (d1 d2). R1 has (d0 d1); R2 has (d1 d2).
+;     bit 1   R1 requests the missing delta              (sur-request? d2 == 1)
+;     bit 2   R1 does not request an already-had delta   (sur-request? d1 == 0)
+;     bit 4   R1's request-set is exactly the absent one (request-count == 1)
+;     bit 8   the requested delta is named correctly     (d2 is in the want-set)
+;     bit 16  R2, already current, requests nothing       (request-count == 0)
+;     bit 32  re-addressing accepts d2, drops the tamper  (accept-count == 1)
+;     bit 64  the applied delta survived the roundtrip    (sur-applied? d2 in (d0 d1 d2) == 1)
+;   Positive AND negative both pinned: it requests what is missing AND stays silent when current;
+;   it accepts the authentic AND drops the tampered.
+;
+; CARRIER-WORK (named, not claimed here): the wire frames over a socket/HTTP carrier, peer discovery,
+; and the consent gate on which deltas a device may offer (channel-interface.form is the law) remain
+; the same carrier-last work cell-sync-transport.form names — this proves the update LOGIC, the part
+; that is pure Form.
+;
+; KIN: cell-sync-transport.form (the first-sync this updates — offer/diff/verify/consent, the heart it
+;      reuses) · co-learning.form (the federation sibling — merge two cells' exemplar sets; this moves
+;      one delta between them) · channel-interface.form (the consent law that gates what may be offered)

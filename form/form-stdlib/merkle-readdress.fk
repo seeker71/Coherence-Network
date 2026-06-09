@@ -1,0 +1,64 @@
+; merkle-readdress.fk — the cross-runtime address: same content → same root.
+;
+; preludes: form-stdlib/sha256.fk form-stdlib/merkle.fk
+;
+; Canonical truth: this recipe MEANS "a structure's federation address is a
+; pure function of its content." It composes form-stdlib/merkle.fk — the
+; Merkle root is already content-addressed; here we make the re-address
+; property falsifiable: build the SAME content through DIFFERENT construction
+; paths and the root is byte-identical; change the content (a different leaf,
+; a different order, an extra leaf) and the root differs.
+;
+; WHY THIS CLOSES THE FEDERATION-ADDRESSING GAP:
+;   A local NodeID counter hands out ids by arrival order — the same cell
+;   ingested on two kernels, or rebuilt along a different code path, gets two
+;   different local ids. That id cannot be the shared address across the
+;   federation. The Merkle root can: it is computed from the leaves' bytes
+;   alone (sha256 of content, domain-separated, folded pairwise — see
+;   merkle.fk), so two kernels that hold the same structure derive the same
+;   root with no coordination. The root IS the cross-runtime-stable address;
+;   the counter never could be.
+;
+; Surface:
+;   (rebuild-by-cons blocks)        → an equal block-list built a different way
+;   (reverse-blocks blocks)         → the same leaves in reverse order
+;   (same-root? a b)                → 1 if merkle-root a == merkle-root b, else 0
+;
+; Cost: every same-root? call runs two full merkle-root folds (sha256 is the
+; O(n²) recipe), so callers keep the leaf-set tiny.
+
+(do
+    (defn rd-nil? (xs) (eq (len xs) 0))
+
+    ;; A DIFFERENT construction path that yields an EQUAL value: walk the
+    ;; block-list and re-cons each block (and each byte inside it) onto a
+    ;; freshly built tail. No structure-sharing with the input; the bytes are
+    ;; identical. This is the "built along another path" leg of re-address —
+    ;; what a second kernel's ingest, or a different build order, produces.
+    (defn rebuild-bytes (bs)
+        (if (rd-nil? bs) (list)
+            (cons (head bs) (rebuild-bytes (tail bs)))))
+
+    (defn rebuild-by-cons (blocks)
+        (if (rd-nil? blocks) (list)
+            (cons (rebuild-bytes (head blocks))
+                  (rebuild-by-cons (tail blocks)))))
+
+    ;; Reverse the leaf order (append the head after the reversed tail). Merkle
+    ;; is an ORDERED structure: reordering the leaves is different content, so
+    ;; the root must differ. This sharpens "same structure → same root" to mean
+    ;; same ORDERED content, never a set-equality overclaim.
+    (defn rd-append1 (xs x)
+        (if (rd-nil? xs) (list x) (cons (head xs) (rd-append1 (tail xs) x))))
+
+    (defn reverse-blocks (blocks)
+        (if (rd-nil? blocks) (list)
+            (rd-append1 (reverse-blocks (tail blocks)) (head blocks))))
+
+    ;; The address comparison: two structures share an address iff their roots
+    ;; are byte-identical. Reuses merkle.fk's bytes-eq so the digest compare is
+    ;; the same one the proof verifier uses. 1 = same address, 0 = different.
+    (defn same-root? (a b)
+        (bytes-eq (merkle-root a) (merkle-root b)))
+
+    0)

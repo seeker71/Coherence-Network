@@ -1,0 +1,44 @@
+; preludes: form-stdlib/core.fk form-stdlib/conversation-context.fk
+;
+; conversation-context-band — a transcript turned into the turn-taking context vector, proven three-way.
+;
+; A live transcript, most-recent-FIRST (newest at the head). Three utterances (list ts speaker named):
+;   u-new = [12 7 1]  tick 12, speaker 7, the agent WAS named here (newest)
+;   u-mid = [ 9 3 0]  tick  9, speaker 3, not named
+;   u-old = [ 5 7 1]  tick  5, speaker 7, the agent was named (oldest)
+;   convo      = [u-new u-mid u-old]   — named at the head (most recent)
+;   convo-late = [u-mid u-mid u-old]   — named ONLY at index 2 (the oldest), outside a small window
+; The agent decides at now=20. Window k=2 unless a claim varies it.
+;
+; Verdict 127 when every claim lands:
+;   1   cc-last-ts of a live transcript = the head's ts                 (most recent tick = 12)
+;   2   cc-last-ts of an empty transcript = 0                           (no last utterance)
+;   4   cc-pause computed correctly = now − last-ts                     (20 − 12 = 8)
+;   8   cc-named-recently? TRUE when named within the window            (named at head, k=2 → 1)
+;   16  cc-named-recently? FALSE when the named turn is OUTSIDE window  (named at idx 2, k=2 → 0)
+;   32  cc-context well-formed = [pause, named-recently, depth]         ([8 1 3], length 3)
+;   64  cc-named-recently? on an empty transcript = 0                   (never named, the honest 0)
+(do
+    (let u-new (list 12 7 1))
+    (let u-mid (list 9 3 0))
+    (let u-old (list 5 7 1))
+    (let convo (list u-new u-mid u-old))
+    (let convo-late (list u-mid u-mid u-old))
+    (let cold (list))
+    (let now 20)
+    (let k 2)
+    (let ctx (cc-context convo now k))
+    (let c0 (if (eq (cc-last-ts convo) 12) 1 0))
+    (let c1 (if (eq (cc-last-ts cold) 0) 2 0))
+    (let c2 (if (eq (cc-pause convo now) 8) 4 0))
+    (let c3 (if (eq (cc-named-recently? convo k) 1) 8 0))
+    (let c4 (if (eq (cc-named-recently? convo-late k) 0) 16 0))
+    (let c5 (if (eq (nth ctx 0) 8)
+               (if (eq (nth ctx 1) 1)
+                   (if (eq (nth ctx 2) 3)
+                       (if (eq (len ctx) 3) 32 0)
+                       0)
+                   0)
+               0))
+    (let c6 (if (eq (cc-named-recently? cold k) 0) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
