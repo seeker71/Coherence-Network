@@ -26,16 +26,16 @@
             "HashCode"))
     (let hashcode-body (bml-method-body hashcode-method))
 
-    (let RuleBP (make_nodeid 1 2 99 9210))
+    (let HashRuleBP (make_nodeid 1 2 99 9210))
     (let ObjBP (make_nodeid 1 2 99 9211))
-    (let EnvBP (bml-constructor-env-blueprint 0))
-    (let env (record_new EnvBP))
+    (let HashEnvBP (bml-constructor-env-blueprint 0))
+    (let env (record_new HashEnvBP))
 
     (let name-object (record_new ObjBP "HashCode" 40))
     (let item-object (record_new ObjBP "HashCode" 2))
     (let rule-instance
         (record_new
-            RuleBP
+            HashRuleBP
             "m_strName" name-object
             "m_hItem" item-object))
     (let direct-result
@@ -50,14 +50,14 @@
             self
             env))
 
-    (let before-has (method_has RuleBP "HashCode"))
-    (method_define RuleBP "HashCode" rule-hashcode-dispatch)
-    (let after-has (method_has RuleBP "HashCode"))
+    (let before-has (method_has HashRuleBP "HashCode"))
+    (method_define HashRuleBP "HashCode" rule-hashcode-dispatch)
+    (let after-has (method_has HashRuleBP "HashCode"))
 
     (let first-result (method_invoke rule-instance "HashCode"))
     (let second-rule
         (record_new
-            RuleBP
+            HashRuleBP
             "m_strName" (record_new ObjBP "HashCode" 5)
             "m_hItem" (record_new ObjBP "HashCode" 7)))
     (let second-result (method_invoke second-rule "HashCode"))

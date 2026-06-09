@@ -23,8 +23,8 @@
 ; only collapsed to the int sum at the very end.
 
 (do
-    (let bp (make_nodeid 1 2 99 9001))
-    (let r (record_new bp "x" 10 "y" 20))
+    (let record-band-bp (make_nodeid 1 2 99 9001))
+    (let r (record_new record-band-bp "x" 10 "y" 20))
 
     ;; basic read + has (record_has returns bool; eq returns bool)
     (let read-ok
@@ -46,7 +46,7 @@
     (let identity-ok (eq (record_get r "y") 77))
 
     ;; blueprint round-trips
-    (let bp-ok (node_eq (record_blueprint r) bp))
+    (let bp-ok (node_eq (record_blueprint r) record-band-bp))
 
     ;; value carry: 99 + 77 = 176 only when all of the above held
     (if (and read-ok (and update-ok (and type-ok (and identity-ok bp-ok))))

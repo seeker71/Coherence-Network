@@ -46,9 +46,9 @@
     ;; --- make cells in TWO domains, both of the same shape ----------------
     ;; an idea and a spec that happen to share a structural shape (a CTOR), each
     ;; a durable NamedCell keyed by domain+name.
-    (let bp (make_nodeid 1 8 4 1))
-    (let s2 (sc-make-cell c s1 "agent-pipeline" "idea" bp node-a))
-    (let s3 (sc-make-cell c s2 "agent-pipeline" "spec" bp node-a))
+    (let substrate-core-cell-bp (make_nodeid 1 8 4 1))
+    (let s2 (sc-make-cell c s1 "agent-pipeline" "idea" substrate-core-cell-bp node-a))
+    (let s3 (sc-make-cell c s2 "agent-pipeline" "spec" substrate-core-cell-bp node-a))
     (let cell-ok
         (if (eq (sc-found? (sc-lookup c s3 "agent-pipeline" "idea")) 1)
             (if (eq (sc-found? (sc-lookup c s3 "agent-pipeline" "spec")) 1) 100 0) 0))

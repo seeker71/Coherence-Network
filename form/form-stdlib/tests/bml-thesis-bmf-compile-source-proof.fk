@@ -42,10 +42,10 @@
             "Compile"))
     (let compile-body (bml-method-body compile-method))
 
-    (let BmfBP (make_nodeid 1 2 99 9220))
+    (let CompileBmfBP (make_nodeid 1 2 99 9220))
     (let HashBP (make_nodeid 1 2 99 9221))
     (let SyntaxBP (make_nodeid 1 2 99 9222))
-    (let EnvBP (bml-constructor-env-blueprint 0))
+    (let CompileEnvBP (bml-constructor-env-blueprint 0))
     (let syntax-table (record_new HashBP))
     (let syntax-ok
         (record_new
@@ -82,12 +82,12 @@
             (record_set compiler "lastCompiledFile" (record_get stream "FileName"))
             (record_get self "invokeResult")))
 
-    (method_define BmfBP "GetFileExtension" bmf-get-file-extension-dispatch)
+    (method_define CompileBmfBP "GetFileExtension" bmf-get-file-extension-dispatch)
     (method_define HashBP "Get" syntax-table-get-dispatch)
     (method_define SyntaxBP "Invoke" syntax-invoke-dispatch)
 
-    (let bmf-ok-direct (record_new BmfBP "m_hSyntaxes" syntax-table))
-    (let env-ok (record_new EnvBP "strFileName" "grammar.bmf"))
+    (let bmf-ok-direct (record_new CompileBmfBP "m_hSyntaxes" syntax-table))
+    (let env-ok (record_new CompileEnvBP "strFileName" "grammar.bmf"))
     (let direct-ok
         (bml-body-source-exec-bmf-compile
             compile-body
@@ -95,16 +95,16 @@
             env-ok))
     (let stream-ok (record_get env-ok "hStream"))
 
-    (let bmf-no-syntax (record_new BmfBP "m_hSyntaxes" syntax-table))
-    (let env-no-syntax (record_new EnvBP "strFileName" "missing.xyz"))
+    (let bmf-no-syntax (record_new CompileBmfBP "m_hSyntaxes" syntax-table))
+    (let env-no-syntax (record_new CompileEnvBP "strFileName" "missing.xyz"))
     (let direct-no-syntax
         (bml-body-source-exec-bmf-compile
             compile-body
             bmf-no-syntax
             env-no-syntax))
 
-    (let bmf-fail (record_new BmfBP "m_hSyntaxes" syntax-table))
-    (let env-fail (record_new EnvBP "strFileName" "broken.fail"))
+    (let bmf-fail (record_new CompileBmfBP "m_hSyntaxes" syntax-table))
+    (let env-fail (record_new CompileEnvBP "strFileName" "broken.fail"))
     (let direct-fail
         (bml-body-source-exec-bmf-compile compile-body bmf-fail env-fail))
 
@@ -117,10 +117,10 @@
                     file-name))
             (bml-body-source-exec compile-body self call-env)))
 
-    (method_define BmfBP "Compile" bmf-compile-dispatch)
-    (let bmf-ok-invoke (record_new BmfBP "m_hSyntaxes" syntax-table))
+    (method_define CompileBmfBP "Compile" bmf-compile-dispatch)
+    (let bmf-ok-invoke (record_new CompileBmfBP "m_hSyntaxes" syntax-table))
     (let invoked-ok (method_invoke bmf-ok-invoke "Compile" "grammar.bmf"))
-    (let bmf-no-syntax-invoke (record_new BmfBP "m_hSyntaxes" syntax-table))
+    (let bmf-no-syntax-invoke (record_new CompileBmfBP "m_hSyntaxes" syntax-table))
     (let invoked-no-syntax
         (method_invoke bmf-no-syntax-invoke "Compile" "missing.xyz"))
 

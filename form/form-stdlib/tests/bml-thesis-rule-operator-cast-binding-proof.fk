@@ -25,11 +25,11 @@
             "operator=="))
     (let operator-body (bml-method-body operator-method))
 
-    (let RuleBP (make_nodeid 1 2 99 9280))
-    (let CallEnvBP (bml-constructor-env-blueprint 0))
-    (let rule-instance (record_new RuleBP "bmlClass" "Rule" "Name" "left"))
-    (let other-rule (record_new RuleBP "bmlClass" "Rule" "Name" "right"))
-    (let call-env (record_new CallEnvBP "hObj" other-rule))
+    (let CastRuleBP (make_nodeid 1 2 99 9280))
+    (let CastCallEnvBP (bml-constructor-env-blueprint 0))
+    (let rule-instance (record_new CastRuleBP "bmlClass" "Rule" "Name" "left"))
+    (let other-rule (record_new CastRuleBP "bmlClass" "Rule" "Name" "right"))
+    (let call-env (record_new CastCallEnvBP "hObj" other-rule))
     (let direct-result
         (bml-body-source-exec-typed-cast-assignments
             operator-body
@@ -37,7 +37,7 @@
             call-env))
     (let direct-bound (record_get call-env "hOther"))
 
-    (let sequence-env (record_new CallEnvBP "hObj" other-rule))
+    (let sequence-env (record_new CastCallEnvBP "hObj" other-rule))
     (let sequence-result
         (bml-body-source-exec
             operator-body
