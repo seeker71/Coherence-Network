@@ -920,6 +920,7 @@ ensure_kernel_router_canary() {
         && grep -q '\"items\":\\[' /tmp/contributors.body \
         && grep -q '\"limit\":5' /tmp/contributors.body \
         && grep -q '\"offset\":0' /tmp/contributors.body \
+        && grep -q '\"items\":\\[{' /tmp/contributors.body \
         && grep -qi '^X-Form-Router: native-kernel' /tmp/contributions.headers \
         && grep -qi '^X-Form-Handler: api_contributions' /tmp/contributions.headers \
         && grep -qi '^X-Form-Python-Authority: false' /tmp/contributions.headers \
