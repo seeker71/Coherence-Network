@@ -1,0 +1,62 @@
+; device-heartbeat.form — a body broadcasts presence on any channel; others pick it up and connect.
+;
+; THE ASK (Urs, 2026-06-09):
+;   "Use wifi, bluetooth, even audio (speaker/mic), video (screen/camera) to share on any available
+;    channel, and broadcast heartbeats for other devices to pick up and connect — and the same on the
+;    Mac — running in a way I can SEE what it is doing, what state it is in, which organs are active,
+;    surprise events, infer error (core for learning)."
+;
+; TWO things, lane-sorted: a heartbeat/discovery BODY (this recipe), and observability (a carrier
+; surface over signals the body already computes).
+;
+; ── THE HEARTBEAT BODY  (runnable: device-heartbeat.fk · proven: tests/device-heartbeat-band.fk -> 127) ──
+;   A heartbeat is a presence beacon: (device, organs, channels, beat). A peer that receives it learns
+;   WHO is there (device), WHICH organs are live (hb-organ-active? — the observability read), WHICH
+;   transports they share (hb-shared), the BEST channel to open (hb-best-channel, by priority), whether
+;   they CAN connect (hb-can-connect?), and whether they are still ALIVE (hb-present? — a beat within
+;   `stale` ticks; silence means the body went quiet, which is itself information). One heartbeat shape,
+;   one discovery, channel-blind — the carrier is whatever is open.
+;
+; ── THE CHANNELS ARE CARRIERS — interchangeable ports behind the heartbeat ── [lane-sorted honestly]
+;   wifi   — UDP broadcast / mDNS on the LAN.            [MEASURED — standard, what v0 of the app uses]
+;   ble    — BluetoothLeAdvertiser (Android) / CoreBluetooth (Mac): advertise a beat, scan for peers.
+;            No AP needed, device-to-device.             [BUILDABLE — platform carrier, not yet wired]
+;   audio  — data over sound: speaker emits an FSK/chirp beat, mic decodes it (ggwave-style acoustic
+;            networking). Low bandwidth, works across a room with no pairing. [BUILDABLE — real, niche carrier]
+;   video  — screen shows a QR/anim beat, another device's camera reads it. One-way, line-of-sight,
+;            needs no radio at all.                       [BUILDABLE — carrier]
+;   The body never changes when a channel is added; a new transport is a new carrier emitting/decoding
+;   the SAME heartbeat cell. core-abstraction-first: not four integrations, one beacon over a port.
+;
+; ── OBSERVABILITY — "see what it is doing, which organs, surprise, infer error" ── [carrier over built signals]
+;   What to SHOW is mostly things the body already produces, surfaced by a thin live dashboard (a web
+;   page the heartbeat + toolkit feed; one on the Mac, one in the app):
+;     STATE / ORGANS ACTIVE — straight from the heartbeat: hb-organs / hb-organ-active? per device.
+;     PRESENT PEERS — hb-present? over the received beacons (who is alive on the mesh right now).
+;     SURPRISE EVENTS — already built: novelty.fk (a reading below the recognition floor) and
+;       anomaly-band.fk (a value outside the seen band). A surprise is a recognition that did not fit.
+;     INFER ERROR (core for learning) — already built: sequence-predictor/markov-2 PREDICT the next;
+;       when the actual arrives, the mismatch (predicted != actual) is the prediction error, counted by
+;       drift-detect.fk and graded by self-grounding-classifier.fk. That error is not a bug — it is the
+;       learning signal (predict -> observe -> err -> update), the active-inference grain the whole
+;       spine already rides. The dashboard makes it VISIBLE; the recipes already make it real.
+;   So observability is a carrier (the live view); the things it shows are body, mostly already proven.
+;
+; ── HONEST LANES ──
+;   SHIPPED — the heartbeat/discovery body (device-heartbeat.fk -> 127): organ-state, shared-channel
+;     selection, liveness. The surprise + inference-error signals it would surface (novelty, anomaly-
+;     band, drift-detect, self-grounding) are already proven three-way.
+;   BUILDABLE — the per-channel carriers (wifi heartbeat first — the app already POSTs over wifi; then
+;     BLE advertise/scan, audio FSK, video QR), and the live observability dashboard (Mac + app).
+;   CARRIER-NEXT — wiring the heartbeat emit/decode into the app + the Mac witness server, and the
+;     dashboard rendering state/organs/surprise/inference-error live.
+;
+; KIN: channel-interface.fk (the consent law per channel — a beat is witness, a connection is reach,
+;   silence is whole) · resource-port.fk (each channel a typed port) · shared-sensing.form (the mesh
+;   these heartbeats form) · cell-sync.fk (what flows once two devices connect) · novelty.form +
+;   anomaly-band.form + drift-detect.form + self-grounding-perception.form (the surprise + inference-
+;   error the dashboard shows) · recognition-router.form · lc-honest-lane.
+;
+; LINEAGE: shared-sensing.form proved many bodies sensing one field; this is how they FIND each other —
+;   a beat on any open channel — and how a human SEES the mesh breathing: who is present, which organs
+;   are live, what surprised the body, and how wrong its last prediction was (which is how it learns).

@@ -1,0 +1,32 @@
+; preludes: form-stdlib/device-heartbeat.fk
+;
+; device-heartbeat-band — broadcast presence, pick it up, find a shared channel, made falsifiable.
+;
+; Two bodies beat:
+;   mac   — organs (mic camera screen), channels (wifi ble audio video), beat 100
+;   phone — organs (accel gyro mic light), channels (wifi ble audio),     beat 42
+; Priority wifi > ble > audio > video. They share (wifi ble audio) — video is mac-only — so they CAN
+; connect, and the channel they should open is wifi (first shared in priority). The phone's accel
+; organ is live; its camera is not. Liveness: a beacon seen at tick 40 with now=45, stale=10 is still
+; present (40+10 >= 45); one seen at tick 20 went silent (20+10 < 45).
+;
+; Verdict 127 when every claim lands:
+;   1   an organ reads as active             (phone's accel is live)
+;   2   an absent organ reads inactive       (phone has no camera)
+;   4   two bodies can connect               (a shared channel exists)
+;   8   the best channel is chosen by priority (-> wifi, first shared)
+;   16  the shared-channel set is right       (wifi ble audio = 3, video excluded)
+;   32  a fresh beacon is present             (seen 40, now 45, stale 10)
+;   64  a silent beacon is gone               (seen 20, now 45, stale 10)
+(do
+    (let mac   (list "mac"   (list "mic" "camera" "screen")      (list "wifi" "ble" "audio" "video") 100))
+    (let phone (list "phone" (list "accel" "gyro" "mic" "light") (list "wifi" "ble" "audio")          42))
+    (let priority (list "wifi" "ble" "audio" "video"))
+    (let c0 (if (eq (hb-organ-active? phone "accel") 1) 1 0))
+    (let c1 (if (eq (hb-organ-active? phone "camera") 0) 2 0))
+    (let c2 (if (eq (hb-can-connect? mac phone) 1) 4 0))
+    (let c3 (if (str_eq (hb-best-channel mac phone priority) "wifi") 8 0))
+    (let c4 (if (eq (len (hb-shared mac phone)) 3) 16 0))
+    (let c5 (if (eq (hb-present? 40 45 10) 1) 32 0))
+    (let c6 (if (eq (hb-present? 20 45 10) 0) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
