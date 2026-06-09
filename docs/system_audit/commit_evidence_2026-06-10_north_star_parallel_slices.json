@@ -1,0 +1,188 @@
+{
+  "date": "2026-06-10",
+  "thread_branch": "codex/north-star-parallel-slices-20260610",
+  "commit_scope": "Move several north-star slices in parallel: branch choice feedback cells, source-aware route-goal task cards, a parallel Form validation runner, and an executable BML compiler-image proof ratchet.",
+  "files_owned": [
+    "MANIFEST.md",
+    "api/tests/test_runtime_web_api_provenance.py",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/branch-choice-order.form",
+    "docs/system_audit/commit_evidence_2026-06-10_north_star_parallel_slices.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/native_route_goal_state.json",
+    "form/form-stdlib/branch-choice-order.fk",
+    "form/form-stdlib/choice-receipt-learning.fk",
+    "form/form-stdlib/tests/bml-compiler-fkb-image-proof.fk",
+    "form/form-stdlib/tests/branch-choice-order-band.fk",
+    "form/form-stdlib/tests/choice-receipt-learning-band.fk",
+    "form/validate.sh",
+    "scripts/form_validate_shards.py",
+    "scripts/INDEX.md",
+    "scripts/native_route_goal_loop.py"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "bash -n form/validate.sh",
+      "python3 -m py_compile scripts/native_route_goal_loop.py scripts/form_validate_shards.py",
+      "cd api && python3 -m ruff check ../scripts/native_route_goal_loop.py ../scripts/form_validate_shards.py tests/test_runtime_web_api_provenance.py",
+      "cd api && python3 -m pytest -q tests/test_runtime_web_api_provenance.py",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/branch-choice-order.fk form-stdlib/tests/branch-choice-order-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/tests/choice-receipt-learning-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/choice-receipt.fk form-stdlib/bmf-choice-receipts.fk form-stdlib/tests/bmf-choice-receipt-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-fkb-image-proof.fk",
+      "python3 scripts/form_validate_shards.py --jobs 1 --regex '^(closure|fact)\\\\.fk|stdlib/(branch-choice-order-band|choice-receipt-learning-band|sequence-predictor-band|online-accuracy-band)\\\\.fk'",
+      "python3 scripts/form_validate_shards.py --jobs 4 --regex '^(closure|fact)\\\\.fk|stdlib/(branch-choice-order-band|choice-receipt-learning-band|sequence-predictor-band|online-accuracy-band)\\\\.fk'",
+      "python3 scripts/native_route_goal_loop.py /goal --source api --seconds 86400 --limit 2000 --json",
+      "python3 scripts/native_route_goal_loop.py /loop --source api --seconds 86400 --limit 2000 --write-state --json",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-10_north_star_parallel_slices.json"
+    ],
+    "summary": "Form now has a proven branch-choice ordering cell that mixes short-term and long-term success/fail branch feedback while keeping alignment and trust as gates, plus a receipt-learning adapter that turns BMF choice receipts into branch-order feedback. The route-goal loop now preserves the observed source in generated task-card commands, so backend API promotion work does not accidentally re-run the web_api queue. Form validation has a parallel sharding entry point that preserves validate.sh semantics, and validate.sh suppresses npm update notices so TypeScript package-manager chatter cannot masquerade as kernel divergence. The BML compiler image proof now round-trips an executable BML-compiled witness through .fkb and executes the loaded payload.",
+    "observed_delta": {
+      "branch_choice_order_verdict": 511,
+      "choice_receipt_learning_verdict": 255,
+      "bmf_choice_receipt_verdict": 67108863,
+      "bml_compiler_fkb_binary_verdict_before": 24,
+      "bml_compiler_fkb_binary_verdict_after": 29,
+      "form_shard_subset_jobs_1_seconds": 22.74,
+      "form_shard_subset_jobs_4_seconds": 10.39,
+      "form_shard_subset_speedup": "2.19x",
+      "route_goal_source_requested": "api",
+      "route_goal_source_effective": "api",
+      "route_goal_next_task_command": "python3 scripts/native_route_goal_loop.py /goal --source api --seconds 86400 --limit 2000",
+      "route_goal_next_route": "POST /api/ideas",
+      "route_goal_goal_native_share": 0.893,
+      "route_goal_native_executable_share": 0.915
+    },
+    "known_limitations": [
+      {
+        "scope": "branch choice runtime integration",
+        "observed": "The branch-order and receipt-learning cells are proven Form contracts. They are not yet wired into the live BMF parser choice scheduler or any persisted kernel feedback store."
+      },
+      {
+        "scope": "parallel validation runner",
+        "observed": "The measured speedup is on a six-workload focused subset. The full Form suite was not rerun in this slice because the prior full run took about 4921 seconds and this change intentionally targeted faster focused proof loops."
+      },
+      {
+        "scope": "BML compiler image",
+        "observed": "The compiler image now carries and executes one BML-compiled witness after .fkb readback. It is still not a self-hosted compiler image."
+      },
+      {
+        "scope": "route-goal state",
+        "observed": "docs/system_audit/native_route_goal_state.json is a fresh runtime snapshot and may drift as production traffic changes."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "No deploy attempted for this local proof and tooling slice."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Choice ordering has a receipt-feedback proof path, the route-goal backend queue preserves its observed source, Form validation can shard focused workloads in parallel, and the BML compiler image can execute a loaded witness payload.",
+    "public_endpoints": [
+      "POST /api/ideas"
+    ],
+    "test_flows": [
+      "branch-choice-order-band proves short/long branch feedback with choose_best and choose_any lanes.",
+      "choice-receipt-learning-band proves CHOICE-RECEIPT outcomes update branch-order candidates.",
+      "test_native_route_goal_loop_counts_form_mutations_as_native_executable proves the api task card command preserves --source api.",
+      "test_native_route_goal_loop_task_card_preserves_all_source proves explicit all-source task cards stay all-source.",
+      "bml-compiler-fkb-image-proof in --binary mode proves the loaded .fkb payload compiles and executes to 8."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete. CI, PR review, merge, and any post-merge production verification remain before claiming release."
+  },
+  "idea_ids": [
+    "idea-realization-engine",
+    "agent-pipeline"
+  ],
+  "spec_ids": [
+    "specs/native-mutation-public-gate.md"
+  ],
+  "task_ids": [
+    "north-star-parallel-slices-20260610"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "subagent-coordination"
+      ]
+    },
+    {
+      "contributor_id": "agent:lorentz",
+      "contributor_type": "machine",
+      "roles": [
+        "parallel-validation-runner"
+      ]
+    },
+    {
+      "contributor_id": "agent:einstein",
+      "contributor_type": "machine",
+      "roles": [
+        "route-goal-discovery"
+      ]
+    },
+    {
+      "contributor_id": "agent:huygens",
+      "contributor_type": "machine",
+      "roles": [
+        "bml-compiler-ratchet-discovery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/branch-choice-order.fk::bco-score",
+    "form/form-stdlib/choice-receipt-learning.fk::crl-learn-candidate",
+    "scripts/form_validate_shards.py::run",
+    "scripts/native_route_goal_loop.py::task_card_source_arg",
+    "api/tests/test_runtime_web_api_provenance.py::test_native_route_goal_loop_task_card_preserves_all_source",
+    "form/form-stdlib/tests/bml-compiler-fkb-image-proof.fk::loaded-choose-program"
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "api/tests/test_runtime_web_api_provenance.py",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/branch-choice-order.form",
+    "docs/system_audit/commit_evidence_2026-06-10_north_star_parallel_slices.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/native_route_goal_state.json",
+    "form/form-stdlib/branch-choice-order.fk",
+    "form/form-stdlib/choice-receipt-learning.fk",
+    "form/form-stdlib/tests/bml-compiler-fkb-image-proof.fk",
+    "form/form-stdlib/tests/branch-choice-order-band.fk",
+    "form/form-stdlib/tests/choice-receipt-learning-band.fk",
+    "form/validate.sh",
+    "scripts/form_validate_shards.py",
+    "scripts/INDEX.md",
+    "scripts/native_route_goal_loop.py"
+  ],
+  "change_intent": "runtime_feature"
+}

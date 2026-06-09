@@ -176,6 +176,31 @@ def test_native_route_goal_loop_counts_form_mutations_as_native_executable():
     assert state["native_executable_events"] == 2
     assert state["native_executable_share"] == 1.0
     assert state["goal_native_events"] == 0
+    assert "--source api" in state["next_task_card"]["commands"][0]
+
+
+def test_native_route_goal_loop_task_card_preserves_all_source():
+    state = native_route_goal_loop.build_goal_state(
+        payload={
+            "measurement_source": "test",
+            "endpoints": [
+                {
+                    "endpoint": "/api/not-yet-native",
+                    "method": "GET",
+                    "event_count": 2,
+                    "total_runtime_ms": 10.0,
+                    "average_runtime_ms": 5.0,
+                    "by_source": {"api": 2},
+                }
+            ],
+        },
+        source_requested=None,
+        source_effective=None,
+        seconds=3600,
+        target_share=0.9,
+    )
+
+    assert "--source all" in state["next_task_card"]["commands"][0]
 
 
 def test_inventory_flow_native_route_expresses_lineage_grammar():

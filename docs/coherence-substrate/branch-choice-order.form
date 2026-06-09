@@ -1,0 +1,46 @@
+; branch-choice-order.form — learned ordering for BMF/Form choice branches.
+;
+; THE ASK:
+;   Choice should not stay fixed in source order forever. A parser, route, or
+;   scheduler can remember which alternatives recently succeeded or failed,
+;   keep older evidence as stable memory, and order the next run from that
+;   witnessed history.
+;
+; THE SHAPE  (runnable: form-stdlib/branch-choice-order.fk · proven:
+; tests/branch-choice-order-band.fk -> 511)
+;
+;   A candidate is `(path short-success short-fail long-success long-fail
+;   alignment trust)`.
+;
+;   1. SHORT MEMORY reacts fast. Recent success is weighted higher than long
+;      success, so a fresh winning branch can outrank a historically good
+;      branch that is now failing.
+;   2. LONG MEMORY keeps the body from thrashing. Older successes and failures
+;      continue to count after the short window is rolled forward.
+;   3. CORE GATES stay separate. Alignment and trust can gate a candidate even
+;      when branch feedback is hot, so "it often works" does not become "it is
+;      coherent to do."
+;   4. ROLL-FORWARD moves short stats into long stats once a threshold is
+;      reached, then clears the short window. No mutation is needed; the next
+;      candidate record is a returned value.
+;   5. TWO LANES remain available: `bco-choose-best` for learned ordering and
+;      `bco-choose-any` for the cheap unordered lane.
+;   6. RECEIPTS BECOME LEARNING DATA through `choice-receipt-learning.fk`:
+;      a selected success increments short success, a selected fail increments
+;      short fail, silence and unselected branches stay unchanged. The adapter
+;      is proven by `tests/choice-receipt-learning-band.fk` -> 255.
+;
+; WHY THIS IS THE KERNEL-SIDE CONTRACT:
+;   It mirrors the proven branch-prediction lesson without importing hardware
+;   machinery wholesale: local recency adapts quickly, long history stabilizes,
+;   and a selector compares integer counters instead of floating ratios. The
+;   open question for the runtime is carrier policy: where receipts are stored,
+;   how wide the short window should be per grammar, and when exploration should
+;   deliberately try a lower-scoring alternative.
+;
+; KIN:
+;   choice-receipt.fk (what happened) · choice-receipt-learning.fk (what the
+;   receipt changes) · online-accuracy.fk (success/fail counts) ·
+;   sequence-predictor.fk (history as the model) · recognition-router.fk
+;   (most-data wins, silence when no claim earns trust) · confidence-calibrate.fk
+;   (scores become comparable before routing).

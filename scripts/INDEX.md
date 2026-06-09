@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 148
+**Total files**: 149
 
 | File | Purpose |
 |---|---|
@@ -54,6 +54,7 @@
 | [fill_missing_spec_sections.py](fill_missing_spec_sections.py) | Heal pre-existing spec body gaps the validator surfaces. |
 | [form_cli.py](form_cli.py) | form_cli.py — Form-native CLI: generate, execute, convert. |
 | [form_native_grammar_contract.py](form_native_grammar_contract.py) | Audit Form-native grammar status without counting host parser bridges as done. |
+| [form_validate_shards.py](form_validate_shards.py) | Run Form validation workloads as parallel shards. |
 | [framebuffer_viewer.py](framebuffer_viewer.py) | framebuffer_viewer.py — render the kernel's framebuffer as a text panel. |
 | [frequency_references.py](frequency_references.py) | Frequency reference corpus for the Living Collective scoring engine. |
 | [gen_bp_table.py](gen_bp_table.py) | Generate the kernel-resident bp lookup table for all three Form kernels. |

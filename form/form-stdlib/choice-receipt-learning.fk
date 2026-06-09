@@ -1,0 +1,38 @@
+; choice-receipt-learning.fk — turn CHOICE-RECEIPTs into branch-order feedback.
+;
+; A receipt is witnessed outcome. A branch-order candidate is remembered
+; outcome. This adapter is the reversible seam between them: selected success
+; increments short-success; selected fail increments short-fail; silence and
+; unselected branches remain unchanged.
+;
+; Proven by: form-stdlib/tests/choice-receipt-learning-band.fk
+
+(do
+    (defn crl-selected? (candidate receipt)
+        (str_eq (bco-path candidate) (cr-receipt-selected-path receipt)))
+
+    (defn crl-learn-candidate (candidate receipt)
+        (if (crl-selected? candidate receipt)
+            (if (str_eq (cr-receipt-outcome receipt) (cr-outcome-success))
+                (bco-note-success candidate)
+                (if (str_eq (cr-receipt-outcome receipt) (cr-outcome-fail))
+                    (bco-note-fail candidate)
+                    candidate))
+            candidate))
+
+    (defn crl-learn-candidates (candidates receipt)
+        (if (eq (len candidates) 0) (empty)
+            (cons
+                (crl-learn-candidate (head candidates) receipt)
+                (crl-learn-candidates (tail candidates) receipt))))
+
+    (defn crl-roll-forward-candidates (candidates threshold)
+        (if (eq (len candidates) 0) (empty)
+            (cons
+                (bco-roll-forward (head candidates) threshold)
+                (crl-roll-forward-candidates (tail candidates) threshold))))
+
+    (defn crl-best-path-after-receipt (candidates receipt)
+        (bco-choose-best-path (crl-learn-candidates candidates receipt)))
+
+    0)

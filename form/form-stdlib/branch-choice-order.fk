@@ -1,0 +1,115 @@
+; branch-choice-order.fk — order choice branches from short + long outcome feedback.
+;
+; A branch candidate carries two memories:
+;   short: recent successes/failures, quick enough to flip when the field changes
+;   long:  older successes/failures, stable enough to avoid thrash
+;
+; Core alignment and trust are kept as gates and small nudges, not collapsed into
+; branch-prediction feedback. A low-alignment candidate can have a hot branch
+; score and still refuse selection.
+;
+; Proven by: form-stdlib/tests/branch-choice-order-band.fk
+
+(do
+    (defn bco-candidate (path short-success short-fail long-success long-fail alignment trust)
+        (list path short-success short-fail long-success long-fail alignment trust))
+
+    (defn bco-path (c) (nth c 0))
+    (defn bco-short-success (c) (nth c 1))
+    (defn bco-short-fail (c) (nth c 2))
+    (defn bco-long-success (c) (nth c 3))
+    (defn bco-long-fail (c) (nth c 4))
+    (defn bco-alignment (c) (nth c 5))
+    (defn bco-trust (c) (nth c 6))
+
+    (defn bco-core-bucket (score)
+        (if (ge score 90) 3
+            (if (ge score 70) 2
+                (if (ge score 50) 1 0))))
+
+    (defn bco-core-ready? (c)
+        (if (and (ge (bco-alignment c) 70) (ge (bco-trust c) 70)) 1 0))
+
+    (defn bco-short-total (c)
+        (add (bco-short-success c) (bco-short-fail c)))
+
+    (defn bco-short-signal (c)
+        (if (ge (bco-short-success c) (bco-short-fail c))
+            (add (bco-short-success c)
+                 (add (bco-short-success c) (bco-short-success c)))
+            0))
+
+    (defn bco-long-signal (c)
+        (if (ge (bco-long-success c) (bco-long-fail c))
+            (bco-long-success c)
+            0))
+
+    (defn bco-branch-score (c)
+        (add (bco-short-signal c) (bco-long-signal c)))
+
+    (defn bco-score (c)
+        (if (eq (bco-core-ready? c) 1)
+            (add (bco-branch-score c)
+                 (add (bco-core-bucket (bco-alignment c))
+                      (bco-core-bucket (bco-trust c))))
+            0))
+
+    (defn bco-note-success (c)
+        (bco-candidate
+            (bco-path c)
+            (add (bco-short-success c) 1)
+            (bco-short-fail c)
+            (bco-long-success c)
+            (bco-long-fail c)
+            (bco-alignment c)
+            (bco-trust c)))
+
+    (defn bco-note-fail (c)
+        (bco-candidate
+            (bco-path c)
+            (bco-short-success c)
+            (add (bco-short-fail c) 1)
+            (bco-long-success c)
+            (bco-long-fail c)
+            (bco-alignment c)
+            (bco-trust c)))
+
+    (defn bco-promote (c)
+        (bco-candidate
+            (bco-path c)
+            0
+            0
+            (add (bco-long-success c) (bco-short-success c))
+            (add (bco-long-fail c) (bco-short-fail c))
+            (bco-alignment c)
+            (bco-trust c)))
+
+    (defn bco-promote-ready? (c threshold)
+        (if (ge (bco-short-total c) threshold) 1 0))
+
+    (defn bco-roll-forward (c threshold)
+        (if (eq (bco-promote-ready? c threshold) 1) (bco-promote c) c))
+
+    (defn bco-choose-best-loop (candidates best)
+        (if (eq (len candidates) 0) best
+            (if (gt (bco-score (head candidates)) (bco-score best))
+                (bco-choose-best-loop (tail candidates) (head candidates))
+                (bco-choose-best-loop (tail candidates) best))))
+
+    (defn bco-choose-best (candidates)
+        (if (eq (len candidates) 0)
+            (bco-candidate "none" 0 0 0 0 0 0)
+            (bco-choose-best-loop (tail candidates) (head candidates))))
+
+    (defn bco-choose-best-path (candidates)
+        (bco-path (bco-choose-best candidates)))
+
+    (defn bco-choose-any (candidates)
+        (if (eq (len candidates) 0)
+            (bco-candidate "none" 0 0 0 0 0 0)
+            (head candidates)))
+
+    (defn bco-choose-any-path (candidates)
+        (bco-path (bco-choose-any candidates)))
+
+    0)

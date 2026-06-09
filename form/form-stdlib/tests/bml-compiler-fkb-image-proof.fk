@@ -4,8 +4,9 @@
 ;
 ; Proves the first BML compiler image artifact in the bootstrap ratchet path.
 ; The image is not the final self-hosted compiler yet; it is a source-proven
-; .fkb checkpoint of parsed BML compiler-source metadata, with BML source
-; remaining authoritative and the binary serving as recoverable image.
+; .fkb checkpoint of parsed BML compiler-source metadata plus one executable
+; BML-compiled witness payload. BML source remains authoritative; the binary is
+; now a recoverable image whose loaded child can execute after readback.
 
 (do
     (defn score-bool (actual)
@@ -21,6 +22,12 @@
         (if (nil? actual)
             0
             (if (str_eq actual expected) 1 0)))
+
+    (defn result-object (m)
+        (cap-get (match-caps m) "result"))
+
+    (defn result-value (m)
+        (bmf-object-value (result-object m)))
 
     (defn class-const-value-score (class-component const-name expected-value)
         (if (nil? class-component)
@@ -58,6 +65,15 @@
     (let classes (bml-model-classes model))
     (let interfaces (bml-model-interfaces model))
     (let templates (bml-components-of-kind nodes "Template"))
+    (let choose-match
+        (apply-bml-bmf-rule "choose-fail-int"
+            (list (bml-src-keyword "choose") (bml-src-op "{")
+                  (bml-src-keyword "fail") (bml-src-op ";") (bml-src-op "}")
+                  (bml-src-op ",") (bml-src-op "{")
+                  (bml-src-keyword "return") (bml-src-int "8")
+                  (bml-src-op ";") (bml-src-op "}"))))
+    (let choose-node (result-value choose-match))
+    (let choose-program (bml-compile-program choose-node))
 
     (let bootstrap-image-class
         (bml-model-find-class
@@ -84,10 +100,13 @@
                 (intern_trivial_int (len nodes))
                 (intern_trivial_int (len classes))
                 (intern_trivial_int (len templates))
-                (intern_trivial_int (len interfaces)))))
+                (intern_trivial_int (len interfaces))
+                choose-node)))
     (let bytes-written (write_form_binary image-path image))
     (let loaded (read_form_binary image-path))
     (let loaded-kids (node_children loaded))
+    (let loaded-choose-node (nth loaded-kids 8))
+    (let loaded-choose-program (bml-compile-program loaded-choose-node))
 
     (sum
         (list
@@ -132,4 +151,9 @@
             (score-int (node_value (nth loaded-kids 4)) (len nodes))
             (score-int (node_value (nth loaded-kids 5)) (len classes))
             (score-int (node_value (nth loaded-kids 6)) (len templates))
-            (score-int (node_value (nth loaded-kids 7)) (len interfaces)))))
+            (score-int (node_value (nth loaded-kids 7)) (len interfaces))
+            (score-bool (match? choose-match))
+            (score-int (bma-run-value choose-program) 8)
+            (score-bool (node_eq loaded-choose-node choose-node))
+            (score-int (bma-run-value loaded-choose-program) 8)
+            (score-gt (len (comp-program-ops loaded-choose-program)) 0))))
