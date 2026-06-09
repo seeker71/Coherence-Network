@@ -35,17 +35,22 @@ def test_ab_observation_cases_cover_all_native_mutation_preview_routes():
     assert all(case.sql_contains for case in mod.CASES)
 
 
-def test_ab_observation_case_passes_only_when_a_fanout_and_b_native_preview():
+def test_ab_observation_case_passes_with_native_default_preview_and_fallback():
     mod = _load_harness()
     case = mod.CASES[2]
-    control = mod.HTTPObservation(
-        status=200,
-        router="fanout-python",
+    default = mod.HTTPObservation(
+        status=202,
+        router="native-kernel",
         body="",
         parsed={
-            "method": "POST",
-            "path": "/api/spec-registry",
-            "body": case.body,
+            "native_default_invitation": True,
+            "required_header": None,
+            "fallback_header": "X-Form-Python-Fallback",
+            "request_body": case.body,
+            "sql": " ".join(case.sql_contains),
+            "decision_receipt": {
+                "selected_path": "implicit-native-invitation",
+            },
         },
     )
     treatment = mod.HTTPObservation(
@@ -61,10 +66,10 @@ def test_ab_observation_case_passes_only_when_a_fanout_and_b_native_preview():
             "sql": " ".join(case.sql_contains),
             "trust_envelope": {
                 "choice_success": 1,
-                "silence": "fanout-default",
+                "silence": "not-knowing-is-native-invitation",
                 "protocol": "X-Form-Native-Preview",
-                "fail": "rollback-to-fanout",
-                "stop": "ordinary-traffic-unflipped",
+                "fail": "explicit-python-fallback",
+                "stop": "native-default-observed",
                 "bma": "native-mutation-trust-envelope",
                 "prediction_error": "carried_as_residual",
                 "side_effect_intents": [
@@ -74,16 +79,28 @@ def test_ab_observation_case_passes_only_when_a_fanout_and_b_native_preview():
                     {"name": "idea-valuation-audit-ledger"},
                 ],
                 "reversible_gate": {
-                    "default_route": "fanout-python",
+                    "default_route": "native-kernel",
+                    "default_protocol": "implicit-native-invitation",
                     "native_route": "X-Form-Native-Preview",
-                    "ordinary_traffic_flip_allowed": False,
-                    "ordinary_traffic_flip_performed": False,
+                    "fallback_route": "X-Form-Python-Fallback",
+                    "ordinary_traffic_flip_allowed": True,
+                    "ordinary_traffic_flip_performed": True,
                 },
             },
         },
     )
+    fallback = mod.HTTPObservation(
+        status=200,
+        router="fanout-python",
+        body="",
+        parsed={
+            "method": "POST",
+            "path": "/api/spec-registry",
+            "body": case.body,
+        },
+    )
 
-    observation = mod.evaluate_case(case, control, treatment)
+    observation = mod.evaluate_case(case, default, treatment, fallback)
 
     assert observation.passed is True
     assert all(observation.checks.values())
@@ -95,10 +112,12 @@ def test_ab_gate_blocks_flip_when_any_observation_fails():
         name="ok",
         passed=True,
         checks={"ok": True},
-        control_status=200,
-        control_router="fanout-python",
+        default_status=202,
+        default_router="native-kernel",
         treatment_status=202,
         treatment_router="native-kernel",
+        fallback_status=200,
+        fallback_router="fanout-python",
         operation="create-spec",
         node_id="spec-ok",
     )
@@ -106,10 +125,12 @@ def test_ab_gate_blocks_flip_when_any_observation_fails():
         name="bad",
         passed=False,
         checks={"treatment_native": False},
-        control_status=200,
-        control_router="fanout-python",
+        default_status=202,
+        default_router="native-kernel",
         treatment_status=200,
         treatment_router="fanout-python",
+        fallback_status=200,
+        fallback_router="fanout-python",
         operation="",
         node_id="",
     )
@@ -119,7 +140,7 @@ def test_ab_gate_blocks_flip_when_any_observation_fails():
     assert report["confidence"] == 0.5
     assert report["gate_pass"] is False
     assert report["ordinary_traffic_flip_performed"] is False
-    assert report["ordinary_traffic_flip_allowed"] is False
+    assert report["ordinary_traffic_flip_allowed"] is True
     assert report["recommendation"] == "hold_flip_collect_more_observations"
 
 
@@ -130,10 +151,12 @@ def test_ab_gate_recommends_live_db_trial_after_full_confidence():
             name=case.name,
             passed=True,
             checks={"ok": True},
-            control_status=200,
-            control_router="fanout-python",
+            default_status=202,
+            default_router="native-kernel",
             treatment_status=202,
             treatment_router="native-kernel",
+            fallback_status=200,
+            fallback_router="fanout-python",
             operation=case.operation,
             node_id=case.node_id,
         )
@@ -145,11 +168,12 @@ def test_ab_gate_recommends_live_db_trial_after_full_confidence():
     assert report["confidence"] == 1.0
     assert report["gate_pass"] is True
     assert report["recommendation"] == "preview_confidence_complete"
-    assert report["ordinary_traffic_flip_performed"] is False
+    assert report["ordinary_traffic_flip_performed"] is True
+    assert report["python_fallback_header"] == "X-Form-Python-Fallback"
     assert report["next_evidence_needed"] == [
-        "public-gate decision receipts in deployed canary traffic",
-        "no-header public control remains outside native canary",
-        "sustained X-Form-Native-Public-Gate canary evidence before any no-header flip",
+        "public Traefik default mutation routes to kernel-router",
+        "native HTTP mutation handler preserves production persistence semantics",
+        "explicit X-Form-Python-Fallback refusal/control signal is counted separately",
     ]
 
 
@@ -159,4 +183,4 @@ def test_route_forms_name_the_ab_observation_gate_before_flip():
         assert "front-door flip -> A/B observation gate before movement" in text
         assert "deploy/kernel-router/mutation_ab_observation_harness.py" in text
         assert "preview confidence is complete" in text
-        assert "deployed public-gate canary" in text
+        assert "implicit native invitation" in text

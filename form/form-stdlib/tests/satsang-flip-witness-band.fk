@@ -6,9 +6,9 @@
 ; agent board and satsang protocol:
 ;   1    board plus satsang protocol are present
 ;   2    treatment selects native-kernel
-;   4    no-header control stays fanout-python
+;   4    public Traefik no-header control stays outside native default
 ;   8    decision plus rollback receipts make the gate reversible
-;   16   ordinary traffic remains unflipped
+;   16   public Traefik default boundary is held
 ;   32   public evidence source is named
 ;   64   the circle witnesses and the answer survives
 ;   128  the answer is not self-certified
@@ -23,7 +23,7 @@
     (let markers (sfw-choice-markers))
     (let c0 (if (sfw-board-protocol? r) 1 0))
     (let c1 (if (sfw-treatment-native? r) 2 0))
-    (let c2 (if (sfw-control-fanout? r) 4 0))
+    (let c2 (if (sfw-public-control-outside-native? r) 4 0))
     (let c3 (if (sfw-reversible? r) 8 0))
     (let c4 (if (sfw-ordinary-boundary-kept? r) 16 0))
     (let c5 (if (sfw-public-evidence-present? r) 32 0))

@@ -2,9 +2,9 @@
 ; route runners.
 ;
 ; The route-side-effect runner can mutate graph rows and record side effects.
-; This module adds the route-local public gate receipt: an explicit header-gated
-; movement shape that can be rolled back by removing the header or disabling the
-; public-gate route row, while ordinary no-header traffic remains fanout-python.
+; This module adds the route-local public gate receipt and the default native
+; invitation shape: no-header traffic that reaches the kernel accepts native by
+; default; X-Form-Python-Fallback is the explicit refusal/control signal.
 ;
 ; preludes: form-stdlib/core.fk form-stdlib/application-graph-node-port.fk
 ;           form-stdlib/native-mutation-side-effects.fk
@@ -13,18 +13,21 @@
 ;
 (do
     (defn nmpg-public-gate-header () "X-Form-Native-Public-Gate")
+    (defn nmpg-python-fallback-header () "X-Form-Python-Fallback")
 
     (defn nmpg-public-gate-contract-json ()
         (nms-cat (list
             "{\"state\":\"public-gate-installed\""
             ",\"required_header\":\"X-Form-Native-Public-Gate\""
-            ",\"default_route\":\"fanout-python\""
+            ",\"default_route\":\"native-kernel\""
+            ",\"default_protocol\":\"implicit-native-invitation\""
             ",\"gate_route\":\"native-kernel\""
+            ",\"fallback_route\":\"X-Form-Python-Fallback\""
             ",\"route_runner\":\"Form-native application graph mutation plus side effects plus idea valuation audit ledger\""
             ",\"route_local_rollback_receipt\":\"persisted\""
             ",\"decision_receipt\":\"per-request\""
-            ",\"ordinary_traffic_flip_performed\":false"
-            ",\"rollback\":\"remove X-Form-Native-Public-Gate or disable public-gate route row\""
+            ",\"ordinary_traffic_flip_performed\":true"
+            ",\"rollback\":\"send X-Form-Python-Fallback, remove the default native route row, or retarget Traefik to api\""
             "}")))
 
     (defn nmpg-decision-receipt-json (gate-id operation node-id)
@@ -41,18 +44,19 @@
             ",\"outcome\":\"success\""
             ",\"choice\":1"
             ",\"candidates\":["
-                "{\"path\":\"fanout-python\",\"eligible\":true,\"selected\":false,\"outcome\":\"silence\"},"
-                "{\"path\":\"X-Form-Native-Preview\",\"eligible\":true,\"selected\":false,\"outcome\":\"stop\"},"
-                "{\"path\":\"X-Form-Native-Public-Gate\",\"eligible\":true,\"selected\":true,\"outcome\":\"success\"}"
+                "{\"path\":\"implicit-native-invitation\",\"eligible\":true,\"selected\":false,\"outcome\":\"success\"},"
+                "{\"path\":\"X-Form-Native-Preview\",\"eligible\":true,\"selected\":false,\"outcome\":\"preview\"},"
+                "{\"path\":\"X-Form-Native-Public-Gate\",\"eligible\":true,\"selected\":true,\"outcome\":\"success\"},"
+                "{\"path\":\"X-Form-Python-Fallback\",\"eligible\":true,\"selected\":false,\"outcome\":\"refusal-signal\"}"
             "]"
-            ",\"ordinary_traffic_flip_performed\":false"
-            ",\"silence\":\"fanout-default-when-no-native-header\""
-            ",\"fail\":\"rollback-to-fanout-by-removing-public-gate-header\""
-            ",\"stop\":\"ordinary-traffic-unflipped\""
+            ",\"ordinary_traffic_flip_performed\":true"
+            ",\"silence\":\"not-knowing-is-native-invitation\""
+            ",\"fail\":\"explicit-python-fallback\""
+            ",\"stop\":\"native-default-observed\""
             ",\"bma\":\"native-mutation-public-gate\""
             ",\"reversible\":true"
             ",\"can_contradict_intent\":true"
-            ",\"signature\":{\"category\":\"native-mutation-gate\",\"selected_path\":\"X-Form-Native-Public-Gate\",\"outcome_code\":1,\"candidate_count\":3}"
+            ",\"signature\":{\"category\":\"native-mutation-gate\",\"selected_path\":\"X-Form-Native-Public-Gate\",\"outcome_code\":1,\"candidate_count\":4}"
             "}")))
 
     (defn nmpg-rollback-details-json (gate-id node-id)
@@ -60,8 +64,8 @@
             "{\"surface\":\"native-mutation-public-gate\""
             ",\"gate_id\":\"" gate-id "\""
             ",\"node_id\":\"" node-id "\""
-            ",\"rollback\":\"remove X-Form-Native-Public-Gate or disable public-gate route row\""
-            ",\"ordinary_traffic_flip_performed\":false"
+            ",\"rollback\":\"send X-Form-Python-Fallback, remove the default native route row, or retarget Traefik to api\""
+            ",\"ordinary_traffic_flip_performed\":true"
             ",\"mode\":\"route-local-rollback-receipt\""
             "}")))
 
@@ -104,14 +108,14 @@
             conn))
 
     ;; 11111111 =
-    ;;   public gate contract names explicit header and fanout default
+    ;;   public gate contract names explicit header and native default
     ;;   rollback receipt SQL is route-local and conflict-safe
     ;;   per-request decision receipt records the selected branch
     ;;   idea public gate calls the route-side-effect runner
     ;;   idea update public gate calls the valuation audit-ledger runner
     ;;   spec public gate calls the route-side-effect runner
     ;;   rollback receipt function is exposed
-    ;;   ordinary traffic remains unflipped in the contract
+    ;;   ordinary traffic defaults native in the contract
     (defn nmpg-public-gate-test ()
         (do
             (let contract (nmpg-public-gate-contract-json))
@@ -120,18 +124,18 @@
             (let contract-ok (if (eq (nms-and4
                 (nms-contains? contract "public-gate-installed")
                 (nms-contains? contract "X-Form-Native-Public-Gate")
-                (nms-contains? contract "\"default_route\":\"fanout-python\"")
+                (nms-contains? contract "\"default_route\":\"native-kernel\"")
                 (nms-contains? contract "\"route_local_rollback_receipt\":\"persisted\"")) 1) 1 0))
             (let receipt-ok (if (eq (nms-and4
                 (nms-contains? receipt-sql "public-gate-rollback-receipt")
                 (nms-contains? receipt-sql "route-local-rollback-receipt")
                 (nms-contains? receipt-sql "ON CONFLICT")
-                (nms-contains? receipt-sql "disable public-gate route row")) 1) 10 0))
+                (nms-contains? receipt-sql "X-Form-Python-Fallback")) 1) 10 0))
             (let decision-ok (if (eq (nms-and4
                 (nms-contains? decision "native-mutation-gate-decision-receipt")
                 (nms-contains? decision "\"selected_path\":\"X-Form-Native-Public-Gate\"")
                 (nms-contains? decision "\"outcome\":\"success\"")
-                (nms-contains? decision "\"can_contradict_intent\":true")) 1) 100 0))
+                (nms-contains? decision "X-Form-Python-Fallback")) 1) 100 0))
             (let idea-ok (if (eq (nms-and3
                 (nms-contains? "nmpg-run-idea-create-public-gate nmrs-run-idea-create-with-side-effects" "nmpg-run-idea-create-public-gate")
                 (nms-contains? "nmpg-run-idea-create-public-gate nmrs-run-idea-create-with-side-effects" "nmrs-run-idea-create-with-side-effects")
@@ -149,9 +153,9 @@
                 (nms-contains? "nmpg-record-public-gate-rollback-receipt nmpg-public-gate-rollback-receipt-sql" "nmpg-public-gate-rollback-receipt-sql")
                 (nms-contains? "nmpg-record-public-gate-rollback-receipt nmpg-public-gate-rollback-receipt-sql" "rollback-receipt")) 1) 1000000 0))
             (let traffic-ok (if (eq (nms-and3
-                (nms-contains? contract "\"ordinary_traffic_flip_performed\":false")
-                (nms-contains? contract "remove X-Form-Native-Public-Gate")
-                (nms-contains? contract "fanout-python")) 1) 10000000 0))
+                (nms-contains? contract "\"ordinary_traffic_flip_performed\":true")
+                (nms-contains? contract "\"default_protocol\":\"implicit-native-invitation\"")
+                (nms-contains? contract "X-Form-Python-Fallback")) 1) 10000000 0))
             (sum (list contract-ok receipt-ok decision-ok idea-ok idea-update-ok spec-ok function-ok traffic-ok))))
 
     0)

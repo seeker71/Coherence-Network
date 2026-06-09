@@ -40,11 +40,11 @@ source:
     symbols: [spec_registry_router_structure]
 requirements:
   - "A Form-native public gate persists route-local rollback receipts while composing the native route-side-effect runner."
-  - "The production route manifest exposes X-Form-Native-Public-Gate rows for mutable ideas/spec routes without changing no-header traffic."
-  - "The public-gate harness observes no-header fanout, preview-header SQL preview, public-gate native selection, and public-gate priority when both headers are present."
+  - "The production route manifest exposes X-Form-Native-Public-Gate rows plus no-header native-default invitation rows for mutable ideas/spec routes; X-Form-Python-Fallback is the explicit refusal/control signal."
+  - "The public-gate harness observes no-header native-default invitation, preview-header SQL preview, public-gate native selection, public-gate priority when both headers are present, and explicit Python fallback fanout."
   - "HTTP public-gate responses stay honest: the header gate executes and emits a rollback receipt shape, while DB execution remains proven in the Form live fixture rather than claimed by the HTTP route."
   - "Each public-gate HTTP response emits a compact decision receipt naming candidates, selected path, outcome, protocol, reversibility, and a signature so the gate can contradict intent with observable state."
-  - "The deploy path exposes X-Form-Native-Public-Gate as a Traefik header-gated public canary before any ordinary no-header flip."
+  - "The deploy path exposes X-Form-Native-Public-Gate as a Traefik header-gated public canary while public no-header Traefik default waits for persistence-preserving HTTP native mutation execution."
   - "The side-effect ledger keeps rollback receipts as gate-local safety rather than Python parity, so side-effect proof does not justify side effects."
   - "The public-gate Form layer exposes an idea update runner over the native idea valuation audit-ledger carrier."
 done_when:
@@ -65,8 +65,11 @@ constraints:
 
 The native route runner can now perform graph mutations and side effects
 together. This spec adds the next reversible movement: a public-gate header that
-selects native mutation route rows and carries a route-local rollback receipt,
-while ordinary no-header traffic continues to fan out to FastAPI. The
+selects native mutation route rows and carries a route-local rollback receipt.
+No-header traffic that reaches the kernel now accepts the implicit native
+invitation, and `X-Form-Python-Fallback` is the explicit refusal/control signal.
+Public Traefik no-header default remains outside this spec's deploy flip until
+HTTP native mutation execution preserves production persistence semantics. The
 side-effect ledger is the constraint around this movement: rollback receipts are
 reversible gate safety, not evidence that extra domain side effects belong.
 
@@ -75,18 +78,20 @@ reversible gate safety, not evidence that extra domain side effects belong.
 - [ ] **R1**: `native-mutation-public-gate.fk` defines the
   `X-Form-Native-Public-Gate` header, a public-gate rollback receipt SQL shape,
   and idea/spec public-gate runner wrappers over the route-side-effect carrier.
-- [ ] **R2**: The sibling-kernel band returns `111111` for header, receipt,
+- [ ] **R2**: The sibling-kernel band returns `11111111` for header, receipt,
   route-runner binding, exposed functions, and ordinary-traffic rollback state.
-- [ ] **R3**: The live integration returns `11111111` after executing idea and
+- [ ] **R3**: The live integration returns `111111111` after executing idea and
   spec public-gate runners, reading graph rows, revisions, public-gate rollback
   receipts, key audit, contract state, cleanup, and close from throwaway
   Postgres.
-- [ ] **R4**: `production-routes.fk` exposes method-specific
-  `X-Form-Native-Public-Gate` rows for mutable ideas/spec routes with higher
-  priority than preview rows when both headers are present.
+- [ ] **R4**: `production-routes.fk` exposes method-specific no-header
+  native-default invitation rows plus `X-Form-Native-Public-Gate` rows for
+  mutable ideas/spec routes, with public-gate priority above preview rows when
+  both headers are present.
 - [ ] **R5**: `mutation_public_gate_harness.py` observes all five mutation
-  shapes as A no-header fanout, B preview-header SQL preview, and C public-gate
-  native selection.
+  shapes as A no-header native-default invitation, B preview-header SQL preview,
+  C public-gate native selection, and D explicit `X-Form-Python-Fallback`
+  fanout.
 - [ ] **R6**: Public-gate HTTP responses include a route-local rollback receipt,
   keep `executes:false` for HTTP-side DB honesty, and carry
   `route_local_gate_executes:true`.
@@ -97,8 +102,9 @@ reversible gate safety, not evidence that extra domain side effects belong.
   carrier.
 - [ ] **R9**: Public-gate responses carry `decision_receipt` with
   `state=native-mutation-gate-decision-receipt`, selected path
-  `X-Form-Native-Public-Gate`, candidate outcomes for fanout/preview/public
-  gate, `can_contradict_intent=true`, and a compact signature.
+  `X-Form-Native-Public-Gate`, candidate outcomes for implicit native
+  invitation/preview/public gate/Python fallback, `can_contradict_intent=true`,
+  and a compact signature.
 - [ ] **R10**: The Hostinger deploy path runs a kernel-router canary service
   with `production-routes.fk` and Traefik header rules for
   `X-Form-Native-Preview: 1` and `X-Form-Native-Public-Gate: 1`, while the
@@ -106,7 +112,7 @@ reversible gate safety, not evidence that extra domain side effects belong.
 - [ ] **R11**: Public deployment verification probes
   `X-Form-Native-Public-Gate: 1` against `POST /api/ideas`, requires
   `202 + X-Form-Router:native-kernel + decision_receipt`, and separately checks
-  a no-header control does not enter the native canary.
+  public Traefik no-header control has not yet entered the native default route.
 
 ## Research Inputs
 
@@ -186,19 +192,20 @@ scripts/verify_kernel_canary_public_gate.sh https://api.coherencycoin.com
 ## Out of Scope
 
 - Production application database writes.
-- Ordinary no-header front-door mutation routing changes.
+- Public Traefik no-header front-door mutation routing changes.
 - Claiming HTTP-side DB execution before a deployed carrier supplies the DSN and
   observes the receipt.
 - Treating public-gate receipts as Python parity or domain-side-effect evidence.
 
 ## Gaps
 
-- GAP-NMPG1: closed by the header-gated kernel-router canary overlay and public
-  verifier. The next gap is sustained canary observation before any no-header
-  mutation flip.
-- GAP-NMPG3 follow-up task: `native-mutation-sustained-canary-observation`.
-  Collect deployed treatment/control canary observations over real rollout time
-  before any ordinary no-header mutation traffic flip.
+- GAP-NMPG1: closed by the header-gated kernel-router canary overlay, public
+  verifier, and local default-native invitation harness. The next gap is wiring
+  the public Traefik no-header default to kernel-router only after HTTP native
+  mutation execution preserves production persistence semantics.
+- GAP-NMPG3 follow-up task: `native-http-mutation-persistence-default`.
+  Carry production persistence semantics in the HTTP native mutation handler,
+  then route public Traefik no-header mutation traffic through kernel-router.
 - GAP-NMPG2: closed by `specs/native-idea-valuation-audit-ledger.md`. Idea
   valuation audit-ledger parity is now carried Form-native and bound into an
   idea update public-gate runner.
@@ -216,7 +223,7 @@ scripts/verify_kernel_canary_public_gate.sh https://api.coherencycoin.com
   value `1`; other header values intentionally continue through the ordinary API
   route until a broader canary rule is proven.
 - The ledger states that rollback receipts are gate-local safety rather than Python parity.
-- Removing the public-gate header or route row is the reversible rollback for
-  the header-gated canary path.
+- `X-Form-Python-Fallback`, removing the default native route row, or restoring
+  the public Traefik api route is the reversible rollback path.
 - No-header public mutation behavior remains FastAPI while the canary gathers
   evidence.

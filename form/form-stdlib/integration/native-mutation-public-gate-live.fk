@@ -18,7 +18,7 @@
 ;   idea update audit-ledger readback         -> 1000
 ;   spec public gate runner readback         -> 10000
 ;   public-gate rollback receipts readback   -> 100000
-;   public gate contract keeps fanout default -> 1000000
+;   public gate contract keeps native default -> 1000000
 ;   drop fixture tables                      -> 10000000
 ;   close connection                         -> 100000000
 
@@ -177,8 +177,8 @@
     (let contract (nmpg-public-gate-contract-json))
     (let contract-ok (if (eq (nms-and4
         (if (eq (nms-contains? contract "X-Form-Native-Public-Gate") 1) 1 0)
-        (if (eq (nms-contains? contract "\"default_route\":\"fanout-python\"") 1) 1 0)
-        (if (eq (nms-contains? contract "\"ordinary_traffic_flip_performed\":false") 1) 1 0)
+        (if (eq (nms-contains? contract "\"default_route\":\"native-kernel\"") 1) 1 0)
+        (if (eq (nms-contains? contract "\"ordinary_traffic_flip_performed\":true") 1) 1 0)
         (if (eq (nms-contains? contract "idea valuation audit ledger") 1) 1 0)) 1) 1000000 0))
 
     (pg_exec conn "DROP TABLE IF EXISTS audit_ledger")

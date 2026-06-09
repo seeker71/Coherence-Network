@@ -209,8 +209,8 @@ defn native_mutation_side_effect_ledger() = {
                 "api/tests/test_native_mutation_public_gate.py"
             ],
             "keep as transitional public-gate safety; do not cite as domain parity",
-            "delete or narrow after deployed public-gate canary proves promotion path",
-            "receipt is reversible gating tissue; ordinary no-header traffic remains fanout"
+            "delete or narrow after native persistence has its own rollback carrier",
+            "receipt is reversible gating tissue; no-header kernel traffic is native-default and explicit fallback is signal"
         ),
         nmsl_entry(
             "idea-valuation-audit-ledger",
@@ -234,7 +234,7 @@ defn native_mutation_side_effect_ledger() = {
             ],
             "keep as Python parity for idea update route runners",
             "delete only if Python idea updates stop writing VALUATION_CHANGE audit-ledger entries",
-            "idea valuation audit-ledger parity is carried Form-native; ordinary no-header traffic still waits for deployed public-gate canary evidence"
+            "idea valuation audit-ledger parity is carried Form-native; public Traefik default waits for persistence-preserving native HTTP execution"
         ),
         nmsl_entry(
             "resonance-reattunement",
