@@ -59,6 +59,10 @@ then lift them into simpler generic Form/BML teachings. Hot paths are the first
 teachers: route timing, JIT hit/miss data, framebuffer traces, carrier-tissue
 reads, edge-category counts, wellness output, and source repetition shall pull
 work toward reusable blueprints, grammars, recipes, cells, and proof bands.
+When you author a stdlib recipe + band, read [`form/form-stdlib/AUTHORING.md`](../../form/form-stdlib/AUTHORING.md)
+first — the primitive set, the proof-band shape, the validate invocation, and the
+traps that diverge across kernels (chief among them: `and`/`or` are binary, never
+`(and a b c)`).
 
 Cell voice rule: before serving a doorway, page, API route, concept, edge,
 source file, or runtime cell, ask what it can declare about its soul, purpose,
