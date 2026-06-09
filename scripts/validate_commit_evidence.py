@@ -18,6 +18,7 @@ RUNTIME_PATH_PREFIXES = (
     "web/components/",
     "web/lib/",
     "form/",
+    "deploy/front-door/",
     "deploy/kernel-router/",
     "Dockerfile.kernel-router",
 )

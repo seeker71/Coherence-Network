@@ -116,3 +116,14 @@ def test_native_route_goal_loop_normalizes_web_health_proxy_to_upstream_route():
     assert source_effective == "web_api"
     assert summary["endpoints"][0]["endpoint"] == "/api/health"
     assert summary["endpoints"][0]["event_count"] == 1
+
+
+def test_native_route_goal_loop_sees_workspace_and_task_routes_as_bml():
+    native_routes = native_route_goal_loop.load_native_routes()
+
+    expected = ("kernel-native-high-grammar", "BML", True, True)
+    assert native_route_goal_loop.route_status("GET", "/api/workspaces", native_routes) == expected
+    assert native_route_goal_loop.route_status("GET", "/api/agent/tasks", native_routes) == expected
+    assert native_route_goal_loop.route_status("GET", "/api/tasks", native_routes) == expected
+    assert native_route_goal_loop.route_status("GET", "/api/agent/tasks/task_example", native_routes) == expected
+    assert native_route_goal_loop.route_status("POST", "/api/graph/edges", native_routes) == expected
