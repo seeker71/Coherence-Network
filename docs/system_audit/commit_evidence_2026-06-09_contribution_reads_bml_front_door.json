@@ -1,0 +1,137 @@
+{
+  "date": "2026-06-09",
+  "thread_branch": "codex/native-contribution-reads-20260609",
+  "commit_scope": "Move GET /api/contributors and GET /api/contributions from Python graph read fanout into BML front-door native read routes.",
+  "files_owned": [
+    "deploy/front-door/api.bml",
+    "deploy/hostinger/auto-deploy.sh",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "docs/system_audit/commit_evidence_2026-06-09_contribution_reads_bml_front_door.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/native_route_goal_state.json",
+    "scripts/verify_web_api_deploy.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/native_route_goal_loop.py /loop --source web_api --seconds 86400 --write-state",
+      "cd form/form-kernel-rust && cargo build --release",
+      "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_web_api_deploy.sh",
+      "VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -c 'source scripts/verify_web_api_deploy.sh https://api.example https://web.example'",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check",
+      "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --routes ../../deploy/front-door/api.bml --stdlib ../form-stdlib --host 127.0.0.1 --port 19186",
+      "curl -sS -D /tmp/contributors-19186.headers -o /tmp/contributors-19186.json 'http://127.0.0.1:19186/api/contributors?limit=5&offset=0' -H 'Accept: application/json'",
+      "curl -sS -D /tmp/contributions-19186.headers -o /tmp/contributions-19186.json 'http://127.0.0.1:19186/api/contributions?limit=5&offset=0' -H 'Accept: application/json'"
+    ],
+    "summary": "The BML front-door catalog now defines DB-backed api_contributors and api_contributions handlers plus exact RouteCell rows. The Hostinger Traefik overlay routes both public paths to kernel-router-bml-front-door, and deploy verification now requires native router, handler, python-authority, and paginated body proof.",
+    "observed_delta": {
+      "before_public_probe_contributors": "Production GET /api/contributors?limit=5&offset=0 returned HTTP 200 through the Python path with paginated body shape {items: array, total: 169, limit: 5, offset: 0}.",
+      "before_public_probe_contributions": "Production GET /api/contributions?limit=5&offset=0 returned HTTP 200 through the Python path with paginated empty body shape {items: [], total: 0, limit: 5, offset: 0}.",
+      "local_front_door_route_load": "form-kernel-rust serve loaded 45 native routes and listed GET /api/contributors and GET /api/contributions as native Form handlers.",
+      "local_front_door_probe": "Both local endpoints reached the native router and returned X-Form-Router:native-kernel; this worktree lacks a running local Postgres socket, so DB-backed handler bodies returned 503 database unavailable locally.",
+      "route_goal_state": "docs/system_audit/native_route_goal_state.json reports bml_routes=45, goal_native_share=0.946, and classifies /api/contributors and /api/contributions as kernel-native-high-grammar with handlers api_contributors and api_contributions."
+    },
+    "known_limitations": [
+      {
+        "scope": "catalog-wide check route command",
+        "observed": "form-kernel-rust check --routes deploy/front-door/api.bml still reports the same 14 unresolved full-catalog names on origin/main and on this branch. This release adds no new checker debt; focused serve proof validates route loading."
+      },
+      {
+        "scope": "local DB-backed proof",
+        "observed": "api/config/api.json points at a local Postgres socket in this worktree, and no local Postgres is running. Production deploy canary and public verification must prove DB-backed 2xx behavior after merge."
+      },
+      {
+        "scope": "GET /api/assets",
+        "observed": "The assets route remains Python fanout. Exact parity depends on Python uuid5(NAMESPACE_URL, 'coherencycoin.com/asset') semantics for slug-shaped assets; the next native release should add a Form/Rust UUID5/SHA1 helper instead of approximating the ID contract."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending push and PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com",
+      "curl -i 'https://api.coherencycoin.com/api/contributors?limit=5&offset=0'",
+      "curl -i 'https://api.coherencycoin.com/api/contributions?limit=5&offset=0'"
+    ],
+    "notes": "Post-merge deploy must show both public routes return X-Form-Router:native-kernel, the matching X-Form-Handler, X-Form-Python-Authority:false, and paginated bodies."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Public contribution registry reads are invited into the native BML front door by default instead of being served by FastAPI graph read handlers.",
+    "public_endpoints": [
+      "GET /api/contributors",
+      "GET /api/contributions"
+    ],
+    "test_flows": [
+      "Refresh native route goal state and confirm both paths are kernel-native-high-grammar.",
+      "Run the BML front-door router locally and confirm both paths dispatch through native route cells.",
+      "Require deploy/public verification to prove native headers and paginated body contracts against production DB."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local route proof is complete. PR checks, merge, deploy, and public verification remain before claiming public release."
+  },
+  "idea_ids": [
+    "contribution-ledger",
+    "native-route-goal"
+  ],
+  "spec_ids": [
+    "specs/002-agent-orchestration-api.md",
+    "specs/contribution-ledger.md"
+  ],
+  "task_ids": [
+    "contribution-reads-bml-front-door-20260609"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "deploy/front-door/api.bml::api_contributors",
+    "deploy/front-door/api.bml::api_contributions",
+    "deploy/front-door/api.bml::ContributorsIndexRoute",
+    "deploy/front-door/api.bml::ContributionsIndexRoute",
+    "deploy/kernel-router/docker-compose.kernel-router.yml::coherence-api-contributors",
+    "deploy/kernel-router/docker-compose.kernel-router.yml::coherence-api-contributions",
+    "scripts/verify_web_api_deploy.sh::check_contribution_reads_native",
+    "deploy/hostinger/auto-deploy.sh::BML front-door contribution read canary",
+    "docs/system_audit/native_route_goal_state.json"
+  ],
+  "change_files": [
+    "deploy/front-door/api.bml",
+    "deploy/hostinger/auto-deploy.sh",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "docs/system_audit/commit_evidence_2026-06-09_contribution_reads_bml_front_door.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/native_route_goal_state.json",
+    "scripts/verify_web_api_deploy.sh"
+  ],
+  "change_intent": "runtime_feature"
+}

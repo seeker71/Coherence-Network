@@ -5,15 +5,15 @@
     "proof": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk",
     "query": "form/form-stdlib/queries/native-route-goal-tending.fk"
   },
-  "generated_at": "2026-06-09T15:33:53.674462+00:00",
+  "generated_at": "2026-06-09T15:50:22.993058+00:00",
   "goal": "90% of web-used API method+path traffic served by kernel-native handlers written in BML or a route/domain grammar.",
-  "goal_native_events": 1868,
-  "goal_native_share": 0.934,
+  "goal_native_events": 1892,
+  "goal_native_share": 0.946,
   "measurement_source": "runtime_events",
-  "native_executable_events": 1868,
-  "native_executable_share": 0.934,
+  "native_executable_events": 1892,
+  "native_executable_share": 0.946,
   "native_route_sources": {
-    "bml_routes": 43,
+    "bml_routes": 45,
     "form_manifest_routes": 34
   },
   "next_action": "observe-next-route-window",
@@ -45,18 +45,18 @@
   "promotion_needed": [],
   "routes": [
     {
-      "average_runtime_ms": 244.4963,
+      "average_runtime_ms": 346.5828,
       "by_source": {
-        "web_api": 1430
+        "web_api": 1422
       },
-      "cumulative_traffic_share": 0.715,
+      "cumulative_traffic_share": 0.711,
       "current_grammar": "BML",
       "current_handler": "api_meetings_anonymous_trace_record",
       "current_required_header": "Accept",
       "current_source": "deploy/front-door/api.bml",
       "desired_grammar": "BML",
       "endpoint": "/api/meetings/anonymous-traces",
-      "event_count": 1430,
+      "event_count": 1422,
       "high_grammar_native": true,
       "method": "POST",
       "methods": [
@@ -64,22 +64,22 @@
       ],
       "native_executable": true,
       "status": "kernel-native-high-grammar",
-      "total_runtime_ms": 349629.6918,
-      "traffic_share": 0.715
+      "total_runtime_ms": 492840.7031,
+      "traffic_share": 0.711
     },
     {
-      "average_runtime_ms": 107.3422,
+      "average_runtime_ms": 122.8775,
       "by_source": {
-        "web_api": 345
+        "web_api": 369
       },
-      "cumulative_traffic_share": 0.8875,
+      "cumulative_traffic_share": 0.8955,
       "current_grammar": "BML",
       "current_handler": "api_household_events",
       "current_required_header": "Accept",
       "current_source": "deploy/front-door/api.bml",
       "desired_grammar": "BML",
       "endpoint": "/api/household/events",
-      "event_count": 345,
+      "event_count": 369,
       "high_grammar_native": true,
       "method": "GET",
       "methods": [
@@ -87,22 +87,22 @@
       ],
       "native_executable": true,
       "status": "kernel-native-high-grammar",
-      "total_runtime_ms": 37033.0617,
-      "traffic_share": 0.1725
+      "total_runtime_ms": 45341.7934,
+      "traffic_share": 0.1845
     },
     {
-      "average_runtime_ms": 362.2062,
+      "average_runtime_ms": 403.5956,
       "by_source": {
-        "web_api": 30
+        "web_api": 28
       },
-      "cumulative_traffic_share": 0.9025,
+      "cumulative_traffic_share": 0.9095,
       "current_grammar": "BML",
       "current_handler": "api_views_ping",
       "current_required_header": "Accept",
       "current_source": "deploy/front-door/api.bml",
       "desired_grammar": "BML",
       "endpoint": "/api/views/ping",
-      "event_count": 30,
+      "event_count": 28,
       "high_grammar_native": true,
       "method": "POST",
       "methods": [
@@ -110,22 +110,22 @@
       ],
       "native_executable": true,
       "status": "kernel-native-high-grammar",
-      "total_runtime_ms": 10866.1865,
-      "traffic_share": 0.015
+      "total_runtime_ms": 11300.6769,
+      "traffic_share": 0.014
     },
     {
-      "average_runtime_ms": 1679.3621,
+      "average_runtime_ms": 1522.151,
       "by_source": {
-        "web_api": 18
+        "web_api": 21
       },
-      "cumulative_traffic_share": 0.9115,
+      "cumulative_traffic_share": 0.92,
       "current_grammar": "BML",
       "current_handler": "api_health",
       "current_required_header": "Accept",
       "current_source": "deploy/front-door/api.bml",
       "desired_grammar": "BML",
       "endpoint": "/api/health",
-      "event_count": 18,
+      "event_count": 21,
       "high_grammar_native": true,
       "method": "GET",
       "methods": [
@@ -133,22 +133,22 @@
       ],
       "native_executable": true,
       "status": "kernel-native-high-grammar",
-      "total_runtime_ms": 30228.518,
-      "traffic_share": 0.009
+      "total_runtime_ms": 31965.1712,
+      "traffic_share": 0.0105
     },
     {
-      "average_runtime_ms": 502.6949,
+      "average_runtime_ms": 450.9997,
       "by_source": {
-        "web_api": 12
+        "web_api": 14
       },
-      "cumulative_traffic_share": 0.9175,
+      "cumulative_traffic_share": 0.927,
       "current_grammar": "BML",
       "current_handler": "api_workspaces",
       "current_required_header": "Accept",
       "current_source": "deploy/front-door/api.bml",
       "desired_grammar": "BML",
       "endpoint": "/api/workspaces",
-      "event_count": 12,
+      "event_count": 14,
       "high_grammar_native": true,
       "method": "GET",
       "methods": [
@@ -156,114 +156,22 @@
       ],
       "native_executable": true,
       "status": "kernel-native-high-grammar",
-      "total_runtime_ms": 6032.3393,
-      "traffic_share": 0.006
+      "total_runtime_ms": 6313.9961,
+      "traffic_share": 0.007
     },
     {
-      "average_runtime_ms": 8.3982,
+      "average_runtime_ms": 74.8234,
       "by_source": {
-        "web_api": 8
+        "web_api": 6
       },
-      "cumulative_traffic_share": 0.9215,
-      "current_grammar": "BML",
-      "current_handler": "api_edges",
-      "current_required_header": "Accept",
-      "current_source": "deploy/front-door/api.bml",
-      "desired_grammar": "BML",
-      "endpoint": "/api/edges",
-      "event_count": 8,
-      "high_grammar_native": true,
-      "method": "GET",
-      "methods": [
-        "GET"
-      ],
-      "native_executable": true,
-      "status": "kernel-native-high-grammar",
-      "total_runtime_ms": 67.1856,
-      "traffic_share": 0.004
-    },
-    {
-      "average_runtime_ms": 834.1592,
-      "by_source": {
-        "web_api": 4
-      },
-      "cumulative_traffic_share": 0.9235,
-      "current_grammar": "BML",
-      "current_handler": "api_coherence_score",
-      "current_required_header": "Accept",
-      "current_source": "deploy/front-door/api.bml",
-      "desired_grammar": "BML",
-      "endpoint": "/api/coherence/score",
-      "event_count": 4,
-      "high_grammar_native": true,
-      "method": "GET",
-      "methods": [
-        "GET"
-      ],
-      "native_executable": true,
-      "status": "kernel-native-high-grammar",
-      "total_runtime_ms": 3336.6366,
-      "traffic_share": 0.002
-    },
-    {
-      "average_runtime_ms": 249.4787,
-      "by_source": {
-        "web_api": 4
-      },
-      "cumulative_traffic_share": 0.9255,
-      "current_grammar": "",
-      "current_handler": "",
-      "current_required_header": "",
-      "current_source": "",
-      "desired_grammar": "BML route catalog",
-      "endpoint": "/api/contributors",
-      "event_count": 4,
-      "high_grammar_native": false,
-      "method": "GET",
-      "methods": [
-        "GET"
-      ],
-      "native_executable": false,
-      "status": "python-fanout",
-      "total_runtime_ms": 997.915,
-      "traffic_share": 0.002
-    },
-    {
-      "average_runtime_ms": 74.0352,
-      "by_source": {
-        "web_api": 4
-      },
-      "cumulative_traffic_share": 0.9275,
-      "current_grammar": "",
-      "current_handler": "",
-      "current_required_header": "",
-      "current_source": "",
-      "desired_grammar": "BML route catalog",
-      "endpoint": "/api/contributions",
-      "event_count": 4,
-      "high_grammar_native": false,
-      "method": "GET",
-      "methods": [
-        "GET"
-      ],
-      "native_executable": false,
-      "status": "python-fanout",
-      "total_runtime_ms": 296.1409,
-      "traffic_share": 0.002
-    },
-    {
-      "average_runtime_ms": 73.2659,
-      "by_source": {
-        "web_api": 4
-      },
-      "cumulative_traffic_share": 0.9295,
+      "cumulative_traffic_share": 0.93,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
       "current_source": "",
       "desired_grammar": "BML route catalog",
       "endpoint": "/api/assets",
-      "event_count": 4,
+      "event_count": 6,
       "high_grammar_native": false,
       "method": "GET",
       "methods": [
@@ -271,21 +179,136 @@
       ],
       "native_executable": false,
       "status": "python-fanout",
-      "total_runtime_ms": 293.0634,
-      "traffic_share": 0.002
+      "total_runtime_ms": 448.9407,
+      "traffic_share": 0.003
     },
     {
-      "average_runtime_ms": 35.2553,
+      "average_runtime_ms": 7.6343,
       "by_source": {
-        "web_api": 4
+        "web_api": 6
       },
-      "cumulative_traffic_share": 0.9315,
+      "cumulative_traffic_share": 0.933,
+      "current_grammar": "BML",
+      "current_handler": "api_edges",
+      "current_required_header": "Accept",
+      "current_source": "deploy/front-door/api.bml",
+      "desired_grammar": "BML",
+      "endpoint": "/api/edges",
+      "event_count": 6,
+      "high_grammar_native": true,
+      "method": "GET",
+      "methods": [
+        "GET"
+      ],
+      "native_executable": true,
+      "status": "kernel-native-high-grammar",
+      "total_runtime_ms": 45.8059,
+      "traffic_share": 0.003
+    },
+    {
+      "average_runtime_ms": 779.7163,
+      "by_source": {
+        "web_api": 5
+      },
+      "cumulative_traffic_share": 0.9355,
+      "current_grammar": "BML",
+      "current_handler": "api_coherence_score",
+      "current_required_header": "Accept",
+      "current_source": "deploy/front-door/api.bml",
+      "desired_grammar": "BML",
+      "endpoint": "/api/coherence/score",
+      "event_count": 5,
+      "high_grammar_native": true,
+      "method": "GET",
+      "methods": [
+        "GET"
+      ],
+      "native_executable": true,
+      "status": "kernel-native-high-grammar",
+      "total_runtime_ms": 3898.5817,
+      "traffic_share": 0.0025
+    },
+    {
+      "average_runtime_ms": 277.2101,
+      "by_source": {
+        "web_api": 5
+      },
+      "cumulative_traffic_share": 0.938,
+      "current_grammar": "BML",
+      "current_handler": "api_contributors",
+      "current_required_header": "Accept",
+      "current_source": "deploy/front-door/api.bml",
+      "desired_grammar": "BML",
+      "endpoint": "/api/contributors",
+      "event_count": 5,
+      "high_grammar_native": true,
+      "method": "GET",
+      "methods": [
+        "GET"
+      ],
+      "native_executable": true,
+      "status": "kernel-native-high-grammar",
+      "total_runtime_ms": 1386.0507,
+      "traffic_share": 0.0025
+    },
+    {
+      "average_runtime_ms": 88.8925,
+      "by_source": {
+        "web_api": 5
+      },
+      "cumulative_traffic_share": 0.9405,
+      "current_grammar": "BML",
+      "current_handler": "api_contributions",
+      "current_required_header": "Accept",
+      "current_source": "deploy/front-door/api.bml",
+      "desired_grammar": "BML",
+      "endpoint": "/api/contributions",
+      "event_count": 5,
+      "high_grammar_native": true,
+      "method": "GET",
+      "methods": [
+        "GET"
+      ],
+      "native_executable": true,
+      "status": "kernel-native-high-grammar",
+      "total_runtime_ms": 444.4626,
+      "traffic_share": 0.0025
+    },
+    {
+      "average_runtime_ms": 48.1357,
+      "by_source": {
+        "web_api": 5
+      },
+      "cumulative_traffic_share": 0.943,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
       "current_source": "",
       "desired_grammar": "BML route catalog",
       "endpoint": "/api/translations/page/contributions",
+      "event_count": 5,
+      "high_grammar_native": false,
+      "method": "GET",
+      "methods": [
+        "GET"
+      ],
+      "native_executable": false,
+      "status": "python-fanout",
+      "total_runtime_ms": 240.6786,
+      "traffic_share": 0.0025
+    },
+    {
+      "average_runtime_ms": 1522.9151,
+      "by_source": {
+        "web_api": 4
+      },
+      "cumulative_traffic_share": 0.945,
+      "current_grammar": "",
+      "current_handler": "",
+      "current_required_header": "",
+      "current_source": "",
+      "desired_grammar": "BML route catalog",
+      "endpoint": "/api/translations/page/flow",
       "event_count": 4,
       "high_grammar_native": false,
       "method": "GET",
@@ -294,38 +317,15 @@
       ],
       "native_executable": false,
       "status": "python-fanout",
-      "total_runtime_ms": 141.0214,
+      "total_runtime_ms": 6091.6605,
       "traffic_share": 0.002
-    },
-    {
-      "average_runtime_ms": 1854.9728,
-      "by_source": {
-        "web_api": 3
-      },
-      "cumulative_traffic_share": 0.933,
-      "current_grammar": "",
-      "current_handler": "",
-      "current_required_header": "",
-      "current_source": "",
-      "desired_grammar": "BML route catalog",
-      "endpoint": "/api/translations/page/flow",
-      "event_count": 3,
-      "high_grammar_native": false,
-      "method": "GET",
-      "methods": [
-        "GET"
-      ],
-      "native_executable": false,
-      "status": "python-fanout",
-      "total_runtime_ms": 5564.9183,
-      "traffic_share": 0.0015
     },
     {
       "average_runtime_ms": 27.5313,
       "by_source": {
         "web_api": 3
       },
-      "cumulative_traffic_share": 0.9345,
+      "cumulative_traffic_share": 0.9465,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -348,7 +348,7 @@
       "by_source": {
         "web_api": 2
       },
-      "cumulative_traffic_share": 0.9355,
+      "cumulative_traffic_share": 0.9475,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -367,57 +367,11 @@
       "traffic_share": 0.001
     },
     {
-      "average_runtime_ms": 24.6478,
-      "by_source": {
-        "web_api": 2
-      },
-      "cumulative_traffic_share": 0.9365,
-      "current_grammar": "",
-      "current_handler": "",
-      "current_required_header": "",
-      "current_source": "",
-      "desired_grammar": "BML route catalog",
-      "endpoint": "/api/presences/asset:c6f8cf6993a4d85a/resonances",
-      "event_count": 2,
-      "high_grammar_native": false,
-      "method": "GET",
-      "methods": [
-        "GET"
-      ],
-      "native_executable": false,
-      "status": "python-fanout",
-      "total_runtime_ms": 49.2956,
-      "traffic_share": 0.001
-    },
-    {
-      "average_runtime_ms": 21.4579,
-      "by_source": {
-        "web_api": 2
-      },
-      "cumulative_traffic_share": 0.9375,
-      "current_grammar": "",
-      "current_handler": "",
-      "current_required_header": "",
-      "current_source": "",
-      "desired_grammar": "BML route catalog",
-      "endpoint": "/api/concepts/lc-transmission/carried-by",
-      "event_count": 2,
-      "high_grammar_native": false,
-      "method": "GET",
-      "methods": [
-        "GET"
-      ],
-      "native_executable": false,
-      "status": "python-fanout",
-      "total_runtime_ms": 42.9159,
-      "traffic_share": 0.001
-    },
-    {
       "average_runtime_ms": 16.474,
       "by_source": {
         "web_api": 2
       },
-      "cumulative_traffic_share": 0.9385,
+      "cumulative_traffic_share": 0.9485,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -440,7 +394,7 @@
       "by_source": {
         "web_api": 2
       },
-      "cumulative_traffic_share": 0.9395,
+      "cumulative_traffic_share": 0.9495,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -463,7 +417,7 @@
       "by_source": {
         "web_api": 2
       },
-      "cumulative_traffic_share": 0.9405,
+      "cumulative_traffic_share": 0.9505,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -486,7 +440,7 @@
       "by_source": {
         "web_api": 2
       },
-      "cumulative_traffic_share": 0.9415,
+      "cumulative_traffic_share": 0.9515,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -509,7 +463,7 @@
       "by_source": {
         "web_api": 2
       },
-      "cumulative_traffic_share": 0.9425,
+      "cumulative_traffic_share": 0.9525,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -532,7 +486,7 @@
       "by_source": {
         "web_api": 2
       },
-      "cumulative_traffic_share": 0.9435,
+      "cumulative_traffic_share": 0.9535,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -555,7 +509,7 @@
       "by_source": {
         "web_api": 2
       },
-      "cumulative_traffic_share": 0.9445,
+      "cumulative_traffic_share": 0.9545,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -578,7 +532,7 @@
       "by_source": {
         "web_api": 2
       },
-      "cumulative_traffic_share": 0.9455,
+      "cumulative_traffic_share": 0.9555,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -597,49 +551,26 @@
       "traffic_share": 0.001
     },
     {
-      "average_runtime_ms": 4.2809,
+      "average_runtime_ms": 5.0909,
       "by_source": {
         "web_api": 2
       },
-      "cumulative_traffic_share": 0.9465,
-      "current_grammar": "BML",
-      "current_handler": "api_field_story_trace",
-      "current_required_header": "Accept",
-      "current_source": "deploy/front-door/api.bml",
-      "desired_grammar": "BML",
-      "endpoint": "/api/field-stories/urs-field-story/trace/author/Liquid Bloom - Topic",
+      "cumulative_traffic_share": 0.9565,
+      "current_grammar": "",
+      "current_handler": "",
+      "current_required_header": "",
+      "current_source": "",
+      "desired_grammar": "BML route catalog",
+      "endpoint": "/api/translations/page/home",
       "event_count": 2,
-      "high_grammar_native": true,
+      "high_grammar_native": false,
       "method": "GET",
       "methods": [
         "GET"
       ],
-      "native_executable": true,
-      "status": "kernel-native-high-grammar",
-      "total_runtime_ms": 8.5618,
-      "traffic_share": 0.001
-    },
-    {
-      "average_runtime_ms": 2.7484,
-      "by_source": {
-        "web_api": 2
-      },
-      "cumulative_traffic_share": 0.9475,
-      "current_grammar": "BML",
-      "current_handler": "api_field_story_trace",
-      "current_required_header": "Accept",
-      "current_source": "deploy/front-door/api.bml",
-      "desired_grammar": "BML",
-      "endpoint": "/api/field-stories/urs-field-story/trace/author/Mose - Topic",
-      "event_count": 2,
-      "high_grammar_native": true,
-      "method": "GET",
-      "methods": [
-        "GET"
-      ],
-      "native_executable": true,
-      "status": "kernel-native-high-grammar",
-      "total_runtime_ms": 5.4968,
+      "native_executable": false,
+      "status": "python-fanout",
+      "total_runtime_ms": 10.1818,
       "traffic_share": 0.001
     },
     {
@@ -647,7 +578,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.948,
+      "cumulative_traffic_share": 0.957,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -670,7 +601,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9485,
+      "cumulative_traffic_share": 0.9575,
       "current_grammar": "BML",
       "current_handler": "api_agent_task",
       "current_required_header": "Accept",
@@ -689,34 +620,11 @@
       "traffic_share": 0.0005
     },
     {
-      "average_runtime_ms": 198.6216,
-      "by_source": {
-        "web_api": 1
-      },
-      "cumulative_traffic_share": 0.949,
-      "current_grammar": "",
-      "current_handler": "",
-      "current_required_header": "",
-      "current_source": "",
-      "desired_grammar": "BML route catalog",
-      "endpoint": "/api/concepts/lc-pulse/carried-by",
-      "event_count": 1,
-      "high_grammar_native": false,
-      "method": "GET",
-      "methods": [
-        "GET"
-      ],
-      "native_executable": false,
-      "status": "python-fanout",
-      "total_runtime_ms": 198.6216,
-      "traffic_share": 0.0005
-    },
-    {
       "average_runtime_ms": 190.1987,
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9495,
+      "cumulative_traffic_share": 0.958,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -739,7 +647,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.95,
+      "cumulative_traffic_share": 0.9585,
       "current_grammar": "BML",
       "current_handler": "api_ideas",
       "current_required_header": "Accept",
@@ -762,7 +670,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9505,
+      "cumulative_traffic_share": 0.959,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -785,7 +693,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.951,
+      "cumulative_traffic_share": 0.9595,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -804,34 +712,11 @@
       "traffic_share": 0.0005
     },
     {
-      "average_runtime_ms": 84.7147,
-      "by_source": {
-        "web_api": 1
-      },
-      "cumulative_traffic_share": 0.9515,
-      "current_grammar": "",
-      "current_handler": "",
-      "current_required_header": "",
-      "current_source": "",
-      "desired_grammar": "BML route catalog",
-      "endpoint": "/api/concepts/lc-v-living-spaces/carried-by",
-      "event_count": 1,
-      "high_grammar_native": false,
-      "method": "GET",
-      "methods": [
-        "GET"
-      ],
-      "native_executable": false,
-      "status": "python-fanout",
-      "total_runtime_ms": 84.7147,
-      "traffic_share": 0.0005
-    },
-    {
       "average_runtime_ms": 80.1317,
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.952,
+      "cumulative_traffic_share": 0.96,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -850,34 +735,11 @@
       "traffic_share": 0.0005
     },
     {
-      "average_runtime_ms": 71.2153,
-      "by_source": {
-        "web_api": 1
-      },
-      "cumulative_traffic_share": 0.9525,
-      "current_grammar": "",
-      "current_handler": "",
-      "current_required_header": "",
-      "current_source": "",
-      "desired_grammar": "BML route catalog",
-      "endpoint": "/api/concepts/lc-play/carried-by",
-      "event_count": 1,
-      "high_grammar_native": false,
-      "method": "GET",
-      "methods": [
-        "GET"
-      ],
-      "native_executable": false,
-      "status": "python-fanout",
-      "total_runtime_ms": 71.2153,
-      "traffic_share": 0.0005
-    },
-    {
       "average_runtime_ms": 65.4393,
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.953,
+      "cumulative_traffic_share": 0.9605,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -900,7 +762,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9535,
+      "cumulative_traffic_share": 0.961,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -919,34 +781,11 @@
       "traffic_share": 0.0005
     },
     {
-      "average_runtime_ms": 61.247,
-      "by_source": {
-        "web_api": 1
-      },
-      "cumulative_traffic_share": 0.954,
-      "current_grammar": "",
-      "current_handler": "",
-      "current_required_header": "",
-      "current_source": "",
-      "desired_grammar": "BML route catalog",
-      "endpoint": "/api/concepts/lc-open-design/carried-by",
-      "event_count": 1,
-      "high_grammar_native": false,
-      "method": "GET",
-      "methods": [
-        "GET"
-      ],
-      "native_executable": false,
-      "status": "python-fanout",
-      "total_runtime_ms": 61.247,
-      "traffic_share": 0.0005
-    },
-    {
       "average_runtime_ms": 59.1995,
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9545,
+      "cumulative_traffic_share": 0.9615,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -969,7 +808,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.955,
+      "cumulative_traffic_share": 0.962,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -992,7 +831,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9555,
+      "cumulative_traffic_share": 0.9625,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -1015,7 +854,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.956,
+      "cumulative_traffic_share": 0.963,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -1038,7 +877,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9565,
+      "cumulative_traffic_share": 0.9635,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -1061,7 +900,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.957,
+      "cumulative_traffic_share": 0.964,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -1080,34 +919,11 @@
       "traffic_share": 0.0005
     },
     {
-      "average_runtime_ms": 49.1091,
-      "by_source": {
-        "web_api": 1
-      },
-      "cumulative_traffic_share": 0.9575,
-      "current_grammar": "",
-      "current_handler": "",
-      "current_required_header": "",
-      "current_source": "",
-      "desired_grammar": "BML route catalog",
-      "endpoint": "/api/concepts/lc-resonating/carried-by",
-      "event_count": 1,
-      "high_grammar_native": false,
-      "method": "GET",
-      "methods": [
-        "GET"
-      ],
-      "native_executable": false,
-      "status": "python-fanout",
-      "total_runtime_ms": 49.1091,
-      "traffic_share": 0.0005
-    },
-    {
       "average_runtime_ms": 41.655,
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.958,
+      "cumulative_traffic_share": 0.9645,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -1126,34 +942,11 @@
       "traffic_share": 0.0005
     },
     {
-      "average_runtime_ms": 40.5596,
-      "by_source": {
-        "web_api": 1
-      },
-      "cumulative_traffic_share": 0.9585,
-      "current_grammar": "",
-      "current_handler": "",
-      "current_required_header": "",
-      "current_source": "",
-      "desired_grammar": "BML route catalog",
-      "endpoint": "/api/concepts/lc-v-shelter-organism/carried-by",
-      "event_count": 1,
-      "high_grammar_native": false,
-      "method": "GET",
-      "methods": [
-        "GET"
-      ],
-      "native_executable": false,
-      "status": "python-fanout",
-      "total_runtime_ms": 40.5596,
-      "traffic_share": 0.0005
-    },
-    {
       "average_runtime_ms": 34.671,
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.959,
+      "cumulative_traffic_share": 0.965,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -1176,7 +969,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9595,
+      "cumulative_traffic_share": 0.9655,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -1199,7 +992,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.96,
+      "cumulative_traffic_share": 0.966,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -1222,7 +1015,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9605,
+      "cumulative_traffic_share": 0.9665,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -1241,34 +1034,11 @@
       "traffic_share": 0.0005
     },
     {
-      "average_runtime_ms": 31.2241,
-      "by_source": {
-        "web_api": 1
-      },
-      "cumulative_traffic_share": 0.961,
-      "current_grammar": "",
-      "current_handler": "",
-      "current_required_header": "",
-      "current_source": "",
-      "desired_grammar": "BML route catalog",
-      "endpoint": "/api/concepts/lc-v-food-practice/carried-by",
-      "event_count": 1,
-      "high_grammar_native": false,
-      "method": "GET",
-      "methods": [
-        "GET"
-      ],
-      "native_executable": false,
-      "status": "python-fanout",
-      "total_runtime_ms": 31.2241,
-      "traffic_share": 0.0005
-    },
-    {
       "average_runtime_ms": 30.2305,
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9615,
+      "cumulative_traffic_share": 0.967,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -1291,7 +1061,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.962,
+      "cumulative_traffic_share": 0.9675,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -1314,7 +1084,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9625,
+      "cumulative_traffic_share": 0.968,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -1337,7 +1107,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.963,
+      "cumulative_traffic_share": 0.9685,
       "current_grammar": "BML",
       "current_handler": "api_field_story_trace",
       "current_required_header": "Accept",
@@ -1360,7 +1130,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9635,
+      "cumulative_traffic_share": 0.969,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -1383,7 +1153,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.964,
+      "cumulative_traffic_share": 0.9695,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -1406,7 +1176,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9645,
+      "cumulative_traffic_share": 0.97,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -1429,7 +1199,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.965,
+      "cumulative_traffic_share": 0.9705,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -1448,34 +1218,11 @@
       "traffic_share": 0.0005
     },
     {
-      "average_runtime_ms": 21.7701,
-      "by_source": {
-        "web_api": 1
-      },
-      "cumulative_traffic_share": 0.9655,
-      "current_grammar": "",
-      "current_handler": "",
-      "current_required_header": "",
-      "current_source": "",
-      "desired_grammar": "BML route catalog",
-      "endpoint": "/api/contributors/64be49a6-2d2a-42a4-870d-4c48077cc753/portfolio",
-      "event_count": 1,
-      "high_grammar_native": false,
-      "method": "GET",
-      "methods": [
-        "GET"
-      ],
-      "native_executable": false,
-      "status": "python-fanout",
-      "total_runtime_ms": 21.7701,
-      "traffic_share": 0.0005
-    },
-    {
       "average_runtime_ms": 21.4845,
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.966,
+      "cumulative_traffic_share": 0.971,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -1494,17 +1241,17 @@
       "traffic_share": 0.0005
     },
     {
-      "average_runtime_ms": 20.7303,
+      "average_runtime_ms": 18.8344,
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9665,
+      "cumulative_traffic_share": 0.9715,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
       "current_source": "",
       "desired_grammar": "BML route catalog",
-      "endpoint": "/api/contributors/64be49a6-2d2a-42a4-870d-4c48077cc753/tasks",
+      "endpoint": "/api/concepts/lc-transmission/carried-by",
       "event_count": 1,
       "high_grammar_native": false,
       "method": "GET",
@@ -1513,76 +1260,7 @@
       ],
       "native_executable": false,
       "status": "python-fanout",
-      "total_runtime_ms": 20.7303,
-      "traffic_share": 0.0005
-    },
-    {
-      "average_runtime_ms": 20.4829,
-      "by_source": {
-        "web_api": 1
-      },
-      "cumulative_traffic_share": 0.967,
-      "current_grammar": "",
-      "current_handler": "",
-      "current_required_header": "",
-      "current_source": "",
-      "desired_grammar": "BML route catalog",
-      "endpoint": "/api/contributors/64be49a6-2d2a-42a4-870d-4c48077cc753/cc-history",
-      "event_count": 1,
-      "high_grammar_native": false,
-      "method": "GET",
-      "methods": [
-        "GET"
-      ],
-      "native_executable": false,
-      "status": "python-fanout",
-      "total_runtime_ms": 20.4829,
-      "traffic_share": 0.0005
-    },
-    {
-      "average_runtime_ms": 20.0059,
-      "by_source": {
-        "web_api": 1
-      },
-      "cumulative_traffic_share": 0.9675,
-      "current_grammar": "",
-      "current_handler": "",
-      "current_required_header": "",
-      "current_source": "",
-      "desired_grammar": "BML route catalog",
-      "endpoint": "/api/contributors/64be49a6-2d2a-42a4-870d-4c48077cc753/idea-contributions",
-      "event_count": 1,
-      "high_grammar_native": false,
-      "method": "GET",
-      "methods": [
-        "GET"
-      ],
-      "native_executable": false,
-      "status": "python-fanout",
-      "total_runtime_ms": 20.0059,
-      "traffic_share": 0.0005
-    },
-    {
-      "average_runtime_ms": 18.8039,
-      "by_source": {
-        "web_api": 1
-      },
-      "cumulative_traffic_share": 0.968,
-      "current_grammar": "",
-      "current_handler": "",
-      "current_required_header": "",
-      "current_source": "",
-      "desired_grammar": "BML route catalog",
-      "endpoint": "/api/contributors/64be49a6-2d2a-42a4-870d-4c48077cc753/stakes",
-      "event_count": 1,
-      "high_grammar_native": false,
-      "method": "GET",
-      "methods": [
-        "GET"
-      ],
-      "native_executable": false,
-      "status": "python-fanout",
-      "total_runtime_ms": 18.8039,
+      "total_runtime_ms": 18.8344,
       "traffic_share": 0.0005
     },
     {
@@ -1590,7 +1268,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9685,
+      "cumulative_traffic_share": 0.972,
       "current_grammar": "BML",
       "current_handler": "api_agent_tasks",
       "current_required_header": "Accept",
@@ -1613,7 +1291,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.969,
+      "cumulative_traffic_share": 0.9725,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -1636,7 +1314,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9695,
+      "cumulative_traffic_share": 0.973,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -1659,7 +1337,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.97,
+      "cumulative_traffic_share": 0.9735,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -1682,7 +1360,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9705,
+      "cumulative_traffic_share": 0.974,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -1705,7 +1383,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.971,
+      "cumulative_traffic_share": 0.9745,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -1728,7 +1406,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9715,
+      "cumulative_traffic_share": 0.975,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -1747,34 +1425,11 @@
       "traffic_share": 0.0005
     },
     {
-      "average_runtime_ms": 12.3385,
-      "by_source": {
-        "web_api": 1
-      },
-      "cumulative_traffic_share": 0.972,
-      "current_grammar": "",
-      "current_handler": "",
-      "current_required_header": "",
-      "current_source": "",
-      "desired_grammar": "BML route catalog",
-      "endpoint": "/api/graph/nodes/asset:c6f8cf6993a4d85a/edges",
-      "event_count": 1,
-      "high_grammar_native": false,
-      "method": "GET",
-      "methods": [
-        "GET"
-      ],
-      "native_executable": false,
-      "status": "python-fanout",
-      "total_runtime_ms": 12.3385,
-      "traffic_share": 0.0005
-    },
-    {
       "average_runtime_ms": 12.1056,
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9725,
+      "cumulative_traffic_share": 0.9755,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -1797,7 +1452,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.973,
+      "cumulative_traffic_share": 0.976,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -1820,7 +1475,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9735,
+      "cumulative_traffic_share": 0.9765,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -1843,7 +1498,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.974,
+      "cumulative_traffic_share": 0.977,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -1866,7 +1521,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9745,
+      "cumulative_traffic_share": 0.9775,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -1889,7 +1544,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.975,
+      "cumulative_traffic_share": 0.978,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -1912,7 +1567,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9755,
+      "cumulative_traffic_share": 0.9785,
       "current_grammar": "BML",
       "current_handler": "api_agent_task",
       "current_required_header": "Accept",
@@ -1935,7 +1590,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.976,
+      "cumulative_traffic_share": 0.979,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -1954,34 +1609,11 @@
       "traffic_share": 0.0005
     },
     {
-      "average_runtime_ms": 9.2342,
-      "by_source": {
-        "web_api": 1
-      },
-      "cumulative_traffic_share": 0.9765,
-      "current_grammar": "",
-      "current_handler": "",
-      "current_required_header": "",
-      "current_source": "",
-      "desired_grammar": "BML route catalog",
-      "endpoint": "/api/translations/page/nodes-asset:52d293b752836662",
-      "event_count": 1,
-      "high_grammar_native": false,
-      "method": "GET",
-      "methods": [
-        "GET"
-      ],
-      "native_executable": false,
-      "status": "python-fanout",
-      "total_runtime_ms": 9.2342,
-      "traffic_share": 0.0005
-    },
-    {
       "average_runtime_ms": 8.9302,
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.977,
+      "cumulative_traffic_share": 0.9795,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -2004,7 +1636,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9775,
+      "cumulative_traffic_share": 0.98,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -2027,7 +1659,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.978,
+      "cumulative_traffic_share": 0.9805,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -2046,34 +1678,11 @@
       "traffic_share": 0.0005
     },
     {
-      "average_runtime_ms": 8.4027,
-      "by_source": {
-        "web_api": 1
-      },
-      "cumulative_traffic_share": 0.9785,
-      "current_grammar": "BML",
-      "current_handler": "api_agent_task",
-      "current_required_header": "Accept",
-      "current_source": "deploy/front-door/api.bml",
-      "desired_grammar": "BML",
-      "endpoint": "/api/agent/tasks/task_2480d0e026cba9b7",
-      "event_count": 1,
-      "high_grammar_native": true,
-      "method": "GET",
-      "methods": [
-        "GET"
-      ],
-      "native_executable": true,
-      "status": "kernel-native-high-grammar",
-      "total_runtime_ms": 8.4027,
-      "traffic_share": 0.0005
-    },
-    {
       "average_runtime_ms": 8.3663,
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.979,
+      "cumulative_traffic_share": 0.981,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -2096,7 +1705,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9795,
+      "cumulative_traffic_share": 0.9815,
       "current_grammar": "BML",
       "current_handler": "api_agent_task",
       "current_required_header": "Accept",
@@ -2119,7 +1728,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.98,
+      "cumulative_traffic_share": 0.982,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -2142,7 +1751,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9805,
+      "cumulative_traffic_share": 0.9825,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -2165,7 +1774,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.981,
+      "cumulative_traffic_share": 0.983,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -2188,7 +1797,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9815,
+      "cumulative_traffic_share": 0.9835,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -2211,7 +1820,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.982,
+      "cumulative_traffic_share": 0.984,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -2234,7 +1843,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9825,
+      "cumulative_traffic_share": 0.9845,
       "current_grammar": "BML",
       "current_handler": "api_agent_tasks_active",
       "current_required_header": "Accept",
@@ -2253,34 +1862,11 @@
       "traffic_share": 0.0005
     },
     {
-      "average_runtime_ms": 7.3742,
-      "by_source": {
-        "web_api": 1
-      },
-      "cumulative_traffic_share": 0.983,
-      "current_grammar": "",
-      "current_handler": "",
-      "current_required_header": "",
-      "current_source": "",
-      "desired_grammar": "BML route catalog",
-      "endpoint": "/api/presences/asset:c6f8cf6993a4d85a/places",
-      "event_count": 1,
-      "high_grammar_native": false,
-      "method": "GET",
-      "methods": [
-        "GET"
-      ],
-      "native_executable": false,
-      "status": "python-fanout",
-      "total_runtime_ms": 7.3742,
-      "traffic_share": 0.0005
-    },
-    {
       "average_runtime_ms": 7.2963,
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9835,
+      "cumulative_traffic_share": 0.985,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -2303,7 +1889,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.984,
+      "cumulative_traffic_share": 0.9855,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -2326,7 +1912,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9845,
+      "cumulative_traffic_share": 0.986,
       "current_grammar": "BML",
       "current_handler": "api_agent_task",
       "current_required_header": "Accept",
@@ -2349,7 +1935,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.985,
+      "cumulative_traffic_share": 0.9865,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -2372,7 +1958,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9855,
+      "cumulative_traffic_share": 0.987,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -2391,34 +1977,11 @@
       "traffic_share": 0.0005
     },
     {
-      "average_runtime_ms": 6.3136,
-      "by_source": {
-        "web_api": 1
-      },
-      "cumulative_traffic_share": 0.986,
-      "current_grammar": "",
-      "current_handler": "",
-      "current_required_header": "",
-      "current_source": "",
-      "desired_grammar": "agent task grammar",
-      "endpoint": "/api/agent/tasks/task_2480d0e026cba9b7/log",
-      "event_count": 1,
-      "high_grammar_native": false,
-      "method": "GET",
-      "methods": [
-        "GET"
-      ],
-      "native_executable": false,
-      "status": "python-fanout",
-      "total_runtime_ms": 6.3136,
-      "traffic_share": 0.0005
-    },
-    {
       "average_runtime_ms": 6.3034,
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9865,
+      "cumulative_traffic_share": 0.9875,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -2441,7 +2004,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.987,
+      "cumulative_traffic_share": 0.988,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -2464,7 +2027,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9875,
+      "cumulative_traffic_share": 0.9885,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -2487,7 +2050,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.988,
+      "cumulative_traffic_share": 0.989,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -2510,7 +2073,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9885,
+      "cumulative_traffic_share": 0.9895,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -2533,7 +2096,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.989,
+      "cumulative_traffic_share": 0.99,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -2552,34 +2115,11 @@
       "traffic_share": 0.0005
     },
     {
-      "average_runtime_ms": 5.5587,
-      "by_source": {
-        "web_api": 1
-      },
-      "cumulative_traffic_share": 0.9895,
-      "current_grammar": "",
-      "current_handler": "",
-      "current_required_header": "",
-      "current_source": "",
-      "desired_grammar": "agent task grammar",
-      "endpoint": "/api/agent/tasks/task_647b9e3cae432291/log",
-      "event_count": 1,
-      "high_grammar_native": false,
-      "method": "GET",
-      "methods": [
-        "GET"
-      ],
-      "native_executable": false,
-      "status": "python-fanout",
-      "total_runtime_ms": 5.5587,
-      "traffic_share": 0.0005
-    },
-    {
       "average_runtime_ms": 5.2289,
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.99,
+      "cumulative_traffic_share": 0.9905,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -2602,7 +2142,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9905,
+      "cumulative_traffic_share": 0.991,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -2625,7 +2165,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.991,
+      "cumulative_traffic_share": 0.9915,
       "current_grammar": "BML",
       "current_handler": "api_agent_task",
       "current_required_header": "Accept",
@@ -2648,7 +2188,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9915,
+      "cumulative_traffic_share": 0.992,
       "current_grammar": "BML",
       "current_handler": "api_agent_task",
       "current_required_header": "Accept",
@@ -2671,7 +2211,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.992,
+      "cumulative_traffic_share": 0.9925,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -2694,7 +2234,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9925,
+      "cumulative_traffic_share": 0.993,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -2717,7 +2257,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.993,
+      "cumulative_traffic_share": 0.9935,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -2740,7 +2280,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9935,
+      "cumulative_traffic_share": 0.994,
       "current_grammar": "BML",
       "current_handler": "api_agent_task",
       "current_required_header": "Accept",
@@ -2763,7 +2303,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.994,
+      "cumulative_traffic_share": 0.9945,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -2779,29 +2319,6 @@
       "native_executable": false,
       "status": "python-fanout",
       "total_runtime_ms": 4.7124,
-      "traffic_share": 0.0005
-    },
-    {
-      "average_runtime_ms": 4.6743,
-      "by_source": {
-        "web_api": 1
-      },
-      "cumulative_traffic_share": 0.9945,
-      "current_grammar": "",
-      "current_handler": "",
-      "current_required_header": "",
-      "current_source": "",
-      "desired_grammar": "BML route catalog",
-      "endpoint": "/api/translations/page/home",
-      "event_count": 1,
-      "high_grammar_native": false,
-      "method": "GET",
-      "methods": [
-        "GET"
-      ],
-      "native_executable": false,
-      "status": "python-fanout",
-      "total_runtime_ms": 4.6743,
       "traffic_share": 0.0005
     },
     {
@@ -2920,34 +2437,11 @@
       "traffic_share": 0.0005
     },
     {
-      "average_runtime_ms": 4.4631,
-      "by_source": {
-        "web_api": 1
-      },
-      "cumulative_traffic_share": 0.9975,
-      "current_grammar": "BML",
-      "current_handler": "api_agent_task",
-      "current_required_header": "Accept",
-      "current_source": "deploy/front-door/api.bml",
-      "desired_grammar": "BML",
-      "endpoint": "/api/agent/tasks/task_647b9e3cae432291",
-      "event_count": 1,
-      "high_grammar_native": true,
-      "method": "GET",
-      "methods": [
-        "GET"
-      ],
-      "native_executable": true,
-      "status": "kernel-native-high-grammar",
-      "total_runtime_ms": 4.4631,
-      "traffic_share": 0.0005
-    },
-    {
       "average_runtime_ms": 4.4428,
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.998,
+      "cumulative_traffic_share": 0.9975,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -2966,34 +2460,11 @@
       "traffic_share": 0.0005
     },
     {
-      "average_runtime_ms": 4.3787,
-      "by_source": {
-        "web_api": 1
-      },
-      "cumulative_traffic_share": 0.9985,
-      "current_grammar": "",
-      "current_handler": "",
-      "current_required_header": "",
-      "current_source": "",
-      "desired_grammar": "BML route catalog",
-      "endpoint": "/api/translations/page/contributors-64be49a6-2d2a-42a4-870d-4c48077cc753-portfolio",
-      "event_count": 1,
-      "high_grammar_native": false,
-      "method": "GET",
-      "methods": [
-        "GET"
-      ],
-      "native_executable": false,
-      "status": "python-fanout",
-      "total_runtime_ms": 4.3787,
-      "traffic_share": 0.0005
-    },
-    {
       "average_runtime_ms": 4.269,
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.999,
+      "cumulative_traffic_share": 0.998,
       "current_grammar": "",
       "current_handler": "",
       "current_required_header": "",
@@ -3016,7 +2487,7 @@
       "by_source": {
         "web_api": 1
       },
-      "cumulative_traffic_share": 0.9995,
+      "cumulative_traffic_share": 0.9985,
       "current_grammar": "BML",
       "current_handler": "api_agent_task",
       "current_required_header": "Accept",
@@ -3032,6 +2503,52 @@
       "native_executable": true,
       "status": "kernel-native-high-grammar",
       "total_runtime_ms": 3.8962,
+      "traffic_share": 0.0005
+    },
+    {
+      "average_runtime_ms": 3.3713,
+      "by_source": {
+        "web_api": 1
+      },
+      "cumulative_traffic_share": 0.999,
+      "current_grammar": "BML",
+      "current_handler": "api_field_story_trace",
+      "current_required_header": "Accept",
+      "current_source": "deploy/front-door/api.bml",
+      "desired_grammar": "BML",
+      "endpoint": "/api/field-stories/urs-field-story/trace/author/Liquid Bloom - Topic",
+      "event_count": 1,
+      "high_grammar_native": true,
+      "method": "GET",
+      "methods": [
+        "GET"
+      ],
+      "native_executable": true,
+      "status": "kernel-native-high-grammar",
+      "total_runtime_ms": 3.3713,
+      "traffic_share": 0.0005
+    },
+    {
+      "average_runtime_ms": 2.9104,
+      "by_source": {
+        "web_api": 1
+      },
+      "cumulative_traffic_share": 0.9995,
+      "current_grammar": "BML",
+      "current_handler": "api_field_story_trace",
+      "current_required_header": "Accept",
+      "current_source": "deploy/front-door/api.bml",
+      "desired_grammar": "BML",
+      "endpoint": "/api/field-stories/urs-field-story/trace/author/Mose - Topic",
+      "event_count": 1,
+      "high_grammar_native": true,
+      "method": "GET",
+      "methods": [
+        "GET"
+      ],
+      "native_executable": true,
+      "status": "kernel-native-high-grammar",
+      "total_runtime_ms": 2.9104,
       "traffic_share": 0.0005
     },
     {
@@ -3063,6 +2580,6 @@
   "source_requested": "web_api",
   "target_share": 0.9,
   "total_events": 2000,
-  "total_runtime_ms": 449256.9885,
+  "total_runtime_ms": 604316.6367,
   "window_seconds": 86400
 }

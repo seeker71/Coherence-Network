@@ -908,6 +908,39 @@ ensure_kernel_router_canary() {
   probe_ok=0
   while (( $(date +%s) < deadline )); do
     if docker compose "${compose_args[@]}" exec -T kernel-router-bml-front-door sh -lc \
+      "curl -fsS -D /tmp/contributors.headers -o /tmp/contributors.body \
+        'http://127.0.0.1:8080/api/contributors?limit=5&offset=0' \
+        -H 'Accept: application/json' \
+        && curl -fsS -D /tmp/contributions.headers -o /tmp/contributions.body \
+        'http://127.0.0.1:8080/api/contributions?limit=5&offset=0' \
+        -H 'Accept: application/json' \
+        && grep -qi '^X-Form-Router: native-kernel' /tmp/contributors.headers \
+        && grep -qi '^X-Form-Handler: api_contributors' /tmp/contributors.headers \
+        && grep -qi '^X-Form-Python-Authority: false' /tmp/contributors.headers \
+        && grep -q '\"items\":\\[' /tmp/contributors.body \
+        && grep -q '\"limit\":5' /tmp/contributors.body \
+        && grep -q '\"offset\":0' /tmp/contributors.body \
+        && grep -qi '^X-Form-Router: native-kernel' /tmp/contributions.headers \
+        && grep -qi '^X-Form-Handler: api_contributions' /tmp/contributions.headers \
+        && grep -qi '^X-Form-Python-Authority: false' /tmp/contributions.headers \
+        && grep -q '\"items\":\\[' /tmp/contributions.body \
+        && grep -q '\"limit\":5' /tmp/contributions.body \
+        && grep -q '\"offset\":0' /tmp/contributions.body" \
+      2>&1 | tee -a "$LOG_FILE"; then
+      probe_ok=1
+      break
+    fi
+    sleep 3
+  done
+  if [[ "$probe_ok" != "1" ]]; then
+    log "FAIL: BML front-door contribution read routes did not return native paginated proof"
+    exit 1
+  fi
+
+  deadline=$(( $(date +%s) + 120 ))
+  probe_ok=0
+  while (( $(date +%s) < deadline )); do
+    if docker compose "${compose_args[@]}" exec -T kernel-router-bml-front-door sh -lc \
       "curl -fsS -D /tmp/household-events.headers -o /tmp/household-events.body \
         'http://127.0.0.1:8080/api/household/events?limit=5' \
         -H 'Accept: application/json' \
