@@ -1,0 +1,103 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "codex/license-stewardship-choice-20260611",
+  "commit_scope": "Choose the root Apache-2.0 license and name the public patent stewardship posture.",
+  "files_owned": [
+    "LICENSE",
+    "package.json",
+    "docs/stewardship/patent-stewardship.md",
+    "docs/stewardship/external-collaboration-disclosure-practice.md",
+    "docs/stewardship/README.md",
+    "docs/system_audit/commit_evidence_20260611_license_stewardship_choice.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260611_license_stewardship_choice.json",
+      "make wellness",
+      "git fetch origin main && git rebase origin/main",
+      "git diff --check --cached",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "notes": "Prompt guide passed at worktree start. Generated repo indexes are up to date. Evidence validation passed after setting change_intent to process_only. Wellness passed; it noted an existing production health timeout under deploy lag and local kernel binary absence for route tracing, neither blocking this docs/metadata slice. The exact fetch/rebase command passed after the staged edit was temporarily stashed and restored. Staged diff check, local PR guard, and followthrough guard passed."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until this branch is committed, pushed, and opened as a PR."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No deploy attempted before PR."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "The license and posture edit is staged with local proof complete. Remote CI, merge, and deploy verification remain before the phase gate can close."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The repo no longer leaves the root license unresolved: Apache-2.0 is present in the root license file and package metadata, and the patent stewardship posture is readable from stewardship docs.",
+    "public_endpoints": [
+      "documentation"
+    ],
+    "test_flows": [
+      "LICENSE contains the Apache License 2.0 text.",
+      "package.json declares Apache-2.0.",
+      "docs/stewardship/patent-stewardship.md states the public code license and separates patent/publication stewardship from private filing text.",
+      "docs/stewardship/external-collaboration-disclosure-practice.md points external evaluation to Apache-2.0 plus the patent stewardship posture.",
+      "docs/stewardship/README.md links the stewardship posture and disclosure practice."
+    ]
+  },
+  "idea_ids": [
+    "knowledge-and-resonance",
+    "form-kernel-self-hosting"
+  ],
+  "spec_ids": [
+    "public-verification-framework"
+  ],
+  "task_ids": [
+    "license-stewardship-choice-20260611"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "values alignment",
+        "sole applicant context"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Apache License 2.0 canonical source: https://www.apache.org/licenses/LICENSE-2.0.txt",
+    "LICENSE carries Apache License 2.0 in the root repository.",
+    "package.json declares Apache-2.0.",
+    "docs/stewardship/patent-stewardship.md names patent activity as record, boundary, and reciprocal collaboration process.",
+    "docs/stewardship/external-collaboration-disclosure-practice.md replaces the prior license gap with the chosen Apache-2.0 and patent stewardship posture.",
+    "Private filing packet notes were updated outside git under /Users/ursmuff/Documents/coherence-patent-drafts/2026-06-11-proof-carrying-trusted-action-runtime/."
+  ],
+  "change_files": [
+    "LICENSE",
+    "package.json",
+    "docs/stewardship/patent-stewardship.md",
+    "docs/stewardship/external-collaboration-disclosure-practice.md",
+    "docs/stewardship/README.md"
+  ],
+  "change_intent": "process_only"
+}

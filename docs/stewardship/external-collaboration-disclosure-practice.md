@@ -9,9 +9,9 @@ privacy: public process only; unpublished specs, filing text, inventor details, 
 This practice keeps the body's values intact when a powerful outside
 organization may want to evaluate, license, adopt, fund, or shape the work.
 
-It is not legal advice and it does not choose a binding license. It names the
-membranes that must stay distinct before detailed enabling disclosure leaves
-the body.
+It is not legal advice. The root repository license is Apache-2.0; the patent,
+publication, and external evaluation membranes stay separately named before
+detailed enabling disclosure leaves the body.
 
 ## North star
 
@@ -23,7 +23,7 @@ That means:
 - public proof stays runnable and inspectable;
 - unpublished filing text, private notes, and deal terms stay private;
 - detailed external disclosure waits for a chosen record path;
-- license ambiguity is treated as friction to resolve, not leverage to exploit;
+- license clarity is held as a collaboration condition;
 - no company receives more authority than the offer explicitly grants.
 
 ## Three membranes
@@ -47,16 +47,17 @@ detailed external technical share.
 
 Open source is witness, not abandonment.
 
-The current repo has package metadata that says `ISC`, but no root `LICENSE`
-file was present when this practice was authored. That is a stewardship gap:
-companies, contributors, and future maintainers need a clear license and patent
-posture to know what is offered.
+The root repository carries Apache-2.0 in `LICENSE` and in package metadata.
+That is the public code permission and contribution default for the root work.
+The patent/publication posture is named separately because copyright
+permission, contribution patent permission, unpublished filing text, and later
+commercial terms are different membranes.
 
 Practice:
 
-- add a root license only as an explicit steward decision;
-- separately name the patent posture, because copyright permission and patent
-  permission are different questions;
+- keep the standard Apache-2.0 license text intact;
+- keep the patent stewardship posture readable beside the collaboration
+  practice;
 - keep proof artifacts public when they are meant to prevent enclosure;
 - keep private filing drafts out of the repo until the publication path is
   deliberately chosen.
@@ -80,7 +81,7 @@ Before any detailed company evaluation, require:
 
 1. `record_path_chosen`: provisional, defensive publication, later publication
    plan, or explicit hold.
-2. `license_posture_named`: current repo license facts and desired offer are
+2. `license_posture_named`: Apache-2.0 and the patent stewardship posture are
    stated plainly.
 3. `scope_bounded`: the external party receives only the brief, demo, or packet
    named for that contact.
@@ -125,7 +126,9 @@ each boundary honest:
 
 - public proof prevents enclosure by obscurity;
 - filing/publication creates a dated record;
-- license clarity tells collaborators what is actually offered;
+- Apache-2.0 tells collaborators what the public code offers;
+- patent stewardship tells companies how closed commercial embedding becomes a
+  reciprocal offer;
 - private stewardship keeps deal terms and unpublished claims out of the public
   body;
 - offer/ack practice prevents urgency from becoming accidental transfer.
