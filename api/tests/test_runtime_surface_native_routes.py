@@ -7,16 +7,18 @@ and kernel-first CAPABLE (native handlers in the kernel-router manifest that
 serve the WHOLE request lifecycle in Form, proven byte-identical in shadow,
 awaiting the front-door flip).
 
-``kernel_first_capable_routes()`` reads that CAPABLE count from the manifest
-``deploy/kernel-router/production-routes.fk`` as DATA. The subtle contract: the
+``kernel_first_capable_routes()`` reads that CAPABLE count from both native
+sources as DATA: ``deploy/kernel-router/production-routes.fk`` and the BML
+front-door catalog ``deploy/front-door/api.bml``. The subtle contract: the Form
 manifest may bind ``/api/...`` routes as raw ``(list "<path>" <handler>)`` rows
 or as higher-grammar ``kh-route-data-ref`` rows resolved through the sibling
-route-data JSON. Path-only rows return bare paths; method-specific
-KernelHTTPRoute rows return ``"METHOD /api/path"`` so two methods can share a
-wildcard path without becoming one capability. The parser must return each route
-once, from its binding, never from a comment, and must exclude non-``/api`` probes
-like ``/health``. This pins that contract with a strange-minimal synthetic
-manifest plus a pin against the real checked-in manifest.
+route-data JSON. The BML catalog contributes ``route(...)`` rows. Path-only GET
+rows return bare paths; method-specific rows return ``"METHOD /api/path"`` so
+two methods can share a wildcard path without becoming one capability. The
+parser must return each route once, from its binding, never from a comment, and
+must exclude non-``/api`` probes like ``/health``. This pins that contract with a
+strange-minimal synthetic manifest plus a pin against the real checked-in
+catalogs.
 """
 
 from __future__ import annotations
@@ -82,6 +84,7 @@ def test_parser_reads_bindings_not_comments(monkeypatch, tmp_path):
     )
     mod = _load_report()
     monkeypatch.setattr(mod, "_KERNEL_ROUTER_MANIFEST", manifest)
+    monkeypatch.setattr(mod, "_BML_FRONT_DOOR_CATALOG", tmp_path / "missing-api.bml")
 
     routes = mod.kernel_first_capable_routes()
 
@@ -97,22 +100,36 @@ def test_parser_reads_bindings_not_comments(monkeypatch, tmp_path):
 
 
 def test_absent_manifest_degrades_to_empty(monkeypatch, tmp_path):
-    """No manifest → empty CAPABLE list (the report degrades, never crashes)."""
+    """No native catalogs → empty CAPABLE list (the report degrades, never crashes)."""
     mod = _load_report()
     monkeypatch.setattr(mod, "_KERNEL_ROUTER_MANIFEST", tmp_path / "missing.fk")
+    monkeypatch.setattr(mod, "_BML_FRONT_DOOR_CATALOG", tmp_path / "missing-api.bml")
     assert mod.kernel_first_capable_routes() == []
 
 
-def test_real_manifest_native_routes_are_served_zero_and_include_ideas_structure():
+def test_real_manifest_native_routes_are_served_zero_and_include_ideas_structure(monkeypatch):
     """The real instrument: 0 served kernel-first at the front door, and the
     production manifest's native routes are all CAPABLE. Pins the SERVED/CAPABLE
     split the runtime-share journey tracks, including native Form source/structure
     source-portfolio, graph-projection, and specs source routes that do not have
     a CPython twin."""
     mod = _load_report()
+    monkeypatch.setattr(
+        mod,
+        "probe_kernel_front_door",
+        lambda: {
+            "url": "https://api.example/api/attention/kernel-runtime",
+            "reachable": False,
+            "status": None,
+            "x_form_router": "",
+            "kernel_front_door": False,
+            "reported_native_route_count": None,
+            "error": "test-no-public-probe",
+        },
+    )
     report = mod.build_report()
 
-    assert report["kernel_first_served_routes"] == 0  # no front-door flip
+    assert report["kernel_first_served_routes"] == 0  # no live front-door probe in this unit test
     capable = report["kernel_first_capable_route_names"]
     capable_paths = {r.split(" ", 1)[1] if " " in r else r for r in capable}
     assert report["kernel_first_capable_routes"] == len(capable)
@@ -124,7 +141,12 @@ def test_real_manifest_native_routes_are_served_zero_and_include_ideas_structure
     assert "/api/ideas/source-portfolio" in capable_paths
     assert "/api/ideas/graph-projection" in capable_paths
     assert "/api/spec-registry/source-list" in capable_paths
+    assert "/api/sensings" in capable_paths
+    assert "/api/sensings/{sensing_id}" in capable_paths
+    assert "/api/translations/{entity_type}/{entity_id}" in capable_paths
+    assert "/api/workspaces" in capable_paths
     assert "POST /api/ideas" in capable
+    assert "POST /api/meetings/anonymous-traces" in capable
     assert "PATCH /api/ideas/*" in capable
     assert "POST /api/spec-registry" in capable
     assert "PATCH /api/spec-registry/*" in capable
