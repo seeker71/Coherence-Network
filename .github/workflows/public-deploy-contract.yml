@@ -7,6 +7,7 @@ on:
       - 'api/**'
       - 'web/**'
       - 'deploy/hostinger/**'
+      - 'deploy/front-door/**'
       - 'deploy/kernel-router/**'
       - 'Dockerfile*'
       - 'docker-compose*.yml'

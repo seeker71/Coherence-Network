@@ -1,0 +1,97 @@
+{
+  "date": "2026-06-10",
+  "thread_branch": "codex/kernel-router-template-20260610",
+  "commit_scope": "Teach the Rust kernel-router to select BML path-template routes and make front-door catalog changes trigger deployment.",
+  "files_owned": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    ".github/workflows/public-deploy-contract.yml",
+    "form/form-kernel-rust/src/main.rs",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cargo fmt --check",
+      "cargo test route_spec_tests::kernel_http_route_selection_honors_template_segments -- --nocapture",
+      "cargo test route_spec_tests::source_bml_catalog_template_routes_select_natively_in_rust -- --nocapture",
+      "./scripts/test_hostinger_deploy_form_paths.sh",
+      "git diff --check",
+      "python3 scripts/generate_repo_indexes.py --check"
+    ],
+    "observations": [
+      "Public pre-fix probes returned HTTP 200 without X-Form-Router for the promoted BML endpoints, while /api/utils/kernel_status returned X-Form-Router: native-kernel.",
+      "Rust route selection now gives exact matches pressure 0, path-template matches pressure 10, wildcard matches pressure 25, and rejects nonmatching template segment counts.",
+      "The source-compiled deploy/front-door/api.bml catalog now selects runtime-events-index, views-stats, reaction-concept-summary, reaction-concept-threads, concept-voices, and household-request-detail routes in Rust when Accept is present.",
+      "Hostinger and public deploy workflows now include deploy/front-door/**, and the deploy path test proves Dockerfile.kernel-router carries deploy/front-door/api.bml into /routes/api.bml."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof passed; CI, merge, deploy, and public promoted-route header verification remain for this branch."
+  },
+  "idea_ids": [
+    "oss-interface-alignment",
+    "kernel-native-route-goal"
+  ],
+  "spec_ids": [
+    "native-route-goal-loop",
+    "front-door-bml-route-catalog"
+  ],
+  "task_ids": [
+    "kernel-router-template-routes-2026-06-10"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "investigation",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cargo test route_spec_tests::source_bml_catalog_template_routes_select_natively_in_rust -- --nocapture",
+    "./scripts/test_hostinger_deploy_form_paths.sh",
+    "public curl header probes against https://api.coherencycoin.com before the fix"
+  ],
+  "change_files": [
+    ".github/workflows/hostinger-auto-deploy.yml",
+    ".github/workflows/public-deploy-contract.yml",
+    "form/form-kernel-rust/src/main.rs",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Promoted BML read routes with path-template patterns are selected by the production Rust kernel-router instead of falling through to Python without native route headers.",
+    "public_endpoints": [
+      "/api/runtime/events",
+      "/api/views/stats/lc-attuned-spaces",
+      "/api/reactions/concept/lc-attuned-spaces/summary",
+      "/api/reactions/concept/lc-attuned-spaces/threads",
+      "/api/concepts/lc-attuned-spaces/voices"
+    ],
+    "test_flows": [
+      "After deploy, request promoted endpoints with Accept: application/json and verify X-Form-Router is native-kernel.",
+      "Run public deploy verification against api.coherencycoin.com and coherencycoin.com.",
+      "Confirm deploy/front-door/** changes trigger Hostinger Auto Deploy and Public Deploy Contract workflows."
+    ]
+  }
+}

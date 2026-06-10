@@ -4485,7 +4485,9 @@ impl Kernel {
         // jit_compile_value — the Value-ABI JIT lives on the go carrier
         // today; honest 0 here so sibling-Form code can branch on
         // availability (1 compiled, 0 not compiled here, -1 missing).
-        self.register_native("jit_compile_value", cat_witness(), |_, _, _args| Value::Int(0));
+        self.register_native("jit_compile_value", cat_witness(), |_, _, _args| {
+            Value::Int(0)
+        });
         // jit_emit_c — the recipe→C projection lives on the go carrier
         // today; honest "" here so sibling-Form code can branch on it.
         self.register_native("jit_emit_c", cat_witness(), |_, _, _args| {
@@ -8192,6 +8194,35 @@ fn route_pattern_prefix(pattern: &str) -> &str {
     }
 }
 
+fn route_pattern_template(pattern: &str) -> bool {
+    pattern.contains('{') || pattern.contains("/:")
+}
+
+fn route_template_segment(segment: &str) -> bool {
+    (segment.starts_with(':') && segment.len() > 1)
+        || (segment.starts_with('{') && segment.ends_with('}') && segment.len() > 2)
+}
+
+fn route_template_path_matches(pattern: &str, path: &str) -> bool {
+    let pattern_parts: Vec<&str> = pattern.trim_matches('/').split('/').collect();
+    let path_parts: Vec<&str> = path.trim_matches('/').split('/').collect();
+    if pattern_parts.len() != path_parts.len() {
+        return false;
+    }
+    for (pattern_part, path_part) in pattern_parts.iter().zip(path_parts.iter()) {
+        if route_template_segment(pattern_part) {
+            if path_part.is_empty() {
+                return false;
+            }
+            continue;
+        }
+        if pattern_part != path_part {
+            return false;
+        }
+    }
+    true
+}
+
 fn route_method_pressure_with_policy(
     policy: &ChannelPolicy,
     route: &RouteSpec,
@@ -8217,6 +8248,10 @@ fn route_method_pressure(route: &RouteSpec, method: &str) -> i64 {
 fn route_path_pressure(route: &RouteSpec, path: &str) -> i64 {
     if route.pattern == path {
         0
+    } else if route_pattern_template(&route.pattern)
+        && route_template_path_matches(&route.pattern, path)
+    {
+        10
     } else if route_pattern_wildcard(&route.pattern)
         && path.starts_with(route_pattern_prefix(&route.pattern))
     {
@@ -11905,6 +11940,103 @@ mod route_spec_tests {
             Some("tail")
         );
         assert!(select_route_spec(&routes, "GET", "/api/other", &headers).is_none());
+    }
+
+    #[test]
+    fn kernel_http_route_selection_honors_template_segments() {
+        let routes = vec![
+            route("wildcard", "GET", "/api/items/*", 1, "", 25),
+            route("braced-template", "GET", "/api/items/{item_id}", 2, "", 10),
+            route("colon-template", "GET", "/api/colon/:item_id", 2, "", 10),
+            route("exact", "GET", "/api/items/fixed", 3, "", 0),
+        ];
+
+        assert_eq!(
+            select_route_spec(&routes, "GET", "/api/items/42", &[]).map(|r| r.name.as_str()),
+            Some("braced-template")
+        );
+        assert_eq!(
+            select_route_candidate(&routes, "GET", "/api/items/42", &[], &[], "")
+                .map(|selection| selection.candidate.pressure),
+            Some(10)
+        );
+        assert_eq!(
+            select_route_spec(&routes, "GET", "/api/items/fixed", &[]).map(|r| r.name.as_str()),
+            Some("exact")
+        );
+        assert_eq!(
+            select_route_spec(&routes, "GET", "/api/colon/42", &[]).map(|r| r.name.as_str()),
+            Some("colon-template")
+        );
+        assert_eq!(
+            select_route_spec(&routes, "GET", "/api/items/42/extra", &[]).map(|r| r.name.as_str()),
+            Some("wildcard")
+        );
+
+        let template_only = vec![route(
+            "braced-template",
+            "GET",
+            "/api/items/{item_id}",
+            2,
+            "",
+            10,
+        )];
+        assert!(select_route_spec(&template_only, "GET", "/api/items/42/extra", &[]).is_none());
+        assert!(select_route_spec(&template_only, "GET", "/api/items/", &[]).is_none());
+    }
+
+    #[test]
+    fn source_bml_catalog_template_routes_select_natively_in_rust() {
+        let manifest = fs::read_to_string("../../deploy/front-door/api.bml")
+            .expect("read BML front-door catalog");
+        let path = env::temp_dir().join(format!(
+            "form-rust-router-template-catalog-{}.bml",
+            std::process::id()
+        ));
+        fs::write(&path, manifest).expect("write route manifest copy");
+        let path_str = path.to_string_lossy().to_string();
+        let compiled = source_compile_manifest_recipe_object(&path_str, "../form-stdlib")
+            .expect("source route manifest compiles");
+        let program = RouteProgram::RecipeObject(Arc::new(compiled));
+        let (_, _, routes, _) =
+            build_worker_kernel_with_route_data(&program, &path_str, &RouteDataRegistry::default())
+                .expect("BML route catalog loads");
+
+        let headers = vec![("Accept".to_string(), "application/json".to_string())];
+        let probes = vec![
+            ("runtime-events-index", "GET", "/api/runtime/events"),
+            ("views-stats", "GET", "/api/views/stats/lc-attuned-spaces"),
+            (
+                "reaction-concept-summary",
+                "GET",
+                "/api/reactions/concept/lc-attuned-spaces/summary",
+            ),
+            (
+                "reaction-concept-threads",
+                "GET",
+                "/api/reactions/concept/lc-attuned-spaces/threads",
+            ),
+            (
+                "concept-voices",
+                "GET",
+                "/api/concepts/lc-attuned-spaces/voices",
+            ),
+            (
+                "household-request-detail",
+                "GET",
+                "/api/household/requests/request_123",
+            ),
+        ];
+
+        for (name, method, path) in probes {
+            assert_eq!(
+                select_route_spec(&routes, method, path, &headers).map(|r| r.name.as_str()),
+                Some(name),
+                "{method} {path} should select {name}"
+            );
+        }
+
+        let _ = fs::remove_file(path);
     }
 
     #[test]

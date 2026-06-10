@@ -8,6 +8,7 @@ on:
       - 'web/**'
       - 'pulse/**'
       - 'deploy/hostinger/**'
+      - 'deploy/front-door/**'
       - 'deploy/kernel-router/**'
       - 'docs/breath/**'
       - 'scripts/verify_web_api_deploy.sh'
