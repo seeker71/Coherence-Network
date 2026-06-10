@@ -43,7 +43,7 @@
 | [api/app/routers/INDEX.md](api/app/routers/INDEX.md) | 146 | Python bridge/API routers — current endpoint carrier and upstream tail while Form-native routes are promoted |
 | [api/app/services/INDEX.md](api/app/services/INDEX.md) | 246 | API services — business logic and graph operations |
 | [api/app/models/INDEX.md](api/app/models/INDEX.md) | 58 | API models — Pydantic + ORM shapes |
-| [api/tests/INDEX.md](api/tests/INDEX.md) | 263 | API tests — flow-centric |
+| [api/tests/INDEX.md](api/tests/INDEX.md) | 264 | API tests — flow-centric |
 | [web/lib/INDEX.md](web/lib/INDEX.md) | 35 | Web library — shared client/server helpers |
 | [web/components/INDEX.md](web/components/INDEX.md) | 53 | Web components — shared React surfaces |
 | [web/app/INDEX.md](web/app/INDEX.md) | 162 | Web routes — every visible page in the app |

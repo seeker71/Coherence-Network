@@ -1,0 +1,93 @@
+{
+  "date": "2026-06-10",
+  "thread_branch": "codex/kernel-utils-value-parity-20260610",
+  "commit_scope": "Repair kernel attribution value-parity sensing so equivalent numeric display forms such as 2 and 2.0 do not report false accuracy drift.",
+  "files_owned": [
+    "scripts/kernel_attribution_report.py",
+    "api/tests/test_kernel_attribution_report.py",
+    "api/tests/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/commit_evidence_2026-06-10_kernel_attribution_numeric_parity.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form/form-kernel-rust && cargo build --release",
+      "python3 scripts/kernel_attribution_report.py --json | python3 -c 'import json,sys; d=json.load(sys.stdin); rows=d.get(\"per_recipe\", []); bad=[r for r in rows if r.get(\"parity\") is False]; print(\"reached\", d.get(\"reached\"), \"eligible\", d.get(\"eligible\"), \"parity_breaks\", len(bad)); [print(r.get(\"route\"), r.get(\"result\"), \"expected\", r.get(\"expected\")) for r in bad]'",
+      "python3 -m py_compile scripts/kernel_attribution_report.py",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_kernel_attribution_report.py",
+      "cd api && /opt/homebrew/bin/ruff check ../scripts/kernel_attribution_report.py tests/test_kernel_attribution_report.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-10_kernel_attribution_numeric_parity.json",
+      "git diff --check",
+      "make wellness",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "notes": "Before the fix, local kernel attribution traced 22 recipes but reported five false parity breaks caused only by renderer shape: 2 vs 2.0, 1 vs 1.0, and 0 vs 0.0 inside lists. After parsing display literals before parity comparison, the attribution report reaches 22/22 recipes with parity_breaks=0, and wellness reports accuracy 22/22 with the local kernel binary present. The touched script also had one adjacent stale F541 lint issue, repaired while the file was under proof. Rebase with autostash reported the branch current with origin/main, PR guard reported ready_for_push=True/local_preflight=pass, and follow-through reported stale_codex_prs=0."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR creation, and hosted checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No deploy attempted before PR merge. This is a local sensing/process repair with no runtime API route behavior change."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof passed; CI, merge, and public post-merge verification remain pending."
+  },
+  "idea_ids": [
+    "form-native-runtime",
+    "kernel-core-self"
+  ],
+  "spec_ids": [
+    "kernel-native-api-readiness",
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "kernel-attribution-numeric-parity-20260610"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-prioritization"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "scripts/kernel_attribution_report.py now compares parsed literal values before declaring parity drift.",
+    "api/tests/test_kernel_attribution_report.py proves numeric display equivalence is accepted and actual numeric drift is rejected.",
+    "Attribution report after fix: reached 22 eligible 22 parity_breaks 0.",
+    "Post-fix wellness: Kernel-native API accuracy 22/22 recipes match documented value parity; kernel-native surface breathing within envelope."
+  ],
+  "change_files": [
+    "scripts/kernel_attribution_report.py",
+    "api/tests/test_kernel_attribution_report.py",
+    "api/tests/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "process_only"
+}

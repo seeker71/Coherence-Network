@@ -49,6 +49,7 @@ Exit 2 when the kernel binary is absent — names what it couldn't reach.
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import os
 import subprocess
@@ -399,6 +400,23 @@ def native_blueprint(name: str) -> str | None:
     return out.splitlines()[-1].strip() if out else None
 
 
+def _literal_or_raw(value: object) -> object:
+    """Parse kernel/API display literals while preserving opaque strings."""
+    if not isinstance(value, str):
+        return value
+    try:
+        return ast.literal_eval(value)
+    except (SyntaxError, ValueError):
+        return value
+
+
+def _value_parity_matches(result: object, expected: object) -> bool:
+    """Compare value parity, not renderer quirks like ``2`` versus ``2.0``."""
+    if result == expected or str(result) == str(expected):
+        return True
+    return _literal_or_raw(result) == _literal_or_raw(expected)
+
+
 # ---------------------------------------------------------------------------
 # The ONE aggregation mechanism — recipes as DATA, summed into a ranked view.
 # ---------------------------------------------------------------------------
@@ -457,7 +475,7 @@ def aggregate(collect_edges: bool = False) -> dict:
         result = str(trace.get("result", ""))
         rec["result"] = result
         rec["elapsed_us"] = trace.get("elapsed_us")
-        rec["parity"] = result == str(entry["expected_result"])
+        rec["parity"] = _value_parity_matches(result, entry["expected_result"])
 
         tr = trace.get("trace", {})
         for v in tr.get("variants", []):
@@ -839,7 +857,7 @@ def surprise_threshold(
             t = float(m.split(":", 1)[1])
         except ValueError:
             t = sum(projs) / len(projs)
-            return (t, f"mean (bad fixed: spec, fell back)")
+            return (t, "mean (bad fixed: spec, fell back)")
         return (t, f"fixed:{t:g}")
 
     if m.startswith("topk:"):
