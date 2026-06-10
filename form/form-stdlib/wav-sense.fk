@@ -1,0 +1,46 @@
+; wav-sense.fk — read a 16-bit PCM WAV and compute its energy envelope, IN FORM.
+;
+; "Why Python?" — for the DSP, there was no reason. The kernel reads the wav itself (read_file_bytes)
+; and does the math natively: reading + walking 103 KB of wav measured ~8 ms in-kernel. So the energy
+; envelope — the cheap feature the co-learning and voice-traits arms read — belongs in the BODY. The
+; carrier only produces the file (mic → ffmpeg); the body senses it. This is the first DSP lifted out of
+; the Python carrier; f0 follows the same path (read the wav, compute in Form).
+;
+; WAV layout assumed: 44-byte canonical header, then little-endian signed 16-bit mono PCM.
+; Builtins only (no core.fk) so the carrier calls it directly: (do (wav-envelope-file "<path>" 8)).
+; NOTE: `let` is two-arg only (binds for the rest of its `do`); a three-arg (let n v body) drops body.
+
+(defn abs2 (x) (if (ge x 0) x (sub 0 x)))
+
+; signed 16-bit little-endian sample at byte offset i
+(defn wav-sample (bs i)
+  (do (let v (add (nth bs i) (mul (nth bs (add i 1)) 256)))
+      (if (ge v 32768) (sub v 65536) v)))
+
+; sum of |sample| over byte range [i, end), stepping `step` bytes (>=2; larger = downsample)
+(defn wav-abs-sum (bs i end step acc)
+  (if (ge i end) acc
+      (wav-abs-sum bs (add i step) end step (add acc (abs2 (wav-sample bs i))))))
+
+; one window's energy LEVEL 0..9 = mean |amplitude| / 800, capped at 9 (same scale the carrier used)
+(defn wav-window-level (bs start end step)
+  (do (let span (sub end start))
+      (if (le span 0) 0
+          (do (let mean (div (div (wav-abs-sum bs start end step 0) (div span step)) 800))
+              (if (ge mean 9) 9 mean)))))
+
+; window i of 8 across the PCM body [44, n)
+(defn wav-window-i (bs n i step)
+  (do (let w (div (sub n 44) 8))
+      (wav-window-level bs (add 44 (mul i w)) (add 44 (mul (add i 1) w)) step)))
+
+; the 8-window envelope (the cheap feature)
+(defn wav-envelope-bytes (bs n step)
+  (list (wav-window-i bs n 0 step) (wav-window-i bs n 1 step) (wav-window-i bs n 2 step)
+        (wav-window-i bs n 3 step) (wav-window-i bs n 4 step) (wav-window-i bs n 5 step)
+        (wav-window-i bs n 6 step) (wav-window-i bs n 7 step)))
+
+; the carrier door: read the file + compute the envelope, all in-kernel.
+(defn wav-envelope-file (path step)
+  (do (let bs (read_file_bytes path))
+      (wav-envelope-bytes bs (len bs) step)))

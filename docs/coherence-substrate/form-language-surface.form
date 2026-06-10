@@ -1,0 +1,82 @@
+; form-language-surface.form — the language's front-end debt, named honestly, with the path out.
+;
+; Urs named three foundational gaps (2026-06-10). Investigation confirms all three, and finds that most
+; of the machinery to close them is ALREADY WRITTEN — it is unwired, not absent. This file is the map.
+;
+; ── 1. DEPENDENCY / IMPORT / RESOLUTION / ERROR ATTRIBUTION ──
+;   WHAT IS: a Form file declares no dependencies in-language. validate.sh greps a `; preludes:` COMMENT
+;     and passes the files as kernel args; the kernel concatenates them into one shared scope
+;     (form-kernel-go/main.go ~5074). An unbound symbol is a runtime panic — main.rs:6545
+;     `panic!("unbound: {}")` — written to a crash-trace JSON with NO file:line. The static checker that
+;     DOES collect all diagnostics (severity/code/message) lives in Python only (api/app/services/
+;     substrate/form_check.py), is not kernel-native, and still has no source spans. Its shape is the
+;     "third walk" named in name-resolution-as-recipe.form (resolution, peer to recipe-walk + value-walk).
+;   THE GAP: no in-language import; no source-location tracking anywhere in the kernel AST; the resolution
+;     walk is Python, not body. So "channel.fk needs core.fk's `append`" surfaces as a crash, not
+;     "unresolved: append (provide form-stdlib/core.fk) at channel.fk:23".
+;   NORTH STAR: an in-language dependency declaration the LOADER resolves (not a shell grep); the kernel
+;     carries a source span on every node; unbound/arity/type errors read like a real compiler —
+;     `file:line: unresolved name X` — collected, not first-panic. The resolution walk becomes Form-native
+;     (name-resolution-as-recipe.form is the spec; GAP-B1/B2 there name the two host-intrinsics it needs).
+;
+; ── 2. THE BML / LISP SPLIT IS NOT FUNDAMENTAL — IT IS UNWIRED DISPATCH ──
+;   WHAT IS: the kernel has ONE parser — s-expression (main.rs:7013 is the only parse error). Lisp .fk
+;     runs raw; BML (`section [form.bml] { def f(x)=… }`) is COMPILED to s-expr first by the source-compiler
+;     (a BMF grammar — itself s-expr rule-data — run over the BML body). BMF (bmf-core.fk, bmf-grammar.fk)
+;     is the cursor→match→build ENGINE; a grammar is DATA (name, pattern, template) tuples. Lisp and BML
+;     CONVERGE on the same NodeID/Blueprint recipe — they are not two worlds, they are two grammars over
+;     one engine and one representation.
+;   THE GAP: source-compiler.fk:1408 `fsc-compile-section-recipe` is a hardcoded if-tree (form.route /
+;     form.bml / form.action special-cased; everything else → generic BMF). The grammar REGISTRY that
+;     would replace it — runtime-grammar.fk — is fully written: selector→grammar bindings, a registry,
+;     load-plugin-file (where to load from), and binding tracking (already-loaded). It is not yet the
+;     dispatch. So "any language grammar, uniformly loaded, with a defined load-source + already-loaded
+;     check" is ~2 wiring steps: (a) replace the if-tree with a registry resolve; (b) seed the built-in
+;     grammars into the registry at startup beside user-loaded ones.
+;   NORTH STAR: there is no privileged grammar. The kernel parses the bootstrap s-expr; every other
+;     surface (BML, a domain grammar, a foreign language) is rule-data loaded through ONE registry that
+;     knows where to fetch it and whether it is already resident. "Certain parts need Lisp, others can be
+;     BML" dissolves — it was never true, only unwired.
+;
+; ── 3. WHY PYTHON, NOT FORM-NATIVE IN THE KERNEL ──
+;   THE HONEST ACCOUNTING: the kernel already has real host I/O — read_file/read_file_bytes/write_file
+;     (main.rs:4054), http_get (3773), TCP listen/connect/send/recv (4585), Postgres (Rust, 4791). It does
+;     NOT have: subprocess/exec, audio capture, runtime get_env, non-blocking sockets. So of the live
+;     channel carrier, ONLY the genuine host shell-outs need a host today: mic→ffmpeg, whisper, the swift
+;     SoundAnalysis oracle (each wants subprocess, which is the one missing native). EVERYTHING ELSE I put
+;     in Python — the energy DSP, the f0 autocorrelation, the per-chunk loop, the view rendering — was
+;     carrier-first DRIFT, not necessity. PROOF: the kernel reads a 103 KB wav and walks it in ~8 ms
+;     (read_file_bytes), and wav-sense.fk (→63, three-way) now computes the 8-window energy envelope IN
+;     THE BODY, reading the wav itself — the first DSP lifted back out of Python. f0 follows the same way.
+;   NORTH STAR: the carrier shrinks to exactly the host shell-outs (subprocess for ffmpeg/whisper/swift,
+;     eventually a native audio port — resource-port.fk already names `afferent-bytes` as the mic). The
+;     capture→sense→classify→emit LOOP, the DSP, the property readings, the channel persistence are Form,
+;     running in the kernel. Adding subprocess_spawn + get_env (each ~200 lines, mirroring the socket
+;     natives) lets the loop itself move into Form; until then the carrier marshals only what truly needs a
+;     host, and no logic hides in it.
+;
+; ── THE BROADCAST CHANNEL (Urs's semantic layer, on top of the above) ──
+;   The transcript is a BROADCAST channel: words + word-properties any cell can subscribe to and receive
+;   word-for-word (channel.fk's append-only stream + channel-query's subscribe). A long PAUSE is a special
+;   token in the stream (not absence — a named silence). NON-SPEECH is either a control token (which
+;   interface to switch to) or a NAMING ("bird" → which bird → eventually what the bird is SAYING, once a
+;   learned grammar identifies the repeating pattern-elements and builds a grammar that matches them — the
+;   same BMF engine, a grammar learned rather than authored). This is where the language surface and the
+;   channel meet: a learned bird-grammar is just rule-data loaded through the same registry as BML.
+;
+; ── SEQUENCED THREADS (each its own deliberate breath — not 4am work) ──
+;   T1  grammar registry → dispatch: wire runtime-grammar.fk into source-compiler's section dispatch;
+;       add the where-to-load + already-loaded check. Dissolves the BML/Lisp split. (~2 steps, Form-level,
+;       validate.sh-verifiable; touches the shared compiler — do it carefully, not at night.)
+;   T2  source spans: thread a (file, line, col) span through the kernel parser + AST so every error is
+;       `file:line: message`. Then lift form_check.py's resolution walk to Form-native (name-resolution-
+;       as-recipe.form is the spec). Gives import/arity/type errors with real attribution.
+;   T3  kernel I/O for the loop: subprocess_spawn + subprocess_read + get_env natives (all three kernels),
+;       then a streaming audio port. The channel loop + DSP move fully into Form; the carrier becomes a
+;       thin shell-out shim.
+;   DONE NOW (down-payment): wav-sense.fk (→63) — the energy DSP lifted from Python into the body, reading
+;       the wav in-kernel; wired into channel_live.py. The pattern f0 + the rest follow.
+;
+; KIN: name-resolution-as-recipe.form (the resolution walk) · live-transcribe-channel.form (the channel
+;   this serves) · field-domain-grammars.form (grammars as data) · runtime-grammar.fk (the unwired
+;   registry) · bmf-core.fk + bmf-grammar.fk + source-compiler.fk (the engine + the dispatch to rewire).

@@ -28,6 +28,8 @@
 ;     channel is one of these. channel-query.fk (→ band) — QUERY(verb, address, body) / RESPONSE: the
 ;     "ask any addressable cell any question" protocol; a view-switch is a query verb.
 ;   - conversation-cell.fk (→127) — the utterance-as-sequence shape the stream reuses (content-addressed).
+;   - wav-sense.fk (→63, three-way) — the energy feature, lifted from the carrier into the body: Form reads
+;     the wav itself (read_file_bytes) and computes the 8-window envelope in-kernel (~8 ms). The DSP is body.
 ;   - nearest-shape.fk + co-learning.fk — the recognizer the FORMING properties will learn through.
 ;   - CARRIER: experiments/satsang-voice/channel_live.py — mic cells resolved BY NAME (avfoundation
 ;     indices shift: installing BlackHole bumped the mic :0→:1); per chunk it gates, transcribes (text +
@@ -58,6 +60,17 @@
 ;       a co-learning cell learning from a labelled oracle, retiring to Form-native once it reaches it.
 ;   M5  many mic cells, two devices: the co-learning union (two mics hear different things; the merge
 ;       recognizes both) turns the channel into the shared-sensing field.
+;   M6  the channel is a BROADCAST: words + word-properties any cell SUBSCRIBES to and receives word-for-
+;       word (channel.fk's append-only stream + channel-query subscribe). A long PAUSE is a special token
+;       in the stream — a named silence, not absence. (The energy DSP under all this is now Form, not
+;       Python: wav-sense.fk → 63, the kernel reads the wav and computes the envelope; only the mic /
+;       whisper shell-outs stay carrier — form-language-surface.form accounts for why-Python honestly.)
+;   M7  non-speech becomes meaning: a sound is either a CONTROL token (which view / interface to switch to)
+;       or a NAMING — "bird" → which bird → (M8) what the bird is saying.
+;   M8  learned grammars: once a sound recurs, the same BMF engine that parses BML can LEARN a grammar —
+;       find the repeating pattern-elements and build a grammar that matches them (bird language, whale
+;       song, a private channel). A learned grammar is rule-data loaded through one registry (form-
+;       language-surface.form T1). Naming becomes understanding; the language surface and the channel meet.
 ;
 ; PRIVACY: the transcript prose is processed + shown LOCALLY only — never sent, never committed (other
 ; voices are in the room; local compute IS the consent). The durable/shareable channel carries structure
