@@ -419,12 +419,28 @@ sync_field_docs() {
     return 0
   fi
 
+  # The api container may still be settling right after a force-recreate (exec races the fresh
+  # container and its exit code would fail a deploy whose site is already up — seen on f51a968).
+  # Retry briefly; fail honestly only if the sync truly cannot land.
+  local target_parent attempt ok
   for target_parent in /app/docs /app/api/docs; do
     log "field docs: syncing docs/field to api:${target_parent}/field"
-    docker compose exec -T api sh -lc "mkdir -p '${target_parent}' && rm -rf '${target_parent}/field'" \
-      2>&1 | tee -a "$LOG_FILE"
-    docker compose cp "$REPO_DIR/docs/field" "api:${target_parent}/field" \
-      2>&1 | tee -a "$LOG_FILE"
+    ok=0
+    for attempt in 1 2 3; do
+      if docker compose exec -T api sh -lc "mkdir -p '${target_parent}' && rm -rf '${target_parent}/field'" \
+           2>&1 | tee -a "$LOG_FILE" \
+         && docker compose cp "$REPO_DIR/docs/field" "api:${target_parent}/field" \
+           2>&1 | tee -a "$LOG_FILE"; then
+        ok=1
+        break
+      fi
+      log "field docs: attempt ${attempt} failed (container may still be settling); retrying in 5s"
+      sleep 5
+    done
+    if [[ "$ok" != 1 ]]; then
+      log "FATAL field docs: sync to ${target_parent} failed after 3 attempts"
+      return 1
+    fi
   done
 }
 
