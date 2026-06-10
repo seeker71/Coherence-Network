@@ -47,6 +47,32 @@
 
 (defn fk-run (prog arg) (fk-walk prog prog arg))
 
+; ── multi-function programs (m4e1) — CALL by index into a function list ──
+; A program is a LIST of one-param functions; fn 0 is main. CALL (tag 12)
+; names a function by index and passes one evaluated argument — mutual
+; recursion lands, and SELF is honestly re-grounded as re-enter fn 0, so
+; every single-function program keeps walking unchanged via (list p).
+(defn fk-call (fidx e) (fk-node 12 (ms-intern (ms-cell fidx) e)))
+
+(defn fkm-walk (fns node arg)
+    (if (eq (fk-tag node) 1) (ms-value (fk-body node))
+    (if (eq (fk-tag node) 2) arg
+    (if (eq (fk-tag node) 3) (add (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                  (fkm-walk fns (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 4) (sub (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                  (fkm-walk fns (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 5) (if (le (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                     (fkm-walk fns (ms-child (fk-body node) 1) arg)) 1 0)
+    (if (eq (fk-tag node) 6) (if (eq (fkm-walk fns (ms-child (fk-body node) 0) arg) 0)
+                                 (fkm-walk fns (ms-child (ms-child (fk-body node) 1) 1) arg)
+                                 (fkm-walk fns (ms-child (ms-child (fk-body node) 1) 0) arg))
+    (if (eq (fk-tag node) 7) (fkm-walk fns (nth fns 0) (fkm-walk fns (fk-body node) arg))
+    (if (eq (fk-tag node) 12) (fkm-walk fns (nth fns (ms-value (ms-child (fk-body node) 0)))
+                                            (fkm-walk fns (ms-child (fk-body node) 1) arg))
+        0)))))))))
+
+(defn fkm-run (fns arg) (fkm-walk fns (nth fns 0) arg))
+
 ; fib authored as data — the program every carrier in fourth-kernel.form's
 ; rows answers: IF (LE arg 1) arg (ADD (SELF (arg-1)) (SELF (arg-2)))
 (defn fk-fib-program ()

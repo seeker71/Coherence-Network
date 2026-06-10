@@ -1,0 +1,38 @@
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk
+;
+; fourth-call-band — m4e1 proven three-way: CALL + the function table. A
+; program is a LIST of one-param functions (fn 0 is main); CALL names a
+; function by index — mutual recursion lands, which SELF (one recursion)
+; could never carry; SELF is re-grounded as re-enter fn 0, so every
+; single-function program keeps walking unchanged. This is the stone that
+; unblocks the emitter-as-program (the full m4d fixpoint's named blocker).
+;
+; Verdict 15 when CALL holds:
+;   1   mutual recursion walks — even/odd calling each other by index:
+;       even(10) = 1 and even(7) = 0 through fkm-run
+;   2   fib via CALL(0,·) answers 55 — and the OLD SELF-shaped fib program
+;       still answers 55 through fkm (SELF == re-enter fn 0): back-compat
+;   4   the multi-function flatten — even/odd land in ONE 18-row table with
+;       function roots 8,17 (children before parents, each fn's root last)
+;   8   the emitted text is deterministic (two emissions str_eq) and the
+;       single-function emission carries fk_fn[1] (the special case folds in)
+(do
+    (let even (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-lit 1) (fk-call 1 (fk-sub (fk-arg) (fk-lit 1)))))
+    (let odd  (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-lit 0) (fk-call 0 (fk-sub (fk-arg) (fk-lit 1)))))
+    (let eo (list even odd))
+    (let c0 (if (eq (fkm-run eo 10) 1) (if (eq (fkm-run eo 7) 0) 1 0) 0))
+
+    (let fibc (fk-if (fk-le (fk-arg) (fk-lit 1)) (fk-arg)
+                     (fk-add (fk-call 0 (fk-sub (fk-arg) (fk-lit 1)))
+                             (fk-call 0 (fk-sub (fk-arg) (fk-lit 2))))))
+    (let c1 (if (eq (fkm-run (list fibc) 10) 55)
+                (if (eq (fkm-run (list (fk-fib-program)) 10) 55) 2 0) 0))
+
+    (let flat (fkc-flatten-many eo))
+    (let c2 (if (eq (len (nth flat 0)) 18)
+                (if (str_eq (fkc-fn-text (nth flat 1)) "8,17") 4 0) 0))
+
+    (let c3 (if (str_eq (fkc-emit-many eo) (fkc-emit-many eo))
+                (if (str_eq (fkc-fn-text (nth (fkc-flatten-many (list fibc)) 1)) (int_to_str (sub (len (nth (fkc-flatten-many (list fibc)) 0)) 1))) 8 0) 0))
+
+    (add c0 (add c1 (add c2 c3))))
