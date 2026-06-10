@@ -301,6 +301,44 @@
                                     recipes over head/tail — a champion-
                                     challenger question for m4e3, decided by
                                     counts, not churn))
+        # ── THE OVERNIGHT WORK ORDER (Urs, 2026-06-11, going to bed) ──────
+        # "work towards the current kernel surface fully implemented in the
+        # 4th kernel and passing all bands; bonus: real binary/assembly
+        # execution on all host resources; TTS and STT with the largest
+        # public models; the largest LLM this Mac runs; the api served on a
+        # binary compiled by the 4th kernel" — honest ladder, each stone
+        # shipped + witnessed separately; any cell may pick up the next one:
+        (overnight-ladder
+          (n1-net-organ    socket ops in a server-variant emission: the
+                           constant main owns socket/bind/listen/accept via
+                           quoteless externs; the PROGRAM's PUTC bytes become
+                           the response — the net organ physical)
+          (n2-api-binary   one real route: an fkw-emitted binary serves
+                           health-shaped JSON on a port; curl witnesses;
+                           THE api-on-a-4th-kernel-binary seed)
+          (n3-driver       fork/exec/pipe emission variant: spawn argv-given
+                           command, capture stdout into fk_src, the program
+                           parses it with the BMF CURSOR — a live subprocess
+                           stream under the streaming matcher)
+          (n4-tts          drive /usr/bin/say through n3 — TTS physical;
+                           model-class TTS (piper et al) named after)
+          (n5-stt          brew whisper-cpp + largest whisper model feasible
+                           (large-v3 target); n3 drives transcription; the
+                           cursor walks the transcript)
+          (n6-llm          drive ollama dolphin-mixtral:8x22b-q6_K (115 GB,
+                           the largest local; 128 GB RAM / 16 cores) through
+                           n3; measure tok/s — the organ driven, never
+                           reimplemented (host-resource-access))
+          (n7-ratchet      m4e3 flattener first click: ONE compiled .fk band
+                           through the observe door onto the table; fkw runs
+                           it; bands-on-fourth-arm 0 -> 1)
+          (n8-assembly     otool -tv on emitted binaries in the audit — the
+                           Form-emitted ARM64 assembly visible)
+          (honesty         all-424-bands is a WALK not a night — families
+                           climb as ops land (strings next); model COMPUTE
+                           rides host organs by design — the sibling
+                           orchestrates, ports, parses, measures))
+
         (m4e3-bridge the real-recipe flattener: read a COMPILED .fk recipe
                      through the observe door (node_category/node_children/
                      node_value) and flatten the REAL category set into the
