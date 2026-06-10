@@ -16,6 +16,49 @@ log() {
   printf '%s — %s\n' "$(timestamp)" "$*" | tee -a "$LOG_FILE"
 }
 
+# A deploy cancelled mid-recreate (concurrency cancel-in-progress) can leave
+# sibling services stopped while the repo and the api container sit aligned
+# at the target SHA — web and pulse down, every Traefik route for them dark,
+# and the witness unable to report the silence it is part of. That exact
+# state shipped on 2026-06-10: the 14:14Z rollout was cancelled by the next
+# push, web never came back, and the next run's "Already flowing" exited 0.
+# So every path through this script calls this: start whatever is stopped
+# (up -d is idempotent for running services), hard-require the public organs
+# (api, web), and name the witness loudly when it is down — a dark witness
+# verifies blind.
+ensure_all_services_up() {
+  local running missing svc
+  running="$(docker compose -f "$COMPOSE_ROOT/docker-compose.yml" ps --format '{{.Service}} {{.State}}' 2>/dev/null | awk '$2=="running" {print $1}')"
+  missing=""
+  for svc in api web pulse; do
+    if ! printf '%s\n' "$running" | grep -qx "$svc"; then
+      missing="${missing} ${svc}"
+    fi
+  done
+  if [[ -z "$missing" ]]; then
+    return 0
+  fi
+  log "services down:${missing} — raising the whole body (docker compose up -d)"
+  if ! docker compose -f "$COMPOSE_ROOT/docker-compose.yml" up -d --wait --wait-timeout 180 2>&1 | tee -a "$LOG_FILE"; then
+    log "compose up --wait failed or unsupported; falling back to plain up -d"
+    docker compose -f "$COMPOSE_ROOT/docker-compose.yml" up -d 2>&1 | tee -a "$LOG_FILE" || true
+  fi
+  local deadline=$(( $(date +%s) + 180 ))
+  for svc in api web; do
+    while ! docker compose -f "$COMPOSE_ROOT/docker-compose.yml" ps --format '{{.Service}} {{.State}}' 2>/dev/null | awk -v s="$svc" '$1==s && $2=="running"' | grep -q .; do
+      if (( $(date +%s) >= deadline )); then
+        log "FAIL: $svc did not reach running state after raise"
+        return 1
+      fi
+      sleep 3
+    done
+  done
+  if ! docker compose -f "$COMPOSE_ROOT/docker-compose.yml" ps --format '{{.Service}} {{.State}}' 2>/dev/null | awk '$1=="pulse" && $2=="running"' | grep -q .; then
+    log "WARN: pulse (the witness) is still not running — the body deploys blind until it breathes"
+  fi
+  log "all core services running"
+}
+
 run_with_timeout() {
   local seconds="$1"
   shift
@@ -83,6 +126,9 @@ RUNNING_SHORT="${RUNNING_SHA:0:12}"
 
 if [[ "$OLD_SHA" == "$TARGET_SHA" && "$RUNNING_SHA" == "$TARGET_SHA" ]]; then
   log "Already flowing at ${TARGET_SHA:0:12} (repo and running API aligned)"
+  # Aligned repo + api is necessary, not sufficient — raise any stopped
+  # siblings (web, pulse) before resting, or this exit masks their silence.
+  ensure_all_services_up || exit 1
   exit 0
 fi
 
@@ -980,6 +1026,10 @@ ensure_kernel_router_canary() {
   elapsed=$((ended - started))
   log "kernel-router canary: running and locally receipt-proven (${elapsed}s)"
 }
+
+# Raise any service a prior cancelled rollout left stopped before the hard
+# checks below — they verify the whole body, not only the rebuilt scope.
+ensure_all_services_up || true
 
 if wait_for_running api; then
   log "api container running"
