@@ -1,0 +1,69 @@
+; transformer-numerics.fk — M3 of form-native-models.form: softmax, gelu, layernorm as proven Form.
+;
+; The stone that connects the layer math to a real transformer block: the three numerics every
+; attention+FFN block needs (M4), composed from primitives only — exp by square-and-reduce Taylor,
+; sqrt by fixed-count Newton, tanh from exp. All fp64; the recipe DEFINES the reduction order and
+; the approximation, so every kernel computes the same bits (determinism is the feature, not the
+; constraint). Format-parameterized variants (bf16/fp8 via apply_arith) are M1's stone, not this one.
+; The band's claims are pinned to the PyTorch fp64 reference (softmax / layer_norm eps=1e-5 /
+; gelu approximate='tanh'), each value reduced to an integer at 1e-6 — the conformance discipline
+; turned toward the reference implementation the weights will arrive from (M6: whisper-tiny).
+
+; --- scalar numerics: abs, exp, tanh, sqrt ---
+(defn tn-abs (x) (if (lt x 0.0) (sub 0.0 x) x))
+
+; exp: Taylor at 0 (14 terms, |x| <= 0.5), reached by halving, then squared back up.
+(defn tn-exp-acc (x n term acc)
+  (if (gt n 14.0) acc
+      (tn-exp-acc x (add n 1.0) (mul term (div x n)) (add acc (mul term (div x n))))))
+(defn tn-exp-small (x) (tn-exp-acc x 1.0 1.0 1.0))
+(defn tn-pow2k (v k) (if (eq k 0) v (tn-pow2k (mul v v) (sub k 1))))
+(defn tn-exp-reduce (x k)
+  (if (le (tn-abs x) 0.5) (tn-pow2k (tn-exp-small x) k)
+      (tn-exp-reduce (div x 2.0) (add k 1))))
+(defn tn-exp (x) (tn-exp-reduce x 0))
+
+; tanh from exp: (e^2x − 1) / (e^2x + 1)
+(defn tn-tanh-of (e2x) (div (sub e2x 1.0) (add e2x 1.0)))
+(defn tn-tanh (x) (tn-tanh-of (tn-exp (mul 2.0 x))))
+
+; sqrt: Newton from the value itself, fixed 50 iterations — converged is a fixed point, so the
+; count buys determinism, not drift.
+(defn tn-sqrt-iter (v g n)
+  (if (eq n 0) g (tn-sqrt-iter v (mul 0.5 (add g (div v g))) (sub n 1))))
+(defn tn-sqrt (v) (if (le v 0.0) 0.0 (tn-sqrt-iter v v 50)))
+
+; --- vector helpers (float-counted: no int/float mixing) ---
+(defn tn-flen (xs) (if (eq (len xs) 0) 0.0 (add 1.0 (tn-flen (tail xs)))))
+(defn tn-sum-acc (acc xs)
+  (if (eq (len xs) 0) acc (tn-sum-acc (add acc (head xs)) (tail xs))))
+(defn tn-sum (xs) (tn-sum-acc 0.0 xs))
+(defn tn-max-acc (best xs)
+  (if (eq (len xs) 0) best
+      (if (gt (head xs) best) (tn-max-acc (head xs) (tail xs)) (tn-max-acc best (tail xs)))))
+(defn tn-max (xs) (tn-max-acc (head xs) (tail xs)))
+(defn tn-sub-scalar (xs c)
+  (if (eq (len xs) 0) (empty) (cons (sub (head xs) c) (tn-sub-scalar (tail xs) c))))
+(defn tn-scale (xs s)
+  (if (eq (len xs) 0) (empty) (cons (mul (head xs) s) (tn-scale (tail xs) s))))
+(defn tn-exp-map (xs)
+  (if (eq (len xs) 0) (empty) (cons (tn-exp (head xs)) (tn-exp-map (tail xs)))))
+
+; --- softmax: max-subtract for stability, exp, normalize ---
+(defn tn-softmax-norm (es) (tn-scale es (div 1.0 (tn-sum es))))
+(defn tn-softmax (xs) (tn-softmax-norm (tn-exp-map (tn-sub-scalar xs (tn-max xs)))))
+
+; --- layernorm: biased variance, eps inside the sqrt (the torch shape), gamma=1 beta=0 ---
+(defn tn-mean (xs) (div (tn-sum xs) (tn-flen xs)))
+(defn tn-var-acc (m acc xs)
+  (if (eq (len xs) 0) acc
+      (tn-var-acc m (add acc (mul (sub (head xs) m) (sub (head xs) m))) (tail xs))))
+(defn tn-var (xs) (div (tn-var-acc (tn-mean xs) 0.0 xs) (tn-flen xs)))
+(defn tn-layernorm (xs eps)
+  (tn-scale (tn-sub-scalar xs (tn-mean xs)) (div 1.0 (tn-sqrt (add (tn-var xs) eps)))))
+
+; --- gelu: the tanh approximation (whisper/GPT lineage), 0.5·x·(1 + tanh(√(2/π)·(x + 0.044715·x³))) ---
+(defn tn-gelu (x)
+  (mul (mul 0.5 x)
+       (add 1.0 (tn-tanh (mul 0.7978845608028654
+                              (add x (mul 0.044715 (mul x (mul x x)))))))))

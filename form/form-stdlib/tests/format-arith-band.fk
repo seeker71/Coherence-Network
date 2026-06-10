@@ -1,0 +1,41 @@
+; preludes: form-stdlib/core.fk form-stdlib/format-arith.fk
+;
+; format-arith-band — M1's format-parameterized quantize/ops/matvec against the torch reference
+; (bfloat16 = RNE, float8_e4m3fn) and the body's own canonical conformance vector, proven three-way.
+; W = [[1.1, -2.3, 0.7], [0.05, 3.3, -1.2]], x = [0.9, 0.31, -2.0]; mb 7 = bf16, mb 3 = fp8-e4m3.
+;
+; Verdict 2047 when every claim lands:
+;   1     bf16(0.1) → 100098            (0.10009765625, torch bfloat16 round-trip, at 1e-6)
+;   2     bf16 tie 1+0.5/128 → 1.0      (half-to-EVEN holds the tie down)
+;   4     bf16 tie 1+1.5/128 → 1.015625 (and up when the floor is odd)
+;   8     bf16 mul 0.1·0.2 → 20020      (torch: 0.02001953125)
+;   16    fp8-e4m3 add 0.5+0.25 → 0.75  (the canonical conformance vector in the body's own canon)
+;   32    bf16 matvec[0] → -1125000     (torch fold, exact)
+;   64    bf16 matvec[1] → 3484375
+;   128   fp8 matvec[0] → -1000000
+;   256   fp8 matvec[1] → 3500000
+;   512   bf16 matvec relative error < 1e-2 on both rows (the accumulation conformance shape)
+;   1024  fp8 matvec relative error < 0.15 on both rows  (measured for this 3-term fold — fp8's
+;                                                          2^-4 step accumulates; not a general claim)
+(do
+    (let w0 (list 1.1 -2.3 0.7))
+    (let w1 (list 0.05 3.3 -1.2))
+    (let x  (list 0.9 0.31 -2.0))
+    (let f64v (list (fq-dot w0 x 52) (fq-dot w1 x 52)))
+    (let bfv (fq-matvec (list w0 w1) x 7))
+    (let f8v (fq-matvec (list w0 w1) x 3))
+    (let c0  (if (eq (round (mul (fq-quant 0.1 7) 1000000.0)) 100098) 1 0))
+    (let c1  (if (eq (fq-quant 1.00390625 7) 1.0) 2 0))
+    (let c2  (if (eq (fq-quant 1.01171875 7) 1.015625) 4 0))
+    (let c3  (if (eq (round (mul (fq-mul 0.1 0.2 7) 1000000.0)) 20020) 8 0))
+    (let c4  (if (eq (fq-add 0.5 0.25 3) 0.75) 16 0))
+    (let c5  (if (eq (round (mul (nth bfv 0) 1000000.0)) -1125000) 32 0))
+    (let c6  (if (eq (round (mul (nth bfv 1) 1000000.0)) 3484375) 64 0))
+    (let c7  (if (eq (round (mul (nth f8v 0) 1000000.0)) -1000000) 128 0))
+    (let c8  (if (eq (round (mul (nth f8v 1) 1000000.0)) 3500000) 256 0))
+    (let c9  (if (and (lt (fq-relerr (nth bfv 0) (nth f64v 0)) 0.01)
+                      (lt (fq-relerr (nth bfv 1) (nth f64v 1)) 0.01)) 512 0))
+    (let c10 (if (and (lt (fq-relerr (nth f8v 0) (nth f64v 0)) 0.15)
+                      (lt (fq-relerr (nth f8v 1) (nth f64v 1)) 0.15)) 1024 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7
+    (add c8 (add c9 c10)))))))))))
