@@ -405,5 +405,36 @@ if [[ "$m_a" != "42" || "$m_b" != "9001" ]]; then
 fi
 
 echo
+# ── 13. n1/n2 — the NET organ + the api on a 4th-kernel-compiled binary ──
+# A server-variant binary owns socket/bind/listen/accept/fork; the responder
+# program's PUTC bytes (dup2'd to the connection) are the body. Live curl.
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
+    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" > "$work/srv-driver.fk"
+cat >> "$work/srv-driver.fk" <<'EOF'
+(let resp (fkresp "HTTP/1.0 200 OK\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{\"status\":\"ok\",\"served_by\":\"fourth-kernel-binary\"}"))
+(print "==SRV==")
+(print (fkc-emit-server (list resp)))
+(print "==END==")
+EOF
+(cd "$FORMDIR" && "$GO_BIN" "$work/srv-driver.fk" 2>/dev/null) > "$work/srv.out"
+sed -n '/^==SRV==$/,/^==END==$/p' "$work/srv.out" | sed -e '1d' -e '$d' > "$work/api.c"
+"$CLANG" -O2 -o "$work/fkapi" "$work/api.c"
+PORT=8231
+"$work/fkapi" "$PORT" & API_PID=$!
+n=0; while [ $n -lt 40 ]; do
+    if curl -sS --max-time 1 -o /dev/null "http://127.0.0.1:$PORT/" 2>/dev/null; then break; fi
+    n=$((n+1))
+done
+code="$(curl -sS --max-time 3 -w '%{http_code}' -o "$work/body.txt" "http://127.0.0.1:$PORT/health" 2>/dev/null)"
+t="$(curl -sS --max-time 3 -w '%{time_total}' -o /dev/null "http://127.0.0.1:$PORT/" 2>/dev/null)"
+kill -9 "$API_PID" 2>/dev/null
+echo "n1/n2 the api served on a binary the 4th kernel compiled (net organ: socket/bind/accept/fork):"
+echo "  GET /health -> HTTP $code in ${t}s  body: $(cat "$work/body.txt")"
+if [[ "$code" != "200" ]]; then
+    echo "FAIL  fourth-kernel api binary did not serve 200"; exit 1
+fi
+echo "  the response BODY is the program's PUTC bytes; the net lifecycle is the constant main (the organ)"
+
+echo
 echo "conditions: $(uname -m) $(uname -s), clang -O2, full-process invocations (startup included)"
 echo "ok — parity held and the rows are real; the spec is docs/coherence-substrate/fourth-kernel.form"
