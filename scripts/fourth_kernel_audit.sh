@@ -436,5 +436,35 @@ fi
 echo "  the response BODY is the program's PUTC bytes; the net lifecycle is the constant main (the organ)"
 
 echo
+# ── 14. n3 — the DRIVER organ: fork/exec/pipe a host command, parse its stdout ──
+# The keystone the model stones ride: the binary spawns a host command, captures
+# its stdout into fk_src, and the PROGRAM parses that LIVE stream with the cursor.
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
+    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" > "$work/drv-driver.fk"
+cat >> "$work/drv-driver.fk" <<'EOF'
+(defn seqq (a b) (fk-if a b b))
+(defn adv () (fk-set (fk-lit 0) (fk-add (fk-get (fk-lit 0)) (fk-lit 1))))
+(defn x2 () (fk-add (fk-arg) (fk-arg)))
+(defn x10 () (fk-add (fk-add (x2) (x2)) (fk-add (fk-add (x2) (x2)) (x2))))
+(defn curb () (fk-buf (fk-get (fk-lit 0))))
+(let numf (fk-if (fk-le (fk-lit 48) (curb)) (fk-if (fk-le (curb) (fk-lit 57)) (seqq (adv) (fk-call 1 (fk-add (x10) (fk-sub (fk-buf (fk-sub (fk-get (fk-lit 0)) (fk-lit 1))) (fk-lit 48))))) (fk-arg)) (fk-arg)))
+(let entry (fk-call 1 (fk-lit 0)))
+(print "==DRV==")
+(print (fkc-emit-driver (list entry numf)))
+(print "==END==")
+EOF
+(cd "$FORMDIR" && "$GO_BIN" "$work/drv-driver.fk" 2>/dev/null) > "$work/drv.out"
+sed -n '/^==DRV==$/,/^==END==$/p' "$work/drv.out" | sed -e '1d' -e '$d' > "$work/fkdrv.c"
+"$CLANG" -O2 -o "$work/fkdrv" "$work/fkdrv.c"
+d_pf="$("$work/fkdrv" printf 31337 | head -1)"
+d_yr="$("$work/fkdrv" date +%Y | head -1)"
+echo "n3 the driver organ (fork/exec/pipe a host command; parse its stdout with the BMF cursor):"
+echo "  drive 'printf 31337' -> $d_pf   drive 'date +%Y' -> $d_yr (the year parsed off live date stdout)"
+if [[ "$d_pf" != "31337" ]]; then
+    echo "FAIL  driver did not parse the piped subprocess stdout"; exit 1
+fi
+echo "  the host command's stdout flows into fk_src; the cursor reads a LIVE subprocess — the organ TTS/STT/LLM ride"
+
+echo
 echo "conditions: $(uname -m) $(uname -s), clang -O2, full-process invocations (startup included)"
 echo "ok — parity held and the rows are real; the spec is docs/coherence-substrate/fourth-kernel.form"
