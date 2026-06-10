@@ -117,6 +117,39 @@
   # belongs with the primitive spec+verify registry.
   (census scripts/minimal_kernel_census.sh)
 
+  # ── The completion: trinity, types, and the OS all describe over the four ─
+  # Urs: "and we can describe blueprint, recipe and cells including all the
+  # primitive generic and bit accurate types this way and build a full form OS
+  # from those 4 primitives?" — yes; each layer is theorem, running tissue,
+  # or named-with-a-path:
+  (completion
+
+    (trinity-over-the-four                                  # core-axioms derives it; the four operate it
+      (recipe      what-intern-builds)                      # the composed cell itself (water)
+      (blueprint   intern-of-the-shape-projection)          # observe children/categories, intern the
+                                                            # type-level view; identity free (ice)
+      (named-cell  name-cell->node-id-in-a-table-of-cells)  # bind = intern + repoint the table version;
+                                                            # names 0..many and free (gas)
+      (nothing-beyond intern observe repoint))
+
+    (types-as-cells                                         # PROVEN, not only describable
+      (a-type-is        a-blueprint)
+      (generic          a-blueprint-with-hole-cells)        # compatible-with / view-as are live doors
+      (bit-accurate     format-CELLS-as-data)               # numeric-formats.canonical.json: 19 formats,
+                                                            # width/mantissa/rounding/epsilon + vectors
+      (semantics-in-form format-arith.fk-RNE-quantize-vs-torch)  # M1 of form-native-models, three-way
+      (carrier-for-speed port-cpu-under-the-conformance-band)    # recipe = spec, native = carrier
+      (proof            transformer-audit-bit-exact-f740120e-across-x86-android-cpu-hexagon-dsp))
+
+    (os-over-the-four                                       # host-kernel.os-feature-coverage, by family
+      (offer   syscall-abi ipc-over-channel scheduler-offers-the-compute-organ)
+      (port    drivers filesystem network time interrupts-as-unsolicited-afferent-offers)
+      (intern  protection-node-id-as-unforgeable-capability memory-isolation-by-content-addressing)
+      (repoint process-and-name-tables safe-self-update boot-roots)
+      (runs    fs net postgres persistence ipc-two-cell-daemon time walk_parallel)
+      (named-with-a-path scheduler-as-recipe interrupt-band preemption-policy)
+      (leaf-honesty the-fours-per-host-implementations-are-native-by-definition)))
+
   (invariant
     (four-families-one-per-axiom-face  intern observe offer port)
     (axiom-1-lives-inside-offer        the-ack-vocabulary-IS-the-states)
