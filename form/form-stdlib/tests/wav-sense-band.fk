@@ -1,0 +1,23 @@
+; preludes: form-stdlib/core.fk form-stdlib/wav-sense.fk
+;
+; wav-sense-band — the energy-envelope DSP, lifted from the Python carrier into the body, proven three-way.
+;
+; The pure functions are checked on fixed byte lists (a synthetic mini-PCM) so the proof needs no file;
+; the file door (wav-envelope-file) is exercised live by the carrier. 8000 = 64 + 31·256 (lo=64, hi=31).
+;
+; Verdict 63 when every claim lands:
+;   1   LE decode: [lo 0, hi 16] = 4096
+;   2   sign: [lo 0, hi 128] = −32768
+;   4   abs of that sample = 32768
+;   8   abs-sum over two samples (100, 200) = 300
+;   16  a window of four 8000-amplitude samples → level 9 (mean 8000/800 = 10, capped)
+;   32  a window of silence → level 0
+(do
+    (let c0 (if (eq (wav-sample (list 0 16) 0) 4096) 1 0))
+    (let c1 (if (eq (wav-sample (list 0 128) 0) (sub 0 32768)) 2 0))
+    (let c2 (if (eq (abs2 (wav-sample (list 0 128) 0)) 32768) 4 0))
+    (let c3 (if (eq (wav-abs-sum (list 100 0 200 0) 0 4 2 0) 300) 8 0))
+    (let loud (list 64 31 64 31 64 31 64 31))
+    (let c4 (if (eq (wav-window-level loud 0 8 2) 9) 16 0))
+    (let c5 (if (eq (wav-window-level (list 0 0 0 0) 0 4 2) 0) 32 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))

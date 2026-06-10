@@ -185,6 +185,17 @@ def gate(loudness, speechiness):
         return 0
 
 
+def envelope_form(wav):
+    # the energy feature, computed IN THE BODY: Form reads the wav (read_file_bytes) and the 8-window
+    # envelope is wav-sense.fk, not Python. The carrier only hands over the file path.
+    out = kernel("form-stdlib/wav-sense.fk", f'(do (wav-envelope-file "{wav}" 8))')
+    try:
+        v = json.loads(out)
+        return v if isinstance(v, list) and len(v) == 8 else [0] * 8
+    except Exception:
+        return [0] * 8
+
+
 def traits(f0v, windows, g, speechiness, agree):
     # one body call → [speaker-band, arousal, transcript-trust, sound-trust, agreement-trust]
     wv = " ".join(map(str, windows))
@@ -281,8 +292,8 @@ def main():
                     silent += 1
                     print(f"[{time.strftime('%H:%M:%S')}] {cell['name']} silence — (mic {loud}/99, nothing to hear)")
                     continue
-                s = samples(wav)
-                win = windows8(s)
+                s = samples(wav)            # still read in Python for f0 (the next DSP to lift into Form)
+                win = envelope_form(wav)    # the energy feature: now computed in the BODY (wav-sense.fk)
                 cat = sound_oracle(wav)
                 pitch = f0(s) if g >= 2 else 0
                 # co-learning agreement signal (does the Form sound-arm already match the oracle?)
