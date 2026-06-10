@@ -1185,6 +1185,56 @@ check_household_events_native() {
   return 0
 }
 
+check_promoted_bml_read_routes_native() {
+  local routes=(
+    "runtime-events|/api/runtime/events?limit=1&source=api|api_runtime_events"
+    "views-stats|/api/views/stats/lc-attuned-spaces?days=30|api_views_stats"
+    "reaction-summary|/api/reactions/concept/lc-attuned-spaces/summary|api_reaction_concept_summary"
+    "reaction-threads|/api/reactions/concept/lc-attuned-spaces/threads|api_reaction_concept_threads"
+    "concept-voices|/api/concepts/lc-attuned-spaces/voices|api_concept_voices"
+  )
+  local spec name route_path expected_handler url headers_file body_file status router handler authority
+
+  echo
+  echo "==> Promoted BML read native routes"
+
+  for spec in "${routes[@]}"; do
+    name="${spec%%|*}"
+    route_path="${spec#*|}"
+    expected_handler="${route_path#*|}"
+    route_path="${route_path%%|*}"
+    url="${API_URL%/}${route_path}"
+    headers_file="$TMP_DIR/promoted_${name}.headers.txt"
+    body_file="$TMP_DIR/promoted_${name}.body.json"
+
+    status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -L -D "$headers_file" -o "$body_file" -w "%{http_code}" \
+      --max-time "$CURL_MAX_TIME" \
+      --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+      "$url" \
+      -H "Accept: application/json" || true)"
+    router="$(awk 'tolower($1) == "x-form-router:" { print $2 }' "$headers_file" | tail -n 1 | tr -d '\r')"
+    handler="$(awk 'tolower($1) == "x-form-handler:" { print $2 }' "$headers_file" | tail -n 1 | tr -d '\r')"
+    authority="$(awk 'tolower($1) == "x-form-python-authority:" { print $2 }' "$headers_file" | tail -n 1 | tr -d '\r')"
+
+    echo "${route_path}: status=${status:-unknown} router=${router:-<missing>} handler=${handler:-<missing>} python_authority=${authority:-<missing>}"
+    if [[ -z "$status" || "$status" -lt 200 || "$status" -ge 300 ]]; then
+      echo "FAIL: promoted BML read route did not return 2xx: ${route_path}"
+      head -c 250 "$body_file" || true
+      echo
+      return 1
+    fi
+    if [[ "$router" != "native-kernel" || "$handler" != "$expected_handler" || "$authority" != "false" ]]; then
+      echo "FAIL: promoted BML read route did not return native proof headers: ${route_path}"
+      head -c 250 "$body_file" || true
+      echo
+      return 1
+    fi
+  done
+
+  echo "PASS"
+  return 0
+}
+
 check_kernel_status_native() {
   local url="${API_URL%/}/api/utils/kernel_status"
   local headers_file="$TMP_DIR/kernel_status.headers.txt"
@@ -1477,6 +1527,7 @@ check_native_canary_with_rollout "Inventory flow observation native route" check
 check_native_canary_with_rollout "Kernel status native route" check_kernel_status_native || fail=1
 check_native_canary_with_rollout "Agent task native routes" check_agent_tasks_activity_native || fail=1
 check_native_canary_with_rollout "Contribution read native routes" check_contribution_reads_native || fail=1
+check_native_canary_with_rollout "Promoted BML read native routes" check_promoted_bml_read_routes_native || fail=1
 check_native_canary_with_rollout "Household events native route" check_household_events_native || fail=1
 check_url "Public web root" "${WEB_URL%/}/" || fail=1
 check_web_css_assets "${WEB_URL%/}/" || fail=1
