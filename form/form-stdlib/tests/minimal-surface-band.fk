@@ -1,0 +1,44 @@
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk
+;
+; minimal-surface-band — the four doors proven three-way, one claim each, plus
+; the axiom-3 gift as its own claim. After this band, a recipe against the
+; surface runs identically on every kernel: the m4a contract of
+; fourth-kernel.form, the families of minimal-kernel.form.
+;
+; Verdict 31 when the surface holds:
+;   1   INTERN — same nested composition, separately built, is the same cell;
+;       swapped children are a different cell (position participates)
+;   2   OBSERVE — arity and children read back; the nested child IS a freshly
+;       interned same-shape cell (round-trip and content-address in one claim);
+;       the leaf value returns through the door
+;   4   OFFER — a 3-deep node-counter-offer chain threads to its terminal 42;
+;       choice pops on fail (ack-0) through a nested cascade; a non-fail first
+;       answer commits
+;   8   PORT — text crosses the membrane out and returns identical
+;   16  SAVE/RESTORE FREE — a held composition survives composing over it
+;       untouched, and the successor's child IS the held cell (axiom 3)
+(do
+    (let n1 (ms-intern (ms-cell 1) (ms-intern (ms-cell 2) (ms-cell 3))))
+    (let n2 (ms-intern (ms-cell 1) (ms-intern (ms-cell 2) (ms-cell 3))))
+    (let swapped (ms-intern (ms-intern (ms-cell 2) (ms-cell 3)) (ms-cell 1)))
+    (let c0 (if (eq (ms-same n1 n2) 1) (if (eq (ms-same n1 swapped) 0) 1 0) 0))
+
+    (let c1 (if (eq (ms-arity n1) 2)
+                (if (eq (ms-same (ms-child n1 1) (ms-intern (ms-cell 2) (ms-cell 3))) 1)
+                    (if (eq (ms-value (ms-child n1 0)) 1) 2 0) 0) 0))
+
+    (let chain (ms-ack-node (ms-ack-node (ms-ack-node (ms-ack-terminal 42)))))
+    (let c2 (if (eq (ms-thread chain) 42)
+                (if (eq (ms-choice 0 (ms-choice 0 5)) 5)
+                    (if (eq (ms-choice 3 5) 3) 4 0) 0) 0))
+
+    (let p "/tmp/minimal-surface-band.txt")
+    (ms-port-out p "the membrane returns what crossed it")
+    (let c3 (if (str_eq (ms-port-in p) "the membrane returns what crossed it") 8 0))
+
+    (let s (ms-intern (ms-cell 4) (ms-cell 5)))
+    (let s2 (ms-intern (ms-cell 0) s))
+    (let c4 (if (eq (ms-same s (ms-intern (ms-cell 4) (ms-cell 5))) 1)
+                (if (eq (ms-same (ms-child s2 1) s) 1) 16 0) 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))

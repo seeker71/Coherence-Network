@@ -1,0 +1,111 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "worktree-fourth-kernel-seed",
+  "commit_scope": "fourth-kernel.form m4a: the minimal surface \u2014 the four primitive families (intern, observe, offer, port) as one recipe-callable door each, proven three-way at verdict 31, with the BMF thread/choice lane and the axiom-3 save/restore gift proven as their own claims. MS-PAIR registered at 1.2.99.1300.",
+  "files_owned": [
+    "form/form-stdlib/minimal-surface.fk",
+    "form/form-stdlib/tests/minimal-surface-band.fk",
+    "form/form-stdlib/blueprint-registry.json",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/coherence-substrate/INDEX.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/tests/minimal-surface-band.fk",
+      "python3 scripts/scan_form_blueprints.py --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-11_minimal_surface_m4a.json"
+    ],
+    "summary": "The surface holds three-way at 31: (1) intern \u2014 a nested composition separately built is the same cell, swapped children are a different cell; (2) observe \u2014 arity and children read back, the nested child IS a freshly interned same-shape cell, the leaf value returns; (4) offer \u2014 a 3-deep node-counter-offer chain threads to its terminal, choice pops on fail (ack-0) through a nested cascade, a non-fail first answer commits; (8) port \u2014 text crosses the membrane out and returns identical; (16) save/restore free \u2014 a held composition survives composing over it untouched and the successor's child IS the held cell. Blueprint registry check clean: 0 unregistered type-99.",
+    "observed_delta": {
+      "minimal_surface_band_verdict": 31,
+      "kernels_agreeing": 3,
+      "divergent": 0,
+      "ms_pair_blueprint": "1.2.99.1300",
+      "unregistered_type_99_after": 0
+    },
+    "known_limitations": [
+      {
+        "limitation": "The intern door composes pairs (MS-PAIR); n-ary composition is reachable by nesting, and a dedicated n-ary door can join when a consumer needs it.",
+        "follow_up": "m4b authors the walker over these doors; if n-ary intern earns its place there, it lands with its own band claim."
+      },
+      {
+        "limitation": "The port door proves the filesystem carrier; the lattice port and other carriers ride the same door shape but are proven by their own existing bands (persistence.fk, fs-crud).",
+        "follow_up": "m4b composes against the door; carrier swaps stay behind it per resource-port.fk."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "PR gates run the three-way band; the registry check rides scan_form_blueprints --check."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "form-stdlib additions ride the api image rebuild; the lattice ingests the updated fourth-kernel.form on the post-merge hook."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No route behavior changes. The body gains the m4a portability contract: recipes authored against minimal-surface.fk's four doors run identically on every kernel that proves the band \u2014 the precondition for m4b (the walker as recipes) and the fourth kernel's bootstrap ladder.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "minimal-surface-band proves the four doors three-way at verdict 31: intern content-address law, observe round-trip, offer ack-threading with BMF choice/fail, port membrane round-trip, and the axiom-3 save/restore gift.",
+      "scan_form_blueprints --check proves MS-PAIR is registered, not magic: 0 unregistered type-99 literals."
+    ],
+    "summary": "validate.sh end-to-end across Go/Rust/TS: 1 ok, 0 divergent, verdict 31."
+  },
+  "phase_gate": {
+    "phase": "m4a-surface",
+    "gate": "the four doors proven three-way locally; CI three-way + deploy ingest confirm the crossing",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "m4b \u2014 the walker authored as recipes over the surface, run interpreted on the existing kernels (correct before fast)"
+  },
+  "idea_ids": [
+    "fourth-kernel"
+  ],
+  "spec_ids": [
+    "kernel-native-api-readiness",
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "minimal-surface-m4a-20260611"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "lay-the-first-stone"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-fable-5"
+  },
+  "evidence_refs": [
+    "docs/coherence-substrate/minimal-kernel.form",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "form/form-stdlib/blueprint-registry.json"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/system_audit/commit_evidence_2026-06-11_minimal_surface_m4a.json",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-stdlib/minimal-surface.fk",
+    "form/form-stdlib/tests/minimal-surface-band.fk"
+  ],
+  "change_intent": "runtime_feature"
+}

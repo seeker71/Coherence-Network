@@ -301,6 +301,7 @@ var bpTable = map[string][4]uint32{
 	"MIDI-NOTE-ON": {1, 2, 99, 1400},
 	"MIDI-SONG": {1, 2, 99, 1403},
 	"MIDI-TRACK": {1, 2, 99, 1402},
+	"MS-PAIR": {1, 2, 99, 1300},
 	"NAME-RECORD": {1, 2, 99, 1850},
 	"NATIVE-ROUTE-ATTENTION": {1, 2, 99, 1734},
 	"NATIVE-ROUTE-GOAL": {1, 2, 99, 1735},
