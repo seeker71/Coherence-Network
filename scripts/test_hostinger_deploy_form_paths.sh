@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WORKFLOW="$ROOT_DIR/.github/workflows/hostinger-auto-deploy.yml"
 DEPLOY_SCRIPT="$ROOT_DIR/deploy/hostinger/auto-deploy.sh"
 DOCKERFILE="$ROOT_DIR/Dockerfile.api"
+KERNEL_ROUTER_DOCKERFILE="$ROOT_DIR/Dockerfile.kernel-router"
 
 fail() {
   echo "FAIL: $*" >&2
@@ -14,8 +15,14 @@ fail() {
 grep -Fq "'form/form-stdlib/**'" "$WORKFLOW" \
   || fail "Hostinger workflow does not trigger for form/form-stdlib changes"
 
+grep -Fq "'deploy/front-door/**'" "$WORKFLOW" \
+  || fail "Hostinger workflow does not trigger for BML front-door catalog changes"
+
 grep -Fq "COPY form/form-stdlib/ ./form/form-stdlib/" "$DOCKERFILE" \
   || fail "API image does not carry form/form-stdlib"
+
+grep -Fq "COPY deploy/front-door/api.bml /routes/api.bml" "$KERNEL_ROUTER_DOCKERFILE" \
+  || fail "kernel-router image does not carry the BML front-door catalog"
 
 grep -Fq "form/form-stdlib/*)" "$DEPLOY_SCRIPT" \
   || fail "deploy service routing does not send form/form-stdlib changes to api"
