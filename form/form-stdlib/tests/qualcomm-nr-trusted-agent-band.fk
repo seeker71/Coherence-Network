@@ -1,0 +1,124 @@
+; qualcomm-nr-trusted-agent-band.fk
+;
+; Proves seven claims:
+;   1   the recipient lens is NR Access Stratum software leadership
+;   2   the first pitch is proof-carrying control runtime, not metaphysics
+;   4   protocol action requires an offered typed port plus capability gates
+;   8   no-event, no, yes, and counter-offer remain distinct
+;   16  modem/AI actions map to local Snapdragon-class organs
+;   32  the health gate rejects extractive optimization
+;   64  route, promotion, permission, and witness must hold before authority
+;
+; Verdict: 127 when every claim lands across Go/Rust/TS.
+;
+; preludes:
+;   form-stdlib/core.fk
+;   form-stdlib/resource-port.fk
+;   form-stdlib/recognition-router.fk
+;   form-stdlib/champion-challenger.fk
+;   form-stdlib/grammars/living-equation.fk
+;   form-stdlib/all-life-north-star.fk
+;   form-stdlib/qualcomm-nr-trusted-agent.fk
+
+(do
+    (let lens-ok
+        (if (str_eq (qnra-recipient-lens)
+                    "senior-nr-5g-access-stratum-software-lead") 1 0))
+
+    (let pitch-ok
+        (if (str_eq (qnra-first-pitch) "proof-carrying-control-runtime")
+            (if (str_eq (qnra-delayed-pitch) "universal-ontology")
+                (if (str_eq (qnra-external-disclosure-gate)
+                            "patent-counsel-or-defensive-publication-first") 2 0)
+                0)
+            0))
+
+    (let agent (qnra-modem-agent-resource))
+    (let gates (qnra-action-gates 1 1 1 1 1 1))
+    (let missing-witness (qnra-action-gates 1 1 1 0 1 1))
+    (let port-ok
+        (if (eq (qnra-action-allowed? agent (efferent-bytes) gates) 1)
+            (if (eq (qnra-action-allowed? agent (efferent-pixel) gates) 0)
+                (if (eq (qnra-action-allowed? agent (efferent-bytes) missing-witness) 0)
+                    4 0)
+                0)
+            0))
+
+    (let nothing-path (qnra-ack-path (empty)))
+    (let no-path (qnra-ack-path (list 0)))
+    (let yes-path (qnra-ack-path (list 1)))
+    (let node-path (qnra-ack-path (list 42)))
+    (let ack-ok
+        (if (str_eq nothing-path "nothing:no-event-or-wait")
+            (if (str_eq no-path "zero:received-no")
+                (if (str_eq yes-path "one:authorized-crossing")
+                    (if (str_eq node-path "node:counter-offer-policy-cell")
+                        (if (not (str_eq nothing-path no-path)) 8 0)
+                        0)
+                    0)
+                0)
+            0))
+
+    (let organ-ok
+        (if (str_eq (qnra-action-organ "protocol-control") "cpu-access-stratum")
+            (if (str_eq (qnra-action-organ "radio-context") "modem-rf")
+                (if (str_eq (qnra-action-organ "traffic-classify") "modem-ai-processor")
+                    (if (str_eq (qnra-action-organ "edge-inference") "hexagon-npu")
+                        (if (str_eq (qnra-action-organ "signal-stream") "hexagon-dsp")
+                            (if (str_eq (qnra-action-organ "visual-debug") "adreno-gpu")
+                                (if (str_eq (qnra-action-organ "witness-seal") "secure-world")
+                                    16 0)
+                                0)
+                            0)
+                        0)
+                    0)
+                0)
+            0))
+
+    (let before (aln-state 5 5 5 5 5))
+    (let healthy-after (aln-state 7 7 7 7 7))
+    (let extractive-after (aln-state 9 9 9 4 9))
+    (let health-gates (aln-gates 1 1 1 1 1))
+    (let health-ok
+        (if (eq (qnra-health-score before healthy-after health-gates) 7)
+            (if (eq (qnra-health-score before extractive-after health-gates) 0)
+                32 0)
+            0))
+
+    (let readings
+        (list
+            (list "cpu-access-stratum" (list (list "protocol-control" 72)))
+            (list "modem-ai-processor" (list (list "traffic-classify" 93)))
+            (list "hexagon-npu" (list (list "edge-inference" 86)))))
+    (let history
+        (list
+            (list 1 1)
+            (list 1 1)
+            (list 0 1)))
+    (let route (qnra-route-organ readings 60))
+    (let allowed (qnra-action-allowed? agent (efferent-bytes) gates))
+    (let trace
+        (qnra-witness-trace "shadow-policy"
+                            "traffic-classify"
+                            route
+                            (qnra-ack-path (list 1))
+                            allowed
+                            (qnra-health-score before healthy-after health-gates)))
+    (let authority-ok
+        (if (str_eq route "modem-ai-processor")
+            (if (eq (qnra-authority-ready?
+                        route
+                        (qnra-authority history 3 0)
+                        allowed
+                        trace) 1)
+                (if (eq (qnra-authority-ready? "" "challenger" allowed trace) 0)
+                    64 0)
+                0)
+            0))
+
+    (add lens-ok
+    (add pitch-ok
+    (add port-ok
+    (add ack-ok
+    (add organ-ok
+    (add health-ok authority-ok)))))))

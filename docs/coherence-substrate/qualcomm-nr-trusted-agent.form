@@ -1,0 +1,162 @@
+# ---------------------------------------------------------------------
+# qualcomm-nr-trusted-agent.form
+# ---------------------------------------------------------------------
+#
+# A Qualcomm-facing proof package for a senior NR 5G Access Stratum software
+# leader.
+#
+# Public professional grounding, not private context: Kurt Otte's visible
+# surface describes a long-tenured Qualcomm engineering leader over NR 5G
+# Access Stratum software and large global Snapdragon modem software delivery.
+# So the digestible door is not "new metaphysics." It is:
+#
+#   proof-carrying trusted action for modem-era agentic AI.
+#
+# The claim to evaluate:
+#
+#   Form can sit above existing modem, OS, and AI carriers as a small runtime
+#   contract: observations enter through typed afferent ports; actions cross
+#   only as offers through typed efferent ports; no-event, no, yes, and
+#   counter-offer remain distinct; every authority expansion is witnessed,
+#   health-scored, reversible where required, and promoted only by measured
+#   competition.
+#
+# Runnable heart:
+#
+#   form/form-stdlib/qualcomm-nr-trusted-agent.fk
+#   form/form-stdlib/tests/qualcomm-nr-trusted-agent-band.fk
+#
+# Verify:
+#
+#   cd form && ./validate.sh form-stdlib/core.fk \
+#     form-stdlib/resource-port.fk \
+#     form-stdlib/recognition-router.fk \
+#     form-stdlib/champion-challenger.fk \
+#     form-stdlib/grammars/living-equation.fk \
+#     form-stdlib/all-life-north-star.fk \
+#     form-stdlib/qualcomm-nr-trusted-agent.fk \
+#     form-stdlib/tests/qualcomm-nr-trusted-agent-band.fk
+#
+# The band returns 127 when the seven proof claims land across Go/Rust/TS.
+
+(qualcomm-nr-trusted-agent
+
+  (lineage
+    (derives-from core-axioms.form host-kernel.form minimal-kernel.form all-life-north-star.form)
+    (ports       form/form-stdlib/resource-port.fk)
+    (routing     form/form-stdlib/recognition-router.fk)
+    (promotion   form/form-stdlib/champion-challenger.fk)
+    (health      form/form-stdlib/all-life-north-star.fk)
+    (runs-as     form/form-stdlib/qualcomm-nr-trusted-agent.fk)
+    (proven-by   form/form-stdlib/tests/qualcomm-nr-trusted-agent-band.fk))
+
+  # -- Recipient lens -------------------------------------------------
+  (recipient-lens
+    (role senior-nr-5g-access-stratum-software-lead)
+    (cares-about modem-correctness protocol-state-determinism global-delivery field-debuggability power-latency standards-regression-risk)
+    (language-to-use proof-carrying-control-runtime)
+    (language-to-delay universal-ontology all-knowledge-space-time sovereignty-vitality-poetry))
+
+  # -- One-minute version ---------------------------------------------
+  (one-minute
+    (name proof-carrying-trusted-action-layer-for-agentic-modems)
+    (not-a-rewrite of-modem-stack-android-linux-or-ai-stack)
+    (is-a-layer above-existing-carriers)
+    (prevents ai-or-agent-from-becoming-unbounded-control-plane)
+    (gives every-action-a-port-a-gate-an-ack-a-witness-and-a-replayable-trace))
+
+  # -- External disclosure gate --------------------------------------
+  # Strategic/legal lane, not legal advice: before a detailed external share,
+  # choose the record-making path deliberately. A provisional filing can set an
+  # early U.S. filing date, but by itself it is not examined and does not
+  # automatically create a public prior-art record. A defensive publication, or
+  # a later published nonprovisional/PCT path, is the public-record move. The
+  # point here is stewardship: keep the work from being enclosed by a corporate
+  # structure before its life-serving intent is visible.
+  (external-disclosure-gate
+    (before-contact patent-counsel-or-defensive-publication-first)
+    (provisional-use establish-early-filing-date)
+    (publication-use create-public-prior-art-record)
+    (purpose protect-life-serving-use-and-the-record-not-extraction)
+    (share-after-record one-page-technical-brief-plus-demo-not-full-private-notes)
+    (avoid confidential-enabling-detail-before-strategy-is-chosen))
+
+  # -- Why it is relevant to NR Access Stratum ------------------------
+  # Access Stratum software already lives where state machines, timing,
+  # events, radio context, policy, and carrier/OEM differences meet. Agentic AI
+  # adds another decision source. This package makes that source bounded.
+  (nr-access-stratum-fit
+    (protocol-state transition-as-offered-cell)
+    (no-event nothing-is-first-class-not-a-failed-no)
+    (reject 0-is-received-no)
+    (accept 1-is-authorized-crossing)
+    (counter-offer node-is-new-protocol-or-policy-cell)
+    (debugging witness-trace-is-replayable-state-transition-evidence)
+    (field-risk agent-suggestions-cannot-act-without-capability-port-and-gates))
+
+  # -- Qualcomm benefit paths ----------------------------------------
+  (benefit-paths
+
+    (for-kurt
+      (digestible-question "Can agentic AI touch modem behavior without becoming unbounded?")
+      (answer only-through-proof-carrying-offers-over-capability-ports)
+      (benefit makes-the-risk-reviewable-by-a-protocol-software-leader))
+
+    (for-nr-as-teams
+      (benefit deterministic-state-transition-receipts)
+      (benefit shorter-field-debug-loop-via-local-witness-traces)
+      (benefit explicit-no-event-vs-reject-vs-accept-semantics)
+      (benefit champion-challenger-rollout-before-authority-flips))
+
+    (for-ai-and-edge-teams
+      (benefit trusted-action-layer-above-model-inference)
+      (benefit route-inference-to-local-organs-by-measured-fit)
+      (benefit keep-private-local-context-on-device-when-possible))
+
+    (for-platform-and-hardware-teams
+      (benefit hardware-backed-capability-ports)
+      (benefit compact-witness-trace-buffer)
+      (benefit offer-ack-dispatch-as-fast-path)
+      (benefit health-power-latency-counters-as-runtime-input)))
+
+  # -- Snapdragon-class hardware map ---------------------------------
+  # Carriers are named in Qualcomm-style terms while staying general. This does
+  # not require reimplementing existing drivers or modem firmware first.
+  (hardware-map
+    (cpu-as-control-organ            nr-protocol-policy-and-fallback)
+    (modem-rf-as-network-organ       radio-context-measurement-and-sync)
+    (modem-ai-processor-as-inference traffic-classification-channel-state-policy-hints)
+    (hexagon-npu-as-edge-ai-organ    local-models-ranking-and-embedding)
+    (hexagon-dsp-as-signal-organ     low-power-audio-sensor-and-stream-processing)
+    (adreno-gpu-as-visual-organ      display-vision-preprocess-and-visualization)
+    (secure-world-as-trust-organ     capability-keys-witness-seal-private-policy)
+    (memory-as-cell-organ            content-addressed-state-and-reversible-repoint))
+
+  # -- First demo Kurt can evaluate -----------------------------------
+  (first-demo
+    (name agentic-modem-policy-shadow-mode)
+    (input live-or-replayed-radio-context-plus-local-device-context)
+    (agent-output proposed-policy-or-optimization-cell)
+    (gate must-offer-through-named-capability-port)
+    (ack nothing-no-yes-or-counter-offer)
+    (authority shadow-first-champion-challenger-before-promote)
+    (trace every-proposal-decision-organ-ack-health-score)
+    (success-criteria no-protocol-action-without-receipt plus-replayable-debug plus-measured-latency-power))
+
+  # -- Proof claims ---------------------------------------------------
+  (proof-claims
+    (claim-1 recipient-lens-is-nr-access-stratum-software)
+    (claim-2 first-pitch-is-proof-carrying-control-runtime)
+    (claim-4 protocol-action-requires-typed-port-and-gates)
+    (claim-8 no-event-no-yes-counter-offer-are-distinct)
+    (claim-16 modem-and-ai-actions-map-to-local-organs)
+    (claim-32 health-gate-rejects-extractive-optimization)
+    (claim-64 route-promotion-and-witness-must-all-hold-before-authority))
+
+  # -- Conversation shape ---------------------------------------------
+  (send-this-shape
+    (lead "I think this may be a proof-carrying trusted action layer for agentic modem software.")
+    (second "It does not ask Qualcomm to rewrite the modem stack; it wraps existing carriers in typed offer/ack ports.")
+    (third "The useful demo is shadow-mode agentic modem policy with replayable witness traces and champion-challenger promotion.")
+    (gate "Before a detailed technical disclosure, we are choosing the filing/publication lane so the record carries the life-serving intent.")
+    (ask "Would this be worth evaluating as a bounded runtime contract above modem/edge-AI decision sources?")))
