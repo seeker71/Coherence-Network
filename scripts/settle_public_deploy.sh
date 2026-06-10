@@ -86,6 +86,7 @@ last_run_id=""
 dispatch_count=0
 dispatched_after_run_id=""
 dispatched_target_sha=""
+runtime_sha_required=0
 
 echo "Settling public deploy for ${REPO}"
 echo "API: ${API_URL}"
@@ -99,6 +100,7 @@ while :; do
 
   if [[ -n "$live_sha" && "$live_sha" == "$target_sha" ]]; then
     echo "deploy-sha: live=${live_sha} target=${target_sha}"
+    runtime_sha_required=1
     break
   fi
 
@@ -115,6 +117,7 @@ while :; do
   ]]; then
     echo "deploy-sha: live=${live_sha} matches latest Hostinger deploy"
     echo "main-sha: ${target_sha} has no newer Hostinger deploy; treating as non-runtime/process-only drift"
+    runtime_sha_required=0
     break
   fi
 
@@ -182,5 +185,7 @@ while :; do
   sleep "$POLL_SECONDS"
 done
 
-VERIFY_REQUIRE_API_HEALTH_SHA="${VERIFY_REQUIRE_API_HEALTH_SHA:-0}" \
+VERIFY_REQUIRE_API_HEALTH_SHA="${VERIFY_REQUIRE_API_HEALTH_SHA:-$runtime_sha_required}" \
+VERIFY_REQUIRE_WEB_HEALTH_PROXY_SHA="${VERIFY_REQUIRE_WEB_HEALTH_PROXY_SHA:-$runtime_sha_required}" \
+VERIFY_WAIT_FOR_OPTIONAL_SHA_PARITY="${VERIFY_WAIT_FOR_OPTIONAL_SHA_PARITY:-$runtime_sha_required}" \
   "$(dirname "$0")/verify_web_api_deploy.sh" "$API_URL" "$WEB_URL"

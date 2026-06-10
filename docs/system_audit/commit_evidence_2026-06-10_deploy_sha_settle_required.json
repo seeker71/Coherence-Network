@@ -1,0 +1,92 @@
+{
+  "date": "2026-06-10",
+  "thread_branch": "codex/deploy-sha-settle-required-20260610",
+  "commit_scope": "Make public deploy verification wait for runtime SHA parity in strict deploy paths and require both API and web SHA checks after settled runtime deploys.",
+  "files_owned": [
+    ".github/workflows/hostinger-api-native-deploy.yml",
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "docs/system_audit/commit_evidence_2026-06-10_deploy_sha_settle_required.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/settle_public_deploy.sh",
+    "scripts/test_verify_web_api_sha_patience.sh",
+    "scripts/verify_web_api_deploy.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "bash -n scripts/verify_web_api_deploy.sh scripts/settle_public_deploy.sh scripts/test_verify_web_api_sha_patience.sh scripts/test_settle_public_deploy_dispatch.sh scripts/test_settle_public_deploy_stale_target_dispatch.sh",
+      "bash scripts/test_verify_web_api_sha_patience.sh",
+      "perl -e 'alarm shift; exec @ARGV' 20 bash scripts/test_settle_public_deploy_dispatch.sh",
+      "perl -e 'alarm shift; exec @ARGV' 20 bash scripts/test_settle_public_deploy_stale_target_dispatch.sh",
+      "bash scripts/test_verify_web_api_css_assets.sh",
+      "bash scripts/test_verify_web_api_pulse_witness.sh",
+      "ruby -e 'require \"yaml\"; ARGV.each { |path| YAML.load_file(path); puts \"OK #{path}\" }' .github/workflows/hostinger-auto-deploy.yml .github/workflows/hostinger-api-native-deploy.yml",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-10_deploy_sha_settle_required.json",
+      "git diff --check"
+    ],
+    "notes": "The new SHA patience test mocks old-SHA then target-SHA responses for API health and web health-proxy, proving strict parity waits through rollout mismatch and then passes. Existing deploy-settle dispatch tests still pass."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending PR creation and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending post-merge public verification with the updated deploy verifier."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof passed; CI and post-merge public deploy verification are pending."
+  },
+  "idea_ids": [
+    "idea-realization-engine",
+    "north-star-public-proof"
+  ],
+  "spec_ids": [
+    "production-deploy-proof",
+    "public-deploy-contract"
+  ],
+  "task_ids": [
+    "deploy-sha-settle-required-20260610"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-prioritization"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "scripts/test_verify_web_api_sha_patience.sh proves strict API and web SHA checks retry a rollout mismatch and pass after the target SHA appears.",
+    "scripts/settle_public_deploy.sh now promotes API and web SHA checks to required mode after observing runtime parity with the target SHA.",
+    ".github/workflows/hostinger-auto-deploy.yml and .github/workflows/hostinger-api-native-deploy.yml run strict SHA parity with bounded patience after deploy."
+  ],
+  "change_files": [
+    ".github/workflows/hostinger-api-native-deploy.yml",
+    ".github/workflows/hostinger-auto-deploy.yml",
+    "docs/system_audit/commit_evidence_2026-06-10_deploy_sha_settle_required.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/settle_public_deploy.sh",
+    "scripts/test_verify_web_api_sha_patience.sh",
+    "scripts/verify_web_api_deploy.sh"
+  ],
+  "change_intent": "process_only"
+}
