@@ -235,5 +235,35 @@ fi
 echo "  probe: $(sed -n 3,13p "$work/fkd-run.txt" | tr '\n' ' ')(arms 1..11 — PUTC equals the byte count)"
 
 echo
+# ── 6. m4e1 — CALL + the function table: mutual recursion in the booted ──
+# binary, and fib through CALL instead of SELF (the multi-function lane
+# that unblocks the emitter-as-program).
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
+    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" > "$work/fke-driver.fk"
+cat >> "$work/fke-driver.fk" <<'EOF'
+(let even (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-lit 1) (fk-call 1 (fk-sub (fk-arg) (fk-lit 1)))))
+(let odd  (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-lit 0) (fk-call 0 (fk-sub (fk-arg) (fk-lit 1)))))
+(let fibc (fk-if (fk-le (fk-arg) (fk-lit 1)) (fk-arg) (fk-add (fk-call 0 (fk-sub (fk-arg) (fk-lit 1))) (fk-call 0 (fk-sub (fk-arg) (fk-lit 2))))))
+(print "==EO==")
+(print (fkc-emit-many (list even odd)))
+(print "==FIB==")
+(print (fkc-emit-many (list fibc)))
+(print "==END==")
+EOF
+(cd "$FORMDIR" && "$GO_BIN" "$work/fke-driver.fk" 2>/dev/null) > "$work/fke-emit.out"
+sed -n '/^==EO==$/,/^==FIB==$/p' "$work/fke-emit.out" | sed -e '1d' -e '$d' > "$work/eo.c"
+sed -n '/^==FIB==$/,/^==END==$/p' "$work/fke-emit.out" | sed -e '1d' -e '$d' > "$work/fibc.c"
+"$CLANG" -O2 -o "$work/eo" "$work/eo.c"
+"$CLANG" -O2 -o "$work/fibc" "$work/fibc.c"
+eo10="$("$work/eo" 10 | head -1)"; eo7="$("$work/eo" 7 | head -1)"; fibc28="$("$work/fibc" 28 | head -1)"
+echo "m4e1 CALL + function table (mutual recursion, booted):"
+echo "  even(10)=$eo10 even(7)=$eo7 (mutual CALL by index)  fib-via-CALL(28)=$fibc28"
+if [[ "$eo10" != "1" || "$eo7" != "0" || "$fibc28" != "$go_fib" ]]; then
+    echo "FAIL  CALL-lane parity broken"; exit 1
+fi
+fibc_t="$(median_ms 15 "$work/fibc" 28)"
+echo "  fib-via-CALL median: ${fibc_t} ms (vs SELF-shaped fkw above — the CALL indirection priced)"
+
+echo
 echo "conditions: $(uname -m) $(uname -s), clang -O2, full-process invocations (startup included)"
 echo "ok — parity held and the rows are real; the spec is docs/coherence-substrate/fourth-kernel.form"
