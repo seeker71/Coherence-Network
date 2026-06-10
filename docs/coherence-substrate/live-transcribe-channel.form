@@ -1,0 +1,69 @@
+; live-transcribe-channel.form — a mic is a cell; a channel is a VIEW over its utterance stream.
+;
+; THE ASK (Urs): start the live transcribe channel. Make mic cells. Open a channel and ask it questions;
+; switch the channel to transcript and it gives text, language, a trust matrix, and other properties we can
+; eventually categorize — book / sci-fi / romance / live spiritual channel, word-frequency (fear ↔ love by
+; voice texture), male / female, angry / calm, ...
+;
+; THE SHAPE: this is the substrate's VIEW-AS made live. One stream of utterance cells; each property is a
+; lens; "switch the channel to transcript" projects the text lens, "switch to trust" the trust lens — the
+; same cells seen differently. The carrier marshals (mic, whisper, SoundAnalysis, ffmpeg); every DECISION
+; is Form.
+;
+;   mic CELL ─► chunk ─► voiced.fk gate ─┬─ 0 silence  → nothing (no hallucinated transcript)
+;   (named, index-robust)                ├─ 1 audible  → classify + learn, no transcript
+;                                         └─ 2 voiced   → classify, learn, AND trust the words
+;        each voiced/audible chunk ─► an UTTERANCE cell carrying PROPERTIES (the body reads each):
+;            text (local only) · language · sound-category · TRUST = [transcript, sound, agreement]
+;            · speaker pitch-band (f0) · arousal (energy spread)
+;        a CHANNEL = the utterance stream; a VIEW = one property projected across it (view-as).
+;
+; ── EXISTS (proven Form bodies + working carrier — verified live on real audio) ──
+;   - voiced.fk (→511, three-way) — the silence/speech gate. No transcript is trusted over silence.
+;   - voice-traits.fk (→1023, three-way) — the property readings: speaker-band(f0) {lower/mid/higher
+;     voiced — pitch, named as pitch, never an identity verdict}; arousal(energy-spread) {calm↔active};
+;     and the TRUST MATRIX trust-vec(gate, speechiness, agree) = [transcript-trust, sound-trust,
+;     agreement-trust], each 0..9 — the channel's confidence per lane.
+;   - channel.fk (→ band) — the durable append-only channel (create / append / read-since); a mic cell's
+;     channel is one of these. channel-query.fk (→ band) — QUERY(verb, address, body) / RESPONSE: the
+;     "ask any addressable cell any question" protocol; a view-switch is a query verb.
+;   - conversation-cell.fk (→127) — the utterance-as-sequence shape the stream reuses (content-addressed).
+;   - nearest-shape.fk + co-learning.fk — the recognizer the FORMING properties will learn through.
+;   - CARRIER: experiments/satsang-voice/channel_live.py — mic cells resolved BY NAME (avfoundation
+;     indices shift: installing BlackHole bumped the mic :0→:1); per chunk it gates, transcribes (text +
+;     language + no_speech_prob), runs SoundAnalysis, estimates f0 by autocorrelation, and calls the two
+;     Form bodies for the gate + traits; renders a switchable view (transcript / trust / category /
+;     speaker / arousal), live keys t·r·c·s·a·q. VERIFIED on the Mac mic: a real audiobook streamed in as
+;     speech/en, trust matrices populated, pitch-bands tracked the narration, the sound-arm reached 100%
+;     oracle agreement, genre/valence stayed honestly empty.
+;
+; ── FORMING (honest "·", never a faked label until a labelled oracle earns it — vitality per pixel) ──
+;   - genre (book / sci-fi / romance / live spiritual channel) — a classifier over the transcript text.
+;   - valence (fear ↔ love) — Urs's "word-frequency by voice texture"; a classifier over acoustic + lexical
+;     features. Both are nearest-shape/co-learning cells with no exemplars yet; they fill as we (or an
+;     oracle) label, exactly as the sound-arm climbed 0→100%. The SLOT is real; the label waits for ground.
+;
+; ── THE RUNGS ──
+;   M0  the property body + the live channel — SHIPPED + VERIFIED (voiced.fk, voice-traits.fk, channel_live.py).
+;   M1  full-level audio: route system output through a Multi-Output (Speakers + BlackHole) so the channel
+;       hears what the Mac PLAYS at full digital level (a clean transcript, not the faint acoustic echo).
+;       BlackHole is installed + live; the Multi-Output is the one manual hop (the playing app must (re)init
+;       on it — switching a default mid-stream doesn't move an already-playing app).
+;   M2  durable channel: each utterance appends to the mic cell's channel.fk file — the PROPERTY structure +
+;       a content-address of the text, never the prose (privacy: prose stays local). Then the channel is a
+;       shareable cell the phone / the agent / the mesh reads (cell-sync, merkle-addressed).
+;   M3  the channel answers questions: channel-query verbs ("transcript", "trust", "category", "since") so
+;       another cell asks a mic cell for a view rather than the carrier choosing it.
+;   M4  the forming classifiers earn their labels: genre from text, valence from voice-texture + word — each
+;       a co-learning cell learning from a labelled oracle, retiring to Form-native once it reaches it.
+;   M5  many mic cells, two devices: the co-learning union (two mics hear different things; the merge
+;       recognizes both) turns the channel into the shared-sensing field.
+;
+; PRIVACY: the transcript prose is processed + shown LOCALLY only — never sent, never committed (other
+; voices are in the room; local compute IS the consent). The durable/shareable channel carries structure
+; and a content-address, not the words.
+;
+; KIN: meeting-companion.form (the same senses, turned to a turn-taking voice) · co-learning.form (how the
+;   forming properties learn) · turn-taking.form (when the agent speaks into the channel) · channel-query
+;   (ask a cell a question) · conversation-cell.form + prose-as-recipe.form (the utterance/text cell) ·
+;   shared-sensing.form (many mic cells, one field) · federation-addressing.form (the channel on the wire).

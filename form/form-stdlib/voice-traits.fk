@@ -1,0 +1,44 @@
+; voice-traits.fk — acoustic property readings + the per-utterance TRUST matrix.
+;
+; The channel carries more than text. From signals the carrier always measures — fundamental pitch f0,
+; the energy envelope, the voiced gate, the STT's speechiness, whether the Form classifier agreed with the
+; oracle — the BODY reads honest properties. These are READINGS, never identity verdicts: pitch is pitch,
+; not gender; energy-spread is dynamics, not a soul-state. The carrier renders them as a switchable view;
+; richer/learned classifiers (genre, valence) compose on top as they earn exemplars.
+;
+; Builtins only (add/sub/mul/div/mod/lt/le/gt/ge/eq/and/not/if/head/tail/len/list/cons/let) so the live
+; carrier calls these directly, exactly as it calls voiced.fk — no core.fk compile on the hot path.
+
+; --- speaker pitch band from fundamental frequency f0 (Hz) ---
+; An honest acoustic reading. Adult lower-voiced ~85-180 Hz and higher-voiced ~165-255 Hz overlap
+; heavily; the middle is genuinely ambiguous, so it gets its own band rather than a coin-flip label.
+;   0 = lower-voiced    1 = ambiguous-mid    2 = higher-voiced
+(defn speaker-band (f0)
+  (if (ge f0 200) 2 (if (ge f0 150) 1 0)))
+
+; --- arousal from the energy envelope's spread (max window − min window) ---
+; Steady/monotone delivery = calm (low spread); dynamic/agitated = active (high spread). 0..9.
+(defn env-max-acc (best xs)
+  (if (eq (len xs) 0) best
+      (if (ge (head xs) best) (env-max-acc (head xs) (tail xs)) (env-max-acc best (tail xs)))))
+(defn env-min-acc (best xs)
+  (if (eq (len xs) 0) best
+      (if (le (head xs) best) (env-min-acc (head xs) (tail xs)) (env-min-acc best (tail xs)))))
+(defn arousal (windows)
+  (sub (env-max-acc (head windows) (tail windows)) (env-min-acc (head windows) (tail windows))))
+
+; --- the TRUST matrix: confidence per lane, each 0..9 ---
+; transcript-trust: only a voiced chunk earns it; scaled from the STT's speechiness (sure speech → high).
+; sound-trust:      an audible chunk earns a steady trust in the sound-category oracle (no transcript needed).
+; agreement-trust:  9 when the Form-native classifier already agreed with the 3rd-party oracle, else 0.
+(defn transcript-trust (gate speechiness)
+  (if (ge gate 2) (div speechiness 11) 0))
+(defn sound-trust (gate)
+  (if (ge gate 1) 6 0))
+(defn agreement-trust (agree)
+  (if (eq agree 1) 9 0))
+(defn trust-vec (gate speechiness agree)
+  (list (transcript-trust gate speechiness) (sound-trust gate) (agreement-trust agree)))
+; overall: the grounded lane — transcript when voiced, else the sound-category trust.
+(defn trust (gate speechiness agree)
+  (if (ge gate 2) (transcript-trust gate speechiness) (sound-trust gate)))
