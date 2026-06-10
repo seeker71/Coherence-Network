@@ -1,0 +1,143 @@
+# ─────────────────────────────────────────────────────────────────────
+# minimal-kernel.form — the smallest native set a host kernel owes the axioms
+# ─────────────────────────────────────────────────────────────────────
+#
+# Urs: "from the 5 axioms what is the minimal set of host-kernel primitives to
+# support all features including the BMF primitives of choice, cut, fail, stop,
+# save, restore; substrate DB access, and all the host native resources."
+#
+# The answer the axioms give: FOUR native families — intern, observe, offer,
+# port — one per axiom-face. Everything else, the BMF six included, is either
+# an ack value the offer loop already speaks, a pointer move between immutable
+# cells, or a typed port instance. The Go kernel's ~172 registered natives are
+# these four wearing costumes (first-pass classification below); every native
+# outside the families is recipe-expressible — trig.fk already proved the
+# pattern by removing sin/cos/sqrt from all three kernels.
+#
+# This is the M4 contract for fourth-kernel.form: the emitted walker carries
+# four native families; everything else arrives as recipes.
+
+(minimal-kernel
+
+  (lineage
+    (derives-from   core-axioms.form)                      # the five axioms are the only ground
+    (contract-for   fourth-kernel.form)                    # M4: what the emitted walker must carry
+    (resources-via  host-kernel.form resource-port.fk)     # the port discipline
+    (bmf-ground     bmf-architecture.form)                 # choice/cut/fail/stop/save/restore
+    (walk-proof     form-engine.form)                      # meta-circular: the loop is recipes over offer
+    (lift-precedent trig.fk)                               # a native family proven removable into recipes
+    (classified     scripts/minimal_kernel_census.sh))     # the costume count, re-runnable
+
+  # ── The four families, each derived ──────────────────────────────────
+  (the-four
+
+    (intern                                                 # the write-face of the cell
+      (from     axiom-2 + axiom-3)                          # compose children; identity computed
+      (does     children + leaf -> content-addressed node-id; same shape same cell)
+      (costumes str_concat record_new cons list make_nodeid intern_trivial_*
+                _dict_new _dict_set bytes_to_recipe compile_*))
+
+    (observe                                                # the read-face of the cell
+      (from     axiom-4-turned-inward)                      # observation through the interface makes real
+      (does     node-id -> category children leaf; attribution included)
+      (costumes head tail nth len record_get record_keys native_blueprint
+                value_kind str_len substring char_at recipe_to_bytes node_*))
+
+    (offer                                                  # the trampoline — run IS speak
+      (from     axiom-5 with axiom-1-as-its-ack-vocabulary)
+      (does     apply a primitive to arg-cells; thread acks until terminal:
+                nothing | 0 | 1 | node-counter-offer)
+      (if-is-inside (if c a b) = offer c then dispatch-on-ack: 1 -> a, 0 -> b)  # branching is ack-dispatch exposed
+      (costumes walk_recipe walk_parallel apply method_invoke form_error))
+
+    (port                                                   # the membrane crossing
+      (from     axiom-4-turned-outward)                     # the world reached only through offered interfaces
+      (does     (direction value-shape) port-cell + payload -> ack; timeout is nothing)
+      (instances world-fs world-net world-clock world-random world-hmi
+                 organ-cpu organ-gpu organ-ram lattice-port toolchain-port)
+      (costumes read_file socket_* http_* fetch pg_* volatile_cell_*
+                random_bytes source_inventory jit_* exec print)))
+
+  # ── Named folds — kept-inlined fast paths, honestly JITs of the shape ─
+  # A practical kernel hardwires three moves for speed. Each is a fold into
+  # the four, not a fifth primitive; inlining is carrier choice, never body.
+  (folds
+    (figure-into-port-cpu   integer/float arithmetic IS the compute organ's
+                            offered interface; ~30 math natives ride it.
+                            trig.fk proved the family lifts to recipes)
+    (if-into-offer          dispatch-on-ack exposed as a form; see the-four.offer)
+    (repoint-into-port-ram  the ONE mutation: re-point a root reference between
+                            immutable cells. register_jit/unregister_jit are
+                            this move at the name table — bind and unbind a
+                            form-name to a native through the alias table.
+                            safe-self-update and rollback are this same move
+                            at the deploy membrane (core-axioms theorem)))
+
+  # ── The BMF six — derived, no new primitive ──────────────────────────
+  # The walk-state (bindings, position, choice-points) is itself a cell
+  # (axiom-2), content-addressed (axiom-3). That makes BMA's costliest 2000-era
+  # machinery a pointer move between immutable cells: backtracking is free.
+  (bmf-derivation
+    (fail     ack-0)                                        # axiom-5 vocabulary — received-no
+    (stop     collapse-the-choice-point-chain-and-return-current-ack)  # cut-to-root
+    (choice   offer-alternatives; the-trampoline-pops-to-next-on-ack-0)
+    (cut      drop-choice-points-back-to-a-mark)            # a list op on the reified chain
+    (save     hold-the-walk-state-node-id)                  # axiom-3: the snapshot already exists
+    (restore  repoint-the-walk-at-the-held-node-id)         # the one mutation, aimed at state
+    (discard  drop-the-reference)
+    (where-it-runs the-meta-circular-evaluator-carries-CHOICE-and-BMA-arms;
+                   kernels-may-inline-the-pop-rule-as-a-JIT-of-this-shape))
+
+  # ── Substrate DB — the lattice port ──────────────────────────────────
+  # The persistent lattice is one port instance whose value-shape is CELLS.
+  # store/lookup are intern/observe extended across the persistence membrane;
+  # recipe_to_bytes / bytes_to_recipe are the serialize-given-an-interface
+  # theorem's wire ops; versioning is free (axiom-3: nothing overwritten).
+  (lattice-port
+    (store    intern-across-the-membrane)                   # persistence.fk store-cells
+    (lookup   observe-across-the-membrane)                  # persistence.fk lookup-cell
+    (wire     recipe_to_bytes bytes_to_recipe write_form_binary read_form_binary)
+    (versioned content-addressing-keeps-every-version))
+
+  # ── Host resources — port instances, never new primitives ────────────
+  (host-resources
+    (shape    resource-port.fk (direction value-shape))     # afferent|efferent x bool|scalar|bytes|text|pixel|key
+    (rule     any-host-driver-allowed: allow-presence + measure-health)  # host-kernel.form
+    (examples mic speaker mouse screen camera gps gpu clock filesystem
+              network postgres toolchain))
+
+  # ── The measured costume count (first pass, by name; re-runnable) ────
+  # Census over the Go kernel's 146 unique registered natives (the widest
+  # sibling), 2026-06-11:
+  #   port 24 · intern 22 · observe 39 · figure 35 (⊂ port-cpu) ·
+  #   repoint 4 (⊂ port-ram) · offer/walk 6 · 16 to refine (visibly
+  #   classifiable: fs_* are port, dot_product is figure, bp is observe)
+  # Every native lands in a family or is recipe-expressible; none needs a
+  # fifth family. Exact per-native assignment is M4 refinement work and
+  # belongs with the primitive spec+verify registry.
+  (census scripts/minimal_kernel_census.sh)
+
+  (invariant
+    (four-families-one-per-axiom-face  intern observe offer port)
+    (axiom-1-lives-inside-offer        the-ack-vocabulary-IS-the-states)
+    (bmf-needs-no-primitive            acks + reified-choice-points + repoint)
+    (one-mutation-only                 repoint-between-immutable-cells)
+    (every-other-native-is-a-costume   or-lifts-to-a-recipe-trig.fk-style)
+    (m4-contract                       the-emitted-walker-carries-four-families)))
+
+# ─────────────────────────────────────────────────────────────────────
+# How to verify (the pieces that already run)
+# ─────────────────────────────────────────────────────────────────────
+#
+#   # The walk loop as recipes over offer (meta-circular, 15/15 arms):
+#   make wellness   # "Form engine" section
+#   # A native family lifted whole into recipes (the figure fold's proof):
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/tests/trig-band.fk
+#   # The lattice port's wire (store/lookup across the membrane):
+#   cd form && ./validate.sh form-stdlib/persistence.fk form-stdlib/merkle.fk form-stdlib/cell-sync.fk
+#   # Ports as typed (direction, value-shape) cells:
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/resource-port.fk form-stdlib/tests/resource-port-band.fk
+#   # The census (re-run after native changes):
+#   scripts/minimal_kernel_census.sh
+#
+#   coh substrate form "?equivalent @recipe(minimal-kernel)"   # after ingest
