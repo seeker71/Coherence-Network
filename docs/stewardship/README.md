@@ -43,8 +43,9 @@ arrangements — see [`registry/`](registry/). The registry holds
 category-level public entries; sensitive specifics live in the
 wrapper's encrypted treasury record.
 
-For external company evaluation, patent/publication decisions, and
-license-boundary practice, see
+For the project's root code license and patent stewardship posture, see
+[`patent-stewardship.md`](patent-stewardship.md). For external company
+evaluation, patent/publication decisions, and disclosure-boundary practice, see
 [`external-collaboration-disclosure-practice.md`](external-collaboration-disclosure-practice.md).
-It names the public process while keeping unpublished filing text,
-inventor details, and deal terms private.
+They name the public process while keeping unpublished filing text, inventor
+details, and deal terms private.
