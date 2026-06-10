@@ -164,6 +164,91 @@ run_emulated() {
 run_emulated M2 "android-cpu-exec" qemu-aarch64 aarch64-linux-android start64.c
 run_emulated M3 "android-dsp-exec" qemu-hexagon hexagon starthex.c
 
+# ── 4b. M5/M6: the serving loop — prompt in, greedy tokens out ──
+# What an inference server does, as the same recipe data: embeddings,
+# causal blocks, logits, argmax, sliding context. Greedy over bit-exact
+# floats means the whole token stream must agree on every organ.
+cat > "$work/lmdriver.fk" <<'EOF'
+(do (print (tk-emit-lm (tk-arch 8 2 4 16) 2 12)) 0)
+EOF
+(cd "$FORMDIR" && "$GO_BIN" form-stdlib/transformer-kernel.fk "$work/lmdriver.fk" 2>/dev/null) \
+    | sed '$d' > "$work/lm.c"
+cat > "$work/lmmain.c" <<'EOF'
+#include <stdio.h>
+unsigned int tk_generate(const unsigned char *, int, unsigned char *, int);
+int main(void) {
+    unsigned char prompt[4] = { 102, 111, 114, 109 };
+    unsigned char out[12];
+    unsigned int cs = tk_generate(prompt, 4, out, 12);
+    printf("%08x ", cs);
+    for (int i = 0; i < 12; i++) printf("%02x", out[i]);
+    printf("\n");
+    return 0;
+}
+EOF
+echo ""
+if "$CLANG" $FPFLAGS -o "$work/lmhost" "$work/lm.c" "$work/lmmain.c" 2>"$work/lm.err"; then
+    lmline="$("$work/lmhost")"
+    lmref="${lmline%% *}"
+    echo "PASS  M5: serving loop on host — prompt \"form\" -> 12 greedy tokens ${lmline#* } (checksum $lmref)"
+else
+    echo "FAIL  M5: LM host compile failed:"; head -3 "$work/lm.err"; fails=1; lmref=""
+fi
+cat > "$work/lmstart64.c" <<'EOF'
+unsigned int tk_serve_checksum(void);
+void _start(void) {
+    unsigned int cs = tk_serve_checksum();
+    char buf[9];
+    for (int i = 7; i >= 0; i--) { unsigned d = cs & 0xfu; buf[i] = d < 10 ? '0'+d : 'a'+(d-10); cs >>= 4; }
+    buf[8] = '\n';
+    register long x0 asm("x0") = 1;
+    register long x1 asm("x1") = (long)buf;
+    register long x2 asm("x2") = 9;
+    register long x8 asm("x8") = 64;
+    asm volatile("svc #0" : "+r"(x0) : "r"(x1), "r"(x2), "r"(x8) : "memory");
+    register long e0 asm("x0") = 0;
+    register long e8 asm("x8") = 93;
+    asm volatile("svc #0" :: "r"(e0), "r"(e8));
+}
+EOF
+cat > "$work/lmstarthex.c" <<'EOF'
+unsigned int tk_serve_checksum(void);
+void _start(void) {
+    unsigned int cs = tk_serve_checksum();
+    char buf[9];
+    for (int i = 7; i >= 0; i--) { unsigned d = cs & 0xfu; buf[i] = d < 10 ? '0'+d : 'a'+(d-10); cs >>= 4; }
+    buf[8] = '\n';
+    register long r0 asm("r0") = 1;
+    register long r1 asm("r1") = (long)buf;
+    register long r2 asm("r2") = 9;
+    register long r6 asm("r6") = 64;
+    asm volatile("trap0(#1)" : "+r"(r0) : "r"(r1), "r"(r2), "r"(r6) : "memory");
+    register long e0 asm("r0") = 0;
+    register long e6 asm("r6") = 94;
+    asm volatile("trap0(#1)" :: "r"(e0), "r"(e6));
+}
+EOF
+serve_emulated() {
+    local gate="$1" label="$2" qemu="$3" target="$4" start="$5"
+    if ! command -v "$qemu" >/dev/null; then
+        echo "SKIP  $gate $label: $qemu not installed"; return
+    fi
+    if [[ -z "$lmref" ]]; then echo "SKIP  $gate $label: no host reference"; return; fi
+    if "$CLANG" --target="$target" -nostdlib -ffreestanding -fuse-ld=lld -static $FPFLAGS \
+            -o "$work/$label.elf" "$work/lm.c" "$work/$start" 2>"$work/lx.err"; then
+        got="$("$qemu" "$work/$label.elf")"
+        if [[ "$got" == "$lmref" ]]; then
+            echo "PASS  $gate $label: token-stream checksum $got == host — same 12 tokens on the ISA"
+        else
+            echo "FAIL  $gate $label: $got != host $lmref"; fails=1
+        fi
+    else
+        echo "FAIL  $gate $label: link failed:"; head -2 "$work/lx.err"; fails=1
+    fi
+}
+serve_emulated M5 "lm-android-cpu" qemu-aarch64 aarch64-linux-android lmstart64.c
+serve_emulated M6 "lm-android-dsp" qemu-hexagon hexagon lmstarthex.c
+
 # ── 5. M4: the Vulkan / Android GPU door ──
 echo ""
 if command -v llvm-spirv >/dev/null || command -v llvm-spirv-18 >/dev/null; then
@@ -199,7 +284,9 @@ echo "hardware; PTX/GCN/SPIR-V execution needs the GPU; silicon is the organ."
 echo ""
 if [[ $fails -eq 0 ]]; then
     echo "MINIMUM met. One transformer block: six instruction sets, bit-exact"
-    echo "execution on emulated Android CPU and DSP, SPIR-V validated."
+    echo "execution on emulated Android CPU and DSP, SPIR-V validated — and the"
+    echo "serving loop (prompt -> greedy tokens) yields the same token stream"
+    echo "on every organ that runs."
 else
     echo "MINIMUM NOT met."
 fi

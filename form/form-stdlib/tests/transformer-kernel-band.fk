@@ -10,7 +10,7 @@
 ; Execution and per-ISA assembly are witnessed by
 ; scripts/transformer_kernel_audit.sh on the Go carrier's host toolchain.
 ;
-; Band verdict 127 when every claim lands:
+; Band verdict 255 when every claim lands:
 ;   1   the projection is substantial (one C unit, > 3000 chars)
 ;   2   the architecture's dims land: #define D 8 / H 2 / S 4 / F 16
 ;   4   the attention tissue is present (tk_softmax, scaled scores)
@@ -19,6 +19,8 @@
 ;   32  determinism marks are present (seeded LCG, division-free
 ;       bit-trick Newton reciprocal and rsqrt)
 ;   64  a different architecture projects different dims, same body
+;   128 the serving shape projects: causal mask, greedy argmax over a
+;       byte vocab, sliding context, fixed prompt probe (the LM loop)
 (do
     (defn tk-has? (src marker) (ge (str_find src marker 0) 0))
 
@@ -47,4 +49,11 @@
                (and (tk-has? src2 "#define F 32")
                     (tk-has? src2 "tk_forward_checksum")))
                 64 0))
-    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
+    (let lm (tk-emit-lm (tk-arch 8 2 4 16) 2 12))
+    (let c7 (if (and (tk-has? lm "tk_serve_checksum")
+               (and (tk-has? lm "att[i*S + j] = j <= i ? sc * scale : -60.0f;")
+                (and (tk-has? lm "if (logits[t] > logits[best]) best = t;")
+                 (and (tk-has? lm "#define V 256")
+                      (tk-has? lm "#define L 2")))))
+                128 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

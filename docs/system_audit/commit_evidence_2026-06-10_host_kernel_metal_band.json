@@ -78,6 +78,12 @@
           "vector lanes": "AVX-512 vmulps, RISC-V V vfmul sighted"
         }
       },
+      "serving_loop_2026_06_10": {
+        "shape": "what an inference server does, as the same recipe data: tk-emit-lm projects embeddings + L causal pre-LN blocks + final LN + byte-vocab logits + greedy argmax + sliding context into the same freestanding C unit; toy LCG weights, prompt \"form\", 12 greedy tokens",
+        "result": "token stream 15b6db6218d7f352122cb642 (checksum f0395211) identical on host x86, qemu-aarch64 (Android CPU), and qemu-hexagon (Android DSP) — whole-stream agreement, since greedy argmax over bit-exact floats forks loudly on any divergence",
+        "band": "tests/transformer-kernel-band.fk verdict 255 three-way",
+        "next_toward_ollama": "real weights (GGUF via read_file_bytes) replacing the LCG; a real tokenizer; the existing kernel-http door serving tk_generate"
+      },
       "jit_tmp_dir_finding": "a full validate.sh suite left 12,665 /tmp/form-jit-* dirs (~29GB) and filled the disk mid-suite; jit.go keeps each MkdirTemp dir for process lifetime but nothing reclaims them across runs — content-addressed dir reuse (bodyKey-named dirs, atomic rename) would make them a persistent cache instead of sediment",
       "execution_and_gpu_doors_2026_06_10": {
         "android_cpu_executed": "freestanding static aarch64 binary of the emitted recipes ran under qemu-aarch64 — exit 42 (fact(10)==3628800 && poly(3,4)==25 computed by the ISA)",
