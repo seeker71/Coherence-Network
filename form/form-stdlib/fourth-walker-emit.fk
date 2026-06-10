@@ -238,6 +238,18 @@
 
 (defn fkc-emit-driver (fns) (fkc-emit-driver2 (fkc-flatten-many fns)))
 
+; fkcount — a two-function parser PROGRAM that counts the bytes of the captured
+; stream (fk_src) until NUL, via the cursor. The witness that the driver
+; captured a real host-model stream: fn 0 calls fn 1 from position 0; fn 1
+; recurses 1 + count(pos+1) while BUF(pos) is non-zero. Drive say/whisper/ollama
+; through fkc-emit-driver with this as the program — the count is the proof the
+; sibling drove the host organ and received its output.
+(defn fkcount-fns ()
+    (list (fk-call 1 (fk-lit 0))
+          (fk-if (fk-buf (fk-arg))
+                 (fk-add (fk-lit 1) (fk-call 1 (fk-add (fk-arg) (fk-lit 1))))
+                 (fk-lit 0))))
+
 ; ── the UNIVERSAL walker — no baked program: load a table FILE and run it ──
 ; One binary, many programs. The table file (fkc-table-file) is plain ints —
 ; function count, roots, row count, rows — read through the fs afferent port
