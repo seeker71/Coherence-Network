@@ -115,6 +115,7 @@
   (sovereignty
     (the-invited-decides  allow OR stop OR witness OR re-enter)  # sovereign-boundary-protocol.fk sbp-choice
     (may-decline          nothing-is-a-valid-reply)             # silence honored; no offer compels an answer
+    (timeout-is-nothing   an-unreachable-or-silent-cell-answers-nothing)  # Urs: timeout == nothing — partition is silence, not a failure mode; the canary retries on nothing
     (reach-beyond         is-invasion)                          # past the offered interface — witnessed, consequenced
     (complete-sovereignty the-answer-is-never-coerced))         # "respond with complete sovereignty" — Urs
 

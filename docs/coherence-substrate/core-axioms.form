@@ -37,6 +37,7 @@
   (axiom-1-states
     (statement "there are three states: 0, 1, nothing")               # Urs, breath 1
     (nothing-is-first-class the-ground-not-a-missing-0)
+    (timeout-is-nothing     no-answer-in-time-is-silence-not-an-error)   # Urs: timeout == nothing
     (generates integers the-ack-values the-boundary-of-a-distinction))
 
   (axiom-2-cell
