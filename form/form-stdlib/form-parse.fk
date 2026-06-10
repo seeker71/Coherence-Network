@@ -1,0 +1,76 @@
+; form-parse.fk — m4e3 path-b: a Form parser IN FORM that reads Form source
+; text (a cursor over the string, no pre-tokenizer — the BMF discipline) and
+; produces a fourth-walker PROGRAM (cells via fk-lit/fk-add/...). Everything
+; downstream — fkc-flatten, the emitter, the universal binary, the three
+; walkers — then runs it unchanged. This is the bridge: real Form source ->
+; a runnable program, parsed by Form itself.
+;
+; The grammar this first stone covers (the walker's pure-compute op set):
+;   expr   := integer | '(' op expr+ ')'
+;   op     := add | sub | le | if
+; State threads as (cell, end-pos) lists; no let-in-defn (kernel trap), so the
+; recursion is many small defns. mul/sub are full-engine ops (recipe, not band).
+
+(defn fp-at (s pos) (ord (char_at s pos)))
+(defn fp-len (s) (str_len s))
+(defn fp-isdigit (c) (and (ge c 48) (ge 57 c)))
+(defn fp-isdelim (c) (if (eq c 32) 1 (if (eq c 40) 1 (if (eq c 41) 1 0))))
+
+; skip spaces
+(defn fp-skip (s pos)
+    (if (ge pos (fp-len s)) pos
+        (if (eq (fp-at s pos) 32) (fp-skip s (add pos 1)) pos)))
+
+; read a run of digits from pos -> (value end-pos)
+(defn fp-digits (s pos acc)
+    (if (ge pos (fp-len s)) (list acc pos)
+        (if (fp-isdigit (fp-at s pos))
+            (fp-digits s (add pos 1) (add (mul acc 10) (sub (fp-at s pos) 48)))
+            (list acc pos))))
+
+; end of a symbol (op name) — first delimiter at or after pos
+(defn fp-sym-end (s pos)
+    (if (ge pos (fp-len s)) pos
+        (if (eq (fp-isdelim (fp-at s pos)) 1) pos (fp-sym-end s (add pos 1)))))
+
+; ── expr: integer or ( ... ) ─────────────────────────────────────────────
+(defn fp-expr (s pos) (fp-expr2 s (fp-skip s pos)))
+(defn fp-expr2 (s pos)
+    (if (eq (fp-at s pos) 40)                       ; '('
+        (fp-list s (add pos 1))
+        (fp-num (fp-digits s pos 0))))              ; integer -> (LIT v) end
+(defn fp-num (ve) (list (fk-lit (nth ve 0)) (nth ve 1)))
+
+; ── '(' op ... : read the op symbol, then dispatch on arity ──────────────
+(defn fp-list (s pos) (fp-op s pos (fp-sym-end s pos)))
+(defn fp-op (s symStart symEnd)
+    (fp-byop (substring s symStart symEnd) s symEnd))
+
+; dispatch: 'if' is 3-arg, the rest 2-arg
+(defn fp-byop (op s pos)
+    (if (str_eq op "if") (fp-if s pos)
+        (fp-bin op s pos)))
+
+; ── 2-arg op: parse a, parse b from a's end, close ')' ───────────────────
+(defn fp-bin (op s pos)        (fp-bin-a op s (fp-expr s pos)))
+(defn fp-bin-a (op s ae)       (fp-bin-b op s (nth ae 0) (fp-expr s (nth ae 1))))
+(defn fp-bin-b (op s a be)     (list (fp-mk op a (nth be 0)) (fp-close s (nth be 1))))
+(defn fp-mk (op a b)
+    (if (str_eq op "add") (fk-add a b)
+        (if (str_eq op "sub") (fk-sub a b)
+            (if (str_eq op "le") (fk-le a b) (fk-add a b)))))
+
+; ── 3-arg 'if': c t e then close ─────────────────────────────────────────
+(defn fp-if (s pos)            (fp-if-c s (fp-expr s pos)))
+(defn fp-if-c (s ce)           (fp-if-t s (nth ce 0) (fp-expr s (nth ce 1))))
+(defn fp-if-t (s c te)         (fp-if-e s c (nth te 0) (fp-expr s (nth te 1))))
+(defn fp-if-e (s c t ee)       (list (fk-if c t (nth ee 0)) (fp-close s (nth ee 1))))
+
+; close: skip spaces then a ')' (return position after it)
+(defn fp-close (s pos)
+    (if (ge (fp-skip s pos) (fp-len s)) (fp-skip s pos)
+        (add (fp-skip s pos) 1)))
+
+; fp-parse: Form source string -> a fourth-walker program (cells). The root
+; cell is the first of the (cell end-pos) pair returned by fp-expr at pos 0.
+(defn fp-parse (s) (nth (fp-expr s 0) 0))

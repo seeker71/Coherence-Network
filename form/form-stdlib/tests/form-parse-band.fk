@@ -1,0 +1,24 @@
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/form-parse.fk
+;
+; form-parse-band — m4e3's first real stone, proven three-way: a Form parser
+; written IN FORM reads Form SOURCE TEXT (recursive descent over the string, a
+; cursor, no pre-tokenizer — the BMF discipline) and produces a fourth-walker
+; program whose walk equals the value the source denotes. Form source -> a
+; runnable program, parsed by Form. The op set covered is the walker's pure-
+; compute family (integer, add, sub, le, if, nesting); defn/let/do/str_* are
+; the climb to full stdlib bands (m4e4), each lifting the ratchet.
+;
+; Verdict 15 when the parser holds:
+;   1   a flat form     — "(add 40 2)" parses and walks to 42
+;   2   nesting         — "(add (sub 50 8) (add 0 0))" walks to 42 (the parser
+;       recurses, child indices land, the tree is real)
+;   4   both branches   — "(if (le 3 5) 111 222)" -> 111 and the >5 form -> 222
+;   8   a bare atom and a deep nest — "7" -> 7 and a 3-deep add chain -> 60
+(do
+    (let c0 (if (eq (fk-run (fp-parse "(add 40 2)") 0) 42) 1 0))
+    (let c1 (if (eq (fk-run (fp-parse "(add (sub 50 8) (add 0 0))") 0) 42) 2 0))
+    (let c2 (if (eq (fk-run (fp-parse "(if (le 3 5) 111 222)") 0) 111)
+                (if (eq (fk-run (fp-parse "(if (le 9 5) 111 222)") 0) 222) 4 0) 0))
+    (let c3 (if (eq (fk-run (fp-parse "7") 0) 7)
+                (if (eq (fk-run (fp-parse "(add 10 (add 20 30))") 0) 60) 8 0) 0))
+    (add c0 (add c1 (add c2 c3))))
