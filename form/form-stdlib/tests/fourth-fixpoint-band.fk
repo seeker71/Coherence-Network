@@ -1,0 +1,30 @@
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk
+;
+; fourth-fixpoint-band — m4d's first move proven three-way: the four new ops
+; flatten canonically (NODE = the binary observing itself, PUTC = the efferent
+; port, DIV/MOD = figure leaves), the quine knot is closed (the self-printer
+; contains its own true length, and adding the true length leaves the length
+; unchanged), and the self-printer's emission is deterministic. The byte-exact
+; self-emission itself is the audit's claim — it needs clang; here the kernels
+; prove the EMITTER side of the fixpoint agrees everywhere.
+;
+; Verdict 15 when the knot holds:
+;   1   PUTC(LIT 7) flattens to {1,7,0,0},{9,0,0,0}, and DIV(LIT 9, LIT 2)
+;       to {1,9,0,0},{1,2,0,0},{10,0,1,0}, — the new ops in the table
+;   2   knot stability — the printer's row count with the placeholder equals
+;       the row count with the true length (the fixpoint lands in one rebuild)
+;   4   deterministic — two emissions of the self-printer are str_eq
+;   8   the knot's literal — the self-printer's table carries LIT (N-1),
+;       its own true bound, found by scanning the rows
+(do
+    (let c0 (if (str_eq (fkc-rows-text (fkc-flatten (fkd-putc (fk-lit 7)))) "{1,7,0,0},{9,0,0,0},")
+                (if (str_eq (fkc-rows-text (fkc-flatten (fkd-div (fk-lit 9) (fk-lit 2)))) "{1,9,0,0},{1,2,0,0},{10,0,1,0},") 1 0) 0))
+
+    (let n0 (len (fkc-flatten (fkd-printer-with 0))))
+    (let c1 (if (eq (len (fkc-flatten (fkd-self-printer))) n0) 2 0))
+
+    (let c2 (if (str_eq (fkc-emit (fkd-self-printer)) (fkc-emit (fkd-self-printer))) 4 0))
+
+    (let c3 (if (eq (fkd-has-lit (fkc-flatten (fkd-self-printer)) (sub n0 1)) 1) 8 0))
+
+    (add c0 (add c1 (add c2 c3))))
