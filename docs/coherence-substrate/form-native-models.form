@@ -56,6 +56,11 @@
 ;   M2  quant tensor encode/dequant — quantize_block (absmax -> int8/nf4 codes via round + the nf4
 ;        16-quantile table already in the format cell) + dequant; round-trip band: dequant(encode(W)) ~ W
 ;        within format epsilon; identical tensors node_eq (dedup proof). Weights become substrate cells.
+;        [SHIPPED: form-stdlib/tensor-quant.fk + tests/tensor-quant-band.fk → 4095, three-way. The
+;        kernels' half-away round IS the int8 quantizer; the nf4 table travels as data from the format
+;        cell; int8 round-trips within 1e-2, nf4 within half its largest quantile gap × absmax (the
+;        honest bound); identical rows → identical code lists (the dedup shape — node_eq interning
+;        itself already proven by ml-flow-band.fk); a zero row encodes without dividing by zero.]
 ;   M3  transformer-numerics — softmax (max-subtract for stability), gelu (tanh approximation), layernorm,
 ;        composed from the existing exp/tanh/matvec; each a three-way band on tiny dims.
 ;        [SHIPPED: form-stdlib/transformer-numerics.fk + tests/transformer-numerics-band.fk → 4095,
