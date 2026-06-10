@@ -147,7 +147,10 @@ jobs:
           backoff=30
           while :; do
             set +e
-            ./scripts/verify_web_api_deploy.sh "${PUBLIC_DEPLOY_API_BASE}" "${PUBLIC_DEPLOY_WEB_BASE}"
+            VERIFY_REQUIRE_API_HEALTH_SHA=1 \
+            VERIFY_REQUIRE_WEB_HEALTH_PROXY_SHA=1 \
+            SHA_PARITY_PATIENCE_SECONDS=180 \
+              ./scripts/verify_web_api_deploy.sh "${PUBLIC_DEPLOY_API_BASE}" "${PUBLIC_DEPLOY_WEB_BASE}"
             rc=$?
             set -e
             if [ "$rc" -eq 0 ]; then
