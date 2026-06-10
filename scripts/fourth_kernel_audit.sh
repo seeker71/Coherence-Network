@@ -173,5 +173,40 @@ fi
 
 echo
 echo "emitted source: $(wc -c < "$work/fk4.c" | tr -d ' ') bytes, every byte authored by Form recipes"
+
+# ── 4. m4c — the EMITTED WALKER: the emitter reads fib-as-cells and emits ──
+# the generic walker + node table + probe; the program stays data in C.
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
+    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" > "$work/fkw-driver.fk"
+cat >> "$work/fkw-driver.fk" <<'EOF'
+(print "==FKW==")
+(print (fkc-emit (fk-fib-program)))
+(print "==END==")
+EOF
+(cd "$FORMDIR" && "$GO_BIN" "$work/fkw-driver.fk" 2>/dev/null) > "$work/fkw-emit.out"
+sed -n '/^==FKW==$/,/^==END==$/p' "$work/fkw-emit.out" | sed -e '1d' -e '$d' > "$work/fkw.c"
+if ! grep -q 'fk_arms' "$work/fkw.c"; then
+    echo "FAIL  walker emission did not carry its probe — see $work/fkw-emit.out"; exit 1
+fi
+"$CLANG" -O2 -o "$work/fkw" "$work/fkw.c"
+FKW="$work/fkw"
+
+fkw_out="$("$FKW" 28)"
+fkw_fib="$(printf '%s\n' "$fkw_out" | sed -n 1p)"
+echo
+echo "m4c emitted walker (fib-as-cells -> C node table + generic walk + probe):"
+echo "  fib 28  walker=$go_fib  fkw=$fkw_fib"
+if [[ "$go_fib" != "$fkw_fib" ]]; then
+    echo "FAIL  emitted-walker parity broken — its rows do not count"; exit 1
+fi
+echo "  probe (arms LIT ARG ADD SUB LE IF SELF, from inside the binary):"
+printf '%s\n' "$fkw_out" | sed -n 2,8p | tr '\n' ' ' | sed 's/^/    /'; echo
+fkw_t_fib="$(median_ms 15 "$FKW" 28)"
+fkw_t_zero="$(median_ms 15 "$FKW" 0)"
+fkw_rss="$(max_rss_mb "$FKW" 28)"
+row "fkw (emitted walker)" "$fkw_t_fib" "-" "-" "$fkw_t_zero" "$fkw_rss" "$(size_kb "$FKW")"
+echo "  (fkw walks the SAME program-as-data the kernels walk — one interpretation layer, native; sum/ack rows arrive when their programs are authored)"
+
+echo
 echo "conditions: $(uname -m) $(uname -s), clang -O2, full-process invocations (startup included)"
 echo "ok — parity held and the rows are real; the spec is docs/coherence-substrate/fourth-kernel.form"
