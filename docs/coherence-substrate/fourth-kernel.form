@@ -1,0 +1,123 @@
+# ─────────────────────────────────────────────────────────────────────
+# fourth-kernel.form — the sibling whose source is Form: native artifacts
+#                      emitted from recipes, measured against the three walkers
+# ─────────────────────────────────────────────────────────────────────
+#
+# Urs: "I would love to have a native BMF compiler and a native API host binary
+# just to compare them performance, memory footprint, etc. and I would love to
+# have a host-kernel native cli written from the form recipe instead of
+# go/rust/TS as fourth kernel to compare against."
+#
+# This is kernel-self-composition's close-self-rebuild-loop choosing its first
+# stones, and host-kernel's zero-to-many-implementations made literal: a FOURTH
+# carrier of the same content-addressed body, whose source is not a host
+# language a human wrote but text the recipes themselves emit. The comparison
+# is the point — champion-challenger discipline over real measured rows (wall
+# time, maximum RSS, binary size, startup), never a claim of superiority.
+# Each artifact earns its place by counts, and the walkers stay authoritative
+# for semantics: the emitted native must return the walker's values.
+#
+# Two emission lanes exist today; this spec names them honestly:
+#   kernel-resident lowering — jit_emit_c / jit.go: the kernel lowers a recipe
+#     to C/native. General (handles recursion), RUNS, but the lowerer is
+#     host-language hardcode. A bridge carrier, and itself M4's lift target.
+#   emitter-as-recipe — jit-tensor-emit.fk, fourth-kernel-emit.fk: the emitter
+#     IS Form; the kernel keeps dumb carriers (clang/rustc, dlopen/exec). The
+#     body-owned lane this spec grows. close-jit-crystallization's heart.
+
+(fourth-kernel
+
+  (lineage
+    (closes-toward  kernel-self-composition.close-self-rebuild-loop)  # author -> compile -> boot bigger
+    (heart-of       host-kernel.close-jit-crystallization)            # recipe -> native, installed, meltable
+    (lane-proven    jit-tensor-emit.fk)                               # the emitter as Form, bit-for-bit, 20077x
+    (carrier-rule   host-kernel.host-resource-access)                 # clang/rustc/loader: allowed carriers
+    (measures-like  champion-challenger.fk recognition-router.fk)     # earned flips, measured fitness
+    (coordinates    codex/native-http-stack-architecture)             # the API-host slice shares that seam
+    (seed           fourth-kernel-emit.fk tests/fourth-kernel-emit-band.fk
+                    scripts/fourth_kernel_audit.sh))
+
+  # ── The measurement protocol (shared by every milestone) ─────────────
+  # A row is honest when the SAME semantic ask runs through each carrier's
+  # own front door, values agree, and the numbers carry their conditions.
+  (measurement-protocol
+    (ask          identical-recipe-semantics-per-carrier)   # e.g. fib 28 = 317811 everywhere
+    (parity-first values-must-agree-before-any-timing-counts)
+    (rows         wall-time maximum-rss binary-size startup-time)
+    (carriers     form-kernel-go form-kernel-rust form-kernel-ts the-emitted-native)
+    (conditions   named-with-every-number)                  # machine, flags, N, date
+    (evidence     docs/system_audit/commit_evidence-records)
+    (verdict      champion-challenger-earned-never-declared))
+
+  # ── M1 — the CLI seed [SHIPPED with this spec] ────────────────────────
+  # A complete standalone C program — integer printer, fib, sum, ackermann,
+  # argv main — every byte emitted by Form recipes (fourth-kernel-emit.fk),
+  # one quoteless line (extern declarations instead of #include: preprocessor
+  # lines need newlines, a Form string is one line — the constraint shaped a
+  # cleaner emission). Proven three-way: the program text is byte-identical
+  # across kernels and prefix-parameterized (band → 7). The audit script
+  # carries the text through clang, checks value parity against the walkers,
+  # and writes the first measured comparison rows.
+  (m1-cli-seed
+    (emitter      fourth-kernel-emit.fk)                    # fk4-program: the whole binary as a string
+    (proof        tests/fourth-kernel-emit-band.fk -> 7 three-way)
+    (carrier      scripts/fourth_kernel_audit.sh)           # clang -O2, parity, time/rss/size/startup
+    (workloads    fib sum ackermann)                        # the kernels/README.md performance frame
+    (lowering     recursion-to-loops-for-fib-and-sum ack-stays-recursive)  # value parity over integers
+    (next         emit-from-recipe-shape-not-hand-shaped-text))  # walk the recipe tree to C, in Form
+
+  # ── M2 — the native BMF compiler ──────────────────────────────────────
+  # The BMF engine (apply-object-rule, engine.fk; the BML compiler picture in
+  # kernels/BMF_BML_COMPILER_PICTURE.md) emitted as a native binary: source in,
+  # recipes out. Compared against the three kernels compiling the same BML
+  # corpus: compile throughput, RSS, startup. The .fkb bootstrap-image ratchet
+  # is the natural exchange format — the native compiler proves itself by
+  # producing the same content-addressed image the walkers produce.
+  (m2-bmf-compiler-native
+    (compose      engine.fk-rule-application                # runs three-way today
+                  fourth-kernel-emit-lane                   # the emitter discipline from M1
+                  fkb-image-as-parity-gate)                 # same source -> same NodeIDs -> same image
+    (proof        a-band-where-native-and-walker-compile-one-corpus-to-equal-images)
+    (rows         compile-throughput rss startup binary-size))
+
+  # ── M3 — the native API host ──────────────────────────────────────────
+  # The front door as one native binary: socket accept, HTTP parse, route
+  # dispatch over the BML catalog shapes (kernel-http.fk, http-serve.fk,
+  # production-routes.fk, api.bml), JSON emit. Measured against form-kernel-go
+  # serve on the same routes: p50/p95, RSS, startup, binary size. This slice
+  # shares a seam with the native-http-stack architecture work (codex branch);
+  # the offered interface is the meeting point, not a race.
+  (m3-api-host-native
+    (compose      kernel-http.fk http-serve.fk production-routes-shapes
+                  fourth-kernel-emit-lane)
+    (parity       X-Form-Router-receipts-and-body-equality-against-the-go-front-door)
+    (rows         p50 p95 rss startup binary-size)
+    (coordinate   codex-native-http-stack-architecture))
+
+  # ── M4 — the walker itself (the true fourth sibling) ──────────────────
+  # The emitter grows from hand-shaped program text (M1) to walking a recipe
+  # tree and emitting its lowering — the lowerer as recipe, jit_emit_c's
+  # intelligence moved into the body. Then the emitted program IS a kernel:
+  # intern, node_eq, category dispatch over a primitive subset, enough to
+  # realize a chosen band family. That binary joins validate.sh as the fourth
+  # arm, and close-self-rebuild-loop's band cites this lane: a kernel authors,
+  # compiles, and boots a strictly larger kernel.
+  (m4-walker-emitted
+    (compose      recipe-tree-walk-in-form                  # the lowerer as recipe
+                  intern-and-node-eq-emission               # the substrate spine, emitted
+                  validate.sh-fourth-arm)                   # sibling parity includes the emitted one
+    (closes       kernel-self-composition.close-self-rebuild-loop)
+    (proof        the-emitted-kernel-passes-a-named-band-family-and-its-values-equal-the-three)))
+
+# ─────────────────────────────────────────────────────────────────────
+# How to verify (today)
+# ─────────────────────────────────────────────────────────────────────
+#
+#   # M1 emission, three-way (the program text is the cell):
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/fourth-kernel-emit.fk \
+#     form-stdlib/tests/fourth-kernel-emit-band.fk
+#
+#   # M1 carrier: compile the emitted text, prove value parity, measure rows:
+#   scripts/fourth_kernel_audit.sh
+#
+#   coh substrate form "?equivalent @recipe(fourth-kernel)"   # after ingest

@@ -1,0 +1,118 @@
+{
+  "date": "2026-06-10",
+  "thread_branch": "worktree-fourth-kernel-seed",
+  "commit_scope": "fourth-kernel.form M1: a complete standalone native CLI whose every source byte is emitted by Form recipes (fourth-kernel-emit.fk, proven three-way at 7), carried through clang by fourth_kernel_audit.sh with value parity gating the first measured comparison rows against the three walking kernels.",
+  "files_owned": [
+    "docs/coherence-substrate/fourth-kernel.form",
+    "form/form-stdlib/fourth-kernel-emit.fk",
+    "form/form-stdlib/tests/fourth-kernel-emit-band.fk",
+    "scripts/fourth_kernel_audit.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/fourth-kernel-emit.fk form-stdlib/tests/fourth-kernel-emit-band.fk",
+      "scripts/fourth_kernel_audit.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-10_fourth_kernel_seed.json"
+    ],
+    "summary": "The emission is the cell: all three kernels produce the byte-identical standalone C program (verdict 7 — canonical text, prefix parameterization through the self-calling ackermann frame, deterministic re-emission). The audit compiled the emitted text with clang -O2, proved value parity on fib 28 = 317811, sum 1000 = 500500, ackermann 3 6 = 509 across go/rust/ts walkers and the emitted binary, then measured the rows. The Form-emitted native answers full invocations in ~2 ms at 1.3 MB max RSS from a 33 KB binary; the walkers answer the same recursive recipes in 461-1696 ms (fib 28) at 53-139 MB RSS from 4-21 MB carriers. The walkers stay authoritative for semantics; the emitted binary is the fourth carrier seed, not a replacement.",
+    "observed_delta": {
+      "fourth_kernel_emit_band_verdict": 7,
+      "parity_fib_28": 317811,
+      "parity_sum_1000": 500500,
+      "parity_ack_3_6": 509,
+      "fk4_fib28_ms": 2.1,
+      "fk4_sum1k_ms": 2.4,
+      "fk4_ack36_ms": 2.8,
+      "fk4_startup_ms": 2.3,
+      "fk4_max_rss_mb": 1.3,
+      "fk4_binary_kb": 33,
+      "go_fib28_ms": 811.4,
+      "go_max_rss_mb": 53.2,
+      "go_binary_kb": 21245,
+      "rust_fib28_ms": 461.5,
+      "rust_max_rss_mb": 87.0,
+      "rust_binary_kb": 4270,
+      "ts_tsx_fib28_ms": 1695.5,
+      "ts_tsx_max_rss_mb": 139.4,
+      "emitted_source_bytes": 1110,
+      "conditions": "arm64 Darwin, clang -O2, full-process invocations (startup included), median over 15/5/3 runs"
+    },
+    "known_limitations": [
+      {
+        "limitation": "fib and sum are lowered to loops in the emitted program while the walkers run the recursive recipes — value parity over integers is the gate (the cross-ISA discipline); op-shape parity is not claimed.",
+        "follow_up": "M4 walks the recipe tree in Form and emits its lowering, making the emitted shape derivable instead of hand-shaped."
+      },
+      {
+        "limitation": "The ts row carries npx tsx process overhead; it names the carrier honestly (form-kernel-ts (tsx)) rather than a compiled TS runtime.",
+        "follow_up": "A compiled/bundled TS entry would tighten that row when the comparison starts to matter for TS specifically."
+      },
+      {
+        "limitation": "Walker RSS includes each kernel's full runtime; the comparison is carriers-as-shipped, not allocator micro-accounting.",
+        "follow_up": "Per-milestone rows (M2 compiler, M3 API host) keep the same carriers-as-shipped framing."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "PR gates run the three-way band; the audit script is operational tooling exercised locally and runnable anywhere clang exists."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No route or production surface changes; form-stdlib additions ride the normal api image rebuild and the lattice ingests fourth-kernel.form on post-merge hook."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No route behavior changes. The api image gains form-stdlib/fourth-kernel-emit.fk + its band (synced by deploy), and the lattice gains the fourth-kernel.form cell on post-merge ingest — queryable through the substrate door. The new capability is local-carrier: scripts/fourth_kernel_audit.sh emits, compiles, parity-gates, and measures the Form-emitted native CLI against the three walkers.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "fourth-kernel-emit-band proves the complete standalone C program is byte-identical three-way, prefix-parameterized through the self-calling ackermann frame, and deterministic (verdict 7).",
+      "fourth_kernel_audit.sh proves value parity (fib 28 = 317811, sum 1000 = 500500, ackermann 3 6 = 509) across go/rust/ts walkers and the Form-emitted binary before any timing row counts, then measures wall/RSS/size/startup."
+    ],
+    "summary": "scripts/fourth_kernel_audit.sh end-to-end: emit via kernel, clang -O2, parity gate, measured rows printed with conditions."
+  },
+  "phase_gate": {
+    "phase": "m1-cli-seed",
+    "gate": "emission proven three-way and parity-gated rows measured",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "M2 native BMF compiler (fkb-image parity gate); M3 native API host (coordinate with codex native-http-stack); M4 lowerer-as-recipe and the emitted walker as validate.sh's fourth arm"
+  },
+  "idea_ids": ["fourth-kernel"],
+  "spec_ids": ["kernel-native-api-readiness", "runtime-shared-native-representation"],
+  "task_ids": ["fourth-kernel-seed-20260610"],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "fourth-kernel-ask"]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation", "measurement"]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-fable-5"
+  },
+  "evidence_refs": [
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/coherence-substrate/kernel-self-composition.form",
+    "docs/coherence-substrate/host-kernel.form",
+    "form/form-stdlib/jit-tensor-emit.fk"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/system_audit/commit_evidence_2026-06-10_fourth_kernel_seed.json",
+    "form/form-stdlib/fourth-kernel-emit.fk",
+    "form/form-stdlib/tests/fourth-kernel-emit-band.fk",
+    "kernels/README.md",
+    "scripts/fourth_kernel_audit.sh"
+  ],
+  "change_intent": "runtime_feature"
+}
