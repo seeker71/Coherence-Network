@@ -512,5 +512,21 @@ fi
 echo "  the model COMPUTE rides the host organ; the 4th-kernel binary drives it and counts the output (host-resource-access)"
 
 echo
+# ── 16. n8 — the Form-emitted machine code, made visible ────────────────
+# Disassemble the emitted walker: Form recipe -> emitted C -> real ARM64.
+if command -v otool >/dev/null && [[ -x "$work/fkwu" ]]; then
+    insns="$(otool -tvV "$work/fkwu" 2>/dev/null | grep -cE '^[0-9a-f]{16}')"
+    echo "n8 the Form-emitted machine code (otool on the universal walker binary):"
+    echo "  the recipe walker is $insns native instructions; first ops of fk_walk:"
+    otool -tvV "$work/fkwu" 2>/dev/null | grep -A 6 '_fk_walk:' | head -7 | sed 's/^/    /'
+    echo "  Form recipe -> emitted C -> $(uname -m) machine code — the whole arc, real"
+elif command -v objdump >/dev/null && [[ -x "$work/fkwu" ]]; then
+    echo "n8 the Form-emitted machine code (objdump):"
+    objdump -d "$work/fkwu" 2>/dev/null | grep -A 6 '<fk_walk>:' | head -7 | sed 's/^/    /'
+else
+    echo "n8 disassembler (otool/objdump) absent — skipped"
+fi
+
+echo
 echo "conditions: $(uname -m) $(uname -s), clang -O2, full-process invocations (startup included)"
 echo "ok — parity held and the rows are real; the spec is docs/coherence-substrate/fourth-kernel.form"

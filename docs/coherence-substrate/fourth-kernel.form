@@ -346,8 +346,10 @@
           (n7-ratchet      m4e3 flattener first click: ONE compiled .fk band
                            through the observe door onto the table; fkw runs
                            it; bands-on-fourth-arm 0 -> 1)
-          (n8-assembly     otool -tv on emitted binaries in the audit — the
-                           Form-emitted ARM64 assembly visible)
+          (n8-assembly     [SHIPPED] otool -tvV on the emitted walker in the
+                           audit shows real ARM64 (stp/ldr/adrp/lsl) — the
+                           whole arc visible: Form recipe -> emitted C ->
+                           machine code; the instruction count reported)
           (honesty         all-424-bands is a WALK not a night — families
                            climb as ops land (strings next); model COMPUTE
                            rides host organs by design — the sibling
