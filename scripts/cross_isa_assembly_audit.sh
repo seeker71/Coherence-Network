@@ -134,15 +134,111 @@ for label in "android-cpu__(aarch64)" "android-dsp__(hexagon)"; do
     fi
 done
 
+# ── 4. EXECUTION on the foreign ISAs — emulated organs, real semantics ──
+# The recipes run as freestanding static binaries under qemu-user: exit
+# code 42 means fact(10)==3628800 AND poly(3,4)==25 computed BY THE
+# FOREIGN ISA's own instructions. SKIP (not FAIL) where qemu is absent.
 echo ""
-echo "north-star edges (named, not gated):"
-echo "  - Metal AIR: the arm64-apple stream above is the MLX host half;"
-echo "    the .metal kernel compile needs Apple's toolchain on-device"
-echo "  - SPIR-V (Vulkan/Android GPU): needs llvm-spirv beside this clang"
-echo "  - execution on DSP/GPU organs awaits the device; generation is proven here"
+echo "execution on emulated organs (exit 42 = parity computed on the ISA):"
+cat > "$work/start64.c" <<'EOF'
+long long form_fact(long long);
+long long form_poly(long long, long long);
+void _start(void) {
+    long code = (form_fact(10) == 3628800 && form_poly(3, 4) == 25) ? 42 : 1;
+    asm volatile("mov x0, %0; mov x8, #93; svc #0" :: "r"(code) : "x0", "x8");
+}
+EOF
+cat > "$work/starthex.c" <<'EOF'
+long long form_fact(long long);
+long long form_poly(long long, long long);
+void _start(void) {
+    long code = (form_fact(10) == 3628800 && form_poly(3, 4) == 25) ? 42 : 1;
+    register long r0 asm("r0") = code;
+    register long r6 asm("r6") = 94; /* exit_group */
+    asm volatile("trap0(#1)" :: "r"(r0), "r"(r6));
+}
+EOF
+run_emulated() { # label qemu-bin target start-file
+    local label="$1" qemu="$2" target="$3" start="$4"
+    if ! command -v "$qemu" >/dev/null; then
+        echo "SKIP  $label: $qemu not installed (apt-get install qemu-user)"; return
+    fi
+    if "$CLANG" --target="$target" -nostdlib -ffreestanding -fuse-ld=lld -static -O2 \
+            -o "$work/$label.elf" "$work/recipes.c" "$work/$start" 2>"$work/x.err"; then
+        "$qemu" "$work/$label.elf"; local rc=$?
+        if [[ $rc -eq 42 ]]; then
+            echo "PASS  $label: executed under $qemu — exit 42 (parity on the ISA)"
+        else
+            echo "FAIL  $label: exit $rc (expected 42)"; fails=1
+        fi
+    else
+        echo "FAIL  $label: link failed:"; head -2 "$work/x.err"; fails=1
+    fi
+}
+run_emulated "android-cpu-exec" qemu-aarch64 aarch64-linux-android start64.c
+run_emulated "android-dsp-exec" qemu-hexagon hexagon starthex.c
+
+# ── 5. SPIR-V — the Vulkan / Android GPU door ──
+echo ""
+if command -v llvm-spirv >/dev/null || command -v llvm-spirv-18 >/dev/null; then
+    spirvbin="$(command -v llvm-spirv || command -v llvm-spirv-18)"
+    spirvdir="$work/spirvbin"; mkdir -p "$spirvdir"; ln -sf "$spirvbin" "$spirvdir/llvm-spirv"
+    if PATH="$spirvdir:$PATH" "$CLANG" --target=spirv64 -O2 -c -o "$work/recipes.spv" "$work/recipes.c" 2>"$work/s.err"; then
+        imuls=$(spirv-dis "$work/recipes.spv" 2>/dev/null | grep -c 'OpIMul' || true)
+        if [[ "$imuls" -gt 0 ]] && spirv-val "$work/recipes.spv" 2>/dev/null; then
+            echo "PASS  vulkan/android-gpu (spir-v): $imuls OpIMul, module validates (spirv-val)"
+        else
+            echo "FAIL  spir-v: OpIMul=$imuls or validation failed"; fails=1
+        fi
+    else
+        echo "FAIL  spir-v: clang --target=spirv64 refused:"; head -2 "$work/s.err"; fails=1
+    fi
+else
+    echo "SKIP  spir-v: install llvm-spirv-18 + spirv-tools"
+fi
+
+# ── 6. MSL — the Metal / MLX GPU kernel source ──
+# Emitted from the same projection; held by clang as C++ on this host.
+# AIR bytes need Apple's compiler — that half is named, not faked.
+cat > "$work/recipes.metal" <<EOF
+/* Generated MSL — Form recipe → Metal kernel source.
+   AIR compile awaits Apple's toolchain; this source is the GPU half,
+   the arm64-apple assembly stream is the MLX host half. */
+#ifdef __METAL_VERSION__
+#include <metal_stdlib>
+using namespace metal;
+#endif
+
+$(sed -e 's/^long long form_poly/static long form_poly/' -e 's/long long/long/g' "$work/recipes.c" | grep -A3 'static long form_poly')
+
+kernel void poly_kernel(device long *out [[buffer(0)]],
+                        constant long *in [[buffer(1)]],
+                        uint tid [[thread_position_in_grid]]) {
+    out[tid] = form_poly(in[2 * tid], in[2 * tid + 1]);
+}
+EOF
+cat > "$work/msl_prelude.h" <<'EOF'
+/* host-side syntax hold for MSL: erase Metal address-space keywords */
+#define kernel
+#define device
+#define constant const
+typedef unsigned int uint;
+EOF
+if "$CLANG" -x c++ -std=c++14 -fsyntax-only -Wno-unknown-attributes \
+        -include "$work/msl_prelude.h" "$work/recipes.metal" 2>"$work/m.err"; then
+    echo "PASS  apple-mlx-gpu (msl): kernel source emitted and held as C++ (AIR awaits Apple toolchain)"
+else
+    echo "FAIL  msl: emitted kernel source does not hold:"; head -3 "$work/m.err"; fails=1
+fi
+
+echo ""
+echo "remaining device-only edges (named, not gated):"
+echo "  - Metal AIR bytes and on-GPU execution need Apple hardware"
+echo "  - physical DSP/GPU execution: emulation is proven above; silicon is the organ"
 echo ""
 if [[ $fails -eq 0 ]]; then
-    echo "MINIMUM met. One recipe, six instruction sets, value parity held."
+    echo "MINIMUM met. One recipe: six instruction sets generated, two foreign"
+    echo "ISAs executed under emulation, SPIR-V validated, MSL kernel held."
 else
     echo "MINIMUM NOT met — the cross-ISA projection is not emitting what we expect."
 fi

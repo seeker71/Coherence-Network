@@ -247,8 +247,10 @@
 #   # One recipe shown as six instruction sets — Android CPU (aarch64),
 #   # Android DSP (hexagon mpyi), Apple/MLX host (arm64 mul), NVIDIA PTX
 #   # (mul.lo.s64), AMD GCN (v_mul_lo), x86-64 (imul) — value parity held,
-#   # recursion lowered to loops (jit_emit_c → LLVM; generation proven here,
-#   # organ execution awaits the device):
+#   # recursion lowered to loops; the same recipes EXECUTED under
+#   # qemu-aarch64 and qemu-hexagon (exit 42 = parity on the ISA); SPIR-V
+#   # generated and validated (Vulkan/Android-GPU door); MSL kernel source
+#   # emitted and held (Metal AIR awaits Apple hardware):
 #   scripts/cross_isa_assembly_audit.sh
 #   # evidence: docs/system_audit/commit_evidence_2026-06-10_host_kernel_metal_band.json
 #

@@ -60,10 +60,16 @@
         "x86-64 reference": "55 insns, imulq"
       },
       "named_edges": [
-        "Metal AIR needs Apple's toolchain on-device; the arm64-apple stream is the MLX host half",
-        "SPIR-V (Vulkan/Android GPU) needs llvm-spirv beside this clang",
-        "execution on DSP/GPU organs awaits the device; generation is proven here"
-      ]
+        "Metal AIR bytes and on-GPU execution need Apple hardware; the emitted MSL kernel source is the GPU half, the arm64-apple assembly stream is the MLX host half",
+        "physical DSP/GPU execution: emulation is proven; silicon is the organ"
+      ],
+      "execution_and_gpu_doors_2026_06_10": {
+        "android_cpu_executed": "freestanding static aarch64 binary of the emitted recipes ran under qemu-aarch64 — exit 42 (fact(10)==3628800 && poly(3,4)==25 computed by the ISA)",
+        "android_dsp_executed": "freestanding static hexagon binary ran under qemu-hexagon — exit 42 (parity computed by mpyi semantics)",
+        "vulkan_android_gpu_spirv": "clang --target=spirv64 via llvm-spirv-18 — 3 OpIMul, spirv-val clean",
+        "apple_mlx_gpu_msl": "Metal kernel source emitted from the same projection and held by clang as C++ on this host",
+        "tools": "qemu-user, llvm-spirv-18, spirv-tools installed in-session; the audit SKIPs honestly where they are absent"
+      }
     },
     "named_edges_left_open": [
       "int literals truncate at 32 bits in every kernel; the ts walker's add wraps at 32 bits while go and rust carry int64 — the band keeps constants inside int32; widening the integer model is its own movement",
