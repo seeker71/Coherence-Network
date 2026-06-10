@@ -322,10 +322,13 @@
                            fork-loop holding. THE api-on-a-4th-kernel-binary,
                            real. Next: read the request line off the cursor and
                            route (m4e3); JSON body from substrate values)
-          (n3-driver       fork/exec/pipe emission variant: spawn argv-given
-                           command, capture stdout into fk_src, the program
-                           parses it with the BMF CURSOR — a live subprocess
-                           stream under the streaming matcher)
+          (n3-driver       [SHIPPED] fkc-emit-driver: pipe/fork/execvp spawn
+                           the argv-given command, its stdout captured into
+                           fk_src, the PROGRAM parses that LIVE stream with the
+                           BMF cursor. Witnessed: drive printf 31337 -> 31337,
+                           drive date +%Y -> 2026 (the year off live date
+                           stdout). tests/fourth-driver-band.fk -> 15 three-way.
+                           THE keystone: TTS/STT/LLM are this organ + a parser)
           (n4-tts          drive /usr/bin/say through n3 — TTS physical;
                            model-class TTS (piper et al) named after)
           (n5-stt          brew whisper-cpp + largest whisper model feasible

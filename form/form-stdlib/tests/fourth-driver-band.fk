@@ -1,0 +1,31 @@
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk
+;
+; fourth-driver-band — n3 proven three-way: the DRIVER organ (fork/exec/pipe a
+; host command, capture its stdout into fk_src, then the PROGRAM parses that
+; live stream with the BMF cursor). This is the keystone the model stones ride:
+; the sibling drives the host's TTS/STT/LLM and parses the result, never
+; reimplements it. The live driving — date +%Y -> 2026 parsed off the pipe — is
+; the audit's half; here the kernels prove the driver emission agrees.
+;
+; (No length pin: emission byte-length shifts as sibling cells add ops in
+; parallel; the band asserts structure, which is stable.)
+;
+; Verdict 15 when the driver surface holds:
+;   1   the driver emission carries pipe(fds) — the capture channel
+;   2   it carries fork() and execvp(argv[1] — spawn the host command
+;   4   it reads the child stdout into fk_src — the cursor's stream
+;   8   the emission is deterministic and parameterized by the parser program
+(do
+    (defn curb () (fk-buf (fk-get (fk-lit 0))))
+    (let p1 (fk-buf (fk-lit 0)))
+    (let p2 (fk-add (fk-buf (fk-lit 0)) (fk-buf (fk-lit 1))))
+    (let d1 (fkc-emit-driver (list p1)))
+
+    (let c0 (if (ge (str_find d1 "pipe(fds)" 0) 0) 1 0))
+    (let c1 (if (ge (str_find d1 "fork()" 0) 0)
+                (if (ge (str_find d1 "execvp(argv[1]" 0) 0) 2 0) 0))
+    (let c2 (if (ge (str_find d1 "read(fds[0], fk_src" 0) 0) 4 0))
+    (let c3 (if (str_eq d1 (fkc-emit-driver (list p1)))
+                (if (str_eq d1 (fkc-emit-driver (list p2))) 0 8) 0))
+
+    (add c0 (add c1 (add c2 c3))))
