@@ -1,0 +1,24 @@
+; preludes: form-stdlib/core.fk form-stdlib/wav-sense.fk form-stdlib/spectrum.fk
+;
+; spectrum-band — the Goertzel filterbank discriminates frequency, proven three-way (float → integer verdict).
+;
+; Two 8-sample signals (no header; +10000 = bytes [16 39], −10000 = [240 216]):
+;   DC      [+10000]·8        — all energy at ~0 Hz: the LOW band must out-power the HIGH band.
+;   Nyquist [+10000 −10000]·4 — all energy at fs/2: the HIGH band must out-power the LOW band.
+; clo = 2cos(2π·100/16000) = 1.99846 ; chi = 2cos(2π·7000/16000) = −1.84776.
+;
+; Verdict 7 when every claim lands:
+;   1   low band dominates the DC signal     (band-power dc clo  >  band-power dc chi)
+;   2   high band dominates the Nyquist tone  (band-power alt chi >  band-power alt clo)
+;   4   the spectrum returns all 8 bands      (len == 8)
+;   8   normalized: DC's low band is the peak  (spectrum-levels lane 0 ≥ 8, i.e. ~9 = the max)
+(do
+    (let dc  (list 16 39 16 39 16 39 16 39 16 39 16 39 16 39 16 39))
+    (let alt (list 16 39 240 216 16 39 240 216 16 39 240 216 16 39 240 216))
+    (let clo 1.99846)
+    (let chi -1.84776)
+    (let c0 (if (gt (band-power dc 0 16 2 clo) (band-power dc 0 16 2 chi)) 1 0))
+    (let c1 (if (gt (band-power alt 0 16 2 chi) (band-power alt 0 16 2 clo)) 2 0))
+    (let c2 (if (eq (len (spectrum-coeffs dc 0 16 2 (spec-coeffs))) 8) 4 0))
+    (let c3 (if (ge (head (spectrum-levels dc 0 16 2)) 8) 8 0))
+    (add c0 (add c1 (add c2 c3))))

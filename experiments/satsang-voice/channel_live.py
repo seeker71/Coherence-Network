@@ -35,7 +35,9 @@ FORM = os.environ.get("COH_FORM", os.path.join(REPO, "form"))
 KERNEL = os.environ.get("COH_KERNEL", os.path.join(FORM, "form-kernel-rust", "target", "release", "form-kernel-rust"))
 ORACLE = os.environ.get("COH_SOUND_CLASSIFY", "/tmp/sound_classify")
 WHISPER_PY = os.environ.get("COH_WHISPER_PY", "/tmp/whisper-env/bin/python")
-WHISPER_MODEL = os.environ.get("COH_WHISPER_MODEL", "mlx-community/whisper-tiny")
+# the ORACLE we learn from should be best-quality (Urs): large-v3-turbo, not tiny. The Form classifiers
+# can only learn as well as the ground truth they learn from. COH_WHISPER_MODEL overrides for speed.
+WHISPER_MODEL = os.environ.get("COH_WHISPER_MODEL", "mlx-community/whisper-large-v3-turbo")
 # a mic cell is named by DEVICE NAME, not index — avfoundation indices shift when devices come/go
 # (installing BlackHole bumped the mic from :0 to :1). Default to the built-in mic by name.
 MICS = [m.strip() for m in os.environ.get("COH_MIC", "MacBook Pro Microphone").split(",") if m.strip()]
@@ -150,14 +152,31 @@ def sound_oracle(wav):
         return "other"
 
 
+_WHISPER = None
+
+
+def whisper_server():
+    # keep the best model resident (whisper_server.py) so it loads once (~5 s) then transcribes in ~0.5 s.
+    global _WHISPER
+    if _WHISPER is None:
+        log = open(os.path.join(TMP, "whisper.log"), "w")
+        _WHISPER = subprocess.Popen([WHISPER_PY, os.path.join(HERE, "whisper_server.py"), WHISPER_MODEL],
+                                    stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=log, text=True, bufsize=1)
+        for _ in range(5):
+            try:
+                if json.loads(_WHISPER.stdout.readline()).get("ready"):
+                    break
+            except Exception:
+                continue
+    return _WHISPER
+
+
 def transcribe(wav):
-    # (text, language, no_speech_prob) — language is a property; no_speech_prob feeds the trust gate.
-    out = sh([WHISPER_PY, "-c",
-              f"import mlx_whisper,json,sys;r=mlx_whisper.transcribe(sys.argv[1],"
-              f"path_or_hf_repo='{WHISPER_MODEL}');s=(r.get('segments') or [{{}}]);"
-              f"print(json.dumps({{'t':r['text'],'l':r.get('language','?'),'n':s[0].get('no_speech_prob',1.0)}}))", wav])
+    # the BEST oracle, kept resident: one path in, one JSON line out (text, language, no_speech_prob).
+    p = whisper_server()
     try:
-        d = json.loads((out.stdout or "").strip().splitlines()[-1])
+        p.stdin.write(wav + "\n"); p.stdin.flush()
+        d = json.loads(p.stdout.readline())
         return (d.get("t") or "").strip(), (d.get("l") or "?"), float(d.get("n", 1.0))
     except Exception:
         return "", "?", 1.0
@@ -192,6 +211,22 @@ def envelope_form(wav):
     try:
         v = json.loads(out)
         return v if isinstance(v, list) and len(v) == 8 else [0] * 8
+    except Exception:
+        return [0] * 8
+
+
+def spectrum_form(wav):
+    # a second BODY probe: the FFT spectrum (Goertzel filterbank, spectrum.fk) — 8 normalized band levels
+    # 0..9 over 100..7000 Hz. Form reads the wav itself; the kernel has no sin/cos, so the band cosine
+    # coefficients are data and the recurrence is pure mul/add/sub.
+    drv = os.path.join(TMP, "spec.fk")
+    with open(drv, "w") as fh:
+        fh.write(f'(do (spectrum-levels-file "{wav}" 16))')
+    out = sh([KERNEL, "form-stdlib/wav-sense.fk", "form-stdlib/spectrum.fk", drv], cwd=FORM)
+    line = (out.stdout or out.stderr).strip().splitlines()
+    try:
+        v = json.loads(line[-1])
+        return [max(0, min(9, int(round(x)))) for x in v] if isinstance(v, list) and len(v) == 8 else [0] * 8
     except Exception:
         return [0] * 8
 
@@ -231,6 +266,9 @@ def render(view, u):
         return f"[{clk}] {u['mic']} speaker▸ f0 {u['f0']:>3}Hz → {PITCH[u['band']]:<11} (pitch, not identity)  | “{head}”"
     if view == "arousal":
         return f"[{clk}] {u['mic']} arousal▸ {u['arousal']}/9 {arousal_word(u['arousal']):<6} (energy-dynamics)  | “{head}”"
+    if view == "spectrum":
+        bars = "".join("▁▂▃▄▅▆▇█"[min(7, b)] for b in u["spec"])
+        return f"[{clk}] {u['mic']} spectrum▸ {bars} (100→7kHz, Goertzel in-kernel)  | “{head}”"
     # transcript (rich, default): text + language + trust matrix + the other properties
     return (f"[{clk}] {u['mic']} {u['cat']:<6} {u['lang']:<2} {PITCH[u['band']]:<11} {arousal_word(u['arousal']):<6} "
             f"trust[{t[0]},{t[1]},{t[2]}] | “{head}”\n"
@@ -273,11 +311,12 @@ def main():
     try:
         named = ", ".join(f"{c['name']}({idx})" for idx, c in cells.items())
         print(f"live transcribe channel — {len(cells)} mic cell(s): {named}; view: {view}.")
-        print("keys: t transcript · r trust · c category · s speaker · a arousal · q quit\n")
+        print("keys: t transcript · r trust · c category · s speaker · a arousal · f spectrum · q quit\n")
         for _ in range(n):
             k = read_key()
-            if k in ("t", "r", "c", "s", "a"):
-                view = {"t": "transcript", "r": "trust", "c": "category", "s": "speaker", "a": "arousal"}[k]
+            if k in ("t", "r", "c", "s", "a", "f"):
+                view = {"t": "transcript", "r": "trust", "c": "category", "s": "speaker",
+                        "a": "arousal", "f": "spectrum"}[k]
                 print(f"  ── channel → {view} ──")
             if k == "q":
                 break
@@ -293,31 +332,35 @@ def main():
                     print(f"[{time.strftime('%H:%M:%S')}] {cell['name']} silence — (mic {loud}/99, nothing to hear)")
                     continue
                 s = samples(wav)            # still read in Python for f0 (the next DSP to lift into Form)
-                win = envelope_form(wav)    # the energy feature: now computed in the BODY (wav-sense.fk)
+                win = envelope_form(wav)    # probe 1: energy envelope — body (wav-sense.fk)
+                spec = spectrum_form(wav) if g >= 1 else [0] * 8   # probe 2: FFT spectrum — body (spectrum.fk)
+                feat = win + spec           # FUSION: two probe channels → one richer modality (field-fusion.fk)
                 cat = sound_oracle(wav)
                 pitch = f0(s) if g >= 2 else 0
-                # co-learning agreement signal (does the Form sound-arm already match the oracle?)
+                # co-learning agreement on the FUSED feature (energy + spectrum recognizes more than either)
                 agree = 0
                 if sound_ex:
-                    fv = " ".join(map(str, win))
+                    fv = " ".join(map(str, feat))
                     protos = " ".join('(list "%s" (list %s))' % (l, " ".join(map(str, f))) for l, f in sound_ex)
                     pred = kernel("form-stdlib/nearest-shape.fk", f"(do (ns-label (list {fv}) (list {protos})))").strip('"')
                     s_checks += 1
                     if pred == cat:
                         s_agree += 1; agree = 1
-                sound_ex.append((cat, win))
+                sound_ex.append((cat, feat))
                 band, arous, tt, st, at = traits(pitch, win, g, speechy, agree)
                 if g < 2:
                     text = ""                      # audible non-speech: classify, no transcript
                 u = {"ts": ts, "mic": cell["name"], "cat": cat, "lang": lang if g >= 2 else "·",
                      "f0": pitch, "band": band, "arousal": arous, "tvec": [tt, st, at],
-                     "speechy": speechy, "text": text, "words": len(text.split())}
+                     "spec": spec, "speechy": speechy, "text": text, "words": len(text.split())}
                 cell["stream"].append(u)
                 print(render(view, u))
     finally:
         if raw is not None:
             import termios
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, raw)
+        if _WHISPER is not None:
+            _WHISPER.terminate()
 
     heard = sum(len(c["stream"]) for c in cells.values())
     rate = round(100 * s_agree / s_checks) if s_checks else 0
