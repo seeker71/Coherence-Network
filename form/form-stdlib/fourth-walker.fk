@@ -82,6 +82,11 @@
 (defn fk-get (i)   (fk-node 14 i))
 (defn fk-time ()   (fk-node 15 (ms-cell 0)))
 (defn fk-rnd ()    (fk-node 16 (ms-cell 0)))
+; 17 BUF i — read the loaded SOURCE stream's byte at i: the BMF cursor's eye.
+; The cursor POSITION lives in the RAM organ (fk_mem) — save/restore is a
+; pointer move through SET/GET, never a copy: BMA's discipline, no lexer,
+; no token stream, args on the call stack.
+(defn fk-buf (i) (fk-node 17 i))
 
 ; fib authored as data — the program every carrier in fourth-kernel.form's
 ; rows answers: IF (LE arg 1) arg (ADD (SELF (arg-1)) (SELF (arg-2)))
