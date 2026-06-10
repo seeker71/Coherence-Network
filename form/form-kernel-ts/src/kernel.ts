@@ -3146,6 +3146,68 @@ export class Kernel {
       int: Date.now(),
     }));
 
+    // `unix_ms_to_iso_utc` — render a millisecond instant as the
+    // second-resolution ISO UTC string the Go carrier emits.
+    this.registerNative("unix_ms_to_iso_utc", catCall(), (_k, args) => ({
+      kind: "str",
+      str: `${new Date(argInt(args, 0)).toISOString().slice(0, 19)}Z`,
+    }));
+
+    // ── volatile cells — the RAM organ as a kernel resource ──
+    // In-process volatile KV with update timestamps, mirroring the Go
+    // carrier (server.go registerHostIONatives): put returns 1, get
+    // returns the stored value or null, delete returns 1/0, scan_since
+    // returns (key value updated_ms) triples for one namespace, and
+    // prune_before returns the count of cells released.
+    this.registerNative("volatile_cell_put", catCall(), (_k, args) => {
+      volatileCells.set(volatileCoord(argStr(args, 0), argStr(args, 1)), {
+        updatedMs: Date.now(),
+        value: args[2] ?? { kind: "null" },
+      });
+      return { kind: "int", int: 1 };
+    });
+    this.registerNative("volatile_cell_get", catAccess(), (_k, args) => {
+      const cell = volatileCells.get(
+        volatileCoord(argStr(args, 0), argStr(args, 1)),
+      );
+      return cell ? cell.value : { kind: "null" };
+    });
+    this.registerNative("volatile_cell_delete", catCall(), (_k, args) => {
+      const had = volatileCells.delete(
+        volatileCoord(argStr(args, 0), argStr(args, 1)),
+      );
+      return { kind: "int", int: had ? 1 : 0 };
+    });
+    this.registerNative("volatile_cell_scan_since", catAccess(), (_k, args) => {
+      const prefix = `${argStr(args, 0)}\x00`;
+      const since = argInt(args, 1);
+      const out: Value[] = [];
+      for (const [coord, cell] of volatileCells) {
+        if (!coord.startsWith(prefix) || cell.updatedMs < since) continue;
+        out.push({
+          kind: "list",
+          list: [
+            { kind: "str", str: coord.slice(prefix.length) },
+            cell.value,
+            { kind: "int", int: cell.updatedMs },
+          ],
+        });
+      }
+      return { kind: "list", list: out };
+    });
+    this.registerNative("volatile_cell_prune_before", catCall(), (_k, args) => {
+      const prefix = `${argStr(args, 0)}\x00`;
+      const before = argInt(args, 1);
+      let pruned = 0;
+      for (const [coord, cell] of volatileCells) {
+        if (coord.startsWith(prefix) && cell.updatedMs < before) {
+          volatileCells.delete(coord);
+          pruned += 1;
+        }
+      }
+      return { kind: "int", int: pruned };
+    });
+
     // Debug — no Form category claimed; honest about being outside the
     // structural vocabulary.
     this.registerNative("trace", catUndefined(), (_k, args) => {
@@ -3201,6 +3263,13 @@ export class Kernel {
         return `<record @${nodeKey(v.record.blueprint)} #${v.record.fields.length}fields>`;
     }
   }
+}
+
+// volatile cells — process-lifetime RAM organ shared by every kernel
+// instance in this process, like Go's goVolatileCells global.
+const volatileCells = new Map<string, { updatedMs: number; value: Value }>();
+function volatileCoord(namespace: string, key: string): string {
+  return `${namespace}\x00${key}`;
 }
 
 // argN helpers — typed extraction with friendly errors.

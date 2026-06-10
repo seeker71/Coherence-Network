@@ -1,0 +1,42 @@
+{
+  "date": "2026-06-10",
+  "thread_branch": "claude/kernel-satsang-self-describing-tfncwn",
+  "commit_scope": "Binary proof that the host kernel uses every resource it has, as close to the metal as currently available: one Form program exercises CPU bit/float/many-core organs, native dispatch (jit_compile + register_jit rewire), the RAM organ (volatile cells, now three-way), real filesystem, real loopback TCP, the host clock, /dev/urandom entropy, and the offered-but-unplugged world-net doors. Proven three-way at validate.sh AND as a compiled .fkb artifact each kernel executes natively; the Go arm additionally compiles the band's metal-fact recipe to a host-native ELF x86-64 .so via the host Go toolchain.",
+  "files_owned": [
+    "form/form-stdlib/tests/host-kernel-metal-band.fk",
+    "form/form-kernel-ts/src/kernel.ts",
+    "form/form-kernel-rust/src/main.rs",
+    "docs/coherence-substrate/host-kernel.form",
+    "docs/system_audit/commit_evidence_2026-06-10_host_kernel_metal_band.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/host-kernel-metal-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/tests/host-kernel-metal-band.fk"
+    ],
+    "results": {
+      "source_mode": "1023, 1 ok, 0 divergent (go = rust = typescript)",
+      "binary_mode": "1023, 1 ok, 0 divergent — the same program as one .fkb artifact executed natively by each kernel",
+      "go_native_so": "jit_compile(metal-fact) emitted /tmp/form-jit-*/plugin.so — ELF 64-bit LSB shared object, x86-64, built by the host Go toolchain from the Form recipe during the band run"
+    },
+    "parity_repairs_landed": [
+      "form-kernel-ts: volatile_cell_put/get/delete/scan_since/prune_before ported (RAM organ now carried by all three siblings)",
+      "form-kernel-ts: unix_ms_to_iso_utc ported (second-resolution ISO UTC, matching go)",
+      "form-kernel-rust: volatile_cell_scan_since aligned to go's (key value updated_ms) triple shape"
+    ],
+    "named_edges_left_open": [
+      "int literals truncate at 32 bits in every kernel; the ts walker's add wraps at 32 bits while go and rust carry int64 — the band keeps constants inside int32; widening the integer model is its own movement",
+      "pg_* natives are carried by go and rust only; the ts carrier does not offer the pg port yet, so the parity band checks http_get and socket_listen offers",
+      "register_jit binds form-names to registered natives only; arithmetic verbs live in the walker, not the native table"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "not-applicable",
+    "notes": "Kernel-local proof band; no production surface changes."
+  }
+}

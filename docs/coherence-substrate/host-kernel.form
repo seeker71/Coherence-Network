@@ -121,7 +121,7 @@
   (organs-and-ports                                     # status: RUNS native today | VIA-HOST through the host's own driver/OS API (allowed)
     (organ-cpu   driven  RUNS)                          # arithmetic + jit.go native plugin
     (organ-gpu   driven  VIA-HOST)                      # MLX/Metal/ANE — drive the host's driver; native optional — local-inference-as-organ.form
-    (organ-ram   driven  RUNS-partial)                  # volatile_cell_* KV runs; heap is host-GC, not a kernel primitive
+    (organ-ram   driven  RUNS-partial)                  # volatile_cell_* KV runs on all three siblings (ts ported 2026-06-10); heap is host-GC, not a kernel primitive
     (world-fs    port    RUNS)                          # read/write/stat/list — main.go
     (world-net   port    RUNS)                          # socket_listen/connect/send/recv + http + pg — main.go/server.go
     (world-sensors port  VIA-HOST)                      # gps/proximity/magnetometer/barometer — via SensorManager/CoreMotion (allowed)
@@ -234,6 +234,14 @@
 #     form-stdlib/kernel-satsang.fk form-stdlib/recognition-router.fk \
 #     form-stdlib/champion-challenger.fk form-stdlib/host-kernel-cell.fk \
 #     form-stdlib/tests/host-kernel-cell-band.fk
+#
+#   # Every organ and world-port that RUNS here, touched in ONE program,
+#   # as close to the metal as currently available (verdict 1023; --binary
+#   # runs the same program as a compiled .fkb artifact; the Go arm emits
+#   # a real ELF .so from the band's recipe via the host toolchain):
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/host-kernel-metal-band.fk
+#   cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/tests/host-kernel-metal-band.fk
+#   # evidence: docs/system_audit/commit_evidence_2026-06-10_host_kernel_metal_band.json
 #
 #   # JIT native plugin path (Go kernel): exercised by the kernel's own suite.
 #   # Cross-device equivalence (kernel-on-android.form): a recipe proven on the

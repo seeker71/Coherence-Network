@@ -4743,13 +4743,23 @@ impl Kernel {
             let namespace = args[0].as_str();
             let cutoff = args[1].as_int();
             let prefix = format!("{namespace}\0");
+            // sibling parity: Go returns (key value updated_ms) triples
             let rows = volatile_table()
                 .lock()
                 .unwrap()
                 .cells
                 .iter()
                 .filter(|(coord, cell)| coord.starts_with(&prefix) && cell.updated_ms >= cutoff)
-                .map(|(_, cell)| cell.value.clone())
+                .map(|(coord, cell)| {
+                    Value::List(
+                        vec![
+                            Value::Str(coord[prefix.len()..].to_string().into()),
+                            cell.value.clone(),
+                            Value::Int(cell.updated_ms),
+                        ]
+                        .into(),
+                    )
+                })
                 .collect::<Vec<_>>();
             Value::List(rows.into())
         });
