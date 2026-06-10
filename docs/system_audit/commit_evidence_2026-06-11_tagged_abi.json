@@ -1,0 +1,111 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "worktree-fourth-kernel-seed",
+  "commit_scope": "The tagged value ABI ships in the fourth sibling's multi-function, universal, and jit lanes: table raw, LIT encodes on read, refs odd, EMPTY = 1 = the null reference = axiom-1's NOTHING. Matched-0 and nothing are distinct through plain IF; every prior parity unchanged; the quine's single lane stays raw by design.",
+  "files_owned": [
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/tests/fourth-os-band.fk",
+    "docs/coherence-substrate/fourth-kernel.form"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/tests/fourth-os-band.fk",
+      "cd form && ./validate.sh ... tests/fourth-heap-band.fk",
+      "cd form && ./validate.sh ... tests/fourth-call-band.fk",
+      "cd form && ./validate.sh ... tests/fourth-walker-emit-band.fk",
+      "cd form && ./validate.sh ... tests/fourth-fixpoint-band.fk",
+      "scripts/fourth_kernel_audit.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-11_tagged_abi.json"
+    ],
+    "summary": "All five fourth-kernel bands three-way green after the ABI (os 15 re-pinned 4327/4242 with the lowering canonical updated to (2 + a) \u2014 the band caught the encoding honestly; heap 15 unchanged str_find claims; call 15; emit 7 and fixpoint 15 on the raw single lane). Full audit exit 0: fib 317811 on every carrier, sibling heap value 25 unchanged, bmf 22/202, organs 7, self-JIT cold 28.0 ms -> hot 4.7 ms parity held, quine byte-exact 3388. The new claim, witnessed: matched-0 -> 0 and no-match -> 1 (the null reference) distinct through plain IF \u2014 the ack gap closed; {nothing, 0, 1, node} = {null-ref, int-0, int-1, ref}, protocol and ABI one shape. A first replace over-reached into the raw quine lane (m4c parity 754 caught by the audit's gate) and was reverted \u2014 the parity-first protocol did its job.",
+    "observed_delta": {
+      "bands": "os 15, heap 15, call 15, emit 7, fixpoint 15 \u2014 0 divergent",
+      "matched_zero": 0,
+      "no_match_nothing": 1,
+      "parities_unchanged": "fib 317811, heap 25, bmf 22/202, organs 7, quine 3388 bytes",
+      "jit_cold_ms": 28.0,
+      "jit_hot_ms": 4.7,
+      "emission_bytes": "universal 4327, jit 4242"
+    },
+    "known_limitations": [
+      {
+        "limitation": "fk_pv prints nothing as 1 \u2014 same glyph as int 1 at the display layer only (values are distinct in the ABI).",
+        "follow_up": "A ref-prefixing printer when display ambiguity ever matters."
+      },
+      {
+        "limitation": "The quine single lane stays raw ints-only by design; it gains the ABI when the self-printer learns refs.",
+        "follow_up": "Rides the m4d whole-source lane."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "PR gates run all bands three-way."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "form-stdlib rides the api rebuild; lattice ingests the spec on merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No route changes. The sibling's values are tagged: nothing is the null reference, zero is data, refs are node-acks \u2014 the ack vocabulary physical, the flattener's ground ready.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "Five bands three-way; audit end-to-end with the zero-vs-nothing witness and all prior parities."
+    ],
+    "summary": "validate.sh + audit exit 0."
+  },
+  "phase_gate": {
+    "phase": "m4e3a-tagged-abi",
+    "gate": "acks physical with all prior parities unchanged; CI + deploy confirm",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "m4e3 \u2014 the real-recipe flattener through the observe door onto cursor + heap + honest acks"
+  },
+  "idea_ids": [
+    "fourth-kernel"
+  ],
+  "spec_ids": [
+    "kernel-native-api-readiness",
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "tagged-abi-20260611"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "nil-as-nothing"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-fable-5"
+  },
+  "evidence_refs": [
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/system_audit/commit_evidence_2026-06-11_arena_heap_m4e2.json"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/system_audit/commit_evidence_2026-06-11_tagged_abi.json",
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/tests/fourth-os-band.fk"
+  ],
+  "change_intent": "runtime_feature"
+}
