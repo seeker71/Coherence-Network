@@ -191,6 +191,38 @@
                        per-host native part — emitted from canonical
                        implementation-recipes, verified against laws-as-bands,
                        native by definition: they are what native MEANS)
+
+      # ── m4e — the north star: the existing kernel surface, fully present ──
+      # Urs: the fourth kernel carries what the three siblings carry. The
+      # RATCHET is the band suite: every stone is measured as stdlib bands
+      # runnable on the fourth arm (424 bands today; fkw runs 0 real bands —
+      # its programs are combinator-authored). The walk, in surface order:
+      (m4e-surface-walk
+        (ratchet     bands-passing-on-fkw-over-424)         # the measure, never a claim
+        (m4e1-call   CALL + a function table: one-param functions called by
+                     index — kills the SELF single-recursion limit, lands
+                     mutual recursion, AND unblocks the emitter-as-program
+                     (the full m4d fixpoint's named blocker)
+                     [SHIPPED: fk-call + fkm-walk/fkm-run (recipe side, SELF
+                     re-grounded as re-enter fn 0 — single-function programs
+                     walk unchanged) + fkc-flatten-many/fkc-emit-many (one
+                     table, fk_fn[] roots, CALL dispatches through it);
+                     tests/fourth-call-band.fk -> 15 three-way (even/odd
+                     mutual recursion, fib-via-CALL = 55 + SELF back-compat,
+                     the 18-row two-function table with roots 8,17,
+                     deterministic emission); audit boots it: even(10)=1
+                     even(7)=0, fib-via-CALL(28)=317811 at 19.3 ms — the
+                     CALL indirection priced against the SELF shape])
+        (m4e2-heap   lists as an arena heap in the emitted C: cons/head/
+                     tail/len/nth/empty — the band subset's structural half)
+        (m4e3-bridge the real-recipe flattener: read a COMPILED .fk recipe
+                     through the observe door (node_category/node_children/
+                     node_value) and flatten the REAL category set into the
+                     table — fkw walks bands unmodified; validate.sh gains
+                     the fourth arm for covered bands)
+        (m4e4-grow   strings + str_eq, then natives family by family (the
+                     minimal-kernel census order: figure, observe, intern,
+                     port), each landing as bands flip to four-way))
       (hot-swap-free   the same emitter at runtime granularity: crystallize a
                        hot recipe -> toolchain port -> install by repoint ->
                        melt on cool, gated by champion-challenger counts))))

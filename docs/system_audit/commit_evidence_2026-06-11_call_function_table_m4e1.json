@@ -1,0 +1,111 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "worktree-fourth-kernel-seed",
+  "commit_scope": "fourth-kernel.form m4e1 — the north-star walk opened (the existing kernel surface fully present in the fourth sibling, ratcheted by bands runnable on the fourth arm) and its first stone laid: CALL + a function table. Programs become lists of one-param functions flattened into one table; CALL dispatches by index through fk_fn[]; SELF is re-grounded as re-enter fn 0 so single-function programs walk unchanged. Mutual recursion lands at both the recipe level and in the booted binary; the emitter-as-program blocker (the full m4d fixpoint) is removed.",
+  "files_owned": [
+    "form/form-stdlib/fourth-walker.fk",
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/tests/fourth-call-band.fk",
+    "scripts/fourth_kernel_audit.sh",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/coherence-substrate/INDEX.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/tests/fourth-call-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/tests/fourth-walker-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/tests/fourth-fixpoint-band.fk",
+      "scripts/fourth_kernel_audit.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-11_call_function_table_m4e1.json"
+    ],
+    "summary": "fourth-call-band holds three-way at 15: (1) even/odd mutual recursion by CALL index through fkm-run (even(10)=1, even(7)=0); (2) fib via CALL(0) answers 55 AND the old SELF-shaped fib still answers 55 through fkm — SELF == re-enter fn 0, back-compat as a claim; (4) the two-function flatten lands in one 18-row table with roots 8,17; (8) deterministic emission and the single-function emission carries fk_fn[1] — the special case folds in. Prior bands re-proven unbroken (walker 15, fixpoint 15). The audit booted the CALL lane: even(10)=1, even(7)=0, fib-via-CALL(28)=317811 at 19.3 ms median — the CALL indirection priced at ~2.5 ms over the SELF-shaped walker.",
+    "observed_delta": {
+      "fourth_call_band_verdict": 15,
+      "kernels_agreeing": 3,
+      "divergent": 0,
+      "even_odd_booted": "even(10)=1, even(7)=0",
+      "fib_via_call_28": 317811,
+      "fib_via_call_ms": 19.3,
+      "self_shaped_fkw_ms": 16.7,
+      "two_function_table_rows": 18,
+      "function_roots": "8,17",
+      "north_star_ratchet": "bands runnable on the fourth arm: 0 of 424 (the walk just opened)"
+    },
+    "known_limitations": [
+      {
+        "limitation": "Functions take one parameter; multi-arity arrives when a consumer (the emitter-as-program, or the real-recipe bridge) asks, with frames if needed.",
+        "follow_up": "m4e3's real-recipe flattener will name the actual arity demand from compiled .fk recipes."
+      },
+      {
+        "limitation": "fkc-emit (single-program, root-spliced) and fkc-emit-many coexist; the quine seed still rides the single lane.",
+        "follow_up": "Migrate the self-printer to emit-many and compost the single lane once the fixpoint canonical moves with it."
+      },
+      {
+        "limitation": "The north-star ratchet starts at 0/424: fkw walks combinator-authored programs, not yet compiled .fk bands.",
+        "follow_up": "m4e2 arena heap (lists), then m4e3 the observe-door flattener over real recipes — the first real band flipping to four-way is the next measurable click."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "PR gates run all four fourth-kernel bands three-way."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "form-stdlib additions ride the api image rebuild; the lattice ingests the updated fourth-kernel.form on the post-merge hook."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No route behavior changes. The fourth sibling gains multi-function programs: CALL by index through an emitted function table, mutual recursion proven at recipe level and booted — the structural prerequisite for walking real kernel-surface recipes and for the emitter authored as a program.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "fourth-call-band proves mutual recursion, CALL-fib + SELF back-compat, the multi-function flatten shape, and deterministic emission, three-way at 15.",
+      "fourth_kernel_audit.sh m4e1 section boots even/odd and fib-via-CALL: parity gates, then the CALL indirection is priced."
+    ],
+    "summary": "validate.sh four bands 1 ok 0 divergent each; audit end-to-end boots the CALL lane with parity."
+  },
+  "phase_gate": {
+    "phase": "m4e1-call-function-table",
+    "gate": "mutual recursion booted with parity; CI three-way + deploy ingest confirm the crossing",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "m4e2 — lists as an arena heap in the emitted C (cons/head/tail/len/nth/empty), the band subset's structural half"
+  },
+  "idea_ids": ["fourth-kernel"],
+  "spec_ids": ["kernel-native-api-readiness", "runtime-shared-native-representation"],
+  "task_ids": ["call-function-table-m4e1-20260611"],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "north-star-naming"]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation", "measurement"]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-fable-5"
+  },
+  "evidence_refs": [
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/system_audit/commit_evidence_2026-06-11_quine_seed_m4d.json",
+    "docs/coherence-substrate/minimal-kernel.form"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/system_audit/commit_evidence_2026-06-11_call_function_table_m4e1.json",
+    "form/form-stdlib/fourth-walker.fk",
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/tests/fourth-call-band.fk",
+    "scripts/fourth_kernel_audit.sh"
+  ],
+  "change_intent": "runtime_feature"
+}
