@@ -2136,28 +2136,39 @@ def sense_kernel_api() -> list[str]:
         # The honest runtime-share nuance: route-COUNT is kernel USAGE, not the
         # runtime-SHARE that actually left CPython. Even kernel-served routes run
         # the kernel as a guest-subroutine — routing/binding/validation/response
-        # stay CPython; 0 routes are served kernel-FIRST at the live front door.
-        # But the kernel-router manifest now holds native handlers that serve the
-        # WHOLE lifecycle in Form, proven byte-identical in shadow — the CAPABLE
-        # surface, read from the one source (runtime_surface_report, no duplicated
-        # parse). Track runtime-share, not route-count.
+        # stay CPython. Kernel-FIRST served count is read from the public
+        # front-door provenance probe in runtime_surface_report. The kernel-router
+        # manifest holds native handlers that serve the WHOLE lifecycle in Form;
+        # byte parity is useful evidence, while the native-first gate is web/API
+        # smoke, tool flows, native observability, and explicit fallback.
         n_capable = None
+        n_kernel_first = None
+        front_door_probe = None
         rsr_path = ROOT / "scripts" / "runtime_surface_report.py"
         if rsr_path.is_file():
             try:
                 _spec = importlib.util.spec_from_file_location("runtime_surface_report", rsr_path)
                 _rsr = importlib.util.module_from_spec(_spec)  # type: ignore[arg-type]
                 _spec.loader.exec_module(_rsr)  # type: ignore[union-attr]
-                n_capable = len(_rsr.kernel_first_capable_routes())
+                report = _rsr.build_report()
+                n_capable = report.get("kernel_first_capable_routes")
+                n_kernel_first = report.get("kernel_first_served_routes")
+                front_door_probe = report.get("front_door_probe") or {}
             except Exception:
                 n_capable = None
         if n_capable:
+            probe_note = ""
+            if isinstance(front_door_probe, dict) and front_door_probe.get("reachable"):
+                probe_note = (
+                    f"; public probe status={front_door_probe.get('status')} "
+                    f"router={front_door_probe.get('x_form_router') or '<missing>'}"
+                )
             lines.append(
-                f"  vitality: runtime-share — 0 routes served kernel-FIRST at the front "
-                f"door (those {n_served} run the kernel as a guest-subroutine inside "
-                f"CPython), but {n_capable} are kernel-first CAPABLE: native handlers "
-                "proven byte-identical in shadow, whole lifecycle in Form, awaiting the "
-                "front-door flip (scripts/runtime_surface_report.py)"
+                f"  vitality: runtime-share — {n_kernel_first or 0} routes served "
+                f"kernel-FIRST at the public front door; {n_capable} are kernel-first "
+                "CAPABLE native handlers in the manifest, whole lifecycle in Form "
+                "(gate: web/API/tool smoke + native observability + fallback"
+                f"{probe_note}; scripts/runtime_surface_report.py)"
             )
         else:
             lines.append(

@@ -27,6 +27,12 @@ grep -Fq "COPY deploy/front-door/api.bml /routes/api.bml" "$KERNEL_ROUTER_DOCKER
 grep -Fq 'Path(`/api/runtime/events`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
   || fail "kernel-router ingress does not expose the runtime-events BML route"
 
+grep -Fq 'coherence-api-kernel-native-first.rule: "Host(`api.coherencycoin.com`)"' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+  || fail "kernel-router ingress does not make the API host native-first"
+
+grep -Fq 'coherence-api-kernel-native-first.service: "coherence-api-kernel-canary"' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+  || fail "kernel-router native-first ingress does not target the production manifest service"
+
 grep -Fq 'PathRegexp(`^/api/views/stats/[^/]+$`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
   || fail "kernel-router ingress does not expose the views-stats BML template route"
 

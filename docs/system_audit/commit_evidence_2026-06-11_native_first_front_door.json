@@ -1,0 +1,110 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "codex/native-first-front-door-20260611",
+  "commit_scope": "Make the production API host native-first by routing ordinary Host(api.coherencycoin.com) traffic through the kernel-router, while keeping explicit higher-priority native/BML routes and Python fan-out for the tail.",
+  "files_owned": [
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "scripts/runtime_surface_report.py",
+    "scripts/wellness_check.py",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "scripts/verify_kernel_canary_public_gate.sh",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/commit_evidence_2026-06-11_native_first_front_door.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "./scripts/agent-coord.sh claim \"native-first front door smoke gate\"",
+      "bash -n scripts/test_hostinger_deploy_form_paths.sh scripts/verify_kernel_canary_public_gate.sh deploy/hostinger/auto-deploy.sh scripts/kernel_front_door_local_preflight.sh scripts/verify_web_api_deploy.sh",
+      "./scripts/test_hostinger_deploy_form_paths.sh",
+      "python3 scripts/runtime_surface_report.py --json",
+      "python3 -m py_compile scripts/runtime_surface_report.py scripts/wellness_check.py",
+      "./scripts/kernel_front_door_local_preflight.sh",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check"
+    ],
+    "notes": "Prompt guide and wellness passed on the dedicated worktree. Static deploy-path proof passed and now requires the native-first API host router. Runtime surface report measured the before-deploy public state as 22/815 kernel-served, 34 kernel-first capable, 0 kernel-first served, with https://api.coherencycoin.com/api/attention/kernel-runtime returning 404 and no X-Form-Router. Local kernel front-door preflight built the release Rust kernel, checked manifests and image packaging, proved /api/version and /api/health fan out with X-Form-Router: fanout-python, proved /api/utils/coherence_weight serves native-kernel, and proved /api/attention/kernel-runtime serves native metrics. Wellness runtime-share wording now uses the same public front-door provenance probe."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until this branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No public deploy has run yet. The before-deploy public probe intentionally remains 0 served kernel-first; after deploy, scripts/verify_kernel_canary_public_gate.sh must show ordinary no-header /api/attention/kernel-runtime returning 200 with X-Form-Router: native-kernel."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local proof is green and the change is ready for rebase, guard, commit, push, PR, CI, merge, deploy, and public verification."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Production Traefik will route ordinary API host traffic through the kernel-router first. Native manifest rows answer directly, explicit BML/native routes keep higher priority, and unmatched paths fan out to the existing Python API so the website and tools continue to work.",
+    "public_endpoints": [
+      "GET /api/attention/kernel-runtime",
+      "GET /api/version",
+      "GET /api/health",
+      "POST /api/ideas"
+    ],
+    "test_flows": [
+      "Local kernel-router served native /api/utils/coherence_weight with X-Form-Router: native-kernel.",
+      "Local kernel-router served /api/attention/kernel-runtime with native live measurements.",
+      "Local kernel-router fanned /api/version and /api/health to Python with X-Form-Router: fanout-python.",
+      "Public runtime-surface read established the before-deploy baseline: 34 capable, 0 served, native attention route still 404."
+    ]
+  },
+  "idea_ids": [
+    "native-first-front-door",
+    "form-native-runtime",
+    "operational-smoke-over-byte-fear"
+  ],
+  "spec_ids": [
+    "kernel-native-api-promotion",
+    "source-language-kernel-router-tracking"
+  ],
+  "task_ids": [
+    "native-first-front-door-20260611"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "runtime-policy"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "deploy/kernel-router/docker-compose.kernel-router.yml defines coherence-api-kernel-native-first for Host(api.coherencycoin.com) targeting coherence-api-kernel-canary at priority 700.",
+    "scripts/test_hostinger_deploy_form_paths.sh now fails if the native-first API host router or production-manifest service target is absent.",
+    "scripts/verify_kernel_canary_public_gate.sh now probes no-header /api/attention/kernel-runtime and requires X-Form-Router: native-kernel plus live metrics.",
+    "scripts/runtime_surface_report.py now derives kernel-first served count from the public front-door provenance probe and treats byte parity as evidence rather than a routing permission gate.",
+    "scripts/wellness_check.py now reads the same runtime-surface report and reports kernel-first served/capable counts without fixed pre-flip wording.",
+    "./scripts/kernel_front_door_local_preflight.sh -> PASS: native coherence_weight, native attention metrics, fanout-python version/health."
+  ],
+  "change_files": [
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "scripts/runtime_surface_report.py",
+    "scripts/wellness_check.py",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "scripts/verify_kernel_canary_public_gate.sh",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}
