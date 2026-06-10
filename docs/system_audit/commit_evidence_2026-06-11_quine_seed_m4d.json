@@ -1,0 +1,108 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "worktree-fourth-kernel-seed",
+  "commit_scope": "fourth-kernel.form m4d first move — the quine seed: four axiom-faced ops grow the emitted walker (NODE observe-itself, PUTC efferent port, DIV/MOD figure leaves), and a self-printer program, authored by closing the quine knot (it contains its own true length), walks its OWN node table in the booted binary and emits it byte-exactly. Band three-way at 15; the byte-exact fixpoint check rides the audit.",
+  "files_owned": [
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/tests/fourth-fixpoint-band.fk",
+    "form/form-stdlib/tests/fourth-walker-emit-band.fk",
+    "scripts/fourth_kernel_audit.sh",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/coherence-substrate/INDEX.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/tests/fourth-fixpoint-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/tests/fourth-walker-emit-band.fk",
+      "scripts/fourth_kernel_audit.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-11_quine_seed_m4d.json"
+    ],
+    "summary": "fourth-fixpoint-band holds three-way at 15: (1) the new ops flatten canonically (PUTC and DIV tables); (2) knot stability — the printer's row count with the placeholder equals the count with the true length, so the fixpoint lands in one rebuild; (4) deterministic self-printer emission; (8) the knot's literal is present — the program's table carries LIT(N-1), its own true bound. The walker-emit band re-proven at 15 with the grown walker text (arms to 11). The audit's m4d section booted the self-printer: the binary emitted its own 283-row node table byte-exactly — 3388 bytes — with the probe narrating from inside: PUTC 3388 (== byte count), NODE 3176 self-reads, SELF 284 (rows+1), DIV/MOD 547 each.",
+    "observed_delta": {
+      "fourth_fixpoint_band_verdict": 15,
+      "fourth_walker_emit_band_verdict": 15,
+      "kernels_agreeing": 3,
+      "divergent": 0,
+      "self_printer_rows": 283,
+      "self_emitted_table_bytes": 3388,
+      "fixpoint_diff": "byte-exact",
+      "probe_arms": "LIT 9720, ARG 3745, ADD 5354, SUB 0, LE 1778, IF 1778, SELF 284, NODE 3176, PUTC 3388, DIV 547, MOD 547",
+      "probe_invariant": "PUTC count == emitted byte count; SELF == rows + 1"
+    },
+    "known_limitations": [
+      {
+        "limitation": "The quine seed emits the data half (the node table); the constant walker text is not yet self-emitted — that needs a string-pool streaming lane in the emitted C.",
+        "follow_up": "Stream the walker text through PUTC from a pool the emitter lays down; then the binary emits its whole source."
+      },
+      {
+        "limitation": "Ops 8-11 live in the emitted walker; the recipe-level fk-walk stays ops 1-7 (no putchar-shaped native at recipe level) — parity for self-print programs is the audit's text-diff against the emitter's truth, not a recipe-walk.",
+        "follow_up": "If a recipe-level efferent-char port lands, fk-walk grows the same arms and the band gains recipe-walk parity claims."
+      },
+      {
+        "limitation": "The full m4d fixpoint — the emitter itself authored as a program the walker runs on itself — remains open; SELF gives one recursion, the emitter wants several (mode-packing or a CALL op is the path).",
+        "follow_up": "Grow toward CALL/multi-function or mode-packed encoding; the fixpoint band: same content-address in, byte-identical source out."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "PR gates run both bands three-way."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "form-stdlib additions ride the api image rebuild; the lattice ingests the updated fourth-kernel.form on the post-merge hook."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No route behavior changes. The emitted sibling gains self-observation (NODE) and self-emission (PUTC): the booted binary reproduces its own program table byte-exactly with the trace narrating — the data half of m4d's self-hosting fixpoint, measured.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "fourth-fixpoint-band proves new-op flatten canonicals, knot stability, deterministic emission, and the knot literal present, three-way at 15.",
+      "fourth_kernel_audit.sh m4d section: emit self-printer -> clang -> run -> diff the binary's self-emitted table against fkc-rows-text of the same flatten -> byte-exact, probe shown."
+    ],
+    "summary": "validate.sh both bands 1 ok 0 divergent; audit end-to-end fixpoint diff byte-exact."
+  },
+  "phase_gate": {
+    "phase": "m4d-quine-seed",
+    "gate": "the data half self-emits byte-exactly with the probe narrating; CI three-way + deploy ingest confirm the crossing",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "stream the constant walker text (string-pool lane) -> the binary emits its whole source; then the emitter as a program — self-hosting whole"
+  },
+  "idea_ids": ["fourth-kernel"],
+  "spec_ids": ["kernel-native-api-readiness", "runtime-shared-native-representation"],
+  "task_ids": ["quine-seed-m4d-20260611"],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "yes-please"]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation", "measurement"]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-fable-5"
+  },
+  "evidence_refs": [
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/system_audit/commit_evidence_2026-06-11_emitted_walker_m4c.json"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/system_audit/commit_evidence_2026-06-11_quine_seed_m4d.json",
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/tests/fourth-fixpoint-band.fk",
+    "form/form-stdlib/tests/fourth-walker-emit-band.fk",
+    "scripts/fourth_kernel_audit.sh"
+  ],
+  "change_intent": "runtime_feature"
+}

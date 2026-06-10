@@ -199,13 +199,40 @@ echo "  fib 28  walker=$go_fib  fkw=$fkw_fib"
 if [[ "$go_fib" != "$fkw_fib" ]]; then
     echo "FAIL  emitted-walker parity broken — its rows do not count"; exit 1
 fi
-echo "  probe (arms LIT ARG ADD SUB LE IF SELF, from inside the binary):"
-printf '%s\n' "$fkw_out" | sed -n 2,8p | tr '\n' ' ' | sed 's/^/    /'; echo
+echo "  probe (arms LIT ARG ADD SUB LE IF SELF NODE PUTC DIV MOD, from inside the binary):"
+printf '%s\n' "$fkw_out" | sed -n 2,12p | tr '\n' ' ' | sed 's/^/    /'; echo
 fkw_t_fib="$(median_ms 15 "$FKW" 28)"
 fkw_t_zero="$(median_ms 15 "$FKW" 0)"
 fkw_rss="$(max_rss_mb "$FKW" 28)"
 row "fkw (emitted walker)" "$fkw_t_fib" "-" "-" "$fkw_t_zero" "$fkw_rss" "$(size_kb "$FKW")"
 echo "  (fkw walks the SAME program-as-data the kernels walk — one interpretation layer, native; sum/ack rows arrive when their programs are authored)"
+
+echo
+# ── 5. m4d first move — the quine seed: the booted binary emits its own ──
+# node table byte-exactly (self-observation through NODE, self-emission
+# through PUTC), checked against the emitter's independently computed text.
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
+    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" > "$work/fkd-driver.fk"
+cat >> "$work/fkd-driver.fk" <<'EOF'
+(print "==SRC==")
+(print (fkc-emit (fkd-self-printer)))
+(print "==TBL==")
+(print (fkc-rows-text (fkc-flatten (fkd-self-printer))))
+(print "==END==")
+EOF
+(cd "$FORMDIR" && "$GO_BIN" "$work/fkd-driver.fk" 2>/dev/null) > "$work/fkd-emit.out"
+sed -n '/^==SRC==$/,/^==TBL==$/p' "$work/fkd-emit.out" | sed -e '1d' -e '$d' > "$work/fkd.c"
+sed -n '/^==TBL==$/,/^==END==$/p' "$work/fkd-emit.out" | sed -e '1d' -e '$d' > "$work/fkd-want.txt"
+"$CLANG" -O2 -o "$work/fkd" "$work/fkd.c"
+"$work/fkd" 0 > "$work/fkd-run.txt"
+head -1 "$work/fkd-run.txt" > "$work/fkd-got.txt"
+echo "m4d quine seed (the binary walks its OWN table and emits it):"
+if diff -q "$work/fkd-got.txt" "$work/fkd-want.txt" >/dev/null; then
+    echo "  FIXPOINT HOLDS — self-emitted table is byte-exact ($(wc -c < "$work/fkd-want.txt" | tr -d ' ') bytes)"
+else
+    echo "  FAIL  self-emission diverged from the emitter's truth"; exit 1
+fi
+echo "  probe: $(sed -n 3,13p "$work/fkd-run.txt" | tr '\n' ' ')(arms 1..11 — PUTC equals the byte count)"
 
 echo
 echo "conditions: $(uname -m) $(uname -s), clang -O2, full-process invocations (startup included)"

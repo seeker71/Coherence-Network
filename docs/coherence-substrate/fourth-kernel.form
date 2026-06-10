@@ -166,7 +166,23 @@
       (m4d-fixpoint    the booted kernel re-runs the SAME emitter recipe on
                        itself: same content-address in, byte-identical source
                        out — self-hosting, close-self-rebuild-loop's band
-                       stated plainly)
+                       stated plainly
+                       [QUINE SEED SHIPPED — the data half: four ops grew the
+                       walker, each an axiom-face (8 NODE = observe-itself,
+                       9 PUTC = the efferent port, 10/11 DIV/MOD = figure
+                       leaves; PUTC returns 0 so ADD sequences); the
+                       self-printer walks its OWN node table and emits it
+                       byte-exactly — 283 rows, 3388 bytes, the probe
+                       narrating from inside: PUTC count == byte count, SELF
+                       284 = rows+1, NODE 3176 self-reads. The quine knot (a
+                       program containing its own true length) closes by
+                       fixpoint authoring — row count is independent of the
+                       literal, one rebuild lands it (fkd-self-printer).
+                       Band tests/fourth-fixpoint-band.fk -> 15 three-way;
+                       the byte-exact check lives in the audit. Remaining
+                       for the FULL fixpoint: stream the constant walker
+                       text (a string-pool lane), then the emitter itself
+                       authored as a program — self-hosting whole])
       (leaf-honesty    the four leaf implementations (intern's hashing, the
                        trampoline, dlopen/exec ports) are the only genuinely
                        per-host native part — emitted from canonical

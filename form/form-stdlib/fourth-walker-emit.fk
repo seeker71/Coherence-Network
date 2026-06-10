@@ -21,11 +21,12 @@
 (defn fkc-flat (n acc)
     (if (eq (fk-tag n) 1) (cons (list 1 (ms-value (fk-body n)) 0 0) acc)
     (if (eq (fk-tag n) 2) (cons (list 2 0 0 0) acc)
-    (if (eq (fk-tag n) 7) (fkc-self2 (fkc-flat (fk-body n) acc))
+    (if (eq (fk-tag n) 7) (fkc-un2 7 (fkc-flat (fk-body n) acc))
+    (if (eq (fk-tag n) 9) (fkc-un2 9 (fkc-flat (fk-body n) acc))
     (if (eq (fk-tag n) 6) (fkc-if2 (fkc-flat (ms-child (fk-body n) 0) acc) n)
-        (fkc-bin2 (fk-tag n) (fkc-flat (ms-child (fk-body n) 0) acc) n))))))
+        (fkc-bin2 (fk-tag n) (fkc-flat (ms-child (fk-body n) 0) acc) n)))))))
 
-(defn fkc-self2 (acc1) (cons (list 7 (sub (len acc1) 1) 0 0) acc1))
+(defn fkc-un2 (tag acc1) (cons (list tag (sub (len acc1) 1) 0 0) acc1))
 
 (defn fkc-bin2 (tag acc1 n) (fkc-bin3 tag (sub (len acc1) 1) (fkc-flat (ms-child (fk-body n) 1) acc1)))
 (defn fkc-bin3 (tag ia acc2) (cons (list tag ia (sub (len acc2) 1) 0) acc2))
@@ -56,7 +57,7 @@
     "extern int putchar(int); static void fk_pr(long long v) { char b[32]; int n = 0; if (v < 0) { putchar(45); v = 0 - v; } if (v == 0) { putchar(48); } while (v > 0) { b[n] = 48 + v % 10; v = v / 10; n = n + 1; } while (n > 0) { n = n - 1; putchar(b[n]); } putchar(10); } ")
 
 (defn fkc-decl-text (rows)
-    (str_concat "static long long fk_arms[8]; static const long long fk_node["
+    (str_concat "static long long fk_arms[12]; static const long long fk_node["
     (str_concat (int_to_str (len rows))
     (str_concat "][4] = { "
     (str_concat (fkc-rows-text rows) " }; ")))))
@@ -64,12 +65,12 @@
 (defn fkc-walk-text (root)
     (str_concat "static long long fk_walk(long long i, long long a) { long long t = fk_node[i][0]; fk_arms[t] = fk_arms[t] + 1; if (t == 1) { return fk_node[i][1]; } if (t == 2) { return a; } if (t == 3) { return fk_walk(fk_node[i][1], a) + fk_walk(fk_node[i][2], a); } if (t == 4) { return fk_walk(fk_node[i][1], a) - fk_walk(fk_node[i][2], a); } if (t == 5) { if (fk_walk(fk_node[i][1], a) <= fk_walk(fk_node[i][2], a)) { return 1; } return 0; } if (t == 6) { if (fk_walk(fk_node[i][1], a) == 0) { return fk_walk(fk_node[i][3], a); } return fk_walk(fk_node[i][2], a); } if (t == 7) { return fk_walk("
     (str_concat (int_to_str root)
-                ", fk_walk(fk_node[i][1], a)); } return 0; } ")))
+                ", fk_walk(fk_node[i][1], a)); } if (t == 8) { return fk_node[fk_walk(fk_node[i][1], a)][fk_walk(fk_node[i][2], a)]; } if (t == 9) { putchar((int)fk_walk(fk_node[i][1], a)); return 0; } if (t == 10) { return fk_walk(fk_node[i][1], a) / fk_walk(fk_node[i][2], a); } if (t == 11) { return fk_walk(fk_node[i][1], a) % fk_walk(fk_node[i][2], a); } return 0; } ")))
 
 (defn fkc-main-text (root)
     (str_concat "extern int atoi(const char *); int main(int argc, char **argv) { long long a = 0; if (argc > 1) { a = atoi(argv[1]); } fk_pr(fk_walk("
     (str_concat (int_to_str root)
-                ", a)); long long t = 1; while (t <= 7) { fk_pr(fk_arms[t]); t = t + 1; } return 0; }")))
+                ", a)); long long t = 1; while (t <= 11) { fk_pr(fk_arms[t]); t = t + 1; } return 0; }")))
 
 (defn fkc-emit2 (rows)
     (str_concat (fkc-pr-text)
@@ -78,3 +79,62 @@
                 (fkc-main-text (sub (len rows) 1))))))
 
 (defn fkc-emit (prog) (fkc-emit2 (fkc-flatten prog)))
+
+; ── m4d first move — the quine seed ──────────────────────────────────────
+; Four new ops, each a named axiom-face in the emitted sibling:
+;   8 NODE a b   read fk_node[a][b] — the binary OBSERVES ITSELF (axiom 4 inward)
+;   9 PUTC e     emit one char, return 0 — the efferent PORT (axiom 4 outward)
+;   10 DIV, 11 MOD — figure leaves the digit printer needs
+; PUTC returning 0 makes ADD a sequencing door (values stay 0). The
+; self-printer walks its OWN node table row by row (ARG is the row index,
+; SELF advances it) and emits exactly the text fkc-rows-text computes from
+; the same flatten — the data half of self-emission. The quine knot — the
+; program containing its own true length — closes by fixpoint authoring:
+; the row COUNT of fkd-printer-with is independent of the literal inside,
+; so one rebuild with the measured length lands exactly.
+
+(defn fkd-node (a b) (fk-node 8 (ms-intern a b)))
+(defn fkd-putc (e)   (fk-node 9 e))
+(defn fkd-div (a b)  (fk-node 10 (ms-intern a b)))
+(defn fkd-mod (a b)  (fk-node 11 (ms-intern a b)))
+(defn fkd-seq (a b)  (fk-add a b))
+(defn fkd-ch (c)     (fkd-putc (fk-lit c)))
+(defn fkd-d1 (v)     (fkd-putc (fk-add (fk-lit 48) v)))
+
+(defn fkd-num (v)
+    (fk-if (fk-le v (fk-lit 9))
+           (fkd-d1 v)
+           (fk-if (fk-le v (fk-lit 99))
+                  (fkd-seq (fkd-d1 (fkd-div v (fk-lit 10)))
+                           (fkd-d1 (fkd-mod v (fk-lit 10))))
+                  (fkd-seq (fkd-d1 (fkd-div v (fk-lit 100)))
+                  (fkd-seq (fkd-d1 (fkd-mod (fkd-div v (fk-lit 10)) (fk-lit 10)))
+                           (fkd-d1 (fkd-mod v (fk-lit 10))))))))
+
+(defn fkd-cell (j) (fkd-num (fkd-node (fk-arg) (fk-lit j))))
+
+(defn fkd-row ()
+    (fkd-seq (fkd-ch 123)
+    (fkd-seq (fkd-cell 0)
+    (fkd-seq (fkd-ch 44)
+    (fkd-seq (fkd-cell 1)
+    (fkd-seq (fkd-ch 44)
+    (fkd-seq (fkd-cell 2)
+    (fkd-seq (fkd-ch 44)
+    (fkd-seq (fkd-cell 3)
+    (fkd-seq (fkd-ch 125) (fkd-ch 44)))))))))))
+
+(defn fkd-printer-with (nminus1)
+    (fk-if (fk-le (fk-arg) (fk-lit nminus1))
+           (fkd-seq (fkd-row) (fk-self (fk-add (fk-arg) (fk-lit 1))))
+           (fkd-putc (fk-lit 10))))
+
+(defn fkd-self-printer ()
+    (fkd-printer-with (sub (len (fkc-flatten (fkd-printer-with 0))) 1)))
+
+; band helper — does any row carry (1, v, 0, 0)? (the knot's LIT, scanned)
+(defn fkd-has-lit (rows v)
+    (if (eq (len rows) 0) 0
+        (if (eq (nth (head rows) 0) 1)
+            (if (eq (nth (head rows) 1) v) 1 (fkd-has-lit (tail rows) v))
+            (fkd-has-lit (tail rows) v))))
