@@ -689,6 +689,21 @@ def test_wellness_reading_projects_sections_into_shared_shape() -> None:
     assert "Witness-trace: trace breathing within budget" in reading["what_can_compost"][1]
 
 
+def test_static_to_dynamic_cells_are_live_not_attention() -> None:
+    """Resolved static-to-dynamic surfaces leave wants_attention."""
+    mod = _load_script_module("wellness_check")
+
+    lines = mod.sense_static_to_dynamic_cells()
+    reading = mod.build_reading(
+        [("Static-to-dynamic cells — do fixed ledgers have live successors?", lines)]
+    )
+
+    assert not any("wants_dynamic:" in line for line in lines)
+    assert any("lane_end_state: 4/4 dynamic successors live" in line for line in lines)
+    assert reading["what_wants_attention"] == []
+    assert any("lane_end_state: 4/4 dynamic successors live" in item for item in reading["what_can_compost"])
+
+
 def test_wellness_kernel_live_probe_covers_kernel_served_recipe_ledger() -> None:
     """Every kernel-served recipe route is included in live fallback sensing."""
     wellness = _load_script_module("wellness_check")

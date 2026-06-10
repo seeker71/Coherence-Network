@@ -190,7 +190,7 @@ showed you the roster and recent signals. To take part:
 - `coord share "<what>" "<where>"` — a learning you put in the body, announced to all
 - `scripts/coord-heartbeat.sh <agent>` — run in a tab: periodic liveness + announces when the protocol upgrades on main
 - `scripts/coord-watcher.sh` — run once anywhere: the naive watcher asks "who? when? how come?" at stale/dropped/unanswered threads, and "why python?" at any new .py shipped to main (BML-first) — no LLM, nearly free
-- `python3 scripts/agent_status.py --diff` — the git-side collision view
+- `python3 scripts/agent_status.py` — the git-side collision view (`--json` for automation)
 
 Staying current: the protocol is body (git). A running agent upgrades by re-sourcing
 `agent-coord.sh` after a pull; a new session reads the latest automatically (the join
@@ -401,10 +401,13 @@ read instead of blocking the first classification. Treat
 candidate admission happens in wellness; a static manifest row is added when a
 successor path, release gate, live-consumer read, and proof command are known;
 release means the replacement path is proven and callers no longer require the
-old carrier. Any static surface the body relies on shall appear in wellness as
-`wants_dynamic` with a named dynamic successor and resource reason, so attention
-can choose it when it is the right next spend. Static edges shall release into
-dynamic edge categories: repeated edge events between cells compress into an
+old carrier. The static-to-dynamic lane now lives in
+`form/form-stdlib/static-to-dynamic-cells.fk`, with proof band
+`form/form-stdlib/tests/static-to-dynamic-cells-band.fk` and the tending command
+`make static-to-dynamic-tending`; unresolved static surfaces can still appear as
+attention, while resolved surfaces report `dynamic_successor` and
+`lane_end_state` in wellness. Static edges shall release into dynamic edge
+categories: repeated edge events between cells compress into an
 `edge_reputation` count on the named category instead of storing every event.
 Surprise follows the same rule: when `Substrate surprise` finds an unseen twin,
 ask which edge was missed, whether it is worth remembering, how hot/cold it is,

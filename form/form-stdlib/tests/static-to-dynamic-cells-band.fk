@@ -1,0 +1,43 @@
+; static-to-dynamic-cells-band.fk - proof for static memory release cells.
+;
+; preludes: form-stdlib/static-to-dynamic-cells.fk
+;
+; Band verdict: 262143 when the four formerly-attention static surfaces all
+; project into live dynamic successor cells with proof commands and release gates.
+
+section [form.bml] {
+    def std-band-find-surface(surfaces, source_path) {
+        if nil?(surfaces) then empty else if str_eq(std-surface-source-path(head(surfaces)), source_path) then head(surfaces) else std-band-find-surface(tail(surfaces), source_path);
+    }
+
+    def std-static-to-dynamic-cells-band-score() {
+        let lane = std-sample-lane();
+        let surfaces = std-lane-surfaces(lane);
+        let compost = std-band-find-surface(surfaces, "kernels/BOOTSTRAP_COMPOST_MANIFEST.md");
+        let firing = std-band-find-surface(surfaces, "kernels/PHASE_A_FIRING_QUESTIONS.md");
+        let start_packet = std-band-find-surface(surfaces, "docs/shared/agent-start-packet.md");
+        let route_goal = std-band-find-surface(surfaces, "docs/system_audit/native_route_goal_state.json");
+        sum(list(
+            std-bool-score(std-lane-valid?(lane), 1),
+            std-bool-score(std-lane-end-state?(lane), 2),
+            std-bool-score(if std-lane-attention-needed?(lane) then false else true, 4),
+            std-bool-score(eq(len(surfaces), 4), 8),
+            std-bool-score(eq(std-live-count(surfaces), 4), 16),
+            std-bool-score(eq(std-active-count(surfaces), 4), 32),
+            std-bool-score(eq(std-lane-live-bp(lane), 10000), 64),
+            std-bool-score(eq(std-source-signal-total(surfaces), 70), 128),
+            std-bool-score(eq(std-evidence-total(surfaces), 16), 256),
+            std-bool-score(str_eq(std-successor-id(std-surface-successor(compost)), "substrate:compost-release-ledger-cells"), 512),
+            std-bool-score(str_eq(std-successor-id(std-surface-successor(firing)), "substrate:metabolic-attestation-cells"), 1024),
+            std-bool-score(str_eq(std-successor-id(std-surface-successor(start_packet)), "substrate:generated-agent-start-packet"), 2048),
+            std-bool-score(str_eq(std-successor-id(std-surface-successor(route_goal)), "substrate:native-route-goal-cells"), 4096),
+            std-bool-score(str_eq(std-successor-carrier(std-surface-successor(route_goal)), "form/form-stdlib/native-route-goal-cells.fk"), 8192),
+            std-bool-score(str_eq(std-successor-proof-command(std-surface-successor(compost)), "make static-to-dynamic-tending"), 16384),
+            std-bool-score(std-surface-live?(start_packet), 32768),
+            std-bool-score(std-surface-valid?(route_goal), 65536),
+            std-bool-score(str_eq(std-lane-name(lane), "static-to-dynamic-lane"), 131072)
+        ));
+    }
+
+    std-static-to-dynamic-cells-band-score();
+}

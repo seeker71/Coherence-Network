@@ -1,0 +1,128 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "codex/static-dynamic-lane-20260611",
+  "commit_scope": "Move the static-to-dynamic wellness lane to live Form successor cells and remove the repeated wants_dynamic attention rows.",
+  "files_owned": [
+    "Makefile",
+    "README.md",
+    "api/tests/test_edge_cases_regression.py",
+    "cli/README.md",
+    "docs/shared/agent-start-packet.md",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-stdlib/queries/static-to-dynamic-tending.fk",
+    "form/form-stdlib/static-to-dynamic-cells.fk",
+    "form/form-stdlib/tests/static-to-dynamic-cells-band.fk",
+    "mcp-server/README.md",
+    "scripts/wellness_check.py",
+    "skills/coherence-network/SKILL.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/static-to-dynamic-cells.fk form-stdlib/tests/static-to-dynamic-cells-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/static-to-dynamic-cells.fk form-stdlib/tests/static-to-dynamic-cells-band.fk",
+      "make static-to-dynamic-tending",
+      "python3 -m py_compile scripts/wellness_check.py",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_edge_cases_regression.py -k static_to_dynamic",
+      "python3 scripts/build_readmes.py --check",
+      "python3 scripts/scan_form_blueprints.py --check",
+      "git diff --check"
+    ],
+    "summary": "The new static-to-dynamic Form band returns 262143 in source and binary validation. The tending query returns the static-to-dynamic lane with four live successor surfaces. Wellness now reports dynamic_successor rows, lane_end_state: 4/4 dynamic successors live, and what_wants_attention: none."
+  },
+  "known_failed_attempts": [],
+  "ci_validation": {
+    "status": "pending",
+    "reason": "Remote CI is pending until this branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No deployment has run yet for this local Form/wellness lane change."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed; CI and deploy validation remain pending until PR and release flow."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The static-to-dynamic lane is no longer reported as unresolved wellness attention. Fixed source ledgers now point at live dynamic successor cells with carrier paths, proof commands, release gates, and evidence counts.",
+    "public_endpoints": [
+      "make static-to-dynamic-tending",
+      "make wellness"
+    ],
+    "test_flows": [
+      "static-to-dynamic-cells-band proves all four successor cells are valid, active, live, and named by registered Blueprints",
+      "make static-to-dynamic-tending returns the lane cell with four live successor rows",
+      "wellness reports what_wants_attention: none and places lane_end_state in what_can_compost",
+      "test_static_to_dynamic_cells_are_live_not_attention protects the resolved lane from regressing to wants_dynamic attention"
+    ]
+  },
+  "idea_ids": [
+    "form-native-runtime",
+    "knowledge-and-resonance",
+    "agent-memory"
+  ],
+  "spec_ids": [
+    "source-artifact-sensing-graph-integration",
+    "kb-substrate-sync-discipline",
+    "native-route-goal-cells"
+  ],
+  "task_ids": [
+    "static-dynamic-lane-end-state"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-priority"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/static-to-dynamic-cells.fk defines static source surfaces, dynamic successors, lane validity, live counts, and end-state checks.",
+    "form/form-stdlib/tests/static-to-dynamic-cells-band.fk returns 262143 across source and binary validation.",
+    "form/form-stdlib/queries/static-to-dynamic-tending.fk returns the live lane for human and agent tending.",
+    "scripts/wellness_check.py reports dynamic_successor rows, live evidence counts, and lane_end_state instead of wants_dynamic rows.",
+    "api/tests/test_edge_cases_regression.py asserts the lane leaves what_wants_attention and enters what_can_compost.",
+    "docs/shared/agent-start-packet.md now teaches the live Form lane, proof band, and tending command."
+  ],
+  "change_files": [
+    "Makefile",
+    "README.md",
+    "api/tests/test_edge_cases_regression.py",
+    "cli/README.md",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-stdlib/queries/static-to-dynamic-tending.fk",
+    "form/form-stdlib/static-to-dynamic-cells.fk",
+    "form/form-stdlib/tests/static-to-dynamic-cells-band.fk",
+    "mcp-server/README.md",
+    "scripts/wellness_check.py",
+    "skills/coherence-network/SKILL.md"
+  ],
+  "change_intent": "runtime_feature"
+}
