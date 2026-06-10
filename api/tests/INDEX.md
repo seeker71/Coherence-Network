@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 263
+**Total files**: 264
 
 | File | Purpose |
 |---|---|
@@ -130,6 +130,7 @@
 | [test_interest_registration.py](test_interest_registration.py) | Flow-centric tests for interest registration — privacy-first community gathering. |
 | [test_investments.py](test_investments.py) | Flow-centric tests for the investment surface — covers preview, portfolio, |
 | [test_ip_registration.py](test_ip_registration.py) | Flow tests for ip_registration_service — story-protocol-integration R1, R7. |
+| [test_kernel_attribution_report.py](test_kernel_attribution_report.py) | Regression tests for kernel attribution parity sensing. |
 | [test_kernel_conformance_harness.py](test_kernel_conformance_harness.py) | Executable kernel conformance harness for Form question effects. |
 | [test_kernel_inline_latency.py](test_kernel_inline_latency.py) | Latency sensing for the inline (PyO3) kernel path. |
 | [test_knowledge_resonance.py](test_knowledge_resonance.py) | Acceptance tests for spec: knowledge-resonance-engine (idea: knowledge-and-resonance). |
