@@ -1,0 +1,119 @@
+# ─────────────────────────────────────────────────────────────────────
+# linux-as-recipes.form — every high-level Linux subsystem mapped to its Form
+#   recipe / axiom-composition, marked RUNS (with the file) or NAMED.
+# ─────────────────────────────────────────────────────────────────────
+#
+# Urs: "you have all the high level features of Linux mapped to actual form
+# recipes." This is that map — honest about what RUNS in the fourth kernel
+# today vs what is NAMED with a path. host-kernel.form's os-feature-coverage is
+# the axiom-level sketch; this is the subsystem-by-subsystem realization audit.
+#
+# The thesis (host-kernel.form): a NodeID is an unforgeable capability (seL4's
+# model); offer-and-acknowledge is the syscall ABI; every resource is a typed
+# port. So Linux's duties are not reimplemented — they are COMPOSITIONS of the
+# five axioms, and a growing fraction already RUN as fourth-kernel binaries.
+
+(linux-as-recipes
+
+  (legend (RUNS "a fourth-kernel binary / Form recipe does this today, cited")
+          (NAMED "the axiom-composition is named; the recipe is the next stone"))
+
+  # ── Process & execution ─────────────────────────────────────────────
+  (process-management
+    (fork-exec-wait   RUNS  fourth-walker-emit.fk fkc-emit-driver — pipe/fork/execvp spawn a host
+                            command, capture its stdout; n3 witnessed (date +%Y -> 2026))
+    (process-spawn    RUNS  the driver organ IS spawn; the meeting companion drives whisper/ollama/say)
+    (scheduler        NAMED offer-the-compute-organ-to-competing-recipes; recognition-router.fk already
+                            CHOOSES an implementation by measured fitness (RUNS as a recipe) — the
+                            scheduling POLICY is a recipe, order/fairness its arms)
+    (signals          NAMED an unsolicited afferent offer on a channel; timeout==nothing is the SIGALRM shape))
+
+  # ── Memory ──────────────────────────────────────────────────────────
+  (memory
+    (allocation       RUNS  the arena heap (m4e2): CONS bumps fk_heap; HEAD/TAIL deref; NTH/LEN walk)
+    (isolation        RUNS-by-construction content-addressing-is-immutability (axiom-3) — no cell mutates
+                            another; a change MINTS a new node-id; the one mutation is repoint (a pointer move))
+    (address-spaces   RUNS  NodeID.package field: 1 = body, 2+ = branches/sandboxes — capability-scoped)
+    (gc-compaction    NAMED the arena is bump-only today; melt/compaction earns its place by a measured
+                            workload (axiom-3's nothing-overwritten is the default until then)))
+
+  # ── Storage / filesystem ────────────────────────────────────────────
+  (filesystem
+    (vfs-read-write   RUNS  world-fs port: read_file/write_file/stat/list (main.go); the universal binary
+                            LOADS programs and SOURCE through it (open/read), the BMF cursor reads the stream)
+    (inode-identity   RUNS  a file's content-addressed NodeID IS its inode — same content, same identity)
+    (persistence      RUNS  persistence.fk store/lookup; .fkb images; versioning free (content-addressing)))
+
+  # ── Devices / drivers (the HAL) ─────────────────────────────────────
+  (devices
+    (driver-model     RUNS  resource-port.fk — every device a typed (direction, value-shape) PORT,
+                            carrier-swappable; host-resource-access admits any host driver/OS API)
+    (entropy          RUNS  op 16 RND — /dev/urandom's shape (two draws differ, witnessed))
+    (clock            RUNS  op 15 TIME — the host clock organ, real epoch (afferent scalar))
+    (gpu              RUNS-via-host ollama/Metal driven through the driver organ (100% GPU confirmed);
+                            native GPU emitters (metal.ts) are a lane, NAMED for the model fast-path)
+    (audio-video-hmi  RUNS-via-host mic/speaker/camera via the OS API; n4 TTS (say) + STT (whisper) witnessed))
+
+  # ── Networking ──────────────────────────────────────────────────────
+  (networking
+    (sockets          RUNS  fkc-emit-server — socket/bind/listen/accept/fork as the net organ; an api
+                            served at HTTP 200 on a 4th-kernel binary (n1/n2), sub-millisecond)
+    (http             RUNS  kernel-http.fk / http-serve.fk / http-socket.fk; the responder body is Form (PUTC))
+    (tcp-stack        RUNS-via-host the host TCP/IP under the offered socket port (allowed carrier)))
+
+  # ── IPC & concurrency ───────────────────────────────────────────────
+  (ipc
+    (pipes            RUNS  the driver organ's pipe(fds) captures a child's stdout — the cursor reads it)
+    (channels-msgq    RUNS  kernel-offer-protocol.form: offer-a-cell-over-a-channel; cell-registry +
+                            channel-query + verb-router; the two-cell daemon round trip)
+    (shared-memory    RUNS  the content-addressed lattice IS shared memory by NodeID — observe by id)
+    (concurrency      NAMED many offers in flight, acks threaded (the offer-and-acknowledge closure);
+                            walk_parallel RUNS in the kernels))
+
+  # ── Syscall / protection / boot ─────────────────────────────────────
+  (kernel-core
+    (syscall-abi      RUNS-by-construction offer-and-acknowledge (axiom-5) IS the syscall interface —
+                            offer a cell + args, acked by exactly one of nothing/0/1/node)
+    (protection-caps  RUNS-by-construction NodeID-as-unforgeable-capability (axiom-3+4, the seL4 model) —
+                            forging a capability needs the actual content bytes; least-privilege = the
+                            cell offers only the interface it chooses)
+    (permissions      RUNS  the trust matrix is cells (axiom-4); sovereign-boundary-protocol.fk answers
+                            allow/stop/witness/re-enter)
+    (loadable-modules RUNS  the JIT / emit-compile-exec lane: a recipe -> .so (jit.go) or -> clang binary
+                            (fourth-kernel-emit) -> dlopen/exec; install-as-named-callable-leaf NAMED)
+    (dynamic-linking  RUNS-via-host dlopen/clang are allowed carriers; the recipe is the linked unit)
+    (interrupts       NAMED an unsolicited afferent offer; no event in time = nothing (timeout==nothing))
+    (boot-init        NAMED compose-the-kernel-from-the-axioms = kernel-self-composition.form
+                            (boot -> offer a channel -> self-extend); the .fkb image is the boot artifact))
+
+  # ── Userland surface ────────────────────────────────────────────────
+  (userland
+    (shell-pipeline   RUNS  the driver organ chains host commands; the companion is a real pipeline)
+    (tty-stdio        RUNS  PUTC (op 9) is the efferent char port; the universal binary's stdout)
+    (interpreter      RUNS  form-parse.fk reads Form SOURCE over the cursor and runs it on the 4th kernel)
+    (package-identity RUNS  content-addressing: a program IS its NodeID; same shape = same package, dedup free))
+
+  # ── The honest tally ─────────────────────────────────────────────────
+  (tally
+    (runs   "process-spawn, arena memory, memory-isolation, address-spaces, filesystem, inode-identity,
+             persistence, driver-model, entropy, clock, sockets, http, pipes, channels, shared-memory,
+             syscall-abi, protection-caps, permissions, loadable-modules, shell, stdio, interpreter — the
+             SPINE of an OS, as fourth-kernel binaries or Form recipes, proven")
+    (named  "scheduler policy, signals, gc/compaction, full concurrency, interrupts, boot-from-axioms —
+             each an axiom-composition with a path, the next stones")
+    (verdict "the high-level Linux feature set MAPS to Form recipes; a large fraction already RUNS; the
+              remainder is NAMED with axiom-compositions, not hand-waved — the walk continues"))
+
+  (invariant
+    (not-reimplemented-but-composed every duty is a composition of the five axioms, not a port of Linux)
+    (capability-os                  NodeID-as-unforgeable-capability — seL4's model, by construction)
+    (runs-vs-named-honest           the spine RUNS; the remainder is NAMED with a path, never claimed)))
+
+# ─────────────────────────────────────────────────────────────────────
+# How to verify the RUNS rows
+# ─────────────────────────────────────────────────────────────────────
+#   scripts/fourth_kernel_audit.sh        # process/net/driver/fs/clock/entropy/stdio/interpreter, live
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/resource-port.fk \
+#     form-stdlib/tests/resource-port-band.fk      # the HAL
+#   cd form && ./validate.sh form-stdlib/persistence.fk form-stdlib/merkle.fk form-stdlib/cell-sync.fk
+#   coh substrate form "?equivalent @recipe(linux-as-recipes)"   # after ingest
