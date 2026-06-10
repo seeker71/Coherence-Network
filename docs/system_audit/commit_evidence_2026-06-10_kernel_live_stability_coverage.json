@@ -1,0 +1,87 @@
+{
+  "date": "2026-06-10",
+  "thread_branch": "codex/kernel-live-stability-coverage-20260610",
+  "commit_scope": "Expand kernel-native API wellness stability sensing from the legacy seven-route map to every route in the kernel-served recipe ledger.",
+  "files_owned": [
+    "scripts/wellness_check.py",
+    "api/tests/test_edge_cases_regression.py",
+    "docs/system_audit/commit_evidence_2026-06-10_kernel_live_stability_coverage.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_edge_cases_regression.py::test_wellness_kernel_live_probe_covers_kernel_served_recipe_ledger",
+      "cd api && /opt/homebrew/bin/ruff check ../scripts/wellness_check.py tests/test_edge_cases_regression.py",
+      "python3 -m py_compile scripts/wellness_check.py",
+      "curl -fsS https://api.coherencycoin.com/api/health | python3 -m json.tool",
+      "python3 -c 'import importlib.util; spec=importlib.util.spec_from_file_location(\"wellness_check_under_probe\", \"scripts/wellness_check.py\"); mod=importlib.util.module_from_spec(spec); spec.loader.exec_module(mod); print(\"\\n\".join(mod.sense_kernel_api()))'",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-10_kernel_live_stability_coverage.json",
+      "git diff --check",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "notes": "The old wellness stability probe carried a hand-coded seven-route map while the kernel-served recipe ledger now has 22 routes. The new helper derives live endpoint paths directly from KERNEL_SERVED_RECIPES. Focused proof confirms every ledger route maps to a live path, including /api/utils/coherence_summary_score. Direct kernel sensing after the change reports production kernel_runtime inline and checked 22/22 kernel-served endpoints with no fallback. Rebase with autostash reported the branch current with origin/main, PR guard reported ready_for_push=True/local_preflight=pass, and follow-through reported stale_codex_prs=0."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR creation, and hosted checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No deploy attempted before PR merge. Public health was reachable locally and reported deployed_sha 2f95e45e with kernel_runtime inline."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof passed; PR CI, merge, and public post-merge verification remain pending."
+  },
+  "idea_ids": [
+    "form-native-runtime",
+    "kernel-core-self"
+  ],
+  "spec_ids": [
+    "kernel-native-api-readiness",
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "kernel-live-stability-coverage-20260610"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-prioritization"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "scripts/wellness_check.py derives live stability probe paths from kernel_attribution_report.KERNEL_SERVED_RECIPES.",
+    "api/tests/test_edge_cases_regression.py proves the wellness live probe covers every kernel-served recipe route.",
+    "Direct sense_kernel_api proof reports checked 22/22 kernel-served endpoints (inline) with no fallback."
+  ],
+  "change_files": [
+    "scripts/wellness_check.py",
+    "api/tests/test_edge_cases_regression.py",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "process_only"
+}
