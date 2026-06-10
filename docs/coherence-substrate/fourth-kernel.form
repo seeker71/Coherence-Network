@@ -280,7 +280,17 @@
                                       fail and false finally distinct, both expressible)
                        (cost          one shift per op — priced by the audit rows,
                                       champion-challenger against the sentinel design)
-                       (lands-at      m4e3 alongside the real-recipe flattener))
+                       (lands-at      m4e3 alongside the real-recipe flattener)
+                       (SHIPPED       the multi-function + universal + jit lanes now
+                                      speak the tagged ABI: table raw, LIT encodes on
+                                      read (<<1), refs odd, EMPTY = 1 = the null ref =
+                                      NOTHING; witnessed — matched-0 -> 0, no-match ->
+                                      1, distinct through plain IF, no sentinel; every
+                                      prior parity unchanged (fib 317811, heap 25,
+                                      bmf 22/202, organs 7, jit flip, quine byte-exact
+                                      on the raw single lane); the os-band caught the
+                                      lowering change honestly ((2 + a): literals
+                                      lower encoded) and bands re-pinned 4327/4242))
                      (range-honesty program literals ride intern_trivial_int,
                                     which is 32-BIT — larger literals truncate
                                     silently (a sentinel literal cost an
