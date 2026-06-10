@@ -1,0 +1,94 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "worktree-fourth-kernel-seed",
+  "commit_scope": "fourth-kernel.form m4b first walker: the fourth kernel's walker authored entirely as recipes over the minimal surface — programs are content-addressed cells, dispatch-on-tag down the observe door, op set LIT/ARG/ADD/SUB/LE/IF/SELF, fib authored as data answers through SELF re-entering the program. Proven three-way at verdict 15.",
+  "files_owned": [
+    "form/form-stdlib/fourth-walker.fk",
+    "form/form-stdlib/tests/fourth-walker-band.fk",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/coherence-substrate/INDEX.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/tests/fourth-walker-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-11_fourth_walker_m4b.json"
+    ],
+    "summary": "The walker holds three-way at 15: (1) arithmetic walks — ADD(LIT 40, LIT 2) = 42 and SUB(LIT 50, LIT 8) = 42; (2) both branch arms walk — IF(LE(ARG,1),111,222) answers 111 at the just-at-threshold arg 1 and 222 at arg 2; (4) recursion walks — fib authored as data answers 55 at arg 10 and 1 at the base-case boundary, SELF re-entering the whole program; (8) programs are cells — the fib program authored twice is the SAME cell, one changed leaf is a DIFFERENT cell. The walker touches only the surface doors plus figure leaves (add/sub/le — the compute organ's port).",
+    "observed_delta": {
+      "fourth_walker_band_verdict": 15,
+      "kernels_agreeing": 3,
+      "divergent": 0,
+      "op_set": "LIT ARG ADD SUB LE IF SELF",
+      "fib_10_through_walker": 55
+    },
+    "known_limitations": [
+      {
+        "limitation": "One-argument programs with whole-program SELF recursion; no environments, closures, or multi-arity yet — the smallest heart that proves recursion over content-addressed programs.",
+        "follow_up": "The op set grows toward the full category table as m4c's emitter learns to lower it; environments arrive when a workload earns them."
+      },
+      {
+        "limitation": "Meta-interpretation cost (this walker runs on a kernel walker) is unmeasured by design — m4b is correct-before-fast; the rows come when m4c emits this walker native.",
+        "follow_up": "m4c: the emitter lowers fk-walk itself; the audit harness then adds the emitted-walker row."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "PR gates run the three-way band."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "form-stdlib additions ride the api image rebuild; the lattice ingests the updated fourth-kernel.form on the post-merge hook."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No route behavior changes. The body gains the m4b walker: recipes-as-cells walked to values by a walker that is itself recipes over the m4a surface — the precondition for m4c (the emitter lowers the walker to native source).",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "fourth-walker-band proves arithmetic, both branch arms, SELF recursion (fib-as-data = 55 and the base-case boundary), and program-as-cell identity (same program twice = same cell, changed leaf = different cell), three-way at verdict 15."
+    ],
+    "summary": "validate.sh end-to-end across Go/Rust/TS: 1 ok, 0 divergent, verdict 15."
+  },
+  "phase_gate": {
+    "phase": "m4b-walker-as-recipes",
+    "gate": "the first walker proven three-way locally; CI three-way + deploy ingest confirm the crossing",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "m4c — the emitter walks fk-walk's recipe shape and emits its native source; toolchain port compiles; the binary joins the audit rows"
+  },
+  "idea_ids": ["fourth-kernel"],
+  "spec_ids": ["kernel-native-api-readiness", "runtime-shared-native-representation"],
+  "task_ids": ["fourth-walker-m4b-20260611"],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "next-please"]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation"]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-fable-5"
+  },
+  "evidence_refs": [
+    "docs/coherence-substrate/minimal-kernel.form",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/system_audit/commit_evidence_2026-06-11_minimal_surface_m4a.json"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/system_audit/commit_evidence_2026-06-11_fourth_walker_m4b.json",
+    "form/form-stdlib/fourth-walker.fk",
+    "form/form-stdlib/tests/fourth-walker-band.fk"
+  ],
+  "change_intent": "runtime_feature"
+}

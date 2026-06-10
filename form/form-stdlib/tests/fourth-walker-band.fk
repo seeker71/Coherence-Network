@@ -1,0 +1,33 @@
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk
+;
+; fourth-walker-band — m4b proven three-way: a walker authored entirely over
+; the minimal surface walks programs that are themselves content-addressed
+; cells, recursion included. Correct before fast.
+;
+; Verdict 15 when the walker holds:
+;   1   arithmetic walks — ADD(LIT 40, LIT 2) = 42 and SUB(LIT 50, LIT 8) = 42
+;   2   both branch arms walk — IF(LE(ARG,1), 111, 222) answers 111 at arg 1
+;       (the just-at-threshold edge) and 222 at arg 2
+;   4   recursion walks — fib authored as data answers 55 at arg 10 and 1 at
+;       arg 1 (the base-case boundary), through SELF re-entering the program
+;   8   programs are cells — the fib program authored twice is the SAME cell;
+;       changing one leaf (the base threshold) is a DIFFERENT cell
+(do
+    (let c0 (if (eq (fk-run (fk-add (fk-lit 40) (fk-lit 2)) 0) 42)
+                (if (eq (fk-run (fk-sub (fk-lit 50) (fk-lit 8)) 0) 42) 1 0) 0))
+
+    (let branch (fk-if (fk-le (fk-arg) (fk-lit 1)) (fk-lit 111) (fk-lit 222)))
+    (let c1 (if (eq (fk-run branch 1) 111)
+                (if (eq (fk-run branch 2) 222) 2 0) 0))
+
+    (let c2 (if (eq (fk-run (fk-fib-program) 10) 55)
+                (if (eq (fk-run (fk-fib-program) 1) 1) 4 0) 0))
+
+    (let tweaked (fk-if (fk-le (fk-arg) (fk-lit 2))
+                        (fk-arg)
+                        (fk-add (fk-self (fk-sub (fk-arg) (fk-lit 1)))
+                                (fk-self (fk-sub (fk-arg) (fk-lit 2))))))
+    (let c3 (if (eq (ms-same (fk-fib-program) (fk-fib-program)) 1)
+                (if (eq (ms-same (fk-fib-program) tweaked) 0) 8 0) 0))
+
+    (add c0 (add c1 (add c2 c3))))
