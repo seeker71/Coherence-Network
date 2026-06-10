@@ -87,6 +87,18 @@
 ; pointer move through SET/GET, never a copy: BMA's discipline, no lexer,
 ; no token stream, args on the call stack.
 (defn fk-buf (i) (fk-node 17 i))
+; 18 EMPTY       — list arena null pointer
+; 19 CONS h t    — list arena alloc, returns the new cell pointer
+; 20 HEAD xs     — read arena head
+; 21 TAIL xs     — read arena tail pointer
+; 22 LEN xs      — count arena chain length
+; 23 NTH xs i    — read the ith arena head
+(defn fk-empty ()   (fk-node 18 (ms-cell 0)))
+(defn fk-cons (h t) (fk-node 19 (ms-intern h t)))
+(defn fk-head (xs)  (fk-node 20 xs))
+(defn fk-tail (xs)  (fk-node 21 xs))
+(defn fk-len (xs)   (fk-node 22 xs))
+(defn fk-nth (xs i) (fk-node 23 (ms-intern xs i)))
 
 ; fib authored as data — the program every carrier in fourth-kernel.form's
 ; rows answers: IF (LE arg 1) arg (ADD (SELF (arg-1)) (SELF (arg-2)))
