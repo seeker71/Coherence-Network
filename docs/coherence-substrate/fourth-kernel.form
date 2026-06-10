@@ -107,7 +107,35 @@
                   intern-and-node-eq-emission               # the substrate spine, emitted
                   validate.sh-fourth-arm)                   # sibling parity includes the emitted one
     (closes       kernel-self-composition.close-self-rebuild-loop)
-    (proof        the-emitted-kernel-passes-a-named-band-family-and-its-values-equal-the-three)))
+    (proof        the-emitted-kernel-passes-a-named-band-family-and-its-values-equal-the-three)
+
+    # The bootstrap ladder (Urs named it; the order is what makes it safe —
+    # the fourth kernel is CORRECT before it is FAST, proven by the same bands):
+    (ladder
+      (m4a-surface     name minimal-kernel.form's four families as ONE recipe-
+                       callable door each (a minimal-surface cell + band); prove
+                       all kernels agree through the doors — after this band,
+                       a recipe against the surface runs identically everywhere)
+      (m4b-walker-as-recipes  the fourth kernel authored as recipes over the
+                       surface, run INTERPRETED on the existing kernels first;
+                       form-engine.form already proves the walk loop is
+                       recipe-expressible — 15/15 dispatch arms)
+      (m4c-emit-and-boot  the emitter recipe (this file's lane, generalized
+                       from hand-shaped text to walking the recipe tree) emits
+                       the walker's native source; the toolchain port compiles;
+                       the binary boots and joins validate.sh as the fourth arm)
+      (m4d-fixpoint    the booted kernel re-runs the SAME emitter recipe on
+                       itself: same content-address in, byte-identical source
+                       out — self-hosting, close-self-rebuild-loop's band
+                       stated plainly)
+      (leaf-honesty    the four leaf implementations (intern's hashing, the
+                       trampoline, dlopen/exec ports) are the only genuinely
+                       per-host native part — emitted from canonical
+                       implementation-recipes, verified against laws-as-bands,
+                       native by definition: they are what native MEANS)
+      (hot-swap-free   the same emitter at runtime granularity: crystallize a
+                       hot recipe -> toolchain port -> install by repoint ->
+                       melt on cool, gated by champion-challenger counts))))
 
 # ─────────────────────────────────────────────────────────────────────
 # How to verify (today)
