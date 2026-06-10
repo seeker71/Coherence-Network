@@ -219,6 +219,25 @@
         (fkd-seq (fkd-ch (ord (char_at s i))) (fkresp-from s (add i 1)))))
 (defn fkresp (s) (fkresp-from s 0))
 
+; ── n3 — the DRIVER organ: fork/exec/pipe a host command, its stdout into ──
+; fk_src, then the PROGRAM parses that stream with the BMF cursor. This is
+; the keystone the model stones ride: the sibling does not reimplement TTS,
+; STT, or an LLM — it DRIVES the host's own (say, whisper-cpp, ollama)
+; through this organ and parses/measures the result (host-resource-access:
+; allow-presence + measure-health). argv[1..] is the command + args; the
+; captured bytes land in fk_src (the same buffer the universal loader fills),
+; so op 17 BUF and the streaming cursor read a LIVE subprocess.
+(defn fkc-driver-main-text ()
+    "extern int pipe(int *); extern int fork(void); extern int dup2(int,int); extern int close(int); extern long read(int,void*,unsigned long); extern int execvp(const char*, char* const*); extern void _exit(int); extern int atoi(const char *); int main(int argc, char **argv) { if (argc < 2) { return 1; } int fds[2]; if (pipe(fds) < 0) { return 2; } int pid = fork(); if (pid == 0) { dup2(fds[1], 1); close(fds[0]); close(fds[1]); execvp(argv[1], &argv[1]); _exit(127); } close(fds[1]); long total = 0; long g; while ((g = read(fds[0], fk_src + total, 262143 - total)) > 0) { total = total + g; } fk_src[total] = 0; close(fds[0]); long long a = 0; fk_pv(fk_walk(fk_fn[0], a)); return 0; }")
+
+(defn fkc-emit-driver2 (flat)
+    (str_concat (fkc-pr-text)
+    (str_concat (fkc-decl-many-text (nth flat 0) (nth flat 1))
+    (str_concat (fkc-walk-many-text)
+                (fkc-driver-main-text)))))
+
+(defn fkc-emit-driver (fns) (fkc-emit-driver2 (fkc-flatten-many fns)))
+
 ; ── the UNIVERSAL walker — no baked program: load a table FILE and run it ──
 ; One binary, many programs. The table file (fkc-table-file) is plain ints —
 ; function count, roots, row count, rows — read through the fs afferent port
