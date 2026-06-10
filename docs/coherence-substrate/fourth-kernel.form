@@ -96,7 +96,30 @@
     (witnessed    "g1 tok1=ADD10 -> binary -> 22 ; g2 tok1=ADD100 -> binary -> 202, same source [1,1,2]")
     (honest-scope tokenwise-pattern-action-fold)            # the nesting/choose/fail engine is m4e3
     (compiler-as-recipe-today  the-compiler-folds-Form-lists)  # emittable when m4e2 gives the heap
-    (compiler-as-binary-needs  m4e2-heap + m4e4-strings)    # to read textual source through the port, named))
+    (compiler-as-binary-needs  m4e2-heap + m4e4-strings)    # to read textual source through the port, named
+
+    # ── The BMF discipline (Urs, 2026-06-11) — bmf-architecture.form's record ──
+    # BMF is NOT tokenize-then-parse. Rules match bytes STRAIGHT OFF a streaming
+    # CURSOR over the source ("Run — what a lexer would scan, inline ... no
+    # lexer, no token stream"); backtracking restores a CURSOR POSITION and a
+    # STACK COORDINATE — both pointer moves, O(1), axiom-3's gift. Recipe args
+    # and locals ride the STACK, never heap environments. bmf-mini's tokenwise
+    # fold proved the grammar-as-data transform only — it pre-tokenized, which
+    # is NOT the BMF parse shape; the cursor lane below is.
+    (bmf-discipline
+      (streaming-cursor   bytes-straight-off-the-source no-lexer-no-token-stream)
+      (backtrack          restore-cursor-position-and-stack-mark both-pointer-moves)
+      (stack-not-heap     recipe-args-and-locals-ride-the-call-stack)
+      (cursor-lane-SHIPPED op-17-BUF reads the loaded source stream; the cursor
+                          position lives in the RAM organ so save/restore IS
+                          SET/GET — a pointer move; witnessed in the audit:
+                          one matcher table, source x42 -> rule A matches off
+                          the cursor -> 42; source 9001 -> A fails on byte one
+                          -> cursor RESTORED -> rule B streams digits -> 9001;
+                          args on the C call stack throughout)
+      (fail-honesty       fail-as-0 collides with a matched 0 — BMF's richer
+                          ack vocabulary {nothing,0,1,node} is the named fix
+                          when the walker grows a nothing value)))
 
   # ── M3 — the native API host ──────────────────────────────────────────
   # The front door as one native binary: socket accept, HTTP parse, route

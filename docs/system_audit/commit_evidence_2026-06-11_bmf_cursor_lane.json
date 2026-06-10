@@ -1,0 +1,104 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "worktree-fourth-kernel-seed",
+  "commit_scope": "The BMF discipline encoded and its cursor lane laid: BMF matches bytes straight off a streaming cursor (no lexer, no token stream), backtracking restores a cursor position and stack coordinate (pointer moves), and recipe args ride the call stack — bmf-architecture.form's record, now honored in the fourth sibling via op 17 BUF (source-stream byte at index) with the cursor position living in the RAM organ. A real backtracking matcher witnessed; bmf-mini honestly marked as the fold proof only, not the parse shape.",
+  "files_owned": [
+    "form/form-stdlib/fourth-walker.fk",
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/tests/fourth-os-band.fk",
+    "scripts/fourth_kernel_audit.sh",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/coherence-substrate/INDEX.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/tests/fourth-os-band.fk",
+      "scripts/fourth_kernel_audit.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-11_bmf_cursor_lane.json"
+    ],
+    "summary": "fourth-os-band re-proven three-way at 15 with the grown emissions re-pinned (universal 3124 bytes, jit 3039 — the lengths couple cross-kernel text agreement to the verdict). The audit's streaming-BMF section ran a real backtracking match on real byte streams through ONE matcher table: source x42 -> rule A matches x off the cursor, streams digits -> 42; source 9001 -> rule A FAILS on the first byte -> the cursor is RESTORED through the RAM organ (SET/GET — a pointer move, never a copy) -> rule B streams the digits -> 9001. No tokenizer anywhere: op 17 BUF reads the loaded source byte at an index; advance is SET 0 (GET 0 + 1); save/restore are mem slots; recipe args ride the C call stack via CALL parameters.",
+    "observed_delta": {
+      "fourth_os_band_verdict": 15,
+      "kernels_agreeing": 3,
+      "divergent": 0,
+      "universal_emission_bytes": 3124,
+      "jit_emission_bytes": 3039,
+      "matcher_source_x42": 42,
+      "matcher_source_9001": 9001,
+      "backtrack": "rule A failed on byte one; cursor restored via RAM organ; rule B succeeded",
+      "discipline": "streaming cursor, no lexer/token stream; stack args; save/restore = pointer moves"
+    },
+    "known_limitations": [
+      {
+        "limitation": "fail-as-0 collides with a legitimately matched 0 — BMF's richer ack vocabulary {nothing, 0, 1, node} is the named fix once the walker grows a first-class nothing.",
+        "follow_up": "Axiom-1's nothing lands as a walker value; fail becomes nothing and 0 becomes honest data."
+      },
+      {
+        "limitation": "The matcher is combinator-authored; the full engine.fk rule set (Alt/Seq/Run/Many with memoized Match) arrives via m4e3's observe-door flattener.",
+        "follow_up": "The cursor lane is the substrate engine.fk's rules need; m4e3 reads them as cells and runs them here."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "PR gates run the fourth-kernel bands three-way."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "form-stdlib additions ride the api image rebuild; the lattice ingests the updated fourth-kernel.form on the post-merge hook."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No route behavior changes. The fourth sibling gains BMF's true parse substrate: a streaming cursor over loaded source with pointer-move backtracking and stack-resident args — the discipline encoded in the spec, the lane witnessed with a real choice/fail/restore match.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "fourth-os-band pins the grown emissions exactly (3124/3039) and the organ/cursor tissue three-way at 15.",
+      "fourth_kernel_audit.sh section 11: one matcher table over two real byte streams — match, fail, restore, re-match — values 42 and 9001."
+    ],
+    "summary": "validate.sh three-way 1 ok 0 divergent; audit end-to-end streaming match with backtrack."
+  },
+  "phase_gate": {
+    "phase": "bmf-cursor-lane",
+    "gate": "streaming-cursor match with pointer-move backtrack witnessed; CI three-way + deploy ingest confirm the crossing",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "first-class nothing (the honest fail ack); m4e3 — engine.fk's Alt/Seq/Run rules through the observe door onto this cursor"
+  },
+  "idea_ids": ["fourth-kernel"],
+  "spec_ids": ["kernel-native-api-readiness", "runtime-shared-native-representation"],
+  "task_ids": ["bmf-cursor-lane-20260611"],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "bmf-discipline-correction"]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation", "measurement"]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-fable-5"
+  },
+  "evidence_refs": [
+    "docs/coherence-substrate/bmf-architecture.form",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/system_audit/commit_evidence_2026-06-11_form_os_face_universal_jit_organs.json"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/system_audit/commit_evidence_2026-06-11_bmf_cursor_lane.json",
+    "form/form-stdlib/fourth-walker.fk",
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/tests/fourth-os-band.fk",
+    "scripts/fourth_kernel_audit.sh"
+  ],
+  "change_intent": "runtime_feature"
+}

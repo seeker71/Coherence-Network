@@ -355,5 +355,46 @@ fi
 echo "  parity held across the flip — gas cooled to ice on measured heat, the probe showing the crossing"
 
 echo
+# ── 11. streaming BMF — cursor + stack, no tokenizer ─────────────────────
+# Rules match bytes STRAIGHT OFF the loaded source stream (op 17 BUF); the
+# cursor position lives in the RAM organ so save/restore is a pointer move
+# (BMA's discipline); recipe args ride the call stack. Choice/fail with a
+# real backtrack: rule A (match x then digits) | rule B (digits).
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
+    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" > "$work/cur-driver.fk"
+cat >> "$work/cur-driver.fk" <<'EOF'
+(defn seqq (a b) (fk-if a b b))
+(defn adv () (fk-set (fk-lit 0) (fk-add (fk-get (fk-lit 0)) (fk-lit 1))))
+(defn x10 () (fk-add (fk-add (fk-add (fk-arg) (fk-arg)) (fk-add (fk-arg) (fk-arg))) (fk-add (fk-add (fk-add (fk-arg) (fk-arg)) (fk-add (fk-arg) (fk-arg))) (fk-add (fk-arg) (fk-arg)))))
+(let number (fk-if (fk-le (fk-lit 48) (fk-buf (fk-get (fk-lit 0))))
+                   (fk-if (fk-le (fk-buf (fk-get (fk-lit 0))) (fk-lit 57))
+                          (seqq (adv) (fk-call 2 (fk-add (x10) (fk-sub (fk-buf (fk-sub (fk-get (fk-lit 0)) (fk-lit 1))) (fk-lit 48)))))
+                          (fk-arg))
+                   (fk-arg)))
+(let ruleA (fk-if (fk-sub (fk-buf (fk-get (fk-lit 0))) (fk-lit 120))
+                  (fk-lit 0)
+                  (seqq (adv) (fk-call 2 (fk-lit 0)))))
+(let entry (seqq (fk-set (fk-lit 1) (fk-get (fk-lit 0)))
+           (seqq (fk-set (fk-lit 2) (fk-call 1 (fk-lit 0)))
+                 (fk-if (fk-get (fk-lit 2))
+                        (fk-get (fk-lit 2))
+                        (seqq (fk-set (fk-lit 0) (fk-get (fk-lit 1))) (fk-call 2 (fk-lit 0)))))))
+(print "==TM==")
+(print (fkc-table-file (list entry ruleA number)))
+(print "==END==")
+EOF
+(cd "$FORMDIR" && "$GO_BIN" "$work/cur-driver.fk" 2>/dev/null) > "$work/cur.out"
+sed -n '/^==TM==$/,/^==END==$/p' "$work/cur.out" | sed -e '1d' -e '$d' > "$work/t-match.txt"
+printf 'x42' > "$work/src-a.txt"; printf '9001' > "$work/src-b.txt"
+m_a="$("$work/fkwu" "$work/t-match.txt" 0 "$work/src-a.txt" | head -1)"
+m_b="$("$work/fkwu" "$work/t-match.txt" 0 "$work/src-b.txt" | head -1)"
+echo "streaming BMF (one matcher table; bytes off the cursor; backtrack = pointer move):"
+echo "  source x42  -> $m_a (rule A: match x, stream digits)"
+echo "  source 9001 -> $m_b (A fails on byte one -> cursor restored -> rule B streams digits)"
+if [[ "$m_a" != "42" || "$m_b" != "9001" ]]; then
+    echo "FAIL  streaming cursor matcher broke"; exit 1
+fi
+
+echo
 echo "conditions: $(uname -m) $(uname -s), clang -O2, full-process invocations (startup included)"
 echo "ok — parity held and the rows are real; the spec is docs/coherence-substrate/fourth-kernel.form"
