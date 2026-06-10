@@ -122,20 +122,23 @@ _KERNEL_ROUTER_FILES = [
 # is the whole request lifecycle, a categorically deeper move than serve_via_kernel
 # (which keeps the lifecycle in CPython and calls the kernel as a guest subroutine).
 _KERNEL_ROUTER_MANIFEST = ROOT / "deploy" / "kernel-router" / "production-routes.fk"
+_BML_FRONT_DOOR_CATALOG = ROOT / "deploy" / "front-door" / "api.bml"
 _DEFAULT_FRONT_DOOR_PROBE_PATH = "/api/attention/kernel-runtime"
 
 
 def kernel_first_capable_routes() -> list[str]:
-    """API routes with a NATIVE Form handler in the kernel-router manifest.
+    """API routes with a NATIVE handler in the Form manifest or BML catalog.
 
-    These serve their ENTIRE request lifecycle in Form (X-Form-Router:
-    native-kernel) — the categorical step past serve_via_kernel's guest
-    subroutine. They are CAPABLE: a real native handler exists in the manifest and
-    the dispatch mechanism is proven. Whether they are SERVED is read from the
-    public front-door provenance probe, because the operational truth is the
-    current Traefik entrance, not an old assumption. Byte parity remains useful
-    evidence for promoted twins; the native-first deploy gate is web/API/tool
-    smoke, native observability, and explicit fallback.
+    These serve their ENTIRE request lifecycle through the kernel router
+    (X-Form-Router: native-kernel) — the categorical step past
+    serve_via_kernel's guest subroutine. They are CAPABLE: a real native handler
+    exists in either the older Form manifest or the high-grammar BML front-door
+    catalog and the dispatch mechanism is proven. Whether they are SERVED is
+    read from the public front-door provenance probe, because the operational
+    truth is the current Traefik entrance and deployed catalog, not an old
+    assumption. Byte parity remains useful evidence for promoted twins; the
+    native-first deploy gate is web/API/tool smoke, native observability, and
+    explicit fallback.
 
     Read from the manifest's ``(let routes ...)`` block as DATA (the manifest is
     the one source); ``/health`` and other non-``/api`` probes are excluded so the
@@ -151,11 +154,11 @@ def kernel_first_capable_routes() -> list[str]:
     is absent (the report degrades to the SERVED count and says so).
     """
     if not _KERNEL_ROUTER_MANIFEST.is_file():
-        return []
+        return bml_front_door_routes()
     try:
         text = _KERNEL_ROUTER_MANIFEST.read_text(encoding="utf-8")
     except OSError:
-        return []
+        return bml_front_door_routes()
     idx = text.find("(let routes")
     block = _strip_form_line_comments(text[idx:] if idx != -1 else text)
     route_data = _kernel_route_data_patterns(_KERNEL_ROUTER_MANIFEST)
@@ -184,6 +187,31 @@ def kernel_first_capable_routes() -> list[str]:
             path = match.group(6)
             route_label = path if method == "ANY" else f"{method} {path}"
         if route_label and route_label not in seen:
+            routes.append(route_label)
+            seen.add(route_label)
+    for route_label in bml_front_door_routes():
+        if route_label not in seen:
+            routes.append(route_label)
+            seen.add(route_label)
+    return routes
+
+
+def bml_front_door_routes() -> list[str]:
+    """API routes with a high-grammar BML front-door handler."""
+    if not _BML_FRONT_DOOR_CATALOG.is_file():
+        return []
+    try:
+        text = _BML_FRONT_DOOR_CATALOG.read_text(encoding="utf-8")
+    except OSError:
+        return []
+    routes: list[str] = []
+    seen: set[str] = set()
+    route_row = re.compile(
+        r'route\("[^"]+",\s*"([A-Z]+)",\s*"(/api/[^"]+)",\s*\d+,\s*"[^"]+",\s*"[^"]*"'
+    )
+    for method, path in route_row.findall(_strip_form_line_comments(text)):
+        route_label = path if method == "GET" else f"{method} {path}"
+        if route_label not in seen:
             routes.append(route_label)
             seen.add(route_label)
     return routes
@@ -247,6 +275,7 @@ def probe_kernel_front_door() -> dict:
                 "status": resp.status,
                 "x_form_router": router,
                 "kernel_front_door": router == "native-kernel",
+                "reported_native_route_count": _reported_native_route_count(body),
                 "body_preview": body,
             }
     except urllib.error.HTTPError as exc:
@@ -258,6 +287,7 @@ def probe_kernel_front_door() -> dict:
             "status": exc.code,
             "x_form_router": router,
             "kernel_front_door": router == "native-kernel",
+            "reported_native_route_count": _reported_native_route_count(body),
             "body_preview": body,
         }
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
@@ -269,6 +299,16 @@ def probe_kernel_front_door() -> dict:
             "kernel_front_door": False,
             "error": str(exc),
         }
+
+
+def _reported_native_route_count(body: str) -> int | None:
+    match = re.search(r'"native_route_count"\s*:\s*(\d+)', body)
+    if not match:
+        return None
+    try:
+        return int(match.group(1))
+    except ValueError:
+        return None
 
 
 def _load_attribution_module():
@@ -372,7 +412,15 @@ def build_report() -> dict:
     capable = kernel_first_capable_routes()
     n_capable = len(capable)
     front_door = probe_kernel_front_door()
-    n_front_door_served = n_capable if front_door.get("kernel_front_door") else 0
+    reported_native_route_count = front_door.get("reported_native_route_count")
+    if front_door.get("kernel_front_door"):
+        n_front_door_served = (
+            reported_native_route_count
+            if isinstance(reported_native_route_count, int)
+            else n_capable
+        )
+    else:
+        n_front_door_served = 0
 
     usage_pct = (100.0 * n_served / total_routes) if total_routes else None
     loc_per_route = (cpy["total"] / n_served) if n_served else None
@@ -392,6 +440,7 @@ def build_report() -> dict:
         "kernel_first_served_routes": n_front_door_served,
         "kernel_first_capable_routes": n_capable,
         "kernel_first_capable_route_names": capable,
+        "kernel_first_deployed_native_route_count": reported_native_route_count,
         "kernel_first_routes": n_front_door_served,  # back-compat alias of SERVED
         "front_door_probe": front_door,
         "served_route_names": served_routes,

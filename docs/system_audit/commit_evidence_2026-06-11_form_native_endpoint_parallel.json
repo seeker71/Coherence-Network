@@ -1,0 +1,116 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "codex/form-native-endpoints-20260611",
+  "commit_scope": "Move the next observed API route families into the BML native front door and repair native-route wellness accounting to include the BML catalog.",
+  "files_owned": [
+    "deploy/front-door/api.bml",
+    "scripts/runtime_surface_report.py",
+    "api/tests/test_runtime_web_api_provenance.py",
+    "api/tests/test_runtime_surface_native_routes.py",
+    "docs/system_audit/native_route_goal_state.json",
+    "docs/system_audit/commit_evidence_2026-06-11_form_native_endpoint_parallel.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/native_route_goal_loop.py /loop --source web_api --seconds 86400 --write-state",
+      "cd form/form-kernel-rust && cargo build --release --bin form-kernel-rust",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_runtime_web_api_provenance.py tests/test_runtime_surface_native_routes.py tests/test_translations_router.py tests/test_source_artifact_sensing_graph.py",
+      "cd api && /opt/homebrew/bin/ruff check tests/test_runtime_web_api_provenance.py tests/test_runtime_surface_native_routes.py ../scripts/runtime_surface_report.py",
+      "make native-route-goal-tending",
+      "python3 scripts/runtime_surface_report.py --json",
+      "form/form-kernel-rust/target/release/form-kernel-rust serve --host 127.0.0.1 --port 19161 --routes deploy/front-door/api.bml --stdlib form/form-stdlib --upstream http://127.0.0.1:9",
+      "curl -sS -D /tmp/native-sensings.headers -o /tmp/native-sensings.json 'http://127.0.0.1:19161/api/sensings?limit=2' -H 'Accept: application/json'",
+      "curl -sS -D /tmp/native-sensings-invalid.headers -o /tmp/native-sensings-invalid.json 'http://127.0.0.1:19161/api/sensings?kind=bad' -H 'Accept: application/json'",
+      "curl -sS -D /tmp/native-translations.headers -o /tmp/native-translations.json 'http://127.0.0.1:19161/api/translations/page/flow' -H 'Accept: application/json'",
+      "curl -sS -D /tmp/native-deploy-stream.headers -o /tmp/native-deploy-stream.json --max-time 2 'http://127.0.0.1:19161/api/deploy/log/stream' -H 'Accept: text/event-stream'",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "bash -n scripts/test_hostinger_deploy_form_paths.sh scripts/verify_web_api_deploy.sh deploy/hostinger/auto-deploy.sh",
+      "git diff --check",
+      "python3 baseline comparison: current deploy/front-door/api.bml strict unresolved names match origin/main exactly"
+    ],
+    "notes": "Added BML native handlers for GET /api/sensings, GET /api/sensings/{sensing_id}, and GET /api/translations/{entity_type}/{entity_id}. The web_api route-goal window rose from 89.10% high-grammar native before the change to 90.50% after, with no next web-used route needed in the observed window. Local native smoke proved promoted routes select X-Form-Router:native-kernel and the intentionally unpromoted deploy SSE route stays X-Form-Router:fanout-python. No local Postgres was configured, so DB-backed promoted reads returned the native persistence-unavailable boundary; body readback remains deploy proof. Strict BML catalog check still reports 14 unresolved names, and a current-vs-origin comparison proved the unresolved set is unchanged by this branch."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR creation, and hosted checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No deploy attempted before PR merge. runtime_surface_report now distinguishes 45 currently deployed native front-door routes from 86 local capable native handlers across Form+BML."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof passed; PR CI, merge, deploy, and public post-deploy verification remain pending."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The BML front door natively handles sensings list/detail reads and generic translation entity reads; runtime-surface wellness counts both Form manifest and BML catalog capabilities while live served count remains sourced from the deployed router measurement.",
+    "proof": "Local native listener returned X-Form-Router:native-kernel for /api/sensings and /api/translations/page/flow, returned native 400 validation for invalid sensings kind, and returned X-Form-Router:fanout-python for /api/deploy/log/stream.",
+    "public_endpoints": [
+      "GET /api/sensings",
+      "GET /api/sensings/{sensing_id}",
+      "GET /api/translations/{entity_type}/{entity_id}",
+      "GET /api/deploy/log/stream"
+    ],
+    "test_flows": [
+      "Native sensings list route selects the kernel and reaches the native persistence boundary when local DB is absent.",
+      "Native sensings invalid-kind route returns the expected 400 validation shape without Python fanout.",
+      "Native generic translation page route selects the kernel and reaches the native persistence boundary when local DB is absent.",
+      "Deploy log SSE remains explicit fanout-python until native streaming is promoted."
+    ]
+  },
+  "idea_ids": [
+    "form-native-runtime",
+    "oss-interface-alignment"
+  ],
+  "spec_ids": [
+    "kernel-router-fanout-native-invitation",
+    "ideas-router-form-expression",
+    "spec-registry-source-native"
+  ],
+  "task_ids": [
+    "form-native-endpoints-20260611"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-prioritization"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "deploy/front-door/api.bml defines api_sensings, api_sensing_detail, api_translations_entity, and their RouteCell bindings.",
+    "docs/system_audit/native_route_goal_state.json reports bml_routes=53, goal_native_share=0.905, native_executable_share=0.905, and next_route=null for the web_api window.",
+    "scripts/runtime_surface_report.py reports kernel_first_capable_routes=86 and kernel_first_deployed_native_route_count=45, separating local capability from deployed served count.",
+    "Focused pytest proof passed 20 tests across route-goal, runtime-surface, translations, and source-artifact sensing coverage."
+  ],
+  "change_files": [
+    "deploy/front-door/api.bml",
+    "scripts/runtime_surface_report.py",
+    "api/tests/test_runtime_web_api_provenance.py",
+    "api/tests/test_runtime_surface_native_routes.py",
+    "docs/system_audit/native_route_goal_state.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}
