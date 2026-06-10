@@ -1,0 +1,63 @@
+; transformer-block.fk — M4 of form-native-models.form: one attention+FFN block as proven Form.
+;
+; The real transformer primitive, replacing weightless attention.fk: a whisper-shaped pre-LN block
+;   h = x + Wo·attn(LN1(x)) + bo        attn = softmax(q·kᵀ/√d_k)-weighted sum of v
+;   y = h + W2·gelu(W1·LN2(h) + b1) + b2
+; composed entirely from transformer-numerics.fk (M3: softmax, gelu, layernorm, exp, sqrt) plus the
+; dot/matvec walk below. Weights are arguments — lists of rows — so the block is recipe DATA all the
+; way down: a layer stack is a SEQUENCE of these calls, mutable at runtime (the dynamic-recipe
+; advantage). This lane is fp64; format-parameterized (bf16/fp8) and quantized weights are M1/M2's
+; stones. gelu is the tanh approximation (M3's lane); the exact-erf variant joins when a model that
+; trained on it arrives. Proven three-way against the PyTorch fp64 reference by
+; tests/transformer-block-band.fk.
+
+; --- vector / matrix walk ---
+(defn tb-dot (a b)
+  (if (eq (len a) 0) 0.0 (add (mul (head a) (head b)) (tb-dot (tail a) (tail b)))))
+(defn tb-matvec (rows x)
+  (if (eq (len rows) 0) (empty) (cons (tb-dot (head rows) x) (tb-matvec (tail rows) x))))
+(defn tb-vec-add (a b)
+  (if (eq (len a) 0) (empty) (cons (add (head a) (head b)) (tb-vec-add (tail a) (tail b)))))
+(defn tb-vec-mul (a b)
+  (if (eq (len a) 0) (empty) (cons (mul (head a) (head b)) (tb-vec-mul (tail a) (tail b)))))
+(defn tb-zeros (n) (if (eq n 0) (empty) (cons 0.0 (tb-zeros (sub n 1)))))
+(defn tb-affine (w b x) (tb-vec-add (tb-matvec w x) b))
+
+; --- sequence walks (a sequence is a list of position-vectors) ---
+(defn tb-ln-seq (xs eps gamma beta)
+  (if (eq (len xs) 0) (empty)
+      (cons (tb-vec-add (tb-vec-mul (tn-layernorm (head xs) eps) gamma) beta)
+            (tb-ln-seq (tail xs) eps gamma beta))))
+(defn tb-proj-seq (w b xs)
+  (if (eq (len xs) 0) (empty) (cons (tb-affine w b (head xs)) (tb-proj-seq w b (tail xs)))))
+(defn tb-add-seq (as bs)
+  (if (eq (len as) 0) (empty) (cons (tb-vec-add (head as) (head bs)) (tb-add-seq (tail as) (tail bs)))))
+(defn tb-gelu-map (xs)
+  (if (eq (len xs) 0) (empty) (cons (tn-gelu (head xs)) (tb-gelu-map (tail xs)))))
+
+; --- attention: scores, softmax over keys, weighted sum of values ---
+(defn tb-scores (q ks scale)
+  (if (eq (len ks) 0) (empty) (cons (mul (tb-dot q (head ks)) scale) (tb-scores q (tail ks) scale))))
+(defn tb-weighted-acc (alphas vs acc)
+  (if (eq (len alphas) 0) acc
+      (tb-weighted-acc (tail alphas) (tail vs)
+                       (tb-vec-add acc (tn-scale (head vs) (head alphas))))))
+(defn tb-attend-one (q ks vs scale)
+  (tb-weighted-acc (tn-softmax (tb-scores q ks scale)) vs (tb-zeros (len (head vs)))))
+(defn tb-attn-seq (qs ks vs scale)
+  (if (eq (len qs) 0) (empty)
+      (cons (tb-attend-one (head qs) ks vs scale) (tb-attn-seq (tail qs) ks vs scale))))
+
+; --- the two pre-LN residual sub-blocks, then the whole block ---
+(defn tb-attn-sub (lns wq bq wk bk wv bv wo bo scale)
+  (tb-proj-seq wo bo
+    (tb-attn-seq (tb-proj-seq wq bq lns) (tb-proj-seq wk bk lns) (tb-proj-seq wv bv lns) scale)))
+(defn tb-attn-block (xs eps g1 be1 wq bq wk bk wv bv wo bo scale)
+  (tb-add-seq xs (tb-attn-sub (tb-ln-seq xs eps g1 be1) wq bq wk bk wv bv wo bo scale)))
+(defn tb-ffn (w1 c1 w2 c2 x) (tb-affine w2 c2 (tb-gelu-map (tb-affine w1 c1 x))))
+(defn tb-ffn-seq (w1 c1 w2 c2 xs)
+  (if (eq (len xs) 0) (empty) (cons (tb-ffn w1 c1 w2 c2 (head xs)) (tb-ffn-seq w1 c1 w2 c2 (tail xs)))))
+(defn tb-ffn-block (xs eps g2 be2 w1 c1 w2 c2)
+  (tb-add-seq xs (tb-ffn-seq w1 c1 w2 c2 (tb-ln-seq xs eps g2 be2))))
+(defn tb-block (xs eps g1 be1 wq bq wk bk wv bv wo bo scale g2 be2 w1 c1 w2 c2)
+  (tb-ffn-block (tb-attn-block xs eps g1 be1 wq bq wk bk wv bv wo bo scale) eps g2 be2 w1 c1 w2 c2))
