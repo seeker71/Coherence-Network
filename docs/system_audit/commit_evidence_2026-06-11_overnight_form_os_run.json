@@ -1,0 +1,90 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "worktree-fourth-kernel-seed",
+  "commit_scope": "Overnight Form-OS run for the fourth kernel: the full audit (16 sections) passes exit 0, all 11 fourth-kernel bands three-way green, and host organs are driven by 4th-kernel-compiled binaries — net (an api served at HTTP 200), driver (fork/exec/pipe), TTS (real audio via say), LLM (ollama up to the 115 GB dolphin-mixtral), with emitted ARM64 made visible. This record carries the measured model numbers the audit only summarizes.",
+  "files_owned": [
+    "scripts/fourth_kernel_audit.sh",
+    "docs/coherence-substrate/fourth-kernel.form"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "scripts/fourth_kernel_audit.sh  (16 sections, exit 0)",
+      "11 fourth-kernel bands three-way: minimal-surface, walker, walker-emit, fixpoint, call, heap, os, net, driver, model, bmf-mini (each 1 ok, 0 divergent)"
+    ],
+    "summary": "FULL AUDIT exit 0. fk4 parity (fib 317811 / sum 500500 / ack 509 across go=rust=ts=fk4); m4c emitted walker fib 317811 with the in-binary probe; m4d quine byte-exact 3388; m4e1 CALL mutual recursion + fib-via-CALL 317811 at ~22 ms; M2 grammar+source to a grammar-driven binary (g1 to 22, g2 to 202); universal loader one binary runs fib/even-odd/bmf-compiled/heap(25)/organs(7) from files; self-JIT cold 21.4 ms to hot 3.5 ms at threshold 50 with parity held and njit=26; streaming BMF cursor backtrack (x42 to 42, 9001 to 9001 via cursor restore); n1/n2 api on a 4th-kernel binary GET /health 200 in 0.68 ms; n3 driver parses live subprocess stdout (printf 31337, date +%Y to 2026); n8 the emitted walker is 667 native ARM64 instructions. All 11 bands three-way green: an earlier suite-run showed 10 apparent failures, diagnosed as a harness quoting bug feeding a space-joined filename, NOT a band or kernel fault (each band passes with separate prelude args, as shipped).",
+    "observed_delta": {
+      "full_audit_exit": 0,
+      "fourth_kernel_bands_three_way": "11/11 green",
+      "api_binary_http": "200 in 0.68 ms (fork-per-connection; net organ socket/bind/listen/accept)",
+      "driver_live": "printf 31337 to 31337; date +%Y to 2026 (parsed off live subprocess stdout via BMF cursor)",
+      "tts_say": "63144 to 134642 bytes of real AIFF-C audio, driven by the 4th-kernel binary",
+      "llm_small_llama3_2_3b": "~208 bytes captured in ~2.6 s",
+      "llm_acceptable_deepseek_r1_32b": "3390 bytes captured in 44.6 s (19 GB, fits comfortably; the largest with acceptable performance)",
+      "llm_largest_dolphin_mixtral_8x22b_q6": "265 bytes captured in 501.2 s (115 GB on 128 GB RAM; load-dominated thrashing at ~7% free; ran through the 4th-kernel binary but NOT acceptable performance; the honest ceiling)",
+      "self_jit_runtime": "21.4 ms walking to 3.5 ms after the heat flip",
+      "emitted_assembly": "667 native ARM64 instructions in fk_walk (otool); Form recipe to emitted C to machine code"
+    },
+    "known_limitations": [
+      {
+        "limitation": "All-424-stdlib-bands on the 4th arm (the m4e3 ratchet) is 0/424 — a walk, not a night; the real-recipe flattener through the observe door is the next stone and inherits cursor + heap + tagged-ABI honest acks.",
+        "follow_up": "m4e3: read a compiled .fk recipe's real category set and flatten onto the table; the first band flips the ratchet to 1."
+      },
+      {
+        "limitation": "The 115 GB model thrashes on 128 GB RAM (7% free, 501 s load-dominated) — it RUNS through the 4th-kernel binary but not at acceptable speed; deepseek-r1:32b (19 GB, 44.6 s) is the largest with acceptable performance.",
+        "follow_up": "A q4 70b is the likely sweet spot for largest-acceptable; the driver organ is model-agnostic."
+      },
+      {
+        "limitation": "n5 STT (whisper-cpp + large-v3) not installed overnight; the driver organ is the same shape as n4/n6 and ready.",
+        "follow_up": "brew install whisper-cpp; download large-v3; drive via fkcount and let the cursor walk the transcript."
+      },
+      {
+        "limitation": "The api binary serves a static responder body; reading the request line off the cursor and routing is m4e3 + strings.",
+        "follow_up": "Route on the cursor; build the JSON body from substrate values via the heap."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "PR gates run the fourth-kernel bands three-way; the audit is operational tooling (model sections gated on tool presence)."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "form-stdlib rides the api image rebuild; the lattice ingests fourth-kernel.form on merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No route behavior changes. The fourth sibling now drives the host's real resources — net (an api), subprocess, TTS, STT-ready, LLM up to the 115 GB ceiling — all through binaries it compiled, with emitted machine code visible and every prior parity intact.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "16-section audit end to end (exit 0); 11 bands three-way; live api curl 200; live model drives with measured bytes and latency."
+    ],
+    "summary": "audit exit 0; bands green; model organs witnessed."
+  },
+  "phase_gate": {
+    "phase": "overnight-form-os-run",
+    "gate": "net/driver/tts/llm organs driven by 4th-kernel binaries, emitted assembly visible, all built bands green; CI + deploy confirm",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "m4e3 the real-recipe flattener (the band ratchet's first click); n5 whisper STT; route the api on the cursor; a q4-70b for largest-acceptable"
+  },
+  "idea_ids": ["fourth-kernel"],
+  "spec_ids": ["kernel-native-api-readiness", "runtime-shared-native-representation"],
+  "task_ids": ["overnight-form-os-run-20260611"],
+  "contributors": [
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction", "overnight-work-order"]},
+    {"contributor_id": "agent:claude", "contributor_type": "machine", "roles": ["implementation", "validation", "measurement"]}
+  ],
+  "agent": {"name": "Claude Code", "version": "claude-fable-5"},
+  "evidence_refs": [
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/coherence-substrate/minimal-kernel.form",
+    "docs/coherence-substrate/host-kernel.form"
+  ],
+  "change_files": [
+    "docs/system_audit/commit_evidence_2026-06-11_overnight_form_os_run.json"
+  ],
+  "change_intent": "process_only"
+}
