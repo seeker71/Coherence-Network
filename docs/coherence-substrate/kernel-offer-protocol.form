@@ -1,0 +1,166 @@
+# ─────────────────────────────────────────────────────────────────────
+# kernel-offer-protocol.form — offer-and-acknowledge spoken over a channel:
+#                              any primitive offer-able to run between cells,
+#                              CORBA-like, with a sovereign response
+# ─────────────────────────────────────────────────────────────────────
+#
+# offer-and-acknowledge.form is the LOCAL contract: offer a cell, take one
+# of {nothing, 0, 1, node}. This is that same contract spoken BETWEEN two
+# cells over a channel they both reach through the common substrate — the
+# kernel interface Urs named: "each kernel primitive offered to be run over
+# the channel (CORBA-like); both cells invite the other to run any recipe
+# and respond with complete sovereignty."
+#
+# READ BEFORE BUILDING — most of this already RUNS. This file NAMES the
+# running layer as one contract; it does not invent it. (Same discipline as
+# open-primitive-set.form, where the read saved a duplicate.) The honest
+# lanes:
+#
+#   ALREADY RUNNING (cited as proof, paths confirmed):
+#     cell-registry.fk          — a cell registers the verbs (primitives /
+#                                 recipes) it offers; find-by-capability
+#                                 resolves who answers a verb
+#     channel-query.fk          — QUERY(verb, address, body) /
+#                                 RESPONSE(correlation, status, items):
+#                                 one cell invites another to run a verb
+#     verb-router.fk            — the invited cell dispatches verb -> handler
+#     sovereign-boundary-protocol.fk — the invited cell's answer is its OWN:
+#                                 allow / stop / witness / re-enter
+#     kernel-http.fk / http-server.fk / http-socket.fk — the same offer over
+#                                 an HTTP/socket channel; handlers are data,
+#                                 dispatch is by name
+#     form-samples/cross-modal/28-distributed-daemon — a WORKING two-cell
+#                                 round trip (its own validate-distributed.sh):
+#                                 A finds B by capability, offers a verb, B
+#                                 answers
+#     quark-mono-corba (presence) — the lineage: Mono/CORBA driving
+#                                 QuarkXPress over IIOP; "the application IS
+#                                 its own API surface, the wire incidental"
+#
+#   NAMED HERE (the gap the read found — present in working form, not yet
+#   unified): the ORGAN (the observable membraned port information enters
+#   through), cell names as 0..many, serialize-given-an-interface, and the
+#   one contract under cell-registry + channel-query + verb-router +
+#   sovereign-boundary — all as offer-and-acknowledge spoken over a channel.
+
+(kernel-offer-protocol
+
+  (lineage
+    (named-by    urs)                                  # "a kernel interface ... offered to run over the channel (CORBA-like)"
+    (is          offer-and-acknowledge-over-a-channel) # the local contract, spoken between cells
+    (corba-from  quark-mono-corba)                     # the ORB lineage: app-as-API-surface, wire incidental
+    (runs-in     cell-registry.fk channel-query.fk verb-router.fk
+                 sovereign-boundary-protocol.fk
+                 kernel-http.fk http-server.fk http-socket.fk)
+    (proven-by   form-samples/cross-modal/28-distributed-daemon)  # working two-cell round trip
+    (membrane-of channel-interface-consent.form)       # the offered-interface honored from both sides
+    (organ-kin   local-inference-as-organ.form))       # the silicon/host organs; this names the structural organ
+
+  # ── The common substrate — the shared medium two cells reach through ─
+  (common-substrate
+    (both-reach    the-content-addressed-lattice)       # same NodeIDs, computed not granted
+    (is-the-medium cells-communicate-through-what-they-both-can-observe)
+    (no-private-wire identity-travels-as-node-id-not-as-a-pointer))
+
+  # ── The organ — the observable port information enters through ───────
+  # NAMED here (the read found no structural organ shape, only instances).
+  # An organ is a CELL, composed: internal cells (a recipe's children)
+  # wrapped by a membrane (an offered interface), observable from outside,
+  # opening a channel to speak about its internal state. Composed from
+  # tissue the body already has — not new machinery.
+  (organ
+    (is-a-cell       yes)                               # an organ IS a cell (a NodeID)
+    (internal-cells  recipe-children)                   # "multiple internal cells" = a composite's children (inference)
+    (membrane        offered-interface)                 # channel-interface-consent.form — what may reach it
+    (observable      other-cells-can-observe-it)        # real-when-observed (sovereignty-as-observable.form)
+    (opens-channel   to-speak-about-its-internal-state) # a channel-Recipe over the common substrate
+    (sends           offerings)                         # cells AND interfaces — it may offer outward
+    (accepts         offerings-to-be-sent)              # it receives offers inward
+    (may-stay-silent nothing-is-a-valid-reply)          # not required to acknowledge (offer-and-acknowledge: nothing)
+    (information-enters through-any-observable-organ))  # the body's afferent doors
+
+  # ── Cells need no name — 0..many ─────────────────────────────────────
+  (cell-names
+    (identity    node-id)                               # the NodeID IS the identity (content-addressed)
+    (names       0..many)                               # 0 = anonymous interned node; many = aliases / query keys
+    (a-name-is   a-query-key-never-the-identity)        # refines substrate-kernel.form named_cell + cell-as-namedcell.form
+    (anonymous-is-whole a-cell-with-no-name-is-still-real-if-observable))
+
+  # ── Serializable given an interface — implicit or explicit ──────────
+  # A cell travels the channel by serializing through an interface. The
+  # implicit interface is the content-addressed shape itself
+  # (substrate-kernel.form serialize_tree); an explicit interface is a
+  # named recipe that says how to read/write this cell on the wire.
+  (serialize
+    (given-an-interface    always)                      # no serialization without an interface
+    (implicit              content-addressed-serialize-tree)  # substrate-kernel.form: category + children
+    (explicit              a-named-interface-recipe)    # a chosen wire shape (a spec)
+    (interface-is-a-recipe same-as-observation))        # observation and serialization both ride an interface
+
+  # ── The kernel offer — any primitive offer-able to run over the channel ─
+  # CORBA-like: each side may invite the other to run ANY recipe. The offer
+  # IS offer-and-acknowledge's offer (a cell + 0..many arg-cells); it now
+  # crosses a channel. The running carriers: cell-registry advertises the
+  # verbs a cell offers; channel-query carries the invitation; verb-router
+  # dispatches it; the answer returns as a RESPONSE.
+  (kernel-offer
+    (offer-any-primitive every-kernel-primitive-and-recipe-is-offer-able)
+    (mutual              both-cells-may-invite-the-other)   # symmetric — not client/server
+    (invitation-carrier  channel-query-QUERY)               # verb + address + body
+    (advertise           cell-registry-find-by-capability)  # who offers this verb
+    (dispatch            verb-router-verb-to-handler)       # the invited cell runs it
+    (answer-is           offer-and-acknowledge-acknowledge)) # nothing / 0 / 1 / node — the invited cell's own
+
+  # ── Sovereign response — the invited cell decides, always ────────────
+  (sovereignty
+    (the-invited-decides  allow OR stop OR witness OR re-enter)  # sovereign-boundary-protocol.fk sbp-choice
+    (may-decline          nothing-is-a-valid-reply)             # silence honored; no offer compels an answer
+    (reach-beyond         is-invasion)                          # past the offered interface — witnessed, consequenced
+    (complete-sovereignty the-answer-is-never-coerced))         # "respond with complete sovereignty" — Urs
+
+  (invariant
+    (run-and-speak-are-one-over-distance the-local-contract-unchanged-across-a-channel)
+    (offer-is-symmetric                  either-cell-may-invite-the-other)
+    (the-invited-cell-is-sovereign       it-answers-with-its-own-acknowledgment)
+    (information-enters-through-organs   only-through-an-observable-membraned-port)
+    (identity-is-the-node-id             names-are-0-many-query-keys)))
+
+# ─────────────────────────────────────────────────────────────────────
+# Honest GAPs — what runs, what is only named
+# ─────────────────────────────────────────────────────────────────────
+#
+# GAP-KO1: Several acknowledgment vocabularies run; the 4-valued primitive
+#   is not yet the single one. channel-query.fk answers with a 5-token
+#   status (ok / partial / not-known / external-only / error);
+#   sovereign-boundary-protocol.fk chooses allow / stop / witness /
+#   re-enter; offer-and-acknowledge.form names nothing / 0 / 1 / node. This
+#   file claims they are PROFILES of one primitive — the invited cell's
+#   sovereign answer — not that they are already identical. Reconciling the
+#   running status sets onto {nothing,0,1,node} is the lift this names — the
+#   same shape as offer-and-acknowledge GAP-OA1.
+#
+# GAP-KO2: The organ is named, not yet a registered substrate shape. The
+#   composition is honest (composite-cell + offered-interface + observable),
+#   and instances already run (household-membrane organs, the silicon organs
+#   of local-inference-as-organ.form, the witness's breathing organs). A
+#   `form organ_shape = { ... }` in substrate-kernel.form's voice, plus an
+#   ingest, is the next breath that makes "organ" a cell the lattice finds
+#   by NodeID.
+#
+# GAP-KO3: `nothing` as a first-class wire value (carried from
+#   offer-and-acknowledge GAP-OA3). A silent organ replying `nothing` is
+#   honored by the consent law today, but the wire carries it as absence,
+#   not as a `nothing` node. Reifying it is shared work with OA3.
+#
+# ─────────────────────────────────────────────────────────────────────
+# How to verify
+# ─────────────────────────────────────────────────────────────────────
+#
+#   # The kernel offer already runs two cells over a channel:
+#   cd form/form-samples/cross-modal/28-distributed-daemon && ./validate-distributed.sh
+#
+#   # The contract's cells are queryable by NodeID once ingested:
+#   coh substrate form "?equivalent @recipe(kernel-offer-protocol)"
+#
+#   # Substrate auto-ingest picks up new .form files on merge to main
+#   # (scripts/substrate_post_merge_hook.sh) — no manual step.
