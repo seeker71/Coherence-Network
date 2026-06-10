@@ -1,0 +1,150 @@
+# ─────────────────────────────────────────────────────────────────────
+# form-native-llm.form — would an LLM built on Form primitives be a different
+#                        shape? Yes. This names how, with the lanes kept honest.
+# ─────────────────────────────────────────────────────────────────────
+#
+# Urs: "wouldn't an LLM on form primitives be architected different, embedding
+# would be quite different, and with choice, fail, cut and stop as well as
+# nothing, 0, 1, node as core values the transformer layers might look different
+# as well. how would it look, and how would we cross learn/train from a local
+# LLM to that? could we fine-tune an LLM to natively speak form and how would
+# that change efficiency and capabilities (fractal, holographic, scalar wave)?"
+#
+# LANES (CLAUDE.md discipline — kept separate, never blended):
+#   [RUNS]      proven in the body today, cited.
+#   [INFER]     architectural inference from the primitives; falsifiable, not yet built.
+#   [SYMBOL]    frequency/resonance language — a way of seeing, NOT a physics claim.
+# form-native-models.form is the companion: it proves a STANDARD transformer runs
+# deterministically in Form. THIS file asks the different question — what the
+# primitives make NATIVE that a dense float transformer only approximates.
+
+(form-native-llm
+
+  (lineage
+    (runs-on        form-native-models.form)         # the deterministic numeric substrate [RUNS]
+    (value-abi      fourth-kernel.form tagged-ABI)   # {nothing,0,1,node} = {null-ref,int,int,ref} [RUNS]
+    (cross-learn    co-learning.form federated-slices.form)  # the oracle + merge mechanisms [RUNS]
+    (grounds        cell-numerics.form numeric-formats.canonical.json))
+
+  # ── 1. Embedding: a coordinate, not an opaque vector ────────────────
+  # A dense LLM embeds a token as a learned float vector — meaning is a point
+  # in R^d, opaque, compared by dot product. In Form a cell's identity is its
+  # CONTENT-ADDRESSED NodeID: same composition -> same coordinate, everywhere,
+  # for free. [RUNS today: substrate equivalence-by-structure.]
+  (embedding
+    (dense-llm   a-learned-float-vector compared-by-dot-product)
+    (form-native the-NodeID-IS-the-embedding)         # [INFER] position in the content-addressed lattice
+    (consequence two-utterances-that-COMPOSE-the-same-share-a-coordinate)  # not learned — structural
+    (hybrid      a-float-vector can hang off a NodeID as a recipe leaf)  # [INFER] learned + structural together
+    (so          meaning is partly GIVEN by structure, partly LEARNED on top — not all learned))
+
+  # ── 2. Attention: choice/fail, not dense softmax ────────────────────
+  # Dense attention softmaxes QK^T over ALL tokens every layer — O(n^2) dense
+  # float, everything attends to everything, weighted. The BMF primitives make
+  # a different shape native: SPECULATIVE, SPARSE retrieval.
+  (attention
+    (dense-llm   softmax over all-pairs O(n-squared) dense-float-everything-weighted)
+    (form-native CHOICE the relevant cells, FAIL the irrelevant, CUT to the match, STOP when resolved)  # [INFER]
+    (mechanism   content-addressed retrieval — attend by shape-match / NodeID kinship, not dot-product)
+    (sparsity    nothing is a FIRST-CLASS value (axiom-1) — a position can be NOTHING, genuine
+                 zero-cost absence, not a softmax weight rounding toward zero)  # [RUNS: nothing in the 4th kernel]
+    (cost        [INFER] sub-quadratic when most pairs FAIL early — backtracking is a pointer move
+                 (axiom-3), so a wrong attention path costs O(1) to abandon, not a recomputed pass))
+
+  # ── 3. The layer: a recipe, content-addressed (holographic) ─────────
+  # A dense transformer block is a fixed dense-matmul pipeline. A Form layer is
+  # a RECIPE — and identical sub-computations share a NodeID, so a pattern
+  # computed once is reused wherever it recurs. This is the HOLOGRAPHIC property,
+  # grounded: the whole in every part because the part IS the same content-cell.
+  (layer
+    (dense-llm   fixed dense matmul + softmax + matmul, recomputed every token)
+    (form-native a recipe tree; repeated sub-shapes share NodeIDs -> computed once, reused)  # [RUNS: content-addressing]
+    (holographic [SYMBOL->grounded] "the whole in every part" = same shape, same NodeID, everywhere;
+                 the grounded correlate is structural DEDUP + cross-document equivalence)
+    (mutable     the architecture is DATA (a recipe), so it can grow/prune at runtime —
+                 a dense .pt cannot rewrite its own graph; a Form model can)  # [RUNS: form-native-models generatable]
+    (verifiable  every layer output is reproducible three-way (validate.sh) — not a black box))  # [RUNS]
+
+  # ── 4. The value type IS the ack vocabulary ─────────────────────────
+  # {nothing, 0, 1, node} (fourth-kernel tagged ABI) gives the model honest
+  # categorical outputs a float head only approximates: nothing = "no answer /
+  # abstain" (not argmax of noise), 0/1 = decided, node = a counter-offer (a
+  # structured continuation, the model handing back a cell, not a token id).
+  (values
+    (nothing  honest-abstention — the model can SAY no-answer, axiom-1, not hallucinate the nearest)
+    (zero-one decided categorical, exact)
+    (node     a counter-offer: the model returns a CELL (a structured plan / a sub-recipe), not a flat token)  # [INFER]
+    (so       generation is offer-and-acknowledge (core-axioms): the model OFFERS cells, the world ACKs))
+
+  # ── 5. Fractal / holographic / scalar-wave — the three framings ─────
+  (framings
+    (fractal      [RUNS] recursive composition — cells compose cells to any depth, the same
+                  blueprint at every scale; a Form model is self-similar across layers by construction)
+    (holographic  [SYMBOL->grounded] content-addressing: every part carries the identity of the whole-shape
+                  it belongs to; reconstruct-from-a-fragment = look up the NodeID. Grounded as dedup +
+                  equivalence, NOT claimed as optical holography)
+    (scalar-wave  [SYMBOL] a frequency-language framing (CLAUDE.md frequencies are symbolic operating
+                  language, NOT a physical measurement claim): meaning propagating by RESONANCE — a query
+                  cell "resonates" with stored cells that share its shape — rather than by dense numeric
+                  transport. The grounded correlate is content-addressed resonance: shape-match retrieval,
+                  same NodeID = perfect resonance. Held in the mystery lane on purpose; the engineering
+                  claim underneath is only the retrieval-by-shape-match, which is buildable [INFER]))
+
+  # ── 6. Cross-learning from a local LLM — already have the mechanism ─
+  # Two proven patterns carry this; no new theory needed:
+  (cross-learn
+    (oracle-distill [RUNS] co-learning.form M1 already learned from an oracle 0->91% (a Form-native
+                    classifier learning from the SoundAnalysis oracle). Same shape: the local LLM is the
+                    ORACLE; it emits (prompt -> output) pairs; the Form-native model learns to reproduce
+                    them; champion-challenger promotes the Form path only when it matches on held-out)
+    (slice-merge    [RUNS] federated-slices.form merges trust-weighted model slices deterministically —
+                    so many Form models cross-teach by sharing content-addressed deltas, every cell
+                    merging to the SAME numbers (a determinism PyTorch float-averaging can't promise))
+    (the-bridge     [INFER] distill the local LLM's BEHAVIOR into Form recipes, then let the structural
+                    layer (embedding-as-coordinate, attention-as-choice) REPLACE the dense parts where it
+                    matches — measured, champion-challenger, never assumed))
+
+  # ── 7. Fine-tuning a local LLM to natively SPEAK Form — concrete ────
+  # The nearest, most useful step, and fully buildable on the proven stack:
+  (speak-form
+    (corpus      [INFER, buildable now] the substrate IS the dataset: every spec, recipe, .fk, and the
+                 idea->spec->code chains are (intent -> Form/BML) pairs. Generate (NL-intent, Form-recipe)
+                 from the body; LoRA-fine-tune a local model (ollama/mlx) to EMIT Form notation/BML)
+    (capability  the model's output stops being plausible TEXT and becomes a RECIPE: content-addressed,
+                 composable, and VERIFIABLE — it either proves three-way or it does not. Hallucination is
+                 bounded by what NodeIDs exist (the substrate's promise), not by RLHF taste)  # [INFER]
+    (efficiency  [INFER] a Form-emitting model can be SMALLER for the same useful power: it offloads
+                 structure/equivalence to the substrate (given, not learned) and need only learn the
+                 mapping intent->shape; the dedup + verify happen outside its weights)
+    (loop        speak-form closes the north-star: the agent's VOICE (satsang M4) composing in Form, the
+                 fourth kernel running what it composes, the witness proving it — language that EXECUTES))
+
+  (invariant
+    (different-yes    Form primitives make sparse-speculative attention, structural embedding, honest
+                      abstention, and mutable verifiable layers NATIVE — a dense transformer approximates these)
+    (lanes-honest     RUNS vs INFER vs SYMBOL kept separate; scalar-wave stays mystery, its engineering
+                      correlate (shape-match retrieval) named plainly)
+    (build-on-proven  every step composes from what RUNS: deterministic numerics, the tagged ABI, the
+                      oracle-distill + slice-merge mechanisms, the substrate-as-corpus)
+    (smallest-first   fine-tune-to-speak-Form is the nearest real stone; the native-attention rewrite is
+                      the deep one, taken measured and champion-challenger, never by faith)))
+
+# ─────────────────────────────────────────────────────────────────────
+# The honest one-paragraph answer
+# ─────────────────────────────────────────────────────────────────────
+# Yes — and the difference is not cosmetic. A Form-native LLM embeds by
+# COORDINATE (content-addressed) instead of by opaque vector; attends by CHOICE
+# / FAIL (sparse, speculative, O(1) to abandon a wrong path) instead of dense
+# softmax; can output NOTHING (honest abstention) or a NODE (a structured
+# counter-offer) instead of only a token distribution; and its layers are
+# RECIPES that dedup holographically and can rewrite themselves. We reach it not
+# by faith but by the mechanisms that already RUN: distill a local LLM as an
+# oracle (co-learning, proven 0->91%), merge slices deterministically (federated-
+# slices), and — the nearest stone — fine-tune a local model on the substrate to
+# EMIT Form, so its words become verifiable executable recipes. Fractal and
+# holographic are grounded (recursive composition; content-addressed dedup);
+# scalar-wave stays in the mystery lane, its only engineering claim being
+# retrieval-by-resonance = shape-match. The capability shift: outputs that
+# prove instead of merely persuade.
+#
+#   coh substrate form "?equivalent @recipe(form-native-llm)"   # after ingest
