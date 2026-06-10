@@ -1,0 +1,64 @@
+; preludes: form-stdlib/primitive-registry.fk
+;
+; primitive-registry-band — the kernel's native surface answers its own
+; declared specs, three-way.
+;
+; Every kernel native carries (name, category, spec, verification recipe,
+; expected outside, lane) in primitive-registry.fk — the kernel-satsang
+; ksat-part discipline applied to the primitive surface itself. This band
+; is the circle: it runs every lane-1 verification on all three kernels and
+; refuses a part that claims an outside its recipe cannot produce. Lane-0
+; entries (35) stay declared and visible — panic-contract, socket-carrier,
+; sweep-hazard, toolchain, sibling-gap — counted here, gated against kernel
+; source by form/scripts/validate_primitive_registry.py and surfaced by the
+; wellness primitive-coverage sense.
+;
+; Band verdict 63 when every claim lands:
+;   1   shape: 197 entries, every one well-formed (7 fields, nonempty
+;       name + spec, known category token), no duplicate names
+;   2   every lane-1 verification recipe yields its declared outside
+;       (162 of 162 — one false claim anywhere drops this bit)
+;   4   the lanes are pinned: 162 in-band + 35 carrier-declared = 197;
+;       a new native or lane flip must touch these numbers consciously
+;   8   a part claiming a wrong outside is REFUSED: verification compares
+;       against the declaration, never against what the recipe happens
+;       to return
+;   16  every lane-1 entry's declared category matches the category the
+;       kernel itself attests via native_blueprint (exemplar-compared,
+;       no magic numbers) — the drift that caught ts node_eq as witness
+;       while go + rust declare compare
+;   32  the registry answers as a spec surface: the pow entry declares
+;       outside 1024 on the method category, readable without running it
+(do
+    (let reg (prim-registry))
+
+    ; ── 1: shape — every entry well-formed, no duplicates ──
+    (let c0 (if (and (eq (len reg) 197)
+                 (and (eq (prim-shapes-ok-count reg) 197)
+                      (eq (prim-dup-count reg) 0)))
+                1 0))
+
+    ; ── 2: every lane-1 verification answers its declared outside ──
+    (let c1 (if (eq (prim-verified-count reg) 162) 2 0))
+
+    ; ── 4: the lanes are pinned numbers, not drift ──
+    (let c2 (if (and (eq (prim-mode-count reg 1) 162)
+                     (eq (prim-mode-count reg 0) 35))
+                4 0))
+
+    ; ── 8: a wrong claimed outside is refused ──
+    (let bad-part (prim "pv-bad-probe" "method" "claims 8, yields 7"
+        (defn pv-bad-probe () 7) 8 1))
+    (let c3 (if (prim-verified? bad-part) 0 8))
+
+    ; ── 16: declared categories match kernel attestation ──
+    (let c4 (if (eq (prim-attested-count reg) 162) 16 0))
+
+    ; ── 32: the registry reads back as a spec surface ──
+    (let pow-entry (prim-find reg "pow"))
+    (let c5 (if (and (eq (prim-expected pow-entry) 1024)
+                 (and (str_eq (prim-category pow-entry) "method")
+                      (eq (prim-mode pow-entry) 1)))
+                32 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))

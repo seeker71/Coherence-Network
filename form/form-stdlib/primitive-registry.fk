@@ -1,0 +1,594 @@
+; primitive-registry.fk — every kernel native carries its declared spec:
+; (name, Form category, contract line, verification recipe, expected outside, lane).
+;
+; The kernel-satsang discipline (kernel-satsang.fk ksat-part) applied to the
+; primitive surface itself: a native is swappable tissue, and what makes it
+; swappable is a declared outside — name, blueprint category, and a runnable
+; verification recipe whose expected value any sibling can check. This file IS
+; that declaration for the whole sibling-parity native surface of
+; form-kernel-go/main.go (and the field-constructor + env-native tables).
+;
+; lane 1 — the verification walks in-band, three-way, every validate run
+;          (tests/primitive-registry-band.fk).
+; lane 0 — carrier-gated: the verification recipe is declared and runnable,
+;          but its honest run-surface is not this band. Five honest reasons,
+;          named per entry in the spec line:
+;            panic-contract   the native's contract IS a panic (form_error)
+;            socket-carrier   loopback I/O proven in the socket bands
+;            sweep-hazard     substrate_gc can sweep band tissue mid-walk
+;            toolchain        result depends on host compiler availability
+;            sibling-gap      absent in rust and/or ts today — the gap a
+;                             fourth-kernel audit lane and sibling work close
+;
+; The category tokens mirror main.go's attribution constructors:
+;   call access method compare list witness undefined field
+; (env natives keep their Go token; native_blueprint cannot see them, the
+;  band skips their attestation via prim-env-native?.)
+;
+; Proven by: tests/primitive-registry-band.fk (three-way at validate.sh).
+; Drift gate: form/scripts/validate_primitive_registry.py — registry names ==
+; kernel names, tokens == Go attribution, lanes == sibling presence.
+; Spec home: docs/coherence-substrate/primitive-registry.form;
+; fourth-kernel.form M2/M4 cite this registry as the primitive-by-primitive
+; verification source an emitted kernel must answer.
+(do
+    ; ── the cell: one native's declared outside ──────────────────────────
+    (defn prim (name category spec verify expected mode)
+        (list "prim" name category spec verify expected mode))
+    (defn prim-name     (e) (nth e 1))
+    (defn prim-category (e) (nth e 2))
+    (defn prim-spec     (e) (nth e 3))
+    (defn prim-verify   (e) (nth e 4))
+    (defn prim-expected (e) (nth e 5))
+    (defn prim-mode     (e) (nth e 6))
+
+    ; verification: run the declared recipe, compare the declared outside.
+    (defn prim-call0 (f) (f))
+    (defn prim-verified? (e)
+        (eq (prim-call0 (prim-verify e)) (prim-expected e)))
+
+    ; shared probe recipe — the smallest walkable composite (add 2 3).
+    (defn pv-probe-recipe ()
+        (intern_node (bp "add")
+            (list (intern_trivial_int 2) (intern_trivial_int 3))))
+
+    ; env-registered natives are invisible to native_blueprint; the band
+    ; skips their category attestation through this registry-owned list.
+    (defn prim-env-native? (n)
+        (or (str_eq n "jit_compile")
+            (or (str_eq n "jit_emit_c")
+                (or (str_eq n "jit_compile_value")
+                    (or (str_eq n "jit_compiled?")
+                        (str_eq n "walk_recipe_here"))))))
+
+    ; one exemplar native per category token; attestation compares
+    ; native_blueprint coordinates against the exemplar's — category
+    ; equality without one magic number. Exemplar tokens are themselves
+    ; gated against Go source by validate_primitive_registry.py.
+    (defn prim-exemplar (token)
+        (if (str_eq token "call")    "read_file"
+        (if (str_eq token "access")  "str_len"
+        (if (str_eq token "method")  "str_concat"
+        (if (str_eq token "compare") "str_eq"
+        (if (str_eq token "list")    "cons"
+        (if (str_eq token "witness") "intern_node"
+        (if (str_eq token "undefined") "trace"
+            ""))))))))
+
+    ; category attestation for a lane-1 entry: field constructors attest
+    ; level-2 placement (each carries its own Field type), env natives are
+    ; vacuously attested (skipped), every other token must share its
+    ; exemplar's category NodeID exactly.
+    (defn prim-category-attested? (e)
+        (if (prim-env-native? (prim-name e))
+            true
+            (if (str_eq (prim-category e) "field")
+                (eq (node_level (native_blueprint (prim-name e))) 2)
+                (node_eq (native_blueprint (prim-name e))
+                         (native_blueprint (prim-exemplar (prim-category e)))))))
+
+    ; ── walk helpers over the registry ───────────────────────────────────
+    (defn prim-known-token? (t)
+        (or (str_eq t "call")
+            (or (str_eq t "access")
+                (or (str_eq t "method")
+                    (or (str_eq t "compare")
+                        (or (str_eq t "list")
+                            (or (str_eq t "witness")
+                                (or (str_eq t "undefined")
+                                    (str_eq t "field")))))))))
+
+    (defn prim-shape-ok? (e)
+        (and (eq (len e) 7)
+             (and (str_eq (nth e 0) "prim")
+                  (and (gt (str_len (prim-name e)) 0)
+                       (and (gt (str_len (prim-spec e)) 0)
+                            (prim-known-token? (prim-category e)))))))
+
+    (defn prim-shapes-ok-count (entries)
+        (if (eq (len entries) 0)
+            0
+            (add (if (prim-shape-ok? (head entries)) 1 0)
+                 (prim-shapes-ok-count (tail entries)))))
+
+    (defn prim-mode-count (entries m)
+        (if (eq (len entries) 0)
+            0
+            (add (if (eq (prim-mode (head entries)) m) 1 0)
+                 (prim-mode-count (tail entries) m))))
+
+    ; lane-1 verifications that answer their declared outside.
+    (defn prim-verified-count (entries)
+        (if (eq (len entries) 0)
+            0
+            (add (if (eq (prim-mode (head entries)) 1)
+                     (if (prim-verified? (head entries)) 1 0)
+                     0)
+                 (prim-verified-count (tail entries)))))
+
+    ; lane-1 category attestations that hold.
+    (defn prim-attested-count (entries)
+        (if (eq (len entries) 0)
+            0
+            (add (if (eq (prim-mode (head entries)) 1)
+                     (if (prim-category-attested? (head entries)) 1 0)
+                     0)
+                 (prim-attested-count (tail entries)))))
+
+    (defn prim-name-in? (entries n)
+        (if (eq (len entries) 0)
+            false
+            (if (str_eq (prim-name (head entries)) n)
+                true
+                (prim-name-in? (tail entries) n))))
+
+    (defn prim-dup-count (entries)
+        (if (eq (len entries) 0)
+            0
+            (add (if (prim-name-in? (tail entries) (prim-name (head entries))) 1 0)
+                 (prim-dup-count (tail entries)))))
+
+    (defn prim-find (entries n)
+        (if (eq (len entries) 0)
+            0
+            (if (str_eq (prim-name (head entries)) n)
+                (head entries)
+                (prim-find (tail entries) n))))
+
+    ; ── the registry — main.go registration order ────────────────────────
+    (defn prim-registry () (list
+        (prim "print" "call" "writes args + newline to stdout, returns null; stdout is the contract validate compares"
+            (defn pv-print () (do (print "prim-registry-print-probe") 1)) 1 1)
+        (prim "str_len" "access" "byte length of a string"
+            (defn pv-str-len () (str_len "satsang")) 7 1)
+        (prim "substring" "access" "s[a:b) by byte index; out-of-range panics"
+            (defn pv-substring () (if (str_eq (substring "satsang" 3 7) "sang") 1 0)) 1 1)
+        (prim "char_at" "access" "one-byte string at index; out-of-range panics"
+            (defn pv-char-at () (if (str_eq (char_at "form" 0) "f") 1 0)) 1 1)
+        (prim "str_concat" "method" "two strings joined"
+            (defn pv-str-concat () (str_len (str_concat "sat" "sang"))) 7 1)
+        (prim "form_error" "witness" "panic-contract: panics with the message, never returns; carrier observes exit"
+            (defn pv-form-error () (do (form_error "prim-registry-probe") 0)) 0 0)
+        (prim "form-error" "witness" "panic-contract: kebab door of form_error"
+            (defn pv-form-error-k () (do (form-error "prim-registry-probe") 0)) 0 0)
+        (prim "source_scan_file" "call" "scans a file through a (source-lexicon ...) into token cells"
+            (defn pv-source-scan-file () (do (write_file_text "/tmp/prim-reg-scan.txt" "form")
+                (if (ge (len (source_scan_file "/tmp/prim-reg-scan.txt" (list "source-lexicon" (list) (list) "kw" "prop" "name" "int" "float" "string" "char" "op" (list) "" "" ""))) 1) 1 0))) 1 1)
+        (prim "pow" "method" "integer base**exp; negative exp yields 0"
+            (defn pv-pow () (pow 2 10)) 1024 1)
+        (prim "record_new" "method" "mutable record tagged by blueprint NodeID with k v pairs"
+            (defn pv-record-new () (if (record? (record_new (bp "PRIM-REGISTRY-PROBE") "x" 1)) 1 0)) 1 1)
+        (prim "record_get" "access" "field value by name, null when absent"
+            (defn pv-record-get () (record_get (record_new (bp "PRIM-REGISTRY-PROBE") "x" 41) "x")) 41 1)
+        (prim "record_set" "method" "mutates the field in place and returns the record"
+            (defn pv-record-set () (record_get (record_set (record_new (bp "PRIM-REGISTRY-PROBE") "x" 1) "x" 8) "x")) 8 1)
+        (prim "record_has" "access" "field presence as bool; absent field answers false"
+            (defn pv-record-has () (if (record_has (record_new (bp "PRIM-REGISTRY-PROBE") "x" 1) "x")
+                (if (record_has (record_new (bp "PRIM-REGISTRY-PROBE")) "y") 0 1) 0)) 1 1)
+        (prim "record_blueprint" "access" "the record's blueprint NodeID"
+            (defn pv-record-blueprint () (if (node_eq (record_blueprint (record_new (bp "PRIM-REGISTRY-PROBE"))) (bp "PRIM-REGISTRY-PROBE")) 1 0)) 1 1)
+        (prim "record_keys" "access" "field names in insertion order"
+            (defn pv-record-keys () (len (record_keys (record_new (bp "PRIM-REGISTRY-PROBE") "a" 1 "b" 2)))) 2 1)
+        (prim "record?" "access" "record type predicate; non-records answer false"
+            (defn pv-record? () (if (record? (record_new (bp "PRIM-REGISTRY-PROBE"))) (if (record? 7) 0 1) 0)) 1 1)
+        (prim "method_define" "method" "binds a closure as a named method on a blueprint; first param is the receiver"
+            (defn pv-method-define () (do
+                (method_define (bp "PRIM-REGISTRY-PROBE") "pv-def" (defn pv-method-define-m (self) 11))
+                (method_invoke (record_new (bp "PRIM-REGISTRY-PROBE")) "pv-def"))) 11 1)
+        (prim "method_has" "access" "method presence by record's blueprint; absent name answers false"
+            (defn pv-method-has () (do
+                (method_define (bp "PRIM-REGISTRY-PROBE") "pv-has" (defn pv-method-has-m (self) 1))
+                (if (method_has (record_new (bp "PRIM-REGISTRY-PROBE")) "pv-has")
+                    (if (method_has (record_new (bp "PRIM-REGISTRY-PROBE")) "pv-absent") 0 1) 0))) 1 1)
+        (prim "method_invoke" "method" "dispatches by blueprint, binds receiver then args"
+            (defn pv-method-invoke () (do
+                (method_define (bp "PRIM-REGISTRY-PROBE") "pv-inv" (defn pv-method-invoke-m (self n) (add n 4)))
+                (method_invoke (record_new (bp "PRIM-REGISTRY-PROBE")) "pv-inv" 3))) 7 1)
+        (prim "str_find" "access" "index of needle from start index, or -1"
+            (defn pv-str-find () (str_find "satsang" "sang" 0)) 3 1)
+        (prim "str_line_at" "access" "sibling-gap (go-only): the full line containing byte index, CR trimmed"
+            (defn pv-str-line-at () (if (str_eq (str_line_at "ab\ncd" 3) "cd") 1 0)) 1 0)
+        (prim "str_ascii_prefix" "access" "sibling-gap (go-only): longest leading pure-ASCII run"
+            (defn pv-str-ascii-prefix () (str_len (str_ascii_prefix (str_concat "ab" (byte_to_str 200))))) 2 0)
+        (prim "scan_run" "access" "end index of a contiguous byte-class run (0 ws, 1 digit, 2 alpha, 3 ident, 4 nonquote, 5 nonnl, 6 jsonsafe)"
+            (defn pv-scan-run () (scan_run "  form" 0 0)) 2 1)
+        (prim "string_fold" "call" "host-loop fold of (acc char) closure over a string's bytes"
+            (defn pv-string-fold () (string_fold "abc" 0 (defn pv-string-fold-step (acc c) (add acc 1)))) 3 1)
+        (prim "str_eq" "compare" "string equality; integers and nodes belong to eq"
+            (defn pv-str-eq () (if (str_eq "a" "a") (if (str_eq "a" "b") 0 1) 0)) 1 1)
+        (prim "int_to_str" "method" "renders any trivial value as text (int, bool, null, float passthrough)"
+            (defn pv-int-to-str () (str_len (int_to_str 1024))) 4 1)
+        (prim "value_str" "method" "sibling-gap (ts): canonical display string of any value"
+            (defn pv-value-str () (if (str_eq (value_str 42) "42") 1 0)) 1 0)
+        (prim "value_kind" "witness" "sibling-gap (ts): kind name of a value (int string bool null list closure node_id float record)"
+            (defn pv-value-kind () (if (str_eq (value_kind 7) "int") 1 0)) 1 0)
+        (prim "value-kind" "witness" "sibling-gap (ts): kebab door of value_kind"
+            (defn pv-value-kind-k () (if (str_eq (value-kind 7) "int") 1 0)) 1 0)
+        (prim "str_to_int" "method" "decimal parse; unparseable text answers 0"
+            (defn pv-str-to-int () (str_to_int "1024")) 1024 1)
+        (prim "str_to_float" "method" "sibling-gap (ts): float parse; round half-away pins 2.5 to 3"
+            (defn pv-str-to-float () (round (str_to_float "2.5"))) 3 0)
+        (prim "ord" "access" "first byte as int; empty string answers -1"
+            (defn pv-ord () (add (ord "A") (ord ""))) 64 1)
+        (prim "byte_to_str" "access" "one byte (0..255) as a one-char string; out-of-range answers empty"
+            (defn pv-byte-to-str () (if (str_eq (byte_to_str 65) "A") 1 0)) 1 1)
+        (prim "list" "list" "variadic list literal"
+            (defn pv-list () (len (list 1 2 3))) 3 1)
+        (prim "cons" "list" "prepends onto a list"
+            (defn pv-cons () (head (cons 9 (list 1)))) 9 1)
+        (prim "head" "list" "first element; empty answers null"
+            (defn pv-head () (head (list 7 8))) 7 1)
+        (prim "tail" "list" "list without its head; empty stays empty"
+            (defn pv-tail () (len (tail (list 1 2 3)))) 2 1)
+        (prim "len" "access" "polymorphic length: list elements, dict PAIRS, string bytes"
+            (defn pv-len () (add (len (list 1 2)) (len "abc"))) 5 1)
+        (prim "nth" "access" "element by index; out-of-range answers null"
+            (defn pv-nth () (nth (list 4 5 6) 2)) 6 1)
+        (prim "empty" "list" "constructs the empty list — an absence value, never a predicate"
+            (defn pv-empty () (len (empty))) 0 1)
+        (prim "_list_append" "list" "functional append: a NEW list xs ++ [x]"
+            (defn pv-list-append () (nth (_list_append (list 1) 9) 1)) 9 1)
+        (prim "_dict_new" "list" "tagged pair-list dict; len counts PAIRS not slots"
+            (defn pv-dict-new () (len (_dict_new "a" 1))) 1 1)
+        (prim "_dict_get" "access" "value by key, null when absent"
+            (defn pv-dict-get () (_dict_get (_dict_new "a" 1 "b" 2) "b")) 2 1)
+        (prim "_dict_set" "method" "functional upsert: existing key overwritten, new key appended"
+            (defn pv-dict-set () (_dict_get (_dict_set (_dict_new "a" 1) "a" 5) "a")) 5 1)
+        (prim "_dict_has" "compare" "key presence as bool"
+            (defn pv-dict-has () (if (_dict_has (_dict_new "a" 1) "a") (if (_dict_has (_dict_new "a" 1) "z") 0 1) 0)) 1 1)
+        (prim "_dict_keys" "access" "keys in insertion order"
+            (defn pv-dict-keys () (len (_dict_keys (_dict_new "a" 1 "b" 2)))) 2 1)
+        (prim "_dict_values" "access" "values in insertion order"
+            (defn pv-dict-values () (nth (_dict_values (_dict_new "a" 7)) 0)) 7 1)
+        (prim "_get" "access" "polymorphic get: record field, dict key, list index, string byte"
+            (defn pv-get () (add (_get (list 4 5) 1) (_get (_dict_new "k" 10) "k"))) 15 1)
+        (prim "_iter" "list" "iterable view: dict keys, list itself, string chars"
+            (defn pv-iter () (len (_iter "abc"))) 3 1)
+        (prim "_in" "compare" "membership: dict key, list element, substring"
+            (defn pv-in () (if (_in "an" "satsang") (if (_in 9 (list 1 2)) 0 1) 0)) 1 1)
+        (prim "min" "method" "least int of a list, or the single arg itself"
+            (defn pv-min () (add (min (list 3 1 2)) (min 9))) 10 1)
+        (prim "max" "method" "greatest int of a list, or the single arg itself"
+            (defn pv-max () (max (list 3 9 2))) 9 1)
+        (prim "abs" "method" "absolute value; pinned on a real -1 from str_find"
+            (defn pv-abs () (add (abs (str_find "a" "z" 0)) 1)) 2 1)
+        (prim "floor" "method" "float toward negative infinity as int; int passes through"
+            (defn pv-floor () (floor 2.7)) 2 1)
+        (prim "ceil" "method" "float toward positive infinity as int; int passes through"
+            (defn pv-ceil () (ceil 2.1)) 3 1)
+        (prim "trunc" "method" "float toward zero as int; int passes through"
+            (defn pv-trunc () (trunc 2.9)) 2 1)
+        (prim "round" "method" "half-AWAY-from-zero to int: 2.5 lands on 3"
+            (defn pv-round () (round 2.5)) 3 1)
+        (prim "_plus" "method" "polymorphic +: int add, float promotion, string and list concat"
+            (defn pv-plus () (add (_plus 2 3) (str_len (_plus "a" "b")))) 7 1)
+        (prim "math_sqrt" "method" "square root as float"
+            (defn pv-math-sqrt () (round (math_sqrt 9.0))) 3 1)
+        (prim "math_acos" "method" "sibling-gap (go-only): arccosine in radians; acos(0)*2 rounds to 3"
+            (defn pv-math-acos () (round (mul (math_acos 0.0) 2.0))) 3 0)
+        (prim "math_pi" "method" "the circle constant; *2 rounds to 6"
+            (defn pv-math-pi () (round (mul (math_pi) 2.0))) 6 1)
+        (prim "math_floor" "method" "CPython math.floor: float toward negative infinity as int"
+            (defn pv-math-floor () (math_floor 2.9)) 2 1)
+        (prim "math_ceil" "method" "CPython math.ceil: float toward positive infinity as int"
+            (defn pv-math-ceil () (math_ceil 2.1)) 3 1)
+        (prim "math_pow" "method" "float power"
+            (defn pv-math-pow () (round (math_pow 2.0 10.0))) 1024 1)
+        (prim "math_log" "method" "natural log; log(e) rounds to 1"
+            (defn pv-math-log () (round (math_log (math_exp 1.0)))) 1 1)
+        (prim "math_exp" "method" "e**x; exp(0) rounds to 1"
+            (defn pv-math-exp () (round (math_exp 0.0))) 1 1)
+        (prim "round_ndigits" "method" "CPython round(x, n): half-to-EVEN — 2.5 lands on 2, where round lands on 3"
+            (defn pv-round-ndigits () (round (round_ndigits 2.5 0))) 2 1)
+        (prim "make_float32" "witness" "interns an f32 trivial NodeID; 0.5 survives the narrowing exactly"
+            (defn pv-make-float32 () (round (mul (float_value (make_float32 0.5)) 2.0))) 1 1)
+        (prim "make_float64" "witness" "interns an f64 trivial NodeID"
+            (defn pv-make-float64 () (round (float_value (make_float64 2.5)))) 3 1)
+        (prim "read_file" "call" "whole file as string; missing file answers null"
+            (defn pv-read-file () (do (write_file_text "/tmp/prim-reg-rf.txt" "satsang") (str_len (read_file "/tmp/prim-reg-rf.txt")))) 7 1)
+        (prim "read_file_bytes" "call" "whole file as int byte list"
+            (defn pv-read-file-bytes () (do (write_file_text "/tmp/prim-reg-rb.txt" "satsang") (nth (read_file_bytes "/tmp/prim-reg-rb.txt") 0))) 115 1)
+        (prim "source_inventory" "call" "walks a tree, rows of [relative-path, line-count] filtered by suffix"
+            (defn pv-source-inventory () (do (fs_mkdir "/tmp/prim-reg-inv")
+                (do (write_file_text "/tmp/prim-reg-inv/a.txt" "x")
+                    (if (ge (len (source_inventory "/tmp/prim-reg-inv" ".txt" (list))) 1) 1 0)))) 1 1)
+        (prim "random_bytes" "call" "n bytes from /dev/urandom — values diverge by design, the length is the deterministic claim"
+            (defn pv-random-bytes () (len (random_bytes 8))) 8 1)
+        (prim "band" "method" "bitwise and"
+            (defn pv-band () (band 12 10)) 8 1)
+        (prim "bor" "method" "bitwise or"
+            (defn pv-bor () (bor 12 10)) 14 1)
+        (prim "bxor" "method" "bitwise xor"
+            (defn pv-bxor () (bxor 12 10)) 6 1)
+        (prim "bnot_u32" "method" "bitwise not under u32 semantics; ~0 + 1 wraps to 0 (literals stay int32, values are honest u32)"
+            (defn pv-bnot-u32 () (add_u32 (bnot_u32 0) 1)) 0 1)
+        (prim "shl_u32" "method" "u32 shift left, count masked to 31; the top bit round-trips"
+            (defn pv-shl-u32 () (shr_u32 (shl_u32 1 31) 31)) 1 1)
+        (prim "shr_u32" "method" "u32 logical shift right, count masked to 31"
+            (defn pv-shr-u32 () (shr_u32 1024 10)) 1 1)
+        (prim "rotr_u32" "method" "u32 rotate right; 1 rotated through 32 bits comes home"
+            (defn pv-rotr-u32 () (rotr_u32 (rotr_u32 1 1) 31)) 1 1)
+        (prim "add_u32" "method" "modular u32 addition: 2^31 + 2^31 wraps to 0"
+            (defn pv-add-u32 () (add_u32 (shl_u32 1 31) (shl_u32 1 31))) 0 1)
+        (prim "register_jit" "witness" "binds form-name to native-name for dispatch; 1 on bind, 0 when the native is unknown"
+            (defn pv-register-jit () (do (register_jit "pv-reg-probe" "add_u32") (unregister_jit "pv-reg-probe"))) 1 1)
+        (prim "unregister_jit" "witness" "removes a jit alias; 1 removed, 0 when none was bound"
+            (defn pv-unregister-jit () (add (unregister_jit "pv-unreg-absent")
+                (do (register_jit "pv-unreg-probe" "add_u32") (unregister_jit "pv-unreg-probe")))) 1 1)
+        (prim "recipe_to_bytes" "witness" "recipe subtree to .fkb wire bytes as an int list"
+            (defn pv-recipe-to-bytes () (if (ge (len (recipe_to_bytes (pv-probe-recipe))) 10) 1 0)) 1 1)
+        (prim "bytes_to_recipe" "witness" ".fkb wire bytes back to a walkable recipe — the round-trip keeps the value"
+            (defn pv-bytes-to-recipe () (walk_recipe (bytes_to_recipe (recipe_to_bytes (pv-probe-recipe))))) 5 1)
+        (prim "jit_compile" "witness" "host-JIT of a named closure: 1 compiled, 0 honest fallback, -1 unbound name"
+            (defn pv-jit-compile () (add (jit_compile "pv-jit-absent-name") 1)) 0 1)
+        (prim "jit_emit_c" "witness" "recipe lowered to C source on the go carrier; siblings answer honest empty"
+            (defn pv-jit-emit-c () (if (str_eq (jit_emit_c "pv-jit-absent-name") "") 1 0)) 1 1)
+        (prim "jit_compile_value" "witness" "toolchain: Value-ABI JIT on the go carrier (-1 unbound there); siblings answer constant 0"
+            (defn pv-jit-compile-value () (add (jit_compile_value "pv-jit-absent-name") 1)) 0 0)
+        (prim "jit_aliased?" "compare" "1 when a jit alias is bound for the name, else 0"
+            (defn pv-jit-aliased? () (add (jit_aliased? "pv-ali-absent")
+                (do (register_jit "pv-ali-probe" "add_u32")
+                    (add (jit_aliased? "pv-ali-probe")
+                         (do (unregister_jit "pv-ali-probe") (jit_aliased? "pv-ali-probe")))))) 1 1)
+        (prim "jit_compiled?" "compare" "sibling-gap (ts): 1 when the named closure's body holds a loaded artifact"
+            (defn pv-jit-compiled? () (jit_compiled? "pv-jit-absent-name")) 0 0)
+        (prim "jit-stats" "witness" "observer rows of (kind, body, count, detail) for jit state"
+            (defn pv-jit-stats () (if (ge (len (jit-stats)) 0) 1 0)) 1 1)
+        (prim "seeded_bytes" "call" "deterministic glibc-LCG byte stream: same (seed,count) everywhere"
+            (defn pv-seeded-bytes () (nth (seeded_bytes 1 2) 0)) 166 1)
+        (prim "sum_bytes_list" "call" "host-loop integer sum of a list"
+            (defn pv-sum-bytes-list () (sum_bytes_list (list 1 2 3))) 6 1)
+        (prim "write_form_binary" "call" "recipe to .fkb artifact on disk (string table + tree); answers bytes written"
+            (defn pv-write-form-binary () (if (gt (write_form_binary "/tmp/prim-reg.fkb" (pv-probe-recipe)) 0) 1 0)) 1 1)
+        (prim "read_form_binary" "call" ".fkb artifact back to a walkable recipe"
+            (defn pv-read-form-binary () (do (write_form_binary "/tmp/prim-reg-rt.fkb" (pv-probe-recipe))
+                (walk_recipe (read_form_binary "/tmp/prim-reg-rt.fkb")))) 5 1)
+        (prim "file_size" "call" "byte size from stat; missing answers -1"
+            (defn pv-file-size () (do (write_file_text "/tmp/prim-reg-sz.txt" "12345") (file_size "/tmp/prim-reg-sz.txt"))) 5 1)
+        (prim "file_mtime" "call" "modification unix seconds; missing answers -1"
+            (defn pv-file-mtime () (do (write_file_text "/tmp/prim-reg-mt.txt" "x")
+                (if (gt (file_mtime "/tmp/prim-reg-mt.txt") 0) 1 0))) 1 1)
+        (prim "file_byte_at" "call" "single byte at offset; missing or past-end answers -1"
+            (defn pv-file-byte-at () (do (write_file_text "/tmp/prim-reg-ba.txt" "satsang") (file_byte_at "/tmp/prim-reg-ba.txt" 0))) 115 1)
+        (prim "read_file_slice" "call" "length bytes from offset as string"
+            (defn pv-read-file-slice () (do (write_file_text "/tmp/prim-reg-sl.txt" "satsang")
+                (if (str_eq (read_file_slice "/tmp/prim-reg-sl.txt" 3 4) "sang") 1 0))) 1 1)
+        (prim "fs_exists" "call" "path presence: 1 or 0"
+            (defn pv-fs-exists () (do (fs_mkdir "/tmp/prim-reg-dir")
+                (add (fs_exists "/tmp/prim-reg-dir") (fs_exists "/tmp/prim-reg-absent-xyz")))) 1 1)
+        (prim "fs_is_dir" "call" "directory predicate: 1 or 0"
+            (defn pv-fs-is-dir () (do (fs_mkdir "/tmp/prim-reg-dir")
+                (add (fs_is_dir "/tmp/prim-reg-dir") (fs_is_dir "/tmp/prim-reg-absent-xyz")))) 1 1)
+        (prim "fs_mkdir" "call" "mkdir -p semantics: existing dir is success 0"
+            (defn pv-fs-mkdir () (add (fs_mkdir "/tmp/prim-reg-dir") (fs_mkdir "/tmp/prim-reg-dir"))) 0 1)
+        (prim "fs_rmdir" "call" "recursive directory removal: 0 ok, -1 not a dir"
+            (defn pv-fs-rmdir () (do (fs_mkdir "/tmp/prim-reg-rm/inner")
+                (do (write_file_text "/tmp/prim-reg-rm/inner/f.txt" "x")
+                    (add (fs_rmdir "/tmp/prim-reg-rm") (fs_exists "/tmp/prim-reg-rm"))))) 0 1)
+        (prim "fs_remove" "call" "removes one file: 0 ok, -1 missing or a dir"
+            (defn pv-fs-remove () (do (write_file_text "/tmp/prim-reg-del.txt" "x")
+                (add (fs_remove "/tmp/prim-reg-del.txt") (fs_exists "/tmp/prim-reg-del.txt")))) 0 1)
+        (prim "fs_rename" "call" "renames a path: 0 ok, -1 error"
+            (defn pv-fs-rename () (do (write_file_text "/tmp/prim-reg-a.txt" "x")
+                (do (fs_rename "/tmp/prim-reg-a.txt" "/tmp/prim-reg-b.txt")
+                    (add (fs_exists "/tmp/prim-reg-b.txt") (fs_exists "/tmp/prim-reg-a.txt"))))) 1 1)
+        (prim "fs_list" "call" "directory entry names; missing dir answers null"
+            (defn pv-fs-list () (do (fs_mkdir "/tmp/prim-reg-ls")
+                (do (write_file_text "/tmp/prim-reg-ls/one.txt" "x")
+                    (if (ge (len (fs_list "/tmp/prim-reg-ls")) 1) 1 0)))) 1 1)
+        (prim "socket_listen" "call" "socket-carrier: tcp listener on 127.0.0.1:port (0 = ephemeral); handle or -1"
+            (defn pv-socket-listen () (do (let h (socket_listen 0)) (do (socket_close h) (if (ge h 0) 1 0)))) 1 0)
+        (prim "socket_port" "call" "socket-carrier: bound port of a listener — the loopback basis"
+            (defn pv-socket-port () (do (let h (socket_listen 0)) (do (let p (socket_port h)) (do (socket_close h) (if (gt p 0) 1 0))))) 1 0)
+        (prim "socket_accept" "call" "socket-carrier: blocking accept; conn handle or -1"
+            (defn pv-socket-accept () (socket_accept -1)) -1 0)
+        (prim "socket_connect" "call" "socket-carrier: tcp dial host:port; conn handle or -1"
+            (defn pv-socket-connect () (socket_connect "127.0.0.1" 9)) -1 0)
+        (prim "socket_send" "call" "socket-carrier: bytes sent or -1 on a dead handle"
+            (defn pv-socket-send () (socket_send -1 "x")) -1 0)
+        (prim "socket_recv" "call" "socket-carrier: received string, empty on close or dead handle"
+            (defn pv-socket-recv () (str_len (socket_recv -1 4))) 0 0)
+        (prim "socket_close" "call" "socket-carrier: closes and drops a handle; 0 ok, -1 unknown"
+            (defn pv-socket-close () (socket_close -1)) -1 0)
+        (prim "make_nodeid" "witness" "raw 4-tuple NodeID; (1 2 12 1) IS the add category bp resolves"
+            (defn pv-make-nodeid () (if (node_eq (make_nodeid 1 2 12 1) (bp "add")) 1 0)) 1 1)
+        (prim "bp" "witness" "registered blueprint name to NodeID; unknown names fail loud"
+            (defn pv-bp () (node_type (bp "add"))) 12 1)
+        (prim "intern_trivial_int" "witness" "int as trivial NodeID; node_value reads it back"
+            (defn pv-intern-trivial-int () (node_value (intern_trivial_int 77))) 77 1)
+        (prim "intern_trivial_string" "witness" "string into the overflow table as a trivial NodeID"
+            (defn pv-intern-trivial-string () (if (str_eq (node_value (intern_trivial_string "sat")) "sat") 1 0)) 1 1)
+        (prim "intern_trivial_bool" "witness" "bool as trivial NodeID; inst carries the bit"
+            (defn pv-intern-trivial-bool () (add (node_inst (intern_trivial_bool true)) (node_inst (intern_trivial_bool false)))) 1 1)
+        (prim "intern_trivial_float" "witness" "float from its SOURCE TEXT into the overflow table"
+            (defn pv-intern-trivial-float () (round (mul (float_value (intern_trivial_float "0.5")) 2.0))) 1 1)
+        (prim "float_value" "method" "decodes a TrivFloat NodeID back to a live float"
+            (defn pv-float-value () (round (float_value (make_float64 1.5)))) 2 1)
+        (prim "print_float" "method" "sibling-gap (go-only): prints a float clean (%.10g) and returns null"
+            (defn pv-print-float () (do (print_float 2.5) 1)) 1 0)
+        (prim "dot_product" "method" "float dot product of equal-length vectors"
+            (defn pv-dot-product () (round (dot_product (list 1.0 2.0) (list 3.0 4.0)))) 11 1)
+        (prim "magnitude" "method" "euclidean norm; the 3-4-5 triangle pins it"
+            (defn pv-magnitude () (round (magnitude (list 3.0 4.0)))) 5 1)
+        (prim "vector_cosine" "method" "cosine similarity; zero-norm answers 0"
+            (defn pv-vector-cosine () (round (mul (vector_cosine (list 1.0 0.0) (list 1.0 0.0)) 10.0))) 10 1)
+        (prim "pair_angle" "method" "sibling-gap (go-only): angle in radians via clamped cosine; orthogonal*2 rounds to 3"
+            (defn pv-pair-angle () (round (mul (pair_angle (list 1.0 0.0) (list 0.0 1.0)) 2.0))) 3 0)
+        (prim "dominant_band_delta" "method" "sibling-gap (go-only): [band index, max abs delta] between two vectors"
+            (defn pv-dominant-band-delta () (round (nth (dominant_band_delta (list 0.0 5.0) (list 0.0 1.0)) 0))) 1 0)
+        (prim "intern_node" "witness" "content-addressed composite from category + children; the recipe constructor"
+            (defn pv-intern-node () (walk_recipe (pv-probe-recipe))) 5 1)
+        (prim "substrate_mark" "witness" "live root NodeIDs the kernel currently holds"
+            (defn pv-substrate-mark () (if (ge (len (substrate_mark)) 0) 1 0)) 1 1)
+        (prim "substrate_counts" "witness" "intern-table population rows"
+            (defn pv-substrate-counts () (if (ge (len (substrate_counts)) 1) 1 0)) 1 1)
+        (prim "substrate_release" "witness" "releases listed roots from the active set; empty release answers 0"
+            (defn pv-substrate-release () (substrate_release (list))) 0 1)
+        (prim "substrate_gc" "witness" "sweep-hazard: collects nodes unreachable from the given roots — can sweep band tissue mid-walk"
+            (defn pv-substrate-gc () (if (ge (len (substrate_gc (list))) 0) 1 0)) 1 0)
+        (prim "node_category" "witness" "a composite's category NodeID"
+            (defn pv-node-category () (if (node_eq (node_category (pv-probe-recipe)) (bp "add")) 1 0)) 1 1)
+        (prim "node_children" "witness" "a composite's child NodeIDs"
+            (defn pv-node-children () (len (node_children (pv-probe-recipe)))) 2 1)
+        (prim "node_value" "witness" "a trivial's value"
+            (defn pv-node-value () (node_value (intern_trivial_int 41))) 41 1)
+        (prim "node_pkg" "witness" "the pkg coordinate of a NodeID"
+            (defn pv-node-pkg () (node_pkg (make_nodeid 2 3 4 5))) 2 1)
+        (prim "node_level" "witness" "the level coordinate of a NodeID"
+            (defn pv-node-level () (node_level (make_nodeid 2 3 4 5))) 3 1)
+        (prim "node_type" "witness" "the type coordinate of a NodeID"
+            (defn pv-node-type () (node_type (make_nodeid 2 3 4 5))) 4 1)
+        (prim "node_inst" "witness" "the inst coordinate of a NodeID"
+            (defn pv-node-inst () (node_inst (make_nodeid 2 3 4 5))) 5 1)
+        (prim "node_eq" "compare" "structural NodeID equality; non-NodeID args fail loud"
+            (defn pv-node-eq () (if (node_eq (bp "add") (bp "add")) (if (node_eq (bp "add") (bp "mul")) 0 1) 0)) 1 1)
+        (prim "value_eq" "compare" "polymorphic equality within a kind; cross-kind answers false"
+            (defn pv-value-eq () (if (value_eq 7 7) (if (value_eq 7 "7") 0 1) 0)) 1 1)
+        (prim "intern_node_at" "witness" "intern_node plus (file line col) source attribution into the framebuffer"
+            (defn pv-intern-node-at () (walk_recipe (intern_node_at (bp "add")
+                (list (intern_trivial_int 2) (intern_trivial_int 3)) "prim-registry-probe.fk" 1 1))) 5 1)
+        (prim "node_source" "witness" "reads back (file line col) attribution; unattributed answers empty"
+            (defn pv-node-source () (nth (node_source (intern_node_at (bp "add")
+                (list (intern_trivial_int 1) (intern_trivial_int 1)) "prim-reg-src.fk" 7 3)) 1)) 7 1)
+        (prim "framebuffer-events" "witness" "all NodeIDs holding source attribution"
+            (defn pv-framebuffer-events () (if (ge (len (framebuffer-events)) 0) 1 0)) 1 1)
+        (prim "framebuffer-event-rows" "witness" "sibling-gap (ts has it, rust does not): ordered detail rows of the framebuffer"
+            (defn pv-framebuffer-event-rows () (if (ge (len (framebuffer-event-rows)) 0) 1 0)) 1 0)
+        (prim "framebuffer-counts" "witness" "sibling-gap (ts has it, rust does not): (file line col count) aggregation rows"
+            (defn pv-framebuffer-counts () (if (ge (len (framebuffer-counts)) 0) 1 0)) 1 0)
+        (prim "framebuffer-observe-start" "witness" "sibling-gap (go-only): turns runtime observation on"
+            (defn pv-framebuffer-observe-start () (do (framebuffer-observe-start)
+                (if (framebuffer-observe-active?) (do (framebuffer-observe-stop) 1) 0))) 1 0)
+        (prim "framebuffer-observe-stop" "witness" "sibling-gap (go-only): turns runtime observation off"
+            (defn pv-framebuffer-observe-stop () (do (framebuffer-observe-start)
+                (do (framebuffer-observe-stop) (if (framebuffer-observe-active?) 0 1)))) 1 0)
+        (prim "framebuffer-observe-active?" "compare" "sibling-gap (go-only): observation state as bool, off by default"
+            (defn pv-framebuffer-observe-active? () (if (framebuffer-observe-active?) 0 1)) 1 0)
+        (prim "framebuffer-clear" "witness" "resets attribution, sequence, and roots for bounded windows"
+            (defn pv-framebuffer-clear () (do (framebuffer-clear)
+                (if (eq (len (framebuffer-events)) 0) 1 0))) 1 1)
+        (prim "serialize-recipe" "witness" "recipe tree to flat bytes: 5 BE u32 per node + children"
+            (defn pv-serialize-recipe () (if (ge (len (serialize-recipe (pv-probe-recipe))) 20) 1 0)) 1 1)
+        (prim "deserialize-recipe" "witness" "flat bytes back to a recipe; re-interning keeps content-addressed identity"
+            (defn pv-deserialize-recipe () (walk_recipe (deserialize-recipe (serialize-recipe (pv-probe-recipe))))) 5 1)
+        (prim "write_file_bytes" "call" "writes an int byte list; answers bytes written"
+            (defn pv-write-file-bytes () (write_file_bytes "/tmp/prim-reg-wb.bin" (list 1 2 3))) 3 1)
+        (prim "file_append_bytes" "call" "atomic O_APPEND under the kernel lock; answers NEW TOTAL size"
+            (defn pv-file-append-bytes () (do (write_file_bytes "/tmp/prim-reg-ap.bin" (list 1 2))
+                (file_append_bytes "/tmp/prim-reg-ap.bin" (list 3)))) 3 1)
+        (prim "write_file_text" "call" "writes a string; answers bytes written"
+            (defn pv-write-file-text () (write_file_text "/tmp/prim-reg-wt.txt" "sat")) 3 1)
+        (prim "walk-cached" "witness" "memoized walk keyed by recipe NodeID; caller asserts purity"
+            (defn pv-walk-cached () (add (walk-cached (pv-probe-recipe)) (walk-cached (pv-probe-recipe)))) 10 1)
+        (prim "walk-cache-clear" "witness" "empties the walk cache and its counters"
+            (defn pv-walk-cache-clear () (do (walk-cache-clear) (if (eq (walk-cache-size) 0) 1 0))) 1 1)
+        (prim "walk-cache-size" "witness" "entries currently held in the walk cache"
+            (defn pv-walk-cache-size () (do (walk-cache-clear) (do (walk-cached (pv-probe-recipe)) (walk-cache-size)))) 1 1)
+        (prim "walk-cache-stats" "witness" "(hits misses size) of the walk cache"
+            (defn pv-walk-cache-stats () (if (eq (len (walk-cache-stats)) 3) 1 0)) 1 1)
+        (prim "compile_form_source" "witness" "sibling-gap (go-only): raw S-expression text to a pinned recipe root"
+            (defn pv-compile-form-source () (walk_recipe (compile_form_source "(add 2 3)" "prim-registry-probe"))) 5 0)
+        (prim "compile-form-source" "witness" "sibling-gap (go-only): kebab door of compile_form_source"
+            (defn pv-compile-form-source-k () (walk_recipe (compile-form-source "(add 2 3)" "prim-registry-probe"))) 5 0)
+        (prim "compile_source_section" "witness" "sibling-gap (go-only): one named BML section compiled into the kernel"
+            (defn pv-compile-source-section () (do (compile_source_section "section [p] { def pv-css-probe() = 41; }" "p" "prim-registry-probe")
+                (str_len (source_compile_last_error)))) 0 0)
+        (prim "compile-source-section" "witness" "sibling-gap (go-only): kebab door of compile_source_section"
+            (defn pv-compile-source-section-k () (do (compile-source-section "section [p] { def pv-cssk-probe() = 41; }" "p" "prim-registry-probe")
+                (str_len (source-compile-last-error)))) 0 0)
+        (prim "compile_source_text" "witness" "sibling-gap (go-only): whole BML source text compiled into the kernel"
+            (defn pv-compile-source-text () (do (compile_source_text "section [p] { def pv-cst-probe() = 41; }" "prim-registry-probe")
+                (str_len (source_compile_last_error)))) 0 0)
+        (prim "compile-source-text" "witness" "sibling-gap (go-only): kebab door of compile_source_text"
+            (defn pv-compile-source-text-k () (do (compile-source-text "section [p] { def pv-cstk-probe() = 41; }" "prim-registry-probe")
+                (str_len (source-compile-last-error)))) 0 0)
+        (prim "source_compile_last_error" "witness" "sibling-gap (go-only): last source-compile error text; a broken section sets it"
+            (defn pv-source-compile-last-error () (do (compile_source_text "section [" "prim-registry-probe")
+                (if (gt (str_len (source_compile_last_error)) 0) 1 0))) 1 0)
+        (prim "source-compile-last-error" "witness" "sibling-gap (go-only): kebab door of source_compile_last_error"
+            (defn pv-source-compile-last-error-k () (do (compile-source-text "section [" "prim-registry-probe")
+                (if (gt (str_len (source-compile-last-error)) 0) 1 0))) 1 0)
+        (prim "walk_recipe" "witness" "walks a recipe root in a fresh frame — the realization door"
+            (defn pv-walk-recipe () (walk_recipe (pv-probe-recipe))) 5 1)
+        (prim "walk_parallel" "witness" "walks pure roots across workers; impure roots fall back sequential"
+            (defn pv-walk-parallel () (nth (walk_parallel (list (pv-probe-recipe)) 1) 0)) 5 1)
+        (prim "walk-parallel" "witness" "kebab door of walk_parallel"
+            (defn pv-walk-parallel-k () (nth (walk-parallel (list (pv-probe-recipe)) 1) 0)) 5 1)
+        (prim "walk_parallel_cached" "witness" "walk_parallel with walk-cache reuse and duplicate-root fanout"
+            (defn pv-walk-parallel-cached () (nth (walk_parallel_cached (list (pv-probe-recipe)) 1) 0)) 5 1)
+        (prim "walk-parallel-cached" "witness" "kebab door of walk_parallel_cached"
+            (defn pv-walk-parallel-cached-k () (nth (walk-parallel-cached (list (pv-probe-recipe)) 1) 0)) 5 1)
+        (prim "native_blueprint" "witness" "a native's Form category NodeID from inside Form; unknown answers null"
+            (defn pv-native-blueprint () (if (node_eq (native_blueprint "str_len") (native_blueprint "nth")) 1 0)) 1 1)
+        (prim "trace" "undefined" "prints [trace label] value to stderr and returns the value; no category claimed yet"
+            (defn pv-trace () (trace "prim-registry" 7)) 7 1)
+        (prim "now_unix_ms" "call" "host wall-clock ms; shape-only claim — values diverge between invocations"
+            (defn pv-now-unix-ms () (if (gt (now_unix_ms) 0) 1 0)) 1 1)
+        (prim "field_blueprint" "field" "Field Model constructor: interns a FIELD/1 composite over children"
+            (defn pv-field-blueprint () (len (node_children (field_blueprint (list (intern_trivial_int 1) (intern_trivial_int 2)))))) 2 1)
+        (prim "field_cell" "field" "Field Model constructor: interns a FIELD/2 composite over children"
+            (defn pv-field-cell () (len (node_children (field_cell (list (intern_trivial_int 1)))))) 1 1)
+        (prim "field_carrier" "field" "Field Model constructor: CARRIER composite"
+            (defn pv-field-carrier () (len (node_children (field_carrier (list (intern_trivial_int 1)))))) 1 1)
+        (prim "field_topology" "field" "Field Model constructor: TOPOLOGY composite"
+            (defn pv-field-topology () (len (node_children (field_topology (list (intern_trivial_int 1)))))) 1 1)
+        (prim "field_fiber" "field" "Field Model constructor: FIBER composite"
+            (defn pv-field-fiber () (len (node_children (field_fiber (list (intern_trivial_int 1)))))) 1 1)
+        (prim "field_region" "field" "Field Model constructor: REGION composite"
+            (defn pv-field-region () (len (node_children (field_region (list (intern_trivial_int 1)))))) 1 1)
+        (prim "field_boundary" "field" "Field Model constructor: BOUNDARY composite"
+            (defn pv-field-boundary () (len (node_children (field_boundary (list (intern_trivial_int 1)))))) 1 1)
+        (prim "field_neighborhood" "field" "Field Model constructor: NEIGHBORHOOD composite"
+            (defn pv-field-neighborhood () (len (node_children (field_neighborhood (list (intern_trivial_int 1)))))) 1 1)
+        (prim "field_match" "field" "Field Model constructor: MATCH-FIELD composite"
+            (defn pv-field-match () (len (node_children (field_match (list (intern_trivial_int 1)))))) 1 1)
+        (prim "field_delta" "field" "Field Model constructor: DELTA composite"
+            (defn pv-field-delta () (len (node_children (field_delta (list (intern_trivial_int 1)))))) 1 1)
+        (prim "field_resolve" "field" "Field Model constructor: RESOLVE composite"
+            (defn pv-field-resolve () (len (node_children (field_resolve (list (intern_trivial_int 1)))))) 1 1)
+        (prim "field_commit" "field" "Field Model constructor: COMMIT composite"
+            (defn pv-field-commit () (len (node_children (field_commit (list (intern_trivial_int 1)))))) 1 1)
+        (prim "field_step" "field" "Field Model constructor: STEP composite"
+            (defn pv-field-step () (len (node_children (field_step (list (intern_trivial_int 1)))))) 1 1)
+        (prim "field_lift" "field" "Field Model constructor: LIFT composite"
+            (defn pv-field-lift () (len (node_children (field_lift (list (intern_trivial_int 1)))))) 1 1)
+        (prim "field_sample" "field" "Field Model constructor: SAMPLE composite"
+            (defn pv-field-sample () (len (node_children (field_sample (list (intern_trivial_int 1)))))) 1 1)
+        (prim "field_observe" "field" "Field Model constructor: OBSERVE composite"
+            (defn pv-field-observe () (len (node_children (field_observe (list (intern_trivial_int 1)))))) 1 1)
+        (prim "field_intervene" "field" "Field Model constructor: INTERVENE composite"
+            (defn pv-field-intervene () (len (node_children (field_intervene (list (intern_trivial_int 1)))))) 1 1)
+        (prim "field_residual" "field" "Field Model constructor: RESIDUAL composite"
+            (defn pv-field-residual () (len (node_children (field_residual (list (intern_trivial_int 1)))))) 1 1)
+        (prim "field_receipt" "field" "Field Model constructor: RECEIPT composite"
+            (defn pv-field-receipt () (len (node_children (field_receipt (list (intern_trivial_int 1)))))) 1 1)
+        (prim "field_cost" "field" "Field Model constructor: COST composite"
+            (defn pv-field-cost () (len (node_children (field_cost (list (intern_trivial_int 1)))))) 1 1)
+        (prim "field_consent" "field" "Field Model constructor: CONSENT composite"
+            (defn pv-field-consent () (len (node_children (field_consent (list (intern_trivial_int 1)))))) 1 1)
+        (prim "field_evidence" "field" "Field Model constructor: EVIDENCE composite"
+            (defn pv-field-evidence () (len (node_children (field_evidence (list (intern_trivial_int 1)))))) 1 1)
+        (prim "walk_recipe_here" "witness" "walks a recipe in the CALLER's env so its lets land in scope; pins the root"
+            (defn pv-walk-recipe-here () (walk_recipe_here (pv-probe-recipe))) 5 1)))
+
+    0)

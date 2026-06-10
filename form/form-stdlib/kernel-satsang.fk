@@ -17,8 +17,10 @@
 ;           straight lane), channel-interface.fk (offered modes; an
 ;           un-offered mode is invasion, dropped), satsang-share.fk
 ;           (state-boundary crossings are share-worthy signals).
-; Kin:      kernel-core-self.fk (the minimal self image, BML authority) and
-;           value-execution.fk (no claim survives without execution proof).
+; Kin:      kernel-core-self.fk (the minimal self image, BML authority),
+;           value-execution.fk (no claim survives without execution proof),
+;           and primitive-registry.fk (this part-discipline applied to the
+;           kernel's whole real native surface, entry by entry).
 ; Proven by: form-stdlib/tests/kernel-satsang-band.fk — three-way at
 ;           validate.sh, and through --binary for the native artifact path.
 
