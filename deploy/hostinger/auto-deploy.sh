@@ -1005,12 +1005,12 @@ ensure_kernel_router_canary() {
   while (( $(date +%s) < deadline )); do
     if docker compose "${compose_args[@]}" exec -T kernel-router-bml-front-door sh -lc \
       "for spec in \
-        'runtime-events|/api/runtime/events?limit=1&source=api' \
-        'views-stats|/api/views/stats/lc-attuned-spaces?days=30' \
-        'reaction-summary|/api/reactions/concept/lc-attuned-spaces/summary' \
-        'reaction-threads|/api/reactions/concept/lc-attuned-spaces/threads' \
-        'concept-voices|/api/concepts/lc-attuned-spaces/voices'; do \
-          name=\${spec%%|*}; url=\${spec#*|}; \
+        'runtime-events|/api/runtime/events?limit=1&source=api|api_runtime_events' \
+        'views-stats|/api/views/stats/lc-attuned-spaces?days=30|api_views_stats' \
+        'reaction-summary|/api/reactions/concept/lc-attuned-spaces/summary|api_reaction_concept_summary' \
+        'reaction-threads|/api/reactions/concept/lc-attuned-spaces/threads|api_reaction_concept_threads' \
+        'concept-voices|/api/concepts/lc-attuned-spaces/voices|api_concept_voices'; do \
+          name=\${spec%%|*}; rest=\${spec#*|}; url=\${rest%%|*}; handler=\${rest#*|}; \
           if ! curl -fsS -D /tmp/promoted-\${name}.headers -o /tmp/promoted-\${name}.body \
             \"http://127.0.0.1:8080\${url}\" \
             -H 'Accept: application/json'; then \
@@ -1024,6 +1024,16 @@ ensure_kernel_router_canary() {
             echo; \
             exit 1; \
           fi; \
+          if ! grep -qi \"^X-Form-Handler: \${handler}\" /tmp/promoted-\${name}.headers; then \
+            echo \"promoted route missing native handler proof: \${name}\"; \
+            sed -n '1,40p' /tmp/promoted-\${name}.headers; \
+            exit 1; \
+          fi; \
+          if ! grep -qi '^X-Form-Python-Authority: false' /tmp/promoted-\${name}.headers; then \
+            echo \"promoted route missing native authority proof: \${name}\"; \
+            sed -n '1,40p' /tmp/promoted-\${name}.headers; \
+            exit 1; \
+          fi; \
         done" \
       2>&1 | tee -a "$LOG_FILE"; then
       probe_ok=1
@@ -1032,7 +1042,7 @@ ensure_kernel_router_canary() {
     sleep 3
   done
   if [[ "$probe_ok" != "1" ]]; then
-    log "FAIL: BML front-door promoted read routes did not return native router proof"
+    log "FAIL: BML front-door promoted read routes did not return native proof headers"
     exit 1
   fi
 
