@@ -1,0 +1,40 @@
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk
+;
+; fourth-os-band — the Form-OS face of the fourth sibling, proven three-way:
+; the UNIVERSAL walker (no baked program — it loads a table FILE through the
+; fs port and runs it: one binary, many programs), the self-JIT lane (native
+; alternatives lowered FROM the cells, heat-flipped at runtime), and the organ
+; ops (RAM set/get, clock, entropy). Cross-kernel text agreement is pinned by
+; exact emission LENGTHS (a divergent kernel emits a different length and the
+; verdicts split); behavior on real hardware is the audit's half.
+;
+; Verdict 15 when the OS face holds:
+;   1   the table FILE is canonical — ADD(LIT 40, LIT 2) serializes to
+;       1 2 3 1 40 0 0 1 2 0 0 3 0 1 0 (function count, roots, row count, rows)
+;   2   the universal walker's full emission is 2878 bytes and deterministic —
+;       program-independent constant tissue, loader and organ arms included
+;   4   the native lowering is faithful text — ADD(LIT 1, ARG) lowers to
+;       (1 + a) — and the jit emission for CALL-fib is 2932 bytes
+;   8   the organ program (RAM roundtrip + clock + entropy, mask 7) flattens
+;       to its 23 rows with tags 13..16 present in the table
+(do
+    (let c0 (if (str_eq (fkc-table-file (list (fk-add (fk-lit 40) (fk-lit 2)))) "1 2 3 1 40 0 0 1 2 0 0 3 0 1 0") 1 0))
+
+    (let c1 (if (eq (str_len (fkc-emit-universal)) 2878)
+                (if (str_eq (fkc-emit-universal) (fkc-emit-universal)) 2 0) 0))
+
+    (let fibc (fk-if (fk-le (fk-arg) (fk-lit 1)) (fk-arg)
+                     (fk-add (fk-call 0 (fk-sub (fk-arg) (fk-lit 1)))
+                             (fk-call 0 (fk-sub (fk-arg) (fk-lit 2))))))
+    (let c2 (if (str_eq (fkc-nat-expr (fk-add (fk-lit 1) (fk-arg))) "(1 + a)")
+                (if (eq (str_len (fkc-emit-jit (list fibc))) 2932) 4 0) 0))
+
+    (let organ (fk-add (fk-if (fk-sub (fk-set (fk-lit 7) (fk-lit 42)) (fk-get (fk-lit 7))) (fk-lit 0) (fk-lit 1))
+               (fk-add (fk-if (fk-le (fk-time) (fk-lit 0)) (fk-lit 0) (fk-lit 2))
+                       (fk-if (fk-sub (fk-rnd) (fk-rnd)) (fk-lit 4) (fk-lit 0)))))
+    (let orows (nth (fkc-flatten-many (list organ)) 0))
+    (let c3 (if (eq (len orows) 23)
+                (if (eq (fkd-has-tag orows 13) 1)
+                    (if (eq (fkd-has-tag orows 16) 1) 8 0) 0) 0))
+
+    (add c0 (add c1 (add c2 c3))))

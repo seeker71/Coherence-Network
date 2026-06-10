@@ -299,5 +299,61 @@ echo "  (the compiler runs as a recipe here; the standalone compiler-binary that
 echo "   source through the port is m4e2 heap + m4e4 strings — named in fourth-kernel.form)"
 
 echo
+# ── 8-10. the Form-OS face: universal loader, self-JIT on heat, the organs ──
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
+    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" "$FORMDIR/form-stdlib/bmf-mini.fk" > "$work/os-driver.fk"
+cat >> "$work/os-driver.fk" <<'EOF'
+(let fibc (fk-if (fk-le (fk-arg) (fk-lit 1)) (fk-arg) (fk-add (fk-call 0 (fk-sub (fk-arg) (fk-lit 1))) (fk-call 0 (fk-sub (fk-arg) (fk-lit 2))))))
+(let even (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-lit 1) (fk-call 1 (fk-sub (fk-arg) (fk-lit 1)))))
+(let odd  (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-lit 0) (fk-call 0 (fk-sub (fk-arg) (fk-lit 1)))))
+(let g1 (list (bmf-rule 1 3 10) (bmf-rule 2 4 3)))
+(let organ (fk-add (fk-if (fk-sub (fk-set (fk-lit 7) (fk-lit 42)) (fk-get (fk-lit 7))) (fk-lit 0) (fk-lit 1))
+           (fk-add (fk-if (fk-le (fk-time) (fk-lit 0)) (fk-lit 0) (fk-lit 2))
+                   (fk-if (fk-sub (fk-rnd) (fk-rnd)) (fk-lit 4) (fk-lit 0)))))
+(print "==UNI==")
+(print (fkc-emit-universal))
+(print "==TFIB==")
+(print (fkc-table-file (list fibc)))
+(print "==TEO==")
+(print (fkc-table-file (list even odd)))
+(print "==TBMF==")
+(print (fkc-table-file (list (bmf-compile g1 (list 1 1 2)))))
+(print "==TORG==")
+(print (fkc-table-file (list organ)))
+(print "==JIT==")
+(print (fkc-emit-jit (list fibc)))
+(print "==END==")
+EOF
+(cd "$FORMDIR" && "$GO_BIN" "$work/os-driver.fk" 2>/dev/null) > "$work/os.out"
+sed -n '/^==UNI==$/,/^==TFIB==$/p' "$work/os.out" | sed -e '1d' -e '$d' > "$work/uni.c"
+sed -n '/^==TFIB==$/,/^==TEO==$/p' "$work/os.out" | sed -e '1d' -e '$d' > "$work/t-fib.txt"
+sed -n '/^==TEO==$/,/^==TBMF==$/p' "$work/os.out" | sed -e '1d' -e '$d' > "$work/t-eo.txt"
+sed -n '/^==TBMF==$/,/^==TORG==$/p' "$work/os.out" | sed -e '1d' -e '$d' > "$work/t-bmf.txt"
+sed -n '/^==TORG==$/,/^==JIT==$/p' "$work/os.out" | sed -e '1d' -e '$d' > "$work/t-org.txt"
+sed -n '/^==JIT==$/,/^==END==$/p' "$work/os.out" | sed -e '1d' -e '$d' > "$work/fkjit.c"
+"$CLANG" -O2 -o "$work/fkwu" "$work/uni.c"
+"$CLANG" -O2 -o "$work/fkjit" "$work/fkjit.c"
+u_fib="$("$work/fkwu" "$work/t-fib.txt" 28 | head -1)"
+u_e10="$("$work/fkwu" "$work/t-eo.txt" 10 | head -1)"; u_e7="$("$work/fkwu" "$work/t-eo.txt" 7 | head -1)"
+u_bmf="$("$work/fkwu" "$work/t-bmf.txt" 5 | head -1)"
+u_org="$("$work/fkwu" "$work/t-org.txt" 0 | head -1)"
+echo "UNIVERSAL walker (one binary, no baked program — loads table files through the fs port):"
+echo "  fib table -> $u_fib  even/odd -> $u_e10/$u_e7  bmf-grammar-compiled -> $u_bmf  organs -> $u_org"
+if [[ "$u_fib" != "$go_fib" || "$u_e10" != "1" || "$u_e7" != "0" || "$u_bmf" != "22" || "$u_org" != "7" ]]; then
+    echo "FAIL  universal walker parity broken"; exit 1
+fi
+echo "  organs mask 7 = RAM set/get roundtrip + real clock + entropy (two draws differed), physically"
+cold="$("$work/fkjit" 28 | head -1)"
+hotout="$("$work/fkjit" 28 50)"; hot="$(printf '%s\n' "$hotout" | head -1)"; njit="$(printf '%s\n' "$hotout" | tail -1)"
+cold_ms="$(median_ms 9 "$work/fkjit" 28)"
+hot_ms="$(median_ms 9 "$work/fkjit" 28 50)"
+echo "SELF-JIT on heat (native alternatives lowered FROM the cells; threshold flips dispatch at runtime):"
+echo "  cold fib28=$cold (${cold_ms} ms, walk only)  hot fib28=$hot (${hot_ms} ms, threshold 50, njit=$njit)"
+if [[ "$cold" != "$go_fib" || "$hot" != "$go_fib" || "$njit" == "0" ]]; then
+    echo "FAIL  self-JIT parity or flip broken"; exit 1
+fi
+echo "  parity held across the flip — gas cooled to ice on measured heat, the probe showing the crossing"
+
+echo
 echo "conditions: $(uname -m) $(uname -s), clang -O2, full-process invocations (startup included)"
 echo "ok — parity held and the rows are real; the spec is docs/coherence-substrate/fourth-kernel.form"

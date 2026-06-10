@@ -1,0 +1,120 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "worktree-fourth-kernel-seed",
+  "commit_scope": "The Form-OS face of the fourth sibling: (1) the UNIVERSAL walker — one emitted binary with no baked program loads node-table files through the fs port and runs them (any source with a grammar compiles to a table this binary runs); (2) self-JIT on heat — native alternatives lowered from the cells, dispatch flips at a runtime threshold with parity held; (3) organ ops with physical proofs — RAM set/get, real clock, entropy. Band three-way at 15; audit runs all three on real hardware.",
+  "files_owned": [
+    "form/form-stdlib/fourth-walker.fk",
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/tests/fourth-os-band.fk",
+    "scripts/fourth_kernel_audit.sh",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/coherence-substrate/INDEX.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/tests/fourth-os-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/tests/fourth-walker-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/tests/fourth-walker-emit-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/tests/fourth-fixpoint-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/tests/fourth-call-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/bmf-mini.fk form-stdlib/tests/bmf-mini-band.fk",
+      "scripts/fourth_kernel_audit.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-11_form_os_face_universal_jit_organs.json"
+    ],
+    "summary": "fourth-os-band holds three-way at 15: the table-file serialization is canonical; the universal walker's emission is 2878 bytes, deterministic, program-independent constant tissue (loader and organ arms included — a divergent kernel would emit a different length and split the verdicts); the native lowering text is faithful ((1 + a)) and the jit emission is 2932 bytes; the organ program flattens to 23 rows carrying tags 13..16. The audit ran the physical half: ONE universal binary ran four table files — fib 317811, even/odd 1/0, a bmf-grammar-compiled program 22, organs 7 (RAM write-42-read-42, real epoch clock positive, two entropy draws differed). The self-JIT binary held parity across the flip: fib28 cold 19.3 ms walking, hot 3.0 ms after flipping at threshold 50 (6.4x at runtime), njit=26 walker-to-native crossings in the probe. All six prior fourth-kernel bands re-proven green.",
+    "observed_delta": {
+      "fourth_os_band_verdict": 15,
+      "kernels_agreeing": 3,
+      "divergent": 0,
+      "universal_emission_bytes": 2878,
+      "jit_emission_bytes": 2932,
+      "universal_one_binary_four_programs": "fib 317811, even/odd 1/0, bmf-compiled 22, organs 7",
+      "self_jit_cold_ms": 19.3,
+      "self_jit_hot_ms": 3.0,
+      "self_jit_runtime_speedup": "6.4x",
+      "self_jit_njit_crossings": 26,
+      "organs_physical": "ram set/get roundtrip, clock epoch positive, entropy draws differed, fs via loader + PUTC, cpu via compute"
+    },
+    "known_limitations": [
+      {
+        "limitation": "The self-JIT's native alternatives are compiled into the baked binary at emission; a FOREIGN table loaded by the universal binary has no pre-lowered natives — true runtime codegen (the binary re-emitting C through the toolchain port, or mmap codegen) is the full crystallization wire, named open.",
+        "follow_up": "The universal binary already carries PUTC and the loader; the re-emit-and-exec lane composes from running parts."
+      },
+      {
+        "limitation": "Melt-on-cool is not wired — heat only rises within a run; learned-primitive's hysteresis is the named other half.",
+        "follow_up": "A decay term on fk_heat plus a flip-back check lands it; the probe already shows what is needed."
+      },
+      {
+        "limitation": "Organ proofs cover cpu/fs/ram/clock/entropy; net, hmi (screen/audio), and gpu are port-shaped and named for m4f — the resource-port discipline holds their doors.",
+        "follow_up": "Sockets via extern socket/connect declarations are the natural next organ; the quoteless constraint allows them."
+      },
+      {
+        "limitation": "RND uses arc4random (macOS/BSD native; glibc 2.36+ on Linux) — the audit names its conditions; older Linux needs the urandom-fd lane.",
+        "follow_up": "If CI hosts lack arc4random, switch the RND arm to open/read on /dev/urandom through the same loader externs."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "PR gates run all seven fourth-kernel bands three-way."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "form-stdlib additions ride the api image rebuild; the lattice ingests the updated fourth-kernel.form on the post-merge hook."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No route behavior changes. The fourth sibling gains its Form-OS face: a universal program-loading walker (one binary, many programs — any grammar's compiled output runs without rebuild), heat-triggered crystallization at runtime with parity, and physical organ proofs for ram/clock/entropy beside the existing fs/cpu.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "fourth-os-band pins the table-file canonical, both emissions' exact lengths (cross-kernel text agreement via verdict-coupled lengths), the native-lowering text, and the organ table shape, three-way at 15.",
+      "fourth_kernel_audit.sh sections 8-10: one universal binary runs four table files with parity; the self-JIT binary flips at threshold 50 with parity and visible njit; the organ mask returns 7 on real hardware."
+    ],
+    "summary": "validate.sh seven bands 1 ok 0 divergent each; audit end-to-end universal + self-JIT + organs, all parity-gated."
+  },
+  "phase_gate": {
+    "phase": "m4e-form-os-face",
+    "gate": "universal loading, heat-flip crystallization, and organ physicality proven; CI three-way + deploy ingest confirm the crossing",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "melt-on-cool; runtime codegen for foreign tables (the full crystallization wire); net/hmi/gpu organ ports (m4f); m4e2 heap + m4e3 real-recipe flattener toward the band ratchet"
+  },
+  "idea_ids": ["fourth-kernel"],
+  "spec_ids": ["kernel-native-api-readiness", "runtime-shared-native-representation"],
+  "task_ids": ["form-os-face-20260611"],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "form-os-proof-ask"]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation", "measurement"]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-fable-5"
+  },
+  "evidence_refs": [
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/coherence-substrate/host-kernel.form",
+    "form/form-stdlib/learned-primitive.fk",
+    "docs/system_audit/commit_evidence_2026-06-11_bmf_mini_m2.json"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/system_audit/commit_evidence_2026-06-11_form_os_face_universal_jit_organs.json",
+    "form/form-stdlib/fourth-walker.fk",
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/tests/fourth-os-band.fk",
+    "scripts/fourth_kernel_audit.sh"
+  ],
+  "change_intent": "runtime_feature"
+}
