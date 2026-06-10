@@ -23,8 +23,14 @@
     "parity_repairs_landed": [
       "form-kernel-ts: volatile_cell_put/get/delete/scan_since/prune_before ported (RAM organ now carried by all three siblings)",
       "form-kernel-ts: unix_ms_to_iso_utc ported (second-resolution ISO UTC, matching go)",
-      "form-kernel-rust: volatile_cell_scan_since aligned to go's (key value updated_ms) triple shape"
+      "form-kernel-rust: volatile_cell_scan_since aligned to go's (key value updated_ms) triple shape",
+      "form-kernel-rust + form-kernel-ts: ML vector trio ported (dot_product, magnitude, vector_cosine — IEEE 754 binary64 end to end, go semantics)",
+      "form-kernel-rust + form-kernel-ts: jit_compile_value offered as an honest 0-stub (1 compiled, 0 not-compiled-here, -1 missing) so the Value-ABI door never crashes a sibling"
     ],
+    "jit_span_band": {
+      "file": "form/form-stdlib/tests/jit-native-span-band.fk",
+      "results": "255, 1 ok, 0 divergent in source mode AND --binary — IEEE float, string, and ML vector recipes walk, ask for Value-ABI native compilation (go compiles to a host .so; rust/ts answer honest 0), and yield identical values across dispatch paths and kernels"
+    },
     "named_edges_left_open": [
       "int literals truncate at 32 bits in every kernel; the ts walker's add wraps at 32 bits while go and rust carry int64 — the band keeps constants inside int32; widening the integer model is its own movement",
       "pg_* natives are carried by go and rust only; the ts carrier does not offer the pg port yet, so the parity band checks http_get and socket_listen offers",

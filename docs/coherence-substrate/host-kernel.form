@@ -241,6 +241,9 @@
 #   # a real ELF .so from the band's recipe via the host toolchain):
 #   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/host-kernel-metal-band.fk
 #   cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/tests/host-kernel-metal-band.fk
+#   # IEEE floats, strings, and the ML vector trio through the Value-ABI
+#   # JIT — identical values across dispatch paths and kernels (255):
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/jit-native-span-band.fk
 #   # evidence: docs/system_audit/commit_evidence_2026-06-10_host_kernel_metal_band.json
 #
 #   # JIT native plugin path (Go kernel): exercised by the kernel's own suite.

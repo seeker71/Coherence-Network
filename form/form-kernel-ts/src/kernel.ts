@@ -2052,6 +2052,50 @@ export class Kernel {
     this.registerNative("math_sqrt", catMethod(), (_k, args) => {
       return { kind: "f64", float: Math.sqrt(argFloat(args, 0)) };
     });
+    // ── ML vector organ — sibling parity with the go carrier's trio.
+    // IEEE 754 binary64 end to end, so the same vectors yield the same
+    // bits on every kernel.
+    this.registerNative("dot_product", catMethod(), (_k, args) => {
+      const a = args[0];
+      const b = args[1];
+      if (a?.kind !== "list" || b?.kind !== "list" || a.list.length !== b.list.length) {
+        throw new Error("dot_product requires equal length vectors");
+      }
+      let sum = 0;
+      for (let i = 0; i < a.list.length; i++) {
+        sum += argFloat([a.list[i]!], 0) * argFloat([b.list[i]!], 0);
+      }
+      return { kind: "f64", float: sum };
+    });
+    this.registerNative("magnitude", catMethod(), (_k, args) => {
+      const v = args[0];
+      if (v?.kind !== "list") throw new Error("magnitude expects a vector");
+      let sum = 0;
+      for (const x of v.list) {
+        const f = argFloat([x], 0);
+        sum += f * f;
+      }
+      return { kind: "f64", float: Math.sqrt(sum) };
+    });
+    this.registerNative("vector_cosine", catMethod(), (_k, args) => {
+      const a = args[0];
+      const b = args[1];
+      if (a?.kind !== "list" || b?.kind !== "list" || a.list.length !== b.list.length) {
+        throw new Error("vector_cosine requires equal length vectors");
+      }
+      let dot = 0;
+      let na = 0;
+      let nb = 0;
+      for (let i = 0; i < a.list.length; i++) {
+        const fa = argFloat([a.list[i]!], 0);
+        const fb = argFloat([b.list[i]!], 0);
+        dot += fa * fb;
+        na += fa * fa;
+        nb += fb * fb;
+      }
+      if (na === 0 || nb === 0) return { kind: "f64", float: 0 };
+      return { kind: "f64", float: dot / (Math.sqrt(na) * Math.sqrt(nb)) };
+    });
     this.registerNative("math_pi", catMethod(), () => ({
       kind: "f64",
       float: Math.PI,
@@ -2285,6 +2329,14 @@ export class Kernel {
     // env. After a successful compile, every (form-name args...) call
     // dispatches through the compiled function instead of walking the
     // recipe tree — same canonical Form recipe; host-native speed.
+    // jit_compile_value — the Value-ABI JIT lives on the go carrier today;
+    // honest 0 so sibling-Form code can branch on availability
+    // (1 compiled, 0 not compiled here, -1 missing).
+    this.registerNative("jit_compile_value", catWitness(), () => ({
+      kind: "int",
+      int: 0,
+    }));
+
     this.registerEnvNative("jit_compile", catWitness(), (k, env, args) => {
       if (k.jitCompileHook === null) {
         // Compiler not installed on this kernel build — honest 0 so
