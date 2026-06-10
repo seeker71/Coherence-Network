@@ -1,0 +1,73 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "codex/bml-promoted-public-strict-20260611",
+  "commit_scope": "Make the public deploy verifier require full promoted BML native proof headers.",
+  "files_owned": [
+    "scripts/verify_web_api_deploy.sh",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "bash -n scripts/verify_web_api_deploy.sh",
+      "PUBLIC_API_BASE_URL=https://api.coherencycoin.com PUBLIC_WEB_BASE_URL=https://coherencycoin.com VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -lc 'source scripts/verify_web_api_deploy.sh; check_promoted_bml_read_routes_native'",
+      "PUBLIC_API_BASE_URL=https://api.coherencycoin.com PUBLIC_WEB_BASE_URL=https://coherencycoin.com ./scripts/verify_web_api_deploy.sh",
+      "git diff --check"
+    ],
+    "observations": [
+      "Production now emits X-Form-Router, X-Form-Handler, and X-Form-Python-Authority for all five promoted BML read routes.",
+      "The public deploy verifier now carries expected handler names in the promoted-route table and fails unless the handler and authority headers match.",
+      "The full verifier passed against production at 842ef637; the first native canary crossed a rollout boundary and settled after three attempts."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local and public verifier proof passed; CI, merge, and post-merge deploy proof remain for this branch."
+  },
+  "idea_ids": [
+    "oss-interface-alignment",
+    "kernel-native-route-goal"
+  ],
+  "spec_ids": [
+    "native-route-goal-loop",
+    "front-door-bml-route-catalog"
+  ],
+  "task_ids": [
+    "bml-promoted-public-strict-headers-2026-06-11"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "post-PR #2783 public header probes showed full promoted BML proof headers",
+    "check_promoted_bml_read_routes_native strict verifier output",
+    "full public deploy verifier output at production SHA 842ef637"
+  ],
+  "change_files": [
+    "scripts/verify_web_api_deploy.sh",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "process_only"
+}
