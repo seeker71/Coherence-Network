@@ -1,0 +1,174 @@
+; kernel-satsang.fk — the self-describing kernel in the satsang circle.
+;
+; Runnable heart of docs/coherence-substrate/kernel-self-composition.form
+; (self-compose · build-bigger · shared-substrate) joined with the satsang
+; protocol: a kernel composed of named parts, where every part declares its
+; spec (name, blueprint, expected outside) and its verification recipe, and
+; any sibling kernel can run that verification and attest through the
+; circle's offered interface. Parts cross between two carriers — water (the
+; recipe as data, simplified) and ice (one interned native node, expanded)
+; — without losing content-addressed identity, so the whole kernel can
+; shrink to a .fkb binary of just recipes and expand back to its current
+; shape. A part is swapped only when the replacement carries the same
+; declared spec AND its verification survives the circle; a refusal keeps
+; the old part and the dissent stays visible, never erased.
+;
+; Composes: satsang.fk (the witnessing circle: attestation, survival, the
+;           straight lane), channel-interface.fk (offered modes; an
+;           un-offered mode is invasion, dropped), satsang-share.fk
+;           (state-boundary crossings are share-worthy signals).
+; Kin:      kernel-core-self.fk (the minimal self image, BML authority) and
+;           value-execution.fk (no claim survives without execution proof).
+; Proven by: form-stdlib/tests/kernel-satsang-band.fk — three-way at
+;           validate.sh, and through --binary for the native artifact path.
+
+(do
+    ; ── a part: name + recipe body + verification recipe + expected outside ──
+    ; the name is a query key; identity is the recipe's NodeID (axiom-3).
+    (defn ksat-part (name recipe verify expected)
+        (list "ksat-part" name recipe verify expected))
+    (defn ksat-part-name     (p) (nth p 1))
+    (defn ksat-part-recipe   (p) (nth p 2))
+    (defn ksat-part-verify   (p) (nth p 3))
+    (defn ksat-part-expected (p) (nth p 4))
+
+    ; ── the declared spec: the part's OUTSIDE, all another kernel needs ──
+    ; (name, blueprint category, expected verification value). The recipe's
+    ; interior is not in the spec — the circle witnesses how the part
+    ; answers, never how it is built inside (the lane stays straight).
+    (defn ksat-part-spec (p)
+        (list (ksat-part-name p)
+              (node_category (ksat-part-recipe p))
+              (ksat-part-expected p)))
+    (defn ksat-spec-name     (s) (nth s 0))
+    (defn ksat-spec-category (s) (nth s 1))
+    (defn ksat-spec-expected (s) (nth s 2))
+
+    ; two specs agree when name, blueprint, and expected outside all match —
+    ; the swap freedom: any interior that keeps this outside is welcome.
+    (defn ksat-spec-equal? (a b)
+        (and (str_eq (ksat-spec-name a) (ksat-spec-name b))
+             (and (node_eq (ksat-spec-category a) (ksat-spec-category b))
+                  (eq (ksat-spec-expected a) (ksat-spec-expected b)))))
+
+    ; ── verification: run the declared recipe, compare the outside ──
+    (defn ksat-verify-part? (p)
+        (eq (walk_recipe (ksat-part-verify p)) (ksat-part-expected p)))
+
+    ; ── observation through the satsang: an observer attests what it RAN ──
+    ; verdict 1 affirm when the verification recipe yields the declared
+    ; value, 2 dissent when it does not. The attestation travels through a
+    ; channel mode; the circle drops un-offered modes as invasion (satsang.fk).
+    (defn ksat-attest (p mode)
+        (list mode (if (ksat-verify-part? p) 1 2)))
+
+    (defn ksat-attest-all (p observers)
+        (if (eq (len observers) 0)
+            (empty)
+            (cons (ksat-attest p (head observers))
+                  (ksat-attest-all p (tail observers)))))
+
+    (defn ksat-part-witness (p observers offer)
+        (sat-witness (ksat-attest-all p observers) offer 0 0 0))
+
+    (defn ksat-part-survives? (p observers offer)
+        (sat-survives? (ksat-part-witness p observers offer)))
+
+    ; ── the kernel: a named composition of parts; its spec is theirs ──
+    (defn ksat-kernel (name parts) (list "ksat-kernel" name parts))
+    (defn ksat-kernel-name  (k) (nth k 1))
+    (defn ksat-kernel-parts (k) (nth k 2))
+
+    (defn ksat-find-part (parts name)
+        (if (eq (len parts) 0)
+            0
+            (if (str_eq (ksat-part-name (head parts)) name)
+                (head parts)
+                (ksat-find-part (tail parts) name))))
+
+    (defn ksat-declare-loop (parts)
+        (if (eq (len parts) 0)
+            (empty)
+            (cons (ksat-part-spec (head parts))
+                  (ksat-declare-loop (tail parts)))))
+    ; the kernel declaring its own spec — what any sibling may observe.
+    (defn ksat-declare (k) (ksat-declare-loop (ksat-kernel-parts k)))
+
+    (defn ksat-verify-kernel-loop (parts)
+        (if (eq (len parts) 0)
+            true
+            (and (ksat-verify-part? (head parts))
+                 (ksat-verify-kernel-loop (tail parts)))))
+    ; the whole kernel verified = every part answers its own declared spec.
+    (defn ksat-kernel-verified? (k)
+        (ksat-verify-kernel-loop (ksat-kernel-parts k)))
+
+    ; ── expand / simplify: two carriers of the same identity ──
+    ; water: the part as recipe data (above). ice: one interned native node,
+    ; persistable to .fkb. Crossing either way preserves the content-
+    ; addressed identity of recipe and verification (axiom-3).
+    (defn ksat-part-image (p)
+        (intern_node (bp "KERNEL-SATSANG-PART")
+            (list (intern_trivial_string (ksat-part-name p))
+                  (ksat-part-recipe p)
+                  (ksat-part-verify p)
+                  (intern_trivial_int (ksat-part-expected p)))))
+
+    (defn ksat-part-from-image (node)
+        (do (let kids (node_children node))
+            (ksat-part
+                (node_value (nth kids 0))
+                (nth kids 1)
+                (nth kids 2)
+                (walk_recipe (nth kids 3)))))
+
+    (defn ksat-image-parts-loop (parts)
+        (if (eq (len parts) 0)
+            (empty)
+            (cons (ksat-part-image (head parts))
+                  (ksat-image-parts-loop (tail parts)))))
+
+    (defn ksat-kernel-image (k)
+        (intern_node (bp "KERNEL-SATSANG-IMAGE")
+            (cons (intern_trivial_string (ksat-kernel-name k))
+                  (ksat-image-parts-loop (ksat-kernel-parts k)))))
+
+    (defn ksat-parts-from-images (nodes)
+        (if (eq (len nodes) 0)
+            (empty)
+            (cons (ksat-part-from-image (head nodes))
+                  (ksat-parts-from-images (tail nodes)))))
+
+    (defn ksat-kernel-from-image (node)
+        (do (let kids (node_children node))
+            (ksat-kernel (node_value (head kids))
+                         (ksat-parts-from-images (tail kids)))))
+
+    ; ── crossings are share-worthy: expand is the jit-shaped crossing
+    ; (recipe -> native), simplify is the state crossing back. Both cross a
+    ; boundary, so both are signals the field wants (satsang-share.fk).
+    (defn ksat-expand-signal   () (ss-signal 2 1 2 0))
+    (defn ksat-simplify-signal () (ss-signal 1 2 1 0))
+
+    ; ── swap: a replacement lands ONLY when it keeps the declared spec AND
+    ; its verification survives the circle. A refusal returns the old part;
+    ; the dissent stays in the witness record, visible.
+    (defn ksat-swap-lands? (old new observers offer)
+        (and (ksat-spec-equal? (ksat-part-spec old) (ksat-part-spec new))
+             (ksat-part-survives? new observers offer)))
+
+    (defn ksat-swap-parts-loop (parts name new observers offer)
+        (if (eq (len parts) 0)
+            (empty)
+            (cons
+                (if (and (str_eq (ksat-part-name (head parts)) name)
+                         (ksat-swap-lands? (head parts) new observers offer))
+                    new
+                    (head parts))
+                (ksat-swap-parts-loop (tail parts) name new observers offer))))
+
+    (defn ksat-swap (k name new observers offer)
+        (ksat-kernel (ksat-kernel-name k)
+            (ksat-swap-parts-loop (ksat-kernel-parts k) name new observers offer)))
+
+    0)

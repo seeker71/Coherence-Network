@@ -63,7 +63,8 @@
     (organ       local-inference-as-organ.form)         # drive the silicon, do not reimplement it
     (on-a-host   kernel-on-android.form)                # a concrete host instance (Rust .so built)
     (carriers    form-kernel-go form-kernel-rust form-kernel-ts)  # 0..many implementations, proven equal by validate.sh
-    (self-compose kernel-self-composition.form))     # the kernel composed from the five axioms, self-extending
+    (self-compose kernel-self-composition.form)      # the kernel composed from the five axioms, self-extending
+    (runnable-cell host-kernel-cell.fk))             # the kernel AS the composition: hosts are measured, swappable carriers of one body
 
   # ── The kernel IS an implementation of core-axioms ───────────────────
   (implements-core
@@ -120,7 +121,7 @@
   (organs-and-ports                                     # status: RUNS native today | VIA-HOST through the host's own driver/OS API (allowed)
     (organ-cpu   driven  RUNS)                          # arithmetic + jit.go native plugin
     (organ-gpu   driven  VIA-HOST)                      # MLX/Metal/ANE — drive the host's driver; native optional — local-inference-as-organ.form
-    (organ-ram   driven  RUNS-partial)                  # volatile_cell_* KV runs; heap is host-GC, not a kernel primitive
+    (organ-ram   driven  RUNS-partial)                  # volatile_cell_* KV runs on all three siblings (ts ported 2026-06-10); heap is host-GC, not a kernel primitive
     (world-fs    port    RUNS)                          # read/write/stat/list — main.go
     (world-net   port    RUNS)                          # socket_listen/connect/send/recv + http + pg — main.go/server.go
     (world-sensors port  VIA-HOST)                      # gps/proximity/magnetometer/barometer — via SensorManager/CoreMotion (allowed)
@@ -220,11 +221,43 @@
 # How to verify (the spine, today)
 # ─────────────────────────────────────────────────────────────────────
 #
-#   cd form && ./validate.sh \
+#   cd form && ./validate.sh form-stdlib/core.fk \
 #     form-stdlib/resource-port.fk        form-stdlib/tests/resource-port-band.fk \
 #     form-stdlib/learned-primitive.fk    form-stdlib/tests/learned-primitive-band.fk \
 #     form-stdlib/recognition-router.fk   form-stdlib/tests/recognition-router-band.fk \
 #     form-stdlib/champion-challenger.fk  form-stdlib/tests/champion-challenger-band.fk
+#
+#   # The kernel AS the composition — hosts as measured, swappable carriers
+#   # of one content-addressed body (verdict 255, also under --binary):
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel-interface.fk \
+#     form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/satsang-share.fk \
+#     form-stdlib/kernel-satsang.fk form-stdlib/recognition-router.fk \
+#     form-stdlib/champion-challenger.fk form-stdlib/host-kernel-cell.fk \
+#     form-stdlib/tests/host-kernel-cell-band.fk
+#
+#   # Every organ and world-port that RUNS here, touched in ONE program,
+#   # as close to the metal as currently available (verdict 1023; --binary
+#   # runs the same program as a compiled .fkb artifact; the Go arm emits
+#   # a real ELF .so from the band's recipe via the host toolchain):
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/host-kernel-metal-band.fk
+#   cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/tests/host-kernel-metal-band.fk
+#   # IEEE floats, strings, and the ML vector trio through the Value-ABI
+#   # JIT — identical values across dispatch paths and kernels (255):
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/jit-native-span-band.fk
+#   # One recipe shown as six instruction sets — Android CPU (aarch64),
+#   # Android DSP (hexagon mpyi), Apple/MLX host (arm64 mul), NVIDIA PTX
+#   # (mul.lo.s64), AMD GCN (v_mul_lo), x86-64 (imul) — value parity held,
+#   # recursion lowered to loops; the same recipes EXECUTED under
+#   # qemu-aarch64 and qemu-hexagon (exit 42 = parity on the ISA); SPIR-V
+#   # generated and validated (Vulkan/Android-GPU door); MSL kernel source
+#   # emitted and held (Metal AIR awaits Apple hardware):
+#   scripts/cross_isa_assembly_audit.sh
+#   # A full transformer block (architecture as recipe data, division-free
+#   # IEEE binary32) as six instruction sets, bit-exact f740120e on x86 +
+#   # emulated Android CPU + emulated Hexagon DSP, SPIR-V validated, AMD
+#   # GCN constant-folds the whole block at compile time:
+#   scripts/transformer_kernel_audit.sh
+#   # evidence: docs/system_audit/commit_evidence_2026-06-10_host_kernel_metal_band.json
 #
 #   # JIT native plugin path (Go kernel): exercised by the kernel's own suite.
 #   # Cross-device equivalence (kernel-on-android.form): a recipe proven on the

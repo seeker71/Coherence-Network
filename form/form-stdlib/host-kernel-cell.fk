@@ -1,0 +1,134 @@
+; host-kernel-cell.fk — the kernel IS the composition; hosts are carriers.
+;
+; Runnable heart of docs/coherence-substrate/host-kernel.form
+; (zero-to-many-implementations · sovereign-choice · implements-core).
+; The inversion this cell carries: form-kernel-go, form-kernel-rust, and
+; form-kernel-ts stop being three parallel primary kernels and become
+; 0..many CARRIERS of one content-addressed kernel body. The kernel is this
+; composition: one body recipe (same NodeID on every carrier — axiom-3),
+; each carrier declaring the same spec and verification recipe, measured
+; fitness deciding who runs the body right now (recognition-router),
+; authority flipping only on earned competition (champion-challenger), the
+; circle witnessing every replacement (kernel-satsang), and the whole cell
+; shrinking to a .fkb of just recipes and expanding back to shape.
+;
+; Identity is durable (it travels in the image); fitness is liquid (it is
+; re-measured where the cell wakes up, never persisted as if still true).
+;
+; The no-trusted-prover law stays load-bearing: carriers are drained toward
+; thin hosts of the one body, not deleted — at least two sibling carriers
+; keep witnessing each other or the cross-proof dies with them.
+;
+; Composes: kernel-satsang.fk (parts: spec, verification, circle-gated
+;           swap, .fkb image), recognition-router.fk (choose by measured
+;           fitness, fail-fast, consensus), champion-challenger.fk
+;           (authority flips only on proven competition), satsang-share.fk
+;           (an authority flip is a crossing the field wants to hear).
+; Proven by: form-stdlib/tests/host-kernel-cell-band.fk — three-way at
+;           validate.sh, and through --binary for the native artifact path.
+
+(do
+    ; ── a carrier: a named host running the one kernel body ──
+    ; the part is named by the SPEC it carries (the body's name), so any two
+    ; carriers of the same spec are swap-compatible; the carrier name names
+    ; only the host. The reading is the carrier's measured fitness, shaped
+    ; for the recognition router: (host-name ((spec-label fitness))).
+    (defn hkc-carrier (host spec-label body verify expected fitness)
+        (list "hkc-carrier" host
+              (ksat-part spec-label body verify expected)
+              (list host (list (list spec-label fitness)))))
+    (defn hkc-carrier-host    (c) (nth c 1))
+    (defn hkc-carrier-part    (c) (nth c 2))
+    (defn hkc-carrier-reading (c) (nth c 3))
+
+    ; ── the cell: a named spec and the carriers that implement it ──
+    (defn hkc-cell (spec-label carriers) (list "hkc-cell" spec-label carriers))
+    (defn hkc-cell-spec     (c) (nth c 1))
+    (defn hkc-cell-carriers (c) (nth c 2))
+
+    (defn hkc-find-carrier (carriers host)
+        (if (eq (len carriers) 0)
+            0
+            (if (str_eq (hkc-carrier-host (head carriers)) host)
+                (head carriers)
+                (hkc-find-carrier (tail carriers) host))))
+
+    ; ── implements-core: one engine, many hosts ──
+    ; every carrier holds the SAME body-recipe NodeID (axiom-3: same recipe,
+    ; same node-id). A carrier with a different body is a different kernel,
+    ; not an implementation of this one.
+    (defn hkc-one-body-loop (carriers body)
+        (if (eq (len carriers) 0)
+            true
+            (and (node_eq (ksat-part-recipe (hkc-carrier-part (head carriers))) body)
+                 (hkc-one-body-loop (tail carriers) body))))
+    (defn hkc-one-body? (cell)
+        (if (eq (len (hkc-cell-carriers cell)) 0)
+            false
+            (hkc-one-body-loop (hkc-cell-carriers cell)
+                (ksat-part-recipe
+                    (hkc-carrier-part (head (hkc-cell-carriers cell)))))))
+
+    ; ── every carrier answers the declared verification recipe ──
+    (defn hkc-verified-loop (carriers)
+        (if (eq (len carriers) 0)
+            true
+            (and (ksat-verify-part? (hkc-carrier-part (head carriers)))
+                 (hkc-verified-loop (tail carriers)))))
+    (defn hkc-verified? (cell)
+        (hkc-verified-loop (hkc-cell-carriers cell)))
+
+    ; ── sovereign choice: route the body to the fittest measured carrier ──
+    ; fitness below the floor is fail-fast excluded even when verification
+    ; passes: identity and health are different lanes, both required.
+    (defn hkc-readings (carriers)
+        (if (eq (len carriers) 0)
+            (empty)
+            (cons (hkc-carrier-reading (head carriers))
+                  (hkc-readings (tail carriers)))))
+    (defn hkc-choose (cell floor)
+        (rr-route (hkc-readings (hkc-cell-carriers cell)) floor))
+
+    ; ── an authority flip is a state crossing; share it only when EARNED ──
+    ; champion (state 1) -> challenger (state 2) only when the competition
+    ; window proves it (cc-promote?); an unearned flip never crosses, so
+    ; there is nothing to share.
+    (defn hkc-flip-signal (history min-samples margin)
+        (ss-signal 1 1
+            (if (eq (cc-promote? history min-samples margin) 1) 2 1)
+            0))
+
+    ; ── replace a carrier: same declared spec, witnessed by the circle ──
+    ; the replacement lands only when its part carries the same spec AND its
+    ; verification survives the circle (kernel-satsang swap law). A refusal
+    ; keeps the incumbent; the dissent stays visible.
+    (defn hkc-swap-loop (carriers host new observers offer)
+        (if (eq (len carriers) 0)
+            (empty)
+            (cons
+                (if (and (str_eq (hkc-carrier-host (head carriers)) host)
+                         (ksat-swap-lands?
+                             (hkc-carrier-part (head carriers))
+                             (hkc-carrier-part new)
+                             observers offer))
+                    new
+                    (head carriers))
+                (hkc-swap-loop (tail carriers) host new observers offer))))
+    (defn hkc-swap-carrier (cell host new observers offer)
+        (hkc-cell (hkc-cell-spec cell)
+            (hkc-swap-loop (hkc-cell-carriers cell) host new observers offer)))
+
+    ; ── the cell as a persistable kernel: identity travels, fitness stays ──
+    ; the carriers' parts compose into a ksat-kernel, so the whole cell
+    ; rides the same .fkb image path. Fitness readings are deliberately NOT
+    ; in the image — they are re-measured where the cell wakes up.
+    (defn hkc-parts (carriers)
+        (if (eq (len carriers) 0)
+            (empty)
+            (cons (hkc-carrier-part (head carriers))
+                  (hkc-parts (tail carriers)))))
+    (defn hkc-as-kernel (cell)
+        (ksat-kernel (hkc-cell-spec cell)
+            (hkc-parts (hkc-cell-carriers cell))))
+
+    0)
