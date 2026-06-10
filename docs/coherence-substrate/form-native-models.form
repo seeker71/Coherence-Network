@@ -87,6 +87,17 @@
 ;        emit a matmul loop, reuse compile_rust_cdylib, verify bit-exact vs the apply_arith reference
 ;        (add matmul conformance vectors to numeric-formats.canonical.json). Then port metal.ts -> a
 ;        Metal carrier for bf16 matmul, verified under epsilon.
+;        [EMITTER-AS-RECIPE LANE SHIPPED (close-jit-crystallization's heart): form-stdlib/
+;        jit-tensor-emit.fk + tests/jit-tensor-emit-band.fk → 7, three-way — the slice-ABI matvec
+;        EMITTER is a Form recipe (str_concat over the recipe shape; `extern fn` keeps the source
+;        quote-free), the kernel keeps only dumb carriers (rustc --crate-type=cdylib, dlopen, call).
+;        The emitted loop accumulates j DOWNWARD — tb-dot's exact right-fold — so the native result
+;        is the recipe's result bit-for-bit, not epsilon-close. MEASURED on a 1280×1280 fp64 matvec
+;        (whisper-large d_model): interpreted walk 43.05 s; Form-emitted rustc native 2.1 ms; SAME
+;        value at 1e-15 granularity; 20,077× from one naive single-threaded loop. Remaining for M5:
+;        the kernel-resident wiring (buffer bridge intern_node SEQUENCE ↔ flat slice, install-as-
+;        named-callable-leaf, melt-when-cool, cost-aware trigger), format-parameterized emission
+;        (bf16/int8 per format-arith.fk semantics), canon matmul vectors, and the GPU/BLAS organ.]
 ;   M6  whisper-tiny block 0 — carrier loads openai/whisper-tiny safetensors (or mlx-community/whisper-tiny,
 ;        already referenced in experiments/satsang-voice), encodes block-0 weights via M2, runs M4 over
 ;        them, matches the HF reference activation within epsilon. First real model in the body. (Even

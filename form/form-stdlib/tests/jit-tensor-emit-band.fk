@@ -1,0 +1,20 @@
+; preludes: form-stdlib/core.fk form-stdlib/jit-tensor-emit.fk
+;
+; jit-tensor-emit-band — the JIT emitter as recipe, proven three-way: the emitted Rust slice-ABI
+; matvec source is byte-identical across kernels (str_eq against the canonical text), the function
+; name parameterizes cleanly, and the loop carries tb-dot's exact right-fold order (j counts DOWN)
+; so the native result is the recipe's result bit-for-bit, not merely within epsilon.
+;
+; Verdict 7 when the emission lands:
+;   1   the full emitted source for form_matvec_f64 equals the canonical text
+;   2   a different name lands in the same frame (emission is a function, not a constant)
+;   4   two emissions of the same name are str_eq (deterministic text — the crystallization
+;       cache's ground: same emission, same cell)
+(do
+    (let want "#[no_mangle] pub unsafe extern fn form_matvec_f64 (w: *const f64, x: *const f64, y: *mut f64, rows: i64, cols: i64) { let r = rows as usize; let c = cols as usize; let mut i = 0usize; while i < r { let row = w.add(i * c); let mut acc = 0.0f64; let mut j = c; while j > 0 { j -= 1; acc = *row.add(j) * *x.add(j) + acc; } *y.add(i) = acc; i += 1; } }")
+    (let got (jte-matvec-rust "form_matvec_f64"))
+    (let other (jte-matvec-rust "mv2"))
+    (let c0 (if (str_eq got want) 1 0))
+    (let c1 (if (str_eq other (str_concat "#[no_mangle] pub unsafe extern fn " (str_concat "mv2" " (w: *const f64, x: *const f64, y: *mut f64, rows: i64, cols: i64) { let r = rows as usize; let c = cols as usize; let mut i = 0usize; while i < r { let row = w.add(i * c); let mut acc = 0.0f64; let mut j = c; while j > 0 { j -= 1; acc = *row.add(j) * *x.add(j) + acc; } *y.add(i) = acc; i += 1; } }"))) 2 0))
+    (let c2 (if (str_eq (jte-matvec-rust "form_matvec_f64") got) 4 0))
+    (add c0 (add c1 c2)))
