@@ -1,0 +1,107 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "codex/axiom-reading-origin-main-20260611",
+  "commit_scope": "Add the highest defensible all-life north star as a Form teaching with runnable recipes and a sibling-kernel proof band.",
+  "files_owned": [
+    "docs/coherence-substrate/all-life-north-star.form",
+    "docs/coherence-substrate/INDEX.md",
+    "form/form-stdlib/all-life-north-star.fk",
+    "form/form-stdlib/tests/all-life-north-star-band.fk",
+    "docs/system_audit/commit_evidence_20260611_all_life_north_star.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/grammars/living-equation.fk form-stdlib/all-life-north-star.fk form-stdlib/tests/all-life-north-star-band.fk",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260611_all_life_north_star.json",
+      "git diff --check --cached",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "notes": "Prompt guide passed in the dedicated worktree after attaching the branch. The branch was rebased onto origin/main. The all-life north-star proof band returns 127 with 1 ok, 0 divergent across Go, Rust, and TypeScript kernels. Generated repo indexes are up to date. Evidence validation, cached diff check, local PR guard, followthrough guard, and wellness pass."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until this branch is committed, pushed, and opened as a PR."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No deploy attempted for this Form/documentation proof slice before PR."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local proof, evidence validation, diff check, local PR guard, followthrough guard, and wellness pass. Commit, push, PR, remote CI, and deploy verification remain pending."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The repo now carries a runnable all-life north-star recipe that scores candidate action by the weakest life-good after action, rejects unproven or extractive movement, keeps silence distinct from no, and maps paths by life-good and scale.",
+    "public_endpoints": [
+      "internal Form sibling kernels"
+    ],
+    "test_flows": [
+      "The north-star recipe returns a stable all-life-vitality-through-sovereign-coherence name.",
+      "A low-vitality state chooses vitality and the choices:circulate-life-force path.",
+      "The primary levers for health, vitality, and sovereignty are inherited from the integrated living-equation stance.",
+      "An action that raises four goods while lowering sovereignty scores 0.",
+      "A candidate missing the witnessed proof gate scores 0.",
+      "Silence is distinct from no and maps to wait-witness-no-force.",
+      "The technology scale maps to ports, health, and reversible choice."
+    ]
+  },
+  "idea_ids": [
+    "knowledge-and-resonance",
+    "form-kernel-self-hosting"
+  ],
+  "spec_ids": [
+    "form-kernel-roadmap",
+    "public-verification-framework"
+  ],
+  "task_ids": [
+    "all-life-north-star-20260611"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-selection",
+        "benefit-for-life-framing"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/coherence-substrate/all-life-north-star.form names the highest defensible north star and paths by life-good and scale.",
+    "form/form-stdlib/all-life-north-star.fk implements the weakest-good score, proof gates, non-extraction guard, silence/no distinction, and path mappings.",
+    "form/form-stdlib/tests/all-life-north-star-band.fk proves seven claims with verdict 127 across sibling kernels.",
+    "Focused validation: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/grammars/living-equation.fk form-stdlib/all-life-north-star.fk form-stdlib/tests/all-life-north-star-band.fk -> 127; 1 ok, 0 divergent.",
+    "python3 scripts/generate_repo_indexes.py --check -> All indexes up to date.",
+    "make wellness passed after the change.",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main -> ready_for_push=True.",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict -> stale_codex_prs=0."
+  ],
+  "change_files": [
+    "docs/coherence-substrate/all-life-north-star.form",
+    "docs/coherence-substrate/INDEX.md",
+    "form/form-stdlib/all-life-north-star.fk",
+    "form/form-stdlib/tests/all-life-north-star-band.fk"
+  ],
+  "change_intent": "runtime_feature"
+}
