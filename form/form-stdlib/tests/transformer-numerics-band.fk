@@ -1,0 +1,38 @@
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk
+;
+; transformer-numerics-band — M3's softmax/gelu/layernorm against the PyTorch fp64 reference,
+; proven three-way. Every claim is a reference value computed by torch (softmax · layer_norm
+; eps=1e-5 · gelu approximate='tanh' · libm exp/tanh/sqrt), reduced to an integer at 1e-6.
+; Inputs: x = [-1.5, 0.0, 2.0, 0.5].
+;
+; Verdict 4095 when every value lands:
+;   1     exp(1.0)        → 2718282   (e, through square-and-reduce Taylor)
+;   2     exp(-2.5)       → 82085     (a negative arg crosses the reduction)
+;   4     tanh(0.7)       → 604368
+;   8     sqrt(2.0)       → 1414214   (Newton, fixed count)
+;   16    gelu(-1.0)      → -158808   (the negative lobe)
+;   32    gelu(0.5)       → 345714
+;   64    gelu(2.0)       → 1954598
+;   128   softmax(x)[0]   → 21746     (the smallest logit stays present, never zeroed)
+;   256   softmax(x)[2]   → 720117    (the largest logit dominates without saturating)
+;   512   sum(softmax(x)) → 1000000   (a distribution, exactly)
+;   1024  layernorm(x)[0] → -1399996  (torch layer_norm, eps inside the sqrt)
+;   2048  layernorm(x)[3] → 199999
+(do
+    (let x (list -1.5 0.0 2.0 0.5))
+    (let sm (tn-softmax x))
+    (let ln (tn-layernorm x 0.00001))
+    (let c0  (if (eq (round (mul (tn-exp 1.0) 1000000.0)) 2718282) 1 0))
+    (let c1  (if (eq (round (mul (tn-exp -2.5) 1000000.0)) 82085) 2 0))
+    (let c2  (if (eq (round (mul (tn-tanh 0.7) 1000000.0)) 604368) 4 0))
+    (let c3  (if (eq (round (mul (tn-sqrt 2.0) 1000000.0)) 1414214) 8 0))
+    (let c4  (if (eq (round (mul (tn-gelu -1.0) 1000000.0)) -158808) 16 0))
+    (let c5  (if (eq (round (mul (tn-gelu 0.5) 1000000.0)) 345714) 32 0))
+    (let c6  (if (eq (round (mul (tn-gelu 2.0) 1000000.0)) 1954598) 64 0))
+    (let c7  (if (eq (round (mul (nth sm 0) 1000000.0)) 21746) 128 0))
+    (let c8  (if (eq (round (mul (nth sm 2) 1000000.0)) 720117) 256 0))
+    (let c9  (if (eq (round (mul (tn-sum sm) 1000000.0)) 1000000) 512 0))
+    (let c10 (if (eq (round (mul (nth ln 0) 1000000.0)) -1399996) 1024 0))
+    (let c11 (if (eq (round (mul (nth ln 3) 1000000.0)) 199999) 2048 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7
+    (add c8 (add c9 (add c10 c11))))))))))))
