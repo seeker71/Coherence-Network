@@ -1,0 +1,97 @@
+{
+  "date": "2026-06-10",
+  "thread_branch": "codex/kernel-bml-ingress-20260610",
+  "commit_scope": "Expose promoted BML read routes through the public kernel-router front door.",
+  "files_owned": [
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/verify_web_api_deploy.sh",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_web_api_deploy.sh scripts/test_hostinger_deploy_form_paths.sh",
+      "./scripts/test_hostinger_deploy_form_paths.sh",
+      "PUBLIC_API_BASE_URL=https://api.coherencycoin.com PUBLIC_WEB_BASE_URL=https://coherencycoin.com VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 source scripts/verify_web_api_deploy.sh",
+      "ruby -e 'require \"yaml\"; ARGV.each { |path| YAML.load_file(path); puts \"OK #{path}\" }' deploy/kernel-router/docker-compose.kernel-router.yml .github/workflows/hostinger-auto-deploy.yml .github/workflows/public-deploy-contract.yml",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check"
+    ],
+    "observations": [
+      "After the Rust template matcher fix was deployed, public probes still showed missing X-Form-Router for the promoted endpoints; /api/utils/kernel_status remained native.",
+      "The BML front-door service Traefik labels did not expose GET /api/runtime/events or the single-segment template paths for views stats, reaction summary, reaction threads, and concept voices.",
+      "The overlay now adds bounded GET Path/PathRegexp rules for those promoted read routes at priority 1182.",
+      "The Hostinger deploy canary and public deploy verifier now probe the promoted read routes for native-kernel, expected X-Form-Handler, and X-Form-Python-Authority: false."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local ingress proof passed; CI, merge, deploy, and public promoted-route header verification remain for this branch."
+  },
+  "idea_ids": [
+    "oss-interface-alignment",
+    "kernel-native-route-goal"
+  ],
+  "spec_ids": [
+    "native-route-goal-loop",
+    "front-door-bml-route-catalog"
+  ],
+  "task_ids": [
+    "bml-promoted-route-ingress-2026-06-10"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "investigation",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "public curl header probes after af2eceeb deploy",
+    "./scripts/test_hostinger_deploy_form_paths.sh",
+    "VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 source scripts/verify_web_api_deploy.sh"
+  ],
+  "change_files": [
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/verify_web_api_deploy.sh",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Promoted BML read routes are reachable through the public kernel-router front door and return native proof headers instead of falling through to Python.",
+    "public_endpoints": [
+      "/api/runtime/events",
+      "/api/views/stats/lc-attuned-spaces",
+      "/api/reactions/concept/lc-attuned-spaces/summary",
+      "/api/reactions/concept/lc-attuned-spaces/threads",
+      "/api/concepts/lc-attuned-spaces/voices"
+    ],
+    "test_flows": [
+      "After deploy, request promoted endpoints with Accept: application/json and verify X-Form-Router is native-kernel.",
+      "Run ./scripts/verify_web_api_deploy.sh against the public API and web surfaces.",
+      "Confirm Hostinger deploy canary probes the promoted read routes inside kernel-router-bml-front-door before public verification."
+    ]
+  }
+}
