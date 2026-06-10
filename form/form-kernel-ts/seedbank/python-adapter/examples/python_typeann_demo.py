@@ -20,7 +20,7 @@
 #
 # Runs identically under:
 #   python3 python_typeann_demo.py             — CPython
-#   npm run kernel -- python-eval ...          — TS evalPython
+#   kernel-bmf-run <file.py>          — kernel-bmf-run
 #   form-kernel-rust python_typeann_demo.fk    — native kernel binary
 
 

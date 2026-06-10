@@ -8,7 +8,7 @@
 #
 # Runs identically under:
 #   python3 python_inheritance_demo.py        — CPython
-#   npm run kernel -- python-eval ...         — TS evalPython
+#   kernel-bmf-run <file.py>         — kernel-bmf-run
 #   form-kernel-rust python_inheritance_demo.fk — native kernel binary
 #
 # Pending (each its own breath): multiple inheritance, MRO complexity,

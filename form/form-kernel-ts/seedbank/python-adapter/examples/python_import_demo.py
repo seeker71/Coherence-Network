@@ -8,12 +8,12 @@
 # defined module imports remain a separate breath.
 #
 # Every operand is chosen so the IEEE 754 result is reproducible to the
-# bit. Three runtimes (CPython, TS evalPython, form-kernel-rust) walk
+# bit. Three runtimes (CPython, kernel-bmf-run, form-kernel-rust) walk
 # the same expression and produce the same final string.
 #
 # Runs identically under:
 #   python3 python_import_demo.py             — CPython
-#   npm run kernel -- python-eval ...         — TS evalPython
+#   kernel-bmf-run <file.py>         — kernel-bmf-run
 #   form-kernel-rust python_import_demo.fk    — native kernel binary
 
 import math

@@ -11,7 +11,7 @@
 # Pure list + float arithmetic — division, multiplication, subtraction. No
 # transcendentals, so the same value renders across all three runtimes:
 #   - CPython
-#   - TS evalPython
+#   - kernel-bmf-run
 #   - form-kernel-rust
 #
 # The total <= 0 guard returns 0.0 (an empty or all-zero count list has no

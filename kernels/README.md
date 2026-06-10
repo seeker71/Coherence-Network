@@ -161,7 +161,7 @@ Three-digit overhead is interpreter-typical. The compiled-path (TS) closes to ~1
 
 The roadmap in [`form/kernel-roadmap.md`](../form/kernel-roadmap.md) names what comes next: Form-stdlib growth, parser-as-recipe migration for Rust/Go/TS surfaces, substrate persistence wired into the kernels, and the visualizer's render path consuming the NodeID plane for live Blueprint-cluster animation.
 
-[`BOOTSTRAP_COMPOST_MANIFEST.md`](BOOTSTRAP_COMPOST_MANIFEST.md) names every file that composts when Form-native parsing proves three-way parity per demo. The parity suite's `PARITY_THIRD_RUNTIME` selector flips the third runtime atomically; `make wellness` surfaces the remaining bootstrap weight each breath.
+[`BOOTSTRAP_COMPOST_MANIFEST.md`](BOOTSTRAP_COMPOST_MANIFEST.md) names every file that composts when Form-native parsing proves three-way parity per demo. The Python parity suite now compares CPython, `kernel-bmf-compile` + Rust execution, and `kernel-bmf-run`; `make wellness` surfaces the remaining bootstrap weight each breath.
 
 [`BMF_BML_COMPILER_PICTURE.md`](BMF_BML_COMPILER_PICTURE.md) names the modern BMF/BML compiler and compiler-compiler picture: legacy BMF/BML source hierarchy, compiler-compiler flow, shared compiler flow, language-port contract, the executable Form proof, the BML source body at [`form/form-stdlib/bml/bmf-bml-compiler-picture.bml`](../form/form-stdlib/bml/bmf-bml-compiler-picture.bml), the current source-lowering proofs that carry parsed BML declarations into `compiler-object` sections and execute a concrete BML-owned source lowerer, the `.fkb` bootstrap-image ratchet that keeps BML source authoritative while preserving a recoverable compiler image, and the first source-derived `BML-COMPILER-IMAGE` `.fkb` checkpoint.
 

@@ -4,7 +4,7 @@
 #
 # Runs identically under:
 #   python3 python_assign_demo.py        — CPython
-#   npm run kernel -- python-run ...     — TS evalPython
+#   kernel-bmf-run <file.py>     — kernel-bmf-run
 #   form-kernel-rust python_assign_demo.fk — native kernel binary
 
 def add(a, b):

@@ -10,7 +10,7 @@
 #
 # Three runtimes produce identical results:
 #   - CPython
-#   - TS evalPython
+#   - kernel-bmf-run
 #   - form-kernel-rust
 
 
