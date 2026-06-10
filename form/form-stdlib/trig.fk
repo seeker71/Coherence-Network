@@ -1,0 +1,34 @@
+; trig.fk — sin, cos, sqrt as FORM RECIPES, not kernel natives.
+;
+; "Those kernel 'needs' can be Form recipes compiled into where they execute, much better than writing them
+; in each kernel." (Urs) — and the pure-math needs are the sharpest case: they were never kernel needs.
+; sin/cos/sqrt are recipes over mul/add/div, which Go, Rust, and TS already have — so writing them ONCE in
+; Form means they run on all three identically (three-way), with NO native added to any kernel. Float is
+; deterministic three-way (the matvec proof). The source-compiler can later LOWER these to a target's native
+; sin/cos for speed — the same recipe, compiled where it runs — but the body needs no kernel surgery to use
+; them today. This is core-abstraction-first: one engine, the cases are data/recipes, never parallel code.
+;
+; NOTE: div is INTEGER division on integer operands; every recipe forces float (a float literal in the chain).
+
+; --- sqrt: Newton/Heron iteration  x ← (x + a/x)/2 ---
+(defn sqrt-iter (a x n)
+  (if (eq n 0) x (sqrt-iter a (div (add x (div a x)) 2.0) (sub n 1))))
+(defn fsqrt (a)
+  (if (le a 0) 0.0
+      (do (let af (mul a 1.0)) (sqrt-iter af af 20))))
+
+; --- sin/cos: range-reduce to [-π, π], then the Taylor series ---
+(defn TAU () 6.283185307179586)
+(defn HALF-PI () 1.5707963267948966)
+(defn range-reduce (x)
+  (sub x (mul (TAU) (round (div x (TAU))))))
+; Taylor recurrence: term_{k+1} = term_k · (-x²) / ((2(k+1))·(2(k+1)+1)); sum the terms.
+(defn sin-acc (x2 term k acc n)
+  (if (ge k n) acc
+      (sin-acc x2
+               (div (mul (mul term -1.0) x2) (mul (mul 2 (add k 1)) (add (mul 2 (add k 1)) 1)))
+               (add k 1) (add acc term) n)))
+(defn fsin (x)
+  (do (let r (range-reduce (mul x 1.0)))
+      (sin-acc (mul r r) r 0 0 10)))
+(defn fcos (x) (fsin (add (mul x 1.0) (HALF-PI))))
