@@ -1,0 +1,27 @@
+; preludes: form-stdlib/core.fk form-stdlib/voice-traits.fk
+;
+; voice-traits-band — the channel's acoustic property readings + trust matrix, proven three-way.
+;
+; Verdict 1023 when every reading lands:
+;   1    120 Hz reads lower-voiced        (speaker-band 120 == 0)
+;   2    175 Hz reads ambiguous-mid       (speaker-band 175 == 1 — honest about the overlap)
+;   4    230 Hz reads higher-voiced       (speaker-band 230 == 2)
+;   8    a steady envelope is calm        (arousal of 8 equal windows == 0)
+;   16   a wild envelope is active        (arousal of 0..9 swings == 9)
+;   32   voiced+sure → transcript-trust 9 (trust-vec lane 0, from speechiness 99)
+;   64   ...and sound-trust 6             (trust-vec lane 1)
+;   128  ...and agreement-trust 9         (trust-vec lane 2, the Form arm agreed with the oracle)
+;   256  silence → overall trust 0        (nothing to trust)
+;   512  audible non-speech → trust 6     (trust the sound category, not a transcript)
+(do
+    (let c0 (if (eq (speaker-band 120) 0) 1 0))
+    (let c1 (if (eq (speaker-band 175) 1) 2 0))
+    (let c2 (if (eq (speaker-band 230) 2) 4 0))
+    (let c3 (if (eq (arousal (list 4 4 4 4 4 4 4 4)) 0) 8 0))
+    (let c4 (if (eq (arousal (list 0 9 1 8 2 7 0 9)) 9) 16 0))
+    (let c5 (if (eq (head (trust-vec 2 99 1)) 9) 32 0))
+    (let c6 (if (eq (head (tail (trust-vec 2 99 1))) 6) 64 0))
+    (let c7 (if (eq (head (tail (tail (trust-vec 2 99 1)))) 9) 128 0))
+    (let c8 (if (eq (trust 0 0 0) 0) 256 0))
+    (let c9 (if (eq (trust 1 0 0) 6) 512 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 c9))))))))))
