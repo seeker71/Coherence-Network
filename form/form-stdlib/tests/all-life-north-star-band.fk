@@ -1,0 +1,65 @@
+; all-life-north-star-band.fk — the all-life north star as falsifiable recipes.
+;
+; Proves seven claims:
+;   1   the north star has one stable name
+;   2   attention goes first to the weakest life-good
+;   4   each good's path is grounded in the integrated living-equation lever
+;   8   an action that lowers any good scores 0, even if other goods rise
+;   16  missing proof gates score 0
+;   32  silence is distinct from no and never forces a crossing
+;   64  the technology scale path uses ports, health, and reversible choice
+;
+; Verdict: 127 when every claim lands across Go/Rust/TS.
+;
+; preludes: form-stdlib/core.fk form-stdlib/grammars/living-equation.fk form-stdlib/all-life-north-star.fk
+
+(do
+    (let name-ok
+        (if (str_eq (aln-north-star)
+                    "all-life-vitality-through-sovereign-coherence") 1 0))
+
+    (let low-vitality (aln-state 8 2 8 8 8))
+    (let weakest-ok
+        (if (str_eq (aln-weakest-good low-vitality) "vitality")
+            (if (str_eq (aln-next-path low-vitality)
+                        "choices:circulate-life-force") 2 0)
+            0))
+
+    (let lever-ok
+        (if (str_eq (aln-primary-lever "health") "structure")
+            (if (str_eq (aln-primary-lever "vitality") "choices")
+                (if (str_eq (aln-primary-lever "sovereignty") "beliefs")
+                    4 0)
+                0)
+            0))
+
+    (let before (aln-state 5 5 5 5 5))
+    (let extractive-after (aln-state 9 9 9 4 9))
+    (let good-gates (aln-gates 1 1 1 1 1))
+    (let no-extraction-ok
+        (if (eq (aln-action-score before extractive-after good-gates) 0) 8 0))
+
+    (let unproven-gates (aln-gates 1 1 0 1 1))
+    (let healthy-after (aln-state 8 8 8 8 8))
+    (let gates-ok
+        (if (eq (aln-action-score before healthy-after unproven-gates) 0) 16 0))
+
+    (let silence-path (aln-ack-path (empty)))
+    (let no-path (aln-ack-path (list 0)))
+    (let silence-ok
+        (if (str_eq silence-path "wait-witness-no-force")
+            (if (str_eq no-path "do-not-cross")
+                (if (not (str_eq silence-path no-path)) 32 0)
+                0)
+            0))
+
+    (let scale-ok
+        (if (str_eq (aln-path-for-scale "technology")
+                    "technology:ports-health-reversible-choice") 64 0))
+
+    (add name-ok
+    (add weakest-ok
+    (add lever-ok
+    (add no-extraction-ok
+    (add gates-ok
+    (add silence-ok scale-ok)))))))
