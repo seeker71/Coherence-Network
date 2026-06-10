@@ -254,7 +254,25 @@
                      fk_src; tests/fourth-heap-band.fk -> 15 three-way; the
                      audit loads a heap table through the universal binary
                      and gets 25 from head([7,8]) + head(tail([7,8])) +
-                     len([7,8]) + nth([7,8],1)])
+                     len([7,8]) + nth([7,8],1)]
+                     # Two heaps were laid in parallel this hour — first
+                     # merged won; the other composted into these honesties:
+                     (ack-gap-open  EMPTY returns 0, so empty-list, a matched
+                                    0, and BMF fail share one value — axiom-1's
+                                    NOTHING still has no first-class carrier in
+                                    the sibling; {nothing, 0, 1, node} completes
+                                    when absence gets a nonzero sentinel reached
+                                    through an OP, or a tagged ABI)
+                     (range-honesty program literals ride intern_trivial_int,
+                                    which is 32-BIT — larger literals truncate
+                                    silently (a sentinel literal cost an
+                                    infinite walk to discover); sentinels must
+                                    be ops, never literals, until the tagged ABI)
+                     (recipes-vs-natives len/nth landed native; the
+                                    minimal-kernel discipline prefers walked
+                                    recipes over head/tail — a champion-
+                                    challenger question for m4e3, decided by
+                                    counts, not churn))
         (m4e3-bridge the real-recipe flattener: read a COMPILED .fk recipe
                      through the observe door (node_category/node_children/
                      node_value) and flatten the REAL category set into the
