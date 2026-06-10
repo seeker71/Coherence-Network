@@ -232,7 +232,40 @@
                      the fourth arm for covered bands)
         (m4e4-grow   strings + str_eq, then natives family by family (the
                      minimal-kernel census order: figure, observe, intern,
-                     port), each landing as bands flip to four-way))
+                     port), each landing as bands flip to four-way)
+
+        (m4e-universal  [SHIPPED] the UNIVERSAL walker — no baked program:
+                     one emitted binary loads a node-table FILE through the
+                     fs afferent port (open/read, quoteless extern decls)
+                     and runs it. fkc-table-file serializes any program;
+                     witnessed: ONE binary ran fib (317811), even/odd (1/0),
+                     a bmf-grammar-compiled program (22), and the organ
+                     program (7) from four table files — load any source
+                     that has a grammar, compile to cells, run, no rebuild)
+
+        (m4e-jit     [SHIPPED] self-JIT on heat — learned-primitive's
+                     crystallize in the emitted sibling: the emitter lowers
+                     each pure function FROM ITS CELLS to a native C
+                     alternative (fkc-nat-expr; ports/organs honestly not
+                     lowered), the binary counts heat per function, and
+                     dispatch flips to native when heat crosses the runtime
+                     threshold. Witnessed: fib28 cold 19.3 ms walking ->
+                     hot 3.0 ms after flipping at threshold 50, parity held,
+                     njit=26 crossings in the probe — gas cooled to ice on
+                     measured heat. Open, named: melt-on-cool, and true
+                     runtime codegen for FOREIGN loaded tables (the universal
+                     binary re-emitting through the toolchain port — the
+                     full crystallization wire))
+
+        (organs-physical  one physical proof per host resource through the
+                     fourth sibling, band tests/fourth-os-band.fk -> 15:
+                     (cpu     compute — every band and row)            # RUNS
+                     (fs      the loader reads table files; PUTC emits) # RUNS
+                     (ram     ops 13/14 SET/GET — write 42, read 42)   # RUNS
+                     (clock   op 15 TIME — real epoch, positive)       # RUNS
+                     (entropy op 16 RND — two draws differed)          # RUNS
+                     (net hmi gpu — port-shaped, named for m4f; the
+                      resource-port discipline holds their doors)))    # NAMED
       (hot-swap-free   the same emitter at runtime granularity: crystallize a
                        hot recipe -> toolchain port -> install by repoint ->
                        melt on cool, gated by champion-challenger counts))))
