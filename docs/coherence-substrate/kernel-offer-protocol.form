@@ -127,31 +127,31 @@
     (identity-is-the-node-id             names-are-0-many-query-keys)))
 
 # ─────────────────────────────────────────────────────────────────────
-# Honest GAPs — what runs, what is only named
+# Closing recipes — each opening is a recipe we know how to run
 # ─────────────────────────────────────────────────────────────────────
-#
-# GAP-KO1: Several acknowledgment vocabularies run; the 4-valued primitive
-#   is not yet the single one. channel-query.fk answers with a 5-token
-#   status (ok / partial / not-known / external-only / error);
-#   sovereign-boundary-protocol.fk chooses allow / stop / witness /
-#   re-enter; offer-and-acknowledge.form names nothing / 0 / 1 / node. This
-#   file claims they are PROFILES of one primitive — the invited cell's
-#   sovereign answer — not that they are already identical. Reconciling the
-#   running status sets onto {nothing,0,1,node} is the lift this names — the
-#   same shape as offer-and-acknowledge GAP-OA1.
-#
-# GAP-KO2: The organ is named, not yet a registered substrate shape. The
-#   composition is honest (composite-cell + offered-interface + observable),
-#   and instances already run (household-membrane organs, the silicon organs
-#   of local-inference-as-organ.form, the witness's breathing organs). A
-#   `form organ_shape = { ... }` in substrate-kernel.form's voice, plus an
-#   ingest, is the next breath that makes "organ" a cell the lattice finds
-#   by NodeID.
-#
-# GAP-KO3: `nothing` as a first-class wire value (carried from
-#   offer-and-acknowledge GAP-OA3). A silent organ replying `nothing` is
-#   honored by the consent law today, but the wire carries it as absence,
-#   not as a `nothing` node. Reifying it is shared work with OA3.
+# Openings with a known path, composed from parts that already run.
+
+(closing-recipes
+
+  (close-one-ack-vocabulary                            # shared with offer-and-acknowledge
+    (compose channel-query-5-token-status              # ok/partial/not-known/external-only/error — runs
+             sbp-allow-stop-witness-re-enter           # the sovereign answer — runs
+             a-mapping-recipe-onto-nothing-0-1-node)   # each maps to one of the four
+    (shared-with offer-and-acknowledge.close-one-ack-vocabulary)
+    (proof   a-band-where-each-running-status-maps-to-exactly-one-of-the-four))
+
+  (close-organ-as-a-registered-shape                   # the organ, found by NodeID
+    (compose composite-cell offered-interface observable  # the honest composition
+             a-form-organ-shape-in-substrate-kernel.form  # register it
+             an-ingest)
+    (instances-already-run household-organs silicon-organs witness-organs)
+    (proof   a-band-where-organ-shape-interns-and-an-organ-cell-is-found-by-node-id))
+
+  (close-nothing-as-a-wire-value                       # shared with offer-and-acknowledge
+    (compose the-channel
+             a-nothing-node-on-the-wire-distinct-from-absence)
+    (shared-with offer-and-acknowledge.close-nothing-as-a-value)
+    (proof   a-band-where-a-silent-offer-returns-a-nothing-node-not-an-empty-frame)))
 #
 # ─────────────────────────────────────────────────────────────────────
 # How to verify

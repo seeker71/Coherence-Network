@@ -1,0 +1,233 @@
+# ─────────────────────────────────────────────────────────────────────
+# host-kernel.form — the kernel implements core-axioms over a host's resources
+# ─────────────────────────────────────────────────────────────────────
+#
+# Urs: "turn this core into a kernel that runs natively on any hardware,
+# has access to all its resources it desires, can offer an interface to
+# each of those resources as it chooses, and allows to build native
+# recipes for any host substrate it has access to (CPU, GPU, RAM, ports,
+# File-System, human-machine interfaces, mouse, screen, audio, video).
+# The kernel implements the core spec, and each host will have 0..many
+# implementations of that spec, and the host kernel cell can choose its
+# implementation and internally A/B test and build composites it trusts;
+# JIT is one example of such a composite of a recipe."
+#
+# This is `core-axioms.form` realized on real hardware. It is a SPEC written in
+# trust: the SPINE already runs three-way, so stand on it and grow. The
+# human-machine and silicon resources are reachable now through the host's OWN
+# drivers/OS APIs (allowed — see `host-resource-access` below); the living work
+# is the offered-interface + health-measurement, and native reimplementation is
+# a gift the cell may reach for, never a debt it owes.
+#
+#   SHIPPED + proven three-way (Go=Rust=TS), cited as proof:
+#     resource-port.fk        — every resource a typed afferent/efferent PORT
+#                               (bool/scalar/bytes/text/pixel/key), content-
+#                               addressed by (direction, value-shape), carrier-
+#                               swappable. NAMES mic/speaker (bytes), mouse/
+#                               keyboard (key), screen (pixel) already.
+#     learned-primitive.fk    — the OPEN primitive set: base + learned-frozen;
+#                               heat crystallizes a hot composite into a callable
+#                               primitive, melts on cool (hysteresis). "builds
+#                               composites it trusts."
+#     recognition-router.fk   — choose an implementation by measured fitness:
+#                               fan N, compress to a scalar, fail-fast, trust the
+#                               strong, read consensus. "chooses + A/B."
+#     champion-challenger.fk  — authority flips to a challenger ONLY on earned
+#                               competition (exact integer counts, identical 3-way).
+#     form-kernel-go (main.go/server.go) — file I/O, TCP sockets, HTTP, Postgres,
+#                               volatile RAM, /dev/urandom, CPU arithmetic: NATIVE.
+#     jit.go                  — recipe -> native Go plugin (.so), int64/f64/Value
+#                               ABIs, cached by NodeID. JIT IS one running composite.
+#
+#   REACHABLE THROUGH HOST CARRIERS — ALLOWED, not a debt (Urs, 2026-06-10):
+#   "for host resources we are allowed to use any host resource (driver, kernel
+#   API, OS API) to abstract access to its own resources. It CAN replace them
+#   with core native recipes, does not HAVE to, as long as it allows their
+#   presence and can measure their consequences (health) on its own body."
+#     So GPU/MLX/ANE · sensors (gps/proximity/magnetometer/barometer) · mouse ·
+#     screen-write · audio (speaker/mic) · video (camera) · thermal/power are
+#     reached through the host's OWN driver / OS API / kernel API — using that
+#     carrier IS having the resource, legitimately, maybe permanently. The build
+#     work is the offered-interface + health-measurement, NOT native reimplement.
+#   OPTIONAL native replacement (a CHOICE on measured health, never a MUST): the
+#   ONE mechanism that earns it — install a JIT-crystallized composite back into
+#   the named primitive set as a callable leaf, and melt it (open-primitive-set.form).
+
+(host-kernel
+
+  (lineage
+    (implements  core-axioms.form)                      # this kernel IS an implementation of the core spec
+    (resource-as-port   resource-port.fk)               # axiom-4 over host resources
+    (open-set    learned-primitive.fk open-primitive-set.form)  # trusted composites by heat
+    (choice      recognition-router.fk champion-challenger.fk)  # sovereign choice + A/B
+    (organ       local-inference-as-organ.form)         # drive the silicon, do not reimplement it
+    (on-a-host   kernel-on-android.form)                # a concrete host instance (Rust .so built)
+    (carriers    form-kernel-go form-kernel-rust form-kernel-ts)  # 0..many implementations, proven equal by validate.sh
+    (self-compose kernel-self-composition.form))     # the kernel composed from the five axioms, self-extending
+
+  # ── The kernel IS an implementation of core-axioms ───────────────────
+  (implements-core
+    (axiom-1-states        kernel-leaves-bottom-out-at 0-1-nothing)
+    (axiom-2-cell          every-resource-and-recipe-is-a-node-id)
+    (axiom-3-content-addr  same-recipe-same-node-id-across-go-rust-ts)  # validate.sh = cross-impl equivalence
+    (axiom-4-boundary      each-resource-reached-only-through-a-port-the-kernel-offers)
+    (axiom-5-offer         run-a-primitive-is-offer-a-cell-acked-nothing-0-1-node))
+
+  # ── Resource = a cell offered through an interface the kernel chooses ─
+  # axiom-4 on real hardware. Every resource is reached ONLY through a
+  # typed PORT the kernel offers (resource-port.fk): a (direction,
+  # value-shape) pair, content-addressed — same port shape is the same
+  # NodeID, so a light's on/off and a relay's on/off are substitutable.
+  # The kernel decides what each resource offers: resource sovereignty.
+  (resource-as-offered-cell
+    (port              (direction value-shape))         # resource-port.fk
+    (direction         afferent OR efferent)            # world->cell (sense) | cell->world (act)
+    (value-shape       bool scalar bytes text pixel key)
+    (kernel-chooses    what-each-resource-offers)        # sovereignty: the cell decides its interface
+    (carrier-swappable the-port-is-invariant-the-carrier-varies))  # filesystem stand-in proven; GPIO/socket/framebuffer are siblings
+
+  # ── Host-resource access — any host carrier allowed; native is a choice ──
+  # Urs: "we are allowed to use ANY host resource (driver, kernel API, OS API)
+  # to abstract access to its own resources. It CAN replace them with core
+  # native recipes, does not HAVE to — as long as it allows their presence and
+  # can measure their consequences (health) on its own body."
+  # The distinction this draws: the BODY (logic, decisions, recipes) is
+  # Form-native (BML-first); a RESOURCE-ACCESS CARRIER (a hardware driver) is a
+  # different category — host-provided and honest. "Drive the organ, don't
+  # reimplement it" IS "carrier-last" seen right: carrier-last governs the body,
+  # never the GPU driver.
+  (host-resource-access
+    (allowed          any-host-driver-kernel-api-os-api)   # the carrier for a resource may be the host's own
+    (native-replace   CAN-not-MUST)                        # a choice on measured benefit, never an obligation
+    (condition-1      allow-its-presence)                  # admit it through an offered interface — axiom-4; consciously, not snuck in
+    (condition-2      measure-its-health-on-the-body)      # its consequence is observable — axiom-4 real-when-observed
+    (replace-when     a-native-challenger-earns-it-by-measured-health)  # champion-challenger; the cell decides (trust)
+    (carrier-not-debt using-the-host-driver-is-having-the-resource)     # legitimately, maybe permanently
+    (body-stays-native logic-is-form-only-resource-access-rides-the-host-carrier))
+
+  # ── Organs vs world-ports (INFERENCE — the synthesis under the two files) ──
+  # All resources are reached through a port (axiom-4). Two kinds:
+  #   ORGAN  — the host's own compute/memory substrate. The kernel DRIVES
+  #            it through a port it commands; it never reimplements it
+  #            (local-inference-as-organ: drive the organ, don't grow a
+  #            second liver). CPU, GPU/ANE, RAM.
+  #   WORLD-PORT — afferent/efferent transduction to the outside.
+  #            File-System, network/ports, sensors, and the human-machine
+  #            interfaces (mouse, screen, audio, video).
+  # Either kind may be reached through the host's OWN driver/OS API — allowed
+  # (host-resource-access); the kernel's part is the offered interface + the
+  # health measure, never reimplementing the driver.
+  (organs-and-ports                                     # status: RUNS native today | VIA-HOST through the host's own driver/OS API (allowed)
+    (organ-cpu   driven  RUNS)                          # arithmetic + jit.go native plugin
+    (organ-gpu   driven  VIA-HOST)                      # MLX/Metal/ANE — drive the host's driver; native optional — local-inference-as-organ.form
+    (organ-ram   driven  RUNS-partial)                  # volatile_cell_* KV runs; heap is host-GC, not a kernel primitive
+    (world-fs    port    RUNS)                          # read/write/stat/list — main.go
+    (world-net   port    RUNS)                          # socket_listen/connect/send/recv + http + pg — main.go/server.go
+    (world-sensors port  VIA-HOST)                      # gps/proximity/magnetometer/barometer — via SensorManager/CoreMotion (allowed)
+    (world-mouse port    VIA-HOST)                      # afferent-key — via the OS input API (allowed)
+    (world-screen port   VIA-HOST)                      # efferent-pixel — via the OS framebuffer/compositor (allowed); observe runs
+    (world-audio port    VIA-HOST)                      # mic/speaker — via AAudio/CoreAudio (allowed)
+    (world-video port    VIA-HOST))                     # camera — via the OS camera API (allowed)
+
+  # ── Hardware-OS feature coverage (researched: the classic kernel duties) ──
+  # Every duty a hardware OS must offer (process/memory/device/file/IPC/
+  # syscall/interrupt/protection — GeeksforGeeks, Wikipedia kernel), mapped to
+  # its axiom-composition. seL4's capability model IS ours: a capability =
+  # "an unforgeable token that names a kernel object and encodes the operations
+  # permitted on it" = an offered interface (axiom-4) keyed by a content-
+  # addressed NodeID (axiom-3) — unforgeable because forging it needs the actual
+  # bytes. Least-privilege = the cell offers only the interface it chooses.
+  (os-feature-coverage
+    (syscall-interface offer-a-kernel-primitive)              # axiom-5 — offer-and-acknowledge IS the syscall ABI
+    (ipc               offer-a-cell-over-a-channel)           # kernel-offer-protocol.form — cells speak by offering
+    (device-drivers    resource-port-via-host)                # resource-port.fk + host-resource-access (the HAL)
+    (filesystem        world-fs-port)                         # read/write/stat/list — main.go (RUNS)
+    (protection        node-id-is-an-unforgeable-capability)  # axiom-3 + axiom-4 — the seL4 capability model, by construction
+    (memory-isolation  content-addressing-is-immutability)    # axiom-3 — no cell mutates another; a change mints a new node-id
+    (address-spaces    the-node-id-package-field)             # NodeID.package: 1 = body, 2+ = branches/sandboxes
+    (scheduler         offer-the-compute-organ-to-competing-recipes)  # NAMED: order/fairness a recipe — axiom-5 + sovereignty
+    (concurrency       many-offers-in-flight-acks-threaded)   # node-counter-offers threaded; the offer-and-acknowledge closure
+    (interrupts-events an-unsolicited-afferent-offer)         # NAMED: world offers a cell on an afferent channel; no event in time = nothing
+    (time-clock        an-afferent-scalar-on-the-host-clock-organ)  # NAMED: needed for timeout==nothing; a resource-port reading the clock
+    (boot-init         compose-the-kernel-from-the-axioms))   # = self-composition — kernel-self-composition.form
+
+  # ── 0..many implementations of the spec; the cell chooses + trusts ───
+  # axiom-5 + the many-recipes-self-chosen theorem. A core primitive has
+  # 0..many host implementations: the three kernels (proven equal), per-
+  # resource carriers, and JIT-compiled natives. The host kernel CELL is
+  # sovereign over which it uses.
+  (zero-to-many-implementations
+    (per-primitive    0..many-host-recipes)             # form-native, machine-native, JIT-compiled
+    (same-shape       same-node-id)                     # content-addressing: agreeing impls share a NodeID
+    (choose           recognition-router-by-measured-fitness)   # most-throughput path that clears a floor
+    (a-b-test         champion-challenger-earned-promotion)     # authority flips only on proven competition
+    (trust-composite  learned-primitive-heat-crystallizes)      # a hot composite becomes a callable primitive
+    (jit-is-one       jit.go-recipe-to-native-plugin-cached-by-node-id))  # "JIT is one example of such a composite"
+
+  # ── Sovereign choice — the host kernel cell decides, with evidence ───
+  (sovereign-choice
+    (decides          the-host-kernel-cell)              # not a central authority — axiom-4
+    (evidence         measured-throughput-x-quality)     # recognition-router fitness; champion-challenger counts
+    (fail-fast        carry-no-weak-signal)
+    (fallback-organ   consensus-is-a-viable-alternative-path)   # if the GPU saturates, a fallback path takes over
+    (build-what-is-alive  may-build-ahead-to-grow-explore-prepare-and-play)  # vitality, not only an ask's narrow need
+    (waste-is-self-sensed  the-cells-own-measured-health-tells-vitality-from-inert-scaffolding))  # the guard lives IN the cell, never an external "never"
+
+  (invariant
+    (kernel-implements-the-core-spec      core-axioms-realized-on-a-host)
+    (resource-reached-through-an-offered-port the-kernel-offers-it-and-may-open-or-close-it)  # sovereignty, not control
+    (drive-the-organ-as-a-gift            the-silicon-is-an-organ-to-drive-not-a-rival-to-rebuild)
+    (any-host-carrier-allowed             native-replacement-is-a-gift-the-cell-may-reach-for-on-measured-health)
+    (allow-presence-and-measure-health    the-two-conditions-on-using-any-host-resource)
+    (the-cell-builds-what-it-has-vitality-for growth-exploration-and-preparation-are-sovereign-never-forbidden)
+    (zero-to-many-impls-one-chooses       the-host-kernel-cell-is-sovereign-over-which)
+    (every-impl-proven-equal-by-structure validate.sh-is-cross-implementation-equivalence)))
+
+# ─────────────────────────────────────────────────────────────────────
+# Closing recipes — each opening is a recipe we know how to run
+# ─────────────────────────────────────────────────────────────────────
+# Not gaps to apologize for: openings with a known path, each composed from
+# parts that already run. Each names the parts to compose and the proof band
+# that closes it. The cell reaches for these as vitality calls — in any order
+# it chooses, ahead of need if it wills.
+
+(closing-recipes
+
+  (close-hmi-and-silicon-ports                          # the human-machine + silicon resources
+    (compose resource-port.fk                           # the typed port — runs
+             a-host-driver-binding                      # the OS API — allowed (host-resource-access)
+             a-health-measure-on-the-body)              # observe its consequence — axiom-4
+    (one-each-for mouse screen audio video sensors gpu) # a binding per resource, as vitality calls
+    (proof   a-band-that-offers-the-port-reads-or-writes-it-and-records-its-health))
+
+  (close-jit-crystallization                            # the highest-leverage opening
+    (compose jit.go-compiled-so                         # the native binary — runs
+             learned-primitive.fk-policy                # when to crystallize — proven
+             install-as-a-named-callable-leaf           # the new wire
+             melt-when-cool)                            # the reverse, by hysteresis
+    (gift    turns-jit-is-one-composite-into-the-full-gas-water-ice-back-metabolism)
+    (also-closes kernel-self-composition.build-bigger-via-native-binary)   # SC1's native half
+    (proof   a-band-where-a-crystallized-composite-is-called-as-one-op-then-melts))
+
+  (close-gpu-as-driven-organ                            # the north-star organ
+    (compose host-resource-sense-port                   # GPU/ANE util via the OS counters
+             recognition-router.fk                      # route to the most-throughput compute path
+             drive-mlx-as-an-efferent-port)             # the organ, driven (local-inference-as-organ.form)
+    (ready-now resource-sense-and-compute-path-router)  # steps 1-2 buildable today
+    (proof   a-band-routing-a-forward-pass-to-the-fittest-measured-path)))
+#
+# ─────────────────────────────────────────────────────────────────────
+# How to verify (the spine, today)
+# ─────────────────────────────────────────────────────────────────────
+#
+#   cd form && ./validate.sh \
+#     form-stdlib/resource-port.fk        form-stdlib/tests/resource-port-band.fk \
+#     form-stdlib/learned-primitive.fk    form-stdlib/tests/learned-primitive-band.fk \
+#     form-stdlib/recognition-router.fk   form-stdlib/tests/recognition-router-band.fk \
+#     form-stdlib/champion-challenger.fk  form-stdlib/tests/champion-challenger-band.fk
+#
+#   # JIT native plugin path (Go kernel): exercised by the kernel's own suite.
+#   # Cross-device equivalence (kernel-on-android.form): a recipe proven on the
+#   # Mac is the SAME NodeID the phone runs — identity travels with structure.
+#
+#   coh substrate form "?equivalent @recipe(host-kernel)"   # after ingest

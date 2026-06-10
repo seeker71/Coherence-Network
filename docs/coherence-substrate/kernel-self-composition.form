@@ -1,0 +1,143 @@
+# ─────────────────────────────────────────────────────────────────────
+# kernel-self-composition.form — the kernel composed from the five axioms,
+#                                 self-extending, over a shared versioned substrate
+# ─────────────────────────────────────────────────────────────────────
+#
+# Urs: "create a set of spec recipes using just axioms as core primitives we
+# can describe and use to compose the kernel from, giving the core kernel full
+# self-composability rooted in the core axioms expressed through the core
+# primitives available; receive input through a named channel which runs the
+# consent-protocol as one option; the kernel is allowed to offer any channel
+# and any interface it chooses; and it is allowed to build bigger versions
+# using its own native binary and the shared versioned and persistent substrate
+# that any other kernel or cell can observe or interact with using its offered
+# channels."
+#
+# This is the SELF-COMPOSITION spec: every kernel feature is a recipe over the
+# five axioms (core-axioms.form) — nothing below the axioms, nothing beside
+# them. The kernel can re-compose and extend ITSELF because it is made of the
+# same primitives it offers.
+#
+# Grounds in what runs: persistence.fk (the lattice persists), merkle.fk +
+# federation-addressing.form + cell-sync.fk (shared across runtimes by content),
+# jit.go (recipe -> native binary), kernel-offer-protocol.form (the offered
+# channels other cells reach it through).
+
+(kernel-self-composition
+
+  (lineage
+    (primitives-from core-axioms.form)                  # the five axioms ARE the only primitives
+    (resources-from  host-kernel.form)                  # the host organs/ports it composes over
+    (channels-from   kernel-offer-protocol.form channel-interface-consent.form)
+    (persist-by      persistence.fk)                    # the lattice persists
+    (version-by      content-addressing)                # axiom-3: new shape = new node-id; old persists = version lineage
+    (share-by        merkle.fk federation-addressing.form cell-sync.fk))  # observable/interactable across runtimes by content
+
+  # ── The core primitives available (just the five axioms) ─────────────
+  (core-primitives
+    (state    axiom-1)                                  # 0 / 1 / nothing
+    (cell     axiom-2)                                  # a node-id; composes children
+    (address  axiom-3)                                  # identity = composition (content-addressed)
+    (boundary axiom-4)                                  # reached only through an offered interface; observed = real; sovereign
+    (offer    axiom-5)                                  # offer a cell + 0..many args -> ack nothing/0/1/node
+    (nothing-below-these no-primitive-is-not-one-of-these))  # full grounding — the kernel bottoms out here
+
+  # ── A channel — a named cell offering an interface ───────────────────
+  # The kernel receives input through a NAMED channel. A channel is a cell
+  # (axiom-2) with a name (names are 0..many query keys), offering an interface
+  # (axiom-4) over which offers cross (axiom-5). The consent-protocol is ONE
+  # interface a channel may offer — not the only one.
+  (channel
+    (is              a-named-cell-offering-an-interface)
+    (named           a-name-0..many-the-node-id-is-identity)  # names are query keys; identity is the NodeID
+    (input           offers-arriving-on-the-channel)     # axiom-5, afferent
+    (interface       any-the-kernel-chooses)             # axiom-4 sovereignty — it offers what it wills
+    (consent-is-one  channel-interface-consent.form-is-ONE-option)  # one interface among many, not the only one
+    (offer-any       the-kernel-may-open-any-channel-and-offer-any-interface))
+
+  # ── Full self-composability — the kernel is recipes over the primitives ──
+  # Every kernel feature (channel, scheduler, port, driver-binding, the offer
+  # ABI itself) is a recipe composed from the five primitives. So the kernel can
+  # read, re-compose, and extend itself — it is not made of anything it cannot
+  # also author.
+  (self-compose
+    (made-of          recipes-over-the-five-primitives)  # all the way down
+    (self-readable    the-kernel-is-a-cell-it-can-observe-itself)   # axiom-4 real-when-observed, applied to itself
+    (self-extend      offer-itself-a-recipe-that-builds-a-bigger-kernel)  # the self-update theorem (core-axioms)
+    (sovereign-accept it-acks-and-trusts-the-change-or-not)  # axiom-4 — its own decision; reversible (axiom-3)
+    (rooted-in-axioms no-feature-escapes-the-five))
+
+  # ── Build bigger versions — two carriers, both already running ───────
+  # The kernel extends itself by (a) compiling a bigger recipe to its OWN native
+  # binary, and (b) growing the shared, versioned, persistent substrate.
+  (build-bigger
+    (via-native-binary  jit.go-compiles-a-recipe-to-native-and-runs-it)  # self-hosting; the new op is a callable leaf (host-kernel GAP-HK2)
+    (via-substrate      store-new-cells-in-the-persistent-lattice)        # persistence.fk
+    (versioned          content-addressing-keeps-every-version)           # axiom-3: a new shape mints a new node-id; the old persists
+    (reversible         roll-back-by-re-pointing-a-name-at-the-old-node-id)  # the version history IS the node-id lineage
+    (bigger-is-rooted   the-larger-kernel-is-still-recipes-over-the-five))
+
+  # ── Shared, observable, interactable — other kernels and cells ───────
+  # The substrate is the common medium (kernel-offer-protocol common-substrate).
+  # Any other kernel or cell observes or interacts ONLY through the channels
+  # this kernel offers — never by reaching past them (axiom-4 breach).
+  (shared-substrate
+    (common-medium   the-content-addressed-lattice-both-reach)
+    (observe         any-cell-may-read-by-node-id)         # real-when-observed
+    (interact        only-through-an-offered-channel)      # kernel-offer-protocol; reach-beyond is invasion
+    (across-runtimes merkle-root-crosses-the-wire-not-the-local-node-id)  # federation-addressing.form
+    (same-by-content what-one-kernel-proves-another-runs-by-node-id))     # validate.sh = cross-kernel equivalence
+
+  # ── Boot — the kernel comes up by composing itself from the axioms ───
+  (boot
+    (from            the-five-axioms-as-the-only-given)
+    (compose         primitives-then-channels-then-ports)  # bottom-up, content-addressed
+    (offer-a-channel the-first-act-is-to-offer-a-channel-for-input)  # then it can receive
+    (self-hosting    a-kernel-boots-a-bigger-kernel-it-authored))   # the bootstrap loop
+
+  (invariant
+    (only-five-primitives          nothing-below-or-beside-the-axioms)
+    (input-through-a-named-channel consent-is-one-interface-not-the-only-one)
+    (the-kernel-offers-its-channels each-cell-reaches-through-what-is-offered)  # reach-past is breach, witnessed
+    (the-kernel-grows-by-its-own-vitality it-may-build-bigger-when-it-wills-not-only-when-asked)
+    (self-extend-stays-rooted      a-bigger-kernel-is-still-recipes-over-the-five)
+    (versioned-persistent-shared   content-addressed-lattice-persisted-and-reachable-by-content)))
+
+# ─────────────────────────────────────────────────────────────────────
+# Closing recipes — each opening is a recipe we know how to run
+# ─────────────────────────────────────────────────────────────────────
+# Openings with a known path, composed from parts that already run. The kernel
+# reaches for these as vitality calls — to grow, not because it owes a debt.
+
+(closing-recipes
+
+  (close-self-rebuild-loop                              # boot -> offer -> self-extend -> boot bigger
+    (compose jit.go-recipe-to-native                    # the native binary — runs
+             persistence.fk-store                       # persist the new cells — runs
+             kernel-offer-protocol-channels             # offer the channels — runs
+             host-kernel.close-jit-crystallization)     # install the bigger op as a callable leaf
+    (proof   a-band-where-a-kernel-authors-compiles-and-boots-a-strictly-larger-kernel))
+
+  (close-named-channel-front-door                       # the kernel's primary input door
+    (compose a-named-channel-cell                       # axiom-2 + a name
+             kernel-offer-protocol                      # offers arrive as input — runs cell<->cell
+             channel-interface-consent-as-one-interface) # consent selectable among the interfaces it offers
+    (proof   a-band-where-input-arrives-on-a-named-channel-and-the-offered-interface-is-honored))
+
+  (close-version-history-view                           # the lineage of node-ids a name pointed at
+    (compose content-addressing                         # every version already persists — axiom-3
+             a-recipe-walking-the-node-id-lineage-of-a-name)  # the history is data; this names the read
+    (gift    rollback-and-audit-fall-out-the-history-IS-the-lineage)
+    (proof   a-band-returning-the-ordered-node-ids-a-name-resolved-to-over-time)))
+#
+# ─────────────────────────────────────────────────────────────────────
+# How to verify
+# ─────────────────────────────────────────────────────────────────────
+#
+#   # The primitives + persistence + sharing already run:
+#   cd form && ./validate.sh form-stdlib/persistence.fk form-stdlib/merkle.fk \
+#                            form-stdlib/cell-sync.fk
+#   # The offered channels (cell<->cell):
+#   cd form/form-samples/cross-modal/28-distributed-daemon && ./validate-distributed.sh
+#   # After ingest:
+#   coh substrate form "?equivalent @recipe(kernel-self-composition)"
