@@ -1,0 +1,54 @@
+; fourth-match.fk — a wake-word matcher as a fourth-walker PROGRAM: does the
+; captured stream (fk_src) contain a fixed needle? The Form decision cell of
+; the meeting companion — whisper (STT) fills fk_src, this 4th-kernel binary
+; decides "addressed to me?", and on 1 the orchestrator drives ollama + say.
+;
+; Built on the streaming-cursor discipline (op 17 BUF, no tokenizer): a scan
+; over the source, a match-at-position inner walk, the base position in the
+; RAM organ (mem[0]) so the one-arg CALL can carry the match index k. The
+; needle bytes are baked from the Form string at authoring (ord/char_at) into
+; a nested compare — the matcher program IS the needle, content-addressed.
+;
+; Functions (CALL by index): 0 entry, 1 scan, 2 match-at, 3 needle-byte(k).
+;   entry      : mem[0] = 0 ; CALL scan
+;   scan       : if BUF(mem[0]) == 0 -> 0 (end, absent)
+;                else if CALL match-at(0) == LEN -> 1 (found)
+;                else mem[0] = mem[0]+1 ; CALL scan
+;   match-at(k): if k == LEN -> LEN ; else if BUF(mem[0]+k) == needle(k)
+;                -> CALL match-at(k+1) ; else 0
+;   needle(k)  : baked nested-if returning needle byte k
+
+(defn fm-seq (a b) (fk-if a b b))                 ; eval a (effect), then b
+(defn fm-getp ()   (fk-get (fk-lit 0)))           ; base scan position
+(defn fm-setp (v)  (fk-set (fk-lit 0) v))
+
+; needle(k): a select-by-equality chain over k -> byte k, baked from the string.
+(defn fm-needle (s) (fm-needle-chain s 0))
+(defn fm-needle-chain (s k)
+    (if (ge k (str_len s)) (fk-lit 0)
+        (fk-if (fk-sub (fk-arg) (fk-lit k))        ; arg - k : 0 when arg==k -> else-branch picks byte k
+               (fm-needle-chain s (add k 1))
+               (fk-lit (ord (char_at s k))))))
+
+; match-at(k): k in ARG, base in mem[0]
+(defn fm-matchat (s)
+    (fk-if (fk-sub (fk-arg) (fk-lit (str_len s)))               ; k - LEN : 0 when k==LEN
+           (fk-if (fk-sub (fk-buf (fk-add (fm-getp) (fk-arg)))  ; BUF(base+k) - needle(k)
+                          (fk-call 3 (fk-arg)))
+                  (fk-lit 0)                                     ; mismatch
+                  (fk-call 2 (fk-add (fk-arg) (fk-lit 1))))      ; match -> next k
+           (fk-lit (str_len s))))                               ; k==LEN -> full match
+
+; scan: walk base across the source
+(defn fm-scan (s)
+    (fk-if (fk-buf (fm-getp))                                   ; BUF(base) != 0 ?
+           (fk-if (fk-sub (fk-call 2 (fk-lit 0)) (fk-lit (str_len s)))  ; match-at(0) - LEN
+                  (fm-seq (fm-setp (fk-add (fm-getp) (fk-lit 1))) (fk-call 1 (fk-lit 0)))  ; advance, rescan
+                  (fk-lit 1))                                    ; full match here -> found
+           (fk-lit 0)))                                         ; end of source -> absent
+
+(defn fm-entry () (fm-seq (fm-setp (fk-lit 0)) (fk-call 1 (fk-lit 0))))
+
+; the four functions, in CALL-index order (entry=0, scan=1, match-at=2, needle=3)
+(defn fm-contains-fns (needle)
+    (list (fm-entry) (fm-scan needle) (fm-matchat needle) (fm-needle needle)))
