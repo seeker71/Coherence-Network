@@ -689,6 +689,19 @@ def test_wellness_reading_projects_sections_into_shared_shape() -> None:
     assert "Witness-trace: trace breathing within budget" in reading["what_can_compost"][1]
 
 
+def test_wellness_kernel_live_probe_covers_kernel_served_recipe_ledger() -> None:
+    """Every kernel-served recipe route is included in live fallback sensing."""
+    wellness = _load_script_module("wellness_check")
+    attribution = _load_script_module("kernel_attribution_report")
+
+    paths = wellness._kernel_live_endpoint_paths(attribution.KERNEL_SERVED_RECIPES)
+    routes = {str(entry["route"]) for entry in attribution.KERNEL_SERVED_RECIPES}
+
+    assert set(paths) == routes
+    assert len(paths) >= 22
+    assert "/api/utils/coherence_summary_score" in paths
+
+
 def test_pr_guard_detached_head_blocked(monkeypatch) -> None:
     """Detached HEAD state is detected and blocked."""
     mod = _load_script_module("worktree_pr_guard")
