@@ -1,0 +1,91 @@
+{
+  "date": "2026-06-10",
+  "thread_branch": "codex/kernel-first-next-20260610",
+  "commit_scope": "Promote live route-pressure read surfaces into the BML front-door route catalog.",
+  "files_owned": [
+    "deploy/front-door/api.bml",
+    "form/form-kernel-go/server_test.go",
+    "docs/system_audit/native_route_goal_state.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "go test . -run TestKernelReadRoutePromotionsSelectNatively -count=1",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/kernel-http.fk form-stdlib/language-model.fk form-stdlib/tests/source-language-route-class-template-band.fk",
+      "python3 scripts/native_route_goal_loop.py /goal --source web_api --seconds 86400 --limit 2000 --write-state --json",
+      "python3 scripts/native_route_goal_loop.py /goal --source api --seconds 86400 --limit 2000 --write-state --json"
+    ],
+    "observations": [
+      "New native route-selection proof passed for GET /api/runtime/events, /api/views/stats/{asset_id}, /api/reactions/concept/{entity_id}/summary, /api/reactions/concept/{entity_id}/threads, and /api/concepts/{concept_id}/voices.",
+      "Form cross-kernel route-class validation returned 1049665 with 1 ok and 0 divergent.",
+      "Comparable live web_api pressure readings moved from roughly 0.8435 before the views/reactions/voices lifts to 0.8755 after them; next web route is GET /api/lenses.",
+      "API pressure is live-window sensitive and remains led by GET /api/concepts/domain/living-collective; latest written state shows 0.802 with 1604/2000 native events."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof passed; CI, merge, deploy, and public verification remain to be completed for this branch."
+  },
+  "idea_ids": [
+    "oss-interface-alignment",
+    "kernel-native-route-goal"
+  ],
+  "spec_ids": [
+    "native-route-goal-loop",
+    "front-door-bml-route-catalog"
+  ],
+  "task_ids": [
+    "kernel-read-route-promotions-2026-06-10"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "go test . -run TestKernelReadRoutePromotionsSelectNatively -count=1",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/kernel-http.fk form-stdlib/language-model.fk form-stdlib/tests/source-language-route-class-template-band.fk",
+    "docs/system_audit/native_route_goal_state.json"
+  ],
+  "change_files": [
+    "deploy/front-door/api.bml",
+    "docs/system_audit/native_route_goal_state.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-kernel-go/server_test.go"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The kernel front door can serve the promoted read routes natively once deployed, reducing Python fanout on live route-pressure surfaces without changing response contracts.",
+    "public_endpoints": [
+      "/api/runtime/events",
+      "/api/views/stats/lc-attuned-spaces",
+      "/api/reactions/concept/lc-attuned-spaces/summary",
+      "/api/reactions/concept/lc-attuned-spaces/threads",
+      "/api/concepts/lc-attuned-spaces/voices"
+    ],
+    "test_flows": [
+      "After deploy, request promoted endpoints with Accept: application/json and verify X-Form-Router is native-kernel or native-kernel-go.",
+      "Run native_route_goal_loop for web_api and api sources to verify the promoted routes remain high_grammar_native."
+    ]
+  }
+}
