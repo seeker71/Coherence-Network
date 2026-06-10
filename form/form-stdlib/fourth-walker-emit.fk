@@ -190,6 +190,35 @@
 
 (defn fkc-emit-many (fns) (fkc-emit-many2 (fkc-flatten-many fns)))
 
+; ── n1/n2 — the NET organ + the api-on-a-4th-kernel-binary ──────────────
+; A server-variant main owns the net organ through quoteless externs:
+; socket/bind/listen/accept, then dup2(fd, 1) repoints stdout to the
+; accepted connection so the PROGRAM's PUTC bytes ARE the response. The
+; program is a pure responder (fn 0 PUTCs a full HTTP/1.0 response, the
+; connection closed after — HTTP/1.0 connection-close, which curl honors).
+; The kernel-resource lifecycle is the constant main (the organ); the body
+; the program serves is Form. Port is argv[1] (default 8080).
+(defn fkc-server-main-text ()
+    "extern int socket(int,int,int); extern int bind(int,const void*,unsigned int); extern int listen(int,int); extern long accept(int,void*,void*); extern int close(int); extern int dup2(int,int); extern int fflush(void*); extern int fork(void); extern void _exit(int); extern int setsockopt(int,int,int,const void*,unsigned int); extern long read(int,void*,unsigned long); extern int shutdown(int,int); extern int atoi(const char *); static char fk_rq[8192]; struct fk_sa { unsigned char len; unsigned char fam; unsigned char p[2]; unsigned int addr; unsigned char z[8]; }; int main(int argc, char **argv) { long long port = 8080; if (argc > 1) { port = atoi(argv[1]); } int sfd = socket(2, 1, 0); int yes = 1; setsockopt(sfd, 65535, 4, &yes, 4); struct fk_sa a; a.len = 16; a.fam = 2; a.p[0] = (port >> 8) & 255; a.p[1] = port & 255; a.addr = 0; for (int z = 0; z < 8; z = z + 1) { a.z[z] = 0; } if (bind(sfd, &a, 16) < 0) { return 1; } listen(sfd, 16); while (1) { long cfd = accept(sfd, 0, 0); if (cfd < 0) { continue; } if (fork() == 0) { read((int)cfd, fk_rq, 8192); dup2((int)cfd, 1); fk_walk(fk_fn[0], 0); fflush(0); shutdown((int)cfd, 2); _exit(0); } close((int)cfd); } return 0; }")
+
+(defn fkc-emit-server2 (flat)
+    (str_concat (fkc-pr-text)
+    (str_concat (fkc-decl-many-text (nth flat 0) (nth flat 1))
+    (str_concat (fkc-walk-many-text)
+                (fkc-server-main-text)))))
+
+(defn fkc-emit-server (fns) (fkc-emit-server2 (fkc-flatten-many fns)))
+
+; fkresp — a responder PROGRAM (cells) that PUTCs the bytes of a Form string,
+; one PUTC per byte (ord off char_at), sequenced by fkd-seq (ADD over PUTC=0).
+; The string IS the whole HTTP/1.0 response; fold it once, get a program-as-
+; cells the net main serves. Authoring-time recursion over the string; the
+; emitted program is a flat PUTC chain — a static response, no input read yet.
+(defn fkresp-from (s i)
+    (if (eq i (str_len s)) (fk-lit 0)
+        (fkd-seq (fkd-ch (ord (char_at s i))) (fkresp-from s (add i 1)))))
+(defn fkresp (s) (fkresp-from s 0))
+
 ; ── the UNIVERSAL walker — no baked program: load a table FILE and run it ──
 ; One binary, many programs. The table file (fkc-table-file) is plain ints —
 ; function count, roots, row count, rows — read through the fs afferent port
