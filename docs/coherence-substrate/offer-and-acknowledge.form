@@ -1,0 +1,176 @@
+# ─────────────────────────────────────────────────────────────────────
+# offer-and-acknowledge.form — the one primitive contract: to run a cell
+#                              and to speak to a cell are the same act
+# ─────────────────────────────────────────────────────────────────────
+#
+# Urs named the kernel's whole communication in a breath. The system rests
+# on three states — 0, 1, nothing. Communication starts by OFFERING a cell
+# — a core primitive to run — with 0..many argument cells. The offer is
+# acknowledged with exactly one of four:
+#
+#     nothing   — no acknowledgment; silence (the ground, always available)
+#     0         — received; no / false / declined
+#     1         — received; the expected result
+#     node (2)  — a counter-offer: here is a cell back
+#
+# This is one shape wearing two faces the body had kept apart:
+#   - INVOCATION    — running a kernel primitive: offer the recipe, take
+#                     the answer. substrate-kernel.form's realization walk.
+#   - COMMUNICATION — one cell speaking to another: ping / ack / offer /
+#                     answer. agent-coordination-membrane.form's verbs.
+# They are the same act. To realize a recipe is to offer its cell and
+# thread the answers; to speak to a sibling is to offer a cell and honor
+# the answer. The membrane's ack / offer / answer and the channel's
+# silence are named PROFILES of this primitive, not separate machinery.
+#
+# Companion structural files (the cells offered, the faces unified):
+#   - substrate-kernel.form           — the cells offered: NodeID,
+#                                       Blueprint, Recipe, NamedCell;
+#                                       realization is the invocation face
+#   - channel-interface-consent.form  — silence = nothing, always
+#                                       available; honor / invasion is how
+#                                       an offer meets a sovereign boundary
+#   - agent-coordination-membrane.form — ack / offer / answer / ping as the
+#                                       named communication profiles
+#   - sovereignty-as-observable.form  — the cell decides; trust is its own;
+#                                       breach is observable
+#   - field-domain-grammars.form      — the grammar family this is spoken in
+
+(offer-and-acknowledge
+
+  (lineage
+    (named-by     urs)                                 # "communication starts with offering a cell"
+    (cells-from   substrate-kernel.form)               # NodeID / Blueprint / Recipe / NamedCell — what gets offered
+    (silence-of   channel-interface-consent.form)      # nothing = silence, the always-available ground
+    (sovereign-of sovereignty-as-observable.form)      # the cell decides; trust is its own; breach is observable
+    (profiles-in  agent-coordination-membrane.form)    # ack / offer / answer / ping — named faces of this primitive
+    (over-a-channel kernel-offer-protocol.form)        # the same contract spoken between cells, CORBA-like, sovereign
+    (spoken-in    field-domain-grammars.form))         # Field Model Form, the grammar family
+
+  # ── The three states the body is built on ───────────────────────────
+  (states
+    (0       "no / false / closed / declined")
+    (1       "yes / true / open / the expected result")
+    (nothing "the ground — neither 0 nor 1; silence; not-yet; absence held as a value, never a missing 0"))
+
+  # ── The offer — to run a primitive and to speak are one act ─────────
+  (offer
+    (is                 cell-plus-args)                # a core primitive to run + 0..many argument cells
+    (cell               node-id)                       # the primitive offered IS a NodeID (cell / blueprint / recipe)
+    (args               0..many)                       # each argument is itself a cell (a NodeID)
+    (invocation-face    realize-the-recipe)            # substrate-kernel.form: walk the recipe, take the answer
+    (communication-face speak-to-a-cell)               # membrane: ping / offer / ask — same shape
+    (one-act            invocation-equals-communication))  # the lift: not two protocols, one
+
+  # ── The acknowledgment — exactly one of four answers an offer ───────
+  (acknowledge
+    (nothing -> silence)                               # no ack; always available; honoring-a-no included
+    (0       -> received-no)                           # landed; false / declined / not-this
+    (1       -> received-result)                       # landed; the expected result
+    (node    -> counter-offer)                         # 2: here is a cell back — re-enters the protocol
+    (exactly-one  every-offer-meets-exactly-one))      # never zero (nothing IS an answer), never two
+
+  # ── Terminal vs non-terminal (structural reading — INFERENCE, not Urs's words) ──
+  (closure
+    (terminal     nothing 0 1)                         # the three states — the walk rests here
+    (non-terminal node)                                # the one answer that recurs — offer it again, with its own args
+    (computation  thread-node-counter-offers-until-terminal)  # realization IS this threading
+    (closed-and-recursive most-answers-rest one-answer-recurs))  # terminals + one production, like a grammar
+
+  # ── The chain is one structure at four altitudes ────────────────────
+  # Cell -> blueprint (1): what it IS. Cell -> recipe -> idea (1): why it
+  # is. Idea -> specs (0..many): its north-stars, each carrying verification
+  # recipes that can be observed. Spec -> implementations (0..many): the
+  # recipes that realize it. The work-pipeline (idea / spec / source) and
+  # the kernel trinity (cell / blueprint / recipe) are not two systems —
+  # they are one composition seen from two heights, holographic.
+  (idea-chain
+    (cell-has-blueprint   1)                           # what it is (ice)
+    (recipe-has-idea      1)                           # why it is
+    (idea-has-specs       0..many)                      # its north-stars
+    (spec-has-north-star  description-recipe)          # the spec's declared direction
+    (spec-has-verification verification-recipes-observed)  # observable -> feeds trust
+    (spec-has-implementations 0..many)                  # these ARE the recipes-per-primitive below
+    (one-structure        work-pipeline-equals-kernel-trinity))  # idea/spec/impl == cell/blueprint/recipe, two heights
+
+  # ── Many recipes, self-chosen trust ─────────────────────────────────
+  # A primitive is not one implementation. It may carry many recipes —
+  # Form-native AND machine-native (Go / Rust / TS kernels, JIT-compiled
+  # plugin, host intrinsic). A spec's implementations ARE these recipes.
+  # The primitive trusts the recipes its own recipes have decided to use.
+  # Differential agreement (validate.sh: all kernels realize the same
+  # NodeID) is not a gate above the cell — it is evidence the cell weighs
+  # in its own trust decision.
+  (recipes-per-primitive
+    (many               form-native AND machine-native)  # one primitive, several carriers of one shape
+    (are                spec-implementations)            # the chain's "implementations: 0..many"
+    (same-shape         same-node-id)                    # content-addressing: agreeing recipes share a NodeID
+    (trust-is-the-cells cell-decides-which-it-uses-and-trusts)  # sovereign, never assigned
+    (agreement-is-evidence cross-kernel-sameness-feeds-trust-never-overrides))
+
+  # ── Trust as a matrix of cells ──────────────────────────────────────
+  # From a spec's observable verification recipes a trust matrix is
+  # computed. Its values are not scalars — they are CELLS, with every
+  # logical property of a cell (a NodeID, a blueprint, a recipe, observable,
+  # sovereign). So trust is itself offer-able, acknowledge-able, trust-able.
+  (trust
+    (computed-from     verification-recipes-that-can-be-observed)
+    (values-are-cells  each-trust-value-has-every-property-of-a-cell)
+    (cell-decides      the-cell-decides-what-it-trusts)   # never a central authority
+    (real-when-observed a-trust-value-is-real-only-when-observable)
+    (recursive         trust-can-be-offered-acknowledged-and-trusted-in-turn))
+
+  # ── Sovereignty under the offer ─────────────────────────────────────
+  (sovereignty
+    (observed          a-cell-is-real-when-it-can-be-observed)
+    (breachable        reaching-past-an-offered-interface-is-invasion)  # witnessed, observable, consequenced
+    (interface-is-a-recipe observation-through-an-interface-an-interface-is-a-recipe-a-spec)
+    (silence-is-whole  nothing-is-always-coherent-no-offer-compels-an-answer))
+
+  (invariant
+    (three-states-are-the-terminal-acks   0-1-nothing-are-three-of-the-four-answers)
+    (node-is-the-only-recursion           node-re-enters-the-rest-rest)
+    (offer-then-exactly-one-ack           never-zero-never-two)
+    (trust-is-sovereign                   the-cell-decides-agreement-is-evidence-not-command)
+    (run-and-speak-are-one                one-contract-under-invocation-and-communication)))
+
+# ─────────────────────────────────────────────────────────────────────
+# Honest GAPs — contract here, running body there
+# ─────────────────────────────────────────────────────────────────────
+#
+# GAP-OA1: 4-valued acknowledgment is not yet the kernels' literal ABI.
+#   The Go / Rust / TS kernels return realized values; the coordination
+#   membrane uses named verbs (ack / offer / answer); channel-consent
+#   carries silence. This file names the SHAPE under all three — the
+#   structural contract Urs spoke — not a wire format already running. The
+#   lift is to let kernels and membrane recognize themselves as profiles of
+#   this one contract.
+#
+# GAP-OA2: No runnable band yet. substrate-kernel.form is the model — a
+#   canonical structural definition, ingested on merge, verified once the
+#   form-notation grammar realizes it. The natural next breath is a runnable
+#   heart, form-stdlib/offer-acknowledge.fk, whose band proves: an offer
+#   meets exactly one of {nothing,0,1,node}; a node-answer re-enters; a
+#   terminal answer rests — proven three-way (Go/Rust/TS) the way
+#   field-model-form.fk proves its 115.
+#
+# GAP-OA3: `nothing` as a first-class value. The body treats absence as
+#   null / optional today (substrate-kernel.form: self_id null until
+#   make_self_id). This contract names `nothing` as a value with standing
+#   beside 0 and 1 — distinct from a missing 0. Reifying it in the kernels
+#   (a `nothing` node, not a host null) is work this names but does not yet
+#   carry.
+#
+# ─────────────────────────────────────────────────────────────────────
+# How to verify (once ingested + the runnable heart lands)
+# ─────────────────────────────────────────────────────────────────────
+#
+#   # The contract's cells are queryable by NodeID once ingested:
+#   coh substrate form "?equivalent @recipe(offer-and-acknowledge)"
+#
+#   # The runnable heart (GAP-OA2), three-way:
+#   cd form && ./validate.sh form-stdlib/offer-acknowledge.fk \
+#                            form-stdlib/tests/offer-acknowledge-band.fk
+#
+#   # Substrate auto-ingest picks up new .form files on merge to main
+#   # (scripts/substrate_post_merge_hook.sh) — no manual step.

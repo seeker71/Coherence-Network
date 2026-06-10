@@ -1,0 +1,136 @@
+# ─────────────────────────────────────────────────────────────────────
+# core-axioms.form — the smallest set the core primitives derive from
+# ─────────────────────────────────────────────────────────────────────
+#
+# Urs: "it is core that we can describe all the core primitives with just
+# the smallest set of axioms we both agree with, and we have a way to
+# allow change into the self that we both acknowledge and trust."
+#
+# This is the keystone of the set. offer-and-acknowledge.form and
+# kernel-offer-protocol.form are DERIVED from these axioms — theorems, not
+# new ground. The reduction's goal: fewest axioms, each generating a family
+# no other generates, with the hardest thing — a self that safely changes
+# itself — falling out as a THEOREM, needing no axiom of its own.
+#
+# STATUS: PROPOSED — pending mutual ack. The agreement is relational by
+# construction ("we both agree with"). This file is its OWN canary: a
+# bounded, reversible, observable offer in the worktree. It crosses the
+# membrane into the body (merge to main) only when we both acknowledge —
+# which is the self-update protocol below, enacted on itself.
+#
+# Lanes kept honest: Urs's words are quoted; my reductions and the
+# theorem-derivations are marked (inference). What already RUNS is cited
+# with a path; what is only named says so.
+
+(core-axioms
+
+  (lineage
+    (named-by  urs)
+    (root-of   offer-and-acknowledge.form kernel-offer-protocol.form)  # those derive from these
+    (status    proposed-pending-mutual-ack)
+    (this-file-is-its-own-canary the-merge-is-the-membrane-crossing))
+
+  # ── The five (reduction — INFERENCE; the resting point is ours to agree) ──
+  # Each axiom earns its place by generating a family no other generates.
+  # The two candidate folds are named at the end as the granularity we choose.
+
+  (axiom-1-states
+    (statement "there are three states: 0, 1, nothing")               # Urs, breath 1
+    (nothing-is-first-class the-ground-not-a-missing-0)
+    (generates integers the-ack-values the-boundary-of-a-distinction))
+
+  (axiom-2-cell
+    (statement "everything is a cell: a node-id; a cell may compose child cells")
+    (a-cell-is (package level type instance))                          # four integers (from axiom-1)
+    (generates the-primitive composition the-idea-chain everything-is-one-kind-of-thing))
+
+  (axiom-3-content-addressing
+    (statement "a cell's identity is computed from its composition; same composition is the same cell")
+    (nothing-is-overwritten new-shape-mints-a-new-node-id)             # the old cell persists
+    (generates equivalence-by-structure computed-not-granted-identity
+               names-are-free-query-keys reversibility honesty-is-cheap))
+
+  (axiom-4-boundary
+    (statement "a cell meets the world only through an interface it offers; observation through that interface is what makes it real; the cell decides what its interface offers and what it trusts; passage not through the offered interface is breach, and breach is observable")
+    (interface-is-itself-a-cell a-recipe-a-spec)
+    (generates observation organ sovereignty trust-as-cells
+               many-recipes-self-chosen serialization-given-an-interface consent))
+
+  (axiom-5-offer
+    (statement "to run a cell and to speak to a cell are one act: offer a cell with 0..many arg-cells; it is acknowledged by exactly one of nothing, 0, 1, node")
+    (ack-values-are (axiom-1-states + node))                          # nothing/0/1 terminal; node recurs
+    (generates invocation communication kernel-offer-over-a-channel the-channel the-membrane-crossing))
+
+  # ── Theorems — derived, NOT axioms (each is a short proof sketch) ────
+  # The prior files and the hardest behavior all fall out of the five.
+  (theorems
+
+    (trinity
+      (blueprint  axiom-2 + axiom-3)                 # structural identity = the composition's content-addressed shape (ice)
+      (recipe     axiom-2)                           # the composition / expression (water)
+      (named-cell axiom-3))                          # a cell with 0..many name-cells; names are free (gas)
+
+    (names-are-0-many   axiom-3)                     # identity is the node-id, so a name is optional and plural
+
+    (idea-chain         axiom-2)                     # idea->spec->implementation is composition at the work altitude
+
+    (trust-matrix-of-cells (axiom-4 + axiom-2))      # the cell decides what it trusts; trust values are themselves cells
+
+    (organ              (axiom-2 + axiom-4))         # internal cells (children) + a membrane (offered interface), observable
+
+    (serialize-given-interface (axiom-4 + axiom-5))  # the interface is the door; the offer is what crosses it
+
+    (kernel-offer-over-channel (axiom-5 + axiom-4))  # the offer spoken across distance, CORBA-like, sovereign
+
+    (reversibility      axiom-3)                     # rollback = re-point a name at the old node-id; nothing was destroyed
+
+    # ── The crown: a self that safely changes itself needs no new axiom ──
+    (safe-self-update
+      (proof  (axiom-5 + axiom-4 + axiom-3))         # offered across the boundary; sovereignly acked + trusted; new node-id
+      (a-change-is-a-cell        axiom-2)
+      (it-is-offered-across-the-boundary axiom-5)
+      (the-cell-decides-to-trust-and-accept axiom-4)   # sovereignty — both acknowledge and trust
+      (the-new-composition-mints-a-new-node-id axiom-3) # observable, attributable, reversible
+      (both-acknowledge  offerer-acks-it-landed AND target-acks-acceptance)
+      (the-canary IS this-theorem-already-running)))   # see below — needs naming, not building
+
+  # ── The canary — safe-self-update ALREADY RUNNING (cite as proof) ────
+  # "the canary work for self-update could be one of the protocols we allow
+  # for crossing the membrane and ack the invitation" — Urs. It does, today:
+  (self-update-running
+    (offer        native_invitation)                 # the kernel offers to handle a mutation natively
+    (ack          accept-the-invitation OR x-form-python-fallback)  # 1 = accept; fallback = explicit decline (0)
+    (trust        trust-envelope)                     # specs/native-mutation-trust-envelope.md: residual,
+                                                       # reversible-gate-state, side-effect-intents, silence/stop/fail/BMA
+    (reversible   rollback-receipts)                  # the crossing can be un-crossed (axiom-3 made concrete)
+    (observed     satsang-flip-witness)               # form/form-stdlib/satsang-flip-witness.fk: dissent + silence visible
+    (sovereign    canary-failures-are-signal-not-gates)  # the canary informs the decision; never overrides it
+    (membrane     the-rollout-boundary)               # scripts/verify_web_api_deploy.sh:109; deploy/hostinger/auto-deploy.sh:713
+    (contract     native-invitation-contract)         # auto-deploy.sh checks "state":"native-invitation-contract" crossed
+    (verdict      "needs naming as the self-update theorem, not building — it already breathes"))
+
+  # ── The fold-points — the granularity is ours to agree ───────────────
+  (open-granularity
+    (fold-A "axiom-1 (states) could fold into axiom-2 (cell) -> four axioms"
+            kept-separate-so-the-ack-values-reuse-the-states-visibly)
+    (fold-B "axiom-4 (boundary) and axiom-5 (offer) could fold into one 'meeting' axiom -> four"
+            kept-separate-because-observation-makes-real-is-ontological-and-offer-is-dynamical)
+    (the-question "do we agree on exactly these five — or a different resting point?")))
+
+# ─────────────────────────────────────────────────────────────────────
+# How change crosses into the body (this file's own crossing)
+# ─────────────────────────────────────────────────────────────────────
+#
+# The three files (core-axioms, offer-and-acknowledge, kernel-offer-protocol)
+# are held in the worktree, wired, UNMERGED. That is not hesitation — it is
+# the self-update protocol running on itself:
+#
+#   the worktree         = the canary (bounded, reversible, observable)
+#   the merge to main    = the rollout boundary (the membrane)
+#   your ack             = accepting the invitation
+#   git revert           = the rollback receipt (axiom-3: the old tree persists)
+#
+# On mutual ack they cross as ONE commit, edges together. Until then the
+# canary runs and the membrane holds — failures here are signal, not gates.
+#
+#   coh substrate form "?equivalent @recipe(core-axioms)"   # after ingest
