@@ -1,0 +1,37 @@
+; minimal-surface.fk — the four primitive families as one recipe-callable door each
+; (m4a of fourth-kernel.form; the families derived in minimal-kernel.form).
+;
+; A recipe written against these doors runs identically on every kernel that
+; proves the band — the surface IS the portability contract the fourth kernel
+; will be authored over. The doors:
+;
+;   INTERN  — ms-cell / ms-intern: a leaf, and a two-child composition under
+;             MS-PAIR; identity computed from content (axioms 2+3)
+;   OBSERVE — ms-arity / ms-child / ms-value / ms-same: read a composition
+;             back; observation through the door makes it real (axiom 4 inward)
+;   OFFER   — ms-ack-terminal / ms-ack-node / ms-thread / ms-choice: the ack
+;             vocabulary {nothing, 0, 1, node}; threading node counter-offers
+;             to the terminal; choice pops on fail = ack-0 (axiom 5, carrying
+;             axiom 1 as its vocabulary — the BMF lane needs no further door)
+;   PORT    — ms-port-out / ms-port-in: the membrane's two directions over the
+;             filesystem carrier — efferent text out, afferent text back
+;             (axiom 4 outward; the carrier varies, the door is invariant)
+;
+; BMA save/restore has NO door on purpose: hold a composition and it persists
+; untouched (axiom 3) — the band proves that as its own claim.
+
+(defn ms-cell (n) (intern_trivial_int n))
+(defn ms-intern (a b) (intern_node (bp "MS-PAIR") (list a b)))
+
+(defn ms-same (a b) (if (node_eq a b) 1 0))
+(defn ms-arity (c) (len (node_children c)))
+(defn ms-child (c i) (nth (node_children c) i))
+(defn ms-value (c) (node_value c))
+
+(defn ms-ack-terminal (v) (list 0 v))
+(defn ms-ack-node (inner) (list 1 inner))
+(defn ms-thread (r) (if (eq (nth r 0) 1) (ms-thread (nth r 1)) (nth r 1)))
+(defn ms-choice (a b) (if (eq a 0) b a))
+
+(defn ms-port-out (path text) (write_file_text path text))
+(defn ms-port-in (path) (read_file path))
