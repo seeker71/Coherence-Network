@@ -1,0 +1,45 @@
+; bmf-mini.fk — a grammar-AS-DATA compiler: source tokens folded through rule
+; cells into a fourth-walker program-as-cells (M2 proof-of-shape; m4e3 seed).
+;
+; A RULE is (token, op, operand): pattern = the token to match, semantic action
+; = wrap the accumulator program as (op acc (LIT operand)). A GRAMMAR is a list
+; of rules; SOURCE is a list of token ints. Compile folds the source through the
+; grammar, the accumulator starting at ARG — so a DIFFERENT grammar compiles the
+; SAME source into a DIFFERENT program. That is the compiler-compiler property:
+; the grammar is data, not baked. The product is a program-as-cells; the
+; existing emitter (fourth-walker-emit.fk) turns it into a native binary, so
+; grammar + source -> a new binary, end to end.
+;
+; This is the tokenwise face of BMF (pattern-action rules folded over source).
+; The full nesting/choose/fail engine (engine.fk read through the observe door)
+; is m4e3; this proves the data-driven transform and the binary generation.
+
+(defn bmf-rule (tok op operand)
+    (ms-intern (ms-cell tok) (ms-intern (ms-cell op) (ms-cell operand))))
+(defn bmf-rule-tok     (r) (ms-value (ms-child r 0)))
+(defn bmf-rule-op      (r) (ms-value (ms-child (ms-child r 1) 0)))
+(defn bmf-rule-operand (r) (ms-value (ms-child (ms-child r 1) 1)))
+
+; pattern match — find the rule whose token matches (the BMF rule-selection step)
+(defn bmf-rule-for (grammar tok)
+    (if (eq (bmf-rule-tok (head grammar)) tok) (head grammar)
+        (bmf-rule-for (tail grammar) tok)))
+
+; semantic action — wrap the accumulator program: (op acc (LIT operand))
+(defn bmf-apply (rule acc)
+    (fk-node (bmf-rule-op rule) (ms-intern acc (fk-lit (bmf-rule-operand rule)))))
+
+; compile — fold the source through the grammar, acc starting at ARG
+(defn bmf-fold (grammar src acc)
+    (if (eq (len src) 0) acc
+        (bmf-fold grammar (tail src) (bmf-apply (bmf-rule-for grammar (head src)) acc))))
+(defn bmf-compile (grammar src) (bmf-fold grammar src (fk-arg)))
+
+; reference fold — the value the compiled program must produce, computed
+; directly so the band checks the transform against an independent truth
+(defn bmf-step (rule v)
+    (if (eq (bmf-rule-op rule) 3) (add v (bmf-rule-operand rule))
+        (sub v (bmf-rule-operand rule))))
+(defn bmf-ref (grammar src v)
+    (if (eq (len src) 0) v
+        (bmf-ref grammar (tail src) (bmf-step (bmf-rule-for grammar (head src)) v))))
