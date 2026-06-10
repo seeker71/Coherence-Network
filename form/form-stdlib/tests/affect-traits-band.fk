@@ -1,0 +1,40 @@
+; preludes: form-stdlib/core.fk form-stdlib/voice-traits.fk form-stdlib/affect-traits.fk
+;
+; affect-traits-band — cadence, the felt plane, and the earned-sentiment gate, proven three-way.
+;
+; Verdict 65535 when every reading lands:
+;   1     2.8 syl/s reads slow            (speech-cadence-band 28 == 0)
+;   2     4.5 syl/s reads measured        (speech-cadence-band 45 == 1 — the ordinary middle)
+;   4     6.2 syl/s reads quick           (speech-cadence-band 62 == 2)
+;   8     70 BPM reads slow               (music-cadence-band 70 == 0)
+;   16    132 BPM reads fast              (music-cadence-band 132 == 2)
+;   32    an even pulse is steady         (pulse-steadiness of equal intervals == 9)
+;   64    a rubato pulse is free          (pulse-steadiness of 0..9 swings == 0)
+;   128   the middle stays ambiguous      (felt-band 50 == 1 — never a coin-flip)
+;   256   high arousal + high valence     (felt-quadrant 80 75 == 3 bright-charged)
+;   512   high arousal + low valence      (felt-quadrant 80 20 == 1 heavy-charged)
+;   1024  a mid lane refuses a quadrant   (felt-quadrant 50 90 == 4 forming)
+;   2048  silence earns nothing           (affect-trust 0 99 == 0)
+;   4096  voiced + sure → trust 9         (affect-trust 2 99 == 9)
+;   8192  music earns the mood lane       (mood-trust 1 77 == 7)
+;   16384 below the floor stays forming   (report-sentiment? 2 40 60 == 0)
+;   32768 at the floor, music reports     (report-sentiment? 1 60 60 == 1)
+(do
+    (let c0  (if (eq (speech-cadence-band 28) 0) 1 0))
+    (let c1  (if (eq (speech-cadence-band 45) 1) 2 0))
+    (let c2  (if (eq (speech-cadence-band 62) 2) 4 0))
+    (let c3  (if (eq (music-cadence-band 70) 0) 8 0))
+    (let c4  (if (eq (music-cadence-band 132) 2) 16 0))
+    (let c5  (if (eq (pulse-steadiness (list 5 5 5 5 5 5)) 9) 32 0))
+    (let c6  (if (eq (pulse-steadiness (list 0 9 2 8 1 7)) 0) 64 0))
+    (let c7  (if (eq (felt-band 50) 1) 128 0))
+    (let c8  (if (eq (felt-quadrant 80 75) 3) 256 0))
+    (let c9  (if (eq (felt-quadrant 80 20) 1) 512 0))
+    (let c10 (if (eq (felt-quadrant 50 90) 4) 1024 0))
+    (let c11 (if (eq (affect-trust 0 99) 0) 2048 0))
+    (let c12 (if (eq (affect-trust 2 99) 9) 4096 0))
+    (let c13 (if (eq (mood-trust 1 77) 7) 8192 0))
+    (let c14 (if (eq (report-sentiment? 2 40 60) 0) 16384 0))
+    (let c15 (if (eq (report-sentiment? 1 60 60) 1) 32768 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7
+    (add c8 (add c9 (add c10 (add c11 (add c12 (add c13 (add c14 c15))))))))))))))))

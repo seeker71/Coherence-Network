@@ -1,0 +1,82 @@
+; affect-traits.form — felt-sense readings over the channel: cadence, the felt plane, earned sentiment.
+; The body bands and gates what free oracles measure; a reading is never a soul-state, and a label
+; is shown only when it is earned.
+;
+; Proven three-way (Go · Rust · TS) by form-stdlib/tests/affect-traits-band.fk at form/validate.sh → 65535.
+
+; ---------------------------------------------------------------------------
+; purpose
+; ---------------------------------------------------------------------------
+; voice-traits.fk reads what the channel carries acoustically — pitch band, energy spread, the trust
+; matrix. What it leaves forming is the FELT half: how fast the saying moves (cadence), where the
+; sound sits on the felt plane (arousal × valence × dominance), and whether a sentiment label has
+; earned the right to be shown. affect-traits is that half. The same discipline holds throughout:
+; the CARRIER measures with free oracles, the BODY decides. An oracle's number is evidence the body
+; weighs, not a verdict it repeats; below every floor the surface shows forming ("·"), never a
+; faked label.
+;
+; The oracles are all free and the carrier names them honestly (affect_sense.py):
+;   cadence      — librosa (beat-tracker BPM, onset intervals) · parselmouth/Praat (voiced rate)
+;   felt plane   — audeering w2v2 MSP-dim (arousal/valence/dominance ≈0..1, research license)
+;   sentiment    — emotion2vec+ via funasr (9-class label + confidence)
+; Fine-tuning ground, also free: RAVDESS + CREMA-D (speech), MTG-Jamendo mood tags + DEAM
+; valence-arousal curves (music).
+
+; ---------------------------------------------------------------------------
+; functions
+; ---------------------------------------------------------------------------
+; (speech-cadence-band rate10)        -> 0 slow · 1 measured · 2 quick, from syllables/s ×10.
+;                                        Conversational speech is the ordinary middle (3.5–5.5
+;                                        syl/s), so the middle is its own band, never a forced
+;                                        extreme.
+; (music-cadence-band bpm)            -> 0 slow (<76) · 1 mid · 2 fast (>=120), from the tracker.
+; (pulse-steadiness intervals)        -> 9 steady .. 0 free/rubato. The spread shape is
+;                                        voice-traits' arousal read over time-between-onsets
+;                                        instead of energy — same recipe, different signal. The
+;                                        carrier scales each interval by deviation from the median
+;                                        (±50% = full range), so only real rubato spreads.
+; (felt-band x)                       -> 0 low · 1 ambiguous-mid · 2 high, lane ×100. Like
+;                                        speaker-band, the middle is genuinely ambiguous and gets
+;                                        its own band — never a coin-flip.
+; (felt-vec ar va dom)                -> the three banded lanes as one reading.
+; (felt-quadrant ar va)               -> 0 settled-dim · 1 heavy-charged · 2 warm-still ·
+;                                        3 bright-charged · 4 forming. A quadrant is claimed only
+;                                        when BOTH lanes are out of the mid; one ambiguous lane
+;                                        and the whole quadrant stays forming.
+; (affect-trust gate conf)            -> 0..9. Only voiced speech (gate 2) earns trust in the
+;                                        speech-affect oracle, scaled by its confidence — the
+;                                        transcript-trust shape turned toward affect.
+; (mood-trust gate conf)              -> 0..9. Audible non-speech (gate 1, music) earns the
+;                                        music-mood lane instead.
+; (report-sentiment? gate conf floor) -> 1 only when the gate is open AND confidence meets the
+;                                        floor; otherwise the surface shows forming.
+
+; ---------------------------------------------------------------------------
+; spine-composition
+; ---------------------------------------------------------------------------
+; Three spines, each already living in the body, turned toward feeling:
+;
+;   banding       :  (if (ge x hi) 2 (if (ge x lo) 1 0))   — speaker-band's honest-middle shape,
+;                                                            used for cadence and every felt lane.
+;   spread        :  (sub 9 (arousal intervals))            — voice-traits' max−min spread, read
+;                                                            over onset intervals; steadiness is
+;                                                            its complement by construction.
+;   earned trust  :  (if (ge gate g) (div conf 11) 0)       — transcript-trust's shape: the gate
+;                                                            opens the lane, confidence scales it,
+;                                                            silence earns exactly nothing.
+;
+; felt-quadrant nests four ifs rather than and-ing predicates: the mid-check happens per lane
+; FIRST (either mid → 4 forming), so a quadrant claim structurally cannot rest on an ambiguous
+; lane. report-sentiment? joins exactly two predicates with one BINARY and.
+
+; ---------------------------------------------------------------------------
+; one honest lane
+; ---------------------------------------------------------------------------
+; Everything here is a READING of one chunk of sound: where its cadence bands, where it sits on
+; the felt plane, whether its sentiment label cleared the floor. None of it is an identity claim
+; about a speaker or a verdict about a state of soul — a heavy-charged quadrant is where the SOUND
+; sits, and the next chunk reads fresh. The gate composes from voiced.fk: silence earns nothing,
+; music earns the mood lanes, only voiced speech earns the speech lanes. A carrier without an STT
+; honestly tops out at gate 1 — its speech lanes stay forming rather than guessing. Richer
+; readings (per-word affect curves riding the sentence_tree as prosody annotation — audio-grammar
+; GAP-A4's confidence lane) compose on top as they earn exemplars.
