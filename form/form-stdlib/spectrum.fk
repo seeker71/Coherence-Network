@@ -2,18 +2,20 @@
 ;
 ; "Even a fast fourier spectrum analyzer gives really good signal." It does — and like every DSP it belongs
 ; in the body, not the carrier (wav-sense.fk lifted the energy envelope; this lifts the spectrum). The kernel
-; has no sin/cos, but Goertzel needs only ONE precomputed cosine coefficient per band, then a pure
-; mul/add/sub recurrence over the samples — so a real DFT-band spectrum is Form-native with the band
-; coefficients as DATA. Float is deterministic three-way (the matvec proof); a band power is a value, and a
-; verdict reduces to an integer comparison.
+; needs no kernel sin/cos: Goertzel needs only ONE cosine coefficient per band, and trig.fk's fcos (a Form
+; recipe, not a native) computes it — so a real DFT-band spectrum is fully Form-native, coefficients and
+; recurrence alike. Float is deterministic three-way (the matvec proof); a band power is a value, and a
+; verdict reduces to an integer comparison. Preludes trig.fk (fcos/TAU) + wav-sense.fk (wav-sample).
 ;
 ; Per band, coeff = 2·cos(2π·f/fs):   s0 = x + coeff·s1 − s2 ; carry (s1,s2) ← (s0,s1) over the window ;
 ;   power = s1² + s2² − coeff·s1·s2.   Preludes wav-sense.fk for wav-sample (the PCM decode).
 
-; the 8 band coefficients — 100,200,400,800,1600,3200,5000,7000 Hz at fs=16000. DATA, computed once.
-; (low → high; the last two are negative as the band passes π/2.) This list IS the analyzer's resolution.
+; the band frequencies (Hz) ARE the analyzer's resolution; the COEFFICIENTS are computed from them in Form
+; via trig.fk's fcos — no magic constants, no kernel cos. coeff = 2·cos(2π·f/fs), fs=16000.
+(defn band-coeff (f) (mul 2.0 (fcos (div (mul (TAU) (mul f 1.0)) 16000.0))))
 (defn spec-coeffs ()
-  (list 1.99846 1.99383 1.97538 1.90211 1.61803 0.61803 -0.76537 -1.84776))
+  (list (band-coeff 100) (band-coeff 200) (band-coeff 400) (band-coeff 800)
+        (band-coeff 1600) (band-coeff 3200) (band-coeff 5000) (band-coeff 7000)))
 
 ; the Goertzel recurrence over samples [i, end) stepping `step` bytes; returns the band power (float).
 (defn goertzel (bs i end step coeff s1 s2)

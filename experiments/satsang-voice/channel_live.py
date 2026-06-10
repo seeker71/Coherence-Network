@@ -222,7 +222,7 @@ def spectrum_form(wav):
     drv = os.path.join(TMP, "spec.fk")
     with open(drv, "w") as fh:
         fh.write(f'(do (spectrum-levels-file "{wav}" 16))')
-    out = sh([KERNEL, "form-stdlib/wav-sense.fk", "form-stdlib/spectrum.fk", drv], cwd=FORM)
+    out = sh([KERNEL, "form-stdlib/trig.fk", "form-stdlib/wav-sense.fk", "form-stdlib/spectrum.fk", drv], cwd=FORM)
     line = (out.stdout or out.stderr).strip().splitlines()
     try:
         v = json.loads(line[-1])

@@ -1,4 +1,4 @@
-; preludes: form-stdlib/core.fk form-stdlib/wav-sense.fk form-stdlib/spectrum.fk
+; preludes: form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/wav-sense.fk form-stdlib/spectrum.fk
 ;
 ; spectrum-band — the Goertzel filterbank discriminates frequency, proven three-way (float → integer verdict).
 ;

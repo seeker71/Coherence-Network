@@ -1,0 +1,22 @@
+; preludes: form-stdlib/core.fk form-stdlib/trig.fk
+;
+; trig-band — sin/cos/sqrt as Form recipes (no kernel native), proven three-way. Floats reduce to an
+; integer verdict via round (×1000 where decimals matter), so last-bit display never affects the proof.
+;
+; Verdict 127 when every claim lands:
+;   1   sqrt(4) = 2
+;   2   sqrt(2) = 1.41421…           (×1000 → 1414)
+;   4   sin(0) = 0
+;   8   sin(π/2) = 1
+;   16  sin(π/6) = 0.5               (×1000 → 500)
+;   32  cos(0) = 1
+;   64  cos(π) = −1
+(do
+    (let c0 (if (eq (round (fsqrt 4.0)) 2) 1 0))
+    (let c1 (if (eq (round (mul (fsqrt 2.0) 1000)) 1414) 2 0))
+    (let c2 (if (eq (round (fsin 0.0)) 0) 4 0))
+    (let c3 (if (eq (round (fsin (HALF-PI))) 1) 8 0))
+    (let c4 (if (eq (round (mul (fsin 0.5235987755982988) 1000)) 500) 16 0))
+    (let c5 (if (eq (round (fcos 0.0)) 1) 32 0))
+    (let c6 (if (eq (round (fcos 3.141592653589793)) -1) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
