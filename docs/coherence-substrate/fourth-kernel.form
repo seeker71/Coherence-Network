@@ -95,8 +95,8 @@
     (band         tests/bmf-mini-band.fk -> 15 three-way)   # faithful vs reference, grammar-is-data, program-as-cell
     (witnessed    "g1 tok1=ADD10 -> binary -> 22 ; g2 tok1=ADD100 -> binary -> 202, same source [1,1,2]")
     (honest-scope tokenwise-pattern-action-fold)            # the nesting/choose/fail engine is m4e3
-    (compiler-as-recipe-today  the-compiler-folds-Form-lists)  # emittable when m4e2 gives the heap
-    (compiler-as-binary-needs  m4e2-heap + m4e4-strings)    # to read textual source through the port, named
+    (compiler-as-recipe-today  the-compiler-folds-Form-lists)  # heap now has a native arena
+    (compiler-as-binary-needs  m4e4-strings + m4e3-real-recipe-flattener)  # textual source/full engine, named
 
     # ── The BMF discipline (Urs, 2026-06-11) — bmf-architecture.form's record ──
     # BMF is NOT tokenize-then-parse. Rules match bytes STRAIGHT OFF a streaming
@@ -247,7 +247,14 @@
                      even(7)=0, fib-via-CALL(28)=317811 at 19.3 ms — the
                      CALL indirection priced against the SELF shape])
         (m4e2-heap   lists as an arena heap in the emitted C: cons/head/
-                     tail/len/nth/empty — the band subset's structural half)
+                     tail/len/nth/empty — the band subset's structural half
+                     [SHIPPED: tag 17 remains BUF for the streaming BMF
+                     cursor; tags 18..23 are EMPTY/CONS/HEAD/TAIL/LEN/NTH.
+                     The emitted C carries fk_heap_head/fk_heap_tail beside
+                     fk_src; tests/fourth-heap-band.fk -> 15 three-way; the
+                     audit loads a heap table through the universal binary
+                     and gets 25 from head([7,8]) + head(tail([7,8])) +
+                     len([7,8]) + nth([7,8],1)])
         (m4e3-bridge the real-recipe flattener: read a COMPILED .fk recipe
                      through the observe door (node_category/node_children/
                      node_value) and flatten the REAL category set into the
@@ -262,8 +269,8 @@
                      fs afferent port (open/read, quoteless extern decls)
                      and runs it. fkc-table-file serializes any program;
                      witnessed: ONE binary ran fib (317811), even/odd (1/0),
-                     a bmf-grammar-compiled program (22), and the organ
-                     program (7) from four table files — load any source
+                     a bmf-grammar-compiled program (22), a heap program
+                     (25), and the organ program (7) from five table files — load any source
                      that has a grammar, compile to cells, run, no rebuild)
 
         (m4e-jit     [SHIPPED] self-JIT on heat — learned-primitive's

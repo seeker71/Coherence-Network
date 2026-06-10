@@ -296,7 +296,7 @@ if [[ "$b1" != "22" || "$b2" != "202" ]]; then
 fi
 echo "  SAME source, DIFFERENT grammar -> DIFFERENT binary — the compiler-compiler property, compiled."
 echo "  (the compiler runs as a recipe here; the standalone compiler-binary that reads textual"
-echo "   source through the port is m4e2 heap + m4e4 strings — named in fourth-kernel.form)"
+echo "   source through the port still needs m4e4 strings and the m4e3 real-recipe bridge)"
 
 echo
 # ── 8-10. the Form-OS face: universal loader, self-JIT on heat, the organs ──
@@ -307,6 +307,10 @@ cat >> "$work/os-driver.fk" <<'EOF'
 (let even (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-lit 1) (fk-call 1 (fk-sub (fk-arg) (fk-lit 1)))))
 (let odd  (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-lit 0) (fk-call 0 (fk-sub (fk-arg) (fk-lit 1)))))
 (let g1 (list (bmf-rule 1 3 10) (bmf-rule 2 4 3)))
+(let heap (fk-cons (fk-lit 7) (fk-cons (fk-lit 8) (fk-empty))))
+(let heap_prog (fk-add (fk-head heap)
+               (fk-add (fk-head (fk-tail heap))
+               (fk-add (fk-len heap) (fk-nth heap (fk-lit 1))))))
 (let organ (fk-add (fk-if (fk-sub (fk-set (fk-lit 7) (fk-lit 42)) (fk-get (fk-lit 7))) (fk-lit 0) (fk-lit 1))
            (fk-add (fk-if (fk-le (fk-time) (fk-lit 0)) (fk-lit 0) (fk-lit 2))
                    (fk-if (fk-sub (fk-rnd) (fk-rnd)) (fk-lit 4) (fk-lit 0)))))
@@ -318,6 +322,8 @@ cat >> "$work/os-driver.fk" <<'EOF'
 (print (fkc-table-file (list even odd)))
 (print "==TBMF==")
 (print (fkc-table-file (list (bmf-compile g1 (list 1 1 2)))))
+(print "==THEAP==")
+(print (fkc-table-file (list heap_prog)))
 (print "==TORG==")
 (print (fkc-table-file (list organ)))
 (print "==JIT==")
@@ -328,7 +334,8 @@ EOF
 sed -n '/^==UNI==$/,/^==TFIB==$/p' "$work/os.out" | sed -e '1d' -e '$d' > "$work/uni.c"
 sed -n '/^==TFIB==$/,/^==TEO==$/p' "$work/os.out" | sed -e '1d' -e '$d' > "$work/t-fib.txt"
 sed -n '/^==TEO==$/,/^==TBMF==$/p' "$work/os.out" | sed -e '1d' -e '$d' > "$work/t-eo.txt"
-sed -n '/^==TBMF==$/,/^==TORG==$/p' "$work/os.out" | sed -e '1d' -e '$d' > "$work/t-bmf.txt"
+sed -n '/^==TBMF==$/,/^==THEAP==$/p' "$work/os.out" | sed -e '1d' -e '$d' > "$work/t-bmf.txt"
+sed -n '/^==THEAP==$/,/^==TORG==$/p' "$work/os.out" | sed -e '1d' -e '$d' > "$work/t-heap.txt"
 sed -n '/^==TORG==$/,/^==JIT==$/p' "$work/os.out" | sed -e '1d' -e '$d' > "$work/t-org.txt"
 sed -n '/^==JIT==$/,/^==END==$/p' "$work/os.out" | sed -e '1d' -e '$d' > "$work/fkjit.c"
 "$CLANG" -O2 -o "$work/fkwu" "$work/uni.c"
@@ -336,12 +343,14 @@ sed -n '/^==JIT==$/,/^==END==$/p' "$work/os.out" | sed -e '1d' -e '$d' > "$work/
 u_fib="$("$work/fkwu" "$work/t-fib.txt" 28 | head -1)"
 u_e10="$("$work/fkwu" "$work/t-eo.txt" 10 | head -1)"; u_e7="$("$work/fkwu" "$work/t-eo.txt" 7 | head -1)"
 u_bmf="$("$work/fkwu" "$work/t-bmf.txt" 5 | head -1)"
+u_heap="$("$work/fkwu" "$work/t-heap.txt" 0 | head -1)"
 u_org="$("$work/fkwu" "$work/t-org.txt" 0 | head -1)"
 echo "UNIVERSAL walker (one binary, no baked program — loads table files through the fs port):"
-echo "  fib table -> $u_fib  even/odd -> $u_e10/$u_e7  bmf-grammar-compiled -> $u_bmf  organs -> $u_org"
-if [[ "$u_fib" != "$go_fib" || "$u_e10" != "1" || "$u_e7" != "0" || "$u_bmf" != "22" || "$u_org" != "7" ]]; then
+echo "  fib table -> $u_fib  even/odd -> $u_e10/$u_e7  bmf-grammar-compiled -> $u_bmf  heap -> $u_heap  organs -> $u_org"
+if [[ "$u_fib" != "$go_fib" || "$u_e10" != "1" || "$u_e7" != "0" || "$u_bmf" != "22" || "$u_heap" != "25" || "$u_org" != "7" ]]; then
     echo "FAIL  universal walker parity broken"; exit 1
 fi
+echo "  m4e2 arena heap: EMPTY/CONS/HEAD/TAIL/LEN/NTH returned 25 from [7,8]"
 echo "  organs mask 7 = RAM set/get roundtrip + real clock + entropy (two draws differed), physically"
 cold="$("$work/fkjit" 28 | head -1)"
 hotout="$("$work/fkjit" 28 50)"; hot="$(printf '%s\n' "$hotout" | head -1)"; njit="$(printf '%s\n' "$hotout" | tail -1)"
