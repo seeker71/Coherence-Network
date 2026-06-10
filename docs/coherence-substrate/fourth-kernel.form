@@ -47,6 +47,13 @@
     (carriers     form-kernel-go form-kernel-rust form-kernel-ts the-emitted-native)
     (conditions   named-with-every-number)                  # machine, flags, N, date
     (evidence     docs/system_audit/commit_evidence-records)
+    (observability a-carrier-without-a-probe-door-is-not-yet-a-sibling)  # trace arms +
+                  # framebuffer provenance ride every milestone; the walker-as-recipes
+                  # inherits the kernels' Blueprint attribution for free (measured:
+                  # fib(10)-as-data = 14,360 WITNESS + 8,562 ACCESS + 5,738 COND vs
+                  # 264 MATH — the meta-interpretation tax made visible, ~87 dispatches
+                  # per real op, exactly what m4c's emitter collapses); the EMITTED
+                  # lane is dark today (fk4 has no probe) — m4c carries its probe out
     (verdict      champion-challenger-earned-never-declared))
 
   # ── M1 — the CLI seed [SHIPPED with this spec] ────────────────────────
@@ -139,7 +146,10 @@
       (m4c-emit-and-boot  the emitter recipe (this file's lane, generalized
                        from hand-shaped text to walking the recipe tree) emits
                        the walker's native source; the toolchain port compiles;
-                       the binary boots and joins validate.sh as the fourth arm)
+                       the binary boots and joins validate.sh as the fourth arm
+                       — AND emits its probe with it: arm counters and NodeID
+                       provenance in the emitted source, read through the port
+                       door; the sibling must not go dark as it gets fast)
       (m4d-fixpoint    the booted kernel re-runs the SAME emitter recipe on
                        itself: same content-address in, byte-identical source
                        out — self-hosting, close-self-rebuild-loop's band
