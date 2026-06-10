@@ -45,6 +45,15 @@ grep -Fq 'PathRegexp(`^/api/reactions/concept/[^/]+/threads$`)' "$ROOT_DIR/deplo
 grep -Fq 'PathRegexp(`^/api/concepts/[^/]+/voices$`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
   || fail "kernel-router ingress does not expose the concept voices BML template route"
 
+grep -Fq 'Path(`/api/sensings`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+  || fail "kernel-router ingress does not expose the sensings BML route"
+
+grep -Fq 'PathRegexp(`^/api/sensings/[^/]+$`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+  || fail "kernel-router ingress does not expose the sensing detail BML template route"
+
+grep -Fq 'PathRegexp(`^/api/translations/[^/]+/[^/]+$`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+  || fail "kernel-router ingress does not expose the translations entity BML template route"
+
 grep -Fq "BML front-door promoted read routes" "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not probe the promoted BML read routes"
 
@@ -53,6 +62,12 @@ grep -Fq 'X-Form-Handler: \${handler}' "$DEPLOY_SCRIPT" \
 
 grep -Fq 'X-Form-Python-Authority: false' "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not require promoted BML authority proof"
+
+grep -Fq 'api_sensings' "$DEPLOY_SCRIPT" \
+  || fail "deploy canary does not probe the sensings BML handler"
+
+grep -Fq 'api_translations_entity' "$DEPLOY_SCRIPT" \
+  || fail "deploy canary does not probe the translations entity BML handler"
 
 grep -Fq 'api-native-ok-json("api_runtime_events"' "$ROOT_DIR/deploy/front-door/api.bml" \
   || fail "runtime events handler does not emit native proof headers"
@@ -68,6 +83,15 @@ grep -Fq 'api-native-ok-json("api_reaction_concept_threads"' "$ROOT_DIR/deploy/f
 
 grep -Fq 'api-native-ok-json("api_concept_voices"' "$ROOT_DIR/deploy/front-door/api.bml" \
   || fail "concept voices handler does not emit native proof headers"
+
+grep -Fq 'api-native-ok-json("api_sensings"' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "sensings handler does not emit native proof headers"
+
+grep -Fq 'api-native-ok-json("api_sensing_detail"' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "sensing detail handler does not emit native proof headers"
+
+grep -Fq 'api-native-ok-json("api_translations_entity"' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "translations entity handler does not emit native proof headers"
 
 grep -Fq "form/form-stdlib/*)" "$DEPLOY_SCRIPT" \
   || fail "deploy service routing does not send form/form-stdlib changes to api"
