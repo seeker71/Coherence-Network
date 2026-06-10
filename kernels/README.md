@@ -88,6 +88,15 @@ With Blueprint attribution on the kernel + NodeID provenance on the framebuffer,
 
 This is what the kernels are for: **execution that is also a body the visualizer can read**, not execution that hides itself behind a profiler.
 
+## The kernels implement a named core spec (2026-06-10)
+
+The kernel model derives from five agreed axioms — states (0/1/nothing), cell, content-addressing, boundary, offer — with everything else, safe self-update included, falling out as theorems ([`core-axioms.form`](../docs/coherence-substrate/core-axioms.form)). Two derived specs name the kernel's shape:
+
+- [`host-kernel.form`](../docs/coherence-substrate/host-kernel.form) — the kernel realizes the axioms over a host's resources. Every resource is reached through a typed port the kernel offers (`resource-port.fk`); a NodeID is an unforgeable capability in seL4's sense; any host driver/OS API is an allowed carrier under allow-presence + measure-health; implementations are 0..many and the host-kernel cell chooses by measured fitness (`recognition-router.fk`, `champion-challenger.fk`).
+- [`kernel-self-composition.form`](../docs/coherence-substrate/kernel-self-composition.form) — the kernel composed from just the five axioms, self-extending through its own native binary (`jit.go`) and the shared versioned persistent substrate (`persistence.fk`); versioning is free from content-addressing.
+
+The runnable heart is proven three-way: `host-kernel-cell.fk` (hosts as measured, swappable carriers of one content-addressed body → 255), `kernel-satsang.fk` (self-describing parts, circle-witnessed swap, `.fkb` shrink/expand), and the metal band `form-stdlib/tests/host-kernel-metal-band.fk` (every organ and world-port that runs, touched in one program → 1023, also as a compiled `.fkb`; the Go arm emits a real ELF `.so` from the band's recipe). `scripts/cross_isa_assembly_audit.sh` shows one recipe as six instruction sets with value parity (x86-64, arm64, aarch64, Hexagon DSP, NVIDIA PTX, AMD GCN; SPIR-V validated), and `scripts/transformer_kernel_audit.sh` runs a full transformer block bit-exact across x86 + emulated Android CPU + emulated Hexagon DSP. On the model lane, the tensor JIT's matvec emitter is itself a Form recipe (`form-stdlib/jit-tensor-emit.fk` → 7, three-way): the emitted native loop folds exactly like the recipe, so native = recipe bit-for-bit — measured 20,077× on a whisper-large-sized fp64 matvec.
+
 ## Quick start — three kernels, one workload
 
 ```bash

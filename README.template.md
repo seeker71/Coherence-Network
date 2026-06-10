@@ -51,6 +51,7 @@ which trace can be returned.
 The last integrated movement brought the network closer to running as the thing it describes:
 
 - **Form is executable tissue, not only notation.** Host-language-shaped control flow, records, methods, classes, runtime introspection, and the meta-circular evaluator now run through Form and shared kernel conformance.
+- **The core rests on five named axioms.** States (0/1/nothing), cell, content-addressing, boundary, offer — agreed and crossed 2026-06-10. Offer-and-acknowledge, the kernel-offer protocol, the host kernel, and kernel self-composition are derived theorems, with safe self-update already running as the native-mutation public-gate canary ([`core-axioms.form`](docs/coherence-substrate/core-axioms.form)).
 - **The front door is being drawn into Form.** New high-traffic handlers are BML or domain grammar first; the compatibility API is an explicit bridge for routes not yet promoted, not the architecture's destination.
 - **The substrate has real carriers.** Filesystem, TCP, OSI-shaped channel-flow cells, consentful circle/satsang groups, segmented logs, storage ports, resource ports, and Postgres carriers let cells move through durable interfaces instead of staying as static docs.
 - **Meaning travels by shape.** Private channels, feature translation, tensor recipe walks, random doorway work, and grammar families show coherence moving across substrates without requiring the same surface symbols.
