@@ -396,5 +396,46 @@ if [[ "$m_a" != "42" || "$m_b" != "9001" ]]; then
 fi
 
 echo
+# ── 12. m4e2 — the arena heap + nothing first-class (the ack vocabulary) ──
+# Lists live in a bump arena (CONS/HEAD/TAIL); NIL is THE absence — empty
+# list and axiom-1's nothing as one ground state, reached through its OP
+# (literals are 32-bit; the sentinel never rides one). len and sum are
+# walked RECIPES over the doors. fail returns NOTHING now: a matched zero
+# is honest data — the offer ack vocabulary {nothing, 0, 1, node} complete.
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
+    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" > "$work/hp-driver.fk"
+cat >> "$work/hp-driver.fk" <<'EOF'
+(defn seqq (a b) (fk-if a b b))
+(defn lst3 () (fk-cons (fk-lit 7) (fk-cons (fk-lit 8) (fk-cons (fk-lit 9) (fk-nil)))))
+(let lenf (fk-if (fk-sub (fk-arg) (fk-nil)) (fk-add (fk-lit 1) (fk-call 1 (fk-tail (fk-arg)))) (fk-lit 0)))
+(let sumf (fk-if (fk-sub (fk-arg) (fk-nil)) (fk-add (fk-head (fk-arg)) (fk-call 2 (fk-tail (fk-arg)))) (fk-lit 0)))
+(let entry2 (fk-add (fk-add (fk-call 1 (lst3)) (fk-call 1 (lst3))) (fk-add (fk-call 1 (lst3)) (fk-call 2 (lst3)))))
+(defn adv () (fk-set (fk-lit 0) (fk-add (fk-get (fk-lit 0)) (fk-lit 1))))
+(defn x2 () (fk-add (fk-arg) (fk-arg)))
+(defn x10 () (fk-add (fk-add (x2) (x2)) (fk-add (fk-add (x2) (x2)) (x2))))
+(defn curb () (fk-buf (fk-get (fk-lit 0))))
+(let numf (fk-if (fk-le (fk-lit 48) (curb)) (fk-if (fk-le (curb) (fk-lit 57)) (seqq (adv) (fk-call 1 (fk-add (x10) (fk-sub (fk-buf (fk-sub (fk-get (fk-lit 0)) (fk-lit 1))) (fk-lit 48))))) (fk-arg)) (fk-arg)))
+(let mentry (fk-if (fk-le (fk-lit 48) (curb)) (fk-if (fk-le (curb) (fk-lit 57)) (fk-call 1 (fk-lit 0)) (fk-nil)) (fk-nil)))
+(print "==TL==")
+(print (fkc-table-file (list entry2 lenf sumf)))
+(print "==TM==")
+(print (fkc-table-file (list mentry numf)))
+(print "==END==")
+EOF
+(cd "$FORMDIR" && "$GO_BIN" "$work/hp-driver.fk" 2>/dev/null) > "$work/hp.out"
+sed -n '/^==TL==$/,/^==TM==$/p' "$work/hp.out" | sed -e '1d' -e '$d' > "$work/t-list.txt"
+sed -n '/^==TM==$/,/^==END==$/p' "$work/hp.out" | sed -e '1d' -e '$d' > "$work/t-num.txt"
+printf '0' > "$work/src-zero.txt"; printf 'z' > "$work/src-z.txt"
+h_list="$("$work/fkwu" "$work/t-list.txt" 0 | head -1)"
+h_zero="$("$work/fkwu" "$work/t-num.txt" 0 "$work/src-zero.txt" | head -1)"
+h_z="$("$work/fkwu" "$work/t-num.txt" 0 "$work/src-z.txt" | head -1)"
+echo "m4e2 heap + nothing (lists in the arena; len/sum as walked recipes; honest acks):"
+echo "  3*len + sum over [7,8,9] -> $h_list   matched-zero -> $h_zero   no-match -> $h_z (nothing)"
+if [[ "$h_list" != "33" || "$h_zero" != "0" || "$h_z" != "1000000000000000" ]]; then
+    echo "FAIL  heap or honest-ack lane broke"; exit 1
+fi
+echo "  fail returns NOTHING, a matched 0 is data — {nothing, 0, 1, node} complete in the sibling"
+
+echo
 echo "conditions: $(uname -m) $(uname -s), clang -O2, full-process invocations (startup included)"
 echo "ok — parity held and the rows are real; the spec is docs/coherence-substrate/fourth-kernel.form"

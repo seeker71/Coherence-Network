@@ -1,0 +1,113 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "worktree-fourth-kernel-seed",
+  "commit_scope": "fourth-kernel.form m4e2 — the arena heap and axiom-1's nothing, first-class: CONS/HEAD/TAIL over a bump arena with references as values (the node ack), NIL as THE absence (empty list and nothing one ground state, reached through its op), len/sum as walked recipes through the universal binary, and BMF fail returning NOTHING so a matched zero is honest data — the offer ack vocabulary {nothing, 0, 1, node} complete in the emitted sibling. Band three-way at 15; runtime witnessed in the audit.",
+  "files_owned": [
+    "form/form-stdlib/fourth-walker.fk",
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/tests/fourth-heap-band.fk",
+    "form/form-stdlib/tests/fourth-os-band.fk",
+    "scripts/fourth_kernel_audit.sh",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/coherence-substrate/INDEX.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/tests/fourth-heap-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/tests/fourth-os-band.fk",
+      "scripts/fourth_kernel_audit.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-11_arena_heap_m4e2.json"
+    ],
+    "summary": "fourth-heap-band holds three-way at 15: CONS(LIT 5, NIL) flattens with NIL as an op row (the absence reached structurally — discovered the hard way: intern_trivial_int is 32-bit, a big sentinel literal truncates to garbage and the NIL-test never fires; the op shape is the honest fix and the range constraint is now named); HEAD(TAIL(ARG)) chains unary; the universal emission is 3620 bytes deterministic; the jit emission 3535. The audit witnessed the runtime half: 3*len + sum over [7,8,9] = 33 through the universal binary (len and sum are walked recipes via CALL over the doors); the honest-ack matcher returned a REAL matched zero for source '0' and NOTHING (the sentinel) for source 'z' — fail and zero no longer collide. fourth-os-band re-pinned and re-proven; full audit green end to end including all prior sections.",
+    "observed_delta": {
+      "fourth_heap_band_verdict": 15,
+      "fourth_os_band_verdict": 15,
+      "kernels_agreeing": 3,
+      "divergent": 0,
+      "universal_emission_bytes": 3620,
+      "jit_emission_bytes": 3535,
+      "list_program_result": 33,
+      "matched_zero": 0,
+      "no_match_nothing": 1000000000000000,
+      "ack_vocabulary": "{nothing, 0, 1, node} physical: nothing = NIL sentinel, node = arena ref",
+      "found_bug": "intern_trivial_int truncates beyond 32-bit — the sentinel must be an op, never a literal"
+    },
+    "known_limitations": [
+      {
+        "limitation": "The arena is bump-only — no melt/GC; axiom-3's nothing-overwritten as a feature until compaction earns its place by a real workload.",
+        "follow_up": "Arena watermark in the probe when list workloads grow; compaction lands champion-challenger style if ever needed."
+      },
+      {
+        "limitation": "Program literals ride intern_trivial_int (32-bit range); values needing more bits must be computed or reached through ops (as NIL is).",
+        "follow_up": "A tagged value ABI (m4e4 territory) lifts the range honestly; until then the constraint is named in band and spec."
+      },
+      {
+        "limitation": "References use a range-tag (values >= 1e15 are refs) rather than a tagged ABI — band programs keep ints below the base.",
+        "follow_up": "Same tagged-ABI lane as above."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "PR gates run the fourth-kernel bands three-way."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "form-stdlib additions ride the api image rebuild; the lattice ingests the updated fourth-kernel.form on the post-merge hook."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No route behavior changes. The fourth sibling gains structure: lists in an arena, recipes walking them, and the complete offer ack vocabulary — fail is nothing, zero is data, references are node-acks. The band-subset's structural half is in place for m4e3's real-recipe flattener.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "fourth-heap-band pins NIL-as-op flatten, unary chains, and both emission lengths, three-way at 15.",
+      "fourth_kernel_audit.sh section 12: lists + len/sum recipes return 33; matched-zero vs nothing distinct on real byte streams."
+    ],
+    "summary": "validate.sh both bands 1 ok 0 divergent; audit end-to-end heap + honest acks."
+  },
+  "phase_gate": {
+    "phase": "m4e2-arena-heap",
+    "gate": "lists walked by recipes and the complete ack vocabulary witnessed; CI three-way + deploy ingest confirm the crossing",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "m4e3 — the real-recipe flattener through the observe door onto the cursor + heap; the band ratchet's first click"
+  },
+  "idea_ids": ["fourth-kernel"],
+  "spec_ids": ["kernel-native-api-readiness", "runtime-shared-native-representation"],
+  "task_ids": ["arena-heap-m4e2-20260611"],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "next-milestone"]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation", "measurement"]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-fable-5"
+  },
+  "evidence_refs": [
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/coherence-substrate/core-axioms.form",
+    "docs/system_audit/commit_evidence_2026-06-11_bmf_cursor_lane.json"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/system_audit/commit_evidence_2026-06-11_arena_heap_m4e2.json",
+    "form/form-stdlib/fourth-walker.fk",
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/tests/fourth-heap-band.fk",
+    "form/form-stdlib/tests/fourth-os-band.fk",
+    "scripts/fourth_kernel_audit.sh"
+  ],
+  "change_intent": "runtime_feature"
+}

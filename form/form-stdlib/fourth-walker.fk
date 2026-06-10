@@ -88,6 +88,18 @@
 ; no token stream, args on the call stack.
 (defn fk-buf (i) (fk-node 17 i))
 
+; ── the arena heap (m4e2) + axiom-1's nothing, first-class ──────────────
+; 18 CONS a b — a pair in the bump arena; the value is a REF (node-ack!)
+; 19 HEAD r · 20 TAIL r — deref
+; 21 NIL — THE absence value: the empty list and axiom-1's nothing are one
+;          ground state (the body's own teaching). fail returns NIL now, so
+;          a matched 0 is honest data — the offer ack vocabulary
+;          {nothing, 0, 1, node} is complete in the emitted sibling.
+(defn fk-cons (a b) (fk-node 18 (ms-intern a b)))
+(defn fk-head (r)   (fk-node 19 r))
+(defn fk-tail (r)   (fk-node 20 r))
+(defn fk-nil ()     (fk-node 21 (ms-cell 0)))
+
 ; fib authored as data — the program every carrier in fourth-kernel.form's
 ; rows answers: IF (LE arg 1) arg (ADD (SELF (arg-1)) (SELF (arg-2)))
 (defn fk-fib-program ()

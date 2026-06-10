@@ -1,0 +1,37 @@
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk
+;
+; fourth-heap-band — m4e2 proven three-way: the arena heap (CONS/HEAD/TAIL)
+; and axiom-1's NOTHING as a first-class value (NIL — the empty list and the
+; absence are one ground state, the body's own teaching). With references as
+; values the offer ack vocabulary {nothing, 0, 1, node} is complete in the
+; emitted sibling, and BMF's fail returns NOTHING — a matched zero is honest
+; data, the collision closed. Runtime behavior (lists walked, len/sum as
+; recipes, fail-vs-zero on real streams) is the audit's half; here the
+; kernels prove the emission tissue agrees everywhere.
+;
+; Named range honesty: program LITERALS ride intern_trivial_int (32-bit
+; range); the NIL sentinel is reached through its OP (tag 21), never a
+; literal — the band's c0 pins exactly that shape.
+;
+; Verdict 15 when the heap lands:
+;   1   CONS(LIT 5, NIL) flattens with NIL as an OP row (21,0,0,0) — the
+;       absence is reached structurally, not as a big literal
+;   2   HEAD(TAIL(ARG)) flattens unary-chained (20 then 19, children first)
+;   4   the universal walker's emission is 3620 bytes and deterministic —
+;       arena arms (18..21) now constant tissue in the one binary
+;   8   the jit emission for CALL-fib is 3535 bytes — the heap rides the
+;       baked lane too
+(do
+    (let c0 (if (str_eq (fkc-rows-text (fkc-flatten (fk-cons (fk-lit 5) (fk-nil)))) "{1,5,0,0},{21,0,0,0},{18,0,1,0},") 1 0))
+
+    (let c1 (if (str_eq (fkc-rows-text (fkc-flatten (fk-head (fk-tail (fk-arg))))) "{2,0,0,0},{20,0,0,0},{19,1,0,0},") 2 0))
+
+    (let c2 (if (eq (str_len (fkc-emit-universal)) 3620)
+                (if (str_eq (fkc-emit-universal) (fkc-emit-universal)) 4 0) 0))
+
+    (let fibc (fk-if (fk-le (fk-arg) (fk-lit 1)) (fk-arg)
+                     (fk-add (fk-call 0 (fk-sub (fk-arg) (fk-lit 1)))
+                             (fk-call 0 (fk-sub (fk-arg) (fk-lit 2))))))
+    (let c3 (if (eq (str_len (fkc-emit-jit (list fibc))) 3535) 8 0))
+
+    (add c0 (add c1 (add c2 c3))))

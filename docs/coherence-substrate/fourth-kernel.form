@@ -247,7 +247,22 @@
                      even(7)=0, fib-via-CALL(28)=317811 at 19.3 ms — the
                      CALL indirection priced against the SELF shape])
         (m4e2-heap   lists as an arena heap in the emitted C: cons/head/
-                     tail/len/nth/empty — the band subset's structural half)
+                     tail/len/nth/empty — the band subset's structural half
+                     [SHIPPED + the ack vocabulary COMPLETE: ops 18-21 —
+                     CONS into a bump arena returning a REF (the node ack!),
+                     HEAD/TAIL deref, NIL as THE absence (empty list and
+                     axiom-1's nothing are one ground state, reached through
+                     its OP — program literals are 32-bit trivials, the
+                     sentinel never rides one). len and sum run as WALKED
+                     RECIPES over the doors (33 over [7,8,9] through the
+                     universal binary). BMF fail returns NOTHING now: a
+                     matched zero is honest data — witnessed source-0 -> 0
+                     vs no-match -> nothing; {nothing, 0, 1, node} physical
+                     in the emitted sibling. tests/fourth-heap-band.fk -> 15
+                     three-way. Named honest: arena is bump-only (no melt/GC
+                     — axiom-3's nothing-overwritten as a feature until
+                     compaction earns its place); literals 32-bit until a
+                     tagged ABI])
         (m4e3-bridge the real-recipe flattener: read a COMPILED .fk recipe
                      through the observe door (node_category/node_children/
                      node_value) and flatten the REAL category set into the
