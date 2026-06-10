@@ -125,7 +125,17 @@
       (m4b-walker-as-recipes  the fourth kernel authored as recipes over the
                        surface, run INTERPRETED on the existing kernels first;
                        form-engine.form already proves the walk loop is
-                       recipe-expressible — 15/15 dispatch arms)
+                       recipe-expressible — 15/15 dispatch arms
+                       [FIRST WALKER SHIPPED: form-stdlib/fourth-walker.fk +
+                       tests/fourth-walker-band.fk -> 15, three-way — programs
+                       are content-addressed cells built through the intern
+                       door (same program twice = same cell, one leaf changed
+                       = different cell); dispatch-on-tag down the observe
+                       door; LIT/ARG/ADD/SUB/LE/IF/SELF; fib authored as data
+                       answers 55 through SELF re-entering the program; the
+                       walker touches only surface doors + figure leaves.
+                       Open here: the op set grows toward the full category
+                       table as m4c's emitter learns to lower it])
       (m4c-emit-and-boot  the emitter recipe (this file's lane, generalized
                        from hand-shaped text to walking the recipe tree) emits
                        the walker's native source; the toolchain port compiles;

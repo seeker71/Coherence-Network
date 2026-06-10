@@ -1,0 +1,56 @@
+; fourth-walker.fk — the fourth kernel's walker, authored as recipes over the
+; minimal surface (m4b of fourth-kernel.form: correct before fast).
+;
+; Programs here are CELLS: every node is built through the intern door
+; (minimal-surface.fk), so a program is content-addressed like any value —
+; the same program authored twice IS the same cell, and walking it is
+; dispatch-on-tag down the observe door. The walker touches nothing beyond
+; the surface doors plus figure leaves (add/sub/le — the compute organ's
+; port, the named fold): no host construct carries the semantics.
+;
+; The op set is the smallest that proves a real kernel heart — literals,
+; the argument, arithmetic, comparison, branching, and SELF (whole-program
+; recursion), enough to walk fib authored as data:
+;
+;   tag 1 LIT v      tag 2 ARG       tag 3 ADD a b    tag 4 SUB a b
+;   tag 5 LE a b     tag 6 IF c t e  tag 7 SELF e
+;
+; A node is pair(tag-leaf, body); binary bodies are pair(a, b); IF's body
+; is pair(c, pair(t, e)). fk-run walks a program against one argument.
+
+(defn fk-node (tag body) (ms-intern (ms-cell tag) body))
+(defn fk-tag  (n) (ms-value (ms-child n 0)))
+(defn fk-body (n) (ms-child n 1))
+
+(defn fk-lit  (v)     (fk-node 1 (ms-cell v)))
+(defn fk-arg  ()      (fk-node 2 (ms-cell 0)))
+(defn fk-add  (a b)   (fk-node 3 (ms-intern a b)))
+(defn fk-sub  (a b)   (fk-node 4 (ms-intern a b)))
+(defn fk-le   (a b)   (fk-node 5 (ms-intern a b)))
+(defn fk-if   (c t e) (fk-node 6 (ms-intern c (ms-intern t e))))
+(defn fk-self (e)     (fk-node 7 e))
+
+(defn fk-walk (prog node arg)
+    (if (eq (fk-tag node) 1) (ms-value (fk-body node))
+    (if (eq (fk-tag node) 2) arg
+    (if (eq (fk-tag node) 3) (add (fk-walk prog (ms-child (fk-body node) 0) arg)
+                                  (fk-walk prog (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 4) (sub (fk-walk prog (ms-child (fk-body node) 0) arg)
+                                  (fk-walk prog (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 5) (if (le (fk-walk prog (ms-child (fk-body node) 0) arg)
+                                     (fk-walk prog (ms-child (fk-body node) 1) arg)) 1 0)
+    (if (eq (fk-tag node) 6) (if (eq (fk-walk prog (ms-child (fk-body node) 0) arg) 0)
+                                 (fk-walk prog (ms-child (ms-child (fk-body node) 1) 1) arg)
+                                 (fk-walk prog (ms-child (ms-child (fk-body node) 1) 0) arg))
+    (if (eq (fk-tag node) 7) (fk-walk prog prog (fk-walk prog (fk-body node) arg))
+        0))))))))
+
+(defn fk-run (prog arg) (fk-walk prog prog arg))
+
+; fib authored as data — the program every carrier in fourth-kernel.form's
+; rows answers: IF (LE arg 1) arg (ADD (SELF (arg-1)) (SELF (arg-2)))
+(defn fk-fib-program ()
+    (fk-if (fk-le (fk-arg) (fk-lit 1))
+           (fk-arg)
+           (fk-add (fk-self (fk-sub (fk-arg) (fk-lit 1)))
+                   (fk-self (fk-sub (fk-arg) (fk-lit 2))))))
