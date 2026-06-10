@@ -58,6 +58,11 @@
 ;        within format epsilon; identical tensors node_eq (dedup proof). Weights become substrate cells.
 ;   M3  transformer-numerics — softmax (max-subtract for stability), gelu (tanh approximation), layernorm,
 ;        composed from the existing exp/tanh/matvec; each a three-way band on tiny dims.
+;        [SHIPPED: form-stdlib/transformer-numerics.fk + tests/transformer-numerics-band.fk → 4095,
+;        three-way. exp by square-and-reduce Taylor, sqrt by fixed-count Newton, tanh from exp — all
+;        Lisp-level stdlib, every band claim pinned to the PyTorch fp64 reference (softmax · layer_norm
+;        eps=1e-5 · gelu approximate='tanh') reduced to integers at 1e-6. The conformance discipline
+;        turned toward the reference the whisper-tiny weights will arrive from.]
 ;   M4  one attention+FFN block — compose M1+M2+M3 into a learned-weight self-attention + FFN block,
 ;        proven three-way on tiny dims (the real transformer primitive, replacing weightless attention.fk).
 ;   M5  JIT matmul to native — a JitTensorCompiled carrier (slice ABI, beside the scalar JitCompiled),
