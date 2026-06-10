@@ -91,3 +91,7 @@ audit-evidence-index-cache:
 native-route-goal-tending:
 	@cd form/form-kernel-rust && cargo build --release --quiet
 	@cd form && form-kernel-rust/target/release/form-kernel-rust run --stdlib form-stdlib form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/native-route-goal-cells.fk form-stdlib/queries/native-route-goal-tending.fk
+
+static-to-dynamic-tending:
+	@cd form/form-kernel-rust && cargo build --release --quiet
+	@cd form && form-kernel-rust/target/release/form-kernel-rust run --stdlib form-stdlib form-stdlib/core.fk form-stdlib/static-to-dynamic-cells.fk form-stdlib/queries/static-to-dynamic-tending.fk

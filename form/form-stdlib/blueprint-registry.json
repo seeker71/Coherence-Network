@@ -5397,6 +5397,48 @@
      "form/form-stdlib/primitive-registry.fk"
     ],
     "curated": true
+  },
+  {
+   "pkg": 1,
+   "level": 2,
+   "type": 99,
+   "inst": 25,
+   "name": "STATIC-DYNAMIC-LANE",
+   "meaning": "Aggregate lane that proves static memory has live dynamic successors.",
+   "aliases": [],
+   "reuse": 1,
+   "defined_in": [
+    "form/form-stdlib/static-to-dynamic-cells.fk"
+   ],
+   "curated": true
+  },
+  {
+   "pkg": 1,
+   "level": 2,
+   "type": 99,
+   "inst": 26,
+   "name": "STATIC-DYNAMIC-SURFACE",
+   "meaning": "Static source surface projected into a dynamic successor cell with proof and release state.",
+   "aliases": [],
+   "reuse": 1,
+   "defined_in": [
+    "form/form-stdlib/static-to-dynamic-cells.fk"
+   ],
+   "curated": true
+  },
+  {
+   "pkg": 1,
+   "level": 2,
+   "type": 99,
+   "inst": 27,
+   "name": "STATIC-DYNAMIC-SUCCESSOR",
+   "meaning": "Dynamic successor cell named by a static source surface.",
+   "aliases": [],
+   "reuse": 1,
+   "defined_in": [
+    "form/form-stdlib/static-to-dynamic-cells.fk"
+   ],
+   "curated": true
   }
  ]
 }

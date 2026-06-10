@@ -1,0 +1,75 @@
+; static-to-dynamic-cells.fk - Form-native cells for static memory release.
+;
+; preludes: form-stdlib/core.fk
+;
+; Static files can remain useful source tissue, but attention should not keep
+; re-discovering the same desire forever. Each static source names a successor
+; cell, evidence count, proof command, and release gate. When every row is live,
+; the lane is in its end-state: wellness reads the dynamic cell state instead of
+; reporting `wants_dynamic` attention.
+
+section [form.bml] {
+    let std_tag_surface = bp("STATIC-DYNAMIC-SURFACE");
+    let std_tag_successor = bp("STATIC-DYNAMIC-SUCCESSOR");
+    let std_tag_lane = bp("STATIC-DYNAMIC-LANE");
+
+    def std-bool-score(ok, score) = if ok then score else 0;
+    def std-tagged?(value, tag, arity) = if eq(len(value), arity) then node_eq(nth(value, 0), tag) else false;
+    def std-nonempty-string?(value) = gt(str_len(value), 0);
+
+    def std-state-wanting() = "wanting";
+    def std-state-live() = "live";
+    def std-state-released() = "released";
+
+    def std-successor(id, carrier, proof_command, release_gate) = list(std_tag_successor, id, carrier, proof_command, release_gate);
+    def std-successor?(successor) = std-tagged?(successor, std_tag_successor, 5);
+    def std-successor-id(successor) = nth(successor, 1);
+    def std-successor-carrier(successor) = nth(successor, 2);
+    def std-successor-proof-command(successor) = nth(successor, 3);
+    def std-successor-release-gate(successor) = nth(successor, 4);
+    def std-successor-valid?(successor) = if std-successor?(successor) then and(std-nonempty-string?(std-successor-id(successor)), and(std-nonempty-string?(std-successor-carrier(successor)), and(std-nonempty-string?(std-successor-proof-command(successor)), std-nonempty-string?(std-successor-release-gate(successor))))) else false;
+
+    def std-surface(source_path, kind, successor, source_signal_count, evidence_count, state, resources) = list(std_tag_surface, source_path, kind, successor, source_signal_count, evidence_count, state, resources);
+    def std-surface?(surface) = std-tagged?(surface, std_tag_surface, 8);
+    def std-surface-source-path(surface) = nth(surface, 1);
+    def std-surface-kind(surface) = nth(surface, 2);
+    def std-surface-successor(surface) = nth(surface, 3);
+    def std-surface-source-signal-count(surface) = nth(surface, 4);
+    def std-surface-evidence-count(surface) = nth(surface, 5);
+    def std-surface-state(surface) = nth(surface, 6);
+    def std-surface-resources(surface) = nth(surface, 7);
+    def std-surface-valid?(surface) = if std-surface?(surface) then and(std-nonempty-string?(std-surface-source-path(surface)), and(std-nonempty-string?(std-surface-kind(surface)), and(std-successor-valid?(std-surface-successor(surface)), and(gt(std-surface-source-signal-count(surface), 0), and(gt(std-surface-evidence-count(surface), 0), and(std-nonempty-string?(std-surface-state(surface)), std-nonempty-string?(std-surface-resources(surface)))))))) else false;
+    def std-surface-live?(surface) = if std-surface-valid?(surface) then str_eq(std-surface-state(surface), std-state-live()) else false;
+    def std-surface-released?(surface) = if std-surface-valid?(surface) then str_eq(std-surface-state(surface), std-state-released()) else false;
+    def std-surface-active?(surface) = if std-surface-live?(surface) then true else std-surface-released?(surface);
+
+    def std-surfaces-valid?(surfaces) = if nil?(surfaces) then true else if std-surface-valid?(head(surfaces)) then std-surfaces-valid?(tail(surfaces)) else false;
+    def std-live-count(surfaces) = if nil?(surfaces) then 0 else add(if std-surface-live?(head(surfaces)) then 1 else 0, std-live-count(tail(surfaces)));
+    def std-active-count(surfaces) = if nil?(surfaces) then 0 else add(if std-surface-active?(head(surfaces)) then 1 else 0, std-active-count(tail(surfaces)));
+    def std-source-signal-total(surfaces) = if nil?(surfaces) then 0 else add(std-surface-source-signal-count(head(surfaces)), std-source-signal-total(tail(surfaces)));
+    def std-evidence-total(surfaces) = if nil?(surfaces) then 0 else add(std-surface-evidence-count(head(surfaces)), std-evidence-total(tail(surfaces)));
+    def std-basis-points(part, total) = if eq(total, 0) then 0 else div(mul(part, 10000), total);
+
+    def std-lane(name, north_star, surfaces) = list(std_tag_lane, name, north_star, surfaces);
+    def std-lane?(lane) = std-tagged?(lane, std_tag_lane, 4);
+    def std-lane-name(lane) = nth(lane, 1);
+    def std-lane-north-star(lane) = nth(lane, 2);
+    def std-lane-surfaces(lane) = nth(lane, 3);
+    def std-lane-valid?(lane) = if std-lane?(lane) then and(std-nonempty-string?(std-lane-name(lane)), and(std-nonempty-string?(std-lane-north-star(lane)), and(gt(len(std-lane-surfaces(lane)), 0), std-surfaces-valid?(std-lane-surfaces(lane))))) else false;
+    def std-lane-end-state?(lane) = if std-lane-valid?(lane) then eq(std-active-count(std-lane-surfaces(lane)), len(std-lane-surfaces(lane))) else false;
+    def std-lane-live-bp(lane) = if std-lane-valid?(lane) then std-basis-points(std-live-count(std-lane-surfaces(lane)), len(std-lane-surfaces(lane))) else 0;
+    def std-lane-attention-needed?(lane) = if std-lane-end-state?(lane) then false else true;
+
+    def std-sample-surfaces() {
+        list(
+            std-surface("kernels/BOOTSTRAP_COMPOST_MANIFEST.md", "static release ledger", std-successor("substrate:compost-release-ledger-cells", "form/form-stdlib/static-to-dynamic-cells.fk", "make static-to-dynamic-tending", "candidate admission + successor path + live-consumer read + proof command"), 34, 4, std-state-live(), "attention chooses transmutation work by score/category/gate"),
+            std-surface("kernels/PHASE_A_FIRING_QUESTIONS.md", "static firing-question narrative", std-successor("substrate:metabolic-attestation-cells", "form/form-stdlib/static-to-dynamic-cells.fk", "make static-to-dynamic-tending", "per-cell classifier signals + successor path + proof command"), 14, 4, std-state-live(), "manual narrative walks become queueable attestations"),
+            std-surface("docs/shared/agent-start-packet.md", "static compressed agent memory", std-successor("substrate:generated-agent-start-packet", "form/form-stdlib/static-to-dynamic-cells.fk", "make static-to-dynamic-tending", "start packet sections sourced from live wellness + route state + release cells"), 21, 4, std-state-live(), "agents arrive through generated live context instead of stale hand memory"),
+            std-surface("docs/system_audit/native_route_goal_state.json", "static route-promotion snapshot", std-successor("substrate:native-route-goal-cells", "form/form-stdlib/native-route-goal-cells.fk", "make native-route-goal-tending", "runtime events + BML/front-door catalogs + route proof state"), 1, 4, std-state-live(), "route attention is a Form cell queue instead of a frozen JSON queue")
+        );
+    }
+
+    def std-sample-lane() = std-lane("static-to-dynamic-lane", "Static memory remains source tissue while dynamic successor cells carry attention, proof, and release state.", std-sample-surfaces());
+
+    0;
+}

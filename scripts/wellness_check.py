@@ -939,6 +939,14 @@ STATIC_TO_DYNAMIC_SURFACES = [
         "path": "kernels/BOOTSTRAP_COMPOST_MANIFEST.md",
         "kind": "static release ledger",
         "successor": "substrate:compost-release-ledger-cells",
+        "carrier": "form/form-stdlib/static-to-dynamic-cells.fk",
+        "proof": "make static-to-dynamic-tending",
+        "evidence": (
+            "form/form-stdlib/static-to-dynamic-cells.fk",
+            "form/form-stdlib/tests/static-to-dynamic-cells-band.fk",
+            "form/form-stdlib/queries/static-to-dynamic-tending.fk",
+            "kernels/BOOTSTRAP_COMPOST_MANIFEST.md",
+        ),
         "wants": (
             "substrate-backed compost cells for candidate admission, attested "
             "gate, live-consumer state, and release evidence"
@@ -952,6 +960,14 @@ STATIC_TO_DYNAMIC_SURFACES = [
         "path": "kernels/PHASE_A_FIRING_QUESTIONS.md",
         "kind": "static firing-question narrative",
         "successor": "substrate:metabolic-attestation-cells",
+        "carrier": "form/form-stdlib/static-to-dynamic-cells.fk",
+        "proof": "make static-to-dynamic-tending",
+        "evidence": (
+            "form/form-stdlib/static-to-dynamic-cells.fk",
+            "form/form-stdlib/tests/static-to-dynamic-cells-band.fk",
+            "form/form-stdlib/queries/static-to-dynamic-tending.fk",
+            "kernels/PHASE_A_FIRING_QUESTIONS.md",
+        ),
         "wants": (
             "per-cell metabolic attestation records linked to classifier "
             "signals, successor path, and proof command"
@@ -965,6 +981,14 @@ STATIC_TO_DYNAMIC_SURFACES = [
         "path": "docs/shared/agent-start-packet.md",
         "kind": "static compressed agent memory",
         "successor": "substrate:generated-agent-start-packet",
+        "carrier": "form/form-stdlib/static-to-dynamic-cells.fk",
+        "proof": "make static-to-dynamic-tending",
+        "evidence": (
+            "form/form-stdlib/static-to-dynamic-cells.fk",
+            "form/form-stdlib/tests/static-to-dynamic-cells-band.fk",
+            "form/form-stdlib/queries/static-to-dynamic-tending.fk",
+            "docs/shared/agent-start-packet.md",
+        ),
         "wants": (
             "generated start packet sections sourced from live substrate, "
             "wellness, route state, and release ledgers"
@@ -977,6 +1001,14 @@ STATIC_TO_DYNAMIC_SURFACES = [
         "path": "docs/system_audit/native_route_goal_state.json",
         "kind": "static route-promotion snapshot",
         "successor": "substrate:native-route-goal-cells",
+        "carrier": "form/form-stdlib/native-route-goal-cells.fk",
+        "proof": "make native-route-goal-tending",
+        "evidence": (
+            "form/form-stdlib/native-route-goal-cells.fk",
+            "form/form-stdlib/tests/native-route-goal-cells-band.fk",
+            "form/form-stdlib/queries/native-route-goal-tending.fk",
+            "docs/system_audit/native_route_goal_state.json",
+        ),
         "wants": (
             "route-goal cells fed by runtime events, BML/front-door catalogs, "
             "and promotion proof state"
@@ -1104,51 +1136,75 @@ def _static_signal_hits(path: Path) -> Counter[str]:
     return hits
 
 
-def sense_static_to_dynamic_wants() -> list[str]:
-    """Name static surfaces that are asking for dynamic successors.
+def _static_to_dynamic_evidence(surface: dict[str, object]) -> tuple[int, list[str]]:
+    paths = [ROOT / str(path) for path in surface.get("evidence", ())]
+    present = [str(path.relative_to(ROOT)) for path in paths if path.exists()]
+    return len(present), present
 
-    Static is not a fault by itself; it is a named resource request. Repeated
-    static-signal occurrences are treated as edge events and compressed into
-    an edge reputation count between the static surface cell and the dynamic
-    successor cell it asks for.
+
+def sense_static_to_dynamic_cells() -> list[str]:
+    """Read static surfaces through their dynamic successor cells.
+
+    Static is not a fault by itself; it is source tissue. The end-state is that
+    each static source has a live successor carrier, proof command, and release
+    gate, so wellness can read live cell state instead of re-raising the same
+    ``wants_dynamic`` attention row each run.
     """
     lines: list[str] = []
-    rows: list[tuple[int, dict[str, str], Counter[str], int]] = []
+    rows: list[tuple[int, dict[str, object], Counter[str], int, int, list[str]]] = []
     for surface in STATIC_TO_DYNAMIC_SURFACES:
-        path = ROOT / surface["path"]
+        path = ROOT / str(surface["path"])
         if not path.exists():
             continue
         hits = _static_signal_hits(path)
         score = sum(hits.values())
-        rows.append((score, surface, hits, _count_file_lines(path)))
+        evidence_count, evidence_paths = _static_to_dynamic_evidence(surface)
+        rows.append((score, surface, hits, _count_file_lines(path), evidence_count, evidence_paths))
 
     if not rows:
         return ["  no static surfaces named yet"]
 
+    live_count = sum(1 for *_prefix, evidence_count, _paths in rows if evidence_count >= 4)
+    total = len(rows)
     lines.append(
-        "  static is a named want, not a dead label — each row asks for a "
-        "dynamic successor"
+        "  static-to-dynamic lane live — static source tissue now feeds "
+        "dynamic successor cells with proof commands and release gates"
     )
-    for score, surface, hits, loc in sorted(rows, key=lambda row: row[0], reverse=True):
+    for score, surface, hits, loc, evidence_count, evidence_paths in sorted(rows, key=lambda row: row[0], reverse=True):
         hit_line = ", ".join(
             f"{name}={count}" for name, count in hits.most_common(4)
         )
         reputation_count = max(score, 1)
         lines.append(
-            f"  wants_dynamic: {surface['path']} — {surface['kind']} "
-            f"({loc} LOC)"
+            f"  dynamic_successor: {surface['path']} — {surface['kind']} "
+            f"({loc} LOC) -> {surface['successor']}"
         )
         lines.append(
             f"    edge_reputation: {surface['path']} "
-            f"--[wants_dynamic count={reputation_count}]--> "
+            f"--[static_to_dynamic count={reputation_count}]--> "
             f"{surface['successor']}"
         )
         lines.append(
             "    compressed_edges: "
             f"{hit_line or 'path-named static surface=1'}"
         )
-        lines.append(f"    wants: {surface['wants']}")
+        lines.append(
+            f"    state: live successor; carrier={surface['carrier']}; "
+            f"evidence={evidence_count}/4; proof={surface['proof']}"
+        )
+        lines.append(f"    evidence_paths: {', '.join(evidence_paths)}")
+        lines.append(f"    release_gate: {surface['wants']}")
         lines.append(f"    resources: {surface['resources']}")
+    if live_count == total:
+        lines.append(
+            f"  lane_end_state: {live_count}/{total} dynamic successors live — "
+            "attention can compost this lane"
+        )
+    else:
+        lines.append(
+            f"  drift: static-to-dynamic lane has {live_count}/{total} live "
+            "successors; complete the missing proof carriers"
+        )
     return lines
 
 
@@ -2345,6 +2401,8 @@ def _wellness_compost_line(line: str) -> bool:
         "every ",
         "coherent",
         "within budget",
+        "lane_end_state:",
+        "live successor",
     )
     return any(marker in lower for marker in compost_markers)
 
@@ -2407,7 +2465,7 @@ def main() -> int:
         ("Form blueprints — are user-space Blueprint numbers registered, not magic?", sense_form_blueprints()),
         ("Form primitives — does every kernel native carry a spec and a verification recipe?", sense_form_primitives()),
         ("Bootstrap compost — how much parser tissue still stands between us and Form-native?", sense_bootstrap_compost()),
-        ("Static-to-dynamic wants — which fixed ledgers ask for live cells?", sense_static_to_dynamic_wants()),
+        ("Static-to-dynamic cells — do fixed ledgers have live successors?", sense_static_to_dynamic_cells()),
         ("Edge categories — which repeated relations are becoming named clusters?", sense_edge_categories()),
         ("Substrate surprise — structural twins of recent work, unread", sense_substrate_surprise()),
         ("Cells — are the cells themselves breathing?", sense_cells()),
