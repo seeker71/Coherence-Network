@@ -91,7 +91,15 @@
         "correctness_witness": "greedy decode from BOS yields the canonical 'Once upon a time, there was a little girl named Lily' opening — real learned weights speaking through the projected engine",
         "tok_s_scalar_O3": 54,
         "tok_s_native_fast": 179,
-        "host": "x86-64 cascadelake (AVX vector lanes)"
+        "host": "x86-64 cascadelake (AVX vector lanes)",
+        "ollama_comparison_same_host_same_model": {
+          "ollama_version": "0.30.7 (cpu runner, 4 threads, stories15M GGUF imported via Modelfile, temperature 0, 100 tokens)",
+          "ollama_f16_tok_s": "62-77 across four runs",
+          "ollama_q8_tok_s": "54-111 (noisy at this size)",
+          "llama2c_runc_reference_tok_s": 186,
+          "recipe_engine_tok_s_single_thread": 179,
+          "reading": "all engines emit the identical greedy text. On a 15M f32 model the recipe-projected single-thread engine runs ~2.4x ollama's 4-thread rate and within 4% of run.c — ollama/llama.cpp carry server, graph, and thread-sync overheads built for billion-param models, which dominate at tiny sizes. The honest claim is parity with hand-written C at this scale, not victory over llama.cpp at 7B."
+        }
       },
       "jit_tmp_dir_finding": "a full validate.sh suite left 12,665 /tmp/form-jit-* dirs (~29GB) and filled the disk mid-suite; jit.go keeps each MkdirTemp dir for process lifetime but nothing reclaims them across runs — content-addressed dir reuse (bodyKey-named dirs, atomic rename) would make them a persistent cache instead of sediment",
       "execution_and_gpu_doors_2026_06_10": {
