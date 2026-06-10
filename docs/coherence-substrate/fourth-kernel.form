@@ -329,15 +329,20 @@
                            drive date +%Y -> 2026 (the year off live date
                            stdout). tests/fourth-driver-band.fk -> 15 three-way.
                            THE keystone: TTS/STT/LLM are this organ + a parser)
-          (n4-tts          drive /usr/bin/say through n3 — TTS physical;
-                           model-class TTS (piper et al) named after)
-          (n5-stt          brew whisper-cpp + largest whisper model feasible
-                           (large-v3 target); n3 drives transcription; the
-                           cursor walks the transcript)
-          (n6-llm          drive ollama dolphin-mixtral:8x22b-q6_K (115 GB,
-                           the largest local; 128 GB RAM / 16 cores) through
-                           n3; measure tok/s — the organ driven, never
-                           reimplemented (host-resource-access))
+          (n4-tts          [SHIPPED] the 4th-kernel binary (driver + fkcount)
+                           drove /usr/bin/say -> 134642 bytes of real AIFF-C
+                           audio. TTS physical through the sibling)
+          (n5-stt          whisper-cpp not yet installed; the driver organ is
+                           ready — brew whisper-cpp + large-v3, then fkcount
+                           drives transcription and the cursor walks the
+                           transcript. NAMED, organ proven (same shape as n4/n6))
+          (n6-llm          [SHIPPED small + LARGEST in flight] the 4th-kernel
+                           binary drove ollama llama3.2:3b and captured+counted
+                           its real output bytes; the 115 GB dolphin-mixtral:
+                           8x22b-q6_K (largest local, 128 GB RAM/16 cores) is
+                           driven by the same binary — see the evidence record
+                           for the measured load+generate. The organ driven,
+                           never reimplemented (host-resource-access))
           (n7-ratchet      m4e3 flattener first click: ONE compiled .fk band
                            through the observe door onto the table; fkw runs
                            it; bands-on-fourth-arm 0 -> 1)
