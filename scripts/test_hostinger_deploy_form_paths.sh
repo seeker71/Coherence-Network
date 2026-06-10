@@ -24,6 +24,24 @@ grep -Fq "COPY form/form-stdlib/ ./form/form-stdlib/" "$DOCKERFILE" \
 grep -Fq "COPY deploy/front-door/api.bml /routes/api.bml" "$KERNEL_ROUTER_DOCKERFILE" \
   || fail "kernel-router image does not carry the BML front-door catalog"
 
+grep -Fq 'Path(`/api/runtime/events`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+  || fail "kernel-router ingress does not expose the runtime-events BML route"
+
+grep -Fq 'PathRegexp(`^/api/views/stats/[^/]+$`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+  || fail "kernel-router ingress does not expose the views-stats BML template route"
+
+grep -Fq 'PathRegexp(`^/api/reactions/concept/[^/]+/summary$`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+  || fail "kernel-router ingress does not expose the reaction summary BML template route"
+
+grep -Fq 'PathRegexp(`^/api/reactions/concept/[^/]+/threads$`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+  || fail "kernel-router ingress does not expose the reaction threads BML template route"
+
+grep -Fq 'PathRegexp(`^/api/concepts/[^/]+/voices$`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+  || fail "kernel-router ingress does not expose the concept voices BML template route"
+
+grep -Fq "BML front-door promoted read routes" "$DEPLOY_SCRIPT" \
+  || fail "deploy canary does not probe the promoted BML read routes"
+
 grep -Fq "form/form-stdlib/*)" "$DEPLOY_SCRIPT" \
   || fail "deploy service routing does not send form/form-stdlib changes to api"
 

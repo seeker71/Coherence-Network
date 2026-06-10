@@ -1004,6 +1004,36 @@ ensure_kernel_router_canary() {
   probe_ok=0
   while (( $(date +%s) < deadline )); do
     if docker compose "${compose_args[@]}" exec -T kernel-router-bml-front-door sh -lc \
+      "for spec in \
+        'runtime-events|/api/runtime/events?limit=1&source=api|api_runtime_events' \
+        'views-stats|/api/views/stats/lc-attuned-spaces?days=30|api_views_stats' \
+        'reaction-summary|/api/reactions/concept/lc-attuned-spaces/summary|api_reaction_concept_summary' \
+        'reaction-threads|/api/reactions/concept/lc-attuned-spaces/threads|api_reaction_concept_threads' \
+        'concept-voices|/api/concepts/lc-attuned-spaces/voices|api_concept_voices'; do \
+          name=\${spec%%|*}; rest=\${spec#*|}; url=\${rest%%|*}; handler=\${rest#*|}; \
+          curl -fsS -D /tmp/promoted-\${name}.headers -o /tmp/promoted-\${name}.body \
+            \"http://127.0.0.1:8080\${url}\" \
+            -H 'Accept: application/json' \
+            && grep -qi '^X-Form-Router: native-kernel' /tmp/promoted-\${name}.headers \
+            && grep -qi \"^X-Form-Handler: \${handler}\" /tmp/promoted-\${name}.headers \
+            && grep -qi '^X-Form-Python-Authority: false' /tmp/promoted-\${name}.headers \
+            || exit 1; \
+        done" \
+      2>&1 | tee -a "$LOG_FILE"; then
+      probe_ok=1
+      break
+    fi
+    sleep 3
+  done
+  if [[ "$probe_ok" != "1" ]]; then
+    log "FAIL: BML front-door promoted read routes did not return native proof headers"
+    exit 1
+  fi
+
+  deadline=$(( $(date +%s) + 120 ))
+  probe_ok=0
+  while (( $(date +%s) < deadline )); do
+    if docker compose "${compose_args[@]}" exec -T kernel-router-bml-front-door sh -lc \
       "curl -fsS -D /tmp/household-events.headers -o /tmp/household-events.body \
         'http://127.0.0.1:8080/api/household/events?limit=5' \
         -H 'Accept: application/json' \
