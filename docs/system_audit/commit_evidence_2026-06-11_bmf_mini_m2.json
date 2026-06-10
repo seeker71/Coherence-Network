@@ -1,0 +1,105 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "worktree-fourth-kernel-seed",
+  "commit_scope": "fourth-kernel.form M2 proof-of-shape: a grammar-as-data compiler (bmf-mini.fk) folds source tokens through rule cells into a program-as-cells; the pipeline compile -> fkc-emit-many -> clang yields a running binary, and swapping the grammar yields a different binary (the compiler-compiler property, in compiled output). Transform proven three-way at 15; binary generation driven end-to-end in the audit.",
+  "files_owned": [
+    "form/form-stdlib/bmf-mini.fk",
+    "form/form-stdlib/tests/bmf-mini-band.fk",
+    "scripts/fourth_kernel_audit.sh",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/coherence-substrate/INDEX.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/bmf-mini.fk form-stdlib/tests/bmf-mini-band.fk",
+      "scripts/fourth_kernel_audit.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-11_bmf_mini_m2.json"
+    ],
+    "summary": "bmf-mini-band holds three-way at 15: (1) faithful — compile grammar g1 over source [1,1,2] and walk on 5 equals 22 equals the independently computed bmf-ref; (2) grammar is data — g2 (operand 100 not 10) over the SAME source walks to 202, the compiler-compiler property; (4) program-as-cell — same grammar+source twice is the same cell, a different grammar a different cell; (8) a mixed ADD/SUB fold walks to its reference. The audit drove the binary half end to end: grammar + source -> compile (recipe) -> fkc-emit-many -> clang -> running binary; g1 -> binary -> 22, g2 -> binary -> 202 on the same source [1,1,2] at input 5 — same source, different grammar, different working binary.",
+    "observed_delta": {
+      "bmf_mini_band_verdict": 15,
+      "kernels_agreeing": 3,
+      "divergent": 0,
+      "g1_binary_output": 22,
+      "g2_binary_output": 202,
+      "source_tokens": "[1,1,2]",
+      "compiler_compiler_property": "same source, different grammar -> different binary",
+      "north_star_ratchet": "bands runnable on the fourth arm: 0 of 424 (M2 is the pipeline, not yet a band on fkw)"
+    },
+    "known_limitations": [
+      {
+        "limitation": "The compiler runs as a Form recipe (it folds Form lists of rules and tokens); the standalone compiler-binary that reads textual source through the port needs m4e2 (heap for the lists) + m4e4 (strings for textual source/output).",
+        "follow_up": "When m4e2/m4e4 land, the compiler emits as a binary via the same fke machinery the walker uses — it is already program-shaped."
+      },
+      {
+        "limitation": "Tokenwise pattern-action fold — no nesting, choose, fail, or cut yet; this is the data-driven transform, not the full BMF engine.",
+        "follow_up": "m4e3 reads engine.fk's apply-object-rule recipes through the observe door for the full nesting/backtracking BMF."
+      },
+      {
+        "limitation": "The grammar's op set is the walker's (ADD/SUB over a literal operand); richer semantic actions arrive as the walker op set grows (m4e2/m4e4).",
+        "follow_up": "Each new op the walker gains is a new semantic-action shape the grammar can target."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "PR gates run the bmf-mini band three-way alongside the other fourth-kernel bands."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "form-stdlib additions ride the api image rebuild; the lattice ingests the updated fourth-kernel.form on the post-merge hook."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No route behavior changes. The body gains the compiler-compiler kernel as a proof-of-shape: grammar + source compiles to a running native binary, and the grammar genuinely drives the output (swap it, the binary changes) — M2's central claim, demonstrated.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "bmf-mini-band proves faithful transform vs reference, grammar-is-data, program-as-cell identity, and a mixed fold, three-way at 15.",
+      "fourth_kernel_audit.sh M2 section: two grammars over one source -> two binaries via clang -> 22 and 202, parity-gated."
+    ],
+    "summary": "validate.sh three-way 1 ok 0 divergent; audit end-to-end grammar+source -> binary, grammar-driven."
+  },
+  "phase_gate": {
+    "phase": "m2-bmf-compiler-proof-of-shape",
+    "gate": "grammar + source -> a running binary, grammar-driven, transform three-way; CI + deploy confirm the crossing",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "m4e2 heap so the compiler itself emits as a binary; m4e3 the full engine.fk BMF through the observe door"
+  },
+  "idea_ids": ["fourth-kernel"],
+  "spec_ids": ["kernel-native-api-readiness", "runtime-shared-native-representation"],
+  "task_ids": ["bmf-mini-m2-20260611"],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "bmf-compiler-binary-ask"]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation", "measurement"]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-fable-5"
+  },
+  "evidence_refs": [
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/system_audit/commit_evidence_2026-06-11_call_function_table_m4e1.json",
+    "kernels/BMF_BML_COMPILER_PICTURE.md"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/system_audit/commit_evidence_2026-06-11_bmf_mini_m2.json",
+    "form/form-stdlib/bmf-mini.fk",
+    "form/form-stdlib/tests/bmf-mini-band.fk",
+    "scripts/fourth_kernel_audit.sh"
+  ],
+  "change_intent": "runtime_feature"
+}

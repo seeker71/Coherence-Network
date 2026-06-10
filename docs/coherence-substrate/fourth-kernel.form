@@ -86,7 +86,17 @@
                   fkb-image-as-parity-gate)                 # same source -> same NodeIDs -> same image
     (proof        a-band-where-native-and-walker-compile-one-corpus-to-equal-images)
     (verification-source primitive-registry.fk)             # the natives it carries, answered entry-by-entry
-    (rows         compile-throughput rss startup binary-size))
+    (rows         compile-throughput rss startup binary-size)
+    # ── Proof-of-shape SHIPPED: grammar + source -> a new binary, grammar-driven ──
+    (proof-of-shape bmf-mini.fk)                            # rules-as-cells (token, op, operand)
+    (transform    grammar-and-source-cells-folded-into-a-program-as-cells)  # the compiler-compiler kernel
+    (grammar-is-data  swap-the-grammar-get-a-different-binary)  # proven in COMPILED output
+    (pipeline     compile-recipe -> fkc-emit-many -> clang -> a-running-binary)  # end to end, in the audit
+    (band         tests/bmf-mini-band.fk -> 15 three-way)   # faithful vs reference, grammar-is-data, program-as-cell
+    (witnessed    "g1 tok1=ADD10 -> binary -> 22 ; g2 tok1=ADD100 -> binary -> 202, same source [1,1,2]")
+    (honest-scope tokenwise-pattern-action-fold)            # the nesting/choose/fail engine is m4e3
+    (compiler-as-recipe-today  the-compiler-folds-Form-lists)  # emittable when m4e2 gives the heap
+    (compiler-as-binary-needs  m4e2-heap + m4e4-strings)    # to read textual source through the port, named))
 
   # ── M3 — the native API host ──────────────────────────────────────────
   # The front door as one native binary: socket accept, HTTP parse, route

@@ -1,0 +1,28 @@
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/bmf-mini.fk
+;
+; bmf-mini-band — a grammar-as-data compiler proven three-way: source tokens
+; folded through rule cells produce a program-as-cells whose walk equals an
+; independently computed reference, the grammar genuinely drives the output
+; (swap it, the value changes), and the compiled program is a content-addressed
+; cell. The binary-generation half (compile -> emit -> clang -> run) is the
+; audit's claim; here the kernels prove the transform agrees everywhere.
+;
+; Verdict 15 when the compiler holds:
+;   1   faithful — compile g1 over [1,1,2], walk on 5 == 22 == bmf-ref
+;   2   grammar is data — g2 (operand 100 not 10) over the SAME source walks
+;       to 202, not 22: the compiler-compiler property
+;   4   program is a cell — same grammar+source twice = the same program cell;
+;       a different grammar = a different cell
+;   8   a mixed fold lands — [1,2,1] interleaving ADD/SUB walks to its reference
+(do
+    (let g1 (list (bmf-rule 1 3 10) (bmf-rule 2 4 3)))    ; tok1 -> ADD 10, tok2 -> SUB 3
+    (let g2 (list (bmf-rule 1 3 100) (bmf-rule 2 4 3)))   ; tok1 -> ADD 100
+    (let src (list 1 1 2))
+    (let p1 (bmf-compile g1 src))
+    (let c0 (if (eq (fk-run p1 5) 22) (if (eq (fk-run p1 5) (bmf-ref g1 src 5)) 1 0) 0))
+    (let c1 (if (eq (fk-run (bmf-compile g2 src) 5) 202) 2 0))
+    (let c2 (if (eq (ms-same p1 (bmf-compile g1 src)) 1)
+                (if (eq (ms-same p1 (bmf-compile g2 src)) 0) 4 0) 0))
+    (let src2 (list 1 2 1))
+    (let c3 (if (eq (fk-run (bmf-compile g1 src2) 5) (bmf-ref g1 src2 5)) 8 0))
+    (add c0 (add c1 (add c2 c3))))
