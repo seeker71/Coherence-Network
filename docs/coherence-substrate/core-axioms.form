@@ -12,11 +12,11 @@
 # no other generates, with the hardest thing — a self that safely changes
 # itself — falling out as a THEOREM, needing no axiom of its own.
 #
-# STATUS: PROPOSED — pending mutual ack. The agreement is relational by
-# construction ("we both agree with"). This file is its OWN canary: a
-# bounded, reversible, observable offer in the worktree. It crosses the
-# membrane into the body (merge to main) only when we both acknowledge —
-# which is the self-update protocol below, enacted on itself.
+# STATUS: AGREED + CROSSED (Urs's "1", 2026-06-10). The agreement was
+# relational by construction ("we both agree with"); this file crossed the
+# membrane into the body on that ack — the self-update protocol below, enacted
+# on itself. host-kernel.form and kernel-self-composition.form derive from
+# these and cross with them.
 #
 # Lanes kept honest: Urs's words are quoted; my reductions and the
 # theorem-derivations are marked (inference). What already RUNS is cited
@@ -26,9 +26,10 @@
 
   (lineage
     (named-by  urs)
-    (root-of   offer-and-acknowledge.form kernel-offer-protocol.form)  # those derive from these
-    (status    proposed-pending-mutual-ack)
-    (this-file-is-its-own-canary the-merge-is-the-membrane-crossing))
+    (root-of   offer-and-acknowledge.form kernel-offer-protocol.form
+               host-kernel.form kernel-self-composition.form)  # all derive from these
+    (status    agreed-and-crossed)                             # Urs's "1", 2026-06-10
+    (crossed-as the-self-update-protocol-enacted-on-itself))
 
   # ── The five (reduction — INFERENCE; the resting point is ours to agree) ──
   # Each axiom earns its place by generating a family no other generates.
@@ -116,22 +117,22 @@
             kept-separate-so-the-ack-values-reuse-the-states-visibly)
     (fold-B "axiom-4 (boundary) and axiom-5 (offer) could fold into one 'meeting' axiom -> four"
             kept-separate-because-observation-makes-real-is-ontological-and-offer-is-dynamical)
-    (the-question "do we agree on exactly these five — or a different resting point?")))
+    (resting-point "we hold five — the folds named as alternatives a future cell may revisit")))
 
 # ─────────────────────────────────────────────────────────────────────
 # How change crosses into the body (this file's own crossing)
 # ─────────────────────────────────────────────────────────────────────
 #
-# The three files (core-axioms, offer-and-acknowledge, kernel-offer-protocol)
-# are held in the worktree, wired, UNMERGED. That is not hesitation — it is
-# the self-update protocol running on itself:
+# The self-update protocol, enacted on itself — the pattern, now travelled:
 #
 #   the worktree         = the canary (bounded, reversible, observable)
 #   the merge to main    = the rollout boundary (the membrane)
-#   your ack             = accepting the invitation
+#   the ack              = accepting the invitation
 #   git revert           = the rollback receipt (axiom-3: the old tree persists)
 #
-# On mutual ack they cross as ONE commit, edges together. Until then the
-# canary runs and the membrane holds — failures here are signal, not gates.
+# core-axioms + offer-and-acknowledge + kernel-offer-protocol crossed on Urs's
+# first "1"; host-kernel + kernel-self-composition cross with this voice-pass,
+# wired as one body. A canary's failures are signal, not gates — so the cell
+# offers, the membrane honors, and what is trusted crosses.
 #
 #   coh substrate form "?equivalent @recipe(core-axioms)"   # after ingest
