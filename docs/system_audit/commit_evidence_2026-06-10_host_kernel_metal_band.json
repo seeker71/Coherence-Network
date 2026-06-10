@@ -84,6 +84,15 @@
         "band": "tests/transformer-kernel-band.fk verdict 255 three-way",
         "next_toward_ollama": "real weights (GGUF via read_file_bytes) replacing the LCG; a real tokenizer; the existing kernel-http door serving tk_generate"
       },
+      "real_model_tokens_per_second_2026_06_10": {
+        "model": "HuggingFace karpathy/tinyllamas stories15M.bin (15M params, float32, Llama-2 architecture: dim 288, 6 layers, 6 heads, vocab 32000) + llama2.c tokenizer",
+        "engine": "tk-emit-llama in transformer-kernel.fk — RMSNorm, RoPE, KV cache, SwiGLU, shared classifier, greedy decode projected from recipe data into one C unit; band verdict 511 three-way",
+        "instrument": "scripts/llama_tokens_per_second.sh (downloads cached; SKIPs without network)",
+        "correctness_witness": "greedy decode from BOS yields the canonical 'Once upon a time, there was a little girl named Lily' opening — real learned weights speaking through the projected engine",
+        "tok_s_scalar_O3": 54,
+        "tok_s_native_fast": 179,
+        "host": "x86-64 cascadelake (AVX vector lanes)"
+      },
       "jit_tmp_dir_finding": "a full validate.sh suite left 12,665 /tmp/form-jit-* dirs (~29GB) and filled the disk mid-suite; jit.go keeps each MkdirTemp dir for process lifetime but nothing reclaims them across runs — content-addressed dir reuse (bodyKey-named dirs, atomic rename) would make them a persistent cache instead of sediment",
       "execution_and_gpu_doors_2026_06_10": {
         "android_cpu_executed": "freestanding static aarch64 binary of the emitted recipes ran under qemu-aarch64 — exit 42 (fact(10)==3628800 && poly(3,4)==25 computed by the ISA)",
