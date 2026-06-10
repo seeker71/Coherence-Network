@@ -23,7 +23,7 @@
       "After the Rust template matcher fix was deployed, public probes still showed missing X-Form-Router for the promoted endpoints; /api/utils/kernel_status remained native.",
       "The BML front-door service Traefik labels did not expose GET /api/runtime/events or the single-segment template paths for views stats, reaction summary, reaction threads, and concept voices.",
       "The overlay now adds bounded GET Path/PathRegexp rules for those promoted read routes at priority 1182.",
-      "The Hostinger deploy canary and public deploy verifier now probe the promoted read routes for native-kernel, expected X-Form-Handler, and X-Form-Python-Authority: false."
+      "The Hostinger deploy canary and public deploy verifier now probe the promoted read routes for native-kernel router proof. Post-deploy production evidence showed these BML promoted read handlers expose X-Form-Router but not per-handler proof headers."
     ]
   },
   "ci_validation": {
