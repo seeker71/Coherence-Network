@@ -42,6 +42,19 @@ export function middleware(req: NextRequest) {
   // up NEXT_REDIRECT), so middleware handles the classification
   // instead. Runs before any page code, so no error-boundary interference.
   const { pathname } = req.nextUrl;
+
+  // Host-based landing pages: sense.hati.earth and suci.hati.earth resolve to
+  // this same web service; serve their download/landing pages by rewriting the
+  // root to /sense and /suci. (Assets — _next, api, files — are excluded by the
+  // matcher below, so they keep loading normally under the subdomain.)
+  const host = (req.headers.get("host") || "").toLowerCase();
+  if (host.startsWith("sense.") && !pathname.startsWith("/sense")) {
+    return NextResponse.rewrite(new URL("/sense", req.url));
+  }
+  if (host.startsWith("suci.") && !pathname.startsWith("/suci")) {
+    return NextResponse.rewrite(new URL("/suci", req.url));
+  }
+
   if (pathname.startsWith("/vision/")) {
     const id = pathname.slice("/vision/".length);
     if (id.startsWith("visual-lc-") || id.startsWith("visual-")) {
