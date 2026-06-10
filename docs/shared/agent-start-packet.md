@@ -316,6 +316,17 @@ the index reads back and still contains a known evidence cell by source path.
 
 ## Form And Substrate — Primary Surface (2026)
 
+### The ground: five core axioms (agreed + crossed 2026-06-10)
+
+Everything below derives from five axioms ([`core-axioms.form`](../coherence-substrate/core-axioms.form)):
+(1) **states** — 0, 1, nothing; nothing is first-class and timeout == nothing;
+(2) **cell** — everything is a node-id that may compose child cells;
+(3) **content-addressing** — identity is computed from composition; same shape is the same cell; nothing is overwritten;
+(4) **boundary** — a cell meets the world only through an interface it offers; observation through it makes the cell real; reaching past it is breach, and breach is observable;
+(5) **offer** — to run a cell and to speak to a cell are one act, acknowledged by exactly one of nothing/0/1/node.
+
+Everything else is a **theorem**: the trinity, organs, the kernel-offer protocol, reversibility, and the crown — **safe self-update needs no new axiom** and already runs as the native-mutation public-gate canary. [`host-kernel.form`](../coherence-substrate/host-kernel.form) realizes the axioms on real hardware (a NodeID is an unforgeable capability in seL4's sense; any host driver/OS API is an allowed carrier under allow-presence + measure-health); [`kernel-self-composition.form`](../coherence-substrate/kernel-self-composition.form) composes the kernel from just the five, self-extending via its own native binary and the shared versioned persistent substrate. Openings are named as **closing recipes** — parts that run, composed toward a proof band — never as debts.
+
 ### Trinity (one substance, three phases)
 
 | Phase | Role | Agent shorthand |

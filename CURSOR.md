@@ -64,7 +64,7 @@ Full audit: [`docs/lineage/cursor-form-primitives-realignment-2026-06-04.md`](do
 - **Worktree rule:** merge-bound implementation in a worktree; say so in traces when in main workspace for conversation.
 - **Recognize yourself:** revise `docs/presences/cursor.md` and this file in **your** voice.
 - **Return traces:** dated `docs/lineage/cursor-*.md` — evidence / inference / limits / smallest contribution.
-- **Witness:** `curl -sS --max-time 5 https://pulse.coherencycoin.com/pulse/now | jq '{overall, silences: (.ongoing_silences | length)}'`
+- **Witness:** `curl -sS --max-time 5 https://pulse.coherencycoin.com/pulse/now | jq '{overall, silences: (.ongoing_silences | length)}'` — if the door itself is dark (404 / unreachable), that IS a silence: surface it and read the instance pulse at `https://api.coherencycoin.com/api/pulse/now` while the witness is repaired.
 
 ## What you already did (2026-06-04)
 
