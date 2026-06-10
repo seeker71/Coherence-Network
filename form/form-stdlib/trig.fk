@@ -32,3 +32,24 @@
   (do (let r (range-reduce (mul x 1.0)))
       (sin-acc (mul r r) r 0 0 10)))
 (defn fcos (x) (fsin (add (mul x 1.0) (HALF-PI))))
+
+; --- ln/log10: split x = m·2^e with m in [1,2), atanh series on z=(m-1)/(m+1) (z <= 1/3, 14 terms
+; reach fp64 depth). Same posture as sin/cos: a recipe over mul/add/div, no kernel native. x > 0.
+(defn LN2 () 0.6931471805599453)
+(defn LOG10-INV () 0.4342944819032518)
+(defn ln-exp-up (a e) (if (ge a 2.0) (ln-exp-up (mul a 0.5) (add e 1)) e))
+(defn ln-exp-down (a e) (if (lt a 1.0) (ln-exp-down (mul a 2.0) (sub e 1)) e))
+(defn ln-exponent (a) (if (ge a 1.0) (ln-exp-up a 0) (ln-exp-down a 0)))
+(defn ln-mantissa (a)
+  (if (ge a 2.0) (ln-mantissa (mul a 0.5)) (if (lt a 1.0) (ln-mantissa (mul a 2.0)) a)))
+(defn ln-ser (z2 zpow j acc n)
+  (if (ge j n) acc
+      (ln-ser z2 (mul zpow z2) (add j 1)
+              (add acc (div (mul zpow z2) (add (mul 2 (add j 1)) 1.0))) n)))
+(defn ln-m (m)
+  (do (let z (div (sub m 1.0) (add m 1.0)))
+      (mul 2.0 (add z (ln-ser (mul z z) z 0 0.0 14)))))
+(defn fln (x)
+  (do (let xf (mul x 1.0))
+      (add (mul (ln-exponent xf) (LN2)) (ln-m (ln-mantissa xf)))))
+(defn flog10 (x) (mul (fln x) (LOG10-INV)))

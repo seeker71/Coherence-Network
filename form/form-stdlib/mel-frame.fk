@@ -1,0 +1,40 @@
+; mel-frame.fk — the mel front-end's frame shape: whisper's own front door, computed IN THE BODY.
+;
+; form-native-models.form M6 names the smallest first move toward whisper-tiny: the mel front-end —
+; STFT + mel filterbank — matching whisper.log_mel. This recipe carries one FRAME of that pipeline,
+; fully Form-native in the spectrum.fk lineage: the hann window is fcos, the DFT bin power is the
+; Goertzel recurrence over the windowed samples, a mel row is its (bins, slaney-weights) support as
+; DATA, and log10 is trig.fk's fln. torch.stft frame 5 (hop 160, n_fft 400, center) is the interior
+; frame this matches — the band proves it against the torch/numpy fp64 reference. The full 80×3000
+; spectrogram is the same recipe walked 80×3000 times; making that fast is M5's JIT stone, not a new
+; shape. Preludes trig.fk (fsin/fcos/TAU/fln/flog10).
+
+; hann (periodic, torch.hann_window): w[n] = 0.5 − 0.5·cos(2πn/N)
+(defn mf-hann (n N)
+  (sub 0.5 (mul 0.5 (fcos (div (mul (TAU) (mul n 1.0)) (mul N 1.0))))))
+
+; a windowed test frame, generated in the body: sample off+n of sin(2πf·s/sr), times the window
+(defn mf-frame (f sr off N n)
+  (if (ge n N) (empty)
+      (cons (mul (fsin (div (mul (TAU) (mul f (add off n))) (mul sr 1.0))) (mf-hann n N))
+            (mf-frame f sr off N (add n 1)))))
+
+; Goertzel over a sample list: |DFT bin|² with one cosine coefficient (spectrum.fk's recurrence,
+; walking a list instead of wav bytes)
+(defn mf-goertzel (xs coeff s1 s2)
+  (if (eq (len xs) 0)
+      (sub (add (mul s1 s1) (mul s2 s2)) (mul coeff (mul s1 s2)))
+      (mf-goertzel (tail xs) coeff (sub (add (head xs) (mul coeff s1)) s2) s1)))
+(defn mf-bin-power (xs k N)
+  (mf-goertzel xs (mul 2.0 (fcos (div (mul (TAU) (mul k 1.0)) (mul N 1.0)))) 0.0 0.0))
+
+; a mel row's energy: slaney weights · bin powers over the row's support (bins + weights are DATA
+; from the filterbank cell, exactly as spectrum.fk carries its band coefficients)
+(defn mf-mel-energy (xs ks ws N)
+  (if (eq (len ks) 0) 0.0
+      (add (mul (head ws) (mf-bin-power xs (head ks) N))
+           (mf-mel-energy xs (tail ks) (tail ws) N))))
+
+; whisper's log lane: log10(clamp(mel, 1e-10))
+(defn mf-log-clamped (e) (if (lt e 0.0000000001) -10.0 (flog10 e)))
+(defn mf-log-mel (xs ks ws N) (mf-log-clamped (mf-mel-energy xs ks ws N)))

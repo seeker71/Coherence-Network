@@ -91,6 +91,12 @@
 ;        already referenced in experiments/satsang-voice), encodes block-0 weights via M2, runs M4 over
 ;        them, matches the HF reference activation within epsilon. First real model in the body. (Even
 ;        smaller first: the mel front-end — STFT + an 80-row filterbank — matching whisper.log_mel.)
+;        [mel front-end frame SHIPPED: form-stdlib/mel-frame.fk + tests/mel-frame-band.fk → 1023,
+;        three-way. One whisper-style STFT frame fully Form-native in the spectrum.fk lineage: hann is
+;        fcos, bin power is the Goertzel recurrence, a mel row is its slaney (bins, weights) support as
+;        data, log10 is trig.fk's new fln. Matches torch.stft frame 5 / librosa slaney / whisper's
+;        clamp-log lane at 1e-6. The full 80×3000 spectrogram is this recipe walked — speed is M5's
+;        JIT stone, not a new shape. Remaining for M6: safetensors carrier + block-0 activation match.]
 ;   Parallel, not gated on the above: the recognition-router + ensemble-vote + champion-challenger +
 ;     learning-arc already run N classifiers on one chunk, compared, all learning, the router escalating
 ;     to a richer recipe on events — A/B/C/D over the same samples. The deterministic Form layer is what
