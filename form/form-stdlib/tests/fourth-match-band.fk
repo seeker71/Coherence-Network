@@ -1,0 +1,28 @@
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/fourth-match.fk
+;
+; fourth-match-band — the wake-word matcher (the companion's Form decision
+; cell) proven three-way at emission: a "does fk_src contain this needle"
+; scanner over the BMF cursor, the base position in the RAM organ, the needle
+; baked from the string. The LIVE 1/0 on real streams (hey kernel -> 1, no
+; wake -> 0) is the audit's half; here the kernels prove the program agrees.
+;
+; Verdict 15 when the matcher holds:
+;   1   fm-contains-fns is four functions (entry, scan, match-at, needle)
+;   2   the matcher reads the cursor — its table carries BUF (tag 17)
+;   4   the driver emission carries the capture organ (execvp + fk_src read)
+;   8   the needle parameterizes — different needles give different emissions
+(do
+    (let fns (fm-contains-fns "kernel"))
+    (let c0 (if (eq (len fns) 4) 1 0))
+
+    (let rows (nth (fkc-flatten-many fns) 0))
+    (let c1 (if (eq (fkd-has-tag rows 17) 1) 2 0))
+
+    (let d (fkc-emit-driver fns))
+    (let c2 (if (ge (str_find d "execvp(argv[1]" 0) 0)
+                (if (ge (str_find d "read(fds[0], fk_src" 0) 0) 4 0) 0))
+
+    (let c3 (if (str_eq d (fkc-emit-driver fns))
+                (if (str_eq d (fkc-emit-driver (fm-contains-fns "ok"))) 0 8) 0))
+
+    (add c0 (add c1 (add c2 c3))))
