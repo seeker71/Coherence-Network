@@ -17,7 +17,7 @@
 #
 # Three runtimes produce identical results:
 #   - CPython (the FastAPI shim still calls this on the parity_suite path)
-#   - TS evalPython (the bootstrap evaluator)
+#   - kernel-bmf-run
 #   - form-kernel-rust (what the live endpoint actually shells into)
 
 

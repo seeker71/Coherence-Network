@@ -5,7 +5,7 @@
 #
 # Runs identically under:
 #   python3 python_dict_demo.py             - CPython
-#   npm run kernel -- python-eval ...       - TS evalPython
+#   kernel-bmf-run <file.py>       - Form-native walker
 #   form-kernel-rust python_dict_demo.fk    - native kernel binary
 #
 # The final expression is reduced to a scalar so parity comparison stays

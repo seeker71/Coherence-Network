@@ -270,9 +270,15 @@ def compile_probe(force: bool) -> dict[str, Any]:
         "sha256": hashlib.sha256(recipe_bytes).hexdigest(),
         "bytes": len(recipe_bytes),
     }
-    node_modules = ADAPTER_DIR.parent.parent / "node_modules"
-    if not force and not node_modules.is_dir():
-        out["recompile"] = "skipped-node-modules-absent"
+    compiler = ADAPTER_DIR / "scripts" / "kernel-bmf-compile"
+    missing_toolchain = [
+        str(path)
+        for path in (compiler, GO_BIN, RUST_BIN)
+        if not path.exists()
+    ]
+    if missing_toolchain and not force:
+        out["recompile"] = "skipped-form-native-toolchain-absent"
+        out["missing_toolchain"] = missing_toolchain
         return out
 
     with tempfile.NamedTemporaryFile("w", suffix=".fk", delete=False) as tmp:
@@ -280,7 +286,7 @@ def compile_probe(force: bool) -> dict[str, Any]:
     try:
         start = time.perf_counter()
         proc = subprocess.run(
-            ["npx", "tsx", "src/main.ts", "python-compile", str(PY_DEMO), str(tmp_path)],
+            [str(compiler), str(PY_DEMO), str(tmp_path)],
             cwd=str(ADAPTER_DIR),
             capture_output=True,
             text=True,

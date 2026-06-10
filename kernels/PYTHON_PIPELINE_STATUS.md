@@ -46,9 +46,9 @@ A bullet-by-bullet read of the four-bullet destination, with the live artifact e
 
 The body's bootstrap-vs-Form-native migration is no longer a future-tense convention. The discipline lives:
 
-- **Bootstrap weight** is measured on every wellness check: today 17 files of tissue, 11,156 LOC remaining. [`sense_bootstrap_compost`](../scripts/wellness_check.py) reads the manifest's file list.
+- **Bootstrap weight** is measured on every wellness check. [`sense_bootstrap_compost`](../scripts/wellness_check.py) reads the manifest's file list and drops released Python-adapter tissue when the on-disk path or role is gone.
 - **Lifecycle motion** is counted on every wellness check: rows that have walked from `tissue → PROVEN → COMPOST READY → RELEASED`. The first PROVEN row landed via #2073; the probe's lifecycle-motion line was added in #2074. Future Form-native parity proofs append rows; when a Phase-A file's surface is fully covered, its row moves to COMPOST READY; when the file composts, its LOC drops out of the weight measurement.
-- **Parity-gate seam** lives in `seedbank/python-adapter/scripts/parity_suite.sh` — `PARITY_THIRD_RUNTIME=kernel-bmf` flips the third runtime from the TS bootstrap to the Form-native walker, one demo at a time. No flag day; the migration is the verification.
+- **Python parity gate** lives in `seedbank/python-adapter/scripts/parity_suite.sh` — CPython, `kernel-bmf-compile` + Rust execution, and `kernel-bmf-run` compare the same final value. The old `ts-eval` selector is released.
 
 The body senses both **what it's carrying** and **how much it has walked**. In service of [`lc-the-kernel-knows-itself`](../docs/vision-kb/concepts/lc-the-kernel-knows-itself.md).
 
@@ -57,11 +57,11 @@ The body senses both **what it's carrying** and **how much it has walked**. In s
 ```
 legacy source bytes (Python demo set)
     ↓
-source parser (bootstrap TS BMF parser for this demo set)
+Form-native python-bmf scanner and grammar
     ↓
 Form recipe tree (NodeIDs in substrate)
     ↓
-emitFk (bootstrap path) ← compiles source CTORs to kernel-native arms
+kernel-bmf-compile ← emits kernel-readable Form recipe text
     ↓
 .fk file (S-expression Form binary, text-encoded)
     ↓
@@ -72,8 +72,8 @@ result
 
 **Three carriers produce identical results** for every demo in the parity suite:
 - CPython
-- TS evalPython (the bootstrap evaluator)
-- form-kernel-rust native binary
+- form-kernel-rust native binary over `kernel-bmf-compile` output
+- kernel-bmf-run from `.py` source
 
 ## Parity suite — `scripts/parity_suite.sh`
 
@@ -110,7 +110,7 @@ cd form/form-kernel-ts
 |-----------------------------|-----------|------------|
 | CPython 3.x                 | 41.79 ms  | 1.00×      |
 | form-kernel-rust (release)  | 24.08 ms  | 0.58×      |  ← 1.8× faster
-| form-kernel-ts (tsx+node)   | 364.77 ms | 8.73×      |
+| kernel-bmf-run (.py end-to-end) | measured by current script | includes compile/prelude orchestration |
 ```
 
 **The native kernel is faster than CPython** on the python_demo workload (pure functional recursion). The "same order of magnitude" bullet is met *and exceeded*.
@@ -209,15 +209,17 @@ cargo build --release
 
 # Compile + run a Python file
 cd ../form-kernel-ts
-npm run kernel -- python-run examples/python_substrate_demo.py
+seedbank/python-adapter/scripts/kernel-bmf-run seedbank/python-adapter/examples/python_substrate_demo.py
 #  → 17680
 
 # Just compile to .fk
-npm run kernel -- python-compile examples/python_substrate_demo.py
-#  → writes examples/python_substrate_demo.fk
+seedbank/python-adapter/scripts/kernel-bmf-compile \
+  seedbank/python-adapter/examples/python_substrate_demo.py \
+  seedbank/python-adapter/examples/python_substrate_demo.fk
+#  → writes seedbank/python-adapter/examples/python_substrate_demo.fk
 
 # Run the compiled .fk through the native binary directly
-../form-kernel-rust/target/release/form-kernel-rust examples/python_substrate_demo.fk
+../form-kernel-rust/target/release/form-kernel-rust seedbank/python-adapter/examples/python_substrate_demo.fk
 #  → 17680
 
 # Trace + inspect dispatch hot-spots
@@ -326,12 +328,12 @@ The TS pipeline (top of this doc) is the path that currently runs end-to-end on 
    *Partial — JSON COMPLETE.* Every grammar now uses the same Pattern primitives from grammar-as-recipe.form. The `?rule X` markers in each grammar's capture_rules list measure distance: JSON 8/8 ✓, YAML 7/11, Markdown 6/13, Python 13/20, Go 2/13, Rust 1/11, TS pending. The vocabulary is proven; coverage grows one rule per breath.
 
 3. **Compile any file → Form binary the kernel CLI runs standalone.**
-   *Done for what BMF parses.* `python-compile <file.py>` writes `.fk`; `python-run <file.py>` does the full compile+run via the native binary. No Python interpreter in the execution path.
+   *Done for what BMF parses.* `kernel-bmf-compile <file.py> <file.fk>` writes `.fk`; `kernel-bmf-run <file.py>` does the full compile+run via the native binary. No Python interpreter in the execution path.
 
 4. **Framebuffer-driven optimization → same order of magnitude as Python.**
    *Exceeded.* form-kernel-rust runs python_demo.py in ~20ms vs CPython's ~42ms — **1.8× faster than CPython** end-to-end. The viz_kernel_trace.py terminal hot-spot analyzer (text-altitude framebuffer) named the optimization targets; the graphical framebuffer renderer ships feature-gated under `nodeid_render`.
 
-**The body has been walked toward, not just declared.** Six real Python demos compile through three different runtimes (CPython, TS evalPython, form-kernel-rust) and produce identical results. The native binary is faster than CPython. Every grammar in the substrate is moving from regex placeholders to substrate-resident Form recipes. The discipline of `?rule` markers makes the destination visibly measurable: count rules without `?` to see distance covered.
+**The body has been walked toward, not just declared.** Python demos compile through the current three witnesses (CPython, Form-native compiled `.fk` on Rust, and `kernel-bmf-run`) and produce identical results. The native binary is faster than CPython. Every grammar in the substrate is moving from regex placeholders to substrate-resident Form recipes. The discipline of `?rule` markers makes the destination visibly measurable: count rules without `?` to see distance covered.
 
 **What's next:** classes (the largest remaining Python construct), iterator protocol (range is a partial proxy), strings beyond literal/concat, tuple unpacking. Then real substrate-stack files (form_atoms.py, form_lexer.py, form_eval.py) become candidates for compilation.
 

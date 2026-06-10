@@ -5,12 +5,12 @@
 # Every operand is chosen so the IEEE 754 result is EXACT (sums of
 # binary fractions whose denominators are powers of 2). That keeps the
 # three-way parity gate honest at the byte level — no precision drift
-# between CPython, TS evalPython, and the form-kernel-rust binary,
+# between CPython, kernel-bmf-run, and the form-kernel-rust binary,
 # regardless of how each runtime renders the final float.
 #
 # Runs identically under:
 #   python3 python_float_demo.py             — CPython
-#   npm run kernel -- python-eval ...        — TS evalPython
+#   kernel-bmf-run <file.py>        — kernel-bmf-run
 #   form-kernel-rust python_float_demo.fk    — native kernel binary
 
 def lerp(a, b, t):

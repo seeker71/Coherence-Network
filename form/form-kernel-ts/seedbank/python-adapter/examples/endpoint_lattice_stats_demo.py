@@ -8,7 +8,7 @@
 #
 # Runs identically through:
 #   python3 endpoint_lattice_stats_demo.py            - CPython
-#   tsx src/main.ts python-eval ...                   - TS evalPython
+#   kernel-bmf-run <file.py>                   - Form-native walker
 #   form-kernel-rust endpoint_lattice_stats_demo.fk   - native kernel
 #
 # The fetch + JSON-parse primitives (http_get, _json_to_dict) live on

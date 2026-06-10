@@ -1,0 +1,130 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "codex/bootstrap-tissue-release-20260611",
+  "commit_scope": "Release bootstrap Python adapter tissue onto the Form-native kernel-bmf compile/run path and repair the compiler gaps exposed by the three-way parity gate.",
+  "files_owned": [
+    "form/form-stdlib/grammars/python-bmf-compiler.fk",
+    "form/form-kernel-ts/seedbank/python-adapter/scripts/parity_suite.sh",
+    "form/form-kernel-ts/seedbank/python-adapter/scripts/perf_compare.sh",
+    "form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_idea_score_demo.py",
+    "scripts/wellness_check.py",
+    "kernels/BOOTSTRAP_COMPOST_MANIFEST.md",
+    "docs/system_audit/commit_evidence_20260611_bootstrap_tissue_release.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form/form-kernel-go && go build -o bin-go .",
+      "cd form/form-kernel-rust && cargo build --release",
+      "cd form/form-kernel-ts/seedbank/python-adapter && ./scripts/parity_suite.sh",
+      "cd form/form-kernel-ts/seedbank/python-adapter && ITERS=1 ./scripts/perf_compare.sh examples/python_demo.py",
+      "bash -n form/form-kernel-ts/seedbank/python-adapter/scripts/parity_suite.sh form/form-kernel-ts/seedbank/python-adapter/scripts/perf_compare.sh form/form-kernel-ts/seedbank/python-adapter/scripts/kernel-bmf-compile form/form-kernel-ts/seedbank/python-adapter/scripts/kernel-bmf-run",
+      "python3 -m py_compile scripts/wellness_check.py scripts/kernel_readiness_harness.py scripts/grounded_cost_endpoint_probe.py form/form-kernel-ts/scripts/viz_kernel_trace.py",
+      "git diff --check"
+    ],
+    "notes": "Prompt guide passed in the dedicated worktree. Go and Rust kernels built. The Python adapter parity suite passed 38/38 with CPython, Form-native compiled .fk on Rust, and kernel-bmf-run. The benchmark matched results across all three paths and measured compiled Rust at 0.38x CPython time for examples/python_demo.py; kernel-bmf-run remains startup-heavy because it includes source compile/prelude orchestration per invocation. Wellness passed with bootstrap weight at 11 files / 6504 LOC and the third-runtime selector released."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until this branch is committed, pushed, and opened as a PR."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No deploy attempted before PR; local wellness reports production currently aligned with origin/main."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local compiler/parity/performance/wellness proof passes. Commit, push, PR, remote CI, merge, deploy, and public verification remain pending."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The Python adapter release gate now routes through kernel-bmf-compile and kernel-bmf-run instead of the stale TypeScript evaluator path. The Form-native Python compiler now handles function params, final expression fallback, local while/for helpers, polymorphic plus, class constructors, and Python round(x, n) through round_ndigits.",
+    "public_endpoints": [
+      "internal Form kernel Python adapter release gate"
+    ],
+    "test_flows": [
+      "kernel-bmf-compile examples/python_bridge_demo.py emits a non-empty .fk recipe that Rust executes as 720.",
+      "parity_suite.sh compares CPython, compiled Rust .fk, and kernel-bmf-run for 38 shipped Python demos/endpoints.",
+      "perf_compare.sh refuses divergent runtime results before reporting timing.",
+      "make wellness reports the Python adapter release line and released third-runtime selector."
+    ]
+  },
+  "idea_ids": [
+    "form-kernel-self-hosting",
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "form-kernel-roadmap",
+    "python-bmf-contract",
+    "public-verification-framework"
+  ],
+  "task_ids": [
+    "bootstrap-tissue-release-20260611"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-selection",
+        "release-priority"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "form/form-kernel-ts/seedbank/python-adapter/scripts/parity_suite.sh -> parity_suite: 38 passing, 0 failing (third runtime: kernel-bmf).",
+    "form/form-kernel-ts/seedbank/python-adapter/scripts/perf_compare.sh examples/python_demo.py -> cpy=40949 rust=40949 kernel-bmf=40949; compiled Rust 28.23 ms vs CPython 73.83 ms.",
+    "form/form-stdlib/grammars/python-bmf-compiler.fk repairs final expression fallback, loop helper locality, destructuring, class constructor params/records, polymorphic plus, and round_ndigits lowering.",
+    "make wellness passed and reports bootstrap weight 11 files / 6504 LOC, python adapter release 4/4 parser/emitter/CLI files deleted, 2/2 scripts on kernel-bmf path, and third-runtime selector released.",
+    "bash -n, python3 -m py_compile, and git diff --check passed."
+  ],
+  "change_files": [
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-kernel-ts/scripts/viz_kernel_trace.py",
+    "form/form-kernel-ts/seedbank/README.md",
+    "form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_coherence_weight_demo.py",
+    "form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_idea_score_demo.py",
+    "form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_lattice_stats_demo.py",
+    "form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_marginal_cc_return_demo.py",
+    "form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_nodeid_compatibility_demo.py",
+    "form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_nodeid_distance_demo.py",
+    "form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_simpson_diversity_demo.py",
+    "form/form-kernel-ts/seedbank/python-adapter/examples/endpoint_weighted_average_demo.py",
+    "form/form-kernel-ts/seedbank/python-adapter/examples/python_assign_demo.py",
+    "form/form-kernel-ts/seedbank/python-adapter/examples/python_class_demo.py",
+    "form/form-kernel-ts/seedbank/python-adapter/examples/python_demo.py",
+    "form/form-kernel-ts/seedbank/python-adapter/examples/python_dict_demo.py",
+    "form/form-kernel-ts/seedbank/python-adapter/examples/python_float_demo.py",
+    "form/form-kernel-ts/seedbank/python-adapter/examples/python_import_demo.py",
+    "form/form-kernel-ts/seedbank/python-adapter/examples/python_inheritance_demo.py",
+    "form/form-kernel-ts/seedbank/python-adapter/examples/python_substrate_demo.py",
+    "form/form-kernel-ts/seedbank/python-adapter/examples/python_typeann_demo.py",
+    "form/form-kernel-ts/seedbank/python-adapter/examples/python_typing_compose_demo.py",
+    "form/form-kernel-ts/seedbank/python-adapter/scripts/parity_suite.sh",
+    "form/form-kernel-ts/seedbank/python-adapter/scripts/perf_compare.sh",
+    "form/form-stdlib/grammars/python-bmf-compiler.fk",
+    "kernels/BOOTSTRAP_COMPOST_MANIFEST.md",
+    "kernels/PYTHON_PIPELINE_STATUS.md",
+    "kernels/README.md",
+    "scripts/grounded_cost_endpoint_probe.py",
+    "scripts/kernel_readiness_harness.py",
+    "scripts/wellness_check.py"
+  ],
+  "change_intent": "runtime_fix"
+}

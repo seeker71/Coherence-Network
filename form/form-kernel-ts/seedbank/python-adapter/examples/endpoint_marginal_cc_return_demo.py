@@ -15,7 +15,7 @@
 # form). No transcendentals, so the same value renders across all three
 # runtimes:
 #   - CPython
-#   - TS evalPython
+#   - kernel-bmf-run
 #   - form-kernel-rust
 #
 # The 0.0 / 0.1 floors clamp negative gaps and tiny remaining costs; max2

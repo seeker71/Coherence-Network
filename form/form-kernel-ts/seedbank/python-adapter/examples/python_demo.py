@@ -10,7 +10,7 @@
 # both surfaces are visible in the python-trace JSON output.
 #
 # Usage:
-#   tsx src/main.ts python-trace examples/python_demo.py
+#   python3 scripts/viz_kernel_trace.py seedbank/python-adapter/examples/python_demo.py
 
 def fact(n):
     return 1 if n < 2 else n * fact(n - 1)

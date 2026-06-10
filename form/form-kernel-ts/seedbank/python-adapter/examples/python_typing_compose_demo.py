@@ -2,7 +2,7 @@
 #
 # Closes the loop on PR #2057 (typeann), #2058 (imports + math), and
 # #2060 (classes) by exercising all three in a single file that runs
-# identically under CPython, TS evalPython, and form-kernel-rust.
+# identically under CPython, kernel-bmf-run, and form-kernel-rust.
 #
 # The composition matters because each surface was shipped on its own
 # branch from the `floats` foundation; without a demo that joins them
@@ -44,7 +44,7 @@
 #
 # Runs identically under:
 #   python3 python_typing_compose_demo.py             — CPython
-#   npm run kernel -- python-eval ...                 — TS evalPython
+#   kernel-bmf-run <file.py>                 — kernel-bmf-run
 #   form-kernel-rust python_typing_compose_demo.fk    — native kernel binary
 
 from typing import List, Optional, Dict, Tuple, Any, Callable

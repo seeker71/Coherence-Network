@@ -53,10 +53,14 @@ DIM = "\033[2m"
 
 
 def compile_py_to_fk(py_path: Path) -> Path:
-    """Compile a .py file to .fk via the TS kernel's python-compile."""
+    """Compile a .py file to .fk via the Form-native compiler."""
     fk_path = py_path.with_suffix(".fk")
+    script_dir = Path(__file__).resolve().parent
+    compiler = script_dir.parent / "seedbank" / "python-adapter" / "scripts" / "kernel-bmf-compile"
+    if not compiler.exists():
+        sys.exit(f"error: kernel-bmf-compile not found at {compiler}")
     subprocess.run(
-        ["npx", "tsx", "src/main.ts", "python-compile", str(py_path), str(fk_path)],
+        [str(compiler), str(py_path), str(fk_path)],
         check=True,
         capture_output=True,
     )

@@ -1162,10 +1162,9 @@ def sense_bootstrap_compost() -> list[str]:
     is bootstrap tissue with a named compost gate. The body sees its own
     weight by reading the named files and reporting LOC.
 
-    Selector currently in effect: the default of
-    seedbank/python-adapter/scripts/parity_suite.sh's PARITY_THIRD_RUNTIME.
-    When that default flips from ts-eval to kernel-bmf, the Phase-A rows
-    are residue.
+    The Python adapter selector has composted: parity_suite.sh now uses the
+    Form-native kernel-bmf path directly, and the deleted TS parser/emitter/CLI
+    no longer count as live bootstrap tissue.
     """
     manifest = ROOT / "kernels" / "BOOTSTRAP_COMPOST_MANIFEST.md"
     if not manifest.is_file():
@@ -1187,9 +1186,6 @@ def sense_bootstrap_compost() -> list[str]:
             "form/form-kernel-ts/seedbank/ts-adapter/src/lang-ts-fk.ts",
         ],
         "B": [
-            "form/form-kernel-ts/seedbank/python-adapter/src/main.ts",
-            "form/form-kernel-ts/seedbank/python-adapter/scripts/parity_suite.sh",
-            "form/form-kernel-ts/seedbank/python-adapter/scripts/perf_compare.sh",
             "form/form-kernel-ts/seedbank/ts-adapter/src/main.ts",
             "form/form-kernel-ts/seedbank/ts-adapter/scripts/parity_suite.sh",
         ],
@@ -1237,18 +1233,34 @@ def sense_bootstrap_compost() -> list[str]:
             f"    · Phase {phase} ({label}): {present} files, {loc} LOC{composted}"
         )
 
+    python_adapter_released = [
+        "form/form-kernel-ts/seedbank/python-adapter/src/lang-python.ts",
+        "form/form-kernel-ts/seedbank/python-adapter/src/lang-python-fk.ts",
+        "form/form-kernel-ts/seedbank/python-adapter/src/main.ts",
+        "form/form-kernel-ts/seedbank/python-adapter/src/lang-python.test.ts",
+    ]
+    released_count = sum(1 for rel in python_adapter_released if not (ROOT / rel).exists())
+    reworked_scripts = [
+        "form/form-kernel-ts/seedbank/python-adapter/scripts/parity_suite.sh",
+        "form/form-kernel-ts/seedbank/python-adapter/scripts/perf_compare.sh",
+    ]
+    reworked_count = sum(1 for rel in reworked_scripts if (ROOT / rel).is_file())
+    if released_count or reworked_count:
+        lines.append(
+            "  python adapter release — "
+            f"{released_count}/{len(python_adapter_released)} parser/emitter/CLI "
+            f"files deleted; {reworked_count}/{len(reworked_scripts)} scripts "
+            "serve the Form-native kernel-bmf path"
+        )
+
     python_transmutation_groups = [
         (
-            "adapter parser/emitter",
-            phase_files["A"][:5],
-            "Form-native .py→.fk scanner+grammar path replaces "
-            "`python-compile` in the Rust-bootstrap leg",
-        ),
-        (
-            "adapter CLI/scripts",
-            phase_files["B"][:3],
-            "kernel-native source reader + parity/perf gates call the "
-            "Form-native grammar path directly",
+            "shared ctor vocabulary",
+            [
+                "form/form-kernel-ts/seedbank/python-adapter/src/ctor-convergence.ts",
+                "form/form-kernel-ts/seedbank/python-adapter/src/ctor-convergence.test.ts",
+            ],
+            "CTOR vocabulary moves into Form data and NodeID identity tests",
         ),
         (
             "bridge/runtime",
@@ -1410,32 +1422,29 @@ def sense_bootstrap_compost() -> list[str]:
     )
     lines.append(f"  lifecycle motion — {lifecycle_summary}")
 
-    # Third-runtime selector — read the default out of the parity script.
-    # Today: ts-eval (bootstrap). Destination: kernel-bmf (Form-native).
+    # Third-runtime selector release — older manifests exposed
+    # PARITY_THIRD_RUNTIME=ts-eval. The current script should be Form-native
+    # only; if the selector returns, wellness names the regression.
     parity = ROOT / "form" / "form-kernel-ts" / "seedbank" / "python-adapter" / "scripts" / "parity_suite.sh"
-    third = "unknown"
+    selector_state = "unknown"
     if parity.is_file():
-        m = re.search(
-            r'PARITY_THIRD_RUNTIME="?\$\{PARITY_THIRD_RUNTIME:-([a-z0-9-]+)\}',
-            parity.read_text(),
-        )
-        if m:
-            third = m.group(1)
-    if third == "ts-eval":
+        parity_text = parity.read_text()
+        if "PARITY_THIRD_RUNTIME" in parity_text or "python-eval" in parity_text:
+            selector_state = "selector-present"
+        elif "kernel-bmf-run" in parity_text and "kernel-bmf-compile" in parity_text:
+            selector_state = "released"
+    if selector_state == "selector-present":
         lines.append(
-            "  third runtime default: ts-eval (TS bootstrap) — flip to "
-            "kernel-bmf when Form-native compiles every PARITY_FILES demo"
+            "  third-runtime selector: bootstrap residue present — "
+            "PARITY_THIRD_RUNTIME/python-eval still appears in parity_suite.sh"
         )
-    elif third == "kernel-bmf":
+    elif selector_state == "released":
         lines.append(
-            "  third runtime default: kernel-bmf (Form-native) — the "
-            "evalPython/ts-eval seam is retired, but the Phase-A parser + "
-            "emitter + CLI remain LIVE (the parity suite's Rust-bootstrap leg, "
-            "+ readiness harness deploy step); they release when a Form-native "
-            ".py→.fk path replaces python-compile (see manifest Phase A)"
+            "  third-runtime selector: released — parity compares CPython, "
+            "Form-native compiled .fk on Rust, and kernel-bmf-run"
         )
     else:
-        lines.append(f"  third runtime default: {third}")
+        lines.append(f"  third-runtime selector: {selector_state}")
 
     lines.append(
         "  (kernels/BOOTSTRAP_COMPOST_MANIFEST.md holds the named compost "
