@@ -1,0 +1,53 @@
+; spectrum.fk — a Goertzel filterbank: the wav's frequency spectrum, computed IN THE BODY.
+;
+; "Even a fast fourier spectrum analyzer gives really good signal." It does — and like every DSP it belongs
+; in the body, not the carrier (wav-sense.fk lifted the energy envelope; this lifts the spectrum). The kernel
+; has no sin/cos, but Goertzel needs only ONE precomputed cosine coefficient per band, then a pure
+; mul/add/sub recurrence over the samples — so a real DFT-band spectrum is Form-native with the band
+; coefficients as DATA. Float is deterministic three-way (the matvec proof); a band power is a value, and a
+; verdict reduces to an integer comparison.
+;
+; Per band, coeff = 2·cos(2π·f/fs):   s0 = x + coeff·s1 − s2 ; carry (s1,s2) ← (s0,s1) over the window ;
+;   power = s1² + s2² − coeff·s1·s2.   Preludes wav-sense.fk for wav-sample (the PCM decode).
+
+; the 8 band coefficients — 100,200,400,800,1600,3200,5000,7000 Hz at fs=16000. DATA, computed once.
+; (low → high; the last two are negative as the band passes π/2.) This list IS the analyzer's resolution.
+(defn spec-coeffs ()
+  (list 1.99846 1.99383 1.97538 1.90211 1.61803 0.61803 -0.76537 -1.84776))
+
+; the Goertzel recurrence over samples [i, end) stepping `step` bytes; returns the band power (float).
+(defn goertzel (bs i end step coeff s1 s2)
+  (if (ge i end)
+      (sub (add (mul s1 s1) (mul s2 s2)) (mul coeff (mul s1 s2)))
+      (goertzel bs (add i step) end step coeff
+                (sub (add (wav-sample bs i) (mul coeff s1)) s2)
+                s1)))
+
+(defn band-power (bs start end step coeff)
+  (goertzel bs start end step coeff 0 0))
+
+; the spectrum: one band power per coefficient over the window [start, end).
+(defn spectrum-coeffs (bs start end step coeffs)
+  (if (eq (len coeffs) 0) (empty)
+      (cons (band-power bs start end step (head coeffs))
+            (spectrum-coeffs bs start end step (tail coeffs)))))
+
+; the carrier door: read the wav + compute the 8-band spectrum over the PCM body (step downsamples for speed).
+(defn spectrum-file (path step)
+  (do (let bs (read_file_bytes path))
+      (spectrum-coeffs bs 44 (len bs) step (spec-coeffs))))
+
+; --- normalize to 0..9 band LEVELS (relative to the loudest band) so the spectrum fuses with the energy
+; envelope (same granularity) — the spectral SHAPE, carrier-agnostic of absolute loudness.
+(defn spec-fmax (xs best)
+  (if (eq (len xs) 0) best
+      (if (gt (head xs) best) (spec-fmax (tail xs) (head xs)) (spec-fmax (tail xs) best))))
+(defn spec-norm (powers mx)
+  (if (eq (len powers) 0) (empty)
+      (cons (div (mul 9 (head powers)) mx) (spec-norm (tail powers) mx))))
+(defn spectrum-levels (bs start end step)
+  (do (let s (spectrum-coeffs bs start end step (spec-coeffs)))
+      (spec-norm s (spec-fmax s 1))))
+(defn spectrum-levels-file (path step)
+  (do (let bs (read_file_bytes path))
+      (spectrum-levels bs 44 (len bs) step)))

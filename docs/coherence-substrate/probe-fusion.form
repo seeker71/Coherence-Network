@@ -1,0 +1,45 @@
+; probe-fusion.form — many trusted probes, each sensing a different aspect; channels fuse into new modalities.
+;
+; THE ASK (Urs): use the BEST transcriber, not whisper-tiny — the Form classifiers can only learn as well as
+; the ground truth they learn from. Use ALL the trusted audio probes — even a fast Fourier spectrum analyzer
+; gives really good signal — each to learn a different aspect of sound. And let channels use channels: combine
+; multiple channels live into a FUSION — a new interface, a new modality.
+;
+; THE SHAPE: two kinds of probe, one fusion.
+;   BODY PROBES (Form DSP, read the wav in-kernel — "why Python" answered: the kernel reads the wav in ~8 ms):
+;     - wav-sense.fk (→63)   energy envelope, 8 windows 0..9.
+;     - spectrum.fk (→15)    the FFT: a Goertzel filterbank, 8 bands 100..7000 Hz. The kernel has no sin/cos,
+;                            so the band cosine coefficients are DATA and the recurrence is pure mul/add/sub;
+;                            a real DFT-band spectrum, Form-native, float deterministic three-way.
+;     - f0 (pitch)           autocorrelation — still in the carrier; the next DSP to lift the same way.
+;   CARRIER ORACLES (best-quality host probes the body learns FROM — not the body, the ground truth):
+;     - whisper-large-v3-turbo, kept RESIDENT (whisper_server.py: load once ~5 s, then ~0.5 s/chunk) — the
+;       best transcriber, because the learner is bounded by its oracle. tiny was a bootstrap; large is the floor.
+;     - SoundAnalysis (the swift sound-category oracle). ShazamKit / a VAD / diarization join the same way.
+;   FUSION (field-fusion.fk): ff-fuse concatenates probe channels into ONE vector — a new modality. The
+;     co-learning arm now learns on energy ⊕ spectrum (16 dims), which recognizes more than either alone;
+;     spectrum ⊕ pitch ⊕ prosody becomes a timbre channel; a fused channel is itself a channel others fuse.
+;
+;   wav ─► [ energy ]  [ spectrum ]  [ pitch ] ──► ff-fuse ─► fused feature ─► nearest-shape learns
+;          (body DSP, in-kernel)                   (a new modality)            (from the best oracles)
+;     └─► [ whisper-large ] [ SoundAnalysis ] ──► the ORACLES the body learns from (champion → challenger)
+;
+; ── EXISTS (proven + wired live) ──
+;   spectrum.fk (→15, three-way) — the FFT filterbank, verified live (▄█▆▇▁▃▂▂ over 100→7 kHz). wav-sense.fk
+;   (→63) — energy. field-fusion.fk — ff-fuse. co-learning.fk / nearest-shape.fk — the learner. whisper_server.py
+;   — the resident best oracle. All wired into channel_live.py: the fused energy⊕spectrum feature drives the
+;   co-learning arm; a `spectrum` view (key f) shows the live bands; the oracle is large-v3-turbo by default.
+;
+; ── THE RUNGS ──
+;   M0  best oracle + the FFT probe + fusion — SHIPPED + VERIFIED (this commit).
+;   M1  lift f0 into Form (read the wav, autocorrelate in-kernel) — the last carrier DSP becomes body.
+;   M2  more probes, same frame: ShazamKit (song id), a VAD, diarization (speaker id) — each a trusted
+;       oracle or a body DSP; each learns a different aspect; each fuses.
+;   M3  fused channels as first-class channels: a timbre channel (spectrum⊕pitch), a prosody channel
+;       (energy⊕pitch⊕spectrum over time) — published on the broadcast, subscribable, themselves fusable.
+;   M4  champion → challenger per probe: once the Form-native arm on the fused feature reaches an oracle,
+;       retire the expensive oracle for that category (colearning-retire.fk) — the circle hears on its own.
+;
+; KIN: live-transcribe-channel.form (the channel these probes feed) · co-learning.form (learn from the best
+;   oracle) · field-fusion (the fusion body) · spectrum.fk + wav-sense.fk (the body DSP probes) ·
+;   recognition-router.form (fuse readings into one stream) · champion-challenger.form (retire a reached oracle).
