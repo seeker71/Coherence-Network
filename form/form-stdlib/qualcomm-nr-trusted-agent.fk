@@ -1,0 +1,104 @@
+; qualcomm-nr-trusted-agent.fk
+;
+; A compact Qualcomm/NR-facing recipe for Form as proof-carrying trusted action
+; above existing modem, OS, and AI carriers. It does not assert anything about
+; Qualcomm products. It proves a translation shape aimed at a senior NR Access
+; Stratum software lens: bounded agentic AI, typed ports, distinct ack states,
+; measured local organ routing, witness trace, health gate, and promotion only
+; by competition.
+;
+; preludes:
+;   form-stdlib/core.fk
+;   form-stdlib/resource-port.fk
+;   form-stdlib/recognition-router.fk
+;   form-stdlib/champion-challenger.fk
+;   form-stdlib/grammars/living-equation.fk
+;   form-stdlib/all-life-north-star.fk
+
+(do
+    (defn qnra-recipient-lens ()
+        "senior-nr-5g-access-stratum-software-lead")
+
+    (defn qnra-first-pitch ()
+        "proof-carrying-control-runtime")
+
+    (defn qnra-delayed-pitch ()
+        "universal-ontology")
+
+    (defn qnra-external-disclosure-gate ()
+        "patent-counsel-or-defensive-publication-first")
+
+    (defn qnra-benefit-for (audience)
+        (if (str_eq audience "nr-as")
+            "deterministic-state-transition-receipts"
+        (if (str_eq audience "edge-ai")
+            "trusted-action-layer-above-model-inference"
+        (if (str_eq audience "hardware")
+            "capability-ports-and-witness-trace-fast-path"
+            "bounded-agentic-modem-policy"))))
+
+    (defn qnra-ack-path (ack)
+        (if (eq (len ack) 0) "nothing:no-event-or-wait"
+        (if (eq (head ack) 0) "zero:received-no"
+        (if (eq (head ack) 1) "one:authorized-crossing"
+            "node:counter-offer-policy-cell"))))
+
+    (defn qnra-action-gates (local private bounded witnessed reversible measured)
+        (list local private bounded witnessed reversible measured))
+
+    (defn qnra-gates? (gates)
+        (if (and (eq (nth gates 0) 1)
+                 (and (eq (nth gates 1) 1)
+                 (and (eq (nth gates 2) 1)
+                 (and (eq (nth gates 3) 1)
+                 (and (eq (nth gates 4) 1)
+                      (eq (nth gates 5) 1)))))) 1 0))
+
+    (defn qnra-modem-agent-resource ()
+        (mk-resource "agentic-modem-policy" "proof-carrying-control-layer"
+            (list
+                (mk-terminal (afferent-bytes) "radio-context")
+                (mk-terminal (afferent-text) "policy-input")
+                (mk-terminal (efferent-bytes) "modem-action")
+                (mk-terminal (efferent-text) "witness-report"))))
+
+    (defn qnra-action-allowed? (resource port gates)
+        (if (eq (resource-has-port? resource port) 1)
+            (qnra-gates? gates)
+            0))
+
+    (defn qnra-action-organ (action)
+        (if (str_eq action "protocol-control") "cpu-access-stratum"
+        (if (str_eq action "radio-context") "modem-rf"
+        (if (str_eq action "traffic-classify") "modem-ai-processor"
+        (if (str_eq action "edge-inference") "hexagon-npu"
+        (if (str_eq action "signal-stream") "hexagon-dsp"
+        (if (str_eq action "visual-debug") "adreno-gpu"
+        (if (str_eq action "witness-seal") "secure-world"
+            "cpu-fallback"))))))))
+
+    (defn qnra-route-organ (readings floor)
+        (rr-source (rr-route readings floor)))
+
+    (defn qnra-health-score (before after gates)
+        (aln-action-score before after gates))
+
+    (defn qnra-authority (history min-samples margin)
+        (cc-authority history min-samples margin))
+
+    (defn qnra-witness-trace (proposal action organ ack-path allowed score)
+        (list "trace" proposal action organ ack-path allowed score))
+
+    (defn qnra-trace-proven? (trace)
+        (if (eq (len trace) 0) 0
+            (if (str_eq (nth trace 0) "trace") 1 0)))
+
+    (defn qnra-authority-ready? (route authority allowed trace)
+        (if (str_eq route "") 0
+            (if (str_eq authority "challenger")
+                (if (eq allowed 1)
+                    (qnra-trace-proven? trace)
+                    0)
+                0)))
+
+    0)
