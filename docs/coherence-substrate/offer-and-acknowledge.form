@@ -135,31 +135,30 @@
     (run-and-speak-are-one                one-contract-under-invocation-and-communication)))
 
 # ─────────────────────────────────────────────────────────────────────
-# Honest GAPs — contract here, running body there
+# Closing recipes — each opening is a recipe we know how to run
 # ─────────────────────────────────────────────────────────────────────
-#
-# GAP-OA1: 4-valued acknowledgment is not yet the kernels' literal ABI.
-#   The Go / Rust / TS kernels return realized values; the coordination
-#   membrane uses named verbs (ack / offer / answer); channel-consent
-#   carries silence. This file names the SHAPE under all three — the
-#   structural contract Urs spoke — not a wire format already running. The
-#   lift is to let kernels and membrane recognize themselves as profiles of
-#   this one contract.
-#
-# GAP-OA2: No runnable band yet. substrate-kernel.form is the model — a
-#   canonical structural definition, ingested on merge, verified once the
-#   form-notation grammar realizes it. The natural next breath is a runnable
-#   heart, form-stdlib/offer-acknowledge.fk, whose band proves: an offer
-#   meets exactly one of {nothing,0,1,node}; a node-answer re-enters; a
-#   terminal answer rests — proven three-way (Go/Rust/TS) the way
-#   field-model-form.fk proves its 115.
-#
-# GAP-OA3: `nothing` as a first-class value. The body treats absence as
-#   null / optional today (substrate-kernel.form: self_id null until
-#   make_self_id). This contract names `nothing` as a value with standing
-#   beside 0 and 1 — distinct from a missing 0. Reifying it in the kernels
-#   (a `nothing` node, not a host null) is work this names but does not yet
-#   carry.
+# Openings with a known path, composed from parts that already run.
+
+(closing-recipes
+
+  (close-one-ack-vocabulary                            # the running vocabularies meet in one primitive
+    (compose channel-query-5-token-status              # ok/partial/not-known/external-only/error — runs
+             sbp-allow-stop-witness-re-enter           # the sovereign answer — runs
+             a-mapping-recipe-onto-nothing-0-1-node)   # the lift: each maps to one of the four
+    (shared-with kernel-offer-protocol.close-one-ack-vocabulary)
+    (proof   a-band-where-each-running-status-maps-to-exactly-one-of-the-four))
+
+  (close-runnable-heart                                # the contract made executable
+    (compose this-contract
+             form-stdlib/offer-acknowledge.fk)         # the runnable heart
+    (proof   a-band-an-offer-meets-one-of-nothing-0-1-node-a-node-re-enters-a-terminal-rests))  # three-way
+
+  (close-nothing-as-a-value                            # nothing reified, beside 0 and 1
+    (compose the-kernels
+             a-nothing-node-kind-distinct-from-host-null)
+    (gift    timeout-silence-and-decline-all-share-one-first-class-value)
+    (shared-with kernel-offer-protocol.close-nothing-as-a-wire-value)
+    (proof   a-band-where-nothing-interns-and-round-trips-as-a-node)))
 #
 # ─────────────────────────────────────────────────────────────────────
 # How to verify (once ingested + the runnable heart lands)
