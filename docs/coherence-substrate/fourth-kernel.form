@@ -149,7 +149,20 @@
                        the binary boots and joins validate.sh as the fourth arm
                        — AND emits its probe with it: arm counters and NodeID
                        provenance in the emitted source, read through the port
-                       door; the sibling must not go dark as it gets fast)
+                       door; the sibling must not go dark as it gets fast
+                       [FIRST BOOT SHIPPED: fourth-walker-emit.fk +
+                       tests/fourth-walker-emit-band.fk -> 15, three-way —
+                       the emitter READS the program cells (post-order flatten
+                       incl. the 3-child IF), the table + root vary while the
+                       walker text stays program-independent, the full C
+                       byte-exact. The audit boots it: fib-as-cells -> clang
+                       -> fkw, parity 317811, THE PROBE INSIDE (fk_arms self-
+                       reported 9.2M dispatches by tag), fib 28 in 16.9 ms /
+                       1.3 MB / 33 KB vs the siblings' 450-1742 ms on the same
+                       program-as-data — the meta-tax collapsed ~27-100x with
+                       the trace riding. Open here: validate.sh fourth-arm
+                       wiring, NodeID provenance plane, and m4d's self-emission
+                       (the op set needs string/emit ops to run the emitter)])
       (m4d-fixpoint    the booted kernel re-runs the SAME emitter recipe on
                        itself: same content-address in, byte-identical source
                        out — self-hosting, close-self-rebuild-loop's band

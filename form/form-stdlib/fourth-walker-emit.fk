@@ -1,0 +1,80 @@
+; fourth-walker-emit.fk — m4c of fourth-kernel.form: the emitter walks the
+; program tree and emits the WALKER's native source, probe included.
+;
+; M1's emitter (fourth-kernel-emit.fk) hand-shaped its program text; this one
+; READS the program — a fourth-walker.fk cell tree, through the observe door —
+; and serializes it into a C node table beside a generic walk function. The
+; program stays data even in C: the walker text is program-independent, only
+; the table and the root index vary. That is the fourth sibling's shape — a
+; walker, not a per-program compiler.
+;
+; The probe is emitted WITH the walker (the sibling-gate of the measurement
+; protocol: a carrier without a probe door is not yet a sibling): fk_arms[]
+; counts every dispatch by tag, and main prints the result followed by the
+; seven arm counts — the binary is born observable, line 1 the value,
+; lines 2..8 the trace.
+;
+; Flattening: post-order over the cells; a node's row is (tag, a, b, c) with
+; child indices into the table; the root is the last row. cons builds the
+; row list newest-first; emission walks tail-first so index 0 prints first.
+
+(defn fkc-flat (n acc)
+    (if (eq (fk-tag n) 1) (cons (list 1 (ms-value (fk-body n)) 0 0) acc)
+    (if (eq (fk-tag n) 2) (cons (list 2 0 0 0) acc)
+    (if (eq (fk-tag n) 7) (fkc-self2 (fkc-flat (fk-body n) acc))
+    (if (eq (fk-tag n) 6) (fkc-if2 (fkc-flat (ms-child (fk-body n) 0) acc) n)
+        (fkc-bin2 (fk-tag n) (fkc-flat (ms-child (fk-body n) 0) acc) n))))))
+
+(defn fkc-self2 (acc1) (cons (list 7 (sub (len acc1) 1) 0 0) acc1))
+
+(defn fkc-bin2 (tag acc1 n) (fkc-bin3 tag (sub (len acc1) 1) (fkc-flat (ms-child (fk-body n) 1) acc1)))
+(defn fkc-bin3 (tag ia acc2) (cons (list tag ia (sub (len acc2) 1) 0) acc2))
+
+(defn fkc-if2 (acc1 n) (fkc-if3 acc1 (sub (len acc1) 1) n))
+(defn fkc-if3 (acc1 ic n) (fkc-if4 (fkc-flat (ms-child (ms-child (fk-body n) 1) 0) acc1) ic n))
+(defn fkc-if4 (acc2 ic n) (fkc-if5 acc2 (sub (len acc2) 1) ic n))
+(defn fkc-if5 (acc2 it ic n) (fkc-if6 (fkc-flat (ms-child (ms-child (fk-body n) 1) 1) acc2) it ic))
+(defn fkc-if6 (acc3 it ic) (cons (list 6 ic it (sub (len acc3) 1)) acc3))
+
+(defn fkc-flatten (prog) (fkc-flat prog (empty)))
+
+(defn fkc-row-text (r)
+    (str_concat "{"
+    (str_concat (int_to_str (nth r 0))
+    (str_concat ","
+    (str_concat (int_to_str (nth r 1))
+    (str_concat ","
+    (str_concat (int_to_str (nth r 2))
+    (str_concat ","
+    (str_concat (int_to_str (nth r 3)) "},")))))))))
+
+(defn fkc-rows-text (rows)
+    (if (eq (len rows) 1) (fkc-row-text (head rows))
+        (str_concat (fkc-rows-text (tail rows)) (fkc-row-text (head rows)))))
+
+(defn fkc-pr-text ()
+    "extern int putchar(int); static void fk_pr(long long v) { char b[32]; int n = 0; if (v < 0) { putchar(45); v = 0 - v; } if (v == 0) { putchar(48); } while (v > 0) { b[n] = 48 + v % 10; v = v / 10; n = n + 1; } while (n > 0) { n = n - 1; putchar(b[n]); } putchar(10); } ")
+
+(defn fkc-decl-text (rows)
+    (str_concat "static long long fk_arms[8]; static const long long fk_node["
+    (str_concat (int_to_str (len rows))
+    (str_concat "][4] = { "
+    (str_concat (fkc-rows-text rows) " }; ")))))
+
+(defn fkc-walk-text (root)
+    (str_concat "static long long fk_walk(long long i, long long a) { long long t = fk_node[i][0]; fk_arms[t] = fk_arms[t] + 1; if (t == 1) { return fk_node[i][1]; } if (t == 2) { return a; } if (t == 3) { return fk_walk(fk_node[i][1], a) + fk_walk(fk_node[i][2], a); } if (t == 4) { return fk_walk(fk_node[i][1], a) - fk_walk(fk_node[i][2], a); } if (t == 5) { if (fk_walk(fk_node[i][1], a) <= fk_walk(fk_node[i][2], a)) { return 1; } return 0; } if (t == 6) { if (fk_walk(fk_node[i][1], a) == 0) { return fk_walk(fk_node[i][3], a); } return fk_walk(fk_node[i][2], a); } if (t == 7) { return fk_walk("
+    (str_concat (int_to_str root)
+                ", fk_walk(fk_node[i][1], a)); } return 0; } ")))
+
+(defn fkc-main-text (root)
+    (str_concat "extern int atoi(const char *); int main(int argc, char **argv) { long long a = 0; if (argc > 1) { a = atoi(argv[1]); } fk_pr(fk_walk("
+    (str_concat (int_to_str root)
+                ", a)); long long t = 1; while (t <= 7) { fk_pr(fk_arms[t]); t = t + 1; } return 0; }")))
+
+(defn fkc-emit2 (rows)
+    (str_concat (fkc-pr-text)
+    (str_concat (fkc-decl-text rows)
+    (str_concat (fkc-walk-text (sub (len rows) 1))
+                (fkc-main-text (sub (len rows) 1))))))
+
+(defn fkc-emit (prog) (fkc-emit2 (fkc-flatten prog)))

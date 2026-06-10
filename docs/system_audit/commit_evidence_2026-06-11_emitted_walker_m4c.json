@@ -1,0 +1,113 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "worktree-fourth-kernel-seed",
+  "commit_scope": "fourth-kernel.form m4c first boot: the emitter walks a program-as-cells and emits the generic native walker beside its node table, probe included (fk_arms by tag). Proven three-way at 15; booted by the audit with value parity and the trace self-reported from inside the binary. The fk4 missing-trace question closes BY m4c, not before it: the emitted lane's first observable sibling.",
+  "files_owned": [
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/tests/fourth-walker-emit-band.fk",
+    "scripts/fourth_kernel_audit.sh",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/coherence-substrate/INDEX.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/tests/fourth-walker-emit-band.fk",
+      "scripts/fourth_kernel_audit.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-11_emitted_walker_m4c.json"
+    ],
+    "summary": "The emitter holds three-way at 15: (1) the tiny program flattens to the canonical post-order table; (2) the 3-child IF row carries (cond, then, else) indices; (4) deterministic emission; (8) the FULL emitted C byte-exact — printer, fk_arms declaration, node table, generic walker with the root spliced into SELF, probe-printing main. The audit booted it: fib-as-cells through clang answers 317811 (parity with all walkers), the probe self-reports 9,254,109 dispatches by tag from inside the binary (LIT 2,056,913 / ARG 2,571,142 / ADD 514,228 / SUB 1,028,456 / LE 1,028,457 / IF 1,028,457 / SELF 1,028,456), and the rows land: fib 28 in 16.9 ms / 1.3 MB max RSS / 33 KB binary vs the three kernels' 449.8-1741.9 ms on the same recursive semantics — the meta-interpretation tax measured at ~87x in m4b collapses to one native interpretation layer, with the trace riding.",
+    "observed_delta": {
+      "fourth_walker_emit_band_verdict": 15,
+      "kernels_agreeing": 3,
+      "divergent": 0,
+      "fkw_parity_fib_28": 317811,
+      "fkw_fib28_ms": 16.9,
+      "fkw_startup_ms": 2.3,
+      "fkw_max_rss_mb": 1.3,
+      "fkw_binary_kb": 33,
+      "fkw_probe_dispatches_total": 9254109,
+      "fkw_probe_arms": "LIT 2056913, ARG 2571142, ADD 514228, SUB 1028456, LE 1028457, IF 1028457, SELF 1028456",
+      "siblings_fib28_ms": "go 815.8, rust 449.8, ts(tsx) 1741.9",
+      "conditions": "arm64 Darwin, clang -O2, full-process invocations, medians over 15/5/3 runs"
+    },
+    "known_limitations": [
+      {
+        "limitation": "fkw bakes one program per emission (fib here); sum/ack rows arrive when their programs are authored as cells — the walker text is already program-independent.",
+        "follow_up": "A program-loading port (read the node table through the afferent door) makes one fkw serve any program; lands when a consumer asks."
+      },
+      {
+        "limitation": "The probe is arm counters; the NodeID provenance plane (framebuffer sibling) is named in the gate but not yet emitted.",
+        "follow_up": "m4d-adjacent: emit the provenance write beside each dispatch, read through the port door."
+      },
+      {
+        "limitation": "validate.sh fourth-arm wiring is open: fkw proves parity through the audit, not yet inside validate.sh's per-sample loop.",
+        "follow_up": "Wire fkw as an optional fourth arm for the band families its op set covers."
+      },
+      {
+        "limitation": "m4d self-emission needs the op set to grow string/emit ops so the walker can run the emitter on itself.",
+        "follow_up": "The fixpoint band: same content-address in, byte-identical source out."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "PR gates run the three-way band; the audit is operational tooling runnable wherever clang exists."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "form-stdlib additions ride the api image rebuild; the lattice ingests the updated fourth-kernel.form on the post-merge hook."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No route behavior changes. The body gains the m4c emitted walker: a native binary emitted entirely from Form recipes that walks content-addressed programs with its probe inside — the emitted lane's darkness (fk4) closes by construction, and the tax-collapse is now measurable per milestone.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "fourth-walker-emit-band proves table flatten (incl. 3-child IF), determinism, and byte-exact full emission, three-way at 15.",
+      "fourth_kernel_audit.sh boots the emitted walker: parity 317811 gates the rows; the probe prints from inside the binary; medians and RSS recorded with conditions."
+    ],
+    "summary": "validate.sh three-way 1 ok 0 divergent; audit end-to-end emit -> clang -> parity -> probe -> rows."
+  },
+  "phase_gate": {
+    "phase": "m4c-emit-and-boot",
+    "gate": "the emitted walker boots with parity and its probe inside; CI three-way + deploy ingest confirm the crossing",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "m4d — grow the op set (string/emit ops) so the booted walker runs the emitter on itself: byte-identical self-emission, the fixpoint"
+  },
+  "idea_ids": ["fourth-kernel"],
+  "spec_ids": ["kernel-native-api-readiness", "runtime-shared-native-representation"],
+  "task_ids": ["emitted-walker-m4c-20260611"],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "observability-first", "i-would-like-to-see-m4c"]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation", "measurement"]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-fable-5"
+  },
+  "evidence_refs": [
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/system_audit/commit_evidence_2026-06-11_fourth_walker_m4b.json",
+    "docs/system_audit/commit_evidence_2026-06-11_minimal_surface_m4a.json"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/system_audit/commit_evidence_2026-06-11_emitted_walker_m4c.json",
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/tests/fourth-walker-emit-band.fk",
+    "scripts/fourth_kernel_audit.sh"
+  ],
+  "change_intent": "runtime_feature"
+}
