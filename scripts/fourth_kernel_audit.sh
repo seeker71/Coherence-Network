@@ -265,5 +265,39 @@ fibc_t="$(median_ms 15 "$work/fibc" 28)"
 echo "  fib-via-CALL median: ${fibc_t} ms (vs SELF-shaped fkw above — the CALL indirection priced)"
 
 echo
+# ── 7. M2 proof-of-shape — grammar + source -> a new binary, grammar-driven ──
+# A grammar-as-data compiler (bmf-mini.fk) folds source tokens through rule
+# cells into a program-as-cells; the emitter turns that into C; clang makes a
+# binary. Swap the grammar, get a DIFFERENT binary — the compiler-compiler
+# property, proven in compiled output.
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
+    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" "$FORMDIR/form-stdlib/bmf-mini.fk" > "$work/bmf-driver.fk"
+cat >> "$work/bmf-driver.fk" <<'EOF'
+(let g1 (list (bmf-rule 1 3 10) (bmf-rule 2 4 3)))
+(let g2 (list (bmf-rule 1 3 100) (bmf-rule 2 4 3)))
+(let src (list 1 1 2))
+(print "==B1==")
+(print (fkc-emit-many (list (bmf-compile g1 src))))
+(print "==B2==")
+(print (fkc-emit-many (list (bmf-compile g2 src))))
+(print "==END==")
+EOF
+(cd "$FORMDIR" && "$GO_BIN" "$work/bmf-driver.fk" 2>/dev/null) > "$work/bmf.out"
+sed -n '/^==B1==$/,/^==B2==$/p' "$work/bmf.out" | sed -e '1d' -e '$d' > "$work/prog1.c"
+sed -n '/^==B2==$/,/^==END==$/p' "$work/bmf.out" | sed -e '1d' -e '$d' > "$work/prog2.c"
+"$CLANG" -O2 -o "$work/prog1" "$work/prog1.c"
+"$CLANG" -O2 -o "$work/prog2" "$work/prog2.c"
+b1="$("$work/prog1" 5 | head -1)"; b2="$("$work/prog2" 5 | head -1)"
+echo "M2 grammar + source -> binary (source tokens [1,1,2], input 5):"
+echo "  grammar g1 (tok1=ADD 10)  -> binary -> $b1 (expect 22)"
+echo "  grammar g2 (tok1=ADD 100) -> binary -> $b2 (expect 202)"
+if [[ "$b1" != "22" || "$b2" != "202" ]]; then
+    echo "FAIL  grammar-driven binary generation broke"; exit 1
+fi
+echo "  SAME source, DIFFERENT grammar -> DIFFERENT binary — the compiler-compiler property, compiled."
+echo "  (the compiler runs as a recipe here; the standalone compiler-binary that reads textual"
+echo "   source through the port is m4e2 heap + m4e4 strings — named in fourth-kernel.form)"
+
+echo
 echo "conditions: $(uname -m) $(uname -s), clang -O2, full-process invocations (startup included)"
 echo "ok — parity held and the rows are real; the spec is docs/coherence-substrate/fourth-kernel.form"
