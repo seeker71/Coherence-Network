@@ -104,6 +104,38 @@
                     layer (embedding-as-coordinate, attention-as-choice) REPLACE the dense parts where it
                     matches — measured, champion-challenger, never assumed))
 
+  # ── 6b. The MESH: many cells, active inference, error-gated consolidation ──
+  # Urs: "multiple cells contribute to active inference and continuous learning;
+  # for every infer error we detect at run-time, that is feedback for the
+  # short-term cells before they switch states into long-term."
+  # This is not new theory — the body holds the parts; this names their union:
+  (mesh-active-inference
+    (error-is-the-signal [RUNS] active-inference.form: "infer error is core for learning" —
+                    ai-surprise (prediction error) DRIVES the update; ai-settled? = residual surprise
+                    fell below tolerance; a step that already fits teaches nothing. The runtime infer
+                    error IS the learning signal, exactly as named)
+    (short-then-long [RUNS] federated-slices.form M4 + the gas->water->ice phase metabolism: a fresh
+                    observation is GAS (volatile, short-term); runtime error keeps updating it; it cools
+                    to WATER (a validated pattern) and only FREEZES to ICE (consolidated, long-term, shared)
+                    when ai-settled? AND champion-challenger promote — CLS/EWC by another name)
+    (the-gate       [INFER, the synthesis] consolidation short->long is GATED ON PREDICTION ERROR:
+                    a short-term cell switches to long-term only when its residual runtime error is low
+                    AND it survives the challenger. High ongoing error -> stays plastic (short-term);
+                    low settled error -> crystallizes (long-term). Error is both the teacher and the gate)
+    (many-cells     [RUNS mechanism] every cell runs its own active inference locally; deltas are
+                    content-addressed slices; the trust-weighted deterministic merge (slice-merge) makes
+                    the MESH learn what no single cell could — co-learning proved two mics beat one. Each
+                    cell's runtime errors feed ITS short-term plasticity; only settled long-term slices
+                    are offered to the mesh, so the network shares CONSOLIDATED knowing, not noise)
+    (continuous     [INFER] inference and learning are the same loop: infer -> measure error -> update
+                    short-term -> (settled? promote to long-term : stay plastic) -> share -> merge. No
+                    train/serve split; the model learns AT runtime from every error, the mesh consolidating
+                    what settles. The fourth kernel's nothing-ack matters here: an honest "I don't know"
+                    (nothing) is a HIGH-surprise signal that keeps the cell plastic instead of faking a 1)
+    (where-it-runs  active-inference.fk + federated-slices.fk + co-learning.fk + champion-challenger.fk
+                    already RUN three-way; the union into a learning LLM is the [INFER] build, stone by
+                    stone, each gated by measured error, never by faith))
+
   # ── 7. Fine-tuning a local LLM to natively SPEAK Form — concrete ────
   # The nearest, most useful step, and fully buildable on the proven stack:
   (speak-form
