@@ -528,5 +528,31 @@ else
 fi
 
 echo
+# ── 17. m4e3 first stone — Form SOURCE parsed (in Form) and run on the 4th kernel ──
+# A Form parser written in Form reads source TEXT (recursive descent, a cursor,
+# no tokenizer), emits a walker program; the universal binary runs it. Real
+# Form source -> a value, end to end on the fourth kernel.
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
+    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" "$FORMDIR/form-stdlib/form-parse.fk" > "$work/fp-driver.fk"
+cat >> "$work/fp-driver.fk" <<'EOF'
+(print "==T1==")
+(print (fkc-table-file (list (fp-parse "(add (sub 50 8) (add 0 0))"))))
+(print "==T2==")
+(print (fkc-table-file (list (fp-parse "(if (le 3 5) 111 222)"))))
+(print "==END==")
+EOF
+(cd "$FORMDIR" && "$GO_BIN" "$work/fp-driver.fk" 2>/dev/null) > "$work/fp.out"
+sed -n '/^==T1==$/,/^==T2==$/p' "$work/fp.out" | sed -e '1d' -e '$d' > "$work/fp-t1.txt"
+sed -n '/^==T2==$/,/^==END==$/p' "$work/fp.out" | sed -e '1d' -e '$d' > "$work/fp-t2.txt"
+fp1="$("$work/fkwu" "$work/fp-t1.txt" 0 | head -1)"
+fp2="$("$work/fkwu" "$work/fp-t2.txt" 0 | head -1)"
+echo "m4e3 first stone — Form SOURCE parsed in Form, run on the universal 4th-kernel binary:"
+echo "  source '(add (sub 50 8) (add 0 0))' -> $fp1 (expect 42)   '(if (le 3 5) 111 222)' -> $fp2 (expect 111)"
+if [[ "$fp1" != "42" || "$fp2" != "111" ]]; then
+    echo "FAIL  Form-source parse-and-run broke"; exit 1
+fi
+echo "  the parser is recursive-descent over the source string (a cursor, no tokenizer); op-gap to full bands is m4e4 (defn/let/do/str_*)"
+
+echo
 echo "conditions: $(uname -m) $(uname -s), clang -O2, full-process invocations (startup included)"
 echo "ok — parity held and the rows are real; the spec is docs/coherence-substrate/fourth-kernel.form"

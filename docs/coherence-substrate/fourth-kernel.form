@@ -381,7 +381,19 @@
                      (op-gap        real bands also need the figure/observe/
                         intern families (str_*, node_*, defn/let/do) — m4e4
                         grows these; the ratchet climbs as each family lands)
-                     (ratchet-now   0 of 424 — honestly a walk, not a night))
+                     (FIRST-STONE-SHIPPED  path-b walked, no longer just
+                        scoped: form-parse.fk is a Form parser IN FORM that
+                        reads Form SOURCE TEXT (recursive descent over the
+                        string, a cursor, NO tokenizer) and emits a walker
+                        program. Witnessed three-way (tests/form-parse-band.fk
+                        -> 15) and in the audit: source (add (sub 50 8)
+                        (add 0 0)) -> 42 and (if (le 3 5) 111 222) -> 111 run
+                        on the universal 4th-kernel binary. Real Form source
+                        -> a value, end to end. The op-gap to FULL stdlib
+                        bands (defn/let/do/str_*/node_*) is m4e4's family-by-
+                        family climb; each family lands, the ratchet rises)
+                     (ratchet-now   expressions parse+run; full bands need the
+                        op-gap families — the walk continues, stone by stone))
         (m4e4-grow   strings + str_eq, then natives family by family (the
                      minimal-kernel census order: figure, observe, intern,
                      port), each landing as bands flip to four-way)
