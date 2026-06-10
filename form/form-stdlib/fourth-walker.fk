@@ -73,6 +73,16 @@
 
 (defn fkm-run (fns arg) (fkm-walk fns (nth fns 0) arg))
 
+; ── organ ops (emitted-lane, like PUTC): the host's body through the sibling ──
+; 13 SET idx val — RAM efferent (fk_mem write, returns val)
+; 14 GET idx     — RAM afferent
+; 15 TIME        — the clock organ (real epoch seconds)
+; 16 RND         — the entropy organ (a real random draw per evaluation)
+(defn fk-set (i v) (fk-node 13 (ms-intern i v)))
+(defn fk-get (i)   (fk-node 14 i))
+(defn fk-time ()   (fk-node 15 (ms-cell 0)))
+(defn fk-rnd ()    (fk-node 16 (ms-cell 0)))
+
 ; fib authored as data — the program every carrier in fourth-kernel.form's
 ; rows answers: IF (LE arg 1) arg (ADD (SELF (arg-1)) (SELF (arg-2)))
 (defn fk-fib-program ()
