@@ -1,0 +1,131 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "codex/m4e2-arena-heap-20260611",
+  "commit_scope": "Ship m4e2: list values as an arena heap in the emitted fourth sibling, with EMPTY/CONS/HEAD/TAIL/LEN/NTH compiled into the native C walker after the BMF cursor BUF lane and proven by three-way bands plus the physical fourth-kernel audit.",
+  "files_owned": [
+    "docs/coherence-substrate/fourth-kernel.form",
+    "form/form-stdlib/fourth-walker.fk",
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/tests/fourth-heap-band.fk",
+    "form/form-stdlib/tests/fourth-os-band.fk",
+    "scripts/fourth_kernel_audit.sh",
+    "docs/system_audit/commit_evidence_2026-06-11_m4e2_arena_heap.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/tests/fourth-heap-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/tests/fourth-os-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/tests/fourth-walker-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/tests/fourth-walker-emit-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/tests/fourth-call-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/tests/fourth-fixpoint-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/bmf-mini.fk form-stdlib/tests/bmf-mini-band.fk",
+      "scripts/fourth_kernel_audit.sh"
+    ],
+    "summary": "fourth-heap-band holds three-way at 15. The emitted sibling keeps tag 17 as BUF for the streaming BMF cursor and now carries tags 18..23 for EMPTY, CONS, HEAD, TAIL, LEN, and NTH. fourth-os-band was recalibrated to the widened deterministic source lengths (universal 4059 bytes, JIT 3974 bytes) and holds at 15. The fourth-kernel audit compiled the universal walker and loaded a heap table that returned 25 from head([7,8]) + head(tail([7,8])) + len([7,8]) + nth([7,8],1).",
+    "observed_delta": {
+      "fourth_heap_band_verdict": 15,
+      "fourth_os_band_verdict": 15,
+      "kernels_agreeing": 3,
+      "divergent": 0,
+      "new_tags": [18, 19, 20, 21, 22, 23],
+      "reserved_existing_tag": "17 BUF remains the BMF streaming cursor eye",
+      "universal_emission_bytes": 4059,
+      "jit_emission_bytes": 3974,
+      "native_heap_audit_value": 25,
+      "self_jit_hot_ms": 4.4,
+      "self_jit_njit_crossings": 26
+    },
+    "known_limitations": [
+      {
+        "limitation": "The heap is a fixed 4096-cell arena in the emitted C, with 0 as the empty pointer and no GC or overflow policy beyond the small-audit mask.",
+        "follow_up": "The m4e3 real-recipe flattener and later band ratchet can decide whether temporary arena release, bounds checks, or growable arenas are needed before broad validate.sh fourth-arm use."
+      },
+      {
+        "limitation": "Textual source through the standalone compiler-binary still needs m4e4 strings and the m4e3 real-recipe bridge.",
+        "follow_up": "Next milestone remains m4e3: read compiled .fk recipe cells through observe/category/value and flatten the real category set into the table."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "PR checks have not run yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Post-merge deploy has not run yet; no public route behavior changes are expected."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No public route behavior changes. The fourth sibling gains native list heap semantics in emitted C, making Form list structure executable in the universal/JIT walker lane.",
+    "public_endpoints": [
+      "POST /api/substrate/form (unchanged; no public-route behavior delta)"
+    ],
+    "test_flows": [
+      "fourth-heap-band pins EMPTY/CONS/HEAD/TAIL/LEN/NTH table shape and deterministic universal emission three-way at verdict 15.",
+      "fourth_kernel_audit.sh compiles the universal walker and runs the heap table natively, returning 25 from the six heap operations over [7,8]."
+    ],
+    "summary": "The runtime delta is proven by three-way Form bands plus native C execution through the fourth-kernel audit."
+  },
+  "phase_gate": {
+    "phase": "m4e2-arena-heap",
+    "gate": "list heap semantics compile into the emitted sibling and run through the universal binary",
+    "state": "crossed-locally",
+    "can_move_next_phase": false,
+    "next": "m4e3 real-recipe flattener: read compiled .fk category/value/children through observe and bring covered bands into the fourth validate arm."
+  },
+  "idea_ids": [
+    "fourth-kernel"
+  ],
+  "spec_ids": [
+    "kernel-native-api-readiness",
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "m4e2-arena-heap-20260611"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-prioritization"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/coherence-substrate/fourth-kernel.form",
+    "form/form-stdlib/tests/fourth-heap-band.fk",
+    "form/form-stdlib/tests/fourth-os-band.fk",
+    "scripts/fourth_kernel_audit.sh"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/system_audit/commit_evidence_2026-06-11_m4e2_arena_heap.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/fourth-walker.fk",
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/tests/fourth-heap-band.fk",
+    "form/form-stdlib/tests/fourth-os-band.fk",
+    "scripts/fourth_kernel_audit.sh"
+  ],
+  "change_intent": "runtime_feature"
+}

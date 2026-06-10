@@ -1,0 +1,37 @@
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk
+;
+; fourth-heap-band — m4e2 proven three-way: the emitted sibling now has a
+; list arena. EMPTY is the null pointer, CONS allocates one arena cell, and
+; HEAD/TAIL/LEN/NTH read it back. The audit boots the same program natively;
+; this band proves the recipe-side table and emitter agree across the three
+; source kernels.
+;
+; Verdict 15 when the heap surface holds:
+;   1   EMPTY flattens as tag 18 and CONS as tag 19 over child expressions
+;   2   the heap reader program carries HEAD/TAIL/LEN/NTH tags
+;   4   table-file emission is deterministic and contains the six heap tags
+;   8   the widened universal walker emission carries the arena arrays
+(do
+    (let xs (fk-cons (fk-lit 7) (fk-cons (fk-lit 8) (fk-empty))))
+    (let c0 (if (str_eq (fkc-rows-text (fkc-flatten (fk-empty))) "{18,0,0,0},")
+                (if (eq (fkd-has-tag (nth (fkc-flatten-many (list xs)) 0) 19) 1) 1 0) 0))
+
+    (let readprog (fk-add (fk-head xs)
+                  (fk-add (fk-head (fk-tail xs))
+                  (fk-add (fk-len xs) (fk-nth xs (fk-lit 1))))))
+    (let rows (nth (fkc-flatten-many (list readprog)) 0))
+    (let c1 (if (eq (fkd-has-tag rows 20) 1)
+                (if (eq (fkd-has-tag rows 21) 1)
+                    (if (eq (fkd-has-tag rows 22) 1)
+                        (if (eq (fkd-has-tag rows 23) 1) 2 0) 0) 0) 0))
+
+    (let table (fkc-table-file (list readprog)))
+    (let c2 (if (str_eq table (fkc-table-file (list readprog)))
+                (if (eq (fkd-has-tag rows 18) 1)
+                    (if (eq (fkd-has-tag rows 19) 1) 4 0) 0) 0))
+
+    (let uni (fkc-emit-universal))
+    (let c3 (if (ge (str_find uni "fk_heap_head[4096]" 0) 0)
+                (if (ge (str_find uni "while (t <= 23)" 0) 0) 8 0) 0))
+
+    (add c0 (add c1 (add c2 c3))))

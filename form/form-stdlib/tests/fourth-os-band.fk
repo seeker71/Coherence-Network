@@ -11,26 +11,24 @@
 ; Verdict 15 when the OS face holds:
 ;   1   the table FILE is canonical — ADD(LIT 40, LIT 2) serializes to
 ;       1 2 3 1 40 0 0 1 2 0 0 3 0 1 0 (function count, roots, row count, rows)
-;   2   the universal walker's full emission is 3124 bytes and deterministic —
+;   2   the universal walker's full emission is 4059 bytes and deterministic —
 ;       program-independent constant tissue: loader, organ arms, and the BMF
-;       cursor's eye (op 17 BUF — bytes straight off the loaded source stream,
-;       no lexer, no token stream; the cursor position lives in the RAM organ
-;       so save/restore is a pointer move, and args ride the call stack)
+;       cursor's eye (op 17 BUF) plus the m4e2 arena heap (ops 18..23)
 ;   4   the native lowering is faithful text — ADD(LIT 1, ARG) lowers to
-;       (1 + a) — and the jit emission for CALL-fib is 3039 bytes
+;       (1 + a) — and the jit emission for CALL-fib is 3974 bytes
 ;   8   the organ program (RAM roundtrip + clock + entropy, mask 7) flattens
 ;       to its 23 rows with tags 13..16 present in the table
 (do
     (let c0 (if (str_eq (fkc-table-file (list (fk-add (fk-lit 40) (fk-lit 2)))) "1 2 3 1 40 0 0 1 2 0 0 3 0 1 0") 1 0))
 
-    (let c1 (if (eq (str_len (fkc-emit-universal)) 3124)
+    (let c1 (if (eq (str_len (fkc-emit-universal)) 4059)
                 (if (str_eq (fkc-emit-universal) (fkc-emit-universal)) 2 0) 0))
 
     (let fibc (fk-if (fk-le (fk-arg) (fk-lit 1)) (fk-arg)
                      (fk-add (fk-call 0 (fk-sub (fk-arg) (fk-lit 1)))
                              (fk-call 0 (fk-sub (fk-arg) (fk-lit 2))))))
     (let c2 (if (str_eq (fkc-nat-expr (fk-add (fk-lit 1) (fk-arg))) "(1 + a)")
-                (if (eq (str_len (fkc-emit-jit (list fibc))) 3039) 4 0) 0))
+                (if (eq (str_len (fkc-emit-jit (list fibc))) 3974) 4 0) 0))
 
     (let organ (fk-add (fk-if (fk-sub (fk-set (fk-lit 7) (fk-lit 42)) (fk-get (fk-lit 7))) (fk-lit 0) (fk-lit 1))
                (fk-add (fk-if (fk-le (fk-time) (fk-lit 0)) (fk-lit 0) (fk-lit 2))
