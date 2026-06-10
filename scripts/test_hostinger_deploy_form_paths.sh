@@ -42,6 +42,27 @@ grep -Fq 'PathRegexp(`^/api/concepts/[^/]+/voices$`)' "$ROOT_DIR/deploy/kernel-r
 grep -Fq "BML front-door promoted read routes" "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not probe the promoted BML read routes"
 
+grep -Fq 'X-Form-Handler: \${handler}' "$DEPLOY_SCRIPT" \
+  || fail "deploy canary does not require promoted BML handler proof"
+
+grep -Fq 'X-Form-Python-Authority: false' "$DEPLOY_SCRIPT" \
+  || fail "deploy canary does not require promoted BML authority proof"
+
+grep -Fq 'api-native-ok-json("api_runtime_events"' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "runtime events handler does not emit native proof headers"
+
+grep -Fq 'api-native-ok-json("api_views_stats"' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "views stats handler does not emit native proof headers"
+
+grep -Fq 'api-native-ok-json("api_reaction_concept_summary"' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "reaction summary handler does not emit native proof headers"
+
+grep -Fq 'api-native-ok-json("api_reaction_concept_threads"' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "reaction threads handler does not emit native proof headers"
+
+grep -Fq 'api-native-ok-json("api_concept_voices"' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "concept voices handler does not emit native proof headers"
+
 grep -Fq "form/form-stdlib/*)" "$DEPLOY_SCRIPT" \
   || fail "deploy service routing does not send form/form-stdlib changes to api"
 
