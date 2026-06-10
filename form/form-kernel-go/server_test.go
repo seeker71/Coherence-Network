@@ -418,6 +418,51 @@ func TestRuntimeEventsCreateRouteValidatesNatively(t *testing.T) {
 	}
 }
 
+func TestKernelReadRoutePromotionsSelectNatively(t *testing.T) {
+	body, err := os.ReadFile("../../deploy/front-door/api.bml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	artifact, err := sourceCompileServeProgram(
+		[]sourcePart{{label: "deploy/front-door/api.bml", source: string(body)}},
+		"../form-stdlib",
+	)
+	if err != nil {
+		t.Fatalf("sourceCompileServeProgram: %v", err)
+	}
+	worker, err := buildGoServeWorker(&goServeProgram{artifact: artifact})
+	if err != nil {
+		t.Fatalf("buildGoServeWorker: %v", err)
+	}
+
+	for _, tc := range []struct {
+		name   string
+		target string
+	}{
+		{"runtime events index", "http://native.example.test/api/runtime/events?limit=2&source=api"},
+		{"views stats", "http://native.example.test/api/views/stats/lc-attuned-spaces?days=30"},
+		{"reaction summary", "http://native.example.test/api/reactions/concept/lc-attuned-spaces/summary"},
+		{"reaction threads", "http://native.example.test/api/reactions/concept/lc-attuned-spaces/threads"},
+		{"concept voices", "http://native.example.test/api/concepts/lc-attuned-spaces/voices"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tc.target, nil)
+			req.Header.Set("Accept", "application/json")
+			rec := httptest.NewRecorder()
+			worker.serve(rec, req)
+			res := rec.Result()
+			defer res.Body.Close()
+			if got := res.Header.Get("X-Form-Router"); got != "native-kernel-go" {
+				gotBody, _ := io.ReadAll(res.Body)
+				t.Fatalf("%s router = %q, want native-kernel-go body=%s", tc.name, got, string(gotBody))
+			}
+			if got := res.Header.Get("X-Form-Route-Where"); !strings.Contains(got, "route:") {
+				t.Fatalf("%s route where = %q, want native route trace", tc.name, got)
+			}
+		})
+	}
+}
+
 func TestViewsPingRouteValidatesNatively(t *testing.T) {
 	body, err := os.ReadFile("../../deploy/front-door/api.bml")
 	if err != nil {
