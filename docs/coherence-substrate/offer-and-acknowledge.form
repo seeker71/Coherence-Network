@@ -51,7 +51,7 @@
   (states
     (0       "no / false / closed / declined")
     (1       "yes / true / open / the expected result")
-    (nothing "the ground — neither 0 nor 1; silence; not-yet; absence held as a value, never a missing 0"))
+    (nothing "the ground — neither 0 nor 1; silence; not-yet; no-answer-in-time (a timeout IS nothing); absence held as a value, never a missing 0"))
 
   # ── The offer — to run a primitive and to speak are one act ─────────
   (offer
@@ -64,7 +64,7 @@
 
   # ── The acknowledgment — exactly one of four answers an offer ───────
   (acknowledge
-    (nothing -> silence)                               # no ack; always available; honoring-a-no included
+    (nothing -> silence)                               # no ack; always available; honoring-a-no included; a TIMEOUT is nothing (Urs) — never a separate error/failure mode
     (0       -> received-no)                           # landed; false / declined / not-this
     (1       -> received-result)                       # landed; the expected result
     (node    -> counter-offer)                         # 2: here is a cell back — re-enters the protocol
