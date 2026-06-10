@@ -1,0 +1,97 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "codex/stewardship-disclosure-license-20260611",
+  "commit_scope": "Add a public stewardship practice for external collaboration, patent/publication record paths, and license-boundary clarity.",
+  "files_owned": [
+    "docs/stewardship/external-collaboration-disclosure-practice.md",
+    "docs/stewardship/README.md",
+    "docs/system_audit/commit_evidence_20260611_stewardship_disclosure_practice.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260611_stewardship_disclosure_practice.json",
+      "git diff --check --cached",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "notes": "Prompt guide passed in the dedicated worktree. Wellness passed after the public stewardship practice landed; it noted production deploy lag and local kernel binary absence for route tracing, neither blocking this docs-only slice. Generated repo indexes are up to date. Evidence validation passed. Branch rebased cleanly onto origin/main with autostash."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until this branch is committed, pushed, and opened as a PR."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No deploy attempted before PR."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Implementation, generated-index check, evidence validation, wellness, and rebase are complete. Staging, diff check, PR guard, followthrough guard, push, PR, remote CI, and deploy verification remain pending."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The repo publicly names a values-aligned process for company evaluation: choose a record path, clarify license posture, bound external scope, avoid accidental assignment, and keep private filing/deal details out of public memory.",
+    "public_endpoints": [
+      "documentation"
+    ],
+    "test_flows": [
+      "The stewardship README links to the external collaboration disclosure practice.",
+      "The practice distinguishes provisional filing, defensive publication, and later publication.",
+      "The practice names the missing root LICENSE as a stewardship gap without adding a binding license.",
+      "The practice provides a bounded Qualcomm/Kurt contact shape.",
+      "The practice keeps unpublished filing text, inventor details, and deal terms private."
+    ]
+  },
+  "idea_ids": [
+    "knowledge-and-resonance",
+    "form-kernel-self-hosting"
+  ],
+  "spec_ids": [
+    "public-verification-framework"
+  ],
+  "task_ids": [
+    "stewardship-disclosure-license-20260611"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "sole applicant context",
+        "values alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/stewardship/external-collaboration-disclosure-practice.md names the record, open-source, and external relationship membranes.",
+    "docs/stewardship/README.md points external collaboration and patent/publication practice to the new public process doc.",
+    "python3 scripts/generate_repo_indexes.py --check -> All indexes up to date.",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260611_stewardship_disclosure_practice.json -> OK.",
+    "make wellness passed after the change.",
+    "Private filing artifacts were prepared outside the repo under /Users/ursmuff/Documents/coherence-patent-drafts/2026-06-11-proof-carrying-trusted-action-runtime/ and intentionally omitted from public git."
+  ],
+  "change_files": [
+    "docs/stewardship/external-collaboration-disclosure-practice.md",
+    "docs/stewardship/README.md"
+  ],
+  "change_intent": "docs_only"
+}

@@ -42,3 +42,9 @@ estate, intellectual property, digital access, and access-granted
 arrangements — see [`registry/`](registry/). The registry holds
 category-level public entries; sensitive specifics live in the
 wrapper's encrypted treasury record.
+
+For external company evaluation, patent/publication decisions, and
+license-boundary practice, see
+[`external-collaboration-disclosure-practice.md`](external-collaboration-disclosure-practice.md).
+It names the public process while keeping unpublished filing text,
+inventor details, and deal terms private.
