@@ -1,0 +1,105 @@
+# ─────────────────────────────────────────────────────────────────────
+# primitive-registry.form — the kernel's native surface as declared,
+#                           verified, swappable tissue
+# ─────────────────────────────────────────────────────────────────────
+#
+# kernel-satsang.fk proved the shape on three demo parts: a kernel is a
+# composition of named parts, each declaring (name, blueprint category,
+# verification recipe, expected outside), swapped only when the
+# replacement keeps the declared spec and survives the circle. This
+# registry applies that discipline to the real surface: every native the
+# Go kernel registers — 197 names across main.go's registerNative calls,
+# the fieldConstructors table, and registerEnvNative — carries its
+# declared outside in form-stdlib/primitive-registry.fk.
+#
+# Each entry: (prim name category spec verify expected lane)
+#   name      the registered dispatch name (kebab twins are own doors)
+#   category  the Form attribution token main.go declares (call access
+#             method compare list witness undefined field)
+#   spec      one contract line, the strange edge named
+#   verify    a zero-arg verification recipe — parsed once, content-
+#             addressed, runnable by any sibling (axiom-3: the name is a
+#             query key, identity is the recipe)
+#   expected  the integer outside the recipe must answer
+#   lane      1 = walked in-band three-way each validate run
+#             0 = carrier-declared, visible, awaiting its honest carrier
+#
+# The lanes are honesty, not coverage theatre. Lane 0 names its reason
+# per entry: panic-contract (form_error IS a panic), socket-carrier
+# (loopback proven in the socket bands), sweep-hazard (substrate_gc can
+# sweep band tissue mid-walk), toolchain (jit compile results depend on
+# host compilers), sibling-gap (absent in rust and/or ts today — the
+# precise list a sibling-parity pass or the fourth kernel's audit lane
+# closes next).
+
+(primitive-registry
+
+  (lineage
+    (discipline     kernel-satsang.fk ksat-part)            # spec + verify + expected, circle-witnessed
+    (registry       form-stdlib/primitive-registry.fk)      # 197 entries, main.go order
+    (proof          form-stdlib/tests/primitive-registry-band.fk -> 63 three-way)
+    (drift-gate     form/scripts/validate_primitive_registry.py)  # registry == kernel source
+    (wellness       scripts/wellness_check.py sense_form_primitives)
+    (feeds          fourth-kernel.m2-bmf-compiler-native fourth-kernel.m4-walker-emitted))
+
+  # ── what the band proves, three-way, every validate run ─────────────
+  (band-claims
+    (shape          197-entries-7-fields-known-tokens-no-duplicates)
+    (verification   162-of-162-lane-1-recipes-answer-their-declared-outside)
+    (lanes-pinned   162-in-band-plus-35-carrier-declared)
+    (refusal        a-part-claiming-a-wrong-outside-is-dissented)     # ksat bad-swap, kept
+    (attestation    declared-category-equals-native_blueprint-category-by-exemplar)
+    (spec-surface   entries-readable-without-running))                # pow: method, 1024
+
+  # ── what the registry caught while being born ───────────────────────
+  # The identity layer found drift no behavioral band could see:
+  #   ts node_eq was registered catWitness while go + rust declare
+  #   catCompare(eq) — healed in the same breath (kernel.ts).
+  #   main.go registered write_form_binary twice — the second silently
+  #   overwrote the first; composted, and the gate now refuses regrowth.
+  (first-catches
+    (ts-node-eq-attribution-drift   healed)
+    (go-write-form-binary-duplicate composted))
+
+  # ── the visible tail (lane 0, 35 entries) ───────────────────────────
+  (carrier-lanes
+    (panic-contract  form_error form-error)
+    (socket-carrier  socket_listen socket_port socket_accept socket_connect
+                     socket_send socket_recv socket_close)
+    (sweep-hazard    substrate_gc)
+    (toolchain       jit_compile_value)
+    (sibling-gap     # go-only: the fourth kernel's audit lane runs these
+                     compile_form_source compile-form-source
+                     compile_source_section compile-source-section
+                     compile_source_text compile-source-text
+                     source_compile_last_error source-compile-last-error
+                     math_acos pair_angle dominant_band_delta print_float
+                     str_line_at str_ascii_prefix
+                     framebuffer-observe-start framebuffer-observe-stop
+                     framebuffer-observe-active?
+                     # rust-gap:
+                     framebuffer-counts framebuffer-event-rows
+                     # ts-gap:
+                     value_str value_kind value-kind str_to_float jit_compiled?))
+
+  # ── how this feeds the fourth kernel ────────────────────────────────
+  # M2 (native BMF compiler) and M4 (the emitted walker) prove themselves
+  # primitive-by-primitive: the emitted artifact realizes a subset of this
+  # registry and answers each entry's verification recipe with its declared
+  # outside. The registry is the question list; the band's refusal claim is
+  # the discipline that a wrong answer never lands.
+  (fourth-kernel-ground
+    (question-list  every-entry-name-verify-expected)
+    (subset-honesty an-emitted-kernel-declares-which-entries-it-carries)
+    (parity-gate    answers-must-equal-the-walkers-before-any-timing-counts)))
+
+# ─────────────────────────────────────────────────────────────────────
+# How to verify (today)
+# ─────────────────────────────────────────────────────────────────────
+#
+#   cd form && ./validate.sh form-stdlib/core.fk \
+#     form-stdlib/primitive-registry.fk \
+#     form-stdlib/tests/primitive-registry-band.fk     # -> 63, 0 divergent
+#
+#   python3 form/scripts/validate_primitive_registry.py  # drift gate, rc 0
+#   python3 scripts/wellness_check.py                    # Form primitives sense

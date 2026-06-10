@@ -1,0 +1,44 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "claude/priceless-cray-b14477",
+  "commit_scope": "Primitive registry: every kernel native carries (name, category, spec, verification recipe, expected outside, lane) in the kernel-satsang ksat-part discipline; one generic band proves the lane-1 surface three-way; a drift gate and wellness sense keep registry == kernel source and the carrier tail visible.",
+  "files_owned": [
+    "form/form-stdlib/primitive-registry.fk",
+    "form/form-stdlib/tests/primitive-registry-band.fk",
+    "form/scripts/validate_primitive_registry.py",
+    "docs/coherence-substrate/primitive-registry.form",
+    "scripts/wellness_check.py",
+    "form/form-kernel-go/main.go",
+    "form/form-kernel-ts/src/kernel.ts",
+    "docs/system_audit/commit_evidence_2026-06-11_primitive_registry.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/primitive-registry.fk form-stdlib/tests/primitive-registry-band.fk",
+      "python3 form/scripts/validate_primitive_registry.py",
+      "python3 scripts/scan_form_blueprints.py --check",
+      "cd form && ./validate.sh"
+    ],
+    "results": {
+      "primitive_registry_band": "verdict 63 three-way (go/rust/ts byte-identical output incl. print + trace probes), 0 divergent",
+      "registry_surface": "197 entries == 197 main.go natives (registerNative + fieldConstructors table + registerEnvNative); 162 lane-1 in-band verified; 35 lane-0 carrier-declared",
+      "drift_gate": "rc 0 — names, category tokens, lane/sibling-presence, band pins all aligned",
+      "full_validate": "see PR description for the no-arg ./validate.sh aggregate on this branch"
+    }
+  },
+  "measured_claims": [
+    "Band coverage before this change: 117 of 197 native names appeared in any stdlib test band; 80 carried no declared behavioral verification.",
+    "After: all 197 carry declared (spec, verification recipe, expected outside); 162 verifications execute three-way every validate run; the 35-entry tail is named per-entry with its carrier reason (panic-contract 2, socket-carrier 7, sweep-hazard 1, toolchain 1, sibling-gap 24).",
+    "Sibling gaps made legible: 17 go-only natives (compile_* family, framebuffer-observe trio, math_acos, pair_angle, dominant_band_delta, print_float, str_line_at, str_ascii_prefix), 2 rust-gaps (framebuffer-counts, framebuffer-event-rows), 4 ts-gaps (value_str, value_kind, value-kind, str_to_float) + jit_compiled?."
+  ],
+  "first_catches": {
+    "ts_node_eq_attribution": "form-kernel-ts registered node_eq as catWitness while go and rust declare catCompare(eq) — caught by the band's native_blueprint exemplar attestation (ts attested 161/162), healed in kernel.ts in the same breath",
+    "go_write_form_binary_duplicate": "main.go registered write_form_binary twice (second silently overwrote the first); duplicate composted, and the drift gate now fails on any duplicate registration",
+    "int32_literal_space": "trivial int literals parse into 32-bit inst space (4294967295 reads back as -1) while natives return honest int64 — u32 bit-op verifications rewritten as round-trip reductions, the teaching now lives in those entries' spec lines"
+  },
+  "downstream": {
+    "fourth_kernel": "M2 verification-source and M4 question-list now cite primitive-registry.fk — an emitted kernel proves itself primitive-by-primitive against the declared verification recipes",
+    "wellness": "sense_form_primitives surfaces lane totals, sibling gaps, and band circulation every wellness run"
+  }
+}

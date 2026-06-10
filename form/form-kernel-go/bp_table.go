@@ -315,6 +315,7 @@ var bpTable = map[string][4]uint32{
 	"PING-SELF": {1, 2, 99, 1720},
 	"PNG-CHUNK": {1, 2, 99, 91},
 	"PNG-FILE": {1, 2, 99, 90},
+	"PRIM-REGISTRY-PROBE": {1, 2, 99, 24},
 	"PY-ASSIGN": {1, 2, 16, 1},
 	"PY-BMF-ANNOTATED": {1, 2, 99, 520},
 	"PY-BMF-ASSERT": {1, 2, 99, 541},

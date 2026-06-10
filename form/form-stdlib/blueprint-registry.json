@@ -5383,6 +5383,20 @@
    "defined_in": [
     "form/form-stdlib/minimal-surface.fk"
    ]
+  },
+  {
+    "pkg": 1,
+    "level": 2,
+    "type": 99,
+    "inst": 24,
+    "name": "PRIM-REGISTRY-PROBE",
+    "meaning": "Probe blueprint for primitive-registry.fk record/method verifications \u2014 the registry's own record type, used by record_new/record_get/method_define entries",
+    "aliases": [],
+    "reuse": 1,
+    "defined_in": [
+     "form/form-stdlib/primitive-registry.fk"
+    ],
+    "curated": true
   }
  ]
 }
