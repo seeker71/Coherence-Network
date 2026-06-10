@@ -2337,6 +2337,13 @@ export class Kernel {
       int: 0,
     }));
 
+    // jit_emit_c — the recipe→C projection lives on the go carrier today;
+    // honest "" so sibling-Form code can branch on it.
+    this.registerNative("jit_emit_c", catWitness(), () => ({
+      kind: "str",
+      str: "",
+    }));
+
     this.registerEnvNative("jit_compile", catWitness(), (k, env, args) => {
       if (k.jitCompileHook === null) {
         // Compiler not installed on this kernel build — honest 0 so

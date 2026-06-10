@@ -4486,6 +4486,11 @@ impl Kernel {
         // today; honest 0 here so sibling-Form code can branch on
         // availability (1 compiled, 0 not compiled here, -1 missing).
         self.register_native("jit_compile_value", cat_witness(), |_, _, _args| Value::Int(0));
+        // jit_emit_c — the recipe→C projection lives on the go carrier
+        // today; honest "" here so sibling-Form code can branch on it.
+        self.register_native("jit_emit_c", cat_witness(), |_, _, _args| {
+            Value::Str(String::new().into())
+        });
         // write_form_binary — emit a Recipe to .fkb in the full artifact
         // format (string table + tree). Sibling to read_form_binary.
         // Use when source-compile output crosses kernel invocations:

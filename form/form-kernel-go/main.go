@@ -2787,6 +2787,26 @@ func (k *Kernel) registerNatives() {
 	//   ANY recipe (lists, strings, native calls, cross-function calls) to a
 	//   plugin operating on core.Value, with calls routed through dispatch.
 	//   The recipe stays canonical truth; this just runs it native.
+	// jit_emit_c form-name-str → the recipe lowered to freestanding C
+	//   source (jit_c.go int64 subset), or "" when the shape isn't in the
+	//   subset / the name isn't a closure. The projection surface for
+	//   cross-ISA assembly: scripts/jit_assembly_audit tooling feeds it to
+	//   LLVM for aarch64/hexagon/amdgcn/nvptx and reads the instructions.
+	k.registerEnvNative("jit_emit_c", catWitness(), func(k *Kernel, env *Frame, args []Value) Value {
+		if len(args) < 1 || args[0].Kind != VStr {
+			return Value{Kind: VStr, Str: ""}
+		}
+		nameID := k.internName(args[0].Str)
+		v, ok := env.Lookup(nameID)
+		if !ok || v.Kind != VClosure {
+			return Value{Kind: VStr, Str: ""}
+		}
+		src, err := jitEmitCClosure(k, v.Cl)
+		if err != nil {
+			return Value{Kind: VStr, Str: ""}
+		}
+		return Value{Kind: VStr, Str: src}
+	})
 	k.registerEnvNative("jit_compile_value", catWitness(), func(k *Kernel, env *Frame, args []Value) Value {
 		if len(args) < 1 || args[0].Kind != VStr {
 			return Value{Kind: VInt, Int: -1}

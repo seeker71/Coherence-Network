@@ -47,6 +47,24 @@
       },
       "reading": "the Value-ABI JIT is fully native (every call stays inside the .so) but boxed: 80-byte Value structs dominate the instruction stream and arithmetic rides intra-plugin jitabi helper calls. The de-boxing/inlining work is the measured distance, re-read by re-running the audit after each JIT improvement."
     },
+    "cross_isa_assembly_audit": {
+      "file": "scripts/cross_isa_assembly_audit.sh",
+      "emitter": "form-kernel-go/jit_c.go — kernel-native jit_emit_c lowers the recipe to freestanding C (int64 subset mirroring jit.go); rust/ts offer honest empty-string stubs",
+      "minimum_gates_2026_06_10": "M0 value parity (emitted C computes walker answers on this host) · every target organ emits its ISA's real multiply · recursion fully native on CPU/DSP (lowered to loops, zero calls) — all PASS",
+      "isa_table_2026_06_10": {
+        "android-cpu aarch64": "32 insns, mul x11,x0,x11",
+        "apple-mlx-host arm64": "41 insns, mul x11,x0,x11",
+        "android-dsp hexagon": "97 insns, r3 += mpyi(r0,r27)",
+        "nvidia-gpu ptx": "46 insns, mul.lo.s64",
+        "amd-gpu gcn": "34 insns, v_mul_lo_u32",
+        "x86-64 reference": "55 insns, imulq"
+      },
+      "named_edges": [
+        "Metal AIR needs Apple's toolchain on-device; the arm64-apple stream is the MLX host half",
+        "SPIR-V (Vulkan/Android GPU) needs llvm-spirv beside this clang",
+        "execution on DSP/GPU organs awaits the device; generation is proven here"
+      ]
+    },
     "named_edges_left_open": [
       "int literals truncate at 32 bits in every kernel; the ts walker's add wraps at 32 bits while go and rust carry int64 — the band keeps constants inside int32; widening the integer model is its own movement",
       "pg_* natives are carried by go and rust only; the ts carrier does not offer the pg port yet, so the parity band checks http_get and socket_listen offers",
