@@ -1192,6 +1192,8 @@ check_promoted_bml_read_routes_native() {
     "reaction-summary|/api/reactions/concept/lc-attuned-spaces/summary|api_reaction_concept_summary"
     "reaction-threads|/api/reactions/concept/lc-attuned-spaces/threads|api_reaction_concept_threads"
     "concept-voices|/api/concepts/lc-attuned-spaces/voices|api_concept_voices"
+    "sensings|/api/sensings?limit=2|api_sensings"
+    "translations-page-flow|/api/translations/page/flow|api_translations_entity"
   )
   local spec name route_path expected_handler url headers_file body_file status router handler authority
 

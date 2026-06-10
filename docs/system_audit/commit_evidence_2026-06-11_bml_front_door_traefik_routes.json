@@ -1,0 +1,101 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "codex/form-native-endpoints-traefik-20260611",
+  "commit_scope": "Route the newly promoted BML front-door endpoint families through public Traefik labels and guard the deploy canaries so BML-native handlers are actually reached in production.",
+  "files_owned": [
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/verify_web_api_deploy.sh",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "docs/system_audit/commit_evidence_2026-06-11_bml_front_door_traefik_routes.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "bash -n scripts/test_hostinger_deploy_form_paths.sh scripts/verify_web_api_deploy.sh deploy/hostinger/auto-deploy.sh",
+      "./scripts/test_hostinger_deploy_form_paths.sh",
+      "git diff --check",
+      "python3 - <<'PY' ... yaml.safe_load('deploy/kernel-router/docker-compose.kernel-router.yml') and assert new BML Traefik label keys ... PY"
+    ],
+    "notes": "The previous BML handler commit deployed the API SHA but public requests to /api/sensings and /api/translations/page/flow still returned X-Form-Router: fanout-python because the BML front-door service did not have Traefik labels for those paths. This follow-up adds labels for GET /api/sensings, GET /api/sensings/{sensing_id}, and GET /api/translations/{entity_type}/{entity_id}; extends the Hostinger local canary for sensings and translations; and extends the public deploy verifier so future deploy verification fails if these promoted routes are not publicly native."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR creation, hosted checks, merge, and production deploy verification."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Public pre-fix smoke on merged 767a80ad showed the new BML handlers were compiled but not publicly routed: /api/sensings?limit=2 and /api/translations/page/flow returned X-Form-Router: fanout-python. This commit is the route-overlay repair; post-merge proof must show native-kernel headers on the same public paths."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local routing proof passed; hosted checks, merge, and post-deploy public native header proof remain pending."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "After deployment, public GET /api/sensings, GET /api/sensings/{sensing_id}, and GET /api/translations/{entity_type}/{entity_id} should route to coherence-api-kernel-bml-front-door and return BML native proof headers instead of fanout-python.",
+    "proof": "Static deploy guard validates the three Traefik label rules and handler proof declarations; public deploy verifier now probes sensings and translation entity reads for X-Form-Router:native-kernel, X-Form-Handler, and X-Form-Python-Authority:false.",
+    "public_endpoints": [
+      "GET /api/sensings",
+      "GET /api/sensings/{sensing_id}",
+      "GET /api/translations/{entity_type}/{entity_id}"
+    ],
+    "test_flows": [
+      "Static Hostinger deploy-path test fails if any new BML route label is removed.",
+      "Hostinger local canary fails if sensings or translations do not execute inside kernel-router-bml-front-door.",
+      "Public deploy verifier fails if sensings or translations fall back to Python after deploy."
+    ]
+  },
+  "idea_ids": [
+    "form-native-runtime",
+    "oss-interface-alignment"
+  ],
+  "spec_ids": [
+    "kernel-router-fanout-native-invitation",
+    "ideas-router-form-expression",
+    "spec-registry-source-native"
+  ],
+  "task_ids": [
+    "form-native-endpoints-traefik-20260611"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-prioritization"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "deploy/kernel-router/docker-compose.kernel-router.yml now routes /api/sensings, /api/sensings/{sensing_id}, and /api/translations/{entity_type}/{entity_id} to coherence-api-kernel-bml-front-door.",
+    "deploy/hostinger/auto-deploy.sh now probes api_sensings and api_translations_entity inside the BML front-door service.",
+    "scripts/verify_web_api_deploy.sh now requires native proof headers on public sensings and translation entity reads.",
+    "scripts/test_hostinger_deploy_form_paths.sh guards the new labels and native proof handlers."
+  ],
+  "change_files": [
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/verify_web_api_deploy.sh",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix"
+}

@@ -1009,7 +1009,9 @@ ensure_kernel_router_canary() {
         'views-stats|/api/views/stats/lc-attuned-spaces?days=30|api_views_stats' \
         'reaction-summary|/api/reactions/concept/lc-attuned-spaces/summary|api_reaction_concept_summary' \
         'reaction-threads|/api/reactions/concept/lc-attuned-spaces/threads|api_reaction_concept_threads' \
-        'concept-voices|/api/concepts/lc-attuned-spaces/voices|api_concept_voices'; do \
+        'concept-voices|/api/concepts/lc-attuned-spaces/voices|api_concept_voices' \
+        'sensings|/api/sensings?limit=2|api_sensings' \
+        'translations-page-flow|/api/translations/page/flow|api_translations_entity'; do \
           name=\${spec%%|*}; rest=\${spec#*|}; url=\${rest%%|*}; handler=\${rest#*|}; \
           if ! curl -fsS -D /tmp/promoted-\${name}.headers -o /tmp/promoted-\${name}.body \
             \"http://127.0.0.1:8080\${url}\" \
