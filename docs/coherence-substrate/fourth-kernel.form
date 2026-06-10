@@ -309,13 +309,19 @@
         # binary compiled by the 4th kernel" — honest ladder, each stone
         # shipped + witnessed separately; any cell may pick up the next one:
         (overnight-ladder
-          (n1-net-organ    socket ops in a server-variant emission: the
-                           constant main owns socket/bind/listen/accept via
-                           quoteless externs; the PROGRAM's PUTC bytes become
-                           the response — the net organ physical)
-          (n2-api-binary   one real route: an fkw-emitted binary serves
-                           health-shaped JSON on a port; curl witnesses;
-                           THE api-on-a-4th-kernel-binary seed)
+          (n1-net-organ    [SHIPPED] socket/bind/listen/accept/fork own the
+                           net organ in a server-variant main (fkc-emit-server,
+                           quoteless externs); dup2(cfd,1) makes the PROGRAM's
+                           PUTC bytes the response body; the request is drained
+                           and the connection shut down cleanly. fkresp folds a
+                           string into a PUTC-chain responder. tests/fourth-net-
+                           band.fk -> 15 three-way)
+          (n2-api-binary   [SHIPPED] a binary the 4th kernel compiled serves
+                           HTTP 200 + JSON; the audit curls it live — GET
+                           /health -> 200 sub-millisecond, three requests, the
+                           fork-loop holding. THE api-on-a-4th-kernel-binary,
+                           real. Next: read the request line off the cursor and
+                           route (m4e3); JSON body from substrate values)
           (n3-driver       fork/exec/pipe emission variant: spawn argv-given
                            command, capture stdout into fk_src, the program
                            parses it with the BMF CURSOR — a live subprocess
