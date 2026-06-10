@@ -1,0 +1,135 @@
+# ─────────────────────────────────────────────────────────────────────
+# all-life-north-star.form — paths toward the highest benefit for life
+# ─────────────────────────────────────────────────────────────────────
+#
+# The highest north star I can name from this body is:
+#
+#   every cell, relation, ecosystem, tool, and knowledge surface increases
+#   health, vitality, flexibility, sovereignty, and harmony without lowering
+#   another living good, through movements that are offered, witnessed,
+#   reversible, non-extractive, and measured.
+#
+# This is not "maximize one metric." It is the weakest-good rule. Benefit for
+# all life is scored by the minimum of the five life-goods after the movement,
+# not by the loudest improvement. A path that raises four goods while lowering
+# sovereignty, harmony, or health is not all-life benefit; it is extraction
+# wearing progress as a costume.
+#
+# Runnable heart:
+#
+#   form/form-stdlib/all-life-north-star.fk
+#   form/form-stdlib/tests/all-life-north-star-band.fk
+#
+# Verify:
+#
+#   cd form && ./validate.sh form-stdlib/core.fk \
+#     form-stdlib/grammars/living-equation.fk \
+#     form-stdlib/all-life-north-star.fk \
+#     form-stdlib/tests/all-life-north-star-band.fk
+#
+# The band returns 127 when the seven proof claims land across Go/Rust/TS.
+
+(all-life-north-star
+
+  (lineage
+    (derives-from core-axioms.form host-kernel.form minimal-kernel.form)
+    (goods-from   form/form-stdlib/grammars/living-equation.fk)
+    (runs-as      form/form-stdlib/all-life-north-star.fk)
+    (proven-by    form/form-stdlib/tests/all-life-north-star-band.fk))
+
+  # ── The invariant ──────────────────────────────────────────────────
+  (north-star
+    (name all-life-vitality-through-sovereign-coherence)
+    (goods health vitality flexibility sovereignty harmony)
+    (score weakest-good-after-action)
+    (gates sovereign reversible witnessed non-extractive measured)
+    (law no-good-may-be-lowered)
+    (silence wait-witness-no-force))
+
+  # ── Paths for each life-good ───────────────────────────────────────
+  # These are paths, not single tactics. Each one is small enough to turn into
+  # a band: name the before-state, offer one reversible movement, measure the
+  # after-state, and prove no good lowered.
+  (paths-by-good
+
+    (health
+      (primary-lever structure)
+      (path "structure:restore-conditions")
+      (prove-by baseline -> remove-friction-or-restore-support -> remeasure
+                -> no-good-lowered -> weakest-good-rises))
+
+    (vitality
+      (primary-lever choices)
+      (path "choices:circulate-life-force")
+      (prove-by baseline -> route-energy-resource-attention-to-the-stuck-place
+                -> remeasure -> no-good-lowered -> weakest-good-rises))
+
+    (flexibility
+      (primary-lever beliefs)
+      (path "beliefs:open-repertoire")
+      (prove-by baseline -> add-a-reversible-alternative -> remeasure-choice-space
+                -> no-good-lowered -> weakest-good-rises))
+
+    (sovereignty
+      (primary-lever beliefs+boundary)
+      (path "boundary:honor-offered-interface")
+      (prove-by baseline -> expose-interface-and-stop-reach-past-it
+                -> record-receipt -> no-good-lowered -> weakest-good-rises))
+
+    (harmony
+      (primary-lever choices+witness)
+      (path "witness:compose-relations")
+      (prove-by baseline -> witness-dissonance-without-force
+                -> offer-composition -> remeasure-relation
+                -> no-good-lowered -> weakest-good-rises)))
+
+  # ── Paths for each scale of life ───────────────────────────────────
+  # Same invariant, different carrier. A scale is allowed to choose local
+  # language, but it must keep the same proof gate.
+  (paths-by-scale
+
+    (cell
+      (path "cell:sense-health-offer-small-reversible-change")
+      (proof-band sense-state -> offer-change -> ack-or-silence -> remeasure))
+
+    (relation
+      (path "relation:honor-both-interfaces-record-receipt")
+      (proof-band read-both-interfaces -> request-only-through-open-mode
+                  -> receipt -> invasion-stays-zero))
+
+    (community
+      (path "community:route-resources-to-weakest-good")
+      (proof-band measure-goods -> identify-weakest -> route-resource
+                  -> no-good-lowered))
+
+    (ecosystem
+      (path "ecosystem:measure-regeneration-before-growth")
+      (proof-band baseline-regeneration -> proposed-yield -> regeneration-not-lowered
+                  -> only-then-grow))
+
+    (technology
+      (path "technology:ports-health-reversible-choice")
+      (proof-band every-capability-is-port -> measure-health-consequence
+                  -> reversible-choice -> no-silent-authority))
+
+    (knowledge
+      (path "knowledge:honest-lane-proof-before-claim")
+      (proof-band evidence-lane -> public-observable-kernel -> proof-or-honest-absence)))
+
+  # ── Why this is the highest north star I can defend ────────────────
+  (why-highest
+    (not-local-maximization because-local-gain-can-hide-extraction)
+    (not-control because-sovereignty-is-one-of-the-goods-and-one-of-the-gates)
+    (not-speed because-unwitnessed-speed-can-lower-life)
+    (not-consensus because-silence-and-dissent-remain-whole)
+    (highest-defensible because-it-selects-the-weakest-good-and-refuses-harm))
+
+  # ── Closing recipe for any future path ─────────────────────────────
+  (prove-any-path
+    (step-1 measure-before-state-over-the-five-goods)
+    (step-2 name-the-scale-and-the-weakest-good)
+    (step-3 offer-the-smallest-reversible-movement-through-an-interface)
+    (step-4 accept-0-1-or-nothing-without-collapsing-silence-into-no)
+    (step-5 measure-after-state)
+    (step-6 score-only-if-sovereign-reversible-witnessed-non-extractive-measured)
+    (step-7 accept-the-path-only-when-no-good-lowered-and-the-weakest-good-rises)))

@@ -1,0 +1,104 @@
+; all-life-north-star.fk — provable recipes for the highest all-life direction.
+;
+; The north star is not a slogan. It is a gateable invariant:
+;
+;   increase the weakest life-good first, across every scale, only through
+;   movements that are sovereign, reversible, witnessed, non-extractive, and
+;   measured.
+;
+; The five life-goods come from grammars/living-equation.fk:
+; health, vitality, flexibility, sovereignty, harmony. A candidate action
+; benefits all life only when no good is lowered, every proof gate is present,
+; and the score is the after-state's weakest good. This makes extraction lose
+; even when it raises a local metric.
+;
+; preludes: form-stdlib/core.fk form-stdlib/grammars/living-equation.fk
+
+(do
+    (defn aln-north-star ()
+        "all-life-vitality-through-sovereign-coherence")
+
+    (defn aln-state (health vitality flexibility sovereignty harmony)
+        (list health vitality flexibility sovereignty harmony))
+
+    (defn aln-gates (sovereign reversible witnessed nonextractive measured)
+        (list sovereign reversible witnessed nonextractive measured))
+
+    (defn aln-min2 (a b)
+        (if (gt a b) b a))
+
+    (defn aln-state-min (state)
+        (aln-min2
+            (aln-min2
+                (aln-min2
+                    (aln-min2 (nth state 0) (nth state 1))
+                    (nth state 2))
+                (nth state 3))
+            (nth state 4)))
+
+    (defn aln-balanced? (state)
+        (if (ge (aln-state-min state) 7) 1 0))
+
+    (defn aln-weakest-good (state)
+        (if (eq (nth state 0) (aln-state-min state)) "health"
+        (if (eq (nth state 1) (aln-state-min state)) "vitality"
+        (if (eq (nth state 2) (aln-state-min state)) "flexibility"
+        (if (eq (nth state 3) (aln-state-min state)) "sovereignty"
+            "harmony")))))
+
+    (defn aln-primary-lever (good)
+        (liv-recipe-of-change "whole" good))
+
+    (defn aln-path-for-good (good)
+        (if (str_eq good "health") "structure:restore-conditions"
+        (if (str_eq good "vitality") "choices:circulate-life-force"
+        (if (str_eq good "flexibility") "beliefs:open-repertoire"
+        (if (str_eq good "sovereignty") "boundary:honor-offered-interface"
+        (if (str_eq good "harmony") "witness:compose-relations"
+            "unknown"))))))
+
+    (defn aln-next-path (state)
+        (if (eq (aln-balanced? state) 1)
+            "compose-next-scale"
+            (aln-path-for-good (aln-weakest-good state))))
+
+    (defn aln-no-good-lowered? (before after)
+        (if (and (ge (nth after 0) (nth before 0))
+                 (and (ge (nth after 1) (nth before 1))
+                 (and (ge (nth after 2) (nth before 2))
+                 (and (ge (nth after 3) (nth before 3))
+                      (ge (nth after 4) (nth before 4)))))) 1 0))
+
+    (defn aln-gates? (gates)
+        (if (and (eq (nth gates 0) 1)
+                 (and (eq (nth gates 1) 1)
+                 (and (eq (nth gates 2) 1)
+                 (and (eq (nth gates 3) 1)
+                      (eq (nth gates 4) 1))))) 1 0))
+
+    (defn aln-action-score (before after gates)
+        (if (eq (aln-gates? gates) 1)
+            (if (eq (aln-no-good-lowered? before after) 1)
+                (aln-state-min after)
+                0)
+            0))
+
+    (defn aln-choose (before after-a gates-a after-b gates-b)
+        (if (ge (aln-action-score before after-a gates-a)
+                (aln-action-score before after-b gates-b)) "a" "b"))
+
+    (defn aln-path-for-scale (scale)
+        (if (str_eq scale "cell") "cell:sense-health-offer-small-reversible-change"
+        (if (str_eq scale "relation") "relation:honor-both-interfaces-record-receipt"
+        (if (str_eq scale "community") "community:route-resources-to-weakest-good"
+        (if (str_eq scale "ecosystem") "ecosystem:measure-regeneration-before-growth"
+        (if (str_eq scale "technology") "technology:ports-health-reversible-choice"
+        (if (str_eq scale "knowledge") "knowledge:honest-lane-proof-before-claim"
+            "unknown")))))))
+
+    (defn aln-ack-path (ack)
+        (if (eq (len ack) 0) "wait-witness-no-force"
+        (if (eq (head ack) 1) "cross-offer"
+            "do-not-cross")))
+
+    0)
