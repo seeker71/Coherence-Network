@@ -1,0 +1,39 @@
+; preludes: form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/mel-frame.fk
+;
+; mel-frame-band — one whisper-style mel frame against the torch/numpy fp64 reference, three-way.
+; The frame: sin(2π·440·s/16000), samples 600..999 (torch.stft frame 5, hop 160, n_fft 400 — the
+; interior frame, no padding; torch vs direct DFT agree at 1.8e-12), periodic hann. 440 Hz IS bin 11,
+; so the powers are exact hann leakage: P11 = (N/4)² = 10000, P10 = P12 = 2500, P9 ≈ 0. Mel rows
+; 10/11/12 are the slaney filterbank's rows (librosa, the same family whisper ships), each with
+; two-bin support, weights as data. log10 values match whisper's log lane before normalization.
+;
+; Verdict 1023 when the frame lands:
+;   1    P11·100 → 1000000        (the on-bin power, (400/4)²)
+;   2    P12·100 → 250000         (hann leakage, exactly a quarter)
+;   4    |P9| < 1e-5              (an off-support bin is honestly silent)
+;   8    mel row 11 ·1e4 → 2263993
+;   16   mel row 10 ·1e4 → 993143
+;   32   log10 mel 11 ·1e6 → 2354875
+;   64   log10 mel 10 ·1e6 → 1997012
+;   128  log10 mel 12 ·1e6 → 1776154
+;   256  the clamp lane: log of silence → exactly -10
+;   512  flog10(1000) → 3         (the new ln recipe, on a value the reader can check by eye)
+(do
+    (let xs (mf-frame 440.0 16000 600 400 0))
+    (let p11 (mf-bin-power xs 11 400))
+    (let p12 (mf-bin-power xs 12 400))
+    (let p9  (mf-bin-power xs 9 400))
+    (let m10 (mf-mel-energy xs (list 10 11) (list 0.01990821771323681 0.004954374860972166) 400))
+    (let m11 (mf-mel-energy xs (list 11 12) (list 0.021899040788412094 0.0029635531827807426) 400))
+    (let l12 (mf-log-mel xs (list 12 13) (list 0.02388986200094223 0.0009727313299663365) 400))
+    (let c0 (if (eq (round (mul p11 100.0)) 1000000) 1 0))
+    (let c1 (if (eq (round (mul p12 100.0)) 250000) 2 0))
+    (let c2 (if (lt (if (lt p9 0.0) (sub 0.0 p9) p9) 0.00001) 4 0))
+    (let c3 (if (eq (round (mul m11 10000.0)) 2263993) 8 0))
+    (let c4 (if (eq (round (mul m10 10000.0)) 993143) 16 0))
+    (let c5 (if (eq (round (mul (mf-log-clamped m11) 1000000.0)) 2354875) 32 0))
+    (let c6 (if (eq (round (mul (mf-log-clamped m10) 1000000.0)) 1997012) 64 0))
+    (let c7 (if (eq (round (mul l12 1000000.0)) 1776154) 128 0))
+    (let c8 (if (eq (round (mul (mf-log-clamped 0.0) 1000000.0)) -10000000) 256 0))
+    (let c9 (if (eq (round (mul (flog10 1000.0) 1000000.0)) 3000000) 512 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 c9))))))))))
