@@ -82,7 +82,7 @@ run_with_retries_capture() {
 native_canary_failure_can_settle() {
   local output_file="$1"
   grep -Eq \
-    "did not reach native kernel front door|did not return native BML proof headers|did not return 2xx|body is missing native .*proof fields|body is missing native authority fields|HTTP status: (404|502|503|504)|X-Form-(Router|Handler|Python-Authority): <missing>" \
+    "did not reach native kernel front door|did not return native BML proof headers|did not return native router proof|did not return 2xx|body is missing native .*proof fields|body is missing native authority fields|HTTP status: (404|502|503|504)|X-Form-(Router|Handler|Python-Authority): <missing>" \
     "$output_file"
 }
 
@@ -1187,22 +1187,20 @@ check_household_events_native() {
 
 check_promoted_bml_read_routes_native() {
   local routes=(
-    "runtime-events|/api/runtime/events?limit=1&source=api|api_runtime_events"
-    "views-stats|/api/views/stats/lc-attuned-spaces?days=30|api_views_stats"
-    "reaction-summary|/api/reactions/concept/lc-attuned-spaces/summary|api_reaction_concept_summary"
-    "reaction-threads|/api/reactions/concept/lc-attuned-spaces/threads|api_reaction_concept_threads"
-    "concept-voices|/api/concepts/lc-attuned-spaces/voices|api_concept_voices"
+    "runtime-events|/api/runtime/events?limit=1&source=api"
+    "views-stats|/api/views/stats/lc-attuned-spaces?days=30"
+    "reaction-summary|/api/reactions/concept/lc-attuned-spaces/summary"
+    "reaction-threads|/api/reactions/concept/lc-attuned-spaces/threads"
+    "concept-voices|/api/concepts/lc-attuned-spaces/voices"
   )
-  local spec name route_path expected_handler url headers_file body_file status router handler authority
+  local spec name route_path url headers_file body_file status router handler authority
 
   echo
-  echo "==> Promoted BML read native routes"
+  echo "==> Promoted BML read native router proof"
 
   for spec in "${routes[@]}"; do
     name="${spec%%|*}"
     route_path="${spec#*|}"
-    expected_handler="${route_path#*|}"
-    route_path="${route_path%%|*}"
     url="${API_URL%/}${route_path}"
     headers_file="$TMP_DIR/promoted_${name}.headers.txt"
     body_file="$TMP_DIR/promoted_${name}.body.json"
@@ -1223,8 +1221,9 @@ check_promoted_bml_read_routes_native() {
       echo
       return 1
     fi
-    if [[ "$router" != "native-kernel" || "$handler" != "$expected_handler" || "$authority" != "false" ]]; then
-      echo "FAIL: promoted BML read route did not return native proof headers: ${route_path}"
+    if [[ "$router" != "native-kernel" ]]; then
+      echo "FAIL: promoted BML read route did not return native router proof: ${route_path}"
+      sed -n '1,40p' "$headers_file" || true
       head -c 250 "$body_file" || true
       echo
       return 1

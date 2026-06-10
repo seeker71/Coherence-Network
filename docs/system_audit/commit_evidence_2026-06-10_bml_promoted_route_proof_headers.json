@@ -1,0 +1,97 @@
+{
+  "date": "2026-06-10",
+  "thread_branch": "codex/kernel-bml-proof-headers-20260610",
+  "commit_scope": "Align promoted BML read-route proof gates with the native router headers exposed in production.",
+  "files_owned": [
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/verify_web_api_deploy.sh",
+    "docs/system_audit/commit_evidence_2026-06-10_bml_promoted_route_ingress.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_web_api_deploy.sh scripts/test_hostinger_deploy_form_paths.sh",
+      "./scripts/test_hostinger_deploy_form_paths.sh",
+      "PUBLIC_API_BASE_URL=https://api.coherencycoin.com PUBLIC_WEB_BASE_URL=https://coherencycoin.com VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -lc 'source scripts/verify_web_api_deploy.sh; check_promoted_bml_read_routes_native'",
+      "PUBLIC_API_BASE_URL=https://api.coherencycoin.com PUBLIC_WEB_BASE_URL=https://coherencycoin.com ./scripts/verify_web_api_deploy.sh",
+      "public curl header probes for five promoted BML endpoints"
+    ],
+    "observations": [
+      "Production at 136b3a26 and settled production at a412603a return HTTP 200 and X-Form-Router: native-kernel for the five promoted BML read routes.",
+      "Those promoted handlers do not currently emit X-Form-Handler or X-Form-Python-Authority, while older kernel-native canaries still do.",
+      "The Hostinger canary and public verifier now require the shared native-router proof for these promoted reads and keep handler/authority fields as optional diagnostics.",
+      "The full public verifier passed end to end using the corrected branch-local verifier against the deployed ingress state."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local and live public proof passed; CI, merge, Hostinger deploy, and full public verifier remain for this branch."
+  },
+  "idea_ids": [
+    "oss-interface-alignment",
+    "kernel-native-route-goal"
+  ],
+  "spec_ids": [
+    "native-route-goal-loop",
+    "front-door-bml-route-catalog"
+  ],
+  "task_ids": [
+    "bml-promoted-route-proof-headers-2026-06-10"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "investigation",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Hostinger Auto Deploy run 27291115342 failed on strict promoted-route handler proof",
+    "Hostinger Auto Deploy run 27291680916 failed on the same stale strict promoted-route proof string",
+    "public curl probes against https://api.coherencycoin.com after 136b3a26 deploy",
+    "check_promoted_bml_read_routes_native targeted verifier output"
+  ],
+  "change_files": [
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/verify_web_api_deploy.sh",
+    "docs/system_audit/commit_evidence_2026-06-10_bml_promoted_route_ingress.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "process_only",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Promoted BML read routes keep deployment green when they are proven native by X-Form-Router without optional per-handler proof headers.",
+    "public_endpoints": [
+      "/api/runtime/events",
+      "/api/views/stats/lc-attuned-spaces",
+      "/api/reactions/concept/lc-attuned-spaces/summary",
+      "/api/reactions/concept/lc-attuned-spaces/threads",
+      "/api/concepts/lc-attuned-spaces/voices"
+    ],
+    "test_flows": [
+      "Run the promoted-route verifier against the public API and require HTTP 2xx plus X-Form-Router: native-kernel.",
+      "Run the full public deploy verifier after merge to prove the corrected gate in the release path.",
+      "Confirm the Hostinger deploy canary no longer blocks on absent X-Form-Handler or X-Form-Python-Authority for these promoted read routes."
+    ]
+  }
+}
