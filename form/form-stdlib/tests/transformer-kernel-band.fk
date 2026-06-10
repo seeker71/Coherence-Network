@@ -1,0 +1,50 @@
+; preludes: form-stdlib/transformer-kernel.fk
+;
+; transformer-kernel-band — the architecture-as-data projection, three-way.
+;
+; Every sibling kernel builds the same C translation unit from the same
+; architecture data. The band proves the projection is identical and
+; structurally whole: dims land as #defines, the full block is present
+; (attention, softmax, layernorm, SiLU FFN, residual, checksum), and a
+; second architecture projects different dims through the same body.
+; Execution and per-ISA assembly are witnessed by
+; scripts/transformer_kernel_audit.sh on the Go carrier's host toolchain.
+;
+; Band verdict 127 when every claim lands:
+;   1   the projection is substantial (one C unit, > 3000 chars)
+;   2   the architecture's dims land: #define D 8 / H 2 / S 4 / F 16
+;   4   the attention tissue is present (tk_softmax, scaled scores)
+;   8   the norm and activation tissue is present (tk_layernorm, SiLU)
+;   16  the proof surface is present (tk_forward_checksum, FNV-1a-32 fold)
+;   32  determinism marks are present (seeded LCG, division-free
+;       bit-trick Newton reciprocal and rsqrt)
+;   64  a different architecture projects different dims, same body
+(do
+    (defn tk-has? (src marker) (ge (str_find src marker 0) 0))
+
+    (let src (tk-emit-c (tk-arch 8 2 4 16)))
+    (let c0 (if (gt (str_len src) 3000) 1 0))
+    (let c1 (if (and (tk-has? src "#define D 8")
+               (and (tk-has? src "#define H 2")
+                (and (tk-has? src "#define S 4")
+                     (tk-has? src "#define F 16"))))
+                2 0))
+    (let c2 (if (and (tk-has? src "tk_softmax")
+                     (tk-has? src "att[i*S + j] = s * scale;"))
+                4 0))
+    (let c3 (if (and (tk-has? src "tk_layernorm")
+                     (tk-has? src "ff[i] * tk_recip(1.0f + tk_exp(0.0f - ff[i]))"))
+                8 0))
+    (let c4 (if (and (tk-has? src "tk_forward_checksum")
+                     (tk-has? src "2166136261u"))
+                16 0))
+    (let c5 (if (and (tk-has? src "unsigned int lcg = 42u;")
+               (and (tk-has? src "0x5f3759dfu")
+                    (tk-has? src "0x7ef311c3u")))
+                32 0))
+    (let src2 (tk-emit-c (tk-arch 16 4 8 32)))
+    (let c6 (if (and (tk-has? src2 "#define D 16")
+               (and (tk-has? src2 "#define F 32")
+                    (tk-has? src2 "tk_forward_checksum")))
+                64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

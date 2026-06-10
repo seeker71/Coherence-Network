@@ -252,6 +252,11 @@
 #   # generated and validated (Vulkan/Android-GPU door); MSL kernel source
 #   # emitted and held (Metal AIR awaits Apple hardware):
 #   scripts/cross_isa_assembly_audit.sh
+#   # A full transformer block (architecture as recipe data, division-free
+#   # IEEE binary32) as six instruction sets, bit-exact f740120e on x86 +
+#   # emulated Android CPU + emulated Hexagon DSP, SPIR-V validated, AMD
+#   # GCN constant-folds the whole block at compile time:
+#   scripts/transformer_kernel_audit.sh
 #   # evidence: docs/system_audit/commit_evidence_2026-06-10_host_kernel_metal_band.json
 #
 #   # JIT native plugin path (Go kernel): exercised by the kernel's own suite.

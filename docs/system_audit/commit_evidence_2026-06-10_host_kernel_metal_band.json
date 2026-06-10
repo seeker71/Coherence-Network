@@ -63,6 +63,22 @@
         "Metal AIR bytes and on-GPU execution need Apple hardware; the emitted MSL kernel source is the GPU half, the arm64-apple assembly stream is the MLX host half",
         "physical DSP/GPU execution: emulation is proven; silicon is the organ"
       ],
+      "transformer_block_2026_06_10": {
+        "architecture_as_data": "form-stdlib/transformer-kernel.fk — (tk-arch 8 2 4 16) projects a full pre-LN multi-head attention + SiLU FFN block to one freestanding, division-free IEEE-binary32 C unit (Newton recip/rsqrt, no libcalls, no libm); three-way band tests/transformer-kernel-band.fk verdict 127",
+        "audit": "scripts/transformer_kernel_audit.sh",
+        "checksum": "f740120e — FNV-1a-32 over output bit patterns, identical on x86 host, qemu-aarch64 (Android CPU), qemu-hexagon (Android DSP)",
+        "isa_table": {
+          "android-cpu aarch64": "2363 insns, NEON fmul v4.4s (auto-vectorized)",
+          "apple-mlx-host arm64": "2439 insns, fmul.4s",
+          "android-dsp hexagon": "2079 insns, sfmpy, zero libcalls",
+          "nvidia-gpu ptx": "1926 insns, mul.rn.f32",
+          "amd-gpu gcn": "3 insns — the GPU compiler constant-folded the whole block to v_mov_b32 0xf740120e: bit-exactness proven at compile time",
+          "x86-64": "2600 insns, mulss",
+          "spir-v": "140 OpFMul, spirv-val clean",
+          "vector lanes": "AVX-512 vmulps, RISC-V V vfmul sighted"
+        }
+      },
+      "jit_tmp_dir_finding": "a full validate.sh suite left 12,665 /tmp/form-jit-* dirs (~29GB) and filled the disk mid-suite; jit.go keeps each MkdirTemp dir for process lifetime but nothing reclaims them across runs — content-addressed dir reuse (bodyKey-named dirs, atomic rename) would make them a persistent cache instead of sediment",
       "execution_and_gpu_doors_2026_06_10": {
         "android_cpu_executed": "freestanding static aarch64 binary of the emitted recipes ran under qemu-aarch64 — exit 42 (fact(10)==3628800 && poly(3,4)==25 computed by the ISA)",
         "android_dsp_executed": "freestanding static hexagon binary ran under qemu-hexagon — exit 42 (parity computed by mpyi semantics)",
