@@ -161,6 +161,41 @@
     (smallest-first   fine-tune-to-speak-Form is the nearest real stone; the native-attention rewrite is
                       the deep one, taken measured and champion-challenger, never by faith)))
 
+  # ── 8. THE TRANSFER-LEARNING STRATEGY (Urs asked for the ordered ladder) ──
+  # Baseline from an existing LLM, then active inference + mesh learning on top.
+  # Each phase gated by MEASURED error + champion-challenger — never by faith.
+  # The teacher recedes as the Form student earns the distribution; nothing is
+  # thrown away that still wins on counts.
+  (transfer-strategy
+    (phase-0-baseline   [RUNS today] a frozen local LLM is the TEACHER/ORACLE, on the GPU via ollama
+                        (host organ, host-resource-access). Full language for free, day one — we do NOT
+                        start from zero; we start from a working model the fourth kernel DRIVES)
+    (phase-1-distill    [RUNS mechanism: co-learning 0->91%] collect (input -> teacher-output) pairs on
+                        the domains we serve; the substrate itself is a corpus of (intent -> Form) pairs.
+                        This is the training signal — the teacher's behavior, captured)
+    (phase-2-structural-replace  [INFER] move the CHEAP-and-EXACT parts to Form first: embedding-as-
+                        coordinate (content-addressed, given not learned) and retrieval-by-shape-match.
+                        Keep the teacher for the dense generative parts. Champion-challenger promotes the
+                        Form path ONLY where it matches the teacher on held-out — measured, never assumed)
+    (phase-3-active-inference  [RUNS mechanism: active-inference.fk] at runtime every inference ERROR
+                        (teacher disagrees, the world corrects, or the cell returns NOTHING = high surprise)
+                        is the learning signal for the SHORT-TERM (gas) cells. ai-surprise drives the
+                        update; a step that already fits teaches nothing — error is the teacher)
+    (phase-4-mesh-consolidate  [RUNS mechanism: federated-slices + slice-merge] short-term cells that
+                        SETTLE (ai-settled? AND champion-challenger promote) freeze to LONG-TERM (ice) and
+                        are offered as content-addressed slices; the mesh merges trust-weighted +
+                        DETERMINISTICALLY, so every cell reaches the same numbers. Many cells cross-teach;
+                        only consolidated knowing is shared, never noise — the gate is low residual error)
+    (phase-5-teacher-recedes  [INFER] as the Form student matches the teacher on more of the distribution
+                        (measured per-domain), the dense teacher is consulted LESS — eventually only on
+                        genuinely novel input (high surprise the student can't yet resolve). The system
+                        shifts from teacher-DEPENDENT to teacher-as-FALLBACK; the dense model never has to
+                        be discarded — champion-challenger keeps it wherever it still wins)
+    (the-invariant      error is the currency at every phase: it gates distillation (what to learn),
+                        structural-replace (where Form matches), consolidation (when short->long), and
+                        teacher-recession (where the student is trusted). No train/serve split — the system
+                        learns at runtime from every error, the mesh consolidating what settles))
+
 # ─────────────────────────────────────────────────────────────────────
 # The honest one-paragraph answer
 # ─────────────────────────────────────────────────────────────────────
