@@ -1933,6 +1933,16 @@ def sense_deploy_lag() -> list[str]:
 _KERNEL_TRACE_REGRESSION_US = 5000  # a single recipe trace over ~5ms ⇒ look
 
 
+def _kernel_live_endpoint_paths(served: list[dict[str, object]]) -> dict[str, str]:
+    """Map kernel-served route ledger rows to live HTTP paths for stability probes."""
+    paths: dict[str, str] = {}
+    for entry in served:
+        route = str(entry.get("route") or "")
+        if route.startswith("/api/"):
+            paths[route] = route
+    return paths
+
+
 def sense_kernel_api() -> list[str]:
     """Is the kernel-native API surface breathing across all five dimensions?
 
@@ -2045,28 +2055,26 @@ def sense_kernel_api() -> list[str]:
     health = _get("/api/health")
     live_runtime = health.get("kernel_runtime") if health else None
     live_fallbacks: list[str] = []
+    live_unchecked: list[str] = []
     live_runtimes_seen: set[str] = set()
+    live_checked = 0
+    live_expected = 0
     live_unreached = health is None
     if not live_unreached:
         # Stability: each transmuted endpoint should report inline/preload, not
         # python-fallback. Hit each with its defaults (no query → documented
         # sample input), read the `runtime` field.
-        endpoint_paths = {
-            "/api/utils/coherence_weight": "/api/utils/coherence_weight",
-            "/api/utils/nodeid_distance": "/api/utils/nodeid_distance",
-            "/api/utils/nodeid_compatibility": "/api/utils/nodeid_compatibility",
-            "/api/utils/weighted_average": "/api/utils/weighted_average",
-            "/api/utils/simpson_diversity": "/api/utils/simpson_diversity",
-            "/api/utils/idea_score": "/api/utils/idea_score",
-            "/api/utils/marginal_cc_return": "/api/utils/marginal_cc_return",
-        }
+        endpoint_paths = _kernel_live_endpoint_paths(served)
+        live_expected = len(endpoint_paths)
         for route in (str(s["route"]) for s in served):
             path = endpoint_paths.get(route)
             if not path:
                 continue
             body = _get(path)
             if body is None:
+                live_unchecked.append(route)
                 continue
+            live_checked += 1
             rt = body.get("runtime")
             if rt:
                 live_runtimes_seen.add(rt)
@@ -2134,10 +2142,19 @@ def sense_kernel_api() -> list[str]:
             )
         else:
             seen = ", ".join(sorted(live_runtimes_seen)) or live_runtime
-            lines.append(
-                f"  stability: production kernel_runtime '{live_runtime}'; "
-                f"endpoints serving via kernel ({seen}) — no fallback"
-            )
+            if live_unchecked:
+                unread = ", ".join(live_unchecked[:5])
+                more = f", +{len(live_unchecked) - 5} more" if len(live_unchecked) > 5 else ""
+                lines.append(
+                    f"  stability: production kernel_runtime '{live_runtime}'; "
+                    f"checked {live_checked}/{live_expected} kernel-served endpoints ({seen}); "
+                    f"runtime unread for: {unread}{more}"
+                )
+            else:
+                lines.append(
+                    f"  stability: production kernel_runtime '{live_runtime}'; "
+                    f"checked {live_checked}/{live_expected} kernel-served endpoints ({seen}) — no fallback"
+                )
     elif live_runtime == "python-fallback":
         lines.append(
             "  drift: stability — production kernel_runtime is 'python-fallback'; "
