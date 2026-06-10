@@ -1,0 +1,66 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "worktree-fourth-kernel-seed",
+  "commit_scope": "Exercised the Go JIT under measurement (Urs: 'exercise the JIT, address the boxing and stack and inlining issues'). Finding: the emitter is correct (verified native self-recursive C via jit_emit_c) but the runtime does NOT realize a speedup on recursive integer workloads — JIT fib 38 is indistinguishable from the walker. The gap is dispatch-realization, not emission. Recorded as a precise scoped lift; the JIT is Go-only (no three-way parity risk, the bands run on the walker).",
+  "files_owned": [
+    "docs/coherence-substrate/form-native-models.form"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "form-kernel-go jit_emit_c \"fib\"  (read the lowered C)",
+      "time form-kernel-go (jit_compile fib; fib 35/38)  vs  walker fib 35/38",
+      "form-kernel-go jit-stats"
+    ],
+    "summary": "MEASURED (arm64 Darwin, M4 Max). The emitter is correct: jit_emit_c on fib produces `long long form_fib(long long p0) { return ... form_fib(p0-1) + form_fib(p0-2) ... }` — a direct NATIVE self-recursion (no callback to the kernel). jit_compile returns 1 (success) and jit-stats shows a dispatch-hit entry. YET the runtime shows no speedup: walker fib32 1.14s / fib35 2.62s / fib38 8.10s; JIT fib32 1.19s / fib35 2.51s / fib38 7.92s — within ~2%, where a routed native would be 100x+ faster (native fib 38 in Go is ~tens of ms). Conclusion: the compiled native is not carrying the recursive workload at runtime. The dispatch arm (main.go ~4255-4331) resolves the closure, computes bodyKey, and checks jitCompiledGoV/jitCompiledGo with three ABI guards (allInt&&I64, numeric&&F64, allJITValue&&Value) — so the lift starts by instrumenting which guard is taken (or missed) for the recursive run and whether jc.I64 was populated vs a Value-ABI boxing fallback. The emitter is NOT the suspect; the runtime realization is.",
+    "observed_delta": {
+      "emitter_correct": "jit_emit_c fib -> native self-recursive C (form_fib calls form_fib directly)",
+      "jit_compile_result": 1,
+      "walker_fib32_s": 1.14,
+      "jit_fib32_s": 1.19,
+      "walker_fib35_s": 2.62,
+      "jit_fib35_s": 2.51,
+      "walker_fib38_s": 8.10,
+      "jit_fib38_s": 7.92,
+      "expected_if_realized": "JIT fib38 ~= compile(~0.7s) + native(~tens of ms) << walker 8.10s",
+      "verdict": "no runtime speedup realized on recursive int workload"
+    },
+    "known_limitations": [
+      {
+        "limitation": "Root cause not yet isolated: candidates are (a) i64 plugin build silently failing -> Value-ABI boxing fallback per op; (b) the dispatch guard missing (jc.I64 nil) and falling through to the walker; (c) the plugin loads but the top-level call doesn't reach the dispatch arm for this shape. The timing rules OUT the emitter (correct C) and rules OUT a parity issue (JIT is Go-only).",
+        "follow_up": "Instrument jitDispatchHits[cl.Body] count for the fib-38 run (1 = native carried it but native is slow -> impossible for that C, so really a fallthrough; millions = re-entering walker per recursion). Then read which of the three ABI guards is taken. Fix is Go-kernel-local, safe for three-way bands (they walk, never JIT)."
+      },
+      {
+        "limitation": "This gap is load-bearing for 'full model in Form': without realized JIT speedup, a Form-native transformer runs at walker speed (one 1280x1280 matvec = 43s). M5's emitter-as-recipe proved the EMITTED native is fast (2.1ms) when run as a standalone compiled binary (the fourth-kernel lane) — so the working fast path today is EMIT-then-compile-then-exec (fourth-kernel-emit), NOT the in-process jit_compile dispatch. That is the honest current state: fast native exists via the fourth-kernel binary lane; the in-process JIT dispatch does not yet realize it.",
+        "follow_up": "Two routes to model speed: (1) fix the in-process JIT dispatch realization; (2) lean on the fourth-kernel emit-compile-exec lane (proven 20,077x on one matvec) and wire the model through it. Route 2 already works end to end for emitted programs."
+      }
+    ]
+  },
+  "ci_validation": {"status": "not_applicable", "summary": "Measurement + doc note; no code change to the kernel in this record."},
+  "deploy_validation": {"status": "not_applicable", "summary": "Doc-only; rides normal ingest."},
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No behavior change — a measured finding recorded. Names the honest JIT state: emitter correct, in-process dispatch does not realize the speedup; the working fast-native path today is the fourth-kernel emit-compile-exec lane.",
+    "public_endpoints": ["POST /api/substrate/form"],
+    "test_flows": ["jit_emit_c fib (emitter correct); timed jit vs walker fib 32/35/38 (no realized speedup)."],
+    "summary": "exercised under measurement; gap located precisely."
+  },
+  "phase_gate": {
+    "phase": "jit-exercise",
+    "gate": "the JIT realization gap measured and scoped; the emitter cleared, the runtime dispatch named as the lift",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "instrument jitDispatchHits + ABI-guard taken for the recursive run; fix the dispatch realization (Go-only, safe for bands); OR route model speed through the proven fourth-kernel emit-compile-exec lane"
+  },
+  "idea_ids": ["fourth-kernel"],
+  "spec_ids": ["kernel-native-api-readiness", "runtime-shared-native-representation"],
+  "task_ids": ["jit-realization-gap-20260611"],
+  "contributors": [
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction", "exercise-the-jit"]},
+    {"contributor_id": "agent:claude", "contributor_type": "machine", "roles": ["measurement", "diagnosis"]}
+  ],
+  "agent": {"name": "Claude Code", "version": "claude-fable-5"},
+  "evidence_refs": ["docs/coherence-substrate/form-native-models.form", "docs/coherence-substrate/fourth-kernel.form"],
+  "change_files": ["docs/coherence-substrate/form-native-models.form", "docs/system_audit/commit_evidence_2026-06-11_jit_realization_gap.json"],
+  "change_intent": "process_only"
+}

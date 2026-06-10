@@ -98,6 +98,17 @@
 ;        the kernel-resident wiring (buffer bridge intern_node SEQUENCE ↔ flat slice, install-as-
 ;        named-callable-leaf, melt-when-cool, cost-aware trigger), format-parameterized emission
 ;        (bf16/int8 per format-arith.fk semantics), canon matmul vectors, and the GPU/BLAS organ.]
+;        ── JIT REALIZATION GAP (measured 2026-06-11, exercising the JIT) ──
+;        The EMITTER is correct: jit_emit_c on fib lowers to native self-recursive C
+;        (form_fib calls form_fib directly). But the IN-PROCESS jit_compile dispatch does NOT
+;        realize a speedup: JIT fib38 7.92s ≈ walker 8.10s (where routed native is 100x+). The
+;        compiled native is not carrying the recursive workload at runtime — a dispatch-realization
+;        bug (main.go ~4255-4331), NOT an emitter bug, NOT a parity risk (the JIT is Go-only; bands
+;        walk). HONEST CURRENT FAST PATH: the fourth-kernel EMIT-COMPILE-EXEC lane
+;        (fourth-kernel-emit.fk -> clang -> a standalone binary) IS fast and proven (2.1ms matvec,
+;        20,077x) — that is where Form-native model SPEED lives today, not the in-process JIT. Two
+;        routes forward: fix the in-process dispatch realization, OR wire the model through the
+;        proven emit-compile-exec lane. Evidence: commit_evidence_2026-06-11_jit_realization_gap.json.]
 ;   M6  whisper-tiny block 0 — carrier loads openai/whisper-tiny safetensors (or mlx-community/whisper-tiny,
 ;        already referenced in experiments/satsang-voice), encodes block-0 weights via M2, runs M4 over
 ;        them, matches the HF reference activation within epsilon. First real model in the body. (Even
