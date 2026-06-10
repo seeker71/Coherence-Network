@@ -1,0 +1,86 @@
+{
+  "date": "2026-06-10",
+  "thread_branch": "codex/native-canary-rollout-retry-20260610",
+  "commit_scope": "Make public deploy native-route canaries patient across rollout boundary responses while preserving hard failure behavior.",
+  "files_owned": [
+    "scripts/verify_web_api_deploy.sh",
+    "docs/system_audit/commit_evidence_2026-06-10_native_canary_rollout_retry.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "bash -n scripts/verify_web_api_deploy.sh",
+      "VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -c 'source scripts/verify_web_api_deploy.sh https://api.example https://web.example'",
+      "VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -c 'source scripts/verify_web_api_deploy.sh https://api.example https://web.example; count=0; flaky_native_canary() { count=$((count + 1)); if [[ \"$count\" -lt 2 ]]; then echo \"HTTP status: 200\"; echo \"X-Form-Router: <missing>\"; echo \"FAIL: kernel status route did not return native BML proof headers\"; return 1; fi; echo \"HTTP status: 200\"; echo \"X-Form-Router: native-kernel\"; echo \"PASS\"; return 0; }; NATIVE_CANARY_PATIENCE_SECONDS=5 NATIVE_CANARY_PATIENCE_INTERVAL=0 check_native_canary_with_rollout \"mock native canary\" flaky_native_canary >/tmp/mock-native-canary.out; cat /tmp/mock-native-canary.out; test \"$count\" -eq 2; grep -q \"settled after 2 attempt\" /tmp/mock-native-canary.out'",
+      "VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -c 'source scripts/verify_web_api_deploy.sh https://api.example https://web.example; hard_failure() { echo \"FAIL: contribution read bodies no longer match paginated read contract\"; return 1; }; set +e; NATIVE_CANARY_PATIENCE_SECONDS=5 NATIVE_CANARY_PATIENCE_INTERVAL=0 check_native_canary_with_rollout \"mock hard canary\" hard_failure >/tmp/mock-hard-canary.out; rc=$?; set -e; cat /tmp/mock-hard-canary.out; if [[ \"$rc\" -eq 0 ]]; then echo \"expected failure\"; exit 1; fi; if grep -q \"retrying\" /tmp/mock-hard-canary.out; then echo \"unexpected retry\"; exit 1; fi; exit 0'",
+      "PUBLIC_API_BASE_URL=https://api.coherencycoin.com PUBLIC_WEB_BASE_URL=https://coherencycoin.com ./scripts/verify_web_api_deploy.sh",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-10_native_canary_rollout_retry.json",
+      "git diff --check",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "notes": "The previous post-merge verification observed API/web SHA parity on the new commit but several native-route canaries briefly returned Python/front-door-missing responses during rollout, then passed on re-run after settling. The new wrapper retries the whole native canary only for rollout-shaped native proof/header failures, and keeps non-retriable body contract failures immediate. The settled public verifier passed end to end on 6885b2a5. Rebase with autostash completed cleanly, PR guard reported ready_for_push=True/local_preflight=pass, and follow-through reported stale_codex_prs=0."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR creation, and hosted checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No deploy attempted before PR merge. Public verifier was run against the current settled production deployment and passed."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof and public settled verifier passed; PR CI, merge, and public post-merge verification remain pending."
+  },
+  "idea_ids": [
+    "deployment-gate-reliability",
+    "form-native-runtime"
+  ],
+  "spec_ids": [
+    "release-gates",
+    "kernel-native-api-readiness"
+  ],
+  "task_ids": [
+    "native-canary-rollout-retry-20260610"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-prioritization"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "scripts/verify_web_api_deploy.sh adds check_native_canary_with_rollout around native-route canaries.",
+    "Mock flaky canary proves missing X-Form-Router/native proof headers retry and settle.",
+    "Mock hard body-contract failure proves non-rollout failures do not retry.",
+    "Full public verifier passed against settled production at 6885b2a5."
+  ],
+  "change_files": [
+    "scripts/verify_web_api_deploy.sh",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "process_only"
+}

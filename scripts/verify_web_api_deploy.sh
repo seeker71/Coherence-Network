@@ -29,6 +29,8 @@ VERIFY_REQUIRE_PROVIDER_READINESS="${VERIFY_REQUIRE_PROVIDER_READINESS:-0}"
 VERIFY_REQUIRE_API_HEALTH_SHA="${VERIFY_REQUIRE_API_HEALTH_SHA:-0}"
 VERIFY_REQUIRE_WEB_HEALTH_PROXY_SHA="${VERIFY_REQUIRE_WEB_HEALTH_PROXY_SHA:-0}"
 PULSE_RECHECK_SECONDS="${PULSE_RECHECK_SECONDS:-30}"
+NATIVE_CANARY_PATIENCE_SECONDS="${NATIVE_CANARY_PATIENCE_SECONDS:-90}"
+NATIVE_CANARY_PATIENCE_INTERVAL="${NATIVE_CANARY_PATIENCE_INTERVAL:-5}"
 
 run_with_retries() {
   local attempts="$1"
@@ -72,6 +74,46 @@ run_with_retries_capture() {
     attempt=$((attempt + 1))
   done
   return "$rc"
+}
+
+native_canary_failure_can_settle() {
+  local output_file="$1"
+  grep -Eq \
+    "did not reach native kernel front door|did not return native BML proof headers|did not return 2xx|body is missing native .*proof fields|body is missing native authority fields|HTTP status: (404|502|503|504)|X-Form-(Router|Handler|Python-Authority): <missing>" \
+    "$output_file"
+}
+
+check_native_canary_with_rollout() {
+  local name="$1"
+  shift
+  local slug
+  slug="$(echo "$name" | tr "[:upper:]" "[:lower:]" | tr -cs "a-z0-9" "_")"
+  local deadline=$(( $(date +%s) + NATIVE_CANARY_PATIENCE_SECONDS ))
+  local attempt=1
+  local output_file rc
+
+  while :; do
+    output_file="$TMP_DIR/native_canary_${slug}_${attempt}.txt"
+    if "$@" >"$output_file" 2>&1; then
+      cat "$output_file"
+      if (( attempt > 1 )); then
+        echo "OK: ${name} settled after ${attempt} attempt(s)"
+      fi
+      return 0
+    else
+      rc=$?
+    fi
+    cat "$output_file"
+
+    if native_canary_failure_can_settle "$output_file" && (( $(date +%s) < deadline )); then
+      echo "WARN: ${name} may still be crossing the rollout boundary; retrying in ${NATIVE_CANARY_PATIENCE_INTERVAL}s..."
+      sleep "$NATIVE_CANARY_PATIENCE_INTERVAL"
+      attempt=$((attempt + 1))
+      continue
+    fi
+
+    return "$rc"
+  done
 }
 
 check_url() {
@@ -1384,13 +1426,13 @@ else
   echo "==> Skipping API persistence contract check (VERIFY_REQUIRE_PERSISTENCE_CHECK=0)"
 fi
 check_provider_readiness "${API_URL%/}/api/automation/usage/readiness" "$VERIFY_REQUIRE_PROVIDER_READINESS" || fail=1
-check_kernel_image_native_proposal || fail=1
-check_inventory_flow_native || fail=1
-check_inventory_flow_observation_native || fail=1
-check_kernel_status_native || fail=1
-check_agent_tasks_activity_native || fail=1
-check_contribution_reads_native || fail=1
-check_household_events_native || fail=1
+check_native_canary_with_rollout "Kernel image proposal native route" check_kernel_image_native_proposal || fail=1
+check_native_canary_with_rollout "Inventory flow native route" check_inventory_flow_native || fail=1
+check_native_canary_with_rollout "Inventory flow observation native route" check_inventory_flow_observation_native || fail=1
+check_native_canary_with_rollout "Kernel status native route" check_kernel_status_native || fail=1
+check_native_canary_with_rollout "Agent task native routes" check_agent_tasks_activity_native || fail=1
+check_native_canary_with_rollout "Contribution read native routes" check_contribution_reads_native || fail=1
+check_native_canary_with_rollout "Household events native route" check_household_events_native || fail=1
 check_url "Public web root" "${WEB_URL%/}/" || fail=1
 check_web_css_assets "${WEB_URL%/}/" || fail=1
 check_web_public_asset "logo" "/assets/logo.svg" "svg" || fail=1
