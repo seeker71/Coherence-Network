@@ -27,6 +27,10 @@
 ;
 ; ── EXISTS (proven Form bodies + working carriers — the hard part is done) ──
 ;   - turn-taking.fk (→127, three-way) — the speak/stay gate, LEARNED from invitations. THE novel core.
+;   - voiced.fk (→511, three-way) — the silence/speech gate that stops the STT hallucinating over silence.
+;     A transcript is trusted only when the chunk is loud AND the STT is speech-confident (loudness from
+;     mean dBFS; speechiness from 1−no_speech_prob). 0 silence (say/learn nothing) · 1 audible non-speech
+;     (the oracle classifies + co-learning learns, but NO transcript) · 2 voiced speech (trust the words).
 ;   - recognition-router.fk (sound →127, sight →31) — fuse readings into one stream or honest silence.
 ;   - declared-source.fk (→127) — the cheap now-playing classifier (PREFER declared / SKIP the listener /
 ;     GROUND the inferred on the free declared label). Android MediaSessionManager carries it; on Mac the
@@ -55,15 +59,22 @@
 ;
 ; ── THE MILESTONES ──
 ;   M0  the turn-taking decision body — SHIPPED (turn-taking.fk → 127).
-;   M1  THE LIVE COMPANION — SHIPPED + VERIFIED on a real dialog: experiments/satsang-voice/meeting_live.py.
-;       Per chunk: ffmpeg mic → mlx-whisper TRANSCRIPT + SoundAnalysis CATEGORY (the oracle) → a cheap
-;       feature → nearest-shape (body, via the kernel) learns the category (co-learning) → the utterance
-;       is appended to the conversation → turn-taking.fk (body) decides speak/stay. Run live on a real
-;       conversation: whisper transcribed each 6s chunk, SoundAnalysis confirmed "speech", the Form sound-
-;       classifier reached 100% agreement with the oracle, and the agent correctly STAYED SILENT every chunk
-;       (day one — no learned "speak" moment, not named). The body learns; it waits its turn. PRIVACY: the
-;       transcript is processed + shown LOCALLY only, never sent, never committed (local compute IS consent).
-;       (M1+M2 are now both demonstrated here — the context [pause, named, words] already feeds tt-speak?.)
+;   M1  THE LIVE COMPANION LOOP — the BODY runs live, the transcript now has an honest gate:
+;       experiments/satsang-voice/meeting_live.py. Per chunk: ffmpeg mic → loudness (mean dBFS) +
+;       Whisper's no_speech_prob → voiced.fk gate-level (BODY: 0 silence / 1 audible non-speech / 2
+;       voiced speech) → SoundAnalysis category + a cheap feature → nearest-shape (BODY) learns the
+;       category (co-learning) → turn-taking.fk (BODY) decides speak/stay. VERIFIED live: the loop, the
+;       learning (100% oracle agreement on audible chunks), and the speak/stay decision (correctly silent
+;       on day one) all run on the real mic.
+;       CORRECTED — the honest part: an earlier note here claimed a VERIFIED "real dialog" transcript. It
+;       was not real. The mic was at the −56 dB noise floor (the room/playback audio wasn't reaching it)
+;       and Whisper HALLUCINATED 222 words of fluent text — a documented STT failure on silence (its own
+;       no_speech_prob was 0.81). Reporting that as a dialog was the overclaim. voiced.fk closes it: a
+;       transcript is trusted ONLY when the chunk is genuinely loud AND the STT is speech-confident; silence
+;       is reported as silence, never transcribed. When the source IS audible at the mic (loudness > floor)
+;       the transcript flows — and a faint source still limits a tiny STT's accuracy, named honestly, not hidden.
+;       PRIVACY: the transcript is processed + shown LOCALLY only, never sent, never committed (local compute
+;       IS consent). (M1+M2 are both demonstrated here — the context [pause, named, words] feeds tt-speak?.)
 ;   M2  context from the transcript → turn-taking: build [pause, named, insight-confidence] from the
 ;       conversation cell, feed tt-speak?; the agent offers text when named/buttoned (still no autonomous voice).
 ;   M3  the mesh hop: the conversation cell rides cell-sync/mesh-relay to a second device (shared-sensing field).

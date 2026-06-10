@@ -1,21 +1,27 @@
 #!/usr/bin/env python3
-"""meeting_live.py — the live meeting companion: listen, transcribe, classify, learn, hold the turn.
+"""meeting_live.py — the live meeting companion: listen, gate, transcribe, classify, learn, hold the turn.
 
-Per chunk of real audio: whisper writes the TRANSCRIPT, SoundAnalysis names the sound CATEGORY (the
-3rd-party oracle), a cheap energy feature + nearest-shape (the BODY, via the kernel) learn that category
-(co-learning M1), the utterance is appended to a conversation, and turn-taking.fk (the BODY) decides
-whether the agent speaks — which on day one is almost never (it has learned no "speak" moment yet, and is
-not named). Carrier-last: this file only marshals (mic, whisper, the swift oracle, the kernel); the
-recognition, the learning, and the speak/stay decision are Form.
+Per chunk of real audio the BODY (Form, via the kernel) decides three things and the carrier only marshals:
+
+  1. voiced.fk gate-level  — is this silence (0), an audible non-speech sound (1), or voiced speech (2)?
+     Measured from two signals the carrier always has: loudness (mean dBFS) and speechiness (1 − Whisper's
+     no_speech_prob). This closes a real failure: end-to-end STT INVENTS fluent text from silence — Whisper
+     returned 222 words for a −56 dB mic floor while its own no_speech_prob said 0.81. A transcript is
+     trusted ONLY when the body calls the chunk voiced; silence learns nothing and says nothing.
+  2. nearest-shape.fk      — the co-learning sound classifier predicts the oracle's category, then learns it.
+  3. turn-taking.fk        — speak or stay (day one: almost never; it has learned no "speak" moment).
 
 PRIVACY: the transcript is processed and shown LOCALLY only (for you, in this room). It is never sent
 anywhere and never written into a committed artifact. Local compute IS the consent.
 
-Carriers (Mac): ffmpeg (mic), mlx-whisper (STT), swift sound_classify (SoundAnalysis), form-kernel-rust.
+Carriers (Mac): ffmpeg (mic + volumedetect), mlx-whisper (STT), swift sound_classify (SoundAnalysis),
+form-kernel-rust. The mic only hears the room acoustically; to hear what the Mac itself plays (an
+audiobook, a call) route system audio through a loopback device (e.g. BlackHole) and point COH_MIC at it.
 Run:  COH_FORM=<worktree>/form COH_KERNEL=<...>/form-kernel-rust  python3 meeting_live.py [n_chunks]
 """
 import json
 import os
+import re
 import struct
 import subprocess
 import sys
@@ -30,7 +36,10 @@ ORACLE = os.environ.get("COH_SOUND_CLASSIFY", "/tmp/sound_classify")
 WHISPER_PY = os.environ.get("COH_WHISPER_PY", "/tmp/whisper-env/bin/python")
 WHISPER_MODEL = os.environ.get("COH_WHISPER_MODEL", "mlx-community/whisper-tiny")
 AGENT_NAME = os.environ.get("COH_AGENT_NAME", "claude").lower()
+MIC = os.environ.get("COH_MIC", ":0")     # avfoundation input; point at a loopback device for system audio
 CHUNK_S = int(os.environ.get("COH_CHUNK", "6"))
+LOUD_FLOOR = int(os.environ.get("COH_LOUD_FLOOR", "40"))    # mean dBFS > −50 ; calibrated on the Mac mic
+SPEECH_FLOOR = int(os.environ.get("COH_SPEECH_FLOOR", "40"))  # no_speech_prob < 0.60
 TMP = "/tmp/coh-meeting"
 os.makedirs(TMP, exist_ok=True)
 
@@ -40,9 +49,17 @@ def sh(cmd, **kw):
 
 
 def record(dst):
-    sh(["ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "avfoundation", "-i", ":0",
+    sh(["ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "avfoundation", "-i", MIC,
         "-t", str(CHUNK_S), "-ar", "16000", "-ac", "1", "-y", dst])
     return dst
+
+
+def level(wav):
+    # mean dBFS of the chunk → an integer loudness the Form gate reads (silence ~34, speech ~70).
+    out = sh(["ffmpeg", "-hide_banner", "-nostats", "-i", wav, "-af", "volumedetect", "-f", "null", "/dev/null"])
+    m = re.search(r"mean_volume:\s*([-0-9.]+)", out.stderr or "")
+    db = float(m.group(1)) if m else -90.0
+    return max(0, min(99, int(round(db)) + 90))
 
 
 COARSE = (("speech", ("speech", "voice", "sing", "narrat", "whisper", "shout", "conversation")),
@@ -68,10 +85,18 @@ def sound_oracle(wav):
 
 
 def transcribe(wav):
+    # returns (text, no_speech_prob). The prob is the carrier's evidence that this is real speech and not
+    # Whisper's silence-fill (segment-0 no_speech_prob; high = silence). The Form gate, not this function,
+    # decides whether to trust the text.
     out = sh([WHISPER_PY, "-c",
-              f"import mlx_whisper,sys;print(mlx_whisper.transcribe(sys.argv[1],"
-              f"path_or_hf_repo='{WHISPER_MODEL}')['text'])", wav])
-    return (out.stdout or "").strip()
+              f"import mlx_whisper,json,sys;r=mlx_whisper.transcribe(sys.argv[1],"
+              f"path_or_hf_repo='{WHISPER_MODEL}');s=(r.get('segments') or [{{}}]);"
+              f"print(json.dumps({{'t':r['text'],'n':s[0].get('no_speech_prob',1.0)}}))", wav])
+    try:
+        d = json.loads((out.stdout or "").strip().splitlines()[-1])
+        return (d.get("t") or "").strip(), float(d.get("n", 1.0))
+    except Exception:
+        return "", 1.0
 
 
 def feature(wav):
@@ -96,6 +121,15 @@ def kernel(recipe, expr):
     return line[-1].strip().strip('"') if line else "?"
 
 
+def gate(loudness, speechiness):
+    # the BODY (voiced.fk) decides: 0 silence · 1 audible non-speech · 2 voiced speech.
+    out = kernel("form-stdlib/voiced.fk", f"(do (gate-level {loudness} {speechiness} {LOUD_FLOOR} {SPEECH_FLOOR}))")
+    try:
+        return int(out)
+    except Exception:
+        return 0
+
+
 def ns_predict(feat, exemplars):
     if not exemplars:
         return "?"
@@ -106,8 +140,6 @@ def ns_predict(feat, exemplars):
 
 def tt_speak(named, context, tt_exemplars, floor, pause, pause_floor):
     # the BODY decides whether to speak — turn-taking.fk composes nearest-shape.
-    # run with both preluded by concatenating the two recipe files into one driver dir is overkill;
-    # the kernel accepts multiple recipe files before the driver.
     fv = " ".join(map(str, context))
     protos = " ".join('(list "%s" (list %s))' % (l, " ".join(map(str, f))) for l, f in tt_exemplars)
     drv = os.path.join(TMP, "tt.fk")
@@ -128,19 +160,28 @@ def main():
     tt_ex = []               # turn-taking's learned "speak"/"stay" moments (empty day one)
     conversation = []        # utterances: (t, category, words, named)
     s_checks = s_agree = 0
+    rate = 0
+    silent = 0
     last_t = None
     spoke = False
     print(f"meeting companion — listening, {n} chunks of {CHUNK_S}s. (transcript shown locally only)\n")
     for i in range(n):
         wav = record(os.path.join(TMP, f"c{i}.wav"))
         t = int(time.time())
-        text = transcribe(wav)
+        loud = level(wav)
+        text, nsp = transcribe(wav)
+        speechy = 100 - min(100, int(round(nsp * 100)))
+        g = gate(loud, speechy)          # 0 silence · 1 audible non-speech · 2 voiced speech
+
+        if g == 0:
+            # silence — the mic floor. The body hears nothing; we learn nothing, trust no transcript.
+            silent += 1
+            print(f"[{i+1}] silence  —  | mic {loud:>2}/99 nsp {nsp:.2f} | (nothing to hear)")
+            continue
+
+        # audible (1) or voiced (2): the oracle classifies; co-learning learns the real sound.
         cat = sound_oracle(wav)
         feat = feature(wav)
-        words = len(text.split())
-        named = 1 if AGENT_NAME in text.lower() else 0
-
-        # co-learning: the Form sound classifier predicts then learns the oracle's category
         pred = ns_predict(feat, sound_ex)
         if pred != "?":
             s_checks += 1
@@ -148,7 +189,12 @@ def main():
                 s_agree += 1
         sound_ex.append((cat, feat))
 
-        # the conversation + the turn-taking context
+        # only a VOICED chunk yields a trusted transcript; an audible non-speech chunk has no words.
+        if g < 2:
+            text = ""
+        words = len(text.split())
+        named = 1 if AGENT_NAME in text.lower() else 0
+
         pause = 0 if last_t is None else max(0, t - last_t - CHUNK_S)
         last_t = t
         conversation.append((t, cat, words, named))
@@ -158,14 +204,19 @@ def main():
 
         rate = round(100 * s_agree / s_checks) if s_checks else 0
         decision = "SPEAK" if speak else "listen"
-        # transcript shown locally; only a short head echoed so the room sees it's live
         head = " ".join(text.split()[:8])
-        print(f"[{i+1}] {cat:<7} {words:>2}w | sound-learn {rate:>3}% | turn: {decision:<6} "
-              f"| “{head}{'…' if words > 8 else ''}”")
+        tag = "speech" if g == 2 else cat
+        print(f"[{i+1}] {tag:<7} {words:>2}w | mic {loud:>2}/99 nsp {nsp:.2f} | learn {rate:>3}% "
+              f"| turn: {decision:<6} | “{head}{'…' if words > 8 else ''}”")
 
-    print(f"\n{len(conversation)} utterances; the Form sound-classifier reached {rate}% agreement with "
-          f"the SoundAnalysis oracle; the agent {'offered its voice' if spoke else 'stayed silent'}"
+    heard = len(conversation)
+    print(f"\n{heard} sound(s) heard, {silent} silent chunk(s) gated out (no hallucinated transcript). "
+          f"{'The Form sound-classifier reached %d%% agreement with the oracle; ' % rate if s_checks else ''}"
+          f"the agent {'offered its voice' if spoke else 'stayed silent'} "
           f"(day one — it has learned no 'speak' moment and was not named). The body learns; it waits its turn.")
+    if heard == 0:
+        print("\nEVERY chunk was silence at the mic. If audio WAS playing, the mic isn't hearing it — "
+              "route system audio through a loopback device and set COH_MIC (see the module docstring).")
 
 
 if __name__ == "__main__":

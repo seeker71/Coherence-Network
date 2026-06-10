@@ -1,0 +1,30 @@
+; voiced.fk — is there real speech to trust, or just silence the STT will hallucinate over?
+;
+; The failure this closes: Whisper (and every end-to-end STT) INVENTS fluent text from silence/noise —
+; it returned 222 words of "a little bit of a little bit of…" for a −56 dB mic floor while its own
+; no_speech_prob said 0.81. Trusting that transcript reports a hallucination as a real utterance.
+;
+; The gate is a TWO-EVIDENCE agreement: a reading is voiced speech only if the audio is loud enough to
+; be a real sound AND the recognizer itself is confident it is speech (not its silence guess). One signal
+; alone lies — loud music is audible but not speech; a confident hallucination is speechy but not audible.
+; Carrier feeds two integers it can always measure: loudness = mean_volume_dB + 90 (silence ~34, speech
+; ~70); speechiness = 100 − no_speech_prob·100 (silence ~19, speech ~99). The body decides; the carrier
+; only measures. Same shape as recognition-router's strongest-reading-wins / honest-silence.
+
+(defn audible? (loudness floor)
+  (ge loudness floor))                                  ; loud enough to be a real sound at all
+
+(defn voiced? (loudness speechiness loud-floor speech-floor)
+  (and (audible? loudness loud-floor)                   ; a real sound AND
+       (ge speechiness speech-floor)))                  ; the STT itself calls it speech — not its silence-fill
+
+(defn voiced-verdict (loudness speechiness loud-floor speech-floor)
+  (if (voiced? loudness speechiness loud-floor speech-floor) 1 0))
+
+; one call the carrier branches on: 0 silence (learn nothing, say nothing) · 1 audible non-speech
+; (the sound oracle still classifies + the co-learning arm still learns — music, an animal — but NO
+; transcript) · 2 voiced speech (classify, learn, AND trust the transcript).
+(defn gate-level (loudness speechiness loud-floor speech-floor)
+  (if (audible? loudness loud-floor)
+      (if (ge speechiness speech-floor) 2 1)
+      0))
