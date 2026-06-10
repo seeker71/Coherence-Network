@@ -1,0 +1,162 @@
+; preludes: form-stdlib/core.fk
+;
+; host-kernel-metal-band — the host kernel touching every resource it has,
+; as close to the metal as currently available, in ONE program.
+;
+; Runnable proof for host-kernel.form organs-and-ports: each organ and
+; world-port that RUNS in this container is exercised here through the
+; kernel's own natives — no shell, no foreign runtime. The band proves
+; three-way at validate.sh AND through --binary, where the whole program
+; travels as a compiled .fkb artifact each kernel executes natively. The
+; Go arm additionally compiles `metal-fact` to a host-native .so plugin
+; via the host Go toolchain (jit.go) — the artifact lands on disk under
+; /tmp/form-jit-*/plugin.so as standalone evidence.
+;
+; Band verdict 1023 when every organ answers:
+;   1    ORGAN-CPU integer/bit — ALU shifts, rotates, masks
+;   2    ORGAN-CPU float — FPU sqrt/pow through the math organ
+;   4    ORGAN-CPU many-core — walk_parallel over pure recipe roots
+;   8    NATIVE DISPATCH — jit_compile a recursive recipe (Go: .so on
+;        disk; TS: V8; Rust: honest 0-stub) + the register_jit rewire
+;        door opens for real natives and refuses unknown ones
+;   16   ORGAN-RAM — volatile cells: put/get/scan/delete/prune, with
+;        (key value updated_ms) triples on every sibling
+;   32   WORLD-FS — write/stat/read/list/remove a real file
+;   64   WORLD-NET — real loopback TCP: listen/connect/accept, bytes
+;        both directions, clean close
+;   128  CLOCK ORGAN — the host clock ticks past a known epoch; a fixed
+;        instant renders the same ISO second everywhere
+;   256  ENTROPY — /dev/urandom yields requested width, two draws
+;        differ; the seeded LCG yields identical bytes on every sibling
+;   512  OFFERED-BUT-UNPLUGGED — pg/http ports are offered (observable
+;        natives) even where no wire is connected
+;
+; Known integer edge, named while it lives: int LITERALS truncate at 32
+; bits in every kernel, and the ts walker's add wraps there while go and
+; rust carry int64. This band keeps every constant inside int32 so the
+; claims test the organs, not the edge; widening the integer model is its
+; own movement.
+(do
+    ; ── 1: ORGAN-CPU integer/bit ──
+    (let c0 (if (and (eq (shl_u32 1 8) 256)
+                 (and (eq (rotr_u32 256 8) 1)
+                  (and (eq (band 12 10) 8)
+                       (eq (bxor 12 10) 6))))
+                1 0))
+
+    ; ── 2: ORGAN-CPU float ──
+    (let c1 (if (and (eq (trunc (math_sqrt 81)) 9)
+                     (eq (trunc (math_pow 2 10)) 1024))
+                2 0))
+
+    ; ── 4: ORGAN-CPU many-core ──
+    (let PLUS (make_nodeid 1 2 12 1))
+    (let MUL (make_nodeid 1 2 12 3))
+    (let r1 (intern_node PLUS (list (intern_trivial_int 2) (intern_trivial_int 3))))
+    (let r2 (intern_node MUL (list (intern_trivial_int 3) (intern_trivial_int 4))))
+    (let r3 (intern_node MUL (list (intern_trivial_int 5) (intern_trivial_int 5))))
+    (let r4 (intern_node PLUS (list (intern_trivial_int 1) (intern_trivial_int 7))))
+    (let c2 (if (eq (sum (walk_parallel (list r1 r2 r3 r4) 3)) 50) 4 0))
+
+    ; ── 8: NATIVE DISPATCH — recipe to native, and the rewire door ──
+    (defn metal-fact (n)
+        (if (le n 1) 1
+            (mul n (metal-fact (sub n 1)))))
+    (let base (metal-fact 6))
+    (let compiled (jit_compile "metal-fact"))
+    ; the rewire door binds form-names to REGISTERED natives (str_len);
+    ; arithmetic verbs live in the walker, not the native table.
+    (let c3 (if (and (eq base 720)
+                 (and (ge compiled 0)
+                  (and (eq (metal-fact 7) 5040)
+                   (and (eq (register_jit "metal-strlen" "str_len") 1)
+                    (and (eq (register_jit "metal-ghost" "no_such_native") 0)
+                         (eq (unregister_jit "metal-strlen") 1))))))
+                8 0))
+
+    ; ── 16: ORGAN-RAM — volatile cells ──
+    (let put-ok (volatile_cell_put "metal" "cell-a" 42))
+    (let got (volatile_cell_get "metal" "cell-a"))
+    (let scanned (volatile_cell_scan_since "metal" 0))
+    (let row (head scanned))
+    (let del-ok (volatile_cell_delete "metal" "cell-a"))
+    (let gone (volatile_cell_get "metal" "cell-a"))
+    ; prune cutoff stays inside int32: literals truncate at 32 bits in
+    ; every kernel and the ts walker's add wraps there too (known edge,
+    ; named in the band header) — cutoff 1 proves the door, delete the rest.
+    (let put2 (volatile_cell_put "metal" "cell-b" 7))
+    (let pruned (volatile_cell_prune_before "metal" 1))
+    (let del2 (volatile_cell_delete "metal" "cell-b"))
+    (let c4 (if (and (eq put-ok 1)
+                 (and (eq got 42)
+                  (and (eq (len scanned) 1)
+                   (and (str_eq (nth row 0) "cell-a")
+                    (and (eq (nth row 1) 42)
+                     (and (gt (nth row 2) 0)
+                      (and (eq del-ok 1)
+                       (and (nil? gone)
+                        (and (eq put2 1)
+                         (and (eq pruned 0) (eq del2 1)))))))))))
+                16 0))
+
+    ; ── 32: WORLD-FS — a real file ──
+    (let path "/tmp/host-kernel-metal.txt")
+    (let wrote (write_file_text path "metal"))
+    (let c5 (if (and (eq wrote 5)
+                 (and (eq (fs_exists path) 1)
+                  (and (eq (file_size path) 5)
+                   (and (str_eq (read_file path) "metal")
+                    (and (gt (len (fs_list "/tmp")) 0)
+                     (and (eq (fs_remove path) 0)
+                          (eq (fs_exists path) 0)))))))
+                32 0))
+
+    ; ── 64: WORLD-NET — real loopback TCP (backlog trick, no threads) ──
+    (let srv (socket_listen 0))
+    (let port (socket_port srv))
+    (let cli (socket_connect "127.0.0.1" port))
+    (let conn (socket_accept srv))
+    (let sent1 (socket_send cli "PING"))
+    (let got1 (socket_recv conn 4))
+    (let sent2 (socket_send conn "PONG"))
+    (let got2 (socket_recv cli 4))
+    (let closed (socket_close conn))
+    (let c6 (if (and (ge srv 0)
+                 (and (gt port 0)
+                  (and (ge cli 0)
+                   (and (ge conn 0)
+                    (and (str_eq got1 "PING")
+                     (and (str_eq got2 "PONG")
+                          (eq closed 0)))))))
+                64 0))
+    (socket_close cli)
+    (socket_close srv)
+
+    ; ── 128: CLOCK ORGAN — instants stay inside int32 (the literal edge) ──
+    (let c7 (if (and (gt (now_unix_ms) 1000000000)
+                     (str_eq (unix_ms_to_iso_utc 86400000)
+                             "1970-01-02T00:00:00Z"))
+                128 0))
+
+    ; ── 256: ENTROPY — the urandom door and the deterministic LCG ──
+    (let draw1 (random_bytes 16))
+    (let draw2 (random_bytes 16))
+    (let seeded (seeded_bytes 7 4))
+    (let c8 (if (and (eq (len draw1) 16)
+                 (and (eq (len draw2) 16)
+                  (and (not (value_eq draw1 draw2))
+                   (and (eq (nth seeded 0) 52)
+                    (and (eq (nth seeded 1) 93)
+                     (and (eq (nth seeded 2) 210)
+                          (eq (nth seeded 3) 163)))))))
+                256 0))
+
+    ; ── 512: OFFERED-BUT-UNPLUGGED — world-net doors exist as offers ──
+    ; http_get is offered by every sibling even where no wire is connected
+    ; here; the pg port is offered by the go and rust carriers today and
+    ; stays out of this parity band until the ts carrier offers it too.
+    (let c9 (if (and (eq (node_type (native_blueprint "http_get")) 10)
+                     (eq (node_type (native_blueprint "socket_listen")) 10))
+                512 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 c9))))))))))

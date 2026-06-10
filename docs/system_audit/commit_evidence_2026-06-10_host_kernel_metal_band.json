@@ -1,0 +1,127 @@
+{
+  "date": "2026-06-10",
+  "thread_branch": "claude/kernel-satsang-self-describing-tfncwn",
+  "commit_scope": "Binary proof that the host kernel uses every resource it has, as close to the metal as currently available: one Form program exercises CPU bit/float/many-core organs, native dispatch (jit_compile + register_jit rewire), the RAM organ (volatile cells, now three-way), real filesystem, real loopback TCP, the host clock, /dev/urandom entropy, and the offered-but-unplugged world-net doors. Proven three-way at validate.sh AND as a compiled .fkb artifact each kernel executes natively; the Go arm additionally compiles the band's metal-fact recipe to a host-native ELF x86-64 .so via the host Go toolchain.",
+  "files_owned": [
+    "form/form-stdlib/tests/host-kernel-metal-band.fk",
+    "form/form-kernel-ts/src/kernel.ts",
+    "form/form-kernel-rust/src/main.rs",
+    "docs/coherence-substrate/host-kernel.form",
+    "docs/system_audit/commit_evidence_2026-06-10_host_kernel_metal_band.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/host-kernel-metal-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/tests/host-kernel-metal-band.fk"
+    ],
+    "results": {
+      "source_mode": "1023, 1 ok, 0 divergent (go = rust = typescript)",
+      "binary_mode": "1023, 1 ok, 0 divergent — the same program as one .fkb artifact executed natively by each kernel",
+      "go_native_so": "jit_compile(metal-fact) emitted /tmp/form-jit-*/plugin.so — ELF 64-bit LSB shared object, x86-64, built by the host Go toolchain from the Form recipe during the band run"
+    },
+    "parity_repairs_landed": [
+      "form-kernel-ts: volatile_cell_put/get/delete/scan_since/prune_before ported (RAM organ now carried by all three siblings)",
+      "form-kernel-ts: unix_ms_to_iso_utc ported (second-resolution ISO UTC, matching go)",
+      "form-kernel-rust: volatile_cell_scan_since aligned to go's (key value updated_ms) triple shape",
+      "form-kernel-rust + form-kernel-ts: ML vector trio ported (dot_product, magnitude, vector_cosine — IEEE 754 binary64 end to end, go semantics)",
+      "form-kernel-rust + form-kernel-ts: jit_compile_value offered as an honest 0-stub (1 compiled, 0 not-compiled-here, -1 missing) so the Value-ABI door never crashes a sibling"
+    ],
+    "jit_span_band": {
+      "file": "form/form-stdlib/tests/jit-native-span-band.fk",
+      "results": "255, 1 ok, 0 divergent in source mode AND --binary — IEEE float, string, and ML vector recipes walk, ask for Value-ABI native compilation (go compiles to a host .so; rust/ts answer honest 0), and yield identical values across dispatch paths and kernels"
+    },
+    "jit_assembly_audit": {
+      "file": "scripts/jit_assembly_audit.sh",
+      "minimum_gates": "M0 value parity (fact(10)=3628800 post-compile) · M1 symbol exported · M2 arithmetic native inside the plugin (imul in jitabi.Mul, no foreign hops) · M3 native self-call recursion — all PASS 2026-06-10",
+      "north_star_gap_2026_06_10": {
+        "hot_fn_instructions": 272,
+        "hot_fn_instructions_target": 32,
+        "boxed_value_moves": 210,
+        "boxed_value_moves_target": 0,
+        "stack_frame_bytes": 616,
+        "stack_frame_bytes_target": 64,
+        "helper_calls": 3,
+        "helper_calls_target": 0,
+        "inline_imul_in_hot_body": 0
+      },
+      "reading": "the Value-ABI JIT is fully native (every call stays inside the .so) but boxed: 80-byte Value structs dominate the instruction stream and arithmetic rides intra-plugin jitabi helper calls. The de-boxing/inlining work is the measured distance, re-read by re-running the audit after each JIT improvement."
+    },
+    "cross_isa_assembly_audit": {
+      "file": "scripts/cross_isa_assembly_audit.sh",
+      "emitter": "form-kernel-go/jit_c.go — kernel-native jit_emit_c lowers the recipe to freestanding C (int64 subset mirroring jit.go); rust/ts offer honest empty-string stubs",
+      "minimum_gates_2026_06_10": "M0 value parity (emitted C computes walker answers on this host) · every target organ emits its ISA's real multiply · recursion fully native on CPU/DSP (lowered to loops, zero calls) — all PASS",
+      "isa_table_2026_06_10": {
+        "android-cpu aarch64": "32 insns, mul x11,x0,x11",
+        "apple-mlx-host arm64": "41 insns, mul x11,x0,x11",
+        "android-dsp hexagon": "97 insns, r3 += mpyi(r0,r27)",
+        "nvidia-gpu ptx": "46 insns, mul.lo.s64",
+        "amd-gpu gcn": "34 insns, v_mul_lo_u32",
+        "x86-64 reference": "55 insns, imulq"
+      },
+      "named_edges": [
+        "Metal AIR bytes and on-GPU execution need Apple hardware; the emitted MSL kernel source is the GPU half, the arm64-apple assembly stream is the MLX host half",
+        "physical DSP/GPU execution: emulation is proven; silicon is the organ"
+      ],
+      "transformer_block_2026_06_10": {
+        "architecture_as_data": "form-stdlib/transformer-kernel.fk — (tk-arch 8 2 4 16) projects a full pre-LN multi-head attention + SiLU FFN block to one freestanding, division-free IEEE-binary32 C unit (Newton recip/rsqrt, no libcalls, no libm); three-way band tests/transformer-kernel-band.fk verdict 127",
+        "audit": "scripts/transformer_kernel_audit.sh",
+        "checksum": "f740120e — FNV-1a-32 over output bit patterns, identical on x86 host, qemu-aarch64 (Android CPU), qemu-hexagon (Android DSP)",
+        "isa_table": {
+          "android-cpu aarch64": "2363 insns, NEON fmul v4.4s (auto-vectorized)",
+          "apple-mlx-host arm64": "2439 insns, fmul.4s",
+          "android-dsp hexagon": "2079 insns, sfmpy, zero libcalls",
+          "nvidia-gpu ptx": "1926 insns, mul.rn.f32",
+          "amd-gpu gcn": "3 insns — the GPU compiler constant-folded the whole block to v_mov_b32 0xf740120e: bit-exactness proven at compile time",
+          "x86-64": "2600 insns, mulss",
+          "spir-v": "140 OpFMul, spirv-val clean",
+          "vector lanes": "AVX-512 vmulps, RISC-V V vfmul sighted"
+        }
+      },
+      "serving_loop_2026_06_10": {
+        "shape": "what an inference server does, as the same recipe data: tk-emit-lm projects embeddings + L causal pre-LN blocks + final LN + byte-vocab logits + greedy argmax + sliding context into the same freestanding C unit; toy LCG weights, prompt \"form\", 12 greedy tokens",
+        "result": "token stream 15b6db6218d7f352122cb642 (checksum f0395211) identical on host x86, qemu-aarch64 (Android CPU), and qemu-hexagon (Android DSP) — whole-stream agreement, since greedy argmax over bit-exact floats forks loudly on any divergence",
+        "band": "tests/transformer-kernel-band.fk verdict 255 three-way",
+        "next_toward_ollama": "real weights (GGUF via read_file_bytes) replacing the LCG; a real tokenizer; the existing kernel-http door serving tk_generate"
+      },
+      "real_model_tokens_per_second_2026_06_10": {
+        "model": "HuggingFace karpathy/tinyllamas stories15M.bin (15M params, float32, Llama-2 architecture: dim 288, 6 layers, 6 heads, vocab 32000) + llama2.c tokenizer",
+        "engine": "tk-emit-llama in transformer-kernel.fk — RMSNorm, RoPE, KV cache, SwiGLU, shared classifier, greedy decode projected from recipe data into one C unit; band verdict 511 three-way",
+        "instrument": "scripts/llama_tokens_per_second.sh (downloads cached; SKIPs without network)",
+        "correctness_witness": "greedy decode from BOS yields the canonical 'Once upon a time, there was a little girl named Lily' opening — real learned weights speaking through the projected engine",
+        "tok_s_scalar_O3": 54,
+        "tok_s_native_fast": 179,
+        "host": "x86-64 cascadelake (AVX vector lanes)",
+        "ollama_comparison_same_host_same_model": {
+          "ollama_version": "0.30.7 (cpu runner, 4 threads, stories15M GGUF imported via Modelfile, temperature 0, 100 tokens)",
+          "ollama_f16_tok_s": "62-77 across four runs",
+          "ollama_q8_tok_s": "54-111 (noisy at this size)",
+          "llama2c_runc_reference_tok_s": 186,
+          "recipe_engine_tok_s_single_thread": 179,
+          "reading": "all engines emit the identical greedy text. On a 15M f32 model the recipe-projected single-thread engine runs ~2.4x ollama's 4-thread rate and within 4% of run.c — ollama/llama.cpp carry server, graph, and thread-sync overheads built for billion-param models, which dominate at tiny sizes. The honest claim is parity with hand-written C at this scale, not victory over llama.cpp at 7B."
+        }
+      },
+      "jit_tmp_dir_finding": "a full validate.sh suite left 12,665 /tmp/form-jit-* dirs (~29GB) and filled the disk mid-suite; jit.go keeps each MkdirTemp dir for process lifetime but nothing reclaims them across runs — content-addressed dir reuse (bodyKey-named dirs, atomic rename) would make them a persistent cache instead of sediment",
+      "execution_and_gpu_doors_2026_06_10": {
+        "android_cpu_executed": "freestanding static aarch64 binary of the emitted recipes ran under qemu-aarch64 — exit 42 (fact(10)==3628800 && poly(3,4)==25 computed by the ISA)",
+        "android_dsp_executed": "freestanding static hexagon binary ran under qemu-hexagon — exit 42 (parity computed by mpyi semantics)",
+        "vulkan_android_gpu_spirv": "clang --target=spirv64 via llvm-spirv-18 — 3 OpIMul, spirv-val clean",
+        "apple_mlx_gpu_msl": "Metal kernel source emitted from the same projection and held by clang as C++ on this host",
+        "tools": "qemu-user, llvm-spirv-18, spirv-tools installed in-session; the audit SKIPs honestly where they are absent"
+      }
+    },
+    "named_edges_left_open": [
+      "int literals truncate at 32 bits in every kernel; the ts walker's add wraps at 32 bits while go and rust carry int64 — the band keeps constants inside int32; widening the integer model is its own movement",
+      "pg_* natives are carried by go and rust only; the ts carrier does not offer the pg port yet, so the parity band checks http_get and socket_listen offers",
+      "register_jit binds form-names to registered natives only; arithmetic verbs live in the walker, not the native table"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "not-applicable",
+    "notes": "Kernel-local proof band; no production surface changes."
+  }
+}

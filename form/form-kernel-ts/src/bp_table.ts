@@ -289,6 +289,8 @@ export const BP_TABLE: Record<string, [number, number, number, number]> = {
   "JSX-ELEMENT": [1, 2, 99, 110],
   "JSX-TEXT": [1, 2, 99, 111],
   "KERNEL-CORE-IMAGE": [1, 2, 99, 15],
+  "KERNEL-SATSANG-IMAGE": [1, 2, 99, 19],
+  "KERNEL-SATSANG-PART": [1, 2, 99, 18],
   "MDL-ARR": [1, 2, 99, 11],
   "MDL-NULL": [1, 2, 99, 13],
   "MDL-OBJ": [1, 2, 99, 10],

@@ -1,0 +1,131 @@
+; preludes: form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/satsang-share.fk form-stdlib/kernel-satsang.fk form-stdlib/recognition-router.fk form-stdlib/champion-challenger.fk form-stdlib/host-kernel-cell.fk
+;
+; host-kernel-cell-band — the kernel as composition, hosts as carriers,
+; made falsifiable.
+;
+; One kernel body (a single content-addressed recipe) is carried by four
+; hosts: form-kernel-go (fitness 90), form-kernel-rust (95), form-kernel-ts
+; (70), and stale-port (30 — verified but unhealthy). The cell chooses by
+; measured fitness, flips authority only on earned competition, witnesses
+; every replacement through the circle, and round-trips itself as a .fkb
+; binary of just recipes.
+;
+; Band verdict 255 when every claim lands:
+;   1    one engine, many hosts — every carrier holds the same body NodeID
+;   2    every carrier answers the declared verification recipe
+;   4    sovereign choice — the fittest carrier above the floor is routed;
+;        the verified-but-weak carrier is fail-fast excluded; consensus holds
+;   8    authority flips to a challenger only on earned competition,
+;        never on a short window
+;   16   the earned flip is a crossing the field hears; the unearned one
+;        never crosses, so there is nothing to share
+;   32   the circle witnesses the chosen carrier: honored voices counted,
+;        the invasive voice dropped, the carrier survives
+;   64   a same-spec replacement lands through the circle; a carrier whose
+;        body cannot produce the declared outside is refused, incumbent kept
+;   128  the whole cell round-trips through a .fkb binary and re-verifies —
+;        rebuilt from just recipes, back to its current shape
+(do
+    (let offer (sat-circle-interface))
+    (let observers (list (m-witness) (m-reflect) (m-be-seen) (m-project)))
+
+    ; the ONE kernel body: a single content-addressed recipe every host runs
+    (let plus-recipe
+        (intern_node (bp "add")
+            (list (intern_trivial_int 2) (intern_trivial_int 3))))
+    (let body-recipe
+        (intern_node (bp "do")
+            (list (intern_trivial_int 1) plus-recipe
+                  (intern_node (bp "mul")
+                      (list plus-recipe (intern_trivial_int 4))))))
+
+    (let go-carrier
+        (hkc-carrier "form-kernel-go" "host-kernel" body-recipe body-recipe 20 90))
+    (let rust-carrier
+        (hkc-carrier "form-kernel-rust" "host-kernel" body-recipe body-recipe 20 95))
+    (let ts-carrier
+        (hkc-carrier "form-kernel-ts" "host-kernel" body-recipe body-recipe 20 70))
+    (let stale-carrier
+        (hkc-carrier "stale-port" "host-kernel" body-recipe body-recipe 20 30))
+    (let cell (hkc-cell "host-kernel"
+        (list go-carrier rust-carrier ts-carrier stale-carrier)))
+
+    ; ── 1: one engine, many hosts ──
+    (let c0 (if (hkc-one-body? cell) 1 0))
+
+    ; ── 2: every carrier verifies the declared spec ──
+    (let c1 (if (hkc-verified? cell) 2 0))
+
+    ; ── 4: sovereign choice by measured fitness; weak is fail-fast; consensus ──
+    (let flow (hkc-choose cell 50))
+    (let readings (hkc-readings (hkc-cell-carriers cell)))
+    (let c2 (if (and (str_eq (rr-source flow) "form-kernel-rust")
+                 (and (eq (rr-flow-strength flow) 95)
+                  (and (not (rr-passes? (hkc-carrier-reading stale-carrier) 50))
+                   (and (ksat-verify-part? (hkc-carrier-part stale-carrier))
+                        (eq (rr-consensus? readings 50 flow) 1)))))
+                4 0))
+
+    ; ── 8: authority flips only on earned competition ──
+    ; eight head-to-head trials, challenger reaches the champion -> earned;
+    ; three trials, window too short to trust -> champion holds.
+    (let earned (list (list 1 1) (list 1 1) (list 0 1) (list 1 1)
+                      (list 1 1) (list 0 1) (list 1 1) (list 1 1)))
+    (let short (list (list 1 1) (list 1 1) (list 1 1)))
+    (let c3 (if (and (str_eq (cc-authority earned 6 0) "challenger")
+                     (str_eq (cc-authority short 6 0) "champion"))
+                8 0))
+
+    ; ── 16: the earned flip crosses and is shared; the unearned never crosses ──
+    (let c4 (if (and (ss-share? (hkc-flip-signal earned 6 0) false)
+                     (not (ss-share? (hkc-flip-signal short 6 0) false)))
+                16 0))
+
+    ; ── 32: the circle witnesses the chosen carrier; invasion dropped ──
+    (let rust-part (hkc-carrier-part rust-carrier))
+    (let w (ksat-part-witness rust-part observers offer))
+    (let c5 (if (and (eq (sat-affirmed w) 3)
+                 (and (eq (add (sat-affirmed w)
+                              (add (sat-dissented w) (sat-silent w))) 3)
+                      (ksat-part-survives? rust-part observers offer)))
+                32 0))
+
+    ; ── 64: a same-spec replacement lands; a false-claim carrier is refused ──
+    ; jit-native carries the SAME body crystallized native (same NodeID — JIT
+    ; changes the carrier, never the identity) and replaces the ts host.
+    (let jit-carrier
+        (hkc-carrier "jit-native" "host-kernel" body-recipe body-recipe 20 99))
+    (let swapped (hkc-swap-carrier cell "form-kernel-ts" jit-carrier observers offer))
+    (let jit-found (hkc-find-carrier (hkc-cell-carriers swapped) "jit-native"))
+    ; the broken carrier claims the spec's outside (20) over a body that
+    ; produces 2 — the circle dissents, the incumbent go host is kept.
+    (let broken-carrier
+        (hkc-carrier "broken-port" "host-kernel"
+            (intern_node (bp "add")
+                (list (intern_trivial_int 1) (intern_trivial_int 1)))
+            (intern_node (bp "add")
+                (list (intern_trivial_int 1) (intern_trivial_int 1)))
+            20 99))
+    (let refused (hkc-swap-carrier cell "form-kernel-go" broken-carrier observers offer))
+    (let kept (hkc-find-carrier (hkc-cell-carriers refused) "form-kernel-go"))
+    (let c6 (if (and (str_eq (hkc-carrier-host jit-found) "jit-native")
+                 (and (hkc-one-body? swapped)
+                  (and (hkc-verified? swapped)
+                   (and (not (ksat-part-survives? (hkc-carrier-part broken-carrier) observers offer))
+                        (str_eq (hkc-carrier-host kept) "form-kernel-go")))))
+                64 0))
+
+    ; ── 128: the cell shrinks to a .fkb of just recipes and comes back ──
+    (let image-path "/tmp/host-kernel-cell-image.fkb")
+    (let cell-kernel (hkc-as-kernel swapped))
+    (let cell-image (ksat-kernel-image cell-kernel))
+    (let bytes-written (write_form_binary image-path cell-image))
+    (let loaded (read_form_binary image-path))
+    (let rebuilt (ksat-kernel-from-image loaded))
+    (let c7 (if (and (gt bytes-written 0)
+                 (and (node_eq loaded cell-image)
+                  (and (str_eq (ksat-kernel-name rebuilt) "host-kernel")
+                       (ksat-kernel-verified? rebuilt))))
+                128 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

@@ -4436,6 +4436,61 @@ impl Kernel {
             }
             _ => Value::Int(0),
         });
+        // ── ML vector organ — sibling parity with the go carrier's trio.
+        // IEEE 754 binary64 end to end, so the same vectors yield the
+        // same bits on every kernel.
+        self.register_native("dot_product", cat_method(), |_, _, args| {
+            match (&args[0], &args[1]) {
+                (Value::List(a), Value::List(b)) if a.len() == b.len() => {
+                    let mut sum = 0.0f64;
+                    for i in 0..a.len() {
+                        sum += a[i].as_float() * b[i].as_float();
+                    }
+                    Value::Float(sum)
+                }
+                _ => panic!("dot_product requires equal length vectors"),
+            }
+        });
+        self.register_native("magnitude", cat_method(), |_, _, args| match &args[0] {
+            Value::List(v) => {
+                let mut sum = 0.0f64;
+                for x in v.iter() {
+                    let f = x.as_float();
+                    sum += f * f;
+                }
+                Value::Float(sum.sqrt())
+            }
+            _ => panic!("magnitude expects a vector"),
+        });
+        self.register_native("vector_cosine", cat_method(), |_, _, args| {
+            match (&args[0], &args[1]) {
+                (Value::List(a), Value::List(b)) if a.len() == b.len() => {
+                    let (mut dot, mut na, mut nb) = (0.0f64, 0.0f64, 0.0f64);
+                    for i in 0..a.len() {
+                        let fa = a[i].as_float();
+                        let fb = b[i].as_float();
+                        dot += fa * fb;
+                        na += fa * fa;
+                        nb += fb * fb;
+                    }
+                    if na == 0.0 || nb == 0.0 {
+                        Value::Float(0.0)
+                    } else {
+                        Value::Float(dot / (na.sqrt() * nb.sqrt()))
+                    }
+                }
+                _ => panic!("vector_cosine requires equal length vectors"),
+            }
+        });
+        // jit_compile_value — the Value-ABI JIT lives on the go carrier
+        // today; honest 0 here so sibling-Form code can branch on
+        // availability (1 compiled, 0 not compiled here, -1 missing).
+        self.register_native("jit_compile_value", cat_witness(), |_, _, _args| Value::Int(0));
+        // jit_emit_c — the recipe→C projection lives on the go carrier
+        // today; honest "" here so sibling-Form code can branch on it.
+        self.register_native("jit_emit_c", cat_witness(), |_, _, _args| {
+            Value::Str(String::new().into())
+        });
         // write_form_binary — emit a Recipe to .fkb in the full artifact
         // format (string table + tree). Sibling to read_form_binary.
         // Use when source-compile output crosses kernel invocations:
@@ -4743,13 +4798,23 @@ impl Kernel {
             let namespace = args[0].as_str();
             let cutoff = args[1].as_int();
             let prefix = format!("{namespace}\0");
+            // sibling parity: Go returns (key value updated_ms) triples
             let rows = volatile_table()
                 .lock()
                 .unwrap()
                 .cells
                 .iter()
                 .filter(|(coord, cell)| coord.starts_with(&prefix) && cell.updated_ms >= cutoff)
-                .map(|(_, cell)| cell.value.clone())
+                .map(|(coord, cell)| {
+                    Value::List(
+                        vec![
+                            Value::Str(coord[prefix.len()..].to_string().into()),
+                            cell.value.clone(),
+                            Value::Int(cell.updated_ms),
+                        ]
+                        .into(),
+                    )
+                })
                 .collect::<Vec<_>>();
             Value::List(rows.into())
         });

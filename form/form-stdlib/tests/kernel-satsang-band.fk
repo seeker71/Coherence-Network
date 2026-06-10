@@ -1,0 +1,128 @@
+; preludes: form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/satsang-share.fk form-stdlib/kernel-satsang.fk
+;
+; kernel-satsang-band — the self-describing kernel in the satsang circle,
+; made falsifiable.
+;
+; A kernel of three named parts (walk, choose, adder) declares its spec and
+; verification recipes. Four observers reach toward each part: witness,
+; reflect, and be-seen are offered modes (counted); project is not offered
+; (invasion, dropped). The kernel shrinks to one interned image, round-trips
+; through .fkb, and re-verifies after rebuild. One swap keeps the declared
+; spec with a different interior and survives the circle; one swap claims an
+; outside its recipe cannot produce, the circle dissents, and the refusal
+; keeps the old part with the dissent visible.
+;
+; Band verdict 255 when every claim lands:
+;   1    the kernel declares its spec — one 3-field outside per part,
+;        the recipe interior is not in the spec
+;   2    a sibling observer verifies every part against its declared outside
+;   4    the circle witnesses a part: three honored voices counted, the
+;        invasive voice dropped, the part survives
+;   8    expand/simplify: part -> native image -> part keeps content-
+;        addressed identity and still verifies
+;   16   the whole kernel round-trips through a .fkb binary and the rebuilt
+;        kernel re-verifies — rebuilt from just recipes, back to shape
+;   32   a good swap lands: different interior, same declared spec,
+;        survives the circle, kernel still verified
+;   64   a bad swap is refused: verification fails, the circle dissents,
+;        the old part stays, the dissent stays visible
+;   128  both crossings (expand, simplify) are share-worthy signals
+(do
+    (let offer (sat-circle-interface))
+    (let observers (list (m-witness) (m-reflect) (m-be-seen) (m-project)))
+
+    (let plus-recipe
+        (intern_node (bp "add")
+            (list (intern_trivial_int 2) (intern_trivial_int 3))))
+    (let mul-recipe
+        (intern_node (bp "mul") (list plus-recipe (intern_trivial_int 4))))
+    (let walk-recipe
+        (intern_node (bp "do")
+            (list (intern_trivial_int 1) plus-recipe mul-recipe)))
+    (let choose-recipe
+        (intern_node (bp "if")
+            (list
+                (intern_node (bp "gt")
+                    (list (intern_trivial_int 5) (intern_trivial_int 3)))
+                (intern_trivial_int 8)
+                (intern_trivial_int 13))))
+
+    (let walk-part   (ksat-part "walk"   walk-recipe   walk-recipe   20))
+    (let choose-part (ksat-part "choose" choose-recipe choose-recipe 8))
+    (let adder-part  (ksat-part "adder"  plus-recipe   plus-recipe   5))
+    (let kernel (ksat-kernel "kernel-satsang-self"
+        (list walk-part choose-part adder-part)))
+
+    ; ── 1: the declared spec — three parts, three-field outsides only ──
+    (let specs (ksat-declare kernel))
+    (let c0 (if (and (eq (len specs) 3)
+                 (and (eq (len (head specs)) 3)
+                      (str_eq (ksat-spec-name (head specs)) "walk")))
+                1 0))
+
+    ; ── 2: a sibling observer runs every declared verification ──
+    (let c1 (if (ksat-kernel-verified? kernel) 2 0))
+
+    ; ── 4: the circle witnesses a part; invasion dropped; it survives ──
+    (let w (ksat-part-witness walk-part observers offer))
+    (let c2 (if (and (eq (sat-affirmed w) 3)
+                 (and (eq (add (sat-affirmed w)
+                              (add (sat-dissented w) (sat-silent w))) 3)
+                      (ksat-part-survives? walk-part observers offer)))
+                4 0))
+
+    ; ── 8: expand to the native image and simplify back; identity holds ──
+    (let adder-image (ksat-part-image adder-part))
+    (let adder-back (ksat-part-from-image adder-image))
+    (let c3 (if (and (node_eq (node_category adder-image)
+                              (bp "KERNEL-SATSANG-PART"))
+                 (and (node_eq (ksat-part-recipe adder-back) plus-recipe)
+                  (and (eq (ksat-part-expected adder-back) 5)
+                       (ksat-verify-part? adder-back))))
+                8 0))
+
+    ; ── 16: the whole kernel through the .fkb binary and back to shape ──
+    (let image-path "/tmp/kernel-satsang-image.fkb")
+    (let kernel-image (ksat-kernel-image kernel))
+    (let bytes-written (write_form_binary image-path kernel-image))
+    (let loaded (read_form_binary image-path))
+    (let rebuilt (ksat-kernel-from-image loaded))
+    (let c4 (if (and (gt bytes-written 0)
+                 (and (node_eq loaded kernel-image)
+                  (and (str_eq (ksat-kernel-name rebuilt) "kernel-satsang-self")
+                       (ksat-kernel-verified? rebuilt))))
+                16 0))
+
+    ; ── 32: the good swap — new interior, same declared spec, survives ──
+    (let new-adder-recipe
+        (intern_node (bp "add")
+            (list (intern_trivial_int 1) (intern_trivial_int 4))))
+    (let new-adder (ksat-part "adder" new-adder-recipe new-adder-recipe 5))
+    (let swapped (ksat-swap kernel "adder" new-adder observers offer))
+    (let swapped-adder (ksat-find-part (ksat-kernel-parts swapped) "adder"))
+    (let c5 (if (and (not (node_eq new-adder-recipe plus-recipe))
+                 (and (ksat-spec-equal? (ksat-part-spec adder-part)
+                                        (ksat-part-spec new-adder))
+                  (and (node_eq (ksat-part-recipe swapped-adder) new-adder-recipe)
+                       (ksat-kernel-verified? swapped))))
+                32 0))
+
+    ; ── 64: the bad swap — the claimed outside never arrives; refused ──
+    (let bad-adder-recipe
+        (intern_node (bp "add")
+            (list (intern_trivial_int 1) (intern_trivial_int 1))))
+    (let bad-adder (ksat-part "adder" bad-adder-recipe bad-adder-recipe 5))
+    (let w-bad (ksat-part-witness bad-adder observers offer))
+    (let refused (ksat-swap kernel "adder" bad-adder observers offer))
+    (let kept-adder (ksat-find-part (ksat-kernel-parts refused) "adder"))
+    (let c6 (if (and (eq (sat-dissented w-bad) 3)
+                 (and (not (ksat-part-survives? bad-adder observers offer))
+                      (node_eq (ksat-part-recipe kept-adder) plus-recipe)))
+                64 0))
+
+    ; ── 128: both crossings are signals the field wants ──
+    (let c7 (if (and (ss-share? (ksat-expand-signal) false)
+                     (ss-share? (ksat-simplify-signal) false))
+                128 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

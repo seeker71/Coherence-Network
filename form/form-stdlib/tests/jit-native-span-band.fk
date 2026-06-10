@@ -1,0 +1,88 @@
+; preludes: form-stdlib/core.fk
+;
+; jit-native-span-band — IEEE floats, strings, and ML vector primitives
+; through the Value-ABI JIT, identical on every sibling.
+;
+; Three recipes — an IEEE hypotenuse, a string tag, and a vector cosine —
+; walk first, then ask for Value-ABI native compilation (the go carrier
+; compiles to a host .so through jit_compile_value; rust and ts answer an
+; honest 0 and keep walking), then run again. Values must be identical
+; across dispatch paths AND kernels: IEEE 754 binary64 is the shared
+; float ground, and the ML trio (dot_product magnitude vector_cosine)
+; lives on all three siblings as of this band.
+;
+; Band verdict 255 when every claim lands:
+;   1    IEEE ground — sqrt(2) carries the same binary64 digits everywhere
+;   2    a float recipe walks: hypotenuse of (3 4) is 5
+;   4    Value-ABI compilation is offered on every sibling (1 compiled,
+;        0 honest-not-here — never a crash)
+;   8    the float recipe yields identical values after the JIT ask
+;   16   a string recipe survives the same crossing
+;   32   the ML trio answers: dot, magnitude, cosine (aligned and
+;        orthogonal) — same numbers on every kernel
+;   64   the ML trio reached THROUGH a compiled recipe (the dispatch
+;        hop) matches the direct call
+;   128  one recipe composes all three domains — floats, strings,
+;        vectors — and the composition survives the JIT crossing
+(do
+    ; ── the three recipes ──
+    (defn f-hyp (a b)
+        (math_sqrt (add (mul a a) (mul b b))))
+    (defn s-tag (s)
+        (str_concat "metal-" s))
+    (defn v-sim (a b)
+        (vector_cosine a b))
+    (defn blend (a b s)
+        (str_concat s
+            (int_to_str (trunc (mul (v-sim a b) (mul (f-hyp 3 4) 100))))))
+
+    ; ── 1: IEEE ground ──
+    (let c0 (if (eq (trunc (mul (math_sqrt 2) 1000000)) 1414213) 1 0))
+
+    ; ── 2: float walk ──
+    (let pre-hyp (trunc (mul (f-hyp 3 4) 100)))
+    (let pre-tag (s-tag "ok"))
+    (let va (list 1 2 3))
+    (let vb (list 4 5 6))
+    (let unit-x (list 1 0))
+    (let unit-y (list 0 1))
+    (let pre-sim (trunc (mul (v-sim unit-x unit-x) 1000)))
+    (let pre-blend (blend unit-x unit-x "v"))
+    (let c1 (if (eq pre-hyp 500) 2 0))
+
+    ; ── 4: the Value-ABI door is offered everywhere ──
+    (let j1 (jit_compile_value "f-hyp"))
+    (let j2 (jit_compile_value "s-tag"))
+    (let j3 (jit_compile_value "v-sim"))
+    (let j4 (jit_compile_value "blend"))
+    (let c2 (if (and (ge j1 0) (and (ge j2 0) (and (ge j3 0) (ge j4 0)))) 4 0))
+
+    ; ── 8: float identity across the crossing ──
+    (let c3 (if (and (eq (trunc (mul (f-hyp 3 4) 100)) pre-hyp)
+                     (eq (trunc (mul (f-hyp 5 12) 100)) 1300))
+                8 0))
+
+    ; ── 16: string identity across the crossing ──
+    (let c4 (if (and (str_eq (s-tag "ok") pre-tag)
+                     (str_eq (s-tag "jit") "metal-jit"))
+                16 0))
+
+    ; ── 32: the ML trio, direct ──
+    (let c5 (if (and (eq (trunc (dot_product va vb)) 32)
+                 (and (eq (trunc (magnitude (list 3 4))) 5)
+                  (and (eq (trunc (mul (vector_cosine va va) 1000)) 1000)
+                       (eq (trunc (mul (vector_cosine unit-x unit-y) 1000)) 0))))
+                32 0))
+
+    ; ── 64: the ML trio through the compiled recipe's dispatch hop ──
+    (let c6 (if (and (eq (trunc (mul (v-sim unit-x unit-x) 1000)) pre-sim)
+                     (eq (trunc (mul (v-sim va vb) 1000))
+                         (trunc (mul (vector_cosine va vb) 1000))))
+                64 0))
+
+    ; ── 128: all three domains in one recipe, across the crossing ──
+    (let c7 (if (and (str_eq pre-blend "v500")
+                     (str_eq (blend unit-x unit-x "v") "v500"))
+                128 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

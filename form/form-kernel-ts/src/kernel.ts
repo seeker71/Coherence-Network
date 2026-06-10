@@ -2052,6 +2052,50 @@ export class Kernel {
     this.registerNative("math_sqrt", catMethod(), (_k, args) => {
       return { kind: "f64", float: Math.sqrt(argFloat(args, 0)) };
     });
+    // ── ML vector organ — sibling parity with the go carrier's trio.
+    // IEEE 754 binary64 end to end, so the same vectors yield the same
+    // bits on every kernel.
+    this.registerNative("dot_product", catMethod(), (_k, args) => {
+      const a = args[0];
+      const b = args[1];
+      if (a?.kind !== "list" || b?.kind !== "list" || a.list.length !== b.list.length) {
+        throw new Error("dot_product requires equal length vectors");
+      }
+      let sum = 0;
+      for (let i = 0; i < a.list.length; i++) {
+        sum += argFloat([a.list[i]!], 0) * argFloat([b.list[i]!], 0);
+      }
+      return { kind: "f64", float: sum };
+    });
+    this.registerNative("magnitude", catMethod(), (_k, args) => {
+      const v = args[0];
+      if (v?.kind !== "list") throw new Error("magnitude expects a vector");
+      let sum = 0;
+      for (const x of v.list) {
+        const f = argFloat([x], 0);
+        sum += f * f;
+      }
+      return { kind: "f64", float: Math.sqrt(sum) };
+    });
+    this.registerNative("vector_cosine", catMethod(), (_k, args) => {
+      const a = args[0];
+      const b = args[1];
+      if (a?.kind !== "list" || b?.kind !== "list" || a.list.length !== b.list.length) {
+        throw new Error("vector_cosine requires equal length vectors");
+      }
+      let dot = 0;
+      let na = 0;
+      let nb = 0;
+      for (let i = 0; i < a.list.length; i++) {
+        const fa = argFloat([a.list[i]!], 0);
+        const fb = argFloat([b.list[i]!], 0);
+        dot += fa * fb;
+        na += fa * fa;
+        nb += fb * fb;
+      }
+      if (na === 0 || nb === 0) return { kind: "f64", float: 0 };
+      return { kind: "f64", float: dot / (Math.sqrt(na) * Math.sqrt(nb)) };
+    });
     this.registerNative("math_pi", catMethod(), () => ({
       kind: "f64",
       float: Math.PI,
@@ -2285,6 +2329,21 @@ export class Kernel {
     // env. After a successful compile, every (form-name args...) call
     // dispatches through the compiled function instead of walking the
     // recipe tree — same canonical Form recipe; host-native speed.
+    // jit_compile_value — the Value-ABI JIT lives on the go carrier today;
+    // honest 0 so sibling-Form code can branch on availability
+    // (1 compiled, 0 not compiled here, -1 missing).
+    this.registerNative("jit_compile_value", catWitness(), () => ({
+      kind: "int",
+      int: 0,
+    }));
+
+    // jit_emit_c — the recipe→C projection lives on the go carrier today;
+    // honest "" so sibling-Form code can branch on it.
+    this.registerNative("jit_emit_c", catWitness(), () => ({
+      kind: "str",
+      str: "",
+    }));
+
     this.registerEnvNative("jit_compile", catWitness(), (k, env, args) => {
       if (k.jitCompileHook === null) {
         // Compiler not installed on this kernel build — honest 0 so
@@ -3146,6 +3205,68 @@ export class Kernel {
       int: Date.now(),
     }));
 
+    // `unix_ms_to_iso_utc` — render a millisecond instant as the
+    // second-resolution ISO UTC string the Go carrier emits.
+    this.registerNative("unix_ms_to_iso_utc", catCall(), (_k, args) => ({
+      kind: "str",
+      str: `${new Date(argInt(args, 0)).toISOString().slice(0, 19)}Z`,
+    }));
+
+    // ── volatile cells — the RAM organ as a kernel resource ──
+    // In-process volatile KV with update timestamps, mirroring the Go
+    // carrier (server.go registerHostIONatives): put returns 1, get
+    // returns the stored value or null, delete returns 1/0, scan_since
+    // returns (key value updated_ms) triples for one namespace, and
+    // prune_before returns the count of cells released.
+    this.registerNative("volatile_cell_put", catCall(), (_k, args) => {
+      volatileCells.set(volatileCoord(argStr(args, 0), argStr(args, 1)), {
+        updatedMs: Date.now(),
+        value: args[2] ?? { kind: "null" },
+      });
+      return { kind: "int", int: 1 };
+    });
+    this.registerNative("volatile_cell_get", catAccess(), (_k, args) => {
+      const cell = volatileCells.get(
+        volatileCoord(argStr(args, 0), argStr(args, 1)),
+      );
+      return cell ? cell.value : { kind: "null" };
+    });
+    this.registerNative("volatile_cell_delete", catCall(), (_k, args) => {
+      const had = volatileCells.delete(
+        volatileCoord(argStr(args, 0), argStr(args, 1)),
+      );
+      return { kind: "int", int: had ? 1 : 0 };
+    });
+    this.registerNative("volatile_cell_scan_since", catAccess(), (_k, args) => {
+      const prefix = `${argStr(args, 0)}\x00`;
+      const since = argInt(args, 1);
+      const out: Value[] = [];
+      for (const [coord, cell] of volatileCells) {
+        if (!coord.startsWith(prefix) || cell.updatedMs < since) continue;
+        out.push({
+          kind: "list",
+          list: [
+            { kind: "str", str: coord.slice(prefix.length) },
+            cell.value,
+            { kind: "int", int: cell.updatedMs },
+          ],
+        });
+      }
+      return { kind: "list", list: out };
+    });
+    this.registerNative("volatile_cell_prune_before", catCall(), (_k, args) => {
+      const prefix = `${argStr(args, 0)}\x00`;
+      const before = argInt(args, 1);
+      let pruned = 0;
+      for (const [coord, cell] of volatileCells) {
+        if (coord.startsWith(prefix) && cell.updatedMs < before) {
+          volatileCells.delete(coord);
+          pruned += 1;
+        }
+      }
+      return { kind: "int", int: pruned };
+    });
+
     // Debug — no Form category claimed; honest about being outside the
     // structural vocabulary.
     this.registerNative("trace", catUndefined(), (_k, args) => {
@@ -3201,6 +3322,13 @@ export class Kernel {
         return `<record @${nodeKey(v.record.blueprint)} #${v.record.fields.length}fields>`;
     }
   }
+}
+
+// volatile cells — process-lifetime RAM organ shared by every kernel
+// instance in this process, like Go's goVolatileCells global.
+const volatileCells = new Map<string, { updatedMs: number; value: Value }>();
+function volatileCoord(namespace: string, key: string): string {
+  return `${namespace}\x00${key}`;
 }
 
 // argN helpers — typed extraction with friendly errors.
