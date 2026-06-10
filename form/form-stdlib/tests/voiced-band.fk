@@ -1,0 +1,30 @@
+; preludes: form-stdlib/core.fk form-stdlib/voiced.fk
+;
+; voiced-band — the two-evidence speech gate that stops Whisper hallucinating over silence, three-way.
+;
+; Measured on the real Mac mic (2026-06-10): a silent room (book inaudible to the mic) read mean_volume
+; −56 dB → loudness 34, and Whisper's no_speech_prob 0.81 → speechiness 19, yet Whisper still emitted 222
+; words. Real speech read −21 dB → loudness 70, no_speech_prob 0.01 → speechiness 99. Floors: loud 40
+; (mean > −50 dB), speech 40 (no_speech < 0.60). Both signals must agree before a transcript is trusted.
+;
+; Verdict 63 when every claim lands:
+;   1   silence is NOT voiced            (loud 34, speech 19 → 0 — the hallucination is gated out)
+;   2   real speech IS voiced            (loud 70, speech 99 → 1)
+;   4   loud-but-not-speech NOT voiced   (loud 70, speech 19 → 0 — music/clatter isn't a transcript)
+;   8   quiet-but-confident NOT voiced   (loud 34, speech 99 → 0 — too faint to trust even a sure STT)
+;   16  loud sound IS audible            (audible? 70 40 == 1 — a real sound for the oracle to classify)
+;   32  silence is NOT audible           (audible? 34 40 == 0 — nothing there)
+;   64  gate-level silence  == 0          (learn nothing, say nothing)
+;  128  gate-level music    == 1          (classify + learn the sound, but no transcript)
+;  256  gate-level speech   == 2          (classify, learn, AND trust the transcript)
+(do
+    (let c0 (if (eq (voiced-verdict 34 19 40 40) 0) 1 0))
+    (let c1 (if (eq (voiced-verdict 70 99 40 40) 1) 2 0))
+    (let c2 (if (eq (voiced-verdict 70 19 40 40) 0) 4 0))
+    (let c3 (if (eq (voiced-verdict 34 99 40 40) 0) 8 0))
+    (let c4 (if (eq (if (audible? 70 40) 1 0) 1) 16 0))
+    (let c5 (if (eq (if (audible? 34 40) 1 0) 0) 32 0))
+    (let c6 (if (eq (gate-level 34 19 40 40) 0) 64 0))
+    (let c7 (if (eq (gate-level 70 19 40 40) 1) 128 0))
+    (let c8 (if (eq (gate-level 70 99 40 40) 2) 256 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 c8)))))))))
