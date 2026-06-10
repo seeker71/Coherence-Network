@@ -723,10 +723,13 @@ def sense_form_engine() -> list[str]:
         lines.append(
             "    · in Form but not Python: " + ", ".join(int_to_name[t] for t in extra)
         )
-    lines.append(
-        "  (Each missing arm is one `@1.2.<t>.<i>` row in form-engine.form away"
-    )
-    lines.append("   from symmetric. Asymmetry is signal, not failure.)")
+    if missing:
+        lines.append(
+            "  (Each missing arm is one `@1.2.<t>.<i>` row in form-engine.form away"
+        )
+        lines.append("   from symmetric. Asymmetry is signal, not failure.)")
+    else:
+        lines.append("  symmetric — Form covers every Python dispatch branch.")
     return lines
 
 

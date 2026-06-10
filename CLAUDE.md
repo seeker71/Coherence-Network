@@ -344,7 +344,7 @@ Fallbacks stay within provider. Config: `api/config/model_routing.json`.
 
 Multiple agents (Claude Code, Codex, Cursor) may work in parallel on different tasks using git worktrees.
 
-**Before starting work**: Run `python3 scripts/agent_status.py --diff` to check for file-level conflicts with other active worktrees.
+**Before starting work**: Run `python3 scripts/agent_status.py` for the human conflict view, or `python3 scripts/agent_status.py --json` when automation needs the raw worktree/task data.
 
 **Worktree conventions**:
 - Each agent session gets its own worktree under `.claude/worktrees/` or `.codex/worktrees/`
@@ -352,7 +352,7 @@ Multiple agents (Claude Code, Codex, Cursor) may work in parallel on different t
 - Ship: commit → push branch → PR → merge
 
 **Conflict avoidance**:
-- If `agent_status.py --diff` reports overlapping files, coordinate before proceeding
+- If `agent_status.py` reports overlapping files, coordinate before proceeding
 - Prefer non-overlapping task assignments across agents
 - When conflicts are unavoidable, the first PR merged wins — the other rebases
 

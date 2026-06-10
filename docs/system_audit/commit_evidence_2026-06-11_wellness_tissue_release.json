@@ -1,0 +1,91 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "codex/wellness-tissue-release-20260611",
+  "commit_scope": "Release stale wellness attention tissue by making the Form engine sense report healthy symmetry without triggering the attention classifier, and correct active orientation docs for the current agent_status.py interface.",
+  "files_owned": [
+    "scripts/wellness_check.py",
+    "CLAUDE.md",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/commit_evidence_2026-06-11_wellness_tissue_release.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "./scripts/agent-coord.sh claim \"wellness tissue release\"",
+      "python3 scripts/agent_status.py --json",
+      "python3 -m py_compile scripts/wellness_check.py scripts/agent_status.py",
+      "make wellness | rg -A10 -B2 \"Form engine|what_wants_attention\"",
+      "rg -n \"agent_status\\\\.py --diff\" CLAUDE.md docs/shared/agent-start-packet.md AGENTS.md 2>/dev/null || true",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-11_wellness_tissue_release.json",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "notes": "Initial wellness showed Form engine covered 15/15 Python dispatch branches but still emitted the stale missing-arm guidance, causing what_wants_attention to include a healthy surface. The focused wellness rerun now shows 'symmetric — Form covers every Python dispatch branch', and what_wants_attention starts with the real static-to-dynamic wants. The active orientation files no longer reference the removed agent_status.py --diff flag; python3 scripts/agent_status.py --json works. Rebased cleanly through moving main heads; transient public 502s were observed during sibling Hostinger rollouts, while local process proof and PR guard remained green."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI is pending until this branch is pushed and a PR is opened."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No public deploy attempted yet from this branch; this is process/sensing tissue, not a runtime behavior change. Main-branch Hostinger rollouts were in progress during local proof."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Focused proof, evidence validation, index check, diff check, rebase, local PR guard, and followthrough guard passed. Commit, push, PR, remote CI, merge, and final wellness/deploy alignment are still pending."
+  },
+  "idea_ids": [
+    "wellness-as-sensing",
+    "agent-arrival-truth",
+    "tissue-release"
+  ],
+  "spec_ids": [
+    "wellness-check",
+    "agent-start-packet"
+  ],
+  "task_ids": [
+    "wellness-tissue-release-20260611"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "wellness-release"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "scripts/wellness_check.py sense_form_engine now only emits missing-arm guidance when missing arms exist.",
+    "Focused wellness proof shows the Form engine healthy line moved out of what_wants_attention and into what_can_compost.",
+    "CLAUDE.md and docs/shared/agent-start-packet.md now name python3 scripts/agent_status.py / --json instead of the removed --diff flag.",
+    "python3 scripts/agent_status.py --json returned worktree/task data successfully."
+  ],
+  "change_files": [
+    "scripts/wellness_check.py",
+    "CLAUDE.md",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "process_only"
+}
