@@ -65,6 +65,11 @@
 ;        turned toward the reference the whisper-tiny weights will arrive from.]
 ;   M4  one attention+FFN block — compose M1+M2+M3 into a learned-weight self-attention + FFN block,
 ;        proven three-way on tiny dims (the real transformer primitive, replacing weightless attention.fk).
+;        [SHIPPED (fp64 lane): form-stdlib/transformer-block.fk + tests/transformer-block-band.fk → 511,
+;        three-way. The whisper-shaped pre-LN block — h = x + Wo·attn(LN1(x)), y = h + FFN(LN2(h)) —
+;        T=2/d=2/ffn=4, weights as recipe data (lists of rows), every claim pinned to the torch fp64
+;        reference at 1e-6, the √d_k scale computed by the body's own tn-sqrt. The format-parameterized
+;        and quantized-weight lanes stay M1/M2's stones.]
 ;   M5  JIT matmul to native — a JitTensorCompiled carrier (slice ABI, beside the scalar JitCompiled),
 ;        emit a matmul loop, reuse compile_rust_cdylib, verify bit-exact vs the apply_arith reference
 ;        (add matmul conformance vectors to numeric-formats.canonical.json). Then port metal.ts -> a

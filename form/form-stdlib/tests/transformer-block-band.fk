@@ -1,0 +1,46 @@
+; preludes: form-stdlib/core.fk form-stdlib/transformer-numerics.fk form-stdlib/transformer-block.fk
+;
+; transformer-block-band — M4's pre-LN attention+FFN block against the PyTorch fp64 reference,
+; proven three-way. The reference: torch layer_norm (affine, eps=1e-5) → q/k/v/out projections →
+; softmax(q·kᵀ/√2) → residual → layer_norm → fc2(gelu_tanh(fc1)) → residual, T=2 positions, d=2,
+; FFN hidden 4, every weight non-trivial. Each claim is a torch value reduced to an integer at 1e-6.
+;
+; Verdict 511 when the whole block lands:
+;   1    α[0][0] → 469632   (the attention actually mixes — neither 0 nor 1)
+;   2    α[0] sums to 1     (a distribution over keys, exactly)
+;   4    h[0][0] → 1012568  (post-attention residual, position 0)
+;   8    h[1][1] → 2048126  (post-attention residual, position 1)
+;   16   y[0][0] → 1175482  (block output)
+;   32   y[0][1] → -300290
+;   64   y[1][0] → 545407
+;   128  y[1][1] → 2171165
+;   256  scale is the body's own √: 1/tn-sqrt(2) rounds to 707107 (no host constant smuggled in)
+(do
+    (let x   (list (list 1.0 -0.5) (list 0.5 2.0)))
+    (let g1  (list 0.9 1.1))   (let be1 (list 0.01 -0.02))
+    (let wq  (list (list 0.5 -0.25) (list 0.1 0.3)))   (let bq (list 0.1 -0.1))
+    (let wk  (list (list 0.2 0.4) (list -0.3 0.1)))    (let bk (list 0.0 0.2))
+    (let wv  (list (list 0.3 -0.2) (list 0.25 0.5)))   (let bv (list 0.05 -0.05))
+    (let wo  (list (list 0.6 0.1) (list -0.2 0.4)))    (let bo (list 0.0 0.1))
+    (let g2  (list 1.05 0.95))  (let be2 (list 0.0 0.03))
+    (let w1  (list (list 0.5 -0.3) (list 0.2 0.7) (list -0.4 0.1) (list 0.3 0.3)))
+    (let c1  (list 0.1 0.0 -0.1 0.2))
+    (let w2  (list (list 0.25 -0.15 0.3 0.05) (list 0.1 0.4 -0.2 0.15)))
+    (let c2  (list 0.0 0.05))
+    (let eps 0.00001)
+    (let scale (div 1.0 (tn-sqrt 2.0)))
+    (let lns (tb-ln-seq x eps g1 be1))
+    (let alpha0 (tn-softmax (tb-scores (tb-affine wq bq (head lns))
+                                       (tb-proj-seq wk bk lns) scale)))
+    (let h (tb-attn-block x eps g1 be1 wq bq wk bk wv bv wo bo scale))
+    (let y (tb-block x eps g1 be1 wq bq wk bk wv bv wo bo scale g2 be2 w1 c1 w2 c2))
+    (let c0 (if (eq (round (mul (nth alpha0 0) 1000000.0)) 469632) 1 0))
+    (let c1b (if (eq (round (mul (tn-sum alpha0) 1000000.0)) 1000000) 2 0))
+    (let c2b (if (eq (round (mul (nth (nth h 0) 0) 1000000.0)) 1012568) 4 0))
+    (let c3 (if (eq (round (mul (nth (nth h 1) 1) 1000000.0)) 2048126) 8 0))
+    (let c4 (if (eq (round (mul (nth (nth y 0) 0) 1000000.0)) 1175482) 16 0))
+    (let c5 (if (eq (round (mul (nth (nth y 0) 1) 1000000.0)) -300290) 32 0))
+    (let c6 (if (eq (round (mul (nth (nth y 1) 0) 1000000.0)) 545407) 64 0))
+    (let c7 (if (eq (round (mul (nth (nth y 1) 1) 1000000.0)) 2171165) 128 0))
+    (let c8 (if (eq (round (mul scale 1000000.0)) 707107) 256 0))
+    (add c0 (add c1b (add c2b (add c3 (add c4 (add c5 (add c6 (add c7 c8)))))))))
