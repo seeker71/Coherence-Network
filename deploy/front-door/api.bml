@@ -118,6 +118,7 @@ section [form.bml] {
     def api-json-number(value) = json-node-float-text(value_str(value));
     def api-json-db-bool(value) = if str_eq(value_str(value), "true") then true else if str_eq(value_str(value), "1") then true else false;
     def api-ok-json(node) = kh-response(200, list(kh-header("Content-Type", "application/json")), json-emit(node));
+    def api-native-ok-json(handler, node) = kh-response(200, list(kh-header("Content-Type", "application/json"), kh-header("X-Form-Handler", handler), kh-header("X-Form-Python-Authority", "false")), json-emit(node));
     def api-created-json(node) = kh-response(201, list(kh-header("Content-Type", "application/json")), json-emit(node));
     def api-error-status-json(status, detail) = kh-response(status, list(kh-header("Content-Type", "application/json")), json-emit(json-node-object(list(json-node-pair("detail", json-node-string(detail))))));
     def api-service-unavailable(code, detail) = kh-response(503, list(kh-header("Content-Type", "application/json")), json-emit(json-node-object(list(json-node-pair("detail", json-node-object(list(json-node-pair("error", json-node-string(code)), json-node-pair("detail", json-node-string(detail)))))))));
@@ -373,7 +374,7 @@ section [form.bml] {
         let limit = api-clamp-limit(kh-query-int-or(request, "limit", 50), 200);
         let rows = pg_query_rows(conn, "SELECT id, concept_id, author_name, COALESCE(author_id,'') AS author_id, locale, body, COALESCE(location,'') AS location, replace(created_at::text, ' ', 'T') AS created_at, COALESCE(proposed_as_proposal_id,'') AS proposed_as_proposal_id FROM concept_voices WHERE concept_id = $1 ORDER BY created_at DESC LIMIT $2", list(concept_id, limit));
         let closed = pg_close(conn);
-        if str_eq(concept_id, "") then api-error-status-json(422, "concept_id is required") else if api-query-failed?() then api-service-unavailable("persistence", "concept voices query failed") else api-ok-json(json-node-object(list(json-node-pair("concept_id", json-node-string(concept_id)), json-node-pair("voices", json-node-array(recent-voice-rows(rows))), json-node-pair("total", json-node-int(len(rows))))));
+        if str_eq(concept_id, "") then api-error-status-json(422, "concept_id is required") else if api-query-failed?() then api-service-unavailable("persistence", "concept voices query failed") else api-native-ok-json("api_concept_voices", json-node-object(list(json-node-pair("concept_id", json-node-string(concept_id)), json-node-pair("voices", json-node-array(recent-voice-rows(rows))), json-node-pair("total", json-node-int(len(rows))))));
     }
     def api_concept_voices(request) {
         let conn = pg_connect(config_database_url());
@@ -834,7 +835,7 @@ section [form.bml] {
         let days = api-clamp-limit(kh-query-int-or(request, "days", 30), 365);
         let rows = pg_query_rows(conn, api-views-stats-sql(), list(asset_id, days));
         let closed = pg_close(conn);
-        if str_eq(asset_id, "") then api-error-status-json(422, "asset_id is required") else if api-query-failed?() then api-service-unavailable("persistence", "views stats query failed") else if nil?(rows) then api-ok-json(api-views-stats-empty-json(asset_id, days)) else api-ok-json(api-views-stats-json(head(rows)));
+        if str_eq(asset_id, "") then api-error-status-json(422, "asset_id is required") else if api-query-failed?() then api-service-unavailable("persistence", "views stats query failed") else if nil?(rows) then api-native-ok-json("api_views_stats", api-views-stats-empty-json(asset_id, days)) else api-native-ok-json("api_views_stats", api-views-stats-json(head(rows)));
     }
     def api_views_stats(request) {
         let conn = pg_connect(config_database_url());
@@ -850,7 +851,7 @@ section [form.bml] {
     def api-reaction-summary-connected(conn, entity_id) {
         let rows = pg_query_rows(conn, api-reaction-summary-sql(), list(entity_id));
         let closed = pg_close(conn);
-        if str_eq(entity_id, "") then api-error-status-json(422, "entity_id is required") else if api-query-failed?() then api-service-unavailable("persistence", "reaction summary query failed") else if nil?(rows) then api-ok-json(json-node-object(list(json-node-pair("entity_type", json-node-string("concept")), json-node-pair("entity_id", json-node-string(entity_id)), json-node-pair("emojis", json-node-array(empty)), json-node-pair("comment_count", json-node-int(0)), json-node-pair("total", json-node-int(0))))) else api-ok-json(api-reaction-summary-json(head(rows)));
+        if str_eq(entity_id, "") then api-error-status-json(422, "entity_id is required") else if api-query-failed?() then api-service-unavailable("persistence", "reaction summary query failed") else if nil?(rows) then api-native-ok-json("api_reaction_concept_summary", json-node-object(list(json-node-pair("entity_type", json-node-string("concept")), json-node-pair("entity_id", json-node-string(entity_id)), json-node-pair("emojis", json-node-array(empty)), json-node-pair("comment_count", json-node-int(0)), json-node-pair("total", json-node-int(0))))) else api-native-ok-json("api_reaction_concept_summary", api-reaction-summary-json(head(rows)));
     }
     def api_reaction_concept_summary(request) {
         let conn = pg_connect(config_database_url());
@@ -862,7 +863,7 @@ section [form.bml] {
     def api-reaction-threads-connected(conn, entity_id, limit) {
         let rows = pg_query_rows(conn, api-reaction-threads-sql(), list(entity_id, limit));
         let closed = pg_close(conn);
-        if str_eq(entity_id, "") then api-error-status-json(422, "entity_id is required") else if api-query-failed?() then api-service-unavailable("persistence", "reaction threads query failed") else if nil?(rows) then api-ok-json(json-node-object(list(json-node-pair("entity_type", json-node-string("concept")), json-node-pair("entity_id", json-node-string(entity_id)), json-node-pair("threads", json-node-array(empty)), json-node-pair("count", json-node-int(0))))) else api-ok-json(api-reaction-threads-json(head(rows), entity_id));
+        if str_eq(entity_id, "") then api-error-status-json(422, "entity_id is required") else if api-query-failed?() then api-service-unavailable("persistence", "reaction threads query failed") else if nil?(rows) then api-native-ok-json("api_reaction_concept_threads", json-node-object(list(json-node-pair("entity_type", json-node-string("concept")), json-node-pair("entity_id", json-node-string(entity_id)), json-node-pair("threads", json-node-array(empty)), json-node-pair("count", json-node-int(0))))) else api-native-ok-json("api_reaction_concept_threads", api-reaction-threads-json(head(rows), entity_id));
     }
     def api_reaction_concept_threads(request) {
         let conn = pg_connect(config_database_url());
@@ -926,7 +927,7 @@ section [form.bml] {
         let count_rows = pg_query_rows(conn, api-runtime-events-count-sql(), list(source, window));
         let page_rows = pg_query_rows(conn, api-runtime-events-page-sql(), list(source, limit, offset));
         let closed = pg_close(conn);
-        if api-query-failed?() then api-service-unavailable("persistence", "runtime events query failed") else api-ok-json(api-runtime-events-response-json(count_rows, page_rows, limit, offset));
+        if api-query-failed?() then api-service-unavailable("persistence", "runtime events query failed") else api-native-ok-json("api_runtime_events", api-runtime-events-response-json(count_rows, page_rows, limit, offset));
     }
     def api_runtime_events(request) {
         let conn = pg_connect(config_database_url());

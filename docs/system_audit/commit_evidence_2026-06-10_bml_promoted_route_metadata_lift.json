@@ -1,0 +1,94 @@
+{
+  "date": "2026-06-10",
+  "thread_branch": "codex/bml-promoted-proof-metadata-20260610",
+  "commit_scope": "Lift promoted BML read routes from router-only proof to handler and Python-authority proof in the source catalog.",
+  "files_owned": [
+    "deploy/front-door/api.bml",
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "bash -n deploy/hostinger/auto-deploy.sh scripts/test_hostinger_deploy_form_paths.sh scripts/verify_web_api_deploy.sh && ./scripts/test_hostinger_deploy_form_paths.sh",
+      "cd form/form-kernel-rust && cargo test route_spec_tests::source_bml_catalog_template_routes_select_natively_in_rust -- --nocapture",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check"
+    ],
+    "observations": [
+      "The promoted BML read routes were proven native by X-Form-Router after PR #2781, but their successful responses did not carry X-Form-Handler or X-Form-Python-Authority.",
+      "The BML catalog now has a narrow api-native-ok-json(handler, node) helper for successful native JSON responses that need semantic proof headers.",
+      "GET /api/runtime/events, /api/views/stats/{asset_id}, /api/reactions/concept/{entity_id}/summary, /api/reactions/concept/{entity_id}/threads, and /api/concepts/{concept_id}/voices now use the helper.",
+      "The Hostinger local canary is strict again for those promoted reads, requiring router, handler, and Python-authority proof headers from the newly built BML front-door image."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": []
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local source-catalog and canary-path proof passed; CI, merge, deploy, and public post-deploy header verification remain."
+  },
+  "idea_ids": [
+    "oss-interface-alignment",
+    "kernel-native-route-goal"
+  ],
+  "spec_ids": [
+    "native-route-goal-loop",
+    "front-door-bml-route-catalog"
+  ],
+  "task_ids": [
+    "bml-promoted-route-metadata-lift-2026-06-10"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "post-merge public verifier for PR #2781 showed promoted BML reads router-native but handler=<missing>",
+    "deploy/front-door/api.bml api-native-ok-json helper",
+    "route_spec_tests::source_bml_catalog_template_routes_select_natively_in_rust"
+  ],
+  "change_files": [
+    "deploy/front-door/api.bml",
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Promoted BML read routes emit X-Form-Handler and X-Form-Python-Authority: false on successful native JSON responses after the new BML front-door image is deployed.",
+    "public_endpoints": [
+      "/api/runtime/events",
+      "/api/views/stats/lc-attuned-spaces",
+      "/api/reactions/concept/lc-attuned-spaces/summary",
+      "/api/reactions/concept/lc-attuned-spaces/threads",
+      "/api/concepts/lc-attuned-spaces/voices"
+    ],
+    "test_flows": [
+      "Build/load the BML source catalog through the Rust kernel route loader.",
+      "Run the Hostinger local canary and require router, handler, and Python-authority proof headers from the promoted read routes.",
+      "After deployment, curl the public promoted endpoints and verify X-Form-Handler and X-Form-Python-Authority are present."
+    ]
+  }
+}
