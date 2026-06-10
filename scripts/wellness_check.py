@@ -803,6 +803,45 @@ def sense_form_blueprints() -> list[str]:
     return lines
 
 
+def sense_form_primitives() -> list[str]:
+    """Does every kernel native carry a declared spec and verification?
+
+    form-stdlib/primitive-registry.fk declares (name, category, spec,
+    verification recipe, expected outside, lane) for the whole sibling-parity
+    native surface — the kernel-satsang ksat-part discipline applied to the
+    primitives themselves. Lane-1 verifications run three-way in
+    tests/primitive-registry-band.fk; lane-0 entries are carrier-declared
+    (panic-contract, sockets, gc sweep, toolchain, sibling-gap) and this
+    sense keeps that tail visible. Delegates to
+    form/scripts/validate_primitive_registry.py — the canonical drift gate
+    between registry and kernel source.
+    """
+    script = ROOT / "form" / "scripts" / "validate_primitive_registry.py"
+    if not script.is_file():
+        return ["  (form/scripts/validate_primitive_registry.py not present; skipping)"]
+    try:
+        result = subprocess.run(
+            ["python3", str(script)],
+            capture_output=True, text=True, timeout=30,
+        )
+    except Exception as exc:
+        return [f"  (validate_primitive_registry.py did not run cleanly: {exc})"]
+    lines: list[str] = []
+    if result.returncode == 0:
+        lines.append("  every kernel native carries a declared spec + verification recipe")
+        for prefix in ("natives", "lanes", "sibling gaps", "band circulation"):
+            for ln in result.stdout.splitlines():
+                if ln.startswith(prefix):
+                    lines.append(f"    {ln.strip()}")
+                    break
+        return lines
+    lines.append("  the primitive registry and the kernel surface have drifted:")
+    for ln in (result.stdout + result.stderr).splitlines():
+        if ln.startswith("FAIL"):
+            lines.append(f"    {ln.strip()}")
+    return lines
+
+
 METABOLIC_CATEGORY_RULES = [
     {
         "label": "source grammar/parser residue",
@@ -2343,6 +2382,7 @@ def main() -> int:
         ("Form engine — does the meta-circular evaluator cover Python dispatch?", sense_form_engine()),
         ("Form ontology — does the form-side table agree with each kernel parser?", sense_form_ontology()),
         ("Form blueprints — are user-space Blueprint numbers registered, not magic?", sense_form_blueprints()),
+        ("Form primitives — does every kernel native carry a spec and a verification recipe?", sense_form_primitives()),
         ("Bootstrap compost — how much parser tissue still stands between us and Form-native?", sense_bootstrap_compost()),
         ("Static-to-dynamic wants — which fixed ledgers ask for live cells?", sense_static_to_dynamic_wants()),
         ("Edge categories — which repeated relations are becoming named clusters?", sense_edge_categories()),

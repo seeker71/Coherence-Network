@@ -2962,8 +2962,9 @@ export class Kernel {
       return { kind: "null" };
     });
     // node_eq — structural compare of two NodeIDs by their four
-    // components. Sibling parity with Go's node_eq + Rust's node_eq.
-    this.registerNative("node_eq", catWitness(), (_k, args) => {
+    // components. Sibling parity with Go's node_eq + Rust's node_eq,
+    // including the catCompare(eq) attribution both siblings declare.
+    this.registerNative("node_eq", catCompareEq(), (_k, args) => {
       const a = argNodeID(args, 0);
       const b = argNodeID(args, 1);
       const equal =

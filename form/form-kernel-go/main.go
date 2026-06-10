@@ -2958,13 +2958,6 @@ func (k *Kernel) registerNatives() {
 		}
 		return Value{Kind: VNodeID, Nid: root}
 	})
-	k.registerNative("write_form_binary", catCall(), func(k *Kernel, args []Value) Value {
-		bytes := serializeArtifact(k, args[1].Nid)
-		if err := os.WriteFile(resolveKernelHostPath(args[0].Str), bytes, 0644); err != nil {
-			return Value{Kind: VInt, Int: -1}
-		}
-		return Value{Kind: VInt, Int: int64(len(bytes))}
-	})
 	k.registerNative("file_size", catCall(), func(_ *Kernel, args []Value) Value {
 		info, err := os.Stat(resolveKernelHostPath(args[0].Str))
 		if err != nil {

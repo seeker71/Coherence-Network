@@ -85,6 +85,7 @@
                   fourth-kernel-emit-lane                   # the emitter discipline from M1
                   fkb-image-as-parity-gate)                 # same source -> same NodeIDs -> same image
     (proof        a-band-where-native-and-walker-compile-one-corpus-to-equal-images)
+    (verification-source primitive-registry.fk)             # the natives it carries, answered entry-by-entry
     (rows         compile-throughput rss startup binary-size))
 
   # ── M3 — the native API host ──────────────────────────────────────────
@@ -114,6 +115,8 @@
                   intern-and-node-eq-emission               # the substrate spine, emitted
                   validate.sh-fourth-arm)                   # sibling parity includes the emitted one
     (closes       kernel-self-composition.close-self-rebuild-loop)
+    (question-list primitive-registry.fk)                   # declares its subset, answers each entry's
+                                                            # verification recipe with the declared outside
     (proof        the-emitted-kernel-passes-a-named-band-family-and-its-values-equal-the-three)
 
     # The bootstrap ladder (Urs named it; the order is what makes it safe —
