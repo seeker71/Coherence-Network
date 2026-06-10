@@ -263,6 +263,24 @@
                                     the sibling; {nothing, 0, 1, node} completes
                                     when absence gets a nonzero sentinel reached
                                     through an OP, or a tagged ABI)
+                     # Urs asked: could NIL/NULL be encoded AS nothing? Yes —
+                     # and the axioms say it is the CORRECT encoding, on one
+                     # condition: refs and ints must be distinguishable.
+                     (ack-encoding-answer
+                       (one-bit-tag   refs odd — ref(idx) = idx<<1|1; ints even — v<<1)
+                       (nothing-is    the-null-reference = 1)   # ref-space zero
+                       (then          NIL NULL empty-list BMF-fail timeout are ONE
+                                      ground state — axiom-1's nothing, first-class)
+                       (int-0-honest  a matched zero is data, never a fail)
+                       (node-is       any non-null ref — a counter-offer IS a cell ref)
+                       (the-gift      the ack vocabulary {nothing, 0, 1, node} IS the
+                                      value type system: {null-ref, int-zero, int-one,
+                                      ref} — protocol and ABI are one shape)
+                       (behaviors     CHOICE pops on nothing; IF branches on zero —
+                                      fail and false finally distinct, both expressible)
+                       (cost          one shift per op — priced by the audit rows,
+                                      champion-challenger against the sentinel design)
+                       (lands-at      m4e3 alongside the real-recipe flattener))
                      (range-honesty program literals ride intern_trivial_int,
                                     which is 32-BIT — larger literals truncate
                                     silently (a sentinel literal cost an
