@@ -9,8 +9,15 @@ the words count, voice-traits' transcript-trust scales by the recognizer's own c
 
   TTS  — piper (rhasspy, free, local onnx voice; COH_PIPER_VOICE names the .onnx)
          → espeak-ng fallback (apt/brew install, formant synth — robotic but honest and tiny)
-  STT  — faster-whisper (free, CPU int8, ~40 languages)
+         (Voxtral-4B-TTS exists — mistralai, CC BY-NC weights, research lane — but its runtime
+          is vLLM with a flow-matching decoder not yet in plain transformers; that arm is an open
+          gap until a vLLM host carries it, named here rather than stubbed.)
+  STT  — faster-whisper (free, CPU int8, ~40 languages) — also the GATE oracle: its
+         no_speech_prob is the speechiness voiced.fk gates on
          → mlx-whisper fallback (Apple-Silicon)
+         → Voxtral-Mini-3B (mistralai, Apache 2.0, transformers-native) as the TRANSCRIPT oracle
+           when COH_VOXTRAL=1 — an LLM decoder with no calibrated no_speech_prob, so it never
+           gates; it only speaks once the gate is already open. Each oracle for what it measures.
 
 The round-trip is the witness: text → TTS → wav → loudness + speechiness → voiced.fk gate →
 STT → transcript. A synthesis the recognizer can't hear as speech fails the gate — the loop
@@ -71,6 +78,24 @@ def stt(wav):
         return "", "?", None, None
 
 
+def voxtral_stt(wav):
+    # the transcript oracle (Apache 2.0, transformers >= 4.54): rich multilingual hearing, no
+    # calibrated speechiness — call only behind an open voiced gate. Opt-in (9 GB of weights).
+    if os.environ.get("COH_VOXTRAL") != "1":
+        return None
+    try:
+        import torch
+        from transformers import VoxtralForConditionalGeneration, AutoProcessor
+        mid = "mistralai/Voxtral-Mini-3B-2507"
+        proc = AutoProcessor.from_pretrained(mid)
+        model = VoxtralForConditionalGeneration.from_pretrained(mid, dtype=torch.bfloat16)
+        inputs = proc.apply_transcription_request(language="en", audio=wav, model_id=mid)
+        out = model.generate(**inputs, max_new_tokens=128)
+        return proc.batch_decode(out[:, inputs.input_ids.shape[1]:], skip_special_tokens=True)[0].strip()
+    except Exception:
+        return None
+
+
 def roundtrip(text):
     wav = os.path.join(TMP, "roundtrip.wav")
     mouth = tts(text, wav)
@@ -89,6 +114,9 @@ def roundtrip(text):
     print(f"gate  ▸ {['silence', 'audible', 'voiced'][gate]}  (speechiness {sp}) → transcript-trust {trust}/9")
     if gate >= 2:
         print(f"stt   ▸ {ear} [{lang}] heard: “{heard}”")
+        vox = voxtral_stt(wav)
+        if vox is not None:
+            print(f"stt   ▸ voxtral-mini-3b heard: “{vox}”")
     else:
         print(f"stt   ▸ transcript withheld — the body doesn't trust words below the voiced gate")
 
