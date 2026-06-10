@@ -28,6 +28,9 @@ VERIFY_REQUIRE_TELEGRAM_ALERTS="${VERIFY_REQUIRE_TELEGRAM_ALERTS:-0}"
 VERIFY_REQUIRE_PROVIDER_READINESS="${VERIFY_REQUIRE_PROVIDER_READINESS:-0}"
 VERIFY_REQUIRE_API_HEALTH_SHA="${VERIFY_REQUIRE_API_HEALTH_SHA:-0}"
 VERIFY_REQUIRE_WEB_HEALTH_PROXY_SHA="${VERIFY_REQUIRE_WEB_HEALTH_PROXY_SHA:-0}"
+VERIFY_WAIT_FOR_OPTIONAL_SHA_PARITY="${VERIFY_WAIT_FOR_OPTIONAL_SHA_PARITY:-0}"
+SHA_PARITY_PATIENCE_SECONDS="${SHA_PARITY_PATIENCE_SECONDS:-60}"
+SHA_PARITY_PATIENCE_INTERVAL="${SHA_PARITY_PATIENCE_INTERVAL:-5}"
 PULSE_RECHECK_SECONDS="${PULSE_RECHECK_SECONDS:-30}"
 NATIVE_CANARY_PATIENCE_SECONDS="${NATIVE_CANARY_PATIENCE_SECONDS:-90}"
 NATIVE_CANARY_PATIENCE_INTERVAL="${NATIVE_CANARY_PATIENCE_INTERVAL:-5}"
@@ -712,80 +715,104 @@ check_api_runtime_sha() {
   local health_body="$TMP_DIR/api_health_sha.body.json"
   local main_head_body="$TMP_DIR/api_main_head_sha.body.json"
   local health_status main_head_status
+  local deadline=$(( $(date +%s) + SHA_PARITY_PATIENCE_SECONDS ))
+  local should_wait=0
+  local attempt=1
+  if [[ "$required" == "1" || "$VERIFY_WAIT_FOR_OPTIONAL_SHA_PARITY" == "1" ]]; then
+    should_wait=1
+  fi
 
   echo
   echo "==> API runtime SHA parity: ${health_url} vs ${main_head_url} (required=${required})"
-  health_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$health_body" -w "%{http_code}" \
-    --max-time "$CURL_MAX_TIME" \
-    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
-    "$health_url" || true)"
-  main_head_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$main_head_body" -w "%{http_code}" \
-    --max-time "$CURL_MAX_TIME" \
-    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
-    "$main_head_url" || true)"
-  echo "health status: ${health_status:-unknown} | main-head status: ${main_head_status:-unknown}"
 
-  if [[ -z "$health_status" || "$health_status" -lt 200 || "$health_status" -ge 400 ]]; then
-    echo "FAIL: api health endpoint unavailable for SHA parity check"
-    return 1
-  fi
-  if [[ -z "$main_head_status" || "$main_head_status" -lt 200 || "$main_head_status" -ge 400 ]]; then
-    if [[ "$required" == "1" ]]; then
-      echo "FAIL: main-head endpoint unavailable for required SHA parity check"
+  while :; do
+    health_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$health_body" -w "%{http_code}" \
+      --max-time "$CURL_MAX_TIME" \
+      --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+      "$health_url" || true)"
+    main_head_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$main_head_body" -w "%{http_code}" \
+      --max-time "$CURL_MAX_TIME" \
+      --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+      "$main_head_url" || true)"
+    echo "health status: ${health_status:-unknown} | main-head status: ${main_head_status:-unknown}"
+
+    if [[ -z "$health_status" || "$health_status" -lt 200 || "$health_status" -ge 400 ]]; then
+      echo "FAIL: api health endpoint unavailable for SHA parity check"
       return 1
     fi
-    echo "WARN: main-head endpoint unavailable (non-blocking SHA parity check)"
-    return 0
-  fi
-
-  local expected_sha observed_sha
-  expected_sha=""
-  observed_sha=""
-  if command -v jq >/dev/null 2>&1; then
-    expected_sha="$(jq -r '.sha // ""' "$main_head_body" 2>/dev/null || true)"
-    observed_sha="$(
-      jq -r '(.deployed_sha // .updated_at // .commit_sha // .git_sha // "")' "$health_body" 2>/dev/null || true
-    )"
-  else
-    expected_sha="$(grep -o '"sha"[[:space:]]*:[[:space:]]*"[^"]*"' "$main_head_body" | head -n 1 | sed 's/.*"sha"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')"
-    observed_sha="$(grep -o '"deployed_sha"[[:space:]]*:[[:space:]]*"[^"]*"' "$health_body" | head -n 1 | sed 's/.*"deployed_sha"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')"
-  fi
-  expected_sha="$(echo "${expected_sha:-}" | tr -d '\r')"
-  observed_sha="$(echo "${observed_sha:-}" | tr -d '\r')"
-  echo "expected_sha: ${expected_sha:-<missing>}"
-  echo "observed_sha: ${observed_sha:-<missing>}"
-
-  if [[ -z "$expected_sha" ]]; then
-    if [[ "$required" == "1" ]]; then
-      echo "FAIL: expected SHA is missing from main-head response"
-      return 1
+    if [[ -z "$main_head_status" || "$main_head_status" -lt 200 || "$main_head_status" -ge 400 ]]; then
+      if [[ "$required" == "1" ]]; then
+        echo "FAIL: main-head endpoint unavailable for required SHA parity check"
+        return 1
+      fi
+      echo "WARN: main-head endpoint unavailable (non-blocking SHA parity check)"
+      return 0
     fi
-    echo "WARN: expected SHA missing from main-head response"
-    return 0
-  fi
 
-  local observed_normalized
-  observed_normalized="$(echo "$observed_sha" | tr '[:upper:]' '[:lower:]')"
-  if [[ -z "$observed_sha" || "$observed_normalized" == "unknown" || "$observed_normalized" == "none" || "$observed_normalized" == "n/a" ]]; then
-    if [[ "$required" == "1" ]]; then
-      echo "FAIL: API health does not expose deployed SHA (required)"
-      return 1
+    local expected_sha observed_sha
+    expected_sha=""
+    observed_sha=""
+    if command -v jq >/dev/null 2>&1; then
+      expected_sha="$(jq -r '.sha // ""' "$main_head_body" 2>/dev/null || true)"
+      observed_sha="$(
+        jq -r '(.deployed_sha // .updated_at // .commit_sha // .git_sha // "")' "$health_body" 2>/dev/null || true
+      )"
+    else
+      expected_sha="$(grep -o '"sha"[[:space:]]*:[[:space:]]*"[^"]*"' "$main_head_body" | head -n 1 | sed 's/.*"sha"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')"
+      observed_sha="$(grep -o '"deployed_sha"[[:space:]]*:[[:space:]]*"[^"]*"' "$health_body" | head -n 1 | sed 's/.*"deployed_sha"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')"
     fi
-    echo "WARN: API health does not expose deployed SHA (non-blocking)"
-    return 0
-  fi
+    expected_sha="$(echo "${expected_sha:-}" | tr -d '\r')"
+    observed_sha="$(echo "${observed_sha:-}" | tr -d '\r')"
+    echo "expected_sha: ${expected_sha:-<missing>}"
+    echo "observed_sha: ${observed_sha:-<missing>}"
 
-  if [[ "$observed_sha" != "$expected_sha" ]]; then
-    if [[ "$required" == "1" ]]; then
-      echo "FAIL: API deployed SHA does not match expected main-head SHA"
-      return 1
+    if [[ -z "$expected_sha" ]]; then
+      if [[ "$required" == "1" ]]; then
+        echo "FAIL: expected SHA is missing from main-head response"
+        return 1
+      fi
+      echo "WARN: expected SHA missing from main-head response"
+      return 0
     fi
-    echo "WARN: API deployed SHA does not match expected main-head SHA (non-blocking)"
-    return 0
-  fi
 
-  echo "PASS"
-  return 0
+    local observed_normalized
+    observed_normalized="$(echo "$observed_sha" | tr '[:upper:]' '[:lower:]')"
+    if [[ -z "$observed_sha" || "$observed_normalized" == "unknown" || "$observed_normalized" == "none" || "$observed_normalized" == "n/a" ]]; then
+      if (( should_wait == 1 && $(date +%s) < deadline )); then
+        echo "WARN: API health has no deployed SHA yet; retrying in ${SHA_PARITY_PATIENCE_INTERVAL}s..."
+        sleep "$SHA_PARITY_PATIENCE_INTERVAL"
+        attempt=$((attempt + 1))
+        continue
+      fi
+      if [[ "$required" == "1" ]]; then
+        echo "FAIL: API health does not expose deployed SHA (required)"
+        return 1
+      fi
+      echo "WARN: API health does not expose deployed SHA (non-blocking)"
+      return 0
+    fi
+
+    if [[ "$observed_sha" != "$expected_sha" ]]; then
+      if (( should_wait == 1 && $(date +%s) < deadline )); then
+        echo "WARN: API deployed SHA does not match expected main-head SHA; retrying in ${SHA_PARITY_PATIENCE_INTERVAL}s..."
+        sleep "$SHA_PARITY_PATIENCE_INTERVAL"
+        attempt=$((attempt + 1))
+        continue
+      fi
+      if [[ "$required" == "1" ]]; then
+        echo "FAIL: API deployed SHA does not match expected main-head SHA"
+        return 1
+      fi
+      echo "WARN: API deployed SHA does not match expected main-head SHA (non-blocking)"
+      return 0
+    fi
+
+    if (( attempt > 1 )); then
+      echo "OK: API runtime SHA parity settled after ${attempt} attempt(s)"
+    fi
+    echo "PASS"
+    return 0
+  done
 }
 
 check_web_runtime_sha() {
@@ -795,99 +822,117 @@ check_web_runtime_sha() {
   local proxy_body="$TMP_DIR/web_health_proxy_sha.body.json"
   local main_head_body="$TMP_DIR/web_main_head_sha.body.json"
   local proxy_status main_head_status
+  local deadline=$(( $(date +%s) + SHA_PARITY_PATIENCE_SECONDS ))
+  local should_wait=0
+  local attempt=1
+  if [[ "$required" == "1" || "$VERIFY_WAIT_FOR_OPTIONAL_SHA_PARITY" == "1" ]]; then
+    should_wait=1
+  fi
 
   echo
   echo "==> Web runtime SHA parity: ${proxy_url} vs ${main_head_url} (required=${required})"
-  proxy_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$proxy_body" -w "%{http_code}" \
-    --max-time "$CURL_MAX_TIME" \
-    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
-    "$proxy_url" || true)"
-  main_head_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$main_head_body" -w "%{http_code}" \
-    --max-time "$CURL_MAX_TIME" \
-    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
-    "$main_head_url" || true)"
-  echo "proxy status: ${proxy_status:-unknown} | main-head status: ${main_head_status:-unknown}"
 
-  if [[ -z "$proxy_status" || "$proxy_status" -lt 200 || "$proxy_status" -ge 400 ]]; then
-    echo "FAIL: web health-proxy endpoint unavailable for SHA parity check"
-    return 1
-  fi
-  if [[ -z "$main_head_status" || "$main_head_status" -lt 200 || "$main_head_status" -ge 400 ]]; then
-    if [[ "$required" == "1" ]]; then
-      echo "FAIL: main-head endpoint unavailable for required web SHA parity check"
+  while :; do
+    proxy_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$proxy_body" -w "%{http_code}" \
+      --max-time "$CURL_MAX_TIME" \
+      --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+      "$proxy_url" || true)"
+    main_head_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -o "$main_head_body" -w "%{http_code}" \
+      --max-time "$CURL_MAX_TIME" \
+      --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+      "$main_head_url" || true)"
+    echo "proxy status: ${proxy_status:-unknown} | main-head status: ${main_head_status:-unknown}"
+
+    if [[ -z "$proxy_status" || "$proxy_status" -lt 200 || "$proxy_status" -ge 400 ]]; then
+      echo "FAIL: web health-proxy endpoint unavailable for SHA parity check"
       return 1
     fi
-    echo "WARN: main-head endpoint unavailable (non-blocking web SHA parity check)"
-    return 0
-  fi
-
-  local expected_sha observed_sha api_status
-  expected_sha=""
-  observed_sha=""
-  api_status=""
-  if command -v jq >/dev/null 2>&1; then
-    expected_sha="$(jq -r '.sha // ""' "$main_head_body" 2>/dev/null || true)"
-    observed_sha="$(
-      jq -r '(.web.deployed_sha // .web.updated_at // .web.commit_sha // .web.git_sha // "")' "$proxy_body" 2>/dev/null || true
-    )"
-    api_status="$(jq -r '.api.status // ""' "$proxy_body" 2>/dev/null || true)"
-  else
-    expected_sha="$(grep -o '"sha"[[:space:]]*:[[:space:]]*"[^"]*"' "$main_head_body" | head -n 1 | sed 's/.*"sha"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')"
-    observed_sha="$(grep -o '"deployed_sha"[[:space:]]*:[[:space:]]*"[^"]*"' "$proxy_body" | head -n 1 | sed 's/.*"deployed_sha"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')"
-    if [[ -z "$observed_sha" ]]; then
-      observed_sha="$(grep -o '"updated_at"[[:space:]]*:[[:space:]]*"[^"]*"' "$proxy_body" | head -n 1 | sed 's/.*"updated_at"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')"
+    if [[ -z "$main_head_status" || "$main_head_status" -lt 200 || "$main_head_status" -ge 400 ]]; then
+      if [[ "$required" == "1" ]]; then
+        echo "FAIL: main-head endpoint unavailable for required web SHA parity check"
+        return 1
+      fi
+      echo "WARN: main-head endpoint unavailable (non-blocking web SHA parity check)"
+      return 0
     fi
-    api_status="$(grep -o '"status"[[:space:]]*:[[:space:]]*"[^"]*"' "$proxy_body" | head -n 1 | sed 's/.*"status"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')"
-  fi
-  expected_sha="$(echo "${expected_sha:-}" | tr -d '\r')"
-  observed_sha="$(echo "${observed_sha:-}" | tr -d '\r')"
-  api_status="$(echo "${api_status:-}" | tr -d '\r')"
-  echo "expected_sha: ${expected_sha:-<missing>}"
-  echo "observed_sha: ${observed_sha:-<missing>}"
-  echo "api_status: ${api_status:-<missing>}"
 
-  if [[ -n "$api_status" && "$api_status" != "ok" ]]; then
-    echo "FAIL: web health-proxy indicates API is not healthy"
-    return 1
-  fi
+    local expected_sha observed_sha api_status
+    expected_sha=""
+    observed_sha=""
+    api_status=""
+    if command -v jq >/dev/null 2>&1; then
+      expected_sha="$(jq -r '.sha // ""' "$main_head_body" 2>/dev/null || true)"
+      observed_sha="$(
+        jq -r '(.web.deployed_sha // .web.updated_at // .web.commit_sha // .web.git_sha // "")' "$proxy_body" 2>/dev/null || true
+      )"
+      api_status="$(jq -r '.api.status // ""' "$proxy_body" 2>/dev/null || true)"
+    else
+      expected_sha="$(grep -o '"sha"[[:space:]]*:[[:space:]]*"[^"]*"' "$main_head_body" | head -n 1 | sed 's/.*"sha"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')"
+      observed_sha="$(grep -o '"deployed_sha"[[:space:]]*:[[:space:]]*"[^"]*"' "$proxy_body" | head -n 1 | sed 's/.*"deployed_sha"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')"
+      if [[ -z "$observed_sha" ]]; then
+        observed_sha="$(grep -o '"updated_at"[[:space:]]*:[[:space:]]*"[^"]*"' "$proxy_body" | head -n 1 | sed 's/.*"updated_at"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')"
+      fi
+      api_status="$(grep -o '"status"[[:space:]]*:[[:space:]]*"[^"]*"' "$proxy_body" | head -n 1 | sed 's/.*"status"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')"
+    fi
+    expected_sha="$(echo "${expected_sha:-}" | tr -d '\r')"
+    observed_sha="$(echo "${observed_sha:-}" | tr -d '\r')"
+    api_status="$(echo "${api_status:-}" | tr -d '\r')"
+    echo "expected_sha: ${expected_sha:-<missing>}"
+    echo "observed_sha: ${observed_sha:-<missing>}"
+    echo "api_status: ${api_status:-<missing>}"
 
-  if [[ -z "$expected_sha" ]]; then
-    if [[ "$required" == "1" ]]; then
-      echo "FAIL: expected SHA is missing from main-head response"
+    if [[ -n "$api_status" && "$api_status" != "ok" ]]; then
+      echo "FAIL: web health-proxy indicates API is not healthy"
       return 1
     fi
-    echo "WARN: expected SHA missing from main-head response"
-    return 0
-  fi
 
-  local observed_normalized
-  observed_normalized="$(echo "$observed_sha" | tr '[:upper:]' '[:lower:]')"
-  if [[ -z "$observed_sha" || "$observed_normalized" == "unknown" || "$observed_normalized" == "none" || "$observed_normalized" == "n/a" ]]; then
-    if [[ "$required" == "1" ]]; then
-      echo "FAIL: web health-proxy does not expose deployed SHA (required)"
-      return 1
+    if [[ -z "$expected_sha" ]]; then
+      if [[ "$required" == "1" ]]; then
+        echo "FAIL: expected SHA is missing from main-head response"
+        return 1
+      fi
+      echo "WARN: expected SHA missing from main-head response"
+      return 0
     fi
-    echo "WARN: web health-proxy does not expose deployed SHA (non-blocking)"
-    return 0
-  fi
 
-  if [[ "$observed_sha" != "$expected_sha" ]]; then
-    # Two cases produce a mismatch: (a) the deploy is stale (live SHA is
-    # behind expected), or (b) main moved forward during this verification
-    # window (live SHA is ahead of expected — rollout race, not a failure).
-    # When this check is non-required, log it and pass; when required, fail.
-    # The api-side parity check (check_api_runtime_sha) honors `required`
-    # the same way; this brings the web side into symmetry.
-    if [[ "$required" == "1" ]]; then
-      echo "FAIL: web deployed SHA does not match expected main-head SHA"
-      return 1
+    local observed_normalized
+    observed_normalized="$(echo "$observed_sha" | tr '[:upper:]' '[:lower:]')"
+    if [[ -z "$observed_sha" || "$observed_normalized" == "unknown" || "$observed_normalized" == "none" || "$observed_normalized" == "n/a" ]]; then
+      if (( should_wait == 1 && $(date +%s) < deadline )); then
+        echo "WARN: web health-proxy has no deployed SHA yet; retrying in ${SHA_PARITY_PATIENCE_INTERVAL}s..."
+        sleep "$SHA_PARITY_PATIENCE_INTERVAL"
+        attempt=$((attempt + 1))
+        continue
+      fi
+      if [[ "$required" == "1" ]]; then
+        echo "FAIL: web health-proxy does not expose deployed SHA (required)"
+        return 1
+      fi
+      echo "WARN: web health-proxy does not expose deployed SHA (non-blocking)"
+      return 0
     fi
-    echo "WARN: web deployed SHA does not match expected main-head SHA (non-blocking; possibly rollout race)"
-    return 0
-  fi
 
-  echo "PASS"
-  return 0
+    if [[ "$observed_sha" != "$expected_sha" ]]; then
+      if (( should_wait == 1 && $(date +%s) < deadline )); then
+        echo "WARN: web deployed SHA does not match expected main-head SHA; retrying in ${SHA_PARITY_PATIENCE_INTERVAL}s..."
+        sleep "$SHA_PARITY_PATIENCE_INTERVAL"
+        attempt=$((attempt + 1))
+        continue
+      fi
+      if [[ "$required" == "1" ]]; then
+        echo "FAIL: web deployed SHA does not match expected main-head SHA"
+        return 1
+      fi
+      echo "WARN: web deployed SHA does not match expected main-head SHA (non-blocking; possibly rollout race)"
+      return 0
+    fi
+
+    if (( attempt > 1 )); then
+      echo "OK: Web runtime SHA parity settled after ${attempt} attempt(s)"
+    fi
+    echo "PASS"
+    return 0
+  done
 }
 
 check_kernel_image_native_proposal() {
