@@ -10,7 +10,7 @@
 #     to stay in integer arithmetic — the kernel's MATH arms are
 #     int-only today; float natives are an honest follow-up gap)
 #
-# Runs identically across CPython, TS evalPython, and form-kernel-rust.
+# Runs identically across CPython, kernel-bmf-run, and form-kernel-rust.
 
 def weighted_score(value, position):
     if position == 0:

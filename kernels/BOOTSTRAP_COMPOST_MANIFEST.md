@@ -10,24 +10,24 @@ sibling PRs (`template-machinery`, `python-bmf-driven-parse`, and onward) as
 each demo proves three-way identity on the Form-native side.
 
 The discipline is **discipline + readiness**: every bootstrap file is named here
-with the gate that must be green before it composts, and the parity suite
-already carries a runtime selector that switches the third runtime atomically
-(see `seedbank/python-adapter/scripts/parity_suite.sh` `PARITY_THIRD_RUNTIME`).
-As of 2026-06-01, **all 20** of the `PARITY_FILES` prove three-way green under
-the Form-native walker (isolated-tempdir measurement, freshly rebuilt Go + Rust
-kernels). The last demo (`python_typing_compose_demo`) closed when the
-annotated-parameter lift bug was fixed (see the dated row below). **The flip is
-taken (2026-06-01):** `PARITY_THIRD_RUNTIME` now defaults to `kernel-bmf` — the
-Form-native walker is the canonical Python runtime; `ts-eval` remains available
-via an explicit `PARITY_THIRD_RUNTIME=ts-eval`. The flip retires the
-`evalPython`/`ts-eval` *third-runtime seam* — but a 2026-06-03 dependency walk
-(Phase A) found the Python-adapter parser + emitter + CLI still carry the parity
-suite's **Rust-bootstrap leg** (`python-compile` → `.fk` → Rust kernel, leg 2,
-unconditional) with four live consumers, plus a direct import from the kept
-`ctor-convergence.test.ts`. So `lang-python.ts` and siblings are **NOT residue
-on the flip alone** — they release only when the Rust-bootstrap leg is replaced
-by a Form-native `.py → .fk` path (the destination shape). See Phase A for the
-full graph and the gate that actually holds.
+with the gate that must be green before it composts. As of 2026-06-07, the
+Python adapter parser/emitter/CLI gate has crossed from correction to release:
+`lang-python.ts`, `lang-python-fk.ts`, `lang-python.test.ts`, and `main.ts` are
+gone from the tree, and the parity suite now carries the current three witnesses
+without reopening the old selector seam:
+
+1. CPython evaluates the source file's final expression.
+2. `kernel-bmf-compile` emits `.fk` through Form-native grammar rules, then the
+   Rust kernel executes that recipe.
+3. `kernel-bmf-run` walks the `.py` source through the Form-native path end to
+   end.
+
+The 2026-06-03 dependency walk below remains useful as a caution: the flip alone
+was not sufficient evidence. The later 2026-06-07 compiler release supplied the
+missing replacement path. The 2026-06-11 bootstrap-tissue pass removes the stale
+`ts-eval` selector and routes the remaining trace/readiness/perf tools through
+`kernel-bmf-compile`, so those older "live consumer" edges no longer preserve
+the deleted CLI.
 
 This is the readiness map. The compost is downstream of green gates.
 
@@ -97,33 +97,28 @@ result
 No host parser. No TypeScript lowering. No Python `ast` bridge. The grammar IS
 data; the engines walk it; the kernels execute the recipes.
 
-The bootstrap exists because we need a way to *prove* the Form-native pipeline
-matches CPython before we can rely on it. Three-way parity (CPython +
-TS bootstrap + Rust kernel) is the gate that earns the right to remove the
-TS bootstrap. Three-way parity (CPython + Form-native + Rust kernel) is the
-gate that earns the right to remove the Rust kernel from the bootstrap role
-(it stays as the execution kernel; only its bootstrap-parser role composts).
+The bootstrap existed because we needed a way to *prove* the Form-native
+pipeline matches CPython before relying on it. The current Python gate is
+three-way parity across CPython, Form-native compiled `.fk` on the Rust kernel,
+and `kernel-bmf-run` from `.py` source. The Rust kernel stays as an execution
+kernel; only host-language parser/emitter scaffolding composts.
 
 ---
 
 ## Phase A — Bootstrap parsers + emitters
 
-These shipped two distinct roles. The `evalPython` tree-walker fills the
-**third-runtime seam** (`ts-eval`), and with the flip taken (2026-06-01) the
-Form-native walker is the default third runtime — so the `evalPython` sub-path
-is legacy. But the *same files* also carry the parser + emitter that runs the
-parity suite's **Rust-bootstrap leg** (`python-compile` → `.fk` → Rust kernel),
-which is leg 2 of the three-way gate and runs **unconditionally on every parity
-invocation regardless of `PARITY_THIRD_RUNTIME`**. That role is not residue —
-it is live tissue with live consumers (see the dependency walk below). The
-files do not compost until the Rust-bootstrap leg is itself replaced by a
-Form-native `.py → .fk` path (the destination shape at the top of this doc).
+These shipped two distinct roles: the old `evalPython` tree-walker and the
+parser/emitter that generated `.fk` for the Rust leg. The 2026-06-03 dependency
+walk correctly blocked deletion when only the third-runtime default had flipped.
+That block is now superseded: the Form-native compiler path exists, the TS
+parser/emitter/CLI files are deleted, and the remaining Python scripts call
+`kernel-bmf-compile` / `kernel-bmf-run` directly.
 
 **Dependency walk — 2026-06-03 (`claude/compost-python-adapter`).** A sibling
 PR set out to compost the Python adapter on the strength of the flip. The
 dependency graph said otherwise, and rigor kept the tree whole:
 
-- **`lang-python.ts` (`parsePython` + `buildPythonLanguage`) is live two ways.**
+- **`lang-python.ts` (`parsePython` + `buildPythonLanguage`) was live two ways.**
   (1) `parity_suite.sh` line 315 calls `python-compile` (via `main.ts` →
   `parsePython` → `emitFk`) for the **Rust-bootstrap leg** on every run — not
   the `ts-eval` branch, the unconditional leg 2. (2) `ctor-convergence.test.ts`
@@ -131,42 +126,46 @@ dependency graph said otherwise, and rigor kept the tree whole:
   imports `buildPythonLanguage` + `parsePython` and exercises them in 28
   passing assertions (cross-language CTOR convergence). Removing `lang-python.ts`
   breaks both.
-- **`lang-python-fk.ts` (`emitFk`) is the Rust-bootstrap leg's emitter** —
-  consumed by `python-compile`/`python-run` in `main.ts`. Not residue while
-  leg 2 runs.
-- **`main.ts` exposes `python-compile`/`python-run`**, consumed live by FOUR
+- **`lang-python-fk.ts` (`emitFk`) was the Rust-bootstrap leg's emitter** —
+  consumed by `python-compile`/`python-run` in `main.ts`. It was not residue
+  while leg 2 ran.
+- **`main.ts` exposed `python-compile`/`python-run`**, consumed live by FOUR
   surfaces: `parity_suite.sh` (Rust-bootstrap leg), `perf_compare.sh`,
   `form/form-kernel-ts/scripts/viz_kernel_trace.py` (the trace visualizer), and
   `scripts/kernel_readiness_harness.py` (the API-kernel readiness harness, which
   documents `python-compile` as "the deploy step"). `PYTHON_PIPELINE_STATUS.md`
   lists `python-compile`/`python-run` in its active "How to run" section.
-- **`lang-python.test.ts`** covers the still-live `lang-python.ts` parser +
-  `evalPython`; removing it deletes coverage of live code.
+- **`lang-python.test.ts`** covered the then-live `lang-python.ts` parser +
+  `evalPython`; removing it would have deleted coverage of live code.
 - **`ctor-convergence.ts` / `ctor-convergence.test.ts`** stay (shared with the
   ts-adapter; compost when *it* does).
 
-What is genuinely legacy is the narrow `evalPython` → `python-eval` → the
-`ts-eval` branch of `parity_suite.sh` (lines 240-244). Even that is wired live
-into `main.ts` as one of four documented subcommands, so it does not compost in
-isolation — `lang-python.ts` (which holds `evalPython`) stays for the
-Rust-bootstrap leg and the convergence test regardless.
+At that date, the genuinely legacy slice was only the narrow `evalPython` →
+`python-eval` → `ts-eval` branch of `parity_suite.sh`; the parser/emitter/CLI
+still had live consumers. The gate that actually held was: replace the parity
+suite's **Rust-bootstrap leg** with a Form-native `.py → .fk` path and route
+the readiness harness + trace visualizer through that path instead of
+`python-compile`. The selector flip (2026-06-01) was a necessary earlier
+breath, not the compost gate.
 
-**Gate that actually holds:** the Python-adapter parser + emitter + CLI compost
-when the parity suite's **Rust-bootstrap leg** is replaced by a Form-native
-`.py → .fk` path and the readiness harness + trace visualizer read that path
-instead of `python-compile` — i.e. when the destination shape (top of this doc:
-"No host parser. No TypeScript lowering.") is reached, not merely when the
-third-runtime *selector* flipped. The selector flip (2026-06-01) is a
-necessary earlier breath, not the compost gate.
+**Superseding release — 2026-06-11 (`codex/bootstrap-tissue-release-20260611`).**
+The gate above is now satisfied in the working tree. `kernel-bmf-compile`
+replaces `python-compile` for parity, trace visualization, readiness harnesses,
+and the grounded-cost probe. `parity_suite.sh` no longer exposes
+`PARITY_THIRD_RUNTIME` or calls `python-eval`; it compares CPython,
+Form-native compiled `.fk` on Rust, and `kernel-bmf-run`. `perf_compare.sh`
+measures the same current surfaces. This release does not delete the
+shared `ctor-convergence.*` files or TypeScript adapter tissue; those remain
+separate rows.
 
 ### Python adapter
 
 | File | LOC | What it does today | Form-native replacement |
 |---|---|---|---|
-| `form/form-kernel-ts/seedbank/python-adapter/src/lang-python.ts` | 2199 | TS hand-coded Python parser (`parsePython` — the Rust-bootstrap leg's parser, run on every parity invocation) + tree-walking evaluator (`evalPython` — the legacy `ts-eval` third runtime). **Also imported by the kept `ctor-convergence.test.ts`.** | `form-stdlib/grammars/python-bmf.fk` rules consuming BMF source objects emitted by the generic Form scanner |
-| `form/form-kernel-ts/seedbank/python-adapter/src/lang-python-fk.ts` | 674 | TS emitter — lowers parsed Python CTORs to `.fk` text the Rust kernel runs | Form-native rules emit reversible Form objects directly; no separate emitter layer — the parser output IS the recipe |
+| `form/form-kernel-ts/seedbank/python-adapter/src/lang-python.ts` | 2199 | **RELEASED 2026-06-07** — TS hand-coded Python parser + `evalPython` tree walker removed | `form-stdlib/grammars/python-bmf.fk` + `python-bmf-lift.fk` |
+| `form/form-kernel-ts/seedbank/python-adapter/src/lang-python-fk.ts` | 674 | **RELEASED 2026-06-07** — TS emitter removed | `form-stdlib/grammars/python-bmf-compiler.fk` via `kernel-bmf-compile` |
 | `form/form-kernel-ts/seedbank/python-adapter/src/ctor-convergence.ts` | 672 | TS-side CTOR vocabulary + convergence helpers (shared with TS adapter for Blueprint identity) | CTOR vocabulary moves into `form-stdlib/grammars/ctor-vocabulary.fk` as Form data; convergence is structural by content-addressing |
-| `form/form-kernel-ts/seedbank/python-adapter/src/lang-python.test.ts` | 342 | TS-side parser/eval unit tests | Form-side rule tests under `form-stdlib/tests/python-grammar-*.fk` (one per shipped construct) |
+| `form/form-kernel-ts/seedbank/python-adapter/src/lang-python.test.ts` | 342 | **RELEASED 2026-06-07** — TS parser/eval tests removed | Form-side rule tests under `form-stdlib/tests/python-grammar-*.fk` (one per shipped construct) |
 | `form/form-kernel-ts/seedbank/python-adapter/src/ctor-convergence.test.ts` | 358 | TS-side convergence unit tests | Form-side equivalence tests asserting NodeID identity for cross-language structural twins |
 
 **Subtotal Phase A — Python adapter: 4245 LOC** — **COMPOSTED / RELEASED (2026-06-07).** The Rust-bootstrap leg has been fully replaced by the Form-native compiler (`form-stdlib/grammars/python-bmf-compiler.fk` and `python-bmf-lift.fk`). The legacy TS-based parser (`lang-python.ts`), emitter (`lang-python-fk.ts`), tests (`lang-python.test.ts`), and CLI (`main.ts`) have been completely deleted (composted). `ctor-convergence.test.ts` was successfully refactored to construct mock Python AST captured trees programmatically without any dependency on the legacy TS parser.
@@ -200,11 +199,11 @@ Breath 2 of `form/kernel-roadmap.md`) across three sibling kernels.
 
 | File | LOC | What it does today | Form-native replacement |
 |---|---|---|---|
-| `form/form-kernel-ts/seedbank/python-adapter/src/main.ts` | 221 | CLI entry: `python-compile`, `python-run`, `python-eval`, `python-trace` | Subsumed by `form-kernel-{rust,go,ts} <file.py>` — the kernel reads `.py` directly via the grammar |
-| `form/form-kernel-ts/seedbank/python-adapter/scripts/parity_suite.sh` | 99 | Three-way parity gate (CPython / ts-eval / Rust kernel) | Replaced by Form-native parity gate comparing (CPython / classic-rd Form engine / BMF-streaming Form engine) × 3 kernels = 7-way matrix; same shell wrapper, different runtimes |
-| `form/form-kernel-ts/seedbank/python-adapter/scripts/perf_compare.sh` | 91 | Wall-clock comparison CPython vs Rust kernel vs TS evalPython | Becomes (CPython vs native kernel vs Form-native walker on kernel); the TS-bootstrap row drops out |
+| `form/form-kernel-ts/seedbank/python-adapter/src/main.ts` | 221 | **RELEASED 2026-06-07** — old CLI (`python-compile`, `python-run`, `python-eval`, `python-trace`) deleted | `kernel-bmf-compile` and `kernel-bmf-run` |
+| `form/form-kernel-ts/seedbank/python-adapter/scripts/parity_suite.sh` | 99 | **REWORKED 2026-06-11** — three-way gate (CPython / Form-native compiled `.fk` on Rust / kernel-bmf-run) | Future 7-way matrix can extend this shell wrapper without reintroducing TS eval |
+| `form/form-kernel-ts/seedbank/python-adapter/scripts/perf_compare.sh` | 91 | **REWORKED 2026-06-11** — wall-clock comparison CPython vs Rust compiled `.fk` vs kernel-bmf-run | Keep as current perf smoke; no TS-bootstrap row |
 
-**Subtotal Phase B — Python adapter: 411 LOC** (scripts stay, third-runtime row drops out — net compost is ~30 LOC of script tissue + the entire 221-LOC CLI)
+**Subtotal Phase B — Python adapter: CLI released; scripts retained as Form-native gates.**
 
 ### TypeScript adapter
 
@@ -331,47 +330,33 @@ confirm Shape 2 classification + LOC count.
 
 ## Summary
 
-| Phase | What | LOC named for compost |
+| Phase | What | Remaining named tissue |
 |---|---|---|
-| A | Bootstrap parsers + emitters (Python adapter + TS adapter) | **5,781** |
-| B | Adapter CLIs + scripts + emitted .fk files | **714** (~+20 .fk files; 4 emitted .fk RELEASED 2026-05-31 — see RELEASED section) |
+| A | Bootstrap parsers + emitters (Python adapter released; shared ctor + TS adapter remain) | Counted by `make wellness` from files still present |
+| B | Adapter CLIs + scripts + emitted .fk files (Python CLI released; Python scripts reworked) | Counted by `make wellness`; emitted `.fk` release rows below |
 | C | Python bridge + form_runtime + self-host registry | **2,938** + utility-router rows |
 | D | Foundational persistence + infrastructure | **TBD** (firing-questions in flight) |
-| **Total** | | **~9,433 LOC + Phase D** of bootstrap tissue with named compost gates |
+| **Total** | | Dynamic; `sense_bootstrap_compost` is the current source of truth |
 
 ---
 
-## The runtime-selector switch
+## The retired Python runtime selector
 
-`form/form-kernel-ts/seedbank/python-adapter/scripts/parity_suite.sh` carries
-`PARITY_THIRD_RUNTIME` (env-var):
+`form/form-kernel-ts/seedbank/python-adapter/scripts/parity_suite.sh` no longer
+carries `PARITY_THIRD_RUNTIME`. That selector was useful while `ts-eval` and
+`kernel-bmf` overlapped, but it became misleading once the TS Python
+parser/emitter/CLI composted.
 
-- `kernel-bmf` (**default — the flip is taken, 2026-06-01**) — invokes
-  `kernel-bmf-run <source.py>`, which reads `.py` via
-  `form-stdlib/grammars/python-bmf.fk`, lifts to PY-BMF-* recipes
-  (`python-bmf-lift.fk`), and walks them through the Form-native interpreter
-  (`python-bmf-eval.fk`) on the Rust kernel. **All 20 `PARITY_FILES` pass
-  three-way** under it (CPython == Rust-bootstrap == kernel-bmf) when measured
-  in isolated tempdirs. This is now the canonical Python runtime.
-- `ts-eval` (legacy bootstrap, still available) — the TS bootstrap evaluator
-  (`lang-python.ts` → `evalPython`). Selectable via an explicit
-  `PARITY_THIRD_RUNTIME=ts-eval` for as long as the Phase-A tissue lives.
+The current Python parity gate is fixed and explicit:
 
-**The flip was one line** (the `${PARITY_THIRD_RUNTIME:-...}` fallback in
-`parity_suite.sh`), fully reversible, and changes no CI gate — no workflow runs
-the parity suite; the `form/**` gates run only `bash validate.sh`. The flip
-retires the `evalPython`/`ts-eval` third-runtime seam. It does **not** retire the
-Phase-A parser + emitter + CLI: note that the parity guarantee above is
-`CPython == Rust-bootstrap == kernel-bmf` — the **Rust-bootstrap leg**
-(`python-compile` → `.fk`, via `lang-python.ts` + `lang-python-fk.ts` + `main.ts`)
-is a distinct, current leg that runs on every invocation. The 2026-06-03
-dependency walk (Phase A) found that leg plus four live consumers and a direct
-import from `ctor-convergence.test.ts`, so those files are **still live**, not
-residue. They release when the Rust-bootstrap leg is replaced by a Form-native
-`.py → .fk` path.
+- CPython evaluates the source file's final expression.
+- `kernel-bmf-compile <source.py> <out.fk>` emits a Form-native recipe and the
+  Rust kernel executes it.
+- `kernel-bmf-run <source.py>` walks the same `.py` source through the
+  Form-native path end to end.
 
-The same selector shape can extend to the TS adapter parity gate
-(`PARITY_THIRD_RUNTIME` over `ts-eval` vs `kernel-bmf-ts`).
+The TypeScript adapter may still need its own transition selector while its
+hand-written parser lives. The Python adapter does not.
 
 ---
 
@@ -381,19 +366,19 @@ The same selector shape can extend to the TS adapter parity gate
   parity.
 - It does not claim files compost that aren't named here. New bootstrap tissue
   shipped after 2026-05-26 gets a manifest row when added.
-- It does not delete the legacy path on flip. `PARITY_THIRD_RUNTIME=kernel-bmf`
-  is now the default, but `PARITY_THIRD_RUNTIME=ts-eval` still runs the TS
-  bootstrap unchanged for as long as the Phase-A tissue lives.
+- It does not claim a selector exists after release. The Python selector is
+  retired; future selector language belongs to the TypeScript adapter or a new
+  live transition surface.
 
 ---
 
 ## How this stays current
 
 When a sibling PR proves parity for a demo, it appends a row to a "PROVEN"
-section at the bottom of this file (date + file + selector) and bumps a
-counter. When `PARITY_THIRD_RUNTIME=kernel-bmf` becomes the default, the
-phase-A rows for the proven files get marked **COMPOST READY**. When the
-files actually compost, the row moves to a "RELEASED" section with the PR.
+section at the bottom of this file (date + file + command) and bumps a
+counter. When replacement coverage is complete for a named file, that row gets
+marked **COMPOST READY**. When the file actually composts, the row moves to a
+"RELEASED" section with the PR.
 
 The manifest is the body's awareness of its own bootstrap weight. As long as
 the weight has a named destination and a green-gate path to compost, the body
@@ -405,7 +390,7 @@ is supple under the load.
 
 - **`make wellness`** — `sense_bootstrap_compost` in `scripts/wellness_check.py`
   reads the file paths listed above, sums on-disk LOC, and surfaces the current
-  bootstrap weight + third-runtime selector. The body sees its own load each
+  bootstrap weight + Python selector release state. The body sees its own load each
   time wellness runs (auto at SessionStart via `arrival.py`).
 - **`kernels/PYTHON_PIPELINE_STATUS.md`** — the four-bullet destination map.
   Cross-references this manifest at the *third* bullet ("compile any file →
@@ -420,9 +405,9 @@ is supple under the load.
 ## PROVEN — rows that have walked their first lifecycle step
 
 A row appears here when a sibling PR proves three-way parity for a specific
-shape under `PARITY_THIRD_RUNTIME=kernel-bmf` (or equivalent — sibling-kernel
+shape under the current Form-native gate (or equivalent sibling-kernel
 agreement on the Form-native side). The row names the date, the PR, the file
-it proves, and the selector that exercises the proof. When all shapes a
+it proves, and the command that exercises the proof. When all shapes a
 Phase-A file expresses are PROVEN, the Phase-A row gets marked **COMPOST READY**.
 When the file actually composts, it moves to **RELEASED**.
 
@@ -726,9 +711,9 @@ weight; git remembers it if it's ever needed again.
 
 | Date | PR | What released | Why it was safe | Regeneration path |
 |---|---|---|---|---|
-| 2026-05-31 | `claude/release-proven-bootstrap` | The four COMPOST-READY demos' emitter artifacts: `python_bridge_demo.fk`, `python_demo.fk`, `python_assign_demo.fk`, `python_imperative_demo.fk` (Phase B "emitted .fk files" tissue) | All four demos reached COMPOST READY (Form-native value proven three-way). The `.fk` files are emitter output nothing reads as a committed input — `parity_suite.sh` overwrites each one via `python-compile` immediately before running it; `form/validate.sh` (the three-way kernel gate) walks `form-samples/` + `form-stdlib/` and never references the seedbank examples; no CI workflow, doc link, or script consumes the committed `.fk` content | `parity_suite.sh` regenerates each on the next run; or `npx tsx src/main.ts python-compile examples/<name>.py examples/<name>.fk` from the adapter dir |
-| 2026-05-31 | `claude/release-bootstrap-fk-artifacts` | 12 more emitter `.fk` artifacts (the rest of the regenerable residue): `endpoint_lattice_stats_demo`, `endpoint_nodeid_distance_demo`, `python_builtins_demo`, `python_class_demo`, `python_dict_demo`, `python_float_demo`, `python_import_demo`, `python_inheritance_demo`, `python_lambda_demo`, `python_range_demo`, `python_string_demo`, `python_substrate_demo` (all `.fk`) | Same safety shape as the first row: each has a `.py` sibling in `PARITY_FILES`, so `parity_suite.sh` overwrites it via `python-compile` before every run — committed emitter output with no live reader. **Deliberately KEPT** (not pure residue this pass): `endpoint_lattice_stats_live.fk` (no `.py` sibling — not regenerable, possibly hand-authored), `python_typeann_demo.fk` (has `.py` but not in PARITY_FILES — suite won't auto-recreate), and 4 demos with in-flight local edits from a live parity run (`endpoint_coherence_weight_demo`, `endpoint_nodeid_compatibility_demo`, `endpoint_weighted_average_demo`, `python_typing_compose_demo`) — never force-remove tissue someone is actively touching | `parity_suite.sh` regenerates each on the next run; or `npx tsx src/main.ts python-compile examples/<name>.py examples/<name>.fk` |
-| 2026-06-01 | `claude/parity-fk-residue-gitignore` | The last 5 regenerable emitter `.fk` still tracked — `endpoint_coherence_weight_demo`, `endpoint_nodeid_compatibility_demo`, `endpoint_nodeid_distance_demo`, `endpoint_weighted_average_demo`, `python_typing_compose_demo` — untracked, **and the residue's return path closed**: `examples/.gitignore` now ignores `examples/*.fk` (the parity-suite emitter output) with `!` exceptions for the two non-regenerated keepers (`endpoint_lattice_stats_live.fk`, `python_typeann_demo.fk`). The prior two release rows removed the residue but had no structural guard, so every `parity_suite.sh` run re-created the `.fk` as untracked and some drifted back to tracked — a dirty worktree after each parity run, twice running. The `.gitignore` makes the release *stick*: regeneration still happens in place (verified — `python_substrate_demo` `17680`, `endpoint_coherence_weight_demo` `16185` three-way after a fresh run), git just stops seeing it | `parity_suite.sh` regenerates each in place on the next run; or `npx tsx src/main.ts python-compile examples/<name>.py examples/<name>.fk`. The two keepers stay tracked via `!` lines in `examples/.gitignore` |
+| 2026-05-31 | `claude/release-proven-bootstrap` | The four COMPOST-READY demos' emitter artifacts: `python_bridge_demo.fk`, `python_demo.fk`, `python_assign_demo.fk`, `python_imperative_demo.fk` (Phase B "emitted .fk files" tissue) | All four demos reached COMPOST READY (Form-native value proven three-way). The `.fk` files are emitter output nothing reads as a committed input — `parity_suite.sh` regenerates each one before the Rust leg reads it; `form/validate.sh` (the three-way kernel gate) walks `form-samples/` + `form-stdlib/` and never references the seedbank examples; no CI workflow, doc link, or script consumes the committed `.fk` content | `parity_suite.sh` regenerates each on the next run; or `kernel-bmf-compile examples/<name>.py examples/<name>.fk` from the adapter dir |
+| 2026-05-31 | `claude/release-bootstrap-fk-artifacts` | 12 more emitter `.fk` artifacts (the rest of the regenerable residue): `endpoint_lattice_stats_demo`, `endpoint_nodeid_distance_demo`, `python_builtins_demo`, `python_class_demo`, `python_dict_demo`, `python_float_demo`, `python_import_demo`, `python_inheritance_demo`, `python_lambda_demo`, `python_range_demo`, `python_string_demo`, `python_substrate_demo` (all `.fk`) | Same safety shape as the first row: each has a `.py` sibling in `PARITY_FILES`, so `parity_suite.sh` regenerates it before every Rust-leg run — committed emitter output with no live reader. **Deliberately KEPT** (not pure residue this pass): `endpoint_lattice_stats_live.fk` (no `.py` sibling — not regenerable, possibly hand-authored), `python_typeann_demo.fk` (has `.py` but not in PARITY_FILES — suite won't auto-recreate), and 4 demos with in-flight local edits from a live parity run (`endpoint_coherence_weight_demo`, `endpoint_nodeid_compatibility_demo`, `endpoint_weighted_average_demo`, `python_typing_compose_demo`) — never force-remove tissue someone is actively touching | `parity_suite.sh` regenerates each on the next run; or `kernel-bmf-compile examples/<name>.py examples/<name>.fk` |
+| 2026-06-01 | `claude/parity-fk-residue-gitignore` | The last 5 regenerable emitter `.fk` still tracked — `endpoint_coherence_weight_demo`, `endpoint_nodeid_compatibility_demo`, `endpoint_nodeid_distance_demo`, `endpoint_weighted_average_demo`, `python_typing_compose_demo` — untracked, **and the residue's return path closed**: `examples/.gitignore` now ignores `examples/*.fk` (the parity-suite emitter output) with `!` exceptions for the two non-regenerated keepers (`endpoint_lattice_stats_live.fk`, `python_typeann_demo.fk`). The prior two release rows removed the residue but had no structural guard, so every `parity_suite.sh` run re-created the `.fk` as untracked and some drifted back to tracked — a dirty worktree after each parity run, twice running. The `.gitignore` makes the release *stick*: regeneration still happens in place (verified — `python_substrate_demo` `17680`, `endpoint_coherence_weight_demo` `16185` three-way after a fresh run), git just stops seeing it | `parity_suite.sh` regenerates each in place on the next run; or `kernel-bmf-compile examples/<name>.py examples/<name>.fk`. The two keepers stay tracked via `!` lines in `examples/.gitignore` |
 | 2026-06-09 | `codex/remove-non-form-tissue-20260609` | The five TypeScript adapter emitted `.fk` artifacts: `ts_accumulator_demo.fk`, `ts_arith_demo.fk`, `ts_arrow_demo.fk`, `ts_composition_demo.fk`, `ts_recursion_demo.fk`, plus `seedbank/ts-adapter/examples/.gitignore` to close the return path | The TS parity suite lists the `.ts` sources as its live inputs and compiles each source to a sibling `.fk` immediately before the Rust-kernel leg reads it. Reference checks found no direct readers of the committed `.fk` files outside the examples directory; docs and evidence refer to the `.ts` sources. The `.fk` files are emitter output, not source of truth. | `cd form/form-kernel-ts && ./seedbank/ts-adapter/scripts/parity_suite.sh` regenerates each ignored `.fk` before running the Rust leg; or `npx tsx seedbank/ts-adapter/src/main.ts ts-compile seedbank/ts-adapter/examples/<name>.ts` |
 
 **The first composted cell.** With this row the lifecycle has walked its

@@ -27,7 +27,7 @@ them:
     api/app/services/form_kernel_bridge.serve_via_kernel:
       1. load_recipe(endpoint_X.fk)   — a .fk PRE-COMPILED at deploy time
                                          (the deploy pipeline runs
-                                         `python-compile X.py X.fk` once)
+                                         `kernel-bmf-compile X.py X.fk` once)
       2. inject_bindings(...)          — rewrite (let ...) literals, in-process
       3. run_recipe(...)               — fork+exec form-kernel-rust <tmp.fk>
     The py→fk COMPILE is a BUILD-TIME cost, amortized across every request.
@@ -321,16 +321,17 @@ def _ensure_bridge():
 
 
 def compile_demo_to_fk(demo_py: str, dst: Path) -> float:
-    """Compile a .py demo to .fk via the TS python-compile (the deploy step).
+    """Compile a .py demo to .fk via the Form-native compiler.
 
     Returns the wall-clock seconds the compile took — this is the BUILD-TIME
     cost, measured once and reported separately from per-request latency. The
     live endpoint never pays this per request; the deploy pipeline does, once.
     """
     src = EXAMPLES / demo_py
+    compiler = ADAPTER / "scripts" / "kernel-bmf-compile"
     t0 = time.perf_counter()
     subprocess.run(
-        ["npx", "tsx", "src/main.ts", "python-compile", str(src), str(dst)],
+        [str(compiler), str(src), str(dst)],
         cwd=str(ADAPTER),
         check=True,
         capture_output=True,

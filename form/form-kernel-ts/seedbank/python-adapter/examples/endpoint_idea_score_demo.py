@@ -12,7 +12,7 @@
 # `if a > b` branch is the float-correct, value-identical form). No
 # transcendentals, so the same value renders across all three runtimes:
 #   - CPython
-#   - TS evalPython
+#   - kernel-bmf-run
 #   - form-kernel-rust
 #
 # max2(a, b) == max(a, b) for the non-NaN floats this carries: both return
@@ -31,8 +31,8 @@ def idea_score(potential_value, confidence, estimated_cost, resistance_risk):
 
 
 # Endpoint's frozen sample input — a mid-confidence idea with real cost and
-# risk: (8.0 * 0.75) / max(2.0 + 1.0, 0.5) = 6.0 / 3.0 = 2.0.
-potential_value = 8.0
+# risk: (8.4 * 0.75) / max(2.0 + 1.0, 0.5) = 6.3 / 3.0 = 2.1.
+potential_value = 8.4
 confidence = 0.75
 estimated_cost = 2.0
 resistance_risk = 1.0

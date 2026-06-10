@@ -8,7 +8,7 @@
 #
 # Runs identically under:
 #   python3 python_class_demo.py             — CPython
-#   npm run kernel -- python-eval ...        — TS evalPython
+#   kernel-bmf-run <file.py>        — kernel-bmf-run
 #   form-kernel-rust python_class_demo.fk    — native kernel binary
 
 class Counter:
