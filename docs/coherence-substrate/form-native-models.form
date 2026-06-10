@@ -53,6 +53,14 @@
 ;   M1  format-parameterized matvec — compute the proven matvec in bf16/fp8 via apply_arith, conformance
 ;        band against the fp64 reference under epsilon_for. (the stone that connects the layer math to
 ;        the 19 formats.)
+;        [SHIPPED (Form lane): form-stdlib/format-arith.fk + tests/format-arith-band.fk → 2047,
+;        three-way. Quantize-to-format in pure Form (normalize to [1,2), mantissa rounded half-to-EVEN,
+;        rebuilt by exact powers of two), mb parameterizes the format (7=bf16, 3=fp8-e4m3); ops are
+;        quantize-op-quantize; the matvec re-quantizes every partial product and sum. Single ops match
+;        torch bfloat16/float8_e4m3fn exactly (+ the canon's fp8 add vector); accumulated matvecs hold
+;        RELATIVE error under the format's epsilon-shape — the absolute single-op epsilon on a fold
+;        would be theatre. Normal range only (no subnormal/saturation modeling). The kernel-apply_arith
+;        lane and new canon vectors ride with M5's conformance work.]
 ;   M2  quant tensor encode/dequant — quantize_block (absmax -> int8/nf4 codes via round + the nf4
 ;        16-quantile table already in the format cell) + dequant; round-trip band: dequant(encode(W)) ~ W
 ;        within format epsilon; identical tensors node_eq (dedup proof). Weights become substrate cells.

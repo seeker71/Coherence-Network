@@ -1,0 +1,52 @@
+; format-arith.fk — M1 of form-native-models.form: format-parameterized arithmetic + matvec.
+;
+; The stone that connects the layer math to the 19 numeric formats: quantize-to-format as pure Form
+; (normalize to [1,2) by halving/doubling, round the mantissa half-to-EVEN — torch/IEEE's tie rule,
+; not the kernel round's half-away — rebuild by exact powers of two), then format ops as
+; quantize-op-quantize, then the matvec where EVERY partial product and partial sum re-quantizes.
+; mb parameterizes the stored mantissa bits: 7 = bf16, 3 = fp8-e4m3, 2 = fp4-uniform — one recipe,
+; the format cell supplies the number. Scope named honestly: normal range only (no subnormal,
+; saturation, or infinity modeling); band inputs live where every format breathes.
+;
+; Conformance discipline (the roadmap's own): single ops match the torch reference exactly
+; (bfloat16 / float8_e4m3fn round-trips are fp64-exact); accumulated matvecs are held to RELATIVE
+; error under the format's epsilon-shape — accumulation widens absolute error by design, and
+; claiming the single-op epsilon for a fold would be theatre.
+
+; --- exact powers of two (fp64-exact for the exponents any normal value needs) ---
+(defn fq-pow2-up (acc n) (if (eq n 0) acc (fq-pow2-up (mul acc 2.0) (sub n 1))))
+(defn fq-pow2-down (acc n) (if (eq n 0) acc (fq-pow2-down (mul acc 0.5) (sub n 1))))
+(defn fq-pow2 (e) (if (ge e 0) (fq-pow2-up 1.0 e) (fq-pow2-down 1.0 (sub 0 e))))
+
+; --- exponent of a > 0: the e with a/2^e in [1,2) ---
+(defn fq-exp-up (a e) (if (ge a 2.0) (fq-exp-up (mul a 0.5) (add e 1)) e))
+(defn fq-exp-down (a e) (if (lt a 1.0) (fq-exp-down (mul a 2.0) (sub e 1)) e))
+(defn fq-exponent (a) (if (ge a 1.0) (fq-exp-up a 0) (fq-exp-down a 0)))
+
+; --- round half to even (y >= 0): the IEEE tie rule, built from floor ---
+(defn fq-rne-tie (f) (if (eq (mod f 2) 0) f (add f 1)))
+(defn fq-rne-frac (f frac)
+  (if (gt frac 0.5) (add f 1) (if (lt frac 0.5) f (fq-rne-tie f))))
+(defn fq-rne (y) (fq-rne-frac (floor y) (sub y (floor y))))
+
+; --- quantize to mb stored mantissa bits ---
+(defn fq-quant-m (m e mb) (mul (div (fq-rne (mul m (fq-pow2 mb))) (fq-pow2 mb)) (fq-pow2 e)))
+(defn fq-quant-pos (a mb) (fq-quant-m (div a (fq-pow2 (fq-exponent a))) (fq-exponent a) mb))
+(defn fq-quant (x mb)
+  (if (eq x 0.0) 0.0
+      (if (lt x 0.0) (sub 0.0 (fq-quant-pos (sub 0.0 x) mb)) (fq-quant-pos x mb))))
+
+; --- format ops: operands and result all live in the format ---
+(defn fq-add (a b mb) (fq-quant (add (fq-quant a mb) (fq-quant b mb)) mb))
+(defn fq-mul (a b mb) (fq-quant (mul (fq-quant a mb) (fq-quant b mb)) mb))
+
+; --- the format-parameterized matvec: every partial product and sum re-quantizes ---
+(defn fq-dot (a b mb)
+  (if (eq (len a) 0) 0.0
+      (fq-add (fq-mul (head a) (head b) mb) (fq-dot (tail a) (tail b) mb) mb)))
+(defn fq-matvec (rows x mb)
+  (if (eq (len rows) 0) (empty) (cons (fq-dot (head rows) x mb) (fq-matvec (tail rows) x mb))))
+
+; --- relative-error sensing for the conformance claims ---
+(defn fq-abs (x) (if (lt x 0.0) (sub 0.0 x) x))
+(defn fq-relerr (got want) (div (fq-abs (sub got want)) (fq-abs want)))
