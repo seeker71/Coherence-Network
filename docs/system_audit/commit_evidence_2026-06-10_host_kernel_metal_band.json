@@ -31,6 +31,22 @@
       "file": "form/form-stdlib/tests/jit-native-span-band.fk",
       "results": "255, 1 ok, 0 divergent in source mode AND --binary — IEEE float, string, and ML vector recipes walk, ask for Value-ABI native compilation (go compiles to a host .so; rust/ts answer honest 0), and yield identical values across dispatch paths and kernels"
     },
+    "jit_assembly_audit": {
+      "file": "scripts/jit_assembly_audit.sh",
+      "minimum_gates": "M0 value parity (fact(10)=3628800 post-compile) · M1 symbol exported · M2 arithmetic native inside the plugin (imul in jitabi.Mul, no foreign hops) · M3 native self-call recursion — all PASS 2026-06-10",
+      "north_star_gap_2026_06_10": {
+        "hot_fn_instructions": 272,
+        "hot_fn_instructions_target": 32,
+        "boxed_value_moves": 210,
+        "boxed_value_moves_target": 0,
+        "stack_frame_bytes": 616,
+        "stack_frame_bytes_target": 64,
+        "helper_calls": 3,
+        "helper_calls_target": 0,
+        "inline_imul_in_hot_body": 0
+      },
+      "reading": "the Value-ABI JIT is fully native (every call stays inside the .so) but boxed: 80-byte Value structs dominate the instruction stream and arithmetic rides intra-plugin jitabi helper calls. The de-boxing/inlining work is the measured distance, re-read by re-running the audit after each JIT improvement."
+    },
     "named_edges_left_open": [
       "int literals truncate at 32 bits in every kernel; the ts walker's add wraps at 32 bits while go and rust carry int64 — the band keeps constants inside int32; widening the integer model is its own movement",
       "pg_* natives are carried by go and rust only; the ts carrier does not offer the pg port yet, so the parity band checks http_get and socket_listen offers",
