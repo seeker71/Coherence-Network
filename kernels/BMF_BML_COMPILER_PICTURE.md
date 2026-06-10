@@ -195,6 +195,17 @@ cd form
 
 Expected result: `24` with `1 ok, 0 divergent`.
 
+## The Self-Improvement Loop
+
+The pieces above compose into one loop, and every part of it already runs somewhere:
+
+1. **The compiler is a CLI-shippable binary.** `--emit-binary` compiles any workload (the compiler's own preludes included) into one `.fkb` artifact; `--binary` executes it natively on any sibling kernel. The bootstrap image ratchet (above) is this loop applied to the compiler itself.
+2. **Hot recipes become host-native code.** `jit_compile` turns a recipe into machine code — the Go arm emits a real ELF `.so` through the host toolchain (proven mid-band in `form/form-stdlib/tests/host-kernel-metal-band.fk`, verdict 1023 three-way and under `--binary`). The supported subset is int64 arithmetic/recursion today; `jit_compile_value` extends the ABI; the Rust arm is an honest 0-stub until cranelift.
+3. **A faster version of any part — including the JIT recipe itself — earns its place, never asserts it.** `champion-challenger.fk` flips authority only on proven head-to-head competition; `recognition-router.fk` routes to measured fitness; `kernel-satsang.fk` + `host-kernel-cell.fk` gate the actual swap through declared spec equality and the witnessing circle (verdict 255 three-way and under `--binary`).
+4. **The same loop ships any CLI tool.** The API host is the second instance: `kernel-http.fk` + the native kernel router already serve routes natively; an improved handler recipe enters through the same verify → A/B → circle-gated swap.
+
+This is `kernel-self-composition.form`'s `close-self-rebuild-loop` seen from the compiler's side: we can build faster versions of ourselves, verify them, and let them take over only when the competition record says so.
+
 ## Choice Receipts
 
 The compiler choice path now has an optional witnessed form:
