@@ -1,0 +1,64 @@
+; tensor-quant.fk — M2 of form-native-models.form: quant tensor encode/dequant. Weights become cells.
+;
+; Absmax block quantization, the shape every loaded model arrives through: a weight row's largest
+; magnitude sets the scale; int8 codes are round(w/scale) (the kernels' half-away round IS the
+; quantizer); nf4 codes are nearest-neighbor against the 16-quantile lookup table that already lives
+; in the nf4 format cell (numeric-formats.canonical.json) — the table is DATA passed in, not a
+; constant baked here. Decode is the exact inverse walk. Codes are small integers, so a quantized
+; row is content-addressable for free: identical rows yield identical code lists (the dedup the
+; substrate promises — interning float vectors with node_eq is already proven by ml-flow-band.fk;
+; this recipe supplies the codes that make two same-shaped weight rows literally the same cell).
+; A zero row encodes without dividing by zero: int8 → all 0, nf4 → the table's exact-zero slot.
+; Round-trip honesty: int8 lands within the sub-32-bit epsilon (1e-2); nf4's bound is half its
+; largest quantile gap × absmax — claimed at that bound, never tighter than the table allows.
+
+(defn tq-abs (x) (if (lt x 0.0) (sub 0.0 x) x))
+(defn tq-absmax-acc (best xs)
+  (if (eq (len xs) 0) best
+      (if (gt (tq-abs (head xs)) best)
+          (tq-absmax-acc (tq-abs (head xs)) (tail xs))
+          (tq-absmax-acc best (tail xs)))))
+(defn tq-absmax (xs) (tq-absmax-acc 0.0 xs))
+
+; --- int8: scale = absmax/127, codes = round(w/scale) ---
+(defn tq-int8-scale (absmax) (div absmax 127.0))
+(defn tq-int8-encode-s (xs scale)
+  (if (eq (len xs) 0) (empty)
+      (if (eq scale 0.0)
+          (cons 0 (tq-int8-encode-s (tail xs) scale))
+          (cons (round (div (head xs) scale)) (tq-int8-encode-s (tail xs) scale)))))
+(defn tq-int8-encode (xs) (tq-int8-encode-s xs (tq-int8-scale (tq-absmax xs))))
+(defn tq-int8-decode (codes scale)
+  (if (eq (len codes) 0) (empty)
+      (cons (mul (head codes) scale) (tq-int8-decode (tail codes) scale))))
+
+; --- nf4: normalize by absmax, nearest of the 16 quantiles; ties keep the lower index ---
+(defn tq-nearest-walk (x table idx best-idx best-dist)
+  (if (eq (len table) 0) best-idx
+      (if (lt (tq-abs (sub x (head table))) best-dist)
+          (tq-nearest-walk x (tail table) (add idx 1) idx (tq-abs (sub x (head table))))
+          (tq-nearest-walk x (tail table) (add idx 1) best-idx best-dist))))
+(defn tq-nf4-code (x table) (tq-nearest-walk x table 0 0 1000000000.0))
+(defn tq-nf4-encode-n (xs absmax table)
+  (if (eq (len xs) 0) (empty)
+      (if (eq absmax 0.0)
+          (cons (tq-nf4-code 0.0 table) (tq-nf4-encode-n (tail xs) absmax table))
+          (cons (tq-nf4-code (div (head xs) absmax) table)
+                (tq-nf4-encode-n (tail xs) absmax table)))))
+(defn tq-nf4-encode (xs table) (tq-nf4-encode-n xs (tq-absmax xs) table))
+(defn tq-nf4-decode (codes absmax table)
+  (if (eq (len codes) 0) (empty)
+      (cons (mul (nth table (head codes)) absmax) (tq-nf4-decode (tail codes) absmax table))))
+
+; --- round-trip sensing + the dedup shape ---
+(defn tq-maxerr-acc (a b best)
+  (if (eq (len a) 0) best
+      (if (gt (tq-abs (sub (head a) (head b))) best)
+          (tq-maxerr-acc (tail a) (tail b) (tq-abs (sub (head a) (head b))))
+          (tq-maxerr-acc (tail a) (tail b) best))))
+(defn tq-maxerr (a b) (tq-maxerr-acc a b 0.0))
+(defn tq-codes-eq (a b)
+  (if (eq (len a) (len b))
+      (if (eq (len a) 0) 1
+          (if (eq (head a) (head b)) (tq-codes-eq (tail a) (tail b)) 0))
+      0))
