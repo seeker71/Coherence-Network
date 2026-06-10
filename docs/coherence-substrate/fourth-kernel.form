@@ -359,7 +359,29 @@
                      through the observe door (node_category/node_children/
                      node_value) and flatten the REAL category set into the
                      table — fkw walks bands unmodified; validate.sh gains
-                     the fourth arm for covered bands)
+                     the fourth arm for covered bands
+                     # ── SCOPED for the next hands (probed 2026-06-11 night) ──
+                     # Two viable paths; the recon found the constraints:
+                     (path-a-introspect  walk a recipe NodeID's tree with
+                        node_category/node_children/node_value, map each Form
+                        category to a walker tag (MATH->3/4, COMPARE->5,
+                        COND->6, FNCALL->12, trivial-int->1, ARG->2), flatten.
+                        BLOCKER probed: no `quote`/`recipe_of` to GET a
+                        function's recipe NodeID from .fk surface — needs a
+                        kernel door exposing the interned recipe tree, OR
+                        author bands whose recipe is reached another way)
+                     (path-b-cursor      the BMF cursor (op 17 BUF, SHIPPED)
+                        parses Form SOURCE text into the table directly — a
+                        recursive-descent grammar over parens/atoms emitting
+                        rows with child indices. No kernel door needed; rides
+                        the streaming-cursor + heap already proven. Likely the
+                        cleaner first click: pick the simplest stdlib band whose
+                        body is in the walker's op set, parse its source, run,
+                        match the three kernels -> ratchet 0->1)
+                     (op-gap        real bands also need the figure/observe/
+                        intern families (str_*, node_*, defn/let/do) — m4e4
+                        grows these; the ratchet climbs as each family lands)
+                     (ratchet-now   0 of 424 — honestly a walk, not a night))
         (m4e4-grow   strings + str_eq, then natives family by family (the
                      minimal-kernel census order: figure, observe, intern,
                      port), each landing as bands flip to four-way)
