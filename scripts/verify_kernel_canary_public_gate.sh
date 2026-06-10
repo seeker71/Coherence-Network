@@ -172,6 +172,54 @@ print(
 PY
 }
 
+assert_kernel_runtime_body() {
+  local body_file="$1"
+  python3 - "$body_file" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as fh:
+    obj = json.load(fh)
+
+measurements = obj.get("measurements") or {}
+matrix = obj.get("matrix")
+candidate = obj.get("next_bml_candidate") or {}
+int_keys = (
+    "native_route_count",
+    "observed_native_route_count",
+    "observed_path_count",
+    "total_requests",
+    "native_requests",
+    "fanout_requests",
+    "choice_attempts",
+    "choice_successes",
+    "choice_failures",
+)
+checks = {
+    "source": obj.get("source") == "kernel-router:live-metrics",
+    "matrix_shape": isinstance(matrix, list)
+    and len(matrix) == 2
+    and all(isinstance(row, list) and len(row) == 2 for row in matrix),
+    "candidate_path": isinstance(candidate.get("path"), str),
+}
+for key in int_keys:
+    checks[key] = isinstance(measurements.get(key), int)
+
+checks["native_routes_present"] = measurements.get("native_route_count", 0) > 0
+checks["native_front_door_observed"] = measurements.get("native_requests", 0) > 0
+checks["requests_observed"] = measurements.get("total_requests", 0) > 0
+
+missing = [name for name, ok in checks.items() if not ok]
+if missing:
+    raise SystemExit("kernel runtime body failed checks: " + ", ".join(missing))
+
+print(
+    "native_route_count={native_route_count} total_requests={total_requests} "
+    "native_requests={native_requests} fanout_requests={fanout_requests}".format(**measurements)
+)
+PY
+}
+
 echo "kernel-canary-public-gate: probing ${API_URL}/api/ideas"
 
 for attempt in $(seq 1 "$ATTEMPTS"); do
@@ -242,6 +290,41 @@ for attempt in $(seq 1 "$ATTEMPTS"); do
   fi
 
   echo "WAIT no-header default attempt ${attempt}/${ATTEMPTS}: status=${default_status:-none} router=${default_router:-none}"
+  sleep "$SLEEP_SECONDS"
+done
+
+echo "kernel-canary-public-gate: probing no-header native front door ${API_URL}/api/attention/kernel-runtime"
+
+for attempt in $(seq 1 "$ATTEMPTS"); do
+  runtime_headers="$TMP_DIR/kernel-runtime.headers"
+  runtime_body="$TMP_DIR/kernel-runtime.body"
+  runtime_status="$(
+    curl -sS -D "$runtime_headers" -o "$runtime_body" -w "%{http_code}" \
+      --max-time "$CURL_MAX_TIME" \
+      --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+      "${API_URL}/api/attention/kernel-runtime" \
+      -H "Accept: application/json" \
+      || true
+  )"
+  runtime_router="$(header_value "$runtime_headers" "x-form-router:")"
+
+  if [[ "$runtime_status" == "200" && "$runtime_router" == "native-kernel" ]]; then
+    if assert_kernel_runtime_body "$runtime_body"; then
+      echo "PASS ordinary API host enters native front door status=${runtime_status} router=${runtime_router}"
+      break
+    fi
+  fi
+
+  if [[ "$attempt" -ge "$ATTEMPTS" ]]; then
+    echo "FAIL ordinary API host did not reach native front door after ${ATTEMPTS} attempts"
+    echo "last_status=${runtime_status:-none} last_router=${runtime_router:-none}"
+    echo "body preview:"
+    head -c 500 "$runtime_body" || true
+    echo
+    exit 1
+  fi
+
+  echo "WAIT native front-door attempt ${attempt}/${ATTEMPTS}: status=${runtime_status:-none} router=${runtime_router:-none}"
   sleep "$SLEEP_SECONDS"
 done
 

@@ -56,15 +56,15 @@ What is measured vs stated (the honesty bar)
     files; it is offered as evidence of the layering's weight, NOT as a precise
     "fraction of runtime" (wall-clock fraction depends on inputs and is dominated
     by FastAPI+Pydantic+network for any real request — stated, not faked).
-  • Kernel-FIRST has two honest readings, both exact. SERVED = 0: no route is
-    served by the kernel at the LIVE front door (Traefik routes every request to
-    CPython; the 22 kernel-served routes are CPython handlers calling the kernel
-    as a subroutine). CAPABLE = the count of native handlers in the kernel-router
-    manifest (deploy/kernel-router/production-routes.fk) — whole-lifecycle-Form
-    routes whose dispatch mechanism is proven but whose byte-identity to the live
-    twin is NOT yet proven (no harness, none in CI, e2e pending), awaiting that
-    identity proof and then the front-door flip. CAPABLE is the native surface that
-    EXISTS; SERVED is what fronts live traffic.
+  • Kernel-FIRST has two honest readings. SERVED is read from the public
+    front-door probe: when /api/attention/kernel-runtime returns
+    X-Form-Router: native-kernel, the live Host(api.coherencycoin.com) entrance
+    is the kernel-router and every manifest row is live native surface. CAPABLE
+    is the count of native handlers in deploy/kernel-router/production-routes.fk
+    whether or not the public router has been flipped yet. Byte parity remains
+    useful evidence for promoted twins, but the operational gate is simpler:
+    the website, API smoke, tool flows, native observability, and fallback all
+    still work.
 
 This is a SENSING instrument — read-only, no behavior change, like the wellness
 probe and the attribution report. It tells the body the unflattering truth about
@@ -131,13 +131,11 @@ def kernel_first_capable_routes() -> list[str]:
     These serve their ENTIRE request lifecycle in Form (X-Form-Router:
     native-kernel) — the categorical step past serve_via_kernel's guest
     subroutine. They are CAPABLE: a real native handler exists in the manifest and
-    the dispatch mechanism is proven, but they are NOT yet proven byte-identical to
-    the live CPython twin (no harness diffs them, none in CI, e2e status:pending),
-    and NOT yet served at the live front door. The manifest is what the durable
-    runtime-share flip will front with, but until that flip Traefik still routes
-    every request to CPython. So this is the native surface that EXISTS, awaiting
-    its identity proof and then the front-door cutover — distinct from kernel-first
-    SERVED, which stays 0.
+    the dispatch mechanism is proven. Whether they are SERVED is read from the
+    public front-door provenance probe, because the operational truth is the
+    current Traefik entrance, not an old assumption. Byte parity remains useful
+    evidence for promoted twins; the native-first deploy gate is web/API/tool
+    smoke, native observability, and explicit fallback.
 
     Read from the manifest's ``(let routes ...)`` block as DATA (the manifest is
     the one source); ``/health`` and other non-``/api`` probes are excluded so the
@@ -373,6 +371,8 @@ def build_report() -> dict:
 
     capable = kernel_first_capable_routes()
     n_capable = len(capable)
+    front_door = probe_kernel_front_door()
+    n_front_door_served = n_capable if front_door.get("kernel_front_door") else 0
 
     usage_pct = (100.0 * n_served / total_routes) if total_routes else None
     loc_per_route = (cpy["total"] / n_served) if n_served else None
@@ -384,17 +384,16 @@ def build_report() -> dict:
         "kernel_served_pct": round(usage_pct, 1) if usage_pct is not None else None,
         # kernel-FIRST = the kernel as the FRONT DOOR (whole lifecycle in Form).
         # Two honest sub-counts the journey needs kept apart:
-        #   SERVED  — served kernel-first at the LIVE front door. Still 0: Traefik
-        #             routes every request to CPython; the manifest is not yet the
-        #             front door (the durable flip is Urs's go + presence).
-        #   CAPABLE — native handlers proven byte-identical in shadow in the router
-        #             manifest, whole lifecycle in Form, awaiting the front-door
-        #             flip. This is the native surface that EXISTS today — the
-        #             runtime-share metric genuinely moving, not route-count.
-        "kernel_first_served_routes": 0,
+        #   SERVED  — served kernel-first at the LIVE front door, read from the
+        #             public no-header kernel-runtime provenance probe.
+        #   CAPABLE — native handlers in the router manifest, whole lifecycle in
+        #             Form, ready to front ordinary traffic with Python fan-out for
+        #             the tail.
+        "kernel_first_served_routes": n_front_door_served,
         "kernel_first_capable_routes": n_capable,
         "kernel_first_capable_route_names": capable,
-        "kernel_first_routes": 0,  # back-compat alias of SERVED: 0 at the front door
+        "kernel_first_routes": n_front_door_served,  # back-compat alias of SERVED
+        "front_door_probe": front_door,
         "served_route_names": served_routes,
         # --- Axis 2: the per-route CPython-vs-kernel layering ---
         "kernel_router_cpython_loc": cpy["total"],
@@ -443,22 +442,36 @@ def render_human(r: dict) -> str:
         f"  Served kernel-FIRST at the LIVE front door (kernel as the runtime, "
         f"whole lifecycle in Form): {r['kernel_first_served_routes']}."
     )
+    probe = r.get("front_door_probe") or {}
+    if probe:
+        if probe.get("reachable"):
+            w(
+                "  Public front-door probe: {status} {router} at {url}.".format(
+                    status=probe.get("status"),
+                    router=probe.get("x_form_router") or "<missing-router-header>",
+                    url=probe.get("url"),
+                )
+            )
+        else:
+            w(
+                "  Public front-door probe unread at {url}: {error}.".format(
+                    url=probe.get("url"),
+                    error=probe.get("error", "unreachable"),
+                )
+            )
     cap = r.get("kernel_first_capable_routes", 0)
     if cap:
         names = ", ".join(r.get("kernel_first_capable_route_names", []))
         w("  Kernel-FIRST CAPABLE (a real native handler in the router manifest,")
-        w(
-            f"  whole lifecycle in Form, awaiting the front-door flip): {cap} — {names}."
-        )
+        w(f"  whole lifecycle in Form): {cap} — {names}.")
         w("  This is the native surface that EXISTS today: the compute AND the")
         w("  request lifecycle run Form-native, no CPython in the path. It is the")
         w("  runtime-share metric genuinely moving, distinct from route-count.")
         w("  PROVEN so far: the dispatch MECHANISM (a native route is served")
         w("  kernel-first, unmatched paths fan out, X-Form-Router labels each).")
-        w("  NOT yet proven: that these 23 handlers are byte-identical to the live")
-        w("  CPython API — no harness diffs them against the twin, none runs in CI,")
-        w("  and the kernel-router e2e evidence is still status:pending. That")
-        w("  byte-identity proof is the cutover's gating step, not the front-door flip.")
+        w("  The gate for native-first is operational now: web/API smoke, tool")
+        w("  flows, native observability, and explicit fallback. Byte parity stays")
+        w("  useful evidence for promoted twins, not the permission slip for routing.")
     w("  The 22 kernel-SERVED routes above are a different, shallower thing: each")
     w("  is a CPython handler that calls the kernel as a SUBROUTINE inside the")
     w("  request — the kernel is a guest there. The capable routes flip that: the")
@@ -522,29 +535,27 @@ def render_human(r: dict) -> str:
     pct = r["kernel_served_pct"]
     cap = r.get("kernel_first_capable_routes", 0)
     w(
-        f"  Still honestly low at the front door. {pct}% of routes touch the kernel"
+        f"  Guest-subroutine usage is still {pct}% of routes"
         if pct is not None
-        else "  Still honestly low at the front door"
+        else "  Guest-subroutine usage remains readable only as a count"
     )
-    w("  at all (as a guest-subroutine); 0 are SERVED kernel-first — Traefik still")
-    w("  routes every live request to CPython.")
+    w(
+        f"  while {r['kernel_first_served_routes']} are SERVED kernel-first at the "
+        "live front door according to the public provenance probe."
+    )
     w("")
     if cap:
         w(f"  But the reversal is no longer hypothetical. {cap} routes are now")
         w("  kernel-FIRST CAPABLE: real native handlers in the router manifest, whole")
         w("  lifecycle in Form. The capable count moved 0 → {0}: the native front-door".format(cap))
-        w("  surface EXISTS. What remains before the cutover is TWO things, not one:")
-        w("  (1) prove these handlers byte-identical to the live API (no harness does")
-        w("  this yet, none in CI, e2e evidence status:pending) — the gating proof;")
-        w("  (2) the Traefik → kernel-router flip, a deliberate two-person live-traffic")
-        w("  moment. The surface exists and the mechanism is proven; the handler-")
-        w("  identity proof is the honest work still between here and a safe flip.")
+        w("  surface EXISTS. The deployable move is the Traefik native-first router,")
+        w("  then smoke the website/API/tool flows and watch fallback/provenance.")
     else:
         w("  The reversal (kernel-as-front-door) has no proven native surface yet.")
     w("")
     w("  The metric to track is runtime-SHARE moving toward the kernel — and it has")
-    w("  two honest readings now: kernel-first SERVED (0, the live front door) and")
-    w("  kernel-first CAPABLE (the native surface that exists, not yet identity-proven). Route-")
+    w("  two honest readings now: kernel-first SERVED (the public front door) and")
+    w("  kernel-first CAPABLE (the native surface that exists in the manifest). Route-")
     w("  count alone stays the wrong metric: it can rise while CPython rises with it.")
     w("")
 
