@@ -1,0 +1,48 @@
+; preludes: form-stdlib/core.fk form-stdlib/tensor-quant.fk
+;
+; tensor-quant-band — M2's absmax int8/nf4 encode/dequant against the fp64 reference, proven
+; three-way. Reference: the bitsandbytes-shaped absmax formula computed in fp64; the nf4 table is
+; the lookup_values list from the nf4 format cell in numeric-formats.canonical.json, passed as
+; data. w = [0.42, -1.5, 0.03, 0.77, -0.62, 1.2].
+;
+; Verdict 4095 when the codes, the round-trips, and the dedup shape all land:
+;   1     absmax(w) → 1.5
+;   2     int8 codes = [36, -127, 3, 65, -52, 102]   (round IS the quantizer)
+;   4     int8 dequant[0] → 425197                   (at 1e-6)
+;   8     int8 dequant[4] → -614173
+;   16    int8 round-trip maxerr < 0.01              (the sub-32-bit epsilon)
+;   32    nf4 codes = [10, 0, 7, 13, 3, 14]          (nearest quantile, ties to the lower index)
+;   64    nf4 dequant[3] → 843926
+;   128   nf4 dequant[5] → 1084435
+;   256   nf4 round-trip maxerr < 0.2078             (half the largest table gap × absmax — the
+;                                                      honest bound, never tighter than the table)
+;   512   same row twice → identical codes           (the dedup shape: content-addressing's ground)
+;   1024  a different row → different codes
+;   2048  a zero row encodes without dividing by zero (int8 → all 0, nf4 → the exact-zero slot 7)
+(do
+    (let nf4 (list -1.0 -0.6961928009986877 -0.5250730514526367 -0.39491748809814453
+                   -0.28444138169288635 -0.18477343022823334 -0.09105003625154495 0.0
+                   0.07958029955625534 0.16093020141124725 0.24611230194568634 0.33791524171829224
+                   0.44070982933044434 0.5626170039176941 0.7229568362236023 1.0))
+    (let w  (list 0.42 -1.5 0.03 0.77 -0.62 1.2))
+    (let am (tq-absmax w))
+    (let i8 (tq-int8-encode w))
+    (let i8d (tq-int8-decode i8 (tq-int8-scale am)))
+    (let n4 (tq-nf4-encode w nf4))
+    (let n4d (tq-nf4-decode n4 am nf4))
+    (let zz (list 0.0 0.0 0.0))
+    (let c0  (if (eq (round (mul am 1000000.0)) 1500000) 1 0))
+    (let c1  (if (eq (tq-codes-eq i8 (list 36 -127 3 65 -52 102)) 1) 2 0))
+    (let c2  (if (eq (round (mul (nth i8d 0) 1000000.0)) 425197) 4 0))
+    (let c3  (if (eq (round (mul (nth i8d 4) 1000000.0)) -614173) 8 0))
+    (let c4  (if (lt (tq-maxerr w i8d) 0.01) 16 0))
+    (let c5  (if (eq (tq-codes-eq n4 (list 10 0 7 13 3 14)) 1) 32 0))
+    (let c6  (if (eq (round (mul (nth n4d 3) 1000000.0)) 843926) 64 0))
+    (let c7  (if (eq (round (mul (nth n4d 5) 1000000.0)) 1084435) 128 0))
+    (let c8  (if (lt (tq-maxerr w n4d) 0.2078) 256 0))
+    (let c9  (if (eq (tq-codes-eq (tq-nf4-encode w nf4) n4) 1) 512 0))
+    (let c10 (if (eq (tq-codes-eq (tq-int8-encode (list 0.42 -1.5 0.03 0.77 -0.62 1.1)) i8) 0) 1024 0))
+    (let c11 (if (and (eq (tq-codes-eq (tq-nf4-encode zz nf4) (list 7 7 7)) 1)
+                      (eq (tq-codes-eq (tq-int8-encode zz) (list 0 0 0)) 1)) 2048 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7
+    (add c8 (add c9 (add c10 c11))))))))))))

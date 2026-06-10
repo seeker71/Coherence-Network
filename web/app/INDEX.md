@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 162
+**Total files**: 164
 
 | Route | File | Purpose |
 |---|---|---|
@@ -125,6 +125,7 @@
 | `/resonance` | [page.tsx](resonance/page.tsx) | _no top-of-file purpose_ |
 | `/runtime` | [page.tsx](runtime/page.tsx) | _no top-of-file purpose_ |
 | `/search` | [page.tsx](search/page.tsx) | _no top-of-file purpose_ |
+| `/sense` | [page.tsx](sense/page.tsx) | sense.hati.earth — the download door for Coherence Sense. Detects the visitor's |
 | `/settings` | [page.tsx](settings/page.tsx) | _no top-of-file purpose_ |
 | `/settings/translations` | [page.tsx](settings/translations/page.tsx) | _no top-of-file purpose_ |
 | `/settings/wallet` | [page.tsx](settings/wallet/page.tsx) | web/app/settings/wallet/page.tsx |
@@ -144,6 +145,7 @@
 | `/substrate/form/space` | [page.tsx](substrate/form/space/page.tsx) | Kernel Space — a walkable 3D rendering of the Form kernel's recipe tree. |
 | `/substrate/ingest` | [page.tsx](substrate/ingest/page.tsx) | Substrate ingest — let a visiting body place markdown content into |
 | `/substrate` | [page.tsx](substrate/page.tsx) | _no top-of-file purpose_ |
+| `/suci` | [page.tsx](suci/page.tsx) | suci.hati.earth — the door to Hati Suci, the resident-service nervous system |
 | `/tasks/[task_id]` | [page.tsx](tasks/[task_id]/page.tsx) | _no top-of-file purpose_ |
 | `/tasks` | [page.tsx](tasks/page.tsx) | _no top-of-file purpose_ |
 | `/teams` | [page.tsx](teams/page.tsx) | _no top-of-file purpose_ |

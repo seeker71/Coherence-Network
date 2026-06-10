@@ -212,7 +212,10 @@ defn audio_lang = language_cell_shape {
 #         probabilistic; each phoneme node carries a `confidence`
 #         float. The substrate doesn't yet have a clean uncertainty
 #         representation. For now: confidence is a per-node leaf;
-#         downstream cells filter or weight by it.
+#         downstream cells filter or weight by it. The banding +
+#         earned-confidence half is carried: affect-traits.fk gates
+#         cadence / felt-plane / sentiment readings by voiced.fk's
+#         gate and the oracle's confidence (affect-traits.form).
 
 # ─────────────────────────────────────────────────────────────────────
 # How to query (once authored + populated)

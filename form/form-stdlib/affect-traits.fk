@@ -1,0 +1,57 @@
+; affect-traits.fk — felt-sense readings: cadence bands, the dimensional affect triple, earned sentiment.
+;
+; The channel carries how something is said and played, not only what. From numbers the carrier's free
+; oracles always measure — speech rate (parselmouth: voiced segments → syllables/s ×10), music tempo
+; (librosa beat-tracker BPM), inter-onset intervals scaled 0..9, the dimensional triple
+; arousal/valence/dominance ×100 (audeering w2v2 MSP-dim), and a sentiment class confidence 0..100
+; (emotion2vec+) — the BODY bands and gates. These are READINGS, never soul-states: a quadrant of the
+; felt plane is where the sound sits, not what the speaker is; an oracle's number is evidence the body
+; weighs, not a verdict it repeats. Composes with voiced.fk gate-level (silence earns nothing; audible
+; non-speech earns the music lanes; voiced speech earns the speech lanes) and voice-traits.fk (pulse
+; steadiness is the arousal spread-shape read over onset intervals — same recipe, different signal).
+; Builtins only, exactly like voice-traits.fk — no core.fk compile on the hot path.
+
+; --- cadence bands: how fast the saying / the playing moves ---
+; speech: rate10 = syllables-per-second × 10. Conversational speech sits ~3.5–5.5 syl/s; the middle
+; is genuinely ordinary, so it gets its own band rather than a forced extreme.
+;   0 = slow    1 = measured    2 = quick
+(defn speech-cadence-band (rate10)
+  (if (ge rate10 55) 2 (if (ge rate10 35) 1 0)))
+
+; music: BPM from the beat tracker. 0 = slow (<76) · 1 = mid · 2 = fast (>=120)
+(defn music-cadence-band (bpm)
+  (if (ge bpm 120) 2 (if (ge bpm 76) 1 0)))
+
+; pulse steadiness from inter-onset intervals (carrier scales each interval 0..9): the spread shape is
+; voice-traits' arousal read over time-between-beats instead of energy. Steady pulse → 9, free/rubato → 0.
+(defn pulse-steadiness (intervals)
+  (sub 9 (arousal intervals)))
+
+; --- the felt plane: dimensional affect triple, each lane ×100 from the dim model ---
+; Like speaker-band, the middle is genuinely ambiguous and gets its own band, never a coin-flip.
+;   0 = low    1 = ambiguous-mid    2 = high
+(defn felt-band (x)
+  (if (ge x 60) 2 (if (ge x 40) 1 0)))
+(defn felt-vec (ar va dom)
+  (list (felt-band ar) (felt-band va) (felt-band dom)))
+
+; quadrant of the felt plane (arousal × valence) — only when BOTH lanes are out of the mid.
+;   0 = settled-dim · 1 = heavy-charged · 2 = warm-still · 3 = bright-charged · 4 = forming (mid refuses)
+(defn felt-quadrant (ar va)
+  (if (eq (felt-band ar) 1) 4
+      (if (eq (felt-band va) 1) 4
+          (if (eq (felt-band ar) 2)
+              (if (eq (felt-band va) 2) 3 1)
+              (if (eq (felt-band va) 2) 2 0)))))
+
+; --- earned sentiment: the trust lanes, in voiced.fk's gate vocabulary ---
+; affect-trust: only voiced speech earns trust in the speech-affect oracle, scaled by its confidence.
+(defn affect-trust (gate conf)
+  (if (ge gate 2) (div conf 11) 0))
+; mood-trust: audible non-speech (music) earns trust in the music-mood oracle.
+(defn mood-trust (gate conf)
+  (if (eq gate 1) (div conf 11) 0))
+; a sentiment label is shown only when earned — gate open AND confidence at the floor.
+; Below the floor the surface shows forming ("·"), never a faked label.
+(defn report-sentiment? (gate conf floor)
+  (if (and (ge gate 1) (ge conf floor)) 1 0))
