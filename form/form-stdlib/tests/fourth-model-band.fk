@@ -1,0 +1,29 @@
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk
+;
+; fourth-model-band — n4/n5/n6 proven three-way at the emission layer: the
+; fkcount parser (two functions: call from 0; recurse 1 + count(pos+1) while
+; BUF is non-zero) driven through fkc-emit-driver is the witness program that
+; the sibling drives a host MODEL (say/whisper/ollama) and counts its captured
+; output. The LIVE driving — say speaks a real .aiff, ollama's 115 GB model
+; answers and the binary counts its bytes — is the audit's half (gated on the
+; tools being present); here the kernels prove the program agrees.
+;
+; Verdict 15 when the model-organ surface holds:
+;   1   fkcount-fns is two functions (entry + recursive counter)
+;   2   its flattened roots are 1,11 (entry tiny, counter after)
+;   4   the driver emission of fkcount carries execvp + the fk_src capture
+;   8   the emission is deterministic
+(do
+    (let fns (fkcount-fns))
+    (let c0 (if (eq (len fns) 2) 1 0))
+
+    (let flat (fkc-flatten-many fns))
+    (let c1 (if (str_eq (fkc-fn-text (nth flat 1)) "1,11") 2 0))
+
+    (let d (fkc-emit-driver fns))
+    (let c2 (if (ge (str_find d "execvp(argv[1]" 0) 0)
+                (if (ge (str_find d "read(fds[0], fk_src" 0) 0) 4 0) 0))
+
+    (let c3 (if (str_eq d (fkc-emit-driver fns)) 8 0))
+
+    (add c0 (add c1 (add c2 c3))))

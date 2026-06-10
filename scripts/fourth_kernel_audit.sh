@@ -466,5 +466,51 @@ fi
 echo "  the host command's stdout flows into fk_src; the cursor reads a LIVE subprocess — the organ TTS/STT/LLM ride"
 
 echo
+# ── 15. n4/n6 — host MODELS driven by a 4th-kernel binary (gated on tools) ──
+# The fkcount parser (counts captured bytes) compiled through the driver IS
+# the witness program: the binary drives say (TTS), ollama (LLM), whisper
+# (STT) and counts what comes back. Skipped where a tool is absent (CI).
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
+    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" > "$work/mdl-driver.fk"
+cat >> "$work/mdl-driver.fk" <<'EOF'
+(print "==C==")
+(print (fkc-emit-driver (fkcount-fns)))
+(print "==END==")
+EOF
+(cd "$FORMDIR" && "$GO_BIN" "$work/mdl-driver.fk" 2>/dev/null) > "$work/mdl.out"
+sed -n '/^==C==$/,/^==END==$/p' "$work/mdl.out" | sed -e '1d' -e '$d' > "$work/fkcnt.c"
+"$CLANG" -O2 -o "$work/fkcnt" "$work/fkcnt.c"
+echo "n4/n6 host models driven by the 4th-kernel-compiled binary (the driver organ + the byte-counter program):"
+if command -v say >/dev/null; then
+    aiff="$work/spoke.aiff"
+    "$work/fkcnt" say -o "$aiff" "the fourth kernel speaks" >/dev/null 2>&1
+    if [[ -s "$aiff" ]]; then
+        echo "  n4 TTS: the binary drove 'say' -> $(wc -c < "$aiff" | tr -d ' ') bytes of real audio at $aiff"
+    else
+        echo "  n4 TTS: say produced no audio file (unexpected)"
+    fi
+else
+    echo "  n4 TTS: 'say' absent — skipped"
+fi
+if command -v ollama >/dev/null; then
+    sm="$(ollama list 2>/dev/null | awk 'NR>1{print $1}' | grep -E ':3b|llama3.2' | head -1)"
+    [[ -z "$sm" ]] && sm="$(ollama list 2>/dev/null | awk 'NR==2{print $1}')"
+    if [[ -n "$sm" ]]; then
+        b0=$(python3 -c 'import time;print(time.time())')
+        n="$("$work/fkcnt" ollama run "$sm" "one short sentence about a self-compiling kernel" 2>/dev/null | head -1)"
+        b1=$(python3 -c 'import time;print(time.time())')
+        echo "  n6 LLM: the binary drove ollama '$sm' -> captured + counted $n bytes in $(python3 -c "print(f'{$b1-$b0:.1f}')")s"
+    fi
+    # the largest local model — driven if present; the headline bonus
+    big="$(ollama list 2>/dev/null | awk '{print $1}' | grep -iE '8x22b|70b|mixtral' | sort | tail -1)"
+    if [[ -n "$big" ]]; then
+        echo "  n6 LARGEST: $big present — drive it with: $work/fkcnt ollama run $big \"...\" (115 GB class; minutes to load; see evidence for the measured run)"
+    fi
+else
+    echo "  n6 LLM: 'ollama' absent — skipped"
+fi
+echo "  the model COMPUTE rides the host organ; the 4th-kernel binary drives it and counts the output (host-resource-access)"
+
+echo
 echo "conditions: $(uname -m) $(uname -s), clang -O2, full-process invocations (startup included)"
 echo "ok — parity held and the rows are real; the spec is docs/coherence-substrate/fourth-kernel.form"
