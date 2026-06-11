@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 149
+**Total files**: 151
 
 | File | Purpose |
 |---|---|
@@ -50,6 +50,7 @@
 | [export_lineage.py](export_lineage.py) | Export the graph's presence lineage into a durable JSON manifest. |
 | [export_vision_image_prompts.py](export_vision_image_prompts.py) | Export persistent prompt records for Living Collective vision images. |
 | [external_proof_demo.py](external_proof_demo.py) | External proof demo — exercises the Coherence Network public API from outside the repo. |
+| [fatal_http_all_kernels_probe.py](fatal_http_all_kernels_probe.py) | Probe fatal HTTP replies across the current four kernel carriers. |
 | [federation_peer_poll.py](federation_peer_poll.py) | federation_peer_poll — fire one peer-poll cycle from the command line. |
 | [fill_missing_spec_sections.py](fill_missing_spec_sections.py) | Heal pre-existing spec body gaps the validator surfaces. |
 | [form_cli.py](form_cli.py) | form_cli.py — Form-native CLI: generate, execute, convert. |
@@ -154,6 +155,7 @@
 | [viewport_audit.py](viewport_audit.py) | Audit a list of URLs at desktop (1440x900) and mobile (390x844) widths. |
 | [wander.py](wander.py) | Launch a wandering sense into the field. |
 | [wellness_check.py](wellness_check.py) | Wellness check — a gentle sensing of the body. |
+| [whisper_block0_carrier.py](whisper_block0_carrier.py) | scripts/whisper_block0_carrier.py — M6 carrier: load safetensors, slice, quantize, and run reference forward pass. |
 | [word_cell_rewriter.py](word_cell_rewriter.py) | word_cell_rewriter — gesture 3 at word-cell granularity. |
 | [worktree_continuity_guard.py](worktree_continuity_guard.py) | Detect stranded changes across sibling worktrees. |
 | [worktree_pr_guard.py](worktree_pr_guard.py) | Worktree PR guard: prevent common CI failures and track PR check failures. |

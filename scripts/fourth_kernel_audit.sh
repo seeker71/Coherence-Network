@@ -769,13 +769,11 @@ echo
 # Nine more REAL stdlib bands (unmodified source from disk) flatten onto the
 # walker's table and run on the SAME universal binary; each verdict is gated
 # four-way against the three walking siblings' own front door (validate.sh,
-# the nine invocations in parallel). feature-vector is the honest tenth: its
-# flatten lands and fits the loader, but its band-scale allocation crosses
-# the arena's water line and the copying melt cannot see packed args held in
-# suspended C frames (m4e2's named suspended-temp gap) — it stays off the
-# ratchet until call arguments ride a walker-managed value stack instead of
-# C locals. adler32 (the original multi-param candidate) still waits on the
-# band/shl_u32/add_u32 figure family and let-in-defn — named, not bent.
+# the nine invocations in parallel). feature-vector flattens here and CROSSES
+# in section 24: call arguments ride the walker-managed value stack, so its
+# band-scale allocation melts safely mid-call. adler32 (the original
+# multi-param candidate) still waits on the band/shl_u32/add_u32 figure
+# family and let-in-defn — named, not bent.
 mp_mods=(cooldown alert-gate value-execution anomaly-band body-state field-fusion histogram-peak model-retire signal-derivative)
 mp_exps=(63 127 7 127 127 127 127 63 127)
 cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
@@ -819,10 +817,9 @@ fv_rows="$(wc -w < "$work/t-mp-feature-vector.txt")"
 if [[ "$fv_rows" -lt 10 ]]; then
     echo "FAIL  the feature-vector flatten itself regressed"; exit 1
 fi
-echo "  feature-vector     flattens ($fv_rows table words, fits the loader) — held OFF the ratchet:"
-echo "                     band-scale allocation crosses the melt water line and packed args in"
-echo "                     suspended C frames are outside the copying melt's root set (m4e2 gap)"
-echo "  bands-on-fourth-arm: $((mp_pass + 1)) (learning-trend + $mp_pass multi-param bands, four-way gated)"
+echo "  feature-vector     flattens ($fv_rows table words, fits the loader) — crosses in section 24"
+echo "                     (its band-scale allocation melts mid-call on the value stack)"
+echo "  bands-on-fourth-arm so far: $((mp_pass + 1)) (learning-trend + $mp_pass multi-param bands, four-way gated)"
 
 echo
 # ── 23. live delivery priority — multiple offers pending in ONE window; WHICH ──
@@ -880,6 +877,36 @@ if [[ "$p1_ack" == "$p3_ack" ]]; then
     echo "FAIL  the two policy rows agreed — the row was not the variable"; exit 1
 fi
 echo "  one policy discipline, afferent and efferent: the rows are scheduler.fk's (band: tests/afferent-priority-band.fk -> 1023)"
+
+echo
+# ── 24. the melt-root wall, down — feature-vector crosses on the value stack ──
+# m4e4 named the wall precisely: packed args lived in suspended C frames the
+# copying melt could not root, and feature-vector's band-scale allocation
+# crosses the arena's 90% water line MID-CALL — the refs went stale where the
+# melt could not see them. Call arguments now ride fk_vs[], a walker-managed
+# value stack (fourth-walker-emit.fk: ARG reads fk_vs[fp]; CALL/SELF push the
+# evaluated argument; CONS/NTH park in-flight refs) that the melt roots AND
+# relocates like any cells (melt-on-cool-band -> 63). The same flattened
+# table from section 22 runs UNMODIFIED on the SAME universal binary, the
+# melt fires mid-band (the stderr readout is the witness), and the verdict
+# is gated four-way against validate.sh's own three-walker answer.
+fv_three="$(cd "$FORMDIR" && ./validate.sh form-stdlib/core.fk form-stdlib/feature-vector.fk form-stdlib/tests/feature-vector-band.fk 2>/dev/null | sed -n 's/.*→ //p' | head -1)"
+fv_fkw="$("$work/fkwu" "$work/t-mp-feature-vector.txt" 0 2>"$work/fv-melt.txt" | head -1)"
+echo "the melt-root wall, down — feature-vector on the fourth arm, melt firing mid-band:"
+echo "  three-walker verdict (validate.sh) = $fv_three   fkw = $fv_fkw   (expect 127)"
+echo "  melt readout mid-band (allocated live dead cap-from cap-to bytes-reclaimed):"
+sed 's/^/    /' "$work/fv-melt.txt"
+if [[ -z "$fv_three" || "$fv_three" != "$fv_fkw" || "$fv_fkw" != "127" ]]; then
+    echo "FAIL  feature-vector did not cross — the fourth arm disagrees with the siblings"; exit 1
+fi
+if ! grep -q '^melt ' "$work/fv-melt.txt"; then
+    echo "FAIL  no melt fired during the band — this run did not witness the wall coming down"; exit 1
+fi
+awk -v pct=90 '/^melt /{ok=($2 * 100 >= $5 * pct)}END{exit ok?0:1}' "$work/fv-melt.txt" \
+    || { echo "FAIL  the melt readout does not show allocation at the water line"; exit 1; }
+echo "  allocation crossed the water line mid-call and the packed args survived relocation —"
+echo "  every live value the walker holds is a melt-visible root (the BMF stack discipline, inward)"
+echo "  bands-on-fourth-arm: 11 (learning-trend + 9 multi-param + feature-vector, four-way gated)"
 
 echo
 echo "conditions: $(uname -m) $(uname -s), clang -O2, full-process invocations (startup included)"

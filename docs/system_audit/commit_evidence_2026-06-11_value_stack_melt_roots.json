@@ -1,0 +1,122 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "form-os4/value-stack",
+  "commit_scope": "Call args on a walker-managed value stack (the melt-root wall, down): fk_walk's argument parameter becomes a frame pointer into fk_vs[] — ARG reads fk_vs[fp], CALL/SELF push the evaluated argument and re-enter at the new frame, CONS/NTH park in-flight refs on the same stack — so the copying melt roots AND relocates every live value the walker holds (fk_mlive/fk_mcopy walk fk_vs beside fk_mem). feature-vector, m4e4's honestly-blocked tenth band, crosses onto the fourth arm with the melt firing mid-band. Bands-on-fourth-arm 10 -> 11.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "fourth-kernel"
+  ],
+  "spec_ids": [
+    "kernel-native-api-readiness",
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "m4e5-value-stack-20260611"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "measurement"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-fable-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/tests/melt-on-cool-band.fk",
+    "form/form-stdlib/tests/fourth-os-band.fk",
+    "form/form-stdlib/tests/fourth-net-band.fk",
+    "scripts/fourth_kernel_audit.sh",
+    "docs/system_audit/commit_evidence_2026-06-11_value_stack_melt_roots.json"
+  ],
+  "change_files": [
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/tests/melt-on-cool-band.fk",
+    "form/form-stdlib/tests/fourth-os-band.fk",
+    "form/form-stdlib/tests/fourth-net-band.fk",
+    "scripts/fourth_kernel_audit.sh"
+  ],
+  "evidence_refs": [
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/coherence-substrate/bmf-architecture.form",
+    "docs/system_audit/commit_evidence_2026-06-11_m4e4_multiparam_fourth_arm.json",
+    "docs/system_audit/commit_evidence_2026-06-11_melt_on_cool_activation.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/arena-melt.fk form-stdlib/tests/melt-on-cool-band.fk",
+      "cd form && ./validate.sh <preludes> form-stdlib/tests/<band>.fk  # each of the 16 bands whose preludes include fourth-walker-emit.fk, SEPARATE invocations",
+      "bash scripts/fourth_kernel_audit.sh",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-11_value_stack_melt_roots.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ],
+    "notes": "The structural fix m4e4 named: packed args lived in suspended C frames the copying melt could neither root nor relocate. fk_walk(i, a) becomes fk_walk(i, fp) — the argument never rides C; it lives at fk_vs[fp] in a dedicated rooted static region (the fk_mem precedent), capacity a named cell (fkc-vstack-capacity = 65536), breach observable (vs! on stderr, exit 9 — axiom-4). fk_melt() drops its (&hh,&ht) special case: the root set is every fk_vs slot below fk_vsp plus fk_mem, marked once (fk_mlive IS am-live) and rewritten in place (fk_mcopy IS am-melt with forwarding). CONS parks both in-flight operands through the push door across the melt door and stores them back FROM the stack (the melt may have relocated them); NTH parks its ref across the index walk. All three many-family walk variants (many/jit/jitmelt) and all four mains moved together; the single-program lane (no heap, no melt) is byte-identical, so fourth-walker-emit-band's exact text pin and the m4d quine hold unchanged. The flattening rules in form-flatten.fk are UNTOUCHED — only the carrier changed, exactly as the n7-ratchet block predicted. Three honest re-pins where bands assert emission lengths: fourth-os-band 6610->7287 (universal) and 6525->7245 (jit), fourth-net-band 6648->7325 (server). melt-on-cool-band grew 31->63: bit 32 proves the stack discipline in the emitted text (region at the named capacity cell, ARG-on-stack arm, melt rooting and relocating fk_vs, CALL through the push door, both emit lanes). Field warning confirmed again: zsh does not word-split an unquoted scalar — prelude lists for validate.sh must be arrays or literal words, or every band looks divergent.",
+    "measured": {
+      "bands_on_fourth_arm_before": 10,
+      "bands_on_fourth_arm_after": 11,
+      "crossed_band": {
+        "feature-vector": 127
+      },
+      "melt_mid_band_readout": "melt 3687 49 3638 4096 4096 58208 (allocated live dead cap-from cap-to bytes-reclaimed) — allocation crossed the 90% water line mid-call; 49 live cells (packed args included) survived relocation; 58 KB reclaimed; carrier kept",
+      "regression_melts": {
+        "chain_n4200": "melt 3687 3687 0 4096 8192 0 — crowded carrier doubles, answer 4200",
+        "churn_5x1000": "melt 3687 687 3000 4096 4096 48000 — garbage reclaimed, carrier kept, answer 1000"
+      },
+      "emission_lengths": {
+        "universal": 7287,
+        "jit_call_fib": 7245,
+        "server_hi": 7325
+      },
+      "named_remaining": {
+        "adler32": "band/shl_u32/add_u32 figure family + let-in-defn nested do",
+        "str_family": "walker string-pool lane (shared with the m4d full-fixpoint blocker)",
+        "floats": "the value stack is the ground these will stand on"
+      }
+    }
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "CI three-way suite runs on the PR; the full band suite plus kernel builds carry the regression net for the walk-variant and main rewrites."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "form-stdlib changes ride the api image rebuild; the lattice ingests the updated recipes on the post-merge hook."
+  },
+  "phase_gate": {
+    "phase": "m4e5-value-stack",
+    "gate": "every live value the walker holds is visible to the walker — call args on a walker-managed stack the melt roots and relocates; the band the wall blocked crosses UNMODIFIED with the melt firing mid-run, four-way gated",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "floats and strings stand on this ground (the stack is where their values will live); deeper recursion is future-proofed; str_* still needs the walker string-pool lane; adler32 waits on the figure family + nested do"
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No route behavior changes. The fourth kernel's band ratchet climbs 10 -> 11: feature-vector runs UNMODIFIED on the universal fkw binary with the copying melt firing mid-band, returning the three siblings' own verdict 127.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "melt-on-cool-band proves the stack discipline three-way at 63: the emitted text carries the stack region at the named capacity cell, the ARG-on-stack arm, the melt rooting and relocating fk_vs, and the CALL push door in both emit lanes.",
+      "fourth_kernel_audit.sh section 24: feature-vector's flattened table -> universal fkw -> verdict 127 four-way gated, with the melt stderr readout proving allocation crossed the water line during the band."
+    ],
+    "summary": "validate.sh: melt-on-cool-band 63; all 16 bands whose preludes include fourth-walker-emit.fk at their verdicts (three length pins honestly re-measured); audit end-to-end green with bands-on-fourth-arm at 11 and the melt firing mid-band on the crossing."
+  }
+}
