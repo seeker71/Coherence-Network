@@ -1215,6 +1215,14 @@ pub(crate) struct Kernel {
     // counter — the only cost is the warm-up.
     jit_hits: HashMap<NodeID, u32>,
     jit_failed: HashSet<NodeID>,
+    // installed_leaves — installed-name → leaf for callables bound into the
+    // kernel's own table AT RUNTIME by jit_install (the
+    // install-as-named-callable-leaf protocol: form-stdlib/install-leaf.fk,
+    // proven three-way by tests/install-leaf-band.fk). NativeFn is a plain
+    // fn pointer (no captures), so the leaf's loaded artifact lives here and
+    // FNCALL dispatch consults this table by name — the table IS the grown
+    // surface. First-bind-wins: jit_install refuses a name already callable.
+    installed_leaves: HashMap<NameID, InstalledLeaf>,
     // Content-addressed maps — the kernel's O(1) dispatch tables, keyed by the
     // NodeID (content-address) of the key. A switch (status→phrase, name→handler,
     // shape→route) becomes a direct NodeID lookup instead of a scan: two
@@ -1598,6 +1606,7 @@ impl Kernel {
             jit_compiled: HashMap::new(),
             jit_hits: HashMap::new(),
             jit_failed: HashSet::new(),
+            installed_leaves: HashMap::new(),
             maps: HashMap::new(),
             next_map: 0,
             switch_tables: HashMap::new(),
@@ -2007,6 +2016,9 @@ impl Kernel {
             // its own hot paths).
             jit_hits: HashMap::new(),
             jit_failed: self.jit_failed.clone(),
+            // Arc clones — installed leaves stay callable in workers; the
+            // table is shared surface, not per-worker state.
+            installed_leaves: self.installed_leaves.clone(),
             // Dispatch tables are content (built at load); each worker carries
             // its own copy so routing needs no lock.
             maps: self.maps.clone(),
@@ -2193,6 +2205,21 @@ impl Drop for JitCompiled {
         // though the on-disk file is gone. Best-effort: ignore errors.
         let _ = fs::remove_dir_all(&self._temp_dir);
     }
+}
+
+// InstalledLeaf — one binding the callable surface grew at runtime via
+// jit_install (install-as-named-callable-leaf; protocol:
+// form-stdlib/install-leaf.fk, proven three-way by
+// tests/install-leaf-band.fk). Carries the loaded artifact (Arc-shared
+// with jit_compiled — same content-addressed body, same .so; the
+// interface it answers is jc.arity over the i64 ABI) and the body NodeID
+// whose content-address is the ack a caller holds but cannot forge
+// (axiom-3). The table never rebinds — first-bind-wins is enforced at
+// jit_install, so a leaf, once bound, is the name's only answer.
+#[derive(Clone, Debug)]
+struct InstalledLeaf {
+    jc: Arc<JitCompiled>,
+    body: NodeID,
 }
 
 // Maximum arity the JIT supports — bounded so dispatch can be a static
@@ -4459,6 +4486,83 @@ impl Kernel {
             k.jit_compiled.insert(cl.body, Arc::new(jc));
             Value::Int(1)
         });
+        // jit_install closure-name-str installed-name-str expected-arity →
+        //   the install-as-named-callable-leaf protocol
+        //   (form-stdlib/install-leaf.fk, proven three-way by
+        //   tests/install-leaf-band.fk) carried onto the Rust JIT lane:
+        //   rustc --crate-type=cdylib → libloading, the artifact bound under
+        //   a NEW name in the kernel's own table at runtime — the surface
+        //   grows by offer, never by recompile. The ack follows axiom-5:
+        //     node — the artifact's body NodeID (content-addressed,
+        //            unforgeable) on bind
+        //     0    — refusal: name collision (first-bind-wins), interface
+        //            mismatch (expected arity is not the closure's own), or
+        //            no artifact (the recipe is outside the JIT subset /
+        //            rustc absent) — the table is untouched either way
+        //     nothing — there is no closure to install (honest absence)
+        self.register_env_native("jit_install", cat_witness(), |k, a, env, args| {
+            if args.len() != 3 {
+                return Value::Null;
+            }
+            let closure_name = args[0].as_str().to_string();
+            let installed_name = args[1].as_str().to_string();
+            let expected_arity = args[2].as_int();
+            let closure_id = k.intern_string(&closure_name).inst;
+            let cl = match a.lookup(env, closure_id) {
+                Some(Value::Closure(c)) => c,
+                // nothing — there is no cell to install
+                _ => return Value::Null,
+            };
+            let installed_id = k.intern_string(&installed_name).inst;
+            if k.natives.contains_key(&installed_id)
+                || k.env_natives.contains_key(&installed_id)
+                || k.installed_leaves.contains_key(&installed_id)
+            {
+                // name collision — first-bind-wins, the table never rebinds
+                return Value::Int(0);
+            }
+            if expected_arity != cl.params.len() as i64 {
+                // interface mismatch — the artifact cannot be bound through
+                // an interface it does not carry
+                return Value::Int(0);
+            }
+            // Ensure the artifact: reuse the content-addressed plugin cache
+            // (same body NodeID, same .so) or compile through the jit lane.
+            let jc = match k.jit_compiled.get(&cl.body).cloned() {
+                Some(j) => j,
+                None => {
+                    let compiled = emit_rust_source(k, cl.name, &cl.params, cl.body)
+                        .and_then(|src| compile_rust_cdylib(&src, cl.params.len()));
+                    match compiled {
+                        Some(j) => {
+                            let arc = Arc::new(j);
+                            k.jit_compiled.insert(cl.body, arc.clone());
+                            arc
+                        }
+                        None => {
+                            // no artifact — the recipe still walks under its
+                            // own name; nothing installs
+                            k.jit_failed.insert(cl.body);
+                            return Value::Int(0);
+                        }
+                    }
+                }
+            };
+            k.installed_leaves
+                .insert(installed_id, InstalledLeaf { jc, body: cl.body });
+            // the node ack: the artifact's content-addressed identity
+            Value::Nid(cl.body)
+        });
+        // installed_leaf? name-str → 1 if the name is a callable the surface
+        // grew at runtime via jit_install, else 0 (build-time natives answer 0).
+        self.register_native("installed_leaf?", cat_compare(RCMP_EQ), |k, _, args| {
+            let id = k.intern_string(args[0].as_str()).inst;
+            if k.installed_leaves.contains_key(&id) {
+                Value::Int(1)
+            } else {
+                Value::Int(0)
+            }
+        });
         // jit_aliased? form-name-str → 1 if a JIT alias is currently bound
         // for this name, else 0. Lets Form code introspect dispatch routing.
         self.register_native("jit_aliased?", cat_compare(RCMP_EQ), |k, _, args| {
@@ -4513,6 +4617,22 @@ impl Kernel {
                     format!("{}.{}.{}.{}", body.pkg, body.level, body.ty, body.inst),
                     1,
                     String::new(),
+                ));
+            }
+            // Installed leaves — callables the surface grew at runtime via
+            // jit_install; detail carries the installed name so the grown
+            // table is readable from Form (sibling of Go's observe lane).
+            let installed: Vec<(NameID, NodeID)> = k
+                .installed_leaves
+                .iter()
+                .map(|(name, leaf)| (*name, leaf.body))
+                .collect();
+            for (name, body) in installed {
+                rows.push((
+                    "installed".to_string(),
+                    format!("{}.{}.{}.{}", body.pkg, body.level, body.ty, body.inst),
+                    0,
+                    k.name_str(name).to_string(),
                 ));
             }
             rows.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
@@ -6859,6 +6979,30 @@ fn walk_inner(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
                             t.record_native(&native_name);
                         }
                         return (ne.func)(k, a, &args);
+                    }
+                }
+                // Installed leaf — a callable the surface grew at runtime via
+                // jit_install (install-as-named-callable-leaf,
+                // form-stdlib/install-leaf.fk). The leaf only answers the
+                // interface it offered: a call outside it (wrong arity, value
+                // shapes the i64 ABI doesn't carry) acknowledges nothing —
+                // honest absence, never a fabricated value (axiom-4: the name
+                // is the boundary; reaching past it is observable as null).
+                let leaf_opt = k.installed_leaves.get(&name).cloned();
+                if let Some(leaf) = leaf_opt {
+                    if a.lookup(env, name).is_none() {
+                        let mut args = Vec::with_capacity(kids.len() - 1);
+                        for arg in &kids[1..] {
+                            args.push(walk(k, a, *arg, env));
+                        }
+                        let leaf_name = k.name_str(name).to_string();
+                        if let Some(t) = &mut k.trace {
+                            t.record_native(&leaf_name);
+                        }
+                        // Arc held through the call — the Library can't be
+                        // dropped mid-call (same contract as the closure jit
+                        // fast path below).
+                        return jit_dispatch(&leaf.jc, &args).unwrap_or(Value::Null);
                     }
                 }
                 // Closure lookup uses the ORIGINAL function-name (not the JIT-

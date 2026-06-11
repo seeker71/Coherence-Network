@@ -25,8 +25,9 @@
     (derived-from core-axioms.form)                   # axioms 3, 4, 5 do all the work
     (protocol    form-stdlib/install-leaf.fk)         # the shape, pure recipe tissue
     (proven-by   form-stdlib/tests/install-leaf-band.fk)  # -> 9, three-way (Go/Rust/TS)
-    (carrier     form-kernel-go jit_install)          # the native lane that RUNS today
-    (witnessed-by form/scripts/jit-install-leaf-test.sh)) # -> 10, live .so install
+    (carrier     form-kernel-go jit_install           # plugin.Open lane, RUNS today
+                 form-kernel-rust jit_install)        # libloading lane, RUNS today
+    (witnessed-by form/scripts/jit-install-leaf-test.sh)) # -> 10 + 10, live .so installs on both
 
   # ── The composition — three axioms, no new machinery ─────────────────
   (composition
@@ -63,7 +64,7 @@
     (call-installed        name -> the-realized-value-or-honest-absence)
     (names-are-query-keys  one-artifact-may-bind-under-many-names — the leaves carry ONE identity))
 
-  # ── The native carrier (Go kernel, RUNS today) ────────────────────────
+  # ── The first native carrier (Go kernel, RUNS today) ──────────────────
   # jit_install closure-name installed-name expected-arity:
   #   1. resolve the closure in the caller's env (no closure -> nothing)
   #   2. refuse a name already callable (natives/env-natives, incl. leaves
@@ -81,21 +82,40 @@
   #   5. ack the body NodeID — the capability handle a caller can hold
   #      but not forge (axiom-3)
   (carrier-go
-    (native        jit_install)                       # env-aware; registry lane 0 (sibling-gap)
+    (native        jit_install)                       # env-aware; registry lane 0 (sibling-gap: ts)
     (introspection installed_leaf?)                   # 1 only for leaves the surface grew at runtime
     (observe       observe/go/jit/install install-refused installed-dispatch installed-guard-miss)
     (witness       form/scripts/jit-install-leaf-test.sh -> 10))
 
-  # ── Open carriers — named, not built speculatively ────────────────────
+  # ── The second native carrier (Rust kernel, RUNS today) ───────────────
+  # Same offer/refusal semantics, only the dlopen mechanics per-host:
+  #   3. ensure the artifact: the main.rs jit lane (recipe -> Rust source
+  #      -> rustc --crate-type=cdylib -> libloading), content-addressed
+  #      plugin cache reused — same body NodeID, same .so
+  #   4. bind the leaf in the kernel's installed-leaves table — Rust's
+  #      NativeFn is a captureless fn pointer, so the grown surface IS a
+  #      kernel-held table consulted at FNCALL dispatch by name: the
+  #      table the protocol names is literally the carrier's data
+  #      structure. The leaf answers the i64 ABI lane it carries; a call
+  #      outside it (floats, wrong arity) acknowledges nothing.
+  # Steps 1, 2, 5 are identical to the Go carrier — the protocol is the
+  # protocol.
+  (carrier-rust
+    (native        jit_install)                       # env-aware; registry lane 0 (sibling-gap: ts)
+    (introspection installed_leaf? jit-stats)         # jit-stats reports "installed" rows: body NodeID + installed name
+    (mechanics     rustc-cdylib libloading installed-leaves-table-at-fncall-dispatch)
+    (witness       form/scripts/jit-install-leaf-test.sh -> 10))
+
+  # ── Open carrier — named, not built speculatively ─────────────────────
   # The PROTOCOL is proven on all three kernels by the band; the native
-  # carrier runs on Go (the kernel that already dlopens). Rust and TS
-  # native lanes are open stones on the same path: Rust would carry
-  # libloading/dlopen over an emitted cdylib; TS would carry a worker or
-  # WASM module. Each lands as the same offer -> bind -> call-by-name
-  # shape; nothing about the protocol changes.
+  # carrier runs on Go (plugin.Open) and Rust (libloading over an emitted
+  # cdylib) — parity by construction, the protocol identical, only the
+  # dlopen mechanics per-host. The TS native lane is the open stone on
+  # the same path: a worker or WASM module. It lands as the same
+  # offer -> bind -> call-by-name shape; nothing about the protocol
+  # changes.
   (open-carriers
-    (rust dlopen-over-emitted-cdylib)
-    (ts   wasm-or-worker-module))
+    (ts wasm-or-worker-module))
 
   (invariant
     (grows-by-offer-never-by-recompile  the-binary-is-untouched; the-table-is-the-surface)
@@ -112,6 +132,7 @@
 #   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel.fk \
 #     form-stdlib/install-leaf.fk form-stdlib/tests/install-leaf-band.fk   # -> 9
 #
-#   # the native carrier, live (jit a function, install it under a new
-#   # name, call it BY NAME, parity vs the recipe walk, refusals honest):
-#   ./form/scripts/jit-install-leaf-test.sh                               # -> 10
+#   # the native carriers, live (jit a function, install it under a new
+#   # name, call it BY NAME, parity vs the recipe walk, refusals honest;
+#   # one section per carrier, each toolchain-gated):
+#   ./form/scripts/jit-install-leaf-test.sh         # go -> 10, rust -> 10
