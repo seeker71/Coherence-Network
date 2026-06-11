@@ -136,9 +136,19 @@
 # (TIME + tail countdown), not minted. Proven: tests/afferent-live-band.fk
 # -> 63 three-way; witnessed: fourth_kernel_audit.sh section 18.
 #
-# Next stones when an ask needs them (named, not built ahead of need):
-# delivery priority as data (POSIX number-order, IRQ priority — a
-# policy cell over the same engine; the live carrier lowers a single
-# pending offer today, so multi-offer time-ordering lands exactly
-# there); the scheduler row, which is this engine's efferent twin
-# (offer-the-compute-organ-to-competing-recipes).
+# Delivery priority is closed — and it closed as the scheduler's OWN
+# rows read backward: POSIX number-order IS sched-fifo's row data
+# (least-wins over the ordinal key, read over signal numbers); IRQ
+# priority IS sched-priority's row data (greatest-wins over urgency,
+# read over levels) — proven row-for-row (afferent-priority.fk,
+# tests/afferent-priority-band.fk -> 1023 three-way) and witnessed
+# live (audit section 23: the same two-offer pending set delivers in
+# opposite orders under the two rows, on the real clock). The mask/
+# window rules stay sovereign before any ranking; one chooser
+# discipline now reads both directions, afferent and efferent.
+#
+# Next stone when an ask needs it (named, not built ahead of need):
+# preemption — a higher-priority offer arriving MID-wait does not yet
+# displace the composed winner; the re-decide-on-arrival stone lands
+# where sched-step and the live poll loop compose (one re-verdict per
+# poll tick rather than per wait).
