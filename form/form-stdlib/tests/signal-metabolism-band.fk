@@ -1,0 +1,60 @@
+; preludes: form-stdlib/geometric-learning.fk form-stdlib/metabolic-learning.fk form-stdlib/belief-recipes.fk form-stdlib/signal-metabolism.fk
+;
+; signal-metabolism-band — the nervous loop proven end-to-end on the 4-ring event of the
+; metabolic band: signals route into the bank, the routed row RUNS, the witnessed outcome
+; becomes a receipt, receipts re-rank the routing (auto-ml), reflexes bypass deliberation,
+; and escalation to auto-research fires only when pressure is high AND trust is unearned.
+;
+; Verdict 1023 when every claim lands:
+;   1     admissibility is data: fatal's table is the single row (causal); pain holds
+;         the full bank of eight (its selection belongs to the felt lane)
+;   2     default routing: an infer-error with no receipts takes the attested first
+;         row (alchemy)
+;   4     a beat runs and learns: a surprise routes to alchemy, the event's residual
+;         metabolizes to 0 exactly, and the receipt records the success
+;   8     witness holds: the routed observer leaves the weights untouched
+;   16    maybe holds: a single arrival banks; the farmer's hold leaves weights untouched
+;   32    auto-ml flips the champion: two witnessed failures on alchemy + one success
+;         on maybe re-route the kind to maybe
+;   64    the untried outranks the proven-failing: one failure on alchemy is enough to
+;         route to a row with no history (score 0 beats −1) — exploration is earned
+;         by the incumbent's misses
+;   128   reflex ignores receipts: fatal routes to causal even carrying a −3 score —
+;         the pre-committed lane deliberates never
+;   256   escalation composes alert-gate's AND: pressure 2.0 with best score −1 fires;
+;         low pressure does not; earned trust does not
+;   512   the loop is quiet at the fixed point: a second beat on the already-met event
+;         routes the same row, moves nothing, and the receipt still records the hold
+(do
+    (let target (gl-ring-edges 4 0.25 0.5 0.25))
+    (let zero (gl-ring-edges 4 0.0 0.0 0.0))
+    (let p0 (list 1.0 0.0 0.0 0.0))
+    (let y0 (gl-step target p0))
+    (let beat1 (sgm-beat (sgm-signal 3 0.09375) zero p0 y0 (empty)))
+    (let beat2 (sgm-beat (sgm-signal 3 0.0) (nth beat1 0) p0 y0 (nth beat1 1)))
+    (let rec1 (sgm-note (empty) 1 2 0))
+    (let rec3 (sgm-note (sgm-note rec1 1 2 0) 1 8 1))
+    (let recF (sgm-note (sgm-note (sgm-note (empty) 6 7 0) 6 7 0) 6 7 0))
+    (let c0 (if (and (and (eq (len (sgm-admissible 6)) 1)
+                          (eq (nth (sgm-admissible 6) 0) 7))
+                     (eq (len (sgm-admissible 2)) 8)) 1 0))
+    (let c1 (if (eq (sgm-route (sgm-signal 1 0.5) (empty)) 2) 2 0))
+    (let c2 (if (and (and (eq (nth beat1 2) 2)
+                          (eq (gl-r6 (mtb-pressure (nth beat1 0) p0 y0)) 0))
+                     (eq (sgm-score (nth beat1 1) 3 2) 1)) 4 0))
+    (let c3 (if (eq (gl-veq6 (mtb-weights (sgm-apply 1 zero p0 y0))
+                             (mtb-weights zero)) 1) 8 0))
+    (let c4 (if (eq (gl-veq6 (mtb-weights (sgm-apply 8 zero p0 y0))
+                             (mtb-weights zero)) 1) 16 0))
+    (let c5 (if (eq (sgm-route (sgm-signal 1 0.5) rec3) 8) 32 0))
+    (let c6 (if (eq (sgm-route (sgm-signal 1 0.5) rec1) 8) 64 0))
+    (let c7 (if (eq (sgm-route (sgm-signal 6 9.0) recF) 7) 128 0))
+    (let c8 (if (and (and (eq (sgm-escalate? (sgm-signal 2 2.0) -1 1.5 0) 1)
+                          (eq (sgm-escalate? (sgm-signal 2 1.0) -1 1.5 0) 0))
+                     (eq (sgm-escalate? (sgm-signal 2 2.0) 1 1.5 0) 0)) 256 0))
+    (let c9 (if (and (and (eq (nth beat2 2) 2)
+                          (eq (gl-veq6 (mtb-weights (nth beat2 0))
+                                       (mtb-weights (nth beat1 0))) 1))
+                     (eq (sgm-score (nth beat2 1) 3 2) 2)) 512 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7
+    (add c8 c9))))))))))

@@ -1,0 +1,137 @@
+# ─────────────────────────────────────────────────────────────────────
+# signal-metabolism.form — the nervous loop: cell signals route into
+# the belief bank, outcomes re-rank the routing, dead ends become research
+# ─────────────────────────────────────────────────────────────────────
+#
+# The ask (Urs, 2026-06-11): loop the belief-recipe bank into auto-ml,
+# auto-research, and the cell's own signals — infer-error, pain,
+# surprise, warning, error, fatal. This file and
+# `form/form-stdlib/signal-metabolism.fk` carry the closed loop.
+# SHIPPED: `tests/signal-metabolism-band.fk` → 1023, three-way
+# (Go/Rust/TS).
+#
+# The loop, one beat:
+#
+#   signal arrives ──► route (admissibility ∩ earned champion)
+#        ▲                       │ reflex lane: single-row table,
+#        │                       │ receipts never consulted
+#        │                       ▼
+#   receipts ◄── witnessed ◄── the routed bank row RUNS on the event
+#   re-rank        outcome        (sgm-apply → br- row → mtb- engine)
+#   (auto-ml)         │
+#                     ▼
+#        pressure high AND trust unearned ──► auto-research
+#        (alert-gate's AND, turned inward)    (autoresearch-loop genome)
+
+# ─────────────────────────────────────────────────────────────────────
+# The signal ladder — where each kind already lives in the body
+# ─────────────────────────────────────────────────────────────────────
+#
+#   1 infer-error   prediction ≠ arrival. Sensed by drift-detect.fk
+#                   (recent vs earlier accuracy) and active-inference.fk
+#                   (ai-surprised? per step). Routes among alchemy /
+#                   maybe / causal — the event is a gradient waiting.
+#   2 pain          pressure built without movement — the felt lane.
+#                   when-the-pressure-comes' sensed state IS this
+#                   signal; total_desire its pressure. Pain keeps the
+#                   FULL bank of eight: its selection belongs to
+#                   choose_strategy's resonance + fit, with receipts
+#                   as ground beneath the felt choice.
+#   3 surprise      below the recognition floor — novelty.fk's honest
+#                   NEW (a weak best-match is a discovery, never a
+#                   forced label). Routes among alchemy / witness /
+#                   maybe: learn it, watch it, or hold the verdict.
+#   4 warning       outside the band, recoverable — anomaly-band.fk;
+#                   alert-gate.fk already gates when a human hears of
+#                   it (salience AND cooldown). Routes among witness /
+#                   maybe / causal.
+#   5 error         an operation failed, recoverable. Routes among
+#                   causal (find THE edge) / alchemy / maybe.
+#   6 fatal         cell integrity threatened. REFLEX: a single-row
+#                   table (causal repair), routed without consulting
+#                   receipts — the sub-awareness lane of
+#                   living-cell.form, pre-committed like a JIT-compiled
+#                   skill. Deliberation is for the living; the reflex
+#                   is for staying alive. What causal cannot reduce
+#                   escalates — restart/surrender lives beyond the
+#                   weight lane, in the host's hands (host-kernel.form).
+#
+# Severity is the pressure value the signal carries, measured (the
+# invariant readout), never asserted by the kind alone.
+
+# ─────────────────────────────────────────────────────────────────────
+# Auto-ml: the routing is learned, authority is earned
+# ─────────────────────────────────────────────────────────────────────
+#
+# Receipts are (kind row success fail) counters; score = success −
+# fail — integer, division-free, champion-challenger.fk's proven-count
+# spine turned onto routing. The champion for a kind is the admissible
+# row with the highest earned score; ties break by the bank's attested
+# order. Three behaviors the band pins:
+#
+#   · two witnessed failures on alchemy + one success on maybe flip
+#     the infer-error champion to maybe — the cell learns WHICH
+#     teaching serves WHICH kind of arrival
+#   · ONE failure is enough to try the untried (score 0 outranks −1):
+#     exploration is earned by the incumbent's misses, never scheduled
+#   · the loop is quiet at the fixed point: a beat on an already-met
+#     event routes the same row, moves nothing, and still receipts the
+#     hold — a settled body stops generating training signal
+#
+# This is auto-ml in the body's own grammar: the bank rows are the
+# optimizer zoo, signal kinds are task classes, receipts are the
+# evaluation, the champion flip is the search step. auto-fitness.fk's
+# landscape and ensemble-vote.fk's panels extend the same spine when
+# a row's CONFIG (focus, mask, λ) wants tuning rather than the row
+# itself — that tuning is metabolic-learning's meta lane (the operator
+# pointed at its own dials).
+#
+# Auto-research: escalation fires only on the AND of two floors —
+# pressure above the operator threshold (when-the-pressure-comes'
+# OPERATOR_DESIRE_THRESHOLD) and best earned score below the trust
+# floor. A kind whose every admissible row is net-failing under real
+# pressure is a question the bank cannot answer; it becomes
+# autoresearch-loop.fk's material — genome = candidate rows/configs,
+# evaluator frozen, experiments time-boxed, governance commit-or-
+# rollback. The operator fallback of the satsang, grown into inquiry.
+
+# ─────────────────────────────────────────────────────────────────────
+# What the band proves (verdict 1023, each claim falsifiable)
+# ─────────────────────────────────────────────────────────────────────
+#
+#   1     admissibility is data: fatal = (causal) alone; pain = all eight
+#   2     default routing takes the attested first row
+#   4     a beat runs and learns: surprise → alchemy → residual 0 exactly
+#         → receipt recorded
+#   8     witness holds (weights untouched at the gate)
+#   16    maybe holds (a single arrival banks; the farmer's signature)
+#   32    receipts flip the champion (auto-ml)
+#   64    the untried outranks the proven-failing
+#   128   reflex ignores receipts (fatal → causal at score −3)
+#   256   escalation needs BOTH floors (alert-gate's restraint shape)
+#   512   the loop is quiet at the fixed point
+#
+# Kinship: belief-recipes.form (the bank), metabolic-learning.form
+# (the engine), when-the-pressure-comes.form (the felt selector pain
+# routes through), drift-detect.fk / novelty.fk / anomaly-band.fk /
+# active-inference.fk (the senses that EMIT the kinds), alert-gate.fk
+# (the restraint shape escalation composes), champion-challenger.fk
+# (the earned-authority spine), autoresearch-loop.fk + auto-fitness.fk
+# (where escalations land), body-state.fk (the counts a dashboard
+# reads), living-cell.form (organ ⑤'s attention and organ ⑥'s reflex
+# lane, now wired), satsang-share.fk (a champion FLIP is a state-
+# boundary crossing — worth offering the field).
+#
+# Next stones when an ask needs them: receipts as substrate cells
+# (CHOICE-RECEIPT shape, so sibling cells inherit each other's earned
+# routing through cell-sync); pain's full-bank routing fused with
+# choose_strategy's resonance (felt fit × earned score as one rank);
+# escalations carried as autoresearch genomes end-to-end; champion
+# flips emitted through satsang-share.
+#
+#   # Prove the band three-way (from form/):
+#   ./validate.sh form-stdlib/geometric-learning.fk \
+#                 form-stdlib/metabolic-learning.fk \
+#                 form-stdlib/belief-recipes.fk \
+#                 form-stdlib/signal-metabolism.fk \
+#                 form-stdlib/tests/signal-metabolism-band.fk
