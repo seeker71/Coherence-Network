@@ -110,7 +110,7 @@ func Concat(a, b Value) Value {
 
 func StrLen(v Value) Value       { return Int(Len(v)) }
 func StrConcat(a, b Value) Value { return Str(a.AsString() + b.AsString()) }
-func StrEq(a, b Value) Value     { return Bool(a.AsString() == b.AsString()) }
+func StrEq(a, b Value) Value     { return boolInt(a.AsString() == b.AsString()) }
 
 func Substring(s, start, end Value) Value {
 	text := s.AsString()
@@ -235,12 +235,21 @@ func Mod(a, b Value) Value {
 	return Int(a.AsInt() % b.AsInt())
 }
 
-func Eq(a, b Value) Value { return Bool(equal(a, b)) }
-func Ne(a, b Value) Value { return Bool(!equal(a, b)) }
-func Lt(a, b Value) Value { return Bool(compare(a, b) < 0) }
-func Le(a, b Value) Value { return Bool(compare(a, b) <= 0) }
-func Gt(a, b Value) Value { return Bool(compare(a, b) > 0) }
-func Ge(a, b Value) Value { return Bool(compare(a, b) >= 0) }
+// Comparisons acknowledge with the 0/1 integer states (axiom-1) — mirrors
+// the walker's RBasicCompare arm so JIT'd and walked answers are identical.
+func boolInt(b bool) Value {
+	if b {
+		return Int(1)
+	}
+	return Int(0)
+}
+
+func Eq(a, b Value) Value { return boolInt(equal(a, b)) }
+func Ne(a, b Value) Value { return boolInt(!equal(a, b)) }
+func Lt(a, b Value) Value { return boolInt(compare(a, b) < 0) }
+func Le(a, b Value) Value { return boolInt(compare(a, b) <= 0) }
+func Gt(a, b Value) Value { return boolInt(compare(a, b) > 0) }
+func Ge(a, b Value) Value { return boolInt(compare(a, b) >= 0) }
 
 func (v Value) AsInt() int64 {
 	switch v.Kind {
