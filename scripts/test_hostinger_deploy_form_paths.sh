@@ -141,6 +141,9 @@ grep -Fq 'X-Form-Handler: \${handler}' "$DEPLOY_SCRIPT" \
 grep -Fq 'X-Form-Python-Authority: false' "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not require promoted BML authority proof"
 
+grep -Fq 'curl -fsS --max-time 10 -D /tmp/promoted-' "$DEPLOY_SCRIPT" \
+  || fail "deploy canary does not bound promoted BML read route curl probes"
+
 grep -Fq 'api_sensings' "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not probe the sensings BML handler"
 
