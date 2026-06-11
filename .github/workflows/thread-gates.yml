@@ -205,6 +205,11 @@ jobs:
         run: |
           cd web && npm ci --allow-git=none && npm run build
 
+      - name: Test web
+        if: steps.changed_surfaces.outputs.web == 'true'
+        run: |
+          cd web && npm run test
+
       - name: Install PR triage dependencies
         if: github.event_name == 'pull_request'
         run: |

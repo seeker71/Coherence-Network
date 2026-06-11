@@ -157,19 +157,24 @@ describe("spec task_e647f5766a54f6f1: form placeholder contrast (idea_submit_for
   });
 });
 
-describe("spec task_e647f5766a54f6f1: background gradients preserved (page.tsx)", () => {
+describe("spec task_e647f5766a54f6f1: background gradients preserved (page.tsx + globals.css)", () => {
   const pageSource = readWebFile("app/page.tsx");
+  const globalsSource = readWebFile("app/globals.css");
 
-  it("ambient glow blur element is still present", () => {
-    // The soft ambient background glow must not have been removed
-    expect(pageSource).toContain("blur-[120px]");
+  it("ambient glow is carried by the site-wide backdrop", () => {
+    // The soft ambient glow lives in globals.css: warm radial gradients on
+    // <html> plus fixed body::before blooms, tuned per theme (spec
+    // ux-homepage-readability R6).
+    expect(globalsSource).toContain("body::before");
+    const radialBlooms = globalsSource.match(/radial-gradient\(/g) ?? [];
+    expect(radialBlooms.length).toBeGreaterThanOrEqual(6);
   });
 
   it("background gradient on card elements is preserved", () => {
     expect(pageSource).toContain("bg-gradient-to-b");
   });
 
-  it("bg-primary/10 ambient fill is preserved", () => {
-    expect(pageSource).toContain("bg-primary/10");
+  it("ambient backdrop carries blooms in light mode too", () => {
+    expect(globalsSource).toMatch(/html\.light body::before/);
   });
 });

@@ -12,11 +12,17 @@ function readWebFile(relativePath: string): string {
 describe("external presence profile page", () => {
   const source = readWebFile("components/presence/PresencePage.tsx");
   const personPageSource = readWebFile("app/people/[id]/page.tsx");
+  const messagesSource = readWebFile("messages/en.json");
 
   it("surfaces richer external profile sections", () => {
-    expect(source).toContain("At a glance");
-    expect(source).toContain("Presence map");
-    expect(source).toContain("Entry points");
+    // Section chrome is i18n: the component renders presence.* message keys
+    // and the en bundle carries the visible copy.
+    expect(source).toContain('t("presence.atAGlance")');
+    expect(source).toContain('t("presence.presenceMap")');
+    expect(source).toContain('t("presence.entryPoints")');
+    expect(messagesSource).toContain('"atAGlance": "At a glance"');
+    expect(messagesSource).toContain('"presenceMap": "Presence map"');
+    expect(messagesSource).toContain('"entryPoints": "Entry points"');
   });
 
   it("keeps the external source and graph node as first-class exits", () => {
