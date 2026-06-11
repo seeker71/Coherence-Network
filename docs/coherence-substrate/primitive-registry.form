@@ -8,7 +8,7 @@
 # verification recipe, expected outside), swapped only when the
 # replacement keeps the declared spec and survives the circle. This
 # registry applies that discipline to the real surface: every native the
-# Go kernel registers — 197 names across main.go's registerNative calls,
+# Go kernel registers — 199 names across main.go's registerNative calls,
 # the fieldConstructors table, and registerEnvNative — carries its
 # declared outside in form-stdlib/primitive-registry.fk.
 #
@@ -36,7 +36,7 @@
 
   (lineage
     (discipline     kernel-satsang.fk ksat-part)            # spec + verify + expected, circle-witnessed
-    (registry       form-stdlib/primitive-registry.fk)      # 197 entries, main.go order
+    (registry       form-stdlib/primitive-registry.fk)      # 199 entries, main.go order
     (proof          form-stdlib/tests/primitive-registry-band.fk -> 63 three-way)
     (drift-gate     form/scripts/validate_primitive_registry.py)  # registry == kernel source
     (wellness       scripts/wellness_check.py sense_form_primitives)
@@ -44,9 +44,9 @@
 
   # ── what the band proves, three-way, every validate run ─────────────
   (band-claims
-    (shape          197-entries-7-fields-known-tokens-no-duplicates)
+    (shape          199-entries-7-fields-known-tokens-no-duplicates)
     (verification   162-of-162-lane-1-recipes-answer-their-declared-outside)
-    (lanes-pinned   162-in-band-plus-35-carrier-declared)
+    (lanes-pinned   162-in-band-plus-37-carrier-declared)
     (refusal        a-part-claiming-a-wrong-outside-is-dissented)     # ksat bad-swap, kept
     (attestation    declared-category-equals-native_blueprint-category-by-exemplar)
     (spec-surface   entries-readable-without-running))                # pow: method, 1024
@@ -61,7 +61,7 @@
     (ts-node-eq-attribution-drift   healed)
     (go-write-form-binary-duplicate composted))
 
-  # ── the visible tail (lane 0, 35 entries) ───────────────────────────
+  # ── the visible tail (lane 0, 37 entries) ───────────────────────────
   (carrier-lanes
     (panic-contract  form_error form-error)
     (socket-carrier  socket_listen socket_port socket_accept socket_connect
@@ -77,6 +77,7 @@
                      str_line_at str_ascii_prefix
                      framebuffer-observe-start framebuffer-observe-stop
                      framebuffer-observe-active?
+                     jit_install installed_leaf?   # install-leaf.form carrier
                      # rust-gap:
                      framebuffer-counts framebuffer-event-rows
                      # ts-gap:

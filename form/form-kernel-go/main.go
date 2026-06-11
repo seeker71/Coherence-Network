@@ -585,6 +585,12 @@ type Kernel struct {
 	jitFailed       map[NodeID]bool
 	jitFailedReason map[NodeID]string
 	jitDispatchHits map[NodeID]uint32
+	// installedLeaves — installed-name → artifact body NodeID for callables
+	// bound into k.natives AT RUNTIME by jit_install (the
+	// install-as-named-callable-leaf carrier; protocol:
+	// form-stdlib/install-leaf.fk). Lets Form code distinguish a leaf the
+	// surface grew by offer from a native compiled into the binary.
+	installedLeaves map[NameID]NodeID
 	switchTables    map[NodeID]*switchTable
 }
 
@@ -626,6 +632,7 @@ func NewKernel() *Kernel {
 		jitFailed:       make(map[NodeID]bool),
 		jitFailedReason: make(map[NodeID]string),
 		jitDispatchHits: make(map[NodeID]uint32),
+		installedLeaves: make(map[NameID]NodeID),
 		switchTables:    make(map[NodeID]*switchTable),
 	}
 	k.registerNatives()
@@ -2827,6 +2834,33 @@ func (k *Kernel) registerNatives() {
 		}
 		k.jitCompiledGoV[bodyKey] = fnv
 		return Value{Kind: VInt, Int: 1}
+	})
+	// jit_install closure-name-str installed-name-str expected-arity →
+	//   the install-as-named-callable-leaf carrier (protocol:
+	//   form-stdlib/install-leaf.fk; band: tests/install-leaf-band.fk).
+	//   Compiles the named closure's body to a host-native artifact (the
+	//   jit.go .so lane, content-addressed plugin cache reused) and binds
+	//   it under installed-name in the kernel's OWN native table at
+	//   runtime — callable from recipes by name, the surface grown by
+	//   offer instead of recompile. Ack (axiom-5):
+	//     node — the artifact's body NodeID (axiom-3: unforgeable identity)
+	//     0    — refusal: installed-name already callable (first-bind-wins),
+	//            expected-arity is not the closure's own interface, or the
+	//            body's shape has no artifact (compile refused)
+	//     nothing — closure-name is not bound to a closure (no cell)
+	k.registerEnvNative("jit_install", catWitness(), func(k *Kernel, env *Frame, args []Value) Value {
+		if len(args) < 3 || args[0].Kind != VStr || args[1].Kind != VStr || args[2].Kind != VInt {
+			return Value{Kind: VNull}
+		}
+		return jitInstallLeaf(k, env, args[0].Str, args[1].Str, args[2].Int)
+	})
+	// installed_leaf? name-str → 1 if the name is a callable the surface
+	// grew at runtime via jit_install, else 0 (build-time natives answer 0).
+	k.registerNative("installed_leaf?", catCompare(RCompareEq), func(k *Kernel, args []Value) Value {
+		if _, ok := k.installedLeaves[k.internName(args[0].Str)]; ok {
+			return Value{Kind: VInt, Int: 1}
+		}
+		return Value{Kind: VInt, Int: 0}
 	})
 	// jit_aliased? form-name-str → 1 if a JIT alias is currently bound
 	// for this name, else 0. Lets Form code introspect dispatch routing.

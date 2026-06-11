@@ -1,0 +1,130 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "form-os2/install-leaf",
+  "commit_scope": "Closes the install-as-named-callable-leaf NAMED half of the linux-as-recipes loadable-modules row. The protocol lands as pure recipe tissue (install-leaf.fk): an install offer carries (name, artifact, expected-interface) where the interface is a CHILD of the artifact — axiom-3 makes lying about an interface structural; the kernel acknowledges by binding the name in a callable table (the node ack is the artifact's body NodeID, the unforgeable capability handle), and a name collision (first-bind-wins) or interface mismatch acknowledges 0 with NO residue; an unbound name acknowledges nothing. The native carrier lands on the Go kernel (the lane that already dlopens): jit_install compiles the named closure through the existing jit.go .so lane (content-addressed plugin cache reused) and binds the artifact as a NativeEntry in k.natives AT RUNTIME — the kernel's own callable surface grows by offer, never by recompile; a subsequent call BY NAME (a name no closure serves) dispatches into generated code with the same ABI guards as the closure jit path. installed_leaf? lets Form code distinguish a leaf the surface grew from a build-time native. Linux's insmod composed from the five axioms, never ported — boot.fk's self-extension (an offer mints a larger image) carried to the callable surface (an offer grows the table).",
+  "files_owned": [
+    "form/form-stdlib/install-leaf.fk",
+    "form/form-stdlib/tests/install-leaf-band.fk",
+    "form/form-kernel-go/jit.go",
+    "form/form-kernel-go/main.go",
+    "form/scripts/jit-install-leaf-test.sh",
+    "form/form-stdlib/primitive-registry.fk",
+    "form/form-stdlib/tests/primitive-registry-band.fk",
+    "form/form-stdlib/blueprint-registry.json",
+    "docs/coherence-substrate/install-leaf.form",
+    "docs/coherence-substrate/primitive-registry.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-11_install_leaf.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel.fk form-stdlib/install-leaf.fk form-stdlib/tests/install-leaf-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/primitive-registry.fk form-stdlib/tests/primitive-registry-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel.fk form-stdlib/persistence.fk form-stdlib/cell-registry.fk form-stdlib/boot.fk form-stdlib/tests/boot-band.fk",
+      "./form/scripts/jit-install-leaf-test.sh",
+      "cd form/form-kernel-go && go test ./...",
+      "python3 form/scripts/validate_primitive_registry.py",
+      "python3 scripts/gen_bp_table.py",
+      "python3 scripts/scan_form_blueprints.py --check",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-11_install_leaf.json"
+    ],
+    "summary": "install-leaf-band verdict 9 (9 claims), 1 ok, 0 divergent — Go = Rust = TypeScript: a fresh install acks the artifact NodeID; a call BY NAME realizes the artifact's value (parity vs walking the body directly); a collision under a bound name refuses with first-bind-wins and no residue; an offer through an interface the artifact does not carry refuses; an unbound name acknowledges nothing; the SAME artifact binds under a second name (names are query keys, one identity); 4 offers grew the table by exactly the 2 accepted; the rebuilt offer is node_eq to the original. Go witness verdict 10: jit_install compiled (defn il-probe (a b) (add (mul a b) 7)) to a .so and bound it as 'il-probe-native' in k.natives at runtime; (il-probe-native 6 7) = 49 = the recipe walk; the float lane agrees ((il-probe-native 2.5 4.0)*10 rounds equal both paths); rebind refused, build-time-native collision refused, arity-3 offer refused with nothing landing, absent closure acked nothing, a 3-arg call to the 2-arity leaf acked nothing. primitive-registry-band 63 with pins retuned 199 total / 162 lane-1 / 37 lane-0; boot-band 9 regression clean; go test ./... ok (285s).",
+    "observed_delta": {
+      "bands": "install-leaf-band 9 — 0 divergent; primitive-registry-band 63 — 0 divergent (pins 197->199, lane-0 35->37); boot-band 9 — 0 divergent (regression)",
+      "witness": "form/scripts/jit-install-leaf-test.sh -> verdict 10 PASS (live .so install, call-by-name, int+float parity, three refusal shapes + interface-breach silence)",
+      "blueprints_registered": "INSTALL-IFACE/INSTALL-ARTIFACT/INSTALL-OFFER/INSTALLED-LEAF at 1.2.99.1754-1757; bp tables regenerated for all three kernels",
+      "kernel_surface": "form-kernel-go gains jit_install (env-aware, witness category) and installed_leaf? (compare); both registry lane-0 sibling-gap; k.installedLeaves tracks runtime-grown leaves; observe events observe/go/jit/install, install-refused, installed-dispatch, installed-guard-miss",
+      "ledger_row": "linux-as-recipes (loadable-modules) install-as-named-callable-leaf — coordinator flips NAMED to RUNS after sibling merges"
+    },
+    "known_limitations": [
+      {
+        "limitation": "The native carrier runs on Go only — the kernel that already carries the dlopen lane. Rust and TS native carriers are open stones named in install-leaf.form (dlopen over emitted cdylib; wasm/worker module); the PROTOCOL is proven on all three kernels by the band.",
+        "follow_up": "Build a sibling carrier when an ask needs it; the offer->bind->call-by-name shape does not change."
+      },
+      {
+        "limitation": "Installed leaves live for the kernel process lifetime (the .so is process-mapped). A durable install across boots is the protocol's table-store shape (persistence.fk idiom) + re-offer at boot — boot.fk's own lane, not yet composed end-to-end.",
+        "follow_up": "Compose boot.fk + install-leaf.fk (a minted image whose cells are install offers replayed at boot) when a consumer needs persistent surface growth."
+      },
+      {
+        "limitation": "Unbinding is named (a new table minted without the leaf — never in-place mutation) but not carried on the Go lane; register_jit/unregister_jit cover the alias case only.",
+        "follow_up": "An uninstall offer if a real flow wants one; first-bind-wins keeps the table honest meanwhile."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "PR gates run the three-way bands; sibling kernels keep the verdict honest."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "form-stdlib + form-kernel-go ride the api rebuild; the lattice auto-ingests install-leaf.form on merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No route changes. The stdlib gains the install protocol; the Go kernel's callable surface can grow at runtime by offer; install-as-named-callable-leaf moves from NAMED to runnable recipe + band + live witness.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "install-leaf-band three-way: bind ack = artifact NodeID, call-by-name parity, collision refusal, first-bind-wins residue check, interface mismatch refusal, honest absence, one-artifact-two-names, growth-by-offer count, content-addressed offer identity.",
+      "jit-install-leaf-test.sh live: jit -> install -> call-by-name -> int+float parity -> rebind/native-collision/arity refusals -> absent-cell nothing -> interface-breach silence."
+    ],
+    "summary": "validate.sh 9 + 63 + 9, all 0 divergent; witness 10 PASS."
+  },
+  "phase_gate": {
+    "phase": "form-os2-install-leaf",
+    "gate": "the install protocol proven three-way as a band AND the artifact-install witnessed live on the Go carrier; ledger flip stays with the coordinator",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "coordinator retunes the loadable-modules row after all six sibling PRs merge; sibling carriers + boot-composed durable installs when asked"
+  },
+  "idea_ids": [
+    "fourth-kernel"
+  ],
+  "spec_ids": [
+    "form-core-kernel-conformance"
+  ],
+  "task_ids": [
+    "form-os2-install-leaf-20260611"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "form-os-map"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-fable-5"
+  },
+  "evidence_refs": [
+    "docs/coherence-substrate/linux-as-recipes.form",
+    "docs/coherence-substrate/core-axioms.form",
+    "docs/coherence-substrate/kernel-offer-protocol.form",
+    "docs/coherence-substrate/install-leaf.form"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/install-leaf.form",
+    "docs/coherence-substrate/primitive-registry.form",
+    "docs/system_audit/commit_evidence_2026-06-11_install_leaf.json",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-go/jit.go",
+    "form/form-kernel-go/main.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-stdlib/install-leaf.fk",
+    "form/form-stdlib/primitive-registry.fk",
+    "form/form-stdlib/tests/install-leaf-band.fk",
+    "form/form-stdlib/tests/primitive-registry-band.fk",
+    "form/scripts/jit-install-leaf-test.sh"
+  ],
+  "change_intent": "runtime_feature"
+}

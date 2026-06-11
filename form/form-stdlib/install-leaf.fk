@@ -1,0 +1,173 @@
+; install-leaf.fk — install-as-named-callable-leaf: a compiled capability is
+; OFFERED to a running body, which acknowledges by binding the name in its
+; callable table — the kernel's surface grows by offer, never by recompile.
+;
+; preludes: form-stdlib/channel.fk
+;
+; This is boot.fk's self-extension carried to the callable surface. boot.fk
+; proved a booted body accepts an offered CELL and MINTS a larger image;
+; here the offered cell is a COMPILED CAPABILITY (the JIT lane's artifact:
+; a recipe lowered to a .so by jit.go, or to a clang binary by the
+; fourth-kernel emitter), and the acknowledgment is a NAME BINDING — a
+; subsequent call BY NAME reaches the artifact. Linux's insmod, composed
+; from the five axioms (core-axioms.form), never ported:
+;
+;   axiom-3 — the artifact's content-addressed NodeID is its unforgeable
+;     identity. The interface is a CHILD of the artifact, so an artifact
+;     cannot claim an interface apart from what it is: a different
+;     interface is a different NodeID.
+;   axiom-4 — the installed name is the boundary: callers reach the
+;     capability only through the interface the artifact itself carries.
+;   axiom-5 — install is an offer; the ack is exactly one of
+;     nothing / 0 / node:
+;       node    — the artifact's NodeID: bound, callable by name
+;       0       — refusal: name collision (first-bind-wins) or the
+;                 offer's expected interface is not the artifact's own
+;       nothing — there is no cell to install (honest absence)
+;
+; The callable table is a durable store in persistence.fk's idiom — a
+; channel of INSTALLED-LEAF messages. The table never rebinds: a second
+; offer under a bound name acknowledges 0 and the table is untouched.
+; Unbinding, when a body wants it, is the registry convention (a new
+; table minted without the leaf) — never an in-place mutation.
+;
+; Shapes (blueprint-registry.json 1754..1757):
+;   INSTALL-IFACE    (arity)            — the offered interface
+;   INSTALL-ARTIFACT (iface, body)      — capability with iface composed in
+;   INSTALL-OFFER    (name, artifact, expected-iface)
+;   INSTALLED-LEAF   (name, artifact)   — one binding in the table
+;
+; Proven by tests/install-leaf-band.fk (three-way). The native carrier —
+; a jitted .so installed into the Go kernel's own native table at runtime
+; — is jit_install in form-kernel-go (witness:
+; form/scripts/jit-install-leaf-test.sh); Rust/TS native carriers are
+; open; the PROTOCOL is what this file proves on all three.
+
+;; --- Blueprints ------------------------------------------------------
+(let INSTALL-IFACE    (bp "INSTALL-IFACE"))
+(let INSTALL-ARTIFACT (bp "INSTALL-ARTIFACT"))
+(let INSTALL-OFFER    (bp "INSTALL-OFFER"))
+(let INSTALLED-LEAF   (bp "INSTALLED-LEAF"))
+
+;; --- helpers ----------------------------------------------------------
+
+(defn il-nil? (xs) (eq (len xs) 0))
+(defn il-nth (xs i)
+    (if (eq i 0) (head xs) (il-nth (tail xs) (sub i 1))))
+
+;; --- the interface ------------------------------------------------------
+
+;; il-iface arity -> INSTALL-IFACE recipe. The interface a callable
+;; answers to. Today one child (arity); a richer interface (value
+;; shapes, capability verbs) composes more children — same blueprint.
+(defn il-iface (arity)
+    (intern_node INSTALL-IFACE (list (intern_trivial_int arity))))
+
+(defn il-iface-arity (iface)
+    (node_value (il-nth (node_children iface) 0)))
+
+;; --- the artifact -------------------------------------------------------
+
+;; il-artifact iface body -> INSTALL-ARTIFACT recipe. The compiled
+;; capability AS A CELL: child 0 its own interface, child 1 the body
+;; (the recipe the artifact realizes — on the native carrier, the
+;; content the .so was compiled from). Because the interface is part
+;; of the composition, axiom-3 makes it inseparable from the identity.
+(defn il-artifact (iface body)
+    (intern_node INSTALL-ARTIFACT (list iface body)))
+
+(defn il-artifact-iface (a) (il-nth (node_children a) 0))
+(defn il-artifact-body  (a) (il-nth (node_children a) 1))
+
+;; --- the offer ------------------------------------------------------------
+
+;; il-offer name-str artifact expected-iface -> INSTALL-OFFER recipe.
+;; The offerer names the binding it asks for and the interface it
+;; expects callers-by-name to use. Content-addressed: the same three
+;; parts always intern to the same offer NodeID on every kernel.
+(defn il-offer (name artifact expected-iface)
+    (intern_node INSTALL-OFFER
+        (list (intern_trivial_string name) artifact expected-iface)))
+
+(defn il-offer-name     (o) (il-nth (node_children o) 0))
+(defn il-offer-artifact (o) (il-nth (node_children o) 1))
+(defn il-offer-expected (o) (il-nth (node_children o) 2))
+
+;; --- the callable table ----------------------------------------------------
+
+;; install-table-create path -> an empty callable table. A table IS a
+;; channel (channel.fk); installed leaves are its messages.
+(defn install-table-create (path) (channel-create path))
+
+(defn il-msgs-to-leaves (msgs acc)
+    (if (il-nil? msgs) acc
+        (il-msgs-to-leaves (tail msgs)
+            (append acc (list (channel-msg-payload (head msgs)))))))
+
+;; installed-leaves path -> every INSTALLED-LEAF in bind order.
+(defn installed-leaves (path)
+    (il-msgs-to-leaves (channel-read path) (list)))
+
+(defn il-leaf-name     (l) (il-nth (node_children l) 0))
+(defn il-leaf-artifact (l) (il-nth (node_children l) 1))
+
+;; lookup-leaf path name-str -> 0-or-1 element list (the body's
+;; optional idiom). The FIRST binding under a name is the binding —
+;; the table never rebinds, so first-match is the only match.
+(defn il-scan (leaves name-id)
+    (if (il-nil? leaves) (list)
+        (if (node_eq (il-leaf-name (head leaves)) name-id)
+            (list (head leaves))
+            (il-scan (tail leaves) name-id))))
+
+(defn lookup-leaf (path name)
+    (il-scan (installed-leaves path) (intern_trivial_string name)))
+
+(defn leaf-found? (result) (if (eq (len result) 1) 1 0))
+(defn leaf-of (result) (head result))
+
+;; --- install: the offer is acknowledged or refused ---------------------------
+
+;; il-bind — append the leaf and ack with the artifact's NodeID: the
+;; node ack, the content-addressed identity no caller can forge.
+(defn il-bind (path offer)
+    (do
+        (channel-append path
+            (channel-message
+                (intern_node INSTALLED-LEAF
+                    (list (il-offer-name offer)
+                          (il-offer-artifact offer)))))
+        (il-offer-artifact offer)))
+
+;; install-leaf path offer -> ack.
+;;   node — bound: the artifact's NodeID
+;;   0    — refusal, not error: the name is already bound
+;;          (first-bind-wins) OR the offer's expected interface is not
+;;          node_eq to the artifact's own. Either way the table is
+;;          untouched — a refused offer leaves no residue.
+(defn install-leaf (path offer)
+    (if (eq (leaf-found? (lookup-leaf path (node_value (il-offer-name offer)))) 1)
+        0
+        (if (node_eq (il-offer-expected offer)
+                     (il-artifact-iface (il-offer-artifact offer)))
+            (il-bind path offer)
+            0)))
+
+;; --- call by name: the reach is the point -------------------------------------
+
+;; il-call-found — realize a found leaf's body (the kernel's normal
+;; recipe walk); an absent leaf acknowledges nothing, expressed as the
+;; empty list — never a fabricated value.
+(defn il-call-found (found)
+    (if (eq (leaf-found? found) 1)
+        (walk_recipe (il-artifact-body (il-leaf-artifact (leaf-of found))))
+        (empty)))
+
+;; call-installed path name -> the value the named capability realizes.
+;; The name resolves through the table the install grew — the same
+;; (bp "name") / registry discipline as every other callable: the name
+;; is a query key; the NodeID reached through it is the identity.
+(defn call-installed (path name)
+    (il-call-found (lookup-leaf path name)))
+
+0

@@ -1,0 +1,117 @@
+# ─────────────────────────────────────────────────────────────────────
+# install-leaf.form — install-as-named-callable-leaf: a compiled capability
+#   offered to a running kernel becomes a NAMED callable in its own table —
+#   the surface grows by offer, never by recompile
+# ─────────────────────────────────────────────────────────────────────
+#
+# Closes the NAMED half of linux-as-recipes.form's loadable-modules row.
+# The JIT lane already RAN: a recipe lowers to a .so (jit.go) or a clang
+# binary (fourth-kernel-emit), dlopen/exec executes it. What was NAMED is
+# the INSTALL: the artifact entering the kernel's own callable table at
+# runtime, addressed by name through the same (bp "name") / registry
+# discipline as every other callable. Linux's insmod, composed from the
+# five axioms (core-axioms.form), never ported.
+#
+# This is boot.fk's self-extension carried to the native lane: boot proved
+# a booted body accepts an offered CELL and mints a larger IMAGE; here a
+# running kernel accepts a COMPILED CAPABILITY and its callable surface
+# grows — the offered cell is executable, the acknowledgment is a binding.
+
+(install-leaf
+
+  (lineage
+    (closes      linux-as-recipes.loadable-modules.install-as-named-callable-leaf)
+    (extends     boot.fk-self-extension)              # offer -> larger body, now at the callable surface
+    (derived-from core-axioms.form)                   # axioms 3, 4, 5 do all the work
+    (protocol    form-stdlib/install-leaf.fk)         # the shape, pure recipe tissue
+    (proven-by   form-stdlib/tests/install-leaf-band.fk)  # -> 9, three-way (Go/Rust/TS)
+    (carrier     form-kernel-go jit_install)          # the native lane that RUNS today
+    (witnessed-by form/scripts/jit-install-leaf-test.sh)) # -> 10, live .so install
+
+  # ── The composition — three axioms, no new machinery ─────────────────
+  (composition
+    (axiom-3 the-artifact's-content-addressed-NodeID-is-its-unforgeable-identity
+             the-interface-is-a-CHILD-of-the-artifact   # INSTALL-ARTIFACT (iface, body)
+             an-artifact-cannot-claim-an-interface-apart-from-what-it-is)
+    (axiom-4 the-installed-name-is-a-boundary
+             callers-reach-the-capability-only-through-the-interface-it-carries
+             a-call-outside-the-offered-interface-acknowledges-nothing-and-is-observable)
+    (axiom-5 install-is-an-offer
+             (ack (node    the-artifact's-body-NodeID — bound, callable by name)
+                  (zero    refusal — name collision (first-bind-wins) OR the
+                           offer's expected interface is not the artifact's own)
+                  (nothing there-is-no-cell-to-install — honest absence))))
+
+  # ── The shapes (blueprint-registry.json 1754..1757) ───────────────────
+  (shapes
+    (INSTALL-IFACE    (arity))                        # the offered interface; richer interfaces compose more children
+    (INSTALL-ARTIFACT (iface body))                   # capability with its interface composed in (axiom-3 covers it)
+    (INSTALL-OFFER    (name artifact expected-iface)) # what the offerer asks
+    (INSTALLED-LEAF   (name artifact)))               # one binding; the table never rebinds
+
+  # ── The protocol (pure recipe tissue, proven three-way) ───────────────
+  # The callable table is a durable store in persistence.fk's idiom — a
+  # channel of INSTALLED-LEAF messages. install-leaf acknowledges by
+  # appending the binding and answering the artifact NodeID; a refused
+  # offer leaves NO residue. call-installed resolves the name through the
+  # table and realizes the artifact's body — the kernel's normal recipe
+  # walk; an unbound name acknowledges nothing, never a fabricated value.
+  (protocol
+    (install-table-create  an-empty-callable-table)
+    (install-leaf          offer -> node-ack-or-0)    # bind or refuse, nothing between
+    (lookup-leaf           name -> 0-or-1-leaf)       # first-bind-wins, first-match-is-the-only-match
+    (call-installed        name -> the-realized-value-or-honest-absence)
+    (names-are-query-keys  one-artifact-may-bind-under-many-names — the leaves carry ONE identity))
+
+  # ── The native carrier (Go kernel, RUNS today) ────────────────────────
+  # jit_install closure-name installed-name expected-arity:
+  #   1. resolve the closure in the caller's env (no closure -> nothing)
+  #   2. refuse a name already callable (natives/env-natives, incl. leaves
+  #      installed earlier — first-bind-wins) and an arity that is not the
+  #      closure's own (the interface the artifact actually carries)
+  #   3. ensure the artifact: the jit.go lane (recipe -> Go source ->
+  #      go build -buildmode=plugin -> plugin.Open), content-addressed
+  #      plugin cache reused — same body NodeID, same .so
+  #   4. bind jitInstalledLeafFn under installed-name in k.natives — the
+  #      kernel's OWN table; the next (installed-name ...) FNCALL
+  #      dispatches into generated code with the same ABI guards as the
+  #      closure jit path; a call outside the interface (wrong arity,
+  #      value shapes no ABI carries) acknowledges nothing, observed as
+  #      observe/go/jit/installed-guard-miss
+  #   5. ack the body NodeID — the capability handle a caller can hold
+  #      but not forge (axiom-3)
+  (carrier-go
+    (native        jit_install)                       # env-aware; registry lane 0 (sibling-gap)
+    (introspection installed_leaf?)                   # 1 only for leaves the surface grew at runtime
+    (observe       observe/go/jit/install install-refused installed-dispatch installed-guard-miss)
+    (witness       form/scripts/jit-install-leaf-test.sh -> 10))
+
+  # ── Open carriers — named, not built speculatively ────────────────────
+  # The PROTOCOL is proven on all three kernels by the band; the native
+  # carrier runs on Go (the kernel that already dlopens). Rust and TS
+  # native lanes are open stones on the same path: Rust would carry
+  # libloading/dlopen over an emitted cdylib; TS would carry a worker or
+  # WASM module. Each lands as the same offer -> bind -> call-by-name
+  # shape; nothing about the protocol changes.
+  (open-carriers
+    (rust dlopen-over-emitted-cdylib)
+    (ts   wasm-or-worker-module))
+
+  (invariant
+    (grows-by-offer-never-by-recompile  the-binary-is-untouched; the-table-is-the-surface)
+    (first-bind-wins                    a-bound-name-never-rebinds; refusal-not-error)
+    (interface-is-composed-in           expected != carried -> refuse (axiom-3 makes lying structural))
+    (the-ack-is-the-capability          the-body-NodeID — unforgeable, content-addressed)
+    (refusal-leaves-no-residue          a-refused-offer-changes-nothing-observable-in-the-table)))
+
+# ─────────────────────────────────────────────────────────────────────
+# How to verify
+# ─────────────────────────────────────────────────────────────────────
+#
+#   # the protocol shape, three-way:
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel.fk \
+#     form-stdlib/install-leaf.fk form-stdlib/tests/install-leaf-band.fk   # -> 9
+#
+#   # the native carrier, live (jit a function, install it under a new
+#   # name, call it BY NAME, parity vs the recipe walk, refusals honest):
+#   ./form/scripts/jit-install-leaf-test.sh                               # -> 10
