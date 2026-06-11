@@ -50,13 +50,35 @@ build_rs() {
     fi
 }
 
+build_ts() {
+    # Bundle the TS kernel once (esbuild, cached by source mtimes) so each band
+    # runs via plain `node` (~60ms) instead of npx tsx (~1.5s). With 455 bands
+    # that is the difference between seconds and 11+ minutes of startup tax.
+    local bundle="$TS_DIR/dist/main.mjs"
+    local stale=0
+    if [[ ! -f "$bundle" ]]; then stale=1; else
+        local f
+        for f in "$TS_DIR"/src/*.ts; do
+            [[ "$f" -nt "$bundle" ]] && { stale=1; break; }
+        done
+    fi
+    if [[ "$stale" == "1" ]]; then
+        echo "  bundling ts kernel..." >&2
+        npx --yes esbuild "$TS_DIR/src/main.ts" --bundle --platform=node             --format=esm --outfile="$bundle" --log-level=warning >&2 || rm -f "$bundle"
+    fi
+}
+
 build_go &
 build_rs &
+build_ts &
 wait
 
 run_ts() {
+    local bundle="$TS_DIR/dist/main.mjs"
     local loader="$PWD/$TS_DIR/node_modules/tsx/dist/loader.mjs"
-    if [[ -x "$TS_DIR/node_modules/.bin/tsx" ]]; then
+    if [[ -f "$bundle" ]]; then
+        node --stack_size="$HOST_STACK_KB" "$bundle" "$@"
+    elif [[ -x "$TS_DIR/node_modules/.bin/tsx" ]]; then
         node --stack_size="$HOST_STACK_KB" --import "$loader" "$TS_DIR/src/main.ts" "$@"
     else
         npx --yes tsx --stack_size="$HOST_STACK_KB" "$TS_DIR/src/main.ts" "$@"
@@ -74,18 +96,38 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Source-compiled preludes are cached by CONTENT (file + compiler chain): the
+# same unchanged core.fk compiles once, not once per band. Without this cache
+# every validate invocation re-ran the full BML source-compiler (~12s) on
+# identical input — 455 bands paid ~90 serial minutes for the same artifact.
+SOURCE_CACHE_DIR="form-stdlib/.cache/source-compiled"
+mkdir -p "$SOURCE_CACHE_DIR"
+compiler_stamp=""
+compiler_chain=("form-stdlib/form-ontology-loader.fk" "form-stdlib/line-grammar.fk" "form-stdlib/bmf-core.fk" "form-stdlib/bmf-grammar.fk" "form-stdlib/bml.fk" "form-stdlib/bml-source.fk" "form-stdlib/source-compiler.fk")
+compiler_stamp="$(cat "${compiler_chain[@]}" "$GO_BIN" 2>/dev/null | shasum | cut -c1-16)"
+
 prepared_args=()
 prepare_sources() {
     prepared_args=()
-    local src out safe driver
+    local src out safe driver key cached
     for src in "$@"; do
         if grep -Eq '^[[:space:]]*section \[' "$src"; then
-            safe="${src//\//__}"
-            out="$source_compile_dir/$safe"
-            driver="$source_compile_dir/compile-${safe}.fk"
-            printf '(do (form-source-compile-file "%s" "%s"))\n' "$src" "$out" > "$driver"
-            "$GO_BIN" "form-stdlib/form-ontology-loader.fk" "form-stdlib/line-grammar.fk" "form-stdlib/bmf-core.fk" "form-stdlib/bmf-grammar.fk" "form-stdlib/bml.fk" "form-stdlib/bml-source.fk" "form-stdlib/source-compiler.fk" "$driver" >/dev/null
-            prepared_args+=("$out")
+            key="$(cat "$src" | shasum | cut -c1-16)-$compiler_stamp"
+            cached="$SOURCE_CACHE_DIR/$key.fk"
+            if [[ ! -s "$cached" ]]; then
+                safe="${src//\//__}"
+                out="$source_compile_dir/$safe"
+                driver="$source_compile_dir/compile-${safe}.fk"
+                printf '(do (form-source-compile-file "%s" "%s"))\n' "$src" "$out" > "$driver"
+                "$GO_BIN" "${compiler_chain[@]}" "$driver" >/dev/null
+                if [[ -s "$out" ]]; then
+                    mv -f "$out" "$cached" 2>/dev/null || cp "$out" "$cached"
+                else
+                    prepared_args+=("$src")
+                    continue
+                fi
+            fi
+            prepared_args+=("$cached")
         else
             prepared_args+=("$src")
         fi
@@ -116,11 +158,18 @@ fi
 # prelude + test file). Every kernel receives the same file list.
 run_siblings() {
     local label="$1"; shift
-    local go_out rs_out ts_out
+    local go_out rs_out ts_out legs
     prepare_sources "$@"
-    go_out=$("$GO_BIN" "${prepared_args[@]}" 2>&1 || true)
-    rs_out=$("$RS_BIN" "${prepared_args[@]}" 2>&1 || true)
-    ts_out=$(run_ts "${prepared_args[@]}" 2>&1 || true)
+    # The three kernels run CONCURRENTLY: a band's wall time is max(leg), not
+    # sum — on compiler-heavy bands the Go+Rust legs ride inside the TS leg's
+    # shadow for free. Outputs stay byte-compared exactly as before.
+    legs="$(mktemp -d "${TMPDIR:-/tmp}/form-legs.XXXXXX")"
+    ( "$GO_BIN" "${prepared_args[@]}" > "$legs/go" 2>&1 || true ) &
+    ( "$RS_BIN" "${prepared_args[@]}" > "$legs/rs" 2>&1 || true ) &
+    ( run_ts "${prepared_args[@]}" > "$legs/ts" 2>&1 || true ) &
+    wait
+    go_out=$(cat "$legs/go"); rs_out=$(cat "$legs/rs"); ts_out=$(cat "$legs/ts")
+    rm -rf "$legs"
     if [[ "$go_out" == "$rs_out" && "$go_out" == "$ts_out" ]]; then
         printf "  ✓  %-30s  → %s\n" "$label" "$go_out"
         ok=$((ok + 1))
