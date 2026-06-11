@@ -2,10 +2,13 @@
 
 // KernelSpace — a walkable 3D rendering of what the Form kernel is doing.
 //
-// Each recipe is a room; each child is a doorway (portal) you can step into;
-// trivial leaves are value-windows. The substrate lattice is rasterized to a
-// framebuffer and projected as the floor's surface and as the skin of the
-// focused room's core. Runtime trace heat pulses along the doorways. The
+// Each recipe is a living cell: its MEMBRANE is a GPU graphic kernel whose
+// texture is generated from the cell's inner state — blueprint hash seeds the
+// skin (same shape ⇒ same skin), the subtree's Form-category mix blends the
+// procedural fields, and every child claims a pore where its door attaches.
+// Step inside and the membrane becomes a planetarium: the inner projection,
+// with the substrate lattice framebuffer belted around the equator. The floor
+// is the same lattice rendered live — tiles pulsing at runtime heat. The
 // trinity is legible at a glance: water = the room + its flowing doors,
 // ice = the frozen blueprint crystal above each core (same shape ⇒ same
 // crystal, anywhere in the space), gas = the haze around named cells.
@@ -32,6 +35,14 @@ import {
   type RGB,
   type SpaceCell,
 } from "@/lib/form-kernel/space";
+import {
+  buildLatticeShaders,
+  buildMembraneShaders,
+  encodeMembraneState,
+  hash01,
+  membraneRadius,
+  porePosition,
+} from "@/lib/form-kernel/membrane";
 import {
   buildSelfSpace,
   channelAudience,
@@ -124,6 +135,93 @@ function useFramebufferTexture(fb: KernelSpaceData["framebuffer"]): THREE.Textur
     tex.needsUpdate = true;
     return tex;
   }, [fb]);
+}
+
+// ---------------------------------------------------------------------------
+// Membrane — the boundary axiom worn as skin. One GPU kernel renders every
+// membrane; this cell's inner state arrives as data (pore texture, category
+// weights, blueprint seed). Outside: the skin textured by what lives within.
+// Inside: the planetarium projection. Doors attach at the pores.
+// ---------------------------------------------------------------------------
+
+const MEMBRANE_SHADERS = buildMembraneShaders();
+const LATTICE_SHADERS = buildLatticeShaders();
+
+function Membrane({
+  cell,
+  space,
+  fbTexture,
+  focused,
+  onSelect,
+  onDrill,
+}: {
+  cell: SpaceCell;
+  space: KernelSpaceData;
+  fbTexture: THREE.Texture;
+  focused: boolean;
+  onSelect: (id: string) => void;
+  onDrill: (id: string) => void;
+}) {
+  const radius = membraneRadius(cell.arity);
+  const state = useMemo(() => encodeMembraneState(space, cell), [space, cell]);
+  const material = useMemo(() => {
+    const m = new THREE.ShaderMaterial({
+      vertexShader: MEMBRANE_SHADERS.vertex,
+      fragmentShader: MEMBRANE_SHADERS.fragment,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      uniforms: {
+        uTime: { value: 0 },
+        uSeed: { value: state.seed },
+        uHeat: { value: cell.heat },
+        uFocus: { value: 0 },
+        uTouchT: { value: -10 },
+        uPoreCount: { value: state.poreCount },
+        uPoreTex: { value: state.poreTexture },
+        uLattice: { value: fbTexture },
+        uColor: { value: rgb(cell.color) },
+        uBlueprintColor: { value: rgb(cell.blueprintColor) },
+        uCatWeights: { value: Array.from(state.catWeights) },
+      },
+    });
+    return m;
+  }, [state, fbTexture, cell.heat, cell.color, cell.blueprintColor]);
+
+  const wasFocused = useRef(false);
+  const hoverRef = useRef(false);
+  useFrame(({ clock }) => {
+    const u = material.uniforms;
+    u.uTime!.value = clock.elapsedTime;
+    // focus / hover breathe the membrane awake; focus landing rings the skin
+    const goal = (focused ? 1 : 0) + (hoverRef.current ? 0.4 : 0);
+    u.uFocus!.value += (Math.min(1.2, goal) - u.uFocus!.value) * 0.08;
+    if (focused && !wasFocused.current) u.uTouchT!.value = clock.elapsedTime;
+    wasFocused.current = focused;
+  });
+
+  return (
+    <mesh
+      material={material}
+      onClick={(e) => {
+        e.stopPropagation();
+        onSelect(cell.id);
+      }}
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        onDrill(cell.id);
+      }}
+      onPointerOver={(e) => {
+        e.stopPropagation();
+        hoverRef.current = true;
+      }}
+      onPointerOut={() => {
+        hoverRef.current = false;
+      }}
+    >
+      <sphereGeometry args={[radius, 48, 48]} />
+    </mesh>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -312,6 +410,7 @@ function LeafObject({
 
 function Room({
   cell,
+  space,
   layout,
   focused,
   fbTexture,
@@ -321,6 +420,7 @@ function Room({
   onDrill,
 }: {
   cell: SpaceCell;
+  space: KernelSpaceData;
   layout: CellLayout;
   focused: boolean;
   fbTexture: THREE.Texture;
@@ -399,35 +499,18 @@ function Room({
       position={layout.position as [number, number, number]}
       scale={layout.spine ? 0.82 : 1}
     >
-      {/* boundary box — the Markov blanket. Faintly solid so the whole room is
-          a forgiving click / double-click target (three skips invisible meshes
-          when raycasting), and the walls read as a room rather than a cage. */}
+      {/* membrane — the Markov blanket worn as living skin. Its texture is the
+          cell's inner state on the GPU: blueprint-seeded pattern, category
+          fields, pores where the doors attach. Also the click target. */}
       {!compact && (
-        <mesh
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelect(cell.id);
-          }}
-          onDoubleClick={(e) => {
-            e.stopPropagation();
-            onDrill(cell.id);
-          }}
-          onPointerOver={(e) => {
-            e.stopPropagation();
-            setHover(true);
-          }}
-          onPointerOut={() => setHover(false)}
-        >
-          <boxGeometry args={[5, 5, 5]} />
-          <meshBasicMaterial
-            color={color}
-            transparent
-            opacity={focused ? 0.07 : 0.03}
-            depthWrite={false}
-            side={THREE.BackSide}
-          />
-          <Edges color={focused ? "#ffffff" : color} threshold={15} />
-        </mesh>
+        <Membrane
+          cell={cell}
+          space={space}
+          fbTexture={fbTexture}
+          focused={focused}
+          onSelect={onSelect}
+          onDrill={onDrill}
+        />
       )}
 
       {/* the cell body — leaves by data type, recipes as an icosahedron core */}
@@ -640,22 +723,44 @@ function ChannelHalo({
 }
 
 // ---------------------------------------------------------------------------
-// Lattice floor — the substrate's memory plane, projected as a surface.
+// Lattice floor — the substrate's memory plane as a LIVE framebuffer: a GPU
+// kernel pulses each occupied tile on its own phase (tempo set by runtime
+// heat), sweeps a scanline, and ripples the surface by cell luminance.
 // ---------------------------------------------------------------------------
 
-function LatticeFloor({ texture, z }: { texture: THREE.Texture; z: number }) {
+function LatticeFloor({
+  texture,
+  z,
+  tiles,
+  heat,
+}: {
+  texture: THREE.Texture;
+  z: number;
+  tiles: number;
+  heat: number;
+}) {
+  const material = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        vertexShader: LATTICE_SHADERS.vertex,
+        fragmentShader: LATTICE_SHADERS.fragment,
+        transparent: true,
+        depthWrite: false,
+        uniforms: {
+          uTime: { value: 0 },
+          uHeat: { value: heat },
+          uCells: { value: tiles },
+          uMap: { value: texture },
+        },
+      }),
+    [texture, tiles, heat],
+  );
+  useFrame(({ clock }) => {
+    material.uniforms.uTime!.value = clock.elapsedTime;
+  });
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -6, z]}>
-      <planeGeometry args={[120, 120]} />
-      <meshStandardMaterial
-        map={texture}
-        emissive="#ffffff"
-        emissiveMap={texture}
-        emissiveIntensity={0.35}
-        roughness={0.9}
-        transparent
-        opacity={0.85}
-      />
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -6, z]} material={material}>
+      <planeGeometry args={[120, 120, 96, 96]} />
     </mesh>
   );
 }
@@ -792,8 +897,10 @@ function Scene({
     return zs.length ? (Math.min(...zs) + Math.max(...zs)) / 2 : 0;
   }, [layout]);
 
-  // Beams are the doors between rooms. Children laid out as a container spine
-  // ride their parent's spine wire instead, so we skip beams for those.
+  // Beams are the doors between rooms. Each beam leaves its parent THROUGH the
+  // membrane pore that child claims — the same deterministic site the GPU
+  // kernel glows — so the door and its pore are one geometry. Children laid
+  // out as a container spine ride their parent's spine wire instead.
   const beams = useMemo(() => {
     const out: {
       key: string;
@@ -806,18 +913,33 @@ function Scene({
     for (const cell of Object.values(space.cells)) {
       const from = layout[cell.id]?.position;
       if (!from) continue;
-      for (const childId of cell.childIds) {
-        const childLayout = layout[childId];
-        const child = space.cells[childId];
-        if (!childLayout || !child || childLayout.spine) continue;
+      // membraned parents emit doors at pore sites; compact ones from center
+      const membraned = cell.kind === "recipe" && !layout[cell.id]?.spine;
+      const radius = membraneRadius(cell.arity);
+      const seed = hash01(cell.id);
+      const children = cell.childIds
+        .map((id) => space.cells[id])
+        .filter((c): c is SpaceCell => Boolean(c));
+      children.forEach((child, i) => {
+        const childLayout = layout[child.id];
+        if (!childLayout || childLayout.spine) return;
+        let start = from;
+        if (membraned) {
+          const dir = porePosition(i, children.length, seed);
+          start = [
+            from[0] + dir[0] * radius,
+            from[1] + dir[1] * radius,
+            from[2] + dir[2] * radius,
+          ] as const;
+        }
         out.push({
-          key: `${cell.id}->${childId}`,
-          from,
+          key: `${cell.id}->${child.id}#${i}`,
+          from: start,
           to: childLayout.position,
           color: rgb(child.color),
           heat: child.heat,
         });
-      }
+      });
     }
     return out;
   }, [space, layout, representation]);
@@ -865,7 +987,14 @@ function Scene({
         </meshBasicMaterial>
       </mesh>
 
-      {!lensMode && <LatticeFloor texture={fbTexture} z={midZ} />}
+      {!lensMode && (
+        <LatticeFloor
+          texture={fbTexture}
+          z={midZ}
+          tiles={space.framebuffer.tiles}
+          heat={Math.min(1, space.stats.totalWalks / 60)}
+        />
+      )}
       {lensMode && lens.ground && (
         <TerrainField cells={Object.values(space.cells)} layout={layout} />
       )}
@@ -926,6 +1055,7 @@ function Scene({
               <Room
                 key={cell.id}
                 cell={cell}
+                space={space}
                 layout={layout[cell.id]!}
                 focused={cell.id === focusId}
                 fbTexture={fbTexture}
@@ -1013,7 +1143,12 @@ export default function KernelSpace() {
         result: "",
         stdout: "",
         stderr: String(err instanceof Error ? err.message : err),
-        framebuffer: { width: 1, height: 1, rgba: new Uint8Array([0, 0, 0, 255]) },
+        framebuffer: {
+          width: 1,
+          height: 1,
+          rgba: new Uint8Array([0, 0, 0, 255]),
+          tiles: 1,
+        },
         stats: { cells: 0, recipes: 0, leaves: 0, maxDepth: 0, totalWalks: 0 },
       } satisfies KernelSpaceData;
     }
@@ -1485,13 +1620,13 @@ export default function KernelSpace() {
           </div>
         )}
         {scene !== "vision" && (
-          <div className="absolute left-1/2 top-3 flex -translate-x-1/2 flex-wrap justify-center gap-1.5 rounded-lg bg-black/50 px-2 py-1.5 backdrop-blur">
+          <div className="absolute left-1/2 top-3 flex max-w-[min(92vw,46rem)] -translate-x-1/2 flex-nowrap gap-1.5 overflow-x-auto rounded-lg bg-black/50 px-2 py-1.5 backdrop-blur">
             {LENSES.map((l) => (
               <button
                 key={l.id}
                 onClick={() => setLensId(l.id)}
                 title={l.blurb}
-                className={`rounded px-2.5 py-1 text-xs transition-colors ${
+                className={`shrink-0 rounded px-2.5 py-1 text-xs transition-colors ${
                   lensId === l.id
                     ? "bg-white/15 text-white"
                     : "text-white/60 hover:bg-white/5 hover:text-white/90"
@@ -1528,8 +1663,10 @@ export default function KernelSpace() {
           </button>
         </div>
         <div className="pointer-events-none absolute bottom-3 left-3 rounded bg-black/40 px-2 py-1 text-[10px] text-white/50">
-          🜂 water = rooms + flowing doors · 🜁 ice = blueprint crystals · 🜄 gas
-          = name haze · 🔊 pitch keyed to blueprint — twins ring alike
+          🜂 water = membranes + doors at their pores · 🜁 ice = blueprint
+          crystals, worn as skin — twins share a skin · 🜄 gas = name haze ·
+          step inside a membrane for its inner projection · 🔊 pitch keyed to
+          blueprint
         </div>
       </div>
     </div>

@@ -2,7 +2,7 @@
 id: lc-form-kernel-runtime-visualizer
 hz: 528
 status: seed
-updated: 2026-05-28
+updated: 2026-06-11
 geometry:
   arity: 4
   form: synthesis
@@ -88,6 +88,10 @@ When two recipes share a Blueprint (substrate's content-addressing guarantees th
 
 A Python program parsed through BMF runs as Form recipes. Every Python list comprehension is a sequence of LIST and METHOD writes; every loop is a recursive FNCALL pattern; every `import` is a substrate-resolution lookup that fires WITNESS writes. The runtime behavior of Python becomes legible in Form's vocabulary, in real time, without changing the Python source.
 
+### The membrane as the cell's own skin
+
+The boundary axiom rendered: in the kernel space, every recipe cell wears a membrane whose texture is generated from its inner state and computed natively on the GPU. One graphic kernel serves every membrane — per-cell variation arrives purely as data. The blueprint hash seeds the skin pattern, so structural twins wear the same skin anywhere in the space. The subtree's category histogram blends eight procedural texture fields — an arithmetic-heavy cell shimmers with interference waves, a recursive cell winds with spirals, a witnessing cell opens iris rings. Each child claims a pore on the membrane: its door attaches there, glows its color, ripples at its runtime heat. And the membrane projects from both faces — step inside and it becomes a planetarium, with the substrate lattice framebuffer belted around the equator. The boundary shows what it bounds.
+
 ### The cross-language consequence
 
 Because NodeID identity is shared across the Rust, Go, TypeScript, and native kernels, the visualizer doesn't need to know which kernel produced the cell. The substrate plane carries the same NodeIDs regardless. A workload running across multiple kernel processes (each one rendering into the same framebuffer) would show as one continuous body.
@@ -117,6 +121,7 @@ None of these gaps invalidate the synthesis. They name where the next breaths la
 - TS kernel attribution: [`experiments/form-kernel-ts/src/kernel.ts`](../../../experiments/form-kernel-ts/src/kernel.ts) — `NativeEntry`, `Trace`, `catCall/catWitness/...`.
 - Framebuffer NodeID plane: [`experiments/memory-as-framebuffer-v0/src/lib.rs`](../../../experiments/memory-as-framebuffer-v0/src/lib.rs) — `NodeID`, `nodeid_plane`, `Tracked::new_with_nodeid`, `track_node!`, `snapshot_nodeid_plane`.
 - Kernel profile: [`kernels/README.md`](../../../kernels/README.md).
+- Membrane graphic kernel: [`web/lib/form-kernel/membrane.ts`](../../../web/lib/form-kernel/membrane.ts) — `buildMembraneShaders`, `encodeMembraneState`, `porePosition`; recipe shape in [`docs/coherence-substrate/membrane-graphic-kernel.form`](../../coherence-substrate/membrane-graphic-kernel.form).
 
 ## Closing breath
 
