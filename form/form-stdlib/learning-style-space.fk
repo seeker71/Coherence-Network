@@ -1,0 +1,182 @@
+; learning-style-space.fk — the auto-ml weave: every learning STYLE is a data row
+; (id, pool, core), one combinator runs them all, and the research loop discovers which
+; inductive bias a task wants. The space is OPEN — a new style is an appended row, never
+; an engine change.
+;
+; The weave (composing the proven lanes):
+;   geometric-learning.fk   the cores and pools — gl-step/gl-diffuse/gl-attn-edges/
+;                           gl-value-iterate carry the CNN, mesh/GDL, transformer, and
+;                           relational/RL biases as edge data and semirings
+;   nearest-shape.fk        shared recognition — features meet memory as bin-match
+;   learning-arc.fk         the shared plasticity and the measure — la-agreements-after's
+;                           predict-then-learn fold IS each style's score on a task
+;   slice-merge/federated   the trainer axis — ls-train/ls-eval/ls-merge show two cells'
+;                           memories composing to strictly exceed either alone
+;
+; A style row: (list id pool core)
+;   core : float signal → float signal   (the mixing — identity, attention, diffusion)
+;   pool : float signal → float features (the symmetry — what is kept invariant)
+;   the engine quantizes pool(core(x)) at 1e-6 into bins for nearest-shape
+; The inductive bias lives ENTIRELY in the row. Memory, recognition, scoring, selection,
+; curiosity, federation are shared tissue — so styles compose (a row may pair any pool
+; with any core) and new biases drop in as data.
+;
+; The teaching the band checks from three sides: different tasks crown DIFFERENT styles
+; (no free lunch — why the space must stay open); a style wins exactly where its symmetry
+; matches the task's; and the loop's curiosity floor guarantees every style is tried
+; before any is retried. Playfulness is not decoration — it is the guarantee that the
+; body keeps meeting biases it has not yet needed.
+(do
+    ; --- vector ground ---
+    (defn ls-r6map (xs)
+        (if (eq (len xs) 0) (empty) (cons (gl-r6 (head xs)) (ls-r6map (tail xs)))))
+    (defn ls-vmax-acc (best xs)
+        (if (eq (len xs) 0) best
+            (if (gt (head xs) best) (ls-vmax-acc (head xs) (tail xs)) (ls-vmax-acc best (tail xs)))))
+    (defn ls-vmax (xs) (ls-vmax-acc (head xs) (tail xs)))
+    (defn ls-vmin-acc (best xs)
+        (if (eq (len xs) 0) best
+            (if (lt (head xs) best) (ls-vmin-acc (head xs) (tail xs)) (ls-vmin-acc best (tail xs)))))
+    (defn ls-vmin (xs) (ls-vmin-acc (head xs) (tail xs)))
+    (defn ls-take (xs n)
+        (if (eq n 0) (empty)
+            (if (eq (len xs) 0) (empty) (cons (head xs) (ls-take (tail xs) (sub n 1))))))
+    (defn ls-drop (xs n)
+        (if (eq n 0) xs (if (eq (len xs) 0) xs (ls-drop (tail xs) (sub n 1)))))
+    (defn ls-pad6 (x)
+        (ls-take (gl-cat x (list 0.0 0.0 0.0 0.0 0.0 0.0)) 6))
+    (defn ls-wrap-nth (x i) (nth x (gl-imod i (len x))))
+    (defn ls-sort-insert (v xs)
+        (if (eq (len xs) 0) (list v)
+            (if (gt (head xs) v) (cons v xs)
+                (cons (head xs) (ls-sort-insert v (tail xs))))))
+    (defn ls-sort-acc (xs acc)
+        (if (eq (len xs) 0) acc (ls-sort-acc (tail xs) (ls-sort-insert (head xs) acc))))
+    (defn ls-sort (xs) (ls-sort-acc xs (empty)))
+
+    ; --- cores: the mixing a style applies before pooling ---
+    (defn ls-core-id (x) x)
+    (defn ls-core-attn (x) (gl-step (gl-attn-edges x) x))
+    (defn ls-prism ()
+        (list (list 0 1) (list 0 2) (list 1 2)
+              (list 3 4) (list 3 5) (list 4 5)
+              (list 0 3) (list 1 4) (list 2 5)))
+    (defn ls-core-mesh (x)
+        (gl-diffuse (gl-mesh-edges (ls-prism) 6 0.5 (div 1.0 6.0)) (ls-pad6 x) 2))
+
+    ; --- pools: the symmetry a style keeps invariant ---
+    (defn ls-pool-id (x) x)
+    (defn ls-pool-conv-of (sm ed) (list (ls-vmax sm) (ls-vmax ed) (ls-vmin ed)))
+    (defn ls-pool-conv (x)
+        (ls-pool-conv-of (gl-step (gl-ring-edges (len x) 0.25 0.5 0.25) x)
+                         (gl-step (gl-ring-edges (len x) -1.0 1.0 0.0) x)))
+    (defn ls-pool-chart (x)
+        (list (gl-sum (ls-take x 3)) (gl-sum (ls-take (ls-drop x 3) 3))))
+    (defn ls-pool-meanmax (x) (list (gl-mean x) (ls-vmax x)))
+    (defn ls-bell-pairs ()
+        (list (list 0 1) (list 0 2) (list 1 3) (list 1 2) (list 2 3) (list 3 3)))
+    (defn ls-bell-edges (pairs x)
+        (if (eq (len pairs) 0) (empty)
+            (cons (list (nth (head pairs) 0) (nth (head pairs) 1)
+                        (ls-wrap-nth x (nth (head pairs) 1)))
+                  (ls-bell-edges (tail pairs) x))))
+    (defn ls-pool-bell (x)
+        (gl-value-iterate (ls-bell-edges (ls-bell-pairs) x) (list 0.0 0.0 0.0 0.0) 0.5 3))
+    (defn ls-pool-sort (x) (ls-sort x))
+
+    ; --- THE engine: one combinator, every style ---
+    (defn ls-feature (outer inner x) (ls-r6map (outer (inner x))))
+    (defn ls-row-id      (row) (nth row 0))
+    (defn ls-row-feature (row x) (ls-feature (nth row 1) (nth row 2) x))
+
+    ; --- the base style table: rows of data, never branches of code ---
+    (defn ls-styles ()
+        (list (list "raw"  ls-pool-id      ls-core-id)
+              (list "conv" ls-pool-conv    ls-core-id)
+              (list "mesh" ls-pool-chart   ls-core-mesh)
+              (list "attn" ls-pool-meanmax ls-core-attn)
+              (list "bell" ls-pool-bell    ls-core-id)))
+
+    ; --- task plumbing: a task is (list (list input label) ...) ---
+    (defn ls-featurize (row task)
+        (if (eq (len task) 0) (empty)
+            (cons (list (ls-row-feature row (nth (head task) 0)) (nth (head task) 1))
+                  (ls-featurize row (tail task)))))
+    (defn ls-score (row task k) (la-agreements-after (ls-featurize row task) k))
+
+    ; --- the research walk: try every style, return attributed receipts ---
+    (defn ls-research (styles task k)
+        (if (eq (len styles) 0) (empty)
+            (cons (list (ls-row-id (head styles)) (ls-score (head styles) task k))
+                  (ls-research (tail styles) task k))))
+    (defn ls-receipt-id    (r) (nth r 0))
+    (defn ls-receipt-score (r) (nth r 1))
+    (defn ls-best-acc (receipts bid bscore)
+        (if (eq (len receipts) 0) bid
+            (if (gt (ls-receipt-score (head receipts)) bscore)
+                (ls-best-acc (tail receipts) (ls-receipt-id (head receipts))
+                             (ls-receipt-score (head receipts)))
+                (ls-best-acc (tail receipts) bid bscore))))
+    (defn ls-best (receipts)
+        (ls-best-acc (tail receipts) (ls-receipt-id (head receipts))
+                     (ls-receipt-score (head receipts))))
+    (defn ls-score-of (receipts id)
+        (if (eq (len receipts) 0) -1
+            (if (str_eq (ls-receipt-id (head receipts)) id)
+                (ls-receipt-score (head receipts))
+                (ls-score-of (tail receipts) id))))
+
+    ; --- trainer axis: federation — memories compose ---
+    (defn ls-train-acc (samples protos)
+        (if (eq (len samples) 0) protos
+            (ls-train-acc (tail samples)
+                          (la-intern (la-oracle (head samples)) (la-feature (head samples)) protos))))
+    (defn ls-train (row task) (ls-train-acc (ls-featurize row task) (empty)))
+    (defn ls-eval-acc (samples protos agree)
+        (if (eq (len samples) 0) agree
+            (ls-eval-acc (tail samples) protos
+                (add agree (if (str_eq (la-predict (la-feature (head samples)) protos)
+                                       (la-oracle (head samples))) 1 0)))))
+    (defn ls-eval (row task protos) (ls-eval-acc (ls-featurize row task) protos 0))
+    (defn ls-merge (pa pb) (gl-cat pa pb))
+
+    ; --- curiosity floor: least-tried-first, so every bias gets met ---
+    (defn ls-tried-count (tried id)
+        (if (eq (len tried) 0) 0
+            (if (str_eq (nth (head tried) 0) id) (nth (head tried) 1)
+                (ls-tried-count (tail tried) id))))
+    (defn ls-least-acc (styles tried bid bcount)
+        (if (eq (len styles) 0) bid
+            (if (lt (ls-tried-count tried (ls-row-id (head styles))) bcount)
+                (ls-least-acc (tail styles) tried (ls-row-id (head styles))
+                              (ls-tried-count tried (ls-row-id (head styles))))
+                (ls-least-acc (tail styles) tried bid bcount))))
+    (defn ls-least (styles tried)
+        (ls-least-acc (tail styles) tried (ls-row-id (head styles))
+                      (ls-tried-count tried (ls-row-id (head styles)))))
+    (defn ls-bump (tried id)
+        (if (eq (len tried) 0) (list (list id 1))
+            (if (str_eq (nth (head tried) 0) id)
+                (cons (list id (add (nth (head tried) 1) 1)) (tail tried))
+                (cons (head tried) (ls-bump (tail tried) id)))))
+    (defn ls-explore-acc (styles tried n acc)
+        (if (eq n 0) acc
+            (ls-explore-acc styles (ls-bump tried (ls-least styles tried)) (sub n 1)
+                            (cons (ls-least styles tried) acc))))
+    (defn ls-explore (styles n) (ls-explore-acc styles (empty) n (empty)))
+    (defn ls-member? (ids id)
+        (if (eq (len ids) 0) 0 (if (str_eq (head ids) id) 1 (ls-member? (tail ids) id))))
+    (defn ls-distinct-acc (ids seen n)
+        (if (eq (len ids) 0) n
+            (if (eq (ls-member? seen (head ids)) 1)
+                (ls-distinct-acc (tail ids) seen n)
+                (ls-distinct-acc (tail ids) (cons (head ids) seen) (add n 1)))))
+    (defn ls-distinct-count (ids) (ls-distinct-acc ids (empty) 0))
+
+    ; --- totality probe: every row predicts through the one engine after one exemplar ---
+    (defn ls-probe-all (styles a b)
+        (if (eq (len styles) 0) 1
+            (if (str_eq (la-predict (ls-row-feature (head styles) b)
+                                    (list (list "A" (ls-row-feature (head styles) a)))) "A")
+                (ls-probe-all (tail styles) a b) 0)))
+    0)

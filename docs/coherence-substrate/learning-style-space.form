@@ -1,0 +1,149 @@
+# ─────────────────────────────────────────────────────────────────────
+# learning-style-space.form — the auto-ml weave: every learning style
+# is a data row, and the research loop discovers the bias a task wants
+# ─────────────────────────────────────────────────────────────────────
+#
+# The ask (2026-06-11): weave CNN, transformer, Euclidean, non-Euclidean,
+# GDL, mesh, federated — every form of learning — into the auto-ml /
+# auto-research lane so it combines and tries any form of learning in
+# the most expansive, playful, alive way.
+#
+# The north-star shape: a learning STYLE is not code. It is a row of
+# data — (id, pool, core) — dropped into ONE engine:
+#
+#     core : float signal → float signal    the MIXING (identity,
+#            attention, mesh diffusion, ...)
+#     pool : float signal → float features  the SYMMETRY (what stays
+#            invariant: shift-pooled ring stats, chart sums, value
+#            statistics, sorted spectrum, max-plus value, ...)
+#     feature = quantize(pool(core(x)))     bins for nearest-shape
+#
+# Memory (la-intern), recognition (ns-sim bin-match), scoring
+# (learning-arc's warmed predict-then-learn fold), selection (receipts
+# → best), curiosity (least-tried-first), and federation (memories
+# compose) are SHARED tissue. The inductive bias lives entirely in the
+# row — so styles compose (any pool × any core), and a new bias is an
+# appended row, never an engine change.
+#
+# SHIPPED: `form/form-stdlib/learning-style-space.fk` +
+# `tests/learning-style-space-band.fk` → 4095 (12 claims), three-way
+# (Go/Rust/TS), composing transformer-numerics + geometric-learning +
+# nearest-shape + learning-arc.
+
+# ─────────────────────────────────────────────────────────────────────
+# What the band proves
+# ─────────────────────────────────────────────────────────────────────
+#
+# Three tasks, three DIFFERENT winners — the no-free-lunch fact is the
+# structural reason the space must stay open and playful:
+#
+#   shift  task (same multiset both classes, shifted at eval)
+#          → conv wins 4/4; raw 1 — translation symmetry pays exactly
+#   chart  task (prism one-hot seeds labeled by chart)
+#          → mesh wins 4/4 from ONE example per class; raw 0 —
+#            the right pooling IS generalization
+#   perm   task (distinct multisets, rearranged so extreme edges collide)
+#          → attn wins 4/4; conv blinded to 2 — value statistics
+#            where locality is blind
+#
+# And the aliveness claims:
+#
+#   totality     every row predicts through the one engine (bit 1)
+#   no-free-lunch the three winners are pairwise distinct (bit 128)
+#   composition  ("conv.attn" = conv pooling over attention mixing)
+#                appended as data participates and scores 4 (bit 256)
+#   openness     sortpool (order-free spectrum) appended as data is
+#                perfect on the reflect task where raw and conv miss
+#                (bit 512) — a bias the engine never knew, measurable
+#                the moment its row lands
+#   federation   two cells' half-memories score 5 and 4; merged scores
+#                6 — collaboration strictly exceeds each alone (bit 1024)
+#   curiosity    5 least-tried-first picks are 5 distinct styles — every
+#                bias gets met before any is retried (bit 2048)
+
+# ─────────────────────────────────────────────────────────────────────
+# The map of learning families (the expansive part)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Rows that ride NOW (proven in this band):
+#   dense / Euclidean-coordinate   raw row — quantized identity
+#   CNN / translation              conv row — gl-ring-edges pooled
+#   GDL / mesh / non-Euclidean     mesh row — gl-diffuse + chart pooling
+#   transformer / attention        attn row — gl-attn-edges mixing
+#   relational / RL                bell row — gl-value-iterate (max-plus)
+#   order spectrum / permutation   sortpool row (the band's openness claim)
+#   composition                    any pool × any core, as data
+#
+# Families already native in sibling tissue (the weave's outer loops):
+#   evolutionary / genome search   autoresearch-loop.fk — mutate +
+#                                  pareto frontier; THIS module's rows
+#                                  are the genome it can now evolve
+#   fitness-landscape walks        auto-fitness.fk — loss snapped to
+#                                  parameter, mutator varies the param
+#   promotion by proven count      champion-challenger.fk — authority
+#                                  flips only on earned competition
+#   online prototype learning      learning-arc.fk — the scoring fold
+#   oracle distillation            co-learning.fk (0→91% measured)
+#   federated merge                slice-merge.fk (sign-election,
+#                                  deterministic) + ls-merge here
+#   ensembles                      ensemble-vote.fk,
+#                                  confidence-weighted-vote.fk
+#   sequence / Markov              markov-2.fk, sequence-predictor.fk
+#   novelty / honest unknown       novelty.fk — below the recognition
+#                                  floor is a discovery, not a match
+#   active inference               active-inference.fk
+#   choice-receipt learning        choice-receipt-learning.fk — the
+#                                  loop remembering which choices paid
+#   weight training / gradient     metabolic-learning.fk — mtb-step
+#                                  trains gl-engine edge weights
+#                                  (credit → gift → release; SGD/Adam/
+#                                  meta-learning as dial settings;
+#                                  mtb-learn meta-tunes its own focus)
+#
+# Open stones with NAMED paths (not built ahead of need):
+#   trained rows                   a style row whose pool/core carry
+#                                  mtb-learned weights — metabolic-
+#                                  learning's output becoming row data
+#   tensor-scale autodiff          mtb-reverse's adjoint carried onto
+#                                  the JIT emitter lane (jit-tensor-emit)
+#   contrastive / self-supervised  pair-loss over ls-features — needs
+#                                  only a loss row, no new engine
+#   Hebbian / local plasticity     co-occurrence bumps on gl edge
+#                                  weights — edges as memory
+#   Bayesian / probabilistic       proven-count gates → priors
+#                                  (classifier-eval's spine)
+#   generative diffusion           ml-diffusion-model-flow.form — the
+#                                  reverse flow; the OTHER diffusion
+#   hypernetworks                  recipes emitting recipes — the
+#                                  fourth-kernel emit lane already
+#                                  emits walkers; weights are next
+#   reservoir computing            one row away: a fixed scramble core
+#                                  + any pool (the engine is ready)
+#   neural ODE / continuous flow   gl-diffuse's continuum limit
+#   meta-learning                  the loop learning explore-order
+#                                  from its own receipts — curiosity
+#                                  becoming taste
+#
+# The teaching: expansive is not exhaustive. The space stays alive
+# because (1) no row is privileged — no free lunch is a checked fact,
+# (2) the curiosity floor guarantees every bias gets met, (3) new
+# biases arrive as data while the engine holds still, and (4) the
+# outer loops (evolve, promote, retire, distill, federate) are the
+# same proven tissue whatever rows the genome carries.
+
+# ─────────────────────────────────────────────────────────────────────
+# Kinship
+# ─────────────────────────────────────────────────────────────────────
+#
+#   geometric-learning.form     the cores and pools — one semiring-
+#                               generic gather; this module is its
+#                               styles-as-data face
+#   metabolic-learning.form     training over the same engine — the
+#                               weights inside a future trained row
+#   form-native-models.form     M7 names auto-ml as a Form meta-learner;
+#                               this module is M7's style-space organ —
+#                               the genome autoresearch evolves is now
+#                               rows, not hand-picked candidates
+#   autoresearch-runtime.form   genome / evaluator / experiment /
+#                               governance — the loop these rows feed
+#   federated-slices.form       the trainer axis at mesh scale
