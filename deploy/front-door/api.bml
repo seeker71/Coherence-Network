@@ -114,7 +114,7 @@ section [form.bml] {
     }
 
     def api-clamp-limit(n, max_value) = if lt(n, 1) then 1 else if gt(n, max_value) then max_value else n;
-    def api-json-nullable-string(value) = if str_eq(value, "") then json-node-null() else json-node-string(value);
+    def api-json-nullable-string(value) = json-node-nullable-string(value);
     def api-json-number(value) = json-node-float-text(value_str(value));
     def api-json-db-bool(value) = if str_eq(value_str(value), "true") then true else if str_eq(value_str(value), "1") then true else false;
     def api-ok-json(node) = kh-response(200, list(kh-header("Content-Type", "application/json"), kh-header("Access-Control-Allow-Origin", "*")), json-emit(node));
