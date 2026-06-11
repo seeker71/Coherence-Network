@@ -418,7 +418,10 @@
 ;; string escaping, null/boolean/number selection, and recursive emission live
 ;; here in Form.
 
-(defn json-node-string (s) (intern_trivial_string s))
+(defn json-node-string (s)
+    (if (str_eq (value_kind s) "null")
+        (json-node-null)
+        (intern_trivial_string s)))
 (defn json-node-int (n) (intern_trivial_int n))
 (defn json-node-float-text (s) (intern_trivial_float s))
 (defn json-node-bool (b) (intern_trivial_bool b))
