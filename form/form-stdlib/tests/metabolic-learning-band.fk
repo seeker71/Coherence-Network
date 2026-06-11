@@ -1,0 +1,77 @@
+; preludes: form-stdlib/geometric-learning.fk form-stdlib/metabolic-learning.fk
+;
+; metabolic-learning-band — the satsang operator proven as learning kernel, three-way, on
+; three domains: the 4-ring (the GDL band's exact-binary lattice), the prism K3×K2 mesh,
+; and the operator's own focus dial held as a one-node self-loop domain. Every weight the
+; learner reaches is exact in IEEE-754 fp64 — one-hot probes onto dyadic targets keep all
+; twelve claims free of rounding; the verdict lens (gl-r6/gl-veq6) is the GDL band's.
+;
+; The learner starts from ZERO weights and must arrive at the GDL band's proven CNN —
+; learning lands on the proven form. The meta claims (1024, 2048) are the recursion:
+; mtb-learn applied to a domain whose single weight IS the focus parameter returns the
+; tuned focus, which then one-shots a fresh geometry. Same recipe, data one level up.
+;
+; Verdict 4095 when every claim lands:
+;   1     pressure is the invariant readout: mean(δ²) on the zero learner = 0.09375 exactly
+;   2     observer: pressure at tolerance (the exact boundary) → edges return UNTOUCHED
+;   4     gift one-shot: focus 1 on probe e0 lands the probed column exactly; pressure → 0
+;   8     four probes → the learned operator IS the proven CNN: gl-step = [6 4 2 4]
+;   16    translation equivariance survives learning: learned(shift x) = shift(learned x)
+;   32    focus is the aperture: focus 1/2 leaves exactly half the residual
+;   64    angle is the direction: angle −1 moves away — residual grows to exactly 3/2 δ
+;   128   ho'oponopono: release λ=1/4 scales the learned response by exactly 3/4
+;   256   frequency routes the update: self-loops masked → only neighbor weights move
+;   512   adjoint carrier: reverse(ring(a b c)) ≡ ring(c b a) — the chain-rule seam
+;   1024  meta: mtb-learn on the focus-as-domain tunes focus 1/2 → 1.0 exactly
+;   2048  recursion closes: the meta-tuned focus one-shots a FRESH geometry (the mesh)
+(do
+    (let p0 (list 1.0 0.0 0.0 0.0))
+    (let p1 (list 0.0 1.0 0.0 0.0))
+    (let p2 (list 0.0 0.0 1.0 0.0))
+    (let p3 (list 0.0 0.0 0.0 1.0))
+    (let target (gl-ring-edges 4 0.25 0.5 0.25))
+    (let zero (gl-ring-edges 4 0.0 0.0 0.0))
+    (let y0 (gl-step target p0))
+    (let y1 (gl-step target p1))
+    (let y2 (gl-step target p2))
+    (let y3 (gl-step target p3))
+    (let x (list 8.0 4.0 0.0 4.0))
+    (let qs (list 3 0 1 2))
+    (let learned1 (mtb-learn zero p0 y0 1.0))
+    (let learned4 (mtb-learn-each zero (list p0 p1 p2 p3) (list y0 y1 y2 y3) 1.0))
+    (let learnedH (mtb-learn zero p0 y0 0.5))
+    (let learnedA (mtb-step zero p0 y0 0.5 -1.0 (mtb-ones 12) -1.0))
+    (let fmask (list 1.0 0.0 1.0 1.0 0.0 1.0 1.0 0.0 1.0 1.0 0.0 1.0))
+    (let learnedF (mtb-step zero p0 y0 1.0 1.0 fmask -1.0))
+    (let prism (list (list 0 1) (list 0 2) (list 1 2)
+                     (list 3 4) (list 3 5) (list 4 5)
+                     (list 0 3) (list 1 4) (list 2 5)))
+    (let mesh-u (gl-mesh-edges prism 6 0.5 0.25))
+    (let mesh-zero (gl-mesh-edges prism 6 0.0 0.0))
+    (let e0m (list 1.0 0.0 0.0 0.0 0.0 0.0))
+    (let ym (gl-step mesh-u e0m))
+    (let metaed (mtb-learn (list (list 0 0 0.5)) (list 1.0) (list 1.0) 1.0))
+    (let fprime (nth (nth metaed 0) 2))
+    (let learnedM (mtb-learn mesh-zero e0m ym fprime))
+    (let c0  (if (eq (gl-r6 (mtb-pressure zero p0 y0)) 93750) 1 0))
+    (let c1  (if (eq (gl-veq6 (mtb-weights (mtb-step zero p0 y0 1.0 1.0 (mtb-ones 12) 0.09375))
+                              (mtb-weights zero)) 1) 2 0))
+    (let c2  (if (and (eq (gl-veq6 (gl-step learned1 p0) y0) 1)
+                      (eq (gl-r6 (mtb-pressure learned1 p0 y0)) 0)) 4 0))
+    (let c3  (if (eq (gl-veq6 (gl-step learned4 x) (list 6.0 4.0 2.0 4.0)) 1) 8 0))
+    (let c4  (if (eq (gl-veq6 (gl-step learned4 (gl-permute qs x))
+                              (gl-permute qs (gl-step learned4 x))) 1) 16 0))
+    (let c5  (if (eq (gl-veq6 (mtb-residual learnedH p0 y0)
+                              (list 0.25 0.125 0.0 0.125)) 1) 32 0))
+    (let c6  (if (eq (gl-veq6 (mtb-residual learnedA p0 y0)
+                              (list 0.75 0.375 0.0 0.375)) 1) 64 0))
+    (let c7  (if (eq (gl-veq6 (gl-step (mtb-release learned4 0.25) p0)
+                              (list 0.375 0.1875 0.0 0.1875)) 1) 128 0))
+    (let c8  (if (eq (gl-veq6 (mtb-residual learnedF p0 y0)
+                              (list 0.5 0.0 0.0 0.0)) 1) 256 0))
+    (let c9  (if (eq (gl-veq6 (gl-step (mtb-reverse (gl-ring-edges 4 0.5 0.25 0.125)) x)
+                              (gl-step (gl-ring-edges 4 0.125 0.25 0.5) x)) 1) 512 0))
+    (let c10 (if (eq (gl-r6 fprime) 1000000) 1024 0))
+    (let c11 (if (eq (gl-r6 (mtb-pressure learnedM e0m ym)) 0) 2048 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7
+    (add c8 (add c9 (add c10 c11))))))))))))
