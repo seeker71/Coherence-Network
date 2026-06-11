@@ -4,6 +4,8 @@
 package main
 
 var bpTable = map[string][4]uint32{
+	"ACK-NODE": {1, 2, 99, 1749},
+	"ACK-NOTHING": {1, 2, 99, 1748},
 	"AEC-EVIDENCE-CELL": {1, 2, 99, 9},
 	"AEC-EVIDENCE-INDEX": {1, 2, 99, 14},
 	"ARRIVAL": {1, 2, 99, 1870},
@@ -312,6 +314,8 @@ var bpTable = map[string][4]uint32{
 	"NATURAL-BMF-QUESTION": {1, 2, 99, 762},
 	"NATURAL-BMF-RELATION": {1, 2, 99, 761},
 	"NOVEL-BLUEPRINT": {1, 2, 99, 1713},
+	"OFFER-ACK": {1, 2, 99, 1747},
+	"OFFER-V0": {1, 2, 99, 1746},
 	"PARETO-CANDIDATE": {1, 2, 99, 1500},
 	"PING-SELF": {1, 2, 99, 1720},
 	"PNG-CHUNK": {1, 2, 99, 91},

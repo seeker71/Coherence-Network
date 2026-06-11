@@ -5453,6 +5453,62 @@
     "form/form-stdlib/static-to-dynamic-cells.fk"
    ],
    "curated": true
+  },
+  {
+   "pkg": 1,
+   "level": 2,
+   "type": 99,
+   "inst": 1746,
+   "name": "OFFER-V0",
+   "meaning": "axiom-5 offer in flight: substrate-ref of the offered cell + 0..many arg cells; the content-addressed NodeID is the correlation token",
+   "aliases": [],
+   "reuse": 1,
+   "defined_in": [
+    "form/form-stdlib/offers-in-flight.fk"
+   ],
+   "curated": true
+  },
+  {
+   "pkg": 1,
+   "level": 2,
+   "type": 99,
+   "inst": 1747,
+   "name": "OFFER-ACK",
+   "meaning": "wire acknowledgment of one offer: correlation token + exactly one of the four ack values (nothing/0/1/node)",
+   "aliases": [],
+   "reuse": 1,
+   "defined_in": [
+    "form/form-stdlib/offers-in-flight.fk"
+   ],
+   "curated": true
+  },
+  {
+   "pkg": 1,
+   "level": 2,
+   "type": 99,
+   "inst": 1748,
+   "name": "ACK-NOTHING",
+   "meaning": "silence reified as a node on the wire \u2014 an ack value distinct from the absence of any ack",
+   "aliases": [],
+   "reuse": 1,
+   "defined_in": [
+    "form/form-stdlib/offers-in-flight.fk"
+   ],
+   "curated": true
+  },
+  {
+   "pkg": 1,
+   "level": 2,
+   "type": 99,
+   "inst": 1749,
+   "name": "ACK-NODE",
+   "meaning": "counter-offer ack value wrapping a cell \u2014 the one ack value that recurs; threading follows it to a terminal",
+   "aliases": [],
+   "reuse": 1,
+   "defined_in": [
+    "form/form-stdlib/offers-in-flight.fk"
+   ],
+   "curated": true
   }
  ]
 }
