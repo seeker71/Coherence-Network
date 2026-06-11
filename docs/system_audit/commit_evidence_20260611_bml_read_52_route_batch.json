@@ -1,0 +1,100 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "codex/native-api-50-batch-20260611",
+  "commit_scope": "Promote the BML GET/read family as a grouped 52-route native front-door batch",
+  "files_owned": [
+    "api/tests/test_runtime_surface_native_routes.py",
+    "deploy/front-door/api.bml",
+    "deploy/hostinger/auto-deploy.sh",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "scripts/runtime_surface_report.py",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "scripts/verify_web_api_deploy.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash -n scripts/verify_web_api_deploy.sh deploy/hostinger/auto-deploy.sh scripts/test_hostinger_deploy_form_paths.sh",
+      "./scripts/test_hostinger_deploy_form_paths.sh",
+      "pytest -q api/tests/test_runtime_surface_native_routes.py api/tests/test_runtime_web_api_provenance.py",
+      "cd form/form-kernel-rust && cargo test source_bml_catalog_template_routes_select_natively_in_rust --quiet",
+      "python3 scripts/runtime_surface_report.py --json"
+    ],
+    "notes": "Static deploy guard proves all 52 BML GET/read RouteCell paths are covered by grouped Traefik ingress; focused Python provenance tests pass; Rust BML route selection passes. Runtime report stays honest: production is still 45 kernel-first served until the grouped BML read front door is deployed and the /api/ready proof header flips native."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "PR CI has not run yet for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh"
+    ],
+    "notes": "Public promoted-BML canaries now include representative reads across the grouped batch. Public deployment proof waits for merge/deploy."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; CI, merge, and public deploy validation remain pending."
+  },
+  "idea_ids": [
+    "native-api-lane",
+    "form-native-front-door"
+  ],
+  "spec_ids": [
+    "bml-read-family-native-front-door",
+    "runtime-surface-native-routes"
+  ],
+  "task_ids": [
+    "native-api-50-batch-20260611"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "deploy/kernel-router/docker-compose.kernel-router.yml#coherence-api-bml-read-core-batch",
+    "deploy/front-door/api.bml#form.route",
+    "scripts/test_hostinger_deploy_form_paths.sh#BML GET/read ingress coverage",
+    "scripts/verify_web_api_deploy.sh#check_promoted_bml_read_routes_native",
+    "scripts/runtime_surface_report.py#bml_front_door_read_routes"
+  ],
+  "change_files": [
+    "api/tests/test_runtime_surface_native_routes.py",
+    "deploy/front-door/api.bml",
+    "deploy/hostinger/auto-deploy.sh",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "scripts/runtime_surface_report.py",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "scripts/verify_web_api_deploy.sh"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "After deploy, the grouped BML GET/read family routes to the native BML front door with X-Form-Router: native-kernel and per-handler X-Form-Handler proof headers, moving the public served count from 45 toward 92 when the BML read proof route flips live.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/ready",
+      "https://api.coherencycoin.com/api/ideas/resonance?limit=2",
+      "https://api.coherencycoin.com/api/workspaces",
+      "https://api.coherencycoin.com/api/runtime/endpoints/summary?limit=2",
+      "https://api.coherencycoin.com/api/inventory/flow?idea_id=__native_inventory_canary__&list_item_limit=1&runtime_window_seconds=3600"
+    ],
+    "test_flows": [
+      "Verify representative promoted BML reads return 2xx, X-Form-Router: native-kernel, X-Form-Python-Authority: false, and their expected X-Form-Handler.",
+      "Verify /api/spec-registry/cards and /api/spec-registry/source-list are excluded from the grouped spec detail router.",
+      "Verify runtime_surface_report counts 52 BML read-capable routes but does not count them as served until /api/ready returns native BML proof headers."
+    ]
+  }
+}
