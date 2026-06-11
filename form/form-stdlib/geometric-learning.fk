@@ -22,24 +22,60 @@
 ; or amplifies — kernels are data, behavior is a consequence. Sibling tissue: denoising diffusion
 ; (the generative reverse flow) lives in ml-flow-band; this module is diffusion ON a domain,
 ; the operator GDL generalizes convolution from.
+;
+; The unification one level deeper: the gather is SEMIRING-GENERIC. gl-gstep takes
+; (combine, weigh) as data — (add, mul) is diffusion/convolution, (max, r+γ·v) is the
+; Bellman backup, (max, +) over the same ring edges is morphological dilation. The three
+; limbs the GDL frame links arrive as instances of the one engine:
+;   ML  gl-gnn-layer / gl-gnn-readout — learned weights (ws wn b) as recipe data; the
+;       readout is a graph invariant, so a molecule's property survives relabeling while
+;       structure (same atoms, different bonds) still discriminates
+;   DL  gl-radius-edges — point clouds: edges built FROM geometry (pairwise distance),
+;       so the graph — and everything downstream — is rigid-motion invariant (E(2))
+;   RL  gl-bellman / gl-value-iterate — relational planning: value propagates from the
+;       goal through graph-structured states; the backup is permutation-equivariant
+; gl-attn-edges (needs transformer-numerics.fk's tn-softmax — prelude it first) builds
+; data-dependent edges: attention IS gl-step on the complete graph; a silent query
+; degenerates to uniform message passing.
 (do
     ; --- vector ground (float signals as lists) ---
-    (defn gl-zeros (n) (if (eq n 0) (empty) (cons 0.0 (gl-zeros (sub n 1)))))
+    (defn gl-fill (n v) (if (eq n 0) (empty) (cons v (gl-fill (sub n 1) v))))
+    (defn gl-zeros (n) (gl-fill n 0.0))
     (defn gl-flen (xs) (if (eq (len xs) 0) 0.0 (add 1.0 (gl-flen (tail xs)))))
     (defn gl-sum-acc (acc xs) (if (eq (len xs) 0) acc (gl-sum-acc (add acc (head xs)) (tail xs))))
     (defn gl-sum (xs) (gl-sum-acc 0.0 xs))
     (defn gl-cat (a b) (if (eq (len a) 0) b (cons (head a) (gl-cat (tail a) b))))
-    (defn gl-bump (ys i v)
-        (if (eq i 0) (cons (add (head ys) v) (tail ys))
-            (cons (head ys) (gl-bump (tail ys) (sub i 1) v))))
 
-    ; --- THE geometric operator: one weighted gather over edge data, fold in list order ---
-    (defn gl-step-acc (edges x y)
+    ; --- integer verdict lens: reduce floats at 1e-6, compare signals elementwise ---
+    (defn gl-r6 (v) (round (mul v 1000000.0)))
+    (defn gl-veq6 (a b)
+        (if (eq (len a) 0) (if (eq (len b) 0) 1 0)
+            (if (eq (len b) 0) 0
+                (if (eq (gl-r6 (head a)) (gl-r6 (head b)))
+                    (gl-veq6 (tail a) (tail b)) 0))))
+    ; --- THE geometric operator: one semiring-generic gather over edge data ---
+    ; cfn combines the standing offer with a contribution; wfn weighs an edge's
+    ; (w, x_j, ctx) into a contribution; zero is the semiring's no-offer value.
+    (defn gl-gbump (ys i cfn v)
+        (if (eq i 0) (cons (cfn (head ys) v) (tail ys))
+            (cons (head ys) (gl-gbump (tail ys) (sub i 1) cfn v))))
+    (defn gl-gstep-acc (edges x y cfn wfn ctx)
         (if (eq (len edges) 0) y
-            (gl-step-acc (tail edges) x
-                (gl-bump y (nth (head edges) 0)
-                    (mul (nth (head edges) 2) (nth x (nth (head edges) 1)))))))
-    (defn gl-step (edges x) (gl-step-acc edges x (gl-zeros (len x))))
+            (gl-gstep-acc (tail edges) x
+                (gl-gbump y (nth (head edges) 0) cfn
+                    (wfn (nth (head edges) 2) (nth x (nth (head edges) 1)) ctx))
+                cfn wfn ctx)))
+    (defn gl-gstep (edges x zero cfn wfn ctx)
+        (gl-gstep-acc edges x (gl-fill (len x) zero) cfn wfn ctx))
+
+    ; --- semiring instances as data ---
+    (defn gl-add2 (a b) (add a b))
+    (defn gl-max2 (a b) (if (gt a b) a b))
+    (defn gl-weigh-lin (w xj ctx) (mul w xj))
+    (defn gl-weigh-bell (r vj g) (add r (mul g vj)))
+
+    ; --- the sum-product reading: diffusion / convolution / message passing ---
+    (defn gl-step (edges x) (gl-gstep edges x 0.0 gl-add2 gl-weigh-lin 0.0))
 
     ; --- diffusion: the operator iterated (heat flow on the domain) ---
     (defn gl-diffuse (edges x t)
@@ -100,11 +136,68 @@
                         (nth (head edges) 2))
                   (gl-permute-edges q (tail edges)))))
 
-    ; --- integer verdict lens: reduce floats at 1e-6, compare signals elementwise ---
-    (defn gl-r6 (v) (round (mul v 1000000.0)))
-    (defn gl-veq6 (a b)
-        (if (eq (len a) 0) (if (eq (len b) 0) 1 0)
-            (if (eq (len b) 0) 0
-                (if (eq (gl-r6 (head a)) (gl-r6 (head b)))
-                    (gl-veq6 (tail a) (tail b)) 0))))
+    ; --- RL limb: relational value propagation (the max-plus reading) ---
+    ; edges (i j r): from state i an action reaches j paying reward r; V'(i) = max (r + γ·V(j))
+    (defn gl-bellman (edges v g) (gl-gstep edges v -1000000000.0 gl-max2 gl-weigh-bell g))
+    (defn gl-value-iterate (edges v g t)
+        (if (eq t 0) v (gl-value-iterate edges (gl-bellman edges v g) g (sub t 1))))
+
+    ; --- DL limb: point clouds — edges built FROM geometry ---
+    ; positions are (x y) pairs; the radius graph keeps every ordered pair within r²,
+    ; so the edge data depends only on pairwise distance: rigid motions leave it unchanged
+    (defn gl-dist2 (p q)
+        (add (mul (sub (nth p 0) (nth q 0)) (sub (nth p 0) (nth q 0)))
+             (mul (sub (nth p 1) (nth q 1)) (sub (nth p 1) (nth q 1)))))
+    (defn gl-radius-inner (ps pi i j r2 w)
+        (if (eq (len ps) 0) (empty)
+            (if (eq i j) (gl-radius-inner (tail ps) pi i (add j 1) r2 w)
+                (if (ge r2 (gl-dist2 pi (head ps)))
+                    (cons (list i j w) (gl-radius-inner (tail ps) pi i (add j 1) r2 w))
+                    (gl-radius-inner (tail ps) pi i (add j 1) r2 w)))))
+    (defn gl-radius-outer (all ps i r2 w)
+        (if (eq (len ps) 0) (empty)
+            (gl-cat (gl-radius-inner all (head ps) i 0 r2 w)
+                    (gl-radius-outer all (tail ps) (add i 1) r2 w))))
+    (defn gl-radius-edges (pts r2 w) (gl-radius-outer pts pts 0 r2 w))
+    ; an exact E(2) motion for the band's witness: rotate 90° about the origin, translate (tx ty)
+    (defn gl-rigid (pts tx ty)
+        (if (eq (len pts) 0) (empty)
+            (cons (list (add tx (sub 0.0 (nth (head pts) 1))) (add ty (nth (head pts) 0)))
+                  (gl-rigid (tail pts) tx ty))))
+    (defn gl-edge-eq (a b)
+        (if (eq (nth a 0) (nth b 0))
+            (if (eq (nth a 1) (nth b 1))
+                (if (eq (gl-r6 (nth a 2)) (gl-r6 (nth b 2))) 1 0) 0) 0))
+    (defn gl-edges-eq (as bs)
+        (if (eq (len as) 0) (if (eq (len bs) 0) 1 0)
+            (if (eq (len bs) 0) 0
+                (if (eq (gl-edge-eq (head as) (head bs)) 1) (gl-edges-eq (tail as) (tail bs)) 0))))
+
+    ; --- ML limb: a GNN layer whose weights (ws wn b) are recipe data ---
+    ; y_i = relu(ws·x_i + wn·Σ_{j∈N(i)} x_j + b); the property readout is the invariant mean
+    (defn gl-relu (v) (if (gt v 0.0) v 0.0))
+    (defn gl-relu-map (xs)
+        (if (eq (len xs) 0) (empty) (cons (gl-relu (head xs)) (gl-relu-map (tail xs)))))
+    (defn gl-gnn-mix (xs aggs ws wn b)
+        (if (eq (len xs) 0) (empty)
+            (cons (add (add (mul ws (head xs)) (mul wn (head aggs))) b)
+                  (gl-gnn-mix (tail xs) (tail aggs) ws wn b))))
+    (defn gl-gnn-layer (pairs x ws wn b)
+        (gl-relu-map (gl-gnn-mix x (gl-step (gl-pair-edges pairs 1.0) x) ws wn b)))
+    (defn gl-gnn-readout (pairs x ws wn b) (gl-mean (gl-gnn-layer pairs x ws wn b)))
+
+    ; --- graph transformer: attention as a data-dependent edge builder ---
+    ; w_ij = softmax_j(x_i · x_j) over the complete graph (scalar features: the dot is mul);
+    ; needs transformer-numerics.fk preluded for tn-softmax. The built edges feed THE SAME
+    ; gl-step — the transformer is a GDL instance.
+    (defn gl-mul-scalar (xs s)
+        (if (eq (len xs) 0) (empty) (cons (mul (head xs) s) (gl-mul-scalar (tail xs) s))))
+    (defn gl-attn-edges-row (ws i j)
+        (if (eq (len ws) 0) (empty)
+            (cons (list i j (head ws)) (gl-attn-edges-row (tail ws) i (add j 1)))))
+    (defn gl-attn-rows (xs full i)
+        (if (eq (len xs) 0) (empty)
+            (gl-cat (gl-attn-edges-row (tn-softmax (gl-mul-scalar full (head xs))) i 0)
+                    (gl-attn-rows (tail xs) full (add i 1)))))
+    (defn gl-attn-edges (x) (gl-attn-rows x x 0))
     0)

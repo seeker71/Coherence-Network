@@ -1,28 +1,47 @@
-; preludes: form-stdlib/geometric-learning.fk
+; preludes: form-stdlib/transformer-numerics.fk form-stdlib/geometric-learning.fk
 ;
-; geometric-learning-band — the GDL teaching proven three-way on two tiny domains:
-; a 4-ring (the periodic 1-D Euclidean grid, x = [8 4 0 4], kernel [.25 .5 .25] — exact
-; binary floats) and the triangular prism K3×K2 (a 3-regular mesh with two charts,
-; seed e0 at node 0). One operator — gl-step over (i j w) edge data — carries every
-; claim. Reference values mirror the recipe's fold order in IEEE-754 fp64, reduced to
-; integers at 1e-6. π = swap(0,1) is NOT a prism automorphism: equivariance is about
-; transporting structure with signal, not about graph symmetry.
+; geometric-learning-band — the GDL teaching proven three-way: the core on two tiny
+; domains (a 4-ring — the periodic 1-D Euclidean grid, x = [8 4 0 4], kernel [.25 .5 .25],
+; exact binary floats — and the triangular prism K3×K2, a 3-regular mesh with two charts,
+; seed e0 at node 0), then the three limbs the frame links — ML (a GNN layer with weights
+; as recipe data, molecular property as a graph invariant), DL (point clouds: edges built
+; from geometry, rigid-motion invariant), RL (relational value propagation, permutation-
+; equivariant Bellman backup) — plus attention as a data-dependent edge builder feeding
+; THE SAME gl-step. One semiring-generic gather carries every claim. Reference values
+; mirror the recipe's fold order in IEEE-754 fp64, reduced to integers at 1e-6.
+; π = swap(0,1) is NOT a prism automorphism: equivariance is about transporting structure
+; with signal, not about graph symmetry.
 ;
-; Verdict 4095 when every claim lands:
-;   1     Euclidean convolution: conv(x) = [6 4 2 4]
-;   2     unification: gl-step over circulant edges ≡ gl-conv — CNNs are geometric
-;         operators on the lattice
-;   4     translation equivariance: conv(shift x) = shift(conv x)
-;   8     permutation equivariance: gl-step(π·edges, π·x) = π·gl-step(edges, x)
-;   16    invariant readout: mean(π·y) = mean(y)
-;   32    diffusion conserves mass: sum(diffuse(x, 3)) = 16 exactly
-;   64    diffusion smooths: diffuse(x, 3) = [4.5 4 3.5 4] exactly
-;   128   diffusion converges to the invariant: diffuse(x, 24) = [4 4 4 4] at 1e-6 —
-;         the constant mode is all that survives
-;   256   embedding separates the mesh's two charts: signs (+ + + − − −)
-;   512   embed[0] = 7805 at 1e-6 (seed chart, seed node)
-;   1024  embed[4] = −7154 at 1e-6 (far chart)
-;   2048  embedding recovers the mirror symmetry through the seed: e1 = e2, e4 = e5
+; Verdict 8388607 when every claim lands:
+;   1        Euclidean convolution: conv(x) = [6 4 2 4]
+;   2        unification: gl-step over circulant edges ≡ gl-conv — CNNs are geometric
+;            operators on the lattice
+;   4        translation equivariance: conv(shift x) = shift(conv x)
+;   8        permutation equivariance: gl-step(π·edges, π·x) = π·gl-step(edges, x)
+;   16       invariant readout: mean(π·y) = mean(y)
+;   32       diffusion conserves mass: sum(diffuse(x, 3)) = 16 exactly
+;   64       diffusion smooths: diffuse(x, 3) = [4.5 4 3.5 4] exactly
+;   128      diffusion converges to the invariant: diffuse(x, 24) = [4 4 4 4] at 1e-6
+;   256      embedding separates the mesh's two charts: signs (+ + + − − −)
+;   512      embed[0] = 7805 at 1e-6 (seed chart, seed node)
+;   1024     embed[4] = −7154 at 1e-6 (far chart)
+;   2048     embedding recovers the mirror symmetry through the seed: e1 = e2, e4 = e5
+;   4096     one edge list, two semirings: (max, +) over the SAME ring edges is
+;            morphological dilation — [8.5 8.25 4.25 8.25]
+;   8192     RL: value iteration reaches V* = [3 4 4 0] — value propagates from the
+;            goal through graph-structured states (planning as diffusion's tropical twin)
+;   16384    RL: V* is a fixed point — bellman(V*) = V*
+;   32768    RL: the backup is permutation-equivariant (relational symmetry)
+;   65536    DL: the point-cloud radius graph is rigid-motion invariant — rotate 90° +
+;            translate (3, −2) yields the identical edge list
+;   131072   DL: diffusion through built edges is chart-bounded — heat from the seeded
+;            cluster never reaches the far cluster (exactly 0); in-cluster [118652 98877 98877]
+;   262144   ML: molecular property is a graph invariant — relabeled molecule → 4666667
+;            both ways
+;   524288   ML: structure discriminates — same atoms, different bonds → 5666667 ≠ 4666667
+;   1048576  attention edges are row-stochastic: constants pass through unchanged
+;   2097152  a silent query attends uniformly: attention output 0 at the zero-feature node
+;   4194304  attention mirror antisymmetry out[2] = −out[0], with out[0] = 575210 at 1e-6
 (do
     (let x (list 8.0 4.0 0.0 4.0))
     (let ring (gl-ring-edges 4 0.25 0.5 0.25))
@@ -38,6 +57,25 @@
     (let y (gl-step mesh-u e0))
     (let d3 (gl-diffuse ring x 3))
     (let emb (gl-embed mesh-w e0 8))
+    (let bell (list (list 0 1 0.0) (list 0 2 1.0) (list 1 3 0.0)
+                    (list 1 2 2.0) (list 2 3 4.0) (list 3 3 0.0)))
+    (let vstar (gl-value-iterate bell (list 0.0 0.0 0.0 0.0) 0.5 3))
+    (let qb (list 2 0 1 3))
+    (let pts (list (list 0.0 0.0) (list 1.0 0.0) (list 0.0 1.0)
+                   (list 4.0 4.0) (list 5.0 4.0)))
+    (let cloud (gl-cat (gl-self-edges 5 0 0.5) (gl-radius-edges pts 2.0 0.125)))
+    (let heat (gl-diffuse cloud (list 1.0 0.0 0.0 0.0 0.0) 4))
+    (let m1 (list (list 0 1) (list 1 2)))
+    (let m1x (list 6.0 8.0 6.0))
+    (let m1r (list (list 1 2) (list 2 0)))
+    (let m2 (list (list 0 1) (list 1 2) (list 0 2)))
+    (let qm (list 2 0 1))
+    (let p1 (gl-gnn-readout m1 m1x 0.5 0.25 -1.0))
+    (let p1r (gl-gnn-readout m1r (gl-permute qm m1x) 0.5 0.25 -1.0))
+    (let p2 (gl-gnn-readout m2 m1x 0.5 0.25 -1.0))
+    (let xa (list 1.0 0.0 -1.0))
+    (let ae (gl-attn-edges xa))
+    (let aout (gl-step ae xa))
     (let c0  (if (eq (gl-veq6 cv (list 6.0 4.0 2.0 4.0)) 1) 1 0))
     (let c1  (if (eq (gl-veq6 (gl-step ring x) cv) 1) 2 0))
     (let c2  (if (eq (gl-veq6 (gl-conv (gl-permute qs x) 0.25 0.5 0.25)
@@ -55,5 +93,22 @@
     (let c10 (if (eq (gl-r6 (nth emb 4)) -7154) 1024 0))
     (let c11 (if (and (eq (gl-r6 (nth emb 1)) (gl-r6 (nth emb 2)))
                       (eq (gl-r6 (nth emb 4)) (gl-r6 (nth emb 5)))) 2048 0))
+    (let c12 (if (eq (gl-veq6 (gl-gstep ring x -1000000000.0 gl-max2 gl-weigh-bell 1.0)
+                              (list 8.5 8.25 4.25 8.25)) 1) 4096 0))
+    (let c13 (if (eq (gl-veq6 vstar (list 3.0 4.0 4.0 0.0)) 1) 8192 0))
+    (let c14 (if (eq (gl-veq6 (gl-bellman bell vstar 0.5) vstar) 1) 16384 0))
+    (let c15 (if (eq (gl-veq6 (gl-bellman (gl-permute-edges qb bell) (gl-permute qb vstar) 0.5)
+                              (gl-permute qb (gl-bellman bell vstar 0.5))) 1) 32768 0))
+    (let c16 (if (eq (gl-edges-eq (gl-radius-edges pts 2.0 0.125)
+                                  (gl-radius-edges (gl-rigid pts 3.0 -2.0) 2.0 0.125)) 1) 65536 0))
+    (let c17 (if (and (eq (gl-veq6 heat (list 0.118652 0.098877 0.098877 0.0 0.0)) 1)
+                      (eq (gl-r6 (nth heat 3)) 0)) 131072 0))
+    (let c18 (if (and (eq (gl-r6 p1) 4666667) (eq (gl-r6 p1r) 4666667)) 262144 0))
+    (let c19 (if (and (eq (gl-r6 p2) 5666667) (not (eq (gl-r6 p1) (gl-r6 p2)))) 524288 0))
+    (let c20 (if (eq (gl-veq6 (gl-step ae (list 1.0 1.0 1.0)) (list 1.0 1.0 1.0)) 1) 1048576 0))
+    (let c21 (if (eq (gl-r6 (nth aout 1)) 0) 2097152 0))
+    (let c22 (if (and (eq (gl-r6 (nth aout 0)) 575210)
+                      (eq (gl-r6 (nth aout 2)) (sub 0 (gl-r6 (nth aout 0))))) 4194304 0))
     (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7
-    (add c8 (add c9 (add c10 c11))))))))))))
+    (add c8 (add c9 (add c10 (add c11 (add c12 (add c13 (add c14 (add c15
+    (add c16 (add c17 (add c18 (add c19 (add c20 (add c21 c22)))))))))))))))))))))))
