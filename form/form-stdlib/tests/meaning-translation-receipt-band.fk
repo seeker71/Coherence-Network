@@ -1,0 +1,46 @@
+; meaning-translation-receipt-band.fk - executable proof for translation receipts.
+;
+; Band verdict: 1111111 when every claim holds across Go/Rust/TS.
+;   valid core axiom witness passes                         ->       1
+;   full receipt is guaranteed                              ->      10
+;   lossy translation refuses with reason                   ->     100
+;   semantic root mismatch refuses with reason              ->    1000
+;   hardcoded/default/collapse equivalence refuses          ->   10000
+;   root belief system validates from axioms + evidence     ->  100000
+;   belief without axiom/evidence/revision refuses          -> 1000000
+;
+; preludes: form-stdlib/core.fk form-stdlib/compiler-lens.fk form-stdlib/meaning-translation-receipt.fk
+
+(do
+    (defn mtr-band-score ()
+        (do
+            (let source-surface (cl-surface "kernel-router-bml" "bml" 9 "route class and schema meaning" "RouteCell and SourceMap"))
+            (let target-surface (cl-surface "kernel-router-go" "go" 8 "compiled route runner meaning" "KernelHTTPRoute and handler cell"))
+            (let source-map (cl-source-map source-surface target-surface "kernel.router.bml:Route<QueryJson>" "form-kernel-go:KernelHTTPRoute<QueryJson>" 1000))
+            (let target-map (cl-source-map target-surface source-surface "form-kernel-go:KernelHTTPRoute<QueryJson>" "kernel.router.bml:Route<QueryJson>" 1000))
+            (let lossless-translation (cl-translation source-surface target-surface "lower" "bidirectional-with-source-map" "lossless-structure"))
+            (let lossy-translation (cl-translation source-surface target-surface "lower" "one-way" "lossy-text"))
+            (let root (mtr-meaning-root "route-query-json-v1" "route-query-json-v1"))
+            (let drift-root (mtr-meaning-root "route-query-json-v1" "route-query-json-v2"))
+            (let axioms (mtr-axiom-witness 1 1 1 1 1))
+            (let missing-axiom (mtr-axiom-witness 1 1 0 1 1))
+            (let encoder (mtr-encoder-witness 1 1 1 1 1))
+            (let table-encoder (mtr-encoder-witness 1 1 1 0 1))
+            (let equivalence (mtr-equivalence-witness 1 1 1 1))
+            (let collapsed-equivalence (mtr-equivalence-witness 1 1 1 0))
+            (let receipt (mtr-receipt source-surface target-surface lossless-translation source-map target-map root axioms encoder equivalence "refuse"))
+            (let lossy-receipt (mtr-receipt source-surface target-surface lossy-translation source-map target-map root axioms encoder equivalence "refuse"))
+            (let drift-receipt (mtr-receipt source-surface target-surface lossless-translation source-map target-map drift-root axioms encoder equivalence "refuse"))
+            (let cheat-receipt (mtr-receipt source-surface target-surface lossless-translation source-map target-map root axioms table-encoder collapsed-equivalence "refuse"))
+            (let belief (mtr-root-belief-system "form-os-meaning-translation" axioms (list "core-axioms" "source-map" "holdout") 1 "content-addressed-revision"))
+            (let invalid-belief (mtr-root-belief-system "belief-without-proof" missing-axiom (empty) 1 "static-assertion"))
+            (sum (list
+                (mtr-bool-score (mtr-axiom-valid? axioms) 1)
+                (mtr-bool-score (mtr-receipt-guaranteed? receipt) 10)
+                (mtr-bool-score (and (not (mtr-receipt-guaranteed? lossy-receipt)) (str_eq (mtr-refusal-reason lossy-receipt) "lossy-translation")) 100)
+                (mtr-bool-score (and (not (mtr-receipt-guaranteed? drift-receipt)) (str_eq (mtr-refusal-reason drift-receipt) "semantic-root-drift")) 1000)
+                (mtr-bool-score (and (not (mtr-receipt-guaranteed? cheat-receipt)) (str_eq (mtr-refusal-reason cheat-receipt) "encoder-witness-missing")) 10000)
+                (mtr-bool-score (mtr-root-belief-valid? belief) 100000)
+                (mtr-bool-score (not (mtr-root-belief-valid? invalid-belief)) 1000000)))))
+
+    (mtr-band-score))
