@@ -68,4 +68,5 @@ def test_spec_registry_router_form_describes_live_and_native_carriers():
     assert "mutation_public_gate_harness.py now proves native HTTP mutation persistence" in form_text
     assert "Public mutable POST/PATCH/DELETE /api/spec-registry Traefik no-header default now enters the kernel-router native default invitation" in form_text
     assert "persists through the mounted production-config carrier" in form_text
-    assert "unpromoted spec-registry routes remain API-backed" in form_text
+    assert "GET /api/spec-registry/{spec_id}, and GET /api/ideas/{idea_id}/specs through one SpecRegistryEntry projection" in form_text
+    assert "remaining richer spec-registry cards stay API-backed" in form_text
