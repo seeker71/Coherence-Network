@@ -1,0 +1,145 @@
+{
+  "date": "2026-06-12",
+  "thread_branch": "form-os4/string-pool",
+  "commit_scope": "String-pool lane (n7-ratchet, walker tags 24..28 of the claimed 24..33 range): strings become content-addressed pool cells in the fourth kernel. The flattener pre-pass (flt-scan) interns every distinct string literal once — same bytes, same slot (axiom 3) — and literals lower to SLIT rows carrying pool indices; str_eq/str_len/str_concat are vocabulary rows onto SEQ/SLEN/SCAT, ord/not are lowerings (SCHAR at byte 0, the IF flip), true/false lower as 1/0. The table file grows a string section (count, then length + bytes per string, plain ints — older tables load with an empty pool); the emitted C carries the pool as its own rooted region (fk_sb/fk_so/fk_sl + fk_sintern) beside the cons arena, so string values ride as plain ints the copying melt never needs to root, and SEQ id-equality means content-equality because every creation path interns. Thirty-three more REAL stdlib bands (unmodified source from disk) run on the universal fkw binary and return the three walkers' own validate.sh verdicts; the string lane rides the value-stack walk signature (fk_walk(i,fp), PR #2878), so the band-scale allocators recognition-router and recognition-router-vision cross with the melt firing mid-band. Bands-on-fourth-arm 11 -> 44.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "fourth-kernel"
+  ],
+  "spec_ids": [
+    "kernel-native-api-readiness",
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "string-pool-20260612"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "measurement"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-fable-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/fourth-walker.fk",
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/tests/form-flatten-strings-band.fk",
+    "form/form-stdlib/tests/fourth-os-band.fk",
+    "form/form-stdlib/tests/fourth-net-band.fk",
+    "scripts/fourth_kernel_audit.sh",
+    "docs/system_audit/commit_evidence_2026-06-12_string_pool_fourth_arm.json"
+  ],
+  "change_files": [
+    "form/form-stdlib/fourth-walker.fk",
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/tests/form-flatten-strings-band.fk",
+    "form/form-stdlib/tests/fourth-os-band.fk",
+    "form/form-stdlib/tests/fourth-net-band.fk",
+    "scripts/fourth_kernel_audit.sh",
+    "scripts/INDEX.md",
+    "MANIFEST.md"
+  ],
+  "evidence_refs": [
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/system_audit/commit_evidence_2026-06-11_m4e4_multiparam_fourth_arm.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/form-parse.fk form-stdlib/form-flatten.fk form-stdlib/tests/form-flatten-strings-band.fk",
+      "cd form && ./validate.sh <preludes> form-stdlib/tests/<band>.fk  # the 18 bands whose preludes include the touched files, each a SEPARATE invocation, in parallel",
+      "cd form && ./validate.sh <preludes> form-stdlib/tests/<band>.fk  # the 33 crossing bands three-way, in parallel — every verdict equals fkw's",
+      "bash scripts/fourth_kernel_audit.sh",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-12_string_pool_fourth_arm.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ],
+    "notes": "form-flatten-strings-band proves the lane three-way at 31: str_eq dispatches a defn by label (16), SCAT interns into the slot its joined bytes already name so SEQ answers 1, str_len+ord+not compose to 70, the pool dedups three distinct literals from four occurrences in first-appearance order, the constructors walk by value (SEQ 1, SLEN-over-SCAT 4, SCHAR 90), the REAL champion-challenger module+band walk by value to the siblings' 127, and the table file's string section serializes 'hi' as '1 2 104 105'. The op-profile re-run over the band corpus found the honest set: 30 single-module bands blocked ONLY on str_eq + string literals, 3 more adding the not-lowering; all 33 cross four-way on fkw. recognition-router (127) and recognition-router-vision (31) allocate past the melt water line mid-band; their packed args ride the walker-managed value stack (fk_vs, PR #2878) as melt-visible roots, and the melt readout witnesses relocation mid-band (e.g. 'melt 3687 71 3616 4096 4096 57856'). chakra-column's divergence was true/false literals resolving to 0 — fixed as a vocabulary lowering (true->LIT 1, false->LIT 0). Emitted-text pins re-measured on the combined tree (string pool + value stack): universal 9095, jit 8784, server 8864 (fourth-os-band, fourth-net-band). fk_arms grew to 34 slots (fkc-arm-slots cell) so tags 24..33 count without overflow; the universal probe prints arms 1..33. Pool sizes are recipe cells (fkc-spool-slots 4096, fkc-spool-bytes 262144); a refused intern answers id -1, observable, never a silent wrap.",
+    "measured": {
+      "bands_on_fourth_arm_before": 11,
+      "bands_on_fourth_arm_after": 44,
+      "crossed_bands": {
+        "active-inference": 127,
+        "branch-choice-order": 511,
+        "cell-sync": 127,
+        "chakra-column": 127,
+        "champion-challenger": 127,
+        "classifier-eval": 63,
+        "confidence-calibrate": 127,
+        "confidence-weighted-vote": 127,
+        "device-heartbeat": 127,
+        "drift-detect": 63,
+        "ensemble-vote": 127,
+        "friend-node": 127,
+        "learned-primitive": 255,
+        "markov-2": 127,
+        "mesh-gradient": 127,
+        "mesh-relay": 127,
+        "nearest-shape": 127,
+        "novelty": 63,
+        "online-accuracy": 63,
+        "predictor-train": 63,
+        "prototype-merge": 127,
+        "provisioning": 127,
+        "recognition-router": 127,
+        "recognition-router-compute": 63,
+        "recognition-router-vision": 31,
+        "self-grounding-classifier": 63,
+        "sequence-predictor": 127,
+        "shared-sensing": 127,
+        "surprise-salience": 127,
+        "temporal-smoothing": 63,
+        "declared-source": 127,
+        "transition-detect": 127,
+        "warm-start": 127
+      },
+      "named_blocked": {
+        "emit_family_bands": "fourth-kernel-emit / jit-tensor-emit / metal-emit / transformer-kernel / primitive-registry need int_to_str, str_find, substring, dicts, or organ vocabulary beyond this lane — named, not bent"
+      }
+    }
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "CI three-way suite runs on the PR; the full band suite plus kernel builds carry the regression net for the fkm-walk string arms, the flattener pool pre-pass, and the emitted pool region."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "form-stdlib changes ride the api image rebuild; the lattice ingests the updated recipes on the post-merge hook."
+  },
+  "phase_gate": {
+    "phase": "string-pool-lane",
+    "gate": "string-vocabulary bands cross onto the fourth arm via a content-addressed pool (literals interned by the flattener, ids as values, SEQ id-equality = content); the crossed bands run UNMODIFIED and four-way gated; the lane proven three-way as recipe tissue",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "the m4d full fixpoint still lacks: (1) int_to_str/substring/str_find as pool ops (29..33 reserved — the emitter's digit and slice vocabulary), (2) runtime string CREATION at table-file scale (the emitter builds ~8 KB of C text; the pool's byte store and the concat staging discipline carry it, but the walker text itself must stream as pool data — a constant-walker-text section), (3) the emitter recipes (fkc-*) flattened as a PROGRAM, which needs nested-do/let-in-defn (the figure sibling's lane) plus the multi-arg packing already proven; with those three, the emitter-as-program emits the walker text from its own node table and the fixpoint closes"
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No route behavior changes. The fourth kernel's band ratchet climbs 11 -> 44: string-vocabulary stdlib bands flatten through the interned pool onto walker tags 24..28 and the universal fkw binary returns the three siblings' own verdicts, four-way gated in audit section 25.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "form-flatten-strings-band proves the pool lane three-way at 31: lowerings by value, pool dedup + first-appearance order, constructors by value, the REAL champion-challenger band at the siblings' 127, and the table-file string section.",
+      "fourth_kernel_audit.sh section 25: flatten 33 string bands -> table files with string sections -> universal fkw -> verdicts gated on equality with validate.sh's three-walker verdict per band; the two band-scale allocators cross with the melt firing mid-band on the value stack."
+    ],
+    "summary": "validate.sh: form-flatten-strings-band 31; all touched-prelude bands at their verdicts (os/net re-pinned to the measured emission lengths on the combined tree; melt-on-cool 63); the 33 crossing bands each 1 ok 0 divergent with fkw matching; audit end-to-end green with bands-on-fourth-arm at 44."
+  }
+}

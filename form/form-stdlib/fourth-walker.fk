@@ -80,7 +80,18 @@
     (if (eq (fk-tag node) 22) (len (fkm-walk fns (fk-body node) arg))
     (if (eq (fk-tag node) 23) (nth (fkm-walk fns (ms-child (fk-body node) 0) arg)
                                    (fkm-walk fns (ms-child (fk-body node) 1) arg))
-        0)))))))))))))))
+    ; string arms 24..28 — the string-pool family on the RECIPE side: values
+    ; are the host kernel's own strings (the emitted sibling carries pool ids;
+    ; interning makes id-equality there mean content-equality here, axiom 3)
+    (if (eq (fk-tag node) 24) (ms-value (ms-child (fk-body node) 1))
+    (if (eq (fk-tag node) 25) (str_len (fkm-walk fns (fk-body node) arg))
+    (if (eq (fk-tag node) 26) (if (str_eq (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                          (fkm-walk fns (ms-child (fk-body node) 1) arg)) 1 0)
+    (if (eq (fk-tag node) 27) (str_concat (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                          (fkm-walk fns (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 28) (ord (char_at (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                            (fkm-walk fns (ms-child (fk-body node) 1) arg)))
+        0))))))))))))))))))))
 
 (defn fkm-run (fns arg) (fkm-walk fns (nth fns 0) arg))
 
@@ -110,6 +121,24 @@
 (defn fk-tail (xs)  (fk-node 21 xs))
 (defn fk-len (xs)   (fk-node 22 xs))
 (defn fk-nth (xs i) (fk-node 23 (ms-intern xs i)))
+
+; ── string-pool ops — tags 24..33 CLAIMED by the string lane (24..28 live,
+;    29..33 reserved for this family: substring/int-to-str are the named next
+;    stones). Strings are content-addressed pool cells: the flattener interns
+;    every literal once (same bytes = same pool slot, axiom 3) and a string
+;    VALUE is its pool id — a plain int, so packed args, lists, and the
+;    copying melt never need to root it; the pool is its own rooted region.
+; 24 SLIT k s — pool literal: pair(pool-index, string-cell); the emitted arm
+;               answers the id, the recipe arm answers the string itself
+; 25 SLEN s   — byte length
+; 26 SEQ a b  — content equality (interned ids: same bytes = same id)
+; 27 SCAT a b — concatenation, the result interned into the pool
+; 28 SCHAR s i — byte code at i (carries ord; char-at composes over it)
+(defn fk-slit (k s)  (fk-node 24 (ms-intern (ms-cell k) (intern_trivial_string s))))
+(defn fk-slen (s)    (fk-node 25 s))
+(defn fk-seq (a b)   (fk-node 26 (ms-intern a b)))
+(defn fk-scat (a b)  (fk-node 27 (ms-intern a b)))
+(defn fk-schar (s i) (fk-node 28 (ms-intern s i)))
 
 ; fib authored as data — the program every carrier in fourth-kernel.form's
 ; rows answers: IF (LE arg 1) arg (ADD (SELF (arg-1)) (SELF (arg-2)))
