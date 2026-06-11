@@ -1,0 +1,116 @@
+; tests/offers-in-flight-band.fk — many offers in flight over a channel; acks
+; land out of order by content-addressed token; all four ack values thread;
+; the unacked offer remains honestly in flight.
+;
+; preludes: form-stdlib/channel.fk form-stdlib/sha256.fk form-stdlib/channel-query.fk form-stdlib/offers-in-flight.fk
+;
+; One strange-minimal case: four offers A,B,C,D launch onto an offer channel
+; and into the in-flight set; the responder reads them and acks three, OUT
+; of launch order (D, A, C), each with a different ack value — D a node
+; counter-offer chain, A an explicit nothing-node, C a 0; B gets no ack.
+;
+; Verdict 255 = 8 claims:
+;     1  launch: 4 in flight, 0 resolved
+;     2  after landing: 3 resolved, the one pending offer IS B
+;     4  A resolved with the nothing-NODE — silence as a value, on the wire
+;     8  C resolved 0; D's raw value is a node counter-offer
+;    16  threading: D's chain rests at 1; a terminal threads to itself
+;    32  nothing is not absence: A (acked nothing) resolved, B (no ack) in flight
+;    64  a fabricated token lands nowhere and reads as no-entry
+;   128  the token is computed, never assigned: re-interning A's shape mints A's token
+
+(do
+    (defn band-nth (xs i)
+        (if (eq i 0) (head xs) (band-nth (tail xs) (sub i 1))))
+
+    ;; Separate /tmp paths so this band collides with no sibling band run.
+    (let offer-path "/tmp/offers-in-flight-band-offer.fkb")
+    (let ack-path   "/tmp/offers-in-flight-band-ack.fkb")
+    (channel-create offer-path)
+    (channel-create ack-path)
+
+    ;; Four offers of one target cell with distinct args — four distinct
+    ;; NodeIDs, four distinct correlation tokens, minted by content alone.
+    (let target (make_nodeid 1 2 99 8201))
+    (let offer-a (oif-offer target (list (intern_trivial_string "alpha"))))
+    (let offer-b (oif-offer target (list (intern_trivial_string "beta"))))
+    (let offer-c (oif-offer target (list (intern_trivial_string "gamma"))))
+    (let offer-d (oif-offer target (list (intern_trivial_string "delta"))))
+
+    ;; Launch: onto the channel AND into the in-flight set.
+    (channel-append offer-path (channel-message offer-a))
+    (channel-append offer-path (channel-message offer-b))
+    (channel-append offer-path (channel-message offer-c))
+    (channel-append offer-path (channel-message offer-d))
+    (let inflight
+        (oif-launch (oif-launch (oif-launch (oif-launch (list) offer-a) offer-b) offer-c) offer-d))
+
+    ;; 1. Four in flight, none resolved.
+    (let c0 (if (and (eq (len (oif-pending inflight)) 4)
+                     (eq (oif-resolved-count inflight) 0)) 1 0))
+
+    ;; The responder cell: read the offers off the channel, ack three of
+    ;; them out of launch order — D, then A, then C. B stays silent.
+    (let offers (channel-read offer-path))
+    (let r-a (channel-msg-payload (band-nth offers 0)))
+    (let r-c (channel-msg-payload (band-nth offers 2)))
+    (let r-d (channel-msg-payload (band-nth offers 3)))
+
+    ;; D: a counter-offer chain — node recurs twice, rests at 1.
+    (channel-append ack-path (channel-message
+        (oif-ack (oif-corr r-d) (oif-ack-node (oif-ack-node (oif-ack-1))))))
+    ;; A: explicit silence — the nothing-node, a real value on the wire.
+    (channel-append ack-path (channel-message
+        (oif-ack (oif-corr r-a) (oif-ack-nothing))))
+    ;; C: received-no.
+    (channel-append ack-path (channel-message
+        (oif-ack (oif-corr r-c) (oif-ack-0))))
+
+    ;; Land every ack as it arrived: D, A, C — none in launch order.
+    (let landed (oif-land-msgs inflight (channel-read ack-path)))
+
+    ;; 2. Three resolved; the one still-pending offer IS B.
+    (let c1 (if (and (eq (oif-resolved-count landed) 3)
+                     (and (eq (len (oif-pending landed)) 1)
+                          (node_eq (head (oif-pending landed)) offer-b))) 2 0))
+
+    ;; 3. A resolved with the nothing-node — it landed on exactly A.
+    (let st-a (oif-state landed (oif-corr offer-a)))
+    (let c2 (if (and (oif-state-resolved? st-a)
+                     (node_eq (oif-state-value st-a) (oif-ack-nothing))) 4 0))
+
+    ;; 4. C resolved 0; D resolved with a node counter-offer.
+    (let st-c (oif-state landed (oif-corr offer-c)))
+    (let st-d (oif-state landed (oif-corr offer-d)))
+    (let c3 (if (and (and (oif-state-resolved? st-c)
+                          (node_eq (oif-state-value st-c) (oif-ack-0)))
+                     (and (oif-state-resolved? st-d)
+                          (oif-node-value? (oif-state-value st-d)))) 8 0))
+
+    ;; 5. Threading: D's chain rests at the terminal 1; a terminal
+    ;;    threads to itself.
+    (let c4 (if (and (node_eq (oif-thread (oif-state-value st-d)) (oif-ack-1))
+                     (node_eq (oif-thread (oif-ack-0)) (oif-ack-0))) 16 0))
+
+    ;; 6. nothing is not absence: A (acked with the nothing-node) is
+    ;;    resolved; B (no ack at all) is still in flight, never dropped.
+    (let st-b (oif-state landed (oif-corr offer-b)))
+    (let c5 (if (and (oif-state-resolved? st-a)
+                     (not (oif-state-resolved? st-b))) 32 0))
+
+    ;; 7. A fabricated token lands nowhere — counts unchanged — and reads
+    ;;    as no-entry: the third distinct non-answer beside in-flight and
+    ;;    acked-with-nothing.
+    (let alien (oif-ack 999999999 (oif-ack-1)))
+    (let after-alien (oif-land landed alien))
+    (let c6 (if (and (and (eq (oif-resolved-count after-alien) 3)
+                          (eq (len (oif-pending after-alien)) 1))
+                     (eq (len (oif-state landed 999999999)) 0)) 64 0))
+
+    ;; 8. The token is computed, never assigned: re-interning A's exact
+    ;;    shape mints A's token, and it differs from B's (axiom-3).
+    (let re-a (oif-offer target (list (intern_trivial_string "alpha"))))
+    (let c7 (if (and (eq (oif-corr re-a) (oif-corr offer-a))
+                     (not (eq (oif-corr re-a) (oif-corr offer-b)))) 128 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
