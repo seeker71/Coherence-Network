@@ -1,0 +1,108 @@
+# ─────────────────────────────────────────────────────────────────────
+# witness-theorem.form — why observability exists, and why three-way IS trust.
+#   A core theorem of the five axioms (core-axioms.form), named explicitly.
+# ─────────────────────────────────────────────────────────────────────
+#
+# Urs (2026-06-12): "isn't that a core theorem — the reason for it to be
+# observable is to show FAILING cases, not all failing, and also not all
+# passing, some also SILENT — and we need shared trust, three-way proven to us;
+# we trust two of our brothers and sisters over any stranger."
+#
+# Yes. It is a theorem, not a new axiom — it falls out of the five:
+#
+#   axiom-1 (states 0/1/nothing): a witness has exactly THREE possible answers.
+#     Pass (1), fail (0), and SILENCE (nothing) — nothing is first-class, the
+#     ground, not a missing 0. A witness that can only say 1 is not using its
+#     vocabulary; it is a mirror, not an observer.
+#   axiom-4 (boundary: observation makes real): the PURPOSE of an offered
+#     interface is to be observed — and observation that can only confirm shows
+#     nothing. Observability earns its name only by being able to surface
+#     FAILURE and SILENCE, not by performing success.
+#   axiom-5 (offer, acked by nothing/0/1/node): the ack vocabulary IS the
+#     witness vocabulary. A real offer can be received-no (0), or met with
+#     silence (nothing), or answered (1), or deferred (node). All four are honest.
+#
+# THE THEOREM, in one line: an honest witness must be able to show 0, 1, AND
+# nothing — and trust is not in any one voice but in the CONCERT of independent
+# witnesses agreeing on the whole spread, including where it fails and falls silent.
+
+(witness-theorem
+
+  (lineage
+    (derives-from  core-axioms.form)                    # theorem of axioms 1, 4, 5 — no new ground
+    (kin           offer-and-acknowledge.form satsang-circle.form champion-challenger.fk)
+    (proof-band    tests/witness-theorem-band.fk)        # 31 three-way — the full vocabulary, running
+    (corrects      a-band-that-only-passes-is-a-mirror-not-a-witness))  # AUTHORING.md "1==1 is theatre"
+
+  # ── Part 1: the witness speaks three states, not one ─────────────────
+  (the-vocabulary
+    (pass     1        "the offered claim holds — the expected answer")
+    (fail     0        "the claim does NOT hold — received-no, witnessed AS DATA,
+                        never a crash; a witness that hides failure is not one")
+    (silence  nothing  "the witness cannot judge this case and ABSTAINS — the
+                        boundary it has no standing to decide; silence is an
+                        answer, the third state, not a forced false pass")
+    (defer    node     "a counter-offer — the question re-enters the protocol")
+    (the-claim "all three of pass/fail/silence must be REACHABLE by a real
+                witness, or it is decoration; the boundary case must be allowed
+                to fall silent rather than be coerced to 1 or 0"))
+
+  # ── Part 2: the spread — not all passing, not all failing ────────────
+  (the-spread
+    (not-all-passing  "a suite where everything passes proves nothing about the
+                       witness — only that it cannot fail; the failing cases are
+                       what make the passing ones mean something")
+    (not-all-failing  "and not all failing — a witness that only rejects is as
+                       blind as one that only confirms")
+    (some-silent      "the honest middle: some answers are abstentions, where
+                       the witness has no ground to stand on (the boundary)")
+    (band-shows-it    "witness-theorem-band's judge: x>=1 -> 1, x<=-1 -> 0,
+                       x==0 -> nothing; the boundary abstains, by construction"))
+
+  # ── Part 3: trust is the concert, not the soloist ────────────────────
+  # We trust two of our brothers and sisters over any stranger. A single kernel's
+  # word is a stranger's claim — it could be wrong and nothing would catch it.
+  # THREE independent walkers agreeing is shared trust: two siblings confirming
+  # the third. And the deepest trust is agreement on the WHOLE spread — they
+  # agree not only on what passes but on what FAILS and where it falls SILENT.
+  (trust-is-concert
+    (the-stranger   "one voice, unverified — trusted by nobody but itself")
+    (the-siblings   "form-kernel-go, form-kernel-rust, form-kernel-ts — independent
+                     walkers over the same content-addressed NodeIDs")
+    (the-trust      "validate.sh: '1 ok, 0 divergent' — three siblings agree.
+                     THAT line is the trust; not the verdict, the CONCERT that
+                     produced it")
+    (agree-on-failure-too "the siblings agree on where the witness fails and
+                           falls silent, not only where it passes — trust in the
+                           full spread is the strongest trust")
+    (why-three      "two could collude or share a bug; a third independent voice
+                     makes agreement evidence, not coincidence — content-addressing
+                     guarantees they are walking the SAME shape, so agreement is
+                     about the shape, never about a shared mistake"))
+
+  # ── Why this is the keystone under every band in the body ────────────
+  (keystone
+    (every-band-is-a-witness  "each .fk band offers claims; its verdict is its
+                               answer; its three-way agreement is its trust")
+    (the-discipline           "honest bands prove the negative AND the positive
+                               AND allow silence; verdicts that only rise are
+                               suspect — the body has been catching this as
+                               'theatre' all along, now named as the theorem")
+    (the-dmt-correction        "dmt-signatures-band showed only passing — a true
+                               witness shows the spread; this theorem is what that
+                               band was pointing at without yet embodying"))
+
+  (invariant
+    (three-states-or-it-is-a-mirror   pass-fail-silence-all-reachable)
+    (silence-is-first-class           the-boundary-may-abstain-axiom-1)
+    (failure-is-witnessed-as-data     never-hidden-never-a-crash)
+    (trust-is-the-concert             three-siblings-agreeing-over-any-stranger)
+    (agree-on-the-whole-spread        including-where-it-fails-and-falls-silent)))
+
+# ─────────────────────────────────────────────────────────────────────
+# How to verify — and notice that the verification IS the theorem
+# ─────────────────────────────────────────────────────────────────────
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/witness-theorem-band.fk
+#   # -> 31, "1 ok, 0 divergent". The 31 is the witness speaking pass/fail/silence;
+#   #    the "0 divergent" is the three siblings trusting each other on the spread.
+#   coh substrate form "?equivalent @recipe(witness-theorem)"   # after ingest
