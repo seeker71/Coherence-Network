@@ -91,6 +91,50 @@ def _enumerate_default_workloads() -> list[Workload]:
     return workloads
 
 
+KERNEL_SEMANTIC_PREFIXES = (
+    "form/form-kernel-go/",
+    "form/form-kernel-rust/",
+    "form/form-kernel-ts/",
+    "form/validate.sh",
+    "scripts/form_validate_shards.py",
+)
+
+
+def _changed_paths(ref: str) -> set[str]:
+    """Repo-relative paths changed vs ref, plus working-tree edits and new files."""
+    import subprocess
+
+    paths: set[str] = set()
+    for cmd in (
+        ["git", "diff", "--name-only", f"{ref}...HEAD"],
+        ["git", "diff", "--name-only"],
+        ["git", "ls-files", "--others", "--exclude-standard", "form/"],
+    ):
+        out = subprocess.run(cmd, capture_output=True, text=True, cwd=REPO_ROOT)
+        paths.update(p.strip() for p in out.stdout.splitlines() if p.strip())
+    return paths
+
+
+def _select_changed(workloads: list[Workload], ref: str) -> list[Workload] | None:
+    """Bands affected by the change set, derived from declared prelude edges.
+
+    Returns None when kernel/runner semantics changed — the honest answer is
+    then the FULL suite, because every band's meaning may have moved.
+    """
+    changed = _changed_paths(ref)
+    if any(p.startswith(KERNEL_SEMANTIC_PREFIXES) or p in KERNEL_SEMANTIC_PREFIXES for p in changed):
+        return None
+    form_changed = {p.removeprefix("form/") for p in changed if p.startswith("form/")}
+    if not form_changed:
+        return []
+    selected = []
+    for w in workloads:
+        deps = set(w.args)
+        if deps & form_changed:
+            selected.append(w)
+    return selected
+
+
 def _filter_workloads(
     workloads: list[Workload],
     include_regex: str | None,
@@ -197,6 +241,17 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         help=f"parallel shard count after the warm shard (default: {default_jobs})",
     )
     parser.add_argument(
+        "--changed",
+        nargs="?",
+        const="origin/main",
+        metavar="REF",
+        help=(
+            "run only bands whose declared prelude chain (or the band itself) "
+            "changed vs REF (default origin/main), incl. working-tree edits; "
+            "kernel/runner changes honestly select the FULL suite"
+        ),
+    )
+    parser.add_argument(
         "--regex",
         "--include-regex",
         dest="include_regex",
@@ -264,6 +319,13 @@ def run(argv: list[str]) -> int:
     except re.error as exc:
         print(f"invalid regex: {exc}", file=sys.stderr)
         return 2
+
+    if args.changed:
+        narrowed = _select_changed(workloads, args.changed)
+        if narrowed is None:
+            print("form-validate-shards: kernel/runner semantics changed — full suite selected")
+        else:
+            workloads = narrowed
 
     _print_selection(workloads, args.binary, args.jobs)
     if not workloads:
