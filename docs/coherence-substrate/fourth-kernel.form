@@ -351,9 +351,23 @@
                            onto IF/LE; lists 1:1 onto arena tags); fkw answers
                            127 = the three walkers' own validate.sh verdict,
                            gated four-way in the audit (n7 section);
-                           bands-on-fourth-arm 0 -> 1, measured; next families
-                           are m4e4 exactly as scoped (str_*/node_*/floats/
-                           multi-param), each lifting more of the 424)
+                           bands-on-fourth-arm 0 -> 1, measured; m4e4
+                           multi-param [SHIPPED]: packed args as a PURE
+                           flattening rule (an N-arg call right-folds its
+                           args into a CONS chain; the callee binds params
+                           as NTH(ARG,i); zero new walker tags, emitted C
+                           unchanged) — nine more bands crossed UNMODIFIED,
+                           bands-on-fourth-arm 1 -> 10, each four-way gated
+                           (audit section 22; tests/form-flatten-band.fk ->
+                           127); remaining families named with their walls:
+                           str_* (needs the walker string-pool lane, shared
+                           with the m4d fixpoint blocker), figure-ops
+                           (band/shl_u32/add_u32 + nested-do unlock the
+                           checksum bands), floats; and the melt-root wall —
+                           packed args live in suspended C frames the
+                           copying melt cannot root (feature-vector blocked
+                           there), the structural fix is call args on a
+                           walker-managed value stack)
           (n8-assembly     [SHIPPED] otool -tvV on the emitted walker in the
                            audit shows real ARM64 (stp/ldr/adrp/lsl) — the
                            whole arc visible: Form recipe -> emitted C ->
@@ -432,12 +446,24 @@
                      the round-1 deaths survive (n=4096 -> 4096 was 0,
                      n=4200 -> 4200 was 104), growth and reclaim faces both
                      witnessed in the audit (section 20), proven three-way
-                     (tests/melt-on-cool-band.fk -> 31). Open, named: the
-                     hot-swap-free face (melting a cooled crystallized
-                     native, champion-challenger gated — heat counters still
-                     only rise), and true runtime codegen for FOREIGN loaded
-                     tables (the universal binary re-emitting through the
-                     toolchain port — the full crystallization wire))
+                     (tests/melt-on-cool-band.fk -> 31). hot-swap face
+                     [SHIPPED]: the gas-ice cycle closes BOTH ways — heat
+                     DECAYS (halve per 256-dispatch epoch; decay quantum,
+                     divisor, melt-line pct, earn window all recipe cells),
+                     a cooled native melts back to walking at the melt line
+                     (50% of hot), and re-crystallization is champion-
+                     challenger gated (fkc-earn-step/fkc-re-earned are
+                     cc-promote? specialized to epoch-trials — ice earned,
+                     never declared, no boundary flip-flop); a transitive
+                     lowerability fixpoint (fk_can) joined as the honesty
+                     gate so a melt can never strand a wrong native;
+                     witnessed audit section 21 (freeze at 51 -> 3 idle
+                     epochs halve 88->44->22 -> melt at 22 -> re-earn after
+                     2 winning epochs), proven three-way
+                     (tests/melt-hot-swap-band.fk -> 31). Open, named: true
+                     runtime codegen for FOREIGN loaded tables (the
+                     universal binary re-emitting through the toolchain
+                     port — the full crystallization wire))
 
         (organs-physical  one physical proof per host resource through the
                      fourth sibling, band tests/fourth-os-band.fk -> 15:
