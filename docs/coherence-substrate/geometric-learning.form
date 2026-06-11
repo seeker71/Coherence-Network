@@ -16,15 +16,22 @@
 # DATA — a list of (i j w) edge triples — and ONE engine walks every
 # domain. No grid path, no graph path, no mesh path. SHIPPED:
 # `form/form-stdlib/geometric-learning.fk` +
-# `tests/geometric-learning-band.fk` → 4095, three-way (Go/Rust/TS).
+# `tests/geometric-learning-band.fk` → 8388607 (23 claims), three-way
+# (Go/Rust/TS).
 #
-#     gl-step:   y_i = Σ_{(i j w)} w · x_j      — the geometric operator
+# The engine is SEMIRING-GENERIC — (combine, weigh) arrive as data,
+# carrier-proven (defn names pass as values, params dispatch in verb
+# position, identical three-way):
+#
+#     gl-gstep:  y_i = ⊕_{(i j w)} w ⊗ x_j      — the geometric operator
+#     gl-step    = gl-gstep with (add, mul)      — sum-product reading
+#     gl-bellman = gl-gstep with (max, r+γ·v)    — max-plus reading
 #     gl-diffuse: gl-step iterated               — heat flow on the domain
 #     gl-mean:    global pooling                 — the invariant readout
 #     gl-embed:   diffuse a seed, deflate mean   — f: Graph → ℝ, the
 #                                                  diffusion-map coordinate
 #
-# Four readings of the same operator, decided by edge data alone:
+# Readings of the same operator, decided by edge data and semiring alone:
 #
 #   Euclidean convolution   gl-ring-edges: circulant weights — the
 #                           weight depends only on the offset, which IS
@@ -37,18 +44,51 @@
 #   manifold embedding      power iteration by diffusion + constant-mode
 #                           deflation — the dominant surviving mode is
 #                           the domain's community/chart coordinate
+#   morphological dilation  the SAME ring edges under (max, +) — one
+#                           edge list, two semirings
+#
+# The three limbs the post names — "a unifying framework linking ML,
+# DL, and RL" — are instances, not new machinery:
+#
+#   ML   gl-gnn-layer / gl-gnn-readout — a GNN layer whose weights
+#        (ws wn b) are recipe data; neighbor aggregation IS gl-step
+#        over pair edges. The readout is a graph invariant: a molecule's
+#        predicted property survives relabeling, while structure (same
+#        atoms, different bonds) still discriminates — the symmetry that
+#        makes GNNs right for chemistry, checked.
+#   DL   gl-radius-edges — point clouds: the graph is built FROM
+#        geometry (pairwise distance), so edges — and everything
+#        downstream — are rigid-motion invariant (E(2)). Heat diffused
+#        through built edges stays chart-bounded: zero leakage between
+#        disconnected clusters, exactly.
+#   RL   gl-bellman / gl-value-iterate — relational planning: value
+#        propagates from the goal through graph-structured states to
+#        the optimal fixed point; the backup is permutation-equivariant
+#        (agents/states interchangeable). Planning is diffusion's
+#        tropical twin — the same gather under (max, +).
+#
+#   gl-attn-edges (composes transformer-numerics' tn-softmax) builds
+#   data-dependent edges: attention IS gl-step on the complete graph.
+#   The band proves the rows are stochastic (constants pass through),
+#   a silent query attends uniformly (attention degenerates to
+#   diffusion), and the output carries the input's mirror antisymmetry.
 
 # ─────────────────────────────────────────────────────────────────────
 # What the band proves (each a falsifiable claim, not an assertion)
 # ─────────────────────────────────────────────────────────────────────
 #
-# Two strange-minimal domains carry all twelve claims:
+# The core claims ride two strange-minimal domains:
 #   · the 4-ring — the periodic 1-D Euclidean grid; kernel [.25 .5 .25]
 #     and x = [8 4 0 4] keep every value exact in binary floats
 #   · the triangular prism K3×K2 — a 3-regular mesh with two charts
 #     (two triangles bridged by rungs); its second diffusion mode IS
 #     the chart split (eigenvalue 2/3 vs 1/2), so power iteration
 #     separates the charts provably fast
+# The limb claims add: a 4-state relational world with an absorbing
+# goal (γ = ½, dyadic rewards — the fixed point is exact), a 5-point
+# two-cluster cloud (dyadic positions and kernels — leakage is exactly
+# zero), two 3-atom molecules sharing the same atom multiset (path vs
+# triangle), and attention over x = [1 0 −1].
 #
 #   1     conv([8 4 0 4]) = [6 4 2 4]            — the CNN form lands
 #   2     gl-step(circulant) ≡ gl-conv           — CNNs ARE geometric
@@ -71,6 +111,24 @@
 #   2048  embed[1]=embed[2], embed[4]=embed[5]   — the embedding recovers
 #                                                  the mesh's mirror symmetry
 #                                                  through the seed
+#   4096  (max,+) over the same ring edges       — morphological dilation
+#         = [8.5 8.25 4.25 8.25]                   one edge list, two semirings
+#   8192  value iteration → V* = [3 4 4 0]       — RL: value propagates from
+#                                                  the goal through relations
+#   16384 bellman(V*) = V*                       — the optimum is a fixed point
+#   32768 backup permutation-equivariant         — relational symmetry
+#   65536 radius graph rigid-motion invariant    — rotate 90° + translate:
+#                                                  identical edge list (E(2))
+#   131072 chart-bounded diffusion               — far cluster exactly 0;
+#                                                  in-cluster [118652 98877 98877]
+#   262144 molecular property graph-invariant    — relabeled → 4666667 both ways
+#   524288 structure discriminates               — same atoms, different bonds
+#                                                  → 5666667 ≠ 4666667
+#   1048576 attention rows stochastic            — constants pass through
+#   2097152 silent query attends uniformly       — attention output 0 at the
+#                                                  zero-feature node
+#   4194304 attention mirror antisymmetry        — out[2] = −out[0], out[0]
+#                                                  = 575210 at 1e-6
 #
 # The conformance discipline is form-native-models': compute in fp64,
 # reduce to integers at 1e-6, pin to a reference that mirrors the
@@ -82,12 +140,13 @@
 # ─────────────────────────────────────────────────────────────────────
 #
 #   form-native-models.form     the sequence/Euclidean lane (transformer
-#                               numerics, M1–M6). Attention is gl-step on
-#                               the COMPLETE graph with data-dependent
-#                               edge weights — softmax(QKᵀ) builds the
-#                               (i j w) list each forward pass. The
-#                               transformer is a GDL instance; the two
-#                               lanes are one teaching.
+#                               numerics, M1–M6). gl-attn-edges proves the
+#                               kinship at toy scale: softmax(x_i·x_j)
+#                               builds the (i j w) list and THE SAME
+#                               gl-step consumes it — the transformer is
+#                               a GDL instance; the two lanes are one
+#                               teaching. This module preludes
+#                               transformer-numerics.fk for tn-softmax.
 #   ml-diffusion-model-flow.form  denoising diffusion — the generative
 #                               reverse flow in latent space. This module
 #                               is diffusion ON a domain (heat flow), the
@@ -101,7 +160,8 @@
 #                               aggregate wants gl-step, not a sibling.
 #
 # Next stones when an ask needs them (named, not built ahead of need):
-# learned edge weights as recipe data (the GNN layer proper — weights
-# arrive like M2's quantized tensors); data-dependent edges (attention
-# as a gl-step edge builder); irregular-degree walks (1/dᵢ weights —
-# the prism's 3-regularity let uniform and walk kernels coincide).
+# vector node features (the dot in gl-attn-edges and the weights in
+# gl-gnn-layer grow into M1/M2's tensor stones); LEARNING the weights
+# (a training loop over the layer — gradient or champion-challenger);
+# irregular-degree walks (1/dᵢ weights — the prism's 3-regularity let
+# uniform and walk kernels coincide).
