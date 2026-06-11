@@ -1,0 +1,97 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "codex/all-kernel-fatal-http-20260611",
+  "commit_scope": "Extend Go kernel HTTP native handler panic recovery to the same fatal response contract as Rust, and add a four-carrier HTTP proof covering Rust, Go, TypeScript JIT, and the Form-emitted fourth HTTP organ.",
+  "files_owned": [
+    "form/form-kernel-go/main.go",
+    "form/form-kernel-go/server.go",
+    "form/form-kernel-go/server_test.go",
+    "scripts/fatal_http_all_kernels_probe.py"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form/form-kernel-go && go test ./... -run TestNativeHandlerFatalResponseNamesKindTraceAndWorkerContinues -count=1",
+      "python3 scripts/fatal_http_all_kernels_probe.py",
+      "cd form/form-kernel-go && go test ./...",
+      "cd form/form-kernel-rust && cargo test --quiet crash_diagnostics_tests -- --nocapture",
+      "python3 -m py_compile scripts/fatal_http_all_kernels_probe.py",
+      "git diff --check"
+    ],
+    "notes": "Focused Go fatal response regression passed. The four-carrier probe returned real HTTP 500 replies for Rust serve and Go serve, a TS kernel+compileNode JIT HTTP wrapper with X-Form-JIT-Compile: 1, and the Form-emitted fourth HTTP binary's current static fatal responder. The Rust and Go rows also proved /ok answered after /boom on the same server. Full Go package tests passed in 214.828s."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "PR CI has not run yet for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "Hostinger Auto Deploy on main after merge"
+    ],
+    "notes": "Deploy proof should confirm kernel-router startup and public API canaries remain healthy after Go fatal-response hardening."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed; PR CI and deploy proof remain pending."
+  },
+  "idea_ids": [
+    "pipeline-reliability",
+    "native-api-lane",
+    "form-native-front-door"
+  ],
+  "spec_ids": [
+    "pulse-silence-boundary-repair",
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "all-kernel-fatal-http-parity-20260611"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/form-kernel-go/server.go#goServeWorker.serve",
+    "form/form-kernel-go/main.go#diagnoseKernelPanic",
+    "form/form-kernel-go/main.go#writeKernelCrashTraceWithContext",
+    "scripts/fatal_http_all_kernels_probe.py"
+  ],
+  "change_files": [
+    "form/form-kernel-go/main.go",
+    "form/form-kernel-go/server.go",
+    "form/form-kernel-go/server_test.go",
+    "scripts/fatal_http_all_kernels_probe.py",
+    "docs/system_audit/commit_evidence_20260611_all_kernel_fatal_http_parity.json"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Selected Go native handler panics now return HTTP 500 fatal responses with X-Form-Router: native-kernel-error, X-Form-Fatal-Kind, X-Form-Crash-Trace, a diagnosis body, and a JSON trace with source/request/route operation; the worker remains usable after the fatal response.",
+    "public_endpoints": [
+      "local://form-kernel-rust/serve/boom",
+      "local://form-kernel-go/serve/boom",
+      "local://form-kernel-ts/jit-wrapper/boom",
+      "local://fourth-kernel/emitted-http/boom"
+    ],
+    "test_flows": [
+      "Trigger a defined local /boom route and inspect the HTTP 500 fatal response fields.",
+      "Verify a healthy /ok route still answers after /boom for Rust and Go listeners.",
+      "Exercise the TS kernel through compileNode JIT under an HTTP wrapper and return the same fatal response envelope.",
+      "Compile the fourth-kernel HTTP responder binary and show its current static fatal response, naming the remaining dynamic API-host gap."
+    ]
+  }
+}
