@@ -1,0 +1,82 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "codex/crash-fatal-http-response-20260611",
+  "commit_scope": "Return a structured HTTP 500 fatal response for recoverable Rust native handler panics instead of an empty reply",
+  "files_owned": [
+    "form/form-kernel-rust/src/main.rs"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form/form-kernel-rust && cargo test --quiet crash_diagnostics_tests -- --nocapture",
+      "cd form/form-kernel-rust && cargo test --quiet",
+      "cd form/form-kernel-rust && cargo build --quiet && target/debug/form-kernel-rust serve --port <free-port> --routes <tmp-crash-routes.fk> --workers 1; curl -D /tmp/form-rust-boom.headers /boom; curl -D /tmp/form-rust-ok.headers /ok"
+    ],
+    "notes": "The synthetic /boom route is a defined local route that intentionally triggers the real type-contract panic class by calling str_concat on Null from _json_get. It is not an undefined-route proof; undefined routes still return local-control 404 or fanout. The corrected one-worker proof returns HTTP/1.1 500 Internal Server Error with X-Form-Router: native-kernel-error, X-Form-Fatal-Kind: type_contract_violation, X-Form-Crash-Trace, and a body starting fatal[type_contract_violation]: as_str: Null. The same one-worker server then serves /ok as HTTP 200 with X-Form-Router: native-kernel. Full Rust kernel tests passed 52/52 in 143.30s."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "PR CI has not run yet for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "Hostinger Auto Deploy on main after merge"
+    ],
+    "notes": "Deploy proof should confirm the kernel-router still starts and public canaries remain healthy after native handler fatal-response hardening."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed; PR CI and deploy proof remain pending."
+  },
+  "idea_ids": [
+    "pipeline-reliability",
+    "native-api-lane",
+    "form-native-front-door"
+  ],
+  "spec_ids": [
+    "pulse-silence-boundary-repair"
+  ],
+  "task_ids": [
+    "rust-kernel-fatal-http-response-20260611"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/form-kernel-rust/src/main.rs#handle_request",
+    "form/form-kernel-rust/src/main.rs#kernel_fatal_http_body",
+    "form/form-kernel-rust/src/main.rs#kernel_fatal_http_headers"
+  ],
+  "change_files": [
+    "form/form-kernel-rust/src/main.rs",
+    "docs/system_audit/commit_evidence_20260611_rust_kernel_fatal_http_response.json"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "A selected native handler panic should return a proper fatal HTTP 500 with classification and trace path when possible, while preserving the source/stack crash trace and keeping the worker pool alive.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/utils/kernel_status",
+      "https://api.coherencycoin.com/api/health"
+    ],
+    "test_flows": [
+      "Trigger a defined local route whose handler panics on Null-to-string and verify HTTP 500 fatal response fields.",
+      "Verify a healthy route still responds after the fatal response on a one-worker serve process."
+    ]
+  }
+}
