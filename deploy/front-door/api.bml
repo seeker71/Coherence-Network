@@ -344,6 +344,12 @@ section [form.bml] {
         let path = kh-request-path(request);
         if le(str_len(path), 17) then "" else substring(path, 17, str_len(path));
     }
+    def api-agent-task-log-id(request) {
+        let tail = api-path-tail(kh-request-path(request), "/api/agent/tasks/");
+        let marker = str_find(tail, "/log", 0);
+        if eq(marker, -1) then tail else substring(tail, 0, marker);
+    }
+    def api-agent-task-log-path(task_id) = str_concat(repo_root(), str_concat("/api/logs/task_", str_concat(task_id, ".log")));
     def agent-json-nullable-int(value) = if str_eq(value_str(value), "") then json-node-null() else json-node-int(value);
     def agent-context-node-or-null(context, key) = if json-object-has?(context, key) then json-object-get(context, key) else json-node-null();
     def agent-task-time-sql(column_name) = str_concat("CASE WHEN ", str_concat(column_name, str_concat(" IS NULL THEN '' ELSE to_char(", str_concat(column_name, " AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') END"))));
@@ -385,6 +391,29 @@ section [form.bml] {
     def api_agent_task(request) {
         let conn = pg_connect(config_database_url());
         if lt(conn, 0) then api-service-unavailable("persistence", "database unavailable") else api-agent-task-connected(conn, request);
+    }
+    def api-agent-task-log-output-preview(output) = if gt(str_len(output), 5000) then substring(output, 0, 5000) else output;
+    def api-agent-task-log-step-line(row) = if str_eq(idea-row("current_step", row), "") then "" else str_concat("current_step: ", str_concat(idea-row("current_step", row), "\n"));
+    def api-agent-task-log-updated-line(row) = if str_eq(idea-row("updated_at", row), "") then "" else str_concat("updated_at: ", str_concat(idea-row("updated_at", row), "\n"));
+    def api-agent-task-log-output-section(row) = if str_eq(idea-row("output", row), "") then "" else str_concat("\noutput:\n", api-agent-task-log-output-preview(idea-row("output", row)));
+    def api-agent-task-log-snapshot(row) {
+        let body = str_concat(str_concat("status: ", str_concat(idea-row("status", row), "\n")), str_concat(api-agent-task-log-step-line(row), str_concat(api-agent-task-log-updated-line(row), api-agent-task-log-output-section(row))));
+        if str_eq(api-trim(body), "") then "No task log file is available for this task yet." else body;
+    }
+    def api-agent-task-log-json(task_id, row, log_text, log_source) = json-node-object(list(json-node-pair("task_id", json-node-string(task_id)), json-node-pair("log", json-node-string(log_text)), json-node-pair("command", api-json-nullable-string(idea-row("command", row))), json-node-pair("output", api-json-nullable-string(idea-row("output", row))), json-node-pair("log_source", json-node-string(log_source))));
+    def api-agent-task-log-row-json(task_id, row) {
+        let path = api-agent-task-log-path(task_id);
+        if eq(fs_exists(path), 1) then api-agent-task-log-json(task_id, row, read_file(path), "file") else api-agent-task-log-json(task_id, row, api-agent-task-log-snapshot(row), "task_snapshot");
+    }
+    def api-agent-task-log-connected(conn, request) {
+        let task_id = api-agent-task-log-id(request);
+        let rows = pg_query_rows(conn, agent-task-sql(), list(task_id));
+        let closed = pg_close(conn);
+        if api-query-failed?() then api-service-unavailable("persistence", "agent task log query failed") else if nil?(rows) then api-error-status-json(404, "Task not found") else api-native-ok-json("api_agent_task_log", api-agent-task-log-row-json(task_id, head(rows)));
+    }
+    def api_agent_task_log(request) {
+        let conn = pg_connect(config_database_url());
+        if lt(conn, 0) then api-service-unavailable("persistence", "database unavailable") else api-agent-task-log-connected(conn, request);
     }
     def api_agent_tasks_active(request) = kh-response(200, list(kh-header("Content-Type", "application/json"), kh-header("X-Form-Handler", "api_agent_tasks_active"), kh-header("X-Form-Python-Authority", "false"), kh-header("Access-Control-Allow-Origin", "*")), "[]");
     def api-agent-tasks-activity-json(request) = json-node-object(list(json-node-pair("items", json-node-array(empty)), json-node-pair("total", json-node-int(0)), json-node-pair("limit", json-node-int(api-clamp-limit(kh-query-int-or(request, "limit", 50), 200))), json-node-pair("offset", json-node-int(idea-safe-offset(kh-query-int-or(request, "offset", 0))))));
@@ -901,6 +930,41 @@ section [form.bml] {
     def api_edges(request) {
         let conn = pg_connect(config_database_url());
         if lt(conn, 0) then api-service-unavailable("persistence", "database unavailable") else api-edges-connected(conn, request);
+    }
+    def api-presence-places-id(request) {
+        let tail = api-path-tail(kh-request-path(request), "/api/presences/");
+        let marker = str_find(tail, "/places", 0);
+        if eq(marker, -1) then "" else substring(tail, 0, marker);
+    }
+    def api-presence-places-sql() = "WITH presence AS (SELECT id FROM graph_nodes WHERE id = $1 LIMIT 1), rows AS (SELECT e.to_id AS place_id, COALESCE(NULLIF(p.name,''), e.to_id) AS place_name, COALESCE(p.properties->>'region','') AS region, COALESCE(p.properties->>'country','') AS country, COALESCE(NULLIF(e.properties->>'role',''), 'based') AS role FROM presence pr JOIN graph_edges e ON e.from_id = pr.id AND e.type = 'at-place' LEFT JOIN graph_nodes p ON p.id = e.to_id ORDER BY place_name ASC LIMIT 50) SELECT COALESCE(jsonb_agg(jsonb_build_object('place_id', place_id, 'place_name', place_name, 'region', NULLIF(region,''), 'country', NULLIF(country,''), 'role', role) ORDER BY place_name ASC), '[]'::jsonb)::text AS items_json FROM rows";
+    def api-presence-places-json(presence_id, rows) = json-node-object(list(json-node-pair("presence_id", json-node-string(presence_id)), json-node-pair("items", if nil?(rows) then json-node-array(empty) else parse-json("presence.places", idea-row("items_json", head(rows)))), json-node-pair("native_observation", json-node-object(list(json-node-pair("grammar", json-node-string("BML")), json-node-pair("handler", json-node-string("api_presence_places")), json-node-pair("relationship", json-node-string("at-place")))))));
+    def api-presence-places-connected(conn, presence_id) {
+        let rows = pg_query_rows(conn, api-presence-places-sql(), list(presence_id));
+        let closed = pg_close(conn);
+        if api-query-failed?() then api-service-unavailable("persistence", "presence places query failed") else api-native-ok-json("api_presence_places", api-presence-places-json(presence_id, rows));
+    }
+    def api_presence_places(request) {
+        let presence_id = api-presence-places-id(request);
+        let conn = pg_connect(config_database_url());
+        if str_eq(presence_id, "") then api-error-status-json(422, "presence_id is required") else if lt(conn, 0) then api-service-unavailable("persistence", "database unavailable") else api-presence-places-connected(conn, presence_id);
+    }
+    def api-graph-node-edges-id(request) {
+        let tail = api-path-tail(kh-request-path(request), "/api/graph/nodes/");
+        let marker = str_find(tail, "/edges", 0);
+        if eq(marker, -1) then "" else substring(tail, 0, marker);
+    }
+    def api-graph-node-edges-direction(request) = match kh-query-value-or(request, "direction", "both") { "incoming" => "incoming", "outgoing" => "outgoing", _ => "both" };
+    def api-graph-node-edges-sql() = "WITH resolved AS (SELECT id FROM graph_nodes WHERE id = $1 OR ($2 AND properties->>'slug' = $1) OR ($2 AND id = 'contributor:' || $1) ORDER BY CASE WHEN id = $1 THEN 0 WHEN properties->>'slug' = $1 THEN 1 ELSE 2 END LIMIT 1), filtered AS (SELECT e.* FROM graph_edges e JOIN resolved r ON (($3 = 'outgoing' AND e.from_id = r.id) OR ($3 = 'incoming' AND e.to_id = r.id) OR ($3 = 'both' AND (e.from_id = r.id OR e.to_id = r.id))) WHERE ($4 = '' OR e.type = $4) ORDER BY e.created_at DESC) SELECT e.id, e.from_id, e.to_id, e.type, e.strength, e.created_by, replace(e.created_at::text, ' ', 'T') AS created_at, COALESCE(e.properties,'{}'::jsonb)::text AS properties_json, (e.type = ANY(string_to_array($5, ','))) AS canonical, fn.id AS from_id, fn.type AS from_type, fn.name AS from_name, COALESCE(fn.properties->>'image_url','') AS from_image_url, COALESCE(fn.properties->>'slug','') AS from_slug, tn.id AS to_id, tn.type AS to_type, tn.name AS to_name, COALESCE(tn.properties->>'image_url','') AS to_image_url, COALESCE(tn.properties->>'slug','') AS to_slug FROM filtered e LEFT JOIN graph_nodes fn ON fn.id = e.from_id LEFT JOIN graph_nodes tn ON tn.id = e.to_id";
+    def api-graph-node-edges-connected(conn, node_id, direction, edge_type) {
+        let slug_lookup = eq(str_find(node_id, ":", 0), -1);
+        let rows = pg_query_rows(conn, api-graph-node-edges-sql(), list(node_id, slug_lookup, direction, edge_type, api-edge-canonical-types()));
+        let closed = pg_close(conn);
+        if api-query-failed?() then api-service-unavailable("persistence", "graph node edges query failed") else api-native-ok-json("api_graph_node_edges", json-node-array(api-edge-rows-json(rows)));
+    }
+    def api_graph_node_edges(request) {
+        let node_id = api-graph-node-edges-id(request);
+        let conn = pg_connect(config_database_url());
+        if str_eq(node_id, "") then api-error-status-json(422, "node_id is required") else if lt(conn, 0) then api-service-unavailable("persistence", "database unavailable") else api-graph-node-edges-connected(conn, node_id, api-graph-node-edges-direction(request), kh-query-value-or(request, "type", ""));
     }
     def graph-edge-create-valid-type?(edge_type) = or(str_eq(edge_type, "inspires"), or(str_eq(edge_type, "depends-on"), or(str_eq(edge_type, "implements"), or(str_eq(edge_type, "contradicts"), or(str_eq(edge_type, "extends"), or(str_eq(edge_type, "analogous-to"), or(str_eq(edge_type, "parent-of"), or(str_eq(edge_type, "manages"), or(str_eq(edge_type, "delegates-to"), or(str_eq(edge_type, "enables"), str_eq(edge_type, "realizes")))))))))));
     def graph-edge-id() {
@@ -1430,6 +1494,7 @@ section [form.route] {
     class ObservedTasksRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("observed-tasks-index", "GET", "/api/tasks", 89, "api_agent_tasks", "Accept", 35);
     class AgentTasksActiveRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("agent-tasks-active", "GET", "/api/agent/tasks/active", 90, "api_agent_tasks_active", "Accept", 25);
     class AgentTasksActivityRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("agent-tasks-activity", "GET", "/api/agent/tasks/activity", 90, "api_agent_tasks_activity", "Accept", 25);
+    class AgentTaskLogRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("agent-task-log", "GET", "/api/agent/tasks/{task_id}/log", 91, "api_agent_task_log", "Accept", 35);
     class AgentTaskRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("agent-task-detail", "GET", "/api/agent/tasks/task_*", 88, "api_agent_task", "Accept", 35);
     class ContributorsIndexRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("contributors-index", "GET", "/api/contributors", 88, "api_contributors", "Accept", 35);
     class ContributionsIndexRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("contributions-index", "GET", "/api/contributions", 88, "api_contributions", "Accept", 35);
@@ -1450,7 +1515,9 @@ section [form.route] {
     class CoherenceNetworkVitalityRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("coherence-network-vitality", "GET", "/api/workspaces/coherence-network/vitality", 84, "api_vitality_coherence_network", "Accept", 35);
     class CoherenceScoreRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("coherence-score", "GET", "/api/coherence/score", 84, "api_coherence_score", "Accept", 35);
     class GraphNodesIndexRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("graph-nodes-index", "GET", "/api/graph/nodes", 83, "api_graph_nodes", "Accept", 35);
+    class GraphNodeEdgesRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("graph-node-edges", "GET", "/api/graph/nodes/{node_id}/edges", 84, "api_graph_node_edges", "Accept", 35);
     class GraphEdgesCreateRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("graph-edges-create", "POST", "/api/graph/edges", 84, "api_graph_edge_create", "Accept", 40);
+    class PresencePlacesRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("presence-places", "GET", "/api/presences/{presence_id}/places", 84, "api_presence_places", "Accept", 35);
     class PresenceSummaryRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("presence-summary", "GET", "/api/presence/summary", 83, "api_presence_summary", "Accept", 25);
     class PresenceHeartbeatRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("presence-heartbeat", "POST", "/api/presence/*", 82, "api_presence_heartbeat", "Accept", 25);
     class PresenceCountRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("presence-count", "GET", "/api/presence/*", 82, "api_presence_count", "Accept", 25);
@@ -1476,6 +1543,6 @@ section [form.route] {
     class KernelStatusRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("kernel-status", "GET", "/api/utils/kernel_status", 78, "api_kernel_status", "Accept", 20);
     class FieldStoryTraceRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("field-story-trace", "GET", "/api/field-stories/*", 78, "api_field_story_trace", "Accept", 40);
 
-    let routes = list(language-route-class-kernel-route(HealthRoute), language-route-class-kernel-route(ReadyRoute), language-route-class-kernel-route(GatesMainHeadRoute), language-route-class-kernel-route(SpecRegistryRoute), language-route-class-kernel-route(SpecRegistryDetailRoute), language-route-class-kernel-route(AgentTasksRoute), language-route-class-kernel-route(ObservedTasksRoute), language-route-class-kernel-route(AgentTasksActiveRoute), language-route-class-kernel-route(AgentTasksActivityRoute), language-route-class-kernel-route(ContributorsIndexRoute), language-route-class-kernel-route(ContributionsIndexRoute), language-route-class-kernel-route(LensesIndexRoute), language-route-class-kernel-route(WorkspacesIndexRoute), language-route-class-kernel-route(SensingsIndexRoute), language-route-class-kernel-route(SensingDetailRoute), language-route-class-kernel-route(TranslationsEntityRoute), language-route-class-kernel-route(CoherenceNetworkVitalityRoute), language-route-class-kernel-route(CoherenceScoreRoute), language-route-class-kernel-route(GraphNodesIndexRoute), language-route-class-kernel-route(GraphEdgesCreateRoute), language-route-class-kernel-route(AnonymousMeetingTraceRecordRoute), language-route-class-kernel-route(AnonymousMeetingTracesRoute), language-route-class-kernel-route(AgentTaskRoute), language-route-class-kernel-route(RecentConceptVoicesRoute), language-route-class-kernel-route(ConceptVoicesRoute), language-route-class-kernel-route(ConceptCarriedByRoute), language-route-class-kernel-route(PresenceResonancesRoute), language-route-class-kernel-route(RecentReactionsRoute), language-route-class-kernel-route(ReactionConceptSummaryRoute), language-route-class-kernel-route(ReactionConceptThreadsRoute), language-route-class-kernel-route(PresenceSummaryRoute), language-route-class-kernel-route(PresenceHeartbeatRoute), language-route-class-kernel-route(PresenceCountRoute), language-route-class-kernel-route(SubstrateFormCompilerRoute), language-route-class-kernel-route(SubstrateKernelImageProposalRoute), language-route-class-kernel-route(SubstratePageRoute), language-route-class-kernel-route(FederationNodesCountRoute), language-route-class-kernel-route(LivingCollectiveConceptRoute), language-route-class-kernel-route(EdgesRoute), language-route-class-kernel-route(InspiredByRoute), language-route-class-kernel-route(ViewsPingRoute), language-route-class-kernel-route(ViewsStatsRoute), language-route-class-kernel-route(RuntimeEventsCreateRoute), language-route-class-kernel-route(RuntimeEventsIndexRoute), language-route-class-kernel-route(RuntimeEndpointsSummaryRoute), language-route-class-kernel-route(InventoryFlowRoute), language-route-class-kernel-route(InventoryFlowObservationRoute), language-route-class-kernel-route(PersonalFeedRoute), language-route-class-kernel-route(HouseholdRequestsRoute), language-route-class-kernel-route(HouseholdRequestDetailRoute), language-route-class-kernel-route(HouseholdMembersRoute), language-route-class-kernel-route(HouseholdEventsRoute), language-route-class-kernel-route(KernelStatusRoute), language-route-class-kernel-route(FieldStoryTraceRoute), language-route-class-kernel-route(IdeaSpecsRoute), language-route-class-kernel-route(IdeasTimingRoute), language-route-class-kernel-route(IdeasObservationRoute), language-route-class-kernel-route(IdeasResonanceRoute), language-route-class-kernel-route(IdeasIndexRoute));
+    let routes = list(language-route-class-kernel-route(HealthRoute), language-route-class-kernel-route(ReadyRoute), language-route-class-kernel-route(GatesMainHeadRoute), language-route-class-kernel-route(SpecRegistryRoute), language-route-class-kernel-route(SpecRegistryDetailRoute), language-route-class-kernel-route(AgentTasksRoute), language-route-class-kernel-route(ObservedTasksRoute), language-route-class-kernel-route(AgentTasksActiveRoute), language-route-class-kernel-route(AgentTasksActivityRoute), language-route-class-kernel-route(AgentTaskLogRoute), language-route-class-kernel-route(ContributorsIndexRoute), language-route-class-kernel-route(ContributionsIndexRoute), language-route-class-kernel-route(LensesIndexRoute), language-route-class-kernel-route(WorkspacesIndexRoute), language-route-class-kernel-route(SensingsIndexRoute), language-route-class-kernel-route(SensingDetailRoute), language-route-class-kernel-route(TranslationsEntityRoute), language-route-class-kernel-route(CoherenceNetworkVitalityRoute), language-route-class-kernel-route(CoherenceScoreRoute), language-route-class-kernel-route(GraphNodesIndexRoute), language-route-class-kernel-route(GraphNodeEdgesRoute), language-route-class-kernel-route(GraphEdgesCreateRoute), language-route-class-kernel-route(AnonymousMeetingTraceRecordRoute), language-route-class-kernel-route(AnonymousMeetingTracesRoute), language-route-class-kernel-route(AgentTaskRoute), language-route-class-kernel-route(RecentConceptVoicesRoute), language-route-class-kernel-route(ConceptVoicesRoute), language-route-class-kernel-route(ConceptCarriedByRoute), language-route-class-kernel-route(PresenceResonancesRoute), language-route-class-kernel-route(PresencePlacesRoute), language-route-class-kernel-route(RecentReactionsRoute), language-route-class-kernel-route(ReactionConceptSummaryRoute), language-route-class-kernel-route(ReactionConceptThreadsRoute), language-route-class-kernel-route(PresenceSummaryRoute), language-route-class-kernel-route(PresenceHeartbeatRoute), language-route-class-kernel-route(PresenceCountRoute), language-route-class-kernel-route(SubstrateFormCompilerRoute), language-route-class-kernel-route(SubstrateKernelImageProposalRoute), language-route-class-kernel-route(SubstratePageRoute), language-route-class-kernel-route(FederationNodesCountRoute), language-route-class-kernel-route(LivingCollectiveConceptRoute), language-route-class-kernel-route(EdgesRoute), language-route-class-kernel-route(InspiredByRoute), language-route-class-kernel-route(ViewsPingRoute), language-route-class-kernel-route(ViewsStatsRoute), language-route-class-kernel-route(RuntimeEventsCreateRoute), language-route-class-kernel-route(RuntimeEventsIndexRoute), language-route-class-kernel-route(RuntimeEndpointsSummaryRoute), language-route-class-kernel-route(InventoryFlowRoute), language-route-class-kernel-route(InventoryFlowObservationRoute), language-route-class-kernel-route(PersonalFeedRoute), language-route-class-kernel-route(HouseholdRequestsRoute), language-route-class-kernel-route(HouseholdRequestDetailRoute), language-route-class-kernel-route(HouseholdMembersRoute), language-route-class-kernel-route(HouseholdEventsRoute), language-route-class-kernel-route(KernelStatusRoute), language-route-class-kernel-route(FieldStoryTraceRoute), language-route-class-kernel-route(IdeaSpecsRoute), language-route-class-kernel-route(IdeasTimingRoute), language-route-class-kernel-route(IdeasObservationRoute), language-route-class-kernel-route(IdeasResonanceRoute), language-route-class-kernel-route(IdeasIndexRoute));
     0;
 }
