@@ -1,0 +1,47 @@
+; preludes: form-stdlib/geometric-learning.fk form-stdlib/metabolic-learning.fk form-stdlib/cognitive-light-cone.fk
+;
+; cognitive-light-cone-band — a cell at node 0 of a six-node body reads its own reach,
+; learns a sensing edge and watches the cone grow, releases and watches it contract,
+; and proves its expressive and receptive cones differ. Domain: a three-hop sensing
+; chain 0→1→2→3 (weights 1/2 — every influence value dyadic, exact in fp64), a far
+; pair 4⇄5, and a DORMANT bridge (4 2 0.0) the cell can learn. Floor 0.2 throughout;
+; the learned bridge lands node 4 at influence 0.25·0.8 = 0.2 — ON the floor exactly,
+; the boundary tested at equality.
+;
+; Verdict 511 when every claim lands:
+;   1     the influence field is exact: spread(3) = [1 .5 .25 .125 0 0]
+;   2     the cone is addressability, smaller than connectivity: node 3 is CONNECTED
+;         but below floor — size 3, the chain's last hop lies outside the cone
+;   4     the temporal horizon is exact: the field settles in 3 steps
+;   8     the cone is monotone in time: spread(1) = [1 .5 0 0 0 0]
+;   16    the cell learns a sensing edge: mtb-learn one-shots the dormant bridge to
+;         0.8 while leaving every settled pathway untouched
+;   32    learning EXPANDS the cone: node 4 enters at exactly the floor — size 3 → 4
+;   64    expansion deepens time: the horizon grows 3 → 4 (the last step carries
+;         influence BELOW the floor — the cone's edge and the body's reach are
+;         distinct, and the cell can read both)
+;   128   hoʻoponopono CONTRACTS the cone: release λ=1/2 → size 2
+;   256   expressive ≠ receptive: over mtb-reverse(edges) the same seed reaches only
+;         itself — the cone is directional; the adjoint converts between the two
+(do
+    (let edges (list (list 1 0 0.5) (list 2 1 0.5) (list 3 2 0.5)
+                     (list 4 2 0.0) (list 4 5 0.5) (list 5 4 0.5)))
+    (let e0 (clc-seed 6 0))
+    (let spread3 (clc-spread edges e0 3))
+    (let probe (clc-seed 6 2))
+    (let target (list 0.0 0.0 0.0 0.5 0.8 0.0))
+    (let grown (mtb-learn edges probe target 1.0))
+    (let spread-g (clc-spread grown e0 8))
+    (let released (mtb-release grown 0.5))
+    (let c0 (if (eq (gl-veq6 spread3 (list 1.0 0.5 0.25 0.125 0.0 0.0)) 1) 1 0))
+    (let c1 (if (eq (clc-cone-size spread3 0.2) 3) 2 0))
+    (let c2 (if (eq (clc-horizon edges e0 8) 3) 4 0))
+    (let c3 (if (eq (gl-veq6 (clc-spread edges e0 1)
+                             (list 1.0 0.5 0.0 0.0 0.0 0.0)) 1) 8 0))
+    (let c4 (if (and (eq (gl-r6 (nth (nth grown 3) 2)) 800000)
+                     (eq (gl-veq6 (gl-step grown probe) target) 1)) 16 0))
+    (let c5 (if (eq (clc-cone-size spread-g 0.2) 4) 32 0))
+    (let c6 (if (eq (clc-horizon grown e0 8) 4) 64 0))
+    (let c7 (if (eq (clc-cone-size (clc-spread released e0 8) 0.2) 2) 128 0))
+    (let c8 (if (eq (clc-cone-size (clc-spread (mtb-reverse edges) e0 8) 0.2) 1) 256 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 c8)))))))))
