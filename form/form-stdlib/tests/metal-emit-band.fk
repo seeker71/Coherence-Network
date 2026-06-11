@@ -1,22 +1,30 @@
 ; preludes: form-stdlib/jit-tensor-emit.fk
 ;
-; metal-emit-band — the GPU matvec emitter as recipe, proven three-way: the emitted MSL
-; kernel source is byte-identical across kernels (str_eq against the canonical text), the
-; function name parameterizes cleanly, and the emission is deterministic. The text carries
-; tb-dot's exact right-fold (j counts DOWN) with the multiply and add split through a named
-; temporary so no Metal compiler contraction can change the recipe's op order — the same
-; conformance-by-construction the rust emission rides, declared at fp32 (MSL has no f64).
+; metal-emit-band — the GPU matvec emitter as recipe, proven three-way: ONE emit spine, the
+; precision lanes as format rows (f32/f16/bf16 — MSL float/half/bfloat storage, fp32 accumulator
+; in every lane per format-arith's accumulate-wide-store-lane semantics). Each lane's emitted MSL
+; kernel source is byte-identical across kernels (str_eq against the canonical text), the function
+; name parameterizes cleanly, and the emission is deterministic. Every lane carries tb-dot's exact
+; right-fold (j counts DOWN) with the multiply and add split through a named temporary so no Metal
+; compiler contraction can change the recipe's op order; load and store conversions through the
+; accumulator type are explicit in the text (identities on the f32 lane).
 ;
-; Verdict 7 when the emission lands:
-;   1   the full emitted MSL for form_matvec_f32 equals the canonical text
+; Verdict 31 when the emission lands:
+;   1   the full emitted f32 MSL for form_matvec_f32 equals the canonical text
 ;   2   a different name lands in the same frame (emission is a function, not a constant)
 ;   4   two emissions of the same name are str_eq (deterministic text — the crystallization
 ;       cache's ground: same emission, same cell)
+;   8   the half lane: form_matvec_f16 over "f16" equals the canonical half text
+;  16   the bfloat lane: form_matvec_bf16 over "bf16" equals the canonical bfloat text
 (do
-    (let want "kernel void form_matvec_f32(device const float* w [[buffer(0)]], device const float* x [[buffer(1)]], device float* y [[buffer(2)]], constant uint& rows [[buffer(3)]], constant uint& cols [[buffer(4)]], uint i [[thread_position_in_grid]]) { if (i >= rows) return; device const float* row = w + i * cols; float acc = 0.0f; uint j = cols; while (j > 0) { j -= 1; float p = row[j] * x[j]; acc = p + acc; } y[i] = acc; }")
+    (let want "kernel void form_matvec_f32(device const float* w [[buffer(0)]], device const float* x [[buffer(1)]], device float* y [[buffer(2)]], constant uint& rows [[buffer(3)]], constant uint& cols [[buffer(4)]], uint i [[thread_position_in_grid]]) { if (i >= rows) return; device const float* row = w + i * cols; float acc = 0.0f; uint j = cols; while (j > 0) { j -= 1; float p = float(row[j]) * float(x[j]); acc = p + acc; } y[i] = float(acc); }")
+    (let want-f16 "kernel void form_matvec_f16(device const half* w [[buffer(0)]], device const half* x [[buffer(1)]], device half* y [[buffer(2)]], constant uint& rows [[buffer(3)]], constant uint& cols [[buffer(4)]], uint i [[thread_position_in_grid]]) { if (i >= rows) return; device const half* row = w + i * cols; float acc = 0.0f; uint j = cols; while (j > 0) { j -= 1; float p = float(row[j]) * float(x[j]); acc = p + acc; } y[i] = half(acc); }")
+    (let want-bf16 "kernel void form_matvec_bf16(device const bfloat* w [[buffer(0)]], device const bfloat* x [[buffer(1)]], device bfloat* y [[buffer(2)]], constant uint& rows [[buffer(3)]], constant uint& cols [[buffer(4)]], uint i [[thread_position_in_grid]]) { if (i >= rows) return; device const bfloat* row = w + i * cols; float acc = 0.0f; uint j = cols; while (j > 0) { j -= 1; float p = float(row[j]) * float(x[j]); acc = p + acc; } y[i] = bfloat(acc); }")
     (let got (jte-matvec-msl "form_matvec_f32"))
     (let other (jte-matvec-msl "mv2"))
     (let c0 (if (str_eq got want) 1 0))
-    (let c1 (if (str_eq other (str_concat "kernel void " (str_concat "mv2" "(device const float* w [[buffer(0)]], device const float* x [[buffer(1)]], device float* y [[buffer(2)]], constant uint& rows [[buffer(3)]], constant uint& cols [[buffer(4)]], uint i [[thread_position_in_grid]]) { if (i >= rows) return; device const float* row = w + i * cols; float acc = 0.0f; uint j = cols; while (j > 0) { j -= 1; float p = row[j] * x[j]; acc = p + acc; } y[i] = acc; }"))) 2 0))
+    (let c1 (if (str_eq other (str_concat "kernel void " (str_concat "mv2" "(device const float* w [[buffer(0)]], device const float* x [[buffer(1)]], device float* y [[buffer(2)]], constant uint& rows [[buffer(3)]], constant uint& cols [[buffer(4)]], uint i [[thread_position_in_grid]]) { if (i >= rows) return; device const float* row = w + i * cols; float acc = 0.0f; uint j = cols; while (j > 0) { j -= 1; float p = float(row[j]) * float(x[j]); acc = p + acc; } y[i] = float(acc); }"))) 2 0))
     (let c2 (if (str_eq (jte-matvec-msl "form_matvec_f32") got) 4 0))
-    (add c0 (add c1 c2)))
+    (let c3 (if (str_eq (jte-matvec-msl-fmt "form_matvec_f16" "f16") want-f16) 8 0))
+    (let c4 (if (str_eq (jte-matvec-msl-fmt "form_matvec_bf16" "bf16") want-bf16) 16 0))
+    (add c0 (add c1 (add c2 (add c3 c4)))))

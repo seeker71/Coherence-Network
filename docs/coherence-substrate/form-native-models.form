@@ -96,8 +96,9 @@
 ;        (whisper-large d_model): interpreted walk 43.05 s; Form-emitted rustc native 2.1 ms; SAME
 ;        value at 1e-15 granularity; 20,077× from one naive single-threaded loop. Remaining for M5:
 ;        the kernel-resident wiring (buffer bridge intern_node SEQUENCE ↔ flat slice, install-as-
-;        named-callable-leaf, melt-when-cool, cost-aware trigger), format-parameterized emission
-;        (bf16/int8 per format-arith.fk semantics), canon matmul vectors, and the GPU/BLAS organ.]
+;        named-callable-leaf, melt-when-cool, cost-aware trigger), format-parameterized emission on
+;        the NATIVE CDYLIB lane (the MSL lane carries f16/bf16 as format rows below; int8 remains),
+;        canon matmul vectors, and the GPU/BLAS organ.]
 ;        ── JIT REALIZATION GAP (measured 2026-06-11, exercising the JIT) ──
 ;        The EMITTER is correct: jit_emit_c on fib lowers to native self-recursive C
 ;        (form_fib calls form_fib directly). But the IN-PROCESS jit_compile dispatch does NOT
@@ -109,17 +110,23 @@
 ;        20,077x) — that is where Form-native model SPEED lives today, not the in-process JIT. Two
 ;        routes forward: fix the in-process dispatch realization, OR wire the model through the
 ;        proven emit-compile-exec lane. Evidence: commit_evidence_2026-06-11_jit_realization_gap.json.]
-;        [GPU LANE RUNS (the metal.ts port, realized as recipe): jte-matvec-msl in jit-tensor-emit.fk
-;        emits the MSL matvec from the SAME emitter-as-recipe discipline — one thread per output row,
-;        inner loop j DOWN (tb-dot's right-fold), mul/add split through a named temporary so no
-;        compiler contraction can change the op order; fp32 is the lane MSL declares (no f64 in device
-;        code — the cross-precision discipline above, both sides held to declared precision).
-;        tests/metal-emit-band.fk → 7 three-way. LIVE WITNESS scripts/metal_matvec_audit.sh (M4 Max,
-;        mathMode=safe, 30 dispatches after warm): 1280×1280 parity 1280/1280 BIT-EXACT, gpu_kernel
-;        0.401 ms vs cpu same-fold-order fp32 1.263 ms; 4096×4096 parity 4096/4096 bit-exact,
-;        0.958 ms vs 12.664 ms (13.2×). Named open: kernel-resident Metal carrier (in-process
-;        dispatch beside rustc/dlopen), bf16/half per format-arith semantics, batching only when a
-;        model stone needs it. Evidence: commit_evidence_2026-06-11_metal_matvec_emitter.json.]
+;        [GPU LANE RUNS, PRECISION AS DATA (the metal.ts port, realized as recipe): jit-tensor-emit.fk
+;        carries ONE emit spine (jte-matvec-msl-spine) and format ROWS (jte-msl-elem/jte-msl-acc:
+;        f32→float, f16→half, bf16→bfloat storage, fp32 accumulator in every lane — M1's
+;        accumulate-wide-store-lane semantics, one RNE rounding at the store boundary, load exact,
+;        mul/add split through a named temporary so no compiler contraction can change the op order,
+;        inner loop j DOWN = tb-dot's right-fold). tests/metal-emit-band.fk → 31 three-way (each
+;        lane's emitted MSL byte-stable). LIVE WITNESS scripts/metal_matvec_audit.sh (M4 Max,
+;        mathMode=safe, 30 dispatches after warm; CPU reference computed in the lane's own conversion
+;        chain, parity gated bit-exact in the lane's storage format — bf16's store-RNE fires on
+;        essentially every row, so agreement proves the format's own tie rule, never a tolerance):
+;        1280² all three lanes parity BIT-EXACT, gpu_kernel f32 0.417 / f16 0.305 / bf16 0.328 ms;
+;        4096² all bit-exact, f32 0.895 vs cpu 13.553 (15.1×), f16 0.811 vs 12.540 (15.5×),
+;        bf16 0.823 vs 12.729 ms (15.5×). MSL bfloat is Metal 3.1+ — the runner gates at runtime
+;        and skips-with-name where absent (this host carries it). Named open: kernel-resident Metal
+;        carrier (in-process dispatch beside rustc/dlopen), batching only when a model stone needs
+;        it. Evidence: commit_evidence_2026-06-11_metal_matvec_emitter.json (fp32 first stone),
+;        commit_evidence_2026-06-11_metal_format_lanes.json (half/bfloat lanes).]
 ;   M6  whisper-tiny block 0 — carrier loads openai/whisper-tiny safetensors (or mlx-community/whisper-tiny,
 ;        already referenced in experiments/satsang-voice), encodes block-0 weights via M2, runs M4 over
 ;        them, matches the HF reference activation within epsilon. First real model in the body. (Even
