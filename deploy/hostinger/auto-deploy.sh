@@ -741,14 +741,19 @@ ensure_kernel_router_canary() {
 
   for service in "${canary_services[@]}"; do
     local listener_probe_path="/api/attention/kernel-runtime"
+    local listener_wait_seconds=90
+    local listener_curl_timeout_seconds=5
     if [[ "$service" == "kernel-router-bml-front-door" ]]; then
       listener_probe_path="/api/utils/kernel_status"
+      listener_wait_seconds=360
+      listener_curl_timeout_seconds=10
     fi
-    deadline=$(( $(date +%s) + 90 ))
+    log "kernel-router canary: waiting for ${service} listener at ${listener_probe_path} (${listener_wait_seconds}s budget)"
+    deadline=$(( $(date +%s) + listener_wait_seconds ))
     listener_ready=0
     while (( $(date +%s) < deadline )); do
       if docker compose "${compose_args[@]}" exec -T "$service" sh -lc \
-        "curl -fsS --max-time 5 -o /dev/null http://127.0.0.1:8080${listener_probe_path}" \
+        "curl -fsS --max-time ${listener_curl_timeout_seconds} -o /dev/null http://127.0.0.1:8080${listener_probe_path}" \
         >/dev/null 2>&1; then
         listener_ready=1
         break
@@ -756,7 +761,9 @@ ensure_kernel_router_canary() {
       sleep 3
     done
     if [[ "$listener_ready" != "1" ]]; then
-      log "FAIL: $service listener did not accept local HTTP at ${listener_probe_path} within 90s"
+      log "FAIL: $service listener did not accept local HTTP at ${listener_probe_path} within ${listener_wait_seconds}s"
+      docker compose "${compose_args[@]}" ps 2>&1 | tee -a "$LOG_FILE" || true
+      docker compose "${compose_args[@]}" logs --tail=120 "$service" 2>&1 | tee -a "$LOG_FILE" || true
       exit 1
     fi
   done
