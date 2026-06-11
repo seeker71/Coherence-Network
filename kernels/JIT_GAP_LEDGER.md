@@ -40,3 +40,32 @@ keystone is gap #1: the compiled native is not realized at runtime. When the
 sub-agent lands gap #1, re-run these probes with timing — float and list
 workloads should drop to native speed in the same breath. Then gaps #3/#4 widen
 coverage further (masks/gating need logic; inner helpers need nested-defn lift).
+
+### Turn-key fix-sketches for the follow-on gaps (read from jit.go, 2026-06-11)
+
+Ready to pick up once gap #1 (dispatch realization) lands. Each names the exact
+site and the lowering. These are SMALL, Go-only, no parity risk.
+
+- **Gap #3 — logic ops** (`jit.go:436`, `case RBasicLogic`). Today: `unsupported`.
+  Lowering: emit C/Go boolean expressions over the int subset. `and` →
+  `(((a) != 0) && ((b) != 0)) ? 1 : 0`, `or` → `|| ... ? 1 : 0`, `not` →
+  `((a) == 0) ? 1 : 0`. Read the op from `cat.Inst` (RLogicAnd/Or/Not) the same
+  way `emitGoCompare`/`emitGoMath` read theirs. and/or are BINARY in the subset
+  (the stdlib trap) — emit two-arg only; reject 3-arg with a clear unsupported.
+  Unblocks: masks, gates, any recipe with a boolean guard (model attention masks).
+
+- **Gap #4 — nested defn** (`jit.go:463`, `case RBasicFnDef`). Today: `unsupported`.
+  Lowering: the emitter ALREADY lifts sibling functions via `plan.helpers` +
+  `plan.emitting`/`plan.emitted` (see `emitGoFnCall` at jit.go ~725). A nested
+  defn with NO free-variable capture (only its own params + globals) can be
+  lifted as a plan-level sibling helper exactly like a top-level one. Refuse ONLY
+  nested defns that capture an outer LOCAL (the documented closures-over-outer
+  limit). Detect capture by walking the inner body's idents against the inner
+  params + known helpers. Unblocks: any recipe factored with inner helpers.
+
+- **Gap #2 — per-call dispatch overhead** (the map lookup + arg-kind scan on every
+  top-level call). After gap #1, profile whether this matters: for deep-recursive
+  shapes the native carries the inner loop so it's a one-time cost; for
+  many-distinct-top-level-calls (a model's per-token loop) it could add up. Lift
+  only with a measured row showing it dominates — otherwise leave it (the scan is
+  cheap relative to any real compute). Don't pre-optimize.
