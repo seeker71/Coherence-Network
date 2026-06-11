@@ -1,0 +1,118 @@
+; signal-metabolism.fk — the cell's nervous loop: a signal (infer-error, pain, surprise,
+; warning, error, fatal) routes into the belief-recipe bank, the chosen row RUNS on the
+; event, the witnessed outcome becomes a receipt, and the receipts re-rank the routing —
+; auto-ml as the cell learning WHICH teaching serves WHICH kind of arrival. When pressure
+; is high and no row has earned trust, the loop escalates to auto-research: the operator
+; fallback of when-the-pressure-comes, grown into an inquiry trigger.
+;
+; The signal ladder (kind codes):
+;   1 infer-error   prediction != arrival     (drift-detect / active-inference's surprise)
+;   2 pain          pressure without movement (the felt lane — when-the-pressure-comes)
+;   3 surprise      below the recognition floor (novelty.fk — honest NEW, never forced)
+;   4 warning       outside the band, recoverable (anomaly-band / alert-gate's salience)
+;   5 error         an operation failed, recoverable
+;   6 fatal         cell integrity threatened — REFLEX lane, no deliberation
+;
+; Admissibility is DATA — per kind, which bank rows may carry the discharge (row codes
+; from belief-recipes: 1 witness · 2 alchemy · 3 second-arrow · 4 dichotomy · 5 surrender
+; · 6 cleanse · 7 causal · 8 maybe). Auto-routed kinds draw only on rows the event shape
+; can dispatch (witness, alchemy, second-arrow, causal, maybe-as-hold); pain keeps the
+; full bank — its selection belongs to the felt lane (choose_strategy resonance), with
+; receipts as ground. A single-row table IS a reflex: routed without consulting receipts
+; — the sub-awareness lane of living-cell.form, pre-committed like a JIT-compiled skill.
+;
+; Receipts are (kind row success fail) counters; the score is success − fail, integer,
+; division-free (champion-challenger's proven-count spine turned onto routing). The
+; champion for a kind is the admissible row with the highest earned score — authority
+; flips only on witnessed outcomes, never on asserted fit.
+;
+; Escalation composes alert-gate's restraint shape (two necessary conditions, one AND):
+; pressure must EXCEED the operator threshold AND the best earned score must sit below
+; the trust floor. Then — and only then — the signal becomes a research question for
+; autoresearch-loop (genome = candidate rows/configs the bank does not yet hold).
+;
+; Proven by: tests/signal-metabolism-band.fk (three-way at validate.sh), composing
+; geometric-learning.fk, metabolic-learning.fk, belief-recipes.fk.
+(do
+    ; --- the signal: (kind pressure) — what arrived, how hard it presses ---
+    (defn sgm-signal (kind pressure) (list kind pressure))
+    (defn sgm-kind (s) (nth s 0))
+    (defn sgm-pressure (s) (nth s 1))
+
+    ; --- admissibility tables: per kind, the rows that may carry the discharge ---
+    (defn sgm-admissible (kind)
+        (if (eq kind 1) (list 2 8 7)
+        (if (eq kind 2) (list 1 2 3 4 5 6 7 8)
+        (if (eq kind 3) (list 2 1 8)
+        (if (eq kind 4) (list 1 8 7)
+        (if (eq kind 5) (list 7 2 8)
+        (if (eq kind 6) (list 7)
+            (empty))))))))
+
+    ; --- a reflex is a single-row table: pre-committed, receipts never consulted ---
+    (defn sgm-reflex? (kind) (if (eq (len (sgm-admissible kind)) 1) 1 0))
+
+    ; --- receipts: (kind row success fail); the auto-ml ground ---
+    (defn sgm-note (receipts kind row ok)
+        (if (eq (len receipts) 0)
+            (list (list kind row (if (eq ok 1) 1 0) (if (eq ok 1) 0 1)))
+            (if (and (eq (nth (head receipts) 0) kind)
+                     (eq (nth (head receipts) 1) row))
+                (cons (list kind row
+                            (add (nth (head receipts) 2) (if (eq ok 1) 1 0))
+                            (add (nth (head receipts) 3) (if (eq ok 1) 0 1)))
+                      (tail receipts))
+                (cons (head receipts) (sgm-note (tail receipts) kind row ok)))))
+    (defn sgm-score (receipts kind row)
+        (if (eq (len receipts) 0) 0
+            (if (and (eq (nth (head receipts) 0) kind)
+                     (eq (nth (head receipts) 1) row))
+                (sub (nth (head receipts) 2) (nth (head receipts) 3))
+                (sgm-score (tail receipts) kind row))))
+
+    ; --- the champion row for a kind: highest earned score, attested order breaks ties ---
+    (defn sgm-champion-walk (receipts kind rows best bestrow)
+        (if (eq (len rows) 0) bestrow
+            (if (gt (sgm-score receipts kind (head rows)) best)
+                (sgm-champion-walk receipts kind (tail rows)
+                    (sgm-score receipts kind (head rows)) (head rows))
+                (sgm-champion-walk receipts kind (tail rows) best bestrow))))
+    (defn sgm-champion (receipts kind)
+        (sgm-champion-walk receipts kind (tail (sgm-admissible kind))
+            (sgm-score receipts kind (head (sgm-admissible kind)))
+            (head (sgm-admissible kind))))
+
+    ; --- routing: reflex bypasses deliberation; everything else earns its champion ---
+    (defn sgm-route (signal receipts)
+        (if (eq (sgm-reflex? (sgm-kind signal)) 1)
+            (head (sgm-admissible (sgm-kind signal)))
+            (sgm-champion receipts (sgm-kind signal))))
+
+    ; --- run the routed row on the event (the auto-dispatchable lane) ---
+    ; 8 (maybe) holds: no update on a single arrival — banking the event for the
+    ; batch is the caller's lane, and the hold IS the farmer's signature.
+    (defn sgm-apply (row edges x y)
+        (if (eq row 1) (br-witness edges x y)
+        (if (eq row 2) (br-alchemy edges x y)
+        (if (eq row 3) (br-second-arrow edges x y)
+        (if (eq row 7) (br-causal edges x y 1.0)
+            edges)))))
+
+    ; --- escalation to auto-research: pressure high AND no row has earned trust ---
+    ; alert-gate's restraint shape: two necessary conditions joined by one AND.
+    (defn sgm-escalate? (signal best-score pth sfloor)
+        (if (and (gt (sgm-pressure signal) pth) (lt best-score sfloor)) 1 0))
+
+    ; --- one full nervous beat: route, run, receipt — returns (edges' receipts' row) ---
+    ; ok = the movement reduced the pressure (or held it, for the hold-shaped rows).
+    (defn sgm-beat (signal edges x y receipts)
+        (sgm-beat-after (sgm-route signal receipts) signal edges x y receipts))
+    (defn sgm-beat-after (row signal edges x y receipts)
+        (sgm-beat-done row
+            (sgm-apply row edges x y) signal x y receipts))
+    (defn sgm-beat-done (row edges2 signal x y receipts)
+        (list edges2
+              (sgm-note receipts (sgm-kind signal) row
+                  (if (gt (mtb-pressure edges2 x y) (sgm-pressure signal)) 0 1))
+              row))
+    0)

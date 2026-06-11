@@ -1,0 +1,22 @@
+; preludes: form-stdlib/jit-tensor-emit.fk
+;
+; metal-emit-band — the GPU matvec emitter as recipe, proven three-way: the emitted MSL
+; kernel source is byte-identical across kernels (str_eq against the canonical text), the
+; function name parameterizes cleanly, and the emission is deterministic. The text carries
+; tb-dot's exact right-fold (j counts DOWN) with the multiply and add split through a named
+; temporary so no Metal compiler contraction can change the recipe's op order — the same
+; conformance-by-construction the rust emission rides, declared at fp32 (MSL has no f64).
+;
+; Verdict 7 when the emission lands:
+;   1   the full emitted MSL for form_matvec_f32 equals the canonical text
+;   2   a different name lands in the same frame (emission is a function, not a constant)
+;   4   two emissions of the same name are str_eq (deterministic text — the crystallization
+;       cache's ground: same emission, same cell)
+(do
+    (let want "kernel void form_matvec_f32(device const float* w [[buffer(0)]], device const float* x [[buffer(1)]], device float* y [[buffer(2)]], constant uint& rows [[buffer(3)]], constant uint& cols [[buffer(4)]], uint i [[thread_position_in_grid]]) { if (i >= rows) return; device const float* row = w + i * cols; float acc = 0.0f; uint j = cols; while (j > 0) { j -= 1; float p = row[j] * x[j]; acc = p + acc; } y[i] = acc; }")
+    (let got (jte-matvec-msl "form_matvec_f32"))
+    (let other (jte-matvec-msl "mv2"))
+    (let c0 (if (str_eq got want) 1 0))
+    (let c1 (if (str_eq other (str_concat "kernel void " (str_concat "mv2" "(device const float* w [[buffer(0)]], device const float* x [[buffer(1)]], device float* y [[buffer(2)]], constant uint& rows [[buffer(3)]], constant uint& cols [[buffer(4)]], uint i [[thread_position_in_grid]]) { if (i >= rows) return; device const float* row = w + i * cols; float acc = 0.0f; uint j = cols; while (j > 0) { j -= 1; float p = row[j] * x[j]; acc = p + acc; } y[i] = acc; }"))) 2 0))
+    (let c2 (if (str_eq (jte-matvec-msl "form_matvec_f32") got) 4 0))
+    (add c0 (add c1 c2)))

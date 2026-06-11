@@ -1602,10 +1602,9 @@ export class Kernel {
       }
       return acc;
     });
-    this.registerNative("str_eq", catCompareEq(), (_k, args) => ({
-      kind: "bool",
-      bool: argStr(args, 0) === argStr(args, 1),
-    }));
+    this.registerNative("str_eq", catCompareEq(), (_k, args) =>
+      boolInt(argStr(args, 0) === argStr(args, 1)),
+    );
     // int_to_str — value-to-string for trivial leaves. Historical name
     // (first use: line numbers in cell-trace.fk); semantics is "render
     // any trivial value as text" so emit-engine.fk's leaf walker can
@@ -2972,17 +2971,17 @@ export class Kernel {
         a.level === b.level &&
         a.type === b.type &&
         a.inst === b.inst;
-      return { kind: "bool", bool: equal };
+      return boolInt(equal);
     });
-    // value_eq — polymorphic equality across Value kinds. Returns true
+    // value_eq — polymorphic equality across Value kinds. Answers 1
     // when both args have the same kind AND compare equal within that
-    // kind. Cross-kind returns false. Use when a Form-side function
+    // kind. Cross-kind answers 0. Use when a Form-side function
     // holds tagged values that may be either strings or NodeIDs —
     // e.g. domain/lens in bmf-symbol-context.
     this.registerNative("value_eq", catCompareEq(), (_k, args) => {
       const a = args[0]!;
       const b = args[1]!;
-      return { kind: "bool", bool: valueEqual(a, b) };
+      return boolInt(valueEqual(a, b));
     });
     this.registerNative("serialize-recipe", catWitness(), (k, args) => {
       const out: number[] = [];
@@ -4383,6 +4382,12 @@ function walkMath(
   return { kind: "int", int: acc };
 }
 
+// boolInt — the truth family's acknowledgment shape: 0/1 integer states
+// (axiom-1) so eq/lt/and/not/node_eq/… answers feed arithmetic on every kernel.
+function boolInt(b: boolean): Value {
+  return { kind: "int", int: b ? 1 : 0 };
+}
+
 function walkCompare(
   k: Kernel,
   op: number,
@@ -4393,13 +4398,15 @@ function walkCompare(
   const av = walk(k, kids[0]!, frame);
   const bv = walk(k, kids[1]!, frame);
 
-  // Width-mixing in comparisons: if either side is float, compare as float;
-  // if either side is bigint, compare as bigint; else as int (bool operands
-  // carry axiom-1's two states as 1/0 — sibling of Rust's as_int). The
-  // answer is itself the two states — Int 0/1 — on every path, the same
-  // shape the JIT's emitted C produces, so a comparison flows directly
-  // into arithmetic. Structural equality over non-numeric values lives in
-  // value_eq / str_eq / node_eq.
+  // A comparison acknowledges with the 0/1 integer states (axiom-1,
+  // core-axioms.form) so its answer flows directly into arithmetic —
+  // the shape the compiled lane's JS coercion already implied. Proven
+  // three-way by tests/eq-shape-band.fk.
+  // Width-mixing: if either side is float, compare as float; if either
+  // side is bigint, compare as bigint; else as int (bool operands carry
+  // axiom-1's two states as 1/0 — sibling of Rust's as_int, including
+  // the panic on non-numeric operands). Structural equality over
+  // non-numeric values lives in value_eq / str_eq / node_eq.
   let r: boolean;
   if (av.kind === "f32" || av.kind === "f64" || bv.kind === "f32" || bv.kind === "f64") {
     const a = expectFloat(av, "compare");
@@ -4438,7 +4445,7 @@ function walkCompare(
       default: throw new Error(`compare: unknown op ${op}`);
     }
   }
-  return { kind: "int", int: r ? 1 : 0 };
+  return boolInt(r);
 }
 
 function valueEqual(a: Value, b: Value): boolean {
@@ -4564,20 +4571,23 @@ function walkLogic(
   kids: readonly NodeID[],
   frame: Frame,
 ): Value {
+  // Logic answers join the comparison family's 0/1 integer states
+  // (axiom-1) — truth has one value shape, so (mul (and ...) n) flows
+  // exactly like (mul (eq ...) n).
   if (op === RLogic.NOT) {
     if (kids.length !== 1) throw new Error("not: need exactly 1 arg");
     const v = walk(k, kids[0]!, frame);
-    return { kind: "int", int: truthy(v) ? 0 : 1 };
+    return boolInt(!truthy(v));
   }
   if (kids.length < 2) throw new Error("and/or: need at least 2 args");
   for (let i = 0; i < kids.length; i++) {
     const v = walk(k, kids[i]!, frame);
     const b = truthy(v);
-    if (op === RLogic.AND && !b) return { kind: "int", int: 0 };
-    if (op === RLogic.OR && b) return { kind: "int", int: 1 };
-    if (i === kids.length - 1) return { kind: "int", int: b ? 1 : 0 };
+    if (op === RLogic.AND && !b) return boolInt(false);
+    if (op === RLogic.OR && b) return boolInt(true);
+    if (i === kids.length - 1) return boolInt(b);
   }
-  return { kind: "int", int: op === RLogic.AND ? 1 : 0 };
+  return boolInt(op === RLogic.AND);
 }
 
 function walkCond(

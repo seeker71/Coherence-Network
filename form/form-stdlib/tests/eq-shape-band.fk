@@ -1,26 +1,39 @@
-; eq-shape-band — axiom-1's two states are the value shape of every truth
-; answer, three-way: a comparison or logic result IS the integer 0 or 1
-; (states are 0/1/nothing), so it flows directly into arithmetic on all
-; sibling kernels — the same shape the JIT's emitted C produces. No
-; if-reduction stands between a question and its use; this verdict is
-; itself composed of eq answers multiplied by bit weights.
-;
-; Verdict 255 when the shape holds:
-;   1    eq feeds mul directly: (mul (eq 2 2) 5) is 5
-;   2    the false state is 0, a value that multiplies: (mul (eq 1 2) 7) is 0
-;   4    ordering answers add: (lt 1 2) + (gt 1 2) is 1
-;   8    logic answers feed arithmetic: (mul (and (eq 1 1) (lt 0 1)) 7) is 7
-;   16   not is the 0/1 flip: (not (eq 1 2)) + (not (eq 3 3)) is 1
-;   32   the float path answers in the same two states: (mul (lt 1.5 2.5) 3) is 3
-;   64   a bool literal carries its state into eq as 1/0: (eq (gt 3 2) true) is 1
-;   128  an answer is the next question's operand: (eq 4 4) + (eq 4 5) is 1
+; eq-shape-band.fk — the truth family's acknowledgment contract: eq/ne/lt/
+; le/gt/ge, and/or/not, node_eq, value_eq, and str_eq answer with the 0/1
+; integer states (axiom-1, core-axioms.form) on every kernel, so a truth
+; answer flows DIRECTLY into arithmetic with bit-identical results — no
+; if-reduction needed. This band deliberately uses mul/sub/lt/le (outside
+; the curated band-verdict subset): feeding truth answers into arithmetic
+; IS the claim under test. Bool literals join through the same door —
+; operand coercion carries true/false as 1/0 (Rust as_int and siblings).
+; Self-contained — kernel verbs only, no preludes.
 (do
-    (let c0 (mul (eq (mul (eq 2 2) 5) 5) 1))
-    (let c1 (mul (eq (mul (eq 1 2) 7) 0) 2))
-    (let c2 (mul (eq (add (lt 1 2) (gt 1 2)) 1) 4))
-    (let c3 (mul (eq (mul (and (eq 1 1) (lt 0 1)) 7) 7) 8))
-    (let c4 (mul (eq (add (not (eq 1 2)) (not (eq 3 3))) 1) 16))
-    (let c5 (mul (eq (mul (lt 1.5 2.5) 3) 3) 32))
-    (let c6 (mul (eq (gt 3 2) true) 64))
-    (let c7 (mul (eq (add (eq 4 4) (eq 4 5)) 1) 128))
-    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
+    ; c0 — the arena-melt crash shape: an equal eq fed straight into mul.
+    (let c0 (if (eq (mul (eq 2 2) 5) 5) 1 0))
+    ; c1 — the unequal case annihilates through mul.
+    (let c1 (if (eq (mul (eq 2 3) 5) 0) 2 0))
+    ; c2 — eq answers chain through add: 1 + 0.
+    (let c2 (if (eq (add (eq 1 1) (eq 1 2)) 1) 4 0))
+    ; c3 — the ordering family in one arithmetic chain: lt+le+gt+ge = 1+1+1+0.
+    (let c3 (if (eq (add (add (lt 1 2) (le 2 2)) (add (gt 3 2) (ge 2 3))) 3) 8 0))
+    ; c4 — ne both ways through sub: 1 - 0.
+    (let c4 (if (eq (sub (ne 1 2) (ne 2 2)) 1) 16 0))
+    ; c5 — node_eq feeds mul: same blueprint ×3, different blueprints add 0.
+    (let c5 (if (eq (add (mul (node_eq (bp "add") (bp "add")) 3)
+                         (node_eq (bp "add") (bp "mul"))) 3) 32 0))
+    ; c6 — the answer is itself comparable: eq-of-eq against the 0/1 states.
+    (let c6 (if (eq (add (eq (eq 5 5) 1) (eq (eq 5 6) 0)) 2) 64 0))
+    ; c7 — the float comparison path acknowledges the same integer states.
+    (let c7 (if (eq (mul (gt 2.5 1.5) 4) 4) 128 0))
+    ; c8 — str_eq and value_eq answer 0/1: positives add to 2, negatives to 0.
+    (let c8 (if (eq (add (add (str_eq "a" "a") (value_eq 7 7))
+                         (add (str_eq "a" "b") (value_eq 7 "7"))) 2) 256 0))
+    ; c9 — logic answers feed arithmetic: (and ...)×7 + (or ...)×5 = 12.
+    (let c9 (if (eq (add (mul (and (eq 1 1) (lt 0 1)) 7)
+                         (mul (or (eq 1 2) (eq 2 2)) 5)) 12) 512 0))
+    ; c10 — not is the 0/1 flip, additive: 1 + 0.
+    (let c10 (if (eq (add (not (eq 1 2)) (not (eq 3 3))) 1) 1024 0))
+    ; c11 — bool literals carry axiom-1's states into eq as 1/0: 1 + 1.
+    (let c11 (if (eq (add (eq (gt 3 2) true) (eq false 0)) 2) 2048 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7
+        (add c8 (add c9 (add c10 c11))))))))))))

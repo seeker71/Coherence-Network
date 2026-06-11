@@ -107,13 +107,13 @@ const PAGE_ASSERTIONS: PageAssertion[] = [
     route: "/contributions",
     file: "app/contributions/page.tsx",
     apiHints: ["/api/contributions", "/api/coherence/score", "/api/assets", "getApiBase()"],
-    dynamicHints: [/filteredRows\.slice/, /liveCoherenceScore/, /contributorNames/],
+    dynamicHints: [/filteredRows\.map/, /liveCoherenceScore/, /contributorNames/],
   },
   {
     route: "/assets",
     file: "app/assets/page.tsx",
     apiHints: ["/api/assets", "getApiBase()"],
-    dynamicHints: [/filteredRows\.slice/, /status === "ok"/, /`\/assets\/\$\{encodeURIComponent\(a\.id\)\}`/],
+    dynamicHints: [/filteredRows\.map/, /assets\.loading/, /`\/assets\/\$\{encodeURIComponent\(a\.id\)\}`/],
   },
   {
     route: "/assets/[asset_id]",
@@ -205,7 +205,10 @@ describe("each page renders dynamic API content", () => {
 describe("fallback messages carry data-placeholder attribute", () => {
   it("keeps explicit fallback or loading messages in scoped pages", () => {
     const requiredAnnotations: Array<{ file: string; textHint: string }> = [
-      { file: "app/page.tsx", textHint: "No recent activity yet. Be the first to share an idea." },
+      // Homepage fallback copy is i18n: the page renders the message key and
+      // the en bundle carries the visible text.
+      { file: "app/page.tsx", textHint: 't("home.emptyActivity")' },
+      { file: "messages/en.json", textHint: '"emptyActivity": "No recent activity yet. Be the first to share an idea."' },
       { file: "app/diagnostics/page.tsx", textHint: "The diagnostics API is not reachable right now." },
       { file: "app/specs/page.tsx", textHint: "No specs are visible yet. Once lineage or registry data lands, this page will show the linked ideas, contributors, and implementation proof automatically." },
       { file: "app/usage/page.tsx", textHint: "Provider stats are not available right now. Check back once the API is connected." },

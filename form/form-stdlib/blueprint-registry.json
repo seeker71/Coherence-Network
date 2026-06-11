@@ -4831,6 +4831,84 @@
    "pkg": 1,
    "level": 2,
    "type": 99,
+   "inst": 1940,
+   "name": "AO-OFFER",
+   "meaning": "An unsolicited afferent offer: a world-event as a cell — (line, at-tick, payload). Signals and interrupts are two readings of this one shape.",
+   "aliases": [],
+   "reuse": 1,
+   "defined_in": [
+    "form/form-stdlib/afferent-offer.fk"
+   ]
+  },
+  {
+   "pkg": 1,
+   "level": 2,
+   "type": 99,
+   "inst": 1941,
+   "name": "AO-ENTRY",
+   "meaning": "One handler-table row: line ↦ handler-recipe name (signal number or IRQ line to handler, as data).",
+   "aliases": [],
+   "reuse": 1,
+   "defined_in": [
+    "form/form-stdlib/afferent-offer.fk"
+   ]
+  },
+  {
+   "pkg": 1,
+   "level": 2,
+   "type": 99,
+   "inst": 1942,
+   "name": "AO-TABLE",
+   "meaning": "The handler table as a cell — introspectable, shippable dispatch surface for afferent offers.",
+   "aliases": [],
+   "reuse": 1,
+   "defined_in": [
+    "form/form-stdlib/afferent-offer.fk"
+   ]
+  },
+  {
+   "pkg": 1,
+   "level": 2,
+   "type": 99,
+   "inst": 1943,
+   "name": "AO-MASK",
+   "meaning": "The boundary's currently-closed doors — sigprocmask and the interrupt controller's mask register as one shape.",
+   "aliases": [],
+   "reuse": 1,
+   "defined_in": [
+    "form/form-stdlib/afferent-offer.fk"
+   ]
+  },
+  {
+   "pkg": 1,
+   "level": 2,
+   "type": 99,
+   "inst": 1944,
+   "name": "AO-DISPATCH",
+   "meaning": "The node-acknowledgment of an afferent offer: which handler fires, answering which offer (correlation by content).",
+   "aliases": [],
+   "reuse": 1,
+   "defined_in": [
+    "form/form-stdlib/afferent-offer.fk"
+   ]
+  },
+  {
+   "pkg": 1,
+   "level": 2,
+   "type": 99,
+   "inst": 1945,
+   "name": "AO-NOTHING",
+   "meaning": "The nothing-acknowledgment as a visible cell: no event in the window — timeout==nothing, shared by the signal and interrupt readings.",
+   "aliases": [],
+   "reuse": 1,
+   "defined_in": [
+    "form/form-stdlib/afferent-offer.fk"
+   ]
+  },
+  {
+   "pkg": 1,
+   "level": 2,
+   "type": 99,
    "inst": 9202,
    "name": "BML-CTOR-ENV",
    "meaning": "Blueprint for a BML constructor's environment record \u2014 the record a constructor body executes against, holding its named fields (hSyntax, strName, hArgs, \u2026). Returned by bml-constructor-env-blueprint in grammars/bml.fk.",
@@ -5507,6 +5585,62 @@
    "reuse": 1,
    "defined_in": [
     "form/form-stdlib/offers-in-flight.fk"
+   ],
+   "curated": true
+  },
+  {
+   "pkg": 1,
+   "level": 2,
+   "type": 99,
+   "inst": 1754,
+   "name": "INSTALL-IFACE",
+   "meaning": "the offered interface of an installable callable \u2014 child 0 the arity as a trivial-int; part of the artifact's own composition so it cannot be claimed apart from what the artifact is",
+   "aliases": [],
+   "reuse": 1,
+   "defined_in": [
+    "form/form-stdlib/install-leaf.fk"
+   ],
+   "curated": true
+  },
+  {
+   "pkg": 1,
+   "level": 2,
+   "type": 99,
+   "inst": 1755,
+   "name": "INSTALL-ARTIFACT",
+   "meaning": "a compiled capability as a cell \u2014 children (INSTALL-IFACE, body recipe); content-addressing makes the interface inseparable from the identity (axiom-3)",
+   "aliases": [],
+   "reuse": 1,
+   "defined_in": [
+    "form/form-stdlib/install-leaf.fk"
+   ],
+   "curated": true
+  },
+  {
+   "pkg": 1,
+   "level": 2,
+   "type": 99,
+   "inst": 1756,
+   "name": "INSTALL-OFFER",
+   "meaning": "an install offer \u2014 children (name trivial-string, INSTALL-ARTIFACT, expected INSTALL-IFACE); the kernel acknowledges by binding the name or acknowledges 0 (refusal)",
+   "aliases": [],
+   "reuse": 1,
+   "defined_in": [
+    "form/form-stdlib/install-leaf.fk"
+   ],
+   "curated": true
+  },
+  {
+   "pkg": 1,
+   "level": 2,
+   "type": 99,
+   "inst": 1757,
+   "name": "INSTALLED-LEAF",
+   "meaning": "one binding in a callable table \u2014 children (name trivial-string, INSTALL-ARTIFACT); the table grows by offer, never rebinds (first-bind-wins)",
+   "aliases": [],
+   "reuse": 1,
+   "defined_in": [
+    "form/form-stdlib/install-leaf.fk"
    ],
    "curated": true
   }

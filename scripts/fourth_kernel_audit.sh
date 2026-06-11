@@ -423,6 +423,7 @@ PORT=8231
 "$work/fkapi" "$PORT" & API_PID=$!
 n=0; while [ $n -lt 40 ]; do
     if curl -sS --max-time 1 -o /dev/null "http://127.0.0.1:$PORT/" 2>/dev/null; then break; fi
+    sleep 0.1   # refused is instant; give the freshly-exec'd server real time to bind
     n=$((n+1))
 done
 code="$(curl -sS --max-time 3 -w '%{http_code}' -o "$work/body.txt" "http://127.0.0.1:$PORT/health" 2>/dev/null)"
@@ -552,6 +553,149 @@ if [[ "$fp1" != "42" || "$fp2" != "111" ]]; then
     echo "FAIL  Form-source parse-and-run broke"; exit 1
 fi
 echo "  the parser is recursive-descent over the source string (a cursor, no tokenizer); op-gap to full bands is m4e4 (defn/let/do/str_*)"
+
+echo
+# ── 18. the live afferent witness — afferent-offer.fk's ao-wait on the real ──
+# clock. The engine (proven → 511 with ticks as data) makes the dispatch|nothing
+# decision at composition; the lowered program (afferent-live.fk) blocks on
+# op 15 TIME through the SAME universal binary. No event in the window →
+# nothing after REAL elapsed time (timeout==nothing, live); an armed timer's
+# tick arrives → its handler fires with the payload — the SIGALRM shape
+# witnessed on a wall clock.
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
+    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" "$FORMDIR/form-stdlib/afferent-offer.fk" \
+    "$FORMDIR/form-stdlib/afferent-live.fk" > "$work/ao-driver.fk"
+cat >> "$work/ao-driver.fk" <<'EOF'
+(let live-table (ao-table (list (ao-entry (ao-sig-alrm) "on-alarm")
+                                (ao-entry (ao-irq-keyboard) "on-key"))))
+(let no-mask (ao-mask (list)))
+(print "==TKEY==")
+(print (fkc-table-file (aolv-fns live-table no-mask (list (ao-irq (ao-irq-keyboard) 0 42)) 2 1000)))
+(print "==TALARM==")
+(print (fkc-table-file (aolv-fns live-table no-mask (list (ao-alarm 1)) 2 1000)))
+(print "==TNOTHING==")
+(print (fkc-table-file (aolv-fns live-table no-mask (list) 1 1000)))
+(print "==END==")
+EOF
+(cd "$FORMDIR" && "$GO_BIN" "$work/ao-driver.fk" 2>/dev/null) > "$work/ao.out"
+sed -n '/^==TKEY==$/,/^==TALARM==$/p' "$work/ao.out" | sed -e '1d' -e '$d' > "$work/t-ao-key.txt"
+sed -n '/^==TALARM==$/,/^==TNOTHING==$/p' "$work/ao.out" | sed -e '1d' -e '$d' > "$work/t-ao-alarm.txt"
+sed -n '/^==TNOTHING==$/,/^==END==$/p' "$work/ao.out" | sed -e '1d' -e '$d' > "$work/t-ao-nothing.txt"
+
+ao_run() { # table-file -> "ack elapsed value wall_s time-polls"
+    python3 - "$work/fkwu" "$1" <<'PY'
+import subprocess, sys, time
+t0 = time.perf_counter()
+out = subprocess.run([sys.argv[1], sys.argv[2], "0"], capture_output=True, text=True).stdout.splitlines()
+wall = time.perf_counter() - t0
+print(out[0], out[1], out[2], f"{wall:.3f}", out[17])
+PY
+}
+
+read -r k_ack k_el k_val k_wall k_polls <<<"$(ao_run "$work/t-ao-key.txt")"
+read -r a_ack a_el a_val a_wall a_polls <<<"$(ao_run "$work/t-ao-alarm.txt")"
+read -r n_ack n_el n_val n_wall n_polls <<<"$(ao_run "$work/t-ao-nothing.txt")"
+echo "live afferent witness (ao-wait's verdict breathing op 15 TIME; the SAME universal binary):"
+echo "  latched irq        -> $k_ack elapsed=${k_el}s payload=$k_val wall=${k_wall}s time-polls=$k_polls (already-arrived offer dispatches now)"
+echo "  armed timer (1s)   -> $a_ack elapsed=${a_el}s payload=$a_val wall=${a_wall}s time-polls=$a_polls (the tick ARRIVED on the host clock)"
+echo "  no event, 1s wait  -> $n_ack elapsed=${n_el}s value=$n_val wall=${n_wall}s time-polls=$n_polls (live timeout==nothing, past the deadline)"
+if [[ "$k_ack" != "on-key" || "$k_val" != "42" ]] || [[ "$k_el" != "0" && "$k_el" != "1" ]]; then
+    echo "FAIL  latched-irq dispatch broke"; exit 1
+fi
+if [[ "$a_ack" != "on-alarm" || "$a_el" != "1" || "$a_val" != "0" ]]; then
+    echo "FAIL  armed-timer dispatch broke — the tick did not arrive as the SIGALRM shape"; exit 1
+fi
+if ! python3 -c "import sys; sys.exit(0 if float('$a_wall') < 2.0 else 1)"; then
+    echo "FAIL  the armed timer did not beat its 2s window"; exit 1
+fi
+if [[ "$n_ack" != "nothing" || "$n_el" != "2" || "$n_val" != "0" ]]; then
+    echo "FAIL  live timeout did not acknowledge nothing"; exit 1
+fi
+if ! python3 -c "import sys; sys.exit(0 if float('$n_wall') >= 1.0 else 1)"; then
+    echo "FAIL  the nothing came BEFORE the deadline elapsed — not a live wait"; exit 1
+fi
+echo "  the engine's arms are afferent-offer.fk's, unchanged; only the tick source went live (band: tests/afferent-live-band.fk -> 63)"
+
+echo
+# ── 19. n7 — bands-on-fourth-arm: a REAL stdlib band, unmodified, on fkw ──
+# The m4e3 flattener (form-flatten.fk) reads learning-trend.fk + its band
+# FROM DISK, flattens defn/let/the curated ops onto the walker's table, and
+# the SAME universal binary runs it. The three walking siblings' verdict
+# comes through their own front door (validate.sh — the body's proof
+# machinery, BML core source-compiled there); fkw must return the same
+# number. This is the band ratchet's first click: 0 -> 1.
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
+    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" "$FORMDIR/form-stdlib/form-parse.fk" \
+    "$FORMDIR/form-stdlib/form-flatten.fk" > "$work/flt-driver.fk"
+cat >> "$work/flt-driver.fk" <<'EOF'
+(print "==TLT==")
+(print (fkc-table-file (flt-band-fns (read_file "form-stdlib/learning-trend.fk") (read_file "form-stdlib/tests/learning-trend-band.fk"))))
+(print "==END==")
+EOF
+(cd "$FORMDIR" && "$GO_BIN" "$work/flt-driver.fk" 2>/dev/null) > "$work/flt.out"
+sed -n '/^==TLT==$/,/^==END==$/p' "$work/flt.out" | sed -e '1d' -e '$d' > "$work/t-lt.txt"
+three_way="$(cd "$FORMDIR" && ./validate.sh form-stdlib/core.fk form-stdlib/learning-trend.fk form-stdlib/tests/learning-trend-band.fk 2>/dev/null | sed -n 's/.*→ //p' | head -1)"
+fkw_band="$("$work/fkwu" "$work/t-lt.txt" 0 | head -1)"
+echo "n7 bands-on-fourth-arm — learning-trend-band (UNMODIFIED source, flattened by form-flatten.fk):"
+echo "  three-walker verdict (validate.sh) = $three_way   fkw = $fkw_band   (expect 127)"
+if [[ -z "$three_way" || "$three_way" != "$fkw_band" || "$fkw_band" != "127" ]]; then
+    echo "FAIL  the fourth arm disagrees with the siblings on a real band"; exit 1
+fi
+echo "  bands-on-fourth-arm: 1 (gt/ge/eq/and lowered onto IF/LE; defn -> CALL table; let inlined; lists on the arena)"
+
+echo
+# ── 20. melt-on-cool — the arena crosses its measured boundary and SURVIVES ──
+# Round 1 measured the bump-only carrier: holds to 4095 cells, n=4096 wraps the
+# root onto the sentinel (LEN 0), n=4200 tears the chain (LEN 104). The melt
+# door (arena-melt.fk's proven walk, emitted as fk_mlive/fk_mcopy/fk_melt) fires
+# at the high-water line; live cells cross into fresh space; the carrier doubles
+# only when the live set crowds it. Same universal binary as section 8; the
+# melt readout (allocated live dead cap-from cap-to bytes-reclaimed) on stderr.
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
+    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" > "$work/melt-driver.fk"
+cat >> "$work/melt-driver.fk" <<'EOF'
+(let chain (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-empty)
+                  (fk-cons (fk-arg) (fk-call 1 (fk-sub (fk-arg) (fk-lit 1))))))
+(let chainlen (fk-len (fk-call 1 (fk-arg))))
+(let churn (fk-if (fk-le (fk-arg) (fk-lit 1))
+                  (fk-len (fk-call 1 (fk-lit 1000)))
+                  (fk-add (fk-sub (fk-len (fk-call 1 (fk-lit 1000))) (fk-lit 1000))
+                          (fk-call 0 (fk-sub (fk-arg) (fk-lit 1))))))
+(print "==TCH==")
+(print (fkc-table-file (list chainlen chain)))
+(print "==TCU==")
+(print (fkc-table-file (list churn chain)))
+(print "==END==")
+EOF
+(cd "$FORMDIR" && "$GO_BIN" "$work/melt-driver.fk" 2>/dev/null) > "$work/melt.out"
+sed -n '/^==TCH==$/,/^==TCU==$/p' "$work/melt.out" | sed -e '1d' -e '$d' > "$work/t-chain.txt"
+sed -n '/^==TCU==$/,/^==END==$/p' "$work/melt.out" | sed -e '1d' -e '$d' > "$work/t-churn.txt"
+m64="$("$work/fkwu" "$work/t-chain.txt" 64 2>"$work/me64.txt" | head -1)"
+m4095="$("$work/fkwu" "$work/t-chain.txt" 4095 2>"$work/me4095.txt" | head -1)"
+m4096="$("$work/fkwu" "$work/t-chain.txt" 4096 2>"$work/me4096.txt" | head -1)"
+m4200="$("$work/fkwu" "$work/t-chain.txt" 4200 2>"$work/me4200.txt" | head -1)"
+mchurn="$("$work/fkwu" "$work/t-churn.txt" 5 2>"$work/mechurn.txt" | head -1)"
+echo "melt-on-cool (the round-1 deaths, rerun on the melt-doored carrier):"
+echo "  chain n=64   -> $m64    (dormant below water — no melt line)"
+echo "  chain n=4095 -> $m4095  (held before; still holds, now melting mid-build)"
+echo "  chain n=4096 -> $m4096  (was 0 — the root wrapped onto the sentinel)"
+echo "  chain n=4200 -> $m4200  (was 104 — the chain torn at the wrap)"
+echo "  churn 5x1000 -> $mchurn  (rebuilds cross the water; garbage reclaimed)"
+echo "  melt readout (allocated live dead cap-from cap-to bytes-reclaimed):"
+sed 's/^/    chain n=4200: /' "$work/me4200.txt"
+sed 's/^/    churn 5x1000: /' "$work/mechurn.txt"
+if [[ "$m64" != "64" || "$m4095" != "4095" || "$m4096" != "4096" || "$m4200" != "4200" || "$mchurn" != "1000" ]]; then
+    echo "FAIL  the melt door did not carry the boundary crossing"; exit 1
+fi
+if [[ -s "$work/me64.txt" ]]; then
+    echo "FAIL  melt fired below the water line"; exit 1
+fi
+if ! grep -q '^melt ' "$work/me4200.txt" || ! grep -q '^melt ' "$work/mechurn.txt"; then
+    echo "FAIL  no melt readout where the boundary was crossed"; exit 1
+fi
+awk '/^melt /{ok=($6==8192)}END{exit ok?0:1}' "$work/me4200.txt" || { echo "FAIL  chain melt did not grow the crowded carrier"; exit 1; }
+awk '/^melt /{ok=($4>0 && $6==4096)}END{exit ok?0:1}' "$work/mechurn.txt" || { echo "FAIL  churn melt did not reclaim within the kept carrier"; exit 1; }
+echo "  the melt the recipes prove is the melt the binary DOES — live sets cross the boundary, garbage returns"
 
 echo
 echo "conditions: $(uname -m) $(uname -s), clang -O2, full-process invocations (startup included)"

@@ -585,6 +585,12 @@ type Kernel struct {
 	jitFailed       map[NodeID]bool
 	jitFailedReason map[NodeID]string
 	jitDispatchHits map[NodeID]uint32
+	// installedLeaves — installed-name → artifact body NodeID for callables
+	// bound into k.natives AT RUNTIME by jit_install (the
+	// install-as-named-callable-leaf carrier; protocol:
+	// form-stdlib/install-leaf.fk). Lets Form code distinguish a leaf the
+	// surface grew by offer from a native compiled into the binary.
+	installedLeaves map[NameID]NodeID
 	switchTables    map[NodeID]*switchTable
 }
 
@@ -626,6 +632,7 @@ func NewKernel() *Kernel {
 		jitFailed:       make(map[NodeID]bool),
 		jitFailedReason: make(map[NodeID]string),
 		jitDispatchHits: make(map[NodeID]uint32),
+		installedLeaves: make(map[NameID]NodeID),
 		switchTables:    make(map[NodeID]*switchTable),
 	}
 	k.registerNatives()
@@ -2098,7 +2105,7 @@ func (k *Kernel) registerNatives() {
 		return acc
 	})
 	k.registerNative("str_eq", catCompare(RCompareEq), func(_ *Kernel, args []Value) Value {
-		return Value{Kind: VBool, Bool: args[0].Str == args[1].Str}
+		return boolInt(args[0].Str == args[1].Str)
 	})
 	// int_to_str — value-to-string for trivial leaves. The historical
 	// name reflects its first use (line numbers in cell-trace.fk); its
@@ -2828,6 +2835,33 @@ func (k *Kernel) registerNatives() {
 		k.jitCompiledGoV[bodyKey] = fnv
 		return Value{Kind: VInt, Int: 1}
 	})
+	// jit_install closure-name-str installed-name-str expected-arity →
+	//   the install-as-named-callable-leaf carrier (protocol:
+	//   form-stdlib/install-leaf.fk; band: tests/install-leaf-band.fk).
+	//   Compiles the named closure's body to a host-native artifact (the
+	//   jit.go .so lane, content-addressed plugin cache reused) and binds
+	//   it under installed-name in the kernel's OWN native table at
+	//   runtime — callable from recipes by name, the surface grown by
+	//   offer instead of recompile. Ack (axiom-5):
+	//     node — the artifact's body NodeID (axiom-3: unforgeable identity)
+	//     0    — refusal: installed-name already callable (first-bind-wins),
+	//            expected-arity is not the closure's own interface, or the
+	//            body's shape has no artifact (compile refused)
+	//     nothing — closure-name is not bound to a closure (no cell)
+	k.registerEnvNative("jit_install", catWitness(), func(k *Kernel, env *Frame, args []Value) Value {
+		if len(args) < 3 || args[0].Kind != VStr || args[1].Kind != VStr || args[2].Kind != VInt {
+			return Value{Kind: VNull}
+		}
+		return jitInstallLeaf(k, env, args[0].Str, args[1].Str, args[2].Int)
+	})
+	// installed_leaf? name-str → 1 if the name is a callable the surface
+	// grew at runtime via jit_install, else 0 (build-time natives answer 0).
+	k.registerNative("installed_leaf?", catCompare(RCompareEq), func(k *Kernel, args []Value) Value {
+		if _, ok := k.installedLeaves[k.internName(args[0].Str)]; ok {
+			return Value{Kind: VInt, Int: 1}
+		}
+		return Value{Kind: VInt, Int: 0}
+	})
 	// jit_aliased? form-name-str → 1 if a JIT alias is currently bound
 	// for this name, else 0. Lets Form code introspect dispatch routing.
 	k.registerNative("jit_aliased?", catCompare(RCompareEq), func(k *Kernel, args []Value) Value {
@@ -3504,18 +3538,18 @@ func (k *Kernel) registerNatives() {
 		if args[0].Kind != VNodeID || args[1].Kind != VNodeID {
 			panic(fmt.Sprintf("node_eq: expected NodeID args, got %v and %v", args[0].Kind, args[1].Kind))
 		}
-		return Value{Kind: VBool, Bool: args[0].Nid == args[1].Nid}
+		return boolInt(args[0].Nid == args[1].Nid)
 	})
-	// value_eq — polymorphic equality across all Value kinds. Returns
-	// true when both args have the same kind AND compare equal within
-	// that kind. Cross-kind returns false (str ≠ nodeid even if they
+	// value_eq — polymorphic equality across all Value kinds. Answers
+	// 1 when both args have the same kind AND compare equal within
+	// that kind. Cross-kind answers 0 (str ≠ nodeid even if they
 	// share text). Use this when a Form-side function holds tagged
 	// values that may be either strings or NodeIDs (e.g. domain/lens
 	// in bmf-symbol-context can be either typed-constant NodeIDs or
 	// string literals). Avoids the str_eq/node_eq fork that previously
 	// forced callers to know which type they held.
 	k.registerNative("value_eq", catCompare(RCompareEq), func(k *Kernel, args []Value) Value {
-		return Value{Kind: VBool, Bool: valueEqual(args[0], args[1])}
+		return boolInt(valueEqual(args[0], args[1]))
 	})
 	// intern_node_at — intern composite + record source attribution.
 	// Engine.fk's parser actions call this so every emitted Recipe carries
@@ -4059,58 +4093,64 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 			rv := k.walk(kids[1], env)
 			// Same width-promotion rule as math: float on either side forces
 			// an IEEE comparison. Pure int/int stays integer. Mirrors Rust.
-			// The answer is axiom-1's two states — Int 0/1 — on every path,
-			// the same shape the JIT's emitted C produces, so a comparison
-			// flows directly into arithmetic.
+			// A comparison acknowledges with the 0/1 integer states (axiom-1,
+			// core-axioms.form) so its answer flows directly into arithmetic —
+			// the same shape every JIT lane already lands at the i64 ABI.
+			// Proven three-way by tests/eq-shape-band.fk.
 			if lv.Kind == VFloat || rv.Kind == VFloat {
 				l := lv.AsFloat()
 				r := rv.AsFloat()
 				switch cat.Inst {
 				case RCompareEq:
-					return Value{Kind: VInt, Int: b2i(l == r)}
+					return boolInt(l == r)
 				case RCompareNe:
-					return Value{Kind: VInt, Int: b2i(l != r)}
+					return boolInt(l != r)
 				case RCompareLt:
-					return Value{Kind: VInt, Int: b2i(l < r)}
+					return boolInt(l < r)
 				case RCompareLe:
-					return Value{Kind: VInt, Int: b2i(l <= r)}
+					return boolInt(l <= r)
 				case RCompareGt:
-					return Value{Kind: VInt, Int: b2i(l > r)}
+					return boolInt(l > r)
 				case RCompareGe:
-					return Value{Kind: VInt, Int: b2i(l >= r)}
+					return boolInt(l >= r)
 				}
 			}
 			a := lv.AsInt()
 			b := rv.AsInt()
 			switch cat.Inst {
 			case RCompareEq:
-				return Value{Kind: VInt, Int: b2i(a == b)}
+				return boolInt(a == b)
 			case RCompareNe:
-				return Value{Kind: VInt, Int: b2i(a != b)}
+				return boolInt(a != b)
 			case RCompareLt:
-				return Value{Kind: VInt, Int: b2i(a < b)}
+				return boolInt(a < b)
 			case RCompareLe:
-				return Value{Kind: VInt, Int: b2i(a <= b)}
+				return boolInt(a <= b)
 			case RCompareGt:
-				return Value{Kind: VInt, Int: b2i(a > b)}
+				return boolInt(a > b)
 			case RCompareGe:
-				return Value{Kind: VInt, Int: b2i(a >= b)}
+				return boolInt(a >= b)
 			}
 
 		case RBasicLogic:
+			// Logic consumes truthiness and answers in the comparison
+			// family's 0/1 integer states (axiom-1) — truth has one value
+			// shape, so (mul (and ...) n) flows on every kernel exactly
+			// like (mul (eq ...) n). Mirrors Rust's as_bool and TS truthy
+			// on the consuming side.
 			switch cat.Inst {
 			case RLogicAnd:
 				if !truthy(k.walk(kids[0], env)) {
-					return Value{Kind: VInt, Int: 0}
+					return boolInt(false)
 				}
-				return Value{Kind: VInt, Int: b2i(truthy(k.walk(kids[1], env)))}
+				return boolInt(truthy(k.walk(kids[1], env)))
 			case RLogicOr:
 				if truthy(k.walk(kids[0], env)) {
-					return Value{Kind: VInt, Int: 1}
+					return boolInt(true)
 				}
-				return Value{Kind: VInt, Int: b2i(truthy(k.walk(kids[1], env)))}
+				return boolInt(truthy(k.walk(kids[1], env)))
 			case RLogicNot:
-				return Value{Kind: VInt, Int: b2i(!truthy(k.walk(kids[0], env)))}
+				return boolInt(!truthy(k.walk(kids[0], env)))
 			}
 
 		case RBasicCond:
@@ -4542,12 +4582,13 @@ func truthy(v Value) bool {
 	return true
 }
 
-// b2i — axiom-1's two states as the value shape of every truth answer.
-func b2i(b bool) int64 {
+// boolInt — the truth family's acknowledgment shape: 0/1 integer states
+// (axiom-1) so eq/lt/and/not/node_eq/… answers feed arithmetic on every kernel.
+func boolInt(b bool) Value {
 	if b {
-		return 1
+		return Value{Kind: VInt, Int: 1}
 	}
-	return 0
+	return Value{Kind: VInt, Int: 0}
 }
 
 // ---------------------------------------------------------------------------

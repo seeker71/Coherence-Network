@@ -1,0 +1,179 @@
+; afferent-offer.fk — the unsolicited afferent offer: ONE wait-with-deadline engine
+; where world-events arrive on lines and absence-in-time acknowledges NOTHING;
+; signals and interrupts are two data-level readings of the same shape.
+;
+; The gap this closes (docs/coherence-substrate/linux-as-recipes.form) names the
+; IDENTICAL axiom-composition twice:
+;   (signals    "an unsolicited afferent offer on a channel; timeout==nothing is the SIGALRM shape")
+;   (interrupts "an unsolicited afferent offer; no event in time = nothing (timeout==nothing)")
+; so the body grows ONE engine, never two parallel implementations — the same move
+; geometric-learning.fk made for convolution/message-passing/diffusion/embedding.
+;
+; The axiom-composition (docs/coherence-substrate/core-axioms.form):
+;   axiom-5 offer    — the world speaks to a cell by offering a cell on a line;
+;                      unsolicited means the cell never asked, it only waits
+;   axiom-1 states   — no event in the window acknowledges as NOTHING, the
+;                      first-class third state; timeout == nothing
+;   axiom-4 boundary — only a line the cell's table offers can deliver; a masked
+;                      line is a door currently closed: the offer stays pending,
+;                      unacknowledged, never an error
+;   axiom-3 content-addressing — identical (line at payload) offers intern to ONE
+;                      cell, so POSIX standard-signal coalescing (N raises pending
+;                      = one delivery) falls out of the substrate for free
+;
+; Every part is cells, never control flow:
+;   AO-OFFER    (line at payload)  an unsolicited world-event: which door, when, what
+;   AO-ENTRY    (line handler)     one handler-table row: line ↦ handler-recipe NAME
+;                                  (function-name not function-value — verb-router.fk's
+;                                  sibling-portable dispatch discipline, keyed by an int)
+;   AO-TABLE    (entry*)           the table IS a cell: introspectable, shippable
+;   AO-MASK     (line*)            the boundary's currently-closed doors — sigprocmask
+;                                  and the interrupt controller's mask register are
+;                                  ONE shape with two Linux names
+;   AO-DISPATCH (handler offer)    the node-ack: which handler fires, answering which
+;                                  offer (correlation by content, not by position)
+;   AO-NOTHING                     the nothing-ack as a visible cell — one shared
+;                                  silence across both readings, by construction
+;
+; The engine acknowledges with the {nothing, node} arms of axiom-5's vocabulary:
+;
+;   ao-wait table mask pending deadline → AO-DISPATCH | AO-NOTHING
+;
+; The two readings are thin data instantiations:
+;   signals    — lines are signal numbers (2=INT, 14=ALRM, 15=TERM). A timer armed
+;                for tick T IS a standing unsolicited offer on the ALRM line at T,
+;                so "SIGALRM fires" and "the wait times out" are one structure:
+;                the offer falls inside the window (dispatch) or beyond it
+;                (nothing). timeout==nothing IS the SIGALRM shape, literally.
+;   interrupts — lines are IRQ lines (0=timer, 1=keyboard). A device event latches
+;                a payload on its line; a masked line does not deliver; a silent
+;                line in time acknowledges nothing.
+;
+; Proof: form-stdlib/tests/afferent-offer-band.fk → 511 three-way (Go/Rust/TS).
+
+;; --- Blueprints (substrate-resident; inst slots 1940..1945) ---------
+(let AO-OFFER    (bp "AO-OFFER"))
+(let AO-ENTRY    (bp "AO-ENTRY"))
+(let AO-TABLE    (bp "AO-TABLE"))
+(let AO-MASK     (bp "AO-MASK"))
+(let AO-DISPATCH (bp "AO-DISPATCH"))
+(let AO-NOTHING  (bp "AO-NOTHING"))
+
+;; --- helpers --------------------------------------------------------
+(defn ao-nil? (xs) (eq (len xs) 0))
+
+(defn ao-ints-of (vs)
+    (if (ao-nil? vs) (list)
+        (cons (intern_trivial_int (head vs))
+              (ao-ints-of (tail vs)))))
+
+;; --- the offer: an unsolicited world-event as a cell ----------------
+;; line is the door it knocks on, at the tick it arrives, payload what
+;; it carries. Same (line at payload) → same NodeID: coalescing.
+(defn ao-offer (line at payload)
+    (intern_node AO-OFFER
+        (list (intern_trivial_int line)
+              (intern_trivial_int at)
+              payload)))
+
+(defn ao-offer-line    (o) (node_value (head (node_children o))))
+(defn ao-offer-at      (o) (node_value (head (tail (node_children o)))))
+(defn ao-offer-payload (o) (head (tail (tail (node_children o)))))
+
+;; --- the handler table: line ↦ handler-recipe name, as cells --------
+(defn ao-entry (line handler-name)
+    (intern_node AO-ENTRY
+        (list (intern_trivial_int line)
+              (intern_trivial_string handler-name))))
+
+(defn ao-entry-line    (e) (node_value (head (node_children e))))
+(defn ao-entry-handler (e) (head (tail (node_children e))))
+
+(defn ao-table (entries) (intern_node AO-TABLE entries))
+(defn ao-table-entries (table) (node_children table))
+
+;; find-terminal idiom (resource-port.fk): () when absent, (entry) when found.
+(defn ao-find-entry (entries line)
+    (if (ao-nil? entries) (empty)
+        (if (eq (ao-entry-line (head entries)) line)
+            (list (head entries))
+            (ao-find-entry (tail entries) line))))
+
+(defn ao-line-handled? (table line)
+    (if (eq (len (ao-find-entry (ao-table-entries table) line)) 1) 1 0))
+
+(defn ao-handler-for (table line)
+    (ao-entry-handler (head (ao-find-entry (ao-table-entries table) line))))
+
+;; --- the mask: the boundary's currently-closed doors -----------------
+(defn ao-mask (lines) (intern_node AO-MASK (ao-ints-of lines)))
+
+(defn ao-masked-in? (kids line)
+    (if (ao-nil? kids) 0
+        (if (eq (node_value (head kids)) line) 1
+            (ao-masked-in? (tail kids) line))))
+
+(defn ao-masked? (mask line) (ao-masked-in? (node_children mask) line))
+
+;; --- the two acknowledgments -----------------------------------------
+;; nothing is a CELL (one NodeID), distinct from an empty frame — both
+;; readings share it because there is one engine to be silent.
+(defn ao-nothing () AO-NOTHING)
+(defn ao-nothing? (x) (if (node_eq x AO-NOTHING) 1 0))
+
+(defn ao-dispatch (handler-name offer)
+    (intern_node AO-DISPATCH (list handler-name offer)))
+;; ao-wait's vocabulary is exactly {nothing, dispatch-node}; not-nothing IS dispatch.
+(defn ao-dispatch? (x) (if (eq (ao-nothing? x) 1) 0 1))
+(defn ao-dispatch-handler (d) (node_value (head (node_children d))))
+(defn ao-dispatch-offer   (d) (head (tail (node_children d))))
+
+;; --- THE engine: wait-with-deadline ----------------------------------
+;; An offer delivers when it is in time (at <= deadline, inclusive), its
+;; door is open (not masked), and its door is offered at all (in the
+;; table). The first deliverable pending offer is dispatched; if none
+;; qualifies, the wait acknowledges nothing. Pure — pending is data;
+;; a masked offer simply stays pending, exactly Linux's pending set.
+(defn ao-deliverable? (table mask offer deadline)
+    (if (gt (ao-offer-at offer) deadline) 0
+        (if (eq (ao-masked? mask (ao-offer-line offer)) 1) 0
+            (ao-line-handled? table (ao-offer-line offer)))))
+
+(defn ao-wait (table mask pending deadline)
+    (if (ao-nil? pending) (ao-nothing)
+        (if (eq (ao-deliverable? table mask (head pending) deadline) 1)
+            (ao-dispatch (ao-handler-for table (ao-offer-line (head pending)))
+                         (head pending))
+            (ao-wait table mask (tail pending) deadline))))
+
+;; --- acknowledge: consume the delivered offer ------------------------
+;; Removes every pending copy node_eq to the delivered offer — which is
+;; exactly POSIX coalescing: duplicate standard signals were already ONE
+;; cell, so one delivery clears them all.
+(defn ao-consume (pending offer)
+    (if (ao-nil? pending) (list)
+        (if (node_eq (head pending) offer)
+            (ao-consume (tail pending) offer)
+            (cons (head pending) (ao-consume (tail pending) offer)))))
+
+;; --- reading 1: signals — lines are signal numbers --------------------
+(defn ao-sig-int  () 2)
+(defn ao-sig-alrm () 14)
+(defn ao-sig-term () 15)
+
+;; a classic signal carries no payload — the knock IS the message
+(defn ao-signal (signo at) (ao-offer signo at (intern_trivial_int 0)))
+
+;; a timer armed for tick `at` IS a standing unsolicited offer on the
+;; ALRM line: in the window it is SIGALRM, beyond it the wait is the
+;; timeout — one structure, two Linux names.
+(defn ao-alarm (at) (ao-signal (ao-sig-alrm) at))
+
+;; --- reading 2: interrupts — lines are IRQ lines ----------------------
+(defn ao-irq-timer    () 0)
+(defn ao-irq-keyboard () 1)
+
+;; a device event latches data on its line (the keyboard's scancode)
+(defn ao-irq (line at payload) (ao-offer line at (intern_trivial_int payload)))
+
+0

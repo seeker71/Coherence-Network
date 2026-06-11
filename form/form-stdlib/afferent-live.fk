@@ -1,0 +1,108 @@
+; afferent-live.fk — the live select/poll wait-carrier: ao-wait's verdict (the
+; SAME afferent-offer.fk engine, arms unchanged) lowered onto a fourth-walker
+; program where op 15 TIME feeds real ticks — the host clock organ, not data.
+;
+; This closes the next-stone afferent-offer.form names: "a host carrier where
+; op 15 TIME feeds real ticks and a fourth-kernel select/poll witness shows a
+; live timeout yielding nothing". No parallel engine is grown: the dispatch /
+; nothing DECISION is made by ao-wait itself (the function proven → 511) at
+; composition time, on the offer ticks as relative seconds; what the lowered
+; program adds is exactly the temporal half the deterministic band could not
+; witness — blocking, arrival, expiry on the real clock:
+;
+;   guard   (LE t0+rel-at now)        the armed offer ARRIVES when the clock
+;                                     reaches its tick — ao-deliverable?'s
+;                                     window check, breathing
+;   window  (LE now t0+rel-deadline)  the wait is open while the clock is
+;                                     inside the window (inclusive, the
+;                                     band's 9-vs-10 edge, live)
+;   nothing                           the clock passes the deadline with no
+;                                     deliverable offer → the nothing-ack,
+;                                     after REAL elapsed time
+;
+; An engine verdict of AO-NOTHING lowers the guard to LIT 0 — the dispatch
+; door composed shut, so the program can only time out: timeout==nothing on
+; a wall clock. A dispatch verdict carries the engine's own handler name
+; (PUTC bytes), offer tick, and payload into the program.
+;
+; Poll granularity composes from existing ops (no new op minted): a two-level
+; tail-position countdown (fn 2 × fn 3) bounds walk-steps between TIME polls,
+; so the wait holds for seconds without unbounded recursion depth.
+;
+; The program (4 fns; RAM 0 = t0, RAM 1 = now; ack = name \n elapsed \n value):
+;   fn 0  t0 := TIME; enter the loop
+;   fn 1  now := TIME; dispatch | keep-waiting | nothing
+;   fn 2  delay: grain × fn 3        fn 3  countdown grain
+;
+; Deterministic proof: tests/afferent-live-band.fk → 63 three-way (Go/Rust/TS).
+; Live proof: scripts/fourth_kernel_audit.sh "live afferent witness" section —
+; the universal fourth-kernel binary blocks on the real clock: no event yields
+; nothing after the deadline truly elapses; an armed timer's tick dispatches.
+
+;; sequence a then b, b's value kept (IF-seq: both arms b; for organ writes)
+(defn aolv-seq (a b) (fk-if a b b))
+
+;; fn 3 — the inner countdown: tail-position CALL, depth-bounded by grain
+(defn aolv-count-fn ()
+    (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-lit 0)
+           (fk-call 3 (fk-sub (fk-arg) (fk-lit 1)))))
+
+;; fn 2 — the poll-granularity delay: grain outer steps, each an inner countdown
+(defn aolv-delay-fn (grain)
+    (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-lit 0)
+           (aolv-seq (fk-call 3 (fk-lit grain))
+                     (fk-call 2 (fk-sub (fk-arg) (fk-lit 1))))))
+
+;; elapsed seconds on the real clock: now - t0 (RAM 1 - RAM 0)
+(defn aolv-elapsed () (fk-sub (fk-get (fk-lit 1)) (fk-get (fk-lit 0))))
+
+;; the acknowledgment made visible: PUTC name, newline, elapsed, newline → value
+(defn aolv-ack (name value)
+    (fkd-seq (fkresp name)
+    (fkd-seq (fkd-ch 10)
+    (fkd-seq (fkd-num (aolv-elapsed))
+    (fkd-seq (fkd-ch 10) value)))))
+
+;; the dispatch door: the engine's nothing composes it SHUT (LIT 0); a
+;; dispatch verdict opens it on arrival — the offer's tick reached by the clock
+(defn aolv-guard (verdict)
+    (if (eq (ao-nothing? verdict) 1)
+        (fk-lit 0)
+        (fk-le (fk-add (fk-get (fk-lit 0))
+                       (fk-lit (ao-offer-at (ao-dispatch-offer verdict))))
+               (fk-get (fk-lit 1)))))
+
+;; the dispatch arm: handler name and payload travel FROM the engine's cells
+(defn aolv-arm (verdict)
+    (if (eq (ao-nothing? verdict) 1)
+        (fk-lit 0)
+        (aolv-ack (ao-dispatch-handler verdict)
+                  (fk-lit (node_value (ao-offer-payload (ao-dispatch-offer verdict)))))))
+
+;; fn 1 — the select/poll loop: poll the clock, dispatch first (inclusive
+;; edge), keep waiting inside the window, acknowledge nothing past it
+(defn aolv-loop-fn (verdict rel-deadline grain)
+    (aolv-seq (fk-set (fk-lit 1) (fk-time))
+        (fk-if (aolv-guard verdict)
+               (aolv-arm verdict)
+               (fk-if (fk-le (fk-get (fk-lit 1))
+                             (fk-add (fk-get (fk-lit 0)) (fk-lit rel-deadline)))
+                      (aolv-seq (fk-call 2 (fk-lit grain)) (fk-call 1 (fk-lit 0)))
+                      (aolv-ack "nothing" (fk-lit 0))))))
+
+;; fn 0 — anchor t0 on the real clock, enter the wait
+(defn aolv-entry-fn ()
+    (aolv-seq (fk-set (fk-lit 0) (fk-time)) (fk-call 1 (fk-lit 0))))
+
+;; the whole carrier: ao-wait — THE engine — makes the decision on ticks as
+;; relative seconds; the program carries that verdict onto the host clock
+(defn aolv-fns2 (verdict rel-deadline grain)
+    (list (aolv-entry-fn)
+          (aolv-loop-fn verdict rel-deadline grain)
+          (aolv-delay-fn grain)
+          (aolv-count-fn)))
+
+(defn aolv-fns (table mask pending rel-deadline grain)
+    (aolv-fns2 (ao-wait table mask pending rel-deadline) rel-deadline grain))
+
+0

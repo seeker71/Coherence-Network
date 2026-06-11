@@ -23,10 +23,20 @@
     (fork-exec-wait   RUNS  fourth-walker-emit.fk fkc-emit-driver — pipe/fork/execvp spawn a host
                             command, capture its stdout; n3 witnessed (date +%Y -> 2026))
     (process-spawn    RUNS  the driver organ IS spawn; the meeting companion drives whisper/ollama/say)
-    (scheduler        NAMED offer-the-compute-organ-to-competing-recipes; recognition-router.fk already
-                            CHOOSES an implementation by measured fitness (RUNS as a recipe) — the
-                            scheduling POLICY is a recipe, order/fairness its arms)
-    (signals          NAMED an unsolicited afferent offer on a channel; timeout==nothing is the SIGALRM shape))
+    (scheduler        RUNS  scheduler.fk — competing recipes OFFER (name arrival priority fitness) for the
+                            compute organ; the POLICY is a pure data row (key-field, least-wins, floor,
+                            requeue) in ONE chooser engine — fifo/round-robin/priority/fitness are four
+                            rows, never four branches; recognition-router's max-over-a-floor choosing is
+                            now a row of this engine (tests/scheduler-band.fk -> 511 three-way))
+    (signals          RUNS  afferent-offer.fk — ao-alarm makes a timer armed for tick T a standing
+                            unsolicited offer on the ALRM line, so SIGALRM-fires and wait-times-out are
+                            one structure (timeout==nothing IS the SIGALRM shape, checked at the window
+                            edge); sigprocmask is AO-MASK data — masked stays pending, delivers when the
+                            mask lifts; coalescing free by content-addressing
+                            (tests/afferent-offer-band.fk -> 511 three-way); LIVE: afferent-live.fk
+                            lowers ao-wait's verdict onto op 15 TIME — the armed timer's tick arrives on
+                            the host clock, the empty window yields nothing only after real elapsed time
+                            (tests/afferent-live-band.fk -> 63; audit section 18)))
 
   # ── Memory ──────────────────────────────────────────────────────────
   (memory
@@ -34,8 +44,14 @@
     (isolation        RUNS-by-construction content-addressing-is-immutability (axiom-3) — no cell mutates
                             another; a change MINTS a new node-id; the one mutation is repoint (a pointer move))
     (address-spaces   RUNS  NodeID.package field: 1 = body, 2+ = branches/sandboxes — capability-scoped)
-    (gc-compaction    NAMED the arena is bump-only today; melt/compaction earns its place by a measured
-                            workload (axiom-3's nothing-overwritten is the default until then)))
+    (gc-compaction    RUNS  arena-melt.fk — liveness is ONE reachability walk, melt is copy-live + repoint,
+                            NodeID preserved across arenas (axiom-3: composition is identity); the melt the
+                            recipes prove is the melt the BINARY does — emitted from the recipe cells into
+                            every many-family binary, firing at the high-water line (thresholds are recipe
+                            cells, no magic in C): the measured deaths now survive (n=4096 -> 4096 was 0;
+                            n=4200 -> 4200 was 104), growth and reclaim faces both witnessed; bump-only
+                            remains the measured default below water
+                            (tests/arena-melt-band.fk -> 63; tests/melt-on-cool-band.fk -> 31 three-way)))
 
   # ── Storage / filesystem ────────────────────────────────────────────
   (filesystem
@@ -50,8 +66,12 @@
                             carrier-swappable; host-resource-access admits any host driver/OS API)
     (entropy          RUNS  op 16 RND — /dev/urandom's shape (two draws differ, witnessed))
     (clock            RUNS  op 15 TIME — the host clock organ, real epoch (afferent scalar))
-    (gpu              RUNS-via-host ollama/Metal driven through the driver organ (100% GPU confirmed);
-                            native GPU emitters (metal.ts) are a lane, NAMED for the model fast-path)
+    (gpu              RUNS  the native emitter lane: jte-matvec-msl (jit-tensor-emit.fk) emits the Metal
+                            matvec from the same tensor cells as the C path, MSL byte-stable three-way
+                            (tests/metal-emit-band.fk -> 7); LIVE on M4 Max: bit-exact value parity on
+                            every output row vs the CPU fp32 right-fold, 13.2x kernel-window at 4096^2
+                            (scripts/metal_matvec_audit.sh); ollama/Metal still ride the driver organ;
+                            kernel-resident carrier + bf16/half lanes named open)
     (audio-video-hmi  RUNS-via-host mic/speaker/camera via the OS API; n4 TTS (say) + STT (whisper) witnessed))
 
   # ── Networking ──────────────────────────────────────────────────────
@@ -67,8 +87,11 @@
     (channels-msgq    RUNS  kernel-offer-protocol.form: offer-a-cell-over-a-channel; cell-registry +
                             channel-query + verb-router; the two-cell daemon round trip)
     (shared-memory    RUNS  the content-addressed lattice IS shared memory by NodeID — observe by id)
-    (concurrency      NAMED many offers in flight, acks threaded (the offer-and-acknowledge closure);
-                            walk_parallel RUNS in the kernels))
+    (concurrency      RUNS  offers-in-flight.fk — many offers in flight over a channel, acks threaded
+                            out-of-order by content-addressed token (an offer's NodeID is its unforgeable
+                            correlation token — axiom-3 closing axiom-5); unacked offers remain honestly
+                            in flight; walk_parallel remains the compute-parallel leaf
+                            (tests/offers-in-flight-band.fk -> 255 three-way)))
 
   # ── Syscall / protection / boot ─────────────────────────────────────
   (kernel-core
@@ -80,11 +103,26 @@
     (permissions      RUNS  the trust matrix is cells (axiom-4); sovereign-boundary-protocol.fk answers
                             allow/stop/witness/re-enter)
     (loadable-modules RUNS  the JIT / emit-compile-exec lane: a recipe -> .so (jit.go) or -> clang binary
-                            (fourth-kernel-emit) -> dlopen/exec; install-as-named-callable-leaf NAMED)
+                            (fourth-kernel-emit) -> dlopen/exec; AND install-as-named-callable-leaf: an
+                            install offer (name, artifact, expected-interface) binds a jitted artifact
+                            into the kernel's own table at runtime — the surface grows by offer, not
+                            recompile; collisions and interface mismatches refuse honestly; the node ack
+                            is the artifact's content NodeID (insmod composed from axiom-3+5, never
+                            ported) — protocol install-leaf.fk (tests/install-leaf-band.fk -> 9
+                            three-way), Go carrier witnessed live (jit_install); Rust/TS carriers named
+                            open in install-leaf.form)
     (dynamic-linking  RUNS-via-host dlopen/clang are allowed carriers; the recipe is the linked unit)
-    (interrupts       NAMED an unsolicited afferent offer; no event in time = nothing (timeout==nothing))
-    (boot-init        NAMED compose-the-kernel-from-the-axioms = kernel-self-composition.form
-                            (boot -> offer a channel -> self-extend); the .fkb image is the boot artifact))
+    (interrupts       RUNS  afferent-offer.fk — the SAME ao-wait engine as signals, readings as data:
+                            ao-irq latches a device payload on an IRQ line; a masked or silent line
+                            acknowledges nothing, and the two readings' silence is the SAME NodeID — one
+                            engine, two readings (tests/afferent-offer-band.fk -> 511 three-way); LIVE:
+                            the latched irq dispatches its payload through the same op-15 carrier the
+                            signals reading breathes (audit section 18))
+    (boot-init        RUNS  boot.fk — kernel-self-composition's boot theorem walks: load a .fkb image (the
+                            boot artifact), the booted body's first act is to offer a channel, one extension
+                            offer MINTS a strictly larger image at a new path; re-booting the original still
+                            wakes N — the artifact's immutability is the kernel's own refusal
+                            (tests/boot-band.fk -> 9, interpreter and compiled lanes)))
 
   # ── Userland surface ────────────────────────────────────────────────
   (userland
@@ -97,12 +135,19 @@
   (tally
     (runs   "process-spawn, arena memory, memory-isolation, address-spaces, filesystem, inode-identity,
              persistence, driver-model, entropy, clock, sockets, http, pipes, channels, shared-memory,
-             syscall-abi, protection-caps, permissions, loadable-modules, shell, stdio, interpreter — the
-             SPINE of an OS, as fourth-kernel binaries or Form recipes, proven")
-    (named  "scheduler policy, signals, gc/compaction, full concurrency, interrupts, boot-from-axioms —
-             each an axiom-composition with a path, the next stones")
-    (verdict "the high-level Linux feature set MAPS to Form recipes; a large fraction already RUNS; the
-              remainder is NAMED with axiom-compositions, not hand-waved — the walk continues"))
+             syscall-abi, protection-caps, permissions, loadable-modules, shell, stdio, interpreter —
+             and now scheduler policy, signals, interrupts, gc/melt (measured), offers-in-flight
+             concurrency, boot-from-axioms: every subsystem row, as fourth-kernel binaries or Form
+             recipes with three-way proof bands")
+    (named  "the deepenings that opened as the last four closed: Rust/TS install carriers (the protocol
+             already proven three-way); the melt's hot-swap-free face (cooled natives re-melting,
+             champion-challenger gated); m4e4's families lifting more bands onto the fourth arm
+             (str_*/node_*/floats/multi-param); kernel-resident Metal carrier + bf16/half lanes;
+             delivery priority as a policy cell over the afferent engine — each named where it lives")
+    (verdict "every high-level Linux subsystem RUNS (or RUNS-by-construction) as Form recipes with
+              three-way proof, and the four named deepenings of the first walk now RUN too — live
+              clock, surviving boundary, growing kernel table, native GPU lane; what stays NAMED is
+              the next ring out — the walk continues"))
 
   (invariant
     (not-reimplemented-but-composed every duty is a composition of the five axioms, not a port of Linux)
@@ -116,4 +161,16 @@
 #   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/resource-port.fk \
 #     form-stdlib/tests/resource-port-band.fk      # the HAL
 #   cd form && ./validate.sh form-stdlib/persistence.fk form-stdlib/merkle.fk form-stdlib/cell-sync.fk
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/recognition-router.fk \
+#     form-stdlib/scheduler.fk form-stdlib/tests/scheduler-band.fk             # scheduler -> 511
+#   cd form && ./validate.sh form-stdlib/afferent-offer.fk \
+#     form-stdlib/tests/afferent-offer-band.fk                                 # signals+interrupts -> 511
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk \
+#     form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk \
+#     form-stdlib/arena-melt.fk form-stdlib/tests/arena-melt-band.fk           # gc/melt -> 63
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel.fk form-stdlib/sha256.fk \
+#     form-stdlib/channel-query.fk form-stdlib/offers-in-flight.fk \
+#     form-stdlib/tests/offers-in-flight-band.fk                               # concurrency -> 255
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel.fk form-stdlib/persistence.fk \
+#     form-stdlib/cell-registry.fk form-stdlib/boot.fk form-stdlib/tests/boot-band.fk   # boot -> 9
 #   coh substrate form "?equivalent @recipe(linux-as-recipes)"   # after ingest

@@ -3179,7 +3179,7 @@ impl Kernel {
             acc
         });
         self.register_native("str_eq", cat_compare(RCMP_EQ), |_, _, args| {
-            Value::Bool(args[0].as_str() == args[1].as_str())
+            bool_int(args[0].as_str() == args[1].as_str())
         });
         // int_to_str — value-to-string for trivial leaves. Historical name
         // (first use: line numbers in cell-trace.fk); semantics is "render
@@ -5290,15 +5290,15 @@ impl Kernel {
         // emit-engine.fk's lookup-template) can dispatch on Recipe category
         // by direct NodeID equality. Sibling parity required across Go/TS.
         self.register_native("node_eq", cat_compare(RCMP_EQ), |_, _, args| {
-            Value::Bool(args[0].as_nid() == args[1].as_nid())
+            bool_int(args[0].as_nid() == args[1].as_nid())
         });
-        // value_eq — polymorphic equality across Value kinds. Returns
-        // true when both args have the same kind AND compare equal
-        // within that kind. Cross-kind returns false. Use when a
+        // value_eq — polymorphic equality across Value kinds. Answers
+        // 1 when both args have the same kind AND compare equal
+        // within that kind. Cross-kind answers 0. Use when a
         // Form-side function holds tagged values that may be either
         // strings or NodeIDs — e.g. domain/lens in bmf-symbol-context.
         self.register_native("value_eq", cat_compare(RCMP_EQ), |_, _, args| {
-            Value::Bool(value_equal(&args[0], &args[1]))
+            bool_int(value_equal(&args[0], &args[1]))
         });
         // intern_node_at — intern a composite Recipe AND record its source
         // attribution. Engine.fk's parser actions call this so every emitted
@@ -6388,6 +6388,12 @@ fn switch_key_from_value(k: &mut Kernel, v: &Value) -> Option<NodeID> {
     }
 }
 
+// bool_int — the truth family's acknowledgment shape: 0/1 integer states
+// (axiom-1) so eq/lt/and/not/node_eq/… answers feed arithmetic on every kernel.
+fn bool_int(b: bool) -> Value {
+    Value::Int(b as i64)
+}
+
 fn value_equal(a: &Value, b: &Value) -> bool {
     match (a, b) {
         (Value::Null, Value::Null) => true,
@@ -6526,13 +6532,14 @@ fn walk_inner(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
                 let rv = walk(k, a, kids[1], env);
                 // Same width-promotion rule as math: float on either side
                 // forces an IEEE comparison. Pure int/int stays integer.
-                // The answer is axiom-1's two states — Int 0/1 — on every
-                // path, the same shape the JIT's emitted C produces, so a
-                // comparison flows directly into arithmetic.
+                // A comparison acknowledges with the 0/1 integer states
+                // (axiom-1, core-axioms.form) so its answer flows directly
+                // into arithmetic — the same shape the JIT's i64 ABI already
+                // lands. Proven three-way by tests/eq-shape-band.fk.
                 if matches!(lv, Value::Float(_)) || matches!(rv, Value::Float(_)) {
                     let l = lv.as_float();
                     let r = rv.as_float();
-                    Value::Int(match cat.inst {
+                    bool_int(match cat.inst {
                         RCMP_EQ => l == r,
                         RCMP_NE => l != r,
                         RCMP_LT => l < r,
@@ -6540,11 +6547,11 @@ fn walk_inner(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
                         RCMP_GT => l > r,
                         RCMP_GE => l >= r,
                         _ => panic!("compare.f64: unknown op {}", cat.inst),
-                    } as i64)
+                    })
                 } else {
                     let l = lv.as_int();
                     let r = rv.as_int();
-                    Value::Int(match cat.inst {
+                    bool_int(match cat.inst {
                         RCMP_EQ => l == r,
                         RCMP_NE => l != r,
                         RCMP_LT => l < r,
@@ -6552,25 +6559,28 @@ fn walk_inner(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
                         RCMP_GT => l > r,
                         RCMP_GE => l >= r,
                         _ => panic!("compare: unknown op {}", cat.inst),
-                    } as i64)
+                    })
                 }
             }
             RB_LOGIC => match cat.inst {
+                // Logic answers join the comparison family's 0/1 integer
+                // states (axiom-1) — truth has one value shape, so
+                // (mul (and ...) n) flows exactly like (mul (eq ...) n).
                 RLOG_AND => {
                     if !walk(k, a, kids[0], env).as_bool() {
-                        Value::Int(0)
+                        bool_int(false)
                     } else {
-                        Value::Int(walk(k, a, kids[1], env).as_bool() as i64)
+                        bool_int(walk(k, a, kids[1], env).as_bool())
                     }
                 }
                 RLOG_OR => {
                     if walk(k, a, kids[0], env).as_bool() {
-                        Value::Int(1)
+                        bool_int(true)
                     } else {
-                        Value::Int(walk(k, a, kids[1], env).as_bool() as i64)
+                        bool_int(walk(k, a, kids[1], env).as_bool())
                     }
                 }
-                RLOG_NOT => Value::Int((!walk(k, a, kids[0], env).as_bool()) as i64),
+                RLOG_NOT => bool_int(!walk(k, a, kids[0], env).as_bool()),
                 _ => panic!("logic: unknown op {}", cat.inst),
             },
             RB_COND => {
@@ -12008,6 +12018,13 @@ mod route_spec_tests {
         let headers = vec![("Accept".to_string(), "application/json".to_string())];
         let probes = vec![
             ("runtime-events-index", "GET", "/api/runtime/events"),
+            ("spec-registry-index", "GET", "/api/spec-registry"),
+            (
+                "spec-registry-detail",
+                "GET",
+                "/api/spec-registry/web-ideas-specs-usage-pages",
+            ),
+            ("idea-specs", "GET", "/api/ideas/user-surfaces/specs"),
             ("views-stats", "GET", "/api/views/stats/lc-attuned-spaces"),
             (
                 "reaction-concept-summary",

@@ -10,16 +10,28 @@
 ;   op     := add | sub | le | if
 ; State threads as (cell, end-pos) lists; no let-in-defn (kernel trap), so the
 ; recursion is many small defns. mul/sub are full-engine ops (recipe, not band).
+;
+; The cursor carries real .fk file shape: whitespace is space/tab/CR/LF and a
+; `;` comment runs to end of line — so a band file parses as it sits on disk
+; (form-flatten.fk rides this same skip to flatten whole bands).
 
 (defn fp-at (s pos) (ord (char_at s pos)))
 (defn fp-len (s) (str_len s))
 (defn fp-isdigit (c) (and (ge c 48) (ge 57 c)))
-(defn fp-isdelim (c) (if (eq c 32) 1 (if (eq c 40) 1 (if (eq c 41) 1 0))))
+(defn fp-isws (c) (if (eq c 32) 1 (if (eq c 10) 1 (if (eq c 13) 1 (if (eq c 9) 1 0)))))
+(defn fp-isdelim (c)
+    (if (eq (fp-isws c) 1) 1 (if (eq c 40) 1 (if (eq c 41) 1 (if (eq c 59) 1 0)))))
 
-; skip spaces
+; end of line — the close of a `;` comment
+(defn fp-eol (s pos)
+    (if (ge pos (fp-len s)) pos
+        (if (eq (fp-at s pos) 10) (add pos 1) (fp-eol s (add pos 1)))))
+
+; skip whitespace and `;` comments
 (defn fp-skip (s pos)
     (if (ge pos (fp-len s)) pos
-        (if (eq (fp-at s pos) 32) (fp-skip s (add pos 1)) pos)))
+        (if (eq (fp-isws (fp-at s pos)) 1) (fp-skip s (add pos 1))
+            (if (eq (fp-at s pos) 59) (fp-skip s (fp-eol s pos)) pos))))
 
 ; read a run of digits from pos -> (value end-pos)
 (defn fp-digits (s pos acc)

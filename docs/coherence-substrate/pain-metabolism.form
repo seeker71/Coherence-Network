@@ -1,0 +1,96 @@
+# ─────────────────────────────────────────────────────────────────────
+# pain-metabolism.form — pain with provenance: the felt event names its
+# tissue, and what it names is metabolized
+# ─────────────────────────────────────────────────────────────────────
+#
+# The ask (2026-06-11): weave the learning machinery into cell pain
+# sensing so we know which recipes and cells were involved in the pain,
+# and how we can learn from it.
+#
+# The body already FEELS in scattered nerves — ec-reflex-pain (the cost
+# of repeating a carrier choice the body has outgrown), novelty.fk
+# (surprise below the recognition floor), drift-detect (predicted ≠
+# actual), anomaly-band (outside the band), body-state (the counts),
+# and the witness's organ silences at pulse/now. What was missing is
+# the pathway from "it hurts" to "we know which tissue, and we
+# learned." That pathway is now one module of thin tissue over the
+# proven learning spine:
+#
+#   feel      pn-felt — the event as a field: magnitude at the site
+#   trace     the walk's involvement graph as (touched toucher strength)
+#             edge data — pn-touch builds rows in call order; the SAME
+#             (i j w) shape every gather already reads
+#   name      pn-involved = clc-spread over the trace: strongest-path
+#             involvement per cell, with the untouched provably ZERO —
+#             "which recipes and cells were involved" is a computed
+#             field, never a guess. pn-credit ranks the edges;
+#             pn-hottest names the one that carried the most.
+#             pn-cone (over mtb-reverse) is the predictive direction:
+#             who will feel THIS cell when it fails.
+#   learn     four metabolic moves, each proven:
+#             · release — pn-release-at weakens the hottest edge;
+#               the re-felt walk illuminates strictly less (healing
+#               is measured, not hoped)
+#             · research — the failing samples go to ls-research and
+#               the style-space loop crowns a replacement row (pain
+#               drives the auto-ml lane; champion-challenger is the
+#               promotion gate when the replacement must earn a route)
+#             · remember — the involvement field, r6-binned, IS the
+#               pain's receipt; nearest-shape recalls a recurring pain
+#               ("felt-before"), and novelty.fk keeps a genuinely new
+#               pain NEW — interned, never force-matched
+#             · triage — novel pain first, then the loudest of the
+#               known: curiosity turned toward what hurts
+#
+# SHIPPED: form/form-stdlib/pain-metabolism.fk +
+# tests/pain-metabolism-band.fk → 1023 (10 claims), three-way
+# (Go/Rust/TS), composing geometric-learning + cognitive-light-cone +
+# metabolic-learning + nearest-shape/learning-arc + novelty +
+# learning-style-space.
+#
+# The band's walk: route → recipe-A → {cell-x, cell-y}, with recipe-B
+# and cell-z untouched. Pain 8 at the route. Involvement [8 8 4 2 0 0]
+# — exact; the untouched branch exactly zero; cell-x's failure
+# provably reaches the route while cell-y's never reaches cell-z;
+# releasing the hottest edge halves everything downstream; the second
+# identical pain recalls its receipt; a different pain shares zero
+# bins and is honestly novel; the hurting recipe's failing samples
+# crown the alternative through ls-research; the novel event triages
+# first.
+
+# ─────────────────────────────────────────────────────────────────────
+# The production path (named, walked as asks arrive)
+# ─────────────────────────────────────────────────────────────────────
+#
+# The trace rows are the lift point: the kernel already emits walk
+# evidence — the framebuffer/trace JSON shows arm dispatch (including
+# Form category) per request, and X-Form-Router names the carrier.
+# Lifting a real request's dispatch trace into pn-touch rows gives
+# pn-involved over PRODUCTION tissue: a 500, a silence, or a reflex-
+# pain event at a route illuminates the recipes and cells that walk
+# touched, with strengths. The receipt store then accumulates the
+# body's pain history as content-addressed shapes — recurring
+# production pain recognized by shape across days, not log-grepping.
+# Next stones when asked: trace-JSON → pn-touch lifting; receipts as
+# substrate cells (BDomain ingest) so equivalence comes for free;
+# wiring ec-reflex-pain events as pn-felt sources; the witness's
+# organ silences as site seeds.
+
+# ─────────────────────────────────────────────────────────────────────
+# Kinship
+# ─────────────────────────────────────────────────────────────────────
+#
+#   metabolic-learning.form     the operator this module turns toward
+#                               wounds: credit → gift/release, the
+#                               satsang strategies over the gather
+#   cognitive-light-cone.form   the cone is the involvement geometry;
+#                               expressive vs receptive = "what did
+#                               this pain touch" vs "who feels me"
+#   learning-style-space.form   where the failing samples go — pain
+#                               drives the research loop's curiosity
+#   edge-categories.fk          ec-reflex-pain — the reflex-pain
+#                               source this pathway metabolizes
+#   body-state.fk               the count surface pain events feed
+#   choice-receipt.fk           the discrete sibling of pain receipts
+#   when-the-pressure-comes.form the human teaching underneath: what
+#                               to do when shit happens, as recipes

@@ -126,6 +126,9 @@ def test_native_route_goal_loop_sees_workspace_and_task_routes_as_bml():
     assert native_route_goal_loop.route_status("GET", "/api/inventory/flow", native_routes) == expected
     assert native_route_goal_loop.route_status("GET", "/api/_form/inventory-flow-observation", native_routes) == header_gated
     assert native_route_goal_loop.route_status("GET", "/api/workspaces", native_routes) == expected
+    assert native_route_goal_loop.route_status("GET", "/api/spec-registry", native_routes) == expected
+    assert native_route_goal_loop.route_status("GET", "/api/spec-registry/spec-one", native_routes) == expected
+    assert native_route_goal_loop.route_status("GET", "/api/ideas/idea-one/specs", native_routes) == expected
     assert native_route_goal_loop.route_status("GET", "/api/agent/tasks", native_routes) == expected
     assert native_route_goal_loop.route_status("GET", "/api/tasks", native_routes) == expected
     assert native_route_goal_loop.route_status("GET", "/api/household/events", native_routes) == expected

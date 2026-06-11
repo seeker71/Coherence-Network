@@ -1,0 +1,101 @@
+; preludes: form-stdlib/transformer-numerics.fk form-stdlib/geometric-learning.fk form-stdlib/nearest-shape.fk form-stdlib/learning-arc.fk form-stdlib/learning-style-space.fk
+;
+; learning-style-space-band — the auto-ml weave proven three-way: styles are data rows,
+; one combinator runs them all, and the research loop crowns the style whose symmetry
+; matches the task — a DIFFERENT winner on each of three tasks (no free lunch, which is
+; why the space stays open). Composition, openness (a new row appended as pure data),
+; federation (memories compose), and the curiosity floor are each one falsifiable claim.
+; Streams and reference scores mirror the IEEE-754 fp64 oracle in the recipe's fold order;
+; scoring is learning-arc's warmed predict-then-learn fold (k=2).
+;
+; Tasks (train 2, eval 4 — every input exact in binary floats):
+;   shift  — same multiset {4,4,0,0} both classes; adjacent-pair vs alternating, shifted
+;            at eval. Only locality separates → conv (shift-pooled ring features) wins.
+;   chart  — prism one-hot seeds labeled by chart. Only mesh structure unifies a chart's
+;            seeds → mesh (chart-pooled diffusion) wins from ONE example per class.
+;   perm   — distinct multisets {8,6,2,0} vs {8,4,4,0}, rearranged at eval so extreme
+;            edges collide. Only value statistics separate → attn (data-dependent
+;            mixing) wins; conv is blinded to 2.
+;   reflect — classes by multiset, evals reversed. The appended sortpool row (full
+;            order-free spectrum) is perfect where raw and conv miss.
+;
+; Verdict 4095 when every claim lands:
+;   1     totality: every base row predicts through the one engine after one exemplar
+;   2     shift: conv = 4 (perfect warmed), raw = 1 — the symmetry pays exactly
+;   4     shift: best = "conv"
+;   8     chart: mesh = 4, raw = 0 — the right pooling generalizes from one example
+;   16    chart: best = "mesh"
+;   32    perm: attn = 4, conv = 2 — value statistics where locality is blind
+;   64    perm: best = "attn"
+;   128   no free lunch: the three winners are pairwise distinct
+;   256   composition: row ("conv.attn" = conv pooling over attention mixing) appended
+;         as data → 6 receipts, composed score 4 on shift
+;   512   openness: sortpool appended as data → reflect: sortpool 2, conv 1, raw 0
+;   1024  federation: half-memories score 5 and 4 on the full chart task; merged = 6 —
+;         collaboration strictly exceeds each cell alone
+;   2048  curiosity floor: 5 least-tried-first picks are 5 distinct styles
+(do
+    (let shift-task (list (list (list 4.0 4.0 0.0 0.0) "A")
+                          (list (list 4.0 0.0 4.0 0.0) "B")
+                          (list (list 0.0 4.0 4.0 0.0) "A")
+                          (list (list 0.0 4.0 0.0 4.0) "B")
+                          (list (list 0.0 0.0 4.0 4.0) "A")
+                          (list (list 4.0 0.0 0.0 4.0) "A")))
+    (let chart-task (list (list (list 1.0 0.0 0.0 0.0 0.0 0.0) "A")
+                          (list (list 0.0 0.0 0.0 1.0 0.0 0.0) "B")
+                          (list (list 0.0 1.0 0.0 0.0 0.0 0.0) "A")
+                          (list (list 0.0 0.0 0.0 0.0 1.0 0.0) "B")
+                          (list (list 0.0 0.0 1.0 0.0 0.0 0.0) "A")
+                          (list (list 0.0 0.0 0.0 0.0 0.0 1.0) "B")))
+    (let perm-task (list (list (list 8.0 6.0 2.0 0.0) "A")
+                         (list (list 8.0 4.0 4.0 0.0) "B")
+                         (list (list 8.0 2.0 6.0 0.0) "A")
+                         (list (list 8.0 4.0 0.0 4.0) "B")
+                         (list (list 8.0 2.0 0.0 6.0) "A")
+                         (list (list 4.0 8.0 4.0 0.0) "B")))
+    (let refl-task (list (list (list 1.0 2.0 3.0 8.0) "A")
+                         (list (list 1.0 1.0 4.0 8.0) "B")
+                         (list (list 8.0 3.0 2.0 1.0) "A")
+                         (list (list 8.0 4.0 1.0 1.0) "B")))
+    (let rec-shift (ls-research (ls-styles) shift-task 2))
+    (let rec-chart (ls-research (ls-styles) chart-task 2))
+    (let rec-perm  (ls-research (ls-styles) perm-task 2))
+    (let comp-row (list "conv.attn" ls-pool-conv ls-core-attn))
+    (let rec-comp (ls-research (gl-cat (ls-styles) (list comp-row)) shift-task 2))
+    (let sort-row (list "sortpool" ls-pool-sort ls-core-id))
+    (let rec-refl (ls-research (gl-cat (ls-styles) (list sort-row)) refl-task 2))
+    (let raw-row (nth (ls-styles) 0))
+    (let half-a (list (list (list 1.0 0.0 0.0 0.0 0.0 0.0) "A")
+                      (list (list 0.0 1.0 0.0 0.0 0.0 0.0) "A")
+                      (list (list 0.0 0.0 0.0 1.0 0.0 0.0) "B")))
+    (let half-b (list (list (list 0.0 0.0 1.0 0.0 0.0 0.0) "A")
+                      (list (list 0.0 0.0 0.0 0.0 1.0 0.0) "B")
+                      (list (list 0.0 0.0 0.0 0.0 0.0 1.0) "B")))
+    (let pa (ls-train raw-row half-a))
+    (let pb (ls-train raw-row half-b))
+    (let picks (ls-explore (ls-styles) 5))
+    (let c0  (if (eq (ls-probe-all (ls-styles)
+                                   (list 8.0 0.0 0.0 0.0) (list 4.0 4.0 0.0 0.0)) 1) 1 0))
+    (let c1  (if (and (eq (ls-score-of rec-shift "conv") 4)
+                      (eq (ls-score-of rec-shift "raw") 1)) 2 0))
+    (let c2  (if (str_eq (ls-best rec-shift) "conv") 4 0))
+    (let c3  (if (and (eq (ls-score-of rec-chart "mesh") 4)
+                      (eq (ls-score-of rec-chart "raw") 0)) 8 0))
+    (let c4  (if (str_eq (ls-best rec-chart) "mesh") 16 0))
+    (let c5  (if (and (eq (ls-score-of rec-perm "attn") 4)
+                      (eq (ls-score-of rec-perm "conv") 2)) 32 0))
+    (let c6  (if (str_eq (ls-best rec-perm) "attn") 64 0))
+    (let c7  (if (and (not (str_eq (ls-best rec-shift) (ls-best rec-chart)))
+                      (and (not (str_eq (ls-best rec-shift) (ls-best rec-perm)))
+                           (not (str_eq (ls-best rec-chart) (ls-best rec-perm))))) 128 0))
+    (let c8  (if (and (eq (len rec-comp) 6)
+                      (eq (ls-score-of rec-comp "conv.attn") 4)) 256 0))
+    (let c9  (if (and (eq (ls-score-of rec-refl "sortpool") 2)
+                      (and (eq (ls-score-of rec-refl "conv") 1)
+                           (eq (ls-score-of rec-refl "raw") 0))) 512 0))
+    (let c10 (if (and (and (eq (ls-eval raw-row chart-task pa) 5)
+                           (eq (ls-eval raw-row chart-task pb) 4))
+                      (eq (ls-eval raw-row chart-task (ls-merge pa pb)) 6)) 1024 0))
+    (let c11 (if (eq (ls-distinct-count picks) 5) 2048 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7
+    (add c8 (add c9 (add c10 c11))))))))))))

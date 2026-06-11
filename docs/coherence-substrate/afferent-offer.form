@@ -1,0 +1,144 @@
+# ─────────────────────────────────────────────────────────────────────
+# afferent-offer.form — signals and interrupts as two readings of ONE
+# unsolicited-afferent-offer engine; timeout==nothing as a checked claim
+# ─────────────────────────────────────────────────────────────────────
+#
+# linux-as-recipes.form names two stones with the IDENTICAL
+# axiom-composition:
+#
+#   (signals    NAMED an unsolicited afferent offer on a channel;
+#               timeout==nothing is the SIGALRM shape)
+#   (interrupts NAMED an unsolicited afferent offer;
+#               no event in time = nothing (timeout==nothing))
+#
+# Same composition, one engine — the move geometric-learning.form made
+# for convolution/message-passing/diffusion/embedding. SHIPPED:
+# `form/form-stdlib/afferent-offer.fk` +
+# `tests/afferent-offer-band.fk` → 511 (9 claims), three-way
+# (Go/Rust/TS). Linux's duty is not reimplemented; it is COMPOSED from
+# the five axioms (core-axioms.form):
+#
+#   axiom-5 offer    — the world speaks to a cell by offering a cell on
+#                      a line; UNSOLICITED means the cell never asked,
+#                      it only waits (the afferent half of axiom-5's
+#                      run-and-speak-are-one)
+#   axiom-1 states   — no event in the window acknowledges as NOTHING,
+#                      the first-class third state; timeout == nothing,
+#                      silence not an error
+#   axiom-4 boundary — only a line the cell's handler table offers can
+#                      deliver; a MASKED line is a door currently
+#                      closed — the offer stays pending, unacknowledged
+#   axiom-3 content-addressing — identical (line at payload) offers
+#                      intern to ONE cell, so POSIX standard-signal
+#                      coalescing (N raises pending = one delivery)
+#                      falls out of the substrate for free
+#
+# The engine — every part cells, never control flow:
+#
+#   AO-OFFER    (line at payload)   a world-event: which door, when, what
+#   AO-ENTRY    (line handler-name) line ↦ handler recipe — data, the
+#                                   verb-router.fk dispatch discipline
+#                                   keyed by an integer line
+#   AO-TABLE    (entry*)            the dispatch surface as a cell:
+#                                   introspectable, shippable
+#   AO-MASK     (line*)             the boundary's closed doors —
+#                                   sigprocmask AND the interrupt
+#                                   controller's mask register, one
+#                                   shape with two Linux names
+#   AO-DISPATCH (handler offer)     the node-ack: which handler fires,
+#                                   answering which offer (node_eq
+#                                   correlation by content)
+#   AO-NOTHING                      the nothing-ack as a visible cell
+#
+#   ao-wait table mask pending deadline → AO-DISPATCH | AO-NOTHING
+#
+# ao-wait acknowledges with the {nothing, node} arms of axiom-5's
+# vocabulary. Pure: pending is data; a masked or out-of-window offer
+# simply stays pending — exactly Linux's pending set. ao-consume
+# completes the cycle (delivered = removed; duplicates were already one
+# cell, so one delivery clears them: coalescing).
+#
+# The two readings, thin data instantiations of the one engine:
+#
+#   signals     lines are signal numbers (2=INT, 14=ALRM, 15=TERM).
+#               ao-alarm: a timer armed for tick T IS a standing
+#               unsolicited offer on the ALRM line at T — so "SIGALRM
+#               fires" and "the wait times out" are ONE structure,
+#               distinguished only by whether T falls inside the wait's
+#               window. timeout==nothing IS the SIGALRM shape, checked.
+#   interrupts  lines are IRQ lines (0=timer, 1=keyboard). ao-irq: a
+#               device event latches a payload on its line; a masked
+#               line does not deliver; a silent line in time
+#               acknowledges nothing.
+#
+# ─────────────────────────────────────────────────────────────────────
+# What the band proves (each a falsifiable claim, not an assertion)
+# ─────────────────────────────────────────────────────────────────────
+#
+# The strange-minimal edge is the deadline itself: the alarm armed AT
+# tick 9 vs tick 10 against deadline 9 pins the window boundary in one
+# tick.
+#
+#   1    a timer armed AT the deadline delivers "on-alarm" — the expiry
+#        IS the unsolicited offer (window inclusive)
+#   2    the SAME engine, the alarm one tick past the deadline →
+#        NOTHING — timeout==nothing IS the SIGALRM shape
+#   4    sigprocmask: SIGINT in time on a masked line stays undelivered
+#        → nothing, never an error
+#   8    unmask delivers the pending: SAME pending, mask lifted →
+#        "on-int" fires — the mask was data, not control flow
+#   16   interrupt reading through the SAME ao-wait: keyboard event on
+#        IRQ 1 dispatches "on-key"; the dispatch's offer IS the latched
+#        event (node_eq) carrying scancode 42
+#   32   a silent line: no event in the window → nothing
+#   64   an unoffered door: an event on a line with no table entry →
+#        nothing (axiom-4 — only an offered interface delivers)
+#   128  the two readings' silence is ONE cell: the signal-timeout
+#        nothing and the irq-silence nothing are the same NodeID — a
+#        parallel implementation would have minted two
+#   256  acknowledged delivery consumes: after ao-consume of the fired
+#        alarm the next wait is nothing — one-shot delivery, coalesced
+#
+# ─────────────────────────────────────────────────────────────────────
+# Kinship and next stones
+# ─────────────────────────────────────────────────────────────────────
+#
+#   linux-as-recipes.form        the map whose signals + interrupts rows
+#                                this closes (NAMED → recipe + band)
+#   host-kernel.form             os-feature-coverage's interrupts-events
+#                                ("an unsolicited afferent offer") and
+#                                time-clock ("needed for timeout==
+#                                nothing") — the tick parameter here is
+#                                that clock reading as data; op 15 TIME
+#                                is the host carrier when the wait goes
+#                                live
+#   kernel-offer-protocol.form   the SOLICITED side of the same offer
+#                                contract (a cell invites another);
+#                                this file is the unsolicited afferent
+#                                half — the world knocking
+#   verb-router.fk               the dispatch-table discipline this
+#                                reuses, keyed by line instead of verb
+#   resource-port.fk             the afferent direction this engine
+#                                waits on; a real device line is an
+#                                afferent port whose events become
+#                                AO-OFFERs
+#   sovereign-boundary-protocol.fk  the mask seen at the relational
+#                                altitude: a closed door is sovereignty,
+#                                not failure
+#
+# The live carrier breathes: afferent-live.fk lowers ao-wait's verdict
+# onto op 15 TIME — the engine's arms unchanged, only the tick source
+# went live. Deterministic decision and live behavior are ONE decision
+# on two tick sources: nothing-verdict composes the dispatch guard
+# shut, so the live timeout yields nothing only after real elapsed
+# time (wall-clock asserted), and the armed timer's tick arrives as
+# the SIGALRM shape on the host clock. Poll granularity is composed
+# (TIME + tail countdown), not minted. Proven: tests/afferent-live-band.fk
+# -> 63 three-way; witnessed: fourth_kernel_audit.sh section 18.
+#
+# Next stones when an ask needs them (named, not built ahead of need):
+# delivery priority as data (POSIX number-order, IRQ priority — a
+# policy cell over the same engine; the live carrier lowers a single
+# pending offer today, so multi-offer time-ordering lands exactly
+# there); the scheduler row, which is this engine's efferent twin
+# (offer-the-compute-organ-to-competing-recipes).

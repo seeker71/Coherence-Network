@@ -233,6 +233,8 @@ func mathV(op int, a, b core.Value) core.Value {
 }
 
 func cmpV(op int, a, b core.Value) core.Value {
+	// Comparisons acknowledge with the 0/1 integer states (axiom-1) —
+	// mirrors the walker's RBasicCompare arm exactly.
 	if a.Kind == core.VFloat || b.Kind == core.VFloat {
 		l := a.AsFloat()
 		r := b.AsFloat()
@@ -251,7 +253,10 @@ func cmpV(op int, a, b core.Value) core.Value {
 		case 5:
 			res = l >= r
 		}
-		return core.Value{Kind: core.VBool, Bool: res}
+		if res {
+			return core.Value{Kind: core.VInt, Int: 1}
+		}
+		return core.Value{Kind: core.VInt, Int: 0}
 	}
 	x := a.Int
 	y := b.Int
@@ -270,7 +275,10 @@ func cmpV(op int, a, b core.Value) core.Value {
 	case 5:
 		res = x >= y
 	}
-	return core.Value{Kind: core.VBool, Bool: res}
+	if res {
+		return core.Value{Kind: core.VInt, Int: 1}
+	}
+	return core.Value{Kind: core.VInt, Int: 0}
 }
 `
 
@@ -430,7 +438,7 @@ func emitVLogic(k *Kernel, op uint32, kids []NodeID, scope *vScope) (string, err
 		if err != nil {
 			return "", err
 		}
-		return fmt.Sprintf("func() core.Value { if !(%s).Bool { return core.Value{Kind: core.VBool, Bool: false} }; return core.Value{Kind: core.VBool, Bool: (%s).Bool} }()", a, b), nil
+		return fmt.Sprintf("func() core.Value { if !truthyV(%s) { return core.Value{Kind: core.VBool, Bool: false} }; return core.Value{Kind: core.VBool, Bool: truthyV(%s)} }()", a, b), nil
 	case RLogicOr:
 		if len(kids) != 2 {
 			return "", unsupported("jitv: or expects 2 args")
@@ -443,7 +451,7 @@ func emitVLogic(k *Kernel, op uint32, kids []NodeID, scope *vScope) (string, err
 		if err != nil {
 			return "", err
 		}
-		return fmt.Sprintf("func() core.Value { if (%s).Bool { return core.Value{Kind: core.VBool, Bool: true} }; return core.Value{Kind: core.VBool, Bool: (%s).Bool} }()", a, b), nil
+		return fmt.Sprintf("func() core.Value { if truthyV(%s) { return core.Value{Kind: core.VBool, Bool: true} }; return core.Value{Kind: core.VBool, Bool: truthyV(%s)} }()", a, b), nil
 	case RLogicNot:
 		if len(kids) != 1 {
 			return "", unsupported("jitv: not expects 1 arg")
@@ -452,7 +460,7 @@ func emitVLogic(k *Kernel, op uint32, kids []NodeID, scope *vScope) (string, err
 		if err != nil {
 			return "", err
 		}
-		return fmt.Sprintf("core.Value{Kind: core.VBool, Bool: !(%s).Bool}", a), nil
+		return fmt.Sprintf("core.Value{Kind: core.VBool, Bool: !truthyV(%s)}", a), nil
 	}
 	return "", unsupported(fmt.Sprintf("jitv: logic op %d", op))
 }

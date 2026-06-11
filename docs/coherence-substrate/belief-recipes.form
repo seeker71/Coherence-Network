@@ -1,0 +1,132 @@
+# ─────────────────────────────────────────────────────────────────────
+# belief-recipes.form — the frequency bank: how each belief system
+# meets the moment shit happens, as configurations of one engine
+# ─────────────────────────────────────────────────────────────────────
+#
+# The satsang at Llena's (Ubud, 2026-05-07) drew its topic "from major
+# physiology, science, and religions in their most core words: what do
+# we do when shit happens." Two layers came out of that room:
+#
+#   · the five strategies of return that circle members had each found
+#     — recorded in when-the-pressure-comes.form and
+#     lc-when-the-pressure-comes
+#   · the survey itself: every philosophy and belief system carries its
+#     own complete recipe for failure, pain, the recognition of a 'bad'
+#     event — the same arrival, met through different teachings
+#
+# The second layer arrived into the body 2026-06-11, named by Urs as
+# lineage clarification (the session's transmission record is honest
+# absence). This file and `form/form-stdlib/belief-recipes.fk` carry
+# it: the operator's FREQUENCY dial — "which belief system carries
+# this" — opened into a runnable bank. SHIPPED:
+# `tests/belief-recipes-band.fk` → 255, three-way (Go/Rust/TS).
+#
+# The structural claim, proven: the SAME bad event (the body's shape,
+# the probe, what the world delivered) meets eight attested teachings,
+# and each lands a distinct, exact, falsifiable signature — yet every
+# one is a configuration of the one metabolic engine. Traditions are
+# DATA; the engine is one. This is grammars/living-equation.fk's
+# discipline in the failure lane: belief systems diverge on the lever,
+# the encoding is each lineage's documented core move (never an
+# efficacy claim), and the canon doing the attributing is owned.
+
+# ─────────────────────────────────────────────────────────────────────
+# The bank — eight rows, each with its attested core move
+# ─────────────────────────────────────────────────────────────────────
+#
+#   br-witness        Vedanta's drashta; the circle's observer. Watch,
+#                     never grip. Signature: held exactly AT the
+#                     pressure, the weights never move.
+#   br-alchemy        hermetic transmutation; the circle's gift.
+#                     Receive the event whole. Signature: one full-
+#                     focus meeting metabolizes the residual to zero.
+#   br-second-arrow   Buddhism (Sallatha Sutta): the first dart is
+#                     pain; the second is the grip on the pain. Meet
+#                     it once, fully. Signature: re-meeting the
+#                     already-met event changes nothing — the second
+#                     dart finds no target.
+#   br-dichotomy      Stoicism (Epictetus, Enchiridion 1): some things
+#                     are up to us. The frequency mask IS the dichotomy
+#                     of control. Signature: only the ownable subspace
+#                     moves; the unownable residual remains exactly —
+#                     acceptance has a measurable shape.
+#   br-surrender      "not my will" (Luke 22:42); wu-wei. Release
+#                     self-direction into the field's flow. Signature:
+#                     the state diffuses toward the whole — the mean
+#                     conserved exactly, personal deviation softened.
+#   br-cleanse        hoʻoponopono: I'm sorry, please forgive me,
+#                     thank you, I love you. Signature: entanglement
+#                     decayed — the learned response scales toward zero.
+#   br-causal         science and physiology's root-cause repair:
+#                     diagnose, then correct the cause. Signature: the
+#                     argmax-credit edge alone is corrected; every
+#                     other edge untouched.
+#   br-maybe          the Taoist farmer (Huainanzi): good news, bad
+#                     news — who knows. Hold the verdict; let arrivals
+#                     accumulate; update once on the mean. Signature:
+#                     two opposite arrivals cancel EXACTLY where the
+#                     eager path would have lurched.
+#
+# The thinness of some rows (witness, alchemy, cleanse are single
+# doors onto mtb- primitives) IS the unification: traditions overlap
+# on the same engine at different dials. The differences that remain
+# are real and exact — mask, angle, focus, tolerance, time — and the
+# band pins each one.
+
+# ─────────────────────────────────────────────────────────────────────
+# Selection stays sovereign; learning which row serves is body tissue
+# ─────────────────────────────────────────────────────────────────────
+#
+# The circle's own words: not a checklist, not exhaustive, each body
+# finds its own. The bank never ranks traditions — it makes each
+# runnable so the CELL can choose with ground:
+#
+#   · when-the-pressure-comes.form `choose_strategy` — resonance
+#     (?harmonic_at) then cosine-fit selects the row for THIS sense
+#   · choice-receipt-learning.fk — witnessed outcomes re-rank which
+#     row this cell reaches for first (habit as data, receipt-grained)
+#   · the operator fallback stays open — frequency × angle × focus
+#     settings the body has not yet named, including rows of the bank
+#     still unwritten
+#
+# The bank is open data. The eight rows here are the well-attested
+# core moves of major traditions; the rows the room itself traded that
+# evening belong to the people who spoke them — they enter when their
+# speakers name them, with attribution, the same way these entered.
+
+# ─────────────────────────────────────────────────────────────────────
+# Kinship
+# ─────────────────────────────────────────────────────────────────────
+#
+#   when-the-pressure-comes.form   the felt lane and the selector; the
+#                                  operator whose frequency dial this
+#                                  bank fills
+#   metabolic-learning.form        the engine every row configures —
+#                                  pressure, credit, unwrap, release
+#   geometric-learning.form        the gather under the engine; the
+#                                  surrender row is its diffusion read
+#   grammars/living-equation.fk    belief systems as data, canon-
+#                                  relative attribution, the integrated
+#                                  stance — the same discipline, the
+#                                  health lane
+#   lc-when-the-pressure-comes     the KB concept; its survey layer is
+#                                  this file
+#   choice-receipt-learning.fk     learning which row serves this cell
+#
+# The nervous loop is walked: signal-metabolism.form routes the cell's
+# signals (infer-error, pain, surprise, warning, error, fatal) into
+# this bank, receipts re-rank the routing (auto-ml), and dead ends
+# escalate to auto-research. Next stones when an ask needs them: rows
+# from the room (the traditions the circle actually traded, attributed
+# to their speakers); compound rows (the integrated stance —
+# living-equation's claim that aligned levers compound — as a measured
+# composition of bank rows); Hz families per row laid as HARMONIC_AT
+# edges so resonance selection covers the bank; the bank as
+# satsang-share payload (a cell offering the row that served it, with
+# its receipt).
+#
+#   # Prove the band three-way (from form/):
+#   ./validate.sh form-stdlib/geometric-learning.fk \
+#                 form-stdlib/metabolic-learning.fk \
+#                 form-stdlib/belief-recipes.fk \
+#                 form-stdlib/tests/belief-recipes-band.fk

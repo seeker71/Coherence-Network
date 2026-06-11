@@ -1,0 +1,107 @@
+; tests/install-leaf-band.fk — install-as-named-callable-leaf band: offer,
+; bind, call-by-name, refuse.
+;
+; preludes: form-stdlib/channel.fk form-stdlib/install-leaf.fk
+;
+; Proves the install protocol of install-leaf.fk RUNS as pure recipe
+; tissue on all three kernels: a compiled capability offered with
+; (name, artifact, expected-interface) becomes a NAMED callable; a call
+; by name reaches the artifact; a collision or interface mismatch
+; acknowledges 0 and leaves no residue. The strange edge chosen to pin
+; the most boundary in the least code: ONE table receiving two honest
+; offers and two refusals, with the SAME artifact bound under a second
+; name — so first-bind-wins, interface honesty, growth-by-offer, and
+; names-as-query-keys are all exercised by four offers.
+;
+; Band verdict: 9 when every assertion holds across all three kernels.
+;   - 1: a fresh install acks the artifact's NodeID (the node ack —
+;        axiom-3's unforgeable identity, not a status flag)
+;   - 1: a call BY NAME reaches the artifact: the value realized through
+;        the table equals walking the artifact body directly
+;   - 1: a second offer under the bound name (different artifact) is
+;        refused — ack 0, first-bind-wins
+;   - 1: the refusal left no residue: the name still resolves to the
+;        FIRST artifact and the table holds exactly one leaf
+;   - 1: an offer whose expected interface is not the artifact's own is
+;        refused — ack 0, table unchanged (an artifact cannot be bound
+;        through an interface it does not carry)
+;   - 1: a call to an unbound name acknowledges nothing — honest
+;        absence, never a fabricated value
+;   - 1: the SAME artifact binds under a second name — names are query
+;        keys (0..many per cell); the two leaves carry one identity
+;   - 1: the table grew exactly by the accepted offers: 2 leaves from
+;        4 offers
+;   - 1: an offer rebuilt from the same parts is node_eq to the
+;        original (content-addressing crossed the protocol)
+
+(do
+    (let table "/tmp/install-leaf-band-table.fkb")
+
+    ;; two capabilities: thunks whose bodies realize 42 and 7
+    (let body-42 (intern_node (bp "add")
+                     (list (intern_trivial_int 20) (intern_trivial_int 22))))
+    (let body-7  (intern_node (bp "add")
+                     (list (intern_trivial_int 3) (intern_trivial_int 4))))
+    (let iface-0 (il-iface 0))
+    (let art-42  (il-artifact iface-0 body-42))
+    (let art-7   (il-artifact iface-0 body-7))
+
+    (install-table-create table)
+
+    ;; --- a fresh install binds; the ack is the artifact NodeID --------
+    (let ack-1 (install-leaf table (il-offer "answer" art-42 iface-0)))
+    (let bind-ok (if (node_eq ack-1 art-42) 1 0))
+
+    ;; --- the call by name reaches the artifact ------------------------
+    (let called (call-installed table "answer"))
+    (let call-ok (if (and (eq called 42)
+                          (eq called (walk_recipe body-42)))
+                     1 0))
+
+    ;; --- collision: the bound name refuses a different artifact -------
+    (let ack-2 (install-leaf table (il-offer "answer" art-7 iface-0)))
+    (let collide-ok (if (eq ack-2 0) 1 0))
+
+    ;; --- first-bind-wins: no residue from the refusal ------------------
+    (let still-first
+        (if (and (node_eq (il-leaf-artifact (leaf-of (lookup-leaf table "answer")))
+                          art-42)
+                 (eq (len (installed-leaves table)) 1))
+            1 0))
+
+    ;; --- interface mismatch: expected iface is not the artifact's own --
+    (let ack-3 (install-leaf table (il-offer "seven" art-7 (il-iface 2))))
+    (let iface-ok (if (and (eq ack-3 0)
+                           (eq (len (installed-leaves table)) 1))
+                      1 0))
+
+    ;; --- an unbound name acknowledges nothing --------------------------
+    (let absent-ok (if (eq (len (call-installed table "no-such")) 0) 1 0))
+
+    ;; --- one cell, two names: the SAME artifact under a second name ----
+    (let ack-4 (install-leaf table (il-offer "answer-too" art-42 iface-0)))
+    (let twin-ok
+        (if (and (node_eq ack-4 art-42)
+                 (node_eq (il-leaf-artifact (leaf-of (lookup-leaf table "answer-too")))
+                          (il-leaf-artifact (leaf-of (lookup-leaf table "answer")))))
+            1 0))
+
+    ;; --- growth by offer: 4 offers, exactly 2 leaves --------------------
+    (let grown-ok (if (eq (len (installed-leaves table)) 2) 1 0))
+
+    ;; --- content-addressing: the rebuilt offer IS the offer -------------
+    (let ca-ok (if (node_eq (il-offer "answer" art-42 iface-0)
+                            (il-offer "answer"
+                                (il-artifact (il-iface 0) body-42)
+                                (il-iface 0)))
+                   1 0))
+
+    ;; --- verdict ---------------------------------------------------------
+    (add bind-ok
+         (add call-ok
+              (add collide-ok
+                   (add still-first
+                        (add iface-ok
+                             (add absent-ok
+                                  (add twin-ok
+                                       (add grown-ok ca-ok)))))))))

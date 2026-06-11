@@ -1194,6 +1194,9 @@ check_promoted_bml_read_routes_native() {
     "concept-voices|/api/concepts/lc-attuned-spaces/voices|api_concept_voices"
     "concept-carried-by|/api/concepts/lc-ceremony/carried-by|api_concept_carried_by"
     "presence-resonances|/api/presences/asset:audible-B00DVN8U82/resonances|api_presence_resonances"
+    "spec-registry|/api/spec-registry?limit=2|api_spec_registry"
+    "spec-registry-detail|/api/spec-registry/web-ideas-specs-usage-pages|api_spec_registry_detail"
+    "idea-specs|/api/ideas/user-surfaces/specs|api_idea_specs"
     "lenses|/api/lenses|api_lenses"
     "sensings|/api/sensings?limit=2|api_sensings"
     "translations-page-flow|/api/translations/page/flow|api_translations_entity"
@@ -1273,6 +1276,40 @@ check_promoted_bml_read_routes_native() {
           || ! grep -q '"lens_id":"artistic"' "$body_file" \
           || ! grep -q '"archetype_axes":{' "$body_file"; then
           echo "FAIL: lenses body no longer matches built-in lens catalog contract"
+          head -c 500 "$body_file" || true
+          echo
+          return 1
+        fi
+      fi
+    fi
+    if [[ "$name" == "spec-registry" || "$name" == "idea-specs" ]]; then
+      if command -v jq >/dev/null 2>&1; then
+        if ! jq -e 'type == "array" and length > 0 and (.[0].spec_id | type == "string") and (.[0].title | type == "string")' "$body_file" >/dev/null; then
+          echo "FAIL: spec family list body no longer matches SpecRegistryEntry[]: ${route_path}"
+          jq '{type: type, length: length, first: (.[0] // null)}' "$body_file" 2>/dev/null || head -c 500 "$body_file"
+          echo
+          return 1
+        fi
+      else
+        if ! grep -q '"spec_id":' "$body_file" || ! grep -q '"title":' "$body_file"; then
+          echo "FAIL: spec family list body no longer matches SpecRegistryEntry[]: ${route_path}"
+          head -c 500 "$body_file" || true
+          echo
+          return 1
+        fi
+      fi
+    fi
+    if [[ "$name" == "spec-registry-detail" ]]; then
+      if command -v jq >/dev/null 2>&1; then
+        if ! jq -e '.spec_id == "web-ideas-specs-usage-pages" and (.title | type == "string") and (.workspace_id | type == "string")' "$body_file" >/dev/null; then
+          echo "FAIL: spec detail body no longer matches SpecRegistryEntry: ${route_path}"
+          jq '{spec_id, title, workspace_id}' "$body_file" 2>/dev/null || head -c 500 "$body_file"
+          echo
+          return 1
+        fi
+      else
+        if ! grep -q '"spec_id":"web-ideas-specs-usage-pages"' "$body_file" || ! grep -q '"workspace_id":' "$body_file"; then
+          echo "FAIL: spec detail body no longer matches SpecRegistryEntry: ${route_path}"
           head -c 500 "$body_file" || true
           echo
           return 1

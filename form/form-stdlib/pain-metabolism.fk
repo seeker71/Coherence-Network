@@ -1,0 +1,90 @@
+; pain-metabolism.fk — pain with provenance: a felt event flows over the walk's own
+; trace, names exactly which recipes and cells carried it (provably zero elsewhere),
+; and what it names is metabolized — released, researched, remembered.
+;
+; The body already feels in scattered nerves: ec-reflex-pain (repeating an outgrown
+; carrier), novelty.fk (surprise below the recognition floor), drift-detect (predicted
+; ≠ actual), anomaly-band (outside the band), body-state (the counts). This module is
+; where any of those events goes NEXT — the pathway from "it hurts" to "we know which
+; tissue, and we learned":
+;
+;   pn-felt       the event as a field — magnitude at the site, nothing elsewhere
+;   pn-involved   clc-spread over the walk trace: strongest-path involvement per cell;
+;                 cells the walk never touched stay EXACTLY zero
+;   pn-cone       who would feel a cell's failure — the same spread over mtb-reverse,
+;                 the predictive direction (expressive ≠ receptive, proven in clc)
+;   pn-credit     per-edge responsibility (involvement at the touched end × strength);
+;                 pn-hottest names the edge that carried the most
+;   pn-release-at hoʻoponopono, surgical — release ONE edge; downstream involvement
+;                 strictly drops on the re-felt walk (healing is measured, not hoped)
+;   receipts      a pain's involvement field IS its shape — r6 bins are the receipt;
+;                 nearest-shape recalls a recurring pain, novelty.fk keeps a new pain
+;                 honestly NEW (interned, never force-matched)
+;   pn-triage     novel-first, then by magnitude — curiosity turned toward what hurts
+;   research      the style-space move: the failing samples go to ls-research and the
+;                 loop crowns a replacement row (the band proves the wiring)
+;
+; A trace is the walk's involvement graph as (touched toucher strength) edge data —
+; the same (i j w) shape every gather reads; pn-touch builds rows in call order.
+; Composes geometric-learning (gl-), cognitive-light-cone (clc-), metabolic-learning
+; (mtb-), nearest-shape/learning-arc (recall), novelty (nv-), learning-style-space
+; (ls-). Proven by tests/pain-metabolism-band.fk (three-way).
+(do
+    ; --- the trace: who touched whom, in the walk's own order ---
+    (defn pn-touch (caller callee strength) (list callee caller strength))
+
+    ; --- the felt event: magnitude at the site, nothing elsewhere ---
+    (defn pn-felt-acc (n i site mag)
+        (if (eq i n) (empty)
+            (cons (if (eq i site) mag 0.0) (pn-felt-acc n (add i 1) site mag))))
+    (defn pn-felt (n site mag) (pn-felt-acc n 0 site mag))
+
+    ; --- involvement: the pain illuminates exactly what the walk touched ---
+    (defn pn-involved (trace felt t) (clc-spread trace felt t))
+    (defn pn-involved-count (inv floor) (clc-cone-size inv floor))
+
+    ; --- the predictive direction: who feels THIS cell when it fails ---
+    (defn pn-cone (trace n cell t) (clc-spread (mtb-reverse trace) (clc-seed n cell) t))
+
+    ; --- per-edge responsibility, and the edge that carried the most ---
+    (defn pn-credit (trace inv)
+        (if (eq (len trace) 0) (empty)
+            (cons (mul (nth inv (nth (head trace) 0)) (nth (head trace) 2))
+                  (pn-credit (tail trace) inv))))
+    (defn pn-hottest-acc (resp k best bk)
+        (if (eq (len resp) 0) bk
+            (if (gt (head resp) best)
+                (pn-hottest-acc (tail resp) (add k 1) (head resp) k)
+                (pn-hottest-acc (tail resp) (add k 1) best bk))))
+    (defn pn-hottest (resp) (pn-hottest-acc (tail resp) 1 (head resp) 0))
+
+    ; --- surgical release: one edge, weakened; the pathway carries less ---
+    (defn pn-release-at (trace k lam)
+        (if (eq (len trace) 0) (empty)
+            (cons (if (eq k 0)
+                      (list (nth (head trace) 0) (nth (head trace) 1)
+                            (mul (sub 1.0 lam) (nth (head trace) 2)))
+                      (head trace))
+                  (pn-release-at (tail trace) (sub k 1) lam))))
+
+    ; --- the receipt: a pain's shape is its involvement field, binned ---
+    (defn pn-receipt (inv) (ls-r6map inv))
+
+    ; --- triage: novel pain first, then the loudest — both as data ---
+    ; an event: (list id novel01 magnitude)
+    (defn pn-before? (a b)
+        (if (gt (nth a 1) (nth b 1)) 1
+            (if (lt (nth a 1) (nth b 1)) 0
+                (if (gt (nth a 2) (nth b 2)) 1 0))))
+    (defn pn-triage-insert (e xs)
+        (if (eq (len xs) 0) (list e)
+            (if (eq (pn-before? e (head xs)) 1) (cons e xs)
+                (cons (head xs) (pn-triage-insert e (tail xs))))))
+    (defn pn-triage-acc (events acc)
+        (if (eq (len events) 0) acc
+            (pn-triage-acc (tail events) (pn-triage-insert (head events) acc))))
+    (defn pn-triage (events) (pn-triage-acc events (empty)))
+    (defn pn-triage-ids (events)
+        (if (eq (len events) 0) (empty)
+            (cons (nth (head events) 0) (pn-triage-ids (tail events)))))
+    0)

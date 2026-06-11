@@ -1,0 +1,35 @@
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/form-parse.fk form-stdlib/form-flatten.fk
+;
+; form-flatten-band — m4e3's flattener proven three-way: REAL band source
+; (the unmodified files on disk) flattens into a fourth-walker program. The
+; lowering semantics and the defn/let/CALL machinery are proven by VALUE on
+; the recipe-side walker; the real-band flatten is proven by STRUCTURE here
+; (the value witness for the real band runs on the emitted universal binary
+; in scripts/fourth_kernel_audit.sh — the fourth arm, where the heap ops
+; live). Same cells, both walkers; content-addressing carries the identity.
+;
+; Verdict 15 when the flattener holds:
+;   1   the lowerings carry values — gt strict at the tie (gt 4 4 -> 0,
+;       the learning-trend boundary), ge admits it, eq lands, and gates
+;   2   defn/let/CALL — a mini band with a function, a let, and a verdict
+;       expression walks to 44 through the function table
+;   4   the REAL learning-trend module + band files (read from disk,
+;       unmodified) flatten to main + 5 module functions = 6 rows in the
+;       function table
+;   8   the flattened table FITS the universal fkw binary — more than 100
+;       real rows, under the loader's 4096-row capacity
+(do
+    (let c0 (if (and (and (eq (fkm-run (flt-src-fns "(do (gt 5 2))") 0) 1)
+                          (eq (fkm-run (flt-src-fns "(do (gt 4 4))") 0) 0))
+                     (and (eq (fkm-run (flt-src-fns "(do (ge 4 4))") 0) 1)
+                          (and (eq (fkm-run (flt-src-fns "(do (eq 7 7))") 0) 1)
+                               (and (eq (fkm-run (flt-src-fns "(do (eq 7 8))") 0) 0)
+                                    (eq (fkm-run (flt-src-fns "(do (and 1 0))") 0) 0)))))
+                1 0))
+    (let c1 (if (eq (fkm-run (flt-src-fns "(do (defn dbl (x) (add x x)) (let four (dbl 2)) (add four (dbl 20)))") 0) 44) 2 0))
+    (let real (flt-band-fns (read_file "form-stdlib/learning-trend.fk")
+                            (read_file "form-stdlib/tests/learning-trend-band.fk")))
+    (let c2 (if (eq (len real) 6) 4 0))
+    (let rows (nth (fkc-flatten-many real) 0))
+    (let c3 (if (and (gt (len rows) 100) (gt 4096 (len rows))) 8 0))
+    (add c0 (add c1 (add c2 c3))))

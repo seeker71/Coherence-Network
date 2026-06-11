@@ -109,6 +109,17 @@
 ;        20,077x) — that is where Form-native model SPEED lives today, not the in-process JIT. Two
 ;        routes forward: fix the in-process dispatch realization, OR wire the model through the
 ;        proven emit-compile-exec lane. Evidence: commit_evidence_2026-06-11_jit_realization_gap.json.]
+;        [GPU LANE RUNS (the metal.ts port, realized as recipe): jte-matvec-msl in jit-tensor-emit.fk
+;        emits the MSL matvec from the SAME emitter-as-recipe discipline — one thread per output row,
+;        inner loop j DOWN (tb-dot's right-fold), mul/add split through a named temporary so no
+;        compiler contraction can change the op order; fp32 is the lane MSL declares (no f64 in device
+;        code — the cross-precision discipline above, both sides held to declared precision).
+;        tests/metal-emit-band.fk → 7 three-way. LIVE WITNESS scripts/metal_matvec_audit.sh (M4 Max,
+;        mathMode=safe, 30 dispatches after warm): 1280×1280 parity 1280/1280 BIT-EXACT, gpu_kernel
+;        0.401 ms vs cpu same-fold-order fp32 1.263 ms; 4096×4096 parity 4096/4096 bit-exact,
+;        0.958 ms vs 12.664 ms (13.2×). Named open: kernel-resident Metal carrier (in-process
+;        dispatch beside rustc/dlopen), bf16/half per format-arith semantics, batching only when a
+;        model stone needs it. Evidence: commit_evidence_2026-06-11_metal_matvec_emitter.json.]
 ;   M6  whisper-tiny block 0 — carrier loads openai/whisper-tiny safetensors (or mlx-community/whisper-tiny,
 ;        already referenced in experiments/satsang-voice), encodes block-0 weights via M2, runs M4 over
 ;        them, matches the HF reference activation within epsilon. First real model in the body. (Even
@@ -154,6 +165,13 @@
 ;   M7 milestone: an autoresearch loop that generates a small layer-stack variant, evaluates it on
 ;   held-out signal, and champion-challenges it against the running model — provable, and gated on M1-M6
 ;   (you can only search architectures once you can build and run them).
+;   M7's STYLE-SPACE ORGAN [SHIPPED: learning-style-space.fk + tests/learning-style-space-band.fk
+;   → 4095, three-way]: the genome the loop searches is now ROWS of (id, pool, core) data — CNN,
+;   mesh/GDL, attention, relational/max-plus, order-spectrum, and their compositions through ONE
+;   combinator; the band proves three tasks crown three different styles (no free lunch), a new
+;   bias appended as pure data is measurable immediately, federated memories compose to strictly
+;   exceed each cell alone, and a curiosity floor meets every style before retrying any. See
+;   learning-style-space.form.
 ;
 ; KIN: numeric-formats.canonical.json (the 19 formats + conformance) · cell-numerics.form / cosine.form
 ;   (the layer math) · attention.fk + embedding-as-recipe.fk (content-addressed attention) ·

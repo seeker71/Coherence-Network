@@ -29,12 +29,17 @@
 ;   am-churn    the measured workload: rebuild an l-cell chain r times; every
 ;               build but the last is garbage (the root moved on)
 ;
-; The sibling's carrier holds 4095 cells (4096 slots, slot 0 the sentinel);
-; past it the bump wraps and overwrites — measured live on the emitted binary:
-; chain-then-LEN answers n up to exactly n=4095, then 0 at n=4096 (the root
-; wraps onto the sentinel) and 104 at n=4200 (the chain torn at the wrap).
-; Melt keeps live sets under the boundary; bump-only stays the right default
-; while a workload's measured allocations sit below it.
+; The sibling's carrier opens at 4095 cells (4096 slots, slot 0 the sentinel).
+; Round 1 measured the bump-only carrier dying past the line (n=4096 wrapped
+; the root onto the sentinel -> LEN 0; n=4200 tore the chain -> LEN 104).
+; The emitted CONS door now carries this melt (fourth-walker-emit.fk's
+; fkc-melt-* tissue, mirrored on am-live/am-melt/am-measure): at the
+; high-water line the walker melts live cells into fresh space and grows
+; the carrier only when the live set crowds it — measured live: chain
+; n=4200 -> 4200 (carrier 4096 -> 8192), churn 5x1000 -> 1000 with 3000
+; dead cells returned (48000 bytes), carrier kept. Bump-only stays the
+; default below the water line; the proof band for the activation is
+; tests/melt-on-cool-band.fk.
 
 ; ── the arena — the m4e2 shape as composition ────────────────────────────
 (defn am-new () (list 0 (empty)))
@@ -78,8 +83,9 @@
 ; 16 bytes per cell: the sibling's two long longs (fk_heap_head + fk_heap_tail)
 (defn am-measure2 (alloc live) (list alloc live (sub alloc live) (mul alloc 16) (mul live 16)))
 (defn am-measure (ar root) (am-measure2 (am-hp ar) (len (am-live-slots ar root))))
-; (the if-chain short-circuits: each claim walks nth only after the
-;  previous one held — eq itself answers 0/1 three-way, per eq-shape-band)
+; (eq acknowledges with the 0/1 integer states on every kernel — axiom-1,
+;  proven by tests/eq-shape-band.fk — so a comparison's answer feeds
+;  arithmetic directly; the if-reduction here is style, not necessity)
 (defn am-readout-is (m alloc live dead pb lb)
     (if (eq (nth m 0) alloc)
         (if (eq (nth m 1) live)
@@ -132,5 +138,7 @@
 (defn am-churn (ar l r) (if (eq r 1) (am-chain ar l) (am-churn2 (am-chain ar l) l r)))
 
 ; ── the sibling's carrier boundary ───────────────────────────────────────
-; 4096 emitted slots with slot 0 reserved as the sentinel: 4095 live cells.
+; 4096 slots at birth with slot 0 reserved as the sentinel: 4095 cells.
+; The high-water door (fkc-needs-melt) melts before the line; the carrier
+; grows past it only when the live set crowds it (fkc-next-capacity).
 (defn am-sibling-capacity () 4095)
