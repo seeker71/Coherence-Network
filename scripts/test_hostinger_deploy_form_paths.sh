@@ -51,6 +51,15 @@ grep -Fq 'PathRegexp(`^/api/concepts/[^/]+/carried-by$`)' "$ROOT_DIR/deploy/kern
 grep -Fq 'PathRegexp(`^/api/presences/[^/]+/resonances$`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
   || fail "kernel-router ingress does not expose the presence resonances BML template route"
 
+grep -Fq 'Path(`/api/spec-registry`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+  || fail "kernel-router ingress does not expose the spec registry BML list route"
+
+grep -Fq 'PathRegexp(`^/api/spec-registry/[^/]+$`) && !Path(`/api/spec-registry/cards`) && !Path(`/api/spec-registry/source-list`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+  || fail "kernel-router ingress does not expose the spec registry BML detail route with reserved siblings excluded"
+
+grep -Fq 'PathRegexp(`^/api/ideas/[^/]+/specs$`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+  || fail "kernel-router ingress does not expose the idea specs BML route"
+
 grep -Fq 'Path(`/api/sensings`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
   || fail "kernel-router ingress does not expose the sensings BML route"
 
@@ -84,6 +93,15 @@ grep -Fq 'api_concept_carried_by' "$DEPLOY_SCRIPT" \
 grep -Fq 'api_presence_resonances' "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not probe the presence resonances BML handler"
 
+grep -Fq 'api_spec_registry' "$DEPLOY_SCRIPT" \
+  || fail "deploy canary does not probe the spec registry BML handler"
+
+grep -Fq 'api_spec_registry_detail' "$DEPLOY_SCRIPT" \
+  || fail "deploy canary does not probe the spec registry detail BML handler"
+
+grep -Fq 'api_idea_specs' "$DEPLOY_SCRIPT" \
+  || fail "deploy canary does not probe the idea specs BML handler"
+
 grep -Fq 'api_translations_entity' "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not probe the translations entity BML handler"
 
@@ -107,6 +125,15 @@ grep -Fq 'api-native-ok-json("api_concept_carried_by"' "$ROOT_DIR/deploy/front-d
 
 grep -Fq 'api-native-ok-json("api_presence_resonances"' "$ROOT_DIR/deploy/front-door/api.bml" \
   || fail "presence resonances handler does not emit native proof headers"
+
+grep -Fq 'api-spec-list-response("api_spec_registry"' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "spec registry handler does not emit native proof headers with x-total-count"
+
+grep -Fq 'api-native-ok-json("api_spec_registry_detail"' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "spec registry detail handler does not emit native proof headers"
+
+grep -Fq 'api-native-ok-json("api_idea_specs"' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "idea specs handler does not emit native proof headers"
 
 grep -Fq 'api-native-ok-json("api_sensings"' "$ROOT_DIR/deploy/front-door/api.bml" \
   || fail "sensings handler does not emit native proof headers"

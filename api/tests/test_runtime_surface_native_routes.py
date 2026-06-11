@@ -141,6 +141,9 @@ def test_real_manifest_native_routes_are_served_zero_and_include_ideas_structure
     assert "/api/ideas/source-portfolio" in capable_paths
     assert "/api/ideas/graph-projection" in capable_paths
     assert "/api/spec-registry/source-list" in capable_paths
+    assert "/api/spec-registry" in capable_paths
+    assert "/api/spec-registry/{spec_id}" in capable_paths
+    assert "/api/ideas/{idea_id}/specs" in capable_paths
     assert "/api/sensings" in capable_paths
     assert "/api/sensings/{sensing_id}" in capable_paths
     assert "/api/translations/{entity_type}/{entity_id}" in capable_paths

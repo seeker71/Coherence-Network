@@ -525,6 +525,85 @@ section [form.bml] {
         let right = api-trim-right-index(s, sub(str_len(s), 1));
         if lt(right, left) then "" else substring(s, left, add(right, 1));
     }
+
+    def api-locale-supported?(lang) = or(str_eq(lang, "en"), or(str_eq(lang, "de"), or(str_eq(lang, "es"), or(str_eq(lang, "fr"), or(str_eq(lang, "id"), str_eq(lang, "pt-br"))))));
+    def api-locale-root(lang) {
+        let dash = str_find(lang, "-", 0);
+        if eq(dash, -1) then lang else substring(lang, 0, dash);
+    }
+    def api-locale-without-quality(raw) {
+        let semi = str_find(raw, ";", 0);
+        if eq(semi, -1) then raw else substring(raw, 0, semi);
+    }
+    def api-locale-first-token(header) {
+        let comma = str_find(header, ",", 0);
+        let first = if eq(comma, -1) then header else substring(header, 0, comma);
+        kh-ascii-lower(api-trim(api-locale-without-quality(first)));
+    }
+    def api-locale-normalized(candidate) {
+        let root = api-locale-root(candidate);
+        if api-locale-supported?(candidate) then candidate else if api-locale-supported?(root) then root else "en";
+    }
+    def api-caller-lang(request) {
+        let query_lang = kh-ascii-lower(api-trim(kh-query-value-or(request, "lang", "")));
+        let header_lang = api-locale-first-token(api-request-header-value-or(request, "Accept-Language", ""));
+        if api-locale-supported?(query_lang) then query_lang else api-locale-normalized(header_lang);
+    }
+    def api-spec-select-sql() = "SELECT COALESCE(NULLIF(n.properties->>'spec_id',''), regexp_replace(n.id, '^spec-', '')) AS spec_id, COALESCE(NULLIF(ev.content_title,''), NULLIF(n.name,''), COALESCE(NULLIF(n.properties->>'spec_id',''), regexp_replace(n.id, '^spec-', ''))) AS title, COALESCE(NULLIF(ev.content_description,''), n.description, '') AS summary, COALESCE(NULLIF(n.properties->>'potential_value','')::double precision, 0.0) AS potential_value, COALESCE(NULLIF(n.properties->>'actual_value','')::double precision, 0.0) AS actual_value, COALESCE(NULLIF(n.properties->>'estimated_cost','')::double precision, 0.0) AS estimated_cost, COALESCE(NULLIF(n.properties->>'actual_cost','')::double precision, 0.0) AS actual_cost, round(GREATEST(COALESCE(NULLIF(n.properties->>'potential_value','')::double precision, 0.0) - COALESCE(NULLIF(n.properties->>'actual_value','')::double precision, 0.0), 0.0)::numeric, 4)::double precision AS value_gap, round((COALESCE(NULLIF(n.properties->>'actual_cost','')::double precision, 0.0) - COALESCE(NULLIF(n.properties->>'estimated_cost','')::double precision, 0.0))::numeric, 4)::double precision AS cost_gap, CASE WHEN COALESCE(NULLIF(n.properties->>'estimated_cost','')::double precision, 0.0) <= 0 THEN 0.0 ELSE round((COALESCE(NULLIF(n.properties->>'potential_value','')::double precision, 0.0) / COALESCE(NULLIF(n.properties->>'estimated_cost','')::double precision, 0.0))::numeric, 4)::double precision END AS estimated_roi, CASE WHEN COALESCE(NULLIF(n.properties->>'actual_cost','')::double precision, 0.0) <= 0 THEN 0.0 ELSE round((COALESCE(NULLIF(n.properties->>'actual_value','')::double precision, 0.0) / COALESCE(NULLIF(n.properties->>'actual_cost','')::double precision, 0.0))::numeric, 4)::double precision END AS actual_roi, COALESCE(n.properties->>'idea_id','') AS idea_id, COALESCE(n.properties->>'process_summary','') AS process_summary, COALESCE(n.properties->>'pseudocode_summary','') AS pseudocode_summary, COALESCE(n.properties->>'implementation_summary','') AS implementation_summary, COALESCE(n.properties->>'created_by_contributor_id','') AS created_by_contributor_id, COALESCE(n.properties->>'updated_by_contributor_id','') AS updated_by_contributor_id, to_char(n.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') AS created_at, to_char(n.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') AS updated_at, COALESCE(n.properties->>'content_path','') AS content_path, COALESCE(n.properties->>'content_hash','') AS content_hash, COALESCE(NULLIF(n.properties->>'workspace_id',''), 'coherence-network') AS workspace_id FROM graph_nodes n LEFT JOIN LATERAL (SELECT content_title, content_description FROM entity_views ev WHERE ev.entity_type = 'spec' AND ev.entity_id = COALESCE(NULLIF(n.properties->>'spec_id',''), regexp_replace(n.id, '^spec-', '')) AND ev.lang = $1 AND ev.status = 'canonical' ORDER BY ev.updated_at DESC LIMIT 1) ev ON true";
+    def api-spec-list-sql() = str_concat(api-spec-select-sql(), " WHERE n.type = 'spec' AND ($2 = '' OR COALESCE(NULLIF(n.properties->>'workspace_id',''), 'coherence-network') = $2) ORDER BY n.updated_at DESC LIMIT $3 OFFSET $4");
+    def api-spec-list-count-sql() = "SELECT count(*)::bigint AS total FROM graph_nodes n WHERE n.type = 'spec' AND ($1 = '' OR COALESCE(NULLIF(n.properties->>'workspace_id',''), 'coherence-network') = $1)";
+    def api-spec-detail-sql() = str_concat(api-spec-select-sql(), " WHERE n.type = 'spec' AND (n.id = $2 OR n.id = ('spec-' || $2) OR COALESCE(NULLIF(n.properties->>'spec_id',''), '') = $2) LIMIT 1");
+    def api-spec-idea-exists-sql() = "SELECT count(*)::bigint AS total FROM graph_nodes WHERE type = 'idea' AND id = $1";
+    def api-spec-idea-list-sql() = str_concat(api-spec-select-sql(), " WHERE n.type = 'spec' AND COALESCE(n.properties->>'idea_id','') = $2 ORDER BY n.updated_at DESC LIMIT 1000");
+    def api-spec-path-id(request) {
+        let path = kh-request-path(request);
+        api-path-first-segment(api-path-tail(path, "/api/spec-registry/"));
+    }
+    def api-idea-specs-id(request) {
+        let tail = api-path-tail(kh-request-path(request), "/api/ideas/");
+        api-path-first-segment(tail);
+    }
+    def api-spec-row-json(row) = json-node-object(list(json-node-pair("spec_id", json-node-string(idea-row("spec_id", row))), json-node-pair("title", json-node-string(idea-row("title", row))), json-node-pair("summary", json-node-string(idea-row("summary", row))), json-node-pair("potential_value", api-json-number(idea-row("potential_value", row))), json-node-pair("actual_value", api-json-number(idea-row("actual_value", row))), json-node-pair("estimated_cost", api-json-number(idea-row("estimated_cost", row))), json-node-pair("actual_cost", api-json-number(idea-row("actual_cost", row))), json-node-pair("value_gap", api-json-number(idea-row("value_gap", row))), json-node-pair("cost_gap", api-json-number(idea-row("cost_gap", row))), json-node-pair("estimated_roi", api-json-number(idea-row("estimated_roi", row))), json-node-pair("actual_roi", api-json-number(idea-row("actual_roi", row))), json-node-pair("idea_id", api-json-nullable-string(idea-row("idea_id", row))), json-node-pair("process_summary", api-json-nullable-string(idea-row("process_summary", row))), json-node-pair("pseudocode_summary", api-json-nullable-string(idea-row("pseudocode_summary", row))), json-node-pair("implementation_summary", api-json-nullable-string(idea-row("implementation_summary", row))), json-node-pair("created_by_contributor_id", api-json-nullable-string(idea-row("created_by_contributor_id", row))), json-node-pair("updated_by_contributor_id", api-json-nullable-string(idea-row("updated_by_contributor_id", row))), json-node-pair("created_at", json-node-string(idea-row("created_at", row))), json-node-pair("updated_at", json-node-string(idea-row("updated_at", row))), json-node-pair("content_path", api-json-nullable-string(idea-row("content_path", row))), json-node-pair("content_hash", api-json-nullable-string(idea-row("content_hash", row))), json-node-pair("workspace_id", json-node-string(idea-row("workspace_id", row)))));
+    def api-spec-rows-json(rows) = if nil?(rows) then empty else cons(api-spec-row-json(head(rows)), api-spec-rows-json(tail(rows)));
+    def api-spec-list-response-json(rows) = json-node-array(api-spec-rows-json(rows));
+    def api-spec-list-response(handler, count_rows, rows) = kh-response(200, list(kh-header("Content-Type", "application/json"), kh-header("X-Form-Handler", handler), kh-header("X-Form-Python-Authority", "false"), kh-header("x-total-count", value_str(if nil?(count_rows) then 0 else idea-row("total", head(count_rows))))), json-emit(api-spec-list-response-json(rows)));
+    def api-spec-registry-connected(conn, request) {
+        let limit = api-clamp-limit(kh-query-int-or(request, "limit", 200), 1000);
+        let offset = idea-safe-offset(kh-query-int-or(request, "offset", 0));
+        let workspace_id = kh-query-value-or(request, "workspace_id", "");
+        let lang = api-caller-lang(request);
+        let count_rows = pg_query_rows(conn, api-spec-list-count-sql(), list(workspace_id));
+        let rows = pg_query_rows(conn, api-spec-list-sql(), list(lang, workspace_id, limit, offset));
+        let closed = pg_close(conn);
+        if api-query-failed?() then api-service-unavailable("persistence", "spec registry query failed") else api-spec-list-response("api_spec_registry", count_rows, rows);
+    }
+    def api_spec_registry(request) {
+        let conn = pg_connect(config_database_url());
+        if lt(conn, 0) then api-service-unavailable("persistence", "database unavailable") else api-spec-registry-connected(conn, request);
+    }
+    def api-spec-detail-connected(conn, request) {
+        let spec_id = api-spec-path-id(request);
+        let rows = pg_query_rows(conn, api-spec-detail-sql(), list(api-caller-lang(request), spec_id));
+        let closed = pg_close(conn);
+        if str_eq(spec_id, "") then api-error-status-json(422, "spec_id is required") else if api-query-failed?() then api-service-unavailable("persistence", "spec registry detail query failed") else if nil?(rows) then api-error-status-json(404, str_concat("Spec '", str_concat(spec_id, "' not found"))) else api-native-ok-json("api_spec_registry_detail", api-spec-row-json(head(rows)));
+    }
+    def api_spec_registry_detail(request) {
+        let conn = pg_connect(config_database_url());
+        if lt(conn, 0) then api-service-unavailable("persistence", "database unavailable") else api-spec-detail-connected(conn, request);
+    }
+    def api-idea-specs-connected(conn, request) {
+        let idea_id = api-idea-specs-id(request);
+        let lang = api-caller-lang(request);
+        let idea_rows = pg_query_rows(conn, api-spec-idea-exists-sql(), list(idea_id));
+        let rows = if nil?(idea_rows) then empty else if le(idea-row("total", head(idea_rows)), 0) then empty else pg_query_rows(conn, api-spec-idea-list-sql(), list(lang, idea_id));
+        let closed = pg_close(conn);
+        if str_eq(idea_id, "") then api-error-status-json(422, "idea_id is required") else if api-query-failed?() then api-service-unavailable("persistence", "idea specs query failed") else if nil?(idea_rows) then api-service-unavailable("persistence", "idea lookup failed") else if le(idea-row("total", head(idea_rows)), 0) then api-error-status-json(404, "Idea not found") else api-native-ok-json("api_idea_specs", api-spec-list-response-json(rows));
+    }
+    def api_idea_specs(request) {
+        let conn = pg_connect(config_database_url());
+        if lt(conn, 0) then api-service-unavailable("persistence", "database unavailable") else api-idea-specs-connected(conn, request);
+    }
+
     def api-json-null-node?(value) = node_eq(node_category(value), JSON-NULL);
     def api-json-value-or(value, default_value) = if api-json-null-node?(value) then default_value else value_str(node_value(value));
     def api-json-int-or(value, default_value) = if api-json-null-node?(value) then default_value else str_to_int(value_str(node_value(value)));
@@ -1338,12 +1417,15 @@ section [form.route] {
     }
 
     class IdeasIndexRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("ideas-index", "GET", "/api/ideas", 90, "api_ideas", "Accept", 20);
+    class IdeaSpecsRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("idea-specs", "GET", "/api/ideas/{idea_id}/specs", 89, "api_idea_specs", "Accept", 35);
     class IdeasResonanceRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("ideas-resonance", "GET", "/api/ideas/resonance", 89, "api_ideas_resonance", "Accept", 35);
     class IdeasObservationRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("ideas-observation", "GET", "/api/_form/ideas-observation", 95, "api_ideas_observe", "X-Form-Observe", 40);
     class IdeasTimingRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("ideas-timing", "GET", "/api/_form/ideas-timing", 96, "api_ideas_timing", "X-Form-Observe", 40);
     class HealthRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("api-health", "GET", "/api/health", 100, "api_health", "Accept", 20);
     class ReadyRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("api-ready", "GET", "/api/ready", 100, "api_ready", "Accept", 20);
     class GatesMainHeadRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("gates-main-head", "GET", "/api/gates/main-head", 83, "api_gates_main_head", "Accept", 35);
+    class SpecRegistryRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("spec-registry-index", "GET", "/api/spec-registry", 88, "api_spec_registry", "Accept", 35);
+    class SpecRegistryDetailRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("spec-registry-detail", "GET", "/api/spec-registry/{spec_id}", 87, "api_spec_registry_detail", "Accept", 35);
     class AgentTasksRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("agent-tasks-index", "GET", "/api/agent/tasks", 89, "api_agent_tasks", "Accept", 35);
     class ObservedTasksRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("observed-tasks-index", "GET", "/api/tasks", 89, "api_agent_tasks", "Accept", 35);
     class AgentTasksActiveRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("agent-tasks-active", "GET", "/api/agent/tasks/active", 90, "api_agent_tasks_active", "Accept", 25);
@@ -1394,6 +1476,6 @@ section [form.route] {
     class KernelStatusRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("kernel-status", "GET", "/api/utils/kernel_status", 78, "api_kernel_status", "Accept", 20);
     class FieldStoryTraceRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("field-story-trace", "GET", "/api/field-stories/*", 78, "api_field_story_trace", "Accept", 40);
 
-    let routes = list(language-route-class-kernel-route(HealthRoute), language-route-class-kernel-route(ReadyRoute), language-route-class-kernel-route(GatesMainHeadRoute), language-route-class-kernel-route(AgentTasksRoute), language-route-class-kernel-route(ObservedTasksRoute), language-route-class-kernel-route(AgentTasksActiveRoute), language-route-class-kernel-route(AgentTasksActivityRoute), language-route-class-kernel-route(ContributorsIndexRoute), language-route-class-kernel-route(ContributionsIndexRoute), language-route-class-kernel-route(LensesIndexRoute), language-route-class-kernel-route(WorkspacesIndexRoute), language-route-class-kernel-route(SensingsIndexRoute), language-route-class-kernel-route(SensingDetailRoute), language-route-class-kernel-route(TranslationsEntityRoute), language-route-class-kernel-route(CoherenceNetworkVitalityRoute), language-route-class-kernel-route(CoherenceScoreRoute), language-route-class-kernel-route(GraphNodesIndexRoute), language-route-class-kernel-route(GraphEdgesCreateRoute), language-route-class-kernel-route(AnonymousMeetingTraceRecordRoute), language-route-class-kernel-route(AnonymousMeetingTracesRoute), language-route-class-kernel-route(AgentTaskRoute), language-route-class-kernel-route(RecentConceptVoicesRoute), language-route-class-kernel-route(ConceptVoicesRoute), language-route-class-kernel-route(ConceptCarriedByRoute), language-route-class-kernel-route(PresenceResonancesRoute), language-route-class-kernel-route(RecentReactionsRoute), language-route-class-kernel-route(ReactionConceptSummaryRoute), language-route-class-kernel-route(ReactionConceptThreadsRoute), language-route-class-kernel-route(PresenceSummaryRoute), language-route-class-kernel-route(PresenceHeartbeatRoute), language-route-class-kernel-route(PresenceCountRoute), language-route-class-kernel-route(SubstrateFormCompilerRoute), language-route-class-kernel-route(SubstrateKernelImageProposalRoute), language-route-class-kernel-route(SubstratePageRoute), language-route-class-kernel-route(FederationNodesCountRoute), language-route-class-kernel-route(LivingCollectiveConceptRoute), language-route-class-kernel-route(EdgesRoute), language-route-class-kernel-route(InspiredByRoute), language-route-class-kernel-route(ViewsPingRoute), language-route-class-kernel-route(ViewsStatsRoute), language-route-class-kernel-route(RuntimeEventsCreateRoute), language-route-class-kernel-route(RuntimeEventsIndexRoute), language-route-class-kernel-route(RuntimeEndpointsSummaryRoute), language-route-class-kernel-route(InventoryFlowRoute), language-route-class-kernel-route(InventoryFlowObservationRoute), language-route-class-kernel-route(PersonalFeedRoute), language-route-class-kernel-route(HouseholdRequestsRoute), language-route-class-kernel-route(HouseholdRequestDetailRoute), language-route-class-kernel-route(HouseholdMembersRoute), language-route-class-kernel-route(HouseholdEventsRoute), language-route-class-kernel-route(KernelStatusRoute), language-route-class-kernel-route(FieldStoryTraceRoute), language-route-class-kernel-route(IdeasTimingRoute), language-route-class-kernel-route(IdeasObservationRoute), language-route-class-kernel-route(IdeasResonanceRoute), language-route-class-kernel-route(IdeasIndexRoute));
+    let routes = list(language-route-class-kernel-route(HealthRoute), language-route-class-kernel-route(ReadyRoute), language-route-class-kernel-route(GatesMainHeadRoute), language-route-class-kernel-route(SpecRegistryRoute), language-route-class-kernel-route(SpecRegistryDetailRoute), language-route-class-kernel-route(AgentTasksRoute), language-route-class-kernel-route(ObservedTasksRoute), language-route-class-kernel-route(AgentTasksActiveRoute), language-route-class-kernel-route(AgentTasksActivityRoute), language-route-class-kernel-route(ContributorsIndexRoute), language-route-class-kernel-route(ContributionsIndexRoute), language-route-class-kernel-route(LensesIndexRoute), language-route-class-kernel-route(WorkspacesIndexRoute), language-route-class-kernel-route(SensingsIndexRoute), language-route-class-kernel-route(SensingDetailRoute), language-route-class-kernel-route(TranslationsEntityRoute), language-route-class-kernel-route(CoherenceNetworkVitalityRoute), language-route-class-kernel-route(CoherenceScoreRoute), language-route-class-kernel-route(GraphNodesIndexRoute), language-route-class-kernel-route(GraphEdgesCreateRoute), language-route-class-kernel-route(AnonymousMeetingTraceRecordRoute), language-route-class-kernel-route(AnonymousMeetingTracesRoute), language-route-class-kernel-route(AgentTaskRoute), language-route-class-kernel-route(RecentConceptVoicesRoute), language-route-class-kernel-route(ConceptVoicesRoute), language-route-class-kernel-route(ConceptCarriedByRoute), language-route-class-kernel-route(PresenceResonancesRoute), language-route-class-kernel-route(RecentReactionsRoute), language-route-class-kernel-route(ReactionConceptSummaryRoute), language-route-class-kernel-route(ReactionConceptThreadsRoute), language-route-class-kernel-route(PresenceSummaryRoute), language-route-class-kernel-route(PresenceHeartbeatRoute), language-route-class-kernel-route(PresenceCountRoute), language-route-class-kernel-route(SubstrateFormCompilerRoute), language-route-class-kernel-route(SubstrateKernelImageProposalRoute), language-route-class-kernel-route(SubstratePageRoute), language-route-class-kernel-route(FederationNodesCountRoute), language-route-class-kernel-route(LivingCollectiveConceptRoute), language-route-class-kernel-route(EdgesRoute), language-route-class-kernel-route(InspiredByRoute), language-route-class-kernel-route(ViewsPingRoute), language-route-class-kernel-route(ViewsStatsRoute), language-route-class-kernel-route(RuntimeEventsCreateRoute), language-route-class-kernel-route(RuntimeEventsIndexRoute), language-route-class-kernel-route(RuntimeEndpointsSummaryRoute), language-route-class-kernel-route(InventoryFlowRoute), language-route-class-kernel-route(InventoryFlowObservationRoute), language-route-class-kernel-route(PersonalFeedRoute), language-route-class-kernel-route(HouseholdRequestsRoute), language-route-class-kernel-route(HouseholdRequestDetailRoute), language-route-class-kernel-route(HouseholdMembersRoute), language-route-class-kernel-route(HouseholdEventsRoute), language-route-class-kernel-route(KernelStatusRoute), language-route-class-kernel-route(FieldStoryTraceRoute), language-route-class-kernel-route(IdeaSpecsRoute), language-route-class-kernel-route(IdeasTimingRoute), language-route-class-kernel-route(IdeasObservationRoute), language-route-class-kernel-route(IdeasResonanceRoute), language-route-class-kernel-route(IdeasIndexRoute));
     0;
 }
