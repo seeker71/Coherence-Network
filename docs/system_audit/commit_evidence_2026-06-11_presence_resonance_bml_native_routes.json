@@ -1,0 +1,110 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "codex/non-native-api-lane-20260611",
+  "commit_scope": "Promote the presence resonance relationship read family into the BML native front door: GET /api/concepts/{concept_id}/carried-by and GET /api/presences/{presence_id}/resonances.",
+  "files_owned": [
+    "deploy/front-door/api.bml",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/verify_web_api_deploy.sh",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "api/tests/test_runtime_surface_native_routes.py",
+    "docs/system_audit/commit_evidence_2026-06-11_presence_resonance_bml_native_routes.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/native_route_goal_loop.py /goal --source web_api --seconds 86400",
+      "bash -n scripts/verify_web_api_deploy.sh && bash -n deploy/hostinger/auto-deploy.sh && bash -n scripts/test_hostinger_deploy_form_paths.sh",
+      "./scripts/test_hostinger_deploy_form_paths.sh",
+      "cargo build --release --bin form-kernel-rust && target/release/form-kernel-rust check --routes ../../deploy/front-door/api.bml --stdlib ../form-stdlib",
+      "tmp=\"$(mktemp)\"; git show origin/main:deploy/front-door/api.bml > \"$tmp\"; form/form-kernel-rust/target/release/form-kernel-rust check --routes \"$tmp\" --stdlib form/form-stdlib; rc=$?; rm -f \"$tmp\"; exit $rc",
+      "python3 -m pytest -q api/tests/test_runtime_surface_native_routes.py api/tests/test_runtime_web_api_provenance.py",
+      "python3 scripts/runtime_surface_report.py --json"
+    ],
+    "notes": "Before this slice, runtime_surface_report showed 87 kernel-first-capable routes and /goal identified GET /api/concepts/lc-ceremony/carried-by plus GET /api/presences/asset:audible-B00DVN8U82/resonances as sparse python-fanout candidates. After the BML family promotion, runtime_surface_report shows 89 capable routes and includes /api/concepts/{concept_id}/carried-by plus /api/presences/{presence_id}/resonances. Static deploy path guard passed. Focused runtime-surface/provenance tests passed. The generic form-kernel-rust check --routes command still reports the same 14 unresolved names on both this branch and origin/main, so that is pre-existing catalog debt rather than a regression from this patch. A live local DB-backed native curl was not run because Docker was not running and no local Postgres listener was available; the default local API config is SQLite while these BML handlers use the Rust Postgres carrier."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR creation, hosted checks, merge, and post-merge deploy verification."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "This branch has not yet been deployed. Post-merge verification must show public GET /api/concepts/lc-ceremony/carried-by and GET /api/presences/asset:audible-B00DVN8U82/resonances return X-Form-Router:native-kernel, the expected X-Form-Handler values, X-Form-Python-Authority:false, and {items,count} JSON bodies."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local static/source-surface proof passed; hosted CI, merge, production deploy, and public native header proof remain pending."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The two presence resonance relationship reads become BML native front-door routes with the same {items,count} response shape as the Python authority, while mutation/attune routes remain Python-served.",
+    "proof": "runtime_surface_report now reports kernel_first_capable_routes=89 and includes both promoted relationship read patterns. Focused runtime-surface tests pin both paths. Deploy/static guards require Traefik labels, deploy canaries, public verifier routes, and native proof headers for both handlers.",
+    "public_endpoints": [
+      "GET /api/concepts/{concept_id}/carried-by",
+      "GET /api/presences/{presence_id}/resonances"
+    ],
+    "test_flows": [
+      "Static deploy path test fails if the new Traefik labels, deploy canary handlers, or BML native proof handlers are removed.",
+      "Public deploy verifier now checks both promoted relationship reads for native proof headers and {items,count} body shape.",
+      "Runtime surface unit test pins both new BML route patterns as kernel-first capable."
+    ]
+  },
+  "idea_ids": [
+    "kernel-native-route-goal",
+    "form-native-runtime",
+    "presence-resonance-relationship-reads"
+  ],
+  "spec_ids": [
+    "native-route-goal-loop",
+    "front-door-bml-route-catalog",
+    "spec-181"
+  ],
+  "task_ids": [
+    "presence-resonance-bml-native-routes-2026-06-11"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-prioritization"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "investigation",
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "python3 scripts/native_route_goal_loop.py /goal --source web_api --seconds 86400 identified GET /api/concepts/lc-ceremony/carried-by and GET /api/presences/asset:audible-B00DVN8U82/resonances as next observed python-fanout route candidates.",
+    "python3 scripts/runtime_surface_report.py --json reported kernel_first_capable_routes=89 and included both promoted route patterns.",
+    "python3 -m pytest -q api/tests/test_runtime_surface_native_routes.py api/tests/test_runtime_web_api_provenance.py returned 12 passed.",
+    "./scripts/test_hostinger_deploy_form_paths.sh returned PASS.",
+    "form-kernel-rust check --routes reports the same 14 unresolved names on this branch and origin/main; no new unresolved symbol was introduced by this route family."
+  ],
+  "change_files": [
+    "deploy/front-door/api.bml",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/verify_web_api_deploy.sh",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "api/tests/test_runtime_surface_native_routes.py",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}

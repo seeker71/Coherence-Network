@@ -45,6 +45,12 @@ grep -Fq 'PathRegexp(`^/api/reactions/concept/[^/]+/threads$`)' "$ROOT_DIR/deplo
 grep -Fq 'PathRegexp(`^/api/concepts/[^/]+/voices$`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
   || fail "kernel-router ingress does not expose the concept voices BML template route"
 
+grep -Fq 'PathRegexp(`^/api/concepts/[^/]+/carried-by$`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+  || fail "kernel-router ingress does not expose the concept carried-by BML template route"
+
+grep -Fq 'PathRegexp(`^/api/presences/[^/]+/resonances$`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+  || fail "kernel-router ingress does not expose the presence resonances BML template route"
+
 grep -Fq 'Path(`/api/sensings`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
   || fail "kernel-router ingress does not expose the sensings BML route"
 
@@ -72,6 +78,12 @@ grep -Fq 'api_sensings' "$DEPLOY_SCRIPT" \
 grep -Fq 'api_lenses' "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not probe the lenses BML handler"
 
+grep -Fq 'api_concept_carried_by' "$DEPLOY_SCRIPT" \
+  || fail "deploy canary does not probe the concept carried-by BML handler"
+
+grep -Fq 'api_presence_resonances' "$DEPLOY_SCRIPT" \
+  || fail "deploy canary does not probe the presence resonances BML handler"
+
 grep -Fq 'api_translations_entity' "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not probe the translations entity BML handler"
 
@@ -89,6 +101,12 @@ grep -Fq 'api-native-ok-json("api_reaction_concept_threads"' "$ROOT_DIR/deploy/f
 
 grep -Fq 'api-native-ok-json("api_concept_voices"' "$ROOT_DIR/deploy/front-door/api.bml" \
   || fail "concept voices handler does not emit native proof headers"
+
+grep -Fq 'api-native-ok-json("api_concept_carried_by"' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "concept carried-by handler does not emit native proof headers"
+
+grep -Fq 'api-native-ok-json("api_presence_resonances"' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "presence resonances handler does not emit native proof headers"
 
 grep -Fq 'api-native-ok-json("api_sensings"' "$ROOT_DIR/deploy/front-door/api.bml" \
   || fail "sensings handler does not emit native proof headers"
