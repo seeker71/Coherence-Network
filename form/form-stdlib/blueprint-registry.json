@@ -5587,6 +5587,62 @@
     "form/form-stdlib/offers-in-flight.fk"
    ],
    "curated": true
+  },
+  {
+   "pkg": 1,
+   "level": 2,
+   "type": 99,
+   "inst": 1754,
+   "name": "INSTALL-IFACE",
+   "meaning": "the offered interface of an installable callable \u2014 child 0 the arity as a trivial-int; part of the artifact's own composition so it cannot be claimed apart from what the artifact is",
+   "aliases": [],
+   "reuse": 1,
+   "defined_in": [
+    "form/form-stdlib/install-leaf.fk"
+   ],
+   "curated": true
+  },
+  {
+   "pkg": 1,
+   "level": 2,
+   "type": 99,
+   "inst": 1755,
+   "name": "INSTALL-ARTIFACT",
+   "meaning": "a compiled capability as a cell \u2014 children (INSTALL-IFACE, body recipe); content-addressing makes the interface inseparable from the identity (axiom-3)",
+   "aliases": [],
+   "reuse": 1,
+   "defined_in": [
+    "form/form-stdlib/install-leaf.fk"
+   ],
+   "curated": true
+  },
+  {
+   "pkg": 1,
+   "level": 2,
+   "type": 99,
+   "inst": 1756,
+   "name": "INSTALL-OFFER",
+   "meaning": "an install offer \u2014 children (name trivial-string, INSTALL-ARTIFACT, expected INSTALL-IFACE); the kernel acknowledges by binding the name or acknowledges 0 (refusal)",
+   "aliases": [],
+   "reuse": 1,
+   "defined_in": [
+    "form/form-stdlib/install-leaf.fk"
+   ],
+   "curated": true
+  },
+  {
+   "pkg": 1,
+   "level": 2,
+   "type": 99,
+   "inst": 1757,
+   "name": "INSTALLED-LEAF",
+   "meaning": "one binding in a callable table \u2014 children (name trivial-string, INSTALL-ARTIFACT); the table grows by offer, never rebinds (first-bind-wins)",
+   "aliases": [],
+   "reuse": 1,
+   "defined_in": [
+    "form/form-stdlib/install-leaf.fk"
+   ],
+   "curated": true
   }
  ]
 }

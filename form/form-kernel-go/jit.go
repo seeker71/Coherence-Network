@@ -1133,6 +1133,123 @@ func emitGoFnCall(k *Kernel, kids []NodeID, scope *goCompileScope) (string, erro
 	return "", unsupported(fmt.Sprintf("jit: unsupported call %q (only self-recursion + arithmetic primitives in subset)", name))
 }
 
+// --- install-as-named-callable-leaf ----------------------------------------
+//
+// The install protocol (form-stdlib/install-leaf.fk, proven three-way by
+// tests/install-leaf-band.fk) carried onto the Go JIT lane: a jitted .so
+// artifact becomes a NAMED callable in the kernel's own native table at
+// runtime — the surface grows by offer, never by recompile. The ack follows
+// axiom-5: the artifact's body NodeID (content-addressed, unforgeable) on
+// bind, 0 on refusal (name collision / interface mismatch / no artifact),
+// nothing when there is no closure to install.
+
+// jitInstalledLeafFn — the callable a successful jit_install binds into
+// k.natives. Mirrors the FNCALL closure jit-dispatch ABI guards; a call
+// outside the offered interface (wrong arity, value shapes no ABI carries)
+// acknowledges nothing — the leaf only ever answers the interface it
+// offered, and the miss is observable.
+func jitInstalledLeafFn(jc *GoJITCompiled, arity int, body NodeID) NativeFn {
+	return func(k *Kernel, args []Value) Value {
+		if len(args) != arity {
+			k.observeJIT("observe/go/jit/installed-guard-miss", body, 1, uint32(len(args)))
+			return Value{Kind: VNull}
+		}
+		allInt := true
+		allNumeric := true
+		hasFloat := false
+		allJITValue := true
+		intArgs := make([]int64, len(args))
+		floatArgs := make([]float64, len(args))
+		jitArgs := make([]jitabi.Value, len(args))
+		for i, av := range args {
+			if av.Kind != VInt {
+				allInt = false
+			}
+			if jv, ok := valueToJIT(av); ok {
+				jitArgs[i] = jv
+			} else {
+				allJITValue = false
+			}
+			switch av.Kind {
+			case VInt:
+				intArgs[i] = av.Int
+				floatArgs[i] = float64(av.Int)
+			case VFloat:
+				hasFloat = true
+				floatArgs[i] = av.Float
+			default:
+				allNumeric = false
+			}
+		}
+		if allInt && jc.I64 != nil {
+			k.jitDispatchHits[body]++
+			k.observeJIT("observe/go/jit/installed-dispatch", body, 1, uint32(len(args)))
+			return Value{Kind: VInt, Int: jc.I64(intArgs)}
+		}
+		if allNumeric && hasFloat && jc.F64 != nil {
+			k.jitDispatchHits[body]++
+			k.observeJIT("observe/go/jit/installed-dispatch", body, 2, uint32(len(args)))
+			return Value{Kind: VFloat, Float: jc.F64(floatArgs)}
+		}
+		if allJITValue && jc.Value != nil {
+			k.jitDispatchHits[body]++
+			k.observeJIT("observe/go/jit/installed-dispatch", body, 3, uint32(len(args)))
+			return valueFromJIT(jc.Value(jitArgs))
+		}
+		k.observeJIT("observe/go/jit/installed-guard-miss", body, 2, uint32(len(args)))
+		return Value{Kind: VNull}
+	}
+}
+
+// jitInstallLeaf — accept or refuse an install offer. Resolves the named
+// closure in the caller's env, ensures a compiled artifact exists for its
+// body (reusing the content-addressed plugin cache), and binds the artifact
+// under installedName in the kernel's own native table. Refusal, not error:
+// a refused offer leaves the table untouched.
+func jitInstallLeaf(k *Kernel, env *Frame, closureName, installedName string, expectedArity int64) Value {
+	closureID := k.internName(closureName)
+	v, ok := env.Lookup(closureID)
+	if !ok || v.Kind != VClosure {
+		// nothing — there is no cell to install
+		return Value{Kind: VNull}
+	}
+	cl := v.Cl
+	installedID := k.internName(installedName)
+	_, hasN := k.natives[installedID]
+	_, hasE := k.envNatives[installedID]
+	if hasN || hasE {
+		// name collision — first-bind-wins, the table never rebinds
+		k.observeJIT("observe/go/jit/install-refused", cl.Body, 1, 1)
+		return Value{Kind: VInt, Int: 0}
+	}
+	if expectedArity != int64(len(cl.Params)) {
+		// interface mismatch — the artifact cannot be bound through an
+		// interface it does not carry
+		k.observeJIT("observe/go/jit/install-refused", cl.Body, 2, 1)
+		return Value{Kind: VInt, Int: 0}
+	}
+	bodyKey := nodeIDKey(cl.Body)
+	jc, compiled := k.jitCompiledGo[bodyKey]
+	if !compiled {
+		fn, err := jitCompileClosureGo(k, cl)
+		if err != nil {
+			// no artifact — the recipe still walks under its own name;
+			// nothing installs
+			k.jitFailed[cl.Body] = true
+			k.jitFailedReason[cl.Body] = err.Error()
+			k.observeJIT("observe/go/jit/install-refused", cl.Body, 3, 1)
+			return Value{Kind: VInt, Int: 0}
+		}
+		k.jitCompiledGo[bodyKey] = fn
+		jc = fn
+	}
+	k.registerNative(installedName, catMethod(), jitInstalledLeafFn(jc, len(cl.Params), cl.Body))
+	k.installedLeaves[installedID] = cl.Body
+	k.observeJIT("observe/go/jit/install", cl.Body, uint32(len(cl.Params)), 1)
+	// the node ack: the artifact's content-addressed identity
+	return Value{Kind: VNodeID, Nid: cl.Body}
+}
+
 func jitNodeIsListExpr(k *Kernel, node NodeID) bool {
 	if node.Level == LevelTrivial {
 		return false
