@@ -423,6 +423,7 @@ PORT=8231
 "$work/fkapi" "$PORT" & API_PID=$!
 n=0; while [ $n -lt 40 ]; do
     if curl -sS --max-time 1 -o /dev/null "http://127.0.0.1:$PORT/" 2>/dev/null; then break; fi
+    sleep 0.1   # refused is instant; give the freshly-exec'd server real time to bind
     n=$((n+1))
 done
 code="$(curl -sS --max-time 3 -w '%{http_code}' -o "$work/body.txt" "http://127.0.0.1:$PORT/health" 2>/dev/null)"
@@ -552,6 +553,68 @@ if [[ "$fp1" != "42" || "$fp2" != "111" ]]; then
     echo "FAIL  Form-source parse-and-run broke"; exit 1
 fi
 echo "  the parser is recursive-descent over the source string (a cursor, no tokenizer); op-gap to full bands is m4e4 (defn/let/do/str_*)"
+
+echo
+# ── 18. the live afferent witness — afferent-offer.fk's ao-wait on the real ──
+# clock. The engine (proven → 511 with ticks as data) makes the dispatch|nothing
+# decision at composition; the lowered program (afferent-live.fk) blocks on
+# op 15 TIME through the SAME universal binary. No event in the window →
+# nothing after REAL elapsed time (timeout==nothing, live); an armed timer's
+# tick arrives → its handler fires with the payload — the SIGALRM shape
+# witnessed on a wall clock.
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
+    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" "$FORMDIR/form-stdlib/afferent-offer.fk" \
+    "$FORMDIR/form-stdlib/afferent-live.fk" > "$work/ao-driver.fk"
+cat >> "$work/ao-driver.fk" <<'EOF'
+(let live-table (ao-table (list (ao-entry (ao-sig-alrm) "on-alarm")
+                                (ao-entry (ao-irq-keyboard) "on-key"))))
+(let no-mask (ao-mask (list)))
+(print "==TKEY==")
+(print (fkc-table-file (aolv-fns live-table no-mask (list (ao-irq (ao-irq-keyboard) 0 42)) 2 1000)))
+(print "==TALARM==")
+(print (fkc-table-file (aolv-fns live-table no-mask (list (ao-alarm 1)) 2 1000)))
+(print "==TNOTHING==")
+(print (fkc-table-file (aolv-fns live-table no-mask (list) 1 1000)))
+(print "==END==")
+EOF
+(cd "$FORMDIR" && "$GO_BIN" "$work/ao-driver.fk" 2>/dev/null) > "$work/ao.out"
+sed -n '/^==TKEY==$/,/^==TALARM==$/p' "$work/ao.out" | sed -e '1d' -e '$d' > "$work/t-ao-key.txt"
+sed -n '/^==TALARM==$/,/^==TNOTHING==$/p' "$work/ao.out" | sed -e '1d' -e '$d' > "$work/t-ao-alarm.txt"
+sed -n '/^==TNOTHING==$/,/^==END==$/p' "$work/ao.out" | sed -e '1d' -e '$d' > "$work/t-ao-nothing.txt"
+
+ao_run() { # table-file -> "ack elapsed value wall_s time-polls"
+    python3 - "$work/fkwu" "$1" <<'PY'
+import subprocess, sys, time
+t0 = time.perf_counter()
+out = subprocess.run([sys.argv[1], sys.argv[2], "0"], capture_output=True, text=True).stdout.splitlines()
+wall = time.perf_counter() - t0
+print(out[0], out[1], out[2], f"{wall:.3f}", out[17])
+PY
+}
+
+read -r k_ack k_el k_val k_wall k_polls <<<"$(ao_run "$work/t-ao-key.txt")"
+read -r a_ack a_el a_val a_wall a_polls <<<"$(ao_run "$work/t-ao-alarm.txt")"
+read -r n_ack n_el n_val n_wall n_polls <<<"$(ao_run "$work/t-ao-nothing.txt")"
+echo "live afferent witness (ao-wait's verdict breathing op 15 TIME; the SAME universal binary):"
+echo "  latched irq        -> $k_ack elapsed=${k_el}s payload=$k_val wall=${k_wall}s time-polls=$k_polls (already-arrived offer dispatches now)"
+echo "  armed timer (1s)   -> $a_ack elapsed=${a_el}s payload=$a_val wall=${a_wall}s time-polls=$a_polls (the tick ARRIVED on the host clock)"
+echo "  no event, 1s wait  -> $n_ack elapsed=${n_el}s value=$n_val wall=${n_wall}s time-polls=$n_polls (live timeout==nothing, past the deadline)"
+if [[ "$k_ack" != "on-key" || "$k_val" != "42" ]] || [[ "$k_el" != "0" && "$k_el" != "1" ]]; then
+    echo "FAIL  latched-irq dispatch broke"; exit 1
+fi
+if [[ "$a_ack" != "on-alarm" || "$a_el" != "1" || "$a_val" != "0" ]]; then
+    echo "FAIL  armed-timer dispatch broke — the tick did not arrive as the SIGALRM shape"; exit 1
+fi
+if ! python3 -c "import sys; sys.exit(0 if float('$a_wall') < 2.0 else 1)"; then
+    echo "FAIL  the armed timer did not beat its 2s window"; exit 1
+fi
+if [[ "$n_ack" != "nothing" || "$n_el" != "2" || "$n_val" != "0" ]]; then
+    echo "FAIL  live timeout did not acknowledge nothing"; exit 1
+fi
+if ! python3 -c "import sys; sys.exit(0 if float('$n_wall') >= 1.0 else 1)"; then
+    echo "FAIL  the nothing came BEFORE the deadline elapsed — not a live wait"; exit 1
+fi
+echo "  the engine's arms are afferent-offer.fk's, unchanged; only the tick source went live (band: tests/afferent-live-band.fk -> 63)"
 
 echo
 echo "conditions: $(uname -m) $(uname -s), clang -O2, full-process invocations (startup included)"

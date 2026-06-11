@@ -1,0 +1,53 @@
+; preludes: form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/afferent-offer.fk form-stdlib/afferent-live.fk
+;
+; afferent-live-band — the live wait-carrier's COMPOSITION proven three-way:
+; ao-wait (the engine proven → 511) decides dispatch|nothing on ticks as
+; data, and the lowering carries exactly that verdict into a fourth-walker
+; program whose tick source is op 15 TIME. The strange-minimal edge is the
+; deterministic band's own: the alarm armed AT tick 9 vs 10 against
+; deadline 9 — here pinning what each verdict COMPOSES, one tick apart.
+; The blocking behavior on a real clock is the audit's half
+; (scripts/fourth_kernel_audit.sh, "live afferent witness").
+;
+; Verdict 63 when the lowering is faithful:
+;   1   NO event: the engine's nothing composes the dispatch door SHUT —
+;       the guard is LIT 0, so the program can only time out
+;   2   the alarm AT the deadline (inclusive edge): the dispatch verdict
+;       composes the guard as the ARRIVAL comparison (LE — the clock
+;       reaching the offer's tick)
+;   4   the alarm one tick past: nothing again — timeout==nothing carried
+;       into the live lowering at the same one-tick edge
+;   8   the program breathes the host clock: the flattened table carries
+;       op 15 TIME and op 12 CALL (the poll loop + granularity delay)
+;   16  the engine's cells ride into the program: the latched IRQ payload
+;       (LIT 42) and the handler name's bytes (LIT 107, the k of on-key)
+;       are rows in the table
+;   32  the carrier is deterministic data: the table-file text equals
+;       itself across two emissions, and the program is exactly 4 functions
+(do
+    (let live-table (ao-table (list (ao-entry (ao-sig-alrm) "on-alarm")
+                                    (ao-entry (ao-irq-keyboard) "on-key"))))
+    (let no-mask (ao-mask (list)))
+
+    (let g-silent (aolv-guard (ao-wait live-table no-mask (list) 9)))
+    (let c0 (if (and (eq (fk-tag g-silent) 1) (eq (ms-value (fk-body g-silent)) 0)) 1 0))
+
+    (let g-edge (aolv-guard (ao-wait live-table no-mask (list (ao-alarm 9)) 9)))
+    (let c1 (if (eq (fk-tag g-edge) 5) 2 0))
+
+    (let g-past (aolv-guard (ao-wait live-table no-mask (list (ao-alarm 10)) 9)))
+    (let c2 (if (and (eq (fk-tag g-past) 1) (eq (ms-value (fk-body g-past)) 0)) 4 0))
+
+    (let silent-rows (nth (fkc-flatten-many (aolv-fns live-table no-mask (list) 9 7)) 0))
+    (let c3 (if (and (eq (fkd-has-tag silent-rows 15) 1)
+                     (eq (fkd-has-tag silent-rows 12) 1)) 8 0))
+
+    (let key-fns (aolv-fns live-table no-mask (list (ao-irq (ao-irq-keyboard) 3 42)) 9 7))
+    (let key-rows (nth (fkc-flatten-many key-fns) 0))
+    (let c4 (if (and (eq (fkd-has-lit key-rows 42) 1)
+                     (eq (fkd-has-lit key-rows 107) 1)) 16 0))
+
+    (let c5 (if (and (str_eq (fkc-table-file key-fns) (fkc-table-file key-fns))
+                     (eq (len key-fns) 4)) 32 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))
