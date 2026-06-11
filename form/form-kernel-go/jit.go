@@ -539,6 +539,12 @@ func emitGoMath(k *Kernel, op uint32, kids []NodeID, scope *goCompileScope) (str
 	case RMathModulo:
 		opStr = "%"
 		valueOp = "jitabi.Mod"
+		if scope.abi == goJITABIf64 {
+			// Go has no float %, and the walker's float mod is floor-mod —
+			// the f64 leg refuses so the combined plugin build stays clean
+			// while the i64 and Value legs carry the shape.
+			return "", unsupported("jit: float mod not in f64 subset")
+		}
 	default:
 		return "", unsupported(fmt.Sprintf("jit: math op %d", op))
 	}
@@ -596,10 +602,6 @@ func emitGoCond(k *Kernel, op uint32, kids []NodeID, scope *goCompileScope) (str
 	if len(kids) < 2 {
 		return "", unsupported("jit: cond expects at least 2 kids")
 	}
-	cond, err := emitGoExpr(k, kids[0], scope)
-	if err != nil {
-		return "", err
-	}
 	then, err := emitGoExpr(k, kids[1], scope)
 	if err != nil {
 		return "", err
@@ -615,12 +617,94 @@ func emitGoCond(k *Kernel, op uint32, kids []NodeID, scope *goCompileScope) (str
 		els = scope.scalarZero() // if-without-else returns null in walker; JIT subset returns 0
 	}
 	scalar := scope.scalarType()
+	if scope.abi != goJITABIValue {
+		// Direct-comparison condition emits as a raw Go boolean — skips the
+		// bool→scalar→!=0 round trip so the native branch matches what a
+		// hand-written Go function would compile to.
+		if boolSrc, ok, err := emitGoCondBool(k, kids[0], scope); err != nil {
+			return "", err
+		} else if ok {
+			return fmt.Sprintf("(func() %s { if %s { return %s }; return %s }())",
+				scalar, boolSrc, scope.cast(then), scope.cast(els)), nil
+		}
+	}
+	cond, err := emitGoExpr(k, kids[0], scope)
+	if err != nil {
+		return "", err
+	}
 	if scope.abi == goJITABIValue {
 		return fmt.Sprintf("(func() %s { if jitabi.Truthy(%s) { return %s }; return %s }())",
 			scalar, cond, then, els), nil
 	}
 	return fmt.Sprintf("(func() %s { if (%s) != 0 { return %s }; return %s }())",
 		scalar, cond, scope.cast(then), scope.cast(els)), nil
+}
+
+// emitGoCondBool — when a condition node is a direct comparison (either the
+// lowered RBasicCompare arm or the FNCALL sugar eq/ne/lt/le/gt/ge), emit it
+// as a native Go boolean expression. Returns ok=false for any other shape so
+// the caller falls back to the scalar-truthiness path.
+func emitGoCondBool(k *Kernel, node NodeID, scope *goCompileScope) (string, bool, error) {
+	if node.Level == LevelTrivial {
+		return "", false, nil
+	}
+	cat := k.category(node)
+	var op uint32
+	var operands []NodeID
+	switch {
+	case cat.Type == RBasicCompare:
+		op = cat.Inst
+		operands = k.children(node)
+	case cat.Type == RBasicFnCall:
+		kids := k.children(node)
+		if len(kids) != 3 {
+			return "", false, nil
+		}
+		name, ok := jitStaticCallName(k, kids[0])
+		if !ok {
+			return "", false, nil
+		}
+		mapped, ok := map[string]uint32{
+			"eq": RCompareEq, "ne": RCompareNe, "lt": RCompareLt,
+			"le": RCompareLe, "gt": RCompareGt, "ge": RCompareGe,
+		}[name]
+		if !ok {
+			return "", false, nil
+		}
+		op = mapped
+		operands = kids[1:]
+	default:
+		return "", false, nil
+	}
+	if len(operands) != 2 {
+		return "", false, nil
+	}
+	var opStr string
+	switch op {
+	case RCompareEq:
+		opStr = "=="
+	case RCompareNe:
+		opStr = "!="
+	case RCompareLt:
+		opStr = "<"
+	case RCompareLe:
+		opStr = "<="
+	case RCompareGt:
+		opStr = ">"
+	case RCompareGe:
+		opStr = ">="
+	default:
+		return "", false, nil
+	}
+	a, err := emitGoExpr(k, operands[0], scope)
+	if err != nil {
+		return "", false, err
+	}
+	b, err := emitGoExpr(k, operands[1], scope)
+	if err != nil {
+		return "", false, err
+	}
+	return fmt.Sprintf("(%s %s %s)", a, opStr, b), true, nil
 }
 
 func emitGoBlock(k *Kernel, op uint32, kids []NodeID, scope *goCompileScope) (string, error) {
@@ -1257,6 +1341,15 @@ func jitNodeIsListExpr(k *Kernel, node NodeID) bool {
 	return k.category(node).Type == RBasicList
 }
 
+// jitRecipeNeedsValueABI — pre-filter deciding whether the typed i64/f64
+// ABIs are even attempted. A TrivString counts as a runtime string value
+// only in value position; the recipe's structural name slots — an IDENT's
+// name child, an FNCALL's static callee, a LET's binding name — are the
+// tree's shape, not data, and must not force the boxed Value-only ABI.
+// The asymmetry that keeps this safe: a false negative costs nothing (the
+// i64/f64 emitters still reject genuinely string-shaped bodies and the
+// build loop skips them), while a false positive silently boxes every call
+// — the typed natives are what give recursive int workloads native speed.
 func jitRecipeNeedsValueABI(k *Kernel, node NodeID) bool {
 	if node.Level == LevelTrivial {
 		return node.Type == TrivString
@@ -1266,13 +1359,31 @@ func jitRecipeNeedsValueABI(k *Kernel, node NodeID) bool {
 		return true
 	}
 	kids := k.children(node)
-	if cat.Type == RBasicFnCall && len(kids) > 0 {
-		if name, ok := jitStaticCallName(k, kids[0]); ok {
-			switch name {
-			case "list", "empty", "cons", "head", "tail", "len", "nil?", "concat", "nth",
-				"str_len", "str_concat", "str_eq", "substring", "char_at", "ord",
-				"byte_to_str", "scan_run":
-				return true
+	switch cat.Type {
+	case RBasicIdent:
+		// The name child is structure, not a string value.
+		return false
+	case RBasicBlock:
+		if cat.Inst == RBlockLet && len(kids) == 2 {
+			// kids[0] is the binding-name slot; only the bound value is data.
+			return jitRecipeNeedsValueABI(k, kids[1])
+		}
+	case RBasicFnCall:
+		if len(kids) > 0 {
+			if name, ok := jitStaticCallName(k, kids[0]); ok {
+				switch name {
+				case "list", "empty", "cons", "head", "tail", "len", "nil?", "concat", "nth",
+					"str_len", "str_concat", "str_eq", "substring", "char_at", "ord",
+					"byte_to_str", "scan_run":
+					return true
+				}
+				// Static callee resolved — scan only the argument slots.
+				for _, kid := range kids[1:] {
+					if jitRecipeNeedsValueABI(k, kid) {
+						return true
+					}
+				}
+				return false
 			}
 		}
 	}

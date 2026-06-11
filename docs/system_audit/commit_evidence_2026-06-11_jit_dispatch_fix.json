@@ -1,0 +1,113 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "worktree-agent-afafcc4210018427a",
+  "commit_scope": "Fixed the Go in-process JIT realization gap measured in commit_evidence_2026-06-11_jit_realization_gap.json. Root cause: jitRecipeNeedsValueABI (form/form-kernel-go/jit.go) treated the recipe's structural name slots — an IDENT's name child (a TrivString), an FNCALL's static callee, a LET's binding name — as runtime string values. Every real body contains one of those, so EVERY jit_compile was forced onto the boxed Value-only ABI: jc.I64 was never built, the dispatch arm took guard 3 (boxed Value), and the boxed native ran at walker speed — which is why walker fib38 (8.10s) and 'JIT' fib38 (7.92s) were indistinguishable. The fix makes the pre-filter structure-aware: IDENT nodes are never string values, a LET scans only its bound value, an FNCALL with a static callee scans only its argument slots. Two companions: (1) the f64 leg refuses float mod (Go has no float %, and the walker's float mod is floor-mod) so a mod-using int recipe no longer poisons the combined plugin build — i64 carries it natively (collatzlen: jit_compile 0 → 1); (2) a peephole emits direct-comparison conditions as raw Go booleans (measured neutral; closes the bool→scalar→!=0 round trip). Go-only change — the three-way validate.sh bands run on the walker, never the JIT.",
+  "files_owned": [
+    "form/form-kernel-go/jit.go",
+    "form/form-kernel-go/jit_test.go",
+    "kernels/JIT_GAP_LEDGER.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form/form-kernel-go && go test ./...",
+      "cd form && ./validate.sh",
+      "time form-kernel-go --expr '(do (defn fib ...) (do (jit_compile \"fib\") (fib 38)))'",
+      "form-kernel-go --expr '... (jit_compile \"fib\") (let t0 (now_unix_ms)) (fib 38) (let t1 (now_unix_ms)) ...'  (compute-only)"
+    ],
+    "summary": "MEASURED (arm64 Darwin, M4 Max), same ground as the gap record. Instrumentation first: pre-fix, jitCompileClosureGo emitted abis:1 (I64=false F64=false Value=true) and the dispatch arm was reached exactly once taking guard 3 (boxed Value) — root cause candidate (a), with the precise mechanism being the pre-filter misclassifying structural name slots, not the plugin build failing. Post-fix: abis:3 (I64=true F64=true Value=true), dispatch takes guard 1 (i64) exactly once, the native carries the whole recursion. fib38: walker 8.10s / pre-fix JIT 7.92s → post-fix compute 0.127–0.133s (62x over walker, within 1.4x of handwritten Go's 0.095s), end-to-end 1.48s including the one-time go-build plugin compile. Secondary realization: the 2000-hit auto-compile path now also lands a usable i64 native mid-run — an un-annotated walker fib38 finishes in ~0.92s. All debug instrumentation removed before commit; the fix ships with jit_test.go pinning both the pre-filter classification and the i64 artifact + single-dispatch realization.",
+    "observed_delta": {
+      "pre_fix_abis_emitted": "value only (I64 nil)",
+      "post_fix_abis_emitted": "i64 + f64 + value",
+      "dispatch_guard_taken_pre_fix": "guard 3 (boxed Value)",
+      "dispatch_guard_taken_post_fix": "guard 1 (i64), exactly 1 dispatch hit",
+      "walker_fib38_s": 8.1,
+      "pre_fix_jit_fib38_s": 7.92,
+      "post_fix_jit_fib38_compute_s": 0.13,
+      "post_fix_jit_fib38_end_to_end_s": 1.48,
+      "handwritten_go_fib38_s": 0.095,
+      "compute_speedup_vs_walker": "62x",
+      "verdict": "native speed realized on the recursive int workload"
+    },
+    "known_limitations": [
+      {
+        "limitation": "Plugin .so is rebuilt per kernel process (~1.3s) and form-jit-* temp dirs accumulate (55,559 stale dirs found in $TMPDIR); the bodyKey is content-addressed so a durable cache would make warm compiles ~0.",
+        "follow_up": "kernels/JIT_GAP_LEDGER.md gap #2 (OPEN)."
+      },
+      {
+        "limitation": "Emitted i64 native is ~1.4x handwritten Go on fib38; auto-compile builds synchronously mid-walk (first hot crossing pays the full build).",
+        "follow_up": "kernels/JIT_GAP_LEDGER.md gaps #3 and #4 (OPEN)."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Go-kernel-local change; form/validate.sh three-way bands (walker-only) green locally, go test ./... green locally (184s). CI runs the same gates on the PR."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Kernel-internal performance fix; rides the normal main deploy. No route shape changes."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "After (jit_compile \"fib\"), a recursive int call runs on the typed i64 native instead of the boxed Value native: fib38 compute drops from ~8s to ~0.13s. Walker remains the honest fallback for shapes the typed emitters reject; the boxed Value ABI remains the carrier for genuinely string/list-shaped bodies (TestValueJITMatchesWalker still green).",
+    "public_endpoints": [
+      "GET /api/_form/ideas-observation"
+    ],
+    "test_flows": [
+      "jit_test.go: TestJITValueABIPreFilterSkipsNameSlots (pre-filter classification), TestIntJITTypedDispatchCarriesRecursion (i64 artifact built + answer matches walker + exactly 1 dispatch crossing)",
+      "jit_value_test.go: TestValueJITMatchesWalker (string-shaped body still compiles and matches walker)"
+    ],
+    "summary": "Measured before/after on the exact workload from the gap record; regression tests pin the mechanism."
+  },
+  "phase_gate": {
+    "phase": "jit-exercise",
+    "gate": "the in-process JIT dispatch realizes native speed on a recursive int workload",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "gap #2 (content-addressed durable plugin cache) makes warm compiles ~0; the form-native-models lane can now weigh the in-process JIT against the fourth-kernel emit-compile-exec lane with both realized"
+  },
+  "idea_ids": [
+    "fourth-kernel"
+  ],
+  "spec_ids": [
+    "kernel-native-api-readiness",
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "jit-realization-gap-20260611"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "fix",
+        "measurement"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-fable-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/commit_evidence_2026-06-11_jit_realization_gap.json",
+    "kernels/JIT_GAP_LEDGER.md"
+  ],
+  "change_files": [
+    "form/form-kernel-go/jit.go",
+    "form/form-kernel-go/jit_test.go",
+    "kernels/JIT_GAP_LEDGER.md",
+    "docs/system_audit/commit_evidence_2026-06-11_jit_dispatch_fix.json"
+  ],
+  "change_intent": "runtime_fix"
+}
