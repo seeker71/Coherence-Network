@@ -16,6 +16,9 @@
             (json-node-pair "active" (json-node-bool true))
             (json-node-pair "missing" (json-node-null))
             (json-node-pair "nullable_string" (json-node-string (_dict_get (_dict_new) "missing")))
+            (json-node-pair "blankable_missing" (json-node-nullable-string (_dict_get (_dict_new) "missing")))
+            (json-node-pair "blankable_empty" (json-node-nullable-string ""))
+            (json-node-pair "blankable_string" (json-node-nullable-string "a71fd081"))
             (json-node-pair "nullable_int" (json-node-int (_dict_get (_dict_new) "missing")))
             (json-node-pair "nullable_float" (json-node-float-text (_dict_get (_dict_new) "missing")))
             (json-node-pair "nullable_bool" (json-node-bool (_dict_get (_dict_new) "missing")))
@@ -26,14 +29,16 @@
 
 (let emitted (json_response_body doc))
 (let expected
-    "{\"name\":\"A\\\"B\",\"path\":\"C:\\\\tmp\",\"count\":3,\"score\":1.25,\"active\":true,\"missing\":null,\"nullable_string\":null,\"nullable_int\":null,\"nullable_float\":null,\"nullable_bool\":null,\"control\":\"a\\u0001b\",\"tags\":[\"x\",\"y\"]}")
+    "{\"name\":\"A\\\"B\",\"path\":\"C:\\\\tmp\",\"count\":3,\"score\":1.25,\"active\":true,\"missing\":null,\"nullable_string\":null,\"blankable_missing\":null,\"blankable_empty\":null,\"blankable_string\":\"a71fd081\",\"nullable_int\":null,\"nullable_float\":null,\"nullable_bool\":null,\"control\":\"a\\u0001b\",\"tags\":[\"x\",\"y\"]}")
 
 (let exact-ok (if (str_eq emitted expected) 1 0))
 (let parsed (json_parse_body "json-emitter-band" emitted))
 (let name-ok
     (if (str_eq (json-string-value (json-object-get parsed "name")) "A\"B") 2 0))
+(let blankable-ok
+    (if (str_eq (json-string-value (json-object-get parsed "blankable_string")) "a71fd081") 16 0))
 (let control-ok (if (ge (str_find emitted "\\u0001" 0) 0) 4 0))
 (let control-parse-ok
     (if (str_eq (json-string-value (json-object-get parsed "control")) control-text) 8 0))
 
-(add exact-ok (add name-ok (add control-ok control-parse-ok)))
+(add exact-ok (add name-ok (add control-ok (add control-parse-ok blankable-ok))))
