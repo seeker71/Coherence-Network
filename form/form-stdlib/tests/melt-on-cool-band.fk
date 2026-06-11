@@ -7,7 +7,7 @@
 ; spliced door — measured live in scripts/fourth_kernel_audit.sh: the round-1
 ; deaths (n=4096 -> 0, n=4200 -> 104) now answer 4096 and 4200.
 ;
-; Verdict 31 when the activation holds:
+; Verdict 63 when the activation holds:
 ;   1   the named cells tie to round 1: capacity = am-sibling-capacity + 1,
 ;       and the water decision flips exactly at the line (3686 no, 3687 yes)
 ;   2   the growth decision: a crowded melt doubles (3687 live -> 8192), a
@@ -20,6 +20,14 @@
 ;   16  the recipe lane runs the same fire-then-quiet cycle in miniature:
 ;       churn 4x16 crosses a 64-cell water (fires), melts to 4 live, and
 ;       the door is quiet at the next capacity
+;   32  the walker-managed VALUE STACK (the melt-root wall, down): the
+;       region is declared at the named capacity cell, ARG reads the frame
+;       slot (fk_vs[fp] — args never ride suspended C frames), the melt
+;       walk ROOTS every stack slot (fk_mlive over fk_vs) and RELOCATES it
+;       in place (fk_vs[k] = fk_mcopy(...)), and CALL parks its evaluated
+;       argument through the push door (fk_vp) before re-entry — so
+;       band-scale allocation can melt mid-call safely (feature-vector's
+;       crossing, audit section 24)
 (do
     (let c0 (if (eq (fkc-arena-capacity) (add (am-sibling-capacity) 1))
                 (if (eq (fkc-needs-melt 3686 4096) 0)
@@ -31,7 +39,7 @@
 
     (let uni (fkc-emit-universal))
     (let c2 (if (ge (str_find uni (fkc-melt-door-text) 0) 0)
-                (if (ge (str_find uni "fk_melt(&hh, &ht)" 0) 0)
+                (if (ge (str_find uni "fk_melt()" 0) 0)
                     (if (ge (str_find uni "fk_hp = fk_hp + 1" 0) 0) 4 0) 0) 0))
 
     (let many (fkc-emit-many (list (fk-lit 5))))
@@ -46,4 +54,11 @@
                 (if (eq (am-hp (nth wm 0)) 4)
                     (if (eq (fkc-needs-melt (am-hp (nth wm 0)) (fkc-next-capacity (am-hp (nth wm 0)) 64)) 0) 16 0) 0) 0))
 
-    (add c0 (add c1 (add c2 (add c3 c4)))))
+    (let c5 (if (ge (str_find uni (str_concat "static long long fk_vs[" (int_to_str (fkc-vstack-capacity))) 0) 0)
+                (if (ge (str_find uni "if (t == 2) { return fk_vs[fp]; }" 0) 0)
+                    (if (ge (str_find uni "fk_mlive(fk_vs[k])" 0) 0)
+                        (if (ge (str_find uni "fk_vs[k] = fk_mcopy(fk_vs[k])" 0) 0)
+                            (if (ge (str_find uni "fk_vp(v12)" 0) 0)
+                                (if (ge (str_find many "fk_vp(v12)" 0) 0) 32 0) 0) 0) 0) 0) 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))

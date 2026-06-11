@@ -16,10 +16,12 @@
 ; calls stay direct ARG (no allocation); zero-param packs EMPTY. Scope held
 ; honestly: PURE bands — nonnegative integer literals, defn bodies that see
 ; only their params, top-level lets, one verdict expression. eq/and lowering
-; re-evaluates pure operands; a packed-args list held across a melt-crossing
-; allocation shares m4e2's named suspended-temp gap (band-scale inputs stay
-; far below the water line); str_*, node_*, floats, and nested do are
-; m4e4's remaining family-by-family climb.
+; re-evaluates pure operands. Packed args ride the emitted walker's VALUE
+; STACK (fourth-walker-emit.fk: ARG reads fk_vs[fp], the melt roots and
+; relocates every stack slot), so band-scale allocation melts safely
+; mid-call — feature-vector's crossing is the witness (audit section 24).
+; str_*, node_*, floats, and nested do are the remaining family-by-family
+; climb.
 
 ; ── walker-carried ops as DATA rows (name arity tag) — one generic engine ──
 (defn flt-ops ()
