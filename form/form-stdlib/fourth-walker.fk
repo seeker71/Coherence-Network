@@ -69,7 +69,18 @@
     (if (eq (fk-tag node) 7) (fkm-walk fns (nth fns 0) (fkm-walk fns (fk-body node) arg))
     (if (eq (fk-tag node) 12) (fkm-walk fns (nth fns (ms-value (ms-child (fk-body node) 0)))
                                             (fkm-walk fns (ms-child (fk-body node) 1) arg))
-        0)))))))))
+    ; list arms 18..23 — the arena family on the RECIPE side: lists are the
+    ; host kernel's own lists, so a packed-args program (m4e4 multi-param)
+    ; proves by VALUE three-way before the emitted arena carries it
+    (if (eq (fk-tag node) 18) (list)
+    (if (eq (fk-tag node) 19) (cons (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                    (fkm-walk fns (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 20) (head (fkm-walk fns (fk-body node) arg))
+    (if (eq (fk-tag node) 21) (tail (fkm-walk fns (fk-body node) arg))
+    (if (eq (fk-tag node) 22) (len (fkm-walk fns (fk-body node) arg))
+    (if (eq (fk-tag node) 23) (nth (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                   (fkm-walk fns (ms-child (fk-body node) 1) arg))
+        0)))))))))))))))
 
 (defn fkm-run (fns arg) (fkm-walk fns (nth fns 0) arg))
 
