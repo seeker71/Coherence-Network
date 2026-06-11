@@ -19,3 +19,21 @@
   (str_concat "#[no_mangle] pub unsafe extern fn "
   (str_concat fname
               " (w: *const f64, x: *const f64, y: *mut f64, rows: i64, cols: i64) { let r = rows as usize; let c = cols as usize; let mut i = 0usize; while i < r { let row = w.add(i * c); let mut acc = 0.0f64; let mut j = c; while j > 0 { j -= 1; acc = *row.add(j) * *x.add(j) + acc; } *y.add(i) = acc; i += 1; } }")))
+
+; jte-matvec-msl — the SAME emitter discipline pointed at the GPU: Metal Shading Language source
+; for the matvec, one thread per output row (rows are independent — parallelism without touching
+; the fold), inner loop accumulating j DOWN exactly like tb-dot and the rust emission above.
+;
+; The fp32 lane is the honest one: MSL has no f64 in device code, so the precision this emission
+; declares is float — and the conformance gate holds BOTH sides to it (a CPU fp32 right-fold in the
+; same op order, per form-native-models' cross-precision discipline). The multiply and add are split
+; through a named temporary (p, then acc) so no conformant Metal compiler can contract them into an
+; fma — bit-for-bit means mul-then-add as two roundings, the recipe's own order, on any carrier.
+; MEASURED on this shape (M4 Max, mathMode safe, 1280x1280): 1280/1280 rows bit-exact vs the CPU
+; fp32 right-fold. No #include needed — kernel/device/constant/uint are language-level, so the
+; source stays one quote-free line, a plain Form string like its rust sibling.
+
+(defn jte-matvec-msl (fname)
+  (str_concat "kernel void "
+  (str_concat fname
+              "(device const float* w [[buffer(0)]], device const float* x [[buffer(1)]], device float* y [[buffer(2)]], constant uint& rows [[buffer(3)]], constant uint& cols [[buffer(4)]], uint i [[thread_position_in_grid]]) { if (i >= rows) return; device const float* row = w + i * cols; float acc = 0.0f; uint j = cols; while (j > 0) { j -= 1; float p = row[j] * x[j]; acc = p + acc; } y[i] = acc; }")))
