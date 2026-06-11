@@ -1,0 +1,132 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "cursor/ts-bmf-lift-eval-20260607",
+  "commit_scope": "Intrinsic casting lands as Form tissue: a CAST ontology category (type 98 — 11 cast pairs + 5 TYPE-* typed-token cells), a cast surface (intrinsic-cast.fk) whose bodies are pure Form wherever the math allows, nothing-on-failure semantics (TrivNull 1.1.4.0 — the core-axioms third state), reversibility/lossiness/totality as data, a static cast-check resolution walk over Blueprint coordinates, and the TS lifter consulting the dialect coercion row to emit explicit CAST nodes for mixed string+int '+'. Both lanes proven three-way.",
+  "files_owned": [
+    "form/form-stdlib/form-ontology.json",
+    "form/form-stdlib/form-ontology-loader.fk",
+    "form/form-stdlib/intrinsic-cast.fk",
+    "form/form-stdlib/typescript-bmf-eval.fk",
+    "form/form-stdlib/typescript-bmf-lift.fk",
+    "form/form-stdlib/tests/intrinsic-cast-band.fk",
+    "form/form-stdlib/tests/intrinsic-cast-check-band.fk",
+    "scripts/gen_bp_table.py",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "specs/form-intrinsic-casting.md",
+    "specs/INDEX.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/gen_bp_table.py",
+      "python3 form/scripts/validate_form_ontology.py",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/intrinsic-cast.fk form-stdlib/typescript-bmf-eval.fk form-stdlib/typescript-bmf-lift.fk form-stdlib/tests/intrinsic-cast-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/intrinsic-cast.fk form-stdlib/tests/intrinsic-cast-check-band.fk",
+      "cd form && <ten grammar-coupled regression suites + both existing TS BMF bands, prelude chains from their headers>",
+      "python3 scripts/validate_spec_quality.py --file specs/form-intrinsic-casting.md",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-11_form_intrinsic_casting_impl.json"
+    ],
+    "summary": "intrinsic-cast-band 7070915/7070915 three-way (15 value casts, 9 law/row-data checks, 7 nothing-failure cells incl. nothing-propagation through a chained cast tree, 7 recipe-layer cells incl. content-addressed cast nodes, recipe-level round-trip, and the lifted TS coercion: '\"n=\" + 5' -> EVAL-CONCAT with an explicit CAST-INT-STRING child -> \"n=5\", both operand orders). intrinsic-cast-check-band 11111111/11111111 three-way (clean cast and clean round-trip chain report zero diagnostics; cast-from-mismatch, lossy-step on a lossy INNER step, nothing-unhandled on math consumers of partial casts — two partial casts give two diagnostics; static types read from Blueprint coordinates; a tree whose value-walk yields nothing still checks statically). Regression: ten grammar-coupled suites + typescript-bmf-eval-band (28000) + typescript-bmf-lift-band (55000) unchanged — the eval/lift integration is lazy (inline type-98 coordinate test), so workloads that never walk CAST nodes need no new prelude. Notable composition choices: string->float is pure Form over the str_to_int leaf, which closed the TS kernel's missing str_to_float without adding a native; float->string is a canonical Form-side formatter so the kernels agree by construction; str_to_int's silent-zero failure is composted behind Form-side digit validation that returns nothing (TrivNull) instead.",
+    "observed_delta": {
+      "bands": "intrinsic-cast-band 7070915, intrinsic-cast-check-band 11111111 — 0 divergent",
+      "bp_table_names": "770 -> 788 (16 CAST rows + TS-BMF-EVAL-STR/EVAL-CONCAT)",
+      "new_ontology": "top-level casts block (type 98, TYPE-* 1-5, pairs 10-20) + typescript.bmf coercions row + TS-BMF 636/637",
+      "smoke": "ts-bmf-run-expr-text '\"n=\" + 5' -> \"n=5\" on Go, Rust, TS with CAST node visible in the lifted tree"
+    },
+    "known_limitations": [
+      {
+        "limitation": "string->float parses decimal form only (optional sign, digits, optional . with digits) — no exponent notation yet; float->string is fixed 6-fractional-digit canonical form, declared lossy.",
+        "follow_up": "Exponent form and a round-trip-faithful formatter ride the format-arith numerics lane when a consumer needs them."
+      },
+      {
+        "limitation": "Lift-time string-typing reads leaf/cast/concat categories — nested expressions whose string-ness is only knowable through idents stay on the math path.",
+        "follow_up": "The cast-check static walk generalizes to lift-time type inference when statement lifting lands."
+      },
+      {
+        "limitation": "Python BMF lifter does not yet consult the coercion table (truthiness in if/while).",
+        "follow_up": "Same lift-plus-node shape, python-bmf-lift.fk, next slice."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "PR gates run kernel parity three-way."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "form-stdlib rides the api rebuild; no route changes."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No route changes. Primitive type movement is now an explicit, content-addressed recipe shape: failed casts realize to nothing instead of silent zeros, dialect coercion is lift-time data instead of kernel branches, and cast chains are statically checkable without execution.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "Two new bands three-way across Go/Rust/TS kernels; ten grammar-coupled suites + two existing TS BMF bands regression-green."
+    ],
+    "summary": "validate.sh exit 0 on both new band workloads and all regression workloads."
+  },
+  "phase_gate": {
+    "phase": "intrinsic-casting",
+    "gate": "Both cast lanes (value-walk + resolution-walk) proven three-way with the lifted TS coercion case",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "Python BMF truthiness coercion; statement lifting; m4e4 str_*/float families carry casts onto the fourth kernel"
+  },
+  "idea_ids": [
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "form-intrinsic-casting"
+  ],
+  "task_ids": [
+    "ts-bmf-lift-eval-20260607"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "design"
+      ]
+    },
+    {
+      "contributor_id": "agent:cursor",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Cursor",
+    "version": "claude-fable-5"
+  },
+  "evidence_refs": [
+    "docs/coherence-substrate/core-axioms.form",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/system_audit/commit_evidence_2026-06-11_ts_bmf_lift_eval.json"
+  ],
+  "change_files": [
+    "docs/system_audit/commit_evidence_2026-06-11_form_intrinsic_casting_impl.json",
+    "form/form-stdlib/form-ontology.json",
+    "form/form-stdlib/form-ontology-loader.fk",
+    "form/form-stdlib/intrinsic-cast.fk",
+    "form/form-stdlib/typescript-bmf-eval.fk",
+    "form/form-stdlib/typescript-bmf-lift.fk",
+    "form/form-stdlib/tests/intrinsic-cast-band.fk",
+    "form/form-stdlib/tests/intrinsic-cast-check-band.fk",
+    "scripts/gen_bp_table.py",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "specs/form-intrinsic-casting.md",
+    "specs/INDEX.md"
+  ],
+  "change_intent": "runtime_feature"
+}
