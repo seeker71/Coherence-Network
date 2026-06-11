@@ -6,6 +6,7 @@
 ;
 ; preludes: core.fk json.fk cache.fk form-ontology-loader.fk engine.fk
 ;           compiler.fk grammars/typescript-bmf.fk
+;           (+ intrinsic-cast.fk before this file when CAST nodes are walked)
 
 (do
     (defn ts-env-empty () (empty))
@@ -156,12 +157,27 @@
             (let pms (ts-collect-params-loop param-leaves (len param-leaves) (empty)))
             (ts-closure "" pms body env)))
 
+    ;; CAST nodes (form-ontology.json "casts", type 98 inst 10+) walk through
+    ;; intrinsic-cast.fk's ic-apply with nothing-propagation. The coordinate
+    ;; test is inline so workloads that never lift casts need not load
+    ;; intrinsic-cast.fk; ic-apply resolves lazily at first cast walk.
+    (defn ts-eval-cast (cat kids env)
+        (do
+            (let v (ts-eval (head kids) env))
+            (if (eq (ic-nothing? v) 1) (ic-nothing) (ic-apply cat v))))
+
     (defn ts-eval (recipe env)
         (do
             (let cat (node_category recipe))
             (let kids (node_children recipe))
             (if (node_eq cat TS-BMF-EVAL-INT)
                 (node_value (head kids))
+            (if (node_eq cat TS-BMF-EVAL-STR)
+                (node_value (head kids))
+            (if (node_eq cat TS-BMF-EVAL-CONCAT)
+                (str_concat (ts-eval (nth kids 0) env) (ts-eval (nth kids 1) env))
+            (if (and (eq (node_type cat) 98) (ge (node_inst cat) 10))
+                (ts-eval-cast cat kids env)
             (if (node_eq cat TS-BMF-EVAL-IDENT)
                 (ts-env-lookup env (node_value (head kids)))
             (if (and (eq (node_pkg cat) 1)
@@ -194,7 +210,7 @@
                 (ts-eval-module-loop kids env 0)
                 (do
                     (trace "ts-eval: unimplemented category" cat)
-                    (head (empty))))))))))))))))
+                    (head (empty)))))))))))))))))))
 
     (defn ts-run (module-recipe)
         (ts-eval module-recipe (ts-env-empty)))

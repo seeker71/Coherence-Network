@@ -51,6 +51,10 @@ def build_table() -> dict[str, tuple]:
         category_type = dialect["category_type"]
         for r in dialect.get("categories", []):
             add(f"{prefix}-{r['name']}", (1, 2, category_type, r["inst"]))
+    casts = onto.get("casts")
+    if casts:
+        for r in casts.get("categories", []):
+            add(f"{casts['name_prefix']}-{r['name']}", (1, 2, casts["category_type"], r["inst"]))
     for r in json.loads(REGISTRY.read_text()).get("blueprints", []):
         coord = (r.get("pkg", 1), r.get("level", 2), r.get("type", 99), r["inst"])
         add(r["name"], coord)
