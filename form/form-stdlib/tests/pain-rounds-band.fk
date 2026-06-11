@@ -1,0 +1,87 @@
+; preludes: form-stdlib/transformer-numerics.fk form-stdlib/geometric-learning.fk form-stdlib/nearest-shape.fk form-stdlib/learning-arc.fk form-stdlib/learning-style-space.fk form-stdlib/metabolic-learning.fk form-stdlib/cognitive-light-cone.fk form-stdlib/novelty.fk form-stdlib/pain-metabolism.fk
+;
+; pain-rounds-band — four rounds of the metabolic loop, each round stating its
+; EXPECTATION before the move and the band proving expectation == actual. The story:
+; a hidden fault at cell-x (intensity 8) that the route only FEELS through
+; transmission (the receptive cone: x → recipe-A → route, product 0.5). Walk:
+; 0 route · 1 recipe-A · 2 cell-x · 3 cell-y · 4 recipe-B · 5 cell-z.
+;
+;   R1  FEEL 4 (= 8 × 0.5). NAME: route→A hottest. Shape interned (store empty —
+;       honest unknown). MOVE: release the hottest edge (λ=½) — treating the
+;       SYMPTOM. THEORY: release halves transmission → predict next felt = 2.
+;   R2  FEEL 2 — prediction VERIFIED. The shape under treatment is honestly NOVEL
+;       (sim 3 < floor 4: a wound under treatment presents differently). MOVE:
+;       research — the failing samples crown the alternative recipe for cell-x;
+;       the CAUSE is fixed (fault → 0). THEORY: predict next felt = 0.
+;   R3  FEEL 0 — prediction VERIFIED. Under tolerance (½) the observer arm holds:
+;       the gate chooses NO move; the trace is untouched.
+;   R4  RELAPSE PROBE: the fault returns at full intensity 8. FELT 2, not 4 —
+;       structural learning (the released pathway) persists through relapse. The
+;       shape EXACTLY matches round-2's receipt: recall fires ("round-2"), the
+;       store does not grow — recognition is instant diagnosis, no re-interning.
+;
+; Verdict 4095 when every claim lands:
+;   1     R1 felt = 4 exactly — transmission through the receptive cone
+;   2     R1 names the route→A edge hottest
+;   4     R1 honest unknown: empty store answers "?" — interned, never guessed
+;   8     R2 predicted == actual (theory: release halves → 2; mechanics agree)
+;   16    R2 shape honestly novel vs the store (treatment changes presentation)
+;   32    R2 research crowns the alternative over the hurting recipe
+;   64    R3 predicted == actual (cause fixed → 0)
+;   128   R3 observer: felt under tolerance → the gate leaves the trace untouched
+;   256   R4 relapse felt = 2 AND < R1's 4 — structural learning persists
+;   512   R4 recall fires: the relapse recognizes "round-2" by shape
+;   1024  R4 recognized ⇒ store stays 2 receipts (no re-interning)
+;   2048  the trajectory heals: 4 > 2 > 0 strictly decreasing across rounds
+(do
+    (let trace (list (pn-touch 0 1 1.0) (pn-touch 1 2 0.5)
+                     (pn-touch 1 3 0.25) (pn-touch 4 5 0.5)))
+    ; ---- ROUND 1: feel, name, intern, move (release), predict ----
+    (let f1 (mul 8.0 (nth (pn-cone trace 6 2 4) 0)))
+    (let inv1 (pn-involved trace (pn-felt 6 0 f1) 4))
+    (let resp1 (pn-credit trace inv1))
+    (let s1 (pn-shape inv1))
+    (let recall1 (la-predict s1 (empty)))
+    (let store1 (la-intern "round-1" s1 (empty)))
+    (let tr1 (pn-release-at trace (pn-hottest resp1) 0.5))
+    (let expected2 (mul 0.5 f1))
+    ; ---- ROUND 2: feel (verify), shape novel, research, fix cause, predict ----
+    (let f2 (mul 8.0 (nth (pn-cone tr1 6 2 4) 0)))
+    (let inv2 (pn-involved tr1 (pn-felt 6 0 f2) 4))
+    (let s2 (pn-shape inv2))
+    (let store2 (la-intern "round-2" s2 store1))
+    (let shift-task (list (list (list 4.0 4.0 0.0 0.0) "A")
+                          (list (list 4.0 0.0 4.0 0.0) "B")
+                          (list (list 0.0 4.0 4.0 0.0) "A")
+                          (list (list 0.0 4.0 0.0 4.0) "B")
+                          (list (list 0.0 0.0 4.0 4.0) "A")
+                          (list (list 4.0 0.0 0.0 4.0) "A")))
+    (let rec (ls-research (list (list "hurting" ls-pool-id ls-core-id)
+                                (list "alt" ls-pool-conv ls-core-id)) shift-task 2))
+    (let expected3 0.0)
+    ; ---- ROUND 3: feel (verify), observer gate holds ----
+    (let f3 (mul 0.0 (nth (pn-cone tr1 6 2 4) 0)))
+    (let tr3 (if (gt f3 0.5) (pn-release-at tr1 0 0.5) tr1))
+    ; ---- ROUND 4: relapse probe — recall pays ----
+    (let f4 (mul 8.0 (nth (pn-cone tr3 6 2 4) 0)))
+    (let inv4 (pn-involved tr3 (pn-felt 6 0 f4) 4))
+    (let s4 (pn-shape inv4))
+    (let recall4 (la-predict s4 store2))
+    (let store4 (if (eq (nv-recognized? (ns-strength s4 store2) 4) 1)
+                    store2 (la-intern "round-4" s4 store2)))
+    ; ---- claims ----
+    (let c0  (if (eq (gl-r6 f1) 4000000) 1 0))
+    (let c1  (if (eq (pn-hottest resp1) 0) 2 0))
+    (let c2  (if (str_eq recall1 "?") 4 0))
+    (let c3  (if (eq (gl-r6 f2) (gl-r6 expected2)) 8 0))
+    (let c4  (if (eq (nv-novel? (ns-strength s2 store1) 4) 1) 16 0))
+    (let c5  (if (and (str_eq (ls-best rec) "alt")
+                      (gt (ls-score-of rec "alt") (ls-score-of rec "hurting"))) 32 0))
+    (let c6  (if (eq (gl-r6 f3) (gl-r6 expected3)) 64 0))
+    (let c7  (if (eq (gl-edges-eq tr3 tr1) 1) 128 0))
+    (let c8  (if (and (eq (gl-r6 f4) 2000000) (lt f4 f1)) 256 0))
+    (let c9  (if (str_eq recall4 "round-2") 512 0))
+    (let c10 (if (eq (len store4) 2) 1024 0))
+    (let c11 (if (and (gt f1 f2) (gt f2 f3)) 2048 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7
+    (add c8 (add c9 (add c10 c11))))))))))))
