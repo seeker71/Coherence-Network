@@ -762,5 +762,68 @@ fi
 echo "  the cycle closed both ways: measured heat froze it, measured cool melted it, ice re-EARNED — never declared"
 
 echo
+# ── 22. m4e4 — multi-param bands on the fourth arm: the ratchet climbs 1 -> 10 ──
+# form-flatten.fk's packed-args rule (an N-arg call right-folds its arguments
+# into a CONS chain on the arena; the callee binds each param as NTH(ARG, i))
+# is a pure flattening lift — ZERO new walker tags, the emitted C unchanged.
+# Nine more REAL stdlib bands (unmodified source from disk) flatten onto the
+# walker's table and run on the SAME universal binary; each verdict is gated
+# four-way against the three walking siblings' own front door (validate.sh,
+# the nine invocations in parallel). feature-vector is the honest tenth: its
+# flatten lands and fits the loader, but its band-scale allocation crosses
+# the arena's water line and the copying melt cannot see packed args held in
+# suspended C frames (m4e2's named suspended-temp gap) — it stays off the
+# ratchet until call arguments ride a walker-managed value stack instead of
+# C locals. adler32 (the original multi-param candidate) still waits on the
+# band/shl_u32/add_u32 figure family and let-in-defn — named, not bent.
+mp_mods=(cooldown alert-gate value-execution anomaly-band body-state field-fusion histogram-peak model-retire signal-derivative)
+mp_exps=(63 127 7 127 127 127 127 63 127)
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
+    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" "$FORMDIR/form-stdlib/form-parse.fk" \
+    "$FORMDIR/form-stdlib/form-flatten.fk" > "$work/mp-driver.fk"
+for m in "${mp_mods[@]}" feature-vector; do
+    cat >> "$work/mp-driver.fk" <<EOF
+(print "==MP-$m==")
+(print (fkc-table-file (flt-band-fns (read_file "form-stdlib/$m.fk") (read_file "form-stdlib/tests/$m-band.fk"))))
+EOF
+done
+echo '(print "==MP-END==")' >> "$work/mp-driver.fk"
+(cd "$FORMDIR" && "$GO_BIN" "$work/mp-driver.fk" 2>/dev/null) > "$work/mp.out"
+prev=""
+while IFS= read -r line; do
+    if [[ "$line" == ==MP-*== ]]; then
+        prev="${line#==MP-}"; prev="${prev%==}"
+        : > "$work/t-mp-$prev.txt"
+    elif [[ -n "$prev" ]]; then
+        printf '%s\n' "$line" >> "$work/t-mp-$prev.txt"
+    fi
+done < "$work/mp.out"
+for m in "${mp_mods[@]}"; do
+    (cd "$FORMDIR" && ./validate.sh form-stdlib/core.fk "form-stdlib/$m.fk" "form-stdlib/tests/$m-band.fk" 2>/dev/null \
+        | sed -n 's/.*→ //p' | head -1 > "$work/vw-$m.txt") &
+done
+wait
+echo "m4e4 multi-param bands on the fourth arm (packed args, flattened by form-flatten.fk):"
+mp_pass=0
+for k in "${!mp_mods[@]}"; do
+    m="${mp_mods[$k]}"; exp="${mp_exps[$k]}"
+    three_way="$(cat "$work/vw-$m.txt")"
+    fkw_v="$("$work/fkwu" "$work/t-mp-$m.txt" 0 2>/dev/null | head -1)"
+    printf "  %-18s three-walker (validate.sh) = %-4s fkw = %-4s (expect %s)\n" "$m" "$three_way" "$fkw_v" "$exp"
+    if [[ -z "$three_way" || "$three_way" != "$fkw_v" || "$fkw_v" != "$exp" ]]; then
+        echo "FAIL  the fourth arm disagrees with the siblings on $m"; exit 1
+    fi
+    mp_pass=$((mp_pass + 1))
+done
+fv_rows="$(wc -w < "$work/t-mp-feature-vector.txt")"
+if [[ "$fv_rows" -lt 10 ]]; then
+    echo "FAIL  the feature-vector flatten itself regressed"; exit 1
+fi
+echo "  feature-vector     flattens ($fv_rows table words, fits the loader) — held OFF the ratchet:"
+echo "                     band-scale allocation crosses the melt water line and packed args in"
+echo "                     suspended C frames are outside the copying melt's root set (m4e2 gap)"
+echo "  bands-on-fourth-arm: $((mp_pass + 1)) (learning-trend + $mp_pass multi-param bands, four-way gated)"
+
+echo
 echo "conditions: $(uname -m) $(uname -s), clang -O2, full-process invocations (startup included)"
 echo "ok — parity held and the rows are real; the spec is docs/coherence-substrate/fourth-kernel.form"

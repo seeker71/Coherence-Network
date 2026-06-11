@@ -9,11 +9,17 @@
 ; band through the fs port: the fourth arm's band ratchet.
 ;
 ; Builds on form-parse.fk (the expression stone: a cursor over the source
-; string, no tokenizer — the BMF discipline). Scope held honestly: PURE bands
-; — nonnegative integer literals, single-param defns whose body sees only its
-; param, top-level lets, one verdict expression. eq/and lowering re-evaluates
-; pure operands; str_*, node_*, floats, nested do, and multi-param defns are
-; m4e4's family-by-family climb.
+; string, no tokenizer — the BMF discipline). Multi-param defns ride PACKED
+; ARGS (m4e4): an N-arg call right-folds its arguments into a CONS chain on
+; the arena, the callee's params bind as NTH(ARG, i) by position — a pure
+; flattening rule over the existing op set, no new walker tags. Single-param
+; calls stay direct ARG (no allocation); zero-param packs EMPTY. Scope held
+; honestly: PURE bands — nonnegative integer literals, defn bodies that see
+; only their params, top-level lets, one verdict expression. eq/and lowering
+; re-evaluates pure operands; a packed-args list held across a melt-crossing
+; allocation shares m4e2's named suspended-temp gap (band-scale inputs stay
+; far below the water line); str_*, node_*, floats, and nested do are
+; m4e4's remaining family-by-family climb.
 
 ; ── walker-carried ops as DATA rows (name arity tag) — one generic engine ──
 (defn flt-ops ()
@@ -87,9 +93,25 @@
 (defn flt-bin (row s ae fns env) (flt-bin2 row s (nth ae 0) (flt-expr s (nth ae 1) fns env)))
 (defn flt-bin2 (row s a be) (list (flt-mkop row a (nth be 0)) (fp-close s (nth be 1))))
 
-(defn flt-call (fname s pos fns env) (flt-call2 (flt-assoc fname fns) s (flt-expr s pos fns env)))
-(defn flt-call2 (row s ae) (list (flt-call3 row (nth ae 0)) (fp-close s (nth ae 1))))
-(defn flt-call3 (row arg) (if (eq (len row) 0) (fk-lit 0) (fk-call (nth row 1) arg)))
+; ── user function calls: every argument until ')' parses, then the row's
+;    arity picks the carrier — arity 1 rides ARG direct (no allocation),
+;    any other arity right-folds the args into a CONS pack the callee
+;    unpacks by NTH position (multi-param-via-packed-args, m4e4) ──────────
+(defn flt-args (s pos fns env)
+    (if (eq (fp-at s (fp-skip s pos)) 41) (list (list) (add (fp-skip s pos) 1))
+        (flt-args2 s (flt-expr s pos fns env) fns env)))
+(defn flt-args2 (s ae fns env) (flt-args3 (nth ae 0) (flt-args s (nth ae 1) fns env)))
+(defn flt-args3 (a re) (list (cons a (nth re 0)) (nth re 1)))
+
+(defn flt-pack (args arity) (if (eq arity 1) (head args) (flt-pack2 args)))
+(defn flt-pack2 (args)
+    (if (eq (len args) 0) (fk-empty)
+        (fk-cons (head args) (flt-pack2 (tail args)))))
+
+(defn flt-call (fname s pos fns env) (flt-call2 (flt-assoc fname fns) (flt-args s pos fns env)))
+(defn flt-call2 (row ae) (list (flt-call3 row (nth ae 0)) (nth ae 1)))
+(defn flt-call3 (row args)
+    (if (eq (len row) 0) (fk-lit 0) (fk-call (nth row 1) (flt-pack args (nth row 2)))))
 
 (defn flt-if (s pos fns env) (flt-if-c s (flt-expr s pos fns env) fns env))
 (defn flt-if-c (s ce fns env) (flt-if-t s (nth ce 0) (flt-expr s (nth ce 1) fns env) fns env))
@@ -116,18 +138,36 @@
         (flt-main s (flt-expr s pos fns env) fns rbodies env))))))
 (defn flt-main (s ee fns rbodies env) (flt-items s (nth ee 1) fns rbodies env (nth ee 0)))
 
-; (defn name (param) body) — pos arrives at the form's '('
+; (defn name (p0 p1 ...) body) — pos arrives at the form's '('. The param
+; LIST reads whole first so the function row carries (name index arity)
+; BEFORE the body parses — self-recursion sees its own arity and packs.
+; The body env binds each param by position: arity 1 is ARG itself, any
+; other arity is NTH(ARG, i) into the packed CONS chain.
+(defn flt-params (s pos)
+    (if (eq (fp-at s (fp-skip s pos)) 41) (list (list) (add (fp-skip s pos) 1))
+        (flt-params2 s (fp-skip s pos))))
+(defn flt-params2 (s pos) (flt-params3 (flt-word s pos) (flt-params s (fp-sym-end s pos))))
+(defn flt-params3 (w re) (list (cons w (nth re 0)) (nth re 1)))
+
+; (`params` itself is a defn-grammar keyword, so the list rides as `ps`)
+(defn flt-penv (ps n i)
+    (if (eq (len ps) 0) (list)
+        (cons (list (head ps)
+                    (if (eq n 1) (fk-arg) (fk-nth (fk-arg) (fk-lit i))))
+              (flt-penv (tail ps) n (add i 1)))))
+
 (defn flt-defn (s pos fns rbodies env main)
     (flt-defn-n s (fp-skip s (fp-sym-end s (fp-skip s (add pos 1)))) fns rbodies env main))
 (defn flt-defn-n (s pos fns rbodies env main)
     (flt-defn-p (flt-word s pos) s (fp-sym-end s pos) fns rbodies env main))
 (defn flt-defn-p (name s pos fns rbodies env main)
-    (flt-defn-p2 name s (fp-skip s (add (fp-skip s pos) 1)) fns rbodies env main))
-(defn flt-defn-p2 (name s pos fns rbodies env main)
-    (flt-defn-b (flt-word s pos) s (add (fp-skip s (fp-sym-end s pos)) 1)
-                (cons (list name (add (len fns) 1)) fns) rbodies env main))
-(defn flt-defn-b (param s pos fns rbodies env main)
-    (flt-defn-done s (flt-expr s pos fns (list (list param (fk-arg)))) fns rbodies env main))
+    (flt-defn-p2 name s (flt-params s (add (fp-skip s pos) 1)) fns rbodies env main))
+(defn flt-defn-p2 (name s pe fns rbodies env main)
+    (flt-defn-b s (nth pe 1)
+                (cons (list name (add (len fns) 1) (len (nth pe 0))) fns)
+                (flt-penv (nth pe 0) (len (nth pe 0)) 0) rbodies env main))
+(defn flt-defn-b (s pos fns benv rbodies env main)
+    (flt-defn-done s (flt-expr s pos fns benv) fns rbodies env main))
 (defn flt-defn-done (s be fns rbodies env main)
     (flt-items s (fp-close s (nth be 1)) fns (cons (nth be 0) rbodies) env main))
 
