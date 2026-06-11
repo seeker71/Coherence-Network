@@ -825,5 +825,62 @@ echo "                     suspended C frames are outside the copying melt's roo
 echo "  bands-on-fourth-arm: $((mp_pass + 1)) (learning-trend + $mp_pass multi-param bands, four-way gated)"
 
 echo
+# ── 23. live delivery priority — multiple offers pending in ONE window; WHICH ──
+# delivers first is a POLICY ROW (afferent-priority.fk): scheduler.fk's proven
+# row shape read by the afferent engine. Two offers pend together — a latched
+# keyboard irq (line 1, payload 42) and a timer armed for +1s (line 14).
+# POSIX number-order delivers line 1 NOW, then the remainder's alarm tick
+# arrives on the real clock; the irq-priority row (line 14 level 7 > line 1
+# level 1) delivers the SAME pending set the other way around — the row is
+# the only variable, witnessed on a wall clock through the SAME universal binary.
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
+    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" "$FORMDIR/form-stdlib/afferent-offer.fk" \
+    "$FORMDIR/form-stdlib/afferent-live.fk" "$FORMDIR/form-stdlib/scheduler.fk" \
+    "$FORMDIR/form-stdlib/afferent-priority.fk" > "$work/aop-driver.fk"
+cat >> "$work/aop-driver.fk" <<'EOF'
+(let pri-table (ao-table (list (ao-entry (ao-irq-keyboard) "on-key")
+                               (ao-entry (ao-sig-alrm) "on-alarm"))))
+(let no-mask (ao-mask (list)))
+(let levels (list (list 1 1) (list 14 7)))
+(let pending (list (ao-irq (ao-irq-keyboard) 0 42) (ao-alarm 1)))
+(print "==TNUM1==")
+(print (fkc-table-file (aolv-fns-pri (aop-number-order) levels pri-table no-mask pending 2 1000)))
+(print "==TNUM2==")
+(print (fkc-table-file (aolv-fns-pri (aop-number-order) levels pri-table no-mask
+    (ao-consume pending (ao-dispatch-offer (ao-deliver (aop-number-order) levels pri-table no-mask pending 2)))
+    2 1000)))
+(print "==TIRQ==")
+(print (fkc-table-file (aolv-fns-pri (aop-irq-priority) levels pri-table no-mask pending 2 1000)))
+(print "==END==")
+EOF
+(cd "$FORMDIR" && "$GO_BIN" "$work/aop-driver.fk" 2>/dev/null) > "$work/aop.out"
+sed -n '/^==TNUM1==$/,/^==TNUM2==$/p' "$work/aop.out" | sed -e '1d' -e '$d' > "$work/t-aop-num1.txt"
+sed -n '/^==TNUM2==$/,/^==TIRQ==$/p' "$work/aop.out" | sed -e '1d' -e '$d' > "$work/t-aop-num2.txt"
+sed -n '/^==TIRQ==$/,/^==END==$/p' "$work/aop.out" | sed -e '1d' -e '$d' > "$work/t-aop-irq.txt"
+read -r p1_ack p1_el p1_val p1_wall p1_polls <<<"$(ao_run "$work/t-aop-num1.txt")"
+read -r p2_ack p2_el p2_val p2_wall p2_polls <<<"$(ao_run "$work/t-aop-num2.txt")"
+read -r p3_ack p3_el p3_val p3_wall p3_polls <<<"$(ao_run "$work/t-aop-irq.txt")"
+echo "live delivery priority (TWO offers pending in one window; the policy ROW picks first):"
+echo "  number-order 1st -> $p1_ack payload=$p1_val elapsed=${p1_el}s wall=${p1_wall}s time-polls=$p1_polls (lowest line: the latched irq, now)"
+echo "  number-order 2nd -> $p2_ack elapsed=${p2_el}s wall=${p2_wall}s time-polls=$p2_polls (the remainder's timer tick ARRIVES on the host clock)"
+echo "  irq-priority 1st -> $p3_ack elapsed=${p3_el}s wall=${p3_wall}s time-polls=$p3_polls (SAME pending set: level 7 outranks the latched line)"
+if [[ "$p1_ack" != "on-key" || "$p1_val" != "42" ]] || [[ "$p1_el" != "0" && "$p1_el" != "1" ]]; then
+    echo "FAIL  number-order did not deliver the lowest line first"; exit 1
+fi
+if [[ "$p2_ack" != "on-alarm" || "$p2_el" != "1" ]]; then
+    echo "FAIL  the second delivery did not arrive in policy order on the real clock"; exit 1
+fi
+if ! python3 -c "import sys; sys.exit(0 if float('$p2_wall') < 2.0 else 1)"; then
+    echo "FAIL  the second delivery did not beat its 2s window"; exit 1
+fi
+if [[ "$p3_ack" != "on-alarm" || "$p3_el" != "1" ]]; then
+    echo "FAIL  the irq-priority row did not reorder the same pending set"; exit 1
+fi
+if [[ "$p1_ack" == "$p3_ack" ]]; then
+    echo "FAIL  the two policy rows agreed — the row was not the variable"; exit 1
+fi
+echo "  one policy discipline, afferent and efferent: the rows are scheduler.fk's (band: tests/afferent-priority-band.fk -> 1023)"
+
+echo
 echo "conditions: $(uname -m) $(uname -s), clang -O2, full-process invocations (startup included)"
 echo "ok — parity held and the rows are real; the spec is docs/coherence-substrate/fourth-kernel.form"

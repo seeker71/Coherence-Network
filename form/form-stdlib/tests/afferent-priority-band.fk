@@ -1,0 +1,92 @@
+; preludes: form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/afferent-offer.fk form-stdlib/afferent-live.fk form-stdlib/scheduler.fk form-stdlib/afferent-priority.fk
+;
+; afferent-priority-band — delivery priority as a policy ROW, proven on ONE
+; pending set. Three offers pending on lines 2, 9, 14, scrambled in pending
+; order (9, 14, 2) AND in arrival ticks (3, 1, 5), so neither position nor
+; time can fake either policy's order. Levels: 2→1, 9→5, 14→7. The
+; strange-minimal edge is the SAME set read by two rows: number-order
+; ascends the lines, irq-priority descends the levels — different but
+; each-correct orders, the scheduler band's exact discipline, here on the
+; afferent side of the one policy shape.
+;
+; Verdict 1023 when every claim lands:
+;   1    POSIX number-order: the full delivery ORDER ascends the line
+;        numbers (on-int on-mid on-alarm) — pending position ignored
+;   2    IRQ priority: the SAME pending set descends the levels
+;        (on-alarm on-mid on-int)
+;   4    the two rows' first deliveries differ — the row is the only
+;        variable (the scheduler band's same-queue-different-row claim)
+;   8    a masked line never delivers regardless of priority: mask the
+;        number-order winner (line 2) → the next in order (on-mid) fires
+;   16   the masked offer STAYS pending: the masked trace serves exactly
+;        the two open lines, and after consuming both the remainder is
+;        the line-2 offer alone
+;   32   one discipline: number-order's row data (key, direction, floor,
+;        requeue) equals sched-fifo's, irq-priority's equals
+;        sched-priority's — the afferent rows ARE the scheduler's rows
+;   64   one deliverable offer: ao-deliver and ao-wait intern the SAME
+;        dispatch cell (node_eq) — the decision point carried, not forked
+;   128  the window rules before priority: the best line number armed
+;        past the deadline is never ranked; the in-window line delivers
+;   256  empty pending: ao-deliver's silence IS ao-wait's nothing cell
+;   512  the live lowering carries the policy's verdict: aolv-fns-pri
+;        composes exactly aolv-fns2 of ao-deliver's dispatch (the line-2
+;        winner), table-file for table-file
+(do
+    (let pri-table (ao-table (list (ao-entry 2 "on-int")
+                                   (ao-entry 9 "on-mid")
+                                   (ao-entry 14 "on-alarm"))))
+    (let no-mask (ao-mask (list)))
+    (let two-mask (ao-mask (list 2)))
+    (let levels (list (list 2 1) (list 9 5) (list 14 7)))
+    (let pending (list (ao-signal 9 3) (ao-signal 14 1) (ao-signal 2 5)))
+
+    (let no-trace (aop-trace (aop-number-order) levels pri-table no-mask pending 9))
+    (let c0 (if (and (and (str_eq (nth no-trace 0) "on-int") (str_eq (nth no-trace 1) "on-mid"))
+                     (and (str_eq (nth no-trace 2) "on-alarm") (eq (len no-trace) 3))) 1 0))
+
+    (let iq-trace (aop-trace (aop-irq-priority) levels pri-table no-mask pending 9))
+    (let c1 (if (and (and (str_eq (nth iq-trace 0) "on-alarm") (str_eq (nth iq-trace 1) "on-mid"))
+                     (and (str_eq (nth iq-trace 2) "on-int") (eq (len iq-trace) 3))) 2 0))
+
+    (let c2 (if (str_eq (nth no-trace 0) (nth iq-trace 0)) 0 4))
+
+    (let d-masked (ao-deliver (aop-number-order) levels pri-table two-mask pending 9))
+    (let c3 (if (str_eq (ao-dispatch-handler d-masked) "on-mid") 8 0))
+
+    (let m-trace (aop-trace (aop-number-order) levels pri-table two-mask pending 9))
+    (let rem1 (ao-consume pending (ao-dispatch-offer d-masked)))
+    (let rem2 (ao-consume rem1 (ao-dispatch-offer
+                  (ao-deliver (aop-number-order) levels pri-table two-mask rem1 9))))
+    (let c4 (if (and (and (eq (len m-trace) 2) (str_eq (nth m-trace 1) "on-alarm"))
+                     (and (eq (len rem2) 1) (eq (ao-offer-line (head rem2)) 2))) 16 0))
+
+    (let c5 (if (and
+                  (and (and (eq (nth (aop-number-order) 1) (nth (sched-fifo) 1))
+                            (eq (nth (aop-number-order) 2) (nth (sched-fifo) 2)))
+                       (and (eq (nth (aop-number-order) 3) (nth (sched-fifo) 3))
+                            (eq (nth (aop-number-order) 4) (nth (sched-fifo) 4))))
+                  (and (and (eq (nth (aop-irq-priority) 1) (nth (sched-priority) 1))
+                            (eq (nth (aop-irq-priority) 2) (nth (sched-priority) 2)))
+                       (and (eq (nth (aop-irq-priority) 3) (nth (sched-priority) 3))
+                            (eq (nth (aop-irq-priority) 4) (nth (sched-priority) 4)))))
+                32 0))
+
+    (let single (list (ao-signal 14 1)))
+    (let c6 (if (node_eq (ao-deliver (aop-irq-priority) levels pri-table no-mask single 9)
+                         (ao-wait pri-table no-mask single 9)) 64 0))
+
+    (let late (list (ao-signal 2 20) (ao-signal 14 3)))
+    (let c7 (if (str_eq (ao-dispatch-handler
+                            (ao-deliver (aop-number-order) levels pri-table no-mask late 9))
+                        "on-alarm") 128 0))
+
+    (let c8 (if (node_eq (ao-deliver (aop-number-order) levels pri-table no-mask (list) 9)
+                         (ao-wait pri-table no-mask (list) 9)) 256 0))
+
+    (let v-pri (ao-deliver (aop-number-order) levels pri-table no-mask pending 9))
+    (let c9 (if (and (eq (ao-offer-line (ao-dispatch-offer v-pri)) 2)
+                     (str_eq (fkc-table-file (aolv-fns-pri (aop-number-order) levels pri-table no-mask pending 9 7))
+                             (fkc-table-file (aolv-fns2 v-pri 9 7)))) 512 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 c9))))))))))
