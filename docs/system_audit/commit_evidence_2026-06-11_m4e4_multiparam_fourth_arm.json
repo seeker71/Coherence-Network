@@ -1,0 +1,115 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "form-os3/m4e4-multiparam",
+  "commit_scope": "m4e4 multi-param family (n7-ratchet): packed-args flattening rule in form-flatten.fk — an N-arg call right-folds its arguments into a CONS chain on the arena, the callee binds each param as NTH(ARG, i). A pure flattening lift: zero new walker tags, the emitted C unchanged. Nine more REAL stdlib bands (cooldown, alert-gate, value-execution, anomaly-band, body-state, field-fusion, histogram-peak, model-retire, signal-derivative — unmodified source from disk) run on the universal fkw binary and return the three walkers' own validate.sh verdicts. Bands-on-fourth-arm 1 -> 10.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "fourth-kernel"
+  ],
+  "spec_ids": [
+    "kernel-native-api-readiness",
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "m4e4-multiparam-20260611"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "measurement"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-fable-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/fourth-walker.fk",
+    "form/form-stdlib/tests/form-flatten-band.fk",
+    "scripts/fourth_kernel_audit.sh",
+    "docs/system_audit/commit_evidence_2026-06-11_m4e4_multiparam_fourth_arm.json"
+  ],
+  "change_files": [
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/fourth-walker.fk",
+    "form/form-stdlib/tests/form-flatten-band.fk",
+    "scripts/fourth_kernel_audit.sh"
+  ],
+  "evidence_refs": [
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/system_audit/commit_evidence_2026-06-11_m4e3_first_click_fourth_arm.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/form-parse.fk form-stdlib/form-flatten.fk form-stdlib/tests/form-flatten-band.fk",
+      "cd form && ./validate.sh <preludes> form-stdlib/tests/<band>.fk  # all 16 bands whose preludes include fourth-walker.fk, in parallel",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/<module>.fk form-stdlib/tests/<module>-band.fk  # the nine crossing bands, three-way",
+      "bash scripts/fourth_kernel_audit.sh",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-11_m4e4_multiparam_fourth_arm.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ],
+    "notes": "form-flatten-band 15 -> 127 three-way: add3(7,11,13)=31 proves the 3-param pack, accsum((5 6 7),0)=18 proves a recursive 2-param fn carrying packed args across re-entry with list walking (the recipe-side walker's new arena arms 18..23 prove by VALUE), and the REAL cooldown module+band flatten and walk by value to the siblings' 63. All 16 bands whose preludes include the touched fourth-walker.fk stayed at their prior verdicts (15/63/31). The op-profile ranking over the band corpus (single-prelude, integer-pure, no nested do) found ten zero-blocker multi-param candidates; nine run four-way clean on fkw: cooldown 63, alert-gate 127, value-execution 7, anomaly-band 127, body-state 127, field-fusion 127, histogram-peak 127, model-retire 63, signal-derivative 127 — each equal to its validate.sh three-walker verdict. feature-vector is the honest tenth: it flattens and fits the loader, but its band-scale allocation crosses the arena's 90% water line and the copying melt cannot see packed args held in suspended C frames (m4e2's named suspended-temp gap), so it stays off the ratchet until call arguments ride a walker-managed value stack. adler32 (the originally rejected multi-param candidate) still waits on the band/shl_u32/add_u32 figure family and let-in-defn nested do — named, not bent. `params` as a leading defn parameter name is a kernel grammar keyword; the flattener carries the list as `ps`.",
+    "measured": {
+      "bands_on_fourth_arm_before": 1,
+      "bands_on_fourth_arm_after": 10,
+      "crossed_bands": {
+        "cooldown": 63,
+        "alert-gate": 127,
+        "value-execution": 7,
+        "anomaly-band": 127,
+        "body-state": 127,
+        "field-fusion": 127,
+        "histogram-peak": 127,
+        "model-retire": 63,
+        "signal-derivative": 127
+      },
+      "named_blocked": {
+        "feature-vector": "melt suspended-temp gap (packed args in C frames are not melt roots; ~14k cells allocated vs 4096 arena)",
+        "adler32": "band/shl_u32/add_u32 ops absent from the walker tag set; let-in-defn nested do",
+        "str_family": "string values need a walker string-pool lane (also the m4d full-fixpoint blocker) — named for the next hands"
+      }
+    }
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "CI three-way suite runs on the PR; the 459-band suite plus kernel builds carry the regression net for the fkm-walk arena arms and the flt-call/flt-defn rework."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "form-stdlib changes ride the api image rebuild; the lattice ingests the updated form-flatten.fk on the post-merge hook."
+  },
+  "phase_gate": {
+    "phase": "m4e4-multiparam-family",
+    "gate": "multi-param functions cross onto the fourth arm via packed args (a pure flattening rule over the existing op set); the crossed bands run UNMODIFIED and four-way gated; the flattener growth proven three-way as recipe tissue",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "str_* family needs a walker string-pool lane (shared with the m4d full-fixpoint blocker); nested do / let-in-defn unlocks adler32-shaped bands together with the band/shl_u32/add_u32 figure family; feature-vector-scale allocation wants call arguments on a walker-managed value stack so the copying melt sees them as roots"
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No route behavior changes. The fourth kernel's band ratchet climbs 1 -> 10: multi-param stdlib bands flatten through packed args onto the unchanged walker op set and the universal fkw binary returns the three siblings' own verdicts, four-way gated in audit section 22.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "form-flatten-band proves the packed-args family three-way at 127: add3(7,11,13)=31, recursive accsum((5 6 7),0)=18 through the recipe-side arena arms, and the REAL cooldown band by value at the siblings' 63.",
+      "fourth_kernel_audit.sh section 22: flatten nine multi-param bands -> table files -> universal fkw -> verdicts gated on equality with validate.sh's three-walker verdict per band, plus the feature-vector flatten-only structural gate."
+    ],
+    "summary": "validate.sh: form-flatten-band 127; all 16 fourth-walker-prelude bands at their prior verdicts; the nine crossing bands each 1 ok 0 divergent with fkw matching; audit end-to-end green with bands-on-fourth-arm at 10."
+  }
+}

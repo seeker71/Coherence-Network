@@ -8,7 +8,7 @@
 ; in scripts/fourth_kernel_audit.sh — the fourth arm, where the heap ops
 ; live). Same cells, both walkers; content-addressing carries the identity.
 ;
-; Verdict 15 when the flattener holds:
+; Verdict 127 when the flattener holds:
 ;   1   the lowerings carry values — gt strict at the tie (gt 4 4 -> 0,
 ;       the learning-trend boundary), ge admits it, eq lands, and gates
 ;   2   defn/let/CALL — a mini band with a function, a let, and a verdict
@@ -18,6 +18,15 @@
 ;       function table
 ;   8   the flattened table FITS the universal fkw binary — more than 100
 ;       real rows, under the loader's 4096-row capacity
+;   16  multi-param via packed args (m4e4) — a 3-param function's call
+;       right-folds its arguments into a CONS pack and the body reads
+;       them back by NTH position: add3(7,11,13) walks to 31
+;   32  a RECURSIVE 2-param function carries packed args across its own
+;       re-entry while walking a list: accsum((5 6 7), 0) walks to 18
+;       (the recipe-side walker's arena arms 18..23 prove by value)
+;   64  the REAL cooldown module + band (multi-param throughout: 2- and
+;       3-param defns, let-bound call arguments, unmodified from disk)
+;       flatten and walk BY VALUE to the siblings' own verdict 63
 (do
     (let c0 (if (and (and (eq (fkm-run (flt-src-fns "(do (gt 5 2))") 0) 1)
                           (eq (fkm-run (flt-src-fns "(do (gt 4 4))") 0) 0))
@@ -32,4 +41,8 @@
     (let c2 (if (eq (len real) 6) 4 0))
     (let rows (nth (fkc-flatten-many real) 0))
     (let c3 (if (and (gt (len rows) 100) (gt 4096 (len rows))) 8 0))
-    (add c0 (add c1 (add c2 c3))))
+    (let c4 (if (eq (fkm-run (flt-src-fns "(do (defn add3 (a b c) (add a (add b c))) (add3 7 11 13))") 0) 31) 16 0))
+    (let c5 (if (eq (fkm-run (flt-src-fns "(do (defn accsum (xs acc) (if (eq (len xs) 0) acc (accsum (tail xs) (add acc (head xs))))) (accsum (list 5 6 7) 0))") 0) 18) 32 0))
+    (let c6 (if (eq (fkm-run (flt-band-fns (read_file "form-stdlib/cooldown.fk")
+                                           (read_file "form-stdlib/tests/cooldown-band.fk")) 0) 63) 64 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))
