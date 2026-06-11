@@ -1,0 +1,105 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "form-os2/melt-on-cool",
+  "commit_scope": "Activate the proven melt at the measured boundary (round 2 of the Form-OS arc; round 1 = arena-melt.fk + the 4095/4096/4200 measurement). The emitted sibling's CONS door now carries the melt: fkc-melt-* recipes in fourth-walker-emit.fk emit C tissue that mirrors arena-melt.fk's proven walk piece by piece (fk_mlive IS am-live, fk_mcopy IS am-melt with forwarding as the slot face of am-intern, the stderr readout IS am-measure at 16 bytes/cell). The arena is a grown carrier (malloc as allowed host carrier); the high-water decision and the growth decision are recipes (fkc-needs-melt, fkc-next-capacity) over named constant cells (fkc-arena-capacity 4096, fkc-melt-water-pct 90) spliced into the emitted text as data. The hard boundary became observable: a refused allocation answers the null sentinel instead of silently wrapping (axiom-4). Named roots at the door: the in-flight cons pair (hh, ht) and the RAM organ (fk_mem) — the two places a no-locals program holds a cell across an allocating computation; pointer values parked in suspended outer compute temps are outside the melt contract, named honestly in the recipe comment (the twin of the JIT's 'ports/organs honestly not lowered').",
+  "files_owned": [
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/arena-melt.fk",
+    "form/form-stdlib/tests/melt-on-cool-band.fk",
+    "form/form-stdlib/tests/fourth-heap-band.fk",
+    "form/form-stdlib/tests/fourth-os-band.fk",
+    "form/form-stdlib/tests/fourth-net-band.fk",
+    "form/form-stdlib/tests/fourth-walker-emit-band.fk",
+    "scripts/fourth_kernel_audit.sh",
+    "docs/system_audit/commit_evidence_2026-06-11_melt_on_cool_activation.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/arena-melt.fk form-stdlib/tests/melt-on-cool-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/arena-melt.fk form-stdlib/tests/arena-melt-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/tests/{fourth-heap-band,fourth-os-band,fourth-net-band,fourth-call-band,fourth-driver-band,fourth-model-band,fourth-fixpoint-band,fourth-walker-emit-band}.fk (each)",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/fourth-match.fk form-stdlib/tests/fourth-match-band.fk",
+      "bash scripts/fourth_kernel_audit.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-11_melt_on_cool_activation.json",
+      "python3 scripts/generate_repo_indexes.py"
+    ],
+    "notes": "melt-on-cool-band verdict 31 with 0 divergent across Go/Rust/TS. arena-melt-band stays 63 (its bump anchor 'fk_hp = fk_hp + 1' preserved by construction). Bands pinning exact emission lengths follow the evolved text with equal exactness: fourth-os-band universal 4327 -> 6610 bytes, jit 4242 -> 6525; fourth-net-band server 4365 -> 6648; all 15 three-way. fourth-heap-band's arena anchor follows the carrier's evolution (static fk_heap_head[4096] -> grown *fk_hh rows), claim unchanged, 15 three-way. One pre-existing drift healed, not dismissed: fourth-walker-emit-band bit 8 was failing on origin/main (verdict 7) because the canonical byte-exact text predates fk_pv joining fkc-pr-text; the 91-byte fk_pv text restored into the band's want -> 15 three-way. One pre-existing audit brittleness healed: the n1/n2 server poll loop had no sleep, so on a loaded machine all 40 probes could fire before the listener bound; sleep 0.05 per attempt."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI three-way validation pending until the branch is pushed and the PR opens."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Recipes, bands, audit, and evidence only; no route or service behavior changes. No deploy required beyond normal main rollout."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local three-way proof and live-binary boundary crossing are green; commit, push, PR, and the coordinator's retune of fourth-kernel.form's melt-on-cool naming plus linux-as-recipes' gc row remain."
+  },
+  "idea_ids": [
+    "fourth-kernel"
+  ],
+  "spec_ids": [
+    "kernel-native-api-readiness",
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "melt-on-cool-activation-20260611"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "form-os-map"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude-code",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "measurement",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-fable-5"
+  },
+  "evidence_refs": [
+    "Three-way band proof: melt-on-cool-band verdict 31, 0 divergent (Go/Rust/TS) — round-1 capacity tie (4096 = am-sibling-capacity + 1), water decision flips exactly at the line (3686 no / 3687 yes), growth decision doubles when crowded and keeps when roomy, the doubled melt leaves the door quiet, the spliced door + melt tissue present in both emit lanes, and the recipe lane runs the same fire-then-quiet cycle in miniature (churn 4x16 crosses a 64-cell water, melts to 4 live, quiet at next capacity).",
+    "Live emitted-sibling measurement (fkc-emit-universal via clang, scripts/fourth_kernel_audit.sh section 18): chain n=64 -> 64 with NO melt (dormant below water); n=4095 -> 4095; n=4096 -> 4096 (round 1 measured 0 — the root wrapped onto the sentinel); n=4200 -> 4200 (round 1 measured 104 — the chain torn at the wrap); churn 5x1000 -> 1000.",
+    "Melt readout, live on stderr (allocated live dead cap-from cap-to bytes-reclaimed): chain n=4200 -> 'melt 3687 3687 0 4096 8192 0' (all live: the carrier doubles, nothing to reclaim — the growth face); churn 5x1000 -> 'melt 3687 687 3000 4096 4096 48000' (3000 dead cells returned, 48000 bytes reclaimed, carrier kept — the reclaim face).",
+    "Sibling-lane parity preserved under the shared arena decl: heap program [7,8] -> 25; self-JIT hot fib28 -> 317811 with njit=26 at threshold 50; full fourth_kernel_audit.sh end-to-end 'ok — parity held and the rows are real' including quine fixpoint, CALL lane, grammar-driven binaries, universal walker, streaming BMF, net organ 200, driver organ, and the m4e3 Form-source stone.",
+    "The melt stays recipe-shaped: the C text is computed by Form recipes whose pieces are named on their arena-melt.fk twins (fk_mlive/am-live, fk_mcopy/am-melt, readout/am-measure, forwarding/am-intern's same-composition-same-cell at the slot face); decisions are recipes (fkc-needs-melt, fkc-next-capacity) proven three-way in the band and spliced into the C as the same algebra; thresholds are named constant cells, no magic numbers in hand-authored C."
+  ],
+  "change_files": [
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/arena-melt.fk",
+    "form/form-stdlib/tests/melt-on-cool-band.fk",
+    "form/form-stdlib/tests/fourth-heap-band.fk",
+    "form/form-stdlib/tests/fourth-os-band.fk",
+    "form/form-stdlib/tests/fourth-net-band.fk",
+    "form/form-stdlib/tests/fourth-walker-emit-band.fk",
+    "scripts/fourth_kernel_audit.sh"
+  ],
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No route behavior changes. The emitted sibling family (many/server/driver/jit/universal) gains the melt door at CONS: a grown arena carrier born lazily at first allocation, melt at the high-water line (live cells copied into fresh space through the recipe-mirrored walk, roots repointed, old space freed), capacity doubling only when the live set crowds it, a stderr melt readout, and an observable refusal (null sentinel) at the hard boundary in place of the silent wrap. Programs allocating below the water line run bump-only exactly as before.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "melt-on-cool-band proves the named cells, both decisions, both emit lanes carrying the door, and the recipe-lane fire-then-quiet cycle, three-way at 31 with 0 divergent.",
+      "Audit lane end-to-end: the round-1 deaths now survive on the live binary — n=4096 -> 4096, n=4200 -> 4200, churn 5x1000 -> 1000 with 3000 dead cells reclaimed — while every earlier audit section (parity rows, quine, CALL, grammar binaries, universal, JIT flip, net 200, driver, m4e3) stays green."
+    ],
+    "summary": "validate.sh 11 bands ok 0 divergent (new band verdict 31); live emitted-binary boundary crossing measured: 4096 -> 4096, 4200 -> 4200, melt readouts on stderr showing growth and reclaim faces."
+  },
+  "change_intent": "runtime_feature"
+}

@@ -10,7 +10,8 @@
 ;   1   EMPTY flattens as tag 18 and CONS as tag 19 over child expressions
 ;   2   the heap reader program carries HEAD/TAIL/LEN/NTH tags
 ;   4   table-file emission is deterministic and contains the six heap tags
-;   8   the widened universal walker emission carries the arena arrays
+;   8   the widened universal walker emission carries the arena carrier
+;       (the grown form: pointer rows + the melt door, melt-on-cool-band)
 (do
     (let xs (fk-cons (fk-lit 7) (fk-cons (fk-lit 8) (fk-empty))))
     (let c0 (if (str_eq (fkc-rows-text (fkc-flatten (fk-empty))) "{18,0,0,0},")
@@ -31,7 +32,7 @@
                     (if (eq (fkd-has-tag rows 19) 1) 4 0) 0) 0))
 
     (let uni (fkc-emit-universal))
-    (let c3 (if (ge (str_find uni "fk_heap_head[4096]" 0) 0)
+    (let c3 (if (ge (str_find uni "static long long *fk_hh" 0) 0)
                 (if (ge (str_find uni "while (t <= 23)" 0) 0) 8 0) 0))
 
     (add c0 (add c1 (add c2 c3))))

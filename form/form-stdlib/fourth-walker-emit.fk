@@ -162,18 +162,72 @@
     (if (eq (len roots) 1) (int_to_str (head roots))
         (str_concat (fkc-fn-text (tail roots)) (str_concat "," (int_to_str (head roots))))))
 
+; ── m4e2 arena + the melt door (melt-on-cool, activated) ─────────────────
+; Round 1 measured the bump-only carrier: holds to exactly 4095 cells, the
+; 4096th wraps the root onto the null sentinel, 4200 tears the chain at the
+; wrap. The activation: the arena is a grown carrier (malloc — an allowed
+; host carrier, like time/arc4random/open) and the CONS door melts at the
+; high-water line. The melt tissue mirrors arena-melt.fk's proven walk,
+; piece by piece: fk_mlive IS am-live (ONE reachability walk from named
+; roots, each slot once), fk_mcopy IS am-melt (figures and the null carry
+; as-is; tail, then head, then cons into the fresh space; forwarding =
+; same-old-cell -> same-new-cell, the slot face of am-intern's same-
+; composition-same-cell), the stderr readout IS am-measure at 16 bytes a
+; cell. Named roots at the door: the in-flight cons pair (hh, ht) and the
+; RAM organ (fk_mem) — the two places a no-locals program can hold a cell
+; across an allocating computation. A pointer parked in a suspended outer
+; compute temp instead of RAM is carrier-coordinate use, outside the melt
+; contract (the honest twin of "ports/organs honestly not lowered").
+; Thresholds are DATA from these named cells, never magic in the C.
+
+(defn fkc-arena-capacity () 4096)
+(defn fkc-melt-water-pct () 90)
+(defn fkc-needs-melt (hp cap) (if (ge (mul hp 100) (mul cap (fkc-melt-water-pct))) 1 0))
+(defn fkc-next-capacity (live cap) (if (gt (mul live 2) cap) (mul cap 2) cap))
+
+(defn fkc-arena-init-text ()
+    (str_concat "static void fk_arena(void) { fk_cap = "
+    (str_concat (int_to_str (fkc-arena-capacity))
+                "; fk_hh = malloc(fk_cap * 8); fk_ht = malloc(fk_cap * 8); fk_hh[0] = 1; fk_ht[0] = 1; } ")))
+
+(defn fkc-melt-walk-text ()
+    "static long long *fk_fw; static long long *fk_nh; static long long *fk_nt; static long long fk_nhp; static void fk_mw(long long v) { char b[32]; long long n = 0; if (v == 0) { b[0] = 48; n = 1; } while (v > 0) { b[n] = 48 + v % 10; v = v / 10; n = n + 1; } while (n > 0) { n = n - 1; write(2, b + n, 1); } } static void fk_mc(long long c) { char b = c; write(2, &b, 1); } static long long fk_mlive(long long b) { if ((b & 1) == 0) { return 0; } long long p = b >> 1; if (p < 1 || p > fk_hp) { return 0; } if (fk_fw[p] != 0) { return 0; } fk_fw[p] = 0 - 1; return 1 + fk_mlive(fk_ht[p]) + fk_mlive(fk_hh[p]); } static long long fk_mcopy(long long b) { if ((b & 1) == 0) { return b; } long long p = b >> 1; if (p < 1 || p > fk_hp) { return b; } if (fk_fw[p] > 0) { return (fk_fw[p] << 1) | 1; } long long t2 = fk_mcopy(fk_ht[p]); long long h2 = fk_mcopy(fk_hh[p]); fk_nhp = fk_nhp + 1; fk_nh[fk_nhp] = h2; fk_nt[fk_nhp] = t2; fk_fw[p] = fk_nhp; return (fk_nhp << 1) | 1; } ")
+
+(defn fkc-melt-run-text ()
+    "static void fk_melt(long long *rh, long long *rt) { fk_fw = calloc(fk_hp + 1, 8); if (fk_fw == 0) { return; } long long nlive = fk_mlive(*rt) + fk_mlive(*rh); long long k = 0; while (k < 256) { nlive = nlive + fk_mlive(fk_mem[k]); k = k + 1; } long long ncap = fk_cap; if (nlive * 2 > fk_cap) { ncap = fk_cap * 2; } fk_nh = malloc(ncap * 8); fk_nt = malloc(ncap * 8); if (fk_nh == 0 || fk_nt == 0) { free(fk_nh); free(fk_nt); free(fk_fw); return; } fk_nhp = 0; fk_nh[0] = 1; fk_nt[0] = 1; *rt = fk_mcopy(*rt); *rh = fk_mcopy(*rh); k = 0; while (k < 256) { fk_mem[k] = fk_mcopy(fk_mem[k]); k = k + 1; } fk_mc(109); fk_mc(101); fk_mc(108); fk_mc(116); fk_mc(32); fk_mw(fk_hp); fk_mc(32); fk_mw(fk_nhp); fk_mc(32); fk_mw(fk_hp - fk_nhp); fk_mc(32); fk_mw(fk_cap); fk_mc(32); fk_mw(ncap); fk_mc(32); fk_mw((fk_hp - fk_nhp) * 16); fk_mc(10); free(fk_hh); free(fk_ht); free(fk_fw); fk_hh = fk_nh; fk_ht = fk_nt; fk_hp = fk_nhp; fk_cap = ncap; } ")
+
+(defn fkc-melt-text ()
+    (str_concat (fkc-arena-init-text)
+    (str_concat (fkc-melt-walk-text) (fkc-melt-run-text))))
+
+; the door at CONS: lazy carrier birth, then the high-water decision
+; (the same algebra as fkc-needs-melt, pct spliced from the cell), then
+; the hard boundary made OBSERVABLE — a refused allocation answers the
+; null sentinel instead of silently wrapping (axiom-4: breach observable).
+(defn fkc-melt-door-text ()
+    (str_concat "if (fk_cap == 0) { fk_arena(); } if (fk_hp * 100 >= fk_cap * "
+    (str_concat (int_to_str (fkc-melt-water-pct))
+                ") { fk_melt(&hh, &ht); } if (fk_hp + 1 >= fk_cap) { return 1; } ")))
+
+(defn fkc-arena-decl-text ()
+    (str_concat "static long long fk_arms[24]; static long long fk_mem[256]; static char fk_src[262144]; static long long *fk_hh; static long long *fk_ht; static long long fk_hp; static long long fk_cap; extern long long time(long long *); extern unsigned int arc4random(void); extern void *malloc(unsigned long); extern void *calloc(unsigned long, unsigned long); extern void free(void *); extern long long write(long long, const void *, unsigned long); "
+                (fkc-melt-text)))
+
 (defn fkc-decl-many-text (rows roots)
-    (str_concat "static long long fk_arms[24]; static long long fk_mem[256]; static char fk_src[262144]; static long long fk_heap_head[4096]; static long long fk_heap_tail[4096]; static long long fk_hp; extern long long time(long long *); extern unsigned int arc4random(void); static const long long fk_fn["
+    (str_concat (fkc-arena-decl-text)
+    (str_concat "static const long long fk_fn["
     (str_concat (int_to_str (len roots))
     (str_concat "] = { "
     (str_concat (fkc-fn-text roots)
     (str_concat " }; static const long long fk_node["
     (str_concat (int_to_str (len rows))
     (str_concat "][4] = { "
-    (str_concat (fkc-rows-text rows) " }; ")))))))))
+    (str_concat (fkc-rows-text rows) " }; "))))))))))
 
 (defn fkc-arms-many-text ()
-    " if (t == 8) { return fk_node[fk_walk(fk_node[i][1], a) >> 1][fk_walk(fk_node[i][2], a) >> 1] << 1; } if (t == 9) { putchar((int)(fk_walk(fk_node[i][1], a) >> 1)); return 0; } if (t == 10) { return ((fk_walk(fk_node[i][1], a) >> 1) / (fk_walk(fk_node[i][2], a) >> 1)) << 1; } if (t == 11) { return ((fk_walk(fk_node[i][1], a) >> 1) % (fk_walk(fk_node[i][2], a) >> 1)) << 1; } if (t == 12) { return fk_walk(fk_fn[fk_node[i][1]], fk_walk(fk_node[i][2], a)); } if (t == 13) { long long mi = fk_walk(fk_node[i][1], a) >> 1; long long mv = fk_walk(fk_node[i][2], a); fk_mem[mi & 255] = mv; return mv; } if (t == 14) { return fk_mem[(fk_walk(fk_node[i][1], a) >> 1) & 255]; } if (t == 15) { return time(0) << 1; } if (t == 16) { return ((long long)arc4random()) << 1; } if (t == 17) { return ((long long)fk_src[(fk_walk(fk_node[i][1], a) >> 1) & 262143]) << 1; } if (t == 18) { return 1; } if (t == 19) { long long hh = fk_walk(fk_node[i][1], a); long long ht = fk_walk(fk_node[i][2], a); fk_hp = fk_hp + 1; fk_heap_head[fk_hp & 4095] = hh; fk_heap_tail[fk_hp & 4095] = ht; return ((fk_hp & 4095) << 1) | 1; } if (t == 20) { long long p = (fk_walk(fk_node[i][1], a) >> 1) & 4095; if (p == 0) { return 1; } return fk_heap_head[p]; } if (t == 21) { long long p = (fk_walk(fk_node[i][1], a) >> 1) & 4095; if (p == 0) { return 1; } return fk_heap_tail[p]; } if (t == 22) { long long p = (fk_walk(fk_node[i][1], a) >> 1) & 4095; long long n = 0; while (p != 0) { n = n + 1; p = (fk_heap_tail[p] >> 1) & 4095; } return n << 1; } if (t == 23) { long long p = (fk_walk(fk_node[i][1], a) >> 1) & 4095; long long k = fk_walk(fk_node[i][2], a) >> 1; while (p != 0 && k > 0) { p = (fk_heap_tail[p] >> 1) & 4095; k = k - 1; } if (p == 0) { return 1; } return fk_heap_head[p]; } return 0; } ")
+    (str_concat " if (t == 8) { return fk_node[fk_walk(fk_node[i][1], a) >> 1][fk_walk(fk_node[i][2], a) >> 1] << 1; } if (t == 9) { putchar((int)(fk_walk(fk_node[i][1], a) >> 1)); return 0; } if (t == 10) { return ((fk_walk(fk_node[i][1], a) >> 1) / (fk_walk(fk_node[i][2], a) >> 1)) << 1; } if (t == 11) { return ((fk_walk(fk_node[i][1], a) >> 1) % (fk_walk(fk_node[i][2], a) >> 1)) << 1; } if (t == 12) { return fk_walk(fk_fn[fk_node[i][1]], fk_walk(fk_node[i][2], a)); } if (t == 13) { long long mi = fk_walk(fk_node[i][1], a) >> 1; long long mv = fk_walk(fk_node[i][2], a); fk_mem[mi & 255] = mv; return mv; } if (t == 14) { return fk_mem[(fk_walk(fk_node[i][1], a) >> 1) & 255]; } if (t == 15) { return time(0) << 1; } if (t == 16) { return ((long long)arc4random()) << 1; } if (t == 17) { return ((long long)fk_src[(fk_walk(fk_node[i][1], a) >> 1) & 262143]) << 1; } if (t == 18) { return 1; } if (t == 19) { long long hh = fk_walk(fk_node[i][1], a); long long ht = fk_walk(fk_node[i][2], a); "
+    (str_concat (fkc-melt-door-text)
+                "fk_hp = fk_hp + 1; fk_hh[fk_hp] = hh; fk_ht[fk_hp] = ht; return (fk_hp << 1) | 1; } if (t == 20) { long long p = fk_walk(fk_node[i][1], a) >> 1; if (p < 1 || p > fk_hp) { return 1; } return fk_hh[p]; } if (t == 21) { long long p = fk_walk(fk_node[i][1], a) >> 1; if (p < 1 || p > fk_hp) { return 1; } return fk_ht[p]; } if (t == 22) { long long p = fk_walk(fk_node[i][1], a) >> 1; long long n = 0; while (p >= 1 && p <= fk_hp) { n = n + 1; p = fk_ht[p] >> 1; } return n << 1; } if (t == 23) { long long p = fk_walk(fk_node[i][1], a) >> 1; long long k = fk_walk(fk_node[i][2], a) >> 1; while (p >= 1 && p <= fk_hp && k > 0) { p = fk_ht[p] >> 1; k = k - 1; } if (p < 1 || p > fk_hp) { return 1; } return fk_hh[p]; } return 0; } ")))
 
 (defn fkc-walk-many-text ()
     (str_concat "static long long fk_walk(long long i, long long a) { long long t = fk_node[i][0]; fk_arms[t] = fk_arms[t] + 1; if (t == 1) { return fk_node[i][1] << 1; } if (t == 2) { return a; } if (t == 3) { return fk_walk(fk_node[i][1], a) + fk_walk(fk_node[i][2], a); } if (t == 4) { return fk_walk(fk_node[i][1], a) - fk_walk(fk_node[i][2], a); } if (t == 5) { if (fk_walk(fk_node[i][1], a) <= fk_walk(fk_node[i][2], a)) { return 2; } return 0; } if (t == 6) { if (fk_walk(fk_node[i][1], a) == 0) { return fk_walk(fk_node[i][3], a); } return fk_walk(fk_node[i][2], a); } if (t == 7) { return fk_walk(fk_fn[0], fk_walk(fk_node[i][1], a)); }"
@@ -280,7 +334,8 @@
         (str_concat (fkc-rows-sp (tail rows)) (str_concat " " (fkc-row-sp (head rows))))))
 
 (defn fkc-decl-universal-text ()
-    "static long long fk_arms[24]; static long long fk_mem[256]; static char fk_src[262144]; static long long fk_heap_head[4096]; static long long fk_heap_tail[4096]; static long long fk_hp; extern long long time(long long *); extern unsigned int arc4random(void); static long long fk_fn[64]; static long long fk_node[4096][4]; static char fk_buf[262144]; static long long fk_pos; extern int open(const char *, int); extern long long read(int, char *, unsigned long); static long long fk_next() { while (fk_buf[fk_pos] != 0) { if (fk_buf[fk_pos] >= 48) { if (fk_buf[fk_pos] <= 57) { break; } } fk_pos = fk_pos + 1; } long long v = 0; while (fk_buf[fk_pos] >= 48 && fk_buf[fk_pos] <= 57) { v = v * 10 + (fk_buf[fk_pos] - 48); fk_pos = fk_pos + 1; } return v; } ")
+    (str_concat (fkc-arena-decl-text)
+                "static long long fk_fn[64]; static long long fk_node[4096][4]; static char fk_buf[262144]; static long long fk_pos; extern int open(const char *, int); extern long long read(int, char *, unsigned long); static long long fk_next() { while (fk_buf[fk_pos] != 0) { if (fk_buf[fk_pos] >= 48) { if (fk_buf[fk_pos] <= 57) { break; } } fk_pos = fk_pos + 1; } long long v = 0; while (fk_buf[fk_pos] >= 48 && fk_buf[fk_pos] <= 57) { v = v * 10 + (fk_buf[fk_pos] - 48); fk_pos = fk_pos + 1; } return v; } "))
 
 (defn fkc-main-universal-text ()
     "extern int atoi(const char *); int main(int argc, char **argv) { if (argc < 2) { return 1; } int fd = open(argv[1], 0); if (fd < 0) { return 2; } long long got = read(fd, fk_buf, 262143); if (got < 0) { return 3; } fk_buf[got] = 0; long long nf = fk_next(); long long k = 0; while (k < nf) { fk_fn[k] = fk_next(); k = k + 1; } long long nr = fk_next(); long long r = 0; while (r < nr) { fk_node[r][0] = fk_next(); fk_node[r][1] = fk_next(); fk_node[r][2] = fk_next(); fk_node[r][3] = fk_next(); r = r + 1; } long long a = 0; if (argc > 2) { a = atoi(argv[2]) << 1; } if (argc > 3) { int sfd = open(argv[3], 0); if (sfd >= 0) { long long sg = read(sfd, fk_src, 262143); if (sg >= 0) { fk_src[sg] = 0; } } } fk_pv(fk_walk(fk_fn[0], a)); long long t = 1; while (t <= 23) { fk_pr(fk_arms[t]); t = t + 1; } return 0; }")

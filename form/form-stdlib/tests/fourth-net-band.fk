@@ -12,8 +12,8 @@
 ;       PUTC chained by ADD-sequencing over a LIT 0 base
 ;   2   the server emission carries the net organ externs — socket(2,1,0),
 ;       fork(), accept(sfd ... — found by str_find
-;   4   the server emission is 4365 bytes for the "hi" responder and
-;       deterministic (same fns -> same text)
+;   4   the server emission is 6648 bytes for the "hi" responder (the arena
+;       rides with its melt door) and deterministic (same fns -> same text)
 ;   8   a different responder string gives a different emission (the body the
 ;       net main serves is the program, parameterized)
 (do
@@ -25,7 +25,7 @@
                 (if (ge (str_find srv "fork()" 0) 0)
                     (if (ge (str_find srv "accept(sfd" 0) 0) 2 0) 0) 0))
 
-    (let c2 (if (eq (str_len srv) 4365)
+    (let c2 (if (eq (str_len srv) 6648)
                 (if (str_eq srv (fkc-emit-server (list resp))) 4 0) 0))
 
     (let c3 (if (str_eq srv (fkc-emit-server (list (fkresp "yo")))) 0 8))
