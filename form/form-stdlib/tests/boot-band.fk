@@ -1,0 +1,131 @@
+; tests/boot-band.fk — boot-from-axioms band: load, offer, self-extend.
+;
+; preludes: form-stdlib/channel.fk form-stdlib/persistence.fk form-stdlib/cell-registry.fk form-stdlib/boot.fk
+;
+; Proves the boot section of kernel-self-composition.form RUNS: a seed
+; .fkb image boots, the booted body's first act is to offer a channel,
+; one offer through that channel extends it, and the boot artifact never
+; mutates. The strange edge chosen to cover the most boundary in the
+; least code: ONE channel carrying both an extension offer and a query
+; (axiom-5: one act), with the mint and the answer reading different
+; image versions across the extension boundary.
+;
+; That one shape exercises:
+;   - load — the image's cells read back; the boot is as real as the read
+;   - offer — the channel is DISCOVERED through the registry, not assumed
+;   - one act — extension and query travel the same door; only the
+;     payload category differs, and the query never leaks into the image
+;   - mint, never mutate — extension writes a NEW image; minting onto
+;     the seed's own path is refused; re-booting the original still
+;     finds the seed shape (axiom-3's strange heart)
+;   - self-hosting — the minted image boots: a kernel boots a bigger
+;     kernel it authored
+;   - content-addressing — the offered cell crosses channel + mint and
+;     reads back as the same NodeID
+;
+; Band verdict: 9 when every assertion holds across all three kernels.
+;   - 1: the seed image boots with 2 cells (load is real)
+;   - 1: the boot's first act made the body reachable — the registry
+;        finds exactly one cell offering "extend"
+;   - 1: accepting offers mints a 3-cell image — exactly one cell
+;        adopted; the query on the same channel did not leak in
+;   - 1: the pending query, answered from the minted image, finds the
+;        offered cell by name
+;   - 1: the SAME query against the original image is honest absence —
+;        the extension lives only in the minted version
+;   - 1: minting onto the original path is refused and the original
+;        still holds 2 cells
+;   - 1: re-booting the ORIGINAL artifact still wakes 2 (immutability)
+;   - 1: booting the MINTED artifact wakes 3 (self-hosting)
+;   - 1: the offered cell rebuilt from the same arguments is node_eq to
+;        the cell read from the minted image (identity crossed the gap)
+
+(do
+    (let seed-image   "/tmp/boot-band-seed.fkb")
+    (let minted-image "/tmp/boot-band-minted.fkb")
+    (let registry     "/tmp/boot-band-registry.fkb")
+    (let boot-channel "/tmp/boot-band-channel.fkb")
+    (let second-life  "/tmp/boot-band-channel-2.fkb")
+    (let third-life   "/tmp/boot-band-channel-3.fkb")
+
+    ;; A CTOR is structure-first: fields are (key, value) pairs under a
+    ;; FIELDS node — never a flat blob (the persistence-band markers).
+    (let FIELDS (make_nodeid 1 2 99 1741))
+    (let FIELD  (make_nodeid 1 2 99 1742))
+    (defn field (k v)
+        (intern_node FIELD
+            (list (intern_trivial_string k)
+                  (intern_trivial_string v))))
+
+    ;; --- the seed: a kernel of two named cells, durable on disk ------
+    (let bp-organ (make_nodeid 1 8 4 3))
+    (cell-store-create seed-image)
+    (cell-put seed-image "greet" "organ" bp-organ
+              (intern_node FIELDS (list (field "act" "first-contact"))))
+    (cell-put seed-image "pulse" "organ" bp-organ
+              (intern_node FIELDS (list (field "act" "witness"))))
+
+    ;; the world's directory — a registry the boot will register into
+    (channel-create registry)
+
+    ;; --- boot: load the image, offer a channel -----------------------
+    (let woke (boot seed-image registry boot-channel 7))
+    (let woke-ok (if (eq woke 2) 1 0))
+
+    ;; --- the offer is real: an outside cell DISCOVERS the channel ----
+    (let reachable (find-by-capability registry "extend"))
+    (let reach-ok (if (eq (len reachable) 1) 1 0))
+    (let found-channel (reg-channel-path (head reachable)))
+
+    ;; --- one channel, two offers (axiom-5: one act) -------------------
+    (let offered (make-cell-recipe "federate" "organ" bp-organ
+                     (intern_node FIELDS
+                         (list (field "act" "reach-siblings")))))
+    (boot-offer-cell found-channel offered)
+    (boot-offer-query found-channel "organ" "federate")
+
+    ;; --- accept: extension MINTS the next image ----------------------
+    (let minted-count (boot-self-extend seed-image found-channel minted-image))
+    (let mint-ok (if (eq minted-count 3) 1 0))
+
+    ;; --- answer the query from the live (minted) body ----------------
+    (let pending (boot-pending-query found-channel))
+    (let q (head pending))
+    (let live-ans (boot-answer minted-image q))
+    (let ans-ok (if (and (eq (cell-found? live-ans) 1)
+                         (str_eq (cell-name (cell-of live-ans)) "federate"))
+                    1 0))
+
+    ;; --- the version boundary: the SAME query against the original ---
+    (let old-ans (boot-answer seed-image q))
+    (let absent-ok (if (eq (cell-found? old-ans) 0) 1 0))
+
+    ;; --- a mint onto the boot artifact's own path is refused ---------
+    (let refused (boot-self-extend seed-image found-channel seed-image))
+    (let refuse-ok (if (and (eq refused 0)
+                            (eq (len (store-cells seed-image)) 2))
+                       1 0))
+
+    ;; --- re-boot the ORIGINAL artifact: still 2 (axiom-3) ------------
+    (let rewoke (boot seed-image registry second-life 7))
+    (let immut-ok (if (eq rewoke 2) 1 0))
+
+    ;; --- boot the MINTED artifact: the bigger kernel, booted ---------
+    (let bigger (boot minted-image registry third-life 8))
+    (let bigger-ok (if (eq bigger 3) 1 0))
+
+    ;; --- identity crossed channel + mint (content-addressing) --------
+    (let rebuilt (make-cell-recipe "federate" "organ" bp-organ
+                     (intern_node FIELDS
+                         (list (field "act" "reach-siblings")))))
+    (let ca-ok (if (node_eq rebuilt (cell-of live-ans)) 1 0))
+
+    ;; --- verdict ------------------------------------------------------
+    (add woke-ok
+         (add reach-ok
+              (add mint-ok
+                   (add ans-ok
+                        (add absent-ok
+                             (add refuse-ok
+                                  (add immut-ok
+                                       (add bigger-ok ca-ok)))))))))
