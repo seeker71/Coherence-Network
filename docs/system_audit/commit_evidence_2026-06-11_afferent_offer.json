@@ -1,0 +1,112 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "form-os/afferent-offer",
+  "commit_scope": "Closes the linux-as-recipes signals + interrupts rows with ONE engine: afferent-offer.fk carries the unsolicited afferent offer (AO-OFFER line/at/payload), a handler table and mask that are cells (AO-ENTRY/AO-TABLE/AO-MASK), and ao-wait, a wait-with-deadline acknowledging with the {nothing, node} arms of axiom-5 — no event in the window IS nothing (axiom-1, timeout==nothing). Signals and interrupts are two thin data readings of the same engine: ao-alarm (a timer armed for tick T is a standing offer on the ALRM line — SIGALRM and timeout are one structure) and ao-irq (a device event latches a payload on a line; masked line = offer not acknowledged). Content-addressing gives POSIX standard-signal coalescing for free; ao-consume completes delivery.",
+  "files_owned": [
+    "form/form-stdlib/afferent-offer.fk",
+    "form/form-stdlib/tests/afferent-offer-band.fk",
+    "docs/coherence-substrate/afferent-offer.form",
+    "docs/coherence-substrate/INDEX.md",
+    "form/form-stdlib/blueprint-registry.json",
+    "docs/system_audit/commit_evidence_2026-06-11_afferent_offer.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/afferent-offer.fk form-stdlib/tests/afferent-offer-band.fk",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-11_afferent_offer.json"
+    ],
+    "summary": "Band verdict 511 (9 claims), 1 ok, 0 divergent — Go = Rust = TypeScript. Both readings through the one ao-wait engine: a timer armed AT the deadline delivers on-alarm while one tick past acknowledges NOTHING (the window edge pinned in one tick — timeout==nothing IS the SIGALRM shape, checked); a masked SIGINT stays pending and the SAME pending delivers once the mask lifts (mask as data, not control flow); a keyboard IRQ dispatches with its latched scancode and node_eq correlation to the originating offer; a silent line and an unoffered line both acknowledge nothing; the signal-timeout nothing and the irq-silence nothing are the SAME NodeID; consuming the delivered alarm makes the next wait nothing (one-shot, coalesced).",
+    "observed_delta": {
+      "band": "afferent-offer-band 511 — 0 divergent",
+      "blueprints_registered": "AO-OFFER/AO-ENTRY/AO-TABLE/AO-MASK/AO-DISPATCH/AO-NOTHING at 1.2.99.1940-1945; bp tables regenerated for all three kernels",
+      "ledger_rows_now_runnable": "linux-as-recipes (signals) and (interrupts) — coordinator flips NAMED to RUNS after sibling merges"
+    },
+    "known_limitations": [
+      {
+        "limitation": "Ticks are data (a logical clock), not yet fed by op 15 TIME; the band is pure and deterministic by design.",
+        "follow_up": "A host carrier where op 15 TIME feeds real ticks and a fourth-kernel select/poll witness shows a live timeout yielding nothing — named in afferent-offer.form, built when an ask needs it."
+      },
+      {
+        "limitation": "Delivery order is pending order; POSIX number-order and IRQ priority are policy cells over the same engine, not yet authored.",
+        "follow_up": "Priority-as-data when a consumer needs it."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "PR gates run the three-way bands; sibling kernels keep the verdict honest."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "form-stdlib rides the api rebuild; the lattice auto-ingests afferent-offer.form on merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No route changes. The stdlib gains the unsolicited-afferent-offer engine; signals and interrupts move from NAMED to runnable recipe + band.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "afferent-offer-band three-way: SIGALRM edge, timeout==nothing, sigprocmask pending, unmask delivery, IRQ scancode dispatch, silent line, unoffered door, shared nothing-cell, consume."
+    ],
+    "summary": "validate.sh 511, 1 ok, 0 divergent."
+  },
+  "phase_gate": {
+    "phase": "form-os-afferent-offer",
+    "gate": "both ledger rows carried by one engine with a three-way band; ledger flip stays with the coordinator",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "coordinator flips linux-as-recipes rows after all five sibling PRs merge; live-tick carrier when asked"
+  },
+  "idea_ids": [
+    "fourth-kernel"
+  ],
+  "spec_ids": [
+    "form-core-kernel-conformance"
+  ],
+  "task_ids": [
+    "form-os-afferent-offer-20260611"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "form-os-map"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-fable-5"
+  },
+  "evidence_refs": [
+    "docs/coherence-substrate/linux-as-recipes.form",
+    "docs/coherence-substrate/core-axioms.form",
+    "docs/coherence-substrate/host-kernel.form",
+    "docs/coherence-substrate/afferent-offer.form"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/afferent-offer.form",
+    "docs/system_audit/commit_evidence_2026-06-11_afferent_offer.json",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts",
+    "form/form-stdlib/afferent-offer.fk",
+    "form/form-stdlib/blueprint-registry.json",
+    "form/form-stdlib/tests/afferent-offer-band.fk"
+  ],
+  "change_intent": "runtime_feature"
+}
