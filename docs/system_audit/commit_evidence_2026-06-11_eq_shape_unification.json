@@ -1,0 +1,130 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "form-os2/eq-shape",
+  "commit_scope": "The comparison family acknowledges with the 0/1 integer states (axiom-1) on all three kernels: eq/ne/lt/le/gt/ge category arms plus node_eq, value_eq, and str_eq answer Int 0/1 everywhere, so a comparison's answer flows directly into arithmetic with bit-identical results. Logic ops consume truthiness (Go's raw .Bool reads healed); the Go Value-ABI JIT mirrors (cmpV preamble, jitabi compare ops, emitted logic IIFEs) and the TS compile lane's emitCompare carry the same shape, closing the interpreted-vs-JIT split inside Go and TS.",
+  "files_owned": [
+    "form/form-kernel-go/main.go",
+    "form/form-kernel-go/jit_value.go",
+    "form/form-kernel-go/jitabi/jitabi.go",
+    "form/form-kernel-rust/src/main.rs",
+    "form/form-kernel-ts/src/kernel.ts",
+    "form/form-kernel-ts/src/compiler.ts",
+    "form/form-stdlib/primitive-registry.fk",
+    "form/form-stdlib/arena-melt.fk",
+    "form/form-stdlib/tests/eq-shape-band.fk"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/tests/eq-shape-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/arena-melt.fk form-stdlib/tests/arena-melt-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/primitive-registry.fk form-stdlib/tests/primitive-registry-band.fk",
+      "cd form && ./validate.sh <curated compare-sensitive set: float-conversions 31, float-natives 28, classifier-eval 63, choice-receipt -1, learned-primitive 255, persistence 7, fourth-os 15, fourth-match 15, python-bmf-class 34, json-emitter 15, json-codec-bml 8191, pain-metabolism 1023, signal-metabolism 1023>",
+      "cd form/form-kernel-go && go test ./...",
+      "cd form/form-kernel-rust && cargo test --release",
+      "cd form/form-kernel-ts && npx tsx src/<each>.test.ts (18 files)",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-11_eq_shape_unification.json"
+    ],
+    "summary": "eq-shape-band 511/511 three-way: the arena-melt crash shape (mul (eq 2 2) 5) answers 5 on every kernel; unequal annihilates to 0; lt/le/gt/ge chain through add (verdict arm 3); ne through sub; node_eq feeds mul; eq-of-eq compares against the 0/1 states; the float comparison path acknowledges the same integers; str_eq + value_eq answer 0/1. Arena-melt six-file workload re-proves 63 with the divergence note retuned to state what IS. Primitive-registry band holds 63 with node_eq/value_eq/str_eq verifies now arithmetic-fed (the contract proof IS the shape). A 78-workload alphabetical full-suite prefix ran 0-divergent before rebase (all form-samples + the audit/auto/belief/bml-thesis compiler clusters — the str_eq-densest tissue); the full ~460-band suite at ~2 bands/min is not cheap, so the curated compare+math+logic+json+match+fourth set stands as the named minimum, plus all three kernels' own test suites green (go test ok 240s incl. route shapes, cargo 49/49, TS 18/18 files). Latent divergences healed in the same breath: Go logic read .Bool raw so (and 1 2) answered false while Rust/TS answered true; Go math read .Int raw so a bool fed to mul silently became 0 while TS threw and Rust converted; Go's Value-ABI JIT compare returned VBool while its scalar/C lanes already returned 0/1.",
+    "observed_delta": {
+      "eq_shape_band": 511,
+      "arena_melt_workload": 63,
+      "primitive_registry_band": 63,
+      "pain_metabolism_band_on_unified_kernels": 1023,
+      "signal_metabolism_band_on_unified_kernels": 1023,
+      "full_suite_prefix": "78 workloads, 0 divergent",
+      "kernel_unit_tests": "go ok 239.9s, rust 49/49, ts 18/18 files",
+      "comparison_natives_unified": "eq ne lt le gt ge (category) + node_eq value_eq str_eq (natives) -> Int 0/1",
+      "consumers_healed": "Go walker logic arm truthy, Go jit_value emitted logic truthyV, jitabi Eq/Ne/Lt/Le/Gt/Ge/StrEq Int, TS emitCompare ?1:0"
+    },
+    "known_limitations": [
+      {
+        "limitation": "Logic ops (and/or/not) still answer bool — they consume 0/1 truthiness but their own acknowledgment shape is a separate family this stone did not widen into.",
+        "follow_up": "A later breath can fold logic answers into the 0/1 states the same way if the body asks."
+      },
+      {
+        "limitation": "Membership/state predicates (_dict_has, _in, record_has, method_has, record?, framebuffer-observe-active?) keep their bool answers; their registry contracts say so honestly.",
+        "follow_up": "Same family-heal recipe applies when those rows are lifted."
+      },
+      {
+        "limitation": "Bool LITERALS (true/false) in arithmetic positions keep the pre-existing tri-divergence (Rust coerces, Go reads raw, TS throws) — comparison answers no longer reach that edge.",
+        "follow_up": "Composts with the bool kind itself as axiom-1 settles deeper."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "PR gates run evidence validation + the Rust kernel serve smoke; the three-way proof is the local validate.sh discipline recorded here."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Kernel binaries rebuild on the host from source; no route contract changes (BML handlers use comparisons only in if-positions; go test's server suite passed unchanged)."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No route changes. A comparison's answer is now an integer state on every carrier: walked, Value-ABI JIT'd, scalar JIT'd, C-emitted, and TS-compiled lanes all agree with each other and with each sibling kernel.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "eq-shape-band three-way; arena-melt six-file workload; primitive-registry band; curated compare-sensitive band set; three kernels' own test suites."
+    ],
+    "summary": "validate.sh three-way green on every named workload."
+  },
+  "phase_gate": {
+    "phase": "form-os2-eq-shape",
+    "gate": "one comparison contract, three carriers, proven by a band that feeds answers straight into arithmetic",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "coordinator retunes linux-as-recipes.form / fourth-kernel.form after all six round-2 stones merge"
+  },
+  "idea_ids": [
+    "fourth-kernel"
+  ],
+  "spec_ids": [
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "eq-shape-20260611"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "axiom-ground"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-fable-5"
+  },
+  "evidence_refs": [
+    "docs/coherence-substrate/core-axioms.form",
+    "form/form-stdlib/tests/eq-shape-band.fk",
+    "docs/system_audit/commit_evidence_2026-06-11_tagged_abi.json"
+  ],
+  "change_files": [
+    "docs/system_audit/commit_evidence_2026-06-11_eq_shape_unification.json",
+    "form/form-kernel-go/main.go",
+    "form/form-kernel-go/jit_value.go",
+    "form/form-kernel-go/jitabi/jitabi.go",
+    "form/form-kernel-rust/src/main.rs",
+    "form/form-kernel-ts/src/kernel.ts",
+    "form/form-kernel-ts/src/compiler.ts",
+    "form/form-stdlib/primitive-registry.fk",
+    "form/form-stdlib/arena-melt.fk",
+    "form/form-stdlib/tests/eq-shape-band.fk"
+  ],
+  "change_intent": "runtime_feature"
+}

@@ -1,0 +1,29 @@
+; eq-shape-band.fk — the comparison family's acknowledgment contract: eq/ne/lt/
+; le/gt/ge, node_eq, value_eq, and str_eq answer with the 0/1 integer states
+; (axiom-1, core-axioms.form) on every kernel, so a comparison's answer flows
+; DIRECTLY into arithmetic with bit-identical results — no if-reduction needed.
+; This band deliberately uses mul/sub/lt/le (outside the curated band-verdict
+; subset): feeding comparison answers into arithmetic IS the claim under test.
+; Self-contained — kernel verbs only, no preludes.
+(do
+    ; c0 — the arena-melt crash shape: an equal eq fed straight into mul.
+    (let c0 (if (eq (mul (eq 2 2) 5) 5) 1 0))
+    ; c1 — the unequal case annihilates through mul.
+    (let c1 (if (eq (mul (eq 2 3) 5) 0) 2 0))
+    ; c2 — eq answers chain through add: 1 + 0.
+    (let c2 (if (eq (add (eq 1 1) (eq 1 2)) 1) 4 0))
+    ; c3 — the ordering family in one arithmetic chain: lt+le+gt+ge = 1+1+1+0.
+    (let c3 (if (eq (add (add (lt 1 2) (le 2 2)) (add (gt 3 2) (ge 2 3))) 3) 8 0))
+    ; c4 — ne both ways through sub: 1 - 0.
+    (let c4 (if (eq (sub (ne 1 2) (ne 2 2)) 1) 16 0))
+    ; c5 — node_eq feeds mul: same blueprint ×3, different blueprints add 0.
+    (let c5 (if (eq (add (mul (node_eq (bp "add") (bp "add")) 3)
+                         (node_eq (bp "add") (bp "mul"))) 3) 32 0))
+    ; c6 — the answer is itself comparable: eq-of-eq against the 0/1 states.
+    (let c6 (if (eq (add (eq (eq 5 5) 1) (eq (eq 5 6) 0)) 2) 64 0))
+    ; c7 — the float comparison path acknowledges the same integer states.
+    (let c7 (if (eq (mul (gt 2.5 1.5) 4) 4) 128 0))
+    ; c8 — str_eq and value_eq answer 0/1: positives add to 2, negatives to 0.
+    (let c8 (if (eq (add (add (str_eq "a" "a") (value_eq 7 7))
+                         (add (str_eq "a" "b") (value_eq 7 "7"))) 2) 256 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 c8)))))))))

@@ -214,8 +214,8 @@
             (defn pv-scan-run () (scan_run "  form" 0 0)) 2 1)
         (prim "string_fold" "call" "host-loop fold of (acc char) closure over a string's bytes"
             (defn pv-string-fold () (string_fold "abc" 0 (defn pv-string-fold-step (acc c) (add acc 1)))) 3 1)
-        (prim "str_eq" "compare" "string equality; integers and nodes belong to eq"
-            (defn pv-str-eq () (if (str_eq "a" "a") (if (str_eq "a" "b") 0 1) 0)) 1 1)
+        (prim "str_eq" "compare" "string equality as the 0/1 integer states; integers and nodes belong to eq"
+            (defn pv-str-eq () (add (str_eq "a" "a") (mul (str_eq "a" "b") 7))) 1 1)
         (prim "int_to_str" "method" "renders any trivial value as text (int, bool, null, float passthrough)"
             (defn pv-int-to-str () (str_len (int_to_str 1024))) 4 1)
         (prim "value_str" "method" "sibling-gap (ts): canonical display string of any value"
@@ -460,10 +460,10 @@
             (defn pv-node-type () (node_type (make_nodeid 2 3 4 5))) 4 1)
         (prim "node_inst" "witness" "the inst coordinate of a NodeID"
             (defn pv-node-inst () (node_inst (make_nodeid 2 3 4 5))) 5 1)
-        (prim "node_eq" "compare" "structural NodeID equality; non-NodeID args fail loud"
-            (defn pv-node-eq () (if (node_eq (bp "add") (bp "add")) (if (node_eq (bp "add") (bp "mul")) 0 1) 0)) 1 1)
-        (prim "value_eq" "compare" "polymorphic equality within a kind; cross-kind answers false"
-            (defn pv-value-eq () (if (value_eq 7 7) (if (value_eq 7 "7") 0 1) 0)) 1 1)
+        (prim "node_eq" "compare" "structural NodeID equality as 0/1; non-NodeID args fail loud"
+            (defn pv-node-eq () (add (node_eq (bp "add") (bp "add")) (mul (node_eq (bp "add") (bp "mul")) 7))) 1 1)
+        (prim "value_eq" "compare" "polymorphic equality within a kind as 0/1; cross-kind answers 0"
+            (defn pv-value-eq () (add (value_eq 7 7) (mul (value_eq 7 "7") 7))) 1 1)
         (prim "intern_node_at" "witness" "intern_node plus (file line col) source attribution into the framebuffer"
             (defn pv-intern-node-at () (walk_recipe (intern_node_at (bp "add")
                 (list (intern_trivial_int 2) (intern_trivial_int 3)) "prim-registry-probe.fk" 1 1))) 5 1)

@@ -1602,10 +1602,9 @@ export class Kernel {
       }
       return acc;
     });
-    this.registerNative("str_eq", catCompareEq(), (_k, args) => ({
-      kind: "bool",
-      bool: argStr(args, 0) === argStr(args, 1),
-    }));
+    this.registerNative("str_eq", catCompareEq(), (_k, args) =>
+      boolInt(argStr(args, 0) === argStr(args, 1)),
+    );
     // int_to_str — value-to-string for trivial leaves. Historical name
     // (first use: line numbers in cell-trace.fk); semantics is "render
     // any trivial value as text" so emit-engine.fk's leaf walker can
@@ -2972,17 +2971,17 @@ export class Kernel {
         a.level === b.level &&
         a.type === b.type &&
         a.inst === b.inst;
-      return { kind: "bool", bool: equal };
+      return boolInt(equal);
     });
-    // value_eq — polymorphic equality across Value kinds. Returns true
+    // value_eq — polymorphic equality across Value kinds. Answers 1
     // when both args have the same kind AND compare equal within that
-    // kind. Cross-kind returns false. Use when a Form-side function
+    // kind. Cross-kind answers 0. Use when a Form-side function
     // holds tagged values that may be either strings or NodeIDs —
     // e.g. domain/lens in bmf-symbol-context.
     this.registerNative("value_eq", catCompareEq(), (_k, args) => {
       const a = args[0]!;
       const b = args[1]!;
-      return { kind: "bool", bool: valueEqual(a, b) };
+      return boolInt(valueEqual(a, b));
     });
     this.registerNative("serialize-recipe", catWitness(), (k, args) => {
       const out: number[] = [];
@@ -4380,6 +4379,12 @@ function walkMath(
   return { kind: "int", int: acc };
 }
 
+// boolInt — the comparison family's acknowledgment shape: 0/1 integer states
+// (axiom-1) so eq/lt/node_eq/… answers feed arithmetic on every kernel.
+function boolInt(b: boolean): Value {
+  return { kind: "int", int: b ? 1 : 0 };
+}
+
 function walkCompare(
   k: Kernel,
   op: number,
@@ -4390,9 +4395,13 @@ function walkCompare(
   const av = walk(k, kids[0]!, frame);
   const bv = walk(k, kids[1]!, frame);
 
+  // A comparison acknowledges with the 0/1 integer states (axiom-1,
+  // core-axioms.form) so its answer flows directly into arithmetic —
+  // the shape the compiled lane's JS coercion already implied. Proven
+  // three-way by tests/eq-shape-band.fk.
   if (op === RCmp.EQ || op === RCmp.NE) {
     const equal = valueEqual(av, bv);
-    return { kind: "bool", bool: op === RCmp.EQ ? equal : !equal };
+    return boolInt(op === RCmp.EQ ? equal : !equal);
   }
 
   // Width-mixing in comparisons: if either side is float, compare as float;
@@ -4429,7 +4438,7 @@ function walkCompare(
       default: throw new Error(`compare: unknown op ${op}`);
     }
   }
-  return { kind: "bool", bool: r };
+  return boolInt(r);
 }
 
 function valueEqual(a: Value, b: Value): boolean {
