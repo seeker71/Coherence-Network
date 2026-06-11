@@ -513,8 +513,11 @@ func TestKernelReadRoutePromotionsSelectNatively(t *testing.T) {
 		{"views stats", "http://native.example.test/api/views/stats/lc-attuned-spaces?days=30"},
 		{"reaction summary", "http://native.example.test/api/reactions/concept/lc-attuned-spaces/summary"},
 		{"reaction threads", "http://native.example.test/api/reactions/concept/lc-attuned-spaces/threads"},
-		{"concept voices", "http://native.example.test/api/concepts/lc-attuned-spaces/voices"},
-	} {
+			{"concept voices", "http://native.example.test/api/concepts/lc-attuned-spaces/voices"},
+			{"presence places", "http://native.example.test/api/presences/asset:audible-B0D2DRHSDJ/places"},
+			{"graph node edges", "http://native.example.test/api/graph/nodes/asset:audible-B0D2DRHSDJ/edges?direction=both"},
+			{"agent task log", "http://native.example.test/api/agent/tasks/task_502d901d6aa7fdbc/log"},
+		} {
 		t.Run(tc.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tc.target, nil)
 			req.Header.Set("Accept", "application/json")
