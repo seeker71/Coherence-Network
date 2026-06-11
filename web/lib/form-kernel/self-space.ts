@@ -160,7 +160,7 @@ export function buildSelfSpace(): KernelSpace {
     result: "one cell in the field, attending",
     stdout: "",
     stderr: "",
-    framebuffer: { width: 4, height: 4, rgba: fb },
+    framebuffer: { width: 4, height: 4, rgba: fb, tiles: 4 },
     stats: {
       cells: order.length,
       recipes: order.length,

@@ -122,3 +122,78 @@ describe("kernel space builder", () => {
     expect(rgba[3]).toBe(255);
   });
 });
+
+describe("membrane graphic kernel", async () => {
+  const {
+    buildLatticeShaders,
+    buildMembraneShaders,
+    encodeMembraneState,
+    hash01,
+    MAX_PORES,
+    membraneRadius,
+    porePosition,
+    subtreeCategoryWeights,
+    FIELD_COUNT,
+  } = await import("../lib/form-kernel/membrane");
+
+  it("places pores deterministically on the unit sphere, spread apart", () => {
+    const seed = hash01("5.18.0");
+    const a = porePosition(0, 5, seed);
+    const b = porePosition(0, 5, seed);
+    expect(a).toEqual(b); // same cell ⇒ same door sites, every build
+    for (let i = 0; i < 5; i++) {
+      const p = porePosition(i, 5, seed);
+      expect(Math.hypot(...p)).toBeCloseTo(1, 5);
+    }
+    // distinct children claim distinct sites
+    const c = porePosition(1, 5, seed);
+    expect(Math.hypot(a[0] - c[0], a[1] - c[1], a[2] - c[2])).toBeGreaterThan(0.3);
+  });
+
+  it("mixes the membrane texture from the subtree's Form-category histogram", () => {
+    const space = buildKernelSpace("(add 1 (mul 2 (sub 9 4)))");
+    const w = subtreeCategoryWeights(space, space.root);
+    expect(w.length).toBe(FIELD_COUNT);
+    const sum = Array.from(w).reduce((a, b) => a + b, 0);
+    expect(sum).toBeCloseTo(1, 5);
+    // an all-arithmetic body textures itself with the interference field
+    expect(w[0]).toBeCloseTo(1, 5);
+  });
+
+  it("encodes children as pores — direction, heat, color, kind — in one texture", () => {
+    const space = buildKernelSpace("(add 1 (mul 2 3))");
+    const root = space.cells[space.root]!;
+    const state = encodeMembraneState(space, root);
+    expect(state.poreCount).toBe(root.childIds.length);
+    // texel row 0: unit direction + heat
+    const d = Math.hypot(state.data[0]!, state.data[1]!, state.data[2]!);
+    expect(d).toBeCloseTo(1, 5);
+    // texel row 1: the recipe child carries kind=1, leaf children kind=0
+    const kinds = root.childIds.map(
+      (_, i) => state.data[(MAX_PORES + i) * 4 + 3],
+    );
+    expect(kinds).toContain(1);
+    expect(kinds).toContain(0);
+    // blueprint seed is shared by structural twins
+    expect(state.seed).toBe(hash01(root.blueprintKey));
+  });
+
+  it("generates one GPU kernel carrying every field, both projections", () => {
+    const { vertex, fragment } = buildMembraneShaders();
+    // the inner state arrives as data: category mix, pores, lattice belt
+    expect(fragment).toContain(`uCatWeights[${FIELD_COUNT}]`);
+    expect(fragment).toContain("uPoreTex");
+    expect(fragment).toContain("uLattice");
+    // the inner projection — the membrane renders both of its sides
+    expect(fragment).toContain("gl_FrontFacing");
+    for (let i = 0; i < FIELD_COUNT; i++) expect(fragment).toContain(`field${i}(`);
+    expect(vertex).toContain("uPoreTex"); // pores pucker the surface too
+    // the lattice floor kernel breathes by runtime heat
+    expect(buildLatticeShaders().fragment).toContain("uHeat");
+  });
+
+  it("grows the membrane gently with arity and keeps doors on its surface", () => {
+    expect(membraneRadius(0)).toBeLessThan(membraneRadius(8));
+    expect(membraneRadius(100)).toBeLessThanOrEqual(2.55 + 1.3);
+  });
+});
