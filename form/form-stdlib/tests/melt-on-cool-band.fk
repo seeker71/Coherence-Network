@@ -1,0 +1,49 @@
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/arena-melt.fk
+;
+; melt-on-cool-band — the activation proven three-way: the melt arena-melt.fk
+; proves is the melt the emitted sibling DOES. The door's decisions are
+; recipes (fkc-needs-melt, fkc-next-capacity), the thresholds are named cells
+; (fkc-arena-capacity, fkc-melt-water-pct), and the emitted C carries the
+; spliced door — measured live in scripts/fourth_kernel_audit.sh: the round-1
+; deaths (n=4096 -> 0, n=4200 -> 104) now answer 4096 and 4200.
+;
+; Verdict 31 when the activation holds:
+;   1   the named cells tie to round 1: capacity = am-sibling-capacity + 1,
+;       and the water decision flips exactly at the line (3686 no, 3687 yes)
+;   2   the growth decision: a crowded melt doubles (3687 live -> 8192), a
+;       roomy one keeps the carrier (4 live -> 4096), and the melt that
+;       doubled leaves the door quiet (4095 cells in 8192 is below water)
+;   4   the universal emission carries the spliced door — the door text the
+;       cells compute, the melt call, and round 1's bump anchor all present
+;   8   both emit lanes carry the melt tissue that mirrors the proven walk:
+;       fk_mlive (am-live) and fk_mcopy (am-melt) in universal AND many
+;   16  the recipe lane runs the same fire-then-quiet cycle in miniature:
+;       churn 4x16 crosses a 64-cell water (fires), melts to 4 live, and
+;       the door is quiet at the next capacity
+(do
+    (let c0 (if (eq (fkc-arena-capacity) (add (am-sibling-capacity) 1))
+                (if (eq (fkc-needs-melt 3686 4096) 0)
+                    (if (eq (fkc-needs-melt 3687 4096) 1) 1 0) 0) 0))
+
+    (let c1 (if (eq (fkc-next-capacity 3687 4096) 8192)
+                (if (eq (fkc-next-capacity 4 4096) 4096)
+                    (if (eq (fkc-needs-melt 4095 8192) 0) 2 0) 0) 0))
+
+    (let uni (fkc-emit-universal))
+    (let c2 (if (ge (str_find uni (fkc-melt-door-text) 0) 0)
+                (if (ge (str_find uni "fk_melt(&hh, &ht)" 0) 0)
+                    (if (ge (str_find uni "fk_hp = fk_hp + 1" 0) 0) 4 0) 0) 0))
+
+    (let many (fkc-emit-many (list (fk-lit 5))))
+    (let c3 (if (ge (str_find uni "fk_mlive" 0) 0)
+                (if (ge (str_find uni "fk_mcopy" 0) 0)
+                    (if (ge (str_find many "fk_mlive" 0) 0)
+                        (if (ge (str_find many "fk_mcopy" 0) 0) 8 0) 0) 0) 0))
+
+    (let w (am-churn (am-new) 4 16))
+    (let wm (am-melt-root (nth w 0) (nth w 1)))
+    (let c4 (if (eq (fkc-needs-melt (am-hp (nth w 0)) 64) 1)
+                (if (eq (am-hp (nth wm 0)) 4)
+                    (if (eq (fkc-needs-melt (am-hp (nth wm 0)) (fkc-next-capacity (am-hp (nth wm 0)) 64)) 0) 16 0) 0) 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
