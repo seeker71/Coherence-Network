@@ -80,6 +80,40 @@
                      guarantees they are walking the SAME shape, so agreement is
                      about the shape, never about a shared mistake"))
 
+  # ── Part 4: silence has a physical floor — the speed of information ──
+  # Urs (2026-06-12): "timeout == silent for technology is also core — that
+  # gives you information exchange speed limits."
+  #
+  # timeout == nothing is an axiom (core-axioms.form: a timed-out offer receives
+  # the ground state, not an error). This part names its FLOOR: silence is only
+  # HONEST after enough time has passed for an answer to have physically
+  # travelled and returned. To declare nothing faster than information can
+  # round-trip is not silence — it is jumping the gun, a FALSE-nothing that is
+  # really "unknown" wearing silence's mask. So the information-exchange speed
+  # limit (the round-trip floor) sets WHEN silence becomes a valid answer.
+  (silence-floor
+    (timeout-is-nothing       core-axioms.form "no answer in the window = the ground state")
+    (the-floor                "the round-trip minimum — the physical speed of
+                               information exchange between the two cells")
+    (honest-silence           "window reached PAST the floor, no answer -> nothing")
+    (false-silence            "window set BELOW the floor -> NOT silence, a fail:
+                               you cannot honestly say nothing before the signal
+                               could have returned")
+    (the-speed-limit          "a faster medium (smaller floor) lets silence be
+                               claimed sooner; a slower medium (larger floor)
+                               forbids it — information-exchange speed IS the
+                               limit on how fast a witness may fall silent")
+    (already-live             "afferent-live.fk lowers ao-wait's empty window onto
+                               op 15 TIME — the empty window yields nothing only
+                               after REAL elapsed time; this part names the floor
+                               that elapsed-time requirement was already honoring")
+    (the-mesh-consequence     "in the distributed cell mesh (kernel-offer-protocol
+                               over channels, cell-sync, federation-addressing) a
+                               cell that times out a remote offer before the
+                               network round-trip has NOT heard silence — it has
+                               jumped the gun; the honest timeout >= measured RTT")
+    (proof-band               tests/silence-floor-band.fk))   # 31 three-way
+
   # ── Why this is the keystone under every band in the body ────────────
   (keystone
     (every-band-is-a-witness  "each .fk band offers claims; its verdict is its
@@ -97,7 +131,9 @@
     (silence-is-first-class           the-boundary-may-abstain-axiom-1)
     (failure-is-witnessed-as-data     never-hidden-never-a-crash)
     (trust-is-the-concert             three-siblings-agreeing-over-any-stranger)
-    (agree-on-the-whole-spread        including-where-it-fails-and-falls-silent)))
+    (agree-on-the-whole-spread        including-where-it-fails-and-falls-silent)
+    (silence-has-a-physical-floor     no-honest-nothing-before-the-information-round-trip)
+    (the-speed-limit-is-real          information-exchange-speed-bounds-how-fast-a-witness-falls-silent)))
 
 # ─────────────────────────────────────────────────────────────────────
 # How to verify — and notice that the verification IS the theorem
