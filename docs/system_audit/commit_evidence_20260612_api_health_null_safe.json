@@ -1,0 +1,91 @@
+{
+  "date": "2026-06-12",
+  "thread_branch": "codex/api-health-null-safe-20260612",
+  "commit_scope": "Harden native front-door nullable string JSON construction against Null inputs",
+  "files_owned": [
+    "deploy/front-door/api.bml",
+    "form/form-stdlib/json.fk",
+    "form/form-stdlib/tests/json-emitter-band.fk"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/tests/json-emitter-band.fk",
+      "scripts/test_hostinger_deploy_form_paths.sh",
+      "git diff --check"
+    ],
+    "notes": "The JSON emitter band now proves nullable string construction across Null, empty string, and a deploy-SHA-like string. The front-door api-json-nullable-string helper delegates to the Form stdlib helper, preventing the observed native /api/health fatal[type_contract_violation]: as_str: Null path when deployed_sha or deployed_sha_source is Null during route evaluation."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "PR CI has not run yet for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "Hostinger Auto Deploy on main after merge",
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com"
+    ],
+    "notes": "Deploy proof should confirm repeated public /api/health CORS probes return 200 with Access-Control-Allow-Origin instead of a transient native fatal response."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed; PR CI and deploy proof remain pending."
+  },
+  "idea_ids": [
+    "form-os-information-protocol",
+    "native-api-lane",
+    "pipeline-reliability"
+  ],
+  "spec_ids": [
+    "pulse-silence-boundary-repair",
+    "evidence-grounding",
+    "native-route-goal-state"
+  ],
+  "task_ids": [
+    "api-health-null-safe-20260612"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "deploy/front-door/api.bml#api-json-nullable-string",
+    "form/form-stdlib/json.fk#json-node-nullable-string",
+    "form/form-stdlib/tests/json-emitter-band.fk#blankable_string",
+    "public-trace:.cache/form-kernel-rust/crash-1781215384147563155-1.json"
+  ],
+  "change_files": [
+    "deploy/front-door/api.bml",
+    "form/form-stdlib/json.fk",
+    "form/form-stdlib/tests/json-emitter-band.fk",
+    "docs/system_audit/commit_evidence_20260612_api_health_null_safe.json"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Native front-door health and route JSON construction should serialize missing nullable string values as JSON null instead of crashing with as_str: Null.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/health"
+    ],
+    "test_flows": [
+      "Probe /api/health repeatedly with Origin: https://coherencycoin.com and verify HTTP 200 plus Access-Control-Allow-Origin.",
+      "Run the public deploy verifier and confirm CORS health no longer trips native-kernel-error."
+    ]
+  }
+}
