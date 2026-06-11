@@ -1,0 +1,90 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "form-os/arena-melt",
+  "commit_scope": "Close the linux-as-recipes gc-compaction gap by its own condition: a measured arena workload first, then melt/compaction as a Form recipe over the content-addressed lattice. arena-melt.fk models the m4e2 emitted arena (rows of head/tail, bump pointer, slot 0 sentinel), carries ONE generic reachability walk (liveness = reachability from named roots), a memory-pressure readout (allocated/live/dead/peak-bytes/live-bytes), a content-addressed cons (same composition = same cell, axiom-3 inside the arena), and melt = copy-live-into-a-fresh-arena + caller repoint, with ms-intern as the lattice witness that NodeIDs are preserved across arenas.",
+  "files_owned": [
+    "form/form-stdlib/arena-melt.fk",
+    "form/form-stdlib/tests/arena-melt-band.fk",
+    "docs/system_audit/commit_evidence_2026-06-11_arena_melt_measured_workload.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/arena-melt.fk form-stdlib/tests/arena-melt-band.fk",
+      "clang -O2 on fkc-emit-universal output, then chain-then-LEN table runs at n in {64, 1000, 4095, 4096, 4200}",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-11_arena_melt_measured_workload.json",
+      "python3 scripts/generate_repo_indexes.py"
+    ],
+    "notes": "Band verdict 63 with 0 divergent across Go/Rust/TS. One kernel-divergence trap was caught and named during authoring: a raw eq return value is bool on TS/Go and int on Rust (TS crashes math.i32 when the bool reaches mul); the fix reduces every answer through if to an integer. The live-binary measurement ran on the emitted universal walker (clang lane, same as scripts/fourth_kernel_audit.sh)."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI three-way validation pending until the branch is pushed and the PR opens."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Recipe + band + evidence only; no route or service behavior changes. No deploy required beyond normal main rollout."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local three-way proof and live-binary measurement are green; commit, push, PR, and coordinator ledger flip of linux-as-recipes.form (gc-compaction NAMED -> measured + recipe RUNS) remain."
+  },
+  "idea_ids": [
+    "fourth-kernel"
+  ],
+  "spec_ids": [
+    "kernel-native-api-readiness",
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "arena-melt-gc-compaction-20260611"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "form-os-map"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude-code",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "measurement",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-fable-5"
+  },
+  "evidence_refs": [
+    "Three-way band proof: arena-melt-band verdict 63, 0 divergent (Go/Rust/TS) — readout, exact-copy melt, lattice-witnessed NodeID preservation, intern dedup dividend, churn workload, sibling boundary.",
+    "Recipe-lane churn measurement (deterministic, proven in-band): rebuild a 4-cell chain 16 times -> allocated 64 cells, live 4, dead 60, peak 1024 bytes, live 64 bytes; melt compacts to exactly 4 cells.",
+    "Live emitted-sibling measurement (fkc-emit-universal via clang; chain-then-LEN program): n=64 -> LEN 64 (64 tag-19 allocations); n=1000 -> 1000; n=4095 -> 4095 (the boundary HOLDS at exactly the 4095-cell capacity); n=4096 -> 0 (the root pointer wraps onto the null sentinel — the allocation is lost); n=4200 -> 104 (the chain torn at the wrap: 4200 live cells measure 104).",
+    "Measured verdict for the ledger: bump-only suffices while a workload's allocations stay at or under 4095 cells between roots (current fourth-kernel workloads peak far below; the band's churn peaks at 64); past the boundary the carrier overwrites — melt is the proven recipe that keeps live sets under it, dormant by measured choice until a workload crosses.",
+    "Identity invariant: ms-same on am-content of the root before and after melt answers 1 in all three kernels — same composition computes the same NodeID in either arena; the slot index was carrier, never identity (core-axioms.form axiom-3)."
+  ],
+  "change_files": [
+    "form/form-stdlib/arena-melt.fk",
+    "form/form-stdlib/tests/arena-melt-band.fk"
+  ],
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No route behavior changes. The stdlib gains the gc-compaction lane: a memory-pressure workload (am-churn), a measured arena readout (am-measure), and melt/compaction as a recipe (am-melt: copy-reachable through a content-addressed cons + caller repoint), with the lattice witnessing NodeID preservation across arenas. The emitted sibling's arena stays bump-only by measured choice; its 4095-cell boundary is now measured and named.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "arena-melt-band proves readout, exact-live-copy melt, lattice-witnessed identity preservation, intern dedup, churn measurement, and the sibling boundary, three-way at 63 with 0 divergent.",
+      "Audit lane end-to-end: fkc-emit-universal -> clang -> chain-then-LEN table runs measure the live arena boundary: 4095 holds, 4096 wraps to the sentinel (LEN 0), 4200 tears to 104."
+    ],
+    "summary": "validate.sh 1 ok 0 divergent at verdict 63; live emitted-binary boundary measured at exactly 4095 cells."
+  },
+  "change_intent": "runtime_feature"
+}
