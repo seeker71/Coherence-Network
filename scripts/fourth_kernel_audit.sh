@@ -617,5 +617,32 @@ fi
 echo "  the engine's arms are afferent-offer.fk's, unchanged; only the tick source went live (band: tests/afferent-live-band.fk -> 63)"
 
 echo
+# ── 19. n7 — bands-on-fourth-arm: a REAL stdlib band, unmodified, on fkw ──
+# The m4e3 flattener (form-flatten.fk) reads learning-trend.fk + its band
+# FROM DISK, flattens defn/let/the curated ops onto the walker's table, and
+# the SAME universal binary runs it. The three walking siblings' verdict
+# comes through their own front door (validate.sh — the body's proof
+# machinery, BML core source-compiled there); fkw must return the same
+# number. This is the band ratchet's first click: 0 -> 1.
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
+    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" "$FORMDIR/form-stdlib/form-parse.fk" \
+    "$FORMDIR/form-stdlib/form-flatten.fk" > "$work/flt-driver.fk"
+cat >> "$work/flt-driver.fk" <<'EOF'
+(print "==TLT==")
+(print (fkc-table-file (flt-band-fns (read_file "form-stdlib/learning-trend.fk") (read_file "form-stdlib/tests/learning-trend-band.fk"))))
+(print "==END==")
+EOF
+(cd "$FORMDIR" && "$GO_BIN" "$work/flt-driver.fk" 2>/dev/null) > "$work/flt.out"
+sed -n '/^==TLT==$/,/^==END==$/p' "$work/flt.out" | sed -e '1d' -e '$d' > "$work/t-lt.txt"
+three_way="$(cd "$FORMDIR" && ./validate.sh form-stdlib/core.fk form-stdlib/learning-trend.fk form-stdlib/tests/learning-trend-band.fk 2>/dev/null | sed -n 's/.*→ //p' | head -1)"
+fkw_band="$("$work/fkwu" "$work/t-lt.txt" 0 | head -1)"
+echo "n7 bands-on-fourth-arm — learning-trend-band (UNMODIFIED source, flattened by form-flatten.fk):"
+echo "  three-walker verdict (validate.sh) = $three_way   fkw = $fkw_band   (expect 127)"
+if [[ -z "$three_way" || "$three_way" != "$fkw_band" || "$fkw_band" != "127" ]]; then
+    echo "FAIL  the fourth arm disagrees with the siblings on a real band"; exit 1
+fi
+echo "  bands-on-fourth-arm: 1 (gt/ge/eq/and lowered onto IF/LE; defn -> CALL table; let inlined; lists on the arena)"
+
+echo
 echo "conditions: $(uname -m) $(uname -s), clang -O2, full-process invocations (startup included)"
 echo "ok — parity held and the rows are real; the spec is docs/coherence-substrate/fourth-kernel.form"

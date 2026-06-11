@@ -1,0 +1,80 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "form-os2/m4e3-first-click",
+  "commit_scope": "m4e3 first click (n7-ratchet): the real-recipe flattener lands as form-flatten.fk — the UNMODIFIED learning-trend stdlib band, read from disk and flattened onto the fourth walker's table, runs on the universal fkw binary and returns the three-kernel verdict 127. Bands-on-fourth-arm 0 -> 1.",
+  "change_intent": "runtime_feature",
+  "idea_ids": ["fourth-kernel"],
+  "spec_ids": ["kernel-native-api-readiness", "runtime-shared-native-representation"],
+  "task_ids": ["m4e3-first-click-20260611"],
+  "contributors": [
+    {"contributor_id": "urs-muff", "contributor_type": "human", "roles": ["direction"]},
+    {"contributor_id": "agent:claude", "contributor_type": "machine", "roles": ["implementation", "validation", "measurement"]}
+  ],
+  "agent": {"name": "Claude Code", "version": "claude-fable-5"},
+  "files_owned": [
+    "form/form-stdlib/form-parse.fk",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/tests/form-flatten-band.fk",
+    "scripts/fourth_kernel_audit.sh",
+    "docs/system_audit/commit_evidence_2026-06-11_m4e3_first_click_fourth_arm.json"
+  ],
+  "change_files": [
+    "form/form-stdlib/form-parse.fk",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/tests/form-flatten-band.fk",
+    "scripts/fourth_kernel_audit.sh"
+  ],
+  "evidence_refs": [
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/system_audit/commit_evidence_2026-06-11_quine_seed_m4d.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/form-parse.fk form-stdlib/tests/form-parse-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/form-parse.fk form-stdlib/form-flatten.fk form-stdlib/tests/form-flatten-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/learning-trend.fk form-stdlib/tests/learning-trend-band.fk",
+      "bash scripts/fourth_kernel_audit.sh",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-11_m4e3_first_click_fourth_arm.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ],
+    "notes": "form-parse-band stayed 15 three-way after the skip/delimiter widening (whitespace + `;` comments — real .fk file shape). form-flatten-band proves the flattener 15 three-way: comparison/and lowerings carry values on the recipe-side walker with the strict tie pinned (gt 4 4 -> 0), defn/let/CALL walk a mini band to 44 through the function table, and the REAL learning-trend module + band files flatten to 6 functions in 295 rows, under the universal loader's 4096-row capacity. learning-trend-band itself (untouched) stays 127 three-way. fourth_kernel_audit.sh end to end green: the new n7 section reads the three-walker verdict through validate.sh (BML core source-compiles there) and the universal fkw binary returns the same 127 from the flattened table — bands-on-fourth-arm 0 -> 1."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "CI three-way suite runs on the PR; the full 449-band suite plus the kernel builds carry the regression net for the fp-skip widening."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "form-stdlib additions ride the api image rebuild; the lattice ingests form-flatten.fk on the post-merge hook."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No route behavior changes. The fourth kernel gains its first REAL stdlib band: form-flatten.fk flattens learning-trend.fk + its band (unmodified source from disk) onto the walker's table; the universal fkw binary runs it through the fs port and returns the siblings' 127 — bands-on-fourth-arm 0 -> 1, measured.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "form-flatten-band proves lowering values (gt strict at the tie), defn/let/CALL through the function table (44), the real-band flatten shape (6 fns), and loader-capacity fit, three-way at 15.",
+      "fourth_kernel_audit.sh n7 section: flatten the real band -> table file -> universal fkw -> 127, gated on equality with validate.sh's three-walker verdict on the same band."
+    ],
+    "summary": "validate.sh: form-parse-band 15, form-flatten-band 15, learning-trend-band 127, each 1 ok 0 divergent; audit end-to-end green with the fourth arm matching the siblings on a real band."
+  },
+  "phase_gate": {
+    "phase": "m4e3-bridge-first-click",
+    "gate": "ONE compiled .fk band, unmodified, flattened onto the walker's table and run by fkw with the three-kernel verdict matched; the flattener itself proven three-way as recipe tissue",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "m4e4 families (str_*, node_*, floats, nested do, multi-param defns via packed args) lift more of the 424 bands onto the fourth arm; eq/gt/ge/and lowerings retarget to native walker tags when the eq sibling's op lands, champion-challenger by counts"
+  },
+  "behavior_changes": [
+    "form-parse.fk's cursor now carries real .fk file shape: whitespace widened to space/tab/CR/LF and `;` comments skip to end of line; fp-isdelim names ws/`;` as symbol delimiters. Existing single-line expression sources parse unchanged (band re-proven 15).",
+    "form-flatten.fk (new): flattens a module file + band file (unmodified Form SOURCE, the path-b cursor lane) into a fourth-walker program — defn becomes a CALL-by-index function-table row (fn 0 = the band's verdict expression), let inlines its pure value cell, gt/ge/eq/and lower onto IF/LE shapes, head/tail/len/nth/cons/list/empty map 1:1 onto arena tags 18..23. Walker-carried ops live as data rows (name arity tag) behind one generic builder. Scope named honestly: pure bands, nonnegative integer literals, single-param defns; str_*/node_*/floats/nested-do/multi-param are m4e4's families.",
+    "fourth_kernel_audit.sh gains the n7 bands-on-fourth-arm section: flatten learning-trend-band from disk, run the table on the universal fkw binary, and gate on equality with the three-walker verdict obtained through validate.sh itself. Also healed the n1/n2 readiness loop: the retry loop now sleeps 0.1s between attempts (instant connection-refused curls previously burned all 40 retries before the freshly exec'd server bound — a real flake observed on this machine)."
+  ],
+  "open_threads": [
+    "Cross-kernel truthiness: (eq (and ...) 1) diverges (Rust int 1 vs Go/TS boolean) — the flattener uses bare conditions; the eq-shape unification is the eq sibling's lane",
+    "let-inlining re-evaluates pure values; SET/GET slot binding is the evaluate-once successor when an impure band arrives"
+  ]
+}
