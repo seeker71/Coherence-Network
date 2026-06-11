@@ -59,6 +59,38 @@
 # first.
 
 # ─────────────────────────────────────────────────────────────────────
+# The rounds experiment — does it work the way we expect?
+# ─────────────────────────────────────────────────────────────────────
+#
+# tests/pain-rounds-band.fk → 4095 (12 claims), three-way: four rounds
+# of the loop, each stating its EXPECTATION before the move, the band
+# proving expectation == actual. A hidden fault at cell-x (intensity 8)
+# that the route only FEELS through transmission (receptive cone 0.5):
+#
+#   round  felt  expected  what happened
+#   R1     4     —         names route→A hottest; shape interned
+#                          (honest unknown); MOVE: release the hottest
+#                          edge — treating the SYMPTOM. Theory: release
+#                          halves transmission → predict 2.
+#   R2     2     2 ✓       prediction verified. The shape under
+#                          treatment is honestly NOVEL (a wound under
+#                          treatment presents differently). MOVE:
+#                          research crowns the alternative recipe; the
+#                          CAUSE is fixed. Theory: predict 0.
+#   R3     0     0 ✓       under tolerance the observer arm holds —
+#                          the gate chooses NO move, trace untouched.
+#   R4     2     —         RELAPSE PROBE: the fault returns at full 8.
+#                          Felt 2, not 4 — structural learning persists
+#                          through relapse. The shape EXACTLY matches
+#                          round-2's receipt: recall fires, the store
+#                          does not grow. Recognition is instant
+#                          diagnosis.
+#
+# The trajectory heals (4 > 2 > 0); pn-shape (the scale-free receipt:
+# pain's identity is its PATTERN, not its loudness) is what lets the
+# relapse recognize itself across intensity changes.
+
+# ─────────────────────────────────────────────────────────────────────
 # The production path (named, walked as asks arrive)
 # ─────────────────────────────────────────────────────────────────────
 #
