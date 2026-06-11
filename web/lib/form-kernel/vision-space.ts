@@ -106,7 +106,7 @@ export function buildVisionSpace(): VisionSpace {
     result: `${order.length} concepts, one body`,
     stdout: "",
     stderr: "",
-    framebuffer: { width: 4, height: 4, rgba: fb },
+    framebuffer: { width: 4, height: 4, rgba: fb, tiles: 4 },
     stats: {
       cells: order.length,
       recipes: order.length,

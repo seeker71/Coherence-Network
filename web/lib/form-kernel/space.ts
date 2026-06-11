@@ -193,7 +193,7 @@ export interface KernelSpace {
   result: string;
   stdout: string;
   stderr: string;
-  framebuffer: { width: number; height: number; rgba: Uint8Array };
+  framebuffer: { width: number; height: number; rgba: Uint8Array; tiles: number };
   stats: {
     cells: number;
     recipes: number;
@@ -293,7 +293,7 @@ function armLabel(category: NodeID): string {
 function renderLattice(
   k: Kernel,
   size = 96,
-): { width: number; height: number; rgba: Uint8Array } {
+): { width: number; height: number; rgba: Uint8Array; tiles: number } {
   const cells: NodeID[] = [];
   for (const key of k.byID.keys()) {
     const p = key.split(".");
@@ -338,7 +338,7 @@ function renderLattice(
       }
     }
   });
-  return { width: size, height: size, rgba };
+  return { width: size, height: size, rgba, tiles: cols };
 }
 
 // --- builder -----------------------------------------------------------------

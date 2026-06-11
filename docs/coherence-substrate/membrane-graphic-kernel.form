@@ -1,0 +1,106 @@
+# ─────────────────────────────────────────────────────────────────────
+# membrane-graphic-kernel.form — the boundary axiom worn as skin
+# ─────────────────────────────────────────────────────────────────────
+#
+# The boundary axiom (core-axioms.form, axiom 4) says every cell has a
+# membrane: the surface where inside meets outside, where offers cross.
+# This recipe names how that membrane becomes VISIBLE — a graphic
+# kernel, generated from the cell's inner state, running natively on
+# the GPU. The matvec-emitter teaching (a Form recipe that emits native
+# code) carried to graphics: a recipe that emits a fragment program.
+#
+# Running carrier today: web/lib/form-kernel/membrane.ts
+#   buildMembraneShaders() — assembles ONE GLSL kernel from a field
+#   table; encodeMembraneState() — packs a cell's inner state as data.
+# The carrier is TS because the GPU door (WebGL) lives in the browser;
+# the SHAPE below is the Form body the carrier expresses. When the
+# kernels grow a WGSL/compute door, this recipe is the blueprint the
+# emitter realizes — same field table, same data feed, new carrier.
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 1 — the inner state that textures the boundary
+# ─────────────────────────────────────────────────────────────────────
+#
+# A membrane's appearance is a projection of exactly three readings of
+# the cell it bounds — nothing decorative, every channel a measurement:
+#
+#   blueprint-seed     hash(blueprint NodeID) — structural identity.
+#                      Two structurally-equivalent cells wear the SAME
+#                      skin pattern anywhere in the space. Ice, worn.
+#
+#   category-mix       normalized histogram of the subtree's Form
+#                      categories (MATH, FNCALL, COND, WITNESS, ...).
+#                      The inner composition blends the texture fields.
+#
+#   pores              one site per child, golden-spiral placed, seeded
+#                      by instance identity. A pore carries the child's
+#                      color, runtime heat, and kind. Doors attach AT
+#                      their pores: offers cross the boundary at named
+#                      sites, and the door's beam and the pore's glow
+#                      are one geometry computed once, read twice
+#                      (JS lays the beam; the GPU draws the glow).
+
+(defn membrane_state (cell)
+  (list
+    (blueprint_seed (hash (.blueprint cell)))
+    (category_mix (histogram (map .category (subtree cell))))
+    (pores (map_indexed
+      (fn (i child)
+        (pore (golden_spiral i (arity cell) (hash (.id cell)))
+              (.color child) (.heat child) (.kind child)))
+      (.children cell)))))
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 2 — one kernel, fields as data
+# ─────────────────────────────────────────────────────────────────────
+#
+# There is ONE membrane program. Per-cell variation arrives as data
+# (uniforms + a 32×2 texel feed), never as parallel shader paths.
+# The fragment kernel is ASSEMBLED from a field table — each Form
+# category family contributes a procedural texture vocabulary:
+#
+#   MATH / COMPARE      → interference   (standing waves meeting)
+#   LIST / ACCESS       → strata         (ordered banding, shelves)
+#   FNCALL / CALL       → spiral         (recursion winding inward)
+#   COND / CHOICE       → veins          (bifurcating decision paths)
+#   WITNESS / OBSERVER  → iris           (concentric attention rings)
+#   IDENT / ALIAS       → filament       (name-threads, script strands)
+#   BLOCK               → sediment       (statement layers)
+#   otherwise           → cellular       (voronoi tissue, the ground)
+#
+# Adding a vocabulary is adding a ROW, not a branch. The kernel mixes
+# the fields by the category histogram at runtime — a MATH-heavy cell
+# shimmers with interference; a recursive cell wears spirals.
+
+(defn membrane_kernel (field_table)
+  (emit_fragment
+    (concat
+      (map (fn (field) (emit_field_fn field)) field_table)
+      (emit_mix field_table)      ; Σ weight_i · field_i(p, seed, t)
+      (emit_pore_loop)            ; glow + ripple at each child's site
+      (emit_fresnel_rim)          ; the living edge, iridescent by seed
+      (emit_inner_projection))))  ; the gl_FrontFacing branch, Part 3
+
+# ─────────────────────────────────────────────────────────────────────
+# Part 3 — both sides of the boundary
+# ─────────────────────────────────────────────────────────────────────
+#
+# A membrane has two faces and the kernel renders both:
+#
+#   outside (front-facing)  the skin — category texture over the
+#                           blueprint-seeded warp; pores glowing their
+#                           children through; heat breathing the whole
+#                           surface; a touch-ripple when focus lands.
+#
+#   inside (back-facing)    the planetarium — the inner projection.
+#                           Pores become windows; the category nebula
+#                           intensifies; and the substrate lattice
+#                           framebuffer belts the equator: the body's
+#                           memory plane, projected on the boundary's
+#                           own inner skin. Stepping into a cell is
+#                           stepping into what it knows.
+#
+# GAP: the lattice belt currently projects the client-side TS-kernel
+# lattice. When the Go kernel's /api/_form/ideas-observation feed
+# streams into the page, the same uniform door carries the production
+# framebuffer — no kernel change, new data.
