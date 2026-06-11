@@ -1,0 +1,88 @@
+# ─────────────────────────────────────────────────────────────────────
+# offers-in-flight.form — full concurrency as the offer-and-acknowledge
+#                         closure: many offers in flight, acks threaded
+#                         back by content-addressed correlation
+# ─────────────────────────────────────────────────────────────────────
+#
+# linux-as-recipes.form names the gap: (concurrency NAMED many offers in
+# flight, acks threaded (the offer-and-acknowledge closure); walk_parallel
+# RUNS in the kernels). walk_parallel is the compute-parallel leaf — this
+# is the offer-level closure, and it now RUNS three-way:
+#
+#   form/form-stdlib/offers-in-flight.fk           — the recipe
+#   form/form-stdlib/tests/offers-in-flight-band.fk — the proof (255)
+#
+# Concurrency here is NOT a thread-pool abstraction ported from a host
+# language. It is axiom-5 closed over plurality: many offers
+# simultaneously on a channel, each acknowledgment threaded back to
+# exactly its own offer — and the correlation key is axiom-3 doing the
+# work. An offer's NodeID is computed from its composition (the offered
+# cell + its args), so it is an UNFORGEABLE correlation token: the same
+# offer IS the same token, a fabricated token matches nothing, and
+# nothing has to assign, count, or remember identifiers.
+
+(offers-in-flight
+
+  (lineage
+    (closes      linux-as-recipes.concurrency)        # the NAMED row this turns toward RUNS
+    (derives-from core-axioms.form)                   # axiom-5 (offer) closed by axiom-3 (content-addressing)
+    (local-contract offer-and-acknowledge.form)       # the single-offer vocabulary {nothing,0,1,node}
+    (over-channel kernel-offer-protocol.form)         # the offer spoken between cells
+    (composes    channel.fk channel-query.fk)         # transport + SUBSTRATE-REF; minimal-surface.fk's ms-thread, substrate-resident
+    (compute-leaf walk_parallel)                      # the kernels' parallel recipe walk — the other half, already running)
+    (proven-by   tests/offers-in-flight-band.fk))     # 255, three-way (Go/Rust/TS)
+
+  # ── The offer — axiom-5 reified as a wire cell ───────────────────────
+  (offer
+    (shape        OFFER-V0 (substrate-ref-of-cell args...))   # bp 1.2.99.1746
+    (token        the-node-id-content-hash)           # minted by composition at the moment of offering
+    (same-offer   same-token)                          # axiom-3: re-interning the shape re-mints the token
+    (launch       into-the-in-flight-set-and-onto-the-channel))
+
+  # ── The four ack values — axiom-1's states + the one recursion ──────
+  (ack-vocabulary
+    (nothing  ACK-NOTHING-node)                        # silence REIFIED on the wire (bp 1.2.99.1748) —
+                                                       # distinct from absence; timeout/decline/silence share one cell
+    (zero     the-trivial-int-0-cell)                  # axiom-1's state, the same 0 everything interns to
+    (one      the-trivial-int-1-cell)
+    (node     ACK-NODE-wrapping-a-counter-offer)       # bp 1.2.99.1749 — the one value that recurs
+    (wire     OFFER-ACK (correlation value)))          # bp 1.2.99.1747 — exactly one value, never zero, never two
+
+  # ── The in-flight set — pure values, no mutation ─────────────────────
+  (in-flight-set
+    (entry        (corr offer resolved-flag ack-value))
+    (launch       oif-launch)                          # pending; the key computes itself
+    (land         oif-land)                            # exactly one pending entry resolves; the rest untouched
+    (land-channel oif-land-msgs)                       # acks read off a channel land in arrival order —
+                                                       # the token routes, never the position
+    (thread       oif-thread)                          # node counter-offers recur to a terminal; nothing/0/1 rest
+    (read         oif-pending oif-resolved-count oif-state))
+
+  # ── The three distinct non-answers (axiom-1's nothing-discipline) ───
+  (non-answers
+    (in-flight        no-ack-yet-the-offer-waits-honestly)   # never silently dropped
+    (acked-nothing    the-nothing-NODE-landed)               # a real answer: silence as a value
+    (never-launched   no-entry-at-all))                      # oif-state returns absence
+
+  (invariant
+    (correlation-is-content-addressing  the-token-is-computed-never-assigned)
+    (out-of-order-is-no-order           arrival-position-carries-no-meaning)
+    (exactly-one-ack-lands-per-offer    a-duplicate-or-fabricated-ack-resolves-nothing)
+    (silence-is-not-loss                an-unacked-offer-remains-in-the-set)
+    (no-host-concurrency-abstraction    the-closure-is-composition-of-axioms-3-and-5)))
+
+# ─────────────────────────────────────────────────────────────────────
+# How to verify
+# ─────────────────────────────────────────────────────────────────────
+#
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel.fk \
+#     form-stdlib/sha256.fk form-stdlib/channel-query.fk \
+#     form-stdlib/offers-in-flight.fk form-stdlib/tests/offers-in-flight-band.fk
+#   # → 255, three-way: four offers A,B,C,D launch onto a channel; acks
+#   #   arrive D,A,C (out of launch order) carrying a node counter-offer
+#   #   chain, an explicit nothing-node, and a 0; each lands on exactly
+#   #   its own offer; D's chain threads to the terminal 1; B — never
+#   #   acked — remains honestly in flight; a fabricated token lands
+#   #   nowhere; re-interning A's shape re-mints A's token.
+#
+#   coh substrate form "?equivalent @recipe(offers-in-flight)"   # after ingest

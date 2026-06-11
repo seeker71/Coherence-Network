@@ -1,0 +1,152 @@
+; offers-in-flight.fk — axiom-5 closed over many offers at once: an in-flight
+; set keyed by each offer's content-addressed NodeID, acks landing out of
+; order on exactly their own offer, all four ack values (nothing/0/1/node)
+; threadable, an unacked offer remaining honestly in flight.
+;
+; preludes: form-stdlib/channel.fk form-stdlib/sha256.fk form-stdlib/channel-query.fk
+;
+; linux-as-recipes.form names the gap this closes: (concurrency NAMED many
+; offers in flight, acks threaded (the offer-and-acknowledge closure)).
+; walk_parallel in the kernels is the compute-parallel leaf; THIS is the
+; offer-level closure. Everything it composes already runs:
+;   channel.fk         — the transport (append / read / payload)
+;   channel-query.fk   — SUBSTRATE-REF and the correlation idiom
+;   minimal-surface.fk — single-offer ack threading (ms-thread); here the
+;                        chain is substrate-resident and many run at once
+;
+; The correlation key is axiom-3 doing the work: an offer's NodeID is
+; computed from its composition, so it is an unforgeable correlation token —
+; the same offer IS the same token, and a fabricated token matches nothing.
+; No counter, no registry, no thread-pool ported from a host language:
+; content-addressing is the concurrency primitive.
+;
+; The ack vocabulary (axiom-5, carrying axiom-1's states as its values):
+;   nothing — ACK-NOTHING, a real node on the wire, DISTINCT from absence
+;             (an offer nobody answered has no ack value at all)
+;   0 / 1   — the trivial-int cells themselves: axiom-1's states, the same
+;             0-cell and 1-cell everything else in the lattice interns to
+;   node    — ACK-NODE wrapping a counter-offer cell; the one value that
+;             recurs — threading follows it down to a terminal
+;
+; The in-flight set is pure value-walking — no mutation anywhere. An entry
+; is (list corr offer resolved-flag ack-value); landing an ack mints a new
+; set in which exactly one pending entry resolved and the rest are untouched.
+
+;; --- Blueprints ----------------------------------------------------
+(let OFFER-V0    (bp "OFFER-V0"))
+(let OFFER-ACK   (bp "OFFER-ACK"))
+(let ACK-NOTHING (bp "ACK-NOTHING"))
+(let ACK-NODE    (bp "ACK-NODE"))
+
+;; --- the offer (axiom-5: a cell + 0..many arg-cells) ----------------
+
+;; oif-offer — intern an OFFER-V0 Recipe: child 0 is a SUBSTRATE-REF to
+;; the offered cell (the primitive/recipe invited to run), children 1..
+;; the argument cells. The NodeID is fully determined by (cell, args) —
+;; the correlation token mints itself at the moment of offering.
+(defn oif-offer (cell-nid args)
+    (intern_node OFFER-V0 (cons (cq-substrate-ref cell-nid) args)))
+
+;; oif-corr — the correlation token: the offer NodeID's content-hash
+;; slot. Same offer shape, same token (axiom-3); distinct args, distinct
+;; token. This is what threads an ack back to exactly its own offer.
+(defn oif-corr (offer) (node_inst offer))
+
+;; --- the four ack values --------------------------------------------
+
+;; oif-ack-nothing — silence as a first-class node. Every cell that acks
+;; nothing interns the SAME cell — timeout, decline, and silence share
+;; one value, and it is distinct from never-having-answered.
+(defn oif-ack-nothing () (intern_node ACK-NOTHING (empty)))
+
+;; oif-ack-0 / oif-ack-1 — the terminal states ARE axiom-1's integers.
+(defn oif-ack-0 () (intern_trivial_int 0))
+(defn oif-ack-1 () (intern_trivial_int 1))
+
+;; oif-ack-node — a counter-offer: here is a cell back. The one ack
+;; value that re-enters the protocol instead of resting.
+(defn oif-ack-node (cell) (intern_node ACK-NODE (list cell)))
+
+;; oif-node-value? — is this ack value a counter-offer (the recurring kind)?
+(defn oif-node-value? (value) (node_eq (node_category value) ACK-NODE))
+
+;; --- the wire ack ----------------------------------------------------
+
+;; oif-ack — OFFER-ACK Recipe: (correlation trivial-int, ack value).
+;; The value is exactly one of the four above — never zero, never two.
+(defn oif-ack (corr value)
+    (intern_node OFFER-ACK (list (intern_trivial_int corr) value)))
+
+(defn oif-ack-corr (ack) (node_value (head (node_children ack))))
+(defn oif-ack-value (ack) (head (tail (node_children ack))))
+
+;; --- threading: node recurs, the other three rest ---------------------
+
+;; oif-thread — follow ACK-NODE counter-offers down to the terminal
+;; (ms-thread's shape, substrate-resident). nothing, 0, 1, and any bare
+;; cell rest where they are.
+(defn oif-thread (value)
+    (if (oif-node-value? value)
+        (oif-thread (head (node_children value)))
+        value))
+
+;; --- the in-flight set (pure values; landing mints a new set) ---------
+;; entry: (list corr offer resolved-flag ack-value); flag 0 = in flight.
+(defn oif-e-corr  (e) (head e))
+(defn oif-e-offer (e) (head (tail e)))
+(defn oif-e-flag  (e) (head (tail (tail e))))
+(defn oif-e-value (e) (head (tail (tail (tail e)))))
+
+;; oif-launch — add an offer to the set, pending. Nothing is assigned;
+;; the key is the offer's own computed NodeID.
+(defn oif-launch (set offer)
+    (cons (list (oif-corr offer) offer 0 0) set))
+
+;; oif-land — land one ack: the first pending entry whose token matches
+;; resolves to the ack's value; every other entry is untouched; an ack
+;; whose token matches no pending entry lands nowhere — a fabricated or
+;; duplicate ack cannot resolve anything (axiom-3 as the guard).
+(defn oif-land (set ack)
+    (if (eq (len set) 0) set
+        (if (and (eq (oif-e-corr (head set)) (oif-ack-corr ack))
+                 (eq (oif-e-flag (head set)) 0))
+            (cons (list (oif-e-corr (head set)) (oif-e-offer (head set)) 1 (oif-ack-value ack))
+                  (tail set))
+            (cons (head set) (oif-land (tail set) ack)))))
+
+;; oif-land-msgs — land every ack read off a channel, in arrival order.
+;; Arrival order and launch order are independent: the token does the
+;; routing, never the position.
+(defn oif-land-msgs (set msgs)
+    (if (eq (len msgs) 0) set
+        (oif-land-msgs (oif-land set (channel-msg-payload (head msgs))) (tail msgs))))
+
+;; --- readers -----------------------------------------------------------
+
+;; oif-pending — the offers still in flight. Launch survives silence: an
+;; unacked offer stays here, never silently dropped.
+(defn oif-pending (set)
+    (if (eq (len set) 0) (list)
+        (if (eq (oif-e-flag (head set)) 0)
+            (cons (oif-e-offer (head set)) (oif-pending (tail set)))
+            (oif-pending (tail set)))))
+
+;; oif-resolved-count — how many offers an ack has landed on.
+(defn oif-resolved-count (set)
+    (if (eq (len set) 0) 0
+        (add (oif-e-flag (head set)) (oif-resolved-count (tail set)))))
+
+;; oif-state — (list flag value) for one correlation token: flag 1 =
+;; resolved with value; flag 0 = still in flight. A token never launched
+;; returns the absence value (empty) — no-entry is a third distinct
+;; non-answer beside in-flight and acked-with-nothing.
+(defn oif-state (set corr)
+    (if (eq (len set) 0) (empty)
+        (if (eq (oif-e-corr (head set)) corr)
+            (list (oif-e-flag (head set)) (oif-e-value (head set)))
+            (oif-state (tail set) corr))))
+
+(defn oif-state-resolved? (st) (eq (head st) 1))
+(defn oif-state-value (st) (head (tail st)))
+
+0
