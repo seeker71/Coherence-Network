@@ -1,0 +1,72 @@
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/arena-melt.fk
+;
+; arena-melt-band — gc/compaction earns its place by measurement, three-way:
+; a five-cell arena where three cells hang from the root and two are garbage.
+; Melt copies exactly the three, bytes shrink 80 -> 48, and the lattice
+; witnesses the root's NodeID PRESERVED across arenas — same composition,
+; same identity; the slot index was carrier, never identity.
+;
+; Verdict 63 when the melt holds:
+;   1   the readout: 5 allocated, 3 live (reachability from the root), 2 dead,
+;       80 peak bytes, 48 live bytes
+;   2   melt copies exactly the live three (new hp 3; the chain reads back
+;       9,8,7) and the OLD arena stays whole (hp still 5, the garbage head
+;       still readable — nothing overwritten)
+;   4   identity: ms-same on old-root content vs melted-root content answers 1;
+;       the garbage composition is NOT the root's (the negative stays 0)
+;   8   the intern dividend: two bump slots carrying ONE composition melt to
+;       ONE cell (3 live slots -> 2 cells), identity still preserved
+;   16  the churn workload measured: rebuild a 4-chain 16 times ->
+;       (64 4 60 1024 64); melt -> 4 cells, chain length 4
+;   32  the sibling boundary: the emitted universal walker carries the
+;       bump-only arm, the measured churn peak (64) sits under the 4095-cell
+;       carrier, and the 1024th rebuild of the same 4-chain crosses it
+(do
+    ; the strange-minimal arena: two garbage cells first, then the 3-chain root
+    (let s1 (am-cons (am-new) (am-fig 42) (am-null)))
+    (let s2 (am-cons (nth s1 0) (am-fig 43) (nth s1 1)))
+    (let s3 (am-cons (nth s2 0) (am-fig 7) (am-null)))
+    (let s4 (am-cons (nth s3 0) (am-fig 8) (nth s3 1)))
+    (let s5 (am-cons (nth s4 0) (am-fig 9) (nth s4 1)))
+    (let oar (nth s5 0))
+    (let root (nth s5 1))
+
+    (let c0 (if (eq (am-readout-is (am-measure oar root) 5 3 2 80 48) 1) 1 0))
+
+    (let melted (am-melt-root oar root))
+    (let nar (nth melted 0))
+    (let nroot (nth melted 1))
+    (let c1 (if (eq (am-hp nar) 3)
+                (if (eq (am-val (am-head nar nroot)) 9)
+                    (if (eq (am-val (am-nth nar nroot 1)) 8)
+                        (if (eq (am-val (am-nth nar nroot 2)) 7)
+                            (if (eq (am-hp oar) 5)
+                                (if (eq (am-val (am-head oar (nth s2 1))) 43) 2 0) 0) 0) 0) 0) 0))
+
+    (let c2 (if (eq (ms-same (am-content oar root) (am-content nar nroot)) 1)
+                (if (eq (ms-same (am-content oar (nth s2 1)) (am-content nar nroot)) 0) 4 0) 0))
+
+    ; two slots, one composition: bump-only cannot know; intern can
+    (let t1 (am-cons (am-new) (am-fig 7) (am-null)))
+    (let t2 (am-cons (nth t1 0) (am-fig 7) (am-null)))
+    (let t3 (am-cons (nth t2 0) (nth t1 1) (nth t2 1)))
+    (let tmelt (am-melt-root (nth t3 0) (nth t3 1)))
+    (let c3 (if (eq (len (am-live-slots (nth t3 0) (nth t3 1))) 3)
+                (if (eq (am-hp (nth tmelt 0)) 2)
+                    (if (eq (ms-same (am-content (nth t3 0) (nth t3 1))
+                                     (am-content (nth tmelt 0) (nth tmelt 1))) 1) 8 0) 0) 0))
+
+    ; the measured workload: 16 rebuilds of a 4-chain — 64 allocated, 4 live
+    (let w (am-churn (am-new) 4 16))
+    (let wmelt (am-melt-root (nth w 0) (nth w 1)))
+    (let c4 (if (eq (am-readout-is (am-measure (nth w 0) (nth w 1)) 64 4 60 1024 64) 1)
+                (if (eq (am-hp (nth wmelt 0)) 4)
+                    (if (eq (am-len (nth wmelt 0) (nth wmelt 1)) 4) 16 0) 0) 0))
+
+    ; the sibling carrier: bump-only today (the emitted arm), boundary at 4095
+    (let uni (fkc-emit-universal))
+    (let c5 (if (ge (str_find uni "fk_hp = fk_hp + 1" 0) 0)
+                (if (ge (am-sibling-capacity) (nth (am-measure (nth w 0) (nth w 1)) 0))
+                    (if (gt (mul 4 1024) (am-sibling-capacity)) 32 0) 0) 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))

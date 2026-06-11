@@ -1,0 +1,137 @@
+; arena-melt.fk — gc/compaction for the m4e2 arena heap as recipes: liveness is
+; reachability from a named root, melt is copy-live-into-a-fresh-arena through a
+; content-addressed cons, and the one mutation is the caller repointing its root
+; (linux-as-recipes.form memory.gc-compaction; core-axioms.form axiom-3).
+;
+; The model mirrors the emitted sibling's arena (fourth-walker-emit.fk, m4e2):
+; fk_heap_head/fk_heap_tail are rows of (head, tail); fk_hp is the bump pointer;
+; slot 0 is the null sentinel. The sibling packs each boxed value into one
+; machine word — figure v as v<<1, pointer p as (p<<1)|1; the model keeps the
+; same two fields as visible composition: a box is (list kind value) with
+; kind 0 = figure, kind 1 = pointer, and (1 0) the null/EMPTY box.
+;
+; What each door teaches:
+;   am-cons     the sibling's tag-19 move — bump-only allocation; nothing is
+;               overwritten (axiom-3 as the default carrier discipline)
+;   am-live     ONE generic reachability walk — liveness IS reachability from
+;               named roots; no separate mark/sweep machinery in any kernel
+;   am-measure  the memory-pressure readout (allocated live dead peak-bytes
+;               live-bytes) at 16 bytes/cell — the sibling's two long longs
+;   am-intern   content-addressed cons: same (head, tail) composition IS the
+;               same cell (axiom-3 brought INTO the arena) — bump-only gives
+;               equal content distinct slots; intern cannot
+;   am-melt     compaction = copy each live cell into a fresh arena through
+;               am-intern; figures carry as-is; the OLD arena stays whole —
+;               a change MINTS new cells, the one mutation is repoint
+;   am-content  resolve an arena composition to its lattice cell (ms-intern):
+;               the lattice computes the SAME NodeID from the same composition
+;               in either arena — the witness that melt preserved identity
+;   am-churn    the measured workload: rebuild an l-cell chain r times; every
+;               build but the last is garbage (the root moved on)
+;
+; The sibling's carrier holds 4095 cells (4096 slots, slot 0 the sentinel);
+; past it the bump wraps and overwrites — measured live on the emitted binary:
+; chain-then-LEN answers n up to exactly n=4095, then 0 at n=4096 (the root
+; wraps onto the sentinel) and 104 at n=4200 (the chain torn at the wrap).
+; Melt keeps live sets under the boundary; bump-only stays the right default
+; while a workload's measured allocations sit below it.
+
+; ── the arena — the m4e2 shape as composition ────────────────────────────
+(defn am-new () (list 0 (empty)))
+(defn am-hp (ar) (nth ar 0))
+(defn am-rows (ar) (nth ar 1))
+
+(defn am-fig (v) (list 0 v))
+(defn am-ptr (p) (list 1 p))
+(defn am-null () (list 1 0))
+(defn am-val (box) (nth box 1))
+(defn am-is-cell (box) (if (eq (nth box 0) 1) (if (eq (nth box 1) 0) 0 1) 0))
+(defn am-box-eq (a b) (if (eq (nth a 0) (nth b 0)) (if (eq (nth a 1) (nth b 1)) 1 0) 0))
+
+; am-cons — the sibling's tag-19 move: bump, hold (head tail), hand back the
+; new pointer. Returns (list arena box). Nothing is overwritten.
+(defn am-cons (ar h t)
+    (list (list (add (am-hp ar) 1) (cons (list h t) (am-rows ar)))
+          (am-ptr (add (am-hp ar) 1))))
+
+; rows are newest-first: slot k of 1..hp lives at position hp-k
+(defn am-cell (ar p) (nth (am-rows ar) (sub (am-hp ar) p)))
+(defn am-head (ar box) (if (am-is-cell box) (nth (am-cell ar (am-val box)) 0) (am-null)))
+(defn am-tail (ar box) (if (am-is-cell box) (nth (am-cell ar (am-val box)) 1) (am-null)))
+
+; am-len / am-nth — the tag-22/23 reads: follow tails to the null sentinel
+(defn am-len (ar box) (if (am-is-cell box) (add 1 (am-len ar (am-tail ar box))) 0))
+(defn am-nth (ar box k) (if (eq k 0) (am-head ar box) (am-nth ar (am-tail ar box) (sub k 1))))
+
+; ── liveness — ONE generic reachability walk from a named root ───────────
+; Heads may be pointers too (trees); the walk descends both fields, marks each
+; slot once, and counts shared cells once — the kernels' walking shape, reused.
+(defn am-seen (acc p) (if (eq (len acc) 0) 0 (if (eq (head acc) p) 1 (am-seen (tail acc) p))))
+(defn am-live (ar box acc)
+    (if (am-is-cell box)
+        (if (am-seen acc (am-val box)) acc
+            (am-live ar (am-head ar box) (am-live ar (am-tail ar box) (cons (am-val box) acc))))
+        acc))
+(defn am-live-slots (ar root) (am-live ar root (empty)))
+
+; ── the measured readout — (allocated live dead peak-bytes live-bytes) ───
+; 16 bytes per cell: the sibling's two long longs (fk_heap_head + fk_heap_tail)
+(defn am-measure2 (alloc live) (list alloc live (sub alloc live) (mul alloc 16) (mul live 16)))
+(defn am-measure (ar root) (am-measure2 (am-hp ar) (len (am-live-slots ar root))))
+; (the innermost claim reduces through if to an integer — a raw eq return
+;  value is kernel-divergent: bool on TS/Go, int on Rust; eq belongs in
+;  if-conditions, integers belong in answers)
+(defn am-readout-is (m alloc live dead pb lb)
+    (if (eq (nth m 0) alloc)
+        (if (eq (nth m 1) live)
+            (if (eq (nth m 2) dead)
+                (if (eq (nth m 3) pb) (if (eq (nth m 4) lb) 1 0) 0) 0) 0) 0))
+
+; ── am-intern — content-addressed cons (axiom-3 in the arena) ────────────
+; Search existing rows for the same (head tail) composition; same composition
+; IS the same cell, so the pointer comes back instead of a new slot.
+(defn am-cell-is (cell h t) (if (am-box-eq (nth cell 0) h) (am-box-eq (nth cell 1) t) 0))
+(defn am-find2 (rows k h t)
+    (if (eq (len rows) 0) 0
+        (if (eq (am-cell-is (head rows) h t) 1) k (am-find2 (tail rows) (sub k 1) h t))))
+(defn am-find (ar h t) (am-find2 (am-rows ar) (am-hp ar) h t))
+(defn am-intern2 (ar h t k) (if (eq k 0) (am-cons ar h t) (list ar (am-ptr k))))
+(defn am-intern (ar h t) (am-intern2 ar h t (am-find ar h t)))
+
+; ── am-melt — compaction as copy-reachable + repoint ─────────────────────
+; Walk the live composition; figures and the null carry as-is; each live cell
+; re-interns into the fresh arena bottom-up. Returns (list new-arena new-root).
+; The OLD arena is untouched — a change MINTS new cells (axiom-3); the one
+; mutation is the CALLER repointing its root at the returned box. Rollback is
+; keeping the old root: nothing was destroyed.
+(defn am-melt3 (st2 tb) (am-intern (nth st2 0) (nth st2 1) tb))
+(defn am-melt2 (oar box st) (am-melt3 (am-melt oar (am-head oar box) (nth st 0)) (nth st 1)))
+(defn am-melt (oar box nar)
+    (if (am-is-cell box) (am-melt2 oar box (am-melt oar (am-tail oar box) nar))
+        (list nar box)))
+(defn am-melt-root (ar root) (am-melt ar root (am-new)))
+
+; ── am-content — the lattice witness ─────────────────────────────────────
+; Resolve a boxed value to its lattice cell through the intern door:
+;   figure v -> (0 . v)      null -> (1 . 0)      cell -> (2 . (head . tail))
+; Same composition computes the same NodeID in either arena — the slot index
+; was only the carrier; identity lives in the composition (axiom-3).
+(defn am-content (ar box)
+    (if (am-is-cell box)
+        (ms-intern (ms-cell 2) (ms-intern (am-content ar (am-head ar box))
+                                          (am-content ar (am-tail ar box))))
+        (if (eq (nth box 0) 0)
+            (ms-intern (ms-cell 0) (ms-cell (nth box 1)))
+            (ms-intern (ms-cell 1) (ms-cell 0)))))
+
+; ── am-churn — the memory-pressure workload ──────────────────────────────
+; Build an l-cell chain (figures l-1..0); rebuild it r times; every build but
+; the last is garbage — the root moved on. allocated = l*r, live = l.
+(defn am-chain2 (st n) (am-cons (nth st 0) (am-fig (sub n 1)) (nth st 1)))
+(defn am-chain (ar n) (if (eq n 0) (list ar (am-null)) (am-chain2 (am-chain ar (sub n 1)) n)))
+(defn am-churn2 (st l r) (am-churn (nth st 0) l (sub r 1)))
+(defn am-churn (ar l r) (if (eq r 1) (am-chain ar l) (am-churn2 (am-chain ar l) l r)))
+
+; ── the sibling's carrier boundary ───────────────────────────────────────
+; 4096 emitted slots with slot 0 reserved as the sentinel: 4095 live cells.
+(defn am-sibling-capacity () 4095)
