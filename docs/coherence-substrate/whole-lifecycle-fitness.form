@@ -1,0 +1,109 @@
+# whole-lifecycle-fitness.form - machines, nutrition, robots, and substances prove the whole body they touch
+
+The kernel may generate machines, nutrition recipes, robot bodies, robot behaviors,
+or therapeutic-substance hypotheses. Generation is not the claim. The claim begins
+only when a receipt can be inspected.
+
+This file names the Form-native gate for claims like:
+
+- a machine is healthy across its whole lifecycle;
+- an ingestible nutrition product is safe and beneficial inside a declared body
+  boundary;
+- a robot has human health benefits down to a molecular marker;
+- a produced substance benefits a declared organic condition.
+
+The receipt does not certify a universal cure. It refuses overbroad cure claims.
+It allows condition-scoped therapeutic claims only when the receipt carries
+molecular, cellular, organism-level, dose, toxicity, stop-boundary, and
+third-party witness evidence.
+
+(whole-lifecycle-fitness
+
+  (lineage
+    (derives-from core-axioms.form host-kernel.form evidence-grounding.form value-execution-as-recipe.form)
+    (runnable form/form-stdlib/lifecycle-fitness-receipt.fk)
+    (proof form/form-stdlib/tests/lifecycle-fitness-receipt-band.fk)
+    (claim-shape hypothesis-generated-then-proof-gated))
+
+  (lifecycle-contract
+    (materials           source-traced measured within-budget contained-or-reversible)
+    (manufacturing       source-traced measured within-budget contained-or-reversible)
+    (transport           source-traced measured within-budget contained-or-reversible)
+    (energy-production   source-traced measured within-budget contained-or-reversible)
+    (operation           source-traced measured within-budget contained-or-reversible)
+    (maintenance         source-traced measured within-budget contained-or-reversible)
+    (end-of-life         source-traced measured within-budget contained-or-reversible)
+    (components          every-part-named material-traced source-traced repairable reusable recyclable toxicity-contained)
+    (all-parts-declared  required))
+
+  (nutrition-contract
+    (ingredient-trace    required)
+    (dose-known          required)
+    (contaminant-safe    required)
+    (bioavailable        required)
+    (digestion-metabolism-excretion-traced required)
+    (population-boundary required)
+    (stop-boundary       required))
+
+  (robot-human-benefit-contract
+    (level               molecular-when-molecular-claim-is-made)
+    (outcome             declared-not-implied)
+    (evidence-trace      source-backed)
+    (molecular-marker    required-for-molecular-claim)
+    (cellular-effect     traced)
+    (organism-effect     traced)
+    (third-party-witness required)
+    (safety-monitor      required)
+    (exposure-boundary   required)
+    (reversible-stop     required)
+    (positive-effect     measured))
+
+  (therapeutic-substance-contract
+    (substance-id        required)
+    (organism-scope      required)
+    (condition-scope     required)
+    (mechanism-trace     required)
+    (molecular-marker    required)
+    (cellular-evidence   required)
+    (organism-evidence   required)
+    (dose-response       required)
+    (toxicity-window     required)
+    (third-party-witness required)
+    (reversible-stop     required)
+    (benefit-observed    required)
+    (universal-cure      refused-as-overbroad))
+
+  (allowed-claims
+    machine-whole-lifecycle
+    ingestible-nutrition-whole-lifecycle
+    robot-molecular-human-benefit
+    condition-specific-therapeutic-substance)
+
+  (refusal-reasons
+    malformed-receipt
+    overbroad-cure-claim
+    unsupported-claim
+    lifecycle-missing
+    all-parts-not-declared
+    lifecycle-phase-proof-missing
+    component-trace-missing
+    ingestion-proof-missing
+    molecular-benefit-proof-missing
+    substance-proof-missing)
+
+  (invariants
+    (generation-is-free-claim-is-gated)
+    (health-is-not-asserted-from-possibility)
+    (molecular-claims-require-molecular-markers)
+    (cellular-claims-require-cellular-evidence)
+    (organism-claims-require-organism-evidence)
+    (whole-lifecycle-claims-require-all-parts)
+    (overbroad-cure-claims-refuse)
+    (absence-returns-a-reason-not-a-crash)))
+
+# SHIPPED
+#
+# `form/form-stdlib/lifecycle-fitness-receipt.fk` carries the receipt and
+# refusal policy. `form/form-stdlib/tests/lifecycle-fitness-receipt-band.fk`
+# proves ten claims three-way: machine lifecycle, ingestible nutrition, robot
+# molecular benefit, condition-scoped substance benefit, and six refusal lanes.

@@ -1,0 +1,72 @@
+; lifecycle-fitness-receipt-band.fk - executable proof for whole-lifecycle fitness receipts.
+;
+; Band verdict: 1111111111 when every claim holds across Go/Rust/TS.
+;   machine whole-lifecycle receipt passes                         ->          1
+;   ingestible nutrition whole-lifecycle receipt passes             ->         10
+;   robot molecular human-benefit receipt passes                    ->        100
+;   condition-specific therapeutic substance receipt passes         ->       1000
+;   missing lifecycle phase refuses                                 ->      10000
+;   untraced component refuses                                      ->     100000
+;   unsafe ingestion refuses                                        ->    1000000
+;   molecular benefit without molecular marker refuses              ->   10000000
+;   all-parts-not-declared refuses                                  ->  100000000
+;   universal cure claim refuses as overbroad                        -> 1000000000
+;
+; preludes: form-stdlib/core.fk form-stdlib/lifecycle-fitness-receipt.fk
+
+(do
+    (defn lfr-band-score ()
+        (do
+            (let materials (lfr-phase "materials" "trace:ore/polymer/biomass-origin" 1 1 1))
+            (let manufacturing (lfr-phase "manufacturing" "trace:factory-energy-water-waste" 1 1 1))
+            (let transport (lfr-phase "transport" "trace:route-packaging-emissions" 1 1 1))
+            (let energy (lfr-phase "energy-production" "trace:grid-solar-storage-mix" 1 1 1))
+            (let operation (lfr-phase "operation" "trace:use-phase-exposure-and-output" 1 1 1))
+            (let maintenance (lfr-phase "maintenance" "trace:repair-calibration-consumables" 1 1 1))
+            (let end-of-life (lfr-phase "end-of-life" "trace:reuse-recycle-safe-disposal" 1 1 1))
+            (let bad-energy (lfr-phase "energy-production" "" 0 1 1))
+
+            (let sensor (lfr-component "sensor" "materials:sensor" "source:sensor-v1" 1 1 1 1))
+            (let actuator (lfr-component "actuator" "materials:actuator" "source:actuator-v1" 1 1 1 1))
+            (let controller (lfr-component "controller" "materials:controller" "source:controller-v1" 1 1 1 1))
+            (let battery (lfr-component "battery" "materials:battery" "source:battery-v1" 1 1 1 1))
+            (let housing (lfr-component "housing" "materials:housing" "source:housing-v1" 1 1 1 1))
+            (let untraced-battery (lfr-component "battery" "materials:battery" "" 1 1 1 1))
+            (let components (list sensor actuator controller battery housing))
+            (let bad-components (list sensor actuator controller untraced-battery housing))
+
+            (let lifecycle (lfr-lifecycle materials manufacturing transport energy operation maintenance end-of-life components 1))
+            (let bad-phase-lifecycle (lfr-lifecycle materials manufacturing transport bad-energy operation maintenance end-of-life components 1))
+            (let bad-component-lifecycle (lfr-lifecycle materials manufacturing transport energy operation maintenance end-of-life bad-components 1))
+            (let undeclared-lifecycle (lfr-lifecycle materials manufacturing transport energy operation maintenance end-of-life components 0))
+
+            (let ingestion (lfr-ingestion "ingredients:complete-with-source" 1 1 1 1 "population:declared" "stop:on-adverse-signal"))
+            (let unsafe-ingestion (lfr-ingestion "ingredients:complete-with-source" 1 0 1 1 "population:declared" "stop:on-adverse-signal"))
+            (let molecular-benefit (lfr-human-benefit "molecular" "reduced-inflammatory-marker" "evidence:pre-post-independent" "marker:il6-pathway" 1 1 1 1 1 "exposure:session-bounds" 1 1))
+            (let missing-marker-benefit (lfr-human-benefit "molecular" "reduced-inflammatory-marker" "evidence:pre-post-independent" "" 1 1 1 1 1 "exposure:session-bounds" 1 1))
+            (let substance (lfr-substance-effect "substance:candidate-a" "organism:human-adult" "condition:declared" "mechanism:binding-metabolism-clearance" "marker:cellular-redox" 1 1 1 1 1 1 1))
+
+            (let machine-receipt (lfr-system-receipt "robot" lifecycle (empty) (empty) (empty) "machine-whole-lifecycle"))
+            (let nutrition-receipt (lfr-system-receipt "nutrition" lifecycle ingestion (empty) (empty) "ingestible-nutrition-whole-lifecycle"))
+            (let robot-benefit-receipt (lfr-system-receipt "robot" lifecycle (empty) molecular-benefit (empty) "robot-molecular-human-benefit"))
+            (let substance-receipt (lfr-system-receipt "substance" lifecycle (empty) (empty) substance "condition-specific-therapeutic-substance"))
+            (let bad-phase-receipt (lfr-system-receipt "robot" bad-phase-lifecycle (empty) (empty) (empty) "machine-whole-lifecycle"))
+            (let bad-component-receipt (lfr-system-receipt "robot" bad-component-lifecycle (empty) (empty) (empty) "machine-whole-lifecycle"))
+            (let unsafe-ingestion-receipt (lfr-system-receipt "nutrition" lifecycle unsafe-ingestion (empty) (empty) "ingestible-nutrition-whole-lifecycle"))
+            (let missing-marker-receipt (lfr-system-receipt "robot" lifecycle (empty) missing-marker-benefit (empty) "robot-molecular-human-benefit"))
+            (let undeclared-receipt (lfr-system-receipt "robot" undeclared-lifecycle (empty) (empty) (empty) "machine-whole-lifecycle"))
+            (let universal-cure-receipt (lfr-system-receipt "substance" lifecycle (empty) (empty) substance "universal-cure-any-condition"))
+
+            (sum (list
+                (lfr-bool-score (lfr-system-fit? machine-receipt) 1)
+                (lfr-bool-score (lfr-system-fit? nutrition-receipt) 10)
+                (lfr-bool-score (lfr-system-fit? robot-benefit-receipt) 100)
+                (lfr-bool-score (lfr-system-fit? substance-receipt) 1000)
+                (lfr-bool-score (and (not (lfr-system-fit? bad-phase-receipt)) (str_eq (lfr-refusal-reason bad-phase-receipt) "lifecycle-phase-proof-missing")) 10000)
+                (lfr-bool-score (and (not (lfr-system-fit? bad-component-receipt)) (str_eq (lfr-refusal-reason bad-component-receipt) "component-trace-missing")) 100000)
+                (lfr-bool-score (and (not (lfr-system-fit? unsafe-ingestion-receipt)) (str_eq (lfr-refusal-reason unsafe-ingestion-receipt) "ingestion-proof-missing")) 1000000)
+                (lfr-bool-score (and (not (lfr-system-fit? missing-marker-receipt)) (str_eq (lfr-refusal-reason missing-marker-receipt) "molecular-benefit-proof-missing")) 10000000)
+                (lfr-bool-score (and (not (lfr-system-fit? undeclared-receipt)) (str_eq (lfr-refusal-reason undeclared-receipt) "all-parts-not-declared")) 100000000)
+                (lfr-bool-score (and (not (lfr-system-fit? universal-cure-receipt)) (str_eq (lfr-refusal-reason universal-cure-receipt) "overbroad-cure-claim")) 1000000000)))))
+
+    (lfr-band-score))
