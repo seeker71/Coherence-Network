@@ -59,6 +59,7 @@ fn crash_trace_context() -> &'static Mutex<CrashTraceContext> {
 
 thread_local! {
     static THREAD_CRASH_TRACE_CONTEXT: RefCell<Option<CrashTraceContext>> = const { RefCell::new(None) };
+    static THREAD_LAST_CRASH_TRACE_PATH: RefCell<Option<PathBuf>> = const { RefCell::new(None) };
 }
 
 fn source_excerpt_head(src: &str, max_chars: usize) -> String {
@@ -116,6 +117,22 @@ fn current_crash_trace_context() -> CrashTraceContext {
         .lock()
         .map(|guard| guard.clone())
         .unwrap_or_default()
+}
+
+fn clear_thread_last_crash_trace_path() {
+    THREAD_LAST_CRASH_TRACE_PATH.with(|slot| {
+        *slot.borrow_mut() = None;
+    });
+}
+
+fn set_thread_last_crash_trace_path(path: &Path) {
+    THREAD_LAST_CRASH_TRACE_PATH.with(|slot| {
+        *slot.borrow_mut() = Some(path.to_path_buf());
+    });
+}
+
+fn take_thread_last_crash_trace_path() -> Option<PathBuf> {
+    THREAD_LAST_CRASH_TRACE_PATH.with(|slot| slot.borrow_mut().take())
 }
 
 fn diagnose_kernel_panic(message: &str) -> CrashDiagnosis {
@@ -222,10 +239,46 @@ fn write_kernel_crash_trace(message: &str, location: Option<String>) -> Option<P
         }
         let path = dir.join(&filename);
         if fs::write(&path, &payload).is_ok() {
+            set_thread_last_crash_trace_path(&path);
             return Some(path);
         }
     }
     None
+}
+
+fn http_header_safe(value: &str) -> String {
+    value.replace(['\r', '\n'], " ")
+}
+
+fn kernel_fatal_http_body(
+    message: &str,
+    diagnosis: &CrashDiagnosis,
+    trace_path: Option<&Path>,
+) -> String {
+    let trace = trace_path
+        .map(|p| p.display().to_string())
+        .unwrap_or_else(|| "trace unavailable".to_string());
+    format!(
+        "fatal[{}]: {}\nlikely_root_cause: {}\navoidance: {}\ntrace: {}\n",
+        diagnosis.fatal_kind, message, diagnosis.likely_root_cause, diagnosis.avoidance, trace
+    )
+}
+
+fn kernel_fatal_http_headers(
+    diagnosis: &CrashDiagnosis,
+    trace_path: Option<&Path>,
+) -> Vec<(String, String)> {
+    let mut headers = vec![(
+        "X-Form-Fatal-Kind".to_string(),
+        diagnosis.fatal_kind.to_string(),
+    )];
+    if let Some(path) = trace_path {
+        headers.push((
+            "X-Form-Crash-Trace".to_string(),
+            http_header_safe(&path.display().to_string()),
+        ));
+    }
+    headers
 }
 
 // --- Socket natives — L1 physical layer (TCP) ---------------------------
@@ -8860,7 +8913,33 @@ fn handle_request(
             );
             return false; // close — the oversized request was fully read; drop it
         }
-        let result = walk(k, arena, cl.body, call_frame);
+        clear_thread_last_crash_trace_path();
+        let result = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            walk(k, arena, cl.body, call_frame)
+        })) {
+            Ok(value) => value,
+            Err(payload) => {
+                let msg = panic_payload_message(payload.as_ref());
+                let diagnosis = diagnose_kernel_panic(&msg);
+                let trace_path = take_thread_last_crash_trace_path()
+                    .or_else(|| write_kernel_crash_trace(&msg, None));
+                let body = kernel_fatal_http_body(&msg, &diagnosis, trace_path.as_deref());
+                let headers = kernel_fatal_http_headers(&diagnosis, trace_path.as_deref());
+                record_router_metrics(router_metrics, &path, "native-kernel-error");
+                let _ = stream.write_all(
+                    http_response(
+                        "500 Internal Server Error",
+                        &body,
+                        "native-kernel-error",
+                        false,
+                        "",
+                        &headers,
+                    )
+                    .as_bytes(),
+                );
+                return false;
+            }
+        };
         router = "native-kernel";
         // A native handler can return the first-class KernelHTTPResponse cell:
         //   kh-response(status, list(kh-header(name, value)...), body)
@@ -13792,6 +13871,24 @@ mod crash_diagnostics_tests {
             .contains("non-string"));
         set_thread_crash_trace_context(CrashTraceContext::default());
         let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn fatal_http_response_names_kind_trace_and_avoidance() {
+        let diagnosis = diagnose_kernel_panic("as_str: Null");
+        let trace_path = Path::new(".cache/form-kernel-rust/crash-test.json");
+        let body = kernel_fatal_http_body("as_str: Null", &diagnosis, Some(trace_path));
+        assert!(body.contains("fatal[type_contract_violation]: as_str: Null"));
+        assert!(body.contains("likely_root_cause:"));
+        assert!(body.contains("avoidance:"));
+        assert!(body.contains("trace: .cache/form-kernel-rust/crash-test.json"));
+        let headers = kernel_fatal_http_headers(&diagnosis, Some(trace_path));
+        assert!(headers
+            .iter()
+            .any(|(k, v)| { k == "X-Form-Fatal-Kind" && v == "type_contract_violation" }));
+        assert!(headers.iter().any(|(k, v)| {
+            k == "X-Form-Crash-Trace" && v == ".cache/form-kernel-rust/crash-test.json"
+        }));
     }
 }
 
