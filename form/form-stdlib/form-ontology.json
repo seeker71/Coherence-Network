@@ -218,7 +218,19 @@
         {"name": "OPTIONAL",     "inst": 620},
         {"name": "TEMPLATE",     "inst": 621},
         {"name": "TERNARY",      "inst": 622},
-        {"name": "IF-ELSE",      "inst": 623}
+        {"name": "IF-ELSE",      "inst": 623},
+        {"name": "EVAL-INT",     "inst": 624, "note": "lift/eval integer leaf"},
+        {"name": "EVAL-IDENT",   "inst": 625, "note": "lift/eval identifier lookup"},
+        {"name": "EVAL-BINOP",   "inst": 626, "note": "lift/eval binary op with op-string child"},
+        {"name": "EVAL-COMPARE", "inst": 627, "note": "lift/eval compare with op-string child"},
+        {"name": "EVAL-MODULE",  "inst": 628, "note": "lift/eval module statement list"},
+        {"name": "EVAL-FN",      "inst": 629, "note": "lift/eval function closure"},
+        {"name": "EVAL-CALL",    "inst": 630, "note": "lift/eval call expression"},
+        {"name": "EVAL-LAMBDA",  "inst": 631, "note": "lift/eval arrow/lambda closure"},
+        {"name": "EVAL-IF",      "inst": 632, "note": "lift/eval ternary/if expression"},
+        {"name": "EVAL-RETURN",  "inst": 633, "note": "lift/eval return value"},
+        {"name": "EVAL-ASSIGN",  "inst": 634, "note": "lift/eval const/let binding"},
+        {"name": "EVAL-PASS",    "inst": 635, "note": "honest unimplemented lift site"}
       ]
     },
     "rust.bmf": {

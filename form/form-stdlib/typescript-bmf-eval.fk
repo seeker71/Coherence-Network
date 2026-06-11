@@ -1,0 +1,202 @@
+; form-stdlib/typescript-bmf-eval.fk
+;
+; First breath — closure interpreter for TS-BMF-EVAL-* recipes lifted by
+; typescript-bmf-lift.fk. Enough surface for parity-demo expressions:
+; int/ident/binop/compare/if/return/assign/fn/call/lambda/module.
+;
+; preludes: core.fk json.fk cache.fk form-ontology-loader.fk engine.fk
+;           compiler.fk grammars/typescript-bmf.fk
+
+(do
+    (defn ts-env-empty () (empty))
+
+    (defn ts-env-extend (env name value)
+        (cons (list name value) env))
+
+    (defn ts-env-lookup-loop (env name)
+        (if (nil? env)
+            (do (trace "ts-env-lookup: undefined name" name) (head (empty)))
+            (if (str_eq (head (head env)) name)
+                (head (tail (head env)))
+                (ts-env-lookup-loop (tail env) name))))
+
+    (defn ts-env-lookup (env name) (ts-env-lookup-loop env name))
+
+    (defn ts-closure (self-name param-names body env)
+        (list "ts-closure" self-name param-names body env))
+
+    (defn ts-closure? (v)
+        (and (not (nil? v))
+             (and (eq (len v) 5)
+                  (str_eq (head v) "ts-closure"))))
+
+    (defn ts-closure-name   (c) (nth c 1))
+    (defn ts-closure-params (c) (nth c 2))
+    (defn ts-closure-body   (c) (nth c 3))
+    (defn ts-closure-env    (c) (nth c 4))
+
+    (defn ts-binop-apply (op left right)
+        (if (str_eq op "+") (_plus left right)
+        (if (str_eq op "-") (sub left right)
+        (if (str_eq op "*") (mul left right)
+        (if (str_eq op "/") (div left right)
+        (if (str_eq op "%") (mod left right)
+            (do (trace "ts-binop: unsupported op" op) (head (empty)))))))))
+
+    (defn ts-compare-apply (op left right)
+        (if (str_eq op "==") (if (eq left right) 1 0)
+        (if (str_eq op "===") (if (eq left right) 1 0)
+        (if (str_eq op "!=") (if (eq left right) 0 1)
+        (if (str_eq op "!==") (if (eq left right) 0 1)
+        (if (str_eq op "<") (if (lt left right) 1 0)
+        (if (str_eq op "<=") (if (le left right) 1 0)
+        (if (str_eq op ">") (if (gt left right) 1 0)
+        (if (str_eq op ">=") (if (ge left right) 1 0)
+            (do (trace "ts-compare: unsupported op" op) (head (empty))))))))))))
+
+    (defn ts-eval-args-loop (recipes env acc)
+        (if (nil? recipes) (reverse acc)
+            (ts-eval-args-loop (tail recipes) env
+                (cons (ts-eval (head recipes) env) acc))))
+
+    (defn ts-eval-args (recipes env)
+        (ts-eval-args-loop recipes env (empty)))
+
+    (defn ts-bind-params-loop (pms values env)
+        (if (nil? pms) env
+            (ts-bind-params-loop (tail pms) (tail values)
+                (ts-env-extend env (head pms) (head values)))))
+
+    (defn ts-bind-params (pms values env)
+        (ts-bind-params-loop pms values env))
+
+    (defn ts-collect-params-loop (leaves n acc)
+        (if (eq n 0) (reverse acc)
+            (ts-collect-params-loop (tail leaves) (sub n 1)
+                (cons (node_value (head leaves)) acc))))
+
+    (defn ts-take (lst n)
+        (if (eq n 0) (empty)
+            (cons (head lst) (ts-take (tail lst) (sub n 1)))))
+
+    (defn ts-last (lst)
+        (if (nil? (tail lst)) (head lst)
+            (ts-last (tail lst))))
+
+    (defn ts-eval-module-loop (stmts env last)
+        (if (nil? stmts) last
+            (do
+                (let r (ts-eval-statement (head stmts) env))
+                (ts-eval-module-loop (tail stmts) (ts-stmt-env r) (ts-stmt-value r)))))
+
+    (defn ts-stmt-result (value env) (list value env 0))
+    (defn ts-stmt-value (r) (head r))
+    (defn ts-stmt-env (r) (head (tail r)))
+
+    (defn ts-eval-statement (recipe env)
+        (do
+            (let cat (node_category recipe))
+            (let kids (node_children recipe))
+            (if (node_eq cat TS-BMF-EVAL-ASSIGN)
+                (do
+                    (let name (node_value (nth kids 0)))
+                    (let val (ts-eval (nth kids 1) env))
+                    (ts-stmt-result val (ts-env-extend env name val)))
+            (if (node_eq cat TS-BMF-EVAL-FN)
+                (do
+                    (let n (len kids))
+                    (let body (ts-last kids))
+                    (let name (node_value (head kids)))
+                    (let param-leaves (ts-take (tail kids) (sub n 2)))
+                    (let pms (ts-collect-params-loop param-leaves (len param-leaves) (empty)))
+                    (let fn (ts-closure name pms body env))
+                    (ts-stmt-result fn (ts-env-extend env name fn)))
+                (ts-stmt-result (ts-eval recipe env) env)))))
+
+    (defn ts-eval-math (cat kids env)
+        (do
+            (let lhs (ts-eval (nth kids 0) env))
+            (let rhs (ts-eval (nth kids 1) env))
+            (let inst (node_inst cat))
+            (if (eq inst 1) (_plus lhs rhs)
+            (if (eq inst 2) (sub lhs rhs)
+            (if (eq inst 3) (mul lhs rhs)
+            (if (eq inst 4) (div lhs rhs)
+            (if (eq inst 5) (mod lhs rhs)
+                (do (trace "ts-eval MATH: unknown inst" inst) (head (empty))))))))))
+
+    (defn ts-eval-compare (cat kids env)
+        (do
+            (let lhs (ts-eval (nth kids 0) env))
+            (let rhs (ts-eval (nth kids 1) env))
+            (let inst (node_inst cat))
+            (if (eq inst 1) (if (eq lhs rhs) 1 0)
+            (if (eq inst 2) (if (eq lhs rhs) 0 1)
+            (if (eq inst 3) (if (lt lhs rhs) 1 0)
+            (if (eq inst 4) (if (le lhs rhs) 1 0)
+            (if (eq inst 5) (if (gt lhs rhs) 1 0)
+            (if (eq inst 6) (if (ge lhs rhs) 1 0)
+                (do (trace "ts-eval COMPARE: unknown inst" inst) (head (empty)))))))))))
+
+    (defn ts-eval-call (kids env)
+        (do
+            (let callee-name (node_value (head kids)))
+            (let arg-values (ts-eval-args (tail kids) env))
+            (let callee (ts-env-lookup env callee-name))
+            (let captured (ts-env-extend (ts-closure-env callee)
+                                         (ts-closure-name callee) callee))
+            (let call-env (ts-bind-params (ts-closure-params callee) arg-values captured))
+            (ts-eval (ts-closure-body callee) call-env)))
+
+    (defn ts-eval-lambda (kids env)
+        (do
+            (let n (len kids))
+            (let body (ts-last kids))
+            (let param-leaves (ts-take kids (sub n 1)))
+            (let pms (ts-collect-params-loop param-leaves (len param-leaves) (empty)))
+            (ts-closure "" pms body env)))
+
+    (defn ts-eval (recipe env)
+        (do
+            (let cat (node_category recipe))
+            (let kids (node_children recipe))
+            (if (node_eq cat TS-BMF-EVAL-INT)
+                (node_value (head kids))
+            (if (node_eq cat TS-BMF-EVAL-IDENT)
+                (ts-env-lookup env (node_value (head kids)))
+            (if (and (eq (node_pkg cat) 1)
+                     (and (eq (node_level cat) 2) (eq (node_type cat) 12)))
+                (ts-eval-math cat kids env)
+            (if (and (eq (node_pkg cat) 1)
+                     (and (eq (node_level cat) 2) (eq (node_type cat) 13)))
+                (ts-eval-compare cat kids env)
+            (if (node_eq cat TS-BMF-EVAL-BINOP)
+                (ts-binop-apply (node_value (nth kids 1))
+                    (ts-eval (nth kids 0) env)
+                    (ts-eval (nth kids 2) env))
+            (if (node_eq cat TS-BMF-EVAL-COMPARE)
+                (ts-compare-apply (node_value (nth kids 1))
+                    (ts-eval (nth kids 0) env)
+                    (ts-eval (nth kids 2) env))
+            (if (node_eq cat TS-BMF-EVAL-RETURN)
+                (ts-eval (head kids) env)
+            (if (node_eq cat TS-BMF-EVAL-IF)
+                (do
+                    (let cond (ts-eval (nth kids 0) env))
+                    (if (eq cond 0)
+                        (ts-eval (nth kids 2) env)
+                        (ts-eval (nth kids 1) env)))
+            (if (node_eq cat TS-BMF-EVAL-CALL)
+                (ts-eval-call kids env)
+            (if (node_eq cat TS-BMF-EVAL-LAMBDA)
+                (ts-eval-lambda kids env)
+            (if (node_eq cat TS-BMF-EVAL-MODULE)
+                (ts-eval-module-loop kids env 0)
+                (do
+                    (trace "ts-eval: unimplemented category" cat)
+                    (head (empty))))))))))))))))
+
+    (defn ts-run (module-recipe)
+        (ts-eval module-recipe (ts-env-empty)))
+
+    0)

@@ -668,4 +668,44 @@
                      typescript-bmf-native-section
                      typescript-bmf-rules))
 
+    ;; --- source scanner (shared fsc cursor; needs source-compiler.fk) ---
+
+    (let typescript-source-keywords
+        (list "import" "from" "export" "const" "let" "var" "function"
+              "return" "class" "interface" "type" "await" "if" "else"
+              "for" "of" "enum" "true" "false" "null" "undefined"))
+
+    ;; 3-char TS operators sit ahead of the shared 2-char table —
+    ;; fsc-source-match-op takes the first listed prefix match. Held as a
+    ;; 0-arg defn so loading this grammar stays free of source-compiler.fk
+    ;; until the scanner actually runs.
+    (defn typescript-source-ops ()
+        (cons "===" (cons "!==" fsc-common-op2)))
+
+    (defn typescript-source-scan-next (cursor)
+        (fsc-source-scan-next-dialect cursor
+            (fsc-source-dialect typescript-source-keywords
+                                "typescript-keyword"
+                                "typescript-name"
+                                "typescript-int"
+                                "typescript-string"
+                                "typescript-op"
+                                "typescript-eof"
+                                (typescript-source-ops))))
+
+    (defn typescript-source-scan-text-loop (cursor acc)
+        (do
+            (let result (typescript-source-scan-next cursor))
+            (let object (fsc-scan-result-object result))
+            (if (str_eq (bmf-object-kind object) "typescript-eof")
+                (reverse-list acc)
+                (typescript-source-scan-text-loop
+                    (fsc-scan-result-cursor result)
+                    (cons object acc)))))
+
+    (defn typescript-source-scan-text (source)
+        (typescript-source-scan-text-loop
+            (fsc-source-cursor source 0 1 0)
+            (empty)))
+
     0)
