@@ -1192,6 +1192,7 @@ check_promoted_bml_read_routes_native() {
     "reaction-summary|/api/reactions/concept/lc-attuned-spaces/summary|api_reaction_concept_summary"
     "reaction-threads|/api/reactions/concept/lc-attuned-spaces/threads|api_reaction_concept_threads"
     "concept-voices|/api/concepts/lc-attuned-spaces/voices|api_concept_voices"
+    "lenses|/api/lenses|api_lenses"
     "sensings|/api/sensings?limit=2|api_sensings"
     "translations-page-flow|/api/translations/page/flow|api_translations_entity"
   )
@@ -1238,6 +1239,26 @@ check_promoted_bml_read_routes_native() {
       head -c 250 "$body_file" || true
       echo
       return 1
+    fi
+    if [[ "$name" == "lenses" ]]; then
+      if command -v jq >/dev/null 2>&1; then
+        if ! jq -e '.total == 10 and (.lenses | type == "array") and (.lenses | length == 10) and (.lenses[0].lens_id | type == "string") and (.lenses[0].archetype_axes | type == "object")' "$body_file" >/dev/null; then
+          echo "FAIL: lenses body no longer matches built-in lens catalog contract"
+          jq '{total, first: (.lenses[0] // null)}' "$body_file" 2>/dev/null || head -c 500 "$body_file"
+          echo
+          return 1
+        fi
+      else
+        if ! grep -q '"lenses":\[' "$body_file" \
+          || ! grep -q '"total":10' "$body_file" \
+          || ! grep -q '"lens_id":"artistic"' "$body_file" \
+          || ! grep -q '"archetype_axes":{' "$body_file"; then
+          echo "FAIL: lenses body no longer matches built-in lens catalog contract"
+          head -c 500 "$body_file" || true
+          echo
+          return 1
+        fi
+      fi
     fi
   done
 

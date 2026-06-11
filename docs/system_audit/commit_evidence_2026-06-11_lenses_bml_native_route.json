@@ -1,0 +1,110 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "codex/next-tight-spot-20260611",
+  "commit_scope": "Promote GET /api/lenses into the BML native front door while preserving Python authority for lens detail and mutation paths.",
+  "files_owned": [
+    "deploy/front-door/api.bml",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/verify_web_api_deploy.sh",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "docs/system_audit/commit_evidence_2026-06-11_lenses_bml_native_route.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/native_route_goal_loop.py /goal --source web_api --seconds 86400",
+      "python3 scripts/runtime_surface_report.py --json",
+      "bash scripts/test_hostinger_deploy_form_paths.sh",
+      "bash -n deploy/hostinger/auto-deploy.sh",
+      "bash -n scripts/verify_web_api_deploy.sh",
+      "bash -n scripts/test_hostinger_deploy_form_paths.sh",
+      "cargo build --release --bin form-kernel-rust",
+      "./form/form-kernel-rust/target/release/form-kernel-rust serve --host 127.0.0.1 --port 18080 --routes deploy/front-door/api.bml --stdlib form/form-stdlib --upstream http://127.0.0.1:9",
+      "curl -sS -D /tmp/lenses.headers -o /tmp/lenses.body -w '%{http_code}\\n' --max-time 5 http://127.0.0.1:18080/api/lenses",
+      "jq -e '.total == 10 and (.lenses | length == 10) and .lenses[0].lens_id == \"artistic\" and all(.lenses[]; (.lens_id | type == \"string\") and (.name | type == \"string\") and (.description | type == \"string\") and (.archetype_axes | type == \"object\") and .is_builtin == true and .created_at == \"2026-01-01T00:00:00Z\")' /tmp/lenses.body",
+      "curl -sS -D /tmp/lens-detail.headers -o /tmp/lens-detail.body -w '%{http_code}\\n' --max-time 5 http://127.0.0.1:18080/api/lenses/scientific"
+    ],
+    "notes": "Before this slice, runtime_surface_report showed 86 kernel-first-capable routes and /goal identified GET /api/lenses as the next BML route-catalog candidate. After the BML route was added, runtime_surface_report shows 87 capable routes including /api/lenses. The local Rust kernel compiled the BML manifest and advertised 54 native routes, with GET /api/lenses -> native. The local /api/lenses probe returned 200 with X-Form-Router:native-kernel, X-Form-Handler:api_lenses, and X-Form-Python-Authority:false. GET /api/lenses/scientific still selected fanout-python against the dummy upstream, preserving Python authority for detail reads."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR creation, hosted checks, merge, and post-merge deploy verification."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "A concurrent main deploy aligned public API and web to a283c12c2000d434f3eb7c08e8f2d0adf6206f89 and pulse returned breathing. This branch has not yet been deployed; post-merge verification must show public GET /api/lenses returns native BML proof headers and total=10."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local runtime proof passed; hosted CI, merge, production deploy, and public /api/lenses native proof remain pending."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "GET /api/lenses should be served by the BML native front door with the built-in ten-lens catalog, while GET /api/lenses/{lens_id} and POST /api/lenses remain on the Python/fanout authority path.",
+    "proof": "Local kernel serving proof returned native headers and a ten-item lens catalog for /api/lenses; /api/lenses/scientific returned fanout-python headers against a dummy upstream.",
+    "public_endpoints": [
+      "GET /api/lenses"
+    ],
+    "test_flows": [
+      "Static deploy path test fails if the /api/lenses Traefik label, deploy canary, or BML native proof handler is removed.",
+      "Hostinger deploy canary probes /api/lenses inside kernel-router-bml-front-door and requires X-Form-Handler: api_lenses.",
+      "Public deploy verifier checks /api/lenses for native proof headers and the ten-item built-in lens body contract."
+    ]
+  },
+  "idea_ids": [
+    "kernel-native-route-goal",
+    "form-native-runtime"
+  ],
+  "spec_ids": [
+    "native-route-goal-loop",
+    "front-door-bml-route-catalog",
+    "spec-181"
+  ],
+  "task_ids": [
+    "lenses-bml-native-route-2026-06-11"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-prioritization"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "investigation",
+        "implementation",
+        "validation",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "python3 scripts/runtime_surface_report.py --json reported kernel_first_capable_routes=87 and included /api/lenses.",
+    "Local Rust serve compiled deploy/front-door/api.bml and advertised GET /api/lenses -> native.",
+    "Local GET /api/lenses returned X-Form-Router:native-kernel, X-Form-Handler:api_lenses, X-Form-Python-Authority:false, total=10.",
+    "Local GET /api/lenses/scientific returned fanout-python against a dummy upstream, showing the exact GET route did not swallow detail reads.",
+    "bash scripts/test_hostinger_deploy_form_paths.sh returned PASS."
+  ],
+  "change_files": [
+    "deploy/front-door/api.bml",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/verify_web_api_deploy.sh",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature"
+}
