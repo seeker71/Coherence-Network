@@ -13,26 +13,38 @@
 ; ARGS (m4e4): an N-arg call right-folds its arguments into a CONS chain on
 ; the arena, the callee's params bind as NTH(ARG, i) by position — a pure
 ; flattening rule over the existing op set, no new walker tags. Single-param
-; calls stay direct ARG (no allocation); zero-param packs EMPTY. Scope held
-; honestly: PURE bands — nonnegative integer literals, defn bodies that see
-; only their params, top-level lets, one verdict expression. eq/and lowering
-; re-evaluates pure operands. Packed args ride the emitted walker's VALUE
-; STACK (fourth-walker-emit.fk: ARG reads fk_vs[fp], the melt roots and
+; calls stay direct ARG (no allocation); zero-param packs EMPTY. Nested
+; (do ...) is an EXPRESSION (m4e5): lets bind env for the rest of the do,
+; the last expression is the value — let-in-defn and do-in-do flatten by
+; the same structural recursion as the top level. Integer literals may be
+; negative; true/false flatten as 1/0; div/mod and the figure-ops family
+; (band/bor/bxor/shl_u32/shr_u32/rotr_u32/add_u32/bnot_u32/mul, tags 34..42)
+; are vocabulary rows — the checksum bands' unlock. Scope held honestly:
+; PURE bands — defn bodies that see only their params + do-lets, top-level
+; lets, one verdict expression. eq/and lowering and let-inlining re-evaluate
+; pure operands. Packed args ride the emitted walker's VALUE STACK
+; (fourth-walker-emit.fk: ARG reads fk_vs[fp], the melt roots and
 ; relocates every stack slot), so band-scale allocation melts safely
 ; mid-call — feature-vector's crossing is the witness (audit section 24).
 ; The str_* family rides the walker string-pool lane (tags 24..28): a
 ; pre-pass (flt-scan) interns every distinct "literal" into the program's
 ; pool — same bytes, same slot — and a literal lowers to SLIT carrying its
 ; pool index; str_eq/str_len/str_concat are table rows, ord/not are
-; lowerings. node_*, floats, substring/int_to_str, and nested do are the
-; remaining family-by-family climb.
+; lowerings. node_*, floats, and substring/int_to_str are the remaining
+; family-by-family climb.
 
 ; ── walker-carried ops as DATA rows (name arity tag) — one generic engine ──
+; (div/mod ride the m4d tags 10/11; the figure-ops family rides 34..42 —
+;  the bitwise-u32 + mul vocabulary the checksum bands need)
 (defn flt-ops ()
     (list (list "add" 2 3) (list "sub" 2 4) (list "le" 2 5)
           (list "cons" 2 19) (list "nth" 2 23)
           (list "head" 1 20) (list "tail" 1 21) (list "len" 1 22)
-          (list "str_len" 1 25) (list "str_eq" 2 26) (list "str_concat" 2 27)))
+          (list "str_len" 1 25) (list "str_eq" 2 26) (list "str_concat" 2 27)
+          (list "div" 2 10) (list "mod" 2 11)
+          (list "band" 2 34) (list "bor" 2 35) (list "bxor" 2 36)
+          (list "shl_u32" 2 37) (list "shr_u32" 2 38) (list "rotr_u32" 2 39)
+          (list "add_u32" 2 40) (list "bnot_u32" 1 41) (list "mul" 2 42)))
 
 (defn flt-assoc (name rows)
     (if (eq (len rows) 0) (list)
@@ -67,7 +79,12 @@
     (if (eq (fp-at s pos) 40) (flt-form s (fp-skip s (add pos 1)) fns env)
         (if (eq (fp-at s pos) 34) (flt-str s (add pos 1) env)
             (if (fp-isdigit (fp-at s pos)) (fp-num (fp-digits s pos 0))
-                (flt-var s pos env)))))
+                (if (and (eq (fp-at s pos) 45) (fp-isdigit (fp-at s (add pos 1))))
+                    (flt-neg (fp-digits s (add pos 1) 0))
+                    (flt-var s pos env))))))
+
+; a '-' immediately before digits is a negative integer literal
+(defn flt-neg (ve) (list (fk-lit (sub 0 (nth ve 0))) (nth ve 1)))
 
 ; ── string literals ride the pool: the pre-pass (flt-scan) interned every
 ;    distinct literal, so a "..." at the cursor lowers to SLIT carrying its
@@ -97,18 +114,45 @@
     (if (str_eq op "if") (flt-if s pos fns env)
     (if (str_eq op "list") (flt-list s pos fns env)
     (if (str_eq op "empty") (list (fk-empty) (fp-close s pos))
+    (if (str_eq op "do") (flt-do s pos fns env (fk-lit 0))
     (if (str_eq op "gt") (flt-low 1 s pos fns env)
     (if (str_eq op "ge") (flt-low 2 s pos fns env)
     (if (str_eq op "eq") (flt-low 3 s pos fns env)
     (if (str_eq op "and") (flt-low 4 s pos fns env)
     (if (str_eq op "ord") (flt-low1 1 s pos fns env)
     (if (str_eq op "not") (flt-low1 2 s pos fns env)
-        (flt-op op s pos fns env)))))))))))
+        (flt-op op s pos fns env))))))))))))
 
 ; one operand, then the unary lowering picked by selector k
 (defn flt-low1 (k s pos fns env) (flt-low1-a k s (flt-expr s pos fns env)))
 (defn flt-low1-a (k s ae) (list (flt-low1-mk k (nth ae 0)) (fp-close s (nth ae 1))))
 (defn flt-low1-mk (k a) (if (eq k 1) (flt-ord a) (flt-not a)))
+
+; ── nested (do ...) as an EXPRESSION (let-in-defn, do-in-do) ──────────────
+; The same structural recursion as the top-level do-walker, scoped to a
+; value position: each (let name v) binds its pure value cell into env for
+; the REST of the do (inlined at every use, m4e3's let discipline); the
+; last expression is the do's value. Nesting falls out of flt-expr — a
+; child that is itself (do ...) re-enters here with its own env tail.
+(defn flt-do (s pos fns env val) (flt-do2 s (fp-skip s pos) fns env val))
+(defn flt-do2 (s pos fns env val)
+    (if (ge pos (fp-len s)) (list val pos)
+    (if (eq (fp-at s pos) 41) (list val (add pos 1))
+    (if (str_eq (flt-peek s pos) "let") (flt-do-let s pos fns env val)
+        (flt-do-e s (flt-expr s pos fns env) fns env)))))
+(defn flt-do-e (s ee fns env) (flt-do2 s (fp-skip s (nth ee 1)) fns env (nth ee 0)))
+
+; (let name value) inside a do — value parses under the CURRENT env, then
+; binds for the remaining items (shadowing outer bindings by name)
+(defn flt-do-let (s pos fns env val)
+    (flt-do-let-n s (fp-skip s (fp-sym-end s (fp-skip s (add pos 1)))) fns env val))
+(defn flt-do-let-n (s pos fns env val)
+    (flt-do-let-v (flt-word s pos) s (fp-sym-end s pos) fns env val))
+(defn flt-do-let-v (name s pos fns env val)
+    (flt-do-let-done name s (flt-expr s pos fns env) fns env val))
+(defn flt-do-let-done (name s ve fns env val)
+    (flt-do2 s (fp-skip s (fp-close s (nth ve 1))) fns
+             (cons (list name (nth ve 0)) env) val))
 
 ; two operands, then the lowering picked by selector k (lowerings are rules,
 ; not tag rows — they BUILD shapes instead of naming one)

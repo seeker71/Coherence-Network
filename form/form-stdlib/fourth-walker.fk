@@ -91,7 +91,35 @@
                                           (fkm-walk fns (ms-child (fk-body node) 1) arg))
     (if (eq (fk-tag node) 28) (ord (char_at (fkm-walk fns (ms-child (fk-body node) 0) arg)
                                             (fkm-walk fns (ms-child (fk-body node) 1) arg)))
-        0))))))))))))))))))))
+        (fkm-walk-fig fns node arg)))))))))))))))))))))
+
+; figure-ops arms (tags 10/11 + 34..42) on the RECIPE side: each arm calls the
+; walking kernel's own native (band/bor/bxor/shl_u32/shr_u32/rotr_u32/add_u32/
+; bnot_u32/mul/div/mod), so three-way parity IS the kernels' own u32 wrap
+; discipline — the emitted C mirrors these semantics bit-for-bit.
+(defn fkm-walk-fig (fns node arg)
+    (if (eq (fk-tag node) 10) (div (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                   (fkm-walk fns (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 11) (mod (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                   (fkm-walk fns (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 34) (band (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                    (fkm-walk fns (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 35) (bor (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                   (fkm-walk fns (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 36) (bxor (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                    (fkm-walk fns (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 37) (shl_u32 (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                       (fkm-walk fns (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 38) (shr_u32 (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                       (fkm-walk fns (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 39) (rotr_u32 (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                        (fkm-walk fns (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 40) (add_u32 (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                       (fkm-walk fns (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 41) (bnot_u32 (fkm-walk fns (fk-body node) arg))
+    (if (eq (fk-tag node) 42) (mul (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                   (fkm-walk fns (ms-child (fk-body node) 1) arg))
+        0))))))))))))
 
 (defn fkm-run (fns arg) (fkm-walk fns (nth fns 0) arg))
 
@@ -115,6 +143,24 @@
 ; 21 TAIL xs     — read arena tail pointer
 ; 22 LEN xs      — count arena chain length
 ; 23 NTH xs i    — read the ith arena head
+; ── figure-ops family (m4e5) — tag range 34..43 CLAIMED by the figure-ops
+; lane (the strings lane holds 24..33; 43 stays reserved). Each op is a small
+; honest arm whose semantics are the walking kernels' own natives:
+;   34 BAND a b      int64 &            35 BOR a b       int64 |
+;   36 BXOR a b      int64 ^            37 SHL_U32 a b   u32(a) << (n&31)
+;   38 SHR_U32 a b   u32(a) >> (n&31)   39 ROTR_U32 a b  u32 rotate right
+;   40 ADD_U32 a b   u32 wrap add       41 BNOT_U32 e    ~u32(e), zero-extended
+;   42 MUL a b       int64 *
+; These unlock the checksum bands (adler32/crc32) plus mul-shaped bands.
+(defn fk-band     (a b) (fk-node 34 (ms-intern a b)))
+(defn fk-bor      (a b) (fk-node 35 (ms-intern a b)))
+(defn fk-bxor     (a b) (fk-node 36 (ms-intern a b)))
+(defn fk-shl-u32  (a b) (fk-node 37 (ms-intern a b)))
+(defn fk-shr-u32  (a b) (fk-node 38 (ms-intern a b)))
+(defn fk-rotr-u32 (a b) (fk-node 39 (ms-intern a b)))
+(defn fk-add-u32  (a b) (fk-node 40 (ms-intern a b)))
+(defn fk-bnot-u32 (e)   (fk-node 41 e))
+(defn fk-mul      (a b) (fk-node 42 (ms-intern a b)))
 (defn fk-empty ()   (fk-node 18 (ms-cell 0)))
 (defn fk-cons (h t) (fk-node 19 (ms-intern h t)))
 (defn fk-head (xs)  (fk-node 20 xs))
