@@ -1,0 +1,139 @@
+; scheduler.fk — the compute organ's offer door: competing recipes OFFER, a policy-as-DATA acknowledges exactly one.
+;
+; The runnable answer to linux-as-recipes.form's scheduler row
+; ("offer-the-compute-organ-to-competing-recipes"). Linux's scheduler duty is not
+; reimplemented — it is COMPOSED from the axioms (core-axioms.form): to run a
+; cell is to OFFER it (axiom-5), so competing recipes place offers at the compute
+; organ's door; per quantum the scheduling POLICY acknowledges exactly one — or
+; nothing, the honest ack when the queue is empty or every offer is below the
+; floor. The others stay queued. Nothing mutates: a quantum returns the next
+; queue as a value (axiom-3); the queue's clock is its own latest arrival.
+;
+; The north star carried here: the POLICY IS DATA, never control flow. One
+; generic chooser engine; each policy is a row (key-field, order, floor, requeue)
+; — FIFO, round-robin, priority, and fitness-weighted differ ONLY in their data;
+; the engine never branches on a policy's name. The ORDER arm says which offer
+; field ranks and which direction wins; the FAIRNESS arm says whether the served
+; offer re-offers at the tail (round-robin = FIFO + requeue, fairness emerging
+; from the queue discipline rather than a special path).
+;
+; recognition-router.fk already CHOOSES an implementation by measured fitness;
+; its select shape (max-over-a-floor) is the (fitness, greatest-wins, floor) ROW
+; of this engine — the band proves the fitness row acknowledges exactly the
+; offer rr-route would route. An offer CARRIES its measured fitness through the
+; interface it presents (axiom-4): the policy reads the offer, never the cell.
+;
+; An offer:  (list name arrival priority fitness)
+;   name      the offering recipe's query key (unique in a queue)
+;   arrival   when it asked — a monotonic stamp (the queue's own clock)
+;   priority  static urgency, higher wins under the priority row
+;   fitness   measured health 0..100 (recognition-router's strength scale)
+; A policy:  (list name key-field least-wins floor requeue) — a pure data row.
+;
+; Kin: recognition-router.fk (the fitness-chooser this generalizes) ·
+; champion-challenger.fk (authority flips on proven competition) ·
+; host-kernel.form os-feature-coverage (scheduler = axiom-5 + sovereignty).
+;
+; Proven by: form-stdlib/tests/scheduler-band.fk (three-way at validate.sh)
+
+(do
+    ; --- an OFFER for the compute organ: the cell presents itself at the door. ---
+    (defn sched-offer (name arrival priority fitness) (list name arrival priority fitness))
+    (defn sched-offer-name     (o) (nth o 0))
+    (defn sched-offer-arrival  (o) (nth o 1))
+    (defn sched-offer-priority (o) (nth o 2))
+    (defn sched-offer-fitness  (o) (nth o 3))
+
+    ; --- a POLICY is a data row, never a code path. key-field picks WHICH offer
+    ;     field ranks (1 arrival, 2 priority, 3 fitness); least-wins picks the
+    ;     direction (1 = smallest key wins, 0 = largest); floor is fail-fast
+    ;     (an offer below it is never acknowledged); requeue is the fairness arm
+    ;     (1 = the served offer re-offers at the tail). ---
+    (defn sched-policy (name key-field least-wins floor requeue)
+        (list name key-field least-wins floor requeue))
+    (defn sched-pol-name    (p) (nth p 0))
+    (defn sched-pol-key     (p) (nth p 1))
+    (defn sched-pol-least?  (p) (nth p 2))
+    (defn sched-pol-floor   (p) (nth p 3))
+    (defn sched-pol-requeue (p) (nth p 4))
+
+    ; the four rows — each policy is nothing but data dropped into the one engine.
+    (defn sched-fifo ()         (sched-policy "fifo"        1 1 0 0))     ; earliest arrival, runs to completion
+    (defn sched-round-robin ()  (sched-policy "round-robin" 1 1 0 1))     ; earliest arrival, requeue = fair share
+    (defn sched-priority ()     (sched-policy "priority"    2 0 0 0))     ; highest static urgency
+    (defn sched-fitness (floor) (sched-policy "fitness"     3 0 floor 0)) ; highest measured fitness over a floor —
+                                                                          ; recognition-router's choosing, as a row
+
+    ; --- the ONE engine: rank by the policy's key, honor its direction + floor. ---
+    (defn sched-key (pol o) (nth o (sched-pol-key pol)))
+    (defn sched-passes? (pol o) (ge (sched-key pol o) (sched-pol-floor pol)))
+    ; strictly better under the order arm — a tie keeps the incumbent, so the
+    ; earlier-queued offer wins ties (stable, no thrash).
+    (defn sched-better? (pol a b)
+        (if (eq (sched-pol-least? pol) 1)
+            (gt (sched-key pol b) (sched-key pol a))
+            (gt (sched-key pol a) (sched-key pol b))))
+
+    ; --- ACKNOWLEDGE: exactly one offer, or () = nothing (axiom-5's honest ack)
+    ;     when the queue is empty or every offer is below the floor. The same
+    ;     max-select-over-floor loop as rr-select, keyed by the policy row. ---
+    (defn sched-ack-loop (pol q best)
+        (if (eq (len q) 0) best
+            (if (sched-passes? pol (head q))
+                (if (eq (len best) 0)
+                    (sched-ack-loop pol (tail q) (head q))
+                    (if (sched-better? pol (head q) best)
+                        (sched-ack-loop pol (tail q) (head q))
+                        (sched-ack-loop pol (tail q) best)))
+                (sched-ack-loop pol (tail q) best))))
+    (defn sched-ack (pol q) (sched-ack-loop pol q (empty)))
+
+    ; --- the queue: place at the tail (the asking); the others stay queued. ---
+    (defn sched-place (q o)
+        (if (eq (len q) 0) (list o)
+            (cons (head q) (sched-place (tail q) o))))
+    (defn sched-rest (q name)
+        (if (eq (len q) 0) (empty)
+            (if (str_eq (sched-offer-name (head q)) name)
+                (tail q)
+                (cons (head q) (sched-rest (tail q) name)))))
+
+    ; the queue's own clock: one past the latest arrival it holds — so a
+    ; re-offered cell lands strictly after everything already waiting.
+    (defn sched-now-loop (q latest)
+        (if (eq (len q) 0) (add latest 1)
+            (if (gt (sched-offer-arrival (head q)) latest)
+                (sched-now-loop (tail q) (sched-offer-arrival (head q)))
+                (sched-now-loop (tail q) latest))))
+    (defn sched-now (q) (sched-now-loop q 0))
+
+    ; --- one QUANTUM: the policy acknowledges one offer; it runs; the fairness
+    ;     arm decides its return — requeue=1 re-offers it at the tail with a
+    ;     fresh arrival stamp (round-robin), requeue=0 lets it run to
+    ;     completion. -> (list chosen next-queue); chosen () when nothing ran. ---
+    (defn sched-requeue (pol q chosen)
+        (if (eq (sched-pol-requeue pol) 1)
+            (sched-place (sched-rest q (sched-offer-name chosen))
+                         (sched-offer (sched-offer-name chosen) (sched-now q)
+                                      (sched-offer-priority chosen)
+                                      (sched-offer-fitness chosen)))
+            (sched-rest q (sched-offer-name chosen))))
+    (defn sched-step (pol q)
+        (if (eq (len (sched-ack pol q)) 0)
+            (list (empty) q)
+            (list (sched-ack pol q) (sched-requeue pol q (sched-ack pol q)))))
+    (defn sched-chosen (step) (nth step 0))
+    (defn sched-queue  (step) (nth step 1))
+
+    ; --- TRACE: serve up to `ticks` quanta; the names served, in order. When the
+    ;     policy acknowledges nothing the organ goes quiet and the trace ends —
+    ;     honest silence, never a forced pick. ---
+    (defn sched-trace-loop (pol q tick ticks)
+        (if (gt tick ticks) (empty)
+            (if (eq (len (sched-ack pol q)) 0)
+                (empty)
+                (cons (sched-offer-name (sched-ack pol q))
+                      (sched-trace-loop pol (sched-queue (sched-step pol q)) (add tick 1) ticks)))))
+    (defn sched-trace (pol q ticks) (sched-trace-loop pol q 1 ticks))
+
+    0)
