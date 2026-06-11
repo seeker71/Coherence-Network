@@ -689,7 +689,7 @@ section [form.bml] {
         let requested_action = api-json-field-value-or(body, "requested_action", "preview");
         let source_label = api-json-field-value-or(body, "source_label", "");
         let canonical_source = read_file(str_concat(repo_root(), "/form/form-stdlib/bml/kernel-core.bml"));
-        api-ok-json(api-kip-proposal-json(source, grammar, source_label, requested_action, canonical_source));
+        api-native-ok-json("api_substrate_kernel_image_proposals", api-kip-proposal-json(source, grammar, source_label, requested_action, canonical_source));
     }
     def anonymous-trace-hash-id(kind, value) {
         let digest = sha256(api-str-to-bytes(str_concat(kind, str_concat(":", value))));
