@@ -12005,6 +12005,13 @@ mod route_spec_tests {
         let headers = vec![("Accept".to_string(), "application/json".to_string())];
         let probes = vec![
             ("runtime-events-index", "GET", "/api/runtime/events"),
+            ("spec-registry-index", "GET", "/api/spec-registry"),
+            (
+                "spec-registry-detail",
+                "GET",
+                "/api/spec-registry/web-ideas-specs-usage-pages",
+            ),
+            ("idea-specs", "GET", "/api/ideas/user-surfaces/specs"),
             ("views-stats", "GET", "/api/views/stats/lc-attuned-spaces"),
             (
                 "reaction-concept-summary",

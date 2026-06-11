@@ -1,0 +1,106 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "codex/non-native-api-family-batch-20260611",
+  "commit_scope": "Promote the graph-backed spec registry read family to the BML native front door",
+  "files_owned": [
+    "api/tests/test_runtime_surface_native_routes.py",
+    "api/tests/test_runtime_web_api_provenance.py",
+    "api/tests/test_spec_registry_router_form.py",
+    "deploy/front-door/api.bml",
+    "deploy/hostinger/auto-deploy.sh",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "form/form-kernel-rust/src/main.rs",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "scripts/verify_web_api_deploy.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "scripts/test_hostinger_deploy_form_paths.sh",
+      "bash -n scripts/verify_web_api_deploy.sh deploy/hostinger/auto-deploy.sh scripts/test_hostinger_deploy_form_paths.sh",
+      "pytest -q api/tests/test_runtime_web_api_provenance.py api/tests/test_runtime_surface_native_routes.py api/tests/test_spec_registry_router_form.py",
+      "cd form/form-kernel-rust && cargo test source_bml_catalog_template_routes_select_natively_in_rust --quiet",
+      "python3 scripts/runtime_surface_report.py --json",
+      "python3 scripts/native_route_goal_loop.py /goal --source web_api --seconds 86400 --limit 2000",
+      "git diff --check"
+    ],
+    "notes": "Static deploy guards, focused Python route-surface tests, Rust BML route selection, surface report, goal loop, and whitespace validation passed. Kernel-first capable routes rose to 92; kernel-first served remains 45 until public deployment."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "PR CI has not run yet for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh"
+    ],
+    "notes": "Public canary checks were updated for the promoted routes; public deploy proof waits for merge and deployment."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete for this slice; CI and public deploy validation remain pending."
+  },
+  "idea_ids": [
+    "native-api-lane",
+    "user-surfaces"
+  ],
+  "spec_ids": [
+    "spec-registry-read-family-native",
+    "web-ideas-specs-usage-pages"
+  ],
+  "task_ids": [
+    "non-native-api-family-batch-20260611"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "deploy/front-door/api.bml#api_spec_registry",
+    "deploy/front-door/api.bml#api_spec_registry_detail",
+    "deploy/front-door/api.bml#api_idea_specs",
+    "scripts/verify_web_api_deploy.sh#check_promoted_bml_read_routes_native",
+    "form/form-kernel-rust/src/main.rs#source_bml_catalog_template_routes_select_natively_in_rust"
+  ],
+  "change_files": [
+    "api/tests/test_runtime_surface_native_routes.py",
+    "api/tests/test_runtime_web_api_provenance.py",
+    "api/tests/test_spec_registry_router_form.py",
+    "deploy/front-door/api.bml",
+    "deploy/hostinger/auto-deploy.sh",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "docs/coherence-substrate/spec-registry-router.form",
+    "form/form-kernel-rust/src/main.rs",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "scripts/verify_web_api_deploy.sh"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "After deploy, GET /api/spec-registry, GET /api/spec-registry/{spec_id}, and GET /api/ideas/{idea_id}/specs route to the native BML front door with SpecRegistryEntry-compatible JSON while /api/spec-registry/cards and /api/spec-registry/source-list remain on their existing carriers.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/spec-registry?limit=2",
+      "https://api.coherencycoin.com/api/spec-registry/web-ideas-specs-usage-pages",
+      "https://api.coherencycoin.com/api/ideas/user-surfaces/specs"
+    ],
+    "test_flows": [
+      "Verify X-Form-Handler is api_spec_registry, api_spec_registry_detail, and api_idea_specs for the promoted read family.",
+      "Verify list and per-idea responses are non-empty SpecRegistryEntry arrays.",
+      "Verify detail response returns spec_id web-ideas-specs-usage-pages and a workspace_id string."
+    ]
+  }
+}
