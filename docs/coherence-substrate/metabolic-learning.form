@@ -198,6 +198,11 @@
 #                                  learned sensing edge grows the cell's
 #                                  cone, release contracts it — proven
 #                                  on the same edge data, three-way.
+#   belief-recipes.form            the frequency dial's bank: eight
+#                                  belief systems' core moves for the
+#                                  bad event, each an attested
+#                                  configuration of THIS engine, each
+#                                  with an exact signature (255).
 #
 # Next stones when an ask needs them (named, honest):
 # mtb-settle (iterate mtb-step until the observer arm holds — the
