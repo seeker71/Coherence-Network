@@ -1,0 +1,75 @@
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/form-parse.fk form-stdlib/form-flatten.fk
+;
+; form-flatten-strings-band — the walker string-pool lane proven three-way:
+; strings are content-addressed pool cells (tags 24..28 — SLIT/SLEN/SEQ/
+; SCAT/SCHAR, the range 24..33 claimed by this family). The flattener's
+; pre-pass interns every distinct "literal" once (same bytes = same slot,
+; axiom 3), a literal lowers to SLIT carrying its pool index, and string
+; VALUES ride as pool ids — plain ints the melt never needs to root. The
+; recipe-side walker proves the same cells by VALUE on host strings; the
+; emitted sibling's id-equality means content-equality BECAUSE the pool is
+; interned. Mini sources build their quotes through byte_to_str 34 — the
+; band file itself stays plain.
+;
+; Verdict 31 when the lane holds:
+;   1   the lowerings carry values — str_eq dispatches a defn by label
+;       (lab walks warm->7 cool->9 mist->0, sum 16), str_concat interns
+;       into the same slot its parts name ((wa+rm) str_eq warm -> 1), and
+;       str_len + ord + not compose (4 + 65 + 1 = 70)
+;   2   the pool is content-addressed — three distinct literals from four
+;       occurrences (dedup), first-appearance order (warm at 0), and the
+;       repeated literal answers its one slot
+;   4   the constructors walk by value — SEQ over two SLITs of one string
+;       is 1, SLEN over SCAT is the joined length, SCHAR reads the byte
+;   8   the REAL champion-challenger module + band (unmodified from disk,
+;       string-labeled authority throughout) flatten and walk BY VALUE to
+;       the siblings' own verdict 127
+;   16  the table file grows a string section — the flattened rows carry
+;       SLIT and SEQ tags, and the pool serializes as count, length, bytes
+;       ("hi" -> "1 2 104 105") behind the unchanged row text
+(do
+    (let q (byte_to_str 34))
+    (defn qw (w) (str_concat q (str_concat w q)))
+    (let src1 (str_concat "(do (defn lab (x) (if (str_eq x "
+              (str_concat (qw "warm")
+              (str_concat ") 7 (if (str_eq x "
+              (str_concat (qw "cool")
+              (str_concat ") 9 0))) (add (lab "
+              (str_concat (qw "warm")
+              (str_concat ") (add (lab "
+              (str_concat (qw "cool")
+              (str_concat ") (lab "
+              (str_concat (qw "mist") ")))))")))))))))))
+    (let src2 (str_concat "(do (str_eq (str_concat "
+              (str_concat (qw "wa")
+              (str_concat " "
+              (str_concat (qw "rm")
+              (str_concat ") "
+              (str_concat (qw "warm") "))")))))))
+    (let src3 (str_concat "(do (add (str_len "
+              (str_concat (qw "warm")
+              (str_concat ") (add (ord "
+              (str_concat (qw "A")
+                          ") (not (not 5)))))")))))
+    (let c0 (if (and (eq (fkm-run (flt-src-fns src1) 0) 16)
+                     (and (eq (fkm-run (flt-src-fns src2) 0) 1)
+                          (eq (fkm-run (flt-src-fns src3) 0) 70)))
+                1 0))
+    (let pool1 (flt-src-pool src1))
+    (let c1 (if (and (eq (len pool1) 3)
+                     (and (eq (flt-sidx pool1 "warm" 0) 0)
+                          (eq (flt-sidx pool1 "mist" 0) 2)))
+                2 0))
+    (let c2 (if (and (eq (fkm-run (list (fk-seq (fk-slit 0 "warm") (fk-slit 0 "warm"))) 0) 1)
+                     (and (eq (fkm-run (list (fk-slen (fk-scat (fk-slit 0 "wa") (fk-slit 1 "rm")))) 0) 4)
+                          (eq (fkm-run (list (fk-schar (fk-slit 0 "AZ") (fk-lit 1))) 0) 90)))
+                4 0))
+    (let cc (flt-band-fns (read_file "form-stdlib/champion-challenger.fk")
+                          (read_file "form-stdlib/tests/champion-challenger-band.fk")))
+    (let c3 (if (eq (fkm-run cc 0) 127) 8 0))
+    (let rows1 (nth (fkc-flatten-many (flt-src-fns src1)) 0))
+    (let c4 (if (and (eq (fkd-has-tag rows1 24) 1)
+                     (and (eq (fkd-has-tag rows1 26) 1)
+                          (str_eq (fks-pool-sp (list "hi")) "1 2 104 105")))
+                16 0))
+    (add c0 (add c1 (add c2 (add c3 c4)))))

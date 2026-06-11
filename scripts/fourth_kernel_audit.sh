@@ -907,6 +907,72 @@ awk -v pct=90 '/^melt /{ok=($2 * 100 >= $5 * pct)}END{exit ok?0:1}' "$work/fv-me
 echo "  allocation crossed the water line mid-call and the packed args survived relocation —"
 echo "  every live value the walker holds is a melt-visible root (the BMF stack discipline, inward)"
 echo "  bands-on-fourth-arm: 11 (learning-trend + 9 multi-param + feature-vector, four-way gated)"
+echo
+# ── 25. string-pool lane — str_* bands on the fourth arm: the ratchet climbs 11 -> 44 ──
+# The walker string-pool lane (tags 24..28 — SLIT/SLEN/SEQ/SCAT/SCHAR; the
+# range 24..33 claimed by the string family): the flattener pre-pass interns
+# every distinct "literal" once into the program's pool (same bytes = same
+# slot, axiom 3), literals lower to SLIT rows carrying pool indices, the
+# table file grows a string section (count, then length + bytes per string),
+# and string VALUES ride as pool ids — plain ints the copying melt never
+# needs to root. str_eq is id-equality in the emitted sibling and means
+# content BECAUSE the pool is interned. Thirty-three more REAL stdlib bands
+# (unmodified source from disk — the op-profile's whole string-only set plus
+# the three needing the not-lowering) run on the SAME universal binary, each
+# gated four-way against validate.sh. recognition-router and recognition-
+# router-vision carry band-scale list traffic across the melt water line;
+# their packed args ride the walker-managed value stack (section 24), so
+# the melt fires mid-band and they cross with the rest.
+sp_mods=(active-inference branch-choice-order cell-sync chakra-column champion-challenger \
+         classifier-eval confidence-calibrate confidence-weighted-vote device-heartbeat \
+         drift-detect ensemble-vote friend-node learned-primitive markov-2 mesh-gradient \
+         mesh-relay nearest-shape novelty online-accuracy predictor-train prototype-merge \
+         provisioning recognition-router recognition-router-compute recognition-router-vision \
+         self-grounding-classifier sequence-predictor shared-sensing surprise-salience \
+         temporal-smoothing declared-source transition-detect warm-start)
+sp_exps=(127 511 127 127 127 63 127 127 127 63 127 127 255 127 127 127 127 63 63 63 127 127 127 63 31 63 127 127 127 63 127 127 127)
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
+    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" "$FORMDIR/form-stdlib/form-parse.fk" \
+    "$FORMDIR/form-stdlib/form-flatten.fk" > "$work/sp-driver.fk"
+for m in "${sp_mods[@]}"; do
+    sp_mod="$(head -1 "$FORMDIR/form-stdlib/tests/$m-band.fk" | sed 's/; preludes://' | tr ' ' '\n' | grep -v core.fk | grep . | head -1 | sed 's|form-stdlib/||')"
+    cat >> "$work/sp-driver.fk" <<EOF
+(print "==SP-$m==")
+(print (fks-table-file (flt-band-fns (read_file "form-stdlib/$sp_mod") (read_file "form-stdlib/tests/$m-band.fk")) (flt-band-pool (read_file "form-stdlib/$sp_mod") (read_file "form-stdlib/tests/$m-band.fk"))))
+EOF
+done
+echo '(print "==SP-END==")' >> "$work/sp-driver.fk"
+(cd "$FORMDIR" && "$GO_BIN" "$work/sp-driver.fk" 2>/dev/null) > "$work/sp.out"
+prev=""
+while IFS= read -r line; do
+    if [[ "$line" == ==SP-*== ]]; then
+        prev="${line#==SP-}"; prev="${prev%==}"
+        : > "$work/t-sp-$prev.txt"
+    elif [[ -n "$prev" ]]; then
+        printf '%s\n' "$line" >> "$work/t-sp-$prev.txt"
+    fi
+done < "$work/sp.out"
+for m in "${sp_mods[@]}"; do
+    ( sp_pres="$(head -1 "$FORMDIR/form-stdlib/tests/$m-band.fk" | sed 's/; preludes: //')"
+      cd "$FORMDIR" && ./validate.sh $sp_pres "form-stdlib/tests/$m-band.fk" 2>/dev/null \
+        | sed -n 's/.*→ //p' | head -1 > "$work/vw-sp-$m.txt" ) &
+done
+wait
+echo "string-pool bands on the fourth arm (literals interned into the pool, str_eq as id-equality):"
+sp_pass=0
+for k in "${!sp_mods[@]}"; do
+    m="${sp_mods[$k]}"; exp="${sp_exps[$k]}"
+    three_way="$(cat "$work/vw-sp-$m.txt")"
+    fkw_v="$("$work/fkwu" "$work/t-sp-$m.txt" 0 2>/dev/null | head -1)"
+    printf "  %-28s three-walker (validate.sh) = %-4s fkw = %-4s (expect %s)\n" "$m" "$three_way" "$fkw_v" "$exp"
+    if [[ -z "$three_way" || "$three_way" != "$fkw_v" || "$fkw_v" != "$exp" ]]; then
+        echo "FAIL  the fourth arm disagrees with the siblings on $m"; exit 1
+    fi
+    sp_pass=$((sp_pass + 1))
+done
+echo "  recognition-router and recognition-router-vision allocate past the melt water line"
+echo "  mid-band — their packed args ride the value stack as melt-visible roots (section 24)"
+echo "  bands-on-fourth-arm: $((11 + sp_pass)) (learning-trend + 9 multi-param + feature-vector + $sp_pass string-pool bands, four-way gated)"
 
 echo
 echo "conditions: $(uname -m) $(uname -s), clang -O2, full-process invocations (startup included)"

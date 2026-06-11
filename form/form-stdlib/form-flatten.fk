@@ -20,14 +20,19 @@
 ; STACK (fourth-walker-emit.fk: ARG reads fk_vs[fp], the melt roots and
 ; relocates every stack slot), so band-scale allocation melts safely
 ; mid-call — feature-vector's crossing is the witness (audit section 24).
-; str_*, node_*, floats, and nested do are the remaining family-by-family
-; climb.
+; The str_* family rides the walker string-pool lane (tags 24..28): a
+; pre-pass (flt-scan) interns every distinct "literal" into the program's
+; pool — same bytes, same slot — and a literal lowers to SLIT carrying its
+; pool index; str_eq/str_len/str_concat are table rows, ord/not are
+; lowerings. node_*, floats, substring/int_to_str, and nested do are the
+; remaining family-by-family climb.
 
 ; ── walker-carried ops as DATA rows (name arity tag) — one generic engine ──
 (defn flt-ops ()
     (list (list "add" 2 3) (list "sub" 2 4) (list "le" 2 5)
           (list "cons" 2 19) (list "nth" 2 23)
-          (list "head" 1 20) (list "tail" 1 21) (list "len" 1 22)))
+          (list "head" 1 20) (list "tail" 1 21) (list "len" 1 22)
+          (list "str_len" 1 25) (list "str_eq" 2 26) (list "str_concat" 2 27)))
 
 (defn flt-assoc (name rows)
     (if (eq (len rows) 0) (list)
@@ -44,6 +49,9 @@
 (defn flt-ge (a b) (fk-le b a))
 (defn flt-eq (a b) (fk-if (fk-le a b) (fk-if (fk-le b a) (fk-lit 1) (fk-lit 0)) (fk-lit 0)))
 (defn flt-and (a b) (fk-if a (fk-if b (fk-lit 1) (fk-lit 0)) (fk-lit 0)))
+; unary lowerings: ord rides SCHAR at byte 0; not is the IF flip
+(defn flt-ord (a) (fk-schar a (fk-lit 0)))
+(defn flt-not (a) (fk-if a (fk-lit 0) (fk-lit 1)))
 
 ; ── words off the cursor ───────────────────────────────────────────────────
 (defn flt-word (s pos) (substring s pos (fp-sym-end s pos)))
@@ -57,11 +65,31 @@
 (defn flt-expr (s pos fns env) (flt-expr2 s (fp-skip s pos) fns env))
 (defn flt-expr2 (s pos fns env)
     (if (eq (fp-at s pos) 40) (flt-form s (fp-skip s (add pos 1)) fns env)
-        (if (fp-isdigit (fp-at s pos)) (fp-num (fp-digits s pos 0))
-            (flt-var s pos env))))
+        (if (eq (fp-at s pos) 34) (flt-str s (add pos 1) env)
+            (if (fp-isdigit (fp-at s pos)) (fp-num (fp-digits s pos 0))
+                (flt-var s pos env)))))
+
+; ── string literals ride the pool: the pre-pass (flt-scan) interned every
+;    distinct literal, so a "..." at the cursor lowers to SLIT carrying its
+;    pool index; the pool itself travels in env under the quote-name (a name
+;    no symbol can collide with — '"' is the literal door, never a var) ─────
+(defn flt-strend (s pos)
+    (if (ge pos (fp-len s)) pos
+        (if (eq (fp-at s pos) 34) pos (flt-strend s (add pos 1)))))
+(defn flt-str (s pos env) (flt-str2 (substring s pos (flt-strend s pos)) (add (flt-strend s pos) 1) env))
+(defn flt-str2 (lit end env) (list (fk-slit (flt-sidx (flt-poolv env) lit 0) lit) end))
+(defn flt-poolq () (byte_to_str 34))
+(defn flt-pool-row (env) (flt-assoc (flt-poolq) env))
+(defn flt-poolv (env) (nth (flt-pool-row env) 1))
+(defn flt-sidx (pool lit i)
+    (if (eq (len pool) 0) (sub 0 1)
+        (if (str_eq (head pool) lit) i (flt-sidx (tail pool) lit (add i 1)))))
 
 (defn flt-var (s pos env) (flt-var2 (flt-word s pos) (fp-sym-end s pos) env))
-(defn flt-var2 (name end env) (list (flt-var3 (flt-assoc name env)) end))
+(defn flt-var2 (name end env)
+    (if (str_eq name "true") (list (fk-lit 1) end)
+        (if (str_eq name "false") (list (fk-lit 0) end)
+            (list (flt-var3 (flt-assoc name env)) end))))
 (defn flt-var3 (row) (if (eq (len row) 0) (fk-lit 0) (nth row 1)))
 
 (defn flt-form (s pos fns env) (flt-form2 (flt-word s pos) s (fp-sym-end s pos) fns env))
@@ -73,7 +101,14 @@
     (if (str_eq op "ge") (flt-low 2 s pos fns env)
     (if (str_eq op "eq") (flt-low 3 s pos fns env)
     (if (str_eq op "and") (flt-low 4 s pos fns env)
-        (flt-op op s pos fns env)))))))))
+    (if (str_eq op "ord") (flt-low1 1 s pos fns env)
+    (if (str_eq op "not") (flt-low1 2 s pos fns env)
+        (flt-op op s pos fns env)))))))))))
+
+; one operand, then the unary lowering picked by selector k
+(defn flt-low1 (k s pos fns env) (flt-low1-a k s (flt-expr s pos fns env)))
+(defn flt-low1-a (k s ae) (list (flt-low1-mk k (nth ae 0)) (fp-close s (nth ae 1))))
+(defn flt-low1-mk (k a) (if (eq k 1) (flt-ord a) (flt-not a)))
 
 ; two operands, then the lowering picked by selector k (lowerings are rules,
 ; not tag rows — they BUILD shapes instead of naming one)
@@ -167,7 +202,8 @@
 (defn flt-defn-p2 (name s pe fns rbodies env main)
     (flt-defn-b s (nth pe 1)
                 (cons (list name (add (len fns) 1) (len (nth pe 0))) fns)
-                (flt-penv (nth pe 0) (len (nth pe 0)) 0) rbodies env main))
+                (cons (flt-pool-row env) (flt-penv (nth pe 0) (len (nth pe 0)) 0))
+                rbodies env main))
 (defn flt-defn-b (s pos fns benv rbodies env main)
     (flt-defn-done s (flt-expr s pos fns benv) fns rbodies env main))
 (defn flt-defn-done (s be fns rbodies env main)
@@ -183,11 +219,32 @@
 (defn flt-let-done (name s ve fns rbodies env main)
     (flt-items s (fp-close s (nth ve 1)) fns rbodies (cons (list name (nth ve 0)) env) main))
 
-; one source file's (do ...) — returns (fns rbodies main endpos)
-(defn flt-top (s fns rbodies)
-    (flt-top2 s (fp-skip s 0) fns rbodies))
-(defn flt-top2 (s pos fns rbodies)
-    (flt-items s (fp-sym-end s (fp-skip s (add pos 1))) fns rbodies (list) (fk-lit 0)))
+; one source file's (do ...) — returns (fns rbodies main endpos); env is
+; seeded with the program's string pool under the quote-name
+(defn flt-top (s fns rbodies pool)
+    (flt-top2 s (fp-skip s 0) fns rbodies pool))
+(defn flt-top2 (s pos fns rbodies pool)
+    (flt-items s (fp-sym-end s (fp-skip s (add pos 1))) fns rbodies
+               (list (list (flt-poolq) pool)) (fk-lit 0)))
+
+; ── the pool pre-pass: walk the source once (token jumps, comments and
+;    whitespace through fp-skip) and intern every DISTINCT "literal" in
+;    first-appearance order — the same order the parser meets them, so a
+;    literal's pool index is stable between flatten and serialization ──────
+(defn flt-scan (s pos acc) (flt-scan-at s (fp-skip s pos) acc))
+(defn flt-scan-at (s pos acc)
+    (if (ge pos (fp-len s)) acc
+        (if (eq (fp-at s pos) 34) (flt-scan-lit s (add pos 1) acc)
+            (flt-scan s (flt-scan-adv s pos) acc))))
+(defn flt-scan-adv (s pos)
+    (if (gt (fp-sym-end s pos) pos) (fp-sym-end s pos) (add pos 1)))
+(defn flt-scan-lit (s pos acc)
+    (flt-scan-lit2 s (flt-strend s pos) (substring s pos (flt-strend s pos)) acc))
+(defn flt-scan-lit2 (s end lit acc) (flt-scan s (add end 1) (flt-pool-add acc lit)))
+(defn flt-pool-add (pool lit)
+    (if (ge (flt-sidx pool lit 0) 0) pool (flt-append pool lit)))
+(defn flt-append (xs x)
+    (if (eq (len xs) 0) (cons x (list)) (cons (head xs) (flt-append (tail xs) x))))
 
 ; ── entry doors ────────────────────────────────────────────────────────────
 ; module source + band source -> the walker's function list (fn 0 = the
@@ -196,12 +253,18 @@
 ; load plain-Form preludes only)
 (defn flt-rev (xs acc)
     (if (eq (len xs) 0) acc (flt-rev (tail xs) (cons (head xs) acc))))
+; the pool doors mirror the fns doors: the SAME scan order feeds both, so a
+; SLIT row's index always names the right string-section entry
+(defn flt-band-pool (modsrc bandsrc) (flt-scan bandsrc 0 (flt-scan modsrc 0 (list))))
+(defn flt-src-pool (src) (flt-scan src 0 (list)))
 (defn flt-band-fns (modsrc bandsrc)
-    (flt-band2 (flt-top modsrc (list) (list)) bandsrc))
-(defn flt-band2 (mr bandsrc)
-    (flt-band3 (flt-top bandsrc (nth mr 0) (nth mr 1))))
+    (flt-band-fns2 modsrc bandsrc (flt-band-pool modsrc bandsrc)))
+(defn flt-band-fns2 (modsrc bandsrc pool)
+    (flt-band2 (flt-top modsrc (list) (list) pool) bandsrc pool))
+(defn flt-band2 (mr bandsrc pool)
+    (flt-band3 (flt-top bandsrc (nth mr 0) (nth mr 1) pool)))
 (defn flt-band3 (br)
     (cons (nth br 2) (flt-rev (nth br 1) (list))))
 
 ; single-source door (prelude-free bands, mini programs)
-(defn flt-src-fns (src) (flt-band3 (flt-top src (list) (list))))
+(defn flt-src-fns (src) (flt-band3 (flt-top src (list) (list) (flt-src-pool src))))
