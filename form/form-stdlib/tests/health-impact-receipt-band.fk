@@ -1,0 +1,52 @@
+; health-impact-receipt-band.fk - executable proof for food/substance/process health impact receipts.
+;
+; Band verdict: 11111111 when every claim holds across Go/Rust/TS.
+;   measured food benefit returns benefit-supported           ->        1
+;   measured preparation benefit returns benefit-supported    ->       10
+;   condition-scoped substance benefit returns supported      ->      100
+;   observed safety risk returns risk-supported               ->     1000
+;   benefit plus risk returns mixed                           ->    10000
+;   mechanism-only evidence stays unknown                     ->   100000
+;   missing exposure boundary refuses                         ->  1000000
+;   universal health/cure claim refuses                       -> 10000000
+;
+; preludes: form-stdlib/core.fk form-stdlib/health-impact-receipt.fk
+
+(do
+    (defn hir-band-score ()
+        (do
+            (let food (hir-subject "food" "USDA-FDC:11090" "broccoli"))
+            (let process (hir-subject "preparation-process" "recipe:steam-3min" "steam broccoli three minutes"))
+            (let substance (hir-subject "substance" "PubChem:example" "candidate compound"))
+            (let exposure (hir-exposure "serving:100g" "oral" "daily" "adult" "stop:on-adverse-signal"))
+            (let missing-exposure (hir-exposure "" "oral" "daily" "adult" "stop:on-adverse-signal"))
+            (let prep (hir-preparation "steam-3min" "source:composition-before-after" 1 1 0 1))
+            (let no-prep (hir-preparation "raw" "source:raw-baseline" 1 1 0 0))
+            (let human-benefit (hir-evidence "measured-human" "source:pubmed-trial" "outcome:validated-marker" 1 1 1 1 "benefit"))
+            (let clinical-benefit (hir-evidence "clinical" "source:clinical-trial" "outcome:declared-condition" 1 1 1 1 "benefit"))
+            (let mechanism-only (hir-evidence "mechanistic" "source:cell-model" "outcome:hypothesis" 1 1 0 1 "benefit"))
+            (let safe (hir-safety "tox:checked" "interactions:checked" "adverse-events:checked" 1 "risk:none-observed" "stop:on-signal" 0))
+            (let risk (hir-safety "tox:checked" "interactions:checked" "adverse-events:observed" 1 "risk:declared" "stop:on-signal" 1))
+            (let witness (hir-witness-pack "USDA-FDC" "PubChem" "PubMed" "openFDA"))
+            (let no-chemical-witness (hir-witness-pack "USDA-FDC" "" "PubMed" "openFDA"))
+
+            (let food-receipt (hir-receipt food exposure no-prep human-benefit safe witness "food-health-impact"))
+            (let preparation-receipt (hir-receipt process exposure prep human-benefit safe witness "preparation-health-impact"))
+            (let substance-receipt (hir-receipt substance exposure no-prep clinical-benefit safe witness "substance-condition-impact"))
+            (let risk-receipt (hir-receipt food exposure no-prep (hir-evidence "observational" "source:cohort" "outcome:risk" 0 0 1 1 "risk") risk witness "risk-impact"))
+            (let mixed-receipt (hir-receipt food exposure no-prep human-benefit risk witness "food-health-impact"))
+            (let unknown-receipt (hir-receipt food exposure no-prep mechanism-only safe witness "food-health-impact"))
+            (let missing-exposure-receipt (hir-receipt food missing-exposure no-prep human-benefit safe witness "food-health-impact"))
+            (let overbroad-receipt (hir-receipt substance exposure no-prep clinical-benefit safe no-chemical-witness "universal-cure-any-condition"))
+
+            (sum (list
+                (hir-bool-score (str_eq (hir-verdict food-receipt) "benefit-supported") 1)
+                (hir-bool-score (str_eq (hir-verdict preparation-receipt) "benefit-supported") 10)
+                (hir-bool-score (str_eq (hir-verdict substance-receipt) "benefit-supported") 100)
+                (hir-bool-score (str_eq (hir-verdict risk-receipt) "risk-supported") 1000)
+                (hir-bool-score (str_eq (hir-verdict mixed-receipt) "mixed") 10000)
+                (hir-bool-score (str_eq (hir-verdict unknown-receipt) "unknown") 100000)
+                (hir-bool-score (and (str_eq (hir-verdict missing-exposure-receipt) "refused") (str_eq (hir-refusal-reason missing-exposure-receipt) "missing-exposure-boundary")) 1000000)
+                (hir-bool-score (and (str_eq (hir-verdict overbroad-receipt) "refused") (str_eq (hir-refusal-reason overbroad-receipt) "overbroad-health-claim")) 10000000)))))
+
+    (hir-band-score))

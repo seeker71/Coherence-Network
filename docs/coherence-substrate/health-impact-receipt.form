@@ -1,0 +1,104 @@
+# health-impact-receipt.form - foods, substances, and preparation processes answer with bounded evidence
+
+The health-impact receipt turns a practical question into an inspectable claim:
+what can be said about this food, substance, or preparation process for this
+exposure and population?
+
+The receipt is not a medical authority. It is a gate. It keeps five outcomes
+separate:
+
+- benefit-supported;
+- risk-supported;
+- mixed;
+- unknown;
+- refused.
+
+Unknown is a real answer. A mechanism, nutrient delta, or molecule-level
+hypothesis can stay visible without becoming a health claim.
+
+(health-impact-receipt
+
+  (lineage
+    (derives-from evidence-grounding.form whole-lifecycle-fitness.form value-execution-as-recipe.form)
+    (runnable form/form-stdlib/health-impact-receipt.fk)
+    (proof form/form-stdlib/tests/health-impact-receipt-band.fk)
+    (claim-shape subject-exposure-preparation-evidence-safety-witness-verdict))
+
+  (subject
+    (kind food OR substance OR preparation-process)
+    (canonical-id from-public-source-when-available)
+    (label human-readable))
+
+  (exposure
+    (dose required)
+    (route required)
+    (frequency required)
+    (population required)
+    (stop-boundary required))
+
+  (preparation
+    (process required-for-preparation-claim)
+    (source-trace required)
+    (measured required)
+    (composition-delta optional-but-at-least-one-delta-required)
+    (contaminant-delta optional-but-at-least-one-delta-required)
+    (bioavailability-delta optional-but-at-least-one-delta-required))
+
+  (evidence
+    (lanes measured-human clinical observational mechanistic composition unknown)
+    (source-trace required)
+    (outcome-trace required)
+    (molecular cellular organism tracked-as-gates)
+    (third-party required-for-human-benefit-support)
+    (effect benefit OR risk OR mixed OR none))
+
+  (safety
+    (toxicity-trace required)
+    (interaction-trace required)
+    (adverse-event-trace required)
+    (contaminant-safe required)
+    (risk-boundary required)
+    (stop-boundary required)
+    (risk-observed verdict-signal))
+
+  (witness-pack
+    (composition e.g. USDA-FDC)
+    (chemical e.g. PubChem-or-DSSTox required-for-substance-claim)
+    (literature e.g. PubMed-or-ClinicalTrials)
+    (safety e.g. openFDA-or-EPA))
+
+  (verdicts
+    benefit-supported
+    risk-supported
+    mixed
+    unknown
+    refused)
+
+  (refusal-reasons
+    malformed-receipt
+    overbroad-health-claim
+    unsupported-claim
+    missing-subject
+    missing-exposure-boundary
+    missing-source-witness
+    missing-evidence
+    missing-safety-boundary
+    missing-chemical-witness
+    missing-preparation-boundary)
+
+  (invariants
+    (no-dose-no-health-claim)
+    (no-population-no-health-claim)
+    (preparation-is-a-transform-not-a-label)
+    (mechanism-only-stays-unknown)
+    (risk-can-stand-without-benefit)
+    (benefit-plus-risk-is-mixed)
+    (universal-health-claims-refuse)))
+
+# SHIPPED
+#
+# `form/form-stdlib/health-impact-receipt.fk` carries the executable receipt
+# and verdict policy. `form/form-stdlib/tests/health-impact-receipt-band.fk`
+# proves eight claims three-way: food benefit, preparation benefit, substance
+# benefit, risk-only, mixed benefit+risk, mechanism-only unknown, missing
+# exposure refusal, and universal-health/cure refusal.
