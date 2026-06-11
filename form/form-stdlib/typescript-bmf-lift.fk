@@ -1,0 +1,169 @@
+; form-stdlib/typescript-bmf-lift.fk
+;
+; First breath — expression lifter from typescript-source-scan-text tokens
+; into TS-BMF-EVAL-* recipes for typescript-bmf-eval.fk.
+;
+; preludes: core.fk json.fk cache.fk form-ontology-loader.fk engine.fk
+;           compiler.fk source-compiler.fk grammars/typescript-bmf.fk
+;           typescript-bmf-eval.fk
+
+(do
+    (let MATH-PLUS     (bp "add"))
+    (let MATH-MINUS    (bp "sub"))
+    (let MATH-MULTIPLY (bp "mul"))
+    (let MATH-DIVIDE   (bp "div"))
+    (let MATH-MOD      (bp "mod"))
+    (let COMPARE-EQ (bp "eq"))
+    (let COMPARE-NE (bp "ne"))
+    (let COMPARE-LT (bp "lt"))
+    (let COMPARE-LE (bp "le"))
+    (let COMPARE-GT (bp "gt"))
+    (let COMPARE-GE (bp "ge"))
+
+    (defn tok-kind (t) (bmf-object-kind t))
+    (defn tok-value (t) (bmf-object-value t))
+    (defn tok-is? (t kind value)
+        (and (str_eq (tok-kind t) kind) (str_eq (tok-value t) value)))
+    (defn tok-op? (t op) (tok-is? t "typescript-op" op))
+    (defn tok-keyword? (t kw) (tok-is? t "typescript-keyword" kw))
+    (defn tok-name? (t) (str_eq (tok-kind t) "typescript-name"))
+    (defn tok-int? (t) (str_eq (tok-kind t) "typescript-int"))
+
+    (defn lift-result (recipe rest) (list recipe rest))
+    (defn lift-recipe (r) (head r))
+    (defn lift-rest (r) (head (tail r)))
+
+    (defn lift-args-loop (tokens acc)
+        (if (nil? tokens) (lift-result (reverse acc) tokens)
+            (if (tok-op? (head tokens) ")")
+                (lift-result (reverse acc) (tail tokens))
+                (do
+                    (let arg-result (lift-expr tokens))
+                    (let next (lift-rest arg-result))
+                    (if (and (not (nil? next)) (tok-op? (head next) ","))
+                        (lift-args-loop (tail next)
+                            (cons (lift-recipe arg-result) acc))
+                        (lift-args-loop next
+                            (cons (lift-recipe arg-result) acc)))))))
+
+    (defn lift-args (tokens) (lift-args-loop tokens (empty)))
+
+    (defn op-prec (s)
+        (if (str_eq s "*") 40
+        (if (str_eq s "/") 40
+        (if (str_eq s "%") 40
+        (if (str_eq s "+") 30
+        (if (str_eq s "-") 30
+        (if (str_eq s "==") 20
+        (if (str_eq s "===") 20
+        (if (str_eq s "!=") 20
+        (if (str_eq s "!==") 20
+        (if (str_eq s "<") 20
+        (if (str_eq s "<=") 20
+        (if (str_eq s ">") 20
+        (if (str_eq s ">=") 20
+            (sub 0 1)))))))))))))))
+
+    (defn tok-binop-prec (tokens)
+        (if (nil? tokens) (sub 0 1)
+            (if (str_eq (tok-kind (head tokens)) "typescript-op")
+                (op-prec (tok-value (head tokens)))
+                (sub 0 1))))
+
+    (defn lift-negate (rest)
+        (do
+            (let operand (lift-primary rest))
+            (lift-result
+                (intern_node MATH-MINUS
+                    (list (intern_node TS-BMF-EVAL-INT (list (intern_trivial_int 0)))
+                          (lift-recipe operand)))
+                (lift-rest operand))))
+
+    (defn lift-name (t rest)
+        (if (and (not (nil? rest)) (tok-op? (head rest) "("))
+            (do
+                (let args-result (lift-args (tail rest)))
+                (lift-result
+                    (intern_node TS-BMF-EVAL-CALL
+                        (cons (intern_trivial_string (tok-value t))
+                              (lift-recipe args-result)))
+                    (lift-rest args-result)))
+            (lift-result
+                (intern_node TS-BMF-EVAL-IDENT
+                    (list (intern_trivial_string (tok-value t))))
+                rest)))
+
+    (defn lift-group (rest)
+        (do
+            (let inner (lift-expr rest))
+            (let after (lift-rest inner))
+            (if (and (not (nil? after)) (tok-op? (head after) ")"))
+                (lift-result (lift-recipe inner) (tail after))
+                (lift-result (lift-recipe inner) after))))
+
+    (defn lift-primary (tokens)
+        (if (nil? tokens)
+            (lift-result (intern_node TS-BMF-EVAL-PASS (empty)) tokens)
+            (do
+                (let t (head tokens))
+                (let rest (tail tokens))
+                (if (tok-op? t "-")
+                    (lift-negate rest)
+                (if (tok-int? t)
+                    (lift-result
+                        (intern_node TS-BMF-EVAL-INT
+                            (list (intern_trivial_int (str_to_int (tok-value t)))))
+                        rest)
+                (if (tok-name? t)
+                    (lift-name t rest)
+                (if (tok-op? t "(")
+                    (lift-group rest)
+                    (do
+                        (trace "ts-lift-primary: unsupported token"
+                               (list (tok-kind t) (tok-value t)))
+                        (lift-result (intern_node TS-BMF-EVAL-PASS (empty)) rest)))))))))
+
+    (defn lift-binop-node (op left right)
+        (if (str_eq op "==") (intern_node COMPARE-EQ (list left right))
+        (if (str_eq op "===") (intern_node COMPARE-EQ (list left right))
+        (if (str_eq op "!=") (intern_node COMPARE-NE (list left right))
+        (if (str_eq op "!==") (intern_node COMPARE-NE (list left right))
+        (if (str_eq op "<") (intern_node COMPARE-LT (list left right))
+        (if (str_eq op "<=") (intern_node COMPARE-LE (list left right))
+        (if (str_eq op ">") (intern_node COMPARE-GT (list left right))
+        (if (str_eq op ">=") (intern_node COMPARE-GE (list left right))
+        (if (str_eq op "+") (intern_node MATH-PLUS (list left right))
+        (if (str_eq op "-") (intern_node MATH-MINUS (list left right))
+        (if (str_eq op "*") (intern_node MATH-MULTIPLY (list left right))
+        (if (str_eq op "/") (intern_node MATH-DIVIDE (list left right))
+        (if (str_eq op "%") (intern_node MATH-MOD (list left right))
+            (intern_node TS-BMF-EVAL-BINOP
+                (list left (intern_trivial_string op) right))))))))))))))))
+
+    (defn lift-binop-loop (left tokens min-prec)
+        (do
+            (let prec (tok-binop-prec tokens))
+            (if (lt prec min-prec) (lift-result left tokens)
+                (do
+                    (let op (tok-value (head tokens)))
+                    (let next-min (add prec 1))
+                    (let rhs-primary (lift-primary (tail tokens)))
+                    (let rhs-climb
+                        (lift-binop-loop (lift-recipe rhs-primary)
+                                         (lift-rest rhs-primary)
+                                         next-min))
+                    (let new-left (lift-binop-node op left (lift-recipe rhs-climb)))
+                    (lift-binop-loop new-left (lift-rest rhs-climb) min-prec)))))
+
+    (defn lift-expr (tokens)
+        (do
+            (let prim (lift-primary tokens))
+            (lift-binop-loop (lift-recipe prim) (lift-rest prim) 0)))
+
+    (defn ts-lift-expr-text (source)
+        (lift-recipe (lift-expr (typescript-source-scan-text source))))
+
+    (defn ts-bmf-run-expr-text (source)
+        (ts-run (intern_node TS-BMF-EVAL-MODULE (list (ts-lift-expr-text source)))))
+
+    0)

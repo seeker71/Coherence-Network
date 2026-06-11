@@ -1,0 +1,119 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "cursor/ts-bmf-lift-eval-20260607",
+  "commit_scope": "TypeScript joins Python on the source->Form-native execution path: a TS source scanner (shared fsc dialect cursor with 3-char === / !== ops), an expression lifter into TS-BMF-EVAL-* / canonical MATH / COMPARE recipes, and a closure interpreter that walks them to values. CTOR Shape B convergence holds from TS source: a lifted `7 + 3` content-addresses to the same MATH-PLUS Blueprint as the hand-built recipe.",
+  "files_owned": [
+    "form/form-stdlib/form-ontology.json",
+    "form/form-stdlib/form-ontology-loader.fk",
+    "form/form-stdlib/grammars/typescript-bmf.fk",
+    "form/form-stdlib/typescript-bmf-eval.fk",
+    "form/form-stdlib/typescript-bmf-lift.fk",
+    "form/form-stdlib/tests/typescript-bmf-eval-band.fk",
+    "form/form-stdlib/tests/typescript-bmf-lift-band.fk",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/gen_bp_table.py",
+      "python3 form/scripts/validate_form_ontology.py",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/typescript-bmf-eval.fk form-stdlib/tests/typescript-bmf-eval-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/typescript-bmf-eval.fk form-stdlib/typescript-bmf-lift.fk form-stdlib/tests/typescript-bmf-lift-band.fk",
+      "cd form && for t in source-corpus-roundtrip-band bmf-generic-language-scanner-band typescript-bmf-reversible-band runtime-real-grammar-capsules-band generic-reverse-emitter-band binary-symbol-lens-band language-bmf-program-core language-bmf-more-constructs language-bmf-expanded-constructs language-bmf-bidirectional; do ./validate.sh form-stdlib/core.fk <preludes-from-header> form-stdlib/tests/$t.fk; done",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-11_ts_bmf_lift_eval.json"
+    ],
+    "summary": "Both new bands three-way green: eval band 28000/28000 (int leaf, canonical MATH binop, const+ident, function+call+return, recursion through the closure self-name to fact(6)=720, arrow-bound-to-const call, op-string BINOP/COMPARE fallback arms), lift band 55000/55000 (precedence, grouping, mod/div, < / === / !==, unary minus, and two CTOR Shape B Blueprint-convergence cells where TS-lifted source node_eq's hand-built MATH-PLUS / COMPARE-LT recipes). All ten existing tests that load grammars/typescript-bmf.fk re-ran three-way green. Teachings landed on the way: the strict TS reader caught compensating paren imbalances Go/Rust silently absorbed; `params` is a reserved reader token in Go/Rust (renamed to pms, matching python-bmf-eval); the shared fsc op table is 2-char only, so the TS dialect prepends === and !== ahead of fsc-common-op2 — held as a 0-arg defn so the grammar still loads without source-compiler.fk (the reversible band's chain caught the eager form).",
+    "observed_delta": {
+      "bands": "typescript-bmf-eval-band 28000, typescript-bmf-lift-band 55000 - 0 divergent",
+      "smoke": "ts-bmf-run-expr-text \"2 + 3 * 4\" -> 14 on Go, Rust, TS",
+      "bp_table_names": 770,
+      "new_ontology_insts": "typescript.bmf 624-635 (EVAL-INT..EVAL-PASS)"
+    },
+    "known_limitations": [
+      {
+        "limitation": "The lifter walks expressions only; const/let, function declarations, arrows, and ternaries lift by hand-built recipe (the eval side already walks them).",
+        "follow_up": "Statement lifting mirroring python-bmf-lift's module walker is the next breath."
+      },
+      {
+        "limitation": "TS strings, floats, bools, objects, and arrays do not lift or eval yet; EVAL-PASS names unsupported tokens honestly with a trace.",
+        "follow_up": "Rides the intrinsic-casting design for Form primitive types."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "PR gates run kernel parity three-way."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "form-stdlib rides the api rebuild; no route changes."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No route changes. TypeScript expression source now walks to values through the same Form-native scan -> lift -> eval shape Python uses, with Blueprint convergence proven from source.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "Two bands three-way across Go/Rust/TS kernels; full validate.sh sweep."
+    ],
+    "summary": "validate.sh exit 0 on both band workloads."
+  },
+  "phase_gate": {
+    "phase": "ts-bmf-first-breath",
+    "gate": "TS expression round-trip proven three-way with Blueprint convergence",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "statement lifting + intrinsic casting for bool/int/float/string primitives"
+  },
+  "idea_ids": [
+    "coherence-substrate"
+  ],
+  "spec_ids": [
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "ts-bmf-lift-eval-20260607"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "agent:cursor",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Cursor",
+    "version": "claude-fable-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/python-bmf-lift-band.fk",
+    "form/form-stdlib/tests/python-bmf-eval-band.fk"
+  ],
+  "change_files": [
+    "docs/system_audit/commit_evidence_2026-06-11_ts_bmf_lift_eval.json",
+    "form/form-stdlib/form-ontology.json",
+    "form/form-stdlib/form-ontology-loader.fk",
+    "form/form-stdlib/grammars/typescript-bmf.fk",
+    "form/form-stdlib/typescript-bmf-eval.fk",
+    "form/form-stdlib/typescript-bmf-lift.fk",
+    "form/form-stdlib/tests/typescript-bmf-eval-band.fk",
+    "form/form-stdlib/tests/typescript-bmf-lift-band.fk",
+    "form/form-kernel-go/bp_table.go",
+    "form/form-kernel-rust/src/bp_table.rs",
+    "form/form-kernel-ts/src/bp_table.ts"
+  ],
+  "change_intent": "runtime_feature"
+}
