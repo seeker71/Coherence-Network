@@ -33,6 +33,6 @@
 
     (let uni (fkc-emit-universal))
     (let c3 (if (ge (str_find uni "static long long *fk_hh" 0) 0)
-                (if (ge (str_find uni "while (t <= 23)" 0) 0) 8 0) 0))
+                (if (ge (str_find uni "while (t <= 42)" 0) 0) 8 0) 0))
 
     (add c0 (add c1 (add c2 c3))))

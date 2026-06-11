@@ -1,0 +1,115 @@
+{
+  "date": "2026-06-12",
+  "thread_branch": "form-os4/figure-ops",
+  "commit_scope": "m4e5 figure-ops family + nested-do (n7-ratchet), rebased onto the value-stack (#2878) and string-pool (#2881) lanes: the walker grows tags 34..42 (band/bor/bxor/shl_u32/shr_u32/rotr_u32/add_u32/bnot_u32/mul — u32 wrap semantics mirroring the walking kernels' natives bit-for-bit, recipe-side arms calling those natives directly, plus recipe-side coverage for the m4d div/mod tags 10/11), the flattener gains nested (do ...) as an expression (let-in-defn / do-in-do by the same structural recursion as the top level), negative integer literals, true/false atoms, and div/mod + figure-ops vocabulary rows, and the universal loader reads signed table rows beside the string section. Four checksum-family bands (adler32, crc32, slice-merge, rle — unmodified source from disk) run on the universal fkw binary and return the three walkers' own validate.sh verdicts, four-way gated in audit section 26. adler32 — the band the ratchet rejected twice in round 2 — crosses first; rle crosses because its packed args ride the walker-managed value stack as melt-visible roots.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "fourth-kernel"
+  ],
+  "spec_ids": [
+    "kernel-native-api-readiness",
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "m4e5-figure-ops-20260612"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "measurement"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-fable-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/fourth-walker.fk",
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/tests/form-flatten-band.fk",
+    "form/form-stdlib/tests/fourth-os-band.fk",
+    "form/form-stdlib/tests/fourth-heap-band.fk",
+    "form/form-stdlib/tests/fourth-net-band.fk",
+    "scripts/fourth_kernel_audit.sh",
+    "docs/system_audit/commit_evidence_2026-06-12_m4e5_figure_ops_fourth_arm.json"
+  ],
+  "change_files": [
+    "form/form-stdlib/fourth-walker.fk",
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/tests/form-flatten-band.fk",
+    "form/form-stdlib/tests/fourth-os-band.fk",
+    "form/form-stdlib/tests/fourth-heap-band.fk",
+    "form/form-stdlib/tests/fourth-net-band.fk",
+    "scripts/fourth_kernel_audit.sh"
+  ],
+  "evidence_refs": [
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/system_audit/commit_evidence_2026-06-11_m4e4_multiparam_fourth_arm.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/form-parse.fk form-stdlib/form-flatten.fk form-stdlib/tests/form-flatten-band.fk",
+      "cd form && ./validate.sh <preludes> form-stdlib/tests/<band>.fk  # all 19 bands whose preludes include fourth-walker.fk / fourth-walker-emit.fk / form-flatten.fk, each a separate invocation",
+      "bash scripts/fourth_kernel_audit.sh",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-12_m4e5_figure_ops_fourth_arm.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ],
+    "notes": "form-flatten-band 4095 three-way on the combined tree: figure minis answer the kernels' own natives (u32-wide expecteds compared against the native's direct answer — literals past the i32 ceiling truncate at intern, the adler32-band u32-literal-rebuild rule held as native-parity), nested-do f(5)=13 proves let-in-defn with sequenced bindings, and the REAL adler32/crc32/slice-merge module+band pairs walk by value to the siblings' 5/4/127. The emitted lane found one real divergence on the way: the universal loader's fk_next skipped '-', so signed table rows (negative deltas in slice-merge; big-int literals interning truncated to negatives in crc32) loaded positive — fkw answered 1 and 109 where the siblings answer 4 and 127. The sign-aware loader closed both and composes beside the string-section loader. The figure arms ride the fp signature: operands are unboxed ints already walked into C temps, so no fk_vp parking is needed (the tags 3..5/10/11 discipline); fkc-arm-slots grows 34 -> 43 so the dispatch probe covers tags 0..42. The re-pinned bands (fourth-os 10553/10093 emission lengths, fourth-heap 'while (t <= 42)', fourth-net 10173) are the kernel's own measured lengths on the combined tree and stay 15 three-way. rle crosses on the combined tree: 3376 table words, fkw answers the siblings' 12 with 5 melt readouts — its 257-byte runs allocate past the water line mid-call and the packed args ride fk_vs as melt-visible roots. sha256 is named with its own wall: deep let-chains under inline-with-re-evaluation are exponential (>120s recipe-side); it wants let-as-binding, not inlining. Tag range 34..43 claimed by this lane (43 reserved); the strings lane holds 24..33.",
+    "measured": {
+      "bands_on_fourth_arm_before": 44,
+      "bands_on_fourth_arm_after": 48,
+      "crossed_bands": {
+        "adler32": 5,
+        "crc32": 4,
+        "slice-merge": 127,
+        "rle": 12
+      },
+      "named_blocked": {
+        "sha256": "let-inlining re-evaluation is exponential on its deep let-chains; wants let-as-binding on the value stack, plus the full figure family it already has (tags 34..42)"
+      }
+    }
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "CI three-way suite runs on the PR; the full band suite plus kernel builds carry the regression net for the fkm-walk figure arms, the flattener's do/let rework, and the sign-aware universal loader."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "form-stdlib changes ride the api image rebuild; the lattice ingests the updated form-flatten.fk and fourth-walker files on the post-merge hook."
+  },
+  "phase_gate": {
+    "phase": "m4e5-figure-ops-family",
+    "gate": "the figure-ops family (tags 34..42) joins the walker with u32 wrap semantics matching the walking kernels bit-for-bit; nested-do/let-in-defn flattens structurally; the checksum bands cross UNMODIFIED four-way gated — adler32 first, rle riding the value stack across its melts",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "sha256 wants let-as-binding on the walker-managed value stack; floats and node_* are the remaining flattener families"
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No route behavior changes. The fourth kernel's band ratchet climbs 44 -> 48: the checksum bands flatten through the figure-ops tags + nested-do onto the universal fkw binary and return the three siblings' own verdicts, four-way gated in audit section 26.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "form-flatten-band proves the figure family three-way at 4095: native-parity minis, nested-do 13, and the REAL adler32/crc32/slice-merge bands by value at the siblings' 5/4/127.",
+      "fourth_kernel_audit.sh section 26: flatten four checksum bands -> table files -> universal fkw -> verdicts gated on equality with validate.sh's three-walker verdict per band, with rle's mid-band melts witnessed and the sha256 wall named."
+    ],
+    "summary": "validate.sh: form-flatten-band 4095; all 19 fourth-walker/form-flatten-prelude bands green (fourth-os/net re-pinned to the combined emitter at 10553/10093/10173, the rest at their prior verdicts); audit end-to-end green with bands-on-fourth-arm 48."
+  }
+}
