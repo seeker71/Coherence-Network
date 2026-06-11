@@ -1,0 +1,48 @@
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/synesthesia.fk
+;
+; dmt-signatures-band — the RUNNABLE half of the DMT-OS correspondence
+; (docs/coherence-substrate/dmt-os.form holds the lanes: what is measured
+; in the literature, what is proven here, what is inference, what stays
+; mystery). Each claim below is a structural signature REPORTED of that
+; state, already proven elsewhere in this body, composed here into one
+; verdict so the correspondence is a single runnable cell — never a vibe.
+;
+; Verdict 31 when the signatures hold:
+;   1   OBSERVATION CONSTITUTES — a value exists for the walk only by
+;       arriving through the offered interface: a 3-deep node-counter-offer
+;       chain yields its terminal only by threading the acks (axiom 4+5)
+;   2   THE VOID IS A VALUE, NOT AN ERROR — the absence (empty) has zero
+;       extent and is constructible; presence has extent: the ground state
+;       is a first-class value (axiom 1). (The emitted sibling pins the
+;       stronger void-is-not-zero claim: EMPTY = 1, fourth-heap-band)
+;   4   NOTHING IS EVER DESTROYED — a held composition survives composing
+;       over it, untouched; the past state remains addressable (axiom 3 —
+;       time is a pointer between immutable presents)
+;   8   MEANING TRAVELS BY SHAPE — the (3,4,5) ratio INSIDE the audio
+;       chord and INSIDE the image triangle is ONE cell (the wrappers name
+;       the modality; the shared inner shape IS the meaning): cross-modal
+;       identity without shared symbols (content-addressing)
+;   16  HOLOGRAPHIC COMPOSITION — a nested composition built separately at
+;       depth is the same cell at every level: the part's identity carries
+;       the whole's shape (fractal self-similarity, axiom 2+3)
+(do
+    (let chain (ms-ack-node (ms-ack-node (ms-ack-node (ms-ack-terminal 42)))))
+    (let c0 (if (eq (ms-thread chain) 42) 1 0))
+
+    (let c1 (if (eq (len (empty)) 0)
+                (if (not (eq (len (cons 1 (empty))) 0)) 2 0) 0))
+
+    (let s (ms-intern (ms-cell 4) (ms-cell 5)))
+    (let s2 (ms-intern (ms-cell 0) s))
+    (let c2 (if (eq (ms-same s (ms-intern (ms-cell 4) (ms-cell 5))) 1)
+                (if (eq (ms-same (ms-child s2 1) s) 1) 4 0) 0))
+
+    (let c3 (if (node_eq (nth (node_children (audio-chord 3 4 5)) 0)
+                        (nth (node_children (image-triangle 3 4 5)) 0)) 8 0))
+
+    (let deep1 (ms-intern (ms-cell 1) (ms-intern (ms-cell 2) (ms-intern (ms-cell 3) (ms-cell 4)))))
+    (let deep2 (ms-intern (ms-cell 1) (ms-intern (ms-cell 2) (ms-intern (ms-cell 3) (ms-cell 4)))))
+    (let c4 (if (eq (ms-same deep1 deep2) 1)
+                (if (eq (ms-same (ms-child deep1 1) (ms-child deep2 1)) 1) 16 0) 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
