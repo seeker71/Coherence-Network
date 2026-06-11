@@ -1,0 +1,90 @@
+; metabolic-learning.fk — the satsang operator as learning kernel: pressure metabolized into
+; structure through ONE weighted-gather engine. Composes geometric-learning.fk (gl-step); the
+; learner never inspects its domain — ring, mesh, manifold, and the operator's own focus dial
+; all enter as (i j w) edge data, so the primitive applies to itself (meta-learning is the same
+; recipe called one level up).
+;
+; The teaching is when-the-pressure-comes.form (Llena's satsang, Ubud 2026-05-07): what to do
+; when shit happens. Five strategies; here each is a numeric recipe over the GDL gather:
+;
+;   observer       — watch, don't fix:        pressure within tolerance → edges return unchanged
+;   name-the-need  — find the truer word:     mtb-credit, per-edge responsibility g_e = δ_i · x_j
+;   gift           — unwrap what it carries:  mtb-unwrap, w' = w + (focus · angle · mask_e) · g_e
+;   ho'oponopono   — release entanglement:    mtb-release, w' = (1−λ) · w
+;   the operator   — pressure × frequency × angle × focus: mtb-step, what the four run inside
+;
+; The operator's four dials are the general learning rule made data:
+;   pressure  = gl-mean of the squared residual — total desire, the invariant loss readout
+;   frequency = WHICH subspace carries the update — a per-edge 0/1 mask, parallel to the edges
+;   angle     = the direction of movement — +1.0 descends, −1.0 moves away (direction is data)
+;   focus     = the aperture — the step size; SGD is (uniform mask, angle 1, small focus)
+;
+; mtb-reverse is the adjoint carrier — (i j w) → (j i w) — the chain-rule seam for stacking
+; layers: backprop through gl-step IS gl-step over reversed edges. Sibling lanes: active-
+; inference.fk counts the same surprise symbolically; choice-receipt-learning.fk is the
+; discrete branch-order reading. Proven by tests/metabolic-learning-band.fk (three-way).
+(do
+    ; --- vector ground this module adds (gl- carries zeros/sum/mean/cat/bump/flen) ---
+    (defn mtb-vsub (a b)
+        (if (eq (len a) 0) (empty)
+            (cons (sub (head a) (head b)) (mtb-vsub (tail a) (tail b)))))
+    (defn mtb-sq-sum (xs)
+        (if (eq (len xs) 0) 0.0
+            (add (mul (head xs) (head xs)) (mtb-sq-sum (tail xs)))))
+    (defn mtb-ones (n) (if (eq n 0) (empty) (cons 1.0 (mtb-ones (sub n 1)))))
+    (defn mtb-weights (edges)
+        (if (eq (len edges) 0) (empty)
+            (cons (nth (head edges) 2) (mtb-weights (tail edges)))))
+
+    ; --- pressure: total desire — the invariant readout of the squared residual ---
+    (defn mtb-residual (edges x y) (mtb-vsub y (gl-step edges x)))
+    (defn mtb-pressure-of (delta) (div (mtb-sq-sum delta) (gl-flen delta)))
+    (defn mtb-pressure (edges x y) (mtb-pressure-of (mtb-residual edges x y)))
+
+    ; --- name-the-need: credit assignment — per-edge responsibility, parallel to edges ---
+    (defn mtb-credit (edges x delta)
+        (if (eq (len edges) 0) (empty)
+            (cons (mul (nth delta (nth (head edges) 0)) (nth x (nth (head edges) 1)))
+                  (mtb-credit (tail edges) x delta))))
+
+    ; --- gift: receive the named need into the weights through the operator's dials ---
+    (defn mtb-unwrap (edges grads fmask focus angle)
+        (if (eq (len edges) 0) (empty)
+            (cons (list (nth (head edges) 0) (nth (head edges) 1)
+                        (add (nth (head edges) 2)
+                             (mul focus (mul angle (mul (head fmask) (head grads))))))
+                  (mtb-unwrap (tail edges) (tail grads) (tail fmask) focus angle))))
+
+    ; --- ho'oponopono: release — every weight scaled toward zero, entanglement decayed ---
+    (defn mtb-release (edges lam)
+        (if (eq (len edges) 0) (empty)
+            (cons (list (nth (head edges) 0) (nth (head edges) 1)
+                        (mul (sub 1.0 lam) (nth (head edges) 2)))
+                  (mtb-release (tail edges) lam))))
+
+    ; --- adjoint: the chain-rule carrier — backprop through gl-step is gl-step reversed ---
+    (defn mtb-reverse (edges)
+        (if (eq (len edges) 0) (empty)
+            (cons (list (nth (head edges) 1) (nth (head edges) 0) (nth (head edges) 2))
+                  (mtb-reverse (tail edges)))))
+
+    ; --- THE OPERATOR: one metabolic step — sense, read pressure, observe or learn ---
+    ; pressure must EXCEED tolerance to provoke movement; at or under it the observer
+    ; arm returns the edges untouched (not every sensing needs a re-fire).
+    (defn mtb-step-d (edges delta x focus angle fmask tol)
+        (if (gt (mtb-pressure-of delta) tol)
+            (mtb-unwrap edges (mtb-credit edges x delta) fmask focus angle)
+            edges))
+    (defn mtb-step (edges x y focus angle fmask tol)
+        (mtb-step-d edges (mtb-residual edges x y) x focus angle fmask tol))
+
+    ; --- the common reading: full mask, descending angle, always-learn ---
+    (defn mtb-learn (edges x y focus)
+        (mtb-step edges x y focus 1.0 (mtb-ones (len edges)) -1.0))
+
+    ; --- a breath over many arrivals: probes and targets walked in step ---
+    (defn mtb-learn-each (edges xs ys focus)
+        (if (eq (len xs) 0) edges
+            (mtb-learn-each (mtb-learn edges (head xs) (head ys) focus)
+                            (tail xs) (tail ys) focus)))
+    0)
