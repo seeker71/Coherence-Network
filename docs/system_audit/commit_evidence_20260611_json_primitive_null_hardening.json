@@ -1,0 +1,84 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "codex/json-null-number-hardening-20260611",
+  "commit_scope": "Harden Form JSON primitive constructors so nullable numeric and boolean route fields emit JSON null instead of crashing",
+  "files_owned": [
+    "form/form-stdlib/json.fk",
+    "form/form-stdlib/tests/json-emitter-band.fk"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/tests/json-emitter-band.fk",
+      "./scripts/test_hostinger_deploy_form_paths.sh",
+      "cd form/form-kernel-rust && cargo test source_bml_catalog_template_routes_select_natively_in_rust --quiet",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260611_json_primitive_null_hardening.json",
+      "git diff --check"
+    ],
+    "notes": "Hostinger Auto Deploy run 27338041650 bounded the previous blind wait and revealed empty replies from the promoted agent-tasks read route before ideas-resonance timed out. The likely crash path is nullable DB primitives, for example progress_pct flowing into json-node-int. This change maps runtime null to JSON null across string, int, float, and bool constructors. Passed the cross-kernel JSON emitter band, 52-route Hostinger BML deploy path proof, Rust native route-catalog test, evidence validation, and git diff whitespace check."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "PR CI has not run yet for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "Hostinger Auto Deploy on main after merge"
+    ],
+    "notes": "Deploy proof should rerun the promoted BML read-route canary and either pass agent-tasks or expose the next concrete route failure."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation, PR CI, and deploy proof remain pending."
+  },
+  "idea_ids": [
+    "native-api-lane",
+    "form-native-front-door",
+    "kernel-crash-trace-repair"
+  ],
+  "spec_ids": [
+    "hostinger-bml-front-door-deploy-proof"
+  ],
+  "task_ids": [
+    "json-null-number-hardening-20260611"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "https://github.com/seeker71/Coherence-Network/actions/runs/27338041650",
+    "form/form-stdlib/json.fk#JSON-constructors"
+  ],
+  "change_files": [
+    "form/form-stdlib/json.fk",
+    "form/form-stdlib/tests/json-emitter-band.fk"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "BML route serializers should return JSON null for nullable primitive DB values rather than closing the HTTP connection with an empty reply.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/agent/tasks?limit=1",
+      "https://api.coherencycoin.com/api/ideas/resonance?limit=2"
+    ],
+    "test_flows": [
+      "Verify the JSON emitter band preserves runtime null through string, int, float, and bool constructors.",
+      "Verify Hostinger Auto Deploy promoted BML read-route canary advances past agent-tasks."
+    ]
+  }
+}
