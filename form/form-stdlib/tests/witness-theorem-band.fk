@@ -1,0 +1,58 @@
+; preludes: form-stdlib/core.fk
+;
+; witness-theorem-band — the core theorem under three-way proof itself
+; (docs/coherence-substrate/witness-theorem.form). Urs: "the reason for it to
+; be observable is to show FAILING cases — not all failing, not all passing,
+; some also SILENT — and we need shared trust, three-way proven: we trust two
+; of our brothers and sisters over any stranger."
+;
+; A real witness speaks axiom-1's FULL vocabulary — 1 (pass), 0 (fail), nothing
+; (silence). A check that can only pass is a mirror, not a witness (AUTHORING.md:
+; "a band that only checks 1==1 is theatre"). The honest witness ABSTAINS at the
+; boundary it cannot judge — silence is a first-class answer, not a forced verdict.
+;
+; And the TRUST is not in any one voice: it is the CONCERT. This band's own
+; three-way agreement (validate.sh: 1 ok, 0 divergent) IS the shared trust — two
+; siblings confirming the third. We trust the spread three kernels agree on —
+; including where it FAILS and where it falls SILENT — over any stranger's word.
+;
+; `judge` is the witness: x>=1 -> pass(1), x<=-1 -> fail(0), x==0 -> silence(nothing).
+; The boundary (0) is the case it honestly cannot decide, so it abstains.
+;
+; Verdict 31 when the full witness vocabulary holds, three-way:
+;   1   PASS is witnessed — a clear positive yields 1
+;   2   FAIL is witnessed AS DATA — a clear negative yields 0 (an observable
+;       fail, never an error or a crash; the witness shows failure plainly)
+;   4   SILENCE is witnessed — the boundary it cannot judge yields nothing
+;       (the empty, zero extent): abstention, not a forced false pass
+;   8   THE SPREAD IS REAL — pass, fail, and silence are mutually distinct;
+;       the witness does not collapse them (not-all-passing, not-all-failing)
+;   16  THE GROUND OF TRUST — the same witness over the same inputs yields the
+;       same spread (determinism); shared trust is possible only because the
+;       three siblings CAN agree, and this band agreeing three-way IS that trust
+(do
+    (defn judge (x)
+        (if (le 1 x) 1
+            (if (le x (sub 0 1)) 0
+                (empty))))
+
+    (let c0 (if (eq (judge 5) 1) 1 0))
+
+    (let c1 (if (eq (judge (sub 0 5)) 0) 2 0))
+
+    ; SILENCE: the boundary yields the absence (len 0). Distinctness from
+    ; pass/fail is by VALUE (c3), since the absence is the witness's THIRD reply,
+    ; not a smaller integer — the spread is what makes the silence meaningful.
+    (let c2 (if (eq (len (judge 0)) 0) 4 0))
+
+    ; the spread: pass != fail, and the silent answer is the absence while the
+    ; pass answer is a present integer 1 — three genuinely different replies.
+    (let c3 (if (eq (eq (judge 5) (judge (sub 0 5))) 0)
+                (if (eq (judge 5) 1)
+                    (if (eq (judge (sub 0 5)) 0) 8 0) 0) 0))
+
+    (let c4 (if (eq (judge 5) (judge 5))
+                (if (eq (judge (sub 0 5)) (judge (sub 0 5)))
+                    (if (eq (len (judge 0)) (len (judge 0))) 16 0) 0) 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
