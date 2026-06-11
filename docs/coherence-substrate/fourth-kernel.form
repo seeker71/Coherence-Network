@@ -359,15 +359,30 @@
                            unchanged) — nine more bands crossed UNMODIFIED,
                            bands-on-fourth-arm 1 -> 10, each four-way gated
                            (audit section 22; tests/form-flatten-band.fk ->
-                           127); remaining families named with their walls:
-                           str_* (needs the walker string-pool lane, shared
-                           with the m4d fixpoint blocker), figure-ops
-                           (band/shl_u32/add_u32 + nested-do unlock the
-                           checksum bands), floats; and the melt-root wall —
-                           packed args live in suspended C frames the
-                           copying melt cannot root (feature-vector blocked
-                           there), the structural fix is call args on a
-                           walker-managed value stack)
+                           127); m4e5 [SHIPPED, four stones one round]:
+                           the VALUE STACK (call args ride melt-rooted
+                           fk_vs — every live value melt-visible, the
+                           melt-root wall down; feature-vector + rle cross
+                           with melts firing mid-band; audit section 24),
+                           the STRING POOL (tags 24-33: content-addressed
+                           interned literals, same bytes = same slot; the
+                           corpus's string need is IDENTITY not
+                           manipulation — 33 bands crossed at once; audit
+                           section 25), the FIGURE FAMILY (tags 34-42 u32
+                           wrap semantics bit-for-bit with the walking
+                           kernels + nested-do/let-in-defn structural
+                           flattening — adler32, twice rejected, answers 5
+                           through the fourth mouth; crc32, slice-merge,
+                           rle; audit section 26); bands-on-fourth-arm
+                           10 -> 48, every crossing four-way gated.
+                           Remaining families with their walls: floats;
+                           sha256 wants let-as-binding (let-inlining
+                           re-evaluation is exponential on deep chains);
+                           pool ops 29-33 (int_to_str first) serve both the
+                           emit-family bands and the m4d fixpoint; and a
+                           typed str-eq lowering before any band compares
+                           strings with plain eq (pool-id equality holds on
+                           the fourth arm only))
           (n8-assembly     [SHIPPED] otool -tvV on the emitted walker in the
                            audit shows real ARM64 (stp/ldr/adrp/lsl) — the
                            whole arc visible: Form recipe -> emitted C ->
@@ -460,10 +475,23 @@
                      witnessed audit section 21 (freeze at 51 -> 3 idle
                      epochs halve 88->44->22 -> melt at 22 -> re-earn after
                      2 winning epochs), proven three-way
-                     (tests/melt-hot-swap-band.fk -> 31). Open, named: true
-                     runtime codegen for FOREIGN loaded tables (the
-                     universal binary re-emitting through the toolchain
-                     port — the full crystallization wire))
+                     (tests/melt-hot-swap-band.fk -> 31). crystallization
+                     wire [SHIPPED, pure-compute family]: the universal
+                     binary CARRIES the lowerer (fkc-emit-uwire: fk_lo
+                     reads loaded fk_node rows and writes C at runtime) —
+                     a FOREIGN table it never saw runs hot, the binary
+                     emits one C source for the can-true family, drives
+                     clang through the toolchain port (one invocation,
+                     handle persisted), dlopens, dispatch flips with
+                     parity held; the both-ways thermodynamics apply
+                     unchanged (freeze/melt/re-earn without recompile),
+                     and the lowerability fixpoint computed at LOAD
+                     refuses organs and out-of-family tags before any
+                     heat counts (a RAM-organ fn and a figure-op fn both
+                     hot, both refused — audit section 27;
+                     tests/crystallization-wire-band.fk -> 31). Open,
+                     named: native shapes beyond the pure-compute tags
+                     (strings/figure/organ arms in fk_lo's algebra))
 
         (organs-physical  one physical proof per host resource through the
                      fourth sibling, band tests/fourth-os-band.fk -> 15:
