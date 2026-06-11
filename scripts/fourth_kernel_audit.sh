@@ -644,5 +644,59 @@ fi
 echo "  bands-on-fourth-arm: 1 (gt/ge/eq/and lowered onto IF/LE; defn -> CALL table; let inlined; lists on the arena)"
 
 echo
+# ── 20. melt-on-cool — the arena crosses its measured boundary and SURVIVES ──
+# Round 1 measured the bump-only carrier: holds to 4095 cells, n=4096 wraps the
+# root onto the sentinel (LEN 0), n=4200 tears the chain (LEN 104). The melt
+# door (arena-melt.fk's proven walk, emitted as fk_mlive/fk_mcopy/fk_melt) fires
+# at the high-water line; live cells cross into fresh space; the carrier doubles
+# only when the live set crowds it. Same universal binary as section 8; the
+# melt readout (allocated live dead cap-from cap-to bytes-reclaimed) on stderr.
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
+    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" > "$work/melt-driver.fk"
+cat >> "$work/melt-driver.fk" <<'EOF'
+(let chain (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-empty)
+                  (fk-cons (fk-arg) (fk-call 1 (fk-sub (fk-arg) (fk-lit 1))))))
+(let chainlen (fk-len (fk-call 1 (fk-arg))))
+(let churn (fk-if (fk-le (fk-arg) (fk-lit 1))
+                  (fk-len (fk-call 1 (fk-lit 1000)))
+                  (fk-add (fk-sub (fk-len (fk-call 1 (fk-lit 1000))) (fk-lit 1000))
+                          (fk-call 0 (fk-sub (fk-arg) (fk-lit 1))))))
+(print "==TCH==")
+(print (fkc-table-file (list chainlen chain)))
+(print "==TCU==")
+(print (fkc-table-file (list churn chain)))
+(print "==END==")
+EOF
+(cd "$FORMDIR" && "$GO_BIN" "$work/melt-driver.fk" 2>/dev/null) > "$work/melt.out"
+sed -n '/^==TCH==$/,/^==TCU==$/p' "$work/melt.out" | sed -e '1d' -e '$d' > "$work/t-chain.txt"
+sed -n '/^==TCU==$/,/^==END==$/p' "$work/melt.out" | sed -e '1d' -e '$d' > "$work/t-churn.txt"
+m64="$("$work/fkwu" "$work/t-chain.txt" 64 2>"$work/me64.txt" | head -1)"
+m4095="$("$work/fkwu" "$work/t-chain.txt" 4095 2>"$work/me4095.txt" | head -1)"
+m4096="$("$work/fkwu" "$work/t-chain.txt" 4096 2>"$work/me4096.txt" | head -1)"
+m4200="$("$work/fkwu" "$work/t-chain.txt" 4200 2>"$work/me4200.txt" | head -1)"
+mchurn="$("$work/fkwu" "$work/t-churn.txt" 5 2>"$work/mechurn.txt" | head -1)"
+echo "melt-on-cool (the round-1 deaths, rerun on the melt-doored carrier):"
+echo "  chain n=64   -> $m64    (dormant below water — no melt line)"
+echo "  chain n=4095 -> $m4095  (held before; still holds, now melting mid-build)"
+echo "  chain n=4096 -> $m4096  (was 0 — the root wrapped onto the sentinel)"
+echo "  chain n=4200 -> $m4200  (was 104 — the chain torn at the wrap)"
+echo "  churn 5x1000 -> $mchurn  (rebuilds cross the water; garbage reclaimed)"
+echo "  melt readout (allocated live dead cap-from cap-to bytes-reclaimed):"
+sed 's/^/    chain n=4200: /' "$work/me4200.txt"
+sed 's/^/    churn 5x1000: /' "$work/mechurn.txt"
+if [[ "$m64" != "64" || "$m4095" != "4095" || "$m4096" != "4096" || "$m4200" != "4200" || "$mchurn" != "1000" ]]; then
+    echo "FAIL  the melt door did not carry the boundary crossing"; exit 1
+fi
+if [[ -s "$work/me64.txt" ]]; then
+    echo "FAIL  melt fired below the water line"; exit 1
+fi
+if ! grep -q '^melt ' "$work/me4200.txt" || ! grep -q '^melt ' "$work/mechurn.txt"; then
+    echo "FAIL  no melt readout where the boundary was crossed"; exit 1
+fi
+awk '/^melt /{ok=($6==8192)}END{exit ok?0:1}' "$work/me4200.txt" || { echo "FAIL  chain melt did not grow the crowded carrier"; exit 1; }
+awk '/^melt /{ok=($4>0 && $6==4096)}END{exit ok?0:1}' "$work/mechurn.txt" || { echo "FAIL  churn melt did not reclaim within the kept carrier"; exit 1; }
+echo "  the melt the recipes prove is the melt the binary DOES — live sets cross the boundary, garbage returns"
+
+echo
 echo "conditions: $(uname -m) $(uname -s), clang -O2, full-process invocations (startup included)"
 echo "ok — parity held and the rows are real; the spec is docs/coherence-substrate/fourth-kernel.form"
