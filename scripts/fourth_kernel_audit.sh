@@ -975,5 +975,71 @@ echo "  mid-band — their packed args ride the value stack as melt-visible root
 echo "  bands-on-fourth-arm: $((11 + sp_pass)) (learning-trend + 9 multi-param + feature-vector + $sp_pass string-pool bands, four-way gated)"
 
 echo
+# ── 26. m4e5 — the figure-ops family + nested-do: the checksum bands cross ──
+# The walker grew tags 34..42 (band/bor/bxor/shl_u32/shr_u32/rotr_u32/
+# add_u32/bnot_u32/mul — the u32 wrap discipline mirroring the walking
+# kernels' natives bit-for-bit), the flattener gained nested (do ...) as an
+# expression (let-in-defn: lets bind env for the rest of the do, the last
+# expression is the value), negative literals, the true/false atoms, and the
+# div/mod rows; the universal loader reads signed table rows (big-int
+# literals intern truncated and travel as negatives, absorbed identically by
+# the u32 casts on both sides). Four checksum-family bands (UNMODIFIED
+# source from disk) run on the SAME universal binary, each gated four-way
+# against the siblings' own validate.sh verdict — adler32, the band the
+# ratchet first rejected in round 2, crosses first. rle's 257-byte runs
+# allocate past the arena water line mid-call; its packed args ride the
+# walker-managed value stack (section 24), so the melt fires mid-band and
+# it crosses with the rest. sha256 stays named with its own wall: deep
+# let-chains under inline-with-re-evaluation are exponential; it wants
+# let-as-binding, not inlining.
+fig_mods=(adler32 crc32 slice-merge rle)
+fig_exps=(5 4 127 12)
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
+    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" "$FORMDIR/form-stdlib/form-parse.fk" \
+    "$FORMDIR/form-stdlib/form-flatten.fk" > "$work/fig-driver.fk"
+for m in "${fig_mods[@]}"; do
+    cat >> "$work/fig-driver.fk" <<EOF
+(print "==FIG-$m==")
+(print (fks-table-file (flt-band-fns (read_file "form-stdlib/$m.fk") (read_file "form-stdlib/tests/$m-band.fk")) (flt-band-pool (read_file "form-stdlib/$m.fk") (read_file "form-stdlib/tests/$m-band.fk"))))
+EOF
+done
+echo '(print "==FIG-END==")' >> "$work/fig-driver.fk"
+(cd "$FORMDIR" && "$GO_BIN" "$work/fig-driver.fk" 2>/dev/null) > "$work/fig.out"
+prev=""
+while IFS= read -r line; do
+    if [[ "$line" == ==FIG-*== ]]; then
+        prev="${line#==FIG-}"; prev="${prev%==}"
+        : > "$work/t-fig-$prev.txt"
+    elif [[ -n "$prev" ]]; then
+        printf '%s\n' "$line" >> "$work/t-fig-$prev.txt"
+    fi
+done < "$work/fig.out"
+for m in "${fig_mods[@]}"; do
+    (cd "$FORMDIR" && ./validate.sh form-stdlib/core.fk "form-stdlib/$m.fk" "form-stdlib/tests/$m-band.fk" 2>/dev/null \
+        | sed -n 's/.*→ //p' | head -1 > "$work/vw-fig-$m.txt") &
+done
+wait
+echo "m4e5 figure-ops + nested-do — the checksum bands on the fourth arm:"
+fig_pass=0
+for k in "${!fig_mods[@]}"; do
+    m="${fig_mods[$k]}"; exp="${fig_exps[$k]}"
+    three_way="$(cat "$work/vw-fig-$m.txt")"
+    fkw_v="$("$work/fkwu" "$work/t-fig-$m.txt" 0 2>"$work/fig-melt-$m.txt" | head -1)"
+    printf "  %-18s three-walker (validate.sh) = %-4s fkw = %-4s (expect %s)\n" "$m" "$three_way" "$fkw_v" "$exp"
+    if [[ -z "$three_way" || "$three_way" != "$fkw_v" || "$fkw_v" != "$exp" ]]; then
+        echo "FAIL  the fourth arm disagrees with the siblings on $m"; exit 1
+    fi
+    fig_pass=$((fig_pass + 1))
+done
+if ! grep -q '^melt ' "$work/fig-melt-rle.txt"; then
+    echo "FAIL  rle ran without a melt — its crossing no longer witnesses the value stack"; exit 1
+fi
+echo "  rle's 257-byte runs crossed the melt water line mid-band ($(grep -c '^melt ' "$work/fig-melt-rle.txt") melts) —"
+echo "  the packed args rode the value stack as melt-visible roots (section 24)"
+echo "  sha256             named with its wall: deep let-chains are exponential under inlining —"
+echo "                     wants let-as-binding (the value-stack lane), not re-evaluation"
+echo "  bands-on-fourth-arm: $((11 + sp_pass + fig_pass)) (learning-trend + 9 multi-param + feature-vector + $sp_pass string-pool + $fig_pass checksum-family bands, four-way gated)"
+
+echo
 echo "conditions: $(uname -m) $(uname -s), clang -O2, full-process invocations (startup included)"
 echo "ok — parity held and the rows are real; the spec is docs/coherence-substrate/fourth-kernel.form"
