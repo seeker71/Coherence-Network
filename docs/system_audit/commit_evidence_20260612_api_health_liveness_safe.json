@@ -1,0 +1,91 @@
+{
+  "date": "2026-06-12",
+  "thread_branch": "codex/api-health-liveness-safe-20260612",
+  "commit_scope": "Make native /api/health a pure liveness response",
+  "files_owned": [
+    "deploy/front-door/api.bml"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "form/form-kernel-rust/target/release/form-kernel-rust serve --host 127.0.0.1 --port 18283 --workers 1 --routes deploy/front-door/api.bml --stdlib form/form-stdlib --upstream http://127.0.0.1:18080",
+      "80 local CORS probes against http://127.0.0.1:18283/api/health",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/tests/json-emitter-band.fk",
+      "scripts/test_hostinger_deploy_form_paths.sh",
+      "git diff --check"
+    ],
+    "notes": "After PR #2892 deployed, a delayed public CORS window still observed 4 native /api/health fatal responses in 80 attempts. Local BML /api/health remained 80/80 stable with this patch. The native liveness response preserves status, version, timestamps, deployed_sha, schema_ok, integrity_compromised, smart_reap_available, recent_outcomes, and kernel_runtime keys, but no longer performs DB integrity/schema/recent-outcomes or filesystem smart-reap checks inside /api/health. Persistence proof remains on /api/health/persistence and /api/ready."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "PR CI has not run yet for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "Hostinger Auto Deploy on main after merge",
+      "repeat /api/health CORS probes against https://api.coherencycoin.com",
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com"
+    ],
+    "notes": "Deploy proof should show repeated native /api/health CORS probes return 200 without X-Form-Fatal-Kind, and public verifier should pass API/web/CORS checks."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation passed; PR CI and deploy proof remain pending."
+  },
+  "idea_ids": [
+    "form-os-information-protocol",
+    "native-api-lane",
+    "pipeline-reliability"
+  ],
+  "spec_ids": [
+    "pulse-silence-boundary-repair",
+    "evidence-grounding",
+    "native-route-goal-state"
+  ],
+  "task_ids": [
+    "api-health-liveness-safe-20260612"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "deploy/front-door/api.bml#api-health-json",
+    "public-window:76-ok-4-fail-native-health-cors-after-pr-2892",
+    "local-window:80-ok-0-fail-native-health-cors-after-liveness-patch"
+  ],
+  "change_files": [
+    "deploy/front-door/api.bml",
+    "docs/system_audit/commit_evidence_20260612_api_health_liveness_safe.json"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Native /api/health should be a crash-resistant liveness endpoint that returns a complete health JSON envelope without invoking production DB/cache/filesystem checks that can fail intermittently.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/health",
+      "https://api.coherencycoin.com/api/health/persistence",
+      "https://api.coherencycoin.com/api/ready"
+    ],
+    "test_flows": [
+      "Probe /api/health repeatedly with Origin: https://coherencycoin.com and verify HTTP 200 plus Access-Control-Allow-Origin.",
+      "Run the public deploy verifier and confirm API runtime SHA parity, promoted BML reads, web health proxy parity, and CORS pass."
+    ]
+  }
+}
