@@ -69,6 +69,7 @@ pub static BP_ENTRIES: &[(&str, [u32; 4])] = &[
     ("BML-PARSED-SOURCE-PARSER", [1, 2, 99, 9263]),
     ("BML-SOURCE-CARRIER", [1, 2, 99, 9262]),
     ("BML-SOURCE-DECLARATION", [1, 2, 99, 9261]),
+    ("BOOT-QUERY", [1, 2, 99, 1744]),
     ("BUCKET", [1, 2, 99, 1840]),
     ("CAPABILITIES", [1, 2, 99, 1721]),
     ("CELL-CIRCLE", [1, 2, 99, 1704]),

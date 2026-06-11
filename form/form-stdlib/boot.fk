@@ -1,0 +1,163 @@
+; boot.fk — boot-from-axioms: the boot theorem of kernel-self-composition
+; as a runnable recipe — load a .fkb image, offer a channel, self-extend
+; by MINTING the next image (the boot artifact itself never mutates).
+;
+; preludes: form-stdlib/channel.fk form-stdlib/persistence.fk form-stdlib/cell-registry.fk
+;
+; The boot sequence from docs/coherence-substrate/kernel-self-composition.form:
+;
+;   (boot (from            the-five-axioms-as-the-only-given)
+;         (compose         primitives-then-channels-then-ports)
+;         (offer-a-channel the-first-act-is-to-offer-a-channel-for-input)
+;         (self-hosting    a-kernel-boots-a-bigger-kernel-it-authored))
+;
+; realized over tissue that already runs:
+;
+;   the boot artifact — a persistence.fk cell store: a .fkb file whose
+;     entries are CELL Recipes. Loading it re-collapses every cell, by
+;     content-addressing, to the same NodeIDs on every sibling kernel
+;     (axiom-3). Reading the image IS the load (axiom-4: observed = real).
+;   offer a channel — the FIRST ACT of a booted body is to become
+;     reachable: open a channel.fk input channel and register it in a
+;     cell-registry.fk directory with the capabilities it chooses
+;     (axiom-4 sovereignty: it offers what it wills; consent is one
+;     interface among many, not the only one).
+;   self-extend — offers arrive on the channel (axiom-5). An extension
+;     offer carries a CELL Recipe; accepting MINTS the next image (seed
+;     cells + offered cells) at a new path. The original image keeps its
+;     shape — axiom-3's strange heart: extension mints, never mutates,
+;     so the version lineage is the sequence of images and rollback is
+;     re-pointing a boot at an older one.
+;   one act — a query travels the same channel as an extension (axiom-5:
+;     to run a cell and to speak to a cell are one act); only the payload
+;     category differs. The ack is a found cell or honest absence.
+;
+; Proven by form-stdlib/tests/boot-band.fk: the seed boots with N cells,
+; one offer extends a minted image to N+1, a query through the offered
+; channel finds the new cell, and re-booting the original image still
+; finds N — a kernel boots a bigger kernel it authored (self-hosting).
+
+;; --- Blueprints -----------------------------------------------------
+;; BOOT-QUERY — the one structural marker this module adds (registry
+;; inst 1744, beside CELL-V0 1740). Children: (domain, name) — the same
+;; two keys persistence.fk's lookup-cell resolves.
+(let BOOT-QUERY (bp "BOOT-QUERY"))
+;; The extension payload is persistence.fk's CELL-V0 — re-derived here
+;; by name; content-addressing makes it the SAME blueprint (names are
+;; query keys, the NodeID is the identity).
+(let BOOT-CELL (bp "CELL-V0"))
+
+;; --- helpers --------------------------------------------------------
+
+(defn bt-nil? (xs) (eq (len xs) 0))
+(defn bt-nth (xs i)
+    (if (eq i 0) (head xs) (bt-nth (tail xs) (sub i 1))))
+
+;; bt-payloads — unwrap every CHANNEL-MSG on a channel to its payload.
+(defn bt-payloads (msgs acc)
+    (if (bt-nil? msgs) acc
+        (bt-payloads (tail msgs)
+            (append acc (list (channel-msg-payload (head msgs)))))))
+
+;; bt-collect-category — every payload of one blueprint category, in
+;; arrival order.
+(defn bt-collect-category (payloads cat acc)
+    (if (bt-nil? payloads) acc
+        (bt-collect-category (tail payloads) cat
+            (if (node_eq (node_category (head payloads)) cat)
+                (append acc (list (head payloads)))
+                acc))))
+
+;; bt-last-of-category — the LAST payload of one category, as a 0-or-1
+;; element list (the body's optional idiom, matching lookup-cell).
+(defn bt-last-of-category (payloads cat acc)
+    (if (bt-nil? payloads) acc
+        (bt-last-of-category (tail payloads) cat
+            (if (node_eq (node_category (head payloads)) cat)
+                (list (head payloads))
+                acc))))
+
+;; bt-adopt — append an already-composed CELL Recipe to a store. A store
+;; is a channel of CELL messages (persistence.fk), so adopting a cell
+;; that crossed a channel lands the identical entry a cell-put of the
+;; same four arguments would — content-addressing is the guarantee.
+(defn bt-adopt (path cell)
+    (channel-append path (channel-message cell)))
+
+;; bt-adopt-all — adopt each cell, then answer with the durable count
+;; read back from disk (the file, not a counter, is the truth).
+(defn bt-adopt-all (path cells)
+    (if (bt-nil? cells) (len (store-cells path))
+        (do (bt-adopt path (head cells))
+            (bt-adopt-all path (tail cells)))))
+
+;; --- boot: load the image, offer a channel ---------------------------
+
+;; boot image-path registry-path channel-path identity -> woke count.
+;; The boot sequence as data the kernel walks:
+;;   1. load  — store-cells re-interns every cell the image holds
+;;   2. offer — create the input channel; register it reachable with
+;;              the capabilities this body chooses ("extend" "query")
+;; Returns how many cells the body woke with; the boot is only as real
+;; as the image that reads back.
+(defn boot (image-path registry-path channel-path identity)
+    (do
+        (let woke (len (store-cells image-path)))
+        (channel-create channel-path)
+        (register-cell registry-path identity channel-path
+            (list "extend" "query"))
+        woke))
+
+;; --- offers into the booted body (the outside cell's side) -----------
+
+;; boot-offer-cell — an extension offer: a CELL Recipe travels to the
+;; body's channel (axiom-5: offer a cell). Returns message count.
+(defn boot-offer-cell (channel-path cell)
+    (channel-append channel-path (channel-message cell)))
+
+;; boot-offer-query — a question is the SAME act as an extension — an
+;; offer on the same channel; only the payload category differs.
+(defn boot-offer-query (channel-path domain name)
+    (channel-append channel-path
+        (channel-message
+            (intern_node BOOT-QUERY
+                (list (intern_trivial_string domain)
+                      (intern_trivial_string name))))))
+
+;; --- self-extend: accept offers by MINTING the next image ------------
+
+;; boot-self-extend image-path channel-path next-image-path -> cell
+;; count of the minted image. Reads the channel, takes every CELL offer
+;; (queries stay queries — they never leak into the image), and writes
+;; seed + offered cells to a NEW store. The original image is untouched:
+;; the version lineage is the sequence of minted images. A mint onto the
+;; seed's own path would mutate the boot artifact — refused (ack 0):
+;; extension mints a new image or does not happen.
+(defn boot-self-extend (image-path channel-path next-image-path)
+    (if (str_eq image-path next-image-path) 0
+        (do
+            (let offered (bt-collect-category
+                             (bt-payloads (channel-read channel-path) (list))
+                             BOOT-CELL (list)))
+            (let seed (store-cells image-path))
+            (cell-store-create next-image-path)
+            (bt-adopt-all next-image-path (append seed offered)))))
+
+;; --- answering a query (the booted body's side) ----------------------
+
+;; boot-pending-query — the latest BOOT-QUERY waiting on the channel,
+;; as a 0-or-1 element list.
+(defn boot-pending-query (channel-path)
+    (bt-last-of-category
+        (bt-payloads (channel-read channel-path) (list))
+        BOOT-QUERY (list)))
+
+;; boot-answer — answer a BOOT-QUERY from a live image. The ack is
+;; axiom-5's: the found cell, or honest absence (empty list) — never a
+;; fabricated one.
+(defn boot-answer (image-path q)
+    (lookup-cell image-path
+        (node_value (bt-nth (node_children q) 0))
+        (node_value (bt-nth (node_children q) 1))))
+
+0

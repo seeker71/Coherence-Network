@@ -4088,6 +4088,20 @@
    "pkg": 1,
    "level": 2,
    "type": 99,
+   "inst": 1744,
+   "name": "BOOT-QUERY",
+   "meaning": "a question offered on a booted body's input channel — children (domain, name), the two keys lookup-cell resolves; the same act as an extension offer (axiom-5), distinguished only by category",
+   "aliases": [],
+   "reuse": 1,
+   "defined_in": [
+    "form/form-stdlib/boot.fk"
+   ],
+   "curated": true
+  },
+  {
+   "pkg": 1,
+   "level": 2,
+   "type": 99,
    "inst": 1745,
    "name": "HOLO-ONE",
    "meaning": "The One \u2014 the prima materia, the single source Blueprint all holographic forms differentiate from (the ground every bulk is interned under). Carries its own address, distinct from HANDLER-NOT-FOUND: the source of all forms is not absence.",

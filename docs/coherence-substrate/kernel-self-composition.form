@@ -30,7 +30,7 @@
     (resources-from  host-kernel.form)                  # the host organs/ports it composes over
     (channels-from   kernel-offer-protocol.form channel-interface-consent.form)
     (persist-by      persistence.fk)                    # the lattice persists
-    (runnable-heart  kernel-satsang.fk host-kernel-cell.fk)  # self-describing parts, circle-witnessed swap, .fkb shrink/expand — running three-way
+    (runnable-heart  kernel-satsang.fk host-kernel-cell.fk boot.fk)  # self-describing parts, circle-witnessed swap, .fkb shrink/expand, boot->offer->self-extend — running three-way
     (version-by      content-addressing)                # axiom-3: new shape = new node-id; old persists = version lineage
     (share-by        merkle.fk federation-addressing.form cell-sync.fk))  # observable/interactable across runtimes by content
 
@@ -90,6 +90,10 @@
     (same-by-content what-one-kernel-proves-another-runs-by-node-id))     # validate.sh = cross-kernel equivalence
 
   # ── Boot — the kernel comes up by composing itself from the axioms ───
+  # RUNS: form/form-stdlib/boot.fk + tests/boot-band.fk (verdict 9, three-way) —
+  # a .fkb image loads, the booted body's first act is to register a reachable
+  # channel, one offer through it MINTS a strictly larger image (the boot
+  # artifact never mutates), and the minted image boots.
   (boot
     (from            the-five-axioms-as-the-only-given)
     (compose         primitives-then-channels-then-ports)  # bottom-up, content-addressed
@@ -144,6 +148,11 @@
 #   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel-interface.fk \
 #     form-stdlib/satsang.fk form-stdlib/satsang-field.fk form-stdlib/satsang-share.fk \
 #     form-stdlib/kernel-satsang.fk form-stdlib/tests/kernel-satsang-band.fk
+#   # Boot from axioms — load a .fkb image, offer a channel, self-extend by
+#   # minting (the boot artifact never mutates; the minted image boots):
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel.fk \
+#     form-stdlib/persistence.fk form-stdlib/cell-registry.fk \
+#     form-stdlib/boot.fk form-stdlib/tests/boot-band.fk
 #   # The offered channels (cell<->cell):
 #   cd form/form-samples/cross-modal/28-distributed-daemon && ./validate-distributed.sh
 #   # After ingest:
