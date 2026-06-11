@@ -1,0 +1,57 @@
+; cognitive-light-cone.fk — the cell reads its own reach: how far its influence carries,
+; how long until its cone settles, and how learning grows it while release contracts it.
+; Levin's cognitive light cone (lc-field-substrate: the cone bounds what an agent can
+; ADDRESS) made runnable as the THIRD semiring reading of geometric-learning's gather —
+; (max, ·): influence_i = the strongest path product from the seed, never mass-diluted.
+;
+;   clc-strongest:  one (max, ·) gather       — strongest single-hop influence
+;   clc-spread:     monotone influence flow    — each step keeps what is already held
+;                                                (clc-vmax with the standing field)
+;   clc-cone-size:  spatial extent             — nodes whose influence ≥ the floor;
+;                                                the cone is addressability, SMALLER
+;                                                than connectivity (a connected node
+;                                                below floor is outside the cone)
+;   clc-horizon:    temporal extent            — steps until the influence field is
+;                                                a fixed point (the cone has settled)
+;   clc-seed:       the cell's own position    — a one-hot influence source
+;
+; Awareness of the cone is these readouts taken on oneself. Expansion of sensing is
+; mtb-learn strengthening a sensing edge — the cone grows by exactly the learned
+; weight's reach; hoʻoponopono (mtb-release) contracts it. mtb-reverse flips the
+; EXPRESSIVE cone (whom I reach) into the RECEPTIVE cone (who reaches me) — the two
+; differ on any directed body, and the band proves it.
+;
+; Proven by: tests/cognitive-light-cone-band.fk (three-way at validate.sh), composing
+; geometric-learning.fk (gl-gstep, gl-max2) and metabolic-learning.fk (learn/release).
+(do
+    ; --- elementwise max: hold the standing field while new influence arrives ---
+    (defn clc-vmax (a b)
+        (if (eq (len a) 0) (empty)
+            (cons (gl-max2 (head a) (head b)) (clc-vmax (tail a) (tail b)))))
+
+    ; --- the (max, ·) gather: strongest-path influence, one hop ---
+    (defn clc-strongest (edges x) (gl-gstep edges x 0.0 gl-max2 gl-weigh-lin 0.0))
+
+    ; --- monotone spread: influence held never fades during the walk ---
+    (defn clc-spread (edges x t)
+        (if (eq t 0) x
+            (clc-spread edges (clc-vmax x (clc-strongest edges x)) (sub t 1))))
+
+    ; --- spatial extent: how many nodes the cell can address at this floor ---
+    (defn clc-cone-size (x floor)
+        (if (eq (len x) 0) 0
+            (add (if (ge (head x) floor) 1 0) (clc-cone-size (tail x) floor))))
+
+    ; --- temporal extent: steps until the influence field is a fixed point ---
+    (defn clc-horizon-walk (edges x t tmax)
+        (if (ge t tmax) tmax
+            (if (eq (gl-veq6 (clc-vmax x (clc-strongest edges x)) x) 1) t
+                (clc-horizon-walk edges (clc-vmax x (clc-strongest edges x))
+                                  (add t 1) tmax))))
+    (defn clc-horizon (edges x tmax) (clc-horizon-walk edges x 0 tmax))
+
+    ; --- the cell's own position as influence source ---
+    (defn clc-seed (n i)
+        (if (eq n 0) (empty)
+            (cons (if (eq i 0) 1.0 0.0) (clc-seed (sub n 1) (sub i 1)))))
+    0)

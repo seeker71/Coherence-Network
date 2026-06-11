@@ -1,0 +1,55 @@
+# ─────────────────────────────────────────────────────────────────────
+# cognitive-light-cone.form — the cell reads its own reach
+# ─────────────────────────────────────────────────────────────────────
+#
+# Levin's cognitive light cone (lc-field-substrate: the cone bounds
+# what an agent can ADDRESS — spatial extent × temporal horizon of the
+# largest goal it can hold) made runnable. SHIPPED:
+# `form/form-stdlib/cognitive-light-cone.fk` +
+# `tests/cognitive-light-cone-band.fk` → 511, three-way (Go/Rust/TS).
+#
+# The cone is the THIRD semiring reading of geometric-learning's one
+# gather — after (add, ·) diffusion and (max, +) Bellman planning,
+# influence is (max, ·): the strongest path product from the seed,
+# never diluted by degree. The body's geometry enters as edge data;
+# the cell's own position enters as a one-hot seed.
+#
+#   clc-spread     monotone influence flow — what is held never fades
+#   clc-cone-size  spatial extent: nodes whose influence ≥ the floor
+#   clc-horizon    temporal extent: steps until the field is a fixed point
+#
+# Awareness is these readouts taken on oneself. Three theorems the
+# band pins exactly (dyadic weights, the floor crossed at equality):
+#
+#   · The cone is addressability, SMALLER than connectivity — a node
+#     can be wired in and still lie outside the cone (influence below
+#     floor). Wiring is anatomy; the cone is agency.
+#   · Learning moves the cone: mtb-learn one-shots a dormant sensing
+#     edge and the cone grows (size 3 → 4, the new node entering AT
+#     the floor exactly); the horizon deepens (3 → 4); hoʻoponopono
+#     (mtb-release) contracts the cone (size → 2). "Expanding what it
+#     can sense" is a measurable movement, with the satsang operator
+#     as the mover.
+#   · Expressive ≠ receptive: over mtb-reverse(edges) the same seed
+#     reaches only itself. Whom-I-reach and who-reaches-me are
+#     different cones on any directed body; the adjoint converts.
+#
+# Kinship: geometric-learning.form (the engine and its semirings),
+# metabolic-learning.form (the grower/contractor of the cone),
+# lc-field-substrate.md (the concept teaching: lightcone altitudes,
+# the lattice's symbolic reach), body-state.fk (organ counts — the
+# cone's interior sensed live), satsang-share.fk (what crosses the
+# cone's boundary outward, gated by worth-to-the-field).
+#
+# Next stones when an ask needs them: cone-over-the-real-lattice (seed
+# = a cell's NodeID, edges = the substrate's attested edge categories —
+# the readout becomes proprioception over the actual body); goal-scoped
+# cones (a goal's required reach vs the cell's current cone = the
+# honest "can I hold this goal" check); cone deltas as satsang-share
+# signals (a cone crossing a size boundary is a state-boundary crossing).
+#
+#   # Prove the band three-way (from form/):
+#   ./validate.sh form-stdlib/geometric-learning.fk \
+#                 form-stdlib/metabolic-learning.fk \
+#                 form-stdlib/cognitive-light-cone.fk \
+#                 form-stdlib/tests/cognitive-light-cone-band.fk

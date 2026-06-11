@@ -194,6 +194,10 @@
 #                                  edge-builder stone.
 #   ml-diffusion-model-flow.form   the generative reverse flow this
 #                                  module's forward heat-walk mirrors.
+#   cognitive-light-cone.form      the reach this learner moves: a
+#                                  learned sensing edge grows the cell's
+#                                  cone, release contracts it — proven
+#                                  on the same edge data, three-way.
 #
 # Next stones when an ask needs them (named, honest):
 # mtb-settle (iterate mtb-step until the observer arm holds — the
