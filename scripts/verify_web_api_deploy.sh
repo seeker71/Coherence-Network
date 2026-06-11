@@ -1192,6 +1192,8 @@ check_promoted_bml_read_routes_native() {
     "reaction-summary|/api/reactions/concept/lc-attuned-spaces/summary|api_reaction_concept_summary"
     "reaction-threads|/api/reactions/concept/lc-attuned-spaces/threads|api_reaction_concept_threads"
     "concept-voices|/api/concepts/lc-attuned-spaces/voices|api_concept_voices"
+    "concept-carried-by|/api/concepts/lc-ceremony/carried-by|api_concept_carried_by"
+    "presence-resonances|/api/presences/asset:audible-B00DVN8U82/resonances|api_presence_resonances"
     "lenses|/api/lenses|api_lenses"
     "sensings|/api/sensings?limit=2|api_sensings"
     "translations-page-flow|/api/translations/page/flow|api_translations_entity"
@@ -1239,6 +1241,23 @@ check_promoted_bml_read_routes_native() {
       head -c 250 "$body_file" || true
       echo
       return 1
+    fi
+    if [[ "$name" == "concept-carried-by" || "$name" == "presence-resonances" ]]; then
+      if command -v jq >/dev/null 2>&1; then
+        if ! jq -e '(.items | type == "array") and (.count | type == "number")' "$body_file" >/dev/null; then
+          echo "FAIL: resonance relationship read body no longer matches {items,count}: ${route_path}"
+          jq '{items_type: (.items | type?), count_type: (.count | type?)}' "$body_file" 2>/dev/null || head -c 500 "$body_file"
+          echo
+          return 1
+        fi
+      else
+        if ! grep -q '"items":\[' "$body_file" || ! grep -q '"count":' "$body_file"; then
+          echo "FAIL: resonance relationship read body no longer matches {items,count}: ${route_path}"
+          head -c 500 "$body_file" || true
+          echo
+          return 1
+        fi
+      fi
     fi
     if [[ "$name" == "lenses" ]]; then
       if command -v jq >/dev/null 2>&1; then

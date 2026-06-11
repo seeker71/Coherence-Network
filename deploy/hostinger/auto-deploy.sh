@@ -1010,6 +1010,8 @@ ensure_kernel_router_canary() {
         'reaction-summary|/api/reactions/concept/lc-attuned-spaces/summary|api_reaction_concept_summary' \
         'reaction-threads|/api/reactions/concept/lc-attuned-spaces/threads|api_reaction_concept_threads' \
         'concept-voices|/api/concepts/lc-attuned-spaces/voices|api_concept_voices' \
+        'concept-carried-by|/api/concepts/lc-ceremony/carried-by|api_concept_carried_by' \
+        'presence-resonances|/api/presences/asset:audible-B00DVN8U82/resonances|api_presence_resonances' \
         'lenses|/api/lenses|api_lenses' \
         'sensings|/api/sensings?limit=2|api_sensings' \
         'translations-page-flow|/api/translations/page/flow|api_translations_entity'; do \
