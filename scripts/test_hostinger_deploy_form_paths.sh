@@ -48,6 +48,9 @@ grep -Fq 'PathRegexp(`^/api/concepts/[^/]+/voices$`)' "$ROOT_DIR/deploy/kernel-r
 grep -Fq 'Path(`/api/sensings`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
   || fail "kernel-router ingress does not expose the sensings BML route"
 
+grep -Fq 'Path(`/api/lenses`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+  || fail "kernel-router ingress does not expose the lenses BML route"
+
 grep -Fq 'PathRegexp(`^/api/sensings/[^/]+$`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
   || fail "kernel-router ingress does not expose the sensing detail BML template route"
 
@@ -65,6 +68,9 @@ grep -Fq 'X-Form-Python-Authority: false' "$DEPLOY_SCRIPT" \
 
 grep -Fq 'api_sensings' "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not probe the sensings BML handler"
+
+grep -Fq 'api_lenses' "$DEPLOY_SCRIPT" \
+  || fail "deploy canary does not probe the lenses BML handler"
 
 grep -Fq 'api_translations_entity' "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not probe the translations entity BML handler"
@@ -86,6 +92,9 @@ grep -Fq 'api-native-ok-json("api_concept_voices"' "$ROOT_DIR/deploy/front-door/
 
 grep -Fq 'api-native-ok-json("api_sensings"' "$ROOT_DIR/deploy/front-door/api.bml" \
   || fail "sensings handler does not emit native proof headers"
+
+grep -Fq 'api-native-ok-json("api_lenses"' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "lenses handler does not emit native proof headers"
 
 grep -Fq 'api-native-ok-json("api_sensing_detail"' "$ROOT_DIR/deploy/front-door/api.bml" \
   || fail "sensing detail handler does not emit native proof headers"
