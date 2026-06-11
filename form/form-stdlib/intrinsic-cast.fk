@@ -1,0 +1,298 @@
+; form-stdlib/intrinsic-cast.fk — intrinsic casting for Form primitives.
+;
+; Every primitive type movement (bool/int/float/string) is an explicit,
+; content-addressed CAST recipe: (intern_node CAST-<FROM>-<TO> (list value-recipe)).
+; The rows live in form-ontology.json under "casts" (type 98, inst 10+;
+; TYPE-* typed-token cells at inst 1..5). A failed cast realizes to nothing —
+; the core-axioms third state (TrivNull, NodeID 1.1.4.0) — never 0, never a
+; thrown error. Reversibility and lossiness are data mirrored from the
+; ontology rows; ic-cast-check is the static resolution-walk peer of the
+; value-walk: it reads Blueprint coordinates without executing the tree.
+;
+; bool IS a Blueprint view over a 0/1 int cell, so bool casts are pure Form.
+; String parse/format bottoms out in the str_to_int / int_to_str leaves only
+; after Form-side validation owns the failure lane (the raw natives return 0
+; on failure — drift this surface composts). string->float is pure Form over
+; the str_to_int leaf (decimal form, no exponent yet); float->string is a
+; canonical Form-side formatter (6 fractional digits, trailing zeros stripped,
+; at least one kept) so all three kernels agree by construction.
+;
+; spec: specs/form-intrinsic-casting.md
+; preludes: form-stdlib/form-ontology-loader.fk
+
+(do
+    ;; --- nothing: the third state -----------------------------------
+    (defn ic-nothing () (node_value (make_nodeid 1 1 4 0)))
+    (defn ic-nothing? (v) (if (str_eq (value_kind v) "null") 1 0))
+
+    ;; --- value-level casts -------------------------------------------
+    (defn ic-bool-int (b) (if (eq b 0) 0 1))
+    (defn ic-int-bool (n) (if (eq n 0) 0 1))
+    (defn ic-int-float (n) (add n 0.0))
+    (defn ic-float-int (f) (trunc f))
+    (defn ic-int-string (n) (int_to_str n))
+    (defn ic-bool-string (b) (if (eq b 0) "false" "true"))
+    (defn ic-string-bool (s)
+        (if (str_eq s "true") 1
+            (if (str_eq s "false") 0 (ic-nothing))))
+    (defn ic-string-bool-truthy (s) (if (eq (str_len s) 0) 0 1))
+
+    ;; string->int: Form-validated decimal parse; nothing on non-numeric.
+    (defn ic-digit? (c) (if (ge (str_find "0123456789" c 0) 0) 1 0))
+
+    (defn ic-digits-only? (s i n)
+        (if (ge i n) 1
+            (if (eq (ic-digit? (char_at s i)) 1)
+                (ic-digits-only? s (add i 1) n)
+                0)))
+
+    (defn ic-string-int-body (s)
+        (if (eq (str_len s) 0) (ic-nothing)
+            (if (eq (ic-digits-only? s 0 (str_len s)) 1)
+                (str_to_int s)
+                (ic-nothing))))
+
+    (defn ic-string-int (s)
+        (if (and (gt (str_len s) 1) (str_eq (char_at s 0) "-"))
+            (do
+                (let m (ic-string-int-body (substring s 1 (str_len s))))
+                (if (eq (ic-nothing? m) 1) (ic-nothing) (sub 0 m)))
+            (ic-string-int-body s)))
+
+    ;; string->float: pure Form over the str_to_int leaf. Decimal form only
+    ;; (optional leading -, digits, optional . with digits); no exponent yet.
+    (defn ic-pow10 (k) (if (eq k 0) 1.0 (mul 10.0 (ic-pow10 (sub k 1)))))
+
+    (defn ic-string-float-parts (ip fp)
+        (if (eq (str_len ip) 0) (ic-nothing)
+        (if (eq (str_len fp) 0) (ic-nothing)
+        (if (eq (ic-digits-only? ip 0 (str_len ip)) 0) (ic-nothing)
+        (if (eq (ic-digits-only? fp 0 (str_len fp)) 0) (ic-nothing)
+            (add (add (str_to_int ip) 0.0)
+                 (div (add (str_to_int fp) 0.0) (ic-pow10 (str_len fp)))))))))
+
+    (defn ic-string-float-abs (s)
+        (do
+            (let dot (str_find s "." 0))
+            (if (lt dot 0)
+                (do
+                    (let n (ic-string-int-body s))
+                    (if (eq (ic-nothing? n) 1) (ic-nothing) (add n 0.0)))
+                (ic-string-float-parts (substring s 0 dot)
+                                       (substring s (add dot 1) (str_len s))))))
+
+    (defn ic-string-float (s)
+        (if (and (gt (str_len s) 1) (str_eq (char_at s 0) "-"))
+            (do
+                (let m (ic-string-float-abs (substring s 1 (str_len s))))
+                (if (eq (ic-nothing? m) 1) (ic-nothing) (sub 0.0 m)))
+            (ic-string-float-abs s)))
+
+    ;; float->string: canonical Form-side formatter — all kernels agree by
+    ;; construction. 6 fractional digits, trailing zeros stripped, >= 1 kept.
+    (defn ic-pad6 (s)
+        (if (ge (str_len s) 6) s (ic-pad6 (str_concat "0" s))))
+
+    (defn ic-strip-zeros (s)
+        (if (le (str_len s) 1) s
+            (if (str_eq (char_at s (sub (str_len s) 1)) "0")
+                (ic-strip-zeros (substring s 0 (sub (str_len s) 1)))
+                s)))
+
+    (defn ic-frac-digits (scaled)
+        (if (eq scaled 0) "0"
+            (ic-strip-zeros (ic-pad6 (int_to_str scaled)))))
+
+    (defn ic-float-string-abs (f)
+        (do
+            (let i (trunc f))
+            (let scaled (round (mul (sub f (add i 0.0)) 1000000.0)))
+            (if (eq scaled 1000000)
+                (str_concat (int_to_str (add i 1)) ".0")
+                (str_concat (int_to_str i)
+                            (str_concat "." (ic-frac-digits scaled))))))
+
+    (defn ic-float-string (f)
+        (if (lt f 0.0)
+            (str_concat "-" (ic-float-string-abs (sub 0.0 f)))
+            (ic-float-string-abs f)))
+
+    ;; --- cast rows as data (mirrors form-ontology.json "casts") ------
+    ;; TYPE-* inst: 1 bool, 2 int, 3 float, 4 string, 5 nothing.
+    (defn ic-cast-category? (cat)
+        (if (eq (node_pkg cat) 1)
+            (if (eq (node_level cat) 2)
+                (if (eq (node_type cat) 98)
+                    (if (ge (node_inst cat) 10) 1 0)
+                    0)
+                0)
+            0))
+
+    (defn ic-reverse-inst (inst)
+        (if (eq inst 10) 11
+        (if (eq inst 12) 13
+        (if (eq inst 14) 15
+        (if (eq inst 18) 19
+        (if (eq inst 19) 18
+            0))))))
+
+    (defn ic-lossy-inst? (inst)
+        (if (eq inst 11) 1
+        (if (eq inst 13) 1
+        (if (eq inst 15) 1
+        (if (eq inst 16) 1
+        (if (eq inst 17) 1
+        (if (eq inst 20) 1
+            0)))))))
+
+    (defn ic-total-inst? (inst)
+        (if (eq inst 15) 0
+        (if (eq inst 17) 0
+        (if (eq inst 19) 0
+            1))))
+
+    (defn ic-from-type-inst (inst)
+        (if (eq inst 10) 1
+        (if (eq inst 11) 2
+        (if (eq inst 12) 2
+        (if (eq inst 13) 3
+        (if (eq inst 14) 2
+        (if (eq inst 15) 4
+        (if (eq inst 16) 3
+        (if (eq inst 17) 4
+        (if (eq inst 18) 1
+        (if (eq inst 19) 4
+        (if (eq inst 20) 4
+            0))))))))))))
+
+    (defn ic-to-type-inst (inst)
+        (if (eq inst 10) 2
+        (if (eq inst 11) 1
+        (if (eq inst 12) 3
+        (if (eq inst 13) 2
+        (if (eq inst 14) 4
+        (if (eq inst 15) 2
+        (if (eq inst 16) 4
+        (if (eq inst 17) 3
+        (if (eq inst 18) 4
+        (if (eq inst 19) 1
+        (if (eq inst 20) 1
+            0))))))))))))
+
+    ;; --- runtime lane: the value-walk --------------------------------
+    (defn ic-apply (cat v)
+        (do
+            (let inst (node_inst cat))
+            (if (eq inst 10) (ic-bool-int v)
+            (if (eq inst 11) (ic-int-bool v)
+            (if (eq inst 12) (ic-int-float v)
+            (if (eq inst 13) (ic-float-int v)
+            (if (eq inst 14) (ic-int-string v)
+            (if (eq inst 15) (ic-string-int v)
+            (if (eq inst 16) (ic-float-string v)
+            (if (eq inst 17) (ic-string-float v)
+            (if (eq inst 18) (ic-bool-string v)
+            (if (eq inst 19) (ic-string-bool v)
+            (if (eq inst 20) (ic-string-bool-truthy v)
+                (do (trace "ic-apply: unknown cast inst" inst) (ic-nothing)))))))))))))))
+
+    (defn ic-cast-node (cast-cat value-recipe)
+        (intern_node cast-cat (list value-recipe)))
+
+    ;; Minimal value-walk over cast trees (trivial leaves + CAST nodes).
+    ;; nothing propagates: a failed inner cast short-circuits the chain.
+    (defn ic-eval-tree (recipe)
+        (if (eq (node_level recipe) 1) (node_value recipe)
+            (do
+                (let cat (node_category recipe))
+                (if (eq (ic-cast-category? cat) 1)
+                    (do
+                        (let v (ic-eval-tree (head (node_children recipe))))
+                        (if (eq (ic-nothing? v) 1) (ic-nothing) (ic-apply cat v)))
+                    (do
+                        (trace "ic-eval-tree: unsupported category" cat)
+                        (ic-nothing))))))
+
+    ;; --- static lane: the resolution-walk -----------------------------
+    ;; Type of a node from Blueprint coordinates alone, no execution.
+    ;; 0 = unknown; 1..5 = TYPE-* inst.
+    (defn ic-static-type (recipe)
+        (if (eq (node_level recipe) 1)
+            (do
+                (let t (node_type recipe))
+                (if (eq t 1) 2
+                (if (eq t 2) 4
+                (if (eq t 3) 1
+                (if (eq t 4) 5
+                (if (eq t 6) 3
+                (if (eq t 7) 3
+                    0)))))))
+            (do
+                (let cat (node_category recipe))
+                (if (eq (ic-cast-category? cat) 1)
+                    (ic-to-type-inst (node_inst cat))
+                (if (and (eq (node_level cat) 2) (eq (node_type cat) 12)) 2
+                (if (and (eq (node_level cat) 2) (eq (node_type cat) 13)) 1
+                    0))))))
+
+    (defn ic-cast-node? (n)
+        (if (eq (node_level n) 1) 0
+            (ic-cast-category? (node_category n))))
+
+    (defn ic-partial-cast-node? (n)
+        (if (eq (ic-cast-node? n) 1)
+            (if (eq (ic-total-inst? (node_inst (node_category n))) 0) 1 0)
+            0))
+
+    ;; lossy-step fires when the INNER cast of a chain is lossy — information
+    ;; already dropped before the outer cast consumes it. Outer lossiness
+    ;; alone is an honest declared cast, not a chain incoherence.
+    (defn ic-check-cast (cat child acc)
+        (do
+            (let inst (node_inst cat))
+            (let child-type (ic-static-type child))
+            (let a1 (if (and (gt child-type 0)
+                             (not (eq child-type (ic-from-type-inst inst))))
+                        (cons "cast-from-mismatch" acc)
+                        acc))
+            (if (eq (ic-cast-node? child) 1)
+                (if (eq (ic-lossy-inst? (node_inst (node_category child))) 1)
+                    (cons "lossy-step" a1)
+                    a1)
+                a1)))
+
+    (defn ic-check-consumer-kids (kids acc)
+        (if (nil? kids) acc
+            (ic-check-consumer-kids (tail kids)
+                (if (eq (ic-partial-cast-node? (head kids)) 1)
+                    (cons "nothing-unhandled" acc)
+                    acc))))
+
+    (defn ic-check-consumer (cat kids acc)
+        (if (or (and (eq (node_level cat) 2) (eq (node_type cat) 12))
+                (and (eq (node_level cat) 2) (eq (node_type cat) 13)))
+            (ic-check-consumer-kids kids acc)
+            acc))
+
+    (defn ic-check-kids (kids acc)
+        (if (nil? kids) acc
+            (ic-check-kids (tail kids) (ic-check-node (head kids) acc))))
+
+    (defn ic-check-node (recipe acc)
+        (if (eq (node_level recipe) 1) acc
+            (do
+                (let cat (node_category recipe))
+                (let kids (node_children recipe))
+                (let acc1 (ic-check-kids kids acc))
+                (if (eq (ic-cast-category? cat) 1)
+                    (ic-check-cast cat (head kids) acc1)
+                    (ic-check-consumer cat kids acc1)))))
+
+    (defn ic-cast-check (recipe) (reverse (ic-check-node recipe (empty))))
+
+    (defn ic-diag-count (diags name)
+        (if (nil? diags) 0
+            (add (if (str_eq (head diags) name) 1 0)
+                 (ic-diag-count (tail diags) name))))
+
+    0)

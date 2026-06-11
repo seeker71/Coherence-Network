@@ -1,15 +1,21 @@
 ---
 idea_id: idea-realization-engine
-status: draft
+status: done
 source:
   - file: form/form-stdlib/form-ontology.json
     symbols: []
   - file: form/form-stdlib/form-ontology-loader.fk
     symbols: [FOL-DIALECT-BINDING-NAMES]
+  - file: form/form-stdlib/intrinsic-cast.fk
+    symbols: [ic-apply, ic-cast-node, ic-eval-tree, ic-cast-check, ic-nothing]
+  - file: form/form-stdlib/tests/intrinsic-cast-band.fk
+    symbols: []
+  - file: form/form-stdlib/tests/intrinsic-cast-check-band.fk
+    symbols: []
   - file: form/form-stdlib/typescript-bmf-lift.fk
-    symbols: [ts-bmf-run-expr-text]
+    symbols: [ts-bmf-run-expr-text, lift-plus-node, lift-cast-to-string]
   - file: form/form-stdlib/typescript-bmf-eval.fk
-    symbols: [ts-run]
+    symbols: [ts-run, ts-eval-cast]
   - file: form/form-kernel-go/main.go
     symbols: [str_to_int, str_to_float, int_to_str]
   - file: docs/coherence-substrate/core-axioms.form
@@ -36,7 +42,7 @@ done_when:
   - "Both bands pass three-way (Go, Rust, TypeScript agree) under form/validate.sh."
   - "ts-bmf-run-expr-text on a mixed string+int expression lifts to an explicit CAST recipe and evaluates to the coerced string."
   - "A failing cast (string->int on a non-numeric string) realizes to nothing in all three kernels."
-test: "cd form && bash -c './validate.sh form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/intrinsic-cast.fk form-stdlib/tests/intrinsic-cast-band.fk' && bash -c './validate.sh form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/intrinsic-cast.fk form-stdlib/tests/intrinsic-cast-check-band.fk'"
+test: "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/intrinsic-cast.fk form-stdlib/typescript-bmf-eval.fk form-stdlib/typescript-bmf-lift.fk form-stdlib/tests/intrinsic-cast-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/intrinsic-cast.fk form-stdlib/tests/intrinsic-cast-check-band.fk"
 constraints:
   - "No silent kernel-level coercion: every type movement visible in a recipe tree as an explicit CAST node."
   - "Cast failure is nothing, never a thrown error and never a default value."
@@ -53,13 +59,13 @@ Lifting real source dies at the first mixed-type expression: TS `'n=' + 5`, Pyth
 
 ## Requirements
 
-- [ ] **R1 — CAST category as ontology data.** `form-ontology.json` gains a `CAST` category whose rows name each primitive cast pair (`bool->int`, `int->bool`, `int->float`, `float->int`, `int->string`, `string->int`, `float->string`, `string->float`, `bool->string`, `string->bool`, plus dialect truthiness views). Each row composes per the structural discipline: from-token and to-token are typed-token cells, not free strings. `scripts/gen_bp_table.py` regenerates Go/Rust/TS bp tables.
-- [ ] **R2 — recipe-first bodies.** `form/form-stdlib/intrinsic-cast.fk` defines the cast surface. `bool<->int` and truthiness are pure Form (a bool *is* a Blueprint view over a 0/1 int cell — Python `True` and TS `true` resolve to the same cell). String parse/format and int<->float conversion bottom out in the existing natives, wrapped so the recipe tree shows the CAST node and the native is just the leaf carrier.
-- [ ] **R3 — nothing on failure.** The cast surface returns `nothing` when the movement cannot complete (`string->int` on `"abc"`). This is the core-axioms third state and the fourth kernel's tagged ABI null-ref, made behavioral. The current `str_to_int` silent-zero is drift this surface composts: call sites move to the cast recipe; the raw native stays untouched in this slice.
-- [ ] **R4 — reversibility as data.** Lossless pairs (`bool<->int`, `int->string`) register a reverse recipe plus a round-trip law the band proves (`cast back (cast there x) node_eq x`). Lossy pairs (`float->int`) register no reverse; the checker reports lossiness when a chain depends on one.
-- [ ] **R5 — dialect coercion tables.** Implicit-coercion rules per dialect live as ontology rows (e.g. TS: `string + int => CAST(int->string) then concat`; Python: `if <int> => CAST(int->bool) via truthiness`). `typescript-bmf-lift.fk` (and later siblings) consult the table at lift time and emit explicit CAST recipes. Kernels never coerce.
-- [ ] **R6 — static cast-check lane.** A Form recipe (`cast-check`) walks a recipe tree without executing it, comparing Blueprint coordinates across CAST boundaries. It reports: incoherent chains (cast target ≠ consumer expectation), lossy steps inside round-trip claims, and `nothing`-producing casts whose consumers have no `nothing` arm. Diagnostics are data the JIT and lifters can read.
-- [ ] **R7 — three-way proof bands.** `intrinsic-cast-band.fk` (value-walk: every pair, round-trip laws, nothing-failure cases, lifted TS mixed expression) and `intrinsic-cast-check-band.fk` (resolution-walk: clean chain passes, broken chain names its diagnostic) pass identically in Go, Rust, and TypeScript.
+- [x] **R1 — CAST category as ontology data.** `form-ontology.json` gains a `CAST` category whose rows name each primitive cast pair (`bool->int`, `int->bool`, `int->float`, `float->int`, `int->string`, `string->int`, `float->string`, `string->float`, `bool->string`, `string->bool`, plus dialect truthiness views). Each row composes per the structural discipline: from-token and to-token are typed-token cells, not free strings. `scripts/gen_bp_table.py` regenerates Go/Rust/TS bp tables.
+- [x] **R2 — recipe-first bodies.** `form/form-stdlib/intrinsic-cast.fk` defines the cast surface. `bool<->int` and truthiness are pure Form (a bool *is* a Blueprint view over a 0/1 int cell — Python `True` and TS `true` resolve to the same cell). String parse/format and int<->float conversion bottom out in the existing natives, wrapped so the recipe tree shows the CAST node and the native is just the leaf carrier.
+- [x] **R3 — nothing on failure.** The cast surface returns `nothing` when the movement cannot complete (`string->int` on `"abc"`). This is the core-axioms third state and the fourth kernel's tagged ABI null-ref, made behavioral. The current `str_to_int` silent-zero is drift this surface composts: call sites move to the cast recipe; the raw native stays untouched in this slice.
+- [x] **R4 — reversibility as data.** Lossless pairs (`bool<->int`, `int->string`) register a reverse recipe plus a round-trip law the band proves (`cast back (cast there x) node_eq x`). Lossy pairs (`float->int`) register no reverse; the checker reports lossiness when a chain depends on one.
+- [x] **R5 — dialect coercion tables.** Implicit-coercion rules per dialect live as ontology rows (e.g. TS: `string + int => CAST(int->string) then concat`; Python: `if <int> => CAST(int->bool) via truthiness`). `typescript-bmf-lift.fk` (and later siblings) consult the table at lift time and emit explicit CAST recipes. Kernels never coerce.
+- [x] **R6 — static cast-check lane.** A Form recipe (`cast-check`) walks a recipe tree without executing it, comparing Blueprint coordinates across CAST boundaries. It reports: incoherent chains (cast target ≠ consumer expectation), lossy steps inside round-trip claims, and `nothing`-producing casts whose consumers have no `nothing` arm. Diagnostics are data the JIT and lifters can read.
+- [x] **R7 — three-way proof bands.** `intrinsic-cast-band.fk` (value-walk: every pair, round-trip laws, nothing-failure cases, lifted TS mixed expression) and `intrinsic-cast-check-band.fk` (resolution-walk: clean chain passes, broken chain names its diagnostic) pass identically in Go, Rust, and TypeScript.
 
 ## Research Inputs
 
@@ -104,10 +110,12 @@ CoercionRow:            # one row per dialect implicit rule
 ## Verification
 
 ```bash
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/intrinsic-cast.fk form-stdlib/tests/intrinsic-cast-band.fk
-cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/intrinsic-cast.fk form-stdlib/tests/intrinsic-cast-check-band.fk
+cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/intrinsic-cast.fk form-stdlib/typescript-bmf-eval.fk form-stdlib/typescript-bmf-lift.fk form-stdlib/tests/intrinsic-cast-band.fk
+cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/intrinsic-cast.fk form-stdlib/tests/intrinsic-cast-check-band.fk
 python3 scripts/validate_spec_quality.py --file specs/form-intrinsic-casting.md
 ```
+
+Proven 2026-06-11: cast band → `7070915`, check band → `11111111`, three-way (Go, Rust, TypeScript); the ten grammar-coupled regression suites and both existing TS BMF bands unchanged.
 
 ## Out of Scope
 
@@ -118,9 +126,9 @@ python3 scripts/validate_spec_quality.py --file specs/form-intrinsic-casting.md
 
 ## Risks and Assumptions
 
-- Float formatting must agree across Go, Rust, and TypeScript for `float->string` to pass three-way; if host formatters diverge, the cast body needs a Form-side canonical formatter (same move the tensor work made for numerics).
-- `nothing` propagation through existing eval arms (`ts-run` binop/compare) assumes consumers can hold `nothing`; the check lane (R6) exists to find consumers that cannot.
-- Assumes typed-token cells for the four primitive type names already intern cleanly; if not, that interning is the first movement inside R1.
+- Float formatting agrees across Go, Rust, and TypeScript because `float->string` IS a Form-side canonical formatter (6 fractional digits, trailing zeros stripped, at least one kept) — the same move the tensor work made for numerics. `string->float` is likewise pure Form over the `str_to_int` leaf (decimal form, no exponent yet), which also closed the TS kernel's missing `str_to_float` gap without adding a native.
+- `nothing` propagation through existing eval arms (`ts-run` binop/compare) assumes consumers can hold `nothing`; the check lane (R6) exists to find consumers that cannot (`nothing-unhandled`).
+- Fourth-kernel coupling: the tagged ABI ({nothing, 0, 1, node}) already carries the failure state physically, and CAST recipes flatten like any category through the observe-door flattener — but only the pure-int casts (`bool<->int`, truthiness) can walk on the fourth kernel today; string and float cast leaves land when m4e4's `str_*`/float op families land. The cast surface adds no new requirement; it rides the already-named ladder.
 
 ## Known Gaps and Follow-up Tasks
 
