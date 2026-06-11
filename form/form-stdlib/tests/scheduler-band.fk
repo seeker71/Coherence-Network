@@ -1,0 +1,65 @@
+; preludes: form-stdlib/recognition-router.fk form-stdlib/scheduler.fk
+;
+; scheduler-band — the scheduling policy as DATA, made falsifiable.
+;
+; ONE queue of three competing offers at the compute organ's door —
+;   alpha (arrival 1, priority 10, fitness 40)
+;   beta  (arrival 2, priority 90, fitness 95)
+;   weak  (arrival 3, priority 5,  fitness 10)
+; — and four policy ROWS dropped into the one engine. The queue never changes;
+; only the data row does, and each row produces a different but each-correct order:
+;   fifo        -> (alpha beta weak)         earliest arrival, runs to completion
+;   priority    -> (beta alpha weak)         highest static urgency
+;   fitness 20  -> (beta alpha), weak never acknowledged + STAYS QUEUED (fail-fast)
+;   round-robin -> (alpha beta alpha beta)   over the two-offer queue (fair share)
+; The fitness row is recognition-router's choosing as data: offers built from rr
+; readings (each presents its measured strength through its offer, axiom-4) are
+; acknowledged exactly where rr-route routes. An empty queue acks nothing
+; (axiom-5's honest ack). A fitness tie keeps the earlier-queued offer (stable).
+;
+; Verdict 511 when every claim lands:
+;   1    fifo serves the earliest arrival first        (head == alpha)
+;   2    fifo order is arrival order, all served       (beta then weak, 3 served)
+;   4    priority serves the most urgent first         (head == beta)
+;   8    same queue, different row, different order    (fifo head != priority head)
+;   16   round-robin requeues: fair share              (ticks 3,4 == alpha,beta again)
+;   32   one engine: the fitness row acks exactly what rr-route routes (== beta)
+;   64   fail-fast: the organ goes quiet after 2 served while weak stays queued
+;   128  empty queue -> nothing
+;   256  a fitness tie keeps the earlier-queued offer  (stable, no thrash)
+(do
+    (let offers (list
+        (sched-offer "alpha" 1 10 40)
+        (sched-offer "beta"  2 90 95)
+        (sched-offer "weak"  3 5  10)))
+    (let fifo-t (sched-trace (sched-fifo) offers 4))
+    (let prio-t (sched-trace (sched-priority) offers 4))
+    (let rr-t   (sched-trace (sched-round-robin)
+                    (list (sched-offer "alpha" 1 10 40) (sched-offer "beta" 2 90 95)) 4))
+    (let fit-t  (sched-trace (sched-fitness 20) offers 4))
+    (let fit-q2 (sched-queue (sched-step (sched-fitness 20)
+                    (sched-queue (sched-step (sched-fitness 20) offers)))))
+    (let readings (list
+        (list "alpha" (list (list "x" 40)))
+        (list "beta"  (list (list "y" 95)))
+        (list "weak"  (list (list "z" 10)))))
+    (let from-rr (list
+        (sched-offer (rr-model (nth readings 0)) 1 0 (rr-strength (nth readings 0)))
+        (sched-offer (rr-model (nth readings 1)) 2 0 (rr-strength (nth readings 1)))
+        (sched-offer (rr-model (nth readings 2)) 3 0 (rr-strength (nth readings 2)))))
+    (let c0 (if (str_eq (nth fifo-t 0) "alpha") 1 0))
+    (let c1 (if (and (and (str_eq (nth fifo-t 1) "beta") (str_eq (nth fifo-t 2) "weak"))
+                     (eq (len fifo-t) 3)) 2 0))
+    (let c2 (if (str_eq (nth prio-t 0) "beta") 4 0))
+    (let c3 (if (str_eq (nth fifo-t 0) (nth prio-t 0)) 0 8))
+    (let c4 (if (and (and (str_eq (nth rr-t 2) "alpha") (str_eq (nth rr-t 3) "beta"))
+                     (eq (len rr-t) 4)) 16 0))
+    (let c5 (if (and (str_eq (sched-offer-name (sched-ack (sched-fitness 20) from-rr))
+                             (rr-source (rr-route readings 20)))
+                     (str_eq (sched-offer-name (sched-ack (sched-fitness 20) from-rr)) "beta")) 32 0))
+    (let c6 (if (and (eq (len fit-t) 2)
+                     (and (eq (len fit-q2) 1) (str_eq (sched-offer-name (nth fit-q2 0)) "weak"))) 64 0))
+    (let c7 (if (eq (len (sched-ack (sched-fifo) (empty))) 0) 128 0))
+    (let c8 (if (str_eq (sched-offer-name (sched-ack (sched-fitness 0)
+                    (list (sched-offer "first" 1 0 50) (sched-offer "second" 2 0 50)))) "first") 256 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 c8)))))))))
