@@ -1,0 +1,101 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "form-os4/crystallization-wire",
+  "commit_scope": "Close m4e-jit's last named open: true runtime codegen for FOREIGN loaded tables (round 4 of the Form-OS arc, the fourth kernel's own install-leaf). The universal walker could load any node-table file through the fs port but only WALK it - native alternatives existed solely for functions baked at its own emit time. The crystallization wire makes the running binary grow native capability from any program it is given: fkc-emit-uwire emits a universal binary that CARRIES THE LOWERER (fk_lo - fkc-nat-expr's per-tag algebra emitted as C that reads the loaded rows at runtime), and when a foreign function's measured heat crosses the hot line the binary emits C source FROM THE LOADED CELLS, drives clang through the driver organ (fork/exec - the toolchain port, an allowed host carrier under allow-presence + measure-health), dlopens the artifact, and flips dispatch. Round-3's thermodynamics apply unchanged: the SAME epoch body (fkc-epoch-body-text, the round-3 epoch refactored to take its bound as text so one body serves baked counts and the runtime fk_nf - no parallel policy), the SAME policy cells (decay quantum/divisor, melt line, earn window), so a foreign native melts on cool and re-earns ice without recompiling (the dlopen handle persists; one clang invocation per table). Honesty gates: lowerability is the SAME transitive fixpoint (fkc-can-list's walk emitted as fk_ok/fk_canc, computed at LOAD time over foreign rows) so ports/organs refuse before any heat counts; a toolchain refusal (no clang, failed dlopen/dlsym) marks the function unlowerable for the run, observable on stderr (jr), never retried into a storm, never a wrong native. Every byte the binary emits at runtime descends from cells: the phrase table is Form strings compiled to char codes (fkc-phrase), the expression shapes are fkc-nat-expr's, the decision shape is named cells (fkc-wire-fires/-ice/-can-after) the band proves.",
+  "files_owned": [
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/tests/crystallization-wire-band.fk",
+    "scripts/fourth_kernel_audit.sh",
+    "docs/system_audit/commit_evidence_2026-06-11_crystallization_wire.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/tests/crystallization-wire-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/champion-challenger.fk form-stdlib/tests/melt-hot-swap-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/arena-melt.fk form-stdlib/tests/melt-on-cool-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/tests/fourth-os-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/tests/fourth-walker-emit-band.fk",
+      "bash scripts/fourth_kernel_audit.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-11_crystallization_wire.json",
+      "python3 scripts/generate_repo_indexes.py"
+    ],
+    "notes": "crystallization-wire-band verdict 31 with 0 divergent across Go/Rust/TS (the firing cell honors the can gate and the hot line; the verdict cells land ice on toolchain-ok and drop can to 0 on toolchain refusal; the load-time fixpoint on the audit's foreign family refuses the driver and the SET-touching cooler while the loop and pure odd-sum stay eligible; the emission carries the cooling clock, the wire door, the fixpoint call, the clang phrase compiled from fkc-wire-clang, and the dlopen carrier; the carried lowerer IS fkc-nat-expr's algebra - LIT doubles into tagged space, IF emits else-then order, the epoch body runs over the RUNTIME function count). All thirteen neighbor bands that prelude fourth-walker-emit.fk re-proven green after the epoch-bound refactor. Audit section 27 measured the live wire (arm64 Darwin, clang -O2, deterministic dispatch counts): a FOREIGN table (odd-sum n^2, built in the audit, never seen by any emitter) loads, fn 2 crosses the hot line at heat 51, the binary emits 218 bytes of C from the loaded cells, drives one clang invocation, dlopens, dispatch flips (jw 2 51 -> jf 2 51, njit=38 native dispatches); 800 cooling dispatches on the refused organ function tick three epochs, heat halves to 22 and the foreign native MELTS (jm 2 22, final ice state 2); parity 16400 walked == 16400 wired; fn 3 (RAM organ) ends heat 370 ice 0 can 0 - hot but refused by the fixpoint, the wire never fires for it. fn 4 (figure-op row, BXOR tag 36 - a tag family outside fk_lo's pure-compute set) is refused at LOAD (can 0): new tag families walk on the universal arm, they never crystallize wrongly. Re-proven on the post-rebase tree carrying the value-stack walker (#2878), the string-pool lane (#2881), and the figure-ops family (#2880): the uwire main rides the fk_walk(i,fp) frame-pointer convention with args on fk_vs and loads the table's string section like the universal sibling; all measured dispatch counts unchanged.",
+    "environment": "arm64 Darwin, clang -O2, Go/Rust/TS kernels via form/validate.sh"
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI three-way validation pending until the branch is pushed and the PR opens."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Recipes, band, audit, and evidence only; no route or service behavior changes. No deploy required beyond normal main rollout."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local three-way proof and live-wire witness are green; push and PR follow. The coordinator's m4e-jit retune (the crystallization wire closed for the pure-compute family) lands after the round-4 siblings merge.",
+    "remaining": [
+      "coordinator retune of fourth-kernel.form m4e-jit block after round-4 siblings merge",
+      "category coverage beyond the pure-compute family (tags 1-7, 12): organ/arena/string ops stay walk-only by the honesty gate until their native shapes are authored"
+    ]
+  },
+  "idea_ids": [
+    "fourth-kernel"
+  ],
+  "spec_ids": [
+    "kernel-native-api-readiness",
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "crystallization-wire-20260611"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "form-os-map"
+      ]
+    },
+    {
+      "contributor_id": "contributor:claude-fable-5",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "proof"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-fable-5"
+  },
+  "change_intent": "runtime_feature",
+  "change_files": [
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/tests/crystallization-wire-band.fk",
+    "scripts/fourth_kernel_audit.sh",
+    "scripts/INDEX.md",
+    "MANIFEST.md"
+  ],
+  "evidence_refs": [
+    "Three-way band proof: crystallization-wire-band verdict 31, 0 divergent (Go/Rust/TS) - firing cell (can AND heat past the hot line), verdict cells (toolchain ok -> ice + can kept; toolchain refused -> no ice + can dropped; no attempt leaves can untouched), load-time fixpoint on the foreign family (driver and SET-cooler refuse, loop and odd-sum eligible), emission carries the wire from the cells (cooling clock, wire door, fk_canc, clang phrase, dlopen), the carried lowerer is fkc-nat-expr's algebra over rows.",
+    "Live wire (fkc-emit-uwire via clang, scripts/fourth_kernel_audit.sh section 27, deterministic dispatch counts): a foreign table no emitter ever lowered loads through the fs port; fn 2 (odd-sum) crosses at heat 51; the RUNNING BINARY emits C from the loaded cells, drives ONE clang invocation through the driver organ, dlopens, and dispatch flips (jw 2 51 -> jf 2 51, njit=38); three idle epochs on the refused cooler halve the heat and the foreign native MELTS at 22 (jm 2 22, ice state 2 in the probe).",
+    "Parity held across the wire: walk-only value 16400 == wired value 16400 (nwire 0 vs 1); phase order asserted toolchain -> crystallize -> melt (wfm).",
+    "Honest refusal measured: fn 3 touches the RAM organ, accumulates heat 370 (far past the hot line 50), and ends ice 0 can 0 - the load-time fixpoint refused it before any heat counted; the runtime-emitted source (218 bytes) contains only the can-true family (fk_n1, fk_n2).",
+    "Neighbor bands unchanged after the epoch-bound refactor: melt-hot-swap-band 31, melt-on-cool-band 31, arena-melt-band 63, fourth-os-band 15, fourth-walker-emit-band 15, form-flatten-band 127, afferent-live-band 63, afferent-priority-band 1023, fourth-{call,driver,fixpoint,heap,match,model,net}-band 15, all three-way 0 divergent."
+  ],
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No route behavior changes. The emitted sibling family gains a new emit lane (fkc-emit-uwire): a universal binary with no baked program and no baked natives that grows its own native capability at runtime from any loaded table - emit C from loaded cells, drive clang through the toolchain port, dlopen, flip dispatch, melt on cool under round-3's unchanged policy cells. Existing emit lanes (fkc-emit-universal, fkc-emit-jit, fkc-emit-jitmelt) are byte-identical; emission-pinning bands hold unchanged.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "crystallization-wire-band proves the wire's decision shape (what crystallizes, what refuses), the load-time fixpoint on the foreign family, and the cell-spliced emission, three-way at 31 with 0 divergent.",
+      "Audit lane end-to-end: section 27 loads a foreign table, drives one function hot, witnesses emit -> clang -> dlopen -> dispatch flip with parity, then cool -> melt; every earlier audit section (parity rows, quine, CALL, grammar binaries, universal, JIT flip, net 200, driver, m4e3, afferent witness, n7+m4e4 band ratchet, melt-on-cool, melt-hot-swap, live priority) stays green."
+    ],
+    "summary": "validate.sh new band verdict 31 three-way 0 divergent; live foreign-table gas-ice cycle measured end-to-end: jw 2 51 -> jf 2 51 -> jm 2 22, parity 16400/16400, one clang invocation, organ function refused at heat 370."
+  }
+}

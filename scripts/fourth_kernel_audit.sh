@@ -1041,5 +1041,87 @@ echo "                     wants let-as-binding (the value-stack lane), not re-e
 echo "  bands-on-fourth-arm: $((11 + sp_pass + fig_pass)) (learning-trend + 9 multi-param + feature-vector + $sp_pass string-pool + $fig_pass checksum-family bands, four-way gated)"
 
 echo
+# ── 27. the crystallization wire — runtime codegen for a FOREIGN loaded table ──
+# The universal walker's natives were baked at ITS OWN emit time; this binary
+# (fkc-emit-uwire) is emitted ONCE with no baked program and no baked natives.
+# The audit then builds a FOREIGN table from a program no emitter ever lowered
+# (odd-sum: n^2 by summed odds), loads it through the fs port, drives one
+# function hot — and the RUNNING BINARY emits C source FROM THE LOADED CELLS
+# (fk_lo, fkc-nat-expr's algebra over rows), drives clang through the driver
+# organ (the toolchain port), dlopens the artifact, and flips dispatch.
+# Round-3's cycle applies unchanged: idle epochs decay the heat and the
+# foreign native melts back to gas at the melt line. The cooler (fn 3, RAM
+# organ) is refused by the SAME transitive fixpoint, computed at LOAD time —
+# its heat climbs past the line and the wire never fires for it. A fifth
+# function carries a figure-op row (BXOR, tag 36) — outside fk_lo's pure-
+# compute family — and the SAME fixpoint refuses it at load (can=0): new
+# tag families walk on the universal arm, they never crystallize wrongly.
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
+    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" > "$work/uw-driver.fk"
+cat >> "$work/uw-driver.fk" <<'EOF'
+(let oddsum (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-lit 0)
+                   (fk-add (fk-sub (fk-add (fk-arg) (fk-arg)) (fk-lit 1))
+                           (fk-call 2 (fk-sub (fk-arg) (fk-lit 1))))))
+(let loopA (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-lit 0)
+                  (fk-add (fk-call 2 (fk-lit 20)) (fk-call 1 (fk-sub (fk-arg) (fk-lit 1))))))
+(let cool  (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-lit 0)
+                  (fk-add (fk-sub (fk-set (fk-lit 9) (fk-arg)) (fk-arg)) (fk-call 3 (fk-sub (fk-arg) (fk-lit 1))))))
+(let driver (fk-add (fk-call 1 (fk-lit 40)) (fk-add (fk-call 3 (fk-lit 800)) (fk-call 2 (fk-lit 20)))))
+(let fig (fk-bxor (fk-arg) (fk-lit 5)))
+(print "==UW==")
+(print (fkc-emit-uwire))
+(print "==TF==")
+(print (fkc-table-file (list driver loopA oddsum cool fig)))
+(print "==END==")
+EOF
+(cd "$FORMDIR" && "$GO_BIN" "$work/uw-driver.fk" 2>/dev/null) > "$work/uw.out"
+sed -n '/^==UW==$/,/^==TF==$/p' "$work/uw.out" | sed -e '1d' -e '$d' > "$work/uw.c"
+sed -n '/^==TF==$/,/^==END==$/p' "$work/uw.out" | sed -e '1d' -e '$d' > "$work/t-foreign.txt"
+"$CLANG" -O2 -o "$work/fkuw" "$work/uw.c"
+uw_cold_out="$("$work/fkuw" "$work/t-foreign.txt" 0 2>/dev/null)"
+uw_cold="$(printf '%s\n' "$uw_cold_out" | sed -n 1p)"
+uw_cold_wire="$(printf '%s\n' "$uw_cold_out" | sed -n 5p)"
+"$work/fkuw" "$work/t-foreign.txt" 0 50 > "$work/uw-hot.out" 2> "$work/uw-hot.err"
+uw_hot="$(sed -n 1p "$work/uw-hot.out")"; uw_njit="$(sed -n 2p "$work/uw-hot.out")"
+uw_nmelt="$(sed -n 3p "$work/uw-hot.out")"; uw_nfrz="$(sed -n 4p "$work/uw-hot.out")"
+uw_nwire="$(sed -n 5p "$work/uw-hot.out")"
+uw_ice2="$(sed -n 13p "$work/uw-hot.out")"; uw_can2="$(sed -n 14p "$work/uw-hot.out")"
+uw_heat3="$(sed -n 15p "$work/uw-hot.out")"; uw_ice3="$(sed -n 16p "$work/uw-hot.out")"; uw_can3="$(sed -n 17p "$work/uw-hot.out")"
+uw_ice4="$(sed -n 19p "$work/uw-hot.out")"; uw_can4="$(sed -n 20p "$work/uw-hot.out")"
+rm -f /tmp/fk-wire-*.c /tmp/fk-wire-*.so
+echo "the crystallization wire (a FOREIGN table runs hot; the binary re-emits itself native at runtime):"
+echo "  walk-only: value=$uw_cold nwire=$uw_cold_wire   wired (hot 50): value=$uw_hot njit=$uw_njit freezes=$uw_nfrz melts=$uw_nmelt clang-drives=$uw_nwire"
+echo "  hot fn (2, odd-sum) boundary crossings (jw=toolchain fires, jf=crystallize, jm=melt):"
+grep '^j[wfmr] ' "$work/uw-hot.err" | sed 's/^/    /'
+echo "  readout: fn2 ice=$uw_ice2 can=$uw_can2 (melted gas after cool)   fn3 heat=$uw_heat3 ice=$uw_ice3 can=$uw_can3 (RAM organ: hot but REFUSED by the fixpoint)"
+echo "           fn4 ice=$uw_ice4 can=$uw_can4 (figure-op row, tag 36: outside fk_lo's family, REFUSED at load)"
+if [[ "$uw_cold" != "16400" || "$uw_hot" != "16400" ]]; then
+    echo "FAIL  foreign-table parity broken across the wire"; exit 1
+fi
+if [[ "$uw_cold_wire" != "0" || "$uw_nwire" != "1" || "$uw_nfrz" != "1" || "$uw_nmelt" != "1" || "$uw_njit" == "0" ]]; then
+    echo "FAIL  the wire did not fire exactly once on heat (or dispatch never went native)"; exit 1
+fi
+uw_seq="$(grep '^j[wfm] 2 ' "$work/uw-hot.err" | awk '{printf "%s", substr($1,2,1)}')"
+if [[ "$uw_seq" != "wfm" ]]; then
+    echo "FAIL  the wire's phase order is not toolchain -> crystallize -> melt (got: $uw_seq)"; exit 1
+fi
+uw_jf="$(grep '^jf 2 ' "$work/uw-hot.err" | awk '{print $3}')"
+uw_jm="$(grep '^jm 2 ' "$work/uw-hot.err" | awk '{print $3}')"
+if (( uw_jf <= 50 )) || (( uw_jm >= 25 )); then
+    echo "FAIL  wire boundary heats disagree with the policy cells (jf=$uw_jf jm=$uw_jm)"; exit 1
+fi
+if [[ "$uw_ice2" != "2" || "$uw_can2" != "1" ]]; then
+    echo "FAIL  the foreign native did not melt back to gas on cool"; exit 1
+fi
+if [[ "$uw_ice3" != "0" || "$uw_can3" != "0" ]] || (( uw_heat3 <= 50 )); then
+    echo "FAIL  the organ-touching function was not refused by the load-time fixpoint"; exit 1
+fi
+if [[ "$uw_ice4" != "0" || "$uw_can4" != "0" ]]; then
+    echo "FAIL  the figure-op function was not refused by the load-time fixpoint"; exit 1
+fi
+echo "  the loop is closed: load foreign cells -> heat -> emit C from the cells -> clang -> dlopen -> flip -> cool -> melt"
+echo "  (band: tests/crystallization-wire-band.fk -> 31; one clang invocation per table, the dlopen handle persists for re-earn)"
+
+echo
 echo "conditions: $(uname -m) $(uname -s), clang -O2, full-process invocations (startup included)"
 echo "ok — parity held and the rows are real; the spec is docs/coherence-substrate/fourth-kernel.form"
