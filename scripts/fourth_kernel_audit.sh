@@ -698,5 +698,69 @@ awk '/^melt /{ok=($4>0 && $6==4096)}END{exit ok?0:1}' "$work/mechurn.txt" || { e
 echo "  the melt the recipes prove is the melt the binary DOES — live sets cross the boundary, garbage returns"
 
 echo
+# ── 21. melt-hot-swap — the SELF-JIT's gas-ice cycle closes BOTH ways ─────
+# Section 8-10 ships the rise (heat per function; dispatch flips native past
+# the hot line). This face: heat DECAYS (halve per 256-dispatch epoch), a
+# crystallized native MELTS back to walking when its decayed heat falls below
+# the melt line (50% of hot), and re-crystallization is champion-challenger
+# gated — 2 CONSECUTIVE epochs above the hot line re-earn ice (the walking
+# path is the champion, always correct; one hot spike is not enough). All
+# policy is recipe cells (fkc-decay-quantum/divisor, fkc-melt-line-pct,
+# fkc-cc-earn-epochs); the C is emitted from them. One binary, two scenarios
+# by arg: 0 = drive hot -> idle epochs -> ONE more call (must WALK: ice fell);
+# 1 = drive hot -> idle epochs -> re-heat (must RE-EARN: ice returns).
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
+    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" > "$work/jm-driver.fk"
+cat >> "$work/jm-driver.fk" <<'EOF'
+(let tri   (fk-if (fk-le (fk-arg) (fk-lit 1)) (fk-arg) (fk-add (fk-arg) (fk-call 2 (fk-sub (fk-arg) (fk-lit 1))))))
+(let loopA (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-lit 0) (fk-add (fk-call 2 (fk-lit 20)) (fk-call 1 (fk-sub (fk-arg) (fk-lit 1))))))
+(let loopB (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-lit 0) (fk-add (fk-sub (fk-set (fk-lit 9) (fk-arg)) (fk-arg)) (fk-call 3 (fk-sub (fk-arg) (fk-lit 1))))))
+(let driver (fk-if (fk-arg)
+                   (fk-add (fk-call 1 (fk-lit 40)) (fk-add (fk-call 3 (fk-lit 800)) (fk-call 1 (fk-lit 40))))
+                   (fk-add (fk-call 1 (fk-lit 40)) (fk-add (fk-call 3 (fk-lit 800)) (fk-call 2 (fk-lit 20))))))
+(print "==JMC==")
+(print (fkc-emit-jitmelt (list driver loopA tri loopB)))
+(print "==END==")
+EOF
+(cd "$FORMDIR" && "$GO_BIN" "$work/jm-driver.fk" 2>/dev/null) > "$work/jm.out"
+sed -n '/^==JMC==$/,/^==END==$/p' "$work/jm.out" | sed -e '1d' -e '$d' > "$work/fkjm.c"
+"$CLANG" -O2 -o "$work/fkjm" "$work/fkjm.c"
+jm0_walk="$("$work/fkjm" 0 | head -1)"
+jm1_walk="$("$work/fkjm" 1 | head -1)"
+"$work/fkjm" 0 50 > "$work/jm-a.out" 2> "$work/jm-a.err"
+"$work/fkjm" 1 50 > "$work/jm-b.out" 2> "$work/jm-b.err"
+vA="$(sed -n 1p "$work/jm-a.out")"; meltA="$(sed -n 3p "$work/jm-a.out")"; frzA="$(sed -n 4p "$work/jm-a.out")"
+heatA2="$(sed -n 9p "$work/jm-a.out")"; iceA2="$(sed -n 10p "$work/jm-a.out")"
+vB="$(sed -n 1p "$work/jm-b.out")"; njitB="$(sed -n 2p "$work/jm-b.out")"; meltB="$(sed -n 3p "$work/jm-b.out")"; frzB="$(sed -n 4p "$work/jm-b.out")"
+heatB2="$(sed -n 9p "$work/jm-b.out")"; iceB2="$(sed -n 10p "$work/jm-b.out")"
+echo "melt-hot-swap (heat rises per dispatch, halves per epoch; ice melts below the line; re-ice is EARNED):"
+echo "  scenario 0 (hot->cool->one call): value=$vA (walk $jm0_walk)  freezes=$frzA melts=$meltA  hotfn end: heat=$heatA2 ice=$iceA2 (2=melted gas)"
+echo "  scenario 1 (hot->cool->re-heat):  value=$vB (walk $jm1_walk)  freezes=$frzB melts=$meltB njit=$njitB  hotfn end: heat=$heatB2 ice=$iceB2 (1=ice)"
+echo "  hotfn (fn 2) boundary crossings (jf=crystallize@heat, jm=melt@heat):"
+grep '^j[fm] 2 ' "$work/jm-b.err" | sed 's/^/    /'
+if [[ "$vA" != "8610" || "$jm0_walk" != "8610" || "$vB" != "16800" || "$jm1_walk" != "16800" ]]; then
+    echo "FAIL  melt-hot-swap parity broken across the cycle"; exit 1
+fi
+if [[ "$frzA" != "1" || "$meltA" != "1" || "$iceA2" != "2" ]]; then
+    echo "FAIL  the cooled native did not melt back to gas"; exit 1
+fi
+if (( heatA2 <= 12 )); then
+    echo "FAIL  the post-melt call did not WALK (heat shows a native dispatch, not 20 walked ones)"; exit 1
+fi
+if [[ "$frzB" != "2" || "$meltB" != "1" || "$iceB2" != "1" || "$njitB" == "0" ]]; then
+    echo "FAIL  re-heat did not re-earn ice through the champion-challenger gate"; exit 1
+fi
+seq2="$(grep '^j[fm] 2 ' "$work/jm-b.err" | awk '{printf "%s", substr($1,2,1)}')"
+if [[ "$seq2" != "fmf" ]]; then
+    echo "FAIL  hotfn's phase order is not crystallize -> melt -> re-earn (got: $seq2)"; exit 1
+fi
+jf1="$(grep '^jf 2 ' "$work/jm-b.err" | sed -n 1p | awk '{print $3}')"
+jmh="$(grep '^jm 2 ' "$work/jm-b.err" | awk '{print $3}')"
+if (( jf1 <= 50 )) || (( jmh >= 25 )); then
+    echo "FAIL  heat at the boundary crossings disagrees with the policy cells (jf=$jf1 jm=$jmh)"; exit 1
+fi
+echo "  the cycle closed both ways: measured heat froze it, measured cool melted it, ice re-EARNED — never declared"
+
+echo
 echo "conditions: $(uname -m) $(uname -s), clang -O2, full-process invocations (startup included)"
 echo "ok — parity held and the rows are real; the spec is docs/coherence-substrate/fourth-kernel.form"
