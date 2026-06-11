@@ -740,11 +740,15 @@ ensure_kernel_router_canary() {
   done
 
   for service in "${canary_services[@]}"; do
+    local listener_probe_path="/api/attention/kernel-runtime"
+    if [[ "$service" == "kernel-router-bml-front-door" ]]; then
+      listener_probe_path="/api/utils/kernel_status"
+    fi
     deadline=$(( $(date +%s) + 90 ))
     listener_ready=0
     while (( $(date +%s) < deadline )); do
       if docker compose "${compose_args[@]}" exec -T "$service" sh -lc \
-        "curl -sS --max-time 2 -o /dev/null http://127.0.0.1:8080/api/health" \
+        "curl -fsS --max-time 5 -o /dev/null http://127.0.0.1:8080${listener_probe_path}" \
         >/dev/null 2>&1; then
         listener_ready=1
         break
@@ -752,7 +756,7 @@ ensure_kernel_router_canary() {
       sleep 3
     done
     if [[ "$listener_ready" != "1" ]]; then
-      log "FAIL: $service listener did not accept local HTTP within 90s"
+      log "FAIL: $service listener did not accept local HTTP at ${listener_probe_path} within 90s"
       exit 1
     fi
   done
