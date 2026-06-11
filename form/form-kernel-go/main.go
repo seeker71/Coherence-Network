@@ -1801,8 +1801,8 @@ func (k *Kernel) registerNatives() {
 	})
 	k.registerNative("substring", catAccess(), func(_ *Kernel, args []Value) Value {
 		s := args[0].Str
-		a := args[1].Int
-		b := args[2].Int
+		a := args[1].AsInt()
+		b := args[2].AsInt()
 		if a < 0 || b < a || b > int64(len(s)) {
 			panic(fmt.Sprintf(
 				"substring: bounds out of range start=%d end=%d len=%d",
@@ -1815,7 +1815,7 @@ func (k *Kernel) registerNatives() {
 	})
 	k.registerNative("char_at", catAccess(), func(_ *Kernel, args []Value) Value {
 		s := args[0].Str
-		i := args[1].Int
+		i := args[1].AsInt()
 		if i < 0 || i >= int64(len(s)) {
 			panic(fmt.Sprintf("char_at: bounds out of range index=%d len=%d", i, len(s)))
 		}
@@ -1841,8 +1841,8 @@ func (k *Kernel) registerNatives() {
 	// (pow base exp) → base**exp. Negative exponents return 0 (Python's
 	// int**-n is a float; floats on this path are a later breath).
 	k.registerNative("pow", catMethod(), func(_ *Kernel, args []Value) Value {
-		base := args[0].Int
-		exp := args[1].Int
+		base := args[0].AsInt()
+		exp := args[1].AsInt()
 		if exp < 0 {
 			return Value{Kind: VInt, Int: 0}
 		}
@@ -1967,7 +1967,7 @@ func (k *Kernel) registerNatives() {
 	k.registerNative("str_find", catAccess(), func(_ *Kernel, args []Value) Value {
 		s := args[0].Str
 		needle := args[1].Str
-		from := int(args[2].Int)
+		from := int(args[2].AsInt())
 		if from < 0 {
 			from = 0
 		}
@@ -1982,7 +1982,7 @@ func (k *Kernel) registerNatives() {
 	})
 	k.registerNative("str_line_at", catAccess(), func(_ *Kernel, args []Value) Value {
 		s := args[0].Str
-		idx := int(args[1].Int)
+		idx := int(args[1].AsInt())
 		if idx < 0 || idx > len(s) {
 			return Value{Kind: VStr, Str: ""}
 		}
@@ -2025,8 +2025,8 @@ func (k *Kernel) registerNatives() {
 	// JSON-special. A new class adds one branch to a small switch.
 	k.registerNative("scan_run", catAccess(), func(_ *Kernel, args []Value) Value {
 		s := args[0].Str
-		from := int(args[1].Int)
-		class := int(args[2].Int)
+		from := int(args[1].AsInt())
+		class := int(args[2].AsInt())
 		if from < 0 {
 			from = 0
 		}
@@ -2154,10 +2154,10 @@ func (k *Kernel) registerNatives() {
 		return Value{Kind: VInt, Int: int64(args[0].Str[0])}
 	})
 	k.registerNative("byte_to_str", catAccess(), func(_ *Kernel, args []Value) Value {
-		if args[0].Int < 0 || args[0].Int > 255 {
+		if args[0].AsInt() < 0 || args[0].AsInt() > 255 {
 			return Value{Kind: VStr, Str: ""}
 		}
-		return Value{Kind: VStr, Str: string(byte(args[0].Int))}
+		return Value{Kind: VStr, Str: string(byte(args[0].AsInt()))}
 	})
 	// List ops
 	k.registerNative("list", catListNat(), func(_ *Kernel, args []Value) Value {
@@ -2199,7 +2199,7 @@ func (k *Kernel) registerNatives() {
 		if args[0].Kind != VList {
 			return Value{Kind: VNull}
 		}
-		i := args[1].Int
+		i := args[1].AsInt()
 		if i < 0 || int(i) >= len(args[0].List) {
 			return Value{Kind: VNull}
 		}
@@ -2316,14 +2316,14 @@ func (k *Kernel) registerNatives() {
 			panic(fmt.Sprintf("_get: no field '%s' on record", args[1].Str))
 		}
 		if args[0].Kind == VList {
-			i := args[1].Int
+			i := args[1].AsInt()
 			if i < 0 || int(i) >= len(args[0].List) {
 				return Value{Kind: VNull}
 			}
 			return args[0].List[i]
 		}
 		if args[0].Kind == VStr {
-			i := args[1].Int
+			i := args[1].AsInt()
 			if i < 0 || int(i) >= len(args[0].Str) {
 				return Value{Kind: VStr, Str: ""}
 			}
@@ -2394,7 +2394,7 @@ func (k *Kernel) registerNatives() {
 			}
 			return Value{Kind: VInt, Int: best}
 		}
-		return Value{Kind: VInt, Int: args[0].Int}
+		return Value{Kind: VInt, Int: args[0].AsInt()}
 	})
 	k.registerNative("max", catMethod(), func(_ *Kernel, args []Value) Value {
 		if len(args) == 1 && args[0].Kind == VList {
@@ -2410,7 +2410,7 @@ func (k *Kernel) registerNatives() {
 			}
 			return Value{Kind: VInt, Int: best}
 		}
-		return Value{Kind: VInt, Int: args[0].Int}
+		return Value{Kind: VInt, Int: args[0].AsInt()}
 	})
 	// `sum` composted from the kernel native list 2026-05-22 —
 	// core.fk's (defn sum (xs) (foldl plus 0 xs)) covers it via the
@@ -2418,9 +2418,9 @@ func (k *Kernel) registerNatives() {
 	// named in kernel-minimality-audit.md.
 	k.registerNative("abs", catMethod(), func(_ *Kernel, args []Value) Value {
 		if args[0].Kind == VFloat {
-			return Value{Kind: VFloat, Float: math.Abs(args[0].Float)}
+			return Value{Kind: VFloat, Float: math.Abs(args[0].AsFloat())}
 		}
-		n := args[0].Int
+		n := args[0].AsInt()
 		if n < 0 {
 			n = -n
 		}
@@ -2432,27 +2432,27 @@ func (k *Kernel) registerNatives() {
 	// sign*round(abs) impl. An int argument passes through unchanged.
 	k.registerNative("floor", catMethod(), func(_ *Kernel, args []Value) Value {
 		if args[0].Kind == VFloat {
-			return Value{Kind: VInt, Int: int64(math.Floor(args[0].Float))}
+			return Value{Kind: VInt, Int: int64(math.Floor(args[0].AsFloat()))}
 		}
-		return Value{Kind: VInt, Int: args[0].Int}
+		return Value{Kind: VInt, Int: args[0].AsInt()}
 	})
 	k.registerNative("ceil", catMethod(), func(_ *Kernel, args []Value) Value {
 		if args[0].Kind == VFloat {
-			return Value{Kind: VInt, Int: int64(math.Ceil(args[0].Float))}
+			return Value{Kind: VInt, Int: int64(math.Ceil(args[0].AsFloat()))}
 		}
-		return Value{Kind: VInt, Int: args[0].Int}
+		return Value{Kind: VInt, Int: args[0].AsInt()}
 	})
 	k.registerNative("trunc", catMethod(), func(_ *Kernel, args []Value) Value {
 		if args[0].Kind == VFloat {
-			return Value{Kind: VInt, Int: int64(math.Trunc(args[0].Float))}
+			return Value{Kind: VInt, Int: int64(math.Trunc(args[0].AsFloat()))}
 		}
-		return Value{Kind: VInt, Int: args[0].Int}
+		return Value{Kind: VInt, Int: args[0].AsInt()}
 	})
 	k.registerNative("round", catMethod(), func(_ *Kernel, args []Value) Value {
 		if args[0].Kind == VFloat {
-			return Value{Kind: VInt, Int: int64(math.Round(args[0].Float))}
+			return Value{Kind: VInt, Int: int64(math.Round(args[0].AsFloat()))}
 		}
-		return Value{Kind: VInt, Int: args[0].Int}
+		return Value{Kind: VInt, Int: args[0].AsInt()}
 	})
 	// Polymorphic `+` for Python: int+int=add, str+str=concat,
 	// list+list=concat, with float promotion on numeric mixes.
@@ -2534,7 +2534,7 @@ func (k *Kernel) registerNatives() {
 	// places (n >= 0), matching CPython bit-for-bit. Sibling-parity with the
 	// Rust + TS kernels. See roundNdigitsDecimal above.
 	k.registerNative("round_ndigits", catMethod(), func(_ *Kernel, args []Value) Value {
-		return Value{Kind: VFloat, Float: roundNdigitsDecimal(args[0].AsFloat(), args[1].Int)}
+		return Value{Kind: VFloat, Float: roundNdigitsDecimal(args[0].AsFloat(), args[1].AsInt())}
 	})
 
 	// ── Float construction + introspection — sibling-parity with the
@@ -2619,7 +2619,7 @@ func (k *Kernel) registerNatives() {
 	// violates sibling parity when invoked — the divergence is the
 	// substrate's signal of live field-touch.
 	k.registerNative("random_bytes", catCall(), func(_ *Kernel, args []Value) Value {
-		n := int(args[0].Int)
+		n := int(args[0].AsInt())
 		if n <= 0 {
 			return Value{Kind: VList, List: []Value{}}
 		}
@@ -2643,38 +2643,38 @@ func (k *Kernel) registerNatives() {
 	// without exponential cost. Operate on 32-bit-unsigned semantics
 	// so SHA-256-style recipes compose round functions consistently.
 	k.registerNative("band", catMethod(), func(_ *Kernel, args []Value) Value {
-		return Value{Kind: VInt, Int: args[0].Int & args[1].Int}
+		return Value{Kind: VInt, Int: args[0].AsInt() & args[1].AsInt()}
 	})
 	k.registerNative("bor", catMethod(), func(_ *Kernel, args []Value) Value {
-		return Value{Kind: VInt, Int: args[0].Int | args[1].Int}
+		return Value{Kind: VInt, Int: args[0].AsInt() | args[1].AsInt()}
 	})
 	k.registerNative("bxor", catMethod(), func(_ *Kernel, args []Value) Value {
-		return Value{Kind: VInt, Int: args[0].Int ^ args[1].Int}
+		return Value{Kind: VInt, Int: args[0].AsInt() ^ args[1].AsInt()}
 	})
 	k.registerNative("bnot_u32", catMethod(), func(_ *Kernel, args []Value) Value {
-		a := uint32(args[0].Int)
+		a := uint32(args[0].AsInt())
 		return Value{Kind: VInt, Int: int64(^a)}
 	})
 	k.registerNative("shl_u32", catMethod(), func(_ *Kernel, args []Value) Value {
-		a := uint32(args[0].Int)
-		n := uint32(args[1].Int) & 31
+		a := uint32(args[0].AsInt())
+		n := uint32(args[1].AsInt()) & 31
 		return Value{Kind: VInt, Int: int64(a << n)}
 	})
 	k.registerNative("shr_u32", catMethod(), func(_ *Kernel, args []Value) Value {
-		a := uint32(args[0].Int)
-		n := uint32(args[1].Int) & 31
+		a := uint32(args[0].AsInt())
+		n := uint32(args[1].AsInt()) & 31
 		return Value{Kind: VInt, Int: int64(a >> n)}
 	})
 	k.registerNative("rotr_u32", catMethod(), func(_ *Kernel, args []Value) Value {
-		a := uint32(args[0].Int)
-		n := uint32(args[1].Int) & 31
+		a := uint32(args[0].AsInt())
+		n := uint32(args[1].AsInt()) & 31
 		return Value{Kind: VInt, Int: int64((a >> n) | (a << (32 - n)))}
 	})
 	// add_u32: modular 32-bit addition — SHA-256's round constants
 	// and message schedule both require this discipline.
 	k.registerNative("add_u32", catMethod(), func(_ *Kernel, args []Value) Value {
-		a := uint32(args[0].Int)
-		b := uint32(args[1].Int)
+		a := uint32(args[0].AsInt())
+		b := uint32(args[1].AsInt())
 		return Value{Kind: VInt, Int: int64(a + b)}
 	})
 	// sha256_bytes / bytes_sum / bytes_hash were temporarily added as
@@ -2852,7 +2852,7 @@ func (k *Kernel) registerNatives() {
 		if len(args) < 3 || args[0].Kind != VStr || args[1].Kind != VStr || args[2].Kind != VInt {
 			return Value{Kind: VNull}
 		}
-		return jitInstallLeaf(k, env, args[0].Str, args[1].Str, args[2].Int)
+		return jitInstallLeaf(k, env, args[0].Str, args[1].Str, args[2].AsInt())
 	})
 	// installed_leaf? name-str → 1 if the name is a callable the surface
 	// grew at runtime via jit_install, else 0 (build-time natives answer 0).
@@ -2944,8 +2944,8 @@ func (k *Kernel) registerNatives() {
 	// Same (seed, count) → byte-identical output across Go / Rust / TS.
 	// glibc rand(): state = (state * 1103515245 + 12345) & 0x7FFFFFFF
 	k.registerNative("seeded_bytes", catCall(), func(_ *Kernel, args []Value) Value {
-		seed := uint32(args[0].Int)
-		count := int(args[1].Int)
+		seed := uint32(args[0].AsInt())
+		count := int(args[1].AsInt())
 		if count <= 0 {
 			return Value{Kind: VList, List: []Value{}}
 		}
@@ -3011,7 +3011,7 @@ func (k *Kernel) registerNatives() {
 		return Value{Kind: VInt, Int: info.ModTime().Unix()}
 	})
 	k.registerNative("file_byte_at", catCall(), func(_ *Kernel, args []Value) Value {
-		if args[1].Int < 0 {
+		if args[1].AsInt() < 0 {
 			return Value{Kind: VInt, Int: -1}
 		}
 		f, err := os.Open(resolveKernelHostPath(args[0].Str))
@@ -3020,15 +3020,15 @@ func (k *Kernel) registerNatives() {
 		}
 		defer f.Close()
 		buf := []byte{0}
-		n, err := f.ReadAt(buf, args[1].Int)
+		n, err := f.ReadAt(buf, args[1].AsInt())
 		if err != nil || n == 0 {
 			return Value{Kind: VInt, Int: -1}
 		}
 		return Value{Kind: VInt, Int: int64(buf[0])}
 	})
 	k.registerNative("read_file_slice", catCall(), func(_ *Kernel, args []Value) Value {
-		offset := args[1].Int
-		length := args[2].Int
+		offset := args[1].AsInt()
+		length := args[2].AsInt()
 		if offset < 0 || length <= 0 {
 			return Value{Kind: VStr, Str: ""}
 		}
@@ -3123,7 +3123,7 @@ func (k *Kernel) registerNatives() {
 	// (socket_recv conn max-bytes)     → received-string ("" on close)
 	// (socket_close handle)            → 0 | -1
 	k.registerNative("socket_listen", catCall(), func(_ *Kernel, args []Value) Value {
-		port := args[0].Int
+		port := args[0].AsInt()
 		ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
 		if err != nil {
 			return Value{Kind: VInt, Int: -1}
@@ -3134,7 +3134,7 @@ func (k *Kernel) registerNatives() {
 	// opened on port 0 (ephemeral) report the OS-assigned port — the basis
 	// of single-process loopback (listen 0 → port → connect → accept).
 	k.registerNative("socket_port", catCall(), func(_ *Kernel, args []Value) Value {
-		v := socketLookup(args[0].Int)
+		v := socketLookup(args[0].AsInt())
 		ln, ok := v.(net.Listener)
 		if !ok {
 			return Value{Kind: VInt, Int: -1}
@@ -3146,7 +3146,7 @@ func (k *Kernel) registerNatives() {
 		return Value{Kind: VInt, Int: int64(ta.Port)}
 	})
 	k.registerNative("socket_accept", catCall(), func(_ *Kernel, args []Value) Value {
-		v := socketLookup(args[0].Int)
+		v := socketLookup(args[0].AsInt())
 		ln, ok := v.(net.Listener)
 		if !ok {
 			return Value{Kind: VInt, Int: -1}
@@ -3159,7 +3159,7 @@ func (k *Kernel) registerNatives() {
 	})
 	k.registerNative("socket_connect", catCall(), func(_ *Kernel, args []Value) Value {
 		host := args[0].Str
-		port := args[1].Int
+		port := args[1].AsInt()
 		c, err := net.Dial("tcp", fmt.Sprintf("%s:%d", host, port))
 		if err != nil {
 			return Value{Kind: VInt, Int: -1}
@@ -3167,7 +3167,7 @@ func (k *Kernel) registerNatives() {
 		return Value{Kind: VInt, Int: socketRegister(c)}
 	})
 	k.registerNative("socket_send", catCall(), func(_ *Kernel, args []Value) Value {
-		v := socketLookup(args[0].Int)
+		v := socketLookup(args[0].AsInt())
 		c, ok := v.(net.Conn)
 		if !ok {
 			return Value{Kind: VInt, Int: -1}
@@ -3179,12 +3179,12 @@ func (k *Kernel) registerNatives() {
 		return Value{Kind: VInt, Int: int64(n)}
 	})
 	k.registerNative("socket_recv", catCall(), func(_ *Kernel, args []Value) Value {
-		v := socketLookup(args[0].Int)
+		v := socketLookup(args[0].AsInt())
 		c, ok := v.(net.Conn)
 		if !ok {
 			return Value{Kind: VStr, Str: ""}
 		}
-		max := args[1].Int
+		max := args[1].AsInt()
 		if max <= 0 {
 			return Value{Kind: VStr, Str: ""}
 		}
@@ -3196,7 +3196,7 @@ func (k *Kernel) registerNatives() {
 		return Value{Kind: VStr, Str: string(buf[:n])}
 	})
 	k.registerNative("socket_close", catCall(), func(_ *Kernel, args []Value) Value {
-		h := args[0].Int
+		h := args[0].AsInt()
 		if h < 0 {
 			return Value{Kind: VInt, Int: -1}
 		}
@@ -3221,10 +3221,10 @@ func (k *Kernel) registerNatives() {
 
 	k.registerNative("make_nodeid", catWitness(), func(_ *Kernel, args []Value) Value {
 		return Value{Kind: VNodeID, Nid: NodeID{
-			Pkg:   uint32(args[0].Int),
-			Level: uint32(args[1].Int),
-			Type:  uint32(args[2].Int),
-			Inst:  uint32(args[3].Int),
+			Pkg:   uint32(args[0].AsInt()),
+			Level: uint32(args[1].AsInt()),
+			Type:  uint32(args[2].AsInt()),
+			Inst:  uint32(args[3].AsInt()),
 		}}
 	})
 	k.registerNative("bp", catWitness(), func(_ *Kernel, args []Value) Value {
@@ -3242,7 +3242,7 @@ func (k *Kernel) registerNatives() {
 			"The substrate never invents a NodeID for an unknown name.", args[0].Str, args[0].Str))
 	})
 	k.registerNative("intern_trivial_int", catWitness(), func(k *Kernel, args []Value) Value {
-		return Value{Kind: VNodeID, Nid: k.internTrivialInt(args[0].Int)}
+		return Value{Kind: VNodeID, Nid: k.internTrivialInt(args[0].AsInt())}
 	})
 	k.registerNative("intern_trivial_string", catWitness(), func(k *Kernel, args []Value) Value {
 		return Value{Kind: VNodeID, Nid: k.internString(args[0].Str)}
@@ -3566,8 +3566,8 @@ func (k *Kernel) registerNatives() {
 		nid := k.intern(cat, kids)
 		fileNid := k.internString(args[2].Str)
 		fileID := NameID(fileNid.Inst)
-		line := uint32(args[3].Int)
-		col := uint32(args[4].Int)
+		line := uint32(args[3].AsInt())
+		col := uint32(args[4].AsInt())
 		k.sourceAttr[nid] = sourceLoc{FileID: fileID, Line: line, Col: col}
 		k.activeRoots = append(k.activeRoots, nid)
 		k.framebufferRoots = append(k.framebufferRoots, nid)
@@ -3838,7 +3838,7 @@ func (k *Kernel) registerNatives() {
 		for i, v := range args[0].List {
 			roots[i] = v.Nid
 		}
-		workers := int(args[1].Int)
+		workers := int(args[1].AsInt())
 		if workers < 1 {
 			workers = 1
 		}
@@ -3886,7 +3886,7 @@ func (k *Kernel) registerNatives() {
 		for i, v := range args[0].List {
 			roots[i] = v.Nid
 		}
-		workers := int(args[1].Int)
+		workers := int(args[1].AsInt())
 		if workers < 1 {
 			workers = 1
 		}

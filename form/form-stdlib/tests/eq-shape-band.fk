@@ -4,9 +4,14 @@
 ; answer flows DIRECTLY into arithmetic with bit-identical results — no
 ; if-reduction needed. This band deliberately uses mul/sub/lt/le (outside
 ; the curated band-verdict subset): feeding truth answers into arithmetic
-; IS the claim under test. Bool literals join through the same door —
-; operand coercion carries true/false as 1/0 (Rust as_int and siblings).
-; Self-contained — kernel verbs only, no preludes.
+; IS the claim under test.
+;
+; The casting is intrinsic, both directions, at every door: bool→int at
+; every numeric door (walker math/compare AND native args — true IS 1,
+; false IS 0), int→bool at every truth door (cond/logic — nonzero IS
+; true). No consumer anywhere needs to know which shape arrived.
+; Self-contained — kernel verbs only, no preludes. Verdict 65535: the
+; full sixteen-bit truth field.
 (do
     ; c0 — the arena-melt crash shape: an equal eq fed straight into mul.
     (let c0 (if (eq (mul (eq 2 2) 5) 5) 1 0))
@@ -35,5 +40,15 @@
     (let c10 (if (eq (add (not (eq 1 2)) (not (eq 3 3))) 1) 1024 0))
     ; c11 — bool literals carry axiom-1's states into eq as 1/0: 1 + 1.
     (let c11 (if (eq (add (eq (gt 3 2) true) (eq false 0)) 2) 2048 0))
+    ; c12 — bool→int is intrinsic in math, no comparison in sight: 5 + 1.
+    (let c12 (if (eq (add (mul true 5) true) 6) 4096 0))
+    ; c13 — int→bool is intrinsic at the truth doors: (if 2 …) takes the
+    ; branch and (and 2 3) normalizes nonzero to the 0/1 states: 1 + 1.
+    (let c13 (if (eq (add (if 2 1 0) (and 2 3)) 2) 8192 0))
+    ; c14 — not flips raw ints through the same door: (not 0) + (not 7).
+    (let c14 (if (eq (add (not 0) (not 7)) 1) 16384 0))
+    ; c15 — the native arg door casts too: a bool indexes a list as 1.
+    (let c15 (if (eq (nth (list 7 8) true) 8) 32768 0))
     (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7
-        (add c8 (add c9 (add c10 c11))))))))))))
+        (add c8 (add c9 (add c10 (add c11 (add c12 (add c13
+        (add c14 c15))))))))))))))))

@@ -3335,6 +3335,8 @@ function volatileCoord(namespace: string, key: string): string {
 function argInt(args: Value[], i: number): number {
   const v = args[i];
   if (!v) throw new Error(`arg ${i}: missing`);
+  // bool→int is intrinsic at every numeric door (axiom-1: true IS 1).
+  if (v.kind === "bool") return v.bool ? 1 : 0;
   if (
     v.kind === "int" ||
     v.kind === "i8" ||
@@ -3350,6 +3352,8 @@ function argInt(args: Value[], i: number): number {
 function argFloat(args: Value[], i: number): number {
   const v = args[i];
   if (!v) throw new Error(`arg ${i}: missing`);
+  // bool→float is intrinsic at every numeric door (axiom-1: true IS 1).
+  if (v.kind === "bool") return v.bool ? 1 : 0;
   if (v.kind === "f32" || v.kind === "f64") return v.float;
   if (
     v.kind === "int" ||
@@ -3485,6 +3489,8 @@ function composeScaledDecimal(kept: string, n: number, neg: boolean): string {
 function argBigInt(args: Value[], i: number): bigint {
   const v = args[i];
   if (!v) throw new Error(`arg ${i}: missing`);
+  // bool→int is intrinsic at every numeric door (axiom-1: true IS 1).
+  if (v.kind === "bool") return v.bool ? 1n : 0n;
   if (v.kind === "i64" || v.kind === "u64") return v.bigint;
   if (
     v.kind === "int" ||
