@@ -77,11 +77,11 @@
                      str_line_at str_ascii_prefix
                      framebuffer-observe-start framebuffer-observe-stop
                      framebuffer-observe-active?
-                     jit_install installed_leaf?   # install-leaf.form carrier
                      # rust-gap:
                      framebuffer-counts framebuffer-event-rows
                      # ts-gap:
-                     value_str value_kind value-kind str_to_float jit_compiled?))
+                     value_str value_kind value-kind str_to_float jit_compiled?
+                     jit_install installed_leaf?))  # install-leaf.form carriers: go + rust live
 
   # ── how this feeds the fourth kernel ────────────────────────────────
   # M2 (native BMF compiler) and M4 (the emitted walker) prove themselves

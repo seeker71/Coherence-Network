@@ -346,9 +346,9 @@
             (defn pv-jit-emit-c () (if (str_eq (jit_emit_c "pv-jit-absent-name") "") 1 0)) 1 1)
         (prim "jit_compile_value" "witness" "toolchain: Value-ABI JIT on the go carrier (-1 unbound there); siblings answer constant 0"
             (defn pv-jit-compile-value () (add (jit_compile_value "pv-jit-absent-name") 1)) 0 0)
-        (prim "jit_install" "witness" "sibling-gap: installs a jitted artifact as a NAMED callable in the kernel's own native table at runtime (install-leaf.fk carrier); ack node=body-NodeID, 0 on collision/interface refusal, nothing when no closure"
+        (prim "jit_install" "witness" "sibling-gap (ts): installs a jitted artifact as a NAMED callable in the kernel's own native table at runtime (install-leaf.fk carrier; go plugin.Open and rust libloading carriers live, witnessed by form/scripts/jit-install-leaf-test.sh); ack node=body-NodeID, 0 on collision/interface refusal, nothing when no closure"
             (defn pv-jit-install () (if (str_eq (value_kind (jit_install "pv-jit-absent-name" "pv-jit-install-leaf" 1)) "null") 1 0)) 1 0)
-        (prim "installed_leaf?" "compare" "sibling-gap: 1 when the name is a callable the surface grew at runtime via jit_install, else 0"
+        (prim "installed_leaf?" "compare" "sibling-gap (ts): 1 when the name is a callable the surface grew at runtime via jit_install, else 0 (go and rust carriers live)"
             (defn pv-installed-leaf? () (installed_leaf? "pv-il-absent-name")) 0 0)
         (prim "jit_aliased?" "compare" "1 when a jit alias is bound for the name, else 0"
             (defn pv-jit-aliased? () (add (jit_aliased? "pv-ali-absent")

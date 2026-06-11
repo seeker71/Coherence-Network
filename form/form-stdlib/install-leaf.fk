@@ -38,10 +38,11 @@
 ;   INSTALLED-LEAF   (name, artifact)   — one binding in the table
 ;
 ; Proven by tests/install-leaf-band.fk (three-way). The native carrier —
-; a jitted .so installed into the Go kernel's own native table at runtime
-; — is jit_install in form-kernel-go (witness:
-; form/scripts/jit-install-leaf-test.sh); Rust/TS native carriers are
-; open; the PROTOCOL is what this file proves on all three.
+; a jitted .so installed into the kernel's own callable table at runtime
+; — is jit_install in form-kernel-go (plugin.Open) and form-kernel-rust
+; (rustc cdylib + libloading), both witnessed by
+; form/scripts/jit-install-leaf-test.sh; the TS native carrier is open
+; (wasm/worker); the PROTOCOL is what this file proves on all three.
 
 ;; --- Blueprints ------------------------------------------------------
 (let INSTALL-IFACE    (bp "INSTALL-IFACE"))
