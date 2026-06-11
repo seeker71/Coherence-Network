@@ -2098,7 +2098,7 @@ func (k *Kernel) registerNatives() {
 		return acc
 	})
 	k.registerNative("str_eq", catCompare(RCompareEq), func(_ *Kernel, args []Value) Value {
-		return Value{Kind: VBool, Bool: args[0].Str == args[1].Str}
+		return boolInt(args[0].Str == args[1].Str)
 	})
 	// int_to_str — value-to-string for trivial leaves. The historical
 	// name reflects its first use (line numbers in cell-trace.fk); its
@@ -3504,18 +3504,18 @@ func (k *Kernel) registerNatives() {
 		if args[0].Kind != VNodeID || args[1].Kind != VNodeID {
 			panic(fmt.Sprintf("node_eq: expected NodeID args, got %v and %v", args[0].Kind, args[1].Kind))
 		}
-		return Value{Kind: VBool, Bool: args[0].Nid == args[1].Nid}
+		return boolInt(args[0].Nid == args[1].Nid)
 	})
-	// value_eq — polymorphic equality across all Value kinds. Returns
-	// true when both args have the same kind AND compare equal within
-	// that kind. Cross-kind returns false (str ≠ nodeid even if they
+	// value_eq — polymorphic equality across all Value kinds. Answers
+	// 1 when both args have the same kind AND compare equal within
+	// that kind. Cross-kind answers 0 (str ≠ nodeid even if they
 	// share text). Use this when a Form-side function holds tagged
 	// values that may be either strings or NodeIDs (e.g. domain/lens
 	// in bmf-symbol-context can be either typed-constant NodeIDs or
 	// string literals). Avoids the str_eq/node_eq fork that previously
 	// forced callers to know which type they held.
 	k.registerNative("value_eq", catCompare(RCompareEq), func(k *Kernel, args []Value) Value {
-		return Value{Kind: VBool, Bool: valueEqual(args[0], args[1])}
+		return boolInt(valueEqual(args[0], args[1]))
 	})
 	// intern_node_at — intern composite + record source attribution.
 	// Engine.fk's parser actions call this so every emitted Recipe carries
@@ -4059,55 +4059,61 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 			rv := k.walk(kids[1], env)
 			// Same width-promotion rule as math: float on either side forces
 			// an IEEE comparison. Pure int/int stays integer. Mirrors Rust.
+			// A comparison acknowledges with the 0/1 integer states (axiom-1,
+			// core-axioms.form) so its answer flows directly into arithmetic —
+			// the same shape every JIT lane already lands at the i64 ABI.
+			// Proven three-way by tests/eq-shape-band.fk.
 			if lv.Kind == VFloat || rv.Kind == VFloat {
 				l := lv.AsFloat()
 				r := rv.AsFloat()
 				switch cat.Inst {
 				case RCompareEq:
-					return Value{Kind: VBool, Bool: l == r}
+					return boolInt(l == r)
 				case RCompareNe:
-					return Value{Kind: VBool, Bool: l != r}
+					return boolInt(l != r)
 				case RCompareLt:
-					return Value{Kind: VBool, Bool: l < r}
+					return boolInt(l < r)
 				case RCompareLe:
-					return Value{Kind: VBool, Bool: l <= r}
+					return boolInt(l <= r)
 				case RCompareGt:
-					return Value{Kind: VBool, Bool: l > r}
+					return boolInt(l > r)
 				case RCompareGe:
-					return Value{Kind: VBool, Bool: l >= r}
+					return boolInt(l >= r)
 				}
 			}
 			a := lv.Int
 			b := rv.Int
 			switch cat.Inst {
 			case RCompareEq:
-				return Value{Kind: VBool, Bool: a == b}
+				return boolInt(a == b)
 			case RCompareNe:
-				return Value{Kind: VBool, Bool: a != b}
+				return boolInt(a != b)
 			case RCompareLt:
-				return Value{Kind: VBool, Bool: a < b}
+				return boolInt(a < b)
 			case RCompareLe:
-				return Value{Kind: VBool, Bool: a <= b}
+				return boolInt(a <= b)
 			case RCompareGt:
-				return Value{Kind: VBool, Bool: a > b}
+				return boolInt(a > b)
 			case RCompareGe:
-				return Value{Kind: VBool, Bool: a >= b}
+				return boolInt(a >= b)
 			}
 
 		case RBasicLogic:
+			// Logic consumes truthiness (so 0/1 comparison answers flow in)
+			// and keeps its bool answer — mirrors Rust's as_bool and TS truthy.
 			switch cat.Inst {
 			case RLogicAnd:
-				if !k.walk(kids[0], env).Bool {
+				if !truthy(k.walk(kids[0], env)) {
 					return Value{Kind: VBool, Bool: false}
 				}
-				return Value{Kind: VBool, Bool: k.walk(kids[1], env).Bool}
+				return Value{Kind: VBool, Bool: truthy(k.walk(kids[1], env))}
 			case RLogicOr:
-				if k.walk(kids[0], env).Bool {
+				if truthy(k.walk(kids[0], env)) {
 					return Value{Kind: VBool, Bool: true}
 				}
-				return Value{Kind: VBool, Bool: k.walk(kids[1], env).Bool}
+				return Value{Kind: VBool, Bool: truthy(k.walk(kids[1], env))}
 			case RLogicNot:
-				return Value{Kind: VBool, Bool: !k.walk(kids[0], env).Bool}
+				return Value{Kind: VBool, Bool: !truthy(k.walk(kids[0], env))}
 			}
 
 		case RBasicCond:
@@ -4537,6 +4543,15 @@ func truthy(v Value) bool {
 		return false
 	}
 	return true
+}
+
+// boolInt — the comparison family's acknowledgment shape: 0/1 integer states
+// (axiom-1) so eq/lt/node_eq/… answers feed arithmetic on every kernel.
+func boolInt(b bool) Value {
+	if b {
+		return Value{Kind: VInt, Int: 1}
+	}
+	return Value{Kind: VInt, Int: 0}
 }
 
 // ---------------------------------------------------------------------------

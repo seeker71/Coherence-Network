@@ -466,7 +466,9 @@ function emitCompare(
               : op === RCmp.GE
                 ? ">="
                 : "===";
-  return `((${a}) ${opStr} (${b}))`;
+  // Comparisons acknowledge with the 0/1 integer states (axiom-1) — the
+  // ?1:0 keeps a compiled body's answer boxing as int, mirroring walkCompare.
+  return `(((${a}) ${opStr} (${b})) ? 1 : 0)`;
 }
 
 function emitLogic(

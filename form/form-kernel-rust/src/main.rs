@@ -3179,7 +3179,7 @@ impl Kernel {
             acc
         });
         self.register_native("str_eq", cat_compare(RCMP_EQ), |_, _, args| {
-            Value::Bool(args[0].as_str() == args[1].as_str())
+            bool_int(args[0].as_str() == args[1].as_str())
         });
         // int_to_str — value-to-string for trivial leaves. Historical name
         // (first use: line numbers in cell-trace.fk); semantics is "render
@@ -5290,15 +5290,15 @@ impl Kernel {
         // emit-engine.fk's lookup-template) can dispatch on Recipe category
         // by direct NodeID equality. Sibling parity required across Go/TS.
         self.register_native("node_eq", cat_compare(RCMP_EQ), |_, _, args| {
-            Value::Bool(args[0].as_nid() == args[1].as_nid())
+            bool_int(args[0].as_nid() == args[1].as_nid())
         });
-        // value_eq — polymorphic equality across Value kinds. Returns
-        // true when both args have the same kind AND compare equal
-        // within that kind. Cross-kind returns false. Use when a
+        // value_eq — polymorphic equality across Value kinds. Answers
+        // 1 when both args have the same kind AND compare equal
+        // within that kind. Cross-kind answers 0. Use when a
         // Form-side function holds tagged values that may be either
         // strings or NodeIDs — e.g. domain/lens in bmf-symbol-context.
         self.register_native("value_eq", cat_compare(RCMP_EQ), |_, _, args| {
-            Value::Bool(value_equal(&args[0], &args[1]))
+            bool_int(value_equal(&args[0], &args[1]))
         });
         // intern_node_at — intern a composite Recipe AND record its source
         // attribution. Engine.fk's parser actions call this so every emitted
@@ -6388,6 +6388,12 @@ fn switch_key_from_value(k: &mut Kernel, v: &Value) -> Option<NodeID> {
     }
 }
 
+// bool_int — the comparison family's acknowledgment shape: 0/1 integer
+// states (axiom-1) so eq/lt/node_eq/… answers feed arithmetic on every kernel.
+fn bool_int(b: bool) -> Value {
+    Value::Int(b as i64)
+}
+
 fn value_equal(a: &Value, b: &Value) -> bool {
     match (a, b) {
         (Value::Null, Value::Null) => true,
@@ -6526,10 +6532,14 @@ fn walk_inner(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
                 let rv = walk(k, a, kids[1], env);
                 // Same width-promotion rule as math: float on either side
                 // forces an IEEE comparison. Pure int/int stays integer.
+                // A comparison acknowledges with the 0/1 integer states
+                // (axiom-1, core-axioms.form) so its answer flows directly
+                // into arithmetic — the same shape the JIT's i64 ABI already
+                // lands. Proven three-way by tests/eq-shape-band.fk.
                 if matches!(lv, Value::Float(_)) || matches!(rv, Value::Float(_)) {
                     let l = lv.as_float();
                     let r = rv.as_float();
-                    Value::Bool(match cat.inst {
+                    bool_int(match cat.inst {
                         RCMP_EQ => l == r,
                         RCMP_NE => l != r,
                         RCMP_LT => l < r,
@@ -6541,7 +6551,7 @@ fn walk_inner(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
                 } else {
                     let l = lv.as_int();
                     let r = rv.as_int();
-                    Value::Bool(match cat.inst {
+                    bool_int(match cat.inst {
                         RCMP_EQ => l == r,
                         RCMP_NE => l != r,
                         RCMP_LT => l < r,
