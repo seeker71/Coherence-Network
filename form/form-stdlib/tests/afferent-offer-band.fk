@@ -1,0 +1,70 @@
+; preludes: form-stdlib/afferent-offer.fk
+;
+; afferent-offer-band — signals AND interrupts proven through the ONE
+; wait-with-deadline engine, the difference pure data: line vocabulary,
+; table, mask. The strange-minimal edge is the deadline itself — the
+; alarm armed AT tick 9 vs tick 10 against deadline 9 pins the window
+; boundary inclusive/exclusive in one tick.
+;
+; Verdict 511 when every claim lands:
+;   1    SIGALRM in the window: a timer armed AT the deadline delivers
+;        "on-alarm" — the expiry IS the unsolicited offer (inclusive edge)
+;   2    timeout==nothing IS the SIGALRM shape: the SAME engine, the alarm
+;        one tick past the deadline, acknowledges NOTHING (exclusive edge)
+;   4    sigprocmask: SIGINT raised in time on a masked line stays
+;        undelivered — nothing, never an error
+;   8    unmask delivers the pending: the SAME pending offers, mask
+;        lifted → "on-int" fires — the mask was data, not control flow
+;   16   interrupt reading, same engine: a keyboard event on IRQ 1
+;        dispatches "on-key"; the dispatch's offer IS the latched event
+;        (node_eq — correlation by content) carrying scancode 42
+;   32   a silent line: no event in the window → nothing
+;   64   an unoffered door: an event on a line with no table entry →
+;        nothing (axiom-4 — only an offered interface delivers)
+;   128  the two readings' silence is ONE cell: the signal-timeout
+;        nothing and the irq-silence nothing are the same NodeID
+;   256  acknowledged delivery consumes: after ao-consume of the fired
+;        alarm, the next wait on the remainder is nothing (one-shot
+;        delivery; content-addressing coalesces duplicates)
+(do
+    (let sig-table (ao-table (list (ao-entry (ao-sig-alrm) "on-alarm")
+                                   (ao-entry (ao-sig-int)  "on-int"))))
+    (let irq-table (ao-table (list (ao-entry (ao-irq-keyboard) "on-key"))))
+    (let no-mask  (ao-mask (list)))
+    (let int-mask (ao-mask (list (ao-sig-int))))
+
+    ;; signal reading — the timer IS a standing unsolicited offer on line 14
+    (let alarm-at-edge (list (ao-alarm 9)))
+    (let d1 (ao-wait sig-table no-mask alarm-at-edge 9))
+    (let c1 (if (and (eq (ao-dispatch? d1) 1)
+                     (str_eq (ao-dispatch-handler d1) "on-alarm")) 1 0))
+
+    (let n2 (ao-wait sig-table no-mask (list (ao-alarm 10)) 9))
+    (let c2 (if (eq (ao-nothing? n2) 1) 2 0))
+
+    (let pending-int (list (ao-signal (ao-sig-int) 3)))
+    (let c3 (if (eq (ao-nothing? (ao-wait sig-table int-mask pending-int 9)) 1) 4 0))
+
+    (let d4 (ao-wait sig-table no-mask pending-int 9))
+    (let c4 (if (and (eq (ao-dispatch? d4) 1)
+                     (str_eq (ao-dispatch-handler d4) "on-int")) 8 0))
+
+    ;; interrupt reading — the SAME ao-wait, different data
+    (let key (ao-irq (ao-irq-keyboard) 3 42))
+    (let d5 (ao-wait irq-table no-mask (list key) 9))
+    (let c5 (if (and (str_eq (ao-dispatch-handler d5) "on-key")
+                     (and (node_eq (ao-dispatch-offer d5) key)
+                          (eq (node_value (ao-offer-payload (ao-dispatch-offer d5))) 42)))
+                16 0))
+
+    (let n6 (ao-wait irq-table no-mask (list) 9))
+    (let c6 (if (eq (ao-nothing? n6) 1) 32 0))
+
+    (let c7 (if (eq (ao-nothing? (ao-wait irq-table no-mask (list (ao-irq 7 2 1)) 9)) 1) 64 0))
+
+    (let c8 (if (node_eq n2 n6) 128 0))
+
+    (let after (ao-consume alarm-at-edge (ao-dispatch-offer d1)))
+    (let c9 (if (eq (ao-nothing? (ao-wait sig-table no-mask after 9)) 1) 256 0))
+
+    (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 c9)))))))))
