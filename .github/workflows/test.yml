@@ -80,3 +80,7 @@ jobs:
       - name: Build web
         run: |
           cd web && npm ci --allow-git=none && npm run build
+
+      - name: Test web
+        run: |
+          cd web && npm run test
