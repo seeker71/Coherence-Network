@@ -4786,14 +4786,16 @@ func (k *Kernel) readSexpr(toks []sexpToken, i int) (NodeID, int) {
 	case "STRING":
 		return k.internString(t.value), i + 1
 	case "IDENT":
-		// Bool literals — true/false are reserved, become trivial values at parse
-		// time. Parallel to int/string literals; lets Form predicates read
-		// naturally without `(eq 0 0)` constructors.
+		// true/false are reader syntax for axiom-1's two states: they intern
+		// as the SAME cells as 1/0 (specs/form-intrinsic-casting.md R2 — a
+		// bool is a view over a 0/1 int cell, not a second value shape).
+		// The bool costume survives only at wire edges (JSON, codecs) via
+		// intern_trivial_bool.
 		if t.value == "true" {
-			return NodeID{Pkg: 1, Level: LevelTrivial, Type: TrivBool, Inst: 1}, i + 1
+			return NodeID{Pkg: 1, Level: LevelTrivial, Type: TrivInt, Inst: 1}, i + 1
 		}
 		if t.value == "false" {
-			return NodeID{Pkg: 1, Level: LevelTrivial, Type: TrivBool, Inst: 0}, i + 1
+			return NodeID{Pkg: 1, Level: LevelTrivial, Type: TrivInt, Inst: 0}, i + 1
 		}
 		return k.intern(catIdent(), []NodeID{k.internString(t.value)}), i + 1
 	case "RPAREN":

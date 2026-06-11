@@ -159,8 +159,13 @@ function readOne(k: Kernel, s: ParseState): NodeID {
     return k.internString(t.text);
   }
   if (t.kind === "ident") {
-    if (t.text === "true") return k.internTrivialBool(true);
-    if (t.text === "false") return k.internTrivialBool(false);
+    // true/false are reader syntax for axiom-1's two states: they intern as
+    // the SAME cells as 1/0 (specs/form-intrinsic-casting.md R2 — a bool is
+    // a view over a 0/1 int cell, not a second value shape). The bool
+    // costume survives only at wire edges (JSON, codecs) via
+    // intern_trivial_bool.
+    if (t.text === "true") return k.internTrivialInt(1);
+    if (t.text === "false") return k.internTrivialInt(0);
     if (t.text === "null") return k.internTrivialNull();
     // Bare identifier: wrap in IDENT recipe; the walker resolves through frame.
     return k.intern(
