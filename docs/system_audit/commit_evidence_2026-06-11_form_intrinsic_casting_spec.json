@@ -1,0 +1,96 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "cursor/ts-bmf-lift-eval-20260607",
+  "commit_scope": "Spec for Form intrinsic casting: every primitive type movement (bool/int/float/string) becomes an explicit content-addressed CAST recipe with nothing-on-failure semantics, reversibility declared as data, dialect coercion tables consulted by lifters, and a Form-native static cast-check walk — both lanes proven three-way. Spec-only slice; the idea is recorded in the pipeline.",
+  "files_owned": [
+    "specs/form-intrinsic-casting.md",
+    "specs/INDEX.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/validate_spec_quality.py --file specs/form-intrinsic-casting.md",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-11_form_intrinsic_casting_spec.json"
+    ],
+    "summary": "Spec quality gate passes. INDEX regenerated so the spec lands with its edges in the same commit. The spec grounds R3 in observed kernel drift: str_to_int discards the parse error and returns 0 (form/form-kernel-go/main.go:2142, same shape in Rust/TS) — the cast surface makes failure the core-axioms third state (nothing) instead. Design lanes settled in conversation: runtime casts are ordinary recipes on the value-walk; static cast-checking is a resolution walk over Blueprint coordinates; both Form-native from the start.",
+    "observed_delta": {
+      "spec": "specs/form-intrinsic-casting.md (status: draft, idea_id: idea-realization-engine)",
+      "idea_recorded": "POST /api/ideas -> c3c5d99d-dc66-44b4-8fd9-915ededbf4c9 (form-intrinsic-casting)"
+    },
+    "known_limitations": [
+      {
+        "limitation": "Spec only — intrinsic-cast.fk, the two bands, and ontology CAST rows do not exist yet.",
+        "follow_up": "Implementation slice per the spec's Task Card; first movement is typed-token interning check named in Risks."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Docs/spec-only change; spec quality gate runs in CI."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No route or runtime changes."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No runtime behavior change. The body gains the named destination for primitive casting so the TS/Python BMF lifters' string/float/bool gap closes along one path instead of per-dialect workarounds.",
+    "public_endpoints": [
+      "POST /api/ideas"
+    ],
+    "test_flows": [
+      "Idea recorded via public POST /api/ideas (python fallback header) and returned id c3c5d99d-dc66-44b4-8fd9-915ededbf4c9."
+    ],
+    "summary": "Spec validated locally; idea persisted through the public door."
+  },
+  "phase_gate": {
+    "phase": "intrinsic-casting-spec",
+    "gate": "Spec drafted, validated, and edged (INDEX + idea record)",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "Implement the cast surface and both proof bands per the Task Card"
+  },
+  "idea_ids": [
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "form-intrinsic-casting"
+  ],
+  "task_ids": [
+    "ts-bmf-lift-eval-20260607"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "design"
+      ]
+    },
+    {
+      "contributor_id": "agent:cursor",
+      "contributor_type": "machine",
+      "roles": [
+        "spec-authoring",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Cursor",
+    "version": "claude-fable-5"
+  },
+  "evidence_refs": [
+    "docs/coherence-substrate/core-axioms.form",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/system_audit/commit_evidence_2026-06-11_ts_bmf_lift_eval.json"
+  ],
+  "change_files": [
+    "docs/system_audit/commit_evidence_2026-06-11_form_intrinsic_casting_spec.json",
+    "specs/form-intrinsic-casting.md",
+    "specs/INDEX.md"
+  ],
+  "change_intent": "docs_only"
+}
