@@ -1,0 +1,103 @@
+{
+  "date": "2026-06-12",
+  "thread_branch": "cursor/ts-bmf-lift-eval-20260607",
+  "commit_scope": "Spec for Form root-word translation: the smallest honest band answering 'can Form carry meaning?' the way the lift bands answered 'can Form carry computation?'. Translation by structural mapping through shared meaning cells — the meaning identity is the i18n corpus key-path cell, surfaces are doors, unknown realizes to nothing (the same third state intrinsic casting uses), ambiguity returns sense lists as data, round-trip + coverage counts are asserted evidence, three-way proof via validate.sh. Real corpus (web/messages en/de/es/id, ~2300 keys per locale) over invented vocabulary.",
+  "files_owned": [
+    "specs/form-root-word-translation.md",
+    "specs/INDEX.md",
+    "scripts/INDEX.md",
+    "MANIFEST.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/validate_spec_quality.py --file specs/form-root-word-translation.md",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-12_form_root_word_translation_spec.json"
+    ],
+    "summary": "Spec quality gate passes (frontmatter source map, requirements, done_when, test, constraints, gaps with follow-ups, files, acceptance referencing tests/). Indexes regenerated. Spec-only commit: no runtime changes; the implementation slice follows the spec's task card.",
+    "observed_delta": {
+      "spec": "specs/form-root-word-translation.md (status: draft)",
+      "idea_recorded": "form-root-word-translation b83be764-5676-4965-b1a7-985ef1a3cf57",
+      "session_ideas": "boundaries-carry-proof c2bdf83c-a590-4882-b692-a2a7244103cc; nutrient-ledger-molecular-cells 111df93f-1f99-459f-bf7e-57bf2035a077 (dependency-ordered after this slice)"
+    },
+    "known_limitations": [
+      {
+        "limitation": "Spec only — root-word-translation.fk and its band do not exist yet.",
+        "follow_up": "Implementation slice per the spec task card: word/meaning cell interning from the i18n corpus, structural translation walk, three-way band."
+      },
+      {
+        "limitation": "The corpus speaks UI register; vocabulary breadth grows with the corpus, not this spec.",
+        "follow_up": "A concepts section in web/messages/*.json lifts coverage without code changes (named in tests/concept-i18n-band.fk)."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Docs-only PR; standard gates."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No runtime changes."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "None at runtime — the spec names the destination for the human-language translation axis and its first proof band.",
+    "public_endpoints": [],
+    "test_flows": [
+      "Spec quality gate + index freshness."
+    ],
+    "summary": "validate_spec_quality.py exit 0."
+  },
+  "phase_gate": {
+    "phase": "root-word-translation",
+    "gate": "Spec named with real-corpus ground, honesty lanes (nothing on unknown, ambiguity as data), and three-way proof shape",
+    "state": "named",
+    "can_move_next_phase": false,
+    "next": "Implement root-word-translation.fk + band per the task card"
+  },
+  "idea_ids": [
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "form-root-word-translation"
+  ],
+  "task_ids": [
+    "ts-bmf-lift-eval-20260607"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "vision"
+      ]
+    },
+    {
+      "contributor_id": "agent:cursor",
+      "contributor_type": "machine",
+      "roles": [
+        "spec-authoring"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Cursor",
+    "version": "claude-fable-5"
+  },
+  "evidence_refs": [
+    "docs/coherence-substrate/i18n-as-recipe-corpus.form",
+    "docs/coherence-substrate/universal-translator.form",
+    "docs/coherence-substrate/prose-as-recipe.form",
+    "docs/system_audit/commit_evidence_2026-06-11_form_intrinsic_casting_impl.json"
+  ],
+  "change_files": [
+    "docs/system_audit/commit_evidence_2026-06-12_form_root_word_translation_spec.json",
+    "specs/form-root-word-translation.md",
+    "specs/INDEX.md",
+    "scripts/INDEX.md",
+    "MANIFEST.md"
+  ],
+  "change_intent": "docs_only"
+}
