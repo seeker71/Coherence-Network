@@ -1,0 +1,49 @@
+; scheduler.form — the compute organ's offer door: scheduling policy as DATA, one chooser engine.
+;
+; THE GAP (linux-as-recipes.form, scheduler row):
+;   "offer-the-compute-organ-to-competing-recipes; recognition-router.fk already CHOOSES an
+;    implementation by measured fitness (RUNS as a recipe) — the scheduling POLICY is a recipe,
+;    order/fairness its arms."
+;
+;   Linux's scheduler duty is not reimplemented — it is COMPOSED from the five axioms
+;   (core-axioms.form). To run a cell is to OFFER it (axiom-5), so competing recipes place
+;   offers at the compute organ's door; per quantum the policy acknowledges exactly one — or
+;   nothing, the honest ack when the queue is empty or every offer is below the floor. The
+;   others stay queued. Nothing mutates: a quantum returns the next queue as a value (axiom-3).
+;
+; THE SHAPE  (runnable: form-stdlib/scheduler.fk · proven: tests/scheduler-band.fk -> 511)
+;
+;   The POLICY IS DATA, never control flow. One generic chooser engine; each policy is a row
+;   (key-field, least-wins, floor, requeue) and the engine never branches on a policy's name:
+;
+;     fifo         (arrival,  least-wins, 0,     run-to-completion)
+;     round-robin  (arrival,  least-wins, 0,     REQUEUE at the tail)
+;     priority     (priority, greatest,   0,     run-to-completion)
+;     fitness      (fitness,  greatest,   floor, run-to-completion)
+;
+;   1. OFFER       sched-offer / sched-place: a cell presents (name arrival priority fitness)
+;      at the door — it carries its measured fitness through the interface it offers
+;      (axiom-4); the policy reads the offer, never reaches into the cell.
+;   2. ORDER arm   sched-key / sched-better?: the row says WHICH field ranks and WHICH
+;      direction wins; ties keep the earlier-queued offer (stable, no thrash).
+;   3. FAIL-FAST   sched-passes?: an offer below the row's floor is never acknowledged —
+;      recognition-router's carry-no-weak-signal, here as starvation-by-policy made visible.
+;   4. ACKNOWLEDGE sched-ack: exactly one offer, or () = nothing — axiom-5's ack discipline
+;      (nothing/0/1/node) IS the scheduling decision.
+;   5. QUANTUM     sched-step / sched-trace: the chosen offer runs; the fairness arm decides
+;      its return — requeue re-offers it at the tail with a fresh stamp from the queue's own
+;      clock (one past the latest arrival), so round-robin is FIFO + requeue: fairness
+;      emerging from queue discipline, not a special engine path.
+;
+; ONE ENGINE, PROVEN: the band builds offers FROM recognition-router readings (each presents
+;   its rr-strength as its fitness) and shows the fitness row acknowledges exactly the offer
+;   rr-route routes — recognition-router's max-over-a-floor select is the (fitness, greatest,
+;   floor) row of this engine. Same queue under fifo vs priority yields different but
+;   each-correct orders: the policy data is the only variable. Empty queue acks nothing.
+;
+; KIN: recognition-router.fk (the fitness-chooser this generalizes) · champion-challenger.fk
+;   (authority flips on proven competition) · host-kernel.form os-feature-coverage (scheduler =
+;   axiom-5 + sovereignty) · substrate-phase.fk (state threads as values, no mutation).
+;
+; Proof: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/recognition-router.fk \
+;   form-stdlib/scheduler.fk form-stdlib/tests/scheduler-band.fk        -> 511, 0 divergent
