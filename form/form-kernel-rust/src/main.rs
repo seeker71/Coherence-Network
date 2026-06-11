@@ -7164,17 +7164,15 @@ fn read_sexp(k: &mut Kernel, toks: &[SexpTok], i: usize) -> (NodeID, usize) {
         }
         "STRING" => (k.intern_string(&t.value), i + 1),
         "IDENT" => {
-            // true/false are reader syntax for axiom-1's two states: they
-            // intern as the SAME cells as 1/0 (specs/form-intrinsic-casting.md
-            // R2 — a bool is a view over a 0/1 int cell, not a second value
-            // shape). The bool costume survives only at wire edges (JSON,
-            // codecs) via intern_trivial_bool.
+            // Bool literals — true/false are reserved, become trivial values at
+            // parse time. Parallel to int/string literals; lets Form predicates
+            // read naturally without `(eq 0 0)` constructors.
             if t.value == "true" {
                 return (
                     NodeID {
                         pkg: 1,
                         level: LEVEL_TRIVIAL,
-                        ty: TRIV_INT,
+                        ty: TRIV_BOOL,
                         inst: 1,
                     },
                     i + 1,
@@ -7185,7 +7183,7 @@ fn read_sexp(k: &mut Kernel, toks: &[SexpTok], i: usize) -> (NodeID, usize) {
                     NodeID {
                         pkg: 1,
                         level: LEVEL_TRIVIAL,
-                        ty: TRIV_INT,
+                        ty: TRIV_BOOL,
                         inst: 0,
                     },
                     i + 1,
