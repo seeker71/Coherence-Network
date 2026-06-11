@@ -815,13 +815,19 @@
     (defn fsc-compile-form-bml-if-recipe (expr)
         (do
             (let then-pos (fsc-bml-find-top-then expr))
+            (if (lt then-pos 0)
+                (fsc-compiler-error-line "form.bml if missing 'then'" expr)
+            (do
             (let else-pos (fsc-bml-find-matching-else expr then-pos))
+            (if (lt else-pos 0)
+                (fsc-compiler-error-line "form.bml if missing matching 'else'" expr)
+            (do
             (let cond-text (fsc-trim (fsc-sub expr 3 then-pos)))
             (let yes-text (fsc-trim (fsc-sub expr (add then-pos 6) else-pos)))
             (let no-text (fsc-trim (fsc-sub expr (add else-pos 6) (str_len expr))))
             (fsc-rec-if3 (fsc-compile-form-bml-expr-recipe cond-text)
                          (fsc-compile-form-bml-expr-recipe yes-text)
-                         (fsc-compile-form-bml-expr-recipe no-text))))
+                         (fsc-compile-form-bml-expr-recipe no-text))))))))
 
     (defn fsc-bml-find-top-eqeq-loop (s i depth quoted)
         (if (ge i (str_len s)) (sub 0 1)

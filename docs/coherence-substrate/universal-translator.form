@@ -347,6 +347,33 @@ defn translate_c_major_triad_walk =
 # must satisfy.
 
 # ─────────────────────────────────────────────────────────────────────
+# Part 5.1 — Executable receipt: guaranteed meaning or honest refusal
+# ─────────────────────────────────────────────────────────────────────
+#
+# The runnable Form receipt is:
+#
+#   form/form-stdlib/meaning-translation-receipt.fk
+#   form/form-stdlib/tests/meaning-translation-receipt-band.fk
+#
+# This narrows "any software to any language with guaranteed meaning" into an
+# inspectable kernel contract:
+#
+#   guarantee = declared source/target compiler surfaces
+#            + bidirectional source maps
+#            + matching semantic root
+#            + five-axiom witness
+#            + honest encoder witness
+#            + computed/reciprocal/holdout/no-collapse equivalence witness
+#            + undefined behavior policy of "refuse"
+#
+# The guarantee is therefore not a universal promise over arbitrary text. It is
+# a receipt over declared semantics. When a carrier is lossy, the semantic root
+# drifts, a source map is missing, an encoder hides behind a table/default, or an
+# axiom witness is absent, the receipt returns a named refusal. This is the Form
+# OS information protocol shape: translate what can be witnessed; stop with
+# source-trackable cause where meaning cannot be guaranteed.
+
+# ─────────────────────────────────────────────────────────────────────
 # Part 6 — How this composts with sibling teaching
 # ─────────────────────────────────────────────────────────────────────
 #
