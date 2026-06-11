@@ -419,6 +419,66 @@ section [form.bml] {
     def api-agent-tasks-activity-json(request) = json-node-object(list(json-node-pair("items", json-node-array(empty)), json-node-pair("total", json-node-int(0)), json-node-pair("limit", json-node-int(api-clamp-limit(kh-query-int-or(request, "limit", 50), 200))), json-node-pair("offset", json-node-int(idea-safe-offset(kh-query-int-or(request, "offset", 0))))));
     def api_agent_tasks_activity(request) = kh-response(200, list(kh-header("Content-Type", "application/json"), kh-header("X-Form-Handler", "api_agent_tasks_activity"), kh-header("X-Form-Python-Authority", "false"), kh-header("Access-Control-Allow-Origin", "*")), json-emit(api-agent-tasks-activity-json(request)));
 
+    def api-join-lines(lines) = if nil?(lines) then "" else if nil?(tail(lines)) then head(lines) else str_concat(head(lines), str_concat("\n", api-join-lines(tail(lines))));
+
+    def api-agent-task-log-connected(conn, request) {
+        let task_id = api-path-first-segment(api-path-tail(kh-request-path(request), "/api/agent/tasks/"));
+        let rows = pg_query_rows(conn, agent-task-sql(), list(task_id));
+        let closed = pg_close(conn);
+        if api-query-failed?() then api-service-unavailable("persistence", "agent task query failed") else if nil?(rows) then api-error-status-json(404, "Task not found") else api-agent-task-log-row(task_id, head(rows));
+    }
+
+    def api-agent-task-log-row(task_id, row) {
+        let command = idea-row("command", row);
+        let output = idea-row("output", row);
+        let log_file_path = str_concat(repo_root(), str_concat("/api/logs/task_", str_concat(task_id, ".log")));
+        if eq(fs_exists(log_file_path), 1) then api-agent-task-log-file(task_id, log_file_path, command, output) else api-agent-task-log-fallback(task_id, row, command, output);
+    }
+
+    def api-agent-task-log-file(task_id, log_file_path, command, output) {
+        let log_content = read_file(log_file_path);
+        api-native-ok-json("api_agent_task_log", json-node-object(list(
+            json-node-pair("task_id", json-node-string(task_id)),
+            json-node-pair("log", json-node-string(log_content)),
+            json-node-pair("command", api-json-nullable-string(command)),
+            json-node-pair("output", api-json-nullable-string(output)),
+            json-node-pair("log_source", json-node-string("file"))
+        )))
+    }
+
+    def api-agent-task-log-empty-fallback(lines) = if eq(len(lines), 0) then "No task log file is available for this task yet." else api-join-lines(lines);
+
+    def api-agent-task-log-output-fallback(lines, clean_output) {
+        let lines_with_output = _list_append(lines, "");
+        let lines_with_output1 = _list_append(lines_with_output, "output:");
+        let lines_with_output2 = _list_append(lines_with_output1, substring(clean_output, 0, 5000));
+        api-join-lines(lines_with_output2)
+    }
+
+    def api-agent-task-log-fallback(task_id, row, command, output) {
+        let status = idea-row("status", row);
+        let current_step = idea-row("current_step", row);
+        let updated_at = idea-row("updated_at", row);
+        let lines = list();
+        let lines1 = if str_eq(value_str(status), "") then lines else _list_append(lines, str_concat("status: ", value_str(status)));
+        let lines2 = if str_eq(value_str(current_step), "") then lines1 else _list_append(lines1, str_concat("current_step: ", value_str(current_step)));
+        let lines3 = if str_eq(value_str(updated_at), "") then lines2 else _list_append(lines2, str_concat("updated_at: ", value_str(updated_at)));
+        let clean_output = api-trim(value_str(output));
+        let fallback_log = if str_eq(clean_output, "") then api-agent-task-log-empty-fallback(lines3) else api-agent-task-log-output-fallback(lines3, clean_output);
+        api-native-ok-json("api_agent_task_log", json-node-object(list(
+            json-node-pair("task_id", json-node-string(task_id)),
+            json-node-pair("log", json-node-string(fallback_log)),
+            json-node-pair("command", api-json-nullable-string(command)),
+            json-node-pair("output", api-json-nullable-string(output)),
+            json-node-pair("log_source", json-node-string("task_snapshot"))
+        )))
+    }
+
+    def api_agent_task_log(request) {
+        let conn = pg_connect(config_database_url());
+        if lt(conn, 0) then api-service-unavailable("persistence", "database unavailable") else api-agent-task-log-connected(conn, request);
+    }
+
     def api-json-nullable-number(value) = if str_eq(value_str(value), "") then json-node-null() else json-node-float-text(value_str(value));
     def api-stable-row-uuid-sql(expr) = str_concat("CASE WHEN COALESCE(", str_concat(expr, ", '') ~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$' THEN ", str_concat(expr, " ELSE lower(substr(md5(id::text),1,8) || '-' || substr(md5(id::text),9,4) || '-' || substr(md5(id::text),13,4) || '-' || substr(md5(id::text),17,4) || '-' || substr(md5(id::text),21,12)) END")));
     def api-contributors-count-sql() = "SELECT count(*)::bigint AS total FROM graph_nodes WHERE type = 'contributor'";

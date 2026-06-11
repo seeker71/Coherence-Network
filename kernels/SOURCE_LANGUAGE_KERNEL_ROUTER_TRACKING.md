@@ -55,6 +55,8 @@ graph/domain grammar is asking to emerge; whether the response shape is the
 right shape rather than only the compatible shape; and whether frequency serves
 the highest goal instead of only the route-count goal.
 
+2026-06-12 promotion pass: `GET /api/agent/tasks/{task_id}/log` is now a BML route in `deploy/front-door/api.bml` mapped natively as `/api/agent/tasks/{task_id}/log`. The handler parses the `task_id` segment from the path, connects to the database, queries the task record, checks if `api/logs/task_{task_id}.log` exists, and reads its content. If the file is not found on disk, the handler constructs a fallback snapshot log from DB state fields (`status`, `current_step`, `updated_at`, and `output` limited to 5000 characters), fully matching the Python FastAPI handler's response contract and returning with `log_source: "task_snapshot"` or `"file"`.
+
 2026-06-07 health movement: `GET /api/health` was already BML/high-grammar
 native and the current `web_api` route-goal window read `47/47` observed events
 on `/api/health`, so the movement was not a route-count promotion. The route
