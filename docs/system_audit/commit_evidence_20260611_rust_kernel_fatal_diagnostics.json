@@ -1,0 +1,86 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "codex/crash-fatal-diagnostics-20260611",
+  "commit_scope": "Classify Rust kernel fatal crashes, preserve source/request context, and keep serve workers alive after recoverable handler panics",
+  "files_owned": [
+    "form/form-kernel-rust/src/main.rs"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form/form-kernel-rust && cargo test --quiet crash_diagnostics_tests -- --nocapture",
+      "cd form/form-kernel-rust && cargo test --quiet",
+      "cd form/form-kernel-rust && cargo run --quiet -- --expr '(str_concat (_json_get \"{}\" \"missing\") \"x\")'",
+      "cd form/form-kernel-rust && cargo build --quiet && target/debug/form-kernel-rust serve --port <free-port> --routes <tmp-crash-routes.fk> --workers 1; curl /boom; curl /ok",
+      "./scripts/test_hostinger_deploy_form_paths.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260611_rust_kernel_fatal_diagnostics.json",
+      "git diff --check"
+    ],
+    "notes": "The focused Rust tests prove type-contract fatal classification and trace JSON fields. The full Rust kernel suite passed 51/51 in 141.05s, including the source BML catalog route test. The live CLI proof exits 1 with fatal[type_contract_violation]: as_str: Null and writes fatal_kind, fatal_message, likely_root_cause, avoidance, source_head, and rust_backtrace. The one-worker serve proof closes the crashing /boom connection, writes operation=worker=0 request=GET /boom route=/boom handler=/boom, logs recovered fatal in worker 0, and then serves /ok with X-Form-Router: native-kernel from the same worker pool. The trace writer now falls back from .cache/form-kernel-rust to the OS temp trace directory if process-global cwd motion makes the primary cache path unavailable. Hostinger form deploy path proof passed with BML GET/read ingress coverage: 52 routes."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "PR CI has not run yet for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "Hostinger Auto Deploy on main after merge"
+    ],
+    "notes": "Deploy proof should confirm the kernel-router still starts and public canaries remain healthy after fatal diagnostics hardening."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local focused validation passed; PR CI and deploy proof remain pending."
+  },
+  "idea_ids": [
+    "pipeline-reliability",
+    "native-api-lane",
+    "form-native-front-door"
+  ],
+  "spec_ids": [
+    "pulse-silence-boundary-repair"
+  ],
+  "task_ids": [
+    "rust-kernel-fatal-diagnostics-20260611"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/form-kernel-rust/src/main.rs#write_kernel_crash_trace",
+    "form/form-kernel-rust/src/main.rs#worker_loop",
+    "specs/pulse-silence-boundary-repair.md#R7"
+  ],
+  "change_files": [
+    "form/form-kernel-rust/src/main.rs",
+    "docs/system_audit/commit_evidence_20260611_rust_kernel_fatal_diagnostics.json"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Recoverable Rust kernel handler panics should produce classified fatal diagnostics with source/request operation context and should not silently remove a serve worker from the pool.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/utils/kernel_status",
+      "https://api.coherencycoin.com/api/health"
+    ],
+    "test_flows": [
+      "Trigger a null-to-string type-contract panic through _json_get and str_concat; inspect the classified trace.",
+      "Trigger a native route panic on a one-worker serve process, then verify another native route still responds."
+    ]
+  }
+}
