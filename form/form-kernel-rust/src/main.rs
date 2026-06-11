@@ -16,7 +16,9 @@
 //         form-kernel-rust --bench
 //         form-kernel-rust --expr "(add 2 3)"
 
+use std::any::Any;
 use std::backtrace::Backtrace;
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs;
@@ -39,11 +41,24 @@ struct CrashTraceContext {
     mode: String,
     args: Vec<String>,
     source: String,
+    source_label: String,
+    operation: String,
+}
+
+#[derive(Clone)]
+struct CrashDiagnosis {
+    fatal_kind: &'static str,
+    likely_root_cause: String,
+    avoidance: String,
 }
 
 fn crash_trace_context() -> &'static Mutex<CrashTraceContext> {
     static T: OnceLock<Mutex<CrashTraceContext>> = OnceLock::new();
     T.get_or_init(|| Mutex::new(CrashTraceContext::default()))
+}
+
+thread_local! {
+    static THREAD_CRASH_TRACE_CONTEXT: RefCell<Option<CrashTraceContext>> = const { RefCell::new(None) };
 }
 
 fn source_excerpt_head(src: &str, max_chars: usize) -> String {
@@ -64,40 +79,131 @@ fn source_line_count(src: &str) -> usize {
 }
 
 fn set_crash_trace_context(mode: &str, args: &[String], source: Option<&str>) {
-    if let Ok(mut ctx) = crash_trace_context().lock() {
-        ctx.mode = mode.to_string();
-        ctx.args = args.to_vec();
-        if let Some(src) = source {
-            ctx.source = src.to_string();
-        }
+    set_crash_trace_context_with_details(mode, args, source, None, None);
+}
+
+fn set_crash_trace_context_with_details(
+    mode: &str,
+    args: &[String],
+    source: Option<&str>,
+    source_label: Option<&str>,
+    operation: Option<&str>,
+) {
+    let new_ctx = CrashTraceContext {
+        mode: mode.to_string(),
+        args: args.to_vec(),
+        source: source.unwrap_or("").to_string(),
+        source_label: source_label.unwrap_or("").to_string(),
+        operation: operation.unwrap_or("").to_string(),
+    };
+    if let Ok(mut global_ctx) = crash_trace_context().lock() {
+        *global_ctx = new_ctx.clone();
+    }
+    set_thread_crash_trace_context(new_ctx);
+}
+
+fn set_thread_crash_trace_context(ctx: CrashTraceContext) {
+    THREAD_CRASH_TRACE_CONTEXT.with(|slot| {
+        *slot.borrow_mut() = Some(ctx);
+    });
+}
+
+fn current_crash_trace_context() -> CrashTraceContext {
+    if let Some(ctx) = THREAD_CRASH_TRACE_CONTEXT.with(|slot| slot.borrow().clone()) {
+        return ctx;
+    }
+    crash_trace_context()
+        .lock()
+        .map(|guard| guard.clone())
+        .unwrap_or_default()
+}
+
+fn diagnose_kernel_panic(message: &str) -> CrashDiagnosis {
+    let lower = message.to_ascii_lowercase();
+    if lower.starts_with("as_str:") {
+        return CrashDiagnosis {
+            fatal_kind: "type_contract_violation",
+            likely_root_cause: "a Form/native recipe passed a non-string value to a string-only primitive".to_string(),
+            avoidance: "guard with value_kind/value-kind, convert with value_str, or use null-safe JSON constructors before calling string primitives".to_string(),
+        };
+    }
+    if lower.starts_with("as_int:")
+        || lower.starts_with("as_float:")
+        || lower.starts_with("as_nid:")
+    {
+        return CrashDiagnosis {
+            fatal_kind: "type_contract_violation",
+            likely_root_cause: "a Form/native recipe passed a value with the wrong primitive kind to a typed host boundary".to_string(),
+            avoidance: "validate the value kind before the native call, or route through an explicit conversion recipe".to_string(),
+        };
+    }
+    if lower.contains("unbound identifier") || lower.contains("unbound function") {
+        return CrashDiagnosis {
+            fatal_kind: "name_resolution_error",
+            likely_root_cause: "a recipe or route manifest referenced a name that was not bound in the loaded source/prelude set".to_string(),
+            avoidance: "run the route/source check gate and include the defining prelude before serving the manifest".to_string(),
+        };
+    }
+    if lower.contains("wants") && lower.contains("got") {
+        return CrashDiagnosis {
+            fatal_kind: "arity_contract_violation",
+            likely_root_cause: "a closure or native was called with a different argument count than its declaration accepts".to_string(),
+            avoidance: "align the call site with the function signature or add an adapter recipe at the boundary".to_string(),
+        };
+    }
+    if lower.contains("bounds out of range") || lower.contains("index out of bounds") {
+        return CrashDiagnosis {
+            fatal_kind: "bounds_violation",
+            likely_root_cause: "a recipe indexed outside the observed collection/string bounds".to_string(),
+            avoidance: "check length/bounds before indexing or use a boundary-aware recipe that returns an explicit error value".to_string(),
+        };
+    }
+    if lower.contains("source-compile") || lower.contains("parse error") {
+        return CrashDiagnosis {
+            fatal_kind: "source_compile_failure",
+            likely_root_cause: "source text could not be lowered into a valid Form recipe before execution".to_string(),
+            avoidance: "run the source compiler/check command and repair the reported source coordinate before serving".to_string(),
+        };
+    }
+    CrashDiagnosis {
+        fatal_kind: "kernel_panic",
+        likely_root_cause: "the kernel crossed an unchecked host-language panic boundary".to_string(),
+        avoidance: "inspect the trace backtrace and source excerpt, then move the failing boundary into a checked fatal/error return".to_string(),
     }
 }
 
+fn panic_payload_message(payload: &(dyn Any + Send)) -> String {
+    payload
+        .downcast_ref::<String>()
+        .map(|s| s.to_string())
+        .or_else(|| payload.downcast_ref::<&str>().map(|s| s.to_string()))
+        .unwrap_or_else(|| "unknown error".to_string())
+}
+
 fn write_kernel_crash_trace(message: &str, location: Option<String>) -> Option<PathBuf> {
-    let ctx = crash_trace_context()
-        .lock()
-        .map(|guard| guard.clone())
-        .unwrap_or_default();
-    let dir = PathBuf::from(".cache").join("form-kernel-rust");
-    let trace_dir = if fs::create_dir_all(&dir).is_ok() {
-        dir
-    } else {
-        env::temp_dir()
-    };
+    let ctx = current_crash_trace_context();
+    let diagnosis = diagnose_kernel_panic(message);
     let now = SystemTime::now().duration_since(UNIX_EPOCH).ok()?;
-    let path = trace_dir.join(format!(
+    let filename = format!(
         "crash-{}{:09}-{}.json",
         now.as_secs(),
         now.subsec_nanos(),
         std::process::id()
-    ));
+    );
     let report = serde_json::json!({
         "when_unix_seconds": now.as_secs(),
         "pid": std::process::id(),
         "mode": ctx.mode,
         "args": ctx.args,
+        "fatal_kind": diagnosis.fatal_kind,
+        "fatal_message": message,
         "panic": message,
+        "likely_root_cause": diagnosis.likely_root_cause,
+        "avoidance": diagnosis.avoidance,
         "location": location,
+        "thread": thread::current().name().unwrap_or("unnamed"),
+        "source_label": ctx.source_label,
+        "operation": ctx.operation,
         "source_bytes": ctx.source.len(),
         "source_line_count": source_line_count(&ctx.source),
         "source_head": source_excerpt_head(&ctx.source, 2000),
@@ -105,8 +211,21 @@ fn write_kernel_crash_trace(message: &str, location: Option<String>) -> Option<P
         "rust_backtrace": format!("{:?}", Backtrace::force_capture()),
     });
     let data = serde_json::to_vec_pretty(&report).ok()?;
-    fs::write(&path, [data, b"\n".to_vec()].concat()).ok()?;
-    Some(path)
+    let payload = [data, b"\n".to_vec()].concat();
+    let trace_dirs = [
+        PathBuf::from(".cache").join("form-kernel-rust"),
+        env::temp_dir().join("form-kernel-rust"),
+    ];
+    for dir in trace_dirs {
+        if fs::create_dir_all(&dir).is_err() {
+            continue;
+        }
+        let path = dir.join(&filename);
+        if fs::write(&path, &payload).is_ok() {
+            return Some(path);
+        }
+    }
+    None
 }
 
 // --- Socket natives — L1 physical layer (TCP) ---------------------------
@@ -8564,8 +8683,13 @@ fn handle_request(
     upstream: &Option<String>,
     upstream_pool: &mut UpstreamPool,
     router_metrics: &Arc<Mutex<RouterMetrics>>,
+    crash_context: &ServeCrashContext,
 ) -> bool {
     let channel_policy = default_http_channel_policy();
+    crash_context.set_operation(
+        "serve-request-read",
+        format!("worker={} read request", crash_context.worker_id),
+    );
     // Read the FULL request: the header block, then exactly Content-Length body
     // bytes if present (read_request honors Content-Length across as many socket
     // reads as the body needs — a body larger than one buffer is fully captured —
@@ -8599,6 +8723,13 @@ fn handle_request(
     // on an error below).
     let keep_alive = head_keep_alive(&head);
     let (method, target, path, query_data) = parse_request_line(&head);
+    crash_context.set_operation(
+        "serve-request",
+        format!(
+            "worker={} request={} {}",
+            crash_context.worker_id, method, target
+        ),
+    );
     let mut request_data = query_data.clone();
     // Parse the body by Content-Type and MERGE its fields into the same alist
     // the handler reads (core-abstraction-first: ONE request-data shape, whether
@@ -8653,6 +8784,13 @@ fn handle_request(
         .and_then(|choice| choice.selected.as_ref())
     {
         let route = selection.route;
+        crash_context.set_operation(
+            "serve-handler",
+            format!(
+                "worker={} request={} {} route={} handler={}",
+                crash_context.worker_id, method, path, route.pattern, route.name
+            ),
+        );
         // NATIVE: served entirely in Form, no Python in the path.
         // Build the compatibility handler alist as Value::List of (key, value)
         // pairs. Router context is prepended so reserved router facts win over any
@@ -8972,6 +9110,7 @@ fn serve_connection(
     upstream: &Option<String>,
     upstream_pool: &mut UpstreamPool,
     router_metrics: &Arc<Mutex<RouterMetrics>>,
+    crash_context: &ServeCrashContext,
 ) {
     // Idle timeout so a held-open keep-alive connection cannot starve the pool.
     let _ = stream.set_read_timeout(Some(KEEPALIVE_IDLE_TIMEOUT));
@@ -9000,7 +9139,32 @@ fn serve_connection(
         upstream,
         upstream_pool,
         router_metrics,
+        crash_context,
     ) {}
+}
+
+#[derive(Clone)]
+struct ServeCrashContext {
+    worker_id: usize,
+    routes_path: Arc<String>,
+    routes_source: Arc<String>,
+}
+
+impl ServeCrashContext {
+    fn set_operation(&self, mode: &str, operation: String) {
+        let args = vec![
+            "serve".to_string(),
+            "--routes".to_string(),
+            self.routes_path.as_ref().clone(),
+        ];
+        set_thread_crash_trace_context(CrashTraceContext {
+            mode: mode.to_string(),
+            args,
+            source: self.routes_source.as_ref().clone(),
+            source_label: self.routes_path.as_ref().clone(),
+            operation,
+        });
+    }
 }
 
 // One kernel worker. Builds its OWN Kernel + Arena (the routes.fk loaded once
@@ -9013,12 +9177,19 @@ fn worker_loop(
     id: usize,
     program: Arc<RouteProgram>,
     routes_path: Arc<String>,
+    routes_source: Arc<String>,
     route_data: Arc<RouteDataRegistry>,
     upstream: Arc<Option<String>>,
     rx: Arc<Mutex<mpsc::Receiver<TcpStream>>>,
     router_metrics: Arc<Mutex<RouterMetrics>>,
     form_mode: bool,
 ) {
+    let crash_context = ServeCrashContext {
+        worker_id: id,
+        routes_path: Arc::clone(&routes_path),
+        routes_source,
+    };
+    crash_context.set_operation("serve-worker-load", format!("worker={} load routes", id));
     let (mut k, mut arena, route_specs, root_env) =
         match build_worker_kernel_with_route_data(&program, &routes_path, &route_data) {
             Ok(t) => t,
@@ -9079,17 +9250,40 @@ fn worker_loop(
         };
         match stream {
             Ok(s) => {
-                if let Some((ref cl, ref routes_val, ref registry_val)) = form_serve {
-                    serve_connection_form(s, &mut k, &mut arena, cl, routes_val, registry_val);
-                } else {
-                    serve_connection(
-                        s,
-                        &mut k,
-                        &mut arena,
-                        &route_specs,
-                        &upstream,
-                        &mut upstream_pool,
-                        &router_metrics,
+                crash_context.set_operation(
+                    "serve-connection",
+                    format!("worker={} connection accepted", id),
+                );
+                let served = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    if let Some((ref cl, ref routes_val, ref registry_val)) = form_serve {
+                        serve_connection_form(
+                            s,
+                            &mut k,
+                            &mut arena,
+                            cl,
+                            routes_val,
+                            registry_val,
+                            &crash_context,
+                        );
+                    } else {
+                        serve_connection(
+                            s,
+                            &mut k,
+                            &mut arena,
+                            &route_specs,
+                            &upstream,
+                            &mut upstream_pool,
+                            &router_metrics,
+                            &crash_context,
+                        );
+                    }
+                }));
+                if let Err(payload) = served {
+                    let msg = panic_payload_message(payload.as_ref());
+                    eprintln!(
+                        "form-kernel-rust serve: recovered fatal in worker {}: {}; \
+                         connection closed; worker continues",
+                        id, msg
                     );
                 }
             }
@@ -9857,7 +10051,12 @@ fn serve_connection_form(
     kh_serve_conn: &Arc<Closure>,
     routes_val: &Value,
     registry_val: &Value,
+    crash_context: &ServeCrashContext,
 ) {
+    crash_context.set_operation(
+        "serve-form-handler",
+        format!("worker={} form-mode kh-serve-conn", crash_context.worker_id),
+    );
     // STREAMING: the kernel does NOT pre-read a buffer. It registers the accepted
     // connection as a Form socket handle and hands that handle to the recipe;
     // kh-serve-conn (http-socket.fk) owns ALL the I/O — loop-recv the request
@@ -10021,6 +10220,16 @@ fn cli_serve(args: &[String]) -> i32 {
             return 1;
         }
     };
+    let routes_source = Arc::new(raw_src);
+    let mut serve_context_args = vec!["serve".to_string()];
+    serve_context_args.extend(args.iter().cloned());
+    set_crash_trace_context_with_details(
+        "serve",
+        &serve_context_args,
+        Some(routes_source.as_str()),
+        Some(&routes_path),
+        Some("serve startup"),
+    );
     let route_data = match load_route_data_registry(&routes_path, route_data_path.as_deref()) {
         Ok(data) => data,
         Err(e) => {
@@ -10034,7 +10243,7 @@ fn cli_serve(args: &[String]) -> i32 {
     // body's own form-stdlib source-compiler into one Form Recipe object. Worker
     // kernels clone/import from that object graph directly; raw S-expression
     // manifests keep the existing source reader path.
-    let program = if manifest_has_source_sections(&raw_src) {
+    let program = if manifest_has_source_sections(routes_source.as_str()) {
         match source_compile_manifest_recipe_object(&routes_path, &stdlib_dir) {
             Ok(compiled) => {
                 eprintln!(
@@ -10049,7 +10258,7 @@ fn cli_serve(args: &[String]) -> i32 {
             }
         }
     } else {
-        RouteProgram::Source(Arc::new(raw_src))
+        RouteProgram::Source(Arc::clone(&routes_source))
     };
 
     // Validate the manifest ONCE up front (in the main thread) so a broken
@@ -10086,6 +10295,7 @@ fn cli_serve(args: &[String]) -> i32 {
     let program = Arc::new(program);
     let route_data = Arc::new(route_data);
     let routes_path_arc = Arc::new(routes_path);
+    let routes_source_arc = Arc::clone(&routes_source);
     let upstream_arc = Arc::new(upstream);
     let router_metrics = Arc::new(Mutex::new(RouterMetrics::default()));
 
@@ -10107,6 +10317,7 @@ fn cli_serve(args: &[String]) -> i32 {
         let program = Arc::clone(&program);
         let route_data = Arc::clone(&route_data);
         let routes_path = Arc::clone(&routes_path_arc);
+        let routes_source = Arc::clone(&routes_source_arc);
         let upstream = Arc::clone(&upstream_arc);
         let rx = Arc::clone(&rx);
         let router_metrics = Arc::clone(&router_metrics);
@@ -10118,6 +10329,7 @@ fn cli_serve(args: &[String]) -> i32 {
                 id,
                 program,
                 routes_path,
+                routes_source,
                 route_data,
                 upstream,
                 rx,
@@ -13523,7 +13735,13 @@ fn install_panic_hook() {
             .map(|s| s.as_str())
             .or_else(|| info.payload().downcast_ref::<&str>().copied())
             .unwrap_or("unknown error");
-        eprintln!("form-kernel-rust: {}", msg);
+        let diagnosis = diagnose_kernel_panic(msg);
+        eprintln!("form-kernel-rust: fatal[{}]: {}", diagnosis.fatal_kind, msg);
+        eprintln!(
+            "form-kernel-rust: likely root cause: {}",
+            diagnosis.likely_root_cause
+        );
+        eprintln!("form-kernel-rust: avoidance: {}", diagnosis.avoidance);
         let location = info
             .location()
             .map(|loc| format!("{}:{}:{}", loc.file(), loc.line(), loc.column()));
@@ -13531,6 +13749,53 @@ fn install_panic_hook() {
             eprintln!("form-kernel-rust: crash trace: {}", path.display());
         }
     }));
+}
+
+#[cfg(test)]
+mod crash_diagnostics_tests {
+    use super::*;
+
+    #[test]
+    fn diagnose_null_string_contract_as_type_violation() {
+        let diagnosis = diagnose_kernel_panic("as_str: Null");
+        assert_eq!(diagnosis.fatal_kind, "type_contract_violation");
+        assert!(diagnosis.likely_root_cause.contains("non-string"));
+        assert!(diagnosis.avoidance.contains("value_kind"));
+    }
+
+    #[test]
+    fn crash_trace_records_diagnosis_source_and_operation() {
+        set_thread_crash_trace_context(CrashTraceContext {
+            mode: "serve-handler".to_string(),
+            args: vec![
+                "serve".to_string(),
+                "--routes".to_string(),
+                "test-routes.fk".to_string(),
+            ],
+            source: "(defn route () (str_concat null \"x\"))".to_string(),
+            source_label: "test-routes.fk".to_string(),
+            operation: "worker=7 request=GET /boom route=/boom handler=route".to_string(),
+        });
+        let path = write_kernel_crash_trace(
+            "as_str: Null",
+            Some("form/form-kernel-rust/src/main.rs:1:1".to_string()),
+        )
+        .expect("trace path");
+        let body = fs::read_to_string(&path).expect("trace body");
+        let json: serde_json::Value = serde_json::from_str(&body).expect("trace json");
+        assert_eq!(json["fatal_kind"], "type_contract_violation");
+        assert_eq!(json["source_label"], "test-routes.fk");
+        assert_eq!(
+            json["operation"],
+            "worker=7 request=GET /boom route=/boom handler=route"
+        );
+        assert!(json["likely_root_cause"]
+            .as_str()
+            .unwrap_or("")
+            .contains("non-string"));
+        set_thread_crash_trace_context(CrashTraceContext::default());
+        let _ = fs::remove_file(path);
+    }
 }
 
 fn main_with_args(args: Vec<String>) -> i32 {

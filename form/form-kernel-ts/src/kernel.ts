@@ -1356,6 +1356,12 @@ export class Kernel {
     this.registerNative("form-error", catWitness(), (_k, args) => {
       throw new Error(argStr(args, 0));
     });
+    const valueKindNative = (_k: Kernel, args: Value[]): Value => ({
+      kind: "str",
+      str: valueKindName(args[0] ?? { kind: "null" }),
+    });
+    this.registerNative("value_kind", catWitness(), valueKindNative);
+    this.registerNative("value-kind", catWitness(), valueKindNative);
     this.registerNative("source_scan_file", catCall(), (_k, args) =>
       sourceNativeScanText(readFileSync(argStr(args, 0), "utf8"), sourceNativeLexiconFromValue(args[1]!)),
     );
@@ -3517,6 +3523,41 @@ function argNodeID(args: Value[], i: number): NodeID {
   const v = args[i];
   if (v?.kind !== "nodeid") throw new Error(`arg ${i}: expected nodeid`);
   return v.nodeid;
+}
+
+function valueKindName(v: Value): string {
+  switch (v.kind) {
+    case "null":
+      return "null";
+    case "int":
+    case "i8":
+    case "i16":
+    case "u8":
+    case "u16":
+    case "u32":
+    case "i64":
+    case "u64":
+      return "int";
+    case "f32":
+    case "f64":
+      return "float";
+    case "str":
+      return "string";
+    case "bool":
+      return "bool";
+    case "list":
+      return "list";
+    case "closure":
+      return "closure";
+    case "nodeid":
+      return "node_id";
+    case "record":
+      return "record";
+    case "ctor":
+      return "constructor";
+    default:
+      return "unknown";
+  }
 }
 
 // ---------------------------------------------------------------------------

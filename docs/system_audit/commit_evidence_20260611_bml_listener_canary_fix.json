@@ -1,0 +1,81 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "codex/bml-listener-canary-fix-20260611",
+  "commit_scope": "Repair Hostinger BML front-door listener readiness canary after the 52-route read batch",
+  "files_owned": [
+    "deploy/hostinger/auto-deploy.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash -n deploy/hostinger/auto-deploy.sh",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260611_bml_listener_canary_fix.json"
+    ],
+    "notes": "The failing Hostinger Auto Deploy run reached healthy Docker containers but timed out the BML listener probe on /api/health. The listener probe now uses cheap native routes: /api/attention/kernel-runtime for the production manifest service and /api/utils/kernel_status for the BML front door."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "PR CI has not run yet for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com"
+    ],
+    "notes": "Public deploy verification waits for this deploy-script repair to land and rerun Hostinger Auto Deploy."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local script validation is complete; CI and public deploy verification remain pending."
+  },
+  "idea_ids": [
+    "native-api-lane",
+    "form-native-front-door"
+  ],
+  "spec_ids": [
+    "hostinger-bml-front-door-deploy-proof"
+  ],
+  "task_ids": [
+    "bml-listener-canary-fix-20260611"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "https://github.com/seeker71/Coherence-Network/actions/runs/27333141827",
+    "deploy/hostinger/auto-deploy.sh#ensure_kernel_router_canary"
+  ],
+  "change_files": [
+    "deploy/hostinger/auto-deploy.sh"
+  ],
+  "change_intent": "process_only",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Hostinger Auto Deploy should no longer fail the kernel-router-bml-front-door listener gate because /api/health is slow during startup; it should wait on the cheap native kernel-status route and then run the deeper BML canaries.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/utils/kernel_status",
+      "https://api.coherencycoin.com/api/ideas/resonance?limit=2",
+      "https://api.coherencycoin.com/api/household/events?limit=2"
+    ],
+    "test_flows": [
+      "Verify Hostinger Auto Deploy completes the Roll forward VPS job.",
+      "Verify promoted BML read routes return native proof headers after the repaired deploy.",
+      "Verify full public deploy script passes against API and web."
+    ]
+  }
+}

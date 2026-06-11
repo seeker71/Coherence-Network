@@ -740,11 +740,20 @@ ensure_kernel_router_canary() {
   done
 
   for service in "${canary_services[@]}"; do
-    deadline=$(( $(date +%s) + 90 ))
+    local listener_probe_path="/api/attention/kernel-runtime"
+    local listener_wait_seconds=90
+    local listener_curl_timeout_seconds=5
+    if [[ "$service" == "kernel-router-bml-front-door" ]]; then
+      listener_probe_path="/api/utils/kernel_status"
+      listener_wait_seconds=360
+      listener_curl_timeout_seconds=10
+    fi
+    log "kernel-router canary: waiting for ${service} listener at ${listener_probe_path} (${listener_wait_seconds}s budget)"
+    deadline=$(( $(date +%s) + listener_wait_seconds ))
     listener_ready=0
     while (( $(date +%s) < deadline )); do
       if docker compose "${compose_args[@]}" exec -T "$service" sh -lc \
-        "curl -sS --max-time 2 -o /dev/null http://127.0.0.1:8080/api/health" \
+        "curl -fsS --max-time ${listener_curl_timeout_seconds} -o /dev/null http://127.0.0.1:8080${listener_probe_path}" \
         >/dev/null 2>&1; then
         listener_ready=1
         break
@@ -752,7 +761,9 @@ ensure_kernel_router_canary() {
       sleep 3
     done
     if [[ "$listener_ready" != "1" ]]; then
-      log "FAIL: $service listener did not accept local HTTP within 90s"
+      log "FAIL: $service listener did not accept local HTTP at ${listener_probe_path} within ${listener_wait_seconds}s"
+      docker compose "${compose_args[@]}" ps 2>&1 | tee -a "$LOG_FILE" || true
+      docker compose "${compose_args[@]}" logs --tail=120 "$service" 2>&1 | tee -a "$LOG_FILE" || true
       exit 1
     fi
   done
@@ -846,7 +857,7 @@ ensure_kernel_router_canary() {
   probe_ok=0
   while (( $(date +%s) < deadline )); do
     if docker compose "${compose_args[@]}" exec -T kernel-router-bml-front-door sh -lc \
-      "curl -fsS -D /tmp/kernel-image.headers -o /tmp/kernel-image.body \
+      "curl -fsS --max-time 10 -D /tmp/kernel-image.headers -o /tmp/kernel-image.body \
         -X POST http://127.0.0.1:8080/api/substrate/kernel-image/proposals \
         -H 'Accept: application/json' \
         -H 'Content-Type: application/json' \
@@ -870,7 +881,7 @@ ensure_kernel_router_canary() {
   probe_ok=0
   while (( $(date +%s) < deadline )); do
     if docker compose "${compose_args[@]}" exec -T kernel-router-bml-front-door sh -lc \
-      "curl -fsS -D /tmp/inventory-flow.headers -o /tmp/inventory-flow.body \
+      "curl -fsS --max-time 10 -D /tmp/inventory-flow.headers -o /tmp/inventory-flow.body \
         'http://127.0.0.1:8080/api/inventory/flow?idea_id=__native_inventory_canary__&list_item_limit=1&runtime_window_seconds=3600' \
         -H 'Accept: application/json' \
         && grep -qi '^X-Form-Router: native-kernel' /tmp/inventory-flow.headers \
@@ -892,7 +903,7 @@ ensure_kernel_router_canary() {
   probe_ok=0
   while (( $(date +%s) < deadline )); do
     if docker compose "${compose_args[@]}" exec -T kernel-router-bml-front-door sh -lc \
-      "curl -fsS -D /tmp/inventory-flow-observe.headers -o /tmp/inventory-flow-observe.body \
+      "curl -fsS --max-time 10 -D /tmp/inventory-flow-observe.headers -o /tmp/inventory-flow-observe.body \
         'http://127.0.0.1:8080/api/_form/inventory-flow-observation?idea_id=__native_inventory_canary__&list_item_limit=1&runtime_window_seconds=3600&event_limit=20&warm=1' \
         -H 'Accept: application/json' \
         -H 'X-Form-Observe: 1' \
@@ -916,7 +927,7 @@ ensure_kernel_router_canary() {
   probe_ok=0
   while (( $(date +%s) < deadline )); do
     if docker compose "${compose_args[@]}" exec -T kernel-router-bml-front-door sh -lc \
-      "curl -fsS -D /tmp/kernel-status.headers -o /tmp/kernel-status.body \
+      "curl -fsS --max-time 10 -D /tmp/kernel-status.headers -o /tmp/kernel-status.body \
         'http://127.0.0.1:8080/api/utils/kernel_status' \
         -H 'Accept: application/json' \
         && grep -qi '^X-Form-Router: native-kernel' /tmp/kernel-status.headers \
@@ -940,10 +951,10 @@ ensure_kernel_router_canary() {
   probe_ok=0
   while (( $(date +%s) < deadline )); do
     if docker compose "${compose_args[@]}" exec -T kernel-router-bml-front-door sh -lc \
-      "curl -fsS -D /tmp/agent-tasks-active.headers -o /tmp/agent-tasks-active.body \
+      "curl -fsS --max-time 10 -D /tmp/agent-tasks-active.headers -o /tmp/agent-tasks-active.body \
         'http://127.0.0.1:8080/api/agent/tasks/active' \
         -H 'Accept: application/json' \
-        && curl -fsS -D /tmp/agent-tasks-activity.headers -o /tmp/agent-tasks-activity.body \
+        && curl -fsS --max-time 10 -D /tmp/agent-tasks-activity.headers -o /tmp/agent-tasks-activity.body \
         'http://127.0.0.1:8080/api/agent/tasks/activity?limit=50&offset=0' \
         -H 'Accept: application/json' \
         && grep -qi '^X-Form-Router: native-kernel' /tmp/agent-tasks-active.headers \
@@ -970,10 +981,10 @@ ensure_kernel_router_canary() {
   probe_ok=0
   while (( $(date +%s) < deadline )); do
     if docker compose "${compose_args[@]}" exec -T kernel-router-bml-front-door sh -lc \
-      "curl -fsS -D /tmp/contributors.headers -o /tmp/contributors.body \
+      "curl -fsS --max-time 10 -D /tmp/contributors.headers -o /tmp/contributors.body \
         'http://127.0.0.1:8080/api/contributors?limit=5&offset=0' \
         -H 'Accept: application/json' \
-        && curl -fsS -D /tmp/contributions.headers -o /tmp/contributions.body \
+        && curl -fsS --max-time 10 -D /tmp/contributions.headers -o /tmp/contributions.body \
         'http://127.0.0.1:8080/api/contributions?limit=5&offset=0' \
         -H 'Accept: application/json' \
         && grep -qi '^X-Form-Router: native-kernel' /tmp/contributors.headers \
@@ -1005,6 +1016,25 @@ ensure_kernel_router_canary() {
   while (( $(date +%s) < deadline )); do
     if docker compose "${compose_args[@]}" exec -T kernel-router-bml-front-door sh -lc \
       "for spec in \
+        'ideas-resonance|/api/ideas/resonance?limit=2|api_ideas_resonance' \
+        'health|/api/health|api_health' \
+        'ready|/api/ready|api_ready' \
+        'gates-main-head|/api/gates/main-head|api_gates_main_head' \
+        'agent-tasks|/api/agent/tasks?limit=1|api_agent_tasks' \
+        'recent-concept-voices|/api/concepts/voices/recent?limit=2|api_concepts_voices_recent' \
+        'recent-reactions|/api/reactions/recent?limit=2|api_reactions_recent' \
+        'anonymous-meeting-traces|/api/meetings/anonymous-traces?limit=2|api_meetings_anonymous_traces' \
+        'workspaces|/api/workspaces|api_workspaces' \
+        'vitality|/api/workspaces/coherence-network/vitality|api_vitality_coherence_network' \
+        'coherence-score|/api/coherence/score|api_coherence_score' \
+        'graph-nodes|/api/graph/nodes?limit=1|api_graph_nodes' \
+        'presence-summary|/api/presence/summary|api_presence_summary' \
+        'living-concept|/api/concepts/lc-circulation|api_concept_living_collective' \
+        'edges|/api/edges?limit=2|api_edges' \
+        'runtime-endpoints-summary|/api/runtime/endpoints/summary?limit=2|api_runtime_endpoints_summary' \
+        'inventory-flow|/api/inventory/flow?idea_id=__native_inventory_canary__&list_item_limit=1&runtime_window_seconds=3600|api_inventory_flow' \
+        'personal-feed|/api/feed/personal?limit=2|api_feed_personal' \
+        'household-events|/api/household/events?limit=2|api_household_events' \
         'runtime-events|/api/runtime/events?limit=1&source=api|api_runtime_events' \
         'views-stats|/api/views/stats/lc-attuned-spaces?days=30|api_views_stats' \
         'reaction-summary|/api/reactions/concept/lc-attuned-spaces/summary|api_reaction_concept_summary' \
@@ -1019,7 +1049,7 @@ ensure_kernel_router_canary() {
         'sensings|/api/sensings?limit=2|api_sensings' \
         'translations-page-flow|/api/translations/page/flow|api_translations_entity'; do \
           name=\${spec%%|*}; rest=\${spec#*|}; url=\${rest%%|*}; handler=\${rest#*|}; \
-          if ! curl -fsS -D /tmp/promoted-\${name}.headers -o /tmp/promoted-\${name}.body \
+          if ! curl -fsS --max-time 10 -D /tmp/promoted-\${name}.headers -o /tmp/promoted-\${name}.body \
             \"http://127.0.0.1:8080\${url}\" \
             -H 'Accept: application/json'; then \
               echo \"promoted route curl failed: \${name}\"; \
@@ -1058,7 +1088,7 @@ ensure_kernel_router_canary() {
   probe_ok=0
   while (( $(date +%s) < deadline )); do
     if docker compose "${compose_args[@]}" exec -T kernel-router-bml-front-door sh -lc \
-      "curl -fsS -D /tmp/household-events.headers -o /tmp/household-events.body \
+      "curl -fsS --max-time 10 -D /tmp/household-events.headers -o /tmp/household-events.body \
         'http://127.0.0.1:8080/api/household/events?limit=5' \
         -H 'Accept: application/json' \
         && grep -qi '^X-Form-Router: native-kernel' /tmp/household-events.headers \

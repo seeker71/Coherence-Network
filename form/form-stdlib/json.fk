@@ -418,10 +418,24 @@
 ;; string escaping, null/boolean/number selection, and recursive emission live
 ;; here in Form.
 
-(defn json-node-string (s) (intern_trivial_string s))
-(defn json-node-int (n) (intern_trivial_int n))
-(defn json-node-float-text (s) (intern_trivial_float s))
-(defn json-node-bool (b) (intern_trivial_bool b))
+(defn json-node-null-value? (value) (str_eq (value_kind value) "null"))
+
+(defn json-node-string (s)
+    (if (json-node-null-value? s)
+        (json-node-null)
+        (intern_trivial_string s)))
+(defn json-node-int (n)
+    (if (json-node-null-value? n)
+        (json-node-null)
+        (intern_trivial_int n)))
+(defn json-node-float-text (s)
+    (if (json-node-null-value? s)
+        (json-node-null)
+        (intern_trivial_float s)))
+(defn json-node-bool (b)
+    (if (json-node-null-value? b)
+        (json-node-null)
+        (intern_trivial_bool b)))
 (defn json-node-null () (intern_node_at JSON-NULL (empty) "form-stdlib/json.fk" 1 1))
 (defn json-node-array (items) (intern_node_at JSON-ARRAY items "form-stdlib/json.fk" 1 1))
 (defn json-node-pair (key value)

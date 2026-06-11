@@ -1,0 +1,140 @@
+; tests/typescript-bmf-eval-band.fk — TS closure interpreter first attestation
+;
+; The closure/scope interpreter at form-stdlib/typescript-bmf-eval.fk walks
+; TS-BMF-EVAL-* recipes back to TypeScript-runtime values. This band-test
+; builds recipes directly — no source parsing, that is the lift band's gate.
+; Each cell's expected value matches what Node would compute for the
+; equivalent TypeScript shape; the asserted score carries a cell-specific
+; offset so the aggregate is sensitive to which arm broke.
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/typescript-bmf-eval.fk
+
+(do
+    ;; ---- recipe builders (sugar over intern_node) ---------------------
+
+    (defn ts-int-lit (n)
+        (intern_node TS-BMF-EVAL-INT (list (intern_trivial_int n))))
+
+    (defn ts-ident (name)
+        (intern_node TS-BMF-EVAL-IDENT (list (intern_trivial_string name))))
+
+    (defn ts-math (op-name left right)
+        (intern_node (bp op-name) (list left right)))
+
+    (defn ts-return (expr)
+        (intern_node TS-BMF-EVAL-RETURN (list expr)))
+
+    (defn ts-assign (name value)
+        (intern_node TS-BMF-EVAL-ASSIGN
+            (list (intern_trivial_string name) value)))
+
+    (defn ts-fn (name pms body)
+        (do
+            (let param-leaves
+                (map (defn _mk (p) (intern_trivial_string p)) pms))
+            (intern_node TS-BMF-EVAL-FN
+                (append
+                    (cons (intern_trivial_string name) param-leaves)
+                    (list body)))))
+
+    (defn ts-call (callee args)
+        (intern_node TS-BMF-EVAL-CALL
+            (cons (intern_trivial_string callee) args)))
+
+    (defn ts-if-expr (cond then-branch else-branch)
+        (intern_node TS-BMF-EVAL-IF
+            (list cond then-branch else-branch)))
+
+    (defn ts-lambda (pms body)
+        (do
+            (let param-leaves
+                (map (defn _mk2 (p) (intern_trivial_string p)) pms))
+            (intern_node TS-BMF-EVAL-LAMBDA
+                (append param-leaves (list body)))))
+
+    (defn ts-module (stmts)
+        (intern_node TS-BMF-EVAL-MODULE stmts))
+
+    ;; ---- cell 1: int leaf — Node: 42 ----------------------------------
+
+    (let cell1-value (ts-run (ts-module (list (ts-int-lit 42)))))
+    (let cell1-score (if (eq cell1-value 42) 1000 0))
+
+    ;; ---- cell 2: binop via canonical MATH Blueprint — Node: 7 + 3 = 10 -
+
+    (let cell2-value
+        (ts-run (ts-module (list
+            (ts-math "add" (ts-int-lit 7) (ts-int-lit 3))))))
+    (let cell2-score (if (eq cell2-value 10) 2000 0))
+
+    ;; ---- cell 3: const binding + ident — Node:
+    ;;   const x = 10;  x + 5  → 15 -------------------------------------
+
+    (let cell3-value
+        (ts-run (ts-module (list
+            (ts-assign "x" (ts-int-lit 10))
+            (ts-math "add" (ts-ident "x") (ts-int-lit 5))))))
+    (let cell3-score (if (eq cell3-value 15) 3000 0))
+
+    ;; ---- cell 4: function + call + return — Node:
+    ;;   function f(n) { return n + 1 }  f(41)  → 42 ---------------------
+
+    (let cell4-value
+        (ts-run (ts-module (list
+            (ts-fn "f" (list "n")
+                (ts-return (ts-math "add" (ts-ident "n") (ts-int-lit 1))))
+            (ts-call "f" (list (ts-int-lit 41)))))))
+    (let cell4-score (if (eq cell4-value 42) 4000 0))
+
+    ;; ---- cell 5: recursion through the closure's self-name — Node:
+    ;;   function fact(n) { return n < 2 ? 1 : n * fact(n - 1) }
+    ;;   fact(6)  → 720 ---------------------------------------------------
+
+    (let cell5-value
+        (ts-run (ts-module (list
+            (ts-fn "fact" (list "n")
+                (ts-return
+                    (ts-if-expr
+                        (intern_node (bp "lt") (list (ts-ident "n") (ts-int-lit 2)))
+                        (ts-int-lit 1)
+                        (ts-math "mul" (ts-ident "n")
+                            (ts-call "fact"
+                                (list (ts-math "sub" (ts-ident "n") (ts-int-lit 1))))))))
+            (ts-call "fact" (list (ts-int-lit 6)))))))
+    (let cell5-score (if (eq cell5-value 720) 5000 0))
+
+    ;; ---- cell 6: arrow bound to a const, then called — Node:
+    ;;   const g = (n) => n * 2;  g(21)  → 42 -----------------------------
+
+    (let cell6-value
+        (ts-run (ts-module (list
+            (ts-assign "g"
+                (ts-lambda (list "n")
+                    (ts-math "mul" (ts-ident "n") (ts-int-lit 2))))
+            (ts-call "g" (list (ts-int-lit 21)))))))
+    (let cell6-score (if (eq cell6-value 42) 6000 0))
+
+    ;; ---- cell 7: op-string BINOP + COMPARE fallback arms — Node:
+    ;;   (7 % 4 === 3 ? 30 : 0) + 12  → 42 --------------------------------
+
+    (let cell7-value
+        (ts-run (ts-module (list
+            (ts-math "add"
+                (ts-if-expr
+                    (intern_node TS-BMF-EVAL-COMPARE
+                        (list (intern_node TS-BMF-EVAL-BINOP
+                                  (list (ts-int-lit 7)
+                                        (intern_trivial_string "%")
+                                        (ts-int-lit 4)))
+                              (intern_trivial_string "===")
+                              (ts-int-lit 3)))
+                    (ts-int-lit 30)
+                    (ts-int-lit 0))
+                (ts-int-lit 12))))))
+    (let cell7-score (if (eq cell7-value 42) 7000 0))
+
+    ;; ---- aggregate: 1000+2000+3000+4000+5000+6000+7000 = 28000 --------
+
+    (sum (list cell1-score cell2-score cell3-score
+               cell4-score cell5-score cell6-score
+               cell7-score)))

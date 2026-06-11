@@ -20,10 +20,10 @@ section [form.bml] {
     def idea-pagination-json(summary, limit, offset, returned) = json-node-object(list(json-node-pair("total", json-node-int(idea-row("total_ideas", summary))), json-node-pair("limit", json-node-int(limit)), json-node-pair("offset", json-node-int(offset)), json-node-pair("returned", json-node-int(returned)), json-node-pair("has_more", json-node-bool(lt(add(offset, returned), idea-row("total_ideas", summary))))));
     def idea-response-json(summary, rows, limit, offset) = json-node-object(list(json-node-pair("ideas", json-node-array(idea-json-rows(rows))), json-node-pair("summary", idea-summary-json(summary)), json-node-pair("pagination", idea-pagination-json(summary, limit, offset, len(rows)))));
     def idea-error-response(status, code, detail) = kh-response(status, list(kh-header("Content-Type", "application/json")), json-emit(json-node-object(list(json-node-pair("error", json-node-string(code)), json-node-pair("detail", json-node-string(detail))))));
-    def idea-ok-response(summary, rows, limit, offset) = kh-response(200, list(kh-header("Content-Type", "application/json")), json-emit(idea-response-json(summary, rows, limit, offset)));
+    def idea-ok-response(summary, rows, limit, offset) = kh-response(200, list(kh-header("Content-Type", "application/json"), kh-header("X-Form-Handler", "api_ideas"), kh-header("X-Form-Python-Authority", "false")), json-emit(idea-response-json(summary, rows, limit, offset)));
     def timing-ms(start, stop) = sub(stop, start);
     def idea-timing-json(status, body_bytes, rows_returned, summary_rows, t0, t_config, t_connect, t_params, t_summary, t_page, t_close, t_shape, t_emit) = json-node-object(list(json-node-pair("route", json-node-string("/api/ideas")), json-node-pair("scope", json-node-string("native-handler")), json-node-pair("status", json-node-int(status)), json-node-pair("body_bytes", json-node-int(body_bytes)), json-node-pair("rows_returned", json-node-int(rows_returned)), json-node-pair("summary_rows", json-node-int(summary_rows)), json-node-pair("excluded", json-node-array(list(json-node-string("process_startup"), json-node-string("tcp_accept"), json-node-string("client_network"), json-node-string("response_write")))), json-node-pair("timings_ms", json-node-object(list(json-node-pair("config", json-node-int(timing-ms(t0, t_config))), json-node-pair("connect", json-node-int(timing-ms(t_config, t_connect))), json-node-pair("params", json-node-int(timing-ms(t_connect, t_params))), json-node-pair("summary_query", json-node-int(timing-ms(t_params, t_summary))), json-node-pair("page_query", json-node-int(timing-ms(t_summary, t_page))), json-node-pair("close", json-node-int(timing-ms(t_page, t_close))), json-node-pair("shape_tree", json-node-int(timing-ms(t_close, t_shape))), json-node-pair("json_emit", json-node-int(timing-ms(t_shape, t_emit))), json-node-pair("handler_total", json-node-int(timing-ms(t0, t_emit))))))));
-    def idea-timing-response(status, body_bytes, rows_returned, summary_rows, t0, t_config, t_connect, t_params, t_summary, t_page, t_close, t_shape, t_emit) = kh-response(200, list(kh-header("Content-Type", "application/json")), json-emit(idea-timing-json(status, body_bytes, rows_returned, summary_rows, t0, t_config, t_connect, t_params, t_summary, t_page, t_close, t_shape, t_emit)));
+    def idea-timing-response(status, body_bytes, rows_returned, summary_rows, t0, t_config, t_connect, t_params, t_summary, t_page, t_close, t_shape, t_emit) = kh-response(200, list(kh-header("Content-Type", "application/json"), kh-header("X-Form-Handler", "api_ideas_timing"), kh-header("X-Form-Python-Authority", "false")), json-emit(idea-timing-json(status, body_bytes, rows_returned, summary_rows, t0, t_config, t_connect, t_params, t_summary, t_page, t_close, t_shape, t_emit)));
     def observe-event-limit(n) = if lt(n, 1) then 1 else if gt(n, 250000) then 250000 else n;
     def observe-warm-count(n) = if lt(n, 0) then 0 else if gt(n, 200) then 200 else n;
     def observe-json-string-list(items) = if nil?(items) then empty else cons(json-node-string(head(items)), observe-json-string-list(tail(items)));
@@ -36,7 +36,7 @@ section [form.bml] {
     def observe-response-json(response, counts, events, event_nodes, jit_rows, warm_count) = json-node-object(list(json-node-pair("route", json-node-string("/api/ideas")), json-node-pair("status", json-node-int(kh-response-status(response))), json-node-pair("body_bytes", json-node-int(str_len(kh-response-body(response)))), json-node-pair("warm_count", json-node-int(warm_count)), json-node-pair("framebuffer_count_rows", json-node-int(len(counts))), json-node-pair("framebuffer_event_rows", json-node-int(len(events))), json-node-pair("events_returned", json-node-int(len(event_nodes))), json-node-pair("jit_rows", json-node-int(len(jit_rows))), json-node-pair("jit_stats", json-node-array(observe-jit-json-rows(jit_rows))), json-node-pair("counts", json-node-array(observe-count-json-rows(counts))), json-node-pair("events", json-node-array(event_nodes))));
     def observe-response(response, counts, events, event_limit, jit_rows, warm_count) {
         let event_nodes = observe-event-json-rows(events, event_limit);
-        kh-response(200, list(kh-header("Content-Type", "application/json")), json-emit(observe-response-json(response, counts, events, event_nodes, jit_rows, warm_count)));
+        kh-response(200, list(kh-header("Content-Type", "application/json"), kh-header("X-Form-Handler", "api_ideas_observe"), kh-header("X-Form-Python-Authority", "false")), json-emit(observe-response-json(response, counts, events, event_nodes, jit_rows, warm_count)));
     }
     def api-ideas-summary-sql() = "WITH raw AS (SELECT n.id, n.name, n.description, COALESCE(NULLIF(n.properties->>'potential_value','')::double precision,0.0) AS potential_value, COALESCE(NULLIF(n.properties->>'actual_value','')::double precision,0.0) AS actual_value, COALESCE(NULLIF(n.properties->>'estimated_cost','')::double precision,0.0) AS estimated_cost, COALESCE(NULLIF(n.properties->>'actual_cost','')::double precision,0.0) AS actual_cost, COALESCE(NULLIF(n.properties->>'resistance_risk','')::double precision,1.0) AS resistance_risk, COALESCE(NULLIF(n.properties->>'confidence','')::double precision,0.5) AS confidence, COALESCE(n.properties->>'manifestation_status','none') AS manifestation_status FROM graph_nodes n WHERE n.type = 'idea' AND ($1 = '' OR n.id ILIKE '%' || $1 || '%' OR n.name ILIKE '%' || $1 || '%' OR n.description ILIKE '%' || $1 || '%') AND ($2 OR NOT (n.id LIKE 'runtime:%' OR n.id LIKE 'runtime-%' OR COALESCE(n.properties->'interfaces','[]'::jsonb) ?| array['internal','system','machine:internal','agent:internal'])) AND (NOT $3 OR COALESCE(n.properties->>'manifestation_status','none') <> 'validated') AND (NOT $4 OR COALESCE((n.properties->>'is_curated')::boolean,false)) AND ($5 = '' OR COALESCE(n.properties->>'pillar','') = $5) AND ($6 = '' OR COALESCE(n.properties->>'workspace_id','coherence-network') = $6) AND ($7 = '' OR COALESCE(n.properties->'tags','[]'::jsonb) ?& string_to_array($7, ','))) SELECT count(*)::bigint AS total_ideas, count(*) FILTER (WHERE manifestation_status <> 'validated')::bigint AS unvalidated_ideas, count(*) FILTER (WHERE manifestation_status = 'validated')::bigint AS validated_ideas, COALESCE(round(sum(potential_value)::numeric, 4), 0)::double precision AS total_potential_value, COALESCE(round(sum(actual_value)::numeric, 4), 0)::double precision AS total_actual_value, COALESCE(round(GREATEST(sum(potential_value) - sum(actual_value), 0)::numeric, 4), 0)::double precision AS total_value_gap FROM raw";
     def api-ideas-page-sql() = "WITH raw AS (SELECT n.id, n.name, n.description, COALESCE(NULLIF(n.properties->>'potential_value','')::double precision,0.0) AS potential_value, COALESCE(NULLIF(n.properties->>'actual_value','')::double precision,0.0) AS actual_value, COALESCE(NULLIF(n.properties->>'estimated_cost','')::double precision,0.0) AS estimated_cost, COALESCE(NULLIF(n.properties->>'actual_cost','')::double precision,0.0) AS actual_cost, COALESCE(NULLIF(n.properties->>'resistance_risk','')::double precision,1.0) AS resistance_risk, COALESCE(NULLIF(n.properties->>'confidence','')::double precision,0.5) AS confidence, COALESCE(n.properties->>'manifestation_status','none') AS manifestation_status, COALESCE(n.properties->'interfaces','[]'::jsonb)::text AS interfaces_json, COALESCE(n.properties->'open_questions','[]'::jsonb)::text AS open_questions_json, COALESCE(n.properties->>'idea_type','standalone') AS idea_type, COALESCE(n.properties->>'parent_idea_id','') AS parent_idea_id, COALESCE(n.properties->'child_idea_ids','[]'::jsonb)::text AS child_idea_ids_json, COALESCE(n.properties->>'stage','none') AS stage, COALESCE(n.properties->>'work_type','') AS work_type, COALESCE(n.properties->>'lifecycle','active') AS lifecycle, COALESCE(n.properties->>'duplicate_of','') AS duplicate_of, COALESCE(n.properties->>'last_activity_at','') AS last_activity_at, COALESCE(n.properties->'value_basis','null'::jsonb)::text AS value_basis_json, COALESCE(n.properties->'tags','[]'::jsonb)::text AS tags_json, COALESCE(n.properties->>'workspace_git_url','') AS workspace_git_url, COALESCE(NULLIF(n.properties->>'slug',''), n.id) AS slug, COALESCE(n.properties->'slug_history','[]'::jsonb)::text AS slug_history_json, COALESCE((n.properties->>'is_curated')::boolean,false) AS is_curated, COALESCE(n.properties->>'pillar','') AS pillar, COALESCE(n.properties->>'workspace_id','coherence-network') AS workspace_id, COALESCE(n.properties->>'rollup_condition','') AS rollup_condition FROM graph_nodes n WHERE n.type = 'idea' AND ($1 = '' OR n.id ILIKE '%' || $1 || '%' OR n.name ILIKE '%' || $1 || '%' OR n.description ILIKE '%' || $1 || '%') AND ($2 OR NOT (n.id LIKE 'runtime:%' OR n.id LIKE 'runtime-%' OR COALESCE(n.properties->'interfaces','[]'::jsonb) ?| array['internal','system','machine:internal','agent:internal'])) AND (NOT $3 OR COALESCE(n.properties->>'manifestation_status','none') <> 'validated') AND (NOT $4 OR COALESCE((n.properties->>'is_curated')::boolean,false)) AND ($5 = '' OR COALESCE(n.properties->>'pillar','') = $5) AND ($6 = '' OR COALESCE(n.properties->>'workspace_id','coherence-network') = $6) AND ($7 = '' OR COALESCE(n.properties->'tags','[]'::jsonb) ?& string_to_array($7, ','))), scored AS (SELECT raw.*, round(((potential_value * confidence) / GREATEST(estimated_cost + resistance_risk, 0.5))::numeric, 4)::double precision AS free_energy_score, round(GREATEST(potential_value - actual_value, 0)::numeric, 4)::double precision AS value_gap, round(((GREATEST(potential_value - actual_value, 0) * confidence * confidence) / (GREATEST(estimated_cost - actual_cost, 0.1) + resistance_risk * 0.5))::numeric, 4)::double precision AS marginal_cc_score, round(GREATEST(estimated_cost - actual_cost, 0)::numeric, 4)::double precision AS remaining_cost_cc, round(GREATEST(potential_value - actual_value, 0)::numeric, 4)::double precision AS value_gap_cc, CASE WHEN GREATEST(estimated_cost - actual_cost, 0) > 0 THEN round((GREATEST(potential_value - actual_value, 0) / GREATEST(estimated_cost - actual_cost, 0))::numeric, 4)::double precision ELSE 0.0 END AS roi_cc FROM raw), ranked AS (SELECT scored.*, CASE WHEN $8 = 'marginal_cc' THEN marginal_cc_score ELSE free_energy_score END AS sort_score FROM scored), weighted AS (SELECT ranked.*, exp(sort_score - max(sort_score) OVER ()) AS exp_score FROM ranked), final AS (SELECT weighted.*, COALESCE(round((exp_score / NULLIF(sum(exp_score) OVER (), 0))::numeric, 6), 0)::double precision AS selection_weight FROM weighted) SELECT * FROM final ORDER BY sort_score DESC, id ASC LIMIT $9 OFFSET $10";
@@ -143,7 +143,7 @@ section [form.bml] {
     def api-workspaces-connected(conn) {
         let rows = pg_query_rows(conn, api-workspaces-sql(), list());
         let closed = pg_close(conn);
-        if api-query-failed?() then api-service-unavailable("persistence", "workspace query failed") else api-ok-json(json-node-array(api-workspace-rows-json(rows)));
+        if api-query-failed?() then api-service-unavailable("persistence", "workspace query failed") else api-native-ok-json("api_workspaces", json-node-array(api-workspace-rows-json(rows)));
     }
     def api_workspaces(request) {
         let conn = pg_connect(config_database_url());
@@ -254,7 +254,7 @@ section [form.bml] {
         api-json-field-value-or(commit, "sha", "");
     }
     def api-gate-main-head-json(repo, branch, sha) = json-node-object(list(json-node-pair("repo", json-node-string(repo)), json-node-pair("branch", json-node-string(branch)), json-node-pair("sha", json-node-string(sha))));
-    def api-gate-main-head-ok(repo, branch, sha) = api-ok-json(api-gate-main-head-json(repo, branch, sha));
+    def api-gate-main-head-ok(repo, branch, sha) = api-native-ok-json("api_gates_main_head", api-gate-main-head-json(repo, branch, sha));
     def api-gate-main-head-from-http(repo, branch, response) {
         let status = api-gate-http-status(response);
         let error = api-gate-http-error(response);
@@ -334,10 +334,10 @@ section [form.bml] {
         let common = list(json-node-pair("status", json-node-string(status)), json-node-pair("version", json-node-string(api-version())), json-node-pair("timestamp", json-node-string(api-now-iso())), json-node-pair("started_at", json-node-string(api-started-at-iso())), json-node-pair("uptime_seconds", json-node-int(up)), json-node-pair("uptime_human", json-node-string(uptime_human(up))), json-node-pair("deployed_sha", api-json-nullable-string(deployed_sha)), json-node-pair("deployed_sha_source", api-json-nullable-string(deployed_sha_source)), json-node-pair("integrity_compromised", json-node-bool(api-integrity-compromised())));
         if include_db then json-node-object(_list_append(common, json-node-pair("db_connected", json-node-bool(db_connected)))) else json-node-object(list(json-node-pair("status", json-node-string(status)), json-node-pair("version", json-node-string(api-version())), json-node-pair("timestamp", json-node-string(api-now-iso())), json-node-pair("started_at", json-node-string(api-started-at-iso())), json-node-pair("uptime_seconds", json-node-int(up)), json-node-pair("uptime_human", json-node-string(uptime_human(up))), json-node-pair("deployed_sha", api-json-nullable-string(deployed_sha)), json-node-pair("deployed_sha_source", api-json-nullable-string(deployed_sha_source)), json-node-pair("integrity_compromised", json-node-bool(api-integrity-compromised())), json-node-pair("schema_ok", json-node-bool(api-schema-ok())), json-node-pair("opencode_enabled", json-node-bool(true)), json-node-pair("smart_reap_available", json-node-bool(api-smart-reap-available?())), json-node-pair("smart_reap_import_error", json-node-null()), json-node-pair("recent_outcomes", api-recent-outcomes()), json-node-pair("kernel_runtime", json-node-string(kernel_runtime_name()))));
     }
-    def api_health(request) = api-ok-json(api-health-json("ok", false, false));
+    def api_health(request) = api-native-ok-json("api_health", api-health-json("ok", false, false));
     def api_ready(request) {
         let db_ok = api-db-connected();
-        if db_ok then api-ok-json(api-health-json("ready", db_ok, true)) else api-service-unavailable("database_unavailable", "database unavailable");
+        if db_ok then api-native-ok-json("api_ready", api-health-json("ready", db_ok, true)) else api-service-unavailable("database_unavailable", "database unavailable");
     }
 
     def api-agent-task-id(request) {
@@ -370,7 +370,7 @@ section [form.bml] {
         let count_rows = pg_query_rows(conn, agent-tasks-count-sql(), agent-tasks-filter-params(request));
         let page_rows = pg_query_rows(conn, agent-tasks-page-sql(), agent-tasks-page-params(request, limit, offset));
         let closed = pg_close(conn);
-        if api-query-failed?() then api-service-unavailable("persistence", "agent task list query failed") else api-ok-json(agent-tasks-response-json(count_rows, page_rows));
+        if api-query-failed?() then api-service-unavailable("persistence", "agent task list query failed") else api-native-ok-json("api_agent_tasks", agent-tasks-response-json(count_rows, page_rows));
     }
     def api_agent_tasks(request) {
         let conn = pg_connect(config_database_url());
@@ -380,7 +380,7 @@ section [form.bml] {
         let task_id = api-agent-task-id(request);
         let rows = pg_query_rows(conn, agent-task-sql(), list(task_id));
         let closed = pg_close(conn);
-        if api-query-failed?() then api-service-unavailable("persistence", "agent task query failed") else if nil?(rows) then api-error-status-json(404, "Task not found") else api-ok-json(agent-task-json(head(rows)));
+        if api-query-failed?() then api-service-unavailable("persistence", "agent task query failed") else if nil?(rows) then api-error-status-json(404, "Task not found") else api-native-ok-json("api_agent_task", agent-task-json(head(rows)));
     }
     def api_agent_task(request) {
         let conn = pg_connect(config_database_url());
@@ -435,7 +435,7 @@ section [form.bml] {
         let limit = api-clamp-limit(kh-query-int-or(request, "limit", 20), 100);
         let rows = pg_query_rows(conn, "SELECT id, concept_id, author_name, COALESCE(author_id,'') AS author_id, locale, body, COALESCE(location,'') AS location, replace(created_at::text, ' ', 'T') AS created_at, COALESCE(proposed_as_proposal_id,'') AS proposed_as_proposal_id FROM concept_voices ORDER BY created_at DESC LIMIT $1", list(limit));
         let closed = pg_close(conn);
-        api-ok-json(json-node-object(list(json-node-pair("voices", json-node-array(recent-voice-rows(rows))), json-node-pair("total", json-node-int(len(rows))))));
+        api-native-ok-json("api_concepts_voices_recent", json-node-object(list(json-node-pair("voices", json-node-array(recent-voice-rows(rows))), json-node-pair("total", json-node-int(len(rows))))));
     }
     def api_concepts_voices_recent(request) {
         let conn = pg_connect(config_database_url());
@@ -491,7 +491,7 @@ section [form.bml] {
         let limit = api-clamp-limit(kh-query-int-or(request, "limit", 20), 100);
         let rows = pg_query_rows(conn, "SELECT id, entity_type, entity_id, author_name, COALESCE(author_id,'') AS author_id, COALESCE(emoji,'') AS emoji, COALESCE(comment,'') AS comment, locale, COALESCE(parent_reaction_id,'') AS parent_reaction_id, replace(created_at::text, ' ', 'T') AS created_at FROM reactions ORDER BY created_at DESC LIMIT $1", list(limit));
         let closed = pg_close(conn);
-        api-ok-json(json-node-object(list(json-node-pair("reactions", json-node-array(recent-reaction-rows(rows))))));
+        api-native-ok-json("api_reactions_recent", json-node-object(list(json-node-pair("reactions", json-node-array(recent-reaction-rows(rows))))));
     }
     def api_reactions_recent(request) {
         let conn = pg_connect(config_database_url());
@@ -510,7 +510,7 @@ section [form.bml] {
         let summary_rows = pg_query_rows(conn, anonymous-traces-summary-sql(), list(source_point_id));
         let closed = pg_close(conn);
         let summary = if nil?(summary_rows) then anonymous-traces-summary-json(_dict_new("source_point_id", source_point_id, "source_point_count", 0, "meeting_count", 0, "first_seen_at", "", "last_seen_at", "", "total_duration_ms", 0, "duration_bucket", "under_10s", "entry_surface", "", "surfaces_met_json", "[]", "surface_sequence_json", "[]", "page_count", 0, "referrer_domain", "", "referrer_domains_json", "[]", "folded_into_contributor_id", "", "continuity_note", "source_point_id is a same-browser continuity hint, not identity proof")) else anonymous-traces-summary-json(head(summary_rows));
-        api-ok-json(json-node-object(list(json-node-pair("items", json-node-array(anonymous-trace-item-rows(rows))), json-node-pair("summary", summary), json-node-pair("limit", json-node-int(limit)))));
+        api-native-ok-json("api_meetings_anonymous_traces", json-node-object(list(json-node-pair("items", json-node-array(anonymous-trace-item-rows(rows))), json-node-pair("summary", summary), json-node-pair("limit", json-node-int(limit)))));
     }
     def api_meetings_anonymous_traces(request) {
         let conn = pg_connect(config_database_url());
@@ -689,7 +689,7 @@ section [form.bml] {
         let requested_action = api-json-field-value-or(body, "requested_action", "preview");
         let source_label = api-json-field-value-or(body, "source_label", "");
         let canonical_source = read_file(str_concat(repo_root(), "/form/form-stdlib/bml/kernel-core.bml"));
-        api-ok-json(api-kip-proposal-json(source, grammar, source_label, requested_action, canonical_source));
+        api-native-ok-json("api_substrate_kernel_image_proposals", api-kip-proposal-json(source, grammar, source_label, requested_action, canonical_source));
     }
     def anonymous-trace-hash-id(kind, value) {
         let digest = sha256(api-str-to-bytes(str_concat(kind, str_concat(":", value))));
@@ -764,7 +764,7 @@ section [form.bml] {
     def api-vitality-connected(conn, request) {
         let rows = pg_query_rows(conn, api_vitality_sql(), list());
         let closed = pg_close(conn);
-        if nil?(rows) then api-service-unavailable("persistence", "vitality query failed") else api-ok-json(api-vitality-json("coherence-network", head(rows)));
+        if nil?(rows) then api-service-unavailable("persistence", "vitality query failed") else api-native-ok-json("api_vitality_coherence_network", api-vitality-json("coherence-network", head(rows)));
     }
 
     def api-route-page-path(route) = if str_eq(route, "") then "web/app/page.tsx" else if str_eq(route, "/") then "web/app/page.tsx" else if kh-prefix?(route, "/substrate/form/space") then "web/app/substrate/form/space/page.tsx" else if kh-prefix?(route, "/substrate/form") then "web/app/substrate/form/page.tsx" else if kh-prefix?(route, "/substrate/") then "web/app/substrate/[domain]/[name]/page.tsx" else if kh-prefix?(route, "/vision/") then "web/app/vision/[conceptId]/page.tsx" else if kh-prefix?(route, "/people/") then "web/app/people/[id]/page.tsx" else if kh-prefix?(route, "/concepts/") then "web/app/concepts/[conceptId]/page.tsx" else if kh-prefix?(route, "/ideas/") then "web/app/ideas/[id]/page.tsx" else if kh-prefix?(route, "/nodes/") then "web/app/nodes/[id]/page.tsx" else str_concat("web/app", str_concat(route, "/page.tsx"));
@@ -784,7 +784,7 @@ section [form.bml] {
         let rows = pg_query_rows(conn, substrate-page-cell-sql(), list(path));
         let twins = pg_query_rows(conn, substrate-page-twins-sql(), list(path));
         let closed = pg_close(conn);
-        if nil?(rows) then api-ok-json(substrate-page-missing-json(route, path)) else api-ok-json(substrate-page-found-json(route, path, head(rows), twins));
+        if nil?(rows) then api-native-ok-json("api_substrate_page", substrate-page-missing-json(route, path)) else api-native-ok-json("api_substrate_page", substrate-page-found-json(route, path, head(rows), twins));
     }
     def api_substrate_page(request) {
         let conn = pg_connect(config_database_url());
@@ -794,7 +794,7 @@ section [form.bml] {
     def api-federation-count-connected(conn) {
         let rows = pg_query_rows(conn, "SELECT count(*)::bigint AS count FROM federation_nodes", list());
         let closed = pg_close(conn);
-        if nil?(rows) then api-service-unavailable("persistence", "federation node count query failed") else api-ok-json(json-node-object(list(json-node-pair("count", json-node-int(idea-row("count", head(rows)))))));
+        if nil?(rows) then api-service-unavailable("persistence", "federation node count query failed") else api-native-ok-json("api_federation_nodes_count", json-node-object(list(json-node-pair("count", json-node-int(idea-row("count", head(rows)))))));
     }
     def api_federation_nodes_count(request) {
         let conn = pg_connect(config_database_url());
@@ -817,7 +817,7 @@ section [form.bml] {
     def api-graph-nodes-page-sql() = "SELECT n.id AS node_id, n.type AS node_type, n.name AS node_name, n.description AS node_description, n.phase AS node_phase, replace(n.created_at::text, ' ', 'T') AS node_created_at, replace(n.updated_at::text, ' ', 'T') AS node_updated_at, COALESCE(n.properties,'{}'::jsonb)::text AS node_properties_json, (SELECT count(*)::bigint FROM jsonb_object_keys(COALESCE(n.properties,'{}'::jsonb))) AS node_property_dimensions, (SELECT count(*)::bigint FROM graph_edges e WHERE e.to_id = n.id) AS node_incoming_edges, (SELECT count(*)::bigint FROM graph_edges e WHERE e.from_id = n.id) AS node_outgoing_edges, CASE WHEN n.type = 'concept' THEN (SELECT count(*)::bigint FROM concept_voices v WHERE v.concept_id = n.id) ELSE 0 END AS node_voice_count, (SELECT count(*)::bigint FROM reactions r WHERE r.entity_type = n.type AND r.entity_id = n.id) AS node_reaction_count FROM graph_nodes n WHERE ($1 = '' OR n.type = $1) AND ($2 = '' OR n.phase = $2) AND ($3 = '' OR n.name ILIKE '%' || $3 || '%' OR n.description ILIKE '%' || $3 || '%') AND n.id NOT LIKE 'anonymous-meeting:%' ORDER BY n.updated_at DESC LIMIT $4 OFFSET $5";
     def api-graph-node-rows-json(rows) = if nil?(rows) then empty else cons(api-node-json(head(rows), "node_"), api-graph-node-rows-json(tail(rows)));
     def api-graph-nodes-total(count_rows) = if nil?(count_rows) then 0 else idea-row("total", head(count_rows));
-    def api-graph-nodes-response(count_rows, page_rows, limit, offset) = api-ok-json(json-node-object(list(json-node-pair("items", json-node-array(api-graph-node-rows-json(page_rows))), json-node-pair("total", json-node-int(api-graph-nodes-total(count_rows))), json-node-pair("limit", json-node-int(limit)), json-node-pair("offset", json-node-int(offset)), json-node-pair("native_observation", json-node-object(list(json-node-pair("grammar", json-node-string("BML")), json-node-pair("handler", json-node-string("api_graph_nodes")), json-node-pair("projection", json-node-string("graph_nodes.to_dict-compatible")), json-node-pair("property_projection", json-node-string("merged"))))))));
+    def api-graph-nodes-response(count_rows, page_rows, limit, offset) = api-native-ok-json("api_graph_nodes", json-node-object(list(json-node-pair("items", json-node-array(api-graph-node-rows-json(page_rows))), json-node-pair("total", json-node-int(api-graph-nodes-total(count_rows))), json-node-pair("limit", json-node-int(limit)), json-node-pair("offset", json-node-int(offset)), json-node-pair("native_observation", json-node-object(list(json-node-pair("grammar", json-node-string("BML")), json-node-pair("handler", json-node-string("api_graph_nodes")), json-node-pair("projection", json-node-string("graph_nodes.to_dict-compatible")), json-node-pair("property_projection", json-node-string("merged"))))))));
     def api-graph-nodes-connected(conn, node_type, phase, search, limit, offset) {
         let count_rows = pg_query_rows(conn, api-graph-nodes-count-sql(), list(node_type, phase, search));
         let page_rows = pg_query_rows(conn, api-graph-nodes-page-sql(), list(node_type, phase, search, limit, offset));
@@ -846,7 +846,7 @@ section [form.bml] {
     def api-coherence-score-connected(conn) {
         let rows = pg_query_rows(conn, coherence-score-sql(), list());
         let closed = pg_close(conn);
-        if api-query-failed?() then api-service-unavailable("persistence", "coherence score query failed") else if nil?(rows) then api-service-unavailable("persistence", "coherence score query returned no rows") else api-ok-json(coherence-response-json(head(rows)));
+        if api-query-failed?() then api-service-unavailable("persistence", "coherence score query failed") else if nil?(rows) then api-service-unavailable("persistence", "coherence score query returned no rows") else api-native-ok-json("api_coherence_score", coherence-response-json(head(rows)));
     }
     def api_coherence_score(request) {
         let conn = pg_connect(config_database_url());
@@ -862,7 +862,7 @@ section [form.bml] {
         let concept_id = api-concept-id(request);
         let rows = pg_query_rows(conn, api-concept-sql(), list(concept_id));
         let closed = pg_close(conn);
-        if api-query-failed?() then api-service-unavailable("persistence", "concept query failed") else if nil?(rows) then api-not-found(str_concat("Concept not found: ", concept_id)) else api-ok-json(api-node-json(head(rows), ""));
+        if api-query-failed?() then api-service-unavailable("persistence", "concept query failed") else if nil?(rows) then api-not-found(str_concat("Concept not found: ", concept_id)) else api-native-ok-json("api_concept_living_collective", api-node-json(head(rows), ""));
     }
     def api_concept_living_collective(request) {
         let conn = pg_connect(config_database_url());
@@ -879,7 +879,7 @@ section [form.bml] {
         let offset = idea-safe-offset(kh-query-int-or(request, "offset", 0));
         let rows = pg_query_rows(conn, ideas-resonance-sql(), list(window_hours, limit, offset));
         let closed = pg_close(conn);
-        if api-query-failed?() then api-service-unavailable("persistence", "idea resonance query failed") else api-ok-json(json-node-object(list(json-node-pair("items", json-node-array(ideas-resonance-rows-json(rows))), json-node-pair("total", json-node-int(ideas-resonance-total(rows))), json-node-pair("limit", json-node-int(limit)), json-node-pair("offset", json-node-int(offset)), json-node-pair("window_hours", json-node-int(window_hours)), json-node-pair("native_observation", json-node-object(list(json-node-pair("grammar", json-node-string("BML")), json-node-pair("dimensions", json-node-int(8)), json-node-pair("handler", json-node-string("api_ideas_resonance"))))))));
+        if api-query-failed?() then api-service-unavailable("persistence", "idea resonance query failed") else api-native-ok-json("api_ideas_resonance", json-node-object(list(json-node-pair("items", json-node-array(ideas-resonance-rows-json(rows))), json-node-pair("total", json-node-int(ideas-resonance-total(rows))), json-node-pair("limit", json-node-int(limit)), json-node-pair("offset", json-node-int(offset)), json-node-pair("window_hours", json-node-int(window_hours)), json-node-pair("native_observation", json-node-object(list(json-node-pair("grammar", json-node-string("BML")), json-node-pair("dimensions", json-node-int(8)), json-node-pair("handler", json-node-string("api_ideas_resonance"))))))));
     }
     def api_ideas_resonance(request) {
         let conn = pg_connect(config_database_url());
@@ -896,7 +896,7 @@ section [form.bml] {
         let offset = idea-safe-offset(kh-query-int-or(request, "offset", 0));
         let rows = pg_query_rows(conn, api-edges-sql(), list(kh-query-value-or(request, "type", ""), kh-query-value-or(request, "from_id", ""), kh-query-value-or(request, "to_id", ""), limit, offset, api-edge-canonical-types()));
         let closed = pg_close(conn);
-        if api-query-failed?() then api-service-unavailable("persistence", "edges query failed") else api-ok-json(json-node-object(list(json-node-pair("items", json-node-array(api-edge-rows-json(rows))), json-node-pair("total", json-node-int(api-edges-total(rows))), json-node-pair("limit", json-node-int(limit)), json-node-pair("offset", json-node-int(offset)), json-node-pair("native_observation", json-node-object(list(json-node-pair("grammar", json-node-string("BML")), json-node-pair("handler", json-node-string("api_edges"))))))));
+        if api-query-failed?() then api-service-unavailable("persistence", "edges query failed") else api-native-ok-json("api_edges", json-node-object(list(json-node-pair("items", json-node-array(api-edge-rows-json(rows))), json-node-pair("total", json-node-int(api-edges-total(rows))), json-node-pair("limit", json-node-int(limit)), json-node-pair("offset", json-node-int(offset)), json-node-pair("native_observation", json-node-object(list(json-node-pair("grammar", json-node-string("BML")), json-node-pair("handler", json-node-string("api_edges"))))))));
     }
     def api_edges(request) {
         let conn = pg_connect(config_database_url());
@@ -946,7 +946,7 @@ section [form.bml] {
         let offset = idea-safe-offset(kh-query-int-or(request, "offset", 0));
         let rows = pg_query_rows(conn, api-inspired-by-sql(), list(source_id, viewer_id, limit, offset));
         let closed = pg_close(conn);
-        if api-query-failed?() then api-service-unavailable("persistence", "inspired-by query failed") else api-ok-json(json-node-object(list(json-node-pair("items", json-node-array(api-inspired-by-rows-json(rows))), json-node-pair("count", json-node-int(len(rows))), json-node-pair("total", json-node-int(api-inspired-total(rows))), json-node-pair("limit", json-node-int(limit)), json-node-pair("offset", json-node-int(offset)), json-node-pair("shared_count", if str_eq(viewer_id, "") then json-node-null() else json-node-int(api-inspired-shared-count(rows))), json-node-pair("native_observation", json-node-object(list(json-node-pair("grammar", json-node-string("BML")), json-node-pair("handler", json-node-string("api_inspired_by")), json-node-pair("source_contributor_id", json-node-string(source_id))))))));
+        if api-query-failed?() then api-service-unavailable("persistence", "inspired-by query failed") else api-native-ok-json("api_inspired_by", json-node-object(list(json-node-pair("items", json-node-array(api-inspired-by-rows-json(rows))), json-node-pair("count", json-node-int(len(rows))), json-node-pair("total", json-node-int(api-inspired-total(rows))), json-node-pair("limit", json-node-int(limit)), json-node-pair("offset", json-node-int(offset)), json-node-pair("shared_count", if str_eq(viewer_id, "") then json-node-null() else json-node-int(api-inspired-shared-count(rows))), json-node-pair("native_observation", json-node-object(list(json-node-pair("grammar", json-node-string("BML")), json-node-pair("handler", json-node-string("api_inspired_by")), json-node-pair("source_contributor_id", json-node-string(source_id))))))));
     }
     def api-inspired-by-ready(request, source_id, viewer_id) {
         let conn = pg_connect(config_database_url());
@@ -1126,7 +1126,7 @@ section [form.bml] {
         let source = kh-query-value-or(request, "source", "");
         let rows = pg_query_rows(conn, api-runtime-summary-sql(), list(seconds, limit, source));
         let closed = pg_close(conn);
-        if api-query-failed?() then api-service-unavailable("persistence", "runtime endpoint summary query failed") else api-ok-json(json-node-object(list(json-node-pair("window_seconds", json-node-int(seconds)), json-node-pair("source", if str_eq(source, "") then json-node-null() else json-node-string(source)), json-node-pair("endpoints", json-node-array(api-runtime-endpoint-rows-json(rows))), json-node-pair("native_observation", json-node-object(list(json-node-pair("grammar", json-node-string("BML")), json-node-pair("handler", json-node-string("api_runtime_endpoints_summary")), json-node-pair("source_filter_applied", json-node-bool(not(str_eq(source, ""))))))))));
+        if api-query-failed?() then api-service-unavailable("persistence", "runtime endpoint summary query failed") else api-native-ok-json("api_runtime_endpoints_summary", json-node-object(list(json-node-pair("window_seconds", json-node-int(seconds)), json-node-pair("source", if str_eq(source, "") then json-node-null() else json-node-string(source)), json-node-pair("endpoints", json-node-array(api-runtime-endpoint-rows-json(rows))), json-node-pair("native_observation", json-node-object(list(json-node-pair("grammar", json-node-string("BML")), json-node-pair("handler", json-node-string("api_runtime_endpoints_summary")), json-node-pair("source_filter_applied", json-node-bool(not(str_eq(source, ""))))))))));
     }
     def api_runtime_endpoints_summary(request) {
         let conn = pg_connect(config_database_url());
@@ -1182,7 +1182,7 @@ section [form.bml] {
         let summary_rows = pg_query_rows(conn, inventory-flow-summary-sql(), list(idea_id, include_internal_ideas, runtime_window_seconds));
         let item_rows = pg_query_rows(conn, inventory-flow-items-sql(), list(idea_id, include_internal_ideas, runtime_window_seconds, list_item_limit));
         let closed = pg_close(conn);
-        if api-query-failed?() then api-service-unavailable("persistence", "inventory flow query failed") else if nil?(summary_rows) then api-service-unavailable("persistence", "inventory flow summary query returned no rows") else api-ok-json(inventory-flow-response-json(head(summary_rows), item_rows, idea_id, include_internal_ideas, runtime_window_seconds));
+        if api-query-failed?() then api-service-unavailable("persistence", "inventory flow query failed") else if nil?(summary_rows) then api-service-unavailable("persistence", "inventory flow summary query returned no rows") else api-native-ok-json("api_inventory_flow", inventory-flow-response-json(head(summary_rows), item_rows, idea_id, include_internal_ideas, runtime_window_seconds));
     }
     def api-inventory-flow-db-response(idea_id, include_internal_ideas, runtime_window_seconds, list_item_limit) {
         let conn = pg_connect(config_database_url());
@@ -1193,7 +1193,7 @@ section [form.bml] {
         let include_internal_ideas = kh-query-bool-or(request, "include_internal_ideas", false);
         let runtime_window_seconds = inventory-flow-window(kh-query-int-or(request, "runtime_window_seconds", 86400));
         let list_item_limit = api-clamp-limit(kh-query-int-or(request, "list_item_limit", 12), 200);
-        if gt(str_len(idea_id), 255) then api-error-status-json(422, "idea_id must be at most 255 characters") else if inventory-flow-canary?(idea_id) then api-ok-json(inventory-flow-canary-response-json(idea_id, include_internal_ideas, runtime_window_seconds)) else api-inventory-flow-db-response(idea_id, include_internal_ideas, runtime_window_seconds, list_item_limit);
+        if gt(str_len(idea_id), 255) then api-error-status-json(422, "idea_id must be at most 255 characters") else if inventory-flow-canary?(idea_id) then api-native-ok-json("api_inventory_flow", inventory-flow-canary-response-json(idea_id, include_internal_ideas, runtime_window_seconds)) else api-inventory-flow-db-response(idea_id, include_internal_ideas, runtime_window_seconds, list_item_limit);
     }
     def observe-warm-inventory-flow(request, remaining) {
         if le(remaining, 0) then 0 else observe-warm-inventory-flow-after(request, remaining, api_inventory_flow(request));
@@ -1204,7 +1204,7 @@ section [form.bml] {
     def inventory-flow-observe-response-json(response, events, event_nodes, jit_rows, warm_count, request, t0, t1) = json-node-object(list(json-node-pair("route", json-node-string("/api/_form/inventory-flow-observation")), json-node-pair("observed_route", json-node-string("/api/inventory/flow")), json-node-pair("observed_handler", json-node-string("api_inventory_flow")), json-node-pair("observed_idea_id", api-json-nullable-string(kh-query-value-or(request, "idea_id", ""))), json-node-pair("observed_canary", json-node-bool(inventory-flow-canary?(kh-query-value-or(request, "idea_id", "")))), json-node-pair("status", json-node-int(kh-response-status(response))), json-node-pair("body_bytes", json-node-int(str_len(kh-response-body(response)))), json-node-pair("warm_count", json-node-int(warm_count)), json-node-pair("handler_total_ms", json-node-int(sub(t1, t0))), json-node-pair("framebuffer_event_rows", json-node-int(len(events))), json-node-pair("events_returned", json-node-int(len(event_nodes))), json-node-pair("jit_rows", json-node-int(len(jit_rows))), json-node-pair("jit_stats", json-node-array(observe-jit-json-rows(jit_rows))), json-node-pair("events", json-node-array(event_nodes)), json-node-pair("inventory_flow_native_observation", inventory-flow-native-observation-json()), json-node-pair("native_observation", inventory-flow-observe-native-json())));
     def inventory-flow-observe-response(response, events, event_limit, jit_rows, warm_count, request, t0, t1) {
         let event_nodes = inventory-flow-observe-event-json-rows(events, event_limit);
-        kh-response(200, list(kh-header("Content-Type", "application/json")), json-emit(inventory-flow-observe-response-json(response, events, event_nodes, jit_rows, warm_count, request, t0, t1)));
+        kh-response(200, list(kh-header("Content-Type", "application/json"), kh-header("X-Form-Handler", "api_inventory_flow_observe"), kh-header("X-Form-Python-Authority", "false")), json-emit(inventory-flow-observe-response-json(response, events, event_nodes, jit_rows, warm_count, request, t0, t1)));
     }
     def api_inventory_flow_observe(request) {
         let warm_count = observe-warm-count(kh-query-int-or(request, "warm", 0));
@@ -1227,14 +1227,14 @@ section [form.bml] {
     def api-feed-personal-connected(conn, contributor_id, author_name, limit, locale) {
         let rows = pg_query_rows(conn, api-feed-personal-sql(), list(contributor_id, author_name, limit));
         let closed = pg_close(conn);
-        if api-query-failed?() then api-service-unavailable("persistence", "personal feed query failed") else api-ok-json(json-node-object(list(json-node-pair("items", json-node-array(api-feed-rows-json(rows, locale))), json-node-pair("count", json-node-int(len(rows))), json-node-pair("locale", json-node-string(locale)), json-node-pair("native_observation", json-node-object(list(json-node-pair("grammar", json-node-string("BML")), json-node-pair("handler", json-node-string("api_feed_personal")), json-node-pair("union_arms", json-node-int(5))))))));
+        if api-query-failed?() then api-service-unavailable("persistence", "personal feed query failed") else api-native-ok-json("api_feed_personal", json-node-object(list(json-node-pair("items", json-node-array(api-feed-rows-json(rows, locale))), json-node-pair("count", json-node-int(len(rows))), json-node-pair("locale", json-node-string(locale)), json-node-pair("native_observation", json-node-object(list(json-node-pair("grammar", json-node-string("BML")), json-node-pair("handler", json-node-string("api_feed_personal")), json-node-pair("union_arms", json-node-int(5))))))));
     }
     def api_feed_personal(request) {
         let contributor_id = kh-query-value-or(request, "contributor_id", "");
         let author_name = kh-query-value-or(request, "author_name", "");
         let limit = api-clamp-limit(kh-query-int-or(request, "limit", 40), 200);
         let locale = kh-query-value-or(request, "lang", "en");
-        if and(str_eq(contributor_id, ""), str_eq(author_name, "")) then api-ok-json(json-node-object(list(json-node-pair("items", json-node-array(empty)), json-node-pair("count", json-node-int(0)), json-node-pair("locale", json-node-string(locale))))) else api-feed-personal-ready(contributor_id, author_name, limit, locale);
+        if and(str_eq(contributor_id, ""), str_eq(author_name, "")) then api-native-ok-json("api_feed_personal", json-node-object(list(json-node-pair("items", json-node-array(empty)), json-node-pair("count", json-node-int(0)), json-node-pair("locale", json-node-string(locale))))) else api-feed-personal-ready(contributor_id, author_name, limit, locale);
     }
     def api-feed-personal-ready(contributor_id, author_name, limit, locale) {
         let conn = pg_connect(config_database_url());
@@ -1251,7 +1251,7 @@ section [form.bml] {
         let limit = api-clamp-limit(kh-query-int-or(request, "limit", 200), 500);
         let rows = pg_query_rows(conn, api-household-requests-sql(), list(status, limit));
         let closed = pg_close(conn);
-        if api-query-failed?() then api-service-unavailable("persistence", "household request query failed") else api-ok-json(json-node-array(api-household-request-rows-json(rows)));
+        if api-query-failed?() then api-service-unavailable("persistence", "household request query failed") else api-native-ok-json("api_household_requests", json-node-array(api-household-request-rows-json(rows)));
     }
     def api_household_requests(request) {
         let conn = pg_connect(config_database_url());
@@ -1264,7 +1264,7 @@ section [form.bml] {
     def api-household-request-detail-connected(conn, request_id) {
         let rows = pg_query_rows(conn, api-household-request-sql(), list(request_id));
         let closed = pg_close(conn);
-        if api-query-failed?() then api-service-unavailable("persistence", "household request query failed") else if nil?(rows) then api-not-found(str_concat("request not found: ", request_id)) else api-ok-json(api-household-request-json(head(rows)));
+        if api-query-failed?() then api-service-unavailable("persistence", "household request query failed") else if nil?(rows) then api-not-found(str_concat("request not found: ", request_id)) else api-native-ok-json("api_household_request_detail", api-household-request-json(head(rows)));
     }
     def api_household_request_detail(request) {
         let request_id = api-household-request-id(request);
@@ -1279,7 +1279,7 @@ section [form.bml] {
         let role = kh-query-value-or(request, "role", "");
         let rows = pg_query_rows(conn, api-household-members-sql(), list(role));
         let closed = pg_close(conn);
-        if api-query-failed?() then api-service-unavailable("persistence", "household members query failed") else api-ok-json(json-node-array(api-household-member-rows-json(rows)));
+        if api-query-failed?() then api-service-unavailable("persistence", "household members query failed") else api-native-ok-json("api_household_members", json-node-array(api-household-member-rows-json(rows)));
     }
     def api_household_members(request) {
         let conn = pg_connect(config_database_url());
@@ -1341,13 +1341,13 @@ section [form.bml] {
     def api_presence_summary(request) {
         let rows = api-presence-live-rows();
         let summary_rows = api-presence-sort-summary(api-presence-summary-acc(rows, empty));
-        api-ok-json(json-node-object(list(json-node-pair("total_entities", json-node-int(len(summary_rows))), json-node-pair("top", json-node-array(api-presence-summary-row-jsons(take(20, summary_rows)))))));
+        api-native-ok-json("api_presence_summary", json-node-object(list(json-node-pair("total_entities", json-node-int(len(summary_rows))), json-node-pair("top", json-node-array(api-presence-summary-row-jsons(take(20, summary_rows)))))));
     }
     def api_presence_count(request) {
         let entity_type = api-presence-entity-type(request);
         let entity_id = api-presence-entity-id(request);
         let fingerprint = kh-query-value-or(request, "fingerprint", "");
-        if api-presence-supported?(entity_type) then api-ok-json(api-presence-count-json(api-presence-live-rows(), entity_type, entity_id, fingerprint)) else api-error-json(400, str_concat("Unsupported entity_type '", str_concat(entity_type, "'")));
+        if api-presence-supported?(entity_type) then api-native-ok-json("api_presence_count", api-presence-count-json(api-presence-live-rows(), entity_type, entity_id, fingerprint)) else api-error-json(400, str_concat("Unsupported entity_type '", str_concat(entity_type, "'")));
     }
     def api_presence_heartbeat(request) {
         let entity_type = api-presence-entity-type(request);
@@ -1403,7 +1403,7 @@ section [form.bml] {
         let selector = api-field-trace-selector(request);
         let value = api-field-trace-value(request);
         let result = if and(str_eq(slug, "urs-field-story"), str_eq(selector, "author")) then api-field-author-result(value) else empty;
-        if nil?(result) then api-not-found("field story trace value not found") else api-ok-json(json-node-object(list(json-node-pair("slug", json-node-string(slug)), json-node-pair("selector", json-node-string(selector)), json-node-pair("value", json-node-string(value)), json-node-pair("result", head(result)))));
+        if nil?(result) then api-not-found("field story trace value not found") else api-native-ok-json("api_field_story_trace", json-node-object(list(json-node-pair("slug", json-node-string(slug)), json-node-pair("selector", json-node-string(selector)), json-node-pair("value", json-node-string(value)), json-node-pair("result", head(result)))));
     }
 
     0;

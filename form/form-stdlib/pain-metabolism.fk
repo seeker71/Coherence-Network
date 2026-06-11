@@ -70,6 +70,13 @@
     ; --- the receipt: a pain's shape is its involvement field, binned ---
     (defn pn-receipt (inv) (ls-r6map inv))
 
+    ; --- the scale-free receipt: pain's identity is its PATTERN, not its loudness ---
+    ; the same wound at half intensity is the same shape; a different pathway is a new one
+    (defn pn-shape (inv)
+        (if (gt (ls-vmax inv) 0.0)
+            (ls-r6map (gl-mul-scalar inv (div 1.0 (ls-vmax inv))))
+            (ls-r6map inv)))
+
     ; --- triage: novel pain first, then the loudest — both as data ---
     ; an event: (list id novel01 magnitude)
     (defn pn-before? (a b)

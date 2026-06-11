@@ -72,6 +72,66 @@ grep -Fq 'PathRegexp(`^/api/sensings/[^/]+$`)' "$ROOT_DIR/deploy/kernel-router/d
 grep -Fq 'PathRegexp(`^/api/translations/[^/]+/[^/]+$`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
   || fail "kernel-router ingress does not expose the translations entity BML template route"
 
+if ! python3 - "$ROOT_DIR/deploy/front-door/api.bml" "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+catalog = Path(sys.argv[1]).read_text(encoding="utf-8")
+compose = Path(sys.argv[2]).read_text(encoding="utf-8")
+
+routes = []
+for match in re.finditer(
+    r'route\("([^"]+)",\s*"([A-Z]+)",\s*"([^"]+)",\s*\d+,\s*"([^"]+)",\s*"([^"]*)"',
+    catalog,
+):
+    name, method, path, handler, header = match.groups()
+    if method == "GET":
+        routes.append((name, path, header))
+
+if len(routes) < 50:
+    raise SystemExit(f"BML GET/read route batch too small: {len(routes)}")
+
+def expected_token(path: str) -> str:
+    if path == "/api/spec-registry/{spec_id}":
+        return "PathRegexp(`^/api/spec-registry/[^/]+$`) && !Path(`/api/spec-registry/cards`) && !Path(`/api/spec-registry/source-list`)"
+    if path == "/api/concepts/lc-*":
+        return "PathRegexp(`^/api/concepts/lc-[^/]+$`)"
+    if path == "/api/agent/tasks/task_*":
+        return "PathRegexp(`^/api/agent/tasks/task_[^/]+$`)"
+    if path == "/api/presence/*":
+        return "PathRegexp(`^/api/presence/[^/]+$`)"
+    if path == "/api/field-stories/*":
+        return "PathRegexp(`^/api/field-stories/.+$`)"
+    if "{" in path:
+        pattern = re.sub(r"\{[^/{}]+\}", "[^/]+", path)
+        return f"PathRegexp(`^{pattern}$`)"
+    return f"Path(`{path}`)"
+
+missing = [(name, path, expected_token(path)) for name, path, _header in routes if expected_token(path) not in compose]
+if missing:
+    for name, path, token in missing:
+        print(f"missing {name}: {path} expected {token}", file=sys.stderr)
+    raise SystemExit(1)
+
+required_batches = [
+    "coherence-api-bml-read-core-batch",
+    "coherence-api-bml-read-ideas-agent-batch",
+    "coherence-api-bml-read-relation-batch",
+    "coherence-api-bml-read-sensing-batch",
+    "coherence-api-bml-read-operations-batch",
+    "coherence-api-bml-read-observe-batch",
+]
+missing_batches = [name for name in required_batches if name not in compose]
+if missing_batches:
+    raise SystemExit(f"missing BML read batch routers: {missing_batches}")
+
+print(f"BML GET/read ingress coverage: {len(routes)} routes")
+PY
+then
+  fail "kernel-router ingress does not cover every BML GET/read route"
+fi
+
 grep -Fq "BML front-door promoted read routes" "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not probe the promoted BML read routes"
 
@@ -80,6 +140,9 @@ grep -Fq 'X-Form-Handler: \${handler}' "$DEPLOY_SCRIPT" \
 
 grep -Fq 'X-Form-Python-Authority: false' "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not require promoted BML authority proof"
+
+grep -Fq 'curl -fsS --max-time 10 -D /tmp/promoted-' "$DEPLOY_SCRIPT" \
+  || fail "deploy canary does not bound promoted BML read route curl probes"
 
 grep -Fq 'api_sensings' "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not probe the sensings BML handler"
