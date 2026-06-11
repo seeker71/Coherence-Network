@@ -33,7 +33,10 @@
                             one structure (timeout==nothing IS the SIGALRM shape, checked at the window
                             edge); sigprocmask is AO-MASK data — masked stays pending, delivers when the
                             mask lifts; coalescing free by content-addressing
-                            (tests/afferent-offer-band.fk -> 511 three-way)))
+                            (tests/afferent-offer-band.fk -> 511 three-way); LIVE: afferent-live.fk
+                            lowers ao-wait's verdict onto op 15 TIME — the armed timer's tick arrives on
+                            the host clock, the empty window yields nothing only after real elapsed time
+                            (tests/afferent-live-band.fk -> 63; audit section 18)))
 
   # ── Memory ──────────────────────────────────────────────────────────
   (memory
@@ -42,11 +45,13 @@
                             another; a change MINTS a new node-id; the one mutation is repoint (a pointer move))
     (address-spaces   RUNS  NodeID.package field: 1 = body, 2+ = branches/sandboxes — capability-scoped)
     (gc-compaction    RUNS  arena-melt.fk — liveness is ONE reachability walk, melt is copy-live + repoint,
-                            NodeID preserved across arenas (axiom-3: composition is identity); the emitted
-                            sibling's bump arena measured live: holds to exactly 4095 cells, wraps at 4096;
-                            current workloads peak at 64 — bump-only stays the default BY MEASURED CHOICE,
-                            melt is the proven path waiting at that boundary
-                            (tests/arena-melt-band.fk -> 63 three-way)))
+                            NodeID preserved across arenas (axiom-3: composition is identity); the melt the
+                            recipes prove is the melt the BINARY does — emitted from the recipe cells into
+                            every many-family binary, firing at the high-water line (thresholds are recipe
+                            cells, no magic in C): the measured deaths now survive (n=4096 -> 4096 was 0;
+                            n=4200 -> 4200 was 104), growth and reclaim faces both witnessed; bump-only
+                            remains the measured default below water
+                            (tests/arena-melt-band.fk -> 63; tests/melt-on-cool-band.fk -> 31 three-way)))
 
   # ── Storage / filesystem ────────────────────────────────────────────
   (filesystem
@@ -61,8 +66,12 @@
                             carrier-swappable; host-resource-access admits any host driver/OS API)
     (entropy          RUNS  op 16 RND — /dev/urandom's shape (two draws differ, witnessed))
     (clock            RUNS  op 15 TIME — the host clock organ, real epoch (afferent scalar))
-    (gpu              RUNS-via-host ollama/Metal driven through the driver organ (100% GPU confirmed);
-                            native GPU emitters (metal.ts) are a lane, NAMED for the model fast-path)
+    (gpu              RUNS  the native emitter lane: jte-matvec-msl (jit-tensor-emit.fk) emits the Metal
+                            matvec from the same tensor cells as the C path, MSL byte-stable three-way
+                            (tests/metal-emit-band.fk -> 7); LIVE on M4 Max: bit-exact value parity on
+                            every output row vs the CPU fp32 right-fold, 13.2x kernel-window at 4096^2
+                            (scripts/metal_matvec_audit.sh); ollama/Metal still ride the driver organ;
+                            kernel-resident carrier + bf16/half lanes named open)
     (audio-video-hmi  RUNS-via-host mic/speaker/camera via the OS API; n4 TTS (say) + STT (whisper) witnessed))
 
   # ── Networking ──────────────────────────────────────────────────────
@@ -94,12 +103,21 @@
     (permissions      RUNS  the trust matrix is cells (axiom-4); sovereign-boundary-protocol.fk answers
                             allow/stop/witness/re-enter)
     (loadable-modules RUNS  the JIT / emit-compile-exec lane: a recipe -> .so (jit.go) or -> clang binary
-                            (fourth-kernel-emit) -> dlopen/exec; install-as-named-callable-leaf NAMED)
+                            (fourth-kernel-emit) -> dlopen/exec; AND install-as-named-callable-leaf: an
+                            install offer (name, artifact, expected-interface) binds a jitted artifact
+                            into the kernel's own table at runtime — the surface grows by offer, not
+                            recompile; collisions and interface mismatches refuse honestly; the node ack
+                            is the artifact's content NodeID (insmod composed from axiom-3+5, never
+                            ported) — protocol install-leaf.fk (tests/install-leaf-band.fk -> 9
+                            three-way), Go carrier witnessed live (jit_install); Rust/TS carriers named
+                            open in install-leaf.form)
     (dynamic-linking  RUNS-via-host dlopen/clang are allowed carriers; the recipe is the linked unit)
     (interrupts       RUNS  afferent-offer.fk — the SAME ao-wait engine as signals, readings as data:
                             ao-irq latches a device payload on an IRQ line; a masked or silent line
                             acknowledges nothing, and the two readings' silence is the SAME NodeID — one
-                            engine, two readings (tests/afferent-offer-band.fk -> 511 three-way))
+                            engine, two readings (tests/afferent-offer-band.fk -> 511 three-way); LIVE:
+                            the latched irq dispatches its payload through the same op-15 carrier the
+                            signals reading breathes (audit section 18))
     (boot-init        RUNS  boot.fk — kernel-self-composition's boot theorem walks: load a .fkb image (the
                             boot artifact), the booted body's first act is to offer a channel, one extension
                             offer MINTS a strictly larger image at a new path; re-booting the original still
@@ -121,11 +139,15 @@
              and now scheduler policy, signals, interrupts, gc/melt (measured), offers-in-flight
              concurrency, boot-from-axioms: every subsystem row, as fourth-kernel binaries or Form
              recipes with three-way proof bands")
-    (named  "the deepenings: a live select/poll wait-carrier for the afferent witness (op 15 TIME as
-             tick carrier); melt activation when a workload crosses the measured 4095-cell boundary;
-             native GPU emitters; install-as-named-callable-leaf — each a named stone on a proven path")
-    (verdict "every high-level Linux subsystem now RUNS (or RUNS-by-construction) as Form recipes with
-              three-way proof; what stays NAMED is deepening on proven paths — the walk continues"))
+    (named  "the deepenings that opened as the last four closed: Rust/TS install carriers (the protocol
+             already proven three-way); the melt's hot-swap-free face (cooled natives re-melting,
+             champion-challenger gated); m4e4's families lifting more bands onto the fourth arm
+             (str_*/node_*/floats/multi-param); kernel-resident Metal carrier + bf16/half lanes;
+             delivery priority as a policy cell over the afferent engine — each named where it lives")
+    (verdict "every high-level Linux subsystem RUNS (or RUNS-by-construction) as Form recipes with
+              three-way proof, and the four named deepenings of the first walk now RUN too — live
+              clock, surviving boundary, growing kernel table, native GPU lane; what stays NAMED is
+              the next ring out — the walk continues"))
 
   (invariant
     (not-reimplemented-but-composed every duty is a composition of the five axioms, not a port of Linux)
