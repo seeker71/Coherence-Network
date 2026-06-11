@@ -4988,6 +4988,86 @@ func kernelSourceLineCount(src string) int {
 	return strings.Count(src, "\n") + 1
 }
 
+type kernelCrashDiagnosis struct {
+	fatalKind       string
+	likelyRootCause string
+	avoidance       string
+}
+
+func diagnoseKernelPanic(message string) kernelCrashDiagnosis {
+	lower := strings.ToLower(message)
+	switch {
+	case strings.Contains(lower, "as_str") ||
+		strings.Contains(lower, "argstr") ||
+		strings.Contains(lower, "expected string") ||
+		strings.Contains(lower, "string"):
+		return kernelCrashDiagnosis{
+			fatalKind:       "type_contract_violation",
+			likelyRootCause: "a Form/native recipe passed a non-string value to a string-only primitive",
+			avoidance:       "guard with value_kind/value-kind, convert with value_str, or use null-safe JSON constructors before calling string primitives",
+		}
+	case strings.Contains(lower, "as_int") ||
+		strings.Contains(lower, "argint") ||
+		strings.Contains(lower, "expected int") ||
+		strings.Contains(lower, "wrong primitive kind"):
+		return kernelCrashDiagnosis{
+			fatalKind:       "type_contract_violation",
+			likelyRootCause: "a Form/native recipe passed a value with the wrong primitive kind to a typed host boundary",
+			avoidance:       "validate the value kind before the native call, or route through an explicit conversion recipe",
+		}
+	case strings.Contains(lower, "unbound"):
+		return kernelCrashDiagnosis{
+			fatalKind:       "name_resolution_error",
+			likelyRootCause: "a recipe or route manifest referenced a name that was not bound in the loaded source/prelude set",
+			avoidance:       "run the route/source check gate and include the defining prelude before serving the manifest",
+		}
+	case strings.Contains(lower, "arity") ||
+		strings.Contains(lower, "wants") ||
+		strings.Contains(lower, "argument"):
+		return kernelCrashDiagnosis{
+			fatalKind:       "arity_contract_violation",
+			likelyRootCause: "a closure or native was called with a different argument count than its declaration accepts",
+			avoidance:       "align the call site with the function signature or add an adapter recipe at the boundary",
+		}
+	case strings.Contains(lower, "bounds") ||
+		strings.Contains(lower, "range") ||
+		strings.Contains(lower, "index"):
+		return kernelCrashDiagnosis{
+			fatalKind:       "bounds_violation",
+			likelyRootCause: "a recipe indexed outside the observed collection/string bounds",
+			avoidance:       "check length/bounds before indexing or use a boundary-aware recipe that returns an explicit error value",
+		}
+	case strings.Contains(lower, "source-compile") ||
+		strings.Contains(lower, "parse error"):
+		return kernelCrashDiagnosis{
+			fatalKind:       "source_compile_failure",
+			likelyRootCause: "source text could not be lowered into a valid Form recipe before execution",
+			avoidance:       "run the source compiler/check command and repair the reported source coordinate before serving",
+		}
+	default:
+		return kernelCrashDiagnosis{
+			fatalKind:       "kernel_panic",
+			likelyRootCause: "the kernel crossed an unchecked host-language panic boundary",
+			avoidance:       "inspect the trace stack and source excerpt, then move the failing boundary into a checked fatal/error return",
+		}
+	}
+}
+
+func kernelFatalHTTPBody(message string, diagnosis kernelCrashDiagnosis, tracePath string) string {
+	trace := tracePath
+	if trace == "" {
+		trace = "trace unavailable"
+	}
+	return fmt.Sprintf(
+		"fatal[%s]: %s\nlikely_root_cause: %s\navoidance: %s\ntrace: %s\n",
+		diagnosis.fatalKind,
+		message,
+		diagnosis.likelyRootCause,
+		diagnosis.avoidance,
+		trace,
+	)
+}
+
 func kernelModeFromArgs(args []string) string {
 	if len(args) == 0 {
 		return "startup"
@@ -5013,6 +5093,10 @@ func kernelModeFromArgs(args []string) string {
 }
 
 func writeKernelCrashTrace(args []string, src string, recovered any) string {
+	return writeKernelCrashTraceWithContext(args, src, recovered, "", "")
+}
+
+func writeKernelCrashTraceWithContext(args []string, src string, recovered any, sourceLabel string, operation string) string {
 	dir := filepath.Join(".cache", "form-kernel-go")
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		dir = os.TempDir()
@@ -5025,12 +5109,20 @@ func writeKernelCrashTrace(args []string, src string, recovered any) string {
 	if tailStart < 0 {
 		tailStart = 0
 	}
+	message := fmt.Sprint(recovered)
+	diagnosis := diagnoseKernelPanic(message)
 	report := map[string]any{
 		"when_utc":          time.Now().UTC().Format(time.RFC3339Nano),
 		"pid":               os.Getpid(),
 		"mode":              kernelModeFromArgs(args),
 		"args":              args,
-		"panic":             fmt.Sprint(recovered),
+		"fatal_kind":        diagnosis.fatalKind,
+		"fatal_message":     message,
+		"panic":             message,
+		"likely_root_cause": diagnosis.likelyRootCause,
+		"avoidance":         diagnosis.avoidance,
+		"source_label":      sourceLabel,
+		"operation":         operation,
 		"source_bytes":      len(src),
 		"source_line_count": kernelSourceLineCount(src),
 		"source_head":       kernelSourceExcerpt(src, 2000),
