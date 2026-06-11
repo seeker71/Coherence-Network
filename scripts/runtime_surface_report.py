@@ -123,7 +123,9 @@ _KERNEL_ROUTER_FILES = [
 # (which keeps the lifecycle in CPython and calls the kernel as a guest subroutine).
 _KERNEL_ROUTER_MANIFEST = ROOT / "deploy" / "kernel-router" / "production-routes.fk"
 _BML_FRONT_DOOR_CATALOG = ROOT / "deploy" / "front-door" / "api.bml"
+_KERNEL_ROUTER_COMPOSE = ROOT / "deploy" / "kernel-router" / "docker-compose.kernel-router.yml"
 _DEFAULT_FRONT_DOOR_PROBE_PATH = "/api/attention/kernel-runtime"
+_DEFAULT_BML_READ_PROBE_PATH = "/api/ready"
 
 
 def kernel_first_capable_routes() -> list[str]:
@@ -153,12 +155,23 @@ def kernel_first_capable_routes() -> list[str]:
     binding shapes, so the scan reads bindings only. Returns [] if the manifest
     is absent (the report degrades to the SERVED count and says so).
     """
+    routes: list[str] = []
+    seen: set[str] = set()
+    for route_label in kernel_router_manifest_routes() + bml_front_door_routes():
+        if route_label not in seen:
+            routes.append(route_label)
+            seen.add(route_label)
+    return routes
+
+
+def kernel_router_manifest_routes() -> list[str]:
+    """Native route labels bound by the production Form router manifest."""
     if not _KERNEL_ROUTER_MANIFEST.is_file():
-        return bml_front_door_routes()
+        return []
     try:
         text = _KERNEL_ROUTER_MANIFEST.read_text(encoding="utf-8")
     except OSError:
-        return bml_front_door_routes()
+        return []
     idx = text.find("(let routes")
     block = _strip_form_line_comments(text[idx:] if idx != -1 else text)
     route_data = _kernel_route_data_patterns(_KERNEL_ROUTER_MANIFEST)
@@ -189,10 +202,6 @@ def kernel_first_capable_routes() -> list[str]:
         if route_label and route_label not in seen:
             routes.append(route_label)
             seen.add(route_label)
-    for route_label in bml_front_door_routes():
-        if route_label not in seen:
-            routes.append(route_label)
-            seen.add(route_label)
     return routes
 
 
@@ -215,6 +224,45 @@ def bml_front_door_routes() -> list[str]:
             routes.append(route_label)
             seen.add(route_label)
     return routes
+
+
+def bml_front_door_read_routes() -> list[str]:
+    """GET/read BML route labels intended for grouped public ingress."""
+    if not _BML_FRONT_DOOR_CATALOG.is_file():
+        return []
+    try:
+        text = _BML_FRONT_DOOR_CATALOG.read_text(encoding="utf-8")
+    except OSError:
+        return []
+    routes: list[str] = []
+    seen: set[str] = set()
+    route_row = re.compile(
+        r'route\("[^"]+",\s*"GET",\s*"(/api/[^"]+)",\s*\d+,\s*"[^"]+",\s*"[^"]*"'
+    )
+    for path in route_row.findall(_strip_form_line_comments(text)):
+        if path not in seen:
+            routes.append(path)
+            seen.add(path)
+    return routes
+
+
+def bml_read_ingress_declared() -> bool:
+    """Whether the deploy overlay declares the grouped BML GET/read ingress."""
+    if not _KERNEL_ROUTER_COMPOSE.is_file():
+        return False
+    try:
+        text = _KERNEL_ROUTER_COMPOSE.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    required = (
+        "coherence-api-bml-read-core-batch",
+        "coherence-api-bml-read-ideas-agent-batch",
+        "coherence-api-bml-read-relation-batch",
+        "coherence-api-bml-read-sensing-batch",
+        "coherence-api-bml-read-operations-batch",
+        "coherence-api-bml-read-observe-batch",
+    )
+    return all(name in text for name in required)
 
 
 def _strip_form_line_comments(text: str) -> str:
@@ -297,6 +345,75 @@ def probe_kernel_front_door() -> dict:
             "status": None,
             "x_form_router": "",
             "kernel_front_door": False,
+            "error": str(exc),
+        }
+
+
+def probe_bml_read_front_door() -> dict:
+    """Read a public BML read-route proof header.
+
+    The old kernel-runtime metrics route reports the production Form manifest's
+    native route count. The BML front-door is a sibling native entrance, so it
+    needs its own proof read: a stable GET/read route must return the BML handler
+    and native authority headers before the report counts the grouped BML read
+    lane as SERVED.
+    """
+    api = os.environ.get("COHERENCE_API_BASE", "https://api.coherencycoin.com").rstrip("/")
+    path = _DEFAULT_BML_READ_PROBE_PATH
+    url = f"{api}{path}"
+    req = urllib.request.Request(
+        url,
+        headers={
+            "Accept": "application/json",
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache",
+            "User-Agent": "runtime-surface-report/1.0",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=4) as resp:
+            body = resp.read(128).decode("utf-8", errors="replace")
+            router = resp.headers.get("X-Form-Router", "")
+            handler = resp.headers.get("X-Form-Handler", "")
+            authority = resp.headers.get("X-Form-Python-Authority", "")
+            return {
+                "url": url,
+                "reachable": True,
+                "status": resp.status,
+                "x_form_router": router,
+                "x_form_handler": handler,
+                "x_form_python_authority": authority,
+                "bml_read_front_door": (
+                    router == "native-kernel"
+                    and handler == "api_ready"
+                    and authority.lower() == "false"
+                ),
+                "body_preview": body,
+            }
+    except urllib.error.HTTPError as exc:
+        body = exc.read(128).decode("utf-8", errors="replace")
+        router = exc.headers.get("X-Form-Router", "")
+        handler = exc.headers.get("X-Form-Handler", "")
+        authority = exc.headers.get("X-Form-Python-Authority", "")
+        return {
+            "url": url,
+            "reachable": True,
+            "status": exc.code,
+            "x_form_router": router,
+            "x_form_handler": handler,
+            "x_form_python_authority": authority,
+            "bml_read_front_door": False,
+            "body_preview": body,
+        }
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        return {
+            "url": url,
+            "reachable": False,
+            "status": None,
+            "x_form_router": "",
+            "x_form_handler": "",
+            "x_form_python_authority": "",
+            "bml_read_front_door": False,
             "error": str(exc),
         }
 
@@ -411,14 +528,27 @@ def build_report() -> dict:
 
     capable = kernel_first_capable_routes()
     n_capable = len(capable)
+    manifest_capable = kernel_router_manifest_routes()
+    bml_read_routes = bml_front_door_read_routes()
     front_door = probe_kernel_front_door()
     reported_native_route_count = front_door.get("reported_native_route_count")
+    bml_front_door = (
+        probe_bml_read_front_door()
+        if front_door.get("kernel_front_door") and bml_read_ingress_declared()
+        else {
+            "reachable": False,
+            "bml_read_front_door": False,
+            "reason": "kernel front door unread or grouped BML read ingress undeclared",
+        }
+    )
     if front_door.get("kernel_front_door"):
-        n_front_door_served = (
+        manifest_served = (
             reported_native_route_count
             if isinstance(reported_native_route_count, int)
-            else n_capable
+            else len(manifest_capable)
         )
+        bml_read_served = len(bml_read_routes) if bml_front_door.get("bml_read_front_door") else 0
+        n_front_door_served = min(n_capable, manifest_served + bml_read_served)
     else:
         n_front_door_served = 0
 
@@ -441,6 +571,10 @@ def build_report() -> dict:
         "kernel_first_capable_routes": n_capable,
         "kernel_first_capable_route_names": capable,
         "kernel_first_deployed_native_route_count": reported_native_route_count,
+        "kernel_first_manifest_capable_routes": len(manifest_capable),
+        "bml_front_door_read_capable_routes": len(bml_read_routes),
+        "bml_front_door_read_ingress_declared": bml_read_ingress_declared(),
+        "bml_front_door_probe": bml_front_door,
         "kernel_first_routes": n_front_door_served,  # back-compat alias of SERVED
         "front_door_probe": front_door,
         "served_route_names": served_routes,
@@ -507,6 +641,23 @@ def render_human(r: dict) -> str:
                     url=probe.get("url"),
                     error=probe.get("error", "unreachable"),
                 )
+            )
+    bml_probe = r.get("bml_front_door_probe") or {}
+    bml_read_count = r.get("bml_front_door_read_capable_routes", 0)
+    if r.get("bml_front_door_read_ingress_declared"):
+        if bml_probe.get("bml_read_front_door"):
+            w(
+                "  BML read-front-door probe: {status} {handler}; "
+                "{count} grouped GET/read routes are publicly native-capable.".format(
+                    status=bml_probe.get("status"),
+                    handler=bml_probe.get("x_form_handler"),
+                    count=bml_read_count,
+                )
+            )
+        else:
+            w(
+                "  BML read-front-door ingress is declared for "
+                f"{bml_read_count} GET/read routes; public probe is not live yet."
             )
     cap = r.get("kernel_first_capable_routes", 0)
     if cap:

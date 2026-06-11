@@ -159,3 +159,47 @@ def test_real_manifest_native_routes_are_served_zero_and_include_ideas_structure
     assert len(capable) == len(set(capable)), f"duplicates: {capable}"
     # back-compat alias stays pinned to SERVED (0 at the front door)
     assert report["kernel_first_routes"] == report["kernel_first_served_routes"]
+
+
+def test_bml_read_front_door_probe_counts_grouped_read_batch(monkeypatch):
+    """The BML read front door is a sibling native entrance, so the served
+    count includes the grouped GET/read batch once its public proof route is
+    live instead of staying pinned to the production-manifest metric."""
+    mod = _load_report()
+    monkeypatch.setattr(
+        mod,
+        "probe_kernel_front_door",
+        lambda: {
+            "url": "https://api.example/api/attention/kernel-runtime",
+            "reachable": True,
+            "status": 200,
+            "x_form_router": "native-kernel",
+            "kernel_front_door": True,
+            "reported_native_route_count": 45,
+            "body_preview": '{"native_route_count":45}',
+        },
+    )
+    monkeypatch.setattr(
+        mod,
+        "probe_bml_read_front_door",
+        lambda: {
+            "url": "https://api.example/api/ready",
+            "reachable": True,
+            "status": 200,
+            "x_form_router": "native-kernel",
+            "x_form_handler": "api_ready",
+            "x_form_python_authority": "false",
+            "bml_read_front_door": True,
+            "body_preview": "{}",
+        },
+    )
+
+    report = mod.build_report()
+
+    assert report["bml_front_door_read_ingress_declared"] is True
+    assert report["bml_front_door_read_capable_routes"] >= 50
+    assert report["kernel_first_served_routes"] == min(
+        report["kernel_first_capable_routes"],
+        45 + report["bml_front_door_read_capable_routes"],
+    )
+    assert report["kernel_first_served_routes"] > 45
