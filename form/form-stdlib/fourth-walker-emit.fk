@@ -395,6 +395,147 @@
 
 (defn fkc-emit-jit (fns) (fkc-emit-jit2 fns (fkc-flatten-many fns)))
 
+; ── melt-hot-swap — the gas-ice cycle closed BOTH ways (the SELF-JIT's cool face) ──
+; The block above ships the rise: heat per function, dispatch flips native past
+; the hot line. This face is the fall. Every fkc-decay-quantum dispatches is one
+; EPOCH and every heat divides by fkc-decay-divisor (halving — the simplest
+; honest decay: recent heat dominates, old heat fades geometrically). A
+; crystallized native MELTS back to the walking path when its decayed heat
+; falls below the melt line (fkc-melt-line — a percentage of the hot line, the
+; same cell algebra as fkc-melt-water-pct: no magic in the C). And
+; re-crystallization is champion-challenger gated: after a melt the native is a
+; CHALLENGER again — the walking path is the champion (always correct; it IS
+; the semantics) — and ice is re-EARNED by winning fkc-cc-earn-epochs
+; CONSECUTIVE epochs, an epoch won when measured heat stays above the hot line.
+; fkc-cc-trial names each epoch as a champion-challenger trial; fkc-earn-step /
+; fkc-re-earned are cc-promote? specialized to that history (champion always 1,
+; margin 0 => every trial in the window won => consecutive wins) — the tie is
+; proven against champion-challenger.fk itself in tests/melt-hot-swap-band.fk.
+; One honesty gate joins the cycle: only functions whose cell trees stay in the
+; pure-compute family (tags 1-7, 12) — TRANSITIVELY, through every callee —
+; are lowerable (fkc-can-list, greatest fixpoint so mutual pure recursion
+; stays native-eligible); a function touching ports/organs walks forever
+; (fk_can[] in the emitted C), so a melt can never strand a wrong native.
+
+(defn fkc-decay-quantum ()  256)  ; dispatches per epoch — the cooling clock
+(defn fkc-decay-divisor ()  2)    ; heat halves each epoch
+(defn fkc-melt-line-pct ()  50)   ; ice melts when heat < hot * pct / 100
+(defn fkc-cc-earn-epochs () 2)    ; consecutive winning epochs to re-earn ice
+
+(defn fkc-heat-decay (h)    (div h (fkc-decay-divisor)))
+(defn fkc-melt-line (hot)   (div (mul hot (fkc-melt-line-pct)) 100))
+(defn fkc-melts-now (h hot) (if (gt (fkc-melt-line hot) h) 1 0))
+(defn fkc-cc-trial (h hot)  (list 1 (if (gt h hot) 1 0)))
+(defn fkc-earn-step (earn won) (if (eq won 1) (add earn 1) 0))
+(defn fkc-re-earned (earn)  (if (ge earn (fkc-cc-earn-epochs)) 1 0))
+
+; transitive lowerability — a function may crystallize only if its own cells
+; AND every callee's are pure-compute. Greatest fixpoint: start all-1, apply
+; len+1 times so impurity propagates through any call chain.
+(defn fkc-lower-ok (n can)
+    (if (eq (fk-tag n) 1) 1
+    (if (eq (fk-tag n) 2) 1
+    (if (eq (fk-tag n) 7) (if (eq (nth can 0) 1) (fkc-lower-ok (fk-body n) can) 0)
+    (if (eq (fk-tag n) 12) (if (eq (nth can (ms-value (ms-child (fk-body n) 0))) 1)
+                               (fkc-lower-ok (ms-child (fk-body n) 1) can) 0)
+    (if (eq (fk-tag n) 6) (if (eq (fkc-lower-ok (ms-child (fk-body n) 0) can) 1)
+                              (fkc-low-if2 n can) 0)
+    (if (eq (fk-tag n) 3) (fkc-low-bin n can)
+    (if (eq (fk-tag n) 4) (fkc-low-bin n can)
+    (if (eq (fk-tag n) 5) (fkc-low-bin n can)
+        0)))))))))
+(defn fkc-low-bin (n can)
+    (if (eq (fkc-lower-ok (ms-child (fk-body n) 0) can) 1)
+        (fkc-lower-ok (ms-child (fk-body n) 1) can) 0))
+(defn fkc-low-if2 (n can)
+    (if (eq (fkc-lower-ok (ms-child (ms-child (fk-body n) 1) 0) can) 1)
+        (fkc-lower-ok (ms-child (ms-child (fk-body n) 1) 1) can) 0))
+(defn fkc-can-map (rest can)
+    (if (eq (len rest) 0) (empty)
+        (cons (fkc-lower-ok (head rest) can) (fkc-can-map (tail rest) can))))
+(defn fkc-can-iter (fns can m)
+    (if (eq m 0) can (fkc-can-iter fns (fkc-can-map fns can) (sub m 1))))
+(defn fkc-ones (m) (if (eq m 0) (empty) (cons 1 (fkc-ones (sub m 1)))))
+(defn fkc-can-list (fns) (fkc-can-iter fns (fkc-ones (len fns)) (add (len fns) 1)))
+
+; the C fragments the cycle is emitted from — each splices its policy cell, so
+; the band can assert the binary's text IS the recipes' algebra
+(defn fkc-jm-decay-text ()
+    (str_concat "fk_heat[f] = fk_heat[f] / " (str_concat (int_to_str (fkc-decay-divisor)) "; ")))
+(defn fkc-jm-melt-cond-text ()
+    (str_concat "fk_heat[f] < fk_hot * " (str_concat (int_to_str (fkc-melt-line-pct)) " / 100")))
+(defn fkc-jm-earn-cond-text ()
+    (str_concat "fk_earn[f] >= " (int_to_str (fkc-cc-earn-epochs))))
+(defn fkc-jm-tick-cond-text ()
+    (str_concat "fk_tick >= " (int_to_str (fkc-decay-quantum))))
+; boundary-crossing readout on stderr (the satsang door): jf = crystallize, jm = melt
+(defn fkc-jm-mark-text (c)
+    (str_concat "fk_mc(106); fk_mc("
+    (str_concat (int_to_str c)
+                "); fk_mc(32); fk_mw(f); fk_mc(32); fk_mw(fk_heat[f]); fk_mc(10); ")))
+
+(defn fkc-jitmelt-decl-text ()
+    "static long long fk_heat[64]; static long long fk_ice[64]; static long long fk_earn[64]; static long long fk_can[64]; static long long fk_tick; static long long fk_hot; static long long fk_njit; static long long fk_nmelt; static long long fk_nfreeze; static long long (*fk_nat_tab[64])(long long); ")
+
+; the epoch: ice states walk 0 gas -> 1 ice -> 2 melted-gas; a melted native
+; re-earns ice only through the consecutive-win gate; then every heat decays
+(defn fkc-epoch-text (nf)
+    (str_concat "static void fk_epoch(void) { long long f = 0; while (f < "
+    (str_concat (int_to_str nf)
+    (str_concat ") { if (fk_ice[f] == 2) { if (fk_heat[f] > fk_hot) { fk_earn[f] = fk_earn[f] + 1; } else { fk_earn[f] = 0; } if ("
+    (str_concat (fkc-jm-earn-cond-text)
+    (str_concat ") { fk_ice[f] = 1; fk_nfreeze = fk_nfreeze + 1; "
+    (str_concat (fkc-jm-mark-text 102)
+    (str_concat "} } if (fk_ice[f] == 1) { if ("
+    (str_concat (fkc-jm-melt-cond-text)
+    (str_concat ") { fk_ice[f] = 2; fk_earn[f] = 0; fk_nmelt = fk_nmelt + 1; "
+    (str_concat (fkc-jm-mark-text 109)
+    (str_concat "} } "
+    (str_concat (fkc-jm-decay-text) "f = f + 1; } } ")))))))))))))
+
+; the dispatch door: tick the cooling clock, count the heat, and first
+; crystallization (gas that was never ice) flips on raw heat — the shipped rise
+(defn fkc-jd-text ()
+    (str_concat "static void fk_jd(long long f) { fk_tick = fk_tick + 1; if ("
+    (str_concat (fkc-jm-tick-cond-text)
+    (str_concat ") { fk_tick = 0; fk_epoch(); } fk_heat[f] = fk_heat[f] + 1; if (fk_ice[f] == 0) { if (fk_can[f] == 1) { if (fk_heat[f] > fk_hot) { fk_ice[f] = 1; fk_nfreeze = fk_nfreeze + 1; "
+    (str_concat (fkc-jm-mark-text 102) "} } } } ")))))
+
+(defn fkc-walk-jitmelt-text ()
+    (str_concat "static long long fk_walk(long long i, long long a) { long long t = fk_node[i][0]; fk_arms[t] = fk_arms[t] + 1; if (t == 1) { return fk_node[i][1] << 1; } if (t == 2) { return a; } if (t == 3) { return fk_walk(fk_node[i][1], a) + fk_walk(fk_node[i][2], a); } if (t == 4) { return fk_walk(fk_node[i][1], a) - fk_walk(fk_node[i][2], a); } if (t == 5) { if (fk_walk(fk_node[i][1], a) <= fk_walk(fk_node[i][2], a)) { return 2; } return 0; } if (t == 6) { if (fk_walk(fk_node[i][1], a) == 0) { return fk_walk(fk_node[i][3], a); } return fk_walk(fk_node[i][2], a); } if (t == 7) { long long v7 = fk_walk(fk_node[i][1], a); fk_jd(0); if (fk_ice[0] == 1) { fk_njit = fk_njit + 1; return fk_nat_tab[0](v7); } return fk_walk(fk_fn[0], v7); } if (t == 12) { long long f12 = fk_node[i][1]; long long v12 = fk_walk(fk_node[i][2], a); fk_jd(f12); if (fk_ice[f12] == 1) { fk_njit = fk_njit + 1; return fk_nat_tab[f12](v12); } return fk_walk(fk_fn[f12], v12); }"
+                (fkc-arms-many-text)))
+
+(defn fkc-can-fills (can k)
+    (if (eq (len can) 0) " "
+        (str_concat "fk_can["
+        (str_concat (int_to_str k)
+        (str_concat "] = "
+        (str_concat (int_to_str (head can))
+        (str_concat "; " (fkc-can-fills (tail can) (add k 1)))))))))
+
+; probe: value, njit, nmelt, nfreeze, then (heat, ice) per function — the
+; thermodynamic state is the readout, born observable like every sibling
+(defn fkc-main-jitmelt-text (fns)
+    (str_concat "extern int atoi(const char *); int main(int argc, char **argv) { long long a = 0; if (argc > 1) { a = atoi(argv[1]) << 1; } fk_hot = 1000000000000; if (argc > 2) { fk_hot = atoi(argv[2]); } "
+    (str_concat (fkc-jit-fills 0 (len fns))
+    (str_concat (fkc-can-fills (fkc-can-list fns) 0)
+    (str_concat "fk_pv(fk_walk(fk_fn[0], a)); fk_pr(fk_njit); fk_pr(fk_nmelt); fk_pr(fk_nfreeze); long long f = 0; while (f < "
+    (str_concat (int_to_str (len fns))
+                ") { fk_pr(fk_heat[f]); fk_pr(fk_ice[f]); f = f + 1; } return 0; }"))))))
+
+(defn fkc-emit-jitmelt2 (fns flat)
+    (str_concat (fkc-pr-text)
+    (str_concat (fkc-decl-many-text (nth flat 0) (nth flat 1))
+    (str_concat (fkc-jitmelt-decl-text)
+    (str_concat (fkc-jit-protos 0 (len fns))
+    (str_concat (fkc-jit-bodies fns 0)
+    (str_concat (fkc-epoch-text (len fns))
+    (str_concat (fkc-jd-text)
+    (str_concat (fkc-walk-jitmelt-text)
+                (fkc-main-jitmelt-text fns))))))))))
+
+(defn fkc-emit-jitmelt (fns) (fkc-emit-jitmelt2 fns (fkc-flatten-many fns)))
+
 ; band helper — does any row carry the given tag? (organ ops in the table)
 (defn fkd-has-tag (rows t)
     (if (eq (len rows) 0) 0

@@ -1,0 +1,96 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "form-os3/melt-hot-swap",
+  "commit_scope": "Close the SELF-JIT's gas-ice cycle BOTH ways (round 3 of the Form-OS arc; round 2 = melt-on-cool's arena face, PR #2846). The shipped half let heat only rise: dispatch flips to native past the hot line. This face makes heat FALL and ice MELT: every fkc-decay-quantum (256) dispatches is one epoch and every heat halves (fkc-heat-decay over fkc-decay-divisor); a crystallized native melts back to the walking path when its decayed heat falls below the melt line (fkc-melt-line = hot * fkc-melt-line-pct / 100, the same cell algebra as fkc-melt-water-pct); and re-crystallization is champion-challenger gated — after a melt the native is a challenger again and re-earns ice only by winning fkc-cc-earn-epochs (2) CONSECUTIVE epochs above the hot line. fkc-earn-step/fkc-re-earned ARE cc-promote? specialized to that history (champion = walking path, always correct; margin 0 => every trial won => consecutive wins), proven against champion-challenger.fk itself in the band. One honesty gate joins: lowerability is TRANSITIVE (fkc-can-list, greatest fixpoint over the function table) so a pure function calling a port/organ function never crystallizes (fk_can[] in the emitted C) and a melt can never strand a wrong native. All policy is recipe cells; the emitted C fragments (fkc-jm-*-text) splice those cells, so the band asserts the binary's text IS the recipes' algebra.",
+  "files_owned": [
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/tests/melt-hot-swap-band.fk",
+    "scripts/fourth_kernel_audit.sh",
+    "docs/system_audit/commit_evidence_2026-06-11_melt_hot_swap.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/champion-challenger.fk form-stdlib/tests/melt-hot-swap-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/arena-melt.fk form-stdlib/tests/melt-on-cool-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/tests/fourth-os-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/tests/fourth-walker-emit-band.fk",
+      "bash scripts/fourth_kernel_audit.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-11_melt_hot_swap.json",
+      "python3 scripts/generate_repo_indexes.py"
+    ],
+    "notes": "melt-hot-swap-band verdict 31 with 0 divergent across Go/Rust/TS (cells cohere; melt boundary exact at 24/25 with hot=50; champion-challenger tie proven against cc-promote? itself; transitive lowerability incl. mutual pure recursion staying eligible and impurity poisoning a call edge; emission carries the spliced cell algebra). Neighbor bands hold unchanged: melt-on-cool-band 31, fourth-os-band 15, fourth-walker-emit-band 15, all three-way. Audit section 21 measured rows (arm64 Darwin, clang -O2, one binary, deterministic dispatch counts): hotfn crystallizes at heat 51 (hot line 50, jf 2 51); three idle epochs halve 88 -> 44 -> 22 and it MELTS at heat 22 (melt line 25, jm 2 22); scenario 0's single post-melt call WALKS — final heat 31 = 11 + 20 walked dispatches (a native dispatch would read 12), final ice state 2 (melted gas), value 8610 = walk-only 8610; scenario 1 re-heats and the native RE-EARNS ice after 2 consecutive winning epochs (jf 2 293), final ice state 1, freezes=2 melts=1 njit=62, value 16800 = walk-only 16800 — parity held at every phase, the crossing order asserted as crystallize -> melt -> re-earn.",
+    "environment": "arm64 Darwin, clang -O2, Go/Rust/TS kernels via form/validate.sh"
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Remote CI three-way validation pending until the branch is pushed and the PR opens."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Recipes, band, audit, and evidence only; no route or service behavior changes. No deploy required beyond normal main rollout."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local three-way proof and live-binary cycle witness are green; push, PR, and the coordinator's retune of fourth-kernel.form's SELF-JIT block (the hot-swap-free face now closed both ways at the policy level; true runtime codegen for foreign tables remains the named open) follow.",
+    "remaining": [
+      "coordinator retune of fourth-kernel.form SELF-JIT block after all five round-3 siblings merge"
+    ]
+  },
+  "idea_ids": [
+    "fourth-kernel"
+  ],
+  "spec_ids": [
+    "kernel-native-api-readiness",
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "melt-hot-swap-20260611"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "contributor:seeker71",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "form-os-map"
+      ]
+    },
+    {
+      "contributor_id": "contributor:claude-fable-5",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "proof"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-fable-5"
+  },
+  "change_intent": "runtime_feature",
+  "change_files": [
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/tests/melt-hot-swap-band.fk",
+    "scripts/fourth_kernel_audit.sh"
+  ],
+  "evidence_refs": [
+    "Three-way band proof: melt-hot-swap-band verdict 31, 0 divergent (Go/Rust/TS) — policy cells cohere (decay halves and reaches zero, melt line at hot=50 is 25, cooling clock and earn window positive); melt boundary exact (heat 24 melts, 25 holds, fresh-frozen 51 never melts at its own crossing); champion-challenger tie proven against cc-promote? itself (a window of won epoch-trials promotes by BOTH doors, one cold epoch breaks both — the consecutive gate IS margin-0 promotion); lowerability transitive (pure self-recursion lowers, port/organ never, impurity poisons a call edge, mutual pure recursion even/odd stays eligible); emission carries the spliced cell algebra (decay, melt line, earn gate, cooling clock, dispatch door, honesty gate).",
+    "Live emitted-sibling cycle (fkc-emit-jitmelt via clang, scripts/fourth_kernel_audit.sh section 21, deterministic dispatch counts): crystallize at heat 51 (jf 2 51, hot line 50); three idle epochs halve 88 -> 44 -> 22 and the native MELTS at heat 22 (jm 2 22, melt line 25); the single post-melt call WALKS — final heat 31 = 11 + 20 walked dispatches where a native dispatch would read 12, final ice state 2 (melted gas); re-heat re-EARNS ice after 2 consecutive winning epochs (jf 2 293), final ice state 1, freezes=2 melts=1 njit=62.",
+    "Parity held at every phase: scenario 0 value 8610 == walk-only 8610; scenario 1 value 16800 == walk-only 16800; crossing order asserted crystallize -> melt -> re-earn (fmf).",
+    "Neighbor bands unchanged: melt-on-cool-band 31, fourth-os-band 15, fourth-walker-emit-band 15, all three-way 0 divergent."
+  ],
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No route behavior changes. The emitted sibling family gains a new emit lane (fkc-emit-jitmelt) where the SELF-JIT cycle runs both directions: heat decays per epoch, a cooled crystallized native melts back to the walking path, and re-crystallization is champion-challenger gated by consecutive winning epochs. The shipped fkc-emit-jit lane is untouched (its rise-only flip and the fib28 cold/hot witness stay byte-identical); existing emission-pinning bands hold unchanged.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "melt-hot-swap-band proves the policy cells, the melt boundary, the cc-promote? tie, transitive lowerability, and the spliced emission, three-way at 31 with 0 divergent.",
+      "Audit lane end-to-end: section 21 drives one binary through crystallize -> melt -> re-earn with parity at every phase, while every earlier audit section (parity rows, quine, CALL, grammar binaries, universal, JIT flip, net 200, driver, m4e3, afferent witness, n7 band ratchet, melt-on-cool) stays green."
+    ],
+    "summary": "validate.sh new band verdict 31 three-way 0 divergent; live emitted-binary gas-ice cycle measured both ways: jf 2 51 -> jm 2 22 -> jf 2 293, parity 8610/16800 held, ice re-earned never declared."
+  }
+}
