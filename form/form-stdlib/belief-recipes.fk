@@ -1,0 +1,97 @@
+; belief-recipes.fk — the frequency bank: each philosophy and belief system's core recipe
+; for the moment shit happens (failure, pain, the recognized 'bad' event), runnable as a
+; configuration of ONE metabolic engine. The satsang at Llena's (Ubud, 2026-05-07) drew
+; its topic "from major physiology, science, and religions in their most core words: what
+; do we do when shit happens" — the operator's FREQUENCY dial (when-the-pressure-comes:
+; "which belief system carries this") is this bank. Traditions enter as DATA, the engine
+; is one — the same discipline grammars/living-equation.fk holds (belief systems diverge
+; on the lever; the encoding is each lineage's documented core move, never an efficacy
+; claim; selection stays sovereign — the circle's own words: not a checklist).
+;
+; The same arrival (edges, x, y) — the body's current shape, the probe, what the world
+; delivered — meets eight attested teachings, each with a falsifiable signature:
+;
+;   br-witness       Vedanta drashta / the circle's observer — watch, never grip:
+;                    the observer gate held exactly AT the pressure (no movement)
+;   br-alchemy       hermetic transmutation / the circle's gift — receive it whole:
+;                    full-focus unwrap, the residual completely metabolized
+;   br-second-arrow  Buddhism, Sallatha Sutta — the first dart is pain, the second
+;                    is the grip on the pain: meet it ONCE fully; re-meeting the
+;                    same event finds nothing left to strike (idempotent)
+;   br-dichotomy     Stoicism, Epictetus Enchiridion 1 — move only what is yours:
+;                    the frequency mask IS the dichotomy of control; the unownable
+;                    residual remains, named and accepted, never erased
+;   br-surrender     "not my will" (Luke 22:42) / wu-wei — release self-direction
+;                    into the field's flow: the state diffuses toward the whole's
+;                    mode; nothing is lost (mass conserved), deviation softens
+;   br-cleanse       hoʻoponopono — I'm sorry, please forgive me, thank you, I love
+;                    you: entanglement decayed toward zero, the response scaled down
+;   br-causal        science / physiology's root-cause repair — trace the credit,
+;                    correct THE responsible edge surgically, leave the rest alone
+;   br-maybe         the Taoist farmer (Huainanzi) — good news, bad news, who knows:
+;                    hold the verdict; accumulate arrivals; update once on the mean
+;                    (two opposite arrivals cancel EXACTLY — the lurch never happens)
+;
+; Witness/alchemy/second-arrow/cleanse are thin doors onto mtb- primitives — that
+; thinness IS the unification: traditions overlap on the same engine at different
+; dials, and the dials are data. Selection across the bank is already body tissue:
+; when-the-pressure-comes.form's choose_strategy (resonance + fit) picks the row;
+; choice-receipt-learning.fk learns which row served THIS cell. Proven by:
+; tests/belief-recipes-band.fk (three-way at validate.sh), composing
+; geometric-learning.fk and metabolic-learning.fk.
+(do
+    ; --- vector ground this bank adds ---
+    (defn br-vadd (a b)
+        (if (eq (len a) 0) (empty)
+            (cons (add (head a) (head b)) (br-vadd (tail a) (tail b)))))
+    (defn br-vscale (xs c)
+        (if (eq (len xs) 0) (empty)
+            (cons (mul c (head xs)) (br-vscale (tail xs) c))))
+
+    ; --- witness: the observer gate held exactly at the pressure — watch, no grip ---
+    (defn br-witness (edges x y)
+        (mtb-step edges x y 1.0 1.0 (mtb-ones (len edges)) (mtb-pressure edges x y)))
+
+    ; --- alchemy: receive the event whole — full-focus unwrap of the residual ---
+    (defn br-alchemy (edges x y) (mtb-learn edges x y 1.0))
+
+    ; --- second arrow: one full meeting; the band proves re-meeting strikes nothing ---
+    (defn br-second-arrow (edges x y) (mtb-learn edges x y 1.0))
+
+    ; --- dichotomy of control: update only the ownable subspace (cmask = 1.0/0.0) ---
+    (defn br-dichotomy (edges x y focus cmask)
+        (mtb-step edges x y focus 1.0 cmask -1.0))
+
+    ; --- surrender: the state released into the field's flow toward the whole ---
+    (defn br-surrender (field-edges state t) (gl-diffuse field-edges state t))
+
+    ; --- cleanse: entanglement decayed — the hoʻoponopono scaling toward zero ---
+    (defn br-cleanse (edges lam) (mtb-release edges lam))
+
+    ; --- causal repair: find THE responsible edge, correct it, touch nothing else ---
+    (defn br-argmax-walk (xs best bi i)
+        (if (eq (len xs) 0) bi
+            (if (gt (head xs) best)
+                (br-argmax-walk (tail xs) (head xs) i (add i 1))
+                (br-argmax-walk (tail xs) best bi (add i 1)))))
+    (defn br-argmax (xs) (br-argmax-walk (tail xs) (head xs) 0 1))
+    (defn br-onehot-mask (n k)
+        (if (eq n 0) (empty)
+            (cons (if (eq k 0) 1.0 0.0) (br-onehot-mask (sub n 1) (sub k 1)))))
+    (defn br-causal (edges x y focus)
+        (mtb-step edges x y focus 1.0
+            (br-onehot-mask (len edges)
+                (br-argmax (mtb-credit edges x (mtb-residual edges x y))))
+            -1.0))
+
+    ; --- maybe: hold the verdict across arrivals; update once on the mean gradient ---
+    (defn br-gsum (edges xs ys)
+        (if (eq (len xs) 0) (gl-zeros (len edges))
+            (br-vadd (mtb-credit edges (head xs)
+                          (mtb-residual edges (head xs) (head ys)))
+                     (br-gsum edges (tail xs) (tail ys)))))
+    (defn br-maybe (edges xs ys focus)
+        (mtb-unwrap edges
+            (br-vscale (br-gsum edges xs ys) (div 1.0 (gl-flen xs)))
+            (mtb-ones (len edges)) focus 1.0))
+    0)

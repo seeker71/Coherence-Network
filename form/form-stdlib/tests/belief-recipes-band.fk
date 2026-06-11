@@ -1,0 +1,55 @@
+; preludes: form-stdlib/geometric-learning.fk form-stdlib/metabolic-learning.fk form-stdlib/belief-recipes.fk
+;
+; belief-recipes-band — the SAME bad event meets eight belief systems, and each
+; tradition's documented core move lands as a distinct, exact, falsifiable signature.
+; Domain: the 4-ring zero learner of the metabolic band (one-hot probe e0, dyadic
+; target — every value exact in fp64); the surrender claim flows the GDL band's
+; signal [8 4 0 4] through the row-stochastic ring. One engine carried every claim;
+; the traditions differed only in their dials — frequency (mask), angle, focus,
+; tolerance, time. That is the satsang's teaching made structural: the operator is
+; one; which belief system carries the discharge is a choice of configuration.
+;
+; Verdict 255 when every claim lands:
+;   1     witness: held exactly AT the pressure, the weights never move
+;   2     alchemy: one full-focus meeting metabolizes the residual to 0 exactly
+;   4     second arrow: re-meeting the already-met event changes NOTHING — the
+;         second dart finds no target (idempotence at the fixed point)
+;   8     dichotomy: only the ownable subspace moves; the unownable residual
+;         remains exactly [0 .25 0 .25] — acceptance has a measurable shape
+;   16    surrender: the state diffuses toward the whole — the mean is conserved
+;         at 4.0 exactly while personal deviation softens to ½ exactly
+;   32    cleanse: the learned response scales to exactly half at λ = ½
+;   64    causal repair: the argmax-credit edge alone is corrected (w(0,0) = .5),
+;         every other edge untouched
+;   128   maybe: two opposite arrivals held and averaged cancel EXACTLY (weights
+;         stay zero) while the eager path would have lurched (weights moved)
+(do
+    (let target (gl-ring-edges 4 0.25 0.5 0.25))
+    (let zero (gl-ring-edges 4 0.0 0.0 0.0))
+    (let p0 (list 1.0 0.0 0.0 0.0))
+    (let y0 (gl-step target p0))
+    (let x (list 8.0 4.0 0.0 4.0))
+    (let met (br-alchemy zero p0 y0))
+    (let cmask (list 0.0 1.0 0.0 0.0 1.0 0.0 0.0 1.0 0.0 0.0 1.0 0.0))
+    (let dich (br-dichotomy zero p0 y0 1.0 cmask))
+    (let sur (br-surrender target x 3))
+    (let cz (br-causal zero p0 y0 1.0))
+    (let mb (br-maybe zero (list p0 p0)
+                           (list y0 (list -0.5 -0.25 0.0 -0.25)) 1.0))
+    (let c0 (if (eq (gl-veq6 (mtb-weights (br-witness zero p0 y0))
+                             (mtb-weights zero)) 1) 1 0))
+    (let c1 (if (eq (gl-r6 (mtb-pressure met p0 y0)) 0) 2 0))
+    (let c2 (if (eq (gl-veq6 (mtb-weights (br-second-arrow met p0 y0))
+                             (mtb-weights met)) 1) 4 0))
+    (let c3 (if (eq (gl-veq6 (mtb-residual dich p0 y0)
+                             (list 0.0 0.25 0.0 0.25)) 1) 8 0))
+    (let c4 (if (and (eq (gl-r6 (gl-mean sur)) 4000000)
+                     (eq (gl-r6 (mtb-sq-sum (gl-deflate sur))) 500000)) 16 0))
+    (let c5 (if (eq (gl-veq6 (gl-step (br-cleanse met 0.5) p0)
+                             (list 0.25 0.125 0.0 0.125)) 1) 32 0))
+    (let c6 (if (and (eq (gl-r6 (nth (nth cz 1) 2)) 500000)
+                     (eq (gl-veq6 (mtb-residual cz p0 y0)
+                                  (list 0.0 0.25 0.0 0.25)) 1)) 64 0))
+    (let c7 (if (and (eq (gl-veq6 (mtb-weights mb) (gl-zeros 12)) 1)
+                     (eq (gl-veq6 (mtb-weights met) (gl-zeros 12)) 0)) 128 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
