@@ -7,6 +7,7 @@
 ; a BML `==` expression, and a valid candidate matrix for the direct route.
 
 (defn route_runtime_health () "ok")
+(defn api_agent_task_log (request) "ok")
 
 section [form.route] {
     def route_runtime_eq_probe(request) = if kh-request-method(request) == "GET" then "eq" else "neq";
@@ -17,6 +18,7 @@ section [form.route] {
         member route: KernelHTTPRoute;
     }
     class RuntimeHealthRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("runtime-health", "GET", "/api/runtime/health", 9, "route_runtime_health", "Accept", 0);
+    class AgentTaskLogRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> = route("agent-task-log", "GET", "/api/agent/tasks/{task_id}/log", 89, "api_agent_task_log", "Accept", 35);
     class RuntimeDataRoute : RouteCell<KernelHTTPRequest, KernelHTTPResponse> {
         def handle(request) {
             route_runtime_health();
