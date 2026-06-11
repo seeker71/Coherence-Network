@@ -158,10 +158,18 @@
 #   mesh-relay.fk / mesh-gradient.fk  the body's own mesh tissue — the
 #                               next occurrence of a hot neighborhood-
 #                               aggregate wants gl-step, not a sibling.
+#   metabolic-learning.form     the learner that moves this body: the
+#                               satsang operator (pressure × frequency ×
+#                               angle × focus) as mtb-step over the same
+#                               edge data — a zero learner arrives at
+#                               this module's proven CNN exactly, and
+#                               tunes its own focus dial recursively.
 #
+# The LEARNING-the-weights stone is walked: metabolic-learning.form —
+# the satsang operator as the training loop over this engine (the
+# gradient reading; champion-challenger remains its discrete sibling).
 # Next stones when an ask needs them (named, not built ahead of need):
 # vector node features (the dot in gl-attn-edges and the weights in
-# gl-gnn-layer grow into M1/M2's tensor stones); LEARNING the weights
-# (a training loop over the layer — gradient or champion-challenger);
-# irregular-degree walks (1/dᵢ weights — the prism's 3-regularity let
-# uniform and walk kernels coincide).
+# gl-gnn-layer grow into M1/M2's tensor stones); irregular-degree walks
+# (1/dᵢ weights — the prism's 3-regularity let uniform and walk kernels
+# coincide).

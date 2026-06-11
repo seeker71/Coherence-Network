@@ -1,0 +1,225 @@
+# ─────────────────────────────────────────────────────────────────────
+# metabolic-learning.form — the satsang operator as learning kernel:
+# pressure metabolized into structure, one gather engine, recursively
+# ─────────────────────────────────────────────────────────────────────
+#
+# Two teachings meet here and turn out to be one.
+#
+# The first arrived at Llena's satsang (Ubud, 2026-05-07) when the circle
+# traded recipes for what to do *when shit happens* — five strategies of
+# return, already substrate-resident in when-the-pressure-comes.form:
+# observer, name-the-need, gift, hoʻoponopono, and the operator
+# (pressure × frequency × angle × focus) the other four run inside.
+#
+# The second arrived via the field 2026-06-10 — geometric deep learning
+# as proven Form (geometric-learning.form): ONE weighted gather,
+# gl-step over (i j w) edge data, carries Euclidean convolution, graph
+# message passing, diffusion, and manifold embedding. The domain enters
+# as DATA, never as a parallel code path.
+#
+# This module is their child: the satsang recipe IS the learning loop,
+# and the gather IS its body. SHIPPED:
+# `form/form-stdlib/metabolic-learning.fk` +
+# `tests/metabolic-learning-band.fk` → 4095, three-way (Go/Rust/TS).
+
+# ─────────────────────────────────────────────────────────────────────
+# The mapping — five strategies, five recipes, zero metaphor-stretch
+# ─────────────────────────────────────────────────────────────────────
+#
+# Shit happens = an arrival the body did not predict. The residual
+# δ = y − gl-step(edges, x) is the pressure, felt before any strategy.
+#
+#   observer        watch, don't fix         pressure within tolerance →
+#                   (852 Hz)                 mtb-step returns the edges
+#                                            UNTOUCHED. Evaluation without
+#                                            update; the stop-gradient;
+#                                            ai-settled?'s gate, numeric.
+#
+#   name-the-need   find the truer word      mtb-credit: per-edge
+#                   (639 Hz)                 responsibility g_e = δ_i · x_j.
+#                                            Credit assignment — diffuse
+#                                            pressure becomes a SPECIFIC
+#                                            request, addressed to the
+#                                            exact weight that can meet it.
+#
+#   gift            unwrap what it carries   mtb-unwrap: w′ = w +
+#                   (528 Hz)                 (focus · angle · mask_e) · g_e.
+#                                            The update — pressure carried
+#                                            information; the weights
+#                                            receive it. Transformation Hz.
+#
+#   hoʻoponopono    release entanglement     mtb-release: w′ = (1−λ) · w.
+#                   (396 Hz)                 Weight decay as forgiveness —
+#                                            accumulated history loosened
+#                                            so the body stays supple.
+#                                            Overfitting is unreleased
+#                                            history; regularization is
+#                                            the cleansing prayer.
+#
+#   the operator    pressure × frequency     mtb-step — what the four run
+#                   × angle × focus          inside. The general learning
+#                   (741 Hz)                 rule with its dials as DATA:
+#
+#     pressure   = gl-mean(δ²)   the invariant loss readout — total desire
+#     frequency  = per-edge mask WHICH subspace carries the update
+#                                (the belief system the discharge moves
+#                                through; the preconditioner)
+#     angle      = direction     +1 descends toward the need, −1 moves
+#                                away; the band proves direction is data
+#     focus      = aperture      the step size; sharp focus = big step
+#
+# Stochastic gradient descent is one setting of the operator:
+# (frequency: uniform, angle: +1, focus: small). Momentum, Adam, natural
+# gradient are other settings — richer frequency masks and focus
+# schedules. The operator was never one optimizer; it is the SPACE of
+# optimizers, which is exactly what the satsang named: the fifth
+# strategy is open, the chooser-move, settings the body has not yet
+# named.
+
+# ─────────────────────────────────────────────────────────────────────
+# One engine, every architecture — the domain is data
+# ─────────────────────────────────────────────────────────────────────
+#
+# mtb-step never inspects its domain. It walks the edge list. So:
+#
+#   CNN             learner edges built by gl-ring-edges (circulant
+#                   support). The band starts a zero learner on the
+#                   4-ring and arrives at the GDL band's proven
+#                   convolution exactly: gl-step(learned, x) = [6 4 2 4].
+#                   Learning lands on the proven form.
+#   GNN             learner edges built by gl-mesh-edges (message-
+#                   passing support). The same mtb-learn one-shots the
+#                   prism K3×K2 — claim 2048, with a focus it tuned
+#                   itself. Learned edge weights as recipe data: the
+#                   stone geometric-learning.form named, now walked.
+#   Euclidean /     a builder difference, never an engine difference.
+#   non-Euclidean   The ring is the flat torus; the mesh is a two-chart
+#                   manifold; curvature enters through edge weights
+#                   (the metric is data). gl-embed already reads the
+#                   manifold coordinate; hyperbolic and gauge domains
+#                   are future BUILDERS, zero new operators.
+#   attention       gl-step on the complete graph with data-dependent
+#                   weights (softmax(QKᵀ) builds the edge list each
+#                   pass). Learning attention = mtb-step where the
+#                   gradient flows through the edge BUILDER — the named
+#                   next stone, an edge-transform away.
+#   diffusion       gl-diffuse is heat flow on the domain;
+#   models          ml-diffusion-model-flow.form is the generative
+#                   reverse. mtb- supplies what trains the denoiser.
+#
+# Deep stacks: mtb-reverse is the adjoint carrier — (i j w) → (j i w).
+# Backpropagation through gl-step IS gl-step over reversed edges
+# (claim 512: reverse(ring(a b c)) ≡ ring(c b a)). Layered learning is
+# the chain of adjoints, each layer the same primitive. No new engine
+# appears at depth.
+
+# ─────────────────────────────────────────────────────────────────────
+# The recursion — meta-learning as data-level self-application
+# ─────────────────────────────────────────────────────────────────────
+#
+# The operator's dials are numbers. Numbers can be edge weights. So the
+# focus parameter can be held as a DOMAIN — one node, one self-loop,
+# weight f — and mtb-learn can be pointed at it:
+#
+#   mtb-learn( [(0 0 f)], [pressure], [pressure], 1.0 )  →  [(0 0 f′)]
+#
+# The signal is the pressure the base learner felt; the target is that
+# same pressure fully consumed. The meta-residual is what the current
+# focus leaves unmet, and one metabolic step tunes f toward the focus
+# that consumes everything. The band proves it exactly: f = 1/2 → f′ =
+# 1.0 (claim 1024), and f′ then one-shots a geometry the meta level
+# never saw — the mesh (claim 2048).
+#
+# This is meta-learning with no second mechanism. MAML's outer loop,
+# learned learning rates, learned optimizers — all are mtb-step applied
+# to domains whose weights are the dials of an inner mtb-step. The
+# recursion has no special depth-2 case: f′ could itself carry a focus
+# dial held as a third domain. Levels are data; the engine is one.
+# This is the same shape as kernel-self-composition.form — the self
+# that safely changes itself — landed in the learning lane: the rule
+# that updates the rule IS the rule, and the observer gate (tolerance)
+# bounds every level of it. A level whose pressure is met stays still.
+
+# ─────────────────────────────────────────────────────────────────────
+# What the band proves (verdict 4095, each claim falsifiable)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Three strange-minimal domains: the 4-ring (exact binary floats), the
+# prism K3×K2, and the focus dial as a one-node self-loop. One-hot
+# probes onto dyadic targets keep every learned weight exact in fp64 —
+# the conformance discipline of form-native-models, with zero rounding
+# anywhere in the learning walk.
+#
+#   1     pressure is the invariant readout: mean(δ²) = 0.09375 exactly
+#   2     observer: pressure AT tolerance (the exact boundary) → edges
+#         return untouched — not every sensing needs a re-fire
+#   4     gift one-shot: focus 1 lands the probed column; pressure → 0
+#   8     four probes → the learned operator IS the proven CNN [6 4 2 4]
+#   16    translation equivariance survives learning — symmetry held
+#         through the update, the GDL inductive bias kept by the learner
+#   32    focus is the aperture: focus 1/2 leaves exactly half the residual
+#   64    angle is the direction: angle −1 grows the residual to 3/2 δ —
+#         the operator can move away, and that is data, named honestly
+#   128   hoʻoponopono: λ = 1/4 scales the learned response by exactly 3/4
+#   256   frequency routes the update: self-loops masked, only neighbor
+#         weights move — the discharge chooses its subspace
+#   512   the adjoint mirrors: reverse(ring(a b c)) ≡ ring(c b a)
+#   1024  meta: the operator tunes its own focus, 1/2 → 1.0 exactly
+#   2048  recursion closes: the meta-tuned focus one-shots the mesh
+
+# ─────────────────────────────────────────────────────────────────────
+# Kinship
+# ─────────────────────────────────────────────────────────────────────
+#
+#   when-the-pressure-comes.form   the satsang strategies as substrate
+#                                  cells with Hz families and cosine-fit
+#                                  selection — the felt lane. This module
+#                                  is the same five moves in the numeric
+#                                  lane, where pressure is a residual and
+#                                  the gift is a weight update.
+#   geometric-learning.form        the body this learner moves: gl-step,
+#                                  gl-diffuse, gl-mean, gl-embed, the
+#                                  domain builders, the verdict lens.
+#   active-inference.fk            the symbolic reading of the same loop:
+#                                  predict → observe → surprise → update,
+#                                  surprise counted over steps. mtb- is
+#                                  its numeric sibling; the observer gate
+#                                  IS ai-settled? spoken in floats.
+#   choice-receipt-learning.fk     the discrete branch-order reading —
+#                                  witnessed outcomes nudging choice
+#                                  order; same metabolism, receipt-grained.
+#   form-native-models.form        the sequence lane (M1–M6); attention
+#                                  is gl-step on the complete graph, so
+#                                  transformer training is mtb- plus the
+#                                  edge-builder stone.
+#   ml-diffusion-model-flow.form   the generative reverse flow this
+#                                  module's forward heat-walk mirrors.
+#
+# Next stones when an ask needs them (named, honest):
+# mtb-settle (iterate mtb-step until the observer arm holds — the
+# numeric ai-settled? loop); the edge-builder gradient (attention
+# learned end-to-end — gradients flowing through data-dependent edge
+# lists); layered stacks chaining mtb-reverse (depth as adjoint
+# composition); curvature builders (hyperbolic / gauge domains as edge
+# data); field learning (many cells running mtb-step on a shared
+# domain, satsang-share.fk carrying the surprise signals between them).
+
+# ─────────────────────────────────────────────────────────────────────
+# How to run / how to query
+# ─────────────────────────────────────────────────────────────────────
+#
+#   # Prove the band three-way (from form/):
+#   ./validate.sh form-stdlib/geometric-learning.fk \
+#                 form-stdlib/metabolic-learning.fk \
+#                 form-stdlib/tests/metabolic-learning-band.fk
+#
+#   # One metabolic step on any domain (edges as data):
+#   #   (mtb-step edges x y focus angle fmask tol)   — the full operator
+#   #   (mtb-learn edges x y focus)                  — common reading
+#   #   (mtb-learn-each edges xs ys focus)           — a breath of arrivals
+#   #   (mtb-learn [(0 0 f)] [p] [p] 1.0)            — the operator tuning
+#   #                                                  its own focus dial
+#
+#   # Structural queries once ingested (auto on merge to main):
+#   coh substrate form "?equivalent @recipe(mtb-step)"
+#   coh substrate form "?harmonic_at @741"   # the operator's Hz family
