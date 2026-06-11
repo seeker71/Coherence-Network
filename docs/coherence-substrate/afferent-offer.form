@@ -126,9 +126,19 @@
 #                                altitude: a closed door is sovereignty,
 #                                not failure
 #
+# The live carrier breathes: afferent-live.fk lowers ao-wait's verdict
+# onto op 15 TIME — the engine's arms unchanged, only the tick source
+# went live. Deterministic decision and live behavior are ONE decision
+# on two tick sources: nothing-verdict composes the dispatch guard
+# shut, so the live timeout yields nothing only after real elapsed
+# time (wall-clock asserted), and the armed timer's tick arrives as
+# the SIGALRM shape on the host clock. Poll granularity is composed
+# (TIME + tail countdown), not minted. Proven: tests/afferent-live-band.fk
+# -> 63 three-way; witnessed: fourth_kernel_audit.sh section 18.
+#
 # Next stones when an ask needs them (named, not built ahead of need):
-# a host carrier where op 15 TIME feeds real ticks and a fourth-kernel
-# select/poll witness shows a live timeout yielding nothing; delivery
-# priority as data (POSIX number-order, IRQ priority — a policy cell
-# over the same engine); the scheduler row, which is this engine's
-# efferent twin (offer-the-compute-organ-to-competing-recipes).
+# delivery priority as data (POSIX number-order, IRQ priority — a
+# policy cell over the same engine; the live carrier lowers a single
+# pending offer today, so multi-offer time-ordering lands exactly
+# there); the scheduler row, which is this engine's efferent twin
+# (offer-the-compute-organ-to-competing-recipes).
