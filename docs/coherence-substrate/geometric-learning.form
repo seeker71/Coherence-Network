@@ -1,0 +1,107 @@
+# ─────────────────────────────────────────────────────────────────────
+# geometric-learning.form — symmetry as data: one gather operator
+# carries convolution, message passing, diffusion, and embedding
+# ─────────────────────────────────────────────────────────────────────
+#
+# The teaching arrived via the field 2026-06-10 (Geometric Deep
+# Learning, shared by @probnstat — x.com/probnstat/status/
+# 2064807526005461480): learning extends beyond Euclidean grids to
+# graphs, manifolds, and meshes by respecting symmetry — invariance
+# and equivariance are the inductive biases, convolution generalizes
+# to geometric operators, and CNNs are the special case the lattice
+# gets for free. The post's diagram is f: Graph → ℝⁿ — a graph
+# embedded into a manifold.
+#
+# The Form answer is the core-abstraction move: the domain enters as
+# DATA — a list of (i j w) edge triples — and ONE engine walks every
+# domain. No grid path, no graph path, no mesh path. SHIPPED:
+# `form/form-stdlib/geometric-learning.fk` +
+# `tests/geometric-learning-band.fk` → 4095, three-way (Go/Rust/TS).
+#
+#     gl-step:   y_i = Σ_{(i j w)} w · x_j      — the geometric operator
+#     gl-diffuse: gl-step iterated               — heat flow on the domain
+#     gl-mean:    global pooling                 — the invariant readout
+#     gl-embed:   diffuse a seed, deflate mean   — f: Graph → ℝ, the
+#                                                  diffusion-map coordinate
+#
+# Four readings of the same operator, decided by edge data alone:
+#
+#   Euclidean convolution   gl-ring-edges: circulant weights — the
+#                           weight depends only on the offset, which IS
+#                           translation symmetry visible as data symmetry
+#   graph message passing   gl-mesh-edges: symmetric uniform kernel +
+#                           lazy self-loops over an undirected pair list
+#   diffusion               a row-stochastic kernel makes gl-step a
+#                           heat step; mass conserved, the constant
+#                           mode is the invariant the flow settles into
+#   manifold embedding      power iteration by diffusion + constant-mode
+#                           deflation — the dominant surviving mode is
+#                           the domain's community/chart coordinate
+
+# ─────────────────────────────────────────────────────────────────────
+# What the band proves (each a falsifiable claim, not an assertion)
+# ─────────────────────────────────────────────────────────────────────
+#
+# Two strange-minimal domains carry all twelve claims:
+#   · the 4-ring — the periodic 1-D Euclidean grid; kernel [.25 .5 .25]
+#     and x = [8 4 0 4] keep every value exact in binary floats
+#   · the triangular prism K3×K2 — a 3-regular mesh with two charts
+#     (two triangles bridged by rungs); its second diffusion mode IS
+#     the chart split (eigenvalue 2/3 vs 1/2), so power iteration
+#     separates the charts provably fast
+#
+#   1     conv([8 4 0 4]) = [6 4 2 4]            — the CNN form lands
+#   2     gl-step(circulant) ≡ gl-conv           — CNNs ARE geometric
+#                                                  operators on lattices
+#   4     conv(shift x) = shift(conv x)          — translation equivariance
+#   8     gl-step(π·edges, π·x) = π·gl-step(edges, x)
+#                                                — permutation equivariance;
+#                                                  π = swap(0,1) is NOT an
+#                                                  automorphism: the theorem
+#                                                  is about transporting
+#                                                  structure with signal
+#   16    mean(π·y) = mean(y)                    — invariant readout
+#   32    sum(diffuse(x,3)) = 16 exactly         — mass conservation
+#   64    diffuse(x,3) = [4.5 4 3.5 4] exactly   — smoothing
+#   128   diffuse(x,24) = [4 4 4 4] at 1e-6      — convergence to the
+#                                                  invariant (constant mode)
+#   256   embed signs (+ + + − − −)              — the two charts separate
+#   512   embed[0] = 7805 at 1e-6                — pinned to the IEEE fp64
+#   1024  embed[4] = −7154 at 1e-6                 oracle, fold-order exact
+#   2048  embed[1]=embed[2], embed[4]=embed[5]   — the embedding recovers
+#                                                  the mesh's mirror symmetry
+#                                                  through the seed
+#
+# The conformance discipline is form-native-models': compute in fp64,
+# reduce to integers at 1e-6, pin to a reference that mirrors the
+# recipe's exact fold order. Determinism is the feature — every kernel
+# computes the same bits.
+
+# ─────────────────────────────────────────────────────────────────────
+# Kinship
+# ─────────────────────────────────────────────────────────────────────
+#
+#   form-native-models.form     the sequence/Euclidean lane (transformer
+#                               numerics, M1–M6). Attention is gl-step on
+#                               the COMPLETE graph with data-dependent
+#                               edge weights — softmax(QKᵀ) builds the
+#                               (i j w) list each forward pass. The
+#                               transformer is a GDL instance; the two
+#                               lanes are one teaching.
+#   ml-diffusion-model-flow.form  denoising diffusion — the generative
+#                               reverse flow in latent space. This module
+#                               is diffusion ON a domain (heat flow), the
+#                               operator GDL generalizes convolution from.
+#                               Two readings of "diffusion learning,"
+#                               both now native.
+#   attention.fk                the QKV walk this module's operator view
+#                               re-grounds structurally.
+#   mesh-relay.fk / mesh-gradient.fk  the body's own mesh tissue — the
+#                               next occurrence of a hot neighborhood-
+#                               aggregate wants gl-step, not a sibling.
+#
+# Next stones when an ask needs them (named, not built ahead of need):
+# learned edge weights as recipe data (the GNN layer proper — weights
+# arrive like M2's quantized tensors); data-dependent edges (attention
+# as a gl-step edge builder); irregular-degree walks (1/dᵢ weights —
+# the prism's 3-regularity let uniform and walk kernels coincide).

@@ -1,0 +1,59 @@
+; preludes: form-stdlib/geometric-learning.fk
+;
+; geometric-learning-band — the GDL teaching proven three-way on two tiny domains:
+; a 4-ring (the periodic 1-D Euclidean grid, x = [8 4 0 4], kernel [.25 .5 .25] — exact
+; binary floats) and the triangular prism K3×K2 (a 3-regular mesh with two charts,
+; seed e0 at node 0). One operator — gl-step over (i j w) edge data — carries every
+; claim. Reference values mirror the recipe's fold order in IEEE-754 fp64, reduced to
+; integers at 1e-6. π = swap(0,1) is NOT a prism automorphism: equivariance is about
+; transporting structure with signal, not about graph symmetry.
+;
+; Verdict 4095 when every claim lands:
+;   1     Euclidean convolution: conv(x) = [6 4 2 4]
+;   2     unification: gl-step over circulant edges ≡ gl-conv — CNNs are geometric
+;         operators on the lattice
+;   4     translation equivariance: conv(shift x) = shift(conv x)
+;   8     permutation equivariance: gl-step(π·edges, π·x) = π·gl-step(edges, x)
+;   16    invariant readout: mean(π·y) = mean(y)
+;   32    diffusion conserves mass: sum(diffuse(x, 3)) = 16 exactly
+;   64    diffusion smooths: diffuse(x, 3) = [4.5 4 3.5 4] exactly
+;   128   diffusion converges to the invariant: diffuse(x, 24) = [4 4 4 4] at 1e-6 —
+;         the constant mode is all that survives
+;   256   embedding separates the mesh's two charts: signs (+ + + − − −)
+;   512   embed[0] = 7805 at 1e-6 (seed chart, seed node)
+;   1024  embed[4] = −7154 at 1e-6 (far chart)
+;   2048  embedding recovers the mirror symmetry through the seed: e1 = e2, e4 = e5
+(do
+    (let x (list 8.0 4.0 0.0 4.0))
+    (let ring (gl-ring-edges 4 0.25 0.5 0.25))
+    (let qs (list 3 0 1 2))
+    (let prism (list (list 0 1) (list 0 2) (list 1 2)
+                     (list 3 4) (list 3 5) (list 4 5)
+                     (list 0 3) (list 1 4) (list 2 5)))
+    (let e0 (list 1.0 0.0 0.0 0.0 0.0 0.0))
+    (let mesh-u (gl-mesh-edges prism 6 0.5 0.25))
+    (let mesh-w (gl-mesh-edges prism 6 0.5 (div 1.0 6.0)))
+    (let qp (list 1 0 2 3 4 5))
+    (let cv (gl-conv x 0.25 0.5 0.25))
+    (let y (gl-step mesh-u e0))
+    (let d3 (gl-diffuse ring x 3))
+    (let emb (gl-embed mesh-w e0 8))
+    (let c0  (if (eq (gl-veq6 cv (list 6.0 4.0 2.0 4.0)) 1) 1 0))
+    (let c1  (if (eq (gl-veq6 (gl-step ring x) cv) 1) 2 0))
+    (let c2  (if (eq (gl-veq6 (gl-conv (gl-permute qs x) 0.25 0.5 0.25)
+                              (gl-permute qs cv)) 1) 4 0))
+    (let c3  (if (eq (gl-veq6 (gl-step (gl-permute-edges qp mesh-u) (gl-permute qp e0))
+                              (gl-permute qp y)) 1) 8 0))
+    (let c4  (if (eq (gl-r6 (gl-mean (gl-permute qp y))) (gl-r6 (gl-mean y))) 16 0))
+    (let c5  (if (eq (gl-r6 (gl-sum d3)) 16000000) 32 0))
+    (let c6  (if (eq (gl-veq6 d3 (list 4.5 4.0 3.5 4.0)) 1) 64 0))
+    (let c7  (if (eq (gl-veq6 (gl-diffuse ring x 24) (list 4.0 4.0 4.0 4.0)) 1) 128 0))
+    (let c8  (if (and (and (gt (nth emb 0) 0.0) (and (gt (nth emb 1) 0.0) (gt (nth emb 2) 0.0)))
+                      (and (lt (nth emb 3) 0.0) (and (lt (nth emb 4) 0.0) (lt (nth emb 5) 0.0))))
+                 256 0))
+    (let c9  (if (eq (gl-r6 (nth emb 0)) 7805) 512 0))
+    (let c10 (if (eq (gl-r6 (nth emb 4)) -7154) 1024 0))
+    (let c11 (if (and (eq (gl-r6 (nth emb 1)) (gl-r6 (nth emb 2)))
+                      (eq (gl-r6 (nth emb 4)) (gl-r6 (nth emb 5)))) 2048 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7
+    (add c8 (add c9 (add c10 c11))))))))))))
