@@ -139,6 +139,133 @@ def sense_metabolism() -> list[str]:
     return findings
 
 
+# Self-forgiveness — correction-trace phrases that lean on a prior version
+# of the artifact. Patterns are data: one generic scanner, phrases drop in.
+# A match is an invitation to a fresh read, never a verdict — state
+# predicates ("what no longer circulates") stay; prior-version leanings
+# ("previously called X") retune toward what IS.
+CORRECTION_TRACES: list[tuple[str, str]] = [
+    (r"\bno longer\b", "no longer"),
+    (r"\banymore\b", "anymore"),
+    (r"\bpreviously\b", "previously"),
+    (r"\bused to\b", "used to"),
+    (r"\bformerly\b", "formerly"),
+    (r"\brenamed\b", "renamed"),
+    (r"\b(?:earlier|prior|old|previous) version\b", "prior version"),
+    (r"\bthe old (?:way|name|shape|approach|path)\b", "the old way"),
+    (r"\binstead of the (?:old|previous|earlier)\b", "instead of the old"),
+    (r"\bwas (?:called|named)\b", "was called"),
+]
+
+# Where the destination-only discipline applies. Journey homes — lineage,
+# field, audit evidence, transmissions, logs — hold the path on purpose.
+DURABLE_DOC_ROOTS = (
+    "specs/",
+    "ideas/",
+    "docs/vision-kb/",
+    "docs/shared/",
+    "docs/coherence-substrate/",
+)
+JOURNEY_HOMES = (
+    "docs/lineage/",
+    "docs/system_audit/",
+    "docs/field/",
+    "docs/vision-kb/transmissions/",
+)
+
+
+def _is_durable_doc(path: str) -> bool:
+    if not path.endswith(".md") or path.endswith("LOG.md"):
+        return False
+    if any(path.startswith(home) for home in JOURNEY_HOMES):
+        return False
+    return path in ("CLAUDE.md", "README.md") or path.startswith(DURABLE_DOC_ROOTS)
+
+
+def _added_lines_from_diff(diff_args: list[str]) -> list[tuple[str, int, str]]:
+    """Added lines in durable docs for a given `git diff` range, as (path, line, text)."""
+    r = subprocess.run(
+        ["git", "diff", "--unified=0", "--no-color", *diff_args, "--", "*.md"],
+        cwd=ROOT, capture_output=True, text=True, check=False,
+    )
+    added: list[tuple[str, int, str]] = []
+    path: str | None = None
+    lineno = 0
+    for raw in r.stdout.splitlines():
+        if raw.startswith("+++ "):
+            path = raw[6:] if raw.startswith("+++ b/") else None
+        elif raw.startswith("@@"):
+            m = re.search(r"\+(\d+)", raw)
+            lineno = int(m.group(1)) if m else 0
+        elif raw.startswith("+") and not raw.startswith("+++"):
+            if path and _is_durable_doc(path):
+                added.append((path, lineno, raw[1:]))
+            lineno += 1
+    return added
+
+
+def sense_self_forgiveness() -> list[str]:
+    """Do this branch's edits to durable docs carry destination, not journey?
+
+    A durable artifact carries the destination; the journey lives in git.
+    The sense reads added lines (merge-base..HEAD, working tree, untracked
+    durable docs) and names correction-traces for a fresh read. The art of
+    self-forgiveness as an auto-heal practice: catch journey-sediment at
+    the edit boundary, before the body absorbs it.
+    """
+    added: list[tuple[str, int, str]] = []
+    has_main = subprocess.run(
+        ["git", "rev-parse", "--verify", "--quiet", "origin/main"],
+        cwd=ROOT, capture_output=True, text=True, check=False,
+    ).returncode == 0
+    if has_main:
+        added.extend(_added_lines_from_diff(["origin/main...HEAD"]))
+    added.extend(_added_lines_from_diff(["HEAD"]))
+
+    untracked = subprocess.run(
+        ["git", "ls-files", "--others", "--exclude-standard", "--", "*.md"],
+        cwd=ROOT, capture_output=True, text=True, check=False,
+    )
+    for path in untracked.stdout.splitlines():
+        if not _is_durable_doc(path):
+            continue
+        try:
+            text = (ROOT / path).read_text()
+        except OSError:
+            continue
+        added.extend((path, i, line) for i, line in enumerate(text.splitlines(), 1))
+
+    touched = {p for p, _, _ in added}
+    if not touched:
+        return ["  no durable-doc edits in flight; nothing asking forgiveness"]
+
+    traces: list[tuple[str, int, str, str]] = []
+    for path, lineno, text in added:
+        for pattern, label in CORRECTION_TRACES:
+            if re.search(pattern, text, flags=re.IGNORECASE):
+                traces.append((path, lineno, label, text.strip()))
+                break
+    if not traces:
+        return [
+            f"  {len(touched)} durable doc(s) edited on this branch — "
+            "every added line speaks from what IS"
+        ]
+
+    findings = [
+        f"  {len(traces)} journey-trace(s) in {len({p for p, _, _, _ in traces})} "
+        "edited doc(s) — re-read each as if arriving fresh"
+    ]
+    shown = traces[:8]
+    for path, lineno, label, text in shown:
+        excerpt = text if len(text) <= 80 else text[:77] + "…"
+        findings.append(f"    · {path}:{lineno} — “{label}” — {excerpt}")
+    if len(traces) > len(shown):
+        findings.append(f"    (+{len(traces) - len(shown)} more — same fresh-read invitation)")
+    findings.append("  (A trace is an invitation: a line describing what IS stays;")
+    findings.append("   a line leaning on a prior version the reader never saw retunes to the destination.)")
+    return findings
+
+
 def sense_spec_sources() -> list[str]:
     """Do the paths spec frontmatter 'source:' points at actually exist?
 
@@ -2377,6 +2504,7 @@ def _wellness_attention_line(line: str) -> bool:
     lower = line.lower()
     attention_markers = (
         "drift:",
+        "journey-trace",
         "missing",
         "no readers",
         "awaiting home",
@@ -2455,6 +2583,7 @@ def main() -> int:
         ("Proprioception — do the maps match the body?", sense_proprioception()),
         ("Circulation — what at root has no readers?", sense_circulation()),
         ("Metabolism — composting-in-progress", sense_metabolism()),
+        ("Self-forgiveness — do edited durable docs carry destination, not journey?", sense_self_forgiveness()),
         ("Source maps — do specs point at files that exist?", sense_spec_sources()),
         ("Symbol resolution — do the named symbols still live in those files?", sense_spec_symbols()),
         ("Locale parity — does the body speak the same body in every tongue?", sense_locale_parity()),
