@@ -6,14 +6,14 @@ metadata:
     "openclaw":
       {
         "emoji": "🔗",
-        "requires": { "bins": ["cc"] },
+        "requires": { "bins": ["coh"] },
         "install":
           [
             {
               "id": "node",
               "kind": "node",
               "package": "coherence-cli",
-              "bins": ["cc"],
+              "bins": ["coh"],
               "label": "Install Coherence CLI (npm)",
             },
           ],
