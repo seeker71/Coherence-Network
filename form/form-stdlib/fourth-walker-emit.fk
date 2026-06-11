@@ -593,10 +593,13 @@
     "static long long fk_heat[64]; static long long fk_ice[64]; static long long fk_earn[64]; static long long fk_can[64]; static long long fk_tick; static long long fk_hot; static long long fk_njit; static long long fk_nmelt; static long long fk_nfreeze; static long long (*fk_nat_tab[64])(long long); ")
 
 ; the epoch: ice states walk 0 gas -> 1 ice -> 2 melted-gas; a melted native
-; re-earns ice only through the consecutive-win gate; then every heat decays
-(defn fkc-epoch-text (nf)
+; re-earns ice only through the consecutive-win gate; then every heat decays.
+; The bound is TEXT so the same body serves a baked count (a literal) and the
+; universal wire's runtime count (fk_nf) — one epoch, never two.
+(defn fkc-epoch-text (nf) (fkc-epoch-body-text (int_to_str nf)))
+(defn fkc-epoch-body-text (bound)
     (str_concat "static void fk_epoch(void) { long long f = 0; while (f < "
-    (str_concat (int_to_str nf)
+    (str_concat bound
     (str_concat ") { if (fk_ice[f] == 2) { if (fk_heat[f] > fk_hot) { fk_earn[f] = fk_earn[f] + 1; } else { fk_earn[f] = 0; } if ("
     (str_concat (fkc-jm-earn-cond-text)
     (str_concat ") { fk_ice[f] = 1; fk_nfreeze = fk_nfreeze + 1; "
@@ -662,3 +665,124 @@
         (if (eq (nth (head rows) 0) 1)
             (if (eq (nth (head rows) 1) v) 1 (fkd-has-lit (tail rows) v))
             (fkd-has-lit (tail rows) v))))
+
+; ── the crystallization wire — runtime codegen for FOREIGN loaded tables ──
+; The SELF-JIT above bakes native alternatives at EMIT time: fkc-nat-expr
+; lowers the cells the emitter saw. A FOREIGN table — loaded through the fs
+; port by the universal walker, never seen by any emitter — could only walk.
+; This wire closes the loop: the universal binary CARRIES THE LOWERER (fk_lo —
+; fkc-nat-expr's per-tag algebra emitted as C that reads the loaded rows), and
+; when a foreign function runs hot it emits C source FROM THE LOADED CELLS,
+; drives clang through the driver organ (fork/exec — the toolchain port, an
+; allowed host carrier like say/whisper/ollama), dlopens the artifact, and
+; flips dispatch — the full gas-to-ice cycle for programs that arrived after
+; birth. Round-3's thermodynamics apply unchanged: the SAME epoch body
+; (fkc-epoch-body-text over fk_nf), the SAME policy cells (decay quantum and
+; divisor, melt line, earn window), so a foreign native melts on cool and
+; re-earns ice through the champion-challenger gate without recompiling (the
+; dlopen handle persists; one clang invocation per table). Honesty gates:
+; lowerability is the SAME transitive fixpoint (fkc-can-list's walk emitted
+; as fk_ok/fk_canc over the rows, computed at LOAD time), so ports and organs
+; refuse before any heat counts; and a toolchain refusal (no clang, failed
+; dlopen/dlsym) marks the function unlowerable for the run — observable on
+; stderr (jr), never retried into a storm, never a wrong native.
+; Every byte the binary emits at runtime descends from these cells: the
+; phrase table is Form strings compiled to char codes (fkc-phrase), the
+; expression shapes are fkc-nat-expr's, the decision shape is named below.
+
+; the wire's decision cells — the band proves these ARE the emitted door
+(defn fkc-wire-fires (canf heat hot) (if (eq canf 1) (if (gt heat hot) 1 0) 0))
+(defn fkc-wire-ice (fires ok) (if (eq fires 1) (if (eq ok 1) 1 0) 0))
+(defn fkc-wire-can-after (fires ok canf) (if (eq fires 1) (if (eq ok 1) canf 0) canf))
+
+; the toolchain port's host organ and the condensation path, named as cells
+(defn fkc-wire-clang () "clang")
+(defn fkc-wire-tmp () "/tmp/fk-wire-")
+
+; a Form string compiled to a C char array — the runtime emitter's phrases
+; stay authored HERE, the C only carries their codes
+(defn fkc-ccodes (s i)
+    (if (eq i (str_len s)) "0"
+        (str_concat (int_to_str (ord (char_at s i)))
+                    (str_concat "," (fkc-ccodes s (add i 1))))))
+(defn fkc-phrase (name s)
+    (str_concat "static const char "
+    (str_concat name
+    (str_concat "[] = {"
+    (str_concat (fkc-ccodes s 0) "}; ")))))
+
+(defn fkc-wire-phrases-text ()
+    (str_concat (fkc-phrase "fk_p1" "long long fk_n")
+    (str_concat (fkc-phrase "fk_p2" "(long long a);")
+    (str_concat (fkc-phrase "fk_p3" "(long long a){return ")
+    (str_concat (fkc-phrase "fk_p4" ";}")
+    (str_concat (fkc-phrase "fk_p5" "fk_n")
+    (str_concat (fkc-phrase "fk_p6" (fkc-wire-tmp))
+    (str_concat (fkc-phrase "fk_p7" ".c")
+    (str_concat (fkc-phrase "fk_p8" ".so")
+    (str_concat (fkc-phrase "fk_p9" "")
+    (str_concat (fkc-phrase "fk_pc" (fkc-wire-clang))
+    (str_concat (fkc-phrase "fk_po" "-O2")
+    (str_concat (fkc-phrase "fk_ps" "-shared")
+    (str_concat (fkc-phrase "fk_pf" "-fPIC")
+                (fkc-phrase "fk_pd" "-o")))))))))))))))
+
+(defn fkc-wire-decl-text ()
+    "static long long fk_nf; static long long fk_nwire; static void *fk_dlh; static char fk_cs[65536]; static long long fk_cn; static char fk_fc[64]; static char fk_fs[64]; static char fk_sy[32]; extern int close(int); extern int creat(const char *, int); extern int fork(void); extern int execvp(const char *, char * const *); extern int waitpid(int, int *, int); extern int getpid(void); extern void _exit(int); extern void *dlopen(const char *, int); extern void *dlsym(void *, const char *); ")
+
+; text builders: append char/decimal/phrase into the source buffer; fk_mkp
+; shapes a name or path as prefix-number-suffix (the only naming the wire does)
+(defn fkc-rt-append-text ()
+    "static void fk_ca(long long c) { fk_cs[fk_cn] = (char)c; fk_cn = fk_cn + 1; } static void fk_cd(long long v) { char b[32]; long long n = 0; if (v == 0) { b[0] = 48; n = 1; } while (v > 0) { b[n] = 48 + v % 10; v = v / 10; n = n + 1; } while (n > 0) { n = n - 1; fk_ca(b[n]); } } static void fk_cp(const char *p) { while (*p) { fk_ca(*p); p = p + 1; } } static void fk_mkp(char *b, const char *pre, long long v, const char *suf) { long long n = 0; while (*pre) { b[n] = *pre; n = n + 1; pre = pre + 1; } char d[32]; long long m = 0; if (v == 0) { d[0] = 48; m = 1; } while (v > 0) { d[m] = 48 + v % 10; v = v / 10; m = m + 1; } while (m > 0) { m = m - 1; b[n] = d[m]; n = n + 1; } while (*suf) { b[n] = *suf; n = n + 1; suf = suf + 1; } b[n] = 0; } ")
+
+; the lowerability fixpoint over LOADED rows — fkc-lower-ok/fkc-can-list's
+; walk, reading the table: tags 1-7 and 12 lower; everything else refuses;
+; impurity poisons transitively through call edges (nf+1 simultaneous passes)
+(defn fkc-rt-can-text ()
+    "static long long fk_ok(long long i) { long long t = fk_node[i][0]; if (t == 1) { return 1; } if (t == 2) { return 1; } if (t == 3) { if (fk_ok(fk_node[i][1]) == 0) { return 0; } return fk_ok(fk_node[i][2]); } if (t == 4) { if (fk_ok(fk_node[i][1]) == 0) { return 0; } return fk_ok(fk_node[i][2]); } if (t == 5) { if (fk_ok(fk_node[i][1]) == 0) { return 0; } return fk_ok(fk_node[i][2]); } if (t == 6) { if (fk_ok(fk_node[i][1]) == 0) { return 0; } if (fk_ok(fk_node[i][2]) == 0) { return 0; } return fk_ok(fk_node[i][3]); } if (t == 7) { if (fk_can[0] == 0) { return 0; } return fk_ok(fk_node[i][1]); } if (t == 12) { if (fk_can[fk_node[i][1]] == 0) { return 0; } return fk_ok(fk_node[i][2]); } return 0; } static void fk_canc(void) { long long k = 0; while (k < fk_nf) { fk_can[k] = 1; k = k + 1; } long long m = 0; while (m <= fk_nf) { long long nx[64]; k = 0; while (k < fk_nf) { nx[k] = fk_ok(fk_fn[k]); k = k + 1; } k = 0; while (k < fk_nf) { fk_can[k] = nx[k]; k = k + 1; } m = m + 1; } } ")
+
+; the lowerer the binary carries: fkc-nat-expr's per-tag shapes, reading the
+; loaded rows — LIT doubles into tagged space, LE answers 2/0, IF emits the
+; else-then order, SELF and CALL recurse through fk_n<idx> in the same .so
+(defn fkc-rt-lower-text ()
+    "static void fk_lo(long long i) { long long t = fk_node[i][0]; if (t == 1) { fk_cd(fk_node[i][1] + fk_node[i][1]); } if (t == 2) { fk_ca(97); } if (t == 3) { fk_ca(40); fk_lo(fk_node[i][1]); fk_ca(43); fk_lo(fk_node[i][2]); fk_ca(41); } if (t == 4) { fk_ca(40); fk_lo(fk_node[i][1]); fk_ca(45); fk_lo(fk_node[i][2]); fk_ca(41); } if (t == 5) { fk_ca(40); fk_lo(fk_node[i][1]); fk_ca(60); fk_ca(61); fk_lo(fk_node[i][2]); fk_ca(63); fk_ca(50); fk_ca(58); fk_ca(48); fk_ca(41); } if (t == 6) { fk_ca(40); fk_lo(fk_node[i][1]); fk_ca(61); fk_ca(61); fk_ca(48); fk_ca(63); fk_lo(fk_node[i][3]); fk_ca(58); fk_lo(fk_node[i][2]); fk_ca(41); } if (t == 7) { fk_cp(fk_p5); fk_cd(0); fk_ca(40); fk_lo(fk_node[i][1]); fk_ca(41); } if (t == 12) { fk_cp(fk_p5); fk_cd(fk_node[i][1]); fk_ca(40); fk_lo(fk_node[i][2]); fk_ca(41); } } ")
+
+; the wire itself: one source for the WHOLE can-true family (the fixpoint
+; guarantees every callee is in it), one clang drive, one dlopen handle for
+; the run; each hot function dlsyms its own symbol when its heat crosses
+(defn fkc-wire-text ()
+    (str_concat "static long long fk_wire(long long f) { fk_nwire = fk_nwire + 1; "
+    (str_concat (fkc-jm-mark-text 119)
+                "if (fk_dlh == 0) { fk_cn = 0; long long k = 0; while (k < fk_nf) { if (fk_can[k] == 1) { fk_cp(fk_p1); fk_cd(k); fk_cp(fk_p2); } k = k + 1; } k = 0; while (k < fk_nf) { if (fk_can[k] == 1) { fk_cp(fk_p1); fk_cd(k); fk_cp(fk_p3); fk_lo(fk_fn[k]); fk_cp(fk_p4); } k = k + 1; } long long pid = getpid(); fk_mkp(fk_fc, fk_p6, pid, fk_p7); fk_mkp(fk_fs, fk_p6, pid, fk_p8); int fd = creat(fk_fc, 420); if (fd < 0) { return 0; } write(fd, fk_cs, fk_cn); close(fd); int cp = fork(); if (cp == 0) { char *av[8]; av[0] = (char *)fk_pc; av[1] = (char *)fk_po; av[2] = (char *)fk_ps; av[3] = (char *)fk_pf; av[4] = (char *)fk_pd; av[5] = fk_fs; av[6] = fk_fc; av[7] = 0; execvp(av[0], av); _exit(127); } int st = 1; waitpid(cp, &st, 0); if (st != 0) { return 0; } fk_dlh = dlopen(fk_fs, 2); if (fk_dlh == 0) { return 0; } } fk_mkp(fk_sy, fk_p5, f, fk_p9); void *sp = dlsym(fk_dlh, fk_sy); if (sp == 0) { return 0; } fk_nat_tab[f] = (long long (*)(long long))sp; return 1; } ")))
+
+; the dispatch door with the wire in the freeze arm: fkc-wire-fires decides
+; (can AND heat past the hot line), fkc-wire-ice/-can-after land the verdict —
+; success flips dispatch (jf), a toolchain refusal marks can=0 honestly (jr)
+(defn fkc-jd-wire-text ()
+    (str_concat "static void fk_jd(long long f) { fk_tick = fk_tick + 1; if ("
+    (str_concat (fkc-jm-tick-cond-text)
+    (str_concat ") { fk_tick = 0; fk_epoch(); } fk_heat[f] = fk_heat[f] + 1; if (fk_ice[f] == 0) { if (fk_can[f] == 1) { if (fk_heat[f] > fk_hot) { if (fk_wire(f) == 1) { fk_ice[f] = 1; fk_nfreeze = fk_nfreeze + 1; "
+    (str_concat (fkc-jm-mark-text 102)
+    (str_concat "} else { fk_can[f] = 0; "
+    (str_concat (fkc-jm-mark-text 114)
+                "} } } } } ")))))))
+
+; probe: value, njit, nmelt, nfreeze, nwire, then (heat, ice, can) per loaded
+; function — the foreign thermodynamic state born observable like every sibling
+(defn fkc-main-uwire-text ()
+    "extern int atoi(const char *); int main(int argc, char **argv) { if (argc < 2) { return 1; } int fd = open(argv[1], 0); if (fd < 0) { return 2; } long long got = read(fd, fk_buf, 262143); if (got < 0) { return 3; } fk_buf[got] = 0; fk_nf = fk_next(); long long k = 0; while (k < fk_nf) { fk_fn[k] = fk_next(); k = k + 1; } long long nr = fk_next(); long long r = 0; while (r < nr) { fk_node[r][0] = fk_next(); fk_node[r][1] = fk_next(); fk_node[r][2] = fk_next(); fk_node[r][3] = fk_next(); r = r + 1; } long long ns = fk_next(); long long si = 0; while (si < ns) { long long sl = fk_next(); fk_so[fk_sp] = fk_sbp; fk_sl[fk_sp] = sl; long long bj = 0; while (bj < sl) { fk_sb[fk_sbp] = (char)fk_next(); fk_sbp = fk_sbp + 1; bj = bj + 1; } fk_sp = fk_sp + 1; si = si + 1; } long long a = 0; if (argc > 2) { a = atoi(argv[2]) << 1; } fk_hot = 1000000000000; if (argc > 3) { fk_hot = atoi(argv[3]); } fk_canc(); fk_vs[0] = a; fk_vsp = 1; fk_pv(fk_walk(fk_fn[0], 0)); fk_pr(fk_njit); fk_pr(fk_nmelt); fk_pr(fk_nfreeze); fk_pr(fk_nwire); long long f = 0; while (f < fk_nf) { fk_pr(fk_heat[f]); fk_pr(fk_ice[f]); fk_pr(fk_can[f]); f = f + 1; } return 0; }")
+
+(defn fkc-emit-uwire ()
+    (str_concat (fkc-pr-text)
+    (str_concat (fkc-decl-universal-text)
+    (str_concat (fkc-jitmelt-decl-text)
+    (str_concat (fkc-wire-decl-text)
+    (str_concat (fkc-wire-phrases-text)
+    (str_concat (fkc-rt-append-text)
+    (str_concat (fkc-rt-can-text)
+    (str_concat (fkc-rt-lower-text)
+    (str_concat (fkc-wire-text)
+    (str_concat (fkc-epoch-body-text "fk_nf")
+    (str_concat (fkc-jd-wire-text)
+    (str_concat (fkc-walk-jitmelt-text)
+                (fkc-main-uwire-text))))))))))))))
