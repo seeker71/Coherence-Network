@@ -215,8 +215,10 @@ section [form.bml] {
     def api-started-at-iso() = unix_ms_to_iso_utc(kernel_started_unix_ms());
     def api-uptime-seconds() = div(sub(now_unix_ms(), kernel_started_unix_ms()), 1000);
     def api-version() = "1.0.0";
-    def api-deployed-sha() = config_value_or("deployed_sha", "");
-    def api-deployed-sha-source() = if api-deployed-sha() == "" then "" else "config:deployed_sha";
+    def api-string-or(value, default_value) = if str_eq(value_kind(value), "null") then default_value else value;
+    def api-config-string-or(path, default_value) = api-string-or(config_value_or(path, default_value), default_value);
+    def api-deployed-sha() = api-config-string-or("deployed_sha", "");
+    def api-deployed-sha-source() = if str_eq(api-deployed-sha(), "") then "" else "config:deployed_sha";
     def api-strip-trailing-slash(s) = if and(gt(str_len(s), 0), char_at(s, sub(str_len(s), 1)) == "/") then substring(s, 0, sub(str_len(s), 1)) else s;
     def api-gate-main-head-cache-key(repo, branch) = str_concat(repo, str_concat("|", branch));
     def api-gate-main-head-cache-ttl-ms() = mul(config_value_or("release_gates.branch_head_sha_cache_ttl_seconds", 45.0), 1000.0);
