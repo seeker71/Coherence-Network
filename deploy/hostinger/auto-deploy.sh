@@ -1028,6 +1028,7 @@ ensure_kernel_router_canary() {
         'vitality|/api/workspaces/coherence-network/vitality|api_vitality_coherence_network' \
         'coherence-score|/api/coherence/score|api_coherence_score' \
         'graph-nodes|/api/graph/nodes?limit=1|api_graph_nodes' \
+        'graph-node-edges|/api/graph/nodes/asset:audible-B0D2DRHSDJ/edges?direction=both|api_graph_node_edges' \
         'presence-summary|/api/presence/summary|api_presence_summary' \
         'living-concept|/api/concepts/lc-circulation|api_concept_living_collective' \
         'edges|/api/edges?limit=2|api_edges' \
@@ -1042,6 +1043,7 @@ ensure_kernel_router_canary() {
         'concept-voices|/api/concepts/lc-attuned-spaces/voices|api_concept_voices' \
         'concept-carried-by|/api/concepts/lc-ceremony/carried-by|api_concept_carried_by' \
         'presence-resonances|/api/presences/asset:audible-B00DVN8U82/resonances|api_presence_resonances' \
+        'presence-places|/api/presences/asset:audible-B0D2DRHSDJ/places|api_presence_places' \
         'spec-registry|/api/spec-registry?limit=2|api_spec_registry' \
         'spec-registry-detail|/api/spec-registry/web-ideas-specs-usage-pages|api_spec_registry_detail' \
         'idea-specs|/api/ideas/user-surfaces/specs|api_idea_specs' \

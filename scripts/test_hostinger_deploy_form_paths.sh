@@ -51,6 +51,12 @@ grep -Fq 'PathRegexp(`^/api/concepts/[^/]+/carried-by$`)' "$ROOT_DIR/deploy/kern
 grep -Fq 'PathRegexp(`^/api/presences/[^/]+/resonances$`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
   || fail "kernel-router ingress does not expose the presence resonances BML template route"
 
+grep -Fq 'PathRegexp(`^/api/presences/[^/]+/places$`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+  || fail "kernel-router ingress does not expose the presence places BML template route"
+
+grep -Fq 'PathRegexp(`^/api/graph/nodes/[^/]+/edges$`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+  || fail "kernel-router ingress does not expose the graph node edges BML template route"
+
 grep -Fq 'Path(`/api/spec-registry`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
   || fail "kernel-router ingress does not expose the spec registry BML list route"
 
@@ -156,6 +162,12 @@ grep -Fq 'api_concept_carried_by' "$DEPLOY_SCRIPT" \
 grep -Fq 'api_presence_resonances' "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not probe the presence resonances BML handler"
 
+grep -Fq 'api_presence_places' "$DEPLOY_SCRIPT" \
+  || fail "deploy canary does not probe the presence places BML handler"
+
+grep -Fq 'api_graph_node_edges' "$DEPLOY_SCRIPT" \
+  || fail "deploy canary does not probe the graph node edges BML handler"
+
 grep -Fq 'api_spec_registry' "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not probe the spec registry BML handler"
 
@@ -188,6 +200,24 @@ grep -Fq 'api-native-ok-json("api_concept_carried_by"' "$ROOT_DIR/deploy/front-d
 
 grep -Fq 'api-native-ok-json("api_presence_resonances"' "$ROOT_DIR/deploy/front-door/api.bml" \
   || fail "presence resonances handler does not emit native proof headers"
+
+grep -Fq 'api-native-ok-json("api_presence_places"' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "presence places handler does not emit native proof headers"
+
+grep -Fq 'api-native-ok-json("api_graph_node_edges"' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "graph node edges handler does not emit native proof headers"
+
+grep -Fq 'api-native-ok-json("api_agent_task_log"' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "agent task log handler does not emit native proof headers"
+
+grep -Fq 'language-route-class-kernel-route(AgentTaskLogRoute)' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "agent task log route class is not exported in the BML routes list"
+
+grep -Fq 'language-route-class-kernel-route(PresencePlacesRoute)' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "presence places route class is not exported in the BML routes list"
+
+grep -Fq 'language-route-class-kernel-route(GraphNodeEdgesRoute)' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "graph node edges route class is not exported in the BML routes list"
 
 grep -Fq 'api-spec-list-response("api_spec_registry"' "$ROOT_DIR/deploy/front-door/api.bml" \
   || fail "spec registry handler does not emit native proof headers with x-total-count"
