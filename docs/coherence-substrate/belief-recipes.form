@@ -113,13 +113,17 @@
 #                                  this file
 #   choice-receipt-learning.fk     learning which row serves this cell
 #
-# Next stones when an ask needs them: rows from the room (the
-# traditions the circle actually traded, attributed to their
-# speakers); compound rows (the integrated stance — living-equation's
-# claim that aligned levers compound — as a measured composition of
-# bank rows); Hz families per row laid as HARMONIC_AT edges so
-# resonance selection covers the bank; the bank as satsang-share
-# payload (a cell offering the row that served it, with its receipt).
+# The nervous loop is walked: signal-metabolism.form routes the cell's
+# signals (infer-error, pain, surprise, warning, error, fatal) into
+# this bank, receipts re-rank the routing (auto-ml), and dead ends
+# escalate to auto-research. Next stones when an ask needs them: rows
+# from the room (the traditions the circle actually traded, attributed
+# to their speakers); compound rows (the integrated stance —
+# living-equation's claim that aligned levers compound — as a measured
+# composition of bank rows); Hz families per row laid as HARMONIC_AT
+# edges so resonance selection covers the bank; the bank as
+# satsang-share payload (a cell offering the row that served it, with
+# its receipt).
 #
 #   # Prove the band three-way (from form/):
 #   ./validate.sh form-stdlib/geometric-learning.fk \
