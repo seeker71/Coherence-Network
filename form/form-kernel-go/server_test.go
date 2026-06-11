@@ -256,6 +256,76 @@ func TestHealthRouteNativeOperationalShape(t *testing.T) {
 	}
 }
 
+func TestNativeHandlerFatalResponseNamesKindTraceAndWorkerContinues(t *testing.T) {
+	source := `
+(defn route_boom (q) (form_error "as_str: Null"))
+(defn route_ok (q) "ok")
+(let routes (list
+  (list "/boom" route_boom)
+  (list "/ok" route_ok)))
+`
+	worker, err := buildGoServeWorker(&goServeProgram{source: source})
+	if err != nil {
+		t.Fatalf("buildGoServeWorker: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "http://native.example.test/boom", nil)
+	rec := httptest.NewRecorder()
+	worker.serve(rec, req)
+	res := rec.Result()
+	defer res.Body.Close()
+	gotBody, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("fatal status = %d body=%s", res.StatusCode, string(gotBody))
+	}
+	if got := res.Header.Get("X-Form-Router"); got != "native-kernel-error" {
+		t.Fatalf("fatal router = %q, want native-kernel-error", got)
+	}
+	if got := res.Header.Get("X-Form-Fatal-Kind"); got != "type_contract_violation" {
+		t.Fatalf("fatal kind = %q", got)
+	}
+	tracePath := res.Header.Get("X-Form-Crash-Trace")
+	if tracePath == "" {
+		t.Fatal("missing X-Form-Crash-Trace")
+	}
+	defer os.Remove(tracePath)
+	if !strings.Contains(string(gotBody), "fatal[type_contract_violation]: as_str: Null") {
+		t.Fatalf("fatal body missing diagnosis: %s", string(gotBody))
+	}
+	if !strings.Contains(string(gotBody), "trace: "+tracePath) {
+		t.Fatalf("fatal body missing trace path: %s", string(gotBody))
+	}
+	traceBody, err := os.ReadFile(tracePath)
+	if err != nil {
+		t.Fatalf("read trace %s: %v", tracePath, err)
+	}
+	for _, want := range []string{
+		`"fatal_kind": "type_contract_violation"`,
+		`"source_label": "go serve source manifest"`,
+		`"operation": "request=GET /boom route:`,
+	} {
+		if !strings.Contains(string(traceBody), want) {
+			t.Fatalf("trace body missing %s: %s", want, string(traceBody))
+		}
+	}
+
+	okReq := httptest.NewRequest(http.MethodGet, "http://native.example.test/ok", nil)
+	okRec := httptest.NewRecorder()
+	worker.serve(okRec, okReq)
+	okRes := okRec.Result()
+	defer okRes.Body.Close()
+	okBody, err := io.ReadAll(okRes.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if okRes.StatusCode != http.StatusOK || string(okBody) != "ok" {
+		t.Fatalf("worker did not continue: status=%d body=%s", okRes.StatusCode, string(okBody))
+	}
+}
+
 func TestCompileSourceSectionNativeReturnsRecipe(t *testing.T) {
 	k := NewKernel()
 	expr := `(compile_source_section "form.bml" "add(20, 22);" "test/runtime.bml")`
