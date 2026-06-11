@@ -1,0 +1,110 @@
+; geometric-learning.fk — geometric deep learning as proven Form: ONE weighted-gather operator
+; over edge data carries Euclidean convolution, graph message passing, diffusion, and manifold
+; embedding; symmetry is a band-checked theorem, never an assertion.
+;
+; The teaching (the GDL program — symmetry, invariance, equivariance — arrived via the field
+; 2026-06-10): a learning architecture respects the structure of its domain, and the domain
+; enters as DATA — a list of (i j w) edge triples — never as a parallel code path. One engine:
+;
+;     gl-step:  y_i = Σ_{(i j w)} w · x_j        (weighted gather over the edge list)
+;
+; · Euclidean convolution  = gl-step over circulant ring edges — the weight depends only on
+;   the offset, which IS translation symmetry made visible as data symmetry. gl-conv is the
+;   textbook form; the band proves gl-step ≡ gl-conv: CNNs are geometric operators on lattices.
+; · graph message passing  = gl-step over symmetric mesh edges (uniform kernel; aggregate
+;   neighbors + lazy self-loop). Permutation equivariance: gl-step(π·edges, π·x) = π·gl-step(edges, x).
+; · diffusion (heat flow)  = gl-diffuse: gl-step iterated. With a row-stochastic kernel mass
+;   is conserved and the flow settles into the constant mode — the invariant.
+; · manifold embedding     = gl-embed: diffuse a seed, deflate the constant mode. f: Graph → ℝ —
+;   the diffusion-map coordinate; on a two-chart mesh its sign separates the charts.
+;
+; The same builder with different weights decides whether the operator diffuses (row-stochastic)
+; or amplifies — kernels are data, behavior is a consequence. Sibling tissue: denoising diffusion
+; (the generative reverse flow) lives in ml-flow-band; this module is diffusion ON a domain,
+; the operator GDL generalizes convolution from.
+(do
+    ; --- vector ground (float signals as lists) ---
+    (defn gl-zeros (n) (if (eq n 0) (empty) (cons 0.0 (gl-zeros (sub n 1)))))
+    (defn gl-flen (xs) (if (eq (len xs) 0) 0.0 (add 1.0 (gl-flen (tail xs)))))
+    (defn gl-sum-acc (acc xs) (if (eq (len xs) 0) acc (gl-sum-acc (add acc (head xs)) (tail xs))))
+    (defn gl-sum (xs) (gl-sum-acc 0.0 xs))
+    (defn gl-cat (a b) (if (eq (len a) 0) b (cons (head a) (gl-cat (tail a) b))))
+    (defn gl-bump (ys i v)
+        (if (eq i 0) (cons (add (head ys) v) (tail ys))
+            (cons (head ys) (gl-bump (tail ys) (sub i 1) v))))
+
+    ; --- THE geometric operator: one weighted gather over edge data, fold in list order ---
+    (defn gl-step-acc (edges x y)
+        (if (eq (len edges) 0) y
+            (gl-step-acc (tail edges) x
+                (gl-bump y (nth (head edges) 0)
+                    (mul (nth (head edges) 2) (nth x (nth (head edges) 1)))))))
+    (defn gl-step (edges x) (gl-step-acc edges x (gl-zeros (len x))))
+
+    ; --- diffusion: the operator iterated (heat flow on the domain) ---
+    (defn gl-diffuse (edges x t)
+        (if (eq t 0) x (gl-diffuse edges (gl-step edges x) (sub t 1))))
+
+    ; --- invariant readout (global pooling) and constant-mode deflation ---
+    (defn gl-mean (x) (div (gl-sum x) (gl-flen x)))
+    (defn gl-shift-scalar (xs c)
+        (if (eq (len xs) 0) (empty) (cons (sub (head xs) c) (gl-shift-scalar (tail xs) c))))
+    (defn gl-deflate (x) (gl-shift-scalar x (gl-mean x)))
+
+    ; --- manifold embedding: diffuse a seed, keep what the constant mode cannot hold ---
+    (defn gl-embed (edges x0 t) (gl-deflate (gl-diffuse edges x0 t)))
+
+    ; --- domain builders: domains are data ---
+    ; circulant ring — the periodic 1-D Euclidean grid; kernel (km k0 kp) by offset only
+    (defn gl-imod (a n) (if (ge a n) (sub a n) (if (lt a 0) (add a n) a)))
+    (defn gl-ring-edges-acc (n i km k0 kp)
+        (if (eq i n) (empty)
+            (cons (list i (gl-imod (sub i 1) n) km)
+            (cons (list i i k0)
+            (cons (list i (gl-imod (add i 1) n) kp)
+                  (gl-ring-edges-acc n (add i 1) km k0 kp))))))
+    (defn gl-ring-edges (n km k0 kp) (gl-ring-edges-acc n 0 km k0 kp))
+
+    ; undirected pair list → symmetric mesh edges: lazy self-loops + uniform neighbor kernel
+    (defn gl-self-edges (n i ws)
+        (if (eq i n) (empty) (cons (list i i ws) (gl-self-edges n (add i 1) ws))))
+    (defn gl-pair-edges (pairs wn)
+        (if (eq (len pairs) 0) (empty)
+            (cons (list (nth (head pairs) 0) (nth (head pairs) 1) wn)
+            (cons (list (nth (head pairs) 1) (nth (head pairs) 0) wn)
+                  (gl-pair-edges (tail pairs) wn)))))
+    (defn gl-mesh-edges (pairs n ws wn)
+        (gl-cat (gl-self-edges n 0 ws) (gl-pair-edges pairs wn)))
+
+    ; --- textbook circular convolution (the CNN form, for the unification claim) ---
+    (defn gl-conv-at (x n i km k0 kp)
+        (add (mul km (nth x (gl-imod (sub i 1) n)))
+        (add (mul k0 (nth x i))
+             (mul kp (nth x (gl-imod (add i 1) n))))))
+    (defn gl-conv-acc (x n i km k0 kp)
+        (if (eq i n) (empty)
+            (cons (gl-conv-at x n i km k0 kp) (gl-conv-acc x n (add i 1) km k0 kp))))
+    (defn gl-conv (x km k0 kp) (gl-conv-acc x (len x) 0 km k0 kp))
+
+    ; --- the symmetry action: relabel signals, transport edge data with them ---
+    ; q is the gather map: (π·x)[k] = x[q[k]]; edges relabel through q's inverse
+    (defn gl-permute (q x)
+        (if (eq (len q) 0) (empty) (cons (nth x (head q)) (gl-permute (tail q) x))))
+    (defn gl-index-of-acc (xs v k)
+        (if (eq (head xs) v) k (gl-index-of-acc (tail xs) v (add k 1))))
+    (defn gl-index-of (xs v) (gl-index-of-acc xs v 0))
+    (defn gl-permute-edges (q edges)
+        (if (eq (len edges) 0) (empty)
+            (cons (list (gl-index-of q (nth (head edges) 0))
+                        (gl-index-of q (nth (head edges) 1))
+                        (nth (head edges) 2))
+                  (gl-permute-edges q (tail edges)))))
+
+    ; --- integer verdict lens: reduce floats at 1e-6, compare signals elementwise ---
+    (defn gl-r6 (v) (round (mul v 1000000.0)))
+    (defn gl-veq6 (a b)
+        (if (eq (len a) 0) (if (eq (len b) 0) 1 0)
+            (if (eq (len b) 0) 0
+                (if (eq (gl-r6 (head a)) (gl-r6 (head b)))
+                    (gl-veq6 (tail a) (tail b)) 0))))
+    0)
