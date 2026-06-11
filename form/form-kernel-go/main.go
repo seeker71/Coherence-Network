@@ -4039,8 +4039,8 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 					return Value{Kind: VFloat, Float: l - math.Floor(l/r)*r}
 				}
 			}
-			a := lv.Int
-			b := rv.Int
+			a := lv.AsInt()
+			b := rv.AsInt()
 			switch cat.Inst {
 			case RMathPlus:
 				return Value{Kind: VInt, Int: a + b}
@@ -4059,55 +4059,58 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 			rv := k.walk(kids[1], env)
 			// Same width-promotion rule as math: float on either side forces
 			// an IEEE comparison. Pure int/int stays integer. Mirrors Rust.
+			// The answer is axiom-1's two states — Int 0/1 — on every path,
+			// the same shape the JIT's emitted C produces, so a comparison
+			// flows directly into arithmetic.
 			if lv.Kind == VFloat || rv.Kind == VFloat {
 				l := lv.AsFloat()
 				r := rv.AsFloat()
 				switch cat.Inst {
 				case RCompareEq:
-					return Value{Kind: VBool, Bool: l == r}
+					return Value{Kind: VInt, Int: b2i(l == r)}
 				case RCompareNe:
-					return Value{Kind: VBool, Bool: l != r}
+					return Value{Kind: VInt, Int: b2i(l != r)}
 				case RCompareLt:
-					return Value{Kind: VBool, Bool: l < r}
+					return Value{Kind: VInt, Int: b2i(l < r)}
 				case RCompareLe:
-					return Value{Kind: VBool, Bool: l <= r}
+					return Value{Kind: VInt, Int: b2i(l <= r)}
 				case RCompareGt:
-					return Value{Kind: VBool, Bool: l > r}
+					return Value{Kind: VInt, Int: b2i(l > r)}
 				case RCompareGe:
-					return Value{Kind: VBool, Bool: l >= r}
+					return Value{Kind: VInt, Int: b2i(l >= r)}
 				}
 			}
-			a := lv.Int
-			b := rv.Int
+			a := lv.AsInt()
+			b := rv.AsInt()
 			switch cat.Inst {
 			case RCompareEq:
-				return Value{Kind: VBool, Bool: a == b}
+				return Value{Kind: VInt, Int: b2i(a == b)}
 			case RCompareNe:
-				return Value{Kind: VBool, Bool: a != b}
+				return Value{Kind: VInt, Int: b2i(a != b)}
 			case RCompareLt:
-				return Value{Kind: VBool, Bool: a < b}
+				return Value{Kind: VInt, Int: b2i(a < b)}
 			case RCompareLe:
-				return Value{Kind: VBool, Bool: a <= b}
+				return Value{Kind: VInt, Int: b2i(a <= b)}
 			case RCompareGt:
-				return Value{Kind: VBool, Bool: a > b}
+				return Value{Kind: VInt, Int: b2i(a > b)}
 			case RCompareGe:
-				return Value{Kind: VBool, Bool: a >= b}
+				return Value{Kind: VInt, Int: b2i(a >= b)}
 			}
 
 		case RBasicLogic:
 			switch cat.Inst {
 			case RLogicAnd:
-				if !k.walk(kids[0], env).Bool {
-					return Value{Kind: VBool, Bool: false}
+				if !truthy(k.walk(kids[0], env)) {
+					return Value{Kind: VInt, Int: 0}
 				}
-				return Value{Kind: VBool, Bool: k.walk(kids[1], env).Bool}
+				return Value{Kind: VInt, Int: b2i(truthy(k.walk(kids[1], env)))}
 			case RLogicOr:
-				if k.walk(kids[0], env).Bool {
-					return Value{Kind: VBool, Bool: true}
+				if truthy(k.walk(kids[0], env)) {
+					return Value{Kind: VInt, Int: 1}
 				}
-				return Value{Kind: VBool, Bool: k.walk(kids[1], env).Bool}
+				return Value{Kind: VInt, Int: b2i(truthy(k.walk(kids[1], env)))}
 			case RLogicNot:
-				return Value{Kind: VBool, Bool: !k.walk(kids[0], env).Bool}
+				return Value{Kind: VInt, Int: b2i(!truthy(k.walk(kids[0], env)))}
 			}
 
 		case RBasicCond:
@@ -4537,6 +4540,14 @@ func truthy(v Value) bool {
 		return false
 	}
 	return true
+}
+
+// b2i — axiom-1's two states as the value shape of every truth answer.
+func b2i(b bool) int64 {
+	if b {
+		return 1
+	}
+	return 0
 }
 
 // ---------------------------------------------------------------------------

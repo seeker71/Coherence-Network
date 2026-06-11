@@ -4176,6 +4176,7 @@ function walkMatchSwitch(
 }
 
 function expectInt(v: Value, op: string): number {
+  if (v.kind === "bool") return v.bool ? 1 : 0;
   if (
     v.kind !== "int" &&
     v.kind !== "i8" &&
@@ -4189,6 +4190,7 @@ function expectInt(v: Value, op: string): number {
 }
 
 function expectFloat(v: Value, op: string): number {
+  if (v.kind === "bool") return v.bool ? 1 : 0;
   if (v.kind === "f32" || v.kind === "f64") return v.float;
   if (
     v.kind === "int" ||
@@ -4204,6 +4206,7 @@ function expectFloat(v: Value, op: string): number {
 }
 
 function expectBigInt(v: Value, op: string): bigint {
+  if (v.kind === "bool") return v.bool ? 1n : 0n;
   if (v.kind === "i64" || v.kind === "u64") return v.bigint;
   if (
     v.kind === "int" ||
@@ -4390,18 +4393,20 @@ function walkCompare(
   const av = walk(k, kids[0]!, frame);
   const bv = walk(k, kids[1]!, frame);
 
-  if (op === RCmp.EQ || op === RCmp.NE) {
-    const equal = valueEqual(av, bv);
-    return { kind: "bool", bool: op === RCmp.EQ ? equal : !equal };
-  }
-
   // Width-mixing in comparisons: if either side is float, compare as float;
-  // if either side is bigint, compare as bigint; else as int.
+  // if either side is bigint, compare as bigint; else as int (bool operands
+  // carry axiom-1's two states as 1/0 — sibling of Rust's as_int). The
+  // answer is itself the two states — Int 0/1 — on every path, the same
+  // shape the JIT's emitted C produces, so a comparison flows directly
+  // into arithmetic. Structural equality over non-numeric values lives in
+  // value_eq / str_eq / node_eq.
   let r: boolean;
   if (av.kind === "f32" || av.kind === "f64" || bv.kind === "f32" || bv.kind === "f64") {
     const a = expectFloat(av, "compare");
     const b = expectFloat(bv, "compare");
     switch (op) {
+      case RCmp.EQ: r = a === b; break;
+      case RCmp.NE: r = a !== b; break;
       case RCmp.LT: r = a < b; break;
       case RCmp.LE: r = a <= b; break;
       case RCmp.GT: r = a > b; break;
@@ -4412,6 +4417,8 @@ function walkCompare(
     const a = expectBigInt(av, "compare");
     const b = expectBigInt(bv, "compare");
     switch (op) {
+      case RCmp.EQ: r = a === b; break;
+      case RCmp.NE: r = a !== b; break;
       case RCmp.LT: r = a < b; break;
       case RCmp.LE: r = a <= b; break;
       case RCmp.GT: r = a > b; break;
@@ -4422,6 +4429,8 @@ function walkCompare(
     const a = expectInt(av, "compare");
     const b = expectInt(bv, "compare");
     switch (op) {
+      case RCmp.EQ: r = a === b; break;
+      case RCmp.NE: r = a !== b; break;
       case RCmp.LT: r = a < b; break;
       case RCmp.LE: r = a <= b; break;
       case RCmp.GT: r = a > b; break;
@@ -4429,7 +4438,7 @@ function walkCompare(
       default: throw new Error(`compare: unknown op ${op}`);
     }
   }
-  return { kind: "bool", bool: r };
+  return { kind: "int", int: r ? 1 : 0 };
 }
 
 function valueEqual(a: Value, b: Value): boolean {
@@ -4558,17 +4567,17 @@ function walkLogic(
   if (op === RLogic.NOT) {
     if (kids.length !== 1) throw new Error("not: need exactly 1 arg");
     const v = walk(k, kids[0]!, frame);
-    return { kind: "bool", bool: !truthy(v) };
+    return { kind: "int", int: truthy(v) ? 0 : 1 };
   }
   if (kids.length < 2) throw new Error("and/or: need at least 2 args");
   for (let i = 0; i < kids.length; i++) {
     const v = walk(k, kids[i]!, frame);
     const b = truthy(v);
-    if (op === RLogic.AND && !b) return { kind: "bool", bool: false };
-    if (op === RLogic.OR && b) return { kind: "bool", bool: true };
-    if (i === kids.length - 1) return { kind: "bool", bool: b };
+    if (op === RLogic.AND && !b) return { kind: "int", int: 0 };
+    if (op === RLogic.OR && b) return { kind: "int", int: 1 };
+    if (i === kids.length - 1) return { kind: "int", int: b ? 1 : 0 };
   }
-  return { kind: "bool", bool: op === RLogic.AND };
+  return { kind: "int", int: op === RLogic.AND ? 1 : 0 };
 }
 
 function walkCond(

@@ -6526,10 +6526,13 @@ fn walk_inner(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
                 let rv = walk(k, a, kids[1], env);
                 // Same width-promotion rule as math: float on either side
                 // forces an IEEE comparison. Pure int/int stays integer.
+                // The answer is axiom-1's two states — Int 0/1 — on every
+                // path, the same shape the JIT's emitted C produces, so a
+                // comparison flows directly into arithmetic.
                 if matches!(lv, Value::Float(_)) || matches!(rv, Value::Float(_)) {
                     let l = lv.as_float();
                     let r = rv.as_float();
-                    Value::Bool(match cat.inst {
+                    Value::Int(match cat.inst {
                         RCMP_EQ => l == r,
                         RCMP_NE => l != r,
                         RCMP_LT => l < r,
@@ -6537,11 +6540,11 @@ fn walk_inner(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
                         RCMP_GT => l > r,
                         RCMP_GE => l >= r,
                         _ => panic!("compare.f64: unknown op {}", cat.inst),
-                    })
+                    } as i64)
                 } else {
                     let l = lv.as_int();
                     let r = rv.as_int();
-                    Value::Bool(match cat.inst {
+                    Value::Int(match cat.inst {
                         RCMP_EQ => l == r,
                         RCMP_NE => l != r,
                         RCMP_LT => l < r,
@@ -6549,25 +6552,25 @@ fn walk_inner(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
                         RCMP_GT => l > r,
                         RCMP_GE => l >= r,
                         _ => panic!("compare: unknown op {}", cat.inst),
-                    })
+                    } as i64)
                 }
             }
             RB_LOGIC => match cat.inst {
                 RLOG_AND => {
                     if !walk(k, a, kids[0], env).as_bool() {
-                        Value::Bool(false)
+                        Value::Int(0)
                     } else {
-                        Value::Bool(walk(k, a, kids[1], env).as_bool())
+                        Value::Int(walk(k, a, kids[1], env).as_bool() as i64)
                     }
                 }
                 RLOG_OR => {
                     if walk(k, a, kids[0], env).as_bool() {
-                        Value::Bool(true)
+                        Value::Int(1)
                     } else {
-                        Value::Bool(walk(k, a, kids[1], env).as_bool())
+                        Value::Int(walk(k, a, kids[1], env).as_bool() as i64)
                     }
                 }
-                RLOG_NOT => Value::Bool(!walk(k, a, kids[0], env).as_bool()),
+                RLOG_NOT => Value::Int((!walk(k, a, kids[0], env).as_bool()) as i64),
                 _ => panic!("logic: unknown op {}", cat.inst),
             },
             RB_COND => {

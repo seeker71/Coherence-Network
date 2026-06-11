@@ -78,9 +78,8 @@
 ; 16 bytes per cell: the sibling's two long longs (fk_heap_head + fk_heap_tail)
 (defn am-measure2 (alloc live) (list alloc live (sub alloc live) (mul alloc 16) (mul live 16)))
 (defn am-measure (ar root) (am-measure2 (am-hp ar) (len (am-live-slots ar root))))
-; (the innermost claim reduces through if to an integer — a raw eq return
-;  value is kernel-divergent: bool on TS/Go, int on Rust; eq belongs in
-;  if-conditions, integers belong in answers)
+; (the if-chain short-circuits: each claim walks nth only after the
+;  previous one held — eq itself answers 0/1 three-way, per eq-shape-band)
 (defn am-readout-is (m alloc live dead pb lb)
     (if (eq (nth m 0) alloc)
         (if (eq (nth m 1) live)

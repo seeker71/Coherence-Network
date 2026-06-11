@@ -182,6 +182,23 @@ func (v Value) AsFloat() float64 {
 	panic(fmt.Sprintf("AsFloat: %v", v))
 }
 
+// AsInt — numeric operand coercion: ints pass through, floats truncate,
+// booleans carry axiom-1's two states as 1/0. Sibling of Rust's as_int.
+func (v Value) AsInt() int64 {
+	switch v.Kind {
+	case VInt:
+		return v.Int
+	case VFloat:
+		return int64(v.Float)
+	case VBool:
+		if v.Bool {
+			return 1
+		}
+		return 0
+	}
+	panic(fmt.Sprintf("AsInt: %v", v))
+}
+
 // FormatFloatJS — JS String(number) semantics: shortest round-trippable form,
 // NaN/Infinity spelled out.
 func FormatFloatJS(f float64) string {
