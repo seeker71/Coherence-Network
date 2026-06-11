@@ -154,6 +154,13 @@
 ;   M7 milestone: an autoresearch loop that generates a small layer-stack variant, evaluates it on
 ;   held-out signal, and champion-challenges it against the running model — provable, and gated on M1-M6
 ;   (you can only search architectures once you can build and run them).
+;   M7's STYLE-SPACE ORGAN [SHIPPED: learning-style-space.fk + tests/learning-style-space-band.fk
+;   → 4095, three-way]: the genome the loop searches is now ROWS of (id, pool, core) data — CNN,
+;   mesh/GDL, attention, relational/max-plus, order-spectrum, and their compositions through ONE
+;   combinator; the band proves three tasks crown three different styles (no free lunch), a new
+;   bias appended as pure data is measurable immediately, federated memories compose to strictly
+;   exceed each cell alone, and a curiosity floor meets every style before retrying any. See
+;   learning-style-space.form.
 ;
 ; KIN: numeric-formats.canonical.json (the 19 formats + conformance) · cell-numerics.form / cosine.form
 ;   (the layer math) · attention.fk + embedding-as-recipe.fk (content-addressed attention) ·
