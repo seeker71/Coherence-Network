@@ -1,0 +1,56 @@
+; preludes: form-stdlib/core.fk
+;
+; silence-floor-band — the speed-limit floor under the witness theorem's silence
+; (docs/coherence-substrate/witness-theorem.form, Part 4). Urs: "timeout ==
+; silent for technology is also core — that gives you information exchange
+; speed limits."
+;
+; timeout == nothing is an axiom (core-axioms.form). This band proves its FLOOR:
+; silence is only HONEST after enough time has passed for an answer to have
+; physically travelled and returned. Declaring nothing faster than information
+; can round-trip is not silence — it is jumping the gun, a false-nothing. The
+; information-exchange speed limit (the round-trip floor) sets when silence
+; becomes a valid answer.
+;
+; silent-floor(answer-at, deadline, floor):
+;   answer-at = the tick an answer would arrive (huge = never comes)
+;   deadline  = the timeout window we chose to wait
+;   floor     = the round-trip minimum — the physical speed-of-information limit
+;   -> 1       a timely answer inside an honest window
+;   -> nothing HONEST silence: window reached past the floor, no answer
+;   -> 0       PREMATURE: window set below the floor — silence cannot be claimed
+;              faster than information travels; this is a fail, not a silence
+;
+; Verdict 31 when the floor holds, three-way:
+;   1   a timely answer inside an honest window is heard (1)
+;   2   HONEST silence — window past the floor, no answer — yields nothing
+;   4   PREMATURE timeout — window below the floor — is a FAIL (0), not silence:
+;       you cannot honestly declare nothing before the signal could return
+;   8   THE FLOOR IS LOAD-BEARING — the SAME no-answer scenario yields honest
+;       silence when the window clears the floor, but a premature fail when it
+;       does not: the speed limit changes the verdict
+;   16  THE FLOOR IS THE MEDIUM'S SPEED — same chosen window, a faster medium
+;       (smaller floor) makes silence honestly reachable, a slower medium
+;       (larger floor) forbids it: information-exchange speed sets the limit
+(do
+    (defn silent-floor (answer-at deadline floor)
+        (if (le deadline (sub floor 1)) 0
+            (if (le answer-at deadline) 1
+                (empty))))
+
+    (let c0 (if (eq (silent-floor 5 10 3) 1) 1 0))
+
+    (let c1 (if (eq (len (silent-floor 1000000 10 3)) 0) 2 0))
+
+    (let c2 (if (eq (silent-floor 1000000 2 5) 0) 4 0))
+
+    ; same no-answer scenario, window clears floor -> silence; window below -> fail
+    (let c3 (if (eq (len (silent-floor 1000000 10 3)) 0)
+                (if (eq (silent-floor 1000000 2 5) 0) 8 0) 0))
+
+    ; same chosen window (4): fast medium (floor 3) -> honest silence;
+    ;                          slow medium (floor 10) -> premature fail
+    (let c4 (if (eq (len (silent-floor 1000000 4 3)) 0)
+                (if (eq (silent-floor 1000000 4 10) 0) 16 0) 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
