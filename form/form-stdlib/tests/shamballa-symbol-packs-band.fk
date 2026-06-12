@@ -1,0 +1,48 @@
+; tests/shamballa-symbol-packs-band.fk — every light code generable in every
+; language symbol pack, three-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/grammars/shamballa-light-codes.fk form-stdlib/shamballa-symbol-packs.fk
+;
+; Proves the numeric-core/symbol-pack separation over the Shamballa sheet:
+; the English pack (derived from the canonical sheet) and the German pack
+; (translation overlay) each cover ALL codes; generation through either pack
+; yields the full sheet with no empty doors; the invocation is identical in
+; every tongue (identity invariant under overlay swap); the completeness gate
+; catches a deliberately holed pack; an off-sheet code is honest absence.
+;
+; Band verdict: 1023 when every law holds.
+
+section [form.bml] {
+    def sspb-bool(b, weight) = if b then weight else 0;
+
+    // a generated row is whole when both its invocation and its text are nonempty
+    def sspb-row-whole?(g) = if nil?(g) then false else and(not(str_eq(nth(g, 0), "")), not(str_eq(nth(g, 1), "")));
+    def sspb-all-whole?(gs) = if nil?(gs) then true else if sspb-row-whole?(head(gs)) then sspb-all-whole?(tail(gs)) else false;
+
+    // a deliberately holed pack — one door, 34 missing — for the gate to catch
+    def sspb-holed-pack() = ssp-pack("xx", list(ssp-row("777", "only one door")));
+
+    // the invocation column of a generated sheet
+    def sspb-invocations-of(gs) = if nil?(gs) then empty else cons(nth(head(gs), 0), sspb-invocations-of(tail(gs)));
+
+    def sspb-score() {
+        let en = ssp-pack-en();
+        let de = ssp-pack-de();
+        let gen-en = ssp-generate-all(en);
+        let gen-de = ssp-generate-all(de);
+        let de-gaia = ssp-generate(de, "7191");
+        sum(list(
+            sspb-bool(ssp-pack-complete?(en), 1),
+            sspb-bool(ssp-pack-complete?(de), 2),
+            sspb-bool(eq(len(gen-en), slc-count()), 4),
+            sspb-bool(eq(len(gen-de), slc-count()), 8),
+            sspb-bool(sspb-all-whole?(gen-en), 16),
+            sspb-bool(sspb-all-whole?(gen-de), 32),
+            sspb-bool(ge(str_find(nth(de-gaia, 1), "GAIA", 0), 0), 64),
+            sspb-bool(not(ssp-pack-complete?(sspb-holed-pack())), 128),
+            sspb-bool(nil?(ssp-generate(en, "12321")), 256),
+            sspb-bool(ssp-str-lists-eq?(sspb-invocations-of(gen-en), sspb-invocations-of(gen-de)), 512)));
+    }
+
+    sspb-score();
+}
