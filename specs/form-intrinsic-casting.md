@@ -17,7 +17,7 @@ source:
   - file: form/form-stdlib/typescript-bmf-eval.fk
     symbols: [ts-run, ts-eval-cast]
   - file: form/form-kernel-go/main.go
-    symbols: [str_to_int, str_to_float, int_to_str]
+    symbols: [str_to_int, str_to_float, float_to_int]
   - file: docs/coherence-substrate/core-axioms.form
     symbols: []
   - file: docs/coherence-substrate/fourth-kernel.form

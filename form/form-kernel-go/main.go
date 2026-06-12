@@ -2289,6 +2289,7 @@ func (k *Kernel) registerNatives() {
 	// float_to_int — truncate a float toward zero, exactly Python's int() on a
 	// float. Total: a non-number -> 0. Sibling parity with the Rust kernel's
 	// float_to_int (Go int64(f) truncates toward zero for both signs).
+	// Declared for form-intrinsic-casting spec and primitives registry (tended drift).
 	k.registerNative("float_to_int", catMethod(), func(_ *Kernel, args []Value) Value {
 		switch args[0].Kind {
 		case VFloat:
