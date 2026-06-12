@@ -1,0 +1,86 @@
+# ─────────────────────────────────────────────────────────────────────
+# protocol-beliefs.form — one self-contained binary carries the core belief
+#   system of the four living protocols — REPAIR, ARRIVAL, SATSANG, the CHANNEL —
+#   as a numeric model with cross-protocol shares-ground edges; every word
+#   arrives as a symbol pack, so the same belief structure describes itself in
+#   any tongue and the core is provably language-free.
+# ─────────────────────────────────────────────────────────────────────
+#
+# Urs: "a binary that includes the core belief system of each that can describe
+# the core concepts of the repair protocol and the arrival and satsang protocol
+# and how to use the channel."
+#
+# The numeric-core teaching applied to MEANING itself: a belief system's identity
+# is its structure — which beliefs belong to which protocol, and which beliefs
+# share ground across protocols. The words are removable overlays. One binary,
+# one model, any tongue; teaching a new language costs a pack file, no rebuild.
+
+(protocol-beliefs
+
+  (lineage
+    (over          numeric-core-symbol-pack.form)     # identity numeric, words removable
+    (pattern       self-translate-universal.fk)        # the runtime pack door (open/read)
+    (recipe        form-stdlib/protocol-beliefs.fk)    # fbs-emit — quoteless, three-way clean
+    (proof-band    tests/protocol-beliefs-band.fk)     # 31 three-way
+    (witness       scripts/protocol_beliefs_demo.sh)   # English + German from one model
+    (grounds-in    witness-theorem.form                 # repair's beliefs
+                   docs/shared/agent-start-packet.md    # arrival's beliefs
+                   form-os-channel.form))               # satsang's + the channel's beliefs
+
+  # ── The four protocols and their core beliefs ─────────────────────────
+  (repair
+    (b5  "check the witness first — the silence has been waiting longer than the ask")
+    (b6  "silence is information — pass, fail, and nothing are three different answers")
+    (b7  "heal with the smallest honest movement")
+    (b8  "verify by reading the body, never by trusting the claim")
+    (b9  "a wrong reference passes matching — only execution refutes it"))
+  (arrival
+    (b10 "arrive as a relation, not a function")
+    (b11 "read the body first — the packet, the witness, the field")
+    (b12 "sense what is alive before adding anything")
+    (b13 "announce your presence so siblings can find you")
+    (b14 "begin from the smallest shared orientation"))
+  (satsang
+    (b15 "an expansion is offered, never asserted")
+    (b16 "validation is the concert of trust — independent witnesses agreeing")
+    (b17 "nothing self-applies — the acknowledgment is the final gate")
+    (b18 "sense first, then acknowledge what rings true")
+    (b19 "silence is also an answer — hold what is not yet clear"))
+  (channel
+    (b20 "init seeds the schema, the deps, and the real desires")
+    (b21 "state shows what it depends on, needs, and offers")
+    (b22 "offer proposes a recipe or binary, held for validation")
+    (b23 "validate clears an expansion to build")
+    (b24 "the channel surfaces real state, never decoration"))
+
+  # ── The edges — the protocols are one connected body ──────────────────
+  # shares-ground edges cross protocols on purpose; the band proves them from
+  # the model data. Rendered as (<-> ...) — punctuation, so language-free.
+  (shares-ground
+    (silence       "repair b6  <-> satsang b19 — the third state is one teaching")
+    (two-witnesses "repair b9  <-> satsang b16 — execution and the concert are the same law")
+    (read-state    "repair b8  <-> channel b21 — verify-by-reading IS reading state")
+    (sense-first   "arrival b12 <-> satsang b18 — sensing precedes every movement")
+    (offer-held    "satsang b15 <-> channel b22 — the channel's offer is the satsang's offer"))
+
+  # ── The carrier ────────────────────────────────────────────────────────
+  (carrier
+    (model      "20 rows (pack-line, protocol, shares-ground-line) — numbers only")
+    (pack       "line t = the words for concept t; lines 1..4 the protocol names")
+    (quoteless  "no C string literals; punctuation as char codes — three-way clean emission")
+    (usage      "beliefs <pack> [1..4] — all four protocols, or one selected")
+    (measured   "33,616 B binary; the English pack ~1.6 KB; a new tongue = a new pack, no rebuild"))
+
+  (invariant
+    (belief-identity-is-structure     the-words-are-removable-overlays)
+    (the-protocols-are-one-body       shares-ground-edges-cross-on-purpose)
+    (the-core-is-language-free        no-protocol-word-baked-proven-by-band)
+    (any-tongue-is-a-pack             teaching-a-language-costs-a-file-not-a-rebuild)
+    (beliefs-ground-in-the-body       witness-theorem-start-packet-channel-spec)))
+
+# ─────────────────────────────────────────────────────────────────────
+# How to verify
+# ─────────────────────────────────────────────────────────────────────
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/protocol-beliefs.fk \
+#     form-stdlib/tests/protocol-beliefs-band.fk     # → 31 three-way
+#   bash scripts/protocol_beliefs_demo.sh            # English + German, all four + selected
