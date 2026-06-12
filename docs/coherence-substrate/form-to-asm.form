@@ -27,10 +27,12 @@
     (licenses      form-os-channel.form)                # clang external -> internalized only through the gate
     (proof-bands   tests/form-asm-band.fk               # 31 — encoder byte-accurate, gate sound
                    tests/form-lower-band.fk             # 31 — tree compiles to assembler-identical bytes
+                   tests/form-lower-cond-band.fk        # 31 — CONTROL FLOW: branches + offsets + selection
                    tests/form-macho-band.fk)            # 31 — the emitted Mach-O object is well-formed
     (live-witness  scripts/form_asm_conviction_demo.sh  # Form instruction bytes == assembler bytes
                    scripts/form_lower_demo.sh           # Form COMPILES a tree to assembler-identical bytes
-                   scripts/form_macho_demo.sh))         # Form -> .o -> ld -> a RUNNABLE binary, exit 40, ZERO clang
+                   scripts/form_macho_demo.sh           # Form -> .o -> ld -> a RUNNABLE binary, exit 40, ZERO clang
+                   scripts/form_branch_demo.sh))        # the FULL program BRANCHES on runtime input, zero clang
 
   # ── The encoder: instruction encoding as a recipe ────────────────────
   # An instruction is fields packed into a word; the encoder emits the on-disk
@@ -75,9 +77,16 @@
   # native machine code, no clang in the lowering path.
   (lowering-realized
     (lit    "lower(LIT n)         = movz w0, #n")
-    (add    "lower(ADD(x, LIT i)) = lower(x) ; add w0, w0, #i")
-    (sub    "lower(SUB(x, LIT i)) = lower(x) ; sub w0, w0, #i")
-    (compile "compile(tree)       = lower(tree) ; ret — proven byte-identical to clang"))
+    (arg    "lower(ARG)           = mov w0, w1 — the single argument n is banked in w1")
+    (add    "lower(ADD(x, LIT i)) = lower(x) ; add w0, w0, #i · ADD(ARG, x) -> add w0, w1, w0 (register)")
+    (sub    "lower(SUB(ARG, LIT i)) = sub w0, w1, #i DIRECT — operand-aware selection; the naive
+             lower-then-fold would clobber w0 (correctness, not just size)")
+    (cond   "lower(COND(LE(ARG, LIT i), t, e)) = cmp w1,#i ; b.gt +(len(t)+2) ; t ; b +(len(e)+1) ; e
+             — branch offsets COMPUTED from the lowered block lengths")
+    (fn     "compile-fn(tree)     = orr w1,wzr,w0 (bank argc) ; lower(tree) ; ret")
+    (witnessed "the FULL asm-pl-human program — if (n<=1) then 1 else (n+(n-1)) — compiles
+                byte-identical to clang and RUNS on runtime input n=argc: 1 -> 1 (then-branch),
+                2 -> 3, 5 -> 9 (else-branch); both branches live (form_branch_demo.sh)"))
 
   # ── The Mach-O wrapper — REALIZED: a runnable binary, zero clang ─────
   # form-macho.fk emits a valid arm64 Mach-O OBJECT (mach_header_64 + LC_SEGMENT_64
@@ -97,9 +106,9 @@
   (closing-cells
     (general-encoder "the field-into-byte encoder for high-base instructions (branches, loads,
                       stores) with carry — so any instruction encodes without a > 2^31 word")
-    (richer-lowering "multi-register operands, the calling convention, stack frames, and control
-                      flow for COND/CALL — lowering the FULL asm-pl-human numeric program, beyond
-                      the single-accumulator immediate-arithmetic form already realized")
+    (richer-lowering "general register allocation, the calling convention, stack frames, and CALL
+                      (recursion) — beyond the one-argument accumulator+w1 scheme realized for the
+                      full asm-pl-human COND program")
     (self-link       "emit a linked Mach-O EXECUTABLE directly (dyld load commands + LC_MAIN +
                       LC_CODE_SIGNATURE), retiring ld too — leaving only the platform's signature")
     (kernel-int      "a kernel finding surfaced here: integer literals > 2^31 wrap to signed int32
