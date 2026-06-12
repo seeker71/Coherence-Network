@@ -638,6 +638,13 @@ type Kernel struct {
 	jitFailed       map[NodeID]bool
 	jitFailedReason map[NodeID]string
 	jitDispatchHits map[NodeID]uint32
+	// jitAsync* — landing zone for hot-threshold builds running off the
+	// walker goroutine (jit.go's jitAsyncKick/jitAsyncTake). Only these
+	// maps are shared across goroutines; jitCompiledGo itself stays
+	// walker-only — landed artifacts are adopted into it at dispatch.
+	jitAsyncMu       sync.Mutex
+	jitAsyncBuilding map[string]bool
+	jitAsyncLanded   map[string]*jitAsyncResult
 	// installedLeaves — installed-name → artifact body NodeID for callables
 	// bound into k.natives AT RUNTIME by jit_install (the
 	// install-as-named-callable-leaf carrier; protocol:
@@ -691,6 +698,8 @@ func NewKernel() *Kernel {
 		jitFailed:       make(map[NodeID]bool),
 		jitFailedReason: make(map[NodeID]string),
 		jitDispatchHits: make(map[NodeID]uint32),
+		jitAsyncBuilding: make(map[string]bool),
+		jitAsyncLanded:   make(map[string]*jitAsyncResult),
 		installedLeaves: make(map[NameID]NodeID),
 		switchTables:    make(map[NodeID]*switchTable),
 	}
@@ -3311,7 +3320,7 @@ func (k *Kernel) registerNatives() {
 	k.registerNative("socket_connect", catCall(), func(_ *Kernel, args []Value) Value {
 		host := args[0].Str
 		port := args[1].AsInt()
-		c, err := net.Dial("tcp", fmt.Sprintf("%s:%d", host, port))
+		c, err := net.Dial("tcp", net.JoinHostPort(host, strconv.FormatInt(port, 10)))
 		if err != nil {
 			return Value{Kind: VInt, Int: -1}
 		}
@@ -4558,20 +4567,34 @@ func (k *Kernel) walkInner(n NodeID, env *Frame) Value {
 				}
 				k.observeJIT("observe/go/jit/guard-miss", cl.Body, 1, uint32(len(argVals)))
 			} else if !k.jitFailed[cl.Body] {
+				// The hot crossing kicks the build on a goroutine; this call
+				// and the ones after it keep walking until the artifact
+				// lands, then adoption swaps it in and later calls dispatch
+				// native. The walk is the same answer either way.
 				const goJITHotThreshold uint32 = 2000
-				hits := k.jitHits[cl.Body] + 1
-				if hits >= goJITHotThreshold {
-					if jc, err := jitCompileClosureGo(k, cl); err == nil {
-						k.jitCompiledGo[bodyKey] = jc
+				if res, building := k.jitAsyncTake(bodyKey); res != nil {
+					if res.jc != nil {
+						k.jitCompiledGo[bodyKey] = res.jc
 						k.observeJIT("observe/go/jit/auto-compile-success", cl.Body, 1, 1)
 					} else {
 						k.jitFailed[cl.Body] = true
-						k.jitFailedReason[cl.Body] = err.Error()
+						k.jitFailedReason[cl.Body] = res.reason
 						k.observeJIT("observe/go/jit/auto-compile-fail", cl.Body, 1, 1)
 					}
 					delete(k.jitHits, cl.Body)
-				} else {
-					k.jitHits[cl.Body] = hits
+				} else if !building {
+					hits := k.jitHits[cl.Body] + 1
+					if hits >= goJITHotThreshold {
+						if err := k.jitAsyncKick(cl, bodyKey); err != nil {
+							// Emit refused before any goroutine started.
+							k.jitFailed[cl.Body] = true
+							k.jitFailedReason[cl.Body] = err.Error()
+							k.observeJIT("observe/go/jit/auto-compile-fail", cl.Body, 1, 1)
+						}
+						delete(k.jitHits, cl.Body)
+					} else {
+						k.jitHits[cl.Body] = hits
+					}
 				}
 			}
 			call := NewCallFrame(cl.Env, len(cl.Params))
@@ -5119,35 +5142,35 @@ func (k *Kernel) buildVerb(verb string, args []NodeID) NodeID {
 }
 
 // Category constructors
-func catMath(inst uint32) NodeID    { return NodeID{1, LevelBasic, RBasicMath, inst} }
-func catCompare(inst uint32) NodeID { return NodeID{1, LevelBasic, RBasicCompare, inst} }
-func catLogic(inst uint32) NodeID   { return NodeID{1, LevelBasic, RBasicLogic, inst} }
-func catCond(inst uint32) NodeID    { return NodeID{1, LevelBasic, RBasicCond, inst} }
-func catBlock(inst uint32) NodeID   { return NodeID{1, LevelBasic, RBasicBlock, inst} }
-func catMatch(inst uint32) NodeID   { return NodeID{1, LevelBasic, RBasicMatch, inst} }
-func catChoice(inst uint32) NodeID  { return NodeID{1, LevelBasic, RBasicChoice, inst} }
-func catIdent() NodeID              { return NodeID{1, LevelBasic, RBasicIdent, 1} }
-func catFnDef() NodeID              { return NodeID{1, LevelBasic, RBasicFnDef, 1} }
-func catFnCall() NodeID             { return NodeID{1, LevelBasic, RBasicFnCall, 1} }
+func catMath(inst uint32) NodeID    { return NodeID{Pkg: 1, Level: LevelBasic, Type: RBasicMath, Inst: inst} }
+func catCompare(inst uint32) NodeID { return NodeID{Pkg: 1, Level: LevelBasic, Type: RBasicCompare, Inst: inst} }
+func catLogic(inst uint32) NodeID   { return NodeID{Pkg: 1, Level: LevelBasic, Type: RBasicLogic, Inst: inst} }
+func catCond(inst uint32) NodeID    { return NodeID{Pkg: 1, Level: LevelBasic, Type: RBasicCond, Inst: inst} }
+func catBlock(inst uint32) NodeID   { return NodeID{Pkg: 1, Level: LevelBasic, Type: RBasicBlock, Inst: inst} }
+func catMatch(inst uint32) NodeID   { return NodeID{Pkg: 1, Level: LevelBasic, Type: RBasicMatch, Inst: inst} }
+func catChoice(inst uint32) NodeID  { return NodeID{Pkg: 1, Level: LevelBasic, Type: RBasicChoice, Inst: inst} }
+func catIdent() NodeID              { return NodeID{Pkg: 1, Level: LevelBasic, Type: RBasicIdent, Inst: 1} }
+func catFnDef() NodeID              { return NodeID{Pkg: 1, Level: LevelBasic, Type: RBasicFnDef, Inst: 1} }
+func catFnCall() NodeID             { return NodeID{Pkg: 1, Level: LevelBasic, Type: RBasicFnCall, Inst: 1} }
 
 // Native-attribution category constructors. Each names the Form-shape a
 // native expresses; the walker records them in the trace when the native
 // fires. Mirrors Rust kernel's cat_call / cat_witness / cat_access /
 // cat_method / cat_list_nat / cat_undefined.
-func catCall() NodeID      { return NodeID{1, LevelBasic, RBasicCall, 1} }
-func catWitness() NodeID   { return NodeID{1, LevelBasic, RBasicWitness, 1} }
-func catAccess() NodeID    { return NodeID{1, LevelBasic, RBasicAccess, 1} }
-func catMethod() NodeID    { return NodeID{1, LevelBasic, RBasicMethod, 1} }
-func catListNat() NodeID   { return NodeID{1, LevelBasic, RBasicList, 1} }
-func catTransmute() NodeID { return NodeID{1, LevelBasic, RBasicTransmute, 1} }
+func catCall() NodeID      { return NodeID{Pkg: 1, Level: LevelBasic, Type: RBasicCall, Inst: 1} }
+func catWitness() NodeID   { return NodeID{Pkg: 1, Level: LevelBasic, Type: RBasicWitness, Inst: 1} }
+func catAccess() NodeID    { return NodeID{Pkg: 1, Level: LevelBasic, Type: RBasicAccess, Inst: 1} }
+func catMethod() NodeID    { return NodeID{Pkg: 1, Level: LevelBasic, Type: RBasicMethod, Inst: 1} }
+func catListNat() NodeID   { return NodeID{Pkg: 1, Level: LevelBasic, Type: RBasicList, Inst: 1} }
+func catTransmute() NodeID { return NodeID{Pkg: 1, Level: LevelBasic, Type: RBasicTransmute, Inst: 1} }
 func catFieldPrimitive(categoryType uint32) NodeID {
-	return NodeID{1, LevelBasic, categoryType, 1}
+	return NodeID{Pkg: 1, Level: LevelBasic, Type: categoryType, Inst: 1}
 }
-func catField() NodeID     { return NodeID{1, LevelBasic, RBasicField, 1} }
-func catDelta() NodeID     { return NodeID{1, LevelBasic, RBasicDelta, 1} }
-func catReceipt() NodeID   { return NodeID{1, LevelBasic, RBasicReceipt, 1} }
-func catResidual() NodeID  { return NodeID{1, LevelBasic, RBasicResidual, 1} }
-func catUndefined() NodeID { return NodeID{1, LevelBasic, RBasicUndefined, 0} }
+func catField() NodeID     { return NodeID{Pkg: 1, Level: LevelBasic, Type: RBasicField, Inst: 1} }
+func catDelta() NodeID     { return NodeID{Pkg: 1, Level: LevelBasic, Type: RBasicDelta, Inst: 1} }
+func catReceipt() NodeID   { return NodeID{Pkg: 1, Level: LevelBasic, Type: RBasicReceipt, Inst: 1} }
+func catResidual() NodeID  { return NodeID{Pkg: 1, Level: LevelBasic, Type: RBasicResidual, Inst: 1} }
+func catUndefined() NodeID { return NodeID{Pkg: 1, Level: LevelBasic, Type: RBasicUndefined, Inst: 0} }
 
 // ---------------------------------------------------------------------------
 // Main — entry point

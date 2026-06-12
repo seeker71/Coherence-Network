@@ -39,22 +39,37 @@
     (if (eq (fk-tag n) 25) (fkc-un2 25 (fkc-flat (fk-body n) acc))
     (if (eq (fk-tag n) 29) (fkc-un2 29 (fkc-flat (fk-body n) acc))
     (if (eq (fk-tag n) 41) (fkc-un2 41 (fkc-flat (fk-body n) acc))
+    ; jit-lowered lane (tags 44..53, jit-lower.fk): 44/45 are pair-bodied and
+    ; ride the default binary arm; 47 FOLDED is a value leaf like LIT;
+    ; 46 LOGIC-NOT and the delegate carriers 48/49/50/52 hold their single
+    ; child DIRECTLY (the SELF layout: child index in column 1);
+    ; 51 CLOSURE-LIFTED is (index-leaf, child) — the CALL row layout;
+    ; 53 FOLDED-IF shares the 3-child IF flatten, tag threaded through
+    (if (eq (fk-tag n) 47) (cons (list 47 (ms-value (fk-body n)) 0 0) acc)
+    (if (eq (fk-tag n) 46) (fkc-un2 46 (fkc-flat (fk-body n) acc))
+    (if (eq (fk-tag n) 48) (fkc-un2 48 (fkc-flat (fk-body n) acc))
+    (if (eq (fk-tag n) 49) (fkc-un2 49 (fkc-flat (fk-body n) acc))
+    (if (eq (fk-tag n) 50) (fkc-un2 50 (fkc-flat (fk-body n) acc))
+    (if (eq (fk-tag n) 52) (fkc-un2 52 (fkc-flat (fk-body n) acc))
+    (if (eq (fk-tag n) 51) (fkc-idx2 51 (ms-value (ms-child (fk-body n) 0)) (fkc-flat (ms-child (fk-body n) 1) acc))
     (if (eq (fk-tag n) 12) (fkc-call2 (ms-value (ms-child (fk-body n) 0)) (fkc-flat (ms-child (fk-body n) 1) acc))
-    (if (eq (fk-tag n) 6) (fkc-if2 (fkc-flat (ms-child (fk-body n) 0) acc) n)
-        (fkc-bin2 (fk-tag n) (fkc-flat (ms-child (fk-body n) 0) acc) n))))))))))))))))))))
+    (if (eq (fk-tag n) 53) (fkc-if2 53 (fkc-flat (ms-child (fk-body n) 0) acc) n)
+    (if (eq (fk-tag n) 6) (fkc-if2 6 (fkc-flat (ms-child (fk-body n) 0) acc) n)
+        (fkc-bin2 (fk-tag n) (fkc-flat (ms-child (fk-body n) 0) acc) n))))))))))))))))))))))))))))
 
-(defn fkc-call2 (fidx acc1) (cons (list 12 fidx (sub (len acc1) 1) 0) acc1))
+(defn fkc-idx2 (tag fidx acc1) (cons (list tag fidx (sub (len acc1) 1) 0) acc1))
+(defn fkc-call2 (fidx acc1) (fkc-idx2 12 fidx acc1))
 
 (defn fkc-un2 (tag acc1) (cons (list tag (sub (len acc1) 1) 0 0) acc1))
 
 (defn fkc-bin2 (tag acc1 n) (fkc-bin3 tag (sub (len acc1) 1) (fkc-flat (ms-child (fk-body n) 1) acc1)))
 (defn fkc-bin3 (tag ia acc2) (cons (list tag ia (sub (len acc2) 1) 0) acc2))
 
-(defn fkc-if2 (acc1 n) (fkc-if3 acc1 (sub (len acc1) 1) n))
-(defn fkc-if3 (acc1 ic n) (fkc-if4 (fkc-flat (ms-child (ms-child (fk-body n) 1) 0) acc1) ic n))
-(defn fkc-if4 (acc2 ic n) (fkc-if5 acc2 (sub (len acc2) 1) ic n))
-(defn fkc-if5 (acc2 it ic n) (fkc-if6 (fkc-flat (ms-child (ms-child (fk-body n) 1) 1) acc2) it ic))
-(defn fkc-if6 (acc3 it ic) (cons (list 6 ic it (sub (len acc3) 1)) acc3))
+(defn fkc-if2 (tag acc1 n) (fkc-if3 tag acc1 (sub (len acc1) 1) n))
+(defn fkc-if3 (tag acc1 ic n) (fkc-if4 tag (fkc-flat (ms-child (ms-child (fk-body n) 1) 0) acc1) ic n))
+(defn fkc-if4 (tag acc2 ic n) (fkc-if5 tag acc2 (sub (len acc2) 1) ic n))
+(defn fkc-if5 (tag acc2 it ic n) (fkc-if6 tag (fkc-flat (ms-child (ms-child (fk-body n) 1) 1) acc2) it ic))
+(defn fkc-if6 (tag acc3 it ic) (cons (list tag ic it (sub (len acc3) 1)) acc3))
 
 (defn fkc-flatten (prog) (fkc-flat prog (empty)))
 
@@ -315,7 +330,8 @@
     (str_concat "fk_hp = fk_hp + 1; fk_hh[fk_hp] = fk_vs[fk_vsp - 2]; fk_ht[fk_hp] = fk_vs[fk_vsp - 1]; fk_vsp = fk_vsp - 2; return (fk_hp << 1) | 1; } if (t == 20) { long long p = fk_walk(fk_node[i][1], fp) >> 1; if (p < 1 || p > fk_hp) { return 1; } return fk_hh[p]; } if (t == 21) { long long p = fk_walk(fk_node[i][1], fp) >> 1; if (p < 1 || p > fk_hp) { return 1; } return fk_ht[p]; } if (t == 22) { long long p = fk_walk(fk_node[i][1], fp) >> 1; long long n = 0; while (p >= 1 && p <= fk_hp) { n = n + 1; p = fk_ht[p] >> 1; } return n << 1; } if (t == 23) { long long x23 = fk_walk(fk_node[i][1], fp); fk_vp(x23); long long k23 = fk_walk(fk_node[i][2], fp) >> 1; fk_vsp = fk_vsp - 1; long long p = fk_vs[fk_vsp] >> 1; while (p >= 1 && p <= fk_hp && k23 > 0) { p = fk_ht[p] >> 1; k23 = k23 - 1; } if (p < 1 || p > fk_hp) { return 1; } return fk_hh[p]; } "
     (str_concat (fkc-str-arms-text)
     (str_concat (fkc-figure-arms-text)
-    (str_concat (fkc-aquatic-arms-text) "return 0; } ")))))))
+    (str_concat (fkc-jit-lower-arms-text)
+    (str_concat (fkc-aquatic-arms-text) "return 0; } "))))))))
 
 ; aquatic-organ + apply-lowered arms (tags 60..65 — the large-parallel
 ; lift's organ lane, re-homed past the figure family): native pass-throughs
@@ -334,6 +350,19 @@
 ; no fk_vp parking (the same discipline as tags 3..5 and 10/11).
 (defn fkc-figure-arms-text ()
     "if (t == 34) { return (((fk_walk(fk_node[i][1], fp) >> 1) & (fk_walk(fk_node[i][2], fp) >> 1)) << 1); } if (t == 35) { return (((fk_walk(fk_node[i][1], fp) >> 1) | (fk_walk(fk_node[i][2], fp) >> 1)) << 1); } if (t == 36) { return (((fk_walk(fk_node[i][1], fp) >> 1) ^ (fk_walk(fk_node[i][2], fp) >> 1)) << 1); } if (t == 37) { unsigned int x = (unsigned int)(fk_walk(fk_node[i][1], fp) >> 1); long long n = (fk_walk(fk_node[i][2], fp) >> 1) & 31; return ((long long)(unsigned int)(x << n)) << 1; } if (t == 38) { unsigned int x = (unsigned int)(fk_walk(fk_node[i][1], fp) >> 1); long long n = (fk_walk(fk_node[i][2], fp) >> 1) & 31; return ((long long)(x >> n)) << 1; } if (t == 39) { unsigned long long x = (unsigned int)(fk_walk(fk_node[i][1], fp) >> 1); long long n = (fk_walk(fk_node[i][2], fp) >> 1) & 31; return ((long long)(unsigned int)((x >> n) | (x << (32 - n)))) << 1; } if (t == 40) { unsigned int x = (unsigned int)(fk_walk(fk_node[i][1], fp) >> 1); unsigned int y = (unsigned int)(fk_walk(fk_node[i][2], fp) >> 1); return ((long long)(unsigned int)(x + y)) << 1; } if (t == 41) { unsigned int x = (unsigned int)(fk_walk(fk_node[i][1], fp) >> 1); return ((long long)(unsigned int)(~x)) << 1; } if (t == 42) { return ((fk_walk(fk_node[i][1], fp) >> 1) * (fk_walk(fk_node[i][2], fp) >> 1)) << 1; } ")
+
+; jit-lowered arms (tags 44..53), emitted: the native mirror of fk-walk's
+; lowered lane (fourth-walker.fk / jit-lower.fk). Logic answers ride boxed
+; booleans (2 = true, 0 = false — the LE discipline); both logic operands
+; walk unconditionally into C temps before the verdict, exactly as the
+; recipe walks both children (a PUTC inside either operand still fires).
+; 47 FOLDED is the LIT arm over its folded value; 46/48/49/50/52 read their
+; single child at column 1 (the SELF layout); 51 CLOSURE-LIFTED walks its
+; child at column 2 past the index leaf (the CALL layout); 53 FOLDED-IF is
+; the IF arm verbatim. Unboxed temps are ints already walked — the melt
+; relocates only cells, so no fk_vp parking (the tags 3..5 discipline).
+(defn fkc-jit-lower-arms-text ()
+    "if (t == 44) { long long a44 = fk_walk(fk_node[i][1], fp); long long b44 = fk_walk(fk_node[i][2], fp); if (a44 != 0 && b44 != 0) { return 2; } return 0; } if (t == 45) { long long a45 = fk_walk(fk_node[i][1], fp); long long b45 = fk_walk(fk_node[i][2], fp); if (a45 != 0 || b45 != 0) { return 2; } return 0; } if (t == 46) { if (fk_walk(fk_node[i][1], fp) == 0) { return 2; } return 0; } if (t == 47) { return fk_node[i][1] << 1; } if (t == 48) { return fk_walk(fk_node[i][1], fp); } if (t == 49) { return fk_walk(fk_node[i][1], fp); } if (t == 50) { return fk_walk(fk_node[i][1], fp); } if (t == 51) { return fk_walk(fk_node[i][2], fp); } if (t == 52) { return fk_walk(fk_node[i][1], fp); } if (t == 53) { if (fk_walk(fk_node[i][1], fp) == 0) { return fk_walk(fk_node[i][3], fp); } return fk_walk(fk_node[i][2], fp); } ")
 
 (defn fkc-walk-many-text ()
     (str_concat "static long long fk_walk(long long i, long long fp) { long long t = fk_node[i][0]; fk_arms[t] = fk_arms[t] + 1; if (t == 1) { return fk_node[i][1] << 1; } if (t == 2) { return fk_vs[fp]; } if (t == 3) { return fk_walk(fk_node[i][1], fp) + fk_walk(fk_node[i][2], fp); } if (t == 4) { return fk_walk(fk_node[i][1], fp) - fk_walk(fk_node[i][2], fp); } if (t == 5) { if (fk_walk(fk_node[i][1], fp) <= fk_walk(fk_node[i][2], fp)) { return 2; } return 0; } if (t == 6) { if (fk_walk(fk_node[i][1], fp) == 0) { return fk_walk(fk_node[i][3], fp); } return fk_walk(fk_node[i][2], fp); } if (t == 7) { long long v7 = fk_walk(fk_node[i][1], fp); fk_vp(v7); long long r7 = fk_walk(fk_fn[0], fk_vsp - 1); fk_vsp = fk_vsp - 1; return r7; }"
