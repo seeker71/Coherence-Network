@@ -135,6 +135,36 @@ fn take_thread_last_crash_trace_path() -> Option<PathBuf> {
     THREAD_LAST_CRASH_TRACE_PATH.with(|slot| slot.borrow_mut().take())
 }
 
+// Snap a byte index down to the nearest UTF-8 char boundary at or below it.
+// The addressing natives (substring, char_at, str_find) accept byte indices
+// computed by recipes that step bytewise; an index inside a multibyte char
+// is answered with the boundary-snapped read, never a panic. Flooring BOTH
+// ends keeps the adjacency law: substring(s,a,m) + substring(s,m,b) ==
+// substring(s,a,b) for any m, so split-and-rejoin recipes stay exact.
+fn floor_char_boundary_idx(s: &str, mut i: usize) -> usize {
+    if i > s.len() {
+        i = s.len();
+    }
+    while i > 0 && !s.is_char_boundary(i) {
+        i -= 1;
+    }
+    i
+}
+
+// Snap a byte index up to the nearest char boundary at or above it. Search
+// starts (str_find `from`) snap forward so a find-next loop stepping +1 from
+// a match advances past a multibyte char instead of re-finding it forever.
+fn ceil_char_boundary_idx(s: &str, i: usize) -> usize {
+    if i >= s.len() {
+        return s.len();
+    }
+    let mut i = i;
+    while i < s.len() && !s.is_char_boundary(i) {
+        i += 1;
+    }
+    i
+}
+
 fn diagnose_kernel_panic(message: &str) -> CrashDiagnosis {
     let lower = message.to_ascii_lowercase();
     if lower.starts_with("as_str:") {
@@ -3055,8 +3085,8 @@ impl Kernel {
                     s.len()
                 );
             }
-            let a = a_i as usize;
-            let b = b_i as usize;
+            let a = floor_char_boundary_idx(s, a_i as usize);
+            let b = floor_char_boundary_idx(s, b_i as usize);
             Value::Str(s[a..b].to_string().into())
         });
         self.register_native("char_at", cat_access(), |_, _, args| {
@@ -3066,7 +3096,16 @@ impl Kernel {
                 panic!("char_at: bounds out of range index={} len={}", i_i, s.len());
             }
             let i = i_i as usize;
-            Value::Str((s.as_bytes()[i] as char).to_string().into())
+            // At a char start: the whole char. Inside a multibyte char:
+            // nothing — so a bytewise loop concatenating char_at over
+            // 0..str_len reconstructs the string exactly, once per char.
+            if !s.is_char_boundary(i) {
+                return Value::Str(String::new().into());
+            }
+            match s[i..].chars().next() {
+                Some(ch) => Value::Str(ch.to_string().into()),
+                None => Value::Str(String::new().into()),
+            }
         });
         self.register_native("str_concat", cat_method(), |_, _, args| {
             let mut s = args[0].as_str().to_string();
@@ -3283,6 +3322,7 @@ impl Kernel {
             if from > s.len() {
                 return Value::Int(-1);
             }
+            let from = ceil_char_boundary_idx(s, from);
             match s[from..].find(needle) {
                 Some(i) => Value::Int((from + i) as i64),
                 None => Value::Int(-1),
@@ -7311,11 +7351,18 @@ fn tokenize_sexp(src: &str) -> Vec<SexpTok> {
 }
 
 fn unescape(s: &str) -> String {
+    // Verbatim runs copy as &str slices so multibyte chars survive intact —
+    // pushing bytes one-at-a-time as `b as char` Latin-1-promotes every
+    // UTF-8 continuation byte and mangles every non-ASCII literal. Escape
+    // positions are ASCII backslashes, so the run boundaries are always
+    // char boundaries.
     let mut out = String::with_capacity(s.len());
     let bytes = s.as_bytes();
     let mut i = 0;
+    let mut run = 0;
     while i < bytes.len() {
         if bytes[i] == b'\\' && i + 1 < bytes.len() {
+            out.push_str(&s[run..i]);
             match bytes[i + 1] {
                 b'n' => out.push('\n'),
                 b't' => out.push('\t'),
@@ -7325,11 +7372,12 @@ fn unescape(s: &str) -> String {
                 c => out.push(c as char),
             }
             i += 2;
+            run = i;
             continue;
         }
-        out.push(bytes[i] as char);
         i += 1;
     }
+    out.push_str(&s[run..]);
     out
 }
 
