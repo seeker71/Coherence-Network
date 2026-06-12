@@ -81,19 +81,15 @@
   # is the natural exchange format — the native compiler proves itself by
   # producing the same content-addressed image the walkers produce.
   #
-  # Concrete large move executed: jit-lower.fk now has full BMF lowering
-  # (cursor 38 direct, match/fail/cut 34-36 lowered, caps 37 unboxed, str-op 39).
-  # fourth-walker + emit extended with tags 34-39 + direct C arms (unboxed
-  # cursor reads, match/caps, no boxed Value for lowered compiler paths).
-  # audit.sh now has bmf-compiler workload that lowers a grammar+engine slice
-  # via the portable recipe, emits the specialized native binary, measures.
-  # C for the slice captured/analyzed: shows direct lowered BMF forms (fk_src
-  # for cursor, && for logic, folded, unboxed caps) vs what we do not expect
-  # (old IIFE dispatch, full boxing for lowered parts). This + prior lifts
-  # is the path to emitting the *whole* BMF compiler (engine + source-compiler
-  # + full grammars) as lowered Form recipe on the 4th lane. North star within
-  # reach; next is deeper lowering for full engine objects + self-emit of the
-  # compiler binary + throughput rows in audit.
+  # BMF-lowered lane today: the vocabulary lives in fourth-walker.fk at tags
+  # 54..59 (match/fail/cut/cap-pair/cursor/str-op; re-homed off the string
+  # 24..33 and figure-ops 34..43 lanes), and the BMF-LOWERED carrier (tag 52)
+  # is proven transparent to the lowering engine and the walker
+  # (full-jit-lower-band.fk piece 32, three-way). Real engine/grammar lowering
+  # passes — apply-object-rule, cap flow, cursor/match as direct forms — plus
+  # emit-lane C arms for the lane are the named closing recipes on the path to
+  # emitting the whole BMF compiler as lowered Form recipe (JIT_GAP_LEDGER
+  # row 9 holds the open gap).
   (m2-bmf-compiler-native
     (compose      engine.fk-rule-application                # runs three-way today
                   fourth-kernel-emit-lane                   # the emitter discipline from M1
@@ -112,21 +108,18 @@
     (compiler-as-recipe-today  the-compiler-folds-Form-lists)  # heap now has a native arena
     (compiler-as-binary-needs  m4e4-strings + m4e3-real-recipe-flattener)  # textual source/full engine, named
 
-    # ── Cell A completion (parallel "yes, and maybe surprising"): portable full-BMF as lowered recipes ──
-    # jit-lower.fk now carries the complete lowering for full BMF compiler + JIT: engine (apply-object-rule, cap-get/set, mk-match/fail) + grammar (cursor, ref/rep, bmf-compile-step) + prior folds/unbox/logic/BMF tags.
-    # fourth-walker-emit.fk armed for the lowered apply (tag 45) with direct C.
-    # fkc-emit / fourth emit + audit patterns used to produce/update full bmf-compiler native in ~/4th-binaries/bmf-compiler (and -full).
-    # Any minimal kernel loads the recipe cells, lowers, emits/walks the same native.
-    # Rows + proof (smallest; parity first; from audit/drivers in 4th-binaries + /tmp; arm64 clang-O2):
-    #   bmf-compiler-full (portable lowered) : fib28-ms 0.4  rss 0.8MB  size 48KB
-    #   sample: fkwu or direct bin on lowered compiler-core table arg5 -> 22/202 (g1/g2); apply lowered exercised; parity holds on bmf-mini-band vs walkers.
-    #   clang/fkwu on table: emitted C shows direct t==34 (bmf-match), t==38 (cursor fk_src), t==27 folded, t==45 apply-lowered, && for logic, no IIFE/box for lowered paths.
-    #   validate: form/validate.sh on bmf + fourth bands (core + bmf-mini + learning-trend flattened) + jit-lower usage passes three-way + fourth arm.
-    #   sample run: 4th-binaries logs (bmf-out.txt fk4-audit.out) + /tmp/*bmf*driver runs confirm "ok — parity held"; full binary in ~/4th-binaries/ via audit emit.
-    # Updated: JIT_GAP_LEDGER.md (row 9 closed via Form), audit.sh (full-BMF rows+proof+produce step), this .form, one evidence slice.
-    # Scope: jit-lower.fk, fourth-walker-emit.fk (arms), JIT_GAP_LEDGER.md, fourth_kernel_audit.sh, fourth-kernel.form, 1 evidence json.
-    # Reference: existing drivers /tmp/bmf_compiler_slice_driver.fk , /Users/ursmuff/4th-binaries/bmf-all.fk bmf_native_driver.fk .
-    # Evidence before resonance: the lowered recipe + emitted C table + parity numbers + band verdicts are the proof.
+    # ── Portable full-BMF as lowered recipes: the open lane ──
+    # The proven ground (2026-06-12 band heal): jit-lower.fk is one generic
+    # bottom-up lowering engine (shape-per-tag as data) with logic / fold /
+    # dead-branch rules and transparent carriers, proven three-way by
+    # jit-lower-band.fk (15) + full-jit-lower-band.fk (63); the BMF-lowered
+    # vocabulary holds tags 52 + 54..59 in fourth-walker.fk.
+    # The close (JIT_GAP_LEDGER row 9): real engine/grammar lowering passes
+    # (apply-object-rule, cap-get/set, mk-match/fail, cursor/ref/rep) through
+    # the same engine, then emit-lane C arms for the lane, then audit rows for
+    # the emitted compiler binary.
+    # Evidence before resonance: band verdicts + emitted C tables are the
+    # proof; claims enter this file only after validate.sh holds them.
 
     # ── The BMF discipline (Urs, 2026-06-11) — bmf-architecture.form's record ──
     # BMF is NOT tokenize-then-parse. Rules match bytes STRAIGHT OFF a streaming
@@ -167,7 +160,7 @@
 
   # ── Organs-physical (aquatic surprise realized) ────────────────────────
   # Water-based organisms + "maybe surprising" co-organism hardware as 4th
-  # emitted native (M4 / m4e-jit + host resources). Tags 40-44 (FLOW-COHERENT
+  # emitted native (M4 / m4e-jit + host resources). Tags 60..64 (FLOW-COHERENT
   # vortex for EZ coherence, CHARGE-SEP gentle fields, SPECTRUM repair tones,
   # VIBRE vitality freqs, BIO-SENSE organism reply) are now first-class lowered
   # Form ops with direct C arms in the emitter — zero interpreter tax on the
@@ -184,7 +177,7 @@
   # tables and arm proof; physical prototype + real bio measurement remain the
   # honest next gate.
   (organs-physical-aquatic-surprise
-    (tags         40-44 direct in emitter (flow/charge/spectrum/vibre/bio-sense))
+    (tags         60..64 direct in emitter (flow/charge/spectrum/vibre/bio-sense))
     (surprise     "water flow is the computation the organism lives as extended Form; organism co-authors the carrier via growth invitations")
     (realized     "2026-06-12: emitter armed, drivers in /tmp, loadable tables via fkwu, co-organism recipes lowered")
     (carrier      fourth-walker-emit.fk + fkc-emit-driver/many + fkwu universal)
@@ -471,39 +464,28 @@
                      (25), and the organ program (7) from five table files — load any source
                      that has a grammar, compile to cells, run, no rebuild)
 
-        (m4e-jit     [SHIPPED + LARGE PARALLEL MOVE] self-JIT on heat — learned-primitive's
+        (m4e-jit     [RECIPE PROVEN] self-JIT on heat — learned-primitive's
                      crystallize in the emitted sibling + the portable JIT lowerer
-                     as Form recipe (jit-lower.fk). The lowerer (one recipe) now
-                     covers the full surface: all gaps (logic 24-26 unboxed, nested
-                     lift 31, dispatch via inlining), fully folded (const/dead/CSE/let),
-                     fully unboxed (str 28, float 29, list 30, record), all primitives,
-                     BMF lowering (32). Parallel: fourth-walker.fk extended with the
-                     tags, fourth-walker-emit.fk emits direct efficient C for lowered
-                     forms (no IIFE, direct && for logic, inlined folded, unboxed
-                     primitives), full-jit-lower-band.fk exercises the pipeline end-to-end.
-                     The emitted binary (audit) now has the features "natively" because
-                     the Form JIT recipe ran first on the cells. jit-lower-as-form evidence.
-                     The Go hardcode remains reference parity. Any minimal kernel loads
-                     the same recipe. This is the body-owned lane per host-kernel.form
-                     and fourth-kernel.form m4e-jit / m4e3. Open: full wiring of
-                     jit-lower into every m4e ratchet step + hot-swap-free + foreign
-                     tables re-lowered at load.)(m4e-jit     [SHIPPED + LARGE PARALLEL MOVE] self-JIT on heat — learned-primitive's
-                     crystallize in the emitted sibling + the portable JIT lowerer
-                     as Form recipe (jit-lower.fk). The lowerer (one recipe) now
-                     covers the full surface: all gaps (logic 24-26 unboxed, nested
-                     lift 31, dispatch via inlining), fully folded (const/dead/CSE/let),
-                     fully unboxed (str 28, float 29, list 30, record), all primitives,
-                     BMF lowering (32). Parallel: fourth-walker.fk extended with the
-                     tags, fourth-walker-emit.fk emits direct efficient C for lowered
-                     forms (no IIFE, direct && for logic, inlined folded, unboxed
-                     primitives), full-jit-lower-band.fk exercises the pipeline end-to-end.
-                     The emitted binary (audit) now has the features "natively" because
-                     the Form JIT recipe ran first on the cells. jit-lower-as-form evidence.
-                     The Go hardcode remains reference parity. Any minimal kernel loads
-                     the same recipe. This is the body-owned lane per host-kernel.form
-                     and fourth-kernel.form m4e-jit / m4e3. Open: full wiring of
-                     jit-lower into every m4e ratchet step + hot-swap-free + foreign
-                     tables re-lowered at load.)
+                     as Form recipe (jit-lower.fk). The lowerer is ONE generic
+                     bottom-up engine — per-tag body shape held as DATA
+                     (jit-shape-table) — with three proven rules: logic
+                     recognition (the direct IF expansion of and/or/not becomes
+                     LOGIC tags 44..46), const folding + dead-branch (FOLDED 47),
+                     and transparent carriers (unbox 48..50, closure-lift 51,
+                     bmf-lowered 52). fourth-walker.fk holds the tag vocabulary
+                     and walker arms; jit-lower-band.fk (verdict 15) and
+                     full-jit-lower-band.fk (verdict 63) prove three-way that a
+                     lowered tree walks to the same answer as its source —
+                     including the IF-expansion guard lowering to the SAME
+                     content-addressed cell the explicit LOGIC-AND constructor
+                     builds (axiom 3 doing the equivalence proof). The Go
+                     hardcode remains reference parity; any minimal kernel
+                     loads the same recipe. Open, as named closing recipes:
+                     call-inlining and nested-defn lift as real rules in the
+                     engine, payload-level string/float unboxing, BMF
+                     engine/grammar lowering over the named vocabulary
+                     (tags 54..59), emit-lane direct C arms for the lowered
+                     tags, and wiring jit-lower into the m4e ratchet steps.)
 
         (organs-physical  one physical proof per host resource through the
                      fourth sibling, band tests/fourth-os-band.fk -> 15:
@@ -556,7 +538,7 @@
 # Bidirectional natural language <-> Form/BMF translator as native 4th-emitted binary.
 # Driver: /tmp/nl-form-translator-driver.fk (bmf-grammar.fk / engine + natural-bmf.fk grammar-as-data
 # for NL-patterns to Form recipes; simple humanize/explain recipe using natural-source emitters for reverse).
-# Lower: jit-lower-full (portable Form recipe from jit-lower.fk).
+# Lower: jit-lower-tree (portable Form recipe from jit-lower.fk).
 # Emit: fkc-emit-driver (fourth-walker-emit.fk patterns) -> /tmp/4th-nl-form-translator.c -> clang -> ~/4th-binaries/4th-nl-form-translator.
 # Sample run (NL->recipe + human; Form->NL): see /tmp/4th-nl-form-translator-sample-run.txt.
 # Surprising tie (with Cell C aquatic surprise): aquatic bio-sense / vib / spectrum / charge patterns

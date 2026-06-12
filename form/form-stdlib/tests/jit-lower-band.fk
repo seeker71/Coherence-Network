@@ -1,45 +1,42 @@
-; jit-lower-band.fk — portable JIT lowering as Form recipe, proven on the fourth lane.
+; preludes: form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/jit-lower.fk
 ;
-; Runs the lowerer from jit-lower.fk on expressions built with the fourth-walker
-; cell model, then executes the (lowered) program and checks answers match the
-; direct (un-lowered) version. This is the body-owned version of the logic feature
-; (gap #3 reference semantics from the Go typed hardcode).
+; jit-lower-band — portable JIT logic lowering proven on the fourth lane:
+; the lowering recipe (jit-lower.fk) rewrites the direct IF expansion of
+; and/or/not guards into the unboxed LOGIC lane (tags 44..46), and the
+; lowered tree walks to the same 0/1 as its source — the body-owned version
+; of the logic feature (gap #3 reference semantics from the Go typed
+; hardcode), exactly the host-kernel.form intent: JIT as a composite of a
+; recipe, no host-specific JIT code in the kernel.
 ;
-; When the fourth-walker-emit (or a generalized lower-then-emit) is used on the
-; lowered tree, the emitted native binary gets the benefit with no host-specific
-; JIT code in the kernel — exactly the intent of host-kernel.form ("JIT ... composite of a recipe")
-; and fourth-kernel.form (emitter / lowerer as Form, m4e-jit self-JIT on heat, m4e3
-; real-recipe flattener).
-
+; Verdict 15 when the lowering holds:
+;   1   the IF expansion of (and (le arg 5) (le 0 arg)) lowers to LOGIC-AND
+;       at the root — the recipe recognized the shape, not just rebuilt it
+;   2   lowered and direct walk to the same answer at arg 3 (inside the
+;       range), arg 0 (the lower edge), and arg 9 (outside)
+;   4   the not shape IF c 0 1 lowers to LOGIC-NOT and agrees with its
+;       source at args 0 and 7
+;   8   a guard over literals only folds all the way down to a literal cell
+;       that walks to 1 — fold and dead-branch compose through the logic lane
 (do
-  ;; Build a guard that would have been RBasicLogic in the full system.
-  ;; (and (le x 5) (ge x 0)) — truthy 0/1 convention.
-  (let x (fk-lit 3))
-  (let guard-direct (fk-if (fk-le x (fk-lit 5))
-                           (fk-if (fk-le (fk-lit 0) x) (fk-lit 1) (fk-lit 0))
-                           (fk-lit 0)))
+    (let guard-direct (fk-if (fk-le (fk-arg) (fk-lit 5))
+                             (fk-if (fk-le (fk-lit 0) (fk-arg)) (fk-lit 1) (fk-lit 0))
+                             (fk-lit 0)))
+    (let lowered (jit-lower-tree guard-direct))
+    (let c0 (if (eq (fk-tag lowered) 44) 1 0))
+    (let c1 (if (eq (fk-run lowered 3) (fk-run guard-direct 3))
+                (if (eq (fk-run lowered 0) (fk-run guard-direct 0))
+                    (if (eq (fk-run lowered 9) (fk-run guard-direct 9)) 2 0) 0) 0))
 
-  ;; The portable lower (from jit-lower.fk) applied to an and shape.
-  ;; We construct the and explicitly using the helper the lowerer exports.
-  (let and-shape (jit-lower-and (fk-le x (fk-lit 5)) (fk-le (fk-lit 0) x)))
-  (let lowered (jit-lower and-shape))   ; the recipe does the work
+    (let not-direct (fk-if (fk-le (fk-arg) (fk-lit 5)) (fk-lit 0) (fk-lit 1)))
+    (let not-lowered (jit-lower-tree not-direct))
+    (let c2 (if (eq (fk-tag not-lowered) 46)
+                (if (eq (fk-run not-lowered 0) (fk-run not-direct 0))
+                    (if (eq (fk-run not-lowered 7) (fk-run not-direct 7)) 4 0) 0) 0))
 
-  ;; Run both on the fourth walker (or the emitted binary when this band is
-  ;; loaded as a table).
-  (let r-direct (fk-run (fk-lit 0) guard-direct))   ; dummy arg, not used
-  (let r-lowered (fk-run (fk-lit 0) lowered))
+    (let const-guard (fk-if (fk-le (fk-lit 3) (fk-lit 5))
+                            (fk-if (fk-le (fk-lit 0) (fk-lit 3)) (fk-lit 1) (fk-lit 0))
+                            (fk-lit 0)))
+    (let folded (jit-lower-tree const-guard))
+    (let c3 (if (eq (jit-lit-node? folded) 1) (if (eq (fk-run folded 0) 1) 8 0) 0))
 
-  ;; For a real tree the lowerer would be applied to a whole program cell.
-  ;; Here we just prove the logic lowering rule itself produces a tree that
-  ;; walks to the same 0/1 as the direct IF expansion.
-  ;; Verdict piece: 1 if they agree on this case.
-  (if (eq r-direct r-lowered) 1 0)
-
-  ;; Extend with or/not cases in follow-up slices exactly as the Go reference
-  ;; and the ledger sketches. The same pattern applies to folding and unboxing
-  ;; rules once those helpers are filled in jit-lower.fk.
-
-  ;; When this band (and its cousins for the other JIT features) passes on the
-  ;; emitted fourth binary (via the audit or validate.sh fourth arm), we have
-  ;; a proven binary that carries the full JIT-as-portable-Form-recipe surface.
-)
+    (add c0 (add c1 (add c2 c3))))

@@ -1,261 +1,150 @@
-; jit-lower.fk — the JIT as portable Form recipe (the full close-jit-crystallization on the fourth/host-kernel lane).
+; jit-lower.fk — JIT lowering as a portable Form recipe over the fourth-walker
+; cell model. Per host-kernel.form: "JIT is one example of such a composite of
+; a recipe" — the lowering intelligence lives in Form; hosts only carry.
+; Per fourth-kernel.form: kernel-resident lowering (Go jit.go) is reference
+; semantics; the body-owned recipe is the portable truth.
 ;
-; LARGE PARALLEL MOVE: this single file now contains comprehensive lowering for the entire list —
-; all gaps (logic, nested defn lift, dispatch overhead via inlining, etc.), fully folded
-; (const fold + dead branch + simple CSE + let reduction), fully unboxed (strings as direct
-; length+data or arena, floats direct, lists via arena with unbox markers, records flat tagged,
-; bools/ints as 0/1), all primitive types (str, float, list, record, logic, closure, BMF expr).
+; ONE generic engine: jit-lower-node walks any program cell bottom-up. The
+; per-tag body shape is DATA (jit-shape-table, index = tag), so new tags join
+; the engine as one table entry, never as a parallel walker. At each rebuilt
+; node the local rules fire in order:
 ;
-; Per host-kernel.form (Urs): "JIT is one example of such a composite of a recipe."
-; Host carriers (clang etc.) allowed; intelligence in Form.
-; Per fourth-kernel.form: kernel-resident lowering (Go jit.go) moves to body as emitter-as-recipe.
-; The emitted fourth binary (or universal loader) is the "proven binary" — lowerer runs as Form
-; recipe on cells (or full recipes via m4e3), emit produces optimized native C (fewer dispatches,
-; direct unboxed ops, inlined, folded). fourth_kernel_audit.sh + bands validate parity + speed.
+;   dead-branch — IF / FOLDED-IF over a literal condition becomes its live arm
+;   logic       — the direct IF expansion of and/or/not becomes the unboxed
+;                 LOGIC lane (tags 44..46): IF c t 0 with boolean-shaped t is
+;                 LOGIC-AND, IF c 1 e is LOGIC-OR, IF c 0 1 is LOGIC-NOT, and
+;                 IF c 1 0 dissolves to c when c is already boolean-shaped
+;   const-fold  — ADD/SUB/MUL/LE and the logic tags over literal children
+;                 become FOLDED literals (tag 47)
 ;
-; Any minimal kernel loads the recipe, runs (jit-lower-full program-cell), gets lowered tree,
-; interprets or emits. The three siblings use it via walkers; fourth is the fast native path.
+; Unbox, lifted-closure, and BMF markers (tags 48..52) are transparent
+; carriers: the engine lowers through them and the walker delegates through
+; them, so a marked subtree keeps its answer. Payload-level string/float
+; unboxing arrives with the emit lane; the bands name what is proven today.
 ;
-; Precedents generalized: jit-tensor-emit.fk (emitter is Form, bit-for-bit), fourth-*-emit.fk
-; (programs/walker as cells), form-flatten.fk (m4e3 flattener).
-;
-; Go hardcode (recent jit.go logic etc.) = reference semantics for parity. Answers must match
-; walker on original tree.
+; Node vocabulary and walker arms live in fourth-walker.fk (tags 44..59).
+; Parity claim, proven by tests/jit-lower-band.fk and
+; tests/full-jit-lower-band.fk: a lowered tree walks (fk-run / fkm-run) to
+; the same answer as its source tree.
 
-; --- extended cell tags for lowered JIT forms (added to fourth-walker model in parallel) ---
-; 44-59 for unboxed/lowered constructs (re-homed past the string and figure lanes). Emit turns them into tight C.
-(defn fk-logic-and (a b) (fk-node 44 (ms-intern a b)))
-(defn fk-logic-or (a b)  (fk-node 45 (ms-intern a b)))
-(defn fk-logic-not (a)   (fk-node 46 a))
-(defn fk-folded (v)      (fk-node 47 v))
-(defn fk-unbox-str (s)   (fk-node 48 s))
-(defn fk-unbox-float (f) (fk-node 49 f))
-(defn fk-unbox-list (xs) (fk-node 50 xs))
-(defn fk-closure-lifted (idx body) (fk-node 51 (ms-intern (ms-cell idx) body)))
-(defn fk-bmf-lowered (e) (fk-node 52 e))
-(defn fk-folded-if (c t e) (fk-node 53 (ms-intern c (ms-intern t e))))
+; --- literal sensing ---------------------------------------------------------
+(defn jit-folded (v) (fk-node 47 (ms-cell v)))
+(defn jit-lit-node? (n) (if (eq (fk-tag n) 1) 1 (if (eq (fk-tag n) 47) 1 0)))
+(defn jit-lit-of (n) (ms-value (fk-body n)))
+(defn jit-lit0? (n) (if (eq (jit-lit-node? n) 1) (if (eq (jit-lit-of n) 0) 1 0) 0))
+(defn jit-lit1? (n) (if (eq (jit-lit-node? n) 1) (if (eq (jit-lit-of n) 1) 1 0) 0))
 
-; --- logic (gap #3 + unboxed) ---
-(defn jit-lower-and (a b) (fk-logic-and a b))
-(defn jit-lower-or (a b)  (fk-logic-or a b))
-(defn jit-lower-not (a)   (fk-logic-not a))
+; --- boolean shape sensing ---------------------------------------------------
+; jit-if10? — n is IF c (lit 1) (lit 0): the boolean coercion shape.
+(defn jit-if10? (n)
+    (if (eq (fk-tag n) 6)
+        (if (eq (jit-lit1? (ms-child (ms-child (fk-body n) 1) 0)) 1)
+            (jit-lit0? (ms-child (ms-child (fk-body n) 1) 1))
+            0)
+        0))
 
-; --- nested lift (gap #4) ---
-(defn jit-lift-nested (inner outer)
-  (fk-closure-lifted (fk-lit 99) inner))
+; jit-boolish? — n always walks to 0/1: a comparison, a logic-lane node, a
+; 0/1 literal, or the IF c 1 0 coercion shape.
+(defn jit-boolish? (n)
+    (do (let t (fk-tag n))
+        (if (eq t 5) 1
+        (if (eq t 44) 1
+        (if (eq t 45) 1
+        (if (eq t 46) 1
+        (if (eq (jit-lit0? n) 1) 1
+        (if (eq (jit-lit1? n) 1) 1
+            (jit-if10? n)))))))))
 
-; --- full folding (fully folded) ---
-(defn jit-fold-const (node)
-  (if (eq (fk-tag node) 3)
-      (do (let l (jit-fold-const (ms-child (fk-body node) 0)))
-          (let r (jit-fold-const (ms-child (fk-body node) 1)))
-          (if (and (eq (fk-tag l) 1) (eq (fk-tag r) 1))
-              (fk-folded (fk-lit (add (ms-value (fk-body l)) (ms-value (fk-body r)))))
-              (fk-add l r)))
-      (if (eq (fk-tag node) 6)
-          (do (let c (jit-fold-const (ms-child (fk-body node) 0)))
-              (if (eq (fk-tag c) 1)
-                   (if (eq (ms-value (fk-body c)) 0)
-                       (jit-fold-const (ms-child (ms-child (fk-body node) 1) 1))
-                       (jit-fold-const (ms-child (ms-child (fk-body node) 1) 0)))
-                   (fk-if c (jit-fold-const (ms-child (ms-child (fk-body node) 1) 0))
-                            (jit-fold-const (ms-child (ms-child (fk-body node) 1) 1)))))
-          node)))
+; jit-bool-view — the boolean a node carries in a boolean position: IF c 1 0
+; carries c (the logic arms coerce any nonzero, so the view is parity-safe
+; there); every other node carries itself.
+(defn jit-bool-view (n)
+    (if (eq (jit-if10? n) 1) (ms-child (fk-body n) 0) n))
 
-(defn jit-fold-dead (node) node)
-(defn jit-let-reduce (node) node)
-(defn jit-cse (node) node)
+; --- rule: dead branch -------------------------------------------------------
+(defn jit-rule-dead-if (node)
+    (do (let t (fk-tag node))
+        (if (or (eq t 6) (eq t 53))
+            (if (eq (jit-lit-node? (ms-child (fk-body node) 0)) 1)
+                (if (eq (jit-lit-of (ms-child (fk-body node) 0)) 0)
+                    (ms-child (ms-child (fk-body node) 1) 1)
+                    (ms-child (ms-child (fk-body node) 1) 0))
+                node)
+            node)))
 
-(defn jit-fold-full (node)
-  (jit-cse (jit-let-reduce (jit-fold-dead (jit-fold-const node)))))
+; --- rule: logic recognition (gap #3 — IF expansion to the LOGIC lane) -------
+(defn jit-rule-logic (node)
+    (if (eq (fk-tag node) 6)
+        (do (let c (ms-child (fk-body node) 0))
+            (let tb (ms-child (ms-child (fk-body node) 1) 0))
+            (let eb (ms-child (ms-child (fk-body node) 1) 1))
+            (if (eq (jit-if10? node) 1)
+                (if (eq (jit-boolish? c) 1) c (fk-logic-and c (fk-lit 1)))
+                (if (and (eq (jit-lit0? tb) 1) (eq (jit-lit1? eb) 1))
+                    (fk-logic-not c)
+                    (if (and (eq (jit-lit0? eb) 1) (eq (jit-boolish? tb) 1))
+                        (fk-logic-and c (jit-bool-view tb))
+                        (if (and (eq (jit-lit1? tb) 1) (eq (jit-boolish? eb) 1))
+                            (fk-logic-or c (jit-bool-view eb))
+                            node)))))
+        node))
 
-; --- unboxing + all primitives (fully unboxed) ---
-(defn jit-unbox-str (s) (fk-unbox-str s))
-(defn jit-unbox-float (f) (fk-unbox-float f))
-(defn jit-unbox-list (xs) (fk-unbox-list xs))
-(defn jit-unbox-record (r) r)
+; --- rule: constant folding --------------------------------------------------
+(defn jit-fold-binary? (t)
+    (if (eq t 3) 1 (if (eq t 4) 1 (if (eq t 5) 1 (if (eq t 42) 1 (if (eq t 44) 1 (if (eq t 45) 1 0)))))))
 
-(defn jit-unbox-primitives-full (node)
-  (if (eq (fk-tag node) 1)
-      (if (is-string-literal (fk-body node)) (jit-unbox-str node) node)
-      (if (eq (fk-tag node) 49) (jit-unbox-float node)
-          (if (eq (fk-tag node) 50) (jit-unbox-list node) node))))
+(defn jit-fold-op (t a b)
+    (if (eq t 3) (add a b)
+    (if (eq t 4) (sub a b)
+    (if (eq t 42) (mul a b)
+    (if (eq t 5) (if (le a b) 1 0)
+    (if (eq t 44) (if (and (not (eq a 0)) (not (eq b 0))) 1 0)
+    (if (eq t 45) (if (or (not (eq a 0)) (not (eq b 0))) 1 0)
+        0)))))))
 
-; --- BMF/compiler lowering as recipe ---
-(defn jit-bmf-lower-expr (expr)
-  (jit-lower-full (jit-fold-full expr)))
+(defn jit-rule-fold (node)
+    (do (let t (fk-tag node))
+        (if (eq (jit-fold-binary? t) 1)
+            (do (let a (ms-child (fk-body node) 0))
+                (let b (ms-child (fk-body node) 1))
+                (if (and (eq (jit-lit-node? a) 1) (eq (jit-lit-node? b) 1))
+                    (jit-folded (jit-fold-op t (jit-lit-of a) (jit-lit-of b)))
+                    node))
+            (if (eq t 46)
+                (if (eq (jit-lit-node? (fk-body node)) 1)
+                    (jit-folded (if (eq (jit-lit-of (fk-body node)) 0) 1 0))
+                    node)
+                node))))
 
-; --- dispatch overhead / inlining ---
-(defn jit-lift-and-inline (node)
-  (do (let lifted (jit-lift-nested node node))
-      (jit-fold-full lifted)))
+; --- the one engine ----------------------------------------------------------
+; Body shape per tag, as data (index = tag):
+;   0 value leaf · 1 one child · 2 two children · 3 IF shape (c,(t,e)) ·
+;   4 leaf+child (CALL / CLOSURE-LIFTED: child 0 is an index leaf)
+(defn jit-shape-table ()
+    (list 0 0 0 2 2 2 3 1 0 0
+          2 2 4 2 1 0 0 1 0 2
+          1 1 1 2 0 1 2 2 2 1
+          0 0 0 0 2 2 2 2 2 2
+          2 1 2 0 2 2 1 0 1 1
+          1 4 1 3 2 1 1 2 1 2))
+(defn jit-shape (t) (if (le 60 t) 0 (nth (jit-shape-table) t)))
 
-; --- master portable JIT (covers everything in one recipe) ---
-(defn jit-lower-full (node)
-  (do (let l1 (jit-lower (jit-lower-and (jit-lower-or (jit-lower-not node)))))
-      (let l2 (jit-fold-full l1))
-      (let l3 (jit-unbox-primitives-full l2))
-      (let l4 (jit-lift-and-inline l3))
-      (let l5 (jit-bmf-lower-expr l4))
-      (let l6 (jit-lower-call l5))   ; lift more: CALL inlining for small fns to reduce dispatch
-      (let l7 (jit-fold-arith l6))   ; more folding on SUB, MUL etc for full arith
-      (jit-unbox-primitives-full l7)))
+(defn jit-rules (node)
+    (jit-rule-fold (jit-rule-logic (jit-rule-dead-if node))))
 
-; lift more: CALL lowering / inlining (reduces dispatch overhead for hot small fns)
-(defn jit-lower-call (node)
-  (if (eq (fk-tag node) 12)
-      (do (let fidx (ms-value (ms-child (fk-body node) 0)))
-          ; for demo, if fidx points to a simple LIT-returning fn, inline the arg
-          ; real would look up the fn body and substitute
-          (fk-add (fk-lit 0) (ms-child (fk-body node) 1)))  ; placeholder inline
-      node))
+(defn jit-rebuild (node t s)
+    (if (eq s 1) (fk-node t (jit-lower-node (fk-body node)))
+    (if (eq s 2) (fk-node t (ms-intern (jit-lower-node (ms-child (fk-body node) 0))
+                                       (jit-lower-node (ms-child (fk-body node) 1))))
+    (if (eq s 3) (fk-node t (ms-intern (jit-lower-node (ms-child (fk-body node) 0))
+                                       (ms-intern (jit-lower-node (ms-child (ms-child (fk-body node) 1) 0))
+                                                  (jit-lower-node (ms-child (ms-child (fk-body node) 1) 1)))))
+    (if (eq s 4) (fk-node t (ms-intern (ms-child (fk-body node) 0)
+                                       (jit-lower-node (ms-child (fk-body node) 1))))
+        node)))))
 
-; lift more: additional arith folding for full primitive coverage + logic folding
-(defn jit-fold-arith (node)
-  (if (eq (fk-tag node) 4)  ; SUB
-      (do (let l (jit-fold-arith (ms-child (fk-body node) 0)))
-          (let r (jit-fold-arith (ms-child (fk-body node) 1)))
-          (if (and (eq (fk-tag l) 1) (eq (fk-tag r) 1))
-              (fk-folded (fk-lit (sub (ms-value (fk-body l)) (ms-value (fk-body r)))))
-              (fk-sub l r)))
-      (if (eq (fk-tag node) 3)
-          (do (let l (jit-fold-arith (ms-child (fk-body node) 0)))
-              (let r (jit-fold-arith (ms-child (fk-body node) 1)))
-              (if (and (eq (fk-tag l) 1) (eq (fk-tag r) 1))
-                  (fk-folded (fk-lit (add (ms-value (fk-body l)) (ms-value (fk-body r)))))
-                  node))
-          (if (eq (fk-tag node) 44)  ; fold logic-and of literals
-              (do (let a (ms-child (fk-body node) 0))
-                  (let b (ms-child (fk-body node) 1))
-                  (if (and (eq (fk-tag a) 1) (eq (fk-tag b) 1))
-                      (fk-folded (fk-lit (if (and (not (eq (ms-value (fk-body a)) 0)) (not (eq (ms-value (fk-body b)) 0))) 1 0)))
-                      node))
-              node)))))
+(defn jit-lower-node (node)
+    (jit-rules (jit-rebuild node (fk-tag node) (jit-shape (fk-tag node)))))
 
-; lift more for full BMF compiler as recipe: cursor (BUF as direct read + unboxed),
-; match/fail/cut as lowered (direct C if on caps, no boxed match objects),
-; caps as unboxed env (arena or direct pairs), string heavy paths unboxed,
-; full engine lowering (mk-match, mk-fail, cap-get/set, bmf-unescape etc as direct ops).
-; This makes the "whole BMF compiler" (engine + grammar + source-compiler logic)
-; lowerable to a specialized native binary via fourth emit.
-
-; New BMF-lowered tags (added to walker/emit in parallel)
-; 34 = BMF-MATCH caps rest   (lowered match result)
-; 35 = BMF-FAIL reason
-; 36 = BMF-FAIL-CUT reason
-; 37 = BMF-CAP-PAIR name val  (unboxed cap)
-; 38 = BMF-CURSOR pos         (direct index into source, unboxed)
-; 39 = BMF-STR-OP s i         (unboxed string op result)
-
-(defn fk-bmf-match (caps rest) (fk-node 54 (ms-intern caps rest)))
-(defn fk-bmf-fail (reason) (fk-node 55 reason))
-(defn fk-bmf-fail-cut (reason) (fk-node 56 reason))
-(defn fk-bmf-cap-pair (name val) (fk-node 57 (ms-intern name val)))
-(defn fk-bmf-cursor (pos) (fk-node 58 pos))
-(defn fk-bmf-str-op (s i) (fk-node 59 (ms-intern s i)))
-
-; BMF-specific lowering pass (called from jit-lower-full)
-(defn jit-bmf-lower-cursor (node)
-  (if (eq (fk-tag node) 17)  ; BUF -> direct cursor
-      (fk-bmf-cursor (ms-child (fk-body node) 0))
-      node))
-
-(defn jit-bmf-lower-match (node)
-  ; lower mk-match / match? / match-caps etc to direct lowered nodes
-  ; (in real use, walk engine.fk expressions and replace)
-  (if (and (eq (fk-tag node) 6) (eq (fk-tag (ms-child (fk-body node) 0)) 1))  ; rough pattern for match
-      (fk-bmf-match (ms-child (fk-body node) 0) (ms-child (ms-child (fk-body node) 1) 0))
-      node))
-
-(defn jit-bmf-lower-caps (node)
-  (if (eq (fk-tag node) 3)  ; example: cap ops lowered to unboxed pairs
-      (if (eq (fk-tag (ms-child (fk-body node) 0)) 1)
-          (fk-bmf-cap-pair (fk-lit "cap") (ms-child (fk-body node) 1))
-          node)
-      node))
-
-(defn jit-bmf-lower-full (node)
-  (jit-bmf-lower-caps (jit-bmf-lower-match (jit-bmf-lower-cursor node))))
-
-; extend existing unbox and lower to call the BMF pass
-(defn jit-unbox-more (node)
-  (do (let n1 (if (eq (fk-tag node) 17) (fk-unbox-str node)
-                (if (eq (fk-tag node) 19) (fk-unbox-list node) node)))
-      (jit-bmf-lower-full n1)))
-
-(defn jit-lower-full (node)
-  (do (let l1 (jit-lower (jit-lower-and (jit-lower-or (jit-lower-not node)))))
-      (let l2 (jit-fold-full l1))
-      (let l3 (jit-unbox-primitives-full l2))
-      (let l4 (jit-lift-and-inline l3))
-      (let l5 (jit-bmf-lower-expr l4))
-      (let l6 (jit-lower-call l5))
-      (let l7 (jit-fold-arith l6))
-      (let l8 (jit-unbox-more l7))
-      (let l9 (jit-bmf-lower-full l8))
-      (jit-unbox-primitives-full l9)))
-
-(defn jit-lower-tree (root)
-  (jit-lower-full root))
-
-; The Go hardcode is reference for parity. This recipe + parallel walker/emit changes
-; = the large move that makes the 4th binary the proven one with all features.
-
-; --- full BMF compiler + engine/grammar lowering (portable recipe, Cell A completion) ---
-; Remaining pieces lifted: apply-object-rule (match + template -> lowered match/caps),
-; cap-get/set (unboxed via bmf-cap-pair), mk-match/fail (direct 34-36), bmf-compile fold,
-; source rule application, grammar ref/rep as lowered cursor+match. All folded/unboxed.
-; Any minimal kernel: load jit-lower.fk, (jit-lower-full (bmf-compiler-cell)), fkc-emit or walk.
-; Go jit.go hardcode is now reference semantics only; the recipe is the portable truth.
-
-(defn jit-lower-cap-get (node)
-  (if (and (eq (fk-tag node) 12) (eq (ms-value (ms-child (fk-body node) 0)) 99))
-      (fk-bmf-cap-pair (ms-child (fk-body node) 1) (fk-lit 0))
-      node))
-
-(defn jit-lower-cap-set (node) node)  ; unboxed pair write lowers to direct in emit
-
-(defn jit-lower-mk-match-full (node)
-  (if (and (eq (fk-tag node) 6) (str? (ms-child (fk-body node) 0)))
-      (fk-bmf-match (ms-child (fk-body node) 0) (ms-child (ms-child (fk-body node) 1) 0))
-      (jit-bmf-lower-match node)))
-
-(defn jit-lower-apply-object-rule (node)
-  ; lower apply-object-rule (match-pattern then template emit) to lowered match + cap flow
-  (if (eq (fk-tag node) 12)
-      (do (let callee (ms-value (ms-child (fk-body node) 0)))
-          (if (or (eq callee 42) (eq callee 2175))  ; apply-object-rule / bmf-dialect-apply
-              (fk-bmf-match (fk-bmf-cap-pair (fk-lit "result") (ms-child (fk-body node) 1))
-                            (fk-bmf-cursor (fk-lit 0)))
-              node))
-      node))
-
-(defn jit-lower-bmf-compile-step (node)
-  ; grammar fold / rule ref / rep lowered to cursor+match (no boxed lists for hot path)
-  (if (eq (fk-tag node) 3)
-      (fk-bmf-lowered (jit-fold-full node))
-      node))
-
-(defn jit-lower-engine-full (node)
-  (jit-lower-apply-object-rule (jit-lower-cap-get (jit-lower-mk-match-full node))))
-
-(defn jit-bmf-lower-full (node)
-  (jit-bmf-lower-caps (jit-bmf-lower-match (jit-bmf-lower-cursor (jit-lower-engine-full node)))))
-
-; integrate engine/grammar into master portable full lower (folded + unboxed + all prim + bmf full)
-(defn jit-lower-full (node)
-  (do (let l1 (jit-lower (jit-lower-and (jit-lower-or (jit-lower-not node)))))
-      (let l2 (jit-fold-full l1))
-      (let l3 (jit-unbox-primitives-full l2))
-      (let l4 (jit-lift-and-inline l3))
-      (let l5 (jit-bmf-lower-expr l4))
-      (let l6 (jit-lower-call l5))
-      (let l7 (jit-fold-arith l6))
-      (let l8 (jit-unbox-more l7))
-      (let l9 (jit-bmf-lower-full l8))
-      (let l10 (jit-lower-engine-full l9))
-      (let l11 (jit-lower-bmf-compile-step l10))
-      (jit-unbox-primitives-full l11)))
-
-; full BMF compiler cell lowered: (jit-lower-full (engine-grammar-bmf-compiler-cell))
-; now covers apply-object-rule + full grammar paths as portable lowered recipe.
+; The door: lower a whole program tree.
+(defn jit-lower-tree (root) (jit-lower-node root))
