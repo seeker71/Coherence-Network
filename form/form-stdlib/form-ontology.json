@@ -38,6 +38,19 @@
     {"name": "or",  "type": 14, "inst": 2, "family": "logic"},
     {"name": "not", "type": 14, "inst": 3, "family": "logic"}
   ],
+  "ml-start-blueprints": {
+    "note": "User-defined for Form-native Phi-start model, STM, external tensors, mesh/satsang in learning (tended from wellness unregistered). Add via scanner or manual for registry. Run scripts/scan_form_blueprints.py --emit-registry after. These enable the structural Phi-like + one-shot + active-inf + STM recall in the native loop.",
+    "TF-HEADER": {"type": 99, "inst": 2001, "note": "tensor-file header cell"},
+    "TF-TENSOR": {"type": 99, "inst": 2002, "note": "tensor-file data cell"},
+    "MESH-SHARE": {"type": 99, "inst": 2003, "note": "mesh delta share in co-learning"},
+    "SATSANG-ATTEST": {"type": 99, "inst": 2004, "note": "satsang witnessed update"},
+    "PHI-RMS-NORM": {"type": 99, "inst": 2101, "note": "Phi structural RMSNorm recipe"},
+    "PHI-GQA-ATTN": {"type": 99, "inst": 2102, "note": "Phi GQA using geometric + tb-attn"},
+    "PHI-SWIGLU": {"type": 99, "inst": 2103, "note": "Phi SwiGLU gated FFN"},
+    "PHI-BLOCK": {"type": 99, "inst": 2104, "note": "Phi-like pre-RMS residual block"},
+    "STM-BUFFER": {"type": 99, "inst": 2201, "note": "short-term memory buffer for one-shot/recall"},
+    "STM-ITEM": {"type": 99, "inst": 2202, "note": "STM (emb, val, recency)"}
+  },
   "dialects_note": "Per-dialect BMF/AST category constants. Each dialect declares its category_type (the type-id used in `make_nodeid 1 2 <type> <inst>`) and a name_prefix; the generator emits a `(let <prefix>-<name> ...)` for each category into form-stdlib/dialect-categories.fk. Numeric (type, inst) values are load-bearing — they intern Recipe shapes the grammar code constructs.",
   "dialects": {
     "python.bmf": {

@@ -1,0 +1,84 @@
+; short-term-memory.fk — short-term / working memory buffer for one-shot learning and recall.
+;
+; Uses the body's primitives and surfaces:
+; - store/restore for the buffer state (persist as tensor via tensor-file or arena/melt).
+; - predictor-train / nearest-shape for one-shot interning of (emb, val).
+; - geometric-learning gl-gstep or gl-gnn for "mesh" over STM items (recency-weighted edges).
+; - active-inference for selection/recall (surprise-driven choice of what to recall or update).
+; - choice/fail/stop/store/restore in usage (e.g. CHOICE "recall from STM or phi or mesh", FAIL high surprise, STOP settled, STORE/RESTORE the buffer).
+; - satsang for witnessed intern (share new one-shot in circle).
+; - mesh neighbors via geometric on STM "local mesh" or global via gl on agent neighbors.
+;
+; One-shot: pt-learn style intern new exemplar into the buffer (capped; drop old via melt or simple tail).
+; Recall: nearest in buffer (via predictor) or gl-gstep over recency edges; or active-inf select the "best" hypothesis from STM + long-term.
+; Integrated with phi-start: the emb from phi-start forward; recall augments the context for next phi predict (e.g. concat or bias or geometric gather).
+; The "model" (phi-start + external tensor weights) has attached STM (the buffer as cells or snapshot tensor); one-shot grows the STM without full weight update; recall makes the effective model context-aware in short term.
+; Persist: the STM as external tensor (header + list of items) or via store/restore in fourth arena.
+; Learning "the same way" + more: Phi would use its context window + backprop; here one-shot + STM recall + active-inf achieves rapid adaptation and recall using the body's native (often cheaper, distributed via mesh, witnessed via satsang).
+;
+; Lifts: predictor-train.fk, nearest-shape.fk, geometric-learning.fk, active-inference.fk, arena/melt (fourth), store/restore (persistence + JIT caches), tensor-file for snapshot, ml-toy-loop for primitives usage.
+
+; --- STM item: (emb, val, recency_or_priority) ---
+; emb = phi-start embedding or feature (vector from tensor ops).
+; val = the "fact" or target or next (string, node, or vector).
+; recency = time or priority (higher = more recent/important; decay via geometric or choice).
+
+(defn stm-item (emb val rec) (list emb val rec))
+(defn stm-emb (item) (nth item 0))
+(defn stm-val (item) (nth item 1))
+(defn stm-rec (item) (nth item 2))
+
+; --- buffer: capped list of items (STM as working memory) ---
+; store: append (one-shot intern), cap at N, drop oldest (melt-like or tail).
+(defn stm-create () (empty))
+(defn stm-store (buf item cap)
+  (let new (cons item buf)
+    (if (gt (len new) cap)
+        (tail new)  ; drop oldest (simple decay; real: geometric or arena melt)
+        new)))
+
+; --- one-shot learn: intern new (emb, val) via pt-learn style (no forgetting within cap; novelty via pt-learn-new?) ---
+; caller checks pt-learn-new? on labels if using labels; here direct intern for numeric emb.
+(defn stm-one-shot (buf emb val cap)
+  (stm-store buf (stm-item emb val (now_unix_ms)) cap))
+
+; --- recall: nearest or geometric over the STM "mesh" ---
+; Simple: nearest-shape over the embs in buf (using predictor-train / nearest-shape logic).
+; Or geometric: treat STM items as nodes, recency as edge w, gl-gstep to "diffuse" query over the local mesh.
+(defn stm-recall-nearest (buf query)
+  (if (eq (len buf) 0) nothing
+      (let best (nearest-shape (map stm-emb buf) query)  ; lift from predictor/nearest
+        (stm-val (nth buf (index-of best))))))  ; or the val of the best
+
+; Geometric recall (for mesh neighbors in STM or global): gl-gstep with recency weights.
+; Edges = self + recency-decayed to other items in buf.
+(defn stm-recall-geo (buf query)
+  (if (eq (len buf) 0) nothing
+      (let embs (map stm-emb buf)
+        (let recs (map stm-rec buf)
+          (let edges (stm-build-recency-edges recs)  ; list (i j w=rec_i * rec_j or decay)
+            (let diffused (gl-gstep edges embs 0.0 gl-add2 gl-weigh-lin 0.0)
+              (stm-val (nth buf (argmax-similarity diffused query)))))))))  ; or nearest on diffused
+
+; --- integrate with active-inference and phi-start ---
+; In the loop: phi_emb = phi-start-forward (context)
+; recalled = stm-recall (buf, phi_emb)  ; or active-inf select from STM hypotheses
+; augmented = tb-vec-add phi_emb (or geometric gather) recalled  ; or concat if dims
+; next_pred = phi-start-forward (augmented) or choice "use recalled or phi"
+; observe actual
+; if ai-surprised? (pred, actual): one-shot the new to STM, or update via surprise signal (store delta)
+; ai-settled? gates "learned this short context"
+; choice/fail/stop: CHOICE which recall strategy (nearest vs geo vs mesh), FAIL if surprise high without intern, STOP if settled or STM full without melt.
+; store/restore: the buf state (or snapshot as tensor-file) across steps or "sleep" (mesh neighbor wake).
+; JIT: the phi forward + recall (hot path).
+
+; --- persist / external tensor for STM snapshot (the "tensor data model") ---
+(defn stm-to-tensor (buf)
+  (tf-tensor (tf-header (list (len buf) 3) "mixed" "stm-snapshot" (now_unix_ms)) (map (fn it (list (stm-emb it) (stm-val it) (stm-rec it))) buf)))
+
+(defn stm-from-tensor (t)
+  (map (fn row (stm-item (nth row 0) (nth row 1) (nth row 2))) (tf-data-of t)))
+
+; One-shot + recall + active-inf in a phi context shows the "start model" can do rapid acquisition (one-shot), short-term recall, and surprise-driven (active) adaptation while the phi forward provides the structural Phi-like computation.
+
+; end short-term-memory.fk
