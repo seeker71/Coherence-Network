@@ -1,0 +1,74 @@
+# ─────────────────────────────────────────────────────────────────────
+# sqlite-as-recipe.form — the SQLite file format is a Form recipe. A binary that
+#   serves its own data surface from a .db file needs no libsqlite3 and no Python:
+#   the b-tree leaf page, the varint, the record header, the serial types, and
+#   column extraction ARE recipes. The kernel gives raw bytes; Form does the rest.
+# ─────────────────────────────────────────────────────────────────────
+#
+# This is the missing carrier under the north star Urs named: "a version which
+# returns the home page and the api all from the sqlite file based db from within
+# the binary." The substrate had filesystem CRUD, TCP, segmented logs, storage
+# ports, Postgres — but no SQLite reader. SQLite lived only in Python (dev/test
+# seeding). Reading a .db file from an emitted native binary needed either
+# libsqlite3 (a host dependency) or this: the format itself as Form.
+#
+# The kernel's job shrinks to fs-port open/read (the raw bytes, as in
+# self-translate-universal); everything after — parse, navigate, decode — is Form.
+
+(sqlite-as-recipe
+
+  (lineage
+    (carrier-for   db-api-server)                    # home + JSON API from a .db, in one emitted binary
+    (reads-bytes-via fs-port-open-read)              # the only kernel call; the parse is Form
+    (data          form-stdlib/sqlite-read.fk)       # the reader recipe
+    (proof-band    tests/sqlite-read-band.fk)        # 31 three-way over REAL sqlite3 bytes
+    (no-host-dep   "no libsqlite3, no Python — the format is the recipe"))
+
+  # ── What the format actually is (and what the recipe decodes) ────────
+  (format
+    (page        "a fixed-size page; a table b-tree LEAF page has type 0x0d")
+    (header      "8-byte leaf header: type, freeblock, ncells, cell-content-start, frag")
+    (pointers    "a cell-pointer array of page-relative offsets — the reader FOLLOWS pointers,
+                  so cell placement is free; any format-faithful layout reads identically")
+    (cell        "payload-length varint, rowid varint, then the record")
+    (record      "header-length varint, then one serial-type varint per column, then the body")
+    (varint      "big-endian, 7 bits/byte, high bit continues — sl-vi returns (value next-index)")
+    (serial-types "0 NULL · 1..6 int (1,2,3,4,6,8 bytes) · 7 float · 8/9 int const 0/1 (0 bytes!)
+                  · N≥12 even → BLOB (N-12)/2 · N≥13 odd → TEXT (N-13)/2"))
+
+  # ── The reader is one generic recipe, two uses (core abstraction) ────
+  # The same leaf-page reader decodes the schema (sqlite_master on page 1) and the
+  # data rows (a table's rootpage). One recipe, not two parallel paths — the
+  # elegant core: navigate by following pointers, decode by walking serial types.
+  (reader
+    (page-header  "sl-pagetype · sl-ncells · sl-cellptr — read the leaf header + pointer array")
+    (cell         "sl-rowid · sl-rec-start · sl-hdrlen — locate the record inside a cell")
+    (column-walk  "sl-col walks the header summing body lengths → (serial-type, body-offset) for column n")
+    (value        "sl-col-byte0 / sl-col-int1 land on real content — text's first char, an int's bytes")
+    (generic      "one leaf reader serves schema page AND data page — same recipe, different page"))
+
+  # ── Scope, named honestly ────────────────────────────────────────────
+  # The band proves a table-btree LEAF page with INTEGER and TEXT columns — what a
+  # seed table uses. The next page shapes are the SAME varint + record recipes
+  # applied wider; they are closing cells, not debts:
+  (closing-cells
+    (interior-pages  "table-btree interior (0x05) — navigate child pointers to find leaves")
+    (overflow-pages  "payloads larger than a page spill to an overflow chain")
+    (indexes         "index b-trees (0x0a/0x02) — same record decode, key-ordered")
+    (more-serials    "float (7), 8-byte ints (6) — body-length already in sl-serial-len; value decode on need"))
+
+  (invariant
+    (the-format-is-a-recipe        no-libsqlite3-no-python-the-bytes-are-form)
+    (the-kernel-only-gives-bytes   fs-port-open-read-the-parse-is-form)
+    (one-generic-leaf-reader       schema-and-data-are-the-same-recipe)
+    (pointers-mean-placement-free  any-format-faithful-layout-reads-identically)
+    (scope-named-not-hidden        interior-overflow-index-are-closing-cells)))
+
+# ─────────────────────────────────────────────────────────────────────
+# How to verify
+# ─────────────────────────────────────────────────────────────────────
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sqlite-read.fk \
+#     form-stdlib/tests/sqlite-read-band.fk          # → 31 three-way over real sqlite3 bytes
+#   # the band's page is the leaf sqlite3 wrote for:
+#   #   CREATE TABLE idea(id INTEGER, slug TEXT, title TEXT);
+#   #   INSERT idea VALUES (1,'agent-pipeline','Agent Pipeline'); (2,'form-os','Form OS');

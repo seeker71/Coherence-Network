@@ -1,0 +1,66 @@
+; preludes: form-stdlib/core.fk form-stdlib/sqlite-read.fk
+;
+; sqlite-read-band — the SQLite file format read by a Form recipe (sqlite-read.fk),
+; proven three-way over REAL SQLite-format bytes. A binary that serves its own
+; data surface from a .db file needs no libsqlite3 and no Python: the leaf page,
+; varint, record header, serial types, and column extraction ARE recipes.
+;
+; The page below is a table-btree LEAF page in true SQLite format, holding the two
+; rows `sqlite3` itself wrote for
+;   CREATE TABLE idea(id INTEGER, slug TEXT, title TEXT);
+;   INSERT idea VALUES (1,'agent-pipeline','Agent Pipeline');   -- id as serial 9 (const 1)
+;   INSERT idea VALUES (2,'form-os','Form OS');                 -- id as serial 1 (int8 = 2)
+; compacted (cells laid right after the 8-byte header + 2-entry pointer array,
+; instead of at the 4096-byte page bottom) — the reader FOLLOWS pointers, so cell
+; placement is format-faithful and the page bakes in 67 bytes, not 4096 of zeros.
+;
+; Verdict 31 when the reader decodes real SQLite:
+;   1   PAGE HEADER — type 0x0d (table-btree leaf), ncells = 2
+;   2   CELL POINTERS + ROWIDS — pointer array resolves both cells; the rowid
+;       varints decode (row 1 → 1, row 2 → 2)
+;   4   RECORD HEADER — header length and the FIRST serial type of each record
+;       (row1 id = serial 9 const-1 → 0 body bytes; row2 id = serial 1 → 1 body byte)
+;   8   COLUMN WALK — sl-col walks the header summing body lengths: column 1 (slug)
+;       is TEXT, its serial decodes the text length (14 / 7) and its body OFFSET
+;   16  VALUE RECOVERY — the decoded offsets land on real content: row1 slug first
+;       char 'a'(97); row2 INTEGER id = 2; row2 slug 'f'(102); row2 title 'F'(70)
+(do
+    (let page (list
+        13  0 0  0 2  0 12  0          ; leaf header: type ncells cell-content-start frag
+        0 12  0 46                     ; cell pointer array: cell0@12  cell1@46
+        ; cell0 (rowid 1): plen=32 rowid=1 | hdr 4 [9,41,41] | "agent-pipeline" "Agent Pipeline"
+        32 1  4 9 41 41
+        97 103 101 110 116 45 112 105 112 101 108 105 110 101
+        65 103 101 110 116 32 80 105 112 101 108 105 110 101
+        ; cell1 (rowid 2): plen=19 rowid=2 | hdr 4 [1,27,27] | id=2 | "form-os" "Form OS"
+        19 2  4 1 27 27
+        2
+        102 111 114 109 45 111 115
+        70 111 114 109 32 79 83))
+
+    (let c0 (if (eq (sl-pagetype page) 13) (if (eq (sl-ncells page) 2) 1 0) 0))
+
+    (let c1 (if (eq (sl-cellptr page 0) 12)
+            (if (eq (sl-cellptr page 1) 46)
+            (if (eq (sl-rowid page 12) 1)
+            (if (eq (sl-rowid page 46) 2) 2 0) 0) 0) 0))
+
+    (let c2 (if (eq (sl-hdrlen page 12) 4)
+            (if (eq (sl-col-serial page 12 0) 9)
+            (if (eq (sl-serial-len 9) 0)
+            (if (eq (sl-col-serial page 46 0) 1)
+            (if (eq (sl-serial-len 1) 1) 4 0) 0) 0) 0) 0))
+
+    (let c3 (if (eq (sl-col-serial page 12 1) 41)
+            (if (eq (sl-text-len 41) 14)
+            (if (eq (sl-col-off page 12 1) 18)
+            (if (eq (sl-col-serial page 46 1) 27)
+            (if (eq (sl-text-len 27) 7)
+            (if (eq (sl-col-off page 46 1) 53) 8 0) 0) 0) 0) 0) 0))
+
+    (let c4 (if (eq (sl-col-byte0 page 12 1) 97)
+            (if (eq (sl-col-int1 page 46 0) 2)
+            (if (eq (sl-col-byte0 page 46 1) 102)
+            (if (eq (sl-col-byte0 page 46 2) 70) 16 0) 0) 0) 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
