@@ -390,6 +390,11 @@ def sense_spec_symbols() -> list[str]:
             rf"^\s*(?:const|let|var)\s+{re.escape(sym)}\s*[:=]",
             rf"^\s*form\s+{re.escape(sym)}\b",         # Form shape
             rf"^\s*defn\s+{re.escape(sym)}\b",         # Form definition
+            # Kernel natives — all three sibling kernels declare a native by
+            # REGISTERING its name as a string: Go/TS `registerNative("sym"`,
+            # Rust `register_native("sym"`. The registry is the definition
+            # site; the quoted name is the declaration.
+            rf"register_?[Nn]ative\(\s*\"{re.escape(sym)}\"",
             # Rust — struct, enum, trait, type alias, fn, union, macro
             rf"\b(?:pub(?:\([^)]+\))?\s+)?(?:unsafe\s+)?(?:async\s+)?fn\s+{re.escape(sym)}\b",
             rf"\b(?:pub(?:\([^)]+\))?\s+)?struct\s+{re.escape(sym)}\b",
