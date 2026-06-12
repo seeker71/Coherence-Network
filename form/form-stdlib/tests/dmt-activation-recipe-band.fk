@@ -1,0 +1,40 @@
+; tests/dmt-activation-recipe-band.fk — DMT's effect as a runnable, reversible
+; Field Model Form activation, three-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/dmt-activation-recipe.fk
+;
+; Proves the operator (reduced ordinary binding + coherent structured input ->
+; addressable symbolic output) runs and matches DMT's effect shape:
+;   before — ordinary binding high (5), structure suppressed (not visible)
+;   after  — binding reduced (1), the addressable structure now visible: the
+;            operator fired, both terms in one step (reduce AND open)
+;   receipt — the activation is recorded (the four deltas applied)
+;   residual — honest: the deep site stays bound (the operator opens what it
+;              addresses, not everything)
+;   reverse — binding re-tightens to 5, structure re-suppresses to 0: the
+;             effect ENDS, fully reversible (short-acting; priors revise back)
+;
+; Band verdict: 511 when every law holds.
+
+section [form.bml] {
+    def darb-bool(b, weight) = if b then weight else 0;
+
+    def darb-score() {
+        let before = dar-field();
+        let result = dar-activate();
+        let after = fmfrt-result-field(result);
+        let reversed = fmfrt-result-field(dar-reverse(result));
+        sum(list(
+            darb-bool(eq(dar-binding(before), 5), 1),
+            darb-bool(and(eq(dar-visible(before, 1), 0), eq(dar-visible(before, 2), 0)), 2),
+            darb-bool(eq(dar-binding(after), 1), 4),
+            darb-bool(and(eq(dar-visible(after, 1), 1), eq(dar-visible(after, 2), 1)), 8),
+            darb-bool(and(lt(dar-binding(after), dar-binding(before)), gt(dar-visible(after, 1), dar-visible(before, 1))), 16),
+            darb-bool(eq(len(fmfrt-receipt-applied(fmfrt-result-receipt(result))), 4), 32),
+            darb-bool(eq(dar-visible(after, 3), 0), 64),
+            darb-bool(eq(dar-binding(reversed), 5), 128),
+            darb-bool(and(eq(dar-visible(reversed, 1), 0), eq(dar-visible(reversed, 2), 0)), 256)));
+    }
+
+    darb-score();
+}

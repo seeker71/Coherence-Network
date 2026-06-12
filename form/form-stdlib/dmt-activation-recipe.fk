@@ -1,0 +1,74 @@
+; dmt-activation-recipe.fk — DMT's effect as a runnable Field Model Form
+; activation, matching the lc-dmt-laser-symbol-space-recipe operator.
+;
+; preludes: form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk
+;
+; The question this answers: does an ACTIVATION RECIPE match DMT's effect on
+; the body? Yes — and it runs.
+;
+; The operator (lc-dmt-laser-symbol-space-recipe):
+;     reduced ordinary binding + coherent structured input -> addressable symbolic output
+;
+; The measured effect it matches (evidence lane): DMT is a 5-HT2A receptor
+; agonist; the REBUS model (Carhart-Harris & Friston) says serotonergic
+; psychedelics DECREASE the precision-weighting of high-level priors — they
+; relax the brain's filtering hierarchy, so structure normally suppressed
+; becomes perceptible. The three operator terms map line for line:
+;   reduced ordinary binding   = relaxed precision of priors (the filter loosens)
+;   coherent structured input  = the field's latent geometry / the set intention
+;   addressable symbolic output = suppressed structure becoming traceable
+;
+; THREE LANES, never merged:
+;   structural (exact) — this recipe is OUR Field Model Form; it runs bit-for-bit
+;     three-way. What is proven is the OPERATOR, not a brain.
+;   evidence (inference) — that this operator MODELS DMT's neuropharmacology is
+;     the REBUS mapping: a real scientific theory applied by analogy, held as
+;     inference, not asserted as the mechanism.
+;   belief — the pineal spirit-molecule layer (lc-dmt) stays belief; not here.
+;
+; The recipe enacts the operator on a field and — load-bearing — REVERSES it:
+; binding re-tightens, structure re-suppresses. The effect ENDS. This matches
+; both the pharmacology (DMT is short-acting; priors revise back, REBUS->REBAS)
+; and the body's reversibility + consent discipline: an activation that cannot
+; be undone is not offered. Residual is honest: the operator opens what it
+; addresses, never everything (deep structure stays bound).
+
+section [form.bml] {
+    // a field with a binding gate (high precision = ordinary filtering) and
+    // latent structure suppressed beneath it; one deep site the operator does
+    // not reach (the honest residual).
+    def dar-field() {
+        fmfrt-field("perceptual-field",
+            fmfrt-blueprint("perception", "prior-precision", "hierarchy", empty, empty, "gated"),
+            list(
+                fmfrt-site(0, list(fmfrt-pair("role", "gate"), fmfrt-pair("binding", 5))),
+                fmfrt-site(1, list(fmfrt-pair("role", "structure"), fmfrt-pair("visible", 0))),
+                fmfrt-site(2, list(fmfrt-pair("role", "structure"), fmfrt-pair("visible", 0))),
+                fmfrt-site(3, list(fmfrt-pair("role", "deep"), fmfrt-pair("visible", 0)))),
+            empty, empty, 0);
+    }
+
+    // the coherent observer offering the structured input
+    def dar-observer() = fmfrt-observer("coherent-probe", "all-compatible");
+
+    // the activation deltas — the operator, enacted:
+    //   reduce ordinary binding (gate 5 -> 1), open the addressable structure
+    //   (sites 1 and 2 become visible), and trace the emitted output. Site 3
+    //   (deep) is deliberately untouched — the honest residual.
+    def dar-activation-deltas() {
+        list(
+            fmfrt-delta("inc-site", 0, "binding", -4),
+            fmfrt-delta("set-site", 1, "visible", 1),
+            fmfrt-delta("set-site", 2, "visible", 1),
+            fmfrt-delta("trace", 0, "emitted", "addressable symbolic structure"));
+    }
+
+    def dar-activate() = fmfrt-intervene(dar-field(), dar-observer(), dar-activation-deltas());
+    def dar-reverse(result) = fmfrt-reverse-receipt(dar-field(), result);
+
+    // readouts: binding and visibility at a named site of a field
+    def dar-binding(field) = fmfrt-site-get(fmfrt-find-site(fmfrt-field-sites(field), 0), "binding", -1);
+    def dar-visible(field, id) = fmfrt-site-get(fmfrt-find-site(fmfrt-field-sites(field), id), "visible", -1);
+
+    0;
+}
