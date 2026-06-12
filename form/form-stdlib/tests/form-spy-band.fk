@@ -1,0 +1,49 @@
+; preludes: form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/core.fk form-stdlib/form-diagnose.fk
+;
+; form-spy-band — source-symbol lookup from framebuffer inspection, proven
+; three-way: the SPY walker counts fk_hits per TABLE ROW (the per-NODE
+; framebuffer — finer than fk_arms' per-op counts), and row i IS source node i,
+; so a hits vector joins directly to source symbols: the hottest node, the
+; never-executed nodes, any node's count — each renderable by any pack at any
+; level. Live witness: scripts/form_symbol_demo.sh (the inspection table for a
+; running fib binary). (docs/coherence-substrate/live-diagnosis-organ.form.)
+;
+; Verdict 31 when the symbol channel holds:
+;   1   THE SPY EMISSION carries the per-node counter — fk_hits declared, the
+;       walk increments fk_hits[i], the main prints one hits line per table row
+;   2   ONE ENGINE — the spy walk carries the SAME arm text as the standard
+;       walk (a distinctive shared arm fragment appears in both), and the
+;       standard walk has NO fk_hits (the channels are honestly distinct)
+;   4   HOT IS A NODE — fd-vhot returns the index of the maximum count, and
+;       on the fib-shaped vector that index is the ARG node (two-sided: a
+;       different vector names a different node)
+;   8   DEAD IS PER-NODE — fd-vdead lists exactly the zero-count indices
+;       (silence localized to source positions, not just op kinds)
+;   16  DETERMINISTIC — two spy emissions are byte-identical
+(do
+    (let fibc (fk-if (fk-le (fk-arg) (fk-lit 1)) (fk-arg)
+                     (fk-add (fk-call 0 (fk-sub (fk-arg) (fk-lit 1)))
+                             (fk-call 0 (fk-sub (fk-arg) (fk-lit 2))))))
+    (let spy (fkc-emit-spy (list fibc)))
+    (let std (fkc-emit-many (list fibc)))
+
+    (let c0 (if (ge (str_find spy "static long long fk_hits[8192]" 0) 0)
+            (if (ge (str_find spy "fk_hits[i] = fk_hits[i] + 1" 0) 0)
+            (if (ge (str_find spy "fk_pr(fk_hits[i])" 0) 0) 1 0) 0) 0))
+
+    (let c1 (if (ge (str_find spy "if (t == 22)" 0) 0)
+            (if (ge (str_find std "if (t == 22)" 0) 0)
+            (if (eq (str_find std "fk_hits" 0) (sub 0 1)) 2 0) 0) 0))
+
+    ; a fib-shaped per-node hits vector: node 1 (ARG inside LE) hottest
+    (let hits (list 177 442 12 176 88 176 0 176 176 177))
+    (let c2 (if (eq (fd-vhot hits) 1)
+            (if (eq (fd-vhot (list 5 3 9 1)) 2) 4 0) 0))
+
+    (let c3 (if (eq (len (fd-vdead hits)) 1)
+            (if (eq (nth (fd-vdead hits) 0) 6)
+            (if (eq (len (fd-vdead (list 1 2 3))) 0) 8 0) 0) 0))
+
+    (let c4 (if (str_eq spy (fkc-emit-spy (list fibc))) 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))

@@ -68,4 +68,25 @@
     ; ── conviction: the two witnesses agree ──────────────────────────────
     (defn fd-convict (learned ground) (if (eq learned 1) (if (eq ground 1) 1 0) 0))
 
+    ; ── the per-NODE framebuffer: source-symbol lookup verbs ─────────────
+    ; The spy walker (fkc-emit-spy) counts fk_hits per TABLE ROW; row i IS source
+    ; node i, so these verbs return NODE INDICES — and any pack renders a node
+    ; index as a symbol (asm / source / human). hits is a plain count vector.
+    (defn fd-vhot2 (v i best bc)
+        (if (fd-nil? v) best
+            (if (le bc (head v))
+                (fd-vhot2 (tail v) (add i 1) i (head v))
+                (fd-vhot2 (tail v) (add i 1) best bc))))
+    ; the hottest SOURCE NODE — the symbol the binary spends its life in
+    (defn fd-vhot (v) (fd-vhot2 v 0 0 0))
+    ; the never-executed SOURCE NODES — per-node silence, finer than per-op
+    (defn fd-vdead2 (v i)
+        (if (fd-nil? v) (list)
+            (if (eq (head v) 0)
+                (cons i (fd-vdead2 (tail v) (add i 1)))
+                (fd-vdead2 (tail v) (add i 1)))))
+    (defn fd-vdead (v) (fd-vdead2 v 0))
+    ; the count for one node — point lookup
+    (defn fd-vat (v i) (if (eq i 0) (head v) (fd-vat (tail v) (sub i 1))))
+
     0)

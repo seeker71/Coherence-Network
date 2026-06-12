@@ -71,6 +71,24 @@
     (separate    "one generic organ recipe; observations and learned laws are always data")
     (convict     "agreement of the independent witnesses — never either alone"))
 
+  # ── Source-symbol lookup — REALIZED: the per-NODE framebuffer ────────
+  # The spy walker (fkc-emit-spy) counts fk_hits per TABLE ROW — finer than
+  # fk_arms' per-op counts — and row i IS source node i, so framebuffer
+  # inspection joins directly to source symbols: every node's live hit count,
+  # rendered by any pack at any level. Witnessed on a running fib(10): 177
+  # function entries (IF/LE/ARG each 177), 89 leaf returns, 88 recursive
+  # expansions — 89 + 88 = 177, the call-tree arithmetic READABLE straight off
+  # the framebuffer; zero dead nodes (full coverage). One engine: the spy walk
+  # reuses the standard arm text; only the header gains the per-node count.
+  (symbol-lookup-realized
+    (channel   "fk_hits[i] per table row — the per-node framebuffer (fkc-emit-spy)")
+    (join      "hits[i] -> source node i -> any pack's rendering — lookup is total")
+    (verbs     "fd-vhot (hottest node) · fd-vdead (never-executed nodes) · fd-vat (point lookup)")
+    (witnessed "fib(10)=55 live: hot node named; 89 leaves + 88 internal = 177 calls
+                read off the counts; scripts/form_symbol_demo.sh prints the full table")
+    (band      "tests/form-spy-band.fk -> 31 three-way — emission carries the counter,
+                one engine with the standard walk, hot/dead two-sided, deterministic"))
+
   # ── Closing cells ─────────────────────────────────────────────────────
   (closing-cells
     (more-laws    "beyond order-2 additive: multiplicative, affine, periodic — a law
