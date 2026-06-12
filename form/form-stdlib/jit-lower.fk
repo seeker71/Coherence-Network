@@ -23,17 +23,17 @@
 ; walker on original tree.
 
 ; --- extended cell tags for lowered JIT forms (added to fourth-walker model in parallel) ---
-; 24-33 for unboxed/lowered constructs. Emit will turn them into tight C.
-(defn fk-logic-and (a b) (fk-node 24 (ms-intern a b)))
-(defn fk-logic-or (a b)  (fk-node 25 (ms-intern a b)))
-(defn fk-logic-not (a)   (fk-node 26 a))
-(defn fk-folded (v)      (fk-node 27 v))
-(defn fk-unbox-str (s)   (fk-node 28 s))
-(defn fk-unbox-float (f) (fk-node 29 f))
-(defn fk-unbox-list (xs) (fk-node 30 xs))
-(defn fk-closure-lifted (idx body) (fk-node 31 (ms-intern (ms-cell idx) body)))
-(defn fk-bmf-lowered (e) (fk-node 32 e))
-(defn fk-folded-if (c t e) (fk-node 33 (ms-intern c (ms-intern t e))))
+; 44-59 for unboxed/lowered constructs (re-homed past the string and figure lanes). Emit turns them into tight C.
+(defn fk-logic-and (a b) (fk-node 44 (ms-intern a b)))
+(defn fk-logic-or (a b)  (fk-node 45 (ms-intern a b)))
+(defn fk-logic-not (a)   (fk-node 46 a))
+(defn fk-folded (v)      (fk-node 47 v))
+(defn fk-unbox-str (s)   (fk-node 48 s))
+(defn fk-unbox-float (f) (fk-node 49 f))
+(defn fk-unbox-list (xs) (fk-node 50 xs))
+(defn fk-closure-lifted (idx body) (fk-node 51 (ms-intern (ms-cell idx) body)))
+(defn fk-bmf-lowered (e) (fk-node 52 e))
+(defn fk-folded-if (c t e) (fk-node 53 (ms-intern c (ms-intern t e))))
 
 ; --- logic (gap #3 + unboxed) ---
 (defn jit-lower-and (a b) (fk-logic-and a b))
@@ -47,14 +47,14 @@
 ; --- full folding (fully folded) ---
 (defn jit-fold-const (node)
   (if (eq (fk-tag node) 3)
-      (let l (jit-fold-const (ms-child (fk-body node) 0))
-           r (jit-fold-const (ms-child (fk-body node) 1))
-           (if (and (eq (fk-tag l) 1) (eq (fk-tag r) 1))
-               (fk-folded (fk-lit (add (ms-value (fk-body l)) (ms-value (fk-body r)))))
-               (fk-add l r)))
+      (do (let l (jit-fold-const (ms-child (fk-body node) 0)))
+          (let r (jit-fold-const (ms-child (fk-body node) 1)))
+          (if (and (eq (fk-tag l) 1) (eq (fk-tag r) 1))
+              (fk-folded (fk-lit (add (ms-value (fk-body l)) (ms-value (fk-body r)))))
+              (fk-add l r)))
       (if (eq (fk-tag node) 6)
-          (let c (jit-fold-const (ms-child (fk-body node) 0))
-               (if (eq (fk-tag c) 1)
+          (do (let c (jit-fold-const (ms-child (fk-body node) 0)))
+              (if (eq (fk-tag c) 1)
                    (if (eq (ms-value (fk-body c)) 0)
                        (jit-fold-const (ms-child (ms-child (fk-body node) 1) 1))
                        (jit-fold-const (ms-child (ms-child (fk-body node) 1) 0)))
@@ -78,8 +78,8 @@
 (defn jit-unbox-primitives-full (node)
   (if (eq (fk-tag node) 1)
       (if (is-string-literal (fk-body node)) (jit-unbox-str node) node)
-      (if (eq (fk-tag node) 29) (jit-unbox-float node)
-          (if (eq (fk-tag node) 30) (jit-unbox-list node) node))))
+      (if (eq (fk-tag node) 49) (jit-unbox-float node)
+          (if (eq (fk-tag node) 50) (jit-unbox-list node) node))))
 
 ; --- BMF/compiler lowering as recipe ---
 (defn jit-bmf-lower-expr (expr)
@@ -87,49 +87,50 @@
 
 ; --- dispatch overhead / inlining ---
 (defn jit-lift-and-inline (node)
-  (let lifted (jit-lift-nested node node)
-       (jit-fold-full lifted)))
+  (do (let lifted (jit-lift-nested node node))
+      (jit-fold-full lifted)))
 
 ; --- master portable JIT (covers everything in one recipe) ---
 (defn jit-lower-full (node)
-  (let l1 (jit-lower (jit-lower-and (jit-lower-or (jit-lower-not node))))
-       l2 (jit-fold-full l1)
-       l3 (jit-unbox-primitives-full l2)
-       l4 (jit-lift-and-inline l3)
-       l5 (jit-bmf-lower-expr l4)
-       l6 (jit-lower-call l5)   ; lift more: CALL inlining for small fns to reduce dispatch
-       l7 (jit-fold-arith l6)   ; more folding on SUB, MUL etc for full arith
-       (jit-unbox-primitives-full l7)))
+  (do (let l1 (jit-lower (jit-lower-and (jit-lower-or (jit-lower-not node)))))
+      (let l2 (jit-fold-full l1))
+      (let l3 (jit-unbox-primitives-full l2))
+      (let l4 (jit-lift-and-inline l3))
+      (let l5 (jit-bmf-lower-expr l4))
+      (let l6 (jit-lower-call l5))   ; lift more: CALL inlining for small fns to reduce dispatch
+      (let l7 (jit-fold-arith l6))   ; more folding on SUB, MUL etc for full arith
+      (jit-unbox-primitives-full l7)))
 
 ; lift more: CALL lowering / inlining (reduces dispatch overhead for hot small fns)
 (defn jit-lower-call (node)
   (if (eq (fk-tag node) 12)
-      (let fidx (ms-value (ms-child (fk-body node) 0))
-           ; for demo, if fidx points to a simple LIT-returning fn, inline the arg
-           ; real would look up the fn body and substitute
-           (fk-add (fk-lit 0) (ms-child (fk-body node) 1)))  ; placeholder inline
+      (do (let fidx (ms-value (ms-child (fk-body node) 0)))
+          ; for demo, if fidx points to a simple LIT-returning fn, inline the arg
+          ; real would look up the fn body and substitute
+          (fk-add (fk-lit 0) (ms-child (fk-body node) 1)))  ; placeholder inline
       node))
 
 ; lift more: additional arith folding for full primitive coverage + logic folding
 (defn jit-fold-arith (node)
   (if (eq (fk-tag node) 4)  ; SUB
-      (let l (jit-fold-arith (ms-child (fk-body node) 0))
-           r (jit-fold-arith (ms-child (fk-body node) 1))
-           (if (and (eq (fk-tag l) 1) (eq (fk-tag r) 1))
-               (fk-folded (fk-lit (sub (ms-value (fk-body l)) (ms-value (fk-body r)))))
-               (fk-sub l r)))
+      (do (let l (jit-fold-arith (ms-child (fk-body node) 0)))
+          (let r (jit-fold-arith (ms-child (fk-body node) 1)))
+          (if (and (eq (fk-tag l) 1) (eq (fk-tag r) 1))
+              (fk-folded (fk-lit (sub (ms-value (fk-body l)) (ms-value (fk-body r)))))
+              (fk-sub l r)))
       (if (eq (fk-tag node) 3)
-          (let l (jit-fold-arith (ms-child (fk-body node) 0))
-               r (jit-fold-arith (ms-child (fk-body node) 1))
-               (if (and (eq (fk-tag l) 1) (eq (fk-tag r) 1))
-                   (fk-folded (fk-lit (add (ms-value (fk-body l)) (ms-value (fk-body r)))))
-                   node))
-          (if (eq (fk-tag node) 24)  ; fold logic-and of literals
-              (let a (ms-child (fk-body node) 0) b (ms-child (fk-body node) 1)
-                   (if (and (eq (fk-tag a) 1) (eq (fk-tag b) 1))
-                       (fk-folded (fk-lit (if (and (not (eq (ms-value (fk-body a)) 0)) (not (eq (ms-value (fk-body b)) 0))) 1 0)))
-                       node))
-              node))))) 
+          (do (let l (jit-fold-arith (ms-child (fk-body node) 0)))
+              (let r (jit-fold-arith (ms-child (fk-body node) 1)))
+              (if (and (eq (fk-tag l) 1) (eq (fk-tag r) 1))
+                  (fk-folded (fk-lit (add (ms-value (fk-body l)) (ms-value (fk-body r)))))
+                  node))
+          (if (eq (fk-tag node) 44)  ; fold logic-and of literals
+              (do (let a (ms-child (fk-body node) 0))
+                  (let b (ms-child (fk-body node) 1))
+                  (if (and (eq (fk-tag a) 1) (eq (fk-tag b) 1))
+                      (fk-folded (fk-lit (if (and (not (eq (ms-value (fk-body a)) 0)) (not (eq (ms-value (fk-body b)) 0))) 1 0)))
+                      node))
+              node)))))
 
 ; lift more for full BMF compiler as recipe: cursor (BUF as direct read + unboxed),
 ; match/fail/cut as lowered (direct C if on caps, no boxed match objects),
@@ -146,12 +147,12 @@
 ; 38 = BMF-CURSOR pos         (direct index into source, unboxed)
 ; 39 = BMF-STR-OP s i         (unboxed string op result)
 
-(defn fk-bmf-match (caps rest) (fk-node 34 (ms-intern caps rest)))
-(defn fk-bmf-fail (reason) (fk-node 35 reason))
-(defn fk-bmf-fail-cut (reason) (fk-node 36 reason))
-(defn fk-bmf-cap-pair (name val) (fk-node 37 (ms-intern name val)))
-(defn fk-bmf-cursor (pos) (fk-node 38 pos))
-(defn fk-bmf-str-op (s i) (fk-node 39 (ms-intern s i)))
+(defn fk-bmf-match (caps rest) (fk-node 54 (ms-intern caps rest)))
+(defn fk-bmf-fail (reason) (fk-node 55 reason))
+(defn fk-bmf-fail-cut (reason) (fk-node 56 reason))
+(defn fk-bmf-cap-pair (name val) (fk-node 57 (ms-intern name val)))
+(defn fk-bmf-cursor (pos) (fk-node 58 pos))
+(defn fk-bmf-str-op (s i) (fk-node 59 (ms-intern s i)))
 
 ; BMF-specific lowering pass (called from jit-lower-full)
 (defn jit-bmf-lower-cursor (node)
@@ -178,21 +179,21 @@
 
 ; extend existing unbox and lower to call the BMF pass
 (defn jit-unbox-more (node)
-  (let n1 (if (eq (fk-tag node) 17) (fk-unbox-str node)
-            (if (eq (fk-tag node) 19) (fk-unbox-list node) node))
-       (jit-bmf-lower-full n1)))
+  (do (let n1 (if (eq (fk-tag node) 17) (fk-unbox-str node)
+                (if (eq (fk-tag node) 19) (fk-unbox-list node) node)))
+      (jit-bmf-lower-full n1)))
 
 (defn jit-lower-full (node)
-  (let l1 (jit-lower (jit-lower-and (jit-lower-or (jit-lower-not node))))
-       l2 (jit-fold-full l1)
-       l3 (jit-unbox-primitives-full l2)
-       l4 (jit-lift-and-inline l3)
-       l5 (jit-bmf-lower-expr l4)
-       l6 (jit-lower-call l5)
-       l7 (jit-fold-arith l6)
-       l8 (jit-unbox-more l7)
-       l9 (jit-bmf-lower-full l8)
-       (jit-unbox-primitives-full l9)))
+  (do (let l1 (jit-lower (jit-lower-and (jit-lower-or (jit-lower-not node)))))
+      (let l2 (jit-fold-full l1))
+      (let l3 (jit-unbox-primitives-full l2))
+      (let l4 (jit-lift-and-inline l3))
+      (let l5 (jit-bmf-lower-expr l4))
+      (let l6 (jit-lower-call l5))
+      (let l7 (jit-fold-arith l6))
+      (let l8 (jit-unbox-more l7))
+      (let l9 (jit-bmf-lower-full l8))
+      (jit-unbox-primitives-full l9)))
 
 (defn jit-lower-tree (root)
   (jit-lower-full root))
@@ -222,11 +223,11 @@
 (defn jit-lower-apply-object-rule (node)
   ; lower apply-object-rule (match-pattern then template emit) to lowered match + cap flow
   (if (eq (fk-tag node) 12)
-      (let callee (ms-value (ms-child (fk-body node) 0))
-           (if (or (eq callee 42) (eq callee 2175))  ; apply-object-rule / bmf-dialect-apply
-               (fk-bmf-match (fk-bmf-cap-pair (fk-lit "result") (ms-child (fk-body node) 1))
-                             (fk-bmf-cursor (fk-lit 0)))
-               node))
+      (do (let callee (ms-value (ms-child (fk-body node) 0)))
+          (if (or (eq callee 42) (eq callee 2175))  ; apply-object-rule / bmf-dialect-apply
+              (fk-bmf-match (fk-bmf-cap-pair (fk-lit "result") (ms-child (fk-body node) 1))
+                            (fk-bmf-cursor (fk-lit 0)))
+              node))
       node))
 
 (defn jit-lower-bmf-compile-step (node)
@@ -243,18 +244,18 @@
 
 ; integrate engine/grammar into master portable full lower (folded + unboxed + all prim + bmf full)
 (defn jit-lower-full (node)
-  (let l1 (jit-lower (jit-lower-and (jit-lower-or (jit-lower-not node))))
-       l2 (jit-fold-full l1)
-       l3 (jit-unbox-primitives-full l2)
-       l4 (jit-lift-and-inline l3)
-       l5 (jit-bmf-lower-expr l4)
-       l6 (jit-lower-call l5)
-       l7 (jit-fold-arith l6)
-       l8 (jit-unbox-more l7)
-       l9 (jit-bmf-lower-full l8)
-       l10 (jit-lower-engine-full l9)
-       l11 (jit-lower-bmf-compile-step l10)
-       (jit-unbox-primitives-full l11)))
+  (do (let l1 (jit-lower (jit-lower-and (jit-lower-or (jit-lower-not node)))))
+      (let l2 (jit-fold-full l1))
+      (let l3 (jit-unbox-primitives-full l2))
+      (let l4 (jit-lift-and-inline l3))
+      (let l5 (jit-bmf-lower-expr l4))
+      (let l6 (jit-lower-call l5))
+      (let l7 (jit-fold-arith l6))
+      (let l8 (jit-unbox-more l7))
+      (let l9 (jit-bmf-lower-full l8))
+      (let l10 (jit-lower-engine-full l9))
+      (let l11 (jit-lower-bmf-compile-step l10))
+      (jit-unbox-primitives-full l11)))
 
 ; full BMF compiler cell lowered: (jit-lower-full (engine-grammar-bmf-compiler-cell))
 ; now covers apply-object-rule + full grammar paths as portable lowered recipe.

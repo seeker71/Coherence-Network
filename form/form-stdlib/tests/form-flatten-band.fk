@@ -8,7 +8,7 @@
 ; in scripts/fourth_kernel_audit.sh — the fourth arm, where the heap ops
 ; live). Same cells, both walkers; content-addressing carries the identity.
 ;
-; Verdict 4095 when the flattener holds:
+; Verdict 32767 when the flattener holds:
 ;   1   the lowerings carry values — gt strict at the tie (gt 4 4 -> 0,
 ;       the learning-trend boundary), ge admits it, eq lands, and gates
 ;   2   defn/let/CALL — a mini band with a function, a let, and a verdict
@@ -41,6 +41,17 @@
 ;        casts, unmodified) walk BY VALUE to the siblings' verdict 4
 ;   2048 the REAL slice-merge module + band (mul + raw negative delta
 ;        coordinates, unmodified) walk BY VALUE to the siblings' 127
+;   4096 the comparison/choice lowerings grow lt and or, and the string
+;        lane grows BYTE2S (tag 29) — byte_to_str as a table row, char_at
+;        as the BYTE2S∘SCHAR composition (byte-level by design)
+;   8192 the shim doors (fourth-shim.fk as first source through the
+;        multi-source fold) — core mirrors sum/append/reverse and the
+;        string stones int_to_str/str_to_int/substring/str_find answer
+;        the walking kernels' own native values
+;   16384 the multi-source door — three sources chain defns across file
+;        boundaries (base->mid->main = 32), and the REAL base64 module +
+;        band (shim-first, unmodified from disk) walk BY VALUE to the
+;        siblings' own verdict 12
 (do
     (let c0 (if (and (and (eq (fkm-run (flt-src-fns "(do (gt 5 2))") 0) 1)
                           (eq (fkm-run (flt-src-fns "(do (gt 4 4))") 0) 0))
@@ -80,4 +91,27 @@
                                             (read_file "form-stdlib/tests/crc32-band.fk")) 0) 4) 1024 0))
     (let c11 (if (eq (fkm-run (flt-band-fns (read_file "form-stdlib/slice-merge.fk")
                                             (read_file "form-stdlib/tests/slice-merge-band.fk")) 0) 127) 2048 0))
-    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 c11))))))))))))
+    (let c12 (if (and (and (eq (fkm-run (flt-src-fns "(do (lt 2 5))") 0) 1)
+                           (and (eq (fkm-run (flt-src-fns "(do (lt 5 5))") 0) 0)
+                                (eq (fkm-run (flt-src-fns "(do (or 0 3))") 0) 1)))
+                      (and (eq (fkm-run (flt-src-fns "(do (or 0 0))") 0) 0)
+                           (and (str_eq (fkm-run (flt-src-fns "(do (byte_to_str 65))") 0) "A")
+                                (str_eq (fkm-run (flt-src-fns "(do (char_at (byte_to_str 90) 0))") 0) "Z"))))
+                 4096 0))
+    (let shim (read_file "form-stdlib/fourth-shim.fk"))
+    (let c13 (if (and (and (eq (fkm-run (flt-srcs-fns (list shim "(do (sum (list 4 5 6)))")) 0) 15)
+                           (and (eq (fkm-run (flt-srcs-fns (list shim "(do (len (append (list 1 2) (list 3))))")) 0) 3)
+                                (eq (fkm-run (flt-srcs-fns (list shim "(do (head (reverse (list 7 8 9))))")) 0) 9)))
+                      (and (str_eq (fkm-run (flt-srcs-fns (list shim "(do (int_to_str (sub 0 45)))")) 0) "-45")
+                           (and (eq (fkm-run (flt-srcs-fns (list shim "(do (str_to_int (int_to_str 307)))")) 0) 307)
+                                (and (str_eq (fkm-run (flt-srcs-fns (list shim "(do (substring (int_to_str 56789) 1 4))")) 0) "678")
+                                     (eq (fkm-run (flt-srcs-fns (list shim "(do (str_find (int_to_str 56789) (int_to_str 78) 0))")) 0) 2)))))
+                 8192 0))
+    (let c14 (if (and (eq (fkm-run (flt-srcs-fns (list "(do (defn base (x) (add x 10)))"
+                                                       "(do (defn mid (x) (mul (base x) 2)))"
+                                                       "(do (mid 6))")) 0) 32)
+                      (eq (fkm-run (flt-srcs-fns (list shim
+                                                       (read_file "form-stdlib/base64.fk")
+                                                       (read_file "form-stdlib/tests/base64-band.fk"))) 0) 12))
+                 16384 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 (add c11 (add c12 (add c13 c14)))))))))))))))
