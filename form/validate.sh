@@ -201,14 +201,19 @@ run_siblings() {
         printf "  ✓  %-30s  → %s\n" "$label" "$go_out"
         ok=$((ok + 1))
         if [[ -n "$fourth_tbl" ]]; then fourth_ok=$((fourth_ok + 1)); fi
+        if [[ -n "${SUITE_STATUS_FILE:-}" ]]; then
+            if [[ -n "$fourth_tbl" ]]; then echo "ok fourth" > "$SUITE_STATUS_FILE"; else echo "ok" > "$SUITE_STATUS_FILE"; fi
+        fi
     elif [[ -n "$fourth_tbl" ]]; then
         printf "  ✗  %-30s\n      go         = %s\n      rust       = %s\n      typescript = %s\n      fourth     = %s\n" \
             "$label" "$go_out" "$rs_out" "$ts_out" "$fk_out"
         fail=$((fail + 1))
+        if [[ -n "${SUITE_STATUS_FILE:-}" ]]; then echo "fail" > "$SUITE_STATUS_FILE"; fi
     else
         printf "  ✗  %-30s\n      go         = %s\n      rust       = %s\n      typescript = %s\n" \
             "$label" "$go_out" "$rs_out" "$ts_out"
         fail=$((fail + 1))
+        if [[ -n "${SUITE_STATUS_FILE:-}" ]]; then echo "fail" > "$SUITE_STATUS_FILE"; fi
     fi
 }
 
@@ -222,10 +227,12 @@ run_siblings_binary() {
     if [[ "$go_out" == "$rs_out" && "$go_out" == "$ts_out" ]]; then
         printf "  ✓  %-30s  → %s\n" "$label" "$go_out"
         ok=$((ok + 1))
+        if [[ -n "${SUITE_STATUS_FILE:-}" ]]; then echo "ok" > "$SUITE_STATUS_FILE"; fi
     else
         printf "  ✗  %-30s\n      go         = %s\n      rust       = %s\n      typescript = %s\n" \
             "$label" "$go_out" "$rs_out" "$ts_out"
         fail=$((fail + 1))
+        if [[ -n "${SUITE_STATUS_FILE:-}" ]]; then echo "fail" > "$SUITE_STATUS_FILE"; fi
     fi
 }
 
@@ -263,9 +270,33 @@ else
     # Pre-flatten every covered band's table in one Go run before the
     # suite fans out — cold cache pays ~20s once; warm runs skip it.
     fourth_prepare_all
+    # Pre-compile the one prelude every band shares so the pool's first
+    # wave doesn't race N copies of the same compile (atomic mv converges
+    # them, but each lost race re-pays the full source-compiler walk).
+    prepare_sources form-stdlib/core.fk
+
+    # The suite fans out ACROSS bands: each workload is one job in a pool
+    # (VALIDATE_JOBS wide, default 8), writing an ordered result block plus
+    # a status file; the aggregation prints blocks in collection order and
+    # counts from the status files. A band's legs were already concurrent;
+    # this makes the bands themselves concurrent — the suite's wall time is
+    # sum(bands)/jobs instead of sum(bands). Caches stay safe under the
+    # fan-out: source-compile and fourth-table writes are content-keyed and
+    # atomic (mv), every leg owns a private TMPDIR.
+    SUITE_PAR="${VALIDATE_JOBS:-8}"
+    suite_dir="$(mktemp -d "${TMPDIR:-/tmp}/form-suite.XXXXXX")"
+    wl_labels=()
+    wl_args=()
+    add_workload() {
+        local label="$1"; shift
+        wl_labels+=("$label")
+        local joined="" a
+        for a in "$@"; do joined="$joined$a"$'\x1f'; done
+        wl_args+=("$joined")
+    }
     # --- form-samples/*.fk: self-contained files ------------------------
     for f in form-samples/*.fk; do
-        run_workload "$(basename "$f")" "$f"
+        add_workload "$(basename "$f")" "$f"
     done
     # --- form-stdlib/tests/*.{fk,form}: prepend stdlib preludes --------
     # Convention: core.fk is always prepended. If the test name matches
@@ -287,14 +318,41 @@ else
             preludes=$(grep -E '^; preludes:' "$f" 2>/dev/null | head -1 | sed 's/^; preludes://' || true)
             if [[ -n "$preludes" ]]; then
                 # shellcheck disable=SC2086
-                run_workload "stdlib/$(basename "$f")" "form-stdlib/core.fk" $preludes "$f"
+                add_workload "stdlib/$(basename "$f")" "form-stdlib/core.fk" $preludes "$f"
             elif [[ -f "$module" && "$module" != "$f" ]]; then
-                run_workload "stdlib/$(basename "$f")" "form-stdlib/core.fk" "$module" "$f"
+                add_workload "stdlib/$(basename "$f")" "form-stdlib/core.fk" "$module" "$f"
             else
-                run_workload "stdlib/$(basename "$f")" "form-stdlib/core.fk" "$f"
+                add_workload "stdlib/$(basename "$f")" "form-stdlib/core.fk" "$f"
             fi
         done
     fi
+    run_one_indexed() {
+        local idx="$1"
+        local IFS=$'\x1f'
+        # shellcheck disable=SC2206
+        local files=(${wl_args[$idx]})
+        SUITE_STATUS_FILE="$suite_dir/$idx.status" \
+            run_workload "${wl_labels[$idx]}" "${files[@]}" > "$suite_dir/$idx.out" 2>&1 || true
+    }
+    i=0
+    total=${#wl_labels[@]}
+    while [[ $i -lt $total ]]; do
+        run_one_indexed "$i" &
+        i=$((i + 1))
+        while [[ "$(jobs -r | wc -l)" -ge "$SUITE_PAR" ]]; do sleep 0.2; done
+    done
+    wait
+    i=0
+    while [[ $i -lt $total ]]; do
+        cat "$suite_dir/$i.out" 2>/dev/null || true
+        case "$(cat "$suite_dir/$i.status" 2>/dev/null || echo fail)" in
+            "ok fourth") ok=$((ok + 1)); fourth_ok=$((fourth_ok + 1)) ;;
+            ok)          ok=$((ok + 1)) ;;
+            *)           fail=$((fail + 1)) ;;
+        esac
+        i=$((i + 1))
+    done
+    rm -rf "$suite_dir"
 fi
 
 echo ""
