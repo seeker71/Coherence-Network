@@ -11,7 +11,7 @@
 ;   reopened file projects no concepts   -> 10000
 
 (do
-    (let dir "/tmp/ideas-graph-projection-band.d")
+    (let dir (str_concat (temp_dir) "/ideas-graph-projection-band.d"))
     (fs_rmdir dir)
 
     (let mem-verdict (igp-test (carrier-memory) ""))

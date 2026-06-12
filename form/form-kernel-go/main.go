@@ -1898,7 +1898,7 @@ func (k *Kernel) registerNatives() {
 	//
 	// record_new — (record_new blueprint k1 v1 k2 v2 ...) → Record.
 	k.registerNative("record_new", catMethod(), func(k *Kernel, args []Value) Value {
-		rec := &Record{Blueprint: args[0].Nid}
+		rec := &Record{Blueprint: args[0].AsNid()}
 		i := 1
 		for i+1 < len(args) {
 			rec.Set(k.internName(args[i].Str), args[i+1])
@@ -1950,7 +1950,7 @@ func (k *Kernel) registerNatives() {
 		if args[2].Kind != VClosure {
 			panic("method_define: third arg must be a closure")
 		}
-		k.methods[methodKey{args[0].Nid, k.internName(args[1].Str)}] = args[2].Cl
+		k.methods[methodKey{args[0].AsNid(), k.internName(args[1].Str)}] = args[2].Cl
 		return args[0]
 	})
 	// method_has — (method_has record-or-blueprint "name") → bool.
@@ -2770,7 +2770,7 @@ func (k *Kernel) registerNatives() {
 	//   Serializes a Recipe subtree to the .fkb wire format as a byte
 	//   list — usable over any byte channel without a file detour.
 	k.registerNative("recipe_to_bytes", catWitness(), func(k *Kernel, args []Value) Value {
-		bytes := serializeArtifact(k, args[0].Nid)
+		bytes := serializeArtifact(k, args[0].AsNid())
 		out := make([]Value, len(bytes))
 		for i, b := range bytes {
 			out[i] = Value{Kind: VInt, Int: int64(b)}
@@ -3026,7 +3026,7 @@ func (k *Kernel) registerNatives() {
 	// fresh string tables on load. This format embeds the strings.
 	k.registerNative("write_form_binary", catCall(), func(k *Kernel, args []Value) Value {
 		path := resolveKernelHostPath(args[0].Str)
-		nid := args[1].Nid
+		nid := args[1].AsNid()
 		bytes := serializeArtifact(k, nid)
 		if err := os.WriteFile(path, bytes, 0644); err != nil {
 			return Value{Kind: VInt, Int: -1}
@@ -3484,10 +3484,10 @@ func (k *Kernel) registerNatives() {
 	})
 
 	k.registerNative("intern_node", catWitness(), func(k *Kernel, args []Value) Value {
-		cat := args[0].Nid
+		cat := args[0].AsNid()
 		kids := make([]NodeID, len(args[1].List))
 		for i, c := range args[1].List {
-			kids[i] = c.Nid
+			kids[i] = c.AsNid()
 		}
 		return Value{Kind: VNodeID, Nid: k.intern(cat, kids)}
 	})
@@ -3553,10 +3553,10 @@ func (k *Kernel) registerNatives() {
 		return Value{Kind: VList, List: k.substrateGC(args[0].List, nil)}
 	})
 	k.registerNative("node_category", catWitness(), func(k *Kernel, args []Value) Value {
-		return Value{Kind: VNodeID, Nid: k.category(args[0].Nid)}
+		return Value{Kind: VNodeID, Nid: k.category(args[0].AsNid())}
 	})
 	k.registerNative("node_children", catWitness(), func(k *Kernel, args []Value) Value {
-		kids := k.children(args[0].Nid)
+		kids := k.children(args[0].AsNid())
 		out := make([]Value, len(kids))
 		for i, c := range kids {
 			out[i] = Value{Kind: VNodeID, Nid: c}
@@ -3564,19 +3564,19 @@ func (k *Kernel) registerNatives() {
 		return Value{Kind: VList, List: out}
 	})
 	k.registerNative("node_value", catWitness(), func(k *Kernel, args []Value) Value {
-		return k.trivialValue(args[0].Nid)
+		return k.trivialValue(args[0].AsNid())
 	})
 	k.registerNative("node_pkg", catWitness(), func(_ *Kernel, args []Value) Value {
-		return Value{Kind: VInt, Int: int64(args[0].Nid.Pkg)}
+		return Value{Kind: VInt, Int: int64(args[0].AsNid().Pkg)}
 	})
 	k.registerNative("node_level", catWitness(), func(_ *Kernel, args []Value) Value {
-		return Value{Kind: VInt, Int: int64(args[0].Nid.Level)}
+		return Value{Kind: VInt, Int: int64(args[0].AsNid().Level)}
 	})
 	k.registerNative("node_type", catWitness(), func(_ *Kernel, args []Value) Value {
-		return Value{Kind: VInt, Int: int64(args[0].Nid.Type)}
+		return Value{Kind: VInt, Int: int64(args[0].AsNid().Type)}
 	})
 	k.registerNative("node_inst", catWitness(), func(_ *Kernel, args []Value) Value {
-		return Value{Kind: VInt, Int: int64(args[0].Nid.Inst)}
+		return Value{Kind: VInt, Int: int64(args[0].AsNid().Inst)}
 	})
 	// node_eq — compare two NodeIDs structurally. Sibling to Rust's node_eq.
 	// Form code (emit-engine.fk lookup-template) uses this for category
@@ -3609,11 +3609,11 @@ func (k *Kernel) registerNatives() {
 	// state is traceable back to the recipe lines that authored it.
 	// Args: (category, children, file_string, line_int, col_int)
 	k.registerNative("intern_node_at", catWitness(), func(k *Kernel, args []Value) Value {
-		cat := args[0].Nid
+		cat := args[0].AsNid()
 		kidsV := args[1].List
 		kids := make([]NodeID, len(kidsV))
 		for i, c := range kidsV {
-			kids[i] = c.Nid
+			kids[i] = c.AsNid()
 		}
 		nid := k.intern(cat, kids)
 		fileNid := k.internString(args[2].Str)
@@ -3628,7 +3628,7 @@ func (k *Kernel) registerNatives() {
 	// node_source — read back a Recipe's source attribution.
 	// Returns (list file_string line col) or empty list if none recorded.
 	k.registerNative("node_source", catWitness(), func(k *Kernel, args []Value) Value {
-		loc, ok := k.sourceAttr[args[0].Nid]
+		loc, ok := k.sourceAttr[args[0].AsNid()]
 		if !ok {
 			return Value{Kind: VList, List: []Value{}}
 		}
@@ -3723,7 +3723,7 @@ func (k *Kernel) registerNatives() {
 	// NodeID is reconstructed at deserialize via intern.
 	k.registerNative("serialize-recipe", catWitness(), func(k *Kernel, args []Value) Value {
 		bytes := []byte{}
-		bytes = serializeNid(k, args[0].Nid, bytes)
+		bytes = serializeNid(k, args[0].AsNid(), bytes)
 		out := make([]Value, len(bytes))
 		for i, b := range bytes {
 			out[i] = Value{Kind: VInt, Int: int64(b)}
@@ -3791,14 +3791,14 @@ func (k *Kernel) registerNatives() {
 	})
 	// walk-cached — JIT-vector memoization. Caller asserts purity.
 	k.registerNative("walk-cached", catWitness(), func(k *Kernel, args []Value) Value {
-		if v, ok := k.walkCache[args[0].Nid]; ok {
+		if v, ok := k.walkCache[args[0].AsNid()]; ok {
 			k.walkCacheHits++
 			return v
 		}
 		k.walkCacheMisses++
 		env := NewFrame(nil)
-		v := k.walk(args[0].Nid, env)
-		k.walkCache[args[0].Nid] = v
+		v := k.walk(args[0].AsNid(), env)
+		k.walkCache[args[0].AsNid()] = v
 		return v
 	})
 	k.registerNative("walk-cache-clear", catWitness(), func(k *Kernel, _ []Value) Value {
@@ -3867,7 +3867,7 @@ func (k *Kernel) registerNatives() {
 	})
 	k.registerNative("walk_recipe", catWitness(), func(k *Kernel, args []Value) Value {
 		env := NewFrame(nil)
-		return k.walk(args[0].Nid, env)
+		return k.walk(args[0].AsNid(), env)
 	})
 	// walk_recipe_here — walks a Recipe in the CALLER's env, so let-
 	// bindings inside the Recipe land in the caller's scope. This is
@@ -3882,8 +3882,8 @@ func (k *Kernel) registerNatives() {
 		// aren't reachable from the source-parsed root, so without this pin
 		// a subsequent substrate_gc would sweep them and leave the env
 		// holding closures with deleted bodies.
-		k.activeRoots = append(k.activeRoots, args[0].Nid)
-		return k.walk(args[0].Nid, env)
+		k.activeRoots = append(k.activeRoots, args[0].AsNid())
+		return k.walk(args[0].AsNid(), env)
 	})
 	walkParallel := func(k *Kernel, args []Value) Value {
 		roots := make([]NodeID, len(args[0].List))
@@ -4062,6 +4062,21 @@ func (k *Kernel) registerNatives() {
 	k.registerNative("now_unix_ms", catCall(), func(_ *Kernel, _ []Value) Value {
 		return Value{Kind: VInt, Int: time.Now().UnixMilli()}
 	})
+
+	// `temp_dir` — the host's scratch directory: TMPDIR when the carrier
+	// names one, /tmp otherwise (no trailing slash). External read (host
+	// env) so it's catCall. The door that lets a band's scratch files land
+	// in per-leg space: validate.sh points each sibling kernel at its own
+	// TMPDIR, so concurrent legs never share a scratch path. Sibling
+	// parity holds on shape, NOT on value — each leg's dir differs by
+	// design; bands fold the path into effects, never into the verdict.
+	k.registerNative("temp_dir", catCall(), func(_ *Kernel, _ []Value) Value {
+		dir := os.Getenv("TMPDIR")
+		if dir == "" {
+			dir = "/tmp"
+		}
+		return Value{Kind: VStr, Str: strings.TrimRight(dir, "/")}
+	})
 }
 
 // Category constructors for native attribution live further down alongside
@@ -4167,8 +4182,8 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 					return boolInt(l >= r)
 				}
 			}
-			a := lv.Int
-			b := rv.Int
+			a := lv.AsInt()
+			b := rv.AsInt()
 			switch cat.Inst {
 			case RCompareEq:
 				return boolInt(a == b)

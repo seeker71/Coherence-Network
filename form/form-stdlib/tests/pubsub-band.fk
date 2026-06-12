@@ -7,7 +7,7 @@
 ; register, and stays put when an unrelated capability registers.
 
 (do
-    (let registry-path "/tmp/pubsub-band-registry.fkb")
+    (let registry-path (str_concat (temp_dir) "/pubsub-band-registry.fkb"))
     (channel-create registry-path)
 
     (let watched "compute")
@@ -17,17 +17,17 @@
     (let s0-ok (if (eq s0 0) 1 0))
 
     ;; Step 1: one cell registers with "compute".
-    (register-cell registry-path 1 "/tmp/p-b" (list "compute"))
+    (register-cell registry-path 1 (str_concat (temp_dir) "/p-b") (list "compute"))
     (let s1 (len (find-by-capability registry-path watched)))
     (let s1-ok (if (eq s1 1) 1 0))
 
     ;; Step 2: second cell registers with "compute" (plus another verb).
-    (register-cell registry-path 2 "/tmp/p-c" (list "compute" "witness"))
+    (register-cell registry-path 2 (str_concat (temp_dir) "/p-c") (list "compute" "witness"))
     (let s2 (len (find-by-capability registry-path watched)))
     (let s2-ok (if (eq s2 2) 1 0))
 
     ;; Step 3: a cell with a DIFFERENT verb registers. Count must not move.
-    (register-cell registry-path 3 "/tmp/p-d" (list "fetch"))
+    (register-cell registry-path 3 (str_concat (temp_dir) "/p-d") (list "fetch"))
     (let s3 (len (find-by-capability registry-path watched)))
     (let s3-ok (if (eq s3 2) 1 0))
 

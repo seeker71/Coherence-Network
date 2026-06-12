@@ -16,7 +16,7 @@
 ;   reopened file keeps deleted spec out -> 10000
 
 (do
-    (let dir "/tmp/graph-node-mutation-carrier-band.d")
+    (let dir (str_concat (temp_dir) "/graph-node-mutation-carrier-band.d"))
     (fs_rmdir dir)
 
     (let mem-verdict (gn-mutation-test (carrier-memory) ""))

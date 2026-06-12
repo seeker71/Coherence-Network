@@ -19,7 +19,7 @@
 ;   offset-read record 3 after all writes     → 10000
 
 (do
-    (let path "/tmp/file-append-band.log")
+    (let path (str_concat (temp_dir) "/file-append-band.log"))
     (fs_remove path)                          ; clean slate (ignore if absent)
 
     ;; bytes for "AA" (65,65), "BBB" (66x3), "CCCC" (67x4)

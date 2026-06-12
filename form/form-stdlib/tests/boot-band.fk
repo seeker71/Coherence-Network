@@ -41,12 +41,12 @@
 ;        the cell read from the minted image (identity crossed the gap)
 
 (do
-    (let seed-image   "/tmp/boot-band-seed.fkb")
-    (let minted-image "/tmp/boot-band-minted.fkb")
-    (let registry     "/tmp/boot-band-registry.fkb")
-    (let boot-channel "/tmp/boot-band-channel.fkb")
-    (let second-life  "/tmp/boot-band-channel-2.fkb")
-    (let third-life   "/tmp/boot-band-channel-3.fkb")
+    (let seed-image   (str_concat (temp_dir) "/boot-band-seed.fkb"))
+    (let minted-image (str_concat (temp_dir) "/boot-band-minted.fkb"))
+    (let registry     (str_concat (temp_dir) "/boot-band-registry.fkb"))
+    (let boot-channel (str_concat (temp_dir) "/boot-band-channel.fkb"))
+    (let second-life  (str_concat (temp_dir) "/boot-band-channel-2.fkb"))
+    (let third-life   (str_concat (temp_dir) "/boot-band-channel-3.fkb"))
 
     ;; A CTOR is structure-first: fields are (key, value) pairs under a
     ;; FIELDS node — never a flat blob (the persistence-band markers).

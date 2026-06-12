@@ -42,25 +42,25 @@
 
     ;; --- two physically-unalike resources, one efferent driver -------------
     (let light (mk-resource "kitchen-light" "Light"
-                  (list (mk-terminal (efferent-bool) "/tmp/rpb-light.line"))))
+                  (list (mk-terminal (efferent-bool) (str_concat (temp_dir) "/rpb-light.line")))))
     (let relay (mk-resource "pump-relay" "Relay"
-                  (list (mk-terminal (efferent-bool) "/tmp/rpb-relay.line"))))
+                  (list (mk-terminal (efferent-bool) (str_concat (temp_dir) "/rpb-relay.line")))))
     (act light (efferent-bool) "1")
     (act relay (efferent-bool) "1")
     (let drive-ok
-        (if (str_eq (read_file "/tmp/rpb-light.line") "1")
-            (if (str_eq (read_file "/tmp/rpb-relay.line") "1") 100 0) 0))
+        (if (str_eq (read_file (str_concat (temp_dir) "/rpb-light.line")) "1")
+            (if (str_eq (read_file (str_concat (temp_dir) "/rpb-relay.line")) "1") 100 0) 0))
 
     ;; --- two afferent kinds, one sense driver ------------------------------
     ;; a Thermostat exposes a scalar read; a Human exposes a text read. Both
     ;; are sensed through the identical `sense` driver — only the port differs.
-    (write_file_text "/tmp/rpb-thermo.adc" "21")          ; the world holds 21°
-    (write_file_text "/tmp/rpb-human.line" "i am here")   ; the human's line
+    (write_file_text (str_concat (temp_dir) "/rpb-thermo.adc") "21")          ; the world holds 21°
+    (write_file_text (str_concat (temp_dir) "/rpb-human.line") "i am here")   ; the human's line
     (let thermo (mk-resource "room-thermostat" "Thermostat"
-                  (list (mk-terminal (afferent-scalar) "/tmp/rpb-thermo.adc"))))
+                  (list (mk-terminal (afferent-scalar) (str_concat (temp_dir) "/rpb-thermo.adc")))))
     (let human  (mk-resource "visitor" "Human"
-                  (list (mk-terminal (afferent-text)   "/tmp/rpb-human.line")
-                        (mk-terminal (efferent-text)   "/tmp/rpb-human.out"))))
+                  (list (mk-terminal (afferent-text)   (str_concat (temp_dir) "/rpb-human.line"))
+                        (mk-terminal (efferent-text)   (str_concat (temp_dir) "/rpb-human.out")))))
     (let sense-ok
         (if (str_eq (sense thermo (afferent-scalar)) "21")
             (if (str_eq (sense human (afferent-text)) "i am here") 1000 0) 0))
@@ -68,8 +68,8 @@
     ;; --- efferent → afferent round-trip on one resource --------------------
     ;; a Valve we can both open AND read back: drive "open", sense it returned.
     (let valve (mk-resource "inlet-valve" "Valve"
-                  (list (mk-terminal (efferent-text) "/tmp/rpb-valve.state")
-                        (mk-terminal (afferent-text) "/tmp/rpb-valve.state"))))
+                  (list (mk-terminal (efferent-text) (str_concat (temp_dir) "/rpb-valve.state"))
+                        (mk-terminal (afferent-text) (str_concat (temp_dir) "/rpb-valve.state")))))
     (act valve (efferent-text) "open")
     (let roundtrip-ok
         (if (str_eq (sense valve (afferent-text)) "open") 10000 0))
@@ -86,7 +86,7 @@
     ;; terminal — the same cell shape as a Light, a Valve, a Socket.
     (act human (efferent-text) "welcome")
     (let human-ok
-        (if (str_eq (read_file "/tmp/rpb-human.out") "welcome")
+        (if (str_eq (read_file (str_concat (temp_dir) "/rpb-human.out")) "welcome")
             (if (eq (resource-has-port? human (afferent-text)) 1) 1000000 0) 0))
 
     (sum (list id-ok shape-ok drive-ok sense-ok roundtrip-ok refusal-ok human-ok)))

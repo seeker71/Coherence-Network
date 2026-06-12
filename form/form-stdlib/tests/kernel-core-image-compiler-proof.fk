@@ -28,7 +28,7 @@
         (if (node_eq actual expected) 1 0))
 
     (let source-path (kernel-core-source-path 0))
-    (let image-path "/tmp/kernel-core-compiler-image.fkb")
+    (let image-path (str_concat (temp_dir) "/kernel-core-compiler-image.fkb"))
     (let compiled (kernel-core-compile-image source-path image-path))
     (let image (kernel-core-compiled-image-node compiled))
     (let image-kids (node_children image))

@@ -19,9 +19,9 @@
     (defn kb-nth (xs i)
         (if (eq i 0) (head xs) (kb-nth (tail xs) (sub i 1))))
 
-    (let registry-path  "/tmp/kv-store-band-registry.fkb")
-    (let k-channel-path "/tmp/kv-store-band-k.fkb")
-    (let a-reply-path   "/tmp/kv-store-band-a-reply.fkb")
+    (let registry-path  (str_concat (temp_dir) "/kv-store-band-registry.fkb"))
+    (let k-channel-path (str_concat (temp_dir) "/kv-store-band-k.fkb"))
+    (let a-reply-path   (str_concat (temp_dir) "/kv-store-band-a-reply.fkb"))
 
     (channel-create registry-path)
     (channel-create k-channel-path)

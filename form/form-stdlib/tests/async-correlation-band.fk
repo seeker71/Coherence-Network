@@ -15,8 +15,8 @@
 
     ;; A separate /tmp path so this band doesn't collide with the
     ;; sample or other band runs.
-    (let request-path "/tmp/async-correlation-band-req.fkb")
-    (let reply-path   "/tmp/async-correlation-band-rep.fkb")
+    (let request-path (str_concat (temp_dir) "/async-correlation-band-req.fkb"))
+    (let reply-path   (str_concat (temp_dir) "/async-correlation-band-rep.fkb"))
     (channel-create request-path)
     (channel-create reply-path)
 

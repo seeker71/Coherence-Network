@@ -26,11 +26,11 @@
         (if (band-nil? xs) ys (cons (head xs) (band-append (tail xs) ys))))
 
     ;; ---------- topology ----------
-    (let registry-path  "/tmp/multi-hop-band-registry.fkb")
-    (let b-channel-path "/tmp/multi-hop-band-b.fkb")
-    (let c-channel-path "/tmp/multi-hop-band-c.fkb")
-    (let b-reply-path   "/tmp/multi-hop-band-b-reply.fkb")
-    (let a-reply-path   "/tmp/multi-hop-band-a-reply.fkb")
+    (let registry-path  (str_concat (temp_dir) "/multi-hop-band-registry.fkb"))
+    (let b-channel-path (str_concat (temp_dir) "/multi-hop-band-b.fkb"))
+    (let c-channel-path (str_concat (temp_dir) "/multi-hop-band-c.fkb"))
+    (let b-reply-path   (str_concat (temp_dir) "/multi-hop-band-b-reply.fkb"))
+    (let a-reply-path   (str_concat (temp_dir) "/multi-hop-band-a-reply.fkb"))
 
     (channel-create registry-path)
     (channel-create b-channel-path)

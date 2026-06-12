@@ -26,4 +26,15 @@
     ; c8 — str_eq and value_eq answer 0/1: positives add to 2, negatives to 0.
     (let c8 (if (eq (add (add (str_eq "a" "a") (value_eq 7 7))
                          (add (str_eq "a" "b") (value_eq 7 "7"))) 2) 256 0))
-    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 c8)))))))))
+    ; c9 — bool OPERANDS coerce to the same 0/1 states inside compare:
+    ;      true meets 1, false meets 0, and a comparison's own answer
+    ;      meets a bool literal (the theme-resonance shape).
+    (let c9 (if (eq (add (add (eq true 1) (eq false 0))
+                         (add (eq (eq 18 68) false) (eq (eq 5 5) true))) 4) 512 0))
+    ; c10 — the ordering family coerces bools identically: false < true,
+    ;       true ≤ 1, true > false = 1+1+1.
+    (let c10 (if (eq (add (lt false true) (add (le true 1) (gt true false))) 3) 1024 0))
+    ; c11 — the float lane meets bools through the same coercion:
+    ;       1.0 = true, and 2.5 > true = 1+1.
+    (let c11 (if (eq (add (eq 1.0 true) (gt 2.5 true)) 2) 2048 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 c11))))))))))))

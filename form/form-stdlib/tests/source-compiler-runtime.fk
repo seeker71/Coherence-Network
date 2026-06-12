@@ -19,7 +19,7 @@ section [form.action] {
     let quote = "\"";
     let rule-source = str_concat("[bml.bmf] {\n      field ::= $type:name $name:name ", str_concat(quote, str_concat(";", str_concat(quote, " => bml-emit-field;\n    }\n"))));
     let sample = str_concat("section ", rule-source);
-    let out-path = "/tmp/form-test-source-compiler-runtime";
+    let out-path = (str_concat (temp_dir) "/form-test-source-compiler-runtime");
     let compiled = form-source-compile-text(sample, out-path);
     let sidecar = str_concat(out-path, ".bml.bmf.fkb");
 

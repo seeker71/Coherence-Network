@@ -45,7 +45,7 @@
             (ext-bytes-eq claimed computed)))
 
     ;; Stage the fixture: short bytes "hello".
-    (let fixture-path "/tmp/external-uri-band-fixture.txt")
+    (let fixture-path (str_concat (temp_dir) "/external-uri-band-fixture.txt"))
     (let fixture-bytes (list 104 101 108 108 111))
     (write_file_bytes fixture-path fixture-bytes)
 

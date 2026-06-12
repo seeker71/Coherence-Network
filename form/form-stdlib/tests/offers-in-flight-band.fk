@@ -24,8 +24,8 @@
         (if (eq i 0) (head xs) (band-nth (tail xs) (sub i 1))))
 
     ;; Separate /tmp paths so this band collides with no sibling band run.
-    (let offer-path "/tmp/offers-in-flight-band-offer.fkb")
-    (let ack-path   "/tmp/offers-in-flight-band-ack.fkb")
+    (let offer-path (str_concat (temp_dir) "/offers-in-flight-band-offer.fkb"))
+    (let ack-path   (str_concat (temp_dir) "/offers-in-flight-band-ack.fkb"))
     (channel-create offer-path)
     (channel-create ack-path)
 

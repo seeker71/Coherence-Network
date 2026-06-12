@@ -66,7 +66,7 @@ section [form.action] {
     let python_source_section = "section [python.bmf] {\n  assign-int ::= $target:name \"=\" $value:int => pybmf-emit-assign-int <= pybmf-source-assign-int;\n}\n";
     // Recipe-emit path (a12b8f71): section bindings live in sibling .fkb,
     // the returned text is one walk_recipe_here driver per section.
-    let compiled_out_path = "/tmp/form-test-natural-bmf-bidirectional";
+    let compiled_out_path = str_concat(temp_dir(), "/form-test-natural-bmf-bidirectional");
     let compiled = form-source-compile-text(str_concat(natural_source_section, python_source_section), compiled_out_path);
 
     let rule_score = sum(list(len(natural-bmf-rules), rt_score(fact_rt), rt_score(fact_the_rt), rt_score(fact_equals_rt), rt_score(fact_id_rt), rt_score(relation_rt), rt_score(relates_rt), rt_score(question_rt), rt_score(meaning_rt)));

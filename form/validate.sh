@@ -163,10 +163,16 @@ run_siblings() {
     # The three kernels run CONCURRENTLY: a band's wall time is max(leg), not
     # sum — on compiler-heavy bands the Go+Rust legs ride inside the TS leg's
     # shadow for free. Outputs stay byte-compared exactly as before.
+    #
+    # Each leg gets its OWN TMPDIR under the legs dir: bands reach scratch
+    # space through the `temp_dir` native, so concurrent sibling legs (and
+    # concurrent validate runs) never share a scratch path. The legs dir is
+    # removed after comparison, so band scratch leaves no sediment.
     legs="$(mktemp -d "${TMPDIR:-/tmp}/form-legs.XXXXXX")"
-    ( "$GO_BIN" "${prepared_args[@]}" > "$legs/go" 2>&1 || true ) &
-    ( "$RS_BIN" "${prepared_args[@]}" > "$legs/rs" 2>&1 || true ) &
-    ( run_ts "${prepared_args[@]}" > "$legs/ts" 2>&1 || true ) &
+    mkdir -p "$legs/tmp-go" "$legs/tmp-rs" "$legs/tmp-ts"
+    ( TMPDIR="$legs/tmp-go" "$GO_BIN" "${prepared_args[@]}" > "$legs/go" 2>&1 || true ) &
+    ( TMPDIR="$legs/tmp-rs" "$RS_BIN" "${prepared_args[@]}" > "$legs/rs" 2>&1 || true ) &
+    ( TMPDIR="$legs/tmp-ts" run_ts "${prepared_args[@]}" > "$legs/ts" 2>&1 || true ) &
     wait
     go_out=$(cat "$legs/go"); rs_out=$(cat "$legs/rs"); ts_out=$(cat "$legs/ts")
     rm -rf "$legs"

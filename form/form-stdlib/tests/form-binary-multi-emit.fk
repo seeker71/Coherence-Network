@@ -33,7 +33,7 @@
     ;; ── Step 2: write to disk as .fkb (artifact format read_form_binary
     ;; reads — FORMBIN2 with string-table header). This is the same
     ;; format the Go/Rust/TS --emit-binary CLI mode produces.
-    (let path "/tmp/form-binary-multi-emit.fkb")
+    (let path (str_concat (temp_dir) "/form-binary-multi-emit.fkb"))
     (let bytes-written (write_form_binary path source-recipe))
 
     ;; ── Probe 1: write succeeded (byte count > 0; -1 on failure)

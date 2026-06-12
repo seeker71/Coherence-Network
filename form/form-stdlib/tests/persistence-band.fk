@@ -26,7 +26,7 @@
 ;   - 1: the idea cell's composed CTOR round-trips (a field value reads back)
 
 (do
-    (let store-path "/tmp/persistence-band-store.fkb")
+    (let store-path (str_concat (temp_dir) "/persistence-band-store.fkb"))
 
     ;; A blueprint is a structural NodeID; we pass real ones through as
     ;; child 2 (a ref, not a slug). These mirror BID_idea / BID_spec

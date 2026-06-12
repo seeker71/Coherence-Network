@@ -11,14 +11,7 @@
 ;
 ; Verdict: 127 when every claim lands across Go/Rust/TS.
 ;
-; preludes:
-;   form-stdlib/core.fk
-;   form-stdlib/resource-port.fk
-;   form-stdlib/recognition-router.fk
-;   form-stdlib/champion-challenger.fk
-;   form-stdlib/grammars/living-equation.fk
-;   form-stdlib/all-life-north-star.fk
-;   form-stdlib/qualcomm-nr-trusted-agent.fk
+; preludes: form-stdlib/resource-port.fk form-stdlib/recognition-router.fk form-stdlib/champion-challenger.fk form-stdlib/grammars/living-equation.fk form-stdlib/all-life-north-star.fk form-stdlib/qualcomm-nr-trusted-agent.fk
 
 (do
     (let lens-ok

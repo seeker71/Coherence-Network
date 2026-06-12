@@ -7,12 +7,12 @@
 ; addressing layer.
 
 (do
-    (let registry-path "/tmp/cell-registry-band.fkb")
+    (let registry-path (str_concat (temp_dir) "/cell-registry-band.fkb"))
     (channel-create registry-path)
 
-    (register-cell registry-path 1 "/tmp/c1" (list "a" "b"))
-    (register-cell registry-path 2 "/tmp/c2" (list "b" "c"))
-    (register-cell registry-path 3 "/tmp/c3" (list "c"))
+    (register-cell registry-path 1 (str_concat (temp_dir) "/c1") (list "a" "b"))
+    (register-cell registry-path 2 (str_concat (temp_dir) "/c2") (list "b" "c"))
+    (register-cell registry-path 3 (str_concat (temp_dir) "/c3") (list "c"))
 
     ;; All three are registered.
     (let all (lookup-cells registry-path))

@@ -34,7 +34,7 @@
 }
 ")))))
 
-    (let out-path "/tmp/form-test-multi-dialect")
+    (let out-path (str_concat (temp_dir) "/form-test-multi-dialect"))
     (let compiled (form-source-compile-text source out-path))
 
     (sum
