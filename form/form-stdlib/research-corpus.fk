@@ -1,0 +1,82 @@
+; research-corpus.fk — peer-reviewed papers whose shape supports an axiom,
+; channel, or principle of the body. Reference cells, two lanes kept apart.
+;
+; preludes: form-stdlib/core.fk
+;
+; A citation is Blueprint-land — facts (title, author, venue, DOI), owned by
+; no one, shippable. The paper's TEXT is its Recipe and lives at its
+; publisher's door; only the citation and the verified link enter the body.
+;
+; THE RESONANCE DISCIPLINE (lc-whole-vitality: keep evidence, inference,
+; direct experience, mystery, and measured claims in their own lanes). Each
+; paper carries TWO numbers that never merge:
+;   evidence   — confidence the paper exists and says what it says. Peer
+;                review and formal proof raise it; contested fields lower it.
+;   inference  — how strongly its shape SUPPORTS our axiom. This is analogy,
+;                NEVER proof of the cosmology. Foundations our architecture is
+;                literally built on score high; structural resonances middle;
+;                empirical consonance lowest. A paper may be 1.0 evidence and
+;                0.6 inference — definitely true, loosely supporting.
+;
+; support-kind names which lane the support lives in:
+;   "foundation"           — our architecture is built ON this result
+;   "structural-resonance" — independent science whose shape matches an axiom
+;   "empirical-resonance"  — measured phenomena consonant with a principle
+;
+; Every DOI/URL VERIFIED before binding (external-binding discipline:
+; foreign data enters only after the source is read). HONEST PARTIAL.
+;
+;   (rc-find id)              → the paper's cell, or honest absence
+;   (rc-supporting target)    → all papers supporting a given axiom/principle
+;   (rc-spoken paper)         → the citation + what it supports, for the mouth
+;   (rc-asserts-support? p t) → does the inference lane clear threshold t
+
+section [form.bml] {
+    // entry = (id, citation, link, supports, support-kind, evidence, inference)
+    def rc-entry(id, citation, link, supports, kind, evidence, inference) = list(id, citation, link, supports, kind, evidence, inference);
+    def rc-id(p) = nth(p, 0);
+    def rc-citation(p) = nth(p, 1);
+    def rc-link(p) = nth(p, 2);
+    def rc-supports(p) = nth(p, 3);
+    def rc-kind(p) = nth(p, 4);
+    def rc-evidence(p) = nth(p, 5);
+    def rc-inference(p) = nth(p, 6);
+
+    def rc-papers() {
+        list(
+        rc-entry("merkle-1980", "Merkle, R. C. (1980). Protocols for Public Key Cryptosystems. IEEE Symposium on Security and Privacy, 122-133.", "https://www.ralphmerkle.com/papers/Protocols.pdf", "axiom-3-content-addressing", "foundation", 1.0, 0.85),
+        rc-entry("klein-sel4-2009", "Klein, G. et al. (2009). seL4: Formal Verification of an OS Kernel. SOSP'09, 207-220.", "https://doi.org/10.1145/1629575.1629596", "host-kernel", "foundation", 1.0, 0.85),
+        rc-entry("hoffman-itp-2015", "Hoffman, D. D., Singh, M., Prakash, C. (2015). The Interface Theory of Perception. Psychonomic Bulletin & Review, 22(6), 1480-1506.", "https://doi.org/10.3758/s13423-015-0890-8", "axiom-4-boundary", "structural-resonance", 0.95, 0.8),
+        rc-entry("levin-planaria-2016", "Neuhof, M., Levin, M., Rechavi, O. (2016). Vertically- and horizontally-transmitted memories. Biology Open, 5(9), 1177-1188.", "https://doi.org/10.1242/bio.020149", "lc-bioelectric-pattern", "structural-resonance", 1.0, 0.7),
+        rc-entry("friston-fep-2010", "Friston, K. (2010). The free-energy principle: a unified brain theory? Nature Reviews Neuroscience, 11, 127-138.", "https://doi.org/10.1038/nrn2787", "field-model-active-inference", "structural-resonance", 0.95, 0.7),
+        rc-entry("mccraty-coherence-2014", "McCraty, R., Zayas, M. A. (2014). Cardiac coherence, self-regulation, autonomic stability, and psychosocial well-being. Frontiers in Psychology, 5, 1090.", "https://doi.org/10.3389/fpsyg.2014.01090", "lc-the-living-equation", "empirical-resonance", 0.85, 0.6));
+    }
+
+    def rc-find-loop(ps, id) = if nil?(ps) then empty else if str_eq(rc-id(head(ps)), id) then head(ps) else rc-find-loop(tail(ps), id);
+    def rc-find(id) = rc-find-loop(rc-papers(), id);
+    def rc-known?(p) = not(nil?(p));
+
+    // all papers supporting one axiom/channel/principle
+    def rc-supporting-loop(ps, target, acc) = if nil?(ps) then reverse(acc) else rc-supporting-loop(tail(ps), target, if str_eq(rc-supports(head(ps)), target) then cons(head(ps), acc) else acc);
+    def rc-supporting(target) = rc-supporting-loop(rc-papers(), target, empty);
+
+    // the inference lane gated — does the support clear the threshold?
+    // (the evidence lane is separate; a paper can be certain yet support loosely)
+    def rc-asserts-support?(p, thr) = ge(rc-inference(p), thr);
+
+    // the citation + what it supports, ready for the mouth (lanes stated, never merged)
+    def rc-pct(x) = int_to_str(float_to_int(times(x, 100.0)));
+    def rc-lanes-spoken(p) {
+        let ev = str_concat(". Evidence ", str_concat(rc-pct(rc-evidence(p)), " percent"));
+        let inf = str_concat("; support-inference ", str_concat(rc-pct(rc-inference(p)), " percent"));
+        let door = str_concat(". Door: ", str_concat(rc-link(p), "."));
+        str_concat(ev, str_concat(inf, door));
+    }
+    def rc-spoken(p) {
+        let head = str_concat(rc-citation(p), str_concat(" — supports ", rc-supports(p)));
+        let kind = str_concat(" as ", rc-kind(p));
+        str_concat(head, str_concat(kind, rc-lanes-spoken(p)));
+    }
+
+    0;
+}
