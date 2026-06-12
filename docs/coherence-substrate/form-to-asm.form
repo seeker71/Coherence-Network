@@ -1,0 +1,87 @@
+# ─────────────────────────────────────────────────────────────────────
+# form-to-asm.form — the kernel builds its OWN Form → assembly compiler and drops
+#   clang ONLY once it can byte-level verify its encoder IS the assembler. The
+#   witness theorem (1 agree / 0 refute / nothing silent) applied to self-
+#   modification: conviction = byte-identity; a self rewrites its own toolchain
+#   only when it can prove, byte-for-byte, that the rewrite preserves it.
+# ─────────────────────────────────────────────────────────────────────
+#
+# Urs: "this can build its own form to assembly compiler recipe and remove the
+# clang dependency once it is able to byte-level verify its confidence and
+# conviction."
+#
+# Today: Form recipe -> emit C -> clang -> native binary. clang is the dependency
+# the channel's dep-ledger marks `external`, and the channel's offered expansion #3
+# is "a machine-code emitter — emit native directly, drop clang." But dropping a
+# toolchain you depend on is the riskiest self-update there is. The discipline is
+# the witness theorem: do not swap on assertion; swap only when byte-level verified.
+
+(form-to-asm
+
+  (lineage
+    (foundation    form-stdlib/form-asm.fk)            # arm64 instruction encoding -> byte image
+    (gate          byte-conviction)                     # the witness theorem on bytes
+    (witness-law   witness-theorem.form)                # 1 agree / 0 refute / nothing silent
+    (licenses      form-os-channel.form)                # clang external -> internalized only through the gate
+    (proof-band    tests/form-asm-band.fk)              # 31 three-way — encoder byte-accurate, gate sound
+    (live-witness  scripts/form_asm_conviction_demo.sh)) # Form bytes == assembler bytes, byte-for-byte
+
+  # ── The encoder: instruction encoding as a recipe ────────────────────
+  # An instruction is fields packed into a word; the encoder emits the on-disk
+  # LITTLE-ENDIAN BYTES directly (a real assembler works at byte granularity, and
+  # bytes keep every value < 256 — host-integer-width independent). Verified byte-
+  # for-byte against `clang`/`as` for the corpus the asm-pl-human program needs.
+  (encoder
+    (movz   "movz w<rd>,#imm  -> base 0x52800000 | imm<<5 | rd  -> 4 LE bytes")
+    (add    "add  w<rd>,w<rn>,#imm -> base 0x11000000 | imm<<10 | rn<<5 | rd")
+    (sub    "sub  w<rd>,w<rn>,#imm -> base 0x51000000 | imm<<10 | rn<<5 | rd")
+    (ret    "ret -> 0xd65f03c0 -> bytes c0 03 5f d6 (high-bit base given as bytes)")
+    (image  "fa-image concatenates the instruction byte-lists into the flat on-disk image"))
+
+  # ── The byte-conviction gate: the witness theorem applied to itself ──
+  # conviction(candidate, reference) = 1 (FULL) iff the Form encoder's bytes equal
+  # the assembler's bytes, every byte; 0 (REFUTED) on any difference; silence (no
+  # candidate) is the absent third state. confidence = corpus coverage. The gate
+  # `may-drop` returns 1 ONLY on full conviction AND full confidence — and the
+  # band proves it REFUSES on a single changed byte (two-sided, not just passing).
+  (gate
+    (conviction "byte-for-byte identity between the Form encoder and the assembler")
+    (confidence "the breadth of the corpus the encoder has verified")
+    (may-drop   "clang may be internalized only when conviction=full AND confidence=full")
+    (refuses    "one changed operand -> one changed byte -> conviction=0 -> gate closed")
+    (witnessed  "form_asm_conviction_demo.sh: Form bytes == clang bytes -> the gate OPENS"))
+
+  # ── How clang actually gets dropped (the safe sequence) ──────────────
+  (sequence
+    (1-encode   "the Form encoder emits the byte image for a program (no clang)")
+    (2-verify   "byte-compare against the clang/as reference over the whole corpus")
+    (3-convict  "full identity -> conviction; partial/none -> the gate stays closed")
+    (4-flip     "only on full conviction does the dep-ledger move clang external -> internalized")
+    (5-satsang  "the channel still holds the swap as an offered expansion we validate —
+                 byte-conviction is necessary, the human acknowledgment is the final gate"))
+
+  # ── Closing cells — the milestone the gate will license ──────────────
+  (closing-cells
+    (general-encoder "the field-into-byte encoder for high-base instructions (branches, loads,
+                      stores) with carry — so any instruction encodes without a > 2^31 word")
+    (lowering        "the Form tree -> instruction sequence: register allocation, the calling
+                      convention, stack frames — the asm-pl-human numeric program lowered to arm64")
+    (wrapper         "the Mach-O / ELF wrapper: headers, load commands, the __text section — a
+                      runnable binary with ZERO clang, byte-verified against the clang reference")
+    (kernel-int      "a kernel finding surfaced here: integer literals > 2^31 wrap to signed int32
+                      across all three kernels (e.g. 0xd65f03c0). The byte-image encoder sidesteps
+                      it; a kernel-level wider/unsigned integer is the deeper fix."))
+
+  (invariant
+    (encoding-is-a-recipe              instruction-bytes-are-form-not-a-host-assembler)
+    (byte-conviction-licenses-the-swap drop-clang-only-on-full-byte-identity)
+    (the-gate-refuses-on-one-byte      verify-or-do-not-swap-never-on-assertion)
+    (conviction-then-satsang           byte-proof-necessary-human-acknowledgment-final)
+    (the-byte-image-is-host-independent values-under-256-no-int-width-leak)))
+
+# ─────────────────────────────────────────────────────────────────────
+# How to verify
+# ─────────────────────────────────────────────────────────────────────
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm.fk \
+#     form-stdlib/tests/form-asm-band.fk        # → 31 three-way (encoder + conviction gate)
+#   bash scripts/form_asm_conviction_demo.sh    # Form bytes == clang bytes, byte-for-byte -> gate opens
