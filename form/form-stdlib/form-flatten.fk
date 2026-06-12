@@ -130,7 +130,8 @@
     (if (str_eq op "char_at") (flt-low 7 s pos fns env)
     (if (str_eq op "ord") (flt-low1 1 s pos fns env)
     (if (str_eq op "not") (flt-low1 2 s pos fns env)
-        (flt-op op s pos fns env)))))))))))))))
+    (if (str_eq op "record_new") (flt-recnew s pos fns env)
+        (flt-op op s pos fns env))))))))))))))))
 
 ; one operand, then the unary lowering picked by selector k
 (defn flt-low1 (k s pos fns env) (flt-low1-a k s (flt-expr s pos fns env)))
@@ -217,6 +218,30 @@
         (flt-list2 s (flt-expr s pos fns env) fns env)))
 (defn flt-list2 (s ee fns env) (flt-list3 (nth ee 0) (flt-list s (nth ee 1) fns env)))
 (defn flt-list3 (e re) (list (fk-cons e (nth re 0)) (nth re 1)))
+
+; ── (record_new bp k1 v1 k2 v2 ...) — records as ARENA TISSUE (no new tags) ──
+; The blueprint is parsed and DISCARDED: the read-only record family this lane
+; carries never compares types (record_blueprint / node_eq stay outside it,
+; with the mutable-identity family). The key/value pairs right-fold into a
+; cons-chain of PROPER 2-lists (list key val) — the SAME arena the `list`
+; special form builds, so head/tail/nil? walk it and the emitted fkwu binary
+; carries records on the existing arena arms (tags 18..23) with zero new
+; walker tags. (A proper 2-list, never a dotted (cons key val) pair: the host
+; kernels' head/tail want proper lists, the C arena reads either, so the
+; 2-list is the shape that walks identically on all four.) The matching read
+; is record_get (fourth-shim.fk): a recipe that walks the chain comparing the
+; interned key id (str_eq IS content equality, axiom 3).
+(defn flt-recnew (s pos fns env) (flt-recnew-bp s (flt-expr s pos fns env) fns env))
+(defn flt-recnew-bp (s be fns env) (flt-recpairs s (nth be 1) fns env))
+(defn flt-recpairs (s pos fns env)
+    (if (eq (fp-at s (fp-skip s pos)) 41) (list (fk-empty) (add (fp-skip s pos) 1))
+        (flt-recpairs-v s (flt-expr s pos fns env) fns env)))
+(defn flt-recpairs-v (s ke fns env)
+    (flt-recpairs-r (nth ke 0) s (flt-expr s (nth ke 1) fns env) fns env))
+(defn flt-recpairs-r (key s ve fns env)
+    (flt-recpairs-done key (nth ve 0) (flt-recpairs s (nth ve 1) fns env)))
+(defn flt-recpairs-done (key val re)
+    (list (fk-cons (fk-cons key (fk-cons val (fk-empty))) (nth re 0)) (nth re 1)))
 
 ; ── the do-walker: defn registers a function row (name BEFORE body, so
 ;    self-recursion lands), let binds env, the last plain expression is the
