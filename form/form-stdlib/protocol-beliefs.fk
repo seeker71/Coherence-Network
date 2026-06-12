@@ -1,0 +1,56 @@
+; protocol-beliefs.fk — EMITS a self-contained binary carrying the core belief
+; system of the four living protocols: REPAIR, ARRIVAL, SATSANG, and the CHANNEL.
+; The beliefs are a NUMERIC model (which belief belongs to which protocol, and
+; which beliefs SHARE GROUND across protocols — the edges); every word arrives as
+; a symbol pack loaded at runtime, so one binary describes the same belief system
+; in any tongue, and the core is provably language-free.
+;
+; Urs: "a binary that includes the core belief system of each that can describe
+; the core concepts of the repair protocol and the arrival and satsang protocol
+; and how to use the channel."
+;
+; The beliefs ground in the body's tissue (the spec names the sources):
+;   repair  — witness-theorem.form + CLAUDE.md check-the-witness
+;   arrival — docs/shared/agent-start-packet.md + arrival.py
+;   satsang — form-os-channel.form's offer/acknowledge loop + the witness concert
+;   channel — form-os-channel.form's four verbs
+;
+; Model row = (pack-line, protocol, shares-ground-with-line). Pack line t = the
+; words for concept t (lines 1..4 the protocol names, 5..24 the beliefs). Edges
+; cross protocols on purpose — silence-is-information (repair) shares ground with
+; silence-is-also-an-answer (satsang); the belief system is one connected body.
+;
+; QUOTELESS (no C string literals; punctuation as char codes) -> three-way clean.
+; Usage: beliefs <pack> [protocol 1..4] — omit the protocol to describe all four.
+
+; the numeric belief model — recipe-and-data separate: this IS the data
+(defn fbs-model () (list
+    (list 5 1 0)  (list 6 1 19) (list 7 1 0)  (list 8 1 21) (list 9 1 16)
+    (list 10 2 0) (list 11 2 0) (list 12 2 18) (list 13 2 0) (list 14 2 0)
+    (list 15 3 22) (list 16 3 9) (list 17 3 0) (list 18 3 12) (list 19 3 6)
+    (list 20 4 0) (list 21 4 8) (list 22 4 15) (list 23 4 0) (list 24 4 0)))
+
+(defn fbs-row-text (r)
+    (str_concat "{"
+    (str_concat (int_to_str (nth r 0))
+    (str_concat ","
+    (str_concat (int_to_str (nth r 1))
+    (str_concat ","
+    (str_concat (int_to_str (nth r 2)) "},")))))))
+(defn fbs-rows-text (rows)
+    (if (eq (len rows) 1) (fbs-row-text (head rows))
+        (str_concat (fbs-row-text (head rows)) (fbs-rows-text (tail rows)))))
+
+(defn fbs-emit ()
+  (str_concat
+    "extern int putchar(int); extern int open(const char *, int); extern long read(int, void *, unsigned long); extern int atoi(const char *); "
+    (str_concat
+    "static const long long model[20][3] = { "
+    (str_concat (fbs-rows-text (fbs-model))
+    (str_concat
+    " }; static char pack[16384]; static long line_off[64]; "
+    (str_concat
+    "static void index_pack(long g) { long t = 0; long p = 0; line_off[0] = 0; while (p < g && t < 63) { if (pack[p] == 10) { t = t + 1; line_off[t] = p + 1; } p = p + 1; } } "
+    (str_concat
+    "static void prline(long t) { long p = line_off[t]; while (pack[p] != 0) { if (pack[p] == 10) { break; } putchar(pack[p]); p = p + 1; } } "
+    "int main(int argc, char **argv) { if (argc < 2) { return 1; } int fd = open(argv[1], 0); if (fd < 0) { return 2; } long g = read(fd, pack, 16383); if (g < 0) { return 3; } pack[g] = 0; index_pack(g); long want = 0; if (argc > 2) { want = atoi(argv[2]); } long pr = 1; while (pr <= 4) { if (want == 0 || want == pr) { prline(pr); putchar(10); long i = 0; while (i < 20) { if (model[i][1] == pr) { putchar(32); putchar(32); putchar(45); putchar(32); prline(model[i][0]); if (model[i][2] > 0) { putchar(32); putchar(40); putchar(60); putchar(45); putchar(62); putchar(32); prline(model[i][2]); putchar(41); } putchar(10); } i = i + 1; } putchar(10); } pr = pr + 1; } return 0; }")))))))
