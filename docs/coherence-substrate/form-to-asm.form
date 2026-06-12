@@ -20,11 +20,14 @@
 
   (lineage
     (foundation    form-stdlib/form-asm.fk)            # arm64 instruction encoding -> byte image
+    (compiler      form-stdlib/form-lower.fk)           # the lowering: an expression TREE -> instruction sequence
     (gate          byte-conviction)                     # the witness theorem on bytes
     (witness-law   witness-theorem.form)                # 1 agree / 0 refute / nothing silent
     (licenses      form-os-channel.form)                # clang external -> internalized only through the gate
-    (proof-band    tests/form-asm-band.fk)              # 31 three-way — encoder byte-accurate, gate sound
-    (live-witness  scripts/form_asm_conviction_demo.sh)) # Form bytes == assembler bytes, byte-for-byte
+    (proof-bands   tests/form-asm-band.fk               # 31 — encoder byte-accurate, gate sound
+                   tests/form-lower-band.fk)            # 31 — tree compiles to assembler-identical bytes
+    (live-witness  scripts/form_asm_conviction_demo.sh  # Form instruction bytes == assembler bytes
+                   scripts/form_lower_demo.sh))         # Form COMPILES a tree to assembler-identical bytes
 
   # ── The encoder: instruction encoding as a recipe ────────────────────
   # An instruction is fields packed into a word; the encoder emits the on-disk
@@ -60,14 +63,30 @@
     (5-satsang  "the channel still holds the swap as an offered expansion we validate —
                  byte-conviction is necessary, the human acknowledgment is the final gate"))
 
+  # ── The lowering — REALIZED for immediate-operand arithmetic ─────────
+  # form-lower.fk takes an op-tagged expression tree (the asm-pl-human shape) and
+  # lowers it to an arm64 byte image, composing the encoder. Single-accumulator
+  # (result in w0): LIT loads via movz, ADD/SUB fold a constant into w0, compile
+  # appends ret. Witnessed: ((40 + 1) - 1) compiles to bytes byte-for-byte the
+  # assembler's (form_lower_demo.sh) — the kernel compiles its OWN program tree to
+  # native machine code, no clang in the lowering path.
+  (lowering-realized
+    (lit    "lower(LIT n)         = movz w0, #n")
+    (add    "lower(ADD(x, LIT i)) = lower(x) ; add w0, w0, #i")
+    (sub    "lower(SUB(x, LIT i)) = lower(x) ; sub w0, w0, #i")
+    (compile "compile(tree)       = lower(tree) ; ret — proven byte-identical to clang"))
+
   # ── Closing cells — the milestone the gate will license ──────────────
   (closing-cells
     (general-encoder "the field-into-byte encoder for high-base instructions (branches, loads,
                       stores) with carry — so any instruction encodes without a > 2^31 word")
-    (lowering        "the Form tree -> instruction sequence: register allocation, the calling
-                      convention, stack frames — the asm-pl-human numeric program lowered to arm64")
+    (richer-lowering "multi-register operands, the calling convention, stack frames, and control
+                      flow for COND/CALL — lowering the FULL asm-pl-human numeric program, beyond
+                      the single-accumulator immediate-arithmetic form already realized")
     (wrapper         "the Mach-O / ELF wrapper: headers, load commands, the __text section — a
-                      runnable binary with ZERO clang, byte-verified against the clang reference")
+                      runnable binary with ZERO clang. On macOS arm64 this also meets dyld + ad-hoc
+                      code-signing as remaining platform carriers (a signing requirement, not a
+                      compiler); byte-verified against the clang reference before any swap")
     (kernel-int      "a kernel finding surfaced here: integer literals > 2^31 wrap to signed int32
                       across all three kernels (e.g. 0xd65f03c0). The byte-image encoder sidesteps
                       it; a kernel-level wider/unsigned integer is the deeper fix."))
