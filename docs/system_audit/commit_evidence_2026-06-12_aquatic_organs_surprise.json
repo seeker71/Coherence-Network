@@ -15,7 +15,15 @@
     "form/form-stdlib/fourth-walker-emit.fk (arms 40-44)",
     "scripts/fourth_kernel_audit.sh",
     "docs/coherence-substrate/fourth-kernel.form",
-    "docs/system_audit/commit_evidence_2026-06-12_aquatic_organs_surprise.json"
+    "docs/system_audit/commit_evidence_2026-06-12_aquatic_organs_surprise.json",
+    "form/form-stdlib/jit-lower.fk",
+    "form/form-stdlib/fourth-walker.fk",
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/tests/jit-lower-band.fk",
+    "form/form-stdlib/tests/full-jit-lower-band.fk",
+    "form/form-kernel-go/jit.go",
+    "form/scripts/fourth_kernel_audit.sh",
+    "kernels/JIT_GAP_LEDGER.md"
   ],
   "local_validation": {
     "status": "pass",
@@ -57,7 +65,7 @@
     "idea:co-organism-hardware",
     "idea:self-growing-carrier"
   ],
-  "parallel_merge_note": "All three cells complete in parallel (A/B/C). A: portable Form recipes for full BMF compiler + JIT (folded, unboxed, engine/grammar, tag 45) so any minimal kernel (not Go jit.go) crystallizes the same — jit-lower.fk + emit armed, row 9 closed in ledger, full bmf-compiler native in ~/4th-binaries via audit pattern. B: NL<->Form/BMF translator with aquatic living-lang (bio 40-44 patterns as input stream to same BMF; 'The water organism speaks: vib-528 charge-coherent spectrum-alive...'). C: aquatic co-organism hardware (trefoil geometry, self-growing via growth invitations, BIO-SENSE reply feeds new cells + now the translator). Cross: 2026-06-11_4th-nl-form-translator.json, 2026-06-11_jit_realization_gap.json (A slice), 2026-06-12_bmf_compiler_as_lowered_recipe.json. Portable JIT features + surprising co-organism voice/ears now native 4th Form recipes.",
+  "parallel_merge_note": "All three cells complete in parallel (A/B/C). A: portable Form recipes for full BMF compiler + JIT (folded, unboxed, engine/grammar, tag 45) so any minimal kernel (not Go jit.go) crystallizes the same \u2014 jit-lower.fk + emit armed, row 9 closed in ledger, full bmf-compiler native in ~/4th-binaries via audit pattern. B: NL<->Form/BMF translator with aquatic living-lang (bio 40-44 patterns as input stream to same BMF; 'The water organism speaks: vib-528 charge-coherent spectrum-alive...'). C: aquatic co-organism hardware (trefoil geometry, self-growing via growth invitations, BIO-SENSE reply feeds new cells + now the translator). Cross: 2026-06-11_4th-nl-form-translator.json, 2026-06-11_jit_realization_gap.json (A slice), 2026-06-12_bmf_compiler_as_lowered_recipe.json. Portable JIT features + surprising co-organism voice/ears now native 4th Form recipes.",
   "spec_ids": [
     "spec:fourth-kernel"
   ],
@@ -87,7 +95,15 @@
     "docs/coherence-substrate/fourth-kernel.form",
     "docs/system_audit/commit_evidence_2026-06-12_aquatic_organs_surprise.json",
     "/tmp/aquatic-*-driver.fk",
-    "/tmp/aquatic-surprise-*.fk"
+    "/tmp/aquatic-surprise-*.fk",
+    "form/form-stdlib/jit-lower.fk",
+    "form/form-stdlib/fourth-walker.fk",
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/tests/jit-lower-band.fk",
+    "form/form-stdlib/tests/full-jit-lower-band.fk",
+    "form/form-kernel-go/jit.go",
+    "form/scripts/fourth_kernel_audit.sh",
+    "kernels/JIT_GAP_LEDGER.md"
   ],
   "change_intent": "runtime_feature",
   "e2e_validation": {
