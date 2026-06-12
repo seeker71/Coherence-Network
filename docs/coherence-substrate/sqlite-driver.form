@@ -1,0 +1,70 @@
+# ─────────────────────────────────────────────────────────────────────
+# sqlite-driver.form — the 4th kernel's SQLite capability, DRIVER FIRST. The
+#   emitted binary links libsqlite3 (an allowed host carrier) so it can WRITE,
+#   not only read — to digest the tools the kernel depends on (clang, sqlite3,
+#   libc) and to persist a living channel's state. The pure Form write-recipe is
+#   the named destination; the driver is the carrier that gets us moving now.
+# ─────────────────────────────────────────────────────────────────────
+#
+# Urs: "we need sqlite support in the 4th kernel with a driver first and then with
+# a form recipe so we can digest things like clang and other tools we depend on."
+#
+# sqlite-read.fk gave the READ path as a pure Form recipe (three-way). But a
+# living kernel needs to WRITE: persist what it depends on, what it needs, what it
+# is offered. Re-deriving the full write side of SQLite (journal, free-list, page
+# allocation, b-tree insert/split) as a recipe before we can write anything would
+# block the body on a large parser. The host kernel's law (allow-presence +
+# measure-health) says a host driver is an allowed carrier: link libsqlite3 NOW,
+# write through it, and retire it into a Form recipe as the destination — never
+# teach the driver as the destination.
+
+(sqlite-driver
+
+  (lineage
+    (read-recipe   sqlite-read.fk)                   # the pure-Form READ path (three-way)
+    (carrier       libsqlite3)                        # the host driver, linked into the emitted binary
+    (law           host-kernel.form)                  # allow-presence + measure-health: a driver is allowed
+    (recipe        form-stdlib/sqlite-driver.fk)      # sqd-emit -> the driver binary
+    (witness       scripts/sqlite_driver_demo.sh)     # digest + write + read, persisted
+    (serves        form-os-channel))                  # the minimal living surface persists through this
+
+  # ── The capability ───────────────────────────────────────────────────
+  (verbs
+    (exec    "<db> exec  \"<SQL>\"  — write (DDL / INSERT / UPDATE) through the driver")
+    (query   "<db> query \"<SQL>\"  — read rows (tab-separated) through the driver")
+    (digest  "<db> digest          — catalog the tools the kernel depends on, then read it"))
+
+  # ── Digesting the tools we depend on ─────────────────────────────────
+  # "digest clang and other tools we depend on" — the kernel writes a catalog of
+  # its dependencies into its own store, the first move toward internalizing them.
+  # The catalog names each tool, its role, and its digest-status: external (we
+  # shell out to it), allowed-carrier (a host floor we keep), or — the horizon —
+  # internalized (carried by a recipe, the dependency dropped).
+  (digest
+    (clang    "compiles the emitted C — external; the horizon is emitting machine code directly")
+    (sqlite3  "seeds the .db and IS this driver — external; the horizon is the Form write-recipe")
+    (libc     "the only runtime link — allowed-carrier (the Mach-O links only libSystem)")
+    (the-ledger "the dep table is the kernel's honest account of what it has not yet digested"))
+
+  # ── Driver first, recipe as destination ──────────────────────────────
+  (closing-cells
+    (form-write-recipe "the pure-Form SQLite WRITE path — b-tree insert/split, page allocation,
+                        free-list, journal — extending sqlite-read.fk so the body writes without
+                        libsqlite3. The driver is retired into the recipe; that is the destination.")
+    (kernel-primitive  "a kernel-level sqlite_* port (Go/Rust/TS) so Form recipes call the driver at
+                        runtime, not only emitted binaries — until the write-recipe lands.")
+    (internalize-clang "the deepest digest: emit machine code directly and drop the clang dependency —
+                        the dep ledger's clang row moves from external to internalized."))
+
+  (invariant
+    (driver-first-recipe-as-destination   link-libsqlite3-now-retire-into-a-recipe)
+    (a-host-driver-is-an-allowed-carrier   allow-presence-plus-measure-health)
+    (the-kernel-writes-what-it-depends-on  the-dep-ledger-is-honest-about-what-is-not-yet-digested)
+    (never-teach-the-driver-as-destination the-form-write-recipe-is-the-body)))
+
+# ─────────────────────────────────────────────────────────────────────
+# How to verify
+# ─────────────────────────────────────────────────────────────────────
+#   bash scripts/sqlite_driver_demo.sh        # emit -> clang -lsqlite3 -> digest, write, read, persist
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sqlite-read.fk \
+#     form-stdlib/tests/sqlite-read-band.fk   # the READ path, three-way (the destination's first half)
