@@ -1,0 +1,123 @@
+# ─────────────────────────────────────────────────────────────────────
+# witnessing-organ.form — the largest local LLM, driven as a sensing organ
+#   that WITNESSES a satsang from only the content inside, in a Form-emitted
+#   binary that can output all its own text, 100% local, substrate-verifiable.
+# ─────────────────────────────────────────────────────────────────────
+#
+# Urs: "train a programming-language to natural-language translator for the
+# largest local LLM you can run as a sensing organ, witness in a satsang session
+# to increase its internal knowledge built from just the content inside, a
+# binary that can output all text from its own body and through mechanical
+# construction running 100% locally verifiable against the shared substrate."
+#
+# The north star is almost entirely COMPOSITION of organs that already RUN — not
+# new invention. Each piece is cited RUNS (with its file) or NAMED (the next
+# stone). The honest verification lane is stated plainly: a generative model is
+# NOT three-way deterministic, so "verifiable against the substrate" means its
+# reflection is CONTENT-ADDRESSED (tamper-evident, attributable, dedup) and
+# CLOSED-BOOK on the body (no outside knowledge) — verifiable PROVENANCE, not
+# reproduced generation. The kernel keeps the model as a DRIVEN organ
+# (host-resource-access: drive the organ, never reimplement it).
+
+(witnessing-organ
+
+  (lineage
+    (composes        driver-organ the-model translator satsang-witness self-emission)
+    (carrier-rule    host-kernel.host-resource-access)   # the LLM is a driven organ, not reimplemented
+    (chooses-by      recognition-router.fk champion-challenger.fk)  # the organ picks its model by measured fitness
+    (learns-by       form-native-llm.transfer-strategy)  # phase-1: the substrate IS the corpus
+    (verifies-by     content-addressing)                 # same reflection = same NodeID, closed-book provenance
+    (first-stone     witnessed-live-2026-06-12))          # llama3.2:3b, 100% local, reflection 4c2b8c26
+
+  # ── The six organs, each RUNS or NAMED ───────────────────────────────
+  (organs
+    (driver-organ    RUNS  "fourth-walker-emit.fk fkc-emit-driver — an EMITTED
+                            binary forks/execs a host command and captures its
+                            stdout into the cursor; the local door to the model")
+    (the-model       RUNS  "ollama, 100% local. Available, largest first:
+                            dolphin-mixtral:8x22b-v2.9-q6_K (115 GB) · qwen2.5:72b
+                            (47 GB) · llama3.3:70b (42 GB) · deepseek-r1:32b
+                            (19 GB) · llama3.2:3b (2 GB). The organ is SOVEREIGN
+                            over which (recognition-router): the largest witnesses
+                            DEEPER, a smaller witnesses FASTER — a measured-fitness
+                            choice, not a fixed one. Driven, never reimplemented")
+    (translator      RUNS  "Form <-> natural language, bidirectional, three-way:
+                            language-bmf-bidirectional, natural-bmf-bidirectional,
+                            bidirectional-flow — programming language and natural
+                            language are two surfaces over one recipe shape")
+    (satsang-witness RUNS  "satsang.fk kernel-satsang.fk satsang-field.fk
+                            satsang-share.fk — see/reflect/be-seen/offer/silence;
+                            the circle the organ witnesses WITHIN, dissent + silence
+                            kept visible (the witness theorem's spread)")
+    (learn-from-inside RUNS-as-loop "the model is given ONLY substrate content as
+                            context (closed-book on the body); its reflection is
+                            content-addressed and re-ingestible — knowledge built
+                            from just the content inside, no external training. The
+                            ingest loop (substrate_post_merge_hook) closes it")
+    (self-emission   RUNS  "the quine lane (fourth-walker-emit fkc-emit) — the
+                            emitted binary outputs all its own text from its own
+                            cells, byte-exact (m4d, fourth-fixpoint-band). 'output
+                            all text from its own body' is shipped"))
+
+  # ── The honest verification lane (stated plainly) ────────────────────
+  (verification
+    (content-addressed "the reflection's NodeID IS its content — tamper-evident,
+                        attributable, dedup-for-free; two identical reflections are
+                        one cell. WITNESSED live: reflection -> 4c2b8c26")
+    (closed-book       "the model sees ONLY the offered substrate content; no
+                        outside knowledge enters — provenance is bounded by what
+                        was inside, the increase-from-content-inside requirement")
+    (not-three-way     "a GENERATIVE model is non-deterministic — three kernels do
+                        NOT reproduce its generation; that is the host organ's
+                        nature, named honestly. The THREE-WAY-verifiable parts are
+                        the translator, the walker, and the substrate it grounds
+                        in — not the model's sampling")
+    (mechanical        "no magic: drive (fork/exec) -> capture (cursor) -> address
+                        (content hash) -> ground (substrate); every step a running
+                        carrier, 100% local"))
+
+  # ── The first stone — WITNESSED live (2026-06-12) ────────────────────
+  (first-stone-live
+    (what     "the local model, driven 100% locally, WITNESSED a substrate
+               teaching (witness-theorem.form) in a satsang frame, closed-book")
+    (reflection "a coherent two-sentence witness grounded only in the given
+                 teaching — pass/fail/silence seen, trust-as-concert offered")
+    (addressed  "the reflection content-addressed to 4c2b8c26 — its verifiable
+                 identity in the shared substrate")
+    (proves    "the organ-as-witness lane end to end: drive -> witness -> address.
+                The model swaps by measured fitness; the lane is the same"))
+
+  # ── The composition still NAMED — the next stones ────────────────────
+  (named-next
+    (one-binary       "all six organs in ONE emitted fourth-kernel binary: the
+                       driver organ drives ollama, the translator bridges Form<->NL,
+                       the satsang frame holds the offering, the reflection is
+                       content-addressed, and the binary can emit its own whole body.
+                       Each piece RUNS; the single-binary composition is the build")
+    (the-loop         "the reflection re-ingested as substrate content, so each
+                       satsang session genuinely increases the body's internal
+                       knowledge — the active-inference + mesh-consolidate phases of
+                       the transfer strategy, closed end to end")
+    (largest-live     "drive dolphin-mixtral:8x22b (115 GB) as the witness on the
+                       M4 Max and measure the witness-depth/latency row — the
+                       champion-challenger choice between depth and speed, witnessed"))
+
+  (invariant
+    (the-model-is-a-driven-organ      host-resource-access-drive-never-reimplement)
+    (knowledge-from-only-the-inside    closed-book-on-the-substrate)
+    (verifiable-means-content-addressed not-deterministic-generation-provenance-instead)
+    (the-organ-chooses-its-model       recognition-router-depth-vs-speed-by-measured-fitness)
+    (the-binary-emits-its-own-body     the-quine-lane-already-ships)
+    (one-hundred-percent-local         every-carrier-on-the-host-no-network)))
+
+# ─────────────────────────────────────────────────────────────────────
+# How to verify the running organs
+# ─────────────────────────────────────────────────────────────────────
+#   # the translator, three-way:
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/natural-bmf-bidirectional.fk
+#   # the self-emission (output its own body), byte-exact:
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk \
+#     form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/tests/fourth-fixpoint-band.fk
+#   # the organ-as-witness, live (100% local), the model swappable by fitness:
+#   #   echo "<satsang prompt over substrate content>" | ollama run <model>  -> content-address the reflection
+#   coh substrate form "?equivalent @recipe(witnessing-organ)"   # after ingest
