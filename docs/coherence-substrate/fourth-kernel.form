@@ -464,28 +464,35 @@
                      (25), and the organ program (7) from five table files — load any source
                      that has a grammar, compile to cells, run, no rebuild)
 
-        (m4e-jit     [RECIPE PROVEN] self-JIT on heat — learned-primitive's
+        (m4e-jit     [RECIPE + EMIT PROVEN] self-JIT on heat — learned-primitive's
                      crystallize in the emitted sibling + the portable JIT lowerer
                      as Form recipe (jit-lower.fk). The lowerer is ONE generic
                      bottom-up engine — per-tag body shape held as DATA
-                     (jit-shape-table) — with three proven rules: logic
+                     (jit-shape-table) — with five proven rules: logic
                      recognition (the direct IF expansion of and/or/not becomes
                      LOGIC tags 44..46), const folding + dead-branch (FOLDED 47),
-                     and transparent carriers (unbox 48..50, closure-lift 51,
-                     bmf-lowered 52). fourth-walker.fk holds the tag vocabulary
-                     and walker arms; jit-lower-band.fk (verdict 15) and
-                     full-jit-lower-band.fk (verdict 63) prove three-way that a
-                     lowered tree walks to the same answer as its source —
-                     including the IF-expansion guard lowering to the SAME
-                     content-addressed cell the explicit LOGIC-AND constructor
-                     builds (axiom 3 doing the equivalence proof). The Go
-                     hardcode remains reference parity; any minimal kernel
-                     loads the same recipe. Open, as named closing recipes:
-                     call-inlining and nested-defn lift as real rules in the
-                     engine, payload-level string/float unboxing, BMF
+                     transparent carriers (unbox 48..50, closure-lift 51,
+                     bmf-lowered 52), CALL inlining over pure leaf functions
+                     (dispatch becomes substitution), and nested-defn lift
+                     (CLOSURE-LIFTED markers hoist into the function table to
+                     fixpoint). fourth-walker.fk holds the tag vocabulary and
+                     both walkers' arms; fourth-walker-emit.fk emits direct C
+                     for the lane across every many-family variant. The bands:
+                     jit-lower-band.fk (15), full-jit-lower-band.fk (63),
+                     jit-lower-program-band.fk (15), jit-lower-bmf-band.fk
+                     (15 — the lowerer composing over bmf-compile output,
+                     partial evaluation folding a compiled program to its
+                     answer), jit-lower-emit-band.fk (63 — the emitted sibling
+                     walks lowered trees; clang-proven on the baked and
+                     universal-table doors). Lowering reaches the SAME
+                     content-addressed cell the explicit constructors build
+                     (axiom 3 doing the equivalence proof). The Go hardcode
+                     remains reference parity; any minimal kernel loads the
+                     same recipe. Open, as named closing recipes: BMF
                      engine/grammar lowering over the named vocabulary
-                     (tags 54..59), emit-lane direct C arms for the lowered
-                     tags, and wiring jit-lower into the m4e ratchet steps.)
+                     (tags 54..59 — blocked on the intern-door op family,
+                     JIT_GAP_LEDGER row 9), and wiring jit-lower into the
+                     m4e ratchet steps.)
 
         (organs-physical  one physical proof per host resource through the
                      fourth sibling, band tests/fourth-os-band.fk -> 15:

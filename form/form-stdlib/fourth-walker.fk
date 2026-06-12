@@ -119,7 +119,23 @@
     (if (eq (fk-tag node) 28) (ord (char_at (fkm-walk fns (ms-child (fk-body node) 0) arg)
                                             (fkm-walk fns (ms-child (fk-body node) 1) arg)))
     (if (eq (fk-tag node) 29) (byte_to_str (fkm-walk fns (fk-body node) arg))
-        (fkm-walk-fig fns node arg))))))))))))))))))))))
+    ; jit-lowered lane 44..53 — the same arms fk-walk carries, so lowered
+    ; multi-function programs (inlined, lifted, folded) walk here too
+    (if (eq (fk-tag node) 44) (if (and (not (eq (fkm-walk fns (ms-child (fk-body node) 0) arg) 0))
+                                       (not (eq (fkm-walk fns (ms-child (fk-body node) 1) arg) 0))) 1 0)
+    (if (eq (fk-tag node) 45) (if (or (not (eq (fkm-walk fns (ms-child (fk-body node) 0) arg) 0))
+                                      (not (eq (fkm-walk fns (ms-child (fk-body node) 1) arg) 0))) 1 0)
+    (if (eq (fk-tag node) 46) (if (eq (fkm-walk fns (fk-body node) arg) 0) 1 0)
+    (if (eq (fk-tag node) 47) (ms-value (fk-body node))  ; folded = literal
+    (if (eq (fk-tag node) 48) (fkm-walk fns (fk-body node) arg)  ; unbox delegates
+    (if (eq (fk-tag node) 49) (fkm-walk fns (fk-body node) arg)
+    (if (eq (fk-tag node) 50) (fkm-walk fns (fk-body node) arg)
+    (if (eq (fk-tag node) 51) (fkm-walk fns (ms-child (fk-body node) 1) arg)  ; lifted closure
+    (if (eq (fk-tag node) 52) (fkm-walk fns (fk-body node) arg)
+    (if (eq (fk-tag node) 53) (if (eq (fkm-walk fns (ms-child (fk-body node) 0) arg) 0)
+                                  (fkm-walk fns (ms-child (ms-child (fk-body node) 1) 1) arg)
+                                  (fkm-walk fns (ms-child (ms-child (fk-body node) 1) 0) arg))
+        (fkm-walk-fig fns node arg))))))))))))))))))))))))))))))))
 
 ; figure-ops arms (tags 10/11 + 34..42) on the RECIPE side: each arm calls the
 ; walking kernel's own native (band/bor/bxor/shl_u32/shr_u32/rotr_u32/add_u32/

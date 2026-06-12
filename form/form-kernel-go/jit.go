@@ -34,20 +34,26 @@
 //   • Let-bindings of integer values
 //   • Parameter references
 //   • Recursive free-function calls (the closure's own name)
+//   • Nested capture-free defns in statement position (lifted as sibling helpers)
 //
 // Out of scope by design (refuse to compile, walker keeps running):
 //   • Lists, strings, floats (in pure i64 leg), closures-over-outer-state
+//     (a nested defn that captures an outer local refuses with its name)
 //   • Native calls inside the compiled body (Value leg or dispatch handles)
 //   • Multi-type signatures beyond the supported ABIs
 //
-// Plugin caching: keyed by the body's NodeID-tuple string ("0.2.99.42").
-// Same recipe shape → same .so reused. The cache survives for the
-// lifetime of the kernel process; rebuilding only happens on a fresh
-// run.
+// Plugin caching: in-memory keyed by the body's NodeID-tuple string
+// ("0.2.99.42") for the lifetime of the kernel process, and durably on disk
+// under $XDG_CACHE_HOME/form-jit (default ~/.cache/form-jit) keyed by content:
+// bodyKey + Go toolchain + race mode + the on-disk kernel sources the plugin's
+// go.mod `replace` points at + the generated source itself. A warm key loads
+// the existing .so via plugin.Open without invoking `go build`.
 
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"os/exec"
@@ -56,6 +62,8 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 
 	"form-kernel-go/jitabi"
 )
@@ -98,8 +106,17 @@ const (
 	goJITABIValue goJITABI = "value"
 )
 
+// goLocalFn — a nested defn lifted to a plan-level sibling helper. Calls
+// resolve by name within the defining scope and its children; the helper
+// shadows any compile-env closure of the same name.
+type goLocalFn struct {
+	fn    string
+	arity int
+}
+
 type goCompileScope struct {
 	vars     map[NameID]string
+	localFns map[NameID]goLocalFn
 	selfName NameID
 	selfFn   string
 	uid      *int
@@ -132,6 +149,7 @@ func newGoCompileScope(selfName NameID, selfFn string, abi goJITABI, env *Frame,
 	}
 	return &goCompileScope{
 		vars:     map[NameID]string{},
+		localFns: map[NameID]goLocalFn{},
 		selfName: selfName,
 		selfFn:   selfFn,
 		uid:      &n,
@@ -145,6 +163,9 @@ func (s *goCompileScope) child() *goCompileScope {
 	cp := newGoCompileScope(s.selfName, s.selfFn, s.abi, s.env, s.plan)
 	for k, v := range s.vars {
 		cp.vars[k] = v
+	}
+	for k, v := range s.localFns {
+		cp.localFns[k] = v
 	}
 	cp.uid = s.uid
 	return cp
@@ -220,11 +241,37 @@ func (e *jitCompileError) Error() string { return e.reason }
 
 func unsupported(reason string) error { return &jitCompileError{reason: reason} }
 
+// jitGoBuildCount — `go build` invocations this process has paid. The durable
+// plugin cache's proof handle: a warm key loads the artifact without growing it.
+var jitGoBuildCount atomic.Uint64
+
+// jitHostRaceEnabled — true when this binary carries the race detector
+// (set by jit_race.go's build-tagged init). Plugin ABI compatibility
+// requires the plugin to carry it too.
+var jitHostRaceEnabled = false
+
+// goJITEmitted — the kernel-free remainder of a compile: everything
+// jitBuildAndLoadGo needs after jitEmitClosureGo has finished reading the
+// recipe store, so the build can run on another goroutine without touching
+// kernel state.
+type goJITEmitted struct {
+	abis     []goJITABI
+	src      string
+	cacheKey string // "" disables the durable cache (kernel sources unreadable)
+}
+
 func jitCompileClosureGo(k *Kernel, cl *Closure) (*GoJITCompiled, error) {
+	em, err := jitEmitClosureGo(k, cl)
+	if err != nil {
+		return nil, err
+	}
+	return jitBuildAndLoadGo(em)
+}
+
+func jitEmitClosureGo(k *Kernel, cl *Closure) (*goJITEmitted, error) {
 	type abiBuild struct {
-		abi string
+		abi goJITABI
 		src string
-		err error
 	}
 	builds := []abiBuild{}
 	firstErr := error(nil)
@@ -244,7 +291,7 @@ func jitCompileClosureGo(k *Kernel, cl *Closure) (*GoJITCompiled, error) {
 			}
 			continue
 		}
-		builds = append(builds, abiBuild{abi: string(abi), src: src})
+		builds = append(builds, abiBuild{abi: abi, src: src})
 	}
 	if len(builds) == 0 {
 		if valueErr != nil {
@@ -262,7 +309,7 @@ func jitCompileClosureGo(k *Kernel, cl *Closure) (*GoJITCompiled, error) {
 	src.WriteString("// Closure name: " + k.nameStr(cl.Name) + "\n\n")
 	src.WriteString("package main\n\n")
 	for _, build := range builds {
-		if build.abi == string(goJITABIValue) {
+		if build.abi == goJITABIValue {
 			src.WriteString("import \"form-kernel-go/jitabi\"\n\n")
 			break
 		}
@@ -272,16 +319,140 @@ func jitCompileClosureGo(k *Kernel, cl *Closure) (*GoJITCompiled, error) {
 		src.WriteString("\n")
 	}
 
+	em := &goJITEmitted{src: src.String()}
+	for _, build := range builds {
+		em.abis = append(em.abis, build.abi)
+	}
+	em.cacheKey = jitPluginCacheKey(nodeIDKey(cl.Body), em.src)
+	return em, nil
+}
+
+var (
+	jitKernelSrcOnce sync.Once
+	jitKernelSrcHash string
+	jitKernelSrcErr  error
+)
+
+// jitKernelSourceHash — content hash of the kernel files a plugin build
+// compiles in: the jitabi package (the only kernel import generated code
+// uses) plus go.mod (toolchain directives). The plugin's go.mod `replace`
+// points at this source tree, so a cached .so is only valid while these
+// bytes are — a stale artifact over an edited jitabi would be a silent
+// chimera. Hashed once per process; the tree doesn't move under a running
+// kernel.
+func jitKernelSourceHash() (string, error) {
+	jitKernelSrcOnce.Do(func() {
+		dir := formKernelModuleDir()
+		paths, err := filepath.Glob(filepath.Join(dir, "jitabi", "*.go"))
+		if err != nil || len(paths) == 0 {
+			jitKernelSrcErr = fmt.Errorf("jit cache: no jitabi sources under %s", dir)
+			return
+		}
+		paths = append(paths, filepath.Join(dir, "go.mod"))
+		h := sha256.New()
+		for _, p := range paths {
+			data, err := os.ReadFile(p)
+			if err != nil {
+				jitKernelSrcErr = err
+				return
+			}
+			h.Write([]byte(filepath.Base(p)))
+			h.Write([]byte{0})
+			h.Write(data)
+			h.Write([]byte{0})
+		}
+		jitKernelSrcHash = hex.EncodeToString(h.Sum(nil))
+	})
+	return jitKernelSrcHash, jitKernelSrcErr
+}
+
+// jitPluginCacheKey — content address for the durable artifact. The key moves
+// when ANY input to the .so moves: the recipe body (bodyKey + the generated
+// source), the Go toolchain (plugin ABI requires a byte-identical toolchain),
+// race mode, and the on-disk kernel sources the plugin compiles against.
+// "" disables the cache when the kernel sources can't be attested.
+func jitPluginCacheKey(bodyKey, src string) string {
+	kernelHash, err := jitKernelSourceHash()
+	if err != nil {
+		return ""
+	}
+	h := sha256.New()
+	for _, part := range []string{bodyKey, runtimeVersionRaw(), fmt.Sprintf("race=%t", jitHostRaceEnabled), kernelHash, src} {
+		h.Write([]byte(part))
+		h.Write([]byte{0})
+	}
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+// jitPluginCachePath — durable artifact location for a cache key. Respects
+// XDG_CACHE_HOME; "" disables the cache (no key, or no resolvable home).
+func jitPluginCachePath(key string) string {
+	if key == "" {
+		return ""
+	}
+	root := os.Getenv("XDG_CACHE_HOME")
+	if root == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return ""
+		}
+		root = filepath.Join(home, ".cache")
+	}
+	return filepath.Join(root, "form-jit", key, "plugin.so")
+}
+
+// jitPersistPlugin — write-temp-then-rename in the cache dir so no process
+// (this one or a sibling) ever observes a half-written .so at the cache path.
+func jitPersistPlugin(builtSo, cacheSo string) error {
+	if err := os.MkdirAll(filepath.Dir(cacheSo), 0o755); err != nil {
+		return err
+	}
+	data, err := os.ReadFile(builtSo)
+	if err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(cacheSo), "plugin.so.tmp-")
+	if err != nil {
+		return err
+	}
+	tmpPath := tmp.Name()
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		os.Remove(tmpPath)
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		os.Remove(tmpPath)
+		return err
+	}
+	if err := os.Chmod(tmpPath, 0o755); err != nil {
+		os.Remove(tmpPath)
+		return err
+	}
+	return os.Rename(tmpPath, cacheSo)
+}
+
+// jitBuildAndLoadGo — the kernel-free half: cache probe, `go build`, atomic
+// persist, plugin load. Touches no kernel state, so jitAsyncKick can run it
+// off the walker goroutine.
+func jitBuildAndLoadGo(em *goJITEmitted) (*GoJITCompiled, error) {
+	cacheSo := jitPluginCachePath(em.cacheKey)
+	if cacheSo != "" {
+		if _, err := os.Stat(cacheSo); err == nil {
+			if p, err := plugin.Open(cacheSo); err == nil {
+				return jitLookupPluginSymbols(p, em.abis)
+			}
+			// unreadable artifact — rebuild and rename over it below
+		}
+	}
+
 	// Write to a temp directory, run `go build -buildmode=plugin`.
 	dir, err := os.MkdirTemp("", "form-jit-")
 	if err != nil {
 		return nil, fmt.Errorf("mkdtemp: %w", err)
 	}
-	// Keep the dir for the lifetime of the kernel process — the .so is
-	// mmap'd by the runtime and shouldn't be removed under it. The OS
-	// reclaims /tmp on reboot; no leak in practice.
 	srcPath := filepath.Join(dir, "main.go")
-	if err := os.WriteFile(srcPath, []byte(src.String()), 0o644); err != nil {
+	if err := os.WriteFile(srcPath, []byte(em.src), 0o644); err != nil {
 		return nil, fmt.Errorf("write source: %w", err)
 	}
 	// Pin the plugin's go.mod to match the host kernel's module so the
@@ -305,21 +476,46 @@ func jitCompileClosureGo(k *Kernel, cl *Closure) (*GoJITCompiled, error) {
 	// one in effect (not the calling shell's). Any error (toolchain
 	// missing, source rejected, plugin mode unavailable, ABI mismatch)
 	// surfaces as a build failure → unsupported → walker fallback.
-	cmd := exec.Command("go", "build", "-buildmode=plugin", "-o", soPath, srcPath)
+	buildArgs := []string{"build", "-buildmode=plugin"}
+	if jitHostRaceEnabled {
+		// A non-race plugin can't load into a race host (package version
+		// mismatch on runtime internals); mirror the host's mode.
+		buildArgs = append(buildArgs, "-race")
+	}
+	buildArgs = append(buildArgs, "-o", soPath, srcPath)
+	cmd := exec.Command("go", buildArgs...)
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(), "GOFLAGS=") // strip user GOFLAGS that might inject -mod=vendor etc.
+	jitGoBuildCount.Add(1)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return nil, fmt.Errorf("go build failed: %v\n%s", err, string(out))
 	}
 
+	if cacheSo != "" {
+		if err := jitPersistPlugin(soPath, cacheSo); err == nil {
+			if p, err := plugin.Open(cacheSo); err == nil {
+				// The .so the runtime mmap'd lives at the cache path now;
+				// the temp build dir can go.
+				os.RemoveAll(dir)
+				return jitLookupPluginSymbols(p, em.abis)
+			}
+		}
+	}
+	// No durable cache — keep the dir for the lifetime of the kernel
+	// process: the .so is mmap'd by the runtime and shouldn't be removed
+	// under it. The OS reclaims /tmp on reboot; no leak in practice.
 	p, err := plugin.Open(soPath)
 	if err != nil {
 		return nil, fmt.Errorf("plugin.Open: %w", err)
 	}
+	return jitLookupPluginSymbols(p, em.abis)
+}
+
+func jitLookupPluginSymbols(p *plugin.Plugin, abis []goJITABI) (*GoJITCompiled, error) {
 	out := &GoJITCompiled{}
-	for _, build := range builds {
-		switch build.abi {
-		case string(goJITABIi64):
+	for _, abi := range abis {
+		switch abi {
+		case goJITABIi64:
 			sym, err := p.Lookup("FnI64")
 			if err != nil {
 				return nil, fmt.Errorf("plugin.Lookup FnI64: %w", err)
@@ -329,7 +525,7 @@ func jitCompileClosureGo(k *Kernel, cl *Closure) (*GoJITCompiled, error) {
 				return nil, fmt.Errorf("plugin.Lookup: FnI64 has wrong type %T", sym)
 			}
 			out.I64 = fn
-		case string(goJITABIf64):
+		case goJITABIf64:
 			sym, err := p.Lookup("FnF64")
 			if err != nil {
 				return nil, fmt.Errorf("plugin.Lookup FnF64: %w", err)
@@ -339,7 +535,7 @@ func jitCompileClosureGo(k *Kernel, cl *Closure) (*GoJITCompiled, error) {
 				return nil, fmt.Errorf("plugin.Lookup: FnF64 has wrong type %T", sym)
 			}
 			out.F64 = fn
-		case string(goJITABIValue):
+		case goJITABIValue:
 			sym, err := p.Lookup("FnValue")
 			if err != nil {
 				return nil, fmt.Errorf("plugin.Lookup FnValue: %w", err)
@@ -461,9 +657,125 @@ func emitGoExpr(k *Kernel, node NodeID, scope *goCompileScope) (string, error) {
 		return "[]" + scope.scalarType() + "{" + strings.Join(elems, ", ") + "}", nil
 
 	case RBasicFnDef:
-		return "", unsupported("jit: nested defn not in subset")
+		// A defn's value is a closure — representable only where the block
+		// emitter discards it (statement position; see emitGoBlock).
+		return "", unsupported("jit: nested defn in value position not in subset")
 	}
 	return "", unsupported(fmt.Sprintf("jit: unsupported arm type %d", cat.Type))
+}
+
+// emitGoNestedDefn — lift a capture-free nested defn into a plan-level
+// sibling helper and register it in the defining scope so later siblings
+// resolve calls by name. A defn that captures an outer local is the
+// documented closures-over-outer limit and refuses with the captured name.
+func emitGoNestedDefn(k *Kernel, node NodeID, scope *goCompileScope) error {
+	kids := k.children(node)
+	if len(kids) != 3 {
+		return unsupported("jit: nested defn expects name, params, body")
+	}
+	name := k.identID(kids[0])
+	paramKids := k.children(kids[1])
+	params := make([]NameID, len(paramKids))
+	for i, p := range paramKids {
+		params[i] = NameID(p.Inst)
+	}
+	bound := map[NameID]bool{name: true}
+	for _, p := range params {
+		bound[p] = true
+	}
+	if capID, captured := jitNestedDefnCapture(k, kids[2], bound, scope); captured {
+		return unsupported(fmt.Sprintf("jit: nested defn %q captures outer local %q (closures-over-outer not in subset)",
+			k.nameStr(name), k.nameStr(capID)))
+	}
+	fn := scope.fresh(fmt.Sprintf("fn_%s_nested_%s", string(scope.abi), k.nameStr(name)))
+	inner := newGoCompileScope(name, fn, scope.abi, scope.env, scope.plan)
+	inner.uid = scope.uid
+	for n, lf := range scope.localFns {
+		inner.localFns[n] = lf
+	}
+	for i, p := range params {
+		inner.vars[p] = fmt.Sprintf("p%d", i)
+	}
+	bodySrc, err := emitGoExpr(k, kids[2], inner)
+	if err != nil {
+		return err
+	}
+	scalar := inner.scalarType()
+	var paramSig strings.Builder
+	for i := range params {
+		if i > 0 {
+			paramSig.WriteString(", ")
+		}
+		paramSig.WriteString(fmt.Sprintf("p%d %s", i, scalar))
+	}
+	plan := scope.plan
+	plan.helperSrc.WriteString(fmt.Sprintf("func %s(%s) %s {\n", fn, paramSig.String(), scalar))
+	plan.helperSrc.WriteString("\treturn ")
+	plan.helperSrc.WriteString(inner.cast(bodySrc))
+	plan.helperSrc.WriteString("\n}\n\n")
+	scope.localFns[name] = goLocalFn{fn: fn, arity: len(params)}
+	return nil
+}
+
+// jitNestedDefnCapture — first outer-local name the inner body reads. Bound
+// names accumulate structurally (params, lets, nested defns) as an
+// over-approximation; a slip-through never miscompiles, because the inner
+// body is emitted against a fresh scope and a real capture that evades this
+// walk still refuses as an unbound identifier. This walk exists to name the
+// refusal honestly.
+func jitNestedDefnCapture(k *Kernel, node NodeID, bound map[NameID]bool, outer *goCompileScope) (NameID, bool) {
+	if node.Level == LevelTrivial {
+		return 0, false
+	}
+	cat := k.category(node)
+	kids := k.children(node)
+	switch cat.Type {
+	case RBasicIdent:
+		id := k.identID(node)
+		if !bound[id] {
+			if _, isOuterLocal := outer.vars[id]; isOuterLocal {
+				return id, true
+			}
+		}
+		return 0, false
+	case RBasicBlock:
+		if cat.Inst == RBlockLet && len(kids) == 2 {
+			if capID, captured := jitNestedDefnCapture(k, kids[1], bound, outer); captured {
+				return capID, true
+			}
+			if kids[0].Level == LevelTrivial && kids[0].Type == TrivString {
+				bound[NameID(kids[0].Inst)] = true
+			}
+			return 0, false
+		}
+	case RBasicFnDef:
+		if len(kids) == 3 {
+			bound[k.identID(kids[0])] = true
+			for _, p := range k.children(kids[1]) {
+				bound[NameID(p.Inst)] = true
+			}
+			return jitNestedDefnCapture(k, kids[2], bound, outer)
+		}
+	case RBasicFnCall:
+		if len(kids) > 0 {
+			rest := kids
+			if _, ok := jitStaticCallName(k, kids[0]); ok {
+				rest = kids[1:] // the callee slot is a name, not a value read
+			}
+			for _, kid := range rest {
+				if capID, captured := jitNestedDefnCapture(k, kid, bound, outer); captured {
+					return capID, true
+				}
+			}
+			return 0, false
+		}
+	}
+	for _, kid := range kids {
+		if capID, captured := jitNestedDefnCapture(k, kid, bound, outer); captured {
+			return capID, true
+		}
+	}
+	return 0, false
 }
 
 func emitGoTrivial(k *Kernel, node NodeID, scope *goCompileScope) (string, error) {
@@ -791,6 +1103,16 @@ func emitGoBlock(k *Kernel, op uint32, kids []NodeID, scope *goCompileScope) (st
 		child := scope.child()
 		for i, c := range kids {
 			isLast := i == len(kids)-1
+			if k.category(c).Type == RBasicFnDef {
+				if isLast {
+					// Walker returns the closure here; no scalar carries that.
+					return "", unsupported("jit: nested defn as block value not in subset")
+				}
+				if err := emitGoNestedDefn(k, c, child); err != nil {
+					return "", err
+				}
+				continue
+			}
 			if k.category(c).Type == RBasicBlock && k.category(c).Inst == RBlockLet {
 				letKids := k.children(c)
 				if len(letKids) == 2 && letKids[0].Level == LevelTrivial && letKids[0].Type == TrivString {
@@ -1255,6 +1577,23 @@ func emitGoFnCall(k *Kernel, kids []NodeID, scope *goCompileScope) (string, erro
 		return "jitabi.ScanRun(" + sSrc + ", " + fromSrc + ", " + classSrc + ")", nil
 	}
 
+	// Nested defns lifted by emitGoNestedDefn resolve before the compile
+	// env: an inner name shadows an outer Form helper of the same name.
+	if lf, ok := scope.localFns[nameID]; ok {
+		if len(kids)-1 != lf.arity {
+			return "", unsupported(fmt.Sprintf("jit: nested %q wants %d args, got %d", name, lf.arity, len(kids)-1))
+		}
+		args := make([]string, 0, len(kids)-1)
+		for i := 1; i < len(kids); i++ {
+			a, err := emitGoExpr(k, kids[i], scope)
+			if err != nil {
+				return "", err
+			}
+			args = append(args, scope.cast(a))
+		}
+		return fmt.Sprintf("%s(%s)", lf.fn, strings.Join(args, ", ")), nil
+	}
+
 	if scope.env != nil {
 		if v, ok := scope.env.Lookup(nameID); ok && v.Kind == VClosure {
 			return emitGoHelperCall(k, nameID, kids, scope)
@@ -1262,6 +1601,72 @@ func emitGoFnCall(k *Kernel, kids []NodeID, scope *goCompileScope) (string, erro
 	}
 
 	return "", unsupported(fmt.Sprintf("jit: unsupported call %q (only self-recursion + arithmetic primitives in subset)", name))
+}
+
+// --- async hot-threshold builds ---------------------------------------------
+//
+// The FNCALL dispatch arm promotes a closure at the hot threshold. The build
+// (~1.3s of `go build`) must not stall the crossing call, so the emit half
+// runs inline — it reads the recipe store, which only the walker goroutine
+// may touch — and the build half runs in a goroutine. Results land in the
+// mutex-guarded zone (k.jitAsyncMu and the two maps under it); the walker
+// adopts them into jitCompiledGo on a later call, so the artifact map itself
+// stays single-goroutine.
+
+type jitAsyncResult struct {
+	jc     *GoJITCompiled // nil when the build failed
+	reason string
+}
+
+// jitAsyncTake — adoption poll for the dispatch arm. Returns the landed
+// result (removing it) or building=true while the goroutine is still out.
+func (k *Kernel) jitAsyncTake(bodyKey string) (*jitAsyncResult, bool) {
+	k.jitAsyncMu.Lock()
+	defer k.jitAsyncMu.Unlock()
+	if res, ok := k.jitAsyncLanded[bodyKey]; ok {
+		delete(k.jitAsyncLanded, bodyKey)
+		return res, false
+	}
+	return nil, k.jitAsyncBuilding[bodyKey]
+}
+
+// jitAsyncKick — start at most one background build per bodyKey. The emit
+// half runs on the caller's (walker) goroutine; an emit refusal returns
+// immediately so the caller can mark the body failed without a goroutine
+// round-trip. A build failure lands as a jitAsyncResult with a reason, so
+// adoption marks the body failed and it is never retried in a loop.
+func (k *Kernel) jitAsyncKick(cl *Closure, bodyKey string) error {
+	k.jitAsyncMu.Lock()
+	if k.jitAsyncBuilding[bodyKey] {
+		k.jitAsyncMu.Unlock()
+		return nil
+	}
+	if _, landed := k.jitAsyncLanded[bodyKey]; landed {
+		k.jitAsyncMu.Unlock()
+		return nil
+	}
+	k.jitAsyncBuilding[bodyKey] = true
+	k.jitAsyncMu.Unlock()
+
+	em, err := jitEmitClosureGo(k, cl)
+	if err != nil {
+		k.jitAsyncMu.Lock()
+		delete(k.jitAsyncBuilding, bodyKey)
+		k.jitAsyncMu.Unlock()
+		return err
+	}
+	go func() {
+		jc, err := jitBuildAndLoadGo(em)
+		res := &jitAsyncResult{jc: jc}
+		if err != nil {
+			res = &jitAsyncResult{reason: err.Error()}
+		}
+		k.jitAsyncMu.Lock()
+		delete(k.jitAsyncBuilding, bodyKey)
+		k.jitAsyncLanded[bodyKey] = res
+		k.jitAsyncMu.Unlock()
+	}()
+	return nil
 }
 
 // --- install-as-named-callable-leaf ----------------------------------------
@@ -1410,6 +1815,11 @@ func jitRecipeNeedsValueABI(k *Kernel, node NodeID) bool {
 	case RBasicIdent:
 		// The name child is structure, not a string value.
 		return false
+	case RBasicFnDef:
+		if len(kids) == 3 {
+			// kids[0] (name) and kids[1] (params) are structural name slots.
+			return jitRecipeNeedsValueABI(k, kids[2])
+		}
 	case RBasicBlock:
 		if cat.Inst == RBlockLet && len(kids) == 2 {
 			// kids[0] is the binding-name slot; only the bound value is data.

@@ -16,6 +16,11 @@
 ;                 IF c 1 0 dissolves to c when c is already boolean-shaped
 ;   const-fold  — ADD/SUB/MUL/LE and the logic tags over literal children
 ;                 become FOLDED literals (tag 47)
+;   inline      — CALL to a pure leaf function becomes the callee body with
+;                 ARG substituted, then re-lowered (the program doors
+;                 jit-lower-program / jit-lower-node-in carry the table)
+;   lift        — CLOSURE-LIFTED markers hoist into the function table as
+;                 real entries called through CALL (jit-lift-program)
 ;
 ; Unbox, lifted-closure, and BMF markers (tags 48..52) are transparent
 ; carriers: the engine lowers through them and the walker delegates through
@@ -132,19 +137,164 @@
 (defn jit-rules (node)
     (jit-rule-fold (jit-rule-logic (jit-rule-dead-if node))))
 
-(defn jit-rebuild (node t s)
-    (if (eq s 1) (fk-node t (jit-lower-node (fk-body node)))
-    (if (eq s 2) (fk-node t (ms-intern (jit-lower-node (ms-child (fk-body node) 0))
-                                       (jit-lower-node (ms-child (fk-body node) 1))))
-    (if (eq s 3) (fk-node t (ms-intern (jit-lower-node (ms-child (fk-body node) 0))
-                                       (ms-intern (jit-lower-node (ms-child (ms-child (fk-body node) 1) 0))
-                                                  (jit-lower-node (ms-child (ms-child (fk-body node) 1) 1)))))
+; --- tree sensing for the program-level rules ---------------------------------
+; jit-has-tag? — does any node in the tree carry tag t?
+(defn jit-has-tag? (node t)
+    (do (let s (jit-shape (fk-tag node)))
+        (if (eq (fk-tag node) t) 1
+            (if (eq s 1) (jit-has-tag? (fk-body node) t)
+            (if (eq s 2) (if (eq (jit-has-tag? (ms-child (fk-body node) 0) t) 1) 1
+                             (jit-has-tag? (ms-child (fk-body node) 1) t))
+            (if (eq s 3) (if (eq (jit-has-tag? (ms-child (fk-body node) 0) t) 1) 1
+                         (if (eq (jit-has-tag? (ms-child (ms-child (fk-body node) 1) 0) t) 1) 1
+                             (jit-has-tag? (ms-child (ms-child (fk-body node) 1) 1) t)))
+            (if (eq s 4) (jit-has-tag? (ms-child (fk-body node) 1) t)
+                0)))))))
+
+; jit-pure? — the subtree opens no organ door (SET/GET/TIME/RND, tags 13..16):
+; safe to duplicate or move across a call boundary.
+(defn jit-pure? (node)
+    (if (eq (jit-has-tag? node 13) 1) 0
+    (if (eq (jit-has-tag? node 14) 1) 0
+    (if (eq (jit-has-tag? node 15) 1) 0
+    (if (eq (jit-has-tag? node 16) 1) 0 1)))))
+
+; jit-leaf-fn? — a function body with no CALL and no SELF: inlining it cannot
+; recurse or widen function-table reach.
+(defn jit-leaf-fn? (body)
+    (if (eq (jit-has-tag? body 12) 1) 0 (if (eq (jit-has-tag? body 7) 1) 0 1)))
+
+; jit-subst-arg — the tree with every ARG leaf replaced by expr (the inline
+; step; expr may be re-evaluated per occurrence, so callers gate on purity).
+(defn jit-subst-arg (node expr)
+    (do (let t (fk-tag node))
+        (let s (jit-shape t))
+        (if (eq t 2) expr
+            (if (eq s 1) (fk-node t (jit-subst-arg (fk-body node) expr))
+            (if (eq s 2) (fk-node t (ms-intern (jit-subst-arg (ms-child (fk-body node) 0) expr)
+                                               (jit-subst-arg (ms-child (fk-body node) 1) expr)))
+            (if (eq s 3) (fk-node t (ms-intern (jit-subst-arg (ms-child (fk-body node) 0) expr)
+                                               (ms-intern (jit-subst-arg (ms-child (ms-child (fk-body node) 1) 0) expr)
+                                                          (jit-subst-arg (ms-child (ms-child (fk-body node) 1) 1) expr))))
+            (if (eq s 4) (fk-node t (ms-intern (ms-child (fk-body node) 0)
+                                               (jit-subst-arg (ms-child (fk-body node) 1) expr)))
+                node)))))))
+
+; --- rule: call inlining (gap #2 — dispatch overhead becomes substitution) ---
+; CALL(fidx, e) inlines when the callee is a pure leaf function and e is pure:
+; the callee body with ARG := e, then lowered again so substitution-born
+; constant shapes fold. Termination: a leaf callee adds no CALL/SELF nodes.
+(defn jit-rule-inline (fns node)
+    (if (eq (fk-tag node) 12)
+        (do (let fidx (ms-value (ms-child (fk-body node) 0)))
+            (let e (ms-child (fk-body node) 1))
+            (if (le (len fns) fidx) node
+                (do (let callee (nth fns fidx))
+                    (if (and (eq (jit-leaf-fn? callee) 1) (eq (jit-pure? callee) 1))
+                        (if (eq (jit-pure? e) 1)
+                            (jit-lower-node-in fns (jit-subst-arg callee e))
+                            node)
+                        node))))
+        node))
+
+(defn jit-rebuild (fns node t s)
+    (if (eq s 1) (fk-node t (jit-lower-node-in fns (fk-body node)))
+    (if (eq s 2) (fk-node t (ms-intern (jit-lower-node-in fns (ms-child (fk-body node) 0))
+                                       (jit-lower-node-in fns (ms-child (fk-body node) 1))))
+    (if (eq s 3) (fk-node t (ms-intern (jit-lower-node-in fns (ms-child (fk-body node) 0))
+                                       (ms-intern (jit-lower-node-in fns (ms-child (ms-child (fk-body node) 1) 0))
+                                                  (jit-lower-node-in fns (ms-child (ms-child (fk-body node) 1) 1)))))
     (if (eq s 4) (fk-node t (ms-intern (ms-child (fk-body node) 0)
-                                       (jit-lower-node (ms-child (fk-body node) 1))))
+                                       (jit-lower-node-in fns (ms-child (fk-body node) 1))))
         node)))))
 
-(defn jit-lower-node (node)
-    (jit-rules (jit-rebuild node (fk-tag node) (jit-shape (fk-tag node)))))
+; jit-lower-node-in — the engine against a function table: rebuild bottom-up,
+; local rules, then inline (an empty table simply leaves every CALL standing).
+(defn jit-lower-node-in (fns node)
+    (jit-rule-inline fns (jit-rules (jit-rebuild fns node (fk-tag node) (jit-shape (fk-tag node))))))
 
-; The door: lower a whole program tree.
+(defn jit-lower-node (node)
+    (jit-lower-node-in (list) node))
+
+; The doors: lower a whole program tree, or a whole function table.
 (defn jit-lower-tree (root) (jit-lower-node root))
+
+(defn jit-lower-program-fns (fns rest)
+    (if (eq (len rest) 0) (list)
+        (cons (jit-lower-node-in fns (head rest)) (jit-lower-program-fns fns (tail rest)))))
+(defn jit-lower-program (fns) (jit-lower-program-fns fns fns))
+
+; --- nested-defn lift (gap #4 recipe lane) ------------------------------------
+; A CLOSURE-LIFTED marker (tag 51) becomes a REAL function-table entry called
+; through CALL(idx, ARG) — same answer (the walker's 51 arm runs the body with
+; the same arg), but the body now lives in the table where every pass (and the
+; emit lane's fn rows) can reach it. One marker hoists per pass; the fixpoint
+; rescans, so markers inside hoisted bodies lift too.
+
+(defn jit-append (xs v)
+    (if (eq (len xs) 0) (cons v (list))
+        (cons (head xs) (jit-append (tail xs) v))))
+
+(defn jit-set-nth (xs i v)
+    (if (eq i 0) (cons v (tail xs))
+        (cons (head xs) (jit-set-nth (tail xs) (sub i 1) v))))
+
+; jit-first-lifted — the body of the first tag-51 marker in the tree (caller
+; guarantees one exists; search order: self, then children left-to-right).
+(defn jit-first-lifted (node)
+    (do (let t (fk-tag node))
+        (let s (jit-shape t))
+        (if (eq t 51) (ms-child (fk-body node) 1)
+            (if (eq s 1) (jit-first-lifted (fk-body node))
+            (if (eq s 2) (if (eq (jit-has-tag? (ms-child (fk-body node) 0) 51) 1)
+                             (jit-first-lifted (ms-child (fk-body node) 0))
+                             (jit-first-lifted (ms-child (fk-body node) 1)))
+            (if (eq s 3) (if (eq (jit-has-tag? (ms-child (fk-body node) 0) 51) 1)
+                             (jit-first-lifted (ms-child (fk-body node) 0))
+                         (if (eq (jit-has-tag? (ms-child (ms-child (fk-body node) 1) 0) 51) 1)
+                             (jit-first-lifted (ms-child (ms-child (fk-body node) 1) 0))
+                             (jit-first-lifted (ms-child (ms-child (fk-body node) 1) 1))))
+            (if (eq s 4) (jit-first-lifted (ms-child (fk-body node) 1))
+                node)))))))
+
+; jit-lift-replace — the tree with that SAME first marker replaced by
+; CALL(idx, ARG); traversal order mirrors jit-first-lifted exactly.
+(defn jit-lift-replace (node idx)
+    (do (let t (fk-tag node))
+        (let s (jit-shape t))
+        (if (eq t 51) (fk-call idx (fk-arg))
+            (if (eq s 1) (fk-node t (jit-lift-replace (fk-body node) idx))
+            (if (eq s 2) (if (eq (jit-has-tag? (ms-child (fk-body node) 0) 51) 1)
+                             (fk-node t (ms-intern (jit-lift-replace (ms-child (fk-body node) 0) idx)
+                                                   (ms-child (fk-body node) 1)))
+                             (fk-node t (ms-intern (ms-child (fk-body node) 0)
+                                                   (jit-lift-replace (ms-child (fk-body node) 1) idx))))
+            (if (eq s 3) (if (eq (jit-has-tag? (ms-child (fk-body node) 0) 51) 1)
+                             (fk-node t (ms-intern (jit-lift-replace (ms-child (fk-body node) 0) idx)
+                                                   (ms-child (fk-body node) 1)))
+                         (if (eq (jit-has-tag? (ms-child (ms-child (fk-body node) 1) 0) 51) 1)
+                             (fk-node t (ms-intern (ms-child (fk-body node) 0)
+                                                   (ms-intern (jit-lift-replace (ms-child (ms-child (fk-body node) 1) 0) idx)
+                                                              (ms-child (ms-child (fk-body node) 1) 1))))
+                             (fk-node t (ms-intern (ms-child (fk-body node) 0)
+                                                   (ms-intern (ms-child (ms-child (fk-body node) 1) 0)
+                                                              (jit-lift-replace (ms-child (ms-child (fk-body node) 1) 1) idx))))))
+            (if (eq s 4) (fk-node t (ms-intern (ms-child (fk-body node) 0)
+                                               (jit-lift-replace (ms-child (fk-body node) 1) idx)))
+                node)))))))
+
+; jit-lift-scan — index of the first function carrying a marker, as a
+; one-element list; empty list when the table is marker-free.
+(defn jit-lift-scan (fns i)
+    (if (le (len fns) i) (list)
+        (if (eq (jit-has-tag? (nth fns i) 51) 1) (cons i (list))
+            (jit-lift-scan fns (add i 1)))))
+
+; The door: every marker hoisted into the table, to fixpoint.
+(defn jit-lift-program (fns)
+    (do (let hit (jit-lift-scan fns 0))
+        (if (eq (len hit) 0) fns
+            (do (let i (head hit))
+                (let f (nth fns i))
+                (jit-lift-program (jit-append (jit-set-nth fns i (jit-lift-replace f (len fns)))
+                                              (jit-first-lifted f)))))))
