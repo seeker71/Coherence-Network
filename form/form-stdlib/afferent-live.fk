@@ -1,9 +1,9 @@
 ; afferent-live.fk — the live select/poll wait-carrier: ao-wait's verdict (the
-; SAME afferent-offer.fk engine, arms unchanged) lowered onto a fourth-walker
+; SAME afferent-offer.fk engine, arms unchanged) lowered onto a Hati-OS kernel
 ; program where op 15 TIME feeds real ticks — the host clock organ, not data.
 ;
 ; This closes the next-stone afferent-offer.form names: "a host carrier where
-; op 15 TIME feeds real ticks and a fourth-kernel select/poll witness shows a
+; op 15 TIME feeds real ticks and a Hati-OS select/poll witness shows a
 ; live timeout yielding nothing". No parallel engine is grown: the dispatch /
 ; nothing DECISION is made by ao-wait itself (the function proven → 511) at
 ; composition time, on the offer ticks as relative seconds; what the lowered
@@ -35,8 +35,8 @@
 ;   fn 2  delay: grain × fn 3        fn 3  countdown grain
 ;
 ; Deterministic proof: tests/afferent-live-band.fk → 63 three-way (Go/Rust/TS).
-; Live proof: scripts/fourth_kernel_audit.sh "live afferent witness" section —
-; the universal fourth-kernel binary blocks on the real clock: no event yields
+; Live proof: scripts/hati_os_kernel_audit.sh "live afferent witness" section —
+; the universal Hati-OS binary blocks on the real clock: no event yields
 ; nothing after the deadline truly elapses; an armed timer's tick dispatches.
 
 ;; sequence a then b, b's value kept (IF-seq: both arms b; for organ writes)

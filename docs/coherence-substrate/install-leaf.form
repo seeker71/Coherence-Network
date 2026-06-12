@@ -6,7 +6,7 @@
 #
 # Closes the NAMED half of linux-as-recipes.form's loadable-modules row.
 # The JIT lane already RAN: a recipe lowers to a .so (jit.go) or a clang
-# binary (fourth-kernel-emit), dlopen/exec executes it. What was NAMED is
+# binary (Hati-OS-emit), dlopen/exec executes it. What was NAMED is
 # the INSTALL: the artifact entering the kernel's own callable table at
 # runtime, addressed by name through the same (bp "name") / registry
 # discipline as every other callable. Linux's insmod, composed from the

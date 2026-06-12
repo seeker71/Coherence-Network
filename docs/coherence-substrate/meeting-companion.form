@@ -103,21 +103,21 @@
 ; THE 4TH-KERNEL REALIZATION (2026-06-11) — runs tomorrow
 ; ─────────────────────────────────────────────────────────────────────
 ; The satsang companion above (Python experiments/satsang-voice) is the proven
-; reference loop. This realization puts the DECISION on the fourth kernel and
-; the COMPUTE on host organs it drives — the body's shape (fourth-kernel.form
+; reference loop. This realization puts the DECISION on the Hati-OS kernel and
+; the COMPUTE on host organs it drives — the body's shape (hati-os.form
 ; n4/n5/n6 + the driver organ):
 ;   STT  whisper.cpp large-v3-turbo (whisper-stream on the mic) — verbatim on jfk.wav
 ;   LLM  ollama on 100% GPU (Metal-confirmed) — answers the addressed request
 ;   TTS  /usr/bin/say — real audio of the reply
-;   DECISION  a 4th-kernel BINARY: form-stdlib/fourth-match.fk emitted by the Go
+;   DECISION  a Hati-OS BINARY: form-stdlib/hati-os-match.fk emitted by the Go
 ;             kernel + clang into `fkmatch`, scanning each transcript segment over
 ;             the BMF cursor (op 17 BUF, the RAM organ holding the scan base) and
 ;             answering 1/0 — "was the companion addressed?". The Form cell at
-;             the center; tests/fourth-match-band.fk -> 15 three-way.
+;             the center; tests/hati-os-match-band.fk -> 15 three-way.
 ; CARRIER: scripts/meeting_companion.sh wires the organs (whisper-stream | the
-;   4th-kernel matcher | ollama | say) + a rolling context window + a transcript
+;   Hati-OS matcher | ollama | say) + a rolling context window + a transcript
 ;   log. Named honestly as glue to be LIFTED into Form as the walker grows the
-;   file/loop op families (fourth-kernel.form m4e4) — not the destination.
+;   file/loop op families (hati-os.form m4e4) — not the destination.
 ; WITNESSED tonight: STT verbatim; the matcher 1/0 on real streams; ollama on
 ;   GPU answered; say spoke; a TTS->STT round trip transcribed near-verbatim; a
 ;   canned segment ran the whole matcher->ollama->say pipeline. AWAITS tomorrow:

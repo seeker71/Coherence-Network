@@ -1,0 +1,10 @@
+; tests/graph-node-mutation-file-verdict-band.fk -- file mutation contract.
+;
+; preludes: form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk
+;
+(do
+    (let dir "/tmp/graph-node-mutation-file-verdict-band.d")
+    (fs_rmdir dir)
+    (let verdict (gn-mutation-test (carrier-file) dir))
+    (fs_rmdir dir)
+    verdict)

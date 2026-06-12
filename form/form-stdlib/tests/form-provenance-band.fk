@@ -1,4 +1,4 @@
-; preludes: form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/form-provenance.fk
+; preludes: form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/form-provenance.fk
 ;
 ; form-provenance-band — CELL PROVENANCE proven three-way: from any table row
 ; back to the original source offset/line/col that created the cell. The locator

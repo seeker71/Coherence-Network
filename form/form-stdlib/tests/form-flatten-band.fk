@@ -1,11 +1,11 @@
-; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/form-parse.fk form-stdlib/form-flatten.fk
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/form-parse.fk form-stdlib/form-flatten.fk
 ;
 ; form-flatten-band — m4e3's flattener proven three-way: REAL band source
-; (the unmodified files on disk) flattens into a fourth-walker program. The
+; (the unmodified files on disk) flattens into a Hati-OS kernel program. The
 ; lowering semantics and the defn/let/CALL machinery are proven by VALUE on
 ; the recipe-side walker; the real-band flatten is proven by STRUCTURE here
 ; (the value witness for the real band runs on the emitted universal binary
-; in scripts/fourth_kernel_audit.sh — the fourth arm, where the heap ops
+; in scripts/hati_os_kernel_audit.sh — the Hati-OS arm, where the heap ops
 ; live). Same cells, both walkers; content-addressing carries the identity.
 ;
 ; Verdict 65535 when the flattener holds:

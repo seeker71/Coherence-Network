@@ -943,6 +943,8 @@ async def capture_runtime_metrics(request: Request, call_next):
     exc_message: str | None = None
     method = request.method
     request_path, route_name, raw_path = _build_route_signature(request)
+    capture_path = request_path
+    capture_route_name = route_name
     query_count, raw_query_rows, heavy_query_rows = _query_summary(request.query_params)
     route_label = route_name or "unknown"
     response = None
@@ -983,12 +985,14 @@ async def capture_runtime_metrics(request: Request, call_next):
             merged = sorted(current | required_exposed)
             response.headers["access-control-expose-headers"] = ", ".join(merged)
         if should_capture:
+            capture_path, capture_route_name, raw_path = _build_route_signature(request)
+            route_label = capture_route_name or route_label or "unknown"
             if request.headers.get("content-length"):
                 body_size = _safe_int_or_none(request.headers.get("content-length")) or 0
             else:
                 body_size = 0
             reasons = _slow_route_reasons(
-                path=request_path,
+                path=capture_path,
                 status_code=status_code,
                 reasons=[],
                 method=method,
@@ -1017,7 +1021,7 @@ async def capture_runtime_metrics(request: Request, call_next):
                 runtime_service.record_event(
                     RuntimeEventCreate(
                         source=_runtime_event_source(request),
-                        endpoint=request_path,
+                        endpoint=capture_path,
                         raw_endpoint=raw_path,
                         method=method,
                         status_code=status_code,
@@ -1036,7 +1040,7 @@ async def capture_runtime_metrics(request: Request, call_next):
                         "slow_api_request method=%s path=%s route=%s raw_path=%s status=%s elapsed_ms=%.2f "
                     "query_count=%s query_samples=%s heavy_queries=%s body_bytes=%s reasons=%s correlation=%s client=%s exception=%s",
                     method,
-                    request_path,
+                    capture_path,
                     route_label,
                     raw_path,
                     status_code,

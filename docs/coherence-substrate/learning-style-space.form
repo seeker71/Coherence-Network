@@ -115,7 +115,7 @@
 #   generative diffusion           ml-diffusion-model-flow.form — the
 #                                  reverse flow; the OTHER diffusion
 #   hypernetworks                  recipes emitting recipes — the
-#                                  fourth-kernel emit lane already
+#                                  Hati-OS emit lane already
 #                                  emits walkers; weights are next
 #   reservoir computing            one row away: a fixed scramble core
 #                                  + any pool (the engine is ready)

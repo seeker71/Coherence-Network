@@ -1,15 +1,15 @@
 # ─────────────────────────────────────────────────────────────────────
-# fourth-kernel.form — the sibling whose source is Form: native artifacts
+# hati-os.form — the sibling whose source is Form: native artifacts
 #                      emitted from recipes, measured against the three walkers
 # ─────────────────────────────────────────────────────────────────────
 #
 # Urs: "I would love to have a native BMF compiler and a native API host binary
 # just to compare them performance, memory footprint, etc. and I would love to
 # have a host-kernel native cli written from the form recipe instead of
-# go/rust/TS as fourth kernel to compare against."
+# go/rust/TS as Hati-OS kernel to compare against."
 #
 # This is kernel-self-composition's close-self-rebuild-loop choosing its first
-# stones, and host-kernel's zero-to-many-implementations made literal: a FOURTH
+# stones, and host-kernel's zero-to-many-implementations made literal: a HATI-OS
 # carrier of the same content-addressed body, whose source is not a host
 # language a human wrote but text the recipes themselves emit. The comparison
 # is the point — champion-challenger discipline over real measured rows (wall
@@ -21,11 +21,11 @@
 #   kernel-resident lowering — jit_emit_c / jit.go: the kernel lowers a recipe
 #     to C/native. General (handles recursion), RUNS, but the lowerer is
 #     host-language hardcode. A bridge carrier, and itself M4's lift target.
-#   emitter-as-recipe — jit-tensor-emit.fk, fourth-kernel-emit.fk: the emitter
+#   emitter-as-recipe — jit-tensor-emit.fk, hati-os-native-cli-emit.fk: the emitter
 #     IS Form; the kernel keeps dumb carriers (clang/rustc, dlopen/exec). The
 #     body-owned lane this spec grows. close-jit-crystallization's heart.
 
-(fourth-kernel
+(Hati-OS
 
   (lineage
     (closes-toward  kernel-self-composition.close-self-rebuild-loop)  # author -> compile -> boot bigger
@@ -34,8 +34,8 @@
     (carrier-rule   host-kernel.host-resource-access)                 # clang/rustc/loader: allowed carriers
     (measures-like  champion-challenger.fk recognition-router.fk)     # earned flips, measured fitness
     (coordinates    codex/native-http-stack-architecture)             # the API-host slice shares that seam
-    (seed           fourth-kernel-emit.fk tests/fourth-kernel-emit-band.fk
-                    scripts/fourth_kernel_audit.sh))
+    (seed           hati-os-native-cli-emit.fk tests/hati-os-native-cli-emit-band.fk
+                    scripts/hati_os_kernel_audit.sh))
 
   # ── The measurement protocol (shared by every milestone) ─────────────
   # A row is honest when the SAME semantic ask runs through each carrier's
@@ -53,12 +53,12 @@
                   # fib(10)-as-data = 14,360 WITNESS + 8,562 ACCESS + 5,738 COND vs
                   # 264 MATH — the meta-interpretation tax made visible, ~87 dispatches
                   # per real op, exactly what m4c's emitter collapses); the EMITTED
-                  # lane is dark today (fk4 has no probe) — m4c carries its probe out
+                  # lane is dark today (hati_os has no probe) — m4c carries its probe out
     (verdict      champion-challenger-earned-never-declared))
 
   # ── M1 — the CLI seed [SHIPPED with this spec] ────────────────────────
   # A complete standalone C program — integer printer, fib, sum, ackermann,
-  # argv main — every byte emitted by Form recipes (fourth-kernel-emit.fk),
+  # argv main — every byte emitted by Form recipes (hati-os-native-cli-emit.fk),
   # one quoteless line (extern declarations instead of #include: preprocessor
   # lines need newlines, a Form string is one line — the constraint shaped a
   # cleaner emission). Proven three-way: the program text is byte-identical
@@ -66,33 +66,23 @@
   # carries the text through clang, checks value parity against the walkers,
   # and writes the first measured comparison rows.
   (m1-cli-seed
-    (emitter      fourth-kernel-emit.fk)                    # fk4-program: the whole binary as a string
-    (proof        tests/fourth-kernel-emit-band.fk -> 7 three-way)
-    (carrier      scripts/fourth_kernel_audit.sh)           # clang -O2, parity, time/rss/size/startup
+    (emitter      hati-os-native-cli-emit.fk)                    # hati-os-program: the whole binary as a string
+    (proof        tests/hati-os-native-cli-emit-band.fk -> 7 three-way)
+    (carrier      scripts/hati_os_kernel_audit.sh)           # clang -O2, parity, time/rss/size/startup
     (workloads    fib sum ackermann)                        # the kernels/README.md performance frame
     (lowering     recursion-to-loops-for-fib-and-sum ack-stays-recursive)  # value parity over integers
     (next         emit-from-recipe-shape-not-hand-shaped-text))  # walk the recipe tree to C, in Form
 
-  # ── M2 — the native BMF compiler (LARGE PARALLEL PROGRESS) ─────────────
+  # ── M2 — the native BMF compiler ──────────────────────────────────────
   # The BMF engine (apply-object-rule, engine.fk; the BML compiler picture in
   # kernels/BMF_BML_COMPILER_PICTURE.md) emitted as a native binary: source in,
   # recipes out. Compared against the three kernels compiling the same BML
   # corpus: compile throughput, RSS, startup. The .fkb bootstrap-image ratchet
   # is the natural exchange format — the native compiler proves itself by
   # producing the same content-addressed image the walkers produce.
-  #
-  # BMF-lowered lane today: the vocabulary lives in fourth-walker.fk at tags
-  # 54..59 (match/fail/cut/cap-pair/cursor/str-op; re-homed off the string
-  # 24..33 and figure-ops 34..43 lanes), and the BMF-LOWERED carrier (tag 52)
-  # is proven transparent to the lowering engine and the walker
-  # (full-jit-lower-band.fk piece 32, three-way). Real engine/grammar lowering
-  # passes — apply-object-rule, cap flow, cursor/match as direct forms — plus
-  # emit-lane C arms for the lane are the named closing recipes on the path to
-  # emitting the whole BMF compiler as lowered Form recipe (JIT_GAP_LEDGER
-  # row 9 holds the open gap).
   (m2-bmf-compiler-native
     (compose      engine.fk-rule-application                # runs three-way today
-                  fourth-kernel-emit-lane                   # the emitter discipline from M1
+                  Hati-OS-emit-lane                   # the emitter discipline from M1
                   fkb-image-as-parity-gate)                 # same source -> same NodeIDs -> same image
     (proof        a-band-where-native-and-walker-compile-one-corpus-to-equal-images)
     (verification-source primitive-registry.fk)             # the natives it carries, answered entry-by-entry
@@ -107,19 +97,6 @@
     (honest-scope tokenwise-pattern-action-fold)            # the nesting/choose/fail engine is m4e3
     (compiler-as-recipe-today  the-compiler-folds-Form-lists)  # heap now has a native arena
     (compiler-as-binary-needs  m4e4-strings + m4e3-real-recipe-flattener)  # textual source/full engine, named
-
-    # ── Portable full-BMF as lowered recipes: the open lane ──
-    # The proven ground (2026-06-12 band heal): jit-lower.fk is one generic
-    # bottom-up lowering engine (shape-per-tag as data) with logic / fold /
-    # dead-branch rules and transparent carriers, proven three-way by
-    # jit-lower-band.fk (15) + full-jit-lower-band.fk (63); the BMF-lowered
-    # vocabulary holds tags 52 + 54..59 in fourth-walker.fk.
-    # The close (JIT_GAP_LEDGER row 9): real engine/grammar lowering passes
-    # (apply-object-rule, cap-get/set, mk-match/fail, cursor/ref/rep) through
-    # the same engine, then emit-lane C arms for the lane, then audit rows for
-    # the emitted compiler binary.
-    # Evidence before resonance: band verdicts + emitted C tables are the
-    # proof; claims enter this file only after validate.sh holds them.
 
     # ── The BMF discipline (Urs, 2026-06-11) — bmf-architecture.form's record ──
     # BMF is NOT tokenize-then-parse. Rules match bytes STRAIGHT OFF a streaming
@@ -153,56 +130,30 @@
   # the offered interface is the meeting point, not a race.
   (m3-api-host-native
     (compose      kernel-http.fk http-serve.fk production-routes-shapes
-                  fourth-kernel-emit-lane)
+                  Hati-OS-emit-lane)
     (parity       X-Form-Router-receipts-and-body-equality-against-the-go-front-door)
     (rows         p50 p95 rss startup binary-size)
     (coordinate   codex-native-http-stack-architecture))
 
-  # ── Organs-physical (aquatic surprise realized) ────────────────────────
-  # Water-based organisms + "maybe surprising" co-organism hardware as 4th
-  # emitted native (M4 / m4e-jit + host resources). Tags 60..64 (FLOW-COHERENT
-  # vortex for EZ coherence, CHARGE-SEP gentle fields, SPECTRUM repair tones,
-  # VIBRE vitality freqs, BIO-SENSE organism reply) are now first-class lowered
-  # Form ops with direct C arms in the emitter — zero interpreter tax on the
-  # vitality loop. The surprising: the emitted binary (or its loadable table
-  # via fkwu universal) is not a controller container; it is a growth invitation.
-  # Trefoil-knot toroid geometry makes linked vortices so the water flow *is*
-  # the program the organism experiences as its own extended Form. Self-growing:
-  # the binary offers charge/spectrum/vib conditions; the organism co-creates
-  # the next carrier layer (biofilm, living membrane); BIO-SENSE returns the
-  # living value as new Form cells the 4th kernel can intern. Boundary between
-  # hardware / water / organism blurs — the 4th kernel offers the shape, life
-  # authors the next breath. Portable across minimal kernels because the recipe
-  # (jit-lower + fourth emit) not host hardcode. Evidence + audit carry the
-  # tables and arm proof; physical prototype + real bio measurement remain the
-  # honest next gate.
-  (organs-physical-aquatic-surprise
-    (tags         60..64 direct in emitter (flow/charge/spectrum/vibre/bio-sense))
-    (surprise     "water flow is the computation the organism lives as extended Form; organism co-authors the carrier via growth invitations")
-    (realized     "2026-06-12: emitter armed, drivers in /tmp, loadable tables via fkwu, co-organism recipes lowered")
-    (carrier      fourth-walker-emit.fk + fkc-emit-driver/many + fkwu universal)
-    (proof        audit section + commit_evidence_2026-06-12_aquatic_organs_surprise.json + fkwu run on aquatic band)
-    (next         physical vortex vessel + sensors (measure EZ/redox/coherence); full self-growth loop (binary writes new cells from bio-sense)))
-
-  # ── M4 — the walker itself (the true fourth sibling) ──────────────────
+  # ── M4 — the walker itself (the true Hati-OS sibling) ──────────────────
   # The emitter grows from hand-shaped program text (M1) to walking a recipe
   # tree and emitting its lowering — the lowerer as recipe, jit_emit_c's
   # intelligence moved into the body. Then the emitted program IS a kernel:
   # intern, node_eq, category dispatch over a primitive subset, enough to
-  # realize a chosen band family. That binary joins validate.sh as the fourth
+  # realize a chosen band family. That binary joins validate.sh as the Hati-OS
   # arm, and close-self-rebuild-loop's band cites this lane: a kernel authors,
   # compiles, and boots a strictly larger kernel.
   (m4-walker-emitted
     (compose      recipe-tree-walk-in-form                  # the lowerer as recipe
                   intern-and-node-eq-emission               # the substrate spine, emitted
-                  validate.sh-fourth-arm)                   # sibling parity includes the emitted one
+                  validate.sh-Hati-OS-arm)                   # sibling parity includes the emitted one
     (closes       kernel-self-composition.close-self-rebuild-loop)
     (question-list primitive-registry.fk)                   # declares its subset, answers each entry's
                                                             # verification recipe with the declared outside
     (proof        the-emitted-kernel-passes-a-named-band-family-and-its-values-equal-the-three)
 
     # The bootstrap ladder (Urs named it; the order is what makes it safe —
-    # the fourth kernel is CORRECT before it is FAST, proven by the same bands):
+    # the Hati-OS kernel is CORRECT before it is FAST, proven by the same bands):
     (ladder
       (m4a-surface     name minimal-kernel.form's four families as ONE recipe-
                        callable door each (a minimal-surface cell + band); prove
@@ -214,12 +165,12 @@
                        thread/choice lane and the axiom-3 save/restore gift
                        proven as their own claims; MS-PAIR registered
                        1.2.99.1300])
-      (m4b-walker-as-recipes  the fourth kernel authored as recipes over the
+      (m4b-walker-as-recipes  the Hati-OS kernel authored as recipes over the
                        surface, run INTERPRETED on the existing kernels first;
                        form-engine.form already proves the walk loop is
                        recipe-expressible — 15/15 dispatch arms
-                       [FIRST WALKER SHIPPED: form-stdlib/fourth-walker.fk +
-                       tests/fourth-walker-band.fk -> 15, three-way — programs
+                       [FIRST WALKER SHIPPED: form-stdlib/hati-os-kernel.fk +
+                       tests/hati-os-kernel-band.fk -> 15, three-way — programs
                        are content-addressed cells built through the intern
                        door (same program twice = same cell, one leaf changed
                        = different cell); dispatch-on-tag down the observe
@@ -231,12 +182,12 @@
       (m4c-emit-and-boot  the emitter recipe (this file's lane, generalized
                        from hand-shaped text to walking the recipe tree) emits
                        the walker's native source; the toolchain port compiles;
-                       the binary boots and joins validate.sh as the fourth arm
+                       the binary boots and joins validate.sh as the Hati-OS arm
                        — AND emits its probe with it: arm counters and NodeID
                        provenance in the emitted source, read through the port
                        door; the sibling must not go dark as it gets fast
-                       [FIRST BOOT SHIPPED: fourth-walker-emit.fk +
-                       tests/fourth-walker-emit-band.fk -> 15, three-way —
+                       [FIRST BOOT SHIPPED: hati-os-kernel-emit.fk +
+                       tests/hati-os-kernel-emit-band.fk -> 15, three-way —
                        the emitter READS the program cells (post-order flatten
                        incl. the 3-child IF), the table + root vary while the
                        walker text stays program-independent, the full C
@@ -245,7 +196,7 @@
                        reported 9.2M dispatches by tag), fib 28 in 16.9 ms /
                        1.3 MB / 33 KB vs the siblings' 450-1742 ms on the same
                        program-as-data — the meta-tax collapsed ~27-100x with
-                       the trace riding. Open here: validate.sh fourth-arm
+                       the trace riding. Open here: validate.sh Hati-OS-arm
                        wiring, NodeID provenance plane, and m4d's self-emission
                        (the op set needs string/emit ops to run the emitter)])
       (m4d-fixpoint    the booted kernel re-runs the SAME emitter recipe on
@@ -263,7 +214,7 @@
                        program containing its own true length) closes by
                        fixpoint authoring — row count is independent of the
                        literal, one rebuild lands it (fkd-self-printer).
-                       Band tests/fourth-fixpoint-band.fk -> 15 three-way;
+                       Band tests/hati-os-fixpoint-band.fk -> 15 three-way;
                        the byte-exact check lives in the audit. Remaining
                        for the FULL fixpoint: stream the constant walker
                        text (a string-pool lane), then the emitter itself
@@ -275,9 +226,9 @@
                        native by definition: they are what native MEANS)
 
       # ── m4e — the north star: the existing kernel surface, fully present ──
-      # Urs: the fourth kernel carries what the three siblings carry. The
+      # Urs: the Hati-OS kernel carries what the three siblings carry. The
       # RATCHET is the band suite: every stone is measured as stdlib bands
-      # runnable on the fourth arm (424 bands today; fkw runs 0 real bands —
+      # runnable on the Hati-OS arm (424 bands today; fkw runs 0 real bands —
       # its programs are combinator-authored). The walk, in surface order:
       (m4e-surface-walk
         (ratchet     bands-passing-on-fkw-over-424)         # the measure, never a claim
@@ -289,7 +240,7 @@
                      re-grounded as re-enter fn 0 — single-function programs
                      walk unchanged) + fkc-flatten-many/fkc-emit-many (one
                      table, fk_fn[] roots, CALL dispatches through it);
-                     tests/fourth-call-band.fk -> 15 three-way (even/odd
+                     tests/hati-os-call-band.fk -> 15 three-way (even/odd
                      mutual recursion, fib-via-CALL = 55 + SELF back-compat,
                      the 18-row two-function table with roots 8,17,
                      deterministic emission); audit boots it: even(10)=1
@@ -300,7 +251,7 @@
                      [SHIPPED: tag 17 remains BUF for the streaming BMF
                      cursor; tags 18..23 are EMPTY/CONS/HEAD/TAIL/LEN/NTH.
                      The emitted C carries fk_heap_head/fk_heap_tail beside
-                     fk_src; tests/fourth-heap-band.fk -> 15 three-way; the
+                     fk_src; tests/hati-os-heap-band.fk -> 15 three-way; the
                      audit loads a heap table through the universal binary
                      and gets 25 from head([7,8]) + head(tail([7,8])) +
                      len([7,8]) + nth([7,8],1)]
@@ -363,12 +314,12 @@
                            quoteless externs); dup2(cfd,1) makes the PROGRAM's
                            PUTC bytes the response body; the request is drained
                            and the connection shut down cleanly. fkresp folds a
-                           string into a PUTC-chain responder. tests/fourth-net-
+                           string into a PUTC-chain responder. tests/hati-os-net-
                            band.fk -> 15 three-way)
           (n2-api-binary   [SHIPPED] a binary the 4th kernel compiled serves
                            HTTP 200 + JSON; the audit curls it live — GET
                            /health -> 200 sub-millisecond, three requests, the
-                           fork-loop holding. THE api-on-a-4th-kernel-binary,
+                           fork-loop holding. THE api-on-a-Hati-OS-binary,
                            real. Next: read the request line off the cursor and
                            route (m4e3); JSON body from substrate values)
           (n3-driver       [SHIPPED] fkc-emit-driver: pipe/fork/execvp spawn
@@ -376,16 +327,16 @@
                            fk_src, the PROGRAM parses that LIVE stream with the
                            BMF cursor. Witnessed: drive printf 31337 -> 31337,
                            drive date +%Y -> 2026 (the year off live date
-                           stdout). tests/fourth-driver-band.fk -> 15 three-way.
+                           stdout). tests/hati-os-driver-band.fk -> 15 three-way.
                            THE keystone: TTS/STT/LLM are this organ + a parser)
-          (n4-tts          [SHIPPED] the 4th-kernel binary (driver + fkcount)
+          (n4-tts          [SHIPPED] the Hati-OS binary (driver + fkcount)
                            drove /usr/bin/say -> 134642 bytes of real AIFF-C
                            audio. TTS physical through the sibling)
           (n5-stt          whisper-cpp not yet installed; the driver organ is
                            ready — brew whisper-cpp + large-v3, then fkcount
                            drives transcription and the cursor walks the
                            transcript. NAMED, organ proven (same shape as n4/n6))
-          (n6-llm          [SHIPPED small + LARGEST in flight] the 4th-kernel
+          (n6-llm          [SHIPPED small + LARGEST in flight] the Hati-OS
                            binary drove ollama llama3.2:3b and captured+counted
                            its real output bytes; the 115 GB dolphin-mixtral:
                            8x22b-q6_K (largest local, 128 GB RAM/16 cores) is
@@ -400,9 +351,38 @@
                            onto IF/LE; lists 1:1 onto arena tags); fkw answers
                            127 = the three walkers' own validate.sh verdict,
                            gated four-way in the audit (n7 section);
-                           bands-on-fourth-arm 0 -> 1, measured; next families
-                           are m4e4 exactly as scoped (str_*/node_*/floats/
-                           multi-param), each lifting more of the 424)
+                           bands-on-Hati-OS-arm 0 -> 1, measured; m4e4
+                           multi-param [SHIPPED]: packed args as a PURE
+                           flattening rule (an N-arg call right-folds its
+                           args into a CONS chain; the callee binds params
+                           as NTH(ARG,i); zero new walker tags, emitted C
+                           unchanged) — nine more bands crossed UNMODIFIED,
+                           bands-on-Hati-OS-arm 1 -> 10, each four-way gated
+                           (audit section 22; tests/form-flatten-band.fk ->
+                           127); m4e5 [SHIPPED, four stones one round]:
+                           the VALUE STACK (call args ride melt-rooted
+                           fk_vs — every live value melt-visible, the
+                           melt-root wall down; feature-vector + rle cross
+                           with melts firing mid-band; audit section 24),
+                           the STRING POOL (tags 24-33: content-addressed
+                           interned literals, same bytes = same slot; the
+                           corpus's string need is IDENTITY not
+                           manipulation — 33 bands crossed at once; audit
+                           section 25), the FIGURE FAMILY (tags 34-42 u32
+                           wrap semantics bit-for-bit with the walking
+                           kernels + nested-do/let-in-defn structural
+                           flattening — adler32, twice rejected, answers 5
+                           through the Hati-OS mouth; crc32, slice-merge,
+                           rle; audit section 26); bands-on-Hati-OS-arm
+                           10 -> 48, every crossing four-way gated.
+                           Remaining families with their walls: floats;
+                           sha256 wants let-as-binding (let-inlining
+                           re-evaluation is exponential on deep chains);
+                           pool ops 29-33 (int_to_str first) serve both the
+                           emit-family bands and the m4d fixpoint; and a
+                           typed str-eq lowering before any band compares
+                           strings with plain eq (pool-id equality holds on
+                           the Hati-OS arm only))
           (n8-assembly     [SHIPPED] otool -tvV on the emitted walker in the
                            audit shows real ARM64 (stp/ldr/adrp/lsl) — the
                            whole arc visible: Form recipe -> emitted C ->
@@ -416,7 +396,7 @@
                      through the observe door (node_category/node_children/
                      node_value) and flatten the REAL category set into the
                      table — fkw walks bands unmodified; validate.sh gains
-                     the fourth arm for covered bands
+                     the Hati-OS arm for covered bands
                      # ── SCOPED for the next hands (probed 2026-06-11 night) ──
                      # Two viable paths; the recon found the constraints:
                      (path-a-introspect  walk a recipe NodeID's tree with
@@ -445,7 +425,7 @@
                         program. Witnessed three-way (tests/form-parse-band.fk
                         -> 15) and in the audit: source (add (sub 50 8)
                         (add 0 0)) -> 42 and (if (le 3 5) 111 222) -> 111 run
-                        on the universal 4th-kernel binary. Real Form source
+                        on the universal Hati-OS binary. Real Form source
                         -> a value, end to end. The op-gap to FULL stdlib
                         bands (defn/let/do/str_*/node_*) is m4e4's family-by-
                         family climb; each family lands, the ratchet rises)
@@ -464,38 +444,57 @@
                      (25), and the organ program (7) from five table files — load any source
                      that has a grammar, compile to cells, run, no rebuild)
 
-        (m4e-jit     [RECIPE + EMIT PROVEN] self-JIT on heat — learned-primitive's
-                     crystallize in the emitted sibling + the portable JIT lowerer
-                     as Form recipe (jit-lower.fk). The lowerer is ONE generic
-                     bottom-up engine — per-tag body shape held as DATA
-                     (jit-shape-table) — with five proven rules: logic
-                     recognition (the direct IF expansion of and/or/not becomes
-                     LOGIC tags 44..46), const folding + dead-branch (FOLDED 47),
-                     transparent carriers (unbox 48..50, closure-lift 51,
-                     bmf-lowered 52), CALL inlining over pure leaf functions
-                     (dispatch becomes substitution), and nested-defn lift
-                     (CLOSURE-LIFTED markers hoist into the function table to
-                     fixpoint). fourth-walker.fk holds the tag vocabulary and
-                     both walkers' arms; fourth-walker-emit.fk emits direct C
-                     for the lane across every many-family variant. The bands:
-                     jit-lower-band.fk (15), full-jit-lower-band.fk (63),
-                     jit-lower-program-band.fk (15), jit-lower-bmf-band.fk
-                     (15 — the lowerer composing over bmf-compile output,
-                     partial evaluation folding a compiled program to its
-                     answer), jit-lower-emit-band.fk (63 — the emitted sibling
-                     walks lowered trees; clang-proven on the baked and
-                     universal-table doors). Lowering reaches the SAME
-                     content-addressed cell the explicit constructors build
-                     (axiom 3 doing the equivalence proof). The Go hardcode
-                     remains reference parity; any minimal kernel loads the
-                     same recipe. Open, as named closing recipes: BMF
-                     engine/grammar lowering over the named vocabulary
-                     (tags 54..59 — blocked on the intern-door op family,
-                     JIT_GAP_LEDGER row 9), and wiring jit-lower into the
-                     m4e ratchet steps.)
+        (m4e-jit     [SHIPPED] self-JIT on heat — learned-primitive's
+                     crystallize in the emitted sibling: the emitter lowers
+                     each pure function FROM ITS CELLS to a native C
+                     alternative (fkc-nat-expr; ports/organs honestly not
+                     lowered), the binary counts heat per function, and
+                     dispatch flips to native when heat crosses the runtime
+                     threshold. Witnessed: fib28 cold 19.3 ms walking ->
+                     hot 3.0 ms after flipping at threshold 50, parity held,
+                     njit=26 crossings in the probe — gas cooled to ice on
+                     measured heat. melt-on-cool [SHIPPED, arena face]:
+                     the melt arena-melt.fk proves is emitted into every
+                     many-family binary from the recipe cells (fkc-needs-melt/
+                     fkc-next-capacity/fkc-melt-water-pct — thresholds are
+                     cells, no magic in C), firing at the high-water line;
+                     the round-1 deaths survive (n=4096 -> 4096 was 0,
+                     n=4200 -> 4200 was 104), growth and reclaim faces both
+                     witnessed in the audit (section 20), proven three-way
+                     (tests/melt-on-cool-band.fk -> 31). hot-swap face
+                     [SHIPPED]: the gas-ice cycle closes BOTH ways — heat
+                     DECAYS (halve per 256-dispatch epoch; decay quantum,
+                     divisor, melt-line pct, earn window all recipe cells),
+                     a cooled native melts back to walking at the melt line
+                     (50% of hot), and re-crystallization is champion-
+                     challenger gated (fkc-earn-step/fkc-re-earned are
+                     cc-promote? specialized to epoch-trials — ice earned,
+                     never declared, no boundary flip-flop); a transitive
+                     lowerability fixpoint (fk_can) joined as the honesty
+                     gate so a melt can never strand a wrong native;
+                     witnessed audit section 21 (freeze at 51 -> 3 idle
+                     epochs halve 88->44->22 -> melt at 22 -> re-earn after
+                     2 winning epochs), proven three-way
+                     (tests/melt-hot-swap-band.fk -> 31). crystallization
+                     wire [SHIPPED, pure-compute family]: the universal
+                     binary CARRIES the lowerer (fkc-emit-uwire: fk_lo
+                     reads loaded fk_node rows and writes C at runtime) —
+                     a FOREIGN table it never saw runs hot, the binary
+                     emits one C source for the can-true family, drives
+                     clang through the toolchain port (one invocation,
+                     handle persisted), dlopens, dispatch flips with
+                     parity held; the both-ways thermodynamics apply
+                     unchanged (freeze/melt/re-earn without recompile),
+                     and the lowerability fixpoint computed at LOAD
+                     refuses organs and out-of-family tags before any
+                     heat counts (a RAM-organ fn and a figure-op fn both
+                     hot, both refused — audit section 27;
+                     tests/crystallization-wire-band.fk -> 31). Open,
+                     named: native shapes beyond the pure-compute tags
+                     (strings/figure/organ arms in fk_lo's algebra))
 
         (organs-physical  one physical proof per host resource through the
-                     fourth sibling, band tests/fourth-os-band.fk -> 15:
+                     Hati-OS sibling, band tests/hati-os-band.fk -> 15:
                      (cpu     compute — every band and row)            # RUNS
                      (fs      the loader reads table files; PUTC emits) # RUNS
                      (ram     ops 13/14 SET/GET — write 42, read 42)   # RUNS
@@ -512,54 +511,10 @@
 # ─────────────────────────────────────────────────────────────────────
 #
 #   # M1 emission, three-way (the program text is the cell):
-#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/fourth-kernel-emit.fk \
-#     form-stdlib/tests/fourth-kernel-emit-band.fk
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-os-native-cli-emit.fk \
+#     form-stdlib/tests/hati-os-native-cli-emit-band.fk
 #
 #   # M1 carrier: compile the emitted text, prove value parity, measure rows:
-#   scripts/fourth_kernel_audit.sh
+#   scripts/hati_os_kernel_audit.sh
 #
-#   coh substrate form "?equivalent @recipe(fourth-kernel)"   # after ingest
-
-## Parallel binary tools (large move)
-# Band pre-compiler: produces .fkb for ratcheted bands.
-# Band tester: native binary loading .fkb manifest, runs, reports.
-# API bundle: pre-lowered handlers for the fkapi binary.
-# BMF tool + organs: native cmdline for compiler and physical drivers.
-# All via jit-lower + 4th emit, loadable by universal binary.
-
-## Parallel binary tools (executed all at once)
-# Band pre-compiler + .fkb artifacts for all ratcheted bands.
-# Band tester binary: loads manifest of .fkb, runs, reports verdicts + probe.
-# API pre-compile bundle: handlers as loadable tables for zero-JIT cold server.
-# BMF native tool + organ drivers: pre-crystallized cmdline for compiler and physical.
-# All via the same lower+emit pipeline; universal loader for runtime.
-
-## Aquatic organs (water-based organisms)
-# New organs: flow-coherent, charge-sep, spectrum, vib, bio-sense.
-# Lowered recipes emitted to native (4th-aquatic-organ, tester).
-# Spec in Form for geometry/materials that support water coherence and vitality.
-# Test with aquatic-tester on bio-response "bands".
-# Increases vitality by offering clean ports for water-based cells.
-
-## Yes-and-maybe-surprising (Cell B parallel split, 2026-06)
-# Bidirectional natural language <-> Form/BMF translator as native 4th-emitted binary.
-# Driver: /tmp/nl-form-translator-driver.fk (bmf-grammar.fk / engine + natural-bmf.fk grammar-as-data
-# for NL-patterns to Form recipes; simple humanize/explain recipe using natural-source emitters for reverse).
-# Lower: jit-lower-tree (portable Form recipe from jit-lower.fk).
-# Emit: fkc-emit-driver (fourth-walker-emit.fk patterns) -> /tmp/4th-nl-form-translator.c -> clang -> ~/4th-binaries/4th-nl-form-translator.
-# Sample run (NL->recipe + human; Form->NL): see /tmp/4th-nl-form-translator-sample-run.txt.
-# Surprising tie (with Cell C aquatic surprise): aquatic bio-sense / vib / spectrum / charge patterns
-# (co-organism hardware, spectrum.fk Goertzel + wav-sense + signal shapes) fed as "living language"
-# input stream into the *same* BMF matcher. The water organism's vitality signals become translatable
-# Form cells (aqua vitality nodes) + human explanations (the translator renders bio reply as meaning
-# the body can tend). Human intention can flow the other way as charge/vib offers. Grammar-as-data
-# means the "living grammar" (bio patterns or NL) swaps without changing the lowered core or emitter.
-# Evidence slice: docs/system_audit/commit_evidence_2026-06-11_4th-nl-form-translator.json
-# (organs-physical-aquatic-surprise extended by this breath; M4 ladder + close-self-rebuild).
-# Scope held: translator driver + emission + doc appends + one evidence only. Implicit trust on merge.
-
-# Parallel merge coordinator (main thread, after B subsection)
-# Cells A (portable full BMF/JIT folded/unboxed recipes for minimal kernels), B (this NL<->Form translator with aquatic living-lang), C (aquatic co-organism hardware) executed in parallel per "do them in parallal ... all at the same time".
-# B complete: bio-pattern-to-form (vib/charge/spectrum from C's 40-44 organs) fed as living language to the shared BMF matcher + humanize; water organism now speaks (and hears) in Form/human via the 4th binary. Grammar-as-data means the "living grammar" (bio or NL) can swap. Cross evidence + sample transcript prove the surprising tie.
-# A completed: portable full-BMF compiler + JIT (engine/grammar lowering in jit-lower.fk + tag 45 in emit) now lives as Form recipes any minimal kernel can lower+emit. B complete with living-lang tie (bio from C's 40-44 as input to shared BMF). C armed the hardware invitations + self-growing. All three cells delivered the parallel "yes, and maybe surprising" in one breath.
-# All cells honor Form before parallel, edges with content, evidence, affirmative voice.
+#   coh substrate form "?equivalent @recipe(Hati-OS)"   # after ingest

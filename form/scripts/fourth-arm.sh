@@ -5,7 +5,7 @@
 # walker binary (fkwu) whose C source is emitted entirely by Form recipes
 # (fourth-walker-emit.fk, fkc-emit-universal). Bands listed in
 # fourth-arm-bands.txt — each one already gated four-way by
-# scripts/fourth_kernel_audit.sh — run on it as a fourth leg: the band's
+# scripts/hati_os_kernel_audit.sh — run on it as a fourth leg: the band's
 # UNMODIFIED source is flattened once into a node-table file (the
 # pre-compiled artifact), cached by content, and the binary answers in
 # milliseconds. A band's wall time stays max(legs); the fourth witness is
@@ -23,8 +23,8 @@ FOURTH_MANIFEST="fourth-arm-bands.txt"
 # change rebuilds exactly what it touches.
 FOURTH_CHAIN=(
     form-stdlib/minimal-surface.fk
-    form-stdlib/fourth-walker.fk
-    form-stdlib/fourth-walker-emit.fk
+    form-stdlib/hati-os-kernel.fk
+    form-stdlib/hati-os-kernel-emit.fk
     form-stdlib/form-parse.fk
     form-stdlib/form-flatten.fk
     form-stdlib/fourth-shim.fk
@@ -47,8 +47,8 @@ build_fourth() {
     if [[ ! -x "$out" ]]; then
         echo "  building fourth kernel (fkwu)..." >&2
         d="$(mktemp -d "${TMPDIR:-/tmp}/form-fourth.XXXXXX")"
-        cat form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk \
-            form-stdlib/fourth-walker-emit.fk > "$d/uni-driver.fk"
+        cat form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk \
+            form-stdlib/hati-os-kernel-emit.fk > "$d/uni-driver.fk"
         printf '(print "==UNI==")\n(print (fkc-emit-universal))\n(print "==END==")\n' >> "$d/uni-driver.fk"
         "$GO_BIN" "$d/uni-driver.fk" 2>/dev/null > "$d/uni.out" || true
         sed -n '/^==UNI==$/,/^==END==$/p' "$d/uni.out" | sed -e '1d' -e '$d' > "$d/uni.c"

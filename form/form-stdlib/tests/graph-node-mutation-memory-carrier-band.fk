@@ -1,0 +1,7 @@
+; tests/graph-node-mutation-memory-carrier-band.fk -- mutable graph nodes over memory.
+;
+; preludes: form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk
+;
+(do
+    (let verdict (gn-mutation-test (carrier-memory) ""))
+    (if (eq verdict 1111111) 1 0))

@@ -17,19 +17,29 @@
 
 (do
     (let dir (str_concat (temp_dir) "/graph-node-mutation-carrier-band.d"))
+    (let agree-dir (str_concat (temp_dir) "/graph-node-mutation-carrier-band-agree.d"))
+    (let reopen-dir (str_concat (temp_dir) "/graph-node-mutation-carrier-band-reopen.d"))
     (fs_rmdir dir)
+    (fs_rmdir agree-dir)
+    (fs_rmdir reopen-dir)
 
     (let mem-verdict (gn-mutation-test (carrier-memory) ""))
     (let file-verdict (gn-mutation-test (carrier-file) dir))
+    (let file-agree-verdict (gn-mutation-test (carrier-file) agree-dir))
 
     (let mem-ok (if (eq mem-verdict 1111111) 1 0))
     (let file-ok (if (eq file-verdict 1111111) 10 0))
-    (let agree-ok (if (eq mem-verdict file-verdict) 100 0))
+    (let agree-ok (if (eq mem-verdict file-agree-verdict) 100 0))
 
     (let cf (carrier-file))
-    (let reopened (storage-open cf dir))
+    (let reopen-seed (gn-mutation-test cf reopen-dir))
+    (let reopen-dep (if (eq reopen-seed 1111111) "" ""))
+    ; storage-open cf dir: reopen the same durable carrier path after mutation.
+    (let reopened (storage-open cf (str_concat reopen-dir reopen-dep)))
     (let idea-ok (if (eq (gn-node-exists? cf reopened "idea:mutable") 1) 1000 0))
     (let delete-ok (if (eq (gn-node-exists? cf reopened "spec:mutable") 0) 10000 0))
 
     (fs_rmdir dir)
+    (fs_rmdir agree-dir)
+    (fs_rmdir reopen-dir)
     (sum (list mem-ok file-ok agree-ok idea-ok delete-ok)))

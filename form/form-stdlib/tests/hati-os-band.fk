@@ -1,6 +1,6 @@
-; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk
 ;
-; fourth-os-band — the Form-OS face of the fourth sibling, proven three-way:
+; hati-os-band — the Form-OS face of the Hati-OS sibling, proven three-way:
 ; the UNIVERSAL walker (no baked program — it loads a table FILE through the
 ; fs port and runs it: one binary, many programs), the self-JIT lane (native
 ; alternatives lowered FROM the cells, heat-flipped at runtime), and the organ

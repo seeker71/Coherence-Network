@@ -3,7 +3,7 @@
 ; content-addressed cons, and the one mutation is the caller repointing its root
 ; (linux-as-recipes.form memory.gc-compaction; core-axioms.form axiom-3).
 ;
-; The model mirrors the emitted sibling's arena (fourth-walker-emit.fk, m4e2):
+; The model mirrors the emitted sibling's arena (hati-os-kernel-emit.fk, m4e2):
 ; fk_heap_head/fk_heap_tail are rows of (head, tail); fk_hp is the bump pointer;
 ; slot 0 is the null sentinel. The sibling packs each boxed value into one
 ; machine word — figure v as v<<1, pointer p as (p<<1)|1; the model keeps the
@@ -32,7 +32,7 @@
 ; The sibling's carrier opens at 4095 cells (4096 slots, slot 0 the sentinel).
 ; Round 1 measured the bump-only carrier dying past the line (n=4096 wrapped
 ; the root onto the sentinel -> LEN 0; n=4200 tore the chain -> LEN 104).
-; The emitted CONS door now carries this melt (fourth-walker-emit.fk's
+; The emitted CONS door now carries this melt (hati-os-kernel-emit.fk's
 ; fkc-melt-* tissue, mirrored on am-live/am-melt/am-measure): at the
 ; high-water line the walker melts live cells into fresh space and grows
 ; the carrier only when the live set crowds it — measured live: chain

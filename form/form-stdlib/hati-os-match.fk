@@ -1,6 +1,6 @@
-; fourth-match.fk — a wake-word matcher as a fourth-walker PROGRAM: does the
+; hati-os-match.fk — a wake-word matcher as a Hati-OS kernel PROGRAM: does the
 ; captured stream (fk_src) contain a fixed needle? The Form decision cell of
-; the meeting companion — whisper (STT) fills fk_src, this 4th-kernel binary
+; the meeting companion — whisper (STT) fills fk_src, this Hati-OS binary
 ; decides "addressed to me?", and on 1 the orchestrator drives ollama + say.
 ;
 ; Built on the streaming-cursor discipline (op 17 BUF, no tokenizer): a scan

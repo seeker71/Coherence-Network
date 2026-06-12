@@ -1,5 +1,5 @@
 ; bmf-mini.fk — a grammar-AS-DATA compiler: source tokens folded through rule
-; cells into a fourth-walker program-as-cells (M2 proof-of-shape; m4e3 seed).
+; cells into a Hati-OS kernel program-as-cells (M2 proof-of-shape; m4e3 seed).
 ;
 ; A RULE is (token, op, operand): pattern = the token to match, semantic action
 ; = wrap the accumulator program as (op acc (LIT operand)). A GRAMMAR is a list
@@ -7,7 +7,7 @@
 ; grammar, the accumulator starting at ARG — so a DIFFERENT grammar compiles the
 ; SAME source into a DIFFERENT program. That is the compiler-compiler property:
 ; the grammar is data, not baked. The product is a program-as-cells; the
-; existing emitter (fourth-walker-emit.fk) turns it into a native binary, so
+; existing emitter (hati-os-kernel-emit.fk) turns it into a native binary, so
 ; grammar + source -> a new binary, end to end.
 ;
 ; This is the tokenwise face of BMF (pattern-action rules folded over source).

@@ -14,7 +14,7 @@
 ;   2   THE VOID IS A VALUE, NOT AN ERROR — the absence (empty) has zero
 ;       extent and is constructible; presence has extent: the ground state
 ;       is a first-class value (axiom 1). (The emitted sibling pins the
-;       stronger void-is-not-zero claim: EMPTY = 1, fourth-heap-band)
+;       stronger void-is-not-zero claim: EMPTY = 1, hati-os-heap-band)
 ;   4   NOTHING IS EVER DESTROYED — a held composition survives composing
 ;       over it, untouched; the past state remains addressable (axiom 3 —
 ;       time is a pointer between immutable presents)

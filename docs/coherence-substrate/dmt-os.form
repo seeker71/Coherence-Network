@@ -26,9 +26,9 @@
 (dmt-os
 
   (lineage
-    (alias-for     the-fourth-kernel-substrate)        # a name/door, not a new thing
+    (alias-for     the-Hati-OS-substrate)        # a name/door, not a new thing
     (proof-band    tests/dmt-signatures-band.fk)        # 31 three-way — the runnable half
-    (grounds-in    core-axioms.form synesthesia.fk minimal-surface.fk fourth-heap-band)
+    (grounds-in    core-axioms.form synesthesia.fk minimal-surface.fk hati-os-heap-band)
     (discipline    evidence-inference-experience-mystery-in-separate-lanes))  # CLAUDE.md
 
   # ── LANE 1: EVIDENCE — what the literature MEASURES of the state ──────
@@ -107,14 +107,14 @@
   # violation on (eq (empty) (empty)) (as_int on a List). The void-is-a-value
   # claim was re-grounded to (len (empty))==0 with extent, which holds
   # three-way; the stronger void!=0 identity is pinned by the emitted sibling
-  # (EMPTY=1, fourth-heap-band) where nothing has its own tagged value. The
+  # (EMPTY=1, hati-os-heap-band) where nothing has its own tagged value. The
   # divergence is a lane-2 edge worth a sibling's eq-on-absence pass — named,
   # not hidden, exactly as the void-as-plenum signature would predict the body
   # to handle its own emptiness.
   (found-divergence
     (where    "eq/as_int on the empty list across Go/Rust/TS")
     (resolved-in-band "len-extent claim, three-way clean")
-    (deeper-home "the tagged-ABI void (EMPTY=1) in the emitted fourth kernel")
+    (deeper-home "the tagged-ABI void (EMPTY=1) in the emitted Hati-OS kernel")
     (open     "an eq-on-absence parity pass — a real lane-2 edge"))
 
   (invariant
