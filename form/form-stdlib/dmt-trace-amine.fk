@@ -1,0 +1,53 @@
+; dmt-trace-amine.fk — DMT as its own honest category: an endogenous trace
+; amine, not a gland's hormone.
+;
+; preludes: form-stdlib/core.fk form-stdlib/energy-center-glands.fk
+;
+; The energy-center pack maps one gland per center. DMT does NOT fit that
+; scheme, and saying so IS the honesty: N,N-dimethyltryptamine is an endogenous
+; trace amine synthesised ACROSS tissues (cerebral cortex, choroid plexus,
+; pineal, lung), not the hormone of a single gland. It reuses the ecg cell
+; shape (so it speaks through the same doors) but lives as its own cell, leaving
+; the seven-center table pure.
+;
+; Two lanes, and BOTH carry a within-lane caveat — DMT is where the honest
+; encoder earns its keep:
+;   evidence (~0.7, not 0.9): the AADC -> tryptamine -> INMT -> DMT pathway is
+;     textbook, INMT mRNA is found in cortex/choroid-plexus/pineal, and
+;     endogenous DMT was detected in rat brain and pineal microdialysate (2013,
+;     2019). The caveat that lowers the lane: a 2023 INMT-knockout study still
+;     showed tryptamine methylation, so INMT may NOT be the essential enzyme —
+;     an alternative pathway is open. The physiological ROLE of endogenous DMT
+;     is unestablished.
+;   belief (~0.3, the lowest in the corpus): the pineal "spirit molecule"
+;     hypothesis (Strassman) — DMT released at birth, death, and dream states,
+;     tied to the crown/third-eye. A HYPOTHESIS, explicitly "fact vs myth"
+;     (Barker), not established. Below the chakra-gland correspondences (0.4)
+;     because it is a specific contested claim, not a broad attested system.
+;
+; dmt-contested? is true: the cell flags that even its evidence lane is under
+; live scientific debate — the body naming its own uncertainty.
+
+section [form.bml] {
+    def dmt-cell() {
+        ecg("dmt", "Crown / Third Eye (hypothesised)", "—",
+            "Pineal (hypothesised) + cortex, choroid plexus, lung — synthesised across tissues, not one gland",
+            list("N,N-dimethyltryptamine (DMT)"),
+            "indoleamine trace amine",
+            "enzyme-made (contested): tryptophan decarboxylated by AADC to tryptamine, then double-methylated to DMT — attributed to INMT, but a 2023 INMT-knockout still methylated tryptamine, so the essential enzyme is unsettled",
+            list("INMT", "DDC"),
+            "an endogenous trace amine present in brain, blood, CSF and pineal; its physiological role is unestablished — detection is real, function is open",
+            "the pineal spirit-molecule hypothesis: released at birth, death and dream states (Strassman) — a hypothesis, fact-vs-myth, not established",
+            0.7, 0.3);
+    }
+
+    // the within-evidence-lane honesty: the canonical enzyme itself is contested
+    def dmt-contested?() = true;
+    def dmt-essential-enzyme-settled?() = false;
+
+    // speaks through the same doors as a center cell
+    def dmt-spoken() = ecg-spoken(dmt-cell());
+    def dmt-belief-spoken() = str_concat("Held as hypothesis, fact-vs-myth, not established: ", ecg-energy-fn(dmt-cell()));
+
+    0;
+}
