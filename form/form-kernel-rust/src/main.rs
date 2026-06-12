@@ -6868,8 +6868,8 @@ fn switch_key_from_value(k: &mut Kernel, v: &Value) -> Option<NodeID> {
     }
 }
 
-// bool_int — the comparison family's acknowledgment shape: 0/1 integer
-// states (axiom-1) so eq/lt/node_eq/… answers feed arithmetic on every kernel.
+// bool_int — the truth family's acknowledgment shape: 0/1 integer states
+// (axiom-1) so eq/lt/and/not/node_eq/… answers feed arithmetic on every kernel.
 fn bool_int(b: bool) -> Value {
     Value::Int(b as i64)
 }
@@ -7048,21 +7048,24 @@ fn walk_inner(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
                 }
             }
             RB_LOGIC => match cat.inst {
+                // Logic answers join the comparison family's 0/1 integer
+                // states (axiom-1) — truth has one value shape, so
+                // (mul (and ...) n) flows exactly like (mul (eq ...) n).
                 RLOG_AND => {
                     if !walk(k, a, kids[0], env).as_bool() {
-                        Value::Bool(false)
+                        bool_int(false)
                     } else {
-                        Value::Bool(walk(k, a, kids[1], env).as_bool())
+                        bool_int(walk(k, a, kids[1], env).as_bool())
                     }
                 }
                 RLOG_OR => {
                     if walk(k, a, kids[0], env).as_bool() {
-                        Value::Bool(true)
+                        bool_int(true)
                     } else {
-                        Value::Bool(walk(k, a, kids[1], env).as_bool())
+                        bool_int(walk(k, a, kids[1], env).as_bool())
                     }
                 }
-                RLOG_NOT => Value::Bool(!walk(k, a, kids[0], env).as_bool()),
+                RLOG_NOT => bool_int(!walk(k, a, kids[0], env).as_bool()),
                 _ => panic!("logic: unknown op {}", cat.inst),
             },
             RB_COND => {

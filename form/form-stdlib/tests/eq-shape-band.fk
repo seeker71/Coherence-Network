@@ -1,10 +1,18 @@
-; eq-shape-band.fk — the comparison family's acknowledgment contract: eq/ne/lt/
-; le/gt/ge, node_eq, value_eq, and str_eq answer with the 0/1 integer states
-; (axiom-1, core-axioms.form) on every kernel, so a comparison's answer flows
-; DIRECTLY into arithmetic with bit-identical results — no if-reduction needed.
-; This band deliberately uses mul/sub/lt/le (outside the curated band-verdict
-; subset): feeding comparison answers into arithmetic IS the claim under test.
-; Self-contained — kernel verbs only, no preludes.
+; eq-shape-band.fk — the truth family's acknowledgment contract: eq/ne/lt/
+; le/gt/ge, and/or/not, node_eq, value_eq, and str_eq answer with the 0/1
+; integer states (axiom-1, core-axioms.form) on every kernel, so a truth
+; answer flows DIRECTLY into arithmetic with bit-identical results — no
+; if-reduction needed. This band deliberately uses mul/sub/lt/le (outside
+; the curated band-verdict subset): feeding truth answers into arithmetic
+; IS the claim under test.
+;
+; The casting is intrinsic, both directions, at every door: bool→int at
+; every numeric door (walker math/compare AND native args — true IS 1,
+; false IS 0), int→bool at every truth door (cond/logic — nonzero IS
+; true). No consumer anywhere needs to know which shape arrived — bool
+; operands meet comparisons, orderings, and the float lane through the
+; same coercion.
+; Self-contained — kernel verbs only, no preludes. Verdict 524287.
 (do
     ; c0 — the arena-melt crash shape: an equal eq fed straight into mul.
     (let c0 (if (eq (mul (eq 2 2) 5) 5) 1 0))
@@ -26,15 +34,33 @@
     ; c8 — str_eq and value_eq answer 0/1: positives add to 2, negatives to 0.
     (let c8 (if (eq (add (add (str_eq "a" "a") (value_eq 7 7))
                          (add (str_eq "a" "b") (value_eq 7 "7"))) 2) 256 0))
-    ; c9 — bool OPERANDS coerce to the same 0/1 states inside compare:
+    ; c9 — logic answers feed arithmetic: (and ...)×7 + (or ...)×5 = 12.
+    (let c9 (if (eq (add (mul (and (eq 1 1) (lt 0 1)) 7)
+                         (mul (or (eq 1 2) (eq 2 2)) 5)) 12) 512 0))
+    ; c10 — not is the 0/1 flip, additive: 1 + 0.
+    (let c10 (if (eq (add (not (eq 1 2)) (not (eq 3 3))) 1) 1024 0))
+    ; c11 — bool literals carry axiom-1's states into eq as 1/0: 1 + 1.
+    (let c11 (if (eq (add (eq (gt 3 2) true) (eq false 0)) 2) 2048 0))
+    ; c12 — bool→int is intrinsic in math, no comparison in sight: 5 + 1.
+    (let c12 (if (eq (add (mul true 5) true) 6) 4096 0))
+    ; c13 — int→bool is intrinsic at the truth doors: (if 2 …) takes the
+    ; branch and (and 2 3) normalizes nonzero to the 0/1 states: 1 + 1.
+    (let c13 (if (eq (add (if 2 1 0) (and 2 3)) 2) 8192 0))
+    ; c14 — not flips raw ints through the same door: (not 0) + (not 7).
+    (let c14 (if (eq (add (not 0) (not 7)) 1) 16384 0))
+    ; c15 — the native arg door casts too: a bool indexes a list as 1.
+    (let c15 (if (eq (nth (list 7 8) true) 8) 32768 0))
+    ; c16 — bool OPERANDS coerce to the same 0/1 states inside compare:
     ;      true meets 1, false meets 0, and a comparison's own answer
     ;      meets a bool literal (the theme-resonance shape).
-    (let c9 (if (eq (add (add (eq true 1) (eq false 0))
-                         (add (eq (eq 18 68) false) (eq (eq 5 5) true))) 4) 512 0))
-    ; c10 — the ordering family coerces bools identically: false < true,
+    (let c16 (if (eq (add (add (eq true 1) (eq false 0))
+                         (add (eq (eq 18 68) false) (eq (eq 5 5) true))) 4) 65536 0))
+    ; c17 — the ordering family coerces bools identically: false < true,
     ;       true ≤ 1, true > false = 1+1+1.
-    (let c10 (if (eq (add (lt false true) (add (le true 1) (gt true false))) 3) 1024 0))
-    ; c11 — the float lane meets bools through the same coercion:
+    (let c17 (if (eq (add (lt false true) (add (le true 1) (gt true false))) 3) 131072 0))
+    ; c18 — the float lane meets bools through the same coercion:
     ;       1.0 = true, and 2.5 > true = 1+1.
-    (let c11 (if (eq (add (eq 1.0 true) (gt 2.5 true)) 2) 2048 0))
-    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 c11))))))))))))
+    (let c18 (if (eq (add (eq 1.0 true) (gt 2.5 true)) 2) 262144 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7
+        (add c8 (add c9 (add c10 (add c11 (add c12 (add c13 (add c14
+        (add c15 (add c16 (add c17 c18)))))))))))))))))))
