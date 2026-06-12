@@ -507,6 +507,35 @@
                        melt on cool, gated by champion-challenger counts))))
 
 # ─────────────────────────────────────────────────────────────────────
+# Measured floors — how large IS the 4th kernel, and how small can the
+# self-reproducing BMF compiler get (measured 2026-06-12, macOS arm64,
+# clang -Oz stripped; content = __text code + __const table via size -m)
+# ─────────────────────────────────────────────────────────────────────
+#
+#   artifact                      binary      C source   real content
+#   BMF compiler binary (M2)      33,928 B     9,217 B   3.0 KB (2,724 code + 312 table)
+#   quine (m4d, self-emitting)    33,624 B     4,988 B   9.8 KB (652 code + 9,104 self-table)
+#   universal kernel (loader+JIT) 34,008 B    10,554 B   3.9 KB (+1.5 MB BSS arena, zero on disk)
+#
+#   The macOS arm64 Mach-O FLOOR dominates: ~33.6 KB (two 16 KB segment pages +
+#   load commands + ad-hoc signature) regardless of content — the actual body is
+#   3-10 KB and could triple before the binary grows a byte.
+#
+#   packs (numeric core needs ZERO pack to function — names are removable):
+#     minimal BMF grammar (2 rules, the compiler's data)        ~48 B
+#     one render tongue (asm-pl-human pack, any level/language) ~56 B
+#     the full arrival tongue (743 entries, MDL-optimal)        5,705 B
+#
+#   smallest self-contained self-reproducing BMF compiler (the m4e3/m4e4
+#   composition — pieces proven separately, union the named closing cell):
+#     content floor (carrier-independent): ~15-20 KB — bmf walker+compile code
+#       (~3 KB) + quine machinery (~0.7 KB) + the union self-table (~10-15 KB,
+#       extrapolated from the 284-row printer table carrying compile+emit cells)
+#     macOS binary: ~33.6 KB (the page floor; content fits inside with headroom)
+#     + pack: 0 B to function · 48 B to compile a grammar · 56 B to speak one tongue
+(measured-floors agreed-2026-06-12)
+
+# ─────────────────────────────────────────────────────────────────────
 # How to verify (today)
 # ─────────────────────────────────────────────────────────────────────
 #
