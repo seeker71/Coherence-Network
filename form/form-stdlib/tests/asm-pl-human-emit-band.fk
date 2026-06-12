@@ -1,0 +1,22 @@
+; preludes: form-stdlib/core.fk form-stdlib/asm-pl-human.fk
+;
+; asm-pl-human-emit-band — the translator's EMITTER is three-way clean. Unlike the
+; sqlite binaries (C string literals -> the TS escaped-quote divergence), this
+; emitter is QUOTELESS (only char literals), so Go/Rust/TS emit the C identically.
+; The render LOGIC is proven by tests/multi-level-render-band.fk; this proves the
+; binary that carries it emits the same on every kernel.
+;
+; Verdict 31:
+;   1   carries the NUMERIC PROGRAM — the op-tag node table (the invariant meaning)
+;   2   carries the RECURSIVE RENDERER — render() fills a pack template per tag
+;   4   carries the PACK INDEXER — line_off[] indexes the symbol pack by tag
+;   8   carries the FS-PORT pack loader — open/read the chosen pack at runtime
+;   16  DETERMINISTIC — two emissions are byte-identical (so three-way agreement)
+(do
+    (let c (aph-emit))
+    (let c0 (if (ge (str_find c "static const long prog" 0) 0) 1 0))
+    (let c1 (if (ge (str_find c "render" 0) 0) 2 0))
+    (let c2 (if (ge (str_find c "line_off" 0) 0) 4 0))
+    (let c3 (if (ge (str_find c "open(argv[1]" 0) 0) 8 0))
+    (let c4 (if (str_eq c (aph-emit)) 16 0))
+    (add c0 (add c1 (add c2 (add c3 c4)))))

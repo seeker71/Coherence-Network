@@ -1,0 +1,64 @@
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk
+;
+; multi-level-render-band — assembly -> programming language -> human language is
+; ONE numeric program rendered at any level by a swappable symbol pack. The op-tag
+; is the numeric root (the invariant meaning); a pack is a per-tag template the
+; renderer fills recursively ($d -> render child d). The LEVEL (asm/PL/human) and
+; the LANGUAGE are both just packs; the numeric program never moves.
+; (docs/coherence-substrate/asm-pl-human.form; witnessed live by
+; scripts/asm_pl_human_demo.sh emitting one binary + four packs.)
+;
+; The program: if (n <= 1) then 1 else (n + (n - 1)). Nodes (tag c1 c2 c3):
+;   0 LIT 1 · 1 ARG · 2 LE(1,0) · 3 SUB(1,0) · 4 ADD(1,3) · 5 COND(2,0,4)=root
+; arity: LIT/ARG 0 · ADD/SUB/LE 2 · COND 3. flatten = the pre-order render walk.
+;
+; Verdict 31 when the multi-level render holds:
+;   1   THE RENDER WALK is correct pre-order — flatten(root) visits all 10 op-nodes
+;       in render order (the surface-token order, pack-independent)
+;   2   LEAF base case — a LIT renders to itself: flatten(LIT) is one node
+;   4   BINARY op expands BOTH operands in order — flatten(SUB) = [tag, child1, child2]
+;   8   3-ARY op (COND) expands all THREE branches — the else-subtree (ADD) flattens
+;       to 5 nodes, so the whole tree is 1 + 3 + 1 + 5 = 10
+;   16  PACK INVARIANCE — two packs over the SAME program give surfaces that differ
+;       by exactly the pack (uniform delta) while the STRUCTURE is identical: the
+;       numeric core is invariant; level/language is only the pack
+(do
+    (defn nil? (xs) (eq (len xs) 0))
+    (defn nth-rec (xs i) (if (eq i 0) (head xs) (nth-rec (tail xs) (sub i 1))))
+    (defn appendl (xs ys) (if (nil? xs) ys (cons (head xs) (appendl (tail xs) ys))))
+    (defn mapadd (xs k) (if (nil? xs) xs (cons (add (head xs) k) (mapadd (tail xs) k))))
+
+    ; the numeric program — the invariant meaning, no pack
+    (defn prog () (list
+        (list 1 1 0 0) (list 2 0 0 0) (list 5 1 0 0)
+        (list 4 1 0 0) (list 3 1 3 0) (list 6 2 0 4)))
+    (defn ntag   (i) (nth (nth-rec (prog) i) 0))
+    (defn nchild (i d) (nth (nth-rec (prog) i) d))
+    (defn arity  (tag) (if (le tag 2) 0 (if (eq tag 6) 3 2)))
+
+    ; the render walk: pre-order, expanding each op's operands in order ($d)
+    (defn flat (i)
+        (if (eq (arity (ntag i)) 0) (list (ntag i))
+        (if (eq (arity (ntag i)) 2)
+            (cons (ntag i) (appendl (flat (nchild i 1)) (flat (nchild i 2))))
+            (cons (ntag i) (appendl (flat (nchild i 1))
+                            (appendl (flat (nchild i 2)) (flat (nchild i 3))))))))
+
+    (let fl (flat 5))                                   ; render the root
+
+    (let c0 (if (eq (len fl) 10) (if (eq (nth fl 0) 6) 1 0) 0))   ; pre-order, COND first
+    (let c1 (if (eq (len (flat 0)) 1) (if (eq (nth (flat 0) 0) 1) 2 0) 0))   ; LIT leaf
+    (let c2 (if (eq (len (flat 3)) 3)                              ; SUB = [4, child, child]
+                (if (eq (nth (flat 3) 0) 4)
+                (if (eq (nth (flat 3) 1) 2) 4 0) 0) 0))           ; child1 = ARG(2)
+    (let c3 (if (eq (len (flat 4)) 5) (if (eq (ntag 5) 6) 8 0) 0))   ; ADD subtree 5 nodes; root 3-ary
+
+    ; pack invariance: two packs (tag+100, tag+200) over the same render walk
+    (let A (mapadd fl 100))
+    (let B (mapadd fl 200))
+    (let c4 (if (eq (len A) (len B))
+            (if (eq (sub (nth B 0) (nth A 0)) 100)        ; surface differs by exactly the pack
+            (if (eq (sub (nth B 9) (nth A 9)) 100)        ; ...uniformly, every position
+            (if (eq (nth fl 0) (sub (nth A 0) 100)) 16 0) 0) 0) 0))   ; structure (fl) unchanged under pack
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))

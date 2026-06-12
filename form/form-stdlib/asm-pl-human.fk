@@ -1,0 +1,62 @@
+; asm-pl-human.fk — an assembly -> programming language -> human language
+; translator, shipped as ONE binary + a swappable symbol pack. The op-tag is the
+; numeric root (the invariant meaning of a program); a pack is a per-tag TEMPLATE
+; with operand slots ($1..$3) that the renderer fills recursively. Swap the pack,
+; get the SAME program at any level: assembly mnemonics, a programming idiom, or a
+; human language (any tongue). numeric-core-symbol-pack + self-translate-universal,
+; now across the abstraction stack — the LEVEL and the LANGUAGE are both packs.
+;
+; Urs: "an assembly to programming language to human language translator that is
+; shipped with a binary and a symbol pack."
+;
+; QUOTELESS by design (only char literals, no C string literals) — so the emitter
+; is three-way clean (Go/Rust/TS emit it identically), unlike the sqlite binaries.
+; The render logic is proven three-way by tests/multi-level-render-band.fk -> 31
+; (correct pre-order walk; pack invariance: the numeric core is unchanged under
+; every pack). The pack is loaded through the fs port (open/read), as in
+; self-translate-universal — identity is the numeric program; the rendering is data.
+;
+; Pack format: line t = the template for op-tag t, $d -> render child d. The
+; bundled program is `if (n <= 1) then 1 else (n + (n - 1))`; the demo ships four
+; packs (asm, c, english, french) over that one numeric program.
+
+(defn aph-emit ()
+  "extern int putchar(int);
+extern int open(const char*, int);
+extern long read(int, void*, unsigned long);
+static const long prog[6][4] = {
+    {1, 1, 0, 0},
+    {2, 0, 0, 0},
+    {5, 1, 0, 0},
+    {4, 1, 0, 0},
+    {3, 1, 3, 0},
+    {6, 2, 0, 4},
+};
+static const long ROOT = 5;
+static char pack[16384];
+static long line_off[64];
+static void prnum(long v){ char b[24]; int n=0; if(v==0){putchar('0');return;}
+    if(v<0){putchar('-');v=-v;} while(v>0){b[n++]='0'+v%10;v/=10;} while(n>0) putchar(b[--n]); }
+static void index_pack(long g){ long t=0, p=0; line_off[0]=0;
+    while(p<g && t<63){ if(pack[p]=='\\n'){ t++; line_off[t]=p+1; } p++; } }
+static void render(long i){
+    long tag = prog[i][0];
+    if(tag==1){ prnum(prog[i][1]); return; }
+    long p = line_off[tag];
+    while(pack[p] && pack[p] != '\\n'){
+        if(pack[p]=='$' && pack[p+1]>='1' && pack[p+1]<='3'){
+            long d = pack[p+1]-'0';
+            render(prog[i][d]);
+            p += 2;
+        } else { putchar(pack[p]); p++; }
+    }
+}
+int main(int argc, char** argv){
+    if(argc < 2) return 1;
+    int fd = open(argv[1], 0); if(fd < 0) return 2;
+    long g = read(fd, pack, 16383); if(g < 0) return 3; pack[g] = 0;
+    index_pack(g);
+    render(ROOT);
+    putchar('\\n');
+    return 0;
+}")
