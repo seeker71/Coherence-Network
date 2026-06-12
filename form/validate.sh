@@ -73,6 +73,14 @@ build_rs &
 build_ts &
 wait
 
+# The fourth sibling — the universal walker binary emitted from Form
+# recipes — joins covered bands as a fourth leg. Built AFTER the Go kernel
+# (its C source is emitted by running the Go walker); everything degrades
+# honestly when clang or the manifest is absent. See scripts/fourth-arm.sh.
+# shellcheck source=scripts/fourth-arm.sh
+source scripts/fourth-arm.sh
+build_fourth
+
 run_ts() {
     local bundle="$TS_DIR/dist/main.mjs"
     local loader="$PWD/$TS_DIR/node_modules/tsx/dist/loader.mjs"
@@ -160,6 +168,14 @@ run_siblings() {
     local label="$1"; shift
     local go_out rs_out ts_out legs
     prepare_sources "$@"
+    # Fourth leg: when the workload's band is in the fourth-arm manifest,
+    # its pre-flattened table runs on the emitted universal walker (fkwu)
+    # alongside the three walkers. Native execution answers in milliseconds,
+    # so max(legs) — the band's wall time — does not move.
+    local fourth_tbl="" fk_out=""
+    if fourth_available; then
+        fourth_tbl="$(fourth_table_for_band "${*: -1}")"
+    fi
     # The three kernels run CONCURRENTLY: a band's wall time is max(leg), not
     # sum — on compiler-heavy bands the Go+Rust legs ride inside the TS leg's
     # shadow for free. Outputs stay byte-compared exactly as before.
@@ -173,12 +189,22 @@ run_siblings() {
     ( TMPDIR="$legs/tmp-go" "$GO_BIN" "${prepared_args[@]}" > "$legs/go" 2>&1 || true ) &
     ( TMPDIR="$legs/tmp-rs" "$RS_BIN" "${prepared_args[@]}" > "$legs/rs" 2>&1 || true ) &
     ( TMPDIR="$legs/tmp-ts" run_ts "${prepared_args[@]}" > "$legs/ts" 2>&1 || true ) &
+    if [[ -n "$fourth_tbl" ]]; then
+        ( "$FKWU" "$fourth_tbl" 0 2>/dev/null | head -1 > "$legs/fk" || true ) &
+    fi
     wait
     go_out=$(cat "$legs/go"); rs_out=$(cat "$legs/rs"); ts_out=$(cat "$legs/ts")
+    if [[ -n "$fourth_tbl" ]]; then fk_out=$(cat "$legs/fk" 2>/dev/null || true); fi
     rm -rf "$legs"
-    if [[ "$go_out" == "$rs_out" && "$go_out" == "$ts_out" ]]; then
+    if [[ "$go_out" == "$rs_out" && "$go_out" == "$ts_out" ]] \
+        && { [[ -z "$fourth_tbl" ]] || [[ "$fk_out" == "$go_out" ]]; }; then
         printf "  ✓  %-30s  → %s\n" "$label" "$go_out"
         ok=$((ok + 1))
+        if [[ -n "$fourth_tbl" ]]; then fourth_ok=$((fourth_ok + 1)); fi
+    elif [[ -n "$fourth_tbl" ]]; then
+        printf "  ✗  %-30s\n      go         = %s\n      rust       = %s\n      typescript = %s\n      fourth     = %s\n" \
+            "$label" "$go_out" "$rs_out" "$ts_out" "$fk_out"
+        fail=$((fail + 1))
     else
         printf "  ✗  %-30s\n      go         = %s\n      rust       = %s\n      typescript = %s\n" \
             "$label" "$go_out" "$rs_out" "$ts_out"
@@ -219,6 +245,7 @@ run_workload() {
 
 ok=0
 fail=0
+fourth_ok=0
 
 # --- explicit mode: validate one file list as one workload --------------
 if [[ $# -gt 0 ]]; then
@@ -233,6 +260,9 @@ if [[ $# -gt 0 ]]; then
     done
     run_workload "$label" "$@"
 else
+    # Pre-flatten every covered band's table in one Go run before the
+    # suite fans out — cold cache pays ~20s once; warm runs skip it.
+    fourth_prepare_all
     # --- form-samples/*.fk: self-contained files ------------------------
     for f in form-samples/*.fk; do
         run_workload "$(basename "$f")" "$f"
@@ -268,6 +298,9 @@ else
 fi
 
 echo ""
+if [[ $fourth_ok -gt 0 ]]; then
+    echo "  fourth arm: $fourth_ok band(s) four-way (fkwu + pre-flattened tables)"
+fi
 if [[ $fail -eq 0 ]]; then
     if [[ $binary_mode -eq 1 ]]; then
         echo "  $ok ok, 0 divergent — kernels agree on every binary artifact."

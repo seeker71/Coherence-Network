@@ -1,0 +1,63 @@
+# fourth-arm-bands.txt — the bands proven to cross four-way on the emitted
+# fourth kernel (fkwu, the universal walker). One row per band:
+#
+#   <band-stem> <table-emitter> <expected-verdict>
+#
+# table-emitter names the flattener door the band's table file comes through:
+#   fkc — fkc-table-file (flt-band-fns ...)                       no string pool
+#   fks — fks-table-file (flt-band-fns ...) (flt-band-pool ...)   string pool
+#
+# The module source is the band's `; preludes:` header (first non-core
+# prelude), falling back to the same-name convention form-stdlib/<stem>.fk.
+# Provenance: scripts/fourth_kernel_audit.sh sections 19/22/24/25/26 —
+# every row here is gated four-way there before it lands here. A band
+# leaves this file only when its source moves outside the walker's op
+# families (the audit will say so first).
+learning-trend fkc 127
+cooldown fkc 63
+alert-gate fkc 127
+value-execution fkc 7
+anomaly-band fkc 127
+body-state fkc 127
+field-fusion fkc 127
+histogram-peak fkc 127
+model-retire fkc 63
+signal-derivative fkc 127
+feature-vector fkc 127
+active-inference fks 127
+branch-choice-order fks 511
+cell-sync fks 127
+chakra-column fks 127
+champion-challenger fks 127
+classifier-eval fks 63
+confidence-calibrate fks 127
+confidence-weighted-vote fks 127
+device-heartbeat fks 127
+drift-detect fks 63
+ensemble-vote fks 127
+friend-node fks 127
+learned-primitive fks 255
+markov-2 fks 127
+mesh-gradient fks 127
+mesh-relay fks 127
+nearest-shape fks 127
+novelty fks 63
+online-accuracy fks 63
+predictor-train fks 63
+prototype-merge fks 127
+provisioning fks 127
+recognition-router fks 127
+recognition-router-compute fks 63
+recognition-router-vision fks 31
+self-grounding-classifier fks 63
+sequence-predictor fks 127
+shared-sensing fks 127
+surprise-salience fks 127
+temporal-smoothing fks 63
+declared-source fks 127
+transition-detect fks 127
+warm-start fks 127
+adler32 fks 5
+crc32 fks 4
+slice-merge fks 127
+rle fks 12
