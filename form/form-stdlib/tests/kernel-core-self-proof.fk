@@ -73,7 +73,7 @@
                         expected-value)))))
 
     (let source-path "form-stdlib/bml/kernel-core.bml")
-    (let image-path "/tmp/kernel-core-self-image.fkb")
+    (let image-path (str_concat (temp_dir) "/kernel-core-self-image.fkb"))
     (let parsed (bml-source-file-parse-declarations source-path))
     (let nodes (bml-source-exec-parse-nodes parsed))
     (let model (bml-source-declaration-model parsed))

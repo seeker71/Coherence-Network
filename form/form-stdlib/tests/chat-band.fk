@@ -35,8 +35,8 @@
         (node_value (head (tail (tail (node_children m))))))
 
     ;; ---------- two mailboxes ---------------------------------------
-    (let chat-a-path "/tmp/chat-band-a.fkb")
-    (let chat-b-path "/tmp/chat-band-b.fkb")
+    (let chat-a-path (str_concat (temp_dir) "/chat-band-a.fkb"))
+    (let chat-b-path (str_concat (temp_dir) "/chat-band-b.fkb"))
     (channel-create chat-a-path)
     (channel-create chat-b-path)
 

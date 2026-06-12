@@ -26,7 +26,7 @@
 ;   rmdir tears the tree down      → 10000000
 
 (do
-    (let root "/tmp/fs-crud-band")
+    (let root (str_concat (temp_dir) "/fs-crud-band"))
     ;; clean slate (ignore result — may not exist yet)
     (fs_rmdir root)
 

@@ -32,7 +32,7 @@
                 (if (eq (ms-choice 0 (ms-choice 0 5)) 5)
                     (if (eq (ms-choice 3 5) 3) 4 0) 0) 0))
 
-    (let p "/tmp/minimal-surface-band.txt")
+    (let p (str_concat (temp_dir) "/minimal-surface-band.txt"))
     (ms-port-out p "the membrane returns what crossed it")
     (let c3 (if (str_eq (ms-port-in p) "the membrane returns what crossed it") 8 0))
 

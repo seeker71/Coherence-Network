@@ -27,7 +27,7 @@
 ;   compaction keeps live set, reclaims dead → 1000000
 
 (do
-    (let dir "/tmp/cell-log-store-band.d")
+    (let dir (str_concat (temp_dir) "/cell-log-store-band.d"))
     (fs_rmdir dir)
     (fs_rmdir (str_concat dir ".compact"))
 

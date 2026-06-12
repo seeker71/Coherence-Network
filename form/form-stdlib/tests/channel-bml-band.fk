@@ -24,4 +24,4 @@ section [form.bml] {
     }
 }
 
-(bml_channel_roundtrip "/tmp/coh-channel-bml-band.fkb")
+(bml_channel_roundtrip (str_concat (temp_dir) "/coh-channel-bml-band.fkb"))

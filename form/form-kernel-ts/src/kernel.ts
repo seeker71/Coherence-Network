@@ -1263,7 +1263,10 @@ export class Kernel {
       case "f64":
         return String(v.float);
       case "str":
-        return JSON.stringify(v.str);
+        // Bare, not JSON-quoted — the Go (Value.String) and Rust
+        // (Value::display) siblings render strings without quotes, and
+        // band outputs are byte-compared across kernels.
+        return v.str;
       case "bool":
         return v.bool ? "true" : "false";
       case "list":
@@ -3235,6 +3238,18 @@ export class Kernel {
       int: Date.now(),
     }));
 
+    // `temp_dir` — the host's scratch directory: TMPDIR when the carrier
+    // names one, /tmp otherwise (no trailing slash). External read (host
+    // env) so it's catCall. The door that lets a band's scratch files land
+    // in per-leg space: validate.sh points each sibling kernel at its own
+    // TMPDIR, so concurrent legs never share a scratch path. Sibling
+    // parity holds on shape, NOT on value — each leg's dir differs by
+    // design; bands fold the path into effects, never into the verdict.
+    this.registerNative("temp_dir", catCall(), (_k, _args) => ({
+      kind: "str",
+      str: (process.env["TMPDIR"] ?? "/tmp").replace(/\/+$/, "") || "/tmp",
+    }));
+
     // `unix_ms_to_iso_utc` — render a millisecond instant as the
     // second-resolution ISO UTC string the Go carrier emits.
     this.registerNative("unix_ms_to_iso_utc", catCall(), (_k, args) => ({
@@ -4487,20 +4502,22 @@ function walkCompare(
 
   // A comparison acknowledges with the 0/1 integer states (axiom-1,
   // core-axioms.form) so its answer flows directly into arithmetic —
-  // the shape the compiled lane's JS coercion already implied. Proven
-  // three-way by tests/eq-shape-band.fk.
-  if (op === RCmp.EQ || op === RCmp.NE) {
-    const equal = valueEqual(av, bv);
-    return boolInt(op === RCmp.EQ ? equal : !equal);
-  }
-
-  // Width-mixing in comparisons: if either side is float, compare as float;
-  // if either side is bigint, compare as bigint; else as int.
+  // the shape the compiled lane's JS coercion already implied. Operands
+  // meet the same numeric coercion in every lane: bools are the 0/1
+  // states, and non-numeric kinds are a type-contract violation —
+  // str_eq, node_eq, and value_eq are the typed doors for those kinds.
+  // Sibling to the Go and Rust walkers; proven three-way by
+  // tests/eq-shape-band.fk.
+  //
+  // Width-mixing: if either side is float, compare as float; if either
+  // side is bigint, compare as bigint; else as int.
   let r: boolean;
   if (av.kind === "f32" || av.kind === "f64" || bv.kind === "f32" || bv.kind === "f64") {
-    const a = expectFloat(av, "compare");
-    const b = expectFloat(bv, "compare");
+    const a = av.kind === "bool" ? (av.bool ? 1 : 0) : expectFloat(av, "compare");
+    const b = bv.kind === "bool" ? (bv.bool ? 1 : 0) : expectFloat(bv, "compare");
     switch (op) {
+      case RCmp.EQ: r = a === b; break;
+      case RCmp.NE: r = a !== b; break;
       case RCmp.LT: r = a < b; break;
       case RCmp.LE: r = a <= b; break;
       case RCmp.GT: r = a > b; break;
@@ -4508,9 +4525,11 @@ function walkCompare(
       default: throw new Error(`compare: unknown op ${op}`);
     }
   } else if (av.kind === "i64" || av.kind === "u64" || bv.kind === "i64" || bv.kind === "u64") {
-    const a = expectBigInt(av, "compare");
-    const b = expectBigInt(bv, "compare");
+    const a = av.kind === "bool" ? (av.bool ? 1n : 0n) : expectBigInt(av, "compare");
+    const b = bv.kind === "bool" ? (bv.bool ? 1n : 0n) : expectBigInt(bv, "compare");
     switch (op) {
+      case RCmp.EQ: r = a === b; break;
+      case RCmp.NE: r = a !== b; break;
       case RCmp.LT: r = a < b; break;
       case RCmp.LE: r = a <= b; break;
       case RCmp.GT: r = a > b; break;
@@ -4518,9 +4537,11 @@ function walkCompare(
       default: throw new Error(`compare: unknown op ${op}`);
     }
   } else {
-    const a = expectInt(av, "compare");
-    const b = expectInt(bv, "compare");
+    const a = av.kind === "bool" ? (av.bool ? 1 : 0) : expectInt(av, "compare");
+    const b = bv.kind === "bool" ? (bv.bool ? 1 : 0) : expectInt(bv, "compare");
     switch (op) {
+      case RCmp.EQ: r = a === b; break;
+      case RCmp.NE: r = a !== b; break;
       case RCmp.LT: r = a < b; break;
       case RCmp.LE: r = a <= b; break;
       case RCmp.GT: r = a > b; break;
