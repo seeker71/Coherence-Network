@@ -111,4 +111,10 @@
 
 ; See ml-toy-loop.fk and short-term-memory.fk for the loop and STM concrete; this provides the Phi-structural forward to plug in.
 
+; Blueprint registrations (harvested by scanner for registry; binds the names so (bp "NAME") literals are in source)
+(let PHI-RMS-NORM (bp "PHI-RMS-NORM"))
+(let PHI-GQA-ATTN (bp "PHI-GQA-ATTN"))
+(let PHI-SWIGLU (bp "PHI-SWIGLU"))
+(let PHI-BLOCK (bp "PHI-BLOCK"))
+
 ; end phi-start.fk
