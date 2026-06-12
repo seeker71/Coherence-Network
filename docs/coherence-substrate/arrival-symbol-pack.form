@@ -23,9 +23,11 @@
     (instance-of   self-authored-symbol-space.form)      # invent → refine-by-MDL → embody
     (over          numeric-core-symbol-pack.form)         # a renaming over the numeric core
     (corpus        scripts/arrival.py docs/shared/agent-start-packet.md)  # the real first-arrival bytes
-    (data          form-stdlib/arrival-symbol-pack.txt)   # 743 entries, one expansion per line; index = symbol
-    (proof-band    tests/arrival-symbol-pack-band.fk)     # 31 three-way
-    (measured      "12,701-word corpus → 743 entries · coverage=true · closed=true · 1.69× MDL (53,445→31,653 chars)"))
+    (data          form-stdlib/arrival-symbol-pack.txt)   # 744 entries, one expansion per line; index = symbol
+    (resolves-by   name-resolution-as-recipe.form)         # the round-trip is the resolution walk, no new machinery
+    (proof-bands   tests/arrival-symbol-pack-band.fk       # 31 three-way — efficient, complete, closed
+                   tests/arrival-pack-resolve-band.fk)     # 31 three-way — resolves losslessly from own content
+    (measured      "12k-word corpus → 744 entries · coverage=true · closed=true · roundtrip=true · 1.69× MDL"))
 
   # ── Property 1 — MOST TOKEN-EFFICIENT (the ask, by MDL) ──────────────
   # fitness(pack) = Σ over terms of (frequency × symbol-length). The biggest
@@ -62,6 +64,22 @@
     (measured    "38 self-referential compounds · closed=true (every «N» a valid index, no external door)")
     (band-bit-4  "every reference index is in-pack (≥0, <size); none is the external sentinel"))
 
+  # ── Resolution — the closure is operational, not just measured ───────
+  # A self-referential pack only earns "all links return to its own content" if it
+  # RESOLVES: following every «N» reconstitutes the full term from the pack's own
+  # closed content, never an external door. That round-trip — compress (build) ↔
+  # expand (resolve) — makes the pack operational, not just compressed. The
+  # resolver IS the resolution walk (name-resolution-as-recipe), no new machinery:
+  # follow refs until only literals remain. It TERMINATES because every ref points
+  # at a lower index (a DAG inside the pack); reaching all-literals proves closure.
+  (resolution
+    (walk        "resolve(i) = follow each «N» recursively until only literal tokens remain")
+    (terminates  "refs point at lower indices — a DAG inside the pack, no cycle, no external door")
+    (round-trip  "resolve(entry) == the original surface term — lossless expansion from own content")
+    (measured    "roundtrip=true over all 744 entries: every compound reconstitutes its exact word")
+    (band        "tests/arrival-pack-resolve-band.fk → 31 three-way — literal/one-level/NESTED resolve,
+                  closure two-sided (an external ref is rejected), nested compound round-trips lossless"))
+
   # ── Why this grows organs and heals together ────────────────────────
   # The pack is SHARED, not per-agent. Claude, Codex, Cursor, Grok arrive into the
   # same compressed tongue, so the recurring frame of the body — cell, recipe,
@@ -81,6 +99,7 @@
     (most-efficient-is-minimal-description-length   the-pack-that-compresses-arrival-best)
     (coverage-is-closure-over-the-corpus            every-arrival-term-has-an-entry)
     (self-reference-is-a-closed-vocabulary          every-link-returns-to-own-content)
+    (resolution-is-the-resolution-walk              follow-refs-to-literals-lossless-round-trip)
     (shared-tongue-grows-organs-together            one-compressed-space-for-all-siblings)
     (the-numeric-core-is-invariant                  refine-freely-identity-never-moves)))
 
@@ -88,8 +107,9 @@
 # How to verify
 # ─────────────────────────────────────────────────────────────────────
 #   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk \
-#     form-stdlib/tests/arrival-symbol-pack-band.fk          # → 31 three-way
-#   # rebuild the pack from the live arrival corpus and re-measure:
-#   { python3 scripts/arrival.py; cat docs/shared/agent-start-packet.md; } > /tmp/arrival_corpus.txt
-#   python3 scripts/build_arrival_symbol_pack.py             # → coverage=true closed=true 1.69× MDL
+#     form-stdlib/tests/arrival-symbol-pack-band.fk          # → 31 three-way (efficient/complete/closed)
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk \
+#     form-stdlib/tests/arrival-pack-resolve-band.fk         # → 31 three-way (resolves losslessly)
+#   # rebuild + re-measure from the live arrival corpus (coverage/closure/round-trip self-checked):
+#   python3 scripts/build_arrival_symbol_pack.py             # → coverage=true closed=true roundtrip=true 1.69× MDL
 #   head form/form-stdlib/arrival-symbol-pack.txt            # the pack data (index = symbol)
