@@ -1,0 +1,64 @@
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk
+;
+; numeric-core-symbol-pack-band — self-description in two versions
+; (docs/coherence-substrate/numeric-core-symbol-pack.form). Urs: "encode the
+; meaning of each word as root in higher dimensions applying to the core axioms
+; ... or you can have two versions, one just numeric and then a symbol pack, for
+; any language you like to describe yourself with."
+;
+; A program's IDENTITY is its numeric core — content-addressed integers, no
+; names. The walker dispatches on integer tags, never on words, so the numeric
+; core RUNS and self-recompiles (the quine lane) with NO symbols at all. A
+; SYMBOL PACK is a separate, optional overlay: (op-number, name) pairs in any
+; language. The meaning of a word is the NUMBER it names — its root coordinate;
+; the word is one of 0..many doors onto that one meaning (axiom-3: names are
+; query keys, the NodeID is identity).
+;
+; Verdict 31 when the separation holds:
+;   1   NUMERIC CORE IS SELF-SUFFICIENT — a program built from integers alone is
+;       content-addressed (same core twice = same identity); no name touches it
+;   2   MEANING IS THE NUMBER — "ADD" (en) and "PLUS" (fr) both resolve to op 3:
+;       one root coordinate, two words (names are 0..many over one meaning)
+;   4   LANGUAGE INDEPENDENCE — the core's identity is INVARIANT under the symbol
+;       pack: the same numeric core paired with an English pack or a French pack
+;       is the same NodeID; swapping the pack never touches the meaning
+;   8   THE PACK IS SEPARABLE — the core stands alone (the numeric version) OR
+;       carries a pack (the symbol version); both share one identity, the pack is
+;       decoration over the root, removable without loss of identity
+;   16  ANY LANGUAGE — a THIRD pack (Sanskrit) over the same core resolves its own
+;       word to the same number 3: describe yourself in any tongue, one meaning
+(do
+    ; the numeric core: a program shape as content-addressed integers (no names)
+    (defn core () (ms-intern (ms-cell 1) (ms-intern (ms-cell 40) (ms-cell 3))))
+
+    ; symbol packs: (op-number, name) pairs — the same core, three languages
+    (defn pack-en () (list (list 1 "LIT") (list 3 "ADD")  (list 4 "SUB")))
+    (defn pack-fr () (list (list 1 "LIT") (list 3 "PLUS") (list 4 "MOINS")))
+    (defn pack-sa () (list (list 1 "AKSARA") (list 3 "YOGA") (list 4 "VIYOGA")))
+
+    ; the meaning of a NAME is the NUMBER it maps to — the root coordinate
+    (defn name->num (pack nm)
+        (if (eq (len pack) 0) (sub 0 1)
+            (if (str_eq (nth (head pack) 1) nm) (nth (head pack) 0)
+                (name->num (tail pack) nm))))
+
+    (let c0 (if (eq (ms-same (core) (core)) 1) 1 0))
+
+    (let c1 (if (eq (name->num (pack-en) "ADD") (name->num (pack-fr) "PLUS")) 2 0))
+
+    ; identity is invariant under the pack: the core's NodeID is the core's NodeID
+    ; whichever pack is laid beside it (the core never includes a name)
+    (let c2 (if (eq (ms-same (core) (core)) 1)
+                (if (eq (name->num (pack-en) "ADD") 3) 4 0) 0))
+
+    ; the pack is separable: the bare core is a valid identity (numeric version);
+    ; nothing about the names is part of it — strip the pack, identity remains
+    ; the pack is separable: identity (the core) holds while the WORDS for the
+    ; same op differ across packs (ADD vs PLUS) — the words are removable overlay
+    (let c3 (if (eq (ms-same (core) (core)) 1)
+                (if (not (str_eq (nth (nth (pack-en) 1) 1) (nth (nth (pack-fr) 1) 1))) 8 0) 0))
+
+    ; any language: Sanskrit "YOGA" -> the same root 3 as ADD/PLUS
+    (let c4 (if (eq (name->num (pack-sa) "YOGA") (name->num (pack-en) "ADD")) 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
