@@ -77,6 +77,35 @@ var (
 	socketNextHnd int64 = 0
 )
 
+// floorCharBoundary snaps a byte index down to the nearest UTF-8 char
+// boundary at or below it. The addressing natives (substring, char_at,
+// str_find) accept byte indices computed by recipes that step bytewise; an
+// index inside a multibyte char is answered with the boundary-snapped read.
+// Sibling parity with the Rust kernel's floor_char_boundary_idx.
+func floorCharBoundary(s string, i int) int {
+	if i > len(s) {
+		i = len(s)
+	}
+	for i > 0 && i < len(s) && !utf8.RuneStart(s[i]) {
+		i--
+	}
+	return i
+}
+
+// ceilCharBoundary snaps a byte index up to the nearest char boundary at or
+// above it. Search starts (str_find `from`) snap forward so a find-next loop
+// stepping +1 from a match advances past a multibyte char instead of
+// re-finding it forever. Sibling parity with Rust's ceil_char_boundary_idx.
+func ceilCharBoundary(s string, i int) int {
+	if i >= len(s) {
+		return len(s)
+	}
+	for i < len(s) && !utf8.RuneStart(s[i]) {
+		i++
+	}
+	return i
+}
+
 func socketRegister(v interface{}) int64 {
 	socketTableMu.Lock()
 	defer socketTableMu.Unlock()
@@ -1811,7 +1840,10 @@ func (k *Kernel) registerNatives() {
 				len(s),
 			))
 		}
-		return Value{Kind: VStr, Str: s[a:b]}
+		// Both ends floor to char boundaries (sibling parity with the Rust
+		// kernel): the adjacency law substring(s,a,m)+substring(s,m,b) ==
+		// substring(s,a,b) holds for any m, and the window is valid UTF-8.
+		return Value{Kind: VStr, Str: s[floorCharBoundary(s, int(a)):floorCharBoundary(s, int(b))]}
 	})
 	k.registerNative("char_at", catAccess(), func(_ *Kernel, args []Value) Value {
 		s := args[0].Str
@@ -1819,7 +1851,14 @@ func (k *Kernel) registerNatives() {
 		if i < 0 || i >= int64(len(s)) {
 			panic(fmt.Sprintf("char_at: bounds out of range index=%d len=%d", i, len(s)))
 		}
-		return Value{Kind: VStr, Str: string(s[i])}
+		// At a char start: the whole char. Inside a multibyte char: nothing —
+		// a bytewise loop concatenating char_at over 0..str_len reconstructs
+		// the string exactly, once per char. Sibling parity with Rust.
+		if !utf8.RuneStart(s[i]) {
+			return Value{Kind: VStr, Str: ""}
+		}
+		r, _ := utf8.DecodeRuneInString(s[i:])
+		return Value{Kind: VStr, Str: string(r)}
 	})
 	k.registerNative("str_concat", catMethod(), func(_ *Kernel, args []Value) Value {
 		return Value{Kind: VStr, Str: args[0].Str + args[1].Str}
@@ -1974,6 +2013,7 @@ func (k *Kernel) registerNatives() {
 		if from > len(s) {
 			return Value{Kind: VInt, Int: -1}
 		}
+		from = ceilCharBoundary(s, from)
 		idx := strings.Index(s[from:], needle)
 		if idx < 0 {
 			return Value{Kind: VInt, Int: -1}

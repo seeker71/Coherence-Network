@@ -1336,7 +1336,10 @@ export class Kernel {
           `substring: bounds out of range start=${start} end=${end} len=${s.length}`,
         );
       }
-      return { kind: "str", str: s.slice(start, end) };
+      return {
+        kind: "str",
+        str: s.slice(floorCharBoundary(s, start), floorCharBoundary(s, end)),
+      };
     });
     this.registerNative("char_at", catAccess(), (_k, args) => {
       const s = argStr(args, 0);
@@ -1344,7 +1347,14 @@ export class Kernel {
       if (i < 0 || i >= s.length) {
         throw new Error(`char_at: bounds out of range index=${i} len=${s.length}`);
       }
-      return { kind: "str", str: s[i] ?? "" };
+      // At a char start: the whole char (both surrogate halves). Inside a
+      // char: nothing — a unitwise loop concatenating char_at over
+      // 0..str_len reconstructs the string exactly, once per char.
+      if (insideSurrogatePair(s, i)) {
+        return { kind: "str", str: "" };
+      }
+      const cp = s.codePointAt(i);
+      return { kind: "str", str: cp === undefined ? "" : String.fromCodePoint(cp) };
     });
     this.registerNative("str_concat", catMethod(), (_k, args) => ({
       kind: "str",
@@ -1500,7 +1510,7 @@ export class Kernel {
     this.registerNative("str_find", catAccess(), (_k, args) => {
       const s = argStr(args, 0);
       const needle = argStr(args, 1);
-      const from = argInt(args, 2);
+      const from = ceilCharBoundary(s, Math.max(0, argInt(args, 2)));
       const idx = s.indexOf(needle, from);
       // `kind: "int"` carries a JS Number — using BigInt here would
       // poison downstream arithmetic with "Cannot mix BigInt and other
@@ -3503,6 +3513,31 @@ function argBigInt(args: Value[], i: number): bigint {
     return BigInt(v.int);
   throw new Error(`arg ${i}: expected integer, got ${v.kind}`);
 }
+// A unit index is "inside a char" when it points at the low half of a
+// surrogate pair — the UTF-16 analog of a UTF-8 continuation byte. The
+// addressing natives snap such indices to a boundary (floor for windows,
+// ceil for search starts) so bytewise-stepping recipes read whole chars,
+// never throw, and the adjacency law substring(s,a,m)+substring(s,m,b) ==
+// substring(s,a,b) holds for any m. Same snap algebra as the Go and Rust
+// kernels over their UTF-8 byte units; unit alignment across encodings is
+// the named open gap (TS counts UTF-16 units, siblings count bytes).
+function insideSurrogatePair(s: string, i: number): boolean {
+  if (i <= 0 || i >= s.length) return false;
+  return (
+    (s.charCodeAt(i) & 0xfc00) === 0xdc00 && (s.charCodeAt(i - 1) & 0xfc00) === 0xd800
+  );
+}
+
+function floorCharBoundary(s: string, i: number): number {
+  if (i > s.length) i = s.length;
+  return insideSurrogatePair(s, i) ? i - 1 : i;
+}
+
+function ceilCharBoundary(s: string, i: number): number {
+  if (i >= s.length) return s.length;
+  return insideSurrogatePair(s, i) ? i + 1 : i;
+}
+
 function argStr(args: Value[], i: number): string {
   const v = args[i];
   if (v?.kind !== "str") throw new Error(`arg ${i}: expected str`);
