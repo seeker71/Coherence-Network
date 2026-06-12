@@ -1,0 +1,105 @@
+; prolog-bmf-reversible-band.fk - canonical Prolog reverse recipes
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/prolog-bmf.fk
+
+(do
+    (defn rt-score (rt)
+        (add (if (bmf-roundtrip-node-eq? rt) 1 0)
+             (len (bmf-roundtrip-source rt))))
+
+    (defn prolog-rt (rule-name objects)
+        (bmf-roundtrip (prolog-bmf-find-rule rule-name prolog-bmf-rules) objects))
+
+    (let fact0-rt
+        (prolog-rt "fact0"
+            (list (prolog-src-name "sunny") (prolog-src-op "."))))
+    (let fact1-rt
+        (prolog-rt "fact1"
+            (list (prolog-src-name "male") (prolog-src-op "(")
+                  (prolog-src-name "tom") (prolog-src-op ")")
+                  (prolog-src-op "."))))
+    (let fact2-rt
+        (prolog-rt "fact2"
+            (list (prolog-src-name "parent") (prolog-src-op "(")
+                  (prolog-src-name "tom") (prolog-src-op ",")
+                  (prolog-src-name "bob") (prolog-src-op ")")
+                  (prolog-src-op "."))))
+    (let rule1-rt
+        (prolog-rt "rule1"
+            (list (prolog-src-name "mortal") (prolog-src-op "(")
+                  (prolog-src-name "X") (prolog-src-op ")")
+                  (prolog-src-op ":-")
+                  (prolog-src-name "human") (prolog-src-op "(")
+                  (prolog-src-name "X") (prolog-src-op ")")
+                  (prolog-src-op "."))))
+    (let rule2-rt
+        (prolog-rt "rule2"
+            (list (prolog-src-name "grandparent") (prolog-src-op "(")
+                  (prolog-src-name "X") (prolog-src-op ",")
+                  (prolog-src-name "Z") (prolog-src-op ")")
+                  (prolog-src-op ":-")
+                  (prolog-src-name "parent") (prolog-src-op "(")
+                  (prolog-src-name "X") (prolog-src-op ",")
+                  (prolog-src-name "Y") (prolog-src-op ")")
+                  (prolog-src-op ",")
+                  (prolog-src-name "parent") (prolog-src-op "(")
+                  (prolog-src-name "Y") (prolog-src-op ",")
+                  (prolog-src-name "Z") (prolog-src-op ")")
+                  (prolog-src-op "."))))
+    (let rule-cut-rt
+        (prolog-rt "rule-cut"
+            (list (prolog-src-name "commit") (prolog-src-op ":-")
+                  (prolog-src-name "gate") (prolog-src-op ",")
+                  (prolog-src-op "!") (prolog-src-op "."))))
+    (let directive-rt
+        (prolog-rt "directive"
+            (list (prolog-src-op ":-") (prolog-src-name "main")
+                  (prolog-src-op "."))))
+    (let directive-call1-rt
+        (prolog-rt "directive-call1"
+            (list (prolog-src-op ":-") (prolog-src-name "initialization")
+                  (prolog-src-op "(") (prolog-src-name "main")
+                  (prolog-src-op ")") (prolog-src-op "."))))
+    (let query2-rt
+        (prolog-rt "query2"
+            (list (prolog-src-op "?-") (prolog-src-name "parent")
+                  (prolog-src-op "(") (prolog-src-name "tom")
+                  (prolog-src-op ",") (prolog-src-name "X")
+                  (prolog-src-op ")") (prolog-src-op "."))))
+    (let is-add-rt
+        (prolog-rt "is-add"
+            (list (prolog-src-name "Sum") (prolog-src-keyword "is")
+                  (prolog-src-name "A") (prolog-src-op "+")
+                  (prolog-src-name "B"))))
+    (let is-add-int-rt
+        (prolog-rt "is-add-int"
+            (list (prolog-src-name "Next") (prolog-src-keyword "is")
+                  (prolog-src-name "N") (prolog-src-op "+")
+                  (prolog-src-int "1"))))
+    (let cons-rt
+        (prolog-rt "cons"
+            (list (prolog-src-op "[") (prolog-src-name "H")
+                  (prolog-src-op "|") (prolog-src-name "T")
+                  (prolog-src-op "]"))))
+    (let nil-list-rt
+        (prolog-rt "nil-list"
+            (list (prolog-src-op "[") (prolog-src-op "]"))))
+    (let unify-rt
+        (prolog-rt "unify"
+            (list (prolog-src-name "X") (prolog-src-op "=")
+                  (prolog-src-name "Y"))))
+    (let dcg2-rt
+        (prolog-rt "dcg2"
+            (list (prolog-src-name "greeting") (prolog-src-op "-->")
+                  (prolog-src-name "hello") (prolog-src-op ",")
+                  (prolog-src-name "world") (prolog-src-op "."))))
+
+    (sum
+        (list (rt-score fact0-rt) (rt-score fact1-rt)
+              (rt-score fact2-rt) (rt-score rule1-rt)
+              (rt-score rule2-rt) (rt-score rule-cut-rt)
+              (rt-score directive-rt) (rt-score directive-call1-rt)
+              (rt-score query2-rt) (rt-score is-add-rt)
+              (rt-score is-add-int-rt) (rt-score cons-rt)
+              (rt-score nil-list-rt) (rt-score unify-rt)
+              (rt-score dcg2-rt))))
