@@ -131,7 +131,7 @@
     ;; Recipe-emit path (a12b8f71): section bindings live in the sibling
     ;; .fkb; the returned text is a walk_recipe_here driver. Check the
     ;; driver shape + the sidecar's existence on disk.
-    (let out-path "/tmp/form-test-fa-bmf-source-compiler-rewrite")
+    (let out-path (str_concat (temp_dir) "/form-test-fa-bmf-source-compiler-rewrite"))
     (let compiled (form-source-compile-text sample out-path))
     (let rule-score
         (add

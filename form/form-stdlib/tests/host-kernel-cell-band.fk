@@ -116,7 +116,7 @@
                 64 0))
 
     ; ── 128: the cell shrinks to a .fkb of just recipes and comes back ──
-    (let image-path "/tmp/host-kernel-cell-image.fkb")
+    (let image-path (str_concat (temp_dir) "/host-kernel-cell-image.fkb"))
     (let cell-kernel (hkc-as-kernel swapped))
     (let cell-image (ksat-kernel-image cell-kernel))
     (let bytes-written (write_form_binary image-path cell-image))

@@ -58,7 +58,7 @@
                         expected-return)))))
 
     (let source-path "form-stdlib/bml/bmf-bml-compiler-picture.bml")
-    (let image-path "/tmp/bml-compiler-source-image.fkb")
+    (let image-path (str_concat (temp_dir) "/bml-compiler-source-image.fkb"))
     (let parsed (bml-source-file-parse-declarations source-path))
     (let nodes (bml-source-exec-parse-nodes parsed))
     (let model (bml-source-declaration-model parsed))

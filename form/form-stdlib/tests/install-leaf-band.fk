@@ -35,7 +35,7 @@
 ;        original (content-addressing crossed the protocol)
 
 (do
-    (let table "/tmp/install-leaf-band-table.fkb")
+    (let table (str_concat (temp_dir) "/install-leaf-band-table.fkb"))
 
     ;; two capabilities: thunks whose bodies realize 42 and 7
     (let body-42 (intern_node (bp "add")

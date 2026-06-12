@@ -124,7 +124,7 @@
     ;; Recipe-first path: form-source-compile-text builds section Recipe objects
     ;; first, then emits executable Form source only as this test's observation
     ;; lens. Runtime carriers can use recipe_to_bytes directly.
-    (let compiled-out-path "/tmp/form-test-source-corpus-roundtrip")
+    (let compiled-out-path (str_concat (temp_dir) "/form-test-source-corpus-roundtrip"))
     (let compiled-source (form-source-compile-text active-source compiled-out-path))
     (let anchor "active-corpus/add")
     (let binary (active-add-binary "add" "a" "int" "b" "int" "int" "a" "b"))

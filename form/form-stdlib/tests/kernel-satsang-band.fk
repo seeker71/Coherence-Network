@@ -82,7 +82,7 @@
                 8 0))
 
     ; ── 16: the whole kernel through the .fkb binary and back to shape ──
-    (let image-path "/tmp/kernel-satsang-image.fkb")
+    (let image-path (str_concat (temp_dir) "/kernel-satsang-image.fkb"))
     (let kernel-image (ksat-kernel-image kernel))
     (let bytes-written (write_form_binary image-path kernel-image))
     (let loaded (read_form_binary image-path))

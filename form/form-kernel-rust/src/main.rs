@@ -5872,6 +5872,20 @@ impl Kernel {
             Value::Int(now_unix_ms_value())
         });
 
+        // `temp_dir` — the host's scratch directory: TMPDIR when the carrier
+        // names one, /tmp otherwise (no trailing slash). External read (host
+        // env) so it's cat_call. The door that lets a band's scratch files
+        // land in per-leg space: validate.sh points each sibling kernel at
+        // its own TMPDIR, so concurrent legs never share a scratch path.
+        // Sibling parity holds on shape, NOT on value — each leg's dir
+        // differs by design; bands fold the path into effects, never into
+        // the verdict.
+        self.register_native("temp_dir", cat_call(), |_, _, _| {
+            let dir = std::env::var("TMPDIR").unwrap_or_default();
+            let dir = if dir.is_empty() { "/tmp".to_string() } else { dir };
+            Value::Str(dir.trim_end_matches('/').to_string().into())
+        });
+
         // No Form category claimed — `trace` is a debug surface, honest
         // about being outside the structural vocabulary.
         self.register_native("trace", cat_undefined(), |_, _, args| {

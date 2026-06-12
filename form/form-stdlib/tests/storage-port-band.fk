@@ -21,7 +21,7 @@
 ;   memory is ephemeral, file is durable — both honest   → 10000
 
 (do
-    (let dir "/tmp/storage-port-band.d")
+    (let dir (str_concat (temp_dir) "/storage-port-band.d"))
     (fs_rmdir dir)
 
     ;; --- the SAME test, two carriers ---------------------------------------
@@ -43,7 +43,7 @@
     ;; --- both carriers are honest about their nature -----------------------
     ;; a fresh memory store is empty; a fresh file store at a NEW dir is empty.
     (let fresh-mem (storage-open (carrier-memory) ""))
-    (let fresh-dir "/tmp/storage-port-band-fresh.d")
+    (let fresh-dir (str_concat (temp_dir) "/storage-port-band-fresh.d"))
     (fs_rmdir fresh-dir)
     (let fresh-file (storage-open cf fresh-dir))
     (let honest-ok
