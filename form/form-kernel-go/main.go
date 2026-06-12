@@ -593,6 +593,17 @@ type Kernel struct {
 	// surface: every cell's state traceable to the source line that
 	// authored it. The practice of self-knowing.
 	sourceAttr map[NodeID]sourceLoc
+	// formStack — the Form-level call chain currently live (closure and
+	// native names, innermost last; closure labels carry file:line:col
+	// when the body recipe is attributed). Pushed at dispatch, truncated
+	// on the walk's success path — so after a panic the frames that were
+	// live at the crash are still here for the recover site to surface.
+	formStack []string
+	// readingFiles — line map for the source currently being read:
+	// (file_name_id, first_global_line) per concatenated part. When
+	// non-empty, readSexpr attributes every parenthesized form so fatal
+	// diagnostics can name the Form source line.
+	readingFiles []readingPart
 	importSeq  uint32
 	// walkCache — JIT-vector memoization for pure recipes. Keyed by
 	// recipe NodeID. Real JIT replaces this with compiled native code;
@@ -646,6 +657,11 @@ type switchTable struct {
 type switchArm struct {
 	pattern NodeID
 	body    NodeID
+}
+
+type readingPart struct {
+	FileID    NameID
+	StartLine uint32
 }
 
 type sourceLoc struct {
@@ -1250,6 +1266,52 @@ func (k *Kernel) identID(n NodeID) NameID {
 // nameStr — resolve a NameID back to its source-level string. Error
 // messages and parse-time only; never in the walker's hot path.
 func (k *Kernel) nameStr(id NameID) string { return k.strs[id] }
+
+// resolveReadingLine — map a global line in the concatenated read buffer
+// back to (file_name_id, line_within_that_file). Entries are in
+// concatenation order; the last entry at or before the line owns it.
+func (k *Kernel) resolveReadingLine(globalLine uint32) (NameID, uint32, bool) {
+	var fileID NameID
+	var local uint32
+	found := false
+	for _, part := range k.readingFiles {
+		if part.StartLine <= globalLine {
+			fileID = part.FileID
+			local = globalLine - part.StartLine + 1
+			found = true
+		} else {
+			break
+		}
+	}
+	return fileID, local, found
+}
+
+// formStackDisplay — the live Form call chain, innermost first, capped.
+func (k *Kernel) formStackDisplay(max int) string {
+	if len(k.formStack) == 0 {
+		return ""
+	}
+	total := len(k.formStack)
+	var frames []string
+	for i := total - 1; i >= 0 && len(frames) < max; i-- {
+		frames = append(frames, k.formStack[i])
+	}
+	out := strings.Join(frames, " < ")
+	if total > max {
+		out += fmt.Sprintf(" … (+%d more)", total-max)
+	}
+	return out
+}
+
+// formFrameLabel — a closure frame's display label: the function name,
+// plus file:line:col when the body recipe carries source attribution.
+func (k *Kernel) formFrameLabel(name NameID, body NodeID) string {
+	label := k.nameStr(name)
+	if loc, ok := k.sourceAttr[body]; ok && int(loc.FileID) < len(k.strs) {
+		label = fmt.Sprintf("%s@%s:%d:%d", label, k.strs[loc.FileID], loc.Line, loc.Col)
+	}
+	return label
+}
 
 // ---------------------------------------------------------------------------
 // Values — runtime tagged values
@@ -4127,6 +4189,16 @@ func (k *Kernel) registerNatives() {
 // ---------------------------------------------------------------------------
 
 func (k *Kernel) walk(n NodeID, env *Frame) Value {
+	// One Form-stack slot per host walk invocation (see walkInner's closure
+	// arm). The truncation runs only on the success path — a panic leaves
+	// the live frames in place for the recover site to read.
+	depth := len(k.formStack)
+	v := k.walkInner(n, env)
+	k.formStack = k.formStack[:depth]
+	return v
+}
+
+func (k *Kernel) walkInner(n NodeID, env *Frame) Value {
 	// Tail-call optimization: a tail-position call — a closure body, a cond
 	// branch, or a do-block's last expr — reassigns n/env and loops here
 	// instead of recursing, so tail-recursive Form loops (gm-rep-loop,
@@ -4135,6 +4207,10 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 	// not. Result-transparent — identical values to plain recursion, far less
 	// stack (a long member/statement list no longer recurses N-deep), which is
 	// what lets the strictest kernel parse the full thesis grammar files.
+	// myFrame — index of this walk invocation's Form-stack slot, -1 until
+	// a closure is entered. TCO re-entry REPLACES the slot (the tail
+	// caller's frame is complete), mirroring the host stack's collapse.
+	myFrame := -1
 	for {
 		if n.Level == LevelTrivial {
 			return k.trivialValue(n)
@@ -4365,7 +4441,10 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 						k.Trace.recordNative(k.nameStr(ne.Name))
 					}
 					k.observeNamedDispatch("observe/go/native-dispatch", ne.Name)
-					return ne.Fn(k, env, args)
+					k.formStack = append(k.formStack, k.nameStr(ne.Name))
+					v := ne.Fn(k, env, args)
+					k.formStack = k.formStack[:len(k.formStack)-1]
+					return v
 				}
 			}
 			// Native takes priority unless user shadowed with a closure.
@@ -4382,7 +4461,10 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 						k.Trace.recordNative(k.nameStr(ne.Name))
 					}
 					k.observeNamedDispatch("observe/go/native-dispatch", ne.Name)
-					return ne.Fn(k, args)
+					k.formStack = append(k.formStack, k.nameStr(ne.Name))
+					v := ne.Fn(k, args)
+					k.formStack = k.formStack[:len(k.formStack)-1]
+					return v
 				}
 			}
 			// Closure lookup uses the original function name so user code stays
@@ -4497,6 +4579,12 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 				k.Trace.recordFn(k.nameStr(cl.Name))
 			}
 			k.observeNamedDispatch("observe/go/function-dispatch", cl.Name)
+			if label := k.formFrameLabel(cl.Name, cl.Body); myFrame >= 0 && myFrame < len(k.formStack) {
+				k.formStack[myFrame] = label
+			} else {
+				myFrame = len(k.formStack)
+				k.formStack = append(k.formStack, label)
+			}
 			n = cl.Body // TCO: closure body is in tail position.
 			env = call
 			continue
@@ -4521,8 +4609,11 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 }
 
 func (k *Kernel) walkChoiceBranch(branch NodeID, env *Frame) (value Value, ok bool, stopped bool) {
+	depth := len(k.formStack)
 	defer func() {
 		if r := recover(); r != nil {
+			// A swallowed branch failure must not leave its frames behind.
+			k.formStack = k.formStack[:depth]
 			switch r.(type) {
 			case choiceFailSignal:
 				value = Value{Kind: VNull}
@@ -4928,7 +5019,18 @@ func (k *Kernel) readSexpr(toks []sexpToken, i int) (NodeID, int) {
 			args = append(args, arg)
 			i = ni
 		}
-		return k.buildVerb(verb, args), i
+		node := k.buildVerb(verb, args)
+		// Source attribution at read time: every parenthesized form
+		// remembers the file:line:col of its opening paren, so a fatal
+		// mid-walk can name the Form source line. Content-addressing
+		// means a shape interned from two sites keeps its FIRST
+		// authoring site.
+		if fileID, localLine, ok := k.resolveReadingLine(uint32(openLine)); ok {
+			if _, exists := k.sourceAttr[node]; !exists {
+				k.sourceAttr[node] = sourceLoc{FileID: fileID, Line: localLine, Col: uint32(openCol)}
+			}
+		}
+		return node, i
 	}
 	panic(fmt.Sprintf("parse error at line %d col %d: unexpected token %s %q", t.line, t.col, t.kind, t.value))
 }
@@ -5196,11 +5298,21 @@ func kernelModeFromArgs(args []string) string {
 	}
 }
 
-func writeKernelCrashTrace(args []string, src string, recovered any) string {
-	return writeKernelCrashTraceWithContext(args, src, recovered, "", "")
+// formStackInnermostFirst — reverse the live stack for the trace record
+// so the first entry answers "where exactly" (sibling to Rust's form_stack).
+func formStackInnermostFirst(stack []string) []string {
+	out := make([]string, 0, len(stack))
+	for i := len(stack) - 1; i >= 0; i-- {
+		out = append(out, stack[i])
+	}
+	return out
 }
 
-func writeKernelCrashTraceWithContext(args []string, src string, recovered any, sourceLabel string, operation string) string {
+func writeKernelCrashTrace(args []string, src string, recovered any, formStack []string) string {
+	return writeKernelCrashTraceWithContext(args, src, recovered, "", "", formStack)
+}
+
+func writeKernelCrashTraceWithContext(args []string, src string, recovered any, sourceLabel string, operation string, formStack []string) string {
 	dir := filepath.Join(".cache", "form-kernel-go")
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		dir = os.TempDir()
@@ -5230,6 +5342,7 @@ func writeKernelCrashTraceWithContext(args []string, src string, recovered any, 
 		"source_bytes":      len(src),
 		"source_line_count": kernelSourceLineCount(src),
 		"source_head":       kernelSourceExcerpt(src, 2000),
+		"form_stack":        formStackInnermostFirst(formStack),
 		"source_tail":       src[tailStart:],
 		"go_stack":          string(debug.Stack()),
 	}
@@ -5251,6 +5364,12 @@ func main() {
 	}
 
 	var src string
+	var crashK *Kernel
+	type lineMapPart struct {
+		path      string
+		startLine uint32
+	}
+	var lineMapParts []lineMapPart
 
 	// Catch parse-time and walk-time panics and convert them to clean error
 	// output. The trace file keeps the host stack and source excerpt for
@@ -5258,7 +5377,17 @@ func main() {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Fprintf(os.Stderr, "form-kernel-go: %v\n", r)
-			if tracePath := writeKernelCrashTrace(args, src, r); tracePath != "" {
+			var stack []string
+			if crashK != nil {
+				stack = crashK.formStack
+				// The Form-level call chain live at the crash, innermost
+				// first — the line that produced the fatal is the innermost
+				// attributed frame.
+				if display := crashK.formStackDisplay(16); display != "" {
+					fmt.Fprintf(os.Stderr, "form-kernel-go: form stack: %s\n", display)
+				}
+			}
+			if tracePath := writeKernelCrashTrace(args, src, r, stack); tracePath != "" {
 				fmt.Fprintf(os.Stderr, "form-kernel-go: crash trace: %s\n", tracePath)
 			}
 			os.Exit(1)
@@ -5332,21 +5461,32 @@ func main() {
 		// Multiple files load sequentially into a shared top-level scope.
 		// Concatenation works because the kernel wraps multi-form input in
 		// an implicit do-block — definitions from earlier files become
-		// visible to later ones.
+		// visible to later ones. The line map remembers each file's first
+		// global line so read-time attribution names the ORIGINAL file:line.
 		var parts []string
+		nextLine := uint32(1)
 		for _, path := range args {
 			b, err := os.ReadFile(path)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "read %s: %v\n", path, err)
 				os.Exit(1)
 			}
-			parts = append(parts, string(b))
+			s := string(b)
+			lineMapParts = append(lineMapParts, lineMapPart{path: path, startLine: nextLine})
+			// +1 for the join newline between parts.
+			nextLine += uint32(strings.Count(s, "\n")) + 1
+			parts = append(parts, s)
 		}
 		src = strings.Join(parts, "\n")
 	}
 
 	k := NewKernel()
+	crashK = k
+	for _, part := range lineMapParts {
+		k.readingFiles = append(k.readingFiles, readingPart{FileID: k.internName(part.path), StartLine: part.startLine})
+	}
 	root := readRootFromSource(k, src)
+	k.readingFiles = nil
 	if args[0] == "--emit-binary" {
 		if err := os.WriteFile(args[1], serializeArtifact(k, root), 0644); err != nil {
 			fmt.Fprintf(os.Stderr, "write %s: %v\n", args[1], err)

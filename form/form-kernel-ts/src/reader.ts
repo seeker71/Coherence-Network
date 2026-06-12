@@ -110,6 +110,10 @@ function tokenize(src: string): Token[] {
 interface ParseState {
   toks: Token[];
   i: number;
+  // attribute — when set, every parenthesized form is recorded with the
+  // file:line:col of its opening paren so fatal diagnostics can name the
+  // Form source line (sibling to the Go/Rust readers).
+  attribute: ((node: NodeID, pos: number) => void) | null;
 }
 
 function peek(s: ParseState): Token | undefined {
@@ -124,7 +128,7 @@ function consume(s: ParseState): Token {
 }
 
 export function readForm(k: Kernel, src: string): NodeID {
-  const s: ParseState = { toks: tokenize(src), i: 0 };
+  const s: ParseState = { toks: tokenize(src), i: 0, attribute: makeAttributor(k, src) };
   const node = readOne(k, s);
   if (s.i !== s.toks.length) {
     const t = s.toks[s.i];
@@ -134,7 +138,7 @@ export function readForm(k: Kernel, src: string): NodeID {
 }
 
 export function readAll(k: Kernel, src: string): NodeID {
-  const s: ParseState = { toks: tokenize(src), i: 0 };
+  const s: ParseState = { toks: tokenize(src), i: 0, attribute: makeAttributor(k, src) };
   const forms: NodeID[] = [];
   while (s.i < s.toks.length) {
     forms.push(readOne(k, s));
@@ -145,6 +149,37 @@ export function readAll(k: Kernel, src: string): NodeID {
     { pkg: 1, level: Level.BASIC, type: RBasic.BLOCK, inst: RBlock.DO },
     forms,
   );
+}
+
+// makeAttributor — byte position → (file, line, col) recorder. Line starts
+// are precomputed once per read; the kernel's readingFiles line map (set by
+// the CLI when loading multiple files) translates global lines back to the
+// original file. Returns null when no line map is active.
+function makeAttributor(
+  k: Kernel,
+  src: string,
+): ((node: NodeID, pos: number) => void) | null {
+  if (k.readingFiles.length === 0) return null;
+  const lineStarts: number[] = [0];
+  for (let i = 0; i < src.length; i++) {
+    if (src[i] === "\n") lineStarts.push(i + 1);
+  }
+  return (node, pos) => {
+    // Binary search: last line start at or before pos.
+    let lo = 0;
+    let hi = lineStarts.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (lineStarts[mid]! <= pos) lo = mid;
+      else hi = mid - 1;
+    }
+    const globalLine = lo + 1;
+    const col = pos - lineStarts[lo]! + 1;
+    const owner = k.resolveReadingLine(globalLine);
+    if (owner !== null) {
+      k.attributeSource(node, owner.file, owner.line, col);
+    }
+  };
 }
 
 function readOne(k: Kernel, s: ParseState): NodeID {
@@ -177,7 +212,11 @@ function readOne(k: Kernel, s: ParseState): NodeID {
     );
   }
   if (t.kind === "lparen") {
-    return readList(k, s);
+    const node = readList(k, s);
+    if (s.attribute !== null && node.level !== Level.TRIVIAL) {
+      s.attribute(node, t.pos);
+    }
+    return node;
   }
   throw new Error(`unexpected token ${t.kind} at ${t.pos}`);
 }
