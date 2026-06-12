@@ -1,8 +1,8 @@
 ; minimal-surface.fk — the four primitive families as one recipe-callable door each
-; (m4a of fourth-kernel.form; the families derived in minimal-kernel.form).
+; (m4a of hati-os.form; the families derived in minimal-kernel.form).
 ;
 ; A recipe written against these doors runs identically on every kernel that
-; proves the band — the surface IS the portability contract the fourth kernel
+; proves the band — the surface IS the portability contract the Hati-OS kernel
 ; will be authored over. The doors:
 ;
 ;   INTERN  — ms-cell / ms-intern: a leaf, and a two-child composition under

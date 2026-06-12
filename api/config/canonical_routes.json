@@ -182,9 +182,19 @@
     {
       "path": "/api/ideas",
       "methods": [
+        "GET",
         "POST"
       ],
-      "purpose": "Create new idea entry for contributor-governed portfolio",
+      "purpose": "List or create contributor-governed portfolio ideas",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "path": "/api/ideas/{idea_id}",
+      "methods": [
+        "GET",
+        "PATCH"
+      ],
+      "purpose": "Inspect or update one contributor-governed idea",
       "idea_id": "portfolio-governance"
     },
     {
@@ -193,6 +203,14 @@
         "POST"
       ],
       "purpose": "Add open question to existing idea",
+      "idea_id": "portfolio-governance"
+    },
+    {
+      "path": "/api/ideas/{idea_id}/questions/answer",
+      "methods": [
+        "POST"
+      ],
+      "purpose": "Answer an open question on an existing idea",
       "idea_id": "portfolio-governance"
     },
     {
@@ -300,6 +318,30 @@
       "spec_ids": [
         "100"
       ]
+    },
+    {
+      "path": "/api/health/persistence",
+      "methods": [
+        "GET"
+      ],
+      "purpose": "Return global persistence contract status for core domain data",
+      "idea_id": "oss-interface-alignment"
+    },
+    {
+      "path": "/api/views/health",
+      "methods": [
+        "GET"
+      ],
+      "purpose": "Report witness-trace write health, storage growth, and cold-tier state",
+      "idea_id": "oss-interface-alignment"
+    },
+    {
+      "path": "/api/views/archive",
+      "methods": [
+        "GET"
+      ],
+      "purpose": "List cold-tier archive totals, compression, and provider distribution for view events",
+      "idea_id": "oss-interface-alignment"
     },
     {
       "path": "/api/friction/entry-points",

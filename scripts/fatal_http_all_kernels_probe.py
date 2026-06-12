@@ -6,10 +6,10 @@ The first two rows use the real persistent HTTP front doors:
   - form-kernel-go serve
 
 The TypeScript row uses the TS kernel + JS JIT under a tiny HTTP harness because
-the TS carrier does not yet ship a persistent route-listener CLI. The fourth row
-uses the Form-emitted server binary lane; today that net organ serves a static
-program response, so the probe writes the trace file before emitting the fatal
-response. Both limitations are printed in the row notes instead of hidden.
+the TS carrier does not yet ship a persistent route-listener CLI. The Hati-OS row
+uses the Form-emitted universal server lane. It loads a responder table once,
+stages live request bytes into `fk_src`, and the loaded Form program branches
+by path to answer `/boom`, `/ok`, and misses differently.
 """
 
 from __future__ import annotations
@@ -279,23 +279,23 @@ process.on("SIGTERM", () => {{
         terminate(proc)
 
 
-def probe_fourth(work: Path) -> ProbeResult:
+def probe_hati_os(work: Path) -> ProbeResult:
     if shutil.which("clang") is None:
-        raise RuntimeError("clang is required for fourth-kernel HTTP proof")
-    trace_dir = ROOT / ".cache" / "fourth-kernel"
+        raise RuntimeError("clang is required for Hati-OS HTTP proof")
+    trace_dir = ROOT / ".cache" / "Hati-OS"
     trace_dir.mkdir(parents=True, exist_ok=True)
     trace_path = trace_dir / f"crash-{time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())}-{os.getpid()}.json"
     trace_path.write_text(
         json.dumps(
             {
                 "when_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                "mode": "fourth-kernel-static-http-proof",
+                "mode": "Hati-OS-dynamic-http-proof",
                 "fatal_kind": "kernel_panic",
-                "fatal_message": "fourth-kernel fatal proof responder",
-                "likely_root_cause": "the fourth HTTP organ is a static responder today; dynamic route panic capture is still the next API-host slice",
-                "avoidance": "move request-line parsing, route dispatch, and fatal capture into the fourth-kernel API host before counting it as dynamic route parity",
-                "source_label": "fourth-walker-emit.fk fkc-emit-server",
-                "operation": "request=GET /boom static fatal responder",
+                "fatal_message": "Hati-OS dynamic fatal proof responder",
+                "likely_root_cause": "the emitted Hati-OS HTTP responder selected the fatal branch for /boom",
+                "avoidance": "trace the request-aware responder branch and move the same path selection into the broader Hati-OS API host",
+                "source_label": "hati-os-kernel-emit.fk fkc-emit-server request-aware proof",
+                "operation": "request=GET /boom dynamic responder",
             },
             indent=2,
         )
@@ -306,53 +306,96 @@ def probe_fourth(work: Path) -> ProbeResult:
         "HTTP/1.0 500 Internal Server Error\r\n"
         "Content-Type: text/plain; charset=utf-8\r\n"
         "Connection: close\r\n"
-        "X-Form-Router: fourth-kernel-error\r\n"
+        "X-Form-Router: Hati-OS-error\r\n"
         "X-Form-Fatal-Kind: kernel_panic\r\n"
         f"X-Form-Crash-Trace: {trace_path}\r\n"
         "\r\n"
-        "fatal[kernel_panic]: fourth-kernel fatal proof responder\n"
-        "likely_root_cause: the fourth HTTP organ is a static responder today; dynamic route panic capture is still the next API-host slice\n"
-        "avoidance: move request-line parsing, route dispatch, and fatal capture into the fourth-kernel API host before counting it as dynamic route parity\n"
+        "fatal[kernel_panic]: Hati-OS dynamic fatal proof responder\n"
+        "likely_root_cause: the emitted Hati-OS HTTP responder selected the fatal branch for /boom\n"
+        "avoidance: trace the request-aware responder branch and move the same path selection into the broader Hati-OS API host\n"
         f"trace: {trace_path}\n"
     )
-    driver = work / "fourth-server-driver.fk"
+    ok_response = (
+        "HTTP/1.0 200 OK\r\n"
+        "Content-Type: text/plain; charset=utf-8\r\n"
+        "Connection: close\r\n"
+        "X-Form-Router: Hati-OS-dynamic\r\n"
+        "\r\n"
+        "ok"
+    )
+    miss_response = (
+        "HTTP/1.0 404 Not Found\r\n"
+        "Content-Type: text/plain; charset=utf-8\r\n"
+        "Connection: close\r\n"
+        "X-Form-Router: Hati-OS-dynamic\r\n"
+        "\r\n"
+        "missing"
+    )
+    driver = work / "hati-os-server-driver.fk"
     driver.write_text(
         (FORM / "form-stdlib" / "minimal-surface.fk").read_text(encoding="utf-8")
-        + (FORM / "form-stdlib" / "fourth-walker.fk").read_text(encoding="utf-8")
-        + (FORM / "form-stdlib" / "fourth-walker-emit.fk").read_text(encoding="utf-8")
+        + (FORM / "form-stdlib" / "hati-os-kernel.fk").read_text(encoding="utf-8")
+        + (FORM / "form-stdlib" / "hati-os-kernel-emit.fk").read_text(encoding="utf-8")
         + "\n"
-        + f'(let resp (fkresp {sexp_string(response)}))\n'
+        + "(defn fk-bool-eq (a b) (fk-if (fk-sub a b) (fk-lit 0) (fk-lit 2)))\n"
+        + "(defn fk-bool-and (a b) (fk-if a b (fk-lit 0)))\n"
+        + "(defn fk-req-at (idx code) (fk-bool-eq (fk-buf (fk-lit idx)) (fk-lit code)))\n"
+        + f"(let is-ok {fk_request_match_expr('/ok')})\n"
+        + f"(let is-boom {fk_request_match_expr('/boom')})\n"
+        + f'(let ok-resp (fkresp {sexp_string(ok_response)}))\n'
+        + f'(let boom-resp (fkresp {sexp_string(response)}))\n'
+        + f'(let miss-resp (fkresp {sexp_string(miss_response)}))\n'
+        + "(let resp (fk-if is-ok ok-resp (fk-if is-boom boom-resp miss-resp)))\n"
         + '(print "==SRV==")\n'
-        + '(print (fkc-emit-server (list resp)))\n'
+        + '(print (fkc-emit-server-universal))\n'
+        + '(print "==TAB==")\n'
+        + '(print (fkc-table-file (list resp)))\n'
         + '(print "==END==")\n',
         encoding="utf-8",
     )
     emit = subprocess.run([str(GO_BIN), str(driver)], cwd=FORM, check=True, capture_output=True, text=True)
-    c_path = work / "fourth-api.c"
+    c_path = work / "hati-os-api.c"
+    table_path = work / "hati-os-api.table.txt"
     in_block = False
+    in_table = False
     lines: list[str] = []
+    table_lines: list[str] = []
     for line in emit.stdout.splitlines():
         if line == "==SRV==":
             in_block = True
+            in_table = False
+            continue
+        if line == "==TAB==":
+            in_block = False
+            in_table = True
             continue
         if line == "==END==":
             break
         if in_block:
             lines.append(line)
+        if in_table:
+            table_lines.append(line)
     c_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    bin_path = work / "fourth-api"
+    table_path.write_text("\n".join(table_lines) + "\n", encoding="utf-8")
+    bin_path = work / "hati-os-api"
     subprocess.run(["clang", "-O2", "-o", str(bin_path), str(c_path)], check=True)
     port = free_port()
-    cmd = [str(bin_path), str(port)]
+    cmd = [str(bin_path), str(table_path), str(port)]
     proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
     try:
         wait_port(port, proc)
         reply = raw_get(port)
+        ok_reply = raw_get(port, "/ok")
+        miss_reply = raw_get(port, "/missing")
+        if "200 OK" not in ok_reply or "\r\n\r\nok" not in ok_reply:
+            raise RuntimeError(f"Hati-OS emitted server did not answer /ok dynamically:\n{ok_reply}")
+        if "404 Not Found" not in miss_reply or "\r\n\r\nmissing" not in miss_reply:
+            raise RuntimeError(f"Hati-OS emitted server did not answer /missing dynamically:\n{miss_reply}")
         return ProbeResult(
-            "fourth-kernel-emitted-http",
+            "Hati-OS-emitted-http",
             cmd,
             reply,
-            "Form-emitted HTTP binary; static fatal responder until fourth API-host routing lands",
+            "Form-emitted universal HTTP binary; loaded responder table proved with /boom, /ok, and /missing",
         )
     finally:
         terminate(proc)
@@ -360,6 +403,21 @@ def probe_fourth(work: Path) -> ProbeResult:
 
 def sexp_string(value: str) -> str:
     return json.dumps(value)
+
+
+def fk_bool_and_expr(parts: list[str]) -> str:
+    if not parts:
+        return "(fk-lit 2)"
+    expr = parts[-1]
+    for part in reversed(parts[:-1]):
+        expr = f"(fk-bool-and {part} {expr})"
+    return expr
+
+
+def fk_request_match_expr(path: str) -> str:
+    request = f"GET {path} "
+    parts = [f"(fk-req-at {idx} {ord(ch)})" for idx, ch in enumerate(request)]
+    return fk_bool_and_expr(parts)
 
 
 def compact_reply(reply: str) -> str:
@@ -385,7 +443,7 @@ def main() -> int:
     results: list[ProbeResult] = []
     with tempfile.TemporaryDirectory(prefix="fatal-http-kernels-") as tmp:
         work = Path(tmp)
-        for probe in (probe_rust, probe_go, probe_ts_jit, probe_fourth):
+        for probe in (probe_rust, probe_go, probe_ts_jit, probe_hati_os):
             results.append(probe(work))
     print("fatal HTTP replies across kernel carriers")
     for result in results:

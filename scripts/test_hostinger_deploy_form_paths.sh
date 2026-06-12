@@ -54,6 +54,12 @@ grep -Fq 'PathRegexp(`^/api/presences/[^/]+/resonances$`)' "$ROOT_DIR/deploy/ker
 grep -Fq 'PathRegexp(`^/api/presences/[^/]+/places$`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
   || fail "kernel-router ingress does not expose the presence places BML template route"
 
+grep -Fq '(PathRegexp(`^/api/graph/nodes/[^/]+$`) && !Path(`/api/graph/nodes/count`))' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+  || fail "kernel-router ingress does not expose the graph node detail BML template route without swallowing count"
+
+grep -Fq '(PathRegexp(`^/api/ideas/[^/]+$`) && !Path(`/api/ideas/storage`) && !Path(`/api/ideas/tags`) && !Path(`/api/ideas/cards`) && !Path(`/api/ideas/health`) && !Path(`/api/ideas/right-sizing`) && !Path(`/api/ideas/showcase`) && !Path(`/api/ideas/resonance`) && !Path(`/api/ideas/count`) && !Path(`/api/ideas/progress`) && !Path(`/api/ideas/portfolio-summary`) && !Path(`/api/ideas/breath-overview`))' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+  || fail "kernel-router ingress does not expose the idea detail BML template route without swallowing static idea routes"
+
 grep -Fq 'PathRegexp(`^/api/graph/nodes/[^/]+/edges$`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
   || fail "kernel-router ingress does not expose the graph node edges BML template route"
 
@@ -65,6 +71,15 @@ grep -Fq 'PathRegexp(`^/api/spec-registry/[^/]+$`) && !Path(`/api/spec-registry/
 
 grep -Fq 'PathRegexp(`^/api/ideas/[^/]+/specs$`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
   || fail "kernel-router ingress does not expose the idea specs BML route"
+
+grep -Fq 'Method(`PATCH`) && PathRegexp(`^/api/ideas/[^/]+$`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+  || fail "kernel-router ingress does not expose the idea update BML route"
+
+grep -Fq 'PathRegexp(`^/api/ideas/[^/]+/questions$`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+  || fail "kernel-router ingress does not expose the idea question create BML route"
+
+grep -Fq 'PathRegexp(`^/api/ideas/[^/]+/questions/answer$`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
+  || fail "kernel-router ingress does not expose the idea question answer BML route"
 
 grep -Fq 'Path(`/api/sensings`)' "$ROOT_DIR/deploy/kernel-router/docker-compose.kernel-router.yml" \
   || fail "kernel-router ingress does not expose the sensings BML route"
@@ -101,6 +116,10 @@ if len(routes) < 50:
 def expected_token(path: str) -> str:
     if path == "/api/spec-registry/{spec_id}":
         return "PathRegexp(`^/api/spec-registry/[^/]+$`) && !Path(`/api/spec-registry/cards`) && !Path(`/api/spec-registry/source-list`)"
+    if path == "/api/graph/nodes/{node_id}":
+        return "(PathRegexp(`^/api/graph/nodes/[^/]+$`) && !Path(`/api/graph/nodes/count`))"
+    if path == "/api/ideas/{idea_id}":
+        return "(PathRegexp(`^/api/ideas/[^/]+$`) && !Path(`/api/ideas/storage`) && !Path(`/api/ideas/tags`) && !Path(`/api/ideas/cards`) && !Path(`/api/ideas/health`) && !Path(`/api/ideas/right-sizing`) && !Path(`/api/ideas/showcase`) && !Path(`/api/ideas/resonance`) && !Path(`/api/ideas/count`) && !Path(`/api/ideas/progress`) && !Path(`/api/ideas/portfolio-summary`) && !Path(`/api/ideas/breath-overview`))"
     if path == "/api/concepts/lc-*":
         return "PathRegexp(`^/api/concepts/lc-[^/]+$`)"
     if path == "/api/agent/tasks/task_*":
@@ -165,6 +184,12 @@ grep -Fq 'api_presence_resonances' "$DEPLOY_SCRIPT" \
 grep -Fq 'api_presence_places' "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not probe the presence places BML handler"
 
+grep -Fq 'api_graph_node_detail' "$DEPLOY_SCRIPT" \
+  || fail "deploy canary does not probe the graph node detail BML handler"
+
+grep -Fq 'api_idea_detail' "$DEPLOY_SCRIPT" \
+  || fail "deploy canary does not probe the idea detail BML handler"
+
 grep -Fq 'api_graph_node_edges' "$DEPLOY_SCRIPT" \
   || fail "deploy canary does not probe the graph node edges BML handler"
 
@@ -204,6 +229,21 @@ grep -Fq 'api-native-ok-json("api_presence_resonances"' "$ROOT_DIR/deploy/front-
 grep -Fq 'api-native-ok-json("api_presence_places"' "$ROOT_DIR/deploy/front-door/api.bml" \
   || fail "presence places handler does not emit native proof headers"
 
+grep -Fq 'api-native-ok-json("api_graph_node_detail"' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "graph node detail handler does not emit native proof headers"
+
+grep -Fq 'api-native-ok-json("api_idea_detail"' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "idea detail handler does not emit native proof headers"
+
+grep -Fq 'api-native-ok-json("api_idea_update"' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "idea update handler does not emit native proof headers"
+
+grep -Fq 'api-native-ok-json("api_idea_question_create"' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "idea question create handler does not emit native proof headers"
+
+grep -Fq 'api-native-ok-json("api_idea_question_answer"' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "idea question answer handler does not emit native proof headers"
+
 grep -Fq 'api-native-ok-json("api_graph_node_edges"' "$ROOT_DIR/deploy/front-door/api.bml" \
   || fail "graph node edges handler does not emit native proof headers"
 
@@ -215,6 +255,21 @@ grep -Fq 'language-route-class-kernel-route(AgentTaskLogRoute)' "$ROOT_DIR/deplo
 
 grep -Fq 'language-route-class-kernel-route(PresencePlacesRoute)' "$ROOT_DIR/deploy/front-door/api.bml" \
   || fail "presence places route class is not exported in the BML routes list"
+
+grep -Fq 'language-route-class-kernel-route(GraphNodeDetailRoute)' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "graph node detail route class is not exported in the BML routes list"
+
+grep -Fq 'language-route-class-kernel-route(IdeaDetailRoute)' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "idea detail route class is not exported in the BML routes list"
+
+grep -Fq 'language-route-class-kernel-route(IdeaUpdateRoute)' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "idea update route class is not exported in the BML routes list"
+
+grep -Fq 'language-route-class-kernel-route(IdeaQuestionCreateRoute)' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "idea question create route class is not exported in the BML routes list"
+
+grep -Fq 'language-route-class-kernel-route(IdeaQuestionAnswerRoute)' "$ROOT_DIR/deploy/front-door/api.bml" \
+  || fail "idea question answer route class is not exported in the BML routes list"
 
 grep -Fq 'language-route-class-kernel-route(GraphNodeEdgesRoute)' "$ROOT_DIR/deploy/front-door/api.bml" \
   || fail "graph node edges route class is not exported in the BML routes list"

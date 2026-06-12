@@ -14,14 +14,14 @@
 # outside the families is recipe-expressible — trig.fk already proved the
 # pattern by removing sin/cos/sqrt from all three kernels.
 #
-# This is the M4 contract for fourth-kernel.form: the emitted walker carries
+# This is the M4 contract for hati-os.form: the emitted walker carries
 # four native families; everything else arrives as recipes.
 
 (minimal-kernel
 
   (lineage
     (derives-from   core-axioms.form)                      # the five axioms are the only ground
-    (contract-for   fourth-kernel.form)                    # M4: what the emitted walker must carry
+    (contract-for   hati-os.form)                    # M4: what the emitted walker must carry
     (resources-via  host-kernel.form resource-port.fk)     # the port discipline
     (bmf-ground     bmf-architecture.form)                 # choice/cut/fail/stop/save/restore
     (walk-proof     form-engine.form)                      # meta-circular: the loop is recipes over offer

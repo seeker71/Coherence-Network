@@ -14,8 +14,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FORM="$ROOT/form"; GO="$FORM/form-kernel-go/bin-go"; CLANG="${CLANG:-clang}"
 [[ -x "$GO" ]] || (cd "$FORM/form-kernel-go" && go build -o bin-go .)
 work="$(mktemp -d "${TMPDIR:-/tmp}/funion.XXXXXX")"; trap 'rm -rf "$work"' EXIT
-PRELUDE() { cat "$FORM/form-stdlib/minimal-surface.fk" "$FORM/form-stdlib/fourth-walker.fk" \
-                "$FORM/form-stdlib/fourth-walker-emit.fk" "$FORM/form-stdlib/fourth-union.fk"; }
+PRELUDE() { cat "$FORM/form-stdlib/minimal-surface.fk" "$FORM/form-stdlib/hati-os-kernel.fk" \
+                "$FORM/form-stdlib/hati-os-kernel-emit.fk" "$FORM/form-stdlib/fourth-union.fk"; }
 
 # ── pass 0: extract the constant text segments + pass-1 row counts ──
 { PRELUDE; cat <<'EOF'

@@ -36,7 +36,7 @@
 ; time-ordering lands exactly where the single-offer carrier already breathes.
 ;
 ; Proof: form-stdlib/tests/afferent-priority-band.fk → 1023 three-way
-; (Go/Rust/TS). Live witness: scripts/fourth_kernel_audit.sh section 23.
+; (Go/Rust/TS). Live witness: scripts/hati_os_kernel_audit.sh section 23.
 
 ;; --- a line's level: the IRQ controller's priority register, as data ---
 (defn aop-level-in (pairs line)

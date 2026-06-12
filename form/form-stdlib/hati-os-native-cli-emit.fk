@@ -1,5 +1,5 @@
-; fourth-kernel-emit.fk — a standalone native CLI emitted entirely from Form recipes
-; (the fourth sibling's seed: kernel-self-composition.close-self-rebuild-loop, first stone).
+; hati-os-native-cli-emit.fk — a standalone native CLI emitted entirely from Form recipes
+; (the Hati-OS sibling's seed: kernel-self-composition.close-self-rebuild-loop, first stone).
 ;
 ; jit-tensor-emit.fk proved the emitter-as-recipe lane at plugin granularity: Form authors the
 ; native source, the kernel keeps only dumb carriers. This recipe widens the lane to a WHOLE
@@ -17,25 +17,25 @@
 ; value parity over integers); ackermann stays recursive, the same call shape the walker takes.
 ; The function-name prefix parameterizes the whole program — emission is a function, not a constant.
 ;
-; scripts/fourth_kernel_audit.sh carries the emitted text through clang and measures the binary
+; scripts/hati_os_kernel_audit.sh carries the emitted text through clang and measures the binary
 ; against the three walking kernels: wall time, maximum RSS, binary size, startup.
 
-(defn fk4-pr-c (p)
+(defn hati-os-pr-c (p)
   (str_concat "extern int putchar(int); static void "
   (str_concat p
               "_pr(long long v) { char b[32]; int n = 0; if (v < 0) { putchar(45); v = 0 - v; } if (v == 0) { putchar(48); } while (v > 0) { b[n] = 48 + v % 10; v = v / 10; n = n + 1; } while (n > 0) { n = n - 1; putchar(b[n]); } putchar(10); }")))
 
-(defn fk4-fib-c (p)
+(defn hati-os-fib-c (p)
   (str_concat "static long long "
   (str_concat p
               "_fib(long long n) { long long a = 0; long long b = 1; long long i = 0; while (i < n) { long long t = a + b; a = b; b = t; i = i + 1; } return a; }")))
 
-(defn fk4-sum-c (p)
+(defn hati-os-sum-c (p)
   (str_concat "static long long "
   (str_concat p
               "_sum(long long n) { long long s = 0; long long i = 1; while (i <= n) { s = s + i; i = i + 1; } return s; }")))
 
-(defn fk4-ack-c (p)
+(defn hati-os-ack-c (p)
   (str_concat "static long long "
   (str_concat p
   (str_concat "_ack(long long m, long long n) { if (m == 0) { return n + 1; } if (n == 0) { return "
@@ -46,7 +46,7 @@
   (str_concat p
               "_ack(m, n - 1)); }")))))))))
 
-(defn fk4-main-c (p)
+(defn hati-os-main-c (p)
   (str_concat "extern int atoi(const char *); int main(int argc, char **argv) { long long w = 0; long long n = 0; long long m = 0; if (argc > 1) { w = atoi(argv[1]); } if (argc > 2) { n = atoi(argv[2]); } if (argc > 3) { m = atoi(argv[3]); } if (w == 1) { "
   (str_concat p
   (str_concat "_pr("
@@ -63,13 +63,13 @@
   (str_concat p
               "_pr(0); } return 0; }")))))))))))))))
 
-(defn fk4-program (p)
-  (str_concat (fk4-pr-c p)
+(defn hati-os-program (p)
+  (str_concat (hati-os-pr-c p)
   (str_concat " "
-  (str_concat (fk4-fib-c p)
+  (str_concat (hati-os-fib-c p)
   (str_concat " "
-  (str_concat (fk4-sum-c p)
+  (str_concat (hati-os-sum-c p)
   (str_concat " "
-  (str_concat (fk4-ack-c p)
+  (str_concat (hati-os-ack-c p)
   (str_concat " "
-              (fk4-main-c p))))))))))
+              (hati-os-main-c p))))))))))

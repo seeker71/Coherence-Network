@@ -1213,6 +1213,8 @@ check_promoted_bml_read_routes_native() {
     "concept-voices|/api/concepts/lc-attuned-spaces/voices|api_concept_voices"
     "concept-carried-by|/api/concepts/lc-ceremony/carried-by|api_concept_carried_by"
     "presence-resonances|/api/presences/asset:audible-B00DVN8U82/resonances|api_presence_resonances"
+    "graph-node-detail|/api/graph/nodes/urs|api_graph_node_detail"
+    "idea-detail|/api/ideas/user-surfaces|api_idea_detail"
     "spec-registry|/api/spec-registry?limit=2|api_spec_registry"
     "spec-registry-detail|/api/spec-registry/web-ideas-specs-usage-pages|api_spec_registry_detail"
     "idea-specs|/api/ideas/user-surfaces/specs|api_idea_specs"

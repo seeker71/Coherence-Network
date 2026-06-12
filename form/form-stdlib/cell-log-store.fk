@@ -34,6 +34,8 @@
             (cls-str-bytes-loop s (add i 1) n
                 (cls-app acc (list (ord (char_at s i)))))))
     (defn cls-str-bytes (s) (cls-str-bytes-loop s 0 (str_len s) (empty)))
+    (defn cls-after1 (effect value) value)
+    (defn cls-after2 (effect-a effect-b value) value)
 
     ;; decimal int → string.
     (defn cls-int-str (n)
@@ -41,12 +43,12 @@
             (str_concat (cls-int-str (div n 10))
                         (substring "0123456789" (mod n 10) (add (mod n 10) 1)))))
     ;; zero-padded 6-digit segment id, for sortable filenames.
+    (defn cls-pad-loop (s)
+        (if (ge (str_len s) 6) s (cls-pad-loop (str_concat "0" s))))
     (defn cls-pad6 (n)
         (do
             (let s (cls-int-str n))
             (cls-pad-loop s)))
-    (defn cls-pad-loop (s)
-        (if (ge (str_len s) 6) s (cls-pad-loop (str_concat "0" s))))
 
     ;; parse a decimal run from s at i → (value next-i).
     (defn cls-parse-int-loop (s i n acc)
@@ -111,10 +113,13 @@
                     (let vlen (str_len value))
                     (let hdr (cls-header "0" klen vlen key))
                     (let line (str_concat hdr value))
-                    (file_append_bytes segpath (cls-app (cls-str-bytes line) (list 10)))
-                    (let voff (add pre0 (str_len hdr)))
-                    (record_set (cls-keydir st) key (cls-entry seg voff vlen))
-                    st))))
+                    (let written-end
+                        (file_append_bytes segpath (cls-app (cls-str-bytes line) (list 10))))
+                    (let voff (sub (sub written-end vlen) 1))
+                    (let entry (cls-entry seg voff vlen))
+                    (cls-after1
+                        (record_set (cls-keydir st) key entry)
+                        st)))))
 
     ;; ---- get: keydir → read_file_slice into the named segment -------------
     (defn cls-get (st key)
@@ -136,9 +141,10 @@
             (let segpath (cls-seg-path (cls-dir st) seg))
             (let klen (str_len key))
             (let hdr (cls-header "1" klen 0 key))
-            (file_append_bytes segpath (cls-app (cls-str-bytes hdr) (list 10)))
-            (record_set (cls-keydir st) key (cls-tomb-entry))
-            st))
+            (cls-after2
+                (file_append_bytes segpath (cls-app (cls-str-bytes hdr) (list 10)))
+                (record_set (cls-keydir st) key (cls-tomb-entry))
+                st)))
 
     ;; ---- open / replay ----------------------------------------------------
     ;; Replay one segment's text into the keydir; seg is its id (for entries).
@@ -156,30 +162,39 @@
                 (let voff (add p3 klen))
                 (let next (add (add voff vlen) 1))
                 (if (gt next n) kd                     ; torn tail → stop
-                    (do
+                    (cls-replay-seg text next n
                         (if (str_eq (substring text pos (add pos 1)) "1")
                             (record_set kd key (cls-tomb-entry))
                             (record_set kd key (cls-entry seg voff vlen)))
-                        (cls-replay-seg text next n kd seg))))))
+                        seg)))))
+
+    (defn cls-replay-result (active kd) (list active kd))
+    (defn cls-replay-active (rr) (nth rr 0))
+    (defn cls-replay-keydir (rr) (nth rr 1))
 
     ;; replay every existing segment 0,1,2,... until one is missing; returns the
-    ;; highest segment id seen (the active one to continue appending to).
+    ;; highest segment id seen (the active one to continue appending to) and the
+    ;; replay-filled keydir as one value so inline let lowering cannot re-create
+    ;; a fresh keydir after replay.
     (defn cls-replay-all (dir kd seg)
         (do
             (let p (cls-seg-path dir seg))
             (if (eq (fs_exists p) 1)
                 (do
                     (let text (read_file p))
-                    (cls-replay-seg text 0 (str_len text) kd seg)
-                    (cls-replay-all dir kd (add seg 1)))
-                (if (eq seg 0) 0 (sub seg 1)))))       ; last existing seg
+                    (let next-kd (cls-replay-seg text 0 (str_len text) kd seg))
+                    (cls-replay-all dir next-kd (add seg 1)))
+                (cls-replay-result
+                    (if (eq seg 0) 0 (sub seg 1))
+                    kd))))       ; last existing seg
 
     (defn cls-open-with (dir seg-bytes)
-        (do
+        (cls-after1
             (fs_mkdir dir)
+            (do
             (let kd (record_new (make_nodeid 1 9 60 1)))
-            (let active (cls-replay-all dir kd 0))
-            (cls-store dir active seg-bytes kd)))
+            (let replay (cls-replay-all dir kd 0))
+            (cls-store dir (cls-replay-active replay) seg-bytes (cls-replay-keydir replay)))))
     (defn cls-open (dir) (cls-open-with dir (cls-default-seg-bytes)))
 
     ;; ---- total bytes across all segments (for compaction accounting) ------

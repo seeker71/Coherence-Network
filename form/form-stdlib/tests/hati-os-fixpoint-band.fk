@@ -1,6 +1,6 @@
-; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk
 ;
-; fourth-fixpoint-band — m4d's first move proven three-way: the four new ops
+; hati-os-fixpoint-band — m4d's first move proven three-way: the four new ops
 ; flatten canonically (NODE = the binary observing itself, PUTC = the efferent
 ; port, DIV/MOD = figure leaves), the quine knot is closed (the self-printer
 ; contains its own true length, and adding the true length leaves the length

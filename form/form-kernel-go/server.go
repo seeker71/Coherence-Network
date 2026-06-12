@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
@@ -160,8 +161,23 @@ func (t *pgHandleTable) setErr(err error) {
 	if err == nil {
 		t.lastErr = ""
 	} else {
-		t.lastErr = err.Error()
+		t.lastErr = formatPGError(err)
 	}
+}
+
+func formatPGError(err error) string {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		parts := []string{pgErr.Message}
+		if pgErr.Detail != "" {
+			parts = append(parts, "detail: "+pgErr.Detail)
+		}
+		if pgErr.Hint != "" {
+			parts = append(parts, "hint: "+pgErr.Hint)
+		}
+		return strings.Join(parts, " | ")
+	}
+	return err.Error()
 }
 
 func (t *pgHandleTable) register(db *sql.DB) int64 {

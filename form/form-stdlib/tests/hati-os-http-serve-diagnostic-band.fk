@@ -1,0 +1,50 @@
+; preludes: form-stdlib/http-parse.fk form-stdlib/http-serve.fk
+;
+; hati-os-http-serve-diagnostic-band — a narrow witness for the Hati-OS universal
+; HTTP gap. The wide http-serve-band proves the full surface (1023) across the
+; sibling kernels; this band isolates the first framing and dispatch stones so
+; the Hati-OS arm can be diagnosed without the whole coherence_weight workload.
+;
+; Verdict 127 when the narrow surface holds:
+;   1   hs-build-response frames a JSON body exactly
+;   2   http-handle on a matching route returns the same exact response
+;   4   the body extractor sees the relayed body unchanged
+;   8   hs-content-type recognizes a JSON body
+;   16  hs-path-only / hs-query-of split a query-bearing path correctly
+;   32  hs-parse-query reads threshold=90&values=1,2 into the expected alist
+;   64  a miss returns the fan-out marker
+
+(defn d-body (resp)
+    (do
+        (let i (str_find resp "\r\n\r\n" 0))
+        (if (eq i -1) "" (substring resp (add i 4) (str_len resp)))))
+
+(defn d-assoc (key pairs)
+    (if (eq (len pairs) 0) ""
+        (if (str_eq (head (head pairs)) key)
+            (head (tail (head pairs)))
+            (d-assoc key (tail pairs)))))
+
+(defn d-ok (q) (http-ok "{\"x\":1}"))
+
+(let d-exact
+    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 7\r\nX-Form-Router: native-kernel\r\n\r\n{\"x\":1}")
+
+(let d-routes (list (list "/ok" d-ok)))
+(let d-resp (http-handle "GET /ok HTTP/1.1\r\nHost: x\r\n\r\n" d-routes))
+(let d-miss (http-handle "GET /miss HTTP/1.1\r\nHost: x\r\n\r\n" d-routes))
+(let d-pq (hs-parse-query (hs-query-of "/p?threshold=90&values=1,2")))
+
+(let c0 (if (str_eq (hs-build-response 200 "{\"x\":1}") d-exact) 1 0))
+(let c1 (if (str_eq d-resp d-exact) 2 0))
+(let c2 (if (str_eq (d-body d-resp) "{\"x\":1}") 4 0))
+(let c3 (if (str_eq (hs-content-type "{\"x\":1}") "application/json") 8 0))
+(let c4 (if (str_eq (hs-path-only "/p?threshold=90&values=1,2") "/p")
+            (if (str_eq (hs-query-of "/p?threshold=90&values=1,2") "threshold=90&values=1,2") 16 0)
+            0))
+(let c5 (if (str_eq (d-assoc "threshold" d-pq) "90")
+            (if (str_eq (d-assoc "values" d-pq) "1,2") 32 0)
+            0))
+(let c6 (if (http-is-fanout? d-miss) 64 0))
+
+(sum (list c0 c1 c2 c3 c4 c5 c6))

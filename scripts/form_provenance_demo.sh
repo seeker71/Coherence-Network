@@ -22,8 +22,8 @@ cat > "$work/fib-source.fk" <<'EOF'
 EOF
 
 # emit the SPY walker from that source + run it for the live framebuffer
-cat "$FORM/form-stdlib/minimal-surface.fk" "$FORM/form-stdlib/fourth-walker.fk" \
-    "$FORM/form-stdlib/fourth-walker-emit.fk" "$work/fib-source.fk" > "$work/e.fk"
+cat "$FORM/form-stdlib/minimal-surface.fk" "$FORM/form-stdlib/hati-os-kernel.fk" \
+    "$FORM/form-stdlib/hati-os-kernel-emit.fk" "$work/fib-source.fk" > "$work/e.fk"
 printf '(print "==C==")\n(print (fkc-emit-spy (list fibc)))\n(print "==END==")\n' >> "$work/e.fk"
 (cd "$FORM" && "$GO" "$work/e.fk" 2>/dev/null) | sed -n '/^==C==$/,/^==END==$/p' | sed -e '1d' -e '$d' > "$work/spy.c"
 "$CLANG" -O2 -o "$work/spy" "$work/spy.c"

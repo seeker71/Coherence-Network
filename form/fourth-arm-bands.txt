@@ -13,7 +13,7 @@
 # (same-name convention form-stdlib/<stem>.fk when no prelude is declared).
 # Provenance: every row is gated four-way by validate.sh itself on every
 # suite run — the fourth leg's verdict must equal the three walkers' byte
-# for byte; scripts/fourth_kernel_audit.sh sections 19/22/24/25/26 carry
+# for byte; scripts/hati_os_kernel_audit.sh sections 19/22/24/25/26 carry
 # the milestone proofs the first rows crossed through. A band leaves this
 # file only when its source moves outside the walker's op families.
 #

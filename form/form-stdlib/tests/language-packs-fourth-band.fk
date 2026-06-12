@@ -7,7 +7,7 @@
 ; deps. The op mapping (tok1 -> ADD, tok2 -> SUB) is the pack's two rows; the
 ; OPERANDS are witnessed from each tongue's parse.
 ;
-; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/adler32.fk form-stdlib/pack-manifest.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/bmf-mini.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/rust-bmf.fk form-stdlib/grammars/prolog-bmf.fk
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/adler32.fk form-stdlib/pack-manifest.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/bmf-mini.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/rust-bmf.fk form-stdlib/grammars/prolog-bmf.fk
 ;
 ; Verdict 31 when the family holds:
 ;   1   shared heart — all five packs compile [1,1,2] to the SAME program cell

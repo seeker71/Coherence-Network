@@ -11,8 +11,8 @@ FORM="$ROOT/form"; GO="$FORM/form-kernel-go/bin-go"; CLANG="${CLANG:-clang}"
 work="$(mktemp -d "${TMPDIR:-/tmp}/fsym.XXXXXX")"; trap 'rm -rf "$work"' EXIT
 
 # emit the SPY fib walker (per-node framebuffer) and its table rows
-cat "$FORM/form-stdlib/minimal-surface.fk" "$FORM/form-stdlib/fourth-walker.fk" \
-    "$FORM/form-stdlib/fourth-walker-emit.fk" > "$work/e.fk"
+cat "$FORM/form-stdlib/minimal-surface.fk" "$FORM/form-stdlib/hati-os-kernel.fk" \
+    "$FORM/form-stdlib/hati-os-kernel-emit.fk" > "$work/e.fk"
 cat >> "$work/e.fk" <<'EOF'
 (let fibc (fk-if (fk-le (fk-arg) (fk-lit 1)) (fk-arg) (fk-add (fk-call 0 (fk-sub (fk-arg) (fk-lit 1))) (fk-call 0 (fk-sub (fk-arg) (fk-lit 2))))))
 (let flat (fkc-flatten-many (list fibc)))

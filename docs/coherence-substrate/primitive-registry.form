@@ -29,7 +29,7 @@
 # (loopback proven in the socket bands), sweep-hazard (substrate_gc can
 # sweep band tissue mid-walk), toolchain (jit compile results depend on
 # host compilers), sibling-gap (absent in rust and/or ts today — the
-# precise list a sibling-parity pass or the fourth kernel's audit lane
+# precise list a sibling-parity pass or the Hati-OS kernel's audit lane
 # closes next).
 
 (primitive-registry
@@ -40,7 +40,7 @@
     (proof          form-stdlib/tests/primitive-registry-band.fk -> 63 three-way)
     (drift-gate     form/scripts/validate_primitive_registry.py)  # registry == kernel source
     (wellness       scripts/wellness_check.py sense_form_primitives)
-    (feeds          fourth-kernel.m2-bmf-compiler-native fourth-kernel.m4-walker-emitted))
+    (feeds          Hati-OS.m2-bmf-compiler-native Hati-OS.m4-walker-emitted))
 
   # ── what the band proves, three-way, every validate run ─────────────
   (band-claims
@@ -68,7 +68,7 @@
                      socket_send socket_recv socket_close)
     (sweep-hazard    substrate_gc)
     (toolchain       jit_compile_value)
-    (sibling-gap     # go-only: the fourth kernel's audit lane runs these
+    (sibling-gap     # go-only: the Hati-OS kernel's audit lane runs these
                      compile_form_source compile-form-source
                      compile_source_section compile-source-section
                      compile_source_text compile-source-text
@@ -83,13 +83,13 @@
                      value_str value_kind value-kind str_to_float jit_compiled?
                      jit_install installed_leaf?))  # install-leaf.form carriers: go + rust live
 
-  # ── how this feeds the fourth kernel ────────────────────────────────
+  # ── how this feeds the Hati-OS kernel ────────────────────────────────
   # M2 (native BMF compiler) and M4 (the emitted walker) prove themselves
   # primitive-by-primitive: the emitted artifact realizes a subset of this
   # registry and answers each entry's verification recipe with its declared
   # outside. The registry is the question list; the band's refusal claim is
   # the discipline that a wrong answer never lands.
-  (fourth-kernel-ground
+  (Hati-OS-ground
     (question-list  every-entry-name-verify-expected)
     (subset-honesty an-emitted-kernel-declares-which-entries-it-carries)
     (parity-gate    answers-must-equal-the-walkers-before-any-timing-counts)))

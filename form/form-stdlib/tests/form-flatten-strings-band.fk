@@ -1,8 +1,8 @@
-; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/form-parse.fk form-stdlib/form-flatten.fk
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/form-parse.fk form-stdlib/form-flatten.fk
 ;
 ; form-flatten-strings-band — the walker string-pool lane proven three-way:
-; strings are content-addressed pool cells (tags 24..28 — SLIT/SLEN/SEQ/
-; SCAT/SCHAR, the range 24..33 claimed by this family). The flattener's
+; strings are content-addressed pool cells (tags 24..33 — SLIT/SLEN/SEQ/
+; SCAT/SCHAR/SSUB/SFIND/STOI/ITOS/BTOS). The flattener's
 ; pre-pass interns every distinct "literal" once (same bytes = same slot,
 ; axiom 3), a literal lowers to SLIT carrying its pool index, and string
 ; VALUES ride as pool ids — plain ints the melt never needs to root. The
@@ -11,7 +11,7 @@
 ; interned. Mini sources build their quotes through byte_to_str 34 — the
 ; band file itself stays plain.
 ;
-; Verdict 31 when the lane holds:
+; Verdict 63 when the lane holds:
 ;   1   the lowerings carry values — str_eq dispatches a defn by label
 ;       (lab walks warm->7 cool->9 mist->0, sum 16), str_concat interns
 ;       into the same slot its parts name ((wa+rm) str_eq warm -> 1), and
@@ -27,6 +27,9 @@
 ;   16  the table file grows a string section — the flattened rows carry
 ;       SLIT and SEQ tags, and the pool serializes as count, length, bytes
 ;       ("hi" -> "1 2 104 105") behind the unchanged row text
+;   32  the higher string family walks and the flattener names it honestly —
+;       substring/str_find/str_to_int/int_to_str/byte_to_str plus the
+;       name->tag rows for substring/str_find/str_to_int/int_to_str/byte_to_str
 (do
     (let q (byte_to_str 34))
     (defn qw (w) (str_concat q (str_concat w q)))
@@ -72,4 +75,15 @@
                      (and (eq (fkd-has-tag rows1 26) 1)
                           (str_eq (fks-pool-sp (list "hi")) "1 2 104 105")))
                 16 0))
-    (add c0 (add c1 (add c2 (add c3 c4)))))
+    (let c5 (if (and (str_eq (fkm-run (list (fk-ssub (fk-slit 0 "planet") (fk-lit 1) (fk-lit 4))) 0) "lan")
+                     (and (eq (fkm-run (list (fk-sfind (fk-slit 0 "hello") (fk-slit 1 "ll") (fk-lit 0))) 0) 2)
+                          (and (eq (fkm-run (list (fk-stoi (fk-slit 0 "42"))) 0) 42)
+                               (and (str_eq (fkm-run (list (fk-itos (fk-lit 17))) 0) "17")
+                                    (and (str_eq (fkm-run (list (fk-btos (fk-lit 65))) 0) "A")
+                                         (and (eq (nth (flt-assoc "substring" (flt-ops)) 2) 29)
+                                              (and (eq (nth (flt-assoc "str_find" (flt-ops)) 2) 30)
+                                                   (and (eq (nth (flt-assoc "str_to_int" (flt-ops)) 2) 31)
+                                                        (and (eq (nth (flt-assoc "int_to_str" (flt-ops)) 2) 32)
+                                                             (eq (nth (flt-assoc "byte_to_str" (flt-ops)) 2) 33))))))))))
+                32 0))
+    (sum (list c0 c1 c2 c3 c4 c5)))

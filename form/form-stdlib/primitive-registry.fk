@@ -18,7 +18,7 @@
 ;            sweep-hazard     substrate_gc can sweep band tissue mid-walk
 ;            toolchain        result depends on host compiler availability
 ;            sibling-gap      absent in rust and/or ts today — the gap a
-;                             fourth-kernel audit lane and sibling work close
+;                             Hati-OS audit lane and sibling work close
 ;
 ; The category tokens mirror main.go's attribution constructors:
 ;   call access method compare list witness undefined field
@@ -29,7 +29,7 @@
 ; Drift gate: form/scripts/validate_primitive_registry.py — registry names ==
 ; kernel names, tokens == Go attribution, lanes == sibling presence.
 ; Spec home: docs/coherence-substrate/primitive-registry.form;
-; fourth-kernel.form M2/M4 cite this registry as the primitive-by-primitive
+; hati-os.form M2/M4 cite this registry as the primitive-by-primitive
 ; verification source an emitted kernel must answer.
 (do
     ; ── the cell: one native's declared outside ──────────────────────────

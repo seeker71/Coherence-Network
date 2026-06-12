@@ -22,6 +22,8 @@
 #   3. kernel-bmf-run reads the .py through the Form-native walker end to end.
 #
 # Add new files to PARITY_FILES below as they're ripened.
+# Optional args narrow the run to specific files, which keeps repair loops
+# tight after a focused example change without weakening the full release gate.
 # Run from form/form-kernel-ts/.
 
 set -euo pipefail
@@ -167,6 +169,12 @@ PARITY_FILES=(
     # idea [0.8,0,0.6,0,0,0]) → dot 0.96 / (1.0*1.0) = 0.96, an exact rational every
     # kernel formats identically; the irrational-cosine edge (1/sqrt(2)) is bit-identical.
     "examples/endpoint_worldview_alignment_demo.py"
+    # First modality geometry slice — integer-only angular aspect detection
+    # over two longitudes and an orb. Distinct from the route utility demos
+    # because it proves the adapter's pure numeric/control-flow path can carry
+    # a domain recipe outside the current API bridge set. Frozen sample
+    # 13°/133° with orb 6 → trine → 3.
+    "examples/endpoint_astro_aspect_demo.py"
     # endpoint_coherence_summary_score — collective_health_service._coherence_summary's
     # COVERAGE/SCORE REDUCTION: four guarded coverage ratios + a weighted-sum score
     # with the task_count==0 neutral guard (0.5) and a [0.0, 1.0] clamp, each
@@ -181,8 +189,16 @@ PARITY_FILES=(
     "examples/endpoint_coherence_summary_score_demo.py"
     "examples/python_inheritance_demo.py"
     "examples/endpoint_lattice_stats_demo.py"
+    # Annotation syntax carries no runtime semantics, so the adapter must drop
+    # it cleanly while preserving the executable recipe. Covers annotated
+    # params, returns, locals, bare declarations, and subscripted generics.
+    "examples/python_typeann_demo.py"
     "examples/python_typing_compose_demo.py"
 )
+
+if (($# > 0)); then
+    PARITY_FILES=("$@")
+fi
 
 # Locate the native binary. The script lives at
 #   form/form-kernel-ts/seedbank/python-adapter/scripts/parity_suite.sh

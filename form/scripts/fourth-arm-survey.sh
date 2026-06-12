@@ -95,8 +95,8 @@ survey_one() {
     rl=" (read_file \"form-stdlib/fourth-shim.fk\")"
     for f in "${srcs[@]}"; do rl="$rl (read_file \"$f\")"; done
     d="$(mktemp -d "${TMPDIR:-/tmp}/fk-survey.XXXXXX")"
-    cat form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk \
-        form-stdlib/fourth-walker-emit.fk form-stdlib/form-parse.fk \
+    cat form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk \
+        form-stdlib/hati-os-kernel-emit.fk form-stdlib/form-parse.fk \
         form-stdlib/form-flatten.fk > "$d/driver.fk"
     printf '(print (fks-table-file (flt-srcs-fns (list%s)) (flt-srcs-pool (list%s) (list))))\n' \
         "$rl" "$rl" >> "$d/driver.fk"

@@ -1,0 +1,19 @@
+; preludes: form-stdlib/core.fk form-stdlib/hati-os-native-cli-emit.fk
+;
+; hati-os-native-cli-emit-band — a whole standalone native CLI emitted from Form, proven three-way:
+; the complete C program for prefix hati_os is byte-identical across kernels (str_eq against the
+; canonical text), the prefix parameterizes even the self-referencing ackermann emission, and
+; two emissions of the same prefix intern to the same text (the crystallization cache's ground).
+;
+; Verdict 7 when the emission lands:
+;   1   the full emitted program for prefix hati_os equals the canonical text
+;   2   a different prefix lands in the self-calling ack frame (emission is a function, not a constant)
+;   4   two emissions of the same prefix are str_eq (deterministic text)
+(do
+    (let want (str_concat "extern int putchar(int); static void hati_os_pr(long long v) { char b[32]; int n = 0; if (v < 0) { putchar(45); v = 0 - v; } if (v == 0) { putchar(48); } while (v > 0) { b[n] = 48 + v % 10; v = v / 10; n = n + 1; } while (n > 0) { n = n - 1; putchar(b[n]); } putchar(10); } static long long hati_os_fib(long long n) { long long a = 0; long long b = 1; long long i = 0; while (i < n) { long long t = a + b; a = b; b = t; i = i + 1; } return a; } static long long hati_os_sum(long long n) { long long s = 0; long long i = 1; while (i <= n) { s = s + i; i = i + 1; } return s; } static long long hati_os_ack(long long m, long long n) { if (m == 0) { return n + 1; } if (n == 0) { return hati_os_ack(m - 1, 1); } return hati_os_ack(m - 1, hati_os_ack(m, n - 1)); } extern int atoi(const char *); int main(int argc, char **argv) { long long w = 0; long long n = 0; long long m = 0; if (argc > 1) { w = atoi(argv[1]); } if (argc > 2) { n = atoi(argv[2]); } if (argc > 3) { m = atoi(argv[3]); } if (w == 1) { hati_os_pr(hati_os_fib(n)); } if (w == 2) { hati_os_pr(hati_os_sum(n)); } if (w == 3) { "
+                          "hati_os_pr(hati_os_ack(n, m)); } if (w == 0) { hati_os_pr(0); } return 0; }"))
+    (let got (hati-os-program "hati_os"))
+    (let c0 (if (str_eq got want) 1 0))
+    (let c1 (if (str_eq (hati-os-ack-c "q") (str_concat "static long long q_ack(long long m, long long n) { if (m == 0) { return n + 1; } if (n == 0) { return q_ack(m - 1, 1); } return q_ack(m - 1, " (str_concat "q" "_ack(m, n - 1)); }"))) 2 0))
+    (let c2 (if (str_eq (hati-os-program "hati_os") got) 4 0))
+    (add c0 (add c1 c2)))

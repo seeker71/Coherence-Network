@@ -1,6 +1,6 @@
-; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk
 ;
-; fourth-call-band — m4e1 proven three-way: CALL + the function table. A
+; hati-os-call-band — m4e1 proven three-way: CALL + the function table. A
 ; program is a LIST of one-param functions (fn 0 is main); CALL names a
 ; function by index — mutual recursion lands, which SELF (one recursion)
 ; could never carry; SELF is re-grounded as re-enter fn 0, so every

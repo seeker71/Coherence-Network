@@ -10,8 +10,8 @@ FORM="$ROOT/form"; GO="$FORM/form-kernel-go/bin-go"; CLANG="${CLANG:-clang}"
 [[ -x "$GO" ]] || (cd "$FORM/form-kernel-go" && go build -o bin-go .)
 work="$(mktemp -d "${TMPDIR:-/tmp}/fmut.XXXXXX")"; trap 'rm -rf "$work"' EXIT
 
-cat "$FORM/form-stdlib/minimal-surface.fk" "$FORM/form-stdlib/fourth-walker.fk" \
-    "$FORM/form-stdlib/fourth-walker-emit.fk" > "$work/e.fk"
+cat "$FORM/form-stdlib/minimal-surface.fk" "$FORM/form-stdlib/hati-os-kernel.fk" \
+    "$FORM/form-stdlib/hati-os-kernel-emit.fk" > "$work/e.fk"
 cat >> "$work/e.fk" <<'EOF'
 (let prog (fk-add (fk-store (fk-lit 0) (fk-lit 42))
                   (fk-len (fk-cons (fk-lit 3) (fk-cons (fk-lit 2)
