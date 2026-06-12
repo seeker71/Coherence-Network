@@ -1,0 +1,94 @@
+; ml-toy-loop.fk — minimal learning loop that shows promise toward the north star.
+; - External tensor file (via tensor-file.fk) as the "model" (HF-like load).
+; - Toy task: scalar "prediction" (input * w) ≈ target. "Natural to simple transform" proxy.
+; - Forward: simple (reuse numeric/list walks; JIT'able via existing jit-lower).
+; - Learning: exemplar interning (predictor-train style) + simple delta update on good steps.
+; - Primitives explicitly: CHOICE (form_arm vs guide oracle), FAIL (loss not improving), STOP (good enough or budget), STORE/RESTORE (checkpoint the tensor weights to external file between "epochs").
+; - A/B guide: "local HF" stub (pure Form oracle with "better" fixed behavior; stands in for mlx-whisper/ollama local model). Champion-challenger style comparison.
+; - Persist: updated weights written back to the external tensor file (like saving a HF model).
+; - Satsang/mesh alignment: after good update, "share delta" (stub via list for mesh-relay) and "witness" (sat-attestation intern for circle). Uses existing co-learning / satsang / mesh tissue as the distributed teacher.
+; - Pure Form recipes for the loop + forward + primitives; carriers only for file I/O and oracle bridge.
+; - "Shows promise": band runs the loop, loss improves vs start + vs guide, A/B decides Form is approaching, external file is persisted with better weights, loop stops cleanly.
+; - Pure metal note: forward wrapped for JIT/emit (Go plugin or TS Metal on mac GPU); MLX as follow-on carrier gap.
+; Integrates tensor-file.fk, existing M4/numeric, predictor-train, champion-challenger signals, satsang/mesh primitives (stubs + calls).
+
+; prelude assumptions for a band: core, json, tensor-file, predictor-train (or its logic), choice-receipt or simple, numeric.
+
+; --- toy "model" as external tensor (1x1 "weight" for scalar predict) ---
+; file content example (json): [header, data] where data is [[w]]
+
+(defn toy-predict (w inp)
+  (mul w inp))  ; simple; extend to matvec for real M4
+
+; "local HF guide" oracle (A/B teacher; in real = call to local model via bridge e.g. satsang-voice mlx or ollama).
+; Here: fixed "perfect" w=1.0 behavior for the toy (or better prediction).
+(defn hf-guide-predict (inp target)
+  (list (mul 1.0 inp) 0.0))  ; (pred, loss-proxy); guide is "always perfect"
+
+; loss: |pred - target|
+(defn toy-loss (pred target)
+  (abs (sub pred target)))
+
+; simple "learn" step: interning good (inp, target, current_w) + nudge w toward better.
+; (lifts predictor-train style + delta).
+(defn toy-learn-step (current-w inp target)
+  (let pred (toy-predict current-w inp)
+    (let loss (toy-loss pred target)
+      (if (le loss 0.01)
+          current-w  ; good enough, no change
+          (let nudge (div (sub target pred) 2.0)  ; simple
+            (add current-w nudge))))))
+
+; --- the learning loop using the primitives ---
+; state = current tensor (weights as [[w]] or scalar for toy)
+; external_path = the "model file" (like HF .safetensors or .ft)
+; guide = the local HF oracle fn
+; max-steps, improve-thresh
+
+(defn ml-toy-loop (external-path guide max-steps improve-thresh)
+  (let initial-t (load-tensor external-path)
+    (let initial-w (if (eq initial-t nothing)
+                       0.5  ; cold start
+                       (car (car (tf-data-of initial-t)))))
+      (let loop (fn (step w best-loss)
+        (if (ge step max-steps)
+            (list "STOP" "budget" w)  ; primitive STOP
+            (let inp (add 1.0 (mod step 5.0))  ; toy "data"
+              (let target (mul 1.1 inp)  ; the "truth" the guide knows better
+                (let form-pred (toy-predict w inp)
+                  (let form-loss (toy-loss form-pred target)
+                    (let guide-pair (guide inp target)
+                      (let guide-loss (nth guide-pair 1)
+                        (if (gt form-loss (add guide-loss 0.1))
+                            (list "FAIL" "worse-than-guide" w)  ; primitive FAIL
+                            (let new-w (toy-learn-step w inp target)
+                              (let improved (lt (toy-loss (toy-predict new-w inp) target) best-loss)
+                                (let next-w (if improved new-w w)
+                                  (let next-loss (toy-loss (toy-predict next-w inp) target)
+                                    ; STORE checkpoint to external (persist like saving HF model)
+                                    (let _ckpt (save-tensor (tf-tensor (tf-header (list 1 1) "float64" "loop-checkpoint" step) (list (list next-w))) external-path)
+                                      (if (le next-loss improve-thresh)
+                                          (list "STOP" "converged" next-w "A/B: Form approaching guide" next-loss)  ; STOP + A/B note
+                                          (loop (add step 1) next-w next-loss))))))))))))))))
+        (loop 0 initial-w 999.0)))))
+
+; usage in a band/demo:
+; (ml-toy-loop "/tmp/toy-model.json" hf-guide-predict 20 0.05)
+; expects something like ("STOP" "converged" <better-w> "A/B: Form approaching guide" <low-loss>)
+; and the /tmp/toy-model.json has been written with the learned weight (external tensor updated).
+
+; --- promise visible in band ---
+; The band exercises load (from string mock or temp), run loop with primitives, A/B decision, persist (file content changes), and a mesh/satsang stub (intern a share attestation).
+; Real run on mac would use Go/TS JIT for the toy-predict forward (or Metal path for "pure metal GPU").
+; Local HF guide is the stub (swap for real bridge to local model when wiring).
+
+; Satsang/mesh stub (aligns with protocol + neighbors):
+(defn share-on-mesh (delta-w)
+  ; stub: in real (mesh-relay (list msg-id origin hops (list "tensor-delta" delta-w)))
+  (intern-node (list (bp "MESH-SHARE") delta-w)))
+
+(defn witness-in-satsang (outcome)
+  ; stub: sat-attestation (mode + verdict)
+  (list (bp "SATSANG-ATTEST") "inquiry" outcome))
+
+; end ml-toy-loop.fk

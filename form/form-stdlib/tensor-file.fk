@@ -1,0 +1,81 @@
+; tensor-file.fk — external tensor data model as a loadable file (HF-like contract).
+; Header + data blobs (using numeric formats + M2 quant where helpful).
+; Loader via host file port (read_file) + parse + intern to recipe data or numeric cells.
+; Usable as weights in M4 blocks / geometric / transformer-numerics etc.
+; Symmetric save. Content-address dedup via substrate/NodeID on the loaded cells.
+; "Like a hugging face model": single load call returns the tensor structure (shape + data as lists or interned nodes) + metadata.
+; Pure Form recipe surface; carriers only for the read/write.
+
+; --- minimal external format (json for Form friendliness; later safetensors parity) ---
+; {
+;   "header": {
+;     "shape": [rows, cols, ...],
+;     "dtype": "float64" | "int8" | ... (from numeric-formats),
+;     "provenance": "nodeid-or-str",
+;     "version": 1
+;   },
+;   "data": [ ... numbers or quantized codes ... ]
+; }
+; For toy: list-of-floats or matrix as list-of-lists (interned via existing numeric/intern_node).
+
+(defn tf-header (shape dtype prov ver)
+  (list (bp "TF-HEADER") shape dtype prov ver))
+
+(defn tf-tensor (header data)
+  (list (bp "TF-TENSOR") header data))
+
+; load from external file path (HF-style single file).
+; Returns (header data) or nothing on bad parse.
+; Uses existing read_file + parse-json (json.fk prelude) + intern.
+(defn load-tensor (path)
+  (let raw (read_file path)
+    (if (eq raw nothing)
+        nothing
+        (let parsed (parse-json raw)
+          (if (eq parsed nothing)
+              nothing
+              (let h (nth parsed 0)  ; assume [header data] or object; for simplicity treat as list for Form
+                (let d (nth parsed 1)
+                  (tf-tensor h d))))))))
+
+; save-tensor: write the tensor (header+data) to path as json.
+; (uses write_file host port if available; for bands use temp_dir + side effect note).
+; In pure recipe: returns the json string for the caller to persist (or side-effect via carrier).
+(defn save-tensor (t path)
+  (let js (json-encode (list (tf-header-of t) (tf-data-of t)))
+    (write_file path js)  ; carrier; falls back to string in some bands
+    js))
+
+; accessors (small recipe sugar)
+(defn tf-header-of (t) (nth t 1))
+(defn tf-data-of (t) (nth t 2))
+(defn tf-shape (t) (nth (tf-header-of t) 1))
+(defn tf-dtype (t) (nth (tf-header-of t) 2))
+
+; --- toy use: treat data as matrix (list of lists) for matvec etc (M4 style) ---
+; intern the data cells for content-address identity (node_eq dedup).
+(defn tf-intern-matrix (rows)
+  (map (fn r (intern_node (map intern-triv r))) rows))
+
+; load and intern for use as weights (e.g. in tb-matvec or geometric).
+(defn load-tensor-matrix (path)
+  (let t (load-tensor path)
+    (if (eq t nothing)
+        nothing
+        (tf-intern-matrix (tf-data-of t)))))
+
+; --- band-friendly helpers (no side effects in pure value walk) ---
+; make a tiny test tensor file content (for bands that use string "files" or temp).
+(defn tf-test-matrix-json ()
+  (json-encode (list
+    (list (bp "TF-HEADER") (list 2 2) "float64" "test-provenance" 1)
+    (list (list 1.0 0.0) (list 0.0 1.0)))))  ; identity toy
+
+; round-trip law (for band): load -> use in tiny forward -> save -> load again -> node_eq or value equal under eps.
+; (the band will exercise with actual read/write via carrier or string mock).
+
+; Note: full safetensors binary header+data + sharded + metadata provenance as substrate cell is follow-on (M6 alignment).
+; This gives the "external file load like HF" contract immediately for the learning loop.
+; Integrates with existing numeric (formats), quant (M2), intern (substrate), read_file (host carrier).
+
+; end tensor-file.fk
