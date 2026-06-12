@@ -1,0 +1,40 @@
+; tests/reference-packs-band.fk — per-concept reference packs, three-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/reference-packs.fk
+;
+; Proves: each concept resolves to its OWN pack (gnn, cnn, fft, gaussian,
+; api, form-language, bmf, bml); external refs carry an https door and an
+; inference lane under 1.0 (analogy, not proof); internal specs carry a repo
+; path and read 1.0/1.0 (self-attested — they ARE the spec, not a resemblance);
+; the external/internal split is told by the door; a multi-ref pack holds more
+; than one door; the spoken line states the lanes; an unknown concept is
+; honest absence.
+;
+; Band verdict: 1023 when every law holds.
+
+section [form.bml] {
+    def rpb-bool(b, weight) = if b then weight else 0;
+
+    def rpb-first-ref(concept) = head(refpack-refs(refpack-of(concept)));
+
+    def rpb-score() {
+        let fft-ref = rpb-first-ref("fft");
+        let api-ref = rpb-first-ref("api-description");
+        let cnn-ref = rpb-first-ref("cnn");
+        let bml-pack = refpack-of("bml");
+        let spoken-fft = ref-spoken(fft-ref);
+        sum(list(
+            rpb-bool(eq(len(refpack-concepts()), 8), 1),
+            rpb-bool(and(refpack-known?(refpack-of("gnn")), refpack-known?(refpack-of("gaussian"))), 2),
+            rpb-bool(and(ref-external?(fft-ref), lt(ref-inference(fft-ref), 1.0)), 4),
+            rpb-bool(and(not(ref-external?(api-ref)), eq(ref-inference(api-ref), 1.0)), 8),
+            rpb-bool(eq(str_find(ref-door(api-ref), "api/app/routers/INDEX.md", 0), 0), 16),
+            rpb-bool(str_eq(ref-kind(api-ref), "internal-spec"), 32),
+            rpb-bool(and(eq(str_find(ref-door(cnn-ref), "https://doi.org/", 0), 0), str_eq(ref-kind(cnn-ref), "structural-resonance")), 64),
+            rpb-bool(eq(len(refpack-refs(bml-pack)), 2), 128),
+            rpb-bool(and(ge(str_find(spoken-fft, "Cooley", 0), 0), ge(str_find(spoken-fft, "support-inference 80 percent", 0), 0)), 256),
+            rpb-bool(not(refpack-known?(refpack-of("no-such-concept"))), 512)));
+    }
+
+    rpb-score();
+}
