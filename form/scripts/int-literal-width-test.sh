@@ -1,17 +1,21 @@
 #!/usr/bin/env bash
 #
-# int-literal-width-test.sh — prove integer literals wider than int32 compute
-# CORRECTLY (not merely identically) across all three kernels.
+# int-literal-width-test.sh — prove integers wider than int32 compute CORRECTLY
+# (not merely identically) across all three kernels, on both the parse and the
+# arithmetic paths.
 #
-# The trap: 3596153792 = 0xD65F03C0 has bit 31 set. Packed into the 32-bit
-# `inst` slot of a trivial NodeID it read back as the signed int32 -698813504,
-# so (div 3596153792 16777216) yielded -41 instead of 214 — and all three
-# kernels agreed on the wrong answer, so validate.sh's three-way agreement check
-# stayed green. This gate runs the band on each kernel and asserts the verdict
-# is exactly 4 (every check in tests/int-literal-width-band.fk holds). Agreement
-# on a wrong number is a FAIL here.
+# Two traps in the same family, both invisible to plain agreement:
+#   parse   — 3596153792 (0xD65F03C0, bit 31 set) packed into the 32-bit `inst`
+#             slot read back as -698813504, so (div ... 16777216) = -41 not 214,
+#             and all three kernels agreed on the wrong answer.
+#   compute — TS's bare-int fold wrapped RESULTS at int32 (Math.imul / `| 0`),
+#             so (mul 100000 100000) = 1410065408 vs Go/Rust's 10000000000.
 #
-# Exit 0 on the expected verdict (4) from all three kernels, 1 otherwise.
+# This gate runs the band on each kernel and asserts the verdict is exactly 9
+# (every check in tests/int-literal-width-band.fk holds). Agreement on a wrong
+# number is a FAIL here.
+#
+# Exit 0 on the expected verdict (9) from all three kernels, 1 otherwise.
 set -euo pipefail
 
 FORMDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -21,7 +25,7 @@ cd "$FORMDIR"
 # standalone — no stdlib prelude, no source-compilation. validate.sh's
 # auto-discovery additionally exercises it with core.fk prepended.
 BAND="form-stdlib/tests/int-literal-width-band.fk"
-EXPECT=4
+EXPECT=9
 
 GO_BIN="form-kernel-go/bin-go"
 RS_BIN="form-kernel-rust/target/release/form-kernel-rust"
@@ -50,6 +54,7 @@ if [[ "$go_out" == "$EXPECT" && "$rs_out" == "$EXPECT" && "$ts_out" == "$EXPECT"
   exit 0
 else
   echo "int literal width: FAIL — expected $EXPECT from every kernel (a smaller" >&2
-  echo "  verdict means a kernel is still truncating wide literals to int32)." >&2
+  echo "  verdict means a kernel is still truncating wide literals or results" >&2
+  echo "  to int32)." >&2
   exit 1
 fi
