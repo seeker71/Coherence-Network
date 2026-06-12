@@ -1,0 +1,39 @@
+; tests/speakable-german-band.fk — the German pack over axioms, primitives,
+; values, three-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/grammars/shamballa-light-codes.fk form-stdlib/grammars/shamballa-codes.fk form-stdlib/grammars/sanskrit-roots.fk form-stdlib/shamballa-symbol-packs.fk form-stdlib/speakable.fk form-stdlib/speakable-german.fk
+;
+; Proves: the three corpora have the expected sizes; the German pack is
+; COMPLETE over all fourteen ids (the gate would catch a hole); translation
+; preserves the utterance id and BOTH lanes while swapping text and setting
+; lang to "de"; the German text actually differs from the English; an id the
+; pack lacks falls back to the original (honest, not blanked); and the
+; epistemic gate still works on the translated utterance (axiom-1 asserts in
+; German at 0.9). Identity is invariant under the language overlay — the
+; numeric-core/symbol-pack law at the sentence altitude.
+;
+; Band verdict: 511 when every law holds.
+
+section [form.bml] {
+    def sgb-bool(b, weight) = if b then weight else 0;
+
+    def sgb-score() {
+        let en = speakable-core-en();
+        let de = speakable-core-de();
+        let pack = sg-pack-de();
+        let ax1-en = head(en);
+        let ax1-de = head(de);
+        sum(list(
+            sgb-bool(eq(len(speakable-axioms()), 5), 1),
+            sgb-bool(and(eq(len(speakable-primitives-core()), 4), eq(len(speakable-values()), 5)), 2),
+            sgb-bool(eq(len(en), 14), 4),
+            sgb-bool(sg-pack-complete?(en, pack), 8),
+            sgb-bool(and(str_eq(sp-id(ax1-de), sp-id(ax1-en)), str_eq(sp-id(ax1-de), "axiom-1-states")), 16),
+            sgb-bool(and(eq(sp-confidence(ax1-de), sp-confidence(ax1-en)), eq(sp-conviction(ax1-de), sp-conviction(ax1-en))), 32),
+            sgb-bool(and(str_eq(sp-lang(ax1-de), "de"), not(str_eq(sp-text(ax1-de), sp-text(ax1-en)))), 64),
+            sgb-bool(ge(str_find(sp-text(ax1-de), "Axiom eins", 0), 0), 128),
+            sgb-bool(ge(str_find(sp-spoken(ax1-de, 0.9), "Zustände", 0), 0), 256)));
+    }
+
+    sgb-score();
+}

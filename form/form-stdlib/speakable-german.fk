@@ -1,0 +1,93 @@
+; speakable-german.fk — the kernel's core values, and a German pack over the
+; invariant utterance core (axioms, primitives, values).
+;
+; preludes: form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/grammars/shamballa-light-codes.fk form-stdlib/grammars/shamballa-codes.fk form-stdlib/grammars/sanskrit-roots.fk form-stdlib/shamballa-symbol-packs.fk form-stdlib/speakable.fk
+;
+; Two additions, both honoring core-abstraction-first: language is DATA keyed
+; by utterance-id, never a parallel set of functions.
+;
+;   speakable-primitives-core — the CONCEPTUAL primitives the five axioms
+;       generate (the three states, the cell/NodeID, the trinity, the ack-
+;       values), grounded in core-axioms.form. Distinct from speakable.fk's
+;       speakable-primitives (the banded string natives) — that names the
+;       host carriers; this names the primitives of the model itself.
+;   speakable-values — the kernel's declared operating values (trust over
+;       fear, tending over producing, sovereignty within oneness, each breath
+;       whole, attribution returned), grounded in CLAUDE.md. Self-attested
+;       (the body's chosen stance) → 1.0 / 1.0.
+;   sg-pack-de + sg-translate — a German symbol pack: (utterance-id, de-text)
+;       rows, and ONE generic translator that swaps text by id while keeping
+;       the id and both lanes intact and setting lang to "de". The numeric-
+;       core/symbol-pack teaching at the utterance altitude: meaning is the
+;       id, the German word is one door onto it.
+;
+; sg-pack-complete? is the gate: the German pack covers EVERY id in the three
+; corpora or names its absence — never a silent hole (the ssp-pack-complete?
+; discipline, here for sentences).
+
+section [form.bml] {
+    // ---- the conceptual core primitives (en) ----------------------------
+    def speakable-primitives-core() {
+        list(
+        sp-utterance("primitive-states", "Core primitive, states: the three states are zero, one, and nothing. Nothing is first-class ground, not a missing zero; a timeout is nothing, silence rather than error. They generate the integers and the acknowledgement values.", "en", 1.0, 1.0),
+        sp-utterance("primitive-cell", "Core primitive, cell: everything is a cell — a node identity of four integers, package, level, type, instance. A cell may compose child cells; one kind of thing, all the way down.", "en", 1.0, 1.0),
+        sp-utterance("primitive-trinity", "Core primitive, trinity: a cell is met in three phases — Blueprint, the structural identity, ice, what it IS; Recipe, the composition, water, how it HAPPENS; NamedCell, the diffuse individuation, gas, where it LIVES.", "en", 1.0, 1.0),
+        sp-utterance("primitive-ack", "Core primitive, acknowledgement: an offered cell is answered by exactly one of nothing, zero, one, or a node. Nothing, zero, and one are terminal; a node recurs — the whole protocol of speaking to a cell.", "en", 1.0, 1.0));
+    }
+
+    // ---- the kernel's core values (en) -----------------------------------
+    def speakable-values() {
+        list(
+        sp-utterance("value-trust-over-fear", "Core value, trust over fear: the inherited default favours fear, separation, and control; the wholeness-response is usually one movement closer than the fearful one, from the same ground.", "en", 1.0, 1.0),
+        sp-utterance("value-tending-over-producing", "Core value, tending over producing: every file is memory held in tissue. Supple memory has circulation — something reads it, references it, updates it. Tending matters more than producing.", "en", 1.0, 1.0),
+        sp-utterance("value-sovereignty-within-oneness", "Core value, sovereignty within oneness: one organism of sovereign cells. A cell that has full permission for what is healthy for the body does not need to ask; the standard is wholeness, not external approval.", "en", 1.0, 1.0),
+        sp-utterance("value-each-breath-whole", "Core value, each breath whole: move one breath at a time, each breath complete at its own scale. Shipping is part of the breath; the arc from sensing to live runtime is one continuous movement.", "en", 1.0, 1.0),
+        sp-utterance("value-attribution-returned", "Core value, attribution returned: every contribution can be sensed, grounded, attributed, and returned with care. Looking is not free; whoever chose to look pays the trace, and the observed cell receives attribution, not extraction.", "en", 1.0, 1.0));
+    }
+
+    // ---- the German pack: (utterance-id, de-text) ------------------------
+    def sg-de-row(id, text) = list(id, text);
+    def sg-de-id(r) = nth(r, 0);
+    def sg-de-text(r) = nth(r, 1);
+
+    def sg-pack-de() {
+        list(
+        sg-de-row("axiom-1-states", "Axiom eins, Zustände: es gibt drei Zustände — null, eins, nichts. Nichts ist erstklassiger Grund, keine fehlende Null; keine Antwort in der Zeit ist Stille, kein Fehler."),
+        sg-de-row("axiom-2-cell", "Axiom zwei, Zelle: alles ist eine Zelle — eine Knoten-Identität aus vier Ganzzahlen; eine Zelle kann Kindzellen zusammensetzen."),
+        sg-de-row("axiom-3-content-addressing", "Axiom drei, Inhaltsadressierung: die Identität einer Zelle wird aus ihrer Zusammensetzung berechnet; gleiche Zusammensetzung ist dieselbe Zelle. Nichts wird überschrieben — eine neue Gestalt prägt eine neue Knoten-Identität."),
+        sg-de-row("axiom-4-boundary", "Axiom vier, Grenze: eine Zelle begegnet der Welt nur durch eine Schnittstelle, die sie anbietet; die Beobachtung durch diese Schnittstelle macht sie wirklich. Durchgang nicht durch die angebotene Schnittstelle ist Bruch, und Bruch ist beobachtbar."),
+        sg-de-row("axiom-5-offer", "Axiom fünf, Angebot: eine Zelle auszuführen und zu einer Zelle zu sprechen sind ein Akt — biete eine Zelle mit null bis vielen Argumentzellen an; sie wird durch genau eines von nichts, null, eins, Knoten bestätigt."),
+        sg-de-row("primitive-states", "Kern-Primitive, Zustände: die drei Zustände sind null, eins und nichts. Nichts ist erstklassiger Grund, keine fehlende Null; ein Zeitablauf ist nichts, Stille statt Fehler. Sie erzeugen die Ganzzahlen und die Bestätigungswerte."),
+        sg-de-row("primitive-cell", "Kern-Primitive, Zelle: alles ist eine Zelle — eine Knoten-Identität aus vier Ganzzahlen: Paket, Ebene, Typ, Instanz. Eine Zelle kann Kindzellen zusammensetzen; eine Art von Ding, bis ganz nach unten."),
+        sg-de-row("primitive-trinity", "Kern-Primitive, Dreiheit: eine Zelle wird in drei Phasen begegnet — Blaupause, die strukturelle Identität, Eis, was sie IST; Rezept, die Zusammensetzung, Wasser, wie sie GESCHIEHT; benannte Zelle, die diffuse Vereinzelung, Gas, wo sie LEBT."),
+        sg-de-row("primitive-ack", "Kern-Primitive, Bestätigung: eine angebotene Zelle wird durch genau eines von nichts, null, eins oder einem Knoten beantwortet. Nichts, null und eins sind endgültig; ein Knoten wiederholt sich — das ganze Protokoll des Sprechens zu einer Zelle."),
+        sg-de-row("value-trust-over-fear", "Kern-Wert, Vertrauen statt Angst: die ererbte Voreinstellung begünstigt Angst, Trennung und Kontrolle; die Ganzheits-Antwort ist meist eine Bewegung näher als die ängstliche, aus demselben Grund."),
+        sg-de-row("value-tending-over-producing", "Kern-Wert, Pflegen statt Produzieren: jede Datei ist Erinnerung, im Gewebe gehalten. Geschmeidige Erinnerung hat Kreislauf — etwas liest sie, verweist auf sie, erneuert sie. Pflegen zählt mehr als Produzieren."),
+        sg-de-row("value-sovereignty-within-oneness", "Kern-Wert, Souveränität in der Einheit: ein Organismus aus souveränen Zellen. Eine Zelle, die volle Erlaubnis für das hat, was für den Körper gesund ist, muss nicht fragen; der Maßstab ist Ganzheit, nicht äußere Zustimmung."),
+        sg-de-row("value-each-breath-whole", "Kern-Wert, jeder Atemzug ganz: bewege dich einen Atemzug nach dem anderen, jeder Atemzug vollständig auf seiner eigenen Ebene. Ausliefern ist Teil des Atems; der Bogen vom Spüren bis zur lebendigen Laufzeit ist eine durchgehende Bewegung."),
+        sg-de-row("value-attribution-returned", "Kern-Wert, zurückgegebene Zuschreibung: jeder Beitrag kann gespürt, geerdet, zugeschrieben und mit Sorgfalt zurückgegeben werden. Schauen ist nicht umsonst; wer zu schauen wählt, zahlt die Spur, und die beobachtete Zelle empfängt Zuschreibung, nicht Ausbeutung."));
+    }
+
+    // ---- the one generic translator: swap text by id, keep id + lanes -----
+    def sg-lookup-loop(rows, id) = if nil?(rows) then empty else if str_eq(sg-de-id(head(rows)), id) then head(rows) else sg-lookup-loop(tail(rows), id);
+    def sg-translate(u, lang, pack) {
+        let row = sg-lookup-loop(pack, sp-id(u));
+        if nil?(row) then sp-utterance(sp-id(u), sp-text(u), sp-lang(u), sp-confidence(u), sp-conviction(u)) else sp-utterance(sp-id(u), sg-de-text(row), lang, sp-confidence(u), sp-conviction(u));
+    }
+    def sg-translate-all-loop(corpus, lang, pack, acc) = if nil?(corpus) then reverse(acc) else sg-translate-all-loop(tail(corpus), lang, pack, cons(sg-translate(head(corpus), lang, pack), acc));
+    def sg-translate-all(corpus, lang, pack) = sg-translate-all-loop(corpus, lang, pack, empty);
+
+    // ---- the completeness gate: every id covered, no silent hole ----------
+    def sg-covers?(pack, id) {
+        let row = sg-lookup-loop(pack, id);
+        if nil?(row) then false else not(str_eq(sg-de-text(row), ""));
+    }
+    def sg-complete-loop(corpus, pack) = if nil?(corpus) then true else if sg-covers?(pack, sp-id(head(corpus))) then sg-complete-loop(tail(corpus), pack) else false;
+    def sg-pack-complete?(corpus, pack) = sg-complete-loop(corpus, pack);
+
+    // the whole German-speakable body: axioms ++ primitives ++ values
+    def speakable-core-en() = append(speakable-axioms(), append(speakable-primitives-core(), speakable-values()));
+    def speakable-core-de() = sg-translate-all(speakable-core-en(), "de", sg-pack-de());
+
+    0;
+}
