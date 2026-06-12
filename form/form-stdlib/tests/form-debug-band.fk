@@ -1,0 +1,54 @@
+; preludes: form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/core.fk form-stdlib/form-diagnose.fk
+;
+; form-debug-band — the VALUE TRACE, proven three-way: live debugging's missing
+; half. The framebuffer counts; the debugger needs VALUES and ORDER. The debug
+; walker (fkc-emit-debug) wraps the UNCHANGED dispatch (fk_walk0) with a tracer
+; that emits (node, value, stack-depth) per completed node, bounded by argv —
+; and the organ's watchpoint verbs read the stream: every value a source node
+; produced in execution order, the last value, the deepest stack. Joined with
+; provenance, a step log reads as source lines. Live witness:
+; scripts/form_debug_demo.sh. (docs/coherence-substrate/live-diagnosis-organ.form.)
+;
+; Verdict 31 when the value trace holds:
+;   1   THE EMISSION carries the tracer — fk_tr declared, the WRAPPER pattern
+;       present (fk_walk0 = the dispatch; fk_walk = trace-and-return), the
+;       bound read from argv (off by default: a clean run stays clean)
+;   2   ONE ENGINE — the debug walk carries the SAME arm text as the standard
+;       walk; the standard walk has no tracer (channels honestly distinct)
+;   4   WATCH — fd-twatch returns every value node 6 produced, in order
+;       (4, 3, 2, 1 on the model trace); a never-traced node returns nothing
+;   8   LAST + DEPTH — fd-tlast is the most recent value (1, not 4); fd-tdepth
+;       is the deepest stack the run reached (two-sided: not the event count)
+;   16  DETERMINISTIC — two debug emissions are byte-identical
+(do
+    (let fibc (fk-if (fk-le (fk-arg) (fk-lit 1)) (fk-arg)
+                     (fk-add (fk-call 0 (fk-sub (fk-arg) (fk-lit 1)))
+                             (fk-call 0 (fk-sub (fk-arg) (fk-lit 2))))))
+    (let dbg (fkc-emit-debug (list fibc)))
+    (let std (fkc-emit-many (list fibc)))
+
+    (let c0 (if (ge (str_find dbg "static void fk_tr(long long i" 0) 0)
+            (if (ge (str_find dbg "static long long fk_walk0(long long i" 0) 0)
+            (if (ge (str_find dbg "long long r = fk_walk0(i, fp)" 0) 0)
+            (if (ge (str_find dbg "fk_dbg = atoi(argv[2])" 0) 0) 1 0) 0) 0) 0))
+
+    (let c1 (if (ge (str_find dbg "if (t == 22)" 0) 0)
+            (if (eq (str_find std "fk_walk0" 0) (sub 0 1))
+            (if (eq (str_find std "fk_tr(" 0) (sub 0 1)) 2 0) 0) 0))
+
+    ; a model trace: (node value depth) events — node 6 = the SUB site
+    (let evs (list (list 2 0 1) (list 6 4 1) (list 7 3 2)
+                   (list 6 3 2) (list 6 2 3) (list 6 1 4) (list 12 5 1)))
+    (let w (fd-twatch evs 6))
+    (let c2 (if (eq (len w) 4)
+            (if (eq (nth w 0) 4)
+            (if (eq (nth w 3) 1)
+            (if (eq (len (fd-twatch evs 99)) 0) 4 0) 0) 0) 0))
+
+    (let c3 (if (eq (fd-tlast evs 6) 1)
+            (if (eq (fd-tdepth evs) 4)
+            (if (eq (eq (fd-tdepth evs) (len evs)) 0) 8 0) 0) 0))
+
+    (let c4 (if (str_eq dbg (fkc-emit-debug (list fibc))) 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
