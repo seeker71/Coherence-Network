@@ -81,4 +81,8 @@
 
 ; One-shot + recall + active-inf in a phi context shows the "start model" can do rapid acquisition (one-shot), short-term recall, and surprise-driven (active) adaptation while the phi forward provides the structural Phi-like computation.
 
+; Blueprint registrations
+(let STM-BUFFER (bp "STM-BUFFER"))
+(let STM-ITEM (bp "STM-ITEM"))
+
 ; end short-term-memory.fk

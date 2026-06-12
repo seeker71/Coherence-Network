@@ -23,52 +23,48 @@
 ; For demo, embs are simple vectors; real: embed lookup from tensor + positional (geometric or RoPE lift).
 
 ; --- the loop recipe using phi-start + stm + active-inf + primitives + external + mesh/satsang ---
+(defn phi-loop-step (step buf current_surprise phi_weights_path stm_snapshot_path guide max_steps improve_thresh cap)
+  (if (ge step max_steps)
+      (list "STOP" "budget" buf current_surprise)
+      (let inp_emb (list (add 1.0 (mod step 3.0)) (mod step 2.0))  ; toy emb for demo
+        (let target (mul 1.1 (head inp_emb))  ; toy target
+          (let recalled (stm-recall-nearest buf inp_emb))
+          (let aug_emb (if (eq recalled nothing) inp_emb (tb-vec-add inp_emb recalled)))
+          (let phi_pred (phi-start-forward (list aug_emb) phi_weights_path))
+          (let form_loss (abs (sub (head phi_pred) target)))
+          (let guide_loss 0.0)
+          (let approaching (le form_loss (add guide_loss 0.05)))
+          (print "step" step "phi loss" form_loss "guide" guide_loss "approaching" approaching "recalled?" (not (eq recalled nothing)))
+          (let surprised (if (gt form_loss 0.1) 1 0))
+          (let new_surprise (add current_surprise surprised))
+          (let new_buf (if (eq surprised 1)
+                           (stm-one-shot buf aug_emb target cap)
+                           buf))
+          (let choice (if (gt form_loss guide_loss) "FAIL worse-than-guide" "CHOICE form-better-or-recall"))
+          (if (gt surprised 0) (print "FAIL high-surprise" choice))
+          (let _store_stm (save-tensor (stm-to-tensor new_buf) stm_snapshot_path))
+          (if (eq surprised 1)
+              (let _mesh (share-on-mesh (list "one-shot" aug_emb target))
+                (let _sat (witness-in-satsang (list "new-exemplar" step))))
+              0)
+          (if (le new_surprise improve_thresh)
+              (list "STOP" "converged" new_buf new_surprise "A/B: Form-Phi + STM + active-inf approaching guide" "one-shot + recall + surprise reduction visible" "external tensors persisted")
+              (phi-loop-step (add step 1) new_buf new_surprise phi_weights_path stm_snapshot_path guide max_steps improve_thresh cap)))))))
+
 (defn phi-one-shot-active-loop (phi_weights_path stm_snapshot_path guide max_steps improve_thresh cap)
-  (let phi_w (load-tensor-matrix phi_weights_path)  ; the "base" Phi structural weights (external tensor)
+  (let phi_w (load-tensor-matrix phi_weights_path)
     (let stm_buf (if (eq (read_file stm_snapshot_path) nothing)
                      (stm-create)
                      (stm-from-tensor (load-tensor stm_snapshot_path))))
-      (let loop (fn (step buf current_surprise)
-        (if (ge step max_steps)
-            (list "STOP" "budget" buf current_surprise)
-            (let inp_emb (list (add 1.0 (mod step 3.0)) (mod step 2.0) ... toy emb)  ; or from data
-              (let target (mul 1.1 (head inp_emb)) ... )  ; the "truth"
-                ; recall from STM (one-shot previous or geo mesh over STM items)
-                (let recalled (stm-recall-nearest buf inp_emb))  ; or stm-recall-geo for mesh
-                (let aug_emb (if (eq recalled nothing) inp_emb (tb-vec-add inp_emb recalled)))  ; augment context
-                ; phi-start forward (the structural Phi-like predict)
-                (let phi_pred (phi-start-forward (list aug_emb) phi_weights_path))  ; or on the emb
-                (let form_loss (abs (sub (head phi_pred) target)))
-                ; guide (local HF stub)
-                (let guide_loss 0.0)  ; perfect for toy
-                (let approaching (le form_loss (add guide_loss 0.05)))
-                (print "step" step "phi loss" form_loss "guide" guide_loss "approaching" approaching "recalled?" (not (eq recalled nothing)))
-                ; active-inf: surprise on the phi + recall prediction
-                (let surprised (if (gt form_loss 0.1) 1 0))  ; lift ai-surprised?
-                (let new_surprise (add current_surprise surprised))
-                ; one-shot if surprised (intern the (aug_emb, target) to STM)
-                (let new_buf (if (eq surprised 1)
-                                 (stm-one-shot buf aug_emb target cap)
-                                 buf))
-                ; primitives
-                (let choice (if (gt form_loss guide_loss) "FAIL worse-than-guide" "CHOICE form-better-or-recall"))
-                (if (gt surprised 0) (print "FAIL high-surprise" choice))
-                ; update "model" or STM via store (persist)
-                (let _store_stm (save-tensor (stm-to-tensor new_buf) stm_snapshot_path))
-                ; mesh/satsang: if one-shot, "share" via gl or MESH-SHARE stub, "witness" in satsang
-                (if (eq surprised 1)
-                    (let _mesh (share-on-mesh (list "one-shot" aug_emb target))
-                      (let _sat (witness-in-satsang (list "new-exemplar" step))))
-                    0)
-                (if (le new_surprise improve_thresh)
-                    (list "STOP" "converged" new_buf new_surprise "A/B: Form-Phi + STM + active-inf approaching guide" "one-shot + recall + surprise reduction visible" "external tensors persisted")
-                    (loop (add step 1) new_buf new_surprise))))))))
-      (loop 0 stm_buf 0))))
+      (phi-loop-step 0 stm_buf 0 phi_weights_path stm_snapshot_path guide max_steps improve_thresh cap))))
 
 ; --- promise visible ---
 ; Run with toy external phi_weights (initial random via tensor-file) and empty stm.
 ; After steps: one-shot grows STM (new exemplars interned), recall augments phi predict (improves "accuracy"), active-inf surprise drops (settled), A/B "approaching", external phi tensor + stm tensor updated (persist), primitives + mesh/satsang exercised, JIT note for the phi forward.
 ; The "start model" (phi-start structural + external tensor) + body's learning (one-shot/STM/active + mesh/satsang) shows the Form native version can acquire, recall, and adapt in short term, using the same structural computations Phi would, while adding the body's distributed witnessed one-shot capabilities.
 ; This is the learning loop that shows promise toward the full native multi-model (with this as the Phi arm, A/B retiring the local HF guide, on MLX/GPU via the lowering, external tensors, primitives, satsang mesh).
+
+; Blueprint registrations (for the loop level if any new, but mainly re-exports the idea)
+(let PHI-START-FORWARD (bp "PHI-START-FORWARD"))
 
 ; end phi-one-shot-active-loop.fk
