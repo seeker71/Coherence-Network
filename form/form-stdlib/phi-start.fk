@@ -1,0 +1,114 @@
+; phi-start.fk — Phi-3 structural "start model" as pure Form-native recipes.
+;
+; The goal: a Form OS native model whose *architecture* is structurally Phi-like (RMSNorm before sub-blocks,
+; GQA for efficient attn, SwiGLU gated FFN, residuals) so that:
+; - It computes the same core ops (matvec, grouped attn, gated non-linearity) that Phi does on embeddings/tokens.
+; - Weights live as external tensor file (tensor-file.fk, load like HF safetensors or .pt mapped to our header+data).
+; - The "model" = the recipe + the loaded tensor cells (content-addressed NodeIDs, mutable, generatable).
+; - "Learn the same way": the forward pass is the Phi computation graph (so same inductive biases for language).
+;   Then adaptation uses the body's native learning surfaces (not (only) backprop):
+;     - One-shot: predictor-train / nearest-shape interning of (phi-emb, target) exemplars.
+;     - Short-term memory recall: STM buffer (this file + geometric) of recent exemplars; recall via nearest or gl-gstep.
+;     - Active inference: the phi-start as "world model" / predictor in active-inference.fk loop (predict next using phi + STM recall,
+;       observe from world/mesh/satsang, surprise as free-energy signal, update by one-shot to STM or delta to long-term/federated-slice,
+;       choice/fail/stop for hypothesis pruning or action selection (e.g. "recall from STM", "query mesh neighbor", "generate from phi")).
+;     - Mesh neighbors: geometric-learning gl-step / gl-gnn over "neighbor" edges (embeddings or facts from mesh-relay) for distributed diffusion of learning.
+;     - Satsang: witnessed collective updates (share new one-shot or surprise reduction in circle; "circle as teacher").
+;     - Primitives: CHOICE (route to STM recall vs phi generate vs mesh), FAIL (high surprise without update), STOP (ai-settled? low residual),
+;       STORE/RESTORE (STM checkpoint, model delta, state across "time" or mesh sleep), JIT (the phi forward hot path via jit-lower or tensor-emit).
+; - Pure metal MLX/GPU: the recipes lowered via existing jit-tensor-emit / fourth-emit to C or TS Metal (bf16 simdgroup tensor cores on Apple; body has MLX refs in satsang-voice experiments for the carrier/path).
+; - Multi-model: this phi-start as one "arm" in recognition-router + champion-challenger; A/B vs local HF Phi (or other) until the Form version (augmented with one-shot/STM/active-inf) approaches or exceeds on the tasks (NL trans, TTS, SST, nat-to-prog).
+; - External tensor: the Phi-like weights (and optionally STM snapshot) as loadable file via tensor-file.fk (header with shape/dtype/provenance, data as lists or quantized; intern to nodes for identity).
+; - Start small: toy dims (d=8-16) with external json tensor for demo; the recipe is general so scales to real Phi-3 sizes once M6 safetensors + larger numeric/JIT land.
+; - Eventually: the Form-Phi can grow beyond the Phi base (mutable recipes, holographic dedup, content-address for facts, no frozen weights tax for one-shot paths, mesh co-learning compounds faster than solo).
+;
+; Lifts: transformer-block.fk + transformer-numerics (tb-attn, tb-ffn, tb-*) + cell-numerics + geometric-learning (for GQA/mesh/attn-edges) + active-inference.fk + predictor-train + nearest-shape + tensor-file.fk + ml-toy-loop concepts + satsang/circle + mesh-relay + co-learning/federated-slices.
+; No new parallel; all Form recipes over the M1-M6 stones + learning surfaces.
+;
+; Proven path: once the structural forward matches Phi numerics (3-way with format), the learning surfaces make it "learn the same way" (adaptation on language tasks) while adding the body's superpowers (one-shot, STM recall, active-inf as inference-time + learning, mesh distributed, satsang witnessed).
+;
+; On MLX/GPU pure metal: forward recipes use the TS Metal backend (metal.ts with tensor cores for the matvec in GQA/FFN) or Go/Rust JIT emit; MLX as the array carrier in experiments (extend for the phi numeric if needed for "MLX and GPU kernels").
+;
+; See also: form-native-models.form (M4 block + M5 JIT + M7 dynamic), geometric-learning.fk (mesh GDL), active-inference.fk, predictor-train.fk, tensor-file.fk, satsang.fk, learning-style-space.fk, federated-slices.form, phi in transformer-kernel comments (RMS, SwiGLU, GQA, RoPE).
+
+; --- RMSNorm (Phi uses RMS instead of LN; lift from cell-numerics / tn) ---
+; rms = scale * x / sqrt( mean(x^2) + eps )
+(defn phi-rms-norm (x eps g)  ; x vector, eps scalar, g scale vector or scalar repeated
+  (let sq (map (fn v (mul v v)) x)
+    (let ms (div (gl-sum sq) (gl-flen x))  ; use gl or tb sum
+      (let r (tn-sqrt (add ms eps))
+        (tb-vec-mul x (div g r))))))  ; elementwise; for scalar g repeat via gl-fill
+
+; --- SwiGLU (Phi FFN: silu(gate) * up , then down; gated linear) ---
+; silu(x) = x / (1 + exp(-x)) ; approx or use tn-exp
+(defn tn-silu (x)
+  (div x (add 1.0 (tn-exp (mul -1.0 x)))))
+
+(defn phi-swiglu (wg wu wd x)  ; gate_w, up_w, down_w matrices (lists of rows), x vector
+  (let g (tn-silu (tb-affine wg (tb-zeros (len x)) x))
+    (let u (tb-affine wu (tb-zeros (len x)) x)
+      (tb-affine wd (tb-zeros (len x)) (tb-vec-mul g u)))))
+
+; --- GQA (grouped query: full Q, shared KV heads repeated for groups; Phi-3 has n_kv < n_q) ---
+; For start: use tb-attn machinery but note KV repeat in data layout of external weights.
+; In real: split heads in the wq/wk/wv tensors, repeat kv per group in tb-attend-one.
+; Here structural lift + geometric for mesh-aware attn if edges present (gl-attn-edges).
+(defn phi-gqa-attend-one (q ks vs scale)  ; for toy full; in full impl repeat kv
+  (tb-attend-one q ks vs scale))
+
+(defn phi-gqa-attn-seq (qs ks vs scale)
+  (if (eq (len qs) 0) (empty)
+      (cons (phi-gqa-attend-one (head qs) ks vs scale) (phi-gqa-attn-seq (tail qs) ks vs scale))))
+
+; --- Phi block (RMS before attn and FFN, residuals, GQA + SwiGLU) ---
+; Mirrors tb-block but with phi norms/gates.
+(defn phi-attn-sub (rms_w wq wk wv wo scale x)
+  (tb-proj-seq wo (tb-zeros (len (head wo)))  ; bias 0 for start Phi-like
+    (phi-gqa-attn-seq (tb-proj-seq wq (tb-zeros ...) (phi-rms-norm x 1e-5 rms_w))
+                       (tb-proj-seq wk (tb-zeros ...) (phi-rms-norm x 1e-5 rms_w))  ; KV shared in full GQA
+                       (tb-proj-seq wv (tb-zeros ...) (phi-rms-norm x 1e-5 rms_w))
+                       scale)))
+
+(defn phi-attn-block (x rms1_w wq wk wv wo scale)
+  (tb-vec-add x (phi-attn-sub rms1_w wq wk wv wo scale x)))
+
+(defn phi-ffn-block (x rms2_w wg wu wd)
+  (tb-vec-add x (phi-swiglu wg wu wd (phi-rms-norm x 1e-5 rms2_w))))
+
+(defn phi-block (x rms1_w wq wk wv wo scale rms2_w wg wu wd)
+  (phi-ffn-block (phi-attn-block x rms1_w wq wk wv wo scale) rms2_w wg wu wd))
+
+; --- Phi start "model" forward (sequence of blocks; embed lookup from external tensor too) ---
+; For start: assume input is already embedded seq (list of vectors); or add simple embed from tensor.
+; Weights external: load via tensor-file as list of matrices (or named in future phi-ckpt format).
+; The "model" recipe + tensor cells can be persisted, shared on mesh (as federated slice), witnessed in satsang.
+(defn phi-start-forward (embs external_tensor_path)
+  (let ws (load-tensor-matrix external_tensor_path)  ; or multi-tensor load for all w's
+    ; for toy: assume ws encodes the block params in order (rms1, wq, wk, wv, wo, scale, rms2, wg, wu, wd)
+    ; real: parse the phi-ckpt header + data into the w's
+    (let block (phi-block embs  ; simplified single block for start; fold for stack
+                 (nth ws 0) (nth ws 1) (nth ws 2) (nth ws 3) (nth ws 4) 1.0
+                 (nth ws 5) (nth ws 6) (nth ws 7) (nth ws 8))
+      block)))
+
+; Note: full decoder would have pos (RoPE via geometric or new recipe), KV cache (store/restore arena), multiple layers.
+; The structure is here: the same matvec/attn/gated ops Phi uses, expressed as Form recipes over the body's stones.
+; Learning augments this base (see integration below).
+
+; --- Integration points for learning (one-shot, STM, active-inf, mesh, satsang) ---
+; The phi-start forward produces embeddings or next predictions.
+; One-shot: intern (phi-emb_of_input, target) via predictor-train / nearest-shape (or into STM).
+; STM recall: use short-term-memory.fk buffer (list of recent (emb, val)); recall via nearest or gl-gstep (recency-weighted mesh of STM items).
+; Active inference: wrap phi-start predict in ai- loop (predict with phi + STM recall, observe, ai-surprised?, one-shot update STM or model delta, ai-settled? gate).
+; Use choice (route "use STM recall or phi generate or mesh query"), fail (high surprise, prune), stop (settled or budget), store/restore (STM state or phi delta tensor), JIT (phi forward).
+; Mesh neighbors: gl-gstep / gl-gnn over "neighbor" edges (other agents' embeddings or facts from mesh-relay) to diffuse learning or recall.
+; Satsang: after one-shot or surprise reduction, share via MESH-SHARE or intern sat-attestation in circle (witnessed collective).
+; External tensor: the phi base weights (and STM snapshot as another tensor) loaded/saved via tensor-file; "the tensor data model" is the file.
+; A/B: this phi-start arm in recognition-router vs local HF Phi (guide); champion-challenger promotes the Form version when it approaches on the tasks (with its one-shot/STM/active advantages).
+; Multi-model: compose with other (e.g. the whisper mel + block for STT, audio-grammar for TTS, universal-translator for NL trans, prose-as-recipe + phi for nat-to-prog).
+
+; The start model is "structurally something that can learn the same way" because the forward is Phi-comparable; the learning is the body's (which for language tasks achieves adaptation via one-shot growth, surprise min as active-inf, mesh compounding, satsang proof — often more efficient and distributed than pure backprop on frozen Phi).
+
+; See ml-toy-loop.fk and short-term-memory.fk for the loop and STM concrete; this provides the Phi-structural forward to plug in.
+
+; end phi-start.fk
