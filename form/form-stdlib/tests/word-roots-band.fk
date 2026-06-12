@@ -1,0 +1,46 @@
+; tests/word-roots-band.fk — the root-word query interface, three-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/word-roots.fk
+;
+; Proves: direct children filter at the caller's threshold on BOTH belief
+; lanes; a known-but-weaker edge answers no WITH its measures while a lower
+; threshold lets it through; an unknown pair is honest absence (0, 0.0, 0.0);
+; the transitive walk chains confidence by product and conviction by minimum
+; (give → forgive → forgiveness reachable at 0.7, out of reach at 0.85);
+; the same walker serves English, German, and Sanskrit as data, no per-
+; language code path.
+;
+; Band verdict: 511 when every law holds.
+
+section [form.bml] {
+    def wrb-bool(b, weight) = if b then weight else 0;
+
+    def wrb-score() {
+        // 1 — direct children of en:give at 0.8 (gives, giving, gift, forgive)
+        let c-give = word-children("en", "give", 0.8);
+        // 2 — the yes: forgive is derived from give at 0.8
+        let r-forgive = word-related?("en", "give", "forgive", 0.8);
+        // 4 — the honest no WITH measures: de geben→Gift at 0.8 (conviction 0.7)
+        let r-gift-high = word-related?("de", "geben", "Gift", 0.8);
+        // 8 — the same edge answers yes when the caller lowers the bar
+        let r-gift-low = word-related?("de", "geben", "Gift", 0.65);
+        // 16 — honest absence for a pair the data never attested
+        let r-absent = word-related?("en", "give", "xylophone", 0.1);
+        // 32 — the walk reaches forgiveness from give at 0.7 (0.85 x 0.95 = 0.8075)
+        // 64 — and cannot reach it at 0.85 (the chain is weaker than its parts)
+        // 128 — the mother tongue mirrors: geben walks to Vergebung at 0.7
+        // 256 — sanskrit family: sqrt-kr has 4 children at 0.8 (karana holds at the edge)
+        sum(list(
+            wrb-bool(eq(len(c-give), 4), 1),
+            wrb-bool(eq(nth(r-forgive, 0), 1), 2),
+            wrb-bool(and(eq(nth(r-gift-high, 0), 0), eq(nth(r-gift-high, 2), 0.7)), 4),
+            wrb-bool(eq(nth(r-gift-low, 0), 1), 8),
+            wrb-bool(and(eq(nth(r-absent, 0), 0), eq(nth(r-absent, 1), 0.0)), 16),
+            wrb-bool(word-walk-reaches?("en", "give", 0.7, "forgiveness"), 32),
+            wrb-bool(not(word-walk-reaches?("en", "give", 0.85, "forgiveness")), 64),
+            wrb-bool(word-walk-reaches?("de", "geben", 0.7, "Vergebung"), 128),
+            wrb-bool(eq(len(word-children("sa", "sqrt-kr", 0.8)), 4), 256)));
+    }
+
+    wrb-score();
+}
