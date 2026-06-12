@@ -27,14 +27,49 @@
     (defn lo-c2  (prog i) (nth (lo-row prog i) 2))     ; ADD/SUB child-2 index (slot 2)
     (defn lo-imm (prog i) (lo-val prog (lo-c2 prog i))) ; the immediate = LIT value of child-2
 
-    ; lower the subtree rooted at i to its instruction byte image (result in w0)
+    (defn lo-c3  (prog i) (nth (lo-row prog i) 3))     ; COND else-branch index (slot 3)
+    (defn lo-arg? (prog i) (eq (lo-tag prog i) 2))     ; is the node ARG (n, held in w1)?
+    (defn lo-lit? (prog i) (eq (lo-tag prog i) 1))
+
+    ; lower the subtree rooted at i to its instruction byte image. Convention: the
+    ; single argument n lives in w1; every expression result lands in w0. The
+    ; dispatch is OPERAND-AWARE instruction selection — ARG-operand forms pick the
+    ; register instruction directly (sub w0,w1,#i), both for size and because the
+    ; naive lower-then-fold would clobber w0 (correctness, not just elegance).
     (defn lo-node (prog i)
         (if (eq (lo-tag prog i) 1) (fa-movz 0 (lo-val prog i))
-        (if (eq (lo-tag prog i) 3) (lo-app (lo-node prog (lo-c1 prog i)) (fa-add 0 0 (lo-imm prog i)))
-        (if (eq (lo-tag prog i) 4) (lo-app (lo-node prog (lo-c1 prog i)) (fa-sub 0 0 (lo-imm prog i)))
-            (list)))))
+        (if (eq (lo-tag prog i) 2) (fa-mov 0 1)
+        (if (eq (lo-tag prog i) 3) (lo-add prog i)
+        (if (eq (lo-tag prog i) 4) (lo-sub prog i)
+        (if (eq (lo-tag prog i) 6) (lo-cond prog i)
+            (list)))))))
+    ; ADD: (x, LIT i) -> lower(x); add w0,w0,#i · (ARG, x) -> lower(x); add w0,w1,w0
+    (defn lo-add (prog i)
+        (if (lo-lit? prog (lo-c2 prog i))
+            (lo-app (lo-node prog (lo-c1 prog i)) (fa-add 0 0 (lo-imm prog i)))
+            (lo-app (lo-node prog (lo-c2 prog i)) (fa-add-r 0 1 0))))
+    ; SUB: (ARG, LIT i) -> sub w0,w1,#i (direct) · (x, LIT i) -> lower(x); sub w0,w0,#i
+    (defn lo-sub (prog i)
+        (if (lo-arg? prog (lo-c1 prog i))
+            (fa-sub 0 1 (lo-imm prog i))
+            (lo-app (lo-node prog (lo-c1 prog i)) (fa-sub 0 0 (lo-imm prog i)))))
+    ; COND(LE(ARG, LIT i), then, else) — the control-flow scheme with computed
+    ; branch offsets (in instructions = bytes/4):
+    ;   cmp w1,#i ; b.gt +(len(then)+2) ; then ; b +(len(else)+1) ; else
+    (defn lo-cond (prog i)
+        (lo-cond2 prog i (lo-node prog (lo-c2 prog i)) (lo-node prog (lo-c3 prog i))))
+    (defn lo-cond2 (prog i tcode ecode)
+        (lo-cat (list
+            (fa-cmp 1 (lo-val prog (lo-c2 prog (lo-c1 prog i))))   ; LE's LIT operand
+            (fa-bgt (add (div (len tcode) 4) 2))
+            tcode
+            (fa-b (add (div (len ecode) 4) 1))
+            ecode)))
+    (defn lo-cat (xss) (if (eq (len xss) 1) (head xss) (lo-app (head xss) (lo-cat (tail xss)))))
 
     ; compile a whole function: lower the root, then return
     (defn lo-compile (prog root) (lo-app (lo-node prog root) (fa-ret)))
+    ; compile a function OF n: the preamble banks argc (arriving in w0) into w1
+    (defn lo-compile-fn (prog root) (lo-app (fa-mov 1 0) (lo-compile prog root)))
 
     0)
