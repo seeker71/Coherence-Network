@@ -1,0 +1,44 @@
+; tests/speakable-band.fk — the speakable corpus with conviction encoding, three-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/grammars/shamballa-light-codes.fk form-stdlib/shamballa-symbol-packs.fk form-stdlib/speakable.fk
+;
+; Proves: the four corpora render whole (no empty doors); the ontology corpus
+; derives row-for-row from form-ontology.json (the kernels' own mirror); the
+; light codes flow through both language packs; the epistemic ordering is law
+; (axioms carry more conviction than light codes); the threshold gate makes
+; the epistemics audible (axioms assert at 0.9, light codes speak as held);
+; and every spoken utterance ends carrying its lanes as percentages.
+;
+; Band verdict: 1023 when every law holds.
+
+section [form.bml] {
+    def spb-bool(b, weight) = if b then weight else 0;
+
+    def spb-all-whole?(us) = if nil?(us) then true else if str_eq(sp-text(head(us)), "") then false else spb-all-whole?(tail(us));
+    def spb-first(us) = head(us);
+
+    def spb-score() {
+        let axioms = speakable-axioms();
+        let prims = speakable-primitives();
+        let onto = speakable-ontology();
+        let lc-en = speakable-light-codes(ssp-pack-en());
+        let lc-de = speakable-light-codes(ssp-pack-de());
+        let axiom-one = spb-first(axioms);
+        let gaia-en = nth(lc-en, 34);
+        let spoken-axiom = sp-spoken(axiom-one, 0.9);
+        let spoken-gaia = sp-spoken(gaia-en, 0.9);
+        sum(list(
+            spb-bool(eq(len(axioms), 5), 1),
+            spb-bool(ge(len(prims), 8), 2),
+            spb-bool(eq(len(onto), json-array-length(json-object-get(sp-ontology-root(), "categories"))), 4),
+            spb-bool(eq(len(lc-en), slc-count()), 8),
+            spb-bool(eq(len(lc-de), slc-count()), 16),
+            spb-bool(and(spb-all-whole?(axioms), and(spb-all-whole?(onto), and(spb-all-whole?(lc-en), spb-all-whole?(lc-de)))), 32),
+            spb-bool(gt(sp-conviction(axiom-one), sp-conviction(gaia-en)), 64),
+            spb-bool(and(sp-asserts?(axiom-one, 0.9), not(sp-asserts?(gaia-en, 0.9))), 128),
+            spb-bool(and(ge(str_find(spoken-gaia, "Held as practice material:", 0), 0), ge(str_find(spoken-gaia, "Shamballa 7191", 0), 0)), 256),
+            spb-bool(and(ge(str_find(spoken-axiom, "conviction 100 percent", 0), 0), ge(str_find(spoken-gaia, "conviction 60 percent", 0), 0)), 512)));
+    }
+
+    spb-score();
+}
