@@ -70,4 +70,16 @@
     (defn str_find (s needle from)
         (if (gt from (str_len s)) (sub 0 1)
             (fourth-sf-at s needle (max2 from 0))))
+    ; record_get — the portable record READ, paired with form-flatten.fk's
+    ; record_new lowering. A record is a cons-chain of (list key val) entries
+    ; (records as arena tissue); this walks the chain and answers the value of
+    ; the first entry whose interned key matches `field` (str_eq IS content
+    ; equality, axiom 3), or 0 when no entry carries it. record_new (the
+    ; flattener special form) is the matching WRITE; the two are the read-only
+    ; record family the fourth arm carries with zero new walker tags.
+    (defn record_get (rec field)
+        (if (nil? rec) 0
+            (if (str_eq (head (head rec)) field)
+                (head (tail (head rec)))
+                (record_get (tail rec) field))))
     0)

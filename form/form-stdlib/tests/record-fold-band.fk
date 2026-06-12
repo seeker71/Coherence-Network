@@ -1,0 +1,59 @@
+; tests/record-fold-band.fk — read-only RECORD construction + field read +
+; fold over a LIST of records, proven FOUR-WAY (Go, Rust, TypeScript, and the
+; emitted fourth kernel fkwu).
+;
+; preludes: form-stdlib/core.fk
+;
+; record_new / record_get are kernel natives on the three walkers; on the
+; fourth arm they ride the records-as-arena-tissue carrier — record_new lowers
+; to a cons-chain of (cons key val) entries (form-flatten.fk's special form,
+; blueprint discarded) and record_get is a recipe that walks the chain
+; (fourth-shim.fk). No new walker tags: records reuse the arena arms (18..23)
+; and the string-pool lane (str_eq = content equality). This is the
+; integer-field, identity-free half of the API_KERNEL_READINESS record gate —
+; the float-field and mutable-aliasing halves stay with the float and
+; mutable-cell lanes (grounded-cost / list-of-record / record / method bands).
+;
+; The strange-minimal edge that covers the most: a single record read at two
+; DISTINCT keys (key matching, not position), a fold that READS a named field
+; from each element of a list of records, a field PREDICATE (count under gt),
+; and the empty-fold identity — the four shapes every list-of-record reduction
+; reduces to, in the simplest expression. Each check is one bit of the verdict
+; so a failure names itself.
+;
+; Band verdict: 31 when every assertion holds across all four kernels.
+;   - record reads field "n" (42) and field "tag" (9) off one record  → 1, 2
+;   - sum a named integer field across a list of records (3+7+5 = 15)  → 4
+;   - count elements whose field passes a predicate (tag > 0 → 2)      → 8
+;   - empty-list fold returns the identity accumulator (0)             → 16
+
+(do
+    (let bp (make_nodeid 1 5 4 1))
+
+    (let items (list
+        (record_new bp "n" 3 "tag" 1)
+        (record_new bp "n" 7 "tag" 1)
+        (record_new bp "n" 5 "tag" 0)))
+
+    ;; sum a named integer field across the list (head/tail accumulator fold)
+    (defn sum_n (xs acc)
+        (if (eq (len xs) 0)
+            acc
+            (sum_n (tail xs) (add acc (record_get (head xs) "n")))))
+
+    ;; count elements whose "tag" field is > 0 (a field predicate)
+    (defn count_tag (xs acc)
+        (if (eq (len xs) 0)
+            acc
+            (if (gt (record_get (head xs) "tag") 0)
+                (count_tag (tail xs) (add acc 1))
+                (count_tag (tail xs) acc))))
+
+    (let one (record_new bp "n" 42 "tag" 9))
+    (let s1 (if (eq (record_get one "n") 42) 1 0))
+    (let s2 (if (eq (record_get one "tag") 9) 1 0))
+    (let s3 (if (eq (sum_n items 0) 15) 1 0))
+    (let s4 (if (eq (count_tag items 0) 2) 1 0))
+    (let s5 (if (eq (sum_n (list) 0) 0) 1 0))
+
+    (add s1 (add (mul s2 2) (add (mul s3 4) (add (mul s4 8) (mul s5 16))))))
