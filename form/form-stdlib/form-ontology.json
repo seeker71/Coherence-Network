@@ -260,6 +260,22 @@
         {"name": "ASYNC",  "inst": 674},
         {"name": "RESULT", "inst": 675}
       ]
+    },
+    "prolog.bmf": {
+      "category_type": 99,
+      "name_prefix": "PL-BMF",
+      "grammar_file": "form-stdlib/grammars/prolog-bmf.fk",
+      "categories": [
+        {"name": "FACT",      "inst": 676, "note": "ground clause with no body — parent(tom, bob)."},
+        {"name": "RULE",      "inst": 677, "note": "head :- body clause"},
+        {"name": "DIRECTIVE", "inst": 678, "note": ":- goal. executed at load"},
+        {"name": "QUERY",     "inst": 679, "note": "?- goal. top-level ask"},
+        {"name": "IS",        "inst": 680, "note": "arithmetic evaluation — X is A + B"},
+        {"name": "LIST",      "inst": 681, "note": "[] and [Head|Tail] cells"},
+        {"name": "CUT",       "inst": 682, "note": "clause committing with ! after its goal"},
+        {"name": "UNIFY",     "inst": 683, "note": "X = Y structural unification"},
+        {"name": "DCG",       "inst": 684, "note": "head --> body definite-clause-grammar rule"}
+      ]
     }
   },
   "casts_note": "Intrinsic casting rows — spec specs/form-intrinsic-casting.md. Each category is one primitive cast pair; `from`/`to` name the TYPE-* typed-token rows; `reverse` names the inverse row when the round-trip law R(C(x)) node_eq x holds for every valid x; `lossy` true means information can drop; `total` false means the cast can fail and a failed cast realizes to nothing (core-axioms third state), never 0 and never a thrown error. Dialect implicit-coercion rows live with each dialect under `coercions`; lifters consult them and emit explicit CAST nodes — kernels never coerce.",
@@ -299,7 +315,8 @@
         {"name": "natural",    "value": 6},
         {"name": "image",      "value": 7},
         {"name": "audio",      "value": 8},
-        {"name": "video",      "value": 9}
+        {"name": "video",      "value": 9},
+        {"name": "prolog",     "value": 10}
       ]
     },
     "domain_kind": {

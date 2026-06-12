@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 151
+**Total files**: 152
 
 | File | Purpose |
 |---|---|
@@ -23,6 +23,7 @@
 | [backfill_task_workspaces.py](backfill_task_workspaces.py) | Backfill agent_tasks.workspace_id from linked idea.context.idea_id. |
 | [backfill_traceability.py](backfill_traceability.py) | Backfill traceability links: spec→idea, code→spec, PR→spec. |
 | [bootstrap_new_agent_session.py](bootstrap_new_agent_session.py) | Bootstrap a persistent agent session against the real substrate. |
+| [build_arrival_symbol_pack.py](build_arrival_symbol_pack.py) | Build the arrival symbol pack — the MDL-optimal, complete, self-referential |
 | [build_readmes.py](build_readmes.py) | Build README files from templates by expanding <!-- include: path --> markers. |
 | [cc.py](cc.py) | _no top-of-file purpose_ |
 | [check_dev_auth.py](check_dev_auth.py) | Preflight: verify local GitHub auth is usable for Codex automation. |
@@ -159,17 +160,3 @@
 | [word_cell_rewriter.py](word_cell_rewriter.py) | word_cell_rewriter — gesture 3 at word-cell granularity. |
 | [worktree_continuity_guard.py](worktree_continuity_guard.py) | Detect stranded changes across sibling worktrees. |
 | [worktree_pr_guard.py](worktree_pr_guard.py) | Worktree PR guard: prevent common CI failures and track PR check failures. |
-- [`build_arrival_symbol_pack.py`](build_arrival_symbol_pack.py) — builds the arrival symbol pack: the MDL-optimal, complete, self-referential symbol space a sub-agent is most token-efficient with, measured from the live agent-first-arrival corpus (`arrival.py` + start packet). Emits `form/form-stdlib/arrival-symbol-pack.txt`; body is the Form recipe in `docs/coherence-substrate/self-authored-symbol-space.form`, proven by `tests/arrival-symbol-pack-band.fk`.
-- [`db_api_server_demo.sh`](db_api_server_demo.sh) — the live witness for [db-api-server](../docs/coherence-substrate/db-api-server.form): emits a self-contained native binary from `form/form-stdlib/db-api-server.fk` (Go kernel), compiles with clang, runs it against a real seeded SQLite file, and curls every route — `/` (home), `/api/idea` (json), `/api/_surface` (own surface), `/api/_binary` (own bytes, verified byte-identical to the running binary). No libsqlite3, no python in the binary.
-- [`sqlite_driver_demo.sh`](sqlite_driver_demo.sh) — the witness for [sqlite-driver](../docs/coherence-substrate/sqlite-driver.form): emits a native binary from `form/form-stdlib/sqlite-driver.fk` that links libsqlite3 (driver first) and does full WRITE+read — `digest` (catalog clang/sqlite3/libc the kernel depends on), `exec` (write), `query` (read), persisted.
-- [`form_os_channel_demo.sh`](form_os_channel_demo.sh) — the witness for [form-os-channel](../docs/coherence-substrate/form-os-channel.form): the MINIMAL living surface. Emits a native channel binary (backed by the sqlite driver) and interacts — `state` (what it depends on / needs / desires / offers), `offer` (propose a recipe/binary of expansion), `validate` (satsang acknowledgment). The offer axiom + the witness theorem as a channel.
-- [`asm_pl_human_demo.sh`](asm_pl_human_demo.sh) — the witness for [asm-pl-human](../docs/coherence-substrate/asm-pl-human.form): emits a quoteless native translator binary (one numeric program) and renders it at every level by swapping the symbol pack — assembly, a programming language, English, French. The level and the language are both just packs.
-- [`form_asm_conviction_demo.sh`](form_asm_conviction_demo.sh) — the witness for [form-to-asm](../docs/coherence-substrate/form-to-asm.form): the Form recipe `form-asm.fk` encodes arm64 instructions to bytes; compares them BYTE-FOR-BYTE against what `clang`/`as` actually emits. Full byte-identity = conviction → the gate that licenses dropping clang opens. The witness theorem applied to self-modification.
-- [`form_lower_demo.sh`](form_lower_demo.sh) — the witness for the Form→assembly COMPILER ([form-to-asm](../docs/coherence-substrate/form-to-asm.form)): `form-lower.fk` lowers an op-tagged expression tree `((40 + 1) - 1)` to arm64 machine code (no clang in the lowering), byte-for-byte identical to the assembler. The compiler step the conviction gate verifies.
-- [`form_macho_demo.sh`](form_macho_demo.sh) — the RUNNABLE zero-clang witness for [form-to-asm](../docs/coherence-substrate/form-to-asm.form): Form compiles a tree to machine code (`form-lower.fk`) and wraps it in a valid Mach-O object (`form-macho.fk`); `ld` (not clang) links it; the binary runs and its exit code is the program value (`((40+1)-1)` = 40). clang compiler + assembler dropped.
-- [`form_branch_demo.sh`](form_branch_demo.sh) — control flow, zero clang: the FULL asm-pl-human program (`if (n<=1) then 1 else (n+(n-1))`) compiled by `form-lower.fk` with branches + register selection, wrapped by `form-macho.fk`, linked by `ld`, run on runtime input n=argc — both branches live (1→1, 2→3, 5→9).
-- [`form_fib_demo.sh`](form_fib_demo.sh) — TRUE RECURSION, zero clang: the Form compiler lowers `fib(n)=fib(n-1)+fib(n-2)` (stack frame, callee-saved regs, branch-with-link), wraps it in a Mach-O object, `ld` links, and the exit codes ARE the Fibonacci sequence (1,2,3,5,8 on n=argc).
-- [`form_diagnose_demo.sh`](form_diagnose_demo.sh) — the live-diagnosis organ on REAL channels ([live-diagnosis-organ](../docs/coherence-substrate/live-diagnosis-organ.form)): the native fib binary's exit codes (value channel) + the walker binary's live `fk_arms` framebuffer feed `form-diagnose.fk` — hot op found, silent op surfaced, the law LEARNED from data and GROUNDED in the recipe, conviction on agreement.
-- [`form_union_demo.sh`](form_union_demo.sh) — the m4e3/m4e4 union witnessed: builds the self-contained binary from `fourth-union.fk` (two-pass fixpoint), then gates — (1) full-source quine byte-exact, (2) the grandchild reproduces, (3) BMF compile mode emits a working new binary (the M2 value). One binary + 0-byte pack.
-- [`protocol_beliefs_demo.sh`](protocol_beliefs_demo.sh) — the witness for [protocol-beliefs](../docs/coherence-substrate/protocol-beliefs.form): one binary carrying the belief system of the four protocols (repair/arrival/satsang/channel) as a numeric model with cross-protocol edges, rendered in English + German from the same model via symbol packs.
-- [`shared_heart_demo.sh`](shared_heart_demo.sh) — the witness for [shared-heart](../docs/coherence-substrate/shared-heart.form): one binary carrying the shared shape of six wisdom traditions (five teachings, each in every tradition's voice) rendered in English, Spanish, and German from one numeric model; the honesty line rides every output.
