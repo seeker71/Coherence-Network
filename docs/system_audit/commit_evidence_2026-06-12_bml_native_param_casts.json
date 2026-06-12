@@ -1,0 +1,90 @@
+{
+  "date": "2026-06-12",
+  "thread_branch": "codex/fix-bml-int-param-casts-20260612",
+  "commit_scope": "Fix remaining BML native front-door SQL parameter casts that bind Form/Rust integers into PostgreSQL promoted read routes.",
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "kernel-native-api-readiness",
+    "bml-front-door"
+  ],
+  "spec_ids": [
+    "kernel-native-api-readiness",
+    "native-front-door-deploy"
+  ],
+  "task_ids": [
+    "bml-native-param-casts-20260612"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "deploy/front-door/api.bml"
+  ],
+  "change_files": [
+    "deploy/front-door/api.bml"
+  ],
+  "evidence_refs": [
+    "deploy/front-door/api.bml",
+    "deploy/hostinger/auto-deploy.sh",
+    "https://api.coherencycoin.com/api/runtime/endpoints/summary?limit=2",
+    "https://api.coherencycoin.com/api/views/stats/lc-attuned-spaces?days=30",
+    "https://api.coherencycoin.com/api/inventory/flow?idea_id=__native_inventory_canary__&list_item_limit=1&runtime_window_seconds=3600"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --port 19112 --routes ../../deploy/front-door/api.bml --stdlib ../form-stdlib",
+      "curl -fsS -D /tmp/form-kernel-health-19112.headers http://127.0.0.1:19112/api/health -o /tmp/form-kernel-health-19112.json",
+      "grep -q \"X-Form-Router: native-kernel\" /tmp/form-kernel-health-19112.headers",
+      "grep -q '\"kernel_runtime\":\"form-kernel-rust\"' /tmp/form-kernel-health-19112.json",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-12_bml_native_param_casts.json",
+      "git diff --check",
+      "if rg -n '\\$[0-9]+::int|\\$2 OR NOT' deploy/front-door/api.bml; then exit 1; fi"
+    ],
+    "notes": "The patched BML front-door source compiles and serves /api/health through the Rust native kernel. No promoted-route SQL placeholder casts to int4 remain in deploy/front-door/api.bml."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "PR checks will run after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Hostinger Auto Deploy for PR #2957 advanced past graph-node-edges, then failed because /api/runtime/endpoints/summary?limit=2 returned 503 with error serializing parameter 0. This slice changes remaining BML promoted-route SQL int4 casts to bigint and converts inventory's include_internal SQL flag to 0/1 bigint."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Promoted BML read routes with integer window/day parameters should return native 200 responses instead of 503 persistence serialization failures.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/runtime/endpoints/summary?limit=2",
+      "https://api.coherencycoin.com/api/views/stats/lc-attuned-spaces?days=30",
+      "https://api.coherencycoin.com/api/inventory/flow?idea_id=__native_inventory_canary__&list_item_limit=1&runtime_window_seconds=3600"
+    ],
+    "test_flows": [
+      "Hostinger Auto Deploy: BML front-door promoted read routes",
+      "curl -i -sS --max-time 20 https://api.coherencycoin.com/api/runtime/endpoints/summary?limit=2"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Pending local proof, PR CI, and post-merge deploy verification."
+  }
+}
