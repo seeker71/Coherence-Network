@@ -1,5 +1,10 @@
 package jitabi
 
+import (
+	"fmt"
+	"unicode/utf8"
+)
+
 type Kind uint8
 
 const (
@@ -112,17 +117,48 @@ func StrLen(v Value) Value       { return Int(Len(v)) }
 func StrConcat(a, b Value) Value { return Str(a.AsString() + b.AsString()) }
 func StrEq(a, b Value) Value     { return boolInt(a.AsString() == b.AsString()) }
 
+// floorCharBoundary snaps a byte index down to the nearest UTF-8 char
+// boundary at or below it. Same contract as the interpreter natives in
+// main.go — JIT-compiled string addressing must answer byte-for-byte what
+// the walker answers, or hot loops mojibake after the auto-JIT threshold.
+func floorCharBoundary(s string, i int) int {
+	if i > len(s) {
+		i = len(s)
+	}
+	for i > 0 && i < len(s) && !utf8.RuneStart(s[i]) {
+		i--
+	}
+	return i
+}
+
 func Substring(s, start, end Value) Value {
 	text := s.AsString()
 	from := int(start.AsInt())
 	to := int(end.AsInt())
-	return Str(text[from:to])
+	if from < 0 || to < from || to > len(text) {
+		panic(fmt.Sprintf(
+			"substring: bounds out of range start=%d end=%d len=%d",
+			from, to, len(text),
+		))
+	}
+	return Str(text[floorCharBoundary(text, from):floorCharBoundary(text, to)])
 }
 
 func CharAt(s, idx Value) Value {
 	text := s.AsString()
 	i := int(idx.AsInt())
-	return Str(string(text[i]))
+	if i < 0 || i >= len(text) {
+		panic(fmt.Sprintf("char_at: bounds out of range index=%d len=%d", i, len(text)))
+	}
+	// At a char start: the whole char as a verbatim byte slice — never
+	// string(text[i]), which widens the byte to a codepoint and double-
+	// encodes multibyte UTF-8. Inside a multibyte char: nothing, so a
+	// bytewise loop concatenating char_at reconstructs the string exactly.
+	if !utf8.RuneStart(text[i]) {
+		return Str("")
+	}
+	_, size := utf8.DecodeRuneInString(text[i:])
+	return Str(text[i : i+size])
 }
 
 func Ord(v Value) Value {
