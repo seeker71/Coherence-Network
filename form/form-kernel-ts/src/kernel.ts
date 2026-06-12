@@ -3453,6 +3453,8 @@ function volatileCoord(namespace: string, key: string): string {
 function argInt(args: Value[], i: number): number {
   const v = args[i];
   if (!v) throw new Error(`arg ${i}: missing`);
+  // bool→int is intrinsic at every numeric door (axiom-1: true IS 1).
+  if (v.kind === "bool") return v.bool ? 1 : 0;
   if (
     v.kind === "int" ||
     v.kind === "i8" ||
@@ -3468,6 +3470,8 @@ function argInt(args: Value[], i: number): number {
 function argFloat(args: Value[], i: number): number {
   const v = args[i];
   if (!v) throw new Error(`arg ${i}: missing`);
+  // bool→float is intrinsic at every numeric door (axiom-1: true IS 1).
+  if (v.kind === "bool") return v.bool ? 1 : 0;
   if (v.kind === "f32" || v.kind === "f64") return v.float;
   if (
     v.kind === "int" ||
@@ -3603,6 +3607,8 @@ function composeScaledDecimal(kept: string, n: number, neg: boolean): string {
 function argBigInt(args: Value[], i: number): bigint {
   const v = args[i];
   if (!v) throw new Error(`arg ${i}: missing`);
+  // bool→int is intrinsic at every numeric door (axiom-1: true IS 1).
+  if (v.kind === "bool") return v.bool ? 1n : 0n;
   if (v.kind === "i64" || v.kind === "u64") return v.bigint;
   if (
     v.kind === "int" ||
@@ -4373,6 +4379,7 @@ function walkMatchSwitch(
 }
 
 function expectInt(v: Value, op: string): number {
+  if (v.kind === "bool") return v.bool ? 1 : 0;
   // A bare integer literal wider than int32 walks in as an i64 (overflow
   // table). The default integer math path holds it as a JS number, exact to
   // 2^53 — the same widening expectFloat already performs. Beyond 2^53 the
@@ -4391,6 +4398,7 @@ function expectInt(v: Value, op: string): number {
 }
 
 function expectFloat(v: Value, op: string): number {
+  if (v.kind === "bool") return v.bool ? 1 : 0;
   if (v.kind === "f32" || v.kind === "f64") return v.float;
   if (
     v.kind === "int" ||
@@ -4406,6 +4414,7 @@ function expectFloat(v: Value, op: string): number {
 }
 
 function expectBigInt(v: Value, op: string): bigint {
+  if (v.kind === "bool") return v.bool ? 1n : 0n;
   if (v.kind === "i64" || v.kind === "u64") return v.bigint;
   if (
     v.kind === "int" ||
@@ -4585,8 +4594,8 @@ function walkMath(
   return { kind: "int", int: acc };
 }
 
-// boolInt — the comparison family's acknowledgment shape: 0/1 integer states
-// (axiom-1) so eq/lt/node_eq/… answers feed arithmetic on every kernel.
+// boolInt — the truth family's acknowledgment shape: 0/1 integer states
+// (axiom-1) so eq/lt/and/not/node_eq/… answers feed arithmetic on every kernel.
 function boolInt(b: boolean): Value {
   return { kind: "int", int: b ? 1 : 0 };
 }
@@ -4776,20 +4785,23 @@ function walkLogic(
   kids: readonly NodeID[],
   frame: Frame,
 ): Value {
+  // Logic answers join the comparison family's 0/1 integer states
+  // (axiom-1) — truth has one value shape, so (mul (and ...) n) flows
+  // exactly like (mul (eq ...) n).
   if (op === RLogic.NOT) {
     if (kids.length !== 1) throw new Error("not: need exactly 1 arg");
     const v = walk(k, kids[0]!, frame);
-    return { kind: "bool", bool: !truthy(v) };
+    return boolInt(!truthy(v));
   }
   if (kids.length < 2) throw new Error("and/or: need at least 2 args");
   for (let i = 0; i < kids.length; i++) {
     const v = walk(k, kids[i]!, frame);
     const b = truthy(v);
-    if (op === RLogic.AND && !b) return { kind: "bool", bool: false };
-    if (op === RLogic.OR && b) return { kind: "bool", bool: true };
-    if (i === kids.length - 1) return { kind: "bool", bool: b };
+    if (op === RLogic.AND && !b) return boolInt(false);
+    if (op === RLogic.OR && b) return boolInt(true);
+    if (i === kids.length - 1) return boolInt(b);
   }
-  return { kind: "bool", bool: op === RLogic.AND };
+  return boolInt(op === RLogic.AND);
 }
 
 function walkCond(
