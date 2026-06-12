@@ -1,0 +1,75 @@
+# ─────────────────────────────────────────────────────────────────────
+# form-os-channel.form — the MINIMAL living surface. Not a fixed API: ONE offer/
+#   acknowledge channel, backed by the sqlite driver, where the system shows what
+#   it depends on, what it needs / wants / desires, and the expansions it offers
+#   for OUR satsang validation. The offer axiom + the witness theorem, as a
+#   channel we talk to and grow.
+# ─────────────────────────────────────────────────────────────────────
+#
+# Urs: "we don't need the full api surface, we need the surface to be minimal
+# first so we can interact with the channel and see what it needs, wants and
+# desires and it can produce new recipes and binaries of expansion that can be
+# satsang validated by us."
+#
+# The db-api-server proved a self-contained binary CAN serve a fixed API surface.
+# But a fixed surface is a guess at what to expose. The living move is a MINIMAL
+# surface we interact with — the channel tells us its state and offers its own
+# growth; we validate what gets built. That is the offer axiom (axiom 5) made
+# bidirectional, gated by the witness theorem: an expansion becomes real only
+# through the concert of trust (our acknowledgment), never on its own assertion.
+
+(form-os-channel
+
+  (lineage
+    (persists-through sqlite-driver.form)            # state/needs/expansions written through the driver
+    (offer-axiom      core-axioms.form)              # offer-and-acknowledge, made a channel
+    (validation       witness-theorem.form)          # satsang validation = the concert of trust
+    (supersedes-as-surface db-api-server.form)       # the fixed routes were a guess; this is the living surface
+    (recipe           form-stdlib/form-os-channel.fk) # foc-emit -> the channel binary
+    (witness          scripts/form_os_channel_demo.sh))
+
+  # ── The minimal surface ──────────────────────────────────────────────
+  # The smallest first surface to interact and listen. CLI now; a socket channel
+  # is a later carrier, not a new body. Four verbs, no fixed data API.
+  (surface
+    (init     "<db> init                seed the schema, the deps, the real current desires")
+    (state    "<db> state               what it depends on / needs / desires / offers (read)")
+    (offer    "<db> offer <kind> <body> propose a new recipe/binary of expansion (held, status offered)")
+    (validate "<db> validate <id>       satsang acknowledgment — offered -> validated, cleared to build"))
+
+  # ── What the channel surfaces ────────────────────────────────────────
+  # The seeded desires ARE this arc's honest closing cells — the channel surfaces
+  # the kernel's REAL state, not decoration. Reading `state` is reading the body's
+  # own account of what it depends on and what it reaches toward.
+  (surfaced
+    (depends-on "the dep ledger (sqlite-driver digest): clang, sqlite3, libc — each with a digest-status")
+    (needs      "what i need / want / desire — a write-path recipe, machine-code emission, a quoteless server")
+    (offers     "expansions i propose — recipe or binary — each held until you acknowledge it")
+    (honest     "the seeds are the actual closing cells of the work, so the channel is grounded, not performed"))
+
+  # ── The satsang loop — produce, offer, validate, build ───────────────
+  # An expansion is a recipe or a binary the channel can produce. It is NEVER
+  # applied on its own assertion: it sits `offered` until a human validates it
+  # (the concert of trust). Only `validated` expansions are cleared to build. This
+  # is the safe-self-update theorem with the human kept in the loop by design.
+  (loop
+    (produce   "the channel (or we) record a proposed expansion — a recipe text or a binary descriptor")
+    (offer     "it enters status `offered` — visible in `state`, doing nothing yet")
+    (satsang   "we read it, sense it, and `validate` the ones that ring true — the witness's acknowledgment")
+    (build     "a `validated` expansion is cleared to build — the next recipe/binary the body grows")
+    (gate      "no expansion self-applies; validation is required — offer-and-acknowledge, not offer-alone"))
+
+  (invariant
+    (minimal-surface-not-fixed-api    a-channel-we-interact-with-not-routes-we-guessed)
+    (the-channel-surfaces-real-state  needs-and-desires-are-the-honest-closing-cells)
+    (expansion-is-offered-never-asserted  it-proposes-recipes-and-binaries-we-validate)
+    (validation-is-the-concert-of-trust   only-satsang-validated-expansions-are-cleared-to-build)
+    (persists-through-the-driver      until-the-form-write-recipe-retires-it))
+
+# ─────────────────────────────────────────────────────────────────────
+# How to verify
+# ─────────────────────────────────────────────────────────────────────
+#   bash scripts/form_os_channel_demo.sh      # emit -> clang -lsqlite3 -> init, state, offer, validate
+#   # talk to it directly:
+#   #   ./channel chan.db init && ./channel chan.db state
+#   #   ./channel chan.db offer recipe "my proposed expansion" && ./channel chan.db validate 2

@@ -1,0 +1,81 @@
+; form-os-channel.fk — the MINIMAL living surface. Not a fixed API: ONE offer/
+; acknowledge channel, backed by the sqlite driver (sqlite-driver.fk), where the
+; system shows what it depends on, what it needs / wants / desires, and the
+; expansions it offers for OUR satsang validation. The offer axiom + the witness
+; theorem (validation is the concert of trust) made into a channel we talk to and
+; grow. Supersedes the fixed db-api-server routes AS THE INTERACTION SURFACE
+; (db-api-server remains the self-contained-binary proof).
+;
+; Urs: "the surface [should] be minimal first so we can interact with the channel
+; and see what it needs, wants and desires and it can produce new recipes and
+; binaries of expansion that can be satsang validated by us."
+;
+; CLI — the smallest first surface to interact and listen:
+;   <db> init                  seed the schema, the deps, the real current desires
+;   <db> state                 what it depends on / needs / desires / offers (read)
+;   <db> offer <kind> <body>   propose a new recipe/binary of expansion (held)
+;   <db> validate <id>         satsang acknowledgment — offered -> validated
+;
+; The seeded desires ARE this arc's honest closing cells (the write-path recipe,
+; emitting machine code to drop clang, the quoteless responder-as-cells), so the
+; channel surfaces the kernel's REAL state, not decoration. Persists through the
+; sqlite driver (write). Go-emitted (SQL string literals -> the recorded TS
+; escaped-quote divergence); compiled with `clang ... -lsqlite3`.
+
+(defn foc-emit ()
+  "typedef struct sqlite3 sqlite3;
+typedef struct sqlite3_stmt sqlite3_stmt;
+extern int sqlite3_open(const char*, sqlite3**);
+extern int sqlite3_exec(sqlite3*, const char*, int(*)(void*,int,char**,char**), void*, char**);
+extern int sqlite3_prepare_v2(sqlite3*, const char*, int, sqlite3_stmt**, const char**);
+extern int sqlite3_bind_text(sqlite3_stmt*, int, const char*, int, void*);
+extern int sqlite3_step(sqlite3_stmt*);
+extern int sqlite3_finalize(sqlite3_stmt*);
+extern int sqlite3_close(sqlite3*);
+extern int printf(const char*, ...);
+extern int strcmp(const char*, const char*);
+static sqlite3 *db;
+static int prow(void*u,int n,char**v,char**c){ int i; for(i=0;i<n;i++){ if(i) printf(\"  \"); printf(\"%s\", v[i]?v[i]:\"\"); } printf(\"\\n\"); return 0; }
+static void ex(const char*s){ char*e=0; sqlite3_exec(db, s, 0,0,&e); }
+static void sel(const char*s){ char*e=0; sqlite3_exec(db, s, prow, 0, &e); }
+static void bind1(const char*sql,const char*a,const char*b){
+    sqlite3_stmt*st; if(sqlite3_prepare_v2(db,sql,-1,&st,0)) return;
+    sqlite3_bind_text(st,1,a,-1,0); if(b) sqlite3_bind_text(st,2,b,-1,0);
+    sqlite3_step(st); sqlite3_finalize(st); }
+int main(int argc,char**argv){
+    if(argc<3){ printf(\"usage: <db> init|state|offer <kind> <body>|validate <id>\\n\"); return 1; }
+    if(sqlite3_open(argv[1], &db)) return 2;
+    ex(\"CREATE TABLE IF NOT EXISTS dep(tool TEXT, role TEXT, digest TEXT);\");
+    ex(\"CREATE TABLE IF NOT EXISTS need(what TEXT, why TEXT);\");
+    ex(\"CREATE TABLE IF NOT EXISTS expansion(id INTEGER PRIMARY KEY, kind TEXT, body TEXT, status TEXT);\");
+    const char*verb = argv[2];
+    if(strcmp(verb,\"init\")==0){
+        ex(\"DELETE FROM dep; INSERT INTO dep VALUES \"
+           \"('clang','compiles the emitted C','external'),\"
+           \"('sqlite3','seeds the .db and is the driver','external'),\"
+           \"('libc','the only runtime link','allowed-carrier');\");
+        ex(\"DELETE FROM need; INSERT INTO need VALUES \"
+           \"('a write-path as a Form recipe','retire the sqlite driver into the body'),\"
+           \"('to emit machine code directly','drop the clang dependency'),\"
+           \"('a quoteless responder-as-cells','make the whole server three-way');\");
+        ex(\"DELETE FROM expansion; INSERT INTO expansion(kind,body,status) VALUES \"
+           \"('recipe','sqlite-write.fk — b-tree insert/split, page alloc, free-list, journal, extending sqlite-read.fk','offered'),\"
+           \"('recipe','responder-as-cells — a quoteless HTTP responder via the fkc-emit-server walker over routing+sqlite recipes','offered'),\"
+           \"('binary','a machine-code emitter — emit native directly, drop clang','offered');\");
+        printf(\"channel initialized — talk to it: state\\n\");
+    } else if(strcmp(verb,\"state\")==0){
+        printf(\"# what i depend on\\n\");                                  sel(\"SELECT tool,role,digest FROM dep;\");
+        printf(\"\\n# what i need / want / desire\\n\");                     sel(\"SELECT what,why FROM need;\");
+        printf(\"\\n# expansions i offer — awaiting your satsang validation\\n\");
+        sel(\"SELECT id,status,kind,body FROM expansion ORDER BY id;\");
+    } else if(strcmp(verb,\"offer\")==0){
+        if(argc<5){ printf(\"usage: <db> offer <kind> <body>\\n\"); return 1; }
+        bind1(\"INSERT INTO expansion(kind,body,status) VALUES (?,?,'offered');\", argv[3], argv[4]);
+        printf(\"offered — held for your satsang validation (state to see it)\\n\");
+    } else if(strcmp(verb,\"validate\")==0){
+        if(argc<4){ printf(\"usage: <db> validate <id>\\n\"); return 1; }
+        bind1(\"UPDATE expansion SET status='validated' WHERE id=?;\", argv[3], 0);
+        printf(\"validated #%s — the concert acknowledges; this expansion is cleared to build\\n\", argv[3]);
+    } else { printf(\"unknown verb: %s\\n\", verb); }
+    sqlite3_close(db); return 0;
+}")
