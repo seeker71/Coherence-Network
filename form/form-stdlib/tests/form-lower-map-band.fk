@@ -1,0 +1,58 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/form-lower.fk
+;
+; form-lower-map-band — the SOURCE MAP for a native 4th-kernel binary, proven
+; three-way: lo-map mirrors the lowering's emission order and names the source
+; node that OWNS each instruction, so address -> bytes -> node is total, and any
+; pack renders each instruction's node at any level (asm / source / human — the
+; asm-pl-human walk over the same tree). Live witness: scripts/form_map_demo.sh.
+;
+; The program is the full asm-pl-human tree — if (n <= 1) then 1 else (n+(n-1)) —
+; whose lowering is 8 instructions. The expected map, instruction by instruction:
+;   0 mov  (preamble)   -> 5 (the root: function entry)
+;   1 cmp               -> 2 (the LE node — the comparison IS the LE)
+;   2 b.gt              -> 5 (the COND owns its jumps)
+;   3 movz              -> 0 (the then-branch LIT)
+;   4 b                 -> 5 (the COND owns its jumps)
+;   5 sub               -> 3 (the SUB node — direct operand selection)
+;   6 add               -> 4 (the ADD node)
+;   7 ret               -> 5 (the root: function exit)
+;
+; Verdict 31 when the mapping is total and exact:
+;   1   TOTAL — one owning node per instruction: len(map) == len(img)/4
+;   2   ENTRY/EXIT belong to the root (instr 0 and 7 -> node 5)
+;   4   THE COMPARISON IS THE LE — instr 1 -> node 2; the COND owns both jumps
+;       (instr 2 and 4 -> node 5)
+;   8   THE BODY MAPS EXACTLY — movz -> LIT(0), sub -> SUB(3), add -> ADD(4)
+;   16  EVERY MAPPED NODE IS VALID — each map entry indexes a real program row
+(do
+    (let prog (list
+        (list 1 1 0 0)     ; 0 LIT 1
+        (list 2 0 0 0)     ; 1 ARG (n)
+        (list 5 1 0 0)     ; 2 LE(n, 1)
+        (list 4 1 0 0)     ; 3 SUB(n, 1)
+        (list 3 1 3 0)     ; 4 ADD(n, n-1)
+        (list 6 2 0 4)))   ; 5 COND(le, 1, add) = root
+
+    (let img (lo-compile-fn prog 5))
+    (let m   (lo-map-fn prog 5))
+
+    (let c0 (if (eq (len m) (div (len img) 4)) 1 0))
+
+    (let c1 (if (eq (nth m 0) 5) (if (eq (nth m 7) 5) 2 0) 0))
+
+    (let c2 (if (eq (nth m 1) 2)
+            (if (eq (nth m 2) 5)
+            (if (eq (nth m 4) 5) 4 0) 0) 0))
+
+    (let c3 (if (eq (nth m 3) 0)
+            (if (eq (nth m 5) 3)
+            (if (eq (nth m 6) 4) 8 0) 0) 0))
+
+    (defn lm-valid (xs n)
+        (if (eq (len xs) 0) 1
+            (if (le (head xs) (sub n 1))
+                (if (le 0 (head xs)) (lm-valid (tail xs) n) 0)
+                0)))
+    (let c4 (if (eq (lm-valid m (len prog)) 1) 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
