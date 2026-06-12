@@ -1,7 +1,7 @@
 {
   "date": "2026-06-12",
-  "thread_branch": "codex/fix-ideas-resonance-native-param-20260612",
-  "commit_scope": "Fix the BML native ideas resonance route after post-merge deploy verification exposed a Rust Postgres parameter serialization failure.",
+  "thread_branch": "codex/fix-ideas-resonance-bigint-param-20260612",
+  "commit_scope": "Fix the BML native ideas resonance route after post-merge deploy verification exposed Rust Postgres parameter serialization failures.",
   "change_intent": "runtime_fix",
   "idea_ids": [
     "kernel-native-api-readiness",
@@ -57,7 +57,7 @@
       "git diff --check",
       "rg -n \"GREATEST\\(\\$1::double precision|ideas-resonance-sql|pg_query_rows\\(conn, ideas-resonance-sql\" deploy/front-door/api.bml"
     ],
-    "notes": "The patched BML front-door source compiles and serves /api/health through the Rust native kernel. The ideas resonance SQL no longer reuses $1 as double precision; the query now uses $4::double precision with a Form float argument."
+    "notes": "The patched BML front-door source compiles and serves /api/health through the Rust native kernel. The ideas resonance SQL no longer reuses $1 as double precision; the query now uses $4::double precision with a Form float argument. A deployed follow-up still returned error serializing parameter 0 because $1 was cast to Postgres int4 while the Rust binder supplies Form integers as i64, so this slice changes the hour-window casts to bigint."
   },
   "ci_validation": {
     "status": "pending",
@@ -65,7 +65,7 @@
   },
   "deploy_validation": {
     "status": "pending",
-    "notes": "Hostinger Auto Deploy failed after PR #2954 because /api/ideas/resonance returned 503 with error serializing parameter 0. This follow-up splits the mixed int/float SQL placeholder into separate native parameters."
+    "notes": "Hostinger Auto Deploy failed after PR #2954 and again after PR #2955 because /api/ideas/resonance returned 503 with error serializing parameter 0. PR #2955 proved the mixed int/float placeholder split deployed, leaving the $1::int cast as the remaining mismatch for the Rust i64 binder. This follow-up changes the hour-window casts to bigint."
   },
   "e2e_validation": {
     "status": "pending",
