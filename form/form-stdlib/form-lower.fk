@@ -32,35 +32,36 @@
     (defn lo-lit? (prog i) (eq (lo-tag prog i) 1))
 
     ; lower the subtree rooted at i to its instruction byte image. Convention: the
-    ; single argument n lives in w1; every expression result lands in w0. The
-    ; dispatch is OPERAND-AWARE instruction selection — ARG-operand forms pick the
-    ; register instruction directly (sub w0,w1,#i), both for size and because the
-    ; naive lower-then-fold would clobber w0 (correctness, not just elegance).
-    (defn lo-node (prog i)
+    ; single argument n lives in w<argr> (1 for the straight-line function, 19 —
+    ; callee-saved — inside a recursive body); every expression result lands in w0.
+    ; The dispatch is OPERAND-AWARE instruction selection — ARG-operand forms pick
+    ; the register instruction directly (sub w0,w<argr>,#i), both for size and
+    ; because the naive lower-then-fold would clobber w0 (correctness, not elegance).
+    (defn lo-node (prog i argr)
         (if (eq (lo-tag prog i) 1) (fa-movz 0 (lo-val prog i))
-        (if (eq (lo-tag prog i) 2) (fa-mov 0 1)
-        (if (eq (lo-tag prog i) 3) (lo-add prog i)
-        (if (eq (lo-tag prog i) 4) (lo-sub prog i)
-        (if (eq (lo-tag prog i) 6) (lo-cond prog i)
+        (if (eq (lo-tag prog i) 2) (fa-mov 0 argr)
+        (if (eq (lo-tag prog i) 3) (lo-add prog i argr)
+        (if (eq (lo-tag prog i) 4) (lo-sub prog i argr)
+        (if (eq (lo-tag prog i) 6) (lo-cond prog i argr)
             (list)))))))
-    ; ADD: (x, LIT i) -> lower(x); add w0,w0,#i · (ARG, x) -> lower(x); add w0,w1,w0
-    (defn lo-add (prog i)
+    ; ADD: (x, LIT i) -> lower(x); add w0,w0,#i · (ARG, x) -> lower(x); add w0,w<argr>,w0
+    (defn lo-add (prog i argr)
         (if (lo-lit? prog (lo-c2 prog i))
-            (lo-app (lo-node prog (lo-c1 prog i)) (fa-add 0 0 (lo-imm prog i)))
-            (lo-app (lo-node prog (lo-c2 prog i)) (fa-add-r 0 1 0))))
-    ; SUB: (ARG, LIT i) -> sub w0,w1,#i (direct) · (x, LIT i) -> lower(x); sub w0,w0,#i
-    (defn lo-sub (prog i)
+            (lo-app (lo-node prog (lo-c1 prog i) argr) (fa-add 0 0 (lo-imm prog i)))
+            (lo-app (lo-node prog (lo-c2 prog i) argr) (fa-add-r 0 argr 0))))
+    ; SUB: (ARG, LIT i) -> sub w0,w<argr>,#i (direct) · (x, LIT i) -> lower(x); sub w0,w0,#i
+    (defn lo-sub (prog i argr)
         (if (lo-arg? prog (lo-c1 prog i))
-            (fa-sub 0 1 (lo-imm prog i))
-            (lo-app (lo-node prog (lo-c1 prog i)) (fa-sub 0 0 (lo-imm prog i)))))
+            (fa-sub 0 argr (lo-imm prog i))
+            (lo-app (lo-node prog (lo-c1 prog i) argr) (fa-sub 0 0 (lo-imm prog i)))))
     ; COND(LE(ARG, LIT i), then, else) — the control-flow scheme with computed
     ; branch offsets (in instructions = bytes/4):
-    ;   cmp w1,#i ; b.gt +(len(then)+2) ; then ; b +(len(else)+1) ; else
-    (defn lo-cond (prog i)
-        (lo-cond2 prog i (lo-node prog (lo-c2 prog i)) (lo-node prog (lo-c3 prog i))))
-    (defn lo-cond2 (prog i tcode ecode)
+    ;   cmp w<argr>,#i ; b.gt +(len(then)+2) ; then ; b +(len(else)+1) ; else
+    (defn lo-cond (prog i argr)
+        (lo-cond2 prog i argr (lo-node prog (lo-c2 prog i) argr) (lo-node prog (lo-c3 prog i) argr)))
+    (defn lo-cond2 (prog i argr tcode ecode)
         (lo-cat (list
-            (fa-cmp 1 (lo-val prog (lo-c2 prog (lo-c1 prog i))))   ; LE's LIT operand
+            (fa-cmp argr (lo-val prog (lo-c2 prog (lo-c1 prog i))))   ; LE's LIT operand
             (fa-bgt (add (div (len tcode) 4) 2))
             tcode
             (fa-b (add (div (len ecode) 4) 1))
@@ -68,8 +69,44 @@
     (defn lo-cat (xss) (if (eq (len xss) 1) (head xss) (lo-app (head xss) (lo-cat (tail xss)))))
 
     ; compile a whole function: lower the root, then return
-    (defn lo-compile (prog root) (lo-app (lo-node prog root) (fa-ret)))
+    (defn lo-compile (prog root) (lo-app (lo-node prog root 1) (fa-ret)))
     ; compile a function OF n: the preamble banks argc (arriving in w0) into w1
     (defn lo-compile-fn (prog root) (lo-app (fa-mov 1 0) (lo-compile prog root)))
+
+    ; ── the recursive-function scheme (CALL, tag 7) ──────────────────────
+    ; A self-recursive binary function: root = COND(LE(ARG, LIT k), base,
+    ; ADD(CALL(e1), CALL(e2))) — the fib shape. The calling convention: the
+    ; argument arrives in w0; the leaf check reads it there (argr=0, no frame); the
+    ; recursive branch builds a frame (x19/x20 callee-saved + fp/lr), banks n into
+    ; w19 (argr=19 for the body), parks the first call's result in w20, and the
+    ; second bl's link is what makes it a CALL, not a jump. Branch-with-link
+    ; offsets are computed backward from the function start, derived from the
+    ; lowered block lengths — labels never exist.
+    ; _main TAIL-CALLS (b, not bl): a bl in main would clobber the libc return
+    ; address in x30 and the final ret would loop on itself — execution caught
+    ; what byte-conviction alone could not (the run is the deeper witness).
+    ; Layout (instruction indices): main = b +1 · fib at 1.
+    (defn lo-rec-fn (prog root)
+        (lo-rec2 prog root
+            (lo-node prog (lo-c2 prog root) 0)                              ; base (argr=0: n still in w0)
+            (lo-node prog (lo-c1 prog (lo-c1 prog (lo-c3 prog root))) 19)   ; e1 = CALL_1's child (argr=19)
+            (lo-node prog (lo-c1 prog (lo-c2 prog (lo-c3 prog root))) 19))) ; e2 = CALL_2's child (argr=19)
+    (defn lo-rec2 (prog root base e1 e2)
+        (lo-cat (list
+            (fa-b 1)                                             ; _main: b _fib (tail call, lr preserved)
+            (fa-cmp 0 (lo-val prog (lo-c2 prog (lo-c1 prog root))))   ; _fib: leaf check on w0
+            (fa-bgt (add (div (len base) 4) 2))
+            base (fa-ret)
+            (fa-stp-pre) (fa-stp-fp) (fa-mov 19 0)               ; frame + bank n -> w19
+            e1
+            (fa-bl (lo-bl-off (len base) (len e1) 0))            ; fib(e1)
+            (fa-mov 20 0)                                        ; park in w20
+            e2
+            (fa-bl (lo-bl-off (len base) (len e1) (add 2 (div (len e2) 4))))  ; fib(e2)
+            (fa-add-r 0 20 0)
+            (fa-ldp-fp) (fa-ldp-post) (fa-ret))))
+    ; the first bl sits at index 1 + (3 + base/4) + 3 + e1/4; offsets aim back at 1
+    (defn lo-bl-off (nb n1 extra)
+        (sub 0 (add (add (div n1 4) (add (div nb 4) 6)) extra)))
 
     0)

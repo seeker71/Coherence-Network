@@ -1,0 +1,67 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/form-lower.fk
+;
+; form-lower-rec-band — CALL: true recursion in the Form -> assembly compiler,
+; proven three-way. fib(n) = if n <= 1 then 1 else fib(n-1) + fib(n-2) — with a
+; stack frame (stp/ldp), callee-saved registers (n banked in w19, the first call's
+; result parked in w20), and bl (branch-with-link, the first HIGH-BASE instruction:
+; base 0x94000000 carries the high bit, so the word is built as bytes — the
+; field-into-byte path) — compiles byte-for-byte to the assembler's 68 bytes.
+; The expression compiler became a FUNCTION compiler. Witnessed running on argc:
+; exit codes 1, 2, 3, 5, 8 (scripts/form_fib_demo.sh).
+;
+; The tree (CALL = tag 7): 0 LIT1 · 1 ARG · 2 LE(1,0) · 3 SUB(ARG,LIT1) ·
+; 4 CALL(3) · 5 LIT2 · 6 SUB(ARG,LIT2) · 7 CALL(6) · 8 ADD(4,7) · 9 COND(2,0,8).
+; Layout: _main = b _fib (a TAIL CALL — a bl here would clobber the libc return
+; address in x30 and the final ret would loop on itself; execution caught what
+; byte-conviction alone could not) · _fib: leaf check (argr=0, no frame) · frame ·
+; body (argr=19) with backward bl offsets COMPUTED from block lengths (-8, -11).
+;
+; Verdict 31 when recursion compiles byte-accurate:
+;   1   fa-bl two's-complements a NEGATIVE offset into imm26 over the high base:
+;       bl -8 -> f8 ff ff 97 (the byte-built word), bl +8 -> 08 00 00 94
+;   2   the frame pairs are exact — stp x19,x20,[sp,#-32]! / ldp [sp],#32
+;   4   the leaf branch reads w0 directly (cmp w0,#1 = 1f 04 00 71, argr=0 —
+;       no frame, no banking on the fast path)
+;   8   the image is 68 bytes (17 instructions), main's tail-call first, ending in ret
+;   16  CONVICTION FULL — the whole recursive function is byte-for-byte the
+;       assembler's; the gate opens for self-calling programs
+(do
+    (let prog (list
+        (list 1 1 0 0)     ; 0 LIT 1
+        (list 2 0 0 0)     ; 1 ARG (n)
+        (list 5 1 0 0)     ; 2 LE(n, 1)
+        (list 4 1 0 0)     ; 3 SUB(n, 1)
+        (list 7 3 0 0)     ; 4 CALL fib(n-1)
+        (list 1 2 0 0)     ; 5 LIT 2
+        (list 4 1 5 0)     ; 6 SUB(n, 2)
+        (list 7 6 0 0)     ; 7 CALL fib(n-2)
+        (list 3 4 7 0)     ; 8 ADD(call, call)
+        (list 6 2 0 8)))   ; 9 COND(le, 1, add) = root
+
+    (let img (lo-rec-fn prog 9))
+    (let ref (list
+        1 0 0 20       31 4 0 113     108 0 0 84     32 0 128 82
+        192 3 95 214   243 83 190 169 253 123 1 169  243 3 0 42
+        96 6 0 81      248 255 255 151 244 3 0 42    96 10 0 81
+        245 255 255 151 128 2 0 11    253 123 65 169 243 83 194 168
+        192 3 95 214))
+
+    (let c0 (if (eq (nth (fa-bl (sub 0 8)) 0) 248)
+            (if (eq (nth (fa-bl (sub 0 8)) 1) 255)
+            (if (eq (nth (fa-bl (sub 0 8)) 3) 151)
+            (if (eq (nth (fa-bl 8) 0) 8)
+            (if (eq (nth (fa-bl 8) 3) 148) 1 0) 0) 0) 0) 0))
+    (let c1 (if (eq (nth (fa-stp-pre) 0) 243)
+            (if (eq (nth (fa-stp-pre) 3) 169)
+            (if (eq (nth (fa-ldp-post) 0) 243)
+            (if (eq (nth (fa-ldp-post) 3) 168) 2 0) 0) 0) 0))
+    ; the leaf check at bytes 4..7: cmp w0,#1 (argr=0)
+    (let c2 (if (eq (nth img 4) 31)
+            (if (eq (nth img 5) 4)
+            (if (eq (nth img 7) 113) 4 0) 0) 0))
+    (let c3 (if (eq (len img) 68)
+            (if (eq (nth img 0) 1)                  ; main's tail-call b first
+            (if (eq (nth img 67) 214) 8 0) 0) 0))   ; ends in ret
+    (let c4 (if (eq (fa-conviction img ref) 1) 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
