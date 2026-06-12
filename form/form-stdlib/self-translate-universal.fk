@@ -1,0 +1,23 @@
+; self-translate-universal.fk — a NUMERIC-ONLY core binary (no language baked in)
+; that LOADS a symbol pack for ANY language at runtime and translates its own
+; model with it. Same binary, swap the pack file, get any tongue — no rebuild.
+; The universal-loader pattern applied to language: identity is the numeric
+; model; the symbol pack is external data, one per language, unbounded.
+;
+; QUOTELESS by design (no C string literals) — so the emitter is three-way clean
+; (avoids the TS escaped-quote divergence self-translate.fk records). Names live
+; in the PACK FILE (one name per op-tag, newline-separated), read through the fs
+; port; the binary carries zero language symbols of its own.
+
+(defn stu-emit ()
+  (str_concat
+    "extern int putchar(int); extern int open(const char *, int); extern long read(int, void *, unsigned long); "
+    (str_concat
+    "static void prnum(long long v) { char b[24]; int n = 0; if (v == 0) { putchar(48); } while (v > 0) { b[n] = 48 + v % 10; v = v / 10; n = n + 1; } while (n > 0) { n = n - 1; putchar(b[n]); } } "
+    (str_concat
+    ; the INTERNAL MODEL — numeric only, language-free
+    "static const long long model[3][4] = { {1,40,0,0}, {2,0,0,0}, {3,0,1,0} }; static char pack[16384]; "
+    (str_concat
+    "int main(int argc, char **argv) { if (argc < 2) { return 1; } int fd = open(argv[1], 0); if (fd < 0) { return 2; } long g = read(fd, pack, 16383); if (g < 0) { return 3; } pack[g] = 0; "
+    ; walk the model; for each op, print line[tag] of the loaded pack (any language)
+    "int i = 0; while (i < 3) { long long t = model[i][0]; long p = 0; long line = 0; while (line < t) { if (pack[p] == 0) { break; } if (pack[p] == 10) { line = line + 1; } p = p + 1; } while (pack[p] != 0) { if (pack[p] == 10) { break; } putchar(pack[p]); p = p + 1; } if (t == 1) { putchar(32); prnum(model[i][1]); } putchar(10); i = i + 1; } return 0; }")))))
