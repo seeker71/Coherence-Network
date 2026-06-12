@@ -1639,6 +1639,20 @@ export class Kernel {
       kind: "int",
       int: parseInt(argStr(args, 0), 10) || 0,
     }));
+    // str_to_float — text-to-float leaf, total (unparseable -> 0.0). Number()
+    // over parseFloat() for sibling parity: "3.5abc" is unparseable in the
+    // Go/Rust kernels, so it must be 0.0 here too.
+    this.registerNative("str_to_float", catMethod(), (_k, args) => {
+      const f = Number(argStr(args, 0).trim());
+      return { kind: "f64", float: Number.isFinite(f) ? f : 0.0 };
+    });
+    // float_to_int — truncate a float toward zero, exactly Python's int() on
+    // a float. Total: a non-number -> 0. Sibling parity with Go and Rust.
+    this.registerNative("float_to_int", catMethod(), (_k, args) => {
+      const v = args[0];
+      const f = v.kind === "f32" || v.kind === "f64" ? v.float : v.kind === "int" ? v.int : 0;
+      return { kind: "int", int: Math.trunc(f) };
+    });
     this.registerNative("ord", catAccess(), (_k, args) => {
       const s = argStr(args, 0);
       return { kind: "int", int: s.length === 0 ? -1 : s.charCodeAt(0) };
