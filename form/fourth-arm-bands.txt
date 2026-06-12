@@ -4,15 +4,27 @@
 #   <band-stem> <table-emitter> <expected-verdict>
 #
 # table-emitter names the flattener door the band's table file comes through:
-#   fkc — fkc-table-file (flt-band-fns ...)                       no string pool
-#   fks — fks-table-file (flt-band-fns ...) (flt-band-pool ...)   string pool
+#   fkc — fkc-table-file (flt-srcs-fns ...)                       no string pool
+#   fks — fks-table-file (flt-srcs-fns ...) (flt-srcs-pool ...)   string pool
 #
-# The module source is the band's `; preludes:` header (first non-core
-# prelude), falling back to the same-name convention form-stdlib/<stem>.fk.
-# Provenance: scripts/fourth_kernel_audit.sh sections 19/22/24/25/26 —
-# every row here is gated four-way there before it lands here. A band
-# leaves this file only when its source moves outside the walker's op
-# families (the audit will say so first).
+# The source list is fourth-shim.fk first (core mirrors + string stones as
+# function rows), then every non-core `; preludes:` module in declared
+# order (BML-dialect sources ride the source-compiler), then the band file
+# (same-name convention form-stdlib/<stem>.fk when no prelude is declared).
+# Provenance: every row is gated four-way by validate.sh itself on every
+# suite run — the fourth leg's verdict must equal the three walkers' byte
+# for byte; scripts/fourth_kernel_audit.sh sections 19/22/24/25/26 carry
+# the milestone proofs the first rows crossed through. A band leaves this
+# file only when its source moves outside the walker's op families.
+#
+# The standing walls (what keeps a band out today, by blocked-band count):
+#   node/substrate family — bp, intern_*, node_* (the content-addressed
+#     lattice as program vocabulary; floats ride in with it)
+#   host io family        — read_file, write_file_text, file_mtime, scan_run
+#   higher-order calls    — foldl/map/filter with function arguments
+#     (wants defunctionalization: monomorphic copies per call site)
+#   multi-line output     — bands that print mid-walk (the walker answers
+#     one value through fk_pr)
 learning-trend fkc 127
 cooldown fkc 63
 alert-gate fkc 127
@@ -61,3 +73,49 @@ adler32 fks 5
 crc32 fks 4
 slice-merge fks 127
 rle fks 12
+base64 fks 12
+bidirectional-flow fks 111111
+bloom fks 4
+co-learning fks 127
+co-learning-stream fks 127
+coherence fks 111111
+colearning-retire fks 127
+compression-fold fks 111111
+conversation-cell fks 127
+conversation-context fks 127
+evidence-grounding fks 127
+forget-stale fks 127
+form-asm fks 31
+form-constants fks 111111
+form-diagnose fks 31
+gematria fks 11111
+go-jit fks 5
+go-jit-value-list fks 4
+harmonic-geometry fks 111111
+heartbeat fks 5
+hmac-sha256 fks 2
+int-literal-width fks 9
+jit-coverage fks 5
+learning-arc fks 127
+living-equation fks 111111
+mesh-health fks 127
+mesh-merge-converge fks 127
+perception-pipeline fks 127
+predictor-sampling fks 127
+rate-limit fks 6
+sanskrit-roots fks 111111
+satsang fks 127
+sha256 fks 2
+shamballa-codes fks 11111
+shamballa-light-codes fks 111111
+silence-floor fks 31
+slice-update-roundtrip fks 127
+string-membership fks 9
+substrate-gc fks 1000
+theme-resonance fks 111111
+trust-decay fks 127
+trust-weighted-colearning fks 127
+turn-taking fks 127
+ulid fks 4
+witness-theorem fks 31
+witness-to-co-regulate fks 127
