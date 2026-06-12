@@ -43,7 +43,14 @@ section [form.bml] {
             "JZK Publishing (Yelm, Washington)",
             "controlled digital lending — borrowable at the Internet Archive; print and audio sold by the holder",
             "https://archive.org/details/whitebook0000ramt",
-            "named in this body's founding lineage (docs/field/urs); the cosmology layer of its earliest transmission chain"));
+            "named in this body's founding lineage (docs/field/urs); the cosmology layer of its earliest transmission chain"),
+        ew-entry("von-daniken-raetsel-der-menschheit",
+            "Die Raetsel der Menschheit neu betrachtet",
+            "Erich von Daeniken",
+            "Erich von Daeniken (official channel + daniken.com)",
+            "free to watch on YouTube; the holder's canonical channel is the offered door, this copy a pointer",
+            "https://www.youtube.com/watch?v=gTCA0zI4v5Q",
+            "the paleocontact / ancient-mysteries thread of the science-symbol-consciousness lineage (docs/field/urs), beside De Stefano and Grant; held as mystery, cosmology not asserted"));
     }
 
     def ew-find-loop(ws, id) = if nil?(ws) then empty else if str_eq(ew-id(head(ws)), id) then head(ws) else ew-find-loop(tail(ws), id);

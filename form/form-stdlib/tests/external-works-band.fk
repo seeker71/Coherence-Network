@@ -8,7 +8,12 @@
 ; offered interface is named; the spoken identity line carries title and
 ; door; an unknown id is honest absence.
 ;
-; Band verdict: 63 when every law holds.
+; A second work joins: von Daeniken's talk — a YouTube door, holder named as
+; the author (not the re-uploader), held in the mystery lane. Proves the cell
+; shape carries a freely-watchable work the same honest way it carries a
+; rights-gated one: door verified, attribution to the holder, lineage noted.
+;
+; Band verdict: 4095 when every law holds.
 
 section [form.bml] {
     def ewb-bool(b, weight) = if b then weight else 0;
@@ -16,13 +21,21 @@ section [form.bml] {
     def ewb-score() {
         let w = ew-find("ramtha-the-white-book");
         let spoken = ew-spoken(w);
+        let v = ew-find("von-daniken-raetsel-der-menschheit");
+        let v-spoken = ew-spoken(v);
         sum(list(
             ewb-bool(ew-known?(w), 1),
             ewb-bool(eq(str_find(ew-url(w), "https://archive.org/details/whitebook0000ramt", 0), 0), 2),
             ewb-bool(and(ge(str_find(ew-attributed-to(w), "JZ Knight", 0), 0), ge(str_find(ew-holder(w), "JZK Publishing", 0), 0)), 4),
             ewb-bool(ge(str_find(ew-interface(w), "controlled digital lending", 0), 0), 8),
             ewb-bool(and(ge(str_find(spoken, "The White Book", 0), 0), ge(str_find(spoken, "Door: https://archive.org", 0), 0)), 16),
-            ewb-bool(not(ew-known?(ew-find("unattested-work"))), 32)));
+            ewb-bool(not(ew-known?(ew-find("unattested-work"))), 32),
+            ewb-bool(ew-known?(v), 64),
+            ewb-bool(eq(str_find(ew-url(v), "https://www.youtube.com/watch?v=gTCA0zI4v5Q", 0), 0), 128),
+            ewb-bool(ge(str_find(ew-attributed-to(v), "von Daeniken", 0), 0), 256),
+            ewb-bool(ge(str_find(ew-lineage-note(v), "cosmology not asserted", 0), 0), 512),
+            ewb-bool(and(ge(str_find(v-spoken, "Raetsel der Menschheit", 0), 0), ge(str_find(v-spoken, "Door: https://www.youtube.com", 0), 0)), 1024),
+            ewb-bool(ge(str_find(ew-interface(v), "free to watch", 0), 0), 2048)));
     }
 
     ewb-score();
