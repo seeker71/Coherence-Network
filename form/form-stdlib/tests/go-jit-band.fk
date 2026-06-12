@@ -25,9 +25,20 @@
     (let r2 (fact 7))                ; 5040
     (let r3 (fact 0))                ; 1 (base case)
 
+    ;; Logic ops (and/or/not) now in the typed i64 JIT subset (gap #3).
+    ;; Produces 0/1 consistent with compare/cond in int subset; used in guards.
+    (defn in-range (x) (if (and (ge x 0) (le x 5)) 1 0))
+    (let compiled-logic (jit_compile "in-range"))
+    (let rlog1 (in-range 3))   ; 1 (true and)
+    (let rlog2 (in-range 6))   ; 0
+    (let rlog3 (in-range -1))  ; 0
+
     ;; Sibling-parity verdict.
     (add attempted
          (add (if (eq r0 720) 1 0)
               (add (if (eq r1 720) 1 0)
                    (add (if (eq r2 5040) 1 0)
-                        (if (eq r3 1) 1 0))))))
+                        (add (if (eq r3 1) 1 0)
+                             (add (if (eq rlog1 1) 1 0)
+                                  (add (if (eq rlog2 0) 1 0)
+                                       (if (eq rlog3 0) 1 0))))))))))
