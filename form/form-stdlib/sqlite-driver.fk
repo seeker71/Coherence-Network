@@ -1,0 +1,46 @@
+; sqlite-driver.fk — the 4th kernel's SQLite capability as a native carrier
+; (DRIVER FIRST). The emitted binary links libsqlite3 — an allowed host carrier
+; under the host kernel's allow-presence + measure-health — so it can WRITE, not
+; only read: exec (write), query (read), digest (catalog the tools the kernel
+; depends on, e.g. clang). This is the carrier the read-only Form recipe
+; (sqlite-read.fk) cannot be yet; the pure Form write-recipe is the named
+; destination (see sqlite-driver.form -> closing-cells).
+;
+; Why driver-first: to digest the tools we depend on (clang, sqlite3, libc) and to
+; persist a living channel's state, needs, and offered expansions, the kernel
+; needs WRITE + full SQL now. The driver gives that; the recipe path follows.
+;
+; CLI:  <db> digest            seed/refresh the deps catalog (write), then read it
+;       <db> exec  "<SQL>"     write (DDL/INSERT/UPDATE) through the driver
+;       <db> query "<SQL>"     read rows (tab-separated) through the driver
+;
+; NOTE (2026-06-12): Go-emitted (the SQL string literals carry quotes -> the
+; recorded TS escaped-quote divergence, self-translate.fk). The artifact is the
+; binary; compiled with `clang ... -lsqlite3`.
+
+(defn sqd-emit ()
+  "typedef struct sqlite3 sqlite3;
+extern int sqlite3_open(const char*, sqlite3**);
+extern int sqlite3_exec(sqlite3*, const char*, int(*)(void*,int,char**,char**), void*, char**);
+extern int sqlite3_close(sqlite3*);
+extern int printf(const char*, ...);
+extern int strcmp(const char*, const char*);
+static int row(void*u,int n,char**v,char**c){ int i; for(i=0;i<n;i++){ if(i) printf(\"\\t\"); printf(\"%s\", v[i]?v[i]:\"\"); } printf(\"\\n\"); return 0; }
+int main(int argc,char**argv){
+    if(argc<3){ printf(\"usage: <db> exec|query|digest [sql]\\n\"); return 1; }
+    sqlite3 *db; if(sqlite3_open(argv[1], &db)) return 2; char *err=0;
+    if(strcmp(argv[2],\"digest\")==0){
+        sqlite3_exec(db, \"CREATE TABLE IF NOT EXISTS dep(tool TEXT, role TEXT, digest TEXT);\", 0,0,&err);
+        sqlite3_exec(db, \"DELETE FROM dep; INSERT INTO dep VALUES \"
+            \"('clang','compiles the emitted C','external'),\"
+            \"('sqlite3','seeds the .db and is this driver','external'),\"
+            \"('libc','the only runtime link','allowed-carrier');\", 0,0,&err);
+        sqlite3_exec(db, \"SELECT tool,role,digest FROM dep;\", row, 0, &err);
+    } else if(strcmp(argv[2],\"query\")==0){
+        if(argc>3) sqlite3_exec(db, argv[3], row, 0, &err);
+    } else {
+        if(argc>3) sqlite3_exec(db, argv[3], 0, 0, &err);
+    }
+    if(err) printf(\"err: %s\\n\", err);
+    sqlite3_close(db); return 0;
+}")
