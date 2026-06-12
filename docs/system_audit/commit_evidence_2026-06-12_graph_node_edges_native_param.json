@@ -1,0 +1,85 @@
+{
+  "date": "2026-06-12",
+  "thread_branch": "codex/fix-graph-node-edges-native-param-20260612",
+  "commit_scope": "Fix the BML native graph-node edges route after Hostinger deploy verification advanced past ideas resonance and exposed a slug-lookup parameter serialization failure.",
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "kernel-native-api-readiness",
+    "bml-front-door"
+  ],
+  "spec_ids": [
+    "kernel-native-api-readiness",
+    "native-front-door-deploy"
+  ],
+  "task_ids": [
+    "graph-node-edges-native-param-20260612"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "deploy/front-door/api.bml"
+  ],
+  "change_files": [
+    "deploy/front-door/api.bml"
+  ],
+  "evidence_refs": [
+    "deploy/front-door/api.bml",
+    "deploy/hostinger/auto-deploy.sh",
+    "https://api.coherencycoin.com/api/graph/nodes/asset:audible-B0D2DRHSDJ/edges?direction=both"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --port 19111 --routes ../../deploy/front-door/api.bml --stdlib ../form-stdlib",
+      "curl -fsS -D /tmp/form-kernel-health-19111.headers http://127.0.0.1:19111/api/health -o /tmp/form-kernel-health-19111.json",
+      "grep -q \"X-Form-Router: native-kernel\" /tmp/form-kernel-health-19111.headers",
+      "grep -q '\"kernel_runtime\":\"form-kernel-rust\"' /tmp/form-kernel-health-19111.json",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-12_graph_node_edges_native_param.json",
+      "git diff --check"
+    ],
+    "notes": "The patched BML front-door source compiles and serves /api/health through the Rust native kernel. The graph-node-edges slug lookup flag is now a 0/1 integer with SQL-side bigint comparison, matching the native binder."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "PR checks will run after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Hostinger Auto Deploy for PR #2956 advanced past ideas-resonance, then failed because /api/graph/nodes/asset:audible-B0D2DRHSDJ/edges?direction=both returned 503 with error serializing parameter 1. This route used a Form equality result as a SQL boolean flag; the fix sends 0/1 and casts the placeholder as bigint."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "GET /api/graph/nodes/asset:audible-B0D2DRHSDJ/edges?direction=both should return 200 from X-Form-Router: native-kernel with X-Form-Handler: api_graph_node_edges instead of 503 persistence serialization failure.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/graph/nodes/asset:audible-B0D2DRHSDJ/edges?direction=both"
+    ],
+    "test_flows": [
+      "Hostinger Auto Deploy: BML front-door promoted read routes",
+      "curl -i -sS --max-time 20 https://api.coherencycoin.com/api/graph/nodes/asset:audible-B0D2DRHSDJ/edges?direction=both"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Pending local proof, PR CI, and post-merge deploy verification."
+  }
+}
