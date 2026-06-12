@@ -122,6 +122,23 @@
     (execution   "the binary runs and returns the program's value — the reference itself is alive")
     (lesson      "a wrong reference passes conviction; only execution refutes it"))
 
+  # ── The SOURCE MAP — REALIZED: every instruction owns a source node ──
+  # lo-map mirrors lo-node's dispatch exactly, emitting the source-node index
+  # that owns each instruction — address -> bytes -> node is TOTAL for the
+  # native binary, and any pack renders each instruction's node at any level
+  # (asm / source / human: the asm-pl-human walk per instruction). Ownership
+  # semantics: the comparison belongs to the LE node; the COND owns both of its
+  # jumps; the function preamble and ret belong to the root. Because the map is
+  # derived from the SAME dispatch as the lowering, they cannot drift apart
+  # structurally. Band: tests/form-lower-map-band.fk -> 31 (total, exact,
+  # every entry valid); witness: scripts/form_map_demo.sh (the full table:
+  # addr | bytes | node | asm rendering | English rendering).
+  (source-map-realized
+    (total     "one owning node per instruction — len(map) == instructions")
+    (ownership "cmp -> the LE; jumps -> the COND; entry/exit -> the root")
+    (no-drift  "the map mirrors the lowering's own dispatch — one engine")
+    (renders   "the same map serves every pack: asm, source, any tongue"))
+
   # ── The Mach-O wrapper — REALIZED: a runnable binary, zero clang ─────
   # form-macho.fk emits a valid arm64 Mach-O OBJECT (mach_header_64 + LC_SEGMENT_64
   # with __text + LC_SYMTAB + code + symbol/string tables), computing every offset

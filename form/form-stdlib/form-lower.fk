@@ -73,6 +73,39 @@
     ; compile a function OF n: the preamble banks argc (arriving in w0) into w1
     (defn lo-compile-fn (prog root) (lo-app (fa-mov 1 0) (lo-compile prog root)))
 
+    ; ── the SOURCE MAP: one owning node per instruction ──────────────────
+    ; lo-map mirrors lo-node's emission order exactly, emitting the source-node
+    ; index that owns each instruction — so a native binary gets a full
+    ; address -> bytes -> node mapping, and any pack renders each instruction's
+    ; node at any level (asm / source / human). The map is derived from the SAME
+    ; dispatch as the lowering: they cannot drift apart structurally.
+    (defn lo-map (prog i)
+        (if (eq (lo-tag prog i) 1) (list i)
+        (if (eq (lo-tag prog i) 2) (list i)
+        (if (eq (lo-tag prog i) 3) (lo-map-add prog i)
+        (if (eq (lo-tag prog i) 4) (lo-map-sub prog i)
+        (if (eq (lo-tag prog i) 6) (lo-map-cond prog i)
+            (list)))))))
+    (defn lo-map-add (prog i)
+        (if (lo-lit? prog (lo-c2 prog i))
+            (lo-app (lo-map prog (lo-c1 prog i)) (list i))
+            (lo-app (lo-map prog (lo-c2 prog i)) (list i))))
+    (defn lo-map-sub (prog i)
+        (if (lo-arg? prog (lo-c1 prog i))
+            (list i)
+            (lo-app (lo-map prog (lo-c1 prog i)) (list i))))
+    ; cmp belongs to the LE node; both branches' jumps belong to the COND itself
+    (defn lo-map-cond (prog i)
+        (lo-cat (list
+            (list (lo-c1 prog i))
+            (list i)
+            (lo-map prog (lo-c2 prog i))
+            (list i)
+            (lo-map prog (lo-c3 prog i)))))
+    ; function form: the argc-banking preamble and the ret belong to the root
+    (defn lo-map-fn (prog root)
+        (lo-app (cons root (lo-map prog root)) (list root)))
+
     ; ── the recursive-function scheme (CALL, tag 7) ──────────────────────
     ; A self-recursive binary function: root = COND(LE(ARG, LIT k), base,
     ; ADD(CALL(e1), CALL(e2))) — the fib shape. The calling convention: the
