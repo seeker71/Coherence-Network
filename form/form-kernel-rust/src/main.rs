@@ -1071,6 +1071,15 @@ pub(crate) const TRIV_INT: u32 = 1;
 pub(crate) const TRIV_STRING: u32 = 2;
 const TRIV_BOOL: u32 = 3;
 const TRIV_NULL: u32 = 4;
+// INT64 — signed integer wider than the 32-bit inst slot. Integer literals fit
+// inline in TRIV_INT while |n| ≤ 2^31-1; once a literal (hash, address, large
+// counter) crosses the int32 ceiling the inst carries an index into the `i64s`
+// overflow table, exactly as FLOAT64 does with `f64s`. Both TRIV_INT and
+// TRIV_INT64 decode to the same Value::Int(i64), so arithmetic stays one
+// uniform i64 path. Aligned three-way: INT64 = 5 across Rust/Go/TS. The .fkb
+// wire format carries the value via a dedicated FORM_BINARY_INT64 record, not
+// the local table index, so cross-kernel portability rides on the value.
+pub(crate) const TRIV_INT64: u32 = 5;
 // FLOAT32 — IEEE 754 32-bit value stored inline; the inst field carries the
 // IEEE bit pattern reinterpreted as u32. No overflow table needed (32 bits fit
 // the 32-bit inst slot). This kernel parses float literals only as float64, so
@@ -1210,6 +1219,10 @@ pub(crate) struct Kernel {
     // ±Inf stay distinct (matches the TS kernel's f64Idx behavior).
     f64s: Vec<f64>,
     f64_idx: HashMap<u64, u32>, // keyed by IEEE bit pattern after canonicalization
+    // Int64 overflow table — the sibling of `f64s` for integers wider than the
+    // 32-bit inst slot. Keyed by the value itself (integers are canonical).
+    i64s: Vec<i64>,
+    i64_idx: HashMap<i64, u32>,
     next_inst: u32,
     natives: HashMap<NameID, NativeEntry>,
     env_natives: HashMap<NameID, EnvAwareNativeEntry>,
@@ -1628,6 +1641,8 @@ impl Kernel {
             str_idx: HashMap::new(),
             f64s: Vec::new(),
             f64_idx: HashMap::new(),
+            i64s: Vec::new(),
+            i64_idx: HashMap::new(),
             next_inst: 1,
             natives: HashMap::new(),
             env_natives: HashMap::new(),
@@ -1687,13 +1702,43 @@ impl Kernel {
         self.intern(cat_undefined(), children)
     }
 
-    pub(crate) fn intern_trivial_int(&self, n: i64) -> NodeID {
+    pub(crate) fn intern_trivial_int(&mut self, n: i64) -> NodeID {
+        // Inline while the value fits the 32-bit inst slot; overflow into
+        // `i64s` once it crosses the int32 ceiling (mirrors
+        // intern_trivial_float64). Both paths decode back to Value::Int(i64)
+        // in trivial_value, so callers and arithmetic never see the split.
+        if n >= i32::MIN as i64 && n <= i32::MAX as i64 {
+            return NodeID {
+                pkg: 1,
+                level: LEVEL_TRIVIAL,
+                ty: TRIV_INT,
+                inst: (n as i32) as u32,
+            };
+        }
+        if let Some(&idx) = self.i64_idx.get(&n) {
+            return NodeID {
+                pkg: 1,
+                level: LEVEL_TRIVIAL,
+                ty: TRIV_INT64,
+                inst: idx,
+            };
+        }
+        let idx = self.i64s.len() as u32;
+        self.i64s.push(n);
+        self.i64_idx.insert(n, idx);
         NodeID {
             pkg: 1,
             level: LEVEL_TRIVIAL,
-            ty: TRIV_INT,
-            inst: (n as i32) as u32,
+            ty: TRIV_INT64,
+            inst: idx,
         }
+    }
+
+    pub(crate) fn decode_int64(&self, inst: u32) -> i64 {
+        *self
+            .i64s
+            .get(inst as usize)
+            .unwrap_or_else(|| panic!("decode_int64: bad index {}", inst))
     }
 
     // intern_trivial_float64 — content-addressed insertion into the f64
@@ -2033,6 +2078,8 @@ impl Kernel {
             str_idx: self.str_idx.clone(),
             f64s: self.f64s.clone(),
             f64_idx: self.f64_idx.clone(),
+            i64s: self.i64s.clone(),
+            i64_idx: self.i64_idx.clone(),
             next_inst: self.next_inst,
             natives: self.natives.clone(),
             env_natives: self.env_natives.clone(),
@@ -2081,6 +2128,7 @@ impl Kernel {
     pub(crate) fn trivial_value(&self, n: NodeID) -> Value {
         match n.ty {
             TRIV_INT => Value::Int((n.inst as i32) as i64),
+            TRIV_INT64 => Value::Int(self.decode_int64(n.inst)),
             TRIV_STRING => Value::Str(self.strs[n.inst as usize].clone().into()),
             TRIV_BOOL => Value::Bool(n.inst != 0),
             TRIV_NULL => Value::Null,
@@ -9758,6 +9806,7 @@ fn import_recipe_leaf(dst: &mut Kernel, src: &Kernel, nid: NodeID) -> NodeID {
     if nid.level == LEVEL_TRIVIAL {
         return match nid.ty {
             TRIV_INT => dst.intern_trivial_int((nid.inst as i32) as i64),
+            TRIV_INT64 => dst.intern_trivial_int(src.decode_int64(nid.inst)),
             TRIV_STRING => dst.intern_string(src.name_str(nid.inst)),
             TRIV_BOOL | TRIV_NULL => nid,
             TRIV_FLOAT32 => dst.intern_trivial_float32(src.decode_float32(nid.inst)),
@@ -14212,6 +14261,14 @@ fn read_f64_le(bytes: &[u8], pos: usize) -> (f64, usize) {
     (f64::from_le_bytes(buf), pos + 8)
 }
 
+// read_i64_le — 8-byte signed int64 little-endian, the payload of a
+// FORM_BINARY_INT64 node. Sibling parity with Go/TS little-endian readers.
+fn read_i64_le(bytes: &[u8], pos: usize) -> (i64, usize) {
+    let mut buf = [0u8; 8];
+    buf.copy_from_slice(&bytes[pos..pos + 8]);
+    (i64::from_le_bytes(buf), pos + 8)
+}
+
 const FORM_BINARY_LEAF: u32 = 0;
 const FORM_BINARY_COMPOSITE: u32 = 1;
 // FLOAT64 carries its VALUE, not its index. A float64 trivial NodeID's `inst`
@@ -14222,6 +14279,11 @@ const FORM_BINARY_COMPOSITE: u32 = 1;
 // and it never rides the wire anyway: the value, not the index nor the local
 // type-tag, travels in bytes, so the .fkb stays portable by construction.
 const FORM_BINARY_FLOAT64: u32 = 2;
+// INT64 carries its VALUE, not its index — the same reasoning as FLOAT64. A
+// TRIV_INT64 NodeID's `inst` is a per-kernel i64s-table index, so an int64
+// node serializes as [FORM_BINARY_INT64][8 bytes signed little-endian] and
+// each kernel re-interns on read. Aligned three-way: tag = 3 across Rust/Go/TS.
+const FORM_BINARY_INT64: u32 = 3;
 
 fn serialize_nid(k: &Kernel, nid: NodeID, bytes: &mut Vec<u8>) {
     if let Some(recipe) = k.by_id.get(&nid) {
@@ -14234,6 +14296,9 @@ fn serialize_nid(k: &Kernel, nid: NodeID, bytes: &mut Vec<u8>) {
     } else if nid.level == LEVEL_TRIVIAL && nid.ty == TRIV_FLOAT64 {
         push_u32(bytes, FORM_BINARY_FLOAT64);
         bytes.extend_from_slice(&k.decode_float64(nid.inst).to_le_bytes());
+    } else if nid.level == LEVEL_TRIVIAL && nid.ty == TRIV_INT64 {
+        push_u32(bytes, FORM_BINARY_INT64);
+        bytes.extend_from_slice(&k.decode_int64(nid.inst).to_le_bytes());
     } else {
         push_u32(bytes, FORM_BINARY_LEAF);
         push_u32(bytes, nid.pkg);
@@ -14248,6 +14313,10 @@ fn deserialize_nid(k: &mut Kernel, bytes: &[u8], pos: usize, scope: u32) -> (Nod
     if tag == FORM_BINARY_FLOAT64 {
         let (value, p) = read_f64_le(bytes, p);
         return (k.intern_trivial_float64(value), p);
+    }
+    if tag == FORM_BINARY_INT64 {
+        let (value, p) = read_i64_le(bytes, p);
+        return (k.intern_trivial_int(value), p);
     }
     if tag == FORM_BINARY_LEAF {
         let (pkg, p) = read_u32(bytes, p);
@@ -14348,6 +14417,13 @@ fn deserialize_nid_with_strings(
         }
         let (value, p) = read_f64_le(bytes, p);
         return Ok((k.intern_trivial_float64(value), p));
+    }
+    if tag == FORM_BINARY_INT64 {
+        if p + 8 > bytes.len() {
+            return Err("form binary: truncated int64".to_string());
+        }
+        let (value, p) = read_i64_le(bytes, p);
+        return Ok((k.intern_trivial_int(value), p));
     }
     if tag == FORM_BINARY_LEAF {
         let (pkg, p) = read_u32(bytes, p);

@@ -1,0 +1,33 @@
+; tests/int-literal-width-band.fk — integer literals wider than int32 survive
+; parsing, arithmetic, and round-trip across all three kernels.
+;
+; The bug this pins: an integer literal was packed into the 32-bit `inst` slot
+; of its trivial NodeID, so any value with bit 31 set was read back as a signed
+; int32. 3596153792 = 0xD65F03C0 became -698813504, and (div 3596153792
+; 16777216) printed -41 instead of 214 — WRONG, yet identical across Go/Rust/TS,
+; so three-way agreement alone never caught it. The fix routes literals past the
+; int32 ceiling through an i64 overflow table (TrivInt64 = 5), exactly as
+; FLOAT64 overflows into f64s. See docs/coherence-substrate/form-to-asm.form
+; closing-cell "kernel-int" for where the byte-image workaround named this hole.
+;
+; Vectors (all chosen so the high word is non-zero — the int32 trap):
+;   (div 3596153792 16777216) = 0xD65F03C0 >> 24 = 0xD6 = 214
+;   (mod 3596153792 256)      = 0xD65F03C0 & 0xFF = 0xC0 = 192
+;   round-trip identity       — the literal interns and decodes to itself
+;   2^53-1 = 9007199254740991 — the documented preservation bar, intact
+;
+; Verdict: 4 when every check holds. A kernel still truncating to int32 returns
+; a smaller count (the div/mod checks fail), so the companion gate
+; form/scripts/int-literal-width-test.sh asserts the verdict is exactly 4 —
+; agreement on a wrong number is not a pass.
+
+(do
+    (let big 3596153792)
+
+    (let ok-div (if (eq (div big 16777216) 214) 1 0))   ; high byte 0xD6
+    (let ok-mod (if (eq (mod big 256)      192) 1 0))   ; low  byte 0xC0
+    (let ok-id  (if (eq big 3596153792)        1 0))    ; intern → decode → self
+    (let ok-max (if (eq 9007199254740991
+                        9007199254740991)     1 0))     ; 2^53-1 preserved
+
+    (add ok-div (add ok-mod (add ok-id ok-max))))
