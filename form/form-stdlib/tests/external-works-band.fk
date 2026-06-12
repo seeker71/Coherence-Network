@@ -1,0 +1,29 @@
+; tests/external-works-band.fk — external reference cells, three-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/external-works.fk
+;
+; Proves: a lineage-attested work resolves by id with its verified door
+; (https, archive.org, the exact lending item); attribution and holder are
+; carried (the rights line is part of the cell, never an afterthought); the
+; offered interface is named; the spoken identity line carries title and
+; door; an unknown id is honest absence.
+;
+; Band verdict: 63 when every law holds.
+
+section [form.bml] {
+    def ewb-bool(b, weight) = if b then weight else 0;
+
+    def ewb-score() {
+        let w = ew-find("ramtha-the-white-book");
+        let spoken = ew-spoken(w);
+        sum(list(
+            ewb-bool(ew-known?(w), 1),
+            ewb-bool(eq(str_find(ew-url(w), "https://archive.org/details/whitebook0000ramt", 0), 0), 2),
+            ewb-bool(and(ge(str_find(ew-attributed-to(w), "JZ Knight", 0), 0), ge(str_find(ew-holder(w), "JZK Publishing", 0), 0)), 4),
+            ewb-bool(ge(str_find(ew-interface(w), "controlled digital lending", 0), 0), 8),
+            ewb-bool(and(ge(str_find(spoken, "The White Book", 0), 0), ge(str_find(spoken, "Door: https://archive.org", 0), 0)), 16),
+            ewb-bool(not(ew-known?(ew-find("unattested-work"))), 32)));
+    }
+
+    ewb-score();
+}
