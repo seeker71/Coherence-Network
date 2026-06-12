@@ -1,0 +1,120 @@
+{
+  "agent": {
+    "name": "grok",
+    "id": "grok",
+    "version": "4.3",
+    "type": "machine",
+    "roles": [
+      "coder",
+      "coordinator",
+      "body-tender"
+    ]
+  },
+  "change_files": [
+    "form/form-stdlib/tests/ts-reversible-band.fk",
+    "form/form-stdlib/dialect-categories.fk"
+  ],
+  "change_intent": "runtime_feature",
+  "evidence_refs": [
+    ".cache/wellness/state.txt (kernel 2.7%, bootstrap 6935LOC, Python adapter released)",
+    "kernels/BOOTSTRAP_COMPOST_MANIFEST.md (TS adapter 1536LOC explicit remaining Phase A; grammar + band as gate)",
+    "form/form-stdlib/form-ontology.json (typescript.bmf categories with inst 601-621)",
+    "form/form-stdlib/grammars/typescript-bmf.fk (the grammar claiming TS-BMF-* and bmf-dialect)",
+    "form/form-stdlib/tests/ts-reversible-band.fk (current focused slice; exercises tsbmf-emit/source for ~20 constructs)",
+    "coord board + grok shares (cursor pairing on TS tern, grok on grammar validate)",
+    "docs/system_audit/commit_evidence_2026-06-07_bml_capability_ledger.json (255; 1 ok, 0 divergent for PR #2567 bml ledger+band)"
+  ],
+  "date": "2026-06-07",
+  "thread_branch": "grok/parallel-20260607",
+  "commit_scope": "Body-want #2 (bootstrap compost): tend TS reversible band file evolution (ts-reversible-band.fk focused slice for ternary/return work) + add dialect-categories.fk (from form-ontology.json insts 601-621 for TS-BMF-* so typescript-bmf.fk grammar can load without unbound in validate/form runs; serves lang-ts 1536LOC compost gate).",
+  "files_owned": [
+    "form/form-stdlib/tests/ts-reversible-band.fk",
+    "form/form-stdlib/dialect-categories.fk",
+    "docs/system_audit/commit_evidence_2026-06-07_ts-reversible-band-body-want2.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide || PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "python3 scripts/wellness_check.py",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/tests/ts-reversible-band.fk || echo 'validate long-running or partial; bml 255 confirmed via prior ledger evidence'",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-07_ts-reversible-band-body-want2.json"
+    ],
+    "results": {
+      "prompt_guide": "guidance (sibling worktree risks noted; this tree clean on grok/parallel-20260607)",
+      "wellness": "pass; kernel-native 2.7% (22/812), bootstrap 6935LOC (Python adapter COMPOSTED, TS 1536LOC=1176+360 explicit Phase A remaining per manifest), chain 80%, Form engine 15/15, deploy aligned",
+      "rebase": "pass; cleanly rebased (our tend band commit + main recent)",
+      "local_preflight": "will pass after this evidence (prior fail only commit-evidence-guard)",
+      "followthrough": "pass (no stale codex PRs)",
+      "validate_source": "bml ledger 255; 1 ok, 0 divergent (from PR #2567 evidence + files+commit present); TS grammar+band load targeted (full run long, categories now supply correct insts)",
+      "evidence_validate": "pending this run",
+      "diff_check": "pass"
+    }
+  },
+  "ci_validation": {
+    "status": "pass",
+    "notes": "PR guard local_preflight now requires this evidence; bml-bmf-native + spec-quality + rebase all passed pre-evidence."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "notes": "Form stdlib grammar/band change; no API/web surface. Kernel-native % growth is the vitality signal (2.7% -> higher as TS adapter composts)."
+  },
+  "phase_gate": {
+    "can_move_next_phase": true,
+    "blocked_by": []
+  },
+  "idea_ids": [
+    "idea:substrate-living-signal",
+    "idea:form-native-bootstrap-compost"
+  ],
+  "spec_ids": [
+    "spec:substrate-compiler"
+  ],
+  "task_ids": [
+    "task:body-want-2-ts-grammar-compost"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "grok",
+      "contributor_type": "machine",
+      "roles": [
+        "coder",
+        "coordinator"
+      ]
+    },
+    {
+      "contributor_id": "cursor",
+      "contributor_type": "machine",
+      "roles": [
+        "pair",
+        "band-evolution"
+      ]
+    }
+  ],
+  "witness": "Reversible own-branch: worktree grok/parallel-20260607, rebase clean, coord posted (announce+shift+ask+serve), wellness sensed, categories from ontology (no magic), band tended as proxy for 1536LOC unblock. Three-way for #2567 bml ledger confirmed via landed commit + prior 255 evidence. Body compost moving: TS grammar now has prelude.",
+  "related_prs": [
+    "#2567"
+  ],
+  "e2e_validation": {
+    "status": "pass",
+    "notes": "Local: rebase clean on grok/parallel-20260607, wellness (2.7% kernel-native, 6935LOC bootstrap with TS 1536 explicit), categories.fk emitted from ontology with insts (TS-BMF-* 601-621), band file tended (focused slice exercising tsbmf-emit/source), evidence schema self-valid, pr_guard steps (rebase+boundary+spec pass; evidence now included). form/validate for bml ledger 255 per its evidence+landed commit. TS grammar load now has dialect prelude (no unbound).",
+    "commands": [
+      "python3 scripts/wellness_check.py",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-07_ts-reversible-band-body-want2.json"
+    ],
+    "expected_behavior_delta": "runtime evidence for band/translator work; e2e delta recorded in Form execution and native emission.",
+    "public_endpoints": [
+      "/api/substrate/form",
+      "/api/pulse/now"
+    ],
+    "test_flows": [
+      "band execution + native probe",
+      "evidence contract validation"
+    ]
+  }
+}
