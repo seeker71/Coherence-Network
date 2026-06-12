@@ -1,0 +1,55 @@
+; preludes: form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk
+;
+; form-mut-band — the MUTATION channel, proven three-way: state debugging needs
+; only CELL CREATION (heap CONS) and POINTER UPDATES (STORE) — reads stay silent,
+; because the walker is deterministic and every read is derivable from the
+; mutation history. The log IS the program's state genesis, and it stays tiny.
+; The wrapper sees the tag before dispatch, so the arms ride verbatim (one
+; engine). Live witness: scripts/form_mut_demo.sh.
+; (docs/coherence-substrate/live-diagnosis-organ.form mutation-channel.)
+;
+; This band also ATTESTS the kernel's memory separation from the walk text
+; itself: recipe args ride the VALUE STACK (fk_vs under the fp discipline),
+; cells are born on the HEAP (CONS pushes fk_hh/fk_ht), and state slots live
+; in fk_mem (STORE repoints them) — three planes, three laws.
+;
+; Verdict 31 when the mutation channel holds:
+;   1   THE EMISSION traces creation and update — the C marker (67) on the CONS
+;       guard (tg == 19) with the born cell's head and tail, the S marker (83)
+;       on the STORE guard (tg == 13), argv-gated
+;   2   READS ARE SILENT — no guard exists for NODE (8), LOAD (14), HEAD (20),
+;       TAIL (21): the scope law, proven by absence
+;   4   ONE ENGINE — the shared arm text rides verbatim (a distinctive arm
+;       fragment present); the standard walk carries no mutation tracer
+;   8   THE THREE MEMORY PLANES, attested from the walk: the heap push
+;       (fk_hh[fk_hp]) in CONS; the stack read (fk_vs[fp]) for ARG; the state
+;       write (fk_mem[) in STORE — heap vs stack vs slots, separate by law
+;   16  DETERMINISTIC — two mutation emissions are byte-identical
+(do
+    (let prog (fk-add (fk-store (fk-lit 0) (fk-lit 42))
+                      (fk-len (fk-cons (fk-lit 3) (fk-cons (fk-lit 2)
+                              (fk-cons (fk-lit 1) (fk-lit 0)))))))
+    (let mut (fkc-emit-mut (list prog)))
+    (let std (fkc-emit-many (list prog)))
+
+    (let c0 (if (ge (str_find mut "if (tg == 19) { putchar(67)" 0) 0)
+            (if (ge (str_find mut "fk_muv(fk_hh[r >> 1]); fk_muv(fk_ht[r >> 1])" 0) 0)
+            (if (ge (str_find mut "if (tg == 13) { putchar(83)" 0) 0)
+            (if (ge (str_find mut "fk_mdbg = atoi(argv[2])" 0) 0) 1 0) 0) 0) 0))
+
+    (let c1 (if (eq (str_find mut "tg == 8)" 0) (sub 0 1))
+            (if (eq (str_find mut "tg == 14)" 0) (sub 0 1))
+            (if (eq (str_find mut "tg == 20)" 0) (sub 0 1))
+            (if (eq (str_find mut "tg == 21)" 0) (sub 0 1)) 2 0) 0) 0) 0))
+
+    (let c2 (if (ge (str_find mut "if (t == 22)" 0) 0)
+            (if (eq (str_find std "fk_walk0" 0) (sub 0 1))
+            (if (eq (str_find std "tg == 19" 0) (sub 0 1)) 4 0) 0) 0))
+
+    (let c3 (if (ge (str_find mut "fk_hh[fk_hp]" 0) 0)
+            (if (ge (str_find mut "return fk_vs[fp]" 0) 0)
+            (if (ge (str_find mut "fk_mem[" 0) 0) 8 0) 0) 0))
+
+    (let c4 (if (str_eq mut (fkc-emit-mut (list prog))) 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))

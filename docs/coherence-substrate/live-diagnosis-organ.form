@@ -133,6 +133,31 @@
     (band      "tests/form-debug-band.fk -> 31 three-way — tracer present, one engine,
                 watch/last/depth two-sided, deterministic emission"))
 
+  # ── The mutation channel — REALIZED: creation + repoints, never reads ──
+  # State debugging needs only the MUTATIONS: heap cell creation (CONS) and
+  # pointer/state updates (STORE) — reads stay silent, because the walker is
+  # deterministic and every read is derivable from the mutation history. The
+  # log IS the program's state genesis, and it stays tiny: 4 events where the
+  # full value-trace logs 12, on the same run. Witnessed live: the heap's
+  # POINTER STRUCTURE is visible at birth — C cell 2: head 2, tail r1 (the
+  # tail referencing cell 1); cell 3 -> r2 — the list's spine readable from
+  # the creation log alone. The kernel's three memory planes, attested from
+  # the walk text in the band: recipe args ride the CALL (the host stack —
+  # the a-convention), cells are born on the HEAP (fk_hh/fk_ht), state slots
+  # live in fk_mem. Scope held: the walker carries the debug channels; the
+  # form-lower native lane keeps its value channel and source map — the full
+  # spy/debug instrumentation does not belong there.
+  (mutation-channel-realized
+    (events    "C <cell> <head> <tail> <depth> — a cell is born, contents + links visible;
+                S <value> <depth> — a state slot is repointed; argv-gated, off = clean")
+    (scope     "creation and repoints only; reads silent — derivable from the log")
+    (planes    "args ride the call · cells on the heap · slots in fk_mem — attested")
+    (witnessed "3 births + 1 repoint = the whole state genesis (scripts/form_mut_demo.sh);
+                the same run's full value-trace: 12 events — the channel is 3x leaner here
+                and the ratio grows with read-heavy programs")
+    (band      "tests/form-mut-band.fk -> 31 three-way — C/S guards present, reads proven
+                silent BY ABSENCE, one engine, the three planes attested, deterministic"))
+
   # ── Closing cells ─────────────────────────────────────────────────────
   (closing-cells
     (more-laws    "beyond order-2 additive: multiplicative, affine, periodic — a law
