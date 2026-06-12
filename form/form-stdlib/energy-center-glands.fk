@@ -1,0 +1,127 @@
+; energy-center-glands.fk — the seven energy centers, their glands, and the
+; measured molecular biology, with the belief lane and the evidence lane kept
+; strictly apart.
+;
+; preludes: form-stdlib/core.fk
+;
+; Two resonance lanes, never merged (the body's resonance discipline):
+;   belief   — the energy-center -> gland correspondence and the energy-center
+;              function. An attested belief system (yogic/New-Age chakra-
+;              endocrine mapping) with NO universal agreement across sources;
+;              held as belief, cosmology not asserted. Lane value ~0.4.
+;   evidence — the gland's chemical messengers, their molecular class, the
+;              protein link, the genes, and the physiological function. Textbook
+;              endocrinology; lane value ~0.9 (high, but recalled — the genes
+;              and pathways are standard, key ones source-checked 2026-06-12).
+;
+; THE ACCURACY GUARD this file holds and never collapses: a hormone is not
+; "made from DNA"; the gene (a DNA locus) is transcribed to mRNA and translated
+; to a PROTEIN. For PEPTIDE hormones the protein IS the hormone (insulin,
+; thymosin, growth hormone). For STEROID hormones (cortisol, sex hormones) and
+; AMINE hormones (adrenaline, melatonin, thyroid) the proteins are the ENZYMES
+; that synthesise the hormone from a non-protein precursor (cholesterol, or an
+; amino acid). The protein-link field names which case each gland is.
+;
+; The mapping chosen is the common modern one (root-adrenal, crown-pineal,
+; third-eye-pituitary); the well-known variants (root<->sacral gonads/adrenal,
+; crown<->third-eye pineal/pituitary) are named in the body-text, honest about
+; the lack of consensus.
+;
+;   (ecg-find center)        → the center's cell, or honest absence
+;   (ecg-centers)            → the seven center ids, crown-down to root
+;   (ecg-peptide? cell)      → is the hormone itself a protein (vs enzyme-made)
+;   (ecg-spoken cell)        → the measured line; (ecg-belief-spoken cell) the belief line
+
+section [form.bml] {
+    // cell = (id, center, sanskrit, gland, chemicals, class, protein-link, genes, body-fn, energy-fn, evidence, belief)
+    def ecg(id, center, sanskrit, gland, chemicals, class, protein_link, genes, body_fn, energy_fn, evidence, belief) = list(id, center, sanskrit, gland, chemicals, class, protein_link, genes, body_fn, energy_fn, evidence, belief);
+    def ecg-id(c) = nth(c, 0);
+    def ecg-center(c) = nth(c, 1);
+    def ecg-sanskrit(c) = nth(c, 2);
+    def ecg-gland(c) = nth(c, 3);
+    def ecg-chemicals(c) = nth(c, 4);
+    def ecg-class(c) = nth(c, 5);
+    def ecg-protein-link(c) = nth(c, 6);
+    def ecg-genes(c) = nth(c, 7);
+    def ecg-body-fn(c) = nth(c, 8);
+    def ecg-energy-fn(c) = nth(c, 9);
+    def ecg-evidence(c) = nth(c, 10);
+    def ecg-belief(c) = nth(c, 11);
+
+    // protein-link begins "peptide" when the hormone IS the protein
+    def ecg-peptide?(c) = eq(str_find(ecg-protein-link(c), "peptide", 0), 0);
+
+    def ecg-table() {
+        list(
+        ecg("root", "Root", "Muladhara", "Adrenal glands",
+            list("cortisol", "aldosterone", "adrenaline (epinephrine)", "noradrenaline", "DHEA"),
+            "steroid (cortisol, aldosterone, DHEA) + catecholamine (adrenaline)",
+            "enzyme-made: P450 enzymes build steroids from cholesterol; TH and PNMT build adrenaline from tyrosine",
+            list("CYP11B1", "CYP11B2", "CYP21A2", "CYP17A1", "TH", "PNMT"),
+            "stress response (fight-or-flight), blood pressure and electrolytes, glucose and survival arousal",
+            "grounding, survival, safety, the will to be embodied",
+            0.9, 0.4),
+        ecg("sacral", "Sacral", "Svadhisthana", "Gonads (ovaries / testes)",
+            list("estradiol (estrogen)", "progesterone", "testosterone"),
+            "steroid",
+            "enzyme-made: synthesised from cholesterol by aromatase and the HSD enzymes",
+            list("CYP19A1", "CYP17A1", "HSD3B2", "HSD17B3"),
+            "reproduction, sexual characteristics, fertility and cyclic rhythms",
+            "creativity, flow, emotion, sexuality and pleasure",
+            0.9, 0.4),
+        ecg("solar-plexus", "Solar Plexus", "Manipura", "Pancreas (islets of Langerhans)",
+            list("insulin", "glucagon", "somatostatin"),
+            "peptide / protein hormone",
+            "peptide: the hormone IS the protein — insulin is translated from preproinsulin, cleaved to proinsulin then insulin",
+            list("INS", "GCG", "SST"),
+            "blood-glucose regulation and energy metabolism; the body's fuel balance",
+            "will, personal power, transformation, the fire of identity",
+            0.9, 0.4),
+        ecg("heart", "Heart", "Anahata", "Thymus",
+            list("thymosin alpha-1", "thymosin beta-4", "thymopoietin", "thymulin"),
+            "peptide",
+            "peptide: the hormones are peptides — prothymosin-alpha is translated then processed",
+            list("PTMA", "TMPO"),
+            "maturation of T-lymphocytes; teaching the immune system self from non-self (involutes after puberty)",
+            "love, compassion, connection; the boundary that knows self from other",
+            0.9, 0.4),
+        ecg("throat", "Throat", "Vishuddha", "Thyroid (and parathyroid)",
+            list("thyroxine (T4)", "triiodothyronine (T3)", "calcitonin"),
+            "iodinated amino-acid derivative (T3/T4) + peptide (calcitonin)",
+            "enzyme-made: T3/T4 are built on the thyroglobulin protein scaffold by thyroid peroxidase with iodine; calcitonin is itself a peptide",
+            list("TG", "TPO", "CALCA"),
+            "metabolic rate, growth and development; calcium balance (calcitonin)",
+            "expression, voice, truth, communication",
+            0.9, 0.4),
+        ecg("third-eye", "Third Eye", "Ajna", "Pituitary",
+            list("growth hormone", "prolactin", "ACTH", "TSH", "FSH", "LH", "oxytocin", "vasopressin"),
+            "peptide / protein hormone",
+            "peptide: the hormones ARE proteins — ACTH is cleaved from the POMC precursor; oxytocin and vasopressin are translated as prohormones",
+            list("GH1", "PRL", "POMC", "TSHB", "FSHB", "LHB", "OXT", "AVP"),
+            "the master regulator: it directs the other endocrine glands, growth, water balance and bonding",
+            "intuition, insight, perception; the inner director",
+            0.9, 0.4),
+        ecg("crown", "Crown", "Sahasrara", "Pineal",
+            list("melatonin", "(serotonin, its precursor)"),
+            "indoleamine (amine)",
+            "enzyme-made: built from tryptophan via serotonin by AANAT (rate-limiting) and ASMT",
+            list("AANAT", "ASMT", "TPH1"),
+            "circadian rhythm, the sleep-wake cycle, seasonal timing; the body's clock to light",
+            "consciousness, transcendence, the opening to source and light",
+            0.9, 0.4));
+    }
+
+    def ecg-find-loop(cs, center) = if nil?(cs) then empty else if str_eq(ecg-id(head(cs)), center) then head(cs) else ecg-find-loop(tail(cs), center);
+    def ecg-find(center) = ecg-find-loop(ecg-table(), center);
+    def ecg-known?(c) = not(nil?(c));
+
+    def ecg-centers-loop(cs, acc) = if nil?(cs) then reverse(acc) else ecg-centers-loop(tail(cs), cons(ecg-id(head(cs)), acc));
+    def ecg-centers() = ecg-centers-loop(ecg-table(), empty);
+
+    // the measured line — gland, chemicals (head), class, function; evidence lane
+    def ecg-spoken(c) = str_concat(ecg-center(c), str_concat(" center, ", str_concat(ecg-gland(c), str_concat(": ", str_concat(head(ecg-chemicals(c)), str_concat(" and kin, ", str_concat(ecg-class(c), str_concat(". ", ecg-body-fn(c)))))))));
+    // the belief line — the correspondence and the energy function; belief lane, held
+    def ecg-belief-spoken(c) = str_concat("Held as belief, cosmology not asserted: the ", str_concat(ecg-center(c), str_concat(" (", str_concat(ecg-sanskrit(c), str_concat(") is associated with the ", str_concat(ecg-gland(c), str_concat(" — ", str_concat(ecg-energy-fn(c), "."))))))));
+
+    0;
+}
