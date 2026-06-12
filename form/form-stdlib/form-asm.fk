@@ -39,6 +39,18 @@
     ; 4 little-endian bytes directly (c0 03 5f d6), not a > 2^31 word literal
     (defn fa-ret  ()          (list 192 3 95 214))
 
+    ; ── control flow + register operands (the full-program instructions) ─
+    ; mov w<rd>, w<rm>  (orr rd, wzr, rm) : base 0x2A0003E0 | rm<<16 | rd
+    (defn fa-mov  (rd rm)     (fa-le (add 704644064 (add (mul rm 65536) rd))))
+    ; cmp w<rn>, #imm  (subs wzr, rn, #imm) : base 0x7100001F | imm<<10 | rn<<5
+    (defn fa-cmp  (rn imm)    (fa-le (add 1895825439 (add (mul imm 1024) (mul rn 32)))))
+    ; b.gt #off  (off in instructions) : base 0x5400000C | off<<5   (cond GT = 0xC)
+    (defn fa-bgt  (off)       (fa-le (add 1409286156 (mul off 32))))
+    ; b #off  (off in instructions) : base 0x14000000 | off
+    (defn fa-b    (off)       (fa-le (add 335544320 off)))
+    ; add w<rd>, w<rn>, w<rm>  (register form) : base 0x0B000000 | rm<<16 | rn<<5 | rd
+    (defn fa-add-r (rd rn rm) (fa-le (add 184549376 (add (mul rm 65536) (add (mul rn 32) rd)))))
+
     ; ── concatenate a list of instruction byte-lists into the flat image ─
     (defn fa-image (instrs)
         (if (nil? instrs) instrs
