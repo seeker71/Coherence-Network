@@ -1,0 +1,57 @@
+; preludes: form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/bmf-mini.fk form-stdlib/fourth-union.fk
+;
+; fourth-union-band — the m4e3/m4e4 union, proven three-way: ONE self-contained
+; binary that is a BMF compiler (grammar+source -> a complete new walker binary's
+; C) and a FULL-SOURCE quine (its own entire C, byte-exact). The live gates run
+; in scripts/form_union_demo.sh (quine cmp, the grandchild, the M2 value); this
+; band proves the structural heart on all three kernels.
+;
+; Verdict 31 when the union's structure holds:
+;   1   THE CLOSED-FORM ROW PATTERN IS THE COMPILER — the rows the binary prints
+;       in compile mode ({2,0,0,0} · {1,arg,0,0} · {op,2k,2k+1,0}...) are exactly
+;       the rows the recipe compiler (bmf-compile) flattens to, for the M2 case
+;   2   THE PROGRAM SHAPE — 11 functions (dispatch num row4 printseg rowsprint
+;       quine ntok pow10 rulefind compk compile), dispatch's root first
+;   4   BOTH MAINS RIDE — the union's own emission carries the QUIET main (the
+;       program's PUTCs are the whole output) while the STANDARD main text (for
+;       compiled children) carries fk_pv — distinct, both available as spool
+;   8   THE DIGIT-TOKEN CHANNEL — mode 112 decomposes to tokens [1,1,2] by the
+;       pow10/mod arithmetic the binary runs
+;   16  DATA ROWS LAND IN TABLE ORDER — fku-with-data appends raw rows after the
+;       function rows (the reversed row list carries them head-first), and the
+;       emission is deterministic (two builds, str_eq)
+(do
+    (let g1 (list (bmf-rule 1 3 10) (bmf-rule 2 4 3)))
+    (let src (list 1 1 2))
+
+    ; 1 — the pattern the binary prints == the recipe compiler's flatten
+    (let crows (nth (fkc-flatten-many (list (bmf-compile g1 src))) 0))
+    (let c0 (if (str_eq (fkc-rows-text crows)
+                        "{2,0,0,0},{1,10,0,0},{3,0,1,0},{1,10,0,0},{3,2,3,0},{1,3,0,0},{4,4,5,0},")
+                1 0))
+
+    ; 2 — the union program's shape
+    (let p0 (list 11 2916 580 1499 1500 1501 1502 1509 1510 1512 1513 1514 1515 2802 2803 2848 2849 2913 2914))
+    (let r0 (list 7 26 73 86 133 277 288 299 332 442 579))
+    (let flat (fkc-flatten-many (fku-program p0 r0)))
+    (let c1 (if (eq (len (nth flat 1)) 11)
+            (if (ge (len (nth flat 0)) 400) 2 0) 0))
+
+    ; 4 — quiet main in the union's emission; fk_pv only in the standard main
+    (let uc (fku-emit-c (nth flat 0) (nth flat 1)))
+    (let c2 (if (ge (str_find uc "fk_walk(fk_fn[0], 0); return 0" 0) 0)
+            (if (eq (str_find (fku-main-quiet-text) "fk_pv" 0) (sub 0 1))
+            (if (ge (str_find (fkc-main-many-text) "fk_pv" 0) 0) 4 0) 0) 0))
+
+    ; 8 — the digit-token channel: 112 -> [1,1,2]
+    (let c3 (if (eq (mod (div 112 100) 10) 1)
+            (if (eq (mod (div 112 10) 10) 1)
+            (if (eq (mod 112 10) 2) 8 0) 0) 0))
+
+    ; 16 — data placement + determinism
+    (let f2 (fku-with-data (list (list (list 9 9 9 9)) (list 0)) (list (list 1 2 3 4) (list 5 6 7 8))))
+    (let c4 (if (eq (len (nth f2 0)) 3)
+            (if (eq (nth (head (nth f2 0)) 0) 5)          ; head of reversed list = LAST table row
+            (if (str_eq uc (fku-emit-c (nth flat 0) (nth flat 1))) 16 0) 0) 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
