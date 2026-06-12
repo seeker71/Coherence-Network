@@ -1,0 +1,75 @@
+; form-macho.fk — the Mach-O wrapper: a Form recipe that emits a valid arm64
+; Mach-O OBJECT file (.o) carrying machine code, so the kernel's own compiled bytes
+; (form-lower.fk) become a RUNNABLE native binary with ZERO clang — `ld` links the
+; .o, the binary runs. clang's compiler and assembler are dropped; the .o format is
+; a host carrier (like the C ABI), `ld` is the linker carrier, and `ld`'s ad-hoc
+; signature meets the macOS arm64 signing requirement — named, not a compiler.
+;
+; A minimal valid .o for a leaf `_main` (no relocations): mach_header_64 +
+; LC_SEGMENT_64 (one __text section) + LC_SYMTAB + the code + the symbol table +
+; the string table. Offsets are computed from the code length, so any compiled
+; program wraps. High-bit constants (magic 0xfeedfacf, section flags 0x80000400)
+; are emitted as BYTES, sidestepping the kernels' > 2^31 literal wrap (form-asm.fk).
+;
+; Witnessed by scripts/form_macho_demo.sh: form-lower compiles ((40+1)-1) -> code,
+; form-macho wraps it -> .o, `ld` links it -> the binary runs and exits 40.
+; Structure proven three-way by tests/form-macho-band.fk.
+
+(do
+    (defn mo-nil? (xs) (eq (len xs) 0))
+    (defn mo-app (xs ys) (if (mo-nil? xs) ys (cons (head xs) (mo-app (tail xs) ys))))
+    (defn mo-cat (xss) (if (eq (len xss) 1) (head xss) (mo-app (head xss) (mo-cat (tail xss)))))
+
+    ; little-endian integer fields (values < 2^31 -> safe; high-bit consts are bytes)
+    (defn mo-u16 (n) (list (mod n 256) (mod (div n 256) 256)))
+    (defn mo-u32 (n) (list (mod n 256) (mod (div n 256) 256)
+                           (mod (div n 65536) 256) (mod (div n 16777216) 256)))
+    (defn mo-u64 (n) (mo-app (mo-u32 n) (list 0 0 0 0)))
+
+    ; the four load commands sum to 208 bytes; code follows at offset 208
+    ; (header 32 + LC_SEGMENT_64 152 + LC_SYMTAB 24)
+    (defn mo-header ()
+        (mo-cat (list
+            (list 207 250 237 254)          ; magic 0xfeedfacf (cf fa ed fe)
+            (mo-u32 16777228)               ; cputype  ARM64  0x0100000c
+            (mo-u32 0)                      ; cpusubtype
+            (mo-u32 1)                      ; filetype MH_OBJECT
+            (mo-u32 2)                      ; ncmds
+            (mo-u32 176)                    ; sizeofcmds (152 + 24)
+            (mo-u32 0) (mo-u32 0))))        ; flags, reserved
+
+    (defn mo-segment (clen)
+        (mo-cat (list
+            (mo-u32 25) (mo-u32 152)        ; LC_SEGMENT_64, cmdsize
+            (list 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)   ; segname (empty for MH_OBJECT)
+            (mo-u64 0) (mo-u64 clen) (mo-u64 208) (mo-u64 clen)  ; vmaddr vmsize fileoff filesize
+            (mo-u32 7) (mo-u32 7) (mo-u32 1) (mo-u32 0))))       ; maxprot initprot nsects flags
+
+    (defn mo-section (clen)
+        (mo-cat (list
+            (list 95 95 116 101 120 116 0 0 0 0 0 0 0 0 0 0)     ; sectname __text
+            (list 95 95 84 69 88 84 0 0 0 0 0 0 0 0 0 0)         ; segname  __TEXT
+            (mo-u64 0) (mo-u64 clen)        ; addr size
+            (mo-u32 208) (mo-u32 2)         ; offset align (2^2 = 4)
+            (mo-u32 0) (mo-u32 0)           ; reloff nreloc
+            (list 0 4 0 128)                ; flags 0x80000400 (PURE|SOME_INSTRUCTIONS)
+            (mo-u32 0) (mo-u32 0) (mo-u32 0))))   ; reserved1,2,3
+
+    (defn mo-symtab (clen)
+        (mo-cat (list
+            (mo-u32 2) (mo-u32 24)                 ; LC_SYMTAB, cmdsize
+            (mo-u32 (add 208 clen)) (mo-u32 1)     ; symoff, nsyms
+            (mo-u32 (add 224 clen)) (mo-u32 7))))  ; stroff (208+clen+16), strsize
+
+    ; one symbol: _main, N_SECT|N_EXT, section 1, value 0
+    (defn mo-nlist () (mo-cat (list (mo-u32 1) (list 15) (list 1) (mo-u16 0) (mo-u64 0))))
+    ; string table: \0 _main \0
+    (defn mo-strtab () (list 0 95 109 97 105 110 0))
+
+    ; the whole object file for the given code byte-list
+    (defn mo-object (code)
+        (mo-cat (list
+            (mo-header) (mo-segment (len code)) (mo-section (len code)) (mo-symtab (len code))
+            code (mo-nlist) (mo-strtab))))
+
+    0)
