@@ -96,7 +96,16 @@
     (witnessed    "g1 tok1=ADD10 -> binary -> 22 ; g2 tok1=ADD100 -> binary -> 202, same source [1,1,2]")
     (honest-scope tokenwise-pattern-action-fold)            # the nesting/choose/fail engine is m4e3
     (compiler-as-recipe-today  the-compiler-folds-Form-lists)  # heap now has a native arena
-    (compiler-as-binary-needs  m4e4-strings + m4e3-real-recipe-flattener)  # textual source/full engine, named
+    (compiler-as-binary  SHIPPED — fourth-union.fk: ONE self-contained binary is
+                         the BMF compiler (digit-tokens through the baked grammar
+                         -> a complete new walker binary's C) AND a full-source
+                         quine (mode 0: its own entire C byte-exact; the
+                         grandchild closes). The same printer serves both — the
+                         quine's emitter IS the compiler's emitter. Gates live in
+                         scripts/form_union_demo.sh; band
+                         tests/fourth-union-band.fk -> 31 three-way. Textual
+                         source through the op-17 cursor and the full
+                         nesting/choose/fail engine remain the richer doors)
 
     # ── The BMF discipline (Urs, 2026-06-11) — bmf-architecture.form's record ──
     # BMF is NOT tokenize-then-parse. Rules match bytes STRAIGHT OFF a streaming
@@ -526,14 +535,18 @@
 #     one render tongue (asm-pl-human pack, any level/language) ~56 B
 #     the full arrival tongue (743 entries, MDL-optimal)        5,705 B
 #
-#   smallest self-contained self-reproducing BMF compiler (the m4e3/m4e4
-#   composition — pieces proven separately, union the named closing cell):
-#     content floor (carrier-independent): ~15-20 KB — bmf walker+compile code
-#       (~3 KB) + quine machinery (~0.7 KB) + the union self-table (~10-15 KB,
-#       extrapolated from the 284-row printer table carrying compile+emit cells)
-#     macOS binary: ~33.6 KB (the page floor; content fits inside with headroom)
-#     + pack: 0 B to function · 48 B to compile a grammar · 56 B to speak one tongue
-(measured-floors agreed-2026-06-12)
+#   the self-contained self-reproducing BMF compiler — BUILT and MEASURED
+#   (fourth-union.fk; gates live in scripts/form_union_demo.sh):
+#     binary 133,464 B · C source 53,402 B · table 2,916 rows · pack 0 B
+#     mode 0 = FULL-SOURCE quine (its entire C, byte-exact; the grandchild
+#     closes); mode N = BMF compiler (digit-tokens through the baked grammar
+#     -> a complete new walker binary; the M2 value reproduced)
+#     where the weight lives: the constant C text rides as spool DATA rows at
+#     4 chars per 4x8-byte row — an 8x expansion (9.3 KB text -> ~74 KB table).
+#     The named compression cell: pack 8 chars/cell (32/row) -> ~12 KB spool,
+#     a ~60 KB binary; the page floor (33.6 KB) remains the macOS minimum.
+#   + pack floors: 0 B to function · 48 B to swap the grammar · 56 B to speak
+(measured-floors revised-2026-06-12 union-built)
 
 # ─────────────────────────────────────────────────────────────────────
 # How to verify (today)
