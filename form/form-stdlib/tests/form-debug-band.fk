@@ -29,7 +29,7 @@
 
     (let c0 (if (ge (str_find dbg "static void fk_tr(long long i" 0) 0)
             (if (ge (str_find dbg "static long long fk_walk0(long long i" 0) 0)
-            (if (ge (str_find dbg "long long r = fk_walk0(i, a)" 0) 0)
+            (if (ge (str_find dbg "long long r = fk_walk0(i, fp)" 0) 0)
             (if (ge (str_find dbg "fk_dbg = atoi(argv[2])" 0) 0) 1 0) 0) 0) 0))
 
     (let c1 (if (ge (str_find dbg "if (t == 22)" 0) 0)
