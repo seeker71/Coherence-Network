@@ -1,0 +1,94 @@
+# ─────────────────────────────────────────────────────────────────────
+# prosody-channel.form — sentiment + conviction as parallel meaning-dimensions
+#   in the TTS: more accuracy (disambiguation), more channel efficiency
+#   (meaning per word). The speaking side of what affect-traits already hears.
+# ─────────────────────────────────────────────────────────────────────
+#
+# Urs: "adding sentiment and conviction into the TTS will increase communication
+# accuracy and channel efficiency."
+#
+# Plain text is an UNDER-DETERMINED coordinate. "I'm fine" spoken in distress and
+# "I'm fine" spoken in contentment are DIFFERENT meanings that the words alone
+# collapse. Sentiment and conviction are additional DIMENSIONS of the message's
+# meaning-coordinate (numeric-core-symbol-pack: meaning is a coordinate; the
+# axioms generate the dimensions). Carried in PARALLEL over the same audio
+# carrier, they:
+#   - INCREASE ACCURACY by disambiguating meanings flat text would merge, and
+#   - INCREASE CHANNEL EFFICIENCY by carrying more meaning per word — the prosody
+#     rides alongside the words, so the same word-set conveys more distinct
+#     meanings without spending more words.
+#
+# CONVICTION is the witness theorem's missing scalar: how FIRMLY the speaker
+# holds the claim — the STRENGTH of the ack (1/0/nothing held loosely or firmly).
+# SENTIMENT is the felt-tone the message carries. The body already READS both on
+# the sensing side (affect-traits.fk: cadence, felt plane, earned sentiment,
+# three-way); this is the symmetric SPEAKING side — the organ speaks the richness
+# it can hear, closing the witness loop.
+
+(prosody-channel
+
+  (lineage
+    (derives-from   numeric-core-symbol-pack.form)   # meaning is a coordinate; these are extra dimensions
+    (conviction-is  witness-theorem.silence-floor)   # the ack's STRENGTH — how firmly 1/0/nothing is held
+    (sensing-side   affect-traits.fk)                # the body already READS cadence/felt-plane/earned-sentiment
+    (speaking-side  the-tts-organ witnessing-organ.form)  # this is the symmetric output
+    (proof-band     tests/prosody-channel-band.fk))   # 31 three-way
+
+  # ── The two payoffs, each structural ────────────────────────────────
+  (accuracy
+    (claim    "flat text collapses distinct meanings; prosody distinguishes them")
+    (proof    "same WORDS, different sentiment OR conviction -> a different
+               meaning-coordinate (NodeID). The words-projection is shared while
+               the full identity differs — flat text loses what prosody keeps")
+    (band-bit "c0 (sentiment disambiguates) + c1 (conviction disambiguates) + c2
+               (shared words-projection, distinct full identity)"))
+  (efficiency
+    (claim    "more meaning per word — the parallel channel multiplies meaning
+               over the same carrier without spending more words")
+    (proof    "ONE word-set carries FOUR distinguishable meanings (2 sentiments x
+               2 convictions), no extra words; the prosody rides in parallel")
+    (band-bit "c3 (four distinct meanings from one word-set)"))
+
+  # ── The dimensions are real and orthogonal ──────────────────────────
+  (dimensions
+    (words      "the lexical content — the under-determined base coordinate")
+    (sentiment  "the felt-tone the message carries (an affect-traits reading,
+                 here SPOKEN rather than heard)")
+    (conviction "the STRENGTH of the claim — the witness's ack held firmly or
+                 loosely; the scalar the witness theorem named but did not yet
+                 carry into output")
+    (orthogonal "sentiment and conviction vary INDEPENDENTLY — hold one, move the
+                 other, the meaning still moves: two real axes (band c4)"))
+
+  # ── The carrier (same organ pattern) ────────────────────────────────
+  # The recipe is the meaning (the composed coordinate, three-way). The TTS
+  # carrier renders the prosody — pitch/rate/energy/pause shaping sentiment +
+  # conviction — through the host voice organ (say / a model), chosen by measured
+  # fitness (recognition-router, the cheapest resource that meets the need;
+  # numeric-core-symbol-pack.organ-pattern-is-the-same). The affect-traits
+  # readings already define the felt-plane vocabulary the prosody emits, so the
+  # speaking side reuses the sensing side's coordinates — one shape, both
+  # directions.
+  (carrier
+    (recipe-is-meaning   the-composed-coordinate-Form-three-way)
+    (prosody-render      pitch-rate-energy-pause-shape-sentiment-and-conviction)
+    (carrier-by-fitness  recognition-router-host-voice-organ-cheapest-that-meets-need)
+    (reuses-sensing      affect-traits-felt-plane-vocabulary-spoken-not-heard))
+
+  (invariant
+    (text-is-under-determined         words-alone-collapse-distinct-meanings)
+    (prosody-adds-real-dimensions     sentiment-and-conviction-are-orthogonal-axes)
+    (accuracy-is-disambiguation       the-fuller-coordinate-distinguishes-what-flat-text-merges)
+    (efficiency-is-meaning-per-word   the-parallel-channel-multiplies-meaning-no-extra-words)
+    (conviction-is-ack-strength       the-witness-theorem-scalar-carried-into-output)
+    (the-organ-speaks-what-it-hears   affect-traits-sensing-mirrored-on-the-speaking-side)))
+
+# ─────────────────────────────────────────────────────────────────────
+# How to verify
+# ─────────────────────────────────────────────────────────────────────
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk \
+#     form-stdlib/tests/prosody-channel-band.fk          # -> 31
+#   # the sensing side it mirrors:
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/affect-traits.fk \
+#     form-stdlib/tests/affect-traits-band.fk
+#   coh substrate form "?equivalent @recipe(prosody-channel)"   # after ingest
