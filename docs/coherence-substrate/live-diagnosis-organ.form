@@ -112,6 +112,27 @@
     (scope     "fk-* constructor expressions; parens inside string literals are outside
                 this scope; the in-cell kernel provenance plane is the destination"))
 
+  # ── The value trace — REALIZED: live debugging's missing half ────────
+  # The framebuffer counts; the debugger needs VALUES and ORDER. The debug
+  # walker (fkc-emit-debug) wraps the UNCHANGED dispatch with a tracer — every
+  # node completion emits (node, value, stack-depth), bounded by argv (off by
+  # default: a clean run stays clean). Joined with provenance the trace reads
+  # as a SOURCE-LEVEL step log of the running binary; the organ's watchpoint
+  # verbs (fd-twatch / fd-tlast / fd-tdepth) read the stream. Witnessed on
+  # fib(5): 131 events; the recursion's descent visible step by step (depth
+  # climbing as values walk 5 -> 4 -> 3); the n-1 call site's full value
+  # sequence 4 3 2 1 1 2 1 in order; deepest stack 4 — observed, not
+  # inferred. Replay is free: the walker is deterministic, the trace IS the
+  # recording.
+  (value-trace-realized
+    (wrapper   "fk_walk0 = the dispatch verbatim; fk_walk = trace-and-return — one engine")
+    (event     "(node, value, depth) per completed node; bound from argv; 0 = clean run")
+    (verbs     "fd-twatch (all values of a node, in order) · fd-tlast · fd-tdepth")
+    (joined    "trace -> provenance -> source line: the step log reads as the source itself")
+    (witnessed "scripts/form_debug_demo.sh — the step log + the watchpoint, live")
+    (band      "tests/form-debug-band.fk -> 31 three-way — tracer present, one engine,
+                watch/last/depth two-sided, deterministic emission"))
+
   # ── Closing cells ─────────────────────────────────────────────────────
   (closing-cells
     (more-laws    "beyond order-2 additive: multiplicative, affine, periodic — a law
