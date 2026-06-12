@@ -1,0 +1,101 @@
+; pack-manifest.fk — the contract that makes a pack local, sealed, and counted.
+;
+; preludes: form-stdlib/core.fk form-stdlib/adler32.fk
+;
+; The fourth kernel grows inside-out from packs (symbol, reference, ontology,
+; axiom, grammar, codec, model, host-carrier — any shape). This file is the
+; keystone: the manifest entry every pack declares, and the seal + count that
+; turn "fully self-contained with the minimal number of external packs" from
+; an aspiration into a property the kernel can VERIFY about itself.
+;
+; A manifest entry is (id, shape, descriptor-hash, seal, deps):
+;   descriptor-hash — content-address of the pack's ASCII descriptor
+;                     (id | shape | dep-ids), adler32 over its bytes. Integrity:
+;                     a tampered descriptor mints a different hash (axiom-3).
+;                     ASCII by design — raw multibyte content hashing awaits the
+;                     kernel unit-alignment work (the named TS/byte gap), so the
+;                     seal is byte-identical three-way today, honest absence for
+;                     content hashing until alignment lands.
+;   seal            — adler32 over (trust-seed ++ descriptor): the body's own
+;                     current convention (cell-registry.fk: "hash-of-secret-seed
+;                     pattern; ed25519 when crypto lands"). Authenticity: only a
+;                     holder of the trust-seed reproduces the seal. NAMED HONESTLY
+;                     as a keyed integrity tag, not yet a cryptographic signature
+;                     — ed25519 verify drops in behind pack-sealed? with ZERO
+;                     manifest change, the recipe shaped for exactly that.
+;   deps            — each (target-id, locality); locality is one of:
+;                       "internal"  — another pack in this body (composes freely)
+;                       "host"      — an OS carrier door (fs/tcp/audio/camera;
+;                                     allowed by host-kernel.form, expected)
+;                       "anchor"    — an irreducible external trust root
+;                       "reference" — an outward provenance pointer (a DOI, an
+;                                     archive.org door); points out BY DESIGN,
+;                                     does NOT reduce self-containment
+;
+; The self-containment measure: external-anchor-count — distinct "anchor" deps.
+; North star is 0; the honest floor is 1 (a single root trust key), and below
+; that only the satsang shape (N mutual keys, no single prover). Reference
+; pointers and host carriers are expected and NOT counted against the kernel's
+; self-containment — only anchors are the irreducible external debt.
+;
+;   (pack-entry id shape deps trust-seed)  → a sealed manifest entry
+;   (pack-sealed? entry trust-seed)        → integrity AND authenticity hold
+;   (pack-self-contained? entry)           → every dep is internal
+;   (manifest-anchor-count manifest)       → the external-debt number
+;   (manifest-self-contained? manifest)    → anchor-count is 0
+
+section [form.bml] {
+    // ---- ascii string → byte list (ASCII only: byte == scalar, three-way) -
+    def pm-ascii-bytes-loop(s, i, n, acc) = if ge(i, n) then reverse(acc) else pm-ascii-bytes-loop(s, add(i, 1), n, cons(ord(char_at(s, i)), acc));
+    def pm-ascii-bytes(s) = pm-ascii-bytes-loop(s, 0, str_len(s), empty);
+    def pm-hash(s) = adler32(pm-ascii-bytes(s));
+
+    // ---- dep = (target-id, locality) ------------------------------------
+    def pm-dep(target, locality) = list(target, locality);
+    def pm-dep-target(d) = nth(d, 0);
+    def pm-dep-locality(d) = nth(d, 1);
+    def pm-dep-anchor?(d) = str_eq(pm-dep-locality(d), "anchor");
+    def pm-dep-internal?(d) = str_eq(pm-dep-locality(d), "internal");
+
+    // ---- the canonical ASCII descriptor: id | shape | dep-ids joined ------
+    def pm-dep-ids-loop(deps, acc) = if nil?(deps) then acc else pm-dep-ids-loop(tail(deps), str_concat(acc, str_concat(",", pm-dep-target(head(deps)))));
+    def pm-descriptor(id, shape, deps) = str_concat(id, str_concat("|", str_concat(shape, str_concat("|", pm-dep-ids-loop(deps, "")))));
+
+    // ---- a sealed entry --------------------------------------------------
+    def pm-entry-make(id, shape, descriptor-hash, seal, deps) = list(id, shape, descriptor-hash, seal, deps);
+    def pm-entry-id(e) = nth(e, 0);
+    def pm-entry-shape(e) = nth(e, 1);
+    def pm-entry-hash(e) = nth(e, 2);
+    def pm-entry-seal(e) = nth(e, 3);
+    def pm-entry-deps(e) = nth(e, 4);
+
+    // seal = hash(trust-seed ++ descriptor) — keyed, ed25519-ready
+    def pm-seal-of(descriptor, trust-seed) = pm-hash(str_concat(trust-seed, descriptor));
+    def pack-entry(id, shape, deps, trust-seed) {
+        let descriptor = pm-descriptor(id, shape, deps);
+        pm-entry-make(id, shape, pm-hash(descriptor), pm-seal-of(descriptor, trust-seed), deps);
+    }
+
+    // verify: the descriptor still hashes to the stored hash (integrity) AND
+    // the seal reproduces under the trust-seed (authenticity). Tamper the
+    // descriptor → hash breaks; tamper without the seed → seal breaks.
+    def pack-sealed?(e, trust-seed) {
+        let descriptor = pm-descriptor(pm-entry-id(e), pm-entry-shape(e), pm-entry-deps(e));
+        and(eq(pm-hash(descriptor), pm-entry-hash(e)), eq(pm-seal-of(descriptor, trust-seed), pm-entry-seal(e)));
+    }
+
+    // ---- self-containment counts ----------------------------------------
+    def pm-all-internal?(deps) = if nil?(deps) then true else if pm-dep-internal?(head(deps)) then pm-all-internal?(tail(deps)) else false;
+    def pack-self-contained?(e) = pm-all-internal?(pm-entry-deps(e));
+
+    def pm-anchor-count-deps(deps, acc) = if nil?(deps) then acc else pm-anchor-count-deps(tail(deps), if pm-dep-anchor?(head(deps)) then add(acc, 1) else acc);
+    def pm-entry-anchor-count(e) = pm-anchor-count-deps(pm-entry-deps(e), 0);
+    def manifest-anchor-count-loop(es, acc) = if nil?(es) then acc else manifest-anchor-count-loop(tail(es), add(acc, pm-entry-anchor-count(head(es))));
+    def manifest-anchor-count(m) = manifest-anchor-count-loop(m, 0);
+    def manifest-self-contained?(m) = eq(manifest-anchor-count(m), 0);
+
+    // every entry in a manifest sealed under one trust-seed
+    def manifest-all-sealed?(m, trust-seed) = if nil?(m) then true else if pack-sealed?(head(m), trust-seed) then manifest-all-sealed?(tail(m), trust-seed) else false;
+
+    0;
+}
