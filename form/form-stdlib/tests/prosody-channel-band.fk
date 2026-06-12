@@ -1,0 +1,55 @@
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk
+;
+; prosody-channel-band — sentiment + conviction as parallel meaning-dimensions
+; (docs/coherence-substrate/prosody-channel.form). Urs: "adding sentiment and
+; conviction into the TTS will increase communication accuracy and channel
+; efficiency."
+;
+; Plain text is an UNDER-DETERMINED coordinate: "I'm fine" with distress and
+; "I'm fine" with contentment are DIFFERENT meanings that flat words collapse.
+; Sentiment and conviction are extra DIMENSIONS of the meaning-coordinate,
+; carried in PARALLEL over the same carrier. They pin the meaning tighter
+; (ACCURACY — disambiguation) without adding words (EFFICIENCY — more meaning
+; per word). Conviction is the witness theorem's missing scalar: how FIRMLY the
+; speaker holds the claim — the strength of the ack. The body already READS
+; affect (affect-traits.fk, the sensing side); this is the symmetric SPEAKING
+; side — the organ speaks the richness it can hear.
+;
+; A spoken message = (words, sentiment, conviction) — a composed cell.
+;
+; Verdict 31 when the parallel channel holds:
+;   1   ACCURACY (disambiguation) — same WORDS, different sentiment, is a
+;       different meaning: flat text would collapse two distinct messages into one
+;   2   CONVICTION IS ITS OWN AXIS — same words + sentiment, different conviction
+;       (firm vs uncertain) is a different meaning: the ack-strength dimension
+;   4   THE WORDS PROJECTION IS SHARED — the two messages have the SAME words
+;       child while differing in full identity: flat text loses what prosody keeps
+;   8   EFFICIENCY (meaning per word) — ONE word-set carries FOUR distinguishable
+;       meanings (2 sentiments x 2 convictions), no extra words: the parallel
+;       channel multiplies meaning over the same carrier
+;   16  ORTHOGONALITY — sentiment and conviction vary INDEPENDENTLY: hold one and
+;       vary the other, the meaning still moves — two real axes, not one
+(do
+    (defn msg (w s c) (ms-intern (ms-cell w) (ms-intern (ms-cell s) (ms-cell c))))
+    (defn words-of (m) (ms-child m 0))
+
+    ; W=7 ("I'm fine"); sentiment distressed=1 / content=2; conviction firm=5 / uncertain=9
+    (let c0 (if (eq (ms-same (msg 7 1 5) (msg 7 2 5)) 0) 1 0))
+
+    (let c1 (if (eq (ms-same (msg 7 2 5) (msg 7 2 9)) 0) 2 0))
+
+    (let c2 (if (eq (ms-same (words-of (msg 7 1 5)) (words-of (msg 7 2 5))) 1)
+                (if (eq (ms-same (msg 7 1 5) (msg 7 2 5)) 0) 4 0) 0))
+
+    ; four distinguishable meanings from one word-set: all four pairwise distinct
+    (let c3 (if (eq (ms-same (msg 7 1 5) (msg 7 1 9)) 0)
+                (if (eq (ms-same (msg 7 1 5) (msg 7 2 5)) 0)
+                    (if (eq (ms-same (msg 7 1 9) (msg 7 2 9)) 0)
+                        (if (eq (ms-same (msg 7 2 5) (msg 7 2 9)) 0) 8 0) 0) 0) 0))
+
+    ; orthogonality: hold conviction, move sentiment -> different; hold sentiment,
+    ; move conviction -> different. Two independent axes.
+    (let c4 (if (eq (ms-same (msg 7 1 5) (msg 7 2 5)) 0)
+                (if (eq (ms-same (msg 7 2 5) (msg 7 2 9)) 0) 16 0) 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
