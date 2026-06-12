@@ -1,0 +1,59 @@
+; shared-heart.fk — EMITS a binary carrying the SHARED SHAPE of the great wisdom
+; traditions: five teachings that recur across six traditions, each witnessed in
+; every tradition's own voice. The model is NUMERIC (which expression belongs to
+; which teaching and which tradition); every word arrives as a symbol pack, so
+; the same shared heart speaks any language — and a tradition or language
+; community authors its OWN pack; nothing about any tradition is baked in code.
+;
+; Urs: "the core religions — can we boil it down to a shared binary shape and a
+; language pack for most common languages."
+;
+; The honest claim, held in the artifact itself: these are RECURRING SHAPES
+; (the comparative-reading inference, not a measured claim); each tradition is a
+; living whole, MORE than what is shared. That sentence is pack line 42 and the
+; binary renders it at the end of every output — the honesty lane rides inside.
+;
+; Teachings (1..5): the golden rule · compassion · presence-stillness ·
+;                   letting-go · unity
+; Traditions (1..6): Hinduism · Buddhism · Judaism · Christianity · Islam · Taoism
+; Model row = (pack-line, teaching, tradition); 30 rows; COMPLETE: every teaching
+; carries an expression in every tradition — that completeness IS the shared
+; shape, and the band proves it from the model data.
+;
+; Pack layout: 1..5 teaching names · 6..11 tradition names · 12..41 expressions
+; (teaching-major: teaching t, tradition d -> line 11 + (t-1)*6 + d) · 42 honesty.
+; QUOTELESS -> three-way clean. Usage: heart <pack> [teaching 1..5].
+
+(defn fsh-model-row (t d) (list (add 11 (add (mul (sub t 1) 6) d)) t d))
+(defn fsh-model-td (t d acc)
+    (if (eq t 0) acc
+        (if (eq d 0) (fsh-model-td (sub t 1) 6 acc)
+            (fsh-model-td t (sub d 1) (cons (fsh-model-row t d) acc)))))
+; rows generated, not hand-typed — the lattice structure IS the recipe;
+; built descending so the table reads (t1,d1) first and traditions render 1..6
+(defn fsh-model () (fsh-model-td 5 6 (list)))
+
+(defn fsh-row-text (r)
+    (str_concat "{"
+    (str_concat (int_to_str (nth r 0))
+    (str_concat ","
+    (str_concat (int_to_str (nth r 1))
+    (str_concat ","
+    (str_concat (int_to_str (nth r 2)) "},")))))))
+(defn fsh-rows-text (rows)
+    (if (eq (len rows) 1) (fsh-row-text (head rows))
+        (str_concat (fsh-row-text (head rows)) (fsh-rows-text (tail rows)))))
+
+(defn fsh-emit ()
+  (str_concat
+    "extern int putchar(int); extern int open(const char *, int); extern long read(int, void *, unsigned long); extern int atoi(const char *); "
+    (str_concat
+    "static const long long model[30][3] = { "
+    (str_concat (fsh-rows-text (fsh-model))
+    (str_concat
+    " }; static char pack[32768]; static long line_off[64]; "
+    (str_concat
+    "static void index_pack(long g) { long t = 0; long p = 0; line_off[0] = 0; while (p < g && t < 63) { if (pack[p] == 10) { t = t + 1; line_off[t] = p + 1; } p = p + 1; } } "
+    (str_concat
+    "static void prline(long t) { long p = line_off[t]; while (pack[p] != 0) { if (pack[p] == 10) { break; } putchar(pack[p]); p = p + 1; } } "
+    "int main(int argc, char **argv) { if (argc < 2) { return 1; } int fd = open(argv[1], 0); if (fd < 0) { return 2; } long g = read(fd, pack, 32767); if (g < 0) { return 3; } pack[g] = 0; index_pack(g); long want = 0; if (argc > 2) { want = atoi(argv[2]); } long t = 1; while (t <= 5) { if (want == 0 || want == t) { prline(t); putchar(10); long i = 0; while (i < 30) { if (model[i][1] == t) { putchar(32); putchar(32); prline(model[i][2] + 5); putchar(58); putchar(32); prline(model[i][0]); putchar(10); } i = i + 1; } putchar(10); } t = t + 1; } prline(42); putchar(10); return 0; }")))))))
