@@ -1,0 +1,85 @@
+{
+  "date": "2026-06-12",
+  "thread_branch": "codex/fix-ideas-resonance-native-param-20260612",
+  "commit_scope": "Fix the BML native ideas resonance route after post-merge deploy verification exposed a Rust Postgres parameter serialization failure.",
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "kernel-native-api-readiness",
+    "bml-front-door"
+  ],
+  "spec_ids": [
+    "kernel-native-api-readiness",
+    "native-front-door-deploy"
+  ],
+  "task_ids": [
+    "ideas-resonance-native-param-20260612"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "deploy/front-door/api.bml"
+  ],
+  "change_files": [
+    "deploy/front-door/api.bml"
+  ],
+  "evidence_refs": [
+    "deploy/front-door/api.bml",
+    "deploy/hostinger/auto-deploy.sh",
+    "https://api.coherencycoin.com/api/ideas/resonance?limit=2"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --port 19109 --routes ../../deploy/front-door/api.bml --stdlib ../form-stdlib",
+      "curl -fsS -D /tmp/form-kernel-health-19109.headers http://127.0.0.1:19109/api/health -o /tmp/form-kernel-health-19109.json",
+      "grep -q \"X-Form-Router: native-kernel\" /tmp/form-kernel-health-19109.headers",
+      "grep -q '\"kernel_runtime\":\"form-kernel-rust\"' /tmp/form-kernel-health-19109.json",
+      "git diff --check",
+      "rg -n \"GREATEST\\(\\$1::double precision|ideas-resonance-sql|pg_query_rows\\(conn, ideas-resonance-sql\" deploy/front-door/api.bml"
+    ],
+    "notes": "The patched BML front-door source compiles and serves /api/health through the Rust native kernel. The ideas resonance SQL no longer reuses $1 as double precision; the query now uses $4::double precision with a Form float argument."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "PR checks will run after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Hostinger Auto Deploy failed after PR #2954 because /api/ideas/resonance returned 503 with error serializing parameter 0. This follow-up splits the mixed int/float SQL placeholder into separate native parameters."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "GET /api/ideas/resonance?limit=2 should return 200 from X-Form-Router: native-kernel with X-Form-Handler: api_ideas_resonance instead of 503 persistence serialization failure.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/ideas/resonance?limit=2"
+    ],
+    "test_flows": [
+      "Hostinger Auto Deploy: BML front-door promoted read routes",
+      "curl -i -sS --max-time 20 https://api.coherencycoin.com/api/ideas/resonance?limit=2"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Pending local proof, PR CI, and post-merge deploy verification."
+  }
+}
