@@ -28,11 +28,13 @@
     (proof-bands   tests/form-asm-band.fk               # 31 — encoder byte-accurate, gate sound
                    tests/form-lower-band.fk             # 31 — tree compiles to assembler-identical bytes
                    tests/form-lower-cond-band.fk        # 31 — CONTROL FLOW: branches + offsets + selection
+                   tests/form-lower-rec-band.fk         # 31 — CALL: recursion, frame, high-base bl
                    tests/form-macho-band.fk)            # 31 — the emitted Mach-O object is well-formed
     (live-witness  scripts/form_asm_conviction_demo.sh  # Form instruction bytes == assembler bytes
                    scripts/form_lower_demo.sh           # Form COMPILES a tree to assembler-identical bytes
                    scripts/form_macho_demo.sh           # Form -> .o -> ld -> a RUNNABLE binary, exit 40, ZERO clang
-                   scripts/form_branch_demo.sh))        # the FULL program BRANCHES on runtime input, zero clang
+                   scripts/form_branch_demo.sh          # the FULL program BRANCHES on runtime input, zero clang
+                   scripts/form_fib_demo.sh))           # TRUE RECURSION: fib calls itself — exits 1,2,3,5,8, zero clang
 
   # ── The encoder: instruction encoding as a recipe ────────────────────
   # An instruction is fields packed into a word; the encoder emits the on-disk
@@ -88,6 +90,38 @@
                 byte-identical to clang and RUNS on runtime input n=argc: 1 -> 1 (then-branch),
                 2 -> 3, 5 -> 9 (else-branch); both branches live (form_branch_demo.sh)"))
 
+  # ── CALL — REALIZED: recursion; the expression compiler became a function compiler ──
+  # lo-rec-fn compiles the self-recursive binary-function shape — root =
+  # COND(LE(ARG, LIT k), base, ADD(CALL(e1), CALL(e2))), the fib shape — to the
+  # assembler's exact 68 bytes. The calling convention: the argument arrives in
+  # w0; the leaf check reads it there (argr=0 — no frame on the fast path); the
+  # recursive branch builds a frame (stp x19/x20 + fp/lr), banks n into callee-
+  # saved w19, parks the first call's result in w20. bl is the first HIGH-BASE
+  # instruction (0x94000000): fa-bl two's-complements a signed offset into imm26
+  # and builds the word as bytes — the field-into-byte path, realized.
+  (call-realized
+    (shape      "COND(LE(ARG,k), base, ADD(CALL(e1), CALL(e2))) — the recursive binary function")
+    (convention "arg in w0; leaf path frameless; frame + w19/w20 callee-saved in the recursive branch")
+    (bl         "branch-with-link over the high base — signed imm26, byte-built (fa-bl)")
+    (offsets    "backward bl targets computed from lowered block lengths — labels never exist")
+    (witnessed  "fib(n)=fib(n-1)+fib(n-2) runs on n=argc: exits 1,2,3,5,8 — Fibonacci in the shell,
+                 zero clang (form_fib_demo.sh); byte-identical to the assembler (form-lower-rec-band)"))
+
+  # ── A lesson the recursion taught: execution is the deeper witness ───
+  # The first reference had _main do `bl _fib; ret` — the bl clobbered the libc
+  # return address in x30, so the final ret looped on itself. Byte-conviction
+  # PASSED (the compiled image matched the reference byte-for-byte) because
+  # conviction proves match-to-reference, and the reference was equally wrong.
+  # Only RUNNING the binary surfaced it; the fix is _main tail-calling (b, not
+  # bl). The witness ladder, in order of depth: three-way bands (structural
+  # agreement) -> byte-conviction (match the assembler) -> EXECUTION (the
+  # artifact lives). Each gate is necessary; none below replaces the one above.
+  (witness-ladder
+    (bands       "three siblings agree the recipe computes the bytes")
+    (conviction  "the bytes equal the assembler's — match-to-reference")
+    (execution   "the binary runs and returns the program's value — the reference itself is alive")
+    (lesson      "a wrong reference passes conviction; only execution refutes it"))
+
   # ── The Mach-O wrapper — REALIZED: a runnable binary, zero clang ─────
   # form-macho.fk emits a valid arm64 Mach-O OBJECT (mach_header_64 + LC_SEGMENT_64
   # with __text + LC_SYMTAB + code + symbol/string tables), computing every offset
@@ -106,9 +140,8 @@
   (closing-cells
     (general-encoder "the field-into-byte encoder for high-base instructions (branches, loads,
                       stores) with carry — so any instruction encodes without a > 2^31 word")
-    (richer-lowering "general register allocation, the calling convention, stack frames, and CALL
-                      (recursion) — beyond the one-argument accumulator+w1 scheme realized for the
-                      full asm-pl-human COND program")
+    (richer-lowering "general register allocation and multi-argument calling conventions — beyond
+                      the one-argument w19/w20 scheme realized for the recursive fib shape")
     (self-link       "emit a linked Mach-O EXECUTABLE directly (dyld load commands + LC_MAIN +
                       LC_CODE_SIGNATURE), retiring ld too — leaving only the platform's signature")
     (kernel-int      "a kernel finding surfaced here: integer literals > 2^31 wrap to signed int32

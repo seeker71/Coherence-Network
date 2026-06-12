@@ -31,13 +31,13 @@
     (let ref (list 0 5 128 82  0 4 0 17  0 4 0 81  192 3 95 214))   ; the assembler image
     (let hand (fa-image (list (fa-movz 0 40) (fa-add 0 0 1) (fa-sub 0 0 1) (fa-ret))))
 
-    (let c0 (if (eq (nth (lo-node prog 0) 0) 0)
-            (if (eq (nth (lo-node prog 0) 1) 5)
-            (if (eq (nth (lo-node prog 0) 2) 128)
-            (if (eq (nth (lo-node prog 0) 3) 82) 1 0) 0) 0) 0))
-    (let c1 (if (eq (len (lo-node prog 2)) 8)             ; LIT-load + add = two instructions
-            (if (eq (nth (lo-node prog 2) 5) 4)           ; the add's byte 1 (imm<<10 -> 0x04)
-            (if (eq (nth (lo-node prog 2) 7) 17) 2 0) 0) 0))  ; the add's high byte (0x11)
+    (let c0 (if (eq (nth (lo-node prog 0 1) 0) 0)
+            (if (eq (nth (lo-node prog 0 1) 1) 5)
+            (if (eq (nth (lo-node prog 0 1) 2) 128)
+            (if (eq (nth (lo-node prog 0 1) 3) 82) 1 0) 0) 0) 0))
+    (let c1 (if (eq (len (lo-node prog 2 1)) 8)             ; LIT-load + add = two instructions
+            (if (eq (nth (lo-node prog 2 1) 5) 4)           ; the add's byte 1 (imm<<10 -> 0x04)
+            (if (eq (nth (lo-node prog 2 1) 7) 17) 2 0) 0) 0))  ; the add's high byte (0x11)
     (let c2 (if (eq (len img) 16)
             (if (eq (nth img 12) 192)
             (if (eq (nth img 15) 214) 4 0) 0) 0))         ; ends in ret (c0 03 5f d6)
