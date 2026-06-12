@@ -1,0 +1,34 @@
+; tests/research-corpus-band.fk — research reference cells, two-lane, three-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/research-corpus.fk
+;
+; Proves: a paper resolves by id with its verified door; the two resonance
+; lanes are SEPARATE (seL4 is 1.0 evidence yet 0.85 inference — certain, but
+; supporting by build-on, not proof); the foundation lane out-infers the
+; empirical-resonance lane (Merkle > McCraty on support-inference); papers
+; group by what they support (two foundations point at the kernel/addressing
+; axioms); the spoken line states both lanes without merging them; an unknown
+; id is honest absence.
+;
+; Band verdict: 127 when every law holds.
+
+section [form.bml] {
+    def rcb-bool(b, weight) = if b then weight else 0;
+
+    def rcb-score() {
+        let merkle = rc-find("merkle-1980");
+        let sel4 = rc-find("klein-sel4-2009");
+        let mccraty = rc-find("mccraty-coherence-2014");
+        let spoken = rc-spoken(sel4);
+        sum(list(
+            rcb-bool(rc-known?(merkle), 1),
+            rcb-bool(eq(str_find(rc-link(merkle), "https://", 0), 0), 2),
+            rcb-bool(and(eq(rc-evidence(sel4), 1.0), lt(rc-inference(sel4), 1.0)), 4),
+            rcb-bool(gt(rc-inference(merkle), rc-inference(mccraty)), 8),
+            rcb-bool(and(str_eq(rc-kind(merkle), "foundation"), str_eq(rc-kind(mccraty), "empirical-resonance")), 16),
+            rcb-bool(and(ge(str_find(spoken, "Evidence 100 percent", 0), 0), ge(str_find(spoken, "support-inference 85 percent", 0), 0)), 32),
+            rcb-bool(not(rc-known?(rc-find("nonexistent-paper"))), 64)));
+    }
+
+    rcb-score();
+}
