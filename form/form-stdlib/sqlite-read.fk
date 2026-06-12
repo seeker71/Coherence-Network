@@ -1,0 +1,74 @@
+; sqlite-read.fk — the SQLite file format as a Form recipe. A binary that reads
+; its own data surface from a .db file needs no libsqlite3 and no Python: the
+; b-tree leaf page, the varint, the record header, the serial types, and column
+; extraction ARE recipes. The kernel's job shrinks to fs-port open/read (the raw
+; bytes); everything after — parse, navigate, decode — is Form.
+;
+; This is the missing carrier under db-api-server: home page + JSON API served
+; from a sqlite file from WITHIN an emitted native binary. Proven three-way by
+; tests/sqlite-read-band.fk over real SQLite-format bytes (a leaf page built by
+; sqlite3 itself, compacted: cells laid right after the pointer array — the reader
+; follows pointers, so any cell placement is format-faithful).
+;
+; A page is a list of byte integers. Offsets are page-relative. Scope: a table
+; b-tree LEAF page (type 0x0d) with INTEGER and TEXT columns — what a seed table
+; uses. Interior pages, overflow pages, and indexes are the named closing cells
+; (the same varint+record recipes, applied to more page shapes).
+;
+; SQLite serial types (the value encoding):
+;   0 NULL(0b) · 1..4 int(1..4b) · 5 int(6b) · 6 int(8b) · 7 float(8b)
+;   8 int const 0 (0b) · 9 int const 1 (0b)
+;   N>=12 even → BLOB len (N-12)/2 · N>=13 odd → TEXT len (N-13)/2
+
+(do
+    (defn sl-nth (b i) (if (eq i 0) (head b) (sl-nth (tail b) (sub i 1))))
+    (defn sl-u8  (b i) (sl-nth b i))
+    (defn sl-u16 (b i) (add (mul (sl-nth b i) 256) (sl-nth b (add i 1))))
+
+    ; ── varint: 7 bits/byte, high bit continues; returns (value next-index) ──
+    (defn sl-vi-go (b i acc)
+        (if (eq (band (sl-nth b i) 128) 0)
+            (list (add (mul acc 128) (sl-nth b i)) (add i 1))
+            (sl-vi-go b (add i 1) (add (mul acc 128) (band (sl-nth b i) 127)))))
+    (defn sl-vi  (b i) (sl-vi-go b i 0))
+    (defn sl-viv (r) (nth r 0))                    ; varint value
+    (defn sl-vin (r) (nth r 1))                    ; index just past the varint
+
+    ; ── leaf page header (8 bytes) + cell pointer array ──
+    (defn sl-pagetype (b)   (sl-u8 b 0))           ; 0x0d = table-btree leaf
+    (defn sl-ncells   (b)   (sl-u16 b 3))
+    (defn sl-cellptr  (b i) (sl-u16 b (add 8 (mul i 2))))   ; page-relative cell offset
+
+    ; ── a cell at offset cp: payload-len varint, rowid varint, then the record ──
+    (defn sl-rowid     (b cp) (sl-viv (sl-vi b (sl-vin (sl-vi b cp)))))
+    (defn sl-rec-start (b cp) (sl-vin (sl-vi b (sl-vin (sl-vi b cp)))))   ; past plen+rowid
+    (defn sl-hdrlen    (b cp) (sl-viv (sl-vi b (sl-rec-start b cp))))     ; header length (incl. this varint)
+    (defn sl-stypes    (b cp) (sl-vin (sl-vi b (sl-rec-start b cp))))     ; first serial-type varint
+    (defn sl-hdr-end   (b cp) (add (sl-rec-start b cp) (sl-hdrlen b cp)))
+    (defn sl-body      (b cp) (sl-hdr-end b cp))                          ; record body start
+
+    ; ── serial type → body byte length, and TEXT length ──
+    (defn sl-serial-len (s)
+        (if (le s 4) s
+        (if (eq s 5) 6
+        (if (le s 7) 8
+        (if (le s 9) 0
+        (if (eq (mod s 2) 0) (div (sub s 12) 2) (div (sub s 13) 2)))))))
+    (defn sl-text-len (s) (div (sub s 13) 2))      ; for odd s>=13
+    (defn sl-is-text  (s) (if (ge s 13) (eq (mod s 2) 1) 0))
+
+    ; ── column n of a cell → (serial-type body-offset), walking the header ──
+    (defn sl-col-go (b si bo n)
+        (if (eq n 0) (list (sl-viv (sl-vi b si)) bo)
+            (sl-col-go b (sl-vin (sl-vi b si))
+                         (add bo (sl-serial-len (sl-viv (sl-vi b si))))
+                         (sub n 1))))
+    (defn sl-col (b cp n) (sl-col-go b (sl-stypes b cp) (sl-body b cp) n))
+    (defn sl-col-serial (b cp n) (nth (sl-col b cp n) 0))
+    (defn sl-col-off    (b cp n) (nth (sl-col b cp n) 1))
+    ; the byte value at column n's body (first byte) — text's first char / int's MSB
+    (defn sl-col-byte0  (b cp n) (sl-u8 b (sl-col-off b cp n)))
+    ; a 1-byte integer column's value (serial 1)
+    (defn sl-col-int1   (b cp n) (sl-u8 b (sl-col-off b cp n)))
+
+    0)
