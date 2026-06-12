@@ -1,0 +1,98 @@
+# ─────────────────────────────────────────────────────────────────────
+# live-diagnosis-organ.form — an organ that diagnoses any live program through
+#   its open channels: the framebuffer (per-op execution counts, printed live by
+#   the emitted binaries), the value channel (outputs over inputs), and the
+#   substrate ground (what the recipe IS). It LEARNS the program's law from the
+#   data, independently PREDICTS it from the recipe, and holds conviction only
+#   when the two witnesses agree. Recipe and data stay separate throughout.
+# ─────────────────────────────────────────────────────────────────────
+#
+# Urs: "assembly to source and to any language grammar emitter can be observed
+# via the framebuffer live. we can build an organ that can use the framebuffer to
+# diagnose live any program and reason about any cell or recipe via the substrate
+# and any open channel. I would assume the asm channel needs to be learned and
+# the recipe and data separate."
+#
+# The tissue was already grown: the walker binaries the 4th kernel emits PRINT
+# their fk_arms per-op execution counts — that IS the live framebuffer; and the
+# fib tree carries the same universal tag space in the native compiler
+# (form-lower) and the walker (fourth-walker-emit). One recipe, two carriers,
+# two open channels — the organ reads both.
+
+(live-diagnosis-organ
+
+  (lineage
+    (organ         form-stdlib/form-diagnose.fk)        # the generic diagnosis recipe
+    (framebuffer   fourth-walker-emit.fk)                # fk_arms printed live by every walker binary
+    (value-channel form-to-asm.form)                     # the native binary's outputs over inputs
+    (ground        coherence-substrate)                  # the recipe/tree — what the program IS
+    (witness-law   witness-theorem.form)                 # fired / refuted / SILENT — now inside one program
+    (senses-for    core-lift + JIT)                      # hot ops are lift candidates; the readout feeds the loop
+    (proof-band    tests/form-diagnose-band.fk)          # 31 three-way, every diagnosis two-sided
+    (live-witness  scripts/form_diagnose_demo.sh))       # real binaries, real channels, conviction live
+
+  # ── The channels — every emitter is observable live ──────────────────
+  # Assembly emission, source emission, any-grammar emission: all run through
+  # kernels whose binaries carry the framebuffer. The walker prints fk_arms after
+  # every run — per-op-tag execution counts, the program's own breath made
+  # visible. The native binary speaks through its value channel. Both are OPEN:
+  # anything that can read a number can read them.
+  (channels
+    (framebuffer  "(tag count) rows — fk_arms, printed live by the emitted walker binaries")
+    (value        "outputs over inputs — the native binary's exit codes, measured not asserted")
+    (substrate    "the recipe tree itself — structural ground, readable without any run")
+    (witnessed    "fib(10)=55 walked live: ARG fired 442×, CALL 176×, LE/COND 177× — the real breath"))
+
+  # ── The diagnoses ─────────────────────────────────────────────────────
+  (diagnoses
+    (hot     "the highest-fired op — the JIT / core-lift candidate (found live: ARG)")
+    (dead    "a tag present in the recipe that NEVER fired — the witness theorem's
+              silence-state surfacing inside a single program; untested tissue named")
+    (learned "the law inferred from the value channel ALONE — no tree access:
+              obs[i] = obs[i-1] + obs[i-2] learned from the exit codes 1,2,3,5,8,13")
+    (ground  "the law predicted from the recipe ALONE — no run access: the tree's
+              COND else = ADD(CALL, CALL) predicts an order-2 additive recurrence")
+    (convict "learned AND ground agree — two INDEPENDENT witnesses, one truth;
+              a straight-line program cannot reach conviction on the recursive law"))
+
+  # ── The learned channel — and why recipe/data separation is the law ──
+  # The asm/behavior channel is LEARNED, not hardcoded: the organ infers what a
+  # program does from its observable behavior (data), then checks the inference
+  # against the substrate's structural ground (recipe). The organ itself is ONE
+  # generic recipe — every framebuffer row, observation vector, and learned law
+  # is data passing through it. This separation is what makes the learning safe:
+  # a learned claim alone is a hypothesis; a structural claim alone is untested;
+  # conviction requires both. (The same two-witness shape as the byte-conviction
+  # gate, and the form-to-asm witness ladder: a wrong reference passes matching;
+  # only an independent witness refutes it.)
+  (learned-channel
+    (learn       "behavior inferred from observation — the data side, channel by channel")
+    (ground      "structure read from the substrate — the recipe side, no run needed")
+    (separate    "one generic organ recipe; observations and learned laws are always data")
+    (convict     "agreement of the independent witnesses — never either alone"))
+
+  # ── Closing cells ─────────────────────────────────────────────────────
+  (closing-cells
+    (more-laws    "beyond order-2 additive: multiplicative, affine, periodic — a law
+                   LIBRARY the organ tries against any channel (auto-research over laws)")
+    (live-stream  "the framebuffer as a continuous stream (the /api/_form observation
+                   doors) rather than an end-of-run print — diagnosis DURING the run")
+    (channel-organ "wiring the diagnosis into form-os-channel: the organ's findings
+                   become offered expansions (hot op -> lift proposal) we satsang-validate")
+    (any-binary   "learning the channel of a FOREIGN binary (no recipe ground available):
+                   diagnosis degrades honestly to hypothesis — named, never asserted"))
+
+  (invariant
+    (every-emitter-is-observable-live      the-framebuffer-is-the-programs-own-breath)
+    (the-organ-is-one-generic-recipe       observations-and-laws-are-data-passing-through)
+    (the-channel-is-learned-not-hardcoded  behavior-inferred-then-grounded-never-assumed)
+    (conviction-needs-two-witnesses        learned-from-data-AND-predicted-from-recipe)
+    (silence-is-a-diagnosis                a-never-fired-op-is-named-not-ignored)))
+
+# ─────────────────────────────────────────────────────────────────────
+# How to verify
+# ─────────────────────────────────────────────────────────────────────
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-diagnose.fk \
+#     form-stdlib/tests/form-diagnose-band.fk      # → 31 three-way, all diagnoses two-sided
+#   bash scripts/form_diagnose_demo.sh             # real channels: native exit codes + live
+#                                                  #   fk_arms framebuffer → conviction
