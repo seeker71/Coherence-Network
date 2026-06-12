@@ -119,3 +119,16 @@ turn-taking fks 127
 ulid fks 4
 witness-theorem fks 31
 witness-to-co-regulate fks 127
+
+# ── records lane — read-only RECORD family as ARENA TISSUE (zero new tags) ──
+# record_new lowers (form-flatten.fk special form, blueprint discarded) to a
+# cons-chain of (list key val) entries; record_get (fourth-shim.fk) walks the
+# chain by interned-key match. Records reuse the arena arms (18..23) + the
+# string-pool lane — no new walker tags claimed (66..69 stay free). The
+# record-fold band proves the integer-field, identity-free half of the
+# API_KERNEL_READINESS record gate: construction, field read at distinct keys,
+# a fold over a LIST of records, a field predicate, the empty-fold identity.
+# The float-field record bands (grounded-cost-*, list-of-record-reduction,
+# record-field-access) wait on the float lane; the mutable-aliasing +
+# blueprint bands (record, method) wait on the mutable-cell + method lanes.
+record-fold fks 31

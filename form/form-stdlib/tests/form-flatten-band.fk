@@ -8,7 +8,7 @@
 ; in scripts/fourth_kernel_audit.sh — the fourth arm, where the heap ops
 ; live). Same cells, both walkers; content-addressing carries the identity.
 ;
-; Verdict 32767 when the flattener holds:
+; Verdict 65535 when the flattener holds:
 ;   1   the lowerings carry values — gt strict at the tie (gt 4 4 -> 0,
 ;       the learning-trend boundary), ge admits it, eq lands, and gates
 ;   2   defn/let/CALL — a mini band with a function, a let, and a verdict
@@ -52,6 +52,11 @@
 ;        boundaries (base->mid->main = 32), and the REAL base64 module +
 ;        band (shim-first, unmodified from disk) walk BY VALUE to the
 ;        siblings' own verdict 12
+;   32768 records as ARENA TISSUE — record_new lowers to a cons-chain of
+;        (list key val) entries (blueprint discarded), record_get walks it
+;        by interned-key match; the REAL record-fold band (unmodified,
+;        shim-first) folds a named integer field across a list of records
+;        and walks BY VALUE to the siblings' verdict 31 — zero new tags
 (do
     (let c0 (if (and (and (eq (fkm-run (flt-src-fns "(do (gt 5 2))") 0) 1)
                           (eq (fkm-run (flt-src-fns "(do (gt 4 4))") 0) 0))
@@ -114,4 +119,14 @@
                                                        (read_file "form-stdlib/base64.fk")
                                                        (read_file "form-stdlib/tests/base64-band.fk"))) 0) 12))
                  16384 0))
-    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 (add c11 (add c12 (add c13 c14)))))))))))))))
+    ;; records as ARENA TISSUE — record_new lowers (form-flatten.fk special
+    ;; form, blueprint discarded) to a cons-chain of (list key val) entries;
+    ;; record_get (the shim recipe) walks the chain by interned-key match. No
+    ;; new walker tags: the arena arms 18..23 + the string lane carry it. The
+    ;; REAL record-fold band (read from disk, unmodified, shim-first) folds a
+    ;; named integer field across a LIST of records and walks BY VALUE to the
+    ;; siblings' own verdict 31 (field read at two keys, a list-of-record fold,
+    ;; a field predicate, the empty-fold identity).
+    (let c15 (if (eq (fkm-run (flt-srcs-fns (list shim
+                                                  (read_file "form-stdlib/tests/record-fold-band.fk"))) 0) 31) 32768 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 (add c11 (add c12 (add c13 (add c14 c15))))))))))))))))
