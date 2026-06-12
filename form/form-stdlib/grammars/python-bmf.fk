@@ -6,10 +6,10 @@
 ; and completed matches emit reversible Form objects.
 ;
 ; Per-dialect PY-BMF-* category constants are declared as data in
-; form-stdlib/form-ontology.json and emitted into
-; form-stdlib/dialect-categories.fk by scripts/generate_ontology.py. This
-; file references them as free identifiers; load dialect-categories.fk as
-; a prelude before this file.
+; form-stdlib/form-ontology.json; scripts/gen_bp_table.py bakes them into
+; the kernel-native bp table, and form-ontology-loader.fk materializes the
+; Form-side bindings. This file references them as free identifiers; load
+; form-ontology-loader.fk as a prelude before this file.
 
 (do
     ;; --- source-object helpers ---------------------------------------

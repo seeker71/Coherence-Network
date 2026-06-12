@@ -1,10 +1,10 @@
 ; grammars/rust-bmf.fk - Rust grammar as native BMF object rules
 ;
 ; Per-dialect category constants (RS-BMF-*) are declared as data in
-; form-stdlib/form-ontology.json and emitted into
-; form-stdlib/dialect-categories.fk by scripts/generate_ontology.py. This
-; file references them as free identifiers; load dialect-categories.fk as
-; a prelude before this file.
+; form-stdlib/form-ontology.json; scripts/gen_bp_table.py bakes them into
+; the kernel-native bp table, and form-ontology-loader.fk materializes the
+; Form-side bindings. This file references them as free identifiers; load
+; form-ontology-loader.fk as a prelude before this file.
 
 (do
     (defn rust-src-keyword (value) (bmf-atom "rust-keyword" value))
