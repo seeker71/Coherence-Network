@@ -1,0 +1,350 @@
+; grammars/prolog-bmf.fk - Prolog grammar as native BMF object rules
+;
+; Per-dialect category constants (PL-BMF-*) are declared as data in
+; form-stdlib/form-ontology.json; scripts/gen_bp_table.py bakes them into
+; the kernel-native bp table, and form-ontology-loader.fk materializes the
+; Form-side bindings. This file references them as free identifiers; load
+; form-ontology-loader.fk as a prelude before this file.
+;
+; Every rule is reversible: => names the emit direction (source objects →
+; interned recipe node) and <= names the source direction (recipe node →
+; source objects), so one rule set carries Prolog in both directions and
+; bmf-roundtrip can prove source → node → source on each rule.
+
+(do
+    (defn prolog-src-keyword (value) (bmf-atom "prolog-keyword" value))
+    (defn prolog-src-name (value) (bmf-atom "prolog-name" value))
+    (defn prolog-src-op (value) (bmf-atom "prolog-op" value))
+    (defn prolog-src-string (value) (bmf-atom "prolog-string" value))
+    (defn prolog-src-int (value) (bmf-atom "prolog-int" value))
+
+    (defn prolog-kw (value) (object-lit "prolog-keyword" value))
+    (defn prolog-op (value) (object-lit "prolog-op" value))
+    (defn prolog-name (capture-name) (list "capture" capture-name (object-lit "prolog-name" "")))
+    (defn prolog-string-lit (capture-name) (list "capture" capture-name (object-lit "prolog-string" "")))
+    (defn prolog-int-lit (capture-name) (list "capture" capture-name (object-lit "prolog-int" "")))
+
+    (defn plbmf-value (objects capture-name)
+        (bmf-collection-value objects capture-name))
+
+    (defn plbmf-string (objects capture-name)
+        (intern_trivial_string (plbmf-value objects capture-name)))
+
+    (defn plbmf-int (objects capture-name)
+        (intern_trivial_int (str_to_int (plbmf-value objects capture-name))))
+
+    (defn plbmf-node-kids (object)
+        (node_children (bmf-object-value object)))
+
+    ;; --- facts: ground clauses with no body --------------------------
+
+    (defn plbmf-emit-fact0 (objects)
+        (intern_node PL-BMF-FACT (list (plbmf-string objects "name"))))
+
+    (defn plbmf-source-fact0 (object)
+        (do
+            (let kids (plbmf-node-kids object))
+            (list (prolog-src-name (node_value (nth kids 0)))
+                  (prolog-src-op "."))))
+
+    (defn plbmf-emit-fact1 (objects)
+        (intern_node PL-BMF-FACT
+                     (list (plbmf-string objects "name")
+                           (plbmf-string objects "arg"))))
+
+    (defn plbmf-source-fact1 (object)
+        (do
+            (let kids (plbmf-node-kids object))
+            (list (prolog-src-name (node_value (nth kids 0)))
+                  (prolog-src-op "(")
+                  (prolog-src-name (node_value (nth kids 1)))
+                  (prolog-src-op ")")
+                  (prolog-src-op "."))))
+
+    (defn plbmf-emit-fact2 (objects)
+        (intern_node PL-BMF-FACT
+                     (list (plbmf-string objects "name")
+                           (plbmf-string objects "a")
+                           (plbmf-string objects "b"))))
+
+    (defn plbmf-source-fact2 (object)
+        (do
+            (let kids (plbmf-node-kids object))
+            (list (prolog-src-name (node_value (nth kids 0)))
+                  (prolog-src-op "(")
+                  (prolog-src-name (node_value (nth kids 1)))
+                  (prolog-src-op ",")
+                  (prolog-src-name (node_value (nth kids 2)))
+                  (prolog-src-op ")")
+                  (prolog-src-op "."))))
+
+    ;; --- rules: head :- body --------------------------------------------
+
+    (defn plbmf-emit-rule1 (objects)
+        (intern_node PL-BMF-RULE
+                     (list (plbmf-string objects "head")
+                           (plbmf-string objects "hx")
+                           (plbmf-string objects "goal")
+                           (plbmf-string objects "gx"))))
+
+    (defn plbmf-source-rule1 (object)
+        (do
+            (let kids (plbmf-node-kids object))
+            (list (prolog-src-name (node_value (nth kids 0)))
+                  (prolog-src-op "(")
+                  (prolog-src-name (node_value (nth kids 1)))
+                  (prolog-src-op ")")
+                  (prolog-src-op ":-")
+                  (prolog-src-name (node_value (nth kids 2)))
+                  (prolog-src-op "(")
+                  (prolog-src-name (node_value (nth kids 3)))
+                  (prolog-src-op ")")
+                  (prolog-src-op "."))))
+
+    (defn plbmf-emit-rule2 (objects)
+        (intern_node PL-BMF-RULE
+                     (list (plbmf-string objects "head")
+                           (plbmf-string objects "hx")
+                           (plbmf-string objects "hz")
+                           (plbmf-string objects "g1")
+                           (plbmf-string objects "a1")
+                           (plbmf-string objects "a2")
+                           (plbmf-string objects "g2")
+                           (plbmf-string objects "b1")
+                           (plbmf-string objects "b2"))))
+
+    (defn plbmf-source-rule2 (object)
+        (do
+            (let kids (plbmf-node-kids object))
+            (list (prolog-src-name (node_value (nth kids 0)))
+                  (prolog-src-op "(")
+                  (prolog-src-name (node_value (nth kids 1)))
+                  (prolog-src-op ",")
+                  (prolog-src-name (node_value (nth kids 2)))
+                  (prolog-src-op ")")
+                  (prolog-src-op ":-")
+                  (prolog-src-name (node_value (nth kids 3)))
+                  (prolog-src-op "(")
+                  (prolog-src-name (node_value (nth kids 4)))
+                  (prolog-src-op ",")
+                  (prolog-src-name (node_value (nth kids 5)))
+                  (prolog-src-op ")")
+                  (prolog-src-op ",")
+                  (prolog-src-name (node_value (nth kids 6)))
+                  (prolog-src-op "(")
+                  (prolog-src-name (node_value (nth kids 7)))
+                  (prolog-src-op ",")
+                  (prolog-src-name (node_value (nth kids 8)))
+                  (prolog-src-op ")")
+                  (prolog-src-op "."))))
+
+    (defn plbmf-emit-rule-cut (objects)
+        (intern_node PL-BMF-CUT
+                     (list (plbmf-string objects "head")
+                           (plbmf-string objects "goal"))))
+
+    (defn plbmf-source-rule-cut (object)
+        (do
+            (let kids (plbmf-node-kids object))
+            (list (prolog-src-name (node_value (nth kids 0)))
+                  (prolog-src-op ":-")
+                  (prolog-src-name (node_value (nth kids 1)))
+                  (prolog-src-op ",")
+                  (prolog-src-op "!")
+                  (prolog-src-op "."))))
+
+    ;; --- directives and queries ---------------------------------------
+
+    (defn plbmf-emit-directive (objects)
+        (intern_node PL-BMF-DIRECTIVE (list (plbmf-string objects "goal"))))
+
+    (defn plbmf-source-directive (object)
+        (do
+            (let kids (plbmf-node-kids object))
+            (list (prolog-src-op ":-")
+                  (prolog-src-name (node_value (nth kids 0)))
+                  (prolog-src-op "."))))
+
+    (defn plbmf-emit-directive-call1 (objects)
+        (intern_node PL-BMF-DIRECTIVE
+                     (list (plbmf-string objects "goal")
+                           (plbmf-string objects "arg"))))
+
+    (defn plbmf-source-directive-call1 (object)
+        (do
+            (let kids (plbmf-node-kids object))
+            (list (prolog-src-op ":-")
+                  (prolog-src-name (node_value (nth kids 0)))
+                  (prolog-src-op "(")
+                  (prolog-src-name (node_value (nth kids 1)))
+                  (prolog-src-op ")")
+                  (prolog-src-op "."))))
+
+    (defn plbmf-emit-query2 (objects)
+        (intern_node PL-BMF-QUERY
+                     (list (plbmf-string objects "goal")
+                           (plbmf-string objects "a")
+                           (plbmf-string objects "b"))))
+
+    (defn plbmf-source-query2 (object)
+        (do
+            (let kids (plbmf-node-kids object))
+            (list (prolog-src-op "?-")
+                  (prolog-src-name (node_value (nth kids 0)))
+                  (prolog-src-op "(")
+                  (prolog-src-name (node_value (nth kids 1)))
+                  (prolog-src-op ",")
+                  (prolog-src-name (node_value (nth kids 2)))
+                  (prolog-src-op ")")
+                  (prolog-src-op "."))))
+
+    ;; --- arithmetic, lists, unification, DCG ---------------------------
+
+    (defn plbmf-emit-is-add (objects)
+        (intern_node PL-BMF-IS
+                     (list (plbmf-string objects "target")
+                           (plbmf-string objects "a")
+                           (plbmf-string objects "b"))))
+
+    (defn plbmf-source-is-add (object)
+        (do
+            (let kids (plbmf-node-kids object))
+            (list (prolog-src-name (node_value (nth kids 0)))
+                  (prolog-src-keyword "is")
+                  (prolog-src-name (node_value (nth kids 1)))
+                  (prolog-src-op "+")
+                  (prolog-src-name (node_value (nth kids 2))))))
+
+    (defn plbmf-emit-is-add-int (objects)
+        (intern_node PL-BMF-IS
+                     (list (plbmf-string objects "target")
+                           (plbmf-string objects "a")
+                           (plbmf-int objects "value"))))
+
+    (defn plbmf-source-is-add-int (object)
+        (do
+            (let kids (plbmf-node-kids object))
+            (list (prolog-src-name (node_value (nth kids 0)))
+                  (prolog-src-keyword "is")
+                  (prolog-src-name (node_value (nth kids 1)))
+                  (prolog-src-op "+")
+                  (prolog-src-int (int_to_str (node_value (nth kids 2)))))))
+
+    (defn plbmf-emit-cons (objects)
+        (intern_node PL-BMF-LIST
+                     (list (plbmf-string objects "head")
+                           (plbmf-string objects "tail"))))
+
+    (defn plbmf-source-cons (object)
+        (do
+            (let kids (plbmf-node-kids object))
+            (list (prolog-src-op "[")
+                  (prolog-src-name (node_value (nth kids 0)))
+                  (prolog-src-op "|")
+                  (prolog-src-name (node_value (nth kids 1)))
+                  (prolog-src-op "]"))))
+
+    (defn plbmf-emit-nil-list (_objects)
+        (intern_node PL-BMF-LIST (list)))
+
+    (defn plbmf-source-nil-list (_object)
+        (list (prolog-src-op "[") (prolog-src-op "]")))
+
+    (defn plbmf-emit-unify (objects)
+        (intern_node PL-BMF-UNIFY
+                     (list (plbmf-string objects "x")
+                           (plbmf-string objects "y"))))
+
+    (defn plbmf-source-unify (object)
+        (do
+            (let kids (plbmf-node-kids object))
+            (list (prolog-src-name (node_value (nth kids 0)))
+                  (prolog-src-op "=")
+                  (prolog-src-name (node_value (nth kids 1))))))
+
+    (defn plbmf-emit-dcg2 (objects)
+        (intern_node PL-BMF-DCG
+                     (list (plbmf-string objects "head")
+                           (plbmf-string objects "b1")
+                           (plbmf-string objects "b2"))))
+
+    (defn plbmf-source-dcg2 (object)
+        (do
+            (let kids (plbmf-node-kids object))
+            (list (prolog-src-name (node_value (nth kids 0)))
+                  (prolog-src-op "-->")
+                  (prolog-src-name (node_value (nth kids 1)))
+                  (prolog-src-op ",")
+                  (prolog-src-name (node_value (nth kids 2)))
+                  (prolog-src-op "."))))
+
+    (let prolog-bmf-native-section
+        (list
+            (bmf-native "plbmf-emit-fact0" plbmf-emit-fact0 PL-BMF-FACT)
+            (bmf-native "plbmf-emit-fact1" plbmf-emit-fact1 PL-BMF-FACT)
+            (bmf-native "plbmf-emit-fact2" plbmf-emit-fact2 PL-BMF-FACT)
+            (bmf-native "plbmf-emit-rule1" plbmf-emit-rule1 PL-BMF-RULE)
+            (bmf-native "plbmf-emit-rule2" plbmf-emit-rule2 PL-BMF-RULE)
+            (bmf-native "plbmf-emit-rule-cut" plbmf-emit-rule-cut PL-BMF-CUT)
+            (bmf-native "plbmf-emit-directive" plbmf-emit-directive PL-BMF-DIRECTIVE)
+            (bmf-native "plbmf-emit-directive-call1" plbmf-emit-directive-call1 PL-BMF-DIRECTIVE)
+            (bmf-native "plbmf-emit-query2" plbmf-emit-query2 PL-BMF-QUERY)
+            (bmf-native "plbmf-emit-is-add" plbmf-emit-is-add PL-BMF-IS)
+            (bmf-native "plbmf-emit-is-add-int" plbmf-emit-is-add-int PL-BMF-IS)
+            (bmf-native "plbmf-emit-cons" plbmf-emit-cons PL-BMF-LIST)
+            (bmf-native "plbmf-emit-nil-list" plbmf-emit-nil-list PL-BMF-LIST)
+            (bmf-native "plbmf-emit-unify" plbmf-emit-unify PL-BMF-UNIFY)
+            (bmf-native "plbmf-emit-dcg2" plbmf-emit-dcg2 PL-BMF-DCG)))
+
+    section [prolog.bmf] {
+      fact0 ::= $name:name "." => plbmf-emit-fact0 <= plbmf-source-fact0;
+      fact1 ::= $name:name "(" $arg:name ")" "." => plbmf-emit-fact1 <= plbmf-source-fact1;
+      fact2 ::= $name:name "(" $a:name "," $b:name ")" "." => plbmf-emit-fact2 <= plbmf-source-fact2;
+      rule1 ::= $head:name "(" $hx:name ")" ":-" $goal:name "(" $gx:name ")" "." => plbmf-emit-rule1 <= plbmf-source-rule1;
+      rule2 ::= $head:name "(" $hx:name "," $hz:name ")" ":-" $g1:name "(" $a1:name "," $a2:name ")" "," $g2:name "(" $b1:name "," $b2:name ")" "." => plbmf-emit-rule2 <= plbmf-source-rule2;
+      rule-cut ::= $head:name ":-" $goal:name "," "!" "." => plbmf-emit-rule-cut <= plbmf-source-rule-cut;
+      directive ::= ":-" $goal:name "." => plbmf-emit-directive <= plbmf-source-directive;
+      directive-call1 ::= ":-" $goal:name "(" $arg:name ")" "." => plbmf-emit-directive-call1 <= plbmf-source-directive-call1;
+      query2 ::= "?-" $goal:name "(" $a:name "," $b:name ")" "." => plbmf-emit-query2 <= plbmf-source-query2;
+      is-add ::= $target:name "is" $a:name "+" $b:name => plbmf-emit-is-add <= plbmf-source-is-add;
+      is-add-int ::= $target:name "is" $a:name "+" $value:int => plbmf-emit-is-add-int <= plbmf-source-is-add-int;
+      cons ::= "[" $head:name "|" $tail:name "]" => plbmf-emit-cons <= plbmf-source-cons;
+      nil-list ::= "[" "]" => plbmf-emit-nil-list <= plbmf-source-nil-list;
+      unify ::= $x:name "=" $y:name => plbmf-emit-unify <= plbmf-source-unify;
+      dcg2 ::= $head:name "-->" $b1:name "," $b2:name "." => plbmf-emit-dcg2 <= plbmf-source-dcg2;
+    }
+
+    (defn prolog-bmf-rule-name (r) (head r))
+
+    (defn prolog-bmf-find-rule (rule-name rules)
+        (if (nil? rules) (empty)
+            (if (str_eq (prolog-bmf-rule-name (head rules)) rule-name)
+                (head rules)
+                (prolog-bmf-find-rule rule-name (tail rules)))))
+
+    (defn apply-prolog-bmf-rule (rule-name object-stream)
+        (apply-object-rule (prolog-bmf-find-rule rule-name prolog-bmf-rules) object-stream))
+
+    (let prolog-recipe-section
+        (form-rule-recipe-section "prolog"
+            (list
+                (compiler-rule "prolog" "fact" "Prolog fact source objects" plbmf-emit-fact2)
+                (compiler-rule "prolog" "rule" "Prolog clause source objects" plbmf-emit-rule2)
+                (compiler-rule "prolog" "directive" "Prolog directive source objects" plbmf-emit-directive)
+                (compiler-rule "prolog" "query" "Prolog query source objects" plbmf-emit-query2)
+                (compiler-rule "prolog" "is" "Prolog arithmetic evaluation source objects" plbmf-emit-is-add)
+                (compiler-rule "prolog" "list" "Prolog list cell source objects" plbmf-emit-cons)
+                (compiler-rule "prolog" "cut" "Prolog committing clause source objects" plbmf-emit-rule-cut)
+                (compiler-rule "prolog" "unify" "Prolog unification source objects" plbmf-emit-unify)
+                (compiler-rule "prolog" "dcg" "Prolog DCG rule source objects" plbmf-emit-dcg2))))
+
+    (let prolog-form-source
+        (form-source "prolog" (list prolog-bmf-second prolog-recipe-section)))
+
+    (let prolog-bmf-dialect
+        (bmf-dialect "prolog"
+                     (form-section-object prolog-bmf-second)
+                     prolog-bmf-native-section
+                     prolog-bmf-rules))
+
+    0)
