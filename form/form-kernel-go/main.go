@@ -2187,6 +2187,18 @@ func (k *Kernel) registerNatives() {
 		f, _ := strconv.ParseFloat(args[0].Str, 64)
 		return Value{Kind: VFloat, Float: f}
 	})
+	// float_to_int — truncate a float toward zero, exactly Python's int() on a
+	// float. Total: a non-number -> 0. Sibling parity with the Rust kernel's
+	// float_to_int (Go int64(f) truncates toward zero for both signs).
+	k.registerNative("float_to_int", catMethod(), func(_ *Kernel, args []Value) Value {
+		switch args[0].Kind {
+		case VFloat:
+			return Value{Kind: VInt, Int: int64(args[0].Float)}
+		case VInt:
+			return Value{Kind: VInt, Int: args[0].Int}
+		}
+		return Value{Kind: VInt, Int: 0}
+	})
 	k.registerNative("ord", catAccess(), func(_ *Kernel, args []Value) Value {
 		if len(args[0].Str) == 0 {
 			return Value{Kind: VInt, Int: -1}
