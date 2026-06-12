@@ -1,0 +1,84 @@
+; reference-packs.fk — per-concept reference packs: each concept its own pack.
+;
+; preludes: form-stdlib/core.fk
+;
+; The symbol-pack shape (one pack per language) generalized to references:
+; one pack per CONCEPT. A pack bundles the references that ground one idea —
+; you load the pack you need, not the whole library. Packs are independent;
+; a new concept is a new pack, never a change to the others.
+;
+; Two kinds of reference live side by side, told apart by their door:
+;   external — a peer-reviewed paper; door is an https DOI/URL; carries the
+;              two resonance lanes (evidence the paper exists/says what it
+;              says; support-inference how its shape backs our concept — see
+;              research-corpus.fk for the discipline). Citation facts only;
+;              the text stays at the publisher's door.
+;   internal — the body's OWN spec; door is a repo path; self-attested, so
+;              evidence and inference are both 1.0 — it does not RESEMBLE the
+;              concept, it IS its specification.
+;
+; Every external DOI/URL VERIFIED before binding. HONEST PARTIAL: a concept
+; without a grounded reference has no pack rather than a fabricated one.
+;
+;   (refpack-of concept)     → the concept's pack, or honest absence
+;   (refpack-refs pack)      → the references in a pack
+;   (refpack-concepts)       → every concept that has a pack
+;   (ref-external? r)        → is the door an external https link
+;   (ref-spoken r)           → citation/spec + door, lanes stated
+
+section [form.bml] {
+    // ref = (id, citation, door, supports, kind, evidence, inference)
+    def ref(id, citation, door, supports, kind, evidence, inference) = list(id, citation, door, supports, kind, evidence, inference);
+    def ref-id(r) = nth(r, 0);
+    def ref-citation(r) = nth(r, 1);
+    def ref-door(r) = nth(r, 2);
+    def ref-supports(r) = nth(r, 3);
+    def ref-kind(r) = nth(r, 4);
+    def ref-evidence(r) = nth(r, 5);
+    def ref-inference(r) = nth(r, 6);
+
+    // an external door begins with https; an internal door is a repo path
+    def ref-external?(r) = eq(str_find(ref-door(r), "https://", 0), 0);
+
+    // pack = (concept, refs)
+    def refpack(concept, refs) = list(concept, refs);
+    def refpack-concept(p) = nth(p, 0);
+    def refpack-refs(p) = nth(p, 1);
+
+    // ---- the packs: each concept, its own ------------------------------
+    def rp-gnn() = refpack("gnn", list(ref("scarselli-gnn-2009", "Scarselli, F. et al. (2009). The Graph Neural Network Model. IEEE Transactions on Neural Networks, 20(1), 61-80.", "https://doi.org/10.1109/TNN.2008.2005605", "field-model-message-passing", "structural-resonance", 1.0, 0.75)));
+    def rp-cnn() = refpack("cnn", list(ref("lecun-cnn-1998", "LeCun, Y., Bottou, L., Bengio, Y., Haffner, P. (1998). Gradient-Based Learning Applied to Document Recognition. Proceedings of the IEEE, 86(11), 2278-2324.", "https://doi.org/10.1109/5.726791", "tensor-jit-convolution", "structural-resonance", 1.0, 0.75)));
+    def rp-fft() = refpack("fft", list(ref("cooley-tukey-fft-1965", "Cooley, J. W., Tukey, J. W. (1965). An Algorithm for the Machine Calculation of Complex Fourier Series. Mathematics of Computation, 19(90), 297-301.", "https://doi.org/10.1090/S0025-5718-1965-0178586-1", "audio-bmf-spectral", "foundation", 1.0, 0.8)));
+    def rp-gaussian() = refpack("gaussian", list(ref("rasmussen-williams-gp-2006", "Rasmussen, C. E., Williams, C. K. I. (2006). Gaussian Processes for Machine Learning. MIT Press. (free web edition)", "https://gaussianprocess.org/gpml/", "numeric-probabilistic-recipes", "structural-resonance", 1.0, 0.7)));
+    def rp-api() = refpack("api-description", list(ref("api-routers-index", "Coherence Network API surface — every router endpoint with its one-line purpose.", "api/app/routers/INDEX.md", "api-surface", "internal-spec", 1.0, 1.0)));
+    def rp-form-language() = refpack("form-language", list(ref("form-language-md", "The Form notation — Lisp-shaped substrate-query language, surface grammar.", "docs/coherence-substrate/form-language.md", "form-notation", "internal-spec", 1.0, 1.0), ref("form-language-surface", "Form language surface — the spec as a Form recipe.", "docs/coherence-substrate/form-language-surface.form", "form-notation", "internal-spec", 1.0, 1.0)));
+    def rp-bmf() = refpack("bmf", list(ref("bmf-architecture", "BMF architecture — Backtracking Model Form, the compiler-compiler substrate.", "docs/coherence-substrate/bmf-architecture.form", "bmf-runtime", "internal-spec", 1.0, 1.0), ref("bmf-form-runtime", "BMF Form runtime — how BMF lowers and runs on the kernels.", "docs/coherence-substrate/bmf-form-runtime.form", "bmf-runtime", "internal-spec", 1.0, 1.0)));
+    def rp-bml() = refpack("bml", list(ref("bml-grammar", "The BML maintenance dialect grammar — section [form.bml] surface.", "form/form-stdlib/grammars/bml.fk", "bml-dialect", "internal-spec", 1.0, 1.0), ref("bml-core", "core.fk — the BML core authored in the dialect it defines.", "form-stdlib/core.fk", "bml-dialect", "internal-spec", 1.0, 1.0)));
+
+    def refpack-all() {
+        list(rp-gnn(), rp-cnn(), rp-fft(), rp-gaussian(), rp-api(), rp-form-language(), rp-bmf(), rp-bml());
+    }
+
+    def refpack-of-loop(ps, concept) = if nil?(ps) then empty else if str_eq(refpack-concept(head(ps)), concept) then head(ps) else refpack-of-loop(tail(ps), concept);
+    def refpack-of(concept) = refpack-of-loop(refpack-all(), concept);
+    def refpack-known?(p) = not(nil?(p));
+
+    def refpack-concepts-loop(ps, acc) = if nil?(ps) then reverse(acc) else refpack-concepts-loop(tail(ps), cons(refpack-concept(head(ps)), acc));
+    def refpack-concepts() = refpack-concepts-loop(refpack-all(), empty);
+
+    // the citation/spec + door, lanes stated (never merged); shared with the
+    // research-corpus discipline — internal specs read 100/100 honestly.
+    def ref-pct(x) = int_to_str(float_to_int(times(x, 100.0)));
+    def ref-lanes(r) {
+        let ev = str_concat(" Evidence ", str_concat(ref-pct(ref-evidence(r)), " percent"));
+        let inf = str_concat("; support-inference ", str_concat(ref-pct(ref-inference(r)), " percent."));
+        str_concat(ev, inf);
+    }
+    def ref-spoken(r) {
+        let head = str_concat(ref-citation(r), str_concat(" — supports ", str_concat(ref-supports(r), str_concat(" as ", ref-kind(r)))));
+        let door = str_concat(" Door: ", str_concat(ref-door(r), "."));
+        str_concat(head, str_concat(".", str_concat(ref-lanes(r), door)));
+    }
+
+    0;
+}
