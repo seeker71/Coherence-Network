@@ -11,7 +11,12 @@
 
 package main
 
-import "testing"
+import (
+	"os"
+	"strings"
+	"testing"
+	"time"
+)
 
 func TestJITValueABIPreFilterSkipsNameSlots(t *testing.T) {
 	k := NewKernel()
@@ -117,5 +122,151 @@ func TestIntJITModRecipeBuildsTypedABI(t *testing.T) {
 	}
 	if jc.F64 != nil {
 		t.Fatal("f64 leg must refuse float mod rather than emit invalid Go")
+	}
+}
+
+func TestJITNestedDefnLift(t *testing.T) {
+	// A capture-free nested defn lifts as a plan-level sibling helper; a
+	// nested defn reading an outer local keeps the documented
+	// closures-over-outer refusal. Both bodies still walk to the same answer.
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	src := `
+(defn outer (n) (do (defn inner (x) (mul x x)) (add (inner n) 1)))
+(defn capouter (n) (do (defn capinner (x) (add x n)) (capinner 3)))
+(do
+  (let compiled (jit_compile "outer"))
+  (let refused (jit_compile "capouter"))
+  (list compiled refused (outer 5) (capouter 5)))
+`
+	k := NewKernel()
+	root := readRootFromSource(k, src)
+	env := NewFrame(nil)
+	result := k.walk(root, env)
+	if result.Kind != VList || len(result.List) != 4 {
+		t.Fatalf("want 4-list, got %v", result)
+	}
+	compiled, refused, lifted, walked := result.List[0], result.List[1], result.List[2], result.List[3]
+	if compiled.Kind != VInt || compiled.Int != 1 {
+		t.Fatalf("jit_compile outer: capture-free nested defn must compile, got %v", compiled)
+	}
+	if refused.Kind != VInt || refused.Int != 0 {
+		t.Fatalf("jit_compile capouter: capturing nested defn must refuse, got %v", refused)
+	}
+	if lifted.Kind != VInt || lifted.Int != 26 {
+		t.Fatalf("outer 5 through the lifted helper: want 26, got %v", lifted)
+	}
+	if walked.Kind != VInt || walked.Int != 8 {
+		t.Fatalf("capouter 5 on the walker: want 8, got %v", walked)
+	}
+	v, ok := env.Lookup(k.internName("outer"))
+	if !ok || v.Kind != VClosure {
+		t.Fatal("outer closure missing from top-level env")
+	}
+	jc := k.jitCompiledGo[nodeIDKey(v.Cl.Body)]
+	if jc == nil || jc.I64 == nil {
+		t.Fatal("typed i64 ABI missing for the nested-defn body")
+	}
+	cv, ok := env.Lookup(k.internName("capouter"))
+	if !ok || cv.Kind != VClosure {
+		t.Fatal("capouter closure missing from top-level env")
+	}
+	if reason := k.jitFailedReason[cv.Cl.Body]; !strings.Contains(reason, "captures outer local") {
+		t.Fatalf("capturing nested defn must refuse with the closures-over-outer message, got %q", reason)
+	}
+}
+
+func TestJITDiskCacheSkipsRebuild(t *testing.T) {
+	// Same program, fresh kernel: the second compile must take the
+	// plugin.Open path off the durable artifact without invoking go build.
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	src := `
+(defn triple (n) (mul n 3))
+(do (let compiled (jit_compile "triple")) (list compiled (triple 7)))
+`
+	run := func(k *Kernel) *Frame {
+		root := readRootFromSource(k, src)
+		env := NewFrame(nil)
+		result := k.walk(root, env)
+		if result.Kind != VList || len(result.List) != 2 {
+			t.Fatalf("want 2-list, got %v", result)
+		}
+		if result.List[0].Int != 1 || result.List[1].Int != 21 {
+			t.Fatalf("want compiled=1 triple(7)=21, got %v / %v", result.List[0], result.List[1])
+		}
+		return env
+	}
+	k1 := NewKernel()
+	env1 := run(k1)
+	v, ok := env1.Lookup(k1.internName("triple"))
+	if !ok || v.Kind != VClosure {
+		t.Fatal("triple closure missing from top-level env")
+	}
+	em, err := jitEmitClosureGo(k1, v.Cl)
+	if err != nil {
+		t.Fatalf("emit: %v", err)
+	}
+	so := jitPluginCachePath(em.cacheKey)
+	if so == "" {
+		t.Fatal("durable cache path unavailable")
+	}
+	if _, err := os.Stat(so); err != nil {
+		t.Fatalf("artifact missing from disk cache after compile: %v", err)
+	}
+	before := jitGoBuildCount.Load()
+	run(NewKernel())
+	if after := jitGoBuildCount.Load(); after != before {
+		t.Fatalf("warm cache key must not invoke go build: count %d -> %d", before, after)
+	}
+}
+
+func TestJITAsyncHotThresholdBuild(t *testing.T) {
+	// The hot crossing answers interpreted immediately; the build runs on a
+	// goroutine, lands in the async zone, and a later call adopts + dispatches
+	// the native artifact.
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	src := `
+(defn hotsum (i acc) (if (le i 0) acc (hotsum (sub i 1) (add acc i))))
+(hotsum 2500 0)
+`
+	k := NewKernel()
+	root := readRootFromSource(k, src)
+	env := NewFrame(nil)
+	result := k.walk(root, env)
+	if result.Kind != VInt || result.Int != 3126250 {
+		t.Fatalf("crossing call must answer interpreted: want 3126250, got %v", result)
+	}
+	v, ok := env.Lookup(k.internName("hotsum"))
+	if !ok || v.Kind != VClosure {
+		t.Fatal("hotsum closure missing from top-level env")
+	}
+	bodyKey := nodeIDKey(v.Cl.Body)
+	deadline := time.Now().Add(180 * time.Second)
+	for k.jitCompiledGo[bodyKey] == nil {
+		k.jitAsyncMu.Lock()
+		_, landed := k.jitAsyncLanded[bodyKey]
+		k.jitAsyncMu.Unlock()
+		if landed {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("async build never landed")
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
+	callRoot := readRootFromSource(k, "(hotsum 3 0)")
+	first := k.walk(callRoot, env)  // adopts the landed artifact
+	second := k.walk(callRoot, env) // dispatches the native
+	if first.Int != 6 || second.Int != 6 {
+		t.Fatalf("hotsum 3: want 6 before and after the swap, got %v / %v", first, second)
+	}
+	if k.jitFailed[v.Cl.Body] {
+		t.Fatalf("async build marked failed: %s", k.jitFailedReason[v.Cl.Body])
+	}
+	jc := k.jitCompiledGo[bodyKey]
+	if jc == nil || jc.I64 == nil {
+		t.Fatal("typed i64 artifact not adopted after the async build landed")
+	}
+	if k.jitDispatchHits[v.Cl.Body] == 0 {
+		t.Fatal("no native dispatch after adoption")
 	}
 }

@@ -1,0 +1,42 @@
+; preludes: form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/bmf-mini.fk form-stdlib/jit-lower.fk
+;
+; jit-lower-bmf-band — the JIT recipe composing over the BMF compiler's
+; output: in the real pipeline the lowerer sits AFTER bmf-compile (grammar +
+; source -> program-as-cells -> lowered program), and this band proves that
+; seam three-way. The full compiler-as-lowered-recipe remains the named open
+; lane (JIT_GAP_LEDGER row 9): the compiler's own body builds cells through
+; the intern doors, which the walker op families do not carry yet.
+;
+; Verdict 15 when the seam holds:
+;   1   parity — a compiled program (g1 over [1,1,2]) lowers and walks to the
+;       same answers as its source tree at args 5 and 0
+;   2   logic composes over compiled tissue — a range guard WRAPPING the
+;       compiled program lowers to LOGIC-AND at the root and answers 1 at
+;       arg 5 (inside), 0 at arg 50 (outside)
+;   4   determinism by content-address — lowering the same wrapped program
+;       twice IS the same cell (axiom 3)
+;   8   partial evaluation — substituting the argument with LIT 5 and
+;       lowering folds the whole compiled program down to a literal cell
+;       carrying its answer 22
+(do
+    (let g1 (list (bmf-rule 1 3 10) (bmf-rule 2 4 3)))
+    (let src (list 1 1 2))
+    (let p (bmf-compile g1 src))
+    (let lp (jit-lower-tree p))
+    (let c0 (if (eq (fk-run lp 5) (fk-run p 5))
+                (if (eq (fk-run lp 0) (fk-run p 0)) 1 0) 0))
+
+    (let guard (fk-if (fk-le p (fk-lit 25))
+                      (fk-if (fk-le (fk-lit 0) p) (fk-lit 1) (fk-lit 0))
+                      (fk-lit 0)))
+    (let lg (jit-lower-tree guard))
+    (let c1 (if (eq (fk-tag lg) 44)
+                (if (eq (fk-run lg 5) 1)
+                    (if (eq (fk-run lg 50) 0) 2 0) 0) 0))
+
+    (let c2 (if (eq (ms-same lg (jit-lower-tree guard)) 1) 4 0))
+
+    (let pc (jit-lower-tree (jit-subst-arg p (fk-lit 5))))
+    (let c3 (if (eq (jit-lit-node? pc) 1) (if (eq (fk-run pc 0) 22) 8 0) 0))
+
+    (add c0 (add c1 (add c2 c3))))
