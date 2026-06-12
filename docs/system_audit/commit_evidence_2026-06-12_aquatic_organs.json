@@ -10,7 +10,15 @@
     "~/4th-binaries/4th-aquatic-tester",
     "scripts/fourth_kernel_audit.sh",
     "docs/coherence-substrate/fourth-kernel.form",
-    "docs/system_audit/commit_evidence_2026-06-12_aquatic_organs.json"
+    "docs/system_audit/commit_evidence_2026-06-12_aquatic_organs.json",
+    "form/form-stdlib/jit-lower.fk",
+    "form/form-stdlib/fourth-walker.fk",
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/tests/jit-lower-band.fk",
+    "form/form-stdlib/tests/full-jit-lower-band.fk",
+    "form/form-kernel-go/jit.go",
+    "form/scripts/fourth_kernel_audit.sh",
+    "kernels/JIT_GAP_LEDGER.md"
   ],
   "local_validation": {
     "status": "pass",
@@ -71,7 +79,15 @@
     "scripts/fourth_kernel_audit.sh",
     "docs/coherence-substrate/fourth-kernel.form",
     "docs/system_audit/commit_evidence_2026-06-12_aquatic_organs.json",
-    "/tmp/aquatic-*-driver.fk"
+    "/tmp/aquatic-*-driver.fk",
+    "form/form-stdlib/jit-lower.fk",
+    "form/form-stdlib/fourth-walker.fk",
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/tests/jit-lower-band.fk",
+    "form/form-stdlib/tests/full-jit-lower-band.fk",
+    "form/form-kernel-go/jit.go",
+    "form/scripts/fourth_kernel_audit.sh",
+    "kernels/JIT_GAP_LEDGER.md"
   ],
   "change_intent": "runtime_feature",
   "e2e_validation": {
