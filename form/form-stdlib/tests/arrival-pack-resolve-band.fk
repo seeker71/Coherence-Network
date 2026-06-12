@@ -1,0 +1,88 @@
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk
+;
+; arrival-pack-resolve-band — the self-referential arrival symbol pack RESOLVES:
+; following every «N» reconstitutes the full term from the pack's OWN closed
+; content, never reaching an external door. This is the round-trip that earns the
+; claim "all links return to its own content" — the pack is not just compressed
+; (arrival-symbol-pack-band) but losslessly EXPANDABLE from itself.
+; (docs/coherence-substrate/arrival-symbol-pack.form, north-star step.)
+;
+; The resolver IS the resolution walk (name-resolution-as-recipe.form) applied to
+; the pack — no new machinery: follow refs until only literals remain. It
+; TERMINATES because every ref points at a lower index (a DAG inside the pack);
+; reaching all-literals is the proof of closure.
+;
+; A pack is a list of entries; an entry is a list of tokens. A token >= 0 is a
+; literal symbol-id; a token < 0 is a reference to entry j, encoded -(j+1). The
+; real pack's «coherence»-«substrate» and «native»-«route»-«goal»-«cells» are
+; exactly this shape; here a 7-entry pack stands in (45 = '-' literal):
+;   e0 form       e1 stdlib    e2 coherence   e3 substrate
+;   e4 form-stdlib          = «0»-«1»
+;   e5 coherence-substrate  = «2»-«3»
+;   e6 form-stdlib-band     = «4»-band   (a ref to a COMPOUND — recursive depth)
+;
+; Verdict 31 when the self-referential pack resolves from its own content:
+;   1   A LITERAL resolves to itself — the ground of the walk
+;   2   A ONE-LEVEL COMPOUND resolves to its named parts — self-reference works
+;       (form-stdlib → [form, -, stdlib])
+;   4   A NESTED COMPOUND resolves RECURSIVELY through another compound — the
+;       holographic depth: «4» expands to [form,-,stdlib] inside e6 (len 5, not 3)
+;   8   CLOSURE IS TWO-SIDED — the good pack is closed (every ref in-pack), AND a
+;       pack with an EXTERNAL ref (out-of-range) is detected as NOT closed: the
+;       check actually rejects an external door, it doesn't just pass everything
+;   16  LOSSLESS ROUND-TRIP — the resolved nested compound EQUALS the explicit
+;       literal sequence: compress (build) ↔ expand (resolve) is identity
+(do
+    (defn nil? (xs) (eq (len xs) 0))
+    (defn nth-rec (xs i) (if (eq i 0) (head xs) (nth-rec (tail xs) (sub i 1))))
+    (defn appendl (xs ys) (if (nil? xs) ys (cons (head xs) (appendl (tail xs) ys))))
+    (defn decode (tok) (sub (sub 0 tok) 1))                  ; tok<0 → entry index j
+    (defn isref (tok) (le tok (sub 0 1)))                    ; tok <= -1
+
+    ; ── the resolution walk: follow refs until only literals remain ──────
+    (defn resolve-tok (pack tok)
+        (if (isref tok) (resolve-entry pack (decode tok)) (list tok)))
+    (defn resolve-toks (pack toks)
+        (if (eq (len toks) 1) (resolve-tok pack (head toks))
+            (appendl (resolve-tok pack (head toks)) (resolve-toks pack (tail toks)))))
+    (defn resolve-entry (pack i) (resolve-toks pack (nth-rec pack i)))
+
+    ; ── closure: every ref decodes into [0,n) and is not a self-ref ──────
+    (defn tok-ok (tok i n)
+        (if (isref tok)
+            (if (eq (decode tok) i) 0
+                (if (le 0 (decode tok)) (if (le (decode tok) (sub n 1)) 1 0) 0))
+            1))
+    (defn entry-ok (toks i n)
+        (if (eq (len toks) 1) (tok-ok (head toks) i n)
+            (if (eq (tok-ok (head toks) i n) 1) (entry-ok (tail toks) i n) 0)))
+    (defn closed-from (pack i n)
+        (if (eq i n) 1
+            (if (eq (entry-ok (nth-rec pack i) i n) 1) (closed-from pack (add i 1) n) 0)))
+    (defn closed (pack) (closed-from pack 0 (len pack)))
+
+    ; ── list equality (lossless round-trip check) ───────────────────────
+    (defn leq (a b)
+        (if (eq (len a) (len b))
+            (if (nil? a) 1 (if (eq (head a) (head b)) (leq (tail a) (tail b)) 0))
+            0))
+
+    (let pack (list
+        (list 100)                              ; e0 form
+        (list 101)                              ; e1 stdlib
+        (list 102)                              ; e2 coherence
+        (list 103)                              ; e3 substrate
+        (list (sub 0 1) 45 (sub 0 2))           ; e4 «0»-«1»  form-stdlib
+        (list (sub 0 3) 45 (sub 0 4))           ; e5 «2»-«3»  coherence-substrate
+        (list (sub 0 5) 45 104)))               ; e6 «4»-band form-stdlib-band
+
+    ; a pack whose entry 1 reaches OUTSIDE itself (ref «8», but n=2) — external door
+    (let badpack (list (list 100) (list (sub 0 9))))
+
+    (let c0 (if (eq (leq (resolve-entry pack 0) (list 100)) 1) 1 0))
+    (let c1 (if (eq (leq (resolve-entry pack 4) (list 100 45 101)) 1) 2 0))
+    (let c2 (if (eq (len (resolve-entry pack 6)) 5) 4 0))   ; recursion expanded the nested ref
+    (let c3 (if (eq (closed pack) 1) (if (eq (closed badpack) 0) 8 0) 0))
+    (let c4 (if (eq (leq (resolve-entry pack 6) (list 100 45 101 45 104)) 1) 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))

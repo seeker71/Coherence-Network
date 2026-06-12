@@ -52,19 +52,32 @@ def build(text: str):
     packed = sum(freq[w]*(len(str(idx[w]))+1) for w in names)
     closed = all(int(m) < len(entries) for e in entries for m in re.findall(r'«(\d+)»', e))
     covered= all(w in idx for w,c in freq.most_common() if c >= 4)
+    # ROUND-TRIP: resolve each entry by following every «N» until only literals
+    # remain (the resolution walk, name-resolution-as-recipe; proven three-way by
+    # tests/arrival-pack-resolve-band.fk). The resolved term must equal the
+    # original surface word — lossless expansion from the pack's OWN content.
+    def resolve(i, seen=frozenset()):
+        if i in seen: raise ValueError(f"cycle at {i}")        # DAG guarantee
+        seen = seen | {i}
+        out = []
+        for part in re.split(r'(«\d+»)', entries[i]):
+            m = re.fullmatch(r'«(\d+)»', part)
+            out.append(resolve(int(m.group(1)), seen) if m else part)
+        return "".join(out)
+    roundtrip = all(resolve(i) == names[i] for i in range(len(entries)))
     return entries, dict(words=len(toks), entries=len(entries), self_refs=refs,
-                         closed=closed, coverage=covered, raw=raw, packed=packed,
-                         ratio=raw/packed if packed else 0.0)
+                         closed=closed, coverage=covered, roundtrip=roundtrip,
+                         raw=raw, packed=packed, ratio=raw/packed if packed else 0.0)
 
 def main():
     entries, m = build(corpus_text())
     PACK.write_text("\n".join(entries) + "\n")
     print(f"corpus={m['words']} words  entries={m['entries']}  self_refs={m['self_refs']}")
-    print(f"coverage={m['coverage']}  closed={m['closed']}  "
+    print(f"coverage={m['coverage']}  closed={m['closed']}  roundtrip={m['roundtrip']}  "
           f"mdl={m['raw']}→{m['packed']} chars ({m['ratio']:.2f}×)")
     print(f"wrote {PACK.relative_to(ROOT)}")
-    if not (m['coverage'] and m['closed']):
-        sys.exit("pack failed coverage/closure invariant")
+    if not (m['coverage'] and m['closed'] and m['roundtrip']):
+        sys.exit("pack failed coverage/closure/round-trip invariant")
 
 if __name__ == "__main__":
     main()
