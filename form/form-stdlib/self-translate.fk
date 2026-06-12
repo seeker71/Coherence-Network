@@ -1,0 +1,40 @@
+; NOTE (2026-06-12): this emitter uses C STRING LITERALS for the symbol packs,
+; which need quote characters. Go and Rust parse the escaped quotes; the TS
+; kernel's string parser currently REJECTS them ("unexpected token rparen") — a
+; real three-way divergence in escaped-quote handling, recorded honestly. So the
+; emitter runs on the Go kernel to produce the binary (the artifact is the
+; binary, not a three-way value); the SEPARATION it demonstrates (numeric core +
+; two packs over one model) is proven three-way, quoteless, by
+; tests/numeric-core-symbol-pack-band.fk. A quoteless rewrite (names as putchar
+; codes) would make the emitter itself three-way — a named next stone.
+;
+; self-translate.fk — a Form recipe that EMITS a self-contained binary holding
+; its own internal model (a program-as-cells) plus English + French symbol packs,
+; able to translate its own model into either language with NO external content.
+; The numeric-core-symbol-pack teaching made into a running binary.
+;
+; The model: a tiny program (LITERAL 40, ARGUMENT, ADD) — its meaning is the
+; numeric node table; the symbol packs are removable name overlays (one per
+; language). The binary walks its OWN table and names each op in the chosen
+; tongue. recipe = the emitter (this file); content = the table + both packs,
+; all baked into the binary.
+
+(defn stx-emit ()
+  (str_concat
+    "extern int putchar(int); "
+    (str_concat
+    "static void pr(const char *s) { while (*s) { putchar(*s); s = s + 1; } } "
+    (str_concat
+    "static void prnum(long long v) { char b[24]; int n = 0; if (v == 0) { putchar(48); } while (v > 0) { b[n] = 48 + v % 10; v = v / 10; n = n + 1; } while (n > 0) { n = n - 1; putchar(b[n]); } } "
+    (str_concat
+    ; the INTERNAL MODEL — the program-as-cells, baked numeric (tag, lit, a, b)
+    "static const long long model[3][4] = { {1,40,0,0}, {2,0,0,0}, {3,0,1,0} }; "
+    (str_concat
+    ; the SYMBOL PACKS — one name per op-tag, two languages, baked in
+    "static const char *en[4] = { \"\", \"LITERAL \", \"THE INPUT\", \"ADD\" }; "
+    (str_concat
+    "static const char *fr[4] = { \"\", \"LITTERAL \", \"L ENTREE\", \"ADDITION\" }; "
+    (str_concat
+    ; main: pick the language from argv, then translate the model row by row
+    "int main(int argc, char **argv) { const char **w = en; if (argc > 1) { if (argv[1][0] == 102) { w = fr; } } "
+    "int i = 0; while (i < 3) { long long t = model[i][0]; pr(w[t]); if (t == 1) { prnum(model[i][1]); } putchar(10); i = i + 1; } return 0; }")))))))))
