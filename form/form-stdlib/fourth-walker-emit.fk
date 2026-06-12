@@ -416,6 +416,32 @@
 
 (defn fkc-emit-server (fns) (fkc-emit-server2 (fkc-flatten-many fns)))
 
+; ── the MUTATION emitter — track creation and pointer updates, never reads ──
+; Debugging state needs only the MUTATIONS: heap cell creation (CONS, t19) and
+; pointer/state updates (STORE, t13). Reads (NODE/LOAD/HEAD/TAIL) stay silent —
+; the walker is deterministic, so every read is derivable from the mutation
+; history; the log IS the program's state genesis, and it stays tiny. The
+; wrapper sees the tag BEFORE dispatch, so the arms ride verbatim (one engine);
+; depth is fk_vsp — the value-stack pointer IS the call depth:
+;   C <cell> <head> <tail> <depth>   a heap cell is born, with its contents
+;   S <value> <depth>                a state slot is repointed
+; argv[2] != 0 turns the channel on; off = byte-clean run.
+(defn fkc-mtr-text ()
+    "static long long fk_mdbg; static void fk_mvp(long long v) { char b[32]; int n = 0; if (v == 0) { putchar(48); } while (v > 0) { b[n] = 48 + v % 10; v = v / 10; n = n + 1; } while (n > 0) { n = n - 1; putchar(b[n]); } putchar(32); } static void fk_muv(long long v) { if ((v & 1) == 0) { fk_mvp(v >> 1); } else { putchar(114); fk_mvp(v >> 1); } } ")
+(defn fkc-walk-mut-text ()
+    (str_concat "static long long fk_walk(long long i, long long fp); static long long fk_walk0(long long i, long long fp) { long long t = fk_node[i][0]; fk_arms[t] = fk_arms[t] + 1; if (t == 1) { return fk_node[i][1] << 1; } if (t == 2) { return fk_vs[fp]; } if (t == 3) { return fk_walk(fk_node[i][1], fp) + fk_walk(fk_node[i][2], fp); } if (t == 4) { return fk_walk(fk_node[i][1], fp) - fk_walk(fk_node[i][2], fp); } if (t == 5) { if (fk_walk(fk_node[i][1], fp) <= fk_walk(fk_node[i][2], fp)) { return 2; } return 0; } if (t == 6) { if (fk_walk(fk_node[i][1], fp) == 0) { return fk_walk(fk_node[i][3], fp); } return fk_walk(fk_node[i][2], fp); } if (t == 7) { long long v7 = fk_walk(fk_node[i][1], fp); fk_vp(v7); long long r7 = fk_walk(fk_fn[0], fk_vsp - 1); fk_vsp = fk_vsp - 1; return r7; }"
+    (str_concat (fkc-arms-many-text)
+                " static long long fk_walk(long long i, long long fp) { long long tg = fk_node[i][0]; long long r = fk_walk0(i, fp); if (fk_mdbg != 0) { if (tg == 19) { putchar(67); putchar(32); fk_mvp(r >> 1); fk_muv(fk_hh[r >> 1]); fk_muv(fk_ht[r >> 1]); fk_mvp(fk_vsp); putchar(10); } if (tg == 13) { putchar(83); putchar(32); fk_muv(r); fk_mvp(fk_vsp); putchar(10); } } return r; } ")))
+(defn fkc-main-mut-text ()
+    "extern int atoi(const char *); int main(int argc, char **argv) { long long a = 0; if (argc > 1) { a = atoi(argv[1]) << 1; } if (argc > 2) { fk_mdbg = atoi(argv[2]); } fk_vs[0] = a; fk_vsp = 1; fk_pv(fk_walk(fk_fn[0], 0)); return 0; }")
+(defn fkc-emit-mut2 (flat)
+    (str_concat (fkc-pr-text)
+    (str_concat (fkc-mtr-text)
+    (str_concat (fkc-decl-many-text (nth flat 0) (nth flat 1))
+    (str_concat (fkc-walk-mut-text)
+                (fkc-main-mut-text))))))
+(defn fkc-emit-mut (fns) (fkc-emit-mut2 (fkc-flatten-many fns)))
+
 ; fkresp — a responder PROGRAM (cells) that PUTCs the bytes of a Form string,
 ; one PUTC per byte (ord off char_at), sequenced by fkd-seq (ADD over PUTC=0).
 ; The string IS the whole HTTP/1.0 response; fold it once, get a program-as-

@@ -195,6 +195,8 @@
 (defn fk-tail (xs)  (fk-node 21 xs))
 (defn fk-len (xs)   (fk-node 22 xs))
 (defn fk-nth (xs i) (fk-node 23 (ms-intern xs i)))
+(defn fk-store (i v)  (fk-node 13 (ms-intern i v)))
+(defn fk-load (i)     (fk-node 14 i))
 
 ; ── string-pool ops — tags 24..33 CLAIMED by the string lane (24..29 live,
 ;    30..33 reserved for this family). Strings are content-addressed pool
