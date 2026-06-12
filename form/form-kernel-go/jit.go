@@ -29,15 +29,16 @@
 // The supported subset (the rest falls back to walker — same answer):
 //   • Arithmetic int64: add, sub, mul, div, mod
 //   • Comparisons: eq, ne, lt, le, gt, ge
+//   • Logic: and, or, not (0/1 int results over truthy inputs; matches walker int-subset convention)
 //   • Conditionals: if / if-else
 //   • Let-bindings of integer values
 //   • Parameter references
 //   • Recursive free-function calls (the closure's own name)
 //
 // Out of scope by design (refuse to compile, walker keeps running):
-//   • Lists, strings, floats, closures-over-outer-state
-//   • Native calls inside the compiled body
-//   • Multi-type signatures beyond int64 → int64
+//   • Lists, strings, floats (in pure i64 leg), closures-over-outer-state
+//   • Native calls inside the compiled body (Value leg or dispatch handles)
+//   • Multi-type signatures beyond the supported ABIs
 //
 // Plugin caching: keyed by the body's NodeID-tuple string ("0.2.99.42").
 // Same recipe shape → same .so reused. The cache survives for the
@@ -433,7 +434,7 @@ func emitGoExpr(k *Kernel, node NodeID, scope *goCompileScope) (string, error) {
 		return emitGoFnCall(k, kids, scope)
 
 	case RBasicLogic:
-		return "", unsupported("jit: logic ops not in subset")
+		return emitGoLogic(k, cat.Inst, kids, scope)
 
 	case RBasicList:
 		if len(kids) == 0 {
@@ -596,6 +597,52 @@ func emitGoCompare(k *Kernel, op uint32, kids []NodeID, scope *goCompileScope) (
 	scalar := scope.scalarType()
 	return fmt.Sprintf("(func() %s { if (%s %s %s) { return %s }; return %s }())",
 		scalar, a, opStr, b, scope.scalarOne(), scope.scalarZero()), nil
+}
+
+func emitGoLogic(k *Kernel, op uint32, kids []NodeID, scope *goCompileScope) (string, error) {
+	if op == RLogicNot {
+		if len(kids) != 1 {
+			return "", unsupported("jit: not expects 1 arg")
+		}
+		a, err := emitGoExpr(k, kids[0], scope)
+		if err != nil {
+			return "", err
+		}
+		if scope.abi == goJITABIValue {
+			return fmt.Sprintf("jitabi.Int( jitabi.Truthy(%s) ? 0 : 1 )", a), nil
+		}
+		scalar := scope.scalarType()
+		one := scope.scalarOne()
+		zero := scope.scalarZero()
+		return fmt.Sprintf("(func() %s { if (%s != 0) { return %s }; return %s }())", scalar, a, zero, one), nil
+	}
+	// and / or — binary (emitter convention for the int subset)
+	if len(kids) != 2 {
+		return "", unsupported("jit: and/or expect 2 args")
+	}
+	a, err := emitGoExpr(k, kids[0], scope)
+	if err != nil {
+		return "", err
+	}
+	b, err := emitGoExpr(k, kids[1], scope)
+	if err != nil {
+		return "", err
+	}
+	var cond string
+	if op == RLogicAnd {
+		cond = fmt.Sprintf("((%s != 0) && (%s != 0))", a, b)
+	} else if op == RLogicOr {
+		cond = fmt.Sprintf("((%s != 0) || (%s != 0))", a, b)
+	} else {
+		return "", unsupported(fmt.Sprintf("jit: logic op %d", op))
+	}
+	if scope.abi == goJITABIValue {
+		return fmt.Sprintf("jitabi.Int( %s ? 1 : 0 )", cond), nil
+	}
+	scalar := scope.scalarType()
+	one := scope.scalarOne()
+	zero := scope.scalarZero()
+	return fmt.Sprintf("(func() %s { if (%s) { return %s }; return %s }())", scalar, cond, one, zero), nil
 }
 
 func emitGoCond(k *Kernel, op uint32, kids []NodeID, scope *goCompileScope) (string, error) {
