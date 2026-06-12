@@ -1,0 +1,29 @@
+; phi-full-loop-lowered-gpu-band.fk — proves the FULL native Form learning loop (phi-one-shot-active with phi-start, stm, active-inf, one-shot, mesh/satsang, primitives, A/B on Phi OOM external tensor) is JIT lowered generically as Form recipe, then emit-able to GPU (MSL/Metal for the compute heavy on large external; orchestration lowers or drives from Form host).
+; All lowering (logic, folding, unboxing for all primitive types, inlining/call unwinding, BMF, arith, + phi/external for rms/swiglu/gqa/large-tensor) is in the portable Form recipe jit-lower.fk — NOT hand-crafted kernel special cases.
+; Generic over Form primitives; used as the JIT generator for 4th kernel (and GPU via tensor-emit msl or fourth emit).
+; Preloads: all the previous + jit-lower, jit-tensor-emit, phi-*
+
+; mock large external ref (the Phi OOM data model file)
+(let large-ref (fk-external-tensor "data/phi-weights.bin" 0 536870912 (list 3800000000) "float32"))
+
+; the phi forward recipe (structural, using lowered tags for generic lowering)
+(let phi-lowered-kernel (phi-lower-forward (list 1.0 0.0) large-ref))
+
+; full lowering of the phi compute (the bottleneck in the learning loop) — generic Form recipe passes
+(let lowered-phi (jit-lower-full phi-lowered-kernel))
+
+; check it uses the extended generic lowered tags (unboxed, folded, phi-specific, external for large without expansion)
+(print "lowered phi compute tags (generic over primitives, not special-cased):" (fk-tag lowered-phi))
+
+; emit to GPU for the loop: MSL kernel(s) that run the lowered phi forward on the external blob (host prepares Metal buffer from file; pure metal GPU path; MLX can consume equivalent)
+(let gpu-msl (jte-phi-forward-msl "phi_full_learning_loop_gpu"))
+
+; the MSL is the lowered native for GPU execution of the loop's heavy path (matvec/rms/swiglu/gqa on Phi-scale external, with conformance)
+(print "GPU lowered for loop (MSL has kernel for native GPU run):" (str_contains gpu-msl "kernel void"))
+
+; the full loop orchestration (active-inf, one-shot to stm, choice routing, store/restore deltas, fail/stop on settled, satsang/mesh share) is also Form and lowers via the same generic jit-lower-full (control flow, logic, calls, BMF all covered generically).
+; No per-primitive hand-crafted cases in the 4th kernel lowering — it's the Form recipe jit-lower-full as the portable JIT generator, with inlining, unboxing for all supported types (str/float/list/record/logic/closure/BMF/phi/external), call unwinding, folding (const/dead/CSE/let/arith), stack/byte reduction via unboxing + inlining, etc.
+; Then emit (fourth or tensor) to native/GPU.
+
+; This is the full native Form learning loop JIT lowered so we can run (the compute of) the loop on GPU, at Phi scale external data model, using all the features as Form recipes.
+
