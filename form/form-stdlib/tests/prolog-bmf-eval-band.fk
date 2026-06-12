@@ -1,0 +1,115 @@
+; prolog-bmf-eval-band.fk - clauses parsed by the grammar, resolved natively:
+; backtracking enumerates solutions, cut commits, is/unify bind.
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/prolog-bmf.fk form-stdlib/prolog-bmf-eval.fk
+
+(do
+    (defn parse-node (rule-name objects)
+        (bmf-object-value
+            (cap-get (match-caps (apply-prolog-bmf-rule rule-name objects)) "result")))
+
+    (defn fact2-node (name a b)
+        (parse-node "fact2"
+            (list (prolog-src-name name) (prolog-src-op "(")
+                  (prolog-src-name a) (prolog-src-op ",")
+                  (prolog-src-name b) (prolog-src-op ")")
+                  (prolog-src-op "."))))
+
+    (defn fact1-node (name a)
+        (parse-node "fact1"
+            (list (prolog-src-name name) (prolog-src-op "(")
+                  (prolog-src-name a) (prolog-src-op ")")
+                  (prolog-src-op "."))))
+
+    (defn fact0-node (name)
+        (parse-node "fact0"
+            (list (prolog-src-name name) (prolog-src-op "."))))
+
+    (defn cut-node (head goal)
+        (parse-node "rule-cut"
+            (list (prolog-src-name head) (prolog-src-op ":-")
+                  (prolog-src-name goal) (prolog-src-op ",")
+                  (prolog-src-op "!") (prolog-src-op "."))))
+
+    ;; grandparent(X,Z) :- parent(X,Y), parent(Y,Z).
+    (let grandparent-node
+        (parse-node "rule2"
+            (list (prolog-src-name "grandparent") (prolog-src-op "(")
+                  (prolog-src-name "X") (prolog-src-op ",")
+                  (prolog-src-name "Z") (prolog-src-op ")")
+                  (prolog-src-op ":-")
+                  (prolog-src-name "parent") (prolog-src-op "(")
+                  (prolog-src-name "X") (prolog-src-op ",")
+                  (prolog-src-name "Y") (prolog-src-op ")")
+                  (prolog-src-op ",")
+                  (prolog-src-name "parent") (prolog-src-op "(")
+                  (prolog-src-name "Y") (prolog-src-op ",")
+                  (prolog-src-name "Z") (prolog-src-op ")")
+                  (prolog-src-op "."))))
+
+    ;; mortal(Q) :- human(Q).
+    (let mortal-node
+        (parse-node "rule1"
+            (list (prolog-src-name "mortal") (prolog-src-op "(")
+                  (prolog-src-name "Q") (prolog-src-op ")")
+                  (prolog-src-op ":-")
+                  (prolog-src-name "human") (prolog-src-op "(")
+                  (prolog-src-name "Q") (prolog-src-op ")")
+                  (prolog-src-op "."))))
+
+    (let kb
+        (pl-kb (list
+            (fact2-node "parent" "tom" "bob")
+            (fact2-node "parent" "tom" "liz")
+            (fact2-node "parent" "bob" "ann")
+            grandparent-node
+            mortal-node
+            (fact1-node "human" "socrates")
+            (fact1-node "human" "plato")
+            (fact0-node "gate")
+            (fact0-node "other")
+            (cut-node "commit" "gate")
+            (cut-node "commit" "other"))))
+
+    ;; cell 1 — ?- grandparent(tom, Z): the two-goal body resolves through
+    ;; the parent chain; exactly one chain reaches a grandchild.
+    (let gp (pl-answers "Z" (pl-query "grandparent" (list "tom" "Z") kb)))
+    (let cell1 (if (and (eq (len gp) 1) (str_eq (head gp) "ann")) 1000 0))
+
+    ;; cell 2 — ?- parent(tom, X): backtracking enumerates both children
+    ;; in clause order.
+    (let kids (pl-answers "X" (pl-query "parent" (list "tom" "X") kb)))
+    (let cell2 (if (and (eq (len kids) 2)
+                        (and (str_eq (nth kids 0) "bob")
+                             (str_eq (nth kids 1) "liz"))) 2000 0))
+
+    ;; cell 3 — cut commits: two commit clauses both satisfiable, the first
+    ;; cut stops the clause scan at one solution. mortal shows the contrast:
+    ;; the same two-clause shape without cut yields both.
+    (let commits (pl-query "commit" (empty) kb))
+    (let mortals (pl-answers "Q" (pl-query "mortal" (list "Q") kb)))
+    (let cell3 (if (and (eq (len commits) 1) (eq (len mortals) 2)) 4000 0))
+    (let cell4 (if (str_eq (head mortals) "socrates") 8000 0))
+
+    ;; cell 5 — Next is N + 1 with N bound: arithmetic binds the target.
+    (let is-node
+        (parse-node "is-add-int"
+            (list (prolog-src-name "Next") (prolog-src-keyword "is")
+                  (prolog-src-name "N") (prolog-src-op "+")
+                  (prolog-src-int "1"))))
+    (let is-r (pl-eval-is is-node (list (list "N" "4"))))
+    (let cell5 (if (and (pl-yes? is-r)
+                        (str_eq (pl-resolve "Next" (pl-yes-bindings is-r)) "5"))
+                   16000 0))
+
+    ;; cell 6 — X = Y unifies through an existing binding.
+    (let u-node
+        (parse-node "unify"
+            (list (prolog-src-name "X") (prolog-src-op "=")
+                  (prolog-src-name "Y"))))
+    (let u-r (pl-eval-unify u-node (list (list "Y" "ann"))))
+    (let cell6 (if (and (pl-yes? u-r)
+                        (str_eq (pl-resolve "X" (pl-yes-bindings u-r)) "ann"))
+                   32000 0))
+
+    (sum (list cell1 cell2 cell3 cell4 cell5 cell6)))

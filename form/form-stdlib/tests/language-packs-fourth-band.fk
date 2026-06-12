@@ -1,0 +1,119 @@
+; language-packs-fourth-band.fk - five tongues, one numeric shape on the fourth
+; kernel's BMF compiler: each language's REAL grammar parses its own surface on
+; the walkers; the parsed operands become that language's grammar pack (rules
+; as data); every pack folds the same token source through bmf-compile into the
+; SAME content-addressed program cell, and the walked value equals the
+; independent reference. Each pack is sealed (pack-manifest) with internal-only
+; deps. The op mapping (tok1 -> ADD, tok2 -> SUB) is the pack's two rows; the
+; OPERANDS are witnessed from each tongue's parse.
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/adler32.fk form-stdlib/pack-manifest.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/bmf-mini.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/rust-bmf.fk form-stdlib/grammars/prolog-bmf.fk
+;
+; Verdict 31 when the family holds:
+;   1   shared heart — all five packs compile [1,1,2] to the SAME program cell
+;   2   value parity — the program walks 5 -> 22 == bmf-ref
+;   4   rust let-int is reversible — the gap this band closed, roundtripped
+;   8   every pack is sealed and self-contained (internal deps only)
+;   16  grammar is data on this lane too — operand 100 -> different cell, 202
+
+(do
+    (defn result-node (m)
+        (bmf-object-value (cap-get (match-caps m) "result")))
+
+    (defn last-kid-int (node)
+        (do
+            (let kids (node_children node))
+            (node_value (nth kids (sub (len kids) 1)))))
+
+    ;; --- each tongue speaks its constant; its real grammar parses it -------
+
+    (defn py-const (v)
+        (last-kid-int (result-node (apply-python-bmf-rule "assign-int"
+            (list (py-name "step") (py-op "=") (py-int v))))))
+
+    (defn ts-const (v)
+        (last-kid-int (result-node (apply-typescript-bmf-rule "assign-int"
+            (list (ts-src-name "step") (ts-src-op "=") (ts-src-int v) (ts-src-op ";"))))))
+
+    (defn go-const (v)
+        (last-kid-int (result-node (apply-go-bmf-rule "var-int"
+            (list (go-src-keyword "var") (go-src-name "step")
+                  (go-src-op "=") (go-src-int v))))))
+
+    (defn rust-const (v)
+        (last-kid-int (result-node (apply-rust-bmf-rule "let-int"
+            (list (rust-src-keyword "let") (rust-src-name "step")
+                  (rust-src-op "=") (rust-src-int v) (rust-src-op ";"))))))
+
+    (defn prolog-const (v)
+        (last-kid-int (result-node (apply-prolog-bmf-rule "is-add-int"
+            (list (prolog-src-name "Step") (prolog-src-keyword "is")
+                  (prolog-src-name "Acc") (prolog-src-op "+")
+                  (prolog-src-int v))))))
+
+    ;; --- packs: (tok1 -> ADD ten, tok2 -> SUB three), operands from parses --
+
+    (defn lang-pack-rules (ten three)
+        (list (bmf-rule 1 3 ten) (bmf-rule 2 4 three)))
+
+    (let py-rules     (lang-pack-rules (py-const "10")     (py-const "3")))
+    (let ts-rules     (lang-pack-rules (ts-const "10")     (ts-const "3")))
+    (let go-rules     (lang-pack-rules (go-const "10")     (go-const "3")))
+    (let rust-rules   (lang-pack-rules (rust-const "10")   (rust-const "3")))
+    (let prolog-rules (lang-pack-rules (prolog-const "10") (prolog-const "3")))
+
+    (let src (list 1 1 2))
+    (let py-prog     (bmf-compile py-rules src))
+    (let ts-prog     (bmf-compile ts-rules src))
+    (let go-prog     (bmf-compile go-rules src))
+    (let rust-prog   (bmf-compile rust-rules src))
+    (let prolog-prog (bmf-compile prolog-rules src))
+
+    ;; cell 1 — shared heart: five tongues, one content-addressed program
+    (let cell1
+        (if (eq (ms-same py-prog ts-prog) 1)
+        (if (eq (ms-same py-prog go-prog) 1)
+        (if (eq (ms-same py-prog rust-prog) 1)
+        (if (eq (ms-same py-prog prolog-prog) 1) 1 0) 0) 0) 0))
+
+    ;; cell 2 — value parity against the independent reference fold
+    (let cell2
+        (if (eq (fk-run py-prog 5) 22)
+            (if (eq (fk-run prolog-prog 5) (bmf-ref py-rules src 5)) 2 0)
+            0))
+
+    ;; cell 3 — the rust gap closed: let-int roundtrips both directions
+    (let rust-rt
+        (bmf-roundtrip (rust-bmf-find-rule "let-int" rust-bmf-rules)
+            (list (rust-src-keyword "let") (rust-src-name "step")
+                  (rust-src-op "=") (rust-src-int "10") (rust-src-op ";"))))
+    (let cell3 (if (bmf-roundtrip-node-eq? rust-rt) 4 0))
+
+    ;; cell 4 — every pack sealed, deps internal only
+    (defn lang-pack-entry (id grammar-dep)
+        (pack-entry id "fourth-kernel-bmf-grammar"
+            (list (pm-dep "bmf-mini" "internal")
+                  (pm-dep "fourth-walker" "internal")
+                  (pm-dep grammar-dep "internal"))
+            "language-packs"))
+
+    (defn pack-whole? (e)
+        (if (eq (pack-sealed? e "language-packs") 1)
+            (pack-self-contained? e) 0))
+
+    (let cell4
+        (if (eq (pack-whole? (lang-pack-entry "python-pack" "python-bmf")) 1)
+        (if (eq (pack-whole? (lang-pack-entry "typescript-pack" "typescript-bmf")) 1)
+        (if (eq (pack-whole? (lang-pack-entry "go-pack" "go-bmf")) 1)
+        (if (eq (pack-whole? (lang-pack-entry "rust-pack" "rust-bmf")) 1)
+        (if (eq (pack-whole? (lang-pack-entry "prolog-pack" "prolog-bmf")) 1) 8 0) 0) 0) 0) 0))
+
+    ;; cell 5 — grammar stays data: a different witnessed operand, a different cell
+    (let wide-rules (lang-pack-rules (py-const "100") (py-const "3")))
+    (let wide-prog (bmf-compile wide-rules src))
+    (let cell5
+        (if (eq (ms-same py-prog wide-prog) 0)
+            (if (eq (fk-run wide-prog 5) 202) 16 0)
+            0))
+
+    (sum (list cell1 cell2 cell3 cell4 cell5)))

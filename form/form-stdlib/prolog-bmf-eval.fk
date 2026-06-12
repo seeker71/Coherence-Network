@@ -1,0 +1,210 @@
+; prolog-bmf-eval.fk - resolution over PL-BMF clause nodes: unification,
+; backtracking across candidate clauses, cut as clause commitment.
+;
+; The lift pattern python-bmf-eval and typescript-bmf-eval established, carried
+; to logic programming: grammars/prolog-bmf.fk parses clauses into PL-BMF-*
+; recipe nodes; this file walks them as a knowledge base. Terms are
+; (functor, args) pairs over strings; a variable is a name whose first
+; character is uppercase or underscore (Prolog's own convention). Solutions
+; are binding lists; pl-solve-goal returns every solution a query has, in
+; clause order, so backtracking IS the list of branches. A cut clause
+; (head :- goal, !.) commits to its first solution and stops the clause scan
+; — the same commitment shape engine.fk's fail-cut discipline carries for
+; grammar choice.
+;
+; Renaming discipline: every clause application renames clause variables with
+; a namespace suffix ("X" -> "X#k"). Namespaces are base-10 paths — a body
+; goal at position i inside namespace k solves in namespace k*10+i — so no
+; two clause applications on one binding chain ever share a suffix.
+
+(do
+    ;; --- terms and variables -----------------------------------------
+
+    (defn pl-term (functor args) (list functor args))
+    (defn pl-term-functor (t) (head t))
+    (defn pl-term-args (t) (head (tail t)))
+
+    (defn pl-var? (s)
+        (ge (str_find "ABCDEFGHIJKLMNOPQRSTUVWXYZ_" (char_at s 0) 0) 0))
+
+    ;; --- bindings: alist of (var value) -------------------------------
+
+    (defn pl-lookup (var bindings)
+        (if (nil? bindings) (empty)
+            (if (str_eq (head (head bindings)) var)
+                (head (tail (head bindings)))
+                (pl-lookup var (tail bindings)))))
+
+    ;; follow a variable chain until an atom or an unbound variable
+    (defn pl-resolve (v bindings)
+        (if (pl-var? v)
+            (do
+                (let bound (pl-lookup v bindings))
+                (if (nil? bound) v (pl-resolve bound bindings)))
+            v))
+
+    ;; --- unification ---------------------------------------------------
+    ;; result: (list "yes" bindings) | (list "no")
+
+    (defn pl-yes (bindings) (list "yes" bindings))
+    (defn pl-no () (list "no"))
+    (defn pl-yes? (r) (str_eq (head r) "yes"))
+    (defn pl-yes-bindings (r) (head (tail r)))
+
+    (defn pl-unify-arg (a b bindings)
+        (do
+            (let ra (pl-resolve a bindings))
+            (let rb (pl-resolve b bindings))
+            (if (str_eq ra rb) (pl-yes bindings)
+            (if (pl-var? ra) (pl-yes (cons (list ra rb) bindings))
+            (if (pl-var? rb) (pl-yes (cons (list rb ra) bindings))
+                (pl-no))))))
+
+    (defn pl-unify-args (as bs bindings)
+        (if (nil? as)
+            (if (nil? bs) (pl-yes bindings) (pl-no))
+            (if (nil? bs) (pl-no)
+                (do
+                    (let r (pl-unify-arg (head as) (head bs) bindings))
+                    (if (pl-yes? r)
+                        (pl-unify-args (tail as) (tail bs) (pl-yes-bindings r))
+                        (pl-no))))))
+
+    (defn pl-unify-term (t1 t2 bindings)
+        (if (str_eq (pl-term-functor t1) (pl-term-functor t2))
+            (pl-unify-args (pl-term-args t1) (pl-term-args t2) bindings)
+            (pl-no)))
+
+    ;; --- clause variable renaming --------------------------------------
+
+    (defn pl-rename-arg (a k)
+        (if (pl-var? a) (str_concat a (str_concat "#" (int_to_str k))) a))
+
+    (defn pl-rename-args (as k)
+        (if (nil? as) (empty)
+            (cons (pl-rename-arg (head as) k) (pl-rename-args (tail as) k))))
+
+    (defn pl-rename-term (t k)
+        (pl-term (pl-term-functor t) (pl-rename-args (pl-term-args t) k)))
+
+    (defn pl-rename-terms (ts k)
+        (if (nil? ts) (empty)
+            (cons (pl-rename-term (head ts) k) (pl-rename-terms (tail ts) k))))
+
+    ;; --- clauses from PL-BMF nodes ---------------------------------------
+    ;; clause: (list head-term body-term-list cut-flag)
+
+    (defn pl-clause (head body cut) (list head body cut))
+    (defn pl-clause-head (c) (nth c 0))
+    (defn pl-clause-body (c) (nth c 1))
+    (defn pl-clause-cut? (c) (eq (nth c 2) 1))
+
+    (defn pl-kid (kids i) (node_value (nth kids i)))
+
+    (defn pl-fact-clause (kids)
+        (if (eq (len kids) 1)
+            (pl-clause (pl-term (pl-kid kids 0) (empty)) (empty) 0)
+        (if (eq (len kids) 2)
+            (pl-clause (pl-term (pl-kid kids 0) (list (pl-kid kids 1))) (empty) 0)
+            (pl-clause (pl-term (pl-kid kids 0) (list (pl-kid kids 1) (pl-kid kids 2)))
+                       (empty) 0))))
+
+    (defn pl-rule-clause (kids)
+        (if (eq (len kids) 4)
+            (pl-clause (pl-term (pl-kid kids 0) (list (pl-kid kids 1)))
+                       (list (pl-term (pl-kid kids 2) (list (pl-kid kids 3))))
+                       0)
+            (pl-clause (pl-term (pl-kid kids 0) (list (pl-kid kids 1) (pl-kid kids 2)))
+                       (list (pl-term (pl-kid kids 3) (list (pl-kid kids 4) (pl-kid kids 5)))
+                             (pl-term (pl-kid kids 6) (list (pl-kid kids 7) (pl-kid kids 8))))
+                       0)))
+
+    (defn pl-cut-clause (kids)
+        (pl-clause (pl-term (pl-kid kids 0) (empty))
+                   (list (pl-term (pl-kid kids 1) (empty)))
+                   1))
+
+    (defn pl-clause-of-node (node)
+        (do
+            (let cat (node_category node))
+            (let kids (node_children node))
+            (if (node_eq cat PL-BMF-FACT) (pl-fact-clause kids)
+            (if (node_eq cat PL-BMF-RULE) (pl-rule-clause kids)
+            (if (node_eq cat PL-BMF-CUT)  (pl-cut-clause kids)
+                (empty))))))
+
+    (defn pl-kb (nodes)
+        (if (nil? nodes) (empty)
+            (cons (pl-clause-of-node (head nodes)) (pl-kb (tail nodes)))))
+
+    ;; --- resolution ------------------------------------------------------
+    ;; pl-solve-goal: every solution (binding list) for one goal, clause order.
+
+    (defn pl-append (xs ys)
+        (if (nil? xs) ys (cons (head xs) (pl-append (tail xs) ys))))
+
+    (defn pl-solve-clauses (clauses goal bindings kb k)
+        (if (nil? clauses) (empty)
+            (do
+                (let clause (head clauses))
+                (let renamed-head (pl-rename-term (pl-clause-head clause) k))
+                (let r (pl-unify-term goal renamed-head bindings))
+                (if (pl-yes? r)
+                    (do
+                        (let body (pl-rename-terms (pl-clause-body clause) k))
+                        (let sols (pl-solve-goals body (pl-yes-bindings r) kb k 1))
+                        (if (pl-clause-cut? clause)
+                            (if (nil? sols)
+                                (pl-solve-clauses (tail clauses) goal bindings kb (add k 1))
+                                (list (head sols)))
+                            (pl-append sols
+                                (pl-solve-clauses (tail clauses) goal bindings kb (add k 1)))))
+                    (pl-solve-clauses (tail clauses) goal bindings kb (add k 1))))))
+
+    (defn pl-solve-goal (goal bindings kb k)
+        (pl-solve-clauses kb goal bindings kb (mul k 100)))
+
+    (defn pl-flatmap-rest (sols goals kb k idx)
+        (if (nil? sols) (empty)
+            (pl-append (pl-solve-goals goals (head sols) kb k (add idx 1))
+                       (pl-flatmap-rest (tail sols) goals kb k idx))))
+
+    (defn pl-solve-goals (goals bindings kb k idx)
+        (if (nil? goals) (list bindings)
+            (do
+                (let sols (pl-solve-goal (head goals) bindings kb (add (mul k 10) idx)))
+                (pl-flatmap-rest sols (tail goals) kb k idx))))
+
+    ;; --- query door --------------------------------------------------------
+
+    (defn pl-query (functor args kb)
+        (pl-solve-goal (pl-term functor args) (empty) kb 1))
+
+    ;; resolve one variable of interest in every solution
+    (defn pl-answers (var solutions)
+        (if (nil? solutions) (empty)
+            (cons (pl-resolve var (head solutions))
+                  (pl-answers var (tail solutions)))))
+
+    ;; --- built-in goals over PL-BMF expression nodes ------------------------
+
+    ;; X is A + B — numeric add; an argument may be an int trivial (is-add-int)
+    ;; or a name resolved through the bindings to a decimal string.
+    (defn pl-num (v bindings)
+        (if (str_eq (value_kind v) "int") v
+            (str_to_int (pl-resolve v bindings))))
+
+    (defn pl-eval-is (node bindings)
+        (do
+            (let kids (node_children node))
+            (let result (add (pl-num (pl-kid kids 1) bindings)
+                             (pl-num (pl-kid kids 2) bindings)))
+            (pl-yes (cons (list (pl-kid kids 0) (int_to_str result)) bindings))))
+
+    ;; X = Y — one unification step
+    (defn pl-eval-unify (node bindings)
+        (do
+            (let kids (node_children node))
+            (pl-unify-arg (pl-kid kids 0) (pl-kid kids 1) bindings)))
+
+    0)
