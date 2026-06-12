@@ -30,6 +30,11 @@
 (defn fk-if   (c t e) (fk-node 6 (ms-intern c (ms-intern t e))))
 (defn fk-self (e)     (fk-node 7 e))
 
+; fk-walk carries the core arms (1..7), CALL-into-a-list (12), and the
+; jit-lowered lane (tags 44..59 — the logic/unbox/closure/bmf-lowered forms
+; of the large-parallel lift, re-homed off the string/figure tag ranges so
+; lowered trees run interpreted beside every other family; the emit mirrors
+; them native).
 (defn fk-walk (prog node arg)
     (if (eq (fk-tag node) 1) (ms-value (fk-body node))
     (if (eq (fk-tag node) 2) arg
@@ -43,7 +48,29 @@
                                  (fk-walk prog (ms-child (ms-child (fk-body node) 1) 1) arg)
                                  (fk-walk prog (ms-child (ms-child (fk-body node) 1) 0) arg))
     (if (eq (fk-tag node) 7) (fk-walk prog prog (fk-walk prog (fk-body node) arg))
-        0))))))))
+    (if (eq (fk-tag node) 12) (fk-walk prog (nth prog (ms-value (ms-child (fk-body node) 0)))
+                                            (fk-walk prog (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 44) (if (and (not (eq (fk-walk prog (ms-child (fk-body node) 0) arg) 0))
+                                       (not (eq (fk-walk prog (ms-child (fk-body node) 1) arg) 0))) 1 0)  ; unboxed and
+    (if (eq (fk-tag node) 45) (if (or (not (eq (fk-walk prog (ms-child (fk-body node) 0) arg) 0))
+                                      (not (eq (fk-walk prog (ms-child (fk-body node) 1) arg) 0))) 1 0)
+    (if (eq (fk-tag node) 46) (if (eq (fk-walk prog (ms-child (fk-body node) 0) arg) 0) 1 0)
+    (if (eq (fk-tag node) 47) (ms-value (fk-body node))  ; folded = literal
+    (if (eq (fk-tag node) 48) (fk-walk prog (ms-child (fk-body node) 0) arg)  ; unbox-str delegate
+    (if (eq (fk-tag node) 49) (fk-walk prog (ms-child (fk-body node) 0) arg)
+    (if (eq (fk-tag node) 50) (fk-walk prog (ms-child (fk-body node) 0) arg)
+    (if (eq (fk-tag node) 51) (fk-walk prog (ms-child (fk-body node) 1) arg)  ; lifted closure
+    (if (eq (fk-tag node) 52) (fk-walk prog (ms-child (fk-body node) 0) arg)
+    (if (eq (fk-tag node) 53) (if (eq (fk-walk prog (ms-child (fk-body node) 0) arg) 0)
+                                  (fk-walk prog (ms-child (ms-child (fk-body node) 1) 1) arg)
+                                  (fk-walk prog (ms-child (ms-child (fk-body node) 1) 0) arg))
+    (if (eq (fk-tag node) 54) (fk-walk prog (ms-child (fk-body node) 1) arg)  ; bmf-match -> rest (simplified direct)
+    (if (eq (fk-tag node) 55) (fk-lit 0)  ; fail -> 0
+    (if (eq (fk-tag node) 56) (fk-lit 0)  ; fail-cut
+    (if (eq (fk-tag node) 57) (ms-child (fk-body node) 1)  ; cap-pair val (unboxed)
+    (if (eq (fk-tag node) 58) (fk-buf (ms-child (fk-body node) 0))  ; cursor direct buf
+    (if (eq (fk-tag node) 59) (fk-lit (char_at (ms-child (fk-body node) 0) (ms-value (ms-child (fk-body node) 1))))  ; str-op unboxed
+        0)))))))))))))))))))))))))
 
 (defn fk-run (prog arg) (fk-walk prog prog arg))
 
@@ -69,7 +96,58 @@
     (if (eq (fk-tag node) 7) (fkm-walk fns (nth fns 0) (fkm-walk fns (fk-body node) arg))
     (if (eq (fk-tag node) 12) (fkm-walk fns (nth fns (ms-value (ms-child (fk-body node) 0)))
                                             (fkm-walk fns (ms-child (fk-body node) 1) arg))
-        0)))))))))
+    ; list arms 18..23 — the arena family on the RECIPE side: lists are the
+    ; host kernel's own lists, so a packed-args program (m4e4 multi-param)
+    ; proves by VALUE three-way before the emitted arena carries it
+    (if (eq (fk-tag node) 18) (list)
+    (if (eq (fk-tag node) 19) (cons (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                    (fkm-walk fns (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 20) (head (fkm-walk fns (fk-body node) arg))
+    (if (eq (fk-tag node) 21) (tail (fkm-walk fns (fk-body node) arg))
+    (if (eq (fk-tag node) 22) (len (fkm-walk fns (fk-body node) arg))
+    (if (eq (fk-tag node) 23) (nth (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                   (fkm-walk fns (ms-child (fk-body node) 1) arg))
+    ; string arms 24..28 — the string-pool family on the RECIPE side: values
+    ; are the host kernel's own strings (the emitted sibling carries pool ids;
+    ; interning makes id-equality there mean content-equality here, axiom 3)
+    (if (eq (fk-tag node) 24) (ms-value (ms-child (fk-body node) 1))
+    (if (eq (fk-tag node) 25) (str_len (fkm-walk fns (fk-body node) arg))
+    (if (eq (fk-tag node) 26) (if (str_eq (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                          (fkm-walk fns (ms-child (fk-body node) 1) arg)) 1 0)
+    (if (eq (fk-tag node) 27) (str_concat (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                          (fkm-walk fns (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 28) (ord (char_at (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                            (fkm-walk fns (ms-child (fk-body node) 1) arg)))
+    (if (eq (fk-tag node) 29) (byte_to_str (fkm-walk fns (fk-body node) arg))
+        (fkm-walk-fig fns node arg))))))))))))))))))))))
+
+; figure-ops arms (tags 10/11 + 34..42) on the RECIPE side: each arm calls the
+; walking kernel's own native (band/bor/bxor/shl_u32/shr_u32/rotr_u32/add_u32/
+; bnot_u32/mul/div/mod), so three-way parity IS the kernels' own u32 wrap
+; discipline — the emitted C mirrors these semantics bit-for-bit.
+(defn fkm-walk-fig (fns node arg)
+    (if (eq (fk-tag node) 10) (div (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                   (fkm-walk fns (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 11) (mod (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                   (fkm-walk fns (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 34) (band (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                    (fkm-walk fns (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 35) (bor (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                   (fkm-walk fns (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 36) (bxor (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                    (fkm-walk fns (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 37) (shl_u32 (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                       (fkm-walk fns (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 38) (shr_u32 (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                       (fkm-walk fns (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 39) (rotr_u32 (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                        (fkm-walk fns (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 40) (add_u32 (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                       (fkm-walk fns (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 41) (bnot_u32 (fkm-walk fns (fk-body node) arg))
+    (if (eq (fk-tag node) 42) (mul (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                   (fkm-walk fns (ms-child (fk-body node) 1) arg))
+        0))))))))))))
 
 (defn fkm-run (fns arg) (fkm-walk fns (nth fns 0) arg))
 
@@ -93,6 +171,24 @@
 ; 21 TAIL xs     — read arena tail pointer
 ; 22 LEN xs      — count arena chain length
 ; 23 NTH xs i    — read the ith arena head
+; ── figure-ops family (m4e5) — tag range 34..43 CLAIMED by the figure-ops
+; lane (the strings lane holds 24..33; 43 stays reserved). Each op is a small
+; honest arm whose semantics are the walking kernels' own natives:
+;   34 BAND a b      int64 &            35 BOR a b       int64 |
+;   36 BXOR a b      int64 ^            37 SHL_U32 a b   u32(a) << (n&31)
+;   38 SHR_U32 a b   u32(a) >> (n&31)   39 ROTR_U32 a b  u32 rotate right
+;   40 ADD_U32 a b   u32 wrap add       41 BNOT_U32 e    ~u32(e), zero-extended
+;   42 MUL a b       int64 *
+; These unlock the checksum bands (adler32/crc32) plus mul-shaped bands.
+(defn fk-band     (a b) (fk-node 34 (ms-intern a b)))
+(defn fk-bor      (a b) (fk-node 35 (ms-intern a b)))
+(defn fk-bxor     (a b) (fk-node 36 (ms-intern a b)))
+(defn fk-shl-u32  (a b) (fk-node 37 (ms-intern a b)))
+(defn fk-shr-u32  (a b) (fk-node 38 (ms-intern a b)))
+(defn fk-rotr-u32 (a b) (fk-node 39 (ms-intern a b)))
+(defn fk-add-u32  (a b) (fk-node 40 (ms-intern a b)))
+(defn fk-bnot-u32 (e)   (fk-node 41 e))
+(defn fk-mul      (a b) (fk-node 42 (ms-intern a b)))
 (defn fk-empty ()   (fk-node 18 (ms-cell 0)))
 (defn fk-cons (h t) (fk-node 19 (ms-intern h t)))
 (defn fk-head (xs)  (fk-node 20 xs))
@@ -100,81 +196,69 @@
 (defn fk-len (xs)   (fk-node 22 xs))
 (defn fk-nth (xs i) (fk-node 23 (ms-intern xs i)))
 
+; ── string-pool ops — tags 24..33 CLAIMED by the string lane (24..29 live,
+;    30..33 reserved for this family). Strings are content-addressed pool
+;    cells: the flattener interns
+;    every literal once (same bytes = same pool slot, axiom 3) and a string
+;    VALUE is its pool id — a plain int, so packed args, lists, and the
+;    copying melt never need to root it; the pool is its own rooted region.
+; 24 SLIT k s — pool literal: pair(pool-index, string-cell); the emitted arm
+;               answers the id, the recipe arm answers the string itself
+; 25 SLEN s   — byte length
+; 26 SEQ a b  — content equality (interned ids: same bytes = same id)
+; 27 SCAT a b — concatenation, the result interned into the pool
+; 28 SCHAR s i — byte code at i (carries ord; char-at composes over it)
+; 29 BYTE2S b — one byte as a 1-char string, interned at runtime (the door
+;               substring/int_to_str/str_find compose through — the shim's
+;               string stones stand on SCHAR + BYTE2S + SCAT)
+(defn fk-slit (k s)  (fk-node 24 (ms-intern (ms-cell k) (intern_trivial_string s))))
+(defn fk-slen (s)    (fk-node 25 s))
+(defn fk-seq (a b)   (fk-node 26 (ms-intern a b)))
+(defn fk-scat (a b)  (fk-node 27 (ms-intern a b)))
+(defn fk-schar (s i) (fk-node 28 (ms-intern s i)))
+(defn fk-byte2s (b)  (fk-node 29 b))
+
 ; --- JIT-lowered unboxed/folded + full BMF tags (large parallel lift) ---
-; 24-33 as before (logic, folded, unbox, closure, bmf-lowered, folded-if)
-; 34 = BMF-MATCH caps rest   (lowered match result, emit as direct if on caps)
-; 35 = BMF-FAIL reason
-; 36 = BMF-FAIL-CUT reason
-; 37 = BMF-CAP-PAIR name val  (unboxed cap env)
-; 38 = BMF-CURSOR pos         (direct source index, unboxed)
-; 39 = BMF-STR-OP s i         (unboxed string op)
-(defn fk-logic-and (a b) (fk-node 24 (ms-intern a b)))
-(defn fk-logic-or (a b)  (fk-node 25 (ms-intern a b)))
-(defn fk-logic-not (a)   (fk-node 26 a))
-(defn fk-folded (v)      (fk-node 27 v))
-(defn fk-unbox-str (s)   (fk-node 28 s))
-(defn fk-unbox-float (f) (fk-node 29 f))
-(defn fk-unbox-list (xs) (fk-node 30 xs))
-(defn fk-closure-lifted (idx body) (fk-node 31 (ms-intern (ms-cell idx) body)))
-(defn fk-bmf-lowered (e) (fk-node 32 e))
-(defn fk-folded-if (c t e) (fk-node 33 (ms-intern c (ms-intern t e))))
-(defn fk-bmf-match (caps rest) (fk-node 34 (ms-intern caps rest)))
-(defn fk-bmf-fail (reason) (fk-node 35 reason))
-(defn fk-bmf-fail-cut (reason) (fk-node 36 reason))
-(defn fk-bmf-cap-pair (name val) (fk-node 37 (ms-intern name val)))
-(defn fk-bmf-cursor (pos) (fk-node 38 pos))
-(defn fk-bmf-str-op (s i) (fk-node 39 (ms-intern s i)))
+; Re-homed to 44..59: the string lane holds 24..33 and the figure-ops lane
+; holds 34..43, so the lowered-forms vocabulary claims the next free range.
+; 44 = LOGIC-AND a b (unboxed)   45 = LOGIC-OR a b    46 = LOGIC-NOT a
+; 47 = FOLDED v                  48 = UNBOX-STR s     49 = UNBOX-FLOAT f
+; 50 = UNBOX-LIST xs             51 = CLOSURE-LIFTED idx body
+; 52 = BMF-LOWERED e             53 = FOLDED-IF c t e
+; 54 = BMF-MATCH caps rest   (lowered match result, emit as direct if on caps)
+; 55 = BMF-FAIL reason
+; 56 = BMF-FAIL-CUT reason
+; 57 = BMF-CAP-PAIR name val  (unboxed cap env)
+; 58 = BMF-CURSOR pos         (direct source index, unboxed)
+; 59 = BMF-STR-OP s i         (unboxed string op)
+(defn fk-logic-and (a b) (fk-node 44 (ms-intern a b)))
+(defn fk-logic-or (a b)  (fk-node 45 (ms-intern a b)))
+(defn fk-logic-not (a)   (fk-node 46 a))
+(defn fk-folded (v)      (fk-node 47 v))
+(defn fk-unbox-str (s)   (fk-node 48 s))
+(defn fk-unbox-float (f) (fk-node 49 f))
+(defn fk-unbox-list (xs) (fk-node 50 xs))
+(defn fk-closure-lifted (idx body) (fk-node 51 (ms-intern (ms-cell idx) body)))
+(defn fk-bmf-lowered (e) (fk-node 52 e))
+(defn fk-folded-if (c t e) (fk-node 53 (ms-intern c (ms-intern t e))))
+(defn fk-bmf-match (caps rest) (fk-node 54 (ms-intern caps rest)))
+(defn fk-bmf-fail (reason) (fk-node 55 reason))
+(defn fk-bmf-fail-cut (reason) (fk-node 56 reason))
+(defn fk-bmf-cap-pair (name val) (fk-node 57 (ms-intern name val)))
+(defn fk-bmf-cursor (pos) (fk-node 58 pos))
+(defn fk-bmf-str-op (s i) (fk-node 59 (ms-intern s i)))
 
-;; Aquatic organ tags (water-based vitality support)
-;; 40 = FLOW-COHERENT rate geometry (vortex/toroidal flow for EZ water coherence)
-;; 41 = CHARGE-SEP voltage current (gentle fields for water battery / charge separation)
-;; 42 = SPECTRUM channel intensity rhythm (full spectrum + NIR for repair/photosynthesis)
-;; 43 = VIBRE freq amp (low-amplitude mechanical/acoustic at vitality frequencies)
-;; 44 = BIO-SENSE type value (non-invasive vitality proxy: movement, optical, conductivity)
-(defn fk-flow-coherent (rate geom) (fk-node 40 (ms-intern rate geom)))
-(defn fk-charge-sep (v i) (fk-node 41 (ms-intern v i)))
-(defn fk-spectrum (ch int rhy) (fk-node 42 (ms-intern ch (ms-intern int rhy))))
-(defn fk-vibre (f a) (fk-node 43 (ms-intern f a)))
-(defn fk-bio-sense (t v) (fk-node 44 (ms-intern t v)))
-
-; Extended walker cases for the new lowered JIT forms (so lowered trees run interpreted too)
-; These will be mirrored in the emit for native speed in the proven binary.
-(defn fk-walk (prog node arg)
-    (if (eq (fk-tag node) 1) (ms-value (fk-body node))
-    (if (eq (fk-tag node) 2) arg
-    (if (eq (fk-tag node) 3) (add (fk-walk prog (ms-child (fk-body node) 0) arg)
-                                  (fk-walk prog (ms-child (fk-body node) 1) arg))
-    (if (eq (fk-tag node) 4) (sub (fk-walk prog (ms-child (fk-body node) 0) arg)
-                                  (fk-walk prog (ms-child (fk-body node) 1) arg))
-    (if (eq (fk-tag node) 5) (if (le (fk-walk prog (ms-child (fk-body node) 0) arg)
-                                     (fk-walk prog (ms-child (fk-body node) 1) arg)) 1 0)
-    (if (eq (fk-tag node) 6) (if (eq (fk-walk prog (ms-child (fk-body node) 0) arg) 0)
-                                 (fk-walk prog (ms-child (ms-child (fk-body node) 1) 1) arg)
-                                 (fk-walk prog (ms-child (ms-child (fk-body node) 1) 0) arg))
-    (if (eq (fk-tag node) 7) (fk-walk prog prog (fk-walk prog (fk-body node) arg))
-    (if (eq (fk-tag node) 12) (fk-walk prog (nth prog (ms-value (ms-child (fk-body node) 0)))
-                                            (fk-walk prog (ms-child (fk-body node) 1) arg))
-    (if (eq (fk-tag node) 24) (if (and (not (eq (fk-walk prog (ms-child (fk-body node) 0) arg) 0))
-                                       (not (eq (fk-walk prog (ms-child (fk-body node) 1) arg) 0))) 1 0)  ; unboxed and
-    (if (eq (fk-tag node) 25) (if (or (not (eq (fk-walk prog (ms-child (fk-body node) 0) arg) 0))
-                                      (not (eq (fk-walk prog (ms-child (fk-body node) 1) arg) 0))) 1 0)
-    (if (eq (fk-tag node) 26) (if (eq (fk-walk prog (ms-child (fk-body node) 0) arg) 0) 1 0)
-    (if (eq (fk-tag node) 27) (ms-value (fk-body node))  ; folded = literal
-    (if (eq (fk-tag node) 28) (fk-walk prog (ms-child (fk-body node) 0) arg)  ; unbox-str delegate
-    (if (eq (fk-tag node) 29) (fk-walk prog (ms-child (fk-body node) 0) arg)
-    (if (eq (fk-tag node) 30) (fk-walk prog (ms-child (fk-body node) 0) arg)
-    (if (eq (fk-tag node) 31) (fk-walk prog (ms-child (fk-body node) 1) arg)  ; lifted closure
-    (if (eq (fk-tag node) 32) (fk-walk prog (ms-child (fk-body node) 0) arg)
-    (if (eq (fk-tag node) 33) (if (eq (fk-walk prog (ms-child (fk-body node) 0) arg) 0)
-                                  (fk-walk prog (ms-child (ms-child (fk-body node) 1) 1) arg)
-                                  (fk-walk prog (ms-child (ms-child (fk-body node) 1) 0) arg))
-    (if (eq (fk-tag node) 34) (fk-walk prog (ms-child (fk-body node) 1) arg)  ; bmf-match -> rest (simplified direct)
-    (if (eq (fk-tag node) 35) (fk-lit 0)  ; fail -> 0
-    (if (eq (fk-tag node) 36) (fk-lit 0)  ; fail-cut
-    (if (eq (fk-tag node) 37) (ms-child (fk-body node) 1)  ; cap-pair val (unboxed)
-    (if (eq (fk-tag node) 38) (fk-buf (ms-child (fk-body node) 0))  ; cursor direct buf
-    (if (eq (fk-tag node) 39) (fk-lit (char_at (ms-child (fk-body node) 0) (ms-value (ms-child (fk-body node) 1))))  ; str-op unboxed
-        0)))))))))))))))))))))))))  ; extended for full BMF lowered (cursor, match, caps, strings) for compiler recipe
+;; Aquatic organ tags (water-based vitality support), re-homed to 60..64
+;; 60 = FLOW-COHERENT rate geometry (vortex/toroidal flow for EZ water coherence)
+;; 61 = CHARGE-SEP voltage current (gentle fields for water battery / charge separation)
+;; 62 = SPECTRUM channel intensity rhythm (full spectrum + NIR for repair/photosynthesis)
+;; 63 = VIBRE freq amp (low-amplitude mechanical/acoustic at vitality frequencies)
+;; 64 = BIO-SENSE type value (non-invasive vitality proxy: movement, optical, conductivity)
+(defn fk-flow-coherent (rate geom) (fk-node 60 (ms-intern rate geom)))
+(defn fk-charge-sep (v i) (fk-node 61 (ms-intern v i)))
+(defn fk-spectrum (ch int rhy) (fk-node 62 (ms-intern ch (ms-intern int rhy))))
+(defn fk-vibre (f a) (fk-node 63 (ms-intern f a)))
+(defn fk-bio-sense (t v) (fk-node 64 (ms-intern t v)))
 
 ; fib authored as data — the program every carrier in fourth-kernel.form's
 ; rows answers: IF (LE arg 1) arg (ADD (SELF (arg-1)) (SELF (arg-2)))

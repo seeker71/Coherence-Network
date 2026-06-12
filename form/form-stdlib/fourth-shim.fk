@@ -1,0 +1,73 @@
+; fourth-shim.fk — the flattener's standing prelude: core.fk vocabulary a
+; band reaches without declaring, expressed first-order in the flattener's
+; own surface (defn/if/let, the op rows, the lowerings). The flattener
+; prepends THIS source to every band's source list, so a call to nil? or
+; sum resolves to a function-table row exactly like any module defn — and
+; a band that defines its own version shadows the shim by parse order.
+;
+; Two lanes live here:
+;   · core mirrors — nil?/sum/append/abs/min2/max2/range/take/drop/
+;     reverse/maximum/minimum/product, each the first-order image of the
+;     core.fk definition (foldl-shaped originals rewritten as direct
+;     recursion; higher-order core stays outside the walker's reach until
+;     defunctionalization)
+;   · string stones — substring/int_to_str/str_to_int/str_find composed
+;     from char_at (the BYTE2S∘SCHAR lowering), str_concat, and ord:
+;     tags 24..29 carry every byte; these recipes carry the shapes
+;
+; The shim is part of FOURTH_CHAIN: its content hashes into every cached
+; table, so a shim change re-flattens exactly what it touches.
+(do
+    (defn nil? (xs) (eq (len xs) 0))
+    (defn plus (a b) (add a b))
+    (defn minus (a b) (sub a b))
+    (defn times (a b) (mul a b))
+    (defn divide (a b) (div a b))
+    (defn identity (x) x)
+    (defn abs (n) (if (lt n 0) (sub 0 n) n))
+    (defn min2 (a b) (if (lt a b) a b))
+    (defn max2 (a b) (if (gt a b) a b))
+    (defn sum (xs) (if (nil? xs) 0 (add (head xs) (sum (tail xs)))))
+    (defn product (xs) (if (nil? xs) 1 (mul (head xs) (product (tail xs)))))
+    (defn maximum (xs) (if (nil? (tail xs)) (head xs) (max2 (head xs) (maximum (tail xs)))))
+    (defn minimum (xs) (if (nil? (tail xs)) (head xs) (min2 (head xs) (minimum (tail xs)))))
+    (defn append (xs ys) (if (nil? xs) ys (cons (head xs) (append (tail xs) ys))))
+    (defn range (start end) (if (ge start end) (empty) (cons start (range (add start 1) end))))
+    (defn take (n xs) (if (or (le n 0) (nil? xs)) (empty) (cons (head xs) (take (sub n 1) (tail xs)))))
+    (defn drop (n xs) (if (le n 0) xs (if (nil? xs) (empty) (drop (sub n 1) (tail xs)))))
+    (defn fourth-rev2 (xs acc) (if (nil? xs) acc (fourth-rev2 (tail xs) (cons (head xs) acc))))
+    (defn reverse (xs) (fourth-rev2 xs (empty)))
+    (defn substring (s a b)
+        (if (ge a b) ""
+            (if (ge a (str_len s)) ""
+                (str_concat (char_at s a) (substring s (add a 1) b)))))
+    (defn fourth-i2s-pos (n)
+        (if (eq n 0) ""
+            (str_concat (fourth-i2s-pos (div n 10)) (byte_to_str (add 48 (mod n 10))))))
+    (defn int_to_str (n)
+        (if (eq n 0) "0"
+            (if (lt n 0) (str_concat "-" (fourth-i2s-pos (sub 0 n)))
+                (fourth-i2s-pos n))))
+    (defn fourth-s2i-digits (s i acc)
+        (if (ge i (str_len s)) acc
+            (fourth-s2i-digits s (add i 1) (add (mul acc 10) (sub (ord (char_at s i)) 48)))))
+    (defn fourth-s2i-ok (s i)
+        (if (ge i (str_len s)) 1
+            (if (lt (ord (char_at s i)) 48) 0
+                (if (gt (ord (char_at s i)) 57) 0 (fourth-s2i-ok s (add i 1))))))
+    (defn fourth-s2i-body (s)
+        (if (eq (fourth-s2i-ok s 0) 0) 0 (fourth-s2i-digits s 0 0)))
+    (defn str_to_int (s)
+        (if (eq (str_len s) 0) 0
+            (if (str_eq (char_at s 0) "-")
+                (if (eq (fourth-s2i-ok s 1) 0) 0
+                    (if (le (str_len s) 1) 0 (sub 0 (fourth-s2i-digits (substring s 1 (str_len s)) 0 0))))
+                (fourth-s2i-body s))))
+    (defn fourth-sf-at (s needle i)
+        (if (gt (add i (str_len needle)) (str_len s)) (sub 0 1)
+            (if (str_eq (substring s i (add i (str_len needle))) needle) i
+                (fourth-sf-at s needle (add i 1)))))
+    (defn str_find (s needle from)
+        (if (gt from (str_len s)) (sub 0 1)
+            (fourth-sf-at s needle (max2 from 0))))
+    0)

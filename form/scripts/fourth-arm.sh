@@ -27,7 +27,11 @@ FOURTH_CHAIN=(
     form-stdlib/fourth-walker-emit.fk
     form-stdlib/form-parse.fk
     form-stdlib/form-flatten.fk
+    form-stdlib/fourth-shim.fk
 )
+# the shim rides every flatten as the FIRST source: core vocabulary and the
+# string stones resolve as ordinary function rows; band defns shadow it
+FOURTH_SHIM="form-stdlib/fourth-shim.fk"
 FKWU=""
 
 fourth_available() { [[ -n "$FKWU" && -x "$FKWU" ]]; }
@@ -71,38 +75,61 @@ fourth_band_stem() {
     awk -v b="$stem" '$1==b{print $1; exit}' "$FOURTH_MANIFEST"
 }
 
-# fourth_band_module — the band's module source: first non-core prelude,
-# falling back to the same-name convention.
-fourth_band_module() {
-    local stem="$1" band="form-stdlib/tests/$stem-band.fk" mod
-    mod="$(grep -E '^; preludes:' "$band" 2>/dev/null | head -1 | sed 's/^; preludes://' \
-        | tr ' ' '\n' | grep -v 'core\.fk' | grep . | head -1)"
-    [[ -z "$mod" ]] && mod="form-stdlib/$stem.fk"
-    printf '%s\n' "$mod"
+# fourth_band_srcs — the band's source list: every non-core prelude in
+# declared order, then the band file itself (same-name convention as the
+# fallback when no prelude is declared).
+fourth_band_srcs() {
+    local stem="$1" band="form-stdlib/tests/$stem-band.fk" mods
+    mods="$(grep -E '^; preludes:' "$band" 2>/dev/null | head -1 | sed 's/^; preludes://' \
+        | tr ' ' '\n' | grep -v 'core\.fk' | grep . || true)"
+    [[ -z "$mods" && -f "form-stdlib/$stem.fk" ]] && mods="form-stdlib/$stem.fk"
+    printf '%s\n' $mods "$band"
+}
+
+# fourth_prep_srcs — prepared source paths for a stem, one per line: a
+# BML-dialect file rides validate.sh's prepare_sources (when in scope) so
+# the flattener always reads plain Form; empty when a source is missing.
+fourth_prep_srcs() {
+    local stem="$1" f
+    while IFS= read -r f; do
+        [[ -f "$f" ]] || return 0
+        if grep -Eq '^[[:space:]]*section \[' "$f" && declare -f prepare_sources >/dev/null; then
+            prepare_sources "$f"
+            printf '%s\n' "${prepared_args[0]}"
+        else
+            printf '%s\n' "$f"
+        fi
+    done < <(fourth_band_srcs "$stem")
+}
+
+# fourth_flatten_expr — the driver line that flattens a source list through
+# the multi-source door (fks carries the string pool; fkc is pool-free).
+fourth_flatten_expr() {
+    local kind="$1"; shift
+    local rl=" (read_file \"$FOURTH_SHIM\")" f
+    for f in "$@"; do rl="$rl (read_file \"$f\")"; done
+    if [[ "$kind" == "fks" ]]; then
+        printf '(print (fks-table-file (flt-srcs-fns (list%s)) (flt-srcs-pool (list%s) (list))))\n' "$rl" "$rl"
+    else
+        printf '(print (fkc-table-file (flt-srcs-fns (list%s))))\n' "$rl"
+    fi
 }
 
 # fourth_table — cached flattened node-table for one band (path on stdout).
 # Emits through the Go walker on a cache miss; empty output means the band
 # runs three-way this time.
 fourth_table() {
-    local stem="$1" kind mod band key out d
+    local stem="$1" kind key out d f srcs=()
     kind="$(awk -v b="$stem" '$1==b{print $2; exit}' "$FOURTH_MANIFEST")"
     [[ -n "$kind" ]] || return 0
-    band="form-stdlib/tests/$stem-band.fk"
-    mod="$(fourth_band_module "$stem")"
-    [[ -f "$band" && -f "$mod" ]] || return 0
-    key="$(cat "$mod" "$band" "${FOURTH_CHAIN[@]}" 2>/dev/null | shasum | cut -c1-16)"
+    while IFS= read -r f; do srcs+=("$f"); done < <(fourth_prep_srcs "$stem")
+    [[ "${#srcs[@]}" -ge 1 ]] || return 0
+    key="$(cat "${srcs[@]}" "${FOURTH_CHAIN[@]}" 2>/dev/null | shasum | cut -c1-16)"
     out="$FOURTH_DIR/t-$stem-$key.txt"
     if [[ ! -s "$out" ]]; then
         d="$(mktemp -d "${TMPDIR:-/tmp}/form-fourth-t.XXXXXX")"
         cat "${FOURTH_CHAIN[@]}" > "$d/driver.fk"
-        if [[ "$kind" == "fks" ]]; then
-            printf '(print (fks-table-file (flt-band-fns (read_file "%s") (read_file "%s")) (flt-band-pool (read_file "%s") (read_file "%s"))))\n' \
-                "$mod" "$band" "$mod" "$band" >> "$d/driver.fk"
-        else
-            printf '(print (fkc-table-file (flt-band-fns (read_file "%s") (read_file "%s"))))\n' \
-                "$mod" "$band" >> "$d/driver.fk"
-        fi
+        fourth_flatten_expr "$kind" "${srcs[@]}" >> "$d/driver.fk"
         "$GO_BIN" "$d/driver.fk" 2>/dev/null > "$out.tmp" && mv -f "$out.tmp" "$out" || rm -f "$out.tmp"
         rm -rf "$d"
     fi
@@ -125,28 +152,22 @@ fourth_table_for_band() {
 fourth_prepare_all() {
     fourth_available || return 0
     [[ -f "$FOURTH_MANIFEST" ]] || return 0
-    local d stems=() outs=() stem kind mod band key out missing=0
+    local d stems=() outs=() stem kind key out missing=0 f srcs
     d="$(mktemp -d "${TMPDIR:-/tmp}/form-fourth-all.XXXXXX")"
     cat "${FOURTH_CHAIN[@]}" > "$d/driver.fk"
     while read -r stem kind _; do
         [[ -z "$stem" || "$stem" == \#* ]] && continue
-        band="form-stdlib/tests/$stem-band.fk"
-        mod="$(fourth_band_module "$stem")"
-        [[ -f "$band" && -f "$mod" ]] || continue
-        key="$(cat "$mod" "$band" "${FOURTH_CHAIN[@]}" 2>/dev/null | shasum | cut -c1-16)"
+        srcs=()
+        while IFS= read -r f; do srcs+=("$f"); done < <(fourth_prep_srcs "$stem")
+        [[ "${#srcs[@]}" -ge 1 ]] || continue
+        key="$(cat "${srcs[@]}" "${FOURTH_CHAIN[@]}" 2>/dev/null | shasum | cut -c1-16)"
         out="$FOURTH_DIR/t-$stem-$key.txt"
         [[ -s "$out" ]] && continue
         missing=$((missing + 1))
         stems+=("$stem")
         outs+=("$out")
         printf '(print "==T-%s==")\n' "$stem" >> "$d/driver.fk"
-        if [[ "$kind" == "fks" ]]; then
-            printf '(print (fks-table-file (flt-band-fns (read_file "%s") (read_file "%s")) (flt-band-pool (read_file "%s") (read_file "%s"))))\n' \
-                "$mod" "$band" "$mod" "$band" >> "$d/driver.fk"
-        else
-            printf '(print (fkc-table-file (flt-band-fns (read_file "%s") (read_file "%s"))))\n' \
-                "$mod" "$band" >> "$d/driver.fk"
-        fi
+        fourth_flatten_expr "$kind" "${srcs[@]}" >> "$d/driver.fk"
     done < "$FOURTH_MANIFEST"
     if [[ "$missing" -eq 0 ]]; then
         rm -rf "$d"

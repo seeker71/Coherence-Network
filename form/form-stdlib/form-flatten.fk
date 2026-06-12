@@ -41,6 +41,7 @@
           (list "cons" 2 19) (list "nth" 2 23)
           (list "head" 1 20) (list "tail" 1 21) (list "len" 1 22)
           (list "str_len" 1 25) (list "str_eq" 2 26) (list "str_concat" 2 27)
+          (list "byte_to_str" 1 29)
           (list "div" 2 10) (list "mod" 2 11)
           (list "band" 2 34) (list "bor" 2 35) (list "bxor" 2 36)
           (list "shl_u32" 2 37) (list "shr_u32" 2 38) (list "rotr_u32" 2 39)
@@ -61,6 +62,11 @@
 (defn flt-ge (a b) (fk-le b a))
 (defn flt-eq (a b) (fk-if (fk-le a b) (fk-if (fk-le b a) (fk-lit 1) (fk-lit 0)) (fk-lit 0)))
 (defn flt-and (a b) (fk-if a (fk-if b (fk-lit 1) (fk-lit 0)) (fk-lit 0)))
+(defn flt-lt (a b) (flt-gt b a))
+(defn flt-or (a b) (fk-if a (fk-lit 1) (fk-if b (fk-lit 1) (fk-lit 0))))
+; char_at composes BYTE2S over SCHAR: the byte at i as a 1-char string
+; (byte-level — multibyte chars stay whole only in the walking kernels)
+(defn flt-char-at (a b) (fk-byte2s (fk-schar a b)))
 ; unary lowerings: ord rides SCHAR at byte 0; not is the IF flip
 (defn flt-ord (a) (fk-schar a (fk-lit 0)))
 (defn flt-not (a) (fk-if a (fk-lit 0) (fk-lit 1)))
@@ -119,9 +125,12 @@
     (if (str_eq op "ge") (flt-low 2 s pos fns env)
     (if (str_eq op "eq") (flt-low 3 s pos fns env)
     (if (str_eq op "and") (flt-low 4 s pos fns env)
+    (if (str_eq op "lt") (flt-low 5 s pos fns env)
+    (if (str_eq op "or") (flt-low 6 s pos fns env)
+    (if (str_eq op "char_at") (flt-low 7 s pos fns env)
     (if (str_eq op "ord") (flt-low1 1 s pos fns env)
     (if (str_eq op "not") (flt-low1 2 s pos fns env)
-        (flt-op op s pos fns env))))))))))))
+        (flt-op op s pos fns env)))))))))))))))
 
 ; one operand, then the unary lowering picked by selector k
 (defn flt-low1 (k s pos fns env) (flt-low1-a k s (flt-expr s pos fns env)))
@@ -162,7 +171,10 @@
 (defn flt-low-mk (k a b)
     (if (eq k 1) (flt-gt a b)
     (if (eq k 2) (flt-ge a b)
-    (if (eq k 3) (flt-eq a b) (flt-and a b)))))
+    (if (eq k 3) (flt-eq a b)
+    (if (eq k 4) (flt-and a b)
+    (if (eq k 5) (flt-lt a b)
+    (if (eq k 6) (flt-or a b) (flt-char-at a b))))))))
 
 ; table ops by arity, else a user function call (one evaluated argument)
 (defn flt-op (op s pos fns env) (flt-op2 (flt-assoc op (flt-ops)) op s pos fns env))
@@ -312,3 +324,18 @@
 
 ; single-source door (prelude-free bands, mini programs)
 (defn flt-src-fns (src) (flt-band3 (flt-top src (list) (list) (flt-src-pool src))))
+
+; multi-source door — a band whose vocabulary spans SEVERAL prelude modules
+; flattens by folding flt-top over the sources in load order: fns/rbodies
+; thread through (each module's defns visible to every later source), the
+; LAST source's main is fn 0, and the pool scans every source in the same
+; order the parser meets them — a SLIT index is stable across the whole
+; program. flt-band-fns is the two-source instance of this fold.
+(defn flt-srcs-pool (srcs acc)
+    (if (eq (len srcs) 0) acc
+        (flt-srcs-pool (tail srcs) (flt-scan (head srcs) 0 acc))))
+(defn flt-srcs-walk (srcs fns rbodies pool)
+    (if (eq (len srcs) 1) (flt-band3 (flt-top (head srcs) fns rbodies pool))
+        (flt-srcs-walk2 (flt-top (head srcs) fns rbodies pool) (tail srcs) pool)))
+(defn flt-srcs-walk2 (r srcs pool) (flt-srcs-walk srcs (nth r 0) (nth r 1) pool))
+(defn flt-srcs-fns (srcs) (flt-srcs-walk srcs (list) (list) (flt-srcs-pool srcs (list))))

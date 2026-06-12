@@ -450,9 +450,9 @@ cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walke
     "$FORMDIR/form-stdlib/fourth-walker-emit.fk" "$FORMDIR/form-stdlib/jit-lower.fk" \
     "$FORMDIR/form-stdlib/bmf-mini.fk" "$FORMDIR/form-stdlib/bmf-grammar.fk" > "$work/bmf-driver.fk"
 cat >> "$work/bmf-driver.fk" <<'EOF'
-; representative "BMF compiler core" as cells (grammar fold + match/cursor/caps logic)
-; built explicitly with the lowered tags (so it works reliably in the fourth model)
-; then lowered via jit-lower-full (new bmf rules for cursor 38, match 34, caps 37, etc.)
+# representative "BMF compiler core" as cells (grammar fold + match/cursor/caps logic)
+# built explicitly with the lowered tags (so it works reliably in the fourth model)
+# then lowered via jit-lower-full (new bmf rules for cursor 38, match 34, caps 37, etc.)
 (let cursor0 (fk-bmf-cursor (fk-lit 0)))
 (let cap42 (fk-bmf-cap-pair (fk-lit "tok") (fk-lit 42)))
 (let match-prog (fk-bmf-match cap42 cursor0))
@@ -480,7 +480,7 @@ echo
 echo "BMF compiler as lowered Form recipe (jit-lower + 4th emit -> native binary):"
 echo "  source bytes: $(wc -c < "$work/bmf.c" | tr -d ' ')"
 row "bmf-compiler (lowered)" "$bmf_t" "-" "-" "-" "$bmf_rss" "$bmf_size"
-; "use" it: the binary is the specialized compiler for the slice (in full M2 it would take grammar+source and emit binary)
+# "use" it: the binary is the specialized compiler for the slice (in full M2 it would take grammar+source and emit binary)
 echo "  (C has direct lowered BMF forms: cursor reads, match/caps unboxed, logic folded; see analysis below)"
 
 echo
@@ -1045,9 +1045,9 @@ echo
 # ratchet first rejected in round 2, crosses first. rle's 257-byte runs
 # allocate past the arena water line mid-call; its packed args ride the
 # walker-managed value stack (section 24), so the melt fires mid-band and
-# it crosses with the rest. sha256 stays named with its own wall: deep
-# let-chains under inline-with-re-evaluation are exponential; it wants
-# let-as-binding, not inlining.
+# it crosses with the rest. sha256 crosses too (its do-let bodies bind
+# through the nested-do discipline) — its row lives in the manifest with
+# the rest of the post-milestone coverage.
 fig_mods=(adler32 crc32 slice-merge rle)
 fig_exps=(5 4 127 12)
 cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
@@ -1092,9 +1092,8 @@ if ! grep -q '^melt ' "$work/fig-melt-rle.txt"; then
 fi
 echo "  rle's 257-byte runs crossed the melt water line mid-band ($(grep -c '^melt ' "$work/fig-melt-rle.txt") melts) —"
 echo "  the packed args rode the value stack as melt-visible roots (section 24)"
-echo "  sha256             named with its wall: deep let-chains are exponential under inlining —"
-echo "                     wants let-as-binding (the value-stack lane), not re-evaluation"
-echo "  bands-on-fourth-arm: $((11 + sp_pass + fig_pass)) (learning-trend + 9 multi-param + feature-vector + $sp_pass string-pool + $fig_pass checksum-family bands, four-way gated)"
+echo "  bands-on-fourth-arm (milestone sections): $((11 + sp_pass + fig_pass)) (learning-trend + 9 multi-param + feature-vector + $sp_pass string-pool + $fig_pass checksum-family bands, four-way gated)"
+echo "  full coverage lives in the manifest: $(grep -vc '^#' "$FORMDIR/fourth-arm-bands.txt") rows, each four-way gated by validate.sh on every suite run"
 
 echo
 # ── 27. the crystallization wire — runtime codegen for a FOREIGN loaded table ──
