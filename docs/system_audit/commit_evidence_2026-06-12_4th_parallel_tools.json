@@ -7,7 +7,17 @@
     "/tmp/*-driver.fk",
     "scripts/fourth_kernel_audit.sh (extended with tool sections)",
     "docs/coherence-substrate/fourth-kernel.form (tools section in ladder)",
-    "docs/system_audit/commit_evidence_2026-06-12_4th_parallel_tools.json"
+    "docs/system_audit/commit_evidence_2026-06-12_4th_parallel_tools.json",
+    "form/form-stdlib/jit-lower.fk",
+    "form/form-stdlib/fourth-walker.fk",
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/tests/jit-lower-band.fk",
+    "form/form-stdlib/tests/full-jit-lower-band.fk",
+    "form/form-kernel-go/jit.go",
+    "form/scripts/fourth_kernel_audit.sh",
+    "scripts/fourth_kernel_audit.sh",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "kernels/JIT_GAP_LEDGER.md"
   ],
   "local_validation": {
     "status": "pass",
@@ -68,7 +78,15 @@
     "scripts/fourth_kernel_audit.sh",
     "docs/coherence-substrate/fourth-kernel.form",
     "docs/system_audit/commit_evidence_2026-06-12_4th_parallel_tools.json",
-    "~/4th-binaries/* (produced artifacts)"
+    "~/4th-binaries/* (produced artifacts)",
+    "form/form-stdlib/jit-lower.fk",
+    "form/form-stdlib/fourth-walker.fk",
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/tests/jit-lower-band.fk",
+    "form/form-stdlib/tests/full-jit-lower-band.fk",
+    "form/form-kernel-go/jit.go",
+    "form/scripts/fourth_kernel_audit.sh",
+    "kernels/JIT_GAP_LEDGER.md"
   ],
   "change_intent": "runtime_feature",
   "e2e_validation": {
