@@ -1,0 +1,155 @@
+; db-api-server.fk — EMITS a self-contained native binary that serves the home
+; page and a JSON API entirely from a SQLite .db file it opens itself, plus its
+; OWN api surface and its OWN binary. No libsqlite3, no Python, no stdio in the
+; running binary: the SQLite format is parsed inline (sqlite-read.fk lifted into
+; the emitted C), the socket is the only kernel organ (the net main pattern from
+; fourth-walker-emit.fk). Witnessed live by scripts/db_api_server_demo.sh.
+;
+; Routes — every response reconstructed from the binary's own surface:
+;   GET /              home page (html) — the idea rows, read from the .db
+;   GET /api/idea      json rows, read from the .db
+;   GET /api/_surface  the binary's OWN api surface (its route list)
+;   GET /api/_binary   the binary's OWN executable bytes (argv[0]) — self-return
+;
+; Portable sockaddr: macOS/BSD (sin_len + family) and Linux (u16 family) via one
+; #ifdef, so the same recipe serves a native macOS binary AND a Linux container
+; (deploy/db-api/Dockerfile).
+;
+; NOTE (2026-06-12): like self-translate.fk, this emitter uses C STRING LITERALS
+; (the html/json payloads), so the Form source carries escaped quotes. Go and Rust
+; parse them; the TS kernel's string parser rejects escaped quotes — a real,
+; recorded three-way divergence. So the emitter runs on the Go kernel to PRODUCE
+; the binary (the artifact is the binary, witnessed live). The load-bearing BODY
+; is three-way: the sqlite parse is sqlite-read.fk (tests/sqlite-read-band.fk ->
+; 31). The closing cell is the quoteless responder-as-cells (the fkc-emit-server
+; walker over routing + sqlite recipes), which makes the whole server three-way;
+; named, not hidden.
+
+(defn das-emit ()
+  "extern int socket(int,int,int);
+extern int bind(int,const void*,unsigned int);
+extern int listen(int,int);
+extern long accept(int,void*,void*);
+extern int close(int);
+extern int setsockopt(int,int,int,const void*,unsigned int);
+extern long read(int,void*,unsigned long);
+extern long write(int,const void*,unsigned long);
+extern int shutdown(int,int);
+extern int fork(void);
+extern void _exit(int);
+extern int atoi(const char*);
+extern int open(const char*,int);
+static unsigned char db[1<<20];
+static long dblen;
+static char rq[8192];
+static char out[1<<20];
+static long op;
+static char *exe_path;
+static void o_c(char c){ out[op++]=c; }
+static void o_s(const char*s){ while(*s) o_c(*s++); }
+static void o_n(long v){ char b[24]; int n=0; if(v==0){o_c('0');return;} if(v<0){o_c('-');v=-v;}
+    while(v>0){b[n++]='0'+v%10;v/=10;} while(n>0) o_c(b[--n]); }
+static long u8(long i){ return db[i]; }
+static long u16(long i){ return db[i]*256 + db[i+1]; }
+static long vi(long *pi){ long i=*pi, acc=0; while(db[i]&128){ acc=(acc<<7)|(db[i]&127); i++; } acc=(acc<<7)|db[i]; i++; *pi=i; return acc; }
+static long serial_len(long s){ if(s<=4)return s; if(s==5)return 6; if(s<=7)return 8; if(s<=9)return 0;
+    return (s&1)? (s-13)/2 : (s-12)/2; }
+static long page_off(long p,long psize){ return (p-1)*psize; }
+static long hdr_off(long po){ return po==0 ? 100 : po; }
+static long cell_cols(long cp,long *coloff,long *st){
+    long i=cp; vi(&i);
+    vi(&i);
+    long recstart=i; long hdrlen=vi(&i); long hdrend=recstart+hdrlen;
+    long bo=hdrend, n=0;
+    while(i<hdrend){ long s=vi(&i); st[n]=s; coloff[n]=bo; bo+=serial_len(s); n++; }
+    return n;
+}
+static long col_int(long off,long s){ if(s==8)return 0; if(s==9)return 1;
+    long v=0,k,len=serial_len(s); for(k=0;k<len;k++) v=(v<<8)|db[off+k]; return v; }
+static void col_text(long off,long s){ long len=(s-13)/2,k; for(k=0;k<len;k++) o_c(db[off+k]); }
+static long first_rootpage(long psize){
+    long po=0, ho=hdr_off(po); long nc=u16(ho+3); if(nc<1) return 0;
+    long cp = po + u16(ho+8);
+    long coloff[8], st[8]; long n=cell_cols(cp,coloff,st);
+    if(n<4) return 0;
+    return col_int(coloff[3], st[3]);
+}
+static long psize;
+static void emit_rows(int as_json){
+    long rp=first_rootpage(psize); if(rp<1){ o_s(as_json?\"[]\":\"(no table)\"); return; }
+    long po=page_off(rp,psize), ho=hdr_off(po); long nc=u16(ho+3);
+    if(as_json) o_c('[');
+    long k; for(k=0;k<nc;k++){
+        long cp = po + u16(ho+8+2*k);
+        long coloff[8], st[8]; long n=cell_cols(cp,coloff,st);
+        if(as_json){
+            if(k) o_c(',');
+            o_s(\"{\\\"id\\\":\"); o_n(col_int(coloff[0],st[0]));
+            o_s(\",\\\"slug\\\":\\\"\"); col_text(coloff[1],st[1]);
+            o_s(\"\\\",\\\"title\\\":\\\"\"); col_text(coloff[2],st[2]); o_s(\"\\\"}\");
+        } else {
+            o_s(\"  <li><b>\"); col_text(coloff[1],st[1]); o_s(\"</b> — \");
+            col_text(coloff[2],st[2]); o_s(\"</li>\\n\");
+        }
+    }
+    if(as_json) o_c(']');
+}
+static void resp_head(const char*status,const char*ctype){
+    o_s(\"HTTP/1.0 \"); o_s(status); o_s(\"\\r\\nContent-Type: \"); o_s(ctype);
+    o_s(\"\\r\\nConnection: close\\r\\n\\r\\n\"); }
+static void route_home(){ resp_head(\"200 OK\",\"text/html; charset=utf-8\");
+    o_s(\"<!doctype html><meta charset=utf-8><title>Form db-api</title>\");
+    o_s(\"<h1>Ideas</h1><ul>\\n\"); emit_rows(0);
+    o_s(\"</ul><p>served entirely from a sqlite file, from within one native \"
+        \"binary emitted by Form — no libsqlite3, no python.</p>\"
+        \"<p>api: <a href=/api/idea>/api/idea</a> · \"
+        \"<a href=/api/_surface>/api/_surface</a> · \"
+        \"<a href=/api/_binary>/api/_binary</a></p>\"); }
+static void route_idea(){ resp_head(\"200 OK\",\"application/json\"); emit_rows(1); }
+static void route_surface(){ resp_head(\"200 OK\",\"application/json\");
+    o_s(\"{\\\"served_by\\\":\\\"form-db-api-binary\\\",\\\"store\\\":\\\"sqlite-file\\\",\"
+        \"\\\"reader\\\":\\\"sqlite-read.fk\\\",\\\"routes\\\":[\"
+        \"{\\\"path\\\":\\\"/\\\",\\\"returns\\\":\\\"home page (html), rows from the db\\\"},\"
+        \"{\\\"path\\\":\\\"/api/idea\\\",\\\"returns\\\":\\\"json rows from the db\\\"},\"
+        \"{\\\"path\\\":\\\"/api/_surface\\\",\\\"returns\\\":\\\"this — its own api surface\\\"},\"
+        \"{\\\"path\\\":\\\"/api/_binary\\\",\\\"returns\\\":\\\"its own executable bytes\\\"}]}\"); }
+static void route_binary(int cfd){
+    int fd=open(exe_path,0); if(fd<0){ resp_head(\"500 err\",\"text/plain\"); o_s(\"no self\"); return; }
+    o_s(\"HTTP/1.0 200 OK\\r\\nContent-Type: application/octet-stream\\r\\nConnection: close\\r\\n\\r\\n\");
+    write(cfd,out,op); op=0;
+    long g; while((g=read(fd,out,sizeof out))>0){ write(cfd,out,g); } close(fd); }
+static void route_404(){ resp_head(\"404 Not Found\",\"text/plain\"); o_s(\"not found\\n\"); }
+static int path_is(const char*p){ long i=0; while(p[i]){ if(rq[4+i]!=p[i]) return 0; i++; }
+    char c=rq[4+i]; return c==' '||c=='?'; }
+#ifdef __linux__
+struct sa { unsigned short fam; unsigned char p[2]; unsigned int addr; unsigned char z[8]; };
+#else
+struct sa { unsigned char len; unsigned char fam; unsigned char p[2]; unsigned int addr; unsigned char z[8]; };
+#endif
+int main(int argc,char**argv){
+    exe_path=argv[0];
+    long port = argc>1 ? atoi(argv[1]) : 8080;
+    const char*dbpath = argc>2 ? argv[2] : \"seed.db\";
+    int fd=open(dbpath,0); if(fd<0) return 2; dblen=read(fd,db,sizeof db); close(fd);
+    psize = u16(16); if(psize==1) psize=65536;
+    int sfd=socket(2,1,0); int yes=1; setsockopt(sfd,65535,4,&yes,4);
+    struct sa a;
+#ifdef __linux__
+    a.fam=2;
+#else
+    a.len=16; a.fam=2;
+#endif
+    a.p[0]=(port>>8)&255; a.p[1]=port&255; a.addr=0;
+    for(int z=0;z<8;z++) a.z[z]=0;
+    if(bind(sfd,&a,16)<0) return 1; listen(sfd,16);
+    while(1){ long cfd=accept(sfd,0,0); if(cfd<0) continue;
+        if(fork()==0){ read((int)cfd,rq,8192); op=0;
+            if(path_is(\"/api/idea\")) route_idea();
+            else if(path_is(\"/api/_surface\")) route_surface();
+            else if(path_is(\"/api/_binary\")){ route_binary((int)cfd); shutdown((int)cfd,2); _exit(0); }
+            else if(path_is(\"/\")) route_home();
+            else route_404();
+            write((int)cfd,out,op); shutdown((int)cfd,2); _exit(0); }
+        close((int)cfd); }
+    return 0;
+}")
