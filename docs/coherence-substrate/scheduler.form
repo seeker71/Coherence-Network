@@ -52,6 +52,6 @@
 ;   multiple pending unsolicited offers through sched-ack — POSIX number-order IS the
 ;   fifo row's data read over line numbers; IRQ priority IS the priority row's data
 ;   read over levels (proven row-for-row: tests/afferent-priority-band.fk -> 1023,
-;   three-way; live: scripts/fourth_kernel_audit.sh section 23). Afferent delivery and
+;   three-way; live: scripts/hati_os_kernel_audit.sh section 23). Afferent delivery and
 ;   efferent scheduling are two readings of ONE policy discipline — the
 ;   signals+interrupts move, one level up.

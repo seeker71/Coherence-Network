@@ -1,10 +1,10 @@
-; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk
 ;
-; fourth-walker-band — m4b proven three-way: a walker authored entirely over
+; hati-os-kernel-band — m4b proven three-way: a walker authored entirely over
 ; the minimal surface walks programs that are themselves content-addressed
 ; cells, recursion included. Correct before fast.
 ;
-; Verdict 15 when the walker holds:
+; Verdict 31 when the walker holds:
 ;   1   arithmetic walks — ADD(LIT 40, LIT 2) = 42 and SUB(LIT 50, LIT 8) = 42
 ;   2   both branch arms walk — IF(LE(ARG,1), 111, 222) answers 111 at arg 1
 ;       (the just-at-threshold edge) and 222 at arg 2
@@ -12,6 +12,9 @@
 ;       arg 1 (the base-case boundary), through SELF re-entering the program
 ;   8   programs are cells — the fib program authored twice is the SAME cell;
 ;       changing one leaf (the base threshold) is a DIFFERENT cell
+;   16  native IEEE double lane walks literals, string parsing, floor, mixed
+;       arithmetic, float-to-int, and round-to-digits through the
+;       multi-function walker
 (do
     (let c0 (if (eq (fk-run (fk-add (fk-lit 40) (fk-lit 2)) 0) 42)
                 (if (eq (fk-run (fk-sub (fk-lit 50) (fk-lit 8)) 0) 42) 1 0) 0))
@@ -30,4 +33,18 @@
     (let c3 (if (eq (ms-same (fk-fib-program) (fk-fib-program)) 1)
                 (if (eq (ms-same (fk-fib-program) tweaked) 0) 8 0) 0))
 
-    (add c0 (add c1 (add c2 c3))))
+    (let fsum (fk-float-to-int
+                  (fk-mul (fk-add (fk-f64 0 "1.25")
+                                  (fk-str-to-float (fk-slit 1 "2.75")))
+                          (fk-lit 10))))
+    (let ffloor (fk-floor (fk-f64 2 "-3.2")))
+    (let fround (fk-round-ndigits (fk-div (fk-f64 3 "1.0")
+                                          (fk-f64 4 "8.0"))
+                                  (fk-lit 2)))
+    (let c4 (if (eq (fkm-run (list fsum) 0) 40)
+                (if (eq (fkm-run (list ffloor) 0) -4)
+                    (if (eq (fkm-run (list fround) 0) 0.12) 16 0)
+                    0)
+                0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))

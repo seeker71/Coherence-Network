@@ -1,0 +1,31 @@
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/form-parse.fk form-stdlib/form-flatten.fk
+;
+; form-flatten-indirect-call-band — function values carried through env/list
+; space and invoked indirectly. This is the route-table stone the Hati-OS HTTP
+; lane needs: a handler can be stored as a value and called later.
+;
+; Verdict 31 when the lane holds:
+;   1   a let-bound single-arg function value calls indirectly
+;   2   a let-bound zero-arg function value calls indirectly
+;   4   a let-bound two-arg function value calls indirectly with the packed list
+;   8   a function symbol lowers as a value (list idx arity), not fk-lit 0
+;   16  an indirect call row (tag 44) appears in the flattened table
+
+(do
+    (let src1 "(do (defn plus1 (x) (add x 1)) (let f plus1) (f 4))")
+    (let src2 "(do (defn seven () 7) (let f seven) (f))")
+    (let src3 "(do (defn add2 (x y) (add x y)) (let f add2) (f 3 5))")
+
+    (let c0 (if (eq (fkm-run (flt-src-fns src1) 0) 5) 1 0))
+    (let c1 (if (eq (fkm-run (flt-src-fns src2) 0) 7) 2 0))
+    (let c2 (if (eq (fkm-run (flt-src-fns src3) 0) 8) 4 0))
+
+    (let fval (flt-fref (list "plus1" 1 1)))
+    (let c3 (if (eq (fkm-run (list (fk-head fval)) 0) 1)
+                (if (eq (fkm-run (list (fk-head (fk-tail fval))) 0) 1) 8 0)
+                0))
+
+    (let rows3 (nth (fkc-flatten-many (flt-src-fns src3)) 0))
+    (let c4 (if (eq (fkd-has-tag rows3 44) 1) 16 0))
+
+    (sum (list c0 c1 c2 c3 c4)))

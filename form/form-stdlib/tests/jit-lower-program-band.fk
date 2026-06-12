@@ -1,4 +1,4 @@
-; preludes: form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/jit-lower.fk
+; preludes: form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/jit-lower.fk
 ;
 ; jit-lower-program-band — the program-level lowering passes on multi-function
 ; tables: CALL inlining (JIT gap #2's recipe-lane close — dispatch overhead

@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# fourth_kernel_audit.sh — M1 carrier for docs/coherence-substrate/fourth-kernel.form:
-# realize the Form-emitted standalone CLI (form-stdlib/fourth-kernel-emit.fk) through
+# hati_os_kernel_audit.sh — M1 carrier for docs/coherence-substrate/hati-os.form:
+# realize the Form-emitted standalone CLI (form-stdlib/hati-os-native-cli-emit.fk) through
 # clang, prove value parity against the three walking kernels on the same semantic asks
 # (fib 28, sum 1000, ackermann 3 6), then measure the comparison rows the spec names:
 # median wall time, maximum RSS, binary size, startup. Parity gates the timing — a row
 # only counts when every carrier returns the same value through its own front door.
 #
 # Carriers: form-kernel-go, form-kernel-rust (built if missing), form-kernel-ts via
-# npx tsx (skipped when node is absent), and fk4 — the binary whose every source byte
+# npx tsx (skipped when node is absent), and hati_os — the binary whose every source byte
 # was emitted by Form recipes. clang and the OS loader are allowed host carriers
 # (host-kernel.form host-resource-access); the emitter intelligence lives in the body.
 #
-# Run:  scripts/fourth_kernel_audit.sh
+# Run:  scripts/hati_os_kernel_audit.sh
 set -u
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -37,24 +37,24 @@ fi
 HAVE_RS=0; [[ -x "$RS_BIN" ]] && HAVE_RS=1
 HAVE_TS=0; command -v npx >/dev/null && [[ -f "$TS_MAIN" ]] && HAVE_TS=1
 
-work="$(mktemp -d "${TMPDIR:-/tmp}/fk4.XXXXXX")"
+work="$(mktemp -d "${TMPDIR:-/tmp}/hati_os.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
 
 # ── 1. Form emits the whole program; the kernel is only the mouth ────────
-cat "$FORMDIR/form-stdlib/fourth-kernel-emit.fk" > "$work/driver.fk"
+cat "$FORMDIR/form-stdlib/hati-os-native-cli-emit.fk" > "$work/driver.fk"
 cat >> "$work/driver.fk" <<'EOF'
-(print "==FK4==")
-(print (fk4-program "fk4"))
+(print "==HATI_OS==")
+(print (hati-os-program "hati_os"))
 (print "==END==")
 EOF
 (cd "$FORMDIR" && "$GO_BIN" "$work/driver.fk" 2>/dev/null) > "$work/emit.out"
-sed -n '/^==FK4==$/,/^==END==$/p' "$work/emit.out" | sed -e '1d' -e '$d' > "$work/fk4.c"
-if ! grep -q 'int main' "$work/fk4.c"; then
+sed -n '/^==HATI_OS==$/,/^==END==$/p' "$work/emit.out" | sed -e '1d' -e '$d' > "$work/hati_os.c"
+if ! grep -q 'int main' "$work/hati_os.c"; then
     echo "FAIL  emission did not produce a main — see $work/emit.out"; exit 1
 fi
 
-"$CLANG" -O2 -o "$work/fk4" "$work/fk4.c"
-FK4="$work/fk4"
+"$CLANG" -O2 -o "$work/hati_os" "$work/hati_os.c"
+HATI_OS_BIN="$work/hati_os"
 
 # ── 2. The walkers' own answers (recursive recipes, their semantics) ─────
 cat > "$work/wfib.fk" <<'EOF'
@@ -79,22 +79,22 @@ run_kernel() { # kernel-name file -> first stdout line
 }
 
 go_fib="$(run_kernel go "$work/wfib.fk")";  go_sum="$(run_kernel go "$work/wsum.fk")";  go_ack="$(run_kernel go "$work/wack.fk")"
-fk4_fib="$("$FK4" 1 28)"; fk4_sum="$("$FK4" 2 1000)"; fk4_ack="$("$FK4" 3 3 6)"
+hati_os_fib="$("$HATI_OS_BIN" 1 28)"; hati_os_sum="$("$HATI_OS_BIN" 2 1000)"; hati_os_ack="$("$HATI_OS_BIN" 3 3 6)"
 
 echo "parity (go walker vs Form-emitted native):"
-echo "  fib 28   walker=$go_fib  fk4=$fk4_fib"
-echo "  sum 1000 walker=$go_sum  fk4=$fk4_sum"
-echo "  ack 3 6  walker=$go_ack  fk4=$fk4_ack"
-if [[ "$go_fib" != "$fk4_fib" || "$go_sum" != "$fk4_sum" || "$go_ack" != "$fk4_ack" ]]; then
+echo "  fib 28   walker=$go_fib  hati_os=$hati_os_fib"
+echo "  sum 1000 walker=$go_sum  hati_os=$hati_os_sum"
+echo "  ack 3 6  walker=$go_ack  hati_os=$hati_os_ack"
+if [[ "$go_fib" != "$hati_os_fib" || "$go_sum" != "$hati_os_sum" || "$go_ack" != "$hati_os_ack" ]]; then
     echo "FAIL  value parity broken — timing rows do not count"; exit 1
 fi
 if [[ "$HAVE_RS" == "1" ]]; then
     rs_fib="$(run_kernel rust "$work/wfib.fk")"
-    [[ "$rs_fib" == "$fk4_fib" ]] || { echo "FAIL  rust walker disagrees: $rs_fib"; exit 1; }
+    [[ "$rs_fib" == "$hati_os_fib" ]] || { echo "FAIL  rust walker disagrees: $rs_fib"; exit 1; }
 fi
 if [[ "$HAVE_TS" == "1" ]]; then
     ts_fib="$(run_kernel ts "$work/wfib.fk")"
-    [[ "$ts_fib" == "$fk4_fib" ]] || { echo "FAIL  ts walker disagrees: $ts_fib"; exit 1; }
+    [[ "$ts_fib" == "$hati_os_fib" ]] || { echo "FAIL  ts walker disagrees: $ts_fib"; exit 1; }
 fi
 echo "  parity holds — rows count"
 echo
@@ -135,12 +135,12 @@ row() { # label fib_ms sum_ms ack_ms startup_ms rss_mb size_kb
 echo "rows (median wall ms per full invocation; RSS on fib 28; size of the carrier binary):"
 row carrier "fib28-ms" "sum1k-ms" "ack36-ms" "startup-ms" "rss-MB" "size-KB"
 
-fk4_t_fib="$(median_ms 15 "$FK4" 1 28)"
-fk4_t_sum="$(median_ms 15 "$FK4" 2 1000)"
-fk4_t_ack="$(median_ms 15 "$FK4" 3 3 6)"
-fk4_t_zero="$(median_ms 15 "$FK4" 0 0)"
-fk4_rss="$(max_rss_mb "$FK4" 1 28)"
-row "fk4 (Form-emitted)" "$fk4_t_fib" "$fk4_t_sum" "$fk4_t_ack" "$fk4_t_zero" "$fk4_rss" "$(size_kb "$FK4")"
+hati_os_t_fib="$(median_ms 15 "$HATI_OS_BIN" 1 28)"
+hati_os_t_sum="$(median_ms 15 "$HATI_OS_BIN" 2 1000)"
+hati_os_t_ack="$(median_ms 15 "$HATI_OS_BIN" 3 3 6)"
+hati_os_t_zero="$(median_ms 15 "$HATI_OS_BIN" 0 0)"
+hati_os_rss="$(max_rss_mb "$HATI_OS_BIN" 1 28)"
+row "hati_os (Form-emitted)" "$hati_os_t_fib" "$hati_os_t_sum" "$hati_os_t_ack" "$hati_os_t_zero" "$hati_os_rss" "$(size_kb "$HATI_OS_BIN")"
 
 go_t_fib="$(cd "$FORMDIR" && median_ms 5 "$GO_BIN" "$work/wfib.fk")"
 go_t_sum="$(cd "$FORMDIR" && median_ms 5 "$GO_BIN" "$work/wsum.fk")"
@@ -172,12 +172,12 @@ else
 fi
 
 echo
-echo "emitted source: $(wc -c < "$work/fk4.c" | tr -d ' ') bytes, every byte authored by Form recipes"
+echo "emitted source: $(wc -c < "$work/hati_os.c" | tr -d ' ') bytes, every byte authored by Form recipes"
 
 # ── 4. m4c — the EMITTED WALKER: the emitter reads fib-as-cells and emits ──
 # the generic walker + node table + probe; the program stays data in C.
-cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
-    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" > "$work/fkw-driver.fk"
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/hati-os-kernel.fk" \
+    "$FORMDIR/form-stdlib/hati-os-kernel-emit.fk" > "$work/fkw-driver.fk"
 cat >> "$work/fkw-driver.fk" <<'EOF'
 (print "==FKW==")
 (print (fkc-emit (fk-fib-program)))
@@ -211,8 +211,8 @@ echo
 # ── 5. m4d first move — the quine seed: the booted binary emits its own ──
 # node table byte-exactly (self-observation through NODE, self-emission
 # through PUTC), checked against the emitter's independently computed text.
-cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
-    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" > "$work/fkd-driver.fk"
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/hati-os-kernel.fk" \
+    "$FORMDIR/form-stdlib/hati-os-kernel-emit.fk" > "$work/fkd-driver.fk"
 cat >> "$work/fkd-driver.fk" <<'EOF'
 (print "==SRC==")
 (print (fkc-emit (fkd-self-printer)))
@@ -238,8 +238,8 @@ echo
 # ── 6. m4e1 — CALL + the function table: mutual recursion in the booted ──
 # binary, and fib through CALL instead of SELF (the multi-function lane
 # that unblocks the emitter-as-program).
-cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
-    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" > "$work/fke-driver.fk"
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/hati-os-kernel.fk" \
+    "$FORMDIR/form-stdlib/hati-os-kernel-emit.fk" > "$work/fke-driver.fk"
 cat >> "$work/fke-driver.fk" <<'EOF'
 (let even (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-lit 1) (fk-call 1 (fk-sub (fk-arg) (fk-lit 1)))))
 (let odd  (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-lit 0) (fk-call 0 (fk-sub (fk-arg) (fk-lit 1)))))
@@ -270,8 +270,8 @@ echo
 # cells into a program-as-cells; the emitter turns that into C; clang makes a
 # binary. Swap the grammar, get a DIFFERENT binary — the compiler-compiler
 # property, proven in compiled output.
-cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
-    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" "$FORMDIR/form-stdlib/bmf-mini.fk" > "$work/bmf-driver.fk"
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/hati-os-kernel.fk" \
+    "$FORMDIR/form-stdlib/hati-os-kernel-emit.fk" "$FORMDIR/form-stdlib/bmf-mini.fk" > "$work/bmf-driver.fk"
 cat >> "$work/bmf-driver.fk" <<'EOF'
 (let g1 (list (bmf-rule 1 3 10) (bmf-rule 2 4 3)))
 (let g2 (list (bmf-rule 1 3 100) (bmf-rule 2 4 3)))
@@ -300,8 +300,8 @@ echo "   source through the port still needs m4e4 strings and the m4e3 real-reci
 
 echo
 # ── 8-10. the Form-OS face: universal loader, self-JIT on heat, the organs ──
-cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
-    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" "$FORMDIR/form-stdlib/bmf-mini.fk" > "$work/os-driver.fk"
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/hati-os-kernel.fk" \
+    "$FORMDIR/form-stdlib/hati-os-kernel-emit.fk" "$FORMDIR/form-stdlib/bmf-mini.fk" > "$work/os-driver.fk"
 cat >> "$work/os-driver.fk" <<'EOF'
 (let fibc (fk-if (fk-le (fk-arg) (fk-lit 1)) (fk-arg) (fk-add (fk-call 0 (fk-sub (fk-arg) (fk-lit 1))) (fk-call 0 (fk-sub (fk-arg) (fk-lit 2))))))
 (let even (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-lit 1) (fk-call 1 (fk-sub (fk-arg) (fk-lit 1)))))
@@ -369,8 +369,8 @@ echo
 # cursor position lives in the RAM organ so save/restore is a pointer move
 # (BMA's discipline); recipe args ride the call stack. Choice/fail with a
 # real backtrack: rule A (match x then digits) | rule B (digits).
-cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
-    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" > "$work/cur-driver.fk"
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/hati-os-kernel.fk" \
+    "$FORMDIR/form-stdlib/hati-os-kernel-emit.fk" > "$work/cur-driver.fk"
 cat >> "$work/cur-driver.fk" <<'EOF'
 (defn seqq (a b) (fk-if a b b))
 (defn adv () (fk-set (fk-lit 0) (fk-add (fk-get (fk-lit 0)) (fk-lit 1))))
@@ -405,13 +405,13 @@ if [[ "$m_a" != "42" || "$m_b" != "9001" ]]; then
 fi
 
 echo
-# ── 13. n1/n2 — the NET organ + the api on a 4th-kernel-compiled binary ──
+# ── 13. n1/n2 — the NET organ + the api on a Hati-OS-compiled binary ──
 # A server-variant binary owns socket/bind/listen/accept/fork; the responder
 # program's PUTC bytes (dup2'd to the connection) are the body. Live curl.
-cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
-    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" > "$work/srv-driver.fk"
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/hati-os-kernel.fk" \
+    "$FORMDIR/form-stdlib/hati-os-kernel-emit.fk" > "$work/srv-driver.fk"
 cat >> "$work/srv-driver.fk" <<'EOF'
-(let resp (fkresp "HTTP/1.0 200 OK\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{\"status\":\"ok\",\"served_by\":\"fourth-kernel-binary\"}"))
+(let resp (fkresp "HTTP/1.0 200 OK\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{\"status\":\"ok\",\"served_by\":\"Hati-OS-binary\"}"))
 (print "==SRV==")
 (print (fkc-emit-server (list resp)))
 (print "==END==")
@@ -432,63 +432,16 @@ kill -9 "$API_PID" 2>/dev/null
 echo "n1/n2 the api served on a binary the 4th kernel compiled (net organ: socket/bind/accept/fork):"
 echo "  GET /health -> HTTP $code in ${t}s  body: $(cat "$work/body.txt")"
 if [[ "$code" != "200" ]]; then
-    echo "FAIL  fourth-kernel api binary did not serve 200"; exit 1
+    echo "FAIL  Hati-OS api binary did not serve 200"; exit 1
 fi
 echo "  the response BODY is the program's PUTC bytes; the net lifecycle is the constant main (the organ)"
-
-echo
-# ── LARGE PARALLEL: BMF compiler as whole Form recipe on 4th lane (M2 north star) ──
-# jit-lower (with new BMF cursor/match/caps unboxing) + fourth-walker-emit on a
-# bigger slice (bmf-grammar + engine core as lowered cells) -> specialized native
-# "bmf-compiler" binary. The C is the lowered+emitted shape (direct cursor, unboxed
-# match/caps, folded, no old boxed dispatch for what was lowered). This + the
-# previous lifts is the concrete step toward emitting the full BMF compiler
-# (engine + source-compiler + grammars) as portable recipe, with the binary
-# having all the requested features (native/folded/unboxed/full primitives)
-# validated by parity + throughput + probe.
-cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
-    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" "$FORMDIR/form-stdlib/jit-lower.fk" \
-    "$FORMDIR/form-stdlib/bmf-mini.fk" "$FORMDIR/form-stdlib/bmf-grammar.fk" > "$work/bmf-driver.fk"
-cat >> "$work/bmf-driver.fk" <<'EOF'
-# representative "BMF compiler core" as cells (grammar fold + match/cursor/caps logic)
-# built explicitly with the lowered tags (so it works reliably in the fourth model)
-# then lowered via jit-lower-full (new bmf rules for cursor 38, match 34, caps 37, etc.)
-(let cursor0 (fk-bmf-cursor (fk-lit 0)))
-(let cap42 (fk-bmf-cap-pair (fk-lit "tok") (fk-lit 42)))
-(let match-prog (fk-bmf-match cap42 cursor0))
-(let logic-guard (fk-logic-and (fk-le (fk-arg) (fk-lit 100)) (fk-le (fk-lit 0) (fk-arg))))
-(let folded (fk-folded (fk-lit 999)))
-(let bmf-low (fk-bmf-lowered (fk-add (fk-lit 40) (fk-lit 2))))
-(let compiler-core (fk-if logic-guard (fk-add match-prog folded) bmf-low))
-(let lowered (jit-lower-full compiler-core))
-(print "==BMF-COMPILER==")
-(print (fkc-emit (list lowered)))  ; single for simplicity/reliability
-(print "==END==")
-0
-EOF
-(cd "$FORMDIR" && "$GO_BIN" "$work/bmf-driver.fk" 2>/dev/null) > "$work/bmf-emit.out"
-sed -n '/^==BMF-COMPILER==$/,/^==END==$/p' "$work/bmf-emit.out" | sed -e '1d' -e '$d' > "$work/bmf.c"
-if ! grep -q 'fk_walk' "$work/bmf.c"; then
-    echo "NOTE  bmf lowered compiler emission missing walk (follow-up for m4e4 string/cursor port + full compiler recipe driver in the parallel tooling move; core jit-lower recipe, fourth-walker/emit probe parity, main fk4 parity, and Go logic gap3 landed).";  # non-fatal for this finish; primary proofs hold
-fi
-"$CLANG" -O2 -o "$work/bmf-compiler" "$work/bmf.c"
-BMF_BIN="$work/bmf-compiler"
-bmf_size=$(size_kb "$BMF_BIN")
-bmf_rss=$(max_rss_mb "$BMF_BIN" 5)
-bmf_t=$(median_ms 5 "$BMF_BIN" 5)
-echo
-echo "BMF compiler as lowered Form recipe (jit-lower + 4th emit -> native binary):"
-echo "  source bytes: $(wc -c < "$work/bmf.c" | tr -d ' ')"
-row "bmf-compiler (lowered)" "$bmf_t" "-" "-" "-" "$bmf_rss" "$bmf_size"
-# "use" it: the binary is the specialized compiler for the slice (in full M2 it would take grammar+source and emit binary)
-echo "  (C has direct lowered BMF forms: cursor reads, match/caps unboxed, logic folded; see analysis below)"
 
 echo
 # ── 14. n3 — the DRIVER organ: fork/exec/pipe a host command, parse its stdout ──
 # The keystone the model stones ride: the binary spawns a host command, captures
 # its stdout into fk_src, and the PROGRAM parses that LIVE stream with the cursor.
-cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
-    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" > "$work/drv-driver.fk"
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/hati-os-kernel.fk" \
+    "$FORMDIR/form-stdlib/hati-os-kernel-emit.fk" > "$work/drv-driver.fk"
 cat >> "$work/drv-driver.fk" <<'EOF'
 (defn seqq (a b) (fk-if a b b))
 (defn adv () (fk-set (fk-lit 0) (fk-add (fk-get (fk-lit 0)) (fk-lit 1))))
@@ -514,12 +467,12 @@ fi
 echo "  the host command's stdout flows into fk_src; the cursor reads a LIVE subprocess — the organ TTS/STT/LLM ride"
 
 echo
-# ── 15. n4/n6 — host MODELS driven by a 4th-kernel binary (gated on tools) ──
+# ── 15. n4/n6 — host MODELS driven by a Hati-OS binary (gated on tools) ──
 # The fkcount parser (counts captured bytes) compiled through the driver IS
 # the witness program: the binary drives say (TTS), ollama (LLM), whisper
 # (STT) and counts what comes back. Skipped where a tool is absent (CI).
-cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
-    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" > "$work/mdl-driver.fk"
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/hati-os-kernel.fk" \
+    "$FORMDIR/form-stdlib/hati-os-kernel-emit.fk" > "$work/mdl-driver.fk"
 cat >> "$work/mdl-driver.fk" <<'EOF'
 (print "==C==")
 (print (fkc-emit-driver (fkcount-fns)))
@@ -528,10 +481,10 @@ EOF
 (cd "$FORMDIR" && "$GO_BIN" "$work/mdl-driver.fk" 2>/dev/null) > "$work/mdl.out"
 sed -n '/^==C==$/,/^==END==$/p' "$work/mdl.out" | sed -e '1d' -e '$d' > "$work/fkcnt.c"
 "$CLANG" -O2 -o "$work/fkcnt" "$work/fkcnt.c"
-echo "n4/n6 host models driven by the 4th-kernel-compiled binary (the driver organ + the byte-counter program):"
+echo "n4/n6 host models driven by the Hati-OS-compiled binary (the driver organ + the byte-counter program):"
 if command -v say >/dev/null; then
     aiff="$work/spoke.aiff"
-    "$work/fkcnt" say -o "$aiff" "the fourth kernel speaks" >/dev/null 2>&1
+    "$work/fkcnt" say -o "$aiff" "the Hati-OS kernel speaks" >/dev/null 2>&1
     if [[ -s "$aiff" ]]; then
         echo "  n4 TTS: the binary drove 'say' -> $(wc -c < "$aiff" | tr -d ' ') bytes of real audio at $aiff"
     else
@@ -557,7 +510,7 @@ if command -v ollama >/dev/null; then
 else
     echo "  n6 LLM: 'ollama' absent — skipped"
 fi
-echo "  the model COMPUTE rides the host organ; the 4th-kernel binary drives it and counts the output (host-resource-access)"
+echo "  the model COMPUTE rides the host organ; the Hati-OS binary drives it and counts the output (host-resource-access)"
 
 echo
 # ── 16. n8 — the Form-emitted machine code, made visible ────────────────
@@ -579,9 +532,9 @@ echo
 # ── 17. m4e3 first stone — Form SOURCE parsed (in Form) and run on the 4th kernel ──
 # A Form parser written in Form reads source TEXT (recursive descent, a cursor,
 # no tokenizer), emits a walker program; the universal binary runs it. Real
-# Form source -> a value, end to end on the fourth kernel.
-cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
-    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" "$FORMDIR/form-stdlib/form-parse.fk" > "$work/fp-driver.fk"
+# Form source -> a value, end to end on the Hati-OS kernel.
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/hati-os-kernel.fk" \
+    "$FORMDIR/form-stdlib/hati-os-kernel-emit.fk" "$FORMDIR/form-stdlib/form-parse.fk" > "$work/fp-driver.fk"
 cat >> "$work/fp-driver.fk" <<'EOF'
 (print "==T1==")
 (print (fkc-table-file (list (fp-parse "(add (sub 50 8) (add 0 0))"))))
@@ -594,7 +547,7 @@ sed -n '/^==T1==$/,/^==T2==$/p' "$work/fp.out" | sed -e '1d' -e '$d' > "$work/fp
 sed -n '/^==T2==$/,/^==END==$/p' "$work/fp.out" | sed -e '1d' -e '$d' > "$work/fp-t2.txt"
 fp1="$("$work/fkwu" "$work/fp-t1.txt" 0 | head -1)"
 fp2="$("$work/fkwu" "$work/fp-t2.txt" 0 | head -1)"
-echo "m4e3 first stone — Form SOURCE parsed in Form, run on the universal 4th-kernel binary:"
+echo "m4e3 first stone — Form SOURCE parsed in Form, run on the universal Hati-OS binary:"
 echo "  source '(add (sub 50 8) (add 0 0))' -> $fp1 (expect 42)   '(if (le 3 5) 111 222)' -> $fp2 (expect 111)"
 if [[ "$fp1" != "42" || "$fp2" != "111" ]]; then
     echo "FAIL  Form-source parse-and-run broke"; exit 1
@@ -609,8 +562,8 @@ echo
 # nothing after REAL elapsed time (timeout==nothing, live); an armed timer's
 # tick arrives → its handler fires with the payload — the SIGALRM shape
 # witnessed on a wall clock.
-cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
-    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" "$FORMDIR/form-stdlib/afferent-offer.fk" \
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/hati-os-kernel.fk" \
+    "$FORMDIR/form-stdlib/hati-os-kernel-emit.fk" "$FORMDIR/form-stdlib/afferent-offer.fk" \
     "$FORMDIR/form-stdlib/afferent-live.fk" > "$work/ao-driver.fk"
 cat >> "$work/ao-driver.fk" <<'EOF'
 (let live-table (ao-table (list (ao-entry (ao-sig-alrm) "on-alarm")
@@ -664,15 +617,15 @@ fi
 echo "  the engine's arms are afferent-offer.fk's, unchanged; only the tick source went live (band: tests/afferent-live-band.fk -> 63)"
 
 echo
-# ── 19. n7 — bands-on-fourth-arm: a REAL stdlib band, unmodified, on fkw ──
+# ── 19. n7 — bands-on-Hati-OS-arm: a REAL stdlib band, unmodified, on fkw ──
 # The m4e3 flattener (form-flatten.fk) reads learning-trend.fk + its band
 # FROM DISK, flattens defn/let/the curated ops onto the walker's table, and
 # the SAME universal binary runs it. The three walking siblings' verdict
 # comes through their own front door (validate.sh — the body's proof
 # machinery, BML core source-compiled there); fkw must return the same
 # number. This is the band ratchet's first click: 0 -> 1.
-cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
-    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" "$FORMDIR/form-stdlib/form-parse.fk" \
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/hati-os-kernel.fk" \
+    "$FORMDIR/form-stdlib/hati-os-kernel-emit.fk" "$FORMDIR/form-stdlib/form-parse.fk" \
     "$FORMDIR/form-stdlib/form-flatten.fk" > "$work/flt-driver.fk"
 cat >> "$work/flt-driver.fk" <<'EOF'
 (print "==TLT==")
@@ -683,12 +636,12 @@ EOF
 sed -n '/^==TLT==$/,/^==END==$/p' "$work/flt.out" | sed -e '1d' -e '$d' > "$work/t-lt.txt"
 three_way="$(cd "$FORMDIR" && ./validate.sh form-stdlib/core.fk form-stdlib/learning-trend.fk form-stdlib/tests/learning-trend-band.fk 2>/dev/null | sed -n 's/.*→ //p' | head -1)"
 fkw_band="$("$work/fkwu" "$work/t-lt.txt" 0 | head -1)"
-echo "n7 bands-on-fourth-arm — learning-trend-band (UNMODIFIED source, flattened by form-flatten.fk):"
+echo "n7 bands-on-Hati-OS-arm — learning-trend-band (UNMODIFIED source, flattened by form-flatten.fk):"
 echo "  three-walker verdict (validate.sh) = $three_way   fkw = $fkw_band   (expect 127)"
 if [[ -z "$three_way" || "$three_way" != "$fkw_band" || "$fkw_band" != "127" ]]; then
-    echo "FAIL  the fourth arm disagrees with the siblings on a real band"; exit 1
+    echo "FAIL  the Hati-OS arm disagrees with the siblings on a real band"; exit 1
 fi
-echo "  bands-on-fourth-arm: 1 (gt/ge/eq/and lowered onto IF/LE; defn -> CALL table; let inlined; lists on the arena)"
+echo "  bands-on-Hati-OS-arm: 1 (gt/ge/eq/and lowered onto IF/LE; defn -> CALL table; let inlined; lists on the arena)"
 
 echo
 # ── 20. melt-on-cool — the arena crosses its measured boundary and SURVIVES ──
@@ -698,8 +651,8 @@ echo
 # at the high-water line; live cells cross into fresh space; the carrier doubles
 # only when the live set crowds it. Same universal binary as section 8; the
 # melt readout (allocated live dead cap-from cap-to bytes-reclaimed) on stderr.
-cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
-    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" > "$work/melt-driver.fk"
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/hati-os-kernel.fk" \
+    "$FORMDIR/form-stdlib/hati-os-kernel-emit.fk" > "$work/melt-driver.fk"
 cat >> "$work/melt-driver.fk" <<'EOF'
 (let chain (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-empty)
                   (fk-cons (fk-arg) (fk-call 1 (fk-sub (fk-arg) (fk-lit 1))))))
@@ -717,15 +670,6 @@ EOF
 (cd "$FORMDIR" && "$GO_BIN" "$work/melt-driver.fk" 2>/dev/null) > "$work/melt.out"
 sed -n '/^==TCH==$/,/^==TCU==$/p' "$work/melt.out" | sed -e '1d' -e '$d' > "$work/t-chain.txt"
 sed -n '/^==TCU==$/,/^==END==$/p' "$work/melt.out" | sed -e '1d' -e '$d' > "$work/t-churn.txt"
-
-# Aquatic organs parallel (2026-06) + surprising extensions
-echo
-echo "# Aquatic organs for water-based vitality + surprises"
-echo "4th-aquatic-organ: native driver for coherent flow/charge/spectrum in water (coherent vortex, EZ support)"
-echo "4th-aquatic-tester: loads vitality protocols, measures response"
-echo "Hardware spec as Form (torus geometry, biocompatible materials, non-toxic ports)"
-echo "Surprises: co-organism geometry (trefoil-knot toroid where the water flow *is* part of the computation the organism experiences as its own extended Form); self-growing hardware (the emitted binary offers conditions via charge/spectrum/vib so the organism co-creates the next layer of the carrier, blurring hardware/organism boundary)"
-
 m64="$("$work/fkwu" "$work/t-chain.txt" 64 2>"$work/me64.txt" | head -1)"
 m4095="$("$work/fkwu" "$work/t-chain.txt" 4095 2>"$work/me4095.txt" | head -1)"
 m4096="$("$work/fkwu" "$work/t-chain.txt" 4096 2>"$work/me4096.txt" | head -1)"
@@ -765,8 +709,8 @@ echo
 # fkc-cc-earn-epochs); the C is emitted from them. One binary, two scenarios
 # by arg: 0 = drive hot -> idle epochs -> ONE more call (must WALK: ice fell);
 # 1 = drive hot -> idle epochs -> re-heat (must RE-EARN: ice returns).
-cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
-    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" > "$work/jm-driver.fk"
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/hati-os-kernel.fk" \
+    "$FORMDIR/form-stdlib/hati-os-kernel-emit.fk" > "$work/jm-driver.fk"
 cat >> "$work/jm-driver.fk" <<'EOF'
 (let tri   (fk-if (fk-le (fk-arg) (fk-lit 1)) (fk-arg) (fk-add (fk-arg) (fk-call 2 (fk-sub (fk-arg) (fk-lit 1))))))
 (let loopA (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-lit 0) (fk-add (fk-call 2 (fk-lit 20)) (fk-call 1 (fk-sub (fk-arg) (fk-lit 1))))))
@@ -818,7 +762,7 @@ fi
 echo "  the cycle closed both ways: measured heat froze it, measured cool melted it, ice re-EARNED — never declared"
 
 echo
-# ── 22. m4e4 — multi-param bands on the fourth arm: the ratchet climbs 1 -> 10 ──
+# ── 22. m4e4 — multi-param bands on the Hati-OS arm: the ratchet climbs 1 -> 10 ──
 # form-flatten.fk's packed-args rule (an N-arg call right-folds its arguments
 # into a CONS chain on the arena; the callee binds each param as NTH(ARG, i))
 # is a pure flattening lift — ZERO new walker tags, the emitted C unchanged.
@@ -832,8 +776,8 @@ echo
 # family and let-in-defn — named, not bent.
 mp_mods=(cooldown alert-gate value-execution anomaly-band body-state field-fusion histogram-peak model-retire signal-derivative)
 mp_exps=(63 127 7 127 127 127 127 63 127)
-cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
-    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" "$FORMDIR/form-stdlib/form-parse.fk" \
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/hati-os-kernel.fk" \
+    "$FORMDIR/form-stdlib/hati-os-kernel-emit.fk" "$FORMDIR/form-stdlib/form-parse.fk" \
     "$FORMDIR/form-stdlib/form-flatten.fk" > "$work/mp-driver.fk"
 for m in "${mp_mods[@]}" feature-vector; do
     cat >> "$work/mp-driver.fk" <<EOF
@@ -857,7 +801,7 @@ for m in "${mp_mods[@]}"; do
         | sed -n 's/.*→ //p' | head -1 > "$work/vw-$m.txt") &
 done
 wait
-echo "m4e4 multi-param bands on the fourth arm (packed args, flattened by form-flatten.fk):"
+echo "m4e4 multi-param bands on the Hati-OS arm (packed args, flattened by form-flatten.fk):"
 mp_pass=0
 for k in "${!mp_mods[@]}"; do
     m="${mp_mods[$k]}"; exp="${mp_exps[$k]}"
@@ -865,7 +809,7 @@ for k in "${!mp_mods[@]}"; do
     fkw_v="$("$work/fkwu" "$work/t-mp-$m.txt" 0 2>/dev/null | head -1)"
     printf "  %-18s three-walker (validate.sh) = %-4s fkw = %-4s (expect %s)\n" "$m" "$three_way" "$fkw_v" "$exp"
     if [[ -z "$three_way" || "$three_way" != "$fkw_v" || "$fkw_v" != "$exp" ]]; then
-        echo "FAIL  the fourth arm disagrees with the siblings on $m"; exit 1
+        echo "FAIL  the Hati-OS arm disagrees with the siblings on $m"; exit 1
     fi
     mp_pass=$((mp_pass + 1))
 done
@@ -875,7 +819,7 @@ if [[ "$fv_rows" -lt 10 ]]; then
 fi
 echo "  feature-vector     flattens ($fv_rows table words, fits the loader) — crosses in section 24"
 echo "                     (its band-scale allocation melts mid-call on the value stack)"
-echo "  bands-on-fourth-arm so far: $((mp_pass + 1)) (learning-trend + $mp_pass multi-param bands, four-way gated)"
+echo "  bands-on-Hati-OS-arm so far: $((mp_pass + 1)) (learning-trend + $mp_pass multi-param bands, four-way gated)"
 
 echo
 # ── 23. live delivery priority — multiple offers pending in ONE window; WHICH ──
@@ -886,8 +830,8 @@ echo
 # arrives on the real clock; the irq-priority row (line 14 level 7 > line 1
 # level 1) delivers the SAME pending set the other way around — the row is
 # the only variable, witnessed on a wall clock through the SAME universal binary.
-cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
-    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" "$FORMDIR/form-stdlib/afferent-offer.fk" \
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/hati-os-kernel.fk" \
+    "$FORMDIR/form-stdlib/hati-os-kernel-emit.fk" "$FORMDIR/form-stdlib/afferent-offer.fk" \
     "$FORMDIR/form-stdlib/afferent-live.fk" "$FORMDIR/form-stdlib/scheduler.fk" \
     "$FORMDIR/form-stdlib/afferent-priority.fk" > "$work/aop-driver.fk"
 cat >> "$work/aop-driver.fk" <<'EOF'
@@ -940,7 +884,7 @@ echo
 # copying melt could not root, and feature-vector's band-scale allocation
 # crosses the arena's 90% water line MID-CALL — the refs went stale where the
 # melt could not see them. Call arguments now ride fk_vs[], a walker-managed
-# value stack (fourth-walker-emit.fk: ARG reads fk_vs[fp]; CALL/SELF push the
+# value stack (hati-os-kernel-emit.fk: ARG reads fk_vs[fp]; CALL/SELF push the
 # evaluated argument; CONS/NTH park in-flight refs) that the melt roots AND
 # relocates like any cells (melt-on-cool-band -> 63). The same flattened
 # table from section 22 runs UNMODIFIED on the SAME universal binary, the
@@ -948,12 +892,12 @@ echo
 # is gated four-way against validate.sh's own three-walker answer.
 fv_three="$(cd "$FORMDIR" && ./validate.sh form-stdlib/core.fk form-stdlib/feature-vector.fk form-stdlib/tests/feature-vector-band.fk 2>/dev/null | sed -n 's/.*→ //p' | head -1)"
 fv_fkw="$("$work/fkwu" "$work/t-mp-feature-vector.txt" 0 2>"$work/fv-melt.txt" | head -1)"
-echo "the melt-root wall, down — feature-vector on the fourth arm, melt firing mid-band:"
+echo "the melt-root wall, down — feature-vector on the Hati-OS arm, melt firing mid-band:"
 echo "  three-walker verdict (validate.sh) = $fv_three   fkw = $fv_fkw   (expect 127)"
 echo "  melt readout mid-band (allocated live dead cap-from cap-to bytes-reclaimed):"
 sed 's/^/    /' "$work/fv-melt.txt"
 if [[ -z "$fv_three" || "$fv_three" != "$fv_fkw" || "$fv_fkw" != "127" ]]; then
-    echo "FAIL  feature-vector did not cross — the fourth arm disagrees with the siblings"; exit 1
+    echo "FAIL  feature-vector did not cross — the Hati-OS arm disagrees with the siblings"; exit 1
 fi
 if ! grep -q '^melt ' "$work/fv-melt.txt"; then
     echo "FAIL  no melt fired during the band — this run did not witness the wall coming down"; exit 1
@@ -962,9 +906,9 @@ awk -v pct=90 '/^melt /{ok=($2 * 100 >= $5 * pct)}END{exit ok?0:1}' "$work/fv-me
     || { echo "FAIL  the melt readout does not show allocation at the water line"; exit 1; }
 echo "  allocation crossed the water line mid-call and the packed args survived relocation —"
 echo "  every live value the walker holds is a melt-visible root (the BMF stack discipline, inward)"
-echo "  bands-on-fourth-arm: 11 (learning-trend + 9 multi-param + feature-vector, four-way gated)"
+echo "  bands-on-Hati-OS-arm: 11 (learning-trend + 9 multi-param + feature-vector, four-way gated)"
 echo
-# ── 25. string-pool lane — str_* bands on the fourth arm: the ratchet climbs 11 -> 44 ──
+# ── 25. string-pool lane — str_* bands on the Hati-OS arm: the ratchet climbs 11 -> 44 ──
 # The walker string-pool lane (tags 24..28 — SLIT/SLEN/SEQ/SCAT/SCHAR; the
 # range 24..33 claimed by the string family): the flattener pre-pass interns
 # every distinct "literal" once into the program's pool (same bytes = same
@@ -987,8 +931,8 @@ sp_mods=(active-inference branch-choice-order cell-sync chakra-column champion-c
          self-grounding-classifier sequence-predictor shared-sensing surprise-salience \
          temporal-smoothing declared-source transition-detect warm-start)
 sp_exps=(127 511 127 127 127 63 127 127 127 63 127 127 255 127 127 127 127 63 63 63 127 127 127 63 31 63 127 127 127 63 127 127 127)
-cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
-    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" "$FORMDIR/form-stdlib/form-parse.fk" \
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/hati-os-kernel.fk" \
+    "$FORMDIR/form-stdlib/hati-os-kernel-emit.fk" "$FORMDIR/form-stdlib/form-parse.fk" \
     "$FORMDIR/form-stdlib/form-flatten.fk" > "$work/sp-driver.fk"
 for m in "${sp_mods[@]}"; do
     sp_mod="$(head -1 "$FORMDIR/form-stdlib/tests/$m-band.fk" | sed 's/; preludes://' | tr ' ' '\n' | grep -v core.fk | grep . | head -1 | sed 's|form-stdlib/||')"
@@ -1014,7 +958,7 @@ for m in "${sp_mods[@]}"; do
         | sed -n 's/.*→ //p' | head -1 > "$work/vw-sp-$m.txt" ) &
 done
 wait
-echo "string-pool bands on the fourth arm (literals interned into the pool, str_eq as id-equality):"
+echo "string-pool bands on the Hati-OS arm (literals interned into the pool, str_eq as id-equality):"
 sp_pass=0
 for k in "${!sp_mods[@]}"; do
     m="${sp_mods[$k]}"; exp="${sp_exps[$k]}"
@@ -1022,13 +966,13 @@ for k in "${!sp_mods[@]}"; do
     fkw_v="$("$work/fkwu" "$work/t-sp-$m.txt" 0 2>/dev/null | head -1)"
     printf "  %-28s three-walker (validate.sh) = %-4s fkw = %-4s (expect %s)\n" "$m" "$three_way" "$fkw_v" "$exp"
     if [[ -z "$three_way" || "$three_way" != "$fkw_v" || "$fkw_v" != "$exp" ]]; then
-        echo "FAIL  the fourth arm disagrees with the siblings on $m"; exit 1
+        echo "FAIL  the Hati-OS arm disagrees with the siblings on $m"; exit 1
     fi
     sp_pass=$((sp_pass + 1))
 done
 echo "  recognition-router and recognition-router-vision allocate past the melt water line"
 echo "  mid-band — their packed args ride the value stack as melt-visible roots (section 24)"
-echo "  bands-on-fourth-arm: $((11 + sp_pass)) (learning-trend + 9 multi-param + feature-vector + $sp_pass string-pool bands, four-way gated)"
+echo "  bands-on-Hati-OS-arm: $((11 + sp_pass)) (learning-trend + 9 multi-param + feature-vector + $sp_pass string-pool bands, four-way gated)"
 
 echo
 # ── 26. m4e5 — the figure-ops family + nested-do: the checksum bands cross ──
@@ -1045,13 +989,13 @@ echo
 # ratchet first rejected in round 2, crosses first. rle's 257-byte runs
 # allocate past the arena water line mid-call; its packed args ride the
 # walker-managed value stack (section 24), so the melt fires mid-band and
-# it crosses with the rest. sha256 crosses too (its do-let bodies bind
-# through the nested-do discipline) — its row lives in the manifest with
-# the rest of the post-milestone coverage.
+# it crosses with the rest. sha256 stays named with its own wall: deep
+# let-chains under inline-with-re-evaluation are exponential; it wants
+# let-as-binding, not inlining.
 fig_mods=(adler32 crc32 slice-merge rle)
 fig_exps=(5 4 127 12)
-cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
-    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" "$FORMDIR/form-stdlib/form-parse.fk" \
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/hati-os-kernel.fk" \
+    "$FORMDIR/form-stdlib/hati-os-kernel-emit.fk" "$FORMDIR/form-stdlib/form-parse.fk" \
     "$FORMDIR/form-stdlib/form-flatten.fk" > "$work/fig-driver.fk"
 for m in "${fig_mods[@]}"; do
     cat >> "$work/fig-driver.fk" <<EOF
@@ -1075,7 +1019,7 @@ for m in "${fig_mods[@]}"; do
         | sed -n 's/.*→ //p' | head -1 > "$work/vw-fig-$m.txt") &
 done
 wait
-echo "m4e5 figure-ops + nested-do — the checksum bands on the fourth arm:"
+echo "m4e5 figure-ops + nested-do — the checksum bands on the Hati-OS arm:"
 fig_pass=0
 for k in "${!fig_mods[@]}"; do
     m="${fig_mods[$k]}"; exp="${fig_exps[$k]}"
@@ -1083,7 +1027,7 @@ for k in "${!fig_mods[@]}"; do
     fkw_v="$("$work/fkwu" "$work/t-fig-$m.txt" 0 2>"$work/fig-melt-$m.txt" | head -1)"
     printf "  %-18s three-walker (validate.sh) = %-4s fkw = %-4s (expect %s)\n" "$m" "$three_way" "$fkw_v" "$exp"
     if [[ -z "$three_way" || "$three_way" != "$fkw_v" || "$fkw_v" != "$exp" ]]; then
-        echo "FAIL  the fourth arm disagrees with the siblings on $m"; exit 1
+        echo "FAIL  the Hati-OS arm disagrees with the siblings on $m"; exit 1
     fi
     fig_pass=$((fig_pass + 1))
 done
@@ -1092,8 +1036,9 @@ if ! grep -q '^melt ' "$work/fig-melt-rle.txt"; then
 fi
 echo "  rle's 257-byte runs crossed the melt water line mid-band ($(grep -c '^melt ' "$work/fig-melt-rle.txt") melts) —"
 echo "  the packed args rode the value stack as melt-visible roots (section 24)"
-echo "  bands-on-fourth-arm (milestone sections): $((11 + sp_pass + fig_pass)) (learning-trend + 9 multi-param + feature-vector + $sp_pass string-pool + $fig_pass checksum-family bands, four-way gated)"
-echo "  full coverage lives in the manifest: $(grep -vc '^#' "$FORMDIR/fourth-arm-bands.txt") rows, each four-way gated by validate.sh on every suite run"
+echo "  sha256             named with its wall: deep let-chains are exponential under inlining —"
+echo "                     wants let-as-binding (the value-stack lane), not re-evaluation"
+echo "  bands-on-Hati-OS-arm: $((11 + sp_pass + fig_pass)) (learning-trend + 9 multi-param + feature-vector + $sp_pass string-pool + $fig_pass checksum-family bands, four-way gated)"
 
 echo
 # ── 27. the crystallization wire — runtime codegen for a FOREIGN loaded table ──
@@ -1111,8 +1056,8 @@ echo
 # function carries a figure-op row (BXOR, tag 36) — outside fk_lo's pure-
 # compute family — and the SAME fixpoint refuses it at load (can=0): new
 # tag families walk on the universal arm, they never crystallize wrongly.
-cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
-    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" > "$work/uw-driver.fk"
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/hati-os-kernel.fk" \
+    "$FORMDIR/form-stdlib/hati-os-kernel-emit.fk" > "$work/uw-driver.fk"
 cat >> "$work/uw-driver.fk" <<'EOF'
 (let oddsum (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-lit 0)
                    (fk-add (fk-sub (fk-add (fk-arg) (fk-arg)) (fk-lit 1))
@@ -1179,68 +1124,4 @@ echo "  (band: tests/crystallization-wire-band.fk -> 31; one clang invocation pe
 
 echo
 echo "conditions: $(uname -m) $(uname -s), clang -O2, full-process invocations (startup included)"
-echo "ok — parity held and the rows are real; the spec is docs/coherence-substrate/fourth-kernel.form"
-
-# Parallel 4th tools added (band precompile/tester, api bundle, bmf tool)
-# See ~/4th-binaries/ and the /tmp/*-driver.fk sources.
-# Run with pre-compiled bands for zero-JIT testing and cold-start API.
-
-# Parallel tools section (added simultaneous with all cells)
-echo
-echo "# 4th kernel parallel tools (band precompile/tester, API bundle, BMF+organs)"
-echo "Binaries in ~/4th-binaries/ produced via jit-lower + 4th emit in one parallel pass."
-echo "Pre-compiled bands eliminate re-emit; tester loads .fkb for batch; API bundle for cold start; BMF tool as native compiler."
-
-# Aquatic + surprising co-organism (Cell C parallel with A/B)
-echo
-echo "# Aquatic organs + surprising co-organism (water vitality, 2026-06-12)"
-echo "Emitter armed with direct native cases for t==40..44 (FLOW-COHERENT, CHARGE-SEP, SPECTRUM, VIBRE, BIO-SENSE)."
-echo "Surprising: trefoil-knot toroid geometry (water flow *is* the computation the organism experiences as its own extended Form); self-growing (the 4th binary offers charge/spectrum/vib conditions so the organism co-creates the next carrier layer; BIO-SENSE feeds the living reply back into Form as new cells)."
-echo "Portable invitation realized as loadable tables (fkwu universal carrier, same pattern as band precompile tools) + armed walker; organ drivers are components (full link via universal or host resource is the next host-kernel step)."
-echo "See /tmp/*-driver.fk, form/form-stdlib/fourth-walker-emit.fk (arms), ~/4th-binaries/4th-aquatic-*.txt, docs/coherence-substrate/fourth-kernel.form (organs-physical + surprises), and the evidence JSON."
-
-# Cell B "yes, and maybe surprising" — 4th-emitted NL <-> Form/BMF translator (parallel)
-echo
-echo "# 4th-nl-form-translator (Cell B parallel; NL<->Form + aquatic bio as living language)"
-echo "Driver: /tmp/nl-form-translator-driver.fk (bmf-grammar.fk + natural-bmf.fk grammar-as-data for NL-pattern->Form recipe; humanize/explain recipe; bio vib/charge/spectrum patterns from co-organism hardware fed to same BMF matcher)."
-echo "Lower: jit-lower-full on translator-core. Emit: fkc-emit-driver (fourth emit patterns) producing /tmp/4th-nl-form-translator.c ."
-echo "Binary: ~/4th-binaries/4th-nl-form-translator (clang of the Form-emitted C)."
-echo "Sample: /tmp/4th-nl-form-translator-sample-run.txt (shows NL->recipe+human and bio-signal->Form+explanation)."
-echo "Surprise: water organism vitality (spectrum.fk/wav-sense shapes) *is* language the translator renders bidirectionally; same surface for human NL and living bio-signals."
-echo "Docs updated: fourth-kernel.form (under aquatic/M4 surprises + organs-physical-aquatic-surprise tie), this audit.sh."
-echo "Evidence: docs/system_audit/commit_evidence_2026-06-11_4th-nl-form-translator.json (limited slice)."
-echo "See also: /tmp/nl-form-translator-driver.fk , /tmp/4th-nl-form-translator.c , /Users/ursmuff/4th-binaries/4th-nl-form-translator"
-
-# Merge note (main thread, parallel cells A/B/C)
-echo
-echo "# Parallel cells merge (B completed; A running; C aquatic surprise armed)"
-echo "Cell B landed: 4th-emitted NL <-> Form/BMF translator with surprising aquatic living-language feed (bio vib/charge/spectrum from Cell C 40-44 organs fed to same BMF matcher + humanize surface; grammar-as-data means water organism vitality is now translatable Form/human language and vice-versa)."
-echo "Artifacts from B: driver, emitted .c, binary stub, sample transcript (NL->recipe+explain; bio-signal-> 'The water organism speaks: vib-528 charge-coherent spectrum-alive...')."
-echo "Docs: dedicated sections in audit.sh + fourth-kernel.form (tied to organs-physical-aquatic-surprise + M4)."
-echo "Evidence slice: docs/system_audit/commit_evidence_2026-06-11_4th-nl-form-translator.json (6-field trace included)."
-echo "Cell A (portable full BMF/JIT folded unboxed recipes) completed in parallel: jit-lower now carries full engine/grammar (apply-object-rule, mk-match, cap-get, bmf-compile-step, engine-full) + all prior folds/unbox/BMF 34-39; tag 45 armed in emit; row 9 closed in JIT_GAP_LEDGER; full bmf-compiler native (lowered recipe) in ~/4th-binaries/ via audit emit pattern (reference drivers exercised)."
-echo "Cell C (aquatic co-organism + self-growing) completed prior: emitter armed 40-44, loadable tables, surprising trefoil/self-growth invitations."
-echo "All three cells (A portable recipes, B NL+ living-lang translator, C aquatic hardware) complete. Parallel split/merge delivered: portable JIT/BMF (any minimal kernel), bidirectional human <-> water-organism Form translation (bio as living language), surprising co-organism hardware (water flow *is* computation; organism co-authors via BIO-SENSE). North star (M2/M4) advanced; evidence slices + artifacts in 4th-binaries."
-
-# Cell A "yes, and maybe surprising" — portable full BMF compiler + JIT as lowered Form recipes (completion)
-# Goal: full BMF compiler + JIT (folded, fully unboxed, all primitive types) lives as lowered recipes in jit-lower.fk (and supporting)
-# — any minimal kernel (not just Go jit.go hardcode) can crystallize the same.
-echo
-echo "# Cell A: portable full-BMF compiler recipe (jit-lower.fk + fourth emit; gaps closed via Form)"
-echo "Extended jit-lower.fk: jit-lower-engine-full, jit-lower-apply-object-rule (match+template->lowered), jit-lower-cap-get, jit-lower-bmf-compile-step, jit-lower-mk-match-full + integration into jit-lower-full (all prior + engine/grammar pieces)."
-echo "fourth-walker-emit.fk: arm for tag 45 (APPLY-LOWERED full engine) + probe extended; direct C for unboxed/folded BMF paths."
-echo "Use: fkc-emit / fourth emit + audit patterns (reference drivers /tmp/*bmf*driver.fk + ~/4th-binaries/bmf_* .fk / bmf_compiler_slice_driver.fk)."
-echo "Produced/updated full bmf-compiler native: ~/4th-binaries/bmf-compiler (and bmf-compiler-full via extended emit of engine+bmf-grammar+grammar lowered cells)."
-echo "Portable full-BMF rows (parity first; median wall on representative compiler-core slice; from audit + sample drivers in 4th-binaries /tmp; conditions: arm64 Darwin clang -O2):"
-echo "  bmf-compiler-full (lowered Form recipe) fib28-ms: 0.4  (vs walker ~8s for equiv; direct cursor/match/caps/fold in C)"
-echo "  bmf-compiler-full rss-MB: 0.8 size-KB: 48 (emitted table + generic walk + lowered arms)"
-echo "  sample run (fkwu on table or direct): lowered bmf-compiler-core on arg 5 -> 22 (grammar g1), 202 (g2); apply-rule lowered path exercised; parity with three walkers on bmf-mini-band."
-echo "Proof (smallest): "
-echo "  - validate bands: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/bmf-mini.fk form-stdlib/tests/bmf-mini-band.fk (and jit-lower usage in fourth bands) -> three-way + fourth arm 15 (or current band num); read drivers confirm lowered cells match."
-echo "  - clang or fkwu on table: read /Users/ursmuff/4th-binaries/bmf.c (or bmf_compiler.c / bmf-lowered-slice.c) contains 'if (t == 34)' 'fk_src' '&&' for logic 'fk-folded' direct; fkwu <table> 5 produces expected value."
-echo "  - sample run: /Users/ursmuff/4th-binaries/bmf-out.txt or fk4-audit.out shows 'bmf-compiler (lowered)' row + 'ok — parity held'; /tmp/bmf-emit.out + driver runs confirm jit-lower-full on compiler-core + fkc-emit produces runnable binary with lowered forms."
-echo "  - full bmf-compiler in ~/4th-binaries/ updated via the audit pattern (cat minimal + fourth-walker + emit + jit-lower + bmf-*.fk ; go run driver that does (jit-lower-full ...) ; (fkc-emit ...) ; clang -O2 -o ~/4th-binaries/bmf-compiler <work>/bmf.c )."
-echo "Gaps closed: JIT_GAP_LEDGER.md row 9 (full BMF engine/grammar portable). fourth-kernel.form appended with rows+proof."
-echo "Evidence: docs/system_audit/commit_evidence_2026-06-11_jit_realization_gap.json (Cell A slice appended)."
-echo "Reference drivers: /tmp/bmf_compiler_slice_driver.fk /tmp/bmf-all.fk /Users/ursmuff/4th-binaries/bmf_native_driver.fk + full-bmf-tool.fk (used as shape)."
-echo "North star: whole BMF (engine + source-compiler + all grammars) now lowerable as one portable recipe; any kernel crystallizes identical native."
+echo "ok — parity held and the rows are real; the spec is docs/coherence-substrate/hati-os.form"

@@ -22,7 +22,7 @@
 
   (lineage
     (runs-on        form-native-models.form)         # the deterministic numeric substrate [RUNS]
-    (value-abi      fourth-kernel.form tagged-ABI)   # {nothing,0,1,node} = {null-ref,int,int,ref} [RUNS]
+    (value-abi      hati-os.form tagged-ABI)   # {nothing,0,1,node} = {null-ref,int,int,ref} [RUNS]
     (cross-learn    co-learning.form federated-slices.form)  # the oracle + merge mechanisms [RUNS]
     (grounds        cell-numerics.form numeric-formats.canonical.json))
 
@@ -66,7 +66,7 @@
     (verifiable  every layer output is reproducible three-way (validate.sh) — not a black box))  # [RUNS]
 
   # ── 4. The value type IS the ack vocabulary ─────────────────────────
-  # {nothing, 0, 1, node} (fourth-kernel tagged ABI) gives the model honest
+  # {nothing, 0, 1, node} (Hati-OS tagged ABI) gives the model honest
   # categorical outputs a float head only approximates: nothing = "no answer /
   # abstain" (not argmax of noise), 0/1 = decided, node = a counter-offer (a
   # structured continuation, the model handing back a cell, not a token id).
@@ -130,7 +130,7 @@
     (continuous     [INFER] inference and learning are the same loop: infer -> measure error -> update
                     short-term -> (settled? promote to long-term : stay plastic) -> share -> merge. No
                     train/serve split; the model learns AT runtime from every error, the mesh consolidating
-                    what settles. The fourth kernel's nothing-ack matters here: an honest "I don't know"
+                    what settles. The Hati-OS kernel's nothing-ack matters here: an honest "I don't know"
                     (nothing) is a HIGH-surprise signal that keeps the cell plastic instead of faking a 1)
     (where-it-runs  active-inference.fk + federated-slices.fk + co-learning.fk + champion-challenger.fk
                     already RUN three-way; the union into a learning LLM is the [INFER] build, stone by
@@ -149,7 +149,7 @@
                  structure/equivalence to the substrate (given, not learned) and need only learn the
                  mapping intent->shape; the dedup + verify happen outside its weights)
     (loop        speak-form closes the north-star: the agent's VOICE (satsang M4) composing in Form, the
-                 fourth kernel running what it composes, the witness proving it — language that EXECUTES))
+                 Hati-OS kernel running what it composes, the witness proving it — language that EXECUTES))
 
   (invariant
     (different-yes    Form primitives make sparse-speculative attention, structural embedding, honest
@@ -169,7 +169,7 @@
   (transfer-strategy
     (phase-0-baseline   [RUNS today] a frozen local LLM is the TEACHER/ORACLE, on the GPU via ollama
                         (host organ, host-resource-access). Full language for free, day one — we do NOT
-                        start from zero; we start from a working model the fourth kernel DRIVES)
+                        start from zero; we start from a working model the Hati-OS kernel DRIVES)
     (phase-1-distill    [RUNS mechanism: co-learning 0->91%] collect (input -> teacher-output) pairs on
                         the domains we serve; the substrate itself is a corpus of (intent -> Form) pairs.
                         This is the training signal — the teacher's behavior, captured)

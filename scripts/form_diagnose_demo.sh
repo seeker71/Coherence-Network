@@ -42,8 +42,8 @@ done
 echo "value channel (native binary, exit codes n=1..6):  ${obs[*]}"
 
 # ── carrier 2: the WALKER fib — its printed fk_arms IS the live framebuffer ──
-cat "$FORM/form-stdlib/minimal-surface.fk" "$FORM/form-stdlib/fourth-walker.fk" \
-    "$FORM/form-stdlib/fourth-walker-emit.fk" > "$work/walker.fk"
+cat "$FORM/form-stdlib/minimal-surface.fk" "$FORM/form-stdlib/hati-os-kernel.fk" \
+    "$FORM/form-stdlib/hati-os-kernel-emit.fk" > "$work/walker.fk"
 cat >> "$work/walker.fk" <<'EOF'
 (let fibc (fk-if (fk-le (fk-arg) (fk-lit 1)) (fk-arg) (fk-add (fk-call 0 (fk-sub (fk-arg) (fk-lit 1))) (fk-call 0 (fk-sub (fk-arg) (fk-lit 2))))))
 (print "==C==")

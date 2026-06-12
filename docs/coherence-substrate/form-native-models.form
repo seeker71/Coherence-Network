@@ -105,8 +105,8 @@
 ;        realize a speedup: JIT fib38 7.92s ≈ walker 8.10s (where routed native is 100x+). The
 ;        compiled native is not carrying the recursive workload at runtime — a dispatch-realization
 ;        bug (main.go ~4255-4331), NOT an emitter bug, NOT a parity risk (the JIT is Go-only; bands
-;        walk). HONEST CURRENT FAST PATH: the fourth-kernel EMIT-COMPILE-EXEC lane
-;        (fourth-kernel-emit.fk -> clang -> a standalone binary) IS fast and proven (2.1ms matvec,
+;        walk). HONEST CURRENT FAST PATH: the Hati-OS EMIT-COMPILE-EXEC lane
+;        (hati-os-native-cli-emit.fk -> clang -> a standalone binary) IS fast and proven (2.1ms matvec,
 ;        20,077x) — that is where Form-native model SPEED lives today, not the in-process JIT. Two
 ;        routes forward: fix the in-process dispatch realization, OR wire the model through the
 ;        proven emit-compile-exec lane. Evidence: commit_evidence_2026-06-11_jit_realization_gap.json.]

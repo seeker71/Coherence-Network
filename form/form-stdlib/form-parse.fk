@@ -1,6 +1,6 @@
 ; form-parse.fk — m4e3 path-b: a Form parser IN FORM that reads Form source
 ; text (a cursor over the string, no pre-tokenizer — the BMF discipline) and
-; produces a fourth-walker PROGRAM (cells via fk-lit/fk-add/...). Everything
+; produces a Hati-OS kernel PROGRAM (cells via fk-lit/fk-add/...). Everything
 ; downstream — fkc-flatten, the emitter, the universal binary, the three
 ; walkers — then runs it unchanged. This is the bridge: real Form source ->
 ; a runnable program, parsed by Form itself.
@@ -83,6 +83,6 @@
     (if (ge (fp-skip s pos) (fp-len s)) (fp-skip s pos)
         (add (fp-skip s pos) 1)))
 
-; fp-parse: Form source string -> a fourth-walker program (cells). The root
+; fp-parse: Form source string -> a Hati-OS kernel program (cells). The root
 ; cell is the first of the (cell end-pos) pair returned by fp-expr at pos 0.
 (defn fp-parse (s) (nth (fp-expr s 0) 0))

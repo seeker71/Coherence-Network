@@ -48,3 +48,4 @@ a = 13
 b = 133
 orb = 6
 result = aspect(a, b, orb)          # 120° apart → trine → 3
+result

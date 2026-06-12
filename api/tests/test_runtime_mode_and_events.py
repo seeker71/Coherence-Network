@@ -6,6 +6,7 @@ from app.models.runtime import RuntimeEventCreate
 from app.services import idea_service
 from app.services.runtime import cache as runtime_cache
 from app.services.runtime import events as runtime_events
+from app.services.runtime import routes as runtime_routes
 
 
 def test_runtime_cache_meta_key_uses_config_test_context(set_config):
@@ -48,6 +49,21 @@ def test_record_event_uses_normalized_endpoint_value(monkeypatch):
     assert event.raw_endpoint == "/api/ideas/demo-123"
     assert event.metadata["normalized_from"] == "/api/ideas/demo-123"
     assert store["events"], "record_event should persist the event payload"
+
+
+def test_runtime_route_registry_covers_live_idea_realization_family():
+    assert runtime_routes.normalize_endpoint("/api/health/persistence", "GET") == "/api/health/persistence"
+    assert runtime_routes.normalize_endpoint("/api/automation/usage/readiness", "GET") == "/api/automation/usage/readiness"
+    assert runtime_routes.normalize_endpoint("/api/views/health", "GET") == "/api/views/health"
+    assert runtime_routes.normalize_endpoint("/api/views/archive", "GET") == "/api/views/archive"
+    assert runtime_routes.normalize_endpoint("/api/ideas", "GET") == "/api/ideas"
+    assert runtime_routes.normalize_endpoint("/api/ideas/demo-123", "GET") == "/api/ideas/{idea_id}"
+    assert runtime_routes.normalize_endpoint("/api/ideas/demo-123", "PATCH") == "/api/ideas/{idea_id}"
+    assert runtime_routes.normalize_endpoint("/api/ideas/demo-123/questions", "POST") == "/api/ideas/{idea_id}/questions"
+    assert (
+        runtime_routes.normalize_endpoint("/api/ideas/demo-123/questions/answer", "POST")
+        == "/api/ideas/{idea_id}/questions/answer"
+    )
 
 
 def test_domain_discovery_defaults_off_in_test_mode(set_config):

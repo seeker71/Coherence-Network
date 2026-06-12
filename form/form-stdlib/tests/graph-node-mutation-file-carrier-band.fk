@@ -1,0 +1,15 @@
+; tests/graph-node-mutation-file-carrier-band.fk -- mutable graph nodes over file storage.
+;
+; preludes: form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk
+;
+(do
+    (let reopen-dir "/tmp/graph-node-mutation-file-carrier-band-reopen.d")
+    (fs_rmdir reopen-dir)
+    (let cf (carrier-file))
+    (let reopen-seed (gn-mutation-test cf reopen-dir))
+    (let dep (if (eq reopen-seed 1111111) "" ""))
+    (let reopened (storage-open cf (str_concat reopen-dir dep)))
+    (let idea-ok (if (eq (gn-node-exists? cf reopened "idea:mutable") 1) 1 0))
+    (let delete-ok (if (eq (gn-node-exists? cf reopened "spec:mutable") 0) 10 0))
+    (fs_rmdir reopen-dir)
+    (sum (list idea-ok delete-ok)))

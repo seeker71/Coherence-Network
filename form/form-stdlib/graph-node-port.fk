@@ -101,6 +101,22 @@
                 store
                 (storage-put carrier store key (str_concat text (str_concat id "\n"))))))
 
+    (defn gn-list-node-ids (carrier store node-type)
+        (gn-split-lines (gn-index-text carrier store node-type)))
+
+    (defn gn-get-node (carrier store id)
+        (storage-get carrier store (gn-node-key id)))
+
+    (defn gn-node-active? (carrier store id)
+        (do
+            (let got (storage-get carrier store (gn-node-type-key id)))
+            (if (eq (storage-found? got) 0)
+                0
+                (if (str_eq (storage-value got) (gn-deleted-type)) 0 1))))
+
+    (defn gn-node-exists? (carrier store id)
+        (gn-node-active? carrier store id))
+
     (defn gn-index-remove-id (carrier store node-type id)
         (do
             (let key (gn-type-index-key node-type))
@@ -172,26 +188,10 @@
                                 (gn-node-value id (gn-deleted-type) "" "" (gn-deleted-type) "{}")))
                             (storage-put carrier s4 (gn-node-type-key id) (gn-deleted-type))))))))
 
-    (defn gn-get-node (carrier store id)
-        (storage-get carrier store (gn-node-key id)))
-
-    (defn gn-node-active? (carrier store id)
-        (do
-            (let got (storage-get carrier store (gn-node-type-key id)))
-            (if (eq (storage-found? got) 0)
-                0
-                (if (str_eq (storage-value got) (gn-deleted-type)) 0 1))))
-
-    (defn gn-node-exists? (carrier store id)
-        (gn-node-active? carrier store id))
-
     (defn gn-count-nodes (carrier store node-type)
         (if (str_eq node-type "")
             (gn-count-value carrier store (gn-total-count-key))
             (gn-count-value carrier store (gn-type-count-key node-type))))
-
-    (defn gn-list-node-ids (carrier store node-type)
-        (gn-split-lines (gn-index-text carrier store node-type)))
 
     (defn gn-list-nodes-by-ids (carrier store ids)
         (if (nil? ids) (empty)
@@ -215,6 +215,10 @@
             (let s1 (gn-create-node carrier s0 "idea:mutable" "idea" "Mutable idea" "Created natively" "gas" "{}"))
             (let s2 (gn-create-node carrier s1 "spec:mutable" "spec" "Mutable spec" "Created natively" "ice" "{}"))
             (let s3 (gn-create-node carrier s2 "idea:mutable" "idea" "Duplicate" "Should not replace" "ice" "{}"))
+            (let duplicate-ok
+                (if (str_eq (storage-value (gn-get-node carrier s3 "idea:mutable"))
+                        (gn-node-value "idea:mutable" "idea" "Mutable idea" "Created natively" "gas" "{}"))
+                    1 0))
             (let s4 (gn-replace-node carrier s3 "idea:mutable" "idea" "Mutable idea revised" "Replaced natively" "water" "{\"stage\":\"implementing\"}"))
             (let s5 (gn-delete-node carrier s4 "spec:mutable"))
             (let s6 (gn-create-node carrier s5 "spec:restore" "spec" "Restored spec" "Created before tombstone" "ice" "{}"))
@@ -223,10 +227,6 @@
             (let s9 (gn-replace-node carrier s8 "spec:missing" "spec" "Missing" "No write" "ice" "{}"))
             (let s10 (gn-delete-node carrier s9 "spec:missing"))
 
-            (let duplicate-ok
-                (if (str_eq (storage-value (gn-get-node carrier s3 "idea:mutable"))
-                        (gn-node-value "idea:mutable" "idea" "Mutable idea" "Created natively" "gas" "{}"))
-                    1 0))
             (let replace-ok
                 (if (str_eq (storage-value (gn-get-node carrier s10 "idea:mutable"))
                         (gn-node-value "idea:mutable" "idea" "Mutable idea revised" "Replaced natively" "water" "{\"stage\":\"implementing\"}"))

@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.models.runtime import RuntimeEventCreate
-from app.services import runtime_service
+from app.services import idea_service, runtime_service
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -56,6 +56,34 @@ def test_web_proxy_request_records_web_api_runtime_source(monkeypatch, set_confi
     assert event.metadata["page_route"] == "/ideas"
     assert event.metadata["web_route"] == "/ideas"
     assert event.metadata["web_proxy"] == "next-api-proxy"
+
+
+def test_dynamic_idea_route_records_route_template_after_dispatch(monkeypatch, set_config):
+    set_config("runtime", "telemetry_enabled", True)
+    captured: list[RuntimeEventCreate] = []
+
+    def fake_record_event(payload: RuntimeEventCreate):
+        captured.append(payload)
+        return payload
+
+    monkeypatch.setattr(runtime_service, "record_event", fake_record_event)
+    idea_service.create_idea(
+        idea_id="runtime-route-template-proof",
+        name="Runtime Route Template Proof",
+        description="Proves middleware records the resolved route template.",
+        potential_value=1.0,
+        estimated_cost=1.0,
+    )
+
+    client = TestClient(app)
+    response = client.get("/api/ideas/runtime-route-template-proof")
+
+    assert response.status_code == 200
+    assert captured, "API middleware should record dynamic idea detail calls"
+    event = captured[-1]
+    assert event.endpoint == "/api/ideas/{idea_id}"
+    assert event.raw_endpoint == "/api/ideas/runtime-route-template-proof"
+    assert event.method == "GET"
 
 
 def test_runtime_endpoint_summary_filters_web_api_source(set_config):
@@ -128,15 +156,29 @@ def test_native_route_goal_loop_sees_workspace_and_task_routes_as_bml():
     assert native_route_goal_loop.route_status("GET", "/api/workspaces", native_routes) == expected
     assert native_route_goal_loop.route_status("GET", "/api/spec-registry", native_routes) == expected
     assert native_route_goal_loop.route_status("GET", "/api/spec-registry/spec-one", native_routes) == expected
+    assert native_route_goal_loop.route_status("GET", "/api/ideas/idea-one", native_routes) == expected
+    assert native_route_goal_loop.route_status("PATCH", "/api/ideas/idea-one", native_routes) == expected
     assert native_route_goal_loop.route_status("GET", "/api/ideas/idea-one/specs", native_routes) == expected
+    assert native_route_goal_loop.route_status("POST", "/api/ideas/idea-one/questions", native_routes) == expected
+    assert (
+        native_route_goal_loop.route_status(
+            "POST", "/api/ideas/idea-one/questions/answer", native_routes
+        )
+        == expected
+    )
     assert native_route_goal_loop.route_status("GET", "/api/agent/tasks", native_routes) == expected
     assert native_route_goal_loop.route_status("GET", "/api/tasks", native_routes) == expected
     assert native_route_goal_loop.route_status("GET", "/api/household/events", native_routes) == expected
     assert native_route_goal_loop.route_status("GET", "/api/agent/tasks/task_example", native_routes) == expected
+    assert native_route_goal_loop.route_status("GET", "/api/health/persistence", native_routes) == expected
+    assert native_route_goal_loop.route_status("GET", "/api/automation/usage/readiness", native_routes) == expected
     assert native_route_goal_loop.route_status("GET", "/api/sensings", native_routes) == expected
     assert native_route_goal_loop.route_status("GET", "/api/sensings/sensing-example", native_routes) == expected
+    assert native_route_goal_loop.route_status("GET", "/api/graph/nodes/example-node", native_routes) == expected
     assert native_route_goal_loop.route_status("GET", "/api/translations/page/flow", native_routes) == expected
     assert native_route_goal_loop.route_status("GET", "/api/translations/concept/lc-example", native_routes) == expected
+    assert native_route_goal_loop.route_status("GET", "/api/views/health", native_routes) == expected
+    assert native_route_goal_loop.route_status("GET", "/api/views/archive", native_routes) == expected
     assert native_route_goal_loop.route_status("POST", "/api/graph/edges", native_routes) == expected
     assert (
         native_route_goal_loop.route_status(
@@ -151,7 +193,6 @@ def test_native_route_goal_loop_sees_method_specific_form_mutation_routes():
 
     expected = ("kernel-native-form-needs-source-lift", "Form", True, False)
     assert native_route_goal_loop.route_status("POST", "/api/ideas", native_routes) == expected
-    assert native_route_goal_loop.route_status("PATCH", "/api/ideas/idea-one", native_routes) == expected
     assert native_route_goal_loop.route_status("POST", "/api/spec-registry", native_routes) == expected
     assert native_route_goal_loop.route_status("PATCH", "/api/spec-registry/spec-one", native_routes) == expected
     assert native_route_goal_loop.route_status("DELETE", "/api/spec-registry/spec-one", native_routes) == expected
@@ -265,3 +306,116 @@ def test_household_events_native_route_releases_empty_calendar_fanout():
     assert "coherence-api-household-events" in ingress_text
     assert "Path(`/api/household/events`)" in ingress_text
     assert "api_household_events" in deploy_text
+
+
+def test_graph_node_detail_native_route_preserves_slug_lookup_without_swallowing_count():
+    route_text = (ROOT / "deploy" / "front-door" / "api.bml").read_text(encoding="utf-8")
+    ingress_text = (ROOT / "deploy" / "kernel-router" / "docker-compose.kernel-router.yml").read_text(
+        encoding="utf-8"
+    )
+    deploy_verify_text = (ROOT / "scripts" / "verify_web_api_deploy.sh").read_text(encoding="utf-8")
+    auto_deploy_text = (ROOT / "deploy" / "hostinger" / "auto-deploy.sh").read_text(encoding="utf-8")
+
+    for required in (
+        'route("graph-node-detail", "GET", "/api/graph/nodes/{node_id}"',
+        "def api_graph_node_detail(request)",
+        "api-graph-node-detail-sql",
+        "api-node-json-projected",
+        "properties->>'slug' = $1",
+        "id = 'contributor:' || $1",
+        "entity_views",
+        'api-native-ok-json("api_graph_node_detail"',
+    ):
+        assert required in route_text
+
+    assert "(PathRegexp(`^/api/graph/nodes/[^/]+$`) && !Path(`/api/graph/nodes/count`))" in ingress_text
+    assert "api_graph_node_detail" in deploy_verify_text
+    assert "/api/graph/nodes/urs" in deploy_verify_text
+    assert "api_graph_node_detail" in auto_deploy_text
+    assert "/api/graph/nodes/urs" in auto_deploy_text
+
+
+def test_idea_detail_native_route_preserves_static_idea_reads():
+    route_text = (ROOT / "deploy" / "front-door" / "api.bml").read_text(encoding="utf-8")
+    ingress_text = (ROOT / "deploy" / "kernel-router" / "docker-compose.kernel-router.yml").read_text(
+        encoding="utf-8"
+    )
+    deploy_verify_text = (ROOT / "scripts" / "verify_web_api_deploy.sh").read_text(encoding="utf-8")
+    auto_deploy_text = (ROOT / "deploy" / "hostinger" / "auto-deploy.sh").read_text(encoding="utf-8")
+
+    for required in (
+        'route("idea-detail", "GET", "/api/ideas/{idea_id}"',
+        "def api_idea_detail(request)",
+        "api-idea-detail-sql",
+        "entity_views WHERE entity_type = 'idea'",
+        "COALESCE(NULLIF(properties->>'slug',''), id) = $1",
+        'api-native-ok-json("api_idea_detail"',
+    ):
+        assert required in route_text
+
+    expected_ingress = (
+        "(PathRegexp(`^/api/ideas/[^/]+$`) && !Path(`/api/ideas/storage`) && !Path(`/api/ideas/tags`) "
+        "&& !Path(`/api/ideas/cards`) && !Path(`/api/ideas/health`) && !Path(`/api/ideas/right-sizing`) "
+        "&& !Path(`/api/ideas/showcase`) && !Path(`/api/ideas/resonance`) && !Path(`/api/ideas/count`) "
+        "&& !Path(`/api/ideas/progress`) && !Path(`/api/ideas/portfolio-summary`) "
+        "&& !Path(`/api/ideas/breath-overview`))"
+    )
+    assert expected_ingress in ingress_text
+    assert "api_idea_detail" in deploy_verify_text
+    assert "/api/ideas/user-surfaces" in deploy_verify_text
+    assert "api_idea_detail" in auto_deploy_text
+    assert "/api/ideas/user-surfaces" in auto_deploy_text
+
+
+def test_idea_question_native_routes_preserve_question_flow_contract():
+    route_text = (ROOT / "deploy" / "front-door" / "api.bml").read_text(encoding="utf-8")
+    ingress_text = (ROOT / "deploy" / "kernel-router" / "docker-compose.kernel-router.yml").read_text(
+        encoding="utf-8"
+    )
+
+    for required in (
+        'route("idea-question-create", "POST", "/api/ideas/{idea_id}/questions"',
+        'route("idea-question-answer", "POST", "/api/ideas/{idea_id}/questions/answer"',
+        "def api_idea_question_create(request)",
+        "def api_idea_question_answer(request)",
+        "api-idea-question-duplicate-sql",
+        "api-idea-question-create-sql",
+        "api-idea-question-exists-sql",
+        "api-idea-question-answer-sql",
+        'api-native-ok-json("api_idea_question_create"',
+        'api-native-ok-json("api_idea_question_answer"',
+    ):
+        assert required in route_text
+
+    assert "PathRegexp(`^/api/ideas/[^/]+/questions$`)" in ingress_text
+    assert "PathRegexp(`^/api/ideas/[^/]+/questions/answer$`)" in ingress_text
+
+
+def test_idea_update_native_route_preserves_patch_flow_contract():
+    route_text = (ROOT / "deploy" / "front-door" / "api.bml").read_text(encoding="utf-8")
+    ingress_text = (ROOT / "deploy" / "kernel-router" / "docker-compose.kernel-router.yml").read_text(
+        encoding="utf-8"
+    )
+
+    for required in (
+        'route("idea-update", "PATCH", "/api/ideas/{idea_id}"',
+        "def api_idea_update(request)",
+        "api-idea-update-sql",
+        "api-idea-update-parent-remove-child-sql",
+        "api-idea-update-parent-add-child-sql",
+        "At least one field required",
+        'api-native-ok-json("api_idea_update"',
+    ):
+        assert required in route_text
+
+    assert 'Method(`PATCH`) && PathRegexp(`^/api/ideas/[^/]+$`)' in ingress_text
+
+
+def test_bml_front_door_captures_query_errors_before_pg_close():
+    route_text = (ROOT / "deploy" / "front-door" / "api.bml").read_text(encoding="utf-8")
+
+    assert "let closed = pg_close(conn);\n        if api-query-failed?()" not in route_text
+    assert "let query_error = pg_last_error();" in route_text
+    assert "let query_failed = gt(str_len(query_error), 0);" in route_text
+    assert 'if query_failed then api-service-unavailable("persistence", "' not in route_text
+    assert 'if query_failed then api-service-unavailable("persistence", query_error)' in route_text

@@ -1,0 +1,33 @@
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk
+;
+; hati-os-kernel-emit-band — m4c's emitter proven three-way: the emitter READS
+; a program-as-cells through the observe door and serializes it byte-identically
+; on every kernel — the node table, the 3-child IF flatten order, and the whole
+; emitted C walker with the root index spliced. The probe (fk_arms) is in the
+; emitted text by construction.
+;
+; Verdict 15 when the emission lands:
+;   1   the tiny program ADD(LIT 40, LIT 2) flattens to the canonical table
+;       (post-order, children before parent, root last)
+;   2   the branch program IF(LE(ARG,1),111,222) flattens with the 3-child IF
+;       row carrying (cond, then, else) indices
+;   4   two emissions of the same program are str_eq (deterministic text)
+;   8   the emitted C carries the native float runtime and float arms while
+;       still emitting the tiny program's node table
+(do
+    (let tiny (fk-add (fk-lit 40) (fk-lit 2)))
+    (let c0 (if (str_eq (fkc-rows-text (fkc-flatten tiny)) "{1,40,0,0},{1,2,0,0},{3,0,1,0},") 1 0))
+
+    (let branch (fk-if (fk-le (fk-arg) (fk-lit 1)) (fk-lit 111) (fk-lit 222)))
+    (let c1 (if (str_eq (fkc-rows-text (fkc-flatten branch)) "{2,0,0,0},{1,1,0,0},{5,0,1,0},{1,111,0,0},{1,222,0,0},{6,2,3,4},") 2 0))
+
+    (let c2 (if (str_eq (fkc-emit (fk-fib-program)) (fkc-emit (fk-fib-program))) 4 0))
+
+    (let emitted (fkc-emit tiny))
+    (let c3 (if (and (ge (str_find emitted "static double fk_fv" 0) 0)
+                     (and (ge (str_find emitted "fk_fbox" 0) 0)
+                          (ge (str_find emitted "{1,40,0,0},{1,2,0,0},{3,0,1,0}," 0) 0)))
+                8
+                0))
+
+    (add c0 (add c1 (add c2 c3))))

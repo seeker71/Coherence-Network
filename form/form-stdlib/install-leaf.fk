@@ -8,7 +8,7 @@
 ; proved a booted body accepts an offered CELL and MINTS a larger image;
 ; here the offered cell is a COMPILED CAPABILITY (the JIT lane's artifact:
 ; a recipe lowered to a .so by jit.go, or to a clang binary by the
-; fourth-kernel emitter), and the acknowledgment is a NAME BINDING — a
+; Hati-OS emitter), and the acknowledgment is a NAME BINDING — a
 ; subsequent call BY NAME reaches the artifact. Linux's insmod, composed
 ; from the five axioms (core-axioms.form), never ported:
 ;

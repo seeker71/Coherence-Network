@@ -12,7 +12,7 @@ run:
 	cd api && uvicorn app.main:app --reload --port 8000
 
 setup:
-	cd api && python -m venv .venv && .venv/bin/pip install -e ".[dev]"
+	cd api && python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 
 dev-setup: setup
 	cd web && npm install

@@ -134,7 +134,7 @@
 # time (wall-clock asserted), and the armed timer's tick arrives as
 # the SIGALRM shape on the host clock. Poll granularity is composed
 # (TIME + tail countdown), not minted. Proven: tests/afferent-live-band.fk
-# -> 63 three-way; witnessed: fourth_kernel_audit.sh section 18.
+# -> 63 three-way; witnessed: hati_os_kernel_audit.sh section 18.
 #
 # Delivery priority is closed — and it closed as the scheduler's OWN
 # rows read backward: POSIX number-order IS sched-fifo's row data

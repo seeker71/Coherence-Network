@@ -15,6 +15,9 @@
 # native mutation handler reads the same production config-file carrier as the
 # API and performs pg_exec inside Form when the mounted config includes
 # database.url. The native-first Host router below is intentionally broad:
+# bounded no-header mutation paths match this with specific method/path routers
+# at priority 900, leaving ordinary traffic to the broad native-first fan-out.
+# Unlisted ordinary requests keep matching api:8000 through kernel-router fan-out.
 # website/API smoke and tool flows are the gate. Native rows answer; unmatched
 # paths transparently fan out through Python with X-Form-Router evidence.
 #
@@ -183,6 +186,21 @@ services:
       traefik.http.routers.coherence-api-idea-specs.tls.certresolver: "letsencrypt"
       traefik.http.routers.coherence-api-idea-specs.priority: "1184"
       traefik.http.routers.coherence-api-idea-specs.service: "coherence-api-kernel-bml-front-door"
+      traefik.http.routers.coherence-api-idea-update.rule: "Host(`api.coherencycoin.com`) && Method(`PATCH`) && PathRegexp(`^/api/ideas/[^/]+$`)"
+      traefik.http.routers.coherence-api-idea-update.entrypoints: "websecure"
+      traefik.http.routers.coherence-api-idea-update.tls.certresolver: "letsencrypt"
+      traefik.http.routers.coherence-api-idea-update.priority: "1184"
+      traefik.http.routers.coherence-api-idea-update.service: "coherence-api-kernel-bml-front-door"
+      traefik.http.routers.coherence-api-idea-question-create.rule: "Host(`api.coherencycoin.com`) && Method(`POST`) && PathRegexp(`^/api/ideas/[^/]+/questions$`)"
+      traefik.http.routers.coherence-api-idea-question-create.entrypoints: "websecure"
+      traefik.http.routers.coherence-api-idea-question-create.tls.certresolver: "letsencrypt"
+      traefik.http.routers.coherence-api-idea-question-create.priority: "1184"
+      traefik.http.routers.coherence-api-idea-question-create.service: "coherence-api-kernel-bml-front-door"
+      traefik.http.routers.coherence-api-idea-question-answer.rule: "Host(`api.coherencycoin.com`) && Method(`POST`) && PathRegexp(`^/api/ideas/[^/]+/questions/answer$`)"
+      traefik.http.routers.coherence-api-idea-question-answer.entrypoints: "websecure"
+      traefik.http.routers.coherence-api-idea-question-answer.tls.certresolver: "letsencrypt"
+      traefik.http.routers.coherence-api-idea-question-answer.priority: "1184"
+      traefik.http.routers.coherence-api-idea-question-answer.service: "coherence-api-kernel-bml-front-door"
       traefik.http.routers.coherence-api-agent-tasks-active.rule: "Host(`api.coherencycoin.com`) && Method(`GET`) && Path(`/api/agent/tasks/active`)"
       traefik.http.routers.coherence-api-agent-tasks-active.entrypoints: "websecure"
       traefik.http.routers.coherence-api-agent-tasks-active.tls.certresolver: "letsencrypt"
@@ -263,12 +281,12 @@ services:
       traefik.http.routers.coherence-api-translations-entity.tls.certresolver: "letsencrypt"
       traefik.http.routers.coherence-api-translations-entity.priority: "1182"
       traefik.http.routers.coherence-api-translations-entity.service: "coherence-api-kernel-bml-front-door"
-      traefik.http.routers.coherence-api-bml-read-core-batch.rule: "Host(`api.coherencycoin.com`) && Method(`GET`) && (Path(`/api/health`) || Path(`/api/ready`) || Path(`/api/gates/main-head`) || Path(`/api/workspaces`) || Path(`/api/workspaces/coherence-network/vitality`) || Path(`/api/coherence/score`) || Path(`/api/graph/nodes`) || PathRegexp(`^/api/graph/nodes/[^/]+/edges$`) || Path(`/api/substrate/page`) || Path(`/api/federation/nodes/count`) || Path(`/api/edges`) || Path(`/api/inspired-by`) || Path(`/api/runtime/endpoints/summary`) || Path(`/api/feed/personal`) || Path(`/api/utils/kernel_status`))"
+      traefik.http.routers.coherence-api-bml-read-core-batch.rule: "Host(`api.coherencycoin.com`) && Method(`GET`) && (Path(`/api/health`) || Path(`/api/ready`) || Path(`/api/gates/main-head`) || Path(`/api/workspaces`) || Path(`/api/workspaces/coherence-network/vitality`) || Path(`/api/coherence/score`) || Path(`/api/graph/nodes`) || (PathRegexp(`^/api/graph/nodes/[^/]+$`) && !Path(`/api/graph/nodes/count`)) || PathRegexp(`^/api/graph/nodes/[^/]+/edges$`) || Path(`/api/substrate/page`) || Path(`/api/federation/nodes/count`) || Path(`/api/edges`) || Path(`/api/inspired-by`) || Path(`/api/runtime/endpoints/summary`) || Path(`/api/feed/personal`) || Path(`/api/utils/kernel_status`))"
       traefik.http.routers.coherence-api-bml-read-core-batch.entrypoints: "websecure"
       traefik.http.routers.coherence-api-bml-read-core-batch.tls.certresolver: "letsencrypt"
       traefik.http.routers.coherence-api-bml-read-core-batch.priority: "1175"
       traefik.http.routers.coherence-api-bml-read-core-batch.service: "coherence-api-kernel-bml-front-door"
-      traefik.http.routers.coherence-api-bml-read-ideas-agent-batch.rule: "Host(`api.coherencycoin.com`) && Method(`GET`) && (Path(`/api/ideas`) || Path(`/api/ideas/resonance`) || PathRegexp(`^/api/ideas/[^/]+/specs$`) || Path(`/api/spec-registry`) || (PathRegexp(`^/api/spec-registry/[^/]+$`) && !Path(`/api/spec-registry/cards`) && !Path(`/api/spec-registry/source-list`)) || Path(`/api/agent/tasks`) || Path(`/api/tasks`) || Path(`/api/agent/tasks/active`) || Path(`/api/agent/tasks/activity`) || PathRegexp(`^/api/agent/tasks/[^/]+/log$`) || PathRegexp(`^/api/agent/tasks/task_[^/]+$`))"
+      traefik.http.routers.coherence-api-bml-read-ideas-agent-batch.rule: "Host(`api.coherencycoin.com`) && Method(`GET`) && (Path(`/api/ideas`) || Path(`/api/ideas/resonance`) || (PathRegexp(`^/api/ideas/[^/]+$`) && !Path(`/api/ideas/storage`) && !Path(`/api/ideas/tags`) && !Path(`/api/ideas/cards`) && !Path(`/api/ideas/health`) && !Path(`/api/ideas/right-sizing`) && !Path(`/api/ideas/showcase`) && !Path(`/api/ideas/resonance`) && !Path(`/api/ideas/count`) && !Path(`/api/ideas/progress`) && !Path(`/api/ideas/portfolio-summary`) && !Path(`/api/ideas/breath-overview`)) || PathRegexp(`^/api/ideas/[^/]+/specs$`) || Path(`/api/spec-registry`) || (PathRegexp(`^/api/spec-registry/[^/]+$`) && !Path(`/api/spec-registry/cards`) && !Path(`/api/spec-registry/source-list`)) || Path(`/api/agent/tasks`) || Path(`/api/tasks`) || Path(`/api/agent/tasks/active`) || Path(`/api/agent/tasks/activity`) || PathRegexp(`^/api/agent/tasks/[^/]+/log$`) || PathRegexp(`^/api/agent/tasks/task_[^/]+$`))"
       traefik.http.routers.coherence-api-bml-read-ideas-agent-batch.entrypoints: "websecure"
       traefik.http.routers.coherence-api-bml-read-ideas-agent-batch.tls.certresolver: "letsencrypt"
       traefik.http.routers.coherence-api-bml-read-ideas-agent-batch.priority: "1175"

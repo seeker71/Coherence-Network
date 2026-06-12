@@ -143,17 +143,26 @@ def test_real_manifest_native_routes_are_served_zero_and_include_ideas_structure
     assert "/api/spec-registry/source-list" in capable_paths
     assert "/api/spec-registry" in capable_paths
     assert "/api/spec-registry/{spec_id}" in capable_paths
+    assert "/api/ideas/{idea_id}" in capable_paths
     assert "/api/ideas/{idea_id}/specs" in capable_paths
     assert "/api/sensings" in capable_paths
     assert "/api/sensings/{sensing_id}" in capable_paths
+    assert "/api/graph/nodes/{node_id}" in capable_paths
     assert "/api/translations/{entity_type}/{entity_id}" in capable_paths
     assert "/api/concepts/{concept_id}/carried-by" in capable_paths
     assert "/api/presences/{presence_id}/resonances" in capable_paths
     assert "/api/presences/{presence_id}/places" in capable_paths
+    assert "/api/health/persistence" in capable_paths
+    assert "/api/views/health" in capable_paths
+    assert "/api/views/archive" in capable_paths
+    assert "/api/automation/usage/readiness" in capable_paths
     assert "/api/graph/nodes/{node_id}/edges" in capable_paths
     assert "/api/agent/tasks/{task_id}/log" in capable_paths
     assert "/api/workspaces" in capable_paths
     assert "POST /api/ideas" in capable
+    assert "PATCH /api/ideas/{idea_id}" in capable
+    assert "POST /api/ideas/{idea_id}/questions" in capable
+    assert "POST /api/ideas/{idea_id}/questions/answer" in capable
     assert "POST /api/meetings/anonymous-traces" in capable
     assert "PATCH /api/ideas/*" in capable
     assert "POST /api/spec-registry" in capable

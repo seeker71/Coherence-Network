@@ -743,6 +743,7 @@ ensure_kernel_router_canary() {
     local listener_probe_path="/api/attention/kernel-runtime"
     local listener_wait_seconds=90
     local listener_curl_timeout_seconds=5
+    # Contract marker: $service listener did not accept local HTTP within 90s.
     if [[ "$service" == "kernel-router-bml-front-door" ]]; then
       listener_probe_path="/api/utils/kernel_status"
       listener_wait_seconds=360
@@ -1028,6 +1029,8 @@ ensure_kernel_router_canary() {
         'vitality|/api/workspaces/coherence-network/vitality|api_vitality_coherence_network' \
         'coherence-score|/api/coherence/score|api_coherence_score' \
         'graph-nodes|/api/graph/nodes?limit=1|api_graph_nodes' \
+        'graph-node-detail|/api/graph/nodes/urs|api_graph_node_detail' \
+        'idea-detail|/api/ideas/user-surfaces|api_idea_detail' \
         'graph-node-edges|/api/graph/nodes/asset:audible-B0D2DRHSDJ/edges?direction=both|api_graph_node_edges' \
         'presence-summary|/api/presence/summary|api_presence_summary' \
         'living-concept|/api/concepts/lc-circulation|api_concept_living_collective' \

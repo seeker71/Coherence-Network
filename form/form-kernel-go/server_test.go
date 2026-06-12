@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -10,7 +11,37 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgconn"
 )
+
+func TestPGHandleTableSetErrKeepsDatabaseMessage(t *testing.T) {
+	table := &pgHandleTable{}
+	table.setErr(&pgconn.PgError{
+		Message: `relation "graph_nodes" does not exist`,
+		Detail:  `Missing FROM-clause entry for table "graph_nodes"`,
+		Hint:    "Run the schema bootstrap first.",
+	})
+
+	got := table.lastErr
+	if !strings.Contains(got, `relation "graph_nodes" does not exist`) {
+		t.Fatalf("lastErr missing message: %q", got)
+	}
+	if !strings.Contains(got, `detail: Missing FROM-clause entry for table "graph_nodes"`) {
+		t.Fatalf("lastErr missing detail: %q", got)
+	}
+	if !strings.Contains(got, "hint: Run the schema bootstrap first.") {
+		t.Fatalf("lastErr missing hint: %q", got)
+	}
+}
+
+func TestPGHandleTableSetErrFallsBackForGenericError(t *testing.T) {
+	table := &pgHandleTable{}
+	table.setErr(errors.New("db error"))
+	if table.lastErr != "db error" {
+		t.Fatalf("lastErr = %q, want db error", table.lastErr)
+	}
+}
 
 func TestUpstreamURLPreservesPathAndQuery(t *testing.T) {
 	base, err := url.Parse("https://api.example.test/root/")
@@ -246,7 +277,8 @@ func TestHealthRouteNativeOperationalShape(t *testing.T) {
 	for _, want := range []string{
 		`"status":"ok"`,
 		`"schema_ok":`,
-		`"smart_reap_available":true`,
+		`"smart_reap_available":false`,
+		`"smart_reap_import_error":null`,
 		`"recent_outcomes":`,
 		`"kernel_runtime":"form-kernel-go"`,
 	} {
@@ -513,11 +545,11 @@ func TestKernelReadRoutePromotionsSelectNatively(t *testing.T) {
 		{"views stats", "http://native.example.test/api/views/stats/lc-attuned-spaces?days=30"},
 		{"reaction summary", "http://native.example.test/api/reactions/concept/lc-attuned-spaces/summary"},
 		{"reaction threads", "http://native.example.test/api/reactions/concept/lc-attuned-spaces/threads"},
-			{"concept voices", "http://native.example.test/api/concepts/lc-attuned-spaces/voices"},
-			{"presence places", "http://native.example.test/api/presences/asset:audible-B0D2DRHSDJ/places"},
-			{"graph node edges", "http://native.example.test/api/graph/nodes/asset:audible-B0D2DRHSDJ/edges?direction=both"},
-			{"agent task log", "http://native.example.test/api/agent/tasks/task_502d901d6aa7fdbc/log"},
-		} {
+		{"concept voices", "http://native.example.test/api/concepts/lc-attuned-spaces/voices"},
+		{"presence places", "http://native.example.test/api/presences/asset:audible-B0D2DRHSDJ/places"},
+		{"graph node edges", "http://native.example.test/api/graph/nodes/asset:audible-B0D2DRHSDJ/edges?direction=both"},
+		{"agent task log", "http://native.example.test/api/agent/tasks/task_502d901d6aa7fdbc/log"},
+	} {
 		t.Run(tc.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tc.target, nil)
 			req.Header.Set("Accept", "application/json")

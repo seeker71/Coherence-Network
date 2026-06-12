@@ -4,23 +4,23 @@
 # ─────────────────────────────────────────────────────────────────────
 #
 # Urs: "you have all the high level features of Linux mapped to actual form
-# recipes." This is that map — honest about what RUNS in the fourth kernel
+# recipes." This is that map — honest about what RUNS in the Hati-OS kernel
 # today vs what is NAMED with a path. host-kernel.form's os-feature-coverage is
 # the axiom-level sketch; this is the subsystem-by-subsystem realization audit.
 #
 # The thesis (host-kernel.form): a NodeID is an unforgeable capability (seL4's
 # model); offer-and-acknowledge is the syscall ABI; every resource is a typed
 # port. So Linux's duties are not reimplemented — they are COMPOSITIONS of the
-# five axioms, and a growing fraction already RUN as fourth-kernel binaries.
+# five axioms, and a growing fraction already RUN as Hati-OS binaries.
 
 (linux-as-recipes
 
-  (legend (RUNS "a fourth-kernel binary / Form recipe does this today, cited")
+  (legend (RUNS "a Hati-OS binary / Form recipe does this today, cited")
           (NAMED "the axiom-composition is named; the recipe is the next stone"))
 
   # ── Process & execution ─────────────────────────────────────────────
   (process-management
-    (fork-exec-wait   RUNS  fourth-walker-emit.fk fkc-emit-driver — pipe/fork/execvp spawn a host
+    (fork-exec-wait   RUNS  hati-os-kernel-emit.fk fkc-emit-driver — pipe/fork/execvp spawn a host
                             command, capture its stdout; n3 witnessed (date +%Y -> 2026))
     (process-spawn    RUNS  the driver organ IS spawn; the meeting companion drives whisper/ollama/say)
     (scheduler        RUNS  scheduler.fk — competing recipes OFFER (name arrival priority fitness) for the
@@ -84,7 +84,7 @@
   # ── Networking ──────────────────────────────────────────────────────
   (networking
     (sockets          RUNS  fkc-emit-server — socket/bind/listen/accept/fork as the net organ; an api
-                            served at HTTP 200 on a 4th-kernel binary (n1/n2), sub-millisecond)
+                            served at HTTP 200 on a Hati-OS binary (n1/n2), sub-millisecond)
     (http             RUNS  kernel-http.fk / http-serve.fk / http-socket.fk; the responder body is Form (PUTC))
     (tcp-stack        RUNS-via-host the host TCP/IP under the offered socket port (allowed carrier)))
 
@@ -110,7 +110,7 @@
     (permissions      RUNS  the trust matrix is cells (axiom-4); sovereign-boundary-protocol.fk answers
                             allow/stop/witness/re-enter)
     (loadable-modules RUNS  the JIT / emit-compile-exec lane: a recipe -> .so (jit.go) or -> clang binary
-                            (fourth-kernel-emit) -> dlopen/exec; AND install-as-named-callable-leaf: an
+                            (Hati-OS-emit) -> dlopen/exec; AND install-as-named-callable-leaf: an
                             install offer (name, artifact, expected-interface) binds a jitted artifact
                             into the kernel's own table at runtime — the surface grows by offer, not
                             recompile; collisions and interface mismatches refuse honestly; the node ack
@@ -119,7 +119,7 @@
                             three-way), TWO carriers witnessed live — Go (plugin.Open; int+float+Value
                             ABI lanes) and Rust (rustc cdylib + libloading; i64 ABI, refusal-parity
                             where a lane is absent: the leaf acks nothing rather than fabricating);
-                            TS (wasm/worker) named open in install-leaf.form; AND the fourth kernel
+                            TS (wasm/worker) named open in install-leaf.form; AND the Hati-OS kernel
                             carries its OWN wire: the universal binary holds the lowerer, re-emits a
                             hot foreign function native at runtime through the toolchain port, and
                             the load-time fixpoint refuses out-of-family code before heat counts
@@ -150,10 +150,10 @@
              persistence, driver-model, entropy, clock, sockets, http, pipes, channels, shared-memory,
              syscall-abi, protection-caps, permissions, loadable-modules, shell, stdio, interpreter —
              and now scheduler policy, signals, interrupts, gc/melt (measured), offers-in-flight
-             concurrency, boot-from-axioms: every subsystem row, as fourth-kernel binaries or Form
+             concurrency, boot-from-axioms: every subsystem row, as Hati-OS binaries or Form
              recipes with three-way proof bands")
     (named  "the ring after round 4 (value stack + string pool + figure family + crystallization wire
-             all landed; bands-on-fourth-arm 10 -> 48): floats; let-as-binding (sha256's wall — inline
+             all landed; bands-on-Hati-OS-arm 10 -> 48): floats; let-as-binding (sha256's wall — inline
              re-evaluation is exponential on deep let chains); pool ops 29-33 with int_to_str first
              (serves the emit-family bands AND the m4d fixpoint — the emitter-as-program needs them);
              native shapes beyond pure-compute in the wire's lowerer; a typed str-eq lowering before
@@ -172,7 +172,7 @@
 # ─────────────────────────────────────────────────────────────────────
 # How to verify the RUNS rows
 # ─────────────────────────────────────────────────────────────────────
-#   scripts/fourth_kernel_audit.sh        # process/net/driver/fs/clock/entropy/stdio/interpreter, live
+#   scripts/hati_os_kernel_audit.sh        # process/net/driver/fs/clock/entropy/stdio/interpreter, live
 #   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/resource-port.fk \
 #     form-stdlib/tests/resource-port-band.fk      # the HAL
 #   cd form && ./validate.sh form-stdlib/persistence.fk form-stdlib/merkle.fk form-stdlib/cell-sync.fk
@@ -181,7 +181,7 @@
 #   cd form && ./validate.sh form-stdlib/afferent-offer.fk \
 #     form-stdlib/tests/afferent-offer-band.fk                                 # signals+interrupts -> 511
 #   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk \
-#     form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk \
+#     form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk \
 #     form-stdlib/arena-melt.fk form-stdlib/tests/arena-melt-band.fk           # gc/melt -> 63
 #   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel.fk form-stdlib/sha256.fk \
 #     form-stdlib/channel-query.fk form-stdlib/offers-in-flight.fk \

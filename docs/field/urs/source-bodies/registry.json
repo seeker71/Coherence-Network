@@ -76,7 +76,19 @@
     "youtube": {
       "history_only_takeout": {"root_key": "downloads_dir", "path": "takeout-20260506T165642Z-3-001.zip"},
       "full_takeout_part_012": {"root_key": "downloads_dir", "path": "takeout-20260506T023119Z-3-012.zip"},
-      "uploads_and_library_parts": {"root_key": "downloads_dir", "pattern": "takeout-20260506T023119Z-3-*.zip"}
+      "uploads_and_library_parts": {"root_key": "downloads_dir", "pattern": "takeout-20260506T023119Z-3-*.zip"},
+      "promoted_transcripts": [
+        {
+          "title": "Erich von Däniken: Die Rätsel der Menschheit neu betrachtet",
+          "platform_id": "youtube:gTCA0zI4v5Q",
+          "url": "https://www.youtube.com/watch?v=gTCA0zI4v5Q",
+          "channel": "HUSTLE TO THE GRAVE",
+          "language": "de",
+          "path": "docs/field/urs/source-bodies/transcripts/2026-06-12-erich-von-daeniken-die-raetsel-der-menschheit-neu-betrachtet.de.md",
+          "ingestion_policy": "raw_transcript_promoted_by_explicit_request",
+          "publication_boundary": "This caption transcript was explicitly promoted into the repo by request; the underlying VTT source remained local during ingestion."
+        }
+      ]
     },
     "photos": {
       "archives": [

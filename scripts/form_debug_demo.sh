@@ -21,8 +21,8 @@ cat > "$work/fib-source.fk" <<'EOF'
 EOF
 
 # emit the DEBUG walker, compile, run fib(5) with the trace on (limit 200)
-cat "$FORM/form-stdlib/minimal-surface.fk" "$FORM/form-stdlib/fourth-walker.fk" \
-    "$FORM/form-stdlib/fourth-walker-emit.fk" "$work/fib-source.fk" > "$work/e.fk"
+cat "$FORM/form-stdlib/minimal-surface.fk" "$FORM/form-stdlib/hati-os-kernel.fk" \
+    "$FORM/form-stdlib/hati-os-kernel-emit.fk" "$work/fib-source.fk" > "$work/e.fk"
 printf '(print "==C==")\n(print (fkc-emit-debug (list fibc)))\n(print "==END==")\n' >> "$work/e.fk"
 (cd "$FORM" && "$GO" "$work/e.fk" 2>/dev/null) | sed -n '/^==C==$/,/^==END==$/p' | sed -e '1d' -e '$d' > "$work/dbg.c"
 "$CLANG" -O2 -o "$work/dbg" "$work/dbg.c"

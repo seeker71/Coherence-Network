@@ -185,12 +185,34 @@ run_siblings() {
     # concurrent validate runs) never share a scratch path. The legs dir is
     # removed after comparison, so band scratch leaves no sediment.
     legs="$(mktemp -d "${TMPDIR:-/tmp}/form-legs.XXXXXX")"
-    mkdir -p "$legs/tmp-go" "$legs/tmp-rs" "$legs/tmp-ts"
-    ( TMPDIR="$legs/tmp-go" "$GO_BIN" "${prepared_args[@]}" > "$legs/go" 2>&1 || true ) &
-    ( TMPDIR="$legs/tmp-rs" "$RS_BIN" "${prepared_args[@]}" > "$legs/rs" 2>&1 || true ) &
-    ( TMPDIR="$legs/tmp-ts" run_ts "${prepared_args[@]}" > "$legs/ts" 2>&1 || true ) &
+    prepare_leg_args() {
+        local leg="$1"
+        local root="$legs/tmp-$leg"
+        local outdir="$legs/src-$leg"
+        local src out
+        mkdir -p "$root" "$outdir"
+        leg_args=()
+        for src in "${prepared_args[@]}"; do
+            if grep -q '"/tmp/' "$src"; then
+                out="$outdir/$(basename "$src")"
+                sed "s#\"/tmp/#\"$root/#g" "$src" > "$out"
+                leg_args+=("$out")
+            else
+                leg_args+=("$src")
+            fi
+        done
+    }
+    prepare_leg_args go
+    go_args=("${leg_args[@]}")
+    prepare_leg_args rs
+    rs_args=("${leg_args[@]}")
+    prepare_leg_args ts
+    ts_args=("${leg_args[@]}")
+    ( TMPDIR="$legs/tmp-go" "$GO_BIN" "${go_args[@]}" > "$legs/go" 2>&1 || true ) &
+    ( TMPDIR="$legs/tmp-rs" "$RS_BIN" "${rs_args[@]}" > "$legs/rs" 2>&1 || true ) &
+    ( TMPDIR="$legs/tmp-ts" run_ts "${ts_args[@]}" > "$legs/ts" 2>&1 || true ) &
     if [[ -n "$fourth_tbl" ]]; then
-        ( "$FKWU" "$fourth_tbl" 0 2>/dev/null | head -1 > "$legs/fk" || true ) &
+        ( TMPDIR="$legs/tmp-fk" "$FKWU" "$fourth_tbl" 0 2>/dev/null | head -1 > "$legs/fk" || true ) &
     fi
     wait
     go_out=$(cat "$legs/go"); rs_out=$(cat "$legs/rs"); ts_out=$(cat "$legs/ts")

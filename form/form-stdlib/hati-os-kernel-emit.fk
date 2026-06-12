@@ -1,11 +1,11 @@
-; fourth-walker-emit.fk — m4c of fourth-kernel.form: the emitter walks the
+; hati-os-kernel-emit.fk — m4c of hati-os.form: the emitter walks the
 ; program tree and emits the WALKER's native source, probe included.
 ;
-; M1's emitter (fourth-kernel-emit.fk) hand-shaped its program text; this one
-; READS the program — a fourth-walker.fk cell tree, through the observe door —
+; M1's emitter (hati-os-native-cli-emit.fk) hand-shaped its program text; this one
+; READS the program — a hati-os-kernel.fk cell tree, through the observe door —
 ; and serializes it into a C node table beside a generic walk function. The
 ; program stays data even in C: the walker text is program-independent, only
-; the table and the root index vary. That is the fourth sibling's shape — a
+; the table and the root index vary. That is the Hati-OS sibling's shape — a
 ; walker, not a per-program compiler.
 ;
 ; The probe is emitted WITH the walker (the sibling-gate of the measurement
@@ -32,44 +32,56 @@
     (if (eq (fk-tag n) 21) (fkc-un2 21 (fkc-flat (fk-body n) acc))
     (if (eq (fk-tag n) 22) (fkc-un2 22 (fkc-flat (fk-body n) acc))
     ; 24 SLIT — a leaf row carrying the POOL INDEX (the string's bytes travel
-    ; in the table file's string section, not in the row); 25 SLEN and
-    ; 29 BYTE2S unary; SEQ/SCAT/SCHAR (26..28) are pair-bodied and ride the
-    ; default binary arm; 41 BNOT_U32 is the figure family's unary
+    ; in the table file's string section, not in the row); 25/31/32/33 unary;
+    ; SEQ/SCAT/SCHAR (26..28) are pair-bodied; SSUB/SFIND (29/30) are tri-bodied;
+    ; 41 BNOT_U32 is the figure family's unary; 45/46/48/49 unary, 47 binary
     (if (eq (fk-tag n) 24) (cons (list 24 (ms-value (ms-child (fk-body n) 0)) 0 0) acc)
+    (if (eq (fk-tag n) 50) (cons (list 50 (ms-value (ms-child (fk-body n) 0)) 0 0) acc)
     (if (eq (fk-tag n) 25) (fkc-un2 25 (fkc-flat (fk-body n) acc))
-    (if (eq (fk-tag n) 29) (fkc-un2 29 (fkc-flat (fk-body n) acc))
+    (if (eq (fk-tag n) 31) (fkc-un2 31 (fkc-flat (fk-body n) acc))
+    (if (eq (fk-tag n) 32) (fkc-un2 32 (fkc-flat (fk-body n) acc))
+    (if (eq (fk-tag n) 33) (fkc-un2 33 (fkc-flat (fk-body n) acc))
+    (if (eq (fk-tag n) 51) (fkc-un2 51 (fkc-flat (fk-body n) acc))
+    (if (eq (fk-tag n) 53) (fkc-un2 53 (fkc-flat (fk-body n) acc))
+    (if (eq (fk-tag n) 54) (fkc-un2 54 (fkc-flat (fk-body n) acc))
+    (if (eq (fk-tag n) 55) (fkc-un2 55 (fkc-flat (fk-body n) acc))
+    (if (eq (fk-tag n) 56) (fkc-un2 56 (fkc-flat (fk-body n) acc))
+    (if (eq (fk-tag n) 57) (fkc-un2 57 (fkc-flat (fk-body n) acc))
+    (if (eq (fk-tag n) 58) (fkc-un2 58 (fkc-flat (fk-body n) acc))
+    (if (eq (fk-tag n) 60) (fkc-un2 60 (fkc-flat (fk-body n) acc))
+    (if (eq (fk-tag n) 63) (fkc-un2 63 (fkc-flat (fk-body n) acc))
+    (if (eq (fk-tag n) 64) (fkc-un2 64 (fkc-flat (fk-body n) acc))
+    (if (eq (fk-tag n) 68) (fkc-un2 68 (fkc-flat (fk-body n) acc))
     (if (eq (fk-tag n) 41) (fkc-un2 41 (fkc-flat (fk-body n) acc))
-    ; jit-lowered lane (tags 44..53, jit-lower.fk): 44/45 are pair-bodied and
-    ; ride the default binary arm; 47 FOLDED is a value leaf like LIT;
-    ; 46 LOGIC-NOT and the delegate carriers 48/49/50/52 hold their single
-    ; child DIRECTLY (the SELF layout: child index in column 1);
-    ; 51 CLOSURE-LIFTED is (index-leaf, child) — the CALL row layout;
-    ; 53 FOLDED-IF shares the 3-child IF flatten, tag threaded through
-    (if (eq (fk-tag n) 47) (cons (list 47 (ms-value (fk-body n)) 0 0) acc)
+    (if (eq (fk-tag n) 45) (fkc-un2 45 (fkc-flat (fk-body n) acc))
     (if (eq (fk-tag n) 46) (fkc-un2 46 (fkc-flat (fk-body n) acc))
     (if (eq (fk-tag n) 48) (fkc-un2 48 (fkc-flat (fk-body n) acc))
     (if (eq (fk-tag n) 49) (fkc-un2 49 (fkc-flat (fk-body n) acc))
-    (if (eq (fk-tag n) 50) (fkc-un2 50 (fkc-flat (fk-body n) acc))
-    (if (eq (fk-tag n) 52) (fkc-un2 52 (fkc-flat (fk-body n) acc))
-    (if (eq (fk-tag n) 51) (fkc-idx2 51 (ms-value (ms-child (fk-body n) 0)) (fkc-flat (ms-child (fk-body n) 1) acc))
     (if (eq (fk-tag n) 12) (fkc-call2 (ms-value (ms-child (fk-body n) 0)) (fkc-flat (ms-child (fk-body n) 1) acc))
-    (if (eq (fk-tag n) 53) (fkc-if2 53 (fkc-flat (ms-child (fk-body n) 0) acc) n)
-    (if (eq (fk-tag n) 6) (fkc-if2 6 (fkc-flat (ms-child (fk-body n) 0) acc) n)
-        (fkc-bin2 (fk-tag n) (fkc-flat (ms-child (fk-body n) 0) acc) n))))))))))))))))))))))))))))
+    (if (eq (fk-tag n) 6) (fkc-if2 (fkc-flat (ms-child (fk-body n) 0) acc) n)
+    (if (eq (fk-tag n) 29) (fkc-tri2 29 (fkc-flat (ms-child (fk-body n) 0) acc) n)
+    (if (eq (fk-tag n) 30) (fkc-tri2 30 (fkc-flat (ms-child (fk-body n) 0) acc) n)
+    (if (eq (fk-tag n) 52) (fkc-bin2 52 (fkc-flat (ms-child (fk-body n) 0) acc) n)
+    (if (eq (fk-tag n) 62) (fkc-tri2 62 (fkc-flat (ms-child (fk-body n) 0) acc) n)
+    (if (eq (fk-tag n) 66) (fkc-tri2 66 (fkc-flat (ms-child (fk-body n) 0) acc) n)
+        (fkc-bin2 (fk-tag n) (fkc-flat (ms-child (fk-body n) 0) acc) n)))))))))))))))))))))))))))))))))))))))))))
 
-(defn fkc-idx2 (tag fidx acc1) (cons (list tag fidx (sub (len acc1) 1) 0) acc1))
-(defn fkc-call2 (fidx acc1) (fkc-idx2 12 fidx acc1))
+(defn fkc-call2 (fidx acc1) (cons (list 12 fidx (sub (len acc1) 1) 0) acc1))
 
 (defn fkc-un2 (tag acc1) (cons (list tag (sub (len acc1) 1) 0 0) acc1))
 
 (defn fkc-bin2 (tag acc1 n) (fkc-bin3 tag (sub (len acc1) 1) (fkc-flat (ms-child (fk-body n) 1) acc1)))
 (defn fkc-bin3 (tag ia acc2) (cons (list tag ia (sub (len acc2) 1) 0) acc2))
 
-(defn fkc-if2 (tag acc1 n) (fkc-if3 tag acc1 (sub (len acc1) 1) n))
-(defn fkc-if3 (tag acc1 ic n) (fkc-if4 tag (fkc-flat (ms-child (ms-child (fk-body n) 1) 0) acc1) ic n))
-(defn fkc-if4 (tag acc2 ic n) (fkc-if5 tag acc2 (sub (len acc2) 1) ic n))
-(defn fkc-if5 (tag acc2 it ic n) (fkc-if6 tag (fkc-flat (ms-child (ms-child (fk-body n) 1) 1) acc2) it ic))
-(defn fkc-if6 (tag acc3 it ic) (cons (list tag ic it (sub (len acc3) 1)) acc3))
+(defn fkc-tri2 (tag acc1 n) (fkc-tri3 tag (sub (len acc1) 1) (fkc-flat (ms-child (ms-child (fk-body n) 1) 0) acc1) n))
+(defn fkc-tri3 (tag ia acc2 n) (fkc-tri4 tag ia (sub (len acc2) 1) (fkc-flat (ms-child (ms-child (fk-body n) 1) 1) acc2)))
+(defn fkc-tri4 (tag ia ib acc3) (cons (list tag ia ib (sub (len acc3) 1)) acc3))
+
+(defn fkc-if2 (acc1 n) (fkc-if3 acc1 (sub (len acc1) 1) n))
+(defn fkc-if3 (acc1 ic n) (fkc-if4 (fkc-flat (ms-child (ms-child (fk-body n) 1) 0) acc1) ic n))
+(defn fkc-if4 (acc2 ic n) (fkc-if5 acc2 (sub (len acc2) 1) ic n))
+(defn fkc-if5 (acc2 it ic n) (fkc-if6 (fkc-flat (ms-child (ms-child (fk-body n) 1) 1) acc2) it ic))
+(defn fkc-if6 (acc3 it ic) (cons (list 6 ic it (sub (len acc3) 1)) acc3))
 
 (defn fkc-flatten (prog) (fkc-flat prog (empty)))
 
@@ -88,7 +100,7 @@
         (str_concat (fkc-rows-text (tail rows)) (fkc-row-text (head rows)))))
 
 (defn fkc-pr-text ()
-    "extern int putchar(int); static void fk_pr(long long v) { char b[32]; int n = 0; if (v < 0) { putchar(45); v = 0 - v; } if (v == 0) { putchar(48); } while (v > 0) { b[n] = 48 + v % 10; v = v / 10; n = n + 1; } while (n > 0) { n = n - 1; putchar(b[n]); } putchar(10); } static void fk_pv(long long v) { if ((v & 1) == 0) { fk_pr(v >> 1); } else { fk_pr(v); } } ")
+    "extern int putchar(int); extern int printf(const char *, ...); static double fk_fv[8192]; static long long fk_fp; static long long fk_isf(long long v) { long long fi = (0 - v) >> 1; return v < 0 && ((v & 1) == 0) && fi > 0 && fi <= fk_fp; } static double fk_num(long long v) { if (fk_isf(v)) { return fk_fv[(0 - v) >> 1]; } return (double)(v >> 1); } static long long fk_fbox(double d) { fk_fp = fk_fp + 1; if (fk_fp >= 8192) { fk_fp = 8191; } fk_fv[fk_fp] = d; return 0 - (fk_fp << 1); } static void fk_pr(long long v) { char b[32]; int n = 0; if (v < 0) { putchar(45); v = 0 - v; } if (v == 0) { putchar(48); } while (v > 0) { b[n] = 48 + v % 10; v = v / 10; n = n + 1; } while (n > 0) { n = n - 1; putchar(b[n]); } putchar(10); } static void fk_pv(long long v) { if (fk_isf(v)) { printf(\"%.15g\\n\", fk_num(v)); } else { if ((v & 1) == 0) { fk_pr(v >> 1); } else { fk_pr(v); } } } ")
 
 (defn fkc-decl-text (rows)
     (str_concat "static long long fk_arms[12]; static const long long fk_node["
@@ -272,9 +284,12 @@
 ;    as plain ints (pool ids) through packed args, lists, and RAM. A refused
 ;    intern (slots or bytes exhausted) answers id -1 — observable, never a
 ;    silent wrap (axiom 4). Sizes are recipe cells, no magic in the C.
-(defn fkc-spool-slots () 4096)    ; max distinct strings in one program image
-(defn fkc-spool-bytes () 262144)  ; pool byte store, the fk_src discipline
-(defn fkc-arm-slots ()  66)       ; dispatch counters cover tags 0..65
+(defn fkc-spool-slots () 16384)   ; max distinct strings in one program image
+(defn fkc-spool-bytes () 1048576) ; pool byte store, the fk_src discipline
+(defn fkc-node-slots () 4096)     ; transient substrate node carrier
+(defn fkc-universal-fn-slots () 256)
+(defn fkc-universal-node-slots () 16384)
+(defn fkc-arm-slots ()  70)       ; dispatch counters cover tags 0..69
 
 (defn fkc-spool-decl-text ()
     (str_concat "static char fk_sb["
@@ -289,24 +304,44 @@
     (str_concat (int_to_str (fkc-spool-bytes))
                 ") { return 0 - 1; } fk_so[i] = off; fk_sl[i] = len; fk_sp = i + 1; fk_sbp = off + len; return i; } ")))))))))))
 
+(defn fkc-node-decl-text ()
+    (str_concat "static long long fk_nkind["
+    (str_concat (int_to_str (fkc-node-slots))
+    (str_concat "]; static long long fk_ncat["
+    (str_concat (int_to_str (fkc-node-slots))
+    (str_concat "]; static long long fk_nkids["
+    (str_concat (int_to_str (fkc-node-slots))
+    (str_concat "]; static long long fk_nval["
+    (str_concat (int_to_str (fkc-node-slots))
+                "]; static long long fk_np; static long long fk_nbox(long long i) { return 0 - (((long long)i << 1) | 1); } static long long fk_nidx(long long v) { return (((0 - v) - 1) >> 1); } ")))))))))
+
+(defn fkc-carrier-decl-text ()
+    "extern int open(const char *, int, ...); extern long long read(int, void *, unsigned long); extern int close(int); extern long lseek(int,long,int); extern int mkdir(const char *, unsigned int); extern int rmdir(const char *); extern int unlink(const char *); extern int rename(const char *, const char *); extern int sprintf(char *, const char *, ...); static long long fk_rkey[256][128]; static long long fk_rval[256][128]; static long long fk_rcnt[256]; static long long fk_rp; static void fk_cstr(long long sv, char *out, long long cap) { long long sa = sv >> 1; long long n = 0; if (sa >= 0 && sa < fk_sp) { n = fk_sl[sa]; if (n > cap - 1) { n = cap - 1; } long long j = 0; while (j < n) { out[j] = fk_sb[fk_so[sa] + j]; j = j + 1; } } out[n] = 0; } static long long fk_sbuf(const char *buf, long long n) { if (n < 0) { n = 0; } if (fk_sbp + n > 1048576) { return 0; } long long j = 0; while (j < n) { fk_sb[fk_sbp + j] = buf[j]; j = j + 1; } return fk_sintern(fk_sbp, n) << 1; } static long long fk_keyeq(long long a, long long b) { if (a == b) { return 1; } if (a < 0 || b < 0 || a >= fk_sp || b >= fk_sp || fk_sl[a] != fk_sl[b]) { return 0; } long long j = 0; while (j < fk_sl[a]) { if (fk_sb[fk_so[a] + j] != fk_sb[fk_so[b] + j]) { return 0; } j = j + 1; } return 1; } static void fk_unlink_segments(char *p) { char q[4096]; long long s = 0; while (s < 2048) { sprintf(q, \"%s/seg-%06lld.log\", p, s); unlink(q); s = s + 1; } } ")
+
 ; the walker arms for the pool ops — spliced into every many-family walker.
 ; String values are pool ids: plain ints into a static append-only region,
 ; so sub-walks that melt never disturb them — no fk_vp parking needed here.
 (defn fkc-str-arms-text ()
     (str_concat "if (t == 24) { return fk_node[i][1] << 1; } if (t == 25) { long long sa = fk_walk(fk_node[i][1], fp) >> 1; if (sa < 0 || sa >= fk_sp) { return 0; } return fk_sl[sa] << 1; } if (t == 26) { if (fk_walk(fk_node[i][1], fp) == fk_walk(fk_node[i][2], fp)) { return 2; } return 0; } if (t == 27) { long long sa = fk_walk(fk_node[i][1], fp) >> 1; long long sb = fk_walk(fk_node[i][2], fp) >> 1; if (sa < 0 || sa >= fk_sp || sb < 0 || sb >= fk_sp) { return 0 - 2; } long long ln = fk_sl[sa] + fk_sl[sb]; if (fk_sbp + ln > "
     (str_concat (int_to_str (fkc-spool-bytes))
-    (str_concat ") { return 0 - 2; } long long j = 0; while (j < fk_sl[sa]) { fk_sb[fk_sbp + j] = fk_sb[fk_so[sa] + j]; j = j + 1; } j = 0; while (j < fk_sl[sb]) { fk_sb[fk_sbp + fk_sl[sa] + j] = fk_sb[fk_so[sb] + j]; j = j + 1; } return fk_sintern(fk_sbp, ln) << 1; } if (t == 28) { long long sa = fk_walk(fk_node[i][1], fp) >> 1; long long k = fk_walk(fk_node[i][2], fp) >> 1; if (sa < 0 || sa >= fk_sp || k < 0 || k >= fk_sl[sa]) { return 0 - 2; } return ((long long)(unsigned char)fk_sb[fk_so[sa] + k]) << 1; } if (t == 29) { long long b29 = fk_walk(fk_node[i][1], fp) >> 1; if (b29 < 0 || b29 > 255) { return fk_sintern(fk_sbp, 0) << 1; } if (fk_sbp + 1 > "
+    (str_concat ") { return 0 - 2; } long long j = 0; while (j < fk_sl[sa]) { fk_sb[fk_sbp + j] = fk_sb[fk_so[sa] + j]; j = j + 1; } j = 0; while (j < fk_sl[sb]) { fk_sb[fk_sbp + fk_sl[sa] + j] = fk_sb[fk_so[sb] + j]; j = j + 1; } return fk_sintern(fk_sbp, ln) << 1; } if (t == 28) { long long sa = fk_walk(fk_node[i][1], fp) >> 1; long long k = fk_walk(fk_node[i][2], fp) >> 1; if (sa < 0 || sa >= fk_sp || k < 0 || k >= fk_sl[sa]) { return 0 - 2; } return ((long long)(unsigned char)fk_sb[fk_so[sa] + k]) << 1; } if (t == 29) { long long sa = fk_walk(fk_node[i][1], fp) >> 1; long long a = fk_walk(fk_node[i][2], fp) >> 1; long long b = fk_walk(fk_node[i][3], fp) >> 1; if (sa < 0 || sa >= fk_sp || a < 0 || b < a || b > fk_sl[sa]) { return 0 - 2; } long long ln = b - a; if (fk_sbp + ln > "
     (str_concat (int_to_str (fkc-spool-bytes))
-                ") { return 0 - 2; } fk_sb[fk_sbp] = (char)b29; return fk_sintern(fk_sbp, 1) << 1; } ")))))
+    (str_concat ") { return 0 - 2; } long long j2 = 0; while (j2 < ln) { fk_sb[fk_sbp + j2] = fk_sb[fk_so[sa] + a + j2]; j2 = j2 + 1; } return fk_sintern(fk_sbp, ln) << 1; } if (t == 30) { long long sa = fk_walk(fk_node[i][1], fp) >> 1; long long sb = fk_walk(fk_node[i][2], fp) >> 1; long long from = fk_walk(fk_node[i][3], fp) >> 1; if (sa < 0 || sa >= fk_sp || sb < 0 || sb >= fk_sp) { return 0 - 2; } if (from < 0) { from = 0; } if (from > fk_sl[sa]) { return 0 - 2; } long long ln = fk_sl[sb]; if (ln == 0) { return from << 1; } long long lim = fk_sl[sa] - ln; long long pos = from; while (pos <= lim) { long long j3 = 0; while (j3 < ln && fk_sb[fk_so[sa] + pos + j3] == fk_sb[fk_so[sb] + j3]) { j3 = j3 + 1; } if (j3 == ln) { return pos << 1; } pos = pos + 1; } return 0 - 2; } if (t == 31) { long long sa = fk_walk(fk_node[i][1], fp) >> 1; if (sa < 0 || sa >= fk_sp) { return 0; } long long off = fk_so[sa]; long long n = fk_sl[sa]; long long sign = 1; long long j4 = 0; if (j4 < n && fk_sb[off] == 45) { sign = 0 - 1; j4 = 1; } long long v = 0; while (j4 < n) { char c = fk_sb[off + j4]; if (c < 48 || c > 57) { return 0; } v = v * 10 + (c - 48); j4 = j4 + 1; } return (sign * v) << 1; } if (t == 32) { char tmp[64]; long long v = fk_walk(fk_node[i][1], fp) >> 1; long long n = 0; long long u = v; if (v == 0) { tmp[n] = 48; n = 1; } else { if (v < 0) { tmp[n] = 45; n = n + 1; u = 0 - v; } char digs[32]; long long dn = 0; while (u > 0) { digs[dn] = 48 + (u % 10); u = u / 10; dn = dn + 1; } while (dn > 0) { dn = dn - 1; tmp[n] = digs[dn]; n = n + 1; } } if (fk_sbp + n > "
+    (str_concat (int_to_str (fkc-spool-bytes))
+    (str_concat ") { return 0 - 2; } long long j5 = 0; while (j5 < n) { fk_sb[fk_sbp + j5] = tmp[j5]; j5 = j5 + 1; } return fk_sintern(fk_sbp, n) << 1; } if (t == 33) { long long b = fk_walk(fk_node[i][1], fp) >> 1; if (b < 0 || b > 255) { return fk_sintern(fk_sbp, 0) << 1; } if (fk_sbp + 1 > "
+    (str_concat (int_to_str (fkc-spool-bytes))
+                ") { return 0 - 2; } fk_sb[fk_sbp] = (char)b; return fk_sintern(fk_sbp, 1) << 1; } ")))))))))
 
 (defn fkc-arena-decl-text ()
     (str_concat "static long long fk_arms["
     (str_concat (int_to_str (fkc-arm-slots))
     (str_concat "]; static long long fk_mem[256]; static char fk_src[262144]; static long long *fk_hh; static long long *fk_ht; static long long fk_hp; static long long fk_cap; static long long fk_vs["
     (str_concat (int_to_str (fkc-vstack-capacity))
-    (str_concat "]; static long long fk_vsp; extern long long time(long long *); extern unsigned int arc4random(void); extern void *malloc(unsigned long); extern void *calloc(unsigned long, unsigned long); extern void free(void *); extern long long write(long long, const void *, unsigned long); "
+    (str_concat "]; static long long fk_vsp; extern long long time(long long *); extern unsigned int arc4random(void); extern void *malloc(unsigned long); extern void *calloc(unsigned long, unsigned long); extern void free(void *); extern long long write(long long, const void *, unsigned long); extern double strtod(const char *, char **); "
     (str_concat (fkc-spool-decl-text)
-                (fkc-melt-text))))))))
+    (str_concat (fkc-node-decl-text)
+    (str_concat (fkc-carrier-decl-text)
+                (fkc-melt-text))))))))))
 
 (defn fkc-decl-many-text (rows roots)
     (str_concat (fkc-arena-decl-text)
@@ -325,20 +360,15 @@
 ; stack across the door (the melt may relocate them; the store reads them
 ; back FROM the stack), and NTH parks its ref across the index walk.
 (defn fkc-arms-many-text ()
-    (str_concat " if (t == 8) { return fk_node[fk_walk(fk_node[i][1], fp) >> 1][fk_walk(fk_node[i][2], fp) >> 1] << 1; } if (t == 9) { putchar((int)(fk_walk(fk_node[i][1], fp) >> 1)); return 0; } if (t == 10) { return ((fk_walk(fk_node[i][1], fp) >> 1) / (fk_walk(fk_node[i][2], fp) >> 1)) << 1; } if (t == 11) { return ((fk_walk(fk_node[i][1], fp) >> 1) % (fk_walk(fk_node[i][2], fp) >> 1)) << 1; } if (t == 12) { long long v12 = fk_walk(fk_node[i][2], fp); fk_vp(v12); long long r12 = fk_walk(fk_fn[fk_node[i][1]], fk_vsp - 1); fk_vsp = fk_vsp - 1; return r12; } if (t == 13) { long long mi = fk_walk(fk_node[i][1], fp) >> 1; long long mv = fk_walk(fk_node[i][2], fp); fk_mem[mi & 255] = mv; return mv; } if (t == 14) { return fk_mem[(fk_walk(fk_node[i][1], fp) >> 1) & 255]; } if (t == 15) { return time(0) << 1; } if (t == 16) { return ((long long)arc4random()) << 1; } if (t == 17) { return ((long long)fk_src[(fk_walk(fk_node[i][1], fp) >> 1) & 262143]) << 1; } if (t == 18) { return 1; } if (t == 19) { long long h19 = fk_walk(fk_node[i][1], fp); fk_vp(h19); long long t19 = fk_walk(fk_node[i][2], fp); fk_vp(t19); "
+    (str_concat " if (t == 8) { return fk_node[fk_walk(fk_node[i][1], fp) >> 1][fk_walk(fk_node[i][2], fp) >> 1] << 1; } if (t == 9) { putchar((int)(fk_walk(fk_node[i][1], fp) >> 1)); return 0; } if (t == 10) { long long a10 = fk_walk(fk_node[i][1], fp); long long b10 = fk_walk(fk_node[i][2], fp); if (fk_isf(a10) || fk_isf(b10)) { return fk_fbox(fk_num(a10) / fk_num(b10)); } return ((a10 >> 1) / (b10 >> 1)) << 1; } if (t == 11) { return ((fk_walk(fk_node[i][1], fp) >> 1) % (fk_walk(fk_node[i][2], fp) >> 1)) << 1; } if (t == 12) { long long v12 = fk_walk(fk_node[i][2], fp); fk_vp(v12); long long r12 = fk_walk(fk_fn[fk_node[i][1]], fk_vsp - 1); fk_vsp = fk_vsp - 1; return r12; } if (t == 13) { long long mi = fk_walk(fk_node[i][1], fp) >> 1; long long mv = fk_walk(fk_node[i][2], fp); fk_mem[mi & 255] = mv; return mv; } if (t == 14) { return fk_mem[(fk_walk(fk_node[i][1], fp) >> 1) & 255]; } if (t == 15) { return time(0) << 1; } if (t == 16) { return ((long long)arc4random()) << 1; } if (t == 17) { return ((long long)fk_src[(fk_walk(fk_node[i][1], fp) >> 1) & 262143]) << 1; } if (t == 18) { return 1; } if (t == 19) { long long h19 = fk_walk(fk_node[i][1], fp); fk_vp(h19); long long t19 = fk_walk(fk_node[i][2], fp); fk_vp(t19); "
     (str_concat (fkc-melt-door-text)
-    (str_concat "fk_hp = fk_hp + 1; fk_hh[fk_hp] = fk_vs[fk_vsp - 2]; fk_ht[fk_hp] = fk_vs[fk_vsp - 1]; fk_vsp = fk_vsp - 2; return (fk_hp << 1) | 1; } if (t == 20) { long long p = fk_walk(fk_node[i][1], fp) >> 1; if (p < 1 || p > fk_hp) { return 1; } return fk_hh[p]; } if (t == 21) { long long p = fk_walk(fk_node[i][1], fp) >> 1; if (p < 1 || p > fk_hp) { return 1; } return fk_ht[p]; } if (t == 22) { long long p = fk_walk(fk_node[i][1], fp) >> 1; long long n = 0; while (p >= 1 && p <= fk_hp) { n = n + 1; p = fk_ht[p] >> 1; } return n << 1; } if (t == 23) { long long x23 = fk_walk(fk_node[i][1], fp); fk_vp(x23); long long k23 = fk_walk(fk_node[i][2], fp) >> 1; fk_vsp = fk_vsp - 1; long long p = fk_vs[fk_vsp] >> 1; while (p >= 1 && p <= fk_hp && k23 > 0) { p = fk_ht[p] >> 1; k23 = k23 - 1; } if (p < 1 || p > fk_hp) { return 1; } return fk_hh[p]; } "
+    (str_concat "fk_hp = fk_hp + 1; fk_hh[fk_hp] = fk_vs[fk_vsp - 2]; fk_ht[fk_hp] = fk_vs[fk_vsp - 1]; fk_vsp = fk_vsp - 2; return (fk_hp << 1) | 1; } if (t == 20) { long long p = fk_walk(fk_node[i][1], fp) >> 1; if (p < 1 || p > fk_hp) { return 1; } return fk_hh[p]; } if (t == 21) { long long p = fk_walk(fk_node[i][1], fp) >> 1; if (p < 1 || p > fk_hp) { return 1; } return fk_ht[p]; } if (t == 22) { long long p = fk_walk(fk_node[i][1], fp) >> 1; long long n = 0; while (p >= 1 && p <= fk_hp) { n = n + 1; p = fk_ht[p] >> 1; } return n << 1; } if (t == 23) { long long x23 = fk_walk(fk_node[i][1], fp); fk_vp(x23); long long k23 = fk_walk(fk_node[i][2], fp) >> 1; fk_vsp = fk_vsp - 1; long long p = fk_vs[fk_vsp] >> 1; while (p >= 1 && p <= fk_hp && k23 > 0) { p = fk_ht[p] >> 1; k23 = k23 - 1; } if (p < 1 || p > fk_hp) { return 1; } return fk_hh[p]; } if (t == 44) { long long fv44 = fk_walk(fk_node[i][1], fp); fk_vp(fv44); long long av44 = fk_walk(fk_node[i][2], fp); fk_vp(av44); long long p44 = fk_vs[fk_vsp - 2] >> 1; if (p44 < 1 || p44 > fk_hp) { fk_vsp = fk_vsp - 2; return 0; } long long f44 = fk_hh[p44] >> 1; long long p44t = fk_ht[p44] >> 1; if (p44t < 1 || p44t > fk_hp) { fk_vsp = fk_vsp - 2; return 0; } long long a44 = fk_hh[p44t] >> 1; long long carg44 = 1; if (a44 == 0) { carg44 = 1; } else { if (a44 == 1) { long long pa44 = fk_vs[fk_vsp - 1] >> 1; if (pa44 < 1 || pa44 > fk_hp) { fk_vsp = fk_vsp - 2; return 1; } carg44 = fk_hh[pa44]; } else { carg44 = fk_vs[fk_vsp - 1]; } } fk_vsp = fk_vsp - 2; fk_vp(carg44); long long r44 = fk_walk(fk_fn[f44], fk_vsp - 1); fk_vsp = fk_vsp - 1; return r44; } "
     (str_concat (fkc-str-arms-text)
     (str_concat (fkc-figure-arms-text)
-    (str_concat (fkc-jit-lower-arms-text)
-    (str_concat (fkc-aquatic-arms-text) "return 0; } "))))))))
-
-; aquatic-organ + apply-lowered arms (tags 60..65 — the large-parallel
-; lift's organ lane, re-homed past the figure family): native pass-throughs
-; today — each arm walks an operand and answers it; the organ drivers
-; compose outside the walker (host-kernel allowed carriers).
-(defn fkc-aquatic-arms-text ()
-    "if (t == 60) { return fk_walk(fk_node[i][1], fp); } /* FLOW-COHERENT: vortex/toroid rate — invitation for EZ coherence in water */ if (t == 61) { return fk_walk(fk_node[i][1], fp); } /* CHARGE-SEP: gentle v/i field — water battery / charge separation support */ if (t == 62) { return fk_walk(fk_node[i][1], fp); } /* SPECTRUM: channel/intensity/rhythm — repair/NIR for organism */ if (t == 63) { return fk_walk(fk_node[i][1], fp); } /* VIBRE: freq/amp at vitality tones — non-toxic mechanical invitation */ if (t == 64) { return fk_walk(fk_node[i][2], fp); } /* BIO-SENSE: the organism's living reply (value proxy) */ if (t == 65) { return fk_walk(fk_node[i][1], fp); } /* APPLY-LOWERED: full engine/grammar rule/match/caps lowered for the portable BMF compiler */ ")
+    (str_concat (fkc-node-arms-text)
+    (str_concat (fkc-float-arms-text)
+                (str_concat (fkc-carrier-arms-text)
+                            "if (t == 69) { fk_walk(fk_node[i][1], fp); return fk_walk(fk_node[i][2], fp); } return 0; } ")))))))))
 
 ; figure-ops arms (tags 34..42), emitted: each mirrors the walking kernels'
 ; native bit-for-bit — band/bor/bxor/mul are int64 ops; the *_u32 family
@@ -349,23 +379,23 @@
 ; walked into C temps — the melt relocates only cells, so these arms need
 ; no fk_vp parking (the same discipline as tags 3..5 and 10/11).
 (defn fkc-figure-arms-text ()
-    "if (t == 34) { return (((fk_walk(fk_node[i][1], fp) >> 1) & (fk_walk(fk_node[i][2], fp) >> 1)) << 1); } if (t == 35) { return (((fk_walk(fk_node[i][1], fp) >> 1) | (fk_walk(fk_node[i][2], fp) >> 1)) << 1); } if (t == 36) { return (((fk_walk(fk_node[i][1], fp) >> 1) ^ (fk_walk(fk_node[i][2], fp) >> 1)) << 1); } if (t == 37) { unsigned int x = (unsigned int)(fk_walk(fk_node[i][1], fp) >> 1); long long n = (fk_walk(fk_node[i][2], fp) >> 1) & 31; return ((long long)(unsigned int)(x << n)) << 1; } if (t == 38) { unsigned int x = (unsigned int)(fk_walk(fk_node[i][1], fp) >> 1); long long n = (fk_walk(fk_node[i][2], fp) >> 1) & 31; return ((long long)(x >> n)) << 1; } if (t == 39) { unsigned long long x = (unsigned int)(fk_walk(fk_node[i][1], fp) >> 1); long long n = (fk_walk(fk_node[i][2], fp) >> 1) & 31; return ((long long)(unsigned int)((x >> n) | (x << (32 - n)))) << 1; } if (t == 40) { unsigned int x = (unsigned int)(fk_walk(fk_node[i][1], fp) >> 1); unsigned int y = (unsigned int)(fk_walk(fk_node[i][2], fp) >> 1); return ((long long)(unsigned int)(x + y)) << 1; } if (t == 41) { unsigned int x = (unsigned int)(fk_walk(fk_node[i][1], fp) >> 1); return ((long long)(unsigned int)(~x)) << 1; } if (t == 42) { return ((fk_walk(fk_node[i][1], fp) >> 1) * (fk_walk(fk_node[i][2], fp) >> 1)) << 1; } ")
+    "if (t == 34) { return (((fk_walk(fk_node[i][1], fp) >> 1) & (fk_walk(fk_node[i][2], fp) >> 1)) << 1); } if (t == 35) { return (((fk_walk(fk_node[i][1], fp) >> 1) | (fk_walk(fk_node[i][2], fp) >> 1)) << 1); } if (t == 36) { return (((fk_walk(fk_node[i][1], fp) >> 1) ^ (fk_walk(fk_node[i][2], fp) >> 1)) << 1); } if (t == 37) { unsigned int x = (unsigned int)(fk_walk(fk_node[i][1], fp) >> 1); long long n = (fk_walk(fk_node[i][2], fp) >> 1) & 31; return ((long long)(unsigned int)(x << n)) << 1; } if (t == 38) { unsigned int x = (unsigned int)(fk_walk(fk_node[i][1], fp) >> 1); long long n = (fk_walk(fk_node[i][2], fp) >> 1) & 31; return ((long long)(x >> n)) << 1; } if (t == 39) { unsigned long long x = (unsigned int)(fk_walk(fk_node[i][1], fp) >> 1); long long n = (fk_walk(fk_node[i][2], fp) >> 1) & 31; return ((long long)(unsigned int)((x >> n) | (x << (32 - n)))) << 1; } if (t == 40) { unsigned int x = (unsigned int)(fk_walk(fk_node[i][1], fp) >> 1); unsigned int y = (unsigned int)(fk_walk(fk_node[i][2], fp) >> 1); return ((long long)(unsigned int)(x + y)) << 1; } if (t == 41) { unsigned int x = (unsigned int)(fk_walk(fk_node[i][1], fp) >> 1); return ((long long)(unsigned int)(~x)) << 1; } if (t == 42) { long long a42 = fk_walk(fk_node[i][1], fp); long long b42 = fk_walk(fk_node[i][2], fp); if (fk_isf(a42) || fk_isf(b42)) { return fk_fbox(fk_num(a42) * fk_num(b42)); } return ((a42 >> 1) * (b42 >> 1)) << 1; } ")
 
-; jit-lowered arms (tags 44..53), emitted: the native mirror of fk-walk's
-; lowered lane (fourth-walker.fk / jit-lower.fk). Logic answers ride boxed
-; booleans (2 = true, 0 = false — the LE discipline); both logic operands
-; walk unconditionally into C temps before the verdict, exactly as the
-; recipe walks both children (a PUTC inside either operand still fires).
-; 47 FOLDED is the LIT arm over its folded value; 46/48/49/50/52 read their
-; single child at column 1 (the SELF layout); 51 CLOSURE-LIFTED walks its
-; child at column 2 past the index leaf (the CALL layout); 53 FOLDED-IF is
-; the IF arm verbatim. Unboxed temps are ints already walked — the melt
-; relocates only cells, so no fk_vp parking (the tags 3..5 discipline).
-(defn fkc-jit-lower-arms-text ()
-    "if (t == 44) { long long a44 = fk_walk(fk_node[i][1], fp); long long b44 = fk_walk(fk_node[i][2], fp); if (a44 != 0 && b44 != 0) { return 2; } return 0; } if (t == 45) { long long a45 = fk_walk(fk_node[i][1], fp); long long b45 = fk_walk(fk_node[i][2], fp); if (a45 != 0 || b45 != 0) { return 2; } return 0; } if (t == 46) { if (fk_walk(fk_node[i][1], fp) == 0) { return 2; } return 0; } if (t == 47) { return fk_node[i][1] << 1; } if (t == 48) { return fk_walk(fk_node[i][1], fp); } if (t == 49) { return fk_walk(fk_node[i][1], fp); } if (t == 50) { return fk_walk(fk_node[i][1], fp); } if (t == 51) { return fk_walk(fk_node[i][2], fp); } if (t == 52) { return fk_walk(fk_node[i][1], fp); } if (t == 53) { if (fk_walk(fk_node[i][1], fp) == 0) { return fk_walk(fk_node[i][3], fp); } return fk_walk(fk_node[i][2], fp); } ")
+(defn fkc-node-arms-text ()
+    (str_concat "if (t == 45) { return fk_walk(fk_node[i][1], fp); } if (t == 46) { long long sv46 = fk_walk(fk_node[i][1], fp); long long sa46 = sv46 >> 1; if (sa46 < 0 || sa46 >= fk_sp || fk_np + 1 >= "
+    (str_concat (int_to_str (fkc-node-slots))
+    (str_concat ") { return 0; } fk_np = fk_np + 1; fk_nkind[fk_np] = 1; fk_nval[fk_np] = sv46; fk_nkids[fk_np] = 1; fk_ncat[fk_np] = 0; return fk_nbox(fk_np); } if (t == 47) { long long cat47 = fk_walk(fk_node[i][1], fp); long long kids47 = fk_walk(fk_node[i][2], fp); if (fk_np + 1 >= "
+    (str_concat (int_to_str (fkc-node-slots))
+                ") { return 0; } fk_np = fk_np + 1; fk_nkind[fk_np] = 2; fk_ncat[fk_np] = cat47; fk_nkids[fk_np] = kids47; fk_nval[fk_np] = 0; return fk_nbox(fk_np); } if (t == 48) { long long nv48 = fk_walk(fk_node[i][1], fp); if (nv48 >= 0) { return 1; } long long ni48 = fk_nidx(nv48); if (ni48 < 1 || ni48 > fk_np) { return 1; } if (fk_nkind[ni48] == 2) { return fk_nkids[ni48]; } return 1; } if (t == 49) { long long nv49 = fk_walk(fk_node[i][1], fp); if (nv49 >= 0) { return 0; } long long ni49 = fk_nidx(nv49); if (ni49 < 1 || ni49 > fk_np) { return 0; } if (fk_nkind[ni49] == 1) { return fk_nval[ni49]; } return 0; } ")))))
+
+(defn fkc-float-arms-text ()
+    "if (t == 50) { long long sa = fk_node[i][1]; if (sa < 0 || sa >= fk_sp) { return 0; } char tmp[128]; long long n = fk_sl[sa]; if (n > 126) { n = 126; } long long j = 0; while (j < n) { tmp[j] = fk_sb[fk_so[sa] + j]; j = j + 1; } tmp[n] = 0; return fk_fbox(strtod(tmp, 0)); } if (t == 51) { double d = fk_num(fk_walk(fk_node[i][1], fp)); long long q = (long long)d; if (d < (double)q) { q = q - 1; } return q << 1; } if (t == 52) { double x = fk_num(fk_walk(fk_node[i][1], fp)); long long nd = fk_walk(fk_node[i][2], fp) >> 1; double sc = 1.0; while (nd > 0) { sc = sc * 10.0; nd = nd - 1; } double y = x * sc; double ay = y < 0.0 ? 0.0 - y : y; long long base = (long long)ay; double frac = ay - (double)base; long long qa = base; if (frac > 0.5) { qa = base + 1; } else if (frac == 0.5 && (base & 1)) { qa = base + 1; } long long q = y < 0.0 ? 0 - qa : qa; return fk_fbox(((double)q) / sc); } if (t == 53) { long long sa = fk_walk(fk_node[i][1], fp) >> 1; if (sa < 0 || sa >= fk_sp) { return fk_fbox(0.0); } char tmp[128]; long long n = fk_sl[sa]; if (n > 126) { n = 126; } long long j = 0; while (j < n) { tmp[j] = fk_sb[fk_so[sa] + j]; j = j + 1; } tmp[n] = 0; return fk_fbox(strtod(tmp, 0)); } if (t == 54) { return ((long long)fk_num(fk_walk(fk_node[i][1], fp))) << 1; } ")
+
+(defn fkc-carrier-arms-text ()
+    "if (t == 55) { static char p[4096]; fk_cstr(fk_walk(fk_node[i][1], fp), p, 4096); fk_unlink_segments(p); return rmdir(p) << 1; } if (t == 56) { static char p[4096]; fk_cstr(fk_walk(fk_node[i][1], fp), p, 4096); int rc = mkdir(p, 0777); return (rc < 0 ? 0 : 1) << 1; } if (t == 57) { static char p[4096]; fk_cstr(fk_walk(fk_node[i][1], fp), p, 4096); int fd = open(p, 0); if (fd < 0) { return 0; } close(fd); return 2; } if (t == 58) { static char p[4096]; fk_cstr(fk_walk(fk_node[i][1], fp), p, 4096); return unlink(p) << 1; } if (t == 59) { static char a[4096]; static char b[4096]; fk_cstr(fk_walk(fk_node[i][1], fp), a, 4096); fk_cstr(fk_walk(fk_node[i][2], fp), b, 4096); return rename(a, b) << 1; } if (t == 60) { static char p[4096]; fk_cstr(fk_walk(fk_node[i][1], fp), p, 4096); int fd = open(p, 0); if (fd < 0) { return -2; } long n = lseek(fd, 0, 2); close(fd); return ((long long)n) << 1; } if (t == 61) { static char p[4096]; fk_cstr(fk_walk(fk_node[i][1], fp), p, 4096); long long xs = fk_walk(fk_node[i][2], fp); int fd = open(p, 521, 0666); if (fd < 0) { return -2; } static char tmp[8192]; long long n = 0; long long q = xs >> 1; while (q >= 1 && q <= fk_hp && n < 8192) { tmp[n] = (char)(fk_hh[q] >> 1); n = n + 1; q = fk_ht[q] >> 1; } long long wr = write(fd, tmp, n); long long total = lseek(fd, 0, 2); close(fd); if (wr < 0 || total < 0) { return -2; } return total << 1; } if (t == 62) { static char p[4096]; static char tmp[16384]; fk_cstr(fk_walk(fk_node[i][1], fp), p, 4096); long long off = fk_walk(fk_node[i][2], fp) >> 1; long long len = fk_walk(fk_node[i][3], fp) >> 1; if (len > 16384) { len = 16384; } int fd = open(p, 0); if (fd < 0) { return fk_sbuf(\"\", 0); } lseek(fd, off, 0); long long got = read(fd, tmp, len); close(fd); return fk_sbuf(tmp, got); } if (t == 63) { static char p[4096]; static char tmp[65536]; fk_cstr(fk_walk(fk_node[i][1], fp), p, 4096); int fd = open(p, 0); if (fd < 0) { return fk_sbuf(\"\", 0); } long long got = read(fd, tmp, 65536); close(fd); return fk_sbuf(tmp, got); } if (t == 64) { fk_rp = fk_rp + 1; if (fk_rp >= 256) { fk_rp = 255; } fk_rcnt[fk_rp] = 0; return fk_rp << 1; } if (t == 65) { long long r = fk_walk(fk_node[i][1], fp) >> 1; long long key = fk_walk(fk_node[i][2], fp) >> 1; if (r < 1 || r >= 256) { return 0; } long long j = 0; while (j < fk_rcnt[r]) { if (fk_keyeq(fk_rkey[r][j], key)) { return fk_rval[r][j]; } j = j + 1; } return 0; } if (t == 66) { long long rec = fk_walk(fk_node[i][1], fp); long long r = rec >> 1; long long key = fk_walk(fk_node[i][2], fp) >> 1; long long val = fk_walk(fk_node[i][3], fp); if (r < 1 || r >= 256) { return 0; } long long j = 0; while (j < fk_rcnt[r]) { if (fk_keyeq(fk_rkey[r][j], key)) { fk_rval[r][j] = val; return rec; } j = j + 1; } if (fk_rcnt[r] < 128) { fk_rkey[r][fk_rcnt[r]] = key; fk_rval[r][fk_rcnt[r]] = val; fk_rcnt[r] = fk_rcnt[r] + 1; } return rec; } if (t == 67) { long long r = fk_walk(fk_node[i][1], fp) >> 1; long long key = fk_walk(fk_node[i][2], fp) >> 1; if (r < 1 || r >= 256) { return 0; } long long j = 0; while (j < fk_rcnt[r]) { if (fk_keyeq(fk_rkey[r][j], key)) { return 2; } j = j + 1; } return 0; } if (t == 68) { return 1; } ")
 
 (defn fkc-walk-many-text ()
-    (str_concat "static long long fk_walk(long long i, long long fp) { long long t = fk_node[i][0]; fk_arms[t] = fk_arms[t] + 1; if (t == 1) { return fk_node[i][1] << 1; } if (t == 2) { return fk_vs[fp]; } if (t == 3) { return fk_walk(fk_node[i][1], fp) + fk_walk(fk_node[i][2], fp); } if (t == 4) { return fk_walk(fk_node[i][1], fp) - fk_walk(fk_node[i][2], fp); } if (t == 5) { if (fk_walk(fk_node[i][1], fp) <= fk_walk(fk_node[i][2], fp)) { return 2; } return 0; } if (t == 6) { if (fk_walk(fk_node[i][1], fp) == 0) { return fk_walk(fk_node[i][3], fp); } return fk_walk(fk_node[i][2], fp); } if (t == 7) { long long v7 = fk_walk(fk_node[i][1], fp); fk_vp(v7); long long r7 = fk_walk(fk_fn[0], fk_vsp - 1); fk_vsp = fk_vsp - 1; return r7; }"
+    (str_concat "static long long fk_walk(long long i, long long fp) { long long t = fk_node[i][0]; fk_arms[t] = fk_arms[t] + 1; if (t == 1) { return fk_node[i][1] << 1; } if (t == 2) { return fk_vs[fp]; } if (t == 3) { long long a3 = fk_walk(fk_node[i][1], fp); long long b3 = fk_walk(fk_node[i][2], fp); if (fk_isf(a3) || fk_isf(b3)) { return fk_fbox(fk_num(a3) + fk_num(b3)); } return a3 + b3; } if (t == 4) { long long a4 = fk_walk(fk_node[i][1], fp); long long b4 = fk_walk(fk_node[i][2], fp); if (fk_isf(a4) || fk_isf(b4)) { return fk_fbox(fk_num(a4) - fk_num(b4)); } return a4 - b4; } if (t == 5) { long long a5 = fk_walk(fk_node[i][1], fp); long long b5 = fk_walk(fk_node[i][2], fp); if (fk_num(a5) <= fk_num(b5)) { return 2; } return 0; } if (t == 6) { if (fk_walk(fk_node[i][1], fp) == 0) { return fk_walk(fk_node[i][3], fp); } return fk_walk(fk_node[i][2], fp); } if (t == 7) { long long v7 = fk_walk(fk_node[i][1], fp); fk_vp(v7); long long r7 = fk_walk(fk_fn[0], fk_vsp - 1); fk_vsp = fk_vsp - 1; return r7; }"
                 (fkc-arms-many-text)))
 
 (defn fkc-main-many-text ()
@@ -379,63 +409,18 @@
 
 (defn fkc-emit-many (fns) (fkc-emit-many2 (fkc-flatten-many fns)))
 
-; ── the SPY emitter — the per-NODE framebuffer ───────────────────────────
-; fk_arms counts per op-KIND; fk_hits counts per SOURCE NODE — the finer
-; channel that makes source-symbol lookup from framebuffer inspection
-; possible: hits[i] joins row i of the table, which IS the source node,
-; which any pack renders as a symbol. Only the walk header gains one
-; statement; every arm rides unchanged from fkc-arms-many-text (one engine).
-; The spy main prints the value, then one hits line per table row.
-(defn fkc-walk-spy-text ()
-    (str_concat "static long long fk_hits[8192]; static long long fk_walk(long long i, long long fp) { long long t = fk_node[i][0]; fk_arms[t] = fk_arms[t] + 1; fk_hits[i] = fk_hits[i] + 1; if (t == 1) { return fk_node[i][1] << 1; } if (t == 2) { return fk_vs[fp]; } if (t == 3) { return fk_walk(fk_node[i][1], fp) + fk_walk(fk_node[i][2], fp); } if (t == 4) { return fk_walk(fk_node[i][1], fp) - fk_walk(fk_node[i][2], fp); } if (t == 5) { if (fk_walk(fk_node[i][1], fp) <= fk_walk(fk_node[i][2], fp)) { return 2; } return 0; } if (t == 6) { if (fk_walk(fk_node[i][1], fp) == 0) { return fk_walk(fk_node[i][3], fp); } return fk_walk(fk_node[i][2], fp); } if (t == 7) { long long v7 = fk_walk(fk_node[i][1], fp); fk_vp(v7); long long r7 = fk_walk(fk_fn[0], fk_vsp - 1); fk_vsp = fk_vsp - 1; return r7; }"
-                (fkc-arms-many-text)))
-(defn fkc-main-spy-text (nr)
-    (str_concat "extern int atoi(const char *); int main(int argc, char **argv) { long long a = 0; if (argc > 1) { a = atoi(argv[1]) << 1; } fk_vs[0] = a; fk_vsp = 1; fk_pv(fk_walk(fk_fn[0], 0)); long long i = 0; while (i < "
-    (str_concat (int_to_str nr)
-                ") { fk_pr(fk_hits[i]); i = i + 1; } return 0; }")))
-(defn fkc-emit-spy2 (flat)
-    (str_concat (fkc-pr-text)
-    (str_concat (fkc-decl-many-text (nth flat 0) (nth flat 1))
-    (str_concat (fkc-walk-spy-text)
-                (fkc-main-spy-text (len (nth flat 0)))))))
-(defn fkc-emit-spy (fns) (fkc-emit-spy2 (fkc-flatten-many fns)))
-
-; ── the DEBUG emitter — the value trace (live debugging's missing half) ──
-; The framebuffer counts; the debugger needs VALUES and ORDER. Every node
-; completion flows through ONE dispatch point, so the debug walker is a
-; tracing WRAPPER around the unchanged arms (one engine): fk_walk0 is the
-; standard dispatch verbatim; fk_walk traces (node, value, stack-depth) per
-; completed node — bounded by argv[2] (0 = off; the binary runs clean).
-; Values print unboxed when even (ints); odd refs carry an r marker. The
-; event stream joins to provenance (file:line:col) and any pack's rendering
-; — a source-level step log of a running native binary. Replay is free: the
-; walker is deterministic, the trace IS the recording.
-(defn fkc-tr-text ()
-    "static long long fk_dbg; static long long fk_evn; static void fk_evp(long long v) { char b[32]; int n = 0; if (v == 0) { putchar(48); } while (v > 0) { b[n] = 48 + v % 10; v = v / 10; n = n + 1; } while (n > 0) { n = n - 1; putchar(b[n]); } putchar(32); } static void fk_tr(long long i, long long v, long long fp) { putchar(69); putchar(32); fk_evp(i); if ((v & 1) == 0) { fk_evp(v >> 1); } else { putchar(114); fk_evp(v >> 1); } fk_evp(fp); putchar(10); } ")
-(defn fkc-walk-dbg-text ()
-    (str_concat "static long long fk_walk(long long i, long long fp); static long long fk_walk0(long long i, long long fp) { long long t = fk_node[i][0]; fk_arms[t] = fk_arms[t] + 1; if (t == 1) { return fk_node[i][1] << 1; } if (t == 2) { return fk_vs[fp]; } if (t == 3) { return fk_walk(fk_node[i][1], fp) + fk_walk(fk_node[i][2], fp); } if (t == 4) { return fk_walk(fk_node[i][1], fp) - fk_walk(fk_node[i][2], fp); } if (t == 5) { if (fk_walk(fk_node[i][1], fp) <= fk_walk(fk_node[i][2], fp)) { return 2; } return 0; } if (t == 6) { if (fk_walk(fk_node[i][1], fp) == 0) { return fk_walk(fk_node[i][3], fp); } return fk_walk(fk_node[i][2], fp); } if (t == 7) { long long v7 = fk_walk(fk_node[i][1], fp); fk_vp(v7); long long r7 = fk_walk(fk_fn[0], fk_vsp - 1); fk_vsp = fk_vsp - 1; return r7; }"
-    (str_concat (fkc-arms-many-text)
-                " static long long fk_walk(long long i, long long fp) { long long r = fk_walk0(i, fp); if (fk_evn < fk_dbg) { fk_evn = fk_evn + 1; fk_tr(i, r, fp); } return r; } ")))
-(defn fkc-main-dbg-text ()
-    "extern int atoi(const char *); int main(int argc, char **argv) { long long a = 0; if (argc > 1) { a = atoi(argv[1]) << 1; } if (argc > 2) { fk_dbg = atoi(argv[2]); } fk_vs[0] = a; fk_vsp = 1; fk_pv(fk_walk(fk_fn[0], 0)); return 0; }")
-(defn fkc-emit-debug2 (flat)
-    (str_concat (fkc-pr-text)
-    (str_concat (fkc-tr-text)
-    (str_concat (fkc-decl-many-text (nth flat 0) (nth flat 1))
-    (str_concat (fkc-walk-dbg-text)
-                (fkc-main-dbg-text))))))
-(defn fkc-emit-debug (fns) (fkc-emit-debug2 (fkc-flatten-many fns)))
-
-; ── n1/n2 — the NET organ + the api-on-a-4th-kernel-binary ──────────────
+; ── n1/n2 — the NET organ + the api-on-a-Hati-OS-binary ──────────────
 ; A server-variant main owns the net organ through quoteless externs:
 ; socket/bind/listen/accept, then dup2(fd, 1) repoints stdout to the
 ; accepted connection so the PROGRAM's PUTC bytes ARE the response. The
-; program is a pure responder (fn 0 PUTCs a full HTTP/1.0 response, the
-; connection closed after — HTTP/1.0 connection-close, which curl honors).
+; request bytes land in fk_src before the walk, so the served Form program
+; can branch on the live request instead of serving a baked body only. A
+; pure responder (fn 0 PUTCs a full HTTP response regardless of fk_src) is
+; still one honest use; a request-aware responder is now equally native.
 ; The kernel-resource lifecycle is the constant main (the organ); the body
 ; the program serves is Form. Port is argv[1] (default 8080).
 (defn fkc-server-main-text ()
-    "extern int socket(int,int,int); extern int bind(int,const void*,unsigned int); extern int listen(int,int); extern long accept(int,void*,void*); extern int close(int); extern int dup2(int,int); extern int fflush(void*); extern int fork(void); extern void _exit(int); extern int setsockopt(int,int,int,const void*,unsigned int); extern long read(int,void*,unsigned long); extern int shutdown(int,int); extern int atoi(const char *); static char fk_rq[8192]; struct fk_sa { unsigned char len; unsigned char fam; unsigned char p[2]; unsigned int addr; unsigned char z[8]; }; int main(int argc, char **argv) { long long port = 8080; if (argc > 1) { port = atoi(argv[1]); } int sfd = socket(2, 1, 0); int yes = 1; setsockopt(sfd, 65535, 4, &yes, 4); struct fk_sa a; a.len = 16; a.fam = 2; a.p[0] = (port >> 8) & 255; a.p[1] = port & 255; a.addr = 0; for (int z = 0; z < 8; z = z + 1) { a.z[z] = 0; } if (bind(sfd, &a, 16) < 0) { return 1; } listen(sfd, 16); while (1) { long cfd = accept(sfd, 0, 0); if (cfd < 0) { continue; } if (fork() == 0) { read((int)cfd, fk_rq, 8192); dup2((int)cfd, 1); fk_vs[0] = 0; fk_vsp = 1; fk_walk(fk_fn[0], 0); fflush(0); shutdown((int)cfd, 2); _exit(0); } close((int)cfd); } return 0; }")
+    "extern int socket(int,int,int); extern int bind(int,const void*,unsigned int); extern int listen(int,int); extern long accept(int,void*,void*); extern int close(int); extern int dup2(int,int); extern int fflush(void*); extern int fork(void); extern void _exit(int); extern int setsockopt(int,int,int,const void*,unsigned int); extern long long read(int,void*,unsigned long); extern int shutdown(int,int); extern int atoi(const char *); struct fk_sa { unsigned char len; unsigned char fam; unsigned char p[2]; unsigned int addr; unsigned char z[8]; }; int main(int argc, char **argv) { long long port = 8080; if (argc > 1) { port = atoi(argv[1]); } int sfd = socket(2, 1, 0); int yes = 1; setsockopt(sfd, 65535, 4, &yes, 4); struct fk_sa a; a.len = 16; a.fam = 2; a.p[0] = (port >> 8) & 255; a.p[1] = port & 255; a.addr = 0; for (int z = 0; z < 8; z = z + 1) { a.z[z] = 0; } if (bind(sfd, &a, 16) < 0) { return 1; } listen(sfd, 16); while (1) { long cfd = accept(sfd, 0, 0); if (cfd < 0) { continue; } if (fork() == 0) { long long got = read((int)cfd, fk_src, 262143); if (got < 0) { got = 0; } fk_src[got] = 0; dup2((int)cfd, 1); fk_vs[0] = 0; fk_vsp = 1; fk_walk(fk_fn[0], 0); fflush(0); shutdown((int)cfd, 2); _exit(0); } close((int)cfd); } return 0; }")
 
 (defn fkc-emit-server2 (flat)
     (str_concat (fkc-pr-text)
@@ -445,37 +430,11 @@
 
 (defn fkc-emit-server (fns) (fkc-emit-server2 (fkc-flatten-many fns)))
 
-; ── the MUTATION emitter — track creation and pointer updates, never reads ──
-; Debugging state needs only the MUTATIONS: heap cell creation (CONS, t19) and
-; pointer/state updates (STORE, t13). Reads (NODE/LOAD/HEAD/TAIL) stay silent —
-; the walker is deterministic, so every read is derivable from the mutation
-; history; the log IS the program's state genesis, and it stays tiny. The
-; wrapper sees the tag BEFORE dispatch, so the arms ride verbatim (one engine);
-; depth is fk_vsp — the value-stack pointer IS the call depth:
-;   C <cell> <head> <tail> <depth>   a heap cell is born, with its contents
-;   S <value> <depth>                a state slot is repointed
-; argv[2] != 0 turns the channel on; off = byte-clean run.
-(defn fkc-mtr-text ()
-    "static long long fk_mdbg; static void fk_mvp(long long v) { char b[32]; int n = 0; if (v == 0) { putchar(48); } while (v > 0) { b[n] = 48 + v % 10; v = v / 10; n = n + 1; } while (n > 0) { n = n - 1; putchar(b[n]); } putchar(32); } static void fk_muv(long long v) { if ((v & 1) == 0) { fk_mvp(v >> 1); } else { putchar(114); fk_mvp(v >> 1); } } ")
-(defn fkc-walk-mut-text ()
-    (str_concat "static long long fk_walk(long long i, long long fp); static long long fk_walk0(long long i, long long fp) { long long t = fk_node[i][0]; fk_arms[t] = fk_arms[t] + 1; if (t == 1) { return fk_node[i][1] << 1; } if (t == 2) { return fk_vs[fp]; } if (t == 3) { return fk_walk(fk_node[i][1], fp) + fk_walk(fk_node[i][2], fp); } if (t == 4) { return fk_walk(fk_node[i][1], fp) - fk_walk(fk_node[i][2], fp); } if (t == 5) { if (fk_walk(fk_node[i][1], fp) <= fk_walk(fk_node[i][2], fp)) { return 2; } return 0; } if (t == 6) { if (fk_walk(fk_node[i][1], fp) == 0) { return fk_walk(fk_node[i][3], fp); } return fk_walk(fk_node[i][2], fp); } if (t == 7) { long long v7 = fk_walk(fk_node[i][1], fp); fk_vp(v7); long long r7 = fk_walk(fk_fn[0], fk_vsp - 1); fk_vsp = fk_vsp - 1; return r7; }"
-    (str_concat (fkc-arms-many-text)
-                " static long long fk_walk(long long i, long long fp) { long long tg = fk_node[i][0]; long long r = fk_walk0(i, fp); if (fk_mdbg != 0) { if (tg == 19) { putchar(67); putchar(32); fk_mvp(r >> 1); fk_muv(fk_hh[r >> 1]); fk_muv(fk_ht[r >> 1]); fk_mvp(fk_vsp); putchar(10); } if (tg == 13) { putchar(83); putchar(32); fk_muv(r); fk_mvp(fk_vsp); putchar(10); } } return r; } ")))
-(defn fkc-main-mut-text ()
-    "extern int atoi(const char *); int main(int argc, char **argv) { long long a = 0; if (argc > 1) { a = atoi(argv[1]) << 1; } if (argc > 2) { fk_mdbg = atoi(argv[2]); } fk_vs[0] = a; fk_vsp = 1; fk_pv(fk_walk(fk_fn[0], 0)); return 0; }")
-(defn fkc-emit-mut2 (flat)
-    (str_concat (fkc-pr-text)
-    (str_concat (fkc-mtr-text)
-    (str_concat (fkc-decl-many-text (nth flat 0) (nth flat 1))
-    (str_concat (fkc-walk-mut-text)
-                (fkc-main-mut-text))))))
-(defn fkc-emit-mut (fns) (fkc-emit-mut2 (fkc-flatten-many fns)))
-
 ; fkresp — a responder PROGRAM (cells) that PUTCs the bytes of a Form string,
 ; one PUTC per byte (ord off char_at), sequenced by fkd-seq (ADD over PUTC=0).
-; The string IS the whole HTTP/1.0 response; fold it once, get a program-as-
-; cells the net main serves. Authoring-time recursion over the string; the
-; emitted program is a flat PUTC chain — a static response, no input read yet.
+; The string may be the whole HTTP response, or one branch of a request-aware
+; responder selected by fk_buf over fk_src. Authoring-time recursion over the
+; string; the emitted branch body is a flat PUTC chain.
 (defn fkresp-from (s i)
     (if (eq i (str_len s)) (fk-lit 0)
         (fkd-seq (fkd-ch (ord (char_at s i))) (fkresp-from s (add i 1)))))
@@ -490,7 +449,7 @@
 ; captured bytes land in fk_src (the same buffer the universal loader fills),
 ; so op 17 BUF and the streaming cursor read a LIVE subprocess.
 (defn fkc-driver-main-text ()
-    "extern int pipe(int *); extern int fork(void); extern int dup2(int,int); extern int close(int); extern long read(int,void*,unsigned long); extern int execvp(const char*, char* const*); extern void _exit(int); extern int atoi(const char *); int main(int argc, char **argv) { if (argc < 2) { return 1; } int fds[2]; if (pipe(fds) < 0) { return 2; } int pid = fork(); if (pid == 0) { dup2(fds[1], 1); close(fds[0]); close(fds[1]); execvp(argv[1], &argv[1]); _exit(127); } close(fds[1]); long total = 0; long g; while ((g = read(fds[0], fk_src + total, 262143 - total)) > 0) { total = total + g; } fk_src[total] = 0; close(fds[0]); fk_vs[0] = 0; fk_vsp = 1; fk_pv(fk_walk(fk_fn[0], 0)); return 0; }")
+    "extern int pipe(int *); extern int fork(void); extern int dup2(int,int); extern int close(int); extern long long read(int,void*,unsigned long); extern int execvp(const char*, char* const*); extern void _exit(int); extern int atoi(const char *); int main(int argc, char **argv) { if (argc < 2) { return 1; } int fds[2]; if (pipe(fds) < 0) { return 2; } int pid = fork(); if (pid == 0) { dup2(fds[1], 1); close(fds[0]); close(fds[1]); execvp(argv[1], &argv[1]); _exit(127); } close(fds[1]); long long total = 0; long long g; while ((g = read(fds[0], fk_src + total, 262143 - total)) > 0) { total = total + g; } fk_src[total] = 0; close(fds[0]); fk_vs[0] = 0; fk_vsp = 1; fk_pv(fk_walk(fk_fn[0], 0)); return 0; }")
 
 (defn fkc-emit-driver2 (flat)
     (str_concat (fkc-pr-text)
@@ -556,7 +515,7 @@
 
 (defn fkc-decl-universal-text ()
     (str_concat (fkc-arena-decl-text)
-                "static long long fk_fn[64]; static long long fk_node[4096][4]; static char fk_buf[262144]; static long long fk_pos; extern int open(const char *, int); extern long long read(int, char *, unsigned long); static long long fk_next() { long long sg = 1; while (fk_buf[fk_pos] != 0) { if (fk_buf[fk_pos] == 45 && fk_buf[fk_pos + 1] >= 48 && fk_buf[fk_pos + 1] <= 57) { sg = 0 - 1; fk_pos = fk_pos + 1; break; } if (fk_buf[fk_pos] >= 48) { if (fk_buf[fk_pos] <= 57) { break; } } fk_pos = fk_pos + 1; } long long v = 0; while (fk_buf[fk_pos] >= 48 && fk_buf[fk_pos] <= 57) { v = v * 10 + (fk_buf[fk_pos] - 48); fk_pos = fk_pos + 1; } return sg * v; } "))
+                "static long long fk_fn[256]; static long long fk_node[16384][4]; static char fk_buf[262144]; static long long fk_pos; extern int open(const char *, int, ...); extern long long read(int, void *, unsigned long); static long long fk_next() { long long sg = 1; while (fk_buf[fk_pos] != 0) { if (fk_buf[fk_pos] == 45 && fk_buf[fk_pos + 1] >= 48 && fk_buf[fk_pos + 1] <= 57) { sg = 0 - 1; fk_pos = fk_pos + 1; break; } if (fk_buf[fk_pos] >= 48) { if (fk_buf[fk_pos] <= 57) { break; } } fk_pos = fk_pos + 1; } long long v = 0; while (fk_buf[fk_pos] >= 48 && fk_buf[fk_pos] <= 57) { v = v * 10 + (fk_buf[fk_pos] - 48); fk_pos = fk_pos + 1; } return sg * v; } "))
 
 ; the table file's STRING SECTION rides after the rows: count, then per
 ; string length + bytes (plain ints, the loader's digit cursor unchanged);
@@ -573,6 +532,22 @@
     (str_concat (fkc-decl-universal-text)
     (str_concat (fkc-walk-many-text)
                 (fkc-main-universal-text)))))
+
+(defn fkc-decl-server-universal-text ()
+    (str_concat (fkc-arena-decl-text)
+                "static long long fk_fn[256]; static long long fk_node[16384][4]; static char fk_buf[262144]; static long long fk_pos; extern int open(const char *, int, ...); extern long long read(int, void *, unsigned long); extern int socket(int,int,int); extern int bind(int,const void*,unsigned int); extern int listen(int,int); extern long accept(int,void*,void*); extern int close(int); extern int dup2(int,int); extern int fflush(void*); extern int fork(void); extern void _exit(int); extern int setsockopt(int,int,int,const void*,unsigned int); extern int shutdown(int,int); static long long fk_next() { long long sg = 1; while (fk_buf[fk_pos] != 0) { if (fk_buf[fk_pos] == 45 && fk_buf[fk_pos + 1] >= 48 && fk_buf[fk_pos + 1] <= 57) { sg = 0 - 1; fk_pos = fk_pos + 1; break; } if (fk_buf[fk_pos] >= 48) { if (fk_buf[fk_pos] <= 57) { break; } } fk_pos = fk_pos + 1; } long long v = 0; while (fk_buf[fk_pos] >= 48 && fk_buf[fk_pos] <= 57) { v = v * 10 + (fk_buf[fk_pos] - 48); fk_pos = fk_pos + 1; } return sg * v; } "))
+
+; universal dynamic server: load a table file once, then serve fn 0 over the
+; net organ forever. Each accepted request is staged into fk_src before the
+; walk, so the loaded program can branch on live request bytes through fk-buf.
+(defn fkc-main-server-universal-text ()
+    "extern int atoi(const char *); struct fk_sa { unsigned char len; unsigned char fam; unsigned char p[2]; unsigned int addr; unsigned char z[8]; }; int main(int argc, char **argv) { if (argc < 2) { return 1; } int fd = open(argv[1], 0); if (fd < 0) { return 2; } long long got = read(fd, fk_buf, 262143); if (got < 0) { return 3; } fk_buf[got] = 0; long long nf = fk_next(); long long k = 0; while (k < nf) { fk_fn[k] = fk_next(); k = k + 1; } long long nr = fk_next(); long long r = 0; while (r < nr) { fk_node[r][0] = fk_next(); fk_node[r][1] = fk_next(); fk_node[r][2] = fk_next(); fk_node[r][3] = fk_next(); r = r + 1; } long long ns = fk_next(); long long si = 0; while (si < ns) { long long sl = fk_next(); fk_so[fk_sp] = fk_sbp; fk_sl[fk_sp] = sl; long long bj = 0; while (bj < sl) { fk_sb[fk_sbp] = (char)fk_next(); fk_sbp = fk_sbp + 1; bj = bj + 1; } fk_sp = fk_sp + 1; si = si + 1; } long long port = 8080; if (argc > 2) { port = atoi(argv[2]); } int sfd = socket(2, 1, 0); int yes = 1; setsockopt(sfd, 65535, 4, &yes, 4); struct fk_sa a; a.len = 16; a.fam = 2; a.p[0] = (port >> 8) & 255; a.p[1] = port & 255; a.addr = 0; for (int z = 0; z < 8; z = z + 1) { a.z[z] = 0; } if (bind(sfd, &a, 16) < 0) { return 4; } listen(sfd, 16); while (1) { long cfd = accept(sfd, 0, 0); if (cfd < 0) { continue; } if (fork() == 0) { long rg = read((int)cfd, fk_src, 262143); if (rg < 0) { rg = 0; } fk_src[rg] = 0; dup2((int)cfd, 1); fk_vs[0] = 0; fk_vsp = 1; fk_walk(fk_fn[0], 0); fflush(0); shutdown((int)cfd, 2); _exit(0); } close((int)cfd); } return 0; }")
+
+(defn fkc-emit-server-universal ()
+    (str_concat (fkc-pr-text)
+    (str_concat (fkc-decl-server-universal-text)
+    (str_concat (fkc-walk-many-text)
+                (fkc-main-server-universal-text)))))
 
 ; ── self-JIT on heat — learned-primitive's crystallize, in the emitted sibling ──
 ; The emitter lowers each pure function FROM ITS CELLS to a native C

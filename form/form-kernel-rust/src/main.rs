@@ -457,6 +457,24 @@ fn pg_set_error(error: Option<String>) {
     *slot = error.unwrap_or_default();
 }
 
+fn pg_error_text(error: &postgres::Error) -> String {
+    if let Some(db_error) = error.as_db_error() {
+        let mut parts = vec![db_error.message().to_string()];
+        if let Some(detail) = db_error.detail() {
+            if !detail.is_empty() {
+                parts.push(format!("detail: {detail}"));
+            }
+        }
+        if let Some(hint) = db_error.hint() {
+            if !hint.is_empty() {
+                parts.push(format!("hint: {hint}"));
+            }
+        }
+        return parts.join(" | ");
+    }
+    error.to_string()
+}
+
 fn pg_register(c: postgres::Client) -> i64 {
     let mut t = pg_table().lock().unwrap();
     t.next += 1;
@@ -5353,7 +5371,7 @@ impl Kernel {
                     Value::Int(pg_register(c))
                 }
                 Err(e) => {
-                    pg_set_error(Some(e.to_string()));
+                    pg_set_error(Some(pg_error_text(&e)));
                     Value::Int(-1)
                 }
             }
@@ -5374,7 +5392,7 @@ impl Kernel {
                     Value::Bool(true)
                 }
                 Err(e) => {
-                    pg_set_error(Some(e.to_string()));
+                    pg_set_error(Some(pg_error_text(&e)));
                     Value::Bool(false)
                 }
             }
@@ -5401,7 +5419,7 @@ impl Kernel {
                     Value::Int(n as i64)
                 }
                 Err(e) => {
-                    pg_set_error(Some(e.to_string()));
+                    pg_set_error(Some(pg_error_text(&e)));
                     Value::Int(-1)
                 }
             }
@@ -5425,7 +5443,7 @@ impl Kernel {
             let rows = match g.query(&sql, &param_refs) {
                 Ok(r) => r,
                 Err(e) => {
-                    pg_set_error(Some(e.to_string()));
+                    pg_set_error(Some(pg_error_text(&e)));
                     return Value::Str("ERR".to_string().into());
                 }
             };
@@ -5466,7 +5484,7 @@ impl Kernel {
             let rows = match g.query(&sql, &param_refs) {
                 Ok(r) => r,
                 Err(e) => {
-                    pg_set_error(Some(e.to_string()));
+                    pg_set_error(Some(pg_error_text(&e)));
                     return Value::List(Vec::new().into());
                 }
             };
