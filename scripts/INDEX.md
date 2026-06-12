@@ -160,3 +160,4 @@
 | [word_cell_rewriter.py](word_cell_rewriter.py) | word_cell_rewriter — gesture 3 at word-cell granularity. |
 | [worktree_continuity_guard.py](worktree_continuity_guard.py) | Detect stranded changes across sibling worktrees. |
 | [worktree_pr_guard.py](worktree_pr_guard.py) | Worktree PR guard: prevent common CI failures and track PR check failures. |
+- [`form_mut_demo.sh`](form_mut_demo.sh) — the mutation channel live: heap cell creation (with pointer links visible at birth) + state repoints traced; reads silent; 4 events vs 12 for the same run's full value-trace.
