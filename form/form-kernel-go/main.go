@@ -156,6 +156,14 @@ const (
 	TrivString uint32 = 2
 	TrivBool   uint32 = 3
 	TrivNull   uint32 = 4
+	// INT64 — signed integer whose magnitude exceeds the 32-bit inst slot.
+	// Integer literals fit inline in TrivInt while |n| ≤ 2^31-1; once a
+	// literal (hash, address, large counter) crosses the int32 ceiling the
+	// inst carries an index into the kernel's `i64s` overflow table, exactly
+	// as FLOAT64 does with `f64s`. Both TrivInt and TrivInt64 decode to the
+	// same Value{VInt, int64}, so arithmetic stays a single uniform i64 path.
+	// Slot 5 is aligned three-way — Rust, Go, and TS all carry INT64 = 5.
+	TrivInt64 uint32 = 5
 	// FLOAT32 — IEEE 754 32-bit value stored inline; the inst field carries
 	// the IEEE bit pattern reinterpreted as u32. No overflow table needed.
 	// Matches sibling TS kernel's Triv.FLOAT32 = 6.
@@ -533,6 +541,11 @@ type Kernel struct {
 	// same NodeID. Mirrors Rust + TS sibling kernels.
 	f64s       []float64
 	f64Idx     map[uint64]uint32
+	// Int64 overflow table — the sibling of `f64s` for integers wider than the
+	// 32-bit inst slot. `i64Idx` is keyed by the value itself (integers are
+	// already canonical) so the same literal interns to the same NodeID.
+	i64s       []int64
+	i64Idx     map[int64]uint32
 	natives    map[NameID]NativeEntry
 	envNatives map[NameID]EnvAwareNativeEntry
 	// methods — the blueprint method table (BML/NUMS reference: methods live
@@ -616,6 +629,7 @@ func NewKernel() *Kernel {
 		walkCache:       make(map[NodeID]Value),
 		next:            1,
 		f64Idx:          make(map[uint64]uint32),
+		i64Idx:          make(map[int64]uint32),
 		natives:         make(map[NameID]NativeEntry),
 		envNatives:      make(map[NameID]EnvAwareNativeEntry),
 		methods:         make(map[methodKey]*Closure),
@@ -723,7 +737,28 @@ func (k *Kernel) intern(category NodeID, children []NodeID) NodeID {
 }
 
 func (k *Kernel) internTrivialInt(n int64) NodeID {
-	return NodeID{Pkg: 1, Level: LevelTrivial, Type: TrivInt, Inst: uint32(int32(n))}
+	// Inline while the value fits the 32-bit inst slot; overflow into `i64s`
+	// once it crosses the int32 ceiling (mirrors internTrivialFloat64). Both
+	// paths decode back to Value{VInt, int64} in trivialValue, so callers and
+	// arithmetic never see the storage split.
+	if n >= math.MinInt32 && n <= math.MaxInt32 {
+		return NodeID{Pkg: 1, Level: LevelTrivial, Type: TrivInt, Inst: uint32(int32(n))}
+	}
+	if idx, ok := k.i64Idx[n]; ok {
+		return NodeID{Pkg: 1, Level: LevelTrivial, Type: TrivInt64, Inst: idx}
+	}
+	idx := uint32(len(k.i64s))
+	k.i64s = append(k.i64s, n)
+	k.i64Idx[n] = idx
+	return NodeID{Pkg: 1, Level: LevelTrivial, Type: TrivInt64, Inst: idx}
+}
+
+// decodeInt64 — read back the value from the i64 overflow table.
+func (k *Kernel) decodeInt64(inst uint32) int64 {
+	if int(inst) >= len(k.i64s) {
+		panic(fmt.Sprintf("decodeInt64: bad index %d", inst))
+	}
+	return k.i64s[inst]
 }
 
 // internTrivialFloat32 — IEEE 754 32-bit inline encoding. The float's bit
@@ -1147,6 +1182,8 @@ func (k *Kernel) trivialValue(n NodeID) Value {
 	switch n.Type {
 	case TrivInt:
 		return Value{Kind: VInt, Int: int64(int32(n.Inst))}
+	case TrivInt64:
+		return Value{Kind: VInt, Int: k.decodeInt64(n.Inst)}
 	case TrivString:
 		return Value{Kind: VStr, Str: k.strs[n.Inst]}
 	case TrivBool:
@@ -5315,6 +5352,11 @@ const (
 	// the local type-tag, so the .fkb stays portable regardless of how each
 	// kernel numbers its trivial types.
 	formBinaryFloat64 uint32 = 2
+	// INT64 carries its VALUE, not its index — the same reasoning as FLOAT64.
+	// A TrivInt64 NodeID's Inst is a per-kernel i64s-table index, meaningless
+	// in another kernel, so an int64 node serializes as [formBinaryInt64][8
+	// bytes signed little-endian] and each kernel re-interns on read.
+	formBinaryInt64 uint32 = 3
 )
 
 func pushU32(bytes []byte, v uint32) []byte {
@@ -5350,6 +5392,27 @@ func readF64LE(bytes []byte, pos int) (float64, int) {
 	return math.Float64frombits(bits), pos + 8
 }
 
+// pushI64LE / readI64LE — a signed int64 as 8 little-endian bytes (the payload
+// of a formBinaryInt64 node). Sibling parity with Rust/TS little-endian writers.
+func pushI64LE(bytes []byte, n int64) []byte {
+	u := uint64(n)
+	return append(bytes,
+		byte(u), byte(u>>8), byte(u>>16), byte(u>>24),
+		byte(u>>32), byte(u>>40), byte(u>>48), byte(u>>56))
+}
+
+func readI64LE(bytes []byte, pos int) (int64, int) {
+	u := uint64(bytes[pos]) |
+		uint64(bytes[pos+1])<<8 |
+		uint64(bytes[pos+2])<<16 |
+		uint64(bytes[pos+3])<<24 |
+		uint64(bytes[pos+4])<<32 |
+		uint64(bytes[pos+5])<<40 |
+		uint64(bytes[pos+6])<<48 |
+		uint64(bytes[pos+7])<<56
+	return int64(u), pos + 8
+}
+
 func serializeNid(k *Kernel, nid NodeID, bytes []byte) []byte {
 	if r, ok := k.byID[nid]; ok {
 		bytes = pushU32(bytes, formBinaryComposite)
@@ -5363,6 +5426,11 @@ func serializeNid(k *Kernel, nid NodeID, bytes []byte) []byte {
 	if nid.Level == LevelTrivial && nid.Type == TrivFloat64 {
 		bytes = pushU32(bytes, formBinaryFloat64)
 		bytes = pushF64LE(bytes, k.decodeFloat64(nid.Inst))
+		return bytes
+	}
+	if nid.Level == LevelTrivial && nid.Type == TrivInt64 {
+		bytes = pushU32(bytes, formBinaryInt64)
+		bytes = pushI64LE(bytes, k.decodeInt64(nid.Inst))
 		return bytes
 	}
 	bytes = pushU32(bytes, formBinaryLeaf)
@@ -5379,6 +5447,11 @@ func deserializeNid(k *Kernel, bytes []byte, pos int, scope uint32) (NodeID, int
 		var value float64
 		value, pos = readF64LE(bytes, pos)
 		return k.internTrivialFloat64(value), pos
+	}
+	if tag == formBinaryInt64 {
+		var value int64
+		value, pos = readI64LE(bytes, pos)
+		return k.internTrivialInt(value), pos
 	}
 	if tag == formBinaryLeaf {
 		var pkg, level, ty, inst uint32
@@ -5491,6 +5564,14 @@ func deserializeNidWithStrings(k *Kernel, bytes []byte, pos int, stringsTable []
 		var value float64
 		value, pos = readF64LE(bytes, pos)
 		return k.internTrivialFloat64(value), pos
+	}
+	if tag == formBinaryInt64 {
+		if pos+8 > len(bytes) {
+			panic("form binary: truncated int64")
+		}
+		var value int64
+		value, pos = readI64LE(bytes, pos)
+		return k.internTrivialInt(value), pos
 	}
 	if tag == formBinaryLeaf {
 		var pkg, level, ty, inst uint32

@@ -150,7 +150,15 @@ export function readAll(k: Kernel, src: string): NodeID {
 function readOne(k: Kernel, s: ParseState): NodeID {
   const t = consume(s);
   if (t.kind === "int") {
-    return k.internTrivialInt(parseInt(t.text, 10));
+    // Parse from the string via BigInt so no precision is lost above 2^53.
+    // Values inside the int32 range intern inline; wider literals (hashes,
+    // addresses, large counters) route through the INT64 overflow table,
+    // exactly as Go/Rust's internTrivialInt overflows into `i64s`.
+    const big = BigInt(t.text);
+    if (big >= -2147483648n && big <= 2147483647n) {
+      return k.internTrivialInt(Number(big));
+    }
+    return k.internTrivialInt64(big);
   }
   if (t.kind === "float") {
     return k.internTrivialFloat64(parseFloat(t.text));

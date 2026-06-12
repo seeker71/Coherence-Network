@@ -4175,6 +4175,11 @@ function walkMatchSwitch(
 }
 
 function expectInt(v: Value, op: string): number {
+  // A bare integer literal wider than int32 walks in as an i64 (overflow
+  // table). The default integer math path holds it as a JS number, exact to
+  // 2^53 — the same widening expectFloat already performs. Beyond 2^53 the
+  // typed I64 width path (expectBigInt) carries full precision.
+  if (v.kind === "i64" || v.kind === "u64") return Number(v.bigint);
   if (
     v.kind !== "int" &&
     v.kind !== "i8" &&
@@ -4780,6 +4785,11 @@ const FORM_BINARY_COMPOSITE = 1;
 // either: the value travels in bytes, not the index nor the local type-tag, so
 // the .fkb stays portable regardless of how each kernel numbers its types.
 const FORM_BINARY_FLOAT64 = 2;
+// INT64 carries its VALUE, not its index — the same reasoning as FLOAT64. A
+// TRIV_INT64 NodeID's `inst` is a per-kernel i64s-table index, so an int64 node
+// serializes as [FORM_BINARY_INT64][8 bytes signed little-endian] and each
+// kernel re-interns on read. Aligned three-way: tag = 3 across Rust/Go/TS.
+const FORM_BINARY_INT64 = 3;
 
 function pushU32(out: number[], v: number): void {
   const n = v >>> 0;
@@ -4811,6 +4821,21 @@ function readF64LE(bytes: Uint8Array, pos: number): [number, number] {
   return [view.getFloat64(0, true), pos + 8];
 }
 
+// pushI64LE / readI64LE — a signed int64 as 8 little-endian bytes (the payload
+// of a FORM_BINARY_INT64 node). Sibling parity with Rust/Go little-endian.
+function pushI64LE(out: number[], n: bigint): void {
+  const view = new DataView(new ArrayBuffer(8));
+  view.setBigInt64(0, n, true);
+  for (let i = 0; i < 8; i++) out.push(view.getUint8(i));
+}
+
+function readI64LE(bytes: Uint8Array, pos: number): [bigint, number] {
+  if (pos + 8 > bytes.length) throw new Error("form binary: truncated int64");
+  const view = new DataView(new ArrayBuffer(8));
+  for (let i = 0; i < 8; i++) view.setUint8(i, bytes[pos + i]!);
+  return [view.getBigInt64(0, true), pos + 8];
+}
+
 function serializeNode(k: Kernel, nid: NodeID, out: number[]): void {
   const recipe = k.recipeAt(nid);
   if (recipe) {
@@ -4823,6 +4848,11 @@ function serializeNode(k: Kernel, nid: NodeID, out: number[]): void {
   if (nid.level === Level.TRIVIAL && nid.type === Triv.FLOAT64) {
     pushU32(out, FORM_BINARY_FLOAT64);
     pushF64LE(out, k.decodeFloat64(nid.inst));
+    return;
+  }
+  if (nid.level === Level.TRIVIAL && nid.type === Triv.INT64) {
+    pushU32(out, FORM_BINARY_INT64);
+    pushI64LE(out, k.decodeInt64(nid.inst));
     return;
   }
   pushU32(out, FORM_BINARY_LEAF);
@@ -4839,6 +4869,11 @@ function deserializeRawNode(k: Kernel, bytes: Uint8Array, pos: number, scope: nu
     let value: number;
     [value, pos] = readF64LE(bytes, pos);
     return [k.internTrivialFloat64(value), pos];
+  }
+  if (tag === FORM_BINARY_INT64) {
+    let value: bigint;
+    [value, pos] = readI64LE(bytes, pos);
+    return [k.internTrivialInt64(value), pos];
   }
   if (tag === FORM_BINARY_LEAF) {
     let pkg: number;
@@ -4877,6 +4912,11 @@ function deserializeNode(
     let value: number;
     [value, pos] = readF64LE(bytes, pos);
     return [k.internTrivialFloat64(value), pos];
+  }
+  if (tag === FORM_BINARY_INT64) {
+    let value: bigint;
+    [value, pos] = readI64LE(bytes, pos);
+    return [k.internTrivialInt64(value), pos];
   }
   if (tag === FORM_BINARY_LEAF) {
     let pkg: number;
