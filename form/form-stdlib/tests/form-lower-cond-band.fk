@@ -1,0 +1,59 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/form-lower.fk
+;
+; form-lower-cond-band — CONTROL FLOW in the Form -> assembly compiler, proven
+; three-way: the FULL asm-pl-human numeric program — if (n <= 1) then 1 else
+; (n + (n - 1)) — lowers to arm64 with comparison, conditional branch, computed
+; branch offsets, and operand-aware register selection, byte-for-byte the
+; assembler's. The same tree asm-pl-human renders as asm/C/English/French now
+; COMPILES and runs zero-clang on RUNTIME input (n = argc; form_macho_demo).
+;
+; The tree (the asm-pl-human shape): 0 LIT 1 · 1 ARG · 2 LE(1,0) · 3 SUB(1,0) ·
+; 4 ADD(1,3) · 5 COND(2,0,4)=root. lo-compile-fn lowers to 8 instructions:
+;   orr w1,wzr,w0 ; cmp w1,#1 ; b.gt +3 ; movz w0,#1 ; b +3 ;
+;   sub w0,w1,#1 ; add w0,w1,w0 ; ret
+; assembler ref (clang -c): 2a0003e1 7100043f 5400006c 52800020
+;                           14000003 51000420 0b000020 d65f03c0
+;
+; Verdict 31 when control-flow compilation is byte-accurate:
+;   1   the new encoders are exact — mov (orr) e1 03 00 2a, cmp 3f 04 00 71,
+;       add-register 20 00 00 0b: three distinct instruction formats
+;   2   BRANCH OFFSETS are computed from lowered block lengths — b.gt jumps
+;       len(then)+2 = 3, b jumps len(else)+1 = 3 (6c 00 00 54 / 03 00 00 14)
+;   4   OPERAND-AWARE SELECTION — SUB(ARG, LIT) selects sub w0,w1,#1 DIRECTLY
+;       (one instruction, 20 04 00 51), not lower-then-fold which would clobber w0
+;   8   the full program is 32 bytes (8 instructions) ending in ret
+;   16  CONVICTION FULL — the compiled image of the whole control-flow program is
+;       byte-for-byte the assembler's; the gate opens for branching programs
+(do
+    (let prog (list
+        (list 1 1 0 0)     ; 0 LIT 1
+        (list 2 0 0 0)     ; 1 ARG (n)
+        (list 5 1 0 0)     ; 2 LE(n, 1)
+        (list 4 1 0 0)     ; 3 SUB(n, 1)
+        (list 3 1 3 0)     ; 4 ADD(n, n-1)
+        (list 6 2 0 4)))   ; 5 COND(le, 1, add) = root
+
+    (let img (lo-compile-fn prog 5))
+    (let ref (list 225 3 0 42   63 4 0 113   108 0 0 84   32 0 128 82
+                   3 0 0 20    32 4 0 81    32 0 0 11    192 3 95 214))
+
+    (let c0 (if (eq (nth (fa-mov 1 0) 0) 225)
+            (if (eq (nth (fa-mov 1 0) 3) 42)
+            (if (eq (nth (fa-cmp 1 1) 0) 63)
+            (if (eq (nth (fa-cmp 1 1) 3) 113)
+            (if (eq (nth (fa-add-r 0 1 0) 3) 11) 1 0) 0) 0) 0) 0))
+    (let c1 (if (eq (nth (fa-bgt 3) 0) 108)
+            (if (eq (nth (fa-bgt 3) 3) 84)
+            (if (eq (nth (fa-b 3) 0) 3)
+            (if (eq (nth (fa-b 3) 3) 20) 2 0) 0) 0) 0))
+    ; SUB(ARG, LIT) is ONE instruction: sub w0,w1,#1 = 20 04 00 51
+    (let c2 (if (eq (len (lo-node prog 3 1)) 4)
+            (if (eq (nth (lo-node prog 3 1) 0) 32)
+            (if (eq (nth (lo-node prog 3 1) 1) 4)
+            (if (eq (nth (lo-node prog 3 1) 3) 81) 4 0) 0) 0) 0))
+    (let c3 (if (eq (len img) 32)
+            (if (eq (nth img 28) 192)
+            (if (eq (nth img 31) 214) 8 0) 0) 0))
+    (let c4 (if (eq (fa-conviction img ref) 1) 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))

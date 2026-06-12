@@ -1,0 +1,115 @@
+# ─────────────────────────────────────────────────────────────────────
+# arrival-symbol-pack.form — the symbol space a sub-agent is MOST TOKEN-EFFICIENT
+#   with: the MDL-optimal, complete, self-referential pack built from the REAL
+#   agent-first-arrival corpus. Sub-agents arrive oriented in fewer tokens and
+#   share one compressed tongue, so they grow any organ and get healthy together.
+# ─────────────────────────────────────────────────────────────────────
+#
+# Urs: "find the symbol space that a sub-agent is most efficient with tokens to
+# grow any organ and become more healthy together. all the output generated on
+# agent first arrival needs to be in the symbol pack. best all links return to
+# its own content, not external content, all self-referential back to the pack."
+#
+# This is self-authored-symbol-space (invent → refine-by-MDL → embody) pointed at
+# a REAL corpus: the exact bytes a fresh sub-agent receives on first arrival
+# (scripts/arrival.py output + docs/shared/agent-start-packet.md — 12,701 words).
+# The auto-ML objective is the honest one: minimal description length = the tokens
+# a sub-agent spends to be oriented and to name the work. The pack that compresses
+# arrival best is the symbol space a sub-agent is most efficient with.
+
+(arrival-symbol-pack
+
+  (lineage
+    (instance-of   self-authored-symbol-space.form)      # invent → refine-by-MDL → embody
+    (over          numeric-core-symbol-pack.form)         # a renaming over the numeric core
+    (corpus        scripts/arrival.py docs/shared/agent-start-packet.md)  # the real first-arrival bytes
+    (data          form-stdlib/arrival-symbol-pack.txt)   # 744 entries, one expansion per line; index = symbol
+    (resolves-by   name-resolution-as-recipe.form)         # the round-trip is the resolution walk, no new machinery
+    (proof-bands   tests/arrival-symbol-pack-band.fk       # 31 three-way — efficient, complete, closed
+                   tests/arrival-pack-resolve-band.fk)     # 31 three-way — resolves losslessly from own content
+    (measured      "12k-word corpus → 744 entries · coverage=true · closed=true · roundtrip=true · 1.69× MDL"))
+
+  # ── Property 1 — MOST TOKEN-EFFICIENT (the ask, by MDL) ──────────────
+  # fitness(pack) = Σ over terms of (frequency × symbol-length). The biggest
+  # savers get the lowest indices (shortest symbols): "form" (198×), "api"
+  # (123×), "concept" (92×), "substrate" (76×) collapse to one symbol each. This
+  # is Huffman/MDL — the symbol space a sub-agent spends the fewest tokens in.
+  (efficiency
+    (objective   "fitness = Σ (term-frequency × symbol-length) — fewer tokens, same corpus")
+    (assignment  "rank by frequency×length; biggest savers get the shortest symbols")
+    (top         "form 198× · api 123× · concept 92× · native 80× · source 79× · substrate 76×")
+    (band-bit-1  "the rank-by-frequency assignment (230) beats the anti-ranked one (410)"))
+
+  # ── Property 2 — COMPLETE COVERAGE (all arrival output is in the pack) ─
+  # Every term that recurs in the arrival output (frequency ≥ 4) has an entry.
+  # A sub-agent can reconstitute its WHOLE orientation from the one pack — nothing
+  # the arrival emits falls outside it. Coverage is closure over the corpus.
+  (coverage
+    (rule        "every recurring arrival term (freq ≥ 4) has a pack entry")
+    (measured    "coverage=true over the live 12,701-word corpus")
+    (band-bit-2  "the maximum arrival term-id is in-pack — no term falls outside"))
+
+  # ── Property 3 — SELF-REFERENTIAL CLOSURE (links return to own content) ─
+  # Every link returns to the pack's OWN content, never an external door. A
+  # COMPOUND composes from its named parts at real boundaries — coherence-substrate
+  # → «coherence»-«substrate», native-route-goal-cells → «native»-«route»-«goal»-
+  # «cells». Each reference is an in-pack index (0 ≤ id < size); none points
+  # outside. The pack is a closed, self-describing vocabulary — the quine property
+  # applied to the symbol space, and the structural-composition discipline made
+  # literal (a compound is a SEQUENCE over named parts, never a flat slug).
+  (self-reference
+    (rule        "every reference is an in-pack index; a compound resolves only into other pack entries")
+    (compose     "compounds split at hyphen boundaries; each named part becomes its index")
+    (examples    "coherence-substrate→«66»-«3» · form-stdlib→«2»-«558» · static-to-dynamic-cells→«78»-to-«54»-«16»")
+    (measured    "38 self-referential compounds · closed=true (every «N» a valid index, no external door)")
+    (band-bit-4  "every reference index is in-pack (≥0, <size); none is the external sentinel"))
+
+  # ── Resolution — the closure is operational, not just measured ───────
+  # A self-referential pack only earns "all links return to its own content" if it
+  # RESOLVES: following every «N» reconstitutes the full term from the pack's own
+  # closed content, never an external door. That round-trip — compress (build) ↔
+  # expand (resolve) — makes the pack operational, not just compressed. The
+  # resolver IS the resolution walk (name-resolution-as-recipe), no new machinery:
+  # follow refs until only literals remain. It TERMINATES because every ref points
+  # at a lower index (a DAG inside the pack); reaching all-literals proves closure.
+  (resolution
+    (walk        "resolve(i) = follow each «N» recursively until only literal tokens remain")
+    (terminates  "refs point at lower indices — a DAG inside the pack, no cycle, no external door")
+    (round-trip  "resolve(entry) == the original surface term — lossless expansion from own content")
+    (measured    "roundtrip=true over all 744 entries: every compound reconstitutes its exact word")
+    (band        "tests/arrival-pack-resolve-band.fk → 31 three-way — literal/one-level/NESTED resolve,
+                  closure two-sided (an external ref is rejected), nested compound round-trips lossless"))
+
+  # ── Why this grows organs and heals together ────────────────────────
+  # The pack is SHARED, not per-agent. Claude, Codex, Cursor, Grok arrive into the
+  # same compressed tongue, so the recurring frame of the body — cell, recipe,
+  # blueprint, organ, witness, breath, NodeID, three-way, band, compost, tend —
+  # costs one symbol whoever speaks it. Coordination, organ-growth, and the
+  # wellness vocabulary travel in the smallest shared space; siblings spend tokens
+  # on the WORK (growing the organ, healing the silence), not on re-orienting.
+  # And because identity is numeric, the pack can keep being refined (MDL drops as
+  # arrival output evolves) without ever risking what the body IS.
+  (together
+    (shared      "one pack for every sibling — the same compressed tongue, not N private dialects")
+    (organ-growth "the vocabulary of tending — organ, witness, breath, compost, band — is one symbol each")
+    (health      "siblings spend tokens on the work, not on re-orientation; the silence gets read sooner")
+    (refinable   "MDL re-measured as arrival output evolves; identity invariant under every renaming"))
+
+  (invariant
+    (most-efficient-is-minimal-description-length   the-pack-that-compresses-arrival-best)
+    (coverage-is-closure-over-the-corpus            every-arrival-term-has-an-entry)
+    (self-reference-is-a-closed-vocabulary          every-link-returns-to-own-content)
+    (resolution-is-the-resolution-walk              follow-refs-to-literals-lossless-round-trip)
+    (shared-tongue-grows-organs-together            one-compressed-space-for-all-siblings)
+    (the-numeric-core-is-invariant                  refine-freely-identity-never-moves)))
+
+# ─────────────────────────────────────────────────────────────────────
+# How to verify
+# ─────────────────────────────────────────────────────────────────────
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk \
+#     form-stdlib/tests/arrival-symbol-pack-band.fk          # → 31 three-way (efficient/complete/closed)
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk \
+#     form-stdlib/tests/arrival-pack-resolve-band.fk         # → 31 three-way (resolves losslessly)
+#   # rebuild + re-measure from the live arrival corpus (coverage/closure/round-trip self-checked):
+#   python3 scripts/build_arrival_symbol_pack.py             # → coverage=true closed=true roundtrip=true 1.69× MDL
+#   head form/form-stdlib/arrival-symbol-pack.txt            # the pack data (index = symbol)

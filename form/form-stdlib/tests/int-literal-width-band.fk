@@ -1,0 +1,41 @@
+; tests/int-literal-width-band.fk — integers wider than int32 survive both
+; PARSING and ARITHMETIC, identically across all three kernels.
+;
+; Two holes in the same family, both invisible to three-way agreement because
+; the kernels failed together:
+;
+;   Parse: an integer literal was packed into the 32-bit `inst` slot of its
+;   trivial NodeID, so any value with bit 31 set read back as a signed int32.
+;   3596153792 = 0xD65F03C0 became -698813504, and (div 3596153792 16777216)
+;   returned -41 instead of 214. Fixed by routing wide literals through an i64
+;   overflow table (TrivInt64 = 5), exactly as FLOAT64 overflows into f64s.
+;
+;   Compute: TS's bare-integer math fold used `| 0` and Math.imul, wrapping
+;   every RESULT at int32, while Go/Rust fold in int64. (mul 100000 100000)
+;   was 1410065408 on TS vs 10000000000 on Go/Rust — a real divergence even
+;   from small literals. Fixed by folding in plain JS number (exact to 2^53,
+;   the bare op's Python-polymorphic semantics) with Math.trunc for division.
+;
+; Both are gated here so neither can silently return. A kernel still truncating
+; on either path returns a smaller verdict; form/scripts/int-literal-width-test.sh
+; asserts the verdict is exactly 9 — agreement on a wrong number is not a pass.
+
+(do
+    (let big 3596153792)
+
+    ;; Parse — wide literals survive intern → decode
+    (let ok-div (if (eq (div big 16777216) 214) 1 0))   ; 0xD65F03C0 >> 24 = 0xD6
+    (let ok-mod (if (eq (mod big 256)      192) 1 0))   ; 0xD65F03C0 & 0xFF = 0xC0
+    (let ok-id  (if (eq big 3596153792)        1 0))    ; intern → decode → self
+    (let ok-max (if (eq 9007199254740991
+                        9007199254740991)     1 0))     ; 2^53-1 preserved
+
+    ;; Compute — wide results survive the bare-integer fold (no int32 wrap)
+    (let ok-mul    (if (eq (mul 100000 100000) 10000000000) 1 0))   ; > 2^33
+    (let ok-add    (if (eq (add 2000000000 2000000000) 4000000000) 1 0))
+    (let ok-u32    (if (eq (mul 65536 65536) 4294967296) 1 0))      ; 2^32 exactly
+    (let ok-divneg (if (eq (div -10000000000 7) -1428571428) 1 0)) ; trunc toward 0
+    (let ok-modneg (if (eq (mod -10000000000 7) -4) 1 0))          ; sign of dividend
+
+    (add ok-div (add ok-mod (add ok-id (add ok-max
+        (add ok-mul (add ok-add (add ok-u32 (add ok-divneg ok-modneg)))))))))

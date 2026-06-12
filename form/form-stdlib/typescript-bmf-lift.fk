@@ -28,6 +28,7 @@
     (defn tok-keyword? (t kw) (tok-is? t "typescript-keyword" kw))
     (defn tok-name? (t) (str_eq (tok-kind t) "typescript-name"))
     (defn tok-int? (t) (str_eq (tok-kind t) "typescript-int"))
+    (defn tok-str? (t) (str_eq (tok-kind t) "typescript-string"))
 
     (defn lift-result (recipe rest) (list recipe rest))
     (defn lift-recipe (r) (head r))
@@ -114,6 +115,11 @@
                         (intern_node TS-BMF-EVAL-INT
                             (list (intern_trivial_int (str_to_int (tok-value t)))))
                         rest)
+                (if (tok-str? t)
+                    (lift-result
+                        (intern_node TS-BMF-EVAL-STR
+                            (list (intern_trivial_string (tok-value t))))
+                        rest)
                 (if (tok-name? t)
                     (lift-name t rest)
                 (if (tok-op? t "(")
@@ -121,7 +127,30 @@
                     (do
                         (trace "ts-lift-primary: unsupported token"
                                (list (tok-kind t) (tok-value t)))
-                        (lift-result (intern_node TS-BMF-EVAL-PASS (empty)) rest)))))))))
+                        (lift-result (intern_node TS-BMF-EVAL-PASS (empty)) rest))))))))))
+
+    ;; TS implicit string coercion, made explicit at lift time. The rule is
+    ;; the typescript.bmf "coercions" row in form-ontology.json: a `+` with a
+    ;; string-typed operand emits CAST-INT-STRING around the non-string side
+    ;; and an EVAL-CONCAT node — the kernel never coerces.
+    (defn lift-string-typed? (r)
+        (do
+            (let cat (node_category r))
+            (if (node_eq cat TS-BMF-EVAL-STR) 1
+            (if (node_eq cat TS-BMF-EVAL-CONCAT) 1
+            (if (and (eq (node_type cat) 98) (ge (node_inst cat) 10))
+                (if (eq (ic-to-type-inst (node_inst cat)) 4) 1 0)
+                0)))))
+
+    (defn lift-cast-to-string (r)
+        (if (eq (lift-string-typed? r) 1) r
+            (intern_node CAST-INT-STRING (list r))))
+
+    (defn lift-plus-node (left right)
+        (if (or (eq (lift-string-typed? left) 1) (eq (lift-string-typed? right) 1))
+            (intern_node TS-BMF-EVAL-CONCAT
+                (list (lift-cast-to-string left) (lift-cast-to-string right)))
+            (intern_node MATH-PLUS (list left right))))
 
     (defn lift-binop-node (op left right)
         (if (str_eq op "==") (intern_node COMPARE-EQ (list left right))
@@ -132,7 +161,7 @@
         (if (str_eq op "<=") (intern_node COMPARE-LE (list left right))
         (if (str_eq op ">") (intern_node COMPARE-GT (list left right))
         (if (str_eq op ">=") (intern_node COMPARE-GE (list left right))
-        (if (str_eq op "+") (intern_node MATH-PLUS (list left right))
+        (if (str_eq op "+") (lift-plus-node left right)
         (if (str_eq op "-") (intern_node MATH-MINUS (list left right))
         (if (str_eq op "*") (intern_node MATH-MULTIPLY (list left right))
         (if (str_eq op "/") (intern_node MATH-DIVIDE (list left right))

@@ -1,0 +1,53 @@
+; preludes: form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/form-provenance.fk
+;
+; form-provenance-band — CELL PROVENANCE proven three-way: from any table row
+; back to the original source offset/line/col that created the cell. The locator
+; scans the source for (fk- constructors (pre-order with depth) and converts to
+; post-order — flatten's exact row order — so row k's authoring position is
+; total, with no kernel surgery and no side table to drift.
+; (docs/coherence-substrate/live-diagnosis-organ.form cell-provenance;
+; live witness: scripts/form_provenance_demo.sh.)
+;
+; The source under test (offsets hand-verified):
+;   (fk-if (fk-le (fk-arg) (fk-lit 1)) (fk-arg) (fk-add (fk-arg) (fk-lit 2)))
+;    0      7      14       23          35       44      52       61
+; pre-order depths: 1 2 3 3 2 2 3 3 -> post-order offsets [14 23 7 35 52 61 44 0]
+;
+; Verdict 31 when provenance is total and exact:
+;   1   THE LOCATOR IS TOTAL — one offset per table row: len(locate(src)) equals
+;       the flattened row count of the SAME program built with the same ctors
+;   2   POST-ORDER IS FLATTEN'S ORDER — row 0 (the LE's ARG) <- offset 14; row 2
+;       (LE) <- 7; the root IF is the LAST row <- offset 0
+;   4   SUBTREES LAND TOGETHER — the else-ADD's children precede it (52, 61, 44
+;       at rows 4..6), mirroring the lowering's child-then-parent emission
+;   8   LINE/COL — with the expression on line 3 of a file, every located row
+;       reports line 3; the root's column is 1 + its offset within the line
+;   16  TWO-SIDED — a non-constructor paren is NOT recorded: a plain (list ...)
+;       wrapper adds no locations; corrupting the scan target finds nothing
+(do
+    (let src "(fk-if (fk-le (fk-arg) (fk-lit 1)) (fk-arg) (fk-add (fk-arg) (fk-lit 2)))")
+    (let locs (fp-locate src))
+
+    (let prog (fk-if (fk-le (fk-arg) (fk-lit 1)) (fk-arg) (fk-add (fk-arg) (fk-lit 2))))
+    (let rows (nth (fkc-flatten-many (list prog)) 0))
+
+    (let c0 (if (eq (len locs) (len rows)) 1 0))
+
+    (let c1 (if (eq (nth locs 0) 14)
+            (if (eq (nth locs 2) 7)
+            (if (eq (nth locs 7) 0) 2 0) 0) 0))
+
+    (let c2 (if (eq (nth locs 4) 52)
+            (if (eq (nth locs 5) 61)
+            (if (eq (nth locs 6) 44) 4 0) 0) 0))
+
+    (let filed (str_concat "; a comment line\n; another\n" src))
+    (let flocs (fp-locate filed))
+    (let c3 (if (eq (fp-line filed (nth flocs 7)) 3)
+            (if (eq (fp-line filed (nth flocs 0)) 3)
+            (if (eq (fp-col filed (nth flocs 7)) 1) 8 0) 0) 0))
+
+    (let c4 (if (eq (len (fp-locate "(list (fk-arg) (fk-lit 9))")) 2)
+            (if (eq (len (fp-locate "(fx-if (fx-le 1 2) 3 4)")) 0) 16 0) 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))

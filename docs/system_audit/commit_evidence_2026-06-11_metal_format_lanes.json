@@ -1,0 +1,125 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "form-os3/metal-formats",
+  "commit_scope": "The GPU emitter lane grows half and bfloat: jit-tensor-emit.fk now carries ONE emit spine (jte-matvec-msl-spine) with precision as DATA — format rows (jte-msl-elem: f32->float, f16->half, bf16->bfloat; jte-msl-acc: fp32 accumulator in every lane, M1 format-arith's accumulate-wide-store-lane semantics). Each lane's emitted MSL is proven byte-stable three-way (tests/metal-emit-band.fk -> 31), and the live GPU witness gates each lane's value parity BIT-EXACT IN THE LANE'S OWN STORAGE FORMAT against a CPU reference computed in the same conversion chain (load exact -> fp32 right-fold in the recipe's op order -> one round-to-nearest-even store into the lane format) — the gate is the format's own semantics, never a tolerance.",
+  "files_owned": [
+    "form/form-stdlib/jit-tensor-emit.fk",
+    "form/form-stdlib/tests/metal-emit-band.fk",
+    "scripts/metal_matvec_audit.sh",
+    "docs/coherence-substrate/form-native-models.form"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/jit-tensor-emit.fk form-stdlib/tests/metal-emit-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/jit-tensor-emit.fk form-stdlib/tests/jit-tensor-emit-band.fk",
+      "scripts/metal_matvec_audit.sh",
+      "scripts/metal_matvec_audit.sh 4096 4096 30"
+    ],
+    "summary": "Band three-way: metal-emit-band -> 31, 0 divergent (f32/f16/bf16 emitted MSL each equals its canonical text; name parameterizes; emission deterministic). Sibling rust band unchanged -> 7. LIVE GPU WITNESS MEASURED (Apple M4 Max, arm64 Darwin 26.3.1, makeLibrary mathMode=safe, one warm then 30 timed dispatches, deterministic integer-derived inputs n/256 chosen exactly representable in each lane format so input quantization is the identity): 1280x1280 parity bit-exact in lane format all three lanes (f32 1280/1280 gpu_kernel 0.417 ms cpu 1.217; f16 1280/1280 0.305 ms cpu 1.133; bf16 1280/1280 0.328 ms cpu 1.068). 4096x4096 all bit-exact (f32 0.895 ms vs cpu 13.553 = 15.1x; f16 0.811 vs 12.540 = 15.5x; bf16 0.823 vs 12.729 = 15.5x). The bf16 store-RNE rounding fires on essentially every output row (accumulated fp32 values exceed 8 significand bits), so bit-exact agreement proves the GPU honors the format's round-half-to-even tie rule — format-arith's fq-rne — not that rounding was avoided. MSL bfloat is Metal 3.1+: the runner gates at runtime (exit 3, skip-with-name) where the toolchain lacks it; this host carries it, so all three lanes ran live.",
+    "observed_delta": {
+      "band_verdict": 31,
+      "band_divergent": 0,
+      "emitted_msl_bytes": { "f32": 438, "f16": 433, "bf16": 444 },
+      "witness_1280": {
+        "f32":  { "parity_bitexact_rows": "1280/1280", "max_abs_diff": 0.0, "gpu_kernel_ms_median": 0.417, "gpu_wall_ms_median": 0.560, "cpu_rightfold_ms": 1.217 },
+        "f16":  { "parity_bitexact_rows": "1280/1280", "max_abs_diff": 0.0, "gpu_kernel_ms_median": 0.305, "gpu_wall_ms_median": 0.436, "cpu_rightfold_ms": 1.133 },
+        "bf16": { "parity_bitexact_rows": "1280/1280", "max_abs_diff": 0.0, "gpu_kernel_ms_median": 0.328, "gpu_wall_ms_median": 0.498, "cpu_rightfold_ms": 1.068 }
+      },
+      "witness_4096": {
+        "f32":  { "parity_bitexact_rows": "4096/4096", "max_abs_diff": 0.0, "gpu_kernel_ms_median": 0.895, "gpu_wall_ms_median": 1.133, "cpu_rightfold_ms": 13.553 },
+        "f16":  { "parity_bitexact_rows": "4096/4096", "max_abs_diff": 0.0, "gpu_kernel_ms_median": 0.811, "gpu_wall_ms_median": 0.963, "cpu_rightfold_ms": 12.540 },
+        "bf16": { "parity_bitexact_rows": "4096/4096", "max_abs_diff": 0.0, "gpu_kernel_ms_median": 0.823, "gpu_wall_ms_median": 0.982, "cpu_rightfold_ms": 12.729 }
+      },
+      "conditions": "Apple M4 Max, macOS 26.3.1 arm64, MTLCompileOptions mathMode=safe (IEEE, no fast-math), 30 timed dispatches after one warm, single-thread CPU reference in the lane's own conversion chain compiled swiftc -O; inputs lane-exact by construction (f32/f16: |n|<=500 within 9 significand bits, bf16: |n|<=128 within 8); CPU bf16 carrier is the +0x7FFF+lsb round-half-to-even fold over fp32 bit patterns, CPU f16 carrier is Swift's native Float16 (arm64)"
+    },
+    "known_limitations": [
+      {
+        "limitation": "The accumulator row is fp32 in every current lane (accumulate-wide-store-lane). A lane that accumulates IN the storage format (format-arith's fq-dot shape, every partial re-quantized) is expressible as a new format row over the same spine but has no consumer yet.",
+        "follow_up": "Add the narrow-accumulate row only when a model stone declares those semantics; the spine already takes accty as data."
+      },
+      {
+        "limitation": "The witness carrier remains swiftc + Metal.framework through the driver-organ idiom; the kernel-resident Metal carrier (in-process dispatch beside rustc/dlopen) stays the named-open next stone.",
+        "follow_up": "Lift the runner's five moves into a kernel native when the model fast-path needs in-process GPU dispatch, parity-gated the same way."
+      },
+      {
+        "limitation": "One matvec per command buffer; the 16-bit lanes halve memory traffic (visibly faster kernels at 1280^2) but a real model batches many ops per buffer.",
+        "follow_up": "Batching/persistent-buffer shapes arrive only when a model stone needs them."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "validate.sh runs metal-emit-band in the default suite via its preludes header; CI three-way gate applies."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Stdlib recipe + band + host witness script; no route or service change. Rides normal merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "New capability: the body emits half- and bfloat-precision GPU compute kernels from the SAME Form emitter spine with precision as a data row, proves each lane's text three-way, and proves on real hardware that the GPU computes each format's exact semantics bit-for-bit (including bfloat's round-half-to-even store).",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "validate.sh band (three kernels agree on every lane's emitted text, verdict 31)",
+      "metal_matvec_audit.sh (Form emits per lane -> Metal runtime compiles -> dispatch -> bit-exact parity in the lane's storage format gates measured rows; bf16 runtime-gated on Metal 3.1+)"
+    ],
+    "summary": "All three precision lanes emitted, parity-gated, and measured live on Apple M4 Max; rows recorded with conditions named."
+  },
+  "phase_gate": {
+    "phase": "m5-gpu-lane",
+    "gate": "the GPU lane's precision becomes DATA: one emit spine, f16/bf16 as format rows, three-way byte-stable, live parity bit-exact per the format's own semantics",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "kernel-resident Metal carrier (in-process dispatch beside rustc/dlopen); batching only when a model stone needs it"
+  },
+  "idea_ids": [
+    "fourth-kernel"
+  ],
+  "spec_ids": [
+    "kernel-native-api-readiness",
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "metal-format-lanes-20260611"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "form-os-arc"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "measurement"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-fable-5"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/jit-tensor-emit.fk",
+    "form/form-stdlib/tests/metal-emit-band.fk",
+    "scripts/metal_matvec_audit.sh",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/system_audit/commit_evidence_2026-06-11_metal_matvec_emitter.json"
+  ],
+  "change_files": [
+    "form/form-stdlib/jit-tensor-emit.fk",
+    "form/form-stdlib/tests/metal-emit-band.fk",
+    "scripts/metal_matvec_audit.sh",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/system_audit/commit_evidence_2026-06-11_metal_format_lanes.json"
+  ],
+  "change_intent": "runtime_feature"
+}

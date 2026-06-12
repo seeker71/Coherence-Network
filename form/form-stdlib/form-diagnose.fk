@@ -1,0 +1,116 @@
+; form-diagnose.fk — the live-diagnosis organ: it reads a program's open channels
+; (the framebuffer's per-op execution counts; the value channel's outputs over
+; inputs), LEARNS the program's law from the data, independently derives the
+; prediction from the recipe (the substrate ground), and holds conviction only
+; when the two witnesses agree. Recipe and data stay separate: this organ is one
+; generic recipe; every observation vector, framebuffer row, and learned law is
+; data passing through it.
+;
+; The channels it reads today:
+;   framebuffer — (tag count) rows; the walker binaries print fk_arms live
+;   value       — outputs over inputs (a native binary's exit codes)
+; The diagnoses it returns:
+;   hot     the op-tag with the highest count — the JIT / lift candidate
+;   dead    a tag present in the recipe that never fired — the witness theorem's
+;           SILENCE state surfacing inside a single program
+;   learned the law inferred from the value channel alone (no tree access)
+;   ground  the law predicted from the recipe alone (no run access)
+;   convict learned AND ground agree — two independent witnesses, one truth
+;
+; Proven three-way by tests/form-diagnose-band.fk; wired to the REAL channels of
+; the Form-compiled fib binaries by scripts/form_diagnose_demo.sh.
+
+(do
+    (defn fd-nil? (xs) (eq (len xs) 0))
+    (defn fd-row (rows i) (if (eq i 0) (head rows) (fd-row (tail rows) (sub i 1))))
+    (defn fd-tag (rows i) (nth (fd-row rows i) 0))
+    (defn fd-c1  (rows i) (nth (fd-row rows i) 1))
+    (defn fd-c2  (rows i) (nth (fd-row rows i) 2))
+    (defn fd-c3  (rows i) (nth (fd-row rows i) 3))
+
+    ; ── the framebuffer channel: (tag count) rows ────────────────────────
+    (defn fd-count (fb tag)
+        (if (fd-nil? fb) 0
+            (if (eq (nth (head fb) 0) tag) (nth (head fb) 1) (fd-count (tail fb) tag))))
+    ; the hottest op — the JIT / core-lift candidate
+    (defn fd-hot2 (fb best bc)
+        (if (fd-nil? fb) best
+            (if (le bc (nth (head fb) 1))
+                (fd-hot2 (tail fb) (nth (head fb) 0) (nth (head fb) 1))
+                (fd-hot2 (tail fb) best bc))))
+    (defn fd-hot (fb) (fd-hot2 fb 0 0))
+    ; dead = present in the recipe's tag set, never fired in the run — SILENCE
+    (defn fd-dead (fb tags)
+        (if (fd-nil? tags) (list)
+            (if (eq (fd-count fb (head tags)) 0)
+                (cons (head tags) (fd-dead fb (tail tags)))
+                (fd-dead fb (tail tags)))))
+
+    ; ── the value channel: LEARN the law from outputs alone ─────────────
+    ; order-2 additive law: obs[i] == obs[i-1] + obs[i-2] for every i >= 2.
+    ; The organ infers self-recursive-additive behavior WITHOUT seeing the tree —
+    ; this is the learned channel; the inference is data, the checker is recipe.
+    (defn fd-learn-add2 (obs)
+        (if (le (len obs) 2) 1
+            (if (eq (nth obs 2) (add (nth obs 0) (nth obs 1)))
+                (fd-learn-add2 (tail obs))
+                0)))
+
+    ; ── the substrate ground: PREDICT the law from the recipe alone ─────
+    ; the self-recursive binary-additive shape: root = COND(_, _, ADD(CALL, CALL)).
+    ; Derived from structure with no run access — the second, independent witness.
+    (defn fd-ground-add2 (prog root)
+        (if (eq (fd-tag prog root) 6)
+            (if (eq (fd-tag prog (fd-c3 prog root)) 3)
+                (if (eq (fd-tag prog (fd-c1 prog (fd-c3 prog root))) 7)
+                    (if (eq (fd-tag prog (fd-c2 prog (fd-c3 prog root))) 7) 1 0) 0) 0) 0))
+
+    ; ── conviction: the two witnesses agree ──────────────────────────────
+    (defn fd-convict (learned ground) (if (eq learned 1) (if (eq ground 1) 1 0) 0))
+
+    ; ── the per-NODE framebuffer: source-symbol lookup verbs ─────────────
+    ; The spy walker (fkc-emit-spy) counts fk_hits per TABLE ROW; row i IS source
+    ; node i, so these verbs return NODE INDICES — and any pack renders a node
+    ; index as a symbol (asm / source / human). hits is a plain count vector.
+    (defn fd-vhot2 (v i best bc)
+        (if (fd-nil? v) best
+            (if (le bc (head v))
+                (fd-vhot2 (tail v) (add i 1) i (head v))
+                (fd-vhot2 (tail v) (add i 1) best bc))))
+    ; the hottest SOURCE NODE — the symbol the binary spends its life in
+    (defn fd-vhot (v) (fd-vhot2 v 0 0 0))
+    ; the never-executed SOURCE NODES — per-node silence, finer than per-op
+    (defn fd-vdead2 (v i)
+        (if (fd-nil? v) (list)
+            (if (eq (head v) 0)
+                (cons i (fd-vdead2 (tail v) (add i 1)))
+                (fd-vdead2 (tail v) (add i 1)))))
+    (defn fd-vdead (v) (fd-vdead2 v 0))
+    ; the count for one node — point lookup
+    (defn fd-vat (v i) (if (eq i 0) (head v) (fd-vat (tail v) (sub i 1))))
+
+    ; ── the value trace: watchpoint verbs over the event stream ──────────
+    ; The debug walker emits ordered events (node, value, depth) — the time
+    ; dimension the framebuffer's aggregates cannot carry. These verbs are the
+    ; watchpoint: every value a source node produced, in execution order; the
+    ; last value; the deepest stack the run reached. Replay needs no machinery:
+    ; the walker is deterministic, so the trace IS the recording.
+    (defn fd-twatch (evs node)
+        (if (fd-nil? evs) (list)
+            (if (eq (nth (head evs) 0) node)
+                (cons (nth (head evs) 1) (fd-twatch (tail evs) node))
+                (fd-twatch (tail evs) node))))
+    (defn fd-tlast2 (evs node acc)
+        (if (fd-nil? evs) acc
+            (if (eq (nth (head evs) 0) node)
+                (fd-tlast2 (tail evs) node (nth (head evs) 1))
+                (fd-tlast2 (tail evs) node acc))))
+    (defn fd-tlast (evs node) (fd-tlast2 evs node (sub 0 1)))
+    (defn fd-tdepth2 (evs best)
+        (if (fd-nil? evs) best
+            (if (le best (nth (head evs) 2))
+                (fd-tdepth2 (tail evs) (nth (head evs) 2))
+                (fd-tdepth2 (tail evs) best))))
+    (defn fd-tdepth (evs) (fd-tdepth2 evs 0))
+
+    0)

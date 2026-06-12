@@ -1,0 +1,59 @@
+; tests/pack-manifest-band.fk — the pack seal + self-containment count, three-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/adler32.fk form-stdlib/pack-manifest.fk
+;
+; Proves the contract that makes "local, sealed, minimal external" verifiable:
+; a sealed entry verifies under its trust-seed; a TAMPERED descriptor breaks
+; integrity; a WRONG seed breaks authenticity; an all-internal pack is self-
+; contained while one carrying an anchor is not; the manifest anchor-count is
+; the external-debt number (a fully internal body counts 0 — north star); and
+; a manifest of internal packs is all-sealed under one seed.
+;
+; The manifest under test is the fourth kernel's inner shells: ontology, axiom,
+; and symbol-packs depend only on each other (internal); reference-packs points
+; outward (a DOI — locality "reference", NOT counted); a host-fs carrier door
+; (locality "host", expected); and ONE trust-anchor (the root key — the honest
+; floor of 1, the only thing standing between this body and north-star 0).
+;
+; Band verdict: 1023 when every law holds.
+
+section [form.bml] {
+    def pmb-bool(b, weight) = if b then weight else 0;
+
+    def pmb-seed() = "root-trust-seed-v0";
+
+    // the inner-shell manifest: each pack and its dependency localities
+    def pmb-ontology() = pack-entry("ontology", "data", list(pm-dep("axiom", "internal")), pmb-seed());
+    def pmb-axiom() = pack-entry("axiom", "data", empty, pmb-seed());
+    def pmb-symbols() = pack-entry("symbol-packs", "symbol-pack", list(pm-dep("ontology", "internal")), pmb-seed());
+    def pmb-reference() = pack-entry("reference-packs", "reference-pack", list(pm-dep("scarselli-gnn-2009", "reference"), pm-dep("ontology", "internal")), pmb-seed());
+    def pmb-hostfs() = pack-entry("host-fs", "host-carrier", list(pm-dep("os-filesystem", "host")), pmb-seed());
+
+    // the fully-internal core (north-star manifest: anchor-count 0)
+    def pmb-core-manifest() = list(pmb-ontology(), pmb-axiom(), pmb-symbols());
+    // the realistic manifest with a reference pointer and a host door (still 0 anchors)
+    def pmb-grown-manifest() = list(pmb-ontology(), pmb-axiom(), pmb-symbols(), pmb-reference(), pmb-hostfs());
+    // the honest-floor manifest: one trust anchor remains (count 1)
+    def pmb-anchored() = pack-entry("trust-root", "anchor-pack", list(pm-dep("root-public-key", "anchor")), pmb-seed());
+    def pmb-floor-manifest() = list(pmb-ontology(), pmb-anchored());
+
+    // a tampered entry: same fields rebuilt with a forged stored hash/seal
+    def pmb-forged() = pm-entry-make("symbol-packs", "symbol-pack", 999999, 888888, list(pm-dep("ontology", "internal")));
+
+    def pmb-score() {
+        let onto = pmb-ontology();
+        sum(list(
+            pmb-bool(pack-sealed?(onto, pmb-seed()), 1),
+            pmb-bool(not(pack-sealed?(onto, "wrong-seed")), 2),
+            pmb-bool(not(pack-sealed?(pmb-forged(), pmb-seed())), 4),
+            pmb-bool(pack-self-contained?(pmb-axiom()), 8),
+            pmb-bool(not(pack-self-contained?(pmb-reference())), 16),
+            pmb-bool(eq(manifest-anchor-count(pmb-core-manifest()), 0), 32),
+            pmb-bool(and(manifest-self-contained?(pmb-grown-manifest()), eq(manifest-anchor-count(pmb-grown-manifest()), 0)), 64),
+            pmb-bool(eq(manifest-anchor-count(pmb-floor-manifest()), 1), 128),
+            pmb-bool(manifest-all-sealed?(pmb-grown-manifest(), pmb-seed()), 256),
+            pmb-bool(not(manifest-all-sealed?(pmb-grown-manifest(), "wrong-seed")), 512)));
+    }
+
+    pmb-score();
+}

@@ -14,7 +14,7 @@
 ;   reopened file keeps typed node list   -> 10000
 
 (do
-    (let dir "/tmp/graph-node-port-band.d")
+    (let dir (str_concat (temp_dir) "/graph-node-port-band.d"))
     (fs_rmdir dir)
 
     (let mem-verdict (gn-test (carrier-memory) ""))

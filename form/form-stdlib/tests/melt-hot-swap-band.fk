@@ -1,0 +1,72 @@
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk form-stdlib/champion-challenger.fk
+;
+; melt-hot-swap-band — the SELF-JIT's gas-ice cycle closed BOTH ways, proven
+; three-way. The shipped half flips dispatch to native when measured heat
+; crosses the hot line; this band proves the cool face: heat decays per epoch
+; (fkc-heat-decay over fkc-decay-divisor), ice melts back to the walking path
+; below the melt line (fkc-melts-now over fkc-melt-line-pct), and
+; re-crystallization is champion-challenger gated — fkc-earn-step/fkc-re-earned
+; ARE cc-promote? specialized to the epoch-trial history (champion = walking
+; path, always correct; margin 0), proven against champion-challenger.fk
+; itself. The live binary face is measured in scripts/fourth_kernel_audit.sh
+; section 21: crystallize -> melt -> re-earn, parity held at every phase.
+;
+; Verdict 31 when the cycle holds:
+;   1   the policy cells cohere: decay halves and reaches zero (a heat can
+;       fully cool), the melt line at hot=50 is 25, the cooling clock and the
+;       earn window are positive
+;   2   the melt boundary is exact: heat 24 melts, 25 holds, and a
+;       fresh-frozen heat (51) never melts at its own crossing
+;   4   the champion-challenger tie: a window of won epoch-trials promotes by
+;       BOTH doors (cc-promote? and the earn chain); one cold epoch breaks
+;       both (the consecutive gate IS margin-0 promotion); the trial shape
+;       carries champion-always-1, challenger-by-measured-heat
+;   8   lowerability is transitive: pure self-recursion lowers, a port/organ
+;       function never does, purity poisons through a call edge, and mutual
+;       pure recursion (even/odd) stays native-eligible — the fixpoint holds
+;   16  the emission carries the cycle FROM the cells: decay, melt line,
+;       earn gate, and cooling clock land in the C as the same spliced
+;       algebra; the dispatch door and the honesty gate are present
+(do
+    (let c0 (if (eq (fkc-heat-decay 88) 44)
+                (if (eq (fkc-heat-decay 1) 0)
+                    (if (eq (fkc-melt-line 50) 25)
+                        (if (gt (fkc-decay-quantum) 0)
+                            (if (gt (fkc-cc-earn-epochs) 0) 1 0) 0) 0) 0) 0))
+
+    (let c1 (if (eq (fkc-melts-now 24 50) 1)
+                (if (eq (fkc-melts-now 25 50) 0)
+                    (if (eq (fkc-melts-now 51 50) 0) 2 0) 0) 0))
+
+    (let hwin (list (fkc-cc-trial 60 50) (fkc-cc-trial 70 50)))
+    (let hcold (list (fkc-cc-trial 60 50) (fkc-cc-trial 10 50)))
+    (let c2 (if (eq (cc-promote? hwin (fkc-cc-earn-epochs) 0) 1)
+                (if (eq (fkc-re-earned (fkc-earn-step (fkc-earn-step 0 1) 1)) 1)
+                    (if (eq (cc-promote? hcold (fkc-cc-earn-epochs) 0) 0)
+                        (if (eq (fkc-re-earned (fkc-earn-step (fkc-earn-step 0 1) 0)) 0)
+                            (if (eq (cc-champ (fkc-cc-trial 10 50)) 1)
+                                (if (eq (cc-chall (fkc-cc-trial 10 50)) 0)
+                                    (if (eq (cc-chall (fkc-cc-trial 60 50)) 1) 4 0) 0) 0) 0) 0) 0) 0))
+
+    (let fib1 (fk-if (fk-le (fk-arg) (fk-lit 1)) (fk-arg)
+                     (fk-add (fk-call 0 (fk-sub (fk-arg) (fk-lit 1)))
+                             (fk-call 0 (fk-sub (fk-arg) (fk-lit 2))))))
+    (let ramf (fk-get (fk-lit 3)))
+    (let callsimpure (fk-call 1 (fk-lit 1)))
+    (let evenf (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-lit 1) (fk-call 1 (fk-sub (fk-arg) (fk-lit 1)))))
+    (let oddf  (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-lit 0) (fk-call 0 (fk-sub (fk-arg) (fk-lit 1)))))
+    (let c3 (if (eq (nth (fkc-can-list (list fib1)) 0) 1)
+                (if (eq (nth (fkc-can-list (list callsimpure ramf)) 0) 0)
+                    (if (eq (nth (fkc-can-list (list callsimpure ramf)) 1) 0)
+                        (if (eq (nth (fkc-can-list (list evenf oddf)) 0) 1)
+                            (if (eq (nth (fkc-can-list (list evenf oddf)) 1) 1) 8 0) 0) 0) 0) 0))
+
+    (let jm (fkc-emit-jitmelt (list fib1)))
+    (let c4 (if (ge (str_find jm (fkc-jm-decay-text) 0) 0)
+                (if (ge (str_find jm (fkc-jm-melt-cond-text) 0) 0)
+                    (if (ge (str_find jm (fkc-jm-earn-cond-text) 0) 0)
+                        (if (ge (str_find jm (fkc-jm-tick-cond-text) 0) 0)
+                            (if (ge (str_find jm "fk_jd(f12)" 0) 0)
+                                (if (ge (str_find jm "fk_can[0] = 1; " 0) 0) 16 0) 0) 0) 0) 0) 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))

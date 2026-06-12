@@ -256,6 +256,76 @@ func TestHealthRouteNativeOperationalShape(t *testing.T) {
 	}
 }
 
+func TestNativeHandlerFatalResponseNamesKindTraceAndWorkerContinues(t *testing.T) {
+	source := `
+(defn route_boom (q) (form_error "as_str: Null"))
+(defn route_ok (q) "ok")
+(let routes (list
+  (list "/boom" route_boom)
+  (list "/ok" route_ok)))
+`
+	worker, err := buildGoServeWorker(&goServeProgram{source: source})
+	if err != nil {
+		t.Fatalf("buildGoServeWorker: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "http://native.example.test/boom", nil)
+	rec := httptest.NewRecorder()
+	worker.serve(rec, req)
+	res := rec.Result()
+	defer res.Body.Close()
+	gotBody, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.StatusCode != http.StatusInternalServerError {
+		t.Fatalf("fatal status = %d body=%s", res.StatusCode, string(gotBody))
+	}
+	if got := res.Header.Get("X-Form-Router"); got != "native-kernel-error" {
+		t.Fatalf("fatal router = %q, want native-kernel-error", got)
+	}
+	if got := res.Header.Get("X-Form-Fatal-Kind"); got != "type_contract_violation" {
+		t.Fatalf("fatal kind = %q", got)
+	}
+	tracePath := res.Header.Get("X-Form-Crash-Trace")
+	if tracePath == "" {
+		t.Fatal("missing X-Form-Crash-Trace")
+	}
+	defer os.Remove(tracePath)
+	if !strings.Contains(string(gotBody), "fatal[type_contract_violation]: as_str: Null") {
+		t.Fatalf("fatal body missing diagnosis: %s", string(gotBody))
+	}
+	if !strings.Contains(string(gotBody), "trace: "+tracePath) {
+		t.Fatalf("fatal body missing trace path: %s", string(gotBody))
+	}
+	traceBody, err := os.ReadFile(tracePath)
+	if err != nil {
+		t.Fatalf("read trace %s: %v", tracePath, err)
+	}
+	for _, want := range []string{
+		`"fatal_kind": "type_contract_violation"`,
+		`"source_label": "go serve source manifest"`,
+		`"operation": "request=GET /boom route:`,
+	} {
+		if !strings.Contains(string(traceBody), want) {
+			t.Fatalf("trace body missing %s: %s", want, string(traceBody))
+		}
+	}
+
+	okReq := httptest.NewRequest(http.MethodGet, "http://native.example.test/ok", nil)
+	okRec := httptest.NewRecorder()
+	worker.serve(okRec, okReq)
+	okRes := okRec.Result()
+	defer okRes.Body.Close()
+	okBody, err := io.ReadAll(okRes.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if okRes.StatusCode != http.StatusOK || string(okBody) != "ok" {
+		t.Fatalf("worker did not continue: status=%d body=%s", okRes.StatusCode, string(okBody))
+	}
+}
+
 func TestCompileSourceSectionNativeReturnsRecipe(t *testing.T) {
 	k := NewKernel()
 	expr := `(compile_source_section "form.bml" "add(20, 22);" "test/runtime.bml")`
@@ -443,8 +513,11 @@ func TestKernelReadRoutePromotionsSelectNatively(t *testing.T) {
 		{"views stats", "http://native.example.test/api/views/stats/lc-attuned-spaces?days=30"},
 		{"reaction summary", "http://native.example.test/api/reactions/concept/lc-attuned-spaces/summary"},
 		{"reaction threads", "http://native.example.test/api/reactions/concept/lc-attuned-spaces/threads"},
-		{"concept voices", "http://native.example.test/api/concepts/lc-attuned-spaces/voices"},
-	} {
+			{"concept voices", "http://native.example.test/api/concepts/lc-attuned-spaces/voices"},
+			{"presence places", "http://native.example.test/api/presences/asset:audible-B0D2DRHSDJ/places"},
+			{"graph node edges", "http://native.example.test/api/graph/nodes/asset:audible-B0D2DRHSDJ/edges?direction=both"},
+			{"agent task log", "http://native.example.test/api/agent/tasks/task_502d901d6aa7fdbc/log"},
+		} {
 		t.Run(tc.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tc.target, nil)
 			req.Header.Set("Accept", "application/json")
@@ -596,4 +669,30 @@ func TestGatesMainHeadRouteFetchesExternalHTTPInBML(t *testing.T) {
 			t.Fatalf("gates main-head body missing %s: %s", want, string(gotBody))
 		}
 	}
+}
+
+// TestFatalNamesFormSourceLine — a typed-boundary fatal must name the Form
+// call chain live at the crash, with file:line attribution from the reader.
+// This is the diagnostic that turns "as_nid: null at the host accessor"
+// into "node_children inside inner@probe.fk:2" — the line that produced it.
+func TestFatalNamesFormSourceLine(t *testing.T) {
+	k := NewKernel()
+	k.readingFiles = []readingPart{{FileID: k.internName("probe.fk"), StartLine: 1}}
+	root := readRootFromSource(k, "(do\n  (defn inner (x) (node_children x))\n  (inner (head (empty))))")
+	k.readingFiles = nil
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("expected a typed-boundary panic, walk returned normally")
+		}
+		display := k.formStackDisplay(16)
+		if !strings.Contains(display, "node_children") {
+			t.Fatalf("form stack missing the native frame: %q", display)
+		}
+		if !strings.Contains(display, "inner@probe.fk:2:") {
+			t.Fatalf("form stack missing the attributed closure frame: %q", display)
+		}
+	}()
+	env := NewFrame(nil)
+	k.walk(root, env)
 }

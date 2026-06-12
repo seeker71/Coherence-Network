@@ -9,9 +9,10 @@
 ; The casting is intrinsic, both directions, at every door: bool→int at
 ; every numeric door (walker math/compare AND native args — true IS 1,
 ; false IS 0), int→bool at every truth door (cond/logic — nonzero IS
-; true). No consumer anywhere needs to know which shape arrived.
-; Self-contained — kernel verbs only, no preludes. Verdict 65535: the
-; full sixteen-bit truth field.
+; true). No consumer anywhere needs to know which shape arrived — bool
+; operands meet comparisons, orderings, and the float lane through the
+; same coercion.
+; Self-contained — kernel verbs only, no preludes. Verdict 524287.
 (do
     ; c0 — the arena-melt crash shape: an equal eq fed straight into mul.
     (let c0 (if (eq (mul (eq 2 2) 5) 5) 1 0))
@@ -49,6 +50,17 @@
     (let c14 (if (eq (add (not 0) (not 7)) 1) 16384 0))
     ; c15 — the native arg door casts too: a bool indexes a list as 1.
     (let c15 (if (eq (nth (list 7 8) true) 8) 32768 0))
+    ; c16 — bool OPERANDS coerce to the same 0/1 states inside compare:
+    ;      true meets 1, false meets 0, and a comparison's own answer
+    ;      meets a bool literal (the theme-resonance shape).
+    (let c16 (if (eq (add (add (eq true 1) (eq false 0))
+                         (add (eq (eq 18 68) false) (eq (eq 5 5) true))) 4) 65536 0))
+    ; c17 — the ordering family coerces bools identically: false < true,
+    ;       true ≤ 1, true > false = 1+1+1.
+    (let c17 (if (eq (add (lt false true) (add (le true 1) (gt true false))) 3) 131072 0))
+    ; c18 — the float lane meets bools through the same coercion:
+    ;       1.0 = true, and 2.5 > true = 1+1.
+    (let c18 (if (eq (add (eq 1.0 true) (gt 2.5 true)) 2) 262144 0))
     (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7
-        (add c8 (add c9 (add c10 (add c11 (add c12 (add c13
-        (add c14 c15))))))))))))))))
+        (add c8 (add c9 (add c10 (add c11 (add c12 (add c13 (add c14
+        (add c15 (add c16 (add c17 c18)))))))))))))))))))

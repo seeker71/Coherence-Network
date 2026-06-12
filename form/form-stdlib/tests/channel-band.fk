@@ -15,7 +15,7 @@
 ; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/channel.fk
 
 (do
-    (let path "/tmp/coh-channel-band.fkb")
+    (let path (str_concat (temp_dir) "/coh-channel-band.fkb"))
 
     ;; --- 1. create -------------------------------------------------
     ;; channel-create writes an empty CHANNEL-V0 Recipe; native

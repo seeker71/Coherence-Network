@@ -8,7 +8,7 @@
 ; in scripts/fourth_kernel_audit.sh — the fourth arm, where the heap ops
 ; live). Same cells, both walkers; content-addressing carries the identity.
 ;
-; Verdict 15 when the flattener holds:
+; Verdict 4095 when the flattener holds:
 ;   1   the lowerings carry values — gt strict at the tie (gt 4 4 -> 0,
 ;       the learning-trend boundary), ge admits it, eq lands, and gates
 ;   2   defn/let/CALL — a mini band with a function, a let, and a verdict
@@ -18,6 +18,29 @@
 ;       function table
 ;   8   the flattened table FITS the universal fkw binary — more than 100
 ;       real rows, under the loader's 4096-row capacity
+;   16  multi-param via packed args (m4e4) — a 3-param function's call
+;       right-folds its arguments into a CONS pack and the body reads
+;       them back by NTH position: add3(7,11,13) walks to 31
+;   32  a RECURSIVE 2-param function carries packed args across its own
+;       re-entry while walking a list: accsum((5 6 7), 0) walks to 18
+;       (the recipe-side walker's arena arms 18..23 prove by value)
+;   64  the REAL cooldown module + band (multi-param throughout: 2- and
+;       3-param defns, let-bound call arguments, unmodified from disk)
+;       flatten and walk BY VALUE to the siblings' own verdict 63
+;   128 the figure-ops vocabulary (m4e5, tags 34..42) carries values —
+;       band/bxor/shl_u32/add_u32/rotr_u32/bnot_u32/mod/mul each answer
+;       the walking kernel's own native; negative literals and the
+;       true/false atoms land
+;   256 nested (do ...) as an expression — let-in-defn binds y and z in
+;       sequence (z sees y), the last expression is the value: f(5) = 13
+;   512 the REAL adler32 module + band (the checksum emblem: figure ops
+;       + nested do + 3-param packed recursion, unmodified from disk)
+;       flatten and walk BY VALUE to the siblings' own verdict 5
+;   1024 the REAL crc32 module + band (bxor/shr_u32 inner fold, big-int
+;        literals riding the kernels' shared intern truncation + u32
+;        casts, unmodified) walk BY VALUE to the siblings' verdict 4
+;   2048 the REAL slice-merge module + band (mul + raw negative delta
+;        coordinates, unmodified) walk BY VALUE to the siblings' 127
 (do
     (let c0 (if (and (and (eq (fkm-run (flt-src-fns "(do (gt 5 2))") 0) 1)
                           (eq (fkm-run (flt-src-fns "(do (gt 4 4))") 0) 0))
@@ -32,4 +55,29 @@
     (let c2 (if (eq (len real) 6) 4 0))
     (let rows (nth (fkc-flatten-many real) 0))
     (let c3 (if (and (gt (len rows) 100) (gt 4096 (len rows))) 8 0))
-    (add c0 (add c1 (add c2 c3))))
+    (let c4 (if (eq (fkm-run (flt-src-fns "(do (defn add3 (a b c) (add a (add b c))) (add3 7 11 13))") 0) 31) 16 0))
+    (let c5 (if (eq (fkm-run (flt-src-fns "(do (defn accsum (xs acc) (if (eq (len xs) 0) acc (accsum (tail xs) (add acc (head xs))))) (accsum (list 5 6 7) 0))") 0) 18) 32 0))
+    (let c6 (if (eq (fkm-run (flt-band-fns (read_file "form-stdlib/cooldown.fk")
+                                           (read_file "form-stdlib/tests/cooldown-band.fk")) 0) 63) 64 0))
+    ;; u32-wide expecteds compare against the kernel's OWN native answer
+    ;; (literals past the i32 ceiling truncate at intern — the adler32-band
+    ;; u32-literal-rebuild rule, held here as native-parity instead)
+    (let c7 (if (and (and (and (eq (fkm-run (flt-src-fns "(do (band 12 10))") 0) 8)
+                               (eq (fkm-run (flt-src-fns "(do (bxor 12 10))") 0) 6))
+                          (and (eq (fkm-run (flt-src-fns "(do (add_u32 (shl_u32 65520 16) 1))") 0)
+                                   (add_u32 (shl_u32 65520 16) 1))
+                               (eq (fkm-run (flt-src-fns "(do (rotr_u32 1 1))") 0)
+                                   (shl_u32 1 31))))
+                     (and (and (eq (fkm-run (flt-src-fns "(do (bnot_u32 0))") 0) (bnot_u32 0))
+                               (eq (fkm-run (flt-src-fns "(do (add (mod 17 5) (mul 6 7)))") 0) 44))
+                          (and (eq (fkm-run (flt-src-fns "(do (add -2 (sub 0 -5)))") 0) 3)
+                               (eq (fkm-run (flt-src-fns "(do (if false 7 (if true 9 8)))") 0) 9))))
+                128 0))
+    (let c8 (if (eq (fkm-run (flt-src-fns "(do (defn f (x) (do (let y (add x 1)) (let z (add y y)) (add z 1))) (f 5))") 0) 13) 256 0))
+    (let c9 (if (eq (fkm-run (flt-band-fns (read_file "form-stdlib/adler32.fk")
+                                           (read_file "form-stdlib/tests/adler32-band.fk")) 0) 5) 512 0))
+    (let c10 (if (eq (fkm-run (flt-band-fns (read_file "form-stdlib/crc32.fk")
+                                            (read_file "form-stdlib/tests/crc32-band.fk")) 0) 4) 1024 0))
+    (let c11 (if (eq (fkm-run (flt-band-fns (read_file "form-stdlib/slice-merge.fk")
+                                            (read_file "form-stdlib/tests/slice-merge-band.fk")) 0) 127) 2048 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 c11))))))))))))

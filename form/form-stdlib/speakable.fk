@@ -1,0 +1,120 @@
+; speakable.fk — the body's speakable corpus with conviction encoding.
+;
+; preludes: form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/grammars/shamballa-light-codes.fk form-stdlib/grammars/shamballa-codes.fk form-stdlib/grammars/sanskrit-roots.fk form-stdlib/shamballa-symbol-packs.fk
+;
+; TTS speaks text; STT hears it back; voice_io (experiments/satsang-voice)
+; carries the wav round-trip. THIS layer is what gets spoken: utterances that
+; carry their epistemic lanes audibly — conviction encoding. Every utterance
+; is (id, text, lang, confidence, conviction); its spoken form ends with the
+; lanes spoken as percentages, and a caller threshold selects the speech MODE:
+; both lanes clear it → the utterance asserts; otherwise it speaks prefixed
+; "Held as practice material:" — the honest hedge, audible, never silent.
+;
+; Four corpora, each with provenance-grounded lanes:
+;   (speakable-axioms)            — the five core axioms, statements carried
+;                                   from docs/coherence-substrate/core-axioms.form
+;                                   (agreed + crossed 2026-06-10; three kernels
+;                                   run them) → confidence 1.0, conviction 1.0
+;   (speakable-primitives)        — kernel natives whose behavior is pinned by
+;                                   three-way bands → 1.0 / 1.0
+;   (speakable-ontology)          — DERIVED at runtime from
+;                                   form-stdlib/form-ontology.json, the file the
+;                                   kernel parsers mirror (wellness verifies the
+;                                   agreement) → 1.0 / 1.0, zero duplication
+;   (speakable-light-codes pack)  — the Shamballa sheet through any language
+;                                   symbol pack; attested text of a single
+;                                   practice lineage, made public, cosmology
+;                                   not asserted → confidence 0.95, conviction 0.6
+;
+; The epistemic ordering is itself a law the band pins: the axioms speak with
+; more conviction than the light codes. At threshold 0.9 the axioms assert and
+; the light codes speak as held — the encoding makes the body's epistemics
+; audible.
+
+section [form.bml] {
+    // utterance = (id, text, lang, confidence, conviction)
+    def sp-utterance(id, text, lang, confidence, conviction) = list(id, text, lang, confidence, conviction);
+    def sp-id(u) = nth(u, 0);
+    def sp-text(u) = nth(u, 1);
+    def sp-lang(u) = nth(u, 2);
+    def sp-confidence(u) = nth(u, 3);
+    def sp-conviction(u) = nth(u, 4);
+
+    // the lanes spoken as percentages — kernel-stable (integers, never float formatting)
+    def sp-pct(x) = int_to_str(float_to_int(times(x, 100.0)));
+    def sp-lanes-spoken(u) = str_concat(" Confidence ", str_concat(sp-pct(sp-confidence(u)), str_concat(" percent, conviction ", str_concat(sp-pct(sp-conviction(u)), " percent."))));
+
+    // the gate: both lanes clear the threshold → assertion; otherwise held
+    def sp-asserts?(u, thr) = and(ge(sp-confidence(u), thr), ge(sp-conviction(u), thr));
+    def sp-spoken(u, thr) = if sp-asserts?(u, thr) then str_concat(sp-text(u), sp-lanes-spoken(u)) else str_concat("Held as practice material: ", str_concat(sp-text(u), sp-lanes-spoken(u)));
+
+    // ---- corpus: the five core axioms ----------------------------------
+    def speakable-axioms() {
+        list(
+        sp-utterance("axiom-1-states", "Axiom one, states: there are three states — zero, one, nothing. Nothing is first-class; no answer in time is silence, not an error.", "en", 1.0, 1.0),
+        sp-utterance("axiom-2-cell", "Axiom two, cell: everything is a cell — a node i d of four integers; a cell may compose child cells.", "en", 1.0, 1.0),
+        sp-utterance("axiom-3-content-addressing", "Axiom three, content addressing: a cell's identity is computed from its composition; same composition is the same cell. Nothing is overwritten — a new shape mints a new node i d.", "en", 1.0, 1.0),
+        sp-utterance("axiom-4-boundary", "Axiom four, boundary: a cell meets the world only through an interface it offers; observation through that interface is what makes it real. Passage not through the offered interface is breach, and breach is observable.", "en", 1.0, 1.0),
+        sp-utterance("axiom-5-offer", "Axiom five, offer: to run a cell and to speak to a cell are one act — offer a cell with zero to many argument cells; it is acknowledged by exactly one of nothing, zero, one, node.", "en", 1.0, 1.0));
+    }
+
+    // ---- corpus: three-way-banded kernel primitives ---------------------
+    // HONEST PARTIAL: natives whose behavior is pinned by sibling bands —
+    // the attestation IS the band. Others join as their bands land.
+    def sp-prim(name, what) = sp-utterance(name, str_concat("Primitive ", str_concat(name, str_concat(": ", what))), "en", 1.0, 1.0);
+    def speakable-primitives() {
+        list(
+        sp-prim("str_len", "the byte length of a string; the Content-Length contract of the native router."),
+        sp-prim("substring", "a byte window over a string; both ends floor to char boundaries, so split and rejoin is exact."),
+        sp-prim("char_at", "the whole character at a start; nothing inside one — a unitwise loop reconstructs the string exactly."),
+        sp-prim("str_find", "substring search from an index; the start ceils past a partial character so find-next always advances."),
+        sp-prim("scan_run", "the end of a contiguous byte-class run; the lexer's stride."),
+        sp-prim("str_concat", "two strings joined; the only string constructor the corpus needs."),
+        sp-prim("cons", "a value joined to the front of a list; composition's smallest move."),
+        sp-prim("eq", "equality acknowledged with the zero and one states of axiom one."));
+    }
+
+    // ---- corpus: the form ontology, derived from the kernels' own mirror -
+    def sp-ontology-root() = json_parse_body("speakable-ontology", read_file("form-stdlib/form-ontology.json"));
+    def sp-ontology-categories() = json-array-elements(json-object-get(sp-ontology-root(), "categories"));
+    def sp-category-utterance(row) {
+        let name = json-string-value(json-object-get(row, "name"));
+        let ty = json-int-value(json-object-get(row, "type"));
+        let inst = json-int-value(json-object-get(row, "inst"));
+        sp-utterance(name, str_concat("Ontology verb ", str_concat(name, str_concat(": type ", str_concat(int_to_str(ty), str_concat(", instance ", str_concat(int_to_str(inst), ".")))))), "en", 1.0, 1.0);
+    }
+    def sp-ontology-loop(rows, acc) = if nil?(rows) then reverse(acc) else sp-ontology-loop(tail(rows), cons(sp-category-utterance(head(rows)), acc));
+    def speakable-ontology() = sp-ontology-loop(sp-ontology-categories(), empty);
+
+    // ---- corpus: the light codes through any language symbol pack -------
+    def sp-light-code-utterance(entry, pack) {
+        let code = slc-entry-code(entry);
+        let g = ssp-generate(pack, code);
+        if nil?(g) then empty else sp-utterance(code, str_concat(nth(g, 0), str_concat(". ", nth(g, 1))), ssp-pack-lang(pack), 0.95, 0.6);
+    }
+    def sp-light-codes-loop(entries, pack, acc) = if nil?(entries) then reverse(acc) else sp-light-codes-loop(tail(entries), pack, cons(sp-light-code-utterance(head(entries), pack), acc));
+    def speakable-light-codes(pack) = sp-light-codes-loop(slc-dictionary(), pack, empty);
+
+    // ---- corpus: the publicly-attested Shamballa SYMBOL codes -----------
+    // Spoken power-symbol names from the public record (multiple practitioner
+    // sources per row, source field carried in the grammar); cosmology not
+    // asserted → confidence 0.9, conviction 0.7 — broader attestation than
+    // the single-lineage light codes, narrower than scholarship.
+    def sp-symbol-code-utterance(e) = sp-utterance(int_to_str(sc-entry-code(e)), str_concat("Shamballa symbol code ", str_concat(int_to_str(sc-entry-code(e)), str_concat(", ", str_concat(sc-entry-name(e), str_concat(": ", sc-entry-function(e)))))), "en", 0.9, 0.7);
+    def sp-symbol-codes-loop(es, acc) = if nil?(es) then reverse(acc) else sp-symbol-codes-loop(tail(es), cons(sp-symbol-code-utterance(head(es)), acc));
+    def speakable-symbol-codes() = sp-symbol-codes-loop(sc-dictionary(), empty);
+
+    // ---- corpus: the bija seed syllables ---------------------------------
+    // Documented scholarship attested across many traditions (the dhatu
+    // discipline of grammars/sanskrit-roots.fk) → confidence 0.95,
+    // conviction 0.85 — asserts at 0.8, still under the axioms.
+    def sp-bija-utterance(e) = sp-utterance(bija-roman(e), str_concat("Seed syllable ", str_concat(bija-roman(e), str_concat(": ", str_concat(bija-chakra(e), str_concat(", element ", str_concat(bija-element(e), str_concat(" — ", str_concat(bija-gloss(e), ".")))))))), "en", 0.95, 0.85);
+    def sp-bija-loop(es, acc) = if nil?(es) then reverse(acc) else sp-bija-loop(tail(es), cons(sp-bija-utterance(head(es)), acc));
+    def speakable-bija() = sp-bija-loop(bija-lexicon(), empty);
+
+    // ---- the whole speakable body, one threshold, ready for the mouth ----
+    def sp-spoken-all-loop(us, thr, acc) = if nil?(us) then reverse(acc) else sp-spoken-all-loop(tail(us), thr, cons(sp-spoken(head(us), thr), acc));
+    def speakable-spoken-all(us, thr) = sp-spoken-all-loop(us, thr, empty);
+
+    0;
+}

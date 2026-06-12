@@ -59,6 +59,65 @@ fn crash_trace_context() -> &'static Mutex<CrashTraceContext> {
 
 thread_local! {
     static THREAD_CRASH_TRACE_CONTEXT: RefCell<Option<CrashTraceContext>> = const { RefCell::new(None) };
+    static THREAD_LAST_CRASH_TRACE_PATH: RefCell<Option<PathBuf>> = const { RefCell::new(None) };
+    static FORM_CALL_STACK: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
+}
+
+// FormStackFrame — one live frame on the Form-level call stack. Pushed when
+// the walker dispatches into a native or closure, popped on Drop. The panic
+// hook runs BEFORE unwinding, so a fatal reads the frames that were live at
+// the crash; unwinding then pops them, which keeps the stack honest across
+// the serve worker's per-request catch_unwind. Closure labels carry source
+// attribution ("name@file:line:col") when the body recipe has it.
+struct FormStackFrame;
+
+impl FormStackFrame {
+    fn push(label: String) -> FormStackFrame {
+        FORM_CALL_STACK.with(|s| s.borrow_mut().push(label));
+        FormStackFrame
+    }
+
+    // Tail call: the caller's frame is complete (its body ended in this
+    // call), so the new label REPLACES the top instead of stacking — the
+    // same collapse a tail-call-optimized host stack performs.
+    fn replace_top(self, label: String) -> FormStackFrame {
+        FORM_CALL_STACK.with(|s| {
+            let mut stack = s.borrow_mut();
+            stack.pop();
+            stack.push(label);
+        });
+        self
+    }
+}
+
+impl Drop for FormStackFrame {
+    fn drop(&mut self) {
+        FORM_CALL_STACK.with(|s| {
+            s.borrow_mut().pop();
+        });
+    }
+}
+
+fn form_stack_snapshot() -> Vec<String> {
+    FORM_CALL_STACK.with(|s| s.borrow().iter().rev().cloned().collect())
+}
+
+fn form_stack_display(max: usize) -> String {
+    let stack = form_stack_snapshot();
+    if stack.is_empty() {
+        return String::new();
+    }
+    let total = stack.len();
+    let mut out = stack
+        .iter()
+        .take(max)
+        .map(|s| s.as_str())
+        .collect::<Vec<_>>()
+        .join(" < ");
+    if total > max {
+        out.push_str(&format!(" … (+{} more)", total - max));
+    }
+    out
 }
 
 fn source_excerpt_head(src: &str, max_chars: usize) -> String {
@@ -116,6 +175,52 @@ fn current_crash_trace_context() -> CrashTraceContext {
         .lock()
         .map(|guard| guard.clone())
         .unwrap_or_default()
+}
+
+fn clear_thread_last_crash_trace_path() {
+    THREAD_LAST_CRASH_TRACE_PATH.with(|slot| {
+        *slot.borrow_mut() = None;
+    });
+}
+
+fn set_thread_last_crash_trace_path(path: &Path) {
+    THREAD_LAST_CRASH_TRACE_PATH.with(|slot| {
+        *slot.borrow_mut() = Some(path.to_path_buf());
+    });
+}
+
+fn take_thread_last_crash_trace_path() -> Option<PathBuf> {
+    THREAD_LAST_CRASH_TRACE_PATH.with(|slot| slot.borrow_mut().take())
+}
+
+// Snap a byte index down to the nearest UTF-8 char boundary at or below it.
+// The addressing natives (substring, char_at, str_find) accept byte indices
+// computed by recipes that step bytewise; an index inside a multibyte char
+// is answered with the boundary-snapped read, never a panic. Flooring BOTH
+// ends keeps the adjacency law: substring(s,a,m) + substring(s,m,b) ==
+// substring(s,a,b) for any m, so split-and-rejoin recipes stay exact.
+fn floor_char_boundary_idx(s: &str, mut i: usize) -> usize {
+    if i > s.len() {
+        i = s.len();
+    }
+    while i > 0 && !s.is_char_boundary(i) {
+        i -= 1;
+    }
+    i
+}
+
+// Snap a byte index up to the nearest char boundary at or above it. Search
+// starts (str_find `from`) snap forward so a find-next loop stepping +1 from
+// a match advances past a multibyte char instead of re-finding it forever.
+fn ceil_char_boundary_idx(s: &str, i: usize) -> usize {
+    if i >= s.len() {
+        return s.len();
+    }
+    let mut i = i;
+    while i < s.len() && !s.is_char_boundary(i) {
+        i += 1;
+    }
+    i
 }
 
 fn diagnose_kernel_panic(message: &str) -> CrashDiagnosis {
@@ -208,6 +313,11 @@ fn write_kernel_crash_trace(message: &str, location: Option<String>) -> Option<P
         "source_line_count": source_line_count(&ctx.source),
         "source_head": source_excerpt_head(&ctx.source, 2000),
         "source_tail": source_excerpt_tail(&ctx.source, 2000),
+        // Innermost frame first — the Form-level call chain live at the
+        // crash. The line that produced the fatal is the innermost closure
+        // frame's attribution (name@file:line:col) or, failing that, the
+        // named native plus its caller.
+        "form_stack": form_stack_snapshot(),
         "rust_backtrace": format!("{:?}", Backtrace::force_capture()),
     });
     let data = serde_json::to_vec_pretty(&report).ok()?;
@@ -222,10 +332,46 @@ fn write_kernel_crash_trace(message: &str, location: Option<String>) -> Option<P
         }
         let path = dir.join(&filename);
         if fs::write(&path, &payload).is_ok() {
+            set_thread_last_crash_trace_path(&path);
             return Some(path);
         }
     }
     None
+}
+
+fn http_header_safe(value: &str) -> String {
+    value.replace(['\r', '\n'], " ")
+}
+
+fn kernel_fatal_http_body(
+    message: &str,
+    diagnosis: &CrashDiagnosis,
+    trace_path: Option<&Path>,
+) -> String {
+    let trace = trace_path
+        .map(|p| p.display().to_string())
+        .unwrap_or_else(|| "trace unavailable".to_string());
+    format!(
+        "fatal[{}]: {}\nlikely_root_cause: {}\navoidance: {}\ntrace: {}\n",
+        diagnosis.fatal_kind, message, diagnosis.likely_root_cause, diagnosis.avoidance, trace
+    )
+}
+
+fn kernel_fatal_http_headers(
+    diagnosis: &CrashDiagnosis,
+    trace_path: Option<&Path>,
+) -> Vec<(String, String)> {
+    let mut headers = vec![(
+        "X-Form-Fatal-Kind".to_string(),
+        diagnosis.fatal_kind.to_string(),
+    )];
+    if let Some(path) = trace_path {
+        headers.push((
+            "X-Form-Crash-Trace".to_string(),
+            http_header_safe(&path.display().to_string()),
+        ));
+    }
+    headers
 }
 
 // --- Socket natives — L1 physical layer (TCP) ---------------------------
@@ -988,6 +1134,15 @@ pub(crate) const TRIV_INT: u32 = 1;
 pub(crate) const TRIV_STRING: u32 = 2;
 const TRIV_BOOL: u32 = 3;
 const TRIV_NULL: u32 = 4;
+// INT64 — signed integer wider than the 32-bit inst slot. Integer literals fit
+// inline in TRIV_INT while |n| ≤ 2^31-1; once a literal (hash, address, large
+// counter) crosses the int32 ceiling the inst carries an index into the `i64s`
+// overflow table, exactly as FLOAT64 does with `f64s`. Both TRIV_INT and
+// TRIV_INT64 decode to the same Value::Int(i64), so arithmetic stays one
+// uniform i64 path. Aligned three-way: INT64 = 5 across Rust/Go/TS. The .fkb
+// wire format carries the value via a dedicated FORM_BINARY_INT64 record, not
+// the local table index, so cross-kernel portability rides on the value.
+pub(crate) const TRIV_INT64: u32 = 5;
 // FLOAT32 — IEEE 754 32-bit value stored inline; the inst field carries the
 // IEEE bit pattern reinterpreted as u32. No overflow table needed (32 bits fit
 // the 32-bit inst slot). This kernel parses float literals only as float64, so
@@ -1108,6 +1263,12 @@ pub(crate) struct Kernel {
     // The satsang-load-bearing surface: every cell's state is traceable
     // back to the source line of the recipe that authored it.
     source_attr: HashMap<NodeID, (NameID, u32, u32)>,
+    // Line map for the source currently being read: (file_name_id,
+    // first_global_line) per concatenated part. When non-empty, read_sexp
+    // attributes every parenthesized form it builds so fatal diagnostics
+    // can name the Form source file:line. Empty outside file loads
+    // (inline strings, route bodies that carry their own labels).
+    reading_files: Vec<(NameID, u32)>,
     // walk_cache — JIT-vector memoization: pure recipes (no I/O, no
     // external state) can have their walk result cached by NodeID.
     // Content-addressing means same recipe shape → same NodeID, so
@@ -1127,6 +1288,10 @@ pub(crate) struct Kernel {
     // ±Inf stay distinct (matches the TS kernel's f64Idx behavior).
     f64s: Vec<f64>,
     f64_idx: HashMap<u64, u32>, // keyed by IEEE bit pattern after canonicalization
+    // Int64 overflow table — the sibling of `f64s` for integers wider than the
+    // 32-bit inst slot. Keyed by the value itself (integers are canonical).
+    i64s: Vec<i64>,
+    i64_idx: HashMap<i64, u32>,
     next_inst: u32,
     natives: HashMap<NameID, NativeEntry>,
     env_natives: HashMap<NameID, EnvAwareNativeEntry>,
@@ -1162,6 +1327,14 @@ pub(crate) struct Kernel {
     // counter — the only cost is the warm-up.
     jit_hits: HashMap<NodeID, u32>,
     jit_failed: HashSet<NodeID>,
+    // installed_leaves — installed-name → leaf for callables bound into the
+    // kernel's own table AT RUNTIME by jit_install (the
+    // install-as-named-callable-leaf protocol: form-stdlib/install-leaf.fk,
+    // proven three-way by tests/install-leaf-band.fk). NativeFn is a plain
+    // fn pointer (no captures), so the leaf's loaded artifact lives here and
+    // FNCALL dispatch consults this table by name — the table IS the grown
+    // surface. First-bind-wins: jit_install refuses a name already callable.
+    installed_leaves: HashMap<NameID, InstalledLeaf>,
     // Content-addressed maps — the kernel's O(1) dispatch tables, keyed by the
     // NodeID (content-address) of the key. A switch (status→phrase, name→handler,
     // shape→route) becomes a direct NodeID lookup instead of a scan: two
@@ -1529,6 +1702,7 @@ impl Kernel {
             by_shape: HashMap::new(),
             by_id: HashMap::new(),
             source_attr: HashMap::new(),
+            reading_files: Vec::new(),
             walk_cache: HashMap::new(),
             walk_cache_hits: 0,
             walk_cache_misses: 0,
@@ -1537,6 +1711,8 @@ impl Kernel {
             str_idx: HashMap::new(),
             f64s: Vec::new(),
             f64_idx: HashMap::new(),
+            i64s: Vec::new(),
+            i64_idx: HashMap::new(),
             next_inst: 1,
             natives: HashMap::new(),
             env_natives: HashMap::new(),
@@ -1545,6 +1721,7 @@ impl Kernel {
             jit_compiled: HashMap::new(),
             jit_hits: HashMap::new(),
             jit_failed: HashSet::new(),
+            installed_leaves: HashMap::new(),
             maps: HashMap::new(),
             next_map: 0,
             switch_tables: HashMap::new(),
@@ -1595,13 +1772,43 @@ impl Kernel {
         self.intern(cat_undefined(), children)
     }
 
-    pub(crate) fn intern_trivial_int(&self, n: i64) -> NodeID {
+    pub(crate) fn intern_trivial_int(&mut self, n: i64) -> NodeID {
+        // Inline while the value fits the 32-bit inst slot; overflow into
+        // `i64s` once it crosses the int32 ceiling (mirrors
+        // intern_trivial_float64). Both paths decode back to Value::Int(i64)
+        // in trivial_value, so callers and arithmetic never see the split.
+        if n >= i32::MIN as i64 && n <= i32::MAX as i64 {
+            return NodeID {
+                pkg: 1,
+                level: LEVEL_TRIVIAL,
+                ty: TRIV_INT,
+                inst: (n as i32) as u32,
+            };
+        }
+        if let Some(&idx) = self.i64_idx.get(&n) {
+            return NodeID {
+                pkg: 1,
+                level: LEVEL_TRIVIAL,
+                ty: TRIV_INT64,
+                inst: idx,
+            };
+        }
+        let idx = self.i64s.len() as u32;
+        self.i64s.push(n);
+        self.i64_idx.insert(n, idx);
         NodeID {
             pkg: 1,
             level: LEVEL_TRIVIAL,
-            ty: TRIV_INT,
-            inst: (n as i32) as u32,
+            ty: TRIV_INT64,
+            inst: idx,
         }
+    }
+
+    pub(crate) fn decode_int64(&self, inst: u32) -> i64 {
+        *self
+            .i64s
+            .get(inst as usize)
+            .unwrap_or_else(|| panic!("decode_int64: bad index {}", inst))
     }
 
     // intern_trivial_float64 — content-addressed insertion into the f64
@@ -1933,6 +2140,7 @@ impl Kernel {
             by_shape: self.by_shape.clone(),
             by_id: self.by_id.clone(),
             source_attr: self.source_attr.clone(),
+            reading_files: Vec::new(),
             walk_cache: HashMap::new(),
             walk_cache_hits: 0,
             walk_cache_misses: 0,
@@ -1941,6 +2149,8 @@ impl Kernel {
             str_idx: self.str_idx.clone(),
             f64s: self.f64s.clone(),
             f64_idx: self.f64_idx.clone(),
+            i64s: self.i64s.clone(),
+            i64_idx: self.i64_idx.clone(),
             next_inst: self.next_inst,
             natives: self.natives.clone(),
             env_natives: self.env_natives.clone(),
@@ -1954,6 +2164,9 @@ impl Kernel {
             // its own hot paths).
             jit_hits: HashMap::new(),
             jit_failed: self.jit_failed.clone(),
+            // Arc clones — installed leaves stay callable in workers; the
+            // table is shared surface, not per-worker state.
+            installed_leaves: self.installed_leaves.clone(),
             // Dispatch tables are content (built at load); each worker carries
             // its own copy so routing needs no lock.
             maps: self.maps.clone(),
@@ -1986,6 +2199,7 @@ impl Kernel {
     pub(crate) fn trivial_value(&self, n: NodeID) -> Value {
         match n.ty {
             TRIV_INT => Value::Int((n.inst as i32) as i64),
+            TRIV_INT64 => Value::Int(self.decode_int64(n.inst)),
             TRIV_STRING => Value::Str(self.strs[n.inst as usize].clone().into()),
             TRIV_BOOL => Value::Bool(n.inst != 0),
             TRIV_NULL => Value::Null,
@@ -2018,6 +2232,21 @@ impl Kernel {
 
     // Resolve a NameID back to its source-level string. Only used in error
     // messages and on the parse-time slow path.
+    // Map a global line in the concatenated read buffer back to
+    // (file_name_id, line_within_that_file). Entries are in concatenation
+    // order; the last entry whose start is at or before the line owns it.
+    fn resolve_reading_line(&self, global_line: u32) -> Option<(NameID, u32)> {
+        let mut owner: Option<(NameID, u32)> = None;
+        for (file_id, start) in &self.reading_files {
+            if *start <= global_line {
+                owner = Some((*file_id, global_line - start + 1));
+            } else {
+                break;
+            }
+        }
+        owner
+    }
+
     fn name_str(&self, id: NameID) -> &str {
         &self.strs[id as usize]
     }
@@ -2140,6 +2369,21 @@ impl Drop for JitCompiled {
         // though the on-disk file is gone. Best-effort: ignore errors.
         let _ = fs::remove_dir_all(&self._temp_dir);
     }
+}
+
+// InstalledLeaf — one binding the callable surface grew at runtime via
+// jit_install (install-as-named-callable-leaf; protocol:
+// form-stdlib/install-leaf.fk, proven three-way by
+// tests/install-leaf-band.fk). Carries the loaded artifact (Arc-shared
+// with jit_compiled — same content-addressed body, same .so; the
+// interface it answers is jc.arity over the i64 ABI) and the body NodeID
+// whose content-address is the ack a caller holds but cannot forge
+// (axiom-3). The table never rebinds — first-bind-wins is enforced at
+// jit_install, so a leaf, once bound, is the name's only answer.
+#[derive(Clone, Debug)]
+struct InstalledLeaf {
+    jc: Arc<JitCompiled>,
+    body: NodeID,
 }
 
 // Maximum arity the JIT supports — bounded so dispatch can be a static
@@ -2975,8 +3219,8 @@ impl Kernel {
                     s.len()
                 );
             }
-            let a = a_i as usize;
-            let b = b_i as usize;
+            let a = floor_char_boundary_idx(s, a_i as usize);
+            let b = floor_char_boundary_idx(s, b_i as usize);
             Value::Str(s[a..b].to_string().into())
         });
         self.register_native("char_at", cat_access(), |_, _, args| {
@@ -2986,7 +3230,16 @@ impl Kernel {
                 panic!("char_at: bounds out of range index={} len={}", i_i, s.len());
             }
             let i = i_i as usize;
-            Value::Str((s.as_bytes()[i] as char).to_string().into())
+            // At a char start: the whole char. Inside a multibyte char:
+            // nothing — so a bytewise loop concatenating char_at over
+            // 0..str_len reconstructs the string exactly, once per char.
+            if !s.is_char_boundary(i) {
+                return Value::Str(String::new().into());
+            }
+            match s[i..].chars().next() {
+                Some(ch) => Value::Str(ch.to_string().into()),
+                None => Value::Str(String::new().into()),
+            }
         });
         self.register_native("str_concat", cat_method(), |_, _, args| {
             let mut s = args[0].as_str().to_string();
@@ -3203,6 +3456,7 @@ impl Kernel {
             if from > s.len() {
                 return Value::Int(-1);
             }
+            let from = ceil_char_boundary_idx(s, from);
             match s[from..].find(needle) {
                 Some(i) => Value::Int((from + i) as i64),
                 None => Value::Int(-1),
@@ -4406,6 +4660,83 @@ impl Kernel {
             k.jit_compiled.insert(cl.body, Arc::new(jc));
             Value::Int(1)
         });
+        // jit_install closure-name-str installed-name-str expected-arity →
+        //   the install-as-named-callable-leaf protocol
+        //   (form-stdlib/install-leaf.fk, proven three-way by
+        //   tests/install-leaf-band.fk) carried onto the Rust JIT lane:
+        //   rustc --crate-type=cdylib → libloading, the artifact bound under
+        //   a NEW name in the kernel's own table at runtime — the surface
+        //   grows by offer, never by recompile. The ack follows axiom-5:
+        //     node — the artifact's body NodeID (content-addressed,
+        //            unforgeable) on bind
+        //     0    — refusal: name collision (first-bind-wins), interface
+        //            mismatch (expected arity is not the closure's own), or
+        //            no artifact (the recipe is outside the JIT subset /
+        //            rustc absent) — the table is untouched either way
+        //     nothing — there is no closure to install (honest absence)
+        self.register_env_native("jit_install", cat_witness(), |k, a, env, args| {
+            if args.len() != 3 {
+                return Value::Null;
+            }
+            let closure_name = args[0].as_str().to_string();
+            let installed_name = args[1].as_str().to_string();
+            let expected_arity = args[2].as_int();
+            let closure_id = k.intern_string(&closure_name).inst;
+            let cl = match a.lookup(env, closure_id) {
+                Some(Value::Closure(c)) => c,
+                // nothing — there is no cell to install
+                _ => return Value::Null,
+            };
+            let installed_id = k.intern_string(&installed_name).inst;
+            if k.natives.contains_key(&installed_id)
+                || k.env_natives.contains_key(&installed_id)
+                || k.installed_leaves.contains_key(&installed_id)
+            {
+                // name collision — first-bind-wins, the table never rebinds
+                return Value::Int(0);
+            }
+            if expected_arity != cl.params.len() as i64 {
+                // interface mismatch — the artifact cannot be bound through
+                // an interface it does not carry
+                return Value::Int(0);
+            }
+            // Ensure the artifact: reuse the content-addressed plugin cache
+            // (same body NodeID, same .so) or compile through the jit lane.
+            let jc = match k.jit_compiled.get(&cl.body).cloned() {
+                Some(j) => j,
+                None => {
+                    let compiled = emit_rust_source(k, cl.name, &cl.params, cl.body)
+                        .and_then(|src| compile_rust_cdylib(&src, cl.params.len()));
+                    match compiled {
+                        Some(j) => {
+                            let arc = Arc::new(j);
+                            k.jit_compiled.insert(cl.body, arc.clone());
+                            arc
+                        }
+                        None => {
+                            // no artifact — the recipe still walks under its
+                            // own name; nothing installs
+                            k.jit_failed.insert(cl.body);
+                            return Value::Int(0);
+                        }
+                    }
+                }
+            };
+            k.installed_leaves
+                .insert(installed_id, InstalledLeaf { jc, body: cl.body });
+            // the node ack: the artifact's content-addressed identity
+            Value::Nid(cl.body)
+        });
+        // installed_leaf? name-str → 1 if the name is a callable the surface
+        // grew at runtime via jit_install, else 0 (build-time natives answer 0).
+        self.register_native("installed_leaf?", cat_compare(RCMP_EQ), |k, _, args| {
+            let id = k.intern_string(args[0].as_str()).inst;
+            if k.installed_leaves.contains_key(&id) {
+                Value::Int(1)
+            } else {
+                Value::Int(0)
+            }
+        });
         // jit_aliased? form-name-str → 1 if a JIT alias is currently bound
         // for this name, else 0. Lets Form code introspect dispatch routing.
         self.register_native("jit_aliased?", cat_compare(RCMP_EQ), |k, _, args| {
@@ -4460,6 +4791,22 @@ impl Kernel {
                     format!("{}.{}.{}.{}", body.pkg, body.level, body.ty, body.inst),
                     1,
                     String::new(),
+                ));
+            }
+            // Installed leaves — callables the surface grew at runtime via
+            // jit_install; detail carries the installed name so the grown
+            // table is readable from Form (sibling of Go's observe lane).
+            let installed: Vec<(NameID, NodeID)> = k
+                .installed_leaves
+                .iter()
+                .map(|(name, leaf)| (*name, leaf.body))
+                .collect();
+            for (name, body) in installed {
+                rows.push((
+                    "installed".to_string(),
+                    format!("{}.{}.{}.{}", body.pkg, body.level, body.ty, body.inst),
+                    0,
+                    k.name_str(name).to_string(),
                 ));
             }
             rows.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
@@ -5659,6 +6006,20 @@ impl Kernel {
             Value::Int(now_unix_ms_value())
         });
 
+        // `temp_dir` — the host's scratch directory: TMPDIR when the carrier
+        // names one, /tmp otherwise (no trailing slash). External read (host
+        // env) so it's cat_call. The door that lets a band's scratch files
+        // land in per-leg space: validate.sh points each sibling kernel at
+        // its own TMPDIR, so concurrent legs never share a scratch path.
+        // Sibling parity holds on shape, NOT on value — each leg's dir
+        // differs by design; bands fold the path into effects, never into
+        // the verdict.
+        self.register_native("temp_dir", cat_call(), |_, _, _| {
+            let dir = std::env::var("TMPDIR").unwrap_or_default();
+            let dir = if dir.is_empty() { "/tmp".to_string() } else { dir };
+            Value::Str(dir.trim_end_matches('/').to_string().into())
+        });
+
         // No Form category claimed — `trace` is a debug surface, honest
         // about being outside the structural vocabulary.
         self.register_native("trace", cat_undefined(), |_, _, args| {
@@ -6600,6 +6961,11 @@ fn walk_inner(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
     // kernel parse the full thesis grammar files without overflowing.
     let mut n = n;
     let mut env = env;
+    // One Form-stack slot per host walk invocation: a closure entered by TCO
+    // REPLACES the slot (its tail-caller's frame is complete); a closure
+    // entered through a fresh recursive walk (arg evaluation, native
+    // interiors) gets its own slot in that invocation.
+    let mut form_frame: Option<FormStackFrame> = None;
     loop {
         if n.level == LEVEL_TRIVIAL {
             return k.trivial_value(n);
@@ -6782,6 +7148,7 @@ fn walk_inner(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
                         if let Some(t) = &mut k.trace {
                             t.record_native(&native_name);
                         }
+                        let _form_frame = FormStackFrame::push(native_name);
                         return (ne.func)(k, a, env, &args);
                     }
                 }
@@ -6808,7 +7175,33 @@ fn walk_inner(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
                         if let Some(t) = &mut k.trace {
                             t.record_native(&native_name);
                         }
+                        let _form_frame = FormStackFrame::push(native_name);
                         return (ne.func)(k, a, &args);
+                    }
+                }
+                // Installed leaf — a callable the surface grew at runtime via
+                // jit_install (install-as-named-callable-leaf,
+                // form-stdlib/install-leaf.fk). The leaf only answers the
+                // interface it offered: a call outside it (wrong arity, value
+                // shapes the i64 ABI doesn't carry) acknowledges nothing —
+                // honest absence, never a fabricated value (axiom-4: the name
+                // is the boundary; reaching past it is observable as null).
+                let leaf_opt = k.installed_leaves.get(&name).cloned();
+                if let Some(leaf) = leaf_opt {
+                    if a.lookup(env, name).is_none() {
+                        let mut args = Vec::with_capacity(kids.len() - 1);
+                        for arg in &kids[1..] {
+                            args.push(walk(k, a, *arg, env));
+                        }
+                        let leaf_name = k.name_str(name).to_string();
+                        if let Some(t) = &mut k.trace {
+                            t.record_native(&leaf_name);
+                        }
+                        let _form_frame = FormStackFrame::push(leaf_name.clone());
+                        // Arc held through the call — the Library can't be
+                        // dropped mid-call (same contract as the closure jit
+                        // fast path below).
+                        return jit_dispatch(&leaf.jc, &args).unwrap_or(Value::Null);
                     }
                 }
                 // Closure lookup uses the ORIGINAL function-name (not the JIT-
@@ -6845,6 +7238,16 @@ fn walk_inner(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
                 if let Some(t) = &mut k.trace {
                     t.record_fn(&fn_name);
                 }
+                let frame_label = match k.source_attr.get(&cl2.body).copied() {
+                    Some((file_id, line, col)) => {
+                        format!("{}@{}:{}:{}", fn_name, k.name_str(file_id), line, col)
+                    }
+                    None => fn_name.clone(),
+                };
+                form_frame = Some(match form_frame.take() {
+                    Some(f) => f.replace_top(frame_label),
+                    None => FormStackFrame::push(frame_label),
+                });
                 // JIT-compiled fast path: if (jit_compile "name") landed for
                 // this closure's body, dispatch through the loaded function
                 // pointer. Form recipe stays canonical truth; the .so is opt-in
@@ -7117,11 +7520,18 @@ fn tokenize_sexp(src: &str) -> Vec<SexpTok> {
 }
 
 fn unescape(s: &str) -> String {
+    // Verbatim runs copy as &str slices so multibyte chars survive intact —
+    // pushing bytes one-at-a-time as `b as char` Latin-1-promotes every
+    // UTF-8 continuation byte and mangles every non-ASCII literal. Escape
+    // positions are ASCII backslashes, so the run boundaries are always
+    // char boundaries.
     let mut out = String::with_capacity(s.len());
     let bytes = s.as_bytes();
     let mut i = 0;
+    let mut run = 0;
     while i < bytes.len() {
         if bytes[i] == b'\\' && i + 1 < bytes.len() {
+            out.push_str(&s[run..i]);
             match bytes[i + 1] {
                 b'n' => out.push('\n'),
                 b't' => out.push('\t'),
@@ -7131,11 +7541,12 @@ fn unescape(s: &str) -> String {
                 c => out.push(c as char),
             }
             i += 2;
+            run = i;
             continue;
         }
-        out.push(bytes[i] as char);
         i += 1;
     }
+    out.push_str(&s[run..]);
     out
 }
 
@@ -7238,7 +7649,19 @@ fn read_sexp(k: &mut Kernel, toks: &[SexpTok], i: usize) -> (NodeID, usize) {
                 args.push(arg);
                 j = nj;
             }
-            (build_verb(k, &verb, args), j)
+            let node = build_verb(k, &verb, args);
+            // Source attribution at read time: every parenthesized form
+            // remembers the file:line:col of its opening paren, so a fatal
+            // mid-walk can name the Form source line, not just the host
+            // accessor. Content-addressing means a shape interned from two
+            // sites keeps its FIRST authoring site — an honest "this shape
+            // was written here (first)".
+            if let Some((file_id, local_line)) = k.resolve_reading_line(t.line) {
+                k.source_attr
+                    .entry(node)
+                    .or_insert((file_id, local_line, t.col));
+            }
+            (node, j)
         }
         _ => panic!(
             "parse error at line {} col {}: unexpected token {} {:?}",
@@ -7498,6 +7921,20 @@ fn count_top_level(toks: &[SexpTok]) -> usize {
 pub(crate) fn run_source(src: &str) -> Value {
     let mut k = Kernel::new();
     let root = read_root_from_source(&mut k, src);
+    execute_root(&mut k, root)
+}
+
+// Run a concatenated multi-file source with a line map so read-time
+// attribution names each form's ORIGINAL file:line. The map entries are
+// (file_name, first_global_line_of_that_file) in concatenation order.
+pub(crate) fn run_source_mapped(src: &str, line_map: &[(String, u32)]) -> Value {
+    let mut k = Kernel::new();
+    k.reading_files = line_map
+        .iter()
+        .map(|(name, start)| (k.intern_string(name).inst, *start))
+        .collect();
+    let root = read_root_from_source(&mut k, src);
+    k.reading_files.clear();
     execute_root(&mut k, root)
 }
 
@@ -8863,7 +9300,33 @@ fn handle_request(
             );
             return false; // close — the oversized request was fully read; drop it
         }
-        let result = walk(k, arena, cl.body, call_frame);
+        clear_thread_last_crash_trace_path();
+        let result = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            walk(k, arena, cl.body, call_frame)
+        })) {
+            Ok(value) => value,
+            Err(payload) => {
+                let msg = panic_payload_message(payload.as_ref());
+                let diagnosis = diagnose_kernel_panic(&msg);
+                let trace_path = take_thread_last_crash_trace_path()
+                    .or_else(|| write_kernel_crash_trace(&msg, None));
+                let body = kernel_fatal_http_body(&msg, &diagnosis, trace_path.as_deref());
+                let headers = kernel_fatal_http_headers(&diagnosis, trace_path.as_deref());
+                record_router_metrics(router_metrics, &path, "native-kernel-error");
+                let _ = stream.write_all(
+                    http_response(
+                        "500 Internal Server Error",
+                        &body,
+                        "native-kernel-error",
+                        false,
+                        "",
+                        &headers,
+                    )
+                    .as_bytes(),
+                );
+                return false;
+            }
+        };
         router = "native-kernel";
         // A native handler can return the first-class KernelHTTPResponse cell:
         //   kh-response(status, list(kh-header(name, value)...), body)
@@ -9476,6 +9939,7 @@ fn import_recipe_leaf(dst: &mut Kernel, src: &Kernel, nid: NodeID) -> NodeID {
     if nid.level == LEVEL_TRIVIAL {
         return match nid.ty {
             TRIV_INT => dst.intern_trivial_int((nid.inst as i32) as i64),
+            TRIV_INT64 => dst.intern_trivial_int(src.decode_int64(nid.inst)),
             TRIV_STRING => dst.intern_string(src.name_str(nid.inst)),
             TRIV_BOOL | TRIV_NULL => nid,
             TRIV_FLOAT32 => dst.intern_trivial_float32(src.decode_float32(nid.inst)),
@@ -13737,6 +14201,14 @@ fn install_panic_hook() {
             .unwrap_or("unknown error");
         let diagnosis = diagnose_kernel_panic(msg);
         eprintln!("form-kernel-rust: fatal[{}]: {}", diagnosis.fatal_kind, msg);
+        // The Form-level call chain live at the crash, innermost first —
+        // the hook runs before unwinding, so the frames are still pushed.
+        // This is the line that answers "WHERE in the Form source": the
+        // innermost named frames, with file:line:col when attributed.
+        let stack = form_stack_display(16);
+        if !stack.is_empty() {
+            eprintln!("form-kernel-rust: form stack: {}", stack);
+        }
         eprintln!(
             "form-kernel-rust: likely root cause: {}",
             diagnosis.likely_root_cause
@@ -13754,6 +14226,40 @@ fn install_panic_hook() {
 #[cfg(test)]
 mod crash_diagnostics_tests {
     use super::*;
+
+    // The reader attributes every parenthesized form to its file:line so a
+    // fatal mid-walk can name the Form source line (the diagnostic that
+    // turns "as_nid: Null at the host accessor" into "node_children inside
+    // inner@probe.fk:2").
+    #[test]
+    fn reader_attributes_forms_to_file_lines() {
+        let mut k = Kernel::new();
+        let file_id = k.intern_string("probe.fk").inst;
+        k.reading_files = vec![(file_id, 1)];
+        let _root =
+            read_root_from_source(&mut k, "(do\n  (defn inner (x) (node_children x)))");
+        k.reading_files.clear();
+        let hit = k
+            .source_attr
+            .values()
+            .any(|(f, line, _)| *f == file_id && *line == 2);
+        assert!(hit, "expected a line-2 attribution for the defn body");
+    }
+
+    // Frames display innermost first — the order a reader scans to find
+    // the failing call. Runs on a dedicated thread so the thread-local
+    // stack starts clean.
+    #[test]
+    fn form_stack_displays_innermost_first() {
+        let display = std::thread::spawn(|| {
+            let _outer = FormStackFrame::push("inner@probe.fk:2:19".to_string());
+            let _native = FormStackFrame::push("node_children".to_string());
+            form_stack_display(16)
+        })
+        .join()
+        .expect("probe thread");
+        assert_eq!(display, "node_children < inner@probe.fk:2:19");
+    }
 
     #[test]
     fn diagnose_null_string_contract_as_type_violation() {
@@ -13796,6 +14302,24 @@ mod crash_diagnostics_tests {
         set_thread_crash_trace_context(CrashTraceContext::default());
         let _ = fs::remove_file(path);
     }
+
+    #[test]
+    fn fatal_http_response_names_kind_trace_and_avoidance() {
+        let diagnosis = diagnose_kernel_panic("as_str: Null");
+        let trace_path = Path::new(".cache/form-kernel-rust/crash-test.json");
+        let body = kernel_fatal_http_body("as_str: Null", &diagnosis, Some(trace_path));
+        assert!(body.contains("fatal[type_contract_violation]: as_str: Null"));
+        assert!(body.contains("likely_root_cause:"));
+        assert!(body.contains("avoidance:"));
+        assert!(body.contains("trace: .cache/form-kernel-rust/crash-test.json"));
+        let headers = kernel_fatal_http_headers(&diagnosis, Some(trace_path));
+        assert!(headers
+            .iter()
+            .any(|(k, v)| { k == "X-Form-Fatal-Kind" && v == "type_contract_violation" }));
+        assert!(headers.iter().any(|(k, v)| {
+            k == "X-Form-Crash-Trace" && v == ".cache/form-kernel-rust/crash-test.json"
+        }));
+    }
 }
 
 fn main_with_args(args: Vec<String>) -> i32 {
@@ -13830,6 +14354,7 @@ fn main_with_args(args: Vec<String>) -> i32 {
         "check" => cli_check(&args[1..]),
         _ => {
             // Source adapter: --expr or <file.fk> [more.fk ...]
+            let mut line_map: Vec<(String, u32)> = Vec::new();
             let src = if args[0] == "--expr" {
                 if args.len() < 2 {
                     eprintln!("--expr requires an argument");
@@ -13838,9 +14363,15 @@ fn main_with_args(args: Vec<String>) -> i32 {
                 args[1].clone()
             } else {
                 let mut parts = Vec::with_capacity(args.len());
+                let mut next_line = 1u32;
                 for path in &args {
                     match fs::read_to_string(path) {
-                        Ok(s) => parts.push(s),
+                        Ok(s) => {
+                            line_map.push((path.clone(), next_line));
+                            // +1 for the join newline between parts.
+                            next_line += s.matches('\n').count() as u32 + 1;
+                            parts.push(s);
+                        }
                         Err(e) => {
                             eprintln!("read {}: {}", path, e);
                             std::process::exit(1);
@@ -13855,7 +14386,7 @@ fn main_with_args(args: Vec<String>) -> i32 {
                 "source"
             };
             set_crash_trace_context(mode, &args, Some(&src));
-            let result = run_source(&src);
+            let result = run_source_mapped(&src, &line_map);
             println!("{}", result.display());
             0
         }
@@ -13912,6 +14443,14 @@ fn read_f64_le(bytes: &[u8], pos: usize) -> (f64, usize) {
     (f64::from_le_bytes(buf), pos + 8)
 }
 
+// read_i64_le — 8-byte signed int64 little-endian, the payload of a
+// FORM_BINARY_INT64 node. Sibling parity with Go/TS little-endian readers.
+fn read_i64_le(bytes: &[u8], pos: usize) -> (i64, usize) {
+    let mut buf = [0u8; 8];
+    buf.copy_from_slice(&bytes[pos..pos + 8]);
+    (i64::from_le_bytes(buf), pos + 8)
+}
+
 const FORM_BINARY_LEAF: u32 = 0;
 const FORM_BINARY_COMPOSITE: u32 = 1;
 // FLOAT64 carries its VALUE, not its index. A float64 trivial NodeID's `inst`
@@ -13922,6 +14461,11 @@ const FORM_BINARY_COMPOSITE: u32 = 1;
 // and it never rides the wire anyway: the value, not the index nor the local
 // type-tag, travels in bytes, so the .fkb stays portable by construction.
 const FORM_BINARY_FLOAT64: u32 = 2;
+// INT64 carries its VALUE, not its index — the same reasoning as FLOAT64. A
+// TRIV_INT64 NodeID's `inst` is a per-kernel i64s-table index, so an int64
+// node serializes as [FORM_BINARY_INT64][8 bytes signed little-endian] and
+// each kernel re-interns on read. Aligned three-way: tag = 3 across Rust/Go/TS.
+const FORM_BINARY_INT64: u32 = 3;
 
 fn serialize_nid(k: &Kernel, nid: NodeID, bytes: &mut Vec<u8>) {
     if let Some(recipe) = k.by_id.get(&nid) {
@@ -13934,6 +14478,9 @@ fn serialize_nid(k: &Kernel, nid: NodeID, bytes: &mut Vec<u8>) {
     } else if nid.level == LEVEL_TRIVIAL && nid.ty == TRIV_FLOAT64 {
         push_u32(bytes, FORM_BINARY_FLOAT64);
         bytes.extend_from_slice(&k.decode_float64(nid.inst).to_le_bytes());
+    } else if nid.level == LEVEL_TRIVIAL && nid.ty == TRIV_INT64 {
+        push_u32(bytes, FORM_BINARY_INT64);
+        bytes.extend_from_slice(&k.decode_int64(nid.inst).to_le_bytes());
     } else {
         push_u32(bytes, FORM_BINARY_LEAF);
         push_u32(bytes, nid.pkg);
@@ -13948,6 +14495,10 @@ fn deserialize_nid(k: &mut Kernel, bytes: &[u8], pos: usize, scope: u32) -> (Nod
     if tag == FORM_BINARY_FLOAT64 {
         let (value, p) = read_f64_le(bytes, p);
         return (k.intern_trivial_float64(value), p);
+    }
+    if tag == FORM_BINARY_INT64 {
+        let (value, p) = read_i64_le(bytes, p);
+        return (k.intern_trivial_int(value), p);
     }
     if tag == FORM_BINARY_LEAF {
         let (pkg, p) = read_u32(bytes, p);
@@ -14048,6 +14599,13 @@ fn deserialize_nid_with_strings(
         }
         let (value, p) = read_f64_le(bytes, p);
         return Ok((k.intern_trivial_float64(value), p));
+    }
+    if tag == FORM_BINARY_INT64 {
+        if p + 8 > bytes.len() {
+            return Err("form binary: truncated int64".to_string());
+        }
+        let (value, p) = read_i64_le(bytes, p);
+        return Ok((k.intern_trivial_int(value), p));
     }
     if tag == FORM_BINARY_LEAF {
         let (pkg, p) = read_u32(bytes, p);

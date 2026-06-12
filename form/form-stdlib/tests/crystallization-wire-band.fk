@@ -1,0 +1,66 @@
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk
+;
+; crystallization-wire-band — the m4e-jit wire's decision shape, proven
+; three-way: WHAT crystallizes at runtime (a transitively lowerable foreign
+; function whose measured heat crossed the hot line, when the toolchain
+; answered) and WHAT refuses (ports/organs by the fixpoint before any heat
+; counts; a toolchain refusal marks the function unlowerable for the run —
+; observable, never retried into a storm, never a wrong native). The live
+; binary face is measured in scripts/fourth_kernel_audit.sh section 27: a
+; foreign table the emitter never saw runs hot, the binary emits C FROM THE
+; LOADED CELLS, drives clang through the driver organ, dlopens, dispatch
+; flips, parity holds, and round-3's cycle melts it on cool.
+;
+; Verdict 31 when the wire's decision shape holds:
+;   1   the firing cell: lowerable AND past the hot line fires; at the line
+;       or unlowerable never fires
+;   2   the verdict cells: toolchain ok -> ice, can kept; toolchain refused
+;       -> no ice AND can drops to 0; no attempt leaves can untouched
+;   4   the load-time fixpoint on the section-27 foreign family: the driver
+;       (reaches the RAM organ through fn 3) and the cooler (SET) refuse;
+;       the loop and the pure odd-sum crystallize — impurity poisons
+;       transitively, purity survives the call edge
+;   8   the emission carries the wire FROM the cells: the cooling clock,
+;       the wire door in the freeze arm, the load-time fixpoint call, the
+;       clang phrase compiled from fkc-wire-clang, and the dlopen carrier
+;       all land in the universal binary's text
+;   16  the lowerer the binary carries IS fkc-nat-expr's algebra over rows:
+;       LIT doubles into tagged space, IF emits the else-then order, and
+;       the epoch body runs over the RUNTIME function count
+(do
+    (let c0 (if (eq (fkc-wire-fires 1 51 50) 1)
+                (if (eq (fkc-wire-fires 1 50 50) 0)
+                    (if (eq (fkc-wire-fires 0 999 50) 0) 1 0) 0) 0))
+
+    (let c1 (if (eq (fkc-wire-ice 1 1) 1)
+                (if (eq (fkc-wire-ice 1 0) 0)
+                    (if (eq (fkc-wire-can-after 1 1 1) 1)
+                        (if (eq (fkc-wire-can-after 1 0 1) 0)
+                            (if (eq (fkc-wire-can-after 0 1 1) 1) 2 0) 0) 0) 0) 0))
+
+    (let oddsum (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-lit 0)
+                       (fk-add (fk-sub (fk-add (fk-arg) (fk-arg)) (fk-lit 1))
+                               (fk-call 2 (fk-sub (fk-arg) (fk-lit 1))))))
+    (let loopA (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-lit 0)
+                      (fk-add (fk-call 2 (fk-lit 20)) (fk-call 1 (fk-sub (fk-arg) (fk-lit 1))))))
+    (let cool  (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-lit 0)
+                      (fk-add (fk-sub (fk-set (fk-lit 9) (fk-arg)) (fk-arg)) (fk-call 3 (fk-sub (fk-arg) (fk-lit 1))))))
+    (let driver (fk-add (fk-call 1 (fk-lit 40)) (fk-add (fk-call 3 (fk-lit 800)) (fk-call 2 (fk-lit 20)))))
+    (let can27 (fkc-can-list (list driver loopA oddsum cool)))
+    (let c2 (if (eq (nth can27 0) 0)
+                (if (eq (nth can27 1) 1)
+                    (if (eq (nth can27 2) 1)
+                        (if (eq (nth can27 3) 0) 4 0) 0) 0) 0))
+
+    (let uw (fkc-emit-uwire))
+    (let c3 (if (ge (str_find uw (fkc-jm-tick-cond-text) 0) 0)
+                (if (ge (str_find uw "if (fk_wire(f) == 1)" 0) 0)
+                    (if (ge (str_find uw "fk_canc(); " 0) 0)
+                        (if (ge (str_find uw (fkc-phrase "fk_pc" (fkc-wire-clang)) 0) 0)
+                            (if (ge (str_find uw "fk_dlh = dlopen(fk_fs, 2)" 0) 0) 8 0) 0) 0) 0) 0))
+
+    (let c4 (if (ge (str_find uw "fk_cd(fk_node[i][1] + fk_node[i][1])" 0) 0)
+                (if (ge (str_find uw "fk_lo(fk_node[i][3]); fk_ca(58); fk_lo(fk_node[i][2])" 0) 0)
+                    (if (ge (str_find uw "while (f < fk_nf) { if (fk_ice[f] == 2)" 0) 0) 16 0) 0) 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))

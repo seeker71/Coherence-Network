@@ -9,17 +9,42 @@
 ; band through the fs port: the fourth arm's band ratchet.
 ;
 ; Builds on form-parse.fk (the expression stone: a cursor over the source
-; string, no tokenizer — the BMF discipline). Scope held honestly: PURE bands
-; — nonnegative integer literals, single-param defns whose body sees only its
-; param, top-level lets, one verdict expression. eq/and lowering re-evaluates
-; pure operands; str_*, node_*, floats, nested do, and multi-param defns are
-; m4e4's family-by-family climb.
+; string, no tokenizer — the BMF discipline). Multi-param defns ride PACKED
+; ARGS (m4e4): an N-arg call right-folds its arguments into a CONS chain on
+; the arena, the callee's params bind as NTH(ARG, i) by position — a pure
+; flattening rule over the existing op set, no new walker tags. Single-param
+; calls stay direct ARG (no allocation); zero-param packs EMPTY. Nested
+; (do ...) is an EXPRESSION (m4e5): lets bind env for the rest of the do,
+; the last expression is the value — let-in-defn and do-in-do flatten by
+; the same structural recursion as the top level. Integer literals may be
+; negative; true/false flatten as 1/0; div/mod and the figure-ops family
+; (band/bor/bxor/shl_u32/shr_u32/rotr_u32/add_u32/bnot_u32/mul, tags 34..42)
+; are vocabulary rows — the checksum bands' unlock. Scope held honestly:
+; PURE bands — defn bodies that see only their params + do-lets, top-level
+; lets, one verdict expression. eq/and lowering and let-inlining re-evaluate
+; pure operands. Packed args ride the emitted walker's VALUE STACK
+; (fourth-walker-emit.fk: ARG reads fk_vs[fp], the melt roots and
+; relocates every stack slot), so band-scale allocation melts safely
+; mid-call — feature-vector's crossing is the witness (audit section 24).
+; The str_* family rides the walker string-pool lane (tags 24..28): a
+; pre-pass (flt-scan) interns every distinct "literal" into the program's
+; pool — same bytes, same slot — and a literal lowers to SLIT carrying its
+; pool index; str_eq/str_len/str_concat are table rows, ord/not are
+; lowerings. node_*, floats, and substring/int_to_str are the remaining
+; family-by-family climb.
 
 ; ── walker-carried ops as DATA rows (name arity tag) — one generic engine ──
+; (div/mod ride the m4d tags 10/11; the figure-ops family rides 34..42 —
+;  the bitwise-u32 + mul vocabulary the checksum bands need)
 (defn flt-ops ()
     (list (list "add" 2 3) (list "sub" 2 4) (list "le" 2 5)
           (list "cons" 2 19) (list "nth" 2 23)
-          (list "head" 1 20) (list "tail" 1 21) (list "len" 1 22)))
+          (list "head" 1 20) (list "tail" 1 21) (list "len" 1 22)
+          (list "str_len" 1 25) (list "str_eq" 2 26) (list "str_concat" 2 27)
+          (list "div" 2 10) (list "mod" 2 11)
+          (list "band" 2 34) (list "bor" 2 35) (list "bxor" 2 36)
+          (list "shl_u32" 2 37) (list "shr_u32" 2 38) (list "rotr_u32" 2 39)
+          (list "add_u32" 2 40) (list "bnot_u32" 1 41) (list "mul" 2 42)))
 
 (defn flt-assoc (name rows)
     (if (eq (len rows) 0) (list)
@@ -36,6 +61,9 @@
 (defn flt-ge (a b) (fk-le b a))
 (defn flt-eq (a b) (fk-if (fk-le a b) (fk-if (fk-le b a) (fk-lit 1) (fk-lit 0)) (fk-lit 0)))
 (defn flt-and (a b) (fk-if a (fk-if b (fk-lit 1) (fk-lit 0)) (fk-lit 0)))
+; unary lowerings: ord rides SCHAR at byte 0; not is the IF flip
+(defn flt-ord (a) (fk-schar a (fk-lit 0)))
+(defn flt-not (a) (fk-if a (fk-lit 0) (fk-lit 1)))
 
 ; ── words off the cursor ───────────────────────────────────────────────────
 (defn flt-word (s pos) (substring s pos (fp-sym-end s pos)))
@@ -49,11 +77,36 @@
 (defn flt-expr (s pos fns env) (flt-expr2 s (fp-skip s pos) fns env))
 (defn flt-expr2 (s pos fns env)
     (if (eq (fp-at s pos) 40) (flt-form s (fp-skip s (add pos 1)) fns env)
-        (if (fp-isdigit (fp-at s pos)) (fp-num (fp-digits s pos 0))
-            (flt-var s pos env))))
+        (if (eq (fp-at s pos) 34) (flt-str s (add pos 1) env)
+            (if (fp-isdigit (fp-at s pos)) (fp-num (fp-digits s pos 0))
+                (if (and (eq (fp-at s pos) 45) (fp-isdigit (fp-at s (add pos 1))))
+                    (flt-neg (fp-digits s (add pos 1) 0))
+                    (flt-var s pos env))))))
+
+; a '-' immediately before digits is a negative integer literal
+(defn flt-neg (ve) (list (fk-lit (sub 0 (nth ve 0))) (nth ve 1)))
+
+; ── string literals ride the pool: the pre-pass (flt-scan) interned every
+;    distinct literal, so a "..." at the cursor lowers to SLIT carrying its
+;    pool index; the pool itself travels in env under the quote-name (a name
+;    no symbol can collide with — '"' is the literal door, never a var) ─────
+(defn flt-strend (s pos)
+    (if (ge pos (fp-len s)) pos
+        (if (eq (fp-at s pos) 34) pos (flt-strend s (add pos 1)))))
+(defn flt-str (s pos env) (flt-str2 (substring s pos (flt-strend s pos)) (add (flt-strend s pos) 1) env))
+(defn flt-str2 (lit end env) (list (fk-slit (flt-sidx (flt-poolv env) lit 0) lit) end))
+(defn flt-poolq () (byte_to_str 34))
+(defn flt-pool-row (env) (flt-assoc (flt-poolq) env))
+(defn flt-poolv (env) (nth (flt-pool-row env) 1))
+(defn flt-sidx (pool lit i)
+    (if (eq (len pool) 0) (sub 0 1)
+        (if (str_eq (head pool) lit) i (flt-sidx (tail pool) lit (add i 1)))))
 
 (defn flt-var (s pos env) (flt-var2 (flt-word s pos) (fp-sym-end s pos) env))
-(defn flt-var2 (name end env) (list (flt-var3 (flt-assoc name env)) end))
+(defn flt-var2 (name end env)
+    (if (str_eq name "true") (list (fk-lit 1) end)
+        (if (str_eq name "false") (list (fk-lit 0) end)
+            (list (flt-var3 (flt-assoc name env)) end))))
 (defn flt-var3 (row) (if (eq (len row) 0) (fk-lit 0) (nth row 1)))
 
 (defn flt-form (s pos fns env) (flt-form2 (flt-word s pos) s (fp-sym-end s pos) fns env))
@@ -61,11 +114,45 @@
     (if (str_eq op "if") (flt-if s pos fns env)
     (if (str_eq op "list") (flt-list s pos fns env)
     (if (str_eq op "empty") (list (fk-empty) (fp-close s pos))
+    (if (str_eq op "do") (flt-do s pos fns env (fk-lit 0))
     (if (str_eq op "gt") (flt-low 1 s pos fns env)
     (if (str_eq op "ge") (flt-low 2 s pos fns env)
     (if (str_eq op "eq") (flt-low 3 s pos fns env)
     (if (str_eq op "and") (flt-low 4 s pos fns env)
-        (flt-op op s pos fns env)))))))))
+    (if (str_eq op "ord") (flt-low1 1 s pos fns env)
+    (if (str_eq op "not") (flt-low1 2 s pos fns env)
+        (flt-op op s pos fns env))))))))))))
+
+; one operand, then the unary lowering picked by selector k
+(defn flt-low1 (k s pos fns env) (flt-low1-a k s (flt-expr s pos fns env)))
+(defn flt-low1-a (k s ae) (list (flt-low1-mk k (nth ae 0)) (fp-close s (nth ae 1))))
+(defn flt-low1-mk (k a) (if (eq k 1) (flt-ord a) (flt-not a)))
+
+; ── nested (do ...) as an EXPRESSION (let-in-defn, do-in-do) ──────────────
+; The same structural recursion as the top-level do-walker, scoped to a
+; value position: each (let name v) binds its pure value cell into env for
+; the REST of the do (inlined at every use, m4e3's let discipline); the
+; last expression is the do's value. Nesting falls out of flt-expr — a
+; child that is itself (do ...) re-enters here with its own env tail.
+(defn flt-do (s pos fns env val) (flt-do2 s (fp-skip s pos) fns env val))
+(defn flt-do2 (s pos fns env val)
+    (if (ge pos (fp-len s)) (list val pos)
+    (if (eq (fp-at s pos) 41) (list val (add pos 1))
+    (if (str_eq (flt-peek s pos) "let") (flt-do-let s pos fns env val)
+        (flt-do-e s (flt-expr s pos fns env) fns env)))))
+(defn flt-do-e (s ee fns env) (flt-do2 s (fp-skip s (nth ee 1)) fns env (nth ee 0)))
+
+; (let name value) inside a do — value parses under the CURRENT env, then
+; binds for the remaining items (shadowing outer bindings by name)
+(defn flt-do-let (s pos fns env val)
+    (flt-do-let-n s (fp-skip s (fp-sym-end s (fp-skip s (add pos 1)))) fns env val))
+(defn flt-do-let-n (s pos fns env val)
+    (flt-do-let-v (flt-word s pos) s (fp-sym-end s pos) fns env val))
+(defn flt-do-let-v (name s pos fns env val)
+    (flt-do-let-done name s (flt-expr s pos fns env) fns env val))
+(defn flt-do-let-done (name s ve fns env val)
+    (flt-do2 s (fp-skip s (fp-close s (nth ve 1))) fns
+             (cons (list name (nth ve 0)) env) val))
 
 ; two operands, then the lowering picked by selector k (lowerings are rules,
 ; not tag rows — they BUILD shapes instead of naming one)
@@ -87,9 +174,25 @@
 (defn flt-bin (row s ae fns env) (flt-bin2 row s (nth ae 0) (flt-expr s (nth ae 1) fns env)))
 (defn flt-bin2 (row s a be) (list (flt-mkop row a (nth be 0)) (fp-close s (nth be 1))))
 
-(defn flt-call (fname s pos fns env) (flt-call2 (flt-assoc fname fns) s (flt-expr s pos fns env)))
-(defn flt-call2 (row s ae) (list (flt-call3 row (nth ae 0)) (fp-close s (nth ae 1))))
-(defn flt-call3 (row arg) (if (eq (len row) 0) (fk-lit 0) (fk-call (nth row 1) arg)))
+; ── user function calls: every argument until ')' parses, then the row's
+;    arity picks the carrier — arity 1 rides ARG direct (no allocation),
+;    any other arity right-folds the args into a CONS pack the callee
+;    unpacks by NTH position (multi-param-via-packed-args, m4e4) ──────────
+(defn flt-args (s pos fns env)
+    (if (eq (fp-at s (fp-skip s pos)) 41) (list (list) (add (fp-skip s pos) 1))
+        (flt-args2 s (flt-expr s pos fns env) fns env)))
+(defn flt-args2 (s ae fns env) (flt-args3 (nth ae 0) (flt-args s (nth ae 1) fns env)))
+(defn flt-args3 (a re) (list (cons a (nth re 0)) (nth re 1)))
+
+(defn flt-pack (args arity) (if (eq arity 1) (head args) (flt-pack2 args)))
+(defn flt-pack2 (args)
+    (if (eq (len args) 0) (fk-empty)
+        (fk-cons (head args) (flt-pack2 (tail args)))))
+
+(defn flt-call (fname s pos fns env) (flt-call2 (flt-assoc fname fns) (flt-args s pos fns env)))
+(defn flt-call2 (row ae) (list (flt-call3 row (nth ae 0)) (nth ae 1)))
+(defn flt-call3 (row args)
+    (if (eq (len row) 0) (fk-lit 0) (fk-call (nth row 1) (flt-pack args (nth row 2)))))
 
 (defn flt-if (s pos fns env) (flt-if-c s (flt-expr s pos fns env) fns env))
 (defn flt-if-c (s ce fns env) (flt-if-t s (nth ce 0) (flt-expr s (nth ce 1) fns env) fns env))
@@ -116,18 +219,37 @@
         (flt-main s (flt-expr s pos fns env) fns rbodies env))))))
 (defn flt-main (s ee fns rbodies env) (flt-items s (nth ee 1) fns rbodies env (nth ee 0)))
 
-; (defn name (param) body) — pos arrives at the form's '('
+; (defn name (p0 p1 ...) body) — pos arrives at the form's '('. The param
+; LIST reads whole first so the function row carries (name index arity)
+; BEFORE the body parses — self-recursion sees its own arity and packs.
+; The body env binds each param by position: arity 1 is ARG itself, any
+; other arity is NTH(ARG, i) into the packed CONS chain.
+(defn flt-params (s pos)
+    (if (eq (fp-at s (fp-skip s pos)) 41) (list (list) (add (fp-skip s pos) 1))
+        (flt-params2 s (fp-skip s pos))))
+(defn flt-params2 (s pos) (flt-params3 (flt-word s pos) (flt-params s (fp-sym-end s pos))))
+(defn flt-params3 (w re) (list (cons w (nth re 0)) (nth re 1)))
+
+; (`params` itself is a defn-grammar keyword, so the list rides as `ps`)
+(defn flt-penv (ps n i)
+    (if (eq (len ps) 0) (list)
+        (cons (list (head ps)
+                    (if (eq n 1) (fk-arg) (fk-nth (fk-arg) (fk-lit i))))
+              (flt-penv (tail ps) n (add i 1)))))
+
 (defn flt-defn (s pos fns rbodies env main)
     (flt-defn-n s (fp-skip s (fp-sym-end s (fp-skip s (add pos 1)))) fns rbodies env main))
 (defn flt-defn-n (s pos fns rbodies env main)
     (flt-defn-p (flt-word s pos) s (fp-sym-end s pos) fns rbodies env main))
 (defn flt-defn-p (name s pos fns rbodies env main)
-    (flt-defn-p2 name s (fp-skip s (add (fp-skip s pos) 1)) fns rbodies env main))
-(defn flt-defn-p2 (name s pos fns rbodies env main)
-    (flt-defn-b (flt-word s pos) s (add (fp-skip s (fp-sym-end s pos)) 1)
-                (cons (list name (add (len fns) 1)) fns) rbodies env main))
-(defn flt-defn-b (param s pos fns rbodies env main)
-    (flt-defn-done s (flt-expr s pos fns (list (list param (fk-arg)))) fns rbodies env main))
+    (flt-defn-p2 name s (flt-params s (add (fp-skip s pos) 1)) fns rbodies env main))
+(defn flt-defn-p2 (name s pe fns rbodies env main)
+    (flt-defn-b s (nth pe 1)
+                (cons (list name (add (len fns) 1) (len (nth pe 0))) fns)
+                (cons (flt-pool-row env) (flt-penv (nth pe 0) (len (nth pe 0)) 0))
+                rbodies env main))
+(defn flt-defn-b (s pos fns benv rbodies env main)
+    (flt-defn-done s (flt-expr s pos fns benv) fns rbodies env main))
 (defn flt-defn-done (s be fns rbodies env main)
     (flt-items s (fp-close s (nth be 1)) fns (cons (nth be 0) rbodies) env main))
 
@@ -141,11 +263,32 @@
 (defn flt-let-done (name s ve fns rbodies env main)
     (flt-items s (fp-close s (nth ve 1)) fns rbodies (cons (list name (nth ve 0)) env) main))
 
-; one source file's (do ...) — returns (fns rbodies main endpos)
-(defn flt-top (s fns rbodies)
-    (flt-top2 s (fp-skip s 0) fns rbodies))
-(defn flt-top2 (s pos fns rbodies)
-    (flt-items s (fp-sym-end s (fp-skip s (add pos 1))) fns rbodies (list) (fk-lit 0)))
+; one source file's (do ...) — returns (fns rbodies main endpos); env is
+; seeded with the program's string pool under the quote-name
+(defn flt-top (s fns rbodies pool)
+    (flt-top2 s (fp-skip s 0) fns rbodies pool))
+(defn flt-top2 (s pos fns rbodies pool)
+    (flt-items s (fp-sym-end s (fp-skip s (add pos 1))) fns rbodies
+               (list (list (flt-poolq) pool)) (fk-lit 0)))
+
+; ── the pool pre-pass: walk the source once (token jumps, comments and
+;    whitespace through fp-skip) and intern every DISTINCT "literal" in
+;    first-appearance order — the same order the parser meets them, so a
+;    literal's pool index is stable between flatten and serialization ──────
+(defn flt-scan (s pos acc) (flt-scan-at s (fp-skip s pos) acc))
+(defn flt-scan-at (s pos acc)
+    (if (ge pos (fp-len s)) acc
+        (if (eq (fp-at s pos) 34) (flt-scan-lit s (add pos 1) acc)
+            (flt-scan s (flt-scan-adv s pos) acc))))
+(defn flt-scan-adv (s pos)
+    (if (gt (fp-sym-end s pos) pos) (fp-sym-end s pos) (add pos 1)))
+(defn flt-scan-lit (s pos acc)
+    (flt-scan-lit2 s (flt-strend s pos) (substring s pos (flt-strend s pos)) acc))
+(defn flt-scan-lit2 (s end lit acc) (flt-scan s (add end 1) (flt-pool-add acc lit)))
+(defn flt-pool-add (pool lit)
+    (if (ge (flt-sidx pool lit 0) 0) pool (flt-append pool lit)))
+(defn flt-append (xs x)
+    (if (eq (len xs) 0) (cons x (list)) (cons (head xs) (flt-append (tail xs) x))))
 
 ; ── entry doors ────────────────────────────────────────────────────────────
 ; module source + band source -> the walker's function list (fn 0 = the
@@ -154,12 +297,18 @@
 ; load plain-Form preludes only)
 (defn flt-rev (xs acc)
     (if (eq (len xs) 0) acc (flt-rev (tail xs) (cons (head xs) acc))))
+; the pool doors mirror the fns doors: the SAME scan order feeds both, so a
+; SLIT row's index always names the right string-section entry
+(defn flt-band-pool (modsrc bandsrc) (flt-scan bandsrc 0 (flt-scan modsrc 0 (list))))
+(defn flt-src-pool (src) (flt-scan src 0 (list)))
 (defn flt-band-fns (modsrc bandsrc)
-    (flt-band2 (flt-top modsrc (list) (list)) bandsrc))
-(defn flt-band2 (mr bandsrc)
-    (flt-band3 (flt-top bandsrc (nth mr 0) (nth mr 1))))
+    (flt-band-fns2 modsrc bandsrc (flt-band-pool modsrc bandsrc)))
+(defn flt-band-fns2 (modsrc bandsrc pool)
+    (flt-band2 (flt-top modsrc (list) (list) pool) bandsrc pool))
+(defn flt-band2 (mr bandsrc pool)
+    (flt-band3 (flt-top bandsrc (nth mr 0) (nth mr 1) pool)))
 (defn flt-band3 (br)
     (cons (nth br 2) (flt-rev (nth br 1) (list))))
 
 ; single-source door (prelude-free bands, mini programs)
-(defn flt-src-fns (src) (flt-band3 (flt-top src (list) (list))))
+(defn flt-src-fns (src) (flt-band3 (flt-top src (list) (list) (flt-src-pool src))))

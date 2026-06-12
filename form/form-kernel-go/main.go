@@ -77,6 +77,35 @@ var (
 	socketNextHnd int64 = 0
 )
 
+// floorCharBoundary snaps a byte index down to the nearest UTF-8 char
+// boundary at or below it. The addressing natives (substring, char_at,
+// str_find) accept byte indices computed by recipes that step bytewise; an
+// index inside a multibyte char is answered with the boundary-snapped read.
+// Sibling parity with the Rust kernel's floor_char_boundary_idx.
+func floorCharBoundary(s string, i int) int {
+	if i > len(s) {
+		i = len(s)
+	}
+	for i > 0 && i < len(s) && !utf8.RuneStart(s[i]) {
+		i--
+	}
+	return i
+}
+
+// ceilCharBoundary snaps a byte index up to the nearest char boundary at or
+// above it. Search starts (str_find `from`) snap forward so a find-next loop
+// stepping +1 from a match advances past a multibyte char instead of
+// re-finding it forever. Sibling parity with Rust's ceil_char_boundary_idx.
+func ceilCharBoundary(s string, i int) int {
+	if i >= len(s) {
+		return len(s)
+	}
+	for i < len(s) && !utf8.RuneStart(s[i]) {
+		i++
+	}
+	return i
+}
+
 func socketRegister(v interface{}) int64 {
 	socketTableMu.Lock()
 	defer socketTableMu.Unlock()
@@ -156,6 +185,14 @@ const (
 	TrivString uint32 = 2
 	TrivBool   uint32 = 3
 	TrivNull   uint32 = 4
+	// INT64 — signed integer whose magnitude exceeds the 32-bit inst slot.
+	// Integer literals fit inline in TrivInt while |n| ≤ 2^31-1; once a
+	// literal (hash, address, large counter) crosses the int32 ceiling the
+	// inst carries an index into the kernel's `i64s` overflow table, exactly
+	// as FLOAT64 does with `f64s`. Both TrivInt and TrivInt64 decode to the
+	// same Value{VInt, int64}, so arithmetic stays a single uniform i64 path.
+	// Slot 5 is aligned three-way — Rust, Go, and TS all carry INT64 = 5.
+	TrivInt64 uint32 = 5
 	// FLOAT32 — IEEE 754 32-bit value stored inline; the inst field carries
 	// the IEEE bit pattern reinterpreted as u32. No overflow table needed.
 	// Matches sibling TS kernel's Triv.FLOAT32 = 6.
@@ -533,6 +570,11 @@ type Kernel struct {
 	// same NodeID. Mirrors Rust + TS sibling kernels.
 	f64s       []float64
 	f64Idx     map[uint64]uint32
+	// Int64 overflow table — the sibling of `f64s` for integers wider than the
+	// 32-bit inst slot. `i64Idx` is keyed by the value itself (integers are
+	// already canonical) so the same literal interns to the same NodeID.
+	i64s       []int64
+	i64Idx     map[int64]uint32
 	natives    map[NameID]NativeEntry
 	envNatives map[NameID]EnvAwareNativeEntry
 	// methods — the blueprint method table (BML/NUMS reference: methods live
@@ -551,6 +593,17 @@ type Kernel struct {
 	// surface: every cell's state traceable to the source line that
 	// authored it. The practice of self-knowing.
 	sourceAttr map[NodeID]sourceLoc
+	// formStack — the Form-level call chain currently live (closure and
+	// native names, innermost last; closure labels carry file:line:col
+	// when the body recipe is attributed). Pushed at dispatch, truncated
+	// on the walk's success path — so after a panic the frames that were
+	// live at the crash are still here for the recover site to surface.
+	formStack []string
+	// readingFiles — line map for the source currently being read:
+	// (file_name_id, first_global_line) per concatenated part. When
+	// non-empty, readSexpr attributes every parenthesized form so fatal
+	// diagnostics can name the Form source line.
+	readingFiles []readingPart
 	importSeq  uint32
 	// walkCache — JIT-vector memoization for pure recipes. Keyed by
 	// recipe NodeID. Real JIT replaces this with compiled native code;
@@ -606,6 +659,11 @@ type switchArm struct {
 	body    NodeID
 }
 
+type readingPart struct {
+	FileID    NameID
+	StartLine uint32
+}
+
 type sourceLoc struct {
 	FileID NameID
 	Line   uint32
@@ -622,6 +680,7 @@ func NewKernel() *Kernel {
 		walkCache:       make(map[NodeID]Value),
 		next:            1,
 		f64Idx:          make(map[uint64]uint32),
+		i64Idx:          make(map[int64]uint32),
 		natives:         make(map[NameID]NativeEntry),
 		envNatives:      make(map[NameID]EnvAwareNativeEntry),
 		methods:         make(map[methodKey]*Closure),
@@ -730,7 +789,28 @@ func (k *Kernel) intern(category NodeID, children []NodeID) NodeID {
 }
 
 func (k *Kernel) internTrivialInt(n int64) NodeID {
-	return NodeID{Pkg: 1, Level: LevelTrivial, Type: TrivInt, Inst: uint32(int32(n))}
+	// Inline while the value fits the 32-bit inst slot; overflow into `i64s`
+	// once it crosses the int32 ceiling (mirrors internTrivialFloat64). Both
+	// paths decode back to Value{VInt, int64} in trivialValue, so callers and
+	// arithmetic never see the storage split.
+	if n >= math.MinInt32 && n <= math.MaxInt32 {
+		return NodeID{Pkg: 1, Level: LevelTrivial, Type: TrivInt, Inst: uint32(int32(n))}
+	}
+	if idx, ok := k.i64Idx[n]; ok {
+		return NodeID{Pkg: 1, Level: LevelTrivial, Type: TrivInt64, Inst: idx}
+	}
+	idx := uint32(len(k.i64s))
+	k.i64s = append(k.i64s, n)
+	k.i64Idx[n] = idx
+	return NodeID{Pkg: 1, Level: LevelTrivial, Type: TrivInt64, Inst: idx}
+}
+
+// decodeInt64 — read back the value from the i64 overflow table.
+func (k *Kernel) decodeInt64(inst uint32) int64 {
+	if int(inst) >= len(k.i64s) {
+		panic(fmt.Sprintf("decodeInt64: bad index %d", inst))
+	}
+	return k.i64s[inst]
 }
 
 // internTrivialFloat32 — IEEE 754 32-bit inline encoding. The float's bit
@@ -1154,6 +1234,8 @@ func (k *Kernel) trivialValue(n NodeID) Value {
 	switch n.Type {
 	case TrivInt:
 		return Value{Kind: VInt, Int: int64(int32(n.Inst))}
+	case TrivInt64:
+		return Value{Kind: VInt, Int: k.decodeInt64(n.Inst)}
 	case TrivString:
 		return Value{Kind: VStr, Str: k.strs[n.Inst]}
 	case TrivBool:
@@ -1184,6 +1266,52 @@ func (k *Kernel) identID(n NodeID) NameID {
 // nameStr — resolve a NameID back to its source-level string. Error
 // messages and parse-time only; never in the walker's hot path.
 func (k *Kernel) nameStr(id NameID) string { return k.strs[id] }
+
+// resolveReadingLine — map a global line in the concatenated read buffer
+// back to (file_name_id, line_within_that_file). Entries are in
+// concatenation order; the last entry at or before the line owns it.
+func (k *Kernel) resolveReadingLine(globalLine uint32) (NameID, uint32, bool) {
+	var fileID NameID
+	var local uint32
+	found := false
+	for _, part := range k.readingFiles {
+		if part.StartLine <= globalLine {
+			fileID = part.FileID
+			local = globalLine - part.StartLine + 1
+			found = true
+		} else {
+			break
+		}
+	}
+	return fileID, local, found
+}
+
+// formStackDisplay — the live Form call chain, innermost first, capped.
+func (k *Kernel) formStackDisplay(max int) string {
+	if len(k.formStack) == 0 {
+		return ""
+	}
+	total := len(k.formStack)
+	var frames []string
+	for i := total - 1; i >= 0 && len(frames) < max; i-- {
+		frames = append(frames, k.formStack[i])
+	}
+	out := strings.Join(frames, " < ")
+	if total > max {
+		out += fmt.Sprintf(" … (+%d more)", total-max)
+	}
+	return out
+}
+
+// formFrameLabel — a closure frame's display label: the function name,
+// plus file:line:col when the body recipe carries source attribution.
+func (k *Kernel) formFrameLabel(name NameID, body NodeID) string {
+	label := k.nameStr(name)
+	if loc, ok := k.sourceAttr[body]; ok && int(loc.FileID) < len(k.strs) {
+		label = fmt.Sprintf("%s@%s:%d:%d", label, k.strs[loc.FileID], loc.Line, loc.Col)
+	}
+	return label
+}
 
 // ---------------------------------------------------------------------------
 // Values — runtime tagged values
@@ -1811,7 +1939,10 @@ func (k *Kernel) registerNatives() {
 				len(s),
 			))
 		}
-		return Value{Kind: VStr, Str: s[a:b]}
+		// Both ends floor to char boundaries (sibling parity with the Rust
+		// kernel): the adjacency law substring(s,a,m)+substring(s,m,b) ==
+		// substring(s,a,b) holds for any m, and the window is valid UTF-8.
+		return Value{Kind: VStr, Str: s[floorCharBoundary(s, int(a)):floorCharBoundary(s, int(b))]}
 	})
 	k.registerNative("char_at", catAccess(), func(_ *Kernel, args []Value) Value {
 		s := args[0].Str
@@ -1819,7 +1950,14 @@ func (k *Kernel) registerNatives() {
 		if i < 0 || i >= int64(len(s)) {
 			panic(fmt.Sprintf("char_at: bounds out of range index=%d len=%d", i, len(s)))
 		}
-		return Value{Kind: VStr, Str: string(s[i])}
+		// At a char start: the whole char. Inside a multibyte char: nothing —
+		// a bytewise loop concatenating char_at over 0..str_len reconstructs
+		// the string exactly, once per char. Sibling parity with Rust.
+		if !utf8.RuneStart(s[i]) {
+			return Value{Kind: VStr, Str: ""}
+		}
+		r, _ := utf8.DecodeRuneInString(s[i:])
+		return Value{Kind: VStr, Str: string(r)}
 	})
 	k.registerNative("str_concat", catMethod(), func(_ *Kernel, args []Value) Value {
 		return Value{Kind: VStr, Str: args[0].Str + args[1].Str}
@@ -1859,7 +1997,7 @@ func (k *Kernel) registerNatives() {
 	//
 	// record_new — (record_new blueprint k1 v1 k2 v2 ...) → Record.
 	k.registerNative("record_new", catMethod(), func(k *Kernel, args []Value) Value {
-		rec := &Record{Blueprint: args[0].Nid}
+		rec := &Record{Blueprint: args[0].AsNid()}
 		i := 1
 		for i+1 < len(args) {
 			rec.Set(k.internName(args[i].Str), args[i+1])
@@ -1911,7 +2049,7 @@ func (k *Kernel) registerNatives() {
 		if args[2].Kind != VClosure {
 			panic("method_define: third arg must be a closure")
 		}
-		k.methods[methodKey{args[0].Nid, k.internName(args[1].Str)}] = args[2].Cl
+		k.methods[methodKey{args[0].AsNid(), k.internName(args[1].Str)}] = args[2].Cl
 		return args[0]
 	})
 	// method_has — (method_has record-or-blueprint "name") → bool.
@@ -1974,6 +2112,7 @@ func (k *Kernel) registerNatives() {
 		if from > len(s) {
 			return Value{Kind: VInt, Int: -1}
 		}
+		from = ceilCharBoundary(s, from)
 		idx := strings.Index(s[from:], needle)
 		if idx < 0 {
 			return Value{Kind: VInt, Int: -1}
@@ -2146,6 +2285,18 @@ func (k *Kernel) registerNatives() {
 	k.registerNative("str_to_float", catMethod(), func(_ *Kernel, args []Value) Value {
 		f, _ := strconv.ParseFloat(args[0].Str, 64)
 		return Value{Kind: VFloat, Float: f}
+	})
+	// float_to_int — truncate a float toward zero, exactly Python's int() on a
+	// float. Total: a non-number -> 0. Sibling parity with the Rust kernel's
+	// float_to_int (Go int64(f) truncates toward zero for both signs).
+	k.registerNative("float_to_int", catMethod(), func(_ *Kernel, args []Value) Value {
+		switch args[0].Kind {
+		case VFloat:
+			return Value{Kind: VInt, Int: int64(args[0].Float)}
+		case VInt:
+			return Value{Kind: VInt, Int: args[0].Int}
+		}
+		return Value{Kind: VInt, Int: 0}
 	})
 	k.registerNative("ord", catAccess(), func(_ *Kernel, args []Value) Value {
 		if len(args[0].Str) == 0 {
@@ -2718,7 +2869,7 @@ func (k *Kernel) registerNatives() {
 	//   Serializes a Recipe subtree to the .fkb wire format as a byte
 	//   list — usable over any byte channel without a file detour.
 	k.registerNative("recipe_to_bytes", catWitness(), func(k *Kernel, args []Value) Value {
-		bytes := serializeArtifact(k, args[0].Nid)
+		bytes := serializeArtifact(k, args[0].AsNid())
 		out := make([]Value, len(bytes))
 		for i, b := range bytes {
 			out[i] = Value{Kind: VInt, Int: int64(b)}
@@ -2974,7 +3125,7 @@ func (k *Kernel) registerNatives() {
 	// fresh string tables on load. This format embeds the strings.
 	k.registerNative("write_form_binary", catCall(), func(k *Kernel, args []Value) Value {
 		path := resolveKernelHostPath(args[0].Str)
-		nid := args[1].Nid
+		nid := args[1].AsNid()
 		bytes := serializeArtifact(k, nid)
 		if err := os.WriteFile(path, bytes, 0644); err != nil {
 			return Value{Kind: VInt, Int: -1}
@@ -3432,10 +3583,10 @@ func (k *Kernel) registerNatives() {
 	})
 
 	k.registerNative("intern_node", catWitness(), func(k *Kernel, args []Value) Value {
-		cat := args[0].Nid
+		cat := args[0].AsNid()
 		kids := make([]NodeID, len(args[1].List))
 		for i, c := range args[1].List {
-			kids[i] = c.Nid
+			kids[i] = c.AsNid()
 		}
 		return Value{Kind: VNodeID, Nid: k.intern(cat, kids)}
 	})
@@ -3501,10 +3652,10 @@ func (k *Kernel) registerNatives() {
 		return Value{Kind: VList, List: k.substrateGC(args[0].List, nil)}
 	})
 	k.registerNative("node_category", catWitness(), func(k *Kernel, args []Value) Value {
-		return Value{Kind: VNodeID, Nid: k.category(args[0].Nid)}
+		return Value{Kind: VNodeID, Nid: k.category(args[0].AsNid())}
 	})
 	k.registerNative("node_children", catWitness(), func(k *Kernel, args []Value) Value {
-		kids := k.children(args[0].Nid)
+		kids := k.children(args[0].AsNid())
 		out := make([]Value, len(kids))
 		for i, c := range kids {
 			out[i] = Value{Kind: VNodeID, Nid: c}
@@ -3512,19 +3663,19 @@ func (k *Kernel) registerNatives() {
 		return Value{Kind: VList, List: out}
 	})
 	k.registerNative("node_value", catWitness(), func(k *Kernel, args []Value) Value {
-		return k.trivialValue(args[0].Nid)
+		return k.trivialValue(args[0].AsNid())
 	})
 	k.registerNative("node_pkg", catWitness(), func(_ *Kernel, args []Value) Value {
-		return Value{Kind: VInt, Int: int64(args[0].Nid.Pkg)}
+		return Value{Kind: VInt, Int: int64(args[0].AsNid().Pkg)}
 	})
 	k.registerNative("node_level", catWitness(), func(_ *Kernel, args []Value) Value {
-		return Value{Kind: VInt, Int: int64(args[0].Nid.Level)}
+		return Value{Kind: VInt, Int: int64(args[0].AsNid().Level)}
 	})
 	k.registerNative("node_type", catWitness(), func(_ *Kernel, args []Value) Value {
-		return Value{Kind: VInt, Int: int64(args[0].Nid.Type)}
+		return Value{Kind: VInt, Int: int64(args[0].AsNid().Type)}
 	})
 	k.registerNative("node_inst", catWitness(), func(_ *Kernel, args []Value) Value {
-		return Value{Kind: VInt, Int: int64(args[0].Nid.Inst)}
+		return Value{Kind: VInt, Int: int64(args[0].AsNid().Inst)}
 	})
 	// node_eq — compare two NodeIDs structurally. Sibling to Rust's node_eq.
 	// Form code (emit-engine.fk lookup-template) uses this for category
@@ -3557,11 +3708,11 @@ func (k *Kernel) registerNatives() {
 	// state is traceable back to the recipe lines that authored it.
 	// Args: (category, children, file_string, line_int, col_int)
 	k.registerNative("intern_node_at", catWitness(), func(k *Kernel, args []Value) Value {
-		cat := args[0].Nid
+		cat := args[0].AsNid()
 		kidsV := args[1].List
 		kids := make([]NodeID, len(kidsV))
 		for i, c := range kidsV {
-			kids[i] = c.Nid
+			kids[i] = c.AsNid()
 		}
 		nid := k.intern(cat, kids)
 		fileNid := k.internString(args[2].Str)
@@ -3576,7 +3727,7 @@ func (k *Kernel) registerNatives() {
 	// node_source — read back a Recipe's source attribution.
 	// Returns (list file_string line col) or empty list if none recorded.
 	k.registerNative("node_source", catWitness(), func(k *Kernel, args []Value) Value {
-		loc, ok := k.sourceAttr[args[0].Nid]
+		loc, ok := k.sourceAttr[args[0].AsNid()]
 		if !ok {
 			return Value{Kind: VList, List: []Value{}}
 		}
@@ -3671,7 +3822,7 @@ func (k *Kernel) registerNatives() {
 	// NodeID is reconstructed at deserialize via intern.
 	k.registerNative("serialize-recipe", catWitness(), func(k *Kernel, args []Value) Value {
 		bytes := []byte{}
-		bytes = serializeNid(k, args[0].Nid, bytes)
+		bytes = serializeNid(k, args[0].AsNid(), bytes)
 		out := make([]Value, len(bytes))
 		for i, b := range bytes {
 			out[i] = Value{Kind: VInt, Int: int64(b)}
@@ -3739,14 +3890,14 @@ func (k *Kernel) registerNatives() {
 	})
 	// walk-cached — JIT-vector memoization. Caller asserts purity.
 	k.registerNative("walk-cached", catWitness(), func(k *Kernel, args []Value) Value {
-		if v, ok := k.walkCache[args[0].Nid]; ok {
+		if v, ok := k.walkCache[args[0].AsNid()]; ok {
 			k.walkCacheHits++
 			return v
 		}
 		k.walkCacheMisses++
 		env := NewFrame(nil)
-		v := k.walk(args[0].Nid, env)
-		k.walkCache[args[0].Nid] = v
+		v := k.walk(args[0].AsNid(), env)
+		k.walkCache[args[0].AsNid()] = v
 		return v
 	})
 	k.registerNative("walk-cache-clear", catWitness(), func(k *Kernel, _ []Value) Value {
@@ -3815,7 +3966,7 @@ func (k *Kernel) registerNatives() {
 	})
 	k.registerNative("walk_recipe", catWitness(), func(k *Kernel, args []Value) Value {
 		env := NewFrame(nil)
-		return k.walk(args[0].Nid, env)
+		return k.walk(args[0].AsNid(), env)
 	})
 	// walk_recipe_here — walks a Recipe in the CALLER's env, so let-
 	// bindings inside the Recipe land in the caller's scope. This is
@@ -3830,8 +3981,8 @@ func (k *Kernel) registerNatives() {
 		// aren't reachable from the source-parsed root, so without this pin
 		// a subsequent substrate_gc would sweep them and leave the env
 		// holding closures with deleted bodies.
-		k.activeRoots = append(k.activeRoots, args[0].Nid)
-		return k.walk(args[0].Nid, env)
+		k.activeRoots = append(k.activeRoots, args[0].AsNid())
+		return k.walk(args[0].AsNid(), env)
 	})
 	walkParallel := func(k *Kernel, args []Value) Value {
 		roots := make([]NodeID, len(args[0].List))
@@ -4010,6 +4161,21 @@ func (k *Kernel) registerNatives() {
 	k.registerNative("now_unix_ms", catCall(), func(_ *Kernel, _ []Value) Value {
 		return Value{Kind: VInt, Int: time.Now().UnixMilli()}
 	})
+
+	// `temp_dir` — the host's scratch directory: TMPDIR when the carrier
+	// names one, /tmp otherwise (no trailing slash). External read (host
+	// env) so it's catCall. The door that lets a band's scratch files land
+	// in per-leg space: validate.sh points each sibling kernel at its own
+	// TMPDIR, so concurrent legs never share a scratch path. Sibling
+	// parity holds on shape, NOT on value — each leg's dir differs by
+	// design; bands fold the path into effects, never into the verdict.
+	k.registerNative("temp_dir", catCall(), func(_ *Kernel, _ []Value) Value {
+		dir := os.Getenv("TMPDIR")
+		if dir == "" {
+			dir = "/tmp"
+		}
+		return Value{Kind: VStr, Str: strings.TrimRight(dir, "/")}
+	})
 }
 
 // Category constructors for native attribution live further down alongside
@@ -4023,6 +4189,16 @@ func (k *Kernel) registerNatives() {
 // ---------------------------------------------------------------------------
 
 func (k *Kernel) walk(n NodeID, env *Frame) Value {
+	// One Form-stack slot per host walk invocation (see walkInner's closure
+	// arm). The truncation runs only on the success path — a panic leaves
+	// the live frames in place for the recover site to read.
+	depth := len(k.formStack)
+	v := k.walkInner(n, env)
+	k.formStack = k.formStack[:depth]
+	return v
+}
+
+func (k *Kernel) walkInner(n NodeID, env *Frame) Value {
 	// Tail-call optimization: a tail-position call — a closure body, a cond
 	// branch, or a do-block's last expr — reassigns n/env and loops here
 	// instead of recursing, so tail-recursive Form loops (gm-rep-loop,
@@ -4031,6 +4207,10 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 	// not. Result-transparent — identical values to plain recursion, far less
 	// stack (a long member/statement list no longer recurses N-deep), which is
 	// what lets the strictest kernel parse the full thesis grammar files.
+	// myFrame — index of this walk invocation's Form-stack slot, -1 until
+	// a closure is entered. TCO re-entry REPLACES the slot (the tail
+	// caller's frame is complete), mirroring the host stack's collapse.
+	myFrame := -1
 	for {
 		if n.Level == LevelTrivial {
 			return k.trivialValue(n)
@@ -4264,7 +4444,10 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 						k.Trace.recordNative(k.nameStr(ne.Name))
 					}
 					k.observeNamedDispatch("observe/go/native-dispatch", ne.Name)
-					return ne.Fn(k, env, args)
+					k.formStack = append(k.formStack, k.nameStr(ne.Name))
+					v := ne.Fn(k, env, args)
+					k.formStack = k.formStack[:len(k.formStack)-1]
+					return v
 				}
 			}
 			// Native takes priority unless user shadowed with a closure.
@@ -4281,7 +4464,10 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 						k.Trace.recordNative(k.nameStr(ne.Name))
 					}
 					k.observeNamedDispatch("observe/go/native-dispatch", ne.Name)
-					return ne.Fn(k, args)
+					k.formStack = append(k.formStack, k.nameStr(ne.Name))
+					v := ne.Fn(k, args)
+					k.formStack = k.formStack[:len(k.formStack)-1]
+					return v
 				}
 			}
 			// Closure lookup uses the original function name so user code stays
@@ -4396,6 +4582,12 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 				k.Trace.recordFn(k.nameStr(cl.Name))
 			}
 			k.observeNamedDispatch("observe/go/function-dispatch", cl.Name)
+			if label := k.formFrameLabel(cl.Name, cl.Body); myFrame >= 0 && myFrame < len(k.formStack) {
+				k.formStack[myFrame] = label
+			} else {
+				myFrame = len(k.formStack)
+				k.formStack = append(k.formStack, label)
+			}
 			n = cl.Body // TCO: closure body is in tail position.
 			env = call
 			continue
@@ -4420,8 +4612,11 @@ func (k *Kernel) walk(n NodeID, env *Frame) Value {
 }
 
 func (k *Kernel) walkChoiceBranch(branch NodeID, env *Frame) (value Value, ok bool, stopped bool) {
+	depth := len(k.formStack)
 	defer func() {
 		if r := recover(); r != nil {
+			// A swallowed branch failure must not leave its frames behind.
+			k.formStack = k.formStack[:depth]
 			switch r.(type) {
 			case choiceFailSignal:
 				value = Value{Kind: VNull}
@@ -4827,7 +5022,18 @@ func (k *Kernel) readSexpr(toks []sexpToken, i int) (NodeID, int) {
 			args = append(args, arg)
 			i = ni
 		}
-		return k.buildVerb(verb, args), i
+		node := k.buildVerb(verb, args)
+		// Source attribution at read time: every parenthesized form
+		// remembers the file:line:col of its opening paren, so a fatal
+		// mid-walk can name the Form source line. Content-addressing
+		// means a shape interned from two sites keeps its FIRST
+		// authoring site.
+		if fileID, localLine, ok := k.resolveReadingLine(uint32(openLine)); ok {
+			if _, exists := k.sourceAttr[node]; !exists {
+				k.sourceAttr[node] = sourceLoc{FileID: fileID, Line: localLine, Col: uint32(openCol)}
+			}
+		}
+		return node, i
 	}
 	panic(fmt.Sprintf("parse error at line %d col %d: unexpected token %s %q", t.line, t.col, t.kind, t.value))
 }
@@ -4991,6 +5197,86 @@ func kernelSourceLineCount(src string) int {
 	return strings.Count(src, "\n") + 1
 }
 
+type kernelCrashDiagnosis struct {
+	fatalKind       string
+	likelyRootCause string
+	avoidance       string
+}
+
+func diagnoseKernelPanic(message string) kernelCrashDiagnosis {
+	lower := strings.ToLower(message)
+	switch {
+	case strings.Contains(lower, "as_str") ||
+		strings.Contains(lower, "argstr") ||
+		strings.Contains(lower, "expected string") ||
+		strings.Contains(lower, "string"):
+		return kernelCrashDiagnosis{
+			fatalKind:       "type_contract_violation",
+			likelyRootCause: "a Form/native recipe passed a non-string value to a string-only primitive",
+			avoidance:       "guard with value_kind/value-kind, convert with value_str, or use null-safe JSON constructors before calling string primitives",
+		}
+	case strings.Contains(lower, "as_int") ||
+		strings.Contains(lower, "argint") ||
+		strings.Contains(lower, "expected int") ||
+		strings.Contains(lower, "wrong primitive kind"):
+		return kernelCrashDiagnosis{
+			fatalKind:       "type_contract_violation",
+			likelyRootCause: "a Form/native recipe passed a value with the wrong primitive kind to a typed host boundary",
+			avoidance:       "validate the value kind before the native call, or route through an explicit conversion recipe",
+		}
+	case strings.Contains(lower, "unbound"):
+		return kernelCrashDiagnosis{
+			fatalKind:       "name_resolution_error",
+			likelyRootCause: "a recipe or route manifest referenced a name that was not bound in the loaded source/prelude set",
+			avoidance:       "run the route/source check gate and include the defining prelude before serving the manifest",
+		}
+	case strings.Contains(lower, "arity") ||
+		strings.Contains(lower, "wants") ||
+		strings.Contains(lower, "argument"):
+		return kernelCrashDiagnosis{
+			fatalKind:       "arity_contract_violation",
+			likelyRootCause: "a closure or native was called with a different argument count than its declaration accepts",
+			avoidance:       "align the call site with the function signature or add an adapter recipe at the boundary",
+		}
+	case strings.Contains(lower, "bounds") ||
+		strings.Contains(lower, "range") ||
+		strings.Contains(lower, "index"):
+		return kernelCrashDiagnosis{
+			fatalKind:       "bounds_violation",
+			likelyRootCause: "a recipe indexed outside the observed collection/string bounds",
+			avoidance:       "check length/bounds before indexing or use a boundary-aware recipe that returns an explicit error value",
+		}
+	case strings.Contains(lower, "source-compile") ||
+		strings.Contains(lower, "parse error"):
+		return kernelCrashDiagnosis{
+			fatalKind:       "source_compile_failure",
+			likelyRootCause: "source text could not be lowered into a valid Form recipe before execution",
+			avoidance:       "run the source compiler/check command and repair the reported source coordinate before serving",
+		}
+	default:
+		return kernelCrashDiagnosis{
+			fatalKind:       "kernel_panic",
+			likelyRootCause: "the kernel crossed an unchecked host-language panic boundary",
+			avoidance:       "inspect the trace stack and source excerpt, then move the failing boundary into a checked fatal/error return",
+		}
+	}
+}
+
+func kernelFatalHTTPBody(message string, diagnosis kernelCrashDiagnosis, tracePath string) string {
+	trace := tracePath
+	if trace == "" {
+		trace = "trace unavailable"
+	}
+	return fmt.Sprintf(
+		"fatal[%s]: %s\nlikely_root_cause: %s\navoidance: %s\ntrace: %s\n",
+		diagnosis.fatalKind,
+		message,
+		diagnosis.likelyRootCause,
+		diagnosis.avoidance,
+		trace,
+	)
+}
+
 func kernelModeFromArgs(args []string) string {
 	if len(args) == 0 {
 		return "startup"
@@ -5015,7 +5301,21 @@ func kernelModeFromArgs(args []string) string {
 	}
 }
 
-func writeKernelCrashTrace(args []string, src string, recovered any) string {
+// formStackInnermostFirst — reverse the live stack for the trace record
+// so the first entry answers "where exactly" (sibling to Rust's form_stack).
+func formStackInnermostFirst(stack []string) []string {
+	out := make([]string, 0, len(stack))
+	for i := len(stack) - 1; i >= 0; i-- {
+		out = append(out, stack[i])
+	}
+	return out
+}
+
+func writeKernelCrashTrace(args []string, src string, recovered any, formStack []string) string {
+	return writeKernelCrashTraceWithContext(args, src, recovered, "", "", formStack)
+}
+
+func writeKernelCrashTraceWithContext(args []string, src string, recovered any, sourceLabel string, operation string, formStack []string) string {
 	dir := filepath.Join(".cache", "form-kernel-go")
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		dir = os.TempDir()
@@ -5028,15 +5328,24 @@ func writeKernelCrashTrace(args []string, src string, recovered any) string {
 	if tailStart < 0 {
 		tailStart = 0
 	}
+	message := fmt.Sprint(recovered)
+	diagnosis := diagnoseKernelPanic(message)
 	report := map[string]any{
 		"when_utc":          time.Now().UTC().Format(time.RFC3339Nano),
 		"pid":               os.Getpid(),
 		"mode":              kernelModeFromArgs(args),
 		"args":              args,
-		"panic":             fmt.Sprint(recovered),
+		"fatal_kind":        diagnosis.fatalKind,
+		"fatal_message":     message,
+		"panic":             message,
+		"likely_root_cause": diagnosis.likelyRootCause,
+		"avoidance":         diagnosis.avoidance,
+		"source_label":      sourceLabel,
+		"operation":         operation,
 		"source_bytes":      len(src),
 		"source_line_count": kernelSourceLineCount(src),
 		"source_head":       kernelSourceExcerpt(src, 2000),
+		"form_stack":        formStackInnermostFirst(formStack),
 		"source_tail":       src[tailStart:],
 		"go_stack":          string(debug.Stack()),
 	}
@@ -5058,6 +5367,12 @@ func main() {
 	}
 
 	var src string
+	var crashK *Kernel
+	type lineMapPart struct {
+		path      string
+		startLine uint32
+	}
+	var lineMapParts []lineMapPart
 
 	// Catch parse-time and walk-time panics and convert them to clean error
 	// output. The trace file keeps the host stack and source excerpt for
@@ -5065,7 +5380,17 @@ func main() {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Fprintf(os.Stderr, "form-kernel-go: %v\n", r)
-			if tracePath := writeKernelCrashTrace(args, src, r); tracePath != "" {
+			var stack []string
+			if crashK != nil {
+				stack = crashK.formStack
+				// The Form-level call chain live at the crash, innermost
+				// first — the line that produced the fatal is the innermost
+				// attributed frame.
+				if display := crashK.formStackDisplay(16); display != "" {
+					fmt.Fprintf(os.Stderr, "form-kernel-go: form stack: %s\n", display)
+				}
+			}
+			if tracePath := writeKernelCrashTrace(args, src, r, stack); tracePath != "" {
 				fmt.Fprintf(os.Stderr, "form-kernel-go: crash trace: %s\n", tracePath)
 			}
 			os.Exit(1)
@@ -5139,21 +5464,32 @@ func main() {
 		// Multiple files load sequentially into a shared top-level scope.
 		// Concatenation works because the kernel wraps multi-form input in
 		// an implicit do-block — definitions from earlier files become
-		// visible to later ones.
+		// visible to later ones. The line map remembers each file's first
+		// global line so read-time attribution names the ORIGINAL file:line.
 		var parts []string
+		nextLine := uint32(1)
 		for _, path := range args {
 			b, err := os.ReadFile(path)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "read %s: %v\n", path, err)
 				os.Exit(1)
 			}
-			parts = append(parts, string(b))
+			s := string(b)
+			lineMapParts = append(lineMapParts, lineMapPart{path: path, startLine: nextLine})
+			// +1 for the join newline between parts.
+			nextLine += uint32(strings.Count(s, "\n")) + 1
+			parts = append(parts, s)
 		}
 		src = strings.Join(parts, "\n")
 	}
 
 	k := NewKernel()
+	crashK = k
+	for _, part := range lineMapParts {
+		k.readingFiles = append(k.readingFiles, readingPart{FileID: k.internName(part.path), StartLine: part.startLine})
+	}
 	root := readRootFromSource(k, src)
+	k.readingFiles = nil
 	if args[0] == "--emit-binary" {
 		if err := os.WriteFile(args[1], serializeArtifact(k, root), 0644); err != nil {
 			fmt.Fprintf(os.Stderr, "write %s: %v\n", args[1], err)
@@ -5360,6 +5696,11 @@ const (
 	// the local type-tag, so the .fkb stays portable regardless of how each
 	// kernel numbers its trivial types.
 	formBinaryFloat64 uint32 = 2
+	// INT64 carries its VALUE, not its index — the same reasoning as FLOAT64.
+	// A TrivInt64 NodeID's Inst is a per-kernel i64s-table index, meaningless
+	// in another kernel, so an int64 node serializes as [formBinaryInt64][8
+	// bytes signed little-endian] and each kernel re-interns on read.
+	formBinaryInt64 uint32 = 3
 )
 
 func pushU32(bytes []byte, v uint32) []byte {
@@ -5395,6 +5736,27 @@ func readF64LE(bytes []byte, pos int) (float64, int) {
 	return math.Float64frombits(bits), pos + 8
 }
 
+// pushI64LE / readI64LE — a signed int64 as 8 little-endian bytes (the payload
+// of a formBinaryInt64 node). Sibling parity with Rust/TS little-endian writers.
+func pushI64LE(bytes []byte, n int64) []byte {
+	u := uint64(n)
+	return append(bytes,
+		byte(u), byte(u>>8), byte(u>>16), byte(u>>24),
+		byte(u>>32), byte(u>>40), byte(u>>48), byte(u>>56))
+}
+
+func readI64LE(bytes []byte, pos int) (int64, int) {
+	u := uint64(bytes[pos]) |
+		uint64(bytes[pos+1])<<8 |
+		uint64(bytes[pos+2])<<16 |
+		uint64(bytes[pos+3])<<24 |
+		uint64(bytes[pos+4])<<32 |
+		uint64(bytes[pos+5])<<40 |
+		uint64(bytes[pos+6])<<48 |
+		uint64(bytes[pos+7])<<56
+	return int64(u), pos + 8
+}
+
 func serializeNid(k *Kernel, nid NodeID, bytes []byte) []byte {
 	if r, ok := k.byID[nid]; ok {
 		bytes = pushU32(bytes, formBinaryComposite)
@@ -5408,6 +5770,11 @@ func serializeNid(k *Kernel, nid NodeID, bytes []byte) []byte {
 	if nid.Level == LevelTrivial && nid.Type == TrivFloat64 {
 		bytes = pushU32(bytes, formBinaryFloat64)
 		bytes = pushF64LE(bytes, k.decodeFloat64(nid.Inst))
+		return bytes
+	}
+	if nid.Level == LevelTrivial && nid.Type == TrivInt64 {
+		bytes = pushU32(bytes, formBinaryInt64)
+		bytes = pushI64LE(bytes, k.decodeInt64(nid.Inst))
 		return bytes
 	}
 	bytes = pushU32(bytes, formBinaryLeaf)
@@ -5424,6 +5791,11 @@ func deserializeNid(k *Kernel, bytes []byte, pos int, scope uint32) (NodeID, int
 		var value float64
 		value, pos = readF64LE(bytes, pos)
 		return k.internTrivialFloat64(value), pos
+	}
+	if tag == formBinaryInt64 {
+		var value int64
+		value, pos = readI64LE(bytes, pos)
+		return k.internTrivialInt(value), pos
 	}
 	if tag == formBinaryLeaf {
 		var pkg, level, ty, inst uint32
@@ -5536,6 +5908,14 @@ func deserializeNidWithStrings(k *Kernel, bytes []byte, pos int, stringsTable []
 		var value float64
 		value, pos = readF64LE(bytes, pos)
 		return k.internTrivialFloat64(value), pos
+	}
+	if tag == formBinaryInt64 {
+		if pos+8 > len(bytes) {
+			panic("form binary: truncated int64")
+		}
+		var value int64
+		value, pos = readI64LE(bytes, pos)
+		return k.internTrivialInt(value), pos
 	}
 	if tag == formBinaryLeaf {
 		var pkg, level, ty, inst uint32

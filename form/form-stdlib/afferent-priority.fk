@@ -1,0 +1,90 @@
+; afferent-priority.fk — WHICH pending offer delivers first is POLICY AS DATA:
+; the scheduler's proven policy-row shape (scheduler.fk), read by the afferent
+; engine (afferent-offer.fk). One policy discipline, afferent and efferent as
+; two readings — the signals+interrupts move, one level up.
+;
+; When several unsolicited offers are pending and deliverable in the same
+; window, Linux names the ordering decision twice: POSIX delivers the
+; lowest-numbered standard signal first; an interrupt controller delivers the
+; highest-priority line first. Both are DATA ROWS of scheduler.fk's
+; (name key-field least-wins floor requeue) shape — sched-ack is the chooser,
+; never a new branch, and the rows are the scheduler's own rows re-read:
+;
+;   aop-number-order  ("number-order" 1 1 0 0) — sched-fifo's exact row data:
+;                     POSIX number-order IS fifo, read over line numbers
+;   aop-irq-priority  ("irq-priority"  2 0 0 0) — sched-priority's exact row
+;                     data: IRQ priority IS the urgency row, read over levels
+;
+; A deliverable offer presents itself to the chooser AS a sched-offer:
+;   (handler-name, line, level, the-offer-cell)
+; arrival-slot ← the line number (the wire's ordinal), priority-slot ← the
+; line's level (the controller's priority register — data beside the engine,
+; pairs (line level), an unlisted line at level 0), fitness-slot ← the offer
+; cell itself, riding through so the dispatch answers the actual offer
+; (axiom-5's node-ack, correlation by content). Requeue stays 0: the pending
+; set's fairness arm is ao-consume — a delivered offer leaves by consumption.
+;
+; Round-1 semantics keep their ground: ao-deliverable? still rules — a masked
+; line never delivers regardless of priority, an out-of-window offer is never
+; ranked, an undelivered offer stays pending (the policy orders only what the
+; boundary already admits). With one deliverable offer, ao-deliver IS ao-wait:
+; the same interned dispatch cell, node_eq — the engine's decision point
+; carried, not forked. Silence stays the one shared AO-NOTHING cell.
+;
+; Live: aolv-fns-pri swaps the verdict source of afferent-live.fk's lowering
+; from ao-wait to ao-deliver — the carrier unchanged, so multi-offer
+; time-ordering lands exactly where the single-offer carrier already breathes.
+;
+; Proof: form-stdlib/tests/afferent-priority-band.fk → 1023 three-way
+; (Go/Rust/TS). Live witness: scripts/fourth_kernel_audit.sh section 23.
+
+;; --- a line's level: the IRQ controller's priority register, as data ---
+(defn aop-level-in (pairs line)
+    (if (ao-nil? pairs) 0
+        (if (eq (nth (head pairs) 0) line)
+            (nth (head pairs) 1)
+            (aop-level-in (tail pairs) line))))
+
+;; --- the two delivery policies: scheduler rows, re-read -----------------
+(defn aop-number-order () (sched-policy "number-order" 1 1 0 0))
+(defn aop-irq-priority () (sched-policy "irq-priority" 2 0 0 0))
+
+;; --- deliverable pending offers, in pending order (ao-deliverable? rules) ---
+(defn aop-deliverables (table mask pending deadline)
+    (if (ao-nil? pending) (list)
+        (if (eq (ao-deliverable? table mask (head pending) deadline) 1)
+            (cons (head pending) (aop-deliverables table mask (tail pending) deadline))
+            (aop-deliverables table mask (tail pending) deadline))))
+
+;; --- a deliverable offer presents itself at the chooser's door ----------
+(defn aop-row (table levels o)
+    (sched-offer (ao-handler-for table (ao-offer-line o))
+                 (ao-offer-line o)
+                 (aop-level-in levels (ao-offer-line o))
+                 o))
+(defn aop-rows (table levels os)
+    (if (ao-nil? os) (list)
+        (cons (aop-row table levels (head os)) (aop-rows table levels (tail os)))))
+
+;; --- deliver: sched-ack chooses; the ack vocabulary stays ao-wait's -----
+(defn aop-ack (chosen)
+    (if (eq (len chosen) 0) (ao-nothing)
+        (ao-dispatch (sched-offer-name chosen) (sched-offer-fitness chosen))))
+(defn ao-deliver (pol levels table mask pending deadline)
+    (aop-ack (sched-ack pol (aop-rows table levels (aop-deliverables table mask pending deadline)))))
+
+;; --- the delivery ORDER: deliver, consume, repeat — handler names -------
+(defn aop-trace (pol levels table mask pending deadline)
+    (if (eq (ao-nothing? (ao-deliver pol levels table mask pending deadline)) 1)
+        (empty)
+        (cons (ao-dispatch-handler (ao-deliver pol levels table mask pending deadline))
+              (aop-trace pol levels table mask
+                         (ao-consume pending
+                             (ao-dispatch-offer (ao-deliver pol levels table mask pending deadline)))
+                         deadline))))
+
+;; --- live: the proven lowering, verdict source swapped to the policy ----
+(defn aolv-fns-pri (pol levels table mask pending rel-deadline grain)
+    (aolv-fns2 (ao-deliver pol levels table mask pending rel-deadline) rel-deadline grain))
+
+0

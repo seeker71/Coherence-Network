@@ -1,0 +1,56 @@
+; tests/string-boundary-band.fk — char-boundary snap algebra of the string
+; addressing natives (substring, char_at, str_find), three-way.
+;
+; Each kernel addresses strings in its own host units (Go/Rust: UTF-8 bytes;
+; TS: UTF-16 units). The band therefore never names an absolute index of
+; multibyte text — every index is discovered through str_find/str_len in the
+; kernel's own units, and only resulting STRING values are compared. The laws:
+;
+;   1. char_at at a char's start returns the whole char.
+;   2. substring floors both ends to char boundaries — adjacency law:
+;      substring(s,0,m) + substring(s,m,len) == s for ANY m, mid-char included.
+;   3. concatenating char_at over every unit index reconstructs the string
+;      exactly (whole char at starts, nothing inside a char).
+;   4. str_find ceils its `from` past a partially-consumed char, so find-next
+;      loops advance instead of re-finding the same match or dying mid-char.
+;
+; Born from the 2026-06-12 production wound: POST /api/ideas with an em-dash
+; in the description hit `substring` mid-char and the Rust kernel answered
+; fatal[kernel_panic] instead of the idea.
+
+(do
+    (defn sbb-rebuild (s i acc)
+        (if (ge i (str_len s)) acc
+            (sbb-rebuild s (add i 1) (str_concat acc (char_at s i)))))
+
+    (let s "ab—cd—e")
+
+    ;; 1. whole char at a found start
+    (let dash1 (str_find s "—" 0))
+    (let ok-char (if (str_eq (char_at s dash1) "—") 1 0))
+
+    ;; 2. adjacency law with the split one unit into the char
+    (let m (add dash1 1))
+    (let ok-adj (if (str_eq (str_concat (substring s 0 m) (substring s m (str_len s))) s) 1 0))
+
+    ;; 3. unitwise char_at reconstruction
+    (let ok-rebuild (if (str_eq (sbb-rebuild s 0 "") s) 1 0))
+
+    ;; 4. find-next from inside the first match reaches the second
+    (let dash2 (str_find s "—" (add dash1 1)))
+    (let ok-next (if (str_eq (substring s dash2 (str_len s)) "—e") 1 0))
+
+    ;; 5. find-next past the second match finds nothing
+    (let ok-end (if (lt (str_find s "—" (add dash2 1)) 0) 1 0))
+
+    ;; 6. the same laws across an astral char (4 UTF-8 bytes / 2 UTF-16 units)
+    (let t "x🜂y")
+    (let fire (str_find t "🜂" 0))
+    (let ok-pair-char (if (str_eq (char_at t fire) "🜂") 1 0))
+    (let n (add fire 1))
+    (let ok-pair-adj (if (str_eq (str_concat (substring t 0 n) (substring t n (str_len t))) t) 1 0))
+    (let ok-pair-rebuild (if (str_eq (sbb-rebuild t 0 "") t) 1 0))
+
+    ;; Band verdict: 8 when every law holds.
+    (add ok-char (add ok-adj (add ok-rebuild (add ok-next (add ok-end
+        (add ok-pair-char (add ok-pair-adj ok-pair-rebuild))))))))

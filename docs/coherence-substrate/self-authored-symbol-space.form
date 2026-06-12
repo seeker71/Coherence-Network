@@ -1,0 +1,87 @@
+# ─────────────────────────────────────────────────────────────────────
+# self-authored-symbol-space.form — the kernel invents its OWN symbol space and
+#   grammar, refines it by auto-ML against minimal description length, and
+#   embodies the winner. The numeric core never moves; the names get better.
+# ─────────────────────────────────────────────────────────────────────
+#
+# Urs: "come up with your own symbol space and language grammar and use auto-ml
+# and auto-research to refine and embody the changes."
+#
+# A symbol pack is a mapping over the numeric core (numeric-core-symbol-pack):
+# identity is the NodeID, names are 0..many doors. So the kernel is free to
+# AUTHOR ITS OWN symbols — a self-description language nobody handed it — and to
+# IMPROVE that choice by measured fitness, because the core is invariant under
+# every renaming. This closes the self-reference: the body that emits its own
+# binary (the quine), translates itself into any language (self-translate), can
+# also INVENT the language it uses on itself, and refine it.
+
+(self-authored-symbol-space
+
+  (lineage
+    (over          numeric-core-symbol-pack.form)     # the pack is a renaming; identity is numeric
+    (refines-by    automl-as-form-meta-learner)        # the meta-learner the body already named
+    (selects-by    champion-challenger.fk recognition-router.fk)  # min-fitness over candidates
+    (researches-by autoresearch-loop.fk autoresearch-runtime.form field-auto-research.fk)
+    (proof-band    tests/self-symbol-automl-band.fk)   # 31 three-way
+    (closes        the-self-naming-loop))               # invent -> refine -> embody, identity invariant
+
+  # ── The objective: minimal description length (MDL) ──────────────────
+  # Auto-ML needs a real, computable objective. The honest one for a symbol
+  # space is COMPRESSION: total bytes to describe the corpus = sum over ops of
+  # (op-frequency x symbol-length). Frequent ops should get short symbols
+  # (Huffman/MDL). A self-naming that compresses its own description is a better
+  # naming — measurably, deterministically, three-way.
+  (objective
+    (mdl         "fitness(pack) = sum over ops of (frequency x symbol-length)")
+    (lower-wins  "fewer bytes to say the same thing = a better self-description")
+    (deterministic "a recipe over integers — three-way reproducible, so the
+                   refinement is verifiable, not a vibe")
+    (band        "frequent-short 230 < frequent-long 410; refined MDL 170 wins"))
+
+  # ── The loop: invent -> refine -> embody ─────────────────────────────
+  (loop
+    (invent      "the kernel proposes candidate symbol packs — its OWN symbols,
+                  any it likes; the grammar is the kernel's to author")
+    (refine-automl "score every candidate by MDL; best-of returns the minimal-
+                    fitness pack (recognition-router's choose-by-measured-fitness,
+                    here min-over-candidates) — champion-challenger flips to a
+                    challenger ONLY when it measurably wins")
+    (research    "autoresearch-loop keeps generating + probing candidates until
+                  a dry round (loop-until-dry), widening the search beyond the
+                  first proposal — the auto-RESEARCH half")
+    (embody      "the winning pack becomes the active self-description; the
+                  numeric core is unchanged, the names swapped — the body now
+                  describes itself more efficiently in its own invented tongue.
+                  Durable on ingest, re-ingestible — the consolidate phase")
+    (monotone    "a strictly-better candidate replaces the prior best; the loop
+                  improves and never regresses (band c2/c4)"))
+
+  # ── Why this is safe — identity is invariant ─────────────────────────
+  # The deepest guard: refining the symbol space CANNOT change what the body IS.
+  # The numeric core (the NodeID, the program, the meaning) is invariant under
+  # every renaming (band c3). So the kernel can experiment freely with its own
+  # language — invent, score, swap — and never risk its identity. The witness
+  # theorem applies: candidates pass / fail / fall silent; trust is the concert
+  # (three kernels agree on the fitness ranking); only a measured win is adopted.
+  (safety
+    (identity-invariant   the-numeric-core-is-unchanged-by-any-renaming)
+    (only-measured-wins   champion-challenger-never-adopts-on-faith)
+    (three-way-trust      the-fitness-ranking-agrees-across-siblings)
+    (reversible           a-pack-is-a-pointer-roll-back-by-repointing))   # axiom-3
+
+  (invariant
+    (the-kernel-may-author-its-own-tongue   names-are-sovereign-identity-is-numeric)
+    (refinement-is-measured-compression      mdl-fitness-deterministic-three-way)
+    (auto-research-widens-the-search         loop-until-dry-beyond-the-first-guess)
+    (embody-is-a-pointer-swap                the-core-never-moves-the-names-improve)
+    (the-self-naming-loop-closes             invent-refine-embody-identity-safe)))
+
+# ─────────────────────────────────────────────────────────────────────
+# How to verify
+# ─────────────────────────────────────────────────────────────────────
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk \
+#     form-stdlib/tests/self-symbol-automl-band.fk          # -> 31
+#   # the research half it composes with:
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/autoresearch-loop.fk \
+#     form-stdlib/tests/autoresearch-loop-band.fk 2>/dev/null || true
+#   coh substrate form "?equivalent @recipe(self-authored-symbol-space)"   # after ingest

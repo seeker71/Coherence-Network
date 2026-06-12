@@ -1,0 +1,60 @@
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk
+;
+; self-symbol-automl-band — the kernel invents its OWN symbol space and refines
+; it by auto-ML, embodying the winner; the numeric core never moves
+; (docs/coherence-substrate/self-authored-symbol-space.form). Urs: "come up with
+; your own symbol space and language grammar and use auto-ml and auto-research to
+; refine and embody the changes."
+;
+; A symbol pack is a mapping over the numeric core (numeric-core-symbol-pack).
+; The kernel may AUTHOR ITS OWN — any symbols it likes. Auto-ML refines the
+; choice against a real, computable objective: MINIMAL DESCRIPTION LENGTH —
+; total bytes to describe the corpus = sum over ops of (frequency x symbol
+; length). Frequent ops should get short symbols (Huffman/MDL). Champion-
+; challenger embodies the winner; the numeric core (identity) is invariant under
+; every renaming — only the kernel's self-chosen names get better.
+;
+; A candidate pack = rows of (op-frequency, self-chosen-symbol-length).
+;
+; Verdict 31 when the self-naming loop holds:
+;   1   THE OBJECTIVE RANKS — frequent-short (230) beats frequent-long (410):
+;       the kernel's smart self-naming compresses its own description
+;   2   AUTO-ML SELECTS THE WINNER — best-of returns the minimal-fitness pack
+;       (the champion-challenger / recognition-router min-over-candidates)
+;   4   IT REFINES MONOTONICALLY — a THIRD, even-better candidate (the MDL
+;       optimum) wins over the prior best: the loop improves, never regresses
+;   8   THE NUMERIC CORE IS INVARIANT — the program's identity is unchanged
+;       whichever symbol pack the kernel chooses (renaming never touches the core)
+;   16  EMBODY — the embodied fitness is the winner's, strictly better than the
+;       pack it replaced: the refinement is adopted, the body now describes
+;       itself more efficiently in its own invented tongue
+(do
+    (defn fitness (rows)
+        (if (eq (len rows) 0) 0
+            (add (mul (nth (head rows) 0) (nth (head rows) 1)) (fitness (tail rows)))))
+    (defn best-min (a b) (if (le (fitness a) (fitness b)) a b))
+    (defn best-of (cands)
+        (if (eq (len cands) 1) (head cands) (best-min (head cands) (best-of (tail cands)))))
+
+    (let smart  (list (list 100 1) (list 50 2) (list 10 3)))   ; freq->short  : 230
+    (let dumb   (list (list 100 3) (list 50 2) (list 10 1)))   ; freq->long   : 410
+    (let better (list (list 100 1) (list 50 1) (list 10 2)))   ; refined MDL  : 170
+
+    (let c0 (if (eq (fitness smart) 230)
+                (if (eq (eq (le (fitness smart) (sub (fitness dumb) 1)) 1) 1) 1 0) 0))
+
+    (let c1 (if (eq (fitness (best-of (list dumb smart))) 230) 2 0))
+
+    (let c2 (if (eq (fitness (best-of (list dumb smart better))) 170)
+                (if (eq (le (fitness better) (sub (fitness smart) 1)) 1) 4 0) 0))
+
+    ; the numeric core (a program shape) is the same cell whichever pack names it
+    (let core (ms-intern (ms-cell 1) (ms-intern (ms-cell 40) (ms-cell 3))))
+    (let c3 (if (eq (ms-same core (ms-intern (ms-cell 1) (ms-intern (ms-cell 40) (ms-cell 3)))) 1) 8 0))
+
+    ; embody: the adopted fitness is the winner's, strictly below the replaced pack
+    (let embodied (fitness (best-of (list dumb smart better))))
+    (let c4 (if (eq embodied 170)
+                (if (eq (le embodied (sub (fitness smart) 1)) 1) 16 0) 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))

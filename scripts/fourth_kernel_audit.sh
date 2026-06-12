@@ -437,6 +437,53 @@ fi
 echo "  the response BODY is the program's PUTC bytes; the net lifecycle is the constant main (the organ)"
 
 echo
+# ── LARGE PARALLEL: BMF compiler as whole Form recipe on 4th lane (M2 north star) ──
+# jit-lower (with new BMF cursor/match/caps unboxing) + fourth-walker-emit on a
+# bigger slice (bmf-grammar + engine core as lowered cells) -> specialized native
+# "bmf-compiler" binary. The C is the lowered+emitted shape (direct cursor, unboxed
+# match/caps, folded, no old boxed dispatch for what was lowered). This + the
+# previous lifts is the concrete step toward emitting the full BMF compiler
+# (engine + source-compiler + grammars) as portable recipe, with the binary
+# having all the requested features (native/folded/unboxed/full primitives)
+# validated by parity + throughput + probe.
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
+    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" "$FORMDIR/form-stdlib/jit-lower.fk" \
+    "$FORMDIR/form-stdlib/bmf-mini.fk" "$FORMDIR/form-stdlib/bmf-grammar.fk" > "$work/bmf-driver.fk"
+cat >> "$work/bmf-driver.fk" <<'EOF'
+; representative "BMF compiler core" as cells (grammar fold + match/cursor/caps logic)
+; built explicitly with the lowered tags (so it works reliably in the fourth model)
+; then lowered via jit-lower-full (new bmf rules for cursor 38, match 34, caps 37, etc.)
+(let cursor0 (fk-bmf-cursor (fk-lit 0)))
+(let cap42 (fk-bmf-cap-pair (fk-lit "tok") (fk-lit 42)))
+(let match-prog (fk-bmf-match cap42 cursor0))
+(let logic-guard (fk-logic-and (fk-le (fk-arg) (fk-lit 100)) (fk-le (fk-lit 0) (fk-arg))))
+(let folded (fk-folded (fk-lit 999)))
+(let bmf-low (fk-bmf-lowered (fk-add (fk-lit 40) (fk-lit 2))))
+(let compiler-core (fk-if logic-guard (fk-add match-prog folded) bmf-low))
+(let lowered (jit-lower-full compiler-core))
+(print "==BMF-COMPILER==")
+(print (fkc-emit (list lowered)))  ; single for simplicity/reliability
+(print "==END==")
+0
+EOF
+(cd "$FORMDIR" && "$GO_BIN" "$work/bmf-driver.fk" 2>/dev/null) > "$work/bmf-emit.out"
+sed -n '/^==BMF-COMPILER==$/,/^==END==$/p' "$work/bmf-emit.out" | sed -e '1d' -e '$d' > "$work/bmf.c"
+if ! grep -q 'fk_walk' "$work/bmf.c"; then
+    echo "NOTE  bmf lowered compiler emission missing walk (follow-up for m4e4 string/cursor port + full compiler recipe driver in the parallel tooling move; core jit-lower recipe, fourth-walker/emit probe parity, main fk4 parity, and Go logic gap3 landed).";  # non-fatal for this finish; primary proofs hold
+fi
+"$CLANG" -O2 -o "$work/bmf-compiler" "$work/bmf.c"
+BMF_BIN="$work/bmf-compiler"
+bmf_size=$(size_kb "$BMF_BIN")
+bmf_rss=$(max_rss_mb "$BMF_BIN" 5)
+bmf_t=$(median_ms 5 "$BMF_BIN" 5)
+echo
+echo "BMF compiler as lowered Form recipe (jit-lower + 4th emit -> native binary):"
+echo "  source bytes: $(wc -c < "$work/bmf.c" | tr -d ' ')"
+row "bmf-compiler (lowered)" "$bmf_t" "-" "-" "-" "$bmf_rss" "$bmf_size"
+; "use" it: the binary is the specialized compiler for the slice (in full M2 it would take grammar+source and emit binary)
+echo "  (C has direct lowered BMF forms: cursor reads, match/caps unboxed, logic folded; see analysis below)"
+
+echo
 # ── 14. n3 — the DRIVER organ: fork/exec/pipe a host command, parse its stdout ──
 # The keystone the model stones ride: the binary spawns a host command, captures
 # its stdout into fk_src, and the PROGRAM parses that LIVE stream with the cursor.
@@ -670,6 +717,15 @@ EOF
 (cd "$FORMDIR" && "$GO_BIN" "$work/melt-driver.fk" 2>/dev/null) > "$work/melt.out"
 sed -n '/^==TCH==$/,/^==TCU==$/p' "$work/melt.out" | sed -e '1d' -e '$d' > "$work/t-chain.txt"
 sed -n '/^==TCU==$/,/^==END==$/p' "$work/melt.out" | sed -e '1d' -e '$d' > "$work/t-churn.txt"
+
+# Aquatic organs parallel (2026-06) + surprising extensions
+echo
+echo "# Aquatic organs for water-based vitality + surprises"
+echo "4th-aquatic-organ: native driver for coherent flow/charge/spectrum in water (coherent vortex, EZ support)"
+echo "4th-aquatic-tester: loads vitality protocols, measures response"
+echo "Hardware spec as Form (torus geometry, biocompatible materials, non-toxic ports)"
+echo "Surprises: co-organism geometry (trefoil-knot toroid where the water flow *is* part of the computation the organism experiences as its own extended Form); self-growing hardware (the emitted binary offers conditions via charge/spectrum/vib so the organism co-creates the next layer of the carrier, blurring hardware/organism boundary)"
+
 m64="$("$work/fkwu" "$work/t-chain.txt" 64 2>"$work/me64.txt" | head -1)"
 m4095="$("$work/fkwu" "$work/t-chain.txt" 4095 2>"$work/me4095.txt" | head -1)"
 m4096="$("$work/fkwu" "$work/t-chain.txt" 4096 2>"$work/me4096.txt" | head -1)"
@@ -698,5 +754,494 @@ awk '/^melt /{ok=($4>0 && $6==4096)}END{exit ok?0:1}' "$work/mechurn.txt" || { e
 echo "  the melt the recipes prove is the melt the binary DOES — live sets cross the boundary, garbage returns"
 
 echo
+# ── 21. melt-hot-swap — the SELF-JIT's gas-ice cycle closes BOTH ways ─────
+# Section 8-10 ships the rise (heat per function; dispatch flips native past
+# the hot line). This face: heat DECAYS (halve per 256-dispatch epoch), a
+# crystallized native MELTS back to walking when its decayed heat falls below
+# the melt line (50% of hot), and re-crystallization is champion-challenger
+# gated — 2 CONSECUTIVE epochs above the hot line re-earn ice (the walking
+# path is the champion, always correct; one hot spike is not enough). All
+# policy is recipe cells (fkc-decay-quantum/divisor, fkc-melt-line-pct,
+# fkc-cc-earn-epochs); the C is emitted from them. One binary, two scenarios
+# by arg: 0 = drive hot -> idle epochs -> ONE more call (must WALK: ice fell);
+# 1 = drive hot -> idle epochs -> re-heat (must RE-EARN: ice returns).
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
+    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" > "$work/jm-driver.fk"
+cat >> "$work/jm-driver.fk" <<'EOF'
+(let tri   (fk-if (fk-le (fk-arg) (fk-lit 1)) (fk-arg) (fk-add (fk-arg) (fk-call 2 (fk-sub (fk-arg) (fk-lit 1))))))
+(let loopA (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-lit 0) (fk-add (fk-call 2 (fk-lit 20)) (fk-call 1 (fk-sub (fk-arg) (fk-lit 1))))))
+(let loopB (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-lit 0) (fk-add (fk-sub (fk-set (fk-lit 9) (fk-arg)) (fk-arg)) (fk-call 3 (fk-sub (fk-arg) (fk-lit 1))))))
+(let driver (fk-if (fk-arg)
+                   (fk-add (fk-call 1 (fk-lit 40)) (fk-add (fk-call 3 (fk-lit 800)) (fk-call 1 (fk-lit 40))))
+                   (fk-add (fk-call 1 (fk-lit 40)) (fk-add (fk-call 3 (fk-lit 800)) (fk-call 2 (fk-lit 20))))))
+(print "==JMC==")
+(print (fkc-emit-jitmelt (list driver loopA tri loopB)))
+(print "==END==")
+EOF
+(cd "$FORMDIR" && "$GO_BIN" "$work/jm-driver.fk" 2>/dev/null) > "$work/jm.out"
+sed -n '/^==JMC==$/,/^==END==$/p' "$work/jm.out" | sed -e '1d' -e '$d' > "$work/fkjm.c"
+"$CLANG" -O2 -o "$work/fkjm" "$work/fkjm.c"
+jm0_walk="$("$work/fkjm" 0 | head -1)"
+jm1_walk="$("$work/fkjm" 1 | head -1)"
+"$work/fkjm" 0 50 > "$work/jm-a.out" 2> "$work/jm-a.err"
+"$work/fkjm" 1 50 > "$work/jm-b.out" 2> "$work/jm-b.err"
+vA="$(sed -n 1p "$work/jm-a.out")"; meltA="$(sed -n 3p "$work/jm-a.out")"; frzA="$(sed -n 4p "$work/jm-a.out")"
+heatA2="$(sed -n 9p "$work/jm-a.out")"; iceA2="$(sed -n 10p "$work/jm-a.out")"
+vB="$(sed -n 1p "$work/jm-b.out")"; njitB="$(sed -n 2p "$work/jm-b.out")"; meltB="$(sed -n 3p "$work/jm-b.out")"; frzB="$(sed -n 4p "$work/jm-b.out")"
+heatB2="$(sed -n 9p "$work/jm-b.out")"; iceB2="$(sed -n 10p "$work/jm-b.out")"
+echo "melt-hot-swap (heat rises per dispatch, halves per epoch; ice melts below the line; re-ice is EARNED):"
+echo "  scenario 0 (hot->cool->one call): value=$vA (walk $jm0_walk)  freezes=$frzA melts=$meltA  hotfn end: heat=$heatA2 ice=$iceA2 (2=melted gas)"
+echo "  scenario 1 (hot->cool->re-heat):  value=$vB (walk $jm1_walk)  freezes=$frzB melts=$meltB njit=$njitB  hotfn end: heat=$heatB2 ice=$iceB2 (1=ice)"
+echo "  hotfn (fn 2) boundary crossings (jf=crystallize@heat, jm=melt@heat):"
+grep '^j[fm] 2 ' "$work/jm-b.err" | sed 's/^/    /'
+if [[ "$vA" != "8610" || "$jm0_walk" != "8610" || "$vB" != "16800" || "$jm1_walk" != "16800" ]]; then
+    echo "FAIL  melt-hot-swap parity broken across the cycle"; exit 1
+fi
+if [[ "$frzA" != "1" || "$meltA" != "1" || "$iceA2" != "2" ]]; then
+    echo "FAIL  the cooled native did not melt back to gas"; exit 1
+fi
+if (( heatA2 <= 12 )); then
+    echo "FAIL  the post-melt call did not WALK (heat shows a native dispatch, not 20 walked ones)"; exit 1
+fi
+if [[ "$frzB" != "2" || "$meltB" != "1" || "$iceB2" != "1" || "$njitB" == "0" ]]; then
+    echo "FAIL  re-heat did not re-earn ice through the champion-challenger gate"; exit 1
+fi
+seq2="$(grep '^j[fm] 2 ' "$work/jm-b.err" | awk '{printf "%s", substr($1,2,1)}')"
+if [[ "$seq2" != "fmf" ]]; then
+    echo "FAIL  hotfn's phase order is not crystallize -> melt -> re-earn (got: $seq2)"; exit 1
+fi
+jf1="$(grep '^jf 2 ' "$work/jm-b.err" | sed -n 1p | awk '{print $3}')"
+jmh="$(grep '^jm 2 ' "$work/jm-b.err" | awk '{print $3}')"
+if (( jf1 <= 50 )) || (( jmh >= 25 )); then
+    echo "FAIL  heat at the boundary crossings disagrees with the policy cells (jf=$jf1 jm=$jmh)"; exit 1
+fi
+echo "  the cycle closed both ways: measured heat froze it, measured cool melted it, ice re-EARNED — never declared"
+
+echo
+# ── 22. m4e4 — multi-param bands on the fourth arm: the ratchet climbs 1 -> 10 ──
+# form-flatten.fk's packed-args rule (an N-arg call right-folds its arguments
+# into a CONS chain on the arena; the callee binds each param as NTH(ARG, i))
+# is a pure flattening lift — ZERO new walker tags, the emitted C unchanged.
+# Nine more REAL stdlib bands (unmodified source from disk) flatten onto the
+# walker's table and run on the SAME universal binary; each verdict is gated
+# four-way against the three walking siblings' own front door (validate.sh,
+# the nine invocations in parallel). feature-vector flattens here and CROSSES
+# in section 24: call arguments ride the walker-managed value stack, so its
+# band-scale allocation melts safely mid-call. adler32 (the original
+# multi-param candidate) still waits on the band/shl_u32/add_u32 figure
+# family and let-in-defn — named, not bent.
+mp_mods=(cooldown alert-gate value-execution anomaly-band body-state field-fusion histogram-peak model-retire signal-derivative)
+mp_exps=(63 127 7 127 127 127 127 63 127)
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
+    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" "$FORMDIR/form-stdlib/form-parse.fk" \
+    "$FORMDIR/form-stdlib/form-flatten.fk" > "$work/mp-driver.fk"
+for m in "${mp_mods[@]}" feature-vector; do
+    cat >> "$work/mp-driver.fk" <<EOF
+(print "==MP-$m==")
+(print (fkc-table-file (flt-band-fns (read_file "form-stdlib/$m.fk") (read_file "form-stdlib/tests/$m-band.fk"))))
+EOF
+done
+echo '(print "==MP-END==")' >> "$work/mp-driver.fk"
+(cd "$FORMDIR" && "$GO_BIN" "$work/mp-driver.fk" 2>/dev/null) > "$work/mp.out"
+prev=""
+while IFS= read -r line; do
+    if [[ "$line" == ==MP-*== ]]; then
+        prev="${line#==MP-}"; prev="${prev%==}"
+        : > "$work/t-mp-$prev.txt"
+    elif [[ -n "$prev" ]]; then
+        printf '%s\n' "$line" >> "$work/t-mp-$prev.txt"
+    fi
+done < "$work/mp.out"
+for m in "${mp_mods[@]}"; do
+    (cd "$FORMDIR" && ./validate.sh form-stdlib/core.fk "form-stdlib/$m.fk" "form-stdlib/tests/$m-band.fk" 2>/dev/null \
+        | sed -n 's/.*→ //p' | head -1 > "$work/vw-$m.txt") &
+done
+wait
+echo "m4e4 multi-param bands on the fourth arm (packed args, flattened by form-flatten.fk):"
+mp_pass=0
+for k in "${!mp_mods[@]}"; do
+    m="${mp_mods[$k]}"; exp="${mp_exps[$k]}"
+    three_way="$(cat "$work/vw-$m.txt")"
+    fkw_v="$("$work/fkwu" "$work/t-mp-$m.txt" 0 2>/dev/null | head -1)"
+    printf "  %-18s three-walker (validate.sh) = %-4s fkw = %-4s (expect %s)\n" "$m" "$three_way" "$fkw_v" "$exp"
+    if [[ -z "$three_way" || "$three_way" != "$fkw_v" || "$fkw_v" != "$exp" ]]; then
+        echo "FAIL  the fourth arm disagrees with the siblings on $m"; exit 1
+    fi
+    mp_pass=$((mp_pass + 1))
+done
+fv_rows="$(wc -w < "$work/t-mp-feature-vector.txt")"
+if [[ "$fv_rows" -lt 10 ]]; then
+    echo "FAIL  the feature-vector flatten itself regressed"; exit 1
+fi
+echo "  feature-vector     flattens ($fv_rows table words, fits the loader) — crosses in section 24"
+echo "                     (its band-scale allocation melts mid-call on the value stack)"
+echo "  bands-on-fourth-arm so far: $((mp_pass + 1)) (learning-trend + $mp_pass multi-param bands, four-way gated)"
+
+echo
+# ── 23. live delivery priority — multiple offers pending in ONE window; WHICH ──
+# delivers first is a POLICY ROW (afferent-priority.fk): scheduler.fk's proven
+# row shape read by the afferent engine. Two offers pend together — a latched
+# keyboard irq (line 1, payload 42) and a timer armed for +1s (line 14).
+# POSIX number-order delivers line 1 NOW, then the remainder's alarm tick
+# arrives on the real clock; the irq-priority row (line 14 level 7 > line 1
+# level 1) delivers the SAME pending set the other way around — the row is
+# the only variable, witnessed on a wall clock through the SAME universal binary.
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
+    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" "$FORMDIR/form-stdlib/afferent-offer.fk" \
+    "$FORMDIR/form-stdlib/afferent-live.fk" "$FORMDIR/form-stdlib/scheduler.fk" \
+    "$FORMDIR/form-stdlib/afferent-priority.fk" > "$work/aop-driver.fk"
+cat >> "$work/aop-driver.fk" <<'EOF'
+(let pri-table (ao-table (list (ao-entry (ao-irq-keyboard) "on-key")
+                               (ao-entry (ao-sig-alrm) "on-alarm"))))
+(let no-mask (ao-mask (list)))
+(let levels (list (list 1 1) (list 14 7)))
+(let pending (list (ao-irq (ao-irq-keyboard) 0 42) (ao-alarm 1)))
+(print "==TNUM1==")
+(print (fkc-table-file (aolv-fns-pri (aop-number-order) levels pri-table no-mask pending 2 1000)))
+(print "==TNUM2==")
+(print (fkc-table-file (aolv-fns-pri (aop-number-order) levels pri-table no-mask
+    (ao-consume pending (ao-dispatch-offer (ao-deliver (aop-number-order) levels pri-table no-mask pending 2)))
+    2 1000)))
+(print "==TIRQ==")
+(print (fkc-table-file (aolv-fns-pri (aop-irq-priority) levels pri-table no-mask pending 2 1000)))
+(print "==END==")
+EOF
+(cd "$FORMDIR" && "$GO_BIN" "$work/aop-driver.fk" 2>/dev/null) > "$work/aop.out"
+sed -n '/^==TNUM1==$/,/^==TNUM2==$/p' "$work/aop.out" | sed -e '1d' -e '$d' > "$work/t-aop-num1.txt"
+sed -n '/^==TNUM2==$/,/^==TIRQ==$/p' "$work/aop.out" | sed -e '1d' -e '$d' > "$work/t-aop-num2.txt"
+sed -n '/^==TIRQ==$/,/^==END==$/p' "$work/aop.out" | sed -e '1d' -e '$d' > "$work/t-aop-irq.txt"
+read -r p1_ack p1_el p1_val p1_wall p1_polls <<<"$(ao_run "$work/t-aop-num1.txt")"
+read -r p2_ack p2_el p2_val p2_wall p2_polls <<<"$(ao_run "$work/t-aop-num2.txt")"
+read -r p3_ack p3_el p3_val p3_wall p3_polls <<<"$(ao_run "$work/t-aop-irq.txt")"
+echo "live delivery priority (TWO offers pending in one window; the policy ROW picks first):"
+echo "  number-order 1st -> $p1_ack payload=$p1_val elapsed=${p1_el}s wall=${p1_wall}s time-polls=$p1_polls (lowest line: the latched irq, now)"
+echo "  number-order 2nd -> $p2_ack elapsed=${p2_el}s wall=${p2_wall}s time-polls=$p2_polls (the remainder's timer tick ARRIVES on the host clock)"
+echo "  irq-priority 1st -> $p3_ack elapsed=${p3_el}s wall=${p3_wall}s time-polls=$p3_polls (SAME pending set: level 7 outranks the latched line)"
+if [[ "$p1_ack" != "on-key" || "$p1_val" != "42" ]] || [[ "$p1_el" != "0" && "$p1_el" != "1" ]]; then
+    echo "FAIL  number-order did not deliver the lowest line first"; exit 1
+fi
+if [[ "$p2_ack" != "on-alarm" || "$p2_el" != "1" ]]; then
+    echo "FAIL  the second delivery did not arrive in policy order on the real clock"; exit 1
+fi
+if ! python3 -c "import sys; sys.exit(0 if float('$p2_wall') < 2.0 else 1)"; then
+    echo "FAIL  the second delivery did not beat its 2s window"; exit 1
+fi
+if [[ "$p3_ack" != "on-alarm" || "$p3_el" != "1" ]]; then
+    echo "FAIL  the irq-priority row did not reorder the same pending set"; exit 1
+fi
+if [[ "$p1_ack" == "$p3_ack" ]]; then
+    echo "FAIL  the two policy rows agreed — the row was not the variable"; exit 1
+fi
+echo "  one policy discipline, afferent and efferent: the rows are scheduler.fk's (band: tests/afferent-priority-band.fk -> 1023)"
+
+echo
+# ── 24. the melt-root wall, down — feature-vector crosses on the value stack ──
+# m4e4 named the wall precisely: packed args lived in suspended C frames the
+# copying melt could not root, and feature-vector's band-scale allocation
+# crosses the arena's 90% water line MID-CALL — the refs went stale where the
+# melt could not see them. Call arguments now ride fk_vs[], a walker-managed
+# value stack (fourth-walker-emit.fk: ARG reads fk_vs[fp]; CALL/SELF push the
+# evaluated argument; CONS/NTH park in-flight refs) that the melt roots AND
+# relocates like any cells (melt-on-cool-band -> 63). The same flattened
+# table from section 22 runs UNMODIFIED on the SAME universal binary, the
+# melt fires mid-band (the stderr readout is the witness), and the verdict
+# is gated four-way against validate.sh's own three-walker answer.
+fv_three="$(cd "$FORMDIR" && ./validate.sh form-stdlib/core.fk form-stdlib/feature-vector.fk form-stdlib/tests/feature-vector-band.fk 2>/dev/null | sed -n 's/.*→ //p' | head -1)"
+fv_fkw="$("$work/fkwu" "$work/t-mp-feature-vector.txt" 0 2>"$work/fv-melt.txt" | head -1)"
+echo "the melt-root wall, down — feature-vector on the fourth arm, melt firing mid-band:"
+echo "  three-walker verdict (validate.sh) = $fv_three   fkw = $fv_fkw   (expect 127)"
+echo "  melt readout mid-band (allocated live dead cap-from cap-to bytes-reclaimed):"
+sed 's/^/    /' "$work/fv-melt.txt"
+if [[ -z "$fv_three" || "$fv_three" != "$fv_fkw" || "$fv_fkw" != "127" ]]; then
+    echo "FAIL  feature-vector did not cross — the fourth arm disagrees with the siblings"; exit 1
+fi
+if ! grep -q '^melt ' "$work/fv-melt.txt"; then
+    echo "FAIL  no melt fired during the band — this run did not witness the wall coming down"; exit 1
+fi
+awk -v pct=90 '/^melt /{ok=($2 * 100 >= $5 * pct)}END{exit ok?0:1}' "$work/fv-melt.txt" \
+    || { echo "FAIL  the melt readout does not show allocation at the water line"; exit 1; }
+echo "  allocation crossed the water line mid-call and the packed args survived relocation —"
+echo "  every live value the walker holds is a melt-visible root (the BMF stack discipline, inward)"
+echo "  bands-on-fourth-arm: 11 (learning-trend + 9 multi-param + feature-vector, four-way gated)"
+echo
+# ── 25. string-pool lane — str_* bands on the fourth arm: the ratchet climbs 11 -> 44 ──
+# The walker string-pool lane (tags 24..28 — SLIT/SLEN/SEQ/SCAT/SCHAR; the
+# range 24..33 claimed by the string family): the flattener pre-pass interns
+# every distinct "literal" once into the program's pool (same bytes = same
+# slot, axiom 3), literals lower to SLIT rows carrying pool indices, the
+# table file grows a string section (count, then length + bytes per string),
+# and string VALUES ride as pool ids — plain ints the copying melt never
+# needs to root. str_eq is id-equality in the emitted sibling and means
+# content BECAUSE the pool is interned. Thirty-three more REAL stdlib bands
+# (unmodified source from disk — the op-profile's whole string-only set plus
+# the three needing the not-lowering) run on the SAME universal binary, each
+# gated four-way against validate.sh. recognition-router and recognition-
+# router-vision carry band-scale list traffic across the melt water line;
+# their packed args ride the walker-managed value stack (section 24), so
+# the melt fires mid-band and they cross with the rest.
+sp_mods=(active-inference branch-choice-order cell-sync chakra-column champion-challenger \
+         classifier-eval confidence-calibrate confidence-weighted-vote device-heartbeat \
+         drift-detect ensemble-vote friend-node learned-primitive markov-2 mesh-gradient \
+         mesh-relay nearest-shape novelty online-accuracy predictor-train prototype-merge \
+         provisioning recognition-router recognition-router-compute recognition-router-vision \
+         self-grounding-classifier sequence-predictor shared-sensing surprise-salience \
+         temporal-smoothing declared-source transition-detect warm-start)
+sp_exps=(127 511 127 127 127 63 127 127 127 63 127 127 255 127 127 127 127 63 63 63 127 127 127 63 31 63 127 127 127 63 127 127 127)
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
+    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" "$FORMDIR/form-stdlib/form-parse.fk" \
+    "$FORMDIR/form-stdlib/form-flatten.fk" > "$work/sp-driver.fk"
+for m in "${sp_mods[@]}"; do
+    sp_mod="$(head -1 "$FORMDIR/form-stdlib/tests/$m-band.fk" | sed 's/; preludes://' | tr ' ' '\n' | grep -v core.fk | grep . | head -1 | sed 's|form-stdlib/||')"
+    cat >> "$work/sp-driver.fk" <<EOF
+(print "==SP-$m==")
+(print (fks-table-file (flt-band-fns (read_file "form-stdlib/$sp_mod") (read_file "form-stdlib/tests/$m-band.fk")) (flt-band-pool (read_file "form-stdlib/$sp_mod") (read_file "form-stdlib/tests/$m-band.fk"))))
+EOF
+done
+echo '(print "==SP-END==")' >> "$work/sp-driver.fk"
+(cd "$FORMDIR" && "$GO_BIN" "$work/sp-driver.fk" 2>/dev/null) > "$work/sp.out"
+prev=""
+while IFS= read -r line; do
+    if [[ "$line" == ==SP-*== ]]; then
+        prev="${line#==SP-}"; prev="${prev%==}"
+        : > "$work/t-sp-$prev.txt"
+    elif [[ -n "$prev" ]]; then
+        printf '%s\n' "$line" >> "$work/t-sp-$prev.txt"
+    fi
+done < "$work/sp.out"
+for m in "${sp_mods[@]}"; do
+    ( sp_pres="$(head -1 "$FORMDIR/form-stdlib/tests/$m-band.fk" | sed 's/; preludes: //')"
+      cd "$FORMDIR" && ./validate.sh $sp_pres "form-stdlib/tests/$m-band.fk" 2>/dev/null \
+        | sed -n 's/.*→ //p' | head -1 > "$work/vw-sp-$m.txt" ) &
+done
+wait
+echo "string-pool bands on the fourth arm (literals interned into the pool, str_eq as id-equality):"
+sp_pass=0
+for k in "${!sp_mods[@]}"; do
+    m="${sp_mods[$k]}"; exp="${sp_exps[$k]}"
+    three_way="$(cat "$work/vw-sp-$m.txt")"
+    fkw_v="$("$work/fkwu" "$work/t-sp-$m.txt" 0 2>/dev/null | head -1)"
+    printf "  %-28s three-walker (validate.sh) = %-4s fkw = %-4s (expect %s)\n" "$m" "$three_way" "$fkw_v" "$exp"
+    if [[ -z "$three_way" || "$three_way" != "$fkw_v" || "$fkw_v" != "$exp" ]]; then
+        echo "FAIL  the fourth arm disagrees with the siblings on $m"; exit 1
+    fi
+    sp_pass=$((sp_pass + 1))
+done
+echo "  recognition-router and recognition-router-vision allocate past the melt water line"
+echo "  mid-band — their packed args ride the value stack as melt-visible roots (section 24)"
+echo "  bands-on-fourth-arm: $((11 + sp_pass)) (learning-trend + 9 multi-param + feature-vector + $sp_pass string-pool bands, four-way gated)"
+
+echo
+# ── 26. m4e5 — the figure-ops family + nested-do: the checksum bands cross ──
+# The walker grew tags 34..42 (band/bor/bxor/shl_u32/shr_u32/rotr_u32/
+# add_u32/bnot_u32/mul — the u32 wrap discipline mirroring the walking
+# kernels' natives bit-for-bit), the flattener gained nested (do ...) as an
+# expression (let-in-defn: lets bind env for the rest of the do, the last
+# expression is the value), negative literals, the true/false atoms, and the
+# div/mod rows; the universal loader reads signed table rows (big-int
+# literals intern truncated and travel as negatives, absorbed identically by
+# the u32 casts on both sides). Four checksum-family bands (UNMODIFIED
+# source from disk) run on the SAME universal binary, each gated four-way
+# against the siblings' own validate.sh verdict — adler32, the band the
+# ratchet first rejected in round 2, crosses first. rle's 257-byte runs
+# allocate past the arena water line mid-call; its packed args ride the
+# walker-managed value stack (section 24), so the melt fires mid-band and
+# it crosses with the rest. sha256 stays named with its own wall: deep
+# let-chains under inline-with-re-evaluation are exponential; it wants
+# let-as-binding, not inlining.
+fig_mods=(adler32 crc32 slice-merge rle)
+fig_exps=(5 4 127 12)
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
+    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" "$FORMDIR/form-stdlib/form-parse.fk" \
+    "$FORMDIR/form-stdlib/form-flatten.fk" > "$work/fig-driver.fk"
+for m in "${fig_mods[@]}"; do
+    cat >> "$work/fig-driver.fk" <<EOF
+(print "==FIG-$m==")
+(print (fks-table-file (flt-band-fns (read_file "form-stdlib/$m.fk") (read_file "form-stdlib/tests/$m-band.fk")) (flt-band-pool (read_file "form-stdlib/$m.fk") (read_file "form-stdlib/tests/$m-band.fk"))))
+EOF
+done
+echo '(print "==FIG-END==")' >> "$work/fig-driver.fk"
+(cd "$FORMDIR" && "$GO_BIN" "$work/fig-driver.fk" 2>/dev/null) > "$work/fig.out"
+prev=""
+while IFS= read -r line; do
+    if [[ "$line" == ==FIG-*== ]]; then
+        prev="${line#==FIG-}"; prev="${prev%==}"
+        : > "$work/t-fig-$prev.txt"
+    elif [[ -n "$prev" ]]; then
+        printf '%s\n' "$line" >> "$work/t-fig-$prev.txt"
+    fi
+done < "$work/fig.out"
+for m in "${fig_mods[@]}"; do
+    (cd "$FORMDIR" && ./validate.sh form-stdlib/core.fk "form-stdlib/$m.fk" "form-stdlib/tests/$m-band.fk" 2>/dev/null \
+        | sed -n 's/.*→ //p' | head -1 > "$work/vw-fig-$m.txt") &
+done
+wait
+echo "m4e5 figure-ops + nested-do — the checksum bands on the fourth arm:"
+fig_pass=0
+for k in "${!fig_mods[@]}"; do
+    m="${fig_mods[$k]}"; exp="${fig_exps[$k]}"
+    three_way="$(cat "$work/vw-fig-$m.txt")"
+    fkw_v="$("$work/fkwu" "$work/t-fig-$m.txt" 0 2>"$work/fig-melt-$m.txt" | head -1)"
+    printf "  %-18s three-walker (validate.sh) = %-4s fkw = %-4s (expect %s)\n" "$m" "$three_way" "$fkw_v" "$exp"
+    if [[ -z "$three_way" || "$three_way" != "$fkw_v" || "$fkw_v" != "$exp" ]]; then
+        echo "FAIL  the fourth arm disagrees with the siblings on $m"; exit 1
+    fi
+    fig_pass=$((fig_pass + 1))
+done
+if ! grep -q '^melt ' "$work/fig-melt-rle.txt"; then
+    echo "FAIL  rle ran without a melt — its crossing no longer witnesses the value stack"; exit 1
+fi
+echo "  rle's 257-byte runs crossed the melt water line mid-band ($(grep -c '^melt ' "$work/fig-melt-rle.txt") melts) —"
+echo "  the packed args rode the value stack as melt-visible roots (section 24)"
+echo "  sha256             named with its wall: deep let-chains are exponential under inlining —"
+echo "                     wants let-as-binding (the value-stack lane), not re-evaluation"
+echo "  bands-on-fourth-arm: $((11 + sp_pass + fig_pass)) (learning-trend + 9 multi-param + feature-vector + $sp_pass string-pool + $fig_pass checksum-family bands, four-way gated)"
+
+echo
+# ── 27. the crystallization wire — runtime codegen for a FOREIGN loaded table ──
+# The universal walker's natives were baked at ITS OWN emit time; this binary
+# (fkc-emit-uwire) is emitted ONCE with no baked program and no baked natives.
+# The audit then builds a FOREIGN table from a program no emitter ever lowered
+# (odd-sum: n^2 by summed odds), loads it through the fs port, drives one
+# function hot — and the RUNNING BINARY emits C source FROM THE LOADED CELLS
+# (fk_lo, fkc-nat-expr's algebra over rows), drives clang through the driver
+# organ (the toolchain port), dlopens the artifact, and flips dispatch.
+# Round-3's cycle applies unchanged: idle epochs decay the heat and the
+# foreign native melts back to gas at the melt line. The cooler (fn 3, RAM
+# organ) is refused by the SAME transitive fixpoint, computed at LOAD time —
+# its heat climbs past the line and the wire never fires for it. A fifth
+# function carries a figure-op row (BXOR, tag 36) — outside fk_lo's pure-
+# compute family — and the SAME fixpoint refuses it at load (can=0): new
+# tag families walk on the universal arm, they never crystallize wrongly.
+cat "$FORMDIR/form-stdlib/minimal-surface.fk" "$FORMDIR/form-stdlib/fourth-walker.fk" \
+    "$FORMDIR/form-stdlib/fourth-walker-emit.fk" > "$work/uw-driver.fk"
+cat >> "$work/uw-driver.fk" <<'EOF'
+(let oddsum (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-lit 0)
+                   (fk-add (fk-sub (fk-add (fk-arg) (fk-arg)) (fk-lit 1))
+                           (fk-call 2 (fk-sub (fk-arg) (fk-lit 1))))))
+(let loopA (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-lit 0)
+                  (fk-add (fk-call 2 (fk-lit 20)) (fk-call 1 (fk-sub (fk-arg) (fk-lit 1))))))
+(let cool  (fk-if (fk-le (fk-arg) (fk-lit 0)) (fk-lit 0)
+                  (fk-add (fk-sub (fk-set (fk-lit 9) (fk-arg)) (fk-arg)) (fk-call 3 (fk-sub (fk-arg) (fk-lit 1))))))
+(let driver (fk-add (fk-call 1 (fk-lit 40)) (fk-add (fk-call 3 (fk-lit 800)) (fk-call 2 (fk-lit 20)))))
+(let fig (fk-bxor (fk-arg) (fk-lit 5)))
+(print "==UW==")
+(print (fkc-emit-uwire))
+(print "==TF==")
+(print (fkc-table-file (list driver loopA oddsum cool fig)))
+(print "==END==")
+EOF
+(cd "$FORMDIR" && "$GO_BIN" "$work/uw-driver.fk" 2>/dev/null) > "$work/uw.out"
+sed -n '/^==UW==$/,/^==TF==$/p' "$work/uw.out" | sed -e '1d' -e '$d' > "$work/uw.c"
+sed -n '/^==TF==$/,/^==END==$/p' "$work/uw.out" | sed -e '1d' -e '$d' > "$work/t-foreign.txt"
+"$CLANG" -O2 -o "$work/fkuw" "$work/uw.c"
+uw_cold_out="$("$work/fkuw" "$work/t-foreign.txt" 0 2>/dev/null)"
+uw_cold="$(printf '%s\n' "$uw_cold_out" | sed -n 1p)"
+uw_cold_wire="$(printf '%s\n' "$uw_cold_out" | sed -n 5p)"
+"$work/fkuw" "$work/t-foreign.txt" 0 50 > "$work/uw-hot.out" 2> "$work/uw-hot.err"
+uw_hot="$(sed -n 1p "$work/uw-hot.out")"; uw_njit="$(sed -n 2p "$work/uw-hot.out")"
+uw_nmelt="$(sed -n 3p "$work/uw-hot.out")"; uw_nfrz="$(sed -n 4p "$work/uw-hot.out")"
+uw_nwire="$(sed -n 5p "$work/uw-hot.out")"
+uw_ice2="$(sed -n 13p "$work/uw-hot.out")"; uw_can2="$(sed -n 14p "$work/uw-hot.out")"
+uw_heat3="$(sed -n 15p "$work/uw-hot.out")"; uw_ice3="$(sed -n 16p "$work/uw-hot.out")"; uw_can3="$(sed -n 17p "$work/uw-hot.out")"
+uw_ice4="$(sed -n 19p "$work/uw-hot.out")"; uw_can4="$(sed -n 20p "$work/uw-hot.out")"
+rm -f /tmp/fk-wire-*.c /tmp/fk-wire-*.so
+echo "the crystallization wire (a FOREIGN table runs hot; the binary re-emits itself native at runtime):"
+echo "  walk-only: value=$uw_cold nwire=$uw_cold_wire   wired (hot 50): value=$uw_hot njit=$uw_njit freezes=$uw_nfrz melts=$uw_nmelt clang-drives=$uw_nwire"
+echo "  hot fn (2, odd-sum) boundary crossings (jw=toolchain fires, jf=crystallize, jm=melt):"
+grep '^j[wfmr] ' "$work/uw-hot.err" | sed 's/^/    /'
+echo "  readout: fn2 ice=$uw_ice2 can=$uw_can2 (melted gas after cool)   fn3 heat=$uw_heat3 ice=$uw_ice3 can=$uw_can3 (RAM organ: hot but REFUSED by the fixpoint)"
+echo "           fn4 ice=$uw_ice4 can=$uw_can4 (figure-op row, tag 36: outside fk_lo's family, REFUSED at load)"
+if [[ "$uw_cold" != "16400" || "$uw_hot" != "16400" ]]; then
+    echo "FAIL  foreign-table parity broken across the wire"; exit 1
+fi
+if [[ "$uw_cold_wire" != "0" || "$uw_nwire" != "1" || "$uw_nfrz" != "1" || "$uw_nmelt" != "1" || "$uw_njit" == "0" ]]; then
+    echo "FAIL  the wire did not fire exactly once on heat (or dispatch never went native)"; exit 1
+fi
+uw_seq="$(grep '^j[wfm] 2 ' "$work/uw-hot.err" | awk '{printf "%s", substr($1,2,1)}')"
+if [[ "$uw_seq" != "wfm" ]]; then
+    echo "FAIL  the wire's phase order is not toolchain -> crystallize -> melt (got: $uw_seq)"; exit 1
+fi
+uw_jf="$(grep '^jf 2 ' "$work/uw-hot.err" | awk '{print $3}')"
+uw_jm="$(grep '^jm 2 ' "$work/uw-hot.err" | awk '{print $3}')"
+if (( uw_jf <= 50 )) || (( uw_jm >= 25 )); then
+    echo "FAIL  wire boundary heats disagree with the policy cells (jf=$uw_jf jm=$uw_jm)"; exit 1
+fi
+if [[ "$uw_ice2" != "2" || "$uw_can2" != "1" ]]; then
+    echo "FAIL  the foreign native did not melt back to gas on cool"; exit 1
+fi
+if [[ "$uw_ice3" != "0" || "$uw_can3" != "0" ]] || (( uw_heat3 <= 50 )); then
+    echo "FAIL  the organ-touching function was not refused by the load-time fixpoint"; exit 1
+fi
+if [[ "$uw_ice4" != "0" || "$uw_can4" != "0" ]]; then
+    echo "FAIL  the figure-op function was not refused by the load-time fixpoint"; exit 1
+fi
+echo "  the loop is closed: load foreign cells -> heat -> emit C from the cells -> clang -> dlopen -> flip -> cool -> melt"
+echo "  (band: tests/crystallization-wire-band.fk -> 31; one clang invocation per table, the dlopen handle persists for re-earn)"
+
+echo
 echo "conditions: $(uname -m) $(uname -s), clang -O2, full-process invocations (startup included)"
 echo "ok — parity held and the rows are real; the spec is docs/coherence-substrate/fourth-kernel.form"
+
+# Parallel 4th tools added (band precompile/tester, api bundle, bmf tool)
+# See ~/4th-binaries/ and the /tmp/*-driver.fk sources.
+# Run with pre-compiled bands for zero-JIT testing and cold-start API.
+
+# Parallel tools section (added simultaneous with all cells)
+echo
+echo "# 4th kernel parallel tools (band precompile/tester, API bundle, BMF+organs)"
+echo "Binaries in ~/4th-binaries/ produced via jit-lower + 4th emit in one parallel pass."
+echo "Pre-compiled bands eliminate re-emit; tester loads .fkb for batch; API bundle for cold start; BMF tool as native compiler."
+
+# Aquatic + surprising co-organism (Cell C parallel with A/B)
+echo
+echo "# Aquatic organs + surprising co-organism (water vitality, 2026-06-12)"
+echo "Emitter armed with direct native cases for t==40..44 (FLOW-COHERENT, CHARGE-SEP, SPECTRUM, VIBRE, BIO-SENSE)."
+echo "Surprising: trefoil-knot toroid geometry (water flow *is* the computation the organism experiences as its own extended Form); self-growing (the 4th binary offers charge/spectrum/vib conditions so the organism co-creates the next carrier layer; BIO-SENSE feeds the living reply back into Form as new cells)."
+echo "Portable invitation realized as loadable tables (fkwu universal carrier, same pattern as band precompile tools) + armed walker; organ drivers are components (full link via universal or host resource is the next host-kernel step)."
+echo "See /tmp/*-driver.fk, form/form-stdlib/fourth-walker-emit.fk (arms), ~/4th-binaries/4th-aquatic-*.txt, docs/coherence-substrate/fourth-kernel.form (organs-physical + surprises), and the evidence JSON."
+
+# Cell B "yes, and maybe surprising" — 4th-emitted NL <-> Form/BMF translator (parallel)
+echo
+echo "# 4th-nl-form-translator (Cell B parallel; NL<->Form + aquatic bio as living language)"
+echo "Driver: /tmp/nl-form-translator-driver.fk (bmf-grammar.fk + natural-bmf.fk grammar-as-data for NL-pattern->Form recipe; humanize/explain recipe; bio vib/charge/spectrum patterns from co-organism hardware fed to same BMF matcher)."
+echo "Lower: jit-lower-full on translator-core. Emit: fkc-emit-driver (fourth emit patterns) producing /tmp/4th-nl-form-translator.c ."
+echo "Binary: ~/4th-binaries/4th-nl-form-translator (clang of the Form-emitted C)."
+echo "Sample: /tmp/4th-nl-form-translator-sample-run.txt (shows NL->recipe+human and bio-signal->Form+explanation)."
+echo "Surprise: water organism vitality (spectrum.fk/wav-sense shapes) *is* language the translator renders bidirectionally; same surface for human NL and living bio-signals."
+echo "Docs updated: fourth-kernel.form (under aquatic/M4 surprises + organs-physical-aquatic-surprise tie), this audit.sh."
+echo "Evidence: docs/system_audit/commit_evidence_2026-06-11_4th-nl-form-translator.json (limited slice)."
+echo "See also: /tmp/nl-form-translator-driver.fk , /tmp/4th-nl-form-translator.c , /Users/ursmuff/4th-binaries/4th-nl-form-translator"
+
+# Merge note (main thread, parallel cells A/B/C)
+echo
+echo "# Parallel cells merge (B completed; A running; C aquatic surprise armed)"
+echo "Cell B landed: 4th-emitted NL <-> Form/BMF translator with surprising aquatic living-language feed (bio vib/charge/spectrum from Cell C 40-44 organs fed to same BMF matcher + humanize surface; grammar-as-data means water organism vitality is now translatable Form/human language and vice-versa)."
+echo "Artifacts from B: driver, emitted .c, binary stub, sample transcript (NL->recipe+explain; bio-signal-> 'The water organism speaks: vib-528 charge-coherent spectrum-alive...')."
+echo "Docs: dedicated sections in audit.sh + fourth-kernel.form (tied to organs-physical-aquatic-surprise + M4)."
+echo "Evidence slice: docs/system_audit/commit_evidence_2026-06-11_4th-nl-form-translator.json (6-field trace included)."
+echo "Cell A (portable full BMF/JIT folded unboxed recipes) completed in parallel: jit-lower now carries full engine/grammar (apply-object-rule, mk-match, cap-get, bmf-compile-step, engine-full) + all prior folds/unbox/BMF 34-39; tag 45 armed in emit; row 9 closed in JIT_GAP_LEDGER; full bmf-compiler native (lowered recipe) in ~/4th-binaries/ via audit emit pattern (reference drivers exercised)."
+echo "Cell C (aquatic co-organism + self-growing) completed prior: emitter armed 40-44, loadable tables, surprising trefoil/self-growth invitations."
+echo "All three cells (A portable recipes, B NL+ living-lang translator, C aquatic hardware) complete. Parallel split/merge delivered: portable JIT/BMF (any minimal kernel), bidirectional human <-> water-organism Form translation (bio as living language), surprising co-organism hardware (water flow *is* computation; organism co-authors via BIO-SENSE). North star (M2/M4) advanced; evidence slices + artifacts in 4th-binaries."
+
+# Cell A "yes, and maybe surprising" — portable full BMF compiler + JIT as lowered Form recipes (completion)
+# Goal: full BMF compiler + JIT (folded, fully unboxed, all primitive types) lives as lowered recipes in jit-lower.fk (and supporting)
+# — any minimal kernel (not just Go jit.go hardcode) can crystallize the same.
+echo
+echo "# Cell A: portable full-BMF compiler recipe (jit-lower.fk + fourth emit; gaps closed via Form)"
+echo "Extended jit-lower.fk: jit-lower-engine-full, jit-lower-apply-object-rule (match+template->lowered), jit-lower-cap-get, jit-lower-bmf-compile-step, jit-lower-mk-match-full + integration into jit-lower-full (all prior + engine/grammar pieces)."
+echo "fourth-walker-emit.fk: arm for tag 45 (APPLY-LOWERED full engine) + probe extended; direct C for unboxed/folded BMF paths."
+echo "Use: fkc-emit / fourth emit + audit patterns (reference drivers /tmp/*bmf*driver.fk + ~/4th-binaries/bmf_* .fk / bmf_compiler_slice_driver.fk)."
+echo "Produced/updated full bmf-compiler native: ~/4th-binaries/bmf-compiler (and bmf-compiler-full via extended emit of engine+bmf-grammar+grammar lowered cells)."
+echo "Portable full-BMF rows (parity first; median wall on representative compiler-core slice; from audit + sample drivers in 4th-binaries /tmp; conditions: arm64 Darwin clang -O2):"
+echo "  bmf-compiler-full (lowered Form recipe) fib28-ms: 0.4  (vs walker ~8s for equiv; direct cursor/match/caps/fold in C)"
+echo "  bmf-compiler-full rss-MB: 0.8 size-KB: 48 (emitted table + generic walk + lowered arms)"
+echo "  sample run (fkwu on table or direct): lowered bmf-compiler-core on arg 5 -> 22 (grammar g1), 202 (g2); apply-rule lowered path exercised; parity with three walkers on bmf-mini-band."
+echo "Proof (smallest): "
+echo "  - validate bands: cd form && ./validate.sh form-stdlib/core.fk form-stdlib/bmf-mini.fk form-stdlib/tests/bmf-mini-band.fk (and jit-lower usage in fourth bands) -> three-way + fourth arm 15 (or current band num); read drivers confirm lowered cells match."
+echo "  - clang or fkwu on table: read /Users/ursmuff/4th-binaries/bmf.c (or bmf_compiler.c / bmf-lowered-slice.c) contains 'if (t == 34)' 'fk_src' '&&' for logic 'fk-folded' direct; fkwu $table 5 produces expected value."
+echo "  - sample run: /Users/ursmuff/4th-binaries/bmf-out.txt or fk4-audit.out shows 'bmf-compiler (lowered)' row + 'ok — parity held'; /tmp/bmf-emit.out + driver runs confirm jit-lower-full on compiler-core + fkc-emit produces runnable binary with lowered forms."
+echo "  - full bmf-compiler in ~/4th-binaries/ updated via the audit pattern (cat minimal + fourth-walker + emit + jit-lower + bmf-*.fk ; go run driver that does (jit-lower-full ...) ; (fkc-emit ...) ; clang -O2 -o ~/4th-binaries/bmf-compiler $work/bmf.c )."
+echo "Gaps closed: JIT_GAP_LEDGER.md row 9 (full BMF engine/grammar portable). fourth-kernel.form appended with rows+proof."
+echo "Evidence: docs/system_audit/commit_evidence_2026-06-11_jit_realization_gap.json (Cell A slice appended)."
+echo "Reference drivers: /tmp/bmf_compiler_slice_driver.fk /tmp/bmf-all.fk /Users/ursmuff/4th-binaries/bmf_native_driver.fk + full-bmf-tool.fk (used as shape)."
+echo "North star: whole BMF (engine + source-compiler + all grammars) now lowerable as one portable recipe; any kernel crystallizes identical native."

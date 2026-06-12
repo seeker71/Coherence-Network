@@ -1,0 +1,112 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "codex/native-batches-20260611",
+  "commit_scope": "Promote high-traffic dynamic read families into the BML native front door: presence places, graph node edges, and agent task logs.",
+  "files_owned": [
+    "deploy/front-door/api.bml",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/test_hostinger_deploy_form_paths.sh",
+    "api/tests/test_runtime_surface_native_routes.py",
+    "form/form-kernel-go/server_test.go",
+    "docs/system_audit/commit_evidence_2026-06-11_native_bml_dynamic_read_batches.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "git diff --check",
+      "bash scripts/test_hostinger_deploy_form_paths.sh",
+      "cd api && python3 -m pytest -q tests/test_runtime_surface_native_routes.py",
+      "cd form/form-kernel-go && go test ./... -run TestKernelReadRoutePromotionsSelectNatively -count=1",
+      "python3 scripts/runtime_surface_report.py --json",
+      "python3 scripts/native_route_goal_loop.py /goal --source web_api --seconds 86400 --limit 2000 --json",
+      "cd form/form-kernel-rust && ./target/release/form-kernel-rust check --routes ../../deploy/front-door/api.bml --stdlib ../form-stdlib",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-11_native_bml_dynamic_read_batches.json"
+    ],
+    "notes": "The BML route catalog now exports 55 GET/read ingress-covered routes and the runtime-surface report shows 95 kernel-first capable/served routes. The Go kernel selection test passed in 37.432s and proves the new dynamic routes choose native-kernel-go, including the higher-priority /api/agent/tasks/{task_id}/log route over the existing task_* wildcard. The web_api goal measurement after the task-log batch reported goal_native_share=0.9725, goal_native_events=1945, total_events=2000, next_action=observe-next-route-window, and native_route_sources={bml_routes:62, form_manifest_routes:34}. The Rust checker still reports the same 14 pre-existing unresolved names observed on origin/main, with no new unresolved symbols from this batch."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR creation, hosted checks, merge, and post-merge deploy verification."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "This branch has not yet been deployed. Hostinger deploy canaries now include the new presence places and graph node edges probes; agent task logs are covered by ingress and kernel route-selection proof because successful public probing needs a live task id."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local route promotion proof passed; CI, merge, and production deploy verification remain pending."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "GET /api/presences/{presence_id}/places, GET /api/graph/nodes/{node_id}/edges, and GET /api/agent/tasks/{task_id}/log should be selected by the BML native front door with X-Form-Python-Authority:false while preserving existing Python-compatible JSON shapes and 404 behavior.",
+    "proof": "Static ingress coverage, runtime-surface accounting, and Go kernel route selection all recognize the promoted dynamic routes. The traffic goal window now exceeds the 90% target at 97.25% native-executable web_api events.",
+    "public_endpoints": [
+      "GET https://api.coherencycoin.com/api/presences/{presence_id}/places",
+      "GET https://api.coherencycoin.com/api/graph/nodes/{node_id}/edges",
+      "GET https://api.coherencycoin.com/api/agent/tasks/{task_id}/log"
+    ],
+    "test_flows": [
+      "scripts/test_hostinger_deploy_form_paths.sh fails if any BML GET route lacks Traefik ingress or if the promoted handlers lose native proof headers.",
+      "api/tests/test_runtime_surface_native_routes.py pins the new dynamic routes in the capable surface.",
+      "form/form-kernel-go/server_test.go compiles deploy/front-door/api.bml and verifies native route selection for presence places, graph node edges, and agent task logs.",
+      "scripts/native_route_goal_loop.py /goal --source web_api --seconds 86400 --limit 2000 reports next_action=observe-next-route-window while the window remains above 90% native-executable."
+    ]
+  },
+  "idea_ids": [
+    "native-api-lane",
+    "form-native-front-door",
+    "kernel-native-route-goal"
+  ],
+  "spec_ids": [
+    "native-route-goal-loop",
+    "front-door-bml-route-catalog",
+    "hostinger-bml-front-door-deploy-proof"
+  ],
+  "task_ids": [
+    "native-bml-dynamic-read-batches-2026-06-11"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-prioritization"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "measurement",
+        "evidence-recording"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "bash scripts/test_hostinger_deploy_form_paths.sh -> BML GET/read ingress coverage: 55 routes; PASS.",
+    "cd api && python3 -m pytest -q tests/test_runtime_surface_native_routes.py -> 4 passed.",
+    "cd form/form-kernel-go && go test ./... -run TestKernelReadRoutePromotionsSelectNatively -count=1 -> ok form-kernel-go 37.432s.",
+    "python3 scripts/runtime_surface_report.py --json -> kernel_first_capable_routes=95 and bml_front_door_read_capable_routes=55.",
+    "python3 scripts/native_route_goal_loop.py /goal --source web_api --seconds 86400 --limit 2000 --json -> goal_native_share=0.9725, next_action=observe-next-route-window.",
+    "cd form/form-kernel-rust && ./target/release/form-kernel-rust check --routes ../../deploy/front-door/api.bml --stdlib ../form-stdlib -> same 14 pre-existing unresolved names as origin/main baseline."
+  ],
+  "change_files": [
+    "api/tests/test_runtime_surface_native_routes.py",
+    "deploy/front-door/api.bml",
+    "deploy/hostinger/auto-deploy.sh",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "form/form-kernel-go/server_test.go",
+    "scripts/test_hostinger_deploy_form_paths.sh"
+  ],
+  "change_intent": "runtime_feature"
+}

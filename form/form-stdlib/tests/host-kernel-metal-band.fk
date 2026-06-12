@@ -100,7 +100,7 @@
                 16 0))
 
     ; ── 32: WORLD-FS — a real file ──
-    (let path "/tmp/host-kernel-metal.txt")
+    (let path (str_concat (temp_dir) "/host-kernel-metal.txt"))
     (let wrote (write_file_text path "metal"))
     (let c5 (if (and (eq wrote 5)
                  (and (eq (fs_exists path) 1)

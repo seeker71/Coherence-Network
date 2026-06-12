@@ -1,0 +1,48 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/form-lower.fk
+;
+; form-lower-band — the Form -> assembly COMPILER, proven three-way: an op-tagged
+; expression tree is lowered to an arm64 byte image that is byte-for-byte the
+; assembler's. This is the compiler step the conviction gate verifies before clang
+; is dropped (form-to-asm.form): the kernel compiles its OWN programs to native
+; bytes, and the bytes ARE clang's.
+;
+; The program: ((40 + 1) - 1). Nodes (tag c1 c2 c3):
+;   0 LIT 40 · 1 LIT 1 · 2 ADD(0,1) · 3 LIT 1 · 4 SUB(2,3)=root
+; lowers to: movz w0,#40 ; add w0,w0,#1 ; sub w0,w0,#1 ; ret
+; assembler image (LE bytes): 00 05 80 52  00 04 00 11  00 04 00 51  c0 03 5f d6
+;
+; Verdict 31 when the compiler is byte-accurate:
+;   1   a LIT lowers to a movz that loads the constant (00 05 80 52 for #40)
+;   2   ADD(x, LIT) lowers to lower(x) THEN add — the operand folds into w0
+;   4   the whole tree compiles to 16 bytes ending in ret (4 instructions)
+;   8   CONVICTION FULL — the compiled image byte-equals the assembler reference;
+;       the gate opens (clang may be dropped for this program)
+;   16  COMPOSITIONAL — the tree-lowering equals the hand-encoded instruction
+;       sequence: compile(tree) == [movz 40][add 1][sub 1][ret], byte-for-byte
+(do
+    (let prog (list
+        (list 1 40 0 0)    ; 0 LIT 40
+        (list 1 1 0 0)     ; 1 LIT 1
+        (list 3 0 1 0)     ; 2 ADD(0,1)
+        (list 1 1 0 0)     ; 3 LIT 1
+        (list 4 2 3 0)))   ; 4 SUB(2,3) = root
+
+    (let img (lo-compile prog 4))
+    (let ref (list 0 5 128 82  0 4 0 17  0 4 0 81  192 3 95 214))   ; the assembler image
+    (let hand (fa-image (list (fa-movz 0 40) (fa-add 0 0 1) (fa-sub 0 0 1) (fa-ret))))
+
+    (let c0 (if (eq (nth (lo-node prog 0 1) 0) 0)
+            (if (eq (nth (lo-node prog 0 1) 1) 5)
+            (if (eq (nth (lo-node prog 0 1) 2) 128)
+            (if (eq (nth (lo-node prog 0 1) 3) 82) 1 0) 0) 0) 0))
+    (let c1 (if (eq (len (lo-node prog 2 1)) 8)             ; LIT-load + add = two instructions
+            (if (eq (nth (lo-node prog 2 1) 5) 4)           ; the add's byte 1 (imm<<10 -> 0x04)
+            (if (eq (nth (lo-node prog 2 1) 7) 17) 2 0) 0) 0))  ; the add's high byte (0x11)
+    (let c2 (if (eq (len img) 16)
+            (if (eq (nth img 12) 192)
+            (if (eq (nth img 15) 214) 4 0) 0) 0))         ; ends in ret (c0 03 5f d6)
+    (let c3 (if (eq (fa-conviction img ref) 1)
+            (if (eq (fa-may-drop (fa-conviction img ref) 1) 1) 8 0) 0))
+    (let c4 (if (eq (fa-conviction img hand) 1) 16 0))    ; lowering == hand-encoded sequence
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))

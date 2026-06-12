@@ -1,0 +1,82 @@
+# ─────────────────────────────────────────────────────────────────────
+# db-api-server.form — one self-contained native binary, emitted from a Form
+#   recipe, that serves the home page and a JSON API entirely from a SQLite file
+#   it opens itself, plus its OWN api surface and its OWN binary. No libsqlite3,
+#   no Python, no stdio in the running binary. The composition the whole arc
+#   pointed at: sqlite-read + the net organ + the self-return, in one cell.
+# ─────────────────────────────────────────────────────────────────────
+#
+# Urs: "a version which returns the home page and the api all from the sqlite file
+# based db from within the binary; every api surface and response reconstructed
+# from its own api surface including its own binary; on a fresh mac os docker image."
+#
+# Every piece was already proven: the SQLite parse (sqlite-as-recipe), the socket
+# net organ (fourth-walker-emit fkc-emit-server, live witness), the quine/self-
+# return (m4d). This binds them into one binary and witnesses the whole loop live.
+
+(db-api-server
+
+  (lineage
+    (data-from    sqlite-as-recipe.form)             # the .db parse, lifted into the emitted C
+    (net-organ    fourth-walker-emit.fk)             # socket/bind/listen/accept/fork — the only kernel call
+    (self-return  m4d-quine)                          # the binary returns its own bytes
+    (recipe       form-stdlib/db-api-server.fk)       # das-emit → the C → the binary
+    (witness      scripts/db_api_server_demo.sh)      # emit → clang → run → curl every route
+    (container    deploy/db-api/Dockerfile)           # minimal Linux image: binary + .db only
+    (data-proof   tests/sqlite-read-band.fk))         # the load-bearing parse, 31 three-way
+
+  # ── What the one binary does ─────────────────────────────────────────
+  (routes
+    (home         "GET /            — home page (html); the idea rows, read from the .db")
+    (api          "GET /api/idea    — json rows, reconstructed from the .db")
+    (surface      "GET /api/_surface — the binary's OWN api surface (its route list)")
+    (self-binary  "GET /api/_binary  — the binary's OWN executable bytes (argv[0])"))
+
+  # ── The self-reference the ask named ─────────────────────────────────
+  # "every api surface and response reconstructed from its own api surface
+  # including its own binary." /api/_surface returns the binary's description of
+  # itself; /api/_binary returns the binary itself. Witnessed: the bytes served on
+  # /api/_binary are byte-for-byte identical to the running executable (cmp clean).
+  (self-reference
+    (surface-returns-self "the api describes its own routes — the surface is data the binary holds")
+    (binary-returns-self  "the binary reads argv[0] and serves its own bytes — response IS the executable")
+    (witnessed            "served bytes == running binary, byte-for-byte (db_api_server_demo.sh: IDENTICAL)"))
+
+  # ── No host runtime — the store is a file, the parse is the recipe ───
+  (self-contained
+    (no-libsqlite3   "the SQLite format is parsed inline — sqlite-read.fk lifted into the emitted C")
+    (no-python-node  "the running binary is one process; libc is the only link (Mach-O: libSystem)")
+    (only-organ      "the socket is the single kernel call; open/read for the .db and for self")
+    (fresh-mac       "witnessed: a native macOS arm64 binary, runs on a fresh Mac with zero installed deps")
+    (linux-container "deploy/db-api/Dockerfile: a minimal Linux image carrying only the binary + the .db"))
+
+  # ── Honest edges ─────────────────────────────────────────────────────
+  (edges
+    (go-emitted      "the emitter uses C string literals (html/json), so it carries escaped quotes:
+                      Go and Rust emit it; the TS kernel rejects escaped quotes — the recorded
+                      three-way divergence (self-translate.fk). The artifact is the binary, witnessed
+                      live; the data BODY (sqlite parse) is three-way.")
+    (responder-cells "the quoteless closing cell: the responder as program-as-cells run by the
+                      fkc-emit-server walker over the routing + sqlite recipes — makes the whole
+                      server three-way, not just the parse. Named, not hidden.")
+    (sqlite-scope    "the reader handles a table-btree leaf page; interior/overflow/index pages are
+                      the closing cells named in sqlite-as-recipe.form.")
+    (container-build "the Dockerfile is authored and portable (Linux/BSD sockaddr #ifdef) but not
+                      built in the session that wrote it (no docker daemon); the native macOS run is
+                      the witnessed artifact."))
+
+  (invariant
+    (one-binary-serves-it-all         home-api-own-surface-own-binary-from-a-sqlite-file)
+    (the-store-is-a-file-the-parse-a-recipe   no-libsqlite3-no-python-only-libc)
+    (the-binary-returns-itself         surface-is-self-description-binary-is-self-bytes)
+    (the-data-body-is-three-way        sqlite-read-band-31)
+    (the-quoteless-server-is-the-closing-cell  responder-as-cells-makes-it-all-three-way)))
+
+# ─────────────────────────────────────────────────────────────────────
+# How to verify
+# ─────────────────────────────────────────────────────────────────────
+#   bash scripts/db_api_server_demo.sh          # emit → clang → run → curl /, /api/idea,
+#                                               #   /api/_surface, /api/_binary (IDENTICAL self-return)
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sqlite-read.fk \
+#     form-stdlib/tests/sqlite-read-band.fk     # → 31 three-way (the data body)
+#   docker build -f deploy/db-api/Dockerfile -t form-db-api .   # the Linux container (needs a daemon)

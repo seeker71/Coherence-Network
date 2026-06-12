@@ -37,16 +37,16 @@ section [form.action] {
 
     let config_text = "extension=.aa\ngrammar=/tmp/form-runtime-grammar-a.fk\n";
     let grammar_a = "; runtime grammar plugin\n; dialect=surface-a\n; block=surface-a.bmf\n; word=surface-a-word\n; rule=greeting\n; literal=hello\n(do 0)\n";
-    let config_write = write_file_text("/tmp/form-runtime-grammar.config", config_text);
-    let grammar_a_write = write_file_text("/tmp/form-runtime-grammar-a.fk", grammar_a);
-    let source_a_write = write_file_text("/tmp/source.aa", "hello field");
+    let config_write = write_file_text((str_concat (temp_dir) "/form-runtime-grammar.config"), config_text);
+    let grammar_a_write = write_file_text((str_concat (temp_dir) "/form-runtime-grammar-a.fk"), grammar_a);
+    let source_a_write = write_file_text((str_concat (temp_dir) "/source.aa"), "hello field");
 
     let registry0 = form-runtime-grammar-registry-empty();
-    let registry = form-runtime-grammar-load-config-for-file(registry0, "/tmp/form-runtime-grammar.config", "/tmp/source.aa", form-capsule-root(132, 1, 9, 1), surface_a_source, surface_a_form, parse_kind, emit_kind, effect_pure, reversible_yes, lossless_yes, deterministic_yes, proof_roundtrip, proof_ok, 1, selector_extension, selector_section, missing);
+    let registry = form-runtime-grammar-load-config-for-file(registry0, (str_concat (temp_dir) "/form-runtime-grammar.config"), (str_concat (temp_dir) "/source.aa"), form-capsule-root(132, 1, 9, 1), surface_a_source, surface_a_form, parse_kind, emit_kind, effect_pure, reversible_yes, lossless_yes, deterministic_yes, proof_roundtrip, proof_ok, 1, selector_extension, selector_section, missing);
 
-    let missing_cc = form-runtime-grammar-config-path(read_file("/tmp/form-runtime-grammar.config"), ".cc", missing);
+    let missing_cc = form-runtime-grammar-config-path(read_file((str_concat (temp_dir) "/form-runtime-grammar.config")), ".cc", missing);
     let binding_a = form-runtime-grammar-resolve-value(registry, ".aa", empty);
-    let result_a = form-runtime-grammar-parse-source-file(registry, "/tmp/source.aa", "greeting", ctx, empty);
+    let result_a = form-runtime-grammar-parse-source-file(registry, (str_concat (temp_dir) "/source.aa"), "greeting", ctx, empty);
     let registry_score = sum(list(str_score(missing_cc, missing, 100), if nil?(binding_a) then 0 else 200, int_score(len(form-runtime-grammar-registry-bindings(registry)), 2, 300), int_score(len(form-recipe-registry-capsules(form-runtime-grammar-registry-recipe-registry(registry))), 1, 400)));
     let parse_score = sum(list(str_score(bmf-object-kind(parsed_object(result_a)), "greeting", 500), str_score(node_value(node_child(parsed_node(result_a), 0)), "field", 600)));
 

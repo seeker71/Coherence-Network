@@ -1,0 +1,42 @@
+; tests/energy-center-glands-band.fk — the seven centers, two lanes apart, three-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/energy-center-glands.fk
+;
+; Proves: seven centers resolve; each carries chemicals, genes, and both a body
+; function and an energy function; the LANE LAW holds — for every center the
+; belief lane is strictly below the evidence lane (the correspondence is held,
+; the biology is measured, never merged); the peptide vs enzyme-made distinction
+; is real (pancreas/pituitary peptide — the hormone IS the protein; pineal/adrenal
+; enzyme-made — the protein is the synthesising enzyme); the measured line speaks
+; the gland and biology while the belief line carries the held-as-belief frame; an
+; eighth center is honest absence.
+;
+; Band verdict: 1023 when every law holds.
+
+section [form.bml] {
+    def ecgb-bool(b, weight) = if b then weight else 0;
+
+    // the lane law over the whole table: belief < evidence for every center
+    def ecgb-lane-law-loop(cs) = if nil?(cs) then true else if lt(ecg-belief(head(cs)), ecg-evidence(head(cs))) then ecgb-lane-law-loop(tail(cs)) else false;
+    def ecgb-each-has-genes-loop(cs) = if nil?(cs) then true else if gt(len(ecg-genes(head(cs))), 0) then ecgb-each-has-genes-loop(tail(cs)) else false;
+
+    def ecgb-score() {
+        let crown = ecg-find("crown");
+        let pancreas = ecg-find("solar-plexus");
+        let adrenal = ecg-find("root");
+        let pituitary = ecg-find("third-eye");
+        sum(list(
+            ecgb-bool(eq(len(ecg-centers()), 7), 1),
+            ecgb-bool(and(ecg-known?(crown), ecg-known?(ecg-find("heart"))), 2),
+            ecgb-bool(ecgb-lane-law-loop(ecg-table()), 4),
+            ecgb-bool(ecgb-each-has-genes-loop(ecg-table()), 8),
+            ecgb-bool(and(ecg-peptide?(pancreas), ecg-peptide?(pituitary)), 16),
+            ecgb-bool(and(not(ecg-peptide?(crown)), not(ecg-peptide?(adrenal))), 32),
+            ecgb-bool(and(ge(str_find(ecg-spoken(crown), "Pineal", 0), 0), ge(str_find(ecg-spoken(crown), "circadian", 0), 0)), 64),
+            ecgb-bool(and(ge(str_find(ecg-belief-spoken(crown), "Held as belief", 0), 0), ge(str_find(ecg-belief-spoken(crown), "Sahasrara", 0), 0)), 128),
+            ecgb-bool(and(ge(str_find(ecg-spoken(pancreas), "insulin", 0), 0), ge(str_find(ecg-protein-link(pancreas), "the hormone IS the protein", 0), 0)), 256),
+            ecgb-bool(not(ecg-known?(ecg-find("eighth-center"))), 512)));
+    }
+
+    ecgb-score();
+}

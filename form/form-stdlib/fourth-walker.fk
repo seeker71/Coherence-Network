@@ -100,6 +100,82 @@
 (defn fk-len (xs)   (fk-node 22 xs))
 (defn fk-nth (xs i) (fk-node 23 (ms-intern xs i)))
 
+; --- JIT-lowered unboxed/folded + full BMF tags (large parallel lift) ---
+; 24-33 as before (logic, folded, unbox, closure, bmf-lowered, folded-if)
+; 34 = BMF-MATCH caps rest   (lowered match result, emit as direct if on caps)
+; 35 = BMF-FAIL reason
+; 36 = BMF-FAIL-CUT reason
+; 37 = BMF-CAP-PAIR name val  (unboxed cap env)
+; 38 = BMF-CURSOR pos         (direct source index, unboxed)
+; 39 = BMF-STR-OP s i         (unboxed string op)
+(defn fk-logic-and (a b) (fk-node 24 (ms-intern a b)))
+(defn fk-logic-or (a b)  (fk-node 25 (ms-intern a b)))
+(defn fk-logic-not (a)   (fk-node 26 a))
+(defn fk-folded (v)      (fk-node 27 v))
+(defn fk-unbox-str (s)   (fk-node 28 s))
+(defn fk-unbox-float (f) (fk-node 29 f))
+(defn fk-unbox-list (xs) (fk-node 30 xs))
+(defn fk-closure-lifted (idx body) (fk-node 31 (ms-intern (ms-cell idx) body)))
+(defn fk-bmf-lowered (e) (fk-node 32 e))
+(defn fk-folded-if (c t e) (fk-node 33 (ms-intern c (ms-intern t e))))
+(defn fk-bmf-match (caps rest) (fk-node 34 (ms-intern caps rest)))
+(defn fk-bmf-fail (reason) (fk-node 35 reason))
+(defn fk-bmf-fail-cut (reason) (fk-node 36 reason))
+(defn fk-bmf-cap-pair (name val) (fk-node 37 (ms-intern name val)))
+(defn fk-bmf-cursor (pos) (fk-node 38 pos))
+(defn fk-bmf-str-op (s i) (fk-node 39 (ms-intern s i)))
+
+;; Aquatic organ tags (water-based vitality support)
+;; 40 = FLOW-COHERENT rate geometry (vortex/toroidal flow for EZ water coherence)
+;; 41 = CHARGE-SEP voltage current (gentle fields for water battery / charge separation)
+;; 42 = SPECTRUM channel intensity rhythm (full spectrum + NIR for repair/photosynthesis)
+;; 43 = VIBRE freq amp (low-amplitude mechanical/acoustic at vitality frequencies)
+;; 44 = BIO-SENSE type value (non-invasive vitality proxy: movement, optical, conductivity)
+(defn fk-flow-coherent (rate geom) (fk-node 40 (ms-intern rate geom)))
+(defn fk-charge-sep (v i) (fk-node 41 (ms-intern v i)))
+(defn fk-spectrum (ch int rhy) (fk-node 42 (ms-intern ch (ms-intern int rhy))))
+(defn fk-vibre (f a) (fk-node 43 (ms-intern f a)))
+(defn fk-bio-sense (t v) (fk-node 44 (ms-intern t v)))
+
+; Extended walker cases for the new lowered JIT forms (so lowered trees run interpreted too)
+; These will be mirrored in the emit for native speed in the proven binary.
+(defn fk-walk (prog node arg)
+    (if (eq (fk-tag node) 1) (ms-value (fk-body node))
+    (if (eq (fk-tag node) 2) arg
+    (if (eq (fk-tag node) 3) (add (fk-walk prog (ms-child (fk-body node) 0) arg)
+                                  (fk-walk prog (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 4) (sub (fk-walk prog (ms-child (fk-body node) 0) arg)
+                                  (fk-walk prog (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 5) (if (le (fk-walk prog (ms-child (fk-body node) 0) arg)
+                                     (fk-walk prog (ms-child (fk-body node) 1) arg)) 1 0)
+    (if (eq (fk-tag node) 6) (if (eq (fk-walk prog (ms-child (fk-body node) 0) arg) 0)
+                                 (fk-walk prog (ms-child (ms-child (fk-body node) 1) 1) arg)
+                                 (fk-walk prog (ms-child (ms-child (fk-body node) 1) 0) arg))
+    (if (eq (fk-tag node) 7) (fk-walk prog prog (fk-walk prog (fk-body node) arg))
+    (if (eq (fk-tag node) 12) (fk-walk prog (nth prog (ms-value (ms-child (fk-body node) 0)))
+                                            (fk-walk prog (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 24) (if (and (not (eq (fk-walk prog (ms-child (fk-body node) 0) arg) 0))
+                                       (not (eq (fk-walk prog (ms-child (fk-body node) 1) arg) 0))) 1 0)  ; unboxed and
+    (if (eq (fk-tag node) 25) (if (or (not (eq (fk-walk prog (ms-child (fk-body node) 0) arg) 0))
+                                      (not (eq (fk-walk prog (ms-child (fk-body node) 1) arg) 0))) 1 0)
+    (if (eq (fk-tag node) 26) (if (eq (fk-walk prog (ms-child (fk-body node) 0) arg) 0) 1 0)
+    (if (eq (fk-tag node) 27) (ms-value (fk-body node))  ; folded = literal
+    (if (eq (fk-tag node) 28) (fk-walk prog (ms-child (fk-body node) 0) arg)  ; unbox-str delegate
+    (if (eq (fk-tag node) 29) (fk-walk prog (ms-child (fk-body node) 0) arg)
+    (if (eq (fk-tag node) 30) (fk-walk prog (ms-child (fk-body node) 0) arg)
+    (if (eq (fk-tag node) 31) (fk-walk prog (ms-child (fk-body node) 1) arg)  ; lifted closure
+    (if (eq (fk-tag node) 32) (fk-walk prog (ms-child (fk-body node) 0) arg)
+    (if (eq (fk-tag node) 33) (if (eq (fk-walk prog (ms-child (fk-body node) 0) arg) 0)
+                                  (fk-walk prog (ms-child (ms-child (fk-body node) 1) 1) arg)
+                                  (fk-walk prog (ms-child (ms-child (fk-body node) 1) 0) arg))
+    (if (eq (fk-tag node) 34) (fk-walk prog (ms-child (fk-body node) 1) arg)  ; bmf-match -> rest (simplified direct)
+    (if (eq (fk-tag node) 35) (fk-lit 0)  ; fail -> 0
+    (if (eq (fk-tag node) 36) (fk-lit 0)  ; fail-cut
+    (if (eq (fk-tag node) 37) (ms-child (fk-body node) 1)  ; cap-pair val (unboxed)
+    (if (eq (fk-tag node) 38) (fk-buf (ms-child (fk-body node) 0))  ; cursor direct buf
+    (if (eq (fk-tag node) 39) (fk-lit (char_at (ms-child (fk-body node) 0) (ms-value (ms-child (fk-body node) 1))))  ; str-op unboxed
+        0)))))))))))))))))))))))))  ; extended for full BMF lowered (cursor, match, caps, strings) for compiler recipe
+
 ; fib authored as data — the program every carrier in fourth-kernel.form's
 ; rows answers: IF (LE arg 1) arg (ADD (SELF (arg-1)) (SELF (arg-2)))
 (defn fk-fib-program ()

@@ -182,8 +182,21 @@ func (v Value) AsFloat() float64 {
 	panic(fmt.Sprintf("AsFloat: %v", v))
 }
 
-// AsInt — numeric operand coercion: ints pass through, floats truncate,
-// booleans carry axiom-1's two states as 1/0. Sibling of Rust's as_int.
+// AsNid — the NodeID-typed boundary: only a VNodeID passes. Reading .Nid
+// raw on any other kind yields the zero NodeID — a silent false positive
+// (two mistyped values "agree"); naming the violation is the honest answer.
+// Sibling to Rust's as_nid and TS's argNodeID.
+func (v Value) AsNid() NodeID {
+	if v.Kind == VNodeID {
+		return v.Nid
+	}
+	panic(fmt.Sprintf("as_nid: %v", v))
+}
+
+// AsInt — the integer lane's coercion: ints pass through, floats truncate,
+// bools are the 0/1 states (axiom-1, core-axioms.form). Any other kind is a
+// type-contract violation — str_eq, node_eq, and value_eq are the typed
+// doors for those kinds. Sibling to Rust's as_int and the TS compare lane.
 func (v Value) AsInt() int64 {
 	switch v.Kind {
 	case VInt:
@@ -196,7 +209,7 @@ func (v Value) AsInt() int64 {
 		}
 		return 0
 	}
-	panic(fmt.Sprintf("AsInt: %v", v))
+	panic(fmt.Sprintf("as_int: %v", v))
 }
 
 // FormatFloatJS — JS String(number) semantics: shortest round-trippable form,

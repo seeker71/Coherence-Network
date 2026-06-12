@@ -27,7 +27,10 @@
                             compute organ; the POLICY is a pure data row (key-field, least-wins, floor,
                             requeue) in ONE chooser engine — fifo/round-robin/priority/fitness are four
                             rows, never four branches; recognition-router's max-over-a-floor choosing is
-                            now a row of this engine (tests/scheduler-band.fk -> 511 three-way))
+                            now a row of this engine (tests/scheduler-band.fk -> 511 three-way); THE
+                            ROWS READ BOTH DIRECTIONS: afferent delivery priority is these same rows —
+                            fifo's data over signal numbers, priority's data over IRQ levels
+                            (afferent-priority.fk, tests/afferent-priority-band.fk -> 1023))
     (signals          RUNS  afferent-offer.fk — ao-alarm makes a timer armed for tick T a standing
                             unsolicited offer on the ALRM line, so SIGALRM-fires and wait-times-out are
                             one structure (timeout==nothing IS the SIGALRM shape, checked at the window
@@ -36,7 +39,10 @@
                             (tests/afferent-offer-band.fk -> 511 three-way); LIVE: afferent-live.fk
                             lowers ao-wait's verdict onto op 15 TIME — the armed timer's tick arrives on
                             the host clock, the empty window yields nothing only after real elapsed time
-                            (tests/afferent-live-band.fk -> 63; audit section 18)))
+                            (tests/afferent-live-band.fk -> 63; audit section 18); multi-offer
+                            delivery order is a scheduler policy row over the deliverable set — masked
+                            and out-of-window rules stay sovereign before any ranking
+                            (afferent-priority.fk -> 1023; audit section 23)))
 
   # ── Memory ──────────────────────────────────────────────────────────
   (memory
@@ -66,12 +72,13 @@
                             carrier-swappable; host-resource-access admits any host driver/OS API)
     (entropy          RUNS  op 16 RND — /dev/urandom's shape (two draws differ, witnessed))
     (clock            RUNS  op 15 TIME — the host clock organ, real epoch (afferent scalar))
-    (gpu              RUNS  the native emitter lane: jte-matvec-msl (jit-tensor-emit.fk) emits the Metal
-                            matvec from the same tensor cells as the C path, MSL byte-stable three-way
-                            (tests/metal-emit-band.fk -> 7); LIVE on M4 Max: bit-exact value parity on
-                            every output row vs the CPU fp32 right-fold, 13.2x kernel-window at 4096^2
+    (gpu              RUNS  the native emitter lane, precision as DATA: one MSL spine (jte-matvec-msl-spine,
+                            jit-tensor-emit.fk) with f32/f16/bf16 as format rows, byte-stable three-way
+                            (tests/metal-emit-band.fk -> 31); LIVE on M4 Max: every lane bit-exact by its
+                            format's OWN semantics (format-arith's RNE chain, accumulate-in-fp32 as data),
+                            15.5x kernel-window at 4096^2 on the 16-bit lanes
                             (scripts/metal_matvec_audit.sh); ollama/Metal still ride the driver organ;
-                            kernel-resident carrier + bf16/half lanes named open)
+                            kernel-resident carrier + batching named open)
     (audio-video-hmi  RUNS-via-host mic/speaker/camera via the OS API; n4 TTS (say) + STT (whisper) witnessed))
 
   # ── Networking ──────────────────────────────────────────────────────
@@ -109,8 +116,14 @@
                             recompile; collisions and interface mismatches refuse honestly; the node ack
                             is the artifact's content NodeID (insmod composed from axiom-3+5, never
                             ported) — protocol install-leaf.fk (tests/install-leaf-band.fk -> 9
-                            three-way), Go carrier witnessed live (jit_install); Rust/TS carriers named
-                            open in install-leaf.form)
+                            three-way), TWO carriers witnessed live — Go (plugin.Open; int+float+Value
+                            ABI lanes) and Rust (rustc cdylib + libloading; i64 ABI, refusal-parity
+                            where a lane is absent: the leaf acks nothing rather than fabricating);
+                            TS (wasm/worker) named open in install-leaf.form; AND the fourth kernel
+                            carries its OWN wire: the universal binary holds the lowerer, re-emits a
+                            hot foreign function native at runtime through the toolchain port, and
+                            the load-time fixpoint refuses out-of-family code before heat counts
+                            (tests/crystallization-wire-band.fk -> 31; audit section 27))
     (dynamic-linking  RUNS-via-host dlopen/clang are allowed carriers; the recipe is the linked unit)
     (interrupts       RUNS  afferent-offer.fk — the SAME ao-wait engine as signals, readings as data:
                             ao-irq latches a device payload on an IRQ line; a masked or silent line
@@ -139,11 +152,13 @@
              and now scheduler policy, signals, interrupts, gc/melt (measured), offers-in-flight
              concurrency, boot-from-axioms: every subsystem row, as fourth-kernel binaries or Form
              recipes with three-way proof bands")
-    (named  "the deepenings that opened as the last four closed: Rust/TS install carriers (the protocol
-             already proven three-way); the melt's hot-swap-free face (cooled natives re-melting,
-             champion-challenger gated); m4e4's families lifting more bands onto the fourth arm
-             (str_*/node_*/floats/multi-param); kernel-resident Metal carrier + bf16/half lanes;
-             delivery priority as a policy cell over the afferent engine — each named where it lives")
+    (named  "the ring after round 4 (value stack + string pool + figure family + crystallization wire
+             all landed; bands-on-fourth-arm 10 -> 48): floats; let-as-binding (sha256's wall — inline
+             re-evaluation is exponential on deep let chains); pool ops 29-33 with int_to_str first
+             (serves the emit-family bands AND the m4d fixpoint — the emitter-as-program needs them);
+             native shapes beyond pure-compute in the wire's lowerer; a typed str-eq lowering before
+             any band compares strings with plain eq; preemption (re-verdict per poll tick); the TS
+             install carrier; kernel-resident Metal + batching")
     (verdict "every high-level Linux subsystem RUNS (or RUNS-by-construction) as Form recipes with
               three-way proof, and the four named deepenings of the first walk now RUN too — live
               clock, surviving boundary, growing kernel table, native GPU lane; what stays NAMED is

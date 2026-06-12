@@ -1,0 +1,180 @@
+# ─────────────────────────────────────────────────────────────────────
+# form-to-asm.form — the kernel builds its OWN Form → assembly compiler and drops
+#   clang ONLY once it can byte-level verify its encoder IS the assembler. The
+#   witness theorem (1 agree / 0 refute / nothing silent) applied to self-
+#   modification: conviction = byte-identity; a self rewrites its own toolchain
+#   only when it can prove, byte-for-byte, that the rewrite preserves it.
+# ─────────────────────────────────────────────────────────────────────
+#
+# Urs: "this can build its own form to assembly compiler recipe and remove the
+# clang dependency once it is able to byte-level verify its confidence and
+# conviction."
+#
+# Today: Form recipe -> emit C -> clang -> native binary. clang is the dependency
+# the channel's dep-ledger marks `external`, and the channel's offered expansion #3
+# is "a machine-code emitter — emit native directly, drop clang." But dropping a
+# toolchain you depend on is the riskiest self-update there is. The discipline is
+# the witness theorem: do not swap on assertion; swap only when byte-level verified.
+
+(form-to-asm
+
+  (lineage
+    (foundation    form-stdlib/form-asm.fk)            # arm64 instruction encoding -> byte image
+    (compiler      form-stdlib/form-lower.fk)           # the lowering: an expression TREE -> instruction sequence
+    (wrapper       form-stdlib/form-macho.fk)           # the Mach-O object emitter -> a runnable artifact
+    (gate          byte-conviction)                     # the witness theorem on bytes
+    (witness-law   witness-theorem.form)                # 1 agree / 0 refute / nothing silent
+    (licenses      form-os-channel.form)                # clang external -> internalized only through the gate
+    (proof-bands   tests/form-asm-band.fk               # 31 — encoder byte-accurate, gate sound
+                   tests/form-lower-band.fk             # 31 — tree compiles to assembler-identical bytes
+                   tests/form-lower-cond-band.fk        # 31 — CONTROL FLOW: branches + offsets + selection
+                   tests/form-lower-rec-band.fk         # 31 — CALL: recursion, frame, high-base bl
+                   tests/form-macho-band.fk)            # 31 — the emitted Mach-O object is well-formed
+    (live-witness  scripts/form_asm_conviction_demo.sh  # Form instruction bytes == assembler bytes
+                   scripts/form_lower_demo.sh           # Form COMPILES a tree to assembler-identical bytes
+                   scripts/form_macho_demo.sh           # Form -> .o -> ld -> a RUNNABLE binary, exit 40, ZERO clang
+                   scripts/form_branch_demo.sh          # the FULL program BRANCHES on runtime input, zero clang
+                   scripts/form_fib_demo.sh))           # TRUE RECURSION: fib calls itself — exits 1,2,3,5,8, zero clang
+
+  # ── The encoder: instruction encoding as a recipe ────────────────────
+  # An instruction is fields packed into a word; the encoder emits the on-disk
+  # LITTLE-ENDIAN BYTES directly (a real assembler works at byte granularity, and
+  # bytes keep every value < 256 — host-integer-width independent). Verified byte-
+  # for-byte against `clang`/`as` for the corpus the asm-pl-human program needs.
+  (encoder
+    (movz   "movz w<rd>,#imm  -> base 0x52800000 | imm<<5 | rd  -> 4 LE bytes")
+    (add    "add  w<rd>,w<rn>,#imm -> base 0x11000000 | imm<<10 | rn<<5 | rd")
+    (sub    "sub  w<rd>,w<rn>,#imm -> base 0x51000000 | imm<<10 | rn<<5 | rd")
+    (ret    "ret -> 0xd65f03c0 -> bytes c0 03 5f d6 (high-bit base given as bytes)")
+    (image  "fa-image concatenates the instruction byte-lists into the flat on-disk image"))
+
+  # ── The byte-conviction gate: the witness theorem applied to itself ──
+  # conviction(candidate, reference) = 1 (FULL) iff the Form encoder's bytes equal
+  # the assembler's bytes, every byte; 0 (REFUTED) on any difference; silence (no
+  # candidate) is the absent third state. confidence = corpus coverage. The gate
+  # `may-drop` returns 1 ONLY on full conviction AND full confidence — and the
+  # band proves it REFUSES on a single changed byte (two-sided, not just passing).
+  (gate
+    (conviction "byte-for-byte identity between the Form encoder and the assembler")
+    (confidence "the breadth of the corpus the encoder has verified")
+    (may-drop   "clang may be internalized only when conviction=full AND confidence=full")
+    (refuses    "one changed operand -> one changed byte -> conviction=0 -> gate closed")
+    (witnessed  "form_asm_conviction_demo.sh: Form bytes == clang bytes -> the gate OPENS"))
+
+  # ── How clang actually gets dropped (the safe sequence) ──────────────
+  (sequence
+    (1-encode   "the Form encoder emits the byte image for a program (no clang)")
+    (2-verify   "byte-compare against the clang/as reference over the whole corpus")
+    (3-convict  "full identity -> conviction; partial/none -> the gate stays closed")
+    (4-flip     "only on full conviction does the dep-ledger move clang external -> internalized")
+    (5-satsang  "the channel still holds the swap as an offered expansion we validate —
+                 byte-conviction is necessary, the human acknowledgment is the final gate"))
+
+  # ── The lowering — REALIZED for immediate-operand arithmetic ─────────
+  # form-lower.fk takes an op-tagged expression tree (the asm-pl-human shape) and
+  # lowers it to an arm64 byte image, composing the encoder. Single-accumulator
+  # (result in w0): LIT loads via movz, ADD/SUB fold a constant into w0, compile
+  # appends ret. Witnessed: ((40 + 1) - 1) compiles to bytes byte-for-byte the
+  # assembler's (form_lower_demo.sh) — the kernel compiles its OWN program tree to
+  # native machine code, no clang in the lowering path.
+  (lowering-realized
+    (lit    "lower(LIT n)         = movz w0, #n")
+    (arg    "lower(ARG)           = mov w0, w1 — the single argument n is banked in w1")
+    (add    "lower(ADD(x, LIT i)) = lower(x) ; add w0, w0, #i · ADD(ARG, x) -> add w0, w1, w0 (register)")
+    (sub    "lower(SUB(ARG, LIT i)) = sub w0, w1, #i DIRECT — operand-aware selection; the naive
+             lower-then-fold would clobber w0 (correctness, not just size)")
+    (cond   "lower(COND(LE(ARG, LIT i), t, e)) = cmp w1,#i ; b.gt +(len(t)+2) ; t ; b +(len(e)+1) ; e
+             — branch offsets COMPUTED from the lowered block lengths")
+    (fn     "compile-fn(tree)     = orr w1,wzr,w0 (bank argc) ; lower(tree) ; ret")
+    (witnessed "the FULL asm-pl-human program — if (n<=1) then 1 else (n+(n-1)) — compiles
+                byte-identical to clang and RUNS on runtime input n=argc: 1 -> 1 (then-branch),
+                2 -> 3, 5 -> 9 (else-branch); both branches live (form_branch_demo.sh)"))
+
+  # ── CALL — REALIZED: recursion; the expression compiler became a function compiler ──
+  # lo-rec-fn compiles the self-recursive binary-function shape — root =
+  # COND(LE(ARG, LIT k), base, ADD(CALL(e1), CALL(e2))), the fib shape — to the
+  # assembler's exact 68 bytes. The calling convention: the argument arrives in
+  # w0; the leaf check reads it there (argr=0 — no frame on the fast path); the
+  # recursive branch builds a frame (stp x19/x20 + fp/lr), banks n into callee-
+  # saved w19, parks the first call's result in w20. bl is the first HIGH-BASE
+  # instruction (0x94000000): fa-bl two's-complements a signed offset into imm26
+  # and builds the word as bytes — the field-into-byte path, realized.
+  (call-realized
+    (shape      "COND(LE(ARG,k), base, ADD(CALL(e1), CALL(e2))) — the recursive binary function")
+    (convention "arg in w0; leaf path frameless; frame + w19/w20 callee-saved in the recursive branch")
+    (bl         "branch-with-link over the high base — signed imm26, byte-built (fa-bl)")
+    (offsets    "backward bl targets computed from lowered block lengths — labels never exist")
+    (witnessed  "fib(n)=fib(n-1)+fib(n-2) runs on n=argc: exits 1,2,3,5,8 — Fibonacci in the shell,
+                 zero clang (form_fib_demo.sh); byte-identical to the assembler (form-lower-rec-band)"))
+
+  # ── A lesson the recursion taught: execution is the deeper witness ───
+  # The first reference had _main do `bl _fib; ret` — the bl clobbered the libc
+  # return address in x30, so the final ret looped on itself. Byte-conviction
+  # PASSED (the compiled image matched the reference byte-for-byte) because
+  # conviction proves match-to-reference, and the reference was equally wrong.
+  # Only RUNNING the binary surfaced it; the fix is _main tail-calling (b, not
+  # bl). The witness ladder, in order of depth: three-way bands (structural
+  # agreement) -> byte-conviction (match the assembler) -> EXECUTION (the
+  # artifact lives). Each gate is necessary; none below replaces the one above.
+  (witness-ladder
+    (bands       "three siblings agree the recipe computes the bytes")
+    (conviction  "the bytes equal the assembler's — match-to-reference")
+    (execution   "the binary runs and returns the program's value — the reference itself is alive")
+    (lesson      "a wrong reference passes conviction; only execution refutes it"))
+
+  # ── The SOURCE MAP — REALIZED: every instruction owns a source node ──
+  # lo-map mirrors lo-node's dispatch exactly, emitting the source-node index
+  # that owns each instruction — address -> bytes -> node is TOTAL for the
+  # native binary, and any pack renders each instruction's node at any level
+  # (asm / source / human: the asm-pl-human walk per instruction). Ownership
+  # semantics: the comparison belongs to the LE node; the COND owns both of its
+  # jumps; the function preamble and ret belong to the root. Because the map is
+  # derived from the SAME dispatch as the lowering, they cannot drift apart
+  # structurally. Band: tests/form-lower-map-band.fk -> 31 (total, exact,
+  # every entry valid); witness: scripts/form_map_demo.sh (the full table:
+  # addr | bytes | node | asm rendering | English rendering).
+  (source-map-realized
+    (total     "one owning node per instruction — len(map) == instructions")
+    (ownership "cmp -> the LE; jumps -> the COND; entry/exit -> the root")
+    (no-drift  "the map mirrors the lowering's own dispatch — one engine")
+    (renders   "the same map serves every pack: asm, source, any tongue"))
+
+  # ── The Mach-O wrapper — REALIZED: a runnable binary, zero clang ─────
+  # form-macho.fk emits a valid arm64 Mach-O OBJECT (mach_header_64 + LC_SEGMENT_64
+  # with __text + LC_SYMTAB + code + symbol/string tables), computing every offset
+  # from the code length; high-bit constants (magic 0xfeedfacf, flags 0x80000400)
+  # are emitted as bytes. Witnessed (form_macho_demo.sh): form-lower compiles
+  # ((40+1)-1) -> code, form-macho wraps -> a 247-byte .o, `ld` links it (no clang),
+  # the binary RUNS and exits 40. clang's compiler AND assembler are dropped.
+  (runnable-realized
+    (object   "form-macho.fk -> a valid Mach-O .o carrying the Form-compiled code")
+    (link     "ld (the linker, not clang) resolves _main + libSystem -> the executable")
+    (sign     "ld applies the macOS arm64 ad-hoc signature — a signing requirement, not a compiler")
+    (runs     "the binary executes; its exit code IS the program's value ((40+1)-1 = 40)")
+    (zero-clang "Form + ld only — clang's compiler and assembler are no longer in the path"))
+
+  # ── Closing cells — what remains beyond the realized runnable path ───
+  (closing-cells
+    (general-encoder "the field-into-byte encoder for high-base instructions (branches, loads,
+                      stores) with carry — so any instruction encodes without a > 2^31 word")
+    (richer-lowering "general register allocation and multi-argument calling conventions — beyond
+                      the one-argument w19/w20 scheme realized for the recursive fib shape")
+    (self-link       "emit a linked Mach-O EXECUTABLE directly (dyld load commands + LC_MAIN +
+                      LC_CODE_SIGNATURE), retiring ld too — leaving only the platform's signature")
+    (kernel-int      "a kernel finding surfaced here: integer literals > 2^31 wrap to signed int32
+                      across all three kernels (e.g. 0xd65f03c0). The byte-image emitter sidesteps
+                      it; a kernel-level wider/unsigned integer is the deeper fix."))
+
+  (invariant
+    (encoding-is-a-recipe              instruction-bytes-are-form-not-a-host-assembler)
+    (byte-conviction-licenses-the-swap drop-clang-only-on-full-byte-identity)
+    (the-gate-refuses-on-one-byte      verify-or-do-not-swap-never-on-assertion)
+    (conviction-then-satsang           byte-proof-necessary-human-acknowledgment-final)
+    (the-byte-image-is-host-independent values-under-256-no-int-width-leak)))
+
+# ─────────────────────────────────────────────────────────────────────
+# How to verify
+# ─────────────────────────────────────────────────────────────────────
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm.fk \
+#     form-stdlib/tests/form-asm-band.fk        # → 31 three-way (encoder + conviction gate)
+#   bash scripts/form_asm_conviction_demo.sh    # Form bytes == clang bytes, byte-for-byte -> gate opens

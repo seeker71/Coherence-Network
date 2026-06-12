@@ -1,0 +1,120 @@
+; preludes: form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/json.fk form-stdlib/transformer-numerics.fk form-stdlib/tensor-quant.fk form-stdlib/transformer-block.fk
+;
+; whisper-block0-band — M6 validation check for Whisper-tiny block 0 forward activations.
+;
+; Loads sliced weights and inputs generated from the HF model, quantizes them,
+; runs tb-block, and compares outputs to NumPy reference values.
+;
+; Verdict 1023 when all checks pass.
+
+(do
+    (defn get-float-list (nodes)
+      (if (eq (len nodes) 0) (empty)
+          (cons (node_value (head nodes)) (get-float-list (tail nodes)))))
+
+    (defn get-float-matrix (rows)
+      (if (eq (len rows) 0) (empty)
+          (cons (get-float-list (node_children (head rows))) (get-float-matrix (tail rows)))))
+
+    (defn load-matrix (arr-node)
+      (get-float-matrix (node_children arr-node)))
+
+    (defn decode-matrix (code-rows scale)
+      (if (eq (len code-rows) 0) (empty)
+          (cons (tq-int8-decode (get-float-list (node_children (head code-rows))) scale)
+                (decode-matrix (tail code-rows) scale))))
+
+    (defn float-abs (x) (if (lt x 0.0) (sub 0.0 x) x))
+    (defn approx-eq (a b eps)
+      (lt (float-abs (sub a b)) eps))
+
+    (defn list-approx-eq (a b eps)
+      (if (eq (len a) 0) (if (eq (len b) 0) 1 0)
+          (if (eq (len b) 0) 0
+              (if (approx-eq (head a) (head b) eps)
+                  (list-approx-eq (tail a) (tail b) eps)
+                  0))))
+
+    (defn matrix-approx-eq (a b eps)
+      (if (eq (len a) 0) (if (eq (len b) 0) 1 0)
+          (if (eq (len b) 0) 0
+              (if (list-approx-eq (head a) (head b) eps)
+                  (matrix-approx-eq (tail a) (tail b) eps)
+                  0))))
+
+    ; Load test data JSON
+    (let json-str (read_file "form-samples/whisper_block0_test_data.json"))
+    (let doc (parse-json "whisper_block0_test_data.json" json-str))
+
+    ; Load Inputs and LN1
+    (let x (load-matrix (json-object-get doc "x")))
+    (let eps (node_value (json-object-get doc "eps")))
+    (let scale (node_value (json-object-get doc "scale")))
+    (let g1 (get-float-list (node_children (json-object-get doc "g1"))))
+    (let be1 (get-float-list (node_children (json-object-get doc "be1"))))
+
+    ; Load & Decode QKV
+    (let wq_scale (node_value (json-object-get doc "wq_scale")))
+    (let wq_codes (node_children (json-object-get doc "wq_codes")))
+    (let wq (decode-matrix wq_codes wq_scale))
+    (let bq (get-float-list (node_children (json-object-get doc "bq"))))
+
+    (let wk_scale (node_value (json-object-get doc "wk_scale")))
+    (let wk_codes (node_children (json-object-get doc "wk_codes")))
+    (let wk (decode-matrix wk_codes wk_scale))
+    (let bk (get-float-list (node_children (json-object-get doc "bk"))))
+
+    (let wv_scale (node_value (json-object-get doc "wv_scale")))
+    (let wv_codes (node_children (json-object-get doc "wv_codes")))
+    (let wv (decode-matrix wv_codes wv_scale))
+    (let bv (get-float-list (node_children (json-object-get doc "bv"))))
+
+    (let wo_scale (node_value (json-object-get doc "wo_scale")))
+    (let wo_codes (node_children (json-object-get doc "wo_codes")))
+    (let wo (decode-matrix wo_codes wo_scale))
+    (let bo (get-float-list (node_children (json-object-get doc "bo"))))
+
+    ; Load LN2 & MLP
+    (let g2 (get-float-list (node_children (json-object-get doc "g2"))))
+    (let be2 (get-float-list (node_children (json-object-get doc "be2"))))
+
+    (let w1_scale (node_value (json-object-get doc "w1_scale")))
+    (let w1_codes (node_children (json-object-get doc "w1_codes")))
+    (let w1 (decode-matrix w1_codes w1_scale))
+    (let b1 (get-float-list (node_children (json-object-get doc "b1"))))
+
+    (let w2_scale (node_value (json-object-get doc "w2_scale")))
+    (let w2_codes (node_children (json-object-get doc "w2_codes")))
+    (let w2 (decode-matrix w2_codes w2_scale))
+    (let b2 (get-float-list (node_children (json-object-get doc "b2"))))
+
+    ; Load Expected Outputs
+    (let expected_alpha0 (get-float-list (node_children (json-object-get doc "expected_alpha0"))))
+    (let expected_h (load-matrix (json-object-get doc "expected_h")))
+    (let expected_y (load-matrix (json-object-get doc "expected_y")))
+
+    ; Forward Pass steps to verify sub-layers
+    (let lns (tb-ln-seq x eps g1 be1))
+    (let q0 (tb-affine wq bq (head lns)))
+    (let ks (tb-proj-seq wk bk lns))
+    (let alpha0 (tn-softmax (tb-scores q0 ks scale)))
+
+    ; Check 1: Softmax scores sum to 1.0 (approx)
+    (let check1 (if (approx-eq (tn-sum alpha0) 1.0 0.0001) 1 0))
+
+    ; Check 2: Softmax vector matching
+    (let check2 (if (list-approx-eq alpha0 expected_alpha0 0.0001) 2 0))
+
+    ; Check 3: Attention output + residual matching (expected_h)
+    (let h (tb-attn-block x eps g1 be1 wq bq wk bk wv bv wo bo scale))
+    (let check3 (if (matrix-approx-eq h expected_h 0.0001) 4 0))
+
+    ; Check 4: Block output matching (expected_y)
+    (let y-computed (tb-block x eps g1 be1 wq bq wk bk wv bv wo bo scale g2 be2 w1 b1 w2 b2))
+    (let check4 (if (matrix-approx-eq y-computed expected_y 0.0001) 8 0))
+
+    ; Verdict payload (1 + 2 + 4 + 8 = 15 -> wait, let's return 1023 if all match by doing shifts)
+    (let result (add check1 (add check2 (add check3 check4))))
+    ; If result == 15, we return 1023 (or another success code)
+    (if (eq result 15) 1023 0)
+)

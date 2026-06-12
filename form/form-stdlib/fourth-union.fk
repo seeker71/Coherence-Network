@@ -1,0 +1,212 @@
+; fourth-union.fk — the m4e3/m4e4 union: ONE self-contained binary that is a BMF
+; COMPILER (grammar+source -> a complete new walker binary's C source) and a
+; FULL-SOURCE QUINE (mode 0 emits its own entire C, byte-exact). The gap named in
+; fourth-kernel.form's measured-floors block, removed.
+;
+; The design that keeps it small: the emitter the quine needs is the SAME emitter
+; the compiler needs for its output — one printer, two table sources. The
+; constant C text (prelude/walker/mains) rides as DATA rows (4 chars per row,
+; cols 0..3, 0-padded); the table section is printed from op-8 NODE self-reads
+; (quine) or computed from the compile fold's closed row pattern (compile):
+;   row 0       = {2,0,0,0}                     (ARG)
+;   row 2k+1    = {1, arg_k, 0, 0}              (the rule's operand literal)
+;   row 2k+2    = {op_k, 2k, 2k+1, 0}           (the rule's op over acc)
+;   root = 2*ntok, NR = 2*ntok + 1              — no heap, no remap
+; Source tokens arrive as the DIGITS of the argv int (mode 112 -> [1,1,2]);
+; mode 0 = quine. The grammar is data rows {tok,op,arg,0} the compiler scans.
+; The union's own main is QUIET (program PUTCs only — the quine's output must be
+; exactly its source); compiled outputs get the STANDARD main (prints the value
+; + the fk_arms framebuffer) — both mains ride in the spool.
+;
+; The fixpoint: every numeric literal (NF, NR, roots, segment bounds, fn indices)
+; is a parameter; literal VALUES never change row COUNTS, so the driver builds
+; once with zeros, measures, rebuilds with the real numbers — m4d's "one rebuild
+; lands it", at full-source scale. Driver: scripts/form_union_demo.sh.
+; Band: tests/fourth-union-band.fk (three-way).
+
+; ── cell builders the union adds (STORE/LOAD/sequencing over side effects) ──
+(defn fku-store (i v) (fk-node 13 (ms-intern i v)))
+(defn fku-load  (i)   (fk-node 14 i))
+; evaluate a for its side effect (store returns its value), then b
+(defn fku-do (a b) (fk-if (fk-le a (fk-lit 999999999)) b (fk-lit 0)))
+
+; ── the quiet main: the program's PUTC bytes ARE the whole output ──
+(defn fku-main-quiet-text ()
+    "extern int atoi(const char *); int main(int argc, char **argv) { long long a = 0; if (argc > 1) { a = atoi(argv[1]) << 1; } fk_vs[0] = a; fk_vsp = 1; fk_walk(fk_fn[0], 0); return 0; }")
+
+; the union's emitted C: standard pieces + the quiet main
+(defn fku-emit-c (rows roots)
+    (str_concat (fkc-pr-text)
+    (str_concat (fkc-decl-many-text rows roots)
+    (str_concat (fkc-walk-many-text) (fku-main-quiet-text)))))
+
+; append raw data rows AFTER the function rows (the flat row list is reversed —
+; head = last table row — so data goes on the head, itself reversed by the caller)
+(defn fku-prepend (data rows) (if (eq (len data) 0) rows (fku-prepend (tail data) (cons (head data) rows))))
+(defn fku-with-data (flat data) (list (fku-prepend data (nth flat 0)) (nth flat 1)))
+
+; (the runtime number printer is fn1, fully recursive — any magnitude; see fku-fn-num)
+
+; ── the union program: a LIST of functions for fkc-emit-many's table ──
+; p = the literal pack (list NF NR ROOT0..  SEGA-S SEGA-E S1S S1E S2S S2E S3S S3E
+;     S4S S4E WS WE MQS MQE MSS MSE GS GE) — every position read by fku-p.
+; fn indices (stable): 0 dispatch · 1 num · 2 row4 · 3 printseg · 4 rowsprint
+;                      5 quine · 6 ntok · 7 pow10 · 8 rulefind · 9 compk · 10 compile
+(defn fku-p (p i) (if (eq i 0) (head p) (fku-p (tail p) (sub i 1))))
+
+(defn fku-callnum (e) (fk-call 1 e))
+; print segment [s..e]: store the end in mem[2], walk rows printing 4 chars each
+(defn fku-seg (s e)
+    (fku-do (fku-store (fk-lit 2) (fk-lit e)) (fk-call 3 (fk-lit s))))
+
+; one char of a data row: putc if > 0 (0 = padding)
+(defn fku-ch4 (col)
+    (fk-if (fk-le (fkd-node (fk-arg) (fk-lit col)) (fk-lit 0))
+           (fk-lit 0)
+           (fkd-putc (fkd-node (fk-arg) (fk-lit col)))))
+
+; fn2 row4(i): the 4 chars of data row i
+(defn fku-fn-row4 ()
+    (fkd-seq (fku-ch4 0) (fkd-seq (fku-ch4 1) (fkd-seq (fku-ch4 2) (fku-ch4 3)))))
+
+; fn3 printseg(i): row4(i); recurse while i < mem[2]
+(defn fku-fn-printseg ()
+    (fkd-seq (fk-call 2 (fk-arg))
+        (fk-if (fk-le (fku-load (fk-lit 2)) (fk-arg))
+               (fk-lit 0)
+               (fk-call 3 (fk-add (fk-arg) (fk-lit 1))))))
+
+; fn1 num(v): general recursive decimal printer — high digits via self-call,
+; so ANY cell value prints (the table holds values up to the fku-do sentinel)
+(defn fku-fn-num ()
+    (fk-if (fk-le (fk-arg) (fk-lit 9))
+           (fkd-d1 (fk-arg))
+           (fkd-seq (fk-call 1 (fkd-div (fk-arg) (fk-lit 10)))
+                    (fkd-d1 (fkd-mod (fk-arg) (fk-lit 10))))))
+
+; fn4 rowsprint(i): print own table row i as {a,b,c,d}, then recurse to NR-1
+(defn fku-cellp (j) (fku-callnum (fkd-node (fk-arg) (fk-lit j))))
+(defn fku-fn-rowsprint (nr)
+    (fkd-seq (fkd-ch 123)
+    (fkd-seq (fku-cellp 0) (fkd-seq (fkd-ch 44)
+    (fkd-seq (fku-cellp 1) (fkd-seq (fkd-ch 44)
+    (fkd-seq (fku-cellp 2) (fkd-seq (fkd-ch 44)
+    (fkd-seq (fku-cellp 3) (fkd-seq (fkd-ch 125) (fkd-seq (fkd-ch 44)
+        (fk-if (fk-le (fk-lit (sub nr 1)) (fk-arg))
+               (fk-lit 0)
+               (fk-call 4 (fk-add (fk-arg) (fk-lit 1)))))))))))))))
+
+; roots chain: num(r0) ',' num(r1) ... (no spaces, no trailing comma)
+(defn fku-roots-chain (roots)
+    (if (eq (len roots) 1) (fku-callnum (fk-lit (head roots)))
+        (fkd-seq (fku-callnum (fk-lit (head roots)))
+        (fkd-seq (fkd-ch 44) (fku-roots-chain (tail roots))))))
+
+; fn5 quine(_): segA · NF · S1 · roots · S2 · NR · S3 · own rows · S4 · walk · MQ · \n
+(defn fku-fn-quine (p roots)
+    (fkd-seq (fku-seg (fku-p p 2) (fku-p p 3))
+    (fkd-seq (fku-callnum (fk-lit (fku-p p 0)))
+    (fkd-seq (fku-seg (fku-p p 4) (fku-p p 5))
+    (fkd-seq (fku-roots-chain roots)
+    (fkd-seq (fku-seg (fku-p p 6) (fku-p p 7))
+    (fkd-seq (fku-callnum (fk-lit (fku-p p 1)))
+    (fkd-seq (fku-seg (fku-p p 8) (fku-p p 9))
+    (fkd-seq (fk-call 4 (fk-lit 0))
+    (fkd-seq (fku-seg (fku-p p 10) (fku-p p 11))
+    (fkd-seq (fku-seg (fku-p p 12) (fku-p p 13))
+    (fkd-seq (fku-seg (fku-p p 14) (fku-p p 15))
+             (fkd-putc (fk-lit 10))))))))))))))
+
+; fn6 ntok(m): digit count
+(defn fku-fn-ntok ()
+    (fk-if (fk-le (fk-arg) (fk-lit 9))
+           (fk-lit 1)
+           (fk-add (fk-lit 1) (fk-call 6 (fkd-div (fk-arg) (fk-lit 10))))))
+
+; fn7 pow10(k)
+(defn fku-fn-pow10 ()
+    (fk-if (fk-le (fk-arg) (fk-lit 0))
+           (fk-lit 1)
+           (fk-node 42 (ms-intern (fk-lit 10) (fk-call 7 (fk-sub (fk-arg) (fk-lit 1)))))))
+
+; fn8 rulefind(i): scan grammar rows; token in mem[3]; returns op*1000000+arg
+; (base 1000000 so pack operands up to 999999 ride without colliding with the
+; op digit — the language-pack lane's wide operands fit).
+; equality by two le's: skip while NODE < tok; match when also NODE <= tok.
+(defn fku-fn-rulefind ()
+    (fk-if (fk-le (fkd-node (fk-arg) (fk-lit 0)) (fk-sub (fku-load (fk-lit 3)) (fk-lit 1)))
+           (fk-call 8 (fk-add (fk-arg) (fk-lit 1)))
+           (fk-if (fk-le (fkd-node (fk-arg) (fk-lit 0)) (fku-load (fk-lit 3)))
+                  (fk-add (fk-node 42 (ms-intern (fkd-node (fk-arg) (fk-lit 1)) (fk-lit 1000000)))
+                          (fkd-node (fk-arg) (fk-lit 2)))
+                  (fk-call 8 (fk-add (fk-arg) (fk-lit 1))))))
+
+; token k of mode: (mode / 10^(ntok-1-k)) % 10
+(defn fku-tok-k ()
+    (fkd-mod (fkd-div (fku-load (fk-lit 0))
+                      (fk-call 7 (fk-sub (fk-sub (fku-load (fk-lit 1)) (fk-lit 1)) (fk-arg))))
+             (fk-lit 10)))
+
+; fn9 compk(k): the two rows for token k, then recurse to ntok-1
+;   {1,ARGk,0,0},{OPk,2k,2k+1,0},
+(defn fku-fn-compk (p)
+    (fku-do (fku-store (fk-lit 3) (fku-tok-k))
+    (fku-do (fku-store (fk-lit 4) (fk-call 8 (fk-lit (fku-p p 18))))
+    (fkd-seq (fkd-ch 123) (fkd-seq (fkd-ch 49) (fkd-seq (fkd-ch 44)
+    (fkd-seq (fku-callnum (fkd-mod (fku-load (fk-lit 4)) (fk-lit 1000000)))
+    (fkd-seq (fkd-ch 44) (fkd-seq (fkd-ch 48) (fkd-seq (fkd-ch 44) (fkd-seq (fkd-ch 48)
+    (fkd-seq (fkd-ch 125) (fkd-seq (fkd-ch 44)
+    (fkd-seq (fkd-ch 123)
+    (fkd-seq (fku-callnum (fkd-div (fku-load (fk-lit 4)) (fk-lit 1000000)))
+    (fkd-seq (fkd-ch 44)
+    (fkd-seq (fku-callnum (fk-node 42 (ms-intern (fk-arg) (fk-lit 2))))
+    (fkd-seq (fkd-ch 44)
+    (fkd-seq (fku-callnum (fk-add (fk-node 42 (ms-intern (fk-arg) (fk-lit 2))) (fk-lit 1)))
+    (fkd-seq (fkd-ch 44) (fkd-seq (fkd-ch 48)
+    (fkd-seq (fkd-ch 125) (fkd-seq (fkd-ch 44)
+        (fk-if (fk-le (fku-load (fk-lit 1)) (fk-add (fk-arg) (fk-lit 1)))
+               (fk-lit 0)
+               (fk-call 9 (fk-add (fk-arg) (fk-lit 1)))))))))))))))))))))))))))
+
+; fn10 compile(m): segA · "1" · S1 · num(2n) · S2 · num(2n+1) · S3 ·
+;                  "{2,0,0,0}," · compk(0..) · S4 · walk · MS · \n
+(defn fku-arg-row ()
+    (fkd-seq (fkd-ch 123) (fkd-seq (fkd-ch 50) (fkd-seq (fkd-ch 44) (fkd-seq (fkd-ch 48)
+    (fkd-seq (fkd-ch 44) (fkd-seq (fkd-ch 48) (fkd-seq (fkd-ch 44) (fkd-seq (fkd-ch 48)
+    (fkd-seq (fkd-ch 125) (fkd-ch 44)))))))))))
+(defn fku-fn-compile (p)
+    (fku-do (fku-store (fk-lit 0) (fk-arg))
+    (fku-do (fku-store (fk-lit 1) (fk-call 6 (fk-arg)))
+    (fkd-seq (fku-seg (fku-p p 2) (fku-p p 3))
+    (fkd-seq (fkd-ch 49)
+    (fkd-seq (fku-seg (fku-p p 4) (fku-p p 5))
+    (fkd-seq (fku-callnum (fk-node 42 (ms-intern (fku-load (fk-lit 1)) (fk-lit 2))))
+    (fkd-seq (fku-seg (fku-p p 6) (fku-p p 7))
+    (fkd-seq (fku-callnum (fk-add (fk-node 42 (ms-intern (fku-load (fk-lit 1)) (fk-lit 2))) (fk-lit 1)))
+    (fkd-seq (fku-seg (fku-p p 8) (fku-p p 9))
+    (fkd-seq (fku-arg-row)
+    (fkd-seq (fk-call 9 (fk-lit 0))
+    (fkd-seq (fku-seg (fku-p p 10) (fku-p p 11))
+    (fkd-seq (fku-seg (fku-p p 12) (fku-p p 13))
+    (fkd-seq (fku-seg (fku-p p 16) (fku-p p 17))
+             (fkd-putc (fk-lit 10)))))))))))))))))
+
+; fn0 dispatch(mode): 0 -> quine · else -> compile(mode)
+(defn fku-fn-dispatch ()
+    (fk-if (fk-le (fk-arg) (fk-lit 0))
+           (fk-call 5 (fk-lit 0))
+           (fk-call 10 (fk-arg))))
+
+; the whole function list (order fixes the fn indices above)
+(defn fku-program (p roots)
+    (list (fku-fn-dispatch)
+          (fku-fn-num)
+          (fku-fn-row4)
+          (fku-fn-printseg)
+          (fku-fn-rowsprint (fku-p p 1))
+          (fku-fn-quine p roots)
+          (fku-fn-ntok)
+          (fku-fn-pow10)
+          (fku-fn-rulefind)
+          (fku-fn-compk p)
+          (fku-fn-compile p)))

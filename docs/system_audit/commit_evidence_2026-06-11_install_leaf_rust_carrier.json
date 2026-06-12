@@ -1,0 +1,113 @@
+{
+  "date": "2026-06-11",
+  "thread_branch": "form-os3/install-rust",
+  "commit_scope": "The SECOND native carrier of install-as-named-callable-leaf lands on the Rust kernel: jit_install compiles the named closure through the existing main.rs jit lane (recipe -> Rust source -> rustc --crate-type=cdylib -> libloading, content-addressed plugin cache reused) and binds the artifact in the kernel's own installed-leaves table AT RUNTIME — a subsequent call BY NAME, a name no closure serves, dispatches into the loaded .so at FNCALL. The protocol (form-stdlib/install-leaf.fk, proven three-way) is untouched: the ack is the artifact's body NodeID on bind, 0 on collision (first-bind-wins against natives, env-natives, and earlier leaves) or interface mismatch (expected arity is not the closure's own), nothing when there is no closure to install. Rust's NativeFn is a captureless fn pointer, so the grown surface IS a kernel-held table consulted at dispatch — the table the protocol names is literally the carrier's data structure. The leaf answers the i64 ABI lane it carries; a call outside it (floats, wrong arity) acknowledges nothing — axiom-4's observable boundary. installed_leaf? distinguishes runtime-grown leaves from build-time natives; jit-stats reports 'installed' rows (body NodeID + installed name) so the grown table is readable from Form. Parity by construction with the Go carrier: the protocol identical, only the dlopen mechanics per-host. The TS native carrier stays named open (wasm/worker), not built speculatively.",
+  "files_owned": [
+    "form/form-kernel-rust/src/main.rs",
+    "form/scripts/jit-install-leaf-test.sh",
+    "form/form-stdlib/install-leaf.fk",
+    "form/form-stdlib/primitive-registry.fk",
+    "docs/coherence-substrate/install-leaf.form",
+    "docs/coherence-substrate/primitive-registry.form",
+    "docs/system_audit/commit_evidence_2026-06-11_install_leaf_rust_carrier.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel.fk form-stdlib/install-leaf.fk form-stdlib/tests/install-leaf-band.fk",
+      "cd form && ./validate.sh form-stdlib/primitive-registry.fk form-stdlib/tests/primitive-registry-band.fk",
+      "./form/scripts/jit-install-leaf-test.sh",
+      "cd form/form-kernel-rust && cargo test --release",
+      "python3 form/scripts/validate_primitive_registry.py",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-11_install_leaf_rust_carrier.json"
+    ],
+    "summary": "install-leaf-band verdict 9, 0 divergent (the protocol band stays green — no protocol change). Witness now runs one section per carrier: go verdict 10 PASS (int + float lanes), rust verdict 10 PASS — jit_install compiled (defn il-probe (a b) (add (mul a b) 7)) through rustc to a cdylib, libloading mapped it, and the artifact bound as 'il-probe-native' in the kernel's installed-leaves table at runtime; (il-probe-native 6 7) = 49 = the recipe walk; a float call acknowledges nothing (outside the i64 ABI the leaf carries); rebind refused, build-time-native collision refused, arity-3 offer refused with nothing landing, absent closure acked nothing, a 3-arg call to the 2-arity leaf acked nothing. primitive-registry-band 63, 0 divergent — no lane flips (ts still gapped), spec lines retuned to name the two live carriers. cargo test --release: 51 passed, 0 failed. validate_primitive_registry.py: no failures, pins steady at 199/162/37.",
+    "observed_delta": {
+      "bands": "install-leaf-band 9 — 0 divergent (unchanged); primitive-registry-band 63 — 0 divergent (no pin changes, spec text only)",
+      "witness": "form/scripts/jit-install-leaf-test.sh -> go verdict 10 PASS + rust verdict 10 PASS (live cdylib install via libloading, call-by-name, i64 parity, interface-boundary silence, three refusal shapes)",
+      "kernel_surface": "form-kernel-rust gains jit_install (env-aware, witness category) and installed_leaf? (compare); Kernel.installed_leaves holds runtime-grown leaves (Arc-shared artifacts, worker-clone safe); FNCALL dispatch answers installed names after build-time natives, before closure lookup; jit-stats gains 'installed' rows",
+      "ledger_row": "linux-as-recipes (loadable-modules) install-as-named-callable-leaf — two native carriers live (go plugin.Open, rust libloading); ts named open; row retune stays with the coordinator"
+    },
+    "known_limitations": [
+      {
+        "limitation": "The Rust leaf answers the i64 ABI lane only — the interface the rustc-cdylib lane carries today. Go's leaf additionally answers float and Value ABI lanes. A call outside the Rust leaf's lane acknowledges nothing (honest, observable), so sibling value-parity holds where the lane exists and refusal-parity holds where it does not.",
+        "follow_up": "Widen the Rust JIT ABI (f64 / tagged-value lanes) when a hot recipe asks for it; the install protocol does not change."
+      },
+      {
+        "limitation": "The TS native carrier stays a named open stone (wasm/worker module) — a different loading shape, not built speculatively.",
+        "follow_up": "Build it when an ask needs it; the offer -> bind -> call-by-name shape is fixed by the band."
+      },
+      {
+        "limitation": "Rust has no per-event observe ledger like Go's observe/go/jit/install family; the grown table is introspectable via installed_leaf? and jit-stats 'installed' rows instead.",
+        "follow_up": "If sibling observe parity becomes a proof target, lift the observe shape into a shared Form teaching first."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "PR gates run the three-way bands; sibling kernels keep the verdict honest."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "form-kernel-rust rides the kernel rebuild; no route changes."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No route changes. The Rust kernel's callable surface can grow at runtime by offer — same protocol, same refusals, same node ack as the Go carrier; parity by construction.",
+    "public_endpoints": [
+      "POST /api/substrate/form"
+    ],
+    "test_flows": [
+      "jit-install-leaf-test.sh rust section: jit (rustc cdylib + libloading) -> install -> call-by-name -> i64 parity vs the recipe walk -> float-call boundary silence -> rebind/native-collision/arity refusals -> absent-cell nothing -> wrong-arity silence.",
+      "install-leaf-band three-way regression: the protocol band stays 9 with 0 divergent."
+    ],
+    "summary": "validate.sh 9 + 63, all 0 divergent; witness go 10 + rust 10 PASS; cargo test 51/51."
+  },
+  "phase_gate": {
+    "phase": "form-os3-install-rust",
+    "gate": "the second native carrier witnessed live on the Rust kernel with the protocol band still green three-way; ledger retune stays with the coordinator",
+    "state": "crossed",
+    "can_move_next_phase": false,
+    "next": "coordinator retunes the loadable-modules row (two carriers live, ts named); ts carrier when asked; ABI widening when a hot recipe asks"
+  },
+  "idea_ids": [
+    "fourth-kernel"
+  ],
+  "spec_ids": [
+    "form-core-kernel-conformance"
+  ],
+  "task_ids": [
+    "form-os3-install-rust-20260611"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "form-os-map"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Code",
+    "version": "claude-fable-5"
+  },
+  "evidence_refs": [
+    "docs/coherence-substrate/install-leaf.form",
+    "docs/coherence-substrate/linux-as-recipes.form",
+    "docs/coherence-substrate/core-axioms.form",
+    "docs/system_audit/commit_evidence_2026-06-11_install_leaf.json"
+  ],
+  "change_intent": "runtime_feature",
+  "change_files": [
+    "docs/coherence-substrate/install-leaf.form",
+    "docs/coherence-substrate/primitive-registry.form",
+    "docs/system_audit/commit_evidence_2026-06-11_install_leaf_rust_carrier.json",
+    "form/form-kernel-rust/src/main.rs",
+    "form/form-stdlib/install-leaf.fk",
+    "form/form-stdlib/primitive-registry.fk",
+    "form/scripts/jit-install-leaf-test.sh"
+  ]
+}

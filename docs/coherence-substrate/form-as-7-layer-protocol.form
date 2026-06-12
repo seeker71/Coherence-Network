@@ -33,7 +33,7 @@
     ;;
     ;; L6 presentation → BMF dialects are the encoding/decoding layer.
     ;;              natural-bmf, image-bmf, audio-bmf, video-bmf,
-    ;;              midi-bmf, document-bmf, go/rust/ts/python-bmf —
+    ;;              midi-bmf, document-bmf, go/rust/ts/python/prolog-bmf —
     ;;              every surface format the body has touched is a
     ;;              Form Recipe family. Cross-format translation is a
     ;;              lens, not a parser-rewrite.
@@ -148,6 +148,7 @@
     ;;   form-stdlib/grammars/rust-bmf.fk         — Rust source
     ;;   form-stdlib/grammars/typescript-bmf.fk   — TypeScript source
     ;;   form-stdlib/grammars/python-bmf.fk       — Python source
+    ;;   form-stdlib/grammars/prolog-bmf.fk       — Prolog source
     ;;   form-stdlib/midi-bmf.fk                  — MIDI events
     ;;
     ;; Cross-format transit is a lens — define an inverse-Recipe that

@@ -1,0 +1,237 @@
+; health-impact-receipt.fk - evidence receipt for foods, substances, and preparation processes.
+;
+; This receipt answers "what health impact can we say?" without turning an
+; unknown into a cure claim. It separates the subject, exposure boundary,
+; preparation transform, evidence lane, safety witness, data-source witness,
+; and claim. A valid receipt returns a bounded verdict: benefit-supported,
+; risk-supported, mixed, unknown, or refused with a named reason.
+
+(do
+    (defn hir-bool-score (ok score)
+        (if ok score 0))
+    (defn hir-tagged? (value tag arity)
+        (if (eq (len value) arity) (str_eq (nth value 0) tag) false))
+    (defn hir-nonempty-string? (value)
+        (gt (str_len value) 0))
+    (defn hir-bit-1? (value)
+        (eq value 1))
+
+    (defn hir-subject (kind canonical-id label)
+        (list "HealthImpactSubject" kind canonical-id label))
+    (defn hir-subject? (subject)
+        (hir-tagged? subject "HealthImpactSubject" 4))
+    (defn hir-subject-kind (subject) (nth subject 1))
+    (defn hir-subject-canonical-id (subject) (nth subject 2))
+    (defn hir-subject-label (subject) (nth subject 3))
+    (defn hir-kind-food? (kind) (str_eq kind "food"))
+    (defn hir-kind-substance? (kind) (str_eq kind "substance"))
+    (defn hir-kind-process? (kind) (str_eq kind "preparation-process"))
+    (defn hir-subject-kind-supported? (kind)
+        (if (hir-kind-food? kind) true
+        (if (hir-kind-substance? kind) true
+            (hir-kind-process? kind))))
+    (defn hir-subject-valid? (subject)
+        (if (hir-subject? subject)
+            (and (hir-subject-kind-supported? (hir-subject-kind subject))
+            (and (hir-nonempty-string? (hir-subject-canonical-id subject))
+                 (hir-nonempty-string? (hir-subject-label subject))))
+            false))
+
+    (defn hir-exposure (dose route frequency population stop-boundary)
+        (list "HealthImpactExposure" dose route frequency population stop-boundary))
+    (defn hir-exposure? (exposure)
+        (hir-tagged? exposure "HealthImpactExposure" 6))
+    (defn hir-exposure-dose (exposure) (nth exposure 1))
+    (defn hir-exposure-route (exposure) (nth exposure 2))
+    (defn hir-exposure-frequency (exposure) (nth exposure 3))
+    (defn hir-exposure-population (exposure) (nth exposure 4))
+    (defn hir-exposure-stop-boundary (exposure) (nth exposure 5))
+    (defn hir-exposure-valid? (exposure)
+        (if (hir-exposure? exposure)
+            (and (hir-nonempty-string? (hir-exposure-dose exposure))
+            (and (hir-nonempty-string? (hir-exposure-route exposure))
+            (and (hir-nonempty-string? (hir-exposure-frequency exposure))
+            (and (hir-nonempty-string? (hir-exposure-population exposure))
+                 (hir-nonempty-string? (hir-exposure-stop-boundary exposure))))))
+            false))
+
+    (defn hir-preparation (process source-trace measured composition-delta contaminant-delta bioavailability-delta)
+        (list "HealthImpactPreparation" process source-trace measured composition-delta contaminant-delta bioavailability-delta))
+    (defn hir-preparation? (preparation)
+        (hir-tagged? preparation "HealthImpactPreparation" 7))
+    (defn hir-preparation-process (preparation) (nth preparation 1))
+    (defn hir-preparation-source-trace (preparation) (nth preparation 2))
+    (defn hir-preparation-measured (preparation) (nth preparation 3))
+    (defn hir-preparation-composition-delta (preparation) (nth preparation 4))
+    (defn hir-preparation-contaminant-delta (preparation) (nth preparation 5))
+    (defn hir-preparation-bioavailability-delta (preparation) (nth preparation 6))
+    (defn hir-preparation-has-delta? (preparation)
+        (if (hir-bit-1? (hir-preparation-composition-delta preparation)) true
+        (if (hir-bit-1? (hir-preparation-contaminant-delta preparation)) true
+            (hir-bit-1? (hir-preparation-bioavailability-delta preparation)))))
+    (defn hir-preparation-valid? (preparation)
+        (if (hir-preparation? preparation)
+            (and (hir-nonempty-string? (hir-preparation-process preparation))
+            (and (hir-nonempty-string? (hir-preparation-source-trace preparation))
+            (and (hir-bit-1? (hir-preparation-measured preparation))
+                 (hir-preparation-has-delta? preparation))))
+            false))
+
+    (defn hir-evidence (lane source-trace outcome-trace molecular cellular organism third-party effect)
+        (list "HealthImpactEvidence" lane source-trace outcome-trace molecular cellular organism third-party effect))
+    (defn hir-evidence? (evidence)
+        (hir-tagged? evidence "HealthImpactEvidence" 9))
+    (defn hir-evidence-lane (evidence) (nth evidence 1))
+    (defn hir-evidence-source-trace (evidence) (nth evidence 2))
+    (defn hir-evidence-outcome-trace (evidence) (nth evidence 3))
+    (defn hir-evidence-molecular (evidence) (nth evidence 4))
+    (defn hir-evidence-cellular (evidence) (nth evidence 5))
+    (defn hir-evidence-organism (evidence) (nth evidence 6))
+    (defn hir-evidence-third-party (evidence) (nth evidence 7))
+    (defn hir-evidence-effect (evidence) (nth evidence 8))
+    (defn hir-evidence-score (evidence)
+        (if (str_eq (hir-evidence-lane evidence) "measured-human") 5
+        (if (str_eq (hir-evidence-lane evidence) "clinical") 4
+        (if (str_eq (hir-evidence-lane evidence) "observational") 3
+        (if (str_eq (hir-evidence-lane evidence) "mechanistic") 2
+        (if (str_eq (hir-evidence-lane evidence) "composition") 1
+            0))))))
+    (defn hir-evidence-benefit-effect? (evidence)
+        (if (str_eq (hir-evidence-effect evidence) "benefit") true
+            (str_eq (hir-evidence-effect evidence) "mixed")))
+    (defn hir-evidence-risk-effect? (evidence)
+        (if (str_eq (hir-evidence-effect evidence) "risk") true
+            (str_eq (hir-evidence-effect evidence) "mixed")))
+    (defn hir-evidence-valid? (evidence)
+        (if (hir-evidence? evidence)
+            (and (hir-nonempty-string? (hir-evidence-lane evidence))
+            (and (hir-nonempty-string? (hir-evidence-source-trace evidence))
+            (and (hir-nonempty-string? (hir-evidence-outcome-trace evidence))
+                 (hir-nonempty-string? (hir-evidence-effect evidence)))))
+            false))
+    (defn hir-human-evidence? (evidence)
+        (if (hir-evidence-valid? evidence)
+            (and (ge (hir-evidence-score evidence) 3)
+                 (hir-bit-1? (hir-evidence-third-party evidence)))
+            false))
+    (defn hir-mechanism-complete? (evidence)
+        (if (hir-evidence-valid? evidence)
+            (and (hir-bit-1? (hir-evidence-molecular evidence))
+            (and (hir-bit-1? (hir-evidence-cellular evidence))
+                 (hir-bit-1? (hir-evidence-organism evidence))))
+            false))
+
+    (defn hir-safety (toxicity-trace interaction-trace adverse-event-trace contaminant-safe risk-boundary stop-boundary risk-observed)
+        (list "HealthImpactSafety" toxicity-trace interaction-trace adverse-event-trace contaminant-safe risk-boundary stop-boundary risk-observed))
+    (defn hir-safety? (safety)
+        (hir-tagged? safety "HealthImpactSafety" 8))
+    (defn hir-safety-toxicity-trace (safety) (nth safety 1))
+    (defn hir-safety-interaction-trace (safety) (nth safety 2))
+    (defn hir-safety-adverse-event-trace (safety) (nth safety 3))
+    (defn hir-safety-contaminant-safe (safety) (nth safety 4))
+    (defn hir-safety-risk-boundary (safety) (nth safety 5))
+    (defn hir-safety-stop-boundary (safety) (nth safety 6))
+    (defn hir-safety-risk-observed (safety) (nth safety 7))
+    (defn hir-safety-valid? (safety)
+        (if (hir-safety? safety)
+            (and (hir-nonempty-string? (hir-safety-toxicity-trace safety))
+            (and (hir-nonempty-string? (hir-safety-interaction-trace safety))
+            (and (hir-nonempty-string? (hir-safety-adverse-event-trace safety))
+            (and (hir-bit-1? (hir-safety-contaminant-safe safety))
+            (and (hir-nonempty-string? (hir-safety-risk-boundary safety))
+                 (hir-nonempty-string? (hir-safety-stop-boundary safety)))))))
+            false))
+    (defn hir-risk-supported? (safety)
+        (if (hir-safety-valid? safety)
+            (hir-bit-1? (hir-safety-risk-observed safety))
+            false))
+
+    (defn hir-witness-pack (composition chemical literature safety)
+        (list "HealthImpactWitnessPack" composition chemical literature safety))
+    (defn hir-witness-pack? (witness)
+        (hir-tagged? witness "HealthImpactWitnessPack" 5))
+    (defn hir-witness-composition (witness) (nth witness 1))
+    (defn hir-witness-chemical (witness) (nth witness 2))
+    (defn hir-witness-literature (witness) (nth witness 3))
+    (defn hir-witness-safety (witness) (nth witness 4))
+    (defn hir-witness-valid? (witness)
+        (if (hir-witness-pack? witness)
+            (and (hir-nonempty-string? (hir-witness-composition witness))
+            (and (hir-nonempty-string? (hir-witness-literature witness))
+                 (hir-nonempty-string? (hir-witness-safety witness))))
+            false))
+    (defn hir-substance-witness-valid? (witness)
+        (and (hir-witness-valid? witness)
+             (hir-nonempty-string? (hir-witness-chemical witness))))
+
+    (defn hir-claim-food? (claim) (str_eq claim "food-health-impact"))
+    (defn hir-claim-preparation? (claim) (str_eq claim "preparation-health-impact"))
+    (defn hir-claim-substance? (claim) (str_eq claim "substance-condition-impact"))
+    (defn hir-claim-risk? (claim) (str_eq claim "risk-impact"))
+    (defn hir-claim-overbroad? (claim)
+        (if (str_eq claim "universal-health-claim") true
+            (str_eq claim "universal-cure-any-condition")))
+    (defn hir-supported-claim? (claim)
+        (if (hir-claim-food? claim) true
+        (if (hir-claim-preparation? claim) true
+        (if (hir-claim-substance? claim) true
+            (hir-claim-risk? claim)))))
+
+    (defn hir-receipt (subject exposure preparation evidence safety witness claim)
+        (list "HealthImpactReceipt" subject exposure preparation evidence safety witness claim))
+    (defn hir-receipt? (receipt)
+        (hir-tagged? receipt "HealthImpactReceipt" 8))
+    (defn hir-receipt-subject (receipt) (nth receipt 1))
+    (defn hir-receipt-exposure (receipt) (nth receipt 2))
+    (defn hir-receipt-preparation (receipt) (nth receipt 3))
+    (defn hir-receipt-evidence (receipt) (nth receipt 4))
+    (defn hir-receipt-safety (receipt) (nth receipt 5))
+    (defn hir-receipt-witness (receipt) (nth receipt 6))
+    (defn hir-receipt-claim (receipt) (nth receipt 7))
+    (defn hir-common-valid? (receipt)
+        (if (hir-receipt? receipt)
+            (and (hir-subject-valid? (hir-receipt-subject receipt))
+            (and (hir-exposure-valid? (hir-receipt-exposure receipt))
+            (and (hir-evidence-valid? (hir-receipt-evidence receipt))
+            (and (hir-safety-valid? (hir-receipt-safety receipt))
+                 (hir-witness-valid? (hir-receipt-witness receipt))))))
+            false))
+
+    (defn hir-benefit-supported? (receipt)
+        (if (hir-common-valid? receipt)
+            (and (hir-evidence-benefit-effect? (hir-receipt-evidence receipt))
+            (and (hir-human-evidence? (hir-receipt-evidence receipt))
+            (if (hir-claim-substance? (hir-receipt-claim receipt))
+                (and (hir-kind-substance? (hir-subject-kind (hir-receipt-subject receipt)))
+                (and (hir-substance-witness-valid? (hir-receipt-witness receipt))
+                     (hir-mechanism-complete? (hir-receipt-evidence receipt))))
+            (if (hir-claim-preparation? (hir-receipt-claim receipt))
+                (and (hir-kind-process? (hir-subject-kind (hir-receipt-subject receipt)))
+                     (hir-preparation-valid? (hir-receipt-preparation receipt)))
+                (hir-kind-food? (hir-subject-kind (hir-receipt-subject receipt)))))))
+            false))
+    (defn hir-impact-known? (receipt)
+        (if (hir-receipt? receipt)
+            (if (hir-benefit-supported? receipt) true
+                (hir-risk-supported? (hir-receipt-safety receipt)))
+            false))
+    (defn hir-refusal-reason (receipt)
+        (if (not (hir-receipt? receipt)) "malformed-receipt"
+        (if (hir-claim-overbroad? (hir-receipt-claim receipt)) "overbroad-health-claim"
+        (if (not (hir-supported-claim? (hir-receipt-claim receipt))) "unsupported-claim"
+        (if (not (hir-subject-valid? (hir-receipt-subject receipt))) "missing-subject"
+        (if (not (hir-exposure-valid? (hir-receipt-exposure receipt))) "missing-exposure-boundary"
+        (if (not (hir-witness-valid? (hir-receipt-witness receipt))) "missing-source-witness"
+        (if (not (hir-evidence-valid? (hir-receipt-evidence receipt))) "missing-evidence"
+        (if (not (hir-safety-valid? (hir-receipt-safety receipt))) "missing-safety-boundary"
+        (if (and (hir-claim-substance? (hir-receipt-claim receipt)) (not (hir-substance-witness-valid? (hir-receipt-witness receipt)))) "missing-chemical-witness"
+        (if (and (hir-claim-preparation? (hir-receipt-claim receipt)) (not (hir-preparation-valid? (hir-receipt-preparation receipt)))) "missing-preparation-boundary"
+            "fit")))))))))))
+    (defn hir-verdict (receipt)
+        (if (not (str_eq (hir-refusal-reason receipt) "fit")) "refused"
+        (if (and (hir-benefit-supported? receipt) (hir-risk-supported? (hir-receipt-safety receipt))) "mixed"
+        (if (hir-benefit-supported? receipt) "benefit-supported"
+        (if (hir-risk-supported? (hir-receipt-safety receipt)) "risk-supported"
+            "unknown")))))
+
+    0)

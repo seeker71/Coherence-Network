@@ -1,0 +1,58 @@
+; tests/source-compile-multibyte-band.fk — multibyte string literals survive
+; form-source-compile-file byte-for-byte, three-way.
+;
+; The 2026-06-12 wound: the Go kernel auto-JITs any closure after 2000 calls
+; (goJITHotThreshold in main.go), so the per-char scan loops of the BML
+; compiler go hot partway through any real file — and jitabi's CharAt widened
+; each byte to a codepoint (ä → Ã¤, the Latin-1-promotion class healed in the
+; interpreter natives by #2894 but never taught to the JIT ABI). Small
+; fixtures and ASCII anchors stayed green: the mojibake only begins ~2KB into
+; a section, after the scanners cross the hot threshold. This band's fixture
+; is large enough to cross it, and every row carries umlauts; bit 4 pins the
+; rows that compile AFTER the JIT swap.
+;
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk
+
+(do
+    ; ä ü ö ß and an em-dash — two- and three-byte UTF-8 in one anchor.
+    (let smb-anchor "Zustände — Prüfung über große Gefäße, gewöhnlich häufig schön")
+    (let smb-rows 60)
+
+    (defn smb-gen (i acc)
+        (if (ge i smb-rows) acc
+            (smb-gen (add i 1)
+                (str_concat acc
+                    (str_concat "    def smb-r"
+                        (str_concat (int_to_str i)
+                            (str_concat "() = \""
+                                (str_concat smb-anchor
+                                    (str_concat " "
+                                        (str_concat (int_to_str i) "\";\n"))))))))))
+
+    (defn smb-count (s needle from acc)
+        (do
+            (let p (str_find s needle from))
+            (if (lt p 0) acc
+                (smb-count s needle (add p (str_len needle)) (add acc 1)))))
+
+    (let smb-src
+        (str_concat "section [form.bml] {\n"
+            (str_concat (smb-gen 0 "") "}\n")))
+
+    (let smb-src-path (str_concat (temp_dir) "/source-compile-multibyte-band-src.fk"))
+    (let smb-out-path (str_concat (temp_dir) "/source-compile-multibyte-band-out.fk"))
+    (write_file_text smb-src-path smb-src)
+    (form-source-compile-file smb-src-path smb-out-path)
+    (let smb-out (read_file smb-out-path))
+
+    ; bit 1 — the compile produced output
+    (let ok-compiled (if (gt (str_len smb-out) 0) 1 0))
+    ; bit 2 — the first row's multibyte text survived (interpreter region)
+    (let ok-first (if (ge (str_find smb-out (str_concat smb-anchor " 0") 0) 0) 1 0))
+    ; bit 4 — EVERY row survived byte-for-byte, including the rows compiled
+    ; after the Go kernel's auto-JIT swap of the hot scan loops
+    (let ok-all (if (eq (smb-count smb-out smb-anchor 0 0) smb-rows) 1 0))
+    ; bit 8 — no widened bytes anywhere ("Ã" is the c3 83 mojibake marker)
+    (let ok-clean (if (lt (str_find smb-out "Ã" 0) 0) 1 0))
+
+    (add ok-compiled (add (mul ok-first 2) (add (mul ok-all 4) (mul ok-clean 8)))))

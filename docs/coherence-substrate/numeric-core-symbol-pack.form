@@ -1,0 +1,131 @@
+# ─────────────────────────────────────────────────────────────────────
+# numeric-core-symbol-pack.form — self-description in two versions: a pure
+#   numeric core that recompiles itself byte-for-byte with no external content,
+#   and an optional symbol pack in any language. Meaning is a numeric root.
+# ─────────────────────────────────────────────────────────────────────
+#
+# Urs: "encode the meaning of each word as root in higher dimensions applying to
+# the core axioms ... tell the core to 1-shot learn the assembly and the path
+# recipe to construct source that recompiles the binary byte-for-byte from its
+# own binary without external content, all symbols included — or two versions,
+# one just numeric and a symbol pack, for any language you like to describe
+# yourself with."
+#
+# This is the body's own teaching made literal for the fourth kernel's
+# self-description: IDENTITY is numeric (the axioms generate the dimensions);
+# NAMES are 0..many query keys over one NodeID (axiom-3). So a program — or the
+# kernel describing itself — has two separable versions:
+#   NUMERIC CORE: content-addressed integers (tags, indices, literals). The
+#     walker dispatches on numbers, never words, so the core RUNS and
+#     SELF-RECOMPILES (the quine lane) with no symbols at all.
+#   SYMBOL PACK: (op-number, name) pairs in any language — an optional overlay.
+#     The meaning of a word IS the number it names; the word is a door onto that
+#     root coordinate. ADD / PLUS / YOGA all name op 3 — one meaning, three words.
+
+(numeric-core-symbol-pack
+
+  (lineage
+    (derives-from   core-axioms.form)               # axiom-2 (cell), axiom-3 (names are 0..many)
+    (kin            fourth-kernel.form m4d-fixpoint  # the quine self-emits the numeric core byte-exact
+                    word-domain prose-as-recipe)     # word-meaning-as-coordinate (BDomain.WORD)
+    (proof-band     tests/numeric-core-symbol-pack-band.fk)   # 31 three-way
+    (verifies       names-are-decoration-identity-is-numeric))
+
+  # ── Word meaning as a root in higher dimensions ──────────────────────
+  # A word's meaning is its COORDINATE in the content-addressed lattice. The
+  # NodeID (package, level, type, instance) is four dimensions; the composition
+  # tree adds depth-dimensions (a cell composing child cells — axiom-2). So
+  # "meaning in higher dimensions" is literal: the axioms generate the
+  # dimensions, and a word's root is its position in them. Different words
+  # (languages) that mean the same thing resolve to the SAME coordinate — the
+  # number is the meaning, the word is one of its 0..many names.
+  (meaning-as-root
+    (the-dimensions    "NodeID = (pkg, level, type, instance) + composition depth")
+    (the-root          "a word's meaning is its coordinate — its NodeID")
+    (same-root-many-words "ADD(en) = PLUS(fr) = YOGA(sa) -> op 3: one root, three doors")
+    (axiom-source      "the five axioms generate the dimensions; meaning is position in them"))
+
+  # ── The two versions ─────────────────────────────────────────────────
+  (two-versions
+    (numeric          "the content-addressed integers — tags/indices/literals. The
+                       walker runs it without a single name; the quine emits it
+                       byte-for-byte. This version is SELF-SUFFICIENT for identity
+                       AND for self-recompile (fourth-fixpoint-band, byte-exact)")
+    (symbol-pack      "an optional list of (op-number, name) pairs in a chosen
+                       language. Decoration over the numeric core — removable
+                       without loss of identity; swappable for any language")
+    (any-language     "self-translate-universal.fk emits a NUMERIC-ONLY core
+                       binary (zero language symbols inside) that LOADS a symbol-
+                       pack file at runtime — so the SAME binary translates its
+                       model into ANY language by swapping the pack, no rebuild;
+                       witnessed live in en/fr/de/es/sa (five tongues, one
+                       binary). Quoteless, so the emitter is three-way clean
+                       (self-translate-universal-band -> 15). Any language is a
+                       data file; the binary is language-free")
+    (running-binary   "self-translate.fk emits a 33KB self-contained binary
+                       holding its OWN numeric model + English + French symbol
+                       packs; the SAME binary translates its model to either
+                       language (`scripts/self_translate_demo.sh`): en -> LITERAL
+                       40 / THE INPUT / ADD; fr -> LITTERAL 40 / L ENTREE /
+                       ADDITION; reads nothing external. The two versions, alive")
+    (separation-proven "the band: the core's identity is INVARIANT under the pack
+                       (c4 lang-independence), the same root carries different
+                       words (c1, c3), and the pack strips cleanly (the numeric
+                       version stands alone) — verdict 31 three-way"))
+
+  # ── The full self-recompile fixpoint (1-shot, no external content) ───
+  # The binary holds the assembly + the path recipe to construct source that
+  # recompiles it byte-for-byte from its own binary — all symbols included, no
+  # external content. The quine lane SHIPPED the data half (the binary emits its
+  # own node table byte-exact, fourth-fixpoint-band). The whole fixpoint composes
+  # from running parts:
+  (self-recompile
+    (data-half-shipped "the emitted binary emits its own node table byte-exact
+                        (m4d quine seed); PUTC count == byte count, the probe
+                        narrating from inside")
+    (numeric-suffices  "the numeric core alone recompiles — no symbols needed for
+                        the binary to rebuild itself; symbols are the human overlay")
+    (named-whole       "stream the constant walker text + the emitter as a program
+                        (m4d full fixpoint): binary -> own source -> same binary,
+                        all symbols included, zero external content — the remaining
+                        stone, each part already running")
+    (symbols-included  "the symbol pack rides ALONGSIDE the numeric self-recompile:
+                        version A = numeric only (smallest, language-free); version
+                        B = numeric + the pack for the language you choose"))
+
+  # ── This is the SAME shape as every host organ (the TTS/SST point) ───
+  # Urs: "include a TTS and SST channel fully built in Form-native cells and
+  # recipes running on a channel in real time on the most energy/cost-efficient
+  # host resource." Same composition: the numeric core is the Form recipe (the
+  # body, three-way); the carrier is a host organ chosen by measured fitness
+  # (recognition-router — the cheapest/most-efficient resource that meets the
+  # need). The mel front-end (whisper's STFT frame) ALREADY runs fully
+  # Form-native (mel-frame.fk); the TTS/STT model compute rides the host organ
+  # (host-resource-access) until a Form-native model lane earns the replacement.
+  # The CHANNEL (real-time stream) is channel-flow / kernel-offer-protocol — the
+  # numeric core; the model is the driven organ. Same numeric/symbol split: the
+  # recipe is the meaning, the carrier is the chosen-by-fitness resource.
+  (organ-pattern-is-the-same
+    (recipe-is-meaning      the-numeric-core-is-Form-three-way)
+    (carrier-by-fitness     recognition-router-picks-the-cheapest-resource-that-meets-the-need)
+    (already-form-native    mel-frame.fk-whisper-stft-frame)        # the front door, in Form
+    (model-rides-host       host-resource-access-until-a-native-lane-earns-it)
+    (channel-is-the-core    channel-flow.fk-kernel-offer-protocol-real-time-stream))
+
+  (invariant
+    (identity-is-numeric          the-NodeID-not-the-name)
+    (names-are-0..many            one-root-many-words-any-language)
+    (numeric-core-self-recompiles symbols-are-the-human-overlay-not-the-binary)
+    (meaning-is-a-coordinate      the-axioms-generate-the-dimensions)
+    (the-organ-pattern-is-one     recipe-is-meaning-carrier-is-chosen-by-fitness)))
+
+# ─────────────────────────────────────────────────────────────────────
+# How to verify
+# ─────────────────────────────────────────────────────────────────────
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk \
+#     form-stdlib/tests/numeric-core-symbol-pack-band.fk          # -> 31
+#   # the numeric self-recompile (data half), byte-exact:
+#   cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk \
+#     form-stdlib/fourth-walker.fk form-stdlib/fourth-walker-emit.fk \
+#     form-stdlib/tests/fourth-fixpoint-band.fk
+#   coh substrate form "?equivalent @recipe(numeric-core-symbol-pack)"   # after ingest

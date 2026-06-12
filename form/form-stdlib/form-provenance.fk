@@ -1,0 +1,77 @@
+; form-provenance.fk — CELL PROVENANCE: from any table row back to the ORIGINAL
+; SOURCE file:line:col that created the cell. The structural fact that makes it
+; pure Form (no kernel surgery): every (fk- constructor in the source makes
+; exactly ONE cell, and flatten is deterministic POST-ORDER — so scanning the
+; source for constructors (pre-order, with paren depth) and converting to
+; post-order yields, for table row k, the byte offset of the constructor that
+; authored it. Line and column derive from the offset by newline counting.
+;
+; Companions: the kernels' fatals already name the Form line that produced them
+; (the runtime-diagnostic half); this is the CELL-CREATION half — any row of any
+; emitted binary's table, even one that never faulted, answers "which source
+; line made you?". The kernel-level NodeID provenance plane (positions riding
+; inside interned cells) is the named destination; this locator is the working
+; carrier that needs only the source text.
+;
+; Scope: fk-* constructor expressions (the walker-program authoring surface);
+; parens inside string literals are outside this scope — named, not hidden.
+; Proven three-way by tests/form-provenance-band.fk; live witness joins
+; hits -> node -> file:line:col -> source text in scripts/form_provenance_demo.sh.
+
+(do
+    (defn fp-nil? (xs) (eq (len xs) 0))
+    (defn fp-app (xs ys) (if (fp-nil? xs) ys (cons (head xs) (fp-app (tail xs) ys))))
+
+    ; is the text at offset i the start of a constructor "(fk-"?
+    (defn fp-ctor? (src i)
+        (if (le (str_len src) (add i 3)) 0
+        (if (eq (ord (char_at src i)) 40)
+        (if (eq (ord (char_at src (add i 1))) 102)
+        (if (eq (ord (char_at src (add i 2))) 107)
+        (if (eq (ord (char_at src (add i 3))) 45) 1 0) 0) 0) 0)))
+
+    ; pre-order scan: every constructor as (offset, depth)
+    (defn fp-scan2 (src i depth acc)
+        (if (le (str_len src) i) acc
+            (if (eq (ord (char_at src i)) 40)
+                (fp-scan2 src (add i 1) (add depth 1)
+                    (if (eq (fp-ctor? src i) 1) (fp-app acc (list (list i (add depth 1)))) acc))
+                (if (eq (ord (char_at src i)) 41)
+                    (fp-scan2 src (add i 1) (sub depth 1) acc)
+                    (fp-scan2 src (add i 1) depth acc)))))
+    (defn fp-scan (src) (fp-scan2 src 0 0 (list)))
+
+    ; pre-order -> post-order: head's subtree = following entries deeper than it;
+    ; post = post(children) ++ [head] ++ post(siblings) — flatten's exact order
+    (defn fp-deeper (xs d)
+        (if (fp-nil? xs) (list)
+            (if (le (nth (head xs) 1) d) (list)
+                (cons (head xs) (fp-deeper (tail xs) d)))))
+    (defn fp-after (xs d)
+        (if (fp-nil? xs) (list)
+            (if (le (nth (head xs) 1) d) xs
+                (fp-after (tail xs) d))))
+    (defn fp-post (pre)
+        (if (fp-nil? pre) (list)
+            (fp-app (fp-post (fp-deeper (tail pre) (nth (head pre) 1)))
+            (fp-app (list (nth (head pre) 0))
+                    (fp-post (fp-after (tail pre) (nth (head pre) 1)))))))
+
+    ; the locator: source text -> per-table-row constructor byte offsets
+    (defn fp-locate (src) (fp-post (fp-scan src)))
+
+    ; offset -> line (1-based) and column (1-based) by newline counting
+    (defn fp-line2 (src i off n)
+        (if (le off i) n
+            (if (eq (ord (char_at src i)) 10)
+                (fp-line2 src (add i 1) off (add n 1))
+                (fp-line2 src (add i 1) off n))))
+    (defn fp-line (src off) (fp-line2 src 0 off 1))
+    (defn fp-col2 (src i off last)
+        (if (le off i) (sub off last)
+            (if (eq (ord (char_at src i)) 10)
+                (fp-col2 src (add i 1) off (add i 1))
+                (fp-col2 src (add i 1) off last))))
+    (defn fp-col (src off) (add (fp-col2 src 0 off 0) 1))
+
+    0)

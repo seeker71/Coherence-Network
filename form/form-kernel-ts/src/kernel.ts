@@ -709,6 +709,65 @@ export class Kernel {
   byID = new Map<string, Recipe>();
   private nextInst = 1; // next instance number for composites
   private sourceAttr = new Map<string, { file: NameID; line: number; col: number }>();
+  // formStack — the Form-level call chain currently live (closure and
+  // native names, innermost last; closure labels carry file:line:col when
+  // the body recipe is attributed). Pushed at dispatch, popped on the
+  // success path only — after a throw the frames that were live at the
+  // crash remain for the top-level catch to surface.
+  formStack: string[] = [];
+  // readingFiles — line map for the source currently being read:
+  // (file name, first global line) per concatenated part. When non-empty,
+  // the reader attributes every parenthesized form so fatal diagnostics
+  // can name the Form source line.
+  readingFiles: { file: string; startLine: number }[] = [];
+
+  // resolveReadingLine — map a global line in the concatenated read buffer
+  // back to (file, line within that file).
+  resolveReadingLine(globalLine: number): { file: string; line: number } | null {
+    let owner: { file: string; line: number } | null = null;
+    for (const part of this.readingFiles) {
+      if (part.startLine <= globalLine) {
+        owner = { file: part.file, line: globalLine - part.startLine + 1 };
+      } else {
+        break;
+      }
+    }
+    return owner;
+  }
+
+  // attributeSource — record a node's authoring site (first writer wins —
+  // content-addressing means a shape interned from two sites keeps its
+  // first authoring site).
+  attributeSource(node: NodeID, file: string, line: number, col: number): void {
+    const key = nodeKey(node);
+    if (!this.sourceAttr.has(key)) {
+      this.sourceAttr.set(key, { file: this.internName(file), line, col });
+    }
+  }
+
+  // formStackDisplay — the live Form call chain, innermost first, capped.
+  formStackDisplay(max: number): string {
+    if (this.formStack.length === 0) return "";
+    const total = this.formStack.length;
+    const frames: string[] = [];
+    for (let i = total - 1; i >= 0 && frames.length < max; i--) {
+      frames.push(this.formStack[i]!);
+    }
+    let out = frames.join(" < ");
+    if (total > max) out += ` … (+${total - max} more)`;
+    return out;
+  }
+
+  // formFrameLabel — a closure frame's display label: the function name,
+  // plus file:line:col when the body recipe carries source attribution.
+  formFrameLabel(name: NameID, body: NodeID): string {
+    let label = this.nameStr(name);
+    const loc = this.sourceAttr.get(nodeKey(body));
+    if (loc !== undefined) {
+      label = `${label}@${this.nameStr(loc.file)}:${loc.line}:${loc.col}`;
+    }
+    return label;
+  }
   private importSeq = 1;
   private walkCache = new Map<string, Value>();
   private walkCacheHits = 0;
@@ -1263,7 +1322,10 @@ export class Kernel {
       case "f64":
         return String(v.float);
       case "str":
-        return JSON.stringify(v.str);
+        // Bare, not JSON-quoted — the Go (Value.String) and Rust
+        // (Value::display) siblings render strings without quotes, and
+        // band outputs are byte-compared across kernels.
+        return v.str;
       case "bool":
         return v.bool ? "true" : "false";
       case "list":
@@ -1336,7 +1398,10 @@ export class Kernel {
           `substring: bounds out of range start=${start} end=${end} len=${s.length}`,
         );
       }
-      return { kind: "str", str: s.slice(start, end) };
+      return {
+        kind: "str",
+        str: s.slice(floorCharBoundary(s, start), floorCharBoundary(s, end)),
+      };
     });
     this.registerNative("char_at", catAccess(), (_k, args) => {
       const s = argStr(args, 0);
@@ -1344,7 +1409,14 @@ export class Kernel {
       if (i < 0 || i >= s.length) {
         throw new Error(`char_at: bounds out of range index=${i} len=${s.length}`);
       }
-      return { kind: "str", str: s[i] ?? "" };
+      // At a char start: the whole char (both surrogate halves). Inside a
+      // char: nothing — a unitwise loop concatenating char_at over
+      // 0..str_len reconstructs the string exactly, once per char.
+      if (insideSurrogatePair(s, i)) {
+        return { kind: "str", str: "" };
+      }
+      const cp = s.codePointAt(i);
+      return { kind: "str", str: cp === undefined ? "" : String.fromCodePoint(cp) };
     });
     this.registerNative("str_concat", catMethod(), (_k, args) => ({
       kind: "str",
@@ -1500,7 +1572,7 @@ export class Kernel {
     this.registerNative("str_find", catAccess(), (_k, args) => {
       const s = argStr(args, 0);
       const needle = argStr(args, 1);
-      const from = argInt(args, 2);
+      const from = ceilCharBoundary(s, Math.max(0, argInt(args, 2)));
       const idx = s.indexOf(needle, from);
       // `kind: "int"` carries a JS Number — using BigInt here would
       // poison downstream arithmetic with "Cannot mix BigInt and other
@@ -1629,6 +1701,20 @@ export class Kernel {
       kind: "int",
       int: parseInt(argStr(args, 0), 10) || 0,
     }));
+    // str_to_float — text-to-float leaf, total (unparseable -> 0.0). Number()
+    // over parseFloat() for sibling parity: "3.5abc" is unparseable in the
+    // Go/Rust kernels, so it must be 0.0 here too.
+    this.registerNative("str_to_float", catMethod(), (_k, args) => {
+      const f = Number(argStr(args, 0).trim());
+      return { kind: "f64", float: Number.isFinite(f) ? f : 0.0 };
+    });
+    // float_to_int — truncate a float toward zero, exactly Python's int() on
+    // a float. Total: a non-number -> 0. Sibling parity with Go and Rust.
+    this.registerNative("float_to_int", catMethod(), (_k, args) => {
+      const v = args[0];
+      const f = v.kind === "f32" || v.kind === "f64" ? v.float : v.kind === "int" ? v.int : 0;
+      return { kind: "int", int: Math.trunc(f) };
+    });
     this.registerNative("ord", catAccess(), (_k, args) => {
       const s = argStr(args, 0);
       return { kind: "int", int: s.length === 0 ? -1 : s.charCodeAt(0) };
@@ -1937,39 +2023,53 @@ export class Kernel {
       }
       return { kind: "list", list: out };
     });
-    // Common Python builtins. Sibling-parity with Rust + Go.
+    // Common Python builtins. Sibling-parity with Rust + Go: elements read
+    // through the same integer lane as Rust's as_int (ints and bools widen,
+    // floats truncate, i64/u64 pass through), so wide literals survive
+    // aggregation — a raw `.int` read on an i64 element is undefined and
+    // silently drops the value (the choice-receipt-band divergence).
     this.registerNative("min", catMethod(), (_k, args) => {
       const v = args[0];
       if (v?.kind === "list") {
         if (v.list.length === 0) throw new Error("min: empty list");
-        let best = (v.list[0] as { int: number }).int;
+        let best = listElemInt(v.list[0]!, "min");
         for (let i = 1; i < v.list.length; i++) {
-          const x = (v.list[i] as { int: number }).int;
+          const x = listElemInt(v.list[i]!, "min");
           if (x < best) best = x;
         }
-        return { kind: "int", int: best };
+        return intOrWide(best);
       }
-      return { kind: "int", int: argInt(args, 0) };
+      return intOrWide(listElemInt(args[0]!, "min"));
     });
     this.registerNative("max", catMethod(), (_k, args) => {
       const v = args[0];
       if (v?.kind === "list") {
         if (v.list.length === 0) throw new Error("max: empty list");
-        let best = (v.list[0] as { int: number }).int;
+        let best = listElemInt(v.list[0]!, "max");
         for (let i = 1; i < v.list.length; i++) {
-          const x = (v.list[i] as { int: number }).int;
+          const x = listElemInt(v.list[i]!, "max");
           if (x > best) best = x;
         }
-        return { kind: "int", int: best };
+        return intOrWide(best);
       }
-      return { kind: "int", int: argInt(args, 0) };
+      return intOrWide(listElemInt(args[0]!, "max"));
     });
     this.registerNative("sum", catMethod(), (_k, args) => {
       const v = args[0];
       if (v?.kind === "list") {
-        let total = 0;
-        for (const e of v.list) total += (e as { int: number }).int ?? 0;
-        return { kind: "int", int: total };
+        // Float promotion mirrors Rust: any float element makes the total
+        // a float (Python's sum([1, 2.5]) behaviour).
+        const anyFloat = v.list.some((e) => e.kind === "f32" || e.kind === "f64");
+        if (anyFloat) {
+          let total = 0;
+          for (const e of v.list) {
+            total += e.kind === "bool" ? (e.bool ? 1 : 0) : expectFloat(e, "sum");
+          }
+          return { kind: "f64", float: total };
+        }
+        let total = 0n;
+        for (const e of v.list) total += listElemInt(e, "sum");
+        return intOrWide(total);
       }
       return { kind: "int", int: 0 };
     });
@@ -3211,6 +3311,18 @@ export class Kernel {
       int: Date.now(),
     }));
 
+    // `temp_dir` — the host's scratch directory: TMPDIR when the carrier
+    // names one, /tmp otherwise (no trailing slash). External read (host
+    // env) so it's catCall. The door that lets a band's scratch files land
+    // in per-leg space: validate.sh points each sibling kernel at its own
+    // TMPDIR, so concurrent legs never share a scratch path. Sibling
+    // parity holds on shape, NOT on value — each leg's dir differs by
+    // design; bands fold the path into effects, never into the verdict.
+    this.registerNative("temp_dir", catCall(), (_k, _args) => ({
+      kind: "str",
+      str: (process.env["TMPDIR"] ?? "/tmp").replace(/\/+$/, "") || "/tmp",
+    }));
+
     // `unix_ms_to_iso_utc` — render a millisecond instant as the
     // second-resolution ISO UTC string the Go carrier emits.
     this.registerNative("unix_ms_to_iso_utc", catCall(), (_k, args) => ({
@@ -3509,6 +3621,31 @@ function argBigInt(args: Value[], i: number): bigint {
     return BigInt(v.int);
   throw new Error(`arg ${i}: expected integer, got ${v.kind}`);
 }
+// A unit index is "inside a char" when it points at the low half of a
+// surrogate pair — the UTF-16 analog of a UTF-8 continuation byte. The
+// addressing natives snap such indices to a boundary (floor for windows,
+// ceil for search starts) so bytewise-stepping recipes read whole chars,
+// never throw, and the adjacency law substring(s,a,m)+substring(s,m,b) ==
+// substring(s,a,b) holds for any m. Same snap algebra as the Go and Rust
+// kernels over their UTF-8 byte units; unit alignment across encodings is
+// the named open gap (TS counts UTF-16 units, siblings count bytes).
+function insideSurrogatePair(s: string, i: number): boolean {
+  if (i <= 0 || i >= s.length) return false;
+  return (
+    (s.charCodeAt(i) & 0xfc00) === 0xdc00 && (s.charCodeAt(i - 1) & 0xfc00) === 0xd800
+  );
+}
+
+function floorCharBoundary(s: string, i: number): number {
+  if (i > s.length) i = s.length;
+  return insideSurrogatePair(s, i) ? i - 1 : i;
+}
+
+function ceilCharBoundary(s: string, i: number): number {
+  if (i >= s.length) return s.length;
+  return insideSurrogatePair(s, i) ? i + 1 : i;
+}
+
 function argStr(args: Value[], i: number): string {
   const v = args[i];
   if (v?.kind !== "str") throw new Error(`arg ${i}: expected str`);
@@ -3523,6 +3660,26 @@ function argNodeID(args: Value[], i: number): NodeID {
   const v = args[i];
   if (v?.kind !== "nodeid") throw new Error(`arg ${i}: expected nodeid`);
   return v.nodeid;
+}
+
+// listElemInt — the integer lane's element read for aggregating natives
+// (min/max/sum): ints and bools widen, floats truncate, i64/u64 pass
+// through. Sibling to Go/Rust Value.AsInt, carried in bigint so values
+// wider than int32 (#2922 literals) survive aggregation exactly.
+function listElemInt(v: Value, op: string): bigint {
+  if (v.kind === "bool") return v.bool ? 1n : 0n;
+  if (v.kind === "f32" || v.kind === "f64") return BigInt(Math.trunc(v.float));
+  return expectBigInt(v, op);
+}
+
+// intOrWide — render an aggregate back as the plain int kind when it fits
+// the exact-double range (the walkers print the same decimal), keeping the
+// i64 kind only when the value genuinely needs it.
+function intOrWide(total: bigint): Value {
+  const n = Number(total);
+  return Number.isSafeInteger(n)
+    ? { kind: "int", int: n }
+    : { kind: "i64", bigint: total };
 }
 
 function valueKindName(v: Value): string {
@@ -4223,6 +4380,11 @@ function walkMatchSwitch(
 
 function expectInt(v: Value, op: string): number {
   if (v.kind === "bool") return v.bool ? 1 : 0;
+  // A bare integer literal wider than int32 walks in as an i64 (overflow
+  // table). The default integer math path holds it as a JS number, exact to
+  // 2^53 — the same widening expectFloat already performs. Beyond 2^53 the
+  // typed I64 width path (expectBigInt) carries full precision.
+  if (v.kind === "i64" || v.kind === "u64") return Number(v.bigint);
   if (
     v.kind !== "int" &&
     v.kind !== "i8" &&
@@ -4364,16 +4526,17 @@ function walkMath(
       : { kind: "u64", bigint: acc };
   }
 
-  // I32 default path — backward-compat fast path.
-  //
-  // Runtime float promotion: the bare-width op (`add`/`+`/`sub`/… with no
-  // width-encoded inst) is what Python's polymorphic `+` lowers to. When any
-  // operand walks to a float at runtime, promote the whole fold to f64 —
-  // matching the Rust + Go MATH walker arms, which dispatch on the actual
-  // operand kind rather than the encoded width. This keeps int+int on the
-  // fast i32 path while opening float-field folds (sum of float `actual_cost`
-  // across a list of records) to three-way parity. Mirrors Python:
-  // int+float→float, float+int→float, float+float→float.
+  // Default integer path — the bare-width op (`add`/`+`/`sub`/… with no
+  // width-encoded inst) is what Python's polymorphic `+` lowers to, so it
+  // carries Python's arbitrary-precision integer semantics, NOT int32 wrap.
+  // Go and Rust compute this fold in int64 (`a * b`, `a + b`); a JS number
+  // holds integers exactly to 2^53, so plain arithmetic matches them across
+  // that whole range — `(mul 100000 100000)` is 10000000000 on all three, not
+  // a Math.imul-wrapped 1410065408. (Beyond 2^53 the explicit typed I64 width
+  // path carries full precision via BigInt.) Float promotion: when any operand
+  // walks to a float at runtime, promote the whole fold to f64 — matching the
+  // Rust + Go MATH arms, which dispatch on the actual operand kind rather than
+  // the encoded width. Mirrors Python: int+float→float, float+float→float.
   const vals = kids.map((kid) => walk(k, kid!, frame));
   if (vals.some((v) => v.kind === "f32" || v.kind === "f64")) {
     let facc = expectFloat(vals[0]!, "math.f64");
@@ -4401,29 +4564,31 @@ function walkMath(
     }
     return { kind: "f64", float: facc };
   }
-  let acc = expectInt(vals[0]!, "math.i32");
+  let acc = expectInt(vals[0]!, "math.int");
   for (let i = 1; i < vals.length; i++) {
-    const x = expectInt(vals[i]!, "math.i32");
+    const x = expectInt(vals[i]!, "math.int");
     switch (op) {
       case RMath.PLUS:
-        acc = (acc + x) | 0;
+        acc = acc + x;
         break;
       case RMath.MINUS:
-        acc = (acc - x) | 0;
+        acc = acc - x;
         break;
       case RMath.MUL:
-        acc = Math.imul(acc, x);
+        acc = acc * x;
         break;
       case RMath.DIV:
+        // Truncate toward zero — matches Go/Rust integer `/` (and Python's
+        // int() of the quotient), without int32 wrap. Math.trunc, not `| 0`.
         if (x === 0) throw new Error("division by zero");
-        acc = (acc / x) | 0;
+        acc = Math.trunc(acc / x);
         break;
       case RMath.MOD:
         if (x === 0) throw new Error("modulo by zero");
-        acc = acc - ((acc / x) | 0) * x;
+        acc = acc - Math.trunc(acc / x) * x;
         break;
       default:
-        throw new Error(`math.i32: unknown op ${op}`);
+        throw new Error(`math.int: unknown op ${op}`);
     }
   }
   return { kind: "int", int: acc };
@@ -4447,17 +4612,19 @@ function walkCompare(
 
   // A comparison acknowledges with the 0/1 integer states (axiom-1,
   // core-axioms.form) so its answer flows directly into arithmetic —
-  // the shape the compiled lane's JS coercion already implied. Proven
-  // three-way by tests/eq-shape-band.fk.
+  // the shape the compiled lane's JS coercion already implied. Operands
+  // meet the same numeric coercion in every lane: bools are the 0/1
+  // states, and non-numeric kinds are a type-contract violation —
+  // str_eq, node_eq, and value_eq are the typed doors for those kinds.
+  // Sibling to the Go and Rust walkers; proven three-way by
+  // tests/eq-shape-band.fk.
+  //
   // Width-mixing: if either side is float, compare as float; if either
-  // side is bigint, compare as bigint; else as int (bool operands carry
-  // axiom-1's two states as 1/0 — sibling of Rust's as_int, including
-  // the panic on non-numeric operands). Structural equality over
-  // non-numeric values lives in value_eq / str_eq / node_eq.
+  // side is bigint, compare as bigint; else as int.
   let r: boolean;
   if (av.kind === "f32" || av.kind === "f64" || bv.kind === "f32" || bv.kind === "f64") {
-    const a = expectFloat(av, "compare");
-    const b = expectFloat(bv, "compare");
+    const a = av.kind === "bool" ? (av.bool ? 1 : 0) : expectFloat(av, "compare");
+    const b = bv.kind === "bool" ? (bv.bool ? 1 : 0) : expectFloat(bv, "compare");
     switch (op) {
       case RCmp.EQ: r = a === b; break;
       case RCmp.NE: r = a !== b; break;
@@ -4468,8 +4635,8 @@ function walkCompare(
       default: throw new Error(`compare: unknown op ${op}`);
     }
   } else if (av.kind === "i64" || av.kind === "u64" || bv.kind === "i64" || bv.kind === "u64") {
-    const a = expectBigInt(av, "compare");
-    const b = expectBigInt(bv, "compare");
+    const a = av.kind === "bool" ? (av.bool ? 1n : 0n) : expectBigInt(av, "compare");
+    const b = bv.kind === "bool" ? (bv.bool ? 1n : 0n) : expectBigInt(bv, "compare");
     switch (op) {
       case RCmp.EQ: r = a === b; break;
       case RCmp.NE: r = a !== b; break;
@@ -4480,8 +4647,8 @@ function walkCompare(
       default: throw new Error(`compare: unknown op ${op}`);
     }
   } else {
-    const a = expectInt(av, "compare");
-    const b = expectInt(bv, "compare");
+    const a = av.kind === "bool" ? (av.bool ? 1 : 0) : expectInt(av, "compare");
+    const b = bv.kind === "bool" ? (bv.bool ? 1 : 0) : expectInt(bv, "compare");
     switch (op) {
       case RCmp.EQ: r = a === b; break;
       case RCmp.NE: r = a !== b; break;
@@ -4755,7 +4922,10 @@ function walkFnCall(
         k.trace?.record(envNe.category.type, envNe.category.inst);
       }
       k.trace?.recordNative(k.nameStr(envNe.name));
-      return envNe.fn(k, frame, envArgs);
+      k.formStack.push(k.nameStr(envNe.name));
+      const envOut = envNe.fn(k, frame, envArgs);
+      k.formStack.pop();
+      return envOut;
     }
     // Native dispatch
     const ne = k.natives.get(dispatchName);
@@ -4771,7 +4941,10 @@ function walkFnCall(
         k.trace.record(ne.category.type, ne.category.inst);
       }
       k.trace?.recordNative(k.nameStr(ne.name));
-      return ne.fn(k, args);
+      k.formStack.push(k.nameStr(ne.name));
+      const neOut = ne.fn(k, args);
+      k.formStack.pop();
+      return neOut;
     }
     // Closure via frame — use the ORIGINAL function-name (not the JIT-
     // aliased one): the user defined this function under rawName and
@@ -4813,6 +4986,7 @@ function invokeClosure(
     callFrame.bind(closure.params[i]!, v);
   }
   k.trace?.recordFn(k.nameStr(closure.name));
+  k.formStack.push(k.formFrameLabel(closure.name, closure.body));
   // JIT-compiled fast path: if this closure's body has been compiled
   // via (jit_compile ...), dispatch through the host-JIT'd function
   // instead of walking the recipe tree. Form recipe stays canonical
@@ -4820,15 +4994,23 @@ function invokeClosure(
   const bodyKey = nodeIDKey(closure.body);
   const compiled = k.jitCompiled.get(bodyKey);
   if (compiled !== undefined) {
+    const depth = k.formStack.length;
     try {
-      return compiled(callFrame);
+      const out = compiled(callFrame);
+      k.formStack.pop();
+      return out;
     } catch (err) {
+      // The walker retries below — a swallowed JIT failure must not
+      // leave its frames behind.
+      k.formStack.length = depth;
       const reason = err instanceof Error ? err.message : String(err);
       k.jitFailedReason.set(bodyKey, reason);
       k.jitDispatchMisses.set(bodyKey, (k.jitDispatchMisses.get(bodyKey) ?? 0) + 1);
     }
   }
-  return walk(k, closure.body, callFrame);
+  const out = walk(k, closure.body, callFrame);
+  k.formStack.pop();
+  return out;
 }
 
 function nodeIDKey(nid: NodeID): string {
@@ -4847,6 +5029,11 @@ const FORM_BINARY_COMPOSITE = 1;
 // either: the value travels in bytes, not the index nor the local type-tag, so
 // the .fkb stays portable regardless of how each kernel numbers its types.
 const FORM_BINARY_FLOAT64 = 2;
+// INT64 carries its VALUE, not its index — the same reasoning as FLOAT64. A
+// TRIV_INT64 NodeID's `inst` is a per-kernel i64s-table index, so an int64 node
+// serializes as [FORM_BINARY_INT64][8 bytes signed little-endian] and each
+// kernel re-interns on read. Aligned three-way: tag = 3 across Rust/Go/TS.
+const FORM_BINARY_INT64 = 3;
 
 function pushU32(out: number[], v: number): void {
   const n = v >>> 0;
@@ -4878,6 +5065,21 @@ function readF64LE(bytes: Uint8Array, pos: number): [number, number] {
   return [view.getFloat64(0, true), pos + 8];
 }
 
+// pushI64LE / readI64LE — a signed int64 as 8 little-endian bytes (the payload
+// of a FORM_BINARY_INT64 node). Sibling parity with Rust/Go little-endian.
+function pushI64LE(out: number[], n: bigint): void {
+  const view = new DataView(new ArrayBuffer(8));
+  view.setBigInt64(0, n, true);
+  for (let i = 0; i < 8; i++) out.push(view.getUint8(i));
+}
+
+function readI64LE(bytes: Uint8Array, pos: number): [bigint, number] {
+  if (pos + 8 > bytes.length) throw new Error("form binary: truncated int64");
+  const view = new DataView(new ArrayBuffer(8));
+  for (let i = 0; i < 8; i++) view.setUint8(i, bytes[pos + i]!);
+  return [view.getBigInt64(0, true), pos + 8];
+}
+
 function serializeNode(k: Kernel, nid: NodeID, out: number[]): void {
   const recipe = k.recipeAt(nid);
   if (recipe) {
@@ -4890,6 +5092,11 @@ function serializeNode(k: Kernel, nid: NodeID, out: number[]): void {
   if (nid.level === Level.TRIVIAL && nid.type === Triv.FLOAT64) {
     pushU32(out, FORM_BINARY_FLOAT64);
     pushF64LE(out, k.decodeFloat64(nid.inst));
+    return;
+  }
+  if (nid.level === Level.TRIVIAL && nid.type === Triv.INT64) {
+    pushU32(out, FORM_BINARY_INT64);
+    pushI64LE(out, k.decodeInt64(nid.inst));
     return;
   }
   pushU32(out, FORM_BINARY_LEAF);
@@ -4906,6 +5113,11 @@ function deserializeRawNode(k: Kernel, bytes: Uint8Array, pos: number, scope: nu
     let value: number;
     [value, pos] = readF64LE(bytes, pos);
     return [k.internTrivialFloat64(value), pos];
+  }
+  if (tag === FORM_BINARY_INT64) {
+    let value: bigint;
+    [value, pos] = readI64LE(bytes, pos);
+    return [k.internTrivialInt64(value), pos];
   }
   if (tag === FORM_BINARY_LEAF) {
     let pkg: number;
@@ -4944,6 +5156,11 @@ function deserializeNode(
     let value: number;
     [value, pos] = readF64LE(bytes, pos);
     return [k.internTrivialFloat64(value), pos];
+  }
+  if (tag === FORM_BINARY_INT64) {
+    let value: bigint;
+    [value, pos] = readI64LE(bytes, pos);
+    return [k.internTrivialInt64(value), pos];
   }
   if (tag === FORM_BINARY_LEAF) {
     let pkg: number;

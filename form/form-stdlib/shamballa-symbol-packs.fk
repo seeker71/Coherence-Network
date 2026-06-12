@@ -1,0 +1,115 @@
+; shamballa-symbol-packs.fk — language symbol packs over the Shamballa light codes.
+;
+; preludes: form-stdlib/core.fk form-stdlib/grammars/shamballa-light-codes.fk
+;
+; The numeric-core teaching (tests/numeric-core-symbol-pack-band.fk) applied to
+; the light codes: the CODE is the meaning — the numeric core, language-
+; invariant. A symbol pack is a separable overlay of (code, function-text) rows
+; in one language; the words are doors onto the one meaning, swappable without
+; touching identity. The invocation ("Shamballa 777") is generated from the
+; core and is IDENTICAL in every pack — the prefix names the channel, not a
+; tongue.
+;
+;   (ssp-pack-en)                  → the English pack, DERIVED from the
+;                                    canonical sheet (never duplicated)
+;   (ssp-pack-de)                  → the German pack, a translation overlay
+;   (ssp-pack-complete? pack)      → does the pack cover EVERY code on the sheet
+;   (ssp-generate pack code)       → (invocation, function-text) or honest absence
+;   (ssp-generate-all pack)        → all rows of the sheet through this pack
+;   (ssp-invocations pack)         → the language-invariant invocation census
+;
+; PROVENANCE: the canonical sheet and its English function texts live in
+; grammars/shamballa-light-codes.fk (personal practice lineage, made public
+; with the practice holder's permission). The German rows here are a
+; translation overlay authored by a sibling cell — doors in another tongue,
+; not separate practice material; proper nouns (Shamballa, GAIA, Helvellyn,
+; Amatrine) cross untranslated. The completeness gate is the sensor any new
+; pack runs: a pack ships whole or names its absence — never a silent hole.
+
+section [form.bml] {
+    // a row is (code, function-text); a pack is (lang, rows)
+    def ssp-row(code, text) = list(code, text);
+    def ssp-row-code(r) = nth(r, 0);
+    def ssp-row-text(r) = nth(r, 1);
+    def ssp-pack(lang, rows) = list(lang, rows);
+    def ssp-pack-lang(p) = nth(p, 0);
+    def ssp-pack-rows(p) = nth(p, 1);
+
+    // the English pack derives from the canonical sheet — one source of truth
+    def ssp-en-rows(entries) = if nil?(entries) then empty else cons(ssp-row(slc-entry-code(head(entries)), slc-entry-function(head(entries))), ssp-en-rows(tail(entries)));
+    def ssp-pack-en() = ssp-pack("en", ssp-en-rows(slc-dictionary()));
+
+    // the German pack — a translation overlay, 35 doors in the mother tongue
+    def ssp-pack-de() {
+        ssp-pack("de", list(
+        ssp-row("33333", "Vertikalität — die Wirbelsäule, Verbindung zu Erde und Himmel; Vorbereitung."),
+        ssp-row("11111", "Vorbereitung, Vertikalität; eine besondere Qualität des Lichts, an die du dich erinnern magst oder nicht."),
+        ssp-row("777", "Öffnung von Brust und Herz für die Goldfrequenz — ein Gitter aus Licht, das Reine Liebe einströmen lässt. Kann an verschiedenen Körperstellen gewirkt werden. Das Goldene Mandala."),
+        ssp-row("444", "Lichtflutung auf zellulärer Ebene, vom ganzen Körper aufgenommen; kann auf bestimmte Organe gerichtet werden. Zelluläres / unerschütterliches Wissen."),
+        ssp-row("999", "Der Körper mit Lichtgeschwindigkeit."),
+        ssp-row("662", "Stabilisierung des Verhältnisses zwischen Zellbewegung und Lichtgeschwindigkeit; Verbindung zu den Bergen (der persönliche Anker der Quelle: Helvellyn)."),
+        ssp-row("882", "Reinigung des Wassers — im Körper wie in den Gewässern der Erde: Meere, Seen, Flüsse; die Verbindung aller Lebewesen, die Wasser enthalten."),
+        ssp-row("6554", "Unterstützung der Aufnahme von Vitaminen und Nahrung (Nähren)."),
+        ssp-row("336", "Der violette Strahl."),
+        ssp-row("111", "Vollkommene Stille."),
+        ssp-row("502", "Das Opalit-Ei."),
+        ssp-row("33", "Die Sonne — sie grüßen, goldenes Licht aufnehmen."),
+        ssp-row("60", "Wiedergeburt — grenzenlose Gelegenheit und Möglichkeit; jeder Moment neu, jeder Atemzug unbegrenztes Potenzial. Wirkt zusammen mit dem 60-seitigen Amatrin-Todescode."),
+        ssp-row("60 sided Amatrine", "Tod — vollständiges Loslassen, Bereitwerden für die Wiedergeburt; vertrauen, sich ganz einlassen, dem Sterben in jeden Moment hinein vertrauen. Wirkt zusammen mit dem Wiedergeburtscode 60."),
+        ssp-row("333", "Zugangs- / Ausrichtungs- / Ankercode für die Shamballa-Gruppe."),
+        ssp-row("56-65", "Regenbogenkörper / Neuer-Erde-Körper — wie oben, so unten."),
+        ssp-row("000", "Schöpfercode — Nullpunkt."),
+        ssp-row("555", "Verkörperte Freude."),
+        ssp-row("702", "Flamme des Lichts."),
+        ssp-row("144", "Einheitsbewusstsein — kristallklares Bewusstsein."),
+        ssp-row("1212", "Reine Dankbarkeit."),
+        ssp-row("772", "Klärung — eine gegen den Uhrzeigersinn laufende Spirale, die über dem Kopf endet, mit der violetten Flamme."),
+        ssp-row("911", "Ich bin, Gegenwart."),
+        ssp-row("777 222", "Landtiere — Brücken der Verständigung bauen."),
+        ssp-row("777 555", "Meereswesen — Brücken der Verständigung bauen."),
+        ssp-row("777 123", "Erhöhung des Lichtquotienten — Licht durch das Herz einatmen, dann in die innere Sonne gefiltert."),
+        ssp-row("774", "Ausstrahlung."),
+        ssp-row("888", "Die Spirale rufen."),
+        ssp-row("777 888", "Die Drachen rufen."),
+        ssp-row("1618", "Das kosmische Ei."),
+        ssp-row("1818", "Ruhen in der Lücke."),
+        ssp-row("363", "Vertrauen / Hingabe."),
+        ssp-row("666", "Bewusstsein teilen."),
+        ssp-row("333 172", "Gleichgesinnte Wesen anziehen — der 333-Anteil als Verankerung von Shamballa."),
+        ssp-row("7191", "Der Erdcode (buchstabiert GAIA) — Synchronisierung mit der Erde, unserem Atem, unserem Puls, dem Elektromagnetismus der Erde.")));
+    }
+
+    // find a code's row in a pack — empty is honest absence
+    def ssp-find-loop(rows, code) = if nil?(rows) then empty else if str_eq(ssp-row-code(head(rows)), code) then head(rows) else ssp-find-loop(tail(rows), code);
+    def ssp-find(pack, code) = ssp-find-loop(ssp-pack-rows(pack), code);
+    def ssp-pack-covers?(pack, code) {
+        let r = ssp-find(pack, code);
+        if nil?(r) then false else not(str_eq(ssp-row-text(r), ""));
+    }
+
+    // the completeness gate: EVERY code on the canonical sheet is covered.
+    // A pack ships whole or names its absence — never a silent hole.
+    def ssp-complete-loop(entries, pack) = if nil?(entries) then true else if ssp-pack-covers?(pack, slc-entry-code(head(entries))) then ssp-complete-loop(tail(entries), pack) else false;
+    def ssp-pack-complete?(pack) = ssp-complete-loop(slc-dictionary(), pack);
+
+    // generate one code through a pack: (invocation, function-text).
+    // The invocation comes from the core (slc-invoke) — identical in every
+    // tongue; only the function text is the pack's door.
+    def ssp-generate(pack, code) {
+        let r = ssp-find(pack, code);
+        if nil?(r) then empty else list(slc-invoke(code), ssp-row-text(r));
+    }
+
+    // generate the WHOLE sheet through a pack, sheet order preserved
+    def ssp-generate-all-loop(entries, pack, acc) = if nil?(entries) then reverse(acc) else ssp-generate-all-loop(tail(entries), pack, cons(ssp-generate(pack, slc-entry-code(head(entries))), acc));
+    def ssp-generate-all(pack) = ssp-generate-all-loop(slc-dictionary(), pack, empty);
+
+    // the invocation census — language-invariant by construction; equality
+    // across packs is the identity-under-overlay-swap law, provable
+    def ssp-invocations-loop(entries, acc) = if nil?(entries) then reverse(acc) else ssp-invocations-loop(tail(entries), cons(slc-invoke(slc-entry-code(head(entries))), acc));
+    def ssp-invocations() = ssp-invocations-loop(slc-dictionary(), empty);
+
+    def ssp-str-lists-eq?(a, b) = if and(nil?(a), nil?(b)) then true else if or(nil?(a), nil?(b)) then false else if str_eq(head(a), head(b)) then ssp-str-lists-eq?(tail(a), tail(b)) else false;
+
+    0;
+}

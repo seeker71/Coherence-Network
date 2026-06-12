@@ -1,0 +1,66 @@
+; tests/intrinsic-cast-check-band.fk — the resolution-walk lane of casting.
+;
+; ic-cast-check walks a recipe tree by Blueprint coordinates without
+; executing it: a coherent chain reports no diagnostics; a cast whose
+; child's static type contradicts the declared from-type reports
+; cast-from-mismatch; a chain that drops information mid-way (lossy inner
+; cast) reports lossy-step; a math/compare consumer holding a partial
+; cast (one that can realize to nothing) reports nothing-unhandled.
+;
+; Aggregate: each check weight 1..powers of 10. Expected: 11111111.
+;
+; spec: specs/form-intrinsic-casting.md
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/intrinsic-cast.fk
+
+(do
+    (let MATH-PLUS (bp "add"))
+    (let leaf42 (intern_trivial_int 42))
+    (let leafs (intern_trivial_string "x"))
+    (let leaff (intern_trivial_float "2.5"))
+
+    ;; clean single cast: no diagnostics
+    (let t1 (ic-cast-node CAST-INT-STRING leaf42))
+    (let k1 (if (eq (len (ic-cast-check t1)) 0) 1 0))
+
+    ;; clean round-trip chain int -> string -> int: no diagnostics
+    ;; (outer STRING-INT is partial and lossy, but the inner cast is
+    ;; lossless and nothing consumes the possible nothing — honest quiet)
+    (let t2 (ic-cast-node CAST-STRING-INT (ic-cast-node CAST-INT-STRING leaf42)))
+    (let k2 (if (eq (len (ic-cast-check t2)) 0) 10 0))
+
+    ;; from-mismatch: BOOL-INT declared from bool, child is a string leaf
+    (let t3 (ic-cast-node CAST-BOOL-INT leafs))
+    (let k3 (if (eq (ic-diag-count (ic-cast-check t3) "cast-from-mismatch") 1) 100 0))
+
+    ;; lossy-step: FLOAT-INT (lossy) feeding INT-STRING — information
+    ;; dropped mid-chain
+    (let t4 (ic-cast-node CAST-INT-STRING (ic-cast-node CAST-FLOAT-INT leaff)))
+    (let k4 (if (eq (ic-diag-count (ic-cast-check t4) "lossy-step") 1) 1000 0))
+
+    ;; nothing-unhandled: a math consumer holding a partial cast
+    (let t5 (intern_node MATH-PLUS
+                (list (ic-cast-node CAST-STRING-INT leafs) leaf42)))
+    (let k5 (if (eq (ic-diag-count (ic-cast-check t5) "nothing-unhandled") 1) 10000 0))
+
+    ;; two partial casts under one consumer: two diagnostics
+    (let t6 (intern_node MATH-PLUS
+                (list (ic-cast-node CAST-STRING-INT leafs)
+                      (ic-cast-node CAST-STRING-INT leafs))))
+    (let k6 (if (eq (ic-diag-count (ic-cast-check t6) "nothing-unhandled") 2) 100000 0))
+
+    ;; static types read from Blueprint coordinates alone
+    (let k7 (if (and (eq (ic-static-type (ic-cast-node CAST-INT-FLOAT leaf42)) 3)
+                     (and (eq (ic-static-type leaf42) 2)
+                          (and (eq (ic-static-type leafs) 4)
+                               (eq (ic-static-type t5) 2)))) 1000000 0))
+
+    ;; the diagnostic walk never executes: this tree's value-walk yields
+    ;; nothing (string "x" cannot become a float), yet the static walk
+    ;; completes and names exactly the lossy inner step
+    (let t8 (ic-cast-node CAST-FLOAT-INT (ic-cast-node CAST-STRING-FLOAT leafs)))
+    (let d8 (ic-cast-check t8))
+    (let k8 (if (and (eq (len d8) 1)
+                     (eq (ic-diag-count d8 "lossy-step") 1))
+                10000000 0))
+
+    (add k1 (add k2 (add k3 (add k4 (add k5 (add k6 (add k7 k8))))))))

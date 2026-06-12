@@ -39,7 +39,10 @@ const (
 	headerNativePath     = "X-Form-Native-Invitation-Selected-Path"
 	headerNativeDecline  = "X-Form-Native-Invitation-Decline-Signal"
 	headerNativeFallback = "X-Form-Native-Invitation-Decline-Header"
+	headerFatalKind      = "X-Form-Fatal-Kind"
+	headerCrashTrace     = "X-Form-Crash-Trace"
 	routeHowNative       = "native-kernel-go"
+	routeHowNativeError  = "native-kernel-error"
 	routeHowFanout       = "fanout-python"
 	nativeInviteValue    = "offered"
 	nativeInviteState    = "native-invitation-offered"
@@ -1511,9 +1514,42 @@ func (p *goServeProgram) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (wkr *goServeWorker) serve(w http.ResponseWriter, r *http.Request) {
+	var activeRoute *goRoute
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			http.Error(w, fmt.Sprintf("native handler panic: %v\n", recovered), http.StatusInternalServerError)
+			message := fmt.Sprint(recovered)
+			diagnosis := diagnoseKernelPanic(message)
+			source, sourceLabel := wkr.crashSource()
+			where := "route:unknown request:" + r.URL.EscapedPath()
+			if activeRoute != nil {
+				where = nativeRouteWhere(activeRoute, r)
+			}
+			operation := fmt.Sprintf("request=%s %s %s", r.Method, r.URL.RequestURI(), where)
+			formStack := append([]string(nil), wkr.k.formStack...)
+			// The pooled worker serves the next request with a clean stack.
+			wkr.k.formStack = wkr.k.formStack[:0]
+			tracePath := writeKernelCrashTraceWithContext(
+				[]string{"serve", r.Method, r.URL.RequestURI()},
+				source,
+				recovered,
+				sourceLabel,
+				operation,
+				formStack,
+			)
+			setRouteDecisionHeaders(
+				w.Header(),
+				routeHowNativeError,
+				where,
+				routeDecisionWho(r),
+				routeDecisionWhen(),
+			)
+			w.Header().Set(headerFatalKind, sanitizeDecisionHeader(diagnosis.fatalKind))
+			if tracePath != "" {
+				w.Header().Set(headerCrashTrace, sanitizeDecisionHeader(tracePath))
+			}
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(kernelFatalHTTPBody(message, diagnosis, tracePath)))
 		}
 	}()
 	route := wkr.match(r)
@@ -1525,6 +1561,7 @@ func (wkr *goServeWorker) serve(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	activeRoute = route
 	requestValue, err := requestValue(route, r)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("native request read failed: %v\n", err), http.StatusBadRequest)
@@ -1559,6 +1596,19 @@ func (wkr *goServeWorker) serve(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(status)
 	_, _ = w.Write([]byte(body))
 	wkr.k.substrateGC([]Value{result}, wkr.env)
+}
+
+func (wkr *goServeWorker) crashSource() (string, string) {
+	if wkr == nil || wkr.program == nil {
+		return "", "form-kernel-go serve"
+	}
+	if wkr.program.source != "" {
+		return wkr.program.source, "go serve source manifest"
+	}
+	if len(wkr.program.artifact) > 0 {
+		return fmt.Sprintf("<compiled route artifact: %d bytes>", len(wkr.program.artifact)), "go serve compiled route artifact"
+	}
+	return "", "go serve route manifest"
 }
 
 func (wkr *goServeWorker) fanout(w http.ResponseWriter, r *http.Request) {

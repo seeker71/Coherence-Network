@@ -1,21 +1,23 @@
 ; grammars/rust-bmf.fk - Rust grammar as native BMF object rules
 ;
 ; Per-dialect category constants (RS-BMF-*) are declared as data in
-; form-stdlib/form-ontology.json and emitted into
-; form-stdlib/dialect-categories.fk by scripts/generate_ontology.py. This
-; file references them as free identifiers; load dialect-categories.fk as
-; a prelude before this file.
+; form-stdlib/form-ontology.json; scripts/gen_bp_table.py bakes them into
+; the kernel-native bp table, and form-ontology-loader.fk materializes the
+; Form-side bindings. This file references them as free identifiers; load
+; form-ontology-loader.fk as a prelude before this file.
 
 (do
     (defn rust-src-keyword (value) (bmf-atom "rust-keyword" value))
     (defn rust-src-name (value) (bmf-atom "rust-name" value))
     (defn rust-src-op (value) (bmf-atom "rust-op" value))
     (defn rust-src-string (value) (bmf-atom "rust-string" value))
+    (defn rust-src-int (value) (bmf-atom "rust-int" value))
 
     (defn rust-kw (value) (object-lit "rust-keyword" value))
     (defn rust-op (value) (object-lit "rust-op" value))
     (defn rust-name (capture-name) (list "capture" capture-name (object-lit "rust-name" "")))
     (defn rust-string-lit (capture-name) (list "capture" capture-name (object-lit "rust-string" "")))
+    (defn rust-int-lit (capture-name) (list "capture" capture-name (object-lit "rust-int" "")))
 
     (defn rsbmf-value (objects capture-name)
         (bmf-collection-value objects capture-name))
@@ -114,6 +116,23 @@
                   (rust-src-name (node_value (nth kids 0)))
                   (rust-src-op "=")
                   (rust-src-name (node_value (nth kids 1)))
+                  (rust-src-op ";"))))
+
+    (defn rsbmf-int (objects capture-name)
+        (intern_trivial_int (str_to_int (rsbmf-value objects capture-name))))
+
+    (defn rsbmf-emit-let-int (objects)
+        (intern_node RS-BMF-LET
+                     (list (rsbmf-string objects "name")
+                           (rsbmf-int objects "value"))))
+
+    (defn rsbmf-source-let-int (object)
+        (do
+            (let kids (rsbmf-node-kids object))
+            (list (rust-src-keyword "let")
+                  (rust-src-name (node_value (nth kids 0)))
+                  (rust-src-op "=")
+                  (rust-src-int (int_to_str (node_value (nth kids 1))))
                   (rust-src-op ";"))))
 
     (defn rsbmf-emit-return-ident (objects)
@@ -217,6 +236,7 @@
             (bmf-native "rsbmf-emit-trait" rsbmf-emit-trait RS-BMF-TRAIT)
             (bmf-native "rsbmf-emit-macro" rsbmf-emit-macro RS-BMF-MACRO)
             (bmf-native "rsbmf-emit-let-ident" rsbmf-emit-let-ident RS-BMF-LET)
+            (bmf-native "rsbmf-emit-let-int" rsbmf-emit-let-int RS-BMF-LET)
             (bmf-native "rsbmf-emit-return-ident" rsbmf-emit-return-ident RS-BMF-RETURN)
             (bmf-native "rsbmf-emit-match-default-ident" rsbmf-emit-match-default-ident RS-BMF-MATCH)
             (bmf-native "rsbmf-emit-if-pass" rsbmf-emit-if-pass RS-BMF-IF)
@@ -238,6 +258,7 @@
       trait ::= "trait" $name:name "{" "}" => rsbmf-emit-trait;
       macro-call ::= $name:name "!" "(" $arg:string ")" ";" => rsbmf-emit-macro <= rsbmf-source-macro;
       let-ident ::= "let" $name:name "=" $value:name ";" => rsbmf-emit-let-ident <= rsbmf-source-let-ident;
+      let-int ::= "let" $name:name "=" $value:int ";" => rsbmf-emit-let-int <= rsbmf-source-let-int;
       return-ident ::= "return" $value:name ";" => rsbmf-emit-return-ident <= rsbmf-source-return-ident;
       match-default-ident ::= "match" $value:name "{" $arm:name "=>" $result:name "}" => rsbmf-emit-match-default-ident <= rsbmf-source-match-default-ident;
       if-pass ::= "if" $cond:name "{" "}" => rsbmf-emit-if-pass <= rsbmf-source-if-pass;

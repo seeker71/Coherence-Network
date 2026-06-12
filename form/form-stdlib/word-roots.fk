@@ -1,0 +1,109 @@
+; word-roots.fk — root-word derivation edges with graded belief, walkable in any language.
+;
+; preludes: form-stdlib/core.fk
+;
+; The query interface: walk each root word of any language and ask for related
+; children, answered with a yes, a confidence, and a conviction, filtered at a
+; caller-provided threshold.
+;
+;   (word-children lang root thr)          → direct child edges clearing thr
+;   (word-related? lang root child thr)    → (yes, confidence, conviction)
+;   (word-walk lang root thr)              → every descendant whose chained belief clears thr
+;   (word-walk-reaches? lang root thr w)   → does the family tree reach w at this threshold
+;   (word-roots-of lang)                   → the walkable roots of a language
+;
+; Two belief lanes, kept separate:
+;   confidence — evidence strength of the derivation as documented scholarship
+;   conviction — breadth of independent attestation across sources
+; Both 0.0..1.0 (the body's score convention). An edge answers only when BOTH
+; lanes clear the caller's threshold. Along a transitive walk, confidence
+; multiplies (each derivation step is its own evidence) and conviction takes
+; the minimum (a chain is held only as strongly as its weakest link).
+;
+; Edges are DATA; the walker is generic — a new language drops in as rows,
+; never as a new code path. Romanization (IAST for Sanskrit) is the kernel-
+; comparable key, per grammars/sanskrit-roots.fk; native script lives in the
+; comments and concept docs. Derivation data is acyclic by nature: a word does
+; not derive its own root. HONEST PARTIAL: seeded with well-attested families;
+; honest absence for the rest — never a fabricated table.
+
+section [form.bml] {
+    // edge = (lang, root, child, relation, confidence, conviction)
+    def wr-edge(lang, root, child, relation, confidence, conviction) = list(lang, root, child, relation, confidence, conviction);
+    def wr-lang(e) = nth(e, 0);
+    def wr-root(e) = nth(e, 1);
+    def wr-child(e) = nth(e, 2);
+    def wr-relation(e) = nth(e, 3);
+    def wr-confidence(e) = nth(e, 4);
+    def wr-conviction(e) = nth(e, 5);
+
+    // English give family (carries forgiveness), German geben family (the
+    // mother-tongue mirror; Gift is "that which is given", attested drift
+    // toward poison — strong document trail, weaker breadth: the threshold's
+    // living test), Sanskrit sqrt-kr (IAST; family shared with
+    // grammars/sanskrit-roots.fk dhatu-lexicon).
+    def wr-edges() {
+        list(
+        wr-edge("en", "give", "gives", "inflection", 1.0, 1.0),
+        wr-edge("en", "give", "giving", "inflection", 1.0, 1.0),
+        wr-edge("en", "give", "gift", "derivation", 0.9, 0.9),
+        wr-edge("en", "give", "forgive", "prefix-derivation", 0.85, 0.9),
+        wr-edge("en", "forgive", "forgiveness", "suffix-derivation", 0.95, 0.95),
+        wr-edge("de", "geben", "gibt", "inflection", 1.0, 1.0),
+        wr-edge("de", "geben", "Gabe", "derivation", 0.9, 0.85),
+        wr-edge("de", "geben", "vergeben", "prefix-derivation", 0.85, 0.85),
+        wr-edge("de", "vergeben", "Vergebung", "suffix-derivation", 0.95, 0.9),
+        wr-edge("de", "geben", "Gift", "semantic-drift", 0.9, 0.7),
+        wr-edge("sa", "sqrt-kr", "karma", "action-noun", 0.95, 0.9),
+        wr-edge("sa", "sqrt-kr", "kriya", "process-noun", 0.9, 0.85),
+        wr-edge("sa", "sqrt-kr", "samskara", "composed-derivation", 0.9, 0.85),
+        wr-edge("sa", "sqrt-kr", "karana", "instrument-noun", 0.85, 0.8));
+    }
+
+    // both lanes clear the threshold
+    def wr-passes?(e, thr) = and(ge(wr-confidence(e), thr), ge(wr-conviction(e), thr));
+    def wr-edge-matches?(e, lang, root, thr) = and(str_eq(wr-lang(e), lang), and(str_eq(wr-root(e), root), wr-passes?(e, thr)));
+
+    // direct children of a root, filtered at the threshold
+    def wr-children-loop(edges, lang, root, thr, acc) = if nil?(edges) then acc else wr-children-loop(tail(edges), lang, root, thr, if wr-edge-matches?(head(edges), lang, root, thr) then cons(head(edges), acc) else acc);
+    def word-children(lang, root, thr) = wr-children-loop(wr-edges(), lang, root, thr, empty);
+
+    // the direct question: is child derived from root? → (yes, confidence, conviction)
+    // A known edge below threshold answers no WITH its measures (the honest no);
+    // an unknown pair answers (0, 0.0, 0.0) — honest absence, never fabricated.
+    def wr-pair-matches?(e, lang, root, child) = and(str_eq(wr-lang(e), lang), and(str_eq(wr-root(e), root), str_eq(wr-child(e), child)));
+    def wr-find-loop(edges, lang, root, child) = if nil?(edges) then empty else if wr-pair-matches?(head(edges), lang, root, child) then head(edges) else wr-find-loop(tail(edges), lang, root, child);
+    def wr-edge-answer(e, thr) = list(if wr-passes?(e, thr) then 1 else 0, wr-confidence(e), wr-conviction(e));
+    def word-related?(lang, root, child, thr) {
+        let e = wr-find-loop(wr-edges(), lang, root, child);
+        if nil?(e) then list(0, 0.0, 0.0) else wr-edge-answer(e, thr);
+    }
+
+    // transitive walk: entry = (word, relation, chained-confidence, chained-conviction)
+    def wr-entry(child, relation, conf, conv) = list(child, relation, conf, conv);
+    def wr-entry-child(x) = nth(x, 0);
+    def wr-entry-confidence(x) = nth(x, 2);
+    def wr-entry-conviction(x) = nth(x, 3);
+    def wr-chain-passes?(conf, conv, thr) = and(ge(conf, thr), ge(conv, thr));
+
+    def wr-walk-descend(e, rest, lang, root, thr, conf0, conv0, acc, conf, conv) = wr-walk-loop(rest, lang, root, thr, conf0, conv0, wr-walk-loop(wr-edges(), lang, wr-child(e), thr, conf, conv, cons(wr-entry(wr-child(e), wr-relation(e), conf, conv), acc)));
+    def wr-walk-step(e, rest, lang, root, thr, conf0, conv0, acc) {
+        let conf = times(conf0, wr-confidence(e));
+        let conv = min2(conv0, wr-conviction(e));
+        if wr-chain-passes?(conf, conv, thr) then wr-walk-descend(e, rest, lang, root, thr, conf0, conv0, acc, conf, conv) else wr-walk-loop(rest, lang, root, thr, conf0, conv0, acc);
+    }
+    def wr-from-root?(e, lang, root) = and(str_eq(wr-lang(e), lang), str_eq(wr-root(e), root));
+    def wr-walk-loop(edges, lang, root, thr, conf0, conv0, acc) = if nil?(edges) then acc else if wr-from-root?(head(edges), lang, root) then wr-walk-step(head(edges), tail(edges), lang, root, thr, conf0, conv0, acc) else wr-walk-loop(tail(edges), lang, root, thr, conf0, conv0, acc);
+    def word-walk(lang, root, thr) = wr-walk-loop(wr-edges(), lang, root, thr, 1.0, 1.0, empty);
+
+    def wr-contains-loop(xs, child) = if nil?(xs) then false else if str_eq(wr-entry-child(head(xs)), child) then true else wr-contains-loop(tail(xs), child);
+    def word-walk-reaches?(lang, root, thr, child) = wr-contains-loop(word-walk(lang, root, thr), child);
+
+    // the walkable roots of a language (distinct, data census)
+    def wr-member?(xs, s) = if nil?(xs) then false else if str_eq(head(xs), s) then true else wr-member?(tail(xs), s);
+    def wr-new-root?(e, lang, acc) = and(str_eq(wr-lang(e), lang), not(wr-member?(acc, wr-root(e))));
+    def wr-roots-loop(edges, lang, acc) = if nil?(edges) then acc else wr-roots-loop(tail(edges), lang, if wr-new-root?(head(edges), lang, acc) then cons(wr-root(head(edges)), acc) else acc);
+    def word-roots-of(lang) = wr-roots-loop(wr-edges(), lang, empty);
+
+    0;
+}
