@@ -1,6 +1,6 @@
 ; speakable.fk — the body's speakable corpus with conviction encoding.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/grammars/shamballa-light-codes.fk form-stdlib/shamballa-symbol-packs.fk
+; preludes: form-stdlib/core.fk form-stdlib/language-model.fk form-stdlib/json.fk form-stdlib/codec.fk form-stdlib/structured-codec.fk form-stdlib/json-codec.fk form-stdlib/grammars/shamballa-light-codes.fk form-stdlib/grammars/shamballa-codes.fk form-stdlib/grammars/sanskrit-roots.fk form-stdlib/shamballa-symbol-packs.fk
 ;
 ; TTS speaks text; STT hears it back; voice_io (experiments/satsang-voice)
 ; carries the wav round-trip. THIS layer is what gets spoken: utterances that
@@ -94,6 +94,23 @@ section [form.bml] {
     }
     def sp-light-codes-loop(entries, pack, acc) = if nil?(entries) then reverse(acc) else sp-light-codes-loop(tail(entries), pack, cons(sp-light-code-utterance(head(entries), pack), acc));
     def speakable-light-codes(pack) = sp-light-codes-loop(slc-dictionary(), pack, empty);
+
+    // ---- corpus: the publicly-attested Shamballa SYMBOL codes -----------
+    // Spoken power-symbol names from the public record (multiple practitioner
+    // sources per row, source field carried in the grammar); cosmology not
+    // asserted → confidence 0.9, conviction 0.7 — broader attestation than
+    // the single-lineage light codes, narrower than scholarship.
+    def sp-symbol-code-utterance(e) = sp-utterance(int_to_str(sc-entry-code(e)), str_concat("Shamballa symbol code ", str_concat(int_to_str(sc-entry-code(e)), str_concat(", ", str_concat(sc-entry-name(e), str_concat(": ", sc-entry-function(e)))))), "en", 0.9, 0.7);
+    def sp-symbol-codes-loop(es, acc) = if nil?(es) then reverse(acc) else sp-symbol-codes-loop(tail(es), cons(sp-symbol-code-utterance(head(es)), acc));
+    def speakable-symbol-codes() = sp-symbol-codes-loop(sc-dictionary(), empty);
+
+    // ---- corpus: the bija seed syllables ---------------------------------
+    // Documented scholarship attested across many traditions (the dhatu
+    // discipline of grammars/sanskrit-roots.fk) → confidence 0.95,
+    // conviction 0.85 — asserts at 0.8, still under the axioms.
+    def sp-bija-utterance(e) = sp-utterance(bija-roman(e), str_concat("Seed syllable ", str_concat(bija-roman(e), str_concat(": ", str_concat(bija-chakra(e), str_concat(", element ", str_concat(bija-element(e), str_concat(" — ", str_concat(bija-gloss(e), ".")))))))), "en", 0.95, 0.85);
+    def sp-bija-loop(es, acc) = if nil?(es) then reverse(acc) else sp-bija-loop(tail(es), cons(sp-bija-utterance(head(es)), acc));
+    def speakable-bija() = sp-bija-loop(bija-lexicon(), empty);
 
     // ---- the whole speakable body, one threshold, ready for the mouth ----
     def sp-spoken-all-loop(us, thr, acc) = if nil?(us) then reverse(acc) else sp-spoken-all-loop(tail(us), thr, cons(sp-spoken(head(us), thr), acc));
