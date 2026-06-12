@@ -129,13 +129,15 @@
            (fk-lit 1)
            (fk-node 42 (ms-intern (fk-lit 10) (fk-call 7 (fk-sub (fk-arg) (fk-lit 1)))))))
 
-; fn8 rulefind(i): scan grammar rows; token in mem[3]; returns op*100+arg.
+; fn8 rulefind(i): scan grammar rows; token in mem[3]; returns op*1000000+arg
+; (base 1000000 so pack operands up to 999999 ride without colliding with the
+; op digit — the language-pack lane's wide operands fit).
 ; equality by two le's: skip while NODE < tok; match when also NODE <= tok.
 (defn fku-fn-rulefind ()
     (fk-if (fk-le (fkd-node (fk-arg) (fk-lit 0)) (fk-sub (fku-load (fk-lit 3)) (fk-lit 1)))
            (fk-call 8 (fk-add (fk-arg) (fk-lit 1)))
            (fk-if (fk-le (fkd-node (fk-arg) (fk-lit 0)) (fku-load (fk-lit 3)))
-                  (fk-add (fk-node 42 (ms-intern (fkd-node (fk-arg) (fk-lit 1)) (fk-lit 100)))
+                  (fk-add (fk-node 42 (ms-intern (fkd-node (fk-arg) (fk-lit 1)) (fk-lit 1000000)))
                           (fkd-node (fk-arg) (fk-lit 2)))
                   (fk-call 8 (fk-add (fk-arg) (fk-lit 1))))))
 
@@ -151,11 +153,11 @@
     (fku-do (fku-store (fk-lit 3) (fku-tok-k))
     (fku-do (fku-store (fk-lit 4) (fk-call 8 (fk-lit (fku-p p 18))))
     (fkd-seq (fkd-ch 123) (fkd-seq (fkd-ch 49) (fkd-seq (fkd-ch 44)
-    (fkd-seq (fku-callnum (fkd-mod (fku-load (fk-lit 4)) (fk-lit 100)))
+    (fkd-seq (fku-callnum (fkd-mod (fku-load (fk-lit 4)) (fk-lit 1000000)))
     (fkd-seq (fkd-ch 44) (fkd-seq (fkd-ch 48) (fkd-seq (fkd-ch 44) (fkd-seq (fkd-ch 48)
     (fkd-seq (fkd-ch 125) (fkd-seq (fkd-ch 44)
     (fkd-seq (fkd-ch 123)
-    (fkd-seq (fku-callnum (fkd-div (fku-load (fk-lit 4)) (fk-lit 100)))
+    (fkd-seq (fku-callnum (fkd-div (fku-load (fk-lit 4)) (fk-lit 1000000)))
     (fkd-seq (fkd-ch 44)
     (fkd-seq (fku-callnum (fk-node 42 (ms-intern (fk-arg) (fk-lit 2))))
     (fkd-seq (fkd-ch 44)

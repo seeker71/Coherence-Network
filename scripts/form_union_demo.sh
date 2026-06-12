@@ -61,28 +61,37 @@ for s in A S1 S2 S3 S4 W MQ MS; do
     idx=$((idx + n))
 done
 GS=$idx
-printf '(list 1 3 10 0)\n(list 2 4 3 0)\n' > "$work/rowsG.fk"   # the M2 grammar as data rows
+# The grammar rows are the shared LANGUAGE-PACK shape: five tongues (python,
+# typescript, go, rust, prolog) each parse their own surface through their real
+# BMF grammars and land on these same two rows — proven three-way in
+# form-stdlib/tests/language-packs-fourth-band.fk. They are also the M2 rows.
+printf '(list 1 3 10 0)\n(list 2 4 3 0)\n' > "$work/rowsG.fk"
 NR=$((idx + 2)); NF=11
 read -r AS AE S1S S1E S2S S2E S3S S3E S4S S4E WS WE MQS MQE MSS MSE <<< "$bounds"
 echo "pass 2: NR=$NR; segments A[$AS..$AE] W[$WS..$WE] MQ[$MQS..$MQE] MS[$MSS..$MSE] G[$GS]"
 
 # ── pass 2: bake the real literals, attach the data rows, emit the union C ──
-{ PRELUDE
-  echo "(let p (list $NF $NR $AS $AE $S1S $S1E $S2S $S2E $S3S $S3E $S4S $S4E $WS $WE $MQS $MQE $MSS $MSE $GS))"
-  echo "(let roots (list $(echo "$ROOTS" | tr ',' ' ')))"
-  echo "(let data (list"
-  cat "$work"/rows{A,S1,S2,S3,S4,W,MQ,MS,G}.fk
-  echo "))"
-  cat <<'EOF'
+# build_union <grammar-rows-file> <name>: same segments and bounds (the grammar
+# row COUNT is fixed at 2 — only the baked pack values differ per variant).
+build_union() {
+    { PRELUDE
+      echo "(let p (list $NF $NR $AS $AE $S1S $S1E $S2S $S2E $S3S $S3E $S4S $S4E $WS $WE $MQS $MQE $MSS $MSE $GS))"
+      echo "(let roots (list $(echo "$ROOTS" | tr ',' ' ')))"
+      echo "(let data (list"
+      cat "$work"/rows{A,S1,S2,S3,S4,W,MQ,MS}.fk "$1"
+      echo "))"
+      cat <<'EOF'
 (let flat (fku-with-data (fkc-flatten-many (fku-program p roots)) data))
 (print "==C==")
 (print (fku-emit-c (nth flat 0) (nth flat 1)))
 (print "==END==")
 EOF
-} > "$work/build.fk"
-(cd "$FORM" && "$GO" "$work/build.fk" 2>/dev/null) | sed -n '/^==C==$/,/^==END==$/p' | sed -e '1d' -e '$d' > "$work/union.c"
-[[ -s "$work/union.c" ]] || { echo "FAIL: no C emitted"; exit 1; }
-"$CLANG" -O2 -o "$work/union" "$work/union.c" || { echo "FAIL: clang"; exit 1; }
+    } > "$work/build-$2.fk"
+    (cd "$FORM" && "$GO" "$work/build-$2.fk" 2>/dev/null) | sed -n '/^==C==$/,/^==END==$/p' | sed -e '1d' -e '$d' > "$work/$2.c"
+    [[ -s "$work/$2.c" ]] || { echo "FAIL: no C emitted ($2)"; exit 1; }
+    "$CLANG" -O2 -o "$work/$2" "$work/$2.c" || { echo "FAIL: clang ($2)"; exit 1; }
+}
+build_union "$work/rowsG.fk" union
 echo "union binary: $(wc -c < "$work/union" | tr -d ' ') bytes  (C source: $(wc -c < "$work/union.c" | tr -d ' ') bytes)"
 
 # ── gate 1: the FULL-SOURCE quine — mode 0 output == its own source, byte-exact ──
@@ -110,6 +119,22 @@ if [[ "$v" == "22" ]]; then
     echo "GATE 3  compiler: mode 112 -> a complete new binary; (5+10+10)-3 = $v (the M2 check)"
 else
     echo "GATE 3 FAIL: expected 22, got $v"; exit 1
+fi
+
+# ── gate 4: the pack is data on the NATIVE lane — the wide language pack
+#            (operand 100, witnessed in language-packs-fourth-band.fk cell 5)
+#            bakes into a sibling union; same source tokens, different value,
+#            and the sibling's own quine still closes ──
+printf '(list 1 3 100 0)\n(list 2 4 3 0)\n' > "$work/rowsG-wide.fk"
+build_union "$work/rowsG-wide.fk" union-wide
+"$work/union-wide" 112 > "$work/prog-wide.c"
+"$CLANG" -O2 -o "$work/prog-wide" "$work/prog-wide.c" || { echo "GATE 4 FAIL: emitted C does not compile"; exit 1; }
+vw="$("$work/prog-wide" 5 | head -1)"
+"$work/union-wide" 0 > "$work/self-wide.c"
+if [[ "$vw" == "202" ]] && cmp -s "$work/self-wide.c" "$work/union-wide.c"; then
+    echo "GATE 4  pack swap: the wide pack -> (5+100+100)-3 = $vw on a sibling binary; its quine closes too"
+else
+    echo "GATE 4 FAIL: expected 202 + byte-exact sibling quine (got $vw)"; exit 1
 fi
 
 echo
