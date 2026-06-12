@@ -23,7 +23,15 @@
     "/tmp/4th-nl-form-translator-sample-run.txt",
     "docs/coherence-substrate/fourth-kernel.form",
     "scripts/fourth_kernel_audit.sh",
-    "docs/system_audit/commit_evidence_2026-06-11_4th-nl-form-translator.json"
+    "docs/system_audit/commit_evidence_2026-06-11_4th-nl-form-translator.json",
+    "form/form-stdlib/jit-lower.fk",
+    "form/form-stdlib/fourth-walker.fk",
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/tests/jit-lower-band.fk",
+    "form/form-stdlib/tests/full-jit-lower-band.fk",
+    "form/form-kernel-go/jit.go",
+    "form/scripts/fourth_kernel_audit.sh",
+    "kernels/JIT_GAP_LEDGER.md"
   ],
   "change_files": [
     "/tmp/nl-form-translator-driver.fk",
@@ -32,7 +40,15 @@
     "/tmp/4th-nl-form-translator-sample-run.txt",
     "docs/coherence-substrate/fourth-kernel.form",
     "scripts/fourth_kernel_audit.sh",
-    "docs/system_audit/commit_evidence_2026-06-11_4th-nl-form-translator.json"
+    "docs/system_audit/commit_evidence_2026-06-11_4th-nl-form-translator.json",
+    "form/form-stdlib/jit-lower.fk",
+    "form/form-stdlib/fourth-walker.fk",
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/tests/jit-lower-band.fk",
+    "form/form-stdlib/tests/full-jit-lower-band.fk",
+    "form/form-kernel-go/jit.go",
+    "form/scripts/fourth_kernel_audit.sh",
+    "kernels/JIT_GAP_LEDGER.md"
   ],
   "local_validation": {
     "status": "pass",

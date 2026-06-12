@@ -11,7 +11,15 @@
     "kernels/JIT_GAP_LEDGER.md (large update)",
     "docs/coherence-substrate/fourth-kernel.form (amended)",
     "docs/system_audit/commit_evidence_2026-06-12_jit_lower_as_form_recipe.json",
-    "docs/system_audit/commit_evidence_2026-06-12_parallel_jit_4th_large_move.json"
+    "docs/system_audit/commit_evidence_2026-06-12_parallel_jit_4th_large_move.json",
+    "form/form-stdlib/jit-lower.fk",
+    "form/form-stdlib/fourth-walker.fk",
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-kernel-go/jit.go",
+    "form/scripts/fourth_kernel_audit.sh",
+    "scripts/fourth_kernel_audit.sh",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "kernels/JIT_GAP_LEDGER.md"
   ],
   "local_validation": {
     "status": "pass",
@@ -41,13 +49,33 @@
   },
   "phase_gate": {
     "can_move_next_phase": false,
-    "blocked_by": ["full ratchet on all 424 bands through the lowered+emitted fourth binary + hot-swap-free + foreign table re-lower"]
+    "blocked_by": [
+      "full ratchet on all 424 bands through the lowered+emitted fourth binary + hot-swap-free + foreign table re-lower"
+    ]
   },
-  "idea_ids": ["idea:kernel-jit-surface"],
-  "spec_ids": ["spec:fourth-kernel"],
-  "task_ids": ["task:portable-jit-recipes-on-fourth-large"],
-  "contributors": [{"contributor_id": "grok", "contributor_type": "machine", "roles": ["coder", "validator"]}],
-  "agent": {"name": "grok", "version": "4.3"},
+  "idea_ids": [
+    "idea:kernel-jit-surface"
+  ],
+  "spec_ids": [
+    "spec:fourth-kernel"
+  ],
+  "task_ids": [
+    "task:portable-jit-recipes-on-fourth-large"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "grok",
+      "contributor_type": "machine",
+      "roles": [
+        "coder",
+        "validator"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "grok",
+    "version": "4.3"
+  },
   "evidence_refs": [
     "form/form-stdlib/jit-tensor-emit.fk",
     "form/form-stdlib/fourth-*.fk (emit/walker)",
@@ -61,7 +89,11 @@
     "form/form-stdlib/fourth-walker-emit.fk",
     "form/form-stdlib/tests/full-jit-lower-band.fk",
     "kernels/JIT_GAP_LEDGER.md",
-    "docs/coherence-substrate/fourth-kernel.form"
+    "docs/coherence-substrate/fourth-kernel.form",
+    "form/form-stdlib/tests/jit-lower-band.fk",
+    "form/form-kernel-go/jit.go",
+    "form/scripts/fourth_kernel_audit.sh",
+    "scripts/fourth_kernel_audit.sh"
   ],
   "change_intent": "runtime_feature",
   "e2e_validation": {

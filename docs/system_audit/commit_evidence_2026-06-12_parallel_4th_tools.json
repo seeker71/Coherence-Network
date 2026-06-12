@@ -9,7 +9,15 @@
     "scripts/fourth_kernel_audit.sh",
     "docs/coherence-substrate/fourth-kernel.form",
     "docs/system_audit/commit_evidence_2026-06-12_4th_parallel_tools.json",
-    "docs/system_audit/commit_evidence_2026-06-12_parallel_4th_tools.json"
+    "docs/system_audit/commit_evidence_2026-06-12_parallel_4th_tools.json",
+    "form/form-stdlib/jit-lower.fk",
+    "form/form-stdlib/fourth-walker.fk",
+    "form/form-stdlib/fourth-walker-emit.fk",
+    "form/form-stdlib/tests/jit-lower-band.fk",
+    "form/form-stdlib/tests/full-jit-lower-band.fk",
+    "form/form-kernel-go/jit.go",
+    "form/scripts/fourth_kernel_audit.sh",
+    "kernels/JIT_GAP_LEDGER.md"
   ],
   "change_files": [
     "form/form-stdlib/fourth-walker.fk",
@@ -20,7 +28,8 @@
     "form/form-kernel-go/jit.go",
     "scripts/fourth_kernel_audit.sh",
     "docs/coherence-substrate/fourth-kernel.form",
-    "kernels/JIT_GAP_LEDGER.md"
+    "kernels/JIT_GAP_LEDGER.md",
+    "form/scripts/fourth_kernel_audit.sh"
   ],
   "idea_ids": [
     "idea:4th-kernel-practical-tools"
