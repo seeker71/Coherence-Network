@@ -709,6 +709,65 @@ export class Kernel {
   byID = new Map<string, Recipe>();
   private nextInst = 1; // next instance number for composites
   private sourceAttr = new Map<string, { file: NameID; line: number; col: number }>();
+  // formStack — the Form-level call chain currently live (closure and
+  // native names, innermost last; closure labels carry file:line:col when
+  // the body recipe is attributed). Pushed at dispatch, popped on the
+  // success path only — after a throw the frames that were live at the
+  // crash remain for the top-level catch to surface.
+  formStack: string[] = [];
+  // readingFiles — line map for the source currently being read:
+  // (file name, first global line) per concatenated part. When non-empty,
+  // the reader attributes every parenthesized form so fatal diagnostics
+  // can name the Form source line.
+  readingFiles: { file: string; startLine: number }[] = [];
+
+  // resolveReadingLine — map a global line in the concatenated read buffer
+  // back to (file, line within that file).
+  resolveReadingLine(globalLine: number): { file: string; line: number } | null {
+    let owner: { file: string; line: number } | null = null;
+    for (const part of this.readingFiles) {
+      if (part.startLine <= globalLine) {
+        owner = { file: part.file, line: globalLine - part.startLine + 1 };
+      } else {
+        break;
+      }
+    }
+    return owner;
+  }
+
+  // attributeSource — record a node's authoring site (first writer wins —
+  // content-addressing means a shape interned from two sites keeps its
+  // first authoring site).
+  attributeSource(node: NodeID, file: string, line: number, col: number): void {
+    const key = nodeKey(node);
+    if (!this.sourceAttr.has(key)) {
+      this.sourceAttr.set(key, { file: this.internName(file), line, col });
+    }
+  }
+
+  // formStackDisplay — the live Form call chain, innermost first, capped.
+  formStackDisplay(max: number): string {
+    if (this.formStack.length === 0) return "";
+    const total = this.formStack.length;
+    const frames: string[] = [];
+    for (let i = total - 1; i >= 0 && frames.length < max; i--) {
+      frames.push(this.formStack[i]!);
+    }
+    let out = frames.join(" < ");
+    if (total > max) out += ` … (+${total - max} more)`;
+    return out;
+  }
+
+  // formFrameLabel — a closure frame's display label: the function name,
+  // plus file:line:col when the body recipe carries source attribution.
+  formFrameLabel(name: NameID, body: NodeID): string {
+    let label = this.nameStr(name);
+    const loc = this.sourceAttr.get(nodeKey(body));
+    if (loc !== undefined) {
+      label = `${label}@${this.nameStr(loc.file)}:${loc.line}:${loc.col}`;
+    }
+    return label;
+  }
   private importSeq = 1;
   private walkCache = new Map<string, Value>();
   private walkCacheHits = 0;
@@ -4817,7 +4876,10 @@ function walkFnCall(
         k.trace?.record(envNe.category.type, envNe.category.inst);
       }
       k.trace?.recordNative(k.nameStr(envNe.name));
-      return envNe.fn(k, frame, envArgs);
+      k.formStack.push(k.nameStr(envNe.name));
+      const envOut = envNe.fn(k, frame, envArgs);
+      k.formStack.pop();
+      return envOut;
     }
     // Native dispatch
     const ne = k.natives.get(dispatchName);
@@ -4833,7 +4895,10 @@ function walkFnCall(
         k.trace.record(ne.category.type, ne.category.inst);
       }
       k.trace?.recordNative(k.nameStr(ne.name));
-      return ne.fn(k, args);
+      k.formStack.push(k.nameStr(ne.name));
+      const neOut = ne.fn(k, args);
+      k.formStack.pop();
+      return neOut;
     }
     // Closure via frame — use the ORIGINAL function-name (not the JIT-
     // aliased one): the user defined this function under rawName and
@@ -4875,6 +4940,7 @@ function invokeClosure(
     callFrame.bind(closure.params[i]!, v);
   }
   k.trace?.recordFn(k.nameStr(closure.name));
+  k.formStack.push(k.formFrameLabel(closure.name, closure.body));
   // JIT-compiled fast path: if this closure's body has been compiled
   // via (jit_compile ...), dispatch through the host-JIT'd function
   // instead of walking the recipe tree. Form recipe stays canonical
@@ -4882,15 +4948,23 @@ function invokeClosure(
   const bodyKey = nodeIDKey(closure.body);
   const compiled = k.jitCompiled.get(bodyKey);
   if (compiled !== undefined) {
+    const depth = k.formStack.length;
     try {
-      return compiled(callFrame);
+      const out = compiled(callFrame);
+      k.formStack.pop();
+      return out;
     } catch (err) {
+      // The walker retries below — a swallowed JIT failure must not
+      // leave its frames behind.
+      k.formStack.length = depth;
       const reason = err instanceof Error ? err.message : String(err);
       k.jitFailedReason.set(bodyKey, reason);
       k.jitDispatchMisses.set(bodyKey, (k.jitDispatchMisses.get(bodyKey) ?? 0) + 1);
     }
   }
-  return walk(k, closure.body, callFrame);
+  const out = walk(k, closure.body, callFrame);
+  k.formStack.pop();
+  return out;
 }
 
 function nodeIDKey(nid: NodeID): string {
