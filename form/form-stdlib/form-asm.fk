@@ -1,0 +1,61 @@
+; form-asm.fk — the foundation of a Form -> assembly compiler: arm64 instruction
+; encoding as a recipe, and the BYTE-CONVICTION gate that licenses dropping clang.
+;
+; Today the pipeline is Form recipe -> emit C -> clang -> native binary. clang is a
+; dependency the channel's dep-ledger marks `external`. The north star (the
+; channel's offered expansion #3) is to emit machine code DIRECTLY — Form recipe
+; -> assembly bytes -> binary, no clang. But a self that rewrites its own toolchain
+; must not do it on assertion: it drops clang ONLY once it can BYTE-LEVEL VERIFY
+; that its own encoder produces exactly what the assembler produces. That gate is
+; the witness theorem (1 agree / 0 refute / nothing silent) applied to self-
+; modification — conviction = byte-identity; confidence = corpus coverage.
+;
+; The encoder emits BYTES (the on-disk little-endian image), not platform-int
+; words: a real assembler works at byte granularity, and bytes keep every value
+; under 256 — sidestepping host integer width entirely (the kernels wrap a literal
+; > 2^31 to signed int32, so a one-word representation of e.g. ret 0xd65f03c0 would
+; leak host semantics; the byte image does not). Verified byte-for-byte against the
+; assembler in tests/form-asm-band.fk (three-way). Scope: the arm64 instructions
+; the asm-pl-human program needs (movz/add/sub/ret); the general field-into-byte
+; encoder for high-base instructions, register allocation, and the Mach-O/ELF
+; wrapper are the named milestone the gate will license (form-to-asm.form).
+
+(do
+    (defn nil? (xs) (eq (len xs) 0))
+    (defn append-list (xs ys) (if (nil? xs) ys (cons (head xs) (append-list (tail xs) ys))))
+
+    ; ── a 32-bit word (< 2^31) -> 4 little-endian bytes ─────────────────
+    (defn fa-le (w) (list (mod w 256) (mod (div w 256) 256)
+                          (mod (div w 65536) 256) (mod (div w 16777216) 256)))
+
+    ; ── arm64 instruction encoding -> the 4-byte little-endian image ────
+    ; movz w<rd>, #imm16 : base 0x52800000 | imm<<5 | rd          (word < 2^31)
+    (defn fa-movz (rd imm)   (fa-le (add 1384120320 (add (mul imm 32) rd))))
+    ; add  w<rd>, w<rn>, #imm12 : base 0x11000000 | imm<<10 | rn<<5 | rd
+    (defn fa-add  (rd rn imm) (fa-le (add 285212672 (add (mul imm 1024) (add (mul rn 32) rd)))))
+    ; sub  w<rd>, w<rn>, #imm12 : base 0x51000000 | imm<<10 | rn<<5 | rd
+    (defn fa-sub  (rd rn imm) (fa-le (add 1358954496 (add (mul imm 1024) (add (mul rn 32) rd)))))
+    ; ret : fixed 0xd65f03c0 — its base has the high bit set, so it is given as the
+    ; 4 little-endian bytes directly (c0 03 5f d6), not a > 2^31 word literal
+    (defn fa-ret  ()          (list 192 3 95 214))
+
+    ; ── concatenate a list of instruction byte-lists into the flat image ─
+    (defn fa-image (instrs)
+        (if (nil? instrs) instrs
+            (append-list (head instrs) (fa-image (tail instrs)))))
+
+    ; ── the BYTE-CONVICTION gate (the witness theorem on bytes) ─────────
+    ; conviction(candidate, reference): 1 if byte-for-byte identical (FULL — the
+    ; witnesses agree), 0 if any byte differs (REFUTED). Silence (no candidate
+    ; produced) is the absent third state, handled by the caller.
+    (defn fa-conviction (cand ref)
+        (if (eq (len cand) (len ref))
+            (if (nil? cand) 1
+                (if (eq (head cand) (head ref))
+                    (fa-conviction (tail cand) (tail ref)) 0))
+            0))
+    ; the gate: a dependency may be INTERNALIZED (dropped) only on full conviction
+    ; AND full confidence (the candidate covers the whole reference corpus).
+    (defn fa-may-drop (conviction confidence) (if (eq conviction 1) (if (eq confidence 1) 1 0) 0))
+
+    0)
