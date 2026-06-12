@@ -54,6 +54,12 @@
     (symbol-pack      "an optional list of (op-number, name) pairs in a chosen
                        language. Decoration over the numeric core — removable
                        without loss of identity; swappable for any language")
+    (running-binary   "self-translate.fk emits a 33KB self-contained binary
+                       holding its OWN numeric model + English + French symbol
+                       packs; the SAME binary translates its model to either
+                       language (`scripts/self_translate_demo.sh`): en -> LITERAL
+                       40 / THE INPUT / ADD; fr -> LITTERAL 40 / L ENTREE /
+                       ADDITION; reads nothing external. The two versions, alive")
     (separation-proven "the band: the core's identity is INVARIANT under the pack
                        (c4 lang-independence), the same root carries different
                        words (c1, c3), and the pack strips cleanly (the numeric
