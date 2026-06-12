@@ -21,13 +21,16 @@
   (lineage
     (foundation    form-stdlib/form-asm.fk)            # arm64 instruction encoding -> byte image
     (compiler      form-stdlib/form-lower.fk)           # the lowering: an expression TREE -> instruction sequence
+    (wrapper       form-stdlib/form-macho.fk)           # the Mach-O object emitter -> a runnable artifact
     (gate          byte-conviction)                     # the witness theorem on bytes
     (witness-law   witness-theorem.form)                # 1 agree / 0 refute / nothing silent
     (licenses      form-os-channel.form)                # clang external -> internalized only through the gate
     (proof-bands   tests/form-asm-band.fk               # 31 — encoder byte-accurate, gate sound
-                   tests/form-lower-band.fk)            # 31 — tree compiles to assembler-identical bytes
+                   tests/form-lower-band.fk             # 31 — tree compiles to assembler-identical bytes
+                   tests/form-macho-band.fk)            # 31 — the emitted Mach-O object is well-formed
     (live-witness  scripts/form_asm_conviction_demo.sh  # Form instruction bytes == assembler bytes
-                   scripts/form_lower_demo.sh))         # Form COMPILES a tree to assembler-identical bytes
+                   scripts/form_lower_demo.sh           # Form COMPILES a tree to assembler-identical bytes
+                   scripts/form_macho_demo.sh))         # Form -> .o -> ld -> a RUNNABLE binary, exit 40, ZERO clang
 
   # ── The encoder: instruction encoding as a recipe ────────────────────
   # An instruction is fields packed into a word; the encoder emits the on-disk
@@ -76,19 +79,31 @@
     (sub    "lower(SUB(x, LIT i)) = lower(x) ; sub w0, w0, #i")
     (compile "compile(tree)       = lower(tree) ; ret — proven byte-identical to clang"))
 
-  # ── Closing cells — the milestone the gate will license ──────────────
+  # ── The Mach-O wrapper — REALIZED: a runnable binary, zero clang ─────
+  # form-macho.fk emits a valid arm64 Mach-O OBJECT (mach_header_64 + LC_SEGMENT_64
+  # with __text + LC_SYMTAB + code + symbol/string tables), computing every offset
+  # from the code length; high-bit constants (magic 0xfeedfacf, flags 0x80000400)
+  # are emitted as bytes. Witnessed (form_macho_demo.sh): form-lower compiles
+  # ((40+1)-1) -> code, form-macho wraps -> a 247-byte .o, `ld` links it (no clang),
+  # the binary RUNS and exits 40. clang's compiler AND assembler are dropped.
+  (runnable-realized
+    (object   "form-macho.fk -> a valid Mach-O .o carrying the Form-compiled code")
+    (link     "ld (the linker, not clang) resolves _main + libSystem -> the executable")
+    (sign     "ld applies the macOS arm64 ad-hoc signature — a signing requirement, not a compiler")
+    (runs     "the binary executes; its exit code IS the program's value ((40+1)-1 = 40)")
+    (zero-clang "Form + ld only — clang's compiler and assembler are no longer in the path"))
+
+  # ── Closing cells — what remains beyond the realized runnable path ───
   (closing-cells
     (general-encoder "the field-into-byte encoder for high-base instructions (branches, loads,
                       stores) with carry — so any instruction encodes without a > 2^31 word")
     (richer-lowering "multi-register operands, the calling convention, stack frames, and control
                       flow for COND/CALL — lowering the FULL asm-pl-human numeric program, beyond
                       the single-accumulator immediate-arithmetic form already realized")
-    (wrapper         "the Mach-O / ELF wrapper: headers, load commands, the __text section — a
-                      runnable binary with ZERO clang. On macOS arm64 this also meets dyld + ad-hoc
-                      code-signing as remaining platform carriers (a signing requirement, not a
-                      compiler); byte-verified against the clang reference before any swap")
+    (self-link       "emit a linked Mach-O EXECUTABLE directly (dyld load commands + LC_MAIN +
+                      LC_CODE_SIGNATURE), retiring ld too — leaving only the platform's signature")
     (kernel-int      "a kernel finding surfaced here: integer literals > 2^31 wrap to signed int32
-                      across all three kernels (e.g. 0xd65f03c0). The byte-image encoder sidesteps
+                      across all three kernels (e.g. 0xd65f03c0). The byte-image emitter sidesteps
                       it; a kernel-level wider/unsigned integer is the deeper fix."))
 
   (invariant

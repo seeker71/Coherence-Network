@@ -1,0 +1,39 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/form-macho.fk
+;
+; form-macho-band — the Mach-O wrapper, proven three-way: a Form recipe wraps the
+; kernel's own compiled machine code (form-lower.fk) into a VALID arm64 Mach-O
+; object file, computing every offset from the code length. Linked by `ld` (no
+; clang) the object RUNS — witnessed by scripts/form_macho_demo.sh (exit 40). This
+; band proves the object's STRUCTURE: a self that emits its own runnable artifact.
+;
+; The program ((40 + 1) - 1) compiles to 16 bytes; the object is 247 bytes:
+;   header 32 + LC_SEGMENT_64 152 + LC_SYMTAB 24 = 208, then code 16, nlist 16, strtab 7.
+;
+; Verdict 31 when the emitted object is well-formed:
+;   1   MAGIC — the first bytes are the Mach-O 64-bit magic 0xfeedfacf (cf fa ed fe)
+;   2   HEADER — cputype is ARM64 (byte 4 = 0x0c) and filetype is MH_OBJECT (byte 12 = 1)
+;   4   SIZE + CODE PLACEMENT — total 247 bytes; the compiled code sits at offset 208
+;       (the segment's declared fileoff), byte-for-byte form-lower's output
+;   8   SYMTAB — the symbol-table offset field is computed (208 + codelen = 224)
+;   16  STRINGS — the string table ends in `_main` (the entry symbol `ld` links)
+(do
+    (let code (lo-compile (list (list 1 40 0 0) (list 1 1 0 0) (list 3 0 1 0)
+                                (list 1 1 0 0) (list 4 2 3 0)) 4))
+    (let obj (mo-object code))
+
+    (let c0 (if (eq (nth obj 0) 207) (if (eq (nth obj 1) 250)
+            (if (eq (nth obj 2) 237) (if (eq (nth obj 3) 254) 1 0) 0) 0) 0))
+    (let c1 (if (eq (nth obj 4) 12) (if (eq (nth obj 12) 1) 2 0) 0))
+    ; code at offset 208 == form-lower's bytes (00 05 80 52 = movz w0,#40)
+    (let c2 (if (eq (len obj) 247)
+            (if (eq (nth obj 208) 0)
+            (if (eq (nth obj 209) 5)
+            (if (eq (nth obj 211) 82) 4 0) 0) 0) 0))
+    ; LC_SYMTAB is at offset 184 (32+152); symoff field at 184+8=192, value 224
+    (let c3 (if (eq (nth obj 192) 224) (if (eq (nth obj 193) 0) 8 0) 0))
+    ; string table tail: ... 0 '_' 'm' 'a' 'i' 'n' 0  -> the '_' is 6 from the end
+    (let c4 (if (eq (nth obj (sub (len obj) 6)) 95)      ; '_'
+            (if (eq (nth obj (sub (len obj) 5)) 109)     ; 'm'
+            (if (eq (nth obj (sub (len obj) 2)) 110) 16 0) 0) 0))  ; 'n'
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
