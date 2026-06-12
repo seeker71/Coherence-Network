@@ -4424,16 +4424,17 @@ function walkMath(
       : { kind: "u64", bigint: acc };
   }
 
-  // I32 default path — backward-compat fast path.
-  //
-  // Runtime float promotion: the bare-width op (`add`/`+`/`sub`/… with no
-  // width-encoded inst) is what Python's polymorphic `+` lowers to. When any
-  // operand walks to a float at runtime, promote the whole fold to f64 —
-  // matching the Rust + Go MATH walker arms, which dispatch on the actual
-  // operand kind rather than the encoded width. This keeps int+int on the
-  // fast i32 path while opening float-field folds (sum of float `actual_cost`
-  // across a list of records) to three-way parity. Mirrors Python:
-  // int+float→float, float+int→float, float+float→float.
+  // Default integer path — the bare-width op (`add`/`+`/`sub`/… with no
+  // width-encoded inst) is what Python's polymorphic `+` lowers to, so it
+  // carries Python's arbitrary-precision integer semantics, NOT int32 wrap.
+  // Go and Rust compute this fold in int64 (`a * b`, `a + b`); a JS number
+  // holds integers exactly to 2^53, so plain arithmetic matches them across
+  // that whole range — `(mul 100000 100000)` is 10000000000 on all three, not
+  // a Math.imul-wrapped 1410065408. (Beyond 2^53 the explicit typed I64 width
+  // path carries full precision via BigInt.) Float promotion: when any operand
+  // walks to a float at runtime, promote the whole fold to f64 — matching the
+  // Rust + Go MATH arms, which dispatch on the actual operand kind rather than
+  // the encoded width. Mirrors Python: int+float→float, float+float→float.
   const vals = kids.map((kid) => walk(k, kid!, frame));
   if (vals.some((v) => v.kind === "f32" || v.kind === "f64")) {
     let facc = expectFloat(vals[0]!, "math.f64");
@@ -4461,29 +4462,31 @@ function walkMath(
     }
     return { kind: "f64", float: facc };
   }
-  let acc = expectInt(vals[0]!, "math.i32");
+  let acc = expectInt(vals[0]!, "math.int");
   for (let i = 1; i < vals.length; i++) {
-    const x = expectInt(vals[i]!, "math.i32");
+    const x = expectInt(vals[i]!, "math.int");
     switch (op) {
       case RMath.PLUS:
-        acc = (acc + x) | 0;
+        acc = acc + x;
         break;
       case RMath.MINUS:
-        acc = (acc - x) | 0;
+        acc = acc - x;
         break;
       case RMath.MUL:
-        acc = Math.imul(acc, x);
+        acc = acc * x;
         break;
       case RMath.DIV:
+        // Truncate toward zero — matches Go/Rust integer `/` (and Python's
+        // int() of the quotient), without int32 wrap. Math.trunc, not `| 0`.
         if (x === 0) throw new Error("division by zero");
-        acc = (acc / x) | 0;
+        acc = Math.trunc(acc / x);
         break;
       case RMath.MOD:
         if (x === 0) throw new Error("modulo by zero");
-        acc = acc - ((acc / x) | 0) * x;
+        acc = acc - Math.trunc(acc / x) * x;
         break;
       default:
-        throw new Error(`math.i32: unknown op ${op}`);
+        throw new Error(`math.int: unknown op ${op}`);
     }
   }
   return { kind: "int", int: acc };
