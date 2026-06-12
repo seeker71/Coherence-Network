@@ -89,6 +89,29 @@
     (band      "tests/form-spy-band.fk -> 31 three-way — emission carries the counter,
                 one engine with the standard walk, hot/dead two-sided, deterministic"))
 
+  # ── Cell provenance — REALIZED: row -> original source file:line:col ──
+  # The locator (form-provenance.fk) needs only the source text: every (fk-
+  # constructor makes exactly one cell, and flatten is deterministic post-order,
+  # so scanning constructors (pre-order with depth) and converting to post-order
+  # yields, for table row k, the byte offset / line / column that AUTHORED it.
+  # No kernel surgery, no side table to drift — the source and the table align
+  # structurally. Witnessed live: every cell of a running fib binary answers
+  # "which source line created me", and the two recursive CALL SITES are
+  # distinguished by line (6:18 the n-1 call, 7:18 the n-2 call) — per-site
+  # resolution per-tag counting can never reach. Companions: the kernels'
+  # fatals already name the Form line that produced them (the runtime half);
+  # the kernel-level NodeID provenance plane is the named destination.
+  (cell-provenance-realized
+    (locator   "fp-locate: source text -> per-row constructor offsets; fp-line/fp-col")
+    (total     "one location per table row — count equals the flattened row count")
+    (no-drift  "post-order of the source scan IS flatten's row order — structural alignment")
+    (witnessed "hits -> row -> fib-source.fk:line:col -> the line itself, live
+                (scripts/form_provenance_demo.sh); call sites told apart by line")
+    (band      "tests/form-provenance-band.fk -> 31 three-way — total, exact offsets,
+                subtrees land together, line/col, two-sided (non-ctors add nothing)")
+    (scope     "fk-* constructor expressions; parens inside string literals are outside
+                this scope; the in-cell kernel provenance plane is the destination"))
+
   # ── Closing cells ─────────────────────────────────────────────────────
   (closing-cells
     (more-laws    "beyond order-2 additive: multiplicative, affine, periodic — a law
