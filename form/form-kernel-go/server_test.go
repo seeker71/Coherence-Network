@@ -670,3 +670,29 @@ func TestGatesMainHeadRouteFetchesExternalHTTPInBML(t *testing.T) {
 		}
 	}
 }
+
+// TestFatalNamesFormSourceLine — a typed-boundary fatal must name the Form
+// call chain live at the crash, with file:line attribution from the reader.
+// This is the diagnostic that turns "as_nid: null at the host accessor"
+// into "node_children inside inner@probe.fk:2" — the line that produced it.
+func TestFatalNamesFormSourceLine(t *testing.T) {
+	k := NewKernel()
+	k.readingFiles = []readingPart{{FileID: k.internName("probe.fk"), StartLine: 1}}
+	root := readRootFromSource(k, "(do\n  (defn inner (x) (node_children x))\n  (inner (head (empty))))")
+	k.readingFiles = nil
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("expected a typed-boundary panic, walk returned normally")
+		}
+		display := k.formStackDisplay(16)
+		if !strings.Contains(display, "node_children") {
+			t.Fatalf("form stack missing the native frame: %q", display)
+		}
+		if !strings.Contains(display, "inner@probe.fk:2:") {
+			t.Fatalf("form stack missing the attributed closure frame: %q", display)
+		}
+	}()
+	env := NewFrame(nil)
+	k.walk(root, env)
+}

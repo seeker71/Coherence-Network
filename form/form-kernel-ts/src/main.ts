@@ -35,6 +35,11 @@ const crashTraceContext: CrashTraceContext = {
   source: "",
 };
 
+// The kernel whose Form call stack the top-level catch surfaces. Set as
+// soon as the CLI kernel exists; the frames live at the crash answer
+// "which Form source line produced this".
+let crashKernel: Kernel | null = null;
+
 function setCrashTraceContext(mode: string, args: string[], source?: string): void {
   crashTraceContext.mode = mode;
   crashTraceContext.args = [...args];
@@ -69,6 +74,8 @@ async function writeKernelCrashTrace(err: unknown): Promise<string | null> {
     source_head: source.slice(0, 2000),
     source_tail: source.slice(Math.max(0, source.length - 2000)),
     js_stack: stack ?? null,
+    // Innermost frame first — the Form-level call chain live at the crash.
+    form_stack: crashKernel === null ? [] : [...crashKernel.formStack].reverse(),
   };
   try {
     await writeFile(path, `${JSON.stringify(report, null, 2)}\n`);
@@ -104,6 +111,7 @@ async function main(): Promise<void> {
   }
 
   const k = new Kernel();
+  crashKernel = k;
   // Install the Form→host-JS JIT hook so (jit_compile "name") from Form
   // code compiles the named closure's body through compiler.ts.
   k.jitCompileHook = compileNode;
@@ -174,11 +182,18 @@ async function main(): Promise<void> {
     console.error("missing source file");
     process.exit(2);
   }
-  const src = (
-    await Promise.all(paths.map((path) => readFile(path, "utf8")))
-  ).join("\n");
+  const parts = await Promise.all(paths.map((path) => readFile(path, "utf8")));
+  // Line map: each file's first global line in the joined source, so
+  // read-time attribution names the ORIGINAL file:line (+1 per join newline).
+  let nextLine = 1;
+  for (let i = 0; i < paths.length; i++) {
+    k.readingFiles.push({ file: paths[i]!, startLine: nextLine });
+    nextLine += (parts[i]!.match(/\n/g)?.length ?? 0) + 1;
+  }
+  const src = parts.join("\n");
   setCrashTraceContext("source", args, src);
   const node = readAll(k, src);
+  k.readingFiles = [];
   k.setActiveRoots([node]);
   const value = walk(k, node, frame);
   k.substrateGC([value], frame);
@@ -236,6 +251,12 @@ main()
   .catch(async (err: unknown) => {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`form-kernel-ts: ${msg}`);
+    // The Form-level call chain live at the crash, innermost first — the
+    // line that produced the fatal is the innermost attributed frame.
+    const formStack = crashKernel?.formStackDisplay(16) ?? "";
+    if (formStack !== "") {
+      console.error(`form-kernel-ts: form stack: ${formStack}`);
+    }
     const tracePath = await writeKernelCrashTrace(err);
     if (tracePath !== null) {
       console.error(`form-kernel-ts: crash trace: ${tracePath}`);

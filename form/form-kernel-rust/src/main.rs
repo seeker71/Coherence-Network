@@ -60,6 +60,64 @@ fn crash_trace_context() -> &'static Mutex<CrashTraceContext> {
 thread_local! {
     static THREAD_CRASH_TRACE_CONTEXT: RefCell<Option<CrashTraceContext>> = const { RefCell::new(None) };
     static THREAD_LAST_CRASH_TRACE_PATH: RefCell<Option<PathBuf>> = const { RefCell::new(None) };
+    static FORM_CALL_STACK: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
+}
+
+// FormStackFrame — one live frame on the Form-level call stack. Pushed when
+// the walker dispatches into a native or closure, popped on Drop. The panic
+// hook runs BEFORE unwinding, so a fatal reads the frames that were live at
+// the crash; unwinding then pops them, which keeps the stack honest across
+// the serve worker's per-request catch_unwind. Closure labels carry source
+// attribution ("name@file:line:col") when the body recipe has it.
+struct FormStackFrame;
+
+impl FormStackFrame {
+    fn push(label: String) -> FormStackFrame {
+        FORM_CALL_STACK.with(|s| s.borrow_mut().push(label));
+        FormStackFrame
+    }
+
+    // Tail call: the caller's frame is complete (its body ended in this
+    // call), so the new label REPLACES the top instead of stacking — the
+    // same collapse a tail-call-optimized host stack performs.
+    fn replace_top(self, label: String) -> FormStackFrame {
+        FORM_CALL_STACK.with(|s| {
+            let mut stack = s.borrow_mut();
+            stack.pop();
+            stack.push(label);
+        });
+        self
+    }
+}
+
+impl Drop for FormStackFrame {
+    fn drop(&mut self) {
+        FORM_CALL_STACK.with(|s| {
+            s.borrow_mut().pop();
+        });
+    }
+}
+
+fn form_stack_snapshot() -> Vec<String> {
+    FORM_CALL_STACK.with(|s| s.borrow().iter().rev().cloned().collect())
+}
+
+fn form_stack_display(max: usize) -> String {
+    let stack = form_stack_snapshot();
+    if stack.is_empty() {
+        return String::new();
+    }
+    let total = stack.len();
+    let mut out = stack
+        .iter()
+        .take(max)
+        .map(|s| s.as_str())
+        .collect::<Vec<_>>()
+        .join(" < ");
+    if total > max {
+        out.push_str(&format!(" … (+{} more)", total - max));
+    }
+    out
 }
 
 fn source_excerpt_head(src: &str, max_chars: usize) -> String {
@@ -255,6 +313,11 @@ fn write_kernel_crash_trace(message: &str, location: Option<String>) -> Option<P
         "source_line_count": source_line_count(&ctx.source),
         "source_head": source_excerpt_head(&ctx.source, 2000),
         "source_tail": source_excerpt_tail(&ctx.source, 2000),
+        // Innermost frame first — the Form-level call chain live at the
+        // crash. The line that produced the fatal is the innermost closure
+        // frame's attribution (name@file:line:col) or, failing that, the
+        // named native plus its caller.
+        "form_stack": form_stack_snapshot(),
         "rust_backtrace": format!("{:?}", Backtrace::force_capture()),
     });
     let data = serde_json::to_vec_pretty(&report).ok()?;
@@ -1200,6 +1263,12 @@ pub(crate) struct Kernel {
     // The satsang-load-bearing surface: every cell's state is traceable
     // back to the source line of the recipe that authored it.
     source_attr: HashMap<NodeID, (NameID, u32, u32)>,
+    // Line map for the source currently being read: (file_name_id,
+    // first_global_line) per concatenated part. When non-empty, read_sexp
+    // attributes every parenthesized form it builds so fatal diagnostics
+    // can name the Form source file:line. Empty outside file loads
+    // (inline strings, route bodies that carry their own labels).
+    reading_files: Vec<(NameID, u32)>,
     // walk_cache — JIT-vector memoization: pure recipes (no I/O, no
     // external state) can have their walk result cached by NodeID.
     // Content-addressing means same recipe shape → same NodeID, so
@@ -1633,6 +1702,7 @@ impl Kernel {
             by_shape: HashMap::new(),
             by_id: HashMap::new(),
             source_attr: HashMap::new(),
+            reading_files: Vec::new(),
             walk_cache: HashMap::new(),
             walk_cache_hits: 0,
             walk_cache_misses: 0,
@@ -2070,6 +2140,7 @@ impl Kernel {
             by_shape: self.by_shape.clone(),
             by_id: self.by_id.clone(),
             source_attr: self.source_attr.clone(),
+            reading_files: Vec::new(),
             walk_cache: HashMap::new(),
             walk_cache_hits: 0,
             walk_cache_misses: 0,
@@ -2161,6 +2232,21 @@ impl Kernel {
 
     // Resolve a NameID back to its source-level string. Only used in error
     // messages and on the parse-time slow path.
+    // Map a global line in the concatenated read buffer back to
+    // (file_name_id, line_within_that_file). Entries are in concatenation
+    // order; the last entry whose start is at or before the line owns it.
+    fn resolve_reading_line(&self, global_line: u32) -> Option<(NameID, u32)> {
+        let mut owner: Option<(NameID, u32)> = None;
+        for (file_id, start) in &self.reading_files {
+            if *start <= global_line {
+                owner = Some((*file_id, global_line - start + 1));
+            } else {
+                break;
+            }
+        }
+        owner
+    }
+
     fn name_str(&self, id: NameID) -> &str {
         &self.strs[id as usize]
     }
@@ -6875,6 +6961,11 @@ fn walk_inner(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
     // kernel parse the full thesis grammar files without overflowing.
     let mut n = n;
     let mut env = env;
+    // One Form-stack slot per host walk invocation: a closure entered by TCO
+    // REPLACES the slot (its tail-caller's frame is complete); a closure
+    // entered through a fresh recursive walk (arg evaluation, native
+    // interiors) gets its own slot in that invocation.
+    let mut form_frame: Option<FormStackFrame> = None;
     loop {
         if n.level == LEVEL_TRIVIAL {
             return k.trivial_value(n);
@@ -7054,6 +7145,7 @@ fn walk_inner(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
                         if let Some(t) = &mut k.trace {
                             t.record_native(&native_name);
                         }
+                        let _form_frame = FormStackFrame::push(native_name);
                         return (ne.func)(k, a, env, &args);
                     }
                 }
@@ -7080,6 +7172,7 @@ fn walk_inner(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
                         if let Some(t) = &mut k.trace {
                             t.record_native(&native_name);
                         }
+                        let _form_frame = FormStackFrame::push(native_name);
                         return (ne.func)(k, a, &args);
                     }
                 }
@@ -7101,6 +7194,7 @@ fn walk_inner(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
                         if let Some(t) = &mut k.trace {
                             t.record_native(&leaf_name);
                         }
+                        let _form_frame = FormStackFrame::push(leaf_name.clone());
                         // Arc held through the call — the Library can't be
                         // dropped mid-call (same contract as the closure jit
                         // fast path below).
@@ -7141,6 +7235,16 @@ fn walk_inner(k: &mut Kernel, a: &mut Arena, n: NodeID, env: FrameId) -> Value {
                 if let Some(t) = &mut k.trace {
                     t.record_fn(&fn_name);
                 }
+                let frame_label = match k.source_attr.get(&cl2.body).copied() {
+                    Some((file_id, line, col)) => {
+                        format!("{}@{}:{}:{}", fn_name, k.name_str(file_id), line, col)
+                    }
+                    None => fn_name.clone(),
+                };
+                form_frame = Some(match form_frame.take() {
+                    Some(f) => f.replace_top(frame_label),
+                    None => FormStackFrame::push(frame_label),
+                });
                 // JIT-compiled fast path: if (jit_compile "name") landed for
                 // this closure's body, dispatch through the loaded function
                 // pointer. Form recipe stays canonical truth; the .so is opt-in
@@ -7542,7 +7646,19 @@ fn read_sexp(k: &mut Kernel, toks: &[SexpTok], i: usize) -> (NodeID, usize) {
                 args.push(arg);
                 j = nj;
             }
-            (build_verb(k, &verb, args), j)
+            let node = build_verb(k, &verb, args);
+            // Source attribution at read time: every parenthesized form
+            // remembers the file:line:col of its opening paren, so a fatal
+            // mid-walk can name the Form source line, not just the host
+            // accessor. Content-addressing means a shape interned from two
+            // sites keeps its FIRST authoring site — an honest "this shape
+            // was written here (first)".
+            if let Some((file_id, local_line)) = k.resolve_reading_line(t.line) {
+                k.source_attr
+                    .entry(node)
+                    .or_insert((file_id, local_line, t.col));
+            }
+            (node, j)
         }
         _ => panic!(
             "parse error at line {} col {}: unexpected token {} {:?}",
@@ -7802,6 +7918,20 @@ fn count_top_level(toks: &[SexpTok]) -> usize {
 pub(crate) fn run_source(src: &str) -> Value {
     let mut k = Kernel::new();
     let root = read_root_from_source(&mut k, src);
+    execute_root(&mut k, root)
+}
+
+// Run a concatenated multi-file source with a line map so read-time
+// attribution names each form's ORIGINAL file:line. The map entries are
+// (file_name, first_global_line_of_that_file) in concatenation order.
+pub(crate) fn run_source_mapped(src: &str, line_map: &[(String, u32)]) -> Value {
+    let mut k = Kernel::new();
+    k.reading_files = line_map
+        .iter()
+        .map(|(name, start)| (k.intern_string(name).inst, *start))
+        .collect();
+    let root = read_root_from_source(&mut k, src);
+    k.reading_files.clear();
     execute_root(&mut k, root)
 }
 
@@ -14068,6 +14198,14 @@ fn install_panic_hook() {
             .unwrap_or("unknown error");
         let diagnosis = diagnose_kernel_panic(msg);
         eprintln!("form-kernel-rust: fatal[{}]: {}", diagnosis.fatal_kind, msg);
+        // The Form-level call chain live at the crash, innermost first —
+        // the hook runs before unwinding, so the frames are still pushed.
+        // This is the line that answers "WHERE in the Form source": the
+        // innermost named frames, with file:line:col when attributed.
+        let stack = form_stack_display(16);
+        if !stack.is_empty() {
+            eprintln!("form-kernel-rust: form stack: {}", stack);
+        }
         eprintln!(
             "form-kernel-rust: likely root cause: {}",
             diagnosis.likely_root_cause
@@ -14085,6 +14223,40 @@ fn install_panic_hook() {
 #[cfg(test)]
 mod crash_diagnostics_tests {
     use super::*;
+
+    // The reader attributes every parenthesized form to its file:line so a
+    // fatal mid-walk can name the Form source line (the diagnostic that
+    // turns "as_nid: Null at the host accessor" into "node_children inside
+    // inner@probe.fk:2").
+    #[test]
+    fn reader_attributes_forms_to_file_lines() {
+        let mut k = Kernel::new();
+        let file_id = k.intern_string("probe.fk").inst;
+        k.reading_files = vec![(file_id, 1)];
+        let _root =
+            read_root_from_source(&mut k, "(do\n  (defn inner (x) (node_children x)))");
+        k.reading_files.clear();
+        let hit = k
+            .source_attr
+            .values()
+            .any(|(f, line, _)| *f == file_id && *line == 2);
+        assert!(hit, "expected a line-2 attribution for the defn body");
+    }
+
+    // Frames display innermost first — the order a reader scans to find
+    // the failing call. Runs on a dedicated thread so the thread-local
+    // stack starts clean.
+    #[test]
+    fn form_stack_displays_innermost_first() {
+        let display = std::thread::spawn(|| {
+            let _outer = FormStackFrame::push("inner@probe.fk:2:19".to_string());
+            let _native = FormStackFrame::push("node_children".to_string());
+            form_stack_display(16)
+        })
+        .join()
+        .expect("probe thread");
+        assert_eq!(display, "node_children < inner@probe.fk:2:19");
+    }
 
     #[test]
     fn diagnose_null_string_contract_as_type_violation() {
@@ -14179,6 +14351,7 @@ fn main_with_args(args: Vec<String>) -> i32 {
         "check" => cli_check(&args[1..]),
         _ => {
             // Source adapter: --expr or <file.fk> [more.fk ...]
+            let mut line_map: Vec<(String, u32)> = Vec::new();
             let src = if args[0] == "--expr" {
                 if args.len() < 2 {
                     eprintln!("--expr requires an argument");
@@ -14187,9 +14360,15 @@ fn main_with_args(args: Vec<String>) -> i32 {
                 args[1].clone()
             } else {
                 let mut parts = Vec::with_capacity(args.len());
+                let mut next_line = 1u32;
                 for path in &args {
                     match fs::read_to_string(path) {
-                        Ok(s) => parts.push(s),
+                        Ok(s) => {
+                            line_map.push((path.clone(), next_line));
+                            // +1 for the join newline between parts.
+                            next_line += s.matches('\n').count() as u32 + 1;
+                            parts.push(s);
+                        }
                         Err(e) => {
                             eprintln!("read {}: {}", path, e);
                             std::process::exit(1);
@@ -14204,7 +14383,7 @@ fn main_with_args(args: Vec<String>) -> i32 {
                 "source"
             };
             set_crash_trace_context(mode, &args, Some(&src));
-            let result = run_source(&src);
+            let result = run_source_mapped(&src, &line_map);
             println!("{}", result.display());
             0
         }
