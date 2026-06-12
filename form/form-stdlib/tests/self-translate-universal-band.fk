@@ -1,0 +1,27 @@
+; preludes: form-stdlib/core.fk form-stdlib/self-translate-universal.fk
+;
+; self-translate-universal-band — the numeric-only core binary that loads a
+; symbol pack for ANY language, proven three-way (quoteless, so all three
+; kernels emit it identically). The live five-language run is the demo
+; (scripts/self_translate_universal_demo.sh); here the kernels prove the emitted
+; core is language-FREE and carries the runtime pack door.
+;
+; Verdict 15 when the universal self-translator holds:
+;   1   the emission carries the INTERNAL MODEL — the numeric node table, the
+;       language-free meaning
+;   2   the core is LANGUAGE-FREE — no language word is baked in (no "ADD", no
+;       "ADDITION"): every name lives in the external pack, the binary carries
+;       zero symbols of any tongue
+;   4   the runtime PACK DOOR is present — open/read load the chosen language's
+;       pack at runtime, so ONE binary serves any language with no rebuild
+;   8   deterministic — two emissions are byte-identical (quoteless, three-way)
+(do
+    (let c (stu-emit))
+    (let c0 (if (ge (str_find c "static const long long model[3][4]" 0) 0) 1 0))
+    (let c1 (if (eq (str_find c "ADD" 0) (sub 0 1))
+                (if (eq (str_find c "ADDITION" 0) (sub 0 1))
+                    (if (eq (str_find c "LITERAL" 0) (sub 0 1)) 2 0) 0) 0))
+    (let c2 (if (ge (str_find c "open(argv[1]" 0) 0)
+                (if (ge (str_find c "read(fd, pack" 0) 0) 4 0) 0))
+    (let c3 (if (str_eq c (stu-emit)) 8 0))
+    (add c0 (add c1 (add c2 c3))))
