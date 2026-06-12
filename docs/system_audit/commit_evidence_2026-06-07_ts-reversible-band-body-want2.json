@@ -106,6 +106,15 @@
       "git fetch origin main && git rebase origin/main",
       "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
       "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-07_ts-reversible-band-body-want2.json"
+    ],
+    "expected_behavior_delta": "runtime evidence for band/translator work; e2e delta recorded in Form execution and native emission.",
+    "public_endpoints": [
+      "/api/substrate/form",
+      "/api/pulse/now"
+    ],
+    "test_flows": [
+      "band execution + native probe",
+      "evidence contract validation"
     ]
   }
 }
