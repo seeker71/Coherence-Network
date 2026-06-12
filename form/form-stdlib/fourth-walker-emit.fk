@@ -263,6 +263,53 @@
 
 (defn fkc-emit-server (fns) (fkc-emit-server2 (fkc-flatten-many fns)))
 
+; ── the SPY emitter — the per-NODE framebuffer ───────────────────────────
+; fk_arms counts per op-KIND; fk_hits counts per SOURCE NODE — the finer
+; channel that makes source-symbol lookup from framebuffer inspection
+; possible: hits[i] joins row i of the table, which IS the source node,
+; which any pack renders as a symbol. Only the walk header gains one
+; statement; every arm rides unchanged from fkc-arms-many-text (one engine).
+; The spy main prints the value, then one hits line per table row.
+(defn fkc-walk-spy-text ()
+    (str_concat "static long long fk_hits[8192]; static long long fk_walk(long long i, long long fp) { long long t = fk_node[i][0]; fk_arms[t] = fk_arms[t] + 1; fk_hits[i] = fk_hits[i] + 1; if (t == 1) { return fk_node[i][1] << 1; } if (t == 2) { return fk_vs[fp]; } if (t == 3) { return fk_walk(fk_node[i][1], fp) + fk_walk(fk_node[i][2], fp); } if (t == 4) { return fk_walk(fk_node[i][1], fp) - fk_walk(fk_node[i][2], fp); } if (t == 5) { if (fk_walk(fk_node[i][1], fp) <= fk_walk(fk_node[i][2], fp)) { return 2; } return 0; } if (t == 6) { if (fk_walk(fk_node[i][1], fp) == 0) { return fk_walk(fk_node[i][3], fp); } return fk_walk(fk_node[i][2], fp); } if (t == 7) { long long v7 = fk_walk(fk_node[i][1], fp); fk_vp(v7); long long r7 = fk_walk(fk_fn[0], fk_vsp - 1); fk_vsp = fk_vsp - 1; return r7; }"
+                (fkc-arms-many-text)))
+(defn fkc-main-spy-text (nr)
+    (str_concat "extern int atoi(const char *); int main(int argc, char **argv) { long long a = 0; if (argc > 1) { a = atoi(argv[1]) << 1; } fk_vs[0] = a; fk_vsp = 1; fk_pv(fk_walk(fk_fn[0], 0)); long long i = 0; while (i < "
+    (str_concat (int_to_str nr)
+                ") { fk_pr(fk_hits[i]); i = i + 1; } return 0; }")))
+(defn fkc-emit-spy2 (flat)
+    (str_concat (fkc-pr-text)
+    (str_concat (fkc-decl-many-text (nth flat 0) (nth flat 1))
+    (str_concat (fkc-walk-spy-text)
+                (fkc-main-spy-text (len (nth flat 0)))))))
+(defn fkc-emit-spy (fns) (fkc-emit-spy2 (fkc-flatten-many fns)))
+
+; ── the DEBUG emitter — the value trace (live debugging's missing half) ──
+; The framebuffer counts; the debugger needs VALUES and ORDER. Every node
+; completion flows through ONE dispatch point, so the debug walker is a
+; tracing WRAPPER around the unchanged arms (one engine): fk_walk0 is the
+; standard dispatch verbatim; fk_walk traces (node, value, stack-depth) per
+; completed node — bounded by argv[2] (0 = off; the binary runs clean).
+; Values print unboxed when even (ints); odd refs carry an r marker. The
+; event stream joins to provenance (file:line:col) and any pack's rendering
+; — a source-level step log of a running native binary. Replay is free: the
+; walker is deterministic, the trace IS the recording.
+(defn fkc-tr-text ()
+    "static long long fk_dbg; static long long fk_evn; static void fk_evp(long long v) { char b[32]; int n = 0; if (v == 0) { putchar(48); } while (v > 0) { b[n] = 48 + v % 10; v = v / 10; n = n + 1; } while (n > 0) { n = n - 1; putchar(b[n]); } putchar(32); } static void fk_tr(long long i, long long v, long long fp) { putchar(69); putchar(32); fk_evp(i); if ((v & 1) == 0) { fk_evp(v >> 1); } else { putchar(114); fk_evp(v >> 1); } fk_evp(fp); putchar(10); } ")
+(defn fkc-walk-dbg-text ()
+    (str_concat "static long long fk_walk(long long i, long long fp); static long long fk_walk0(long long i, long long fp) { long long t = fk_node[i][0]; fk_arms[t] = fk_arms[t] + 1; if (t == 1) { return fk_node[i][1] << 1; } if (t == 2) { return fk_vs[fp]; } if (t == 3) { return fk_walk(fk_node[i][1], fp) + fk_walk(fk_node[i][2], fp); } if (t == 4) { return fk_walk(fk_node[i][1], fp) - fk_walk(fk_node[i][2], fp); } if (t == 5) { if (fk_walk(fk_node[i][1], fp) <= fk_walk(fk_node[i][2], fp)) { return 2; } return 0; } if (t == 6) { if (fk_walk(fk_node[i][1], fp) == 0) { return fk_walk(fk_node[i][3], fp); } return fk_walk(fk_node[i][2], fp); } if (t == 7) { long long v7 = fk_walk(fk_node[i][1], fp); fk_vp(v7); long long r7 = fk_walk(fk_fn[0], fk_vsp - 1); fk_vsp = fk_vsp - 1; return r7; }"
+    (str_concat (fkc-arms-many-text)
+                " static long long fk_walk(long long i, long long fp) { long long r = fk_walk0(i, fp); if (fk_evn < fk_dbg) { fk_evn = fk_evn + 1; fk_tr(i, r, fp); } return r; } ")))
+(defn fkc-main-dbg-text ()
+    "extern int atoi(const char *); int main(int argc, char **argv) { long long a = 0; if (argc > 1) { a = atoi(argv[1]) << 1; } if (argc > 2) { fk_dbg = atoi(argv[2]); } fk_vs[0] = a; fk_vsp = 1; fk_pv(fk_walk(fk_fn[0], 0)); return 0; }")
+(defn fkc-emit-debug2 (flat)
+    (str_concat (fkc-pr-text)
+    (str_concat (fkc-tr-text)
+    (str_concat (fkc-decl-many-text (nth flat 0) (nth flat 1))
+    (str_concat (fkc-walk-dbg-text)
+                (fkc-main-dbg-text))))))
+(defn fkc-emit-debug (fns) (fkc-emit-debug2 (fkc-flatten-many fns)))
+
 ; fkresp — a responder PROGRAM (cells) that PUTCs the bytes of a Form string,
 ; one PUTC per byte (ord off char_at), sequenced by fkd-seq (ADD over PUTC=0).
 ; The string IS the whole HTTP/1.0 response; fold it once, get a program-as-

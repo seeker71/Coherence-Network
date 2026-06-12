@@ -89,4 +89,28 @@
     ; the count for one node — point lookup
     (defn fd-vat (v i) (if (eq i 0) (head v) (fd-vat (tail v) (sub i 1))))
 
+    ; ── the value trace: watchpoint verbs over the event stream ──────────
+    ; The debug walker emits ordered events (node, value, depth) — the time
+    ; dimension the framebuffer's aggregates cannot carry. These verbs are the
+    ; watchpoint: every value a source node produced, in execution order; the
+    ; last value; the deepest stack the run reached. Replay needs no machinery:
+    ; the walker is deterministic, so the trace IS the recording.
+    (defn fd-twatch (evs node)
+        (if (fd-nil? evs) (list)
+            (if (eq (nth (head evs) 0) node)
+                (cons (nth (head evs) 1) (fd-twatch (tail evs) node))
+                (fd-twatch (tail evs) node))))
+    (defn fd-tlast2 (evs node acc)
+        (if (fd-nil? evs) acc
+            (if (eq (nth (head evs) 0) node)
+                (fd-tlast2 (tail evs) node (nth (head evs) 1))
+                (fd-tlast2 (tail evs) node acc))))
+    (defn fd-tlast (evs node) (fd-tlast2 evs node (sub 0 1)))
+    (defn fd-tdepth2 (evs best)
+        (if (fd-nil? evs) best
+            (if (le best (nth (head evs) 2))
+                (fd-tdepth2 (tail evs) (nth (head evs) 2))
+                (fd-tdepth2 (tail evs) best))))
+    (defn fd-tdepth (evs) (fd-tdepth2 evs 0))
+
     0)
