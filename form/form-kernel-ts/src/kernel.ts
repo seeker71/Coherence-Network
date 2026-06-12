@@ -2023,39 +2023,53 @@ export class Kernel {
       }
       return { kind: "list", list: out };
     });
-    // Common Python builtins. Sibling-parity with Rust + Go.
+    // Common Python builtins. Sibling-parity with Rust + Go: elements read
+    // through the same integer lane as Rust's as_int (ints and bools widen,
+    // floats truncate, i64/u64 pass through), so wide literals survive
+    // aggregation — a raw `.int` read on an i64 element is undefined and
+    // silently drops the value (the choice-receipt-band divergence).
     this.registerNative("min", catMethod(), (_k, args) => {
       const v = args[0];
       if (v?.kind === "list") {
         if (v.list.length === 0) throw new Error("min: empty list");
-        let best = (v.list[0] as { int: number }).int;
+        let best = listElemInt(v.list[0]!, "min");
         for (let i = 1; i < v.list.length; i++) {
-          const x = (v.list[i] as { int: number }).int;
+          const x = listElemInt(v.list[i]!, "min");
           if (x < best) best = x;
         }
-        return { kind: "int", int: best };
+        return intOrWide(best);
       }
-      return { kind: "int", int: argInt(args, 0) };
+      return intOrWide(listElemInt(args[0]!, "min"));
     });
     this.registerNative("max", catMethod(), (_k, args) => {
       const v = args[0];
       if (v?.kind === "list") {
         if (v.list.length === 0) throw new Error("max: empty list");
-        let best = (v.list[0] as { int: number }).int;
+        let best = listElemInt(v.list[0]!, "max");
         for (let i = 1; i < v.list.length; i++) {
-          const x = (v.list[i] as { int: number }).int;
+          const x = listElemInt(v.list[i]!, "max");
           if (x > best) best = x;
         }
-        return { kind: "int", int: best };
+        return intOrWide(best);
       }
-      return { kind: "int", int: argInt(args, 0) };
+      return intOrWide(listElemInt(args[0]!, "max"));
     });
     this.registerNative("sum", catMethod(), (_k, args) => {
       const v = args[0];
       if (v?.kind === "list") {
-        let total = 0;
-        for (const e of v.list) total += (e as { int: number }).int ?? 0;
-        return { kind: "int", int: total };
+        // Float promotion mirrors Rust: any float element makes the total
+        // a float (Python's sum([1, 2.5]) behaviour).
+        const anyFloat = v.list.some((e) => e.kind === "f32" || e.kind === "f64");
+        if (anyFloat) {
+          let total = 0;
+          for (const e of v.list) {
+            total += e.kind === "bool" ? (e.bool ? 1 : 0) : expectFloat(e, "sum");
+          }
+          return { kind: "f64", float: total };
+        }
+        let total = 0n;
+        for (const e of v.list) total += listElemInt(e, "sum");
+        return intOrWide(total);
       }
       return { kind: "int", int: 0 };
     });
@@ -3640,6 +3654,26 @@ function argNodeID(args: Value[], i: number): NodeID {
   const v = args[i];
   if (v?.kind !== "nodeid") throw new Error(`arg ${i}: expected nodeid`);
   return v.nodeid;
+}
+
+// listElemInt — the integer lane's element read for aggregating natives
+// (min/max/sum): ints and bools widen, floats truncate, i64/u64 pass
+// through. Sibling to Go/Rust Value.AsInt, carried in bigint so values
+// wider than int32 (#2922 literals) survive aggregation exactly.
+function listElemInt(v: Value, op: string): bigint {
+  if (v.kind === "bool") return v.bool ? 1n : 0n;
+  if (v.kind === "f32" || v.kind === "f64") return BigInt(Math.trunc(v.float));
+  return expectBigInt(v, op);
+}
+
+// intOrWide — render an aggregate back as the plain int kind when it fits
+// the exact-double range (the walkers print the same decimal), keeping the
+// i64 kind only when the value genuinely needs it.
+function intOrWide(total: bigint): Value {
+  const n = Number(total);
+  return Number.isSafeInteger(n)
+    ? { kind: "int", int: n }
+    : { kind: "i64", bigint: total };
 }
 
 function valueKindName(v: Value): string {
