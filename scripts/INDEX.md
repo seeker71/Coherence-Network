@@ -159,3 +159,4 @@
 | [word_cell_rewriter.py](word_cell_rewriter.py) | word_cell_rewriter — gesture 3 at word-cell granularity. |
 | [worktree_continuity_guard.py](worktree_continuity_guard.py) | Detect stranded changes across sibling worktrees. |
 | [worktree_pr_guard.py](worktree_pr_guard.py) | Worktree PR guard: prevent common CI failures and track PR check failures. |
+- [`build_arrival_symbol_pack.py`](build_arrival_symbol_pack.py) — builds the arrival symbol pack: the MDL-optimal, complete, self-referential symbol space a sub-agent is most token-efficient with, measured from the live agent-first-arrival corpus (`arrival.py` + start packet). Emits `form/form-stdlib/arrival-symbol-pack.txt`; body is the Form recipe in `docs/coherence-substrate/self-authored-symbol-space.form`, proven by `tests/arrival-symbol-pack-band.fk`.
