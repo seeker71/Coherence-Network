@@ -1,0 +1,58 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-diagnose.fk
+;
+; form-diagnose-band — the live-diagnosis organ, proven three-way: it reads a
+; program's open channels (framebuffer arm counts; value outputs over inputs),
+; LEARNS the law from data, independently PREDICTS it from the recipe (substrate
+; ground), and holds conviction only when the two witnesses agree. Recipe and
+; data separate: one generic organ recipe; observations and learned laws are data.
+; (docs/coherence-substrate/live-diagnosis-organ.form; live wiring:
+; scripts/form_diagnose_demo.sh on the Form-compiled fib binaries.)
+;
+; The model framebuffer is fib-shaped (ARG hottest; PUTC present-but-silent);
+; the value-channel observation is the REAL fib exit-code sequence.
+;
+; Verdict 31 when the organ diagnoses honestly:
+;   1   HOT — the highest-count op is found (ARG, tag 2): the JIT/lift candidate
+;   2   DEAD IS TWO-SIDED — a recipe tag that never fired is surfaced (tag 9,
+;       SILENCE inside one program) AND a fired tag is NOT flagged
+;   4   LEARNED IS TWO-SIDED — from outputs alone the order-2 additive law is
+;       inferred on (1 2 3 5 8 13), and REFUSED on the corrupted (1 2 3 5 9)
+;   8   GROUND IS TWO-SIDED — the recipe alone predicts the law for the fib tree
+;       (COND else = ADD(CALL,CALL)) and refuses it for the straight-line tree
+;   16  CONVICTION = BOTH WITNESSES — learned(data) AND ground(recipe) agree on
+;       fib; the straight-line program cannot reach conviction on this law
+(do
+    ; fib-shaped framebuffer: (tag count) — ARG hottest, tag 9 silent
+    (let fb (list (list 2 30) (list 3 10) (list 4 20) (list 5 11)
+                  (list 6 11) (list 7 22) (list 1 12) (list 9 0)))
+
+    ; the fib tree (the recipe ground)
+    (let fibp (list
+        (list 1 1 0 0) (list 2 0 0 0) (list 5 1 0 0) (list 4 1 0 0)
+        (list 7 3 0 0) (list 1 2 0 0) (list 4 1 5 0) (list 7 6 0 0)
+        (list 3 4 7 0) (list 6 2 0 8)))
+    ; the straight-line tree ((40+1)-1) — no recursion
+    (let linp (list
+        (list 1 40 0 0) (list 1 1 0 0) (list 3 0 1 0)
+        (list 1 1 0 0) (list 4 2 3 0)))
+
+    ; the value channel: the REAL exit codes of the compiled fib on n = 1..6
+    (let obs  (list 1 2 3 5 8 13))
+    (let bad  (list 1 2 3 5 9))
+
+    (let c0 (if (eq (fd-hot fb) 2) 1 0))
+
+    (let c1 (if (eq (len (fd-dead fb (list 1 2 9))) 1)
+            (if (eq (nth (fd-dead fb (list 1 2 9)) 0) 9)
+            (if (eq (len (fd-dead fb (list 2 7))) 0) 2 0) 0) 0))
+
+    (let c2 (if (eq (fd-learn-add2 obs) 1)
+            (if (eq (fd-learn-add2 bad) 0) 4 0) 0))
+
+    (let c3 (if (eq (fd-ground-add2 fibp 9) 1)
+            (if (eq (fd-ground-add2 linp 4) 0) 8 0) 0))
+
+    (let c4 (if (eq (fd-convict (fd-learn-add2 obs) (fd-ground-add2 fibp 9)) 1)
+            (if (eq (fd-convict (fd-learn-add2 obs) (fd-ground-add2 linp 4)) 0) 16 0) 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
