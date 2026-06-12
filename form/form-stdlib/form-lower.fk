@@ -1,0 +1,40 @@
+; form-lower.fk — the Form -> assembly COMPILER recipe: it lowers an op-tagged
+; expression tree to an arm64 instruction byte image, composing the encoder
+; (form-asm.fk). form-asm encodes single instructions; this is the compiler step —
+; tree -> instruction sequence. The whole lowered program is byte-verified against
+; the assembler through the byte-conviction gate (form-to-asm.form): the kernel
+; compiles its own programs to native bytes and drops clang only when those bytes
+; ARE the assembler's, byte-for-byte.
+;
+; The tree is op-tagged cells (the same shape asm-pl-human renders): nodes
+; (tag c1 c2 c3). This lowering is a single-accumulator scheme (result in w0) over
+; immediate-operand arithmetic — LIT loads, ADD/SUB fold a constant into w0:
+;   lower(LIT n)        = movz w0, #n
+;   lower(ADD(x, LIT i))= lower(x) ; add w0, w0, #i
+;   lower(SUB(x, LIT i))= lower(x) ; sub w0, w0, #i
+;   compile(tree)       = lower(tree) ; ret
+; Multi-register operands, the calling convention, and control flow for COND are
+; the named closing cells (form-to-asm.form). Proven three-way by
+; tests/form-lower-band.fk; witnessed against clang by scripts/form_lower_demo.sh.
+
+(do
+    (defn lo-nil? (xs) (eq (len xs) 0))
+    (defn lo-app (xs ys) (if (lo-nil? xs) ys (cons (head xs) (lo-app (tail xs) ys))))
+    (defn lo-row (prog i) (if (eq i 0) (head prog) (lo-row (tail prog) (sub i 1))))
+    (defn lo-tag (prog i) (nth (lo-row prog i) 0))
+    (defn lo-val (prog i) (nth (lo-row prog i) 1))     ; LIT value (slot 1)
+    (defn lo-c1  (prog i) (nth (lo-row prog i) 1))     ; ADD/SUB child-1 index (slot 1)
+    (defn lo-c2  (prog i) (nth (lo-row prog i) 2))     ; ADD/SUB child-2 index (slot 2)
+    (defn lo-imm (prog i) (lo-val prog (lo-c2 prog i))) ; the immediate = LIT value of child-2
+
+    ; lower the subtree rooted at i to its instruction byte image (result in w0)
+    (defn lo-node (prog i)
+        (if (eq (lo-tag prog i) 1) (fa-movz 0 (lo-val prog i))
+        (if (eq (lo-tag prog i) 3) (lo-app (lo-node prog (lo-c1 prog i)) (fa-add 0 0 (lo-imm prog i)))
+        (if (eq (lo-tag prog i) 4) (lo-app (lo-node prog (lo-c1 prog i)) (fa-sub 0 0 (lo-imm prog i)))
+            (list)))))
+
+    ; compile a whole function: lower the root, then return
+    (defn lo-compile (prog root) (lo-app (lo-node prog root) (fa-ret)))
+
+    0)
