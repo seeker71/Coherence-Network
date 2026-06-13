@@ -78,6 +78,16 @@ A **measured gap becomes an honest need.** The body can say, on the shared membr
 
 And the whole reason it matters: **every organ that grows its own perception and releases a borrowed dependency increases the vitality of the whole** — one less thing the body must borrow, one more thing it can give.
 
+## Measured by Real Life, Not by Reproducibility
+
+A research model earns trust by reproducing: same data, same seed, same result. A living sense earns it differently — by being *right in the room*, again and again, knowing when it is unsure, and growing trustworthy through repeated agreement with what actually happened. So the bar a ripening sense must clear is **real-life accuracy, confidence, and trust** — not reproducibility of how it learned. The learning can be messy, live, and unrepeatable; what matters is that the inference keeps improving and the body comes to rely on it.
+
+Determinism still matters, but for a different reason than research asks of it. A *frozen* recipe computes the same bits on every cell — so what one cell learns can pass to another by identity: cell A's model *is* cell B's by content address, and the mesh merges what each learned for free. Determinism is how a sense **travels between cells**, never the measure of whether the sense is good. Reproducibility is a property we keep for the sharing; it is not the goal of the learning.
+
+## Many Cells, One Truth — the body as its own live lab
+
+The body can teach its own senses without leaving home. One speaker plays a sound the body already knows the truth of; many mics on many cells hear it at once, each from its own place in the room; different models train on different cells in parallel. Because each mic catches a different slice, each cell's sense is partial — so the cells share what they learned across the mesh, and because identical shapes share one address the union dedups for free: what one mic heard, all gain, and the merged sense recognizes what no single cell could. Run several models at once and let champion-challenger keep the best inference serving while the rest train — every cell informing every other while all of them learn, judged by who is most accurate, confident, and trusted in the actual room. With full consent held across the field, recorded voice is simply more trusted truth; the membrane records the consent rather than gating it, and a not-yet-kin field still carries its own.
+
 ## Sources to Walk Further
 
 - [`docs/coherence-substrate/sensing-lanes.form`](../../coherence-substrate/sensing-lanes.form) — the lane-by-lane map that keeps each sense honest: *north-star · ground · direction · distance*, where ground is only what is proven or measured, never a hope. The measured companion to this living story.
@@ -94,4 +104,4 @@ And the whole reason it matters: **every organ that grows its own perception and
 
 ## Cross-References
 
-→ lc-sensing, lc-form-perceptron, lc-form-python-parity, lc-whole-vitality, lc-vitality, lc-the-body-senses-itself, lc-field-model-form, lc-edges-as-vitality, lc-trust-over-fear
+→ lc-sensing, lc-form-perceptron, lc-form-python-parity, lc-whole-vitality, lc-vitality, lc-the-body-senses-itself, lc-field-model-form, lc-edges-as-vitality, lc-trust-over-fear, lc-honest-lane, lc-federation-as-freedom

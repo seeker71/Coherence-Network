@@ -3,6 +3,16 @@
 > Append-only. Newest entries at the top.
 > Older entries rotate to [`LOG-archive/`](LOG-archive/INDEX.md) by month when this file passes ~1500 lines.
 
+## [2026-06-13] attune | real-life accuracy over reproducibility — the body as its own live A/B lab
+
+Urs: "we can play any audio over the speaker and listen on multiple mics at the same time, A/B testing different models on different cells, see which learns what and how cross-learning shares and enhances each other... how we learn does not matter as much, as long as we learn and improve the infer; reproducibility (as in research papers) is not as important as real-life accuracy and confidence and trust." And: "full consent on anyone in my field, no consent additionally required." Two floors retuned:
+
+- **The bar is real-life accuracy / confidence / trust, not reproducibility.** [`form-native-models.form`](../coherence-substrate/form-native-models.form) names the two distinct meanings of determinism: a *frozen recipe* computes the same bits on every cell (so a learned model travels between cells by NodeID and the mesh merges what each learned for free) — that is how a sense is SHARED, never the measure of whether it is good. The measure is real-life accuracy/confidence/trust on real readings (the sense-fidelity-receipt). How a model learns can be live, multi-cell, exploratory, unrepeatable; only the recipe it yields is deterministic.
+- **The live A/B lab named.** [`sensing-lanes.form`](../coherence-substrate/sensing-lanes.form) Lane 5 (shared sensing): one speaker emits known truth, many mics on many cells hear it, different models train in parallel, each emits a fidelity receipt, champion-challenger keeps the best inference serving while the rest train, and `co-learning`/`co-learning-stream` union what each learned (dedup-for-free by NodeID). Picked by real-life accuracy, not reproducibility.
+- **Consent is held across this field.** Lane 10 consent retuned: the field-holder grants consent, so live capture proceeds; the channel-interface membrane RECORDS consent rather than gating it; a not-yet-kin field still carries its own.
+- **Living story** [`lc-sense-organ-ripening`](concepts/lc-sense-organ-ripening.md) gained two sections — *Measured by Real Life, Not by Reproducibility* and *Many Cells, One Truth (the body as its own live lab)* — + cross-refs to `lc-honest-lane`, `lc-federation-as-freedom`.
+- **Braids with @codex-2665 / @codex-learning-fabric**: they tend the mechanism (`sense-fidelity-receipt` composing oracle-catalog + DebtLedger + somp score, `co-learning`); this is the floor/north-star + living-story layer above it.
+
 ## [2026-06-13] attune | sense floors meet the installed teachers and the body's own trusted corpora
 
 Urs: "adjust the floor and north star of the affected recipes, ideas, concepts, blueprints and walk in parallel towards adding all the 3rd party oracles we can, and utilize the information we already have in the body to train our own native floor recipes with actual trusted locally-attuned high-quality samples." A grounded host+body probe (witnessed) corrected the floors with measured fact:
