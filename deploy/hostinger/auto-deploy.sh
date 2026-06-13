@@ -271,10 +271,13 @@ RUNNING_SHORT="${RUNNING_SHA:0:12}"
 
 if [[ "$OLD_SHA" == "$TARGET_SHA" && "$RUNNING_SHA" == "$TARGET_SHA" ]]; then
   log "Already flowing at ${TARGET_SHA:0:12} (repo and running API aligned)"
-  if [[ "$HATI_WEB_HOSTS_CHANGED" == "1" ]]; then
-    log "Hati web hosts: applying label-only web service update"
-    docker compose -f "$COMPOSE_ROOT/docker-compose.yml" up -d web 2>&1 | tee -a "$LOG_FILE"
-  fi
+  # `ensure_hati_web_hosts` may find the labels already present because a
+  # previous deploy wrote them into docker-compose.yml but did not include
+  # the web service in `compose up`. A plain `up -d web` is idempotent when
+  # the live container is already aligned, and it is the missing step that
+  # lets Traefik ingest label-only host changes.
+  log "Hati web hosts: reconciling web service labels"
+  docker compose -f "$COMPOSE_ROOT/docker-compose.yml" up -d web 2>&1 | tee -a "$LOG_FILE"
   # Aligned repo + api is necessary, not sufficient — raise any stopped
   # siblings (web, pulse) before resting, or this exit masks their silence.
   ensure_all_services_up || exit 1
