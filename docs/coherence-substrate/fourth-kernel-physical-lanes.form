@@ -1,0 +1,44 @@
+# fourth-kernel-physical-lanes.form - local Hati-OS resource lane proof
+
+(fourth-kernel-physical-lanes
+  (lineage
+    (rests-on fourth-kernel.form tool-channel.form host-kernel.form)
+    (probe scripts/hati_os_physical_lanes_probe.sh)
+    (carrier form/form-stdlib/hati-os-kernel.fk)
+    (emitter form/form-stdlib/hati-os-kernel-emit.fk)
+    (matcher form/form-stdlib/hati-os-match.fk))
+
+  (claim
+    "The tool/channel surface is more than catalog data when a lane is backed by a Hati-emitted binary."
+    "The probe emits C from Form, compiles native Hati binaries with clang, and runs those binaries against local host resources.")
+
+  (native-binaries
+    (fkdump  "driver binary: fork/exec/pipe host stdout into fk_src, then PUTC captured bytes")
+    (fkcount "driver binary: count captured fk_src bytes")
+    (fkmatch-host "driver binary: parse captured fk_src for a fixed host-exec marker")
+    (fkserver "server binary: socket/bind/listen/accept/fork, stage request into fk_src, respond with PUTC bytes"))
+
+  (resource-lanes
+    (host-exec     host:exec    "printf/date through the Hati driver")
+    (http-request  http:request "curl over external REST through the Hati driver")
+    (kernel-route  kernel:route "local Hati server binary answered curl")
+    (store-query   store:query  "sqlite3 query through the Hati driver")
+    (shell-applets stream:read  "grep/find/awk/xmllint over local files through the Hati driver")
+    (agent-model   kernel:call  "ollama model choice through the Hati driver")
+    (audio-mic     host:file    "rec captures a local WAV when the OS grants mic access")
+    (audio-speaker host:exec    "say renders audio and afplay pushes it to the output device")
+    (screen        host:file    "osascript writes a notification and screencapture reads a PNG frame")
+    (camera        host:file    "ffmpeg avfoundation attempts a real camera frame")
+    (sensors       stream:read  "AVFoundation/audio/display inventory plus physical GPS absence on this Mac host"))
+
+  (evidence
+    (output-dir .cache/hati-os-physical-lanes)
+    (summary summary.json)
+    (lane-artifacts "stdout captures, WAV/AIFF/PNG/JPG/sqlite files when granted by the host OS"))
+
+  (invariant
+    (no-mock-data)
+    (no-python-runtime-carrier-for-lanes)
+    (python-only-serializes-summary-json)
+    (os-refusal-is-recorded-as-physical-lane-data)
+    (every-lane-runs-through-a-Hati-native-binary)))
