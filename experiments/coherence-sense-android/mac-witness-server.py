@@ -18,9 +18,10 @@ Point the phone app at:         http://<this-mac-LAN-IP>:8800   (ipconfig getifa
 """
 import json
 import time
+from argparse import ArgumentParser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-PORT = 8800
+DEFAULT_PORT = 8800
 ORGAN_KEYS = ("accel", "gyro", "light", "mag")
 STALE_SECONDS = 4.0          # no frame in this long -> the body went quiet (a liveness event)
 
@@ -149,12 +150,19 @@ setInterval(tick,800); tick();
 </script></body></html>"""
 
 
-if __name__ == "__main__":
-    srv = ThreadingHTTPServer(("0.0.0.0", PORT), Witness)
-    print(f"Coherence Sense — Mac witness + dashboard on 0.0.0.0:{PORT}")
-    print(f"  open the dashboard:  http://localhost:{PORT}")
-    print(f"  point the phone at:  http://<this-mac-LAN-IP>:{PORT}   (ipconfig getifaddr en0)")
+def main():
+    parser = ArgumentParser(description="Run the Coherence Sense Mac witness server.")
+    parser.add_argument("--port", type=int, default=DEFAULT_PORT)
+    args = parser.parse_args()
+    srv = ThreadingHTTPServer(("0.0.0.0", args.port), Witness)
+    print(f"Coherence Sense — Mac witness + dashboard on 0.0.0.0:{args.port}")
+    print(f"  open the dashboard:  http://localhost:{args.port}")
+    print(f"  point the phone at:  http://<this-mac-LAN-IP>:{args.port}   (ipconfig getifaddr en0)")
     try:
         srv.serve_forever()
     except KeyboardInterrupt:
         print(f"\nwitnessed {state['frames']} frames; last organs: {state['organs']}")
+
+
+if __name__ == "__main__":
+    main()

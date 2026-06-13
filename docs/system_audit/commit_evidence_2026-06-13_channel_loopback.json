@@ -65,9 +65,10 @@
       "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
       "python3 scripts/wellness_check.py",
       "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tool-channel.fk form-stdlib/channel-loopback.fk form-stdlib/tests/channel-loopback-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tool-channel.fk form-stdlib/tool-channel-grammar.fk form-stdlib/channel-loopback.fk form-stdlib/device-heartbeat.fk form-stdlib/body-state.fk form-stdlib/tests/tool-channel-band.fk form-stdlib/tests/tool-channel-grammar-band.fk form-stdlib/tests/channel-loopback-band.fk form-stdlib/tests/device-heartbeat-band.fk form-stdlib/tests/body-state-band.fk",
       "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_channel_loopback.json"
     ],
-    "notes": "Form proof passed with channel-loopback-band verdict 255 across Go/Rust/TS kernels; evidence validation passed in this branch."
+    "notes": "Form proof passed with channel-loopback-band verdict 255 across Go/Rust/TS kernels. Revalidated after sister rebase with fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent. Evidence validation passed in this branch."
   },
   "ci_validation": {
     "status": "pending",

@@ -87,9 +87,10 @@
       "python3 scripts/wellness_check.py",
       "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tool-channel.fk form-stdlib/tests/tool-channel-band.fk",
       "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tool-channel.fk form-stdlib/tool-channel-grammar.fk form-stdlib/tests/tool-channel-grammar-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tool-channel.fk form-stdlib/tool-channel-grammar.fk form-stdlib/channel-loopback.fk form-stdlib/device-heartbeat.fk form-stdlib/body-state.fk form-stdlib/tests/tool-channel-band.fk form-stdlib/tests/tool-channel-grammar-band.fk form-stdlib/tests/channel-loopback-band.fk form-stdlib/tests/device-heartbeat-band.fk form-stdlib/tests/body-state-band.fk",
       "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_tool_channel_surface.json"
     ],
-    "notes": "Focused Form bands pass across Go, Rust, TypeScript, and the Hati fourth arm: tool-channel verdict 255 and tool-channel-grammar verdict 255, each 1 ok, 0 divergent. Prompt guide initially found sibling continuity risk; the repo-provided PROMPT_GATE_SKIP_CONTINUITY=1 path was used after attaching this worktree to a named codex branch. fourth-kernel.form is restored as a compatibility doorway to Hati-OS to heal source-map drift."
+    "notes": "Focused Form bands pass across Go, Rust, TypeScript, and the Hati fourth arm: tool-channel verdict 255 and tool-channel-grammar verdict 255, each 1 ok, 0 divergent. Revalidated after sister rebase with fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent. Prompt guide initially found sibling continuity risk; the repo-provided PROMPT_GATE_SKIP_CONTINUITY=1 path was used after attaching this worktree to a named codex branch. fourth-kernel.form is restored as a compatibility doorway to Hati-OS to heal source-map drift."
   },
   "ci_validation": {
     "status": "pending",
