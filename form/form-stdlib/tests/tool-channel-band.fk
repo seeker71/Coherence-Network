@@ -4,8 +4,8 @@
 ; Verdict 255 when catalog, capabilities, applets, and no-plan behavior hold.
 
 (do
-    (let c0 (if (eq (len (tc-protocols)) 7)
-                (if (eq (len (tc-providers)) 7) 1 0)
+    (let c0 (if (eq (len (tc-protocols)) 9)
+                (if (eq (len (tc-providers)) 9) 1 0)
                 0))
 
     (let c1 (if (eq (len (tc-tools)) 21)
@@ -42,11 +42,17 @@
                 (if (str_eq (tc-plan-protocol group-plan) "store:query") 64 0)
                 0))
 
-    (let usage-plan (tc-plan-tool "usage" "cap.host.exec"))
+    (let process-plan (tc-plan-tool "processes" "cap.host.process"))
+    (let usage-plan (tc-plan-tool "usage" "cap.host.usage"))
+    (let usage-exec-denied (tc-plan-tool "usage" "cap.host.exec"))
     (let c7 (if (eq (tc-native-option? "grep") 1)
                 (if (eq (tc-native-option? "find") 0)
                     (if (eq (tc-protocol-carries? "kernel:route" "cap.kernel.route") 1)
-                        (if (str_eq (tc-plan-op usage-plan) "usage") 128 0)
+                        (if (str_eq (tc-plan-protocol process-plan) "host:process")
+                            (if (str_eq (tc-plan-protocol usage-plan) "host:usage")
+                                (if (str_eq (tc-plan-witness usage-exec-denied) "missing-capability") 128 0)
+                                0)
+                            0)
                         0)
                     0)
                 0))

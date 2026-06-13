@@ -16,10 +16,13 @@
     "The catalog and grammar surface plan explicit tool/channel invocations with protocol, provider, capability, operation, projection, input, output, and refusal witnesses.")
 
   (north-star
-    "Every host tool, external API, kernel call, route, stream, store, model, sensor, audio/video surface, and shell applet is a constructible native protocol row with typed receipts, floor/north-star metadata, and no ambient host access.")
+    "Every host OS call, external API, kernel call, route, stream, store, model, sensor, audio/video surface, and shell applet is a constructible native protocol row with typed receipts, floor/north-star metadata, and no ambient host access.")
+    "Host OS data such as process tables and utilization samples moves through direct host OS/kernel calls as the destination; command-carried receipts stay labeled as floor carriers.")
 
   (protocols
     (host:exec    (provider host)   (capability cap.host.exec)    (native 0) (effect process))
+    (host:process (provider host)   (capability cap.host.process) (native 1) (effect process-table))
+    (host:usage   (provider host)   (capability cap.host.usage)   (native 1) (effect resource-usage))
     (host:file    (provider host)   (capability cap.host.file)    (native 0) (effect filesystem))
     (http:request (provider http)   (capability cap.http.request) (native 1) (effect network))
     (kernel:call  (provider kernel) (capability cap.kernel.call)  (native 1) (effect call))
@@ -29,6 +32,8 @@
 
   (providers
     (host   host:exec    cap.host.exec)
+    (process host:process cap.host.process)
+    (usage   host:usage   cap.host.usage)
     (file   host:file    cap.host.file)
     (http   http:request cap.http.request)
     (kernel kernel:call  cap.kernel.call)
@@ -42,8 +47,8 @@
     (catalog-tools words providers queries which plan))
 
   (applets
-    (processes host:exec cap.host.exec ps)
-    (usage     host:exec cap.host.exec usage)
+    (processes host:process cap.host.process process-snapshot)
+    (usage     host:usage   cap.host.usage   usage-sample)
     (grep    stream:read cap.stream.read grep)
     (find    host:file   cap.host.file   find)
     (awk     stream:read cap.stream.read awk)

@@ -1,0 +1,113 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/host-os-resource-channel-20260613",
+  "commit_scope": "Lift host process and resource utilization from host:exec tool planning into explicit host:process and host:usage native channel protocols, while naming host:exec carriers as the current physical receipt floor.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "form-os-tool-surface",
+    "hati-os",
+    "host-kernel-resource-lanes"
+  ],
+  "spec_ids": [
+    "tool-channel",
+    "channel-loopback",
+    "fourth-kernel-physical-lanes"
+  ],
+  "task_ids": [
+    "host-os-resource-channel-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/tool-channel.fk",
+    "form/form-stdlib/tests/tool-channel-band.fk",
+    "form/form-stdlib/channel-loopback.fk",
+    "docs/coherence-substrate/tool-channel.form",
+    "docs/coherence-substrate/channel-loopback.form",
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form",
+    "docs/system_audit/commit_evidence_2026-06-13_host_os_resource_channels.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/form-stdlib/tool-channel.fk",
+    "form/form-stdlib/tests/tool-channel-band.fk",
+    "form/form-stdlib/channel-loopback.fk",
+    "docs/coherence-substrate/tool-channel.form",
+    "docs/coherence-substrate/channel-loopback.form",
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form",
+    "docs/system_audit/commit_evidence_2026-06-13_host_os_resource_channels.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "form/form-stdlib/tests/tool-channel-band.fk",
+    "form/form-stdlib/tests/tool-channel-grammar-band.fk",
+    "form/form-stdlib/tests/channel-loopback-band.fk",
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tool-channel.fk form-stdlib/tests/tool-channel-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tool-channel.fk form-stdlib/tool-channel-grammar.fk form-stdlib/tests/tool-channel-grammar-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tool-channel.fk form-stdlib/channel-loopback.fk form-stdlib/tests/channel-loopback-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_host_os_resource_channels.json",
+      "python3 -m json.tool docs/system_audit/commit_evidence_2026-06-13_host_os_resource_channels.json",
+      "tail -1 docs/system_audit/model_executor_runs.jsonl | python3 -m json.tool",
+      "git diff --check",
+      "make wellness"
+    ],
+    "notes": "tool-channel-band proves nine protocols and providers, with processes planning through host:process/cap.host.process and usage planning through host:usage/cap.host.usage. The band also proves that cap.host.exec no longer carries usage. Grammar and channel-loopback bands remain 255."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No public deploy behavior changes expected beyond Form/docs proof surfaces."
+  },
+  "phase_gate": {
+    "phase": "native-host-resource-channel-surface",
+    "gate": "Host process and utilization are explicit plannable host OS channel protocols, and the physical proof doc names host:exec only as the current floor carrier while direct host OS calls are the destination.",
+    "state": "local-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Extend scripts/hati_os_physical_lanes_probe.sh and Hati host-resource lowering so process and utilization samples are captured through direct host OS/kernel calls first, with ps/top/vm_stat/iostat-style carriers recorded only as fallback floor receipts."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Cells and recipes can now ask for process and utilization plans through host:process and host:usage instead of host:exec. The docs name host:exec as a floor carrier and direct host OS/kernel calls as the north-star lane.",
+    "public_endpoints": [
+      "local:form-stdlib-tool-channel",
+      "local:form-stdlib-channel-loopback"
+    ],
+    "test_flows": [
+      "Tool channel band returns 255 and proves process/usage protocol planning plus host:exec refusal for usage.",
+      "Tool channel grammar band returns 255 after the new protocols remain lowerable through the language surface.",
+      "Channel loopback band returns 255 and keeps host process/usage floor and north-star rows available to cells."
+    ],
+    "summary": "The planning surface now distinguishes direct host OS resource channels from command execution carriers. Physical direct-call receipts remain the next implementation step."
+  }
+}

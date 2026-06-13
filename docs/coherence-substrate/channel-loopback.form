@@ -26,12 +26,12 @@
     (host-process
       (expresses pid+ppid+command+state+cpu+memory)
       (floor ps-top-carrier-receipt)
-      (north-star "kernel-owned process table stream with typed rows")
+      (north-star "kernel-owned host OS process calls with typed rows")
       (next process-rows-receipt))
     (host-usage
       (expresses cpu+memory+load+disk+network+energy)
-      (floor host-counter-receipt)
-      (north-star "kernel-owned utilization stream with sampling windows and pressure events")
+      (floor host-counter-carrier-receipt)
+      (north-star "kernel-owned host OS utilization calls with sampling windows and pressure events")
       (next usage-sample-receipt))
     (host:file
       (expresses path+bytes+metadata)
