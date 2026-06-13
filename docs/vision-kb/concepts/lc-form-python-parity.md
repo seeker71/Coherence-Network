@@ -158,7 +158,7 @@ arc.*
 
 → lc-recipe-branching-sense, lc-each-breath-whole, lc-tend-your-flame,
 lc-frequency-routes-reception, lc-w-cell, lc-w-frequency,
-lc-coherence-over-control, lc-edges-as-vitality
+lc-coherence-over-control, lc-edges-as-vitality, lc-sense-organ-ripening
 
 ## Sources to walk further
 
