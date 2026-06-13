@@ -10,11 +10,11 @@
   (floor
     (sentence "A native compiler claim is allowed only when the supported subset emits a loadable Hati table with parity proof, and unsupported BML shapes are named before table emission.")
     (no-silent-zero unsupported-lowering-must-not-be-a-valid-table)
-    (current-supported int float string char add const return method-body block-sequence simple-choose/fail table-image string-stdout)
-    (current-unsupported class interface field package import names locals arrays calls break continue try throw while standalone-fail cut save restore discard))
+    (current-supported int float string char add const lexical-const-binding bound-name-return bound-name-add return method-body block-sequence simple-choose/fail table-image string-stdout)
+    (current-unsupported class interface field package import unresolved-names mutable-locals arrays calls method-parameters break continue try throw while standalone-fail cut save restore discard))
 
   (next-step
-    (sentence "Make unsupported BML-to-Hati lowering observable, then close one missing semantic family at a time with a source-level proof and native binary probe.")
-    (walked-now unsupported-lowering-audit)
-    (next-semantic-candidate locals-and-name-binding)
-    (why "locals and names unlock method bodies, calls, fields, classes, templates, and generics without pretending the whole model is native at once")))
+    (sentence "Close one missing semantic family at a time with a source-level proof and native binary probe.")
+    (walked-now unsupported-lowering-audit lexical-const-and-bound-name-lowering)
+    (next-semantic-candidate method-parameters-and-calls)
+    (why "bound names give method bodies a real floor; parameters and calls are the next gate before fields, classes, templates, and generics can become native without pretending the whole model is solved at once")))
