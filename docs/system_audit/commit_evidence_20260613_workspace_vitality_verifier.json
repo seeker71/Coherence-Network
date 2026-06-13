@@ -1,0 +1,93 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/vitality-route-verifier-20260613",
+  "commit_scope": "Update public and Hostinger deploy verification for the workspace vitality BML template handler, and align kernel-router ingress with BML GET/read routes.",
+  "files_owned": [
+    "scripts/verify_web_api_deploy.sh",
+    "deploy/hostinger/auto-deploy.sh",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "docs/system_audit/commit_evidence_20260613_workspace_vitality_verifier.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash -n scripts/verify_web_api_deploy.sh deploy/hostinger/auto-deploy.sh",
+      "bash scripts/test_hostinger_deploy_form_paths.sh",
+      "PUBLIC_API_BASE_URL=https://api.coherencycoin.com PUBLIC_WEB_BASE_URL=https://coherencycoin.com ./scripts/verify_web_api_deploy.sh"
+    ],
+    "notes": "The old Hostinger Auto Deploy run for f6659da15b56 failed after PR #2996 because the deploy verifier still expected X-Form-Handler: api_vitality_coherence_network. Production already returned X-Form-Handler: api_workspace_vitality with X-Form-Router: native-kernel and X-Form-Python-Authority: false. The patched local public verifier passed end to end against deployed SHA f6659da15b56151ec45b4b20215674550b04f50d. Hostinger form path coverage now reports 61 BML GET/read routes and PASS, including PathRegexp(`^/api/workspaces/[^/]+/vitality$`)."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending new Hostinger Auto Deploy run after merge."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local and public verifier proof passed; CI and post-merge deploy rerun are pending."
+  },
+  "idea_ids": [
+    "idea:native-route-goal-loop",
+    "idea:workspace-vitality"
+  ],
+  "spec_ids": [
+    "kernel-router-ingress",
+    "public-deploy-contract"
+  ],
+  "task_ids": [
+    "coord:codex@a3ec-vitality-route-verifier",
+    "gh-run:27464620212"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "coordination"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "Hostinger Auto Deploy run 27464620212 failed on stale vitality handler expectation after PR #2996.",
+    "scripts/test_hostinger_deploy_form_paths.sh: BML GET/read ingress coverage: 61 routes; PASS.",
+    "verify_web_api_deploy.sh: Deployment verification passed; public API/web reachable and CORS aligned."
+  ],
+  "change_files": [
+    "deploy/hostinger/auto-deploy.sh",
+    "deploy/kernel-router/docker-compose.kernel-router.yml",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/verify_web_api_deploy.sh"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Deploy verification accepts the new api_workspace_vitality BML handler and Traefik ingress covers the generic workspace vitality route pattern.",
+    "public_endpoints": [
+      "GET /api/workspaces/coherence-network/vitality",
+      "GET /api/health",
+      "GET /api/gates/main-head"
+    ],
+    "test_flows": [
+      "Public verifier sees /api/workspaces/coherence-network/vitality with native-kernel router, api_workspace_vitality handler, and python_authority=false.",
+      "Hostinger deploy path test confirms all BML GET/read routes have kernel-router ingress coverage."
+    ]
+  }
+}
