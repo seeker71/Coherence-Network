@@ -12,6 +12,12 @@
     "The tool/channel surface is more than catalog data when a lane is backed by a Hati-emitted binary."
     "The probe emits C from Form, compiles native Hati binaries with clang, and runs those binaries against local host resources.")
 
+  (floor
+    "The local proof emits native Hati binaries and records real host/resource stdout or artifacts for the currently available physical lanes.")
+
+  (north-star
+    "Every resource and channel row has a locally inspectable physical receipt, with the most native available codec first and third-party carriers kept explicit until a kernel-native codec replaces them.")
+
   (native-binaries
     (fkdump  "driver binary: fork/exec/pipe host stdout into fk_src, then PUTC captured bytes")
     (fkcount "driver binary: count captured fk_src bytes")
@@ -23,6 +29,8 @@
     (http-request  http:request "curl over external REST through the Hati driver")
     (kernel-route  kernel:route "local Hati server binary answered curl")
     (store-query   store:query  "sqlite3 query through the Hati driver")
+    (host-process  host:exec   "process table rows are constructible through ps/top carriers")
+    (host-usage    host:exec   "CPU, memory, load, disk, network, and energy counters are constructible through host counters")
     (shell-applets stream:read  "grep/find/awk/xmllint over local files through the Hati driver")
     (agent-model   kernel:call  "ollama model choice through the Hati driver")
     (audio-mic     host:file    "rec captures a local WAV when the OS grants mic access")
@@ -35,6 +43,32 @@
     (output-dir .cache/hati-os-physical-lanes)
     (summary summary.json)
     (lane-artifacts "stdout captures, WAV/AIFF/PNG/JPG/sqlite files when granted by the host OS"))
+
+  (missing-physical-samples
+    (tts-stt-loopback
+      (floor "mic WAV and speaker AIFF are proven separately")
+      (missing "one receipt that renders text to audio, transcribes that audio back to text, and records transcript-match"))
+    (stt-tts-loopback
+      (floor "local model Q/A and speaker output are proven separately")
+      (missing "one receipt that takes captured speech tokens, renders speech, and records spoken-render-match"))
+    (video-gen-classifier-loopback
+      (floor "camera JPEG frame is proven")
+      (missing "one generated video/frame sequence plus classifier feature receipt for shape, distance, texture, obstruction, occlusion, composition, transparency, frequency, and spectrum"))
+    (video-classifier-gen-loopback
+      (floor "video feature rows are planned")
+      (missing "one feature-to-render receipt that regenerates frames and checks rendered-feature-match"))
+    (screen-interaction
+      (floor "notification write plus screenshot read is proven")
+      (missing "gesture/event input receipt tied to the pixel receipt"))
+    (gps-sensor
+      (floor "this Mac host physically reports no GPS provider")
+      (missing "GPS coordinate receipt from a device that exposes a location provider"))
+    (multi-model-learning
+      (floor "local Ollama model choice is proven")
+      (missing "two or more native/third-party model receipts over the same channel sample with explicit model choice and comparison fidelity"))
+    (host-process-usage
+      (floor "process and utilization channels are now planned through host:exec")
+      (missing "one Hati-emitted physical receipt for ps/top/vm_stat/iostat-style process and usage samples with typed rows")))
 
   (invariant
     (no-mock-data)

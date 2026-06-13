@@ -229,6 +229,8 @@
             (defn pv-str-to-int () (str_to_int "1024")) 1024 1)
         (prim "str_to_float" "method" "sibling-gap (ts): float parse; round half-away pins 2.5 to 3"
             (defn pv-str-to-float () (round (str_to_float "2.5"))) 3 0)
+        (prim "float_to_int" "method" "truncate float toward zero exactly like Python int(float); ints pass through, non-numbers answer 0"
+            (defn pv-float-to-int () (add (float_to_int 3.9) (float_to_int -2.9))) 1 1)
         (prim "ord" "access" "first byte as int; empty string answers -1"
             (defn pv-ord () (add (ord "A") (ord ""))) 64 1)
         (prim "byte_to_str" "access" "one byte (0..255) as a one-char string; out-of-range answers empty"
@@ -549,6 +551,8 @@
             (defn pv-trace () (trace "prim-registry" 7)) 7 1)
         (prim "now_unix_ms" "call" "host wall-clock ms; shape-only claim — values diverge between invocations"
             (defn pv-now-unix-ms () (if (gt (now_unix_ms) 0) 1 0)) 1 1)
+        (prim "temp_dir" "call" "host scratch directory as a nonempty path; validate assigns each sibling its own TMPDIR"
+            (defn pv-temp-dir () (if (gt (str_len (temp_dir)) 0) 1 0)) 1 1)
         (prim "field_blueprint" "field" "Field Model constructor: interns a FIELD/1 composite over children"
             (defn pv-field-blueprint () (len (node_children (field_blueprint (list (intern_trivial_int 1) (intern_trivial_int 2)))))) 2 1)
         (prim "field_cell" "field" "Field Model constructor: interns a FIELD/2 composite over children"
