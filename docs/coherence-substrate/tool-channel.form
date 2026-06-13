@@ -12,6 +12,12 @@
     "Cells and recipes discover tool options as Form-native rows, then receive an explicit invocation plan."
     "This surface does not execute host processes, read files, send HTTP, or call routes.")
 
+  (floor
+    "The catalog and grammar surface plan explicit tool/channel invocations with protocol, provider, capability, operation, projection, input, output, and refusal witnesses.")
+
+  (north-star
+    "Every host tool, external API, kernel call, route, stream, store, model, sensor, audio/video surface, and shell applet is a constructible native protocol row with typed receipts, floor/north-star metadata, and no ambient host access.")
+
   (protocols
     (host:exec    (provider host)   (capability cap.host.exec)    (native 0) (effect process))
     (host:file    (provider host)   (capability cap.host.file)    (native 0) (effect filesystem))
@@ -31,11 +37,13 @@
     (store  store:query  cap.store.query))
 
   (options
-    (protocol-tools exec file http call route stream query)
+    (protocol-tools exec processes usage file http call route stream query)
     (shell-applets grep find awk fields group xpath xmlpath)
     (catalog-tools words providers queries which plan))
 
   (applets
+    (processes host:exec cap.host.exec ps)
+    (usage     host:exec cap.host.exec usage)
     (grep    stream:read cap.stream.read grep)
     (find    host:file   cap.host.file   find)
     (awk     stream:read cap.stream.read awk)

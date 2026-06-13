@@ -8,7 +8,7 @@
 # verification recipe, expected outside), swapped only when the
 # replacement keeps the declared spec and survives the circle. This
 # registry applies that discipline to the real surface: every native the
-# Go kernel registers — 199 names across main.go's registerNative calls,
+# Go kernel registers — 201 names across main.go's registerNative calls,
 # the fieldConstructors table, and registerEnvNative — carries its
 # declared outside in form-stdlib/primitive-registry.fk.
 #
@@ -36,7 +36,7 @@
 
   (lineage
     (discipline     kernel-satsang.fk ksat-part)            # spec + verify + expected, circle-witnessed
-    (registry       form-stdlib/primitive-registry.fk)      # 199 entries, main.go order
+    (registry       form-stdlib/primitive-registry.fk)      # 201 entries, main.go order
     (proof          form-stdlib/tests/primitive-registry-band.fk -> 63 three-way)
     (drift-gate     form/scripts/validate_primitive_registry.py)  # registry == kernel source
     (wellness       scripts/wellness_check.py sense_form_primitives)
@@ -44,9 +44,9 @@
 
   # ── what the band proves, three-way, every validate run ─────────────
   (band-claims
-    (shape          199-entries-7-fields-known-tokens-no-duplicates)
-    (verification   162-of-162-lane-1-recipes-answer-their-declared-outside)
-    (lanes-pinned   162-in-band-plus-37-carrier-declared)
+    (shape          201-entries-7-fields-known-tokens-no-duplicates)
+    (verification   164-of-164-lane-1-recipes-answer-their-declared-outside)
+    (lanes-pinned   164-in-band-plus-37-carrier-declared)
     (refusal        a-part-claiming-a-wrong-outside-is-dissented)     # ksat bad-swap, kept
     (attestation    declared-category-equals-native_blueprint-category-by-exemplar)
     (spec-surface   entries-readable-without-running))                # pow: method, 1024
@@ -92,7 +92,13 @@
   (Hati-OS-ground
     (question-list  every-entry-name-verify-expected)
     (subset-honesty an-emitted-kernel-declares-which-entries-it-carries)
-    (parity-gate    answers-must-equal-the-walkers-before-any-timing-counts)))
+    (parity-gate    answers-must-equal-the-walkers-before-any-timing-counts))
+
+  (floor
+    "Every kernel native has a registry row; 164 entries verify in-band across Go/Rust/TS and 37 carrier-declared entries stay visible.")
+
+  (north-star
+    "Every native has either an in-band three-kernel proof or an honest physical carrier receipt, and every host-facing native has a Form recipe successor where the kernel can carry it directly."))
 
 # ─────────────────────────────────────────────────────────────────────
 # How to verify (today)

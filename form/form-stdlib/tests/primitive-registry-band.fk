@@ -14,11 +14,11 @@
 ; wellness primitive-coverage sense.
 ;
 ; Band verdict 63 when every claim lands:
-;   1   shape: 199 entries, every one well-formed (7 fields, nonempty
+;   1   shape: 201 entries, every one well-formed (7 fields, nonempty
 ;       name + spec, known category token), no duplicate names
 ;   2   every lane-1 verification recipe yields its declared outside
-;       (162 of 162 — one false claim anywhere drops this bit)
-;   4   the lanes are pinned: 162 in-band + 37 carrier-declared = 199;
+;       (164 of 164 — one false claim anywhere drops this bit)
+;   4   the lanes are pinned: 164 in-band + 37 carrier-declared = 201;
 ;       a new native or lane flip must touch these numbers consciously
 ;   8   a part claiming a wrong outside is REFUSED: verification compares
 ;       against the declaration, never against what the recipe happens
@@ -33,16 +33,16 @@
     (let reg (prim-registry))
 
     ; ── 1: shape — every entry well-formed, no duplicates ──
-    (let c0 (if (and (eq (len reg) 199)
-                 (and (eq (prim-shapes-ok-count reg) 199)
+    (let c0 (if (and (eq (len reg) 201)
+                 (and (eq (prim-shapes-ok-count reg) 201)
                       (eq (prim-dup-count reg) 0)))
                 1 0))
 
     ; ── 2: every lane-1 verification answers its declared outside ──
-    (let c1 (if (eq (prim-verified-count reg) 162) 2 0))
+    (let c1 (if (eq (prim-verified-count reg) 164) 2 0))
 
     ; ── 4: the lanes are pinned numbers, not drift ──
-    (let c2 (if (and (eq (prim-mode-count reg 1) 162)
+    (let c2 (if (and (eq (prim-mode-count reg 1) 164)
                      (eq (prim-mode-count reg 0) 37))
                 4 0))
 
@@ -52,7 +52,7 @@
     (let c3 (if (prim-verified? bad-part) 0 8))
 
     ; ── 16: declared categories match kernel attestation ──
-    (let c4 (if (eq (prim-attested-count reg) 162) 16 0))
+    (let c4 (if (eq (prim-attested-count reg) 164) 16 0))
 
     ; ── 32: the registry reads back as a spec surface ──
     (let pow-entry (prim-find reg "pow"))

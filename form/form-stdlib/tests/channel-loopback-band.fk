@@ -7,7 +7,7 @@
 (do
     (let c0 (if (eq (len (cl-codecs)) 5)
                 (if (eq (len (cl-loops)) 4)
-                    (if (eq (len (cl-resources)) 12) 1 0)
+                    (if (eq (len (cl-resources)) 14) 1 0)
                     0)
                 0))
 
@@ -49,10 +49,13 @@
 
     (let video-resource (cl-resource-by-name "video"))
     (let model-resource (cl-resource-by-name "model"))
+    (let usage-resource (cl-resource-by-name "host-usage"))
     (let c7 (if (eq (len (cl-language-forms)) 5)
                 (if (str_eq (cl-language-form-lowers-to (cl-language-form-by-kind "teach-expression")) "cl-plan-loopback")
                     (if (str_eq (cl-resource-floor video-resource) "frame receipts")
-                        (if (str_eq (cl-resource-next-step model-resource) "chosen-model receipt") 128 0)
+                        (if (str_eq (cl-resource-next-step model-resource) "chosen-model receipt")
+                            (if (str_eq (cl-resource-next-step usage-resource) "usage sample receipt") 128 0)
+                            0)
                         0)
                     0)
                 0))
