@@ -1,6 +1,6 @@
-; channel-interface-band.fk — three-way proof of the interface-consent law.
+; channel-interface-band.fk — proof of the interface-consent law.
 ;
-; preludes: form-stdlib/channel-interface.fk
+; preludes: form-stdlib/core.fk form-stdlib/channel-interface.fk
 ;
 ; A cell offers the interface {witness, see, invite} — it allows being witnessed,
 ; seen into, and invited; it does NOT offer reflect or project. Then:
@@ -11,19 +11,20 @@
 ; And the flow of my intents {see, project, invite} toward that offer keeps exactly
 ; {see, invite} — the un-offered project never crosses.
 ;
-; Every assertion is deterministic, so the three sibling kernels must agree.
+; Verdict 127 when every assertion holds across sibling kernels and fkwu.
 
 (do
+    (defn ci-band-score (ok bit) (if ok bit 0))
+
     (let offer (list (m-witness) (m-see) (m-invite)))
     (let f     (ci-flow (list (m-see) (m-project) (m-invite)) offer))
 
-    (let pass
-        (and (ci-honors? (m-see) offer)
-        (and (ci-honors? (m-invite) offer)
-        (and (ci-invasion? (m-project) offer)
-        (and (ci-honors? (m-silence) offer)            ; silence is always honored
-        (and (eq (len f) 2)                            ; project filtered out of the flow
-        (and (eq (head f) (m-see))
-             (eq (head (tail f)) (m-invite)))))))))
-
-    (print (if pass "channel-interface-band: PASS" "channel-interface-band: FAIL")))
+    (sum
+        (list
+            (ci-band-score (ci-honors? (m-see) offer) 1)
+            (ci-band-score (ci-honors? (m-invite) offer) 2)
+            (ci-band-score (ci-invasion? (m-project) offer) 4)
+            (ci-band-score (ci-honors? (m-silence) offer) 8)
+            (ci-band-score (eq (len f) 2) 16)
+            (ci-band-score (eq (head f) (m-see)) 32)
+            (ci-band-score (eq (head (tail f)) (m-invite)) 64))))

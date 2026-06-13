@@ -40,6 +40,7 @@ export const BP_TABLE: Record<string, [number, number, number, number]> = {
   "BML-AST-ARRAY": [1, 2, 100, 33],
   "BML-AST-BLOCK": [1, 2, 100, 27],
   "BML-AST-BREAK": [1, 2, 100, 28],
+  "BML-AST-CALL": [1, 2, 100, 35],
   "BML-AST-CHAR": [1, 2, 100, 32],
   "BML-AST-CHOOSE": [1, 2, 100, 15],
   "BML-AST-CLASS": [1, 2, 100, 3],

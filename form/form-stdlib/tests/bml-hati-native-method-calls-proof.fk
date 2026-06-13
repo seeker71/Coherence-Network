@@ -1,0 +1,64 @@
+; tests/bml-hati-native-method-calls-proof.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk
+;
+; Proves the next BML-native floor step: a source-level one-argument method
+; binds its parameter in BMA and lowers to a Hati function using ARG, while a
+; known call lowers to a Hati CALL row in a loadable function-table image.
+
+(do
+    (defn score-bool (actual)
+        (if actual 1 0))
+
+    (defn score-int (actual expected)
+        (if (eq actual expected) 1 0))
+
+    (defn score-str (actual expected)
+        (if (nil? actual)
+            0
+            (if (str_eq actual expected) 1 0)))
+
+    (defn str-contains? (haystack needle)
+        (ge (str_find haystack needle 0) 0))
+
+    (let source
+        "int Inc(int n) { return n + 1; }\nreturn Inc(41);\n")
+    (let parsed
+        (bml-source-parse-executable-stream
+            (bml-source-scan-text source)))
+    (let source-node (bml-source-exec-parse-node parsed))
+    (let source-image (bml-hati-compile-image source-node))
+    (let source-table (bml-hati-table-file source-image))
+
+    (let method-node (head (bml-source-exec-parse-nodes parsed)))
+    (let call-node (head (tail (bml-source-exec-parse-nodes parsed))))
+    (let method-image (bml-hati-compile-image method-node))
+    (let method-table (bml-hati-table-file method-image))
+
+    (let unbound-node
+        (bml-ast-return
+            (bml-ast-call "Missing" (bml-ast-int 1))))
+    (let unbound-image (bml-hati-compile-image unbound-node))
+    (let unbound-table (bml-hati-table-file unbound-image))
+
+    (sum
+        (list
+            (score-bool (bml-source-exec-parse-ok? parsed))
+            (score-int (len (bml-source-exec-parse-rest parsed)) 0)
+            (score-int (len (bml-source-exec-parse-nodes parsed)) 2)
+            (score-str (nth (bml-source-exec-parse-rules parsed) 0) "method-param-return-add")
+            (score-str (nth (bml-source-exec-parse-rules parsed) 1) "return-call-int")
+            (score-int (bma-run-value (bml-compile-program source-node)) 42)
+            (score-bool (bml-hati-image-supported? source-image))
+            (score-int (len (bml-hati-image-unsupported source-image)) 0)
+            (score-int (len (bml-hati-image-fns source-image)) 2)
+            (score-int (bml-hati-run-value source-node) 42)
+            (score-bool (str-contains? source-table "12 1"))
+            (score-bool (not (str-contains? source-table "BML-HATI-UNSUPPORTED")))
+            (score-int (bml-hati-run-value-with-arg method-node 41) 42)
+            (score-int (len (bml-hati-image-fns method-image)) 1)
+            (score-bool (str-contains? method-table "2 0 0 0"))
+            (score-str (bml-call-name (bml-node-child call-node 0)) "Inc")
+            (score-bool (not (bml-hati-image-supported? unbound-image)))
+            (score-str (head (bml-hati-image-unsupported unbound-image)) "call/unbound")
+            (score-bool (str-contains? unbound-table "BML-HATI-UNSUPPORTED call/unbound")))))
