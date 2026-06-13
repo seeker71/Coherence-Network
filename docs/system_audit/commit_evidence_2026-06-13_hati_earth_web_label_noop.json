@@ -1,0 +1,89 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/hati-earth-web-label-noop-20260613",
+  "commit_scope": "Make Hostinger no-op deploys reconcile the web service so pre-existing Hati Traefik labels become live.",
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "hati-os",
+    "hati-mesh"
+  ],
+  "spec_ids": [
+    "android-sense-organ",
+    "hati-mesh-presence"
+  ],
+  "task_ids": [
+    "hati-earth-web-label-noop-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "deploy/hostinger/auto-deploy.sh",
+    "docs/system_audit/commit_evidence_2026-06-13_hati_earth_web_label_noop.json"
+  ],
+  "change_files": [
+    "deploy/hostinger/auto-deploy.sh",
+    "docs/system_audit/commit_evidence_2026-06-13_hati_earth_web_label_noop.json"
+  ],
+  "evidence_refs": [
+    "https://github.com/seeker71/Coherence-Network/actions/runs/27462514905",
+    "deploy/hostinger/auto-deploy.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "bash -n deploy/hostinger/auto-deploy.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_hati_earth_web_label_noop.json"
+    ],
+    "notes": "Hostinger run 27462514905 showed Hati labels already present, old_sha=target, running API aligned, and early exit without applying web. The no-op path now always runs docker compose up -d web after Hati label reconciliation; that command is idempotent when labels are already live and applies label-only changes when they are not."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR checks, and merge."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Pending Hostinger Auto Deploy after merge and public Hati-domain URL verification."
+  },
+  "phase_gate": {
+    "phase": "hati-earth-public-download-lane",
+    "gate": "hati.earth routes the published Android and macOS Hati-OS assets through the live web service.",
+    "state": "fix-ready-for-deploy",
+    "can_move_next_phase": false,
+    "next": "Merge, wait for Hostinger Auto Deploy, then verify Hati-domain download URLs."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "A deploy where Hati labels are already present but not live still reconciles the web service, so Traefik receives the Hati host labels.",
+    "public_endpoints": [
+      "https://hati.earth/downloads/hati-os/android/arm64/hati-os-android-arm64.tar.zst",
+      "https://hati.earth/downloads/hati-os/macos/arm64/hati-os-macos-arm64.tar.zst"
+    ],
+    "test_flows": [
+      "Merge the no-op reconciliation fix.",
+      "Wait for Hostinger Auto Deploy to complete.",
+      "Probe both Hati-domain native binary download routes."
+    ],
+    "summary": "Public proof waits on the next Hostinger deploy."
+  }
+}
