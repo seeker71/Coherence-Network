@@ -1,0 +1,132 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/choice-outcome-learning-20260613",
+  "commit_scope": "Add a Form-native BranchOutcome floor where choice branches return ok, rejected evidence, or structural condition states; choice learning updates branch memory only from metabolizable rejected evidence while conditions remain observed but outside branch memory.",
+  "files_owned": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/channel-protocol-choice-floor.form",
+    "docs/system_audit/commit_evidence_2026-06-13_choice_outcome_learning.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/channel-protocol-choice-floor.fk",
+    "form/form-stdlib/choice-outcome-learning.fk",
+    "form/form-stdlib/tests/channel-protocol-choice-floor-band.fk",
+    "form/form-stdlib/tests/choice-outcome-learning-band.fk"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim choice-outcome-learning \"walk typed BranchOutcome floor for ok/reject/condition choice learning; keep low-level fail thin; avoid learning-fabric sibling dirty lane\"",
+      "cd form && scripts/fourth-arm-survey.sh --one form-stdlib/tests/choice-outcome-learning-band.fk && cat form-stdlib/.cache/fourth-survey/r-choice-outcome-learning.tsv",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-outcome-learning.fk form-stdlib/tests/choice-outcome-learning-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/choice-outcome-learning.fk form-stdlib/bml-source.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/channel-protocol-choice-floor.fk form-stdlib/tests/channel-protocol-choice-floor-band.fk",
+      "cd form && scripts/fourth-arm-gate.sh choice-outcome-learning channel-protocol-choice-floor",
+      "cd form && bash scripts/fourth-arm-gate.sh choice-outcome-learning channel-protocol-choice-floor",
+      "cd form && ./validate.sh",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-outcome-learning.fk form-stdlib/tests/choice-outcome-learning-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/choice-outcome-learning.fk form-stdlib/bml-source.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/channel-protocol-choice-floor.fk form-stdlib/tests/channel-protocol-choice-floor-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh choice-outcome-learning channel-protocol-choice-floor",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_choice_outcome_learning.json",
+      "git diff --cached --check",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "results": [
+      "fourth-arm survey returned choice-outcome-learning multi-pass 32767 32767.",
+      "choice-outcome-learning focused validate returned 32767 with fourth arm: 1 band(s) four-way and 1 ok, 0 divergent.",
+      "channel-protocol-choice-floor focused validate returned 32767 with fourth arm: 1 band(s) four-way and 1 ok, 0 divergent after adding the BranchOutcome source to the composite floor.",
+      "direct fourth-arm-gate.sh invocation returned zsh:1: permission denied because the script is not executable in this checkout; rerun with bash returned PASS-4WAY for choice-outcome-learning and channel-protocol-choice-floor.",
+      "full cd form && ./validate.sh entered the monolithic fourth-table flatten and remained active for several minutes without a verdict; it was stopped and is not claimed as a completed suite proof in this evidence or manifest note.",
+      "rebase onto origin/main succeeded; autostash reapply conflicted only on append-style model_executor_runs.jsonl and fourth-arm-bands.txt, then both were resolved by preserving upstream jit-tensor-emit evidence plus this BranchOutcome evidence.",
+      "post-rebase focused proofs still returned 32767 for choice-outcome-learning and channel-protocol-choice-floor with fourth arm: 1 band(s) four-way, 1 ok, 0 divergent for each.",
+      "post-rebase manifest check returned PASS-4WAY for choice-outcome-learning and channel-protocol-choice-floor.",
+      "evidence validation and cached diff whitespace check passed.",
+      "local PR guard reported ready_for_push=True and local_preflight=pass; follow-through reported stale_codex_prs=0."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "reason": "Branch is not pushed yet in this slice."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No deployment performed for this local Form runtime slice."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Focused local Form proofs pass and the fourth-arm manifest admits the new band; remote PR checks and merge remain pending."
+  },
+  "idea_ids": [
+    "channel-protocol-choice-as-first-class-form-bml",
+    "native-learning-recipe-library-routing-metadata",
+    "choice-outcome-learning-backflow"
+  ],
+  "spec_ids": [
+    "specs/canonical-route-registry-and-runtime-mapping.md",
+    "specs/bml-typed-recipes.md",
+    "specs/agent-question-sse-channel.md"
+  ],
+  "task_ids": [
+    "thread-choice-outcome-learning-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "north-star direction",
+        "choice/fail payload learning shape",
+        "frequency language correction",
+        "continue request"
+      ]
+    },
+    {
+      "contributor_id": "codex-choice-outcome-learning",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "coordination",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/choice-outcome-learning-band.fk -> 32767 with Go/Rust/TypeScript/fkwu parity",
+    "cd form && bash scripts/fourth-arm-gate.sh choice-outcome-learning channel-protocol-choice-floor -> PASS-4WAY for both bands",
+    "form/form-stdlib/tests/channel-protocol-choice-floor-band.fk -> 32767 with Go/Rust/TypeScript/fkwu parity after the composite floor learned the BranchOutcome source",
+    "form/fourth-arm-bands.txt records choice-outcome-learning fks 32767"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/channel-protocol-choice-floor.form",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/channel-protocol-choice-floor.fk",
+    "form/form-stdlib/choice-outcome-learning.fk",
+    "form/form-stdlib/tests/channel-protocol-choice-floor-band.fk",
+    "form/form-stdlib/tests/choice-outcome-learning-band.fk"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Form recipes can now return BranchOutcome values for choice branches: ok(value, receipt), reject(evidence, receipt), and condition(state, receipt). Selection can choose the first ok branch or the best rejected evidence; branch memory learns from metabolizable rejected evidence while structural condition outcomes are observed without changing branch memory.",
+    "public_endpoints": [
+      "not-public-endpoint: Form choice outcome learning runtime proof surface",
+      "not-public-endpoint: channel/protocol/choice composite floor"
+    ],
+    "test_flows": [
+      "choice branch outcomes -> first-success selection -> ok value receipt",
+      "all rejected branches -> best rejected evidence selection -> branch-choice-order fail memory update",
+      "structural condition outcome -> observed condition state -> no branch memory update",
+      "dense vector/matrix evidence -> boundary summary -> metabolizable rejected evidence"
+    ]
+  }
+}

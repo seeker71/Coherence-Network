@@ -1,0 +1,143 @@
+; choice-outcome-learning-band.fk
+;
+; Proves the first floor for learning from typed rejected evidence while
+; structural conditions stay noticed but outside branch-memory learning.
+;
+; preludes: form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-outcome-learning.fk
+
+(do
+    (defn col-band-receipt (selected outcome certainty trace)
+        (cr-choice-receipt
+            "choice(policy, branches)"
+            "form-ml-choice"
+            "branch-outcome-learning"
+            (list
+                (cr-choice-candidate "fast" "local" true 5 80 "fast local branch")
+                (cr-choice-candidate "slow" "oracle" true 30 96 "slow comparison branch")
+                (cr-choice-candidate "lane-condition" "condition" true 1 10 "structural lane state"))
+            selected
+            outcome
+            certainty
+            (cr-choice-value (cr-kind-branch-feedback) certainty 92 92 92)
+            "choice-outcome-learning"
+            "choice-outcome-learning-band"
+            "form/form-stdlib/tests/choice-outcome-learning-band.fk"
+            20260613
+            3
+            trace))
+
+    (let success-receipt
+        (col-band-receipt
+            "fast"
+            (cr-outcome-success)
+            91
+            (cr-choice-trace 3 1 1 1)))
+    (let reject-fast-receipt
+        (col-band-receipt
+            "fast"
+            (cr-outcome-fail)
+            72
+            (cr-choice-trace 1 0 1 0)))
+    (let reject-slow-receipt
+        (col-band-receipt
+            "slow"
+            (cr-outcome-fail)
+            88
+            (cr-choice-trace 1 0 1 0)))
+    (let condition-receipt
+        (col-band-receipt
+            "none"
+            (cr-outcome-silence)
+            20
+            (cr-choice-trace 0 0 0 1)))
+
+    (let fast-evidence
+        (col-evidence
+            "residual"
+            8
+            72
+            80
+            (list 3 5)
+            "digest:fast"
+            111
+            "cpu"
+            "f32"
+            "vec2"
+            1
+            3
+            "summarize-and-try-slow"))
+    (let slow-evidence
+        (col-evidence
+            "residual"
+            2
+            88
+            90
+            (list 1 1)
+            "digest:slow"
+            222
+            "mlx"
+            "f32"
+            "vec2"
+            5
+            13
+            "learn-route-shape"))
+    (let dense-evidence
+        (col-summarize-dense-evidence
+            "residual"
+            4
+            9
+            76
+            81
+            "ref:on-device:matrix-a"
+            333
+            "gpu"
+            "f16"
+            "matrix"
+            8
+            21
+            "keep-dense-payload-at-boundary"))
+    (let lane-state
+        (col-condition-state
+            "lane-not-ready"
+            "mlx lane warming"
+            "mlx"
+            1))
+
+    (let ok-outcome (col-ok "fast-value" success-receipt))
+    (let reject-fast (col-reject fast-evidence reject-fast-receipt))
+    (let reject-slow (col-reject slow-evidence reject-slow-receipt))
+    (let dense-reject (col-reject dense-evidence reject-slow-receipt))
+    (let condition-outcome (col-condition lane-state condition-receipt))
+
+    (let outcomes-with-ok (list reject-fast condition-outcome ok-outcome reject-slow))
+    (let reject-only (list reject-fast condition-outcome reject-slow))
+    (let first-ok (col-select (col-policy-first-success) outcomes-with-ok (empty)))
+    (let best-reject (col-select (col-policy-learn-from-reject) reject-only (empty)))
+    (let aggregated (col-reject-evidence-list reject-only))
+
+    (let branch (bco-candidate "slow" 0 0 0 0 90 90))
+    (let learned-from-reject (col-learn-candidate branch best-reject))
+    (let condition-learned (col-learn-candidate branch condition-outcome))
+
+    (let retry0 (col-retry-state 2 2))
+    (let retry1 (col-retry-step retry0))
+    (let retry2 (col-retry-step retry1))
+    (let retry3 (col-retry-step retry2))
+
+    (sum
+        (list
+            (col-score (col-ok? first-ok) 1)
+            (col-score (str_eq (col-outcome-value first-ok) "fast-value") 2)
+            (col-score (eq (len aggregated) 2) 4)
+            (col-score (col-reject? best-reject) 8)
+            (col-score (eq (col-evidence-loss (col-outcome-value best-reject)) 2) 16)
+            (col-score (eq (bco-short-fail learned-from-reject) 1) 32)
+            (col-score (eq (bco-short-fail condition-learned) 0) 64)
+            (col-score (col-condition? condition-outcome) 128)
+            (col-score (col-evidence-metabolizable? dense-evidence) 256)
+            (col-score (eq (len (col-evidence-residual dense-evidence)) 1) 512)
+            (col-score (col-retry-allowed? retry0) 1024)
+            (col-score (not (col-retry-allowed? retry3)) 2048)
+            (col-score (col-outcome-valid? ok-outcome) 4096)
+            (col-score (col-outcome-valid? best-reject) 8192)
+            (col-score (col-outcome-valid? condition-outcome) 16384))))

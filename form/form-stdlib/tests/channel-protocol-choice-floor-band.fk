@@ -4,7 +4,7 @@
 ; Verdict 32767 when the current floor is real and inspectable without claiming
 ; the future unified BML protocol grammar is already complete.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/bml-source.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/channel-protocol-choice-floor.fk
+; preludes: form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/choice-outcome-learning.fk form-stdlib/bml-source.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/channel-protocol-choice-floor.fk
 
 (do
     (defn cpcf-score (ok score)
@@ -39,6 +39,10 @@
         (cpcf-source-find-proof
             sources
             "form/form-stdlib/tests/bml-choice-receipt-row-band.fk"))
+    (let choice-outcome-source
+        (cpcf-source-find-proof
+            sources
+            "form/form-stdlib/tests/choice-outcome-learning-band.fk"))
 
     (let route-template
         (bml-source-parse-template-use
@@ -123,7 +127,7 @@
         (list
             (cpcf-score (eq (len recipe) 6) 1)
             (cpcf-score (eq (len validation-rounds) 3) 2)
-            (cpcf-score (eq (cpcf-proven-source-count sources) 16) 4)
+            (cpcf-score (eq (cpcf-proven-source-count sources) 17) 4)
             (cpcf-score (str_eq (cpcf-source-status channel-interface-source) "proven-four-way") 8)
             (cpcf-score (str_eq (cpcf-source-status channel-flow-source) "proven-four-way") 16)
             (cpcf-score (str_eq (cpcf-source-status tool-channel-source) "proven-four-way") 32)
@@ -131,7 +135,7 @@
             (cpcf-score (str_eq (cpcf-source-status runtime-source) "proven") 128)
             (cpcf-score (and (bml-source-template-use? route-template) (eq (len (bml-source-template-use-type-arguments route-template)) 2)) 256)
             (cpcf-score (and (bml-source-route-call? route-call) (str_eq (bml-source-route-call-name route-call) "route")) 512)
-            (cpcf-score (and (cr-choice-receipt-valid? choice-receipt) (cr-choice-signature? signature)) 1024)
+            (cpcf-score (and (str_eq (cpcf-source-status choice-outcome-source) "proven-four-way") (and (cr-choice-receipt-valid? choice-receipt) (cr-choice-signature? signature))) 1024)
             (cpcf-score (and (str_eq (cr-signature-selected-path signature) "kernel:route") (str_eq learned-path "kernel:route")) 2048)
             (cpcf-score (eq (len current-gaps) 4) 4096)
             (cpcf-score (and (str_eq (cpcf-source-status typed-row-source) "proven-four-way") (cr-choice-receipt-valid? choice-row-receipt)) 8192)
