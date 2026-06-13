@@ -1,0 +1,123 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/bml-protocol-runtime-choice-20260613",
+  "commit_scope": "Lower BML protocol and capability rows into route-choice runtime selection",
+  "files_owned": [
+    "form/form-stdlib/bml-route-choice-runtime.fk",
+    "form/form-stdlib/tests/bml-protocol-runtime-choice-band.fk",
+    "form/form-stdlib/channel-protocol-choice-floor.fk",
+    "form/form-stdlib/tests/channel-protocol-choice-floor-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/channel-protocol-choice-floor.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim bml-protocol-runtime-choice \"lower BML protocol/capability rows into existing route-choice runtime selection; prove four-way and fold into channel-protocol-choice floor; avoid host-IO dynamic registry and production caller lanes\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/bml-source.fk form-stdlib/branch-choice-order.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/tests/bml-protocol-runtime-choice-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/choice-outcome-learning.fk form-stdlib/bml-source.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/channel-protocol-choice-floor.fk form-stdlib/tests/channel-protocol-choice-floor-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh bml-protocol-runtime-choice channel-protocol-choice-floor",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_bml_protocol_runtime_choice.json",
+      "git diff --check",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "results": [
+      "prompt entry passed in continuation mode on codex/bml-protocol-runtime-choice-20260613",
+      "wellness passed with what_wants_attention: none",
+      "bml-protocol-runtime-choice-band returned 65535 with fourth arm: 1 band(s) four-way and 0 divergent",
+      "channel-protocol-choice-floor-band returned 262143 with fourth arm: 1 band(s) four-way and 0 divergent",
+      "fourth-arm manifest check returned PASS-4WAY for bml-protocol-runtime-choice and channel-protocol-choice-floor",
+      "commit evidence validation passed",
+      "git diff --check returned clean",
+      "rebase with autostash succeeded",
+      "local PR reading reported ready_for_push=True",
+      "follow-through reported stale_codex_prs=0"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "reason": "Not pushed or opened as a PR in this evidence slice yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No deployment performed for this local Form runtime slice."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Focused local Form and fourth-arm proofs pass. Remote PR checks are pending until the branch is pushed."
+  },
+  "idea_ids": [
+    "channel-protocol-choice-as-first-class-form-bml",
+    "native-learning-recipe-library-routing-metadata"
+  ],
+  "spec_ids": [
+    "specs/canonical-route-registry-and-runtime-mapping.md",
+    "specs/bml-typed-recipes.md",
+    "specs/agent-question-sse-channel.md"
+  ],
+  "task_ids": [
+    "thread-bml-protocol-runtime-choice-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "north-star direction",
+        "frequency correction",
+        "merge-and-continue request"
+      ]
+    },
+    {
+      "contributor_id": "codex-bml",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "coordination"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/bml-route-choice-runtime.fk",
+    "form/form-stdlib/tests/bml-protocol-runtime-choice-band.fk",
+    "form/form-stdlib/tests/channel-protocol-choice-floor-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/channel-protocol-choice-floor.form"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/channel-protocol-choice-floor.form",
+    "docs/system_audit/commit_evidence_2026-06-13_bml_protocol_runtime_choice.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/bml-route-choice-runtime.fk",
+    "form/form-stdlib/channel-protocol-choice-floor.fk",
+    "form/form-stdlib/tests/bml-protocol-runtime-choice-band.fk",
+    "form/form-stdlib/tests/channel-protocol-choice-floor-band.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "BML protocol(...) and capability(...) rows now lower into the existing bml-route-choice-runtime selection shape. Compatible rows select the native route; incompatible rows flow through the same receipt shape to the comparison route with an inspectable signature.",
+    "public_endpoints": [
+      "local Form stdlib route-choice runtime",
+      "local channel-protocol-choice composite floor"
+    ],
+    "test_flows": [
+      "bml-source-protocol-row-from-expr plus bml-source-capability-row-from-expr -> brcr-protocol-choice-row -> brcr-realize-protocol-capability -> kernelRoute",
+      "mismatched capability row -> brcr-realize-protocol-capability -> slowOracle with escalation receipt",
+      "channel-protocol-choice-floor-band source count 19 -> composite verdict 262143"
+    ]
+  }
+}
