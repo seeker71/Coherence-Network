@@ -1,0 +1,136 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/recipe-choice-fourth-20260613",
+  "commit_scope": "Close the recipe-choice-runtime fourth walker mismatch and admit it to the four-way floor",
+  "files_owned": [
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/hati-os-kernel.fk",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/fourth-shim.fk",
+    "form/form-stdlib/tests/indirect-call-runtime-probe-band.fk",
+    "form/form-stdlib/channel-protocol-choice-floor.fk",
+    "form/form-stdlib/tests/channel-protocol-choice-floor-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/channel-protocol-choice-floor.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim recipe-choice-fourth: close recipe-choice-runtime fourth walker mismatch 35 vs 233 on fresh main",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/indirect-call-runtime-probe-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/choice-receipt.fk form-stdlib/bml-source.fk form-stdlib/branch-choice-order.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/recipe-choice-runtime.fk form-stdlib/tests/recipe-choice-runtime-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh recipe-choice-runtime indirect-call-runtime-probe",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/bml-source.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/channel-protocol-choice-floor.fk form-stdlib/tests/channel-protocol-choice-floor-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh channel-protocol-choice-floor",
+      "cd form && ./validate.sh > /tmp/coherence-form-validate-recipe-choice-fourth-20260613.log 2>&1",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "git add docs/system_audit/model_executor_runs.jsonl",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/indirect-call-runtime-probe-band.fk && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/choice-receipt.fk form-stdlib/bml-source.fk form-stdlib/branch-choice-order.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/recipe-choice-runtime.fk form-stdlib/tests/recipe-choice-runtime-band.fk && bash scripts/fourth-arm-gate.sh recipe-choice-runtime indirect-call-runtime-probe channel-protocol-choice-floor",
+      "cd form && ./validate.sh > /tmp/coherence-form-validate-recipe-choice-fourth-rebased-20260613.log 2>&1",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_recipe_choice_fourth_runtime.json",
+      "git diff --check",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "results": [
+      "indirect-call-runtime-probe-band passed four-way at 7",
+      "recipe-choice-runtime-band passed four-way at 233, closing the previous fourth walker result of 35",
+      "manifest checks returned PASS-4WAY for indirect-call-runtime-probe, recipe-choice-runtime, and channel-protocol-choice-floor",
+      "channel-protocol-choice-floor-band remained four-way at 32767 with proven-source count raised from 15 to 16",
+      "full Form validation returned fourth arm: 120 band(s) four-way (fkwu + pre-flattened tables); 552 ok, 0 divergent",
+      "rebase onto origin/main succeeded; the append-only model executor JSONL conflict was resolved by preserving upstream receipts and this slice's receipt",
+      "rebased focused proofs still passed at 7 and 233, manifest checks returned PASS-4WAY, and rebased full Form validation again returned 120 four-way, 552 ok, 0 divergent",
+      "commit evidence validation and diff whitespace checks passed",
+      "local PR guard reported ready_for_push=True and local_preflight=pass",
+      "follow-through reported stale_codex_prs=0"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "reason": "Branch is not pushed yet in this slice."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No deployment performed for this local Form runtime slice."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local Form proofs pass and the four-way floor moved. Remote PR checks and deployment are pending."
+  },
+  "idea_ids": [
+    "channel-protocol-choice-as-first-class-form-bml",
+    "native-learning-recipe-library-routing-metadata",
+    "recipe-choice-runtime-fourth-floor"
+  ],
+  "spec_ids": [
+    "specs/canonical-route-registry-and-runtime-mapping.md",
+    "specs/bml-typed-recipes.md",
+    "specs/agent-question-sse-channel.md"
+  ],
+  "task_ids": [
+    "thread-recipe-choice-fourth-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "north-star direction",
+        "receipt-practice language correction",
+        "continue request"
+      ]
+    },
+    {
+      "contributor_id": "codex-recipe-choice-fourth",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "coordination"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "/tmp/coherence-form-validate-recipe-choice-fourth-20260613.log",
+    "/tmp/coherence-form-validate-recipe-choice-fourth-rebased-20260613.log",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/tests/recipe-choice-runtime-band.fk",
+    "form/form-stdlib/tests/indirect-call-runtime-probe-band.fk",
+    "docs/coherence-substrate/channel-protocol-choice-floor.form"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/channel-protocol-choice-floor.form",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/channel-protocol-choice-floor.fk",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/fourth-shim.fk",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/hati-os-kernel.fk",
+    "form/form-stdlib/tests/channel-protocol-choice-floor-band.fk",
+    "form/form-stdlib/tests/indirect-call-runtime-probe-band.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The fourth universal walker can now execute nested recipe-choice runtime bands that use recipe registry cells, first-class stored function values, and value equality, so recipe-choice-runtime joins the four-way Form floor at 233.",
+    "public_endpoints": [
+      "local Form fourth kernel",
+      "local Form recipe-choice runtime floor"
+    ],
+    "test_flows": [
+      "recipe_choice -> rcr-realize -> brcr-realize -> route-choice runtime signature",
+      "function value stored in ordinary carrier list -> recovered with nth -> invoked with zero, one, and three arguments",
+      "channel/protocol choice floor proven-source count includes recipe-choice-runtime as proven-four-way"
+    ]
+  }
+}
