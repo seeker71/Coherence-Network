@@ -1,9 +1,9 @@
 ; go-jit-band.fk — sibling-parity attestation for the JIT lattice.
 ;
-; Same recipe; three kernels; three dispatch paths (or honest stub);
+; Same recipe; four kernels; four dispatch paths (or honest stub);
 ; same answer. The band's verdict is the count of correct results
-; across the recipe-walk + post-JIT calls. The number 4 says: every
-; assertion matched the expected value on every kernel.
+; across the recipe-walk + post-JIT calls. The number 8 says: every
+; assertions matched the expected values on every kernel.
 
 (do
     ;; A recursive int64-typed recipe in the supported JIT subset.
@@ -41,4 +41,4 @@
                         (add (if (eq r3 1) 1 0)
                              (add (if (eq rlog1 1) 1 0)
                                   (add (if (eq rlog2 0) 1 0)
-                                       (if (eq rlog3 0) 1 0))))))))))
+                                       (if (eq rlog3 0) 1 0)))))))))
