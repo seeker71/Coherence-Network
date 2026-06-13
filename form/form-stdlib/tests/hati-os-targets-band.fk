@@ -1,0 +1,38 @@
+; preludes: form-stdlib/core.fk form-stdlib/hati-os-targets.fk
+;
+; hati-os-targets-band - host OS implementation and distribution catalog proof.
+; Verdict 255 when macOS and Android target rows, implementation rows, and
+; hati.earth download coordinates are discoverable.
+
+(do
+    (let c0 (if (eq (len (hos-targets)) 2)
+                (if (eq (len (hos-artifacts)) 2) 1 0)
+                0))
+
+    (let mac (hos-target-by-name "macos-arm64"))
+    (let android (hos-target-by-name "android-arm64"))
+    (let c1 (if (str_eq (hos-target-os mac) "macos")
+                (if (str_eq (hos-target-binary-format mac) "mach-o") 2 0)
+                0))
+    (let c2 (if (str_eq (hos-target-os android) "android")
+                (if (str_eq (hos-target-binary-format android) "elf") 4 0)
+                0))
+
+    (let mac-process (hos-impl-for "macos-arm64" "host:process"))
+    (let mac-usage (hos-impl-for "macos-arm64" "host:usage"))
+    (let c3 (if (str_eq (hos-impl-capability mac-process) "cap.host.process")
+                (if (str_eq (hos-impl-capability mac-usage) "cap.host.usage") 8 0)
+                0))
+
+    (let android-sensor (hos-impl-for "android-arm64" "sensor:signal"))
+    (let c4 (if (str_eq (hos-impl-implementation android-sensor) "SensorManager+LocationManager+GNSS-permission-gated") 16 0))
+
+    (let mac-artifact (hos-artifact-for "macos-arm64"))
+    (let android-artifact (hos-artifact-for "android-arm64"))
+    (let c5 (if (str_eq (hos-artifact-url mac-artifact) "https://hati.earth/downloads/hati-os/macos/arm64/hati-os-macos-arm64.tar.zst") 32 0))
+    (let c6 (if (str_eq (hos-artifact-url android-artifact) "https://hati.earth/downloads/hati-os/android/arm64/hati-os-android-arm64.apk") 64 0))
+    (let c7 (if (str_eq (hos-artifact-status mac-artifact) "hati-earth-download-door")
+                (if (str_eq (hos-download-url "android-arm64") (hos-artifact-url android-artifact)) 128 0)
+                0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
