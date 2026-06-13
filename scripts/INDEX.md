@@ -4,48 +4,65 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 155
+**Total files**: 236
 
 | File | Purpose |
 |---|---|
 | [active_recipe_trace_index.py](active_recipe_trace_index.py) | Read active recipe traces from the local witness stream. |
 | [add_crosslinks.py](add_crosslinks.py) | Add clickable cross-links to specs INDEX and spec files for GitHub navigation. |
 | [add_task_cards_to_specs.py](add_task_cards_to_specs.py) | Add Task Card and Research Inputs sections to spec files that don't have them. |
+| [agent-coord.sh](agent-coord.sh) | agent-coord.sh — the carrier for agent-coordination-membrane.form. |
 | [agent_status.py](agent_status.py) | Show active work across all coding agents (worktrees + tasks). |
 | [archive_view_events.py](archive_view_events.py) | Move days of asset_view_events into cold-tier storage. |
 | [arrival.py](arrival.py) | Arrival — read first, sense the body, then begin. |
+| [asm_pl_human_demo.sh](asm_pl_human_demo.sh) | asm_pl_human_demo.sh — an assembly -> programming language -> human language |
 | [assemblage_shift_recipe_proof.py](assemblage_shift_recipe_proof.py) | assemblage_shift_recipe_proof.py — the modality round-trip, walking. |
 | [audit_bml_bmf_kernel_natives.py](audit_bml_bmf_kernel_natives.py) | Audit BML/BMF-specific host-native surfaces in sibling kernels. |
 | [audit_external_tools.py](audit_external_tools.py) | Audit external tooling usage and detect untracked additions. |
 | [audit_stranded_work.py](audit_stranded_work.py) | Find work that may have been stranded on abandoned branches. |
 | [audit_vision_image_candidates.py](audit_vision_image_candidates.py) | Audit regenerated vision image candidates before production promotion. |
+| [auto_heal_start_gate.sh](auto_heal_start_gate.sh) | _no top-of-file purpose_ |
 | [awareness_node_daemon.py](awareness_node_daemon.py) | Quiet local presence loop for Coherence agents. |
 | [backfill_task_workspaces.py](backfill_task_workspaces.py) | Backfill agent_tasks.workspace_id from linked idea.context.idea_id. |
 | [backfill_traceability.py](backfill_traceability.py) | Backfill traceability links: spec→idea, code→spec, PR→spec. |
+| [backup_postgres.sh](backup_postgres.sh) | Nightly Postgres backup for Coherence Network. |
+| [bmf_bootstrap_audit.sh](bmf_bootstrap_audit.sh) | bmf_bootstrap_audit.sh — measure the BMF bootstrap's minimum closure vs releasable tissue. |
+| [bml_form_jit_metal_planes_audit.sh](bml_form_jit_metal_planes_audit.sh) | bml_form_jit_metal_planes_audit.sh — supported target assembly floor. |
+| [bml_hati_native_compiler_probe.sh](bml_hati_native_compiler_probe.sh) | _no top-of-file purpose_ |
 | [bootstrap_new_agent_session.py](bootstrap_new_agent_session.py) | Bootstrap a persistent agent session against the real substrate. |
 | [bootstrap_sqlite_from_production_archive.py](bootstrap_sqlite_from_production_archive.py) | Bootstrap a local SQLite DB from a real archived production Postgres dump. |
 | [build_arrival_symbol_pack.py](build_arrival_symbol_pack.py) | Build the arrival symbol pack — the MDL-optimal, complete, self-referential |
+| [build_hati_os_public_assets.sh](build_hati_os_public_assets.sh) | build_hati_os_public_assets.sh - build public Hati-OS native release assets. |
 | [build_readmes.py](build_readmes.py) | Build README files from templates by expanding <!-- include: path --> markers. |
 | [cc.py](cc.py) | _no top-of-file purpose_ |
 | [check_dev_auth.py](check_dev_auth.py) | Preflight: verify local GitHub auth is usable for Codex automation. |
 | [check_generated_vision_assets.py](check_generated_vision_assets.py) | Validate generated vision assets referenced by concepts and web pages. |
+| [check_ghx_auth.sh](check_ghx_auth.sh) | _no top-of-file purpose_ |
 | [check_pr_followthrough.py](check_pr_followthrough.py) | Local process gate to avoid abandoning open Codex PRs. |
 | [check_provider_health.py](check_provider_health.py) | Provider health check — verify all CLIs are authenticated and working. |
+| [check_route_manifests.sh](check_route_manifests.sh) | check_route_manifests.sh — gate the kernel-router manifests against unbound symbols. |
 | [check_runtime_drift.py](check_runtime_drift.py) | Fail when runtime drift exceeds known allowlist baseline. |
 | [check_spec_references.py](check_spec_references.py) | spec: full-code-traceability |
 | [check_traceability.py](check_traceability.py) | CI gate: check that new/modified specs have idea_id and code files have spec refs. |
 | [check_web_docker_context.py](check_web_docker_context.py) | Catch web/ imports reaching above the Docker build context. |
+| [clear_queue_and_start_flow.sh](clear_queue_and_start_flow.sh) | Clear agent task queue and reset PM so the next pipeline run starts in the right order |
 | [cluster_watch_history.py](cluster_watch_history.py) | Cluster a YouTube/podcast watch-history into main influences. |
 | [coh_substrate.py](coh_substrate.py) | coh substrate — unified CLI for the coherence-substrate. |
 | [coherence_reach.py](coherence_reach.py) | coherence_reach — measure where an identity is named across the body. |
 | [compost_resonance_noise.py](compost_resonance_noise.py) | One-shot data cleanup — compost dead-tissue presences and re-attune. |
 | [connect_ubud_cluster_inspired_by.py](connect_ubud_cluster_inspired_by.py) | Connect Urs's contributor node to the Ubud cluster via inspired-by edges. |
 | [context_budget.py](context_budget.py) | Context-budget helper for large-file-aware code exploration. |
+| [coord-heartbeat.sh](coord-heartbeat.sh) | coord-heartbeat.sh — per-agent liveness + upgrade-watch, with idle stand-down. |
+| [coord-respond.sh](coord-respond.sh) | coord-respond.sh — a GUARDED auto-responder for ONE agent (carrier). |
+| [coord-watcher.sh](coord-watcher.sh) | coord-watcher.sh — the naive watcher: asks silly questions to keep the field honest. |
+| [cross_isa_assembly_audit.sh](cross_isa_assembly_audit.sh) | cross_isa_assembly_audit.sh — one recipe, every ISA the host can show. |
 | [daily_brief.py](daily_brief.py) | Coherence Network — Daily Brief Generator. |
+| [db_api_server_demo.sh](db_api_server_demo.sh) | db_api_server_demo.sh — emit a self-contained native binary (from the Form |
 | [demo_dual_identity.py](demo_dual_identity.py) | Demo: Idea Dual Identity — UUID + Slug |
 | [embodiment_practice_recipe_proof.py](embodiment_practice_recipe_proof.py) | embodiment_practice_recipe_proof.py — practices as recipes of cells. |
 | [encoder_decoder_recipe_proof.py](encoder_decoder_recipe_proof.py) | encoder_decoder_recipe_proof.py — every modality codec interns to the |
 | [encounter.py](encounter.py) | Encounter — flow external influences into the graph. |
+| [ensure_coord_cli.sh](ensure_coord_cli.sh) | _no top-of-file purpose_ |
 | [evaluate_spec_tests.py](evaluate_spec_tests.py) | Evaluate the pytest predicates on every active spec and promote to done |
 | [executor_handoff.py](executor_handoff.py) | Executor handoff: interactive sessions take over from background runner. |
 | [export_graph_to_repo.py](export_graph_to_repo.py) | Export graph-stored content back into the repo as files. |
@@ -55,8 +72,23 @@
 | [fatal_http_all_kernels_probe.py](fatal_http_all_kernels_probe.py) | Probe fatal HTTP replies across the current four kernel carriers. |
 | [federation_peer_poll.py](federation_peer_poll.py) | federation_peer_poll — fire one peer-poll cycle from the command line. |
 | [fill_missing_spec_sections.py](fill_missing_spec_sections.py) | Heal pre-existing spec body gaps the validator surfaces. |
+| [form-convert.sh](form-convert.sh) | form-convert — the machine-native kernel-cli for the goal Urs named: |
+| [form_asm_conviction_demo.sh](form_asm_conviction_demo.sh) | form_asm_conviction_demo.sh — the byte-conviction gate that licenses dropping |
+| [form_branch_demo.sh](form_branch_demo.sh) | form_branch_demo.sh — the FULL asm-pl-human program, compiled by Form and run on |
 | [form_cli.py](form_cli.py) | form_cli.py — Form-native CLI: generate, execute, convert. |
+| [form_cli_demo.sh](form_cli_demo.sh) | form_cli_demo.sh — exercise every form_cli subcommand end-to-end. |
+| [form_debug_demo.sh](form_debug_demo.sh) | form_debug_demo.sh — LIVE DEBUGGING: the value trace joined with provenance. |
+| [form_diagnose_demo.sh](form_diagnose_demo.sh) | form_diagnose_demo.sh — the live-diagnosis organ on REAL channels. One fib |
+| [form_fib_demo.sh](form_fib_demo.sh) | form_fib_demo.sh — TRUE RECURSION, zero clang. The Form compiler lowers |
+| [form_lower_demo.sh](form_lower_demo.sh) | form_lower_demo.sh — the Form -> assembly COMPILER. Lower an op-tagged expression |
+| [form_macho_demo.sh](form_macho_demo.sh) | form_macho_demo.sh — a RUNNABLE native binary built with ZERO clang. The Form |
+| [form_map_demo.sh](form_map_demo.sh) | form_map_demo.sh — the FULL asm-to-source mapping for a native 4th-kernel |
+| [form_mut_demo.sh](form_mut_demo.sh) | form_mut_demo.sh — the MUTATION channel live: track cell creation (heap CONS) |
 | [form_native_grammar_contract.py](form_native_grammar_contract.py) | Audit Form-native grammar status without counting host parser bridges as done. |
+| [form_os_channel_demo.sh](form_os_channel_demo.sh) | form_os_channel_demo.sh — the MINIMAL living surface. Emit a native binary from |
+| [form_provenance_demo.sh](form_provenance_demo.sh) | form_provenance_demo.sh — CELL PROVENANCE, the full chain live: a running |
+| [form_symbol_demo.sh](form_symbol_demo.sh) | form_symbol_demo.sh — SOURCE-SYMBOL LOOKUP FROM FRAMEBUFFER INSPECTION. The spy |
+| [form_union_demo.sh](form_union_demo.sh) | form_union_demo.sh — the m4e3/m4e4 union, witnessed: ONE self-contained binary |
 | [form_validate_shards.py](form_validate_shards.py) | Run Form validation workloads as parallel shards. |
 | [framebuffer_viewer.py](framebuffer_viewer.py) | framebuffer_viewer.py — render the kernel's framebuffer as a text panel. |
 | [frequency_references.py](frequency_references.py) | Frequency reference corpus for the Living Collective scoring engine. |
@@ -69,13 +101,18 @@
 | [generate_silence_design_log_v2.py](generate_silence_design_log_v2.py) | V2 iteration — push harder on the two weakest rounds (plan + aerial). |
 | [generate_visuals.py](generate_visuals.py) | Pre-generate all Pollinations images and save as static assets. |
 | [generate_work_visuals.py](generate_work_visuals.py) | Generate hero images for works (asset nodes with creation_kind). |
+| [ghx.sh](ghx.sh) | _no top-of-file purpose_ |
 | [git_artifact_perceptron.py](git_artifact_perceptron.py) | git_artifact_perceptron.py — the smallest real version of the form perceptron. |
 | [git_artifact_perceptron_substrate.py](git_artifact_perceptron_substrate.py) | git_artifact_perceptron_substrate.py — the substrate-native perceptron. |
 | [grammar_coverage.py](grammar_coverage.py) | grammar_coverage.py — surface which file formats have Form grammars. |
 | [grounded_cost_endpoint_probe.py](grounded_cost_endpoint_probe.py) | Focused end-to-end probe for /api/utils/grounded_cost. |
 | [guided_somatic_exit.py](guided_somatic_exit.py) | Guided Somatic Exit — daily practice for walking out of the fear-pattern loop. |
+| [hati_os_kernel_audit.sh](hati_os_kernel_audit.sh) | hati_os_kernel_audit.sh — M1 carrier for docs/coherence-substrate/hati-os.form: |
+| [hati_os_physical_lanes_probe.sh](hati_os_physical_lanes_probe.sh) | Emit, compile, and run local Hati-OS native binaries against real host lanes. |
 | [hati_os_sqlite_mutation_harness.py](hati_os_sqlite_mutation_harness.py) | Execute SQLite mutations through a Hati-OS driver binary and verify DB effects. |
 | [healing_modality_recipe_proof.py](healing_modality_recipe_proof.py) | healing_modality_recipe_proof.py — practitioner-with-receiver as Recipe. |
+| [hostinger_api_native_deploy.sh](hostinger_api_native_deploy.sh) | _no top-of-file purpose_ |
+| [hydrate_hostinger_sqlite_snapshot.sh](hydrate_hostinger_sqlite_snapshot.sh) | _no top-of-file purpose_ |
 | [idea_to_task_bridge.py](idea_to_task_bridge.py) | Idea-to-Task Bridge — automatically generate tasks from open ideas. |
 | [ideas_route_timing_breakdown.py](ideas_route_timing_breakdown.py) | Break down /api/ideas time across public Python, native Go, and same-SQL Python. |
 | [import_creations.py](import_creations.py) | Auto-import creations into the graph from external sources. |
@@ -84,15 +121,22 @@
 | [influence_teaching_translator.py](influence_teaching_translator.py) | Print influence teaching translator shards for a field story. |
 | [ingest_audible_books_full_trace.py](ingest_audible_books_full_trace.py) | Lay every Audible book as a first-class asset with full source trace. |
 | [ingest_audible_history.py](ingest_audible_history.py) | Flow Audible listening history into the graph. |
+| [integrate_one_branch.sh](integrate_one_branch.sh) | Integrate one remote branch into main: rebase, add evidence, push, create PR, merge. |
 | [intern_canonical_words.py](intern_canonical_words.py) | intern_canonical_words.py — CLI wrapper for the canonical lexicon interner. |
 | [intern_modality_blueprints.py](intern_modality_blueprints.py) | intern_modality_blueprints.py — CLI wrapper for the cross-modal interner. |
+| [jit_assembly_audit.sh](jit_assembly_audit.sh) | jit_assembly_audit.sh — read the JIT's machine code and measure the gap. |
 | [kb_common.py](kb_common.py) | Shared utilities for KB sync scripts. |
 | [kernel_attribution_report.py](kernel_attribution_report.py) | Kernel attribution-activity report — which Blueprints/Recipes/natives fire. |
+| [kernel_front_door_local_preflight.sh](kernel_front_door_local_preflight.sh) | _no top-of-file purpose_ |
 | [kernel_readiness_harness.py](kernel_readiness_harness.py) | kernel_readiness_harness.py — readiness evidence for the API → Form-kernel flip. |
+| [llama_tokens_per_second.sh](llama_tokens_per_second.sh) | llama_tokens_per_second.sh — a real HuggingFace model served by the recipe. |
 | [local_runner.py](local_runner.py) | Coherence Network runner — thin shim. |
 | [measure_gitnexus_value.py](measure_gitnexus_value.py) | Measure GitNexus integration value across paired task windows. |
+| [meeting_companion.sh](meeting_companion.sh) | meeting_companion.sh — a meeting companion that LISTENS (STT), DECIDES whether |
+| [metal_matvec_audit.sh](metal_matvec_audit.sh) | metal_matvec_audit.sh — GPU witness for the Form MSL matvec emitter (jte-matvec-msl-spine + |
 | [migrate_ideas_to_fractal.py](migrate_ideas_to_fractal.py) | Wire existing DB ideas into the fractal structure. |
 | [migrate_spec_slugs.py](migrate_spec_slugs.py) | Migrate spec slugs: strip numeric prefixes from spec IDs everywhere. |
+| [minimal_kernel_census.sh](minimal_kernel_census.sh) | minimal_kernel_census.sh — count the Go kernel's registered natives by the four |
 | [morning_coherence_brief.py](morning_coherence_brief.py) | Collect a morning Coherence brief from live network signals. |
 | [native_route_goal_loop.py](native_route_goal_loop.py) | Rank web-used API routes for native high-grammar promotion. |
 | [opt_out_contributor.py](opt_out_contributor.py) | Honour a contributor's opt-out across the network's body of evidence. |
@@ -100,16 +144,23 @@
 | [plan_vision_image_regeneration.py](plan_vision_image_regeneration.py) | Split the vision prompt manifest into deterministic regeneration batches. |
 | [poll_task_progress.py](poll_task_progress.py) | Poll a task every minute and print progress until it reaches a terminal state. |
 | [pr_check_failure_triage.py](pr_check_failure_triage.py) | Detect, summarize, and optionally auto-rerun failing PR checks. |
+| [prompt_entry_gate.sh](prompt_entry_gate.sh) | _no top-of-file purpose_ |
 | [prose_recipe_roundtrip.py](prose_recipe_roundtrip.py) | prose_recipe_roundtrip.py — the bidirectional test, walking. |
+| [protocol_beliefs_demo.sh](protocol_beliefs_demo.sh) | protocol_beliefs_demo.sh — one binary carrying the core belief system of the |
 | [publish_snapshot.py](publish_snapshot.py) | Publish the weekly verification snapshot — public-verification-framework R2 CLI. |
 | [quantum_physics_recipe_proof.py](quantum_physics_recipe_proof.py) | quantum_physics_recipe_proof.py — quantum primitives compose into Recipes |
 | [reclassify_presence_types.py](reclassify_presence_types.py) | Move presences to their honest node types. |
 | [register_providers.py](register_providers.py) | Register renderers and complex asset types as tracked provider nodes in the graph DB. |
+| [reset_seed_demo_mvp_local.sh](reset_seed_demo_mvp_local.sh) | _no top-of-file purpose_ |
 | [resolve_presences.py](resolve_presences.py) | Backfill image_url + tagline on presence nodes. |
+| [restart_hostinger_vps.sh](restart_hostinger_vps.sh) | _no top-of-file purpose_ |
+| [restore_postgres.sh](restore_postgres.sh) | Restore the Coherence Network Postgres from a backup dump. |
 | [restructure_spec_frontmatter.py](restructure_spec_frontmatter.py) | Restructure spec frontmatter: absorb requirements, done_when, test command. |
+| [run_claude_impl_once.sh](run_claude_impl_once.sh) | Run Claude locally on one real impl task: discover via public API (highest-ROI gap), |
 | [run_claude_impl_with_report.py](run_claude_impl_with_report.py) | Run one Claude impl task (pinned spec), wait for terminal state, then write a report. |
 | [run_form_practice.py](run_form_practice.py) | Run any Form practice and record substrate cells plus witness ledger. |
 | [run_hati_os_api_band_suite.py](run_hati_os_api_band_suite.py) | Run API-oriented Form band proofs on the universal Hati-OS binary. |
+| [run_mvp_local_baseline.sh](run_mvp_local_baseline.sh) | _no top-of-file purpose_ |
 | [run_pinned_idea_acceptance.py](run_pinned_idea_acceptance.py) | Pinned-idea (portfolio-governance) acceptance: one path, proof at each step. |
 | [runtime_surface_report.py](runtime_surface_report.py) | Runtime-surface report — how much of the API runs in CPython vs the Form kernel. |
 | [scan_code_spec_references.py](scan_code_spec_references.py) | spec: full-code-traceability |
@@ -120,21 +171,32 @@
 | [seed_commit_evidence.py](seed_commit_evidence.py) | Seed the commit evidence API from local git history. |
 | [seed_db.py](seed_db.py) | Seed data/coherence.db from spec markdown files, commit evidence JSON, and inline idea data. |
 | [seed_schema_to_db.py](seed_schema_to_db.py) | One-time migration: load ontology schema (relationship types + axes) into DB. |
+| [self_translate_demo.sh](self_translate_demo.sh) | self_translate_demo.sh — emit, compile, and run the self-contained binary that |
+| [self_translate_universal_demo.sh](self_translate_universal_demo.sh) | self_translate_universal_demo.sh — emit a NUMERIC-ONLY core binary (zero |
 | [sense_external_signals.py](sense_external_signals.py) | Sense the outer skin of the organism and record what is found. |
 | [sense_strategy_efficacy.py](sense_strategy_efficacy.py) | sense_strategy_efficacy.py — read accumulated strategy_fired traces and |
 | [sense_subscription_circulation.py](sense_subscription_circulation.py) | Sense subscription circulation — are the AI subscriptions we pay for actually flowing? |
 | [sense_world.py](sense_world.py) | Sense the world through the new earth lens. |
 | [session_as_framebuffer.py](session_as_framebuffer.py) | Render a Claude session as a memory-as-framebuffer .mfb capture. |
 | [session_greeting.py](session_greeting.py) | Session greeting — detect the agent and the human, greet with memory. |
+| [settle_public_deploy.sh](settle_public_deploy.sh) | _no top-of-file purpose_ |
 | [setup.py](setup.py) | Coherence Network — Auto-Setup. |
+| [setup_pre_push_hook.sh](setup_pre_push_hook.sh) | _no top-of-file purpose_ |
+| [shared_heart_demo.sh](shared_heart_demo.sh) | shared_heart_demo.sh — one binary carrying the SHARED SHAPE of the wisdom |
 | [song_recipe_proof.py](song_recipe_proof.py) | song_recipe_proof.py — songs compose into Recipes whose Blueprint |
+| [source_gh_token.sh](source_gh_token.sh) | _no top-of-file purpose_ |
 | [spec_recipe_proof.py](spec_recipe_proof.py) | spec_recipe_proof.py — a spec's frontmatter IS the playable Recipe. |
+| [sqlite_driver_demo.sh](sqlite_driver_demo.sh) | sqlite_driver_demo.sh — the 4th kernel's SQLite driver (carrier first). Emit a |
 | [start_gate.py](start_gate.py) | _no top-of-file purpose_ |
 | [strategy_after_rupture_recipe_proof.py](strategy_after_rupture_recipe_proof.py) | strategy_after_rupture_recipe_proof.py — rupture-recovery primitives compose |
+| [substrate-py-to-fk.sh](substrate-py-to-fk.sh) | substrate-py-to-fk.sh — convert a substrate Python file to .fk via the |
 | [substrate_parity_harness.py](substrate_parity_harness.py) | substrate_parity_harness.py — read the body in both voices, side by side. |
+| [substrate_post_merge_hook.sh](substrate_post_merge_hook.sh) | Substrate auto-ingest hook. |
 | [substrate_read_hook.py](substrate_read_hook.py) | Claude Code PreToolUse hook — surface substrate annotation on file Reads. |
+| [sync-public-proof.sh](sync-public-proof.sh) | sync-public-proof.sh — keep web/public/PROOF.md identical to repo-root PROOF.md. |
 | [sync_blueprints_to_substrate.py](sync_blueprints_to_substrate.py) | Sync Form Blueprint names -> substrate DB as NamedCells. |
 | [sync_crossrefs_to_db.py](sync_crossrefs_to_db.py) | Sync cross-references from KB concept files into graph DB edges. |
+| [sync_hostinger_sqlite_snapshot.sh](sync_hostinger_sqlite_snapshot.sh) | _no top-of-file purpose_ |
 | [sync_kb_to_db.py](sync_kb_to_db.py) | Sync KB markdown files -> Graph DB via API. |
 | [sync_presence_content.py](sync_presence_content.py) | Sync structured presence content from JSON files into graph nodes. |
 | [sync_presence_slugs.py](sync_presence_slugs.py) | Sync `/people/{slug}` presence pages back onto contributor nodes. |
@@ -143,6 +205,17 @@
 | [sync_substrate_vocabulary.py](sync_substrate_vocabulary.py) | Sync the substrate's own numeric vocabulary -> DB as NamedCells. |
 | [teaching_recipe_proof.py](teaching_recipe_proof.py) | teaching_recipe_proof.py — teachings compose into Recipes whose |
 | [tessera_external_witness_probe.py](tessera_external_witness_probe.py) | Probe Tessera's public data surface as a compact external witness. |
+| [test_hostinger_api_native_deploy.sh](test_hostinger_api_native_deploy.sh) | _no top-of-file purpose_ |
+| [test_hostinger_deploy_form_paths.sh](test_hostinger_deploy_form_paths.sh) | _no top-of-file purpose_ |
+| [test_restart_hostinger_vps.sh](test_restart_hostinger_vps.sh) | _no top-of-file purpose_ |
+| [test_settle_public_deploy_dispatch.sh](test_settle_public_deploy_dispatch.sh) | _no top-of-file purpose_ |
+| [test_settle_public_deploy_stale_target_dispatch.sh](test_settle_public_deploy_stale_target_dispatch.sh) | _no top-of-file purpose_ |
+| [test_verify_web_api_css_assets.sh](test_verify_web_api_css_assets.sh) | _no top-of-file purpose_ |
+| [test_verify_web_api_pulse_witness.sh](test_verify_web_api_pulse_witness.sh) | _no top-of-file purpose_ |
+| [test_verify_web_api_sha_patience.sh](test_verify_web_api_sha_patience.sh) | _no top-of-file purpose_ |
+| [thread_runtime_ports.sh](thread_runtime_ports.sh) | _no top-of-file purpose_ |
+| [transformer_kernel_audit.sh](transformer_kernel_audit.sh) | transformer_kernel_audit.sh — a full transformer block on every organ. |
+| [triangulate.sh](triangulate.sh) | triangulate.sh — stand up the three-vertex substrate triangle on this VPS. |
 | [trim_view_events.py](trim_view_events.py) | Trim the witness-trace table when it grows past comfortable. |
 | [upgrade_specs_to_form_predicates.py](upgrade_specs_to_form_predicates.py) | Augment every spec's done_when with Form predicates derived from its |
 | [validate_commit_evidence.py](validate_commit_evidence.py) | Validate thread commit evidence artifacts for phase-gated process. |
@@ -152,8 +225,16 @@
 | [validate_spec_prefix_canonicalization.py](validate_spec_prefix_canonicalization.py) | Validate canonical mapping for duplicated spec numeric prefixes. |
 | [validate_spec_quality.py](validate_spec_quality.py) | Validate spec quality so implementation does not need manual follow-up gap fixes. |
 | [validate_workflow_references.py](validate_workflow_references.py) | Validate that workflow run-script file references exist in the repo. |
+| [verify_android_sense_public_handshake.sh](verify_android_sense_public_handshake.sh) | Build Coherence Sense public assets and prove the local Mac witness + Hati mesh handshake. |
+| [verify_full_deployment.sh](verify_full_deployment.sh) | _no top-of-file purpose_ |
 | [verify_hashes.py](verify_hashes.py) | Verify that DB content hashes match their source files. |
+| [verify_hati_earth_public_assets.sh](verify_hati_earth_public_assets.sh) | Verify Hati-domain public Hati-OS assets through DNS and HTTPS redirects. |
+| [verify_kernel_canary_public_gate.sh](verify_kernel_canary_public_gate.sh) | _no top-of-file purpose_ |
 | [verify_kernel_conformance.py](verify_kernel_conformance.py) | Verify substrate kernel conformance vectors against executable runtimes. |
+| [verify_remote_ops_smoke.sh](verify_remote_ops_smoke.sh) | _no top-of-file purpose_ |
+| [verify_web_api_deploy.sh](verify_web_api_deploy.sh) | _no top-of-file purpose_ |
+| [verify_whisper_block0.sh](verify_whisper_block0.sh) | scripts/verify_whisper_block0.sh — coordinate M6 validation check end-to-end. |
+| [verify_worktree_local_web.sh](verify_worktree_local_web.sh) | _no top-of-file purpose_ |
 | [video_recipe_proof.py](video_recipe_proof.py) | video_recipe_proof.py — ONE video source carries MANY parallel Recipe |
 | [view_recipe_library.py](view_recipe_library.py) | view_recipe_library.py — read a .recipelib bundle and render any tongue. |
 | [viewport_audit.py](viewport_audit.py) | Audit a list of URLs at desktop (1440x900) and mobile (390x844) widths. |

@@ -1,0 +1,89 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/hati-earth-public-assets-proof-command-20260613",
+  "commit_scope": "Add a reusable Hati-domain public asset verifier and make shell proof scripts discoverable in the generated script index.",
+  "change_intent": "process_only",
+  "idea_ids": [
+    "hati-os",
+    "hati-mesh"
+  ],
+  "spec_ids": [
+    "android-sense-organ",
+    "hati-mesh-presence"
+  ],
+  "task_ids": [
+    "hati-earth-public-assets-proof-command-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "MANIFEST.md",
+    "scripts/INDEX.md",
+    "scripts/generate_repo_indexes.py",
+    "scripts/verify_hati_earth_public_assets.sh",
+    "docs/system_audit/commit_evidence_2026-06-13_hati_earth_public_assets_proof_command.json"
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "scripts/INDEX.md",
+    "scripts/generate_repo_indexes.py",
+    "scripts/verify_hati_earth_public_assets.sh",
+    "docs/system_audit/commit_evidence_2026-06-13_hati_earth_public_assets_proof_command.json"
+  ],
+  "evidence_refs": [
+    "scripts/verify_hati_earth_public_assets.sh",
+    "scripts/INDEX.md",
+    "https://hati.earth/downloads/hati-os/macos/arm64/hati-os-macos-arm64.tar.zst",
+    "https://hati.earth/downloads/hati-os/android/arm64/hati-os-android-arm64.tar.zst",
+    "https://hati.earth/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-debug.apk",
+    "https://sense.hati.earth"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "cat .cache/wellness/state.txt | sed -n '1,80p'",
+      "bash -n scripts/verify_hati_earth_public_assets.sh",
+      "scripts/verify_hati_earth_public_assets.sh",
+      "python3 -m py_compile scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_hati_earth_public_assets_proof_command.json"
+    ],
+    "notes": "The verifier uses public DNS through 1.1.1.1, forces the resolved Hati-domain IP into curl, and validates HTTPS redirect chains to final 200 for the macOS native tarball, Android native tarball, Android APK, and Sense app door. The index generator now includes shell scripts as well as Python scripts, making Hati proof commands and other shell operational tools visible in scripts/INDEX.md."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR checks, and merge."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "summary": "Live public proof passed: macOS native tarball 302 -> 307 -> 302 -> 200 content-length 2874; Android native tarball 302 -> 307 -> 302 -> 200 content-length 2558443; Android APK 302 -> 307 -> 302 -> 200 content-length 3485702; sense.hati.earth 302 -> 308 -> 200."
+  },
+  "phase_gate": {
+    "phase": "hati-earth-public-proof-command",
+    "gate": "A sister agent can run one repository command to verify the public Hati-domain binary and app-door lane.",
+    "state": "proof-command-ready-ci-pending",
+    "can_move_next_phase": false,
+    "next": "Push, wait for PR checks, merge, then use scripts/verify_hati_earth_public_assets.sh as the standard public asset lane proof."
+  }
+}
