@@ -667,8 +667,8 @@ Next walked pass in the same session:
 - Warmed `/api/ideas` after `warm=40`: `11` compile-failed rows, `76` warming
   rows, `9` compiled rows, `8` dispatch-hit rows, and `26394` framebuffer event
   rows.
-- `scan_run` disappeared from top failures. New top pressure: `node_value`,
-  logic ops, `_dict_get`, `intern_node_at`, `intern_trivial_float`,
+- `scan_run` disappeared from top failures. After the lowered JIT residual
+  ratchet, top pressure is `node_value`, `_dict_get`, `intern_node_at`, `intern_trivial_float`,
   `node_category`, `node_children`, and `node_type`.
 - Fresh 40-request timing: native Go local tunnel `p50=564.986 ms`,
   `p95=601.781 ms`; public FastAPI `p50=265.967 ms`, `p95=1090.011 ms`.

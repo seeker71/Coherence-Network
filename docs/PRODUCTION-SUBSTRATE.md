@@ -178,8 +178,8 @@ Observed on 2026-06-05:
   (`scan_run`, `substring`, `char_at`, `ord`, `byte_to_str`, `str_eq`). Warmed
   `/api/ideas` moved again to `11` compile-failed bodies, `76` warming bodies,
   `9` compiled bodies, and `8` dispatch-hit bodies; framebuffer event rows fell
-  to `26394`. `scan_run` is no longer a top miss. Remaining top pressure is
-  `node_value`, logic ops, `_dict_get`, `intern_node_at`,
+  to `26394`. `scan_run` is no longer a top miss. After the lowered JIT
+  residual ratchet, remaining top pressure is `node_value`, `_dict_get`, `intern_node_at`,
   `intern_trivial_float`, and node introspection (`node_category`,
   `node_children`, `node_type`).
 - Fresh timing after helper-call lowering: native Go through local SSH tunnel
