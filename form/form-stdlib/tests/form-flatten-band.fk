@@ -8,7 +8,7 @@
 ; in scripts/hati_os_kernel_audit.sh — the Hati-OS arm, where the heap ops
 ; live). Same cells, both walkers; content-addressing carries the identity.
 ;
-; Verdict 65535 when the flattener holds:
+; Verdict 131071 when the flattener holds:
 ;   1   the lowerings carry values — gt strict at the tie (gt 4 4 -> 0,
 ;       the learning-trend boundary), ge admits it, eq lands, and gates
 ;   2   defn/let/CALL — a mini band with a function, a let, and a verdict
@@ -57,6 +57,9 @@
 ;        by interned-key match; the REAL record-fold band (unmodified,
 ;        shim-first) folds a named integer field across a list of records
 ;        and walks BY VALUE to the siblings' verdict 31 — zero new tags
+;   65536 same-source forward references — function signatures register before
+;        bodies parse, so a compiler recipe may call a later helper and mutual
+;        recursion lands on the same function table as the regular walkers.
 (do
     (let c0 (if (and (and (eq (fkm-run (flt-src-fns "(do (gt 5 2))") 0) 1)
                           (eq (fkm-run (flt-src-fns "(do (gt 4 4))") 0) 0))
@@ -129,4 +132,7 @@
     ;; a field predicate, the empty-fold identity).
     (let c15 (if (eq (fkm-run (flt-srcs-fns (list shim
                                                   (read_file "form-stdlib/tests/record-fold-band.fk"))) 0) 31) 32768 0))
-    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 (add c11 (add c12 (add c13 (add c14 c15))))))))))))))))
+    (let c16 (if (and (eq (fkm-run (flt-src-fns "(do (defn a (x) (b x)) (defn b (x) (add x 1)) (a 41))") 0) 42)
+                      (eq (fkm-run (flt-src-fns "(do (defn even (n) (if (eq n 0) 1 (odd (sub n 1)))) (defn odd (n) (if (eq n 0) 0 (even (sub n 1)))) (even 6))") 0) 1))
+                 65536 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 (add c11 (add c12 (add c13 (add c14 (add c15 c16)))))))))))))))))
