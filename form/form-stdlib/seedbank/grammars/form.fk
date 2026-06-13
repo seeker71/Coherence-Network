@@ -23,8 +23,6 @@
     ;; --- universal form-source category NodeIDs -------------------
     ;; Numeric type=99 doc-band, parallel to markdown/json/yaml.
 
-    (let FORM-LIST   (bp "FORM-LIST"))   ; an S-expression list
-    (let FORM-IDENT  (bp "FORM-IDENT"))   ; an identifier atom
 
     ;; --- char predicates ------------------------------------------
 

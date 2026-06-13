@@ -66,6 +66,25 @@ BP_REF_RE = re.compile(r'\(\s*bp\s+"([^"]+)"\s*\)')
 Key = tuple  # (pkg, level, type, inst)
 
 
+def is_bp_symbol_section(rel_path: pathlib.Path | str) -> bool:
+    """Source files that intentionally own Blueprint-name string literals."""
+    return pathlib.Path(rel_path).name.endswith("blueprint-symbol-sections.fk")
+
+
+def iter_form_sources():
+    """Authored Form stdlib sources.
+
+    Generated cache projections are useful runtime artifacts, but they are not
+    allocation sites and should not inflate Blueprint/string-symbol hygiene
+    counts after validation runs.
+    """
+    for f in sorted(FORM_ROOT.rglob("*.fk")):
+        rel = f.relative_to(ROOT)
+        if ".cache" in rel.parts:
+            continue
+        yield f, rel
+
+
 def registered_names(reg: dict) -> set:
     """Every name the kernel's bp table will resolve — canonical + aliases of
     each registered shape (categories, primitives, user blueprints)."""
@@ -80,16 +99,48 @@ def scan_bp_refs(reg: dict) -> dict[str, list[str]]:
     """Map each (bp "NAME") whose NAME is NOT registered → the files using it.
     Form comments start with ';'; strip them so prose like `(bp "name")` in a
     doc-comment is not mistaken for a real reference."""
+    return scan_bp_ref_stats(reg)["unregistered"]
+
+
+def scan_bp_ref_stats(reg: dict) -> dict:
+    """Count every executable `(bp "NAME")` reference and return unresolved refs.
+
+    The unresolved subset is the hard gate; the total count is the softer
+    ratchet that keeps blueprint names visible as string-symbol debt.
+    """
     known = registered_names(reg)
     unreg: dict[str, list[str]] = collections.defaultdict(list)
-    for f in sorted(FORM_ROOT.rglob("*.fk")):
-        rel = str(f.relative_to(ROOT))
+    files: set[str] = set()
+    inline_files: set[str] = set()
+    section_files: set[str] = set()
+    total = 0
+    inline_total = 0
+    sectioned_total = 0
+    for f, rel_path in iter_form_sources():
+        rel = str(rel_path)
+        sectioned = is_bp_symbol_section(rel_path)
         for line in f.read_text(errors="ignore").splitlines():
             code = line.split(";", 1)[0]
             for m in BP_REF_RE.finditer(code):
+                total += 1
+                files.add(rel)
+                if sectioned:
+                    sectioned_total += 1
+                    section_files.add(rel)
+                else:
+                    inline_total += 1
+                    inline_files.add(rel)
                 if m.group(1) not in known:
                     unreg[m.group(1)].append(rel)
-    return {n: sorted(set(fs)) for n, fs in unreg.items()}
+    return {
+        "total": total,
+        "inline_total": inline_total,
+        "sectioned_total": sectioned_total,
+        "files": sorted(files),
+        "inline_files": sorted(inline_files),
+        "section_files": sorted(section_files),
+        "unregistered": {n: sorted(set(fs)) for n, fs in unreg.items()},
+    }
 
 
 def load_registry() -> dict[Key, dict]:
@@ -138,9 +189,8 @@ def scan() -> dict:
     num_to_names: dict[Key, set] = collections.defaultdict(set)
     name_to_nums: dict[str, set] = collections.defaultdict(set)
 
-    for f in sorted(FORM_ROOT.rglob("*.fk")):
-        rel = f.relative_to(ROOT)
-        is_test = "/tests/" in str(rel) or str(rel).endswith("-band.fk")
+    for f, rel in iter_form_sources():
+        is_test = "tests" in rel.parts or str(rel).endswith("-band.fk")
         text = f.read_text()
         for m in LET_RE.finditer(text):
             name = m.group(1) or m.group(2)
@@ -170,7 +220,8 @@ def scan() -> dict:
 
     # (bp "NAME") references whose NAME is not registered — the silent-collision
     # class the kernels now reject at runtime, caught here before they ship.
-    unregistered_bp_names = scan_bp_refs(reg)
+    bp_ref_stats = scan_bp_ref_stats(reg)
+    unregistered_bp_names = bp_ref_stats["unregistered"]
 
     return {
         "reg": reg,
@@ -181,6 +232,7 @@ def scan() -> dict:
         "synonyms": synonyms,
         "unregistered_99": unregistered_99,
         "unregistered_bp_names": unregistered_bp_names,
+        "bp_ref_stats": bp_ref_stats,
     }
 
 
@@ -227,8 +279,8 @@ def emit_registry() -> dict:
         lambda: {"names": collections.Counter(),
                  "comments": collections.Counter(),
                  "files": set()})
-    for f in sorted(FORM_ROOT.rglob("*.fk")):
-        rel = str(f.relative_to(ROOT))
+    for f, rel_path in iter_form_sources():
+        rel = str(rel_path)
         if "/tests/" in rel or rel.endswith("-band.fk"):
             continue  # test-local sentinels name nothing real
         for m in let_re.finditer(f.read_text()):
@@ -280,6 +332,14 @@ def report(s: dict) -> None:
     print(f"  distinct NodeIDs: {len(distinct)}   "
           f"registered: {len(s['reg'])}   "
           f"unregistered type-99: {len(s['unregistered_99'])}")
+    bp_stats = s["bp_ref_stats"]
+    print(f'  bp string refs: {bp_stats["total"]} across '
+          f'{len(bp_stats["files"])} files   '
+          f'unregistered: {len(s["unregistered_bp_names"])}')
+    print(f'    inline: {bp_stats["inline_total"]} across '
+          f'{len(bp_stats["inline_files"])} files   '
+          f'sectioned: {bp_stats["sectioned_total"]} across '
+          f'{len(bp_stats["section_files"])} files')
     print()
 
     if s["collisions"]:
@@ -478,9 +538,16 @@ def main() -> int:
             "literals": len(s["sites"]),
             "distinct": len({x["key"] for x in s["sites"]}),
             "registered": len(s["reg"]),
+            "bp_string_refs": s["bp_ref_stats"]["total"],
+            "bp_string_refs_inline": s["bp_ref_stats"]["inline_total"],
+            "bp_string_refs_sectioned": s["bp_ref_stats"]["sectioned_total"],
+            "bp_string_ref_files": len(s["bp_ref_stats"]["files"]),
+            "bp_string_ref_inline_files": len(s["bp_ref_stats"]["inline_files"]),
+            "bp_string_ref_section_files": len(s["bp_ref_stats"]["section_files"]),
             "collisions": {n: [fmt_key(k) for k in v]
                            for n, v in s["collisions"].items()},
             "unregistered_99": [fmt_key(k) for k in s["unregistered_99"]],
+            "unregistered_bp_names": sorted(s["unregistered_bp_names"]),
         }
         print(json.dumps(out, indent=2))
     else:

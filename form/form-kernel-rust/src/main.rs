@@ -14508,6 +14508,67 @@ fn serialize_nid(k: &Kernel, nid: NodeID, bytes: &mut Vec<u8>) {
     }
 }
 
+struct FormBinaryStringTable {
+    strings: Vec<String>,
+    indexes: HashMap<u32, u32>,
+}
+
+fn collect_artifact_strings(k: &Kernel, nid: NodeID, table: &mut FormBinaryStringTable) {
+    if let Some(recipe) = k.by_id.get(&nid) {
+        collect_artifact_strings(k, recipe.category, table);
+        for &c in &recipe.children {
+            collect_artifact_strings(k, c, table);
+        }
+    } else if nid.level == LEVEL_TRIVIAL && nid.ty == TRIV_STRING {
+        if !table.indexes.contains_key(&nid.inst) {
+            let value = k
+                .strs
+                .get(nid.inst as usize)
+                .unwrap_or_else(|| panic!("form binary: bad string index {}", nid.inst))
+                .clone();
+            let local = table.strings.len() as u32;
+            table.strings.push(value);
+            table.indexes.insert(nid.inst, local);
+        }
+    }
+}
+
+fn serialize_nid_with_strings(
+    k: &Kernel,
+    nid: NodeID,
+    bytes: &mut Vec<u8>,
+    table: &FormBinaryStringTable,
+) {
+    if let Some(recipe) = k.by_id.get(&nid) {
+        push_u32(bytes, FORM_BINARY_COMPOSITE);
+        serialize_nid_with_strings(k, recipe.category, bytes, table);
+        push_u32(bytes, recipe.children.len() as u32);
+        for &c in &recipe.children {
+            serialize_nid_with_strings(k, c, bytes, table);
+        }
+    } else if nid.level == LEVEL_TRIVIAL && nid.ty == TRIV_FLOAT64 {
+        push_u32(bytes, FORM_BINARY_FLOAT64);
+        bytes.extend_from_slice(&k.decode_float64(nid.inst).to_le_bytes());
+    } else if nid.level == LEVEL_TRIVIAL && nid.ty == TRIV_INT64 {
+        push_u32(bytes, FORM_BINARY_INT64);
+        bytes.extend_from_slice(&k.decode_int64(nid.inst).to_le_bytes());
+    } else {
+        push_u32(bytes, FORM_BINARY_LEAF);
+        push_u32(bytes, nid.pkg);
+        push_u32(bytes, nid.level);
+        push_u32(bytes, nid.ty);
+        if nid.level == LEVEL_TRIVIAL && nid.ty == TRIV_STRING {
+            let local = table
+                .indexes
+                .get(&nid.inst)
+                .unwrap_or_else(|| panic!("form binary: missing local string index {}", nid.inst));
+            push_u32(bytes, *local);
+        } else {
+            push_u32(bytes, nid.inst);
+        }
+    }
+}
+
 fn deserialize_nid(k: &mut Kernel, bytes: &[u8], pos: usize, scope: u32) -> (NodeID, usize) {
     let (tag, p) = read_u32(bytes, pos);
     if tag == FORM_BINARY_FLOAT64 {
@@ -14551,14 +14612,19 @@ const FORM_BINARY_MAGIC_V1: &[u8] = b"FORMBIN1";
 const FORM_BINARY_MAGIC: &[u8] = b"FORMBIN2";
 
 fn serialize_artifact(k: &Kernel, root: NodeID) -> Vec<u8> {
+    let mut table = FormBinaryStringTable {
+        strings: Vec::new(),
+        indexes: HashMap::new(),
+    };
+    collect_artifact_strings(k, root, &mut table);
     let mut bytes = FORM_BINARY_MAGIC.to_vec();
-    push_u32(&mut bytes, k.strs.len() as u32);
-    for s in &k.strs {
+    push_u32(&mut bytes, table.strings.len() as u32);
+    for s in &table.strings {
         let raw = s.as_bytes();
         push_u32(&mut bytes, raw.len() as u32);
         bytes.extend_from_slice(raw);
     }
-    serialize_nid(k, root, &mut bytes);
+    serialize_nid_with_strings(k, root, &mut bytes, &table);
     bytes
 }
 

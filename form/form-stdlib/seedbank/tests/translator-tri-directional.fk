@@ -1,7 +1,7 @@
 ; tests/translator-tri-directional.fk — Python ↔ Go ↔ TypeScript through
 ; one universal Recipe vocabulary.
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/python-universal.bnf.fk form-stdlib/grammars/go-universal.bnf.fk form-stdlib/grammars/typescript-universal.bnf.fk form-stdlib/emit-engine.fk form-stdlib/emit.fk form-stdlib/emits/python.fk form-stdlib/emits/go.fk form-stdlib/emits/typescript.fk
+; preludes: form-stdlib/engine.fk form-stdlib/seedbank/grammar-bnf.fk form-stdlib/seedbank/blueprint-symbol-sections.fk form-stdlib/seedbank/grammars/python-universal.bnf.fk form-stdlib/seedbank/grammars/go-universal.bnf.fk form-stdlib/seedbank/grammars/typescript-universal.bnf.fk form-stdlib/emit-engine.fk form-stdlib/seedbank/emit.fk form-stdlib/seedbank/emits/python.fk form-stdlib/seedbank/emits/go.fk form-stdlib/seedbank/emits/typescript.fk
 ;
 ; Three languages, ONE substrate. Any source language parses to a
 ; universal Recipe; any target language emits from that Recipe.

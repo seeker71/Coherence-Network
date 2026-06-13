@@ -1,0 +1,21 @@
+; form-binary-root-local-strings.fk — .fkb artifacts carry root-local strings only.
+;
+; The writer used to serialize the whole kernel string pool, so unrelated
+; strings interned before the root could leak into the artifact. FORMBIN2 now
+; writes a table collected from the root Recipe graph only.
+
+(do
+    (let unrelated (intern_trivial_string "this-string-must-not-ride-in-the-artifact"))
+    (let root (intern_trivial_string "root-only"))
+    (let path (str_concat (temp_dir) "/form-binary-root-local-strings.fkb"))
+    (let written (write_form_binary path root))
+    (let restored (read_form_binary path))
+    (let bytes (read_file_bytes path))
+
+    ;; FORMBIN2 + one local string + one string leaf is small. If the whole
+    ;; process string pool rides along, this crosses the threshold quickly.
+    (let probe-write (if (gt written 0) 1 0))
+    (let probe-roundtrip (if (node_eq restored root) 1 0))
+    (let probe-local-table (if (lt (len bytes) 128) 1 0))
+
+    (add probe-write (add probe-roundtrip probe-local-table)))

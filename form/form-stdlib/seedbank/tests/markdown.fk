@@ -1,11 +1,11 @@
 ; tests/markdown.fk — exercise markdown parser end-to-end
 ;
-; preludes: form-stdlib/grammars/markdown.fk
+; preludes: form-stdlib/seedbank/cell-trace.fk form-stdlib/seedbank/blueprint-symbol-sections.fk form-stdlib/seedbank/grammars/markdown.fk
 ;
 ; (Note: this loads grammars/markdown.fk explicitly since the
 ; validate.sh convention loads form-stdlib/<base>.fk
-; but markdown lives under form-stdlib/grammars/. Invoke via:
-;   bin-go core.fk grammars/markdown.fk tests/markdown.fk
+; but markdown lives under form-stdlib/seedbank/grammars/. Invoke via:
+;   bin-go core.fk cell-trace.fk blueprint-symbol-sections.fk grammars/markdown.fk tests/markdown.fk
 ;
 ; The probe parses a small Markdown document with all three supported
 ; block types — heading, paragraph, code block — then checks that:

@@ -8,6 +8,14 @@ The machine-readable registry is [`form-stdlib/blueprint-registry.json`](form-st
 
 **How a Form file uses a Blueprint:** load `form-stdlib/form-ontology-loader.fk` as a prelude and ask by name — `(bp "JSON-OBJECT")`, `(bp "add")`, `(bp "UUID")`. The loader reads the registry (and the kernel-aligned categories/primitives in `form-ontology.json`) and resolves the name to its NodeID. The raw `(make_nodeid 1 2 99 N)` literal never appears in feature code. **An unregistered name now fails loud** — the kernels (Go/Rust/TS) raise rather than resolve, because the old silent fallback to `(1 2 0 0)` collapsed *every* unknown name onto one NodeID, so distinct blueprints collided invisibly (the bug that bit the Shamballa channel twice). Identity is bounded by what is registered; an unknown name is a missing registration, not a valid shape. The scanner catches it before runtime; the kernel catches it at runtime.
 
+**Where Blueprint-name strings belong:** keep `(bp "NAME")` calls in a
+dedicated symbol section instead of executable stdlib logic. In seedbank, that
+section is `form-stdlib/seedbank/blueprint-symbol-sections.fk`; load it before
+grammars, parsers, emitters, converters, and encoders. Consumer files reference
+the section binding, not the string literal. The scanner distinguishes inline
+references from intentional section references, so source sections count as
+owned symbol declarations while inline references remain cleanup debt.
+
 **How to register / unregister a name:** one command, which also regenerates the three kernel bp tables —
 ```bash
 python3 scripts/scan_form_blueprints.py register MY-SHAPE              # allocate a free inst, add the row
@@ -21,6 +29,7 @@ python3 scripts/scan_form_blueprints.py unregister MY-SHAPE            # remove 
 **The scanner — `scripts/scan_form_blueprints.py`:**
 - no args → full report: every `make_nodeid` literal, how many shapes are registered, which numbers wear many local names (synonyms to collapse), which names point at more than one number (drift to heal), and any `(bp "NAME")` reference with no registry row.
 - `--check` → forward gate: nonzero exit if a type-99 number *or a `(bp "NAME")` reference* is used but unregistered.
+- the report also names total, inline, and sectioned `bp` string-reference counts as a ratchet metric; a passing check means every reference resolves, not that the string-symbol surface is finished.
 - `register NAME` / `unregister NAME` → add/remove one row and regenerate the kernel bp tables (`--inst` to honor an existing coordinate).
 - `--emit-registry` → regenerate the JSON from code, preserving curated rows.
 

@@ -1,6 +1,6 @@
 ; tests/python-universal-expanded.fk — expanded universal Python coverage
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/python-universal.bnf.fk form-stdlib/emit-engine.fk form-stdlib/emit.fk form-stdlib/emits/python.fk form-stdlib/emits/go.fk
+; preludes: form-stdlib/engine.fk form-stdlib/seedbank/grammar-bnf.fk form-stdlib/seedbank/blueprint-symbol-sections.fk form-stdlib/seedbank/grammars/python-universal.bnf.fk form-stdlib/emit-engine.fk form-stdlib/seedbank/emit.fk form-stdlib/seedbank/emits/python.fk form-stdlib/seedbank/emits/go.fk
 ;
 ; New shapes: assignment, function call, multi-statement bodies via `;`.
 

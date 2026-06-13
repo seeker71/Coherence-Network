@@ -10,14 +10,6 @@
 ; statement-level dispatch.
 
 (do
-    (let GO-EXEC-MODULE     (bp "GO-EXEC-MODULE"))
-    (let GO-EXEC-PACKAGE    (bp "GO-EXEC-PACKAGE"))
-    (let GO-EXEC-IMPORT     (bp "GO-EXEC-IMPORT"))
-    (let GO-EXEC-FUNC       (bp "GO-EXEC-FUNC"))
-    (let GO-EXEC-TYPE       (bp "GO-EXEC-TYPE"))
-    (let GO-EXEC-VAR        (bp "GO-EXEC-VAR"))
-    (let GO-EXEC-CONST      (bp "GO-EXEC-CONST"))
-    (let GO-EXEC-SHORT-VAR  (bp "GO-EXEC-SHORT-VAR"))
 
     (defn go-exec-is? (n cat) (node_eq (node_category n) cat))
 

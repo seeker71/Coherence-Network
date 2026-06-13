@@ -43,18 +43,6 @@
     ;; ──────────────────────────────────────────────────────────────────
     ;; Mirrors grammars/python.fk's NodeID assignments. Doc-band type=99.
 
-    (let PY-BNF-MODULE       (bp "PY-BNF-MODULE"))
-    (let PY-BNF-IMPORT       (bp "PY-BNF-IMPORT"))
-    (let PY-BNF-FROM-IMPORT  (bp "PY-BNF-FROM-IMPORT"))
-    (let PY-BNF-FUNCTION-DEF (bp "PY-BNF-FUNCTION-DEF"))
-    (let PY-BNF-ASSIGN       (bp "PY-BNF-ASSIGN"))
-    (let PY-BNF-IDENT        (bp "PY-BNF-IDENT"))
-    (let PY-BNF-NAME-PAIR    (bp "PY-BNF-NAME-PAIR"))
-    (let PY-BNF-BIN-EXPR     (bp "PY-BNF-BIN-EXPR"))
-    (let PY-BNF-INT-EXPR     (bp "PY-BNF-INT-EXPR"))
-    (let PY-BNF-STR-EXPR     (bp "PY-BNF-STR-EXPR"))
-    (let PY-BNF-IDENT-EXPR   (bp "PY-BNF-IDENT-EXPR"))
-    (let PY-BNF-PAREN-EXPR   (bp "PY-BNF-PAREN-EXPR"))
 
     ;; ──────────────────────────────────────────────────────────────────
     ;; Part 2 — emitter library
@@ -156,16 +144,6 @@
 
     ;; Universal Blueprints — kernel walk_recipe evaluates these natively
     ;; (no per-language evaluator needed; the form runtime IS the executor).
-    (let PY-UNIV-MATH-PLUS   (bp "add"))
-    (let PY-UNIV-MATH-MINUS  (bp "sub"))
-    (let PY-UNIV-MATH-MUL    (bp "mul"))
-    (let PY-UNIV-MATH-DIV    (bp "div"))
-    (let PY-UNIV-CMP-EQ      (bp "eq"))
-    (let PY-UNIV-CMP-NEQ     (bp "ne"))
-    (let PY-UNIV-CMP-LT      (bp "lt"))
-    (let PY-UNIV-CMP-LE      (bp "le"))
-    (let PY-UNIV-CMP-GT      (bp "gt"))
-    (let PY-UNIV-CMP-GE      (bp "ge"))
 
     (defn py-bnf-op-to-blueprint (op)
         (if (str_eq op "+") PY-UNIV-MATH-PLUS
@@ -244,12 +222,6 @@
     ;; Expanded Python emitters: call, attribute, if/while/for/return
     ;; ──────────────────────────────────────────────────────────────────
 
-    (let PY-BNF-CALL    (bp "PY-BNF-CALL"))
-    (let PY-BNF-ATTR    (bp "PY-BNF-ATTR"))
-    (let PY-BNF-IF      (bp "PY-BNF-IF"))
-    (let PY-BNF-WHILE   (bp "PY-BNF-WHILE"))
-    (let PY-BNF-FOR     (bp "PY-BNF-FOR"))
-    (let PY-BNF-RETURN  (bp "PY-BNF-RETURN"))
 
     (defn py-bnf-emit-call (caps)
         (intern_node PY-BNF-CALL

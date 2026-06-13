@@ -30,8 +30,6 @@
     ; RBasic.BLOCK = 9, RBlock.DO = 1, RBlock.LET = 3
     ; RBasic.COMPOSE = 2 (network-relational), RCompose sub-arms below
 
-    (let MOD-BLOCK-DO  (bp "do"))
-    (let MOD-BLOCK-LET (bp "let"))
 
     ; ──────────────────────────────────────────────────────────────────
     ; Part 2 — named-field helper (one LET pair)

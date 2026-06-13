@@ -1,6 +1,6 @@
 ; tests/python-full.fk — exercise the comprehensive Python grammar
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/python-full.bnf.fk
+; preludes: form-stdlib/engine.fk form-stdlib/seedbank/grammar-bnf.fk form-stdlib/seedbank/blueprint-symbol-sections.fk form-stdlib/seedbank/grammars/python-full.bnf.fk
 ;
 ; Coverage probes across major Python constructs. Each probe parses
 ; one line of real-shaped Python and verifies a structural property.

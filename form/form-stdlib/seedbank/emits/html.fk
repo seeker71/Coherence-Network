@@ -5,14 +5,6 @@
 ; is XML's surface cousin; templates are mostly tag-renames.
 
 (do
-    (let HTML-OBJ  (bp "HTML-OBJ"))
-    (let HTML-ARR  (bp "HTML-ARR"))
-    (let HTML-PAIR (bp "HTML-PAIR"))
-    (let HTML-NULL (bp "HTML-NULL"))
-    (let HTML-DOC      (bp "HTML-DOC"))
-    (let HTML-HEADING  (bp "HTML-HEADING"))
-    (let HTML-PARA     (bp "HTML-PARA"))
-    (let HTML-CODE     (bp "HTML-CODE"))
 
     (defn html-cat (xs)
         (if (nil? xs) ""

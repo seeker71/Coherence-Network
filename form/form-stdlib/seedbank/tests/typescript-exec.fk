@@ -1,6 +1,6 @@
 ; tests/typescript-exec.fk — TypeScript EXECUTE pipeline proof
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/typescript.bnf.fk form-stdlib/grammars/typescript-exec.fk
+; preludes: form-stdlib/engine.fk form-stdlib/seedbank/grammar-bnf.fk form-stdlib/seedbank/blueprint-symbol-sections.fk form-stdlib/seedbank/grammars/typescript.bnf.fk form-stdlib/seedbank/grammars/typescript-exec.fk
 
 (do
     (let result (parse-typescript-bnf "app.ts" "import React from \"react\"

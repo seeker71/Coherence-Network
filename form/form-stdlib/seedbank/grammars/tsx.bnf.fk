@@ -13,7 +13,6 @@
 ; Recipe produced by the inner grammar.
 
 (do
-    (let TSX-LET (bp "TSX-LET"))
 
     (defn tsx-emit-let (caps)
         (intern_node TSX-LET

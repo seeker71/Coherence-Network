@@ -29,9 +29,6 @@
 
 (do
     ; Category NodeIDs (shared shape from universal-emit.fk).
-    (let SE-BLOCK-DO       (bp "do"))
-    (let SE-BLOCK-SEQUENCE (bp "sequence"))
-    (let SE-BLOCK-LET      (bp "let"))
 
     ; ──────────────────────────────────────────────────────────────────
     ; Leaf-builders — typed value carriers

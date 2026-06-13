@@ -16,12 +16,6 @@
 
 (do
     ;; Universal Blueprints for TS file-header shapes
-    (let TS-BNF-MODULE      (bp "TS-BNF-MODULE"))
-    (let TS-BNF-IMPORT      (bp "TS-BNF-IMPORT"))
-    (let TS-BNF-IMPORT-NS   (bp "TS-BNF-IMPORT-NS"))
-    (let TS-BNF-IMPORT-DEF  (bp "TS-BNF-IMPORT-DEF"))
-    (let TS-BNF-EXPORT-CONST (bp "TS-BNF-EXPORT-CONST"))
-    (let TS-BNF-EXPORT-FN   (bp "TS-BNF-EXPORT-FN"))
 
     ;; Helpers used by the multi-statement module emitter
     (defn ts-bnf-rev-step (acc x) (cons x acc))
@@ -38,16 +32,6 @@
             (intern_node TS-BNF-MODULE all-stmts)))
 
     ;; Universal Blueprints — same shape Python + Go use
-    (let TS-UNIV-MATH-PLUS  (bp "add"))
-    (let TS-UNIV-MATH-MINUS (bp "sub"))
-    (let TS-UNIV-MATH-MUL   (bp "mul"))
-    (let TS-UNIV-MATH-DIV   (bp "div"))
-    (let TS-UNIV-CMP-EQ     (bp "eq"))
-    (let TS-UNIV-CMP-NEQ    (bp "ne"))
-    (let TS-UNIV-CMP-LT     (bp "lt"))
-    (let TS-UNIV-CMP-LE     (bp "le"))
-    (let TS-UNIV-CMP-GT     (bp "gt"))
-    (let TS-UNIV-CMP-GE     (bp "ge"))
 
     (defn ts-bnf-op-to-blueprint (op)
         (if (str_eq op "+") TS-UNIV-MATH-PLUS
@@ -121,13 +105,6 @@
     ;; ──────────────────────────────────────────────────────────────────
     ;; Expanded TS — let / const / if / while / for / call
     ;; ──────────────────────────────────────────────────────────────────
-    (let TS-BNF-LET   (bp "TS-BNF-LET"))
-    (let TS-BNF-CONST (bp "TS-BNF-CONST"))
-    (let TS-BNF-IF    (bp "TS-BNF-IF"))
-    (let TS-BNF-WHILE (bp "TS-BNF-WHILE"))
-    (let TS-BNF-FOR   (bp "TS-BNF-FOR"))
-    (let TS-BNF-CALL  (bp "TS-BNF-CALL"))
-    (let TS-BNF-ATTR  (bp "TS-BNF-ATTR"))
 
     (defn ts-bnf-emit-let (caps)
         (intern_node TS-BNF-LET

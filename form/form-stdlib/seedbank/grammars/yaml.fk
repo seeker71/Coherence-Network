@@ -20,10 +20,6 @@
 ; here as one rule per breath.
 
 (do
-    (let YAML-DOC   (bp "YAML-DOC"))   ; root document = sequence of pairs / list items
-    (let YAML-PAIR  (bp "YAML-PAIR"))   ; (key-string, value)
-    (let YAML-ITEM  (bp "YAML-ITEM"))   ; list-item value
-    (let YAML-LIST  (bp "YAML-LIST"))   ; (sequence of items)
 
     ;; --- line helpers (shared shape with markdown.fk) -------------
 

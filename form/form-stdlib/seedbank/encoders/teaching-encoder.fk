@@ -18,9 +18,6 @@
 ; is structural, not metaphorical.
 
 (do
-    (let TE-BLOCK-DO       (bp "do"))
-    (let TE-BLOCK-SEQUENCE (bp "sequence"))
-    (let TE-BLOCK-LET      (bp "let"))
 
     (defn te-let (key value)
         (intern_node TE-BLOCK-LET

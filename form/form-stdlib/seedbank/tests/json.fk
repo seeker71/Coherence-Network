@@ -1,9 +1,9 @@
 ; tests/json.fk — exercise JSON parser end-to-end
 ;
-; preludes: form-stdlib/cell-trace.fk form-stdlib/grammars/json.fk
+; preludes: form-stdlib/seedbank/cell-trace.fk form-stdlib/seedbank/blueprint-symbol-sections.fk form-stdlib/seedbank/grammars/json.fk
 ;
 ; Loaded via:
-;   bin-go core.fk cell-trace.fk grammars/json.fk tests/json.fk
+;   bin-go core.fk cell-trace.fk blueprint-symbol-sections.fk grammars/json.fk tests/json.fk
 
 (do
     (let sample-json "{\"name\": \"Coherence Network\", \"version\": 1, \"layers\": [\"substrate\", \"kernel\", \"engine\"]}")

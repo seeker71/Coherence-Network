@@ -8,10 +8,6 @@
 ; viewable surface NOW so the registry pattern is honest end-to-end.
 
 (do
-    (let IMG-OBJ  (bp "IMG-OBJ"))
-    (let IMG-ARR  (bp "IMG-ARR"))
-    (let IMG-PAIR (bp "IMG-PAIR"))
-    (let IMG-NULL (bp "IMG-NULL"))
 
     (defn img-cat (xs)
         (if (nil? xs) ""
