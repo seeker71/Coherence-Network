@@ -1,0 +1,97 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/go-jit-typescript-parse-20260613",
+  "commit_scope": "Remove the trailing unmatched close paren from go-jit-band.fk, update its four-way verdict to 8, and record the raised fourth-arm floor after the TypeScript reader can parse the band.",
+  "files_owned": [
+    "docs/system_audit/commit_evidence_2026-06-13_go_jit_typescript_parse.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/tests/go-jit-band.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "COORD_AGENT=codex@a3ec ./scripts/agent-coord.sh claim \"go-jit-band TypeScript parser residual after PR #2981: unexpected token rparen at 5344; avoid grok TypeScript-BMF and codex-bml route-choice lanes\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/go-jit-band.fk",
+      "cd form && ./validate.sh > /tmp/coherence-form-validate-go-jit-parse-20260613.log 2>&1",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/go-jit-band.fk",
+      "cd form && ./validate.sh > /tmp/coherence-form-validate-go-jit-parse-rebased-20260613.log 2>&1",
+      "rg -n \"fourth arm:| ok,|divergent|form-kernel\" /tmp/coherence-form-validate-go-jit-parse-20260613.log /tmp/coherence-form-validate-go-jit-parse-rebased-20260613.log",
+      "bash scripts/bml_form_jit_metal_planes_audit.sh"
+    ],
+    "notes": "Focused go-jit validation returns 8 across Go, Rust, TypeScript, and fkwu. The full Form diagnostic remains rc=1 only because ts-reversible-band.fk is still divergent, but the measured floor moves to fourth arm: 118 band(s) four-way; 550 ok; 1 divergent. The metal-plane audit proves the existing Form-native JIT lane proof, recursive lowerer proof, oracle-learning choice floor, lowered residual cluster, host lowered guard, macOS arm64 Mach-O object receipts, and Android arm64 ELF object receipts."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending PR creation and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "No public HTTP behavior change is expected; this is a Form validation/floor correction."
+    ],
+    "notes": "Android JIT support remains the Form-native recipe/table minimum floor. A clang-like binary packaged inside an APK can be added later as optional acceleration or oracle evidence only after it is shipped and measured."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; CI, merge, and deploy validation are pending."
+  },
+  "idea_ids": [
+    "form-native-jit",
+    "hati-fourth-arm"
+  ],
+  "spec_ids": [
+    "form-fourth-kernel-validation",
+    "jit-gap-ledger"
+  ],
+  "task_ids": [
+    "go-jit-typescript-parse-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex-a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/go-jit-band.fk",
+    "form/fourth-arm-bands.txt",
+    "form/scripts/fourth-arm-gate.sh",
+    "scripts/bml_form_jit_metal_planes_audit.sh",
+    "/tmp/coherence-form-validate-go-jit-parse-20260613.log",
+    "/tmp/coherence-form-validate-go-jit-parse-rebased-20260613.log"
+  ],
+  "change_files": [
+    "docs/system_audit/commit_evidence_2026-06-13_go_jit_typescript_parse.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/tests/go-jit-band.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "go-jit-band.fk is now syntactically balanced, so the TypeScript reader reaches the same recipe value as Go, Rust, and fkwu. The band's expected four-way verdict is now 8, matching the post-JIT and logic assertions. The repository floor records 118 four-way bands, 550 total passing workloads, and one remaining residual row.",
+    "public_endpoints": [
+      "local-only: Form validation; no public HTTP endpoint changed"
+    ],
+    "test_flows": [
+      "Focused go-jit proof returns 8 across Go/Rust/TypeScript/fkwu.",
+      "Full Form diagnostic records 118 four-way bands, 550 ok, and one remaining divergent row.",
+      "Metal-plane audit records macOS arm64 Mach-O and Android arm64 ELF object receipts for BML/Hati, Form JIT, and lowered Form JIT surfaces."
+    ],
+    "known_full_suite_gaps": [
+      "ts-reversible-band.fk: unbound section through the source-ingestion path"
+    ]
+  }
+}
