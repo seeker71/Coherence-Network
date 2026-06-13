@@ -9,15 +9,18 @@
 ; bucket, selected path, witness, coordinate, value kind, and
 ; success/fail/silence texture.
 
-(let CR-TAG-CHOICE-CANDIDATE (bp "CHOICE-CANDIDATE"))
-(let CR-TAG-CHOICE-TRACE (bp "CHOICE-TRACE"))
-(let CR-TAG-CHOICE-VALUE (bp "CHOICE-VALUE"))
-(let CR-TAG-CHOICE-RECEIPT (bp "CHOICE-RECEIPT"))
-(let CR-TAG-CHOICE-SIGNATURE (bp "CHOICE-SIGNATURE"))
+; Registered Blueprint coordinates from form/user-blueprint-registry.md.
+; Keep these as integer tags so emitted fourth-kernel tables compare tags with
+; the same cheap path used by kernel-http and other four-way route rows.
+(let CR-TAG-CHOICE-CANDIDATE 1736)
+(let CR-TAG-CHOICE-TRACE 1737)
+(let CR-TAG-CHOICE-VALUE 1738)
+(let CR-TAG-CHOICE-RECEIPT 1739)
+(let CR-TAG-CHOICE-SIGNATURE 1743)
 
 (defn cr-bool-score (ok score) (if ok score 0))
 (defn cr-tagged? (value tag arity)
-    (if (eq (len value) arity) (node_eq (nth value 0) tag) false))
+    (if (eq (len value) arity) (eq (nth value 0) tag) false))
 (defn cr-nonempty-string? (value) (gt (str_len value) 0))
 
 (defn cr-outcome-success () "success")

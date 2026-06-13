@@ -1,0 +1,38 @@
+; bml-choice-routing-metadata-band.fk - BML route-choice metadata crosses fkwu.
+;
+; preludes: form-stdlib/core.fk form-stdlib/bml-source.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk
+;
+; Band verdict: 4095. This is the four-way floor for the first-class BML
+; choiceReceipt source row: parse row metadata, preserve fast/local and
+; slow/oracle candidates, raise the local branch score from metadata, and
+; expose escalation when the trust matrix falls below the chosen floor.
+
+(do
+    (defn bcm-score (ok bit) (if ok bit 0))
+
+    (let row
+        (bml-source-choice-row-from-expr
+            "choiceReceipt(routePredict,BML,route-choice,localPredictor:native:true:5:82:warm-cache;slowOracle:oracle:true:90:96:third-party-oracle,localPredictor,success,84,branch-prediction-feedback,86,90,88,92,local-confidence-met,codex,bml-choice-routing-metadata-band,20260613,2,1,1,0,0);"))
+    (let candidates (bml-source-choice-row-candidates row))
+    (let local-candidate (head candidates))
+    (let oracle-candidate (head (tail candidates)))
+    (let branch-candidates (bml-source-choice-row->branch-candidates row))
+
+    (let low-trust-row
+        (bml-source-choice-row-from-expr
+            "choiceReceipt(routePredict,BML,route-choice,localPredictor:native:true:5:62:cold-cache;slowOracle:oracle:true:90:96:third-party-oracle,localPredictor,fail,52,branch-prediction-feedback,48,80,72,60,trust-matrix-below-floor,codex,bml-choice-routing-metadata-band,20260613,2,1,0,1,0);"))
+
+    (sum
+        (list
+            (bcm-score (bml-source-choice-receipt-row? row) 1)
+            (bcm-score (eq (len candidates) 2) 2)
+            (bcm-score (bml-source-choice-candidate? local-candidate) 4)
+            (bcm-score (str_eq (bml-source-choice-candidate-path local-candidate) "localPredictor") 8)
+            (bcm-score (str_eq (bml-source-choice-candidate-category oracle-candidate) "oracle") 16)
+            (bcm-score (eq (bml-source-choice-candidate-pressure local-candidate) 5) 32)
+            (bcm-score (eq (bml-source-choice-candidate-score oracle-candidate) 96) 64)
+            (bcm-score (eq (bml-source-choice-metadata-signal local-candidate) 4) 128)
+            (bcm-score (eq (bml-source-choice-row-cost row) 2) 256)
+            (bcm-score (eq (len branch-candidates) 2) 512)
+            (bcm-score (bml-source-choice-row-trust-matrix-ready? row 70) 1024)
+            (bcm-score (bml-source-choice-row-escalation-needed? low-trust-row 70) 2048))))

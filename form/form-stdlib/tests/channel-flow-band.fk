@@ -1,6 +1,6 @@
 ; channel-flow-band.fk — proof for consented channel flow plus OSI-shaped cells.
 ;
-; preludes: form-stdlib/channel-interface.fk form-stdlib/kernel-http.fk form-stdlib/channel-flow.fk
+; preludes: form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/kernel-http.fk form-stdlib/channel-flow.fk
 ;
 ; Band verdict: 8388607 when both surfaces agree across sibling kernels:
 ;   - the interface walker honors/blocks requests against the receiver's offer;

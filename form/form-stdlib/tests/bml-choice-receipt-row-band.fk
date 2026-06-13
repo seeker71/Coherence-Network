@@ -1,0 +1,51 @@
+; bml-choice-receipt-row-band.fk - BML choice receipt rows lower to learning.
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/bml.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/bml-source.fk
+;
+; Band verdict: 131071 across Go/Rust/TS/fkwu. choice-receipt.fk loads before
+; bml-source.fk so row->receipt constructor calls are available to the fourth
+; arm.
+; Proves a first-class BML choiceReceipt(...) row can
+; carry branch/routing metadata, lower into CHOICE-RECEIPT, predict a local
+; native path before a slow oracle path when the trust matrix is ready, and
+; expose an escalation flag when confidence/trust falls below the floor.
+
+(do
+    (defn bcr-score (ok bit) (if ok bit 0))
+
+    (let choice-rule (g-rule (bml-grammar) "choiceReceipt"))
+    (let row
+        (bml-source-choice-row-from-expr
+            "choiceReceipt(routePredict,BML,route-choice,localPredictor:native:true:5:82:warm-cache;slowOracle:oracle:true:90:96:third-party-oracle,localPredictor,success,84,branch-prediction-feedback,86,90,88,92,local-confidence-met,codex,bml-choice-receipt-row-band,20260613,2,1,1,0,0);"))
+    (let candidates (bml-source-choice-row-candidates row))
+    (let local-candidate (head candidates))
+    (let receipt (bml-source-choice-row->receipt row))
+    (let signature (cr-choice-signature receipt))
+    (let branch-candidates (bml-source-choice-row->branch-candidates row))
+    (let predicted-path (bml-source-choice-row-predicted-path row))
+    (let learned-path (crl-best-path-after-receipt branch-candidates receipt))
+
+    (let low-trust-row
+        (bml-source-choice-row-from-expr
+            "choiceReceipt(routePredict,BML,route-choice,localPredictor:native:true:5:62:cold-cache;slowOracle:oracle:true:90:96:third-party-oracle,localPredictor,fail,52,branch-prediction-feedback,48,80,72,60,trust-matrix-below-floor,codex,bml-choice-receipt-row-band,20260613,2,1,0,1,0);"))
+    (let low-trust-receipt (bml-source-choice-row->receipt low-trust-row))
+
+    (sum
+        (list
+            (bcr-score (not (nil? choice-rule)) 1)
+            (bcr-score (bml-source-choice-receipt-row? row) 2)
+            (bcr-score (eq (len candidates) 2) 4)
+            (bcr-score (str_eq (bml-source-choice-candidate-path local-candidate) "localPredictor") 8)
+            (bcr-score (eq (bml-source-choice-metadata-signal local-candidate) 4) 16)
+            (bcr-score (str_eq predicted-path "localPredictor") 32)
+            (bcr-score (cr-choice-receipt-valid? receipt) 64)
+            (bcr-score (cr-choice-signature-preserves? receipt signature) 128)
+            (bcr-score (eq (cr-signature-candidate-count-bucket signature) 2) 256)
+            (bcr-score (eq (cr-receipt-cost receipt) 2) 512)
+            (bcr-score (bml-source-choice-row-trust-matrix-ready? row 70) 1024)
+            (bcr-score (not (bml-source-choice-row-escalation-needed? row 70)) 2048)
+            (bcr-score (str_eq learned-path "localPredictor") 4096)
+            (bcr-score (bml-source-choice-row-escalation-needed? low-trust-row 70) 8192)
+            (bcr-score (cr-choice-receipt-valid? low-trust-receipt) 16384)
+            (bcr-score (not (cr-choice-value-worth-learning? (cr-receipt-value low-trust-receipt))) 32768)
+            (bcr-score (str_eq (cr-value-kind (cr-receipt-value receipt)) (cr-kind-branch-feedback)) 65536))))

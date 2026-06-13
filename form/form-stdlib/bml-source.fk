@@ -63,6 +63,23 @@
     (defn bml-source-name-list (args)
         (bml-source-name-list-loop args 0 (empty)))
 
+    (defn bml-source-split-loop (s sep i acc)
+        (do
+            (let p (bml-source-skip-spaces s i))
+            (if (ge p (str_len s)) (bml-source-rev acc)
+                (do
+                    (let next (bml-source-find s sep p))
+                    (let end (if (lt next 0) (str_len s) next))
+                    (let item (bml-source-trim (bml-source-sub s p end)))
+                    (let rest-start (if (lt next 0) (str_len s) (add next (str_len sep))))
+                    (bml-source-split-loop s sep rest-start (cons item acc))))))
+
+    (defn bml-source-split (s sep)
+        (bml-source-split-loop s sep 0 (empty)))
+
+    (defn bml-source-bool (s)
+        (str_eq (bml-source-trim s) "true"))
+
     (defn bml-source-template-use (class-name template-name type-arguments)
         (list "bml-source-template-use" class-name template-name type-arguments))
 
@@ -110,5 +127,207 @@
             (let eq-pos (bml-source-find value "=" 0))
             (bml-source-route-call-from-expr
                 (bml-source-sub value (add eq-pos 1) (str_len value)))))
+
+    (defn bml-source-choice-receipt-row
+        (expression surface category candidates selected-path outcome certainty
+         value-kind branch-feedback alignment knowing trust why who where
+         when-tick cost trace)
+        (list "bml-source-choice-receipt-row"
+              expression surface category candidates selected-path outcome
+              certainty value-kind branch-feedback alignment knowing trust why
+              who where when-tick cost trace))
+
+    (defn bml-source-choice-receipt-row? (source)
+        (if (eq (len source) 19)
+            (str_eq (nth source 0) "bml-source-choice-receipt-row")
+            false))
+
+    (defn bml-source-choice-row-expression (row) (nth row 1))
+    (defn bml-source-choice-row-surface (row) (nth row 2))
+    (defn bml-source-choice-row-category (row) (nth row 3))
+    (defn bml-source-choice-row-candidates (row) (nth row 4))
+    (defn bml-source-choice-row-selected-path (row) (nth row 5))
+    (defn bml-source-choice-row-outcome (row) (nth row 6))
+    (defn bml-source-choice-row-certainty (row) (nth row 7))
+    (defn bml-source-choice-row-value-kind (row) (nth row 8))
+    (defn bml-source-choice-row-branch-feedback (row) (nth row 9))
+    (defn bml-source-choice-row-alignment (row) (nth row 10))
+    (defn bml-source-choice-row-knowing (row) (nth row 11))
+    (defn bml-source-choice-row-trust (row) (nth row 12))
+    (defn bml-source-choice-row-why (row) (nth row 13))
+    (defn bml-source-choice-row-who (row) (nth row 14))
+    (defn bml-source-choice-row-where (row) (nth row 15))
+    (defn bml-source-choice-row-when (row) (nth row 16))
+    (defn bml-source-choice-row-cost (row) (nth row 17))
+    (defn bml-source-choice-row-trace (row) (nth row 18))
+
+    (defn bml-source-choice-candidate (path category eligible pressure score evidence)
+        (list "bml-source-choice-candidate" path category eligible pressure score evidence))
+
+    (defn bml-source-choice-candidate? (candidate)
+        (if (eq (len candidate) 7)
+            (str_eq (nth candidate 0) "bml-source-choice-candidate")
+            false))
+
+    (defn bml-source-choice-candidate-path (candidate) (nth candidate 1))
+    (defn bml-source-choice-candidate-category (candidate) (nth candidate 2))
+    (defn bml-source-choice-candidate-eligible? (candidate) (nth candidate 3))
+    (defn bml-source-choice-candidate-pressure (candidate) (nth candidate 4))
+    (defn bml-source-choice-candidate-score (candidate) (nth candidate 5))
+    (defn bml-source-choice-candidate-evidence (candidate) (nth candidate 6))
+
+    (defn bml-source-choice-candidate-from-text (text)
+        (do
+            (let parts (bml-source-split text ":"))
+            (bml-source-choice-candidate
+                (nth parts 0)
+                (nth parts 1)
+                (bml-source-bool (nth parts 2))
+                (str_to_int (nth parts 3))
+                (str_to_int (nth parts 4))
+                (nth parts 5))))
+
+    (defn bml-source-choice-candidates-from-list (items)
+        (if (eq (len items) 0) (empty)
+            (cons
+                (bml-source-choice-candidate-from-text (head items))
+                (bml-source-choice-candidates-from-list (tail items)))))
+
+    (defn bml-source-choice-candidates-from-text (text)
+        (bml-source-choice-candidates-from-list (bml-source-split text ";")))
+
+    (defn bml-source-choice-row-from-args (args)
+        (bml-source-choice-receipt-row
+            (nth args 0)
+            (nth args 1)
+            (nth args 2)
+            (bml-source-choice-candidates-from-text (nth args 3))
+            (nth args 4)
+            (nth args 5)
+            (str_to_int (nth args 6))
+            (nth args 7)
+            (str_to_int (nth args 8))
+            (str_to_int (nth args 9))
+            (str_to_int (nth args 10))
+            (str_to_int (nth args 11))
+            (nth args 12)
+            (nth args 13)
+            (nth args 14)
+            (str_to_int (nth args 15))
+            (str_to_int (nth args 16))
+            (cr-choice-trace
+                (str_to_int (nth args 17))
+                (str_to_int (nth args 18))
+                (str_to_int (nth args 19))
+                (str_to_int (nth args 20)))))
+
+    (defn bml-source-choice-row-from-expr (expr)
+        (do
+            (let value (bml-source-strip-semi (bml-source-trim expr)))
+            (let call-open (bml-source-find value "(" 0))
+            (let call-close (bml-source-last-char-index value))
+            (let call-name (bml-source-trim (bml-source-sub value 0 call-open)))
+            (let call-args (bml-source-sub value (add call-open 1) call-close))
+            (if (str_eq call-name "choiceReceipt")
+                (bml-source-choice-row-from-args (bml-source-split call-args ","))
+                (empty))))
+
+    (defn bml-source-choice-row-value (row)
+        (cr-choice-value
+            (bml-source-choice-row-value-kind row)
+            (bml-source-choice-row-branch-feedback row)
+            (bml-source-choice-row-alignment row)
+            (bml-source-choice-row-knowing row)
+            (bml-source-choice-row-trust row)))
+
+    (defn bml-source-choice-candidate->receipt-candidate (candidate)
+        (cr-choice-candidate
+            (bml-source-choice-candidate-path candidate)
+            (bml-source-choice-candidate-category candidate)
+            (bml-source-choice-candidate-eligible? candidate)
+            (bml-source-choice-candidate-pressure candidate)
+            (bml-source-choice-candidate-score candidate)
+            (bml-source-choice-candidate-evidence candidate)))
+
+    (defn bml-source-choice-candidates->receipt-candidates (candidates)
+        (if (eq (len candidates) 0) (empty)
+            (cons
+                (bml-source-choice-candidate->receipt-candidate (head candidates))
+                (bml-source-choice-candidates->receipt-candidates (tail candidates)))))
+
+    (defn bml-source-choice-row->receipt (row)
+        (cr-choice-receipt
+            (bml-source-choice-row-expression row)
+            (bml-source-choice-row-surface row)
+            (bml-source-choice-row-category row)
+            (bml-source-choice-candidates->receipt-candidates
+                (bml-source-choice-row-candidates row))
+            (bml-source-choice-row-selected-path row)
+            (bml-source-choice-row-outcome row)
+            (bml-source-choice-row-certainty row)
+            (bml-source-choice-row-value row)
+            (bml-source-choice-row-why row)
+            (bml-source-choice-row-who row)
+            (bml-source-choice-row-where row)
+            (bml-source-choice-row-when row)
+            (bml-source-choice-row-cost row)
+            (bml-source-choice-row-trace row)))
+
+    (defn bml-source-choice-score-bucket (score)
+        (if (ge score 90) 5
+            (if (ge score 80) 4
+                (if (ge score 70) 3
+                    (if (ge score 50) 2
+                        (if (gt score 0) 1 0))))))
+
+    (defn bml-source-choice-pressure-bucket (pressure)
+        (if (ge pressure 80) 3
+            (if (ge pressure 50) 2
+                (if (ge pressure 20) 1 0))))
+
+    (defn bml-source-choice-metadata-signal (candidate)
+        (do
+            (let signal
+                (sub
+                    (bml-source-choice-score-bucket
+                        (bml-source-choice-candidate-score candidate))
+                    (bml-source-choice-pressure-bucket
+                        (bml-source-choice-candidate-pressure candidate))))
+            (if (gt signal 0) signal 0)))
+
+    (defn bml-source-choice-row->branch-candidate (row candidate)
+        (bco-candidate
+            (bml-source-choice-candidate-path candidate)
+            (bml-source-choice-metadata-signal candidate)
+            (bml-source-choice-pressure-bucket
+                (bml-source-choice-candidate-pressure candidate))
+            0
+            0
+            (bml-source-choice-row-alignment row)
+            (bml-source-choice-row-trust row)))
+
+    (defn bml-source-choice-row->branch-candidates-loop (row candidates)
+        (if (eq (len candidates) 0) (empty)
+            (cons
+                (bml-source-choice-row->branch-candidate row (head candidates))
+                (bml-source-choice-row->branch-candidates-loop row (tail candidates)))))
+
+    (defn bml-source-choice-row->branch-candidates (row)
+        (bml-source-choice-row->branch-candidates-loop
+            row
+            (bml-source-choice-row-candidates row)))
+
+    (defn bml-source-choice-row-predicted-path (row)
+        (bco-choose-best-path (bml-source-choice-row->branch-candidates row)))
+
+    (defn bml-source-choice-row-trust-matrix-ready? (row threshold)
+        (and (ge (bml-source-choice-row-certainty row) threshold)
+             (and (ge (bml-source-choice-row-branch-feedback row) threshold)
+                  (and (ge (bml-source-choice-row-alignment row) threshold)
+                       (and (ge (bml-source-choice-row-knowing row) threshold)
+                            (ge (bml-source-choice-row-trust row) threshold))))))
+
+    (defn bml-source-choice-row-escalation-needed? (row threshold)
+        (not (bml-source-choice-row-trust-matrix-ready? row threshold)))
 
     0)
