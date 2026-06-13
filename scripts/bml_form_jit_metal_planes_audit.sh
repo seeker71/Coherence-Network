@@ -50,7 +50,12 @@ if ! grep -q "4095" "$native_lane_out"; then
   echo "FAIL: Form-native JIT lane proof did not return 4095" >&2
   exit 1
 fi
-echo "PASS  form-native-jit-lanes: CPU/GPU/ML oracle -> Form-native emitter model -> 4095"
+if ! grep -q "fourth arm: 1" "$native_lane_out"; then
+  cat "$native_lane_out"
+  echo "FAIL: Form-native JIT lane proof did not run four-way on fkwu" >&2
+  exit 1
+fi
+echo "PASS  form-native-jit-lanes: CPU/GPU/ML oracle -> Form-native emitter model -> 4095 four-way"
 
 native_rec_out="$work/form-native-recursive-lowerer.out"
 (
@@ -66,7 +71,12 @@ if ! grep -q "31" "$native_rec_out"; then
   echo "FAIL: Form-native recursive lowerer proof did not return 31" >&2
   exit 1
 fi
-echo "PASS  form-native-recursive-lowerer: recursive arm64 byte image -> 31"
+if ! grep -q "fourth arm: 1" "$native_rec_out"; then
+  cat "$native_rec_out"
+  echo "FAIL: Form-native recursive lowerer proof did not run four-way on fkwu" >&2
+  exit 1
+fi
+echo "PASS  form-native-recursive-lowerer: recursive arm64 byte image -> 31 four-way"
 
 oracle_learning_out="$work/jit-oracle-learning.out"
 (
@@ -80,7 +90,12 @@ if ! grep -q "1023" "$oracle_learning_out"; then
   echo "FAIL: JIT oracle learning proof did not return 1023" >&2
   exit 1
 fi
-echo "PASS  jit-oracle-learning: third-party oracle samples -> measured native choice loop -> 1023"
+if ! grep -q "fourth arm: 1" "$oracle_learning_out"; then
+  cat "$oracle_learning_out"
+  echo "FAIL: JIT oracle learning proof did not run four-way on fkwu" >&2
+  exit 1
+fi
+echo "PASS  jit-oracle-learning: third-party oracle samples -> measured native choice loop -> 1023 four-way"
 
 driver="$work/emit-surfaces.fk"
 out="$work/emit.out"
@@ -235,4 +250,4 @@ compile_surface "android-arm64" "aarch64-linux-android" "ELF 64-bit.*(ARM aarch6
 compile_surface "android-arm64" "aarch64-linux-android" "ELF 64-bit.*(ARM aarch64|AArch64)" \
   "form-jit" "$form_c" "mul|madd"
 
-echo "ok — Form-native JIT lane proof holds; oracle learning choice floor holds; clang oracle assembly/object receipts cover every supported metal plane"
+echo "ok — Form-native JIT lane proof holds four-way; oracle learning choice floor holds four-way; clang oracle assembly/object receipts cover every supported metal plane"

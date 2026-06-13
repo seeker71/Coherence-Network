@@ -96,6 +96,8 @@ form-asm fks 31
 form-constants fks 111111
 form-diagnose fks 31
 form-debug fks 31
+form-lower fks 31
+form-lower-rec fks 31
 form-mut fks 31
 form-spy fks 31
 gematria fks 11111
@@ -106,6 +108,8 @@ heartbeat fks 5
 hmac-sha256 fks 2
 int-literal-width fks 9
 jit-coverage fks 5
+jit-metal-lanes fks 4095
+jit-oracle-learning fks 1023
 learning-arc fks 127
 living-equation fks 111111
 mesh-health fks 127
