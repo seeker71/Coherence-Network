@@ -9796,11 +9796,15 @@ const SOURCE_COMPILE_PRELUDES: [&str; 7] = [
 // same Form Recipe object as the manifest in this order. That keeps the runtime
 // carrier explicit: source entry plus Form stdlib language model yields one
 // executable Recipe object whose walk binds KernelHTTPRoute cells.
-const SOURCE_ROUTE_LANGUAGE_PRELUDES: [&str; 5] = [
+const SOURCE_ROUTE_LANGUAGE_PRELUDES: [&str; 9] = [
     "json.fk",
     "core.fk",
     "sha256.fk",
+    "choice-receipt.fk",
+    "bml-source.fk",
+    "branch-choice-order.fk",
     "kernel-http.fk",
+    "bml-route-choice-runtime.fk",
     "language-model.fk",
 ];
 

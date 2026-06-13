@@ -2032,6 +2032,118 @@
 (defn mpg-public-gate-header () "X-Form-Native-Public-Gate")
 (defn mpg-python-fallback-header () "X-Form-Python-Fallback")
 (defn mpg-implicit-native-protocol () "implicit-native-invitation")
+(defn mpg-route-choice-threshold () 70)
+
+(defn mpg-route-choice-stem (operation)
+  (if (str_eq operation "create-idea")
+      "ideas-create"
+      (if (str_eq operation "update-idea")
+          "ideas-update"
+          (if (str_eq operation "create-spec")
+              "specs-create"
+              (if (str_eq operation "update-spec")
+                  "specs-update"
+                  "specs-delete")))))
+
+(defn mpg-route-choice-suffix (selected-path)
+  (if (str_eq selected-path (mpg-public-gate-header))
+      "native-public-gate"
+      (if (str_eq selected-path "X-Form-Native-Preview")
+          "native-preview"
+          "native-default")))
+
+(defn mpg-route-choice-route-name (selected-path operation)
+  (str_concat (mpg-route-choice-stem operation)
+              (str_concat "-" (mpg-route-choice-suffix selected-path))))
+
+(defn mpg-route-choice-method (operation)
+  (if (or (str_eq operation "create-idea") (str_eq operation "create-spec"))
+      "POST"
+      (if (str_eq operation "delete-spec")
+          "DELETE"
+          "PATCH")))
+
+(defn mpg-route-choice-path (operation node-id)
+  (if (str_eq operation "create-idea")
+      "/api/ideas"
+      (if (str_eq operation "update-idea")
+          (str_concat "/api/ideas/" node-id)
+          (if (str_eq operation "create-spec")
+              "/api/spec-registry"
+              (str_concat "/api/spec-registry/" node-id)))))
+
+(defn mpg-route-choice-headers (selected-path)
+  (if (str_eq selected-path (mpg-public-gate-header))
+      (list (kh-header (mpg-public-gate-header) "1"))
+      (if (str_eq selected-path "X-Form-Native-Preview")
+          (list (kh-header "X-Form-Native-Preview" "1"))
+          (list))))
+
+(defn mpg-route-choice-routes ()
+  (list
+    (kh-route "ideas-create-native-public-gate" "POST" "/api/ideas" 1 "route_ideas_create_native_public_gate" "X-Form-Native-Public-Gate" 0)
+    (kh-route "ideas-update-native-public-gate" "PATCH" "/api/ideas/*" 1 "route_ideas_update_native_public_gate" "X-Form-Native-Public-Gate" 25)
+    (kh-route "specs-create-native-public-gate" "POST" "/api/spec-registry" 1 "route_specs_create_native_public_gate" "X-Form-Native-Public-Gate" 0)
+    (kh-route "specs-update-native-public-gate" "PATCH" "/api/spec-registry/*" 1 "route_specs_update_native_public_gate" "X-Form-Native-Public-Gate" 25)
+    (kh-route "specs-delete-native-public-gate" "DELETE" "/api/spec-registry/*" 1 "route_specs_delete_native_public_gate" "X-Form-Native-Public-Gate" 25)
+    (kh-route "ideas-create-native-preview" "POST" "/api/ideas" 0 "route_ideas_create_native_preview" "X-Form-Native-Preview" 0)
+    (kh-route "ideas-update-native-preview" "PATCH" "/api/ideas/*" 0 "route_ideas_update_native_preview" "X-Form-Native-Preview" 25)
+    (kh-route "specs-create-native-preview" "POST" "/api/spec-registry" 0 "route_specs_create_native_preview" "X-Form-Native-Preview" 0)
+    (kh-route "specs-update-native-preview" "PATCH" "/api/spec-registry/*" 0 "route_specs_update_native_preview" "X-Form-Native-Preview" 25)
+    (kh-route "specs-delete-native-preview" "DELETE" "/api/spec-registry/*" 0 "route_specs_delete_native_preview" "X-Form-Native-Preview" 25)
+    (kh-route "ideas-create-native-default" "POST" "/api/ideas" 0 "route_ideas_create_native_default" "" 0)
+    (kh-route "ideas-update-native-default" "PATCH" "/api/ideas/*" 0 "route_ideas_update_native_default" "" 25)
+    (kh-route "specs-create-native-default" "POST" "/api/spec-registry" 0 "route_specs_create_native_default" "" 0)
+    (kh-route "specs-update-native-default" "PATCH" "/api/spec-registry/*" 0 "route_specs_update_native_default" "" 25)
+    (kh-route "specs-delete-native-default" "DELETE" "/api/spec-registry/*" 0 "route_specs_delete_native_default" "" 25)))
+
+(defn mpg-route-choice-request (selected-path operation node-id body)
+  (kh-request
+    (mpg-route-choice-method operation)
+    (mpg-route-choice-path operation node-id)
+    (mpg-route-choice-headers selected-path)
+    (list)
+    body))
+
+(defn mpg-route-choice-row-expr (selected-path operation node-id)
+  (do (let default-route (mpg-route-choice-route-name (mpg-implicit-native-protocol) operation))
+  (do (let preview-route (mpg-route-choice-route-name "X-Form-Native-Preview" operation))
+  (do (let public-route (mpg-route-choice-route-name (mpg-public-gate-header) operation))
+  (do (let selected-route (mpg-route-choice-route-name selected-path operation))
+      (str_concat_all (list
+        "choiceReceipt(nativeMutationGate,BML,route-choice,"
+        default-route ":native:true:5:95:implicit-native-invitation;"
+        preview-route ":native:true:12:80:explicit-preview;"
+        public-route ":native:true:8:92:explicit-public-gate,"
+        selected-route
+        ",success,95,production-route-choice-feedback,90,95,95,95,"
+        "production-caller-brcr-realize,form-kernel-router,"
+        "deploy/kernel-router/production-routes.fk,20260613,3,1,1,0,0);")))))))
+
+(defn mpg-route-choice-realization (selected-path operation node-id body)
+  (brcr-realize
+    (bml-source-choice-row-from-expr
+      (mpg-route-choice-row-expr selected-path operation node-id))
+    (mpg-route-choice-routes)
+    (mpg-route-choice-request selected-path operation node-id body)
+    (mpg-route-choice-threshold)))
+
+(defn mpg-route-choice-signature-json (selected-path operation node-id body)
+  (do (let realization (mpg-route-choice-realization selected-path operation node-id body))
+  (do (let signature (brcr-realization-signature realization))
+      (str_concat_all (list
+        "{\"state\":\"bml-route-choice-runtime-signature\""
+        ",\"category\":" (json_string (nth signature 1))
+        ",\"selected_source_path\":" (json_string (nth signature 2))
+        ",\"selected_route_name\":" (json_string (nth signature 3))
+        ",\"declared_path\":" (json_string (nth signature 4))
+        ",\"escalation_needed\":" (if (nth signature 5) "true" "false")
+        ",\"pressure_bucket\":" (value_str (nth signature 6))
+        ",\"score_bucket\":" (value_str (nth signature 7))
+        ",\"candidate_count\":" (value_str (nth signature 8))
+        ",\"kernel_selected_route\":" (json_string (brcr-realization-kernel-selected-route-name realization))
+        ",\"overrode_kernel\":" (if (brcr-realization-overrode-kernel? realization) "true" "false")
+        "}")))))
 
 (defn mpg-rollback-receipt-json (operation node-id)
   (str_concat_all (list
@@ -2092,7 +2204,7 @@
     ",\"where\":\"deploy/kernel-router/production-routes.fk\""
     "}")))
 
-(defn mpg-decision-receipt-json (protocol selected-path operation node-id)
+(defn mpg-decision-receipt-json (protocol selected-path operation node-id body)
   (str_concat_all (list
     "{\"state\":\"native-mutation-gate-decision-receipt\""
     ",\"receipt_id\":" (json_string (str_concat "decision:" (str_concat selected-path (str_concat ":" (str_concat operation (str_concat ":" node-id))))))
@@ -2114,6 +2226,7 @@
     ",\"can_contradict_intent\":true"
     ",\"proof\":\"deploy/kernel-router/mutation_public_gate_harness.py --json\""
     ",\"signature\":" (mpg-decision-signature-json selected-path operation node-id)
+    ",\"route_choice_signature\":" (mpg-route-choice-signature-json selected-path operation node-id body)
     "}")))
 
 (defn mpg-native-recipe-label (operation node-id)
@@ -2222,7 +2335,8 @@
       ",\"request_body\":" (json_string body)
       ",\"native_invitation\":" (mpg-native-invitation-json (mpg-implicit-native-protocol) (mpg-implicit-native-protocol) operation node-id body)
       ",\"route_local_rollback_receipt\":" (mpg-rollback-receipt-json operation node-id)
-      ",\"decision_receipt\":" (mpg-decision-receipt-json (mpg-implicit-native-protocol) (mpg-implicit-native-protocol) operation node-id)
+      ",\"decision_receipt\":" (mpg-decision-receipt-json (mpg-implicit-native-protocol) (mpg-implicit-native-protocol) operation node-id body)
+      ",\"route_choice_signature\":" (mpg-route-choice-signature-json (mpg-implicit-native-protocol) operation node-id body)
       ",\"trust_envelope\":" (mpg-trust-envelope-json (mpg-implicit-native-protocol) (mpg-implicit-native-protocol) operation node-id)
       ",\"runtime\":\"inline\"}")))))
 
@@ -2245,7 +2359,8 @@
       ",\"request_body\":" (json_string body)
       ",\"native_invitation\":" (mpg-native-invitation-json (mpg-public-gate-header) (mpg-public-gate-header) operation node-id body)
       ",\"route_local_rollback_receipt\":" (mpg-rollback-receipt-json operation node-id)
-      ",\"decision_receipt\":" (mpg-decision-receipt-json (mpg-public-gate-header) (mpg-public-gate-header) operation node-id)
+      ",\"decision_receipt\":" (mpg-decision-receipt-json (mpg-public-gate-header) (mpg-public-gate-header) operation node-id body)
+      ",\"route_choice_signature\":" (mpg-route-choice-signature-json (mpg-public-gate-header) operation node-id body)
       ",\"trust_envelope\":" (mpg-trust-envelope-json (mpg-public-gate-header) (mpg-public-gate-header) operation node-id)
       ",\"runtime\":\"inline\"}")))))
 
@@ -2505,6 +2620,7 @@ section [form.route] {
 ; Paths match the live api exactly so the kernel-router can front /api/utils/*.
 ; ===========================================================================
 (let routes
+  (append
   (list
     (kh-route-data-ref "health" HealthRoute_handle)
     (list "/api/utils/coherence_weight"    route_coherence_weight)
@@ -2535,19 +2651,5 @@ section [form.route] {
     (list "/api/ideas/source-index"        route_ideas_source_index)
     (list "/api/ideas/source-portfolio"    route_ideas_source_portfolio)
     (list "/api/ideas/graph-projection"    route_ideas_graph_projection)
-    (list "/api/spec-registry/source-list" route_specs_source_list)
-    (kh-route "ideas-create-native-public-gate" "POST" "/api/ideas" 1 "route_ideas_create_native_public_gate" "X-Form-Native-Public-Gate" 0)
-    (kh-route "ideas-update-native-public-gate" "PATCH" "/api/ideas/*" 1 "route_ideas_update_native_public_gate" "X-Form-Native-Public-Gate" 25)
-    (kh-route "specs-create-native-public-gate" "POST" "/api/spec-registry" 1 "route_specs_create_native_public_gate" "X-Form-Native-Public-Gate" 0)
-    (kh-route "specs-update-native-public-gate" "PATCH" "/api/spec-registry/*" 1 "route_specs_update_native_public_gate" "X-Form-Native-Public-Gate" 25)
-    (kh-route "specs-delete-native-public-gate" "DELETE" "/api/spec-registry/*" 1 "route_specs_delete_native_public_gate" "X-Form-Native-Public-Gate" 25)
-    (kh-route "ideas-create-native-preview" "POST" "/api/ideas" 0 "route_ideas_create_native_preview" "X-Form-Native-Preview" 0)
-    (kh-route "ideas-update-native-preview" "PATCH" "/api/ideas/*" 0 "route_ideas_update_native_preview" "X-Form-Native-Preview" 25)
-    (kh-route "specs-create-native-preview" "POST" "/api/spec-registry" 0 "route_specs_create_native_preview" "X-Form-Native-Preview" 0)
-    (kh-route "specs-update-native-preview" "PATCH" "/api/spec-registry/*" 0 "route_specs_update_native_preview" "X-Form-Native-Preview" 25)
-    (kh-route "specs-delete-native-preview" "DELETE" "/api/spec-registry/*" 0 "route_specs_delete_native_preview" "X-Form-Native-Preview" 25)
-    (kh-route "ideas-create-native-default" "POST" "/api/ideas" 0 "route_ideas_create_native_default" "" 0)
-    (kh-route "ideas-update-native-default" "PATCH" "/api/ideas/*" 0 "route_ideas_update_native_default" "" 25)
-    (kh-route "specs-create-native-default" "POST" "/api/spec-registry" 0 "route_specs_create_native_default" "" 0)
-    (kh-route "specs-update-native-default" "PATCH" "/api/spec-registry/*" 0 "route_specs_update_native_default" "" 25)
-    (kh-route "specs-delete-native-default" "DELETE" "/api/spec-registry/*" 0 "route_specs_delete_native_default" "" 25)))
+    (list "/api/spec-registry/source-list" route_specs_source_list))
+    (mpg-route-choice-routes)))
