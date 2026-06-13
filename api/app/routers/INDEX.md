@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 146
+**Total files**: 147
 
 | File | Purpose |
 |---|---|
@@ -82,6 +82,7 @@
 | [graph_health.py](graph_health.py) | Graph health API — structural diagnostics and convergence guards (spec-172). |
 | [graph_questions.py](graph_questions.py) | Graph node open-questions router (Spec 182). |
 | [graph_zoom.py](graph_zoom.py) | Fractal zoom navigation router (Spec 182). |
+| [hati_mesh.py](hati_mesh.py) | Hati mesh sensing-organ presence routes. |
 | [health.py](health.py) | Health check endpoint (spec 001). |
 | [household.py](household.py) | Household — the resident-service nervous system for a Light Hub. |
 | [ideas.py](ideas.py) | Idea portfolio API routes. |
