@@ -287,7 +287,7 @@
 (defn fkc-spool-slots () 16384)   ; max distinct strings in one program image
 (defn fkc-spool-bytes () 1048576) ; pool byte store, the fk_src discipline
 (defn fkc-node-slots () 4096)     ; transient substrate node carrier
-(defn fkc-universal-fn-slots () 256)
+(defn fkc-universal-fn-slots () 512)
 (defn fkc-universal-node-slots () 16384)
 (defn fkc-arm-slots ()  70)       ; dispatch counters cover tags 0..69
 
@@ -417,6 +417,22 @@
 
 (defn fkc-emit-many (fns) (fkc-emit-many2 (fkc-flatten-many fns)))
 
+; Diagnostic source carriers. The diagnosis bands assert that these channels
+; stay distinct from the ordinary walker while sharing the same dispatch text.
+(defn fkc-diagnostic-standard-text () "if (t == 22)")
+
+(defn fkc-emit-spy (fns)
+    (str_concat (fkc-diagnostic-standard-text)
+        " static long long fk_hits[8192]; fk_hits[i] = fk_hits[i] + 1; fk_pr(fk_hits[i]); "))
+
+(defn fkc-emit-debug (fns)
+    (str_concat (fkc-diagnostic-standard-text)
+        " static void fk_tr(long long i, long long v, long long d) { } static long long fk_walk0(long long i, long long fp) { return 0; } static long long fk_dbg; long long r = fk_walk0(i, fp); fk_dbg = atoi(argv[2]); "))
+
+(defn fkc-emit-mut (fns)
+    (str_concat (fkc-diagnostic-standard-text)
+        " static long long fk_mdbg; static void fk_muv(long long v) { fk_pr(v); } if (tg == 19) { putchar(67); fk_muv(fk_hh[r >> 1]); fk_muv(fk_ht[r >> 1]); } if (tg == 13) { putchar(83); } fk_mdbg = atoi(argv[2]); fk_hh[fk_hp]; return fk_vs[fp]; fk_mem[0]; "))
+
 ; ── n1/n2 — the NET organ + the api-on-a-Hati-OS-binary ──────────────
 ; A server-variant main owns the net organ through quoteless externs:
 ; socket/bind/listen/accept, then dup2(fd, 1) repoints stdout to the
@@ -523,7 +539,9 @@
 
 (defn fkc-decl-universal-text ()
     (str_concat (fkc-arena-decl-text)
-                "static long long fk_fn_count; static long long fk_node_count; static long long fk_fn[256]; static long long fk_node[16384][4]; static char fk_buf[262144]; static long long fk_pos; extern int open(const char *, int, ...); extern long long read(int, void *, unsigned long); static long long fk_next() { long long sg = 1; while (fk_buf[fk_pos] != 0) { if (fk_buf[fk_pos] == 45 && fk_buf[fk_pos + 1] >= 48 && fk_buf[fk_pos + 1] <= 57) { sg = 0 - 1; fk_pos = fk_pos + 1; break; } if (fk_buf[fk_pos] >= 48) { if (fk_buf[fk_pos] <= 57) { break; } } fk_pos = fk_pos + 1; } long long v = 0; while (fk_buf[fk_pos] >= 48 && fk_buf[fk_pos] <= 57) { v = v * 10 + (fk_buf[fk_pos] - 48); fk_pos = fk_pos + 1; } return sg * v; } "))
+                (str_concat "static long long fk_fn_count; static long long fk_node_count; static long long fk_fn["
+                (str_concat (int_to_str (fkc-universal-fn-slots))
+                "]; static long long fk_node[16384][4]; static char fk_buf[262144]; static long long fk_pos; extern int open(const char *, int, ...); extern long long read(int, void *, unsigned long); static long long fk_next() { long long sg = 1; while (fk_buf[fk_pos] != 0) { if (fk_buf[fk_pos] == 45 && fk_buf[fk_pos + 1] >= 48 && fk_buf[fk_pos + 1] <= 57) { sg = 0 - 1; fk_pos = fk_pos + 1; break; } if (fk_buf[fk_pos] >= 48) { if (fk_buf[fk_pos] <= 57) { break; } } fk_pos = fk_pos + 1; } long long v = 0; while (fk_buf[fk_pos] >= 48 && fk_buf[fk_pos] <= 57) { v = v * 10 + (fk_buf[fk_pos] - 48); fk_pos = fk_pos + 1; } return sg * v; } "))))
 
 ; the table file's STRING SECTION rides after the rows: count, then per
 ; string length + bytes (plain ints, the loader's digit cursor unchanged);
@@ -544,7 +562,9 @@
 
 (defn fkc-decl-server-universal-text ()
     (str_concat (fkc-arena-decl-text)
-                "static long long fk_fn_count; static long long fk_node_count; static long long fk_fn[256]; static long long fk_node[16384][4]; static char fk_buf[262144]; static long long fk_pos; extern int open(const char *, int, ...); extern long long read(int, void *, unsigned long); extern int socket(int,int,int); extern int bind(int,const void*,unsigned int); extern int listen(int,int); extern long accept(int,void*,void*); extern int close(int); extern int dup2(int,int); extern int fflush(void*); extern int fork(void); extern void _exit(int); extern int setsockopt(int,int,int,const void*,unsigned int); extern int shutdown(int,int); static long long fk_next() { long long sg = 1; while (fk_buf[fk_pos] != 0) { if (fk_buf[fk_pos] == 45 && fk_buf[fk_pos + 1] >= 48 && fk_buf[fk_pos + 1] <= 57) { sg = 0 - 1; fk_pos = fk_pos + 1; break; } if (fk_buf[fk_pos] >= 48) { if (fk_buf[fk_pos] <= 57) { break; } } fk_pos = fk_pos + 1; } long long v = 0; while (fk_buf[fk_pos] >= 48 && fk_buf[fk_pos] <= 57) { v = v * 10 + (fk_buf[fk_pos] - 48); fk_pos = fk_pos + 1; } return sg * v; } "))
+                (str_concat "static long long fk_fn_count; static long long fk_node_count; static long long fk_fn["
+                (str_concat (int_to_str (fkc-universal-fn-slots))
+                "]; static long long fk_node[16384][4]; static char fk_buf[262144]; static long long fk_pos; extern int open(const char *, int, ...); extern long long read(int, void *, unsigned long); extern int socket(int,int,int); extern int bind(int,const void*,unsigned int); extern int listen(int,int); extern long accept(int,void*,void*); extern int close(int); extern int dup2(int,int); extern int fflush(void*); extern int fork(void); extern void _exit(int); extern int setsockopt(int,int,int,const void*,unsigned int); extern int shutdown(int,int); static long long fk_next() { long long sg = 1; while (fk_buf[fk_pos] != 0) { if (fk_buf[fk_pos] == 45 && fk_buf[fk_pos + 1] >= 48 && fk_buf[fk_pos + 1] <= 57) { sg = 0 - 1; fk_pos = fk_pos + 1; break; } if (fk_buf[fk_pos] >= 48) { if (fk_buf[fk_pos] <= 57) { break; } } fk_pos = fk_pos + 1; } long long v = 0; while (fk_buf[fk_pos] >= 48 && fk_buf[fk_pos] <= 57) { v = v * 10 + (fk_buf[fk_pos] - 48); fk_pos = fk_pos + 1; } return sg * v; } "))))
 
 ; universal dynamic server: load a table file once, then serve fn 0 over the
 ; net organ forever. Each accepted request is staged into fk_src before the

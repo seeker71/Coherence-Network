@@ -214,6 +214,8 @@
 ; 16 RND         — the entropy organ (a real random draw per evaluation)
 (defn fk-set (i v) (fk-node 13 (ms-intern i v)))
 (defn fk-get (i)   (fk-node 14 i))
+(defn fk-store (i v) (fk-set i v))
+(defn fk-load (i)    (fk-get i))
 (defn fk-time ()   (fk-node 15 (ms-cell 0)))
 (defn fk-rnd ()    (fk-node 16 (ms-cell 0)))
 ; 17 BUF i — read the loaded SOURCE stream's byte at i: the BMF cursor's eye.
