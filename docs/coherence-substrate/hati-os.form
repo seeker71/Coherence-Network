@@ -73,6 +73,28 @@
     (lowering     recursion-to-loops-for-fib-and-sum ack-stays-recursive)  # value parity over integers
     (next         emit-from-recipe-shape-not-hand-shaped-text))  # walk the recipe tree to C, in Form
 
+  # ── M1b — native tool/channel surface ────────────────────────────────
+  # BusyBox contributes the one-binary/many-applets projection. PowerShell
+  # contributes discoverable verb/object/provider shape. Form OS owns the
+  # semantics: every cell and recipe asks the same tool/channel catalog for a
+  # protocol plan, and the CLI is only one projection of those rows.
+  (m1b-tool-channel-surface
+    (catalog      tool-channel.fk)                         # protocols + applets as Form data
+    (grammar      tool-channel-grammar.fk)                 # declarations lower into the same rows
+    (surface      docs/coherence-substrate/tool-channel.form)
+    (compat       docs/coherence-substrate/fourth-kernel.form)
+    (proof        tests/tool-channel-band.fk -> 255 three-way)
+    (grammar-proof tests/tool-channel-grammar-band.fk -> 255 three-way)
+    (protocols    host:exec host:file http:request kernel:call kernel:route stream:read store:query)
+    (applets      grep find awk fields group xpath xmlpath)
+    (catalog-ops  words providers queries which plan)
+    (language     protocol-declaration tool-declaration capability-declaration plan-expression offer-expression)
+    (planning     tc-plan-tool tc-plan-request tc-which tc-protocol-carries? tc-native-option?)
+    (refusal      wrong-or-missing-capability -> tool/no-plan)
+    (host-honesty host-access-is-explicit-host-access-never-ambient)
+    (projection   shell-applets-project-the-catalog-not-duplicate-semantics)
+    (next         per-protocol-executor-behind-offered-kernel-channel))
+
   # ── M2 — the native BMF compiler ──────────────────────────────────────
   # The BMF engine (apply-object-rule, engine.fk; the BML compiler picture in
   # kernels/BMF_BML_COMPILER_PICTURE.md) emitted as a native binary: source in,

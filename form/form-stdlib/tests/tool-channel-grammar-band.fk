@@ -1,0 +1,45 @@
+; preludes: form-stdlib/core.fk form-stdlib/tool-channel.fk form-stdlib/tool-channel-grammar.fk
+;
+; tool-channel-grammar-band - declarations lower to native tool-channel rows.
+; Verdict 255 when the surface is accessible across language levels.
+
+(do
+    (let c0 (if (eq (len (tcg-forms)) 6) 1 0))
+
+    (let pdecl (tcg-protocol-decl "kernel:call" "kernel" "cap.kernel.call" 1 "call"))
+    (let lowered-protocol (tcg-lower-protocol-decl pdecl))
+    (let c1 (if (str_eq (tc-protocol-name lowered-protocol) "kernel:call")
+                (if (str_eq (tc-protocol-capability lowered-protocol) "cap.kernel.call") 2 0)
+                0))
+
+    (let tdecl (tcg-tool-decl "grep" "stream:read" "cap.stream.read" "grep" "shell-applet" "stream+needle" "matches"))
+    (let lowered-tool (tcg-lower-tool-decl tdecl))
+    (let c2 (if (str_eq (tc-tool-name lowered-tool) "grep")
+                (if (str_eq (tc-tool-protocol lowered-tool) "stream:read") 4 0)
+                0))
+
+    (let c3 (if (str_eq (tcg-form-lowers-to (tcg-form-by-kind "capability-declaration")) "tc-capability")
+                (if (str_eq (tcg-form-surface (tcg-form-by-kind "plan-expression")) "cell") 8 0)
+                0))
+
+    (let native-cap (tcg-capability "recipe:scan" "kernel:call" "cap.kernel.call" "call kernel"))
+    (let host-cap (tcg-capability "recipe:scan" "host:file" "cap.host.file" "walk host files"))
+    (let c4 (if (eq (tcg-capability-valid? native-cap) 1)
+                (if (eq (tcg-capability-native? host-cap) 0) 16 0)
+                0))
+
+    (let c5 (if (str_eq (tc-plan-protocol (tcg-lower-plan-tool "grep" "cap.stream.read")) "stream:read")
+                (if (str_eq (tc-plan-protocol (tcg-lower-plan-request "store:query" "cap.store.query" "query")) "store:query") 32 0)
+                0))
+
+    (let offer (tcg-lower-offer (tcg-lower-plan-tool "grep" "cap.stream.read") "tool/channel"))
+    (let c6 (if (str_eq (tcg-offer-channel offer) "tool/channel")
+                (if (str_eq (tc-plan-tool-name (tcg-offer-plan offer)) "grep") 64 0)
+                0))
+
+    (let c7 (if (str_eq (tcg-form-lowers-to (tcg-form-by-kind "protocol-declaration")) "tc-protocol")
+                (if (str_eq (tcg-form-lowers-to (tcg-form-by-kind "tool-declaration")) "tc-tool")
+                    128 0)
+                0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

@@ -1,0 +1,86 @@
+; tool-channel-grammar.fk - language-level forms for the native tool surface.
+;
+; High-level declarations lower into tool-channel.fk rows. This lets grammar
+; surfaces, recipe metadata, applet projections, and low-level plans share one
+; native shape.
+
+(do
+    (defn tcg-form (kind surface phrase lowers-to proof)
+        (list kind surface phrase lowers-to proof))
+    (defn tcg-form-kind (form) (nth form 0))
+    (defn tcg-form-surface (form) (nth form 1))
+    (defn tcg-form-phrase (form) (nth form 2))
+    (defn tcg-form-lowers-to (form) (nth form 3))
+    (defn tcg-form-proof (form) (nth form 4))
+
+    (defn tcg-forms ()
+        (list
+            (tcg-form "protocol-declaration" "all" "protocol <id> provider <provider> capability <cap>" "tc-protocol" "tool-channel-grammar-band")
+            (tcg-form "provider-declaration" "all" "provider <name> via <protocol> requires <cap>" "tc-provider" "tool-channel-grammar-band")
+            (tcg-form "tool-declaration" "all" "tool <name> via <protocol> requires <cap>" "tc-tool" "tool-channel-grammar-band")
+            (tcg-form "capability-declaration" "recipe" "requires protocol <id> with <cap>" "tc-capability" "tool-channel-grammar-band")
+            (tcg-form "plan-expression" "cell" "plan <tool-or-request>" "tc-plan" "tool-channel-grammar-band")
+            (tcg-form "offer-expression" "kernel-channel" "offer tool-plan through tool/channel" "offered-tool-plan" "tool-channel-grammar-band")))
+
+    (defn tcg-find-form (kind forms)
+        (if (eq (len forms) 0) (tcg-form "" "" "" "" "")
+            (if (str_eq (tcg-form-kind (head forms)) kind)
+                (head forms)
+                (tcg-find-form kind (tail forms)))))
+    (defn tcg-form-by-kind (kind) (tcg-find-form kind (tcg-forms)))
+
+    (defn tcg-protocol-decl (name provider capability native effect)
+        (list "protocol-declaration" name provider capability native effect))
+    (defn tcg-protocol-decl-name (decl) (nth decl 1))
+    (defn tcg-protocol-decl-provider (decl) (nth decl 2))
+    (defn tcg-protocol-decl-capability (decl) (nth decl 3))
+    (defn tcg-protocol-decl-native (decl) (nth decl 4))
+    (defn tcg-protocol-decl-effect (decl) (nth decl 5))
+    (defn tcg-lower-protocol-decl (decl)
+        (tc-protocol
+            (tcg-protocol-decl-name decl)
+            (tcg-protocol-decl-provider decl)
+            (tcg-protocol-decl-capability decl)
+            (tcg-protocol-decl-native decl)
+            (tcg-protocol-decl-effect decl)))
+
+    (defn tcg-tool-decl (name protocol capability op projection input output)
+        (list "tool-declaration" name protocol capability op projection input output))
+    (defn tcg-tool-decl-name (decl) (nth decl 1))
+    (defn tcg-tool-decl-protocol (decl) (nth decl 2))
+    (defn tcg-tool-decl-capability (decl) (nth decl 3))
+    (defn tcg-tool-decl-op (decl) (nth decl 4))
+    (defn tcg-tool-decl-projection (decl) (nth decl 5))
+    (defn tcg-tool-decl-input (decl) (nth decl 6))
+    (defn tcg-tool-decl-output (decl) (nth decl 7))
+    (defn tcg-lower-tool-decl (decl)
+        (tc-tool
+            (tcg-tool-decl-name decl)
+            (tcg-tool-decl-protocol decl)
+            (tcg-tool-decl-capability decl)
+            (tcg-tool-decl-op decl)
+            (tcg-tool-decl-projection decl)
+            (tcg-tool-decl-input decl)
+            (tcg-tool-decl-output decl)))
+
+    (defn tcg-capability (owner protocol capability reason)
+        (list "capability-declaration" owner protocol capability reason))
+    (defn tcg-capability-owner (capability) (nth capability 1))
+    (defn tcg-capability-protocol (capability) (nth capability 2))
+    (defn tcg-capability-capability (capability) (nth capability 3))
+    (defn tcg-capability-reason (capability) (nth capability 4))
+    (defn tcg-capability-valid? (capability)
+        (tc-protocol-carries? (tcg-capability-protocol capability) (tcg-capability-capability capability)))
+    (defn tcg-capability-native? (capability)
+        (tc-protocol-native (tc-protocol-by-name (tcg-capability-protocol capability))))
+
+    (defn tcg-lower-plan-tool (tool-name capability)
+        (tc-plan-tool tool-name capability))
+    (defn tcg-lower-plan-request (protocol capability op)
+        (tc-plan-request protocol capability op))
+    (defn tcg-lower-offer (plan channel)
+        (list "offered-tool-plan" channel plan))
+    (defn tcg-offer-channel (offer) (nth offer 1))
+    (defn tcg-offer-plan (offer) (nth offer 2))
+
+    0)
