@@ -1,0 +1,130 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/substrate-node-fourth-floor-20260614",
+  "commit_scope": "Teach the fourth-arm flattener and fkwu emitted walker the explicit substrate NodeID construction/projection floor, admit schema and tree-diff, and keep cold-cache table preparation bounded.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "form-native-jit",
+    "substrate-nodeid",
+    "fourth-arm-floor"
+  ],
+  "spec_ids": [
+    "fourth-arm-floor",
+    "substrate-node-vocabulary",
+    "bml-native-north-star"
+  ],
+  "task_ids": [
+    "substrate-node-fourth-floor-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "android-jit-floor-requirement"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "implementation",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@cf56",
+      "contributor_type": "machine",
+      "roles": [
+        "narrow-blocker-triage"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/hati-os-kernel.fk",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/fourth-arm-bands.txt",
+    "form/scripts/fourth-arm.sh",
+    "docs/system_audit/commit_evidence_2026-06-14_substrate_node_fourth_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/hati-os-kernel.fk",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/fourth-arm-bands.txt",
+    "form/scripts/fourth-arm.sh",
+    "docs/system_audit/commit_evidence_2026-06-14_substrate_node_fourth_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "form/form-stdlib/tests/schema-band.fk",
+    "form/form-stdlib/tests/tree-diff-band.fk",
+    "form/form-stdlib/schema.fk",
+    "form/form-stdlib/tree-diff.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/bml_form_jit_metal_planes_audit.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/schema-band.fk",
+      "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/tree-diff-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh schema tree-diff",
+      "cd form && FOURTH_PREPARE_ALL_BATCH_MAX=0 ./validate.sh",
+      "bash scripts/bml_form_jit_metal_planes_audit.sh"
+    ],
+      "notes": "Focused survey first proved schema -> 10/10 and tree-diff -> 13/13 before manifest admission. The focused fourth-arm gate returned PASS-4WAY for schema and tree-diff. Full Form validation ran with the cold-cache one-by-one fallback forced and returned 'fourth arm: 136 band(s) four-way' and '556 ok, 0 divergent'. The validate output included transient temp cleanup warnings ('rm: ... Directory not empty') but exited 0."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed yet. GitHub checks will be monitored after PR creation."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deployment triggered by this commit. Public verification follows merge/deploy if deployment runs."
+  },
+  "phase_gate": {
+    "phase": "substrate-node-fourth-floor",
+    "gate": "Explicit NodeID construction/projection, schema, and tree-diff pass through Go, Rust, TypeScript, and fkwu.",
+    "state": "local-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Push PR, wait for checks, merge when checks allow, then continue to the next fourth-arm residual cluster without overlapping active coord claims."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The fourth-arm floor now carries make_nodeid plus node_category/node_pkg/node_level/node_type/node_inst, preserves node_children/node_value/node_eq behavior, and captures lexical top-level constants inside defn bodies and across module-to-band source boundaries.",
+    "public_endpoints": [
+      "local:form-fourth-arm-fkwu"
+    ],
+    "test_flows": [
+      "schema-band validates ANY/CAT/LEAF/LIST/TUPLE acceptance and refusal cases four-way at 10.",
+      "tree-diff-band validates equal, replace, child-diff, patch, and empty-diff behavior four-way at 13.",
+      "Full form validate.sh reports 136 fourth-arm bands and 556 ok / 0 divergent across Go, Rust, TypeScript, and covered fkwu bands.",
+      "Cold-cache fourth table preparation falls back to one-by-one flattening when missing rows exceed FOURTH_PREPARE_ALL_BATCH_MAX, avoiding the all-table memory spike observed during this slice."
+    ],
+    "macos_android_evidence": {
+      "macos_arm64": [
+        "PASS plane=macos-arm64 surface=bml-hati target=arm64-apple-macosx object=Mach-O 64-bit object arm64",
+        "PASS plane=macos-arm64 surface=form-jit target=arm64-apple-macosx object=Mach-O 64-bit object arm64",
+        "PASS plane=macos-arm64 surface=form-jit-lowered target=arm64-apple-macosx object=Mach-O 64-bit object arm64"
+      ],
+      "android_arm64": [
+        "PASS plane=android-arm64 surface=bml-hati target=aarch64-linux-android object=ELF 64-bit LSB relocatable, ARM aarch64",
+        "PASS plane=android-arm64 surface=form-jit target=aarch64-linux-android object=ELF 64-bit LSB relocatable, ARM aarch64",
+        "PASS plane=android-arm64 surface=form-jit-lowered target=aarch64-linux-android object=ELF 64-bit LSB relocatable, ARM aarch64"
+      ],
+      "android_floor": "Android remains supported at the minimum Form-native recipe/table and target-object floor in this slice. Shipping a clang-like compiler binary inside the APK remains an optional future acceleration/oracle route, not a claim made by this commit."
+    },
+    "summary": "The substrate node floor raises the manifest to 136 four-way bands while preserving 556 ok / 0 divergent behavior and keeping Android evidence at the explicit Form-native minimum floor."
+  }
+}

@@ -30,8 +30,9 @@
 ; pre-pass (flt-scan) interns every distinct "literal" into the program's
 ; pool — same bytes, same slot — and a literal lowers to SLIT carrying its
 ; pool index; the string family now carries str_eq/str_len/str_concat plus
-; substring/str_find/str_to_int/int_to_str/byte_to_str. node_* and floats are
-; the remaining family-by-family climb.
+; substring/str_find/str_to_int/int_to_str/byte_to_str. The explicit NodeID
+; door carries make_nodeid/category/pkg/level/type/inst; bp table parity, field
+; constructors, and floats remain family-by-family climbs.
 
 ; ── walker-carried ops as DATA rows (name arity tag) — one generic engine ──
 ; (div/mod ride the m4d tags 10/11; the figure-ops family rides 34..42 —
@@ -44,8 +45,11 @@
           (list "substring" 3 29) (list "str_find" 3 30)
           (list "str_to_int" 1 31) (list "int_to_str" 1 32) (list "byte_to_str" 1 33)
           (list "intern_trivial_int" 1 43)
+          (list "make_nodeid" 4 91)
           (list "bp" 1 45) (list "intern_trivial_string" 1 46)
           (list "intern_node" 2 47) (list "node_children" 1 48) (list "node_value" 1 49)
+          (list "node_category" 1 92) (list "node_type" 1 93) (list "node_inst" 1 94)
+          (list "node_pkg" 1 95) (list "node_level" 1 96)
           (list "node_eq" 2 80) (list "value_eq" 2 80)
           (list "math_floor" 1 51) (list "floor" 1 51) (list "round_ndigits" 2 52)
           (list "str_to_float" 1 53) (list "float_to_int" 1 54)
@@ -267,7 +271,8 @@
     (if (eq (len row) 0) (flt-call op s pos fns env)
         (if (eq (nth row 1) 1) (flt-un row s (flt-expr s pos fns env))
             (if (eq (nth row 1) 2) (flt-bin row s (flt-expr s pos fns env) fns env)
-                (flt-tri row s (flt-expr s pos fns env) fns env)))))
+                (if (eq (nth row 1) 3) (flt-tri row s (flt-expr s pos fns env) fns env)
+                    (flt-quad row s (flt-expr s pos fns env) fns env))))))
 (defn flt-un (row s ae) (list (flt-mkop row (nth ae 0) 0) (fp-close s (nth ae 1))))
 (defn flt-bin (row s ae fns env) (flt-bin2 row s (nth ae 0) (flt-expr s (nth ae 1) fns env)))
 (defn flt-bin2 (row s a be) (list (flt-mkop row a (nth be 0)) (fp-close s (nth be 1))))
@@ -276,6 +281,16 @@
 (defn flt-tri3 (row s a b ce)
     (list (fk-node (nth row 2) (ms-intern a (ms-intern b (nth ce 0))))
           (fp-close s (nth ce 1))))
+
+; Four-operand native rows ride the existing list carrier in the body so the
+; emitted program table stays fixed-width (tag + three operand slots).
+(defn flt-quad (row s ae fns env) (flt-quad2 row s (nth ae 0) (flt-expr s (nth ae 1) fns env) fns env))
+(defn flt-quad2 (row s a be fns env) (flt-quad3 row s a (nth be 0) (flt-expr s (nth be 1) fns env) fns env))
+(defn flt-quad3 (row s a b ce fns env) (flt-quad4 row s a b (nth ce 0) (flt-expr s (nth ce 1) fns env)))
+(defn flt-quad4 (row s a b c de)
+    (list (fk-node (nth row 2)
+              (fk-cons a (fk-cons b (fk-cons c (fk-cons (nth de 0) (fk-empty))))))
+          (fp-close s (nth de 1))))
 
 ; ── user function calls: every argument until ')' parses, then the row's
 ;    arity picks the carrier — arity 1 rides ARG direct (no allocation),
@@ -331,8 +346,8 @@
 (defn flt-items (s pos fns rbodies env main)
     (flt-items2 s (fp-skip s pos) fns rbodies env main))
 (defn flt-items2 (s pos fns rbodies env main)
-    (if (ge pos (fp-len s)) (list fns rbodies main pos)
-    (if (eq (fp-at s pos) 41) (list fns rbodies main (add pos 1))
+    (if (ge pos (fp-len s)) (list fns rbodies main pos env)
+    (if (eq (fp-at s pos) 41) (list fns rbodies main (add pos 1) env)
     (if (str_eq (flt-peek s pos) "defn") (flt-defn s pos fns rbodies env main)
     (if (str_eq (flt-peek s pos) "let") (flt-let s pos fns rbodies env main)
         (flt-main s (flt-expr s pos fns env) fns rbodies env))))))
@@ -356,6 +371,10 @@
                     (if (eq n 1) (fk-arg) (fk-nth (fk-arg) (fk-lit i))))
               (flt-penv (tail ps) n (add i 1)))))
 
+(defn flt-env-append (front back)
+    (if (eq (len front) 0) back
+        (cons (head front) (flt-env-append (tail front) back))))
+
 (defn flt-defn (s pos fns rbodies env main)
     (flt-defn-n s (fp-skip s (fp-sym-end s (fp-skip s (add pos 1)))) fns rbodies env main))
 (defn flt-defn-n (s pos fns rbodies env main)
@@ -374,7 +393,9 @@
 (defn flt-defn-p3 (name s pe fns rbodies env main row)
     (flt-defn-b s (nth pe 1)
                 (flt-defn-fns row fns)
-                (cons (flt-pool-row env) (flt-penv (nth pe 0) (len (nth pe 0)) 0))
+                (flt-env-append
+                    (flt-penv (nth pe 0) (len (nth pe 0)) 0)
+                    env)
                 rbodies env main))
 (defn flt-defn-b (s pos fns benv rbodies env main)
     (flt-defn-done s (flt-expr s pos fns benv) fns rbodies env main))
@@ -391,8 +412,9 @@
 (defn flt-let-done (name s ve fns rbodies env main)
     (flt-items s (fp-close s (nth ve 1)) fns rbodies (cons (list name (nth ve 0)) env) main))
 
-; one source file's (do ...) — returns (fns rbodies main endpos); env is
-; seeded with the program's string pool under the quote-name
+; one source file's (do ...) — returns (fns rbodies main endpos env); env is
+; seeded with the program's string pool under the quote-name, then threaded
+; across module sources so top-level constants remain visible to bands.
 ; Register all top-level function signatures in this source before bodies parse.
 ; The regular walkers allow forward references; the fourth-arm flattener must
 ; carry the same contract for mutually recursive compiler recipes.
@@ -415,10 +437,12 @@
     (flt-sig-scan s (nth pe 1) (cons (list name (add (len fns) 1) (len (nth pe 0))) fns)))
 
 (defn flt-top (s fns rbodies pool)
-    (flt-top2 s (fp-skip s 0) (flt-sig-scan s 0 fns) rbodies pool))
-(defn flt-top2 (s pos fns rbodies pool)
+    (flt-top-env s fns rbodies pool (list)))
+(defn flt-top-env (s fns rbodies pool env)
+    (flt-top2 s (fp-skip s 0) (flt-sig-scan s 0 fns) rbodies pool env))
+(defn flt-top2 (s pos fns rbodies pool env)
     (flt-items s (flt-top-pos s pos) fns rbodies
-               (list (list (flt-poolq) pool)) (fk-lit 0)))
+               (flt-env-append (list (list (flt-poolq) pool)) env) (fk-lit 0)))
 (defn flt-top-pos (s pos)
     (if (ge pos (fp-len s)) pos
         (if (and (eq (fp-at s pos) 40)
@@ -479,14 +503,16 @@
 (defn flt-band-fns2 (modsrc bandsrc pool)
     (flt-band2 (flt-top modsrc (list) (list) pool) bandsrc pool))
 (defn flt-band2 (mr bandsrc pool)
-    (flt-band3 (flt-top bandsrc (nth mr 0) (nth mr 1) pool)))
+    (flt-band3 (flt-top-env bandsrc (nth mr 0) (nth mr 1) pool (nth mr 4))))
 (defn flt-band3 (br)
     (cons (nth br 2) (flt-rev (nth br 1) (list))))
 (defn flt-modsrcs-top (modsrcs fns rbodies pool)
-    (if (eq (len modsrcs) 0) (list fns rbodies (fk-lit 0) 0)
-        (flt-modsrcs-top2 (flt-top (head modsrcs) fns rbodies pool) (tail modsrcs) pool)))
+    (flt-modsrcs-top-env modsrcs fns rbodies pool (list)))
+(defn flt-modsrcs-top-env (modsrcs fns rbodies pool env)
+    (if (eq (len modsrcs) 0) (list fns rbodies (fk-lit 0) 0 env)
+        (flt-modsrcs-top2 (flt-top-env (head modsrcs) fns rbodies pool env) (tail modsrcs) pool)))
 (defn flt-modsrcs-top2 (mr rest pool)
-    (flt-modsrcs-top rest (nth mr 0) (nth mr 1) pool))
+    (flt-modsrcs-top-env rest (nth mr 0) (nth mr 1) pool (nth mr 4)))
 (defn flt-band-sources-fns (modsrcs bandsrc)
     (flt-band-sources-fns2 modsrcs bandsrc (flt-band-sources-pool modsrcs bandsrc)))
 (defn flt-band-sources-fns2 (modsrcs bandsrc pool)

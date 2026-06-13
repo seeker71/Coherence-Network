@@ -182,6 +182,16 @@ fourth_prepare_all() {
         rm -rf "$d"
         return 0
     fi
+    local batch_max="${FOURTH_PREPARE_ALL_BATCH_MAX:-48}"
+    if [[ "$missing" -gt "$batch_max" ]]; then
+        echo "  flattening $missing band tables for the fourth arm one-by-one (cold cache; batch cap $batch_max)..." >&2
+        rm -rf "$d"
+        local one
+        for one in "${stems[@]}"; do
+            fourth_table "$one" >/dev/null
+        done
+        return 0
+    fi
     echo "  flattening $missing band tables for the fourth arm..." >&2
     printf '(print "==T-END==")\n' >> "$d/driver.fk"
     "$GO_BIN" "$d/driver.fk" 2>/dev/null > "$d/all.out" || true
