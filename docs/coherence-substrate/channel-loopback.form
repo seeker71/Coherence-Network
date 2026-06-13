@@ -1,0 +1,124 @@
+# channel-loopback.form - cells teaching cells through native channel receipts
+
+(channel-loopback
+  (lineage
+    (rests-on tool-channel.form fourth-kernel-physical-lanes.form encoder-decoder-as-recipe.form modality-as-recipe.form video-as-recipe.form)
+    (recipe form/form-stdlib/channel-loopback.fk)
+    (proof form/form-stdlib/tests/channel-loopback-band.fk -> 255))
+
+  (purpose
+    "A channel loopback is a cell-to-cell teaching lane: one cell's emitted channel data becomes another cell's learning input."
+    "The loopback row names the teacher cell, student cell, codec, preferred protocol, required capability, relation, and fidelity signal."
+    "Each resource row names what the channel can express, its working floor, its north star, and the next receipt that moves it toward the north star.")
+
+  (resource-expression
+    (host:exec
+      (expresses argv+stdout+stderr+exit)
+      (floor fork-exec-pipe)
+      (north-star "kernel-owned process port with typed receipts")
+      (next typed-exit-stdout-receipts))
+    (host:file
+      (expresses path+bytes+metadata)
+      (floor read-write-file)
+      (north-star "content-addressed file port with typed codecs")
+      (next byte-receipt-plus-digest))
+    (http:request
+      (expresses method+url+headers+body+response)
+      (floor host-http-client)
+      (north-star "kernel-native HTTP codec and route planner")
+      (next typed-request-response-receipt))
+    (kernel:call
+      (expresses args+value+trace)
+      (floor in-memory-recipe-call)
+      (north-star "all models and tools callable as cells")
+      (next model-tool-call-receipt))
+    (kernel:route
+      (expresses request+response+headers)
+      (floor native-socket-route)
+      (north-star "kernel front door for every route")
+      (next route-how-where-when-who-receipt))
+    (stream:read
+      (expresses ordered-events+cursor+clock)
+      (floor byte-event-stream)
+      (north-star "backpressure-aware native stream cells")
+      (next cursor-receipt))
+    (store:query
+      (expresses selector+rows+snapshot)
+      (floor sqlite-postgres-carrier-query)
+      (north-star "kernel-owned cell store query plan")
+      (next query-receipt-with-snapshot-id))
+    (audio
+      (expresses waveform+phoneme+prosody+spectrum)
+      (floor pcm-sample-receipts)
+      (north-star "bidirectional TTS/STT learning loop")
+      (next audio-codec-loopback-receipt))
+    (video
+      (expresses 2d+3d+time+shape+distance+texture+occlusion+composition+transparency+frequency+spectrum)
+      (floor frame-receipts)
+      (north-star "generation/classification loop with spatial-temporal features")
+      (next frame-and-feature-loopback-receipt))
+    (screen
+      (expresses pixels+layout+gesture+attention)
+      (floor screenshot-write-receipt)
+      (north-star "native framebuffer read/write learning cell")
+      (next pixel-receipt))
+    (sensor
+      (expresses scalar+vector+clock+confidence)
+      (floor inventory-or-sample-receipt)
+      (north-star "typed sensor fusion cells")
+      (next availability-plus-sample-receipt))
+    (model
+      (expresses prompt+context+answer+trace)
+      (floor third-party-or-local-model-call)
+      (north-star "model weights and architecture as recipe data where available")
+      (next chosen-model-receipt)))
+
+  (codecs
+    (text:tokens     (shape tokens) (protocol kernel:call) (capability cap.kernel.call) (lane in-memory-call))
+    (audio:pcm16     (shape sample-stream) (protocol stream:read) (capability cap.stream.read) (lane sample-stream))
+    (audio:features  (shape phoneme+prosody) (protocol kernel:call) (capability cap.kernel.call) (lane feature-call))
+    (video:rgba-time (shape frame-stream+time) (protocol stream:read) (capability cap.stream.read) (lane frame-stream))
+    (video:features  (shape shape+distance+texture+obstruction+occlusion+composition+transparency+frequency+spectrum)
+                     (protocol kernel:call) (capability cap.kernel.call) (lane feature-call)))
+
+  (loopbacks
+    (tts-teaches-stt
+      (teacher cell:tts) (student cell:stt)
+      (output audio:samples) (input speech:tokens)
+      (codec audio:pcm16) (relation reciprocal) (fidelity transcript-match))
+    (stt-teaches-tts
+      (teacher cell:stt) (student cell:tts)
+      (output text:tokens) (input speech:audio)
+      (codec text:tokens) (relation reciprocal) (fidelity spoken-render-match))
+    (video-gen-teaches-classifier
+      (teacher cell:video-generate) (student cell:video-classify)
+      (output video:frames) (input visual:features)
+      (codec video:rgba-time) (relation cross-modal) (fidelity feature-detection-match))
+    (video-classifier-teaches-gen
+      (teacher cell:video-classify) (student cell:video-generate)
+      (output visual:features) (input video:frames)
+      (codec video:features) (relation cross-modal) (fidelity rendered-feature-match)))
+
+  (language-surface
+    (forms codec-declaration resource-expression loopback-declaration teach-expression roundtrip-proof-expression)
+    (examples
+      "codec audio:pcm16 carries sample-stream via stream:read"
+      "resource video expresses 2d+3d+time+shape+distance+texture+occlusion+composition+transparency+frequency+spectrum floor frame-receipts north-star generation/classification-loop"
+      "loopback cell:tts teaches cell:stt through audio:pcm16"
+      "teach cell:video-classify from cell:video-generate output video:frames"
+      "prove video-gen-teaches-classifier by feature-detection-match")
+    (lowers-to cl-codec cl-loop cl-plan-loopback cl-plan-fidelity))
+
+  (native-protocol-choice
+    (sample-streams stream:read)
+    (frame-streams stream:read)
+    (feature-vectors kernel:call)
+    (token-values kernel:call)
+    (large-artifacts host:file as-storage-lane-after-receipt))
+
+  (invariant
+    (capabilities-explicit)
+    (teacher-and-student-cells-explicit)
+    (codec-shape-explicit)
+    (fidelity-signal-explicit)
+    (execution-carried-by-tool-channel-protocols)))

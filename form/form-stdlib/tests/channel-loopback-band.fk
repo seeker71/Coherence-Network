@@ -1,0 +1,60 @@
+; preludes: form-stdlib/core.fk form-stdlib/tool-channel.fk form-stdlib/channel-loopback.fk
+;
+; channel-loopback-band - cell-to-cell loopback planning proof.
+; Verdict 255 when codecs, reciprocal loops, video feature loops, and
+; grammar-level declarations all lower to explicit native channel plans.
+
+(do
+    (let c0 (if (eq (len (cl-codecs)) 5)
+                (if (eq (len (cl-loops)) 4)
+                    (if (eq (len (cl-resources)) 12) 1 0)
+                    0)
+                0))
+
+    (let audio-codec (cl-codec-by-name "audio:pcm16"))
+    (let c1 (if (str_eq (cl-codec-protocol audio-codec) "stream:read")
+                (if (eq (cl-codec-native audio-codec) 1) 2 0)
+                0))
+
+    (let tts-plan (cl-plan-loopback "tts-teaches-stt" "cap.stream.read"))
+    (let c2 (if (str_eq (cl-plan-status tts-plan) "loopback/plan")
+                (if (str_eq (cl-plan-codec tts-plan) "audio:pcm16")
+                    (if (str_eq (cl-plan-fidelity tts-plan) "transcript-match") 4 0)
+                    0)
+                0))
+
+    (let stt-plan (cl-plan-loopback "stt-teaches-tts" "cap.kernel.call"))
+    (let c3 (if (str_eq (cl-plan-status stt-plan) "loopback/plan")
+                (if (str_eq (cl-plan-relation stt-plan) "reciprocal")
+                    (if (str_eq (cl-plan-protocol stt-plan) "kernel:call") 8 0)
+                    0)
+                0))
+
+    (let denied (cl-plan-loopback "tts-teaches-stt" "cap.kernel.call"))
+    (let c4 (if (str_eq (cl-plan-status denied) "loopback/no-plan")
+                (if (str_eq (cl-plan-witness denied) "missing-capability") 16 0)
+                0))
+
+    (let video-codec (cl-codec-by-name "video:features"))
+    (let c5 (if (str_eq (cl-codec-protocol video-codec) "kernel:call")
+                (if (str_eq (cl-codec-value-shape video-codec) "shape+distance+texture+obstruction+occlusion+composition+transparency+frequency+spectrum") 32 0)
+                0))
+
+    (let video-plan (cl-plan-loopback "video-gen-teaches-classifier" "cap.stream.read"))
+    (let c6 (if (str_eq (cl-plan-status video-plan) "loopback/plan")
+                (if (str_eq (cl-plan-relation video-plan) "cross-modal")
+                    (if (str_eq (cl-plan-fidelity video-plan) "feature-detection-match") 64 0)
+                    0)
+                0))
+
+    (let video-resource (cl-resource-by-name "video"))
+    (let model-resource (cl-resource-by-name "model"))
+    (let c7 (if (eq (len (cl-language-forms)) 5)
+                (if (str_eq (cl-language-form-lowers-to (cl-language-form-by-kind "teach-expression")) "cl-plan-loopback")
+                    (if (str_eq (cl-resource-floor video-resource) "frame receipts")
+                        (if (str_eq (cl-resource-next-step model-resource) "chosen-model receipt") 128 0)
+                        0)
+                    0)
+                0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
