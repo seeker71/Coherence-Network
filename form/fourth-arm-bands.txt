@@ -27,8 +27,8 @@
 #   multi-line output     — bands that print mid-walk (the walker answers
 #     one value through fk_pr)
 #
-# Current floor (2026-06-14 substrate node admission): full
-# `cd form && ./validate.sh` reaches 136 four-way bands and 556 total passing
+# Current floor (2026-06-14 form lowering pass admission): full
+# `cd form && ./validate.sh` reaches 138 four-way bands and 556 total passing
 # workloads, with 0 residual divergent bands. BranchOutcome carries
 # ok/reject/condition results and learnable rejected evidence through the
 # fourth arm; the BML protocol/capability and runtime-choice rows ride the
@@ -40,7 +40,9 @@
 # coordinates, human-readable asm emission, Mach-O shape, native CLI emit, and
 # generic metal emit through the fourth arm. Schema/tree-diff now carry explicit
 # NodeID construction/projection plus lexical top-level constant capture across
-# source modules through the fourth arm. North star: every stdlib band is either
+# source modules through the fourth arm. Conditional and map lowering bands now
+# ride the same fourth-arm floor as the core and recursive lowerer. North star:
+# every stdlib band is either
 # listed here and validated four-way, or its 3-kernel-only blocker is explicitly
 # named in commit evidence; suite-level residuals stay at zero while
 # source-section bands move toward fourth-arm eligibility.
@@ -127,6 +129,8 @@ form-constants fks 111111
 form-diagnose fks 31
 form-debug fks 31
 form-lower fks 31
+form-lower-cond fks 31
+form-lower-map fks 31
 form-lower-rec fks 31
 form-macho fks 31
 form-mut fks 31

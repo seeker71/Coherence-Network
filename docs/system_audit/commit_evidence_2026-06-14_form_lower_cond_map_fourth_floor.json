@@ -1,0 +1,96 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/form-lower-cond-map-fourth-20260614",
+  "commit_scope": "Admit already-surveyed form-lower-cond and form-lower-map bands to the fourth-arm manifest.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "form-native-jit",
+    "fourth-arm-floor",
+    "form-lowering"
+  ],
+  "spec_ids": [
+    "fourth-arm-floor",
+    "form-lowering-floor"
+  ],
+  "task_ids": [
+    "form-lower-cond-map-fourth-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "manifest-admission",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/fourth-arm-bands.txt",
+    "docs/system_audit/commit_evidence_2026-06-14_form_lower_cond_map_fourth_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/fourth-arm-bands.txt",
+    "docs/system_audit/commit_evidence_2026-06-14_form_lower_cond_map_fourth_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "form/form-stdlib/tests/form-lower-cond-band.fk",
+    "form/form-stdlib/tests/form-lower-map-band.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && bash scripts/fourth-arm-survey.sh",
+      "cd form && bash scripts/fourth-arm-gate.sh form-lower-cond form-lower-map",
+      "cd form && ./validate.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_form_lower_cond_map_fourth_floor.json",
+      "git diff --check"
+    ],
+    "notes": "The post-PR #3010 fourth-arm survey classified form-lower-cond and form-lower-map as multi-pass at 31/31 before manifest admission. After adding the bands, the focused fourth-arm gate returns PASS-4WAY for both. Full Form validation returns 'fourth arm: 138 band(s) four-way' and '556 ok, 0 divergent'."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed yet. GitHub checks will be monitored after PR creation."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deployment triggered by this commit. Public verification follows merge/deploy if deployment runs."
+  },
+  "phase_gate": {
+    "phase": "form-lowering-fourth-floor",
+    "gate": "Conditional and map lowering examples pass Go, Rust, TypeScript, and fkwu.",
+    "state": "local-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Push PR, wait for checks, merge when checks allow, then continue to the next non-overlapping fourth-arm residual."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The fourth-arm manifest now carries form-lower-cond and form-lower-map alongside form-lower and form-lower-rec.",
+    "public_endpoints": [
+      "local:form-fourth-arm-fkwu"
+    ],
+    "test_flows": [
+      "form-lower-cond validates conditional lowering parity four-way at 31.",
+      "form-lower-map validates map lowering parity four-way at 31.",
+      "Full form validate.sh reports 138 fourth-arm bands and 556 ok / 0 divergent across Go, Rust, TypeScript, and covered fkwu bands."
+    ],
+    "summary": "This is a manifest floor ratchet for two already-passing lowering bands; no runtime code changes were needed."
+  }
+}
