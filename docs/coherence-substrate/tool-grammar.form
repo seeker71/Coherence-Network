@@ -113,21 +113,33 @@ form tool_grammar_shape = {
 # Part 3 — the invoke recipe
 # ─────────────────────────────────────────────────────────────────────
 #
-# Generic recipe a cell calls to invoke any tool. Composes the
-# call_pattern + carrier + response_pattern into one round-trip.
+# Generic recipe a cell calls to invoke any tool. The current native surface is
+# two-step: first ask `tool-channel.fk` for a protocol plan with `tc-plan-tool`
+# or `tc-plan-request`, then offer that plan through the named kernel/tool
+# channel. The plan names the explicit protocol (`host:exec`, `host:file`,
+# `http:request`, `kernel:call`, `kernel:route`, `stream:read`, `store:query`)
+# and the boundary it crosses. `tc-which`, `tc-protocol-carries?`, and
+# `tc-native-option?` make the catalog inspectable before any offer. No host
+# access is ambient; host tools are visible protocols.
 
 defn invoke(tool, args_tree) = do {
     let invocation = call(tool.call_pattern, args_tree);
-    let raw_result = ?carrier_execute(tool.carrier, invocation);
+    let plan       = tool_channel_plan(tool, args_tree);
+    let raw_result = offer_tool_plan(plan, invocation);
     let parsed     = call(tool.response_pattern, raw_result);
     parsed
 };
 
-# `carrier_execute` is a host intrinsic (GAP-T1): subprocess.run for
-# shell, urllib for http, getattr+call for in_process. The Form recipe
-# names the operation; the host carries the OS-level execution. Same
-# shape as substrate-kernel.form's GAP-K1 (storage I/O stays at the
-# host transaction boundary).
+# `tool_channel_plan` is executable today as
+# `form/form-stdlib/tool-channel.fk`: cells and recipes can discover protocols,
+# providers, applets, catalog tools, and request carriers as Form data, then
+# receive an invocation plan or `tool/no-plan` when a capability is missing.
+# `form/form-stdlib/tool-channel-grammar.fk` makes those concepts available to
+# the language layer: protocol declarations, tool declarations, capability
+# declarations, plan expressions, and offer expressions lower to the same rows.
+# `offer_tool_plan` is the kernel boundary: it carries an explicit protocol
+# plan across an offered channel rather than hiding shell/http/store access in
+# a Python carrier.
 
 # ─────────────────────────────────────────────────────────────────────
 # Part 4 — the witness pairing
@@ -159,13 +171,12 @@ defn invoke_witnessed(cell, tool, args_tree) = do {
 # Part 5 — honest GAPs
 # ─────────────────────────────────────────────────────────────────────
 #
-# GAP-T1: `?carrier_execute(carrier, invocation)` is a host intrinsic.
-#         For "shell" carriers, the host runs `subprocess.run`; for
-#         "http" carriers, `urllib.request`; for "in_process",
-#         dynamic import + getattr. The recipe names the operation;
-#         the OS-level execution lives at the host boundary, the same
-#         way substrate-kernel.form delegates persistence I/O to
-#         SQLAlchemy.
+# GAP-T1: `offer_tool_plan(plan, invocation)` still crosses a kernel boundary,
+#         but the boundary is now explicit Form data. `tool-channel.fk`
+#         distinguishes host access, network requests, kernel calls/routes,
+#         streams, and stores as plannable protocols. The remaining runtime
+#         work is the per-protocol executor behind the offered channel, not a
+#         Python carrier that owns tool semantics.
 #
 # GAP-T2: `call(pattern, args)` is a recipe-application primitive —
 #         walk the pattern's recipe tree with the args bound. Already
