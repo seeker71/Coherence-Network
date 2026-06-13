@@ -1,0 +1,120 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/native-metal-emit-fourth-floor-20260613",
+  "commit_scope": "Admit the native metal and Hati target emit pass cluster to the fourth-arm manifest, raising the fkwu floor from 129 to 134 covered bands without changing kernel behavior.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "form-native-jit",
+    "hati-os",
+    "native-metal-planes"
+  ],
+  "spec_ids": [
+    "fourth-arm-floor",
+    "bml-native-north-star",
+    "hati-os-targets"
+  ],
+  "task_ids": [
+    "native-metal-emit-fourth-floor-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "android-jit-floor-requirement"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-13_native_metal_emit_fourth_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-13_native_metal_emit_fourth_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "form/form-stdlib/tests/asm-pl-human-emit-band.fk",
+    "form/form-stdlib/tests/form-macho-band.fk",
+    "form/form-stdlib/tests/hati-os-native-cli-emit-band.fk",
+    "form/form-stdlib/tests/hati-os-targets-band.fk",
+    "form/form-stdlib/tests/metal-emit-band.fk",
+    "scripts/bml_form_jit_metal_planes_audit.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && bash scripts/fourth-arm-survey.sh",
+      "cd form && python3 scripts/fourth-arm-gap-analysis.py",
+      "cd form && bash scripts/fourth-arm-gate.sh asm-pl-human-emit hati-os-native-cli-emit hati-os-targets metal-emit form-macho",
+      "cd form && ./validate.sh",
+      "bash scripts/bml_form_jit_metal_planes_audit.sh"
+    ],
+    "notes": "The refreshed survey on the post-#3006 floor showed 97 already-passing bands outside the manifest and kept the node/substrate family as the largest blocked cluster. This slice admits only the non-overlapping native metal/emit pass cluster. The focused fourth-arm gate returned PASS-4WAY for asm-pl-human-emit, hati-os-native-cli-emit, hati-os-targets, metal-emit, and form-macho. Full Form validation returned 'fourth arm: 134 band(s) four-way' and '555 ok, 0 divergent'."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed yet. GitHub checks will be monitored after PR creation."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deployment triggered by this commit. Production was aligned to origin/main before this slice started; public verification follows merge/deploy if deployment runs."
+  },
+  "phase_gate": {
+    "phase": "native-metal-emit-fourth-floor",
+    "gate": "Native target/emit shape bands are listed in the fourth-arm manifest and pass through Go, Rust, TypeScript, and fkwu.",
+    "state": "local-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Push PR, wait for checks, merge when checks allow, then continue to the next fourth-arm pass or blocked-op family without overlapping active coord claims."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The fourth-arm floor now includes Hati OS target coordinates, native CLI emit, human-readable asm emit, Mach-O object shape, and generic metal emit rows. The change is a manifest/docs/evidence admission of rows that already measured as fkwu pass candidates.",
+    "public_endpoints": [
+      "local:form-fourth-arm-fkwu"
+    ],
+    "test_flows": [
+      "Focused fourth-arm gate reports PASS-4WAY for all five admitted rows.",
+      "Full form validate.sh reports 134 fourth-arm bands and 555 ok / 0 divergent across Go, Rust, TypeScript, and covered fkwu bands.",
+      "bml_form_jit_metal_planes_audit.sh passes macOS arm64 Mach-O and Android arm64 ELF object receipts for bml-hati, form-jit, and form-jit-lowered surfaces."
+    ],
+    "macos_android_evidence": {
+      "macos_arm64": [
+        "PASS plane=macos-arm64 surface=bml-hati target=arm64-apple-macosx object=Mach-O 64-bit object arm64",
+        "PASS plane=macos-arm64 surface=form-jit target=arm64-apple-macosx object=Mach-O 64-bit object arm64",
+        "PASS plane=macos-arm64 surface=form-jit-lowered target=arm64-apple-macosx object=Mach-O 64-bit object arm64"
+      ],
+      "android_arm64": [
+        "PASS plane=android-arm64 surface=bml-hati target=aarch64-linux-android object=ELF 64-bit LSB relocatable, ARM aarch64",
+        "PASS plane=android-arm64 surface=form-jit target=aarch64-linux-android object=ELF 64-bit LSB relocatable, ARM aarch64",
+        "PASS plane=android-arm64 surface=form-jit-lowered target=aarch64-linux-android object=ELF 64-bit LSB relocatable, ARM aarch64"
+      ],
+      "android_floor": "Android may package a clang-like compiler binary later as optional oracle/acceleration proof, but this floor continues to rely on Form-native recipe/table execution and Android arm64 target receipts."
+    },
+    "summary": "The native metal/emit cluster raises the manifest floor to 134 four-way bands while preserving 555 ok / 0 divergent suite behavior and the Android minimum JIT floor without requiring a bundled runtime compiler."
+  }
+}
