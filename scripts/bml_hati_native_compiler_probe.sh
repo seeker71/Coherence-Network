@@ -80,6 +80,12 @@ cat > "$driver" <<'FK'
             (bml-source-scan-text
                 "const int x = 2;\nconst int y = 5;\nreturn x + 1;\n"))))
 
+(defn probe-method-call-node ()
+    (bml-source-exec-parse-node
+        (bml-source-parse-executable-stream
+            (bml-source-scan-text
+                "int Inc(int n) { return n + 1; }\nreturn Inc(41);\n"))))
+
 (print "==UNI==")
 (print (fkc-emit-universal))
 (print "==INT==")
@@ -94,6 +100,8 @@ cat > "$driver" <<'FK'
 (print (bml-hati-table-file-from-node (probe-choose-node)))
 (print "==LOCALS==")
 (print (bml-hati-table-file-from-node (probe-locals-node)))
+(print "==METHODCALL==")
+(print (bml-hati-table-file-from-node (probe-method-call-node)))
 (print "==END==")
 FK
 
@@ -137,6 +145,7 @@ expected_for() {
     ADD) echo 3 ;;
     CHOOSE) echo 8 ;;
     LOCALS) echo 3 ;;
+    METHODCALL) echo 42 ;;
     *) echo "unknown case: $1" >&2; exit 1 ;;
   esac
 }
@@ -181,6 +190,7 @@ run_case CHAR
 run_case ADD
 run_case CHOOSE
 run_case LOCALS
+run_case METHODCALL
 
 char_table="$work/CHAR.table.txt"
 if ! grep -q "1 1 65" "$char_table"; then

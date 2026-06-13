@@ -158,7 +158,8 @@
         {"name": "CONTINUE",  "inst": 29},
         {"name": "CHAR",      "inst": 32, "note": "insts 30-31 are reserved/skipped historically"},
         {"name": "ARRAY",     "inst": 33},
-        {"name": "FLOAT",     "inst": 34}
+        {"name": "FLOAT",     "inst": 34},
+        {"name": "CALL",      "inst": 35}
       ]
     },
     "go.bmf": {

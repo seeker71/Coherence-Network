@@ -36,6 +36,7 @@
 (let BML-AST-CHAR (intern_trivial_int 32))
 (let BML-AST-ARRAY (intern_trivial_int 33))
 (let BML-AST-FLOAT (intern_trivial_int 34))
+(let BML-AST-CALL (intern_trivial_int 35))
 
 ; go.bmf (GO-BMF) category_type=99
 (let GO-BMF-PACKAGE (intern_trivial_int 631))
@@ -178,4 +179,3 @@
 (let TS-BMF-ENUM (intern_trivial_int 619))
 (let TS-BMF-OPTIONAL (intern_trivial_int 620))
 (let TS-BMF-TEMPLATE (intern_trivial_int 621))
-

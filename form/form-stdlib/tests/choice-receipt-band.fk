@@ -1,6 +1,6 @@
 ; choice-receipt-band.fk - first proof for trace-preserving choice receipts.
 ;
-; preludes: form-stdlib/choice-receipt.fk
+; preludes: form-stdlib/core.fk form-stdlib/choice-receipt.fk
 ;
 ; Band verdict: -1 (4294967295 unsigned) when success, fail, and silence receipts validate;
 ; branch-prediction feedback stays distinct from alignment/knowing/trust; and

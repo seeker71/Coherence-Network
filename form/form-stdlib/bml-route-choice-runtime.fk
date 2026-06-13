@@ -1,0 +1,195 @@
+; bml-route-choice-runtime.fk - BML choiceReceipt metadata drives route choice.
+;
+; preludes: form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/bml-source.fk form-stdlib/branch-choice-order.fk form-stdlib/kernel-http.fk
+;
+; This is the executable bridge between first-class BML choice metadata and
+; the existing kernel HTTP route surface. It does not replace kernel-http; it
+; lets BML choose when a trusted fast route can run and when a slower oracle
+; branch should be selected instead.
+
+(do
+    (defn brcr-empty? (value)
+        (eq (len value) 0))
+
+    (defn brcr-candidate-route-name (candidate)
+        (if (brcr-empty? candidate)
+            "none"
+            (kh-route-name (kh-route-candidate-route candidate))))
+
+    (defn brcr-first-choice-path-by-category (candidates category fallback)
+        (if (eq (len candidates) 0)
+            fallback
+            (if (and (bml-source-choice-candidate-eligible? (head candidates))
+                     (str_eq
+                        (bml-source-choice-candidate-category (head candidates))
+                        category))
+                (bml-source-choice-candidate-path (head candidates))
+                (brcr-first-choice-path-by-category
+                    (tail candidates)
+                    category
+                    fallback))))
+
+    (defn brcr-escalation-path (row fallback)
+        (brcr-first-choice-path-by-category
+            (bml-source-choice-row-candidates row)
+            "oracle"
+            (brcr-first-choice-path-by-category
+                (bml-source-choice-row-candidates row)
+                "http"
+                fallback)))
+
+    (defn brcr-declared-source-path (row)
+        (bml-source-choice-row-selected-path row))
+
+    (defn brcr-selected-source-path (row threshold)
+        (do
+            (let declared (brcr-declared-source-path row))
+            (if (bml-source-choice-row-trust-matrix-ready? row threshold)
+                declared
+                (brcr-escalation-path row declared))))
+
+    (defn brcr-find-route-candidate-by-name (candidates route-name)
+        (if (eq (len candidates) 0)
+            (empty)
+            (if (str_eq
+                    (kh-route-name (kh-route-candidate-route (head candidates)))
+                    route-name)
+                (head candidates)
+                (brcr-find-route-candidate-by-name
+                    (tail candidates)
+                    route-name))))
+
+    (defn brcr-eligible-candidate-or (candidate fallback)
+        (if (brcr-empty? candidate)
+            fallback
+            (if (kh-route-candidate-eligible? candidate)
+                candidate
+                fallback)))
+
+    (defn brcr-realization
+        (row threshold selected-source-path declared-path escalation-needed
+         kernel-choice selected-candidate source-candidate-count)
+        (list
+            "bml-route-choice-runtime"
+            row
+            threshold
+            selected-source-path
+            declared-path
+            escalation-needed
+            kernel-choice
+            selected-candidate
+            source-candidate-count))
+
+    (defn brcr-realization? (value)
+        (if (eq (len value) 9)
+            (str_eq (nth value 0) "bml-route-choice-runtime")
+            false))
+
+    (defn brcr-realization-row (realization) (nth realization 1))
+    (defn brcr-realization-threshold (realization) (nth realization 2))
+    (defn brcr-realization-selected-source-path (realization) (nth realization 3))
+    (defn brcr-realization-declared-path (realization) (nth realization 4))
+    (defn brcr-realization-escalation-needed? (realization) (nth realization 5))
+    (defn brcr-realization-kernel-choice (realization) (nth realization 6))
+    (defn brcr-realization-selected-candidate (realization) (nth realization 7))
+    (defn brcr-realization-source-candidate-count (realization) (nth realization 8))
+
+    (defn brcr-realization-selected-route-name (realization)
+        (brcr-candidate-route-name
+            (brcr-realization-selected-candidate realization)))
+
+    (defn brcr-realization-kernel-selected-route-name (realization)
+        (brcr-candidate-route-name
+            (kh-route-choice-selected
+                (brcr-realization-kernel-choice realization))))
+
+    (defn brcr-realization-overrode-kernel? (realization)
+        (not
+            (str_eq
+                (brcr-realization-selected-route-name realization)
+                (brcr-realization-kernel-selected-route-name realization))))
+
+    (defn brcr-realize (row routes request threshold)
+        (do
+            (let kernel-choice (kh-route-choice-for-request routes request))
+            (let selected-path (brcr-selected-source-path row threshold))
+            (let requested
+                (brcr-find-route-candidate-by-name
+                    (kh-route-choice-candidates kernel-choice)
+                    selected-path))
+            (let selected
+                (brcr-eligible-candidate-or
+                    requested
+                    (kh-route-choice-selected kernel-choice)))
+            (brcr-realization
+                row
+                threshold
+                selected-path
+                (brcr-declared-source-path row)
+                (bml-source-choice-row-escalation-needed? row threshold)
+                kernel-choice
+                selected
+                (len (bml-source-choice-row-candidates row)))))
+
+    (defn brcr-selected-pressure-bucket (realization)
+        (if (brcr-empty? (brcr-realization-selected-candidate realization))
+            5
+            (kh-pressure-bucket
+                (kh-route-candidate-pressure
+                    (brcr-realization-selected-candidate realization)))))
+
+    (defn brcr-selected-score-bucket (realization)
+        (if (brcr-empty? (brcr-realization-selected-candidate realization))
+            0
+            (kh-score-bucket
+                (kh-route-candidate-score
+                    (brcr-realization-selected-candidate realization)))))
+
+    (defn brcr-realization-signature (realization)
+        (list
+            "bml-route-choice-runtime-signature"
+            (bml-source-choice-row-category
+                (brcr-realization-row realization))
+            (brcr-realization-selected-source-path realization)
+            (brcr-realization-selected-route-name realization)
+            (brcr-realization-declared-path realization)
+            (brcr-realization-escalation-needed? realization)
+            (brcr-selected-pressure-bucket realization)
+            (brcr-selected-score-bucket realization)
+            (brcr-realization-source-candidate-count realization)))
+
+    (defn brcr-realization-signature? (signature)
+        (if (eq (len signature) 9)
+            (str_eq (nth signature 0) "bml-route-choice-runtime-signature")
+            false))
+
+    (defn brcr-realization-valid? (realization)
+        (if (brcr-realization? realization)
+            (and
+                (bml-source-choice-receipt-row?
+                    (brcr-realization-row realization))
+                (and
+                    (kh-route-choice-valid?
+                        (brcr-realization-kernel-choice realization))
+                    (and
+                        (eq
+                            (brcr-realization-source-candidate-count realization)
+                            (len
+                                (bml-source-choice-row-candidates
+                                    (brcr-realization-row realization))))
+                        (and
+                            (if (brcr-empty?
+                                    (brcr-realization-selected-candidate
+                                        realization))
+                                false
+                                (kh-route-candidate-valid?
+                                    (brcr-realization-selected-candidate
+                                        realization)))
+                            (str_eq
+                                (brcr-realization-selected-route-name
+                                    realization)
+                                (brcr-realization-selected-source-path
+                                    realization))))))
+            false))
+
+    0)

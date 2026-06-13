@@ -116,7 +116,8 @@
         ;; primary order: litnum BEFORE ident (ident's alnum-run also matches
         ;; digits, so numbers must be tried first), then ident (the common case)
         ;; — idents now match in 2 tries instead of 5, numbers in 1, safely.
-        (rule3 "primary" (p-cap "v" (list "alt" (p-ref "ifexpr") (p-ref "litempty") (p-ref "littrue") (p-ref "litfalse") (p-ref "litnum") (p-ref "ident") (p-ref "litstr") (p-ref "paren") (p-ref "litchr"))) (t-splice "v"))
+        (rule3 "primary" (p-cap "v" (list "alt" (p-ref "choiceReceipt") (p-ref "ifexpr") (p-ref "litempty") (p-ref "littrue") (p-ref "litfalse") (p-ref "litnum") (p-ref "ident") (p-ref "litstr") (p-ref "paren") (p-ref "litchr"))) (t-splice "v"))
+        (rule3 "choiceReceipt" (list "seq" (p-lit "choiceReceipt") (p-lit "(") (p-cap "args" (p-sep (p-ref "expr") (p-lit ","))) (p-lit ")")) (t-emit "fncall" (list (t-emit "ident" (list (t-const "choiceReceipt"))) (t-splices "args"))))
         (rule3 "ifexpr" (list "seq" (p-lit "if") (p-cap "c" (p-ref "expr")) (p-lit "then") (p-cap "t" (p-ref "expr")) (p-lit "else") (p-cap "e" (p-ref "expr"))) (t-emit "if" (list (t-splice "c") (t-splice "t") (t-splice "e"))))
         (rule3 "litempty" (p-lit "empty") (t-emit "fncall" (list (t-emit "ident" (list (t-const "empty"))))))
         (rule3 "littrue" (p-lit "true") (t-const-bool 1))

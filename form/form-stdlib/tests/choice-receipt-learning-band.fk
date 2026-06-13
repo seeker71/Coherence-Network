@@ -1,4 +1,4 @@
-; preludes: form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk
+; preludes: form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk
 ;
 ; choice-receipt-learning-band — receipt witness updates branch-order memory.
 ;

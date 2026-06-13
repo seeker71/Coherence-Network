@@ -1,0 +1,138 @@
+; channel-protocol-choice-floor-band.fk
+;
+; Composite floor proof for channel/interface/protocol/dynamic choice routing.
+; Verdict 32767 when the current floor is real and inspectable without claiming
+; the future unified BML protocol grammar is already complete.
+;
+; preludes: form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/bml-source.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/channel-protocol-choice-floor.fk
+
+(do
+    (defn cpcf-score (ok score)
+        (if ok score 0))
+
+    (let sources (cpcf-related-sources))
+    (let recipe (cpcf-floor-recipe))
+    (let validation-rounds (cpcf-record-value (nth recipe 4)))
+    (let current-gaps (cpcf-record-value (nth recipe 5)))
+
+    (let channel-interface-source
+        (cpcf-source-find-proof
+            sources
+            "form/form-stdlib/tests/channel-interface-band.fk"))
+    (let channel-flow-source
+        (cpcf-source-find-proof
+            sources
+            "form/form-stdlib/tests/channel-flow-band.fk"))
+    (let tool-channel-source
+        (cpcf-source-find-proof
+            sources
+            "form/form-stdlib/tests/tool-channel-band.fk"))
+    (let loopback-source
+        (cpcf-source-find-proof
+            sources
+            "form/form-stdlib/tests/channel-loopback-band.fk"))
+    (let runtime-source
+        (cpcf-source-find-proof
+            sources
+            "form/form-stdlib/tests/runtime-dynamic-capability-registry-band.fk"))
+    (let typed-row-source
+        (cpcf-source-find-proof
+            sources
+            "form/form-stdlib/tests/bml-choice-receipt-row-band.fk"))
+
+    (let route-template
+        (bml-source-parse-template-use
+            "RuntimeDataRoute"
+            "RouteCell<KernelHTTPRequest, KernelHTTPResponse>"))
+    (let route-call
+        (bml-source-route-call-from-expr
+            "route(\"runtime-health\", \"GET\", \"/api/runtime/health\", 9, \"route_runtime_health\", \"Accept\", 0)"))
+    (let choice-row
+        (bml-source-choice-row-from-expr
+            "choiceReceipt(routePredict,BML,route-choice,kernelRoute:native:true:5:90:matching-capability;httpRequest:http:true:30:70:fallback-carrier,kernelRoute,success,95,branch-prediction-feedback,90,95,95,95,native-kernel-route-matched,channel-protocol-choice-floor-band,form/form-stdlib/tests/channel-protocol-choice-floor-band.fk,20260613,2,1,1,0,0);"))
+    (let choice-row-receipt (bml-source-choice-row->receipt choice-row))
+    (let route-request
+        (kh-request
+            "GET"
+            "/api/runtime/health"
+            (list (kh-header "Accept" "application/json"))
+            (list)
+            ""))
+    (let native-route
+        (kh-route
+            "kernelRoute"
+            "GET"
+            "/api/runtime/health"
+            9
+            "route_runtime_health_native"
+            "Accept"
+            25))
+    (let fallback-route
+        (kh-route
+            "httpRequest"
+            "ANY"
+            "/api/*"
+            3
+            "route_runtime_health_http"
+            ""
+            80))
+    (let route-realization
+        (brcr-realize
+            choice-row
+            (list fallback-route native-route)
+            route-request
+            70))
+
+    (let receipt-candidates
+        (list
+            (cr-choice-candidate "kernel:route" "protocol-choice" true 5 90 "native route has matching capability")
+            (cr-choice-candidate "http:request" "protocol-choice" true 12 70 "host HTTP carrier remains fallback")))
+    (let choice-value
+        (cr-choice-value
+            (cr-kind-branch-feedback)
+            90
+            95
+            95
+            95))
+    (let choice-receipt
+        (cr-choice-receipt
+            "choose protocol route"
+            "channel-protocol-choice-floor"
+            "protocol-choice"
+            receipt-candidates
+            "kernel:route"
+            (cr-outcome-success)
+            95
+            choice-value
+            "native kernel route matched requested capability"
+            "channel-protocol-choice-floor-band"
+            "form/form-stdlib/tests/channel-protocol-choice-floor-band.fk"
+            20260613
+            2
+            (cr-choice-trace 2 1 0 0)))
+    (let signature (cr-choice-signature choice-receipt))
+
+    (let stale (bco-candidate "http:request" 0 0 0 1 90 90))
+    (let native (bco-candidate "kernel:route" 0 0 0 0 95 95))
+    (let learned-path
+        (crl-best-path-after-receipt
+            (list stale native)
+            choice-receipt))
+
+    (sum
+        (list
+            (cpcf-score (eq (len recipe) 6) 1)
+            (cpcf-score (eq (len validation-rounds) 3) 2)
+            (cpcf-score (eq (cpcf-proven-source-count sources) 15) 4)
+            (cpcf-score (str_eq (cpcf-source-status channel-interface-source) "proven-four-way") 8)
+            (cpcf-score (str_eq (cpcf-source-status channel-flow-source) "proven-four-way") 16)
+            (cpcf-score (str_eq (cpcf-source-status tool-channel-source) "proven-four-way") 32)
+            (cpcf-score (str_eq (cpcf-source-status loopback-source) "proven-four-way") 64)
+            (cpcf-score (str_eq (cpcf-source-status runtime-source) "proven") 128)
+            (cpcf-score (and (bml-source-template-use? route-template) (eq (len (bml-source-template-use-type-arguments route-template)) 2)) 256)
+            (cpcf-score (and (bml-source-route-call? route-call) (str_eq (bml-source-route-call-name route-call) "route")) 512)
+            (cpcf-score (and (cr-choice-receipt-valid? choice-receipt) (cr-choice-signature? signature)) 1024)
+            (cpcf-score (and (str_eq (cr-signature-selected-path signature) "kernel:route") (str_eq learned-path "kernel:route")) 2048)
+            (cpcf-score (eq (len current-gaps) 4) 4096)
+            (cpcf-score (and (str_eq (cpcf-source-status typed-row-source) "proven-four-way") (cr-choice-receipt-valid? choice-row-receipt)) 8192)
+            (cpcf-score (and (brcr-realization-valid? route-realization) (str_eq (brcr-realization-selected-route-name route-realization) "kernelRoute")) 16384))))

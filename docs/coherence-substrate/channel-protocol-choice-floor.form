@@ -1,0 +1,81 @@
+# channel-protocol-choice-floor.form - shared floor and north star
+
+(channel-protocol-choice-floor
+  (purpose
+    "Make channel, interface, protocol, and dynamic choice routing one inspectable Form/BML shape without replacing the recipes that already run.")
+
+  (floor
+    "A cell can offer an interface; a channel flow can be gated by the receiver's offered interface; channel-loopback protocol rows can name codec, capability, status, and refusal witness; BML route source objects can be parsed; BML choiceReceipt routing metadata crosses four-way; kernel-http route choice crosses four-way; BML choice metadata can select a real kernel route candidate with an inspectable signature; and typed choiceReceipt rows lower into choice receipts that feed learned ordering across four-way.")
+
+  (north-star
+    "Channel, interface, protocol, capability, route choice, receipt, and learning are first-class Form/BML grammar expressions. Channels and protocols are native recipe values for forward flow: a recipe can try a fast local branch, compare it with a slow oracle branch, and escalate only when confidence or the trust matrix falls below the chosen floor. They lower to native recipes, execute across supported lanes, and return inspectable receipts before any route, protocol, model, or JIT choice is trusted.")
+
+  (what-is-proven-now
+    (channel-interface "form/form-stdlib/channel-interface.fk" "form/form-stdlib/tests/channel-interface-band.fk" "four-way 127 on fkwu")
+    (channel-flow "form/form-stdlib/channel-flow.fk" "form/form-stdlib/tests/channel-flow-band.fk" "four-way 8388607 on fkwu")
+    (protocol-loopback "form/form-stdlib/channel-loopback.fk" "form/form-stdlib/tests/channel-loopback-band.fk" "four-way 255 on fkwu")
+    (tool-channel "form/form-stdlib/tool-channel.fk" "form/form-stdlib/tests/tool-channel-band.fk" "four-way 255 on fkwu")
+    (dynamic-capability-routing "form/form-stdlib/runtime-grammar.fk" "form/form-stdlib/tests/runtime-dynamic-capability-registry-band.fk" "three-kernel/host-IO band")
+    (kernel-http-route-choice "form/form-stdlib/kernel-http.fk" "form/form-stdlib/tests/kernel-http-band.fk" "four-way 536965066 on fkwu")
+    (choice-receipt "form/form-stdlib/choice-receipt.fk" "form/form-stdlib/tests/choice-receipt-band.fk" "four-way 4294967295 on fkwu")
+    (choice-receipt-learning "form/form-stdlib/choice-receipt-learning.fk" "form/form-stdlib/tests/choice-receipt-learning-band.fk" "four-way 255 on fkwu")
+    (branch-choice-order "form/form-stdlib/branch-choice-order.fk" "form/form-stdlib/tests/branch-choice-order-band.fk" "four-way 511 on fkwu")
+    (bml-route-choice-runtime "form/form-stdlib/bml-route-choice-runtime.fk" "form/form-stdlib/tests/bml-route-choice-runtime-band.fk" "four-way 32767 on fkwu")
+    (bml-route-source-objects "form/form-stdlib/bml-source.fk" "form/form-stdlib/tests/bml-route-source-object-band.fk" "four-way 2047 on fkwu")
+    (bml-source-textual-spans "form/form-stdlib/bml-source.fk" "form/form-stdlib/tests/bml-source-brace-state-step-proof.fk" "form/form-stdlib/tests/bml-source-cursor-body-span-proof.fk")
+    (bml-choice-routing-metadata "form/form-stdlib/bml-source.fk" "form/form-stdlib/tests/bml-choice-routing-metadata-band.fk" "four-way 4095 on fkwu")
+    (bml-choice-receipt-row "form/form-stdlib/bml-source.fk" "form/form-stdlib/tests/bml-choice-receipt-row-band.fk" "four-way 131071 on fkwu")
+    (bml-interface-and-class-model "form/form-stdlib/grammars/bml.fk" "form/form-stdlib/tests/bml-full-class-model-proof.fk")
+    (bml-generics "form/form-stdlib/bml.fk" "form/form-stdlib/tests/bml-generics-band.fk")
+    (composite-floor "form/form-stdlib/channel-protocol-choice-floor.fk" "form/form-stdlib/tests/channel-protocol-choice-floor-band.fk" "four-way 32767 on fkwu"))
+
+  (native-learning-and-recipe-library
+    (metadata-columns expression surface category candidates selected-path outcome certainty value-kind branch-feedback alignment knowing trust why who where when-tick cost trace)
+    (candidate-columns path category eligible pressure score evidence)
+    (routing-use "candidate score, pressure, branch feedback, certainty, alignment, knowing, trust, cost, and trace are visible to branch-choice prediction, route-choice runtime selection, and route-choice learning")
+    (four-way-floor "choiceReceipt source metadata preserves fast/local and slow/oracle rows, cost, confidence/trust floor, escalation, typed CHOICE-RECEIPT lowering, choice-receipt-learning, kernel-http route choice, and bml-route-choice-runtime across Go/Rust/TS/fkwu")
+    (io-wall "runtime dynamic capability registry remains a host-IO band, so it is proven locally but not manifest-gated on fkwu")
+    (proved-example "trusted BML metadata selects the fast kernelRoute as a real kh-route-candidate; low-trust local metadata escalates to slowOracle even when raw kernel routing would have picked kernelRoute"))
+
+  (related-existing-language-source-recipes
+    (channel-interface-consent.form "the law: honor the other side's offered interface")
+    (channel-flow-dialect.form "the flow: freeze, match, choose, delta, receipt")
+    (channel-loopback.form "the protocol/capability/codec planning rows")
+    (branch-choice-order.form "learned ordering over candidates")
+    (grammar-as-recipe.form "language surfaces are recipes, not host-only parsers")
+    (grammars-from-the-cursor.form "many language syntaxes lower to shared Form nodes")
+    (bml-native-north-star.form "BML compiler north star and current native floor")
+    (specs/canonical-route-registry-and-runtime-mapping.md "route registry and runtime attribution")
+    (specs/bml-typed-recipes.md "typed BML signatures and checker north star")
+    (specs/agent-question-sse-channel.md "human/sub-agent question channel boundary"))
+
+  (sister-validation-rounds
+    (round-1
+      (channel claude-cli)
+      (focus "row-shape, overclaim, and proof-band review")
+      (result "qualify receipt-to-learning as band proof; name explicit row columns, textual BML source citations, BMF choice receipts, and fourth-arm intent"))
+    (round-2
+      (channel gemini-cli)
+      (focus "source parser versus grammar-native boundary")
+      (result "BML route parsing is parsed enough for the floor, not a full grammar; add the BML grammar hook and lower toward CR-TAG-CHOICE-RECEIPT"))
+    (round-3
+      (channel grok-cli)
+      (focus "recorded artifact and runtime gap review")
+      (result "no material overclaim after gaps are named; keep production driver and universal receipts-before-trust enforcement open")))
+
+  (current-gaps
+    (broader-bml-protocol-capability-grammar not-yet-proven-beyond-route-choice-slice)
+    (runtime-dynamic-capability-registry-fourth-arm host-io-wall)
+    (receipts-before-trust not-yet-universal-runtime-enforcement)
+    (production-route-choice-runtime not-yet-active-driver))
+
+  (next-step
+    "Wire production route and recipe-library callers to brcr-realize, persist returned route-choice signatures, and lift broader BML protocol/capability grammar beyond the route-choice slice.")
+
+  (invariant
+    (no-parallel-carrier)
+    (receipts-before-trust)
+    (unsupported-shapes-named)
+    (choice-learns-from-witnessed-outcome)
+    (metadata-informs-branch-choice)
+    (interface-consent-gates-flow)))
