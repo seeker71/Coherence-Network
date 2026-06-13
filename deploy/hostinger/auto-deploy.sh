@@ -533,6 +533,15 @@ if [[ "$STATIC_FAST_PATH_ALLOWED" == "1" && "$DIFF_BASE" != "$TARGET_SHA" ]] && 
   # rebuild flow. No `docker compose build` needed.
 else
   REBUILD_SERVICES="$(services_to_rebuild "$DIFF_BASE" "$TARGET_SHA")"
+  if [[ "$HATI_WEB_HOSTS_CHANGED" == "1" ]]; then
+    case " ${REBUILD_SERVICES} " in
+      *" web "*) ;;
+      *)
+        REBUILD_SERVICES="${REBUILD_SERVICES} web"
+        log "Hati web hosts: forcing web service update so Traefik receives the new host labels"
+        ;;
+    esac
+  fi
   log "Rebuild scope: ${REBUILD_SERVICES} (changed paths -> services, diff_base=${DIFF_BASE:0:12})"
 
   build_started="$(date +%s)"
