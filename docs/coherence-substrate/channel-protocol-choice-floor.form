@@ -27,6 +27,7 @@
     (bml-choice-routing-metadata "form/form-stdlib/bml-source.fk" "form/form-stdlib/tests/bml-choice-routing-metadata-band.fk" "four-way 4095 on fkwu")
     (bml-choice-receipt-row "form/form-stdlib/bml-source.fk" "form/form-stdlib/tests/bml-choice-receipt-row-band.fk" "four-way 131071 on fkwu")
     (production-route-choice-caller "deploy/kernel-router/production-routes.fk" "deploy/kernel-router/mutation_public_gate_harness.py" "native mutation default/public-gate responses persist brcr-realize route_choice_signature")
+    (host-recipe-library-choice-caller "scripts/view_recipe_library.py" "api/tests/test_view_recipe_library_choice.py" "viewer emits recipe-choice-runtime-compatible JSON receipts for selected recipe/tongue paths")
     (bml-interface-and-class-model "form/form-stdlib/grammars/bml.fk" "form/form-stdlib/tests/bml-full-class-model-proof.fk")
     (bml-generics "form/form-stdlib/bml.fk" "form/form-stdlib/tests/bml-generics-band.fk")
     (composite-floor "form/form-stdlib/channel-protocol-choice-floor.fk" "form/form-stdlib/tests/channel-protocol-choice-floor-band.fk" "four-way 32767 on fkwu"))
@@ -70,10 +71,10 @@
     (broader-bml-protocol-capability-grammar not-yet-proven-beyond-route-choice-slice)
     (runtime-dynamic-capability-registry-fourth-arm host-io-wall)
     (receipts-before-trust not-yet-carried-through-all-runtime-choices)
-    (host-cli-recipe-library-callers not-yet-using-recipe-choice-runtime-wrapper))
+    (host-cli-recipe-library-native-execution not-yet-replacing-host-renderer))
 
   (next-step
-    "Carry the recipe-choice runtime wrapper through host CLI callers, carry receipts-before-trust through route/model/protocol choices, and lift broader BML protocol/capability grammar beyond the route-choice slice.")
+    "Use the recipe-choice runtime receipt carried by the host recipe-library viewer as the bridge toward native Form execution, carry receipts-before-trust through route/model/protocol choices, and lift broader BML protocol/capability grammar beyond the route-choice slice.")
 
   (invariant
     (no-parallel-carrier)
