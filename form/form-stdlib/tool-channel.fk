@@ -18,6 +18,8 @@
     (defn tc-protocols ()
         (list
             (tc-protocol "host:exec" "host" "cap.host.exec" 0 "process")
+            (tc-protocol "host:process" "host" "cap.host.process" 1 "process-table")
+            (tc-protocol "host:usage" "host" "cap.host.usage" 1 "resource-usage")
             (tc-protocol "host:file" "host" "cap.host.file" 0 "filesystem")
             (tc-protocol "http:request" "http" "cap.http.request" 1 "network")
             (tc-protocol "kernel:call" "kernel" "cap.kernel.call" 1 "call")
@@ -33,6 +35,8 @@
     (defn tc-providers ()
         (list
             (tc-provider "host" "host:exec" "cap.host.exec")
+            (tc-provider "process" "host:process" "cap.host.process")
+            (tc-provider "usage" "host:usage" "cap.host.usage")
             (tc-provider "file" "host:file" "cap.host.file")
             (tc-provider "http" "http:request" "cap.http.request")
             (tc-provider "kernel" "kernel:call" "cap.kernel.call")
@@ -54,8 +58,8 @@
     (defn tc-tools ()
         (list
             (tc-tool "exec" "host:exec" "cap.host.exec" "exec" "protocol" "argv" "stdout")
-            (tc-tool "processes" "host:exec" "cap.host.exec" "ps" "host-resource" "selector" "process-rows")
-            (tc-tool "usage" "host:exec" "cap.host.exec" "usage" "host-resource" "sample-window" "usage-sample")
+            (tc-tool "processes" "host:process" "cap.host.process" "process-snapshot" "host-resource" "selector" "process-rows")
+            (tc-tool "usage" "host:usage" "cap.host.usage" "usage-sample" "host-resource" "sample-window" "usage-sample")
             (tc-tool "file" "host:file" "cap.host.file" "file" "protocol" "path" "bytes")
             (tc-tool "http" "http:request" "cap.http.request" "request" "protocol" "request" "response")
             (tc-tool "call" "kernel:call" "cap.kernel.call" "call" "protocol" "args" "value")
