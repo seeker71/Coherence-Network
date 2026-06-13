@@ -5,7 +5,7 @@
     "Make channel, interface, protocol, and dynamic choice routing one inspectable Form/BML shape without replacing the recipes that already run.")
 
   (floor
-    "A cell can offer an interface; a channel flow can be received through the receiver's offered interface; channel-loopback protocol rows can name codec, capability, status, and refusal witness; BML route source objects can be parsed; BML protocol/capability source rows parse and witness compatibility across four-way; BML choiceReceipt routing metadata crosses four-way; kernel-http route choice crosses four-way; BML choice metadata can select a real kernel route candidate with an inspectable signature; production native mutation route decisions persist returned brcr-realize signatures; recipe registry choices can carry receipts into route-choice realization; typed choiceReceipt rows lower into choice receipts that feed learned ordering across four-way; and BranchOutcome values carry ok, rejected evidence, and structural condition states as inspectable recipe values.")
+    "A cell can offer an interface; a channel flow can be received through the receiver's offered interface; channel-loopback protocol rows can name codec, capability, status, and refusal witness; BML route source objects can be parsed; BML protocol/capability source rows parse, witness compatibility, and lower into route-choice runtime across four-way; BML choiceReceipt routing metadata crosses four-way; kernel-http route choice crosses four-way; BML choice metadata can select a real kernel route candidate with an inspectable signature; production native mutation route decisions persist returned brcr-realize signatures; recipe registry choices can carry receipts into route-choice realization; typed choiceReceipt rows lower into choice receipts that feed learned ordering across four-way; and BranchOutcome values carry ok, rejected evidence, and structural condition states as inspectable recipe values.")
 
   (north-star
     "Channel, interface, protocol, capability, route choice, receipt, and learning are first-class Form/BML grammar expressions. Channels and protocols are native recipe values for forward flow: a recipe can try a fast local branch, compare it with a slow oracle branch, and escalate only when confidence or the trust matrix falls below the chosen floor. They lower to native recipes, execute across supported lanes, and return inspectable receipts before any route, protocol, model, or JIT choice is trusted.")
@@ -25,6 +25,7 @@
     (recipe-choice-runtime "form/form-stdlib/recipe-choice-runtime.fk" "form/form-stdlib/tests/recipe-choice-runtime-band.fk" "four-way 233 on fkwu")
     (bml-route-source-objects "form/form-stdlib/bml-source.fk" "form/form-stdlib/tests/bml-route-source-object-band.fk" "four-way 2047 on fkwu")
     (bml-protocol-capability-rows "form/form-stdlib/bml-source.fk" "form/form-stdlib/tests/bml-protocol-capability-row-band.fk" "four-way 65535 on fkwu")
+    (bml-protocol-runtime-choice "form/form-stdlib/bml-route-choice-runtime.fk" "form/form-stdlib/tests/bml-protocol-runtime-choice-band.fk" "four-way 65535 on fkwu")
     (bml-source-textual-spans "form/form-stdlib/bml-source.fk" "form/form-stdlib/tests/bml-source-brace-state-step-proof.fk" "form/form-stdlib/tests/bml-source-cursor-body-span-proof.fk")
     (bml-choice-routing-metadata "form/form-stdlib/bml-source.fk" "form/form-stdlib/tests/bml-choice-routing-metadata-band.fk" "four-way 4095 on fkwu")
     (bml-choice-receipt-row "form/form-stdlib/bml-source.fk" "form/form-stdlib/tests/bml-choice-receipt-row-band.fk" "four-way 131071 on fkwu")
@@ -32,15 +33,15 @@
     (host-recipe-library-choice-caller "scripts/view_recipe_library.py" "api/tests/test_view_recipe_library_choice.py" "viewer emits recipe-choice-runtime-compatible JSON receipts for selected recipe/tongue paths")
     (bml-interface-and-class-model "form/form-stdlib/grammars/bml.fk" "form/form-stdlib/tests/bml-full-class-model-proof.fk")
     (bml-generics "form/form-stdlib/bml.fk" "form/form-stdlib/tests/bml-generics-band.fk")
-    (composite-floor "form/form-stdlib/channel-protocol-choice-floor.fk" "form/form-stdlib/tests/channel-protocol-choice-floor-band.fk" "four-way 32767 on fkwu"))
+    (composite-floor "form/form-stdlib/channel-protocol-choice-floor.fk" "form/form-stdlib/tests/channel-protocol-choice-floor-band.fk" "four-way 262143 on fkwu"))
 
   (native-learning-and-recipe-library
     (metadata-columns expression surface category candidates selected-path outcome certainty value-kind branch-feedback alignment knowing trust why who where when-tick cost trace)
     (candidate-columns path category eligible pressure score evidence)
     (routing-use "candidate score, pressure, branch feedback, certainty, alignment, knowing, trust, cost, and trace are visible to branch-choice prediction, route-choice runtime selection, and route-choice learning")
-    (four-way-floor "choiceReceipt source metadata preserves fast/local and slow/oracle rows, cost, confidence/trust floor, escalation, typed CHOICE-RECEIPT lowering, choice-receipt-learning, typed BranchOutcome ok/reject/condition values, BML protocol/capability row compatibility, kernel-http route choice, bml-route-choice-runtime, and recipe-choice-runtime across Go/Rust/TS/fkwu")
+    (four-way-floor "choiceReceipt source metadata preserves fast/local and slow/oracle rows, cost, confidence/trust floor, escalation, typed CHOICE-RECEIPT lowering, choice-receipt-learning, typed BranchOutcome ok/reject/condition values, BML protocol/capability row compatibility, kernel-http route choice, bml-route-choice-runtime, bml-protocol-runtime-choice, and recipe-choice-runtime across Go/Rust/TS/fkwu")
     (io-wall "runtime dynamic capability registry remains a host-IO band, so it is proven locally but not manifest-listed on fkwu")
-    (proved-example "trusted BML metadata selects the fast kernelRoute as a real kh-route-candidate; low-trust local metadata escalates to slowOracle even when raw kernel routing would have picked kernelRoute")
+    (proved-example "trusted BML metadata and compatible BML protocol/capability rows select the fast kernelRoute as a real kh-route-candidate; low-trust or incompatible metadata escalates to slowOracle even when raw kernel routing would have picked kernelRoute")
     (production-example "native mutation default and public-gate responses call brcr-realize over the same mutation kh-route rows used by production-routes and expose route_choice_signature in the response and decision receipt"))
 
   (related-existing-language-source-recipes
@@ -70,13 +71,13 @@
       (result "no material overclaim after gaps are named; keep production driver and receipts-before-trust practice across runtime choices open")))
 
   (current-gaps
-    (bml-protocol-capability-runtime-lowering row-floor-proven-full-runtime-choice-lowering-open)
+    (bml-protocol-capability-model-protocol-runtime-lowering route-choice-runtime-proven-model-protocol-choice-open)
     (runtime-dynamic-capability-registry-fourth-arm host-io-wall)
     (receipts-before-trust not-yet-carried-through-all-runtime-choices)
     (host-cli-recipe-library-native-execution not-yet-replacing-host-renderer))
 
   (next-step
-    "Lower BML protocol/capability source rows through route/model/protocol choices, use the recipe-choice runtime receipt carried by the host recipe-library viewer as the bridge toward native Form execution, and carry receipts-before-trust through every runtime choice.")
+    "Carry BML protocol/capability runtime lowering from route choice into model and protocol choices, use the recipe-choice runtime receipt carried by the host recipe-library viewer as the bridge toward native Form execution, and carry receipts-before-trust through every runtime choice.")
 
   (invariant
     (no-parallel-carrier)

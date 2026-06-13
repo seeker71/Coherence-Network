@@ -48,6 +48,89 @@
                 declared
                 (brcr-escalation-path row declared))))
 
+    (defn brcr-protocol-compat-score (protocol capability)
+        (if (bml-source-protocol-accepts-capability? protocol capability)
+            (bml-source-capability-row-trust-floor capability)
+            0))
+
+    (defn brcr-protocol-compat-outcome (protocol capability)
+        (if (bml-source-protocol-accepts-capability? protocol capability)
+            (cr-outcome-success)
+            (cr-outcome-fail)))
+
+    (defn brcr-protocol-compat-why (protocol capability)
+        (if (bml-source-protocol-accepts-capability? protocol capability)
+            "protocol-capability-compatible"
+            "protocol-capability-needs-comparison"))
+
+    (defn brcr-protocol-choice-candidates
+        (native-path fallback-path native-pressure native-score fallback-pressure fallback-score)
+        (list
+            (bml-source-choice-candidate
+                native-path
+                "native"
+                true
+                native-pressure
+                native-score
+                "protocol-capability-native")
+            (bml-source-choice-candidate
+                fallback-path
+                "oracle"
+                true
+                fallback-pressure
+                fallback-score
+                "protocol-capability-comparison")))
+
+    (defn brcr-protocol-choice-row
+        (protocol capability native-path fallback-path who where when-tick)
+        (do
+            (let compat-score (brcr-protocol-compat-score protocol capability))
+            (let source-cost (bml-source-protocol-row-cost protocol))
+            (bml-source-choice-receipt-row
+                (bml-source-protocol-row-name protocol)
+                (bml-source-protocol-row-surface protocol)
+                "protocol-choice"
+                (brcr-protocol-choice-candidates
+                    native-path
+                    fallback-path
+                    source-cost
+                    compat-score
+                    90
+                    96)
+                native-path
+                (brcr-protocol-compat-outcome protocol capability)
+                compat-score
+                (cr-kind-branch-feedback)
+                compat-score
+                compat-score
+                compat-score
+                compat-score
+                (brcr-protocol-compat-why protocol capability)
+                who
+                where
+                when-tick
+                source-cost
+                (cr-choice-trace
+                    2
+                    (if (bml-source-protocol-accepts-capability? protocol capability) 1 0)
+                    0
+                    (if (bml-source-protocol-accepts-capability? protocol capability) 0 1)))))
+
+    (defn brcr-realize-protocol-capability
+        (protocol capability native-path fallback-path routes request threshold who where when-tick)
+        (brcr-realize
+            (brcr-protocol-choice-row
+                protocol
+                capability
+                native-path
+                fallback-path
+                who
+                where
+                when-tick)
+            routes
+            request
+            threshold))
+
     (defn brcr-find-route-candidate-by-name (candidates route-name)
         (if (eq (len candidates) 0)
             (empty)
@@ -161,6 +244,22 @@
     (defn brcr-realization-signature? (signature)
         (if (eq (len signature) 9)
             (str_eq (nth signature 0) "bml-route-choice-runtime-signature")
+            false))
+
+    (defn brcr-protocol-realization-signature
+        (protocol capability realization)
+        (list
+            "bml-protocol-route-choice-signature"
+            (bml-source-protocol-row-name protocol)
+            (bml-source-capability-row-name capability)
+            (bml-source-protocol-accepts-capability? protocol capability)
+            (brcr-realization-selected-route-name realization)
+            (brcr-realization-escalation-needed? realization)
+            (brcr-realization-source-candidate-count realization)))
+
+    (defn brcr-protocol-realization-signature? (signature)
+        (if (eq (len signature) 7)
+            (str_eq (nth signature 0) "bml-protocol-route-choice-signature")
             false))
 
     (defn brcr-realization-valid? (realization)
