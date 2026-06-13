@@ -27,12 +27,12 @@
 #   multi-line output     — bands that print mid-walk (the walker answers
 #     one value through fk_pr)
 #
-# Current floor (2026-06-13 JIT-lowering residual ratchet): full
-# `cd form && ./validate.sh` reaches 104 four-way bands and 539 total passing
-# workloads, with 5 residual divergent bands. North star: every stdlib band is
+# Current floor (2026-06-13 form-mut fourth-arm ratchet): full
+# `cd form && ./validate.sh` reaches 105 four-way bands and 540 total passing
+# workloads, with 4 residual divergent bands. North star: every stdlib band is
 # either listed here and validated four-way, or its 3-kernel-only blocker is
 # explicitly named in commit evidence. Next walk: markdown/yaml/typescript
-# source-ingestion plus the remaining substrate/source-compiler rows.
+# source-ingestion plus the go-jit TypeScript parse row.
 learning-trend fkc 127
 cooldown fkc 63
 alert-gate fkc 127

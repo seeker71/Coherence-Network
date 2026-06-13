@@ -1,0 +1,103 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/form-mut-fourth-arm-20260613",
+  "commit_scope": "Repair the fourth-arm universal table loader so large fks tables keep their string pool intact, closing the form-mut 31/31/31/29 residual and raising the measured fourth-arm floor.",
+  "files_owned": [
+    "docs/system_audit/commit_evidence_2026-06-13_form_mut_fourth_arm.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "COORD_AGENT=codex@a3ec ./scripts/agent-coord.sh view",
+      "COORD_AGENT=codex@a3ec ./scripts/agent-coord.sh claim \"form-mut fourth-arm residual after PR #2975: diagnose 31/31/31/29 divergence without touching cf56 JIT-lower lane\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/tests/form-mut-band.fk",
+      "bash form/scripts/fourth-arm-gate.sh form-mut",
+      "cd form && ./validate.sh > /tmp/coherence-form-validate-form-mut-fourth-arm-20260613.log 2>&1",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_form_mut_fourth_arm.json",
+      "git diff --check",
+      "make wellness",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "bash form/scripts/fourth-arm-gate.sh form-mut",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "notes": "Focused form-mut validation now returns 31 with 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)' and 1 ok / 0 divergent. The manifest gate prints PASS-4WAY form-mut. Full validation is still diagnostic rc=1 because four unrelated residual bands remain, but the measured floor is now fourth arm: 105 band(s) four-way, 540 ok, 4 divergent. Root cause: the form-mut fks table is 283601 bytes, beyond the old 262143-byte fkwu table loader read; rows pointed at the correct high string-pool indexes, but the runtime loaded a truncated pool and direct string lengths read as zero. The universal table buffer/read limit now covers the large fks image."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending PR creation and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "No public HTTP behavior change is expected; this is a Form fourth-arm runtime proof update."
+    ],
+    "notes": "The fix changes generated fkwu runtime source emitted by Form recipes. It affects local/kernel validation, not public API routing."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local focused and full diagnostic evidence is complete; CI, merge, and deploy validation are pending."
+  },
+  "idea_ids": [
+    "form-fourth-arm",
+    "form-string-pool",
+    "hati-fourth-arm"
+  ],
+  "spec_ids": [
+    "form-fourth-kernel-validation",
+    "fourth-arm-floor"
+  ],
+  "task_ids": [
+    "form-mut-fourth-arm-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex-a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "runtime",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/fourth-arm-bands.txt",
+    "/tmp/coherence-form-validate-form-mut-fourth-arm-20260613.log",
+    "form emitted walker: fkwu"
+  ],
+  "change_files": [
+    "docs/system_audit/commit_evidence_2026-06-13_form_mut_fourth_arm.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The emitted fkwu universal walker can load large fks table images without truncating the string section. form-mut now agrees across Go, Rust, TypeScript, and fkwu at verdict 31, and the full Form suite floor moves from 104 four-way / 539 ok / 5 divergent to 105 four-way / 540 ok / 4 divergent.",
+    "public_endpoints": [
+      "local-only: Form fourth-arm universal walker source; no public HTTP endpoint changed"
+    ],
+    "test_flows": [
+      "Focused form-mut validation proves the formerly divergent band four-way.",
+      "fourth-arm-gate prints PASS-4WAY form-mut.",
+      "Full validate records the raised fourth-arm floor and the four remaining unrelated divergent bands."
+    ],
+    "known_full_suite_gaps": [
+      "go-jit-band.fk: TypeScript source parse error unexpected token rparen at 5344",
+      "markdown-meaning-ingestion-band.fk: unbound DOC-DOC",
+      "ts-reversible-band.fk: unbound section",
+      "yaml-meaning-ingestion-band.fk: unbound YAML-PAIR"
+    ]
+  }
+}
