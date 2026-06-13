@@ -27,12 +27,12 @@
 #   multi-line output     — bands that print mid-walk (the walker answers
 #     one value through fk_pr)
 #
-# Current floor (2026-06-13 go-jit syntax ratchet): full
-# `cd form && ./validate.sh` reaches 118 four-way bands and 550 total passing
-# workloads, with 1 residual divergent band. North star: every stdlib band is
+# Current floor (2026-06-13 source-section residual closure): full
+# `cd form && ./validate.sh` reaches 118 four-way bands and 551 total passing
+# workloads, with 0 residual divergent bands. North star: every stdlib band is
 # either listed here and validated four-way, or its 3-kernel-only blocker is
-# explicitly named in commit evidence. Next walk: the remaining ts-reversible
-# source-ingestion row.
+# explicitly named in commit evidence; suite-level residuals stay at zero while
+# source-section bands move toward fourth-arm eligibility.
 learning-trend fkc 127
 cooldown fkc 63
 alert-gate fkc 127
