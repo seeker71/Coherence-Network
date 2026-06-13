@@ -11,12 +11,28 @@
     "The loopback row names the teacher cell, student cell, codec, preferred protocol, required capability, relation, and fidelity signal."
     "Each resource row names what the channel can express, its working floor, its north star, and the next receipt that moves it toward the north star.")
 
+  (floor
+    "Cells can plan reciprocal and cross-modal teaching lanes over explicit codecs, native protocol choices, capabilities, relation types, and fidelity receipts.")
+
+  (north-star
+    "The OS surface becomes a first-class learning and sensing platform: every resource can express what it senses or emits, every loopback can teach another cell, and every native or third-party model contributes through typed channel receipts.")
+
   (resource-expression
     (host:exec
       (expresses argv+stdout+stderr+exit)
       (floor fork-exec-pipe)
       (north-star "kernel-owned process port with typed receipts")
       (next typed-exit-stdout-receipts))
+    (host-process
+      (expresses pid+ppid+command+state+cpu+memory)
+      (floor ps-top-carrier-receipt)
+      (north-star "kernel-owned process table stream with typed rows")
+      (next process-rows-receipt))
+    (host-usage
+      (expresses cpu+memory+load+disk+network+energy)
+      (floor host-counter-receipt)
+      (north-star "kernel-owned utilization stream with sampling windows and pressure events")
+      (next usage-sample-receipt))
     (host:file
       (expresses path+bytes+metadata)
       (floor read-write-file)

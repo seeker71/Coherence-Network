@@ -8,7 +8,7 @@
                 (if (eq (len (tc-providers)) 7) 1 0)
                 0))
 
-    (let c1 (if (eq (len (tc-tools)) 19)
+    (let c1 (if (eq (len (tc-tools)) 21)
                 (if (str_eq (tc-tool-name (tc-which "which")) "which")
                     (if (eq (len (tc-query-catalog)) 5) 2 0)
                     0)
@@ -42,9 +42,12 @@
                 (if (str_eq (tc-plan-protocol group-plan) "store:query") 64 0)
                 0))
 
+    (let usage-plan (tc-plan-tool "usage" "cap.host.exec"))
     (let c7 (if (eq (tc-native-option? "grep") 1)
                 (if (eq (tc-native-option? "find") 0)
-                    (if (eq (tc-protocol-carries? "kernel:route" "cap.kernel.route") 1) 128 0)
+                    (if (eq (tc-protocol-carries? "kernel:route" "cap.kernel.route") 1)
+                        (if (str_eq (tc-plan-op usage-plan) "usage") 128 0)
+                        0)
                     0)
                 0))
 

@@ -37,6 +37,8 @@
     (defn cl-resources ()
         (list
             (cl-resource "host:exec" "process" "argv+stdout+stderr+exit" "fork-exec-pipe" "kernel-owned process port with typed receipts" "typed exit/stdout receipts")
+            (cl-resource "host-process" "process-table" "pid+ppid+command+state+cpu+memory" "ps/top carrier receipt" "kernel-owned process table stream with typed rows" "process rows receipt")
+            (cl-resource "host-usage" "resource-usage" "cpu+memory+load+disk+network+energy" "host counter receipt" "kernel-owned utilization stream with sampling windows and pressure events" "usage sample receipt")
             (cl-resource "host:file" "filesystem" "path+bytes+metadata" "read-write-file" "content-addressed file port with typed codecs" "byte receipt plus digest")
             (cl-resource "http:request" "network" "method+url+headers+body+response" "host HTTP client" "kernel-native HTTP codec and route planner" "typed request response receipt")
             (cl-resource "kernel:call" "call" "args+value+trace" "in-memory recipe call" "all models and tools callable as cells" "model/tool call receipt")
