@@ -1,0 +1,84 @@
+; tests/bml-hati-native-class-dispatch-proof.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk
+;
+; Proves the next BML-native class floor after record-backed fields:
+; a compiled class image carries multiple method bodies and can dispatch a
+; named method by index against the same record-backed self value.
+
+(do
+    (defn score-bool (actual)
+        (if actual 1 0))
+
+    (defn score-int (actual expected)
+        (if (eq actual expected) 1 0))
+
+    (defn score-str (actual expected)
+        (if (nil? actual)
+            0
+            (if (str_eq actual expected) 1 0)))
+
+    (defn str-contains? (haystack needle)
+        (ge (str_find haystack needle 0) 0))
+
+    (let read-source
+        "int Read() { return this.value + 5; }\n")
+    (let read-parsed
+        (bml-source-parse-executable-stream
+            (bml-source-scan-text read-source)))
+    (let read-method (head (bml-source-exec-parse-nodes read-parsed)))
+
+    (let alt-source
+        "int Alt() { return this.value + 9; }\n")
+    (let alt-parsed
+        (bml-source-parse-executable-stream
+            (bml-source-scan-text alt-source)))
+    (let alt-method (head (bml-source-exec-parse-nodes alt-parsed)))
+
+    (let setter-source
+        "int Set() { this.value = 33; return this.value; }\n")
+    (let setter-parsed
+        (bml-source-parse-executable-stream
+            (bml-source-scan-text setter-source)))
+    (let setter-method (head (bml-source-exec-parse-nodes setter-parsed)))
+
+    (let class-node
+        (bml-ast-class
+            "Rule"
+            "Object"
+            (bml-ast-block
+                (list
+                    (bml-ast-section
+                        (bml-ast-name "public")
+                        (bml-ast-block
+                            (list
+                                (bml-ast-field "int" "value")
+                                read-method
+                                alt-method
+                                setter-method)))))))
+    (let class-image (bml-hati-compile-image class-node))
+    (let class-table (bml-hati-table-file class-image))
+    (let read-self (record_new (make_nodeid 1 9 2026 615) "value" 40))
+    (let set-self (record_new (make_nodeid 1 9 2026 616) "value" 7))
+    (let missing-result
+        (bml-hati-run-class-method-with-arg class-node "Missing" read-self))
+
+    (sum
+        (list
+            (score-bool (bml-source-exec-parse-ok? read-parsed))
+            (score-bool (bml-source-exec-parse-ok? alt-parsed))
+            (score-bool (bml-source-exec-parse-ok? setter-parsed))
+            (score-bool (bml-hati-image-supported? class-image))
+            (score-int (len (bml-hati-image-fns class-image)) 3)
+            (score-int (bml-hati-class-method-index class-node "Read") 0)
+            (score-int (bml-hati-class-method-index class-node "Alt") 1)
+            (score-int (bml-hati-class-method-index class-node "Set") 2)
+            (score-int (bml-hati-class-method-index class-node "Missing") -1)
+            (score-int (bml-hati-run-class-method-with-arg class-node "Read" read-self) 45)
+            (score-int (bml-hati-run-class-method-with-arg class-node "Alt" read-self) 49)
+            (score-int (bml-hati-run-class-method-with-arg class-node "Set" set-self) 33)
+            (score-int (record_get set-self "value") 33)
+            (score-str missing-result "BML-HATI-UNSUPPORTED method/not-found")
+            (score-bool (str-contains? class-table "97"))
+            (score-bool (str-contains? class-table "98"))
+            (score-bool (not (str-contains? class-table "BML-HATI-UNSUPPORTED"))))))
