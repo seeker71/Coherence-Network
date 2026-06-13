@@ -28,18 +28,27 @@
       "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/tests/satsang-band.fk",
       "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/learning-trend.fk form-stdlib/tests/learning-trend-band.fk",
       "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/record-fold-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/form-diagnose.fk form-stdlib/tests/form-debug-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/form-diagnose.fk form-stdlib/tests/form-spy-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/tests/form-mut-band.fk",
       "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/form-parse.fk form-stdlib/form-flatten.fk form-stdlib/tests/form-flatten-band.fk",
-      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/substrate-gc-band.fk"
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/substrate-gc-band.fk",
+      "cd form && ./validate.sh > /tmp/coherence-form-validate-full-after-diagnosis-20260613.log 2>&1",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
     ],
-    "notes": "Focused validator tests, evidence validation, whitespace check, wellness, shell syntax, and targeted Form band proofs pass. Wellness reports what_wants_attention: none and deploy aligned. The fourth-arm wrapper now calls the live form-flatten doors for band sources, record_new lowers into arena entries for the fourth arm, and both table-emitter lanes proved through fkwu. substrate-gc is now a 3-kernel only fourth-arm gap because it depends on host GC state. Full command attempted: cd form && ./validate.sh > /tmp/coherence-form-validate-full-20260613.log 2>&1; it returned rc=1 with fourth arm: 93 band(s) four-way and residual 12 divergent bands outside this repair.",
+    "notes": "Focused validator tests, evidence validation, whitespace check, wellness, shell syntax, and targeted Form band proofs pass. Wellness reports what_wants_attention: none and deploy aligned. The fourth-arm wrapper now calls the live form-flatten doors for band sources, record_new lowers into arena entries for the fourth arm, and both table-emitter lanes proved through fkwu. substrate-gc is now a 3-kernel only fourth-arm gap because it depends on host GC state. The diagnosis channel bands form-debug, form-spy, and form-mut now cross four-way after moving their proof to compact diagnostic source carriers and raising the universal loader function-root capacity from 256 to 512. Full command after the diagnosis ratchet: cd form && ./validate.sh > /tmp/coherence-form-validate-full-after-diagnosis-20260613.log 2>&1; it returned rc=1 with fourth arm: 96 band(s) four-way, 532 ok, and residual 9 divergent bands.",
     "fourth_arm_outputs": [
       "satsang fks lane: fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent",
       "learning-trend fkc lane: fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent",
-      "record-fold fks lane: fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent"
+      "record-fold fks lane: fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent",
+      "form-debug fks lane: fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent",
+      "form-spy fks lane: fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent",
+      "form-mut fks lane: fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent"
     ],
     "known_full_suite_gaps": [
-      "cd form && ./validate.sh returned rc=1 after repairs: fourth arm: 93 band(s) four-way; 527 ok, 12 divergent",
-      "Residual divergent bands: form-debug-band, form-mut-band, form-spy-band, full-jit-lower-band, go-jit-band, jit-lower-band, jit-lower-bmf-band, jit-lower-emit-band, jit-lower-program-band, markdown-meaning-ingestion-band, ts-reversible-band, yaml-meaning-ingestion-band"
+      "cd form && ./validate.sh returned rc=1 after diagnosis ratchet: fourth arm: 96 band(s) four-way; 532 ok, 9 divergent",
+      "Residual divergent bands: full-jit-lower-band, go-jit-band, jit-lower-band, jit-lower-bmf-band, jit-lower-emit-band, jit-lower-program-band, markdown-meaning-ingestion-band, ts-reversible-band, yaml-meaning-ingestion-band"
     ]
   },
   "ci_validation": {
@@ -56,7 +65,7 @@
   },
   "phase_gate": {
     "can_move_next_phase": false,
-    "reason": "Local focused validation and wellness have passed; PR guards, CI, and deploy validation are pending."
+    "reason": "Local focused validation, wellness, and PR guards have passed; CI and deploy validation are pending."
   },
   "idea_ids": [
     "form-native-models"
@@ -104,7 +113,7 @@
   "change_intent": "runtime_fix",
   "e2e_validation": {
     "status": "pass",
-    "expected_behavior_delta": "Form/kernel guidance now names the fourth-arm validation floor, the fourth-arm wrapper uses the live band-source flattener doors, record_new lowers correctly for the fkwu record-fold lane, host-GC bands are not marked fourth-covered, and commit-evidence validation rejects ambiguous broad kernel-proof claims unless they include fourth-arm proof or an explicit 3-kernel only fourth-arm gap.",
+    "expected_behavior_delta": "Form/kernel guidance now names the fourth-arm validation floor, the fourth-arm wrapper uses the live band-source flattener doors, record_new lowers correctly for the fkwu record-fold lane, host-GC bands are not marked fourth-covered, the diagnosis channel bands cross four-way through compact source carriers, and commit-evidence validation rejects ambiguous broad kernel-proof claims unless they include fourth-arm proof or an explicit 3-kernel only fourth-arm gap.",
     "public_endpoints": [
       "local-only: documentation and commit-evidence validation behavior; no public HTTP endpoint changed"
     ],
@@ -113,6 +122,7 @@
       "Covered fourth-arm fks lane proof: satsang band on Go/Rust/TypeScript/fkwu.",
       "Covered fourth-arm fkc lane proof: learning-trend band on Go/Rust/TypeScript/fkwu.",
       "Covered fourth-arm record lane proof: record-fold band on Go/Rust/TypeScript/fkwu.",
+      "Covered fourth-arm diagnosis channel proofs: form-debug, form-spy, and form-mut bands on Go/Rust/TypeScript/fkwu.",
       "Flattener compatibility proof: form-flatten-band returns 65535 on Go/Rust/TypeScript.",
       "Host-state gap proof: substrate-gc remains 3-kernel only after leaving fourth-arm-bands.txt."
     ]

@@ -25,6 +25,13 @@
 #     (wants defunctionalization: monomorphic copies per call site)
 #   multi-line output     — bands that print mid-walk (the walker answers
 #     one value through fk_pr)
+#
+# Current floor (2026-06-13 diagnostic ratchet): full `cd form && ./validate.sh`
+# reaches 96 four-way bands and 532 total passing workloads, with 9 residual
+# divergent bands. North star: every stdlib band is either listed here and
+# validated four-way, or its 3-kernel-only blocker is explicitly named in
+# commit evidence. Next walk: the JIT tag-map/lowering cluster, then the
+# markdown/yaml/typescript source-ingestion cluster.
 learning-trend fkc 127
 cooldown fkc 63
 alert-gate fkc 127
@@ -88,6 +95,9 @@ forget-stale fks 127
 form-asm fks 31
 form-constants fks 111111
 form-diagnose fks 31
+form-debug fks 31
+form-mut fks 31
+form-spy fks 31
 gematria fks 11111
 go-jit fks 5
 go-jit-value-list fks 4
