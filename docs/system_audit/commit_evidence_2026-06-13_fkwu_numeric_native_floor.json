@@ -1,0 +1,132 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/fkwu-numeric-native-floor-20260613",
+  "commit_scope": "Teach the fkwu fourth arm numeric conversion and transcendental residuals, fix float boxing and universal table capacity for rebased floor safety, and admit four numeric/model bands to the fourth-arm floor.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "form-native-jit",
+    "hati-os",
+    "form-native-models"
+  ],
+  "spec_ids": [
+    "fourth-arm-floor",
+    "bml-native-north-star",
+    "hati-os-targets"
+  ],
+  "task_ids": [
+    "fkwu-numeric-native-floor-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "android-jit-floor-requirement"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "coordination"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/fourth-arm-bands.txt",
+    "form/scripts/fourth-arm-gap-analysis.py",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-13_fkwu_numeric_native_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/fourth-arm-bands.txt",
+    "form/scripts/fourth-arm-gap-analysis.py",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-13_fkwu_numeric_native_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "form/form-stdlib/tests/float-conversions-band.fk",
+    "form/form-stdlib/tests/trig-band.fk",
+    "form/form-stdlib/tests/tensor-quant-band.fk",
+    "form/form-stdlib/tests/transcendental-natives-band.fk",
+    "scripts/bml_form_jit_metal_planes_audit.sh",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/hati-os-targets.form"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/float-conversions-band.fk",
+      "cd form && scripts/fourth-arm-survey.sh --one form-stdlib/tests/float-conversions-band.fk",
+      "cd form && scripts/fourth-arm-survey.sh --one form-stdlib/tests/trig-band.fk",
+      "cd form && scripts/fourth-arm-survey.sh --one form-stdlib/tests/tensor-quant-band.fk",
+      "cd form && scripts/fourth-arm-survey.sh --one form-stdlib/tests/transcendental-natives-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh float-conversions trig tensor-quant transcendental-natives",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/choice-receipt.fk form-stdlib/bml-source.fk form-stdlib/branch-choice-order.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/recipe-choice-runtime.fk form-stdlib/tests/recipe-choice-runtime-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh bml-protocol-runtime-choice recipe-choice-runtime channel-protocol-choice-floor float-conversions trig tensor-quant transcendental-natives",
+      "cd form && ./validate.sh",
+      "bash scripts/bml_form_jit_metal_planes_audit.sh"
+    ],
+    "notes": "Focused survey rows returned float-conversions single-pass 31 31, trig single-pass 127 127, tensor-quant single-pass 4095 4095, and transcendental-natives single-pass 16 16. The manifest gate returned PASS-4WAY for all four. Rebased recipe-choice-runtime remained four-way at 233 after the universal table loader stopped hardcoding 16384 node rows and used fkc-universal-node-slots. The combined rebase gate returned PASS-4WAY for bml-protocol-runtime-choice, recipe-choice-runtime, channel-protocol-choice-floor, float-conversions, trig, tensor-quant, and transcendental-natives. Full Form validation returned 'fourth arm: 129 band(s) four-way' and '555 ok, 0 divergent' after preserving the choice outcome and BML protocol admissions from main."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed yet. GitHub checks will be monitored after PR creation."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No production deployment yet. The change is a Form/fkwu floor and docs evidence slice; public deployment verification will follow merge/deploy if a deploy is triggered."
+  },
+  "phase_gate": {
+    "phase": "fkwu-numeric-native-floor",
+    "gate": "Numeric conversion, transcendental, and tensor quantization residual bands run four-way through fkwu without requiring Android runtime clang.",
+    "state": "local-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Push PR, wait for checks, merge when checks allow, then continue with the next fourth-arm residual family."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The emitted fourth kernel can run round, ceil, floor, trunc, math_exp, and math_log-backed numeric/model bands four-way. Negative integers no longer collide with boxed float values in fkwu, and tensor quantization survives repeated encode/decode probes.",
+    "public_endpoints": [
+      "local:form-fourth-arm-fkwu"
+    ],
+    "test_flows": [
+      "float-conversions, trig, tensor-quant, and transcendental-natives pass fkwu survey rows with matching Go verdicts.",
+      "Full form validate.sh reports 129 fourth-arm bands and 555 ok / 0 divergent across Go, Rust, TypeScript, and covered fkwu bands.",
+      "bml_form_jit_metal_planes_audit.sh passes macOS arm64 Mach-O and Android arm64 ELF object receipts for bml-hati, form-jit, and form-jit-lowered surfaces."
+    ],
+    "macos_android_evidence": {
+      "macos_arm64": [
+        "PASS plane=macos-arm64 surface=bml-hati target=arm64-apple-macosx object=Mach-O 64-bit object arm64",
+        "PASS plane=macos-arm64 surface=form-jit target=arm64-apple-macosx object=Mach-O 64-bit object arm64",
+        "PASS plane=macos-arm64 surface=form-jit-lowered target=arm64-apple-macosx object=Mach-O 64-bit object arm64"
+      ],
+      "android_arm64": [
+        "PASS plane=android-arm64 surface=bml-hati target=aarch64-linux-android object=ELF 64-bit LSB relocatable, ARM aarch64",
+        "PASS plane=android-arm64 surface=form-jit target=aarch64-linux-android object=ELF 64-bit LSB relocatable, ARM aarch64",
+        "PASS plane=android-arm64 surface=form-jit-lowered target=aarch64-linux-android object=ELF 64-bit LSB relocatable, ARM aarch64"
+      ],
+      "android_floor": "Android APKs may ship a clang-like compiler binary as optional oracle/acceleration evidence, but the supported minimum JIT floor remains the Form-native recipe/table path proven by fkwu and target receipts."
+    },
+    "summary": "The rebased fourth-arm floor reaches 129 covered bands and 555 passing workloads after adding the numeric native rows on top of the choice outcome and BML protocol admissions from main, with Android represented by Form-native floor proof plus Android arm64 target object receipts rather than a required runtime compiler binary."
+  }
+}
