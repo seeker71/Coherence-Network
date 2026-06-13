@@ -37,6 +37,14 @@
     (seed           hati-os-native-cli-emit.fk tests/hati-os-native-cli-emit-band.fk
                     scripts/hati_os_kernel_audit.sh))
 
+  (host-targets
+    (catalog      hati-os-targets.fk)
+    (proof        tests/hati-os-targets-band.fk -> 255 three-way)
+    (targets      macos-arm64 android-arm64)
+    (distribution https://hati.earth/downloads/hati-os)
+    (contract     one-native-binary-per-target with-sha256 with-source-map with-physical-lane-receipts)
+    (principle    one-Form-semantics-surface-many-host-OS-implementations))
+
   # ── The measurement protocol (shared by every milestone) ─────────────
   # A row is honest when the SAME semantic ask runs through each carrier's
   # own front door, values agree, and the numbers carry their conditions.
@@ -85,7 +93,7 @@
     (compat       docs/coherence-substrate/fourth-kernel.form)
     (proof        tests/tool-channel-band.fk -> 255 three-way)
     (grammar-proof tests/tool-channel-grammar-band.fk -> 255 three-way)
-    (protocols    host:exec host:file http:request kernel:call kernel:route stream:read store:query)
+    (protocols    host:exec host:process host:usage host:file http:request kernel:call kernel:route stream:read store:query)
     (applets      grep find awk fields group xpath xmlpath)
     (catalog-ops  words providers queries which plan)
     (language     protocol-declaration tool-declaration capability-declaration plan-expression offer-expression)

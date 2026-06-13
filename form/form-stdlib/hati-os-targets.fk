@@ -1,0 +1,85 @@
+; hati-os-targets.fk - host OS target and distribution catalog for Hati-OS.
+;
+; The fourth kernel has one Form surface and many host implementations. This
+; catalog keeps target triples, per-OS resource implementations, and public
+; binary download coordinates visible to cells and recipes.
+
+(do
+    (defn hos-target (name os arch binary-format package-format launcher)
+        (list name os arch binary-format package-format launcher))
+    (defn hos-target-name (target) (nth target 0))
+    (defn hos-target-os (target) (nth target 1))
+    (defn hos-target-arch (target) (nth target 2))
+    (defn hos-target-binary-format (target) (nth target 3))
+    (defn hos-target-package-format (target) (nth target 4))
+    (defn hos-target-launcher (target) (nth target 5))
+    (defn hos-empty-target () (hos-target "" "" "" "" "" ""))
+
+    (defn hos-targets ()
+        (list
+            (hos-target "macos-arm64" "macos" "arm64" "mach-o" "tar.zst" "hati-os")
+            (hos-target "android-arm64" "android" "arm64" "elf" "apk+tar.zst" "hati-os.apk")))
+
+    (defn hos-impl (target protocol capability implementation floor north-star)
+        (list target protocol capability implementation floor north-star))
+    (defn hos-impl-target (impl) (nth impl 0))
+    (defn hos-impl-protocol (impl) (nth impl 1))
+    (defn hos-impl-capability (impl) (nth impl 2))
+    (defn hos-impl-implementation (impl) (nth impl 3))
+    (defn hos-impl-floor (impl) (nth impl 4))
+    (defn hos-impl-north-star (impl) (nth impl 5))
+    (defn hos-empty-impl () (hos-impl "" "" "" "" "" ""))
+
+    (defn hos-implementations ()
+        (list
+            (hos-impl "macos-arm64" "host:process" "cap.host.process" "libproc+sysctl+proc_pidinfo" "ps/top carrier receipt" "typed direct process snapshot")
+            (hos-impl "macos-arm64" "host:usage" "cap.host.usage" "host_statistics64+task_info+getifaddrs+IOKit" "vm_stat/iostat carrier receipt" "typed direct utilization sample")
+            (hos-impl "macos-arm64" "audio:pcm16" "cap.audio.sample" "CoreAudio+AVFoundation" "say/rec carrier receipt" "native PCM stream")
+            (hos-impl "macos-arm64" "video:rgba-time" "cap.video.frame" "ScreenCaptureKit+AVFoundation" "screencapture/ffmpeg carrier receipt" "native frame stream")
+            (hos-impl "macos-arm64" "sensor:signal" "cap.sensor.read" "CoreMotion+CoreLocation-when-present" "inventory receipt" "typed sensor stream")
+            (hos-impl "android-arm64" "host:process" "cap.host.process" "procfs+ActivityManager-permission-gated" "toybox ps carrier receipt" "typed app-visible process snapshot")
+            (hos-impl "android-arm64" "host:usage" "cap.host.usage" "procfs+BatteryManager+Debug+SensorManager" "dumpsys/top carrier receipt" "typed utilization and pressure sample")
+            (hos-impl "android-arm64" "audio:pcm16" "cap.audio.sample" "AAudio+AudioRecord+AudioTrack" "intent/media carrier receipt" "native PCM stream")
+            (hos-impl "android-arm64" "video:rgba-time" "cap.video.frame" "Camera2+MediaProjection-permission-gated" "camera/screenshot carrier receipt" "native camera and screen frame stream")
+            (hos-impl "android-arm64" "sensor:signal" "cap.sensor.read" "SensorManager+LocationManager+GNSS-permission-gated" "inventory receipt" "typed sensor and GPS stream")))
+
+    (defn hos-artifact (target kind url format checksum status)
+        (list target kind url format checksum status))
+    (defn hos-artifact-target (artifact) (nth artifact 0))
+    (defn hos-artifact-kind (artifact) (nth artifact 1))
+    (defn hos-artifact-url (artifact) (nth artifact 2))
+    (defn hos-artifact-format (artifact) (nth artifact 3))
+    (defn hos-artifact-checksum (artifact) (nth artifact 4))
+    (defn hos-artifact-status (artifact) (nth artifact 5))
+    (defn hos-empty-artifact () (hos-artifact "" "" "" "" "" ""))
+
+    (defn hos-artifacts ()
+        (list
+            (hos-artifact "macos-arm64" "native-binary" "https://hati.earth/downloads/hati-os/macos/arm64/hati-os-macos-arm64.tar.zst" "tar.zst" "sha256" "hati-earth-download-door")
+            (hos-artifact "android-arm64" "native-binary" "https://hati.earth/downloads/hati-os/android/arm64/hati-os-android-arm64.apk" "apk" "sha256" "hati-earth-download-door")))
+
+    (defn hos-find-target (name rows)
+        (if (eq (len rows) 0) (hos-empty-target)
+            (if (str_eq (hos-target-name (head rows)) name)
+                (head rows)
+                (hos-find-target name (tail rows)))))
+    (defn hos-target-by-name (name) (hos-find-target name (hos-targets)))
+
+    (defn hos-find-impl (target protocol rows)
+        (if (eq (len rows) 0) (hos-empty-impl)
+            (if (str_eq (hos-impl-target (head rows)) target)
+                (if (str_eq (hos-impl-protocol (head rows)) protocol)
+                    (head rows)
+                    (hos-find-impl target protocol (tail rows)))
+                (hos-find-impl target protocol (tail rows)))))
+    (defn hos-impl-for (target protocol) (hos-find-impl target protocol (hos-implementations)))
+
+    (defn hos-find-artifact (target rows)
+        (if (eq (len rows) 0) (hos-empty-artifact)
+            (if (str_eq (hos-artifact-target (head rows)) target)
+                (head rows)
+                (hos-find-artifact target (tail rows)))))
+    (defn hos-artifact-for (target) (hos-find-artifact target (hos-artifacts)))
+    (defn hos-download-url (target) (hos-artifact-url (hos-artifact-for target)))
+
+    0)
