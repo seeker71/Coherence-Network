@@ -1,0 +1,74 @@
+; tests/bml-hati-native-locals-proof.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk
+;
+; Proves the next north-star step after unsupported lowering: source-level
+; lexical const/name binding lowers through both the BMA reference lane and
+; the Hati fourth-kernel native table lane.
+
+(do
+    (defn score-bool (actual)
+        (if actual 1 0))
+
+    (defn score-int (actual expected)
+        (if (eq actual expected) 1 0))
+
+    (defn score-str (actual expected)
+        (if (nil? actual)
+            0
+            (if (str_eq actual expected) 1 0)))
+
+    (defn str-contains? (haystack needle)
+        (ge (str_find haystack needle 0) 0))
+
+    (let source
+        "const int x = 2;\nconst int y = 5;\nreturn x + 1;\n")
+    (let parsed
+        (bml-source-parse-executable-stream
+            (bml-source-scan-text source)))
+    (let source-node (bml-source-exec-parse-node parsed))
+    (let source-image (bml-hati-compile-image source-node))
+    (let source-table (bml-hati-table-file source-image))
+
+    (let return-name-source
+        "const int y = 5;\nreturn y;\n")
+    (let return-name-parsed
+        (bml-source-parse-executable-stream
+            (bml-source-scan-text return-name-source)))
+    (let return-name-node (bml-source-exec-parse-node return-name-parsed))
+
+    (let manual-node
+        (bml-ast-block
+            (list
+                (bml-ast-const "int" "a" (bml-ast-int 4))
+                (bml-ast-return
+                    (bml-ast-add
+                        (bml-ast-name "a")
+                        (bml-ast-int 6))))))
+    (let unresolved-node (bml-ast-return (bml-ast-name "missing")))
+    (let unresolved-image (bml-hati-compile-image unresolved-node))
+    (let unresolved-table (bml-hati-table-file unresolved-image))
+    (let unresolved-run (bml-hati-run-value unresolved-node))
+
+    (sum
+        (list
+            (score-bool (bml-source-exec-parse-ok? parsed))
+            (score-int (len (bml-source-exec-parse-rest parsed)) 0)
+            (score-int (len (bml-source-exec-parse-nodes parsed)) 3)
+            (score-str (nth (bml-source-exec-parse-rules parsed) 0) "const-int")
+            (score-str (nth (bml-source-exec-parse-rules parsed) 2) "return-name-add-int")
+            (score-int (bma-run-value (bml-compile-program source-node)) 3)
+            (score-bool (bml-hati-image-supported? source-image))
+            (score-int (len (bml-hati-image-unsupported source-image)) 0)
+            (score-bool (not (str-contains? source-table "BML-HATI-UNSUPPORTED")))
+            (score-int (bml-hati-run-value source-node) 3)
+            (score-bool (bml-source-exec-parse-ok? return-name-parsed))
+            (score-str (nth (bml-source-exec-parse-rules return-name-parsed) 1) "return-name")
+            (score-int (bma-run-value (bml-compile-program return-name-node)) 5)
+            (score-int (bml-hati-run-value return-name-node) 5)
+            (score-int (bma-run-value (bml-compile-program manual-node)) 10)
+            (score-int (bml-hati-run-value manual-node) 10)
+            (score-bool (not (bml-hati-image-supported? unresolved-image)))
+            (score-str (head (bml-hati-image-unsupported unresolved-image)) "name/unbound")
+            (score-bool (str-contains? unresolved-table "BML-HATI-UNSUPPORTED name/unbound"))
+            (score-bool (str-contains? unresolved-run "BML-HATI-UNSUPPORTED name/unbound")))))

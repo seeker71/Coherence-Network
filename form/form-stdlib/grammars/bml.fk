@@ -3376,11 +3376,41 @@
         (bml-ast-return
             (bml-ast-char (bmf-collection-value objects "value"))))
 
+    (defn bml-emit-return-name (objects)
+        (bml-ast-return
+            (bml-ast-name (bmf-collection-value objects "name"))))
+
+    (defn bml-emit-return-name-add-int (objects)
+        (bml-ast-return
+            (bml-ast-add
+                (bml-ast-name (bmf-collection-value objects "name"))
+                (intern_node BML-AST-INT (list (bml-cap-int objects "value"))))))
+
     (defn bml-source-return-int (object)
         (do
             (let kids (node_children (bmf-object-value object)))
             (let value-node (head kids))
             (list (bml-src-keyword "return")
+                  (bml-src-int (int_to_str (node_value (head (node_children value-node)))))
+                  (bml-src-op ";"))))
+
+    (defn bml-source-return-name (object)
+        (do
+            (let kids (node_children (bmf-object-value object)))
+            (let name-node (head kids))
+            (list (bml-src-keyword "return")
+                  (bml-src-name (node_value (head (node_children name-node))))
+                  (bml-src-op ";"))))
+
+    (defn bml-source-return-name-add-int (object)
+        (do
+            (let kids (node_children (bmf-object-value object)))
+            (let add-node (head kids))
+            (let name-node (bml-node-child add-node 0))
+            (let value-node (bml-node-child add-node 1))
+            (list (bml-src-keyword "return")
+                  (bml-src-name (node_value (head (node_children name-node))))
+                  (bml-src-op "+")
                   (bml-src-int (int_to_str (node_value (head (node_children value-node)))))
                   (bml-src-op ";"))))
 
@@ -3622,6 +3652,8 @@
       return-int ::= "return" $value:int ";" => bml-emit-return-int <= bml-source-return-int;
       return-float ::= "return" $value:float ";" => bml-emit-return-float;
       return-char ::= "return" $value:char ";" => bml-emit-return-char;
+      return-name-add-int ::= "return" $name:name "+" $value:int ";" => bml-emit-return-name-add-int <= bml-source-return-name-add-int;
+      return-name ::= "return" $name:name ";" => bml-emit-return-name <= bml-source-return-name;
       return ::= "return" expression ";" => bml-emit-node-source;
       break-simple ::= "break" $label:name ";" => bml-emit-break-simple <= bml-source-break-simple;
       break ::= "break" label-name ";" cut => bml-emit-node-source;
@@ -3757,6 +3789,9 @@
               "choice-fail-int"
               "choose-fail-int"
               "state-int"
+              "const-int"
+              "return-name-add-int"
+              "return-name"
               "return-char"
               "return-float"
               "return-int"
@@ -4902,6 +4937,8 @@
             (bmf-native "bml-emit-return-int" bml-emit-return-int BML-AST-RETURN)
             (bmf-native "bml-emit-return-float" bml-emit-return-float BML-AST-RETURN)
             (bmf-native "bml-emit-return-char" bml-emit-return-char BML-AST-RETURN)
+            (bmf-native "bml-emit-return-name" bml-emit-return-name BML-AST-RETURN)
+            (bmf-native "bml-emit-return-name-add-int" bml-emit-return-name-add-int BML-AST-RETURN)
             (bmf-native "bml-emit-break-simple" bml-emit-break-simple BML-AST-BREAK)
             (bmf-native "bml-emit-continue-simple" bml-emit-continue-simple BML-AST-CONTINUE)
             (bmf-native "bml-emit-throw-int" bml-emit-throw-int BML-AST-THROW)
@@ -4928,6 +4965,8 @@
                 (compiler-rule "bml" "return-int" "BML return object to BMA ops" bml-emit-return-int)
                 (compiler-rule "bml" "return-float" "BML float return object to BMA ops" bml-emit-return-float)
                 (compiler-rule "bml" "return-char" "BML char return object to BMA ops" bml-emit-return-char)
+                (compiler-rule "bml" "return-name" "BML bound-name return object to BMA ops" bml-emit-return-name)
+                (compiler-rule "bml" "return-name-add-int" "BML bound-name add return object to BMA ops" bml-emit-return-name-add-int)
                 (compiler-rule "bml" "break-simple" "BML break object to BMA ops" bml-emit-break-simple)
                 (compiler-rule "bml" "continue-simple" "BML continue object to BMA ops" bml-emit-continue-simple)
                 (compiler-rule "bml" "throw-int" "BML throw object to BMA ops" bml-emit-throw-int)
@@ -4981,12 +5020,65 @@
     (defn bml-node-child (node index)
         (nth (node_children node) index))
 
+    (defn bml-local-binding (name value bind-env)
+        (list "bml-local-binding" name value bind-env))
+
+    (defn bml-local-binding-name (binding) (nth binding 1))
+    (defn bml-local-binding-value (binding) (nth binding 2))
+    (defn bml-local-binding-env (binding) (nth binding 3))
+
+    (defn bml-local-name (node)
+        (node_value (bml-node-child node 0)))
+
+    (defn bml-local-const-name (node)
+        (node_value (bml-node-child node 1)))
+
+    (defn bml-local-const-value (node)
+        (bml-node-child node 2))
+
+    (defn bml-local-lookup (env name)
+        (if (nil? env)
+            (empty)
+            (if (str_eq (bml-local-binding-name (head env)) name)
+                (head env)
+                (bml-local-lookup (tail env) name))))
+
+    (defn bml-local-bind-const (env node)
+        (cons
+            (bml-local-binding
+                (bml-local-const-name node)
+                (bml-local-const-value node)
+                env)
+            env))
+
+    (defn bml-local-env-after-node (node env)
+        (if (node_eq (node_category node) BML-AST-CONST)
+            (bml-local-bind-const env node)
+            env))
+
     (defn bml-compile-children (children)
-        (if (nil? children) (empty)
-            (append (bml-compile-node (head children))
-                    (bml-compile-children (tail children)))))
+        (bml-compile-children-in children (empty)))
+
+    (defn bml-compile-children-in (children env)
+        (if (nil? children)
+            (empty)
+            (append
+                (bml-compile-node-in (head children) env)
+                (bml-compile-children-in
+                    (tail children)
+                    (bml-local-env-after-node (head children) env)))))
+
+    (defn bml-compile-choose-branches-in (branches env)
+        (if (nil? branches)
+            (empty)
+            (cons
+                (bml-compile-node-in (head branches) env)
+                (bml-compile-choose-branches-in (tail branches) env))))
 
     (defn bml-compile-node (node)
+        (bml-compile-node-in node (empty)))
+
+    (defn bml-compile-node-in (node env)
         (do
             (let cat (node_category node))
             (if (node_eq cat BML-AST-INT)
@@ -4998,36 +5090,44 @@
             (if (node_eq cat BML-AST-CHAR)
                 (list (bma-push-lit (node_value (bml-node-child node 0))))
             (if (node_eq cat BML-AST-ARRAY)
-                (bml-compile-children (node_children node))
+                (bml-compile-children-in (node_children node) env)
             (if (node_eq cat BML-AST-ADD)
-                (append (bml-compile-node (bml-node-child node 0))
-                        (append (bml-compile-node (bml-node-child node 1))
+                (append (bml-compile-node-in (bml-node-child node 0) env)
+                        (append (bml-compile-node-in (bml-node-child node 1) env)
                                 (list (bma-add 0))))
             (if (node_eq cat BML-AST-CONST)
-                (bml-compile-node (bml-node-child node 2))
+                (bml-compile-node-in (bml-local-const-value node) env)
+            (if (node_eq cat BML-AST-NAME)
+                (do
+                    (let binding (bml-local-lookup env (bml-local-name node)))
+                    (if (nil? binding)
+                        (empty)
+                        (bml-compile-node-in
+                            (bml-local-binding-value binding)
+                            (bml-local-binding-env binding))))
             (if (node_eq cat BML-AST-RETURN)
-                (append (bml-compile-node (bml-node-child node 0))
+                (append (bml-compile-node-in (bml-node-child node 0) env)
                         (list (bma-return 0)))
             (if (node_eq cat BML-AST-BREAK)
                 (list (bma-break (node_value (bml-node-child node 0))))
             (if (node_eq cat BML-AST-CONTINUE)
                 (list (bma-continue (node_value (bml-node-child node 0))))
             (if (node_eq cat BML-AST-THROW)
-                (append (bml-compile-node (bml-node-child node 0))
+                (append (bml-compile-node-in (bml-node-child node 0) env)
                         (list (bma-throw 0)))
             (if (node_eq cat BML-AST-TRY)
                 (list (bma-try
-                        (list (bml-compile-node (bml-node-child node 0))
-                              (bml-compile-node (bml-node-child node 1)))))
+                        (list (bml-compile-node-in (bml-node-child node 0) env)
+                              (bml-compile-node-in (bml-node-child node 1) env))))
             (if (node_eq cat BML-AST-WHILE)
                 (list (bma-while-success
-                        (bml-compile-node (bml-node-child node 0))))
+                        (bml-compile-node-in (bml-node-child node 0) env)))
             (if (node_eq cat BML-AST-METHOD)
-                (bml-compile-node (bml-node-child node 1))
+                (bml-compile-node-in (bml-node-child node 1) env)
             (if (node_eq cat BML-AST-BLOCK)
-                (bml-compile-children (node_children node))
+                (bml-compile-children-in (node_children node) env)
             (if (node_eq cat BML-AST-CHOOSE)
-                (list (bma-choose (map bml-compile-node (node_children node))))
+                (list (bma-choose (bml-compile-choose-branches-in (node_children node) env)))
             (if (node_eq cat BML-AST-FAIL)
                 (list (bma-fail 0))
             (if (node_eq cat BML-AST-CUT)
@@ -5038,7 +5138,7 @@
                 (list (bma-restore 0))
             (if (node_eq cat BML-AST-DISCARD)
                 (list (bma-discard 0))
-                (empty))))))))))))))))))))))))
+                (empty)))))))))))))))))))))))))
 
     (defn bml-compile-program (node)
         (comp-program "bma" (bml-compile-node node)))
@@ -5202,10 +5302,10 @@
         "original BML/BMF/Form compiler sources compile themselves into versioned .fkb images and Hati fourth-kernel native binaries with full class, template, generic, method, state, exception, and physical-lane support")
 
     (defn bml-hati-native-floor ()
-        "supported native subsets must produce loadable Hati tables with parity proof; unsupported BML shapes must be named before table emission and never silently become a valid zero result")
+        "supported native subsets include lexical const/name binding and must produce loadable Hati tables with parity proof; unsupported BML shapes, including unresolved names, must be named before table emission and never silently become a valid zero result")
 
     (defn bml-hati-native-next-step ()
-        "make unsupported BML-to-Hati lowering observable, then close the first missing semantic family with a source-level proof and native binary probe")
+        "close method parameter and call binding with a source-level proof and native binary probe, then lift fields, classes, templates, and generics on that binding floor")
 
     (defn bml-hati-lower-result (expr pool)
         (list "bml-hati-lower-result" expr pool))
@@ -5290,22 +5390,42 @@
                 (bml-hati-image-unsupported image))))
 
     (defn bml-hati-unsupported-nodes-in (nodes)
+        (bml-hati-unsupported-nodes-in-env nodes (empty)))
+
+    (defn bml-hati-unsupported-nodes-in-env (nodes env)
         (if (nil? nodes)
             (empty)
             (append
-                (bml-hati-unsupported-node (head nodes))
-                (bml-hati-unsupported-nodes-in (tail nodes)))))
+                (bml-hati-unsupported-node-in (head nodes) env)
+                (bml-hati-unsupported-nodes-in-env
+                    (tail nodes)
+                    (bml-local-env-after-node (head nodes) env)))))
 
     (defn bml-hati-unsupported-choose-in (branches)
+        (bml-hati-unsupported-choose-in-env branches (empty)))
+
+    (defn bml-hati-unsupported-choose-in-env (branches env)
         (if (nil? branches)
             (list "choose/no-success-branch")
             (if (bml-hati-node-fail? (head branches))
-                (bml-hati-unsupported-choose-in (tail branches))
+                (bml-hati-unsupported-choose-in-env (tail branches) env)
                 (append
-                    (bml-hati-unsupported-node (head branches))
-                    (bml-hati-unsupported-nodes-in (tail branches))))))
+                    (bml-hati-unsupported-node-in (head branches) env)
+                    (bml-hati-unsupported-nodes-in-env (tail branches) env)))))
 
     (defn bml-hati-unsupported-node (node)
+        (bml-hati-unsupported-node-in node (empty)))
+
+    (defn bml-hati-unsupported-name-in (node env)
+        (do
+            (let binding (bml-local-lookup env (bml-local-name node)))
+            (if (nil? binding)
+                (list "name/unbound")
+                (bml-hati-unsupported-node-in
+                    (bml-local-binding-value binding)
+                    (bml-local-binding-env binding)))))
+
+    (defn bml-hati-unsupported-node-in (node env)
         (do
             (let cat (node_category node))
             (if (node_eq cat BML-AST-INT)
@@ -5318,18 +5438,20 @@
                 (empty)
             (if (node_eq cat BML-AST-ADD)
                 (append
-                    (bml-hati-unsupported-node (bml-node-child node 0))
-                    (bml-hati-unsupported-node (bml-node-child node 1)))
+                    (bml-hati-unsupported-node-in (bml-node-child node 0) env)
+                    (bml-hati-unsupported-node-in (bml-node-child node 1) env))
             (if (node_eq cat BML-AST-CONST)
-                (bml-hati-unsupported-node (bml-node-child node 2))
+                (bml-hati-unsupported-node-in (bml-local-const-value node) env)
+            (if (node_eq cat BML-AST-NAME)
+                (bml-hati-unsupported-name-in node env)
             (if (node_eq cat BML-AST-RETURN)
-                (bml-hati-unsupported-node (bml-node-child node 0))
+                (bml-hati-unsupported-node-in (bml-node-child node 0) env)
             (if (node_eq cat BML-AST-METHOD)
-                (bml-hati-unsupported-node (bml-node-child node 1))
+                (bml-hati-unsupported-node-in (bml-node-child node 1) env)
             (if (node_eq cat BML-AST-BLOCK)
-                (bml-hati-unsupported-nodes-in (node_children node))
+                (bml-hati-unsupported-nodes-in-env (node_children node) env)
             (if (node_eq cat BML-AST-CHOOSE)
-                (bml-hati-unsupported-choose-in (node_children node))
+                (bml-hati-unsupported-choose-in-env (node_children node) env)
             (if (node_eq cat BML-AST-PACKAGE)
                 (list "package")
             (if (node_eq cat BML-AST-IMPORT)
@@ -5342,8 +5464,6 @@
                 (list "section")
             (if (node_eq cat BML-AST-FIELD)
                 (list "field")
-            (if (node_eq cat BML-AST-NAME)
-                (list "name")
             (if (node_eq cat BML-AST-ARRAY)
                 (list "array")
             (if (node_eq cat BML-AST-BREAK)
@@ -5369,16 +5489,20 @@
                 (list "unknown")))))))))))))))))))))))))))))))
 
     (defn bml-hati-lower-nodes-in (nodes pool)
+        (bml-hati-lower-nodes-in-env nodes pool (empty)))
+
+    (defn bml-hati-lower-nodes-in-env (nodes pool env)
         (if (nil? nodes)
             (bml-hati-lower-result (fk-lit 0) pool)
         (if (nil? (tail nodes))
-            (bml-hati-lower-node-in (head nodes) pool)
+            (bml-hati-lower-node-in-env (head nodes) pool env)
             (do
-                (let first (bml-hati-lower-node-in (head nodes) pool))
+                (let first (bml-hati-lower-node-in-env (head nodes) pool env))
                 (let rest
-                    (bml-hati-lower-nodes-in
+                    (bml-hati-lower-nodes-in-env
                         (tail nodes)
-                        (bml-hati-lower-pool first)))
+                        (bml-hati-lower-pool first)
+                        (bml-local-env-after-node (head nodes) env)))
                 (bml-hati-lower-result
                     (fk-sequence
                         (bml-hati-lower-expr first)
@@ -5386,11 +5510,14 @@
                     (bml-hati-lower-pool rest))))))
 
     (defn bml-hati-lower-choose-in (branches pool)
+        (bml-hati-lower-choose-in-env branches pool (empty)))
+
+    (defn bml-hati-lower-choose-in-env (branches pool env)
         (if (nil? branches)
             (bml-hati-lower-result (fk-lit 0) pool)
             (if (bml-hati-node-fail? (head branches))
-                (bml-hati-lower-choose-in (tail branches) pool)
-                (bml-hati-lower-node-in (head branches) pool))))
+                (bml-hati-lower-choose-in-env (tail branches) pool env)
+                (bml-hati-lower-node-in-env (head branches) pool env))))
 
     (defn bml-hati-lower-float-in (float-node pool)
         (do
@@ -5407,6 +5534,19 @@
                 (bml-hati-pool-entry-pool entry))))
 
     (defn bml-hati-lower-node-in (node pool)
+        (bml-hati-lower-node-in-env node pool (empty)))
+
+    (defn bml-hati-lower-name-in (node pool env)
+        (do
+            (let binding (bml-local-lookup env (bml-local-name node)))
+            (if (nil? binding)
+                (bml-hati-lower-result (fk-lit 0) pool)
+                (bml-hati-lower-node-in-env
+                    (bml-local-binding-value binding)
+                    pool
+                    (bml-local-binding-env binding)))))
+
+    (defn bml-hati-lower-node-in-env (node pool env)
         (do
             (let cat (node_category node))
             (if (node_eq cat BML-AST-INT)
@@ -5425,30 +5565,33 @@
                     pool)
             (if (node_eq cat BML-AST-ADD)
                 (do
-                    (let left (bml-hati-lower-node-in (bml-node-child node 0) pool))
+                    (let left (bml-hati-lower-node-in-env (bml-node-child node 0) pool env))
                     (let right
-                        (bml-hati-lower-node-in
+                        (bml-hati-lower-node-in-env
                             (bml-node-child node 1)
-                            (bml-hati-lower-pool left)))
+                            (bml-hati-lower-pool left)
+                            env))
                     (bml-hati-lower-result
                         (fk-add
                             (bml-hati-lower-expr left)
                             (bml-hati-lower-expr right))
                         (bml-hati-lower-pool right)))
             (if (node_eq cat BML-AST-CONST)
-                (bml-hati-lower-node-in (bml-node-child node 2) pool)
+                (bml-hati-lower-node-in-env (bml-local-const-value node) pool env)
+            (if (node_eq cat BML-AST-NAME)
+                (bml-hati-lower-name-in node pool env)
             (if (node_eq cat BML-AST-RETURN)
-                (bml-hati-lower-node-in (bml-node-child node 0) pool)
+                (bml-hati-lower-node-in-env (bml-node-child node 0) pool env)
             (if (node_eq cat BML-AST-METHOD)
-                (bml-hati-lower-node-in (bml-node-child node 1) pool)
+                (bml-hati-lower-node-in-env (bml-node-child node 1) pool env)
             (if (node_eq cat BML-AST-BLOCK)
-                (bml-hati-lower-nodes-in (node_children node) pool)
+                (bml-hati-lower-nodes-in-env (node_children node) pool env)
             (if (node_eq cat BML-AST-CHOOSE)
-                (bml-hati-lower-choose-in (node_children node) pool)
+                (bml-hati-lower-choose-in-env (node_children node) pool env)
             (if (node_eq cat BML-AST-TRY)
-                (bml-hati-lower-node-in (bml-node-child node 1) pool)
+                (bml-hati-lower-node-in-env (bml-node-child node 1) pool env)
             (if (node_eq cat BML-AST-THROW)
-                (bml-hati-lower-node-in (bml-node-child node 0) pool)
+                (bml-hati-lower-node-in-env (bml-node-child node 0) pool env)
             (if (node_eq cat BML-AST-WHILE)
                 (bml-hati-lower-result (fk-lit 0) pool)
             (if (node_eq cat BML-AST-FAIL)
@@ -5461,7 +5604,7 @@
                 (bml-hati-lower-result (fk-lit 0) pool)
             (if (node_eq cat BML-AST-DISCARD)
                 (bml-hati-lower-result (fk-lit 0) pool)
-                (bml-hati-lower-result (fk-lit 0) pool)))))))))))))))))))))
+                (bml-hati-lower-result (fk-lit 0) pool))))))))))))))))))))))
 
     (defn bml-hati-compile-image (node)
         (do
