@@ -57,7 +57,13 @@
 
     (defn rcr-realization-signature? (signature)
         (if (eq (len signature) 3)
-            (str_eq (nth signature 0) "form-recipe-route-choice-runtime-signature")
+            (and
+                (str_eq (nth signature 0) "form-recipe-route-choice-runtime-signature")
+                (and
+                    (form-recipe-choice-signature?
+                        (rcr-realization-signature-recipe signature))
+                    (brcr-realization-signature?
+                        (rcr-realization-signature-route signature))))
             false))
 
     (defn rcr-realization-signature-recipe (signature) (nth signature 1))
@@ -68,8 +74,12 @@
             (and
                 (rcr-recipe-choice-valid?
                     (rcr-realization-recipe-choice realization))
-                (brcr-realization-valid?
-                    (rcr-realization-route-realization realization)))
+                (and
+                    (brcr-realization?
+                        (rcr-realization-route-realization realization))
+                    (brcr-realization-signature?
+                        (brcr-realization-signature
+                            (rcr-realization-route-realization realization)))))
             false))
 
     0)

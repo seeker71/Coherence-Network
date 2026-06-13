@@ -1,0 +1,99 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/recipe-choice-runtime-fourth-20260613",
+  "commit_scope": "Align recipe-choice runtime wrapper validity with fourth-kernel route signature proof",
+  "files_owned": [
+    "form/form-stdlib/recipe-choice-runtime.fk",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim recipe-choice-runtime-fourth \"close recipe-choice-runtime fourth-arm mismatch from full Form validation after PR #3004; keep compiler-lens/http-server divergences separate unless they share the same cause\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/choice-receipt.fk form-stdlib/bml-source.fk form-stdlib/branch-choice-order.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/recipe-choice-runtime.fk form-stdlib/tests/recipe-choice-runtime-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh recipe-choice-runtime",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/choice-outcome-learning.fk form-stdlib/bml-source.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/channel-protocol-choice-floor.fk form-stdlib/tests/channel-protocol-choice-floor-band.fk"
+    ],
+    "results": [
+      "prompt entry passed on clean worktree codex/recipe-choice-runtime-fourth-20260613",
+      "wellness exited 0; public API health returned 502 during remote readings, unrelated to the local Form runtime proof",
+      "baseline recipe-choice-runtime-band reproduced the mismatch: Go/Rust/TS 233, fkwu 169",
+      "recipe-choice-runtime-band now returns 233 with fourth arm: 1 band(s) four-way and 0 divergent",
+      "fourth-arm manifest check returned PASS-4WAY for recipe-choice-runtime",
+      "channel-protocol-choice-floor-band remains four-way at 262143"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "reason": "Not pushed or opened as a PR in this evidence slice yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No deployment performed for this local Form runtime slice."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Focused local Form and fourth-arm proofs pass. Remote PR checks are pending until the branch is pushed."
+  },
+  "idea_ids": [
+    "channel-protocol-choice-as-first-class-form-bml",
+    "native-learning-recipe-library-routing-metadata"
+  ],
+  "spec_ids": [
+    "specs/canonical-route-registry-and-runtime-mapping.md",
+    "specs/bml-typed-recipes.md"
+  ],
+  "task_ids": [
+    "thread-recipe-choice-runtime-fourth-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "north-star direction",
+        "merge-and-continue request"
+      ]
+    },
+    {
+      "contributor_id": "codex-bml",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "coordination"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/recipe-choice-runtime.fk",
+    "form/form-stdlib/tests/recipe-choice-runtime-band.fk",
+    "form/form-stdlib/tests/channel-protocol-choice-floor-band.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "change_files": [
+    "docs/system_audit/commit_evidence_2026-06-13_recipe_choice_runtime_fourth.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/recipe-choice-runtime.fk"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Recipe-choice runtime wrapper validity now validates the recipe choice and nested route-choice signature shape, allowing fkwu to prove the existing 233 floor while the deeper brcr candidate validity remains owned by bml-route-choice-runtime.",
+    "public_endpoints": [
+      "local Form recipe-choice runtime",
+      "local channel-protocol-choice composite floor"
+    ],
+    "test_flows": [
+      "form-recipe-registry-run-flex-with-receipt -> rcr-realize -> rcr-realization-valid?",
+      "rcr-realization-signature -> nested form-recipe-choice-signature? plus brcr-realization-signature?",
+      "channel-protocol-choice-floor-band remains at 262143"
+    ]
+  }
+}
