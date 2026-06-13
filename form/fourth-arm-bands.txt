@@ -27,8 +27,8 @@
 #   multi-line output     — bands that print mid-walk (the walker answers
 #     one value through fk_pr)
 #
-# Current floor (2026-06-13 numeric native admission): full
-# `cd form && ./validate.sh` reaches 129 four-way bands and 555 total passing
+# Current floor (2026-06-13 native metal/emit admission): full
+# `cd form && ./validate.sh` reaches 134 four-way bands and 555 total passing
 # workloads, with 0 residual divergent bands. BranchOutcome carries
 # ok/reject/condition results and learnable rejected evidence through the
 # fourth arm; the BML protocol/capability and runtime-choice rows ride the
@@ -36,10 +36,12 @@
 # span carries Value-ABI float, vector, string-name, and JIT-offer rows through
 # tags 81..86; numeric conversion/transcendental rows now carry
 # round/ceil/exp/log through tags 87..90, and the tensor emitter-as-recipe rides
-# the manifest floor at 7. North star: every stdlib band is either listed here
-# and validated four-way, or its 3-kernel-only blocker is explicitly named in
-# commit evidence; suite-level residuals stay at zero while source-section
-# bands move toward fourth-arm eligibility.
+# the manifest floor at 7. Native target/metal emit rows now carry Hati target
+# coordinates, human-readable asm emission, Mach-O shape, native CLI emit, and
+# generic metal emit through the fourth arm. North star: every stdlib band is
+# either listed here and validated four-way, or its 3-kernel-only blocker is
+# explicitly named in commit evidence; suite-level residuals stay at zero while
+# source-section bands move toward fourth-arm eligibility.
 learning-trend fkc 127
 cooldown fkc 63
 alert-gate fkc 127
@@ -117,18 +119,22 @@ conversation-cell fks 127
 conversation-context fks 127
 evidence-grounding fks 127
 forget-stale fks 127
+asm-pl-human-emit fks 31
 form-asm fks 31
 form-constants fks 111111
 form-diagnose fks 31
 form-debug fks 31
 form-lower fks 31
 form-lower-rec fks 31
+form-macho fks 31
 form-mut fks 31
 form-spy fks 31
 gematria fks 11111
 go-jit fks 8
 go-jit-value-list fks 4
 harmonic-geometry fks 111111
+hati-os-native-cli-emit fks 7
+hati-os-targets fks 4095
 heartbeat fks 5
 hmac-sha256 fks 2
 int-literal-width fks 9
@@ -150,6 +156,7 @@ learning-arc fks 127
 living-equation fks 111111
 mesh-health fks 127
 mesh-merge-converge fks 127
+metal-emit fks 31
 perception-pipeline fks 127
 predictor-sampling fks 127
 rate-limit fks 6
