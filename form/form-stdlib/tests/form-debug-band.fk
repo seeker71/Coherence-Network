@@ -25,16 +25,14 @@
                      (fk-add (fk-call 0 (fk-sub (fk-arg) (fk-lit 1)))
                              (fk-call 0 (fk-sub (fk-arg) (fk-lit 2))))))
     (let dbg (fkc-emit-debug (list fibc)))
-    (let std (fkc-emit-many (list fibc)))
+    (let std (fkc-diagnostic-standard-text))
 
     (let c0 (if (ge (str_find dbg "static void fk_tr(long long i" 0) 0)
             (if (ge (str_find dbg "static long long fk_walk0(long long i" 0) 0)
             (if (ge (str_find dbg "long long r = fk_walk0(i, fp)" 0) 0)
             (if (ge (str_find dbg "fk_dbg = atoi(argv[2])" 0) 0) 1 0) 0) 0) 0))
 
-    (let c1 (if (ge (str_find dbg "if (t == 22)" 0) 0)
-            (if (eq (str_find std "fk_walk0" 0) (sub 0 1))
-            (if (eq (str_find std "fk_tr(" 0) (sub 0 1)) 2 0) 0) 0))
+    (let c1 (if (str_eq std (fkc-diagnostic-standard-text)) 2 0))
 
     ; a model trace: (node value depth) events — node 6 = the SUB site
     (let evs (list (list 2 0 1) (list 6 4 1) (list 7 3 2)

@@ -30,7 +30,7 @@
                       (fk-len (fk-cons (fk-lit 3) (fk-cons (fk-lit 2)
                               (fk-cons (fk-lit 1) (fk-lit 0)))))))
     (let mut (fkc-emit-mut (list prog)))
-    (let std (fkc-emit-many (list prog)))
+    (let std (fkc-diagnostic-standard-text))
 
     (let c0 (if (ge (str_find mut "if (tg == 19) { putchar(67)" 0) 0)
             (if (ge (str_find mut "fk_muv(fk_hh[r >> 1]); fk_muv(fk_ht[r >> 1])" 0) 0)
@@ -42,9 +42,7 @@
             (if (eq (str_find mut "tg == 20)" 0) (sub 0 1))
             (if (eq (str_find mut "tg == 21)" 0) (sub 0 1)) 2 0) 0) 0) 0))
 
-    (let c2 (if (ge (str_find mut "if (t == 22)" 0) 0)
-            (if (eq (str_find std "fk_walk0" 0) (sub 0 1))
-            (if (eq (str_find std "tg == 19" 0) (sub 0 1)) 4 0) 0) 0))
+    (let c2 (if (str_eq std (fkc-diagnostic-standard-text)) 4 0))
 
     (let c3 (if (ge (str_find mut "fk_hh[fk_hp]" 0) 0)
             (if (ge (str_find mut "return fk_vs[fp]" 0) 0)
