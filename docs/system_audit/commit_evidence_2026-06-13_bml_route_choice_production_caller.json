@@ -1,0 +1,109 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/bml-route-choice-production-20260613",
+  "commit_scope": "Wire production native mutation route decisions to brcr-realize route-choice signatures",
+  "files_owned": [
+    "deploy/kernel-router/production-routes.fk",
+    "deploy/kernel-router/mutation_public_gate_harness.py",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/channel-protocol-choice-floor.form",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-kernel-rust/src/main.rs"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "scripts/check_route_manifests.sh",
+      "cd api && python3 -m pytest -q tests/test_native_mutation_public_gate.py",
+      "python3 -m py_compile deploy/kernel-router/mutation_public_gate_harness.py"
+    ],
+    "results": [
+      "continuity gate addressed before this slice: grok/parallel-20260607 was pushed to origin and dirty local grok work was stashed; prompt-guide passed with blocking_risk_count=0",
+      "wellness reported what_wants_attention: none and deploy aligned at origin/main",
+      "first scripts/check_route_manifests.sh run failed with unbound: routes, proving the gate caught the unsafe late global closure",
+      "production-routes.fk now name-checks cleanly and shadow-routes.fk still resolves",
+      "native mutation public-gate pytest passed 8 tests and now requires top-level plus decision_receipt route_choice_signature fields",
+      "production native mutation default/public-gate responses call brcr-realize over the same mutation kh-route rows appended into the production routes registry"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "reason": "Not pushed or opened as a PR in this slice yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No deployment performed for this local production-caller wiring slice."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof passes and the first production route caller now persists brcr-realize signatures. CI/deploy are pending; remaining gaps are recipe-library callers, broader BML protocol/capability grammar, runtime dynamic capability registry fourth-arm host-IO wall, and universal receipts-before-trust enforcement."
+  },
+  "idea_ids": [
+    "channel-protocol-choice-as-first-class-form-bml",
+    "native-learning-recipe-library-routing-metadata"
+  ],
+  "spec_ids": [
+    "specs/canonical-route-registry-and-runtime-mapping.md",
+    "specs/bml-typed-recipes.md",
+    "specs/agent-question-sse-channel.md"
+  ],
+  "task_ids": [
+    "thread-bml-route-choice-production-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "north-star direction",
+        "merge-and-continue request"
+      ]
+    },
+    {
+      "contributor_id": "codex-bml",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "coordination"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "deploy/kernel-router/production-routes.fk",
+    "deploy/kernel-router/mutation_public_gate_harness.py",
+    "docs/coherence-substrate/channel-protocol-choice-floor.form",
+    "form/form-kernel-rust/src/main.rs",
+    "form/form-stdlib/bml-route-choice-runtime.fk",
+    "coord share at 2026-06-13 after prompt gate continuity repair"
+  ],
+  "change_files": [
+    "deploy/kernel-router/production-routes.fk",
+    "deploy/kernel-router/mutation_public_gate_harness.py",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/channel-protocol-choice-floor.form",
+    "docs/system_audit/commit_evidence_2026-06-13_bml_route_choice_production_caller.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-kernel-rust/src/main.rs"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Native mutation default and public-gate responses now carry BML route-choice runtime signatures computed from brcr-realize over real kernel-http route candidates, both at the top level and inside decision_receipt.",
+    "public_endpoints": [
+      "local kernel-router production-routes manifest",
+      "local mutation_public_gate_harness.py"
+    ],
+    "test_flows": [
+      "production route manifest -> Rust source route-language preludes -> brcr-realize available to route handlers",
+      "native mutation route rows -> mpg-route-choice-routes -> brcr-realize -> route_choice_signature JSON",
+      "mutation_public_gate_harness.py -> default/public-gate cases -> route_choice_signature assertions"
+    ]
+  }
+}
