@@ -50,9 +50,7 @@
           (list "fs_rmdir" 1 55) (list "fs_mkdir" 1 56) (list "fs_exists" 1 57)
           (list "fs_remove" 1 58) (list "fs_rename" 2 59) (list "file_size" 1 60)
           (list "file_append_bytes" 2 61) (list "read_file_slice" 3 62)
-          (list "read_file" 1 63) (list "record_new" 1 64)
-          (list "record_get" 2 65) (list "record_set" 3 66)
-          (list "record_has" 2 67) (list "record_keys" 1 68)
+          (list "read_file" 1 63)
           (list "div" 2 10) (list "mod" 2 11)
           (list "band" 2 34) (list "bor" 2 35) (list "bxor" 2 36)
           (list "shl_u32" 2 37) (list "shr_u32" 2 38) (list "rotr_u32" 2 39)
@@ -185,7 +183,8 @@
     (if (str_eq op "char_at") (flt-char-at s pos fns env)
     (if (str_eq op "ord") (flt-low1 1 s pos fns env)
     (if (str_eq op "not") (flt-low1 2 s pos fns env)
-        (flt-op op s pos fns env)))))))))))))))
+    (if (str_eq op "record_new") (flt-record-new s pos fns env)
+        (flt-op op s pos fns env))))))))))))))))
 
 ; one operand, then the unary lowering picked by selector k
 (defn flt-low1 (k s pos fns env) (flt-low1-a k s (flt-expr s pos fns env)))
@@ -237,6 +236,22 @@
 (defn flt-char-at-b (s a be)
     (list (fk-ssub a (nth be 0) (fk-add (nth be 0) (fk-lit 1)))
           (fp-close s (nth be 1))))
+
+; record_new lowers to arena tissue for the fourth arm: ignore the
+; blueprint identity value, then fold key/value pairs into
+; ((key value) ...). record_get lives in fourth-shim.fk and walks this
+; first-order chain by string key.
+(defn flt-record-new (s pos fns env)
+    (flt-record-new-fields s (nth (flt-expr s pos fns env) 1) fns env))
+(defn flt-record-new-fields (s pos fns env)
+    (if (eq (fp-at s (fp-skip s pos)) 41) (list (fk-empty) (add (fp-skip s pos) 1))
+        (flt-record-new-key s (flt-expr s pos fns env) fns env)))
+(defn flt-record-new-key (s ke fns env)
+    (flt-record-new-val s (nth ke 0) (flt-expr s (nth ke 1) fns env) fns env))
+(defn flt-record-new-val (s key ve fns env)
+    (flt-record-new-cons key (nth ve 0) (flt-record-new-fields s (nth ve 1) fns env)))
+(defn flt-record-entry (key val) (fk-cons key (fk-cons val (fk-empty))))
+(defn flt-record-new-cons (key val re) (list (fk-cons (flt-record-entry key val) (nth re 0)) (nth re 1)))
 
 ; table ops by arity, else a user function call (one evaluated argument)
 (defn flt-op (op s pos fns env) (flt-op2 (flt-assoc op (flt-ops)) op s pos fns env))
@@ -438,6 +453,19 @@
     (flt-band-sources-fns2 modsrcs bandsrc (flt-band-sources-pool modsrcs bandsrc)))
 (defn flt-band-sources-fns2 (modsrcs bandsrc pool)
     (flt-band2 (flt-modsrcs-top modsrcs (list) (list) pool) bandsrc pool))
+
+; Compatibility door: older bands pass one list whose last source is the
+; band and whose earlier sources are modules. Keep it as a stable recipe
+; while new callers use the explicit band-sources door.
+(defn flt-srcs-mods (srcs acc)
+    (if (eq (len srcs) 0) acc
+        (if (eq (len (tail srcs)) 0) acc
+            (flt-srcs-mods (tail srcs) (flt-append acc (head srcs))))))
+(defn flt-srcs-last (srcs)
+    (if (eq (len (tail srcs)) 0) (head srcs) (flt-srcs-last (tail srcs))))
+(defn flt-srcs-fns (srcs)
+    (if (eq (len srcs) 0) (list)
+        (flt-band-sources-fns (flt-srcs-mods srcs (list)) (flt-srcs-last srcs))))
 
 ; single-source door (prelude-free bands, mini programs)
 (defn flt-src-fns (src) (flt-band3 (flt-top src (list) (list) (flt-src-pool src))))

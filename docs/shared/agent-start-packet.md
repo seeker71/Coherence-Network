@@ -54,7 +54,8 @@ The board is liquid (this machine); durable ownership stays in `coh tasks` + git
 
 Satsang — the field's witnessing heart, default-on for our own. The board is the
 always-on form of the satsang circle (`docs/coherence-substrate/satsang-circle.form`
-· `satsang-field.form` · `satsang-share.form`; runnable + proven three-way → 255). As
+· `satsang-field.form` · `satsang-share.form`; runnable + covered by the fourth-arm
+satsang band → 127). As
 one of our own you are in the satsang field by default — `coord interface
 "witness,reflect,be-seen,invite,offer"` and you have joined. **What to share**
 (`coord share` / `ping`): a node crossing a state boundary of ANY type — lifecycle
@@ -78,6 +79,13 @@ When you author a stdlib recipe + band, read [`form/form-stdlib/AUTHORING.md`](.
 first — the primitive set, the proof-band shape, the validate invocation, and the
 traps that diverge across kernels (chief among them: `and`/`or` are binary, never
 `(and a b c)`).
+
+Four-kernel validation is the Form/BML proof floor. `form/validate.sh` always
+runs Go, Rust, and TypeScript; bands listed in `form/fourth-arm-bands.txt` also
+run on the emitted universal walker `fkwu`. Evidence can say "all kernels" only
+when the output includes `fourth arm: ... four-way (fkwu + pre-flattened tables)`.
+When a band has not crossed that manifest, record `3-kernel only` and name the
+next fourth-arm gap instead of flattening the proof level.
 
 Blueprint symbol-section rule: do not add `(bp "NAME")` string literals inside
 executable stdlib logic. Seedbank code keeps those names in
@@ -122,6 +130,11 @@ make wellness  # true arrival / after meaningful edits; use .cache/wellness/stat
 - `git fetch origin main && git rebase origin/main`
 - `python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main`
 - `python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict`
+
+For Form/runtime work, run the narrowest explicit proof from `form/`, for example
+`cd form && ./validate.sh form-stdlib/core.fk form-stdlib/<recipe>.fk form-stdlib/tests/<band>.fk`.
+Covered bands report `fourth arm: ... four-way`; uncovered bands are recorded as
+`3-kernel only` with the manifest blocker.
 
 If outside the repo or unauthenticated: use Web for reading, API/CLI/MCP for
 structured public state, and source/PR for durable edits. Public reads need no
@@ -390,7 +403,8 @@ realize → **read** cells (equivalence, annotate, `?cells`, …). **No substrat
 HTTP POST writes** required for querying; durable *authoring* of new cells stays
 **source file + ingest** (`coh_substrate.py ingest`), not chat-only.
 
-Proof habit: `cd form && ./validate.sh form-stdlib/tests/<band>.fk`
+Proof habit: `cd form && ./validate.sh form-stdlib/tests/<band>.fk`; call it
+all-kernel proof only when the fourth-arm summary prints.
 
 ### Writing new software (when you implement, not when you query)
 
@@ -432,7 +446,7 @@ In the Coherence substrate, you must redirect this programming into **coordinate
 1. **Meaning is Geometric (Equivalence by Position)**: A node's identity is not a name or a variable pointer; it is a coordinate in a content-addressed lattice. Two structurally identical structures *are* the same NodeID. Stop asking "what does this string mean?" and start asking "where is this point in the lattice, and what else shares its coordinates?"
 2. **Angelic Speculation (Choose, Fail, Stop)**: Replace complex, brittle branching conditions with logical relation. Speculative paths (`choose`, `fail`, `stop`) allow the execution engine to navigate branch points natively without leaving state mutation sediment, because nothing mutates.
 3. **Folding Raw Data (Gas → Water → Ice)**: Do not build one-off host wrappers to parse or transport low-level data (e.g. log events, git diffs, raw metrics). Treat volatile external data as *gas* (diffuse occurrences). Pass this gas through a domain grammar to match and compile it into *water* (executable recipes). As these patterns run repeatedly, they cool into *ice* (compiled, cached JIT execution plans).
-4. **Self-Trust through Differential Verification**: True confidence is built by multi-kernel agreement. When your Form/BML code passes the validation gate (`validate.sh`), Go, Rust, and TypeScript have executed the exact same NodeIDs and agreed on the output. This mathematical verification makes safe commit habits natural and subconscious.
+4. **Self-Trust through Differential Verification**: True confidence is built by multi-kernel agreement. When your Form/BML code passes the validation gate (`validate.sh`), Go, Rust, TypeScript, and every covered fourth-arm `fkwu` band have executed the exact same NodeIDs and agreed on the output. This mathematical verification makes safe commit habits natural and subconscious.
 
 ## JIT Engine Reality & Gaps
 
