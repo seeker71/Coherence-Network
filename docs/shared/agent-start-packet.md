@@ -467,7 +467,7 @@ The JIT compiler (`form-kernel-go/jit.go`) is an active Go optimization layer th
 * **Calling Convention & Arity Limits**: The Go plugin boundary is fixed to `func Fn(args []int64) int64`. To pass float vectors (e.g. 8-band efficacy-probe spectra in `pair_angle`), floats must be serialized to `int64` bits and reconstructed as slices on the other side. Dynamic lists, maps, and arbitrary structures cannot cross the boundary without boxing overhead.
 * **Outer Scope Capture**: Capture-free nested definitions can lift, but a nested definition that closes over an outer local still refuses by name.
 * **String and Map Boundary**: Strings have a Form-native pool-id unbox lane in the fourth-arm lowering proof. Complex maps/dicts still need dict/field carrier coverage before they are hot-path native.
-* **Sibling Parity Boundary**: The Go plugin remains Go-specific. The portable JIT-lowering floor is the Form recipe/table path proven by `fkwu`, now including lowered tags 70..79, value-native tags 81..86, and numeric conversion/transcendental tags 87..90. Android should rely on that minimum floor, with any packaged compiler binary treated as optional acceleration/oracle evidence.
+* **Sibling Parity Boundary**: The Go plugin remains Go-specific. The portable JIT-lowering floor is the Form recipe/table path proven by `fkwu`, now including lowered tags 70..79, value-native tags 81..86, numeric conversion/transcendental tags 87..90, and native metal/emit rows for Hati targets, Mach-O shape, native CLI emit, human asm emit, and generic metal emit. Android should rely on that minimum floor, with any packaged compiler binary treated as optional acceleration/oracle evidence.
 
 ## Observability Gaps: Possible vs. Present
 
