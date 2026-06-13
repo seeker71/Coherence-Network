@@ -1,0 +1,94 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/hati-earth-web-label-apply-20260613",
+  "commit_scope": "Ensure Hostinger deploy applies the new Hati web Traefik labels by forcing the web service through compose when hati.earth host labels change.",
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "hati-os",
+    "hati-mesh"
+  ],
+  "spec_ids": [
+    "android-sense-organ",
+    "hati-mesh-presence"
+  ],
+  "task_ids": [
+    "hati-earth-web-label-apply-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/validate_commit_evidence.py",
+    "docs/system_audit/commit_evidence_2026-06-13_hati_earth_web_label_apply.json"
+  ],
+  "change_files": [
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/validate_commit_evidence.py",
+    "docs/system_audit/commit_evidence_2026-06-13_hati_earth_web_label_apply.json"
+  ],
+  "evidence_refs": [
+    "deploy/hostinger/auto-deploy.sh",
+    "https://github.com/seeker71/Coherence-Network/actions/runs/27462260848",
+    "https://hati.earth/downloads/hati-os/android/arm64/hati-os-android-arm64.tar.zst",
+    "https://hati.earth/downloads/hati-os/macos/arm64/hati-os-macos-arm64.tar.zst"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "bash -n deploy/hostinger/auto-deploy.sh",
+      "python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_hati_earth_web_label_apply.json"
+    ],
+    "notes": "Previous Hostinger run 27462260848 showed the deploy script normalized Hati labels but rebuilt/up'd only api: 'Rebuild scope: api'. The hotfix adds web to REBUILD_SERVICES whenever HATI_WEB_HOSTS_CHANGED=1 so docker compose up applies the changed Traefik labels to the web service. Evidence validation now treats deploy/hostinger/ as a runtime path because Hostinger deploy scripts directly change public runtime behavior."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR checks, and merge."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Pending Hostinger Auto Deploy after merge. Required public proof: hati.earth download routes for Android arm64 and macOS arm64 native tarballs no longer reset during TLS and redirect to the verified GitHub release assets."
+  },
+  "phase_gate": {
+    "phase": "hati-earth-public-download-lane",
+    "gate": "hati.earth uses the same published Hati-OS asset surface as the canonical web route, including macOS and Android native binaries.",
+    "state": "fix-ready-for-deploy",
+    "can_move_next_phase": false,
+    "next": "Merge, let Hostinger Auto Deploy apply web labels, then verify the Hati-domain routes."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "When Hati host labels are added or normalized, the Hostinger deploy updates the web service so Traefik serves hati.earth, sense.hati.earth, and suci.hati.earth instead of leaving those labels only in the compose file.",
+    "public_endpoints": [
+      "https://hati.earth/downloads/hati-os/android/arm64/hati-os-android-arm64.tar.zst",
+      "https://hati.earth/downloads/hati-os/macos/arm64/hati-os-macos-arm64.tar.zst"
+    ],
+    "test_flows": [
+      "Merge the deploy hotfix.",
+      "Wait for Hostinger Auto Deploy to complete.",
+      "Probe both Hati-domain native binary download routes and verify redirect/final status."
+    ],
+    "summary": "E2E public proof waits on deploy because the failure is in Hostinger Traefik label application."
+  }
+}
