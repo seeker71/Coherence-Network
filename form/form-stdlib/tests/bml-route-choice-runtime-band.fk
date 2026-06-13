@@ -1,0 +1,135 @@
+; bml-route-choice-runtime-band.fk
+;
+; BML choiceReceipt metadata drives an executable kernel-http route choice.
+; Verdict: 32767 when trusted metadata selects the fast local route, low-trust
+; metadata escalates to the oracle route, and both return inspectable route
+; signatures over real kh-route-candidate values.
+;
+; preludes: form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/bml-source.fk form-stdlib/branch-choice-order.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk
+
+(do
+    (defn brcr-band-score (ok score)
+        (if ok score 0))
+
+    (let request
+        (kh-request
+            "GET"
+            "/api/runtime/health"
+            (list (kh-header "Accept" "application/json"))
+            (list)
+            ""))
+
+    (let kernel-route
+        (kh-route
+            "kernelRoute"
+            "GET"
+            "/api/runtime/health"
+            9
+            "route_runtime_health_native"
+            "Accept"
+            25))
+    (let oracle-route
+        (kh-route
+            "slowOracle"
+            "GET"
+            "/api/runtime/health"
+            1
+            "route_runtime_health_oracle"
+            "Accept"
+            200))
+    (let http-route
+        (kh-route
+            "httpRequest"
+            "ANY"
+            "/api/*"
+            3
+            "route_runtime_health_http"
+            ""
+            80))
+    (let routes (list http-route oracle-route kernel-route))
+
+    (let trusted-row
+        (bml-source-choice-row-from-expr
+            "choiceReceipt(routePredict,BML,route-choice,kernelRoute:native:true:5:90:matching-capability;slowOracle:oracle:true:90:96:third-party-oracle;httpRequest:http:true:30:70:fallback-carrier,kernelRoute,success,95,branch-prediction-feedback,90,95,95,95,native-kernel-route-matched,codex,bml-route-choice-runtime-band,20260613,2,1,1,0,0);"))
+    (let low-trust-row
+        (bml-source-choice-row-from-expr
+            "choiceReceipt(routePredict,BML,route-choice,kernelRoute:native:true:5:62:cold-cache;slowOracle:oracle:true:90:96:third-party-oracle;httpRequest:http:true:30:70:fallback-carrier,kernelRoute,fail,52,branch-prediction-feedback,48,80,72,60,trust-matrix-below-floor,codex,bml-route-choice-runtime-band,20260613,2,1,0,1,0);"))
+
+    (let trusted-realization
+        (brcr-realize trusted-row routes request 70))
+    (let low-trust-realization
+        (brcr-realize low-trust-row routes request 70))
+    (let trusted-signature
+        (brcr-realization-signature trusted-realization))
+    (let low-trust-signature
+        (brcr-realization-signature low-trust-realization))
+
+    (let kernel-choice
+        (brcr-realization-kernel-choice low-trust-realization))
+    (let kernel-selected-route
+        (brcr-candidate-route-name (kh-route-choice-selected kernel-choice)))
+
+    (sum
+        (list
+            (brcr-band-score (brcr-realization-valid? trusted-realization) 1)
+            (brcr-band-score
+                (str_eq
+                    (brcr-realization-selected-source-path trusted-realization)
+                    "kernelRoute")
+                2)
+            (brcr-band-score
+                (str_eq
+                    (brcr-realization-selected-route-name trusted-realization)
+                    "kernelRoute")
+                4)
+            (brcr-band-score
+                (not
+                    (brcr-realization-escalation-needed?
+                        trusted-realization))
+                8)
+            (brcr-band-score (kh-route-choice-valid? kernel-choice) 16)
+            (brcr-band-score
+                (brcr-realization-signature? trusted-signature)
+                32)
+            (brcr-band-score
+                (str_eq
+                    (brcr-realization-declared-path trusted-realization)
+                    "kernelRoute")
+                64)
+            (brcr-band-score
+                (brcr-realization-valid? low-trust-realization)
+                128)
+            (brcr-band-score
+                (str_eq
+                    (brcr-realization-selected-source-path
+                        low-trust-realization)
+                    "slowOracle")
+                256)
+            (brcr-band-score
+                (str_eq
+                    (brcr-realization-selected-route-name
+                        low-trust-realization)
+                    "slowOracle")
+                512)
+            (brcr-band-score
+                (brcr-realization-escalation-needed?
+                    low-trust-realization)
+                1024)
+            (brcr-band-score
+                (and
+                    (str_eq kernel-selected-route "kernelRoute")
+                    (brcr-realization-overrode-kernel?
+                        low-trust-realization))
+                2048)
+            (brcr-band-score
+                (eq (brcr-selected-pressure-bucket low-trust-realization) 0)
+                4096)
+            (brcr-band-score
+                (brcr-realization-signature? low-trust-signature)
+                8192)
+            (brcr-band-score
+                (eq
+                    (brcr-realization-source-candidate-count
+                        low-trust-realization)
+                    3)
+                16384))))
