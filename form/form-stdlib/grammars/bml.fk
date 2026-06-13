@@ -5302,7 +5302,7 @@
         "original BML/BMF/Form compiler sources compile themselves into versioned .fkb images and Hati fourth-kernel native binaries with full class, template, generic, method, state, exception, and physical-lane support")
 
     (defn bml-hati-native-floor ()
-        "supported native subsets include lexical const/name binding and must produce loadable Hati tables with parity proof; unsupported BML shapes, including unresolved names, must be named before table emission and never silently become a valid zero result")
+        "supported native subsets include lexical const/name binding, clang oracle assembly receipts, and Form-native JIT runtime model rows for macos-arm64 and android-arm64; they must produce loadable Hati tables with parity proof; unsupported BML shapes, including unresolved names, must be named before table emission and never silently become a valid zero result")
 
     (defn bml-hati-native-next-step ()
         "close method parameter and call binding with a source-level proof and native binary probe, then lift fields, classes, templates, and generics on that binding floor")
