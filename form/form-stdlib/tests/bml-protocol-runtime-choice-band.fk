@@ -1,0 +1,115 @@
+; bml-protocol-runtime-choice-band.fk
+;
+; BML protocol/capability rows lower into the existing route-choice runtime.
+; Verdict: 65535 when compatible rows select the native route and incompatible
+; rows flow through the same choice receipt shape to a comparison/oracle route.
+;
+; preludes: form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/bml-source.fk form-stdlib/branch-choice-order.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk
+
+(do
+    (defn bprc-score (ok bit)
+        (if ok bit 0))
+
+    (let request
+        (kh-request
+            "GET"
+            "/api/runtime/health"
+            (list (kh-header "Accept" "application/json"))
+            (list)
+            ""))
+
+    (let native-route
+        (kh-route
+            "kernelRoute"
+            "GET"
+            "/api/runtime/health"
+            9
+            "route_runtime_health_native"
+            "Accept"
+            25))
+    (let oracle-route
+        (kh-route
+            "slowOracle"
+            "GET"
+            "/api/runtime/health"
+            1
+            "route_runtime_health_oracle"
+            "Accept"
+            200))
+    (let routes (list oracle-route native-route))
+
+    (let protocol-row
+        (bml-source-protocol-row-from-expr
+            "protocol(sensorFlow,sensor:signal,bodySensor,cap:sensor-read,json,ready,receipt:offer,4);"))
+    (let capability-row
+        (bml-source-capability-row-from-expr
+            "capability(cap:sensor-read,sensor:signal,bodySensor,vector,82,device-local,receipt:offer);"))
+    (let mismatch-capability
+        (bml-source-capability-row-from-expr
+            "capability(cap:remote-write,http:request,bodySensor,json,60,remote,receipt:slow);"))
+
+    (let compatible-choice-row
+        (brcr-protocol-choice-row
+            protocol-row
+            capability-row
+            "kernelRoute"
+            "slowOracle"
+            "codex"
+            "bml-protocol-runtime-choice-band"
+            20260613))
+    (let compatible-realization
+        (brcr-realize-protocol-capability
+            protocol-row
+            capability-row
+            "kernelRoute"
+            "slowOracle"
+            routes
+            request
+            70
+            "codex"
+            "bml-protocol-runtime-choice-band"
+            20260613))
+    (let mismatch-realization
+        (brcr-realize-protocol-capability
+            protocol-row
+            mismatch-capability
+            "kernelRoute"
+            "slowOracle"
+            routes
+            request
+            70
+            "codex"
+            "bml-protocol-runtime-choice-band"
+            20260613))
+
+    (let compatible-signature
+        (brcr-protocol-realization-signature
+            protocol-row
+            capability-row
+            compatible-realization))
+    (let mismatch-signature
+        (brcr-protocol-realization-signature
+            protocol-row
+            mismatch-capability
+            mismatch-realization))
+    (let compatible-choice-receipt
+        (bml-source-choice-row->receipt compatible-choice-row))
+
+    (sum
+        (list
+            (bprc-score (bml-source-protocol-accepts-capability? protocol-row capability-row) 1)
+            (bprc-score (not (bml-source-protocol-accepts-capability? protocol-row mismatch-capability)) 2)
+            (bprc-score (bml-source-choice-receipt-row? compatible-choice-row) 4)
+            (bprc-score (eq (len (bml-source-choice-row-candidates compatible-choice-row)) 2) 8)
+            (bprc-score (str_eq (bml-source-choice-row-category compatible-choice-row) "protocol-choice") 16)
+            (bprc-score (eq (bml-source-choice-row-certainty compatible-choice-row) 82) 32)
+            (bprc-score (cr-choice-receipt-valid? compatible-choice-receipt) 64)
+            (bprc-score (brcr-realization-valid? compatible-realization) 128)
+            (bprc-score (str_eq (brcr-realization-selected-route-name compatible-realization) "kernelRoute") 256)
+            (bprc-score (not (brcr-realization-escalation-needed? compatible-realization)) 512)
+            (bprc-score (brcr-protocol-realization-signature? compatible-signature) 1024)
+            (bprc-score (brcr-realization-valid? mismatch-realization) 2048)
+            (bprc-score (str_eq (brcr-realization-selected-route-name mismatch-realization) "slowOracle") 4096)
+            (bprc-score (brcr-realization-escalation-needed? mismatch-realization) 8192)
+            (bprc-score (brcr-realization-overrode-kernel? mismatch-realization) 16384)
+            (bprc-score (brcr-protocol-realization-signature? mismatch-signature) 32768))))

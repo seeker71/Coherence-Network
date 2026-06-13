@@ -1,7 +1,7 @@
 ; channel-protocol-choice-floor-band.fk
 ;
 ; Composite floor proof for channel/interface/protocol/dynamic choice routing.
-; Verdict 131071 when the current floor is real and inspectable without claiming
+; Verdict 262143 when the current floor is real and inspectable without claiming
 ; the future unified BML protocol grammar is already complete.
 ;
 ; preludes: form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/choice-outcome-learning.fk form-stdlib/bml-source.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/channel-protocol-choice-floor.fk
@@ -47,6 +47,10 @@
         (cpcf-source-find-proof
             sources
             "form/form-stdlib/tests/bml-protocol-capability-row-band.fk"))
+    (let protocol-runtime-source
+        (cpcf-source-find-proof
+            sources
+            "form/form-stdlib/tests/bml-protocol-runtime-choice-band.fk"))
 
     (let route-template
         (bml-source-parse-template-use
@@ -96,6 +100,18 @@
             (list fallback-route native-route)
             route-request
             70))
+    (let protocol-runtime-realization
+        (brcr-realize-protocol-capability
+            protocol-row
+            capability-row
+            "kernelRoute"
+            "httpRequest"
+            (list fallback-route native-route)
+            route-request
+            70
+            "codex"
+            "channel-protocol-choice-floor-band"
+            20260613))
 
     (let receipt-candidates
         (list
@@ -137,7 +153,7 @@
         (list
             (cpcf-score (eq (len recipe) 6) 1)
             (cpcf-score (eq (len validation-rounds) 3) 2)
-            (cpcf-score (eq (cpcf-proven-source-count sources) 18) 4)
+            (cpcf-score (eq (cpcf-proven-source-count sources) 19) 4)
             (cpcf-score (str_eq (cpcf-source-status channel-interface-source) "proven-four-way") 8)
             (cpcf-score (str_eq (cpcf-source-status channel-flow-source) "proven-four-way") 16)
             (cpcf-score (str_eq (cpcf-source-status tool-channel-source) "proven-four-way") 32)
@@ -151,4 +167,16 @@
             (cpcf-score (and (str_eq (cpcf-source-status typed-row-source) "proven-four-way") (cr-choice-receipt-valid? choice-row-receipt)) 8192)
             (cpcf-score (and (brcr-realization-valid? route-realization) (str_eq (brcr-realization-selected-route-name route-realization) "kernelRoute")) 16384)
             (cpcf-score (str_eq (cpcf-source-status protocol-capability-source) "proven-four-way") 32768)
-            (cpcf-score (bml-source-protocol-accepts-capability? protocol-row capability-row) 65536))))
+            (cpcf-score (bml-source-protocol-accepts-capability? protocol-row capability-row) 65536)
+            (cpcf-score
+                (and
+                    (str_eq (cpcf-source-status protocol-runtime-source) "proven-four-way")
+                    (and
+                        (brcr-realization-valid? protocol-runtime-realization)
+                        (and
+                            (str_eq
+                                (brcr-realization-selected-route-name protocol-runtime-realization)
+                                "kernelRoute")
+                            (not
+                                (brcr-realization-escalation-needed? protocol-runtime-realization)))))
+                131072))))
