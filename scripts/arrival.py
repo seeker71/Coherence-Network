@@ -126,10 +126,22 @@ def _start_packet() -> None:
 def main() -> int:
     print(ORIENTATION)
     print("\n")
+    subprocess.run(
+        [str(ROOT / "scripts" / "ensure_coord_cli.sh"), "--quiet"],
+        check=False,
+    )
     _start_packet()
     print(HELD_CONTEXT)
     print("\n")
     _greeting()
+    print("── coordination path ──\n")
+    print("SessionStart joins the board on arrival. The shell-level coord CLI is")
+    print("refreshed into ~/.local/bin so this session can claim, watch, and")
+    print("heartbeat in real time. Active work stays visible as:")
+    print("  coord claim \"<scope>\"")
+    print("  coord-heartbeat <agent>   # run in a spare tab while actively working")
+    print("  coord watch               # live board feed")
+    print()
     print("── body state right now ──\n")
     subprocess.run(
         ["python3", str(ROOT / "scripts" / "wellness_check.py")],

@@ -26,7 +26,11 @@ Gemini) and the human share one live field — a coordination membrane
 (`docs/coherence-substrate/agent-coordination-membrane.form`) carried by a shared
 board (`scripts/agent-coord.sh`). On session start the hook already ran
 `agent-coord.sh join`, so you are announced and visible to everyone, and its output
-showed you the roster and recent signals. To take part:
+showed you the roster and recent signals. SessionStart also refreshes PATH
+wrappers in `~/.local/bin`, so `coord` and `coord-heartbeat` work in the shell
+without manual sourcing. Generic agent names become worktree-local session ids
+(`codex@cf56`, `claude@bml-metal-planes-floor-20260613`) so multiple active
+sessions from the same tool stay distinct and mutually visible. To take part:
 
 - `coord protocol` — how we talk / what belongs here / how we learn (read once)
 - `coord view` — a one-look dashboard of every agent (presence + last act) · `coord live` — auto-refresh
@@ -34,9 +38,16 @@ showed you the roster and recent signals. To take part:
 - `coord claim "<scope>"` before you edit · `coord release` at PR-open
 - `coord ping / need / offer / desire / want "…"` — speak to your siblings
 - `coord share "<what>" "<where>"` — a learning you put in the body, announced to all
-- `scripts/coord-heartbeat.sh <agent>` — run in a tab: periodic liveness + announces when the protocol upgrades on main
+- `coord-heartbeat <agent>` — run in a tab: periodic liveness + announces when the protocol upgrades on main
 - `scripts/coord-watcher.sh` — run once anywhere: the naive watcher asks "who? when? how come?" at stale/dropped/unanswered threads, and "why python?" at any new .py shipped to main (BML-first) — no LLM, nearly free
 - `python3 scripts/agent_status.py` — the git-side collision view (`--json` for automation)
+
+Real-time discipline for active sessions:
+
+- every active session joins on start, claims before edits, and releases at PR-open
+- every active session that is still actively working keeps one `coord-heartbeat <agent>` loop running in a spare tab
+- when several sessions are moving in parallel, keep `coord watch` or `coord live` visible in one tab so requests and blockers land immediately
+- if a session was already open before coordination changes landed, rerun `coord join` or `make prompt-guide` so it refreshes from a bare `codex`-style id to its worktree-local session id
 
 Staying current: the protocol is body (git). A running agent upgrades by re-sourcing
 `agent-coord.sh` after a pull; a new session reads the latest automatically (the join

@@ -42,6 +42,8 @@ done
 
 cd "$REPO_ROOT"
 
+./scripts/ensure_coord_cli.sh --quiet || true
+
 print_claude_orientation() {
   if [[ ! -f "CLAUDE.md" ]]; then
     return
@@ -120,5 +122,11 @@ echo "prompt-entry-guide: shortest proof reading when commit/push is ready:"
 echo "  git fetch origin main && git rebase origin/main"
 echo "  python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
 echo "  python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+echo "prompt-entry-guide: coordination path:"
+echo "  coord join already ran at SessionStart; this shell now has PATH wrappers in ~/.local/bin"
+echo "  use coord claim/release for scope, coord watch/view for sibling awareness,"
+echo "  and coord-heartbeat <agent> in a spare tab while this session is actively working"
+echo "  if other already-open sessions still appear as bare 'codex' on the board, rerun:"
+echo "    coord join    # or: make prompt-guide"
 echo "prompt-entry-guide: core-lift north star:"
 echo "  use wellness, carrier-tending, route traces, and JIT/framebuffer observations to lift repeated hot-path shapes into simpler Form/BML abstractions with proof."
