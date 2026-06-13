@@ -1,0 +1,95 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/bml-native-north-star-floor-20260613",
+  "commit_scope": "Declare the BML/BMF/Form native compiler north star, floor, and next step, then make unsupported BML-to-Hati native lowering observable before any loadable table or program output can masquerade as a valid zero result.",
+  "files_owned": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/system_audit/commit_evidence_2026-06-13_bml_native_north_star_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/grammars/bml.fk",
+    "form/form-stdlib/tests/bml-hati-native-floor-proof.fk"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "scripts/bml_hati_native_compiler_probe.sh",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-compiler-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-floor-proof.fk"
+    ],
+    "notes": "Prompt guide was run with PROMPT_GATE_SKIP_CONTINUITY=1 because the primary workspace reported an unrelated dirty/ahead sibling continuity condition. Wellness ran with the standing Form primitive registry drift for float_to_int and temp_dir. The native compiler probe produced a 36048 byte binary and passed INT, FLOAT, CHAR, ADD, and CHOOSE stdout parity. Existing BML native compiler proof returned 39. The new floor proof returned 14."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending rebase, worktree PR guard, push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and public deployment verification for the substrate/Form surface."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The BML native compiler surface now carries executable north-star/floor/next-step declarations and marks unsupported native lowering with BML-HATI-UNSUPPORTED reasons instead of emitting loadable table or program output that silently evaluates to 0.",
+    "public_endpoints": [
+      "https://coherencycoin.com/substrate/form",
+      "https://api.coherencycoin.com/api/health"
+    ],
+    "test_flows": [
+      "scripts/bml_hati_native_compiler_probe.sh -> INT/FLOAT/CHAR/ADD/CHOOSE stdout parity with 36048 byte native binary",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-compiler-proof.fk -> 39",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-floor-proof.fk -> 14"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local native/compiler proofs pass; CI and public deployment verification remain pending."
+  },
+  "idea_ids": [
+    "bml-native-compiler-north-star"
+  ],
+  "spec_ids": [
+    "bml-native-compiler-floor"
+  ],
+  "task_ids": [
+    "bml-native-north-star-floor-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star requirement"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "scripts/bml_hati_native_compiler_probe.sh -> native binary bytes=36048; INT/FLOAT/CHAR/ADD/CHOOSE stdout parity passed",
+    "cd form && ./validate.sh ... form-stdlib/tests/bml-hati-native-compiler-proof.fk -> 39",
+    "cd form && ./validate.sh ... form-stdlib/tests/bml-hati-native-floor-proof.fk -> 14",
+    "docs/system_audit/model_executor_runs.jsonl -> appended one pass record for bml-native-north-star-floor-20260613",
+    "make wellness -> standing drift only: missing Form primitives float_to_int and temp_dir"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/grammars/bml.fk",
+    "form/form-stdlib/tests/bml-hati-native-floor-proof.fk"
+  ],
+  "change_intent": "runtime_feature"
+}
