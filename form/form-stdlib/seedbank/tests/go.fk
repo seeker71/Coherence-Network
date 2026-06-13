@@ -1,6 +1,6 @@
 ; tests/go.fk — exercise go.fk file-header subset
 ;
-; preludes: form-stdlib/cell-trace.fk form-stdlib/grammars/go.fk
+; preludes: form-stdlib/seedbank/cell-trace.fk form-stdlib/seedbank/blueprint-symbol-sections.fk form-stdlib/seedbank/grammars/go.fk
 (do
     (let sample
         (str_concat "package main

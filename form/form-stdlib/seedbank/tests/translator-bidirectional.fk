@@ -1,6 +1,6 @@
 ; tests/translator-bidirectional.fk — verify bidirectional translation
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/python-universal.bnf.fk form-stdlib/grammars/go-universal.bnf.fk form-stdlib/emit-engine.fk form-stdlib/emit.fk form-stdlib/emits/python.fk form-stdlib/emits/go.fk form-stdlib/emits/typescript.fk form-stdlib/recipe-distance.fk
+; preludes: form-stdlib/engine.fk form-stdlib/seedbank/grammar-bnf.fk form-stdlib/seedbank/blueprint-symbol-sections.fk form-stdlib/seedbank/grammars/python-universal.bnf.fk form-stdlib/seedbank/grammars/go-universal.bnf.fk form-stdlib/emit-engine.fk form-stdlib/seedbank/emit.fk form-stdlib/seedbank/emits/python.fk form-stdlib/seedbank/emits/go.fk form-stdlib/seedbank/emits/typescript.fk form-stdlib/seedbank/recipe-distance.fk
 ;
 ; The verifiable bidirectional translator:
 ;
@@ -9,7 +9,7 @@
 ;
 ; Both directions through the SAME universal vocabulary.
 ;
-; Measurement: recipe-distance (see form-stdlib/recipe-distance.fk) gives
+; Measurement: recipe-distance (see form-stdlib/seedbank/recipe-distance.fk) gives
 ; a structural-fidelity number per translation hop. A clean lossless hop
 ; reads as fidelity=1000ppk (distance=0). When recipes diverge under
 ; cross-language translation, the number says by how much — the BMF

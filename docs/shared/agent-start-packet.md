@@ -79,6 +79,15 @@ first — the primitive set, the proof-band shape, the validate invocation, and 
 traps that diverge across kernels (chief among them: `and`/`or` are binary, never
 `(and a b c)`).
 
+Blueprint symbol-section rule: do not add `(bp "NAME")` string literals inside
+executable stdlib logic. Seedbank code keeps those names in
+`form/form-stdlib/seedbank/blueprint-symbol-sections.fk`; load that prelude
+before seedbank grammars, parsers, emitters, converters, and encoders, then
+reference the binding. `python3 scripts/scan_form_blueprints.py --check` and
+`make wellness` report total, inline, and sectioned `bp` string refs. Passing
+means every name resolves; the inline count is the remaining symbol-swap cleanup
+ratchet.
+
 Cell voice rule: before serving a doorway, page, API route, concept, edge,
 source file, or runtime cell, ask what it can declare about its soul, purpose,
 reason, health, joy, contribution, connections, excitement, sense, feeling,

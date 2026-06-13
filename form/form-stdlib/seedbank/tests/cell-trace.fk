@@ -2,7 +2,7 @@
 ; end-to-end on the native kernel.
 ;
 ; Loaded via:
-;   form-stdlib/core.fk + form-stdlib/cell-trace.fk + tests/cell-trace.fk
+;   form-stdlib/core.fk + form-stdlib/seedbank/cell-trace.fk + tests/cell-trace.fk
 ;
 ; The probe builds a small recipe tree with source attributions stamped
 ; at intern time, then asks cell-trace to walk it back. The result

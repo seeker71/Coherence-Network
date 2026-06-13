@@ -1,7 +1,7 @@
 ; tests/python-exec.fk — exercise the EXECUTE pipeline on Python BNF
 ; recipes
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/python.bnf.fk form-stdlib/grammars/python-exec.fk
+; preludes: form-stdlib/engine.fk form-stdlib/seedbank/grammar-bnf.fk form-stdlib/seedbank/blueprint-symbol-sections.fk form-stdlib/seedbank/grammars/python.bnf.fk form-stdlib/seedbank/grammars/python-exec.fk
 ;
 ; Proof of the read → understand → execute arc on multi-statement
 ; Python sources. Each input parses to a PY-BNF-MODULE wrapper whose

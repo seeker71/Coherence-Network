@@ -30,16 +30,6 @@
     ;; Recipe-shape predicates — keyed by Blueprint NodeID
     ;; ──────────────────────────────────────────────────────────────────
 
-    (let PY-EXEC-MODULE       (bp "PY-EXEC-MODULE"))
-    (let PY-EXEC-IMPORT       (bp "PY-EXEC-IMPORT"))
-    (let PY-EXEC-FROM-IMPORT  (bp "PY-EXEC-FROM-IMPORT"))
-    (let PY-EXEC-FUNCTION-DEF (bp "PY-EXEC-FUNCTION-DEF"))
-    (let PY-EXEC-ASSIGN       (bp "PY-EXEC-ASSIGN"))
-    (let PY-EXEC-BIN-EXPR     (bp "PY-EXEC-BIN-EXPR"))
-    (let PY-EXEC-INT-EXPR     (bp "PY-EXEC-INT-EXPR"))
-    (let PY-EXEC-STR-EXPR     (bp "PY-EXEC-STR-EXPR"))
-    (let PY-EXEC-IDENT-EXPR   (bp "PY-EXEC-IDENT-EXPR"))
-    (let PY-EXEC-PAREN-EXPR   (bp "PY-EXEC-PAREN-EXPR"))
 
     (defn py-exec-is-module? (n)
         (node_eq (node_category n) PY-EXEC-MODULE))

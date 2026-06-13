@@ -1,6 +1,6 @@
 ; tests/python-expr.fk — exercise Python expression evaluation
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/python.bnf.fk form-stdlib/grammars/python-exec.fk
+; preludes: form-stdlib/engine.fk form-stdlib/seedbank/grammar-bnf.fk form-stdlib/seedbank/blueprint-symbol-sections.fk form-stdlib/seedbank/grammars/python.bnf.fk form-stdlib/seedbank/grammars/python-exec.fk
 ;
 ; Probes: parse Python assignments where the rhs is an expression,
 ; then execute through py-exec-eval-expr (precedence-aware arithmetic

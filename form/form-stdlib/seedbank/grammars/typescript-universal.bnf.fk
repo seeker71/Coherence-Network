@@ -8,13 +8,6 @@
 ; (TS arrow functions, type annotations, etc. extend in later breaths.)
 
 (do
-    (let U-FNDEF     (bp "fndef"))
-    (let U-RETURN    (bp "U-RETURN"))
-    (let U-MATH-PLUS (bp "add"))
-    (let U-MATH-MINUS (bp "sub"))
-    (let U-MATH-MUL  (bp "mul"))
-    (let U-IDENT     (bp "ident"))
-    (let U-SEQ       (bp "sequence"))
 
     (defn tu-passthrough (caps)
         (if (cap-has? caps "_result") (cap-get caps "_result")

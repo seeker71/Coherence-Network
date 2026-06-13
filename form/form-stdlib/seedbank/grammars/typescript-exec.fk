@@ -1,14 +1,6 @@
 ; grammars/typescript-exec.fk — TypeScript EXECUTE walker
 
 (do
-    (let TS-EXEC-MODULE     (bp "TS-EXEC-MODULE"))
-    (let TS-EXEC-IMPORT     (bp "TS-EXEC-IMPORT"))
-    (let TS-EXEC-IMPORT-NS  (bp "TS-EXEC-IMPORT-NS"))
-    (let TS-EXEC-IMPORT-DEF (bp "TS-EXEC-IMPORT-DEF"))
-    (let TS-EXEC-EXPORT-CONST (bp "TS-EXEC-EXPORT-CONST"))
-    (let TS-EXEC-EXPORT-FN  (bp "TS-EXEC-EXPORT-FN"))
-    (let TS-EXEC-LET        (bp "TS-EXEC-LET"))
-    (let TS-EXEC-CONST      (bp "TS-EXEC-CONST"))
 
     (defn ts-exec-is? (n c) (node_eq (node_category n) c))
     (defn ts-exec-bind (env n v) (cons (list n v) env))

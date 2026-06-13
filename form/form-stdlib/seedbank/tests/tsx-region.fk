@@ -2,7 +2,7 @@
 ; "CSS or .tsx file have different grammar for different parts...
 ;  stream any source part using any recipe"
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/jsx.bnf.fk form-stdlib/grammars/tsx.bnf.fk
+; preludes: form-stdlib/engine.fk form-stdlib/seedbank/grammar-bnf.fk form-stdlib/seedbank/blueprint-symbol-sections.fk form-stdlib/seedbank/grammars/jsx.bnf.fk form-stdlib/seedbank/grammars/tsx.bnf.fk
 ;
 ; Parses `let x = <h1>hello</h1>` via the .tsx grammar. The outer
 ; grammar handles the TypeScript-style assignment; @jsx delegates the

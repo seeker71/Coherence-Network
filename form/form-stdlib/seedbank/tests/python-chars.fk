@@ -1,6 +1,6 @@
 ; tests/python-chars.fk — Python in character-mode end-to-end
 ;
-; preludes: form-stdlib/grammar-chars.fk form-stdlib/grammars/python-chars.bnf.fk
+; preludes: form-stdlib/grammar-chars.fk form-stdlib/seedbank/blueprint-symbol-sections.fk form-stdlib/seedbank/grammars/python-chars.bnf.fk
 ;
 ; Proves the BMF-shape Python grammar parses real Python lines via
 ; rules-read-characters discipline. No tokenizer phase.

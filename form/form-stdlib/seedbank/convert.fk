@@ -21,15 +21,15 @@
 ; loaded before this file. The kernel-cli convention is:
 ;
 ;   bin-go form-stdlib/core.fk \
-;          form-stdlib/cell-trace.fk \
-;          form-stdlib/grammars/markdown.fk \
-;          form-stdlib/grammars/json.fk \
-;          form-stdlib/grammars/yaml.fk \
-;          form-stdlib/grammars/form.fk \
-;          form-stdlib/grammars/python.fk \
-;          form-stdlib/grammars/typescript.fk \
-;          form-stdlib/grammars/rust.fk \
-;          form-stdlib/grammars/go.fk \
+;          form-stdlib/seedbank/cell-trace.fk \
+;          form-stdlib/seedbank/grammars/markdown.fk \
+;          form-stdlib/seedbank/grammars/json.fk \
+;          form-stdlib/seedbank/grammars/yaml.fk \
+;          form-stdlib/seedbank/grammars/form.fk \
+;          form-stdlib/seedbank/grammars/python.fk \
+;          form-stdlib/seedbank/grammars/typescript.fk \
+;          form-stdlib/seedbank/grammars/rust.fk \
+;          form-stdlib/seedbank/grammars/go.fk \
 ;          form-stdlib/convert.fk \
 ;          <invoking-script.fk>
 ;
@@ -68,7 +68,6 @@
     ;; extensions fall through to a sentinel "unknown-format" cell
     ;; so the caller can detect + react rather than silently failing.
 
-    (let UNKNOWN-FORMAT (bp "UNKNOWN-FORMAT"))
 
     (defn convert (path)
         (do
@@ -92,7 +91,6 @@
     ;; form.fk parser's top-level returns a LIST of top-level expressions;
     ;; we wrap it in a single composite cell so convert always returns ONE
     ;; root cell regardless of grammar.
-    (let FORM-FILE-ROOT (bp "FORM-FILE-ROOT"))
 
     (defn form-as-cell (path content)
         (intern_node_at FORM-FILE-ROOT

@@ -1,6 +1,6 @@
 ; tests/bytecode-execute.fk — universal Recipe IS the common bytecode
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/python-universal.bnf.fk
+; preludes: form-stdlib/engine.fk form-stdlib/seedbank/grammar-bnf.fk form-stdlib/seedbank/blueprint-symbol-sections.fk form-stdlib/seedbank/grammars/python-universal.bnf.fk
 ;
 ; The goal asks for "a common byte code execution engine." The kernel
 ; already walks universal Recipes via walk_recipe — that IS the

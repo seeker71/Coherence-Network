@@ -923,13 +923,23 @@ def sense_form_blueprints() -> list[str]:
         )
     except Exception as exc:
         return [f"  (scan_form_blueprints.py did not run cleanly: {exc})"]
-    # First report line carries the legibility numbers; surface it always.
+    # First report lines carry the legibility and string-symbol numbers;
+    # surface them always so `(bp "NAME")` stays visible as ratchet debt even
+    # when every name resolves.
     head = next((ln for ln in result.stdout.splitlines()
                  if "make_nodeid" in ln), "").strip()
+    bp_refs = next((ln for ln in result.stdout.splitlines()
+                    if "bp string refs" in ln), "").strip()
+    bp_ref_split = next((ln for ln in result.stdout.splitlines()
+                         if "inline:" in ln and "sectioned:" in ln), "").strip()
     if result.returncode == 0:
         lines = ["  every Form Blueprint number is registered — no magic sprawl"]
         if head:
             lines.append(f"    {head}")
+        if bp_refs:
+            lines.append(f"    {bp_refs}")
+        if bp_ref_split:
+            lines.append(f"    {bp_ref_split}")
         return lines
     lines = ["  unregistered Blueprint numbers have crept in:"]
     for line in (result.stdout + result.stderr).splitlines():

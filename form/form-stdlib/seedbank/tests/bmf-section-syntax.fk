@@ -1,6 +1,6 @@
 ; tests/bmf-section-syntax.fk - native BMF section syntax is first-class
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/grammars/python-bmf.fk
+; preludes: form-stdlib/engine.fk form-stdlib/seedbank/blueprint-symbol-sections.fk form-stdlib/seedbank/grammars/python-bmf.fk
 
 (do
     (let bmf-object (form-section-object python-bmf-section))

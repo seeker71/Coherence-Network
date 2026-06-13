@@ -1,13 +1,6 @@
 ; grammars/rust-exec.fk — Rust EXECUTE walker
 
 (do
-    (let RS-EXEC-MODULE  (bp "RS-EXEC-MODULE"))
-    (let RS-EXEC-USE     (bp "RS-EXEC-USE"))
-    (let RS-EXEC-PUB-USE (bp "RS-EXEC-PUB-USE"))
-    (let RS-EXEC-MOD     (bp "RS-EXEC-MOD"))
-    (let RS-EXEC-FN      (bp "RS-EXEC-FN"))
-    (let RS-EXEC-STRUCT  (bp "RS-EXEC-STRUCT"))
-    (let RS-EXEC-LET     (bp "RS-EXEC-LET"))
 
     (defn rs-exec-is? (n c) (node_eq (node_category n) c))
     (defn rs-exec-bind (env n v) (cons (list n v) env))
