@@ -81,6 +81,151 @@ require_file "$REPO_DIR/.git"
 require_file "$COMPOSE_ROOT/docker-compose.yml"
 require_file "$COMPOSE_ROOT/.env"
 
+HATI_WEB_HOSTS_CHANGED=0
+
+ensure_hati_web_hosts() {
+  local result
+  result="$(COMPOSE_FILE="$COMPOSE_ROOT/docker-compose.yml" python3 - <<'PY'
+from __future__ import annotations
+
+import os
+import sys
+from pathlib import Path
+
+compose_path = Path(os.environ["COMPOSE_FILE"])
+lines = compose_path.read_text().splitlines()
+
+
+def indent_of(line: str) -> int:
+    return len(line) - len(line.lstrip(" "))
+
+
+def find_service(name: str) -> tuple[int, int, int]:
+    services_i = -1
+    services_indent = 0
+    for i, line in enumerate(lines):
+        if line.strip() == "services:":
+            services_i = i
+            services_indent = indent_of(line)
+            break
+    if services_i < 0:
+        raise RuntimeError("services: block not found")
+
+    service_i = -1
+    service_indent = 0
+    for i in range(services_i + 1, len(lines)):
+        stripped = lines[i].strip()
+        if not stripped:
+            continue
+        indent = indent_of(lines[i])
+        if indent <= services_indent:
+            break
+        if indent == services_indent + 2 and stripped == f"{name}:":
+            service_i = i
+            service_indent = indent
+            break
+    if service_i < 0:
+        raise RuntimeError(f"{name}: service not found")
+
+    service_end = len(lines)
+    for i in range(service_i + 1, len(lines)):
+        stripped = lines[i].strip()
+        if not stripped:
+            continue
+        if indent_of(lines[i]) <= service_indent:
+            service_end = i
+            break
+    return service_i, service_end, service_indent
+
+
+labels = {
+    "traefik.http.routers.coherence-web-hati.rule": "Host(`hati.earth`) || Host(`www.hati.earth`) || Host(`sense.hati.earth`) || Host(`suci.hati.earth`)",
+    "traefik.http.routers.coherence-web-hati.entrypoints": "websecure",
+    "traefik.http.routers.coherence-web-hati.tls.certresolver": "letsencrypt",
+    "traefik.http.routers.coherence-web-hati.service": "coherence-web-hati",
+    "traefik.http.services.coherence-web-hati.loadbalancer.server.port": "3000",
+}
+
+try:
+    _web_i, web_end, web_indent = find_service("web")
+except Exception as exc:
+    print(f"error: {exc}", file=sys.stderr)
+    sys.exit(1)
+
+labels_i = -1
+labels_indent = web_indent + 2
+for i in range(_web_i + 1, web_end):
+    if lines[i].strip() == "labels:":
+        labels_i = i
+        labels_indent = indent_of(lines[i])
+        break
+
+changed = False
+if labels_i < 0:
+    insert = [f"{' ' * (web_indent + 2)}labels:"]
+    insert.extend(
+        f"{' ' * (web_indent + 4)}{key}: \"{value}\""
+        for key, value in labels.items()
+    )
+    lines[web_end:web_end] = insert
+    changed = True
+else:
+    labels_end = web_end
+    for i in range(labels_i + 1, web_end):
+        stripped = lines[i].strip()
+        if not stripped:
+            continue
+        if indent_of(lines[i]) <= labels_indent:
+            labels_end = i
+            break
+
+    block = lines[labels_i + 1 : labels_end]
+    first_child = next((line.strip() for line in block if line.strip()), "")
+    list_style = first_child.startswith("-")
+    target_keys = tuple(labels.keys())
+    without_hati = [
+        line for line in block if not any(key in line for key in target_keys)
+    ]
+    child_indent = labels_indent + 2
+    if list_style:
+        target = [
+            f"{' ' * child_indent}- \"{key}={value}\""
+            for key, value in labels.items()
+        ]
+    else:
+        target = [
+            f"{' ' * child_indent}{key}: \"{value}\""
+            for key, value in labels.items()
+        ]
+    new_block = without_hati + target
+    if new_block != block:
+        lines[labels_i + 1 : labels_end] = new_block
+        changed = True
+
+if changed:
+    compose_path.write_text("\n".join(lines) + "\n")
+    print("changed")
+else:
+    print("unchanged")
+PY
+)"
+  case "$result" in
+    changed)
+      HATI_WEB_HOSTS_CHANGED=1
+      log "Hati web hosts: added/normalized Traefik router labels for hati.earth and sense/suci subdomains"
+      ;;
+    unchanged)
+      log "Hati web hosts: Traefik router labels already present"
+      ;;
+    *)
+      log "FATAL Hati web hosts: unexpected result '$result'"
+      return 1
+      ;;
+  esac
+}
+
+ensure_hati_web_hosts || exit 1
+
 cd "$REPO_DIR"
 OLD_SHA="$(git rev-parse HEAD)"
 log "Deploy begin — old_sha=${OLD_SHA:0:12} target_sha=${TARGET_SHA:-(resolving)} branch=${BRANCH}"
@@ -126,6 +271,10 @@ RUNNING_SHORT="${RUNNING_SHA:0:12}"
 
 if [[ "$OLD_SHA" == "$TARGET_SHA" && "$RUNNING_SHA" == "$TARGET_SHA" ]]; then
   log "Already flowing at ${TARGET_SHA:0:12} (repo and running API aligned)"
+  if [[ "$HATI_WEB_HOSTS_CHANGED" == "1" ]]; then
+    log "Hati web hosts: applying label-only web service update"
+    docker compose -f "$COMPOSE_ROOT/docker-compose.yml" up -d web 2>&1 | tee -a "$LOG_FILE"
+  fi
   # Aligned repo + api is necessary, not sufficient — raise any stopped
   # siblings (web, pulse) before resting, or this exit masks their silence.
   ensure_all_services_up || exit 1
@@ -370,6 +519,10 @@ STATIC_FAST_PATH_ALLOWED=1
 if [[ -z "$RUNNING_SHA" ]]; then
   STATIC_FAST_PATH_ALLOWED=0
   log "Static-only fast path disabled: running API health unavailable"
+fi
+if [[ "$HATI_WEB_HOSTS_CHANGED" == "1" ]]; then
+  STATIC_FAST_PATH_ALLOWED=0
+  log "Static-only fast path disabled: Hati web host labels changed and must be applied by compose"
 fi
 
 if [[ "$STATIC_FAST_PATH_ALLOWED" == "1" && "$DIFF_BASE" != "$TARGET_SHA" ]] && is_static_only_change "$DIFF_BASE" "$TARGET_SHA"; then
