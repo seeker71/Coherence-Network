@@ -162,6 +162,8 @@
                                            (fkm-walk fns (ms-child (fk-body node) 1) arg))
     (if (eq (fk-tag node) 48) (node_children (fkm-walk fns (fk-body node) arg))
     (if (eq (fk-tag node) 49) (node_value (fkm-walk fns (fk-body node) arg))
+    (if (eq (fk-tag node) 80) (if (value_eq (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                            (fkm-walk fns (ms-child (fk-body node) 1) arg)) 1 0)
     (if (eq (fk-tag node) 50) (fk-parse-f64 (ms-value (ms-child (fk-body node) 1)))
     (if (eq (fk-tag node) 51) (math_floor (fkm-walk fns (fk-body node) arg))
     (if (eq (fk-tag node) 52) (round_ndigits (fkm-walk fns (ms-child (fk-body node) 0) arg)
@@ -200,7 +202,7 @@
     (if (eq (fk-tag node) 31) (str_to_int (fkm-walk fns (fk-body node) arg))
     (if (eq (fk-tag node) 32) (int_to_str (fkm-walk fns (fk-body node) arg))
     (if (eq (fk-tag node) 33) (byte_to_str (fkm-walk fns (fk-body node) arg))
-        (fkm-walk-fig fns node arg))))))))))))))))))))))))))))))))))))))
+        (fkm-walk-fig fns node arg)))))))))))))))))))))))))))))))))))))))
 
 ; figure-ops arms (tags 10/11 + 34..42) on the RECIPE side: each arm calls the
 ; walking kernel's own native (band/bor/bxor/shl_u32/shr_u32/rotr_u32/add_u32/
