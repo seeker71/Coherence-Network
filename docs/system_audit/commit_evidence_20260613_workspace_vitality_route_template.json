@@ -1,0 +1,94 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/native-route-next-breath-20260613",
+  "commit_scope": "Normalize the workspace vitality native front-door route from the exact coherence-network path to the FastAPI template path observed by API-source route-goal telemetry.",
+  "files_owned": [
+    "deploy/front-door/api.bml",
+    "form/form-stdlib/tests/source-language-route-class-template-band.fk",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md",
+    "docs/system_audit/native_route_goal_state.json",
+    "docs/system_audit/commit_evidence_20260613_workspace_vitality_route_template.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/kernel-http.fk form-stdlib/language-model.fk form-stdlib/tests/source-language-route-class-template-band.fk",
+      "python3 scripts/native_route_goal_loop.py /goal --source api --seconds 86400 --limit 2000 --write-state",
+      "cd form/form-kernel-go && go test -run TestKernelReadRoutePromotionsSelectNatively",
+      "python3 scripts/native_route_goal_loop.py /goal --source api --seconds 86400 --limit 2000 --json | python3 -c '<extract vitality route status>'"
+    ],
+    "notes": "Focused source-language route-class band returned 8389697 with 1 ok and 0 divergent. This focused band is 3-kernel only; no all-kernel claim is made for this route slice. The API-source route-goal write now reports GET /api/workspaces/{workspace_id}/vitality as kernel-native-high-grammar with current_grammar BML, current_source deploy/front-door/api.bml, current_handler api_workspace_vitality, and high_grammar_native true. The focused Go carrier route-selection test passed. A broader cd form/form-kernel-go && go test ./... attempt failed in pre-existing TestHealthRouteNativeOperationalShape because this workstation reports smart_reap_available:true while the test expects false; this route slice did not change health behavior."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending PR checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending after PR merge and public deploy checks."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Local focused proof is complete; CI and deploy validation are pending."
+  },
+  "idea_ids": [
+    "idea:native-route-goal-loop",
+    "idea:workspace-vitality"
+  ],
+  "spec_ids": [
+    "kernel-router-tracking",
+    "native-route-goal-state"
+  ],
+  "task_ids": [
+    "coord:codex@a3ec-native-route-next-breath",
+    "route-goal:GET-/api/workspaces/{workspace_id}/vitality"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "coordination"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "source-language-route-class-template-band.fk -> 8389697, 1 ok, 0 divergent",
+    "native_route_goal_loop.py /goal --source api: vitality route status=kernel-native-high-grammar, current_handler=api_workspace_vitality",
+    "go test -run TestKernelReadRoutePromotionsSelectNatively: PASS"
+  ],
+  "change_files": [
+    "deploy/front-door/api.bml",
+    "docs/system_audit/native_route_goal_state.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/tests/source-language-route-class-template-band.fk",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "GET /api/workspaces/{workspace_id}/vitality is recognized as a BML high-grammar native route and returns the request-derived workspace_id through the existing vitality JSON projection.",
+    "public_endpoints": [
+      "GET /api/workspaces/coherence-network/vitality"
+    ],
+    "test_flows": [
+      "API-source route-goal telemetry counts GET /api/workspaces/{workspace_id}/vitality as high_grammar_native.",
+      "Go kernel route selection loads deploy/front-door/api.bml and selects native read routes."
+    ]
+  }
+}
