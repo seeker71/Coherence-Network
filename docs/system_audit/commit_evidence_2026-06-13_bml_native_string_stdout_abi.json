@@ -1,0 +1,105 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/bml-native-string-abi-20260613",
+  "commit_scope": "Close the Hati fourth-kernel native stdout ABI gap so BML string and char results print user-facing string bytes instead of string-pool ids while numeric output stays unchanged.",
+  "files_owned": [
+    "docs/system_audit/commit_evidence_2026-06-13_bml_native_string_stdout_abi.json",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/tests/hati-os-band.fk",
+    "scripts/bml_hati_native_compiler_probe.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "scripts/bml_hati_native_compiler_probe.sh",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-compiler-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/tests/hati-os-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/form-parse.fk form-stdlib/form-flatten.fk form-stdlib/tests/form-flatten-strings-band.fk",
+      "cd form && ./validate.sh form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/bmf-mini.fk form-stdlib/fourth-union.fk form-stdlib/tests/fourth-union-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/champion-challenger.fk form-stdlib/tests/melt-hot-swap-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/tests/crystallization-wire-band.fk"
+    ],
+    "notes": "Native probe emits a 23,025-byte universal C walker and a 36,048-byte binary. The BML char case now prints stdout_first=A with empty stderr and rc=0. Numeric cases stay unchanged: INT=3, FLOAT=1.5, ADD=3, CHOOSE=8. Final medians were approximately 2.45-2.62 ms. Hati OS source shape returns 15, string flattening returns 63, fourth-union returns 31, melt-hot-swap returns 31, crystallization-wire returns 31, and the BML native compiler proof returns 39."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending rebase, worktree guard, push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Pending merge and public deployment verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "A BML program compiled to a Hati loadable table can return a string/char result and have the native universal binary print the string bytes on stdout, not the internal string-pool index.",
+    "public_endpoints": [
+      "https://coherencycoin.com/substrate/form",
+      "https://api.coherencycoin.com/api/health"
+    ],
+    "test_flows": [
+      "scripts/bml_hati_native_compiler_probe.sh -> CHAR stdout_first=A, stderr='', rc=0",
+      "scripts/bml_hati_native_compiler_probe.sh -> INT=3, FLOAT=1.5, ADD=3, CHOOSE=8, stderr=''",
+      "cd form && ./validate.sh ... bml-hati-native-compiler-proof.fk -> 39",
+      "cd form && ./validate.sh ... hati-os-band.fk -> 15",
+      "cd form && ./validate.sh ... form-flatten-strings-band.fk -> 63",
+      "cd form && ./validate.sh ... fourth-union-band.fk -> 31",
+      "cd form && ./validate.sh ... melt-hot-swap-band.fk -> 31",
+      "cd form && ./validate.sh ... crystallization-wire-band.fk -> 31"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local string stdout ABI proof passes; CI, merge, and public deploy verification are pending."
+  },
+  "idea_ids": [
+    "form-native-runtime",
+    "knowledge-and-resonance"
+  ],
+  "spec_ids": [
+    "bml-native-compiler",
+    "form-fourth-kernel"
+  ],
+  "task_ids": [
+    "bml-native-string-stdout-abi-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star requirement for BML/BMF/Form native binaries"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "binary probe"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "scripts/bml_hati_native_compiler_probe.sh -> binary bytes=36048, universal C bytes=23025, INT=3, FLOAT=1.5, CHAR=A, ADD=3, CHOOSE=8, stderr=''",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-compiler-proof.fk -> 39",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/tests/hati-os-band.fk -> 15",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/form-parse.fk form-stdlib/form-flatten.fk form-stdlib/tests/form-flatten-strings-band.fk -> 63",
+    "cd form && ./validate.sh form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/bmf-mini.fk form-stdlib/fourth-union.fk form-stdlib/tests/fourth-union-band.fk -> 31",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/champion-challenger.fk form-stdlib/tests/melt-hot-swap-band.fk -> 31",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/tests/crystallization-wire-band.fk -> 31"
+  ],
+  "change_files": [
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/tests/hati-os-band.fk",
+    "scripts/bml_hati_native_compiler_probe.sh"
+  ],
+  "change_intent": "runtime_feature"
+}

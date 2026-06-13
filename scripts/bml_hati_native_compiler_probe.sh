@@ -125,7 +125,7 @@ expected_for() {
   case "$1" in
     INT) echo 3 ;;
     FLOAT) echo 1.5 ;;
-    CHAR) echo 0 ;;
+    CHAR) echo A ;;
     ADD) echo 3 ;;
     CHOOSE) echo 8 ;;
     *) echo "unknown case: $1" >&2; exit 1 ;;
@@ -178,4 +178,4 @@ if ! grep -q "1 1 65" "$char_table"; then
   exit 1
 fi
 
-echo "char_pool_shape=ok literal=A stdout_is_pool_id=0"
+echo "char_pool_shape=ok literal=A stdout=A"
