@@ -1,0 +1,125 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/jit-lower-ratchet-20260613",
+  "commit_scope": "Make real-time coord CLI participation explicit for concurrent Codex sessions and record the rebased JIT floor after PR #2975",
+  "files_owned": [
+    ".codex/hooks.json",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-13_coord_realtime_mesh.json",
+    "scripts/agent-coord.sh",
+    "scripts/arrival.py",
+    "scripts/ensure_coord_cli.sh",
+    "scripts/prompt_entry_gate.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "bash scripts/ensure_coord_cli.sh --agent codex --bin-dir /tmp/cf56-coord-bin --quiet && PATH=\"/tmp/cf56-coord-bin:$PATH\" COORD_AGENT=codex coord view",
+      "git diff --check --cached && git diff --check",
+      "cd form && ./validate.sh > /tmp/cf56-coord-rebased-full-validate.log 2>&1; rc=$?; echo validate_rc=$rc >> /tmp/cf56-coord-rebased-full-validate.log; tail -n 80 /tmp/cf56-coord-rebased-full-validate.log",
+      "scripts/bml_form_jit_metal_planes_audit.sh > /tmp/cf56-coord-metal-audit.log 2>&1; rc=$?; echo audit_rc=$rc >> /tmp/cf56-coord-metal-audit.log; tail -n 80 /tmp/cf56-coord-metal-audit.log",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_coord_realtime_mesh.json",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "notes": "Prompt guide, wellness, coord wrapper smoke, diff whitespace checks, evidence validation, rebase freshness, worktree PR guard, and follow-through stale checks passed. Full Form validation on rebased origin/main completed as a diagnostic rc=1 with the known residual floor: fourth arm: 104 band(s) four-way; 539 ok; 5 divergent. The JIT lowering cluster is no longer residual: full-jit-lower=63, jit-lower=15, jit-lower-bmf=15, jit-lower-emit=63, jit-lower-program=15. Residual divergent bands are form-mut-band.fk, go-jit-band.fk, markdown-meaning-ingestion-band.fk, ts-reversible-band.fk, and yaml-meaning-ingestion-band.fk. worktree_pr_guard reported ready_for_push=True and local_preflight=pass; check_pr_followthrough reported codex_open_prs=0 and stale_codex_prs=0.",
+    "coord_outputs": [
+      "coord wrapper installed under /tmp/cf56-coord-bin for smoke validation",
+      "coord view showed codex@cf56, codex@a3ec, and codex-bml as distinct active sessions",
+      "codex@a3ec owns the form-mut residual lane; codex-bml owns the BML/Form channel-interface lane; this branch does not claim those scopes"
+    ],
+    "fourth_arm_outputs": [
+      "fourth arm: 104 band(s) four-way (fkwu + pre-flattened tables)",
+      "539 ok, 5 divergent - kernels disagree",
+      "full-jit-lower-band.fk -> 63",
+      "jit-lower-band.fk -> 15",
+      "jit-lower-bmf-band.fk -> 15",
+      "jit-lower-emit-band.fk -> 63",
+      "jit-lower-program-band.fk -> 15"
+    ],
+    "metal_plane_outputs": [
+      "PASS jit-lower-residuals: logic/fold/unbox/lift/BMF/emit cluster is five-band four-way",
+      "PASS host-form-jit-lowered: lowered guard arg5=1 arg11=0",
+      "PASS plane=macos-arm64 surface=bml-hati target=arm64-apple-macosx object=Mach-O 64-bit object arm64",
+      "PASS plane=macos-arm64 surface=form-jit target=arm64-apple-macosx object=Mach-O 64-bit object arm64",
+      "PASS plane=macos-arm64 surface=form-jit-lowered target=arm64-apple-macosx object=Mach-O 64-bit object arm64",
+      "PASS plane=android-arm64 surface=bml-hati target=aarch64-linux-android object=ELF 64-bit LSB relocatable ARM aarch64",
+      "PASS plane=android-arm64 surface=form-jit target=aarch64-linux-android object=ELF 64-bit LSB relocatable ARM aarch64",
+      "PASS plane=android-arm64 surface=form-jit-lowered target=aarch64-linux-android object=ELF 64-bit LSB relocatable ARM aarch64",
+      "audit_rc=0"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "PR CI has not run yet for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "No public HTTP behavior change is expected; post-merge deployment uses the repository's normal main flow."
+    ],
+    "notes": "This branch changes local agent coordination startup and documentation. The macOS/Android evidence records the current merged JIT floor rather than a new runtime diff in this branch."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local validation, evidence validation, and PR guard passed; CI, merge, and deploy validation are still pending."
+  },
+  "idea_ids": [
+    "agent-coordination",
+    "form-native-jit"
+  ],
+  "spec_ids": [
+    "agent-coordination-membrane",
+    "jit-gap-ledger"
+  ],
+  "task_ids": [
+    "coord-realtime-mesh",
+    "jit-floor-rebased-proof"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "coordination-requirements"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex-cf56",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "/tmp/cf56-coord-rebased-full-validate.log",
+    "/tmp/cf56-coord-metal-audit.log",
+    "scripts/agent-coord.sh",
+    "scripts/ensure_coord_cli.sh",
+    "docs/shared/agent-start-packet.md",
+    "form/fourth-arm-bands.txt",
+    "docs/system_audit/commit_evidence_2026-06-13_jit_lowering_residuals.json"
+  ],
+  "change_files": [
+    ".codex/hooks.json",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-13_coord_realtime_mesh.json",
+    "scripts/agent-coord.sh",
+    "scripts/arrival.py",
+    "scripts/ensure_coord_cli.sh",
+    "scripts/prompt_entry_gate.sh"
+  ],
+  "change_intent": "process_only"
+}

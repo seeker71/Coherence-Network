@@ -9,6 +9,10 @@
           },
           {
             "type": "command",
+            "command": "\"$(git rev-parse --show-toplevel)/scripts/ensure_coord_cli.sh\" --agent codex --quiet"
+          },
+          {
+            "type": "command",
             "command": "COORD_AGENT=codex bash \"$(git rev-parse --show-toplevel)/scripts/agent-coord.sh\" join \"$(git rev-parse --show-toplevel)\""
           }
         ]
