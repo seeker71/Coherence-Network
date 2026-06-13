@@ -27,16 +27,17 @@
 #   multi-line output     — bands that print mid-walk (the walker answers
 #     one value through fk_pr)
 #
-# Current floor (2026-06-13 choice-outcome-learning focused admission): the
+# Current floor (2026-06-13 BML protocol/capability focused admission): the
 # latest completed full `cd form && ./validate.sh` on main reached 122 four-way
 # bands and 552 total passing workloads, with 0 residual divergent bands. This
-# slice adds choice-outcome-learning with focused validate.sh and fourth-arm
-# proof: BranchOutcome now carries ok/reject/condition results and learnable
-# rejected evidence through the fourth arm. The JIT native span carries
-# Value-ABI float, vector, string-name, and JIT-offer rows through tags 81..86;
-# jit-tensor-emit also rides the manifest floor at 7. North star: every stdlib
-# band is either listed here and validated four-way, or its 3-kernel-only
-# blocker is explicitly named in commit evidence; suite-level
+# slice adds bml-protocol-capability-row with focused validate.sh and fourth-arm
+# proof, and raises the channel-protocol-choice-floor composite to 131071.
+# BranchOutcome carries ok/reject/condition results and learnable rejected
+# evidence through the fourth arm; the JIT native span carries Value-ABI float,
+# vector, string-name, and JIT-offer rows through tags 81..86; jit-tensor-emit
+# also rides the manifest floor at 7. North star: every stdlib band is either
+# listed here and validated four-way, or its 3-kernel-only blocker is explicitly
+# named in commit evidence; suite-level
 # residuals stay at zero while source-section bands move toward fourth-arm
 # eligibility.
 learning-trend fkc 127
@@ -60,11 +61,12 @@ choice-receipt fks 4294967295
 choice-receipt-learning fks 255
 choice-outcome-learning fks 32767
 bml-route-source-object fks 2047
+bml-protocol-capability-row fks 65535
 bml-choice-routing-metadata fks 4095
 bml-choice-receipt-row fks 131071
 bml-route-choice-runtime fks 32767
 recipe-choice-runtime fks 233
-channel-protocol-choice-floor fks 32767
+channel-protocol-choice-floor fks 131071
 kernel-http fks 536965066
 tool-channel fks 255
 cell-sync fks 127
