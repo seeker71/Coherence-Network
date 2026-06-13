@@ -691,6 +691,90 @@ class BMLCompilerImageEmitter [public, selfHosting, bootstrapBoundary] {
    }
 }
 
+class BMLNativeCompilerImage [public, value, nativeImage] {
+   section [private] {
+      String m_strImageKind;
+      String m_strKernel;
+      String m_strTablePath;
+      String m_strBinaryPath;
+      String m_strSourcePath;
+   }
+
+   section [public] {
+      BMLNativeCompilerImage(
+         String strImageKind,
+         String strKernel,
+         String strTablePath,
+         String strBinaryPath,
+         String strSourcePath ) {
+         m_strImageKind = strImageKind;
+         m_strKernel = strKernel;
+         m_strTablePath = strTablePath;
+         m_strBinaryPath = strBinaryPath;
+         m_strSourcePath = strSourcePath;
+      }
+
+      String ImageKind() [get] {
+         return m_strImageKind;
+      }
+
+      String Kernel() [get] {
+         return m_strKernel;
+      }
+
+      String TablePath() [get] {
+         return m_strTablePath;
+      }
+
+      String BinaryPath() [get] {
+         return m_strBinaryPath;
+      }
+
+      String SourcePath() [get] {
+         return m_strSourcePath;
+      }
+   }
+}
+
+class BMLHatiNativeCompiler [public, concrete, nativeCompiler, selfHosting] {
+   section [class, public] {
+      const String Kernel = "hati-os-fourth";
+      const String TableExtension = ".table.txt";
+      const String LoadableBinaryExtension = ".native";
+      const String CompilerImageExtension = ".fkb";
+      const String ProgramShape = "BML AST to Hati functions plus string pool";
+   }
+
+   section [public] {
+      BMLNativeCompilerImage BuildNativeImage(
+         String strTablePath,
+         String strBinaryPath,
+         String strSourcePath ) {
+         return BMLNativeCompilerImage(
+            "BML-HATI-NATIVE",
+            Kernel,
+            strTablePath,
+            strBinaryPath,
+            strSourcePath );
+      }
+
+      bool CanLoadAsFormKernelBinary(
+         bool bSourceCompiled,
+         bool bTableEmitted,
+         bool bNativeStdoutProof ) {
+         if ( bSourceCompiled == false ) return false;
+         if ( bTableEmitted == false ) return false;
+         if ( bNativeStdoutProof == false ) return false;
+
+         return true;
+      }
+
+      String Shape() [get] {
+         return ProgramShape;
+      }
+   }
+}
+
 class SelfHostingPlan [public, coherent, bootstrapBoundary] {
    section [class, public] {
       const String OwnerLanguage = "BML";

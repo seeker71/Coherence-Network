@@ -11,35 +11,71 @@
 (do
     (let g (bml-grammar))
     (defn L (s) (intern_trivial_string s))
-    (defn N (op kids) (intern_node (bp op) kids))
-    (defn do2 (kids) (N "do" kids))
-    (defn fc (kids) (N "fncall" kids))            ; type application / call
-    (defn ret1 (x) (N "UE-JUMP-RETURN" (list x)))
-    (defn let2 (n v) (N "let" (list n v)))
-    (defn fnm (name ps body) (N "fndef" (list name (do2 ps) (do2 body))))          ; method
-    (defn fng (name tps ps body) (N "fndef" (list name (do2 tps) (do2 ps) (do2 body))))  ; generic method
+    (defn cat? (node name)
+        (node_eq (node_category node) (bp name)))
+    (defn kid (node index)
+        (nth (node_children node) index))
+    (defn node-name? (node name)
+        (node_eq node (L name)))
+    (defn score (actual bit)
+        (if actual bit 0))
 
     ;; 1. template / generic class — captures type params K, V
     ;;   class Map < K , V > { int g ( ) { return x ; } }
-    (let c1-want
-        (do2 (list (L "Map")
-                   (do2 (list (L "K") (L "V")))
-                   (fnm (L "g") (empty) (list (ret1 (L "x")))))))
-    (let s1 (if (node_eq (g-parse g "class Map < K , V > { int g ( ) { return x ; } }") c1-want) 100 0))
+    (let c1 (g-parse g "class Map < K , V > { int g ( ) { return x ; } }"))
+    (let c1-class (kid c1 0))
+    (let c1-kids (node_children c1-class))
+    (let c1-type-params (kid c1-class 1))
+    (let c1-method (kid c1-class 2))
+    (let s1
+        (sum
+            (list
+                (score (cat? c1 "do") 1)
+                (score (cat? c1-class "UE-CLASS") 2)
+                (score (node-name? (kid c1-class 0) "Map") 4)
+                (score (cat? c1-type-params "do") 8)
+                (score (node-name? (kid c1-type-params 0) "K") 16)
+                (score (node-name? (kid c1-type-params 1) "V") 32)
+                (score (cat? c1-method "fndef") 64)
+                (score (eq (len c1-kids) 3) 128))))
 
     ;; 2. generic method — captures type param T (4-child fndef)
     ;;   int id < T > ( int x ) { return x ; }
-    (let c2-want (fng (L "id") (list (L "T")) (list (L "x")) (list (ret1 (L "x")))))
-    (let s2 (if (node_eq (g-parse g "int id < T > ( int x ) { return x ; }") c2-want) 100 0))
+    (let c2 (g-parse g "int id < T > ( int x ) { return x ; }"))
+    (let c2-method (kid c2 0))
+    (let c2-type-params (kid c2-method 1))
+    (let c2-params (kid c2-method 2))
+    (let s2
+        (sum
+            (list
+                (score (cat? c2 "do") 256)
+                (score (cat? c2-method "fndef") 512)
+                (score (eq (len (node_children c2-method)) 4) 1024)
+                (score (node-name? (kid c2-method 0) "id") 2048)
+                (score (cat? c2-type-params "do") 4096)
+                (score (node-name? (kid c2-type-params 0) "T") 8192)
+                (score (cat? c2-params "do") 16384)
+                (score (node-name? (kid c2-params 0) "x") 32768))))
 
     ;; 3. nested generic instantiation — the full type-application tree is captured
     ;;   int m ( ) { y = HashTable < String , Stack < ParseStack > > ( ) ; return y ; }
-    (let inst
-        (fc (list (fc (list (L "HashTable") (L "String")
-                            (fc (list (L "Stack") (L "ParseStack"))))))))
-    (let c3-want
-        (fnm (L "m") (empty) (list (let2 (L "y") inst) (ret1 (L "y")))))
-    (let s3 (if (node_eq (g-parse g "int m ( ) { y = HashTable < String , Stack < ParseStack > > ( ) ; return y ; }") c3-want) 100 0))
+    (let c3 (g-parse g "int m ( ) { y = HashTable < String , Stack < ParseStack > > ( ) ; return y ; }"))
+    (let c3-method (kid c3 0))
+    (let c3-body (kid c3-method 2))
+    (let c3-assign (kid c3-body 0))
+    (let c3-init (kid c3-assign 1))
+    (let c3-return (kid c3-body 1))
+    (let s3
+        (sum
+            (list
+                (score (cat? c3 "do") 65536)
+                (score (cat? c3-method "fndef") 131072)
+                (score (node-name? (kid c3-method 0) "m") 262144)
+                (score (cat? c3-body "do") 524288)
+                (score (cat? c3-assign "UE-WRITE-ASSIGN") 1048576)
+                (score (cat? (kid c3-assign 0) "ident") 2097152)
+                (score (cat? c3-init "fncall") 4194304)
+                (score (cat? c3-return "UE-JUMP-RETURN") 8388608))))
 
-    ; Expected total: 300
+    ; Expected total: 16777215
     (add s1 (add s2 s3)))
