@@ -62,6 +62,7 @@
     "/graph": "web/app/graph/page.tsx",
     "/graph/zoom/[nodeId]": "web/app/graph/zoom/[nodeId]/page.tsx",
     "/graphs": "web/app/graphs/page.tsx",
+    "/hati-os": "web/app/hati-os/page.tsx",
     "/hati-suci": "web/app/hati-suci/page.tsx",
     "/here": "web/app/here/page.tsx",
     "/ideas": "web/app/ideas/page.tsx",

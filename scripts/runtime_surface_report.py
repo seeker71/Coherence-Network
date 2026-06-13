@@ -174,6 +174,7 @@ def kernel_router_manifest_routes() -> list[str]:
         return []
     idx = text.find("(let routes")
     block = _strip_form_line_comments(text[idx:] if idx != -1 else text)
+    block = _with_referenced_route_blocks(_strip_form_line_comments(text), block)
     route_data = _kernel_route_data_patterns(_KERNEL_ROUTER_MANIFEST)
     routes: list[str] = []
     seen: set[str] = set()
@@ -203,6 +204,55 @@ def kernel_router_manifest_routes() -> list[str]:
             routes.append(route_label)
             seen.add(route_label)
     return routes
+
+
+def _with_referenced_route_blocks(text: str, route_block: str) -> str:
+    """Include zero-arg route-list helper bodies referenced from ``routes``.
+
+    Production manifests can keep method-specific route rows in a helper such as
+    ``(mpg-route-choice-routes)`` and splice that helper into ``(let routes ...)``.
+    The runtime-surface report is a scanner, not the Form evaluator, so it must
+    expand those referenced helper bodies before applying the row regex.
+    """
+    blocks = [route_block]
+    seen: set[str] = set()
+    for name in re.findall(r"\(([A-Za-z_][A-Za-z0-9_-]*)\)", route_block):
+        if name in seen:
+            continue
+        seen.add(name)
+        start = text.find(f"(defn {name} ")
+        if start == -1:
+            continue
+        helper = _balanced_form_at(text, start)
+        if "kh-route" in helper or "(list 43004" in helper:
+            blocks.append(helper)
+    return "\n".join(blocks)
+
+
+def _balanced_form_at(text: str, start: int) -> str:
+    """Return the balanced s-expression starting at ``start``, or ``\"\"``."""
+    depth = 0
+    in_string = False
+    escaping = False
+    for idx in range(start, len(text)):
+        ch = text[idx]
+        if in_string:
+            if escaping:
+                escaping = False
+            elif ch == "\\":
+                escaping = True
+            elif ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+        elif ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 0:
+                return text[start : idx + 1]
+    return ""
 
 
 def bml_front_door_routes() -> list[str]:

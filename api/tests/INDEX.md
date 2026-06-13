@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 264
+**Total files**: 266
 
 | File | Purpose |
 |---|---|
@@ -39,6 +39,7 @@
 | [test_auto_heal_service.py](test_auto_heal_service.py) | Tests for the auto-heal-from-diagnostics spec |
 | [test_automation_usage_api.py](test_automation_usage_api.py) | _no top-of-file purpose_ |
 | [test_awareness_node_daemon.py](test_awareness_node_daemon.py) | _no top-of-file purpose_ |
+| [test_bml_idea_family_harness.py](test_bml_idea_family_harness.py) | Live proof wrapper for the BML idea detail/write family harness. |
 | [test_breath_service.py](test_breath_service.py) | Tests for Breath-Aware Lifecycle — gas/water/ice phase distribution. |
 | [test_bridge_notifications.py](test_bridge_notifications.py) | Flow-centric integration tests for Cross-Domain Bridge Notifications. |
 | [test_canonical_words.py](test_canonical_words.py) | Tests for the canonical-word lexicon interner. |
@@ -116,6 +117,7 @@
 | [test_graph_node_form_port.py](test_graph_node_form_port.py) | Proof that graph_nodes have a Form-native storage-port surface. |
 | [test_graph_node_mutation_carrier_form.py](test_graph_node_mutation_carrier_form.py) | Proof that graph-node mutations have a native Form carrier. |
 | [test_grounded_cost_value_measurement.py](test_grounded_cost_value_measurement.py) | Tests for grounded cost & value measurement (spec: grounded-cost-value-measurement). |
+| [test_hati_mesh.py](test_hati_mesh.py) | _no top-of-file purpose_ |
 | [test_homepage_contrast.py](test_homepage_contrast.py) | WCAG AA contrast tests for homepage CSS palette (ux-homepage-readability). |
 | [test_household_service_board.py](test_household_service_board.py) | Flow test for the household resident-service board (api/app/routers/household.py). |
 | [test_idea_lifecycle_closure.py](test_idea_lifecycle_closure.py) | Tests for idea lifecycle closure (spec: idea-lifecycle-closure). |

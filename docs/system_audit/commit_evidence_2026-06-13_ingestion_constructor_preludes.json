@@ -1,0 +1,125 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/ingestion-constructors-fourth-arm-20260613",
+  "commit_scope": "Load the seedbank Blueprint symbol section for markdown and YAML meaning-ingestion bands so DOC-* and YAML-* constructors resolve through the registered symbol table instead of failing at runtime.",
+  "files_owned": [
+    "MANIFEST.md",
+    "api/app/data/web_routes.json",
+    "api/app/routers/INDEX.md",
+    "api/tests/INDEX.md",
+    "api/tests/test_runtime_surface_native_routes.py",
+    "docs/system_audit/commit_evidence_2026-06-13_ingestion_constructor_preludes.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/tests/markdown-meaning-ingestion-band.fk",
+    "form/form-stdlib/tests/yaml-meaning-ingestion-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/INDEX.md",
+    "scripts/runtime_surface_report.py",
+    "web/app/INDEX.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "COORD_AGENT=codex@a3ec ./scripts/agent-coord.sh claim \"markdown/yaml source-ingestion constructor residual after PR #2978: DOC-DOC and YAML-PAIR unbound, avoiding go-jit TypeScript/BMF lanes\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/seedbank/blueprint-symbol-sections.fk form-stdlib/seedbank/grammars/markdown.fk form-stdlib/tests/markdown-meaning-ingestion-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/seedbank/blueprint-symbol-sections.fk form-stdlib/seedbank/grammars/yaml.fk form-stdlib/tests/yaml-meaning-ingestion-band.fk",
+      "cd form && ./validate.sh > /tmp/coherence-form-validate-ingestion-constructors-after-pr2989-20260613.log 2>&1",
+      "rg -n \"✗|fourth arm:| ok,\" /tmp/coherence-form-validate-ingestion-constructors-after-pr2989-20260613.log",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "make wellness",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git diff --check",
+      "cd api && python3 -m pytest -q tests/test_runtime_surface_native_routes.py -vv"
+    ],
+    "notes": "The focused markdown and YAML meaning-ingestion validations both return 1000 with 1 ok / 0 divergent across Go, Rust, and TypeScript. Full validation remains diagnostic rc=1 because two unrelated rows remain divergent after the BML route-choice, production route-choice, oracle-catalog, and recipe registry receipt floors merged, but markdown-meaning-ingestion-band.fk and yaml-meaning-ingestion-band.fk are now passing. The measured combined floor is fourth arm: 117 band(s) four-way, 549 ok, 2 divergent. These source-ingestion bands remain outside the fourth-arm manifest because they depend on read_file/source-compiler and the host/source-ingestion family; the fourth-arm floor itself is unchanged by this slice while total passing workloads rise by two. Wellness surfaced stale generated indexes after origin/main moved; scripts/generate_repo_indexes.py refreshed the seven generated index artifacts and the follow-up --check passed. The post-rebase local PR guard reported local_preflight=pass and check_pr_followthrough reported codex_open_prs=0 / stale_codex_prs=0. CI then exposed a current-main runtime-surface parser gap after PR #2982 moved mutation routes into a referenced helper; scripts/runtime_surface_report.py now expands referenced zero-arg route-list helpers and api/tests/test_runtime_surface_native_routes.py pins that shape."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Pending PR creation and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "No public HTTP behavior change is expected; this is a Form validation/prelude correction."
+    ],
+    "notes": "The change affects local Form suite validation only."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; CI, merge, and deploy validation are pending."
+  },
+  "idea_ids": [
+    "form-source-ingestion",
+    "seedbank-blueprint-symbols"
+  ],
+  "spec_ids": [
+    "form-fourth-kernel-validation",
+    "source-ingestion-constructors"
+  ],
+  "task_ids": [
+    "ingestion-constructor-preludes-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex-a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "validation",
+        "runtime",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "python3 scripts/generate_repo_indexes.py --check",
+    "form/form-stdlib/seedbank/blueprint-symbol-sections.fk",
+    "form/form-stdlib/tests/markdown-meaning-ingestion-band.fk",
+    "form/form-stdlib/tests/yaml-meaning-ingestion-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/runtime_surface_report.py",
+    "/tmp/coherence-form-validate-ingestion-constructors-after-pr2989-20260613.log"
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "api/app/data/web_routes.json",
+    "api/app/routers/INDEX.md",
+    "api/tests/INDEX.md",
+    "api/tests/test_runtime_surface_native_routes.py",
+    "docs/system_audit/commit_evidence_2026-06-13_ingestion_constructor_preludes.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/tests/markdown-meaning-ingestion-band.fk",
+    "form/form-stdlib/tests/yaml-meaning-ingestion-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/INDEX.md",
+    "scripts/runtime_surface_report.py",
+    "web/app/INDEX.md"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Markdown and YAML meaning ingestion now load the registered seedbank Blueprint symbol section before their grammars, so DOC-DOC, DOC-HEADING, DOC-PARAGRAPH, DOC-CODE-BLOCK, YAML-DOC, YAML-PAIR, and YAML-ITEM resolve consistently. On the post-PR #2989 origin/main floor, full Form validation records 117 fourth-arm bands, 549 ok, and 2 divergent rows; this slice contributes the two source-ingestion passes and leaves unrelated residuals named.",
+    "public_endpoints": [
+      "local-only: Form source-ingestion validation; no public HTTP endpoint changed"
+    ],
+    "test_flows": [
+      "Focused markdown meaning-ingestion proof returns 1000 across Go/Rust/TypeScript.",
+      "Focused YAML meaning-ingestion proof returns 1000 across Go/Rust/TypeScript.",
+      "Full validate records the combined raised total passing workload floor and the two remaining unrelated divergent rows.",
+      "Runtime-surface native-route parser test passes and confirms helper-spliced method routes such as POST /api/ideas stay visible."
+    ],
+    "known_full_suite_gaps": [
+      "go-jit-band.fk: TypeScript source parse error unexpected token rparen at 5344",
+      "ts-reversible-band.fk: unbound section"
+    ]
+  }
+}
