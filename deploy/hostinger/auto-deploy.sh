@@ -1191,7 +1191,7 @@ ensure_kernel_router_canary() {
         'recent-reactions|/api/reactions/recent?limit=2|api_reactions_recent' \
         'anonymous-meeting-traces|/api/meetings/anonymous-traces?limit=2|api_meetings_anonymous_traces' \
         'workspaces|/api/workspaces|api_workspaces' \
-        'vitality|/api/workspaces/coherence-network/vitality|api_vitality_coherence_network' \
+        'vitality|/api/workspaces/coherence-network/vitality|api_workspace_vitality' \
         'coherence-score|/api/coherence/score|api_coherence_score' \
         'graph-nodes|/api/graph/nodes?limit=1|api_graph_nodes' \
         'graph-node-detail|/api/graph/nodes/urs|api_graph_node_detail' \
