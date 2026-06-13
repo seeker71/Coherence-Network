@@ -1,0 +1,62 @@
+; oracle-catalog.fk — the 3rd-party oracle TEACHERS installed on this host, as Form data.
+;
+; A teacher is a borrowed sense the body samples while it grows its own (lc-sense-organ-ripening,
+; sensing-lanes.form). This catalog names the teachers actually installed, so a sensing lane can pick one
+; by lane and know its ground-truth role and whether sampling it crosses a membrane. Each teacher is a
+; COMPOSED row (structural-composition: a list, not a flat token); the catalog is a SEQUENCE of rows.
+;
+; A teacher is sampled as a TEACHER, never counted as ground without measured agreement (sensing-lanes.form
+; GROUND line). The row vocabulary mirrors jit-oracle-learning.form's sample-schema so the catalog and the
+; learning loop share one tongue.
+;
+; Row: (organ lane invocation role trust state)
+;   role  : "label" | "generate" | "both"   — the ground truth the teacher can produce
+;   trust : "local" | "remote-membrane"      — local = on-device, no membrane crossed; remote = a consented membrane
+;   state : "installed" | "source-pending" | "absent"
+;
+; Probe-verified on this host 2026-06-13: whisper-cli (whisper.cpp 1.8.6, Metal+BLAS), macOS say (184 voices),
+; ollama 0.23.2 (5 local models + cloud), ffmpeg 8.1.1; the Apple SoundAnalysis/Vision/ShazamKit Swift
+; sources present (source-pending = compile-when-a-run-needs-them, don't-build-ahead-of-need).
+;
+; Proven by: form-stdlib/tests/oracle-catalog-band.fk (three-way at validate.sh).
+(do
+    (defn oc-teacher (organ lane invocation role trust state)
+        (list organ lane invocation role trust state))
+    (defn oc-organ (t) (nth t 0))
+    (defn oc-lane (t) (nth t 1))
+    (defn oc-invocation (t) (nth t 2))
+    (defn oc-role (t) (nth t 3))
+    (defn oc-trust (t) (nth t 4))
+    (defn oc-state (t) (nth t 5))
+
+    ; The installed teachers on this host.
+    (defn oc-catalog ()
+        (list
+            (oc-teacher "ear"         "stt"          "whisper-cli"           "generate" "local"           "installed")
+            (oc-teacher "voice"       "tts"          "say"                   "generate" "local"           "installed")
+            (oc-teacher "ear-ambient" "audio-body"   "sound_classify.swift"  "label"    "local"           "source-pending")
+            (oc-teacher "eye"         "camera"       "vision_classify.swift" "label"    "local"           "source-pending")
+            (oc-teacher "eye-music"   "audio-music"  "shazam_song.swift"     "label"    "local"           "source-pending")
+            (oc-teacher "inner-voice" "local-llm"    "ollama"                "generate" "local"           "installed")
+            (oc-teacher "inner-voice" "remote-llm"   "ollama-cloud"          "generate" "remote-membrane" "installed")
+            (oc-teacher "media"       "ground-truth" "ffmpeg"                "both"     "local"           "installed")))
+
+    ; Count rows whose state is "installed" — the same evidence-counting spine as active-inference's ai-hit-count.
+    (defn oc-installed-count (rows)
+        (if (eq (len rows) 0) 0
+            (add (if (str_eq (oc-state (head rows)) "installed") 1 0)
+                 (oc-installed-count (tail rows)))))
+
+    ; Count rows whose trust crosses a membrane — what sampling would cross a consent boundary.
+    (defn oc-remote-count (rows)
+        (if (eq (len rows) 0) 0
+            (add (if (str_eq (oc-trust (head rows)) "remote-membrane") 1 0)
+                 (oc-remote-count (tail rows)))))
+
+    ; Pick the teacher for a lane (first match). An unknown lane yields an absent row, never a silent pick.
+    (defn oc-for-lane (rows lane)
+        (if (eq (len rows) 0) (oc-teacher "none" lane "none" "none" "none" "absent")
+            (if (str_eq (oc-lane (head rows)) lane) (head rows)
+                (oc-for-lane (tail rows) lane))))
+
+    0)

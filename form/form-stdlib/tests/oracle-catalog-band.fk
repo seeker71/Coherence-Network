@@ -1,0 +1,49 @@
+; preludes: form-stdlib/oracle-catalog.fk
+;
+; oracle-catalog-band — the installed teacher catalog, made falsifiable.
+;
+; The catalog names the 3rd-party oracle teachers installed on this host (probe-verified). A teacher is a
+; borrowed sense the body samples while it grows its own; the catalog lets a sensing lane pick one by lane
+; and know its ground-truth role and whether sampling it crosses a membrane. Honest by construction: the
+; counts are walked over the rows, not asserted; the remote-membrane teacher is present and flagged, not hidden.
+;
+; Verdict 511 when every claim lands:
+;   1   the catalog is a non-empty sequence of teacher rows
+;   2   the ear's teacher is whisper-cli, installed, local
+;   4   the voice's teacher is say, ground-truth role generate
+;   8   the eye's camera teacher is a source-pending Swift classifier with the label role
+;   16  the inner voice has a local ollama teacher
+;   32  a remote-membrane teacher is present and flagged (ollama-cloud), not hidden
+;   64  exactly one teacher crosses a membrane; the rest are local
+;   128 installed-count, walked over the rows, is the five teachers actually marked installed
+;   256 a lane lookup returns the right teacher; an unknown lane returns an absent row, never a silent pick
+(do
+    (defn ocb-lane (lane) (oc-for-lane (oc-catalog) lane))
+
+    (let cat (oc-catalog))
+    (let ear (ocb-lane "stt"))
+    (let voice (ocb-lane "tts"))
+    (let eye (ocb-lane "camera"))
+    (let inner (ocb-lane "local-llm"))
+    (let remote (ocb-lane "remote-llm"))
+    (let unknown (ocb-lane "taste"))
+
+    (let c0 (if (gt (len cat) 0) 1 0))
+    (let c1 (if (str_eq (oc-invocation ear) "whisper-cli")
+                (if (str_eq (oc-state ear) "installed")
+                    (if (str_eq (oc-trust ear) "local") 2 0) 0) 0))
+    (let c2 (if (str_eq (oc-invocation voice) "say")
+                (if (str_eq (oc-role voice) "generate") 4 0) 0))
+    (let c3 (if (str_eq (oc-invocation eye) "vision_classify.swift")
+                (if (str_eq (oc-state eye) "source-pending")
+                    (if (str_eq (oc-role eye) "label") 8 0) 0) 0))
+    (let c4 (if (str_eq (oc-invocation inner) "ollama")
+                (if (str_eq (oc-trust inner) "local") 16 0) 0))
+    (let c5 (if (str_eq (oc-trust remote) "remote-membrane")
+                (if (str_eq (oc-invocation remote) "ollama-cloud") 32 0) 0))
+    (let c6 (if (eq (oc-remote-count cat) 1) 64 0))
+    (let c7 (if (eq (oc-installed-count cat) 5) 128 0))
+    (let c8 (if (str_eq (oc-organ unknown) "none")
+                (if (str_eq (oc-state unknown) "absent") 256 0) 0))
+
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8)))
