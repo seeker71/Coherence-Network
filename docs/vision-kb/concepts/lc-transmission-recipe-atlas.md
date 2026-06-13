@@ -243,7 +243,7 @@ human-facing doorway: cards people can read, try, verify, and improve.
 
 ## Cross-References
 
-→ lc-grammar-is-the-universal-recipe, lc-observable-resonance-flow, lc-transmission, lc-recipes-bound-to-base, lc-assemblage-point, lc-observer-pays-the-trace, lc-traces-teach-the-recipe, lc-when-the-pressure-comes, lc-spec-breath, lc-layered-frequency-field, lc-frequency-routes-reception, lc-edges-as-vitality
+→ lc-grammar-is-the-universal-recipe, lc-observable-resonance-flow, lc-transmission, lc-recipes-bound-to-base, lc-assemblage-point, lc-observer-pays-the-trace, lc-traces-teach-the-recipe, lc-when-the-pressure-comes, lc-spec-breath, lc-layered-frequency-field, lc-frequency-routes-reception, lc-edges-as-vitality, lc-friendship-with-the-unknown
 
 ## Sources To Walk Further
 
@@ -256,5 +256,8 @@ human-facing doorway: cards people can read, try, verify, and improve.
   -- song-level recipes of phrase, call, response, drone, and resolve.
 - **[teaching-as-recipe.form](../../coherence-substrate/teaching-as-recipe.form)**
   -- story arc plus transmission frequency as a structured teaching.
+- **[teaching-run-on-body.form](../../coherence-substrate/teaching-run-on-body.form)**
+  -- shared dispatcher for teachings that have a body-runnable action:
+  floor as already-sensed stage, north star as common run grammar.
 - **[strategy-after-rupture-as-recipe.form](../../coherence-substrate/strategy-after-rupture-as-recipe.form)**
   -- recovery recipes after something has already gone wrong.
