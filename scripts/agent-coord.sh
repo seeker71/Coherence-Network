@@ -11,7 +11,13 @@
 #
 # Two ways to call it:
 #   1. Sourced (interactive):  export COORD_AGENT=grok; source scripts/agent-coord.sh; coord join
-#   2. Executed (hooks):       COORD_AGENT=grok bash scripts/agent-coord.sh join
+#   2. Executed (hooks/CLI):   COORD_AGENT=grok bash scripts/agent-coord.sh join
+#
+# Session identity:
+#   A generic agent name (codex / claude / cursor / grok / gemini) is refined to
+#   a worktree-local session id when the repo root lives in a named worktree, so
+#   five concurrent Codex sessions show up as five distinct cells instead of one.
+#   Example: codex@cf56, claude@bml-metal-planes-floor-20260613, cursor@grok.
 #
 # Verbs:
 #   join                  # announce + show roster + recent — the one-command arrival
@@ -37,6 +43,37 @@
 
 COHERENCE_COORD="${COHERENCE_COORD:-$HOME/.coherence-network/agent-coord.board}"
 
+_coord_root() {
+  git rev-parse --show-toplevel 2>/dev/null || pwd
+}
+
+_coord_session_suffix() {
+  local root="$1"
+  case "$root" in
+    */.codex/worktrees/*/*) basename "$(dirname "$root")" ;;
+    */.claude-worktrees/*/*) basename "$root" ;;
+    */.worktrees/*) basename "$root" ;;
+    *) echo "" ;;
+  esac
+}
+
+_coord_agent_id() {
+  local agent="$1" root="$2" suffix
+  suffix="$(_coord_session_suffix "$root")"
+  case "$agent" in
+    codex|claude|cursor|grok|gemini)
+      if [[ -n "$suffix" ]]; then
+        printf '%s@%s' "$agent" "$suffix"
+      else
+        printf '%s' "$agent"
+      fi
+      ;;
+    *)
+      printf '%s' "$agent"
+      ;;
+  esac
+}
+
 _coord_fmt() {
   # tab-delimited: ISO-ts \t agent \t type \t message  →  HH:MM:SS agent type msg
   while IFS=$'\t' read -r ts agent type msg; do
@@ -60,6 +97,7 @@ _coord_protocol() {
     . close loops: claim->release, block->unblock, need->say when met
     . read the board before you write         . one line per signal
     . name and thank a sibling's help — not silently absorbed
+    . session ids are worktree-local (codex@cf56), not one shared codex blob
   what belongs here
     . coordination: claim / release / block   . requests: need / offer
     . direction: desire / want                . learning: share   . questions
@@ -73,10 +111,43 @@ _coord_protocol() {
     . the watcher asks the silly question unprompted (who? when? how come? why python?) -> answer it; that is the point
   who is doing what
     . open claim = your current work; coord doing shows who holds what; silence is not a status
+  real time
+    . every active session joins on start     . one heartbeat loop per active session while working
+    . coord-heartbeat <agent> in a spare tab  . coord watch / coord live when pairing
   learn from each other
     . a durable discovery -> put it in the body -> coord share "<what>" "<where it lives>"
     . read each other's traces: CURSOR.md, codex traces, docs/lineage, docs/presences
 EOP
+}
+
+_coord_legacy_bare_agents() {
+  awk -F'\t' '
+    {
+      if ($2 ~ /@/) {
+        split($2, parts, "@")
+        suffixed[parts[1]] = 1
+      } else {
+        bare[$2] = 1
+      }
+    }
+    END {
+      for (agent in bare) {
+        if (suffixed[agent]) {
+          print agent
+        }
+      }
+    }
+  ' "$COHERENCE_COORD" 2>/dev/null | sort -u
+}
+
+_coord_legacy_notice() {
+  local legacy
+  legacy="$(_coord_legacy_bare_agents)"
+  if [[ -n "$legacy" ]]; then
+    printf '  ── refresh requested ──\n'
+    printf '  bare legacy session ids remain on the board: %s\n' "$(printf '%s' "$legacy" | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
+    printf '  already-open sessions should rerun: coord join  # or: make prompt-guide\n'
+  fi
 }
 
 _coord_epoch() {  # ISO-8601 (…Z, UTC) -> epoch seconds, portable (BSD -u / GNU)
@@ -124,7 +195,10 @@ _coord_staleness() {  # warn (no network) if this worktree's tooling is behind o
 
 coord() {
   local type="$1"; shift 2>/dev/null || true
-  local agent="${COORD_AGENT:-$(whoami)}"
+  local root raw_agent agent
+  root="$(_coord_root)"
+  raw_agent="${COORD_AGENT:-$(whoami)}"
+  agent="$(_coord_agent_id "$raw_agent" "$root")"
   mkdir -p "$(dirname "$COHERENCE_COORD")"; touch "$COHERENCE_COORD" 2>/dev/null
   case "$type" in
     watch)  tail -n 40 -f "$COHERENCE_COORD" | _coord_fmt; return;;
@@ -134,7 +208,7 @@ coord() {
     doing)    _coord_doing; return;;
     live)     while true; do clear; _coord_view; sleep "${1:-3}"; done; return;;
     protocol) _coord_protocol; return;;
-    join)   coord announce "${*:-$(pwd)}"
+    join)   coord announce "${*:-$root}"
             # satsang default-join: the board is the satsang circle's always-on form, so a
             # recognized-own cell offers the satsang interface by default — but only if it has
             # not already set one, so a cell that chose its own modes keeps them. Entering is the
@@ -144,6 +218,7 @@ coord() {
             fi
             printf '\n  ── who is in the field ──\n'; _coord_roster
             printf '  ── recent signals ──\n'; awk -F'\t' '$3!="heartbeat"' "$COHERENCE_COORD" 2>/dev/null | tail -n 8 | _coord_fmt
+            _coord_legacy_notice
             printf '  ── how we talk ──  (run: coord protocol)\n'
             _coord_staleness
             return;;
