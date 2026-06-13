@@ -13,7 +13,7 @@ Cheap prompt-entry guide for Codex follow-up turns.
 Behavior:
   - default: orient from CLAUDE.md, verify branch/worktree safety, and print the shortest next proof path
   - full proof: use --force-full to run start-guide + rebase + local PR guide
-  - sibling dirty worktrees: print guidance by default; stop only for detached or unpushed-ahead siblings
+  - sibling worktrees: print guidance by default; stop only for recent unpushed-ahead sibling history
 
 Options:
   --force-full   run full preflight now (stashes/restores changes if needed).
@@ -94,8 +94,8 @@ if [[ "${PROMPT_GATE_SKIP_CONTINUITY:-0}" != "1" ]]; then
   fi
   if ! python3 scripts/worktree_continuity_guard.py "${continuity_args[@]}"; then
     echo "prompt-entry-guide: sibling worktree continuity risk detected."
-    echo "Dirty or stale sibling branches are guidance; detached or recent unpushed-ahead siblings can strand history."
-    echo "Continue from that worktree, attach/push it, or merge/cherry-pick its branch before starting new work."
+    echo "Sibling worktrees are guidance; recent unpushed-ahead siblings without an upstream can strand history."
+    echo "Continue from that worktree, push it, or merge/cherry-pick its branch before starting new work."
     echo "Temporary bypass while tending continuity awareness: PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide"
     exit 1
   fi
