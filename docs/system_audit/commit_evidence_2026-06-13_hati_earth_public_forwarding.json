@@ -1,0 +1,83 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/hati-earth-public-forwarding-proof-20260613",
+  "commit_scope": "Record the public Hati-domain forwarding proof after publishing the macOS, Android native, and Android APK artifacts.",
+  "change_intent": "docs_only",
+  "idea_ids": [
+    "hati-os",
+    "hati-mesh"
+  ],
+  "spec_ids": [
+    "android-sense-organ",
+    "hati-mesh-presence"
+  ],
+  "task_ids": [
+    "hati-earth-public-forwarding-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "publication",
+        "validation",
+        "documentation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "docs/system_audit/commit_evidence_2026-06-13_hati_earth_public_forwarding.json"
+  ],
+  "change_files": [
+    "docs/system_audit/commit_evidence_2026-06-13_hati_earth_public_forwarding.json"
+  ],
+  "evidence_refs": [
+    "https://github.com/seeker71/Coherence-Network/releases/tag/hati-os-v0.1.0-20260613",
+    "https://hati.earth/downloads/hati-os/macos/arm64/hati-os-macos-arm64.tar.zst",
+    "https://hati.earth/downloads/hati-os/android/arm64/hati-os-android-arm64.tar.zst",
+    "https://hati.earth/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-debug.apk",
+    "porkbun:domain/getUrlForwarding/hati.earth forwards root -> https://coherencycoin.com includePath=yes",
+    "porkbun:dns/retrieve/hati.earth root/sense/suci ALIAS -> uixie.porkbun.com"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "cat .cache/wellness/state.txt | sed -n '1,80p'",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_hati_earth_public_forwarding.json",
+      "dig +short @1.1.1.1 hati.earth A",
+      "/usr/bin/curl -4 -sSIL --max-time 45 --resolve hati.earth:443:52.33.207.7 https://hati.earth/downloads/hati-os/macos/arm64/hati-os-macos-arm64.tar.zst",
+      "/usr/bin/curl -4 -sSIL --max-time 45 --resolve hati.earth:443:44.230.85.241 https://hati.earth/downloads/hati-os/android/arm64/hati-os-android-arm64.tar.zst",
+      "/usr/bin/curl -4 -sSIL --max-time 45 --resolve hati.earth:443:52.33.207.7 https://hati.earth/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-debug.apk",
+      "/usr/bin/curl -4 -sSIL --max-time 45 --resolve sense.hati.earth:443:52.33.207.7 https://sense.hati.earth"
+    ],
+    "notes": "Porkbun API credentials validated on api.porkbun.com. Root and wildcard A records to 187.77.152.42 were removed after URL forwarding was created. Root, sense, and suci ALIAS records now target uixie.porkbun.com. Public resolvers returned hati.earth A records 52.33.207.7 and 44.230.85.241. HTTPS forwarding settled after ACME TXT records appeared."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR checks, and merge for this docs-only evidence record."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "summary": "External publication proof passed: https://hati.earth/downloads/hati-os/macos/arm64/hati-os-macos-arm64.tar.zst returns 302 to coherencycoin.com, 307 to GitHub release asset, and final 200 with content-length 2874; https://hati.earth/downloads/hati-os/android/arm64/hati-os-android-arm64.tar.zst returns final 200 with content-length 2558443; https://hati.earth/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-debug.apk returns final 200 with content-length 3485702; https://sense.hati.earth returns 302 to coherencycoin.com/sense and final 200."
+  },
+  "phase_gate": {
+    "phase": "hati-earth-public-download-lane",
+    "gate": "hati.earth publishes the Hati-OS macOS native tarball, Android native tarball, and Android APK through HTTPS with path-preserving public redirects.",
+    "state": "public-assets-pass-ci-pending-for-evidence-record",
+    "can_move_next_phase": false,
+    "next": "Push this evidence branch, wait for PR checks, merge, then sister threads can consume the public Hati-domain download lane."
+  }
+}
