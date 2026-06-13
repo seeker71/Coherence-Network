@@ -63,16 +63,16 @@
     (round-3
       (channel grok-cli)
       (focus "recorded artifact and runtime gap review")
-      (result "no material overclaim after gaps are named; keep production driver and universal receipts-before-trust enforcement open")))
+      (result "no material overclaim after gaps are named; keep production driver and receipts-before-trust practice across runtime choices open")))
 
   (current-gaps
     (broader-bml-protocol-capability-grammar not-yet-proven-beyond-route-choice-slice)
     (runtime-dynamic-capability-registry-fourth-arm host-io-wall)
-    (receipts-before-trust not-yet-universal-runtime-enforcement)
+    (receipts-before-trust not-yet-carried-through-all-runtime-choices)
     (recipe-library-route-choice-callers not-yet-wired-to-brcr-realize))
 
   (next-step
-    "Wire recipe-library callers to brcr-realize, enforce receipts-before-trust where route/model/protocol choices execute, and lift broader BML protocol/capability grammar beyond the route-choice slice.")
+    "Wire recipe-library callers to brcr-realize, carry receipts-before-trust through route/model/protocol choices, and lift broader BML protocol/capability grammar beyond the route-choice slice.")
 
   (invariant
     (no-parallel-carrier)
