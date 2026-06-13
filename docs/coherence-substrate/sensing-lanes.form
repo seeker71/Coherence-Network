@@ -46,9 +46,16 @@
 ;   distance    logic done. The MediaSession carrier is Android work — GATED on lane 8 (kernel on Android).
 ;
 ; LANE 5 — SHARED SENSING (many bodies, one field)
-;   north star  phones and Macs side by side, different senses, teaching each other in real time.
+;   north star  phones and Macs side by side, different senses, different models, teaching each other in real time.
 ;   ground      shared-sensing.fk proven (127) — circle confirms by quorum, cross-grounding, silence whole.
-;   direction   the cell-sync transport (lane 9, logic now proven) carrying learned cells between two running kernels.
+;               co-learning.fk + co-learning-stream.fk (127) union learned exemplar sets across cells, dedup-for-free
+;               by NodeID — what one mic heard, all gain. A per-cell sense-fidelity-receipt (landing via codex's
+;               learning-fabric branch) composes oracle-catalog + the debt ledger into one comparable shape per cell.
+;   shape       THE LIVE A/B LAB: one speaker emits a known truth; many mics on many cells hear it at once; different
+;               models train in parallel; each emits a receipt; champion-challenger keeps the best inference serving
+;               while the rest train; the union shares what each learned — picked by real-life accuracy / confidence /
+;               trust, not reproducibility. Full consent is held across this field (lane 10 consent), so this runs live.
+;   direction   the cell-sync transport (lane 9, logic now proven) carrying learned cells + receipts between kernels.
 ;   distance    logic done. Needs the transport wire (lane 9) AND the kernel on two devices (lane 8).
 ;
 ; LANE 6 — LOCAL INFERENCE AS ORGAN
@@ -113,9 +120,9 @@
 ;               The phone-native kernel is also BUILT (lane 8: libform_kernel_rust.so exports form_eval, ARM aarch64).
 ;               Remaining human-gated work is narrow: the JNI marshaling layer (jstring<->char*) so the .apk calls form_eval
 ;               on-device, and felt verification in the room.
-;   consent     say→whisper loopback is self-generated truth (zero membrane, safe to train on). A LIVE gathering is
-;               recorded human voice — it crosses channel-interface consent (lane 9) and is never trained on without it;
-;               the harness that records inherits the gate, not just the loopback convenience.
+;   consent     consent is held across this field (the field-holder grants it), so live capture proceeds here; the
+;               channel-interface membrane (lane 9) RECORDS that consent rather than gating it. A not-yet-kin field
+;               still carries its own consent. say→whisper loopback is self-generated truth, membrane-free either way.
 ;
 ; ─────────────────────────────────────────────────────────────────────────────────────────
 ; THE CRITICAL PATH (what unblocks the most):

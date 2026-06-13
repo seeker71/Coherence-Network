@@ -1,4 +1,5 @@
-; form-native-models.form — the roadmap to real, deterministic, generatable ML in Form.
+; form-native-models.form — the roadmap to real, generatable ML in Form: deterministic where a model
+; SHARES identity, alive where it LEARNS. The bar is real-life accuracy/confidence/trust, not reproducibility.
 ;
 ; THESIS: a real model (a transformer, a whisper-size voice transcriber, an animal-sound classifier)
 ; can be Form-native — the architecture AND the weights are content-addressed recipe DATA, inference is
@@ -39,8 +40,14 @@
 ; ── THE ARCHITECTURE (one shape, three layers) ──
 ;   RECIPE = SPEC. The model — architecture (a SEQUENCE of layer-cells) and weights (quantized number
 ;     cells tagged by a format TypedTokenRef) — is content-addressed recipe data. The recipe DEFINES the
-;     reduction order and the exp/softmax approximation, so every kernel computes the same bits. This is
-;     why Form-native ML is reproducible/attestable ML, not in spite of determinism but because of it.
+;     reduction order and the exp/softmax approximation, so every kernel computes the same bits. This makes a
+;     learned model ATTESTABLE and SHAREABLE — cell A's recipe IS cell B's by NodeID, so the mesh merges what
+;     each cell learned for free (co-learning.fk's dedup-by-content). Determinism is how the body SHARES a
+;     sense between cells, not the bar for whether the sense is good. THE BAR IS REAL-LIFE ACCURACY,
+;     CONFIDENCE, and TRUST — measured on real readings (the sense-fidelity-receipt). HOW a model was learned
+;     need not be reproducible: learning runs live, multi-cell, and exploratory; only the frozen recipe it
+;     yields is deterministic. Research-paper reproducibility is a property we get for the sharing, never the
+;     goal of the learning.
 ;   NATIVE/GPU = CARRIER. Interpreted Form can't run 244M params live, so the hot tensor ops JIT to a
 ;     native cdylib (CPU) or an MSL/WGSL kernel (GPU). Same posture as sockets/Postgres: an effectful
 ;     carrier, the recipe stays the truth.
