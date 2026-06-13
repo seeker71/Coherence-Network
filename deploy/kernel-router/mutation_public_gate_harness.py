@@ -41,6 +41,26 @@ PUBLIC_GATE_HEADER = "X-Form-Native-Public-Gate"
 PYTHON_FALLBACK_HEADER = "X-Form-Python-Fallback"
 IMPLICIT_NATIVE_PROTOCOL = "implicit-native-invitation"
 
+
+def route_choice_route_name(selected_path: str, operation: str) -> str:
+    if operation == "create-idea":
+        stem = "ideas-create"
+    elif operation == "update-idea":
+        stem = "ideas-update"
+    elif operation == "create-spec":
+        stem = "specs-create"
+    elif operation == "update-spec":
+        stem = "specs-update"
+    else:
+        stem = "specs-delete"
+    if selected_path == PUBLIC_GATE_HEADER:
+        suffix = "native-public-gate"
+    elif selected_path == PREVIEW_HEADER:
+        suffix = "native-preview"
+    else:
+        suffix = "native-default"
+    return f"{stem}-{suffix}"
+
 SCHEMA_SQL = """
 DROP TABLE IF EXISTS graph_edges;
 DROP TABLE IF EXISTS graph_node_revisions;
@@ -538,6 +558,13 @@ def _gate_checks(
     decision_signature = decision.get("signature")
     if not isinstance(decision_signature, dict):
         decision_signature = {}
+    route_choice_signature = parsed.get("route_choice_signature")
+    if not isinstance(route_choice_signature, dict):
+        route_choice_signature = {}
+    decision_route_choice_signature = decision.get("route_choice_signature")
+    if not isinstance(decision_route_choice_signature, dict):
+        decision_route_choice_signature = {}
+    expected_route_choice_name = route_choice_route_name(expected_selected_path, case.operation)
     invitation = parsed.get("native_invitation")
     if not isinstance(invitation, dict):
         invitation = {}
@@ -644,6 +671,22 @@ def _gate_checks(
             and decision_signature.get("candidate_count") == 4
             and decision_signature.get("operation") == case.operation
             and decision_signature.get("node_id") == case.node_id
+        ),
+        "route_choice_signature": (
+            route_choice_signature.get("state") == "bml-route-choice-runtime-signature"
+            and route_choice_signature.get("category") == "route-choice"
+            and route_choice_signature.get("selected_source_path") == expected_route_choice_name
+            and route_choice_signature.get("selected_route_name") == expected_route_choice_name
+            and route_choice_signature.get("declared_path") == expected_route_choice_name
+            and route_choice_signature.get("escalation_needed") is False
+            and route_choice_signature.get("candidate_count") == 3
+            and route_choice_signature.get("kernel_selected_route") == expected_route_choice_name
+            and route_choice_signature.get("overrode_kernel") is False
+        ),
+        "decision_receipt_route_choice_signature": (
+            decision_route_choice_signature.get("state") == "bml-route-choice-runtime-signature"
+            and decision_route_choice_signature.get("selected_route_name") == expected_route_choice_name
+            and decision_route_choice_signature.get("candidate_count") == 3
         ),
         "native_invitation_state": invitation.get("state") == "native-invitation-contract",
         "native_invitation_offer": invitation.get("offer_to_know") is True,
