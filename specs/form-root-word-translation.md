@@ -19,7 +19,7 @@ source:
   - file: form/validate.sh
     symbols: []
 requirements:
-  - "Meaning cells come from the real corpus: word-level translation pairs are drawn from web/messages/{en,de,es,id}.json through i18n.fk — the meaning identity IS the shared key-path cell. No invented vocabulary, no statistical alignment."
+  - "Meaning cells come from the real corpus: word-level translation pairs are drawn from web/messages/{en,fr,de,es,id,pt-br}.json (six locales on disk) through i18n.fk — the meaning identity IS the shared key-path cell. No invented vocabulary, no statistical alignment."
   - "Each (locale, surface) pair interns as a word cell pointing at its meaning cell. The same surface appearing under two key-paths composes as two senses — ambiguity is data the structure carries, never a silent first pick."
   - "Translation is a structural walk: translate(surface, from-locale, to-locale) = surface -> word cell -> meaning cell -> target-locale word cell -> surface. The pivot is the shared cell, not the symbol — labels can drift, identity holds."
   - "A surface with no word cell in the from-locale realizes to nothing — the core-axioms third state, same carrier intrinsic casting uses for failed casts — never an empty string, never a thrown error."
@@ -47,7 +47,7 @@ constraints:
 
 The machine-language axis of translation is proven: five dialects lift through canonical recipes and back out, and yesterday's intrinsic-cast work showed dialect semantics living as ontology data. The human-language axis has named teachings (prose-as-recipe, the WORD domain, i18n-as-recipe-corpus) but no running proof. This spec is the smallest honest band that answers *"can Form carry meaning?"* the way the lift bands answered *"can Form carry computation?"* — translation by structural mapping through shared meaning cells, proven three-way on real parallel data the body already holds.
 
-The corpus is not a toy: `web/messages/{en,de,es,id}.json` carries ~2300 key-paths per locale, each key-path a semantic identity with four observed surface emissions. A subset of those values are single words — real ground-truth word-level pairs. The meaning cell IS the key-path; the translator pivots on it the way the substrate pivots on Blueprints: a translator that cannot lie, because the lattice refuses equivalences that are not structurally present.
+The corpus is not a toy: `web/messages/{en,fr,de,es,id,pt-br}.json` carries 2141 surface values per locale across six locales (disk-measured), each key-path a semantic identity with six observed surface emissions — ~10,705 EN→other parallel pairs. A subset of those values are single words — real ground-truth word-level pairs. The meaning cell IS the key-path; the translator pivots on it the way the substrate pivots on Blueprints: a translator that cannot lie, because the lattice refuses equivalences that are not structurally present.
 
 ## Requirements
 

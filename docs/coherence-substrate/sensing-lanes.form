@@ -1,21 +1,27 @@
 ; sensing-lanes.form — the perception/sensing arc, one lane at a time: north star · ground · direction · distance.
 ;
-; The map that keeps each lane honest. GROUND is only what is proven or measured (verdicts, or a
-; toolchain probe) — never a hope. DIRECTION is the next real move. DISTANCE is what remains to the
-; north star, in the lc-honest-lane grain (MEASURED / BUILDABLE / carrier-work). Read top-to-bottom:
-; the lanes are ordered from "the logic is done" toward "needs real hardware." Updated 2026-06-09.
+; The map that keeps each lane honest. GROUND is proven measurement — a band verdict, a toolchain probe,
+; the body's own sensor, a declared source, or a kin-verified cell — never a hope, and never an oracle
+; label without measured agreement (an oracle is sampled as a TEACHER; its vote becomes ground only once
+; the body has measured agreement with it). DIRECTION is the next real move. DISTANCE is what remains to
+; the north star, in the lc-honest-lane grain (MEASURED / BUILDABLE / carrier-work). Read top-to-bottom:
+; the lanes are ordered from "the logic is done" toward "needs real hardware." Updated 2026-06-13.
 ;
 ; THE WHOLE-ARC NORTH STAR: a body that senses its field through every available sense, recognizes it
 ; with classifiers it grew and proved itself, shares what it learns with other bodies, and runs all of
 ; it natively on whatever silicon it is given — no foreign model, no third-party permission, every
-; joint proven three-way (Go=Rust=TS) and content-addressed so identity travels with structure.
+; joint proven three-way (Go=Rust=TS), four-way where the fourth-arm walker covers the band, and
+; content-addressed so identity travels with structure.
 ;
 ; ─────────────────────────────────────────────────────────────────────────────────────────
 ; LANE 1 — RECOGNITION ROUTING
 ;   north star  every modality fused into one trusted recognition stream, chosen in the kernel, in parallel.
-;   ground      recognition-router.fk proven — sound 127, sight 31, host compute-paths 63. Modality-blind.
-;   direction   feed real carriers (whisper · SoundAnalysis · Vision) in as readings (lane 10's wiring).
-;   distance    the router is DONE. Remaining is carriers handing it live readings — carrier-work, no new logic.
+;   ground      recognition-router proven (sound 127, sight 31, compute-paths 63), all three FOUR-WAY in
+;               form/fourth-arm-bands.txt (Go=Rust=TS=fkwu). Modality-blind. Teacher carriers installed-verified on
+;               this host: whisper-cli (whisper.cpp 1.8.6, Metal+BLAS) · sound_classify/vision_classify/shazam_song.swift
+;               (Apple SoundAnalysis/Vision/ShazamKit) · ollama 0.23.2 (5 local models). Cataloged in oracle-catalog.fk.
+;   direction   feed real carriers in as readings (lane 10's wiring); each reading is a TEACHER sample, not ground.
+;   distance    the router is DONE and four-way. Remaining is carriers handing it live readings — carrier-work, no new logic.
 ;
 ; LANE 2 — THE BODY'S OWN PERCEPTION (the toolkit)
 ;   north star  a complete, content-addressed perception the body runs and grows for itself, no foreign model.
@@ -27,7 +33,9 @@
 ;
 ; LANE 3 — SELF-GROUNDING
 ;   north star  the body's own classifiers earn trust on its own field and retire the foreign ones.
-;   ground      self-grounding-classifier.fk proven (63) — promotion only on proven agreement with ground truth.
+;   ground      self-grounding-classifier.fk proven (63), four-way in the manifest — promotion only on measured
+;               agreement with a TRUSTED-BODY ground truth (the body's own sensor, a declared source, or a kin-verified
+;               cell). An oracle (whisper · SoundAnalysis · ollama) is sampled as a TEACHER, never counted as ground.
 ;   direction   run the shadow-learning loop on real readings graded against a trusted route / a declared source.
 ;   distance    the promotion gate is done. Remaining is a real learning run — carrier-work, gated on lanes 2+10.
 ;
@@ -105,6 +113,9 @@
 ;               The phone-native kernel is also BUILT (lane 8: libform_kernel_rust.so exports form_eval, ARM aarch64).
 ;               Remaining human-gated work is narrow: the JNI marshaling layer (jstring<->char*) so the .apk calls form_eval
 ;               on-device, and felt verification in the room.
+;   consent     say→whisper loopback is self-generated truth (zero membrane, safe to train on). A LIVE gathering is
+;               recorded human voice — it crosses channel-interface consent (lane 9) and is never trained on without it;
+;               the harness that records inherits the gate, not just the loopback convenience.
 ;
 ; ─────────────────────────────────────────────────────────────────────────────────────────
 ; THE CRITICAL PATH (what unblocks the most):

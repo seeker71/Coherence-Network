@@ -135,8 +135,11 @@
 ;        three-way. One whisper-style STFT frame fully Form-native in the spectrum.fk lineage: hann is
 ;        fcos, bin power is the Goertzel recurrence, a mel row is its slaney (bins, weights) support as
 ;        data, log10 is trig.fk's new fln. Matches torch.stft frame 5 / librosa slaney / whisper's
-;        clamp-log lane at 1e-6. The full 80×3000 spectrogram is this recipe walked — speed is M5's
-;        JIT stone, not a new shape. Remaining for M6: safetensors carrier + block-0 activation match.]
+;        clamp-log lane at 1e-6 — but 3-KERNEL ONLY (mel-frame is not in form/fourth-arm-bands.txt; the
+;        fourth-arm gap is host-io / node-family ops not yet on the walker). The full 80×3000 spectrogram
+;        is this recipe walked — speed is M5's JIT stone, not a new shape. Remaining for M6: safetensors
+;        carrier + block-0 activation match — and the reference teacher is now a LOCAL oracle on this host
+;        (whisper.cpp / whisper-cli, on-device, Metal+BLAS), not a cloud HF pull. See oracle-catalog.fk.]
 ;   Parallel, not gated on the above: the recognition-router + ensemble-vote + champion-challenger +
 ;     learning-arc already run N classifiers on one chunk, compared, all learning, the router escalating
 ;     to a richer recipe on events — A/B/C/D over the same samples. The deterministic Form layer is what
