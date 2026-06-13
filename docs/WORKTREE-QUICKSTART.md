@@ -35,7 +35,7 @@ Mandatory for every prompt (new or follow-up). This command is continuation-safe
 - clean worktree: runs cheap entry checks (`CLAUDE.md` orientation, branch/worktree safety, sibling continuity guidance),
 - dirty worktree: runs the same cheap entry checks and treats the prompt as in-flight continuation,
 - detached HEAD: fails fast with exact branch attach commands.
-- sibling continuity guard: treats dirty siblings, patch-equivalent siblings, and old unpushed-ahead sibling branches as guidance. It fails fast only for blocking continuity risks such as detached worktrees or recent unpushed-ahead sibling history.
+- sibling continuity guard: treats sibling worktrees, including dirty, detached, patch-equivalent, and old unpushed-ahead branches, as guidance. It fails fast only for recent unpushed-ahead sibling history without an upstream.
 - autonomous worker sidecars under `.claude/worktrees/*` are excluded from sibling continuity risk so Claude workers can run in parallel without blocking Codex prompt entry.
 
 Full proof on demand: `./scripts/prompt_entry_gate.sh --force-full`.
@@ -58,7 +58,7 @@ git add <files> && git commit -m "<message>"   # if changes are ready
 git push -u origin "$(git rev-parse --abbrev-ref HEAD)"   # if branch has no upstream
 ```
 
-If the work is intentionally in progress, continue from that same worktree/thread instead of starting a new one. Dirty and old unpushed-ahead sibling worktrees are integration candidates, not abandoned scratchpads: resume that branch, merge/cherry-pick it, or commit it intentionally before it needs to ship.
+If the work is intentionally in progress, continue from that same worktree/thread when that is the right task. Sibling worktrees are integration candidates, not abandoned scratchpads: resume that branch, merge/cherry-pick it, or commit it intentionally before it needs to ship.
 
 SQLite artifact rule:
 

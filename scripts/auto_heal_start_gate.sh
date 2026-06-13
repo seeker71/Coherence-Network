@@ -93,7 +93,7 @@ if [[ "${AUTO_HEAL_SKIP_CONTINUITY:-0}" != "1" ]]; then
   fi
   if ! python3 scripts/worktree_continuity_guard.py "${continuity_args[@]}"; then
     echo "auto-heal-start-gate: blocking sibling worktree continuity risk detected."
-    echo "Dirty siblings are guidance, but detached or unpushed-ahead siblings can strand history."
+    echo "Sibling worktrees are guidance, but recent unpushed-ahead siblings without an upstream can strand history."
     echo "Temporary bypass while tending continuity awareness: AUTO_HEAL_SKIP_CONTINUITY=1 ./scripts/auto_heal_start_gate.sh ..."
     exit 1
   fi

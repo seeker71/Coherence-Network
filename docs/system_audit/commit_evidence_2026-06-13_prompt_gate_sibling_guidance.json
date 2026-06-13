@@ -1,0 +1,103 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/fix-prompt-gate-sibling-worktrees",
+  "commit_scope": "Treat detached sibling worktrees as prompt-entry guidance instead of a stop condition.",
+  "files_owned": [
+    "api/tests/test_worktree_continuity_guard.py",
+    "docs/WORKTREE-QUICKSTART.md",
+    "docs/system_audit/commit_evidence_2026-06-13_prompt_gate_sibling_guidance.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/auto_heal_start_gate.sh",
+    "scripts/prompt_entry_gate.sh",
+    "scripts/worktree_continuity_guard.py"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make wellness",
+      "make prompt-guide",
+      "python3 -m py_compile scripts/worktree_continuity_guard.py",
+      "python3 -m pytest api/tests/test_worktree_continuity_guard.py -v",
+      "python3 scripts/worktree_continuity_guard.py --fail-on-blocking-risk",
+      "python3 -m ruff check scripts/worktree_continuity_guard.py api/tests/test_worktree_continuity_guard.py",
+      "make prompt-guide",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_prompt_gate_sibling_guidance.json",
+      "git diff --check",
+      "make wellness",
+      "git fetch origin main",
+      "git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "notes": [
+      "The first normal make prompt-guide before the patch failed after branch attachment because a sibling Codex worktree was detached: /Users/ursmuff/.codex/worktrees/9268/Coherence-Network branch=HEAD severity=blocking risks=detached_head.",
+      "The patched live continuity read reports risk_count=7 and blocking_risk_count=0; the same detached sibling now appears as severity=guidance risks=detached_head.",
+      "The patched make prompt-guide passed without PROMPT_GATE_SKIP_CONTINUITY and printed cheap continuation entry complete.",
+      "The rebase onto origin/main succeeded; its autostash conflicted only in the append-only docs/system_audit/model_executor_runs.jsonl, resolved by preserving both the upstream route-manifest proof line and this task's proof line.",
+      "worktree_pr_guard reported ready_for_push=True and local_preflight=pass; check_pr_followthrough reported codex_open_prs=1 and stale_codex_prs=0."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "PR CI has not run yet for this process-only branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "No public runtime behavior change is expected."
+    ],
+    "notes": "This branch changes local prompt-entry and auto-heal gate policy plus its guide text."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local focused validation passes; CI, merge, and deploy validation are still pending."
+  },
+  "idea_ids": [
+    "repository-health"
+  ],
+  "spec_ids": [
+    "repository-workflow-health"
+  ],
+  "task_ids": [
+    "prompt-gate-sibling-worktree-guidance-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "workflow-policy"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex-a283",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "api/tests/test_worktree_continuity_guard.py::test_detached_sibling_worktree_is_guidance_not_blocking",
+    "scripts/worktree_continuity_guard.py --fail-on-blocking-risk: blocking_risk_count=0",
+    "make prompt-guide: completed without PROMPT_GATE_SKIP_CONTINUITY"
+  ],
+  "change_files": [
+    "api/tests/test_worktree_continuity_guard.py",
+    "docs/WORKTREE-QUICKSTART.md",
+    "docs/system_audit/commit_evidence_2026-06-13_prompt_gate_sibling_guidance.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/auto_heal_start_gate.sh",
+    "scripts/prompt_entry_gate.sh",
+    "scripts/worktree_continuity_guard.py"
+  ],
+  "change_intent": "process_only"
+}
