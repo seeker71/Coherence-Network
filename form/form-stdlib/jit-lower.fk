@@ -11,30 +11,41 @@
 ;
 ;   dead-branch — IF / FOLDED-IF over a literal condition becomes its live arm
 ;   logic       — the direct IF expansion of and/or/not becomes the unboxed
-;                 LOGIC lane (tags 44..46): IF c t 0 with boolean-shaped t is
+;                 LOGIC lane (tags 70..72): IF c t 0 with boolean-shaped t is
 ;                 LOGIC-AND, IF c 1 e is LOGIC-OR, IF c 0 1 is LOGIC-NOT, and
 ;                 IF c 1 0 dissolves to c when c is already boolean-shaped
 ;   const-fold  — ADD/SUB/MUL/LE and the logic tags over literal children
-;                 become FOLDED literals (tag 47)
+;                 become FOLDED literals (tag 73)
 ;   inline      — CALL to a pure leaf function becomes the callee body with
 ;                 ARG substituted, then re-lowered (the program doors
 ;                 jit-lower-program / jit-lower-node-in carry the table)
 ;   lift        — CLOSURE-LIFTED markers hoist into the function table as
 ;                 real entries called through CALL (jit-lift-program)
 ;
-; Unbox, lifted-closure, and BMF markers (tags 48..52) are transparent
+; Unbox, lifted-closure, and BMF markers (tags 74..78) are transparent
 ; carriers: the engine lowers through them and the walker delegates through
 ; them, so a marked subtree keeps its answer. Payload-level string/float
 ; unboxing arrives with the emit lane; the bands name what is proven today.
 ;
-; Node vocabulary and walker arms live in fourth-walker.fk (tags 44..59).
+; Hati/BML/native carrier tags own 44..69; this lowered JIT lane lives at
+; 70..79 so the tag map is additive rather than reused.
 ; Parity claim, proven by tests/jit-lower-band.fk and
 ; tests/full-jit-lower-band.fk: a lowered tree walks (fk-run / fkm-run) to
 ; the same answer as its source tree.
 
 ; --- literal sensing ---------------------------------------------------------
-(defn jit-folded (v) (fk-node 47 (ms-cell v)))
-(defn jit-lit-node? (n) (if (eq (fk-tag n) 1) 1 (if (eq (fk-tag n) 47) 1 0)))
+(defn fk-logic-and (a b) (fk-node 70 (ms-intern a b)))
+(defn fk-logic-or (a b) (fk-node 71 (ms-intern a b)))
+(defn fk-logic-not (e) (fk-node 72 e))
+(defn jit-folded (v) (fk-node 73 (ms-cell v)))
+(defn fk-unbox-int (e) (fk-node 74 e))
+(defn fk-unbox-float (e) (fk-node 75 e))
+(defn fk-unbox-string (e) (fk-node 76 e))
+(defn fk-closure-lifted (idx e) (fk-node 77 (ms-intern (ms-cell idx) e)))
+(defn fk-bmf-lowered (e) (fk-node 78 e))
+(defn fk-folded-if (c t e) (fk-node 79 (ms-intern c (ms-intern t e))))
+
+(defn jit-lit-node? (n) (if (eq (fk-tag n) 1) 1 (if (eq (fk-tag n) 73) 1 0)))
 (defn jit-lit-of (n) (ms-value (fk-body n)))
 (defn jit-lit0? (n) (if (eq (jit-lit-node? n) 1) (if (eq (jit-lit-of n) 0) 1 0) 0))
 (defn jit-lit1? (n) (if (eq (jit-lit-node? n) 1) (if (eq (jit-lit-of n) 1) 1 0) 0))
@@ -53,9 +64,9 @@
 (defn jit-boolish? (n)
     (do (let t (fk-tag n))
         (if (eq t 5) 1
-        (if (eq t 44) 1
-        (if (eq t 45) 1
-        (if (eq t 46) 1
+        (if (eq t 70) 1
+        (if (eq t 71) 1
+        (if (eq t 72) 1
         (if (eq (jit-lit0? n) 1) 1
         (if (eq (jit-lit1? n) 1) 1
             (jit-if10? n)))))))))
@@ -69,7 +80,7 @@
 ; --- rule: dead branch -------------------------------------------------------
 (defn jit-rule-dead-if (node)
     (do (let t (fk-tag node))
-        (if (or (eq t 6) (eq t 53))
+        (if (or (eq t 6) (eq t 79))
             (if (eq (jit-lit-node? (ms-child (fk-body node) 0)) 1)
                 (if (eq (jit-lit-of (ms-child (fk-body node) 0)) 0)
                     (ms-child (ms-child (fk-body node) 1) 1)
@@ -96,15 +107,15 @@
 
 ; --- rule: constant folding --------------------------------------------------
 (defn jit-fold-binary? (t)
-    (if (eq t 3) 1 (if (eq t 4) 1 (if (eq t 5) 1 (if (eq t 42) 1 (if (eq t 44) 1 (if (eq t 45) 1 0)))))))
+    (if (eq t 3) 1 (if (eq t 4) 1 (if (eq t 5) 1 (if (eq t 42) 1 (if (eq t 70) 1 (if (eq t 71) 1 0)))))))
 
 (defn jit-fold-op (t a b)
     (if (eq t 3) (add a b)
     (if (eq t 4) (sub a b)
     (if (eq t 42) (mul a b)
     (if (eq t 5) (if (le a b) 1 0)
-    (if (eq t 44) (if (and (not (eq a 0)) (not (eq b 0))) 1 0)
-    (if (eq t 45) (if (or (not (eq a 0)) (not (eq b 0))) 1 0)
+    (if (eq t 70) (if (and (not (eq a 0)) (not (eq b 0))) 1 0)
+    (if (eq t 71) (if (or (not (eq a 0)) (not (eq b 0))) 1 0)
         0)))))))
 
 (defn jit-rule-fold (node)
@@ -115,7 +126,7 @@
                 (if (and (eq (jit-lit-node? a) 1) (eq (jit-lit-node? b) 1))
                     (jit-folded (jit-fold-op t (jit-lit-of a) (jit-lit-of b)))
                     node))
-            (if (eq t 46)
+            (if (eq t 72)
                 (if (eq (jit-lit-node? (fk-body node)) 1)
                     (jit-folded (if (eq (jit-lit-of (fk-body node)) 0) 1 0))
                     node)
@@ -126,13 +137,15 @@
 ;   0 value leaf · 1 one child · 2 two children · 3 IF shape (c,(t,e)) ·
 ;   4 leaf+child (CALL / CLOSURE-LIFTED: child 0 is an index leaf)
 (defn jit-shape-table ()
-    (list 0 0 0 2 2 2 3 1 0 0
+    (list 0 0 0 2 2 2 3 1 2 1
           2 2 4 2 1 0 0 1 0 2
-          1 1 1 2 0 1 2 2 2 1
-          0 0 0 0 2 2 2 2 2 2
-          2 1 2 0 2 2 1 0 1 1
-          1 4 1 3 2 1 1 2 1 2))
-(defn jit-shape (t) (if (le 60 t) 0 (nth (jit-shape-table) t)))
+          1 1 1 2 0 1 2 2 2 3
+          3 1 1 1 2 2 2 2 2 2
+          2 1 2 0 2 1 1 2 1 1
+          0 1 2 1 1 1 1 1 1 2
+          1 2 3 1 1 2 3 2 1 2
+          2 2 1 0 1 1 1 4 1 3))
+(defn jit-shape (t) (if (le 80 t) 0 (nth (jit-shape-table) t)))
 
 (defn jit-rules (node)
     (jit-rule-fold (jit-rule-logic (jit-rule-dead-if node))))
@@ -225,8 +238,8 @@
 (defn jit-lower-program (fns) (jit-lower-program-fns fns fns))
 
 ; --- nested-defn lift (gap #4 recipe lane) ------------------------------------
-; A CLOSURE-LIFTED marker (tag 51) becomes a REAL function-table entry called
-; through CALL(idx, ARG) — same answer (the walker's 51 arm runs the body with
+; A CLOSURE-LIFTED marker (tag 77) becomes a REAL function-table entry called
+; through CALL(idx, ARG) — same answer (the walker's 77 arm runs the body with
 ; the same arg), but the body now lives in the table where every pass (and the
 ; emit lane's fn rows) can reach it. One marker hoists per pass; the fixpoint
 ; rescans, so markers inside hoisted bodies lift too.
@@ -239,19 +252,19 @@
     (if (eq i 0) (cons v (tail xs))
         (cons (head xs) (jit-set-nth (tail xs) (sub i 1) v))))
 
-; jit-first-lifted — the body of the first tag-51 marker in the tree (caller
+; jit-first-lifted — the body of the first tag-77 marker in the tree (caller
 ; guarantees one exists; search order: self, then children left-to-right).
 (defn jit-first-lifted (node)
     (do (let t (fk-tag node))
         (let s (jit-shape t))
-        (if (eq t 51) (ms-child (fk-body node) 1)
+        (if (eq t 77) (ms-child (fk-body node) 1)
             (if (eq s 1) (jit-first-lifted (fk-body node))
-            (if (eq s 2) (if (eq (jit-has-tag? (ms-child (fk-body node) 0) 51) 1)
+            (if (eq s 2) (if (eq (jit-has-tag? (ms-child (fk-body node) 0) 77) 1)
                              (jit-first-lifted (ms-child (fk-body node) 0))
                              (jit-first-lifted (ms-child (fk-body node) 1)))
-            (if (eq s 3) (if (eq (jit-has-tag? (ms-child (fk-body node) 0) 51) 1)
+            (if (eq s 3) (if (eq (jit-has-tag? (ms-child (fk-body node) 0) 77) 1)
                              (jit-first-lifted (ms-child (fk-body node) 0))
-                         (if (eq (jit-has-tag? (ms-child (ms-child (fk-body node) 1) 0) 51) 1)
+                         (if (eq (jit-has-tag? (ms-child (ms-child (fk-body node) 1) 0) 77) 1)
                              (jit-first-lifted (ms-child (ms-child (fk-body node) 1) 0))
                              (jit-first-lifted (ms-child (ms-child (fk-body node) 1) 1))))
             (if (eq s 4) (jit-first-lifted (ms-child (fk-body node) 1))
@@ -262,17 +275,17 @@
 (defn jit-lift-replace (node idx)
     (do (let t (fk-tag node))
         (let s (jit-shape t))
-        (if (eq t 51) (fk-call idx (fk-arg))
+        (if (eq t 77) (fk-call idx (fk-arg))
             (if (eq s 1) (fk-node t (jit-lift-replace (fk-body node) idx))
-            (if (eq s 2) (if (eq (jit-has-tag? (ms-child (fk-body node) 0) 51) 1)
+            (if (eq s 2) (if (eq (jit-has-tag? (ms-child (fk-body node) 0) 77) 1)
                              (fk-node t (ms-intern (jit-lift-replace (ms-child (fk-body node) 0) idx)
                                                    (ms-child (fk-body node) 1)))
                              (fk-node t (ms-intern (ms-child (fk-body node) 0)
                                                    (jit-lift-replace (ms-child (fk-body node) 1) idx))))
-            (if (eq s 3) (if (eq (jit-has-tag? (ms-child (fk-body node) 0) 51) 1)
+            (if (eq s 3) (if (eq (jit-has-tag? (ms-child (fk-body node) 0) 77) 1)
                              (fk-node t (ms-intern (jit-lift-replace (ms-child (fk-body node) 0) idx)
                                                    (ms-child (fk-body node) 1)))
-                         (if (eq (jit-has-tag? (ms-child (ms-child (fk-body node) 1) 0) 51) 1)
+                         (if (eq (jit-has-tag? (ms-child (ms-child (fk-body node) 1) 0) 77) 1)
                              (fk-node t (ms-intern (ms-child (fk-body node) 0)
                                                    (ms-intern (jit-lift-replace (ms-child (ms-child (fk-body node) 1) 0) idx)
                                                               (ms-child (ms-child (fk-body node) 1) 1))))
@@ -287,7 +300,7 @@
 ; one-element list; empty list when the table is marker-free.
 (defn jit-lift-scan (fns i)
     (if (le (len fns) i) (list)
-        (if (eq (jit-has-tag? (nth fns i) 51) 1) (cons i (list))
+        (if (eq (jit-has-tag? (nth fns i) 77) 1) (cons i (list))
             (jit-lift-scan fns (add i 1)))))
 
 ; The door: every marker hoisted into the table, to fixpoint.

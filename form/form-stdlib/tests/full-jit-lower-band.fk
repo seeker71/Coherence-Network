@@ -14,11 +14,11 @@
 ;       0 at arg 11
 ;   4   const folding: ADD(40,2) folds to FOLDED 42, and MUL(SUB(10,4),7)
 ;       folds through nesting to 42
-;   8   the float-unbox carrier (tag 49) is transparent: the engine folds
+;   8   the float-unbox carrier (tag 75) is transparent: the engine folds
 ;       inside it, the walker delegates through it, the answer holds
-;   16  the lifted-closure carrier (tag 51) keeps its index leaf, folds its
+;   16  the lifted-closure carrier (tag 77) keeps its index leaf, folds its
 ;       body, and walks to the body's answer
-;   32  the BMF-lowered carrier (tag 52) folds inside and walks to 42
+;   32  the BMF-lowered carrier (tag 78) folds inside and walks to 42
 (do
     (let fib-prog (fk-fib-program))
     (let lowered-fib (jit-lower-tree fib-prog))
@@ -36,17 +36,17 @@
 
     (let folded-add (jit-lower-tree (fk-add (fk-lit 40) (fk-lit 2))))
     (let folded-mul (jit-lower-tree (fk-mul (fk-sub (fk-lit 10) (fk-lit 4)) (fk-lit 7))))
-    (let c2 (if (eq (fk-tag folded-add) 47)
+    (let c2 (if (eq (fk-tag folded-add) 73)
                 (if (eq (fk-run folded-add 0) 42)
                     (if (eq (fk-run folded-mul 0) 42) 4 0) 0) 0))
 
     (let lowered-unb (jit-lower-tree (fk-unbox-float (fk-add (fk-lit 1) (fk-lit 2)))))
-    (let c3 (if (eq (fk-tag lowered-unb) 49) (if (eq (fk-run lowered-unb 0) 3) 8 0) 0))
+    (let c3 (if (eq (fk-tag lowered-unb) 75) (if (eq (fk-run lowered-unb 0) 3) 8 0) 0))
 
     (let lowered-lift (jit-lower-tree (fk-closure-lifted 9 (fk-add (fk-lit 1) (fk-lit 2)))))
-    (let c4 (if (eq (fk-tag lowered-lift) 51) (if (eq (fk-run lowered-lift 0) 3) 16 0) 0))
+    (let c4 (if (eq (fk-tag lowered-lift) 77) (if (eq (fk-run lowered-lift 0) 3) 16 0) 0))
 
     (let lowered-bmf (jit-lower-tree (fk-bmf-lowered (fk-add (fk-lit 40) (fk-lit 2)))))
-    (let c5 (if (eq (fk-tag lowered-bmf) 52) (if (eq (fk-run lowered-bmf 0) 42) 32 0) 0))
+    (let c5 (if (eq (fk-tag lowered-bmf) 78) (if (eq (fk-run lowered-bmf 0) 42) 32 0) 0))
 
     (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))

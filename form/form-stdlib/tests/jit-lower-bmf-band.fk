@@ -30,7 +30,7 @@
                       (fk-if (fk-le (fk-lit 0) p) (fk-lit 1) (fk-lit 0))
                       (fk-lit 0)))
     (let lg (jit-lower-tree guard))
-    (let c1 (if (eq (fk-tag lg) 44)
+    (let c1 (if (eq (fk-tag lg) 70)
                 (if (eq (fk-run lg 5) 1)
                     (if (eq (fk-run lg 50) 0) 2 0) 0) 0))
 

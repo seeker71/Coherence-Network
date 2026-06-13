@@ -811,9 +811,9 @@ value ABI and added scanner/string primitives (`scan_run`, `substring`,
 `11` compile-failed rows, `76` warming rows, `9` compiled rows, and `8`
 dispatch-hit rows; framebuffer events fell to `26394`. Fresh timing after that
 pass: native Go local tunnel `p50=564.986 ms`, `p95=601.781 ms`; public FastAPI
-`p50=265.967 ms`, `p95=1090.011 ms`. The next pressure is now `node_value`,
-logic ops, `_dict_get`, `intern_node_at`, `intern_trivial_float`, and node
-introspection.
+`p50=265.967 ms`, `p95=1090.011 ms`. After the lowered JIT residual ratchet,
+the next pressure is now `node_value`, `_dict_get`, `intern_node_at`,
+`intern_trivial_float`, and node introspection.
 
 Each handler parses its query params from the request alist (a recursive
 `split_commas` over the kernel's `str_find`/`substring`, then `str_to_int` /

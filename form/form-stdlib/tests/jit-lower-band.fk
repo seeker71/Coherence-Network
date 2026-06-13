@@ -2,7 +2,7 @@
 ;
 ; jit-lower-band — portable JIT logic lowering proven on the fourth lane:
 ; the lowering recipe (jit-lower.fk) rewrites the direct IF expansion of
-; and/or/not guards into the unboxed LOGIC lane (tags 44..46), and the
+; and/or/not guards into the unboxed LOGIC lane (tags 70..72), and the
 ; lowered tree walks to the same 0/1 as its source — the body-owned version
 ; of the logic feature (gap #3 reference semantics from the Go typed
 ; hardcode), exactly the host-kernel.form intent: JIT as a composite of a
@@ -22,14 +22,14 @@
                              (fk-if (fk-le (fk-lit 0) (fk-arg)) (fk-lit 1) (fk-lit 0))
                              (fk-lit 0)))
     (let lowered (jit-lower-tree guard-direct))
-    (let c0 (if (eq (fk-tag lowered) 44) 1 0))
+    (let c0 (if (eq (fk-tag lowered) 70) 1 0))
     (let c1 (if (eq (fk-run lowered 3) (fk-run guard-direct 3))
                 (if (eq (fk-run lowered 0) (fk-run guard-direct 0))
                     (if (eq (fk-run lowered 9) (fk-run guard-direct 9)) 2 0) 0) 0))
 
     (let not-direct (fk-if (fk-le (fk-arg) (fk-lit 5)) (fk-lit 0) (fk-lit 1)))
     (let not-lowered (jit-lower-tree not-direct))
-    (let c2 (if (eq (fk-tag not-lowered) 46)
+    (let c2 (if (eq (fk-tag not-lowered) 72)
                 (if (eq (fk-run not-lowered 0) (fk-run not-direct 0))
                     (if (eq (fk-run not-lowered 7) (fk-run not-direct 7)) 4 0) 0) 0))
 

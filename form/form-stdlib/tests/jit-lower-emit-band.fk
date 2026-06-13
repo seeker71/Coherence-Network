@@ -1,73 +1,108 @@
 ; preludes: form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/jit-lower.fk form-stdlib/hati-os-kernel-emit.fk
 ;
 ; jit-lower-emit-band — the emit half of the jit-lowered lane proven
-; three-way: the emitted C walker carries native arms for tags 44..53
+; three-way: the emitted C walker carries native arms for tags 70..79
 ; (jit-lower.fk's logic/folded/unbox/closure/bmf-lowered vocabulary), so a
 ; lowered tree runs on the emitted fourth sibling with fk-walk's exact
 ; semantics. The kernels agreeing byte-for-byte on this verdict IS the
 ; proof that all three emit the same lowered-lane text.
 ;
 ; Verdict 63 when the lane is carried:
-;   1   the lowering recognizes the and-guard (root tag 44) and the lowered
+;   1   the lowering recognizes the and-guard (root tag 70) and the lowered
 ;       tree walks like its source on the RECIPE side: 1 at arg 5 (inside
 ;       0..10), 0 at arg 11 (outside) — fk-walk's lane is the semantics
-;   2   the lowered guard flattens to the canonical 7-row table, the 44 row
+;   2   the lowered guard flattens to the canonical 7-row table, the 70 row
 ;       carrying its two LE children's indices (post-order, root last)
 ;   4   the emitted many-walker text carries the logic arms natively:
-;       direct && for 44, direct || for 45, == 0 for 46, and the 47 FOLDED
+;       direct && for 70, direct || for 71, == 0 for 72, and the 73 FOLDED
 ;       literal arm (the LIT shape over the folded value)
-;   8   the delegate lane is in the text: 48/49/50/52 walk their child at
-;       column 1, 51 CLOSURE-LIFTED walks its child at column 2 past the
-;       index leaf, 53 FOLDED-IF is the IF arm verbatim
+;   8   the delegate lane is in the text: 74/75/76/78 walk their child at
+;       column 1, 77 CLOSURE-LIFTED walks its child at column 2 past the
+;       index leaf, 79 FOLDED-IF is the IF arm verbatim
 ;   16  the flattener lays the lowered rows by their declared shapes:
-;       46 unary, 47 value leaf, 51 (index, child), 52 unary, and 53 the
+;       72 unary, 73 value leaf, 77 (index, child), 78 unary, and 79 the
 ;       3-child IF row — and the wrapped trees keep their recipe answers
 ;   32  the universal walker (no baked program) carries the same lane, and
 ;       the lowered-program emission is deterministic text
+(defn jit-emit-row-eq? (row tag a b c)
+    (if (eq (nth row 0) tag)
+        (if (eq (nth row 1) a)
+            (if (eq (nth row 2) b)
+                (if (eq (nth row 3) c) 1 0) 0) 0)
+        0))
+
 (do
     (let guard-direct (fk-if (fk-le (fk-arg) (fk-lit 10))
                              (fk-le (fk-lit 0) (fk-arg))
                              (fk-lit 0)))
     (let g (jit-lower-tree guard-direct))
-    (let c0 (if (eq (fk-tag g) 44)
+    (let c0 (if (eq (fk-tag g) 70)
                 (if (eq (fk-run g 5) 1)
                     (if (eq (fk-run g 11) 0)
                         (if (eq (fk-run guard-direct 5) 1)
                             (if (eq (fk-run guard-direct 11) 0) 1 0) 0) 0) 0) 0))
 
-    (let c1 (if (str_eq (fkc-rows-text (fkc-flatten g))
-                        "{2,0,0,0},{1,10,0,0},{5,0,1,0},{1,0,0,0},{2,0,0,0},{5,3,4,0},{44,2,5,0},") 2 0))
+    (let grow (fkc-flatten g))
+    (let c1 (if (eq (len grow) 7)
+                (if (eq (jit-emit-row-eq? (nth grow 0) 70 2 5 0) 1)
+                    (if (eq (jit-emit-row-eq? (nth grow 1) 5 3 4 0) 1)
+                        (if (eq (jit-emit-row-eq? (nth grow 2) 2 0 0 0) 1)
+                            (if (eq (jit-emit-row-eq? (nth grow 3) 1 0 0 0) 1)
+                                (if (eq (jit-emit-row-eq? (nth grow 4) 5 0 1 0) 1)
+                                    (if (eq (jit-emit-row-eq? (nth grow 5) 1 10 0 0) 1)
+                                        (if (eq (jit-emit-row-eq? (nth grow 6) 2 0 0 0) 1) 2 0) 0) 0) 0) 0) 0) 0)
+                0))
 
     (let emt (fkc-emit-many (list g)))
-    (let c2 (if (ge (str_find emt "if (t == 44) { long long a44 = fk_walk(fk_node[i][1], fp); long long b44 = fk_walk(fk_node[i][2], fp); if (a44 != 0 && b44 != 0) { return 2; } return 0; }" 0) 0)
-                (if (ge (str_find emt "a45 != 0 || b45 != 0" 0) 0)
-                    (if (ge (str_find emt "if (t == 46) { if (fk_walk(fk_node[i][1], fp) == 0) { return 2; } return 0; }" 0) 0)
-                        (if (ge (str_find emt "if (t == 47) { return fk_node[i][1] << 1; }" 0) 0) 4 0) 0) 0) 0))
+    (let c2 (if (ge (str_find emt "if (t == 70) { long long a70 = fk_walk(fk_node[i][1], fp); long long b70 = fk_walk(fk_node[i][2], fp); if (a70 != 0 && b70 != 0) { return 2; } return 0; }" 0) 0)
+                (if (ge (str_find emt "a71 != 0 || b71 != 0" 0) 0)
+                    (if (ge (str_find emt "if (t == 72) { if (fk_walk(fk_node[i][1], fp) == 0) { return 2; } return 0; }" 0) 0)
+                        (if (ge (str_find emt "if (t == 73) { return fk_node[i][1] << 1; }" 0) 0) 4 0) 0) 0) 0))
 
-    (let c3 (if (ge (str_find emt "if (t == 48) { return fk_walk(fk_node[i][1], fp); }" 0) 0)
-                (if (ge (str_find emt "if (t == 50) { return fk_walk(fk_node[i][1], fp); }" 0) 0)
-                    (if (ge (str_find emt "if (t == 51) { return fk_walk(fk_node[i][2], fp); }" 0) 0)
-                        (if (ge (str_find emt "if (t == 52) { return fk_walk(fk_node[i][1], fp); }" 0) 0)
-                            (if (ge (str_find emt "if (t == 53) { if (fk_walk(fk_node[i][1], fp) == 0) { return fk_walk(fk_node[i][3], fp); } return fk_walk(fk_node[i][2], fp); }" 0) 0) 8 0) 0) 0) 0) 0))
+    (let c3 (if (ge (str_find emt "if (t == 74) { return fk_walk(fk_node[i][1], fp); }" 0) 0)
+                (if (ge (str_find emt "if (t == 75) { return fk_walk(fk_node[i][1], fp); }" 0) 0)
+                    (if (ge (str_find emt "if (t == 76) { return fk_walk(fk_node[i][1], fp); }" 0) 0)
+                        (if (ge (str_find emt "if (t == 77) { return fk_walk(fk_node[i][2], fp); }" 0) 0)
+                            (if (ge (str_find emt "if (t == 78) { return fk_walk(fk_node[i][1], fp); }" 0) 0)
+                                (if (ge (str_find emt "if (t == 79) { if (fk_walk(fk_node[i][1], fp) == 0) { return fk_walk(fk_node[i][3], fp); } return fk_walk(fk_node[i][2], fp); }" 0) 0) 8 0) 0) 0) 0) 0) 0))
 
     (let wrapped-not (fk-logic-not (fk-lit 0)))
     (let folded21 (jit-folded 21))
     (let lifted (fk-closure-lifted 3 (fk-lit 9)))
     (let delegated (fk-bmf-lowered (fk-lit 7)))
     (let fif (fk-folded-if (fk-le (fk-arg) (fk-lit 3)) (fk-lit 7) (fk-lit 8)))
-    (let c4 (if (str_eq (fkc-rows-text (fkc-flatten wrapped-not)) "{1,0,0,0},{46,0,0,0},")
-                (if (str_eq (fkc-rows-text (fkc-flatten folded21)) "{47,21,0,0},")
-                    (if (str_eq (fkc-rows-text (fkc-flatten lifted)) "{1,9,0,0},{51,3,0,0},")
-                        (if (str_eq (fkc-rows-text (fkc-flatten delegated)) "{1,7,0,0},{52,0,0,0},")
-                            (if (str_eq (fkc-rows-text (fkc-flatten fif)) "{2,0,0,0},{1,3,0,0},{5,0,1,0},{1,7,0,0},{1,8,0,0},{53,2,3,4},")
-                                (if (eq (fk-run wrapped-not 0) 1)
-                                    (if (eq (fk-run folded21 0) 21)
-                                        (if (eq (fk-run fif 2) 7)
-                                            (if (eq (fk-run fif 4) 8) 16 0) 0) 0) 0) 0) 0) 0) 0) 0))
+    (let notrows (fkc-flatten wrapped-not))
+    (let foldrows (fkc-flatten folded21))
+    (let liftrows (fkc-flatten lifted))
+    (let bmfrows (fkc-flatten delegated))
+    (let fifrows (fkc-flatten fif))
+    (let c4 (if (eq (len notrows) 2)
+                (if (eq (jit-emit-row-eq? (nth notrows 0) 72 0 0 0) 1)
+                (if (eq (jit-emit-row-eq? (nth notrows 1) 1 0 0 0) 1)
+                (if (eq (len foldrows) 1)
+                (if (eq (jit-emit-row-eq? (nth foldrows 0) 73 21 0 0) 1)
+                (if (eq (len liftrows) 2)
+                (if (eq (jit-emit-row-eq? (nth liftrows 0) 77 3 0 0) 1)
+                (if (eq (jit-emit-row-eq? (nth liftrows 1) 1 9 0 0) 1)
+                (if (eq (len bmfrows) 2)
+                (if (eq (jit-emit-row-eq? (nth bmfrows 0) 78 0 0 0) 1)
+                (if (eq (jit-emit-row-eq? (nth bmfrows 1) 1 7 0 0) 1)
+                (if (eq (len fifrows) 6)
+                (if (eq (jit-emit-row-eq? (nth fifrows 0) 79 2 3 4) 1)
+                (if (eq (jit-emit-row-eq? (nth fifrows 1) 1 8 0 0) 1)
+                (if (eq (jit-emit-row-eq? (nth fifrows 2) 1 7 0 0) 1)
+                (if (eq (jit-emit-row-eq? (nth fifrows 3) 5 0 1 0) 1)
+                (if (eq (jit-emit-row-eq? (nth fifrows 4) 1 3 0 0) 1)
+                (if (eq (jit-emit-row-eq? (nth fifrows 5) 2 0 0 0) 1)
+                    (if (eq (fk-run wrapped-not 0) 1)
+                        (if (eq (fk-run folded21 0) 21)
+                            (if (eq (fk-run fif 2) 7)
+                                (if (eq (fk-run fif 4) 8) 16 0) 0) 0) 0)
+                    0) 0) 0) 0) 0) 0) 0) 0) 0) 0) 0) 0) 0) 0) 0) 0) 0) 0))
 
     (let uni (fkc-emit-universal))
-    (let c5 (if (ge (str_find uni "a44 != 0 && b44 != 0" 0) 0)
-                (if (ge (str_find uni "if (t == 53) { if (fk_walk(fk_node[i][1], fp) == 0) { return fk_walk(fk_node[i][3], fp); }" 0) 0)
+    (let c5 (if (ge (str_find uni "a70 != 0 && b70 != 0" 0) 0)
+                (if (ge (str_find uni "if (t == 79) { if (fk_walk(fk_node[i][1], fp) == 0) { return fk_walk(fk_node[i][3], fp); }" 0) 0)
                     (if (str_eq emt (fkc-emit-many (list g))) 32 0) 0) 0))
 
     (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))

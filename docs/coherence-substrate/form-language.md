@@ -1037,9 +1037,9 @@ compile-failed / `75` warming / `0` dispatch-hit rows to `15` compile-failed /
 `75` warming / `6` compiled / `6` dispatch-hit rows after the value-ABI pass.
 The next helper-call pass added interprocedural value-ABI lowering plus
 scanner/string primitives and moved the route to `11` compile-failed / `76`
-warming / `9` compiled / `8` dispatch-hit rows. Remaining misses are now
-attributed to `node_value`, logic ops, dict/field, node introspection/write, and
-numeric-trivial construction primitives. The
+warming / `9` compiled / `8` dispatch-hit rows. After the lowered JIT residual
+ratchet, remaining misses are now attributed to `node_value`, dict/field, node
+introspection/write, and numeric-trivial construction primitives. The
 lesson is architectural: JIT work follows repeated framebuffer observation of
 recipe/body coordinates, not endpoint-specific special cases.
 

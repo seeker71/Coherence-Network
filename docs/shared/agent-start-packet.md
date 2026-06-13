@@ -161,8 +161,8 @@ against the same tunnel is `p50=412.903 ms`; public FastAPI HTTP total is
 `p50=269.859 ms`, `p95=1087.374 ms`. Current attention: DB connection/pool cell
 and query strategy for median; substrate allocation/Form JSON/JIT compression for
 native tail; route-contract alignment (`query` is native-only today); remaining
-JIT pressure families after the Go value-ABI and helper-call passes:
-`node_value`, logic ops, dict/field access (`_dict_get`),
+JIT pressure families after the Go value-ABI, helper-call, and lowered
+logic/fold/lift/emit passes: `node_value`, dict/field access (`_dict_get`),
 node introspection/write primitives, `intern_trivial_float`, and route semantics.
 Latest warmed observation state is `11` compile-failed / `76` warming /
 `9` compiled / `8` dispatch-hit rows.
@@ -450,13 +450,13 @@ In the Coherence substrate, you must redirect this programming into **coordinate
 
 ## JIT Engine Reality & Gaps
 
-The JIT compiler (`form-kernel-go/jit.go`) is an active optimization layer that compiles Form closures to Go shared libraries dynamically. However, you must design with its current gaps in mind:
+The JIT compiler (`form-kernel-go/jit.go`) is an active Go optimization layer that compiles Form closures to Go shared libraries dynamically. The portable floor now lives beside it: `jit-lower.fk` lowers the residual logic/fold/unbox/lift/BMF/emit cluster onto reconciled tags 70..79 and the covered bands run through Go, Rust, TypeScript, and `fkwu`. Design with both surfaces in mind:
 
 * **Compilation Latency**: The JIT invokes the host Go toolchain (`go build -buildmode=plugin`) on compile. This requires an external toolchain and incurs a **100ms - 500ms latency** on first run, preventing microsecond-level hot-path compilation.
 * **Calling Convention & Arity Limits**: The Go plugin boundary is fixed to `func Fn(args []int64) int64`. To pass float vectors (e.g. 8-band efficacy-probe spectra in `pair_angle`), floats must be serialized to `int64` bits and reconstructed as slices on the other side. Dynamic lists, maps, and arbitrary structures cannot cross the boundary without boxing overhead.
-* **No Outer Scope Capture / Nested Defs**: The JIT refuses compiles if a recipe contains nested function definitions (`RBasicFnDef`) or references free variables from an outer lexical scope.
-* **No String or Map Support**: Trivial strings (`TrivString`) and complex object mappings are completely unsupported inside JIT compiled bodies.
-* **No Sibling Parity**: The JIT is specific to the Go kernel. Rust and TypeScript run pure interpreter loops or native host optimization (V8), meaning optimization is asymmetric.
+* **Outer Scope Capture**: Capture-free nested definitions can lift, but a nested definition that closes over an outer local still refuses by name.
+* **String and Map Boundary**: Strings have a Form-native pool-id unbox lane in the fourth-arm lowering proof. Complex maps/dicts still need dict/field carrier coverage before they are hot-path native.
+* **Sibling Parity Boundary**: The Go plugin remains Go-specific. The portable JIT-lowering floor is the Form recipe/table path proven by `fkwu`; Android should rely on that minimum floor, with any packaged compiler binary treated as optional acceleration/oracle evidence.
 
 ## Observability Gaps: Possible vs. Present
 

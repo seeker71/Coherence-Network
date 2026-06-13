@@ -14,10 +14,10 @@
 ;   2   the purity gate holds: a callee that opens an organ door (SET) is
 ;       NOT inlined — its CALL stands
 ;   4   lift: one CLOSURE-LIFTED marker hoists into the table — the table
-;       grows to 2 functions, no tag-51 remains, and the lifted program
+;       grows to 2 functions, no tag-77 remains, and the lifted program
 ;       answers exactly what the marked program answers (16 at arg 5)
 ;   8   lift then lower composes: inlining the lifted call dissolves the
-;       marker's indirection entirely (no CALL, no tag-51) at the same answer
+;       marker's indirection entirely (no CALL, no tag-77) at the same answer
 (do
     (let helper (fk-add (fk-arg) (fk-lit 1)))
     (let main0 (fk-add (fk-call 1 (fk-arg)) (fk-call 1 (fk-lit 2))))
@@ -35,13 +35,13 @@
     (let marked (fk-add (fk-closure-lifted 0 (fk-add (fk-arg) (fk-lit 1))) (fk-lit 10)))
     (let lifted (jit-lift-program (list marked)))
     (let c2 (if (eq (len lifted) 2)
-                (if (eq (jit-has-tag? (nth lifted 0) 51) 0)
+                (if (eq (jit-has-tag? (nth lifted 0) 77) 0)
                     (if (eq (fkm-run lifted 5) (fkm-run (list marked) 5))
                         (if (eq (fkm-run lifted 5) 16) 4 0) 0) 0) 0))
 
     (let relow (jit-lower-program lifted))
     (let c3 (if (eq (jit-has-tag? (nth relow 0) 12) 0)
-                (if (eq (jit-has-tag? (nth relow 0) 51) 0)
+                (if (eq (jit-has-tag? (nth relow 0) 77) 0)
                     (if (eq (fkm-run relow 5) 16) 8 0) 0) 0))
 
     (add c0 (add c1 (add c2 c3))))
