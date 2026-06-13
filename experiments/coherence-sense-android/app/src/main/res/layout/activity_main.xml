@@ -2,129 +2,322 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@drawable/bg_app"
     android:fillViewport="true">
 
     <LinearLayout
-        android:orientation="vertical"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="16dp">
+        android:orientation="vertical"
+        android:padding="18dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_hero"
+            android:elevation="2dp"
+            android:orientation="vertical"
+            android:padding="18dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:letterSpacing="0"
+                android:text="HATI MESH ORGAN"
+                android:textColor="#9AD6CA"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:letterSpacing="0"
+                android:text="Coherence Sense"
+                android:textColor="#F8FAF8"
+                android:textSize="28sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/statusView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_status"
+                android:padding="12dp"
+                android:text="Ready. Senses held."
+                android:textColor="#E8F2ED"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/connectBtn"
+                    android:layout_width="0dp"
+                    android:layout_height="52dp"
+                    android:layout_marginEnd="10dp"
+                    android:layout_weight="1"
+                    android:text="Start sharing" />
+
+                <Button
+                    android:id="@+id/settingsBtn"
+                    android:layout_width="112dp"
+                    android:layout_height="52dp"
+                    android:text="Settings" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/settingsPanel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_panel"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Connection"
+                android:textColor="#1F2C2A"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Mac witness URL"
+                android:textColor="#53615D"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/urlField"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:contentDescription="Mac witness URL"
+                android:hint="http://MAC-IP:8800"
+                android:inputType="textUri"
+                android:text="http://192.168.1.10:8800" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="Hati mesh API"
+                android:textColor="#53615D"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/meshField"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:contentDescription="Hati mesh API URL"
+                android:hint="https://api.coherencycoin.com/api"
+                android:inputType="textUri"
+                android:text="https://api.coherencycoin.com/api" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="Identity label"
+                android:textColor="#53615D"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/stewardField"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:contentDescription="Optional cell id or email identity label"
+                android:hint="cell id or email, opt-in"
+                android:inputType="textEmailAddress" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_panel"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Mesh"
+                android:textColor="#1F2C2A"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/meshSummaryView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:fontFamily="monospace"
+                android:text="mesh: waiting"
+                android:textColor="#4D5A56"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/identityView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:fontFamily="monospace"
+                android:text="organ identity not announced"
+                android:textColor="#4D5A56"
+                android:textSize="12sp" />
+
+            <ImageView
+                android:id="@+id/qrView"
+                android:layout_width="176dp"
+                android:layout_height="176dp"
+                android:layout_marginTop="14dp"
+                android:background="#FFFFFF"
+                android:contentDescription="organ identity QR"
+                android:padding="8dp" />
+        </LinearLayout>
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Coherence Sense"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:paddingBottom="4dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="this phone becomes a sense organ of the network — its senses stream to the Mac, which witnesses and shares the field back."
-            android:textSize="12sp"
-            android:paddingBottom="12dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Mac witness URL"
+            android:layout_marginTop="18dp"
+            android:text="Channels"
+            android:textColor="#1F2C2A"
+            android:textSize="18sp"
             android:textStyle="bold" />
 
-        <EditText
-            android:id="@+id/urlField"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:contentDescription="Mac witness URL"
-            android:hint="http://MAC-IP:8800"
-            android:inputType="textUri"
-            android:text="http://192.168.1.10:8800" />
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Hati mesh API"
-            android:textStyle="bold"
-            android:paddingTop="8dp" />
+            <TextView
+                android:id="@+id/sensorLaneView"
+                android:layout_width="0dp"
+                android:layout_height="118dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_lane"
+                android:padding="12dp"
+                android:textColor="#24302D"
+                android:textSize="12sp" />
 
-        <EditText
-            android:id="@+id/meshField"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:contentDescription="Hati mesh API URL"
-            android:hint="https://api.coherencycoin.com/api"
-            android:inputType="textUri"
-            android:text="https://api.coherencycoin.com/api" />
+            <TextView
+                android:id="@+id/audioLaneView"
+                android:layout_width="0dp"
+                android:layout_height="118dp"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_lane"
+                android:padding="12dp"
+                android:textColor="#24302D"
+                android:textSize="12sp" />
+        </LinearLayout>
 
-        <TextView
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Identity label"
-            android:textStyle="bold"
-            android:paddingTop="8dp" />
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
 
-        <EditText
-            android:id="@+id/stewardField"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:contentDescription="Optional cell id or email identity label"
-            android:hint="your cell id or email (optional)"
-            android:inputType="textEmailAddress" />
+            <TextView
+                android:id="@+id/videoLaneView"
+                android:layout_width="0dp"
+                android:layout_height="118dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_lane"
+                android:padding="12dp"
+                android:textColor="#24302D"
+                android:textSize="12sp" />
 
-        <Button
-            android:id="@+id/connectBtn"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Connect + share senses" />
+            <TextView
+                android:id="@+id/networkLaneView"
+                android:layout_width="0dp"
+                android:layout_height="118dp"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_lane"
+                android:padding="12dp"
+                android:textColor="#24302D"
+                android:textSize="12sp" />
+        </LinearLayout>
 
-        <TextView
-            android:id="@+id/statusView"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="not connected — senses held"
-            android:textStyle="bold"
-            android:paddingTop="10dp"
-            android:paddingBottom="10dp" />
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
 
-        <TextView
-            android:id="@+id/identityView"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="organ identity not announced"
-            android:textSize="11sp"
-            android:fontFamily="monospace"
-            android:paddingBottom="8dp" />
+            <TextView
+                android:id="@+id/bluetoothLaneView"
+                android:layout_width="0dp"
+                android:layout_height="118dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_lane"
+                android:padding="12dp"
+                android:textColor="#24302D"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/resourceLaneView"
+                android:layout_width="0dp"
+                android:layout_height="118dp"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_lane"
+                android:padding="12dp"
+                android:textColor="#24302D"
+                android:textSize="12sp" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/channelsView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="channels: none open"
-            android:textSize="11sp"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_panel"
             android:fontFamily="monospace"
-            android:paddingBottom="8dp" />
-
-        <ImageView
-            android:id="@+id/qrView"
-            android:layout_width="160dp"
-            android:layout_height="160dp"
-            android:contentDescription="organ identity QR"
-            android:paddingBottom="8dp" />
+            android:padding="14dp"
+            android:text="channels: none open"
+            android:textColor="#4D5A56"
+            android:textSize="12sp" />
 
         <TextView
             android:id="@+id/dashboardView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="dashboard: not listening"
-            android:textSize="11sp"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_panel"
             android:fontFamily="monospace"
-            android:paddingBottom="8dp" />
+            android:padding="14dp"
+            android:text="resource details: waiting"
+            android:textColor="#4D5A56"
+            android:textSize="12sp" />
 
         <TextView
             android:id="@+id/feedView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_panel"
             android:fontFamily="monospace"
-            android:textSize="11sp" />
+            android:minHeight="90dp"
+            android:padding="14dp"
+            android:text="recent witness: none"
+            android:textColor="#4D5A56"
+            android:textSize="12sp" />
     </LinearLayout>
 </ScrollView>
