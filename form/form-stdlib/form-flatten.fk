@@ -354,9 +354,18 @@
     (flt-defn-p (flt-word s pos) s (fp-sym-end s pos) fns rbodies env main))
 (defn flt-defn-p (name s pos fns rbodies env main)
     (flt-defn-p2 name s (flt-params s (add (fp-skip s pos) 1)) fns rbodies env main))
+(defn flt-defn-sig (name arity fns)
+    (if (eq (len (flt-assoc name fns)) 0)
+        (list name (add (len fns) 1) arity)
+        (flt-assoc name fns)))
+(defn flt-defn-fns (row fns)
+    (if (eq (len (flt-assoc (nth row 0) fns)) 0) (cons row fns) fns))
 (defn flt-defn-p2 (name s pe fns rbodies env main)
+    (flt-defn-p3 name s pe fns rbodies env main
+                 (flt-defn-sig name (len (nth pe 0)) fns)))
+(defn flt-defn-p3 (name s pe fns rbodies env main row)
     (flt-defn-b s (nth pe 1)
-                (cons (list name (add (len fns) 1) (len (nth pe 0))) fns)
+                (flt-defn-fns row fns)
                 (cons (flt-pool-row env) (flt-penv (nth pe 0) (len (nth pe 0)) 0))
                 rbodies env main))
 (defn flt-defn-b (s pos fns benv rbodies env main)
@@ -376,8 +385,29 @@
 
 ; one source file's (do ...) — returns (fns rbodies main endpos); env is
 ; seeded with the program's string pool under the quote-name
+; Register all top-level function signatures in this source before bodies parse.
+; The regular walkers allow forward references; the fourth-arm flattener must
+; carry the same contract for mutually recursive compiler recipes.
+(defn flt-sig-scan (s pos fns) (flt-sig-scan-at s (fp-skip s pos) fns))
+(defn flt-sig-scan-at (s pos fns)
+    (if (ge pos (fp-len s)) fns
+        (if (eq (fp-at s pos) 34)
+            (flt-sig-scan s (add (flt-strend s (add pos 1)) 1) fns)
+            (if (and (eq (fp-at s pos) 40)
+                     (str_eq (flt-word s (fp-skip s (add pos 1))) "defn"))
+                (flt-sig-defn s pos fns)
+                (flt-sig-scan s (flt-scan-adv s pos) fns)))))
+(defn flt-sig-defn (s pos fns)
+    (flt-sig-defn-n s (fp-skip s (fp-sym-end s (fp-skip s (add pos 1)))) fns))
+(defn flt-sig-defn-n (s pos fns)
+    (flt-sig-defn-p (flt-word s pos) s (fp-sym-end s pos) fns))
+(defn flt-sig-defn-p (name s pos fns)
+    (flt-sig-defn-done name s (flt-params s (add (fp-skip s pos) 1)) fns))
+(defn flt-sig-defn-done (name s pe fns)
+    (flt-sig-scan s (nth pe 1) (cons (list name (add (len fns) 1) (len (nth pe 0))) fns)))
+
 (defn flt-top (s fns rbodies pool)
-    (flt-top2 s (fp-skip s 0) fns rbodies pool))
+    (flt-top2 s (fp-skip s 0) (flt-sig-scan s 0 fns) rbodies pool))
 (defn flt-top2 (s pos fns rbodies pool)
     (flt-items s (flt-top-pos s pos) fns rbodies
                (list (list (flt-poolq) pool)) (fk-lit 0)))

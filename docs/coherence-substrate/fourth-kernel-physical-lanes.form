@@ -14,15 +14,15 @@
     (runtime form-native-recipes)
     (choice measured-oracle-learning-samples)
     (hardware-classes cpu gpu ml)
-    (proof form/form-stdlib/tests/jit-metal-lanes-band.fk -> 4095)
-    (learning-proof form/form-stdlib/tests/jit-oracle-learning-band.fk -> 1023))
+    (proof form/form-stdlib/tests/jit-metal-lanes-band.fk -> 4095 four-way-fkwu)
+    (learning-proof form/form-stdlib/tests/jit-oracle-learning-band.fk -> 1023 four-way-fkwu))
 
   (claim
     "The tool/channel surface is more than catalog data when a lane is backed by a Hati-emitted binary."
     "The probe emits C from Form, compiles native Hati binaries with clang, and runs those binaries against local host resources.")
 
   (floor
-    "The local proof emits native Hati binaries and records real host/resource stdout or artifacts for the currently available physical lanes.")
+    "The local proof emits native Hati binaries, runs the Form-native JIT lane proofs through fkwu as a fourth sibling, and records real host/resource stdout or artifacts for the currently available physical lanes.")
 
   (north-star
     "Every resource and channel row has a locally inspectable physical receipt, with the most native available codec first and third-party carriers kept explicit until a kernel-native codec replaces them.")
@@ -95,7 +95,7 @@
       (floor "this Mac host physically reports no GPS provider")
       (missing "GPS coordinate receipt from a device that exposes a location provider"))
     (multi-model-learning
-      (floor "local Ollama model choice is proven, and jit-oracle-learning-band names the measurable oracle/native choice contract")
+      (floor "local Ollama model choice is proven, and jit-oracle-learning-band names the measurable oracle/native choice contract with fkwu parity")
       (missing "two or more native/third-party model receipts over the same channel sample with explicit model choice, comparison fidelity, and continuing exploration cadence"))
     (host-process-usage
       (floor "process and utilization channels now plan through host:process and host:usage; the present receipt floor may still use host:exec carriers")
@@ -103,10 +103,10 @@
 
   (missing-target-distribution-samples
     (macos-arm64
-      (floor "target row, clang oracle assembly/object proof, Form-native JIT runtime row, and hati.earth URL are proven")
+      (floor "target row, clang oracle assembly/object proof, four-way Form-native JIT runtime row, and hati.earth URL are proven")
       (missing "published tarball, sha256, source map, and physical-lane summary JSON at the catalog URL"))
     (android-arm64
-      (floor "target row, clang oracle assembly/object proof, Form-native JIT runtime row, and hati.earth URL are proven")
+      (floor "target row, clang oracle assembly/object proof, four-way Form-native JIT runtime row, and hati.earth URL are proven")
       (missing "published APK, sha256, source map, and Android device/emulator physical-lane summary JSON at the catalog URL")))
 
   (invariant

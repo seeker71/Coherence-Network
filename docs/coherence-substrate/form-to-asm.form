@@ -26,9 +26,9 @@
     (witness-law   witness-theorem.form)                # 1 agree / 0 refute / nothing silent
     (licenses      form-os-channel.form)                # clang external -> internalized only through the gate
     (proof-bands   tests/form-asm-band.fk               # 31 — encoder byte-accurate, gate sound
-                   tests/form-lower-band.fk             # 31 — tree compiles to assembler-identical bytes
+                   tests/form-lower-band.fk             # 31 four-way — tree compiles to assembler-identical bytes
                    tests/form-lower-cond-band.fk        # 31 — CONTROL FLOW: branches + offsets + selection
-                   tests/form-lower-rec-band.fk         # 31 — CALL: recursion, frame, high-base bl
+                   tests/form-lower-rec-band.fk         # 31 four-way — CALL: recursion, frame, high-base bl
                    tests/form-macho-band.fk)            # 31 — the emitted Mach-O object is well-formed
     (live-witness  scripts/form_asm_conviction_demo.sh  # Form instruction bytes == assembler bytes
                    scripts/form_lower_demo.sh           # Form COMPILES a tree to assembler-identical bytes
@@ -89,6 +89,7 @@
     (witnessed "the FULL asm-pl-human program — if (n<=1) then 1 else (n+(n-1)) — compiles
                 byte-identical to clang and RUNS on runtime input n=argc: 1 -> 1 (then-branch),
                 2 -> 3, 5 -> 9 (else-branch); both branches live (form_branch_demo.sh)"))
+    (fourth-arm "tests/form-lower-band.fk is in the fourth-arm manifest and passes fkwu four-way at 31"))
 
   # ── CALL — REALIZED: recursion; the expression compiler became a function compiler ──
   # lo-rec-fn compiles the self-recursive binary-function shape — root =
@@ -106,6 +107,7 @@
     (offsets    "backward bl targets computed from lowered block lengths — labels never exist")
     (witnessed  "fib(n)=fib(n-1)+fib(n-2) runs on n=argc: exits 1,2,3,5,8 — Fibonacci in the shell,
                  zero clang (form_fib_demo.sh); byte-identical to the assembler (form-lower-rec-band)"))
+    (fourth-arm "tests/form-lower-rec-band.fk is in the fourth-arm manifest and passes fkwu four-way at 31"))
 
   # ── A lesson the recursion taught: execution is the deeper witness ───
   # The first reference had _main do `bl _fib; ret` — the bl clobbered the libc
