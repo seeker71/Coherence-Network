@@ -1,0 +1,124 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/bml-hati-class-dispatch-20260613",
+  "commit_scope": "Move the BML native compiler floor from record-backed class fields to named class method dispatch.",
+  "files_owned": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/grammars/bml.fk",
+    "form/form-stdlib/tests/bml-hati-native-class-dispatch-proof.fk",
+    "form/form-stdlib/tests/bml-hati-native-floor-proof.fk"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim bml-hati-class-dispatch \"walk next BML native compiler floor: dispatch a named method from a compiled class image with record-backed self; keep broader construction syntax, templates, generics, and overload resolution for follow-on slices\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-class-dispatch-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-floor-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-class-field-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-method-calls-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-multi-arg-calls-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-runtime.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-compiler-proof.fk",
+      "bash scripts/bml_form_jit_metal_planes_audit.sh",
+      "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/bml-hati-native-class-dispatch-proof.fk",
+      "cd form && ./validate.sh"
+    ],
+    "results": [
+      "prompt-guide passed on worktree branch codex/bml-hati-class-dispatch-20260613",
+      "wellness exited 0; deploy lag reported production aligned at merge SHA 70090eb1",
+      "bml-hati-native-class-dispatch-proof returned 17 with 1 ok and 0 divergent",
+      "bml-hati-native-floor-proof returned 20 with 1 ok and 0 divergent",
+      "bml-hati-native-class-field-proof returned 21 with 1 ok and 0 divergent",
+      "bml-hati-native-method-calls-proof returned 19 with 1 ok and 0 divergent",
+      "bml-hati-native-multi-arg-calls-proof returned 20 with 1 ok and 0 divergent",
+      "bml-compiler-runtime returned 131012 with 1 ok and 0 divergent",
+      "bml-hati-native-compiler-proof returned 39 with 1 ok and 0 divergent",
+      "bml_form_jit_metal_planes_audit.sh passed Form-native CPU/GPU/ML lane proof, recursive lowerer proof, oracle-learning proof, and macOS arm64 Mach-O plus Android arm64 ELF target object receipts",
+      "fourth-arm survey classified bml-hati-native-class-dispatch-proof.fk as bml-io, so this slice does not claim new manifest admission for that band",
+      "full Form validation returned fourth arm: 138 band(s) four-way and 558 ok, 0 divergent"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Pending PR creation and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No public deploy in this step; this is a Form/BML/Hati compiler proof update."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; PR checks remain pending until push."
+  },
+  "idea_ids": [
+    "bml-native-north-star",
+    "hati-fourth-kernel-native-compiler",
+    "record-backed-class-fields",
+    "named-class-method-dispatch"
+  ],
+  "spec_ids": [
+    "specs/bml-typed-recipes.md",
+    "form-fourth-kernel-validation",
+    "supported-metal-plane-jit-proof"
+  ],
+  "task_ids": [
+    "bml-hati-class-dispatch-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "north-star direction",
+        "floor update requirement"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/bml-hati-native-class-dispatch-proof.fk -> class Rule carries Read, Alt, and Set methods; dispatch by name returns 45, 49, and 33 against record-backed self",
+    "form/form-stdlib/grammars/bml.fk -> bml-hati-class-method-index and bml-hati-run-class-method-with-arg dispatch compiled class image methods by name",
+    "docs/coherence-substrate/bml-native-north-star.form -> floor includes named class method dispatch; next semantic candidate is broader class construction",
+    "/tmp/coherence-form-validate-bml-hati-class-dispatch.log -> full Form validation fourth arm: 138 band(s) four-way; 558 ok, 0 divergent"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/system_audit/commit_evidence_2026-06-13_bml_hati_class_dispatch.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/grammars/bml.fk",
+    "form/form-stdlib/tests/bml-hati-native-class-dispatch-proof.fk",
+    "form/form-stdlib/tests/bml-hati-native-floor-proof.fk"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "BML compiled class images can now dispatch a named method by index against a record-backed self value. Missing method dispatch returns an explicit BML-HATI-UNSUPPORTED method/not-found receipt instead of silently selecting method zero.",
+    "public_endpoints": [
+      "not-public-endpoint: local Form/BML/Hati compiler proof surface"
+    ],
+    "test_flows": [
+      "Parse Read, Alt, and Set method bodies through existing BML executable method source rules.",
+      "Construct a class image with three methods and record-backed value field.",
+      "Dispatch Read and Alt by name against the same record-backed self and receive distinct values.",
+      "Dispatch Set by name, mutating record-backed self.value to 33.",
+      "Dispatch a missing method and receive BML-HATI-UNSUPPORTED method/not-found."
+    ]
+  }
+}
