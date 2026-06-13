@@ -12,7 +12,7 @@
 # effectively free.
 #
 # Everything degrades honestly: no clang, no manifest, or an emission
-# failure simply leaves FKWU/table empty and the band runs three-way as
+# failure simply leaves FKWU/table empty and the band runs three-kernel only as
 # before — the suite never goes red because the fourth arm could not build,
 # only when it DISAGREES.
 
@@ -56,7 +56,7 @@ build_fourth() {
             mv -f "$out.tmp" "$out"
         else
             rm -f "$out.tmp"
-            echo "  fourth kernel build did not land — bands run three-way" >&2
+            echo "  fourth kernel build did not land — bands run three-kernel only" >&2
         fi
         rm -rf "$d"
     fi
@@ -106,18 +106,26 @@ fourth_prep_srcs() {
 # the multi-source door (fks carries the string pool; fkc is pool-free).
 fourth_flatten_expr() {
     local kind="$1"; shift
-    local rl=" (read_file \"$FOURTH_SHIM\")" f
-    for f in "$@"; do rl="$rl (read_file \"$f\")"; done
+    local srcs=("$@") count last band mods=" (read_file \"$FOURTH_SHIM\")" band_read f i
+    count="${#srcs[@]}"
+    [[ "$count" -gt 0 ]] || return 1
+    last=$((count - 1))
+    band="${srcs[$last]}"
+    for ((i = 0; i < last; i++)); do
+        f="${srcs[$i]}"
+        mods="$mods (read_file \"$f\")"
+    done
+    band_read="(read_file \"$band\")"
     if [[ "$kind" == "fks" ]]; then
-        printf '(print (fks-table-file (flt-srcs-fns (list%s)) (flt-srcs-pool (list%s) (list))))\n' "$rl" "$rl"
+        printf '(print (fks-table-file (flt-band-sources-fns (list%s) %s) (flt-band-sources-pool (list%s) %s)))\n' "$mods" "$band_read" "$mods" "$band_read"
     else
-        printf '(print (fkc-table-file (flt-srcs-fns (list%s))))\n' "$rl"
+        printf '(print (fkc-table-file (flt-band-sources-fns (list%s) %s)))\n' "$mods" "$band_read"
     fi
 }
 
 # fourth_table — cached flattened node-table for one band (path on stdout).
 # Emits through the Go walker on a cache miss; empty output means the band
-# runs three-way this time.
+# runs three-kernel only this time.
 fourth_table() {
     local stem="$1" kind key out d f srcs=()
     kind="$(awk -v b="$stem" '$1==b{print $2; exit}' "$FOURTH_MANIFEST")"

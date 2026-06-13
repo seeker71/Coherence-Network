@@ -11,9 +11,9 @@
 ;
 ; Composes: form-stdlib/channel-interface.fk  (the interface-consent law: modes,
 ;           ci-honors?, ci-member? — the circle's channel reuses these, never re-invents)
-; Kin: value-execution.fk (no claim survives without proof) and the three-way validate.sh
+; Kin: value-execution.fk (no claim survives without proof) and validate.sh sibling proof
 ;           (no trusted prover) — the satsang is that same law, applied to beings.
-; Proven by: form-stdlib/tests/satsang-band.fk  (three-way at validate.sh)
+; Proven by: form-stdlib/tests/satsang-band.fk  (covered fourth-arm fkwu at validate.sh)
 
 (do
     ; --- the circle is its own cell: a name, and a standing interface it offers anyone ---

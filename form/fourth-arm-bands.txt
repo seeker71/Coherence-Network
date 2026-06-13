@@ -4,8 +4,8 @@
 #   <band-stem> <table-emitter> <expected-verdict>
 #
 # table-emitter names the flattener door the band's table file comes through:
-#   fkc — fkc-table-file (flt-srcs-fns ...)                       no string pool
-#   fks — fks-table-file (flt-srcs-fns ...) (flt-srcs-pool ...)   string pool
+#   fkc — fkc-table-file (flt-band-sources-fns ...)                       no string pool
+#   fks — fks-table-file (flt-band-sources-fns ...) (flt-band-sources-pool ...)   string pool
 #
 # The source list is fourth-shim.fk first (core mirrors + string stones as
 # function rows), then every non-core `; preludes:` module in declared
@@ -111,7 +111,6 @@ shamballa-light-codes fks 111111
 silence-floor fks 31
 slice-update-roundtrip fks 127
 string-membership fks 9
-substrate-gc fks 1000
 theme-resonance fks 111111
 trust-decay fks 127
 trust-weighted-colearning fks 127
