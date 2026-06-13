@@ -1,0 +1,120 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/four-kernel-validation-floor-20260613",
+  "commit_scope": "Document the four-kernel validation floor and guard ambiguous kernel evidence claims",
+    "files_owned": [
+      "CLAUDE.md",
+      "docs/shared/agent-start-packet.md",
+      "form/form-stdlib/AUTHORING.md",
+      "form/form-stdlib/form-flatten.fk",
+      "form/form-stdlib/satsang.fk",
+      "form/form-stdlib/tests/form-flatten-band.fk",
+      "form/fourth-arm-bands.txt",
+      "form/scripts/fourth-arm.sh",
+      "scripts/validate_commit_evidence.py",
+      "api/tests/test_commit_evidence_validator.py",
+      "docs/system_audit/commit_evidence_20260613_four_kernel_validation_floor.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "python3 -m py_compile scripts/validate_commit_evidence.py",
+      "python3 -m pytest api/tests/test_commit_evidence_validator.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260613_four_kernel_validation_floor.json",
+      "git diff --check",
+      "make wellness",
+      "bash -n form/scripts/fourth-arm.sh",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/tests/satsang-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/learning-trend.fk form-stdlib/tests/learning-trend-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/record-fold-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/form-parse.fk form-stdlib/form-flatten.fk form-stdlib/tests/form-flatten-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/substrate-gc-band.fk"
+    ],
+    "notes": "Focused validator tests, evidence validation, whitespace check, wellness, shell syntax, and targeted Form band proofs pass. Wellness reports what_wants_attention: none and deploy aligned. The fourth-arm wrapper now calls the live form-flatten doors for band sources, record_new lowers into arena entries for the fourth arm, and both table-emitter lanes proved through fkwu. substrate-gc is now a 3-kernel only fourth-arm gap because it depends on host GC state. Full command attempted: cd form && ./validate.sh > /tmp/coherence-form-validate-full-20260613.log 2>&1; it returned rc=1 with fourth arm: 93 band(s) four-way and residual 12 divergent bands outside this repair.",
+    "fourth_arm_outputs": [
+      "satsang fks lane: fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent",
+      "learning-trend fkc lane: fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent",
+      "record-fold fks lane: fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent"
+    ],
+    "known_full_suite_gaps": [
+      "cd form && ./validate.sh returned rc=1 after repairs: fourth arm: 93 band(s) four-way; 527 ok, 12 divergent",
+      "Residual divergent bands: form-debug-band, form-mut-band, form-spy-band, full-jit-lower-band, go-jit-band, jit-lower-band, jit-lower-bmf-band, jit-lower-emit-band, jit-lower-program-band, markdown-meaning-ingestion-band, ts-reversible-band, yaml-meaning-ingestion-band"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "PR CI has not run yet for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "Hostinger Auto Deploy on main after merge"
+    ],
+    "notes": "No public route behavior changes are expected beyond the normal post-merge deploy."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local focused validation and wellness have passed; PR guards, CI, and deploy validation are pending."
+  },
+  "idea_ids": [
+    "form-native-models"
+  ],
+  "spec_ids": [
+    "developer-quick-start"
+  ],
+  "task_ids": [
+    "four-kernel-validation-floor"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "documentation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "scripts/validate_commit_evidence.py",
+    "api/tests/test_commit_evidence_validator.py",
+    "form/fourth-arm-bands.txt",
+    "form emitted walker: fkwu"
+  ],
+  "change_files": [
+    "CLAUDE.md",
+    "api/tests/test_commit_evidence_validator.py",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_20260613_four_kernel_validation_floor.json",
+    "form/form-stdlib/AUTHORING.md",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/satsang.fk",
+    "form/form-stdlib/tests/form-flatten-band.fk",
+    "form/fourth-arm-bands.txt",
+    "form/scripts/fourth-arm.sh",
+    "scripts/validate_commit_evidence.py"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Form/kernel guidance now names the fourth-arm validation floor, the fourth-arm wrapper uses the live band-source flattener doors, record_new lowers correctly for the fkwu record-fold lane, host-GC bands are not marked fourth-covered, and commit-evidence validation rejects ambiguous broad kernel-proof claims unless they include fourth-arm proof or an explicit 3-kernel only fourth-arm gap.",
+    "public_endpoints": [
+      "local-only: documentation and commit-evidence validation behavior; no public HTTP endpoint changed"
+    ],
+    "test_flows": [
+      "Focused commit-evidence validator unit tests cover fourth-arm proof, explicit fourth-arm gaps, and ambiguous broad kernel-proof claims.",
+      "Covered fourth-arm fks lane proof: satsang band on Go/Rust/TypeScript/fkwu.",
+      "Covered fourth-arm fkc lane proof: learning-trend band on Go/Rust/TypeScript/fkwu.",
+      "Covered fourth-arm record lane proof: record-fold band on Go/Rust/TypeScript/fkwu.",
+      "Flattener compatibility proof: form-flatten-band returns 65535 on Go/Rust/TypeScript.",
+      "Host-state gap proof: substrate-gc remains 3-kernel only after leaving fourth-arm-bands.txt."
+    ]
+  }
+}

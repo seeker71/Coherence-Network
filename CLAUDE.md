@@ -29,21 +29,21 @@
 
 ## Architecture
 
-- **Form-kernel-native.** The Form kernels (Rust/Go/TS) under `form/` are the core execution engine *and* the HTTP front door: native routes are kernel-served (`X-Form-Router: native-kernel`). The body — logic, decisions, transformations — is Form: recipes and grammars, proven three-way via `form/validate.sh`.
+- **Form-kernel-native.** The Form kernels under `form/` are the core execution engine *and* the HTTP front door: native routes are kernel-served (`X-Form-Router: native-kernel`). The body — logic, decisions, transformations — is Form: recipes and grammars, proven by `form/validate.sh` across Go, Rust, TypeScript, and every covered fourth-arm `fkwu` band.
 - **The core has named ground.** Five axioms — states (0/1/nothing), cell, content-addressing, boundary, offer — generate the whole model; everything else, safe self-update included, is a derived theorem ([`core-axioms.form`](docs/coherence-substrate/core-axioms.form), agreed + crossed 2026-06-10). The kernel is spec'd as their implementation over host resources ([`host-kernel.form`](docs/coherence-substrate/host-kernel.form) — a capability OS in seL4's sense; any host driver is an allowed carrier under allow-presence + measure-health) and as self-composition from just the five ([`kernel-self-composition.form`](docs/coherence-substrate/kernel-self-composition.form)).
 - **Python (FastAPI in `api/`) is the fan-out query carrier, nothing more.** Routes not yet native fan out to the Python upstream (`X-Form-Router: fanout-python`): it scatters queries to the stores and gathers results — never the body. HTTP/router fan-out comes only after Form proof bands (`docs/shared/agent-start-packet.md`; kernel-router fan-out proof: `docs/system_audit/commit_evidence_2026-06-02_kernel_router_fanout.json`). A router still computing in Python is drift composting toward fan-out-only, and new handler work starts in BML or a domain grammar unless no native carrier exists yet.
 - **Web**: Next.js 16 + shadcn/ui in `web/`
 - **Stores** (what Python fans queries out to): Neo4j (graph) · PostgreSQL (relational)
 - **Tests**: `api/tests/` — flow-centric, fast (seconds, not minutes)
-- **Kernels**: [`kernels/README.md`](kernels/README.md) — the Rust, Go, and TypeScript form-kernels under `form/`; no primary kernel. Sibling parity is verified by `form/validate.sh`. Each native carries Blueprint attribution; the trace JSON shows arm dispatch including Form category. Go serves BML route bodies such as `/api/ideas` against production Postgres and exposes framebuffer/JIT observation through `/api/_form/ideas-observation`. See [`SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md`](kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md) for the route-promotion loop and [`lc-form-kernel-runtime-visualizer`](docs/vision-kb/concepts/lc-form-kernel-runtime-visualizer.md) for the source → kernel → framebuffer arc.
+- **Kernels**: [`kernels/README.md`](kernels/README.md) — the Rust, Go, and TypeScript form-kernels under `form/`, plus the emitted universal walker `fkwu` for bands listed in `form/fourth-arm-bands.txt`; no primary kernel. Sibling parity is verified by `form/validate.sh`. Each native carries Blueprint attribution; the trace JSON shows arm dispatch including Form category. Go serves BML route bodies such as `/api/ideas` against production Postgres and exposes framebuffer/JIT observation through `/api/_form/ideas-observation`. See [`SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md`](kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md) for the route-promotion loop and [`lc-form-kernel-runtime-visualizer`](docs/vision-kb/concepts/lc-form-kernel-runtime-visualizer.md) for the source → kernel → framebuffer arc.
 
 ## Current Shape
 
 Recent integration moved the body from description toward runtime:
 
-- **Form executes.** Python-shaped control flow, methods, classes, introspection, and a meta-circular evaluator run through Form; Go, Rust, and TypeScript kernels keep sibling proof where the vector applies.
+- **Form executes.** Python-shaped control flow, methods, classes, introspection, and a meta-circular evaluator run through Form; Go, Rust, TypeScript, and the covered fourth-arm `fkwu` bands keep sibling proof where the vector applies.
 - **The core rests on five axioms.** `core-axioms.form` is the keystone; offer-and-acknowledge, the kernel-offer protocol, the host kernel, and kernel self-composition derive from it. The hardest behavior — a self that safely changes itself — is a theorem, already running as the native-mutation public-gate canary. Openings are named as closing recipes (parts that run, composed toward a proof band), never as debts.
-- **A real model walks in pure Form.** The form-native-models milestones M1–M4 (format-arith, tensor-quant, transformer-numerics, transformer-block) are proven three-way; the tensor JIT's matvec emitter is itself a Form recipe (native = recipe bit-for-bit, 20,077× measured); whisper's mel front-end frame runs fully Form-native (M6 first move).
+- **A real model walks in pure Form.** The form-native-models milestones M1–M4 (format-arith, tensor-quant, transformer-numerics, transformer-block) are proven through the current `validate.sh` sibling floor; evidence says `3-kernel only` where a band has not crossed the fourth-arm manifest yet. The tensor JIT's matvec emitter is itself a Form recipe (native = recipe bit-for-bit, 20,077× measured); whisper's mel front-end frame runs fully Form-native (M6 first move).
 - **Form attracts new work.** New handlers are BML or domain grammar first; existing Python handlers either compile into Form recipes or sit behind an explicit Python port/fanout bridge until promoted. Documentation should name that bridge honestly instead of teaching Python as the destination.
 - **The substrate has carriers.** Filesystem CRUD, TCP, segmented logs, storage ports, resource ports, and Postgres let cells move through durable interfaces instead of staying in static documentation.
 - **Public proof exists.** `/api/utils/nodeid_compatibility` runs a Form-native body behind a public route; `/api/substrate/form` lets agents ask structural questions directly.
@@ -109,7 +109,11 @@ shape is trying to become a reusable teaching?* Use route timing, JIT hit/miss
 data, framebuffer traces, carrier-tissue reads, edge-category counts,
 wellness output, and source repetition as introspection. Lift only with proof:
 a Form/BML band, a native route trace, or an evidence record that shows the old
-low-level shape is now carried by a simpler reusable cell.
+low-level shape is now carried by a simpler reusable cell. Form/BML runtime
+proof walks toward the four-kernel floor: Go, Rust, TypeScript, and the emitted
+`fkwu` arm when `form/fourth-arm-bands.txt` covers the band. Evidence names its
+level exactly: `fourth arm: ... four-way` for covered bands, or `3-kernel only`
+with the fourth-arm gap that keeps the band out of the manifest.
 
 **Find the north star before fitting the ask.** When something is missing, the first move is to name
 where the fully-realized form lives — the most native, most efficient shape we could run (all hardware

@@ -3,8 +3,8 @@
 A guide for any cell — agent or human — writing a new `.fk` recipe + proof band. It carries the
 conventions and the hard-won traps so you don't rediscover them; `validate.sh` is the check that
 reads the body, this is the guide that names the way. The recipes here are the body's logic, proven
-identical across three kernels (Go, Rust, TS) — **three kernels agreeing IS the proof; there is no
-trusted prover.**
+by sibling agreement across Go, Rust, TypeScript, and every covered fourth-arm `fkwu` band — **the
+matching kernel outputs are the proof; there is no trusted prover.**
 
 ## Before you write — don't duplicate
 
@@ -72,7 +72,7 @@ plus `defn · let · do`. (Read `form/form-stdlib/core.fk` — it is the whole v
 - `empty` **constructs** the empty list (`(empty)`, no args) — it is the absence value, **not a
   predicate**. Test emptiness with `(eq (len x) 0)`. See trap 6.
 - This is the **curated band-verdict subset, not the kernel's limit.** `mul`/`sub`/`div` and full IEEE
-  floats all work and **compute deterministically three-way** (proven: integer `mul`, `0.1+0.2`, and a
+  floats all work and **compute deterministically across the Go/Rust/TS floor** (proven: integer `mul`, `0.1+0.2`, and a
   float matvec all → 0 divergent). The kernel is a full numeric engine reading
   `docs/coherence-substrate/numeric-formats.canonical.json` (19 formats incl. bf16/fp8/nf4/int8/bitnet-158).
   These are kept out of *bands* only because verdicts stay integer for clean `eq`-parity. For numeric/ML
@@ -92,7 +92,7 @@ plus `defn · let · do`. (Read `form/form-stdlib/core.fk` — it is the whole v
      counting, selection, and gating — which the primitive set covers exactly.
 
 3. **Float COMPUTE is deterministic; raw-float EQ is the trap.** A fractional float result agrees
-   bit-for-bit three-way (proven); what's unreliable is `eq` on raw floats — and whole-number floats
+   bit-for-bit across the Go/Rust/TS floor (proven); what's unreliable is `eq` on raw floats — and whole-number floats
    still display inconsistently (`3.0` vs `3`). So compute in float, then reduce to an INTEGER verdict —
    `(eq (round (mul r 100.0)) 40)` — and `eq` the integer. `round` is half-AWAY-from-zero on every kernel;
    see `tests/float-conversions-band.fk`. Band SCORES still default to integers `0..100`; floats are the
@@ -110,7 +110,7 @@ plus `defn · let · do`. (Read `form/form-stdlib/core.fk` — it is the whole v
    that never guards). Test emptiness with `(eq (len x) 0)` — the idiom every recipe uses
    (`nearest-shape.fk`, `sequence-predictor.fk`). Cost a cycle in `learning-arc.fk` (verdict 88, not 127).
 
-## Prove it three-way
+## Prove it on all covered kernels
 
 From the repo's `form/` directory, list **every** file explicitly — `core.fk`, your recipe, any
 recipes it composes, then the band:
@@ -121,7 +121,15 @@ cd form
 ```
 
 Success is `✓ ... → <verdict>` **and** `1 ok, 0 divergent`. Iterate until you see your intended
-verdict with zero divergence.
+verdict with zero divergence. `validate.sh` always runs Go, Rust, and TypeScript. When the band's
+stem is listed in `form/fourth-arm-bands.txt`, it also runs on the emitted universal walker `fkwu`
+and prints `fourth arm: ... four-way (fkwu + pre-flattened tables)`.
+
+The authoring floor is four-kernel when the band can live in the fourth-friendly subset: add the band
+to `form/fourth-arm-bands.txt` and iterate until `validate.sh` proves the fourth arm. When the band
+uses an unsupported fourth-arm family, keep the 3-kernel result explicit in evidence as `3-kernel only`
+and name the blocker, such as host I/O, node/substrate operations, higher-order calls, or multiline
+output.
 
 - `unbound function` → a misspelled name, or a primitive that isn't in `core.fk`.
 - `N divergent` (kernels print different numbers) → almost always a 3-arg `and`/`or`; nest it.
