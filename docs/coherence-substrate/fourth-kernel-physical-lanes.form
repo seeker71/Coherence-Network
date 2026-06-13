@@ -17,6 +17,7 @@
 
   (north-star
     "Every resource and channel row has a locally inspectable physical receipt, with the most native available codec first and third-party carriers kept explicit until a kernel-native codec replaces them.")
+    "Host process and utilization lanes walk from host:exec carrier receipts toward direct host OS calls such as process table APIs, task counters, memory statistics, load counters, and device pressure signals.")
 
   (native-binaries
     (fkdump  "driver binary: fork/exec/pipe host stdout into fk_src, then PUTC captured bytes")
@@ -29,8 +30,8 @@
     (http-request  http:request "curl over external REST through the Hati driver")
     (kernel-route  kernel:route "local Hati server binary answered curl")
     (store-query   store:query  "sqlite3 query through the Hati driver")
-    (host-process  host:exec   "process table rows are constructible through ps/top carriers")
-    (host-usage    host:exec   "CPU, memory, load, disk, network, and energy counters are constructible through host counters")
+    (host-process  host:process "process table rows are constructible as a native host OS call lane; current physical floor may use ps/top carriers")
+    (host-usage    host:usage   "CPU, memory, load, disk, network, and energy counters are constructible as native host OS call lanes; current physical floor may use host counter carriers")
     (shell-applets stream:read  "grep/find/awk/xmllint over local files through the Hati driver")
     (agent-model   kernel:call  "ollama model choice through the Hati driver")
     (audio-mic     host:file    "rec captures a local WAV when the OS grants mic access")
@@ -67,8 +68,8 @@
       (floor "local Ollama model choice is proven")
       (missing "two or more native/third-party model receipts over the same channel sample with explicit model choice and comparison fidelity"))
     (host-process-usage
-      (floor "process and utilization channels are now planned through host:exec")
-      (missing "one Hati-emitted physical receipt for ps/top/vm_stat/iostat-style process and usage samples with typed rows")))
+      (floor "process and utilization channels now plan through host:process and host:usage; the present receipt floor may still use host:exec carriers")
+      (missing "one Hati-emitted physical receipt for direct host OS process and utilization calls, with ps/top/vm_stat/iostat-style carriers only as fallback receipts")))
 
   (invariant
     (no-mock-data)
