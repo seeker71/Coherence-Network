@@ -1,0 +1,112 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/hati-os-distribution-matrix-20260613",
+  "commit_scope": "Add a Form-native Hati-OS target and distribution catalog for macOS arm64 and Android arm64, including per-OS protocol implementation rows and hati.earth native binary download coordinates.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "hati-os",
+    "form-os-tool-surface",
+    "host-kernel-resource-lanes"
+  ],
+  "spec_ids": [
+    "hati-os-targets",
+    "hati-os",
+    "fourth-kernel-physical-lanes"
+  ],
+  "task_ids": [
+    "hati-os-distribution-matrix-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "target-requirement"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/hati-os-targets.fk",
+    "form/form-stdlib/tests/hati-os-targets-band.fk",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/coherence-substrate/hati-os.form",
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-13_hati_os_target_distribution.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/form-stdlib/hati-os-targets.fk",
+    "form/form-stdlib/tests/hati-os-targets-band.fk",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/coherence-substrate/hati-os.form",
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-13_hati_os_target_distribution.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "form/form-stdlib/tests/hati-os-targets-band.fk",
+    "form/form-stdlib/tests/tool-channel-band.fk",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-os-targets.fk form-stdlib/tests/hati-os-targets-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tool-channel.fk form-stdlib/tests/tool-channel-band.fk",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_hati_os_target_distribution.json",
+      "python3 -m json.tool docs/system_audit/commit_evidence_2026-06-13_hati_os_target_distribution.json",
+      "tail -1 docs/system_audit/model_executor_runs.jsonl | python3 -m json.tool",
+      "make wellness"
+    ],
+    "notes": "hati-os-targets-band returns 255 across Go/Rust/TS, proving macOS arm64 and Android arm64 target rows, OS-specific implementation rows, and hati.earth download coordinates."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "The release URLs are now native catalog coordinates. Publishing actual binaries, checksums, source maps, and lane receipts to hati.earth remains the next release step."
+  },
+  "phase_gate": {
+    "phase": "hati-os-target-distribution-surface",
+    "gate": "macOS and Android Hati-OS targets are discoverable from Form, with implementation rows and hati.earth binary coordinates.",
+    "state": "local-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Wire the release build to publish the macOS tarball and Android APK at the catalog URLs, with sha256 files, source-map receipts, and per-target physical-lane summary JSON."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Cells and recipes can discover per-host Hati-OS targets and download coordinates for macOS arm64 and Android arm64 instead of assuming a single host implementation.",
+    "public_endpoints": [
+      "local:form-stdlib-hati-os-targets"
+    ],
+    "test_flows": [
+      "Hati OS targets band proves two target rows and two artifact rows.",
+      "Hati OS targets band proves macOS process/usage implementation rows.",
+      "Hati OS targets band proves Android sensor/GPS implementation row.",
+      "Hati OS targets band proves hati.earth macOS and Android artifact URLs."
+    ],
+    "summary": "The native catalog now separates Form semantics from OS-specific implementation and names hati.earth as the binary distribution door. Actual artifact publishing remains explicit release work."
+  }
+}
