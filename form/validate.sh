@@ -220,7 +220,7 @@ run_siblings() {
     wait
     go_out=$(cat "$legs/go"); rs_out=$(cat "$legs/rs"); ts_out=$(cat "$legs/ts")
     if [[ -n "$fourth_tbl" ]]; then fk_out=$(cat "$legs/fk" 2>/dev/null || true); fi
-    rm -rf "$legs"
+    rm -rf "$legs" 2>/dev/null || true
     if [[ "$go_out" == "$rs_out" && "$go_out" == "$ts_out" ]] \
         && { [[ -z "$fourth_tbl" ]] || [[ "$fk_out" == "$go_out" ]]; }; then
         printf "  ✓  %-30s  → %s\n" "$label" "$go_out"

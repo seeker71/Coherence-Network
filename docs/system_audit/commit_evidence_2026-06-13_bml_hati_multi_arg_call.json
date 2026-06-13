@@ -1,0 +1,121 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/bml-hati-multi-arg-call-20260613",
+  "commit_scope": "Move the BML native compiler floor from one-argument method calls to parity-proven two-argument packed Hati calls.",
+  "files_owned": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/grammars/bml.fk",
+    "form/form-stdlib/tests/bml-hati-native-multi-arg-calls-proof.fk",
+    "form/validate.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim bml-hati-multi-arg-call \"walk next BML native compiler floor: two-argument source method/call lowering through existing Hati packed-args machinery; keep class/template/generic lowering for follow-on slices\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-multi-arg-calls-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-method-calls-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-floor-proof.fk",
+      "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/bml-hati-native-multi-arg-calls-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-compiler-proof.fk",
+      "bash scripts/bml_form_jit_metal_planes_audit.sh",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-runtime.fk",
+      "cd form && ./validate.sh"
+    ],
+    "results": [
+      "prompt-guide passed on worktree branch codex/bml-hati-multi-arg-call-20260613",
+      "wellness passed with what_wants_attention: none",
+      "bml-hati-native-multi-arg-calls-proof returned 20 with 1 ok and 0 divergent",
+      "bml-hati-native-method-calls-proof returned 19 with 1 ok and 0 divergent",
+      "bml-hati-native-floor-proof returned 17 with 1 ok and 0 divergent",
+      "fourth-arm survey classified the new multi-arg proof as bml-io, so this slice does not claim new manifest admission for that band",
+      "bml-hati-native-compiler-proof returned 39 with 1 ok and 0 divergent",
+      "bml_form_jit_metal_planes_audit.sh passed Form-native CPU/GPU/ML lane proof, recursive lowerer proof, oracle-learning proof, and macOS arm64 Mach-O plus Android arm64 ELF target object receipts",
+      "bml-compiler-runtime returned 131012 with 1 ok and 0 divergent after cleanup made sibling temp removal best-effort",
+      "full Form validation returned fourth arm: 134 band(s) four-way and 556 ok, 0 divergent"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Pending PR creation and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No public deploy in this step; this is a Form/BML compiler proof update."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; PR checks remain pending until push."
+  },
+  "idea_ids": [
+    "bml-native-north-star",
+    "hati-fourth-kernel-native-compiler",
+    "form-native-jit-metal-lanes"
+  ],
+  "spec_ids": [
+    "specs/bml-typed-recipes.md",
+    "form-fourth-kernel-validation",
+    "supported-metal-plane-jit-proof"
+  ],
+  "task_ids": [
+    "bml-hati-multi-arg-call-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "north-star direction",
+        "floor update requirement"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/bml-hati-native-multi-arg-calls-proof.fk -> source int Sum(int a, int b) { return a + b; } return Sum(19, 23); parses, compiles through BMA, lowers through Hati, and returns 42",
+    "form/form-stdlib/grammars/bml.fk -> two-parameter method source rule, two-int call rule, packed args, method arity, __hati_arg_at, and fk-icall lowering",
+    "form/validate.sh -> best-effort sibling temp cleanup after outputs are read",
+    "docs/coherence-substrate/bml-native-north-star.form -> current-supported includes two-argument method parameter and arity mismatch receipts",
+    "scripts/bml_form_jit_metal_planes_audit.sh -> supported macOS and Android target receipts plus Form-native JIT lanes",
+    "/tmp/coherence-form-validate-bml-hati-multi-arg.log -> full Form validation fourth arm: 134 band(s) four-way; 556 ok, 0 divergent"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/system_audit/commit_evidence_2026-06-13_bml_hati_multi_arg_call.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/grammars/bml.fk",
+    "form/form-stdlib/tests/bml-hati-native-multi-arg-calls-proof.fk",
+    "form/validate.sh"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "BML source can now express a two-parameter integer method and a two-argument call, bind both parameters in the source compiler and Hati native lowerer, reject arity mismatch before native table emission, and execute the packed call through fk-icall with the same result as the BMA path.",
+    "public_endpoints": [
+      "not-public-endpoint: local Form/BML/Hati compiler proof surface"
+    ],
+    "test_flows": [
+      "Parse two-parameter BML method and two-int call into method-two-param-return-add and return-call-two-int source rules.",
+      "Compile source through BMA and verify bml-compile-nodes returns 42.",
+      "Lower to Hati native table and verify bml-hati-run-value returns 42.",
+      "Inspect table tags for fk-icall and fk-nth so the binary shape proves packed argument flow.",
+      "Verify Sum(19) is rejected as call/arity before valid table emission."
+    ]
+  }
+}

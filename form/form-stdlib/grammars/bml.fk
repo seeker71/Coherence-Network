@@ -474,6 +474,9 @@
         (intern_node BML-AST-CALL
                      (list (intern_trivial_string name) arg)))
 
+    (defn bml-ast-call-args (name args)
+        (bml-ast-call name (bml-ast-array args)))
+
     (defn bml-ast-package (name)
         (intern_node BML-AST-PACKAGE (list (intern_trivial_string name))))
 
@@ -500,13 +503,20 @@
     (defn bml-ast-method-parameter-name (parameters)
         (if (nil? parameters) "" (bml-parameter-name (head parameters))))
 
+    (defn bml-ast-method-parameter-name-nodes (parameters)
+        (if (nil? parameters)
+            (empty)
+            (cons
+                (intern_trivial_string (bml-parameter-name (head parameters)))
+                (bml-ast-method-parameter-name-nodes (tail parameters)))))
+
     (defn bml-ast-method-with-parameters (name body parameters)
         (intern_node BML-AST-METHOD
-                     (list
-                        (intern_trivial_string name)
-                        body
-                        (intern_trivial_string
-                            (bml-ast-method-parameter-name parameters)))))
+                     (append
+                        (list
+                            (intern_trivial_string name)
+                            body)
+                        (bml-ast-method-parameter-name-nodes parameters))))
 
     (defn bml-ast-class (name base sections)
         (intern_node BML-AST-CLASS
@@ -3408,6 +3418,16 @@
                 (intern_node BML-AST-INT
                              (list (bml-cap-int objects "value"))))))
 
+    (defn bml-emit-return-call-two-int (objects)
+        (bml-ast-return
+            (bml-ast-call-args
+                (bmf-collection-value objects "callee")
+                (list
+                    (intern_node BML-AST-INT
+                                 (list (bml-cap-int objects "left")))
+                    (intern_node BML-AST-INT
+                                 (list (bml-cap-int objects "right")))))))
+
     (defn bml-source-return-int (object)
         (do
             (let kids (node_children (bmf-object-value object)))
@@ -3538,6 +3558,21 @@
                     (bmf-collection-value objects "param-type")
                     (bmf-collection-value objects "param-name")))))
 
+    (defn bml-emit-method-two-param-return-add (objects)
+        (bml-ast-method-with-parameters
+            (bmf-collection-value objects "name")
+            (bml-ast-return
+                (bml-ast-add
+                    (bml-ast-name (bmf-collection-value objects "left-ref"))
+                    (bml-ast-name (bmf-collection-value objects "right-ref"))))
+            (list
+                (bml-parameter-component
+                    (bmf-collection-value objects "left-type")
+                    (bmf-collection-value objects "left-name"))
+                (bml-parameter-component
+                    (bmf-collection-value objects "right-type")
+                    (bmf-collection-value objects "right-name")))))
+
     (defn bml-emit-choose-fail-int (objects)
         (bml-ast-choose
             (list
@@ -3667,6 +3702,7 @@
       properties ::= "[" property-list "]" => bml-emit-node-source;
       method-return-add ::= $type:name $name:name "(" ")" "{" "return" $left:int "+" $right:int ";" "}" => bml-emit-method-return-add;
       method-param-return-add ::= $type:name $name:name "(" $param-type:name $param-name:name ")" "{" "return" $param-ref:name "+" $value:int ";" "}" => bml-emit-method-param-return-add;
+      method-two-param-return-add ::= $type:name $name:name "(" $left-type:name $left-name:name "," $right-type:name $right-name:name ")" "{" "return" $left-ref:name "+" $right-ref:name ";" "}" => bml-emit-method-two-param-return-add;
       method ::= method-head properties code-block => bml-emit-node-source;
       method-head ::= "operator" spc cut full-class-name "|" interface-ref method-name => bml-emit-node-source;
       parameter ::= field-definition => bml-emit-node-source;
@@ -3690,6 +3726,7 @@
       return-char ::= "return" $value:char ";" => bml-emit-return-char;
       return-name-add-int ::= "return" $name:name "+" $value:int ";" => bml-emit-return-name-add-int <= bml-source-return-name-add-int;
       return-call-int ::= "return" $callee:name "(" $value:int ")" ";" => bml-emit-return-call-int;
+      return-call-two-int ::= "return" $callee:name "(" $left:int "," $right:int ")" ";" => bml-emit-return-call-two-int;
       return-name ::= "return" $name:name ";" => bml-emit-return-name <= bml-source-return-name;
       return ::= "return" expression ";" => bml-emit-node-source;
       break-simple ::= "break" $label:name ";" => bml-emit-break-simple <= bml-source-break-simple;
@@ -3826,8 +3863,10 @@
               "choice-fail-int"
               "choose-fail-int"
               "state-int"
+              "method-two-param-return-add"
               "method-param-return-add"
               "const-int"
+              "return-call-two-int"
               "return-call-int"
               "return-name-add-int"
               "return-name"
@@ -4979,6 +5018,7 @@
             (bmf-native "bml-emit-return-name" bml-emit-return-name BML-AST-RETURN)
             (bmf-native "bml-emit-return-name-add-int" bml-emit-return-name-add-int BML-AST-RETURN)
             (bmf-native "bml-emit-return-call-int" bml-emit-return-call-int BML-AST-RETURN)
+            (bmf-native "bml-emit-return-call-two-int" bml-emit-return-call-two-int BML-AST-RETURN)
             (bmf-native "bml-emit-break-simple" bml-emit-break-simple BML-AST-BREAK)
             (bmf-native "bml-emit-continue-simple" bml-emit-continue-simple BML-AST-CONTINUE)
             (bmf-native "bml-emit-throw-int" bml-emit-throw-int BML-AST-THROW)
@@ -4990,6 +5030,7 @@
             (bmf-native "bml-emit-array-int" bml-emit-array-int BML-AST-ARRAY)
             (bmf-native "bml-emit-method-return-add" bml-emit-method-return-add BML-AST-METHOD)
             (bmf-native "bml-emit-method-param-return-add" bml-emit-method-param-return-add BML-AST-METHOD)
+            (bmf-native "bml-emit-method-two-param-return-add" bml-emit-method-two-param-return-add BML-AST-METHOD)
             (bmf-native "bml-emit-choose-fail-int" bml-emit-choose-fail-int BML-AST-CHOOSE)
             (bmf-native "bml-emit-if-fail-fail-return-int" bml-emit-if-fail-fail-return-int BML-AST-CHOOSE)
             (bmf-native "bml-emit-while-success-fail-return-int" bml-emit-while-success-fail-return-int BML-AST-WHILE)
@@ -5009,6 +5050,7 @@
                 (compiler-rule "bml" "return-name" "BML bound-name return object to BMA ops" bml-emit-return-name)
                 (compiler-rule "bml" "return-name-add-int" "BML bound-name add return object to BMA ops" bml-emit-return-name-add-int)
                 (compiler-rule "bml" "return-call-int" "BML known method call return object to BMA ops" bml-emit-return-call-int)
+                (compiler-rule "bml" "return-call-two-int" "BML known two-argument method call return object to BMA ops" bml-emit-return-call-two-int)
                 (compiler-rule "bml" "break-simple" "BML break object to BMA ops" bml-emit-break-simple)
                 (compiler-rule "bml" "continue-simple" "BML continue object to BMA ops" bml-emit-continue-simple)
                 (compiler-rule "bml" "throw-int" "BML throw object to BMA ops" bml-emit-throw-int)
@@ -5020,6 +5062,7 @@
                 (compiler-rule "bml" "array-int" "BML array literal source objects" bml-emit-array-int)
                 (compiler-rule "bml" "method-return-add" "BML method object to BMA ops" bml-emit-method-return-add)
                 (compiler-rule "bml" "method-param-return-add" "BML one-parameter method object to BMA ops" bml-emit-method-param-return-add)
+                (compiler-rule "bml" "method-two-param-return-add" "BML two-parameter method object to BMA ops" bml-emit-method-two-param-return-add)
                 (compiler-rule "bml" "choice-fail-int" "BML thesis choice object to BMA ops" bml-emit-choose-fail-int)
                 (compiler-rule "bml" "choose-fail-int" "BML choice object to BMA ops" bml-emit-choose-fail-int)
                 (compiler-rule "bml" "if-fail-fail-return-int" "BML if_fail fallback object to BMA ops" bml-emit-if-fail-fail-return-int)
@@ -5087,8 +5130,15 @@
 
     (defn bml-method-node-parameters (node)
         (if (gt (len (node_children node)) 2)
-            (list (bml-parameter-component "" (node_value (bml-node-child node 2))))
+            (bml-method-node-parameters-from node 2)
             (empty)))
+
+    (defn bml-method-node-parameters-from (node index)
+        (if (ge index (len (node_children node)))
+            (empty)
+            (cons
+                (bml-parameter-component "" (node_value (bml-node-child node index)))
+                (bml-method-node-parameters-from node (add index 1)))))
 
     (defn bml-method-node-first-parameter-name (node)
         (do
@@ -5100,6 +5150,11 @@
 
     (defn bml-call-arg (node)
         (bml-node-child node 1))
+
+    (defn bml-call-args (node)
+        (if (node_eq (node_category (bml-call-arg node)) BML-AST-ARRAY)
+            (node_children (bml-call-arg node))
+            (list (bml-call-arg node))))
 
     (defn bml-local-lookup (env name)
         (if (nil? env)
@@ -5170,6 +5225,28 @@
                         env)
                     env))))
 
+    (defn bml-call-bind-args-loop (state env)
+        (do
+            (let params (head state))
+            (let args (head (tail state)))
+            (if (or (nil? params) (nil? args))
+                env
+                (bml-call-bind-args-loop
+                    (list (tail params) (tail args))
+                    (cons
+                        (bml-local-binding
+                            (bml-parameter-name (head params))
+                            (head args)
+                            env)
+                        env)))))
+
+    (defn bml-call-bind-args (method-node call-node env)
+        (bml-call-bind-args-loop
+            (list
+                (bml-method-node-parameters method-node)
+                (bml-call-args call-node))
+            env))
+
     (defn bml-compile-call-in (node env)
         (do
             (let binding (bml-local-lookup env (bml-call-name node)))
@@ -5179,7 +5256,7 @@
                     (let method-node (bml-local-binding-value binding))
                     (bml-compile-node-in
                         (bml-method-node-body method-node)
-                        (bml-call-bind-first-arg method-node node env)))))))
+                        (bml-call-bind-args method-node node env)))))))
 
     (defn bml-compile-node-in (node env)
         (do
@@ -5412,10 +5489,10 @@
         "original BML/BMF/Form compiler sources compile themselves into versioned .fkb images and Hati fourth-kernel native binaries with full class, template, generic, method, state, exception, and physical-lane support")
 
     (defn bml-hati-native-floor ()
-        "supported native subsets include lexical const/name binding, one-argument method parameter binding, known method calls, clang oracle assembly receipts, and Form-native JIT runtime model rows for macos-arm64 and android-arm64; they must produce loadable Hati tables with parity proof; unsupported BML shapes, including unresolved names and unbound calls, must be named before table emission and never silently become a valid zero result")
+        "supported native subsets include lexical const/name binding, one- and two-argument method parameter binding, known method calls, clang oracle assembly receipts, and Form-native JIT runtime model rows for macos-arm64 and android-arm64; they must produce loadable Hati tables with parity proof; unsupported BML shapes, including unresolved names, unbound calls, and arity mismatch, must be named before table emission and never silently become a valid zero result")
 
     (defn bml-hati-native-next-step ()
-        "lift fields, classes, templates, generics, overload resolution, and multi-argument calls on the method parameter/call binding floor")
+        "lift fields, classes, templates, generics, overload resolution, and broader multi-argument call families on the method parameter/call binding floor")
 
     (defn bml-hati-lower-result (expr pool)
         (list "bml-hati-lower-result" expr pool))
@@ -5540,8 +5617,21 @@
             (str_eq (bml-call-name node) "__hati_arg")
             false))
 
-    (defn bml-hati-method-ref (index)
-        (bml-ast-call "__hati_method" (bml-ast-int index)))
+    (defn bml-hati-arg-at-node (index)
+        (bml-ast-call "__hati_arg_at" (bml-ast-int index)))
+
+    (defn bml-hati-arg-at-node? (node)
+        (if (node_eq (node_category node) BML-AST-CALL)
+            (str_eq (bml-call-name node) "__hati_arg_at")
+            false))
+
+    (defn bml-hati-arg-at-index (node)
+        (node_value (bml-node-child (bml-call-arg node) 0)))
+
+    (defn bml-hati-method-ref (index arity)
+        (bml-ast-call-args
+            "__hati_method"
+            (list (bml-ast-int index) (bml-ast-int arity))))
 
     (defn bml-hati-method-ref? (node)
         (if (node_eq (node_category node) BML-AST-CALL)
@@ -5549,7 +5639,18 @@
             false))
 
     (defn bml-hati-method-ref-index (node)
-        (node_value (bml-node-child (bml-call-arg node) 0)))
+        (do
+            (let arg (bml-call-arg node))
+            (if (node_eq (node_category arg) BML-AST-ARRAY)
+                (node_value (bml-node-child (head (node_children arg)) 0))
+                (node_value (bml-node-child arg 0)))))
+
+    (defn bml-hati-method-ref-arity (node)
+        (do
+            (let arg (bml-call-arg node))
+            (if (node_eq (node_category arg) BML-AST-ARRAY)
+                (node_value (bml-node-child (head (tail (node_children arg))) 0))
+                1)))
 
     (defn bml-hati-bind-methods (methods env index)
         (if (nil? methods)
@@ -5559,22 +5660,43 @@
                 (cons
                     (bml-local-binding
                         (bml-method-node-name (head methods))
-                        (bml-hati-method-ref index)
+                        (bml-hati-method-ref
+                            index
+                            (len (bml-method-node-parameters (head methods))))
                         env)
                     env)
                 (add index 1))))
 
     (defn bml-hati-method-param-env (method-node env)
         (do
-            (let param-name (bml-method-node-first-parameter-name method-node))
-            (if (str_eq param-name "")
+            (let params (bml-method-node-parameters method-node))
+            (if (le (len params) 1)
+                (do
+                    (let param-name (bml-method-node-first-parameter-name method-node))
+                    (if (str_eq param-name "")
+                        env
+                        (cons
+                            (bml-local-binding
+                                param-name
+                                (bml-hati-arg-node)
+                                env)
+                            env)))
+                (bml-hati-method-param-env-many (list params 0) env))))
+
+    (defn bml-hati-method-param-env-many (state env)
+        (do
+            (let params (head state))
+            (let index (head (tail state)))
+            (if (nil? params)
                 env
-                (cons
-                    (bml-local-binding
-                        param-name
-                        (bml-hati-arg-node)
-                        env)
-                    env))))
+                (bml-hati-method-param-env-many
+                    (list (tail params) (add index 1))
+                    (cons
+                        (bml-local-binding
+                            (bml-parameter-name (head params))
+                            (bml-hati-arg-at-node index)
+                            env)
+                        env)))))
 
     (defn bml-node-method? (node)
         (node_eq (node_category node) BML-AST-METHOD))
@@ -5618,13 +5740,28 @@
     (defn bml-hati-unsupported-call-in (node env)
         (if (bml-hati-arg-node? node)
             (empty)
+        (if (bml-hati-arg-at-node? node)
+            (empty)
             (do
                 (let binding (bml-local-lookup env (bml-call-name node)))
                 (if (nil? binding)
                     (list "call/unbound")
                 (if (bml-hati-method-ref? (bml-local-binding-value binding))
-                    (bml-hati-unsupported-node-in (bml-call-arg node) env)
-                    (list "call/not-method"))))))
+                    (if (eq
+                            (bml-hati-method-ref-arity (bml-local-binding-value binding))
+                            (len (bml-call-args node)))
+                        (bml-hati-unsupported-call-args-in
+                            (bml-call-args node)
+                            env)
+                        (list "call/arity"))
+                    (list "call/not-method")))))))
+
+    (defn bml-hati-unsupported-call-args-in (args env)
+        (if (nil? args)
+            (empty)
+            (append
+                (bml-hati-unsupported-node-in (head args) env)
+                (bml-hati-unsupported-call-args-in (tail args) env))))
 
     (defn bml-hati-unsupported-node-in (node env)
         (do
@@ -5670,7 +5807,7 @@
             (if (node_eq cat BML-AST-FIELD)
                 (list "field")
             (if (node_eq cat BML-AST-ARRAY)
-                (list "array")
+                (bml-hati-unsupported-call-args-in (node_children node) env)
             (if (node_eq cat BML-AST-BREAK)
                 (list "break")
             (if (node_eq cat BML-AST-CONTINUE)
@@ -5758,6 +5895,12 @@
     (defn bml-hati-lower-call-in (node pool env)
         (if (bml-hati-arg-node? node)
             (bml-hati-lower-result (fk-arg) pool)
+        (if (bml-hati-arg-at-node? node)
+            (bml-hati-lower-result
+                (fk-nth
+                    (fk-arg)
+                    (fk-lit (bml-hati-arg-at-index node)))
+                pool)
             (do
                 (let binding (bml-local-lookup env (bml-call-name node)))
                 (if (nil? binding)
@@ -5770,12 +5913,43 @@
                                 pool
                                 env))
                         (bml-hati-lower-result
-                            (fk-call
-                                (bml-hati-method-ref-index
-                                    (bml-local-binding-value binding))
-                                (bml-hati-lower-expr arg))
+                            (if (le
+                                    (bml-hati-method-ref-arity
+                                        (bml-local-binding-value binding))
+                                    1)
+                                (fk-call
+                                    (bml-hati-method-ref-index
+                                        (bml-local-binding-value binding))
+                                    (bml-hati-lower-expr arg))
+                                (fk-icall
+                                    (fk-cons
+                                        (fk-lit
+                                            (bml-hati-method-ref-index
+                                                (bml-local-binding-value binding)))
+                                        (fk-cons
+                                            (fk-lit
+                                                (bml-hati-method-ref-arity
+                                                    (bml-local-binding-value binding)))
+                                            (fk-empty)))
+                                    (bml-hati-lower-expr arg)))
                             (bml-hati-lower-pool arg)))
-                    (bml-hati-lower-result (fk-lit 0) pool))))))
+                    (bml-hati-lower-result (fk-lit 0) pool)))))))
+
+    (defn bml-hati-lower-array-in (nodes pool env)
+        (if (nil? nodes)
+            (bml-hati-lower-result (fk-empty) pool)
+            (do
+                (let first (bml-hati-lower-node-in-env (head nodes) pool env))
+                (let rest
+                    (bml-hati-lower-array-in
+                        (tail nodes)
+                        (bml-hati-lower-pool first)
+                        env))
+                (bml-hati-lower-result
+                    (fk-cons
+                        (bml-hati-lower-expr first)
+                        (bml-hati-lower-expr rest))
+                    (bml-hati-lower-pool rest)))))
 
     (defn bml-hati-lower-node-in-env (node pool env)
         (do
@@ -5794,6 +5968,8 @@
                 (bml-hati-lower-string-in
                     (node_value (bml-node-child node 0))
                     pool)
+            (if (node_eq cat BML-AST-ARRAY)
+                (bml-hati-lower-array-in (node_children node) pool env)
             (if (node_eq cat BML-AST-ADD)
                 (do
                     (let left (bml-hati-lower-node-in-env (bml-node-child node 0) pool env))
@@ -5840,7 +6016,7 @@
                 (bml-hati-lower-result (fk-lit 0) pool)
             (if (node_eq cat BML-AST-DISCARD)
                 (bml-hati-lower-result (fk-lit 0) pool)
-                (bml-hati-lower-result (fk-lit 0) pool)))))))))))))))))))))))
+                (bml-hati-lower-result (fk-lit 0) pool))))))))))))))))))))))))
 
     (defn bml-hati-lower-methods-in (methods pool env)
         (if (nil? methods)
