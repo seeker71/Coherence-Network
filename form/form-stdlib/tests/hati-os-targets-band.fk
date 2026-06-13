@@ -1,8 +1,9 @@
 ; preludes: form-stdlib/core.fk form-stdlib/hati-os-targets.fk
 ;
 ; hati-os-targets-band - host OS implementation and distribution catalog proof.
-; Verdict 255 when macOS and Android target rows, implementation rows, and
-; hati.earth download coordinates are discoverable.
+; Verdict 4095 when macOS and Android target rows, clang oracle surfaces,
+; Form-native JIT runtime rows, implementation rows, and hati.earth download
+; coordinates are discoverable.
 
 (do
     (let c0 (if (eq (len (hos-targets)) 2)
@@ -34,5 +35,21 @@
     (let c7 (if (str_eq (hos-artifact-status mac-artifact) "hati-earth-download-door")
                 (if (str_eq (hos-download-url "android-arm64") (hos-artifact-url android-artifact)) 128 0)
                 0))
+    (let c8 (if (str_eq (hos-target-clang-triple mac) "arm64-apple-macosx")
+                (if (str_eq (hos-target-assembly-surface mac) "mach-o-relocatable+arm64-asm") 256 0)
+                0))
+    (let c9 (if (str_eq (hos-target-clang-triple android) "aarch64-linux-android")
+                (if (str_eq (hos-target-assembly-surface android) "elf-relocatable+aarch64-asm") 512 0)
+                0))
+    (let c10 (if (str_eq (hos-target-jit-oracle mac) "clang")
+                (if (str_eq (hos-target-jit-runtime mac) "form-native-arm64-assembler")
+                    (if (str_eq (hos-target-jit-model mac) "clang-oracle-sampled-form-native-recipe") 1024 0)
+                    0)
+                0))
+    (let c11 (if (str_eq (hos-target-jit-oracle android) "clang")
+                (if (str_eq (hos-target-jit-runtime android) "form-native-arm64-assembler")
+                    (if (str_eq (hos-target-jit-model android) "clang-oracle-sampled-form-native-recipe") 2048 0)
+                    0)
+                0))
 
-    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 c11))))))))))))

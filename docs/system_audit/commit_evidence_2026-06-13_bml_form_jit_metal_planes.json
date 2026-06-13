@@ -1,0 +1,144 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/bml-metal-planes-floor-20260613",
+  "commit_scope": "Validate the BML/Hati native compiler surface and Form native JIT lowering for supported CPU, GPU, and ML hardware lanes: third-party compilers/drivers/models are oracle/sample sources, Android runtime JIT stays on Form-native recipes, and measurable oracle-learning choice samples gate native promotion.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "bml-native-compiler-north-star",
+    "hati-os",
+    "host-kernel-resource-lanes",
+    "jit-oracle-learning"
+  ],
+  "spec_ids": [
+    "bml-native-compiler-floor",
+    "hati-os-targets",
+    "fourth-kernel-physical-lanes",
+    "jit-oracle-learning"
+  ],
+  "task_ids": [
+    "bml-metal-planes-floor-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star and floor sequencing requirement",
+        "metal-plane validation requirement",
+        "clang-free Android runtime requirement",
+        "CPU/GPU/ML hardware-lane requirement",
+        "third-party oracle learning requirement",
+        "choice-sampling and exploration requirement"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "floor-update-after-validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/coherence-substrate/jit-oracle-learning.form",
+    "docs/system_audit/commit_evidence_2026-06-13_bml_form_jit_metal_planes.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/grammars/bml.fk",
+    "form/form-stdlib/hati-os-targets.fk",
+    "form/form-stdlib/tests/bml-hati-native-floor-proof.fk",
+    "form/form-stdlib/tests/hati-os-targets-band.fk",
+    "form/form-stdlib/tests/jit-oracle-learning-band.fk",
+    "form/form-stdlib/tests/jit-metal-lanes-band.fk",
+    "scripts/bml_form_jit_metal_planes_audit.sh"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/coherence-substrate/jit-oracle-learning.form",
+    "docs/system_audit/commit_evidence_2026-06-13_bml_form_jit_metal_planes.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/grammars/bml.fk",
+    "form/form-stdlib/hati-os-targets.fk",
+    "form/form-stdlib/tests/bml-hati-native-floor-proof.fk",
+    "form/form-stdlib/tests/hati-os-targets-band.fk",
+    "form/form-stdlib/tests/jit-oracle-learning-band.fk",
+    "form/form-stdlib/tests/jit-metal-lanes-band.fk",
+    "scripts/bml_form_jit_metal_planes_audit.sh"
+  ],
+  "evidence_refs": [
+    "form/form-stdlib/tests/hati-os-targets-band.fk -> 4095",
+    "form/form-stdlib/tests/jit-metal-lanes-band.fk -> 4095",
+    "form/form-stdlib/tests/jit-oracle-learning-band.fk -> 1023",
+    "form/form-stdlib/tests/form-lower-rec-band.fk -> 31",
+    "form/form-stdlib/tests/bml-hati-native-floor-proof.fk -> 16",
+    "scripts/bml_form_jit_metal_planes_audit.sh -> Form-native CPU/GPU/ML lane proof, oracle-learning choice proof, host BML/Hati stdout_first=3, host Form JIT form_poly(3,4)=25, macOS Mach-O arm64 objects, Android ELF aarch64 objects",
+    "docs/coherence-substrate/bml-native-north-star.form -> current-supported includes clang-target-assembly, clang-oracle-samples, form-native-jit-runtime, oracle-learning-choice, gpu-kernel-emitter, ml-kernel-emitter, macos-arm64, android-arm64",
+    "docs/system_audit/model_executor_runs.jsonl -> appended one pass record for bml-metal-planes-floor-20260613"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-os-targets.fk form-stdlib/tests/hati-os-targets-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-os-targets.fk form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/jit-tensor-emit.fk form-stdlib/tests/jit-metal-lanes-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/jit-oracle-learning-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/tests/form-lower-rec-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-floor-proof.fk",
+      "scripts/bml_form_jit_metal_planes_audit.sh"
+    ],
+    "notes": "make prompt-guide initially failed on unrelated sibling continuity in the Grok worktree, then passed with the documented PROMPT_GATE_SKIP_CONTINUITY=1 path. Wellness reported no attention items for this task surface and noted production deploy lag separately. The target catalog proof now returns 4095, adding clang oracle rows, Form-native JIT runtime rows, and target assembly surfaces. jit-metal-lanes-band returns 4095, proving the CPU arm64 Form-native assembler/lowerer model plus GPU/ML kernel emitters as Form recipes. jit-oracle-learning-band returns 1023, proving measured oracle/native choice samples: a fast but wrong native recipe cannot enter selection, a parity-correct faster native recipe can win, and exploration keeps third-party plus alternate-native samples active. The BML native floor proof returns 16. The metal-plane audit first proves the Form-native CPU/GPU/ML lane and oracle-learning choice floor, then compiles the BML/Hati universal C host binary and Form jit_emit_c host binary, then emits clang oracle assembly and relocatable objects for arm64-apple-macosx and aarch64-linux-android."
+  },
+  "fourth_arm_validation": {
+    "status": "3-kernel only",
+    "gap": "The validate.sh bands added or changed here are Go/Rust/TypeScript sibling proofs. This commit does not claim fkwu fourth-arm execution for jit-metal-lanes-band or jit-oracle-learning-band; the fourth-arm gap remains lowering these lane/choice proofs through the supported fkwu band path. The clang Mach-O/ELF receipts are target oracle/object receipts, not fourth-arm runtime proof."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending rebase, worktree guard, push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No public deploy is required for the local compiler/target floor until the branch is merged. Publishing signed Hati binaries and receipts remains explicit release work."
+  },
+  "phase_gate": {
+    "phase": "bml-form-jit-metal-plane-floor",
+    "gate": "BML/Hati universal C and Form jit_emit_c lower through clang oracle receipts to macOS arm64 and Android arm64 assembly/object surfaces, while supported CPU/GPU/ML JIT lanes have Form-native recipe proofs and measured oracle-learning choice samples for runtime/internal emission.",
+    "state": "local-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Grow the clang/driver/MLK oracle sample corpus into per-lane Form-native JIT recipe models and real measured choice windows, then close method parameter and call binding in the BML native compiler floor while keeping target assembly receipts in the proof loop."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The native compiler floor now requires target assembly receipts for the supported Hati metal planes, Form-native JIT runtime rows for supported CPU/GPU/ML hardware lanes, and measurable oracle-learning choice samples before a native recipe can be treated as promoted. macOS arm64 is proven as Mach-O arm64 relocatable object output; Android arm64 is proven as ELF aarch64 relocatable object output; Android runtime JIT is explicitly Form-native, not clang-dependent.",
+    "public_endpoints": [
+      "local:form-stdlib-hati-os-targets",
+      "local:form-stdlib-jit-metal-lanes",
+      "local:form-stdlib-jit-oracle-learning",
+      "local:bml-form-jit-metal-planes-audit"
+    ],
+    "test_flows": [
+      "hati-os-targets-band proves target clang triples, oracle rows, Form-native JIT runtime rows, and assembly surfaces.",
+      "jit-metal-lanes-band proves CPU/GPU/ML hardware-lane emitter rows, including Form-native arm64 lowerer byte conviction and deterministic GPU/ML kernel emitters.",
+      "jit-oracle-learning-band proves the choice floor for third-party oracle samples, measured native candidate rows, parity-first promotion, Thompson/champion-challenger hooks, and continuing oracle/alternate sampling.",
+      "bml-hati-native-floor-proof proves the BML floor string names macOS/Android assembly receipts and Form-native JIT runtime.",
+      "bml_form_jit_metal_planes_audit proves Form-native CPU/GPU/ML lane receipts and oracle-learning choice receipts before compiling host BML/Hati and Form JIT binaries.",
+      "bml_form_jit_metal_planes_audit proves macOS Mach-O arm64 and Android ELF aarch64 relocatable objects for both emitted C surfaces."
+    ],
+    "summary": "The floor is now honest about what is supported: Form-native CPU/GPU/ML emitter proofs, a measured oracle/native learning-choice proof, host-run parity, and clang oracle target assembly/object receipts for macOS arm64 and Android arm64. Actual Android device execution, signed artifact publishing, and real larger learned oracle-sample corpora remain separate release/device gates."
+  }
+}

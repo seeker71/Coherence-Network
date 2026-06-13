@@ -1,0 +1,74 @@
+; preludes: form-stdlib/core.fk form-stdlib/hati-os-targets.fk form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/jit-tensor-emit.fk
+;
+; jit-metal-lanes-band - clang is the oracle, not the Android runtime.
+; The supported macOS/Android metal lanes name clang as the sample oracle and
+; Form-native arm64 assembly lowering as the runtime JIT carrier. The same
+; contract reaches GPU and ML kernels: host compilers/drivers are oracles and
+; effectful organs; the kernel source emitters are Form recipes with byte-stable
+; output. The byte conviction gate proves a representative CPU lowerer sample
+; can be internalized.
+;
+; Verdict 4095:
+;   1   exactly the two supported target lanes are present
+;   2   macOS target carries clang triple and Mach-O arm64 assembly surface
+;   4   Android target carries clang triple and ELF aarch64 assembly surface
+;   8   macOS JIT row is clang oracle -> Form-native arm64 assembler
+;   16  Android JIT row is clang oracle -> Form-native arm64 assembler
+;   32  both lanes use the oracle-sampled Form-native recipe model
+;   64  Form lowerer byte-equals the assembler reference for a generated sample
+;   128 the byte-conviction gate allows dropping clang for that covered sample
+;   256 GPU lane: Form emits the f32 Metal kernel source
+;   512 GPU lane: Form emits f16 and bf16 Metal kernel source
+;   1024 ML lane: Form emits the Rust slice-ABI matvec kernel source
+;   2048 GPU/ML emitters are deterministic recipes
+(do
+    (let mac (hos-target-by-name "macos-arm64"))
+    (let android (hos-target-by-name "android-arm64"))
+
+    (let c0 (if (eq (len (hos-targets)) 2) 1 0))
+    (let c1 (if (str_eq (hos-target-clang-triple mac) "arm64-apple-macosx")
+                (if (str_eq (hos-target-assembly-surface mac) "mach-o-relocatable+arm64-asm") 2 0)
+                0))
+    (let c2 (if (str_eq (hos-target-clang-triple android) "aarch64-linux-android")
+                (if (str_eq (hos-target-assembly-surface android) "elf-relocatable+aarch64-asm") 4 0)
+                0))
+    (let c3 (if (str_eq (hos-target-jit-oracle mac) "clang")
+                (if (str_eq (hos-target-jit-runtime mac) "form-native-arm64-assembler") 8 0)
+                0))
+    (let c4 (if (str_eq (hos-target-jit-oracle android) "clang")
+                (if (str_eq (hos-target-jit-runtime android) "form-native-arm64-assembler") 16 0)
+                0))
+    (let c5 (if (str_eq (hos-target-jit-model mac) "clang-oracle-sampled-form-native-recipe")
+                (if (str_eq (hos-target-jit-model android) "clang-oracle-sampled-form-native-recipe") 32 0)
+                0))
+
+    (let prog (list
+        (list 1 40 0 0)
+        (list 1 1 0 0)
+        (list 3 0 1 0)
+        (list 1 1 0 0)
+        (list 4 2 3 0)))
+    (let img (lo-compile prog 4))
+    (let ref (list 0 5 128 82  0 4 0 17  0 4 0 81  192 3 95 214))
+    (let conviction (fa-conviction img ref))
+    (let c6 (if (eq conviction 1) 64 0))
+    (let c7 (if (eq (fa-may-drop conviction 1) 1) 128 0))
+
+    (let msl-f32 (jte-matvec-msl "form_matvec_f32"))
+    (let msl-f16 (jte-matvec-msl-fmt "form_matvec_f16" "f16"))
+    (let msl-bf16 (jte-matvec-msl-fmt "form_matvec_bf16" "bf16"))
+    (let rust-f64 (jte-matvec-rust "form_matvec_f64"))
+    (let c8 (if (ge (str_find msl-f32 "kernel void form_matvec_f32" 0) 0)
+                (if (ge (str_find msl-f32 "float acc" 0) 0) 256 0)
+                0))
+    (let c9 (if (ge (str_find msl-f16 "device const half" 0) 0)
+                (if (ge (str_find msl-bf16 "device const bfloat" 0) 0) 512 0)
+                0))
+    (let c10 (if (ge (str_find rust-f64 "extern fn form_matvec_f64" 0) 0)
+                (if (ge (str_find rust-f64 "while j > 0" 0) 0) 1024 0)
+                0))
+    (let c11 (if (str_eq (jte-matvec-msl "form_matvec_f32") msl-f32)
+                 (if (str_eq (jte-matvec-rust "form_matvec_f64") rust-f64) 2048 0)
+                 0))
+
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11)))

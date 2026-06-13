@@ -44,6 +44,8 @@
         (list
             (score-bool (str-contains? (bml-hati-native-north-star) "original BML/BMF/Form compiler"))
             (score-bool (str-contains? (bml-hati-native-floor) "lexical const/name binding"))
+            (score-bool (str-contains? (bml-hati-native-floor) "macos-arm64 and android-arm64"))
+            (score-bool (str-contains? (bml-hati-native-floor) "Form-native JIT runtime"))
             (score-bool (str-contains? (bml-hati-native-next-step) "method parameter and call binding"))
             (score-bool (bml-hati-image-supported? supported-image))
             (score-int (len (bml-hati-image-unsupported supported-image)) 0)

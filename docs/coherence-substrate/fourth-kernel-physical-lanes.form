@@ -4,9 +4,18 @@
   (lineage
     (rests-on fourth-kernel.form tool-channel.form host-kernel.form hati-os-targets.form)
     (probe scripts/hati_os_physical_lanes_probe.sh)
+    (assembly-probe scripts/bml_form_jit_metal_planes_audit.sh)
     (carrier form/form-stdlib/hati-os-kernel.fk)
     (emitter form/form-stdlib/hati-os-kernel-emit.fk)
     (matcher form/form-stdlib/hati-os-match.fk))
+
+  (jit-hardware-lane-contract
+    (oracle clang-and-host-driver-samples)
+    (runtime form-native-recipes)
+    (choice measured-oracle-learning-samples)
+    (hardware-classes cpu gpu ml)
+    (proof form/form-stdlib/tests/jit-metal-lanes-band.fk -> 4095)
+    (learning-proof form/form-stdlib/tests/jit-oracle-learning-band.fk -> 1023))
 
   (claim
     "The tool/channel surface is more than catalog data when a lane is backed by a Hati-emitted binary."
@@ -17,7 +26,8 @@
 
   (north-star
     "Every resource and channel row has a locally inspectable physical receipt, with the most native available codec first and third-party carriers kept explicit until a kernel-native codec replaces them.")
-    "Host process and utilization lanes walk from host:exec carrier receipts toward direct host OS calls such as process table APIs, task counters, memory statistics, load counters, and device pressure signals.")
+    "Host process and utilization lanes walk from host:exec carrier receipts toward direct host OS calls such as process table APIs, task counters, memory statistics, load counters, and device pressure signals."
+    "Third-party compilers, GPU drivers, MLK kernels, and hosted models stay in the mesh as oracles until Form-native recipes beat them on measured correctness, latency, cost, and trust, with continuing exploration after promotion.")
 
   (native-binaries
     (fkdump  "driver binary: fork/exec/pipe host stdout into fk_src, then PUTC captured bytes")
@@ -47,12 +57,20 @@
 
   (host-target-proof-lanes
     (macos-arm64
+      (clang-triple arm64-apple-macosx)
       (binary-format mach-o)
+      (assembly-surface mach-o-relocatable+arm64-asm)
+      (jit-oracle clang)
+      (jit-runtime form-native-arm64-assembler)
       (distribution https://hati.earth/downloads/hati-os/macos/arm64/hati-os-macos-arm64.tar.zst)
       (resource-implementations libproc+sysctl+proc_pidinfo host_statistics64+task_info+getifaddrs+IOKit CoreAudio+AVFoundation ScreenCaptureKit+AVFoundation CoreMotion+CoreLocation-when-present)
       (floor "current physical receipts are captured on this Mac host"))
     (android-arm64
+      (clang-triple aarch64-linux-android)
       (binary-format elf)
+      (assembly-surface elf-relocatable+aarch64-asm)
+      (jit-oracle clang)
+      (jit-runtime form-native-arm64-assembler)
       (distribution https://hati.earth/downloads/hati-os/android/arm64/hati-os-android-arm64.apk)
       (resource-implementations procfs+ActivityManager-permission-gated procfs+BatteryManager+Debug+SensorManager AAudio+AudioRecord+AudioTrack Camera2+MediaProjection-permission-gated SensorManager+LocationManager+GNSS-permission-gated)
       (floor "Android receipts require an Android device or emulator with granted permissions")))
@@ -77,18 +95,18 @@
       (floor "this Mac host physically reports no GPS provider")
       (missing "GPS coordinate receipt from a device that exposes a location provider"))
     (multi-model-learning
-      (floor "local Ollama model choice is proven")
-      (missing "two or more native/third-party model receipts over the same channel sample with explicit model choice and comparison fidelity"))
+      (floor "local Ollama model choice is proven, and jit-oracle-learning-band names the measurable oracle/native choice contract")
+      (missing "two or more native/third-party model receipts over the same channel sample with explicit model choice, comparison fidelity, and continuing exploration cadence"))
     (host-process-usage
       (floor "process and utilization channels now plan through host:process and host:usage; the present receipt floor may still use host:exec carriers")
       (missing "one Hati-emitted physical receipt for direct host OS process and utilization calls, with ps/top/vm_stat/iostat-style carriers only as fallback receipts")))
 
   (missing-target-distribution-samples
     (macos-arm64
-      (floor "target row and hati.earth URL are proven")
+      (floor "target row, clang oracle assembly/object proof, Form-native JIT runtime row, and hati.earth URL are proven")
       (missing "published tarball, sha256, source map, and physical-lane summary JSON at the catalog URL"))
     (android-arm64
-      (floor "target row and hati.earth URL are proven")
+      (floor "target row, clang oracle assembly/object proof, Form-native JIT runtime row, and hati.earth URL are proven")
       (missing "published APK, sha256, source map, and Android device/emulator physical-lane summary JSON at the catalog URL")))
 
   (invariant
