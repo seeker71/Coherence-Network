@@ -41,7 +41,7 @@
             (cpcf-source "form-recipe" "form/form-stdlib/choice-receipt-learning.fk" "form/form-stdlib/tests/choice-receipt-learning-band.fk" "proven-four-way")
             (cpcf-source "form-recipe" "form/form-stdlib/branch-choice-order.fk" "form/form-stdlib/tests/branch-choice-order-band.fk" "proven-four-way")
             (cpcf-source "form-recipe" "form/form-stdlib/bml-route-choice-runtime.fk" "form/form-stdlib/tests/bml-route-choice-runtime-band.fk" "proven-four-way")
-            (cpcf-source "form-recipe" "form/form-stdlib/recipe-choice-runtime.fk" "form/form-stdlib/tests/recipe-choice-runtime-band.fk" "proven-three-kernel-fourth-mismatch-35-vs-233")
+            (cpcf-source "form-recipe" "form/form-stdlib/recipe-choice-runtime.fk" "form/form-stdlib/tests/recipe-choice-runtime-band.fk" "proven-four-way")
             (cpcf-source "bml-source" "form/form-stdlib/bml-source.fk" "form/form-stdlib/tests/bml-route-source-object-band.fk" "proven-four-way")
             (cpcf-source "bml-source" "form/form-stdlib/bml-source.fk" "form/form-stdlib/tests/bml-choice-routing-metadata-band.fk" "proven-four-way")
             (cpcf-source "bml-source" "form/form-stdlib/bml-source.fk" "form/form-stdlib/tests/bml-choice-receipt-row-band.fk" "proven-four-way")

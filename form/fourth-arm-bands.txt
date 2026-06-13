@@ -27,8 +27,8 @@
 #   multi-line output     — bands that print mid-walk (the walker answers
 #     one value through fk_pr)
 #
-# Current floor (2026-06-13 source-section residual closure): full
-# `cd form && ./validate.sh` reaches 118 four-way bands and 551 total passing
+# Current floor (2026-06-13 recipe-choice runtime closure): full
+# `cd form && ./validate.sh` reaches 120 four-way bands and 552 total passing
 # workloads, with 0 residual divergent bands. North star: every stdlib band is
 # either listed here and validated four-way, or its 3-kernel-only blocker is
 # explicitly named in commit evidence; suite-level residuals stay at zero while
@@ -45,6 +45,7 @@ model-retire fkc 63
 signal-derivative fkc 127
 feature-vector fkc 127
 active-inference fks 127
+indirect-call-runtime-probe fks 7
 branch-choice-order fks 511
 channel-interface fks 127
 channel-flow fks 8388607
@@ -55,6 +56,7 @@ bml-route-source-object fks 2047
 bml-choice-routing-metadata fks 4095
 bml-choice-receipt-row fks 131071
 bml-route-choice-runtime fks 32767
+recipe-choice-runtime fks 233
 channel-protocol-choice-floor fks 32767
 kernel-http fks 536965066
 tool-channel fks 255

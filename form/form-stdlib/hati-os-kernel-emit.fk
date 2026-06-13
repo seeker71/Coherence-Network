@@ -300,9 +300,9 @@
 ;    silent wrap (axiom 4). Sizes are recipe cells, no magic in the C.
 (defn fkc-spool-slots () 16384)   ; max distinct strings in one program image
 (defn fkc-spool-bytes () 1048576) ; pool byte store, the fk_src discipline
-(defn fkc-node-slots () 4096)     ; transient substrate node carrier
-(defn fkc-universal-fn-slots () 512)
-(defn fkc-universal-node-slots () 16384)
+(defn fkc-node-slots () 65536)    ; transient substrate node carrier
+(defn fkc-universal-fn-slots () 2048)
+(defn fkc-universal-node-slots () 65536)
 (defn fkc-arm-slots ()  81)       ; dispatch counters cover tags 0..80
 
 (defn fkc-spool-decl-text ()

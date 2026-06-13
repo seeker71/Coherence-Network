@@ -123,7 +123,7 @@
         (list
             (cpcf-score (eq (len recipe) 6) 1)
             (cpcf-score (eq (len validation-rounds) 3) 2)
-            (cpcf-score (eq (cpcf-proven-source-count sources) 15) 4)
+            (cpcf-score (eq (cpcf-proven-source-count sources) 16) 4)
             (cpcf-score (str_eq (cpcf-source-status channel-interface-source) "proven-four-way") 8)
             (cpcf-score (str_eq (cpcf-source-status channel-flow-source) "proven-four-way") 16)
             (cpcf-score (str_eq (cpcf-source-status tool-channel-source) "proven-four-way") 32)

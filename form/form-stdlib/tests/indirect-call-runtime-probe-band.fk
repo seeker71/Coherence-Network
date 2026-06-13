@@ -1,0 +1,36 @@
+; indirect-call-runtime-probe-band.fk
+;
+; Probe for first-class function values after storage inside ordinary lists.
+; This is the exact shape recipe capabilities use for emit/parse recipes.
+;
+; preludes: form-stdlib/core.fk
+
+(do
+    (defn add3 (a b c)
+        (add (add a b) c))
+
+    (defn const7 ()
+        7)
+
+    (defn inc1 (value)
+        (add value 1))
+
+    (defn carrier (name fn)
+        (list name fn))
+
+    (let three_arg
+        (carrier "three" add3))
+    (let zero_arg
+        (carrier "zero" const7))
+    (let one_arg
+        (carrier "one" inc1))
+
+    (let f3 (nth three_arg 1))
+    (let f0 (nth zero_arg 1))
+    (let f1 (nth one_arg 1))
+
+    (sum
+        (list
+            (if (eq (f3 1 2 3) 6) 1 0)
+            (if (eq (f0) 7) 2 0)
+            (if (eq (f1 9) 10) 4 0))))
