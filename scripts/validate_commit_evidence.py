@@ -20,6 +20,7 @@ RUNTIME_PATH_PREFIXES = (
     "web/lib/",
     "form/",
     "experiments/coherence-sense-android/",
+    "deploy/hostinger/",
     "deploy/front-door/",
     "deploy/kernel-router/",
     "Dockerfile.kernel-router",
