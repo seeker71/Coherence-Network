@@ -1,0 +1,58 @@
+; tests/bml-hati-native-floor-proof.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk
+;
+; Declares the BML-native north star, floor, and next step as runnable BML
+; compiler cells, then walks the floor step: unsupported Hati lowering is
+; observable before table emission instead of silently becoming a valid 0.
+
+(do
+    (defn score-bool (actual)
+        (if actual 1 0))
+
+    (defn score-int (actual expected)
+        (if (eq actual expected) 1 0))
+
+    (defn score-str (actual expected)
+        (if (nil? actual)
+            0
+            (if (str_eq actual expected) 1 0)))
+
+    (defn str-contains? (haystack needle)
+        (ge (str_find haystack needle 0) 0))
+
+    (let supported-node (bml-ast-return (bml-ast-int 7)))
+    (let supported-image (bml-hati-compile-image supported-node))
+    (let supported-table (bml-hati-table-file supported-image))
+
+    (let choose-node
+        (bml-ast-choose
+            (list
+                (bml-ast-fail 0)
+                (bml-ast-return (bml-ast-int 8)))))
+    (let choose-image (bml-hati-compile-image choose-node))
+
+    (let while-node (bml-ast-while-success (bml-ast-return (bml-ast-int 1))))
+    (let while-image (bml-hati-compile-image while-node))
+    (let while-table (bml-hati-table-file while-image))
+    (let while-program (bml-hati-compile-program while-node))
+    (let while-run (bml-hati-run-value while-node))
+
+    (let fail-image (bml-hati-compile-image (bml-ast-fail 0)))
+
+    (sum
+        (list
+            (score-bool (str-contains? (bml-hati-native-north-star) "original BML/BMF/Form compiler"))
+            (score-bool (str-contains? (bml-hati-native-floor) "never silently"))
+            (score-bool (str-contains? (bml-hati-native-next-step) "unsupported BML-to-Hati lowering"))
+            (score-bool (bml-hati-image-supported? supported-image))
+            (score-int (len (bml-hati-image-unsupported supported-image)) 0)
+            (score-bool (not (str-contains? supported-table "BML-HATI-UNSUPPORTED")))
+            (score-bool (bml-hati-image-supported? choose-image))
+            (score-int (bml-hati-run-value choose-node) 8)
+            (score-bool (not (bml-hati-image-supported? while-image)))
+            (score-str (head (bml-hati-image-unsupported while-image)) "while")
+            (score-bool (str-contains? while-table "BML-HATI-UNSUPPORTED while"))
+            (score-bool (str-contains? while-program "BML-HATI-UNSUPPORTED while"))
+            (score-bool (str-contains? while-run "BML-HATI-UNSUPPORTED while"))
+            (score-str (head (bml-hati-image-unsupported fail-image)) "fail"))))
