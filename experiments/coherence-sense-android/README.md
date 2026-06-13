@@ -41,8 +41,24 @@ through the kernel, not in Python.
 2. On the phone: Settings → allow installing from your browser/files app ("unknown sources").
 3. Open the APK; install; launch **Coherence Sense**.
 
-Rebuild + re-publish after changes: `JAVA_HOME=/opt/homebrew/opt/openjdk@21 ./gradlew assembleDebug` then
-`gh release upload coherence-sense-v0 app/build/outputs/apk/debug/app-debug.apk --clobber`.
+From the repository root, rebuild + prove the public asset and mesh handshake after changes:
+
+```bash
+scripts/verify_android_sense_public_handshake.sh
+```
+
+That command builds the debug-signed APK, builds the Hati public asset bundle, starts the Mac witness
+surface, starts a local Hati mesh API, proves announce / heartbeat / list / offer / list, and writes
+`.cache/android-sense-public-handshake/<stamp>/android-sense-public-handshake-summary.json`.
+
+Publish only after the local proof passes:
+
+```bash
+scripts/verify_android_sense_public_handshake.sh --publish
+```
+
+That uploads the macOS package, Android native package, APK, checksums, and asset summary to
+`hati-os-v0.1.0-20260613` with `gh release upload --clobber`.
 
 It's a **debug-signed** build (no Play Store) — fine for trying it on your own device.
 
@@ -83,9 +99,11 @@ When you connect, the app announces itself to `hati.mesh` through the public API
 - `POST /api/hati/mesh/channels/offer` — channel offers to another organ.
 - `GET /api/hati/mesh/channels` — channel/flow rows involving this organ.
 
-The current APK actively streams and measures `sensor:signal` flow. It also declares and displays
-offerable `screen:write`, `audio:pcm16`, and `video:rgba-time` channels; those rates stay `0` until
-permissioned mic/speaker/camera samples are wired as active physical lanes.
+The current APK actively streams and measures `sensor:signal` flow, announces / heartbeats on
+`hati.mesh:presence`, and displays mesh silence as channel data. It declares and displays offerable
+`screen:write`, `audio:pcm16`, `video:rgba-time`, `network:http`, and `bluetooth:presence` channels.
+The mic lane has an active RMS floor when permission is granted; camera/video and speaker output remain
+explicit offered lanes until frame/playback sessions carry active physical samples.
 
 The resource dashboard also makes accelerator floors visible. GPU and DSP/NPU are cataloged lanes,
 but this APK does not yet emit active native compute samples for them. MLX is explicit unsupported

@@ -1,0 +1,171 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/android-sense-rich-channel-surface-20260613",
+  "commit_scope": "Rebase and continue the Android Coherence Sense app as a first-class Hati mesh sensing organ surface with visible identity, channel lanes, resource pressure, mesh presence, QR offer, and floor/north-star receipts.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "hati-os",
+    "hati-mesh",
+    "sense-organ-ripening",
+    "form-os-tool-surface"
+  ],
+  "spec_ids": [
+    "android-sense-organ",
+    "hati-mesh-presence",
+    "channel-loopback",
+    "host-kernel-resource-lanes"
+  ],
+  "task_ids": [
+    "android-sense-rich-channel-surface-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "sister-work-integration"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude-sister-work",
+      "contributor_type": "machine",
+      "roles": [
+        "conceptual-signal",
+        "sense-organ-ripening"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "experiments/coherence-sense-android/README.md",
+    "experiments/coherence-sense-android/app/build.gradle.kts",
+    "experiments/coherence-sense-android/app/src/main/AndroidManifest.xml",
+    "experiments/coherence-sense-android/app/src/main/java/com/coherence/sense/MainActivity.kt",
+    "experiments/coherence-sense-android/app/src/main/res/layout/activity_main.xml",
+    "experiments/coherence-sense-android/app/src/main/res/drawable/",
+    "experiments/coherence-sense-android/app/src/main/res/drawable/bg_app.xml",
+    "experiments/coherence-sense-android/app/src/main/res/drawable/bg_hero.xml",
+    "experiments/coherence-sense-android/app/src/main/res/drawable/bg_lane.xml",
+    "experiments/coherence-sense-android/app/src/main/res/drawable/bg_panel.xml",
+    "experiments/coherence-sense-android/app/src/main/res/drawable/bg_status.xml",
+    "experiments/coherence-sense-android/mac-witness-server.py",
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/validate_commit_evidence.py",
+    "scripts/verify_android_sense_public_handshake.sh",
+    "docs/system_audit/commit_evidence_2026-06-13_android_sense_channel_surface.json"
+  ],
+  "change_files": [
+    "experiments/coherence-sense-android/README.md",
+    "experiments/coherence-sense-android/app/build.gradle.kts",
+    "experiments/coherence-sense-android/app/src/main/AndroidManifest.xml",
+    "experiments/coherence-sense-android/app/src/main/java/com/coherence/sense/MainActivity.kt",
+    "experiments/coherence-sense-android/app/src/main/res/layout/activity_main.xml",
+    "experiments/coherence-sense-android/app/src/main/res/drawable/",
+    "experiments/coherence-sense-android/app/src/main/res/drawable/bg_app.xml",
+    "experiments/coherence-sense-android/app/src/main/res/drawable/bg_hero.xml",
+    "experiments/coherence-sense-android/app/src/main/res/drawable/bg_lane.xml",
+    "experiments/coherence-sense-android/app/src/main/res/drawable/bg_panel.xml",
+    "experiments/coherence-sense-android/app/src/main/res/drawable/bg_status.xml",
+    "experiments/coherence-sense-android/mac-witness-server.py",
+    "deploy/hostinger/auto-deploy.sh",
+    "scripts/validate_commit_evidence.py",
+    "scripts/verify_android_sense_public_handshake.sh",
+    "docs/system_audit/commit_evidence_2026-06-13_android_sense_channel_surface.json"
+  ],
+  "evidence_refs": [
+    "output/android-screenshots/coherence-sense-rich-surface-idle-adb-20260613.png",
+    "output/android-screenshots/coherence-sense-rich-surface-dashboard-adb-20260613.png",
+    "output/android-screenshots/coherence-sense-rich-surface-floor-northstar-adb-20260613.png",
+    ".cache/android-sense-public-handshake/20260613T084039Z/android-sense-public-handshake-summary.json",
+    ".cache/hati-os-public-assets/20260613T084039Z/hati-os-public-assets-summary.json",
+    "https://github.com/seeker71/Coherence-Network/releases/download/hati-os-v0.1.0-20260613/coherence-sense-hati-mesh-debug.apk",
+    "https://github.com/seeker71/Coherence-Network/releases/download/hati-os-v0.1.0-20260613/hati-os-android-arm64.tar.zst",
+    "https://github.com/seeker71/Coherence-Network/releases/download/hati-os-v0.1.0-20260613/hati-os-macos-arm64.tar.zst",
+    "https://coherencycoin.com/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-debug.apk",
+    "https://coherencycoin.com/downloads/hati-os/android/arm64/hati-os-android-arm64.tar.zst",
+    "https://coherencycoin.com/downloads/hati-os/macos/arm64/hati-os-macos-arm64.tar.zst",
+    "docs/vision-kb/concepts/lc-trust-over-fear.md",
+    "docs/vision-kb/concepts/lc-sense-organ-ripening.md",
+    "form/form-stdlib/tool-channel.fk",
+    "form/form-stdlib/channel-loopback.fk",
+    "form/form-stdlib/device-heartbeat.fk",
+    "form/form-stdlib/body-state.fk"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "git fetch origin main && git rebase origin/main",
+      "JAVA_HOME=/opt/homebrew/opt/openjdk@21 ./gradlew :app:assembleDebug",
+      "$HOME/.android-sdk-codex/platform-tools/adb install -r experiments/coherence-sense-android/app/build/outputs/apk/debug/app-debug.apk",
+      "$HOME/.android-sdk-codex/platform-tools/adb shell am start -n com.coherence.sense/.MainActivity",
+      "$HOME/.android-sdk-codex/platform-tools/adb exec-out screencap -p > output/android-screenshots/coherence-sense-rich-surface-idle-adb-20260613.png",
+      "$HOME/.android-sdk-codex/platform-tools/adb shell input touchscreen tap 380 665",
+      "$HOME/.android-sdk-codex/platform-tools/adb shell input swipe 540 1800 540 900 800",
+      "$HOME/.android-sdk-codex/platform-tools/adb exec-out screencap -p > output/android-screenshots/coherence-sense-rich-surface-dashboard-adb-20260613.png",
+      "$HOME/.android-sdk-codex/platform-tools/adb exec-out screencap -p > output/android-screenshots/coherence-sense-rich-surface-floor-northstar-adb-20260613.png",
+      "$HOME/.android-sdk-codex/platform-tools/adb logcat -d -t 800 | rg -n \"ANR in com.coherence.sense|Application Not Responding|FATAL EXCEPTION|AndroidRuntime|Input dispatching timed out|Skipped [0-9]+ frames\" || true",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tool-channel.fk form-stdlib/tool-channel-grammar.fk form-stdlib/channel-loopback.fk form-stdlib/device-heartbeat.fk form-stdlib/body-state.fk form-stdlib/tests/tool-channel-band.fk form-stdlib/tests/tool-channel-grammar-band.fk form-stdlib/tests/channel-loopback-band.fk form-stdlib/tests/device-heartbeat-band.fk form-stdlib/tests/body-state-band.fk",
+      "bash -n scripts/verify_android_sense_public_handshake.sh",
+      "bash -n deploy/hostinger/auto-deploy.sh",
+      "scripts/verify_android_sense_public_handshake.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_android_sense_channel_surface.json"
+    ],
+    "notes": "Gradle debug build passed. ADB screenshots show idle launch, active scrollable channel dashboard, and lower floor/north-star panel. Active proof shows sensors 4/4, mic granted, camera/screen offered, network rx/tx, Bluetooth enabled, local heartbeat 7 organ(s)/7 lane(s), body samples, mesh quiet/no peers heard, and floor/north-star text. Clean logcat after active scroll had no ANR, no fatal exception, and no input dispatch timeout; one Choreographer warning reported 34 skipped frames. Form revalidation passed with fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent. Public-handshake harness passed with a locally lowered Android APK, generated Hati macOS and Android native assets, real Mac witness /sense and /state receipts, local Hati mesh announce + heartbeat + list + channel-offer receipts, organs_count=2, channels_count=1, android announce receipt rt_34b609255bb7, android heartbeat receipt rt_df81d9d07f19, witness frames=1, witness present=true, witness organs=accel/gyro/light/mag. Hostinger deploy script syntax passed after adding an idempotent web Traefik router for hati.earth, www.hati.earth, sense.hati.earth, and suci.hati.earth."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed; CI not run."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "GitHub release public assets were uploaded and verified on release hati-os-v0.1.0-20260613: APK sha256 c50e032ec72c86802f99df045bff2d7f9a43a448eb77789f69187c316755cad4, macOS arm64 tarball sha256 984001bdd2b9cd307b5773acb14f4011e6f29e619accd62f3c6bd8ca48c625da, Android arm64 tarball sha256 d3f1273cb552b0ff322851d57003515acc0e37b8cd698aae966be4ce734bf8cd. Direct GitHub release checksum URLs returned the expected hashes. The canonical deployed web route also passed for https://coherencycoin.com/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-debug.apk, https://coherencycoin.com/downloads/hati-os/android/arm64/hati-os-android-arm64.tar.zst, https://coherencycoin.com/downloads/hati-os/macos/arm64/hati-os-macos-arm64.tar.zst, and the public asset summary, each returning 307 to GitHub and final 200. Hati-domain download verification remains pending until this deploy-script fix reaches Hostinger; before the fix, https://hati.earth/ and https://hati.earth/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-debug.apk reset during TLS from this host."
+  },
+  "phase_gate": {
+    "phase": "android-sense-organ-rich-channel-surface",
+    "gate": "Android app identifies as a Hati mesh organ, exposes available sensing/resource lanes, hides setup behind settings, displays QR/channel offers, and keeps floor and north-star visible while learning from sister Form channel surfaces.",
+    "state": "github-and-canonical-web-assets-pass-hati-domain-fix-pending-deploy",
+    "can_move_next_phase": false,
+    "next": "Merge and run Hostinger deploy so deploy/hostinger/auto-deploy.sh normalizes the web Traefik Hati router labels, then verify https://hati.earth/downloads/hati-os/android/arm64/hati-os-android-arm64.tar.zst and https://hati.earth/downloads/hati-os/macos/arm64/hati-os-macos-arm64.tar.zst against the release asset hashes."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The Android app moves from a raw configuration form to a passable high-fidelity sensing dashboard with explicit mesh identity, offered channels, resource pressure, active samples, and consent-aware identity labeling.",
+    "public_endpoints": [
+      "local:android-debug-apk",
+      "local:adb-emulator",
+      "https://github.com/seeker71/Coherence-Network/releases/download/hati-os-v0.1.0-20260613/coherence-sense-hati-mesh-debug.apk",
+      "https://github.com/seeker71/Coherence-Network/releases/download/hati-os-v0.1.0-20260613/hati-os-android-arm64.tar.zst",
+      "https://github.com/seeker71/Coherence-Network/releases/download/hati-os-v0.1.0-20260613/hati-os-macos-arm64.tar.zst",
+      "https://coherencycoin.com/downloads/hati-os/android/arm64/hati-os-android-arm64.tar.zst",
+      "https://coherencycoin.com/downloads/hati-os/macos/arm64/hati-os-macos-arm64.tar.zst"
+    ],
+    "test_flows": [
+      "Install debug APK on Android emulator and launch MainActivity directly.",
+      "Capture idle screenshot proving app first draw, hidden settings, organ identity, and QR offer.",
+      "Grant optional permissions, tap Start sharing, and capture active dashboard with sensor, audio, video, network, Bluetooth, and body-state lanes.",
+      "Scroll while active to prove UI remains responsive after coalesced dashboard rendering.",
+      "Capture lower dashboard showing floor, north-star, sister-work learning, and sense-organ ripening text.",
+      "Run scripts/verify_android_sense_public_handshake.sh to prove local Android APK build, Hati public asset build, Mac witness sense/state loop, local Hati mesh announce/heartbeat/list, and Android-to-Mac channel offer.",
+      "Upload the generated APK, macOS tarball, Android native tarball, checksum files, and asset summary to the GitHub release, then verify public checksum URLs.",
+      "Verify canonical deployed web download routes on coherencycoin.com follow redirects to final 200 for the Android APK, Android native tarball, macOS native tarball, and asset summary."
+    ],
+    "summary": "Local APK, ADB screenshots, local mesh/witness handshake, generated public asset bundle, GitHub release asset verification, and canonical coherencycoin.com web download routes passed. The remaining work is to merge/deploy the Hostinger Traefik label normalization and re-probe hati.earth."
+  }
+}
