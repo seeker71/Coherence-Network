@@ -109,7 +109,7 @@
   },
   "phase_gate": {
     "can_move_next_phase": false,
-    "reason": "Local proofs pass, and the BML/channel route-choice cluster is four-way through the fourth-arm manifest: interface, flow, loopback, tool channel, choiceReceipt cells, receipt learning, source metadata, typed row lowering, kernel-http route choice, executable route-choice runtime, and the composite floor. CI/deploy are pending; remaining work is broader protocol/capability grammar, host-IO-shaped runtime dynamic capability registry, universal receipts-before-trust enforcement, and production callers using brcr-realize."
+    "reason": "Local proofs pass, and the BML/channel route-choice cluster is four-way through the fourth-arm manifest: interface, flow, loopback, tool channel, choiceReceipt cells, receipt learning, source metadata, typed row lowering, kernel-http route choice, executable route-choice runtime, and the composite floor. CI/deploy are pending; remaining work is broader protocol/capability grammar, host-IO-shaped runtime dynamic capability registry, receipts-before-trust carried through every runtime choice, and production callers using brcr-realize."
   },
   "idea_ids": [
     "channel-protocol-choice-as-first-class-form-bml",

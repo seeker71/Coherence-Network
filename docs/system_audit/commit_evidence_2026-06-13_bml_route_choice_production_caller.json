@@ -38,7 +38,7 @@
   },
   "phase_gate": {
     "can_move_next_phase": false,
-    "reason": "Local proof passes and the first production route caller now persists brcr-realize signatures. CI/deploy are pending; remaining gaps are recipe-library callers, broader BML protocol/capability grammar, runtime dynamic capability registry fourth-arm host-IO wall, and universal receipts-before-trust enforcement."
+    "reason": "Local proof passes and the first production route caller now persists brcr-realize signatures. CI/deploy are pending; remaining gaps are recipe-library callers, broader BML protocol/capability grammar, runtime dynamic capability registry fourth-arm host-IO wall, and receipts-before-trust carried through every runtime choice."
   },
   "idea_ids": [
     "channel-protocol-choice-as-first-class-form-bml",
