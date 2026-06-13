@@ -1,0 +1,20 @@
+# fourth-kernel.form - compatibility doorway for the Hati-OS native sibling
+
+(fourth-kernel
+  (current-name hati-os)
+  (living-surface docs/coherence-substrate/hati-os.form)
+  (native-tool-surface docs/coherence-substrate/tool-channel.form)
+  (native-tool-recipe form/form-stdlib/tool-channel.fk)
+  (native-tool-grammar form/form-stdlib/tool-channel-grammar.fk)
+  (native-tool-proof form/form-stdlib/tests/tool-channel-band.fk -> 255)
+  (native-tool-grammar-proof form/form-stdlib/tests/tool-channel-grammar-band.fk -> 255)
+
+  (compatibility
+    (reason "older source-map entries and agents still ask for fourth-kernel.form")
+    (bridge-to hati-os)
+    (does-not-fork-semantics))
+
+  (invariant
+    (the-fourth-arm-is-the-hati-os-native-sibling)
+    (tool-surface-is-form-native)
+    (host-access-stays-explicit-through-tool-channel)))
