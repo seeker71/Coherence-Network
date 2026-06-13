@@ -1,0 +1,111 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/jit-oracle-fourth-arm-20260613",
+  "commit_scope": "Close the fourth-arm gap for the Form-native JIT oracle-learning and supported metal-lane proofs. The fourth flattener now registers same-source function signatures before body lowering, so compiler recipes can call later helpers and mutually recurse; the lowerer, recursive lowerer, CPU/GPU/ML metal-lane aggregate, and oracle-learning choice band all run four-way on fkwu.",
+  "files_owned": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/form-to-asm.form",
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/coherence-substrate/jit-oracle-learning.form",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/tests/form-flatten-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/bml_form_jit_metal_planes_audit.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/form-parse.fk form-stdlib/form-flatten.fk form-stdlib/tests/form-flatten-band.fk",
+      "bash form/scripts/fourth-arm-gate.sh form-lower form-lower-rec jit-metal-lanes jit-oracle-learning",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-os-targets.fk form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/jit-tensor-emit.fk form-stdlib/tests/jit-metal-lanes-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/jit-oracle-learning-band.fk",
+      "scripts/bml_form_jit_metal_planes_audit.sh",
+      "git diff --check"
+    ],
+    "summary": "form-flatten-band returned 131071. fourth-arm-gate printed PASS-4WAY for form-lower, form-lower-rec, jit-metal-lanes, and jit-oracle-learning. validate.sh for jit-metal-lanes returned 4095 with 'fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)'. validate.sh for jit-oracle-learning returned 1023 with the same fourth-arm line. The metal-plane audit passed macOS arm64 Mach-O and Android arm64 ELF clang oracle receipts plus fkwu four-way native lane proofs."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Pending PR creation and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No public deploy in this step; this is a Form/compiler proof update."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; CI/deploy remain pending until push and PR checks."
+  },
+  "idea_ids": [
+    "bml-native-north-star",
+    "jit-oracle-learning",
+    "fourth-arm-fkwu"
+  ],
+  "spec_ids": [
+    "form-fourth-kernel-validation",
+    "supported-metal-plane-jit-proof"
+  ],
+  "task_ids": [
+    "jit-oracle-fourth-arm-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "north-star",
+        "requirements"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "bash form/scripts/fourth-arm-gate.sh form-lower form-lower-rec jit-metal-lanes jit-oracle-learning -> PASS-4WAY for all four bands",
+    "cd form && ./validate.sh ... jit-metal-lanes-band.fk -> 4095 and fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/jit-oracle-learning-band.fk -> 1023 and fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)",
+    "scripts/bml_form_jit_metal_planes_audit.sh -> Form-native JIT lane proof holds four-way; oracle learning choice floor holds four-way; clang oracle assembly/object receipts cover every supported metal plane"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/form-to-asm.form",
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/coherence-substrate/jit-oracle-learning.form",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/tests/form-flatten-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/bml_form_jit_metal_planes_audit.sh"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Fourth-arm fkwu validation now covers the Form lowerer, recursive lowerer, supported CPU/GPU/ML JIT metal-lane aggregate, and oracle-learning choice band. The metal-plane audit now fails if those proofs fall back to three-kernel-only.",
+    "public_endpoints": [
+      "not-public-endpoint: form native compiler and audit proof surface"
+    ],
+    "test_flows": [
+      "Form source flattener handles same-source forward references and mutual recursion.",
+      "fkwu validates form-lower, form-lower-rec, jit-metal-lanes, and jit-oracle-learning four-way.",
+      "clang oracle assembly/object receipts are generated for macOS arm64 Mach-O and Android arm64 ELF surfaces."
+    ]
+  }
+}
