@@ -128,6 +128,119 @@
             (bml-source-route-call-from-expr
                 (bml-source-sub value (add eq-pos 1) (str_len value)))))
 
+    (defn bml-source-protocol-row
+        (name surface channel capability codec status witness cost)
+        (list "bml-source-protocol-row" name surface channel capability codec status witness cost))
+
+    (defn bml-source-protocol-row? (source)
+        (if (eq (len source) 9)
+            (str_eq (nth source 0) "bml-source-protocol-row")
+            false))
+
+    (defn bml-source-protocol-row-name (row) (nth row 1))
+    (defn bml-source-protocol-row-surface (row) (nth row 2))
+    (defn bml-source-protocol-row-channel (row) (nth row 3))
+    (defn bml-source-protocol-row-capability (row) (nth row 4))
+    (defn bml-source-protocol-row-codec (row) (nth row 5))
+    (defn bml-source-protocol-row-status (row) (nth row 6))
+    (defn bml-source-protocol-row-witness (row) (nth row 7))
+    (defn bml-source-protocol-row-cost (row) (nth row 8))
+    (defn bml-source-protocol-ready? (row)
+        (str_eq (bml-source-protocol-row-status row) "ready"))
+
+    (defn bml-source-protocol-row-from-args (args)
+        (bml-source-protocol-row
+            (nth args 0)
+            (nth args 1)
+            (nth args 2)
+            (nth args 3)
+            (nth args 4)
+            (nth args 5)
+            (nth args 6)
+            (str_to_int (nth args 7))))
+
+    (defn bml-source-protocol-row-from-expr (expr)
+        (do
+            (let value (bml-source-strip-semi (bml-source-trim expr)))
+            (let call-open (bml-source-find value "(" 0))
+            (let call-close (bml-source-last-char-index value))
+            (let call-name (bml-source-trim (bml-source-sub value 0 call-open)))
+            (let call-args (bml-source-sub value (add call-open 1) call-close))
+            (if (str_eq call-name "protocol")
+                (bml-source-protocol-row-from-args (bml-source-split call-args ","))
+                (empty))))
+
+    (defn bml-source-protocol-row-from-assignment (line)
+        (do
+            (let value (bml-source-strip-semi line))
+            (let eq-pos (bml-source-find value "=" 0))
+            (bml-source-protocol-row-from-expr
+                (bml-source-sub value (add eq-pos 1) (str_len value)))))
+
+    (defn bml-source-capability-row
+        (name surface channel value-kind trust-floor lane evidence)
+        (list "bml-source-capability-row" name surface channel value-kind trust-floor lane evidence))
+
+    (defn bml-source-capability-row? (source)
+        (if (eq (len source) 8)
+            (str_eq (nth source 0) "bml-source-capability-row")
+            false))
+
+    (defn bml-source-capability-row-name (row) (nth row 1))
+    (defn bml-source-capability-row-surface (row) (nth row 2))
+    (defn bml-source-capability-row-channel (row) (nth row 3))
+    (defn bml-source-capability-row-value-kind (row) (nth row 4))
+    (defn bml-source-capability-row-trust-floor (row) (nth row 5))
+    (defn bml-source-capability-row-lane (row) (nth row 6))
+    (defn bml-source-capability-row-evidence (row) (nth row 7))
+
+    (defn bml-source-capability-row-from-args (args)
+        (bml-source-capability-row
+            (nth args 0)
+            (nth args 1)
+            (nth args 2)
+            (nth args 3)
+            (str_to_int (nth args 4))
+            (nth args 5)
+            (nth args 6)))
+
+    (defn bml-source-capability-row-from-expr (expr)
+        (do
+            (let value (bml-source-strip-semi (bml-source-trim expr)))
+            (let call-open (bml-source-find value "(" 0))
+            (let call-close (bml-source-last-char-index value))
+            (let call-name (bml-source-trim (bml-source-sub value 0 call-open)))
+            (let call-args (bml-source-sub value (add call-open 1) call-close))
+            (if (str_eq call-name "capability")
+                (bml-source-capability-row-from-args (bml-source-split call-args ","))
+                (empty))))
+
+    (defn bml-source-capability-row-from-assignment (line)
+        (do
+            (let value (bml-source-strip-semi line))
+            (let eq-pos (bml-source-find value "=" 0))
+            (bml-source-capability-row-from-expr
+                (bml-source-sub value (add eq-pos 1) (str_len value)))))
+
+    (defn bml-source-protocol-accepts-capability? (protocol capability)
+        (and
+            (bml-source-protocol-row? protocol)
+            (and
+                (bml-source-capability-row? capability)
+                (and
+                    (str_eq
+                        (bml-source-protocol-row-capability protocol)
+                        (bml-source-capability-row-name capability))
+                    (and
+                        (str_eq
+                            (bml-source-protocol-row-surface protocol)
+                            (bml-source-capability-row-surface capability))
+                        (and
+                            (str_eq
+                                (bml-source-protocol-row-channel protocol)
+                                (bml-source-capability-row-channel capability))
+                            (bml-source-protocol-ready? protocol)))))))
+
     (defn bml-source-choice-receipt-row
         (expression surface category candidates selected-path outcome certainty
          value-kind branch-feedback alignment knowing trust why who where

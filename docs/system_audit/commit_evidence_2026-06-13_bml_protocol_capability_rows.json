@@ -1,0 +1,137 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/bml-protocol-capability-20260613",
+  "commit_scope": "Move the channel/protocol/choice floor forward by making BML protocol(...) and capability(...) source rows first-class grammar hooks with four-way source-row compatibility proof.",
+  "files_owned": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/channel-protocol-choice-floor.form",
+    "docs/system_audit/commit_evidence_2026-06-13_bml_protocol_capability_rows.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/bml-source.fk",
+    "form/form-stdlib/bml.fk",
+    "form/form-stdlib/channel-protocol-choice-floor.fk",
+    "form/form-stdlib/tests/bml-protocol-capability-row-band.fk",
+    "form/form-stdlib/tests/channel-protocol-choice-floor-band.fk"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim bml-protocol-capability \"walk the broader BML protocol/capability grammar floor: parse protocol/capability rows into Form data, prove four-way, fold into channel-protocol-choice floor; avoid runtime-dynamic-host-IO and host-native-exec lanes\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/bml.fk form-stdlib/bml-source.fk form-stdlib/tests/bml-protocol-capability-row-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh bml-protocol-capability-row",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/choice-outcome-learning.fk form-stdlib/bml-source.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/channel-protocol-choice-floor.fk form-stdlib/tests/channel-protocol-choice-floor-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh bml-protocol-capability-row channel-protocol-choice-floor",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/bml.fk form-stdlib/tests/bml-band.fk",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/bml.fk form-stdlib/bml-source.fk form-stdlib/tests/bml-protocol-capability-row-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/choice-outcome-learning.fk form-stdlib/bml-source.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/channel-protocol-choice-floor.fk form-stdlib/tests/channel-protocol-choice-floor-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh bml-protocol-capability-row channel-protocol-choice-floor",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/line-grammar.fk form-stdlib/bmf-core.fk form-stdlib/bmf-grammar.fk form-stdlib/bml.fk form-stdlib/tests/bml-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_bml_protocol_capability_rows.json",
+      "git diff --check",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "results": [
+      "prompt entry passed in the dedicated worktree; wellness returned what_wants_attention: none.",
+      "BML grammar now has explicit protocol(...) and capability(...) primary rules as data, sibling to choiceReceipt(...).",
+      "bml-source.fk now parses protocol(name,surface,channel,capability,codec,status,witness,cost) and capability(name,surface,channel,value-kind,trust-floor,lane,evidence) source rows, with a compatibility witness over surface/channel/capability/status.",
+      "an initial proof that also executed a full g-parse method body produced Go/Rust/TypeScript=65535 and fkwu=65507; the admitted proof was narrowed to grammar hooks as data plus source-row lowering, which is the portable fourth-arm floor for this slice.",
+      "bml-protocol-capability-row focused validate returned 65535 with fourth arm: 1 band(s) four-way and 1 ok, 0 divergent.",
+      "channel-protocol-choice-floor focused validate returned 131071 with fourth arm: 1 band(s) four-way and 1 ok, 0 divergent.",
+      "manifest check returned PASS-4WAY for bml-protocol-capability-row and channel-protocol-choice-floor.",
+      "BML core grammar regression bml-band remained 268435455 with 1 ok, 0 divergent.",
+      "rebase onto origin/main succeeded cleanly; autostash reapplied without conflicts.",
+      "post-rebase bml-protocol-capability-row and channel-protocol-choice-floor focused proofs still returned 65535 and 131071 with fourth arm: 1 band(s) four-way and 0 divergent.",
+      "post-rebase manifest check returned PASS-4WAY for bml-protocol-capability-row and channel-protocol-choice-floor.",
+      "a parallel BML regression run tripped on temporary directory cleanup only; sequential rerun passed at 268435455.",
+      "evidence validation and diff whitespace checks passed.",
+      "local PR guard reported ready_for_push=True and local_preflight=pass; follow-through reported stale_codex_prs=0."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "reason": "Branch is not pushed yet in this slice."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No deployment performed for this local Form/BML grammar slice."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Focused local Form proofs pass and the fourth-arm manifest admits the new row; remote PR checks and merge remain pending."
+  },
+  "idea_ids": [
+    "channel-protocol-choice-as-first-class-form-bml",
+    "native-learning-recipe-library-routing-metadata",
+    "bml-protocol-capability-rows"
+  ],
+  "spec_ids": [
+    "specs/canonical-route-registry-and-runtime-mapping.md",
+    "specs/bml-typed-recipes.md",
+    "specs/agent-question-sse-channel.md"
+  ],
+  "task_ids": [
+    "thread-bml-protocol-capability-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "north-star direction",
+        "next-step request",
+        "protocol/capability as first-class BML direction"
+      ]
+    },
+    {
+      "contributor_id": "codex-bml-protocol-capability",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "coordination",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/bml-protocol-capability-row-band.fk -> 65535 with Go/Rust/TypeScript/fkwu parity",
+    "form/form-stdlib/tests/channel-protocol-choice-floor-band.fk -> 131071 with Go/Rust/TypeScript/fkwu parity",
+    "cd form && bash scripts/fourth-arm-gate.sh bml-protocol-capability-row channel-protocol-choice-floor -> PASS-4WAY for both bands",
+    "form/fourth-arm-bands.txt records bml-protocol-capability-row fks 65535 and channel-protocol-choice-floor fks 131071"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/channel-protocol-choice-floor.form",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/bml-source.fk",
+    "form/form-stdlib/bml.fk",
+    "form/form-stdlib/channel-protocol-choice-floor.fk",
+    "form/form-stdlib/tests/bml-protocol-capability-row-band.fk",
+    "form/form-stdlib/tests/channel-protocol-choice-floor-band.fk"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "BML now names protocol(...) and capability(...) as explicit grammar hooks and source rows. Protocol rows can witness whether a capability row fits their surface, channel, declared capability, and ready status; the shared channel/protocol/choice floor includes this source-level compatibility proof.",
+    "public_endpoints": [
+      "not-public-endpoint: BML source grammar proof surface",
+      "not-public-endpoint: channel/protocol/choice composite floor"
+    ],
+    "test_flows": [
+      "BML grammar -> protocol/capability rule lookup -> grammar hooks exist as data",
+      "protocol(...) source expression -> bml-source-protocol-row -> accessors preserve surface/channel/capability/cost",
+      "capability(...) source expression -> bml-source-capability-row -> accessors preserve trust floor and lane",
+      "protocol row + capability row -> compatibility witness -> composite floor proof"
+    ]
+  }
+}

@@ -1,7 +1,7 @@
 ; channel-protocol-choice-floor-band.fk
 ;
 ; Composite floor proof for channel/interface/protocol/dynamic choice routing.
-; Verdict 32767 when the current floor is real and inspectable without claiming
+; Verdict 131071 when the current floor is real and inspectable without claiming
 ; the future unified BML protocol grammar is already complete.
 ;
 ; preludes: form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/choice-outcome-learning.fk form-stdlib/bml-source.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/channel-protocol-choice-floor.fk
@@ -43,6 +43,10 @@
         (cpcf-source-find-proof
             sources
             "form/form-stdlib/tests/choice-outcome-learning-band.fk"))
+    (let protocol-capability-source
+        (cpcf-source-find-proof
+            sources
+            "form/form-stdlib/tests/bml-protocol-capability-row-band.fk"))
 
     (let route-template
         (bml-source-parse-template-use
@@ -55,6 +59,12 @@
         (bml-source-choice-row-from-expr
             "choiceReceipt(routePredict,BML,route-choice,kernelRoute:native:true:5:90:matching-capability;httpRequest:http:true:30:70:fallback-carrier,kernelRoute,success,95,branch-prediction-feedback,90,95,95,95,native-kernel-route-matched,channel-protocol-choice-floor-band,form/form-stdlib/tests/channel-protocol-choice-floor-band.fk,20260613,2,1,1,0,0);"))
     (let choice-row-receipt (bml-source-choice-row->receipt choice-row))
+    (let protocol-row
+        (bml-source-protocol-row-from-expr
+            "protocol(sensorFlow,sensor:signal,bodySensor,cap:sensor-read,json,ready,receipt:offer,4);"))
+    (let capability-row
+        (bml-source-capability-row-from-expr
+            "capability(cap:sensor-read,sensor:signal,bodySensor,vector,80,device-local,receipt:offer);"))
     (let route-request
         (kh-request
             "GET"
@@ -127,7 +137,7 @@
         (list
             (cpcf-score (eq (len recipe) 6) 1)
             (cpcf-score (eq (len validation-rounds) 3) 2)
-            (cpcf-score (eq (cpcf-proven-source-count sources) 17) 4)
+            (cpcf-score (eq (cpcf-proven-source-count sources) 18) 4)
             (cpcf-score (str_eq (cpcf-source-status channel-interface-source) "proven-four-way") 8)
             (cpcf-score (str_eq (cpcf-source-status channel-flow-source) "proven-four-way") 16)
             (cpcf-score (str_eq (cpcf-source-status tool-channel-source) "proven-four-way") 32)
@@ -139,4 +149,6 @@
             (cpcf-score (and (str_eq (cr-signature-selected-path signature) "kernel:route") (str_eq learned-path "kernel:route")) 2048)
             (cpcf-score (eq (len current-gaps) 4) 4096)
             (cpcf-score (and (str_eq (cpcf-source-status typed-row-source) "proven-four-way") (cr-choice-receipt-valid? choice-row-receipt)) 8192)
-            (cpcf-score (and (brcr-realization-valid? route-realization) (str_eq (brcr-realization-selected-route-name route-realization) "kernelRoute")) 16384))))
+            (cpcf-score (and (brcr-realization-valid? route-realization) (str_eq (brcr-realization-selected-route-name route-realization) "kernelRoute")) 16384)
+            (cpcf-score (str_eq (cpcf-source-status protocol-capability-source) "proven-four-way") 32768)
+            (cpcf-score (bml-source-protocol-accepts-capability? protocol-row capability-row) 65536))))
