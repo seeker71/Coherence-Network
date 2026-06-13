@@ -23,6 +23,9 @@ KNOWN = {
     "ord", "not", "defn", "let",
     # lowerings (2026-06-12)
     "lt", "or", "char_at", "byte_to_str",
+    # numeric fourth-arm rows
+    "floor", "ceil", "trunc", "round", "math_floor", "math_ceil",
+    "math_sqrt", "math_exp", "math_log",
     # fourth-shim.fk rows — core mirrors + string stones
     "nil?", "plus", "minus", "times", "divide", "identity",
     "abs", "min2", "max2", "sum", "product", "maximum", "minimum",
