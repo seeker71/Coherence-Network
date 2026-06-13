@@ -124,16 +124,19 @@ prepare_sources() {
             cached="$SOURCE_CACHE_DIR/$key.fk"
             if [[ ! -s "$cached" ]]; then
                 safe="${src//\//__}"
-                out="$source_compile_dir/$safe"
-                driver="$source_compile_dir/compile-${safe}.fk"
+                out="$(mktemp "$SOURCE_CACHE_DIR/.${key}.XXXXXX")"
+                driver="$(mktemp "$source_compile_dir/compile-${safe}.XXXXXX")"
                 printf '(do (form-source-compile-file "%s" "%s"))\n' "$src" "$out" > "$driver"
-                "$GO_BIN" "${compiler_chain[@]}" "$driver" >/dev/null
-                if [[ -s "$out" ]]; then
-                    mv -f "$out" "$cached" 2>/dev/null || cp "$out" "$cached"
+                if "$GO_BIN" "${compiler_chain[@]}" "$driver" >/dev/null && [[ -s "$out" ]]; then
+                    mv -f "$out" "$cached"
                 else
-                    prepared_args+=("$src")
-                    continue
+                    rm -f "$out" "$driver"
+                    if [[ ! -s "$cached" ]]; then
+                        prepared_args+=("$src")
+                        continue
+                    fi
                 fi
+                rm -f "$out" "$driver"
             fi
             prepared_args+=("$cached")
         else
