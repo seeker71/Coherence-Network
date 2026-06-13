@@ -97,6 +97,25 @@ if ! grep -q "fourth arm: 1" "$oracle_learning_out"; then
 fi
 echo "PASS  jit-oracle-learning: third-party oracle samples -> measured native choice loop -> 1023 four-way"
 
+jit_lower_gate_out="$work/jit-lower-fourth-arm.out"
+(
+  cd "$FORM"
+  bash scripts/fourth-arm-gate.sh \
+    jit-lower \
+    jit-lower-program \
+    full-jit-lower \
+    jit-lower-bmf \
+    jit-lower-emit > "$jit_lower_gate_out"
+)
+for stem in jit-lower jit-lower-program full-jit-lower jit-lower-bmf jit-lower-emit; do
+  if ! grep -q "PASS-4WAY  $stem" "$jit_lower_gate_out"; then
+    cat "$jit_lower_gate_out"
+    echo "FAIL: JIT lower residual cluster did not pass four-way for $stem" >&2
+    exit 1
+  fi
+done
+echo "PASS  jit-lower-residuals: logic/fold/unbox/lift/BMF/emit cluster is five-band four-way"
+
 driver="$work/emit-surfaces.fk"
 out="$work/emit.out"
 compiled_core="$work/core.lowered.fk"
@@ -141,6 +160,12 @@ cat > "$driver" <<'FK'
         (add (mul a a) (mul b b)))
     (print (poly 3 4))
     (print (jit_emit_c "poly")))
+(print "==FORM_JIT_LOWERED_C==")
+(do
+    (let guard-direct (fk-if (fk-le (fk-arg) (fk-lit 10))
+                             (fk-le (fk-lit 0) (fk-arg))
+                             (fk-lit 0)))
+    (print (fkc-emit-many (list (jit-lower-tree guard-direct)))))
 (print "==END==")
 FK
 
@@ -157,6 +182,7 @@ FK
     form-stdlib/source-compiler.fk \
     form-stdlib/hati-os-kernel.fk \
     form-stdlib/hati-os-kernel-emit.fk \
+    form-stdlib/jit-lower.fk \
     "$compiled_bml" \
     "$driver" > "$out"
 )
@@ -175,9 +201,11 @@ bml_c="$work/bml-hati-universal.c"
 bml_table="$work/bml-locals.table.txt"
 form_c_raw="$work/form-jit.raw"
 form_c="$work/form-poly.c"
+lowered_c="$work/form-jit-lowered.c"
 extract_section BML_UNIVERSAL_C "$bml_c"
 extract_section BML_LOCALS_TABLE "$bml_table"
 extract_section FORM_JIT_C "$form_c_raw"
+extract_section FORM_JIT_LOWERED_C "$lowered_c"
 
 form_answer="$(sed -n '1p' "$form_c_raw")"
 sed '1d' "$form_c_raw" > "$form_c"
@@ -188,6 +216,10 @@ fi
 
 if ! grep -q "fk_walk" "$bml_c" || ! grep -q "BML-HATI-UNSUPPORTED" "$bml_table" && ! grep -q " 3 " "$bml_table"; then
   echo "FAIL: BML/Hati surface did not emit universal C plus a loadable locals table" >&2
+  exit 1
+fi
+if ! grep -q "if (t == 70)" "$lowered_c" || ! grep -q "if (t == 79)" "$lowered_c"; then
+  echo "FAIL: lowered JIT surface did not emit the reconciled 70..79 lowered lane" >&2
   exit 1
 fi
 
@@ -210,6 +242,15 @@ echo "PASS  host-bml-hati: locals table stdout_first=3"
 "$CLANG" -O2 -o "$work/form-host" "$form_c" "$work/form-main.c"
 "$work/form-host"
 echo "PASS  host-form-jit: form_poly(3,4)=25"
+
+"$CLANG" -O2 -o "$work/form-lowered-host" "$lowered_c"
+lowered_5="$("$work/form-lowered-host" 5 | sed -n '1p')"
+lowered_11="$("$work/form-lowered-host" 11 | sed -n '1p')"
+if [[ "$lowered_5" != "1" || "$lowered_11" != "0" ]]; then
+  echo "FAIL: lowered JIT host binary returned arg5=$lowered_5 arg11=$lowered_11, expected 1/0" >&2
+  exit 1
+fi
+echo "PASS  host-form-jit-lowered: lowered guard arg5=1 arg11=0"
 
 compile_surface() {
   local plane="$1"
@@ -245,9 +286,13 @@ compile_surface "macos-arm64" "arm64-apple-macosx" "Mach-O.*arm64" \
   "bml-hati" "$bml_c" "fk_walk|_fk_walk"
 compile_surface "macos-arm64" "arm64-apple-macosx" "Mach-O.*arm64" \
   "form-jit" "$form_c" "mul|madd"
+compile_surface "macos-arm64" "arm64-apple-macosx" "Mach-O.*arm64" \
+  "form-jit-lowered" "$lowered_c" "fk_walk|_fk_walk"
 compile_surface "android-arm64" "aarch64-linux-android" "ELF 64-bit.*(ARM aarch64|AArch64)" \
   "bml-hati" "$bml_c" "fk_walk|_fk_walk"
 compile_surface "android-arm64" "aarch64-linux-android" "ELF 64-bit.*(ARM aarch64|AArch64)" \
   "form-jit" "$form_c" "mul|madd"
+compile_surface "android-arm64" "aarch64-linux-android" "ELF 64-bit.*(ARM aarch64|AArch64)" \
+  "form-jit-lowered" "$lowered_c" "fk_walk|_fk_walk"
 
-echo "ok — Form-native JIT lane proof holds four-way; oracle learning choice floor holds four-way; clang oracle assembly/object receipts cover every supported metal plane"
+echo "ok — Form-native JIT lane proof holds four-way; lowered residual cluster holds five-band four-way; oracle learning choice floor holds four-way; clang oracle assembly/object receipts cover every supported metal plane including lowered JIT"
