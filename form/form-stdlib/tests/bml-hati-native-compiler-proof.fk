@@ -1,0 +1,171 @@
+; tests/bml-hati-native-compiler-proof.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk
+;
+; Proves the BML compiler's native image lane: original BML source lowers to
+; executable BMA, the same BML AST lowers to a Hati fourth-kernel table, the
+; .fkb compiler image round-trips with an executable child, and the original
+; compiler picture names the Hati-native binary/table output shape.
+
+(do
+    (defn score-bool (actual)
+        (if actual 1 0))
+
+    (defn score-int (actual expected)
+        (if (eq actual expected) 1 0))
+
+    (defn score-str (actual expected)
+        (if (nil? actual)
+            0
+            (if (str_eq actual expected) 1 0)))
+
+    (defn score-gt (actual expected)
+        (if (gt actual expected) 1 0))
+
+    (defn str-contains? (haystack needle)
+        (ge (str_find haystack needle 0) 0))
+
+    (defn result-object (m)
+        (cap-get (match-caps m) "result"))
+
+    (defn result-value (m)
+        (bmf-object-value (result-object m)))
+
+    (defn float-cents (value)
+        (float_to_int (round_ndigits (mul value 100.0) 0)))
+
+    (defn class-method-return-score (class-component method-name expected-return)
+        (if (nil? class-component)
+            0
+            (do
+                (let method-component
+                    (bml-find-method
+                        (bml-class-own-methods class-component)
+                        method-name))
+                (if (nil? method-component)
+                    0
+                    (score-str
+                        (bml-method-return method-component)
+                        expected-return)))))
+
+    (defn class-const-value-score (class-component const-name expected-value)
+        (if (nil? class-component)
+            0
+            (do
+                (let const-component
+                    (bml-find-const
+                        (bml-class-own-constants class-component)
+                        const-name))
+                (if (nil? const-component)
+                    0
+                    (score-str
+                        (bml-const-value const-component)
+                        expected-value)))))
+
+    (let source-path "form-stdlib/bml/bmf-bml-compiler-picture.bml")
+    (let image-path (str_concat (temp_dir) "/bml-hati-native-compiler.fkb"))
+    (let parsed-model-source (bml-source-file-parse-declarations source-path))
+    (let model (bml-source-declaration-model parsed-model-source))
+    (let native-image-class (bml-model-find-class model "BMLNativeCompilerImage"))
+    (let native-compiler-class (bml-model-find-class model "BMLHatiNativeCompiler"))
+    (let templates (bml-components-of-kind (bml-source-exec-parse-nodes parsed-model-source) "Template"))
+
+    (let stream-source "return 3;\nreturn 1.5;\nreturn 'A';\n")
+    (let stream-parsed
+        (bml-source-parse-executable-stream
+            (bml-source-scan-text stream-source)))
+    (let int-node (nth (bml-source-exec-parse-nodes stream-parsed) 0))
+    (let float-node (nth (bml-source-exec-parse-nodes stream-parsed) 1))
+    (let char-node (nth (bml-source-exec-parse-nodes stream-parsed) 2))
+
+    (let method-add-match
+        (apply-bml-bmf-rule "method-return-add"
+            (list (bml-src-name "int") (bml-src-name "Add")
+                  (bml-src-op "(") (bml-src-op ")")
+                  (bml-src-op "{") (bml-src-keyword "return")
+                  (bml-src-int "1") (bml-src-op "+")
+                  (bml-src-int "2") (bml-src-op ";")
+                  (bml-src-op "}"))))
+    (let add-node (result-value method-add-match))
+
+    (let choose-match
+        (apply-bml-bmf-rule "choose-fail-int"
+            (list (bml-src-keyword "choose") (bml-src-op "{")
+                  (bml-src-keyword "fail") (bml-src-op ";") (bml-src-op "}")
+                  (bml-src-op ",") (bml-src-op "{")
+                  (bml-src-keyword "return") (bml-src-int "8")
+                  (bml-src-op ";") (bml-src-op "}"))))
+    (let choose-node (result-value choose-match))
+
+    (let int-bma (bma-run-value (bml-compile-program int-node)))
+    (let add-bma (bma-run-value (bml-compile-program add-node)))
+    (let choose-bma (bma-run-value (bml-compile-program choose-node)))
+
+    (let int-image (bml-hati-compile-image int-node))
+    (let float-image (bml-hati-compile-image float-node))
+    (let char-image (bml-hati-compile-image char-node))
+    (let add-image (bml-hati-compile-image add-node))
+    (let choose-image (bml-hati-compile-image choose-node))
+    (let int-table (bml-hati-table-file int-image))
+    (let float-table (bml-hati-table-file float-image))
+    (let char-table (bml-hati-table-file char-image))
+    (let choose-table (bml-hati-table-file choose-image))
+
+    (let image-blueprint (bp "BML-COMPILER-IMAGE"))
+    (let compiler-image
+        (intern_node
+            image-blueprint
+            (list
+                (intern_trivial_string source-path)
+                (intern_trivial_string image-path)
+                (intern_trivial_string ".fkb")
+                (intern_trivial_int (file_size source-path))
+                choose-node)))
+    (let bytes-written (write_form_binary image-path compiler-image))
+    (let loaded-image (read_form_binary image-path))
+    (let loaded-choose-node (nth (node_children loaded-image) 4))
+    (let loaded-choose-image (bml-hati-compile-image loaded-choose-node))
+
+    (sum
+        (list
+            (score-bool (bml-source-exec-parse-ok? parsed-model-source))
+            (score-int (len (bml-source-exec-parse-rest parsed-model-source)) 0)
+            (score-bool (not (nil? native-image-class)))
+            (score-bool (not (nil? native-compiler-class)))
+            (score-gt (len templates) 0)
+            (score-str (bml-class-name native-image-class) "BMLNativeCompilerImage")
+            (score-str (bml-class-name native-compiler-class) "BMLHatiNativeCompiler")
+            (score-bool (bml-properties-has? (bml-class-properties native-image-class) "nativeImage"))
+            (score-bool (bml-properties-has? (bml-class-properties native-compiler-class) "nativeCompiler"))
+            (score-bool (bml-properties-has? (bml-class-properties native-compiler-class) "selfHosting"))
+            (score-bool (bml-source-exec-parse-ok? stream-parsed))
+            (score-int (len (bml-source-exec-parse-rest stream-parsed)) 0)
+            (score-int (len (bml-source-exec-parse-nodes stream-parsed)) 3)
+            (score-bool (match? method-add-match))
+            (score-bool (match? choose-match))
+            (score-int int-bma 3)
+            (score-int add-bma 3)
+            (score-int choose-bma 8)
+            (score-int (bml-hati-run-value int-node) 3)
+            (score-int (bml-hati-run-value add-node) 3)
+            (score-int (bml-hati-run-value choose-node) 8)
+            (score-int (float-cents (bml-hati-run-value float-node)) 150)
+            (score-str (bml-hati-run-value char-node) "A")
+            (score-int (len (bml-hati-image-fns int-image)) 1)
+            (score-int (len (bml-hati-image-pool float-image)) 1)
+            (score-str (head (bml-hati-image-pool float-image)) "0.000001")
+            (score-int (len (bml-hati-image-pool char-image)) 1)
+            (score-str (head (bml-hati-image-pool char-image)) "A")
+            (score-gt (str_len int-table) 0)
+            (score-gt (str_len choose-table) 0)
+            (score-bool (str-contains? float-table " 50 0 0 0"))
+            (score-bool (str-contains? char-table "24 0 0 0"))
+            (score-bool (str-contains? char-table "1 1 65"))
+            (score-gt bytes-written 0)
+            (score-gt (file_size image-path) 0)
+            (score-bool (node_eq loaded-image compiler-image))
+            (score-bool (node_eq loaded-choose-node choose-node))
+            (score-int (bml-hati-run-value loaded-choose-node) 8)
+            (score-int
+                (len (bml-hati-image-fns loaded-choose-image))
+                1))))

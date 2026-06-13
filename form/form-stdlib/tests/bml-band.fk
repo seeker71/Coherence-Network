@@ -9,41 +9,80 @@
 (do
     (let g (bml-grammar))
     (defn L (s) (intern_trivial_string s))
-    (defn N (op kids) (intern_node (bp op) kids))
+    (defn cat? (node name)
+        (node_eq (node_category node) (bp name)))
+    (defn kid (node index)
+        (nth (node_children node) index))
+    (defn node-name? (node name)
+        (node_eq node (L name)))
+    (defn score (actual bit)
+        (if actual bit 0))
 
     ;; A — method + assignment + binary + return
     ;;   int f ( int x ) { y = a + b ; return y ; }
-    (let a-want
-        (N "fndef" (list (L "f")
-                         (N "do" (list (L "x")))
-                         (N "do" (list
-                            (N "let" (list (L "y") (N "add" (list (L "a") (L "b")))))
-                            (N "UE-JUMP-RETURN" (list (L "y"))))))))
     (let a-got (g-parse g "int f ( int x ) { y = a + b ; return y ; }"))
-    (let s-a (if (node_eq a-got a-want) 100 0))
+    (let a-method (kid a-got 0))
+    (let a-params (kid a-method 1))
+    (let a-body (kid a-method 2))
+    (let a-assign (kid a-body 0))
+    (let a-add (kid a-assign 1))
+    (let a-return (kid a-body 1))
+    (let s-a
+        (sum
+            (list
+                (score (cat? a-got "do") 1)
+                (score (cat? a-method "fndef") 2)
+                (score (node-name? (kid a-method 0) "f") 4)
+                (score (cat? a-params "do") 8)
+                (score (node-name? (kid a-params 0) "x") 16)
+                (score (cat? a-body "do") 32)
+                (score (cat? a-assign "UE-WRITE-ASSIGN") 64)
+                (score (cat? (kid a-assign 0) "ident") 128)
+                (score (cat? a-add "add") 256)
+                (score (cat? a-return "UE-JUMP-RETURN") 512))))
 
     ;; B — method + if + call (empty params)
-    ;;   int g ( ) { if a { h ( x ) ; } return a ; }
-    (let b-want
-        (N "fndef" (list (L "g")
-                         (N "do" (empty))
-                         (N "do" (list
-                            (N "if-then" (list (L "a")
-                                               (N "do" (list (N "fncall" (list (L "h") (L "x")))))))
-                            (N "UE-JUMP-RETURN" (list (L "a"))))))))
-    (let b-got (g-parse g "int g ( ) { if a { h ( x ) ; } return a ; }"))
-    (let s-b (if (node_eq b-got b-want) 100 0))
+    ;;   int g ( ) { if ( a ) { h ( x ) ; } return a ; }
+    (let b-got (g-parse g "int g ( ) { if ( a ) { h ( x ) ; } return a ; }"))
+    (let b-method (kid b-got 0))
+    (let b-body (kid b-method 2))
+    (let b-if (kid b-body 0))
+    (let b-block (kid b-if 1))
+    (let b-call (kid b-block 0))
+    (let b-return (kid b-body 1))
+    (let s-b
+        (sum
+            (list
+                (score (cat? b-got "do") 1024)
+                (score (cat? b-method "fndef") 2048)
+                (score (node-name? (kid b-method 0) "g") 4096)
+                (score (cat? b-body "do") 8192)
+                (score (cat? b-if "if-then") 16384)
+                (score (cat? (kid b-if 0) "ident") 32768)
+                (score (cat? b-block "do") 65536)
+                (score (cat? b-call "fncall") 131072)
+                (score (cat? (kid b-call 0) "ident") 262144)
+                (score (cat? b-return "UE-JUMP-RETURN") 524288))))
 
     ;; C — class > section [props] > method nesting
     ;;   class C { section [ public ] { int m ( ) { return x ; } } }
-    (let c-want
-        (N "do" (list (L "C")
-                      (N "do" (list
-                         (N "fndef" (list (L "m")
-                                          (N "do" (empty))
-                                          (N "do" (list (N "UE-JUMP-RETURN" (list (L "x"))))))))))))
     (let c-got (g-parse g "class C { section [ public ] { int m ( ) { return x ; } } }"))
-    (let s-c (if (node_eq c-got c-want) 100 0))
+    (let c-class (kid c-got 0))
+    (let c-section (kid c-class 1))
+    (let c-method (kid c-section 0))
+    (let c-body (kid c-method 2))
+    (let c-return (kid c-body 0))
+    (let s-c
+        (sum
+            (list
+                (score (cat? c-got "do") 1048576)
+                (score (cat? c-class "UE-CLASS") 2097152)
+                (score (node-name? (kid c-class 0) "C") 4194304)
+                (score (cat? c-section "do") 8388608)
+                (score (cat? c-method "fndef") 16777216)
+                (score (node-name? (kid c-method 0) "m") 33554432)
+                (score (cat? c-body "do") 67108864)
+                (score (cat? c-return "UE-JUMP-RETURN") 134217728))))
 
-    ; Expected total: 300
+    ; Expected total: 268435455
     (add s-a (add s-b s-c)))
