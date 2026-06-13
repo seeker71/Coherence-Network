@@ -1025,6 +1025,189 @@
                 missing
                 (form-adapter-plan-run plan value anchor ctx))))
 
+    (defn form-recipe-choice-receipt
+        (category selected input-surface output-surface route-count outcome why)
+        (list
+            "form-recipe-choice-receipt"
+            category
+            selected
+            input-surface
+            output-surface
+            route-count
+            outcome
+            why))
+
+    (defn form-recipe-choice-receipt? (receipt)
+        (if (eq (len receipt) 8)
+            (str_eq (nth receipt 0) "form-recipe-choice-receipt")
+            false))
+
+    (defn form-recipe-choice-receipt-category (receipt) (nth receipt 1))
+    (defn form-recipe-choice-receipt-selected (receipt) (nth receipt 2))
+    (defn form-recipe-choice-receipt-input-surface (receipt) (nth receipt 3))
+    (defn form-recipe-choice-receipt-output-surface (receipt) (nth receipt 4))
+    (defn form-recipe-choice-receipt-route-count (receipt) (nth receipt 5))
+    (defn form-recipe-choice-receipt-outcome (receipt) (nth receipt 6))
+    (defn form-recipe-choice-receipt-why (receipt) (nth receipt 7))
+
+    (defn form-recipe-choice-receipt-selected-node (receipt)
+        (form-adapter-capability-node
+            (form-recipe-choice-receipt-selected receipt)))
+
+    (defn form-recipe-choice-receipt-valid? (receipt)
+        (if (form-recipe-choice-receipt? receipt)
+            (and
+                (not (nil? (form-recipe-choice-receipt-selected receipt)))
+                (and
+                    (ge (form-recipe-choice-receipt-route-count receipt) 1)
+                    (str_eq
+                        (form-recipe-choice-receipt-outcome receipt)
+                        "selected")))
+            false))
+
+    (defn form-recipe-choice-signature (receipt)
+        (list
+            "form-recipe-choice-signature"
+            (form-recipe-choice-receipt-category receipt)
+            (form-recipe-choice-receipt-selected-node receipt)
+            (form-recipe-choice-receipt-route-count receipt)
+            (form-recipe-choice-receipt-outcome receipt)
+            (form-recipe-choice-receipt-why receipt)))
+
+    (defn form-recipe-choice-signature? (signature)
+        (if (eq (len signature) 6)
+            (str_eq (nth signature 0) "form-recipe-choice-signature")
+            false))
+
+    (defn form-recipe-choice-signature-category (signature) (nth signature 1))
+    (defn form-recipe-choice-signature-selected-node (signature) (nth signature 2))
+    (defn form-recipe-choice-signature-route-count (signature) (nth signature 3))
+    (defn form-recipe-choice-signature-outcome (signature) (nth signature 4))
+    (defn form-recipe-choice-signature-why (signature) (nth signature 5))
+
+    (defn form-recipe-capability-choice (selected receipt signature)
+        (list "form-recipe-capability-choice" selected receipt signature))
+
+    (defn form-recipe-capability-choice? (choice)
+        (if (eq (len choice) 4)
+            (str_eq (nth choice 0) "form-recipe-capability-choice")
+            false))
+
+    (defn form-recipe-capability-choice-selected (choice) (nth choice 1))
+    (defn form-recipe-capability-choice-receipt (choice) (nth choice 2))
+    (defn form-recipe-capability-choice-signature (choice) (nth choice 3))
+
+    (defn form-recipe-registry-find-capability-with-receipt
+        (registry kind input-surface output-surface ctx effect reversibility lossiness deterministic missing)
+        (do
+            (let selected
+                (form-recipe-registry-find-capability
+                    registry
+                    kind
+                    input-surface
+                    output-surface
+                    ctx
+                    effect
+                    reversibility
+                    lossiness
+                    deterministic
+                    missing))
+            (if (nil? selected)
+                missing
+                (do
+                    (let receipt
+                        (form-recipe-choice-receipt
+                            "capability-selection"
+                            selected
+                            input-surface
+                            output-surface
+                            1
+                            "selected"
+                            "registry-find-capability"))
+                    (form-recipe-capability-choice
+                        selected
+                        receipt
+                        (form-recipe-choice-signature receipt))))))
+
+    (defn form-recipe-flex-choice (result receipt signature)
+        (list "form-recipe-flex-choice" result receipt signature))
+
+    (defn form-recipe-flex-choice? (choice)
+        (if (eq (len choice) 4)
+            (str_eq (nth choice 0) "form-recipe-flex-choice")
+            false))
+
+    (defn form-recipe-flex-choice-result (choice) (nth choice 1))
+    (defn form-recipe-flex-choice-receipt (choice) (nth choice 2))
+    (defn form-recipe-flex-choice-signature (choice) (nth choice 3))
+
+    (defn form-recipe-plan-first-capability (plan missing)
+        (if (form-adapter-plan-empty? plan)
+            missing
+            (head (form-adapter-plan-capabilities plan))))
+
+    (defn form-recipe-registry-run-flex-with-receipt
+        (registry input-surface output-surface value anchor ctx depth missing)
+        (do
+            (let plan
+                (form-recipe-registry-plan-flex
+                    registry
+                    input-surface
+                    output-surface
+                    ctx
+                    depth
+                    missing))
+            (if (nil? plan)
+                missing
+                (do
+                    (let selected
+                        (form-recipe-plan-first-capability plan missing))
+                    (if (nil? selected)
+                        missing
+                        (do
+                            (let result
+                                (form-adapter-plan-run plan value anchor ctx))
+                            (let receipt
+                                (form-recipe-choice-receipt
+                                    "flex-plan-selection"
+                                    selected
+                                    input-surface
+                                    output-surface
+                                    (len (form-adapter-plan-capabilities plan))
+                                    "selected"
+                                    "registry-run-flex"))
+                            (form-recipe-flex-choice
+                                result
+                                receipt
+                                (form-recipe-choice-signature receipt))))))))
+
+    (defn form-recipe-registry-run-capability-with-receipt
+        (registry capability-node value anchor ctx missing)
+        (do
+            (let capability
+                (form-recipe-registry-capability-by-node
+                    registry
+                    capability-node
+                    missing))
+            (if (nil? capability)
+                missing
+                (do
+                    (let result
+                        (form-recipe-capability-run capability value anchor ctx))
+                    (let receipt
+                        (form-recipe-choice-receipt
+                            "capability-run-selection"
+                            capability
+                            (form-adapter-capability-input-surface capability)
+                            (form-adapter-capability-output-surface capability)
+                            1
+                            "selected"
+                            "registry-run-capability"))
+                    (form-recipe-flex-choice
+                        result
+                        receipt
+                        (form-recipe-choice-signature receipt))))))
+
     (defn form-adapter-capsule-node-from (root surfaces capabilities)
         (intern_node
             FORM-ADAPTER-CAPSULE

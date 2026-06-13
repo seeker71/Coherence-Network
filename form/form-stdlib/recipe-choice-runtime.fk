@@ -1,0 +1,75 @@
+; recipe-choice-runtime.fk - recipe registry choices carry route-choice runtime signatures.
+;
+; preludes: form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/bml-source.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk
+
+(do
+    (defn rcr-recipe-choice-receipt (choice)
+        (if (form-recipe-flex-choice? choice)
+            (form-recipe-flex-choice-receipt choice)
+            (form-recipe-capability-choice-receipt choice)))
+
+    (defn rcr-recipe-choice-signature (choice)
+        (if (form-recipe-flex-choice? choice)
+            (form-recipe-flex-choice-signature choice)
+            (form-recipe-capability-choice-signature choice)))
+
+    (defn rcr-recipe-choice-valid? (choice)
+        (if (form-recipe-flex-choice? choice)
+            (and
+                (form-recipe-choice-receipt-valid?
+                    (form-recipe-flex-choice-receipt choice))
+                (form-recipe-choice-signature?
+                    (form-recipe-flex-choice-signature choice)))
+            (if (form-recipe-capability-choice? choice)
+                (and
+                    (form-recipe-choice-receipt-valid?
+                        (form-recipe-capability-choice-receipt choice))
+                    (form-recipe-choice-signature?
+                        (form-recipe-capability-choice-signature choice)))
+                false)))
+
+    (defn rcr-realization (recipe-choice route-realization)
+        (list
+            "form-recipe-route-choice-runtime"
+            recipe-choice
+            route-realization))
+
+    (defn rcr-realization? (realization)
+        (if (eq (len realization) 3)
+            (str_eq (nth realization 0) "form-recipe-route-choice-runtime")
+            false))
+
+    (defn rcr-realization-recipe-choice (realization) (nth realization 1))
+    (defn rcr-realization-route-realization (realization) (nth realization 2))
+
+    (defn rcr-realize (recipe-choice row routes request threshold)
+        (rcr-realization
+            recipe-choice
+            (brcr-realize row routes request threshold)))
+
+    (defn rcr-realization-signature (realization)
+        (list
+            "form-recipe-route-choice-runtime-signature"
+            (rcr-recipe-choice-signature
+                (rcr-realization-recipe-choice realization))
+            (brcr-realization-signature
+                (rcr-realization-route-realization realization))))
+
+    (defn rcr-realization-signature? (signature)
+        (if (eq (len signature) 3)
+            (str_eq (nth signature 0) "form-recipe-route-choice-runtime-signature")
+            false))
+
+    (defn rcr-realization-signature-recipe (signature) (nth signature 1))
+    (defn rcr-realization-signature-route (signature) (nth signature 2))
+
+    (defn rcr-realization-valid? (realization)
+        (if (rcr-realization? realization)
+            (and
+                (rcr-recipe-choice-valid?
+                    (rcr-realization-recipe-choice realization))
+                (brcr-realization-valid?
+                    (rcr-realization-route-realization realization)))
+            false))
+
+    0)
