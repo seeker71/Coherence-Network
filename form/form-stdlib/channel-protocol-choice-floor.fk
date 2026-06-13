@@ -21,13 +21,13 @@
     (defn cpcf-source-status (source) (nth source 3))
 
     (defn cpcf-floor ()
-        "channel/interface/protocol/dynamic-choice floor: a cell can offer an interface, a flow can be gated by the receiver offer, channel-loopback protocol rows can name codec/capability/status/refusal witness, a BML route source object can be parsed, BML choiceReceipt routing metadata crosses four-way, kernel-http route choice crosses four-way, BML metadata can select a real kernel route candidate, and typed choiceReceipt rows lower into choice receipts that feed learned ordering across four-way.")
+        "channel/interface/protocol/dynamic-choice floor: a cell can offer an interface, a flow can be received by the receiver offer, channel-loopback protocol rows can name codec/capability/status/refusal witness, a BML route source object can be parsed, BML choiceReceipt routing metadata crosses four-way, kernel-http route choice crosses four-way, BML metadata can select a real kernel route candidate, recipe registry choices can carry receipts into route-choice realization, and typed choiceReceipt rows lower into choice receipts that feed learned ordering across four-way.")
 
     (defn cpcf-north-star ()
         "north star: channel, interface, protocol, capability, route choice, receipt, and learning become first-class Form/BML grammar expressions that lower to native recipes, execute across supported lanes, and always return inspectable receipts before any route, protocol, model, or JIT choice is trusted.")
 
     (defn cpcf-next-step ()
-        "next step: wire production route and recipe-library callers to brcr-realize, persist returned route-choice signatures, and lift broader BML protocol/capability grammar beyond the route-choice slice.")
+        "next step: carry the recipe-choice runtime wrapper through host CLI callers, persist returned route-choice signatures where recipe choices execute, and lift broader BML protocol/capability grammar beyond the route-choice slice.")
 
     (defn cpcf-related-sources ()
         (list
@@ -41,6 +41,7 @@
             (cpcf-source "form-recipe" "form/form-stdlib/choice-receipt-learning.fk" "form/form-stdlib/tests/choice-receipt-learning-band.fk" "proven-four-way")
             (cpcf-source "form-recipe" "form/form-stdlib/branch-choice-order.fk" "form/form-stdlib/tests/branch-choice-order-band.fk" "proven-four-way")
             (cpcf-source "form-recipe" "form/form-stdlib/bml-route-choice-runtime.fk" "form/form-stdlib/tests/bml-route-choice-runtime-band.fk" "proven-four-way")
+            (cpcf-source "form-recipe" "form/form-stdlib/recipe-choice-runtime.fk" "form/form-stdlib/tests/recipe-choice-runtime-band.fk" "proven-three-kernel-fourth-mismatch-35-vs-233")
             (cpcf-source "bml-source" "form/form-stdlib/bml-source.fk" "form/form-stdlib/tests/bml-route-source-object-band.fk" "proven-four-way")
             (cpcf-source "bml-source" "form/form-stdlib/bml-source.fk" "form/form-stdlib/tests/bml-choice-routing-metadata-band.fk" "proven-four-way")
             (cpcf-source "bml-source" "form/form-stdlib/bml-source.fk" "form/form-stdlib/tests/bml-choice-receipt-row-band.fk" "proven-four-way")
@@ -96,8 +97,8 @@
         (list
             "broader BML protocol/capability grammar beyond the route-choice slice is not yet proven"
             "runtime dynamic capability registry remains host-IO-shaped and is outside the fourth-arm manifest"
-            "receipts-before-trust is an invariant, not yet a universal runtime enforcement gate"
-            "production route registry and recipe-library callers are not yet wired to brcr-realize as their active driver"))
+            "receipts-before-trust is an invariant, not yet carried through every runtime choice"
+            "host CLI recipe-library callers are not yet using the recipe-choice runtime wrapper"))
 
     (defn cpcf-floor-recipe ()
         (list

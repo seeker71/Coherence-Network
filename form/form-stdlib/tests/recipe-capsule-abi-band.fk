@@ -57,6 +57,9 @@ section [form.action] {
     let capsule = form-recipe-capsule(root, list(surface_form, surface_text), list(expensive, cheap), list(expensive_contract, cheap_contract, io_contract), list(cheap_proof), list(expensive_cost, cheap_cost), list(cheap_specializer), empty);
     let registry = form-recipe-registry(list(capsule));
     let selected = form-recipe-registry-find-capability(registry, capability_emit, surface_form, surface_text, ctx, effect_pure, reversible_yes, lossless_yes, deterministic_yes, empty);
+    let selected_choice = form-recipe-registry-find-capability-with-receipt(registry, capability_emit, surface_form, surface_text, ctx, effect_pure, reversible_yes, lossless_yes, deterministic_yes, empty);
+    let selected_choice_receipt = form-recipe-capability-choice-receipt(selected_choice);
+    let selected_choice_signature = form-recipe-capability-choice-signature(selected_choice);
     let rejected = form-recipe-registry-find-capability(registry, capability_emit, surface_form, surface_text, ctx, effect_io, reversible_yes, lossless_yes, deterministic_yes, empty);
     let selected_contract = form-capability-contract-for(form-recipe-registry-contracts(registry), selected, empty);
     let selected_cost = form-capability-cost-for(form-recipe-registry-costs(registry), selected, empty);
@@ -66,11 +69,16 @@ section [form.action] {
     let specialized = specialize(selected);
     let plan = form-recipe-registry-plan-flex(registry, surface_form, surface_text, ctx, 2, empty);
     let result = form-adapter-plan-run(plan, value, anchor, ctx);
+    let run_choice = form-recipe-registry-run-flex-with-receipt(registry, surface_form, surface_text, value, anchor, ctx, 2, empty);
+    let run_choice_result = form-recipe-flex-choice-result(run_choice);
+    let run_choice_receipt = form-recipe-flex-choice-receipt(run_choice);
+    let run_choice_signature = form-recipe-flex-choice-signature(run_choice);
 
     let registry_score = sum(list(int_score(len(form-recipe-registry-capabilities(registry)), 2, 100), int_score(len(form-recipe-registry-contracts(registry)), 3, 200), int_score(len(form-recipe-registry-costs(registry)), 2, 300), int_score(len(form-recipe-registry-proofs(registry)), 1, 400), int_score(len(form-recipe-registry-specializers(registry)), 1, 500)));
     let discovery_score = sum(list(node_score(form-adapter-capability-node(selected), form-adapter-capability-node(cheap), 600), if nil?(rejected) then 700 else 0, node_score(form-capability-contract-effect(selected_contract), effect_pure, 800), int_score(form-capability-cost-score(selected_cost), 90, 900)));
     let proof_score = sum(list(int_score(form-capability-proof-expected(selected_proof), 1, 1000), int_score(proof_ok(selected), 1, 1100), node_score(form-adapter-capability-node(specialized), form-adapter-capability-node(cheap), 1200)));
     let run_score = sum(list(int_score(len(form-adapter-plan-capabilities(plan)), 1, 1300), node_score(form-adapter-plan-result-value(result), value, 1400), int_score(rc_count_value(form-adapter-plan-result-value(result)), 34, 1500)));
+    let receipt_score = sum(list(if form-recipe-capability-choice?(selected_choice) then 1600 else 0, if form-recipe-choice-receipt-valid?(selected_choice_receipt) then 1700 else 0, if form-recipe-choice-signature?(selected_choice_signature) then 1800 else 0, node_score(form-recipe-choice-signature-selected-node(selected_choice_signature), form-adapter-capability-node(cheap), 1900), if form-recipe-flex-choice?(run_choice) then 2000 else 0, if form-recipe-choice-receipt-valid?(run_choice_receipt) then 2100 else 0, if form-recipe-choice-signature?(run_choice_signature) then 2200 else 0, int_score(form-recipe-choice-signature-route-count(run_choice_signature), 1, 2300), node_score(form-adapter-plan-result-value(run_choice_result), value, 2400)));
 
-    sum(list(registry_score, discovery_score, proof_score, run_score));
+    sum(list(registry_score, discovery_score, proof_score, run_score, receipt_score));
 }

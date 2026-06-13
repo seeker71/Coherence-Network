@@ -84,11 +84,17 @@ section [form.action] {
     let ctx = bmf-symbol-context(role_runtime, lens_runtime, list(bmf-symbol-binding(anchor, role_runtime, lens_runtime, "runtime.count", list("runtime-count"))));
 
     let forward = form-recipe-registry-run-flex(runtime_registry, surface_wire, surface_form, value, anchor, ctx, 8, empty);
+    let forward_choice = form-recipe-registry-run-flex-with-receipt(runtime_registry, surface_wire, surface_form, value, anchor, ctx, 8, empty);
+    let forward_choice_receipt = form-recipe-flex-choice-receipt(forward_choice);
+    let forward_choice_signature = form-recipe-flex-choice-signature(forward_choice);
     let reverse = form-recipe-registry-run-flex(runtime_registry, surface_form, surface_wire, value, anchor, ctx, 8, empty);
     let forward_routes = form-adapter-plan-result-routes(forward);
     let reverse_routes = form-adapter-plan-result-routes(reverse);
     let selected_compressor = form-recipe-registry-capability-by-node(runtime_registry, form-adapter-capability-node(compressor), empty);
     let direct_compress = form-recipe-registry-run-capability(runtime_registry, form-adapter-capability-node(compressor), value, anchor, ctx, empty);
+    let direct_compress_choice = form-recipe-registry-run-capability-with-receipt(runtime_registry, form-adapter-capability-node(compressor), value, anchor, ctx, empty);
+    let direct_compress_receipt = form-recipe-flex-choice-receipt(direct_compress_choice);
+    let direct_compress_signature = form-recipe-flex-choice-signature(direct_compress_choice);
     let first_forward_source = form-adapter-route-source(head(forward_routes));
     let last_reverse_source = form-adapter-route-source(nth(reverse_routes, 4));
     let grammar_proof = form-capability-proof-for(form-recipe-registry-proofs(runtime_registry), grammar_parser, proof_runtime, empty);
@@ -98,6 +104,7 @@ section [form.action] {
     let reverse_score = sum(list(int_score(len(reverse_routes), 5, 900), node_score(form-adapter-plan-result-value(reverse), value, 1000), str_score(src_value(last_reverse_source, 1), "transport-writer", 1100)));
     let lookup_score = sum(list(node_score(form-adapter-capability-node(selected_compressor), form-adapter-capability-node(compressor), 1200), node_score(form-adapter-capability-node(form-adapter-route-capability(direct_compress)), form-adapter-capability-node(compressor), 1300), str_score(src_value(form-adapter-route-source(direct_compress), 1), "compressor", 1400)));
     let proof_score = sum(list(int_score(form-capability-proof-expected(grammar_proof), 1, 1500), int_score(proof_ok(grammar_parser), 1, 1600), node_score(form-adapter-capability-node(form-capability-proof-capability(grammar_proof)), form-adapter-capability-node(grammar_parser), 1700)));
+    let receipt_score = sum(list(if form-recipe-flex-choice?(forward_choice) then 1800 else 0, if form-recipe-choice-receipt-valid?(forward_choice_receipt) then 1900 else 0, if form-recipe-choice-signature?(forward_choice_signature) then 2000 else 0, int_score(form-recipe-choice-signature-route-count(forward_choice_signature), 5, 2100), node_score(form-recipe-choice-signature-selected-node(forward_choice_signature), form-adapter-capability-node(transport_parser), 2200), if form-recipe-flex-choice?(direct_compress_choice) then 2300 else 0, if form-recipe-choice-receipt-valid?(direct_compress_receipt) then 2400 else 0, if form-recipe-choice-signature?(direct_compress_signature) then 2500 else 0, int_score(form-recipe-choice-signature-route-count(direct_compress_signature), 1, 2600), node_score(form-recipe-choice-signature-selected-node(direct_compress_signature), form-adapter-capability-node(compressor), 2700)));
 
-    sum(list(registry_score, forward_score, reverse_score, lookup_score, proof_score));
+    sum(list(registry_score, forward_score, reverse_score, lookup_score, proof_score, receipt_score));
 }
