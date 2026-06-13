@@ -14,10 +14,12 @@
     "Cells and recipes can discover which host OS target carries a protocol, which capability it requires, and where its native binary is published.")
 
   (floor
-    "macOS arm64 and Android arm64 have target rows, clang target triples, relocatable assembly/object surfaces, third-party oracle rows, Form-native arm64 assembler runtime rows, measured oracle-learning choice rows, CPU/GPU/ML kernel emitter proof rows running four-way on fkwu, implementation rows for process, utilization, audio, video, and sensor lanes, and hati.earth download coordinates.")
+    "macOS arm64 and Android arm64 have target rows, clang target triples, relocatable assembly/object surfaces, third-party oracle rows, Form-native arm64 assembler runtime rows, measured oracle-learning choice rows, CPU/GPU/ML kernel emitter proof rows running four-way on fkwu, implementation rows for process, utilization, audio, video, sensor, GPU, DSP, and MLX/equivalent accelerator lanes, and hati.earth download coordinates."
+    "GPU, DSP, and MLX are minimal floors today: discoverable protocol rows with capability names and target-specific implementation direction, not full native dispatch receipts.")
 
   (north-star
-    "Every Hati-OS host target publishes signed native binaries, checksums, source-map/provenance receipts, and per-lane physical proof receipts from hati.earth.")
+    "Every Hati-OS host target publishes signed native binaries, checksums, source-map/provenance receipts, and per-lane physical proof receipts from hati.earth."
+    "GPU, DSP/NPU, and MLX/equivalent acceleration become native compute channels with dispatch receipts, pressure counters, codec metadata, and fallback refusals represented as data.")
 
   (targets
     (macos-arm64
@@ -40,8 +42,8 @@
       (jit-oracle clang)
       (jit-runtime form-native-arm64-assembler)
       (jit-model clang-oracle-sampled-form-native-recipe)
-      (package apk+tar.zst)
-      (launcher hati-os.apk)))
+      (package tar.zst)
+      (launcher hati-os)))
 
   (implementations
     (macos-arm64
@@ -49,13 +51,29 @@
       (host:usage cap.host.usage host_statistics64+task_info+getifaddrs+IOKit)
       (audio:pcm16 cap.audio.sample CoreAudio+AVFoundation)
       (video:rgba-time cap.video.frame ScreenCaptureKit+AVFoundation)
-      (sensor:signal cap.sensor.read CoreMotion+CoreLocation-when-present))
+      (sensor:signal cap.sensor.read CoreMotion+CoreLocation-when-present)
+      (gpu:compute cap.compute.gpu Metal+IOReport+powermetrics)
+      (dsp:signal cap.compute.dsp Accelerate+AudioToolbox)
+      (mlx:array cap.compute.mlx MLX+Metal))
     (android-arm64
       (host:process cap.host.process procfs+ActivityManager-permission-gated)
       (host:usage cap.host.usage procfs+BatteryManager+Debug+SensorManager)
       (audio:pcm16 cap.audio.sample AAudio+AudioRecord+AudioTrack)
       (video:rgba-time cap.video.frame Camera2+MediaProjection-permission-gated)
-      (sensor:signal cap.sensor.read SensorManager+LocationManager+GNSS-permission-gated)))
+      (sensor:signal cap.sensor.read SensorManager+LocationManager+GNSS-permission-gated)
+      (gpu:compute cap.compute.gpu Vulkan+OpenGL-ES+GPU-counter-when-available)
+      (dsp:signal cap.compute.dsp NNAPI+vendor-DSP-delegates)
+      (mlx:array cap.compute.mlx unsupported-on-android-equivalent-is-GPU-or-NNAPI)))
+
+  (accelerator-floor
+    (macos-arm64
+      (gpu "catalog and dashboard lane; north-star native Metal dispatch plus GPU pressure receipt")
+      (dsp "catalog and Accelerate/AudioToolbox signal-kernel floor; north-star hardware DSP/ANE receipt when exposed")
+      (mlx "catalog and MLX+Metal target row; north-star native MLX array execution receipt"))
+    (android-arm64
+      (gpu "catalog and dashboard lane; north-star Vulkan/OpenGL ES compute plus pressure receipt")
+      (dsp "catalog and NNAPI/vendor delegate row; north-star DSP/NPU signal receipt")
+      (mlx "explicitly unsupported; north-star maps the same semantic lane to Android GPU/NNAPI without pretending Apple MLX exists")))
 
   (distribution
     (door https://hati.earth)
@@ -64,8 +82,8 @@
       (url https://hati.earth/downloads/hati-os/macos/arm64/hati-os-macos-arm64.tar.zst)
       (checksum sha256))
     (android-arm64
-      (kind native-binary)
-      (url https://hati.earth/downloads/hati-os/android/arm64/hati-os-android-arm64.apk)
+      (kind native-kernel-package)
+      (url https://hati.earth/downloads/hati-os/android/arm64/hati-os-android-arm64.tar.zst)
       (checksum sha256)))
 
   (release-contract
@@ -79,8 +97,14 @@
     (checksum-per-binary)
     (source-map-per-binary)
     (physical-lane-receipts-per-target)
+    (accelerator-floor-rows-visible-until-native-dispatch-proof)
     (os-refusals-recorded-as-data)
     (download-door hati.earth))
 
+  (visual-review-contract
+    (floor "before release, macOS/web and Android app/service surfaces carry local screenshot evidence plus self-review and sister-agent review notes")
+    (cadence "at least before release; not more often than every couple of hours unless the same UI is in an active refinement loop")
+    (north-star "automated per-target screenshot/video artifacts, accessibility pass, and signed review receipt are attached to the release evidence"))
+
   (next
-    "Grow the clang/driver/MLK oracle sample corpus beyond the current four-way Form-native per-lane proof into measured choice windows, then wire the release build to publish the macOS tarball and Android APK at the catalog URLs with sha256 files, target assembly/source-map receipts, and physical-lane summary JSON beside each binary."))
+    "Grow the clang/driver/MLK oracle sample corpus beyond the current four-way Form-native per-lane proof into measured choice windows, then wire the release build to publish the macOS tarball and Android native kernel package at the catalog URLs with sha256 files, target assembly/source-map receipts, and physical-lane summary JSON beside each binary. The APK remains a separate mesh-organ release artifact with its own screenshot and channel proof."))

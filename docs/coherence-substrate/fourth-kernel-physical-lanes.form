@@ -42,6 +42,9 @@
     (store-query   store:query  "sqlite3 query through the Hati driver")
     (host-process  host:process "process table rows are constructible as a native host OS call lane; current physical floor may use ps/top carriers")
     (host-usage    host:usage   "CPU, memory, load, disk, network, and energy counters are constructible as native host OS call lanes; current physical floor may use host counter carriers")
+    (gpu-compute   gpu:compute  "GPU lanes are constructible as native accelerator calls; current floor is catalog and dashboard visibility without active dispatch receipt")
+    (dsp-signal    dsp:signal   "DSP/NPU lanes are constructible as native signal/NN accelerator calls; current floor is catalog visibility without active dispatch receipt")
+    (mlx-array     mlx:array    "MLX lanes are constructible on Apple hosts; Android records explicit unsupported and maps equivalent semantics to GPU/NNAPI")
     (shell-applets stream:read  "grep/find/awk/xmllint over local files through the Hati driver")
     (agent-model   kernel:call  "ollama model choice through the Hati driver")
     (audio-mic     host:file    "rec captures a local WAV when the OS grants mic access")
@@ -63,7 +66,7 @@
       (jit-oracle clang)
       (jit-runtime form-native-arm64-assembler)
       (distribution https://hati.earth/downloads/hati-os/macos/arm64/hati-os-macos-arm64.tar.zst)
-      (resource-implementations libproc+sysctl+proc_pidinfo host_statistics64+task_info+getifaddrs+IOKit CoreAudio+AVFoundation ScreenCaptureKit+AVFoundation CoreMotion+CoreLocation-when-present)
+      (resource-implementations libproc+sysctl+proc_pidinfo host_statistics64+task_info+getifaddrs+IOKit CoreAudio+AVFoundation ScreenCaptureKit+AVFoundation CoreMotion+CoreLocation-when-present Metal+IOReport+powermetrics Accelerate+AudioToolbox MLX+Metal)
       (floor "current physical receipts are captured on this Mac host"))
     (android-arm64
       (clang-triple aarch64-linux-android)
@@ -71,8 +74,8 @@
       (assembly-surface elf-relocatable+aarch64-asm)
       (jit-oracle clang)
       (jit-runtime form-native-arm64-assembler)
-      (distribution https://hati.earth/downloads/hati-os/android/arm64/hati-os-android-arm64.apk)
-      (resource-implementations procfs+ActivityManager-permission-gated procfs+BatteryManager+Debug+SensorManager AAudio+AudioRecord+AudioTrack Camera2+MediaProjection-permission-gated SensorManager+LocationManager+GNSS-permission-gated)
+      (distribution https://hati.earth/downloads/hati-os/android/arm64/hati-os-android-arm64.tar.zst)
+      (resource-implementations procfs+ActivityManager-permission-gated procfs+BatteryManager+Debug+SensorManager AAudio+AudioRecord+AudioTrack Camera2+MediaProjection-permission-gated SensorManager+LocationManager+GNSS-permission-gated Vulkan+OpenGL-ES NNAPI+vendor-DSP-delegates unsupported-MLX)
       (floor "Android receipts require an Android device or emulator with granted permissions")))
 
   (missing-physical-samples
@@ -99,7 +102,13 @@
       (missing "two or more native/third-party model receipts over the same channel sample with explicit model choice, comparison fidelity, and continuing exploration cadence"))
     (host-process-usage
       (floor "process and utilization channels now plan through host:process and host:usage; the present receipt floor may still use host:exec carriers")
-      (missing "one Hati-emitted physical receipt for direct host OS process and utilization calls, with ps/top/vm_stat/iostat-style carriers only as fallback receipts")))
+      (missing "one Hati-emitted physical receipt for direct host OS process and utilization calls, with ps/top/vm_stat/iostat-style carriers only as fallback receipts"))
+    (gpu-dsp-mlx
+      (floor "GPU, DSP, and MLX/equivalent lanes are cataloged and capability-gated for macOS and Android")
+      (missing "one native accelerator dispatch receipt per supported lane: macOS Metal, macOS MLX, Android GPU, Android NNAPI/DSP; Android MLX remains explicit unsupported data"))
+    (release-visual-review
+      (floor "human-visible app/service changes require actual screenshots plus self and sister-agent review before release")
+      (missing "automated screenshot/accessibility/review receipts attached to the release evidence, cadence-limited outside active refinement loops")))
 
   (missing-target-distribution-samples
     (macos-arm64
@@ -107,7 +116,7 @@
       (missing "published tarball, sha256, source map, and physical-lane summary JSON at the catalog URL"))
     (android-arm64
       (floor "target row, clang oracle assembly/object proof, four-way Form-native JIT runtime row, and hati.earth URL are proven")
-      (missing "published APK, sha256, source map, and Android device/emulator physical-lane summary JSON at the catalog URL")))
+      (missing "published Android native kernel package, sha256, source map, and Android device/emulator physical-lane summary JSON at the catalog URL; APK proof remains separate until the app shell announces to hati.mesh and carries organ channels")))
 
   (invariant
     (no-mock-data)
