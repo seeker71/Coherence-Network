@@ -160,6 +160,16 @@ existing edge strength. The 2026-06-09 route-goal state now sees 36 BML routes,
 0.893 native-executable share, and the next measured route pressure at `GET
 /api/automation/usage/readiness`.
 
+2026-06-13 backend route normalization pass: `GET
+/api/workspaces/{workspace_id}/vitality` is now the BML-authored route pattern
+for the workspace vitality handler, rather than only the exact
+`/api/workspaces/coherence-network/vitality` production path. The handler
+derives `workspace_id` from `KernelHTTPRequest`, keeps the existing SQL/Form JSON
+projection, and returns the requested workspace id in the response shape. This
+matches the API-source route-goal telemetry, which reports the FastAPI template
+path as the pressure cell, while the deployed Traefik rule still forwards the
+current coherence-network path to the native kernel.
+
 The route goal loop is now method-aware and uses `runtime_events` first, not
 endpoint summaries. This is a structural correction: `GET /api/household/requests`
 is native, but `POST /api/household/requests` remains a separate gap when it
