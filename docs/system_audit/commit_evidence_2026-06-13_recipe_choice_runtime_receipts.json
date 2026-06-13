@@ -1,0 +1,139 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/bml-recipe-registry-receipts-20260613",
+  "commit_scope": "Carry recipe registry choice receipts into route-choice runtime realization",
+  "files_owned": [
+    "form/form-stdlib/engine.fk",
+    "form/form-stdlib/recipe-choice-runtime.fk",
+    "form/form-stdlib/tests/recipe-capsule-abi-band.fk",
+    "form/form-stdlib/tests/runtime-dynamic-capability-registry-band.fk",
+    "form/form-stdlib/tests/runtime-real-grammar-capsules-band.fk",
+    "form/form-stdlib/tests/recipe-choice-runtime-band.fk",
+    "form/form-stdlib/channel-protocol-choice-floor.fk",
+    "docs/coherence-substrate/channel-protocol-choice-floor.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/choice-receipt.fk form-stdlib/bml-source.fk form-stdlib/branch-choice-order.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/tests/recipe-capsule-abi-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/tests/runtime-dynamic-capability-registry-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/runtime-grammar.fk form-stdlib/grammars/bml.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/rust-bmf.fk form-stdlib/grammars/natural-bmf.fk form-stdlib/grammars/image-bmf.fk form-stdlib/grammars/audio-bmf.fk form-stdlib/grammars/video-bmf.fk form-stdlib/grammars/document-bmf.fk form-stdlib/tests/runtime-real-grammar-capsules-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/choice-receipt.fk form-stdlib/bml-source.fk form-stdlib/branch-choice-order.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/recipe-choice-runtime.fk form-stdlib/tests/recipe-choice-runtime-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/bml-source.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/channel-protocol-choice-floor.fk form-stdlib/tests/channel-protocol-choice-floor-band.fk",
+      "cd form && scripts/fourth-arm-survey.sh --one form-stdlib/tests/recipe-choice-runtime-band.fk",
+      "receipt-practice wording scan",
+      "git fetch origin main",
+      "git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git diff --check"
+    ],
+    "results": [
+      "recipe-capsule-abi-band passed on Go/Rust/TS at 29100",
+      "runtime-dynamic-capability-registry-band passed on Go/Rust/TS at 33200",
+      "runtime-real-grammar-capsules-band passed on Go/Rust/TS at 49600",
+      "recipe-choice-runtime-band passed on Go/Rust/TS at 233",
+      "channel-protocol-choice-floor-band remained four-way at 32767",
+      "fourth-arm survey for recipe-choice-runtime returned bml-mismatch expected 233 and fkwu 35; recorded as the current nested recipe-route wrapper gap",
+      "stale receipts-before-trust wording scan returned no matches",
+      "rebase with autostash succeeded",
+      "local PR reading reported ready_for_push=True",
+      "follow-through reported stale_codex_prs=0"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "reason": "Not pushed or opened as a PR in this slice yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No deployment performed for this local Form recipe-runtime slice."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local sibling proofs and local PR checks pass. Remote PR checks are pending. The fourth walker still needs the nested recipe-choice route wrapper closed from fkwu 35 to 233 before this new wrapper can join the four-way manifest."
+  },
+  "idea_ids": [
+    "channel-protocol-choice-as-first-class-form-bml",
+    "native-learning-recipe-library-routing-metadata"
+  ],
+  "spec_ids": [
+    "specs/canonical-route-registry-and-runtime-mapping.md",
+    "specs/bml-typed-recipes.md",
+    "specs/agent-question-sse-channel.md"
+  ],
+  "task_ids": [
+    "thread-bml-recipe-registry-receipts-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "north-star direction",
+        "frequency correction",
+        "merge-and-continue request"
+      ]
+    },
+    {
+      "contributor_id": "codex-bml",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "coordination"
+      ]
+    },
+    {
+      "contributor_id": "mill-subagent",
+      "contributor_type": "machine",
+      "roles": [
+        "read-only inspection",
+        "next-slice target selection"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/engine.fk",
+    "form/form-stdlib/recipe-choice-runtime.fk",
+    "form/form-stdlib/tests/recipe-choice-runtime-band.fk",
+    "form/form-stdlib/channel-protocol-choice-floor.fk",
+    "docs/coherence-substrate/channel-protocol-choice-floor.form",
+    "subagent Mill inspection notification"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/channel-protocol-choice-floor.form",
+    "docs/system_audit/commit_evidence_2026-06-13_recipe_choice_runtime_receipts.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/channel-protocol-choice-floor.fk",
+    "form/form-stdlib/engine.fk",
+    "form/form-stdlib/recipe-choice-runtime.fk",
+    "form/form-stdlib/tests/recipe-capsule-abi-band.fk",
+    "form/form-stdlib/tests/recipe-choice-runtime-band.fk",
+    "form/form-stdlib/tests/runtime-dynamic-capability-registry-band.fk",
+    "form/form-stdlib/tests/runtime-real-grammar-capsules-band.fk"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Form recipe registry selection now has receipt/signature companion helpers, and recipe-choice-runtime can carry those choices into brcr-realize route-choice realization without changing existing run-flex return values.",
+    "public_endpoints": [
+      "local Form recipe registry",
+      "local recipe-choice runtime band"
+    ],
+    "test_flows": [
+      "form-recipe-registry-find-capability-with-receipt -> form-recipe-choice-signature",
+      "form-recipe-registry-run-flex-with-receipt -> form-recipe-flex-choice-result + receipt + signature",
+      "recipe_choice -> rcr-realize -> brcr-realize -> route-choice runtime signature"
+    ]
+  }
+}

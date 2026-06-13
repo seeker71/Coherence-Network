@@ -1,0 +1,191 @@
+; recipe-choice-runtime-band.fk
+;
+; Recipe registry selection carries an inspectable receipt and then flows
+; through BML route-choice realization using brcr-realize.
+; Verdict: 233 when the recipe choice receipt, selected capability identity,
+; result value, and route-choice realization signature all cross four-way.
+;
+; preludes: form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/choice-receipt.fk form-stdlib/bml-source.fk form-stdlib/branch-choice-order.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/recipe-choice-runtime.fk
+
+(do
+    (let RECIPE_RUNTIME_COUNT (make_nodeid 8 45 12 1))
+
+    (defn rr_count (value)
+        (intern_node
+            RECIPE_RUNTIME_COUNT
+            (list (intern_trivial_int value))))
+
+    (defn rr_count_value (node)
+        (node_value (head (node_children node))))
+
+    (defn src (value)
+        (bmf-object "recipe-runtime-source" value (empty) (empty)))
+
+    (defn src_value (source index)
+        (bmf-object-value (nth source index)))
+
+    (defn rr_score (ok score)
+        (if ok score 0))
+
+    (defn node_score (value want score)
+        (if (node_eq value want) score 0))
+
+    (defn int_score (value want score)
+        (if (eq value want) score 0))
+
+    (let root (form-capsule-root 131 1 9 1))
+    (let kind_role (form-dynamic-kind root 1))
+    (let kind_surface (form-dynamic-kind root 2))
+    (let kind_capability (form-dynamic-kind root 3))
+    (let kind_contract (form-dynamic-kind root 4))
+
+    (let role_runtime (form-dynamic-ref root kind_role 1))
+    (let surface_form (form-dynamic-ref root kind_surface 1))
+    (let surface_text (form-dynamic-ref root kind_surface 2))
+    (let capability_emit (form-dynamic-ref root kind_capability 1))
+    (let effect_pure (form-dynamic-ref root kind_contract 1))
+    (let reversible_yes (form-dynamic-ref root kind_contract 2))
+    (let lossless_yes (form-dynamic-ref root kind_contract 3))
+    (let deterministic_yes (form-dynamic-ref root kind_contract 4))
+
+    (let anchor "recipe/runtime")
+    (let value (rr_count 89))
+    (let ctx
+        (bmf-symbol-context
+            role_runtime
+            role_runtime
+            (empty)))
+
+    (defn emit_count (node anchor ctx)
+        (list
+            (src "count")
+            (src (int_to_str (rr_count_value node)))
+            (src anchor)))
+
+    (defn parse_count (source ctx)
+        (list
+            (src_value source 2)
+            (rr_count (str_to_int (src_value source 1)))))
+
+    (let fast
+        (form-adapter-capability
+            capability_emit
+            surface_form
+            surface_text
+            emit_count
+            parse_count
+            (empty)
+            (empty)))
+
+    (let fallback
+        (form-adapter-capability
+            capability_emit
+            surface_form
+            surface_text
+            emit_count
+            parse_count
+            (empty)
+            (empty)))
+
+    (let capsule
+        (form-recipe-capsule
+            root
+            (list surface_form surface_text)
+            (list fast fallback)
+            (list
+                (form-capability-contract
+                    fast
+                    effect_pure
+                    reversible_yes
+                    lossless_yes
+                    deterministic_yes
+                    (empty))
+                (form-capability-contract
+                    fallback
+                    effect_pure
+                    reversible_yes
+                    lossless_yes
+                    deterministic_yes
+                    (empty)))
+            (empty)
+            (empty)
+            (empty)
+            (empty)))
+
+    (let registry (form-recipe-registry (list capsule)))
+
+    (let recipe_choice
+        (form-recipe-registry-run-flex-with-receipt
+            registry
+            surface_form
+            surface_text
+            value
+            anchor
+            ctx
+            2
+            (empty)))
+
+    (let recipe_signature
+        (rcr-recipe-choice-signature recipe_choice))
+
+    (let recipe_result
+        (form-recipe-flex-choice-result recipe_choice))
+
+    (let request
+        (kh-request
+            "GET"
+            "/recipe/runtime"
+            (list (kh-header "Accept" "application/json"))
+            (list)
+            ""))
+
+    (let fast_route
+        (kh-route
+            "recipeFast"
+            "GET"
+            "/recipe/runtime"
+            9
+            "recipe_runtime_fast"
+            "Accept"
+            25))
+
+    (let oracle_route
+        (kh-route
+            "recipeOracle"
+            "GET"
+            "/recipe/runtime"
+            1
+            "recipe_runtime_oracle"
+            "Accept"
+            200))
+
+    (let routes (list oracle_route fast_route))
+
+    (let trusted_row
+        (bml-source-choice-row-from-expr
+            "choiceReceipt(recipeSelect,Form,recipe-choice,recipeFast:native:true:5:90:recipe-registry-selected;recipeOracle:oracle:true:90:96:third-party-oracle,recipeFast,success,95,branch-prediction-feedback,90,95,95,95,recipe-choice-receipt-carried,recipe-choice-runtime-band,form/form-stdlib/tests/recipe-choice-runtime-band.fk,20260613,2,1,1,0,0);"))
+
+    (let trusted_realization
+        (rcr-realize
+            recipe_choice
+            trusted_row
+            routes
+            request
+            70))
+
+    (let trusted_signature
+        (rcr-realization-signature trusted_realization))
+
+    (sum
+        (list
+            (rr_score (rcr-recipe-choice-valid? recipe_choice) 1)
+            (node_score
+                (form-recipe-choice-signature-selected-node recipe_signature)
+                (form-adapter-capability-node fast)
+                8)
+            (int_score
+                (rr_count_value (form-adapter-plan-result-value recipe_result))
+                89
+                32)
+            (rr_score (rcr-realization-valid? trusted_realization) 64)
+            (rr_score (rcr-realization-signature? trusted_signature) 128))))
