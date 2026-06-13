@@ -27,12 +27,13 @@
 #   multi-line output     — bands that print mid-walk (the walker answers
 #     one value through fk_pr)
 #
-# Current floor (2026-06-13 jit-native-span value-native closure): full
-# `cd form && ./validate.sh` reaches 121 four-way bands and 552 total passing
-# workloads, with 0 residual divergent bands. The JIT native span now carries
-# Value-ABI float, vector, string-name, and JIT-offer rows through tags 81..86.
-# North star: every stdlib band is either listed here and validated four-way, or
-# its 3-kernel-only blocker is explicitly named in commit evidence; suite-level
+# Current floor (2026-06-13 jit-tensor-emitter admission): full
+# `cd form && ./validate.sh` reaches 122 four-way bands and 552 total passing
+# workloads, with 0 residual divergent bands. The JIT native span carries
+# Value-ABI float, vector, string-name, and JIT-offer rows through tags 81..86;
+# the tensor emitter-as-recipe now also rides the manifest floor at 7. North
+# star: every stdlib band is either listed here and validated four-way, or its
+# 3-kernel-only blocker is explicitly named in commit evidence; suite-level
 # residuals stay at zero while source-section bands move toward fourth-arm
 # eligibility.
 learning-trend fkc 127
@@ -133,6 +134,7 @@ jit-lower-emit fks 63
 jit-metal-lanes fks 4095
 jit-native-span fks 255
 jit-oracle-learning fks 1023
+jit-tensor-emit fks 7
 learning-arc fks 127
 living-equation fks 111111
 mesh-health fks 127

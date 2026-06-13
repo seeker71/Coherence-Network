@@ -1,0 +1,116 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/jit-residual-next-20260613",
+  "commit_scope": "Admit the already-four-way jit-tensor-emit band to the fourth-arm manifest floor. After PR #3000 closed the Value-ABI native span, the residual JIT survey showed jit-tensor-emit as the only JIT-named band still outside the manifest, measuring single-pass 7 7.",
+  "files_owned": [
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/system_audit/commit_evidence_2026-06-13_jit_tensor_emit_fourth_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "COORD_AGENT=codex@a3ec coord view",
+      "cd form && scripts/fourth-arm-survey.sh",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/jit-tensor-emit.fk form-stdlib/tests/jit-tensor-emit-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh jit-tensor-emit",
+      "cd form && ./validate.sh",
+      "scripts/bml_form_jit_metal_planes_audit.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_jit_tensor_emit_fourth_floor.json",
+      "git diff --check",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "results": [
+      "coord board showed no active sibling claim on the JIT tensor emitter/fourth-arm floor lane; active sibling work remained on learning-fabric, Android Sense UI/media, and BML dynamic choice.",
+      "wellness passed with deploy aligned: production at 766ed43d matched origin/main and what_wants_attention was none.",
+      "fourth-arm survey from merge commit 766ed43d reported jit-tensor-emit single-pass 7 7 while all other JIT-lower/JIT-native/JIT-oracle rows were already in-manifest.",
+      "focused validate returned core.fk+jit-tensor-emit.fk+jit-tensor-emit-band.fk -> 7 with fourth arm: 1 band(s) four-way and 1 ok, 0 divergent.",
+      "fourth-arm gate returned PASS-4WAY jit-tensor-emit.",
+      "full Form validation returned fourth arm: 122 band(s) four-way (fkwu + pre-flattened tables); 552 ok, 0 divergent. One non-fatal temp cleanup warning appeared, but the command exited 0.",
+      "macOS and Android validation remains covered by the metal-plane audit: macOS arm64 Mach-O and Android arm64 ELF clang oracle receipts pass for BML/Hati, Form-JIT, and lowered Form-JIT surfaces while Android JIT's minimum supported floor stays Form-native recipe/table execution.",
+      "post-rebase focused proof remained clean: jit-tensor-emit -> 7, fourth-arm gate PASS-4WAY, evidence validator passed, and git diff --check passed.",
+      "local PR guard reported ready_for_push=True and local_preflight=pass; follow-through reported stale_codex_prs=0."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "reason": "Branch is not pushed yet in this slice."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No deployment performed yet for this local Form floor admission."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Focused, full, macOS/Android audit, and pre-push guards pass; remote PR checks and merge remain pending."
+  },
+  "idea_ids": [
+    "jit-tensor-emitter-as-recipe",
+    "fourth-arm-fkwu",
+    "android-form-native-jit-floor"
+  ],
+  "spec_ids": [
+    "form-fourth-kernel-validation",
+    "supported-metal-plane-jit-proof"
+  ],
+  "task_ids": [
+    "jit-tensor-emit-fourth-floor-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "continuation request",
+        "JIT residual direction",
+        "Android JIT floor requirement"
+      ]
+    },
+    {
+      "contributor_id": "codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "manifest floor admission",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/jit-tensor-emit-band.fk -> expected verdict 7",
+    "form/form-stdlib/jit-tensor-emit.fk -> tensor JIT emitter-as-recipe source",
+    "form/fourth-arm-bands.txt -> jit-tensor-emit fks 7",
+    "cd form && ./validate.sh -> fourth arm: 122 band(s) four-way; 552 ok, 0 divergent",
+    "scripts/bml_form_jit_metal_planes_audit.sh -> macOS arm64 Mach-O and Android arm64 ELF object receipts"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/system_audit/commit_evidence_2026-06-13_jit_tensor_emit_fourth_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The tensor JIT emitter-as-recipe proof joins the fourth-arm manifest floor so the Rust slice-ABI matvec source emitter is validated by the same Go/Rust/TypeScript/fkwu manifest gate as the lowered JIT and value-native JIT spans.",
+    "public_endpoints": [
+      "not-public-endpoint: Form fourth-kernel runtime proof surface",
+      "not-public-endpoint: supported macOS/Android metal-plane audit receipts"
+    ],
+    "test_flows": [
+      "jit-tensor-emit emits deterministic Rust matvec source for form_matvec_f64.",
+      "fkwu validates the emitted source text parity against Go, Rust, and TypeScript walkers.",
+      "macOS and Android metal-plane audit remains the external receipt for supported target object formats."
+    ]
+  }
+}
