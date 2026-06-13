@@ -5556,10 +5556,10 @@
         "original BML/BMF/Form compiler sources compile themselves into versioned .fkb images and Hati fourth-kernel native binaries with full class, template, generic, method, state, exception, and physical-lane support")
 
     (defn bml-hati-native-floor ()
-        "supported native subsets include lexical const/name binding, one- and two-argument method parameter binding, known method calls, method-scope class field read/write through record-backed self, clang oracle assembly receipts, and Form-native JIT runtime model rows for macos-arm64 and android-arm64; they must produce loadable Hati tables with parity proof; unsupported BML shapes, including unresolved names, unbound calls, and arity mismatch, must be named before table emission and never silently become a valid zero result")
+        "supported native subsets include lexical const/name binding, one- and two-argument method parameter binding, known method calls, method-scope class field read/write through record-backed self, named class method dispatch, clang oracle assembly receipts, and Form-native JIT runtime model rows for macos-arm64 and android-arm64; they must produce loadable Hati tables with parity proof; unsupported BML shapes, including unresolved names, unbound calls, arity mismatch, and missing class methods, must be named before table emission and never silently become a valid zero result")
 
     (defn bml-hati-native-next-step ()
-        "lift broader class construction, class dispatch, templates, generics, overload resolution, and broader multi-argument call families on the method parameter/call binding floor")
+        "lift broader class construction, templates, generics, overload resolution, and broader multi-argument call families on the method parameter/call binding floor")
 
     (defn bml-hati-lower-result (expr pool)
         (list "bml-hati-lower-result" expr pool))
@@ -6159,6 +6159,35 @@
                 (bml-hati-fns-result-pool methods-lowered)
                 node
                 unsupported)))
+
+    (defn bml-hati-class-method-index-loop (methods name index)
+        (if (nil? methods)
+            -1
+            (if (str_eq (bml-method-node-name (head methods)) name)
+                index
+                (bml-hati-class-method-index-loop
+                    (tail methods)
+                    name
+                    (add index 1)))))
+
+    (defn bml-hati-class-method-index (node name)
+        (bml-hati-class-method-index-loop
+            (bml-hati-class-method-nodes node)
+            name
+            0))
+
+    (defn bml-hati-run-class-method-with-arg (node method-name arg)
+        (do
+            (let image (bml-hati-compile-class-image node))
+            (let method-index (bml-hati-class-method-index node method-name))
+            (if (not (bml-hati-image-supported? image))
+                (bml-hati-unsupported-table-file image)
+            (if (eq method-index -1)
+                "BML-HATI-UNSUPPORTED method/not-found"
+                (fkm-walk
+                    (bml-hati-image-fns image)
+                    (nth (bml-hati-image-fns image) method-index)
+                    arg)))))
 
     (defn bml-hati-lower-methods-in (methods pool env)
         (if (nil? methods)
