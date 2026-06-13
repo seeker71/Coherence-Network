@@ -1,0 +1,125 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/primitive-drift-channel-proof-20260613",
+  "commit_scope": "Close primitive-registry drift for float_to_int and temp_dir, add process/usage host-resource channel options, add floor/north-star declarations to the native tool/channel Form surfaces, and name the physical sample receipts still missing from the channel loopback path.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "form-os-tool-surface",
+    "hati-os",
+    "host-kernel-resource-lanes"
+  ],
+  "spec_ids": [
+    "primitive-registry",
+    "tool-channel",
+    "channel-loopback",
+    "fourth-kernel-physical-lanes"
+  ],
+  "task_ids": [
+    "primitive-drift-channel-proof-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "constraints"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/primitive-registry.fk",
+    "form/form-stdlib/tests/primitive-registry-band.fk",
+    "form/form-stdlib/tool-channel.fk",
+    "form/form-stdlib/tests/tool-channel-band.fk",
+    "form/form-stdlib/channel-loopback.fk",
+    "form/form-stdlib/tests/channel-loopback-band.fk",
+    "docs/coherence-substrate/primitive-registry.form",
+    "docs/coherence-substrate/tool-channel.form",
+    "docs/coherence-substrate/channel-loopback.form",
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-13_primitive_drift_channel_samples.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/form-stdlib/primitive-registry.fk",
+    "form/form-stdlib/tests/primitive-registry-band.fk",
+    "form/form-stdlib/tool-channel.fk",
+    "form/form-stdlib/tests/tool-channel-band.fk",
+    "form/form-stdlib/channel-loopback.fk",
+    "form/form-stdlib/tests/channel-loopback-band.fk",
+    "docs/coherence-substrate/primitive-registry.form",
+    "docs/coherence-substrate/tool-channel.form",
+    "docs/coherence-substrate/channel-loopback.form",
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-13_primitive_drift_channel_samples.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "form/scripts/validate_primitive_registry.py",
+    "form/form-stdlib/tests/primitive-registry-band.fk",
+    "form/form-stdlib/tests/tool-channel-band.fk",
+    "form/form-stdlib/tests/channel-loopback-band.fk",
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "python3 scripts/wellness_check.py",
+      "python3 form/scripts/validate_primitive_registry.py",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/primitive-registry.fk form-stdlib/tests/primitive-registry-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tool-channel.fk form-stdlib/tests/tool-channel-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tool-channel.fk form-stdlib/channel-loopback.fk form-stdlib/tests/channel-loopback-band.fk",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_primitive_drift_channel_samples.json"
+    ],
+    "notes": "Primitive registry drift is closed: validate_primitive_registry.py reports 201 natives and 201 registry rows, with 164 in-band verified and 37 carrier-declared. primitive-registry-band returns 63 across Go/Rust/TS. tool-channel-band returns 255 and includes processes/usage host-resource plans. channel-loopback-band returns 255 across Go/Rust/TS."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No public deploy behavior changes expected beyond documentation/proof surfaces."
+  },
+  "phase_gate": {
+    "phase": "native-channel-proof-surface",
+    "gate": "Primitive registry has no missing native rows, process/usage host-resource channels are explicit, and channel docs declare floor, north star, and missing physical sample receipts.",
+    "state": "local-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Extend scripts/hati_os_physical_lanes_probe.sh with the named missing physical samples: process/usage receipts, TTS/STT loopback, STT/TTS loopback, video generation/classification loopbacks, screen gesture receipt, GPS-on-device receipt, and multi-model comparison receipts."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Wellness no longer reports float_to_int or temp_dir primitive registry drift; process/usage host-resource channels are plannable; Form docs expose floor/north-star plus missing physical proof samples for the channel learning surface.",
+    "public_endpoints": [
+      "local:form-stdlib-primitive-registry",
+      "local:form-stdlib-channel-loopback"
+    ],
+    "test_flows": [
+      "Primitive registry drift gate compares kernel source to registry and passes.",
+      "Primitive registry band proves 201 rows, 164 in-band verifications, 37 carrier-declared rows, and category attestation.",
+      "Tool channel band proves processes and usage as explicit host-resource plans.",
+      "Channel loopback band still proves reciprocal and cross-modal loopback planning.",
+      "Fourth-kernel physical lane doc names missing sample receipts."
+    ],
+    "summary": "Local proof passes for primitive drift closure, host process/usage channel planning, and channel loopback planning. Physical proof gaps are named but not yet executed in this commit."
+  }
+}

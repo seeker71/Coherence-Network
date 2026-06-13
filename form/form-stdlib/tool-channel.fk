@@ -54,6 +54,8 @@
     (defn tc-tools ()
         (list
             (tc-tool "exec" "host:exec" "cap.host.exec" "exec" "protocol" "argv" "stdout")
+            (tc-tool "processes" "host:exec" "cap.host.exec" "ps" "host-resource" "selector" "process-rows")
+            (tc-tool "usage" "host:exec" "cap.host.exec" "usage" "host-resource" "sample-window" "usage-sample")
             (tc-tool "file" "host:file" "cap.host.file" "file" "protocol" "path" "bytes")
             (tc-tool "http" "http:request" "cap.http.request" "request" "protocol" "request" "response")
             (tc-tool "call" "kernel:call" "cap.kernel.call" "call" "protocol" "args" "value")
