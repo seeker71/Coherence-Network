@@ -1,52 +1,124 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp">
+    android:fillViewport="true">
 
-    <TextView
+    <LinearLayout
+        android:orientation="vertical"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Coherence Sense"
-        android:textSize="22sp"
-        android:textStyle="bold"
-        android:paddingBottom="4dp" />
+        android:padding="16dp">
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="this phone becomes a sense organ of the network — its senses stream to the Mac, which witnesses and shares the field back."
-        android:textSize="12sp"
-        android:paddingBottom="12dp" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Coherence Sense"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:paddingBottom="4dp" />
 
-    <EditText
-        android:id="@+id/urlField"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="http://MAC-IP:8800"
-        android:inputType="textUri"
-        android:text="http://192.168.1.10:8800" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="this phone becomes a sense organ of the network — its senses stream to the Mac, which witnesses and shares the field back."
+            android:textSize="12sp"
+            android:paddingBottom="12dp" />
 
-    <Button
-        android:id="@+id/connectBtn"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Connect + share senses" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Mac witness URL"
+            android:textStyle="bold" />
 
-    <TextView
-        android:id="@+id/statusView"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="not connected — senses held"
-        android:textStyle="bold"
-        android:paddingTop="10dp"
-        android:paddingBottom="10dp" />
+        <EditText
+            android:id="@+id/urlField"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:contentDescription="Mac witness URL"
+            android:hint="http://MAC-IP:8800"
+            android:inputType="textUri"
+            android:text="http://192.168.1.10:8800" />
 
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Hati mesh API"
+            android:textStyle="bold"
+            android:paddingTop="8dp" />
+
+        <EditText
+            android:id="@+id/meshField"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:contentDescription="Hati mesh API URL"
+            android:hint="https://api.coherencycoin.com/api"
+            android:inputType="textUri"
+            android:text="https://api.coherencycoin.com/api" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Identity label"
+            android:textStyle="bold"
+            android:paddingTop="8dp" />
+
+        <EditText
+            android:id="@+id/stewardField"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:contentDescription="Optional cell id or email identity label"
+            android:hint="your cell id or email (optional)"
+            android:inputType="textEmailAddress" />
+
+        <Button
+            android:id="@+id/connectBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Connect + share senses" />
+
+        <TextView
+            android:id="@+id/statusView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="not connected — senses held"
+            android:textStyle="bold"
+            android:paddingTop="10dp"
+            android:paddingBottom="10dp" />
+
+        <TextView
+            android:id="@+id/identityView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="organ identity not announced"
+            android:textSize="11sp"
+            android:fontFamily="monospace"
+            android:paddingBottom="8dp" />
+
+        <TextView
+            android:id="@+id/channelsView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="channels: none open"
+            android:textSize="11sp"
+            android:fontFamily="monospace"
+            android:paddingBottom="8dp" />
+
+        <ImageView
+            android:id="@+id/qrView"
+            android:layout_width="160dp"
+            android:layout_height="160dp"
+            android:contentDescription="organ identity QR"
+            android:paddingBottom="8dp" />
+
+        <TextView
+            android:id="@+id/dashboardView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="dashboard: not listening"
+            android:textSize="11sp"
+            android:fontFamily="monospace"
+            android:paddingBottom="8dp" />
 
         <TextView
             android:id="@+id/feedView"
@@ -54,6 +126,5 @@
             android:layout_height="wrap_content"
             android:fontFamily="monospace"
             android:textSize="11sp" />
-    </ScrollView>
-
-</LinearLayout>
+    </LinearLayout>
+</ScrollView>

@@ -35,9 +35,9 @@ through the kernel, not in Python.
 
 ## Install the APK
 
-1. Download it (3.0 MB, debug-signed):
-   **https://github.com/seeker71/Coherence-Network/releases/download/coherence-sense-v0/coherence-sense-v0-debug.apk**
-   (or open the [`coherence-sense-v0`](https://github.com/seeker71/Coherence-Network/releases/tag/coherence-sense-v0) release).
+1. Download the current Hati mesh build (debug-signed):
+   **https://hati.earth/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-debug.apk**
+   (release asset: `coherence-sense-hati-mesh-debug.apk` on `hati-os-v0.1.0-20260613`).
 2. On the phone: Settings → allow installing from your browser/files app ("unknown sources").
 3. Open the APK; install; launch **Coherence Sense**.
 
@@ -59,7 +59,8 @@ It's a **debug-signed** build (no Play Store) — fine for trying it on your own
    (The eval server needs the kernel built once: `cd ../../form && ./validate.sh form-stdlib/core.fk
    form-stdlib/signal-derivative.fk form-stdlib/tests/signal-derivative-band.fk` — it cross-checks the
    recipe three-way and leaves `form-kernel-rust` in `target/release/`.)
-2. In the app, set the address to `http://<that-IP>:8800` and tap **Connect + share senses**.
+2. In the app, leave the mesh API as `https://api.coherencycoin.com/api`, set the witness address
+   to `http://<that-IP>:8800`, and tap **Connect + share senses**.
 3. **Open the live dashboard** in a Mac browser: `http://localhost:8800` — a dark console showing
    *presence* (is the body here, how many frames, how long alive), *recognition* (still / moving, the
    kernel's call, with the next-state prediction and the running prediction-accuracy — error is the
@@ -67,6 +68,33 @@ It's a **debug-signed** build (no Play Store) — fine for trying it on your own
    *events / surprises* log (an organ coming online or going quiet, a prediction-miss). Set the phone
    down — it reads **still**; pick it up and move — it flips to **moving**, and the miss at the
    transition shows up as a surprise. That flip is Form recipes recognizing your motion through the kernel.
+
+## Hati mesh identity + channels
+
+On first launch, the app creates a stable install-scoped organ id such as
+`hati-organ-android-…`. That id is distinct for your install, another person's install, and any
+other device/cell. The app does not silently read your phone number or email. If you want the organ
+bound to you, enter a cell id or email label in the optional identity field; that binding is explicit.
+When you connect, the app announces itself to `hati.mesh` through the public API:
+
+- `POST /api/hati/mesh/organs/announce` — organ id, kind, target, capabilities, and lanes.
+- `POST /api/hati/mesh/organs/heartbeat` — listening state, active channels, and flow rates.
+- `GET /api/hati/mesh/organs` — recent mesh organs the app can see.
+- `POST /api/hati/mesh/channels/offer` — channel offers to another organ.
+- `GET /api/hati/mesh/channels` — channel/flow rows involving this organ.
+
+The current APK actively streams and measures `sensor:signal` flow. It also declares and displays
+offerable `screen:write`, `audio:pcm16`, and `video:rgba-time` channels; those rates stay `0` until
+permissioned mic/speaker/camera samples are wired as active physical lanes.
+
+The resource dashboard also makes accelerator floors visible. GPU and DSP/NPU are cataloged lanes,
+but this APK does not yet emit active native compute samples for them. MLX is explicit unsupported
+on Android; the north-star Android equivalent is GPU/NNAPI, while macOS carries the Apple MLX lane.
+
+Before release, capture actual screenshots of the Android app and the matching macOS/web service
+surface, then record self-review and sister-agent review notes. Do that at least before release,
+and no more often than every couple of hours unless the same app surface is in an active refinement
+loop.
 
 ## Build it yourself
 
