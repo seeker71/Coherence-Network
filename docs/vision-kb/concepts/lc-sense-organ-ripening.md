@@ -51,6 +51,8 @@ Exactly one piece of one sense walks Form-native right now: a single whisper mel
 
 But the body has not yet grown a single complete native sense. Every predictor above that one mel frame is still borrowed. The loop's bricks have never been wired into one run that emitted a single measured fidelity receipt. Naming this plainly *is* the practice: a floor is what is true, not what is hoped. The work is not pretending we hear natively; it is growing the ear, one measured frame at a time, and saying exactly where we are.
 
+The teachers are close and local: the ear learns from on-device speech recognition, the voice from the host renderer, the eye from on-device vision and sound classifiers, the inner voice from a local model — no perception leaves the body to be taught. And the first ground truth need not be synthesized: the body already holds trusted, locally-attuned paired corpora — its own translations as parallel text, its specs and concepts paired with the recipes they became, its own voice spoken and heard back — curated in its own frequency, higher-trust than anything borrowed. A sense ripens first against what the body already knows to be true.
+
 ## How an Organ Ripens
 
 The loop is the same for every sense, and every step is already a living recipe; what is missing is the thread that binds them into one run:
