@@ -477,6 +477,14 @@
     (defn bml-ast-call-args (name args)
         (bml-ast-call name (bml-ast-array args)))
 
+    (defn bml-ast-this-field (field-name)
+        (bml-ast-call "__hati_field_get" (bml-ast-string field-name)))
+
+    (defn bml-ast-this-field-set (field-name value)
+        (bml-ast-call-args
+            "__hati_field_set"
+            (list (bml-ast-string field-name) value)))
+
     (defn bml-ast-package (name)
         (intern_node BML-AST-PACKAGE (list (intern_trivial_string name))))
 
@@ -3573,6 +3581,53 @@
                     (bmf-collection-value objects "right-type")
                     (bmf-collection-value objects "right-name")))))
 
+    (defn bml-emit-method-return-this-field-add-int (objects)
+        (bml-ast-method
+            (bmf-collection-value objects "name")
+            (bml-ast-return
+                (bml-ast-add
+                    (bml-ast-this-field (bmf-collection-value objects "field"))
+                    (intern_node BML-AST-INT
+                                 (list (bml-cap-int objects "value")))))))
+
+    (defn bml-emit-method-set-this-field-return (objects)
+        (bml-ast-method
+            (bmf-collection-value objects "name")
+            (bml-ast-block
+                (list
+                    (bml-ast-this-field-set
+                        (bmf-collection-value objects "field")
+                        (intern_node BML-AST-INT
+                                     (list (bml-cap-int objects "value"))))
+                    (bml-ast-return
+                        (bml-ast-this-field
+                            (bmf-collection-value objects "return-field")))))))
+
+    (defn bml-emit-class-field-method-return-this-field-add-int (objects)
+        (do
+            (let field
+                (bml-ast-field
+                    (bmf-collection-value objects "field-type")
+                    (bmf-collection-value objects "field-name")))
+            (let method
+                (bml-ast-method
+                    (bmf-collection-value objects "method-name")
+                    (bml-ast-return
+                        (bml-ast-add
+                            (bml-ast-this-field
+                                (bmf-collection-value objects "return-field"))
+                            (intern_node BML-AST-INT
+                                         (list (bml-cap-int objects "value")))))))
+            (bml-ast-class
+                (bmf-collection-value objects "class-name")
+                (bmf-collection-value objects "base")
+                (bml-ast-block
+                    (list
+                        (bml-ast-section
+                            (bml-ast-name
+                                (bmf-collection-value objects "section-property"))
+                            (bml-ast-block (list field method))))))))
+
     (defn bml-emit-choose-fail-int (objects)
         (bml-ast-choose
             (list
@@ -3675,6 +3730,7 @@
       file-class-section-field-primitive ::= "class" $name:name "[" $property:property "]" ":" "Primitive" "{" "section" "[" $section-property:property "]" "{" $field-type:name $field-name:name ";" "}" "}" => bml-emit-file-class-section-field-primitive;
       file-class-section-const-string ::= "class" $name:name "[" $property:property "]" ":" $base:name "{" "section" "[" "class" "," $section-property:property "]" "{" "const" $const-type:name $const-name:name "=" $const-value:string ";" "}" "}" => bml-emit-file-class-section-const-string;
       file-class-section-return-method ::= "class" $name:name "[" $property:property "]" ":" $base:name "{" "section" "[" $section-property:property "]" "{" $return-type:name $method-name:name "(" ")" "{" "return" $return-value:int ";" "}" "}" "}" => bml-emit-file-class-section-return-method;
+      class-field-method-return-this-field-add-int ::= "class" $class-name:name "[" $property:property "]" ":" $base:name "{" "section" "[" $section-property:property "]" "{" $field-type:name $field-name:name ";" $method-type:name $method-name:name "(" ")" "{" "return" $self:name "." $return-field:name "+" $value:int ";" "}" "}" "}" => bml-emit-class-field-method-return-this-field-add-int;
       file-class-primitive-cut ::= "class" "Cut" "[" $property:property "]" ":" "Primitive" "{" "section" "[" $section-property:property "]" "{" $match-return:name $match-name:name "(" $context-type:name $context-name:name "," $env-type:name $env-name:name "," $tag-type:name $tag-name:name ")" "{" $system-name:name "." "Cut" "(" $arg-object:name "." $argument-name:name "(" $arg-index:int ")" ")" ";" "}" $as-string-return:name $as-string-name:name "(" ")" "{" "return" $as-string-value:string ";" "}" $as-create-return:name $as-create-name:name "(" ")" "{" "return" $as-create-value:string ";" "}" "}" "}" => bml-emit-file-class-primitive-cut;
       class ::= "class" spc cut class-name properties super-class-list class-block => bml-emit-node-source;
       interface-header ::= "interface" $name:name ":" $parent:name => bml-emit-interface-header <= bml-source-interface-header;
@@ -3703,6 +3759,8 @@
       method-return-add ::= $type:name $name:name "(" ")" "{" "return" $left:int "+" $right:int ";" "}" => bml-emit-method-return-add;
       method-param-return-add ::= $type:name $name:name "(" $param-type:name $param-name:name ")" "{" "return" $param-ref:name "+" $value:int ";" "}" => bml-emit-method-param-return-add;
       method-two-param-return-add ::= $type:name $name:name "(" $left-type:name $left-name:name "," $right-type:name $right-name:name ")" "{" "return" $left-ref:name "+" $right-ref:name ";" "}" => bml-emit-method-two-param-return-add;
+      method-return-this-field-add-int ::= $type:name $name:name "(" ")" "{" "return" $self:name "." $field:name "+" $value:int ";" "}" => bml-emit-method-return-this-field-add-int;
+      method-set-this-field-return ::= $type:name $name:name "(" ")" "{" $self:name "." $field:name "=" $value:int ";" "return" $return-self:name "." $return-field:name ";" "}" => bml-emit-method-set-this-field-return;
       method ::= method-head properties code-block => bml-emit-node-source;
       method-head ::= "operator" spc cut full-class-name "|" interface-ref method-name => bml-emit-node-source;
       parameter ::= field-definition => bml-emit-node-source;
@@ -3863,6 +3921,9 @@
               "choice-fail-int"
               "choose-fail-int"
               "state-int"
+              "class-field-method-return-this-field-add-int"
+              "method-set-this-field-return"
+              "method-return-this-field-add-int"
               "method-two-param-return-add"
               "method-param-return-add"
               "const-int"
@@ -5031,6 +5092,9 @@
             (bmf-native "bml-emit-method-return-add" bml-emit-method-return-add BML-AST-METHOD)
             (bmf-native "bml-emit-method-param-return-add" bml-emit-method-param-return-add BML-AST-METHOD)
             (bmf-native "bml-emit-method-two-param-return-add" bml-emit-method-two-param-return-add BML-AST-METHOD)
+            (bmf-native "bml-emit-method-return-this-field-add-int" bml-emit-method-return-this-field-add-int BML-AST-METHOD)
+            (bmf-native "bml-emit-method-set-this-field-return" bml-emit-method-set-this-field-return BML-AST-METHOD)
+            (bmf-native "bml-emit-class-field-method-return-this-field-add-int" bml-emit-class-field-method-return-this-field-add-int BML-AST-CLASS)
             (bmf-native "bml-emit-choose-fail-int" bml-emit-choose-fail-int BML-AST-CHOOSE)
             (bmf-native "bml-emit-if-fail-fail-return-int" bml-emit-if-fail-fail-return-int BML-AST-CHOOSE)
             (bmf-native "bml-emit-while-success-fail-return-int" bml-emit-while-success-fail-return-int BML-AST-WHILE)
@@ -5063,6 +5127,9 @@
                 (compiler-rule "bml" "method-return-add" "BML method object to BMA ops" bml-emit-method-return-add)
                 (compiler-rule "bml" "method-param-return-add" "BML one-parameter method object to BMA ops" bml-emit-method-param-return-add)
                 (compiler-rule "bml" "method-two-param-return-add" "BML two-parameter method object to BMA ops" bml-emit-method-two-param-return-add)
+                (compiler-rule "bml" "method-return-this-field-add-int" "BML method-scope field read object to Hati ops" bml-emit-method-return-this-field-add-int)
+                (compiler-rule "bml" "method-set-this-field-return" "BML method-scope field write object to Hati ops" bml-emit-method-set-this-field-return)
+                (compiler-rule "bml" "class-field-method-return-this-field-add-int" "BML class field plus field-reading method object to Hati ops" bml-emit-class-field-method-return-this-field-add-int)
                 (compiler-rule "bml" "choice-fail-int" "BML thesis choice object to BMA ops" bml-emit-choose-fail-int)
                 (compiler-rule "bml" "choose-fail-int" "BML choice object to BMA ops" bml-emit-choose-fail-int)
                 (compiler-rule "bml" "if-fail-fail-return-int" "BML if_fail fallback object to BMA ops" bml-emit-if-fail-fail-return-int)
@@ -5489,10 +5556,10 @@
         "original BML/BMF/Form compiler sources compile themselves into versioned .fkb images and Hati fourth-kernel native binaries with full class, template, generic, method, state, exception, and physical-lane support")
 
     (defn bml-hati-native-floor ()
-        "supported native subsets include lexical const/name binding, one- and two-argument method parameter binding, known method calls, clang oracle assembly receipts, and Form-native JIT runtime model rows for macos-arm64 and android-arm64; they must produce loadable Hati tables with parity proof; unsupported BML shapes, including unresolved names, unbound calls, and arity mismatch, must be named before table emission and never silently become a valid zero result")
+        "supported native subsets include lexical const/name binding, one- and two-argument method parameter binding, known method calls, method-scope class field read/write through record-backed self, clang oracle assembly receipts, and Form-native JIT runtime model rows for macos-arm64 and android-arm64; they must produce loadable Hati tables with parity proof; unsupported BML shapes, including unresolved names, unbound calls, and arity mismatch, must be named before table emission and never silently become a valid zero result")
 
     (defn bml-hati-native-next-step ()
-        "lift fields, classes, templates, generics, overload resolution, and broader multi-argument call families on the method parameter/call binding floor")
+        "lift broader class construction, class dispatch, templates, generics, overload resolution, and broader multi-argument call families on the method parameter/call binding floor")
 
     (defn bml-hati-lower-result (expr pool)
         (list "bml-hati-lower-result" expr pool))
@@ -5628,6 +5695,16 @@
     (defn bml-hati-arg-at-index (node)
         (node_value (bml-node-child (bml-call-arg node) 0)))
 
+    (defn bml-hati-field-get-node? (node)
+        (if (node_eq (node_category node) BML-AST-CALL)
+            (str_eq (bml-call-name node) "__hati_field_get")
+            false))
+
+    (defn bml-hati-field-set-node? (node)
+        (if (node_eq (node_category node) BML-AST-CALL)
+            (str_eq (bml-call-name node) "__hati_field_set")
+            false))
+
     (defn bml-hati-method-ref (index arity)
         (bml-ast-call-args
             "__hati_method"
@@ -5742,6 +5819,14 @@
             (empty)
         (if (bml-hati-arg-at-node? node)
             (empty)
+        (if (bml-hati-field-get-node? node)
+            (if (eq (len (bml-call-args node)) 1)
+                (bml-hati-unsupported-call-args-in (bml-call-args node) env)
+                (list "field/get-arity"))
+        (if (bml-hati-field-set-node? node)
+            (if (eq (len (bml-call-args node)) 2)
+                (bml-hati-unsupported-call-args-in (bml-call-args node) env)
+                (list "field/set-arity"))
             (do
                 (let binding (bml-local-lookup env (bml-call-name node)))
                 (if (nil? binding)
@@ -5754,7 +5839,7 @@
                             (bml-call-args node)
                             env)
                         (list "call/arity"))
-                    (list "call/not-method")))))))
+                    (list "call/not-method")))))))))
 
     (defn bml-hati-unsupported-call-args-in (args env)
         (if (nil? args)
@@ -5801,11 +5886,11 @@
             (if (node_eq cat BML-AST-INTERFACE)
                 (list "interface")
             (if (node_eq cat BML-AST-CLASS)
-                (list "class")
+                (bml-hati-unsupported-class-in node env)
             (if (node_eq cat BML-AST-SECTION)
-                (list "section")
+                (bml-hati-unsupported-section-in node env)
             (if (node_eq cat BML-AST-FIELD)
-                (list "field")
+                (empty)
             (if (node_eq cat BML-AST-ARRAY)
                 (bml-hati-unsupported-call-args-in (node_children node) env)
             (if (node_eq cat BML-AST-BREAK)
@@ -5829,6 +5914,29 @@
             (if (node_eq cat BML-AST-DISCARD)
                 (list "discard")
                 (list "unknown"))))))))))))))))))))))))))))))))
+
+    (defn bml-hati-unsupported-section-in (node env)
+        (bml-hati-unsupported-nodes-in-env
+            (node_children (bml-node-child node 1))
+            env))
+
+    (defn bml-hati-class-method-nodes-loop (sections)
+        (if (nil? sections)
+            (empty)
+            (append
+                (bml-hati-method-nodes
+                    (node_children (bml-node-child (head sections) 1)))
+                (bml-hati-class-method-nodes-loop (tail sections)))))
+
+    (defn bml-hati-class-method-nodes (node)
+        (bml-hati-class-method-nodes-loop
+            (node_children (bml-node-child node 2))))
+
+    (defn bml-hati-unsupported-class-in (node env)
+        (do
+            (let methods (bml-hati-class-method-nodes node))
+            (let method-env (bml-hati-bind-methods methods env 0))
+            (bml-hati-unsupported-methods-in methods method-env)))
 
     (defn bml-hati-lower-nodes-in (nodes pool)
         (bml-hati-lower-nodes-in-env nodes pool (empty)))
@@ -5901,6 +6009,27 @@
                     (fk-arg)
                     (fk-lit (bml-hati-arg-at-index node)))
                 pool)
+        (if (bml-hati-field-get-node? node)
+            (do
+                (let key (bml-hati-lower-node-in-env (bml-call-arg node) pool env))
+                (bml-hati-lower-result
+                    (fk-rget (fk-arg) (bml-hati-lower-expr key))
+                    (bml-hati-lower-pool key)))
+        (if (bml-hati-field-set-node? node)
+            (do
+                (let args (bml-call-args node))
+                (let key (bml-hati-lower-node-in-env (head args) pool env))
+                (let value
+                    (bml-hati-lower-node-in-env
+                        (head (tail args))
+                        (bml-hati-lower-pool key)
+                        env))
+                (bml-hati-lower-result
+                    (fk-rset
+                        (fk-arg)
+                        (bml-hati-lower-expr key)
+                        (bml-hati-lower-expr value))
+                    (bml-hati-lower-pool value)))
             (do
                 (let binding (bml-local-lookup env (bml-call-name node)))
                 (if (nil? binding)
@@ -5933,7 +6062,7 @@
                                             (fk-empty)))
                                     (bml-hati-lower-expr arg)))
                             (bml-hati-lower-pool arg)))
-                    (bml-hati-lower-result (fk-lit 0) pool)))))))
+                    (bml-hati-lower-result (fk-lit 0) pool)))))))))
 
     (defn bml-hati-lower-array-in (nodes pool env)
         (if (nil? nodes)
@@ -6018,6 +6147,19 @@
                 (bml-hati-lower-result (fk-lit 0) pool)
                 (bml-hati-lower-result (fk-lit 0) pool))))))))))))))))))))))))
 
+    (defn bml-hati-compile-class-image (node)
+        (do
+            (let methods (bml-hati-class-method-nodes node))
+            (let method-env (bml-hati-bind-methods methods (empty) 0))
+            (let unsupported (bml-hati-unsupported-methods-in methods method-env))
+            (let methods-lowered
+                (bml-hati-lower-methods-in methods (empty) method-env))
+            (bml-hati-image
+                (bml-hati-fns-result-fns methods-lowered)
+                (bml-hati-fns-result-pool methods-lowered)
+                node
+                unsupported)))
+
     (defn bml-hati-lower-methods-in (methods pool env)
         (if (nil? methods)
             (bml-hati-fns-result (empty) pool)
@@ -6067,6 +6209,8 @@
         (do
             (if (node_eq (node_category node) BML-AST-BLOCK)
                 (bml-hati-compile-block-image node)
+            (if (node_eq (node_category node) BML-AST-CLASS)
+                (bml-hati-compile-class-image node)
                 (do
                     (let unsupported (bml-hati-unsupported-node node))
                     (let lowered (bml-hati-lower-node-in node (empty)))
@@ -6074,7 +6218,7 @@
                         (list (bml-hati-lower-expr lowered))
                         (bml-hati-lower-pool lowered)
                         node
-                        unsupported)))))
+                        unsupported))))))
 
     (defn bml-hati-compile-program (node)
         (do

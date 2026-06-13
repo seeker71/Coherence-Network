@@ -62,7 +62,16 @@
                                  (fk-walk prog (ms-child (ms-child (fk-body node) 1) 1) arg)
                                  (fk-walk prog (ms-child (ms-child (fk-body node) 1) 0) arg))
     (if (eq (fk-tag node) 7) (fk-walk prog prog (fk-walk prog (fk-body node) arg))
-        (fk-walk-lowered prog node arg)))))))))
+    (if (eq (fk-tag node) 97) (record_get
+                                  (fk-walk prog (ms-child (fk-body node) 0) arg)
+                                  (fk-walk prog (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 98) (do
+                                  (record_set
+                                    (fk-walk prog (ms-child (fk-body node) 0) arg)
+                                    (fk-walk prog (ms-child (ms-child (fk-body node) 1) 0) arg)
+                                    (fk-walk prog (ms-child (ms-child (fk-body node) 1) 1) arg))
+                                  0)
+        (fk-walk-lowered prog node arg)))))))))))
 
 (defn fk-run (prog arg) (fk-walk prog prog arg))
 
@@ -171,6 +180,15 @@
                                             (fkm-walk fns (ms-child (fk-body node) 1) arg))
     (if (eq (fk-tag node) 44) (fkm-icall fns (fkm-walk fns (ms-child (fk-body node) 0) arg)
                                            (fkm-walk fns (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 97) (record_get
+                                  (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                  (fkm-walk fns (ms-child (fk-body node) 1) arg))
+    (if (eq (fk-tag node) 98) (do
+                                  (record_set
+                                    (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                    (fkm-walk fns (ms-child (ms-child (fk-body node) 1) 0) arg)
+                                    (fkm-walk fns (ms-child (ms-child (fk-body node) 1) 1) arg))
+                                  0)
     (if (eq (fk-tag node) 45) (bp (fkm-walk fns (fk-body node) arg))
     (if (eq (fk-tag node) 46) (intern_trivial_string (fkm-walk fns (fk-body node) arg))
     (if (eq (fk-tag node) 47) (intern_node (fkm-walk fns (ms-child (fk-body node) 0) arg)
@@ -217,7 +235,7 @@
     (if (eq (fk-tag node) 31) (str_to_int (fkm-walk fns (fk-body node) arg))
     (if (eq (fk-tag node) 32) (int_to_str (fkm-walk fns (fk-body node) arg))
     (if (eq (fk-tag node) 33) (byte_to_str (fkm-walk fns (fk-body node) arg))
-        (fkm-walk-fig fns node arg)))))))))))))))))))))))))))))))))))))))
+        (fkm-walk-fig fns node arg)))))))))))))))))))))))))))))))))))))))))
 
 ; figure-ops arms (tags 10/11 + 34..42) on the RECIPE side: each arm calls the
 ; walking kernel's own native (band/bor/bxor/shl_u32/shr_u32/rotr_u32/add_u32/
@@ -305,6 +323,8 @@
 (defn fk-tail (xs)  (fk-node 21 xs))
 (defn fk-len (xs)   (fk-node 22 xs))
 (defn fk-nth (xs i) (fk-node 23 (ms-intern xs i)))
+(defn fk-rget (rec key) (fk-node 97 (ms-intern rec key)))
+(defn fk-rset (rec key value) (fk-node 98 (ms-intern rec (ms-intern key value))))
 
 ; ── string-pool ops — tags 24..33 CLAIMED by the string lane (24..33 live,
 ;    substring/search/parse/render all ride this family now — the named next
