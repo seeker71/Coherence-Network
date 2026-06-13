@@ -5198,18 +5198,30 @@
 
     ;; --- BML to Hati native image lowering -----------------------------
 
+    (defn bml-hati-native-north-star ()
+        "original BML/BMF/Form compiler sources compile themselves into versioned .fkb images and Hati fourth-kernel native binaries with full class, template, generic, method, state, exception, and physical-lane support")
+
+    (defn bml-hati-native-floor ()
+        "supported native subsets must produce loadable Hati tables with parity proof; unsupported BML shapes must be named before table emission and never silently become a valid zero result")
+
+    (defn bml-hati-native-next-step ()
+        "make unsupported BML-to-Hati lowering observable, then close the first missing semantic family with a source-level proof and native binary probe")
+
     (defn bml-hati-lower-result (expr pool)
         (list "bml-hati-lower-result" expr pool))
 
     (defn bml-hati-lower-expr (result) (nth result 1))
     (defn bml-hati-lower-pool (result) (nth result 2))
 
-    (defn bml-hati-image (fns pool source-node)
-        (list "bml-hati-image" fns pool source-node))
+    (defn bml-hati-image (fns pool source-node unsupported)
+        (list "bml-hati-image" fns pool source-node unsupported))
 
     (defn bml-hati-image-fns (image) (nth image 1))
     (defn bml-hati-image-pool (image) (nth image 2))
     (defn bml-hati-image-source-node (image) (nth image 3))
+    (defn bml-hati-image-unsupported (image) (nth image 4))
+    (defn bml-hati-image-supported? (image)
+        (eq (len (bml-hati-image-unsupported image)) 0))
 
     (defn bml-hati-pool-index-loop (pool value index)
         (if (nil? pool)
@@ -5261,6 +5273,100 @@
                     (bml-hati-node-fail? (head (node_children node)))
                     false)
                 false))))
+
+    (defn bml-hati-unsupported-reasons-text (reasons)
+        (if (nil? reasons)
+            ""
+        (if (nil? (tail reasons))
+            (head reasons)
+            (str_concat
+                (head reasons)
+                (str_concat "," (bml-hati-unsupported-reasons-text (tail reasons)))))))
+
+    (defn bml-hati-unsupported-table-file (image)
+        (str_concat
+            "BML-HATI-UNSUPPORTED "
+            (bml-hati-unsupported-reasons-text
+                (bml-hati-image-unsupported image))))
+
+    (defn bml-hati-unsupported-nodes-in (nodes)
+        (if (nil? nodes)
+            (empty)
+            (append
+                (bml-hati-unsupported-node (head nodes))
+                (bml-hati-unsupported-nodes-in (tail nodes)))))
+
+    (defn bml-hati-unsupported-choose-in (branches)
+        (if (nil? branches)
+            (list "choose/no-success-branch")
+            (if (bml-hati-node-fail? (head branches))
+                (bml-hati-unsupported-choose-in (tail branches))
+                (append
+                    (bml-hati-unsupported-node (head branches))
+                    (bml-hati-unsupported-nodes-in (tail branches))))))
+
+    (defn bml-hati-unsupported-node (node)
+        (do
+            (let cat (node_category node))
+            (if (node_eq cat BML-AST-INT)
+                (empty)
+            (if (node_eq cat BML-AST-FLOAT)
+                (empty)
+            (if (node_eq cat BML-AST-STRING)
+                (empty)
+            (if (node_eq cat BML-AST-CHAR)
+                (empty)
+            (if (node_eq cat BML-AST-ADD)
+                (append
+                    (bml-hati-unsupported-node (bml-node-child node 0))
+                    (bml-hati-unsupported-node (bml-node-child node 1)))
+            (if (node_eq cat BML-AST-CONST)
+                (bml-hati-unsupported-node (bml-node-child node 2))
+            (if (node_eq cat BML-AST-RETURN)
+                (bml-hati-unsupported-node (bml-node-child node 0))
+            (if (node_eq cat BML-AST-METHOD)
+                (bml-hati-unsupported-node (bml-node-child node 1))
+            (if (node_eq cat BML-AST-BLOCK)
+                (bml-hati-unsupported-nodes-in (node_children node))
+            (if (node_eq cat BML-AST-CHOOSE)
+                (bml-hati-unsupported-choose-in (node_children node))
+            (if (node_eq cat BML-AST-PACKAGE)
+                (list "package")
+            (if (node_eq cat BML-AST-IMPORT)
+                (list "import")
+            (if (node_eq cat BML-AST-INTERFACE)
+                (list "interface")
+            (if (node_eq cat BML-AST-CLASS)
+                (list "class")
+            (if (node_eq cat BML-AST-SECTION)
+                (list "section")
+            (if (node_eq cat BML-AST-FIELD)
+                (list "field")
+            (if (node_eq cat BML-AST-NAME)
+                (list "name")
+            (if (node_eq cat BML-AST-ARRAY)
+                (list "array")
+            (if (node_eq cat BML-AST-BREAK)
+                (list "break")
+            (if (node_eq cat BML-AST-CONTINUE)
+                (list "continue")
+            (if (node_eq cat BML-AST-THROW)
+                (list "throw")
+            (if (node_eq cat BML-AST-TRY)
+                (list "try")
+            (if (node_eq cat BML-AST-WHILE)
+                (list "while")
+            (if (node_eq cat BML-AST-FAIL)
+                (list "fail")
+            (if (node_eq cat BML-AST-CUT)
+                (list "cut")
+            (if (node_eq cat BML-AST-SAVE)
+                (list "save")
+            (if (node_eq cat BML-AST-RESTORE)
+                (list "restore")
+            (if (node_eq cat BML-AST-DISCARD)
+                (list "discard")
+                (list "unknown")))))))))))))))))))))))))))))))
 
     (defn bml-hati-lower-nodes-in (nodes pool)
         (if (nil? nodes)
@@ -5359,24 +5465,34 @@
 
     (defn bml-hati-compile-image (node)
         (do
+            (let unsupported (bml-hati-unsupported-node node))
             (let lowered (bml-hati-lower-node-in node (empty)))
             (bml-hati-image
                 (list (bml-hati-lower-expr lowered))
                 (bml-hati-lower-pool lowered)
-                node)))
+                node
+                unsupported)))
 
     (defn bml-hati-compile-program (node)
-        (bml-hati-image-fns (bml-hati-compile-image node)))
+        (do
+            (let image (bml-hati-compile-image node))
+            (if (bml-hati-image-supported? image)
+                (bml-hati-image-fns image)
+                (bml-hati-unsupported-table-file image))))
 
     (defn bml-hati-run-value (node)
         (do
             (let image (bml-hati-compile-image node))
-            (fkm-run (bml-hati-image-fns image) 0)))
+            (if (bml-hati-image-supported? image)
+                (fkm-run (bml-hati-image-fns image) 0)
+                (bml-hati-unsupported-table-file image))))
 
     (defn bml-hati-table-file (image)
-        (fks-table-file
-            (bml-hati-image-fns image)
-            (bml-hati-image-pool image)))
+        (if (bml-hati-image-supported? image)
+            (fks-table-file
+                (bml-hati-image-fns image)
+                (bml-hati-image-pool image))
+            (bml-hati-unsupported-table-file image)))
 
     (defn bml-hati-table-file-from-node (node)
         (bml-hati-table-file (bml-hati-compile-image node)))
