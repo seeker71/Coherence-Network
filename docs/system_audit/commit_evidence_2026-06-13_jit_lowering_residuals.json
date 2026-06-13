@@ -1,0 +1,168 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/jit-lowering-residuals-20260613",
+  "commit_scope": "Reconcile the lowered JIT vocabulary with Hati/BML tags, prove the residual JIT lowering cluster four-way, and add macOS/Android metal-plane evidence",
+  "files_owned": [
+    "docs/PRODUCTION-SUBSTRATE.md",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/form-language.md",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-13_jit_lowering_residuals.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/hati-os-kernel.fk",
+    "form/form-stdlib/jit-lower.fk",
+    "form/form-stdlib/tests/full-jit-lower-band.fk",
+    "form/form-stdlib/tests/jit-lower-band.fk",
+    "form/form-stdlib/tests/jit-lower-bmf-band.fk",
+    "form/form-stdlib/tests/jit-lower-emit-band.fk",
+    "form/form-stdlib/tests/jit-lower-program-band.fk",
+    "form/fourth-arm-bands.txt",
+    "kernels/JIT_GAP_LEDGER.md",
+    "kernels/KERNEL_AS_ROUTER.md",
+    "kernels/README.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md",
+    "scripts/bml_form_jit_metal_planes_audit.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "bash form/scripts/fourth-arm-gate.sh jit-lower jit-lower-program full-jit-lower jit-lower-bmf jit-lower-emit",
+      "bash scripts/bml_form_jit_metal_planes_audit.sh",
+      "cd form && ./validate.sh > /tmp/coherence-form-validate-full-jit-lower-residuals-rebased-20260613.log 2>&1",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_jit_lowering_residuals.json",
+      "git diff --check",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "notes": "Focused validation passes for all five JIT lowering residual bands on Go, Rust, TypeScript, and fkwu. The metal-plane audit validates the Form-native JIT lane proof, recursive lowerer proof, oracle-learning proof, the lowered residual cluster, host execution of the lowered guard, and macOS arm64 plus Android arm64 object receipts. Full form validation remains a diagnostic rc=1 because five non-target residual bands still diverge; the floor improved to fourth arm: 104 band(s) four-way, 539 ok, 5 divergent.",
+    "fourth_arm_outputs": [
+      "PASS-4WAY jit-lower",
+      "PASS-4WAY jit-lower-program",
+      "PASS-4WAY full-jit-lower",
+      "PASS-4WAY jit-lower-bmf",
+      "PASS-4WAY jit-lower-emit",
+      "PASS form-native-jit-lanes: CPU/GPU/ML oracle -> Form-native emitter model -> 4095 four-way",
+      "PASS form-native-recursive-lowerer: recursive arm64 byte image -> 31 four-way",
+      "PASS jit-oracle-learning: oracle/native choice samples -> 1023 four-way",
+      "PASS jit-lower-residuals: logic/fold/unbox/lift/BMF/emit cluster is five-band four-way"
+    ],
+    "metal_plane_outputs": [
+      "PASS host-bml-hati: locals table stdout_first=3",
+      "PASS host-form-jit: form_poly(3,4)=25",
+      "PASS host-form-jit-lowered: lowered guard arg5=1 arg11=0",
+      "surface=bml-hati target=macos-arm64 format=Mach-O 64-bit object arm64",
+      "surface=form-jit target=macos-arm64 format=Mach-O 64-bit object arm64",
+      "surface=form-jit-lowered target=macos-arm64 format=Mach-O 64-bit object arm64",
+      "surface=bml-hati target=android-arm64 format=ELF 64-bit LSB relocatable, ARM aarch64",
+      "surface=form-jit target=android-arm64 format=ELF 64-bit LSB relocatable, ARM aarch64",
+      "surface=form-jit-lowered target=android-arm64 format=ELF 64-bit LSB relocatable, ARM aarch64"
+    ],
+    "known_full_suite_gaps": [
+      "cd form && ./validate.sh returned rc=1 after the JIT-lowering residual ratchet: fourth arm: 104 band(s) four-way; 539 ok, 5 divergent",
+      "form-mut-band.fk: Go/Rust/TypeScript return 31 while fkwu returns 29 after node carrier substrate work; this is outside the JIT-lowering cluster and remains the next compact diagnostic/substrate row to inspect",
+      "go-jit-band.fk: TypeScript source parse error unexpected token rparen at 5344",
+      "markdown-meaning-ingestion-band.fk: unbound DOC-DOC",
+      "ts-reversible-band.fk: unbound section",
+      "yaml-meaning-ingestion-band.fk: unbound YAML-PAIR"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "PR CI has not run yet for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "No public HTTP behavior change is expected; post-merge deployment uses the repository's normal Hostinger/main flow."
+    ],
+    "notes": "Runtime changes are limited to Form kernel/lowering surfaces and validation scripts. macOS and Android target evidence is local object-receipt evidence from scripts/bml_form_jit_metal_planes_audit.sh."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local focused validation is pass; CI, merge, and deploy validation are pending."
+  },
+  "idea_ids": [
+    "form-native-jit",
+    "hati-fourth-arm"
+  ],
+  "spec_ids": [
+    "bml-native-north-star",
+    "jit-gap-ledger"
+  ],
+  "task_ids": [
+    "jit-lowering-residual-cluster"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex-a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "runtime",
+        "validation",
+        "documentation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/jit-lower.fk",
+    "form/form-stdlib/hati-os-kernel.fk",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/fourth-arm-bands.txt",
+    "form/scripts/fourth-arm-gate.sh",
+    "scripts/bml_form_jit_metal_planes_audit.sh",
+    "form emitted walker: fkwu",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "kernels/JIT_GAP_LEDGER.md"
+  ],
+  "change_files": [
+    "docs/PRODUCTION-SUBSTRATE.md",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/form-language.md",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-13_jit_lowering_residuals.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/hati-os-kernel.fk",
+    "form/form-stdlib/jit-lower.fk",
+    "form/form-stdlib/tests/full-jit-lower-band.fk",
+    "form/form-stdlib/tests/jit-lower-band.fk",
+    "form/form-stdlib/tests/jit-lower-bmf-band.fk",
+    "form/form-stdlib/tests/jit-lower-emit-band.fk",
+    "form/form-stdlib/tests/jit-lower-program-band.fk",
+    "form/fourth-arm-bands.txt",
+    "kernels/JIT_GAP_LEDGER.md",
+    "kernels/KERNEL_AS_ROUTER.md",
+    "kernels/README.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_ARCHITECTURE.md",
+    "kernels/SOURCE_LANGUAGE_KERNEL_ROUTER_TRACKING.md",
+    "scripts/bml_form_jit_metal_planes_audit.sh"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The lowered JIT residual cluster no longer collides with Hati/BML tags 44..46. Lowered JIT constructors occupy tags 70..79, fkwu walks and emits those tags, fourth-arm node carrier support roots node fields through arena melt, and the metal-plane audit proves the lowered guard on host plus macOS arm64 and Android arm64 object receipts. The Android JIT floor is Form-native lowered recipes/tables; any APK-shipped compiler binary is optional oracle or acceleration evidence, not the minimum supported path.",
+    "public_endpoints": [
+      "local-only: Form kernel lowering and documentation; no public HTTP endpoint changed"
+    ],
+    "test_flows": [
+      "JIT lower residual gate proves jit-lower, jit-lower-program, full-jit-lower, jit-lower-bmf, and jit-lower-emit on Go/Rust/TypeScript/fkwu.",
+      "Metal-plane audit proves Form-native JIT lanes and lowered JIT emission before compiling macOS arm64 Mach-O and Android arm64 ELF object receipts.",
+      "Full form validation diagnostic records the raised fourth-arm floor and the five remaining non-target divergent bands."
+    ]
+  }
+}

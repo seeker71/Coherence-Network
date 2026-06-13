@@ -18,20 +18,21 @@
 # file only when its source moves outside the walker's op families.
 #
 # The standing walls (what keeps a band out today, by blocked-band count):
-#   node/substrate family — bp, intern_*, node_* (the content-addressed
-#     lattice as program vocabulary; floats ride in with it)
+#   remaining node/substrate family — bp, intern_node, node_value, node
+#     category/children/type (the content-addressed lattice as program
+#     vocabulary; intern_trivial_int and node_eq now ride the fourth arm)
 #   host io family        — read_file, write_file_text, file_mtime, scan_run
 #   higher-order calls    — foldl/map/filter with function arguments
 #     (wants defunctionalization: monomorphic copies per call site)
 #   multi-line output     — bands that print mid-walk (the walker answers
 #     one value through fk_pr)
 #
-# Current floor (2026-06-13 diagnostic ratchet): full `cd form && ./validate.sh`
-# reaches 96 four-way bands and 532 total passing workloads, with 9 residual
-# divergent bands. North star: every stdlib band is either listed here and
-# validated four-way, or its 3-kernel-only blocker is explicitly named in
-# commit evidence. Next walk: the JIT tag-map/lowering cluster, then the
-# markdown/yaml/typescript source-ingestion cluster.
+# Current floor (2026-06-13 JIT-lowering residual ratchet): full
+# `cd form && ./validate.sh` reaches 104 four-way bands and 539 total passing
+# workloads, with 5 residual divergent bands. North star: every stdlib band is
+# either listed here and validated four-way, or its 3-kernel-only blocker is
+# explicitly named in commit evidence. Next walk: markdown/yaml/typescript
+# source-ingestion plus the remaining substrate/source-compiler rows.
 learning-trend fkc 127
 cooldown fkc 63
 alert-gate fkc 127
@@ -108,6 +109,11 @@ heartbeat fks 5
 hmac-sha256 fks 2
 int-literal-width fks 9
 jit-coverage fks 5
+jit-lower fks 15
+jit-lower-program fks 15
+full-jit-lower fks 63
+jit-lower-bmf fks 15
+jit-lower-emit fks 63
 jit-metal-lanes fks 4095
 jit-oracle-learning fks 1023
 learning-arc fks 127
