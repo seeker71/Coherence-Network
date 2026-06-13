@@ -25,26 +25,6 @@
 
 (do
     ;; Blueprints
-    (let GOF-PACKAGE  (bp "GOF-PACKAGE"))
-    (let GOF-IMPORT   (bp "GOF-IMPORT"))
-    (let GOF-CONST    (bp "GOF-CONST"))
-    (let GOF-VAR      (bp "GOF-VAR"))
-    (let GOF-TYPE     (bp "GOF-TYPE"))
-    (let GOF-FUNC     (bp "GOF-FUNC"))
-    (let GOF-METHOD   (bp "GOF-METHOD"))
-    (let GOF-STRUCT   (bp "GOF-STRUCT"))
-    (let GOF-INTERFACE (bp "GOF-INTERFACE"))
-    (let GOF-IF       (bp "GOF-IF"))
-    (let GOF-FOR      (bp "GOF-FOR"))
-    (let GOF-SWITCH   (bp "GOF-SWITCH"))
-    (let GOF-SELECT   (bp "GOF-SELECT"))
-    (let GOF-RETURN   (bp "GOF-RETURN"))
-    (let GOF-CALL     (bp "GOF-CALL"))
-    (let GOF-IDENT    (bp "GOF-IDENT"))
-    (let GOF-INT      (bp "GOF-INT"))
-    (let GOF-STR      (bp "GOF-STR"))
-    (let GOF-BIN      (bp "GOF-BIN"))
-    (let GOF-COMPOSITE (bp "GOF-COMPOSITE"))
 
     ;; Emitters
     (defn gof-passthrough (caps)

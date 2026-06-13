@@ -1,6 +1,6 @@
 ; tests/go-full.fk — comprehensive Go grammar
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/go-full.bnf.fk
+; preludes: form-stdlib/engine.fk form-stdlib/seedbank/grammar-bnf.fk form-stdlib/seedbank/blueprint-symbol-sections.fk form-stdlib/seedbank/grammars/go-full.bnf.fk
 ;
 ; Each probe is a complete Go source-file (package-clause + optional decl).
 

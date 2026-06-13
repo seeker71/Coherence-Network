@@ -10,12 +10,6 @@
 ;   - "string" literals
 
 (do
-    (let RS-BNF-MODULE    (bp "RS-BNF-MODULE"))
-    (let RS-BNF-USE       (bp "RS-BNF-USE"))
-    (let RS-BNF-PUB-USE   (bp "RS-BNF-PUB-USE"))
-    (let RS-BNF-MOD       (bp "RS-BNF-MOD"))
-    (let RS-BNF-FN        (bp "RS-BNF-FN"))
-    (let RS-BNF-STRUCT    (bp "RS-BNF-STRUCT"))
 
     (defn rs-bnf-rev-step (acc x) (cons x acc))
     (defn rs-bnf-reverse (xs) (foldl rs-bnf-rev-step (empty) xs))
@@ -32,16 +26,6 @@
 
     ;; Universal Blueprints + BMF-style precedence-as-data — same shape
     ;; Python and Go landed on.
-    (let RS-UNIV-MATH-PLUS  (bp "add"))
-    (let RS-UNIV-MATH-MINUS (bp "sub"))
-    (let RS-UNIV-MATH-MUL   (bp "mul"))
-    (let RS-UNIV-MATH-DIV   (bp "div"))
-    (let RS-UNIV-CMP-EQ     (bp "eq"))
-    (let RS-UNIV-CMP-NEQ    (bp "ne"))
-    (let RS-UNIV-CMP-LT     (bp "lt"))
-    (let RS-UNIV-CMP-LE     (bp "le"))
-    (let RS-UNIV-CMP-GT     (bp "gt"))
-    (let RS-UNIV-CMP-GE     (bp "ge"))
 
     (defn rs-bnf-op-to-blueprint (op)
         (if (str_eq op "+") RS-UNIV-MATH-PLUS
@@ -110,11 +94,6 @@
     (defn rs-bnf-emit-paren (caps)
         (cap-get caps "expr"))
 
-    (let RS-BNF-LET   (bp "RS-BNF-LET"))
-    (let RS-BNF-IF    (bp "RS-BNF-IF"))
-    (let RS-BNF-WHILE (bp "RS-BNF-WHILE"))
-    (let RS-BNF-FOR   (bp "RS-BNF-FOR"))
-    (let RS-BNF-MATCH (bp "RS-BNF-MATCH"))
 
     (defn rs-bnf-emit-let (caps)
         (intern_node RS-BNF-LET
@@ -135,7 +114,6 @@
         (intern_node RS-BNF-MATCH
                       (list (cap-get caps "scrutinee"))))
 
-    (let RS-BNF-MATCH-ARM (bp "RS-BNF-MATCH-ARM"))
     (defn rs-bnf-emit-arm (caps)
         (intern_node RS-BNF-MATCH-ARM
                       (list (cap-get caps "pat")

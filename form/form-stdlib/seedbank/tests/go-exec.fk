@@ -1,6 +1,6 @@
 ; tests/go-exec.fk — Go EXECUTE pipeline proof
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/go.bnf.fk form-stdlib/grammars/go-exec.fk
+; preludes: form-stdlib/engine.fk form-stdlib/seedbank/grammar-bnf.fk form-stdlib/seedbank/blueprint-symbol-sections.fk form-stdlib/seedbank/grammars/go.bnf.fk form-stdlib/seedbank/grammars/go-exec.fk
 ;
 ; Parses a real multi-statement Go file shape and executes — package,
 ; import, type, var, const, func all flow through go-execute walker.

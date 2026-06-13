@@ -17,12 +17,6 @@
 ; lifetimes, macros, attributes, derive, async/await, match expressions.
 
 (do
-    (let RS-FILE        (bp "RS-FILE"))
-    (let RS-USE         (bp "RS-USE"))   ; (path)
-    (let RS-MOD         (bp "RS-MOD"))   ; (name)
-    (let RS-FN-DECL     (bp "RS-FN-DECL"))   ; (name, params)
-    (let RS-STRUCT-DECL (bp "RS-STRUCT-DECL"))   ; (name)
-    (let RS-IMPL-BLOCK  (bp "RS-IMPL-BLOCK"))   ; (name)
 
     ;; --- shared line helpers (parallel to python.fk / typescript.fk) ---
 

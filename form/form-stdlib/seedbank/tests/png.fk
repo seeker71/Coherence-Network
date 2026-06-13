@@ -1,9 +1,9 @@
 ; tests/png.fk — exercise PNG parser end-to-end
 ;
-; preludes: form-stdlib/cell-trace.fk form-stdlib/grammars/png.fk
+; preludes: form-stdlib/seedbank/cell-trace.fk form-stdlib/seedbank/blueprint-symbol-sections.fk form-stdlib/seedbank/grammars/png.fk
 ;
 ; Loaded via:
-;   bin-go core.fk cell-trace.fk grammars/png.fk tests/png.fk
+;   bin-go core.fk cell-trace.fk blueprint-symbol-sections.fk grammars/png.fk tests/png.fk
 ;
 ; Fixture: form-samples/tiny.png — minimal valid PNG (1x1 black, 45 bytes):
 ; signature + IHDR (13 data bytes) + IEND (0 data bytes). Two chunks total.

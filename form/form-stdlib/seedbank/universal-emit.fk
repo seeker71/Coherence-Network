@@ -25,60 +25,25 @@
     ;; Matches api/app/services/substrate/category.py constants exactly.
 
     ;; RBasic.MATH (12) + RMath sub-arms
-    (let UE-MATH-PLUS     (bp "add"))
-    (let UE-MATH-MINUS    (bp "sub"))
-    (let UE-MATH-MULTIPLY (bp "mul"))
-    (let UE-MATH-DIVIDE   (bp "div"))
-    (let UE-MATH-MODULO   (bp "mod"))
-    (let UE-MATH-NEGATE   (bp "UE-MATH-NEGATE"))
 
     ;; RBasic.COMPARE (13) + RCompare sub-arms
-    (let UE-COMPARE-EQUAL         (bp "eq"))
-    (let UE-COMPARE-NOT-EQUAL     (bp "ne"))
-    (let UE-COMPARE-LESS          (bp "lt"))
-    (let UE-COMPARE-LESS-EQUAL    (bp "le"))
-    (let UE-COMPARE-GREATER       (bp "gt"))
-    (let UE-COMPARE-GREATER-EQUAL (bp "ge"))
 
     ;; RBasic.LOGIC (14) + RLogic sub-arms
-    (let UE-LOGIC-AND (bp "and"))
-    (let UE-LOGIC-OR  (bp "or"))
-    (let UE-LOGIC-NOT (bp "not"))
 
     ;; RBasic.COND (11) + RCond sub-arms
-    (let UE-COND-IF-THEN      (bp "if-then"))
-    (let UE-COND-IF-THEN-ELSE (bp "if"))
-    (let UE-COND-TERNARY      (bp "UE-COND-TERNARY"))
 
     ;; RBasic.BLOCK (9) + RBlock sub-arms
-    (let UE-BLOCK-DO       (bp "do"))
-    (let UE-BLOCK-SEQUENCE (bp "sequence"))
-    (let UE-BLOCK-LET      (bp "let"))
-    (let UE-BLOCK-WITH     (bp "UE-BLOCK-WITH"))
 
     ;; RBasic.JUMP (18) + RJump sub-arms
-    (let UE-JUMP-RETURN   (bp "UE-JUMP-RETURN"))
-    (let UE-JUMP-BREAK    (bp "UE-JUMP-BREAK"))
-    (let UE-JUMP-CONTINUE (bp "UE-JUMP-CONTINUE"))
-    (let UE-JUMP-YIELD    (bp "UE-JUMP-YIELD"))
 
     ;; RBasic.CALL (10) — function declaration AND invocation; op slot
     ;; in the children distinguishes (first child is op marker)
-    (let UE-CALL (bp "UE-CALL"))
 
     ;; RBasic.ACCESS (15) — name access, member, subscript, global
-    (let UE-ACCESS-LOCAL  (bp "UE-ACCESS-LOCAL"))
-    (let UE-ACCESS-MEMBER (bp "UE-ACCESS-MEMBER"))
-    (let UE-ACCESS-INDEX  (bp "UE-ACCESS-INDEX"))
-    (let UE-ACCESS-GLOBAL (bp "UE-ACCESS-GLOBAL"))
 
     ;; RBasic.WRITE (16) — assignment
-    (let UE-WRITE-ASSIGN (bp "UE-WRITE-ASSIGN"))
 
     ;; Identifier/literal markers used by parser.fk
-    (let UE-IDENT-CAT (bp "ident"))
-    (let UE-FNDEF-CAT (bp "fndef"))
-    (let UE-FNCALL-CAT (bp "fncall"))
 
     ;; ──────────────────────────────────────────────────────────────────
     ;; Universal Recipe constructors (the action-fn vocabulary)
@@ -95,7 +60,7 @@
         (intern_trivial_string s))
 
     (defn emit-bool (s)
-        (if (str_eq s "true") (bp "TRUE-TRIV") (bp "FALSE-TRIV")))
+        (if (str_eq s "true") TRUE-TRIV FALSE-TRIV))
 
     (defn emit-ident (name)
         (intern_node UE-IDENT-CAT (list (intern_trivial_string name))))

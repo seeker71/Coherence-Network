@@ -7,10 +7,6 @@
 ; design tokens, for example.
 
 (do
-    (let CSS-OBJ  (bp "CSS-OBJ"))
-    (let CSS-ARR  (bp "CSS-ARR"))
-    (let CSS-PAIR (bp "CSS-PAIR"))
-    (let CSS-NULL (bp "CSS-NULL"))
 
     (defn css-decls (xs)
         (if (nil? xs) ""

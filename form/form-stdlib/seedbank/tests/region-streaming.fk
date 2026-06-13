@@ -1,7 +1,7 @@
 ; tests/region-streaming.fk — exercise region streaming: one grammar
 ; delegates a sub-pattern's match to a DIFFERENT loaded grammar.
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk
+; preludes: form-stdlib/engine.fk form-stdlib/seedbank/grammar-bnf.fk form-stdlib/seedbank/blueprint-symbol-sections.fk
 ;
 ; The shape Urs's goal named: "CSS or .tsx file have different grammar
 ; for different parts...stream any source part using any recipe."

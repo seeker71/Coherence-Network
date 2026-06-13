@@ -8,10 +8,6 @@
 ; frame composition in subsequent breaths.
 
 (do
-    (let VID-OBJ  (bp "VID-OBJ"))
-    (let VID-ARR  (bp "VID-ARR"))
-    (let VID-PAIR (bp "VID-PAIR"))
-    (let VID-NULL (bp "VID-NULL"))
 
     (defn vid-cat (xs)
         (if (nil? xs) ""

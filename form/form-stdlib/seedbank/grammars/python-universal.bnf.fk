@@ -17,17 +17,6 @@
 ;                                                           → walk_recipe
 
 (do
-    (let U-FNDEF     (bp "fndef"))
-    (let U-FNCALL    (bp "fncall"))
-    (let U-RETURN    (bp "U-RETURN"))
-    (let U-ASSIGN    (bp "U-ASSIGN"))
-    (let U-MATH-PLUS (bp "add"))
-    (let U-MATH-MINUS (bp "sub"))
-    (let U-MATH-MUL  (bp "mul"))
-    (let U-MATH-DIV  (bp "div"))
-    (let U-MATH-MOD  (bp "mod"))
-    (let U-IDENT     (bp "ident"))
-    (let U-SEQ       (bp "sequence"))
 
     (defn pu-cap (caps name)
         (if (nil? caps) ""

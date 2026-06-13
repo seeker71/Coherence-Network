@@ -15,12 +15,6 @@
 ; body parsing, interface defs, channel ops, goroutines, struct literals.
 
 (do
-    (let GO-FILE        (bp "GO-FILE"))
-    (let GO-PACKAGE     (bp "GO-PACKAGE"))
-    (let GO-IMPORT      (bp "GO-IMPORT"))
-    (let GO-FUNC-DECL   (bp "GO-FUNC-DECL"))
-    (let GO-TYPE-DECL   (bp "GO-TYPE-DECL"))
-    (let GO-VAR-DECL    (bp "GO-VAR-DECL"))
 
     ;; --- shared line helpers --------------------------------------
 

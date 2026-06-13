@@ -23,8 +23,6 @@
 ; oriented, so we project the byte position into the column axis).
 
 (do
-    (let PNG-FILE  (bp "PNG-FILE"))   ; root file
-    (let PNG-CHUNK (bp "PNG-CHUNK"))   ; one chunk
 
     ;; --- byte helpers --------------------------------------------------
     ;;

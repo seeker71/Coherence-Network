@@ -101,10 +101,6 @@
     ;; exactly. They live in this file as let-bindings so the emit and
     ;; decode definitions stay co-resident with the format they serve.
 
-    (let E-JSON-OBJECT (bp "E-JSON-OBJECT"))
-    (let E-JSON-ARRAY  (bp "E-JSON-ARRAY"))
-    (let E-JSON-PAIR   (bp "E-JSON-PAIR"))
-    (let E-JSON-NULL   (bp "E-JSON-NULL"))
 
     (let json-templates
         (list

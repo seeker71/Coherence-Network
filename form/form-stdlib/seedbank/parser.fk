@@ -138,25 +138,6 @@
     (defn tokenize (s) (tokenize-loop s 0))
 
     ;; --- substrate categories the parser interns into -----------------
-    (let MATH-PLUS  (bp "add"))
-    (let MATH-MINUS (bp "sub"))
-    (let MATH-MUL   (bp "mul"))
-    (let MATH-DIV   (bp "div"))
-    (let COMPARE-EQ  (bp "eq"))
-    (let COMPARE-NEQ (bp "ne"))
-    (let COMPARE-LT  (bp "lt"))
-    (let COMPARE-LE  (bp "le"))
-    (let COMPARE-GT  (bp "gt"))
-    (let COMPARE-GE  (bp "ge"))
-    (let COND-IF-ELSE (bp "if"))
-    (let BLOCK-DO     (bp "do"))
-    (let BLOCK-SEQ    (bp "sequence"))
-    (let BLOCK-LET    (bp "let"))
-    (let IDENT-CAT  (bp "ident"))
-    (let FNDEF-CAT  (bp "fndef"))
-    (let FNCALL-CAT (bp "fncall"))
-    (let TRUE-TRIV  (bp "TRUE-TRIV"))
-    (let FALSE-TRIV (bp "FALSE-TRIV"))
 
     ;; --- pair helpers --------------------------------------------------
     (defn pair-recipe (p) (head p))

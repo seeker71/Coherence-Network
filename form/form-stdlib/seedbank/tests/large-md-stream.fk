@@ -22,8 +22,8 @@
 ;
 ; Invoke (relative path is from form/, where validate.sh and the
 ; kernel binaries run):
-;   bin-go form-stdlib/core.fk form-stdlib/cell-trace.fk \
-;          form-stdlib/grammars/markdown.fk \
+;   bin-go form-stdlib/core.fk form-stdlib/seedbank/cell-trace.fk \
+;          form-stdlib/seedbank/grammars/markdown.fk \
 ;          form-stdlib/tests/large-md-stream.fk
 
 (do

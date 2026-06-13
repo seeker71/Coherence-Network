@@ -5808,6 +5808,66 @@ func serializeNid(k *Kernel, nid NodeID, bytes []byte) []byte {
 	return bytes
 }
 
+type formBinaryStringTable struct {
+	strings []string
+	indexes map[uint32]uint32
+}
+
+func collectArtifactStrings(k *Kernel, nid NodeID, table *formBinaryStringTable) {
+	if r, ok := k.byID[nid]; ok {
+		collectArtifactStrings(k, r.Category, table)
+		for _, c := range r.Children {
+			collectArtifactStrings(k, c, table)
+		}
+		return
+	}
+	if nid.Level == LevelTrivial && nid.Type == TrivString {
+		if int(nid.Inst) >= len(k.strs) {
+			panic(fmt.Sprintf("form binary: bad string index %d", nid.Inst))
+		}
+		if _, ok := table.indexes[nid.Inst]; !ok {
+			table.indexes[nid.Inst] = uint32(len(table.strings))
+			table.strings = append(table.strings, k.strs[nid.Inst])
+		}
+	}
+}
+
+func serializeNidWithStrings(k *Kernel, nid NodeID, bytes []byte, table *formBinaryStringTable) []byte {
+	if r, ok := k.byID[nid]; ok {
+		bytes = pushU32(bytes, formBinaryComposite)
+		bytes = serializeNidWithStrings(k, r.Category, bytes, table)
+		bytes = pushU32(bytes, uint32(len(r.Children)))
+		for _, c := range r.Children {
+			bytes = serializeNidWithStrings(k, c, bytes, table)
+		}
+		return bytes
+	}
+	if nid.Level == LevelTrivial && nid.Type == TrivFloat64 {
+		bytes = pushU32(bytes, formBinaryFloat64)
+		bytes = pushF64LE(bytes, k.decodeFloat64(nid.Inst))
+		return bytes
+	}
+	if nid.Level == LevelTrivial && nid.Type == TrivInt64 {
+		bytes = pushU32(bytes, formBinaryInt64)
+		bytes = pushI64LE(bytes, k.decodeInt64(nid.Inst))
+		return bytes
+	}
+	bytes = pushU32(bytes, formBinaryLeaf)
+	bytes = pushU32(bytes, nid.Pkg)
+	bytes = pushU32(bytes, nid.Level)
+	bytes = pushU32(bytes, nid.Type)
+	if nid.Level == LevelTrivial && nid.Type == TrivString {
+		local, ok := table.indexes[nid.Inst]
+		if !ok {
+			panic(fmt.Sprintf("form binary: missing local string index %d", nid.Inst))
+		}
+		bytes = pushU32(bytes, local)
+	} else {
+		bytes = pushU32(bytes, nid.Inst)
+	}
+	return bytes
+}
+
 func deserializeNid(k *Kernel, bytes []byte, pos int, scope uint32) (NodeID, int) {
 	tag, pos := readU32(bytes, pos)
 	if tag == formBinaryFloat64 {
@@ -5875,14 +5935,16 @@ var formBinaryMagicV1 = []byte("FORMBIN1")
 var formBinaryMagic = []byte("FORMBIN2")
 
 func serializeArtifact(k *Kernel, root NodeID) []byte {
+	table := &formBinaryStringTable{indexes: make(map[uint32]uint32)}
+	collectArtifactStrings(k, root, table)
 	bytes := append([]byte{}, formBinaryMagic...)
-	bytes = pushU32(bytes, uint32(len(k.strs)))
-	for _, s := range k.strs {
+	bytes = pushU32(bytes, uint32(len(table.strings)))
+	for _, s := range table.strings {
 		raw := []byte(s)
 		bytes = pushU32(bytes, uint32(len(raw)))
 		bytes = append(bytes, raw...)
 	}
-	return serializeNid(k, root, bytes)
+	return serializeNidWithStrings(k, root, bytes, table)
 }
 
 func deserializeArtifact(k *Kernel, bytes []byte) (NodeID, error) {

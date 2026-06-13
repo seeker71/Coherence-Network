@@ -1,7 +1,7 @@
 ; tests/go-bnf.fk — exercise the expanded Go BNF grammar (closer to
 ; the official EBNF from go.dev/ref/spec).
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/go.bnf.fk
+; preludes: form-stdlib/engine.fk form-stdlib/seedbank/grammar-bnf.fk form-stdlib/seedbank/blueprint-symbol-sections.fk form-stdlib/seedbank/grammars/go.bnf.fk
 
 (do
     (defn first-stmt (root) (head (node_children root)))

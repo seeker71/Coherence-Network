@@ -1,6 +1,6 @@
 ; tests/translator-demo.fk — the verifiable translator working
 ;
-; preludes: form-stdlib/emit-engine.fk form-stdlib/emit.fk form-stdlib/emits/python.fk form-stdlib/emits/go.fk form-stdlib/emits/typescript.fk
+; preludes: form-stdlib/emit-engine.fk form-stdlib/seedbank/emit.fk form-stdlib/seedbank/blueprint-symbol-sections.fk form-stdlib/seedbank/emits/python.fk form-stdlib/seedbank/emits/go.fk form-stdlib/seedbank/emits/typescript.fk
 ;
 ; The new goal asks for "a verifiable translator from any language to
 ; any language and a common byte code execution engine."
