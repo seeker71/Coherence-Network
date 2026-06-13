@@ -4,14 +4,17 @@
   (lineage
     (rests-on hati-os.form tool-channel.form fourth-kernel-physical-lanes.form)
     (recipe form/form-stdlib/hati-os-targets.fk)
-    (proof form/form-stdlib/tests/hati-os-targets-band.fk -> 255))
+    (proof form/form-stdlib/tests/hati-os-targets-band.fk -> 4095)
+    (jit-lane-proof form/form-stdlib/tests/jit-metal-lanes-band.fk -> 4095)
+    (oracle-learning-proof form/form-stdlib/tests/jit-oracle-learning-band.fk -> 1023)
+    (assembly-proof scripts/bml_form_jit_metal_planes_audit.sh))
 
   (purpose
     "Each fourth-kernel sibling keeps one Form semantics surface and a target-specific host implementation layer."
     "Cells and recipes can discover which host OS target carries a protocol, which capability it requires, and where its native binary is published.")
 
   (floor
-    "macOS arm64 and Android arm64 have target rows, implementation rows for process, utilization, audio, video, and sensor lanes, and hati.earth download coordinates.")
+    "macOS arm64 and Android arm64 have target rows, clang target triples, relocatable assembly/object surfaces, third-party oracle rows, Form-native arm64 assembler runtime rows, measured oracle-learning choice rows, CPU/GPU/ML kernel emitter proof rows, implementation rows for process, utilization, audio, video, and sensor lanes, and hati.earth download coordinates.")
 
   (north-star
     "Every Hati-OS host target publishes signed native binaries, checksums, source-map/provenance receipts, and per-lane physical proof receipts from hati.earth.")
@@ -20,13 +23,23 @@
     (macos-arm64
       (os macos)
       (arch arm64)
+      (clang-triple arm64-apple-macosx)
       (binary-format mach-o)
+      (assembly-surface mach-o-relocatable+arm64-asm)
+      (jit-oracle clang)
+      (jit-runtime form-native-arm64-assembler)
+      (jit-model clang-oracle-sampled-form-native-recipe)
       (package tar.zst)
       (launcher hati-os))
     (android-arm64
       (os android)
       (arch arm64)
+      (clang-triple aarch64-linux-android)
       (binary-format elf)
+      (assembly-surface elf-relocatable+aarch64-asm)
+      (jit-oracle clang)
+      (jit-runtime form-native-arm64-assembler)
+      (jit-model clang-oracle-sampled-form-native-recipe)
       (package apk+tar.zst)
       (launcher hati-os.apk)))
 
@@ -57,6 +70,12 @@
 
   (release-contract
     (binary-per-target)
+    (clang-assembly-object-proof-per-target)
+    (form-native-jit-runtime-per-target)
+    (clang-oracle-sample-corpus-per-target)
+    (oracle-learning-choice-samples-per-target)
+    (gpu-kernel-emitter-proof)
+    (ml-kernel-emitter-proof)
     (checksum-per-binary)
     (source-map-per-binary)
     (physical-lane-receipts-per-target)
@@ -64,4 +83,4 @@
     (download-door hati.earth))
 
   (next
-    "Wire the release build to publish the macOS tarball and Android APK at the catalog URLs, with sha256 files and physical-lane summary JSON beside each binary."))
+    "Grow the clang/driver/MLK oracle sample corpus into the Form-native per-lane JIT recipe model and choice sampler, then wire the release build to publish the macOS tarball and Android APK at the catalog URLs with sha256 files, target assembly/source-map receipts, and physical-lane summary JSON beside each binary."))

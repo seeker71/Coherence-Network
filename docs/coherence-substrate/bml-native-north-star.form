@@ -3,18 +3,18 @@
 (bml-native-compiler
   (north-star
     (sentence "The original BML, BMF, and Form compiler sources compile themselves into versioned .fkb images and Hati fourth-kernel native binaries.")
-    (must-carry full-class-support full-template-support full-generic-support method-dispatch state exception-and-backtracking typed-values physical-lanes)
-    (artifact-contract source -> compiler-image -> loadable-table -> native-binary -> measured-run)
-    (proof-shape same-source-same-image same-table-same-value stdout-stderr-timing binary-size loadable-artifact-roundtrip))
+    (must-carry full-class-support full-template-support full-generic-support method-dispatch state exception-and-backtracking typed-values physical-lanes clang-target-assembly form-native-jit-runtime clang-oracle-sampling oracle-learning-choice gpu-kernel-emission ml-kernel-emission)
+    (artifact-contract source -> compiler-image -> loadable-table -> native-binary -> target-assembly -> oracle-sample -> form-native-jit-bytes -> measured-native-choice -> measured-run)
+    (proof-shape same-source-same-image same-table-same-value stdout-stderr-timing binary-size loadable-artifact-roundtrip clang-target-assembly target-object-format form-native-byte-conviction oracle-learning-choice))
 
   (floor
-    (sentence "A native compiler claim is allowed only when the supported subset emits a loadable Hati table with parity proof, and unsupported BML shapes are named before table emission.")
+    (sentence "A native compiler claim is allowed only when the supported subset emits a loadable Hati table with parity proof, target assembly receipts exist for the supported metal planes, third-party compilers/drivers/models are treated as oracle/sample sources, Form-native JIT runtime rows and measured oracle-learning choice samples exist for the supported lanes, and unsupported BML shapes are named before table emission.")
     (no-silent-zero unsupported-lowering-must-not-be-a-valid-table)
-    (current-supported int float string char add const lexical-const-binding bound-name-return bound-name-add return method-body block-sequence simple-choose/fail table-image string-stdout)
+    (current-supported int float string char add const lexical-const-binding bound-name-return bound-name-add return method-body block-sequence simple-choose/fail table-image string-stdout clang-target-assembly clang-oracle-samples form-native-jit-runtime oracle-learning-choice gpu-kernel-emitter ml-kernel-emitter macos-arm64 android-arm64)
     (current-unsupported class interface field package import unresolved-names mutable-locals arrays calls method-parameters break continue try throw while standalone-fail cut save restore discard))
 
   (next-step
     (sentence "Close one missing semantic family at a time with a source-level proof and native binary probe.")
-    (walked-now unsupported-lowering-audit lexical-const-and-bound-name-lowering)
+    (walked-now unsupported-lowering-audit lexical-const-and-bound-name-lowering macos/android-clang-assembly-proof form-native-jit-lane-proof gpu/ml-kernel-emitter-proof oracle-learning-choice-floor)
     (next-semantic-candidate method-parameters-and-calls)
-    (why "bound names give method bodies a real floor; parameters and calls are the next gate before fields, classes, templates, and generics can become native without pretending the whole model is solved at once")))
+    (why "bound names give method bodies a real floor; target assembly receipts keep the metal-plane claim honest; Form-native JIT rows keep Android free of a clang runtime dependency; oracle-learning choice samples let native recipes earn runtime selection without losing the third-party teacher; parameters and calls are the next gate before fields, classes, templates, and generics can become native without pretending the whole model is solved at once")))

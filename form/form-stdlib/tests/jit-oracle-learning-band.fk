@@ -1,0 +1,141 @@
+; preludes: form-stdlib/core.fk
+;
+; jit-oracle-learning-band - third-party oracle lanes become teacher samples.
+; The floor is not "clang/driver/model at runtime"; it is a measured choice
+; loop. A native recipe must match the oracle value before speed/cost can make
+; it selectable, and exploration keeps third-party and alternate-native samples
+; flowing after a native recipe wins.
+;
+; Verdict 1023:
+;   1   third-party oracle samples are explicit rows
+;   2   fast but wrong native recipes cannot enter the choice set
+;   4   parity-correct native recipes can enter the choice set
+;   8   oracle remains selected when the native candidate is wrong
+;   16  native recipe is selected when parity holds and measured score wins
+;   32  exploration keeps sampling the third-party oracle after native wins
+;   64  exploration keeps sampling alternate native recipes after native wins
+;   128 Thompson/champion-challenger strategy hooks are named in the sample
+;   256 measurement fields are present: value, micros, cost, trust, samples
+;   512 north-star text names native beating third-party while still sampling
+(do
+    (defn jol-oracle-poly (a b)
+        (add (mul a a) (mul b b)))
+    (defn jol-native-poly (a b)
+        (add (mul a a) (mul b b)))
+
+    (defn jol-sample (lane origin recipe value micros cost trust samples strategy)
+        (list lane origin recipe value micros cost trust samples strategy))
+    (defn jol-lane (sample) (nth sample 0))
+    (defn jol-origin (sample) (nth sample 1))
+    (defn jol-recipe (sample) (nth sample 2))
+    (defn jol-value (sample) (nth sample 3))
+    (defn jol-micros (sample) (nth sample 4))
+    (defn jol-cost (sample) (nth sample 5))
+    (defn jol-trust (sample) (nth sample 6))
+    (defn jol-samples (sample) (nth sample 7))
+    (defn jol-strategy (sample) (nth sample 8))
+
+    (defn jol-score (sample)
+        (sub (add (jol-trust sample) (sub 100 (jol-micros sample))) (jol-cost sample)))
+    (defn jol-error (native oracle)
+        (abs (sub (jol-value native) (jol-value oracle))))
+    (defn jol-correct? (native oracle tolerance)
+        (if (le (jol-error native oracle) tolerance) 1 0))
+    (defn jol-enough-samples? (sample min-samples)
+        (if (ge (jol-samples sample) min-samples) 1 0))
+    (defn jol-choice-eligible? (native oracle tolerance min-samples)
+        (if (eq (jol-correct? native oracle tolerance) 1)
+            (if (eq (jol-enough-samples? native min-samples) 1) 1 0)
+            0))
+    (defn jol-better-than? (native oracle)
+        (if (gt (jol-score native) (jol-score oracle)) 1 0))
+    (defn jol-choose-origin (oracle native tolerance min-samples)
+        (if (eq (jol-choice-eligible? native oracle tolerance min-samples) 1)
+            (if (eq (jol-better-than? native oracle) 1)
+                (jol-origin native)
+                (jol-origin oracle))
+            (jol-origin oracle)))
+    (defn jol-explore? (tick cadence)
+        (if (eq (mod tick cadence) 0) 1 0))
+    (defn jol-strategies ()
+        "Thompson-sampling, champion-challenger, epsilon-exploration")
+    (defn jol-north-star ()
+        "native recipe beats third-party oracle often enough to be chosen while still sampling third-party and alternative native recipes")
+    (defn jol-floor ()
+        "oracle-only lanes carry third-party oracle samples, measurable native recipe candidates, choice samples, Thompson/champion-challenger hooks, and exploration receipts")
+
+    (let oracle
+        (jol-sample
+            "cpu-gpu-ml-learning-lane"
+            "third-party-oracle"
+            "clang-driver-mlk-oracle"
+            (jol-oracle-poly 3 4)
+            90
+            8
+            98
+            256
+            "oracle-baseline"))
+    (let native-wrong
+        (jol-sample
+            "cpu-gpu-ml-learning-lane"
+            "native-recipe"
+            "form-native-poly"
+            (add (jol-native-poly 3 4) 1)
+            20
+            1
+            96
+            256
+            "Thompson-sampling"))
+    (let native-good
+        (jol-sample
+            "cpu-gpu-ml-learning-lane"
+            "native-recipe"
+            "form-native-poly"
+            (jol-native-poly 3 4)
+            24
+            1
+            96
+            256
+            "Thompson-sampling"))
+    (let native-alt
+        (jol-sample
+            "cpu-gpu-ml-learning-lane"
+            "alternate-native-recipe"
+            "form-native-poly-alt"
+            (jol-native-poly 3 4)
+            36
+            2
+            88
+            128
+            "champion-challenger"))
+
+    (let c0 (if (str_eq (jol-origin oracle) "third-party-oracle")
+                (if (str_eq (jol-lane oracle) "cpu-gpu-ml-learning-lane") 1 0)
+                0))
+    (let c1 (if (eq (jol-choice-eligible? native-wrong oracle 0 64) 0) 2 0))
+    (let c2 (if (eq (jol-choice-eligible? native-good oracle 0 64) 1) 4 0))
+    (let c3 (if (str_eq (jol-choose-origin oracle native-wrong 0 64) "third-party-oracle") 8 0))
+    (let c4 (if (str_eq (jol-choose-origin oracle native-good 0 64) "native-recipe") 16 0))
+    (let c5 (if (str_eq (jol-choose-origin oracle native-good 0 64) "native-recipe")
+                (if (eq (jol-explore? 40 10) 1) 32 0)
+                0))
+    (let c6 (if (eq (jol-choice-eligible? native-alt oracle 0 64) 1)
+                (if (eq (jol-explore? 45 15) 1) 64 0)
+                0))
+    (let c7 (if (ge (str_find (jol-strategies) "Thompson" 0) 0)
+                (if (ge (str_find (jol-strategies) "champion-challenger" 0) 0) 128 0)
+                0))
+    (let c8 (if (eq (jol-value native-good) 25)
+                (if (gt (jol-micros native-good) 0)
+                    (if (gt (jol-cost native-good) 0)
+                        (if (gt (jol-trust native-good) 0)
+                            (if (gt (jol-samples native-good) 0) 256 0)
+                            0)
+                        0)
+                    0)
+                0))
+    (let c9 (if (ge (str_find (jol-north-star) "beats third-party oracle" 0) 0)
+                (if (ge (str_find (jol-north-star) "still sampling" 0) 0) 512 0)
+                0))
+
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9)))

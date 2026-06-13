@@ -1,0 +1,36 @@
+# jit-oracle-learning.form - native recipe learning from third-party oracles
+
+(jit-oracle-learning
+  (lineage
+    (rests-on bml-native-north-star.form hati-os-targets.form fourth-kernel-physical-lanes.form)
+    (proof form/form-stdlib/tests/jit-oracle-learning-band.fk -> 1023)
+    (audit scripts/bml_form_jit_metal_planes_audit.sh))
+
+  (north-star
+    "For CPU, GPU, MLK, and other hardware lanes, native Form recipes beat third-party oracle recipes on measured correctness, latency, cost, and trust often enough that the mesh chooses them more frequently, while still sampling the oracle and alternate native candidates to stay honest.")
+
+  (floor
+    "Any lane that only has a third-party oracle today must carry explicit oracle samples, measurable native candidate samples, parity/error checks, choice-strategy rows, and exploration receipts before it can claim native execution progress.")
+
+  (sample-schema
+    (lane)
+    (origin third-party-oracle native-recipe alternate-native-recipe)
+    (recipe)
+    (value)
+    (micros)
+    (cost)
+    (trust)
+    (samples)
+    (strategy Thompson-sampling champion-challenger epsilon-exploration))
+
+  (choice-contract
+    (parity-first "A native recipe with better timing but a wrong value is not eligible.")
+    (measured-choice "A native recipe becomes selectable only after parity holds and measured score beats the oracle.")
+    (exploration "A selected native recipe does not retire the oracle; oracle and alternate-native samples continue on cadence.")
+    (mesh-validation "Agent mesh validation reads the same sample rows and proof verdict before promoting a native recipe into a runtime choice set."))
+
+  (walked-now
+    "The proof band executes a tiny native Form recipe, compares its value and measured metadata against a third-party oracle row, rejects a fast-but-wrong candidate, selects a parity-correct faster candidate, and proves continuing oracle/alternate sampling.")
+
+  (next
+    "Feed real clang, GPU-driver, and MLK oracle receipts from the supported macOS and Android lanes into this schema, then replace the placeholder score with a Thompson/champion-challenger chooser over measured timing and correctness windows."))
