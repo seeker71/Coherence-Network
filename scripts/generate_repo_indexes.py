@@ -52,7 +52,7 @@ TARGETS: list[tuple[str, str, str]] = [
     ("web/lib",           "*.ts",  "Web library — shared client/server helpers"),
     ("web/components",    "*.tsx", "Web components — shared React surfaces"),
     ("web/app",           "page.tsx", "Web routes — every visible page in the app"),
-    ("scripts",           "*.py",  "Scripts — operational tools, generators, syncers"),
+    ("scripts",           "*.py,*.sh",  "Scripts — operational tools, generators, syncers"),
 ]
 
 # Directories that already have an INDEX. We only show them in MANIFEST.
@@ -90,7 +90,7 @@ def extract_purpose(path: Path) -> str:
     suffix = path.suffix
     lines = text.splitlines()
 
-    if suffix == ".py":
+    if suffix in {".py", ".sh"}:
         # Try a triple-quoted module docstring first.
         for i, raw in enumerate(lines):
             line = raw.strip()
@@ -99,6 +99,10 @@ def extract_purpose(path: Path) -> str:
             # A shebang is not the purpose — the docstring after it is.
             if line.startswith("#!"):
                 continue
+            if suffix == ".sh" and line.startswith("#"):
+                return _clean(line.lstrip("# ").rstrip())
+            if suffix == ".sh":
+                break
             if line.startswith('"""') or line.startswith("'''"):
                 quote = line[:3]
                 # Same-line: """one-liner."""
@@ -168,6 +172,14 @@ def list_files(dir_path: Path, glob: str) -> list[Path]:
     if glob == "page.tsx":
         # web/app — scan for every page.tsx recursively.
         return sorted(p for p in dir_path.rglob("page.tsx"))
+    if "," in glob:
+        files = {
+            p
+            for pattern in glob.split(",")
+            for p in dir_path.glob(pattern.strip())
+            if p.name not in SKIP_FILES
+        }
+        return sorted(files)
     return sorted(p for p in dir_path.glob(glob) if p.name not in SKIP_FILES)
 
 
