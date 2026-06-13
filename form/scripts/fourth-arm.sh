@@ -41,7 +41,7 @@ build_fourth() {
     [[ -f "$FOURTH_MANIFEST" ]] || return 0
     command -v clang >/dev/null 2>&1 || return 0
     mkdir -p "$FOURTH_DIR"
-    local stamp out d
+    local stamp out tmp d
     stamp="$(cat "${FOURTH_CHAIN[@]}" "$GO_BIN" 2>/dev/null | shasum | cut -c1-16)"
     out="$FOURTH_DIR/fkwu-$stamp"
     if [[ ! -x "$out" ]]; then
@@ -52,10 +52,11 @@ build_fourth() {
         printf '(print "==UNI==")\n(print (fkc-emit-universal))\n(print "==END==")\n' >> "$d/uni-driver.fk"
         "$GO_BIN" "$d/uni-driver.fk" 2>/dev/null > "$d/uni.out" || true
         sed -n '/^==UNI==$/,/^==END==$/p' "$d/uni.out" | sed -e '1d' -e '$d' > "$d/uni.c"
-        if [[ -s "$d/uni.c" ]] && clang -O2 -o "$out.tmp" "$d/uni.c" 2>/dev/null; then
-            mv -f "$out.tmp" "$out"
+        tmp="$(mktemp "$FOURTH_DIR/.fkwu-$stamp.XXXXXX")"
+        if [[ -s "$d/uni.c" ]] && clang -O2 -o "$tmp" "$d/uni.c" 2>/dev/null; then
+            mv -f "$tmp" "$out"
         else
-            rm -f "$out.tmp"
+            rm -f "$tmp"
             echo "  fourth kernel build did not land — bands run three-kernel only" >&2
         fi
         rm -rf "$d"
