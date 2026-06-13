@@ -1,0 +1,99 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/full-form-suite-gaps-20260613",
+  "commit_scope": "Move the diagnosis channel bands onto the four-kernel floor and update the residual full-suite north star.",
+  "files_owned": [
+    "docs/system_audit/commit_evidence_20260613_diagnostic_four_way_floor.json",
+    "docs/system_audit/commit_evidence_20260613_four_kernel_validation_floor.json",
+    "form/form-stdlib/hati-os-kernel.fk",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/tests/form-debug-band.fk",
+    "form/form-stdlib/tests/form-mut-band.fk",
+    "form/form-stdlib/tests/form-spy-band.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/form-diagnose.fk form-stdlib/tests/form-debug-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/form-diagnose.fk form-stdlib/tests/form-spy-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/tests/form-mut-band.fk",
+      "cd form && ./validate.sh > /tmp/coherence-form-validate-full-after-diagnosis-20260613.log 2>&1",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260613_four_kernel_validation_floor.json",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260613_diagnostic_four_way_floor.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "notes": "The three diagnosis channel bands now pass on Go, Rust, TypeScript, and fkwu. Full validate still returns rc=1, but the measured floor improves from 93 to 96 four-way bands and from 12 to 9 divergent workloads. Remaining residuals are the JIT/lowering cluster plus markdown/yaml/typescript source-ingestion bands."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "PR CI has not run yet for this branch."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "Hostinger Auto Deploy on main after merge"
+    ],
+    "notes": "No public HTTP route behavior changes are expected."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local focused four-kernel validation, full-suite floor measurement, and PR guards are complete; CI and deploy validation are pending."
+  },
+  "idea_ids": [
+    "form-native-models"
+  ],
+  "spec_ids": [
+    "developer-quick-start"
+  ],
+  "task_ids": [
+    "diagnostic-four-way-floor"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "/tmp/coherence-form-validate-full-after-diagnosis-20260613.log",
+    "form/fourth-arm-bands.txt",
+    "form emitted walker: fkwu"
+  ],
+  "change_files": [
+    "docs/system_audit/commit_evidence_20260613_diagnostic_four_way_floor.json",
+    "docs/system_audit/commit_evidence_20260613_four_kernel_validation_floor.json",
+    "form/form-stdlib/hati-os-kernel.fk",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/tests/form-debug-band.fk",
+    "form/form-stdlib/tests/form-mut-band.fk",
+    "form/form-stdlib/tests/form-spy-band.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The live diagnosis channel proofs are now part of the four-kernel floor. The current north star is a full green suite where every stdlib workload is either four-way or explicitly named as a 3-kernel-only blocker; the immediate next walk is the six-band JIT/lowering cluster, then markdown/yaml/typescript source-ingestion.",
+    "public_endpoints": [
+      "local-only: Form stdlib/kernel proof bands; no public HTTP endpoint changed"
+    ],
+    "test_flows": [
+      "form-debug-band, form-spy-band, and form-mut-band each return 31 with fourth arm: 1 band(s) four-way.",
+      "Full validate returns rc=1 with fourth arm: 96 band(s) four-way; 532 ok; 9 divergent."
+    ]
+  }
+}
