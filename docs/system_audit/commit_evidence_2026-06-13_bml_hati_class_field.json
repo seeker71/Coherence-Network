@@ -1,0 +1,133 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/bml-hati-class-field-20260613",
+  "commit_scope": "Move the BML native compiler floor from packed method calls to record-backed method-scope class field read/write.",
+  "files_owned": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/grammars/bml.fk",
+    "form/form-stdlib/hati-os-kernel.fk",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/tests/bml-hati-native-class-field-proof.fk",
+    "form/form-stdlib/tests/bml-hati-native-floor-proof.fk"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim bml-hati-class-field \"walk next BML native compiler floor: parse and lower a minimal class field plus method-scope field read/write through BMA and Hati; keep templates/generics for follow-on slices\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-class-field-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/tests/hati-os-kernel-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/tests/hati-os-kernel-emit-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/record-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-floor-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-method-calls-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-multi-arg-calls-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-compiler-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-runtime.fk",
+      "bash scripts/bml_form_jit_metal_planes_audit.sh",
+      "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/bml-hati-native-class-field-proof.fk",
+      "cd form && ./validate.sh"
+    ],
+    "results": [
+      "prompt-guide passed on worktree branch codex/bml-hati-class-field-20260613",
+      "wellness exited 0; remote production shape/view/health probes returned 502 or timed out, unrelated to this local compiler proof",
+      "bml-hati-native-class-field-proof returned 21 with 1 ok and 0 divergent",
+      "hati-os-kernel-band returned 31 with 1 ok and 0 divergent",
+      "hati-os-kernel-emit-band returned 15 with 1 ok and 0 divergent",
+      "record-band returned 176 with 1 ok and 0 divergent",
+      "bml-hati-native-floor-proof returned 19 with 1 ok and 0 divergent",
+      "bml-hati-native-method-calls-proof returned 19 with 1 ok and 0 divergent",
+      "bml-hati-native-multi-arg-calls-proof returned 20 with 1 ok and 0 divergent",
+      "bml-hati-native-compiler-proof returned 39 with 1 ok and 0 divergent",
+      "bml-compiler-runtime returned 131012 with 1 ok and 0 divergent",
+      "bml_form_jit_metal_planes_audit.sh passed Form-native CPU/GPU/ML lane proof, recursive lowerer proof, oracle-learning proof, and macOS arm64 Mach-O plus Android arm64 ELF target object receipts",
+      "fourth-arm survey classified bml-hati-native-class-field-proof.fk as bml-io, so this slice does not claim new manifest admission for that band",
+      "full Form validation returned fourth arm: 138 band(s) four-way and 557 ok, 0 divergent"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "summary": "Pending PR creation and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No public deploy in this step; this is a Form/BML/Hati compiler proof update."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof is complete; PR checks remain pending until push."
+  },
+  "idea_ids": [
+    "bml-native-north-star",
+    "hati-fourth-kernel-native-compiler",
+    "record-backed-class-fields"
+  ],
+  "spec_ids": [
+    "specs/bml-typed-recipes.md",
+    "form-fourth-kernel-validation",
+    "supported-metal-plane-jit-proof"
+  ],
+  "task_ids": [
+    "bml-hati-class-field-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "north-star direction",
+        "floor update requirement"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/bml-hati-native-class-field-proof.fk -> class Rule source parses a declared value field and Read method; Hati class image returns 42 from record-backed self.value + 5; Set mutates self.value to 33 and returns 33",
+    "form/form-stdlib/hati-os-kernel.fk -> fk-rget tag 97 and fk-rset tag 98 execute record_get and record_set without colliding with NodeID tags 91..96",
+    "form/form-stdlib/hati-os-kernel-emit.fk -> table flattener and emitted C walker serialize and execute tags 97 and 98",
+    "form/form-stdlib/grammars/bml.fk -> method-scope this.field read/write emitters and Hati lowering",
+    "docs/coherence-substrate/bml-native-north-star.form -> floor includes method-scope class field read/write and record-backed self",
+    "/tmp/coherence-form-validate-bml-hati-class-field-rebased.log -> full Form validation fourth arm: 138 band(s) four-way; 557 ok, 0 divergent"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/system_audit/commit_evidence_2026-06-13_bml_hati_class_field.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/grammars/bml.fk",
+    "form/form-stdlib/hati-os-kernel.fk",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/tests/bml-hati-native-class-field-proof.fk",
+    "form/form-stdlib/tests/bml-hati-native-floor-proof.fk"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "BML method bodies can now express this.field reads and this.field assignments that lower into Hati table tags 97 and 98 against a record-backed self value. A class-shaped source declaration is parsed with a field and method, then a Hati class image executes the field-reading method against a supplied record.",
+    "public_endpoints": [
+      "not-public-endpoint: local Form/BML/Hati compiler proof surface"
+    ],
+    "test_flows": [
+      "Parse class Rule[public] with int value and Read method through the existing BML class declaration parser.",
+      "Parse int Read() { return this.value + 5; } through the BML executable method source rule.",
+      "Construct a Hati class image and run it with record_new(... value 37), returning 42 through fk-rget tag 97.",
+      "Parse and run int Set() { this.value = 33; return this.value; }, mutating record-backed self through fk-rset tag 98 and returning 33.",
+      "Verify prior Hati kernel, record, method-call, multi-arg, and metal-plane proof surfaces still pass."
+    ]
+  }
+}
