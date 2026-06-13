@@ -1,30 +1,61 @@
 ; typescript-bmf-reversible-band.fk
 ; exercises the grammar for reversible mapping on 21 constructs
-section [form.bmf] {
-    def score (ok s) (if ok s 0)
-    let features (list
-        (score (list? (tsbmf-emit-import-named (list "names" "module"))) 5)
-        (score (list? (tsbmf-source-import-named (tsbmf-emit-import-named (list "names" "module")))) 5)
-        ; add more for other constructs using the defined emit/source
-        (score (list? (tsbmf-emit-arrow1 (list "x" "body"))) 5)
-        (score (list? (tsbmf-emit-call1 (list "callee" "arg"))) 5)
-        (score (list? (tsbmf-emit-function (list "name" "params"))) 5)
-        (score (list? (tsbmf-emit-class (list "name"))) 5)
-        (score (list? (tsbmf-emit-interface (list "name"))) 5)
-        (score (list? (tsbmf-emit-type-alias (list "name" "value"))) 5)
-        (score (list? (tsbmf-emit-await (list "expr"))) 5)
-        (score (list? (tsbmf-emit-jsx-self (list))) 5)
-        (score (list? (tsbmf-emit-return-ident (list "id"))) 5)
-        (score (list? (tsbmf-emit-assign-ident (list "id" "val"))) 5)
-        (score (list? (tsbmf-emit-member (list "obj" "prop"))) 5)
-        (score (list? (tsbmf-emit-index-int (list "obj" "idx"))) 5)
-        (score (list? (tsbmf-emit-if-pass (list "cond"))) 5)
-        (score (list? (tsbmf-emit-for-of-pass (list))) 5)
-        (score (list? (tsbmf-emit-array-empty (list))) 5)
-        (score (list? (tsbmf-emit-object-empty (list))) 5)
-        (score (list? (tsbmf-emit-enum-empty (list))) 5)
-        (score (list? (tsbmf-emit-optional-member (list))) 5)
-        (score (list? (tsbmf-emit-template-ident (list))) 5)
-    )
-    sum features
+; preludes: form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/typescript-bmf.fk
+section [form.action] {
+    def score(ok, s) = if ok then s else 0;
+    def cap(name, value) = bmf-atom(name, value);
+    def caps0() = bmf-collection(empty);
+    def caps1(n1, v1) = bmf-collection(list(cap(n1, v1)));
+    def caps2(n1, v1, n2, v2) = bmf-collection(list(cap(n1, v1), cap(n2, v2)));
+    def caps3(n1, v1, n2, v2, n3, v3) = bmf-collection(list(cap(n1, v1), cap(n2, v2), cap(n3, v3)));
+    def node_object(kind, node) = bmf-object(kind, node, bmf-empty(0), bmf-identity-inverse);
+    def node_score(node, cat) = score(node_eq(node_category(node), cat), 5);
+    def source_score(source) = score(gt(len(source), 0), 5);
+
+    let import_named = tsbmf-emit-import-named(caps2("names", "names", "module", "module"));
+    let arrow1 = tsbmf-emit-arrow1(caps2("param", "x", "body", "body"));
+    let call1 = tsbmf-emit-call1(caps2("callee", "callee", "arg", "arg"));
+    let function_decl = tsbmf-emit-function(caps2("name", "name", "params", "params"));
+    let class_decl = tsbmf-emit-class(caps1("name", "name"));
+    let interface_decl = tsbmf-emit-interface(caps1("name", "name"));
+    let type_alias = tsbmf-emit-type-alias(caps2("name", "name", "value", "value"));
+    let await_expr = tsbmf-emit-await(caps1("value", "expr"));
+    let jsx_self = tsbmf-emit-jsx-self(caps1("name", "Node"));
+    let return_ident = tsbmf-emit-return-ident(caps1("value", "id"));
+    let assign_ident = tsbmf-emit-assign-ident(caps2("target", "id", "value", "val"));
+    let member = tsbmf-emit-member(caps2("object", "obj", "field", "prop"));
+    let index_int = tsbmf-emit-index-int(caps2("object", "obj", "index", "7"));
+    let if_pass = tsbmf-emit-if-pass(caps1("cond", "cond"));
+    let for_of_pass = tsbmf-emit-for-of-pass(caps2("item", "item", "iter", "items"));
+    let array_empty = tsbmf-emit-array-empty(caps0());
+    let object_empty = tsbmf-emit-object-empty(caps0());
+    let enum_empty = tsbmf-emit-enum-empty(caps1("name", "Name"));
+    let optional_member = tsbmf-emit-optional-member(caps2("object", "obj", "field", "prop"));
+    let template_ident = tsbmf-emit-template-ident(caps3("head", "hello ", "expr", "name", "tail", "!"));
+
+    let features = list(
+        node_score(import_named, TS-BMF-IMPORT),
+        source_score(tsbmf-source-import-named(node_object("import-named", import_named))),
+        node_score(arrow1, TS-BMF-ARROW),
+        node_score(call1, TS-BMF-CALL),
+        node_score(function_decl, TS-BMF-FUNCTION),
+        node_score(class_decl, TS-BMF-CLASS),
+        node_score(interface_decl, TS-BMF-INTERFACE),
+        node_score(type_alias, TS-BMF-TYPE),
+        node_score(await_expr, TS-BMF-AWAIT),
+        node_score(jsx_self, TS-BMF-JSX),
+        node_score(return_ident, TS-BMF-RETURN),
+        node_score(assign_ident, TS-BMF-ASSIGN),
+        node_score(member, TS-BMF-MEMBER),
+        node_score(index_int, TS-BMF-INDEX),
+        node_score(if_pass, TS-BMF-IF),
+        node_score(for_of_pass, TS-BMF-FOR),
+        node_score(array_empty, TS-BMF-ARRAY),
+        node_score(object_empty, TS-BMF-OBJECT),
+        node_score(enum_empty, TS-BMF-ENUM),
+        node_score(optional_member, TS-BMF-OPTIONAL),
+        node_score(template_ident, TS-BMF-TEMPLATE)
+    );
+
+    sum(features);
 }
