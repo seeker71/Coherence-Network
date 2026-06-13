@@ -1,0 +1,51 @@
+; preludes: form-stdlib/core.fk form-stdlib/tool-channel.fk
+;
+; tool-channel-band - native tool/channel planning proof.
+; Verdict 255 when catalog, capabilities, applets, and no-plan behavior hold.
+
+(do
+    (let c0 (if (eq (len (tc-protocols)) 7)
+                (if (eq (len (tc-providers)) 7) 1 0)
+                0))
+
+    (let c1 (if (eq (len (tc-tools)) 19)
+                (if (str_eq (tc-tool-name (tc-which "which")) "which")
+                    (if (eq (len (tc-query-catalog)) 5) 2 0)
+                    0)
+                0))
+
+    (let grep-plan (tc-plan-tool "grep" "cap.stream.read"))
+    (let c2 (if (str_eq (tc-plan-status grep-plan) "tool/plan")
+                (if (str_eq (tc-plan-protocol grep-plan) "stream:read")
+                    (if (str_eq (tc-plan-op grep-plan) "grep") 4 0)
+                    0)
+                0))
+
+    (let find-plan (tc-plan-tool "find" "cap.host.file"))
+    (let c3 (if (str_eq (tc-plan-status find-plan) "tool/plan")
+                (if (str_eq (tc-plan-protocol find-plan) "host:file") 8 0)
+                0))
+
+    (let denied (tc-plan-tool "exec" "ambient"))
+    (let c4 (if (str_eq (tc-plan-status denied) "tool/no-plan")
+                (if (str_eq (tc-plan-witness denied) "missing-capability") 16 0)
+                0))
+
+    (let xpath-plan (tc-plan-tool "xpath" "cap.kernel.call"))
+    (let xmlpath-plan (tc-plan-tool "xmlpath" "cap.kernel.call"))
+    (let c5 (if (str_eq (tc-plan-protocol xpath-plan) "kernel:call")
+                (if (str_eq (tc-plan-op xpath-plan) (tc-plan-op xmlpath-plan)) 32 0)
+                0))
+
+    (let group-plan (tc-plan-tool "group" "cap.store.query"))
+    (let c6 (if (str_eq (tc-plan-status group-plan) "tool/plan")
+                (if (str_eq (tc-plan-protocol group-plan) "store:query") 64 0)
+                0))
+
+    (let c7 (if (eq (tc-native-option? "grep") 1)
+                (if (eq (tc-native-option? "find") 0)
+                    (if (eq (tc-protocol-carries? "kernel:route" "cap.kernel.route") 1) 128 0)
+                    0)
+                0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

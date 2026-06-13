@@ -87,6 +87,17 @@
 ;       lowered by the source-compiler to each target's binding — not three hand-writes. Then the channel
 ;       loop + DSP move fully into Form; the carrier becomes a thin shell-out shim. (The pure-math needs are
 ;       already done — trig.fk — so T3 is only the genuinely host-touching primitives.)
+;   DOWN-PAYMENT (2026-06-13): tool-channel.fk names the native tool/channel
+;       catalog as Form rows, and tool-channel-grammar.fk gives every language
+;       layer declaration forms that lower into the same rows:
+;       protocol-declaration, tool-declaration, capability-declaration,
+;       plan-expression, and offer-expression. Host access is now expressible as
+;       explicit protocol data (`host:exec`, `host:file`) rather than ambient
+;       shell reach; kernel calls/routes, HTTP, streams, and stores share the
+;       same planning shape. docs/coherence-substrate/tool-channel.form is the
+;       OS-facing catalog, and fourth-kernel.form remains the compatibility
+;       doorway to Hati-OS after the rename. Proof: tests/tool-channel-band.fk
+;       -> 255 and tests/tool-channel-grammar-band.fk -> 255.
 ;   DONE NOW (down-payments): wav-sense.fk (→63) — the energy DSP lifted from Python into the body, reading
 ;       the wav in-kernel. spectrum.fk (→15) — the FFT (Goertzel) in the body. trig.fk (→127) — sin/cos/sqrt
 ;       as recipes, NO native added to any kernel; spectrum.fk computes its coefficients with them. All

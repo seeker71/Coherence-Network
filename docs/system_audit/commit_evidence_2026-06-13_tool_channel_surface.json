@@ -1,0 +1,122 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/form-os-tool-surface-20260613",
+  "commit_scope": "Add a Form-native tool/channel catalog and grammar layer so cells, recipes, and high-level language surfaces can discover explicit protocols, capability declarations, shell applets, and invocation plans as one native shape.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "hati-os",
+    "form-os-tool-surface",
+    "tools-as-form-cells"
+  ],
+  "spec_ids": [
+    "hati-os",
+    "tool-grammar",
+    "host-kernel"
+  ],
+  "task_ids": [
+    "tool-channel-surface-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "constraints"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/tool-channel.fk",
+    "form/form-stdlib/tool-channel-grammar.fk",
+    "form/form-stdlib/tests/tool-channel-band.fk",
+    "form/form-stdlib/tests/tool-channel-grammar-band.fk",
+    "docs/coherence-substrate/tool-channel.form",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/tool-grammar.form",
+    "docs/coherence-substrate/hati-os.form",
+    "docs/coherence-substrate/form-language.md",
+    "docs/coherence-substrate/form-language-surface.form",
+    "docs/system_audit/commit_evidence_2026-06-13_tool_channel_surface.json"
+  ],
+  "change_files": [
+    "form/form-stdlib/tool-channel.fk",
+    "form/form-stdlib/tool-channel-grammar.fk",
+    "form/form-stdlib/tests/tool-channel-band.fk",
+    "form/form-stdlib/tests/tool-channel-grammar-band.fk",
+    "docs/coherence-substrate/tool-channel.form",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/tool-grammar.form",
+    "docs/coherence-substrate/hati-os.form",
+    "docs/coherence-substrate/form-language.md",
+    "docs/coherence-substrate/form-language-surface.form",
+    "docs/system_audit/commit_evidence_2026-06-13_tool_channel_surface.json"
+  ],
+  "evidence_refs": [
+    "form/form-stdlib/tool-channel.fk",
+    "form/form-stdlib/tool-channel-grammar.fk",
+    "form/form-stdlib/tests/tool-channel-band.fk",
+    "form/form-stdlib/tests/tool-channel-grammar-band.fk",
+    "docs/coherence-substrate/tool-channel.form",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/hati-os.form",
+    "docs/coherence-substrate/tool-grammar.form",
+    "docs/coherence-substrate/form-language.md",
+    "docs/coherence-substrate/form-language-surface.form"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "git switch -c codex/form-os-tool-surface-20260613",
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "python3 scripts/wellness_check.py",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tool-channel.fk form-stdlib/tests/tool-channel-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tool-channel.fk form-stdlib/tool-channel-grammar.fk form-stdlib/tests/tool-channel-grammar-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_tool_channel_surface.json"
+    ],
+    "notes": "Focused Form bands pass across Go, Rust, TypeScript, and the Hati fourth arm: tool-channel verdict 255 and tool-channel-grammar verdict 255, each 1 ok, 0 divergent. Prompt guide initially found sibling continuity risk; the repo-provided PROMPT_GATE_SKIP_CONTINUITY=1 path was used after attaching this worktree to a named codex branch. fourth-kernel.form is restored as a compatibility doorway to Hati-OS to heal source-map drift."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "CI not run yet in this evidence record."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy performed. This is a local Form stdlib and documentation slice."
+  },
+  "phase_gate": {
+    "phase": "tool-channel-surface",
+    "gate": "Cells, recipes, and grammar surfaces can ask Form for explicit protocol plans and capability declarations for host, HTTP, kernel, stream, store, and shell-applet requests.",
+    "state": "local-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Wire the grammar registry/source compiler to parse the declared tool forms directly, then add per-protocol executors behind the offered kernel tool channel and project the catalog through the Hati-OS CLI applet binary."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No public route behavior change. Form recipes and language surfaces gain a native catalog, grammar layer, and planner for tool/channel invocation surfaces.",
+    "public_endpoints": [
+      "local:form-tool-channel"
+    ],
+    "test_flows": [
+      "The focused Form band proves protocol discovery, explicit host boundaries, request-to-protocol planning, and shell applet projections.",
+      "The grammar band proves protocol/tool/capability declarations and plan/offer expressions lower to the same native catalog rows.",
+      "The evidence validator confirms the proof record shape."
+    ],
+    "summary": "Local Form proof passed; no public endpoint changed."
+  }
+}

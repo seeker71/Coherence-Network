@@ -1,0 +1,63 @@
+# tool-channel.form - native tool/channel planning surface
+
+(tool-channel
+  (lineage
+    (rests-on host-kernel.form kernel-self-composition.form tool-grammar.form)
+    (recipe form/form-stdlib/tool-channel.fk)
+    (grammar form/form-stdlib/tool-channel-grammar.fk)
+    (proof form/form-stdlib/tests/tool-channel-band.fk -> 255)
+    (grammar-proof form/form-stdlib/tests/tool-channel-grammar-band.fk -> 255))
+
+  (purpose
+    "Cells and recipes discover tool options as Form-native rows, then receive an explicit invocation plan."
+    "This surface does not execute host processes, read files, send HTTP, or call routes.")
+
+  (protocols
+    (host:exec    (provider host)   (capability cap.host.exec)    (native 0) (effect process))
+    (host:file    (provider host)   (capability cap.host.file)    (native 0) (effect filesystem))
+    (http:request (provider http)   (capability cap.http.request) (native 1) (effect network))
+    (kernel:call  (provider kernel) (capability cap.kernel.call)  (native 1) (effect call))
+    (kernel:route (provider kernel) (capability cap.kernel.route) (native 1) (effect route))
+    (stream:read  (provider stream) (capability cap.stream.read)  (native 1) (effect stream))
+    (store:query  (provider store)  (capability cap.store.query)  (native 1) (effect store)))
+
+  (providers
+    (host   host:exec    cap.host.exec)
+    (file   host:file    cap.host.file)
+    (http   http:request cap.http.request)
+    (kernel kernel:call  cap.kernel.call)
+    (route  kernel:route cap.kernel.route)
+    (stream stream:read  cap.stream.read)
+    (store  store:query  cap.store.query))
+
+  (options
+    (protocol-tools exec file http call route stream query)
+    (shell-applets grep find awk fields group xpath xmlpath)
+    (catalog-tools words providers queries which plan))
+
+  (applets
+    (grep    stream:read cap.stream.read grep)
+    (find    host:file   cap.host.file   find)
+    (awk     stream:read cap.stream.read awk)
+    (fields  stream:read cap.stream.read fields)
+    (group   store:query cap.store.query group)
+    (xpath   kernel:call cap.kernel.call path-select)
+    (xmlpath kernel:call cap.kernel.call path-select))
+
+  (planning
+    (helpers tc-plan-tool tc-plan-request tc-which tc-protocol-carries? tc-native-option?)
+    (status-ok tool/plan)
+    (status-refusal tool/no-plan)
+    (refusal-witnesses missing-tool missing-capability)
+    (wrong-or-missing-capability returns-tool/no-plan))
+
+  (language-surface
+    (forms protocol-declaration provider-declaration tool-declaration capability-declaration plan-expression offer-expression)
+    (lowers-to same-catalog-rows)
+    (offer-shape explicit-plan-over-tool/channel))
+
+  (invariant
+    (no-python-runtime-carrier)
+    (no-ambient-host-access)
+    (cli-applets-are-projections-not-duplicate-semantics)
+    (capabilities-are-explicit-and-plannable)))
