@@ -5196,6 +5196,191 @@
                 (append (bma-trace-result-trace forward)
                         (bma-trace-result-trace backward)))))
 
+    ;; --- BML to Hati native image lowering -----------------------------
+
+    (defn bml-hati-lower-result (expr pool)
+        (list "bml-hati-lower-result" expr pool))
+
+    (defn bml-hati-lower-expr (result) (nth result 1))
+    (defn bml-hati-lower-pool (result) (nth result 2))
+
+    (defn bml-hati-image (fns pool source-node)
+        (list "bml-hati-image" fns pool source-node))
+
+    (defn bml-hati-image-fns (image) (nth image 1))
+    (defn bml-hati-image-pool (image) (nth image 2))
+    (defn bml-hati-image-source-node (image) (nth image 3))
+
+    (defn bml-hati-pool-index-loop (pool value index)
+        (if (nil? pool)
+            -1
+            (if (str_eq (head pool) value)
+                index
+                (bml-hati-pool-index-loop (tail pool) value (add index 1)))))
+
+    (defn bml-hati-pool-index (pool value)
+        (bml-hati-pool-index-loop pool value 0))
+
+    (defn bml-hati-pool-entry (index pool)
+        (list "bml-hati-pool-entry" index pool))
+
+    (defn bml-hati-pool-entry-index (entry) (nth entry 1))
+    (defn bml-hati-pool-entry-pool (entry) (nth entry 2))
+
+    (defn bml-hati-pool-ensure (pool value)
+        (do
+            (let index (bml-hati-pool-index pool value))
+            (if (eq index -1)
+                (bml-hati-pool-entry (len pool) (append pool (list value)))
+                (bml-hati-pool-entry index pool))))
+
+    (defn bml-hati-float-scale-literal () "0.000001")
+
+    (defn bml-hati-float-micros (float-node)
+        (float_to_int
+            (round_ndigits
+                (mul (float_value float-node) 1000000.0)
+                0)))
+
+    (defn bml-hati-lower-string-in (value pool)
+        (do
+            (let entry (bml-hati-pool-ensure pool value))
+            (bml-hati-lower-result
+                (fk-slit
+                    (bml-hati-pool-entry-index entry)
+                    value)
+                (bml-hati-pool-entry-pool entry))))
+
+    (defn bml-hati-node-fail? (node)
+        (do
+            (let cat (node_category node))
+            (if (node_eq cat BML-AST-FAIL)
+                true
+            (if (node_eq cat BML-AST-BLOCK)
+                (if (eq (len (node_children node)) 1)
+                    (bml-hati-node-fail? (head (node_children node)))
+                    false)
+                false))))
+
+    (defn bml-hati-lower-nodes-in (nodes pool)
+        (if (nil? nodes)
+            (bml-hati-lower-result (fk-lit 0) pool)
+        (if (nil? (tail nodes))
+            (bml-hati-lower-node-in (head nodes) pool)
+            (do
+                (let first (bml-hati-lower-node-in (head nodes) pool))
+                (let rest
+                    (bml-hati-lower-nodes-in
+                        (tail nodes)
+                        (bml-hati-lower-pool first)))
+                (bml-hati-lower-result
+                    (fk-sequence
+                        (bml-hati-lower-expr first)
+                        (bml-hati-lower-expr rest))
+                    (bml-hati-lower-pool rest))))))
+
+    (defn bml-hati-lower-choose-in (branches pool)
+        (if (nil? branches)
+            (bml-hati-lower-result (fk-lit 0) pool)
+            (if (bml-hati-node-fail? (head branches))
+                (bml-hati-lower-choose-in (tail branches) pool)
+                (bml-hati-lower-node-in (head branches) pool))))
+
+    (defn bml-hati-lower-float-in (float-node pool)
+        (do
+            (let entry
+                (bml-hati-pool-ensure
+                    pool
+                    (bml-hati-float-scale-literal)))
+            (bml-hati-lower-result
+                (fk-mul
+                    (fk-lit (bml-hati-float-micros float-node))
+                    (fk-f64
+                        (bml-hati-pool-entry-index entry)
+                        (bml-hati-float-scale-literal)))
+                (bml-hati-pool-entry-pool entry))))
+
+    (defn bml-hati-lower-node-in (node pool)
+        (do
+            (let cat (node_category node))
+            (if (node_eq cat BML-AST-INT)
+                (bml-hati-lower-result
+                    (fk-lit (node_value (bml-node-child node 0)))
+                    pool)
+            (if (node_eq cat BML-AST-FLOAT)
+                (bml-hati-lower-float-in (bml-node-child node 0) pool)
+            (if (node_eq cat BML-AST-STRING)
+                (bml-hati-lower-string-in
+                    (node_value (bml-node-child node 0))
+                    pool)
+            (if (node_eq cat BML-AST-CHAR)
+                (bml-hati-lower-string-in
+                    (node_value (bml-node-child node 0))
+                    pool)
+            (if (node_eq cat BML-AST-ADD)
+                (do
+                    (let left (bml-hati-lower-node-in (bml-node-child node 0) pool))
+                    (let right
+                        (bml-hati-lower-node-in
+                            (bml-node-child node 1)
+                            (bml-hati-lower-pool left)))
+                    (bml-hati-lower-result
+                        (fk-add
+                            (bml-hati-lower-expr left)
+                            (bml-hati-lower-expr right))
+                        (bml-hati-lower-pool right)))
+            (if (node_eq cat BML-AST-CONST)
+                (bml-hati-lower-node-in (bml-node-child node 2) pool)
+            (if (node_eq cat BML-AST-RETURN)
+                (bml-hati-lower-node-in (bml-node-child node 0) pool)
+            (if (node_eq cat BML-AST-METHOD)
+                (bml-hati-lower-node-in (bml-node-child node 1) pool)
+            (if (node_eq cat BML-AST-BLOCK)
+                (bml-hati-lower-nodes-in (node_children node) pool)
+            (if (node_eq cat BML-AST-CHOOSE)
+                (bml-hati-lower-choose-in (node_children node) pool)
+            (if (node_eq cat BML-AST-TRY)
+                (bml-hati-lower-node-in (bml-node-child node 1) pool)
+            (if (node_eq cat BML-AST-THROW)
+                (bml-hati-lower-node-in (bml-node-child node 0) pool)
+            (if (node_eq cat BML-AST-WHILE)
+                (bml-hati-lower-result (fk-lit 0) pool)
+            (if (node_eq cat BML-AST-FAIL)
+                (bml-hati-lower-result (fk-lit 0) pool)
+            (if (node_eq cat BML-AST-CUT)
+                (bml-hati-lower-result (fk-lit 0) pool)
+            (if (node_eq cat BML-AST-SAVE)
+                (bml-hati-lower-result (fk-lit 0) pool)
+            (if (node_eq cat BML-AST-RESTORE)
+                (bml-hati-lower-result (fk-lit 0) pool)
+            (if (node_eq cat BML-AST-DISCARD)
+                (bml-hati-lower-result (fk-lit 0) pool)
+                (bml-hati-lower-result (fk-lit 0) pool)))))))))))))))))))))
+
+    (defn bml-hati-compile-image (node)
+        (do
+            (let lowered (bml-hati-lower-node-in node (empty)))
+            (bml-hati-image
+                (list (bml-hati-lower-expr lowered))
+                (bml-hati-lower-pool lowered)
+                node)))
+
+    (defn bml-hati-compile-program (node)
+        (bml-hati-image-fns (bml-hati-compile-image node)))
+
+    (defn bml-hati-run-value (node)
+        (do
+            (let image (bml-hati-compile-image node))
+            (fkm-run (bml-hati-image-fns image) 0)))
+
+    (defn bml-hati-table-file (image)
+        (fks-table-file
+            (bml-hati-image-fns image)
+            (bml-hati-image-pool image)))
+
+    (defn bml-hati-table-file-from-node (node)
+        (bml-hati-table-file (bml-hati-compile-image node)))
+
     (defn bma-trace-count-mode (trace mode)
         (if (nil? trace) 0
             (add
