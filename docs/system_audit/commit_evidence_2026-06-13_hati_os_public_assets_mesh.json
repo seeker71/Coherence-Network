@@ -1,0 +1,198 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/hati-os-public-assets-20260613",
+  "commit_scope": "Publish real Hati-OS public asset build lanes and add Hati mesh organ identity/channel presence for the Android sensing app.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "hati-os",
+    "hati-mesh-sensing-organs",
+    "form-os-tool-surface"
+  ],
+  "spec_ids": [
+    "hati-os-public-assets",
+    "hati-mesh",
+    "tool-channel"
+  ],
+  "task_ids": [
+    "hati-os-public-assets-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "target-requirement"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "release-prep"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "api/app/main.py",
+    "api/app/routers/hati_mesh.py",
+    "api/tests/test_hati_mesh.py",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form",
+    "docs/coherence-substrate/hati-mesh.form",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/coherence-substrate/tool-channel.form",
+    "docs/system_audit/commit_evidence_2026-06-13_hati_os_public_assets_mesh.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "experiments/coherence-sense-android/README.md",
+    "experiments/coherence-sense-android/app/build.gradle.kts",
+    "experiments/coherence-sense-android/app/src/main/AndroidManifest.xml",
+    "experiments/coherence-sense-android/app/src/main/java/com/coherence/sense/MainActivity.kt",
+    "experiments/coherence-sense-android/app/src/main/res/layout/activity_main.xml",
+    "form/form-stdlib/hati-mesh.fk",
+    "form/form-stdlib/hati-os-targets.fk",
+    "form/form-stdlib/tests/hati-mesh-band.fk",
+    "form/form-stdlib/tests/hati-os-targets-band.fk",
+    "form/form-stdlib/tests/tool-channel-band.fk",
+    "form/form-stdlib/tool-channel.fk",
+    "scripts/build_hati_os_public_assets.sh",
+    "web/app/downloads/hati-os/hati-os-public-assets-summary.json/route.ts",
+    "web/app/downloads/hati-os/[os]/[arch]/[name]/route.ts",
+    "web/app/hati-os/page.tsx",
+    "web/middleware.ts"
+  ],
+  "change_files": [
+    "api/app/main.py",
+    "api/app/routers/hati_mesh.py",
+    "api/tests/test_hati_mesh.py",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form",
+    "docs/coherence-substrate/hati-mesh.form",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/coherence-substrate/tool-channel.form",
+    "docs/system_audit/commit_evidence_2026-06-13_hati_os_public_assets_mesh.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "experiments/coherence-sense-android/README.md",
+    "experiments/coherence-sense-android/app/build.gradle.kts",
+    "experiments/coherence-sense-android/app/src/main/AndroidManifest.xml",
+    "experiments/coherence-sense-android/app/src/main/java/com/coherence/sense/MainActivity.kt",
+    "experiments/coherence-sense-android/app/src/main/res/layout/activity_main.xml",
+    "form/form-stdlib/hati-mesh.fk",
+    "form/form-stdlib/hati-os-targets.fk",
+    "form/form-stdlib/tests/hati-mesh-band.fk",
+    "form/form-stdlib/tests/hati-os-targets-band.fk",
+    "form/form-stdlib/tests/tool-channel-band.fk",
+    "form/form-stdlib/tool-channel.fk",
+    "scripts/build_hati_os_public_assets.sh",
+    "web/app/downloads/hati-os/hati-os-public-assets-summary.json/route.ts",
+    "web/app/downloads/hati-os/[os]/[arch]/[name]/route.ts",
+    "web/app/hati-os/page.tsx",
+    "web/middleware.ts"
+  ],
+  "evidence_refs": [
+    "form/form-stdlib/tests/hati-mesh-band.fk",
+    "form/form-stdlib/tests/hati-os-targets-band.fk",
+    "form/form-stdlib/tests/tool-channel-band.fk",
+    ".cache/hati-os-public-assets/20260613T054205Z/hati-os-public-assets-summary.json",
+    "output/playwright/hati-os-release-review/hati-os-web-api-20260613.png",
+    "release:hati-os-v0.1.0-20260613",
+    "sha256:hati-os-macos-arm64.tar.zst=d4c73bf381db307d886030b6947e5a7260cb20f25ce9d1df48719f947a5fb1c1",
+    "sha256:hati-os-android-arm64.tar.zst=03ec185beaf827115617ebd09d7bfa77fe9c9aa341405ab5ade9ac894e4b51b7",
+    "sha256:coherence-sense-hati-mesh-debug.apk=926db00cb94035e8ae7af5dc3035ebf0f6f8dffdda5ad7963caaa5d634495f3b"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tool-channel.fk form-stdlib/tests/tool-channel-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-os-targets.fk form-stdlib/tests/hati-os-targets-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-mesh.fk form-stdlib/tests/hati-mesh-band.fk",
+      "cd api && python3 -m pytest -q tests/test_hati_mesh.py",
+      "cd experiments/coherence-sense-android && JAVA_HOME=/opt/homebrew/opt/openjdk@21 ./gradlew assembleDebug",
+      "scripts/build_hati_os_public_assets.sh",
+      "export PWCLI=$HOME/.codex/skills/playwright/scripts/playwright_cli.sh && $PWCLI open http://localhost:3117/hati-os && $PWCLI screenshot --filename output/playwright/hati-os-release-review/hati-os-web-api-20260613.png --full-page",
+      "cd web && npm ci",
+      "cd web && npm run build",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+      "curl -L -o /dev/null -sS -w '%{http_code}' --range 0-0 https://github.com/seeker71/Coherence-Network/releases/download/hati-os-v0.1.0-20260613/<asset>"
+    ],
+    "notes": "Built real macOS and Android native packages plus a debug Android mesh-organ APK with SHA256 sidecars. macOS binary executed fib/sum/ack parity locally; Android native kernel package file-checked as ARM64 ELF executable and C-ABI shared library exporting form_eval/form_eval_free. GPU, DSP, and MLX/equivalent lanes are cataloged and capability-gated as floors; active native accelerator dispatch receipts remain missing. Form validate.sh proofs are 3-kernel only; fourth-arm proof remains a tracked gap until the Hati native arm runs the same bands directly."
+  },
+  "release_review": {
+    "status": "partial-pass",
+    "self_review": {
+      "status": "pass",
+      "screenshot": "output/playwright/hati-os-release-review/hati-os-web-api-20260613.png",
+      "notes": "Rendered Hati-OS download page with local web and API services running. Visual floor is readable and links are visible; dev-only console entries were React DevTools/HMR."
+    },
+    "sister_agent_review": {
+      "status": "pass-with-android-runtime-screenshot-blocker",
+      "agent": "Kepler",
+      "requested": "pre-release review of accelerator floor/north-star honesty, Android dashboard surface, screenshot evidence, and web screenshot",
+      "result": "Accelerator honesty passed: GPU/DSP/MLX are represented as floor rows and missing dispatch receipts, not full support. Web screenshot is readable. Review flagged Android runtime screenshot blocker, scroll/layout risk, hint-only labels, stale QR payload, and local runtime DB hygiene.",
+      "remediation": "Moved the Android app surface into one ScrollView, added persistent field labels/content descriptions, added QR refresh on mesh API edits, and restored runtime DB side effects. Android runtime screenshot remains blocked until a device or AVD is available."
+    },
+    "android_runtime_screenshot": {
+      "status": "blocked",
+      "reason": "No attached Android device and no configured Android Virtual Device on this host; adb is present at /opt/homebrew/share/android-commandlinetools/platform-tools/adb.",
+      "floor": "APK builds and is packaged; README and Form docs require actual Android screenshot before release when a device/emulator lane is available.",
+      "north_star": "Automated Android device/emulator screenshot and accessibility receipts are attached to release evidence."
+    }
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "PR checks not started yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "GitHub release assets are public and range-readable. hati.earth redirect deployment verification still needs to run after merge/deploy.",
+    "public_release": {
+      "status": "pass",
+      "url": "https://github.com/seeker71/Coherence-Network/releases/tag/hati-os-v0.1.0-20260613",
+      "range_read_status": {
+        "hati-os-macos-arm64.tar.zst": 206,
+        "hati-os-macos-arm64.tar.zst.sha256": 206,
+        "hati-os-android-arm64.tar.zst": 206,
+        "hati-os-android-arm64.tar.zst.sha256": 206,
+        "coherence-sense-hati-mesh-debug.apk": 206,
+        "coherence-sense-hati-mesh-debug.apk.sha256": 206,
+        "hati-os-public-assets-summary.json": 206
+      }
+    }
+  },
+  "phase_gate": {
+    "phase": "hati-os-public-assets-and-mesh-presence",
+    "gate": "Native assets are buildable locally, mesh organ identity/channel routes are proven locally, and public release upload is prepared.",
+    "state": "local-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Upload release assets, verify public URLs, push PR, merge, and verify hati.earth redirects after deploy."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Hati-OS downloads can be built as real assets, and Android sensing organs can identify themselves with a stable install id, explicitly bind a user-entered cell/email label, announce and heartbeat to hati.mesh, discover peer organs through the public API, offer channels, and display measured sensor flow rates. GPU, DSP, and MLX/equivalent support is represented as an explicit minimal floor with north-star dispatch receipts rather than full support.",
+    "public_endpoints": [
+      "POST /api/hati/mesh/organs/announce",
+      "POST /api/hati/mesh/organs/heartbeat",
+      "GET /api/hati/mesh/organs",
+      "POST /api/hati/mesh/channels/offer",
+      "GET /api/hati/mesh/channels",
+      "GET /downloads/hati-os/*"
+    ],
+    "test_flows": [
+      "Form proofs return expected verdicts: tool-channel 255, Hati-OS target distribution 4095, and hati.mesh identity/channel rows 255.",
+      "API test creates organ announce, heartbeat, and channel offer receipts.",
+      "Android Gradle build produces a debug APK with stable organ id, mesh/channel UI, resource dashboard, QR identity offer, and accelerator floor rows.",
+      "Playwright captures a local web/API screenshot for the Hati-OS download service; Android runtime screenshot is blocked until a device or AVD is available.",
+      "Asset build emits macOS tarball, Android native kernel tarball, Android mesh APK, SHA256 files, and summary JSON."
+    ],
+    "summary": "Local proof is complete; public URL proof follows release upload and web deploy."
+  }
+}
