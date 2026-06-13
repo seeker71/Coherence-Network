@@ -1,0 +1,249 @@
+; choice-outcome-learning.fk - typed branch outcomes for learning from rejected evidence.
+;
+; This layer leaves the low-level choice/fail/stop control tokens thin.
+; Branches return ordinary Form values that a choice recipe can inspect:
+; ok(value, receipt), reject(evidence, receipt), or condition(state, receipt).
+;
+; preludes: form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk
+
+(do
+    (defn col-kind-ok () "choice-outcome-ok")
+    (defn col-kind-reject () "choice-outcome-reject")
+    (defn col-kind-condition () "choice-outcome-condition")
+
+    (defn col-policy-first-success () "first_success")
+    (defn col-policy-learn-from-reject () "learn_from_reject")
+
+    (defn col-score (ok points) (if ok points 0))
+    (defn col-tagged? (value tag arity)
+        (if (eq (len value) arity) (str_eq (nth value 0) tag) false))
+    (defn col-nonempty-string? (value) (gt (str_len value) 0))
+    (defn col-score-valid? (score) (and (ge score 0) (le score 100)))
+    (defn col-small-vector? (values) (le (len values) 4))
+
+    (defn col-evidence
+        (kind loss confidence trust residual ref seed lane dtype shape cost latency hint)
+        (list
+            "choice-outcome-evidence"
+            kind
+            loss
+            confidence
+            trust
+            residual
+            ref
+            seed
+            lane
+            dtype
+            shape
+            cost
+            latency
+            hint))
+
+    (defn col-evidence? (value)
+        (col-tagged? value "choice-outcome-evidence" 14))
+    (defn col-evidence-kind (e) (nth e 1))
+    (defn col-evidence-loss (e) (nth e 2))
+    (defn col-evidence-confidence (e) (nth e 3))
+    (defn col-evidence-trust (e) (nth e 4))
+    (defn col-evidence-residual (e) (nth e 5))
+    (defn col-evidence-ref (e) (nth e 6))
+    (defn col-evidence-seed (e) (nth e 7))
+    (defn col-evidence-lane (e) (nth e 8))
+    (defn col-evidence-dtype (e) (nth e 9))
+    (defn col-evidence-shape (e) (nth e 10))
+    (defn col-evidence-cost (e) (nth e 11))
+    (defn col-evidence-latency (e) (nth e 12))
+    (defn col-evidence-hint (e) (nth e 13))
+
+    (defn col-evidence-text-valid? (e)
+        (and
+            (col-nonempty-string? (col-evidence-kind e))
+            (and
+                (col-nonempty-string? (col-evidence-ref e))
+                (and
+                    (col-nonempty-string? (col-evidence-lane e))
+                    (and
+                        (col-nonempty-string? (col-evidence-dtype e))
+                        (and
+                            (col-nonempty-string? (col-evidence-shape e))
+                            (col-nonempty-string? (col-evidence-hint e))))))))
+
+    (defn col-evidence-score-shape-valid? (e)
+        (and
+            (ge (col-evidence-loss e) 0)
+            (and
+                (col-score-valid? (col-evidence-confidence e))
+                (and
+                    (col-score-valid? (col-evidence-trust e))
+                    (col-small-vector? (col-evidence-residual e))))))
+
+    (defn col-evidence-measure-valid? (e)
+        (and
+            (ge (col-evidence-cost e) 0)
+            (ge (col-evidence-latency e) 0)))
+
+    (defn col-evidence-valid? (e)
+        (if (col-evidence? e)
+            (and
+                (col-evidence-text-valid? e)
+                (and
+                    (col-evidence-score-shape-valid? e)
+                    (col-evidence-measure-valid? e)))
+            false))
+
+    (defn col-evidence-metabolizable? (e)
+        (if (col-evidence-valid? e)
+            (and
+                (le (len (col-evidence-residual e)) 4)
+                (and
+                    (ge (col-evidence-confidence e) 50)
+                    (ge (col-evidence-trust e) 50)))
+            false))
+
+    (defn col-summarize-dense-evidence
+        (kind loss magnitude confidence trust digest seed lane dtype shape cost latency hint)
+        (col-evidence
+            kind
+            loss
+            confidence
+            trust
+            (list magnitude)
+            digest
+            seed
+            lane
+            dtype
+            shape
+            cost
+            latency
+            hint))
+
+    (defn col-condition-state (kind detail lane cost)
+        (list "choice-outcome-condition-state" kind detail lane cost))
+    (defn col-condition-state? (value)
+        (col-tagged? value "choice-outcome-condition-state" 5))
+    (defn col-condition-kind (state) (nth state 1))
+    (defn col-condition-detail (state) (nth state 2))
+    (defn col-condition-lane (state) (nth state 3))
+    (defn col-condition-cost (state) (nth state 4))
+    (defn col-condition-state-valid? (state)
+        (if (col-condition-state? state)
+            (and
+                (col-nonempty-string? (col-condition-kind state))
+                (and
+                    (col-nonempty-string? (col-condition-detail state))
+                    (and
+                        (col-nonempty-string? (col-condition-lane state))
+                        (ge (col-condition-cost state) 0))))
+            false))
+
+    (defn col-ok (value receipt)
+        (list (col-kind-ok) value receipt))
+    (defn col-reject (evidence receipt)
+        (list (col-kind-reject) evidence receipt))
+    (defn col-condition (state receipt)
+        (list (col-kind-condition) state receipt))
+
+    (defn col-ok? (outcome) (col-tagged? outcome (col-kind-ok) 3))
+    (defn col-reject? (outcome) (col-tagged? outcome (col-kind-reject) 3))
+    (defn col-condition? (outcome) (col-tagged? outcome (col-kind-condition) 3))
+    (defn col-outcome-value (outcome) (nth outcome 1))
+    (defn col-outcome-receipt (outcome) (nth outcome 2))
+    (defn col-outcome-valid? (outcome)
+        (if (col-ok? outcome)
+            (cr-choice-receipt-valid? (col-outcome-receipt outcome))
+            (if (col-reject? outcome)
+                (and
+                    (col-evidence-valid? (col-outcome-value outcome))
+                    (cr-choice-receipt-valid? (col-outcome-receipt outcome)))
+                (if (col-condition? outcome)
+                    (and
+                        (col-condition-state-valid? (col-outcome-value outcome))
+                        (cr-choice-receipt-valid? (col-outcome-receipt outcome)))
+                    false))))
+
+    (defn col-first-ok (outcomes missing)
+        (if (eq (len outcomes) 0)
+            missing
+            (if (col-ok? (head outcomes))
+                (head outcomes)
+                (col-first-ok (tail outcomes) missing))))
+
+    (defn col-better-reject? (candidate best)
+        (if (col-reject? candidate)
+            (if (col-evidence-metabolizable? (col-outcome-value candidate))
+                (if (col-reject? best)
+                    (lt
+                        (col-evidence-loss (col-outcome-value candidate))
+                        (col-evidence-loss (col-outcome-value best)))
+                    true)
+                false)
+            false))
+
+    (defn col-best-reject-loop (outcomes best)
+        (if (eq (len outcomes) 0)
+            best
+            (if (col-better-reject? (head outcomes) best)
+                (col-best-reject-loop (tail outcomes) (head outcomes))
+                (col-best-reject-loop (tail outcomes) best))))
+
+    (defn col-best-reject (outcomes)
+        (col-best-reject-loop
+            outcomes
+            (col-reject
+                (col-evidence
+                    "sentinel"
+                    999999
+                    50
+                    50
+                    (list 0)
+                    "ref:none"
+                    0
+                    "none"
+                    "none"
+                    "none"
+                    0
+                    0
+                    "no-reject-yet")
+                (empty))))
+
+    (defn col-reject-evidence-list (outcomes)
+        (if (eq (len outcomes) 0)
+            (empty)
+            (if (col-reject? (head outcomes))
+                (cons
+                    (col-outcome-value (head outcomes))
+                    (col-reject-evidence-list (tail outcomes)))
+                (col-reject-evidence-list (tail outcomes)))))
+
+    (defn col-select (policy outcomes missing)
+        (if (str_eq policy (col-policy-first-success))
+            (col-first-ok outcomes missing)
+            (if (str_eq policy (col-policy-learn-from-reject))
+                (col-best-reject outcomes)
+                missing)))
+
+    (defn col-learn-candidate (candidate outcome)
+        (if (col-ok? outcome)
+            (bco-note-success candidate)
+            (if (col-reject? outcome)
+                (if (col-evidence-metabolizable? (col-outcome-value outcome))
+                    (bco-note-fail candidate)
+                    candidate)
+                candidate)))
+
+    (defn col-retry-state (budget depth)
+        (list "choice-outcome-retry" budget depth))
+    (defn col-retry-budget (state) (nth state 1))
+    (defn col-retry-depth (state) (nth state 2))
+    (defn col-retry-allowed? (state)
+        (if (col-tagged? state "choice-outcome-retry" 3)
+            (and (gt (col-retry-budget state) 0) (gt (col-retry-depth state) 0))
+            false))
+    (defn col-retry-step (state)
+        (if (col-retry-allowed? state)
+            (col-retry-state
+                (sub (col-retry-budget state) 1)
+                (sub (col-retry-depth state) 1))
+            state))
+
+    0)
