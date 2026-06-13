@@ -46,6 +46,9 @@ def test_parser_reads_bindings_not_comments(monkeypatch, tmp_path):
     manifest.write_text(
         "; a comment mentioning /api/commented/before — must be ignored\n"
         "(defn route_health () \"ok\")\n"
+        "(defn native-mutation-routes ()\n"
+        "  (list\n"
+        "    (kh-route \"helper-patch\" \"PATCH\" \"/api/real/helper/*\" 0 \"route_helper\" \"\" 10)))\n"
         "(let routes\n"
         "  (list\n"
         "    ; a comment mentioning (list \"/api/commented/inside\" route_fake) — ignored\n"
@@ -55,7 +58,8 @@ def test_parser_reads_bindings_not_comments(monkeypatch, tmp_path):
         "    (list \"/api/real/one\"  route_one)\n"
         "    (list \"/api/real/two\"  route_two)\n"
         "    (kh-route \"real-post\" \"POST\" \"/api/real/post\" 0 \"route_post\" \"X-Preview\" 0)\n"
-        "    (list 43004 \"real-delete\" \"DELETE\" \"/api/real/two\" 0 \"route_delete\" \"\" 20)))\n"
+        "    (list 43004 \"real-delete\" \"DELETE\" \"/api/real/two\" 0 \"route_delete\" \"\" 20)\n"
+        "    (native-mutation-routes)))\n"
     )
     route_data = tmp_path / "production-routes-data.json"
     route_data.write_text(
@@ -94,6 +98,7 @@ def test_parser_reads_bindings_not_comments(monkeypatch, tmp_path):
         "/api/real/two",
         "POST /api/real/post",
         "DELETE /api/real/two",
+        "PATCH /api/real/helper/*",
     ], routes
     assert "/health" not in routes  # non-/api probe excluded
     assert not any("commented" in r for r in routes)  # comments never captured

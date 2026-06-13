@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 152
+**Total files**: 155
 
 | File | Purpose |
 |---|---|
@@ -23,6 +23,7 @@
 | [backfill_task_workspaces.py](backfill_task_workspaces.py) | Backfill agent_tasks.workspace_id from linked idea.context.idea_id. |
 | [backfill_traceability.py](backfill_traceability.py) | Backfill traceability links: spec→idea, code→spec, PR→spec. |
 | [bootstrap_new_agent_session.py](bootstrap_new_agent_session.py) | Bootstrap a persistent agent session against the real substrate. |
+| [bootstrap_sqlite_from_production_archive.py](bootstrap_sqlite_from_production_archive.py) | Bootstrap a local SQLite DB from a real archived production Postgres dump. |
 | [build_arrival_symbol_pack.py](build_arrival_symbol_pack.py) | Build the arrival symbol pack — the MDL-optimal, complete, self-referential |
 | [build_readmes.py](build_readmes.py) | Build README files from templates by expanding <!-- include: path --> markers. |
 | [cc.py](cc.py) | _no top-of-file purpose_ |
@@ -73,6 +74,7 @@
 | [grammar_coverage.py](grammar_coverage.py) | grammar_coverage.py — surface which file formats have Form grammars. |
 | [grounded_cost_endpoint_probe.py](grounded_cost_endpoint_probe.py) | Focused end-to-end probe for /api/utils/grounded_cost. |
 | [guided_somatic_exit.py](guided_somatic_exit.py) | Guided Somatic Exit — daily practice for walking out of the fear-pattern loop. |
+| [hati_os_sqlite_mutation_harness.py](hati_os_sqlite_mutation_harness.py) | Execute SQLite mutations through a Hati-OS driver binary and verify DB effects. |
 | [healing_modality_recipe_proof.py](healing_modality_recipe_proof.py) | healing_modality_recipe_proof.py — practitioner-with-receiver as Recipe. |
 | [idea_to_task_bridge.py](idea_to_task_bridge.py) | Idea-to-Task Bridge — automatically generate tasks from open ideas. |
 | [ideas_route_timing_breakdown.py](ideas_route_timing_breakdown.py) | Break down /api/ideas time across public Python, native Go, and same-SQL Python. |
@@ -107,6 +109,7 @@
 | [restructure_spec_frontmatter.py](restructure_spec_frontmatter.py) | Restructure spec frontmatter: absorb requirements, done_when, test command. |
 | [run_claude_impl_with_report.py](run_claude_impl_with_report.py) | Run one Claude impl task (pinned spec), wait for terminal state, then write a report. |
 | [run_form_practice.py](run_form_practice.py) | Run any Form practice and record substrate cells plus witness ledger. |
+| [run_hati_os_api_band_suite.py](run_hati_os_api_band_suite.py) | Run API-oriented Form band proofs on the universal Hati-OS binary. |
 | [run_pinned_idea_acceptance.py](run_pinned_idea_acceptance.py) | Pinned-idea (portfolio-governance) acceptance: one path, proof at each step. |
 | [runtime_surface_report.py](runtime_surface_report.py) | Runtime-surface report — how much of the API runs in CPython vs the Form kernel. |
 | [scan_code_spec_references.py](scan_code_spec_references.py) | spec: full-code-traceability |
@@ -160,4 +163,3 @@
 | [word_cell_rewriter.py](word_cell_rewriter.py) | word_cell_rewriter — gesture 3 at word-cell granularity. |
 | [worktree_continuity_guard.py](worktree_continuity_guard.py) | Detect stranded changes across sibling worktrees. |
 | [worktree_pr_guard.py](worktree_pr_guard.py) | Worktree PR guard: prevent common CI failures and track PR check failures. |
-- [`form_mut_demo.sh`](form_mut_demo.sh) — the mutation channel live: heap cell creation (with pointer links visible at birth) + state repoints traced; reads silent; 4 events vs 12 for the same run's full value-trace.
