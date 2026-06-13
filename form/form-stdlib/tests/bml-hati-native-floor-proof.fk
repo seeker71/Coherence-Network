@@ -43,8 +43,8 @@
     (sum
         (list
             (score-bool (str-contains? (bml-hati-native-north-star) "original BML/BMF/Form compiler"))
-            (score-bool (str-contains? (bml-hati-native-floor) "never silently"))
-            (score-bool (str-contains? (bml-hati-native-next-step) "unsupported BML-to-Hati lowering"))
+            (score-bool (str-contains? (bml-hati-native-floor) "lexical const/name binding"))
+            (score-bool (str-contains? (bml-hati-native-next-step) "method parameter and call binding"))
             (score-bool (bml-hati-image-supported? supported-image))
             (score-int (len (bml-hati-image-unsupported supported-image)) 0)
             (score-bool (not (str-contains? supported-table "BML-HATI-UNSUPPORTED")))
