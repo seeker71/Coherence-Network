@@ -18,17 +18,17 @@
 # file only when its source moves outside the walker's op families.
 #
 # The standing walls (what keeps a band out today, by blocked-band count):
-#   remaining node/substrate family — bp, intern_node, node_value, node
-#     category/children/type (the content-addressed lattice as program
-#     vocabulary; intern_trivial_int and node_eq now ride the fourth arm)
+#   remaining node/substrate family — bp table parity, field constructors,
+#     float NodeIDs, and deeper content-addressed lattice surfaces beyond the
+#     explicit make_nodeid/category/pkg/level/type/inst projection floor
 #   host io family        — read_file, write_file_text, file_mtime, scan_run
 #   higher-order calls    — foldl/map/filter with function arguments
 #     (wants defunctionalization: monomorphic copies per call site)
 #   multi-line output     — bands that print mid-walk (the walker answers
 #     one value through fk_pr)
 #
-# Current floor (2026-06-13 native metal/emit admission): full
-# `cd form && ./validate.sh` reaches 134 four-way bands and 555 total passing
+# Current floor (2026-06-14 substrate node admission): full
+# `cd form && ./validate.sh` reaches 136 four-way bands and 556 total passing
 # workloads, with 0 residual divergent bands. BranchOutcome carries
 # ok/reject/condition results and learnable rejected evidence through the
 # fourth arm; the BML protocol/capability and runtime-choice rows ride the
@@ -38,9 +38,11 @@
 # round/ceil/exp/log through tags 87..90, and the tensor emitter-as-recipe rides
 # the manifest floor at 7. Native target/metal emit rows now carry Hati target
 # coordinates, human-readable asm emission, Mach-O shape, native CLI emit, and
-# generic metal emit through the fourth arm. North star: every stdlib band is
-# either listed here and validated four-way, or its 3-kernel-only blocker is
-# explicitly named in commit evidence; suite-level residuals stay at zero while
+# generic metal emit through the fourth arm. Schema/tree-diff now carry explicit
+# NodeID construction/projection plus lexical top-level constant capture across
+# source modules through the fourth arm. North star: every stdlib band is either
+# listed here and validated four-way, or its 3-kernel-only blocker is explicitly
+# named in commit evidence; suite-level residuals stay at zero while
 # source-section bands move toward fourth-arm eligibility.
 learning-trend fkc 127
 cooldown fkc 63
@@ -162,6 +164,7 @@ predictor-sampling fks 127
 rate-limit fks 6
 sanskrit-roots fks 111111
 satsang fks 127
+schema fks 10
 sha256 fks 2
 shamballa-codes fks 11111
 shamballa-light-codes fks 111111
@@ -171,6 +174,7 @@ string-membership fks 9
 theme-resonance fks 111111
 trust-decay fks 127
 trust-weighted-colearning fks 127
+tree-diff fks 13
 turn-taking fks 127
 ulid fks 4
 witness-theorem fks 31
