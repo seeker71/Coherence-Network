@@ -1,0 +1,103 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/channel-loopback-20260613",
+  "commit_scope": "Add a Form-native channel loopback planner so cells can declare teacher/student feedback lanes plus resource expression floors, north stars, codecs, native protocols, capabilities, and fidelity signals.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "form-os-tool-surface",
+    "hati-os",
+    "host-kernel-resource-lanes"
+  ],
+  "spec_ids": [
+    "tool-channel",
+    "channel-loopback",
+    "modality-as-recipe"
+  ],
+  "task_ids": [
+    "channel-loopback-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "constraints"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/channel-loopback.fk",
+    "form/form-stdlib/tests/channel-loopback-band.fk",
+    "docs/coherence-substrate/channel-loopback.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-13_channel_loopback.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/form-stdlib/channel-loopback.fk",
+    "form/form-stdlib/tests/channel-loopback-band.fk",
+    "docs/coherence-substrate/channel-loopback.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-13_channel_loopback.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "form/form-stdlib/channel-loopback.fk",
+    "form/form-stdlib/tests/channel-loopback-band.fk",
+    "docs/coherence-substrate/channel-loopback.form"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "python3 scripts/wellness_check.py",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tool-channel.fk form-stdlib/channel-loopback.fk form-stdlib/tests/channel-loopback-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_channel_loopback.json"
+    ],
+    "notes": "Form proof passed with channel-loopback-band verdict 255 across Go/Rust/TS kernels; evidence validation passed in this branch."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No public deploy behavior changes."
+  },
+  "phase_gate": {
+    "phase": "channel-loopback",
+    "gate": "Cells can plan loopback teaching lanes and resource expression ladders over codecs and native protocols with explicit capabilities and fidelity receipts.",
+    "state": "local-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Use physical lane samples as receipts for loopback learning once native executor cells consume these plans directly."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Form recipes can discover resource floors, north stars, and reciprocal or cross-modal cell teaching lanes.",
+    "public_endpoints": [
+      "local:form-stdlib-channel-loopback"
+    ],
+    "test_flows": [
+      "TTS to STT lowers to an audio sample stream loopback plan.",
+      "STT to TTS lowers to a token call loopback plan.",
+      "Video generation to classification lowers to a frame stream loopback plan.",
+      "Video classification to generation lowers to a feature vector call loopback plan.",
+      "Resource rows declare the floor, north star, and next receipt for each channel family.",
+      "Wrong capabilities return loopback/no-plan."
+    ],
+    "summary": "Local Form validation passed: resource expression rows, reciprocal loopbacks, cross-modal video loopbacks, language forms, and capability refusal all proved in channel-loopback-band -> 255."
+  }
+}
