@@ -13,10 +13,11 @@
     "This surface does not execute host processes, read files, send HTTP, or call routes.")
 
   (floor
-    "The catalog and grammar surface plan explicit tool/channel invocations with protocol, provider, capability, operation, projection, input, output, and refusal witnesses.")
+    "The catalog and grammar surface plan explicit tool/channel invocations with protocol, provider, capability, operation, projection, input, output, and refusal witnesses."
+    "GPU, DSP, and MLX/equivalent accelerator lanes are present as capability-gated planning rows before active native dispatch proof exists.")
 
   (north-star
-    "Every host OS call, external API, kernel call, route, stream, store, model, sensor, audio/video surface, and shell applet is a constructible native protocol row with typed receipts, floor/north-star metadata, and no ambient host access.")
+    "Every host OS call, external API, kernel call, route, stream, store, mesh presence, model, sensor, audio/video surface, and shell applet is a constructible native protocol row with typed receipts, floor/north-star metadata, and no ambient host access.")
     "Host OS data such as process tables and utilization samples moves through direct host OS/kernel calls as the destination; command-carried receipts stay labeled as floor carriers.")
 
   (protocols
@@ -24,9 +25,13 @@
     (host:process (provider host)   (capability cap.host.process) (native 1) (effect process-table))
     (host:usage   (provider host)   (capability cap.host.usage)   (native 1) (effect resource-usage))
     (host:file    (provider host)   (capability cap.host.file)    (native 0) (effect filesystem))
+    (gpu:compute  (provider accelerator) (capability cap.compute.gpu) (native 1) (effect parallel-compute))
+    (dsp:signal   (provider accelerator) (capability cap.compute.dsp) (native 1) (effect signal-kernel))
+    (mlx:array    (provider accelerator) (capability cap.compute.mlx) (native 1) (effect apple-array-compute))
     (http:request (provider http)   (capability cap.http.request) (native 1) (effect network))
     (kernel:call  (provider kernel) (capability cap.kernel.call)  (native 1) (effect call))
     (kernel:route (provider kernel) (capability cap.kernel.route) (native 1) (effect route))
+    (hati.mesh:presence (provider mesh) (capability cap.mesh.presence) (native 1) (effect organ-presence))
     (stream:read  (provider stream) (capability cap.stream.read)  (native 1) (effect stream))
     (store:query  (provider store)  (capability cap.store.query)  (native 1) (effect store)))
 
@@ -35,20 +40,27 @@
     (process host:process cap.host.process)
     (usage   host:usage   cap.host.usage)
     (file   host:file    cap.host.file)
+    (gpu    gpu:compute  cap.compute.gpu)
+    (dsp    dsp:signal   cap.compute.dsp)
+    (mlx    mlx:array    cap.compute.mlx)
     (http   http:request cap.http.request)
     (kernel kernel:call  cap.kernel.call)
     (route  kernel:route cap.kernel.route)
+    (mesh   hati.mesh:presence cap.mesh.presence)
     (stream stream:read  cap.stream.read)
     (store  store:query  cap.store.query))
 
   (options
-    (protocol-tools exec processes usage file http call route stream query)
+    (protocol-tools exec processes usage file gpu-kernel dsp-kernel mlx-kernel http call route announce-organ stream query)
     (shell-applets grep find awk fields group xpath xmlpath)
     (catalog-tools words providers queries which plan))
 
   (applets
     (processes host:process cap.host.process process-snapshot)
     (usage     host:usage   cap.host.usage   usage-sample)
+    (gpu-kernel gpu:compute cap.compute.gpu dispatch)
+    (dsp-kernel dsp:signal cap.compute.dsp dispatch)
+    (mlx-kernel mlx:array cap.compute.mlx dispatch)
     (grep    stream:read cap.stream.read grep)
     (find    host:file   cap.host.file   find)
     (awk     stream:read cap.stream.read awk)

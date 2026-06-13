@@ -1,0 +1,58 @@
+; preludes: form-stdlib/core.fk form-stdlib/hati-mesh.fk
+;
+; hati-mesh-band - sensing-organ identity and channel offer proof.
+; Verdict 255 when organ kinds, capabilities, identity floor, and channel
+; flow rows are discoverable.
+
+(do
+    (let c0 (if (eq (len (hm-organ-kinds)) 6)
+                (if (eq (len (hm-capabilities)) 8)
+                    (if (eq (len (hm-resource-lanes)) 14) 1 0)
+                    0)
+                0))
+
+    (let presence (head (hm-capabilities)))
+    (let c1 (if (str_eq (hm-capability-name presence) "cap.mesh.presence")
+                (if (str_eq (hm-capability-protocol presence) "hati.mesh:presence") 2 0)
+                0))
+
+    (let android-id (hm-identity "hati-organ-android-a1" "android-phone" (hm-unbound-steward) "stable-install-id" "signed self-sovereign mobile organ"))
+    (let c2 (if (str_eq (hm-identity-kind android-id) "android-phone")
+                (if (eq (hm-identity-explicit? android-id) 0) 4 0)
+                0))
+
+    (let sensor-offer (hm-offer-channel "hati-organ-android-a1" "hati-organ-macos-b1" "sensor:signal" "offer:observe-sensor-field" "cap.sensor.read" "json" 1 320))
+    (let c3 (if (str_eq (hm-channel-status sensor-offer) "offered")
+                (if (str_eq (hm-channel-capability sensor-offer) "cap.sensor.read") 8 0)
+                0))
+
+    (let screen-open (hm-open-channel "hati-organ-android-a1" "human:screen" "screen:write" "offer:show-channel-state" "cap.screen.write" "native-ui" 30 4096))
+    (let c4 (if (str_eq (hm-channel-protocol screen-open) "screen:write")
+                (if (eq (hm-channel-sample-rate screen-open) 30) 16 0)
+                0))
+
+    (let audio-offer (hm-offer-channel "hati-organ-android-a1" "human:voice" "audio:pcm16" "offer:listen-speak" "cap.audio.sample" "pcm16" 0 0))
+    (let video-offer (hm-offer-channel "hati-organ-android-a1" "human:camera" "video:rgba-time" "offer:see-be-seen" "cap.video.frame" "rgba" 0 0))
+    (let c5 (if (str_eq (hm-channel-protocol audio-offer) "audio:pcm16")
+                (if (str_eq (hm-channel-protocol video-offer) "video:rgba-time") 32 0)
+                0))
+
+    (let gpu-lane (nth (hm-resource-lanes) 10))
+    (let dsp-lane (nth (hm-resource-lanes) 11))
+    (let mlx-lane (nth (hm-resource-lanes) 12))
+    (let c6 (if (str_eq (hm-resource-lane-name gpu-lane) "gpu")
+                (if (str_eq (hm-resource-lane-floor gpu-lane) "cataloged-no-active-sample")
+                    (if (str_eq (hm-resource-lane-name dsp-lane) "dsp")
+                        (if (str_eq (hm-resource-lane-name mlx-lane) "mlx") 64 0)
+                        0)
+                    0)
+                0))
+
+    (let beat (hm-heartbeat "hati-organ-android-a1" 1 (list "sensor:signal") 1 320))
+    (let c7 (if (str_eq (hm-heartbeat-organ-id beat) "hati-organ-android-a1")
+                (if (eq (hm-heartbeat-listening beat) 1)
+                    (if (eq (hm-heartbeat-bytes-per-second beat) 320) 128 0)
+                    0)
+                0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 c7))))))))

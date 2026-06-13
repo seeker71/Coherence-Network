@@ -1,0 +1,102 @@
+; hati-mesh.fk - sensing-organ identity, presence, and channel offers.
+;
+; This surface names the mesh contract shared by Android apps, host binaries,
+; agents, cameras, microphones, speakers, screens, and other sensing organs.
+; It plans/records identity and channel offers only; media capture, playback,
+; and transport are separate capability-gated lane executions.
+
+(do
+    (defn hm-organ-kind (name floor north-star)
+        (list name floor north-star))
+    (defn hm-organ-kind-name (row) (nth row 0))
+    (defn hm-organ-kind-floor (row) (nth row 1))
+    (defn hm-organ-kind-north-star (row) (nth row 2))
+
+    (defn hm-organ-kinds ()
+        (list
+            (hm-organ-kind "android-phone" "stable-install-id" "signed self-sovereign mobile organ")
+            (hm-organ-kind "macos-binary" "process-local binary id" "signed host-kernel organ")
+            (hm-organ-kind "camera" "device-local id" "signed video organ")
+            (hm-organ-kind "microphone" "device-local id" "signed audio input organ")
+            (hm-organ-kind "speaker" "device-local id" "signed audio output organ")
+            (hm-organ-kind "agent" "agent session id" "durable agent cell identity")))
+
+    (defn hm-capability (name protocol codec active-floor north-star)
+        (list name protocol codec active-floor north-star))
+    (defn hm-capability-name (row) (nth row 0))
+    (defn hm-capability-protocol (row) (nth row 1))
+    (defn hm-capability-codec (row) (nth row 2))
+    (defn hm-capability-active-floor (row) (nth row 3))
+    (defn hm-capability-north-star (row) (nth row 4))
+
+    (defn hm-capabilities ()
+        (list
+            (hm-capability "cap.mesh.presence" "hati.mesh:presence" "json" "announce receipt" "signed organ presence")
+            (hm-capability "cap.sensor.read" "sensor:signal" "json" "Android SensorManager samples" "typed sensor stream")
+            (hm-capability "cap.video.frame" "video:rgba-time" "rgba/video" "permissioned offer" "camera/screen frame stream")
+            (hm-capability "cap.audio.sample" "audio:pcm16" "pcm16" "permissioned offer" "mic/speaker PCM stream")
+            (hm-capability "cap.screen.write" "screen:write" "native-ui" "Android screen UI" "bidirectional visual channel")
+            (hm-capability "cap.compute.gpu" "gpu:compute" "tensor/buffer" "cataloged no active sample" "native GPU compute and pressure receipts")
+            (hm-capability "cap.compute.dsp" "dsp:signal" "signal-buffer" "cataloged no active sample" "native DSP/NPU signal receipts")
+            (hm-capability "cap.compute.mlx" "mlx:array" "mlx-array" "cataloged no active sample" "native MLX execution receipts where supported")))
+
+    (defn hm-resource-lane (name protocol floor north-star)
+        (list name protocol floor north-star))
+    (defn hm-resource-lane-name (row) (nth row 0))
+    (defn hm-resource-lane-protocol (row) (nth row 1))
+    (defn hm-resource-lane-floor (row) (nth row 2))
+    (defn hm-resource-lane-north-star (row) (nth row 3))
+    (defn hm-resource-lanes ()
+        (list
+            (hm-resource-lane "motion" "sensor:signal" "accelerometer/gyroscope SensorManager samples" "typed motion stream with calibration receipt")
+            (hm-resource-lane "gps" "sensor:signal" "permission state and last-known location when granted" "typed live GNSS stream with consent receipt")
+            (hm-resource-lane "mic" "audio:pcm16" "permission state and offered channel" "active PCM capture with sample receipt")
+            (hm-resource-lane "speaker" "audio:pcm16" "offered output channel" "active PCM playback with output receipt")
+            (hm-resource-lane "camera" "video:rgba-time" "permission state and offered channel" "active camera frame stream")
+            (hm-resource-lane "screen" "screen:write" "dashboard and QR identity offer" "bidirectional visual offer/read channel")
+            (hm-resource-lane "disk" "host:usage" "StatFs free/total sample" "typed disk pressure stream")
+            (hm-resource-lane "network" "host:usage" "TrafficStats byte counters" "typed per-channel network pressure stream")
+            (hm-resource-lane "cpu" "host:usage" "available processor count" "typed CPU pressure stream")
+            (hm-resource-lane "ram" "host:usage" "Runtime memory sample" "typed memory pressure stream")
+            (hm-resource-lane "gpu" "gpu:compute" "cataloged-no-active-sample" "typed GPU dispatch and pressure stream")
+            (hm-resource-lane "dsp" "dsp:signal" "cataloged-no-active-sample" "typed DSP/NPU signal stream")
+            (hm-resource-lane "mlx" "mlx:array" "cataloged-no-active-sample" "typed MLX array execution stream on supported hosts")
+            (hm-resource-lane "inner-cells" "kernel:call" "created/updated/freed app counters" "kernel-native cell allocation counters")))
+
+    (defn hm-channel (from-organ to-organ protocol interface capability codec status sample-rate bytes-per-second)
+        (list from-organ to-organ protocol interface capability codec status sample-rate bytes-per-second))
+    (defn hm-channel-from (row) (nth row 0))
+    (defn hm-channel-to (row) (nth row 1))
+    (defn hm-channel-protocol (row) (nth row 2))
+    (defn hm-channel-interface (row) (nth row 3))
+    (defn hm-channel-capability (row) (nth row 4))
+    (defn hm-channel-codec (row) (nth row 5))
+    (defn hm-channel-status (row) (nth row 6))
+    (defn hm-channel-sample-rate (row) (nth row 7))
+    (defn hm-channel-bytes-per-second (row) (nth row 8))
+
+    (defn hm-heartbeat (organ-id listening active-channels sample-rate bytes-per-second)
+        (list organ-id listening active-channels sample-rate bytes-per-second))
+    (defn hm-heartbeat-organ-id (row) (nth row 0))
+    (defn hm-heartbeat-listening (row) (nth row 1))
+    (defn hm-heartbeat-active-channels (row) (nth row 2))
+    (defn hm-heartbeat-sample-rate (row) (nth row 3))
+    (defn hm-heartbeat-bytes-per-second (row) (nth row 4))
+
+    (defn hm-offer-channel (from-organ to-organ protocol interface capability codec sample-rate bytes-per-second)
+        (hm-channel from-organ to-organ protocol interface capability codec "offered" sample-rate bytes-per-second))
+    (defn hm-open-channel (from-organ to-organ protocol interface capability codec sample-rate bytes-per-second)
+        (hm-channel from-organ to-organ protocol interface capability codec "open" sample-rate bytes-per-second))
+
+    (defn hm-identity (organ-id organ-kind steward-cell identity-floor identity-north-star)
+        (list organ-id organ-kind steward-cell identity-floor identity-north-star))
+    (defn hm-identity-organ-id (row) (nth row 0))
+    (defn hm-identity-kind (row) (nth row 1))
+    (defn hm-identity-steward (row) (nth row 2))
+    (defn hm-identity-floor (row) (nth row 3))
+    (defn hm-identity-north-star (row) (nth row 4))
+    (defn hm-unbound-steward () "unbound")
+    (defn hm-identity-explicit? (row)
+        (if (str_eq (hm-identity-steward row) (hm-unbound-steward)) 0 1))
+
+    0)
