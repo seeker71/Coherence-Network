@@ -1,0 +1,67 @@
+# hati-os-targets.form - host OS implementations and binary distribution
+
+(hati-os-targets
+  (lineage
+    (rests-on hati-os.form tool-channel.form fourth-kernel-physical-lanes.form)
+    (recipe form/form-stdlib/hati-os-targets.fk)
+    (proof form/form-stdlib/tests/hati-os-targets-band.fk -> 255))
+
+  (purpose
+    "Each fourth-kernel sibling keeps one Form semantics surface and a target-specific host implementation layer."
+    "Cells and recipes can discover which host OS target carries a protocol, which capability it requires, and where its native binary is published.")
+
+  (floor
+    "macOS arm64 and Android arm64 have target rows, implementation rows for process, utilization, audio, video, and sensor lanes, and hati.earth download coordinates.")
+
+  (north-star
+    "Every Hati-OS host target publishes signed native binaries, checksums, source-map/provenance receipts, and per-lane physical proof receipts from hati.earth.")
+
+  (targets
+    (macos-arm64
+      (os macos)
+      (arch arm64)
+      (binary-format mach-o)
+      (package tar.zst)
+      (launcher hati-os))
+    (android-arm64
+      (os android)
+      (arch arm64)
+      (binary-format elf)
+      (package apk+tar.zst)
+      (launcher hati-os.apk)))
+
+  (implementations
+    (macos-arm64
+      (host:process cap.host.process libproc+sysctl+proc_pidinfo)
+      (host:usage cap.host.usage host_statistics64+task_info+getifaddrs+IOKit)
+      (audio:pcm16 cap.audio.sample CoreAudio+AVFoundation)
+      (video:rgba-time cap.video.frame ScreenCaptureKit+AVFoundation)
+      (sensor:signal cap.sensor.read CoreMotion+CoreLocation-when-present))
+    (android-arm64
+      (host:process cap.host.process procfs+ActivityManager-permission-gated)
+      (host:usage cap.host.usage procfs+BatteryManager+Debug+SensorManager)
+      (audio:pcm16 cap.audio.sample AAudio+AudioRecord+AudioTrack)
+      (video:rgba-time cap.video.frame Camera2+MediaProjection-permission-gated)
+      (sensor:signal cap.sensor.read SensorManager+LocationManager+GNSS-permission-gated)))
+
+  (distribution
+    (door https://hati.earth)
+    (macos-arm64
+      (kind native-binary)
+      (url https://hati.earth/downloads/hati-os/macos/arm64/hati-os-macos-arm64.tar.zst)
+      (checksum sha256))
+    (android-arm64
+      (kind native-binary)
+      (url https://hati.earth/downloads/hati-os/android/arm64/hati-os-android-arm64.apk)
+      (checksum sha256)))
+
+  (release-contract
+    (binary-per-target)
+    (checksum-per-binary)
+    (source-map-per-binary)
+    (physical-lane-receipts-per-target)
+    (os-refusals-recorded-as-data)
+    (download-door hati.earth))
+
+  (next
+    "Wire the release build to publish the macOS tarball and Android APK at the catalog URLs, with sha256 files and physical-lane summary JSON beside each binary."))
