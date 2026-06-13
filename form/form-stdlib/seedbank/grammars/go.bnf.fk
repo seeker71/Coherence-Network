@@ -45,33 +45,6 @@
     ;; Universal Blueprints
     ;; ──────────────────────────────────────────────────────────────────
 
-    (let GO-BNF-MODULE   (bp "GO-BNF-MODULE"))
-    (let GO-BNF-PACKAGE  (bp "GO-BNF-PACKAGE"))
-    (let GO-BNF-IMPORT   (bp "GO-BNF-IMPORT"))
-    (let GO-BNF-FUNC     (bp "GO-BNF-FUNC"))
-    (let GO-BNF-TYPE     (bp "GO-BNF-TYPE"))
-    (let GO-BNF-VAR      (bp "GO-BNF-VAR"))
-    (let GO-BNF-CONST    (bp "GO-BNF-CONST"))
-    (let GO-BNF-BLOCK    (bp "GO-BNF-BLOCK"))
-    (let GO-BNF-RETURN   (bp "GO-BNF-RETURN"))
-    (let GO-BNF-IF       (bp "GO-BNF-IF"))
-    (let GO-BNF-ASSIGN   (bp "GO-BNF-ASSIGN"))
-    (let GO-BNF-EXPR-STMT (bp "GO-BNF-EXPR-STMT"))
-    (let GO-BNF-IDENT-EXPR (bp "GO-BNF-IDENT-EXPR"))
-    (let GO-BNF-INT-EXPR (bp "GO-BNF-INT-EXPR"))
-    (let GO-BNF-STR-EXPR (bp "GO-BNF-STR-EXPR"))
-    (let GO-BNF-STRUCT-TYPE (bp "GO-BNF-STRUCT-TYPE"))
-    (let GO-BNF-BIN-EXPR (bp "GO-BNF-BIN-EXPR"))
-    (let GO-BNF-UNARY-EXPR (bp "GO-BNF-UNARY-EXPR"))
-    (let GO-BNF-PAREN-EXPR (bp "GO-BNF-PAREN-EXPR"))
-    (let GO-BNF-PARAM      (bp "GO-BNF-PARAM"))
-    (let GO-BNF-CALL       (bp "GO-BNF-CALL"))
-    (let GO-BNF-SELECTOR   (bp "GO-BNF-SELECTOR"))
-    (let GO-BNF-FOR        (bp "GO-BNF-FOR"))
-    (let GO-BNF-FIELD      (bp "GO-BNF-FIELD"))
-    (let GO-BNF-SHORT-VAR  (bp "GO-BNF-SHORT-VAR"))
-    (let GO-BNF-SWITCH     (bp "GO-BNF-SWITCH"))
-    (let GO-BNF-CASE       (bp "GO-BNF-CASE"))
 
     (defn go-bnf-emit-short-var (caps)
         (intern_node GO-BNF-SHORT-VAR
@@ -86,7 +59,6 @@
         (intern_node GO-BNF-CASE
                       (list (cap-get caps "val"))))
 
-    (let GO-BNF-COMPOSITE (bp "GO-BNF-COMPOSITE"))
     (defn go-bnf-emit-composite (caps)
         ;; Type{}: empty composite literal — type-name as identity
         (intern_node GO-BNF-COMPOSITE
@@ -276,16 +248,6 @@
     ;; Universal Blueprints — kernel walk_recipe evaluates these natively.
     ;; Same shape Python landed in breath 15: per-tongue grammar emits
     ;; universal Recipes, the form runtime executes them.
-    (let GO-UNIV-MATH-PLUS  (bp "add"))
-    (let GO-UNIV-MATH-MINUS (bp "sub"))
-    (let GO-UNIV-MATH-MUL   (bp "mul"))
-    (let GO-UNIV-MATH-DIV   (bp "div"))
-    (let GO-UNIV-CMP-EQ     (bp "eq"))
-    (let GO-UNIV-CMP-NEQ    (bp "ne"))
-    (let GO-UNIV-CMP-LT     (bp "lt"))
-    (let GO-UNIV-CMP-LE     (bp "le"))
-    (let GO-UNIV-CMP-GT     (bp "gt"))
-    (let GO-UNIV-CMP-GE     (bp "ge"))
 
     (defn go-bnf-op-to-blueprint (op)
         (if (str_eq op "+") GO-UNIV-MATH-PLUS

@@ -1,6 +1,6 @@
 ; tests/grammar-bnf-tags.fk — exercise BMF-style Tag captures
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk
+; preludes: form-stdlib/engine.fk form-stdlib/seedbank/grammar-bnf.fk form-stdlib/seedbank/blueprint-symbol-sections.fk
 ;
 ; BMF's Tag container (docs/field/urs/artifacts/master-thesis-2000/
 ; companion/source-samples/BMF-includes.bml line 19) wraps a sub-rule

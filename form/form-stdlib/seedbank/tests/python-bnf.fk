@@ -1,7 +1,7 @@
 ; tests/python-bnf.fk — exercise python.bnf.fk's BNF-driven Python
 ; parser on the native kernel.
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/python.bnf.fk
+; preludes: form-stdlib/engine.fk form-stdlib/seedbank/grammar-bnf.fk form-stdlib/seedbank/blueprint-symbol-sections.fk form-stdlib/seedbank/grammars/python.bnf.fk
 ;
 ; With multi-statement support (`module ::= statement+`), the parser
 ; wraps every parse in a PY-BNF-MODULE root whose children are the

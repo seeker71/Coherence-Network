@@ -5106,6 +5106,58 @@ function serializeNode(k: Kernel, nid: NodeID, out: number[]): void {
   pushU32(out, nid.inst);
 }
 
+interface FormBinaryStringTable {
+  strings: string[];
+  indexes: Map<number, number>;
+}
+
+function collectArtifactStrings(k: Kernel, nid: NodeID, table: FormBinaryStringTable): void {
+  const recipe = k.recipeAt(nid);
+  if (recipe) {
+    collectArtifactStrings(k, recipe.category, table);
+    for (const child of recipe.children) collectArtifactStrings(k, child, table);
+    return;
+  }
+  if (nid.level === Level.TRIVIAL && nid.type === Triv.STRING && !table.indexes.has(nid.inst)) {
+    const value = k.strs[nid.inst];
+    if (value === undefined) throw new Error(`form binary: bad string index ${nid.inst}`);
+    table.indexes.set(nid.inst, table.strings.length);
+    table.strings.push(value);
+  }
+}
+
+function serializeNodeWithStrings(k: Kernel, nid: NodeID, out: number[], table: FormBinaryStringTable): void {
+  const recipe = k.recipeAt(nid);
+  if (recipe) {
+    pushU32(out, FORM_BINARY_COMPOSITE);
+    serializeNodeWithStrings(k, recipe.category, out, table);
+    pushU32(out, recipe.children.length);
+    for (const child of recipe.children) serializeNodeWithStrings(k, child, out, table);
+    return;
+  }
+  if (nid.level === Level.TRIVIAL && nid.type === Triv.FLOAT64) {
+    pushU32(out, FORM_BINARY_FLOAT64);
+    pushF64LE(out, k.decodeFloat64(nid.inst));
+    return;
+  }
+  if (nid.level === Level.TRIVIAL && nid.type === Triv.INT64) {
+    pushU32(out, FORM_BINARY_INT64);
+    pushI64LE(out, k.decodeInt64(nid.inst));
+    return;
+  }
+  pushU32(out, FORM_BINARY_LEAF);
+  pushU32(out, nid.pkg);
+  pushU32(out, nid.level);
+  pushU32(out, nid.type);
+  if (nid.level === Level.TRIVIAL && nid.type === Triv.STRING) {
+    const local = table.indexes.get(nid.inst);
+    if (local === undefined) throw new Error(`form binary: missing local string index ${nid.inst}`);
+    pushU32(out, local);
+  } else {
+    pushU32(out, nid.inst);
+  }
+}
+
 function deserializeRawNode(k: Kernel, bytes: Uint8Array, pos: number, scope: number): [NodeID, number] {
   let tag: number;
   [tag, pos] = readU32(bytes, pos);
@@ -5236,14 +5288,16 @@ function readBinaryString(strings: readonly string[], index: number): string {
 }
 
 export function serializeRecipeArtifact(k: Kernel, root: NodeID): Buffer {
+  const table: FormBinaryStringTable = { strings: [], indexes: new Map() };
+  collectArtifactStrings(k, root, table);
   const out: number[] = Array.from(FORM_BINARY_MAGIC);
-  pushU32(out, k.strs.length);
-  for (const s of k.strs) {
+  pushU32(out, table.strings.length);
+  for (const s of table.strings) {
     const encoded = Buffer.from(s, "utf8");
     pushU32(out, encoded.length);
     for (const byte of encoded) out.push(byte);
   }
-  serializeNode(k, root, out);
+  serializeNodeWithStrings(k, root, out, table);
   return Buffer.from(out);
 }
 

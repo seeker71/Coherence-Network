@@ -33,15 +33,6 @@
     ;; Substrate Blueprints for the emitted Recipes
     ;; ──────────────────────────────────────────────────────────────────
 
-    (let PYC-MODULE       (bp "PYC-MODULE"))
-    (let PYC-IMPORT       (bp "PYC-IMPORT"))   ; (module, name)
-    (let PYC-FROM-IMPORT  (bp "PYC-FROM-IMPORT"))
-    (let PYC-DEF          (bp "PYC-DEF"))   ; (name)
-    (let PYC-CLASS        (bp "PYC-CLASS"))   ; (name)
-    (let PYC-DOCSTRING    (bp "PYC-DOCSTRING"))   ; (text)
-    (let PYC-NAME-LIST    (bp "PYC-NAME-LIST"))   ; list of name strings
-    (let PYC-DEF-FULL     (bp "PYC-DEF-FULL"))   ; (name, params, ret-type)
-    (let PYC-PARAM-LIST   (bp "PYC-PARAM-LIST"))   ; opaque text for now
 
     ;; ──────────────────────────────────────────────────────────────────
     ;; Character-class helpers (codepoints)

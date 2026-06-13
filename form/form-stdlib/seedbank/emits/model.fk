@@ -7,10 +7,6 @@
 ; gradient can flow through.
 
 (do
-    (let MDL-OBJ  (bp "MDL-OBJ"))
-    (let MDL-ARR  (bp "MDL-ARR"))
-    (let MDL-PAIR (bp "MDL-PAIR"))
-    (let MDL-NULL (bp "MDL-NULL"))
 
     (defn mdl-comma-join (xs)
         (if (nil? xs) ""

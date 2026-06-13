@@ -1,6 +1,6 @@
 ; tests/real-file-parse.fk — parse a structured Python sample
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/python-full.bnf.fk
+; preludes: form-stdlib/engine.fk form-stdlib/seedbank/grammar-bnf.fk form-stdlib/seedbank/blueprint-symbol-sections.fk form-stdlib/seedbank/grammars/python-full.bnf.fk
 ;
 ; Parses form-samples/test_module.py — a small real-shaped Python
 ; module with: imports, constant, two function definitions, multi-stmt

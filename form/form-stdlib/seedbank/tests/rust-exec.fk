@@ -1,6 +1,6 @@
 ; tests/rust-exec.fk — Rust EXECUTE pipeline proof
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/rust.bnf.fk form-stdlib/grammars/rust-exec.fk
+; preludes: form-stdlib/engine.fk form-stdlib/seedbank/grammar-bnf.fk form-stdlib/seedbank/blueprint-symbol-sections.fk form-stdlib/seedbank/grammars/rust.bnf.fk form-stdlib/seedbank/grammars/rust-exec.fk
 
 (do
     (let result (parse-rust-bnf "lib.rs" "use std;

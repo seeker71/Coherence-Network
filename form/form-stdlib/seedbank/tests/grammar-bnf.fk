@@ -1,7 +1,7 @@
 ; tests/grammar-bnf.fk — exercise the BNF grammar reader + recursive
 ; engine on the native kernel.
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk
+; preludes: form-stdlib/engine.fk form-stdlib/seedbank/grammar-bnf.fk form-stdlib/seedbank/blueprint-symbol-sections.fk
 ;
 ; Strategy: build the smallest BNF grammar that exercises every reader
 ; primitive (tokens block / rules block / postfix `*` and `?` / `|`

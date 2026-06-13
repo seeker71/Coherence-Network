@@ -10,10 +10,6 @@
 ; subsequent breaths via serialize-recipe + format-specific encoders.
 
 (do
-    (let AU-OBJ  (bp "AU-OBJ"))
-    (let AU-ARR  (bp "AU-ARR"))
-    (let AU-PAIR (bp "AU-PAIR"))
-    (let AU-NULL (bp "AU-NULL"))
 
     (defn au-cat (xs)
         (if (nil? xs) ""

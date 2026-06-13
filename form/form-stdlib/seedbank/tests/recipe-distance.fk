@@ -15,7 +15,7 @@
 ;
 ; The numbers print so the kernel trace shows the actual ladder.
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk form-stdlib/grammars/python-universal.bnf.fk form-stdlib/emit-engine.fk form-stdlib/emit.fk form-stdlib/emits/python.fk form-stdlib/emits/go.fk form-stdlib/recipe-distance.fk
+; preludes: form-stdlib/engine.fk form-stdlib/seedbank/grammar-bnf.fk form-stdlib/seedbank/blueprint-symbol-sections.fk form-stdlib/seedbank/grammars/python-universal.bnf.fk form-stdlib/emit-engine.fk form-stdlib/seedbank/emit.fk form-stdlib/seedbank/emits/python.fk form-stdlib/seedbank/emits/go.fk form-stdlib/seedbank/recipe-distance.fk
 
 (do
     (let NL "

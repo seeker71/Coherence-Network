@@ -1,6 +1,6 @@
 ; tests/bmf-cut-stop.fk — exercise the BMF primitives Cut, Stop, Nil
 ;
-; preludes: form-stdlib/engine.fk form-stdlib/grammar-bnf.fk
+; preludes: form-stdlib/engine.fk form-stdlib/seedbank/grammar-bnf.fk form-stdlib/seedbank/blueprint-symbol-sections.fk
 ;
 ; BMF (Urs Muff, 2000) introduced three primitives the body now honors:
 ;   • Cut (!)   — commits the surrounding choice frame; subsequent

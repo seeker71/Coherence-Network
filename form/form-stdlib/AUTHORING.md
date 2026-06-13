@@ -15,6 +15,26 @@ toolkit is a dozen recipes). A recipe that already lives wants your extension, n
 grep -rl "<the-thing>" form/form-stdlib/ docs/coherence-substrate/
 ```
 
+## Blueprint names live in symbol sections
+
+Do not put Blueprint-name string literals directly in executable stdlib logic.
+For seedbank grammar, parser, emitter, converter, and encoder code, add the
+binding to `form/form-stdlib/seedbank/blueprint-symbol-sections.fk`, load that
+file before the consumer, then reference the binding:
+
+```lisp
+; in blueprint-symbol-sections.fk
+(let JSON-OBJECT (bp "JSON-OBJECT"))
+
+; in executable code
+(intern_node JSON-OBJECT children)
+```
+
+This keeps cell/blueprint/recipe names externally swappable and prevents quiet
+compile failures when a name changes in one place. The scanner reports total,
+inline, and sectioned `(bp "NAME")` refs; a passing check means every name
+resolves, while the inline count is the remaining cleanup ratchet.
+
 ## The two files
 
 A **recipe** `form/form-stdlib/<name>.fk` — a series of `defn`s ending in literal `0`:
