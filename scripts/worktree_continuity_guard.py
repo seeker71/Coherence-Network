@@ -3,7 +3,7 @@
 
 Purpose:
 - prevent silent abandonment of in-flight work when prompts switch worktrees
-- fail fast when another worktree has risky uncommitted/unpushed state
+- surface sibling worktree state without treating sibling presence as a stop
 """
 
 from __future__ import annotations
@@ -32,7 +32,6 @@ class WorktreeRisk:
 
 
 BLOCKING_RISK_LABELS = {
-    "detached_head",
     "ahead_without_upstream",
 }
 
