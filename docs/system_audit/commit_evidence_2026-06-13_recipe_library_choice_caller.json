@@ -1,0 +1,105 @@
+{
+  "date": "2026-06-13",
+  "thread_branch": "codex/recipe-choice-callers-20260613",
+  "commit_scope": "Carry recipe-choice-runtime receipts into the host recipe-library viewer",
+  "files_owned": [
+    "scripts/view_recipe_library.py",
+    "api/tests/test_view_recipe_library_choice.py",
+    "docs/coherence-substrate/channel-protocol-choice-floor.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim recipe-choice-callers \"carry recipe-choice-runtime wrapper into real caller surface after PR #2998; avoid dynamic-choice and learning-fabric sibling lanes\"",
+      "python3 scripts/view_recipe_library.py --recipe cosine --tongue form --choice-receipt | python3 -m json.tool",
+      "python3 scripts/view_recipe_library.py --choice-receipt --recipe cosine",
+      "python3 -m py_compile scripts/view_recipe_library.py api/tests/test_view_recipe_library_choice.py",
+      "cd api && python3 -m pytest -q tests/test_view_recipe_library_choice.py -vv",
+      "python3 scripts/view_recipe_library.py --recipe cosine --tongue form --choice-receipt >/tmp/view-recipe-choice-receipt.json && python3 -m json.tool /tmp/view-recipe-choice-receipt.json >/tmp/view-recipe-choice-receipt.pretty && rg -n \"form-recipe-route-choice-runtime|form-recipe-choice-signature|bml-route-choice-runtime-signature|tree-render:form\" /tmp/view-recipe-choice-receipt.pretty",
+      "python3 scripts/view_recipe_library.py --list | sed -n '1,20p'",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/bml-source.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/channel-protocol-choice-floor.fk form-stdlib/tests/channel-protocol-choice-floor-band.fk",
+      "cd api && python3 -m ruff check ../scripts/view_recipe_library.py tests/test_view_recipe_library_choice.py",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git diff --check"
+    ],
+    "results": [
+      "view_recipe_library.py emits JSON with kind=form-recipe-route-choice-runtime and runtime=recipe-choice-runtime for --recipe cosine --tongue form --choice-receipt",
+      "stdout contains nested form-recipe-route-choice-runtime-signature, form-recipe-choice-signature, and bml-route-choice-runtime-signature rows; stderr is empty on success",
+      "missing --tongue returns rc=2 with parser stderr and no stdout",
+      "focused pytest passed 2 tests",
+      "default --list output remains unchanged in shape",
+      "channel-protocol-choice-floor-band remains four-way at 32767; fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent",
+      "ruff passed for the touched Python files",
+      "rebase onto origin/main reported branch up to date and reapplied autostash cleanly",
+      "local PR guard reported ready_for_push=True and local_preflight=pass",
+      "follow-through reported stale_codex_prs=0",
+      "diff whitespace check passed"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "reason": "Branch is not pushed yet in this slice."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "reason": "No deployment performed for this host CLI receipt slice."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local CLI and Form floor proofs pass. Remote PR checks and merge are pending."
+  },
+  "idea_ids": [
+    "channel-protocol-choice-as-first-class-form-bml",
+    "native-learning-recipe-library-routing-metadata"
+  ],
+  "spec_ids": [
+    "specs/canonical-route-registry-and-runtime-mapping.md",
+    "specs/bml-typed-recipes.md"
+  ],
+  "task_ids": [
+    "thread-recipe-choice-callers-20260613"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "north-star direction",
+        "continue request"
+      ]
+    },
+    {
+      "contributor_id": "codex-recipe-choice-callers",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "coordination"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "/tmp/view-recipe-choice-receipt.json",
+    "scripts/view_recipe_library.py",
+    "api/tests/test_view_recipe_library_choice.py",
+    "docs/coherence-substrate/channel-protocol-choice-floor.form"
+  ],
+  "change_files": [
+    "api/tests/test_view_recipe_library_choice.py",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/channel-protocol-choice-floor.form",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/view_recipe_library.py"
+  ],
+  "change_intent": "process_only"
+}
