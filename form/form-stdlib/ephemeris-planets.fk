@@ -24,9 +24,10 @@
 ;   (kepler-sun-longitude y m d)  -> the Sun via Earth's orbit (Earth helio λ + 180): the
 ;                                    cross-check against the independently-built ephemeris-sun
 ;
-; Proof: three-way (Go/Rust/TS). The fourth arm (fkwu) waits on the let-inlining re-walk fix —
-; planet-geo-lon reads two let-bound planet-helio-xy lists twice each, and fkwu's in-defn let
-; re-walk diverges there for some bodies. The recipe is correct; the three walkers agree.
+; Proof: four-way (Go/Rust/TS/fkwu). The fourth arm crosses after non-recursive
+; direct-call do-lets learned to snapshot once through per-function RAM windows:
+; planet-geo-lon reads two let-bound planet-helio-xy lists twice each without
+; re-walking either call.
 ;
 ; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/celestial-pole-channel.fk form-stdlib/trig.fk form-stdlib/ephemeris-sun.fk
 ;

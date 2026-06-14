@@ -53,7 +53,7 @@
 # record-blueprint rows among its focused four-way rows, and
 # android-mesh-learning now carries
 # active mic/camera/GPU sample rows at focused verdict 32767. The latest
-# completed full `cd form && ./validate.sh` on this branch reads 209
+# completed full `cd form && ./validate.sh` on this branch reads 210
 # four-way bands and 612 total passing workloads with 0 residual divergent
 # bands; refresh the full aggregate on a quiet host after focused release
 # rather than spending repeated validation cycles under shared-runner
@@ -348,6 +348,10 @@ substrate-core fks 11111
 # The next host-io carrier row is now admitted too: write_file_text rides fkwu
 # tag 104 with overwrite/truncate semantics, so text emitters no longer need to
 # materialize byte lists for the minimum fourth-arm write floor.
+# Pure call lets in non-recursive function bodies now snapshot through
+# per-function RAM windows, and the emitted fkwu RAM organ widened to 4096
+# cells. That lets list-returning pure calls be read more than once without
+# re-walking: ephemeris-planets now crosses four-way at 1111111.
 hostio-roundtrip fks 111
 do-effect-seq fks 2
 doc-xpath fks 10
@@ -355,6 +359,7 @@ concept-xpath fks 9
 dns fks 5
 session fks 9
 ephemeris-sun fks 1111111
+ephemeris-planets fks 1111111
 lenses fks 1111111
 ephemeris-moon fks 1111111
 ephemeris-nodes fks 111111
