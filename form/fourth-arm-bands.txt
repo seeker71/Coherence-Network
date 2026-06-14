@@ -19,9 +19,10 @@
 #
 # The standing walls (what keeps a band out today, by blocked-band count):
 #   remaining node/substrate family — generated bp table parity beyond the
-#     current literal registry floor, field constructors, float NodeIDs, and
-#     deeper content-addressed lattice surfaces beyond the explicit
-#     make_nodeid/category/pkg/level/type/inst projection floor
+#     current literal registry floor, the doc/concept/dns/symbol sibling
+#     constructors, field constructors, float NodeIDs, and deeper
+#     content-addressed lattice surfaces beyond the explicit make_nodeid,
+#     category/pkg/level/type/inst projection, and generic xpath floor
 #   host io family        — read_file, write_file_text, file_mtime, scan_run
 #   higher-order calls    — foldl/map/filter with function arguments
 #     (wants defunctionalization: monomorphic copies per call site)
@@ -29,12 +30,15 @@
 #     one value through fk_pr)
 #
 # Current floor (2026-06-14 guidance + Form-native executable floor): full
-# `cd form && ./validate.sh` reaches 174 four-way bands and 580 total passing
+# `cd form && ./validate.sh` reaches 179 four-way bands and 585 total passing
 # workloads, with 0 residual divergent bands. Literal bp registry aliases now
-# fold through make_nodeid for the audit-log, hex, token, url-encode, and uuid
-# rows. Token's blueprint reservation now lives inside its module body so fkwu
-# executes the recipe verdict, and its fixed positional accessors use direct
-# projections. Record field access now rides a
+# fold through make_nodeid for the audit-log, hex, token, url-encode, uuid,
+# and generic xpath rows. Token's blueprint reservation now lives inside its
+# module body so fkwu executes the recipe verdict, and its fixed positional
+# accessors use direct projections. Generic xpath now proves a registered
+# NodeID constructor/query floor for path-style substrate traversal while the
+# doc/concept/dns/symbol siblings remain named residuals. Record field access
+# now rides a
 # native fourth-arm record carrier: record_new lowers to a packed entry packet,
 # then fkwu tags 64/65/67/68/99 carry construction, get, has, record?, and keys
 # without aliasing ints, lists, nodes, or floats. BranchOutcome carries
@@ -244,6 +248,7 @@ hex fks 14
 token fks 3
 url-encode fks 16
 uuid fks 15
+xpath fks 9
 ephemeris-sun fks 1111111
 lenses fks 1111111
 ephemeris-moon fks 1111111
