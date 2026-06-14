@@ -1,0 +1,134 @@
+; ephemeris-planets.fk — the visible planets, placed natively by ONE Keplerian engine.
+;
+; The north star made literal: there is no per-planet code. A planet IS a row of orbital
+; elements (data); a single recipe solves Kepler's equation, lifts the body into the J2000
+; ecliptic, subtracts Earth's position, and reads the geocentric longitude as an atan2.
+; Mercury, Venus, Mars, Jupiter, Saturn (and Earth, the observer) all flow through the same
+; planet-helio-xy / planet-geo-lon — they differ only as data. Add a planet by adding a row.
+;
+; Elements are the attested JPL low-precision set (Standish, "Keplerian Elements for
+; Approximate Positions of the Major Planets", valid 1800–2050): for each body, the six
+; elements at J2000 and their rates per Julian century —
+;   a (au)  e  I(deg)  L(deg)  ϖ longitude-of-perihelion(deg)  Ω longitude-of-node(deg)
+; held as a 12-list (six values, then six rates). Earth's row is the Earth-Moon barycentre.
+;
+;   T          = (JD − 2451545)/36525           Julian centuries past J2000
+;   M          = L − ϖ                           mean anomaly  (then folded to ±180°)
+;   M = E − e*·sin E                              Kepler's equation (e* = (180/π)·e), Newton-solved
+;   x' = a(cos E − e),  y' = a√(1−e²) sin E       heliocentric, orbital plane
+;   (rotate by ω=ϖ−Ω, I, Ω) → heliocentric ecliptic (x,y)
+;   geocentric = planet − Earth;  λ = atan2(yg, xg)   ecliptic longitude in [0,360)
+;
+;   (mars-longitude y m d)        -> Mars's geocentric ecliptic longitude (float deg)
+;   (mars-sign-tropical y m d)    -> its zodiac sign (→ celestial-pole-channel reductions)
+;   (kepler-sun-longitude y m d)  -> the Sun via Earth's orbit (Earth helio λ + 180): the
+;                                    cross-check against the independently-built ephemeris-sun
+;
+; Proof: three-way (Go/Rust/TS). The fourth arm (fkwu) waits on the let-inlining re-walk fix —
+; planet-geo-lon reads two let-bound planet-helio-xy lists twice each, and fkwu's in-defn let
+; re-walk diverges there for some bodies. The recipe is correct; the three walkers agree.
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/celestial-pole-channel.fk form-stdlib/trig.fk form-stdlib/ephemeris-sun.fk
+;
+
+(do
+    ;; --- orbital element rows (data) — six elements, then six per-century rates --------
+    ;;                         a            e            I            L              ϖ            Ω
+    (defn mercury-elements () (list 0.38709927  0.20563593  7.00497902  252.25032350  77.45779628  48.33076593
+                                    0.00000037  0.00001906 -0.00594749  149472.67411175 0.16047689 -0.12534081))
+    (defn venus-elements ()   (list 0.72333566  0.00677672  3.39467605  181.97909950  131.60246718 76.67984255
+                                    0.00000390 -0.00004107 -0.00078890  58517.81538729  0.00268329 -0.27769418))
+    (defn earth-elements ()   (list 1.00000261  0.01671123 -0.00001531  100.46457166  102.93768193  0.0
+                                    0.00000562 -0.00004392 -0.01294668  35999.37244981  0.32327364  0.0))
+    (defn mars-elements ()    (list 1.52371034  0.09339410  1.84969142  -4.55343205  -23.94362959  49.55953891
+                                    0.00001847  0.00007882 -0.00813131  19140.30268499  0.44441088 -0.29257343))
+    (defn jupiter-elements () (list 5.20288700  0.04838624  1.30439695  34.39644051   14.72847983  100.47390909
+                                   -0.00011607 -0.00013253 -0.00183714  3034.74612775   0.21252668  0.20469106))
+    (defn saturn-elements ()  (list 9.53667594  0.05386179  2.48599187  49.95424423   92.59887831  113.66242448
+                                   -0.00125060 -0.00050991  0.00193609  1222.49362201  -0.41897216 -0.28867794))
+
+    ;; --- the engine ------------------------------------------------------------------
+    (defn planet-T (y m d) (div (mul (ephem-n y m d) 1.0) 36525.0))
+    (defn el-at (els i T) (add (nth els i) (mul (nth els (add i 6)) T)))    ; element + rate·T
+    (defn deg-norm180 (d) (sub d (mul 360.0 (round (div d 360.0)))))        ; fold to (−180,180]
+
+    ;; Kepler: solve E (deg) from M (deg), e — Newton, fixed iterations.
+    ;;   ΔE = (M − (E − e*·sin E)) / (1 − e·cos E),  e* = (180/π)·e
+    (defn kepler-iter (M e estar E n)
+      (if (eq n 0) E
+          (kepler-iter M e estar
+                       (add E (div (sub M (sub E (mul estar (fsin (deg2rad E)))))
+                                   (sub 1.0 (mul e (fcos (deg2rad E))))))
+                       (sub n 1))))
+    (defn kepler-E (M e)
+      (do (let estar (mul 57.29577951308232 e))
+          (kepler-iter M e estar (add M (mul estar (fsin (deg2rad M)))) 10)))
+
+    ;; heliocentric ecliptic (x,y), J2000 — returns a 2-list
+    (defn planet-helio-xy (els T)
+      (do
+        (let a  (el-at els 0 T))
+        (let e  (el-at els 1 T))
+        (let I  (el-at els 2 T))
+        (let L  (el-at els 3 T))
+        (let vp (el-at els 4 T))
+        (let om (el-at els 5 T))
+        (let w  (sub vp om))                          ; argument of perihelion (deg)
+        (let M  (deg-norm180 (sub L vp)))             ; mean anomaly (deg)
+        (let E  (kepler-E M e))
+        (let Er (deg2rad E))
+        (let xp (mul a (sub (fcos Er) e)))
+        (let yp (mul a (mul (fsqrt (sub 1.0 (mul e e))) (fsin Er))))
+        (let wr (deg2rad w)) (let Ir (deg2rad I)) (let Or (deg2rad om))
+        (let cw (fcos wr)) (let sw (fsin wr))
+        (let cO (fcos Or)) (let sO (fsin Or))
+        (let cI (fcos Ir))
+        (let xe (add (mul (sub (mul cw cO) (mul (mul sw sO) cI)) xp)
+                     (mul (sub (mul -1.0 (mul sw cO)) (mul (mul cw sO) cI)) yp)))
+        (let ye (add (mul (add (mul cw sO) (mul (mul sw cO) cI)) xp)
+                     (mul (add (mul -1.0 (mul sw sO)) (mul (mul cw cO) cI)) yp)))
+        (list xe ye)))
+
+    ;; geocentric ecliptic longitude (deg [0,360)): planet − Earth, then atan2
+    (defn planet-geo-lon (els T)
+      (do
+        (let p (planet-helio-xy els T))
+        (let g (planet-helio-xy (earth-elements) T))
+        (let xg (sub (head p) (head g)))
+        (let yg (sub (nth p 1) (nth g 1)))
+        (fnorm360 (mul (fatan2 yg xg) 57.29577951308232))))
+
+    (defn planet-longitude (els y m d) (planet-geo-lon els (planet-T y m d)))
+
+    ;; the Sun, via Earth's own orbit: Earth's heliocentric longitude + 180 — the
+    ;; independent witness that the engine agrees with ephemeris-sun.fk.
+    (defn kepler-sun-longitude (y m d)
+      (do (let g (planet-helio-xy (earth-elements) (planet-T y m d)))
+          (fnorm360 (add (mul (fatan2 (nth g 1) (head g)) 57.29577951308232) 180.0))))
+
+    ;; heliocentric distance r = a(1 − e·cos E) (au) — orbital geometry sanity
+    (defn planet-distance (els T)
+      (do (let a (el-at els 0 T)) (let e (el-at els 1 T))
+          (let M (deg-norm180 (sub (el-at els 3 T) (el-at els 4 T))))
+          (mul a (sub 1.0 (mul e (fcos (deg2rad (kepler-E M e))))))))
+
+    ;; --- named bodies: each is its element row through the one engine ----------------
+    (defn mercury-longitude (y m d) (planet-longitude (mercury-elements) y m d))
+    (defn venus-longitude (y m d)   (planet-longitude (venus-elements) y m d))
+    (defn mars-longitude (y m d)    (planet-longitude (mars-elements) y m d))
+    (defn jupiter-longitude (y m d) (planet-longitude (jupiter-elements) y m d))
+    (defn saturn-longitude (y m d)  (planet-longitude (saturn-elements) y m d))
+
+    (defn mars-sign-tropical (y m d)    (tropical-sign-of (mars-longitude y m d)))
+    (defn mars-sign-sidereal (y m d)    (sidereal-sign-of (mars-longitude y m d) (lahiri-ayanamsa-2000)))
+    (defn jupiter-sign-tropical (y m d) (tropical-sign-of (jupiter-longitude y m d)))
+    (defn saturn-sign-tropical (y m d)  (tropical-sign-of (saturn-longitude y m d)))
+
+    ;; angular difference on the circle (deg), 0..180
+    (defn abs-deg (d) (if (lt d 0.0) (mul -1.0 d) d))
+    (defn ang-diff (a b) (do (let d (abs-deg (sub a b))) (if (gt d 180.0) (sub 360.0 d) d)))
+    (defn lon-wf (lon) (if (ge lon 0.0) (if (lt lon 360.0) 1 0) 0))    ; longitude in [0,360)?
+
+    (defn ephemeris-planets-teaching () "lc-cross-modal-unity")
+
+    0)

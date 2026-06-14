@@ -1,0 +1,69 @@
+; tests/ephemeris-planets-band.fk — the Keplerian planet engine, proven native, four-way.
+;
+; The engine carries no external almanac value to assert; instead it proves itself against
+; physics and the body's own already-proven Sun. Two witnesses do the heavy lifting:
+;   · the SUN, computed through Earth's own orbit (Earth helio λ + 180), must agree with the
+;     independently-built ephemeris-sun.fk to within a degree, all the way around the year —
+;     that validates the full chain: Kepler solve → heliocentric coords → ecliptic rotation
+;     → atan2 → normalisation, on the one body whose answer we can check.
+;   · MARS at its documented 2003-08-28 opposition must sit ~180° from the Sun — opposition
+;     MEANS opposite the Sun, so this validates the geocentric subtraction (planet − Earth)
+;     for an outer body without asserting a fabricated longitude.
+; Angles compare as integer degrees (round); within-tolerance checks round the angular gap.
+;
+; Proof level: THREE-KERNEL (Go/Rust/TS), verdict 1111111. The fourth arm (fkwu) is a named
+; gap, not in the manifest: planet-geo-lon binds two planet-helio-xy list results and reads
+; each twice, and fkwu re-walks those let-bound calls (top-level band lets snapshot, but lets
+; inside a defn re-walk) — the deep re-walk diverges for some bodies (venus/mars at J2000 read
+; 0 where the three walkers agree, while mercury and the Earth-orbit Sun cross cleanly). The
+; recipe is correct — three independent kernels agree bit-for-bit — and this band is a clean
+; reproducer for the fkwu let-inlining re-walk fix; it crosses four-way once that lands.
+;
+; Verdict 1111111 (127) when every claim holds across Go/Rust/TS.
+;   Kepler inverts: solve E for (M=30,e=0.2), then E−e*·sinE = 30          → 1
+;   Sun via Earth's orbit = ephemeris-sun at spring equinox (≤1°)          → 10
+;   …and at the summer solstice (≤1°)                                      → 100
+;   …and at the autumn equinox AND winter solstice (≤1°)                   → 1000
+;   the engine's Sun lands in the same zodiac sign as ephemeris-sun        → 10000
+;   Mars at the 2003-08-28 opposition is ~180° from the Sun (≤5°)          → 100000
+;   all six bodies compute a well-formed longitude in [0,360)              → 1000000
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/celestial-pole-channel.fk form-stdlib/trig.fk form-stdlib/ephemeris-sun.fk form-stdlib/ephemeris-planets.fk
+;
+
+(do
+    ;; --- 1. Kepler's equation inverts: M → E → M --------------------------------------
+    (let E30 (kepler-E 30.0 0.2))
+    (let kep-ok (if (eq (round (sub E30 (mul (mul 57.29577951308232 0.2) (fsin (deg2rad E30))))) 30) 1 0))
+
+    ;; --- 2. the Sun through Earth's orbit = ephemeris-sun, spring equinox -------------
+    (let spring-ok (if (le (round (ang-diff (kepler-sun-longitude 2000 3 20) (sun-longitude 2000 3 20))) 1) 10 0))
+
+    ;; --- 3. …summer solstice ----------------------------------------------------------
+    (let summer-ok (if (le (round (ang-diff (kepler-sun-longitude 2000 6 21) (sun-longitude 2000 6 21))) 1) 100 0))
+
+    ;; --- 4. …autumn equinox AND winter solstice (the far half of the orbit) -----------
+    (let autumn-ok (le (round (ang-diff (kepler-sun-longitude 2000 9 22) (sun-longitude 2000 9 22))) 1))
+    (let winter-ok (le (round (ang-diff (kepler-sun-longitude 2000 12 21) (sun-longitude 2000 12 21))) 1))
+    (let far-ok (if autumn-ok (if winter-ok 1000 0) 0))
+
+    ;; --- 5. the engine's Sun lands in the same sign as ephemeris-sun ------------------
+    (let ks (tropical-sign-of (kepler-sun-longitude 2000 1 1)))
+    (let es (tropical-sign-of (sun-longitude 2000 1 1)))
+    (let sign-ok (if (eq ks es) (if (eq es 9) 10000 0) 0))
+
+    ;; --- 6. Mars at the 2003-08-28 opposition is ~180° from the Sun -------------------
+    ;; opposition ⇒ geocentric Mars and Sun are 180° apart; this exercises planet − Earth.
+    (let mars-opp (ang-diff (mars-longitude 2003 8 28) (fnorm360 (add (sun-longitude 2003 8 28) 180.0))))
+    (let opp-ok (if (le (round mars-opp) 5) 100000 0))
+
+    ;; --- 7. every body computes a well-formed longitude in [0,360) -------------------
+    (let wf-count (add (lon-wf (mercury-longitude 2000 1 1))
+                  (add (lon-wf (venus-longitude 2000 1 1))
+                  (add (lon-wf (mars-longitude 2000 1 1))
+                  (add (lon-wf (jupiter-longitude 2000 1 1))
+                  (add (lon-wf (saturn-longitude 2000 1 1))
+                       (lon-wf (kepler-sun-longitude 2000 1 1))))))))
+    (let wf-ok (if (eq wf-count 6) 1000000 0))
+
+    (add kep-ok (add spring-ok (add summer-ok (add far-ok (add sign-ok (add opp-ok wf-ok)))))))
