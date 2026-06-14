@@ -7,6 +7,7 @@ import json
 import httpx
 import pytest
 
+from pulse_app.analysis import status_from_last_sample
 from pulse_app.probe import probe_all
 
 
@@ -125,6 +126,9 @@ def _handler(
     ready_status=200,
     ideas_body=None,
     ideas_status=200,
+    ideas_headers=None,  # None → default native-kernel carrier header;
+                         # pass {} for a response with no x-form-router header,
+                         # or {"x-form-router": "fanout-python"} for failover.
     vitality_api_body=None,
     vitality_api_status=200,
     web_status=200,
@@ -153,10 +157,15 @@ def _handler(
                 headers={"content-type": "application/json"},
             )
         if path == "/api/ideas":
+            router_headers = (
+                {"x-form-router": "native-kernel"}
+                if ideas_headers is None
+                else ideas_headers
+            )
             return httpx.Response(
                 ideas_status,
                 content=json.dumps(ideas_body if ideas_body is not None else HEALTHY_IDEAS),
-                headers={"content-type": "application/json"},
+                headers={"content-type": "application/json", **router_headers},
             )
         if path == "/api/workspaces/coherence-network/vitality":
             return httpx.Response(
@@ -470,6 +479,53 @@ async def test_endpoint_ideas_http_error():
     by = await _run(_handler(ideas_status=500))
     assert by["endpoint_ideas"].ok is False
     assert "500" in (by["endpoint_ideas"].detail or "")
+
+
+@pytest.mark.asyncio
+async def test_endpoint_ideas_native_kernel_breathes_clean():
+    """The healthy carrier path: native-kernel served it, no strain detail."""
+    by = await _run(_handler())  # default headers carry x-form-router: native-kernel
+    sample = by["endpoint_ideas"]
+    assert sample.ok is True
+    assert sample.detail is None
+    assert status_from_last_sample(sample) == "breathing"
+
+
+@pytest.mark.asyncio
+async def test_endpoint_ideas_fanout_python_fallback_strains():
+    """The #3087 blindness: the native route regressed, Traefik failed over to
+    the Python fan-out, which returned a 200 with a valid 'ideas' list. Status
+    and shape both pass — the only tell is the x-form-router header. The witness
+    must now read this as strained (breathing surface, wrong carrier), not as a
+    clean breath.
+    """
+    by = await _run(_handler(ideas_headers={"x-form-router": "fanout-python"}))
+    sample = by["endpoint_ideas"]
+    # The surface still answers, so the probe itself succeeded — strain, not silence.
+    assert sample.ok is True
+    assert sample.detail is not None
+    assert sample.detail.startswith("fell back: ")
+    assert "native-kernel" in sample.detail
+    assert "fanout-python" in sample.detail
+    # End-to-end: the strain detail makes the current status read 'strained'.
+    assert status_from_last_sample(sample) == "strained"
+    # Sibling organs are untouched — this is a carrier-path sensing win.
+    assert by["api"].ok is True
+    assert by["endpoint_vitality"].ok is True
+
+
+@pytest.mark.asyncio
+async def test_endpoint_ideas_missing_router_header_strains():
+    """No x-form-router header at all means the native carrier never stamped the
+    response — treat it as a fallback too, naming what was (not) seen."""
+    by = await _run(_handler(ideas_headers={}))
+    sample = by["endpoint_ideas"]
+    assert sample.ok is True
+    assert sample.detail is not None
+    assert sample.detail.startswith("fell back: ")
+    assert "native-kernel" in sample.detail
+    assert "no router header" in sample.detail
+    assert status_from_last_sample(sample) == "strained"
 
 
 @pytest.mark.asyncio

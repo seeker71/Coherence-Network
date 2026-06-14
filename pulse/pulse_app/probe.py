@@ -16,7 +16,7 @@ shape, or rendered text markers.
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Iterable
 
 import httpx
@@ -38,6 +38,9 @@ class UpstreamResult:
     text: str | None              # Raw response text when kind=text, else None
     latency_ms: int
     error: str | None             # Transport error text, or None
+    headers: dict[str, str] = field(default_factory=dict)  # response headers,
+                                  # keys lowercased. Extractors and _apply read
+                                  # these for carrier-path checks (x-form-router).
 
 
 async def _probe_upstream(
@@ -66,6 +69,7 @@ async def _probe_upstream(
         else:
             resp = await client.get(url)
         elapsed = int((time.perf_counter() - start) * 1000)
+        headers = {k.lower(): v for k, v in resp.headers.items()}
         body: dict[str, Any] | None = None
         text: str | None = None
         if kind == "json":
@@ -86,6 +90,7 @@ async def _probe_upstream(
             text=text,
             latency_ms=elapsed,
             error=None,
+            headers=headers,
         )
     except httpx.HTTPError as exc:
         elapsed = int((time.perf_counter() - start) * 1000)
@@ -106,6 +111,40 @@ def _short_error(exc: BaseException) -> str:
 
 _SLOW_PREFIX = "slow: "
 
+# Native-promoted routes stamp their response with an `x-form-router` header
+# naming the carrier that served them: "native-kernel" (the Form kernel-router,
+# the body's actual carrier) or "fanout-python" (the Python fan-out fallback).
+# When the kernel-router container is unhealthy, Traefik fails over to the
+# Python `api` container, which still returns 200 with a valid body — so a
+# native-route regression (e.g. the boolean::bigint 500 fixed in #3087) is
+# invisible to status+shape checks alone: the witness probes the Python 200 and
+# reads "breathing" while the native route is down. An organ that declares
+# `expected_router` makes _apply compare the carrier seen and flag a strain
+# when the route was served by anything but its native carrier. Strain, not
+# silence: the surface still breathes, and a brief deploy-window failover
+# self-heals without scarring uptime.
+_FORM_ROUTER_HEADER = "x-form-router"
+_FALLBACK_PREFIX = "fell back: "
+
+
+def _router_fallback_detail(organ: Organ, result: UpstreamResult) -> str | None:
+    """Strain detail when a native-promoted route was served off its carrier.
+
+    Returns None when the organ declares no expected router or the carrier the
+    response named matches. Otherwise returns a "fell back: " strain detail
+    naming the actual carrier seen, so status_from_last_sample reads 'strained'
+    while uptime stays whole. A missing header counts as a fallback too — the
+    native carrier didn't stamp the response.
+    """
+    expected = organ.expected_router
+    if not expected:
+        return None
+    seen = result.headers.get(_FORM_ROUTER_HEADER)
+    if seen == expected:
+        return None
+    seen_label = seen if seen else "no router header"
+    return f"{_FALLBACK_PREFIX}expected {expected}, got {seen_label}"
+
 
 def _apply(organ: Organ, result: UpstreamResult, ts: str) -> Sample:
     if result.error is not None:
@@ -118,18 +157,24 @@ def _apply(organ: Organ, result: UpstreamResult, ts: str) -> Sample:
         )
     verdict = organ.extractor(result)
     detail = verdict.detail
-    # Post-verdict threshold check: a probe that passed content assertions
-    # can still be "slow" — detail is set but ok stays True. The current
-    # status then reads as "strained" via status_from_last_sample while
-    # the historical uptime stays at 100% (nothing was wrong, just slow).
-    if (
-        verdict.ok
-        and organ.latency_threshold_ms
-        and result.latency_ms > organ.latency_threshold_ms
-    ):
-        detail = (
-            f"{_SLOW_PREFIX}{result.latency_ms}ms > {organ.latency_threshold_ms}ms threshold"
-        )
+    # Post-verdict strain checks: a probe that passed content assertions can
+    # still be degraded — detail is set but ok stays True. The current status
+    # then reads as "strained" via status_from_last_sample while historical
+    # uptime stays at 100% (nothing failed, just strained). Carrier-path
+    # fallback takes precedence over slowness: a native route served by the
+    # Python fan-out is the more significant signal (and is usually slower
+    # anyway).
+    if verdict.ok:
+        fallback = _router_fallback_detail(organ, result)
+        if fallback is not None:
+            detail = fallback
+        elif (
+            organ.latency_threshold_ms
+            and result.latency_ms > organ.latency_threshold_ms
+        ):
+            detail = (
+                f"{_SLOW_PREFIX}{result.latency_ms}ms > {organ.latency_threshold_ms}ms threshold"
+            )
     return Sample(
         ts=ts,
         organ=organ.name,
