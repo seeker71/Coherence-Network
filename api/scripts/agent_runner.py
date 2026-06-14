@@ -23,6 +23,7 @@ except ImportError:
 import sys
 if sys.platform != "win32":
     import pwd
+import hashlib
 import socket
 import shlex
 import shutil
@@ -3027,6 +3028,18 @@ def _parse_failure_hint_from_output(output: str) -> dict[str, Any]:
     return hint
 
 
+def _io_match_sig(content: str) -> str:
+    """Content-address a call's input or output — the bootstrap host-native
+    execution of io-match.fk's `iom-capture` (sha256, FIPS 180-4: the same bytes
+    the canonical Form recipe form/form-stdlib/sha256.fk defines). Identity comes
+    for free — identical inputs share a sig, so repeat calls group and dedup; the
+    digest reveals nothing of the content, so a secret in a command never leaks.
+    The native form-cli binary will run iom-capture directly; this feeds the same
+    records until then. Learning logic stays in Form (io-match.fk scoring,
+    tool-embodiment.fk gate, form-cli-loop.fk routing)."""
+    return hashlib.sha256((content or "").encode("utf-8")).hexdigest()
+
+
 def _post_runtime_event(
     client: httpx.Client,
     *,
@@ -3041,6 +3054,8 @@ def _post_runtime_event(
     worker_id: str,
     executor: str,
     is_openai_codex: bool,
+    input_sig: str | None = None,
+    output_sig: str | None = None,
 ) -> None:
     if _cfg_str("pipeline", "tool_telemetry_enabled", "PIPELINE_TOOL_TELEMETRY_ENABLED", "1").strip() in {"0", "false", "False"}:
         return
@@ -3064,6 +3079,14 @@ def _post_runtime_event(
             "is_openai_codex": bool(is_openai_codex),
         },
     }
+    # io-match capture: when the real (input, output) are content-addressed, the
+    # tool telemetry becomes an io-match record — calls group/dedup by input-sig,
+    # and the learning loop (io-match.fk -> tool-embodiment.fk) reads outcome by lane.
+    if input_sig is not None:
+        payload["metadata"]["io_match"] = "1"
+        payload["metadata"]["input_sig"] = input_sig
+        payload["metadata"]["output_sig"] = output_sig or ""
+        payload["metadata"]["outcome"] = "success" if int(returncode) == 0 else "fail"
     try:
         client.post(f"{BASE}/api/runtime/events", json=payload, timeout=5.0)
     except Exception:
@@ -6824,6 +6847,8 @@ def run_one_task(
             worker_id=worker_id,
             executor=executor,
             is_openai_codex=is_openai_codex,
+            input_sig=_io_match_sig(command),
+            output_sig=_io_match_sig(output or ""),
         )
         if status != "completed":
             _post_tool_failure_friction(
