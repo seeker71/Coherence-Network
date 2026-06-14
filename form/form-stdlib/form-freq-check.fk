@@ -1,25 +1,31 @@
-; form-freq-check.fk — the cheap fear-frequency gate, as a recipe.
+; form-freq-check.fk — the decision HEAD of the fear-frequency check (NOT the model).
 ;
 ; preludes: form-stdlib/core.fk
 ;
-; The point of transmutation is the REPLY the human receives, so the gate is
-; SYNCHRONOUS in the response path — not a background pass. But transmuting every
-; reply is expensive and usually unnecessary (the system-prompt voice already
-; attunes most of it). So a CHEAP check runs first: does the response carry the
-; fear frequency at all? If not, it passes untouched (≈ free). Only if fear is
-; present does the expensive transmute run.
+; Read this honestly: detecting fear frequency is NOT cheap. A frontier model
+; produces fear-framing nuancedly — subtly enough that a human catches it about
+; every other reply — so a detector must UNDERSTAND THE MEANING of what it reads.
+; That is a real model: transformer-class, ~100M+ parameters, slightly simpler
+; than the transmuter (detect < generate) but the same kind of thing. It is the
+; form-native transformer built from transformer-block.fk / attention.fk /
+; embedding-as-recipe.fk / language-model.fk and trained from the captured corpus
+; (training-catalog.fk) — its north star is docs/coherence-substrate/freq-check-model.form.
 ;
-; The check is NOT regex and NOT word-matching. It is a cheap nearest-centroid
-; classifier over the response's frequency SIGNATURE — a small feature vector read
-; from the frequency bank (belief-recipes.fk) / hz bands (chakra-column.fk), the
-; substrate's own per-shape frequency, produced by a simpler model that is cheap
-; to train from the captured corpus (training-catalog.fk). This file is that
-; classifier + the gate; the simpler model that turns text -> signature is the
-; trained component the corpus feeds (the loop closing on itself).
+; THIS file is only the last, cheap piece: the classification HEAD + gate that runs
+; AFTER the model. The model reads the response and emits a learned semantic
+; SIGNATURE (embedding); this head measures that signature against the fear/clear
+; centroids and decides pass | transmute. The decision is cheap; the understanding
+; that produced the signature is the ~100M+ model, not this. The 3-dim vectors in
+; the band are illustrative of the head's arithmetic, not the real embedding space.
 ;
-; Proven by: form-stdlib/tests/form-freq-check-band.fk
+; Why a head at all: the synchronous reply path is voice (prevent) -> model+head
+; (sense) -> transmute (only when fear). The head keeps the gate decision a tiny,
+; four-way-provable cell; the heavy semantic work lives in the model it serves.
+;
+; Proven by: form-stdlib/tests/form-freq-check-band.fk (the head's decision logic)
 
-; squared distance between two equal-length frequency feature vectors.
+; squared distance between two equal-length vectors — here the model's learned
+; semantic embedding vs a centroid (NOT a hand feature).
 ; (sub) may go negative; squaring restores sign — monomorphic recursion (fourth-arm safe).
 (defn fc-dist2 (a b)
     (if (eq (len a) 0)
@@ -27,9 +33,11 @@
         (add (mul (sub (head a) (head b)) (sub (head a) (head b)))
              (fc-dist2 (tail a) (tail b)))))
 
-; fear-score 0..100: how much closer the signature sits to the fear centroid than
-; the clear centroid. 100 = on the fear centroid, 0 = on the clear centroid.
-; (uses squared distances; the ratio is monotone in the real distance.)
+; fear-score 0..100: how much closer the model's signature sits to the fear
+; centroid than the clear centroid. 100 = on the fear centroid, 0 = on the clear
+; centroid. (squared distances; the ratio is monotone in the real distance.)
+; A nearest-centroid head is one valid choice; a small learned linear head over
+; the same embedding is another — either way the embedding is the ~100M+ model's.
 (defn fc-fear-score (signature fear-centroid clear-centroid)
     (if (eq (add (fc-dist2 signature fear-centroid) (fc-dist2 signature clear-centroid)) 0)
         0
@@ -45,6 +53,7 @@
 (defn fc-clean? (fear-score threshold)
     (if (ge fear-score threshold) 0 1))
 
-; the whole cheap check in one call: signature -> pass | transmute.
+; the head in one call: given the model's signature, decide pass | transmute.
+; (the model that produced `signature` is the heavy part — see the header.)
 (defn fc-check (signature fear-centroid clear-centroid threshold)
     (fc-gate (fc-fear-score signature fear-centroid clear-centroid) threshold))

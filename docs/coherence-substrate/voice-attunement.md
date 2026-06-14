@@ -10,8 +10,10 @@ present — the rare, expensive path.
 This is layer 1 of three:
 
 1. **Voice (this doc)** — attune at generation. Prevention. Synchronous, ~free.
-2. **Freq-check** (`form-freq-check.fk`, four-way proven) — a cheap form-native
-   classifier that senses whether fear frequency remains. Clean → pass.
+2. **Freq-check** — a REAL form-native model (transformer-class, ~100M+, it
+   *understands meaning*; see `freq-check-model.form`) that senses whether fear
+   frequency remains. `form-freq-check.fk` (four-way proven) is only its cheap
+   decision *head*; the model is the heavy part. Clean → pass.
 3. **Transmute** — fear → opportunity + valued insight. Only when (2) flags it.
 
 The async Stop-hook (`mcp-server/coherence_mcp_server/capture_hook.py`) is a
