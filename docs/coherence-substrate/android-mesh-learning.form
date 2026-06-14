@@ -16,6 +16,7 @@
     "A real authorized Android device is sampled through adb without storing raw sensor values, location coordinates, package inventory, or the adb serial."
     "The receipt records device model/ABI/Android release, battery summary, safe capability inventory, sensor-category inventory, Coherence Sense installed/running state, Mac host/tool summary, Mac witness service state, typed channel rows, and high-cost feature route decisions."
     "The Android carrier can emit active mic RMS, camera luma, and GPU EGL readback summaries while sharing; it does not store raw audio, frames, or GPU buffers."
+    "The current live physical floor observed an unlocked SM-S918U1 sharing to the Mac witness with 141 witness frames, nonzero mic RMS, nonzero camera luma, 2367 camera luma samples, 99 GPU EGL readback samples, and body sample_count 5084."
     "The Form recipe proves the deterministic route surface: native-first, native-first with oracle sampling, oracle-teacher-until-physical-samples, stream merging, per-category oracle retirement, and active mic/camera/GPU sample rows that lift speech, vision, and multimodal routing to native-first when those lanes are present.")
 
   (north-star
@@ -61,9 +62,9 @@
     (handoff "future service should write native substrate ledger records, with JSON summaries as export/cache"))
 
   (next-physical-gaps
-    (live-receipt "unlocked phone with Start sharing tapped, so adb/Mac witness captures nonzero active mic/camera/GPU counters")
     (mic "RMS summaries joined to speech-transcribe heldout learning beyond route readiness")
     (camera "luma summaries joined to vision-describe heldout learning beyond route readiness")
     (accelerator "EGL readback summaries extended to Vulkan/NNAPI kernel receipts compared with CPU/oracle lanes")
+    (receipt-export "replace the Python JSON receipt helper with a Form-native witness-state export path")
     (stream "Mac witness event stream joined to app flow counters and Form-native source-data receipts")
     (retirement "one narrow category with enough heldout native wins to stop sampling the teacher")))

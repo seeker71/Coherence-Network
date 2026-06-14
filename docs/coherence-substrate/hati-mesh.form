@@ -16,7 +16,7 @@
     "The public API accepts organ announcements, organ heartbeats, and channel offers, records runtime receipts, and lists recent organs/channels."
     "The Android app now creates a stable install-scoped organ id, can explicitly bind a user-entered cell/email label, announces to the public API, heartbeats while listening, polls for other mesh organs, offers a sensor channel, and displays local sensor flow rates plus recent channel rows."
     "When sharing is active and permissions are granted, the Android app now samples mic RMS, camera luma, and GPU EGL readback summaries as first-class channel data without retaining raw audio, frames, or GPU buffers."
-    "A real adb-connected Android device can now be sampled as a mesh-learning organ receipt without storing raw sensor values, location coordinates, package inventory, or the adb serial. The current physical floor observed SM-S918U1 Android 16 arm64-v8a, Coherence Sense installed/running, 39 hardware sensors, camera, microphone, GPS, WiFi, Bluetooth LE, NFC, Vulkan compute, and Mac witness liveness.")
+    "A real adb-connected Android device can now be sampled as a mesh-learning organ receipt without storing raw sensor values, location coordinates, package inventory, or the adb serial. The current physical floor observed SM-S918U1 Android 16 arm64-v8a, Coherence Sense installed/running, 39 hardware sensors, camera, microphone, GPS, WiFi, Bluetooth LE, NFC, Vulkan compute, Mac witness liveness, 141 witness frames, 2367 camera luma samples, 99 GPU readback samples, and nonzero mic/camera summary metrics.")
 
   (north-star
     "Each organ carries a signed self-sovereign identity, explicit steward/cell relation, revocable capabilities, nearby-cell discovery, negotiated offer/ack interfaces, typed media codecs, and measured information flow rates.")
@@ -101,7 +101,6 @@
     (north-star "screenshot, accessibility, flow-rate, and reviewer receipts are first-class release evidence"))
 
   (missing-physical-samples
-    (live-active-receipt "unlocked phone sharing receipt with nonzero mic RMS, camera luma, and GPU readback counters")
     (speaker:pcm16 "speaker playback samples from the Android app")
     (nearby-local-discovery "LAN/Bluetooth/Nearby discovery receipts, beyond public mesh recent-presence polling")
     (signed-identity "public-key signature verification over announcements and channel offers")
