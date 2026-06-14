@@ -15,7 +15,8 @@
         (list
             "live witness state counters have a Form-native receipt row"
             "mic camera and gpu counters lower into summary-only active sample rows"
-            "the exporter source is Form-native; Python remains only a compatibility helper"))
+            "the exporter source is Form-native; Python remains only a compatibility helper"
+            "heldout learner rows score native challengers against explicit oracle teachers"))
     (defn wsr-north-star ()
         (list
             "Mac witness writes native receipt cells continuously"
@@ -126,6 +127,73 @@
                 (and
                     (eq (wsr-export-native? state) 1)
                     (eq (wsr-routes-native-first? state) 1)))
+            1
+            0))
+
+    (defn wsr-heldout-row (feature lane count metric native-score oracle-score champion-correct challenger-correct privacy)
+        (list feature lane count metric native-score oracle-score champion-correct challenger-correct privacy))
+    (defn wsr-heldout-feature (row) (nth row 0))
+    (defn wsr-heldout-lane (row) (nth row 1))
+    (defn wsr-heldout-count (row) (nth row 2))
+    (defn wsr-heldout-metric (row) (nth row 3))
+    (defn wsr-heldout-native-score (row) (nth row 4))
+    (defn wsr-heldout-oracle-score (row) (nth row 5))
+    (defn wsr-heldout-champion-correct (row) (nth row 6))
+    (defn wsr-heldout-challenger-correct (row) (nth row 7))
+    (defn wsr-heldout-privacy (row) (nth row 8))
+
+    (defn wsr-heldout-from-state (feature state native-score oracle-score champion-correct challenger-correct)
+        (if (str_eq feature "speech-transcribe")
+            (wsr-heldout-row feature "mic" (wsr-frames state) (wsr-mic-rms-ppm state) native-score oracle-score champion-correct challenger-correct (wsr-privacy state))
+            (if (str_eq feature "vision-describe")
+                (wsr-heldout-row feature "camera" (wsr-camera-samples state) (wsr-camera-luma-ppm state) native-score oracle-score champion-correct challenger-correct (wsr-privacy state))
+                (if (str_eq feature "multimodal-align")
+                    (wsr-heldout-row feature "mic+camera+gpu" (wsr-sample-count state) (wsr-sample-count state) native-score oracle-score champion-correct challenger-correct (wsr-privacy state))
+                    (wsr-heldout-row feature "gpu" (wsr-gpu-samples state) (wsr-gpu-latency-us state) native-score oracle-score champion-correct challenger-correct (wsr-privacy state))))))
+    (defn wsr-heldout-valid? (row)
+        (if (and
+                (gt (wsr-heldout-count row) 0)
+                (and
+                    (gt (wsr-heldout-metric row) 0)
+                    (and
+                        (gt (wsr-heldout-native-score row) 0)
+                        (and
+                            (gt (wsr-heldout-oracle-score row) 0)
+                            (not (str_eq (wsr-heldout-privacy row) "raw-media"))))))
+            1
+            0))
+    (defn wsr-heldout-trial (row)
+        (list (wsr-heldout-champion-correct row) (wsr-heldout-challenger-correct row)))
+    (defn wsr-heldout-history (rows)
+        (if (eq (len rows) 0)
+            (empty)
+            (cons (wsr-heldout-trial (head rows)) (wsr-heldout-history (tail rows)))))
+    (defn wsr-heldout-valid-count (rows)
+        (if (eq (len rows) 0) 0
+            (add
+                (wsr-heldout-valid? (head rows))
+                (wsr-heldout-valid-count (tail rows)))))
+    (defn wsr-heldout-all-valid? (rows)
+        (if (eq (len rows) 0) 1
+            (if (eq (wsr-heldout-valid? (head rows)) 1)
+                (wsr-heldout-all-valid? (tail rows))
+                0)))
+    (defn wsr-heldout-learning-floor? (state rows)
+        (if (and
+                (eq (wsr-learning-ready? state) 1)
+                (and
+                    (eq (wsr-heldout-all-valid? rows) 1)
+                    (ge (wsr-heldout-valid-count rows) 3)))
+            1
+            0))
+    (defn wsr-heldout-retire? (rows min-samples margin)
+        (wsr-heldout-retirement-ready? (wsr-heldout-history rows) min-samples margin))
+    (defn wsr-heldout-authority (rows min-samples margin)
+        (aml-authority (wsr-heldout-history rows) min-samples margin))
+    (defn wsr-heldout-native-wins? (rows min-samples margin)
+        (if (and
+                (eq (wsr-heldout-retire? rows min-samples margin) 1)
+                (str_eq (wsr-heldout-authority rows min-samples margin) "native"))
             1
             0))
 

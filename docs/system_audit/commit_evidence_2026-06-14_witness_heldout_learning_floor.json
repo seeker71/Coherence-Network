@@ -1,0 +1,114 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/witness-heldout-learning-20260614",
+  "commit_scope": "Join Form-native witness-state receipts to heldout learner rows and oracle-retirement proof.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "hati-mesh",
+    "android-sense-organ",
+    "native-learning-surface",
+    "llm-feature-channel-floor"
+  ],
+  "spec_ids": [
+    "android-mesh-learning",
+    "witness-state-receipt",
+    "form-native-learning",
+    "channel-protocol-choice-floor"
+  ],
+  "task_ids": [
+    "witness-heldout-learning-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/witness-state-receipt.fk",
+    "form/form-stdlib/tests/witness-state-receipt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/witness-state-receipt.form",
+    "docs/coherence-substrate/android-mesh-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_witness_heldout_learning_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/form-stdlib/witness-state-receipt.fk",
+    "form/form-stdlib/tests/witness-state-receipt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/witness-state-receipt.form",
+    "docs/coherence-substrate/android-mesh-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_witness_heldout_learning_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "form/form-stdlib/witness-state-receipt.fk",
+    "form/form-stdlib/tests/witness-state-receipt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/witness-state-receipt.form",
+    "docs/coherence-substrate/android-mesh-learning.form",
+    "local:http://localhost:8800/state"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord join && coord claim \"witness heldout learning floor\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/witness-state-receipt.fk form-stdlib/tests/witness-state-receipt-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh witness-state-receipt"
+    ],
+    "notes": "Focused validation returned 65535 with `fourth arm: 1 band(s) four-way` and `1 ok, 0 divergent`. The manifest gate returned `PASS-4WAY witness-state-receipt`. The receipt row now emits heldout learner rows for speech-transcribe, vision-describe, multimodal-align, and gpu-readback-kernel, scores champion/challenger history, keeps too-few samples on the third-party teacher, and proves one long-window native win can retire a narrow teacher. No Python receipt helper was extended."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed when this evidence was written; CI had not run yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested for this Form recipe slice."
+  },
+  "phase_gate": {
+    "phase": "witness-heldout-learning-floor",
+    "gate": "Witness-state summaries must become heldout learner rows before native speech, vision, multimodal, and GPU candidates can earn oracle retirement.",
+    "state": "local-four-way-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Feed real STT, vision, multimodal, and GPU oracle labels into the heldout rows from continuous native witness exports."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The witness-state receipt no longer stops at route readiness. Form can create heldout learner rows from live summary counters, score challenger/champion trials, keep the oracle when samples are too few, and retire one narrow teacher only after enough native wins.",
+    "public_endpoints": [
+      "local:form/validate.sh:witness-state-receipt-band",
+      "local:form/fourth-arm-bands.txt:witness-state-receipt"
+    ],
+    "test_flows": [
+      "Speech, vision, multimodal, and GPU readback rows are valid summary-only heldout rows.",
+      "Heldout rows lower to champion/challenger trial history.",
+      "Too-few rows keep third-party authority.",
+      "A long enough native-win window returns native authority."
+    ],
+    "summary": "The established floor is Form-native heldout learner row and retirement proof over witness-state summaries. Remaining gaps are real teacher labels, continuous native export, and deeper accelerator receipts."
+  }
+}
