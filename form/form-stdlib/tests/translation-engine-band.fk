@@ -1,0 +1,52 @@
+; tests/translation-engine-band.fk — ANY modality -> ANY modality through one shared meaning
+; space, proven four-way. The corpus is DATA passed to the engine (data outside the recipe);
+; the engine routes by NEAREST MEANING, so the last claim translates an UNSEEN coordinate —
+; proof it generalises by similarity, not a hardcoded lookup.
+;
+; The seed corpus carries three meanings, each with faces in several modalities at a shared
+; coordinate (faces that mean the same thing sit at the same embedding):
+;   increment  [9 0 0] : nl-en "add one to x" · code "x + 1" · asm "ADD r0 #1"
+;   greet      [0 9 0] : nl-en "hello" · audio "aud:hello" · nl-de "hallo"
+;   red-circle [0 0 9] : nl-en "red circle" · image "img:red-circle"
+;
+; Verdict 1111111 (127) when every claim holds across all four kernels.
+;   NL -> Code:           "add one to x" -> "x + 1"                      -> 1
+;   NL -> ASM:            "add one to x" -> "ADD r0 #1"                  -> 10
+;   Code -> NL:           "x + 1" -> "add one to x"                      -> 100
+;   NL(text) -> NL(audio): "hello" -> "aud:hello"  (NL is text or audio) -> 1000
+;   text -> image:        "red circle" -> "img:red-circle"              -> 10000
+;   image -> text:        "img:red-circle" -> "red circle"              -> 100000
+;   generalises: an UNSEEN coordinate [8 1 1] -> nearest nl-en meaning  -> 1000000
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/translation-engine.fk
+;
+
+(do
+    ;; the corpus — DATA the engine routes over (in production: content-addressed cells in ice)
+    (let c (list
+        (face "nl-en" "add one to x" (list 9.0 0.0 0.0))
+        (face "code"  "x + 1"        (list 9.0 0.0 0.0))
+        (face "asm"   "ADD r0 #1"    (list 9.0 0.0 0.0))
+        (face "nl-en" "hello"        (list 0.0 9.0 0.0))
+        (face "audio" "aud:hello"    (list 0.0 9.0 0.0))
+        (face "nl-de" "hallo"        (list 0.0 9.0 0.0))
+        (face "nl-en" "red circle"   (list 0.0 0.0 9.0))
+        (face "image" "img:red-circle" (list 0.0 0.0 9.0))))
+
+    ;; --- 1. NL -> Code -----------------------------------------------
+    (let c0 (if (str_eq (te-translate c "nl-en" "add one to x" "code") "x + 1") 1 0))
+    ;; --- 2. NL -> ASM ------------------------------------------------
+    (let c1 (if (str_eq (te-translate c "nl-en" "add one to x" "asm") "ADD r0 #1") 10 0))
+    ;; --- 3. Code -> NL -----------------------------------------------
+    (let c2 (if (str_eq (te-translate c "code" "x + 1" "nl-en") "add one to x") 100 0))
+    ;; --- 4. NL text -> NL audio (NL can be text or audio) ------------
+    (let c3 (if (str_eq (te-translate c "nl-en" "hello" "audio") "aud:hello") 1000 0))
+    ;; --- 5. text -> image (prompt to image) --------------------------
+    (let c4 (if (str_eq (te-translate c "nl-en" "red circle" "image") "img:red-circle") 10000 0))
+    ;; --- 6. image -> text (describing an image) ----------------------
+    (let c5 (if (str_eq (te-translate c "image" "img:red-circle" "nl-en") "red circle") 100000 0))
+    ;; --- 7. generalises from an UNSEEN coordinate (nearest meaning) ---
+    ;; [8 1 1] is nearest the increment meaning [9 0 0] among the three nl-en faces.
+    (let c6 (if (str_eq (te-translate-emb c "nl-en" (list 8.0 1.0 1.0)) "add one to x") 1000000 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 c6)))))))

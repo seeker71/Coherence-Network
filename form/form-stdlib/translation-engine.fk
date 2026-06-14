@@ -1,0 +1,74 @@
+; translation-engine.fk — universal nearest-meaning translator: ANY modality -> ANY modality,
+; through a shared meaning space. The engine is DATA-AGNOSTIC — the corpus (faces with meaning
+; coordinates) is DATA passed in, never hardcoded here. That is "data outside the recipe": the
+; corpus and weights are cells; this .fk is only the engine.
+;
+; A FACE = (modality, surface, embedding). A surface form in some modality, sitting at a
+; meaning coordinate. Faces that mean the same thing sit at the same / nearest embedding —
+; so translation src-modality -> tgt-modality is: take the source face's embedding, find the
+; nearest face OF THE TARGET MODALITY, return its surface. ONE engine carries every pair —
+; NL<->NL (text or audio), NL<->Code, NL<->ASM, text<->image — because universality is the
+; shared meaning space (O(M) faces, not O(M^2) pair-models). cjk-channel's "one cell, many
+; tongues" generalised past language to every modality (embedding-as-recipe: semantically
+; identical inputs across modalities intern to the same NodeID).
+;
+; PROOF LEVEL: this is the S2 floor — data-driven NEAREST-MEANING (it generalises by
+; similarity to unseen inputs, it is not a hardcoded pair lookup). The embeddings carried in
+; are SEED meaning-coordinates; the learned encoder (surface -> embedding for any unseen
+; surface) and the generative decoder (embedding -> a NOVEL surface — the diffusion stage that
+; actually synthesises code/image/audio) are S3, named not faked. In production the faces are
+; content-addressed embedding-as-recipe cells resting in ice; this engine's nearest-meaning
+; math is identical over them.
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk
+;
+
+(do
+    ;; a face: (modality surface embedding-vector)
+    (defn face (modality surface emb) (list modality surface emb))
+    (defn face-mod (f) (nth f 0))
+    (defn face-surface (f) (nth f 1))
+    (defn face-emb (f) (nth f 2))
+
+    ;; L1 distance between two embedding vectors (float, four-way)
+    (defn te-abs (n) (if (lt n 0.0) (mul -1.0 n) n))
+    (defn te-dist-loop (a b acc)
+        (if (eq (len a) 0) acc
+            (if (eq (len b) 0) acc
+                (te-dist-loop (tail a) (tail b)
+                    (add acc (te-abs (sub (head a) (head b))))))))
+    (defn te-dist (a b) (te-dist-loop a b 0.0))
+
+    ;; carry (best-face, best-dist) across the corpus; only faces of tgt modality compete
+    (defn te-near-loop (corpus tgt q best-face best-d)
+        (if (eq (len corpus) 0) best-face
+            (do (let f (head corpus))
+                (if (str_eq (face-mod f) tgt)
+                    (do (let d (te-dist (face-emb f) q))
+                        (if (lt d best-d)
+                            (te-near-loop (tail corpus) tgt q f d)
+                            (te-near-loop (tail corpus) tgt q best-face best-d)))
+                    (te-near-loop (tail corpus) tgt q best-face best-d)))))
+
+    ;; nearest target-modality surface to a query embedding (honest "?" if none)
+    (defn te-nearest (corpus tgt q)
+        (face-surface (te-near-loop corpus tgt q (list "" "?" (list)) 1000000.0)))
+
+    ;; find a source face by (modality, surface)
+    (defn te-find (corpus mod surface)
+        (if (eq (len corpus) 0) (list "" "?" (list))
+            (do (let f (head corpus))
+                (if (str_eq (face-mod f) mod)
+                    (if (str_eq (face-surface f) surface) f (te-find (tail corpus) mod surface))
+                    (te-find (tail corpus) mod surface)))))
+
+    ;; translate a known source face: src (mod,surface) -> nearest target-modality surface
+    (defn te-translate (corpus src-mod src-surface tgt-mod)
+        (te-nearest corpus tgt-mod (face-emb (te-find corpus src-mod src-surface))))
+
+    ;; translate straight from a query embedding — the path for an UNSEEN surface the learned
+    ;; encoder produced; this is where generalisation lives (nearest meaning, not lookup).
+    (defn te-translate-emb (corpus tgt-mod q) (te-nearest corpus tgt-mod q))
+
+    (defn translation-engine-teaching () "lc-cross-modal-unity")
+    0)
