@@ -1,0 +1,102 @@
+; preludes: form-stdlib/core.fk form-stdlib/model-executor-proof-ledger.fk
+;
+; model-executor-proof-ledger-band - executor proof records without Python.
+;
+; Verdict 4095 when native proof-run rows validate, project to legacy rows,
+; accept pass/fail/pending status, and reject malformed or duplicate records.
+
+(do
+    (let source (mepl-source "native-ledger-record" "docs/system_audit/model_executor_run_ledger/unit.json"))
+    (let validation (mepl-validation "pass" (list "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-executor-proof-ledger.fk form-stdlib/tests/model-executor-proof-ledger-band.fk")))
+    (let run
+        (mepl-run
+            "unit-proof"
+            "codex/unit-proof"
+            "gpt-5-codex"
+            0
+            0
+            1
+            (list "pytest")
+            "pass"
+            "unit proof"
+            source
+            validation))
+    (let fail-run
+        (mepl-run
+            "unit-fail"
+            "codex/unit-proof"
+            "gpt-5-codex"
+            1
+            2
+            1
+            (list "pytest")
+            "fail"
+            "unit failure"
+            source
+            (mepl-validation "fail" (list "pytest"))))
+    (let pending-run
+        (mepl-run
+            "unit-pending"
+            "codex/unit-proof"
+            "gpt-5-codex"
+            1
+            2
+            1
+            (list "pytest")
+            "pending"
+            "unit pending"
+            source
+            (mepl-validation "pending" (list "pytest"))))
+    (let bad-attempts
+        (mepl-run
+            "unit-bad-attempts"
+            "codex/unit-proof"
+            "gpt-5-codex"
+            0
+            0
+            0
+            (list "pytest")
+            "pass"
+            "bad attempts"
+            source
+            validation))
+    (let bad-model
+        (mepl-run
+            "unit-bad-model"
+            "codex/unit-proof"
+            ""
+            0
+            0
+            1
+            (list "pytest")
+            "pass"
+            "bad model"
+            source
+            validation))
+    (let legacy (mepl-legacy-from-run run))
+    (let expected-legacy (mepl-legacy-row "gpt-5-codex" 0 0 1 (list "pytest") "pass" "unit proof"))
+
+    (let c0 (if (eq (mepl-run-valid? run) 1) 1 0))
+    (let c1 (if (eq (mepl-run-valid? bad-attempts) 0) 2 0))
+    (let c2 (if (eq (mepl-run-valid? bad-model) 0) 4 0))
+    (let c3 (if (eq (mepl-legacy-valid? legacy) 1) 8 0))
+    (let c4 (if (eq (mepl-legacy-same? legacy expected-legacy) 1) 16 0))
+    (let c5
+        (if (and
+                (eq (mepl-run-valid? fail-run) 1)
+                (eq (mepl-run-valid? pending-run) 1))
+            32
+            0))
+    (let c6
+        (if (and
+                (eq (mepl-ledger-valid? (list run fail-run pending-run)) 1)
+                (eq (mepl-ledger-valid? (list run run)) 0))
+            64
+            0))
+    (let c7 (if (eq (mepl-string-list-valid? (list "pytest" "")) 0) 128 0))
+    (let c8 (if (eq (mepl-validation-valid? (mepl-validation "unknown" (list "pytest"))) 0) 256 0))
+    (let c9 (if (eq (mepl-source-valid? (mepl-source "" "path")) 0) 512 0))
+    (let c10 (if (eq (len (mepl-floor)) 4) 1024 0))
+    (let c11 (if (eq (mepl-ledger-valid? (empty)) 0) 2048 0))
+
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11)))

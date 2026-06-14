@@ -190,7 +190,6 @@
   },
   "validation": {
     "commands": [
-      "python3 scripts/form_native_training_receipt.py --check",
       "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/native-training-receipt.fk form-stdlib/tests/native-training-receipt-band.fk",
       "cd form && bash scripts/fourth-arm-gate.sh native-training-receipt"
     ],

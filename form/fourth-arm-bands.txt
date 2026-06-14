@@ -162,8 +162,9 @@ training-catalog fks 31
 form-cli-loop fks 31
 text-summary-learning fks 262143
 llm-feature-channel-floor fks 131071
-android-mesh-learning fks 32767
-witness-state-receipt fks 16777215
+android-mesh-learning fks 131071
+witness-state-receipt fks 67108863
+model-executor-proof-ledger fks 4095
 model-vitality fks 4095
 field-model-form-runtime fks 63
 field-model-form-runtime-conflict fks 1
@@ -426,7 +427,7 @@ translation-learn fks 1111111
 translation-quality fks 1111111
 translation-engine fks 1111111
 chart-cast fks 1111111
-native-training-receipt fks 2047
+native-training-receipt fks 16383
 eq-effect-once fks 1
 let-effect-once fks 111
 write-file-text fks 1111

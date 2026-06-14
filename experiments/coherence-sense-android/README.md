@@ -133,26 +133,25 @@ Useful commands:
 Logs live at `~/Library/Logs/CoherenceSense/mac-witness.out.log` and
 `~/Library/Logs/CoherenceSense/mac-witness.err.log`.
 
-### Keep the Android + Mac learning receipt running
+### Keep the Android + Mac learning receipt proven
 
-From the repository root, prove the connected phone and Mac witness as learning
-organs once:
+From the repository root, prove the connected phone and Mac witness shape as
+learning organs:
 
 ```bash
-python3 scripts/android_mesh_learning_receipt.py --start-app
+cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/tests/android-mesh-learning-band.fk
 ```
 
-That launches `com.coherence.sense` through adb, samples a safe capability
-inventory from the authorized phone, samples the Mac host/witness/tool lanes,
-and writes `.cache/android-mesh-learning/<stamp>/android-mesh-learning-summary.json`
-plus `.cache/android-mesh-learning/latest.json`. It records liveness and channel
-readiness, not raw sensor values, location coordinates, package inventory, or
-the adb serial.
+That validates capability/liveness receipt rows, typed channels, active
+mic/camera/GPU summary samples, and native-first learning routes without a
+Python receipt helper. It records the shape of liveness and channel readiness,
+not raw sensor values, location coordinates, package inventory, or the adb
+serial.
 
-For a continuous local receipt loop:
+For the four-way gate:
 
 ```bash
-python3 scripts/android_mesh_learning_receipt.py --start-app --loop --interval 60
+cd form && bash scripts/fourth-arm-gate.sh android-mesh-learning witness-state-receipt
 ```
 
 The current receipt feeds the Form-native learning floor: summarize, code-lower,
@@ -162,18 +161,16 @@ summary counters can lift speech, vision, and multimodal alignment to
 native-first routing; heldout wins are still required before retiring their
 teachers.
 
-To write source-backed oracle emission cycles from the live witness counters:
+To prove source-backed oracle emission cycles from the live witness counters:
 
 ```bash
-python3 scripts/witness_oracle_emission_ledger.py --cycles 2 --interval 1
+cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/witness-state-receipt.fk form-stdlib/tests/witness-state-receipt-band.fk
 ```
 
-That reads `http://localhost:8800/state`, derives summary-only STT, vision,
-multimodal, and GPU label rows from the active counters, writes
-`.cache/witness-oracle-emissions/records/*.json`, and updates
-`.cache/witness-oracle-emissions/latest.json`. If the phone is not actively
-sharing (`present=false`) or any mic/camera/GPU counter is missing, it writes a
-blocked receipt and exits non-zero instead of storing a pretend teacher sample.
+That proves summary-only STT, vision, multimodal, and GPU label rows from
+active counters, and it classifies stale or non-increasing cycles as blocked in
+Form. The remaining host gap is direct Form HTTP/resource sampling of
+`http://localhost:8800/state` and direct Form process/device carriers for adb.
 
 ## Hati mesh identity + channels
 

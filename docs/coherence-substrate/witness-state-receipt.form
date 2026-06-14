@@ -4,12 +4,12 @@
   (lineage
     (rests-on android-mesh-learning.form llm-feature-channel-floor.form)
     (recipe form/form-stdlib/witness-state-receipt.fk)
-    (proof form/form-stdlib/tests/witness-state-receipt-band.fk -> 16777215)
-    (fourth-arm form/fourth-arm-bands.txt -> witness-state-receipt fks 16777215))
+    (proof form/form-stdlib/tests/witness-state-receipt-band.fk -> 67108863)
+    (fourth-arm form/fourth-arm-bands.txt -> witness-state-receipt fks 67108863))
 
   (purpose
     "Turn live Mac witness /state counters into deterministic Form-native receipt rows."
-    "Use the receipt rows to feed Android/Mac active sample learning without extending the Python JSON helper.")
+    "Use the receipt rows to feed Android/Mac active sample learning without a Python receipt helper.")
 
   (floor
     "The live witness receipt row carries source, present flag, frame count, mic RMS summary, camera luma summary, camera sample count, GPU readback count, GPU latency summary, total sample count, active organs, and privacy mode."
@@ -19,7 +19,7 @@
     "The receipt emits heldout learner rows for speech, vision, multimodal, and GPU readback lanes, scores challenger/champion trials, keeps too-few samples on the oracle teacher, and retires one narrow teacher only after enough native wins."
     "Native witness export rows and oracle-label rows form the source-backed teacher membrane: raw-media exports are rejected, fixture providers are rejected, and source-backed labels can create heldout rows that retire a narrow teacher only after a long enough native-win window."
     "Live oracle process rows and emission-cycle rows now express continuous source-backed teacher flow: STT, vision, multimodal, and GPU processes must be running, must cover each label by provider/protocol/feature, and must emit across increasing witness export cycles."
-    "scripts/witness_oracle_emission_ledger.py reads the live Mac witness /state endpoint, refuses stale/non-live mic-camera-GPU state by default, and writes summary-only emission records under .cache/witness-oracle-emissions/records.")
+    "The Form recipe classifies emission record status as pass only for live increasing cycles and blocked for stale/non-live cycles; the remaining host gap is direct Form HTTP/resource sampling of /state.")
 
   (north-star
     "The Mac witness exports native receipt cells continuously into the substrate/native recipe ledger."
@@ -52,10 +52,9 @@
     (rejects "fixture providers and raw-media process/cycle privacy"))
 
   (carrier-ledger
-    (command "python3 scripts/witness_oracle_emission_ledger.py --cycles 2 --interval 1")
-    (latest ".cache/witness-oracle-emissions/latest.json")
-    (records ".cache/witness-oracle-emissions/records/*.json")
-    (refusal "present=false or missing mic/camera/GPU counters writes a blocked receipt and exits non-zero"))
+    (command "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/witness-state-receipt.fk form-stdlib/tests/witness-state-receipt-band.fk")
+    (four-way "cd form && bash scripts/fourth-arm-gate.sh witness-state-receipt")
+    (refusal "present=false or non-increasing emission cycles evaluate to blocked in Form"))
 
   (remaining-gaps
     (physical-teacher-runs "replace summary-label carriers with full model-backed STT and vision oracle calls while keeping the same process-row contract")
