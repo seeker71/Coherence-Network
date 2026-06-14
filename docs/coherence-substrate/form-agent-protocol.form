@@ -1,0 +1,70 @@
+; form-agent-protocol.form — the borrowed shape: how form-cli routes and executes
+; like opencode / OpenClaw / Hermes, because it speaks the shape they converge on.
+;
+; We looked at three real agents and took the skeleton they share rather than
+; inventing another. Sources read directly (not memory):
+;   opencode  — github.com/sst/opencode  (session/message-v2.ts, tool/tool.ts,
+;               session/llm.ts, provider/provider.ts; runs on the Vercel AI SDK)
+;   OpenClaw  — github.com/openclaw/openclaw (packages/llm-core/src/types.ts,
+;               packages/agent-core/src/agent-loop.ts)
+;   Hermes    — github.com/NousResearch/Hermes-Function-Calling
+;               (prompt_assets/sys_prompt.yml, functioncall.py)
+
+(form-agent-protocol
+
+  (convergence
+    "All three are: a conversation of role-tagged messages whose content is a LIST"
+    "of typed PARTS (text / thinking / tool_call), tool RESULTS returned keyed by"
+    "the call id, tools declared as {name, description, parameters(JSON-schema)},"
+    "and a loop that runs assistant -> tool_calls -> execute -> append results ->"
+    "repeat until no tool_calls. They differ only in surface: opencode fuses a"
+    "call+result into one state-machine part; OpenClaw/Anthropic keep a tool_call"
+    "part on the assistant and a separate tool role for the result; Hermes encodes"
+    "the very same shape as tags over plain ChatML. We take the separated, portable"
+    "shape — it is what Anthropic, OpenAI, and Hermes all already speak.")
+
+  ; ── the shape, as Form (form-stdlib/form-agent-protocol.fk) ──────────────────
+  (shape
+    (message   "ap-msg(role, parts)            role: user | assistant | tool")
+    (parts     "ap-text / ap-thinking / ap-tool-call(id,name,args) / ap-tool-result(id,name,content)")
+    (tool      "ap-tool-def(name, description, parameters)   parameters is a JSON-schema")
+    (loop      "ap-next(last-msg, step, max) -> execute | done | halt   (+ ap-same-call? doom-guard)")
+    (proof     "tests/form-agent-protocol-band.fk -> 31 four-way"))
+
+  ; ── two wire encodings of the ONE shape (chosen per lane) ────────────────────
+  (encodings
+    (native-json
+      "structured tool_calls in the request/response (OpenAI/Anthropic style;"
+      "opencode via the AI SDK, OpenClaw via its KnownApi families). Used by the"
+      "agent-CLI lane — the subscription model already speaks it.")
+    (hermes-tags
+      "<tool_call>{\"name\":..,\"arguments\":..}</tool_call> and"
+      "<tool_response>{\"name\":..,\"content\":..}</tool_response> over plain ChatML"
+      "(ap-hermes-* wraps the tags; the JSON body is the grammar's codec). Needs NO"
+      "native tool API, so it is the encoding the LOCAL and form-native lanes use —"
+      "the bridge that lets a sovereign model do tool-use at all."))
+
+  ; ── how it routes and executes (composes with what is on main) ───────────────
+  (pipeline
+    (route   "form-cli-router.fk fcr-route -> form-native | agent-cli (no REST)")
+    (encode  "agent-cli -> native-json ; form-native/local -> hermes-tags")
+    (turn    "send messages + tool-defs; receive an assistant message of parts")
+    (decide  "ap-next over the last message -> execute | done | halt")
+    (plan    "for each tool_call part: tool-channel.fk tc-plan validates the channel")
+    (execute "run the planned host channel (bash/file/grep/http) — the carrier")
+    (append  "wrap each output as an ap-tool-result keyed by the call id; recur")
+    (attune  "the reply passes the freq-check (form-freq-check.fk + its model) before it lands")
+    (capture "every turn -> training-catalog.fk: usage becomes capability"))
+
+  (why
+    "This is the difference between a logger and an agent CLI: speaking the shape"
+    "opencode/OpenClaw/Hermes speak means form-cli can route to any of them OR run"
+    "local, execute real tools, and feed every turn back into its own learning —"
+    "one protocol, two encodings, the lane chosen by the sovereignty/trust/"
+    "capability/confidence formula, not by a vendor.")
+
+  (openings
+    "The JSON codec for the hermes-tags body (build + parse the {name,arguments}"
+    "object) is the json grammar's job — wire it to ap-hermes-wrap and a parse"
+    "recipe. The loop driver that walks ap-next is the next carrier (it replaces"
+    "the earlier line-protocol stopgap), emitted native via the foc-emit path."))

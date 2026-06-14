@@ -1,0 +1,85 @@
+; form-agent-protocol.fk — the universal agent request/response/tool-use shape.
+;
+; preludes: form-stdlib/core.fk
+;
+; Borrowed from where opencode, OpenClaw, and Hermes CONVERGE — so the form-cli
+; routes and executes like them. The three differ in surface but agree on one
+; skeleton, which this file makes Form:
+;
+;   message   = (role, parts)          role: "user" | "assistant" | "tool"
+;   part      = text | thinking | tool_call | tool_result   (a tagged, kind-first cell)
+;   tool      = (name, description, parameters)             parameters is a JSON-schema
+;   the loop  = messages+tools -> assistant(maybe tool_calls) -> execute each ->
+;               append tool_results -> repeat until no tool_calls -> done
+;
+; Tool call and tool result are keyed by the same id (Anthropic/OpenAI/Hermes all
+; do this; opencode fuses them into one state-machine part — we keep them separate,
+; the more portable shape). Two WIRE ENCODINGS carry this same shape:
+;   - native JSON tool_calls  — for API backends (the agent-CLI lane)
+;   - Hermes tags             — <tool_call>{json}</tool_call> / <tool_response>{json}
+;     rides plain ChatML, needs no native tool API: the encoding our LOCAL and
+;     form-native lanes use. (ap-hermes-* below; the JSON codec is the grammar.)
+;
+; This composes with what is already on main: fcr-route (form-cli-router.fk) picks
+; the lane, this protocol shapes the turn, tool-channel.fk plans each tool call.
+; North star + the borrowed-shape map: docs/coherence-substrate/form-agent-protocol.form
+;
+; Proven by: form-stdlib/tests/form-agent-protocol-band.fk
+
+; ── message ──────────────────────────────────────────────────────────────────
+(defn ap-msg (role parts) (list role parts))
+(defn ap-msg-role  (m) (nth m 0))
+(defn ap-msg-parts (m) (nth m 1))
+
+; ── parts (kind-first tagged cells) ──────────────────────────────────────────
+(defn ap-text        (text)             (list "text" text))
+(defn ap-thinking    (text)             (list "thinking" text))
+(defn ap-tool-call   (id name args)     (list "tool_call" id name args))
+(defn ap-tool-result (id name content)  (list "tool_result" id name content))
+(defn ap-part-kind   (p) (nth p 0))
+
+; tool_call accessors  (id, name, arguments)
+(defn ap-tc-id   (p) (nth p 1))
+(defn ap-tc-name (p) (nth p 2))
+(defn ap-tc-args (p) (nth p 3))
+; tool_result accessors  (id, name, content)
+(defn ap-tr-id      (p) (nth p 1))
+(defn ap-tr-name    (p) (nth p 2))
+(defn ap-tr-content (p) (nth p 3))
+
+; ── tool definition  (name, description, parameters) ─────────────────────────
+(defn ap-tool-def (name description params) (list name description params))
+(defn ap-tool-def-name        (t) (nth t 0))
+(defn ap-tool-def-description (t) (nth t 1))
+(defn ap-tool-def-params      (t) (nth t 2))
+
+; ── the loop ─────────────────────────────────────────────────────────────────
+; count tool_call parts in a parts list (monomorphic recursion — fourth-arm safe).
+(defn ap-count-tool-calls (parts)
+    (if (eq (len parts) 0)
+        0
+        (add (if (str_eq (ap-part-kind (head parts)) "tool_call") 1 0)
+             (ap-count-tool-calls (tail parts)))))
+(defn ap-has-tool-calls? (msg)
+    (if (eq (ap-count-tool-calls (ap-msg-parts msg)) 0) 0 1))
+
+; the loop decision over the last assistant message:
+;   "execute" — it requested tools and step budget remains -> run them, append results, recur
+;   "halt"    — step budget spent (stop even if more tools were wanted)
+;   "done"    — no tool calls -> the assistant's final answer stands
+(defn ap-next (last-msg step max-steps)
+    (if (ge step max-steps)
+        "halt"
+        (if (eq (ap-has-tool-calls? last-msg) 1) "execute" "done")))
+
+; doom-loop guard (opencode's DOOM_LOOP_THRESHOLD): identical consecutive calls.
+; same id-less signature (name+args) seen `threshold` times in a row -> stop.
+(defn ap-same-call? (a b)
+    (if (and (str_eq (ap-tc-name a) (ap-tc-name b)) (str_eq (ap-tc-args a) (ap-tc-args b))) 1 0))
+
+; ── Hermes wire encoding (the local / form-native lane: tools without a native API) ──
+; serialize/parse the JSON body is the grammar's job; these wrap/recognize the tags.
+(defn ap-hermes-open  () "<tool_call>")
+(defn ap-hermes-close () "</tool_call>")
+(defn ap-hermes-wrap (json-body)
+    (str_concat (ap-hermes-open) (str_concat json-body (ap-hermes-close))))
