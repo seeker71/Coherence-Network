@@ -1,0 +1,119 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/postgres-storage-carrier-receipt-20260614",
+  "commit_scope": "Record the bounded Postgres storage-port host-carrier receipt and move the carrier north star past the Postgres boundary proof.",
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "postgres-storage-carrier-receipt",
+    "postgres-carrier-boundary",
+    "fourth-arm-substrate-carriers",
+    "connected-tissue-north-star",
+    "focused-testing-fast-release"
+  ],
+  "spec_ids": [
+    "fourth-arm-substrate-carriers",
+    "ports-interface-and-structure",
+    "agent-start-packet",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "postgres-storage-carrier-receipt-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "scope-pruning",
+        "architecture-boundary-clarification"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "host-carrier-validation",
+        "north-star-retune",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "docs/coherence-substrate/fourth-arm-substrate-carriers.form",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-14_postgres_storage_carrier_receipt.json",
+    "docs/system_audit/model_executor_run_ledger/postgres-storage-carrier-receipt-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/fourth-arm-substrate-carriers.form",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-14_postgres_storage_carrier_receipt.json",
+    "docs/system_audit/model_executor_run_ledger/postgres-storage-carrier-receipt-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "coord claim postgres-storage-carrier-receipt",
+      "form/scripts/storage-port-carriers-test.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_postgres_storage_carrier_receipt.json",
+      "python3 scripts/model_executor_proof_ledger.py check-jsonl",
+      "python3 scripts/model_executor_proof_ledger.py validate",
+      "git diff --check"
+    ],
+    "notes": "storage-port-carriers-test.sh self-provisioned throwaway Postgres and returned `verdict: 111111`; memory, segmented file, and Postgres storage carriers agreed on the same storage-test verdict."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed when this evidence was written; CI had not run yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested for this host-carrier receipt slice."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The existing bounded Postgres storage-port proof is now recorded as the host-carrier receipt: one carrier-agnostic storage-test returned the identical verdict through memory, segmented file, and throwaway Postgres.",
+    "public_endpoints": [
+      "n/a: local throwaway Postgres host-carrier proof"
+    ],
+    "test_flows": [
+      "form/scripts/storage-port-carriers-test.sh"
+    ]
+  },
+  "evidence_refs": [
+    "form/scripts/storage-port-carriers-test.sh",
+    "form/form-stdlib/integration/storage-port-all-carriers.fk",
+    "docs/coherence-substrate/fourth-arm-substrate-carriers.form",
+    "docs/shared/agent-start-packet.md",
+    "form/fourth-arm-bands.txt"
+  ],
+  "phase_gate": {
+    "phase": "postgres-storage-carrier-receipt",
+    "gate": "Postgres storage-port carrier must prove the same bounded storage-test verdict as memory and segmented file through throwaway Postgres.",
+    "state": "local-host-carrier-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Broader source-scan recipes can build on the admitted scan_run/file_mtime floor."
+  },
+  "floor_update": {
+    "previous_observed_floor": "234 four-way bands / 615 ok / 0 divergent; Postgres carrier boundary proof listed unsupported",
+    "current_observed_floor": "234 four-way bands / 615 ok / 0 divergent; Postgres storage-port host-carrier receipt passes separately with verdict 111111",
+    "new_bands": [],
+    "retuned_north_star": [
+      "postgres-carrier-boundary-receipt moved to supported host-carrier evidence",
+      "Postgres remains outside the pure fkwu value-diff floor",
+      "next host-io gate is broader source-scan recipes"
+    ],
+    "blocked_trials": []
+  }
+}
