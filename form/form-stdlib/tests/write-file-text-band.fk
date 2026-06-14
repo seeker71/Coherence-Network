@@ -1,0 +1,19 @@
+; write-file-text-band.fk — text writes cross the fourth-arm host carrier.
+;
+; preludes: form-stdlib/core.fk
+;
+; Proves the fkwu write_file_text carrier arm against the three reference
+; kernels. The first write creates a real file and returns the byte count; the
+; second write overwrites/truncates the same path, proving this is WriteFile
+; semantics rather than append semantics.
+(do
+    (let path (str_concat (temp_dir) "/fk-write-file-text.txt"))
+    (fs_remove path)
+    (let wrote1 (write_file_text path "SAT"))
+    (let read1 (read_file path))
+    (let wrote2 (write_file_text path "OM"))
+    (let read2 (read_file path))
+    (add (if (eq wrote1 3) 1 0)
+    (add (if (str_eq read1 "SAT") 10 0)
+    (add (if (eq wrote2 2) 100 0)
+         (if (str_eq read2 "OM") 1000 0)))))

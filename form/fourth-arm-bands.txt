@@ -23,7 +23,7 @@
 #     field constructors, float NodeIDs, and deeper content-addressed lattice
 #     surfaces beyond the explicit make_nodeid, category/pkg/level/type/inst
 #     projection, and generic/doc/concept/dns/session floor
-#   host io family        — read_file, write_file_text, file_mtime, scan_run
+#   host io family        — file_mtime, scan_run, and broader write/read recipes
 #   multi-line output     — bands that print mid-walk (the walker answers
 #     one value through fk_pr)
 #
@@ -45,8 +45,8 @@
 # record-blueprint rows among its focused four-way rows, and
 # android-mesh-learning now carries
 # active mic/camera/GPU sample rows at focused verdict 32767. The latest
-# completed full `cd form && ./validate.sh` on this branch reads 208
-# four-way bands and 611 total passing workloads with 0 residual divergent
+# completed full `cd form && ./validate.sh` on this branch reads 209
+# four-way bands and 612 total passing workloads with 0 residual divergent
 # bands; refresh the full aggregate on a quiet host after focused release
 # rather than spending repeated validation cycles under shared-runner
 # contention. Literal bp registry aliases now fold through make_nodeid for the
@@ -337,6 +337,9 @@ substrate-core fks 11111
 # 1). write_file_text/file_mtime/scan_run and segmented-FILE/Postgres carriers
 # can now build on effect-once let discipline instead of working around
 # re-walked bindings.
+# The next host-io carrier row is now admitted too: write_file_text rides fkwu
+# tag 104 with overwrite/truncate semantics, so text emitters no longer need to
+# materialize byte lists for the minimum fourth-arm write floor.
 hostio-roundtrip fks 111
 do-effect-seq fks 2
 doc-xpath fks 10
@@ -359,3 +362,4 @@ translation-quality fks 1111111
 chart-cast fks 1111111
 eq-effect-once fks 1
 let-effect-once fks 111
+write-file-text fks 1111
