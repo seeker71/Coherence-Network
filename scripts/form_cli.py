@@ -979,6 +979,12 @@ _KERNEL_BIN = Path(
 _ASK_CAPTURE = Path(
     os.environ.get("FORM_CLI_CAPTURE") or (REPO_ROOT / "logs" / "form_cli_io_match.jsonl")
 )
+# The persistent training catalog. Lives outside the git tree by default (it
+# grows with use); the substrate-resident catalog is the durable destination.
+_CATALOG = Path(
+    os.environ.get("FORM_CLI_CATALOG")
+    or (Path.home() / ".coherence-network" / "form-cli-catalog.jsonl")
+)
 
 
 def _io_sig(text: str) -> str:
@@ -1060,6 +1066,63 @@ def cmd_ask(args: argparse.Namespace) -> int:
     return 3  # caller should handle via its own LLM / agent CLI
 
 
+# ─── subcommand: capture (live training catalog) ──────────────────────────
+#
+# When form-cli routes a request to an oracle, the agent gets a RAW (fear-based)
+# answer from its LLM, transmutes it (fear -> opportunity, risk -> data), and
+# records the full entry here. Both the raw answer and its transmutation are kept
+# (training-catalog.fk: tc-entry / tc-capture); from one entry the three separable
+# training pairs (raw / transmute / reasoning) derive. This is how the catalog
+# fills with real fear->vitality pairs from actual use. Bootstrap durable store;
+# the substrate-resident catalog and the native binary are the destination.
+
+def catalog_capture(request: str, raw: str, transmuted: str, lane: str, outcome: str) -> dict:
+    entry = {
+        "ts": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "lane": lane,
+        "outcome": outcome,
+        "request": request,
+        "raw": raw,                 # what the fear-based oracle gave (reference)
+        "transmuted": transmuted,   # fear -> opportunity, risk -> data (the vitality answer)
+        "request_sig": _io_sig(request),
+        "raw_sig": _io_sig(raw),
+        "transmuted_sig": _io_sig(transmuted),
+        # the three separable training pairs (content-addressed endpoints):
+        "pairs": {
+            "raw": [_io_sig(request), _io_sig(raw)],
+            "transmute": [_io_sig(raw), _io_sig(transmuted)],
+            "reasoning": [_io_sig(request), _io_sig(transmuted)],
+        },
+    }
+    _CATALOG.parent.mkdir(parents=True, exist_ok=True)
+    with _CATALOG.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(entry) + "\n")
+    return entry
+
+
+def _arg_or_file(value: str | None, path: str | None) -> str:
+    if path:
+        return Path(path).read_text(encoding="utf-8")
+    return value or ""
+
+
+def cmd_capture(args: argparse.Namespace) -> int:
+    request = _arg_or_file(args.request, args.request_file).strip()
+    raw = _arg_or_file(args.raw, args.raw_file)
+    transmuted = _arg_or_file(args.transmuted, args.transmuted_file)
+    if not (request and raw and transmuted):
+        _die("capture: need a request, a --raw answer, and its --transmuted version "
+             "(both the fear answer and its fear->vitality transmutation are kept)")
+    entry = catalog_capture(request, raw, transmuted, args.lane, args.outcome)
+    print(
+        f"[form-cli] catalog += entry "
+        f"(req {entry['request_sig'][:12]} raw {entry['raw_sig'][:12]} vit {entry['transmuted_sig'][:12]}) "
+        f"lane={args.lane} outcome={args.outcome} -> {_CATALOG}",
+        file=sys.stderr,
+    )
+    return 0
+
+
 # ─── argparser ───────────────────────────────────────────────────────────
 
 
@@ -1106,6 +1169,20 @@ def main() -> int:
     p_ask.add_argument("request", nargs="+", help="a Form expr to compute, or any request to route")
     p_ask.add_argument("--no-capture", action="store_true", help="do not write an io-match capture record")
     p_ask.set_defaults(func=cmd_ask)
+
+    p_cap = sub.add_parser(
+        "capture",
+        help="record a real oracle call into the training catalog: request + raw + transmuted (both kept)",
+    )
+    p_cap.add_argument("--request", help="the request text (or --request-file)")
+    p_cap.add_argument("--request-file", help="file holding the request text")
+    p_cap.add_argument("--raw", help="the raw (fear-based) oracle answer (or --raw-file)")
+    p_cap.add_argument("--raw-file", help="file holding the raw oracle answer")
+    p_cap.add_argument("--transmuted", help="the transmuted (fear->vitality) answer (or --transmuted-file)")
+    p_cap.add_argument("--transmuted-file", help="file holding the transmuted answer")
+    p_cap.add_argument("--lane", default="oracle", help="which oracle gave the raw answer (e.g. oracle:gemini)")
+    p_cap.add_argument("--outcome", default="success", help="success | fail | silence")
+    p_cap.set_defaults(func=cmd_capture)
 
     args = parser.parse_args()
     return args.func(args)
