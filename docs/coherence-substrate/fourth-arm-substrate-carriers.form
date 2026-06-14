@@ -26,6 +26,8 @@
       host-io-temp_dir-tag-101                  # $TMPDIR resolution as a native arm
       host-io-fs-carriers-tags-55-63            # open/read/write/close/lseek/mkdir/rmdir/unlink/rename/size/append/slice
       host-io-real-roundtrip                    # real filesystem write -> read crosses four-way deterministically (band hostio-roundtrip)
+      host-io-file-mtime-scan-run               # real file freshness plus string scan stride (band hostio-observation)
+      jit-scan-run-helper-value-abi             # scan_run inside a JIT helper path (band go-jit-value-helper)
       native-write-file-text-tag-104            # overwrite/truncate text write floor (band write-file-text)
       native-file-append                        # append log write floor (band file-append)
       segmented-file-carrier-four-way           # storage-port memory/file substitutability and durability (band storage-port)
@@ -35,10 +37,9 @@
       graph-node-full-mutation-verdict          # memory/file agreement and full file mutation verdict (bands graph-node-mutation-carrier, graph-node-mutation-file-verdict)
       ideas-graph-file-projection)              # idea response projection over reopened file stores (band ideas-graph-projection)
     (current-unsupported
-      file_mtime scan_run                       # broader host-io read/scan recipes
       postgres-carrier-four-way))               # gated on the broader host-io recipes
 
   (next-step
-    (sentence "Land host-io mtime/scan recipes, then Postgres.")
-    (gate file_mtime scan_run)
-    (why "Statement-level effects already fire once (sequenced bare-do, tag 69), operand-level effects already fire once (single-walk eq/lt, tags 102/103), nested do-lets snapshot effecting values, the minimum write floor includes write_file_text plus append, storage-port proves memory/file substitutability with durability, full graph mutation crosses over the file carrier, and ideas projection now crosses over reopened file stores. The next carrier proof is mtime/scan observation before the Postgres carrier can inherit the same content-key discipline.")))
+    (sentence "Land the Postgres carrier on the same content-key discipline; broader source-scan recipes can now build on the scan_run floor.")
+    (gate postgres-carrier-four-way)
+    (why "Statement-level effects already fire once (sequenced bare-do, tag 69), operand-level effects already fire once (single-walk eq/lt, tags 102/103), nested do-lets snapshot effecting values, the minimum write floor includes write_file_text plus append, storage-port proves memory/file substitutability with durability, full graph mutation crosses over the file carrier, ideas projection crosses over reopened file stores, and host-io freshness/scan observation now crosses through file_mtime plus scan_run.")))
