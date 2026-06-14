@@ -414,6 +414,14 @@ is_static_only_change() {
       proof.fk) ;;
       we.fkb) ;;
       PROOF.md) ;;
+      # Fourth-arm validation tissue: test bands and the fkwu manifest are run
+      # only by validate.sh, never loaded by the api/web runtime (the api serves
+      # routes through form-stdlib MODULES, which stay outside this allowlist and
+      # still force a rebuild). So a pure band-admission merge skips the heavy
+      # rebuild+force-recreate that was straining the witness on every fourth-arm
+      # commit — deployed_sha still advances on the fast path.
+      form/form-stdlib/tests/*) ;;
+      form/fourth-arm-bands.txt) ;;
       *) return 1 ;;
     esac
   done <<< "$changed"
