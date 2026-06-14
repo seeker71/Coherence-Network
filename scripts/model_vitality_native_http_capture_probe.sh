@@ -12,8 +12,9 @@
 # row grammar, with no shell projection. The current all-kernel floor is
 # plaintext external HTTP plus verified TLS body capture, and the fourth arm
 # carries direct HTTPS production response headers into model-vitality rows.
-# Next floor: request-header forwarding, measured duration, larger body policy,
-# and streaming/backpressure receipt rows.
+# All kernels now also forward explicit request-header rows and prove the echo
+# through a live HTTPS header endpoint. Next floor: measured fourth-arm
+# duration, larger body policy, and streaming/backpressure receipt rows.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -213,6 +214,83 @@ all_https_detail_fk="$out_dir/all-kernel-https-detail.fk"
 write_external_http_band "http://example.com/" "$all_http_fk" "$all_http_detail_fk"
 write_external_http_band "https://example.com/" "$all_https_fk" "$all_https_detail_fk"
 
+write_request_header_band() {
+    local target_url="$1"
+    local verdict_path="$2"
+    local detail_path="$3"
+    cat > "$verdict_path" <<FK
+(do
+    (defn h (name value) (list 43001 name value))
+    (defn dict-get-pairs (xs key)
+        (if (eq (len xs) 0)
+            0
+            (if (str_eq (head xs) key)
+                (head (tail xs))
+                (dict-get-pairs (tail (tail xs)) key))))
+    (defn dict-get (d key) (dict-get-pairs (tail d) key))
+    (defn dict-sentinel? (s)
+        (and (eq (str_len s) 8)
+        (and (eq (ord (char_at s 0)) 95)
+        (and (eq (ord (char_at s 1)) 95)
+        (and (eq (ord (char_at s 2)) 100)
+        (and (eq (ord (char_at s 3)) 105)
+        (and (eq (ord (char_at s 4)) 99)
+        (and (eq (ord (char_at s 5)) 116)
+        (and (eq (ord (char_at s 6)) 95)
+             (eq (ord (char_at s 7)) 95))))))))))
+    (let trace "codex-request-header-20260614")
+    (let response (http_get "$target_url" (list (h "Accept" "application/json") (h "X-Form-Trace" trace)) 8000))
+    (let status (dict-get response "status_code"))
+    (let body (dict-get response "body"))
+    (let err (dict-get response "error"))
+    (let headers (dict-get response "headers"))
+    (let c0 (if (dict-sentinel? (head response)) 1 0))
+    (let c1 (if (eq status 200) 2 0))
+    (let c2 (if (gt (str_len body) 100) 4 0))
+    (let c3 (if (str_eq err "") 8 0))
+    (let c4 (if (ge (str_find body "X-Form-Trace" 0) 0) 16 0))
+    (let c5 (if (ge (str_find body trace 0) 0) 32 0))
+    (let c6 (if (gt (len headers) 0) 64 0))
+    (sum (list c0 c1 c2 c3 c4 c5 c6)))
+FK
+
+    cat > "$detail_path" <<FK
+(do
+    (defn h (name value) (list 43001 name value))
+    (defn dict-get-pairs (xs key)
+        (if (eq (len xs) 0)
+            0
+            (if (str_eq (head xs) key)
+                (head (tail xs))
+                (dict-get-pairs (tail (tail xs)) key))))
+    (defn dict-get (d key) (dict-get-pairs (tail d) key))
+    (let trace "codex-request-header-20260614")
+    (let response (http_get "$target_url" (list (h "Accept" "application/json") (h "X-Form-Trace" trace)) 8000))
+    (let status (dict-get response "status_code"))
+    (let body (dict-get response "body"))
+    (let err (dict-get response "error"))
+    (let duration (dict-get response "duration_ms"))
+    (let headers (dict-get response "headers"))
+    (str_concat
+        (str_concat
+            (str_concat
+                (str_concat "status=" (int_to_str status))
+                (str_concat " bytes=" (int_to_str (str_len body))))
+            (str_concat
+                (str_concat " error=" err)
+                (str_concat " duration_ms=" (int_to_str duration))))
+        (str_concat
+            (str_concat " echoed_name=" (int_to_str (str_find body "X-Form-Trace" 0)))
+            (str_concat
+                (str_concat " echoed_value=" (int_to_str (str_find body trace 0)))
+                (str_concat " response_headers=" (int_to_str (len headers)))))))
+FK
+}
+
+request_header_fk="$out_dir/all-kernel-request-header-verdict.fk"
+request_header_detail_fk="$out_dir/all-kernel-request-header-detail.fk"
+write_request_header_band "https://httpbin.org/headers" "$request_header_fk" "$request_header_detail_fk"
+
 run_http_kernel() {
     local name="$1"
     shift
@@ -282,6 +360,27 @@ run_https_kernel https-rust "$RS_BIN"
 run_https_kernel https-typescript run_ts
 run_fourth_http "$all_https_fk" "$out_dir/https-fourth.https.verdict" "$out_dir/https-fourth.https.verdict.err"
 run_fourth_http "$all_https_detail_fk" "$out_dir/https-fourth.https.detail" "$out_dir/https-fourth.https.detail.err"
+
+run_request_header_kernel() {
+    local name="$1"
+    shift
+    "$@" "$compiled_core" "$request_header_fk" > "$out_dir/$name.request-header.verdict" 2> "$out_dir/$name.request-header.verdict.err" || {
+        echo "FAIL $name request-header verdict failed"
+        cat "$out_dir/$name.request-header.verdict.err"
+        exit 1
+    }
+    "$@" "$compiled_core" "$request_header_detail_fk" > "$out_dir/$name.request-header.detail" 2> "$out_dir/$name.request-header.detail.err" || {
+        echo "FAIL $name request-header detail failed"
+        cat "$out_dir/$name.request-header.detail.err"
+        exit 1
+    }
+}
+
+run_request_header_kernel header-go "$GO_BIN"
+run_request_header_kernel header-rust "$RS_BIN"
+run_request_header_kernel header-typescript run_ts
+run_fourth_http "$request_header_fk" "$out_dir/header-fourth.request-header.verdict" "$out_dir/header-fourth.request-header.verdict.err"
+run_fourth_http "$request_header_detail_fk" "$out_dir/header-fourth.request-header.detail" "$out_dir/header-fourth.request-header.detail.err"
 
 fourth_runtime_fk="$out_dir/fourth-runtime-authority-verdict.fk"
 fourth_runtime_detail_fk="$out_dir/fourth-runtime-authority-detail.fk"
@@ -367,6 +466,19 @@ if [[ "$https_go_v" != "63" || "$https_rust_v" != "63" || "$https_ts_v" != "63" 
     exit 1
 fi
 
+header_go_v="$(cat "$out_dir/header-go.request-header.verdict")"
+header_rust_v="$(cat "$out_dir/header-rust.request-header.verdict")"
+header_ts_v="$(cat "$out_dir/header-typescript.request-header.verdict")"
+header_fourth_v="$(cat "$out_dir/header-fourth.request-header.verdict")"
+if [[ "$header_go_v" != "127" || "$header_rust_v" != "127" || "$header_ts_v" != "127" || "$header_fourth_v" != "127" ]]; then
+    echo "FAIL all-kernel-request-headers verdict go=$header_go_v rust=$header_rust_v typescript=$header_ts_v fourth=$header_fourth_v cache=$out_dir"
+    echo "header go detail: $(cat "$out_dir/header-go.request-header.detail" 2>/dev/null || true)"
+    echo "header rust detail: $(cat "$out_dir/header-rust.request-header.detail" 2>/dev/null || true)"
+    echo "header typescript detail: $(cat "$out_dir/header-typescript.request-header.detail" 2>/dev/null || true)"
+    echo "header fourth detail: $(cat "$out_dir/header-fourth.request-header.detail" 2>/dev/null || true)"
+    exit 1
+fi
+
 fourth_runtime_v="$(cat "$out_dir/fourth-runtime-authority.verdict")"
 if [[ "$fourth_runtime_v" != "127" ]]; then
     echo "FAIL fourth-runtime-authority verdict fourth=$fourth_runtime_v cache=$out_dir"
@@ -389,6 +501,11 @@ go: $(cat "$out_dir/https-go.https.detail")
 rust: $(cat "$out_dir/https-rust.https.detail")
 typescript: $(cat "$out_dir/https-typescript.https.detail")
 fourth: $(cat "$out_dir/https-fourth.https.detail")
+all_kernel_request_headers:
+go: $(cat "$out_dir/header-go.request-header.detail")
+rust: $(cat "$out_dir/header-rust.request-header.detail")
+typescript: $(cat "$out_dir/header-typescript.request-header.detail")
+fourth: $(cat "$out_dir/header-fourth.request-header.detail")
 fourth_runtime_authority:
 fourth: $(cat "$out_dir/fourth-runtime-authority.detail")
 EOF
@@ -407,5 +524,10 @@ echo "PASS https-go $(cat "$out_dir/https-go.https.detail")"
 echo "PASS https-rust $(cat "$out_dir/https-rust.https.detail")"
 echo "PASS https-typescript $(cat "$out_dir/https-typescript.https.detail")"
 echo "PASS https-fourth $(cat "$out_dir/https-fourth.https.detail")"
+echo "PASS all-kernel-request-headers go=127 rust=127 typescript=127 fourth=127 url=https://httpbin.org/headers"
+echo "PASS header-go $(cat "$out_dir/header-go.request-header.detail")"
+echo "PASS header-rust $(cat "$out_dir/header-rust.request-header.detail")"
+echo "PASS header-typescript $(cat "$out_dir/header-typescript.request-header.detail")"
+echo "PASS header-fourth $(cat "$out_dir/header-fourth.request-header.detail")"
 echo "PASS fourth-arm-https native-tls=openssl-dlopen verified=true"
 echo "PASS fourth-runtime-authority fourth=127 $(cat "$out_dir/fourth-runtime-authority.detail")"
