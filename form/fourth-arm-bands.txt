@@ -28,12 +28,13 @@
 #   multi-line output     — bands that print mid-walk (the walker answers
 #     one value through fk_pr)
 #
-# Current floor (2026-06-14 literal bp admission): full
-# `cd form && ./validate.sh` reaches 146 four-way bands and 565 total passing
+# Current floor (2026-06-14 token recipe admission): full
+# `cd form && ./validate.sh` reaches 147 four-way bands and 565 total passing
 # workloads, with 0 residual divergent bands. Literal bp registry aliases now
-# fold through make_nodeid for the audit-log and hex error-sentinel rows.
-# Token remains a three-kernel recipe-composition row until its fourth-arm
-# mint/validate divergence is lifted separately. Record field access now rides a
+# fold through make_nodeid for the audit-log, hex, and token rows. Token's
+# blueprint reservation now lives inside its module body so fkwu executes the
+# recipe verdict, and its fixed positional accessors use direct projections.
+# Record field access now rides a
 # native fourth-arm record carrier: record_new lowers to a packed entry packet,
 # then fkwu tags 64/65/67/68/99 carry construction, get, has, record?, and keys
 # without aliasing ints, lists, nodes, or floats. BranchOutcome carries
@@ -209,7 +210,10 @@ record-field-access fks 16
 # ── blueprint literal lane — current registry aliases fold to NodeID packets ──
 # Literal bp calls for the current user-range registry names now lower onto
 # make_nodeid packets before fkwu walks the band, matching sibling kernels'
-# generated BP_TABLE identity for the admitted aliases. Dynamic/unknown bp names
-# still ride the tag-45 fallback until the full generated table is native.
+# generated BP_TABLE identity for the admitted aliases. Token also keeps its
+# blueprint reservation inside the module body so the fourth table's first
+# result is the band verdict. Dynamic/unknown bp names still ride the tag-45
+# fallback until the full generated table is native.
 audit-log fks 4
 hex fks 14
+token fks 3

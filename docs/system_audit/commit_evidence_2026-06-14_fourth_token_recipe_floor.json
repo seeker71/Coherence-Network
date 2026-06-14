@@ -1,0 +1,107 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/fourth-token-recipe-floor-20260614",
+  "commit_scope": "Admit token-band to the fourth-arm floor by making its blueprint reservation module-local and using direct fixed token projections.",
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "fourth-arm-node-vocab-floor",
+    "token-recipe-fourth-floor",
+    "jit-lowering-residual-cluster"
+  ],
+  "spec_ids": [
+    "fourth-arm-bands",
+    "model-executor-proof-ledger",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "fourth-token-recipe-floor-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "android-jit-floor-guidance"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/token.fk",
+    "form/form-stdlib/tests/token-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/system_audit/commit_evidence_2026-06-14_fourth_token_recipe_floor.json",
+    "docs/system_audit/model_executor_run_ledger/fourth-token-recipe-floor-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/form-stdlib/token.fk",
+    "form/form-stdlib/tests/token-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/system_audit/commit_evidence_2026-06-14_fourth_token_recipe_floor.json",
+    "docs/system_audit/model_executor_run_ledger/fourth-token-recipe-floor-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "docs/system_audit/model_executor_run_ledger/fourth-token-recipe-floor-20260614.json",
+    ".cache/validate_token_floor_full.log",
+    "form/form-stdlib/.cache/fourth-survey/band-missing-ops.tsv"
+  ],
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "token-band now runs as a manifest-covered fourth-arm fkwu row at verdict 3 while the full Form suite remains divergence-free.",
+    "public_endpoints": [
+      "local:form/validate.sh",
+      "local:scripts/bml_form_jit_metal_planes_audit.sh",
+      "local:form/scripts/fourth-arm-gap-analysis.py"
+    ],
+    "test_flows": [
+      "form:core+sha256+hmac-sha256+token+token-band -> fkwu fourth row returns 3",
+      "form:full validate.sh -> 147 fourth-arm bands, 565 ok, 0 divergent",
+      "metal-plane audit -> macOS arm64 Mach-O and Android arm64 ELF receipts pass"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim fourth-token-recipe-floor",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sha256.fk form-stdlib/audit-log.fk form-stdlib/tests/audit-log-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hex.fk form-stdlib/tests/hex-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sha256.fk form-stdlib/hmac-sha256.fk form-stdlib/token.fk form-stdlib/tests/token-band.fk",
+      "cd form && FOURTH_PREPARE_ALL_BATCH_MAX=999 ./validate.sh",
+      "./scripts/bml_form_jit_metal_planes_audit.sh",
+      "cd form && python3 scripts/fourth-arm-gap-analysis.py"
+    ],
+    "notes": "token-band now passes as a true fourth-leg row at 3. Full validation reports fourth arm: 147 band(s) four-way, 565 ok, 0 divergent. Metal-plane audit passes macOS arm64 Mach-O and Android arm64 ELF receipts."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed yet. GitHub checks will be monitored after PR creation."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deployment triggered by this Form-native floor commit."
+  },
+  "phase_gate": {
+    "phase": "fourth-token-recipe-floor",
+    "gate": "token-band is manifest-covered and validates four-way at verdict 3.",
+    "state": "local-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Replace the literal bp alias list with generated BP table support, then continue node/substrate residuals."
+  }
+}
