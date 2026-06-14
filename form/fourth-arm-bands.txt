@@ -313,12 +313,16 @@ substrate-core fks 11111
 # real filesystem io was 3-kernel-only (the named "host io" wall). temp_dir is
 # now a native fkwu arm (tag 101, fk_tempdir reads $TMPDIR), joining the existing
 # fs carriers (tags 55..63). hostio-roundtrip writes "ABC" then reads it back
-# over the live filesystem and crosses four-way deterministically. The remaining
-# wall is effect-once semantics: fkwu inlines let and drops bare do-statements,
-# and eq/and walk an operand twice, so a side-effecting op re-fires unless walked
-# exactly once — write_file_text/file_mtime/scan_run and the segmented-FILE and
-# Postgres carriers wait on let-effect-once / do-sequencing reaching fkwu.
+# over the live filesystem and crosses four-way deterministically. Effect-once
+# is the remaining ground, and one piece of it is now crossed: bare do-statements
+# (top-level and nested) sequence through tag 69, so each fires exactly once in
+# order (do-effect-seq writes two bytes through two bare appends and reads len 2).
+# Still open: fkwu inlines let (re-walks a bound value at every use) and flt-eq/
+# flt-lt lower an operand twice — so write_file_text/file_mtime/scan_run and the
+# segmented-FILE and Postgres carriers wait on let-effect-once and single-walk
+# eq/lt reaching fkwu.
 hostio-roundtrip fks 111
+do-effect-seq fks 2
 doc-xpath fks 10
 concept-xpath fks 9
 dns fks 5

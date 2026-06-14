@@ -1,0 +1,17 @@
+; do-effect-seq-band.fk — bare do-statements must each fire exactly once, in order.
+;
+; preludes: form-stdlib/core.fk
+;
+; fkwu's flattener kept only a do-block's LAST expression and dropped the bare
+; statements before it, so their side effects vanished. The three reference
+; kernels sequence them. This band writes two bytes through two bare append
+; statements (after a clean-slate remove) and reads the length back — only 2 if
+; every bare statement was walked exactly once, in order. Deterministic: the
+; remove gives a clean slate so reruns return 2.
+(do
+    (let dir (temp_dir))
+    (let path (str_concat dir "/fk-do-effect-seq.txt"))
+    (fs_remove path)
+    (file_append_bytes path (list 65))
+    (file_append_bytes path (list 66))
+    (str_len (read_file path)))
