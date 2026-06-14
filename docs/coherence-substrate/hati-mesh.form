@@ -86,7 +86,9 @@
     (offerable-flow screen:write audio:pcm16 video:rgba-time)
     (visualization identity-receipt channel-list sensor-samples-per-second bytes-per-second)
     (dashboard gps motion mic camera disk network cpu ram gpu dsp mlx inner-cells qr-offer)
-    (public-asset https://hati.earth/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-debug.apk))
+    (install-signing-floor "release APK is signed by the Hati mesh app key and verified before publish")
+    (install-signing-north-star "same identity key also signs mesh announcements, channel offers, sensor receipts, and update manifests")
+    (public-asset https://hati.earth/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-release.apk))
 
   (visual-release-review
     (floor "macOS/web and Android app/service changes are checked with actual screenshots before release")

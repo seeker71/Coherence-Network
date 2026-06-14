@@ -94,7 +94,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:text="Mac witness URL"
+                android:text="Mac witness URL (auto)"
                 android:textColor="#53615D"
                 android:textStyle="bold" />
 
@@ -103,9 +103,16 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:contentDescription="Mac witness URL"
-                android:hint="http://MAC-IP:8800"
-                android:inputType="textUri"
-                android:text="http://192.168.1.10:8800" />
+                android:hint="auto-discovered nearby Mac"
+                android:inputType="textUri" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Filled from nearby Hati Mac witness discovery. Type here only if local discovery is blocked."
+                android:textColor="#6D7874"
+                android:textSize="12sp" />
 
             <TextView
                 android:layout_width="match_parent"
@@ -139,6 +146,13 @@
                 android:contentDescription="Optional cell id or email identity label"
                 android:hint="cell id or email, opt-in"
                 android:inputType="textEmailAddress" />
+
+            <Button
+                android:id="@+id/updateBtn"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="14dp"
+                android:text="Check for update" />
         </LinearLayout>
 
         <LinearLayout

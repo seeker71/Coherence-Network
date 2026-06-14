@@ -1,0 +1,112 @@
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/loopback-learning.fk
+;
+; loopback-learning-band — channel loopback micro-learning with choice feedback.
+;
+; Two partial cells learn from their own streams:
+;   language cell: French→Form, Form→ASM, FFT→music matching
+;   sense cell: TTS→STT, STT→TTS, video→shape/time classification
+; Each cell alone is partial. The merged model is a 6-label, 12-heldout-sample
+; nearest-shape learner that clears a 10/12 accuracy floor. Route candidates
+; start on a generic loopback route, then CHOICE-RECEIPT success feedback moves
+; each scenario to its native route. Failure feedback and promotion are also
+; witnessed.
+;
+; Verdict 65535 when every claim lands:
+;   1      language cell alone is partial: 6/12 correct, below the decent gate
+;   2      sense cell alone is partial: 6/12 correct, below the decent gate
+;   4      merged model gets all 12 heldout samples right
+;   8      merged model clears the decent accuracy gate
+;   16     merged model carries all 6 learned prototypes
+;   32     heldout set has 12 samples
+;   64     cold French→Form route chooses the generic fallback
+;   128    two success receipts move French→Form to its native route
+;   256    all six scenario routes are learned after success receipts
+;   512    no scenario route is selected before feedback
+;   1024   success receipt is valid
+;   2048   success signature preserves receipt texture
+;   4096   failure receipt increments the selected route's failure count
+;   8192   roll-forward clears short memory on the learned route
+;   16384  roll-forward promotes learned success into long memory
+;   32768  generic train/test rows evaluate through the same learner
+(do
+    (let language-model (lbl-device (lbl-language-stream)))
+    (let sense-model (lbl-device (lbl-sense-stream)))
+    (let mesh-model (lbl-mesh-model))
+    (let mesh-pairs (lbl-eval-pairs mesh-model))
+    (let route-sample (lbl-fr-sample))
+    (let target-route (lbl-route route-sample))
+    (let initial-routes (lbl-initial-routes target-route))
+    (let trained-routes (lbl-trained-routes target-route))
+    (let success-receipt
+        (lbl-success-receipt "loopback-route" initial-routes target-route))
+    (let success-signature (cr-choice-signature success-receipt))
+    (let failed-routes
+        (crl-learn-candidates
+            initial-routes
+            (lbl-fail-receipt "loopback-route" initial-routes "generic-loopback")))
+    (let rolled (crl-roll-forward-candidates trained-routes 2))
+    (let rolled-target (nth rolled 1))
+    (let generic-tests
+        (list
+            (lbl-test-row (lbl-fr-query-a) "french-to-form")
+            (lbl-test-row (lbl-fr-query-b) "french-to-form")
+            (lbl-test-row (lbl-form-asm-query-a) "form-to-asm")
+            (lbl-test-row (lbl-form-asm-query-b) "form-to-asm")
+            (lbl-test-row (lbl-tts-stt-query-a) "tts-stt-loopback")
+            (lbl-test-row (lbl-tts-stt-query-b) "tts-stt-loopback")
+            (lbl-test-row (lbl-stt-tts-query-a) "stt-tts-loopback")
+            (lbl-test-row (lbl-stt-tts-query-b) "stt-tts-loopback")
+            (lbl-test-row (lbl-fft-music-query-a) "fft-music-match")
+            (lbl-test-row (lbl-fft-music-query-b) "fft-music-match")
+            (lbl-test-row (lbl-video-shape-query-a) "video-shape-loopback")
+            (lbl-test-row (lbl-video-shape-query-b) "video-shape-loopback")))
+
+    (let c0
+        (if (and
+                (eq (lbl-correct language-model) 6)
+                (eq (lbl-decent? language-model) 0))
+            1
+            0))
+    (let c1
+        (if (and
+                (eq (lbl-correct sense-model) 6)
+                (eq (lbl-decent? sense-model) 0))
+            2
+            0))
+    (let c2 (if (eq (lbl-correct mesh-model) 12) 4 0))
+    (let c3 (if (eq (lbl-decent? mesh-model) 1) 8 0))
+    (let c4 (if (eq (cl-breadth mesh-model) 6) 16 0))
+    (let c5 (if (eq (ce-total mesh-pairs) 12) 32 0))
+    (let c6 (if (str_eq (lbl-before-route target-route) "generic-loopback") 64 0))
+    (let c7 (if (str_eq (lbl-after-route target-route) target-route) 128 0))
+    (let c8 (if (eq (lbl-route-hits (lbl-all-samples)) 6) 256 0))
+    (let c9 (if (eq (lbl-cold-route-hits (lbl-all-samples)) 0) 512 0))
+    (let c10 (if (cr-choice-receipt-valid? success-receipt) 1024 0))
+    (let c11
+        (if (cr-choice-signature-preserves? success-receipt success-signature)
+            2048
+            0))
+    (let c12 (if (eq (bco-short-fail (head failed-routes)) 1) 4096 0))
+    (let c13 (if (eq (bco-short-total rolled-target) 0) 8192 0))
+    (let c14 (if (eq (bco-long-success rolled-target) 2) 16384 0))
+    (let c15
+        (if (and
+                (eq (lbl-correct-tests mesh-model generic-tests) 12)
+                (eq (lbl-decent-tests? mesh-model generic-tests 10 2) 1))
+            32768
+            0))
+    (add c0
+        (add c1
+            (add c2
+                (add c3
+                    (add c4
+                        (add c5
+                            (add c6
+                                (add c7
+                                    (add c8
+                                        (add c9
+                                            (add c10
+                                                (add c11
+                                                    (add c12
+                                                        (add c13
+                                                            (add c14 c15))))))))))))))))

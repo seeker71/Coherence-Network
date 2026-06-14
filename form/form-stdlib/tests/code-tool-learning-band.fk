@@ -1,0 +1,215 @@
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk
+;
+; code-tool-learning-band — Form-native sideband for code generation,
+; tool selection, and tool execution learning.
+;
+; Verdict 131071 when every claim lands:
+;   1     code-generation intent is learned as a native exemplar
+;   2     tool-selection intent is learned as a native exemplar
+;   4     proof-execution intent is learned as a native exemplar
+;   8     high-meta tool planning returns an explicit native plan
+;   16    low-meta tool planning refuses without ambient execution
+;   32    six A/B agent candidates are cataloged
+;   64    success receipt is valid and keeps token cost
+;   128   receipt becomes a new native training sample
+;   256   >50 metadata floor is required and low trust fails it
+;   512   autonomous gate requires sovereignty and trust
+;   1024  receipt learning can make the Form-native candidate win
+;   2048  output envelope carries candidate, plan, receipt, and meta
+;   4096  compiler oracle evidence lane is requestable from the learner
+;   8192  source-grounding oracle is remote and explicit
+;   16384 natural language to host-native ASM is a named learnable north-star intent
+;   32768 Form-native floor oracle wins on lower token/energy/nutrition cost with high sovereignty/trust/confidence
+;   65536 canonical natural-language to host-native ASM lowering path is explicit with alternatives
+(do
+    (let samples
+        (list
+            (ctl-sample "code:generate-form-recipe" (list 9 1 1 0 2) "code:intent")
+            (ctl-sample "tool:select-search" (list 1 9 1 0 2) "tool:intent")
+            (ctl-sample "tool:execute-form-proof" (list 1 1 9 0 3) "proof:intent")
+            (ctl-sample "nl:host-native-asm" (list 8 1 1 9 4) "asm:intent")))
+    (let tests
+        (list
+            (ctl-row (list 9 1 1 0 2) "code:generate-form-recipe")
+            (ctl-row (list 1 9 1 0 2) "tool:select-search")
+            (ctl-row (list 1 1 9 0 3) "tool:execute-form-proof")
+            (ctl-row (list 8 1 1 9 4) "nl:host-native-asm")))
+    (let model (ctl-device samples))
+    (let strong-meta
+        (ctl-meta
+            82
+            78
+            (ctl-freq-spectrum 80 74 88 90 70)
+            76
+            81
+            79))
+    (let low-meta
+        (ctl-meta
+            49
+            60
+            (ctl-freq-spectrum 80 74 88 90 70)
+            76
+            81
+            79))
+    (let plan (ctl-plan-tool "grep" "cap.stream.read" strong-meta))
+    (let denied-plan (ctl-plan-tool "exec" "cap.host.exec" low-meta))
+    (let native-before (ctl-native-candidate strong-meta 1 0 0 0))
+    (let codex-baseline (ctl-agent-candidate "agent:codex" 2 0 0 0 80 79))
+    (let claude-baseline (ctl-agent-candidate "agent:claude" 1 0 1 0 80 80))
+    (let candidates (list native-before codex-baseline claude-baseline))
+    (let receipt
+        (ctl-success-receipt
+            "form-native:code-tool"
+            strong-meta
+            2400))
+    (let learned (crl-learn-candidates candidates receipt))
+    (let receipt-sample (ctl-receipt-sample receipt "code-tool:receipt"))
+    (let output
+        (ctl-output
+            "code:generate-form-recipe"
+            (bco-choose-best-path learned)
+            plan
+            receipt
+            strong-meta))
+    (let compiler-oracle (ctl-oracle-request "code-lowering"))
+    (let source-oracle (ctl-oracle-request "source-grounding"))
+    (let floor-oracles
+        (list
+            (ctl-floor-oracle "agent:codex" 2400 70 70 60 72 80)
+            (ctl-floor-oracle "ollama:local" 1600 45 45 72 74 76)
+            (ctl-floor-oracle "form-native:code-tool" 600 20 20 91 86 83)))
+    (let floor-winner (ctl-floor-winner floor-oracles))
+    (let lowering-path (ctl-canonical-lowering-path))
+
+    (let c0
+        (if (str_eq
+                (ns-label (list 9 1 1 0 2) model)
+                "code:generate-form-recipe")
+            1
+            0))
+    (let c1
+        (if (str_eq
+                (ns-label (list 1 9 1 0 2) model)
+                "tool:select-search")
+            2
+            0))
+    (let c2
+        (if (eq (ctl-correct model tests) 4)
+            4
+            0))
+    (let c3
+        (if (and
+                (str_eq (tc-plan-status plan) "tool/plan")
+                (str_eq (tc-plan-protocol plan) "stream:read"))
+            8
+            0))
+    (let c4
+        (if (and
+                (str_eq (tc-plan-status denied-plan) "tool/no-plan")
+                (str_eq (tc-plan-witness denied-plan) "meta-below-floor"))
+            16
+            0))
+    (let c5
+        (if (eq (len (ctl-agent-catalog)) 6)
+            32
+            0))
+    (let c6
+        (if (and
+                (cr-choice-receipt-valid? receipt)
+                (eq (cr-receipt-cost receipt) 2400))
+            64
+            0))
+    (let c7
+        (if (and
+                (str_eq (ctl-label receipt-sample) "form-native:code-tool")
+                (eq (len (ctl-feature receipt-sample)) 6))
+            128
+            0))
+    (let c8
+        (if (and
+                (eq (ctl-meta-floor50? strong-meta) 1)
+                (eq (ctl-meta-floor50? low-meta) 0))
+            256
+            0))
+    (let c9
+        (if (eq (ctl-meta-autonomous? strong-meta) 1)
+            512
+            0))
+    (let c10
+        (if (str_eq (bco-choose-best-path learned) "form-native:code-tool")
+            1024
+            0))
+    (let c11
+        (if (and
+                (str_eq (ctl-output-candidate output) "form-native:code-tool")
+                (and
+                    (str_eq (tc-plan-tool-name (ctl-output-tool-plan output)) "grep")
+                    (and
+                        (str_eq
+                            (cr-receipt-selected-path (ctl-output-receipt output))
+                            "form-native:code-tool")
+                        (eq
+                            (ctl-meta-trust (ctl-output-meta output))
+                            79))))
+            2048
+            0))
+    (let c12
+        (if (and
+                (eq (ctl-oracle-available? compiler-oracle) 1)
+                (and
+                    (str_eq (oc-ev-invocation compiler-oracle) "clang")
+                    (str_eq (oc-ev-state compiler-oracle) "installed")))
+            4096
+            0))
+    (let c13
+        (if (and
+                (eq (ctl-oracle-available? source-oracle) 1)
+                (eq (ctl-oracle-remote? source-oracle) 1))
+            8192
+            0))
+    (let c14
+        (if (and
+                (str_eq
+                    (ns-label (list 8 1 1 9 4) model)
+                    "nl:host-native-asm")
+                (str_eq (oc-ev-invocation compiler-oracle) "clang"))
+            16384
+            0))
+    (let c15
+        (if (and
+                (str_eq (ctl-fo-path floor-winner) "form-native:code-tool")
+                (and
+                    (eq (ctl-fo-tokens floor-winner) 600)
+                    (and
+                        (eq (ctl-fo-energy floor-winner) 20)
+                        (eq (ctl-fo-ready? floor-winner) 1))))
+            32768
+            0))
+    (let c16
+        (if (and
+                (str_eq (ctl-lp-source lowering-path) "natural-language")
+                (and
+                    (str_eq (ctl-lp-grammar lowering-path) "form/BML/domain-grammar")
+                    (and
+                        (str_eq (ctl-lp-binary lowering-path) "form-binary")
+                        (and
+                            (str_eq (ctl-lp-asm lowering-path) "form-to-host-native-asm")
+                            (eq (len (ctl-lowering-paths)) 4)))))
+            65536
+            0))
+    (add c0
+        (add c1
+            (add c2
+                (add c3
+                    (add c4
+                        (add c5
+                            (add c6
+                                (add c7
+                                    (add c8
+                                        (add c9
+                                            (add c10
+                                                (add c11
+                                                    (add c12
+                                                        (add c13
+                                                            (add c14
+                                                                (add c15 c16)))))))))))))))))

@@ -19,6 +19,7 @@
     (kernel-http-route-choice "form/form-stdlib/kernel-http.fk" "form/form-stdlib/tests/kernel-http-band.fk" "four-way 536965066 on fkwu")
     (choice-receipt "form/form-stdlib/choice-receipt.fk" "form/form-stdlib/tests/choice-receipt-band.fk" "four-way 4294967295 on fkwu")
     (choice-receipt-learning "form/form-stdlib/choice-receipt-learning.fk" "form/form-stdlib/tests/choice-receipt-learning-band.fk" "four-way 255 on fkwu")
+    (loopback-learning "form/form-stdlib/loopback-learning.fk" "form/form-stdlib/tests/loopback-learning-band.fk" "four-way 65535 on fkwu; real TTS/STT sample runner returns generated-band verdict 63 with local whisper large-v3-turbo and full large-v3")
     (branch-choice-order "form/form-stdlib/branch-choice-order.fk" "form/form-stdlib/tests/branch-choice-order-band.fk" "four-way 511 on fkwu")
     (choice-outcome-learning "form/form-stdlib/choice-outcome-learning.fk" "form/form-stdlib/tests/choice-outcome-learning-band.fk" "four-way 32767 on fkwu")
     (bml-route-choice-runtime "form/form-stdlib/bml-route-choice-runtime.fk" "form/form-stdlib/tests/bml-route-choice-runtime-band.fk" "four-way 32767 on fkwu")

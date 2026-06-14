@@ -1,0 +1,125 @@
+; speech-kernel-channel.fk — kernel-native speech channel capability surface.
+;
+; This names the missing kernel tissue directly. Speech model learning already
+; runs in Form; the remaining native expansion is the physical codec path:
+; audio frame receipts, feature extraction receipts, transcript receipts,
+; local LLM oracle receipts, metadata-vector lifting, candidate scoring, and
+; output envelopes.
+;
+; No Python carrier is named here. macOS and Android host APIs are explicit
+; host-kernel carriers for physical I/O, while model learning and metadata
+; routing stay Form/kernel-native.
+;
+; Proven by: form-stdlib/tests/speech-kernel-channel-band.fk
+
+(do
+    (defn skc-lane (name protocol capability host floor north-star state)
+        (list name protocol capability host floor north-star state))
+    (defn skc-name (lane) (nth lane 0))
+    (defn skc-protocol (lane) (nth lane 1))
+    (defn skc-capability (lane) (nth lane 2))
+    (defn skc-host (lane) (nth lane 3))
+    (defn skc-floor (lane) (nth lane 4))
+    (defn skc-north-star (lane) (nth lane 5))
+    (defn skc-state (lane) (nth lane 6))
+
+    (defn skc-lanes ()
+        (list
+            (skc-lane
+                "audio:pcm16-frame"
+                "kernel:host-audio-frame"
+                "cap.audio.frame"
+                "macos:CoreAudio android:AAudio"
+                "pcm16-frame-receipt"
+                "zero-copy frame stream with consent and clock receipts"
+                "host-kernel-carrier")
+            (skc-lane
+                "audio:feature-vector"
+                "kernel:audio-feature"
+                "cap.audio.feature"
+                "form-kernel"
+                "duration/rms/zero-cross/centroid/band-energy"
+                "FFT/mel/chroma/prosody/phoneme feature kernel natives"
+                "form-kernel-native")
+            (skc-lane
+                "speech:transcript-receipt"
+                "kernel:speech-transcript"
+                "cap.speech.transcript"
+                "form-kernel"
+                "teacher transcript token receipt"
+                "native/local STT receipt with timing, token confidence, and silence gates"
+                "form-kernel-native")
+            (skc-lane
+                "speech:llm-oracle-receipt"
+                "kernel:local-llm-oracle"
+                "cap.local.llm.oracle"
+                "ollama:local-llm:auto-best"
+                "label plus meaning/impact/confidence receipt"
+                "local LLM or model committee enriches training without requiring a human teacher"
+                "host-kernel-carrier")
+            (skc-lane
+                "speech:meta-channel"
+                "kernel:speech-meta-vector"
+                "cap.speech.meta"
+                "form-kernel"
+                "14-dimensional numeric metadata vector"
+                "learned high-dimensional affect/meaning/impact field"
+                "form-kernel-native")
+            (skc-lane
+                "speech:candidate-race"
+                "kernel:speech-model-choice"
+                "cap.speech.model.choice"
+                "form-kernel"
+                "candidate score cards and mesh agreement"
+                "active-learning model kernel choice with receipts"
+                "form-kernel-native")
+            (skc-lane
+                "speech:output-envelope"
+                "kernel:speech-output-envelope"
+                "cap.speech.output"
+                "form-kernel"
+                "label/candidate/channel/kernel/meta envelope"
+                "spoken/text/video output channels carry metadata and feedback invitations"
+                "form-kernel-native")))
+
+    (defn skc-find (lanes name)
+        (if (eq (len lanes) 0) (empty)
+            (if (str_eq (skc-name (head lanes)) name)
+                (head lanes)
+                (skc-find (tail lanes) name))))
+    (defn skc-state-count (lanes state)
+        (if (eq (len lanes) 0) 0
+            (add
+                (if (str_eq (skc-state (head lanes)) state) 1 0)
+                (skc-state-count (tail lanes) state))))
+    (defn skc-capability-present? (name)
+        (if (eq (len (skc-find (skc-lanes) name)) 0) 0 1))
+    (defn skc-plan-from-lane (name lane)
+        (if (eq (len lane) 0)
+            (list "speech/no-plan" name)
+            (list
+                "speech/plan"
+                (skc-name lane)
+                (skc-protocol lane)
+                (skc-capability lane)
+                (skc-host lane)
+                (skc-state lane))))
+    (defn skc-plan (name)
+        (skc-plan-from-lane name (skc-find (skc-lanes) name)))
+    (defn skc-plan-state (plan) (nth plan 5))
+    (defn skc-plan-protocol (plan) (nth plan 2))
+    (defn skc-plan-capability (plan) (nth plan 3))
+    (defn skc-host-kernel-required-from-plan? (plan)
+        (if (str_eq (head plan) "speech/plan")
+            (if (str_eq (skc-plan-state plan) "host-kernel-carrier") 1 0)
+            0))
+    (defn skc-host-kernel-required? (name)
+        (skc-host-kernel-required-from-plan? (skc-plan name)))
+    (defn skc-form-kernel-native-from-plan? (plan)
+        (if (str_eq (head plan) "speech/plan")
+            (if (str_eq (skc-plan-state plan) "form-kernel-native") 1 0)
+            0))
+    (defn skc-form-kernel-native? (name)
+        (skc-form-kernel-native-from-plan? (skc-plan name)))
+
+    0)

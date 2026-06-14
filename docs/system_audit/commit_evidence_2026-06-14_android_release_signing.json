@@ -1,0 +1,125 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/hati-earth-public-assets-proof-command-20260613",
+  "commit_scope": "Add a release-signed Android APK lane for the Coherence Sense Hati mesh app and prefer it for public app updates.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "hati-os",
+    "hati-mesh",
+    "sense-organ-ripening",
+    "android-release-signing"
+  ],
+  "spec_ids": [
+    "android-sense-organ",
+    "hati-mesh-presence",
+    "public-hati-assets",
+    "signed-mobile-release"
+  ],
+  "task_ids": [
+    "android-release-signing-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "release-signing"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    ".gitignore",
+    "experiments/coherence-sense-android/README.md",
+    "experiments/coherence-sense-android/app/build.gradle.kts",
+    "experiments/coherence-sense-android/app/src/main/java/com/coherence/sense/MainActivity.kt",
+    "experiments/coherence-sense-android/build_signed_release.sh",
+    "docs/coherence-substrate/hati-mesh.form",
+    "scripts/build_hati_os_public_assets.sh",
+    "scripts/verify_hati_earth_public_assets.sh",
+    "scripts/verify_android_sense_public_handshake.sh",
+    "web/app/hati-os/page.tsx",
+    "web/app/downloads/hati-os/[os]/[arch]/[name]/route.ts",
+    "docs/system_audit/commit_evidence_2026-06-14_android_release_signing.json"
+  ],
+  "change_files": [
+    ".gitignore",
+    "experiments/coherence-sense-android/README.md",
+    "experiments/coherence-sense-android/app/build.gradle.kts",
+    "experiments/coherence-sense-android/app/src/main/java/com/coherence/sense/MainActivity.kt",
+    "experiments/coherence-sense-android/build_signed_release.sh",
+    "docs/coherence-substrate/hati-mesh.form",
+    "scripts/build_hati_os_public_assets.sh",
+    "scripts/verify_hati_earth_public_assets.sh",
+    "scripts/verify_android_sense_public_handshake.sh",
+    "web/app/hati-os/page.tsx",
+    "web/app/downloads/hati-os/[os]/[arch]/[name]/route.ts",
+    "docs/system_audit/commit_evidence_2026-06-14_android_release_signing.json"
+  ],
+  "evidence_refs": [
+    "experiments/coherence-sense-android/app/build/outputs/apk/release/app-release.apk",
+    "experiments/coherence-sense-android/app/build/outputs/apk/release/app-release.apk.sha256",
+    "experiments/coherence-sense-android/app/build/outputs/apk/release/app-release.apksigner.txt",
+    ".cache/android-sense-public-handshake/20260613T164434Z/android-sense-public-handshake-summary.json",
+    ".cache/hati-os-public-assets/20260613T164434Z/hati-os-public-assets-summary.json",
+    "https://hati.earth/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-release.apk",
+    "https://hati.earth/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-release.apk.sha256"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "bash -n experiments/coherence-sense-android/build_signed_release.sh scripts/build_hati_os_public_assets.sh scripts/verify_android_sense_public_handshake.sh scripts/verify_hati_earth_public_assets.sh",
+      "JAVA_HOME=\"${JAVA_HOME:-/opt/homebrew/opt/openjdk@21}\" ./gradlew :app:assembleDebug",
+      "experiments/coherence-sense-android/build_signed_release.sh",
+      "scripts/verify_android_sense_public_handshake.sh"
+    ],
+    "notes": "Prompt guide passed in dirty continuation mode and wellness had no required repair. Shell syntax checks passed. Android debug assembly passed after the updater was changed to prefer release APK metadata. build_signed_release.sh generated a local non-committed keystore at ~/.coherence-network/android/coherence-sense-release.jks when absent, wrote a local ignored signing.properties file, built :app:assembleRelease, verified the APK with apksigner, and wrote the APK SHA-256. Direct signed release APK sha256: c1f00e1468266f73095eaf63015b3bb1be2311c1d647c6810c586320caf726fe. Signer certificate SHA-256 digest from apksigner: 7b175f0a8836145c49dd8b783305fa099716f423a20340d10011880bb45c4fab. The end-to-end public handshake proof passed and generated a local asset summary containing coherence-sense-hati-mesh-release.apk with update_protocol signed-apk-download-user-consent-installer, version_code 2, version_name 0.2, and the same release APK sha256. The proof also restored the generated api/data/coherence.db side effect after validation."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed; CI not run."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Signed release APK and public route support were built and proved locally. The current public hati.earth asset summary still needs the release APK and summary published before device update checks can fetch the signed artifact from the public URL."
+  },
+  "phase_gate": {
+    "phase": "android-release-signing",
+    "gate": "Android app updates prefer a release-signed APK whose hash is published in the Hati public asset summary, while preserving explicit Android installer consent.",
+    "state": "local-proof-pass-public-publish-pending",
+    "can_move_next_phase": false,
+    "next": "Publish the release APK, release APK .sha256, and rebuilt asset summary to hati.earth, then install the release APK on a real Android device and verify update replacement with the same signing key."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The Android updater now selects coherence-sense-hati-mesh-release.apk before the debug APK. The local public asset builder includes signed release APK metadata, the substrate doc names release APK signing as the floor, the web download page points humans at the release APK, and the web download route can serve the release APK and checksum once the artifacts are published.",
+    "public_endpoints": [
+      "https://hati.earth/downloads/hati-os/hati-os-public-assets-summary.json",
+      "https://hati.earth/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-release.apk",
+      "https://hati.earth/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-release.apk.sha256"
+    ],
+    "test_flows": [
+      "Generate or reuse a local non-committed Android release signing key and build the release APK.",
+      "Verify the release APK with apksigner and record the certificate digest.",
+      "Build the local public asset bundle and ensure it contains both debug and release APK entries.",
+      "Run the Android sense public handshake proof and assert the signed release APK asset status and update protocol."
+    ],
+    "summary": "Release signing is locally embodied and proved. A first device migration from the previous debug-signed app requires one uninstall/reinstall because Android rejects package updates signed by a different key; after that, same-key release updates can replace normally through Android's installer consent flow."
+  }
+}

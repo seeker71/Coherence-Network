@@ -77,6 +77,9 @@ echo "== build Android APK =="
 [[ -f "$APK" ]] || { echo "FAIL APK not found at $APK" >&2; exit 1; }
 APK_SHA="$(shasum -a 256 "$APK" | awk '{print $1}')"
 
+echo "== build signed Android release APK =="
+"$ANDROID_DIR/build_signed_release.sh" > "$OUT/android-release-signing.log"
+
 echo "== build Hati public asset bundle =="
 HATI_OS_ASSET_STAMP="$STAMP" "$ROOT/scripts/build_hati_os_public_assets.sh" > "$OUT/hati-assets.log"
 [[ -f "$ASSET_SUMMARY" ]] || { echo "FAIL asset summary not found at $ASSET_SUMMARY" >&2; exit 1; }
@@ -85,6 +88,7 @@ echo "== start Mac witness =="
 python3 "$ANDROID_DIR/mac-witness-server.py" --port "$WITNESS_PORT" > "$OUT/mac-witness.log" 2>&1 &
 WITNESS_PID=$!
 wait_url "$WITNESS_URL/state" "Mac witness"
+curl -fsS "$WITNESS_URL/.well-known/hati-witness" > "$OUT/mac-witness-discovery.json"
 
 echo "== prove Mac witness /sense =="
 post_json "$WITNESS_URL/sense" '{
@@ -148,7 +152,7 @@ post_json "$API_URL/hati/mesh/channels/offer" "{
 }" "$OUT/mesh-offer.json"
 curl -fsS "$API_URL/hati/mesh/channels?organ_id=$ANDROID_ID&limit=10" > "$OUT/mesh-channels.json"
 
-python3 - "$OUT" "$APK_SHA" "$ASSET_SUMMARY" <<'PY'
+python3 - "$OUT" "$APK_SHA" "$ASSET_SUMMARY" "$WITNESS_PORT" <<'PY'
 import json
 import pathlib
 import sys
@@ -156,11 +160,13 @@ import sys
 out = pathlib.Path(sys.argv[1])
 apk_sha = sys.argv[2]
 asset_summary_path = pathlib.Path(sys.argv[3])
+witness_port = int(sys.argv[4])
 
 def load(name):
     return json.loads((out / name).read_text(encoding="utf-8"))
 
 witness = load("mac-witness-state.json")
+discovery = load("mac-witness-discovery.json")
 organs = load("mesh-organs.json")
 channels = load("mesh-channels.json")
 announce_android = load("mesh-announce-android.json")
@@ -170,6 +176,10 @@ asset_summary = json.loads(asset_summary_path.read_text(encoding="utf-8"))
 assert witness["frames"] >= 1, "Mac witness did not record a frame"
 assert witness["present"] is True, "Mac witness did not mark organ present"
 assert "accel" in witness["latest"], "Mac witness did not retain accel sample"
+assert discovery["service_type"] == "_hati-witness._tcp", "Mac witness discovery service type mismatch"
+assert discovery["port"] == witness_port, "Mac witness discovery port mismatch"
+assert discovery["sense_path"] == "/sense", "Mac witness discovery missing /sense path"
+assert discovery["state_path"] == "/state", "Mac witness discovery missing /state path"
 
 ids = {item.get("organ_id") for item in organs.get("items", [])}
 assert "hati-organ-android-local-proof" in ids, "Android organ missing from mesh list"
@@ -183,6 +193,8 @@ assets = {item["name"]: item for item in asset_summary["assets"]}
 assert assets["hati-os-macos-arm64.tar.zst"]["status"] == "pass", "macOS asset did not pass"
 assert assets["hati-os-android-arm64.tar.zst"]["status"] == "pass", "Android native asset did not pass"
 assert assets["coherence-sense-hati-mesh-debug.apk"]["status"] == "pass", "APK asset did not pass"
+assert assets["coherence-sense-hati-mesh-release.apk"]["status"] == "pass", "signed release APK asset did not pass"
+assert assets["coherence-sense-hati-mesh-release.apk"]["update_protocol"] == "signed-apk-download-user-consent-installer", "signed release APK update protocol missing"
 
 summary = {
     "status": "pass",
@@ -198,6 +210,7 @@ summary = {
         "frames": witness["frames"],
         "present": witness["present"],
         "organs": witness["organs"],
+        "discovery": discovery,
     },
     "assets": asset_summary["assets"],
 }
@@ -214,6 +227,8 @@ if [[ "$PUBLISH" == "1" ]]; then
         "$ASSET_OUT/hati-os-android-arm64.tar.zst.sha256" \
         "$ASSET_OUT/coherence-sense-hati-mesh-debug.apk" \
         "$ASSET_OUT/coherence-sense-hati-mesh-debug.apk.sha256" \
+        "$ASSET_OUT/coherence-sense-hati-mesh-release.apk" \
+        "$ASSET_OUT/coherence-sense-hati-mesh-release.apk.sha256" \
         "$ASSET_SUMMARY" \
         --clobber
 fi
