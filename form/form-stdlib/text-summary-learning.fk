@@ -28,7 +28,7 @@
             "a summary passes only with coverage, factuality, citations, compression, confidence, trust, sovereignty, and no contradiction"
             "successful summary receipts become native training samples"
             "real source files can be read through kernel-native file natives and cited by byte slice"
-            "file and file-backed store sources can emit the same coordinate receipt shape while route and stream coordinates remain explicit planned lanes"))
+            "file, file-backed store, kernel route response bodies, and channel cursor windows can emit the same coordinate receipt shape"))
     (defn tsl-north-star ()
         (list
             "native summary grammars and kernels summarize text, code, proof logs, runtime events, dialogue, and memory cells"
@@ -312,8 +312,8 @@
                 request
                 "kernel:route"
                 "cap.kernel.route.read"
-                "pending-kernel-route-source-reader"
-                "route body summaries remain planned until route response bodies are native source receipts"
+                "kernel-http:kh-response-body"
+                "route body, status, and header count must match before summary learning"
                 "kernel routes feed summary claim spans from response bodies, headers, trace, and authority rows")
             (if (str_eq request "text:summarize-stream")
             (tsl-plan
@@ -321,8 +321,8 @@
                 request
                 "stream:read"
                 "cap.stream.read"
-                "pending-stream-cursor-reader"
-                "stream summaries remain planned until cursor windows are native source receipts"
+                "channel:read-since+cursor-window"
+                "stream window summaries require ordered event payloads and a cursor receipt"
                 "ordered events lower into summary claim spans with cursor, backpressure, and replay receipts")
             (if (str_eq request "text:summarize")
             (tsl-plan
@@ -404,9 +404,9 @@
             0
             0
             "application/json"
-            "planned"
-            "pending-kernel-route-source-reader"
-            "route response bodies are visible as coordinates before they are learnable receipts"
+            "ready"
+            "kernel-http:kh-response-body"
+            "route response bodies are learnable only after status, headers, and body are native values"
             "route summaries carry response body, headers, trace, authority, and timing receipts"))
     (defn tsl-stream-source-coordinate (stream cursor)
         (tsl-source-coordinate
@@ -418,10 +418,59 @@
             0
             0
             "event/list"
-            "planned"
-            "pending-stream-cursor-reader"
-            "stream windows are visible as coordinates before they are learnable receipts"
+            "ready"
+            "channel:read-since+cursor-window"
+            "stream windows are learnable only after ordered payloads and cursor counts are native values"
             "stream summaries carry cursor, replay, backpressure, and event-order receipts"))
+
+    (defn tsl-route-response-ready? (status header-count body)
+        (if (and
+                (eq status 200)
+                (and
+                    (gt header-count 0)
+                    (gt (str_len body) 0)))
+            1
+            0))
+    (defn tsl-route-source-data-receipt (coordinate body status header-count claim-count citation-count evidence)
+        (if (eq (tsl-route-response-ready? status header-count body) 1)
+            (tsl-source-data-receipt
+                coordinate
+                body
+                (str_len body)
+                claim-count
+                citation-count
+                evidence)
+            (tsl-source-data-receipt
+                coordinate
+                ""
+                0
+                0
+                0
+                "route status/header/body gate failed")))
+    (defn tsl-stream-window-ready? (event-count next-cursor body)
+        (if (and
+                (gt event-count 0)
+                (and
+                    (gt next-cursor 0)
+                    (gt (str_len body) 0)))
+            1
+            0))
+    (defn tsl-stream-source-data-receipt (coordinate body event-count next-cursor claim-count citation-count evidence)
+        (if (eq (tsl-stream-window-ready? event-count next-cursor body) 1)
+            (tsl-source-data-receipt
+                coordinate
+                body
+                (str_len body)
+                claim-count
+                citation-count
+                evidence)
+            (tsl-source-data-receipt
+                coordinate
+                ""
+                0
+                0
+                0
+                "stream cursor/window/body gate failed")))
 
     (defn tsl-source-data-receipt (coordinate value byte-count claim-count citation-count evidence)
         (list
@@ -510,7 +559,7 @@
             (cr-outcome-success)
             (tsl-summary-confidence summary)
             (tsl-choice-value meta)
-            "ready file and store receipts matched source coordinates; route and stream stayed planned"
+            "ready file, store, route, and stream receipts matched source coordinates"
             "text-summary-learning"
             "summary:multi-source"
             20260614
@@ -524,7 +573,7 @@
     (defn tsl-multi-source-output-receipt (output) (nth output 3))
     (defn tsl-multi-source-output-meta (output) (nth output 4))
     (defn tsl-multi-source-proof-level ()
-        "3-kernel-host-io-file-store-plus-planned-route-stream")
+        "3-kernel-host-io-file-store-route-stream")
 
     (defn tsl-source-read (path)
         (list
@@ -597,7 +646,7 @@
                 18)
             (tsl-source-citation
                 path
-                2690
+                2691
                 46
                 "External LLMs, source search, model committees"
                 "north star keeps teachers explicit"
