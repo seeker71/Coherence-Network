@@ -1,8 +1,9 @@
 ; real-mesh-training-emitter.fk - receipt shape for host/device/model emitters.
 ;
-; Host carriers may touch curl, adb, audio, local model CLIs, and filesystems.
-; This Form row decides whether the carrier established the hard training floor
-; or produced an honest blocked receipt.
+; Host carriers may touch curl, audio, local model CLIs, filesystems, and
+; optional install-only adb provisioning. Runtime training communication must
+; travel through loopback, wifi, mesh, bluetooth, audio, video, screen, optical,
+; NFC, USB-accessory, or related bidirectional channels.
 ;
 ; Proven by: form-stdlib/tests/real-mesh-training-emitter-band.fk
 
@@ -43,6 +44,84 @@
     (defn rmt-emitter-source-bytes-sum (rows)
         (if (eq (len rows) 0) 0
             (add (rmt-emitter-source-bytes (head rows)) (rmt-emitter-source-bytes-sum (tail rows)))))
+    (defn rmt-emitter-transport-in? (transport transports)
+        (if (eq (len transports) 0) 0
+            (if (str_eq transport (head transports))
+                1
+                (rmt-emitter-transport-in? transport (tail transports)))))
+    (defn rmt-emitter-runtime-transports ()
+        (list
+            "http-localhost"
+            "loopback-http"
+            "websocket-loopback"
+            "websocket-lan"
+            "wifi-mesh"
+            "coherence-wifi"
+            "wifi-direct"
+            "bluetooth-le-gatt"
+            "bluetooth-rfcomm"
+            "ble-presence"
+            "audio-loopback"
+            "audio-ultrasonic"
+            "audio-near-ultrasonic"
+            "video-loopback"
+            "video-optical"
+            "screen-loopback"
+            "screen-camera-optical"
+            "nfc-tap"
+            "usb-accessory"))
+    (defn rmt-emitter-bidirectional-transports ()
+        (list
+            "http-localhost"
+            "loopback-http"
+            "websocket-loopback"
+            "websocket-lan"
+            "wifi-mesh"
+            "coherence-wifi"
+            "wifi-direct"
+            "bluetooth-le-gatt"
+            "bluetooth-rfcomm"
+            "audio-loopback"
+            "audio-ultrasonic"
+            "audio-near-ultrasonic"
+            "video-loopback"
+            "video-optical"
+            "screen-loopback"
+            "screen-camera-optical"
+            "nfc-tap"
+            "usb-accessory"))
+    (defn rmt-emitter-runtime-transport? (transport)
+        (rmt-emitter-transport-in? transport (rmt-emitter-runtime-transports)))
+    (defn rmt-emitter-bidirectional-transport? (transport)
+        (rmt-emitter-transport-in? transport (rmt-emitter-bidirectional-transports)))
+    (defn rmt-emitter-install-transport? (transport)
+        (if (str_eq transport "adb-install") 1
+            (if (str_eq transport "adb-usb-install") 1 0)))
+    (defn rmt-emitter-runtime-source? (row)
+        (if (eq (rmt-emitter-source-live? row) 1)
+            (rmt-emitter-runtime-transport? (rmt-emitter-source-transport row))
+            0))
+    (defn rmt-emitter-bidirectional-source? (row)
+        (if (eq (rmt-emitter-source-live? row) 1)
+            (rmt-emitter-bidirectional-transport? (rmt-emitter-source-transport row))
+            0))
+    (defn rmt-emitter-runtime-source-count (rows)
+        (if (eq (len rows) 0) 0
+            (add (rmt-emitter-runtime-source? (head rows)) (rmt-emitter-runtime-source-count (tail rows)))))
+    (defn rmt-emitter-has-runtime-channel? (rows)
+        (if (gt (rmt-emitter-runtime-source-count rows) 0) 1 0))
+    (defn rmt-emitter-bidirectional-source-count (rows)
+        (if (eq (len rows) 0) 0
+            (add (rmt-emitter-bidirectional-source? (head rows)) (rmt-emitter-bidirectional-source-count (tail rows)))))
+    (defn rmt-emitter-has-bidirectional-channel? (rows)
+        (if (gt (rmt-emitter-bidirectional-source-count rows) 0) 1 0))
+    (defn rmt-emitter-install-only-source? (row)
+        (if (eq (rmt-emitter-source-live? row) 1)
+            (rmt-emitter-install-transport? (rmt-emitter-source-transport row))
+            0))
+    (defn rmt-emitter-install-only-source-count (rows)
+        (if (eq (len rows) 0) 0
+            (add (rmt-emitter-install-only-source? (head rows)) (rmt-emitter-install-only-source-count (tail rows)))))
 
     (defn rmt-emitter-window (id status train-bytes heldout-bytes label-count sources processes lanes blocks dataset-merkle)
         (list id status train-bytes heldout-bytes label-count sources processes lanes blocks dataset-merkle))
@@ -65,11 +144,21 @@
                         (if (not (eq (rmt-emitter-sources-live? (rmt-emitter-window-sources row)) 1)) 0
                             (if (not (eq (rmt-processes-real? (rmt-emitter-window-processes row)) 1)) 0
                                 (if (not (eq (rmt-all-required-lanes? (rmt-emitter-window-lanes row)) 1)) 0
-                                    (if (lt
-                                            (rmt-emitter-source-bytes-sum (rmt-emitter-window-sources row))
-                                            (add (rmt-emitter-window-train-bytes row) (rmt-emitter-window-heldout-bytes row)))
-                                        0
-                                        (if (str_eq (rmt-emitter-window-dataset-merkle row) "") 0 1))))))))))
+                                    (if (not (eq (rmt-emitter-has-bidirectional-channel? (rmt-emitter-window-sources row)) 1)) 0
+                                        (if (lt
+                                                (rmt-emitter-source-bytes-sum (rmt-emitter-window-sources row))
+                                                (add (rmt-emitter-window-train-bytes row) (rmt-emitter-window-heldout-bytes row)))
+                                            0
+                                            (if (str_eq (rmt-emitter-window-dataset-merkle row) "") 0 1)))))))))))
+
+    (defn rmt-emitter-communication-verdict (row)
+        (if (eq (rmt-emitter-has-bidirectional-channel? (rmt-emitter-window-sources row)) 1)
+            "bidirectional-runtime-channel-ready"
+            (if (eq (rmt-emitter-has-runtime-channel? (rmt-emitter-window-sources row)) 1)
+                "runtime-channel-one-way-only"
+            (if (gt (rmt-emitter-install-only-source-count (rmt-emitter-window-sources row)) 0)
+                "adb-install-only-not-runtime"
+                    "runtime-channel-missing"))))
 
     (defn rmt-emitter-blocked? (row)
         (if (not (str_eq (rmt-emitter-window-status row) "blocked")) 0

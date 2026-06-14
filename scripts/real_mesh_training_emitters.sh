@@ -2,10 +2,11 @@
 # real_mesh_training_emitters.sh - host/device/model carrier for real mesh training.
 #
 # Form owns the receipt validity in form/form-stdlib/real-mesh-training-*.fk.
-# This script only gathers physical host evidence: local witness endpoints,
-# adb visibility, bounded content-addressed file roots, and optional local
-# model process runs. It emits an active receipt only when the hard data floor
-# is actually present.
+# This script only gathers physical host evidence: local witness/runtime
+# endpoints, bounded content-addressed file roots, optional local model process
+# runs, and optional install-only adb provisioning. Runtime testing/training
+# communication is loopback/wifi/bluetooth/audio/video/screen/channel based,
+# not adb based.
 
 set -euo pipefail
 
@@ -17,9 +18,11 @@ OLLAMA_MODEL="llama3.2:3b"
 WHISPER_MODEL=""
 RUN_MODELS=0
 REQUIRE_ACTIVE=0
+APK_PATH=""
 LABEL_COUNT=0
 TRAIN_ROOTS=()
 HELDOUT_ROOTS=()
+CHANNEL_EVIDENCE=()
 
 MIN_TRAIN_BYTES=314572800
 MIN_HELDOUT_BYTES=104857600
@@ -36,9 +39,12 @@ Options:
   --data-root DIR           Repeatable training data root.
   --heldout-root DIR        Repeatable heldout data root.
   --label-count N           External label count when labels live outside roots.
+  --channel-evidence NAME TRANSPORT FILE SAMPLES
+                            Repeatable runtime channel evidence file.
   --run-models              Execute local model probes instead of inventory only.
   --ollama-model NAME       Ollama model for NL/sentiment/confidence probes.
   --whisper-model FILE      whisper.cpp model for optional STT probe.
+  --apk FILE                Optional Android APK to install with adb.
   --require-active          Exit nonzero unless the hard active floor is met.
   -h, --help                Show this help.
 USAGE
@@ -70,6 +76,10 @@ while [[ $# -gt 0 ]]; do
             LABEL_COUNT="$2"
             shift 2
             ;;
+        --channel-evidence)
+            CHANNEL_EVIDENCE+=("$2|$3|$4|$5")
+            shift 5
+            ;;
         --run-models)
             RUN_MODELS=1
             shift
@@ -80,6 +90,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --whisper-model)
             WHISPER_MODEL="$2"
+            shift 2
+            ;;
+        --apk)
+            APK_PATH="$2"
             shift 2
             ;;
         --require-active)
@@ -106,10 +120,12 @@ mkdir -p "$OUT_DIR"/{sources,processes}
 TOOLS_JSONL="$OUT_DIR/tools.jsonl"
 SOURCES_JSONL="$OUT_DIR/sources.jsonl"
 PROCESSES_JSONL="$OUT_DIR/processes.jsonl"
+PROVISIONING_JSONL="$OUT_DIR/provisioning.jsonl"
 BLOCKS_JSONL="$OUT_DIR/blocks.jsonl"
 : > "$TOOLS_JSONL"
 : > "$SOURCES_JSONL"
 : > "$PROCESSES_JSONL"
+: > "$PROVISIONING_JSONL"
 : > "$BLOCKS_JSONL"
 
 json_string() {
@@ -217,6 +233,41 @@ run_receipted_process() {
         >> "$PROCESSES_JSONL"
 }
 
+run_provisioning_process() {
+    local task="$1"
+    local command_text="$2"
+    local provider="$3"
+    local model="$4"
+    local stdout_file="$OUT_DIR/processes/${task}.stdout"
+    local stderr_file="$OUT_DIR/processes/${task}.stderr"
+    local started ended exit_code stdout_bytes stderr_bytes duration_ms
+    started="$(now_ms)"
+    set +e
+    bash -lc "$command_text" > "$stdout_file" 2> "$stderr_file"
+    exit_code=$?
+    set -e
+    ended="$(now_ms)"
+    duration_ms=$((ended - started))
+    if [[ "$duration_ms" -le 0 ]]; then
+        duration_ms=1
+    fi
+    stdout_bytes="$(file_size "$stdout_file")"
+    stderr_bytes="$(file_size "$stderr_file")"
+    jq -nc \
+        --arg task "$task" \
+        --arg command "$command_text" \
+        --arg provider "$provider" \
+        --arg model "$model" \
+        --arg stdout_path "$stdout_file" \
+        --arg stderr_path "$stderr_file" \
+        --argjson exit_code "$exit_code" \
+        --argjson stdout_bytes "$stdout_bytes" \
+        --argjson stderr_bytes "$stderr_bytes" \
+        --argjson duration_ms "$duration_ms" \
+        '{task:$task, command:$command, provider:$provider, model:$model, exit_code:$exit_code, stdout_bytes:$stdout_bytes, stderr_bytes:$stderr_bytes, duration_ms:$duration_ms, status:(if $exit_code == 0 then "completed" else "failed" end), stdout_path:$stdout_path, stderr_path:$stderr_path}' \
+        >> "$PROVISIONING_JSONL"
+}
+
 root_receipt() {
     local kind="$1"
     local root_path="$2"
@@ -241,6 +292,26 @@ root_receipt() {
         add_block "${kind}_root_empty" "$root_path has no files"
     fi
     add_source "${kind}-root:$(basename "$root_path")" "file-content-addressed" "$status" "$bytes" "$samples" "$merkle" "$root_path"
+}
+
+channel_evidence_receipt() {
+    local name="$1"
+    local transport="$2"
+    local evidence_file="$3"
+    local samples="$4"
+    local bytes merkle
+    if [[ ! -f "$evidence_file" ]]; then
+        add_block "channel_evidence_missing" "$name evidence file $evidence_file is not a file"
+        return
+    fi
+    bytes="$(file_size "$evidence_file")"
+    merkle="$(sha256_file "$evidence_file")"
+    if [[ "$samples" =~ ^[0-9]+$ ]] && [[ "$samples" -gt 0 && "$bytes" -gt 0 ]]; then
+        add_source "$name" "$transport" "live" "$bytes" "$samples" "$merkle" "$evidence_file"
+    else
+        add_block "channel_evidence_empty" "$name evidence file has no usable bytes or samples"
+        add_source "$name" "$transport" "blocked" "$bytes" 0 "$merkle" "$evidence_file"
+    fi
 }
 
 probe_endpoint() {
@@ -284,7 +355,9 @@ require_present_tool() {
 add_tool curl >/dev/null || true
 add_tool jq >/dev/null || true
 add_tool shasum >/dev/null || true
-add_tool adb >/dev/null || true
+if [[ -n "$APK_PATH" ]]; then
+    add_tool adb >/dev/null || true
+fi
 add_tool ffmpeg >/dev/null || true
 add_tool ffprobe >/dev/null || true
 add_tool whisper-cli >/dev/null || true
@@ -299,18 +372,21 @@ require_present_tool shasum "shasum_missing"
 probe_endpoint "mac-android-witness-state" "$WITNESS_URL"
 probe_endpoint "speech-transcript-state" "$TRANSCRIPT_URL"
 
-if jq -e 'select(.name == "adb" and .status == "present")' "$TOOLS_JSONL" >/dev/null; then
-    ADB_OUT="$OUT_DIR/sources/adb-devices.txt"
-    adb devices -l > "$ADB_OUT" 2>&1 || true
-    ADB_DEVICE_COUNT="$(awk 'NR > 1 && $2 == "device" {count++} END {print count + 0}' "$ADB_OUT")"
-    if [[ "$ADB_DEVICE_COUNT" -gt 0 ]]; then
-        add_source "android-adb-devices" "adb-usb" "live" "$(file_size "$ADB_OUT")" "$ADB_DEVICE_COUNT" "$(sha256_file "$ADB_OUT")" "$ADB_OUT"
+if [[ -n "$APK_PATH" ]]; then
+    if [[ ! -f "$APK_PATH" ]]; then
+        add_block "apk_missing" "$APK_PATH is not a file"
+    elif jq -e 'select(.name == "adb" and .status == "present")' "$TOOLS_JSONL" >/dev/null; then
+        run_provisioning_process \
+            "android-install-provisioning" \
+            "adb install -r $(printf '%q' "$APK_PATH")" \
+            "adb-install" \
+            "$(basename "$APK_PATH")"
+        if ! jq -e 'select(.task == "android-install-provisioning" and .status == "completed")' "$PROVISIONING_JSONL" >/dev/null; then
+            add_block "adb_install_failed" "adb install did not complete for $APK_PATH"
+        fi
     else
-        add_block "adb_device_missing" "adb devices listed no attached Android device"
-        add_source "android-adb-devices" "adb-usb" "blocked" "$(file_size "$ADB_OUT")" 0 "$(sha256_file "$ADB_OUT")" "$ADB_OUT"
+        add_block "adb_missing_for_install" "adb is required only because --apk was supplied"
     fi
-else
-    add_block "adb_missing" "adb is not available on PATH"
 fi
 
 for root_path in "${TRAIN_ROOTS[@]+"${TRAIN_ROOTS[@]}"}"; do
@@ -318,6 +394,10 @@ for root_path in "${TRAIN_ROOTS[@]+"${TRAIN_ROOTS[@]}"}"; do
 done
 for root_path in "${HELDOUT_ROOTS[@]+"${HELDOUT_ROOTS[@]}"}"; do
     root_receipt "heldout" "$root_path"
+done
+for channel_item in "${CHANNEL_EVIDENCE[@]+"${CHANNEL_EVIDENCE[@]}"}"; do
+    IFS='|' read -r channel_name channel_transport channel_file channel_samples <<<"$channel_item"
+    channel_evidence_receipt "$channel_name" "$channel_transport" "$channel_file" "$channel_samples"
 done
 
 if jq -e 'select(.name == "say" and .status == "present")' "$TOOLS_JSONL" >/dev/null; then
@@ -375,6 +455,7 @@ fi
 TOOLS_JSON="$(jq -s . "$TOOLS_JSONL")"
 SOURCES_JSON="$(jq -s . "$SOURCES_JSONL")"
 PROCESSES_JSON="$(jq -s . "$PROCESSES_JSONL")"
+PROVISIONING_JSON="$(jq -s . "$PROVISIONING_JSONL")"
 BLOCKS_JSON="$(jq -s . "$BLOCKS_JSONL")"
 
 TRAIN_BYTES="$(jq -s '[.[] | select((.status == "live") and (.name | startswith("train-root:"))) | .bytes] | add // 0' "$SOURCES_JSONL")"
@@ -386,6 +467,8 @@ fi
 
 SOURCE_BYTE_SUM="$(jq -s '[.[] | select(.status == "live") | .bytes] | add // 0' "$SOURCES_JSONL")"
 LIVE_SOURCE_COUNT="$(jq -s '[.[] | select(.status == "live")] | length' "$SOURCES_JSONL")"
+RUNTIME_CHANNEL_COUNT="$(jq -s '[.[] | select(.status == "live" and (.transport == "http-localhost" or .transport == "loopback-http" or .transport == "websocket-loopback" or .transport == "websocket-lan" or .transport == "wifi-mesh" or .transport == "coherence-wifi" or .transport == "wifi-direct" or .transport == "bluetooth-le-gatt" or .transport == "bluetooth-rfcomm" or .transport == "ble-presence" or .transport == "audio-loopback" or .transport == "audio-ultrasonic" or .transport == "audio-near-ultrasonic" or .transport == "video-loopback" or .transport == "video-optical" or .transport == "screen-loopback" or .transport == "screen-camera-optical" or .transport == "nfc-tap" or .transport == "usb-accessory"))] | length' "$SOURCES_JSONL")"
+BIDIRECTIONAL_CHANNEL_COUNT="$(jq -s '[.[] | select(.status == "live" and (.transport == "http-localhost" or .transport == "loopback-http" or .transport == "websocket-loopback" or .transport == "websocket-lan" or .transport == "wifi-mesh" or .transport == "coherence-wifi" or .transport == "wifi-direct" or .transport == "bluetooth-le-gatt" or .transport == "bluetooth-rfcomm" or .transport == "audio-loopback" or .transport == "audio-ultrasonic" or .transport == "audio-near-ultrasonic" or .transport == "video-loopback" or .transport == "video-optical" or .transport == "screen-loopback" or .transport == "screen-camera-optical" or .transport == "nfc-tap" or .transport == "usb-accessory"))] | length' "$SOURCES_JSONL")"
 PROCESS_COMPLETED_COUNT="$(jq -s '[.[] | select(.status == "completed" and .exit_code == 0 and .stdout_bytes >= 32)] | length' "$PROCESSES_JSONL")"
 
 if [[ "$TRAIN_BYTES" -lt "$MIN_TRAIN_BYTES" ]]; then
@@ -400,11 +483,14 @@ fi
 if [[ "$PROCESS_COMPLETED_COUNT" -lt 3 ]]; then
     add_block "below_process_floor" "fewer than three completed local process receipts are present"
 fi
+if [[ "$BIDIRECTIONAL_CHANNEL_COUNT" -lt 1 ]]; then
+    add_block "bidirectional_runtime_channel_missing" "no bidirectional loopback wifi bluetooth audio video screen nfc or usb-accessory runtime channel is live"
+fi
 
 BLOCKS_JSON="$(jq -s . "$BLOCKS_JSONL")"
 BLOCK_COUNT="$(jq 'length' <<<"$BLOCKS_JSON")"
 STATUS="blocked"
-if [[ "$BLOCK_COUNT" -eq 0 && "$TRAIN_BYTES" -ge "$MIN_TRAIN_BYTES" && "$HELDOUT_BYTES" -ge "$MIN_HELDOUT_BYTES" && "$LABEL_COUNT" -ge "$MIN_LABELS" && "$PROCESS_COMPLETED_COUNT" -ge 3 ]]; then
+if [[ "$BLOCK_COUNT" -eq 0 && "$TRAIN_BYTES" -ge "$MIN_TRAIN_BYTES" && "$HELDOUT_BYTES" -ge "$MIN_HELDOUT_BYTES" && "$LABEL_COUNT" -ge "$MIN_LABELS" && "$PROCESS_COMPLETED_COUNT" -ge 3 && "$BIDIRECTIONAL_CHANNEL_COUNT" -ge 1 ]]; then
     STATUS="active"
 fi
 
@@ -424,6 +510,7 @@ jq -n \
     --argjson tools "$TOOLS_JSON" \
     --argjson sources "$SOURCES_JSON" \
     --argjson processes "$PROCESSES_JSON" \
+    --argjson provisioning "$PROVISIONING_JSON" \
     --argjson blocks "$BLOCKS_JSON" \
     --argjson min_train_bytes "$MIN_TRAIN_BYTES" \
     --argjson min_heldout_bytes "$MIN_HELDOUT_BYTES" \
@@ -433,6 +520,8 @@ jq -n \
     --argjson source_byte_sum "$SOURCE_BYTE_SUM" \
     --argjson label_count "$LABEL_COUNT" \
     --argjson live_source_count "$LIVE_SOURCE_COUNT" \
+    --argjson runtime_channel_count "$RUNTIME_CHANNEL_COUNT" \
+    --argjson bidirectional_channel_count "$BIDIRECTIONAL_CHANNEL_COUNT" \
     --argjson process_completed_count "$PROCESS_COMPLETED_COUNT" \
     '{
         schema:$schema,
@@ -451,8 +540,9 @@ jq -n \
         tool_receipts:$tools,
         source_receipts:$sources,
         process_receipts:$processes,
+        provisioning_receipts:$provisioning,
         block_reasons:$blocks,
-        counts:{live_sources:$live_source_count, completed_processes:$process_completed_count}
+        counts:{live_sources:$live_source_count, runtime_channels:$runtime_channel_count, bidirectional_channels:$bidirectional_channel_count, completed_processes:$process_completed_count}
     }' > "$RECEIPT"
 
 printf 'real-mesh-training-emitter status=%s receipt=%s\n' "$STATUS" "$RECEIPT"
