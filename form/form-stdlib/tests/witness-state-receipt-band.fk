@@ -2,7 +2,7 @@
 ;
 ; witness-state-receipt-band - live witness counters as Form-native receipts.
 ;
-; Verdict 4095 when every claim lands:
+; Verdict 65535 when every claim lands:
 ;   1    floor and north-star declarations exist
 ;   2    live witness present with frames
 ;   4    mic counter and organ are active
@@ -15,6 +15,10 @@
 ;   512  active media floor requires mic, camera, and GPU
 ;   1024 speech, vision, and multimodal routes become native-first
 ;   2048 heldout oracle retirement still requires enough samples
+;   4096 witness counters produce valid heldout learner rows
+;   8192 heldout rows score a challenger/champion history
+;   16384 too few heldout rows keep the oracle teacher
+;   32768 enough heldout native wins retire one narrow teacher
 (do
     (let organs (list "accelerometer" "camera" "gps" "gpu" "gyroscope" "light" "magnetometer" "mic" "network" "screen"))
     (let live-state
@@ -57,6 +61,18 @@
             (list "camera" "mic")
             "summary-only/no-raw-audio-frame-buffer"))
     (let few (list (list 0 1) (list 0 1) (list 1 1)))
+    (let speech-heldout (wsr-heldout-from-state "speech-transcribe" live-state 83 81 1 1))
+    (let vision-heldout (wsr-heldout-from-state "vision-describe" live-state 84 82 1 1))
+    (let multimodal-heldout (wsr-heldout-from-state "multimodal-align" live-state 86 80 0 1))
+    (let gpu-heldout (wsr-heldout-from-state "gpu-readback-kernel" live-state 88 80 1 1))
+    (let heldout-rows (list speech-heldout vision-heldout multimodal-heldout gpu-heldout))
+    (let too-few-heldout (list speech-heldout vision-heldout multimodal-heldout))
+    (let win-row (wsr-heldout-from-state "speech-transcribe" live-state 85 80 1 1))
+    (let reached-heldout
+        (list
+            win-row win-row win-row win-row
+            win-row win-row win-row win-row
+            win-row win-row win-row win-row))
 
     (let c0
         (if (and
@@ -116,5 +132,27 @@
                 (eq (wsr-heldout-retirement-ready? few 12 0) 0))
             2048
             0))
+    (let c12
+        (if (and
+                (eq (wsr-heldout-learning-floor? live-state heldout-rows) 1)
+                (eq (wsr-heldout-valid-count heldout-rows) 4))
+            4096
+            0))
+    (let c13
+        (if (and
+                (eq (cc-champ-score (wsr-heldout-history heldout-rows)) 3)
+                (eq (cc-chall-score (wsr-heldout-history heldout-rows)) 4))
+            8192
+            0))
+    (let c14
+        (if (and
+                (eq (wsr-heldout-retire? too-few-heldout 12 0) 0)
+                (str_eq (wsr-heldout-authority too-few-heldout 12 0) "third-party"))
+            16384
+            0))
+    (let c15
+        (if (eq (wsr-heldout-native-wins? reached-heldout 12 0) 1)
+            32768
+            0))
 
-    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11)))
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15)))
