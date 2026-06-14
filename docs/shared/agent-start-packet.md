@@ -116,6 +116,9 @@ re-walking host effects while pure recursive/local bindings keep inline lowering
 `write_file_text` now rides the fourth arm as tag 104 with overwrite/truncate
 semantics, giving text emitters a direct four-way write floor without byte-list
 materialization.
+Non-recursive direct-call `do` lets also snapshot once through per-function RAM
+windows; `ephemeris-planets` now reads list-returning call results repeatedly
+and crosses four-way at `1111111`.
 The next honest record-shaped gaps are object/class construction and method
 dispatch surfaces that still need to lower their broader BML/Hati tissue.
 
@@ -519,7 +522,7 @@ coh substrate run    "<recipe-expr>"                       # execute a recipe, r
   I Ching hexagram 25 / Human Design gate 25 / Gene Key 25, one cell wearing three
   faces. Systems registered today: the 64 (i-ching · human-design · gene-keys), the
   zodiac (western · vedic), IFS, the north-star, CJK (chinese · japanese · english);
-  the live ephemeris (Sun, Moon, lunar nodes) and the Human Design mandala wheel
+  the live ephemeris (Sun, planets, Moon, lunar nodes) and the Human Design mandala wheel
   (date → Sun longitude → gate) compute natively, four-way. A `/api/channels` HTTP door
   onto this is the named next breath (carrier-last). Teaching:
   [`guidance-channels.form`](../coherence-substrate/guidance-channels.form),
