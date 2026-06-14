@@ -1,0 +1,33 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord join && coord claim \"witness oracle carrier ledger\"",
+    "python3 -m py_compile scripts/witness_oracle_emission_ledger.py",
+    "python3 -m pytest -q api/tests/test_witness_oracle_emission_ledger.py",
+    "python3 scripts/witness_oracle_emission_ledger.py --cycles 2 --interval 1",
+    "python3 scripts/generate_repo_indexes.py",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/witness-state-receipt.fk form-stdlib/tests/witness-state-receipt-band.fk"
+  ],
+  "failure_reason": "Added the witness oracle emission ledger carrier. The script reads the live Mac witness /state endpoint, derives summary-only STT/vision/multimodal/GPU process rows, labels, heldout rows, and emission cycles, writes native receipt ledger JSON records under .cache/witness-oracle-emissions, and refuses stale/non-live mic-camera-GPU state by default. Unit tests pass. The live localhost witness probe wrote a blocked receipt because present=false and both sampled cycles had seq=1522. The existing Form receipt contract still proves 16777215 four-way with 1 ok and 0 divergent.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "witness-oracle-carrier-ledger-20260614",
+  "source": {
+    "kind": "codex-worktree",
+    "path": "/Users/ursmuff/.claude-worktrees/Coherence-Network/witness-oracle-carrier-ledger-20260614"
+  },
+  "thread_branch": "codex/witness-oracle-carrier-ledger-20260614",
+  "validation": {
+    "commands": [
+      "python3 -m py_compile scripts/witness_oracle_emission_ledger.py",
+      "python3 -m pytest -q api/tests/test_witness_oracle_emission_ledger.py",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/witness-state-receipt.fk form-stdlib/tests/witness-state-receipt-band.fk"
+    ],
+    "status": "pass"
+  }
+}
