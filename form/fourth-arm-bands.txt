@@ -24,10 +24,20 @@
 #     surfaces beyond the explicit make_nodeid, category/pkg/level/type/inst
 #     projection, and generic/doc/concept/dns/session floor
 #   host io family        — read_file, write_file_text, file_mtime, scan_run
-#   higher-order calls    — foldl/map/filter with function arguments
-#     (wants defunctionalization: monomorphic copies per call site)
 #   multi-line output     — bands that print mid-walk (the walker answers
 #     one value through fk_pr)
+#
+# Crossed walls (kept here as named precedent, not standing blockers):
+#   higher-order calls    — foldl/map/filter with function arguments now CROSS
+#     four-way (higher-order-fn-arg row). No defunctionalization was needed:
+#     the flattener already lowers a function name in argument position to a
+#     function-ref value (flt-fref: cons of (fn-index, arity)), and a call to
+#     a param-bound function lowers to the indirect-call arm (tag 44), which
+#     reads (fn-index, arity) and dispatches — arity 1 reads the single arg,
+#     arity ≥ 2 rides the packed-args list like a direct call. The only gap
+#     was the standing shim: map/filter/foldl/foldr (and even?/odd?/zero?)
+#     are now carried as the EXACT generic recipes core.fk runs, so a band
+#     reaching them resolves ordinary function rows that walk through tag 44.
 #
 # Current floor (2026-06-14 content-address + sibling-node floor): the admitted
 # manifest carries content-address, durable substrate-core, and the doc-xpath,
@@ -94,6 +104,7 @@ signal-derivative fkc 127
 feature-vector fkc 127
 active-inference fks 127
 indirect-call-runtime-probe fks 7
+higher-order-fn-arg fks 1111
 branch-choice-order fks 511
 channel-interface fks 127
 channel-flow fks 8388607
