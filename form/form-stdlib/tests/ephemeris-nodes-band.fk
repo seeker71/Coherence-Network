@@ -1,0 +1,41 @@
+; tests/ephemeris-nodes-band.fk — the lunar nodes (Rahu/Ketu), computed native, four-way.
+;
+; Verdict 111111 (63) when every claim holds across all kernels.
+;   Rahu at 125 deg on 2000-01-01                                 → 1
+;   Rahu sign: tropical Leo (4), sidereal Cancer (3)              → 10
+;   Ketu at 305 deg, tropical Aquarius (10)                       → 100
+;   the axis is always 180 deg: (Rahu + 180) mod 360 = Ketu       → 1000
+;   retrograde: a year on Rahu is 106 (moved back 19 deg)         → 10000
+;   it keeps regressing: two years on Rahu is 86                  → 100000
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/celestial-pole-channel.fk form-stdlib/trig.fk form-stdlib/ephemeris-sun.fk form-stdlib/ephemeris-nodes.fk
+;
+
+(do
+    ;; --- 1. Rahu longitude --------------------------------------------
+    (let rahu-ok (if (eq (rahu-longitude 2000 1 1) 125) 1 0))
+
+    ;; --- 2. Rahu sign in both zodiacs ---------------------------------
+    (let rt (eq (rahu-sign-tropical 2000 1 1) 4))
+    (let rs (eq (rahu-sign-sidereal 2000 1 1) 3))
+    (let rsign-ok (if rt (if rs 10 0) 0))
+
+    ;; --- 3. Ketu, the opposite node -----------------------------------
+    (let kl (eq (ketu-longitude 2000 1 1) 305))
+    (let kt (eq (ketu-sign-tropical 2000 1 1) 10))
+    (let ketu-ok (if kl (if kt 100 0) 0))
+
+    ;; --- 4. the axis is always 180 deg apart --------------------------
+    (let axis-ok
+        (if (eq (mod (add (rahu-longitude 2000 1 1) 180) 360) (ketu-longitude 2000 1 1)) 1000 0))
+
+    ;; --- 5. retrograde: a year on, Rahu has moved back ~19 deg --------
+    (let r2001 (rahu-longitude 2001 1 1))
+    (let retro-ok
+        (if (eq r2001 106) (if (eq (sub 125 r2001) 19) 10000 0) 0))
+
+    ;; --- 6. it keeps regressing: two years on ------------------------
+    (let r2002 (rahu-longitude 2002 1 1))
+    (let keeps-ok (if (eq r2002 86) (if (gt r2001 r2002) 100000 0) 0))
+
+    (sum (list rahu-ok rsign-ok ketu-ok axis-ok retro-ok keeps-ok)))
