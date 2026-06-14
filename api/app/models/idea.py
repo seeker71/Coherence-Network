@@ -159,7 +159,12 @@ class IdeaQuestionCreate(BaseModel):
 class Idea(BaseModel):
     id: str = Field(min_length=1)
     name: str = Field(min_length=1)
-    description: str = Field(min_length=1)
+    # description is optional in real data: ~15% of ideas carry none. The read
+    # model tolerates empty so the native /api/ideas projection (IdeaWithScore)
+    # serves them instead of hard-failing the whole list (the strict min_length=1
+    # 500'd the Go native route while Python skipped). Creation stays strict via
+    # IdeaCreate.
+    description: str = Field(default="")
     potential_value: float = Field(ge=0.0)
     actual_value: float = Field(default=0.0, ge=0.0)
     estimated_cost: float = Field(ge=0.0)
