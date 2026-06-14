@@ -81,6 +81,28 @@ type LearningDashboardData = {
     task_types: string[];
     role: string;
   }[];
+  native_training_artifacts: {
+    artifact_id: string;
+    artifact_kind: string;
+    model_family: string;
+    status: string;
+    recipe_path: string;
+    proof_band_path?: string | null;
+    weights_hash: string;
+    dataset_hash: string;
+    eval_hash: string;
+    sample_count: number;
+    heldout_count: number;
+    correct_count: number;
+    wrong_count: number;
+    native_accuracy_ppm: number;
+    oracle_accuracy_ppm: number;
+    continuous_cycle_count: number;
+    proof_status: string;
+    native_beats_oracle: boolean;
+    observed_at?: string | null;
+    receipt_path: string;
+  }[];
   learning_surfaces: {
     surface_id: string;
     title: string;
@@ -124,6 +146,10 @@ function relTime(iso: string): string {
   if (m < 1) return "now";
   if (m < 60) return `${m}m`;
   return `${Math.floor(m / 60)}h`;
+}
+
+function ppmToPercent(value: number): string {
+  return `${(value / 10000).toFixed(value % 10000 === 0 ? 0 : 1)}%`;
 }
 
 function Gauge({ label, value, max = 100 }: { label: string; value: number; max?: number }) {
@@ -462,6 +488,43 @@ export default function DashboardPage() {
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+              <div className="rounded-xl border border-border/20 bg-card/40 overflow-hidden xl:col-span-2">
+                <div className="px-4 py-3 border-b border-border/10">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Native training artifacts</p>
+                </div>
+                {learning.native_training_artifacts.length > 0 ? (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-px bg-border/10">
+                    {learning.native_training_artifacts.slice(0, 4).map(artifact => (
+                      <div key={artifact.artifact_id} className="bg-card p-4 space-y-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-medium font-mono break-all">{artifact.artifact_id}</p>
+                          <StatusPill value={artifact.proof_status} />
+                          <StatusPill value={artifact.status} />
+                          {artifact.native_beats_oracle && <StatusPill value="native beats oracle" />}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {artifact.model_family} · cycle {artifact.continuous_cycle_count} · samples {artifact.sample_count} · heldout {artifact.heldout_count}
+                        </p>
+                        <p className="text-xs">
+                          <span className="text-muted-foreground">Eval: </span>
+                          native {ppmToPercent(artifact.native_accuracy_ppm)} · oracle {ppmToPercent(artifact.oracle_accuracy_ppm)} · {artifact.correct_count}/{artifact.heldout_count} correct
+                        </p>
+                        <div className="space-y-1 text-[10px] text-muted-foreground font-mono">
+                          <p className="break-all">weights {artifact.weights_hash}</p>
+                          <p className="break-all">data {artifact.dataset_hash}</p>
+                          <p className="break-all">eval {artifact.eval_hash}</p>
+                          <p className="break-all">{artifact.receipt_path}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4">
+                    <p className="text-xs text-muted-foreground">No committed native weight/data/eval receipt has passed yet.</p>
+                  </div>
+                )}
+              </div>
+
               <div className="rounded-xl border border-border/20 bg-card/40 overflow-hidden">
                 <div className="px-4 py-3 border-b border-border/10">
                   <p className="text-xs text-muted-foreground uppercase tracking-wider">Proof surfaces</p>

@@ -1,0 +1,88 @@
+; native-training-receipt.fk - receipt rows for Form-native trained artifacts.
+;
+; The row names the minimum proof for a trained native artifact: recipe source,
+; weight/prototype digest, data digest, eval digest, sample counts, heldout
+; counts, and native-vs-oracle score. It does not claim model authority by
+; configuration; authority starts only when a receipt proves weights, data, and
+; eval together.
+
+(do
+    (defn ntr-row
+        (artifact-id kind recipe-path weights-merkle dataset-merkle eval-merkle
+         cycle-count sample-count heldout-count correct-count wrong-count
+         native-accuracy-ppm oracle-accuracy-ppm status)
+        (list
+            "native-training-receipt"
+            artifact-id
+            kind
+            recipe-path
+            weights-merkle
+            dataset-merkle
+            eval-merkle
+            cycle-count
+            sample-count
+            heldout-count
+            correct-count
+            wrong-count
+            native-accuracy-ppm
+            oracle-accuracy-ppm
+            status))
+
+    (defn ntr-row? (value)
+        (if (eq (len value) 15)
+            (str_eq (nth value 0) "native-training-receipt")
+            0))
+
+    (defn ntr-artifact-id (row) (nth row 1))
+    (defn ntr-kind (row) (nth row 2))
+    (defn ntr-recipe-path (row) (nth row 3))
+    (defn ntr-weights-merkle (row) (nth row 4))
+    (defn ntr-dataset-merkle (row) (nth row 5))
+    (defn ntr-eval-merkle (row) (nth row 6))
+    (defn ntr-cycle-count (row) (nth row 7))
+    (defn ntr-sample-count (row) (nth row 8))
+    (defn ntr-heldout-count (row) (nth row 9))
+    (defn ntr-correct-count (row) (nth row 10))
+    (defn ntr-wrong-count (row) (nth row 11))
+    (defn ntr-native-accuracy-ppm (row) (nth row 12))
+    (defn ntr-oracle-accuracy-ppm (row) (nth row 13))
+    (defn ntr-status (row) (nth row 14))
+
+    (defn ntr-text-present? (value) (not (str_eq value "")))
+    (defn ntr-counts-close? (row)
+        (eq (add (ntr-correct-count row) (ntr-wrong-count row)) (ntr-heldout-count row)))
+
+    (defn ntr-has-digests? (row)
+        (if (ntr-text-present? (ntr-weights-merkle row))
+            (if (ntr-text-present? (ntr-dataset-merkle row))
+                (if (ntr-text-present? (ntr-eval-merkle row)) 1 0)
+                0)
+            0))
+
+    (defn ntr-trained? (row)
+        (if (ntr-row? row)
+            (if (str_eq (ntr-status row) "active")
+                (if (gt (ntr-cycle-count row) 0)
+                    (if (gt (ntr-sample-count row) 0)
+                        (if (gt (ntr-heldout-count row) 0)
+                            (if (ntr-counts-close? row)
+                                (ntr-has-digests? row)
+                                0)
+                            0)
+                        0)
+                    0)
+                0)
+            0))
+
+    (defn ntr-beats-oracle? (row)
+        (if (ntr-trained? row)
+            (gt (ntr-native-accuracy-ppm row) (ntr-oracle-accuracy-ppm row))
+            0))
+
+    (defn ntr-floor ()
+        (list
+            "native artifact receipts must name weights, data, eval, and recipe"
+            "trained_native_model_count is receipt-derived, never route-derived"
+            "continuous cycles append new receipts with comparable eval rows"))
+
+    0)
