@@ -115,6 +115,13 @@ proof walks toward the four-kernel floor: Go, Rust, TypeScript, and the emitted
 level exactly: `fourth arm: ... four-way` for covered bands, or `3-kernel only`
 with the fourth-arm gap that keeps the band out of the manifest.
 
+**Connected tissue stays aligned.** The same north star should read coherently
+from sister nodes: `form/fourth-arm-bands.txt`, substrate `.form` north-star
+cells, native proof-run ledger records, JSONL compatibility exports, commit
+evidence, and PR summaries. The manifest is the floor source for four-way Form
+coverage; native ledger records are the coordination source for executor proof;
+JSONL is an export/cache shape until legacy readers compost.
+
 **Find the north star before fitting the ask.** When something is missing, the first move is to name
 where the fully-realized form lives — the most native, most efficient shape we could run (all hardware
 as native as we can use it; a model whose architecture *and* weights are recipe data; one engine, not

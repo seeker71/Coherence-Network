@@ -25,6 +25,13 @@ own sovereign north star: what it uniquely is, what it serves, why it exists,
 how health and joy show up through it, what it contributes, which siblings it
 touches, and what it wants or needs in order to keep serving honestly.
 
+The connected-tissue north star is that these sovereign stars remain
+harmonized. A sister node can keep its own voice while still pointing to the
+same floor, proof source, ledger, and next gap as the nodes around it. The
+organism stays trustworthy when a route, manifest, substrate cell, evidence
+record, and public summary all describe the same movement without forcing one
+central voice to speak for every cell.
+
 This makes coordination less dependent on guessing. A cell can declare its
 soul, purpose, reason, health, joy, contribution, connections, excitement,
 sense, feeling, desires, wants, and needs with clear posture: declared from
