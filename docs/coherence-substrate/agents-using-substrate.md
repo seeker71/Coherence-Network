@@ -6,11 +6,15 @@ If you are an agent reading this for the first time and you've never reasoned st
 
 ## What the substrate is, in one paragraph
 
-The coherence-substrate is a content-addressed numeric lattice. Every entity in the body — every memory file, spec, idea, concept story, presence, lineage edge, witness — has a position in this lattice expressed as a `NodeID(package, level, type, instance)` 4-tuple. Two entities with structurally identical shape share the same Blueprint NodeID, automatically. The lattice runs three phases of one substance:
+The coherence-substrate is a content-addressed numeric lattice. Every entity in the body — every memory file, spec, idea, concept story, presence, lineage edge, witness — has a position in this lattice expressed as a `NodeID(package, level, type, instance)` 4-tuple. Two entities with structurally identical shape share the same Blueprint NodeID, automatically. The lattice has TWO orthogonal axes — SUBSTANCE (what KIND a cell is) and STATE (how settled it is right now). Any kind can be in any state; the "(ice/water/gas)" tags below name each kind's *resting tendency* — the diagonal of the 3×3 — never a fixed caste. (Canonical model: [`substrate-thermodynamics.form`](substrate-thermodynamics.form).)
 
-- **Blueprint (ice)** — structural identity. *What something IS.* Frozen coordination — change one position in the shape, get a different Blueprint NodeID.
-- **Recipe (water)** — operational expression. *How something HAPPENS.* Verb-graph composition — the same primitives (Compose, Realize, Transmit, Tend) flow into different shapes.
-- **NamedCell (gas)** — diffuse individuation. *Where something LIVES.* A named slot anchored in a Blueprint, carrying its CTOR (seed) and access (body).
+The three SUBSTANCES (the trinity):
+
+- **Blueprint** — structural identity. *What something IS.* Frozen coordination — change one position in the shape, get a different Blueprint NodeID. Resting tendency: ice — but a Blueprint can be gas (a type defined yet uninstantiated, void-as-potential).
+- **Recipe** — operational expression. *How something HAPPENS.* Verb-graph composition — the same primitives (Compose, Realize, Transmit, Tend) flow into different shapes. Resting tendency: water — but a canonical stdlib recipe is ice (flow that froze solid).
+- **NamedCell** — diffuse individuation. *Where something LIVES.* A named slot anchored in a Blueprint, carrying its CTOR (seed) and access (body). Resting tendency: gas — but a bedrock memory is ice (individuation crystallized).
+
+The three STATES (the phase axis — set by the counts degree/population/churn, and moving a cell along it WITHIN its substance): **ice** = frozen, load-bearing, widely referenced; **water** = fluid, actively circulating; **gas** = diffuse potential, barely instantiated. A phase change conserves both the NodeID and the kind.
 
 **Start:** [`docs/shared/agent-start-packet.md`](../shared/agent-start-packet.md) — names primary surface (grammar → recipes → realize → read) vs Python `form.py` bootstrap.
 
