@@ -1,0 +1,99 @@
+openapi: 3.1.0
+info:
+  title: Coherence Network — front door
+  description: >
+    Ask the Coherence Network's content-addressed substrate anything structural,
+    and offer it ideas, concepts, teachings, documents, or tasks — no account,
+    no git. Reads are public; an offer is held as `offered` and grounded by
+    tending, never a direct edit to the body. Paste this schema into a Custom
+    GPT's Actions (Authentication: None).
+  version: "2026-06-14"
+servers:
+  - url: https://api.coherencycoin.com
+paths:
+  /api/substrate/cell/{domain}/{name}:
+    get:
+      operationId: getCell
+      summary: A cell and its metadata (Blueprint, source_path, NodeID coordinate).
+      parameters:
+        - name: domain
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [idea, concept, spec, presence, memory, lineage, guide, kb_page]
+        - name: name
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: The cell with its Blueprint, ctor, access, and source_path }
+  /api/substrate/equivalent/{domain}/{name}:
+    get:
+      operationId: getEquivalent
+      summary: Every cell that shares this cell's Blueprint (its shape-family).
+      parameters:
+        - name: domain
+          in: path
+          required: true
+          schema: { type: string }
+        - name: name
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: The Blueprint and the list of cells sharing it }
+  /api/substrate/lattice/stats:
+    get:
+      operationId: getLatticeStats
+      summary: How large the body is — blueprints, recipes, cells.
+      responses:
+        "200": { description: Lattice totals }
+  /api/substrate/form:
+    post:
+      operationId: askForm
+      summary: Ask the lattice in Form notation (the rich structural query).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expression]
+              properties:
+                expression:
+                  type: string
+                  description: >
+                    Form notation. Examples:
+                    '?equivalent @spec(agent-memory-system)' (shape-family),
+                    '@concept(lc-cross-modal-unity)' (a cell + metadata),
+                    '@idea(agent-pipeline) |> @spec' (walk an edge),
+                    '?cells where domain == "concept"' (filter), '?lattice' (count).
+      responses:
+        "200": { description: "A discriminated result (kind: node_id | recipe | cell | cells | view | views | value)" }
+  /api/substrate/ingest:
+    post:
+      operationId: offerContent
+      summary: Offer an idea, concept, teaching, document, or task to the network.
+      description: >
+        The submission is held as a content-addressed offer. Include
+        `status: offered` and `claimed: false` in the markdown frontmatter; it is
+        grounded into the canonical body by tending, never a direct edit.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [domain, content]
+              properties:
+                domain:
+                  type: string
+                  enum: [idea, concept, spec, presence, memory]
+                content:
+                  type: string
+                  description: >
+                    Markdown with frontmatter. Include name:, status: offered,
+                    claimed: false, then a body holding the idea/teaching/document.
+      responses:
+        "200": { description: The held offer — its cell, Blueprint, and ctor NodeIDs }

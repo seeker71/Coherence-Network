@@ -242,6 +242,7 @@ def render_manifest(targets: list[tuple[str, Path, list[Path]]]) -> str:
         "| [docs/shared/agent-start-packet.md](docs/shared/agent-start-packet.md) | **First file for any agent** — Form-native runtime primary surface, Python bridge/bootstrap compost, read-only query default |",
         "| [docs/PRODUCTION-SUBSTRATE.md](docs/PRODUCTION-SUBSTRATE.md) | **Current production substrate** — Hostinger/VPS topology, internal Postgres credential carriers, native-kernel DB probe path |",
         "| [docs/coherence-substrate/INDEX.md](docs/coherence-substrate/INDEX.md) | Substrate + Form notation drill-down |",
+        "| [docs/front-door/INDEX.md](docs/front-door/INDEX.md) | **Public front door for any AI assistant** — ask the substrate and offer it content from a public ChatGPT/Claude/Gemini, no account, no git (`llms.txt`, connectors, GPT action) |",
         "",
         "## Narrative layer (existing)",
         "",
