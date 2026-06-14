@@ -1,0 +1,50 @@
+; tests/chart-cast-band.fk — cast a chart from a date, the whole stack composed, four-way.
+;
+; The cast is the edge-set: each body placed in a sign and on a gate. The band casts
+; 2000-01-01 and pins every placement (the date -> ephemeris -> sign + wheel chain end to
+; end, for four bodies at once), then shows the cast moves with the sky (the spring-equinox
+; Sun lands in Gate 25).
+;
+; Verdict 1111111 (127) when every claim holds across all four kernels.
+;   Sun:  Gate 38, Capricorn (9)                                   -> 1
+;   Moon: Gate 44, Scorpio (7)                                     -> 10
+;   Rahu: Gate 31, Leo (4)                                         -> 100
+;   Ketu: Gate 41, Aquarius (10)                                   -> 1000
+;   the cast is 4 placements; the accessors read them              -> 10000
+;   the lunar phase is in the chart (balsamic, octant 7)           -> 100000
+;   the cast moves: the spring-equinox Sun is in Gate 25           -> 1000000
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/celestial-pole-channel.fk form-stdlib/trig.fk form-stdlib/ephemeris-sun.fk form-stdlib/ephemeris-moon.fk form-stdlib/ephemeris-nodes.fk form-stdlib/iching-channel.fk form-stdlib/hd-mandala-wheel.fk form-stdlib/chart-cast.fk
+;
+
+(do
+    ;; --- 1. the Sun placement -----------------------------------------
+    (let s (sun-placement 2000 1 1))
+    (let sun-ok (if (eq (pl-gate s) 38) (if (eq (pl-trop s) 9) 1 0) 0))
+
+    ;; --- 2. the Moon placement ----------------------------------------
+    (let m (moon-placement 2000 1 1))
+    (let moon-ok (if (eq (pl-gate m) 44) (if (eq (pl-trop m) 7) 10 0) 0))
+
+    ;; --- 3. the Rahu placement ----------------------------------------
+    (let r (rahu-placement 2000 1 1))
+    (let rahu-ok (if (eq (pl-gate r) 31) (if (eq (pl-trop r) 4) 100 0) 0))
+
+    ;; --- 4. the Ketu placement ----------------------------------------
+    (let k (ketu-placement 2000 1 1))
+    (let ketu-ok (if (eq (pl-gate k) 41) (if (eq (pl-trop k) 10) 1000 0) 0))
+
+    ;; --- 5. the cast is four placements, readable ---------------------
+    (let chart (cast-chart 2000 1 1))
+    (let cast-ok
+        (if (eq (len chart) 4)
+            (if (str_eq (pl-body (head chart)) "Sun") 10000 0) 0))
+
+    ;; --- 6. the lunar phase is part of the chart ----------------------
+    (let phase-ok (if (eq (chart-phase 2000 1 1) 7) 100000 0))
+
+    ;; --- 7. the cast moves with the sky -------------------------------
+    ;; at the spring equinox the Sun sits at 0 deg Aries -> Gate 25.
+    (let move-ok (if (eq (pl-gate (sun-placement 2000 3 20)) 25) 1000000 0))
+
+    (sum (list sun-ok moon-ok rahu-ok ketu-ok cast-ok phase-ok move-ok)))
