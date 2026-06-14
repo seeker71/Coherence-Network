@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 240
+**Total files**: 241
 
 | File | Purpose |
 |---|---|
@@ -140,6 +140,7 @@
 | [minimal_kernel_census.sh](minimal_kernel_census.sh) | minimal_kernel_census.sh — count the Go kernel's registered natives by the four |
 | [model_carrier_rehash_audit.sh](model_carrier_rehash_audit.sh) | model_carrier_rehash_audit.sh — physical model carrier materialize/dematerialize re-hash witness. |
 | [model_executor_proof_ledger.py](model_executor_proof_ledger.py) | Validate and export native model executor proof-run records. |
+| [model_vitality_native_http_capture_probe.sh](model_vitality_native_http_capture_probe.sh) | model_vitality_native_http_capture_probe.sh — prove public pulse/runtime capture through kernel-native http_get. |
 | [model_vitality_production_ingest_probe.sh](model_vitality_production_ingest_probe.sh) | model_vitality_production_ingest_probe.sh — capture live production pulse/runtime slices for Form model vitality rows. |
 | [morning_coherence_brief.py](morning_coherence_brief.py) | Collect a morning Coherence brief from live network signals. |
 | [native_route_goal_loop.py](native_route_goal_loop.py) | Rank web-used API routes for native high-grammar promotion. |

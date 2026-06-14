@@ -46,6 +46,19 @@
 ;   API pulse read overall=strained with silences=2, the pulse front door read
 ;   overall=breathing, and runtime-summary returned native-kernel with
 ;   x-form-python-authority=false and handler api_runtime_endpoints_summary.
+;   Native HTTPS capture floor: cd form && ./validate.sh form-stdlib/core.fk
+;   form-stdlib/json.fk form-stdlib/model-vitality.fk
+;   form-stdlib/tests/model-vitality-native-http-band.fk -> 4095. This proof
+;   lifts the dict returned by kernel-native http_get into explicit capture rows,
+;   parses pulse JSON in Form, reads runtime authority headers case-insensitively,
+;   and rejects failed transport or Python-authority rows. Live native witness:
+;   scripts/model_vitality_native_http_capture_probe.sh source-compiles core,
+;   runs the Go and Rust kernels, and has each kernel fetch the public API pulse
+;   and runtime-summary HTTPS endpoints with native http_get. On
+;   2026-06-14T09:26:06Z both kernels returned verdict 127, API pulse
+;   status=200 with nonzero body bytes and kernel-native-http-get authority,
+;   and runtime-summary returned native-kernel with x-form-python-authority=false
+;   and handler api_runtime_endpoints_summary.
 ;
 ; NORTH STAR:
 ;   Model architecture, weights, deltas, optimizer state, eval receipts,
@@ -68,9 +81,9 @@
 ;   stays the substrate cell/store object; the carrier buffer is never truth.
 ;   Production ingestion rule: public pulse and runtime/front-door readings are
 ;   rows with attribution, observed timestamp, byte count, latency, and authority
-;   headers. A shell probe may witness HTTPS today; the semantic carrier is the
-;   Form row, and the north star is direct fourth-kernel HTTPS capture into that
-;   same row shape.
+;   headers. Go and Rust already prove direct kernel-native HTTPS capture into
+;   that row shape; TypeScript and the fourth arm still need non-shell external
+;   network carriers before "all kernels" can claim this floor.
 ;
 ; REVIEW TRACE:
 ;   The 2026-06-14 architecture review used local Grok, Gemini, and Claude CLI
@@ -90,8 +103,8 @@
 ;   production pulse/runtime telemetry rows.
 ;   Remaining gaps: full safetensors header parsing for arbitrary model files,
 ;   real MLX tensor package ingest beyond the tiny carrier witness,
-;   fourth-kernel-native external HTTPS capture replacing the shell witness,
-;   and large multi-segment model sharing by merkle across mesh peers.
+;   non-shell TypeScript/fourth-arm external HTTPS capture, and large
+;   multi-segment model sharing by merkle across mesh peers.
 
 (model-vitality-surface
   (floor
@@ -109,8 +122,10 @@
     (real-storage-proof "form/form-stdlib/tests/model-vitality-storage-band.fk -> 8191")
     (physical-carrier-proof "form/form-stdlib/tests/model-vitality-physical-band.fk -> 65535")
     (production-ingestion-proof "form/form-stdlib/tests/model-vitality-production-band.fk -> 32767")
+    (native-http-capture-proof "form/form-stdlib/tests/model-vitality-native-http-band.fk -> 4095")
     (native-carrier-witness "scripts/model_carrier_rehash_audit.sh")
     (production-live-witness "scripts/model_vitality_production_ingest_probe.sh")
+    (native-http-live-witness "scripts/model_vitality_native_http_capture_probe.sh")
     (release-health smallest-focused-proof-first))
   (north-star
     (source-of-truth substrate-cells)
@@ -123,5 +138,6 @@
     (ingest-carriers safetensors mlx-package)
     (wellness-pulse-routing model-vitality-row-chooses-focus)
     (production-ingestion pulse-runtime-frontdoor-rows)
-    (external-https-north-star fourth-kernel-native-capture)
+    (external-https-floor go-rust-kernel-native-http-get)
+    (external-https-north-star all-kernels-non-shell-native-capture)
     (release-vitality fast-proofed-release-cadence)))

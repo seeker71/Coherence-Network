@@ -1,0 +1,38 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord join && coord claim \"witness oracle label export floor\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/witness-state-receipt.fk form-stdlib/tests/witness-state-receipt-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh witness-state-receipt"
+  ],
+  "failure_reason": "Added source-backed native witness export and oracle-label rows to witness heldout learning. witness-state-receipt.fk now validates native-witness-export rows, rejects raw-media exports, validates STT/vision/multimodal/GPU oracle-label rows, rejects fixture providers, creates heldout rows from source-backed labels, and gates native retirement on source-backed labels plus long-window native wins. Focused validate returns 1048575 with fourth arm: 1 band(s) four-way and 1 ok, 0 divergent; the manifest gate returns PASS-4WAY witness-state-receipt. No Python receipt helper was extended.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 404,
+    "row_sha256": "8c3acd211636bb210bf0a153bb71af339f4320bba73bd8a184d203ea6af176c6",
+    "summary": "added-source-backed-native-witness-export-and-or"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0404-8c3acd211636",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L404"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord join && coord claim \"witness oracle label export floor\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/witness-state-receipt.fk form-stdlib/tests/witness-state-receipt-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh witness-state-receipt"
+    ],
+    "status": "pass"
+  }
+}
