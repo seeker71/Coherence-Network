@@ -1,0 +1,36 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord claim \"release python receipt carriers into form native\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-executor-proof-ledger.fk form-stdlib/tests/model-executor-proof-ledger-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/native-training-receipt.fk form-stdlib/tests/native-training-receipt-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/witness-state-receipt.fk form-stdlib/tests/android-mesh-learning-band.fk form-stdlib/tests/witness-state-receipt-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh native-training-receipt model-executor-proof-ledger android-mesh-learning witness-state-receipt",
+    "python3 -m pytest -q api/tests/test_models_learning_dashboard.py",
+    "python3 -m ruff check api/app/routers/models.py api/app/services/native_training_receipts.py api/tests/test_models_learning_dashboard.py",
+    "python3 -m py_compile api/app/services/native_training_receipts.py api/app/routers/models.py",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "git diff --check"
+  ],
+  "failure_reason": "Released the standalone Python receipt and proof-ledger carriers into Form-native recipes and proof bands. model-executor-proof-ledger now validates proof-run records at 4095 four-way; native-training-receipt proves continuous witness cycle windows at 16383 four-way; android-mesh-learning proves capability receipt readiness at 131071 four-way; witness-state-receipt proves pass/blocked emission status at 67108863 four-way. The FastAPI dashboard remains a compatibility reader over committed receipts.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "python-receipt-carrier-release-20260614",
+  "source": {
+    "kind": "codex-worktree",
+    "path": "/Users/ursmuff/.claude-worktrees/Coherence-Network/android-mac-witness-link-20260614"
+  },
+  "thread_branch": "codex/android-mac-witness-link-20260614",
+  "validation": {
+    "commands": [
+      "cd form && bash scripts/fourth-arm-gate.sh native-training-receipt model-executor-proof-ledger android-mesh-learning witness-state-receipt",
+      "python3 -m pytest -q api/tests/test_models_learning_dashboard.py"
+    ],
+    "status": "pass"
+  }
+}

@@ -8,10 +8,10 @@
 
 (fourth-arm-substrate-carriers
   (north-star
-    (sentence "The content-addressed substrate is durable across REAL carriers on all four kernels: the same substrate-core module crosses four-way over the in-memory, segmented-FILE, and Postgres carriers, so content-addressing survives a process and persistence boundary, not only memory — one engine, no parallel paths.")
+    (sentence "The content-addressed substrate is durable through one Form storage-port contract: memory and segmented-FILE stay in the pure deterministic four-way floor, while Postgres becomes first-class at the host carrier boundary with rollback-safe native evidence, so content-addressing survives a process and persistence boundary without pretending the pure fourth kernel contains a database engine.")
     (connected-tissue "Harmonizes with form/fourth-arm-bands.txt (the floor source for four-way coverage), hati-os.form (the kernel surface), the native executor proof ledger, and commit evidence so the sister nodes name one current floor and one next gap.")
     (must-carry content-addressed-intern durable-named-cells memory-carrier file-carrier postgres-carrier effect-once-let single-walk-comparison sequenced-effects native-host-io native-text-write native-file-append)
-    (proof-shape same-shape-same-nodeid durable-content-key-roundtrip four-way-0-divergent))
+    (proof-shape same-shape-same-nodeid durable-content-key-roundtrip four-way-0-divergent rollback-safe-host-carrier-receipt))
 
   (floor
     (sentence "A durable-carrier claim is allowed only when the band crosses four-way on fkwu with 0 divergence and its remaining gate is named; a divergence is never buried by leaving the band out of the manifest.")
@@ -35,11 +35,12 @@
       graph-node-memory-mutation-carrier        # graph mutation over memory carrier (band graph-node-mutation-memory-carrier)
       graph-node-file-carrier-reopen            # file carrier reopen proof (band graph-node-mutation-file-carrier)
       graph-node-full-mutation-verdict          # memory/file agreement and full file mutation verdict (bands graph-node-mutation-carrier, graph-node-mutation-file-verdict)
-      ideas-graph-file-projection)              # idea response projection over reopened file stores (band ideas-graph-projection)
+      ideas-graph-file-projection               # idea response projection over reopened file stores (band ideas-graph-projection)
+      postgres-carrier-boundary-receipt)        # storage-port-all-carriers over throwaway Postgres, verdict 111111
     (current-unsupported
-      postgres-carrier-four-way))               # gated on the broader host-io recipes
+      broader-source-scan-recipes))             # remaining host-io lift after scan_run/file_mtime
 
   (next-step
-    (sentence "Land the Postgres carrier on the same content-key discipline; broader source-scan recipes can now build on the scan_run floor.")
-    (gate postgres-carrier-four-way)
-    (why "Statement-level effects already fire once (sequenced bare-do, tag 69), operand-level effects already fire once (single-walk eq/lt, tags 102/103), nested do-lets snapshot effecting values, the minimum write floor includes write_file_text plus append, storage-port proves memory/file substitutability with durability, full graph mutation crosses over the file carrier, ideas projection crosses over reopened file stores, and host-io freshness/scan observation now crosses through file_mtime plus scan_run.")))
+    (sentence "With the bounded Postgres carrier receipt landed, broader source-scan recipes can now build on the scan_run and file_mtime floor.")
+    (gate broader-source-scan-recipes)
+    (why "Statement-level effects already fire once (sequenced bare-do, tag 69), operand-level effects already fire once (single-walk eq/lt, tags 102/103), nested do-lets snapshot effecting values, the minimum write floor includes write_file_text plus append, storage-port proves memory/file substitutability with durability, full graph mutation crosses over the file carrier, ideas projection crosses over reopened file stores, host-io freshness/scan observation now crosses through file_mtime plus scan_run, and storage-port-all-carriers proves the same storage-test verdict across memory, segmented-file, and throwaway Postgres. The Postgres proof remains a host-carrier boundary receipt, not a database engine inside fkwu.")))

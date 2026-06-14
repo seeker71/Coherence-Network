@@ -186,8 +186,10 @@ predicted.
 The architecture is built and proven end-to-end. The storage port
 (`storage-port.fk`) is one interface — `storage-open` / `storage-put` /
 `storage-get` / `storage-has?` — over a carrier record of four function-values.
-Three carriers now satisfy it, and the SAME carrier-agnostic test
-(`storage-test`) returns the IDENTICAL verdict through all three:
+Three carriers now satisfy it at their appropriate proof layers. The SAME
+carrier-agnostic test (`storage-test`) returns the identical verdict through
+memory and file in the deterministic band, and through Postgres in a live
+host-carrier harness:
 
 | Carrier | Backend | File | Proof |
 |---|---|---|---|
@@ -197,12 +199,13 @@ Three carriers now satisfy it, and the SAME carrier-agnostic test
 
 `tests/storage-port-band.fk` (three-way, 11111) proves memory and the segmented
 file log return the identical verdict and the file store survives reopen
-(durability via replay). `integration/storage-port-all-carriers.fk` +
+(durability via replay). The Postgres proof is intentionally separate:
+`integration/storage-port-all-carriers.fk` +
 `scripts/storage-port-carriers-test.sh` (Rust-only, self-provisions a throwaway
-Postgres) runs the **same test across all three** and asserts one verdict —
-**111111**: memory == file == Postgres. That identity is the substitutability
-claim made executable: the call site names no backend, so one logic path is
-proven over every storage backing.
+Postgres) runs the same test through the DB carrier and asserts the matching
+verdict. That identity is the substitutability claim made executable at the
+carrier boundary: the call site names no backend, while live DB effects stay out
+of the pure value-diff floor.
 
 A new backend (IPFS, S3, a remote KV) is the same shape — four functions over a
 couple of effectful natives, no kernel change and no call-site change. IPFS is

@@ -3,7 +3,7 @@
 ; native-training-receipt-band - one tiny native trained artifact with weights,
 ; data, eval, and receipt proof.
 ;
-; Verdict 2047 when the prototype weights classify a 3-cycle / 12-row heldout
+; Verdict 16383 when the prototype weights classify a 3-cycle / 12-row heldout
 ; window, the eval counts close, and the receipt is an active native artifact
 ; that beats the oracle bar named in the receipt.
 
@@ -12,6 +12,47 @@
     (let scene-present (list 0 5 0))
     (let aligned (list 5 5 5))
     (let readback-ok (list 0 0 5))
+    (let cycle-a
+        (ntr-witness-cycle
+            1523
+            "sha256:witness-summary-1523"
+            55620
+            (list
+                (ntr-label-row 1523 "speech-transcribe" "speech-present" "summary-only")
+                (ntr-label-row 1523 "vision-describe" "scene-present" "summary-only")
+                (ntr-label-row 1523 "multimodal-align" "aligned" "summary-only")
+                (ntr-label-row 1523 "gpu-readback-kernel" "readback-ok" "summary-only"))))
+    (let cycle-b
+        (ntr-witness-cycle
+            1524
+            "sha256:witness-summary-1524"
+            55625
+            (list
+                (ntr-label-row 1524 "speech-transcribe" "speech-present" "summary-only")
+                (ntr-label-row 1524 "vision-describe" "scene-present" "summary-only")
+                (ntr-label-row 1524 "multimodal-align" "aligned" "summary-only")
+                (ntr-label-row 1524 "gpu-readback-kernel" "readback-ok" "summary-only"))))
+    (let cycle-c
+        (ntr-witness-cycle
+            1525
+            "sha256:witness-summary-1525"
+            55631
+            (list
+                (ntr-label-row 1525 "speech-transcribe" "speech-present" "summary-only")
+                (ntr-label-row 1525 "vision-describe" "scene-present" "summary-only")
+                (ntr-label-row 1525 "multimodal-align" "aligned" "summary-only")
+                (ntr-label-row 1525 "gpu-readback-kernel" "readback-ok" "summary-only"))))
+    (let stale-cycle
+        (ntr-witness-cycle
+            1523
+            "sha256:witness-summary-1524-stale"
+            55631
+            (list
+                (ntr-label-row 1524 "speech-transcribe" "speech-present" "summary-only")
+                (ntr-label-row 1524 "vision-describe" "scene-present" "summary-only")
+                (ntr-label-row 1524 "multimodal-align" "aligned" "summary-only")
+                (ntr-label-row 1524 "gpu-readback-kernel" "readback-ok" "summary-only"))))
+    (let cycles (list cycle-a cycle-b cycle-c))
     (let weights
         (list
             (list "speech-present" speech-present)
@@ -57,4 +98,7 @@
     (let c8 (if (ntr-beats-oracle? receipt) 256 0))
     (let c9 (if (ntr-larger-heldout-window? receipt 12 3) 512 0))
     (let c10 (if (eq (len (ntr-floor)) 4) 1024 0))
-    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 c10)))))))))))
+    (let c11 (if (eq (ntr-witness-cycle-window-ready? cycles 3 12) 1) 2048 0))
+    (let c12 (if (eq (ntr-witness-cycles-increasing? (list cycle-a stale-cycle)) 0) 4096 0))
+    (let c13 (if (eq (ntr-witness-cycle-label-count cycles) 12) 8192 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 (add c11 (add c12 c13))))))))))))))

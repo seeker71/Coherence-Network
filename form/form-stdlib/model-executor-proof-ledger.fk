@@ -1,0 +1,175 @@
+; model-executor-proof-ledger.fk - Form-native proof-run ledger rows.
+;
+; Executor proof runs live as native records. JSONL is only a compatibility
+; projection/cache for old readers; this recipe carries the validation contract
+; that used to stand in a Python helper.
+
+(do
+    (defn mepl-source (kind path) (list kind path))
+    (defn mepl-source-kind (source) (nth source 0))
+    (defn mepl-source-path (source) (nth source 1))
+
+    (defn mepl-validation (status commands) (list status commands))
+    (defn mepl-validation-status (validation) (nth validation 0))
+    (defn mepl-validation-commands (validation) (nth validation 1))
+
+    (defn mepl-run (run-id thread-branch model-used input-tokens output-tokens attempts commands-run pass-fail failure-reason source validation)
+        (list
+            "model-executor-proof-run"
+            run-id
+            thread-branch
+            model-used
+            input-tokens
+            output-tokens
+            attempts
+            commands-run
+            pass-fail
+            failure-reason
+            source
+            validation))
+    (defn mepl-run? (row)
+        (if (eq (len row) 12)
+            (str_eq (nth row 0) "model-executor-proof-run")
+            0))
+    (defn mepl-run-id (row) (nth row 1))
+    (defn mepl-thread-branch (row) (nth row 2))
+    (defn mepl-model-used (row) (nth row 3))
+    (defn mepl-input-tokens (row) (nth row 4))
+    (defn mepl-output-tokens (row) (nth row 5))
+    (defn mepl-attempts (row) (nth row 6))
+    (defn mepl-commands-run (row) (nth row 7))
+    (defn mepl-pass-fail (row) (nth row 8))
+    (defn mepl-failure-reason (row) (nth row 9))
+    (defn mepl-run-source (row) (nth row 10))
+    (defn mepl-run-validation (row) (nth row 11))
+
+    (defn mepl-text-present? (value) (not (str_eq value "")))
+    (defn mepl-string-list-valid? (values)
+        (if (eq (len values) 0) 0
+            (if (mepl-text-present? (head values))
+                (if (eq (len (tail values)) 0)
+                    1
+                    (mepl-string-list-valid? (tail values)))
+                0)))
+    (defn mepl-status-valid? (status)
+        (if (str_eq status "pass") 1
+            (if (str_eq status "fail") 1
+                (if (str_eq status "pending") 1 0))))
+    (defn mepl-source-valid? (source)
+        (if (and
+                (mepl-text-present? (mepl-source-kind source))
+                (mepl-text-present? (mepl-source-path source)))
+            1
+            0))
+    (defn mepl-validation-valid? (validation)
+        (if (and
+                (eq (mepl-status-valid? (mepl-validation-status validation)) 1)
+                (eq (mepl-string-list-valid? (mepl-validation-commands validation)) 1))
+            1
+            0))
+    (defn mepl-run-valid? (row)
+        (if (and
+                (eq (mepl-run? row) 1)
+                (and
+                    (mepl-text-present? (mepl-run-id row))
+                    (and
+                        (mepl-text-present? (mepl-thread-branch row))
+                        (and
+                            (mepl-text-present? (mepl-model-used row))
+                            (and
+                                (ge (mepl-input-tokens row) 0)
+                                (and
+                                    (ge (mepl-output-tokens row) 0)
+                                    (and
+                                        (gt (mepl-attempts row) 0)
+                                        (and
+                                            (eq (mepl-string-list-valid? (mepl-commands-run row)) 1)
+                                            (and
+                                                (eq (mepl-status-valid? (mepl-pass-fail row)) 1)
+                                                (and
+                                                    (eq (mepl-source-valid? (mepl-run-source row)) 1)
+                                                    (eq (mepl-validation-valid? (mepl-run-validation row)) 1)))))))))))
+            1
+            0))
+
+    (defn mepl-legacy-row (model-used input-tokens output-tokens attempts commands-run pass-fail failure-reason)
+        (list "legacy-model-executor-row" model-used input-tokens output-tokens attempts commands-run pass-fail failure-reason))
+    (defn mepl-legacy-model-used (row) (nth row 1))
+    (defn mepl-legacy-input-tokens (row) (nth row 2))
+    (defn mepl-legacy-output-tokens (row) (nth row 3))
+    (defn mepl-legacy-attempts (row) (nth row 4))
+    (defn mepl-legacy-commands-run (row) (nth row 5))
+    (defn mepl-legacy-pass-fail (row) (nth row 6))
+    (defn mepl-legacy-failure-reason (row) (nth row 7))
+    (defn mepl-legacy-from-run (row)
+        (mepl-legacy-row
+            (mepl-model-used row)
+            (mepl-input-tokens row)
+            (mepl-output-tokens row)
+            (mepl-attempts row)
+            (mepl-commands-run row)
+            (mepl-pass-fail row)
+            (mepl-failure-reason row)))
+    (defn mepl-legacy-valid? (row)
+        (if (and
+                (str_eq (nth row 0) "legacy-model-executor-row")
+                (and
+                    (mepl-text-present? (mepl-legacy-model-used row))
+                    (and
+                        (ge (mepl-legacy-input-tokens row) 0)
+                        (and
+                            (ge (mepl-legacy-output-tokens row) 0)
+                            (and
+                                (gt (mepl-legacy-attempts row) 0)
+                                (and
+                                    (eq (mepl-string-list-valid? (mepl-legacy-commands-run row)) 1)
+                                    (eq (mepl-status-valid? (mepl-legacy-pass-fail row)) 1)))))))
+            1
+            0))
+    (defn mepl-legacy-same? (a b)
+        (if (and
+                (str_eq (mepl-legacy-model-used a) (mepl-legacy-model-used b))
+                (and
+                    (eq (mepl-legacy-input-tokens a) (mepl-legacy-input-tokens b))
+                    (and
+                        (eq (mepl-legacy-output-tokens a) (mepl-legacy-output-tokens b))
+                        (and
+                            (eq (mepl-legacy-attempts a) (mepl-legacy-attempts b))
+                            (and
+                                (str_eq (mepl-legacy-pass-fail a) (mepl-legacy-pass-fail b))
+                                (str_eq (mepl-legacy-failure-reason a) (mepl-legacy-failure-reason b)))))))
+            1
+            0))
+
+    (defn mepl-run-id-seen? (run-id rows)
+        (if (eq (len rows) 0) 0
+            (if (str_eq run-id (mepl-run-id (head rows)))
+                1
+                (mepl-run-id-seen? run-id (tail rows)))))
+    (defn mepl-unique-run-ids? (rows)
+        (if (eq (len rows) 0) 1
+            (if (eq (mepl-run-id-seen? (mepl-run-id (head rows)) (tail rows)) 1)
+                0
+                (mepl-unique-run-ids? (tail rows)))))
+    (defn mepl-runs-all-valid? (rows)
+        (if (eq (len rows) 0) 1
+            (if (eq (mepl-run-valid? (head rows)) 1)
+                (mepl-runs-all-valid? (tail rows))
+                0)))
+    (defn mepl-ledger-valid? (rows)
+        (if (and
+                (ge (len rows) 1)
+                (and
+                    (eq (mepl-runs-all-valid? rows) 1)
+                    (eq (mepl-unique-run-ids? rows) 1)))
+            1
+            0))
+
+    (defn mepl-floor ()
+        (list
+            "executor proof runs are native records"
+            "JSONL is a compatibility projection, not the coordination source"
+            "each record validates source, commands, validation status, and run identity"
+            "duplicate run ids are rejected before export"))
+
+    0)

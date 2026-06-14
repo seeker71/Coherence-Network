@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 277
+**Total files**: 274
 
 | File | Purpose |
 |---|---|
@@ -110,7 +110,6 @@
 | [test_form_cli_mcp_tools.py](test_form_cli_mcp_tools.py) | form-cli MCP tools + Stop-hook — the learning flywheel inside an agent session. |
 | [test_form_kernel_bridge_structure_access.py](test_form_kernel_bridge_structure_access.py) | Tests for the structure-access capability in the Form kernel bridge. |
 | [test_form_native_grammar_contract.py](test_form_native_grammar_contract.py) | Form-native grammar contract: host parser bridges are not completion. |
-| [test_form_native_training_receipt.py](test_form_native_training_receipt.py) | _no top-of-file purpose_ |
 | [test_form_practice_runner.py](test_form_practice_runner.py) | Generic Form practice runner creates cells, recipes, and ledger entries. |
 | [test_frequency_profile_contributor_alias.py](test_frequency_profile_contributor_alias.py) | Contributor profile aliases resolve through the generic graph profile path. |
 | [test_generate_visuals_manifest.py](test_generate_visuals_manifest.py) | _no top-of-file purpose_ |
@@ -148,7 +147,6 @@
 | [test_mcp_substrate_tools.py](test_mcp_substrate_tools.py) | MCP exposure for the coherence-substrate: every sibling agent reaches Form. |
 | [test_meeting_resonance_capture.py](test_meeting_resonance_capture.py) | Meeting resonance capture flow tests. |
 | [test_modality_blueprints.py](test_modality_blueprints.py) | Tests for the cross-modal canonical-shape interner. |
-| [test_model_executor_proof_ledger.py](test_model_executor_proof_ledger.py) | _no top-of-file purpose_ |
 | [test_models_learning_dashboard.py](test_models_learning_dashboard.py) | _no top-of-file purpose_ |
 | [test_monitor_pipeline_stale_running.py](test_monitor_pipeline_stale_running.py) | Stale-running pipeline monitoring tests. |
 | [test_monitor_resolution.py](test_monitor_resolution.py) | Tests for heal-completion-issue-resolution spec (047). |
@@ -283,5 +281,4 @@
 | [test_views_and_wallets.py](test_views_and_wallets.py) | Flow-centric tests for view tracking, wallet integration, and discovery rewards. |
 | [test_vision_content.py](test_vision_content.py) | _no top-of-file purpose_ |
 | [test_wellness_chain_duplicates.py](test_wellness_chain_duplicates.py) | Regression test: the chain organ tolerates duplicate ``test:`` keys. |
-| [test_witness_oracle_emission_ledger.py](test_witness_oracle_emission_ledger.py) | Tests for witness oracle emission ledger carrier records. |
 | [test_worktree_continuity_guard.py](test_worktree_continuity_guard.py) | _no top-of-file purpose_ |

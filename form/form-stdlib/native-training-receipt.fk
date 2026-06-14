@@ -84,6 +84,86 @@
                 (if (ge (ntr-cycle-count row) min-cycles) 1 0)
                 0)
             0))
+    (defn ntr-feature-vector (feature)
+        (if (str_eq feature "speech-transcribe")
+            (list 5 0 0)
+            (if (str_eq feature "vision-describe")
+                (list 0 5 0)
+                (if (str_eq feature "multimodal-align")
+                    (list 5 5 5)
+                    (if (str_eq feature "gpu-readback-kernel")
+                        (list 0 0 5)
+                        (empty))))))
+    (defn ntr-label-row (cycle-seq feature label privacy)
+        (list cycle-seq feature label (ntr-feature-vector feature) privacy))
+    (defn ntr-label-cycle-seq (row) (nth row 0))
+    (defn ntr-label-feature (row) (nth row 1))
+    (defn ntr-label-value (row) (nth row 2))
+    (defn ntr-label-vector (row) (nth row 3))
+    (defn ntr-label-privacy (row) (nth row 4))
+    (defn ntr-label-valid? (row)
+        (if (and
+                (gt (ntr-label-cycle-seq row) 0)
+                (and
+                    (not (str_eq (ntr-label-feature row) ""))
+                    (and
+                        (not (str_eq (ntr-label-value row) ""))
+                        (and
+                            (gt (len (ntr-label-vector row)) 0)
+                            (not (str_eq (ntr-label-privacy row) "raw-media"))))))
+            1
+            0))
+    (defn ntr-labels-valid-count (rows)
+        (if (eq (len rows) 0) 0
+            (add (ntr-label-valid? (head rows)) (ntr-labels-valid-count (tail rows)))))
+    (defn ntr-witness-cycle (sequence export-checksum sample-count labels)
+        (list sequence export-checksum sample-count labels))
+    (defn ntr-witness-cycle-seq (cycle) (nth cycle 0))
+    (defn ntr-witness-cycle-export-checksum (cycle) (nth cycle 1))
+    (defn ntr-witness-cycle-sample-count (cycle) (nth cycle 2))
+    (defn ntr-witness-cycle-labels (cycle) (nth cycle 3))
+    (defn ntr-witness-cycle-valid? (cycle)
+        (if (and
+                (gt (ntr-witness-cycle-seq cycle) 0)
+                (and
+                    (not (str_eq (ntr-witness-cycle-export-checksum cycle) ""))
+                    (and
+                        (gt (ntr-witness-cycle-sample-count cycle) 0)
+                        (ge (ntr-labels-valid-count (ntr-witness-cycle-labels cycle)) 4))))
+            1
+            0))
+    (defn ntr-witness-cycle-label-count (cycles)
+        (if (eq (len cycles) 0) 0
+            (add
+                (ntr-labels-valid-count (ntr-witness-cycle-labels (head cycles)))
+                (ntr-witness-cycle-label-count (tail cycles)))))
+    (defn ntr-witness-cycles-all-valid? (cycles)
+        (if (eq (len cycles) 0) 1
+            (if (eq (ntr-witness-cycle-valid? (head cycles)) 1)
+                (ntr-witness-cycles-all-valid? (tail cycles))
+                0)))
+    (defn ntr-witness-cycle-next? (previous next)
+        (if (and
+                (gt (ntr-witness-cycle-seq next) (ntr-witness-cycle-seq previous))
+                (ge (ntr-witness-cycle-sample-count next) (ntr-witness-cycle-sample-count previous)))
+            1
+            0))
+    (defn ntr-witness-cycles-increasing? (cycles)
+        (if (eq (len cycles) 0) 1
+            (if (eq (len (tail cycles)) 0) 1
+                (if (eq (ntr-witness-cycle-next? (head cycles) (head (tail cycles))) 1)
+                    (ntr-witness-cycles-increasing? (tail cycles))
+                    0))))
+    (defn ntr-witness-cycle-window-ready? (cycles min-cycles min-heldout)
+        (if (and
+                (ge (len cycles) min-cycles)
+                (and
+                    (eq (ntr-witness-cycles-all-valid? cycles) 1)
+                    (and
+                        (eq (ntr-witness-cycles-increasing? cycles) 1)
+                        (ge (ntr-witness-cycle-label-count cycles) min-heldout))))
+            1
+            0))
 
     (defn ntr-floor ()
         (list

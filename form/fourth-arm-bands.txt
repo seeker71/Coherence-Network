@@ -31,7 +31,7 @@
 #     field constructors, float NodeIDs, and deeper content-addressed lattice
 #     surfaces beyond the explicit make_nodeid, category/pkg/level/type/inst
 #     projection, and generic/doc/concept/dns/session floor
-#   host io family        — Postgres carriers and broader source-scan recipes.
+#   host io family        — broader source-scan recipes.
 #     Full floor/north-star for this arc:
 #     docs/coherence-substrate/fourth-arm-substrate-carriers.form
 #   multi-line output     — bands that print mid-walk (the walker answers
@@ -103,9 +103,14 @@
 # arms (tags 102/103) that evaluate each operand exactly once (eq-effect-once).
 # Host io opens with temp_dir (tag 101, fk_tempdir reads $TMPDIR): hostio-roundtrip
 # writes bytes to a real file and reads them back four-way deterministically.
-# North star — the durable file/Postgres carriers: substrate-core threaded over
-# the segmented-FILE carrier crosses once effect-once let lands (the carrier
-# store-threading binds effectful values through let, which fkwu still inlines).
+# North star — durable carriers through one storage-port contract: memory and
+# segmented-FILE stay in the pure deterministic four-way floor, while Postgres
+# is first-class at the host carrier boundary with rollback-safe native evidence,
+# not a database engine embedded inside the pure fourth kernel. substrate-core
+# threaded over the segmented-FILE carrier crosses once effect-once let lands
+# (the carrier store-threading binds effectful values through let, which fkwu
+# still inlines). The bounded Postgres host-carrier receipt now passes through
+# storage-port-all-carriers against throwaway Postgres with verdict 111111.
 # Connected
 # external HTTP now crosses the emitted arm through http_get tag 105: the fkwu
 # binary owns DNS/TCP/socket/read/write for http:// and runtime-loaded
@@ -159,8 +164,9 @@ form-cli-router fks 31
 form-freq-check fks 31
 text-summary-learning fks 262143
 llm-feature-channel-floor fks 131071
-android-mesh-learning fks 32767
-witness-state-receipt fks 16777215
+android-mesh-learning fks 131071
+witness-state-receipt fks 67108863
+model-executor-proof-ledger fks 4095
 model-vitality fks 4095
 field-model-form-runtime fks 63
 field-model-form-runtime-conflict fks 1
@@ -423,7 +429,7 @@ translation-learn fks 1111111
 translation-quality fks 1111111
 translation-engine fks 1111111
 chart-cast fks 1111111
-native-training-receipt fks 2047
+native-training-receipt fks 16383
 eq-effect-once fks 1
 let-effect-once fks 111
 write-file-text fks 1111

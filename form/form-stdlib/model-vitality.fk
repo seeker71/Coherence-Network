@@ -34,8 +34,9 @@
 ; through runtime-loaded OpenSSL/BoringSSL-compatible TLS. This file lifts that
 ; dict into model-vitality rows. The fourth arm now also captures response
 ; header rows and can read them through native _get, so production HTTPS
-; authority receipts are carried by the native body. Next floor: request-header
-; forwarding, duration timing, larger bodies, and streaming/backpressure rows.
+; authority receipts are carried by the native body. Explicit request-header
+; rows now forward through all kernels, including fkwu. Next floor: duration
+; timing, larger bodies, and streaming/backpressure rows.
 
 (do
     (defn mv-kind-model-architecture () "model/architecture")
