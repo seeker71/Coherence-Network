@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 270
+**Total files**: 271
 
 | File | Purpose |
 |---|---|
@@ -120,6 +120,7 @@
 | [test_hati_mesh.py](test_hati_mesh.py) | _no top-of-file purpose_ |
 | [test_homepage_contrast.py](test_homepage_contrast.py) | WCAG AA contrast tests for homepage CSS palette (ux-homepage-readability). |
 | [test_household_service_board.py](test_household_service_board.py) | Flow test for the household resident-service board (api/app/routers/household.py). |
+| [test_idea_empty_description.py](test_idea_empty_description.py) | Idea read model tolerates empty description (real data: ~15% of ideas have none). |
 | [test_idea_lifecycle_closure.py](test_idea_lifecycle_closure.py) | Tests for idea lifecycle closure (spec: idea-lifecycle-closure). |
 | [test_idea_scoring.py](test_idea_scoring.py) | Tests for idea_scoring (spec: ideas-prioritization). |
 | [test_idea_standing_questions.py](test_idea_standing_questions.py) | Tests for idea_standing_questions (spec: standing-questions-roi-and-next-task-generation). |
