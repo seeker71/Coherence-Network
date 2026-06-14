@@ -35,11 +35,12 @@
       graph-node-memory-mutation-carrier        # graph mutation over memory carrier (band graph-node-mutation-memory-carrier)
       graph-node-file-carrier-reopen            # file carrier reopen proof (band graph-node-mutation-file-carrier)
       graph-node-full-mutation-verdict          # memory/file agreement and full file mutation verdict (bands graph-node-mutation-carrier, graph-node-mutation-file-verdict)
-      ideas-graph-file-projection)              # idea response projection over reopened file stores (band ideas-graph-projection)
+      ideas-graph-file-projection               # idea response projection over reopened file stores (band ideas-graph-projection)
+      postgres-carrier-boundary-receipt)        # storage-port-all-carriers over throwaway Postgres, verdict 111111
     (current-unsupported
-      postgres-carrier-boundary-proof))         # bounded host-carrier proof, not pure-kernel DB embedding
+      broader-source-scan-recipes))             # remaining host-io lift after scan_run/file_mtime
 
   (next-step
-    (sentence "Land the Postgres carrier as a bounded host-carrier proof over the same content-key discipline; broader source-scan recipes can now build on the scan_run floor.")
-    (gate postgres-carrier-boundary-proof)
-    (why "Statement-level effects already fire once (sequenced bare-do, tag 69), operand-level effects already fire once (single-walk eq/lt, tags 102/103), nested do-lets snapshot effecting values, the minimum write floor includes write_file_text plus append, storage-port proves memory/file substitutability with durability, full graph mutation crosses over the file carrier, ideas projection crosses over reopened file stores, and host-io freshness/scan observation now crosses through file_mtime plus scan_run. The Postgres move is not to put a database engine inside fkwu; it is to make pg_connect/pg_exec/pg_query/pg_close or an equivalent storage-db door a stable native carrier boundary with normalized rollback-safe evidence.")))
+    (sentence "With the bounded Postgres carrier receipt landed, broader source-scan recipes can now build on the scan_run and file_mtime floor.")
+    (gate broader-source-scan-recipes)
+    (why "Statement-level effects already fire once (sequenced bare-do, tag 69), operand-level effects already fire once (single-walk eq/lt, tags 102/103), nested do-lets snapshot effecting values, the minimum write floor includes write_file_text plus append, storage-port proves memory/file substitutability with durability, full graph mutation crosses over the file carrier, ideas projection crosses over reopened file stores, host-io freshness/scan observation now crosses through file_mtime plus scan_run, and storage-port-all-carriers proves the same storage-test verdict across memory, segmented-file, and throwaway Postgres. The Postgres proof remains a host-carrier boundary receipt, not a database engine inside fkwu.")))
