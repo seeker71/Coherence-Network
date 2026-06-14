@@ -28,7 +28,7 @@
             "a summary passes only with coverage, factuality, citations, compression, confidence, trust, sovereignty, and no contradiction"
             "successful summary receipts become native training samples"
             "real source files can be read through kernel-native file natives and cited by byte slice"
-            "file, file-backed store, kernel route response bodies, and channel cursor windows can emit the same coordinate receipt shape"))
+            "file, file-backed store, socket-served route traces, and backpressure-aware stream windows can emit the same coordinate receipt shape"))
     (defn tsl-north-star ()
         (list
             "native summary grammars and kernels summarize text, code, proof logs, runtime events, dialogue, and memory cells"
@@ -312,18 +312,18 @@
                 request
                 "kernel:route"
                 "cap.kernel.route.read"
-                "kernel-http:kh-response-body"
-                "route body, status, and header count must match before summary learning"
-                "kernel routes feed summary claim spans from response bodies, headers, trace, and authority rows")
+                "socket:kh-serve-listener+wire-trace"
+                "route body, status, router header, wire bytes, and request bytes must match before summary learning"
+                "kernel routes feed summary claim spans from socket-served response bodies, headers, trace, and authority rows")
             (if (str_eq request "text:summarize-stream")
             (tsl-plan
                 "summary/plan"
                 request
                 "stream:read"
                 "cap.stream.read"
-                "channel:read-since+cursor-window"
-                "stream window summaries require ordered event payloads and a cursor receipt"
-                "ordered events lower into summary claim spans with cursor, backpressure, and replay receipts")
+                "channel:read-since+pressure-window"
+                "stream window summaries require ordered event payloads, cursor counts, capacity, and deferred-count receipts"
+                "ordered events lower into summary claim spans with cursor, backpressure, replay, and producer pacing receipts")
             (if (str_eq request "text:summarize")
             (tsl-plan
                 "summary/plan"
@@ -405,9 +405,9 @@
             0
             "application/json"
             "ready"
-            "kernel-http:kh-response-body"
-            "route response bodies are learnable only after status, headers, and body are native values"
-            "route summaries carry response body, headers, trace, authority, and timing receipts"))
+            "socket:kh-serve-listener+wire-trace"
+            "socket-served route bodies are learnable only after status, router header, request bytes, wire bytes, and body bytes are native values"
+            "route summaries carry socket wire, response body, headers, trace, authority, and timing receipts"))
     (defn tsl-stream-source-coordinate (stream cursor)
         (tsl-source-coordinate
             "stream"
@@ -419,9 +419,9 @@
             0
             "event/list"
             "ready"
-            "channel:read-since+cursor-window"
-            "stream windows are learnable only after ordered payloads and cursor counts are native values"
-            "stream summaries carry cursor, replay, backpressure, and event-order receipts"))
+            "channel:read-since+pressure-window"
+            "stream windows are learnable only after ordered payloads, cursor counts, capacity, and deferred counts are native values"
+            "stream summaries carry cursor, replay, backpressure, event-order, and producer pacing receipts"))
 
     (defn tsl-route-response-ready? (status header-count body)
         (if (and
@@ -471,6 +471,125 @@
                 0
                 0
                 "stream cursor/window/body gate failed")))
+
+    (defn tsl-http-wire-body (wire)
+        (do
+            (let marker (str_find wire "\r\n\r\n" 0))
+            (if (eq marker -1) "" (substring wire (add marker 4) (str_len wire)))))
+    (defn tsl-socket-route-trace (method path route handler status request-bytes wire-bytes body-bytes router-header)
+        (list method path route handler status request-bytes wire-bytes body-bytes router-header))
+    (defn tsl-socket-route-trace-method (trace) (nth trace 0))
+    (defn tsl-socket-route-trace-path (trace) (nth trace 1))
+    (defn tsl-socket-route-trace-route (trace) (nth trace 2))
+    (defn tsl-socket-route-trace-handler (trace) (nth trace 3))
+    (defn tsl-socket-route-trace-status (trace) (nth trace 4))
+    (defn tsl-socket-route-trace-request-bytes (trace) (nth trace 5))
+    (defn tsl-socket-route-trace-wire-bytes (trace) (nth trace 6))
+    (defn tsl-socket-route-trace-body-bytes (trace) (nth trace 7))
+    (defn tsl-socket-route-trace-router-header (trace) (nth trace 8))
+    (defn tsl-socket-route-trace-valid? (trace)
+        (if (and
+                (eq (tsl-socket-route-trace-status trace) 200)
+                (and
+                    (gt (str_len (tsl-socket-route-trace-method trace)) 0)
+                    (and
+                        (gt (str_len (tsl-socket-route-trace-path trace)) 0)
+                        (and
+                            (gt (str_len (tsl-socket-route-trace-route trace)) 0)
+                            (and
+                                (gt (str_len (tsl-socket-route-trace-handler trace)) 0)
+                                (and
+                                    (gt (tsl-socket-route-trace-request-bytes trace) 0)
+                                    (and
+                                        (gt (tsl-socket-route-trace-wire-bytes trace) 0)
+                                        (and
+                                            (gt (tsl-socket-route-trace-body-bytes trace) 0)
+                                            (str_eq (tsl-socket-route-trace-router-header trace) "native-kernel")))))))))
+            1
+            0))
+    (defn tsl-socket-route-source-data-receipt (coordinate body trace claim-count citation-count evidence)
+        (if (and
+                (eq (tsl-socket-route-trace-valid? trace) 1)
+                (and
+                    (gt (str_len body) 0)
+                    (eq (str_len body) (tsl-socket-route-trace-body-bytes trace))))
+            (tsl-source-data-receipt
+                coordinate
+                body
+                (str_len body)
+                claim-count
+                citation-count
+                evidence)
+            (tsl-source-data-receipt
+                coordinate
+                ""
+                0
+                0
+                0
+                "socket route trace/body gate failed")))
+
+    (defn tsl-stream-pressure-receipt (stream cursor total-after-cursor window-count capacity deferred-count pressure status decision)
+        (list stream cursor total-after-cursor window-count capacity deferred-count pressure status decision))
+    (defn tsl-stream-pressure-stream (receipt) (nth receipt 0))
+    (defn tsl-stream-pressure-cursor (receipt) (nth receipt 1))
+    (defn tsl-stream-pressure-total-after-cursor (receipt) (nth receipt 2))
+    (defn tsl-stream-pressure-window-count (receipt) (nth receipt 3))
+    (defn tsl-stream-pressure-capacity (receipt) (nth receipt 4))
+    (defn tsl-stream-pressure-deferred-count (receipt) (nth receipt 5))
+    (defn tsl-stream-pressure-pressure (receipt) (nth receipt 6))
+    (defn tsl-stream-pressure-status (receipt) (nth receipt 7))
+    (defn tsl-stream-pressure-decision (receipt) (nth receipt 8))
+    (defn tsl-stream-pressure-ready? (receipt)
+        (if (and
+                (gt (str_len (tsl-stream-pressure-stream receipt)) 0)
+                (and
+                    (gt (str_len (tsl-stream-pressure-cursor receipt)) 0)
+                    (and
+                        (gt (tsl-stream-pressure-total-after-cursor receipt) 0)
+                        (and
+                            (gt (tsl-stream-pressure-window-count receipt) 0)
+                            (and
+                                (gt (tsl-stream-pressure-capacity receipt) 0)
+                                (and
+                                    (le (tsl-stream-pressure-window-count receipt) (tsl-stream-pressure-capacity receipt))
+                                    (and
+                                        (ge (tsl-stream-pressure-total-after-cursor receipt) (tsl-stream-pressure-window-count receipt))
+                                        (and
+                                            (eq
+                                                (add
+                                                    (tsl-stream-pressure-window-count receipt)
+                                                    (tsl-stream-pressure-deferred-count receipt))
+                                                (tsl-stream-pressure-total-after-cursor receipt))
+                                            (and
+                                                (eq (tsl-stream-pressure-pressure receipt) (tsl-stream-pressure-deferred-count receipt))
+                                                (and
+                                                    (gt (str_len (tsl-stream-pressure-status receipt)) 0)
+                                                    (gt (str_len (tsl-stream-pressure-decision receipt)) 0)))))))))))
+            1
+            0))
+    (defn tsl-backpressure-stream-source-data-receipt (coordinate body pressure-receipt next-cursor claim-count citation-count evidence)
+        (if (and
+                (eq (tsl-stream-pressure-ready? pressure-receipt) 1)
+                (eq
+                    (tsl-stream-window-ready?
+                        (tsl-stream-pressure-window-count pressure-receipt)
+                        next-cursor
+                        body)
+                    1))
+            (tsl-source-data-receipt
+                coordinate
+                body
+                (str_len body)
+                claim-count
+                citation-count
+                evidence)
+            (tsl-source-data-receipt
+                coordinate
+                ""
+                0
+                0
+                0
+                "stream backpressure/window/body gate failed")))
 
     (defn tsl-source-data-receipt (coordinate value byte-count claim-count citation-count evidence)
         (list
@@ -573,7 +692,7 @@
     (defn tsl-multi-source-output-receipt (output) (nth output 3))
     (defn tsl-multi-source-output-meta (output) (nth output 4))
     (defn tsl-multi-source-proof-level ()
-        "3-kernel-host-io-file-store-route-stream")
+        "3-kernel-host-io-file-store-socket-route-backpressure-stream")
 
     (defn tsl-source-read (path)
         (list
@@ -646,7 +765,7 @@
                 18)
             (tsl-source-citation
                 path
-                2691
+                2731
                 46
                 "External LLMs, source search, model committees"
                 "north star keeps teachers explicit"

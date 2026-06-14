@@ -1,0 +1,110 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/socket-route-stream-receipts-20260614",
+  "commit_scope": "Promote text summary route and stream source receipts from kernel-http response bodies and cursor windows to socket-served route traces and backpressure-aware stream windows.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "hati-os",
+    "form-os-native-tool-surface",
+    "socket-served-route-traces",
+    "backpressure-aware-streams"
+  ],
+  "spec_ids": [
+    "form-native-source-coordinates",
+    "kernel-route-traces",
+    "stream-backpressure"
+  ],
+  "task_ids": [
+    "socket-route-stream-receipts-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/text-summary-learning.fk",
+    "form/form-stdlib/tests/text-summary-multi-source-band.fk",
+    "docs/coherence-substrate/text-summary-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_socket_route_stream_receipts.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/form-stdlib/text-summary-learning.fk",
+    "form/form-stdlib/tests/text-summary-multi-source-band.fk",
+    "docs/coherence-substrate/text-summary-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_socket_route_stream_receipts.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "form/form-stdlib/text-summary-learning.fk",
+    "form/form-stdlib/tests/text-summary-multi-source-band.fk",
+    "docs/coherence-substrate/text-summary-learning.form",
+    "docs/coherence-substrate/INDEX.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "git fetch origin main",
+      "git rebase origin/main",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/cell-log-store.fk form-stdlib/http-parse.fk form-stdlib/kernel-http.fk form-stdlib/http-request.fk form-stdlib/http-render.fk form-stdlib/http-server.fk form-stdlib/http-socket.fk form-stdlib/channel.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-multi-source-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-real-source-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-learning-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_socket_route_stream_receipts.json",
+      "python3 scripts/model_executor_proof_ledger.py validate",
+      "git diff --check",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "notes": "Prompt guide passed and wellness reported production aligned with origin/main. The focused multi-source band passed as a 3-kernel only host-I/O proof with verdict 65535 and 1 ok, 0 divergent: it reads a real source file slice, writes and reads a real segmented cell-log-store value, sends a real TCP loopback request through kh-serve-listener, receives the native-kernel HTTP wire response, extracts the body, builds a socket route trace receipt, reads a .fkb channel after cursor 1, consumes a capacity-2 window, and records one deferred event as stream pressure. The real-source band passed with verdict 8191 after citation offsets were updated. The base summary-learning band passed with verdict 262143 and fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "CI not run yet in this evidence record."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy performed yet. This is a local Form stdlib and documentation slice."
+  },
+  "phase_gate": {
+    "phase": "socket-route-stream-receipts",
+    "gate": "Cells and recipes can plan and inspect summary source inputs from socket-served kernel routes and backpressure-aware stream windows through the same native source-coordinate receipt shape.",
+    "state": "local-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Move the route trace from single-process loopback into production front-door telemetry and move stream pressure from read-window defer receipts into producer pacing, ack, and replay receipts."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No public API behavior changed. Form-native source-coordinate planning now names socket route trace and stream pressure carriers, and the focused proof physically exercises the local socket route and backpressure read window.",
+    "public_endpoints": [
+      "local:form-text-summary-learning"
+    ],
+    "test_flows": [
+      "The multi-source band drives a real local TCP request through the Form kh-serve-listener route server and validates native-kernel wire/body receipts.",
+      "The stream lane reads real .fkb channel data and records capacity, total-after-cursor, deferred-count, pressure, status, and decision rows before learning.",
+      "The existing summary and real-source bands remain green."
+    ],
+    "summary": "Local Form proof passed; no public endpoint changed."
+  }
+}
