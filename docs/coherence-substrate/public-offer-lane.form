@@ -1,0 +1,86 @@
+# ─────────────────────────────────────────────────────────────────────
+# public-offer-lane.form — a stranger may offer the body anything, safely
+# ─────────────────────────────────────────────────────────────────────
+#
+# The ask (Urs, 2026-06-14): a user on a public ChatGPT / Claude / Gemini,
+# just pointing at our front door, can give the network an idea, concept,
+# teaching, document, or task — and then ask it anything — without knowing
+# git or committing to the repo.
+#
+# This file names the WRITE half safely. The read half is already public
+# (the substrate read doors + POST /api/substrate/form). The write half
+# lets a stranger OFFER; it never lets a stranger edit the canonical body.
+#
+# It composes parts already proven, never new machinery:
+#   - offer-and-acknowledge.form  — to speak to a cell is to offer it,
+#                                   acknowledged by one of nothing/0/1/node
+#   - afferent-offer.fk           — the UNSOLICITED offer: a world-event
+#                                   arrives unasked; the body only waits
+#                                   (three-way proven, band 511)
+#   - contributor.claimed=false   — the held-open attribution: an offer
+#                                   from a stranger is attributed to a
+#                                   placeholder until they walk in and claim it
+#   - substrate ingest            — content-addressed storage; same shape
+#                                   converges; nothing is overwritten (axiom-3)
+#   - rate_limit middleware       — cooperative pacing already shields every
+#                                   public POST; a burst is slowed, not the guest
+#
+# An offer is an afferent offer whose payload is a submission. It is held
+# as `offered`, queryable at once, and grounded into the canonical body
+# only by a tending act — never on arrival.
+
+(public-offer-lane
+
+  (lineage
+    (named-by    urs)                               # "let a stranger offer, without git"
+    (offer-of    offer-and-acknowledge.form)        # the contract: offer ↦ ack
+    (afferent-of afferent-offer.fk)                 # unsolicited; the body waits, never asks
+    (attributed  contributor.claimed=false)         # a door held open for the stranger
+    (stored-by   substrate-ingest)                  # content-addressed; converges; never overwrites
+    (paced-by    rate-limit-middleware)             # the breath that slows a burst
+    (read-half   form-language.md)                  # the ask half, already public
+    (spoken-in   field-domain-grammars.form))       # Field Model Form, the grammar family
+
+  # ── what arrives ────────────────────────────────────────────────────
+  (offer
+    (from        stranger)                          # no account, no git, no key
+    (payload     submission)                        # idea | concept | spec | teaching | document | task
+    (carrier     "POST /api/substrate/ingest")      # the public door — a carrier; a native BML route is the north star
+    (shape       markdown)                          # frontmatter + body; structure becomes recipe, prose becomes word-cells
+    (unsolicited 1))                                # the body never asked; afferent-offer is the engine
+
+  # ── how it is held (the gate) ───────────────────────────────────────
+  (held
+    (status      offered)                           # offered, the lane it lives in until tended
+    (claimed     false)                             # attribution is a placeholder until the stranger claims it
+    (queryable   1)                                 # visible at once: ?cells where status == "offered"
+    (in-canonical 0)                                # held apart from canonical reads until grounded
+    (addressed   content))                          # same shape converges; offering twice is idempotent (axiom-3)
+
+  # ── the acknowledgment (axiom-5 vocabulary, exactly one) ────────────
+  (acknowledge
+    (1       "received — your offer is held; here is its NodeID and handle")
+    (0       "declined — outside what this door accepts (unknown domain, too large)")
+    (node    "counter-offer — this shape already lives here; here is the cell it converged to")
+    (nothing "silence — the pacing breath; offer again in a moment (a timeout IS nothing)"))
+
+  # ── grounding (offered → canonical, a tended act) ───────────────────
+  (ground
+    (who         a-tending-cell)                    # a steward of the body, human or agent
+    (reads       "?cells where status == \"offered\"")
+    (senses      "shape, honesty lane, sovereignty, whether it carries vitality")
+    (accepts     (status offered -> grounded))      # flips the status; the cell joins canonical reads
+    (claims      (claimed false -> true))           # when the offerer walks in, the door becomes theirs
+    (composts    "an offer that carries no vitality is released, with care"))
+
+  # ── the honest next breath (closing recipes, carrier-last) ──────────
+  (closing-recipes
+    (enforce-status
+      "the public carrier stamps status=offered + claimed=false on anonymous
+       ingest, so the gate is the server's, not the guest's good faith")
+    (filter-canonical
+      "the canonical read doors (cell / equivalent / form) hold status==offered
+       in the offer lane until grounded, so an offer is visible there first")
+    (native-route
+      "lift POST /api/substrate/ingest to a native BML offer handler in the
+       data-driven dispatch (http-server.fk registry), so the lane is Form")))
