@@ -27,13 +27,18 @@
       host-io-fs-carriers-tags-55-63            # open/read/write/close/lseek/mkdir/rmdir/unlink/rename/size/append/slice
       host-io-real-roundtrip                    # real filesystem write -> read crosses four-way deterministically (band hostio-roundtrip)
       native-write-file-text-tag-104            # overwrite/truncate text write floor (band write-file-text)
-      native-file-append)                       # append log write floor (band file-append)
+      native-file-append                        # append log write floor (band file-append)
+      segmented-file-carrier-four-way           # storage-port memory/file substitutability and durability (band storage-port)
+      graph-node-port-four-way                  # graph-node port shape over storage carriers (band graph-node-port)
+      graph-node-memory-mutation-carrier        # graph mutation over memory carrier (band graph-node-mutation-memory-carrier)
+      graph-node-file-carrier-reopen)           # file carrier reopen proof (band graph-node-mutation-file-carrier)
     (current-unsupported
       file_mtime scan_run                       # broader host-io read/scan recipes
-      segmented-file-carrier-four-way           # gated on threaded carrier-store receipts beyond the minimum write floor
+      graph-node-full-mutation-verdict          # fkwu still misses part of the file-backed mutation verdict
+      ideas-graph-file-projection               # fkwu projection over reopened file carrier is not yet parity
       postgres-carrier-four-way))               # gated on the broader host-io recipes
 
   (next-step
-    (sentence "Land the remaining host-io read/scan recipes, then substrate-core threaded over the segmented-FILE carrier crosses four-way, then Postgres.")
-    (gate file_mtime scan_run segmented-file-carrier-four-way)
-    (why "Statement-level effects already fire once (sequenced bare-do, tag 69), operand-level effects already fire once (single-walk eq/lt, tags 102/103), nested do-lets snapshot effecting values, and the minimum write floor now includes write_file_text plus append. The next carrier proof is no longer basic writing; it is threaded durable file-store receipts, mtime/scan observation, and then the Postgres carrier over the same content-key discipline the memory carrier already proves four-way.")))
+    (sentence "Close the remaining file-backed graph mutation/projection mismatches, land host-io mtime/scan recipes, then Postgres.")
+    (gate graph-node-full-mutation-verdict ideas-graph-file-projection file_mtime scan_run)
+    (why "Statement-level effects already fire once (sequenced bare-do, tag 69), operand-level effects already fire once (single-walk eq/lt, tags 102/103), nested do-lets snapshot effecting values, the minimum write floor includes write_file_text plus append, and storage-port now proves memory/file substitutability with durability. The next carrier proof is the richer graph mutation/projection layer over the file carrier, plus mtime/scan observation, before the Postgres carrier can inherit the same content-key discipline.")))
