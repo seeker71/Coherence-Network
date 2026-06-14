@@ -31,8 +31,9 @@
 ; pool — same bytes, same slot — and a literal lowers to SLIT carrying its
 ; pool index; the string family now carries str_eq/str_len/str_concat plus
 ; substring/str_find/str_to_int/int_to_str/byte_to_str. The explicit NodeID
-; door carries make_nodeid/category/pkg/level/type/inst; bp table parity, field
-; constructors, and floats remain family-by-family climbs.
+; door carries make_nodeid/category/pkg/level/type/inst. Literal bp calls for
+; the current fourth-floor registry names fold onto make_nodeid packets; the
+; full generated bp table remains a follow-on lift.
 
 ; ── walker-carried ops as DATA rows (name arity tag) — one generic engine ──
 ; (div/mod ride the m4d tags 10/11; the figure-ops family rides 34..42 —
@@ -199,7 +200,8 @@
     (if (str_eq op "ord") (flt-low1 1 s pos fns env)
     (if (str_eq op "not") (flt-low1 2 s pos fns env)
     (if (str_eq op "record_new") (flt-record-new s pos fns env)
-        (flt-op op s pos fns env))))))))))))))))
+    (if (str_eq op "bp") (flt-bp s pos fns env)
+        (flt-op op s pos fns env)))))))))))))))))
 
 ; one operand, then the unary lowering picked by selector k
 (defn flt-low1 (k s pos fns env) (flt-low1-a k s (flt-expr s pos fns env)))
@@ -272,6 +274,44 @@
     (flt-record-new-cons key (nth ve 0) (flt-record-new-fields s (nth ve 1) fns env)))
 (defn flt-record-entry (key val) (fk-cons key (fk-cons val (fk-empty))))
 (defn flt-record-new-cons (key val re) (list (fk-cons (flt-record-entry key val) (nth re 0)) (nth re 1)))
+
+; Literal bp names fold at lowering time so fkwu sees the same NodeID identity
+; the sibling kernels get from their generated BP_TABLE. Dynamic/unknown bp
+; calls still lower to tag 45, preserving the old fallback while the generated
+; table becomes native.
+(defn flt-nodeid4 (p l t i)
+    (fk-node 91
+        (fk-cons (fk-lit p)
+        (fk-cons (fk-lit l)
+        (fk-cons (fk-lit t)
+        (fk-cons (fk-lit i) (fk-empty)))))))
+(defn flt-bp (s pos fns env)
+    (if (eq (fp-at s (fp-skip s pos)) 34)
+        (flt-bp-lit s (add (fp-skip s pos) 1) env)
+        (flt-op "bp" s pos fns env)))
+(defn flt-bp-lit (s pos env)
+    (flt-bp-lit2 s
+        (flt-unescape (substring s pos (flt-strend s pos)))
+        (add (flt-strend s pos) 1)
+        env))
+(defn flt-bp-lit2 (s name end env)
+    (list (flt-bp-node name env) (fp-close s end)))
+(defn flt-bp-fallback (name env)
+    (fk-node 45 (fk-slit (flt-sidx (flt-poolv env) name 0) name)))
+(defn flt-bp-node (name env)
+    (if (str_eq name "HEX-DECODE-ERROR") (flt-nodeid4 1 2 99 1770)
+    (if (str_eq name "AUDIT-ENTRY")      (flt-nodeid4 1 2 99 1770)
+    (if (str_eq name "URL-DECODE-ERROR") (flt-nodeid4 1 2 99 1771)
+    (if (str_eq name "AUDIT-LOG")        (flt-nodeid4 1 2 99 1771)
+    (if (str_eq name "TOKEN")            (flt-nodeid4 1 2 99 1790)
+    (if (str_eq name "SESSION")          (flt-nodeid4 1 2 99 1860)
+    (if (str_eq name "SESSION-TABLE")    (flt-nodeid4 1 2 99 1861)
+    (if (str_eq name "SESSION-NOT-FOUND")(flt-nodeid4 1 2 99 1862)
+    (if (str_eq name "UUID")             (flt-nodeid4 1 2 99 1870)
+    (if (str_eq name "ARRIVAL")          (flt-nodeid4 1 2 99 1870)
+    (if (str_eq name "UUID-PARSE-ERROR") (flt-nodeid4 1 2 99 1871)
+    (if (str_eq name "ARRIVAL-QUALITY")  (flt-nodeid4 1 2 99 1871)
+        (flt-bp-fallback name env))))))))))))))
 
 ; table ops by arity, else a user function call (one evaluated argument)
 (defn flt-op (op s pos fns env) (flt-op2 (flt-assoc op (flt-ops)) op s pos fns env))
