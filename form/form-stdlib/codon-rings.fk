@@ -1,0 +1,107 @@
+; codon-rings.fk — the Gene Keys Codon Rings: the 64 gates grouped by amino acid.
+;
+; The codon-hexagram.fk bridge named this as its next row: the attested labels that tie
+; a gate to the genetic code. Here they are, grounded — the Gene Keys "21 Codon Rings"
+; (Richard Rudd), from the official genekeys.com/resource/codon-rings source, several
+; rings independently cross-checked. Each ring is an AMINO ACID and the set of gates that
+; share it. The 21 rings partition all 64 gates exactly once (Gate 12 also names a nested
+; "Ring of Secrets" inside the Trials ring — why sources say both 21 and 22).
+;
+; This is content-addressing at the gate level, and it MATCHES the genetic code's own:
+; gates in one ring share an amino-acid address the way synonymous codons do
+; (grammars/genetic-code.fk gc-degeneracy), and the ring size IS the codon degeneracy —
+; Leucine and Serine, 6 codons, are 6-gate rings; Methionine and Tryptophan, 1 codon, are
+; single-gate rings. So codon -> gate is content-addressed THROUGH the amino acid.
+;
+;   (gate-amino gate)        -> the gate's amino acid (3-letter; "Stop" for terminators)
+;   (gate-ring gate)         -> the gate's Codon Ring name
+;   (same-ring? a b)         -> do two gates share an amino-acid ring?
+;   (ring-size amino)        -> how many gates share it (= the codon degeneracy)
+;
+; HONESTY (the research lane): the RINGS (amino-acid groupings of gates) are attested Gene
+; Keys data. The deterministic per-gate codon STRING and the base->line binary rule are
+; NOT published openly (taught only in paid Codon Ring material), and competing schemes
+; (Schoenberger, Walter, Yan) disagree on the base assignment and even the hexagram
+; ordering — so this file encodes the ring groupings, NOT a faked codon->gate table. The
+; structural codon=hexagram isomorphism lives in codon-hexagram.fk; this is the labelled
+; ring layer. Anchors stated consistently across sources: Gate 41 = Met (start), Gate 14
+; = Lys, and the three Stop gates 12/33/56.
+;
+; preludes: form-stdlib/core.fk
+;
+
+(do
+    ;; a ring is (name amino gates) ; gates is a list of gate numbers
+    (defn cr-ring (name amino gates) (list name amino gates))
+    (defn cr-name  (r) (nth r 0))
+    (defn cr-amino (r) (nth r 1))
+    (defn cr-gates (r) (nth r 2))
+
+    ;; the 21 Codon Rings — the attested partition of the 64 gates
+    (defn cr-rings ()
+        (list
+            (cr-ring "Origin"       "Met"  (list 41))
+            (cr-ring "Water"        "Phe"  (list 2 8))
+            (cr-ring "Fire"         "Lys"  (list 1 14))
+            (cr-ring "Union"        "Val"  (list 4 7 29 59))
+            (cr-ring "Light"        "Thr"  (list 5 9 11 26))
+            (cr-ring "Alchemy"      "Gly"  (list 6 40 47 64))
+            (cr-ring "Humanity"     "Arg"  (list 10 17 21 25 38 51))
+            (cr-ring "Purification" "Gln"  (list 13 30))
+            (cr-ring "Prosperity"   "Cys"  (list 16 45))
+            (cr-ring "Gaia"         "Ile"  (list 19 60 61))
+            (cr-ring "Destiny"      "Asn"  (list 34 43))
+            (cr-ring "Miracles"     "Trp"  (list 35))
+            (cr-ring "Seeking"      "Ser"  (list 15 39 52 53 54 58))
+            (cr-ring "Illusion"     "Asp"  (list 28 32))
+            (cr-ring "LifeAndDeath" "Leu"  (list 3 20 23 24 27 42))
+            (cr-ring "Matter"       "Ala"  (list 18 46 48 57))
+            (cr-ring "Divinity"     "Pro"  (list 22 36 37 63))
+            (cr-ring "NoReturn"     "Tyr"  (list 31 62))
+            (cr-ring "Whirlwind"    "His"  (list 49 55))
+            (cr-ring "Illuminati"   "Glu"  (list 44 50))
+            (cr-ring "Trials"       "Stop" (list 12 33 56))))
+
+    ;; --- membership: is a gate in a ring's gate-list? -----------------
+    (defn cr-member? (gate gates)
+        (if (eq (len gates) 0) 0
+            (if (eq (head gates) gate) 1 (cr-member? gate (tail gates)))))
+
+    ;; --- the ring a gate belongs to (walk the rings) -----------------
+    (defn cr-find-loop (rings gate)
+        (if (eq (len rings) 0) (empty)
+            (if (eq (cr-member? gate (cr-gates (head rings))) 1)
+                (head rings)
+                (cr-find-loop (tail rings) gate))))
+    (defn cr-find (gate) (cr-find-loop (cr-rings) gate))
+
+    (defn gate-ring (gate)
+        (do (let r (cr-find gate))
+            (if (eq (len r) 0) "unassigned" (cr-name r))))
+    (defn gate-amino (gate)
+        (do (let r (cr-find gate))
+            (if (eq (len r) 0) "?" (cr-amino r))))
+
+    ;; --- content-addressing: do two gates share an amino-acid ring? --
+    (defn same-ring? (a b)
+        (do (let aa (gate-amino a))
+            (if (str_eq aa "?") 0
+                (if (str_eq aa (gate-amino b)) 1 0))))
+
+    ;; --- ring size = codon degeneracy of the amino acid -------------
+    (defn cr-size-loop (rings amino)
+        (if (eq (len rings) 0) 0
+            (if (str_eq (cr-amino (head rings)) amino)
+                (len (cr-gates (head rings)))
+                (cr-size-loop (tail rings) amino))))
+    (defn ring-size (amino) (cr-size-loop (cr-rings) amino))
+
+    ;; --- coverage: the rings partition all 64 gates -----------------
+    (defn cr-total-gates-loop (rings acc)
+        (if (eq (len rings) 0) acc
+            (cr-total-gates-loop (tail rings) (add acc (len (cr-gates (head rings)))))))
+    (defn codon-rings-coverage () (cr-total-gates-loop (cr-rings) 0))
+
+    (defn codon-rings-teaching () "lc-cross-modal-unity")
+
+    0)

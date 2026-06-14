@@ -1,0 +1,57 @@
+; ratio-bridge.fk — one reduced ratio, across music, geometry, frequency, and chemistry.
+;
+; harmonic-geometry.fk already reduces intervals between the seven shapes (ng-gcd,
+; ng-ratio-str), and synesthesia.fk already proves a chord and a triangle of ratio 4:5:6
+; dedup at one content-addressed cell. This generalises that to ARBITRARY reduced ratios
+; and adds the domain field-domain-grammars.form already carries but the ratio bridge did
+; not: CHEMISTRY. The single expression is the reduced ratio itself — same ratio, same
+; cell, whatever names it.
+;
+;   (ratio-cell a b)             -> the reduced ratio "a:b" (the content-address; via ng-ratio-str)
+;   (musical-interval hi lo)     -> a tone ratio        (3:2 = a perfect fifth)
+;   (geometric-proportion a b)   -> a shape proportion  (2:1 = a doubling)
+;   (frequency-ratio hz1 hz2)    -> two frequencies     (880:440 = an octave)
+;   (chemical-stoichiometry n1 n2) -> an atom-count ratio (H2O: H:O = 2:1)
+;   (same-ratio? cell-a cell-b)  -> do two domains name the same reduced ratio?
+;   (interval-name cell)         -> the attested name of a small-integer ratio
+;
+; The headline: the OCTAVE (2:1) and water's H:O stoichiometry (2:1) and a 2:1 rectangle
+; are ONE cell; the perfect FIFTH (3:2) and a 3:2 atom ratio are one cell. Reciprocals
+; stay distinct — 1:2 (C:O in CO2) is not the octave. Four-way: the cell is an integer-
+; reduced string, no node op, so it crosses the fourth arm (unlike synesthesia's node
+; content-addressing, which proves the same fact in the 3-kernel substrate lane).
+;
+; Held in lane: the small-integer ratios (octave, fifth) are exact and attested (just
+; intonation); stoichiometric ratios are empirical; the claim is that they share a
+; STRUCTURE (the reduced ratio), not a cause.
+;
+; preludes: form-stdlib/core.fk form-stdlib/grammars/harmonic-geometry.fk
+;
+
+(do
+    ;; --- the content-addressed reduced-ratio cell (reuse ng-ratio-str) --
+    (defn ratio-cell (a b) (ng-ratio-str a b))
+
+    ;; --- the domain faces — each reduces to the same cell -------------
+    (defn musical-interval     (hi lo)  (ratio-cell hi lo))
+    (defn geometric-proportion (a b)    (ratio-cell a b))
+    (defn frequency-ratio      (hz1 hz2)(ratio-cell hz1 hz2))
+    (defn chemical-stoichiometry (n1 n2)(ratio-cell n1 n2))
+
+    ;; --- cross-domain: do two reduced ratios name one cell? ----------
+    (defn same-ratio? (cell-a cell-b) (if (str_eq cell-a cell-b) 1 0))
+
+    ;; --- the attested name of a small-integer ratio ------------------
+    (defn interval-name (cell)
+        (if (str_eq cell "1:1") "unison"
+        (if (str_eq cell "2:1") "octave"
+        (if (str_eq cell "3:2") "perfect-fifth"
+        (if (str_eq cell "4:3") "perfect-fourth"
+        (if (str_eq cell "5:4") "major-third"
+        (if (str_eq cell "6:5") "minor-third"
+        (if (str_eq cell "3:1") "octave-plus-fifth"
+            "uncommon"))))))))
+
+    (defn ratio-bridge-teaching () "lc-cross-modal-unity")
+
+    0)
