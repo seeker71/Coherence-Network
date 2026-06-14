@@ -1441,8 +1441,10 @@ export class Kernel {
     // (pow base exp) → base**exp. Negative exponents return 0 (Python's
     // int**-n is a float; floats on this path are a later breath).
     this.registerNative("pow", catMethod(), (_k, args) => {
-      const base = argInt(args, 0);
-      const exp = argInt(args, 1);
+      // integer power; float args coerce to int (truncate) to match Go/Rust
+      // AsInt() — pow is the integer power, math_pow the IEEE float power.
+      const base = Math.trunc(argFloat(args, 0));
+      const exp = Math.trunc(argFloat(args, 1));
       if (exp < 0) return { kind: "int", int: 0 };
       let result = 1;
       for (let i = 0; i < exp; i++) result *= base;
@@ -2074,6 +2076,13 @@ export class Kernel {
       return { kind: "int", int: 0 };
     });
     this.registerNative("abs", catMethod(), (_k, args) => {
+      // abs preserves type — float in, float out; int in, int out — sibling-parity
+      // with Go (VFloat -> math.Abs) and Rust (Value::Float(f) -> f.abs()). IEEE
+      // float abs is core, not a special case routed around.
+      const v = args[0];
+      if (v?.kind === "f64" || v?.kind === "f32") {
+        return { kind: "f64", float: Math.abs(v.float) };
+      }
       const n = argInt(args, 0);
       return { kind: "int", int: n < 0 ? -n : n };
     });
