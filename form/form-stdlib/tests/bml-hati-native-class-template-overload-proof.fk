@@ -1,0 +1,142 @@
+; tests/bml-hati-native-class-template-overload-proof.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk
+;
+; Proves the next BML/Hati native class floor after named dispatch:
+; class fields can construct a default record-backed self, overloaded method
+; names can be selected by arity, and template/generic metadata is carried
+; without claiming full specialization.
+
+(do
+    (defn score-bool (actual)
+        (if actual 1 0))
+
+    (defn score-int (actual expected)
+        (if (eq actual expected) 1 0))
+
+    (defn score-str (actual expected)
+        (if (nil? actual)
+            0
+            (if (str_eq actual expected) 1 0)))
+
+    (defn str-contains? (haystack needle)
+        (ge (str_find haystack needle 0) 0))
+
+    (let read-source
+        "int Read() { return this.value + 5; }\n")
+    (let read-parsed
+        (bml-source-parse-executable-stream
+            (bml-source-scan-text read-source)))
+    (let read-method (head (bml-source-exec-parse-nodes read-parsed)))
+
+    (let pick-default-source
+        "int Pick() { return this.value + 1; }\n")
+    (let pick-default-parsed
+        (bml-source-parse-executable-stream
+            (bml-source-scan-text pick-default-source)))
+    (let pick-default-method
+        (head (bml-source-exec-parse-nodes pick-default-parsed)))
+
+    (let pick-one-source
+        "int Pick(int x) { return x + 2; }\n")
+    (let pick-one-parsed
+        (bml-source-parse-executable-stream
+            (bml-source-scan-text pick-one-source)))
+    (let pick-one-method
+        (head (bml-source-exec-parse-nodes pick-one-parsed)))
+
+    (let class-node
+        (bml-ast-class
+            "Rule"
+            "Object"
+            (bml-ast-block
+                (list
+                    (bml-ast-section
+                        (bml-ast-name "public")
+                        (bml-ast-block
+                            (list
+                                (bml-ast-field "int" "value")
+                                (bml-ast-field "int" "count")
+                                read-method
+                                pick-default-method
+                                pick-one-method)))))))
+    (let class-image (bml-hati-compile-image class-node))
+    (let class-table (bml-hati-table-file class-image))
+    (let default-self (bml-hati-construct-class-defaults class-node))
+    (let seeded-self (record_set default-self "value" 40))
+    (let missing-result
+        (bml-hati-run-class-method-with-arg-arity
+            class-node
+            "Pick"
+            2
+            seeded-self))
+
+    (let class-component
+        (comp-bml-component
+            "Class"
+            (list
+                "Rule"
+                (empty)
+                (empty)
+                (empty))))
+    (let template-component
+        (comp-bml-component
+            "Template"
+            (list
+                (list "K" "V")
+                "class"
+                class-component)))
+    (let template-metadata
+        (bml-hati-template-metadata template-component))
+
+    (sum
+        (list
+            (score-bool (bml-source-exec-parse-ok? read-parsed))
+            (score-bool (bml-source-exec-parse-ok? pick-default-parsed))
+            (score-bool (bml-source-exec-parse-ok? pick-one-parsed))
+            (score-int (len (bml-hati-class-field-nodes class-node)) 2)
+            (score-str (bml-field-node-name (head (bml-hati-class-field-nodes class-node))) "value")
+            (score-bool (bml-hati-image-supported? class-image))
+            (score-int (len (bml-hati-image-fns class-image)) 3)
+            (score-int (bml-hati-class-method-index class-node "Pick") 1)
+            (score-int (bml-hati-class-method-index-arity class-node "Pick" 0) 1)
+            (score-int (bml-hati-class-method-index-arity class-node "Pick" 1) 2)
+            (score-int (bml-hati-class-method-index-arity class-node "Pick" 2) -1)
+            (score-str (record_get default-self "bmlClass") "Rule")
+            (score-int (record_get default-self "count") 0)
+            (score-int
+                (bml-hati-run-class-method-with-arg-arity
+                    class-node
+                    "Read"
+                    0
+                    seeded-self)
+                45)
+            (score-int
+                (bml-hati-run-class-method-with-arg-arity
+                    class-node
+                    "Pick"
+                    0
+                    seeded-self)
+                41)
+            (score-int
+                (bml-hati-run-class-method-with-arg-arity
+                    class-node
+                    "Pick"
+                    1
+                    40)
+                42)
+            (score-str missing-result "BML-HATI-UNSUPPORTED method/arity-not-found")
+            (score-str
+                (bml-hati-template-metadata-kind template-metadata)
+                "class")
+            (score-int
+                (bml-hati-template-metadata-param-count template-metadata)
+                2)
+            (score-bool
+                (bml-hati-template-metadata-supported? template-metadata))
+            (score-str
+                (bml-class-name
+                    (bml-hati-template-metadata-body template-metadata))
+                "Rule")
+            (score-bool (str-contains? class-table "97"))
+            (score-bool (not (str-contains? class-table "BML-HATI-UNSUPPORTED"))))))
