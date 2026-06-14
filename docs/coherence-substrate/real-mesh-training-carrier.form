@@ -45,10 +45,14 @@
 
   (host-emitter
     (carrier "scripts/real_mesh_training_emitters.sh")
-    (samples "http://localhost:8800/state" "http://localhost:8799/state" "adb devices" "bounded content-addressed data roots" "macOS say" "optional local Ollama and Whisper")
-    (active-requires "300 MiB training bytes, 100 MiB heldout bytes, 10k labels, live hashed sources, completed local processes, and required lanes")
-    (blocked-receipt "writes block_reasons instead of pretending when adb, Whisper, data roots, labels, or process receipts are missing")
-    (local-2026-06-15 "live witness endpoints and completed local TTS/Ollama receipts observed; blocked because adb had no attached Android device in this shell, no Whisper model was configured, and no large train/heldout roots were supplied"))
+    (runtime-samples "http://localhost:8800/state" "http://localhost:8799/state" "bounded content-addressed data roots" "macOS say" "optional local Ollama and Whisper")
+    (runtime-channels "http-localhost" "loopback-http" "websocket-loopback" "websocket-lan" "wifi-mesh" "coherence-wifi" "wifi-direct" "bluetooth-le-gatt" "bluetooth-rfcomm" "audio-loopback" "audio-ultrasonic" "audio-near-ultrasonic" "video-loopback" "video-optical" "screen-loopback" "screen-camera-optical" "nfc-tap" "usb-accessory")
+    (presence-evidence "ble-presence is useful for discovery and vitality, but is not enough by itself for bidirectional training")
+    (external-channel-evidence "--channel-evidence NAME TRANSPORT FILE SAMPLES attaches hashed receipts from Bluetooth, ultrasonic audio, optical screen-camera, or other channel probes")
+    (install-provisioning "adb is optional and install-only; it is used only when --apk is supplied, never as the runtime training/testing channel")
+    (active-requires "300 MiB training bytes, 100 MiB heldout bytes, 10k labels, at least one live bidirectional runtime channel source, completed local processes, and required lanes")
+    (blocked-receipt "writes block_reasons instead of pretending when runtime channels, Whisper, data roots, labels, or process receipts are missing")
+    (local-2026-06-15 "live witness endpoints and completed local TTS/Ollama receipts observed; blocked because no Whisper model was configured and no large train/heldout roots were supplied; adb absence is not a training communication blocker"))
 
   (what-this-unblocks
     (capture "large local raw+derived windows can be admitted as training data when consented and content-addressed")
@@ -57,7 +61,7 @@
     (routing "choice can route native-first with oracle sampling after real heldout proof"))
 
   (next-carrier-work
-    (physical-capture "run the emitter continuously with actual Mac/Android capture roots and adb-visible phone sessions")
+    (physical-capture "run the emitter continuously with actual Mac/Android capture roots over loopback/wifi/mesh channels")
     (model-runners "add configured Whisper STT and vision/multimodal local process receipts beside the current TTS/Ollama probes")
     (storage "chunk 100s of MiB data into content-addressed substrate/model-vitality rows")
     (dashboard "show real-window bytes, heldout bytes, labels, processes, lanes, AutoML progress, and authority state")))

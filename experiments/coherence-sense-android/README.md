@@ -184,12 +184,30 @@ scripts/real_mesh_training_emitters.sh \
 
 The receipt is written under `.cache/real-mesh-training/windows/...` unless
 `--out` is supplied. The carrier samples `http://localhost:8800/state`,
-`http://localhost:8799/state`, `adb devices`, bounded file roots, macOS TTS,
-and optional local Ollama/Whisper probes. It reports `blocked` until the hard
-Form floor is real: at least 300 MiB of training bytes, 100 MiB of heldout
-bytes, 10k labels, live hashed sources, completed local process receipts, and
-all required lanes. Use `--require-active` when a release job should fail
-unless that floor is met.
+`http://localhost:8799/state`, bounded file roots, macOS TTS, and optional
+local Ollama/Whisper probes. Runtime training communication is loopback, wifi,
+mesh, Bluetooth, audio, video, screen, optical, NFC, USB accessory, or other
+measurable bidirectional channel traffic. Out-of-audible-range audio can ride
+`audio-ultrasonic` or `audio-near-ultrasonic`; camera/screen exchange can ride
+`screen-camera-optical` or `video-optical`; Bluetooth can ride
+`bluetooth-le-gatt` or `bluetooth-rfcomm`; Wi-Fi can ride `wifi-direct`,
+`websocket-lan`, `wifi-mesh`, or `coherence-wifi`. Presence-only signals such as
+`ble-presence` are useful evidence, but not enough by themselves for training.
+`adb` is not a testing or training communication lane; it is only used when
+`--apk` is supplied to install or update the Android app. External channel probes
+can be attached with:
+
+```bash
+scripts/real_mesh_training_emitters.sh \
+  --channel-evidence bluetooth-heartbeat bluetooth-le-gatt /path/to/bt-receipt.json 120 \
+  --channel-evidence optical-loop screen-camera-optical /path/to/optical-receipt.json 240
+```
+
+The receipt reports `blocked` until the hard Form floor is real: at least 300
+MiB of training bytes, 100 MiB of heldout bytes, 10k labels, live hashed
+bidirectional runtime-channel sources, completed local process receipts, and all
+required lanes. Use `--require-active` when a release job should fail unless
+that floor is met.
 
 The receipt shape is validated by:
 
@@ -199,9 +217,11 @@ cd form && bash scripts/fourth-arm-gate.sh real-mesh-training-emitter
 ```
 
 This closes the previous direct host gap at the receipt boundary: Form now owns
-the pass/block authority for direct HTTP/resource sampling and adb/process
+the pass/block authority for direct HTTP/resource/channel sampling and process
 carriers, while the shell remains only the physical IO emitter until those host
-operations are carried directly by the native kernel.
+operations are carried directly by the native kernel. Android `adb` stays in
+the install/provisioning lane; loopback and physical two-way channels carry
+runtime training.
 
 ## Hati mesh identity + channels
 

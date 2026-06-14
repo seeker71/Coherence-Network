@@ -2,7 +2,7 @@
 ;
 ; real-mesh-training-emitter-band - real host emitter pass/block receipt floor.
 ;
-; Verdict 255:
+; Verdict 2047:
 ;   1   live sources with hashes are accepted
 ;   2   complete active emitter window passes the hard floor
 ;   4   blocked windows with explicit reasons are accepted as honest
@@ -11,13 +11,32 @@
 ;   32  active claims with weak process receipts are rejected
 ;   64  source byte sum must cover train + heldout bytes
 ;   128 invalid blocked receipts without reasons are rejected
+;   256 loopback/wifi/bluetooth/audio/video/screen runtime channels satisfy communication without adb
+;   512 adb install-only receipts do not satisfy runtime communication
+;   1024 presence-only channels are evidence but not enough for bidirectional training
 
 (do
     (let lanes (rmt-required-lanes))
     (let sources
         (list
             (rmt-emitter-source "mac-witness-http-state" "http-localhost" "live" 125829120 120000 "sha256:mac-witness-http-state")
-            (rmt-emitter-source "android-witness-state" "adb+wifi" "live" 209715200 480000 "sha256:android-witness-state")
+            (rmt-emitter-source "android-witness-state" "wifi-mesh" "live" 209715200 480000 "sha256:android-witness-state")
+            (rmt-emitter-source "heldout-resource-store" "file-content-addressed" "live" 104857600 12000 "sha256:heldout-resource-store")))
+    (let adb-install-only-sources
+        (list
+            (rmt-emitter-source "android-install-provisioning" "adb-usb-install" "live" 209715200 480000 "sha256:android-install-provisioning")
+            (rmt-emitter-source "heldout-resource-store" "file-content-addressed" "live" 104857600 12000 "sha256:heldout-resource-store")))
+    (let channel-family-sources
+        (list
+            (rmt-emitter-source "local-loopback-channel" "websocket-loopback" "live" 52428800 10000 "sha256:local-loopback-channel")
+            (rmt-emitter-source "bluetooth-gatt-channel" "bluetooth-le-gatt" "live" 52428800 10000 "sha256:bluetooth-gatt-channel")
+            (rmt-emitter-source "ultrasonic-audio-channel" "audio-ultrasonic" "live" 52428800 10000 "sha256:ultrasonic-audio-channel")
+            (rmt-emitter-source "screen-camera-optical-channel" "screen-camera-optical" "live" 52428800 10000 "sha256:screen-camera-optical-channel")
+            (rmt-emitter-source "wifi-direct-channel" "wifi-direct" "live" 52428800 10000 "sha256:wifi-direct-channel")
+            (rmt-emitter-source "heldout-resource-store" "file-content-addressed" "live" 209715200 12000 "sha256:heldout-resource-store")))
+    (let presence-only-sources
+        (list
+            (rmt-emitter-source "ble-presence-only" "ble-presence" "live" 314572800 10000 "sha256:ble-presence-only")
             (rmt-emitter-source "heldout-resource-store" "file-content-addressed" "live" 104857600 12000 "sha256:heldout-resource-store")))
     (let processes
         (list
@@ -47,7 +66,7 @@
             (list)
             lanes
             (list
-                (rmt-emitter-block "adb_device_missing" "adb devices listed no attached Android device")
+                (rmt-emitter-block "runtime_channel_missing" "no loopback wifi mesh audio video or screen runtime channel is live")
                 (rmt-emitter-block "below_training_floor" "captured bytes are below 300 MiB"))
             "sha256:blocked-host-window-001"))
     (let tiny-active
@@ -98,6 +117,42 @@
             lanes
             (list)
             "sha256:weak-source-sum"))
+    (let adb-install-only-window
+        (rmt-emitter-window
+            "adb-install-only-window"
+            "active"
+            314572800
+            104857600
+            10000
+            adb-install-only-sources
+            processes
+            lanes
+            (list)
+            "sha256:adb-install-only-window"))
+    (let channel-family-window
+        (rmt-emitter-window
+            "channel-family-window"
+            "active"
+            314572800
+            104857600
+            10000
+            channel-family-sources
+            processes
+            lanes
+            (list)
+            "sha256:channel-family-window"))
+    (let presence-only-window
+        (rmt-emitter-window
+            "presence-only-window"
+            "active"
+            314572800
+            104857600
+            10000
+            presence-only-sources
+            processes
+            lanes
+            (list)
+            "sha256:presence-only-window"))
     (let empty-blocked
         (rmt-emitter-window
             "empty-blocked"
@@ -119,5 +174,29 @@
     (let c5 (if (eq (rmt-emitter-active? weak-process) 0) 32 0))
     (let c6 (if (eq (rmt-emitter-active? weak-source-sum) 0) 64 0))
     (let c7 (if (str_eq (rmt-emitter-verdict empty-blocked) "invalid-receipt") 128 0))
+    (let c8
+        (if (and
+                (eq (rmt-emitter-active? channel-family-window) 1)
+                (str_eq
+                    (rmt-emitter-communication-verdict channel-family-window)
+                    "bidirectional-runtime-channel-ready"))
+            256
+            0))
+    (let c9
+        (if (and
+                (eq (rmt-emitter-active? adb-install-only-window) 0)
+                (str_eq
+                    (rmt-emitter-communication-verdict adb-install-only-window)
+                    "adb-install-only-not-runtime"))
+            512
+            0))
+    (let c10
+        (if (and
+                (eq (rmt-emitter-active? presence-only-window) 0)
+                (str_eq
+                    (rmt-emitter-communication-verdict presence-only-window)
+                    "runtime-channel-one-way-only"))
+            1024
+            0))
 
-    (sum (list c0 c1 c2 c3 c4 c5 c6 c7)))
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10)))

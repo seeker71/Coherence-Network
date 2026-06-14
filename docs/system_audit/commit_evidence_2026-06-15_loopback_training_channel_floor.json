@@ -1,0 +1,144 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/loopback-training-channel-floor-20260615",
+  "commit_scope": "Retune real mesh training emitters so adb is install-only and runtime training can use loopback, Bluetooth, audio, video, screen, and other bidirectional channels.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "real-mesh-training",
+    "android-mesh-learning",
+    "channel-protocol-choice",
+    "native-training-receipts",
+    "focused-testing-fast-release"
+  ],
+  "spec_ids": [
+    "fourth-arm-bands",
+    "commit-evidence-contract",
+    "agent-start-packet"
+  ],
+  "task_ids": [
+    "loopback-training-channel-floor-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "channel-correction",
+        "north-star-correction"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@loopback-training-channel-floor-20260615",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "form-recipe-authoring",
+        "host-carrier-authoring",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "docs/coherence-substrate/real-mesh-training-carrier.form",
+    "docs/system_audit/commit_evidence_2026-06-15_loopback_training_channel_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "experiments/coherence-sense-android/README.md",
+    "form/form-stdlib/real-mesh-training-emitter.fk",
+    "form/form-stdlib/tests/real-mesh-training-emitter-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/real_mesh_training_emitters.sh"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/real-mesh-training-carrier.form",
+    "docs/system_audit/commit_evidence_2026-06-15_loopback_training_channel_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "experiments/coherence-sense-android/README.md",
+    "form/form-stdlib/real-mesh-training-emitter.fk",
+    "form/form-stdlib/tests/real-mesh-training-emitter-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/real_mesh_training_emitters.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim \"loopback training channel floor\"",
+      "bash -n scripts/real_mesh_training_emitters.sh",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/pareto.fk form-stdlib/autoresearch-loop.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/native-training-receipt.fk form-stdlib/real-mesh-training-carrier.fk form-stdlib/real-mesh-training-emitter.fk form-stdlib/tests/real-mesh-training-emitter-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh real-mesh-training-emitter",
+      "scripts/real_mesh_training_emitters.sh --run-models --ollama-model llama3.2:3b --channel-evidence bluetooth-heartbeat bluetooth-le-gatt .cache/real-mesh-training/channel-evidence/bluetooth.json 120 --channel-evidence optical-loop screen-camera-optical .cache/real-mesh-training/channel-evidence/optical.json 240 --out .cache/real-mesh-training/windows/loopback-channel-proof-20260615"
+    ],
+    "notes": "real-mesh-training-emitter now validates at verdict 2047 with fourth arm: 1 band(s) four-way and 1 ok, 0 divergent. The band proves bidirectional runtime channels across loopback, Wi-Fi, Bluetooth, ultrasonic/near-ultrasonic audio, video/screen optical, NFC, and USB-accessory families; rejects adb-install-only as runtime communication; and rejects presence-only channels as insufficient for training. The host proof observed 4 live sources, 4 runtime channels, 4 bidirectional channels, and 3 completed local processes, with no adb block."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed when this evidence was written; CI had not run yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested for this Form and host-carrier slice."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Runtime testing and training no longer depend on adb visibility. adb is install/provisioning only; loopback, Bluetooth, audio, video, screen, NFC, Wi-Fi, and USB-accessory channel receipts can carry runtime training evidence.",
+    "public_endpoints": [
+      "n/a: local Form and host-carrier proof"
+    ],
+    "test_flows": [
+      "scripts/real_mesh_training_emitters.sh --run-models --ollama-model llama3.2:3b --channel-evidence bluetooth-heartbeat bluetooth-le-gatt .cache/real-mesh-training/channel-evidence/bluetooth.json 120 --channel-evidence optical-loop screen-camera-optical .cache/real-mesh-training/channel-evidence/optical.json 240 --out .cache/real-mesh-training/windows/loopback-channel-proof-20260615"
+    ]
+  },
+  "evidence_refs": [
+    "form/form-stdlib/real-mesh-training-emitter.fk",
+    "form/form-stdlib/tests/real-mesh-training-emitter-band.fk",
+    "scripts/real_mesh_training_emitters.sh",
+    "docs/coherence-substrate/real-mesh-training-carrier.form",
+    "experiments/coherence-sense-android/README.md",
+    "form/fourth-arm-bands.txt",
+    ".cache/real-mesh-training/windows/loopback-channel-proof-20260615/real-mesh-training-window.json"
+  ],
+  "phase_gate": {
+    "phase": "loopback-training-channel-floor",
+    "gate": "Runtime training communication must be bidirectional channel evidence, not adb device visibility.",
+    "state": "local-four-way-proof-pass-with-bidirectional-channel-receipt",
+    "can_move_next_phase": false,
+    "next": "After PR CI, connect real Bluetooth/audio/optical channel probes and large train/heldout roots to produce an active receipt with --require-active."
+  },
+  "floor_update": {
+    "previous_observed_floor": "The emitter treated adb visibility as a host/device signal and could block local runtime training when adb did not list a phone.",
+    "current_observed_floor": "Runtime training accepts bidirectional channel receipts from loopback, Wi-Fi, Bluetooth, ultrasonic audio, optical video/screen, NFC, or USB-accessory sources; adb is install-only and cannot satisfy runtime communication.",
+    "new_bands": [
+      "real-mesh-training-emitter -> 2047 four-way"
+    ],
+    "retuned_north_star": [
+      "install/provision with adb only when needed",
+      "train and test over live bidirectional channels that the devices can actually use together",
+      "attach external channel probe evidence without hiding it as a fake sensor or adb path",
+      "dashboard and route choice read bidirectional channel counts beside process/data floors"
+    ],
+    "blocked_trials": [
+      {
+        "trial": "local channel-evidence run-models probe",
+        "receipt": ".cache/real-mesh-training/windows/loopback-channel-proof-20260615/real-mesh-training-window.json",
+        "observed_counts": {
+          "runtime_channels": 4,
+          "bidirectional_channels": 4,
+          "completed_processes": 3
+        },
+        "blocks": [
+          "whisper_model_not_configured",
+          "below_training_floor",
+          "below_heldout_floor",
+          "below_label_floor"
+        ]
+      }
+    ]
+  }
+}

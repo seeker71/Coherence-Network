@@ -438,7 +438,7 @@ translation-engine fks 1111111
 chart-cast fks 1111111
 native-training-receipt fks 16383
 real-mesh-training-carrier fks 65535
-real-mesh-training-emitter fks 255
+real-mesh-training-emitter fks 2047
 eq-effect-once fks 1
 let-effect-once fks 111
 recursive-let-clobber fks 1
