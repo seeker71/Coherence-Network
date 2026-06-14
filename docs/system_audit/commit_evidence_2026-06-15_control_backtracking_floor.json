@@ -1,0 +1,95 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/control-backtracking-floor-20260615",
+  "commit_scope": "Add a focused source-originated BML control/backtracking proof for save/discard and try/throw/catch, and retune the native north-star to name the proven floor without entering mutable-local or interface/package lanes.",
+  "files_owned": [
+    "form/form-stdlib/tests/bml-thesis-control-backtracking-floor-proof.fk",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/system_audit/bml_thesis_feature_audit_20260601.md",
+    "docs/system_audit/model_executor_run_ledger/control-backtracking-floor-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/commit_evidence_2026-06-15_control_backtracking_floor.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-control-backtracking-floor-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-executor-proof-ledger.fk form-stdlib/tests/model-executor-proof-ledger-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh model-executor-proof-ledger",
+      "python3 -m json.tool docs/system_audit/model_executor_run_ledger/control-backtracking-floor-20260615.json",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-15_control_backtracking_floor.json",
+      "git diff --check"
+    ],
+    "notes": "Focused Form gate passed with verdict 2097151 and 1 ok, 0 divergent across Go/Rust/TypeScript. This band is 3-kernel only because BML source compiler/file-read proof bands are not fourth-arm covered; the next fourth-arm gap is a source-compiler/fkwu admission point, not a control semantic weakening."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "No push or PR was requested."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No deploy was requested."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "BML native floor evidence now includes a focused source-originated control/backtracking proof: bml-thesis-forward-backward-demo.bml parses, lowers to save/push-int/discard/try, returns 7 through catch, clears snapshots, and replays forward/backward to the empty VM state.",
+    "public_endpoints": [
+      "local-form-proof-only"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-control-backtracking-floor-proof.fk"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "The focused source save/discard and try/throw/catch floor is proven locally. General arbitrary control-block lowering, source-level restore spelling, and fourth-arm admission for this source-compiler band remain explicit gaps."
+  },
+  "idea_ids": [
+    "idea-realization-engine"
+  ],
+  "spec_ids": [
+    "runtime-shared-native-representation"
+  ],
+  "task_ids": [
+    "control-backtracking-floor-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "scope"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/bml-thesis-control-backtracking-floor-proof.fk reads form-stdlib/tests/fixtures/bml-thesis-forward-backward-demo.bml directly and proves parse completion, state-int and try-throw-return rule selection, save/push-int/discard/try op lowering, return value 7, snapshot cleanup, and DO/UNDO restoration.",
+    "docs/coherence-substrate/bml-native-north-star.form moves only focused BMA fail/cut/mark-save-restore-discard, source if_fail/while_success, and source save-discard-try-throw-catch into current-supported while keeping arbitrary control-block lowering and source-restore spelling unsupported.",
+    "docs/system_audit/bml_thesis_feature_audit_20260601.md records the new source proof and preserves full arbitrary control-flow lowering as a gap.",
+    "3-kernel only: this source-compiler/file-read proof is not listed in form/fourth-arm-bands.txt; fourth-arm admission for BML source compiler proof bands remains the next exact proof point."
+  ],
+  "change_files": [
+    "form/form-stdlib/tests/bml-thesis-control-backtracking-floor-proof.fk",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/system_audit/bml_thesis_feature_audit_20260601.md",
+    "docs/system_audit/model_executor_run_ledger/control-backtracking-floor-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/commit_evidence_2026-06-15_control_backtracking_floor.json"
+  ],
+  "change_intent": "runtime_feature"
+}

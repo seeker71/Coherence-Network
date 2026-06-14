@@ -1,0 +1,59 @@
+; tests/bml-thesis-control-backtracking-floor-proof.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk
+;
+; Proves the focused BML source-originated control/backtracking floor carried
+; by bml-thesis-forward-backward-demo.bml: save/discard, try/throw/catch, and
+; forward/backward restoration all lower through the native BMA runtime.
+
+(do
+    (defn bool-score (b bit)
+        (if b bit 0))
+
+    (defn int-score (actual expected bit)
+        (if (eq actual expected) bit 0))
+
+    (defn str-score (actual expected bit)
+        (if (str_eq actual expected) bit 0))
+
+    (defn mode-score (state mode bit)
+        (if (str_eq (comp-vm-mode state) mode) bit 0))
+
+    (defn op-name-at (program index)
+        (comp-op-name (nth (comp-program-ops program) index)))
+
+    (let path "form-stdlib/tests/fixtures/bml-thesis-forward-backward-demo.bml")
+    (let parsed (bml-source-file-parse-executable path))
+    (let nodes (bml-source-exec-parse-nodes parsed))
+    (let rules (bml-source-exec-parse-rules parsed))
+    (let program (bml-source-file-compile-executable path))
+    (let state (bma-run-program program))
+    (let proof (bma-run-forward-backward program))
+    (let trace (bma-forward-backward-trace proof))
+    (let forward-state (bma-forward-backward-forward-state proof))
+    (let restored-state (bma-forward-backward-restored-state proof))
+
+    (sum
+        (list
+            (bool-score (bml-source-exec-parse-ok? parsed) 1)
+            (int-score (len (bml-source-exec-parse-rest parsed)) 0 2)
+            (int-score (len nodes) 2 4)
+            (str-score (head rules) "state-int" 8)
+            (str-score (head (tail rules)) "try-throw-return" 16)
+            (int-score (len (comp-program-ops program)) 4 32)
+            (str-score (op-name-at program 0) "save" 64)
+            (str-score (op-name-at program 1) "push-int" 128)
+            (str-score (op-name-at program 2) "discard" 256)
+            (str-score (op-name-at program 3) "try" 512)
+            (mode-score state "return" 1024)
+            (int-score (comp-vm-pop-value state) 7 2048)
+            (int-score (len (comp-vm-snapshots state)) 0 4096)
+            (int-score (bma-trace-count-op trace "try") 2 8192)
+            (int-score (bma-trace-count-mode trace "DO") 4 16384)
+            (int-score (bma-trace-count-mode trace "UNDO") 4 32768)
+            (mode-score forward-state "return" 65536)
+            (int-score (comp-vm-pop-value forward-state) 7 131072)
+            (mode-score restored-state "run" 262144)
+            (int-score (len (comp-vm-stack restored-state)) 0 524288)
+            (int-score (len (comp-vm-snapshots restored-state)) 0 1048576)))
+)

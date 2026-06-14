@@ -1,0 +1,35 @@
+{
+  "ledger_schema": "model_executor_proof_run/v1",
+  "run_id": "interface-package-import-floor-20260615",
+  "thread_branch": "codex/interface-package-import-floor-20260615",
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord claim interface-package-import-floor \"Unblock BML/native interface/package/import floor; avoid mutable-locals and control-backtracking lanes\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/tests/bml-native-interface-package-import-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh bml-native-interface-package-import",
+    "python3 - <<'PY' # parse docs/system_audit/model_executor_runs.jsonl and native run JSON records",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-15_interface_package_import_floor.json",
+    "git diff --check"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Added a narrow Form-native metadata floor for BML/package/import/interface declarations. The row shape carries source receipts, import selectors, interface members, and port-shape linkage without touching mutable-local or control/backtracking compiler internals.",
+  "source": {
+    "kind": "native-ledger-record",
+    "path": "docs/system_audit/model_executor_run_ledger/interface-package-import-floor-20260615.json"
+  },
+  "validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/tests/bml-native-interface-package-import-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh bml-native-interface-package-import",
+      "python3 - <<'PY' # parse docs/system_audit/model_executor_runs.jsonl and native run JSON records",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-15_interface_package_import_floor.json",
+      "git diff --check"
+    ]
+  }
+}
