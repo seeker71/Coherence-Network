@@ -1,0 +1,48 @@
+; tests/ratio-bridge-band.fk — one reduced ratio across music, geometry, frequency, chemistry.
+;
+; Verdict 1111111 (127) when every claim holds across all four kernels.
+;   reduction: 6:4 -> 3:2, 4:2 -> 2:1                                -> 1
+;   the octave is one cell: fifth-tone 2:1 = water H:O 2:1 = a 2:1 rectangle -> 10
+;   the fifth is one cell: 3:2 tone = 3:2 atom ratio                 -> 100
+;   reciprocals stay distinct: CO2's C:O (1:2) is not the octave      -> 1000
+;   the names: 3:2 = perfect-fifth, 2:1 = octave                     -> 10000
+;   a frequency ratio is an interval: 880:440 Hz = an octave         -> 100000
+;   content-addressing across domains: a 4:3 tone = an 8:6 atom ratio -> 1000000
+;
+; preludes: form-stdlib/core.fk form-stdlib/grammars/harmonic-geometry.fk form-stdlib/ratio-bridge.fk
+;
+
+(do
+    ;; --- 1. reduction to lowest terms ---------------------------------
+    (let reduce-ok
+        (if (str_eq (ratio-cell 6 4) "3:2")
+            (if (str_eq (ratio-cell 4 2) "2:1") 1 0) 0))
+
+    ;; --- 2. the octave: one cell across three domains -----------------
+    (let octave-ok
+        (if (eq (same-ratio? (musical-interval 2 1) (chemical-stoichiometry 2 1)) 1)
+            (if (eq (same-ratio? (musical-interval 2 1) (geometric-proportion 2 1)) 1) 10 0) 0))
+
+    ;; --- 3. the fifth: tone = atom ratio ------------------------------
+    (let fifth-ok
+        (if (eq (same-ratio? (musical-interval 3 2) (chemical-stoichiometry 3 2)) 1) 100 0))
+
+    ;; --- 4. reciprocals are distinct cells ----------------------------
+    (let recip-ok
+        (if (eq (same-ratio? (chemical-stoichiometry 1 2) (musical-interval 2 1)) 0) 1000 0))
+
+    ;; --- 5. the attested names ----------------------------------------
+    (let name-ok
+        (if (str_eq (interval-name (musical-interval 3 2)) "perfect-fifth")
+            (if (str_eq (interval-name (musical-interval 2 1)) "octave") 10000 0) 0))
+
+    ;; --- 6. a frequency ratio IS an interval --------------------------
+    (let freq-ok
+        (if (str_eq (interval-name (frequency-ratio 880 440)) "octave") 100000 0))
+
+    ;; --- 7. content-addressing: a tone and an atom ratio, one cell ----
+    ;; the perfect fourth (4:3) and an 8:6 atom ratio reduce to the same cell.
+    (let ca-ok
+        (if (eq (same-ratio? (musical-interval 4 3) (chemical-stoichiometry 8 6)) 1) 1000000 0))
+
+    (sum (list reduce-ok octave-ok fifth-ok recip-ok name-ok freq-ok ca-ok)))
