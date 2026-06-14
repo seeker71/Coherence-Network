@@ -4,9 +4,9 @@
   (lineage
     (rests-on hati-mesh.form channel-loopback.form co-learning-stream.form colearning-retire.form llm-feature-channel-floor.form oracle-catalog.form)
     (recipe form/form-stdlib/android-mesh-learning.fk)
-    (proof form/form-stdlib/tests/android-mesh-learning-band.fk -> 32767)
+    (proof form/form-stdlib/tests/android-mesh-learning-band.fk -> 131071)
     (witness-receipt witness-state-receipt.form)
-    (physical-receipt scripts/android_mesh_learning_receipt.py))
+    (physical-receipt form/form-stdlib/android-mesh-learning.fk))
 
   (purpose
     "Use the connected Android phone and the Mac as always-on learning organs."
@@ -18,8 +18,8 @@
     "The receipt records device model/ABI/Android release, battery summary, safe capability inventory, sensor-category inventory, Coherence Sense installed/running state, Mac host/tool summary, Mac witness service state, typed channel rows, and high-cost feature route decisions."
     "The Android carrier can emit active mic RMS, camera luma, and GPU EGL readback summaries while sharing; it does not store raw audio, frames, or GPU buffers."
     "The current live physical floor observed an unlocked SM-S918U1 sharing to the Mac witness with 141 witness frames, nonzero mic RMS, nonzero camera luma, 2367 camera luma samples, 99 GPU EGL readback samples, and body sample_count 5084."
-    "Those live witness counters now have a Form-native receipt row in witness-state-receipt.fk, with integer-scaled summary metrics, heldout learner rows, source-backed oracle label/export rows, live oracle process rows, continuous emission-cycle rows, and a four-way proof at verdict 16777215."
-    "The Form recipe proves the deterministic route surface: native-first, native-first with oracle sampling, oracle-teacher-until-physical-samples, stream merging, per-category oracle retirement, and active mic/camera/GPU sample rows that lift speech, vision, and multimodal routing to native-first when those lanes are present.")
+    "Those live witness counters now have a Form-native receipt row in witness-state-receipt.fk, with integer-scaled summary metrics, heldout learner rows, source-backed oracle label/export rows, live oracle process rows, continuous emission-cycle rows, and a four-way proof at verdict 67108863."
+    "The Form recipe proves the deterministic route surface: native-first, native-first with oracle sampling, oracle-teacher-until-physical-samples, stream merging, per-category oracle retirement, active mic/camera/GPU sample rows, and capability-receipt readiness that lifts speech, vision, and multimodal routing to native-first when those lanes are present.")
 
   (north-star
     "Mac and Android run continuously: Mac LaunchAgent keeps the witness and local Form learners available; Android keeps Coherence Sense sharing permissioned samples."
@@ -27,12 +27,9 @@
     "The mesh ingests ideas, code, feature requests, runtime traces, and physical-world samples; digests them into typed receipts and exemplars; then embodies winning recipes as first-class native choices.")
 
   (receipt-command
-    (once "python3 scripts/android_mesh_learning_receipt.py --start-app")
-    (continuous "python3 scripts/android_mesh_learning_receipt.py --start-app --loop --interval 60")
-    (oracle-emission "python3 scripts/witness_oracle_emission_ledger.py --cycles 2 --interval 1")
-    (output ".cache/android-mesh-learning/<stamp>/android-mesh-learning-summary.json")
-    (latest ".cache/android-mesh-learning/latest.json")
-    (oracle-latest ".cache/witness-oracle-emissions/latest.json"))
+    (form-proof "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/tests/android-mesh-learning-band.fk")
+    (four-way "cd form && bash scripts/fourth-arm-gate.sh android-mesh-learning")
+    (host-carrier-gap "adb/process sampling should be a Form resource/process carrier; no Python receipt script stands as authority"))
 
   (organs
     (android-phone adb coherence-sense sensor audio video gpu network location)
@@ -62,8 +59,8 @@
   (24-7-operation
     (mac-witness "experiments/coherence-sense-android/macos-witness-service.sh install --mode recognition --port 8800")
     (android-app "adb shell am start -n com.coherence.sense/.MainActivity")
-    (receipt-loop "python3 scripts/android_mesh_learning_receipt.py --start-app --loop --interval 60")
-    (oracle-emission-loop "python3 scripts/witness_oracle_emission_ledger.py --cycles 2 --interval 1")
+    (receipt-loop "Form-native receipt cells validate capability/liveness rows; host process/device carrier is the remaining IO gap")
+    (oracle-emission-loop "Form-native witness-state receipt validates pass/blocked emission cycles; live HTTP sampling carrier remains host IO")
     (form-native-receipt "form/form-stdlib/witness-state-receipt.fk")
     (handoff "running service should write native substrate ledger records continuously, with JSON summaries as export/cache"))
 

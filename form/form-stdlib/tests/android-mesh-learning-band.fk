@@ -2,7 +2,7 @@
 ;
 ; android-mesh-learning-band - Mac + Android senses feed native-first learning.
 ;
-; Verdict 32767 when every claim lands:
+; Verdict 131071 when every claim lands:
 ;   1     floor and north-star declarations exist
 ;   2     Android and Mac organs name physical surfaces
 ;   4     sensor and presence protocols are known
@@ -18,6 +18,8 @@
 ;   4096  active mic/camera/GPU sample rows are valid and summary-only
 ;   8192  active media floor requires all three active lanes
 ;   16384 active samples lift speech, vision, and multimodal routing to native-first
+;   32768 capability receipts validate phone plus Mac inventory
+;   65536 capability learning readiness requires app and witness liveness
 (do
     (let android (aml-android-organ))
     (let mac (aml-mac-organ))
@@ -34,6 +36,8 @@
             (aml-mic-rms-sample 4 12)
             (aml-camera-luma-sample 2 50)
             (aml-gpu-readback-sample 3 7)))
+    (let cap (aml-capability-receipt 1 1 1 1 1 39 1 1 1 1 1))
+    (let cap-app-down (aml-capability-receipt 1 1 0 1 1 39 1 1 1 1 1))
 
     (let c0
         (if (and
@@ -111,5 +115,15 @@
                     (str_eq (aml-active-route-choice "multimodal-align" active-samples 30 70 80) "native-first")))
             16384
             0))
+    (let c15
+        (if (eq (aml-capability-floor? cap) 1)
+            32768
+            0))
+    (let c16
+        (if (and
+                (eq (aml-capability-learning-ready? cap) 1)
+                (eq (aml-capability-learning-ready? cap-app-down) 0))
+            65536
+            0))
 
-    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14)))
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15 c16)))

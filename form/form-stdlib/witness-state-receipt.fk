@@ -408,5 +408,11 @@
                     (eq (wsr-emission-cycles-increasing? cycles) 1)))
             1
             0))
+    (defn wsr-emission-record-status (state cycles)
+        (if (eq (wsr-continuous-emission-floor? state cycles) 1)
+            "pass"
+            "blocked"))
+    (defn wsr-emission-record-pass? (state cycles)
+        (str_eq (wsr-emission-record-status state cycles) "pass"))
 
     0)

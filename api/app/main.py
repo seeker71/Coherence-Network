@@ -422,7 +422,18 @@ def _build_route_signature(request) -> tuple[str, str, str]:
         route_name = str(getattr(route, "name", "") or "")
     raw_path = request.url.path
     request_path = route_path if route_path else raw_path
+    request_path = _restore_observed_api_prefix(request_path, raw_path)
     return request_path, route_name, raw_path
+
+
+def _restore_observed_api_prefix(path: str, raw_path: str) -> str:
+    """Keep runtime route signatures in the externally observed API namespace."""
+    if not path or path.startswith(("/api", "/v1")):
+        return path
+    for prefix in ("/api", "/v1"):
+        if raw_path == prefix or raw_path.startswith(f"{prefix}/"):
+            return f"{prefix}{path}" if path.startswith("/") else f"{prefix}/{path}"
+    return path
 
 
 def _query_summary(query_params) -> tuple[int, list[dict[str, str]], dict[str, str]]:
