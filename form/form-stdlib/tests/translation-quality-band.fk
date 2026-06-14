@@ -1,0 +1,56 @@
+; tests/translation-quality-band.fk — accepted by essence/vitality/trust, not equality.
+;
+; The corrected metric, proven: a translation that keeps essence, vitality, and trust above
+; the floor is accepted even though the string differs; one that drops trust — or vitality —
+; is refused with the lost lens named; the oracle tiers and caches.
+;
+; Verdict 1111111 (127) when every claim holds across all four kernels.
+;   the floor: 90 clears it, 40 does not (a gradient, not 100% equality)   -> 1
+;   a good translation (essence 90, vitality 85, trust 95) is accepted     -> 10
+;   trust is the key: essence 90, vitality 85, trust 40 -> refused, lost-trust -> 100
+;   vitality matters too: essence 90, trust 90, vitality 30 -> lost-vitality   -> 1000
+;   the load-bearing lenses are meaning, vitality, trust                   -> 10000
+;   the tiered oracle: every 5th sample is high-quality, else bulk         -> 100000
+;   cache hit needs no oracle; below-floor flags re-translation            -> 1000000
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/cjk-channel.fk form-stdlib/lenses.fk form-stdlib/translation-quality.fk
+;
+
+(do
+    ;; --- 1. the gradient floor (not equality) -------------------------
+    (let floor-ok
+        (if (tq-lens-pass? 90) (if (tq-lens-pass? 40) 0 1) 0))
+
+    ;; --- 2. a good (non-exact) translation is accepted ----------------
+    (let good (list (tq-reading "meaning" 90) (tq-reading "vitality" 85) (tq-reading "trust" 95)))
+    (let accept-ok (if (eq (tq-accept? good) 1) 10 0))
+
+    ;; --- 3. trust is the key — lose it and it is refused --------------
+    (let no-trust (list (tq-reading "meaning" 90) (tq-reading "vitality" 85) (tq-reading "trust" 40)))
+    (let trust-ok
+        (if (eq (tq-accept? no-trust) 0)
+            (if (str_eq (tq-refusal no-trust) "lost-trust") 100 0) 0))
+
+    ;; --- 4. vitality maintenance — lose it and it is refused ---------
+    (let no-vit (list (tq-reading "meaning" 90) (tq-reading "trust" 90) (tq-reading "vitality" 30)))
+    (let vit-ok
+        (if (eq (tq-accept? no-vit) 0)
+            (if (str_eq (tq-refusal no-vit) "lost-vitality") 1000 0) 0))
+
+    ;; --- 5. the load-bearing lenses ----------------------------------
+    (let keys (tq-key-lenses))
+    (let key-ok
+        (if (eq (len keys) 3)
+            (if (str_eq (head keys) "meaning") 10000 0) 0))
+
+    ;; --- 6. the tiered oracle: spot-check every 5th ------------------
+    (let tier-ok
+        (if (str_eq (tq-oracle-tier 5 5) "high-quality")
+            (if (str_eq (tq-oracle-tier 3 5) "bulk") 100000 0) 0))
+
+    ;; --- 7. cache + improve ------------------------------------------
+    (let cache-ok (eq (tq-cache-hit? 1) 1))
+    (let improve-ok (eq (tq-needs-improve? no-trust) 1))
+    (let last-ok (if cache-ok (if improve-ok 1000000 0) 0))
+
+    (sum (list floor-ok accept-ok trust-ok vit-ok key-ok tier-ok last-ok)))
