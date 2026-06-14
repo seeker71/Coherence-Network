@@ -27,6 +27,12 @@
 ; be represented as explicit production vitality rows and routed through the
 ; same live model-vitality store read. Shell probes may capture public slices,
 ; but the body-readable grammar, validity gates, and focus route live here.
+;
+; Native HTTP capture floor: the Go and Rust kernels already expose http_get as
+; a blocking kernel-native HTTPS client returning a Form dict. This file lifts
+; that dict into model-vitality rows. TypeScript still offers http_get through a
+; curl shell projection; that projection is a named gap for native capture proof,
+; not a truth source.
 
 (do
     (defn mv-kind-model-architecture () "model/architecture")
@@ -44,6 +50,7 @@
     (defn mv-kind-chunk-set-root () "model/chunk-set-root")
     (defn mv-kind-live-vitality-row () "model/live-vitality-row")
     (defn mv-kind-production-vitality-ingest () "model/production-vitality-ingest")
+    (defn mv-kind-native-http-capture () "model/native-http-capture")
 
     (defn mv-floor () (list
         "floor"
@@ -872,6 +879,108 @@
             (and (mv-live-vitality-route-read-valid? (mv-production-vitality-route-live-read r))
                  (str_eq (mv-production-vitality-route-status r) "production-route-ok")))))
             false))
+
+    ;; ---- kernel-native external HTTP capture -----------------------------
+    ;; These helpers expect the dict returned by the kernel native:
+    ;; http_get(url, headers, timeout_ms) -> __dict__ with status_code, body,
+    ;; error, duration_ms, and headers. The semantic row lives here; host scripts
+    ;; may only orchestrate kernel execution.
+    (defn mv-http-response-status (response) (_get response "status_code"))
+    (defn mv-http-response-body (response) (_get response "body"))
+    (defn mv-http-response-error (response) (_get response "error"))
+    (defn mv-http-response-duration-ms (response) (_get response "duration_ms"))
+    (defn mv-http-response-headers (response) (_get response "headers"))
+    (defn mv-http-header (name value) (list 43001 name value))
+    (defn mv-http-header? (header)
+        (if (eq (len header) 3) (eq (nth header 0) 43001) false))
+    (defn mv-http-header-name (header) (nth header 1))
+    (defn mv-http-header-value (header) (nth header 2))
+    (defn mv-ascii-lower-code (cp)
+        (if (and (ge cp 65) (le cp 90)) (add cp 32) cp))
+    (defn mv-str-lower-loop (s i out)
+        (if (ge i (str_len s))
+            out
+            (mv-str-lower-loop
+                s
+                (add i 1)
+                (str_concat out (byte_to_str (mv-ascii-lower-code (ord (char_at s i))))))))
+    (defn mv-str-lower (s) (mv-str-lower-loop s 0 ""))
+    (defn mv-str-eq-ci? (a b) (str_eq (mv-str-lower a) (mv-str-lower b)))
+    (defn mv-http-header-value-or (headers name default-value)
+        (if (eq (len headers) 0)
+            default-value
+            (if (mv-str-eq-ci? (mv-http-header-name (head headers)) name)
+                (mv-http-header-value (head headers))
+                (mv-http-header-value-or (tail headers) name default-value))))
+
+    (defn mv-native-http-capture (url response floor north)
+        (list
+            "model-native-http-capture"
+            url
+            (mv-http-response-status response)
+            (mv-http-response-duration-ms response)
+            (str_len (mv-http-response-body response))
+            (mv-http-response-error response)
+            (mv-http-response-headers response)
+            "kernel-native-http-get"
+            floor
+            north))
+    (defn mv-native-http-capture? (value)
+        (mv-row? value "model-native-http-capture" 10))
+    (defn mv-native-http-capture-url (c) (nth c 1))
+    (defn mv-native-http-capture-status (c) (nth c 2))
+    (defn mv-native-http-capture-duration-ms (c) (nth c 3))
+    (defn mv-native-http-capture-body-bytes (c) (nth c 4))
+    (defn mv-native-http-capture-error (c) (nth c 5))
+    (defn mv-native-http-capture-headers (c) (nth c 6))
+    (defn mv-native-http-capture-authority (c) (nth c 7))
+    (defn mv-native-http-capture-floor (c) (nth c 8))
+    (defn mv-native-http-capture-north (c) (nth c 9))
+    (defn mv-native-http-capture-valid? (c)
+        (if (mv-native-http-capture? c)
+            (and (mv-nonempty? (mv-native-http-capture-url c))
+            (and (eq (mv-native-http-capture-status c) 200)
+            (and (ge (mv-native-http-capture-duration-ms c) 0)
+            (and (gt (mv-native-http-capture-body-bytes c) 0)
+            (and (str_eq (mv-native-http-capture-error c) "")
+            (and (str_eq (mv-native-http-capture-authority c) "kernel-native-http-get")
+            (and (gt (len (mv-native-http-capture-floor c)) 0)
+                 (gt (len (mv-native-http-capture-north c)) 0))))))))
+            false))
+
+    ;; Requires json.fk when called; JSON body parsing stays in Form instead of
+    ;; relying on sibling-specific convenience natives.
+    (defn mv-native-http-pulse-sample (source url response floor north)
+        (do
+            (let body (mv-http-response-body response))
+            (let root (parse-json url body))
+            (mv-production-pulse-sample
+                source
+                url
+                (json-string-value (json-object-get root "as_of"))
+                (json-string-value (json-object-get root "overall"))
+                (json-int-value (json-object-get root "silences"))
+                (mv-http-response-duration-ms response)
+                (str_len body)
+                floor
+                north)))
+
+    ;; Response headers use the same tag-43001 kh-header row shape already used
+    ;; by the native front door, read locally here to avoid making capture proof
+    ;; depend on the BML source compiler.
+    (defn mv-native-http-runtime-telemetry (url response floor north)
+        (do
+            (let headers (mv-http-response-headers response))
+            (mv-production-runtime-telemetry
+                url
+                (mv-http-response-status response)
+                (mv-http-header-value-or headers "x-form-handler" "")
+                (mv-http-header-value-or headers "x-form-router" "")
+                (mv-http-header-value-or headers "x-form-python-authority" "")
+                (mv-http-response-duration-ms response)
+                (str_len (mv-http-response-body response))
+                floor
+                north)))
 
     ;; ---- wellness/pulse routing over model vitality ----------------------
     (defn mv-vitality-route-focus (body-read wellness-state pulse-state release-state)

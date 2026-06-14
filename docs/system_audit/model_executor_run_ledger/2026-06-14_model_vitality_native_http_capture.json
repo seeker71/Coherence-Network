@@ -1,0 +1,28 @@
+{
+  "run_id": "2026-06-14-model-vitality-native-http-capture",
+  "thread_branch": "codex/model-vitality-native-http-capture-20260614",
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord claim \"fourth-kernel native HTTPS capture for model vitality\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-native-http-band.fk",
+    "scripts/model_vitality_native_http_capture_probe.sh"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Added a Form-native model-vitality HTTP capture row surface and deterministic proof band. The band returns 4095 on Go/Rust/TypeScript by lifting the kernel-native http_get dict shape into explicit capture rows, parsing pulse JSON in Form, reading runtime authority headers case-insensitively, and rejecting transport/Python-authority failures. The live probe source-compiles core and runs Go/Rust kernels against public API pulse and runtime-summary HTTPS endpoints with native http_get, returning go=127 and rust=127. TypeScript http_get shell projection and fourth-arm external HTTPS are named carrier gaps.",
+  "source": {
+    "kind": "commit-evidence",
+    "path": "docs/system_audit/commit_evidence_2026-06-14_model_vitality_native_http_capture.json"
+  },
+  "validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-native-http-band.fk",
+      "scripts/model_vitality_native_http_capture_probe.sh"
+    ]
+  }
+}
