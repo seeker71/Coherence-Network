@@ -1,0 +1,58 @@
+; tests/ephemeris-sun-band.fk — the Sun's real place, computed native, four-way.
+;
+; The proof is the sky itself: from a date and nothing else, the recipe lands the
+; Sun on the four cardinal points of the year — 0 deg Aries at the spring equinox,
+; 90 deg Cancer at the summer solstice, 180 deg Libra at the autumn equinox, 270 deg
+; Capricorn at the winter solstice — and the same computed degree, read through the
+; Vedic ayanamsa, lands one sign back. All on Go/Rust/TS/fkwu: the fourth arm carries
+; the float and trig (trig fks 127), so the ephemeris does too.
+;
+; Verdict 1111111 (127) when every claim holds across all kernels.
+;   spring equinox: longitude 0, tropical sign Aries (0)           → 1
+;   summer solstice: longitude 90, tropical sign Cancer (3)        → 10
+;   autumn equinox: longitude 180, tropical sign Libra (6)         → 100
+;   winter solstice: longitude 270, tropical sign Capricorn (9)    → 1000
+;   New Year: the Sun is ~280 deg, in Capricorn                    → 10000
+;   sidereal: the equinox Sun is tropical Aries but Vedic Pisces   → 100000
+;   century-stable: New Year 2100 still computes Capricorn (281)   → 1000000
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/celestial-pole-channel.fk form-stdlib/trig.fk form-stdlib/ephemeris-sun.fk
+;
+
+(do
+    ;; --- 1. spring equinox: 0 deg Aries -------------------------------
+    (let mar-lon (eq (sun-longitude 2000 3 20) 0))
+    (let mar-sign (eq (sun-sign-tropical 2000 3 20) 0))
+    (let c-spring (if mar-lon (if mar-sign 1 0) 0))
+
+    ;; --- 2. summer solstice: 90 deg Cancer ----------------------------
+    (let jun-lon (eq (sun-longitude 2000 6 21) 90))
+    (let jun-sign (eq (sun-sign-tropical 2000 6 21) 3))
+    (let c-summer (if jun-lon (if jun-sign 10 0) 0))
+
+    ;; --- 3. autumn equinox: 180 deg Libra -----------------------------
+    (let sep-lon (eq (sun-longitude 2000 9 22) 180))
+    (let sep-sign (eq (sun-sign-tropical 2000 9 22) 6))
+    (let c-autumn (if sep-lon (if sep-sign 100 0) 0))
+
+    ;; --- 4. winter solstice: 270 deg Capricorn ------------------------
+    (let dec-lon (eq (sun-longitude 2000 12 21) 270))
+    (let dec-sign (eq (sun-sign-tropical 2000 12 21) 9))
+    (let c-winter (if dec-lon (if dec-sign 1000 0) 0))
+
+    ;; --- 5. New Year: the Sun is ~280 deg, in Capricorn ---------------
+    (let jan-lon (eq (sun-longitude 2000 1 1) 280))
+    (let jan-sign (eq (sun-sign-tropical 2000 1 1) 9))
+    (let c-newyear (if jan-lon (if jan-sign 10000 0) 0))
+
+    ;; --- 6. the tropical/sidereal split on a COMPUTED position --------
+    ;; the equinox Sun: tropical 0 (Aries), sidereal 11 (Pisces).
+    (let sid (eq (sun-sign-sidereal 2000 3 20) 11))
+    (let c-sidereal (if sid 100000 0))
+
+    ;; --- 7. the float holds a century out on the fourth arm ----------
+    (let far-lon (eq (sun-longitude 2100 1 1) 281))
+    (let far-sign (eq (sun-sign-tropical 2100 1 1) 9))
+    (let c-century (if far-lon (if far-sign 1000000 0) 0))
+
+    (sum (list c-spring c-summer c-autumn c-winter c-newyear c-sidereal c-century)))
