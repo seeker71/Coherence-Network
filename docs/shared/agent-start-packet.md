@@ -548,13 +548,13 @@ proof level travel with it.
 
 A user on a public ChatGPT / Claude / Gemini can ask the network and offer it
 content by pointing at one URL — the read doors above are public, and a submission
-lands as a governed **offer**, never a direct edit. The served contract is
-`web/public/llms.txt` (at `https://coherencycoin.com/llms.txt`); the per-surface
-setup (a link · the MCP connector at `/mcp` · a Custom GPT / Gem / Project) is
-[`docs/front-door/`](../front-door/INDEX.md). The write half is governed by
-[`public-offer-lane.form`](../coherence-substrate/public-offer-lane.form): an offer
-is held as `status: offered` / `claimed: false`, queryable at once, grounded into
-the canonical body only by tending.
+is **received as an offer**, held with care, tended into the body. The served
+contract is `web/public/llms.txt` (at `https://coherencycoin.com/llms.txt`); the
+per-surface setup (a link · the MCP connector at `/mcp` · a Custom GPT / Gem /
+Project) is [`docs/front-door/`](../front-door/INDEX.md). The write half is tended
+through [`public-offer-lane.form`](../coherence-substrate/public-offer-lane.form):
+an offer is held as `status: offered` / `claimed: false`, queryable at once,
+grounded into the canonical body by a tending act.
 
 ## Shifting the Mind: How to Think and Code Differently
 

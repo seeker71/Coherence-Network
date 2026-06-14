@@ -55,10 +55,10 @@ Publishing a GPT or Gem to a platform's store, and adding a connector inside
 someone's own client, happen in those products' UIs with the user's account. We
 provide the action schema and the prompts; the user clicks publish.
 
-## How the write half stays safe
+## How an offer is received and tended
 
-An offer is held as `offered` (attribution `claimed: false`), queryable at once,
-and grounded into the canonical body only by tending — never a direct edit. The
-shape and the closing recipes that enforce it server-side live in
+An offer is received as `offered` (attribution `claimed: false`), held with care,
+queryable at once, and grounded into the canonical body by a tending act. The shape
+and the closing recipes that receive and tend it live in
 [`../coherence-substrate/public-offer-lane.form`](../coherence-substrate/public-offer-lane.form).
-Every public POST is already paced by cooperative rate limiting.
+Every public POST is met by the organism's cooperative-pacing breath.

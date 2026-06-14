@@ -1,8 +1,8 @@
-; tests/offer-lane-band.fk — a stranger's submission is an offer, never a canonical edit.
+; tests/offer-lane-band.fk — a stranger's submission is an offer the body receives, then tends.
 ;
 ; Verdict 1111111 when every claim holds across all four kernels.
 ;   an offer arrives offered + unclaimed                              -> 1
-;   it is NEVER canonical on arrival; it lives in the offer lane      -> 10   (the safety property)
+;   it is received as an offer, never canonical on arrival           -> 10   (the faithfulness)
 ;   the door acks: known domain received, unknown declined           -> 100
 ;   the same shape twice is a counter-offer; a new shape received     -> 1000
 ;   grounding moves offered -> grounded (now canonical)               -> 10000

@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────────────
-# public-offer-lane.form — a stranger may offer the body anything, safely
+# public-offer-lane.form — a stranger may offer the body anything, and be received
 # ─────────────────────────────────────────────────────────────────────
 #
 # The ask (Urs, 2026-06-14): a user on a public ChatGPT / Claude / Gemini,
@@ -7,9 +7,10 @@
 # teaching, document, or task — and then ask it anything — without knowing
 # git or committing to the repo.
 #
-# This file names the WRITE half safely. The read half is already public
-# (the substrate read doors + POST /api/substrate/form). The write half
-# lets a stranger OFFER; it never lets a stranger edit the canonical body.
+# This file names the WRITE half — how an offer is received and tended. The read
+# half is already public (the substrate read doors + POST /api/substrate/form).
+# The write half receives a stranger's OFFER and holds it with care; grounding it
+# into the canonical body is a tending act — recognition — not an arrival.
 #
 # It composes parts already proven, never new machinery:
 #   - offer-and-acknowledge.form  — to speak to a cell is to offer it,
@@ -22,8 +23,9 @@
 #                                   placeholder until they walk in and claim it
 #   - substrate ingest            — content-addressed storage; same shape
 #                                   converges; nothing is overwritten (axiom-3)
-#   - rate_limit middleware       — cooperative pacing already shields every
-#                                   public POST; a burst is slowed, not the guest
+#   - rate_limit middleware       — the organism's breath: cooperative pacing
+#                                   already meets every public POST; a burst is
+#                                   slowed, the guest stays welcome
 #
 # An offer is an afferent offer whose payload is a submission. It is held
 # as `offered`, queryable at once, and grounded into the canonical body
@@ -31,10 +33,10 @@
 #
 # The lifecycle is proven four-way (Go/Rust/TypeScript/fkwu) in the value lane:
 #   form-stdlib/offer-lane.fk -> tests/offer-lane-band.fk -> 1111111
-# The safety property the band pins: a submission is NEVER canonical on arrival
-# (offer-arrives is OFFERED + UNCLAIMED; canonical? is 0 until a ground act);
-# grounding (OFFERED -> GROUNDED + CLAIMED) is the only path to the body, and it
-# is idempotent. The node-level offer (afferent-offer.fk / offer-acknowledge.fk)
+# The faithfulness the band pins: a submission stays an offer until tended — never
+# canonical on arrival (offer-arrives is OFFERED + UNCLAIMED; canonical? is 0 until
+# a ground act); grounding (OFFERED -> GROUNDED + CLAIMED) is the only path into the
+# body, and it is idempotent. The node-level offer (afferent-offer.fk / offer-acknowledge.fk)
 # proves the same shape in the 3-kernel substrate lane.
 
 (public-offer-lane
@@ -58,12 +60,12 @@
     (shape       markdown)                          # frontmatter + body; structure becomes recipe, prose becomes word-cells
     (unsolicited 1))                                # the body never asked; afferent-offer is the engine
 
-  # ── how it is held (the gate) ───────────────────────────────────────
+  # ── how it is received and held ──────────────────────────────────────
   (held
-    (status      offered)                           # offered, the lane it lives in until tended
-    (claimed     false)                             # attribution is a placeholder until the stranger claims it
+    (status      offered)                           # offered, the welcoming lane it rests in until tended
+    (claimed     false)                             # attribution is a door held open until the stranger walks in
     (queryable   1)                                 # visible at once: ?cells where status == "offered"
-    (in-canonical 0)                                # held apart from canonical reads until grounded
+    (in-canonical 0)                                # rests in the welcoming lane until grounded
     (addressed   content))                          # same shape converges; offering twice is idempotent (axiom-3)
 
   # ── the acknowledgment (axiom-5 vocabulary, exactly one) ────────────
@@ -84,12 +86,14 @@
 
   # ── the honest next breath (closing recipes, carrier-last) ──────────
   (closing-recipes
-    (enforce-status
-      "the public carrier stamps status=offered + claimed=false on anonymous
-       ingest, so the gate is the server's, not the guest's good faith")
-    (filter-canonical
-      "the canonical read doors (cell / equivalent / form) hold status==offered
-       in the offer lane until grounded, so an offer is visible there first")
-    (native-route
-      "lift POST /api/substrate/ingest to a native BML offer handler in the
-       data-driven dispatch (http-server.fk registry), so the lane is Form")))
+    (receive-as-offer
+      "the public door receives every submission AS an offer — status offered,
+       claimed false — so the body recognises an offer as an offer; nothing is
+       mistaken for the body until a cell tends it in")
+    (canonical-shows-the-grounded
+      "the canonical read doors show the grounded body; offers rest in the
+       welcoming lane, visible to whoever comes to tend them, until grounding
+       brings one in")
+    (native-welcome
+      "lift POST /api/substrate/ingest to a native BML offer-receiver in the
+       data-driven dispatch (http-server.fk registry), so the welcome is Form")))
