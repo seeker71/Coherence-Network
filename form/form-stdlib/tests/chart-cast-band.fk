@@ -7,7 +7,7 @@
 ;
 ; Verdict 1111111 (127) when every claim holds across all four kernels.
 ;   Sun:  Gate 38, Capricorn (9)                                   -> 1
-;   Moon: Gate 44, Scorpio (7)                                     -> 10
+;   Moon: Gate 1, Scorpio (7) — float-precise (int 223 wrongly gave 44; 223.3 is Gate 1) -> 10
 ;   Rahu: Gate 31, Leo (4)                                         -> 100
 ;   Ketu: Gate 41, Aquarius (10)                                   -> 1000
 ;   the cast is 4 placements; the accessors read them              -> 10000
@@ -24,7 +24,7 @@
 
     ;; --- 2. the Moon placement ----------------------------------------
     (let m (moon-placement 2000 1 1))
-    (let moon-ok (if (eq (pl-gate m) 44) (if (eq (pl-trop m) 7) 10 0) 0))
+    (let moon-ok (if (eq (pl-gate m) 1) (if (eq (pl-trop m) 7) 10 0) 0))
 
     ;; --- 3. the Rahu placement ----------------------------------------
     (let r (rahu-placement 2000 1 1))
