@@ -11,13 +11,10 @@
 ;     for an outer body without asserting a fabricated longitude.
 ; Angles compare as integer degrees (round); within-tolerance checks round the angular gap.
 ;
-; Proof level: THREE-KERNEL (Go/Rust/TS), verdict 1111111. The fourth arm (fkwu) is a named
-; gap, not in the manifest: planet-geo-lon binds two planet-helio-xy list results and reads
-; each twice, and fkwu re-walks those let-bound calls (top-level band lets snapshot, but lets
-; inside a defn re-walk) — the deep re-walk diverges for some bodies (venus/mars at J2000 read
-; 0 where the three walkers agree, while mercury and the Earth-orbit Sun cross cleanly). The
-; recipe is correct — three independent kernels agree bit-for-bit — and this band is a clean
-; reproducer for the fkwu let-inlining re-walk fix; it crosses four-way once that lands.
+; Proof level: FOUR-WAY (Go/Rust/TS/fkwu), verdict 1111111. The fourth arm now
+; snapshots non-recursive direct-call do-lets through per-function RAM windows,
+; so planet-geo-lon binds two planet-helio-xy list results once and can read each
+; twice without re-walking the call.
 ;
 ; Verdict 1111111 (127) when every claim holds across Go/Rust/TS.
 ;   Kepler inverts: solve E for (M=30,e=0.2), then E−e*·sinE = 30          → 1

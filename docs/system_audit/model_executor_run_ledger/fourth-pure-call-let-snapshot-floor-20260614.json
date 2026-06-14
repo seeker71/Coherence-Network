@@ -1,0 +1,35 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord claim fourth-pure-call-let-snapshot",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/celestial-pole-channel.fk form-stdlib/trig.fk form-stdlib/ephemeris-sun.fk form-stdlib/ephemeris-planets.fk form-stdlib/tests/ephemeris-planets-band.fk",
+    "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/ephemeris-planets-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh ephemeris-planets let-effect-once write-file-text",
+    "cd form && ./validate.sh",
+    "python3 scripts/model_executor_proof_ledger.py sync-jsonl --output docs/system_audit/model_executor_runs.jsonl",
+    "python3 scripts/model_executor_proof_ledger.py check-jsonl",
+    "python3 scripts/model_executor_proof_ledger.py validate",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_fourth_pure_call_let_snapshot_floor.json"
+  ],
+  "failure_reason": "Non-recursive direct-call do-lets now snapshot through per-function fkwu RAM windows, and fkwu RAM widened to 4096 cells. ephemeris-planets moved from survey mismatch 1111111/101111 to 1111111 four-way; the full Form floor is 210 four-way bands, 612 ok, 0 divergent.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "fourth-pure-call-let-snapshot-floor-20260614",
+  "source": {
+    "kind": "codex-worktree",
+    "path": "/Users/ursmuff/.codex/worktrees/a3ec/Coherence-Network"
+  },
+  "thread_branch": "codex/fourth-pure-call-let-snapshot-20260614",
+  "validation": {
+    "commands": [
+      "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/ephemeris-planets-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh ephemeris-planets let-effect-once write-file-text",
+      "cd form && ./validate.sh"
+    ],
+    "status": "pass"
+  }
+}

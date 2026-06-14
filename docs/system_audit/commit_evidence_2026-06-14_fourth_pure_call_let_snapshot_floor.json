@@ -1,0 +1,125 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/fourth-pure-call-let-snapshot-20260614",
+  "commit_scope": "Admit non-recursive pure call-let snapshotting and the ephemeris-planets band to the fourth arm.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "fourth-arm-let-snapshot",
+    "pure-call-let-double-read",
+    "ephemeris-planets-floor",
+    "connected-tissue-north-star"
+  ],
+  "spec_ids": [
+    "fourth-arm-bands",
+    "bml-native-north-star",
+    "agent-start-packet",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "fourth-pure-call-let-snapshot-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "gap-identification",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-14_fourth_pure_call_let_snapshot_floor.json",
+    "docs/system_audit/model_executor_run_ledger/fourth-pure-call-let-snapshot-floor-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/ephemeris-planets.fk",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/tests/ephemeris-planets-band.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-14_fourth_pure_call_let_snapshot_floor.json",
+    "docs/system_audit/model_executor_run_ledger/fourth-pure-call-let-snapshot-floor-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/ephemeris-planets.fk",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/tests/ephemeris-planets-band.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "coord claim \"fourth-pure-call-let-snapshot: fix non-recursive pure call-let double-read divergence; reproducer ephemeris-planets-band; avoid HTTP/witness/BML lanes\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/celestial-pole-channel.fk form-stdlib/trig.fk form-stdlib/ephemeris-sun.fk form-stdlib/ephemeris-planets.fk form-stdlib/tests/ephemeris-planets-band.fk",
+      "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/ephemeris-planets-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh ephemeris-planets let-effect-once write-file-text",
+      "cd form && ./validate.sh",
+      "python3 scripts/model_executor_proof_ledger.py sync-jsonl --output docs/system_audit/model_executor_runs.jsonl",
+      "python3 scripts/model_executor_proof_ledger.py check-jsonl",
+      "python3 scripts/model_executor_proof_ledger.py validate",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_fourth_pure_call_let_snapshot_floor.json"
+    ],
+    "notes": "Before the fix, the fourth-arm survey row for ephemeris-planets read `multi-mismatch 1111111 101111`. After non-recursive direct-call let snapshotting and the fkwu RAM widening, the survey row reads `multi-pass 1111111 1111111`. Focused manifest validation and the full suite are expected to report ephemeris-planets four-way and 210 four-way bands."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed when this evidence was written; CI had not run yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested for this Form lowering/fourth-arm floor slice."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Non-recursive direct-call do-lets lower through a single store/load snapshot so list-returning calls can be read repeatedly without re-walking. Recursive scopes keep pure inline lowering.",
+    "public_endpoints": [
+      "n/a: local Form runtime lowering"
+    ],
+    "test_flows": [
+      "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/ephemeris-planets-band.fk",
+      "cd form && ./validate.sh"
+    ]
+  },
+  "evidence_refs": [
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/ephemeris-planets.fk",
+    "form/form-stdlib/tests/ephemeris-planets-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/shared/agent-start-packet.md",
+    "docs/coherence-substrate/bml-native-north-star.form"
+  ],
+  "phase_gate": {
+    "phase": "fourth-pure-call-let-snapshot-floor",
+    "gate": "List-returning pure calls must be readable more than once on fkwu without re-walking before ephemeris and similar numeric/list recipes can join the fourth floor.",
+    "state": "local-four-way-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Continue the 183/585 family ratchet with another non-overlapping fourth-arm residual cluster after CI merge."
+  },
+  "floor_update": {
+    "previous_observed_floor": "209 four-way bands / 612 ok / 0 divergent",
+    "current_observed_floor": "210 four-way bands / 612 ok / 0 divergent",
+    "new_band": "form/form-stdlib/tests/ephemeris-planets-band.fk -> 1111111 four-way"
+  }
+}
