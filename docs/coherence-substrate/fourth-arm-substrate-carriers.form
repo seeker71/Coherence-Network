@@ -10,7 +10,7 @@
   (north-star
     (sentence "The content-addressed substrate is durable across REAL carriers on all four kernels: the same substrate-core module crosses four-way over the in-memory, segmented-FILE, and Postgres carriers, so content-addressing survives a process and persistence boundary, not only memory — one engine, no parallel paths.")
     (connected-tissue "Harmonizes with form/fourth-arm-bands.txt (the floor source for four-way coverage), hati-os.form (the kernel surface), the native executor proof ledger, and commit evidence so the sister nodes name one current floor and one next gap.")
-    (must-carry content-addressed-intern durable-named-cells memory-carrier file-carrier postgres-carrier effect-once-let single-walk-comparison sequenced-effects native-host-io)
+    (must-carry content-addressed-intern durable-named-cells memory-carrier file-carrier postgres-carrier effect-once-let single-walk-comparison sequenced-effects native-host-io native-text-write native-file-append)
     (proof-shape same-shape-same-nodeid durable-content-key-roundtrip four-way-0-divergent))
 
   (floor
@@ -25,14 +25,15 @@
       single-walk-eq-lt-tags-102-103            # eq/lt evaluate each operand exactly once (band eq-effect-once)
       host-io-temp_dir-tag-101                  # $TMPDIR resolution as a native arm
       host-io-fs-carriers-tags-55-63            # open/read/write/close/lseek/mkdir/rmdir/unlink/rename/size/append/slice
-      host-io-real-roundtrip)                   # real filesystem write -> read crosses four-way deterministically (band hostio-roundtrip)
+      host-io-real-roundtrip                    # real filesystem write -> read crosses four-way deterministically (band hostio-roundtrip)
+      native-write-file-text-tag-104            # overwrite/truncate text write floor (band write-file-text)
+      native-file-append)                       # append log write floor (band file-append)
     (current-unsupported
-      effect-once-let                           # fkwu inlines a let, re-walking its bound value at every use
-      write_file_text file_mtime scan_run       # broader host-io write/read recipes
-      segmented-file-carrier-four-way           # gated on effect-once-let: store-threading binds effectful values through let
-      postgres-carrier-four-way))               # gated on effect-once-let and the broader host-io recipes
+      file_mtime scan_run                       # broader host-io read/scan recipes
+      segmented-file-carrier-four-way           # gated on threaded carrier-store receipts beyond the minimum write floor
+      postgres-carrier-four-way))               # gated on the broader host-io recipes
 
   (next-step
-    (sentence "Land effect-once let so a let value is computed once instead of re-walked; then substrate-core threaded over the segmented-FILE carrier crosses four-way, then Postgres.")
-    (gate effect-once-let)
-    (why "statement-level effects already fire once (sequenced bare-do, tag 69) and operand-level effects already fire once (single-walk eq/lt, tags 102/103); the remaining piece is the let binding itself, which the carrier store-threading (s1 -> s2 -> s3) relies on. Once a let value is bound once rather than re-walked at each use, write_file_text and the file/Postgres carriers ride the same content-key durability the memory carrier already proves four-way.")))
+    (sentence "Land the remaining host-io read/scan recipes, then substrate-core threaded over the segmented-FILE carrier crosses four-way, then Postgres.")
+    (gate file_mtime scan_run segmented-file-carrier-four-way)
+    (why "Statement-level effects already fire once (sequenced bare-do, tag 69), operand-level effects already fire once (single-walk eq/lt, tags 102/103), nested do-lets snapshot effecting values, and the minimum write floor now includes write_file_text plus append. The next carrier proof is no longer basic writing; it is threaded durable file-store receipts, mtime/scan observation, and then the Postgres carrier over the same content-key discipline the memory carrier already proves four-way.")))
