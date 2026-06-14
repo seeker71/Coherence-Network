@@ -80,7 +80,6 @@
 (let DNS-NOT-FOUND    (bp "DNS-NOT-FOUND"))
 (let DNS-PREFIX-MATCH (bp "DNS-PREFIX-MATCH"))
 
-(do
     ;; --- LOCAL HELPERS ----------------------------------------------
     (defn dns-nil? (xs) (eq (len xs) 0))
 
@@ -176,4 +175,4 @@
     ;; list when nothing matches (or the table is empty).
     (defn dns-resolve-prefix (table prefix)
         (dns-reverse
-            (dns-prefix-walk (dns-table-records table) prefix (list)))))
+            (dns-prefix-walk (dns-table-records table) prefix (list))))

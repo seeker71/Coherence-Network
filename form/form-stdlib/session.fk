@@ -60,7 +60,6 @@
 (let SESSION-TABLE     (bp "SESSION-TABLE"))
 (let SESSION-NOT-FOUND (bp "SESSION-NOT-FOUND"))
 
-(do
     ;; --- LOCAL HELPERS ----------------------------------------------
     (defn sess-nil? (xs) (eq (len xs) 0))
 
@@ -118,4 +117,4 @@
         (if (sess-nil? table) SESSION-NOT-FOUND
             (if (eq (session-id (head table)) id)
                 (head table)
-                (session-table-get (tail table) id)))))
+                (session-table-get (tail table) id))))

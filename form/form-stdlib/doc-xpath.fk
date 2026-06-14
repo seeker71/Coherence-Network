@@ -80,7 +80,6 @@
 (let SECTION       (bp "SECTION"))
 (let DOC-NOT-FOUND (bp "DOC-NOT-FOUND"))
 
-(do
     ;; --- LOCAL HELPERS ---------------------------------------------
     (defn dxp-nil? (xs) (eq (len xs) 0))
 
@@ -340,4 +339,4 @@
             (let res (dxpath path doc))
             (if (dxp-nil? res) DOC-NOT-FOUND (head res))))
 
-    0)
+    0
