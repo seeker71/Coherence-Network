@@ -1,0 +1,41 @@
+; tests/ifs-channel-band.fk — the inner family, mapped and proven.
+;
+; The structural claims are the interesting ones: that managers and firefighters
+; are one protective role wearing two strategies, and that the eight qualities of
+; Self are eight faces of one centre — both answered by address, not by surface.
+;
+; Verdict 1111111 (127) when every claim holds across all kernels.
+;   Self speaks the unburdened centre                            → 1
+;   Manager speaks the proactive protector                       → 10
+;   protectors are one role (mgr=ff), an exile is not            → 100
+;   the 8 C's are faces of one Self                              → 1000
+;   the exile speaks its burden                                  → 10000
+;   coverage: 12 cells (4 parts + 8 C's)                         → 100000
+;   honest absence for an unseeded key                           → 1000000
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/ifs-channel.fk
+;
+
+(do
+    ;; --- 1. Self -------------------------------------------------------
+    (let self-ok (if (ge (str_find (ifs-speak 0) "unburdened" 0) 0) 1 0))
+
+    ;; --- 2. Manager ----------------------------------------------------
+    (let mgr-ok (if (ge (str_find (ifs-speak 1) "proactive protector" 0) 0) 10 0))
+
+    ;; --- 3. protectors are one role; exile is a different cell --------
+    (let role-ok (if (eq (ifs-protectors-one-role?) 1) 100 0))
+
+    ;; --- 4. the 8 C's are faces of one Self ---------------------------
+    (let faces-ok (if (eq (ifs-self-faces?) 1) 1000 0))
+
+    ;; --- 5. the exile names its burden --------------------------------
+    (let exile-ok (if (ge (str_find (ifs-speak 3) "burden" 0) 0) 10000 0))
+
+    ;; --- 6. coverage ---------------------------------------------------
+    (let cov-ok (if (eq (ifs-coverage) 12) 100000 0))
+
+    ;; --- 7. honest absence --------------------------------------------
+    (let absent-ok (if (ge (str_find (ifs-speak 99) "honest absence" 0) 0) 1000000 0))
+
+    (sum (list self-ok mgr-ok role-ok faces-ok exile-ok cov-ok absent-ok)))
