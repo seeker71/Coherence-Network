@@ -5,8 +5,8 @@
 ; binary download coordinates visible to cells and recipes.
 
 (do
-    (defn hos-target (name os arch binary-format package-format launcher clang-triple assembly-surface jit-oracle jit-runtime jit-model)
-        (list name os arch binary-format package-format launcher clang-triple assembly-surface jit-oracle jit-runtime jit-model))
+    (defn hos-target (name os arch binary-format package-format launcher clang-triple assembly-surface form-native-object jit-oracle jit-runtime jit-model)
+        (list name os arch binary-format package-format launcher clang-triple assembly-surface form-native-object jit-oracle jit-runtime jit-model))
     (defn hos-target-name (target) (nth target 0))
     (defn hos-target-os (target) (nth target 1))
     (defn hos-target-arch (target) (nth target 2))
@@ -15,15 +15,16 @@
     (defn hos-target-launcher (target) (nth target 5))
     (defn hos-target-clang-triple (target) (nth target 6))
     (defn hos-target-assembly-surface (target) (nth target 7))
-    (defn hos-target-jit-oracle (target) (nth target 8))
-    (defn hos-target-jit-runtime (target) (nth target 9))
-    (defn hos-target-jit-model (target) (nth target 10))
-    (defn hos-empty-target () (hos-target "" "" "" "" "" "" "" "" "" "" ""))
+    (defn hos-target-form-native-object (target) (nth target 8))
+    (defn hos-target-jit-oracle (target) (nth target 9))
+    (defn hos-target-jit-runtime (target) (nth target 10))
+    (defn hos-target-jit-model (target) (nth target 11))
+    (defn hos-empty-target () (hos-target "" "" "" "" "" "" "" "" "" "" "" ""))
 
     (defn hos-targets ()
         (list
-            (hos-target "macos-arm64" "macos" "arm64" "mach-o" "tar.zst" "hati-os" "arm64-apple-macosx" "mach-o-relocatable+arm64-asm" "clang" "form-native-arm64-assembler" "clang-oracle-sampled-form-native-recipe")
-            (hos-target "android-arm64" "android" "arm64" "elf" "tar.zst" "hati-os" "aarch64-linux-android" "elf-relocatable+aarch64-asm" "clang" "form-native-arm64-assembler" "clang-oracle-sampled-form-native-recipe")))
+            (hos-target "macos-arm64" "macos" "arm64" "mach-o" "tar.zst" "hati-os" "arm64-apple-macosx" "mach-o-relocatable+arm64-asm" "form-macho" "clang" "form-native-arm64-assembler" "clang-oracle-sampled-form-native-recipe")
+            (hos-target "android-arm64" "android" "arm64" "elf" "tar.zst" "hati-os" "aarch64-linux-android" "elf-relocatable+aarch64-asm" "form-elf" "clang" "form-native-arm64-assembler" "clang-oracle-sampled-form-native-recipe")))
 
     (defn hos-impl (target protocol capability implementation floor north-star)
         (list target protocol capability implementation floor north-star))

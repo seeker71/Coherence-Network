@@ -1,0 +1,97 @@
+; form-elf.fk — the ELF64 relocatable wrapper: a Form recipe that emits a
+; valid aarch64 ELF OBJECT file (.o) carrying machine code. This is the Android
+; metal-plane twin of form-macho.fk: form-lower.fk supplies arm64 bytes, this
+; recipe wraps those bytes in ELF section and symbol tables without using clang
+; as compiler or assembler. A host linker/emulator receipt is a later carrier;
+; this floor proves the object format itself from Form-native bytes.
+
+(do
+    (defn elf-nil? (xs) (eq (len xs) 0))
+    (defn elf-app (xs ys) (if (elf-nil? xs) ys (cons (head xs) (elf-app (tail xs) ys))))
+    (defn elf-cat (xss) (if (eq (len xss) 1) (head xss) (elf-app (head xss) (elf-cat (tail xss)))))
+    (defn elf-zeroes (n) (if (le n 0) (list) (cons 0 (elf-zeroes (sub n 1)))))
+    (defn elf-align (n a)
+        (if (eq (mod n a) 0)
+            n
+            (add n (sub a (mod n a)))))
+    (defn elf-pad-to (pos target) (elf-zeroes (sub target pos)))
+
+    ; little-endian integer fields. Object offsets are intentionally small in
+    ; this floor, so u64 is a u32 low half plus a zero high half.
+    (defn elf-u16 (n) (list (mod n 256) (mod (div n 256) 256)))
+    (defn elf-u32 (n) (list (mod n 256) (mod (div n 256) 256)
+                            (mod (div n 65536) 256) (mod (div n 16777216) 256)))
+    (defn elf-u64 (n) (elf-app (elf-u32 n) (list 0 0 0 0)))
+
+    (defn elf-text-off () 64)
+    (defn elf-sym-size () 48)
+    (defn elf-strtab () (list 0 109 97 105 110 0)) ; "\0main\0"
+    (defn elf-shstrtab ()
+        (list 0
+              46 116 101 120 116 0
+              46 115 121 109 116 97 98 0
+              46 115 116 114 116 97 98 0
+              46 115 104 115 116 114 116 97 98 0))
+
+    (defn elf-sym-off (clen) (elf-align (add (elf-text-off) clen) 8))
+    (defn elf-str-off (clen) (add (elf-sym-off clen) (elf-sym-size)))
+    (defn elf-shstr-off (clen) (add (elf-str-off clen) (len (elf-strtab))))
+    (defn elf-shoff (clen) (elf-align (add (elf-shstr-off clen) (len (elf-shstrtab))) 8))
+
+    (defn elf-header (clen)
+        (elf-cat (list
+            (list 127 69 76 70 2 1 1 0 0 0 0 0 0 0 0 0) ; ELF64, little-endian
+            (elf-u16 1)                  ; ET_REL
+            (elf-u16 183)                ; EM_AARCH64
+            (elf-u32 1)                  ; EV_CURRENT
+            (elf-u64 0)                  ; e_entry
+            (elf-u64 0)                  ; e_phoff
+            (elf-u64 (elf-shoff clen))   ; e_shoff
+            (elf-u32 0)                  ; e_flags
+            (elf-u16 64)                 ; e_ehsize
+            (elf-u16 0) (elf-u16 0)      ; no program headers
+            (elf-u16 64)                 ; e_shentsize
+            (elf-u16 5)                  ; null, .text, .symtab, .strtab, .shstrtab
+            (elf-u16 4))))               ; e_shstrndx
+
+    (defn elf-null-shdr () (elf-zeroes 64))
+    (defn elf-shdr (name typ flags offset size link info align entsize)
+        (elf-cat (list
+            (elf-u32 name) (elf-u32 typ)
+            (elf-u64 flags) (elf-u64 0)
+            (elf-u64 offset) (elf-u64 size)
+            (elf-u32 link) (elf-u32 info)
+            (elf-u64 align) (elf-u64 entsize))))
+
+    (defn elf-section-headers (clen)
+        (elf-cat (list
+            (elf-null-shdr)
+            (elf-shdr 1 1 6 (elf-text-off) clen 0 0 4 0)
+            (elf-shdr 7 2 0 (elf-sym-off clen) (elf-sym-size) 3 1 8 24)
+            (elf-shdr 15 3 0 (elf-str-off clen) (len (elf-strtab)) 0 0 1 0)
+            (elf-shdr 23 3 0 (elf-shstr-off clen) (len (elf-shstrtab)) 0 0 1 0))))
+
+    ; Two symbols: the required null symbol and global function "main" in .text.
+    (defn elf-symtab (clen)
+        (elf-app
+            (elf-zeroes 24)
+            (elf-cat (list
+                (elf-u32 1)        ; st_name -> "main" in .strtab
+                (list 18)          ; STB_GLOBAL | STT_FUNC
+                (list 0)           ; st_other
+                (elf-u16 1)        ; st_shndx -> .text
+                (elf-u64 0)        ; st_value
+                (elf-u64 clen))))) ; st_size
+
+    (defn elf-object (code)
+        (elf-cat (list
+            (elf-header (len code))
+            code
+            (elf-pad-to (add (elf-text-off) (len code)) (elf-sym-off (len code)))
+            (elf-symtab (len code))
+            (elf-strtab)
+            (elf-shstrtab)
+            (elf-pad-to (add (elf-shstr-off (len code)) (len (elf-shstrtab))) (elf-shoff (len code)))
+            (elf-section-headers (len code)))))
+
+    0)
