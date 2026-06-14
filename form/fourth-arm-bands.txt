@@ -55,7 +55,7 @@
 # record-blueprint rows among its focused four-way rows, and
 # android-mesh-learning now carries
 # active mic/camera/GPU sample rows at focused verdict 32767. The latest
-# completed full `cd form && ./validate.sh` on this branch reads 229
+# completed full `cd form && ./validate.sh` on this branch reads 231
 # four-way bands and 614 total passing workloads with 0 residual divergent
 # bands; refresh the full aggregate on a quiet host after focused release
 # rather than spending repeated validation cycles under shared-runner
@@ -387,9 +387,9 @@ substrate-core fks 11111
 # minimum fourth-arm write floor, and append logs now have the same floor.
 # The durable storage-port and graph-node port floors now cross too: memory and
 # segmented-file carriers are substitutable at the storage-port layer, graph-node
-# port shape is four-way, memory mutation carrier is four-way, and the file
-# carrier reopen proof survives. Full graph mutation verdict and idea projection
-# remain named carrier gaps, not buried omissions.
+# port shape is four-way, memory mutation carrier is four-way, the file carrier
+# reopen proof survives, and the full graph mutation/file verdict now crosses.
+# Ideas graph projection remains the named carrier gap, not a buried omission.
 # Pure call lets in non-recursive function bodies now snapshot through
 # per-function RAM windows, and the emitted fkwu RAM organ widened to 4096
 # cells. That lets list-returning pure calls be read more than once without
@@ -424,3 +424,5 @@ storage-port fks 11111
 graph-node-port fks 11111
 graph-node-mutation-memory-carrier fks 1
 graph-node-mutation-file-carrier fks 11
+graph-node-mutation-carrier fks 11111
+graph-node-mutation-file-verdict fks 1111111

@@ -1,0 +1,32 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord claim fourth-graph-node-verdict-floor",
+    "cd form && bash scripts/fourth-arm-gate.sh graph-node-mutation-file-verdict graph-node-mutation-carrier ideas-graph-projection graph-node-mutation-file-carrier graph-node-mutation-memory-carrier",
+    "cd form && ./validate.sh",
+    "python3 scripts/model_executor_proof_ledger.py sync-jsonl --output docs/system_audit/model_executor_runs.jsonl",
+    "python3 scripts/model_executor_proof_ledger.py check-jsonl",
+    "python3 scripts/model_executor_proof_ledger.py validate",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_fourth_graph_node_mutation_verdict.json"
+  ],
+  "failure_reason": "Snapshotting the duplicate-read value in graph-node mutation keeps source-order file-carrier reads stable through later mutations. graph-node-mutation-carrier and graph-node-mutation-file-verdict now pass four-way; ideas-graph-projection remains outside the manifest as the next graph/carrier gate. Full validation reports 231 four-way bands, 614 ok, 0 divergent.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "fourth-graph-node-verdict-floor-20260614",
+  "source": {
+    "kind": "codex-worktree",
+    "path": "/Users/ursmuff/.codex/worktrees/a3ec/Coherence-Network"
+  },
+  "thread_branch": "codex/fourth-graph-node-verdict-20260614",
+  "validation": {
+    "commands": [
+      "cd form && bash scripts/fourth-arm-gate.sh graph-node-mutation-file-verdict graph-node-mutation-carrier ideas-graph-projection graph-node-mutation-file-carrier graph-node-mutation-memory-carrier",
+      "cd form && ./validate.sh"
+    ],
+    "status": "pass"
+  }
+}

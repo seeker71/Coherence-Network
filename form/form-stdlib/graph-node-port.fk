@@ -215,8 +215,9 @@
             (let s1 (gn-create-node carrier s0 "idea:mutable" "idea" "Mutable idea" "Created natively" "gas" "{}"))
             (let s2 (gn-create-node carrier s1 "spec:mutable" "spec" "Mutable spec" "Created natively" "ice" "{}"))
             (let s3 (gn-create-node carrier s2 "idea:mutable" "idea" "Duplicate" "Should not replace" "ice" "{}"))
+            (let duplicate-value (storage-value (gn-get-node carrier s3 "idea:mutable")))
             (let duplicate-ok
-                (if (str_eq (storage-value (gn-get-node carrier s3 "idea:mutable"))
+                (if (str_eq duplicate-value
                         (gn-node-value "idea:mutable" "idea" "Mutable idea" "Created natively" "gas" "{}"))
                     1 0))
             (let s4 (gn-replace-node carrier s3 "idea:mutable" "idea" "Mutable idea revised" "Replaced natively" "water" "{\"stage\":\"implementing\"}"))

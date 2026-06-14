@@ -118,8 +118,10 @@ semantics, giving text emitters a direct four-way write floor without byte-list
 materialization. `file-append` also crosses as an append-log write floor.
 The storage-port file carrier now crosses at the substitution/durability layer:
 `storage-port`, `graph-node-port`, `graph-node-mutation-memory-carrier`, and
-`graph-node-mutation-file-carrier` are manifest rows. Full graph mutation
-verdicts and idea projection over reopened file stores remain named gaps.
+`graph-node-mutation-file-carrier` are manifest rows. Full graph mutation now
+crosses too through `graph-node-mutation-carrier` and
+`graph-node-mutation-file-verdict`; idea projection over reopened file stores
+remains the named graph/carrier gap.
 Non-recursive direct-call `do` lets also snapshot once through per-function RAM
 windows; `ephemeris-planets` now reads list-returning call results repeatedly
 and crosses four-way at `1111111`.
