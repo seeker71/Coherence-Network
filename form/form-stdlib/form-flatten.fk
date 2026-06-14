@@ -1,8 +1,9 @@
 ; form-flatten.fk — m4e3's real-recipe flattener (path-b, the cursor lane):
 ; reads a REAL stdlib band's Form SOURCE (module file + band file, unmodified)
 ; and flattens it into a Hati-OS kernel program. defn becomes a function-table
-; row (CALL by index, fn 0 = the band's verdict expression), let inlines its
-; pure value cell at every use, and the curated band vocabulary lowers onto
+; row (CALL by index, fn 0 = the band's verdict expression), module lets inline
+; pure value cells, effecting nested do-lets and band top-level lets snapshot
+; once through RAM slots, and the curated band vocabulary lowers onto
 ; the walker's op set: gt/ge/eq/and become IF/LE shapes; head/tail/len/nth/
 ; cons/list/empty map 1:1 to the arena tags 18..23. The output is program-as-
 ; cells — fkc-table-file serializes it and the universal fkw binary runs the
@@ -14,7 +15,7 @@
 ; the arena, the callee's params bind as NTH(ARG, i) by position — a pure
 ; flattening rule over the existing op set, no new walker tags. Single-param
 ; calls stay direct ARG (no allocation); zero-param packs EMPTY. Nested
-; (do ...) is an EXPRESSION (m4e5): lets bind env for the rest of the do,
+; (do ...) is an EXPRESSION (m4e5): effecting lets bind once for the rest of the do,
 ; the last expression is the value — let-in-defn and do-in-do flatten by
 ; the same structural recursion as the top level. Integer literals may be
 ; negative; true/false flatten as 1/0; div/mod and the figure-ops family
@@ -215,8 +216,10 @@
 
 ; ── nested (do ...) as an EXPRESSION (let-in-defn, do-in-do) ──────────────
 ; The same structural recursion as the top-level do-walker, scoped to a
-; value position: each (let name v) binds its pure value cell into env for
-; the REST of the do (inlined at every use, m4e3's let discipline); the
+; value position: an effecting (let name v) walks v once, stores it in a RAM
+; slot, and binds a load cell into env for the REST of the do; pure values keep
+; the old inline lowering so recursive/local compute does not contend on global
+; slots. The
 ; last expression is the do's value. Nesting falls out of flt-expr — a
 ; child that is itself (do ...) re-enters here with its own env tail.
 (defn flt-do (s pos fns env val) (flt-do2 s (fp-skip s pos) fns env val))
@@ -239,17 +242,31 @@
     (flt-do-let-v (flt-word s pos) s (fp-sym-end s pos) fns env val))
 (defn flt-do-let-v (name s pos fns env val)
     (flt-do-let-done name (flt-peek s (fp-skip s pos)) s (flt-expr s pos fns env) fns env val))
+(defn flt-do-let-effect-op (op)
+    (if (str_eq op "record_new") 1
+    (if (str_eq op "file_append_bytes") 1
+    (if (str_eq op "write_file_text") 1
+    (if (str_eq op "fs_remove") 1
+    (if (str_eq op "fs_rename") 1
+    (if (str_eq op "fs_mkdir") 1
+    (if (str_eq op "fs_rmdir") 1
+    (if (str_eq op "read_file") 1
+    (if (str_eq op "read_file_slice") 1
+    (if (str_eq op "file_size") 1
+    (if (str_eq op "file_mtime") 1
+    (if (str_eq op "file_byte_at") 1
+    (if (str_eq op "scan_run") 1 0))))))))))))))
 (defn flt-do-let-done (name op s ve fns env val)
-    (if (str_eq op "record_new")
-        (flt-do-let-record name s ve fns env val (fk-lit (add 128 (len env))))
+    (if (eq (flt-do-let-effect-op op) 1)
+        (flt-do-let-store name s ve fns env val (fk-lit (add 128 (len env))))
         (flt-do2 s (fp-skip s (fp-close s (nth ve 1))) fns
                  (cons (list name (nth ve 0)) env) val)))
-(defn flt-do-let-record (name s ve fns env val slot)
-    (flt-do-let-record-rest
+(defn flt-do-let-store (name s ve fns env val slot)
+    (flt-do-let-store-rest
         (fk-store slot (nth ve 0))
         (flt-do2 s (fp-skip s (fp-close s (nth ve 1))) fns
                  (cons (list name (fk-load slot)) env) val)))
-(defn flt-do-let-record-rest (store rest)
+(defn flt-do-let-store-rest (store rest)
     (list (flt-sequence store (nth rest 0)) (nth rest 1)))
 
 ; two operands, then the lowering picked by selector k (lowerings are rules,
