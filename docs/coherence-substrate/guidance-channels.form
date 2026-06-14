@@ -112,10 +112,13 @@
 ;
 ; OPENINGS NAMED AS NEXT ROWS  (closing recipes, not debts)
 ;
-;   - the live ephemeris: the SUN now computes native (ephemeris-sun.fk — its real ecliptic
-;     longitude from a date, the four cardinal points exact, four-way because the fourth arm
-;     carries trig). The Moon and planets are the next rows (more terms, same trig.fk footing);
-;     gate activation rides the Human Design mandala wheel (a data row); then cast / synastry.
+;   - the live ephemeris now computes the two luminaries and the karmic axis native, four-way:
+;     ephemeris-sun.fk (the Sun's longitude, four cardinal points exact), ephemeris-moon.fk
+;     (the Moon's longitude, sign, and lunar phase — verified at a real lunation's four
+;     quarters), ephemeris-nodes.fk (Rahu/Ketu, retrograde, 180 apart). The planets
+;     (Mercury..Saturn) are the next rows (more terms, same trig.fk footing); gate activation
+;     rides the Human Design mandala wheel (a data row to ground from a source); then cast /
+;     synastry.
 ;   - pole-star selection is nearest-epoch; wrapping the full 25,772-year cycle is the next row.
 ;   - the 64, and each tradition's deeper tables (nakshatras, houses, lines/profiles), fill in by
 ;     row as their attested readings are grounded.
