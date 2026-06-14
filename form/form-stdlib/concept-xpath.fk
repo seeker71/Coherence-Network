@@ -101,7 +101,6 @@
 (let CXP-TRIV-INT    1)
 (let CXP-TRIV-STRING 2)
 
-(do
     ;; --- LOCAL HELPERS ---------------------------------------------
     (defn cxp-nil? (xs) (eq (len xs) 0))
 
@@ -349,4 +348,4 @@
             (let res (cxpath path corpus))
             (if (cxp-nil? res) CONCEPT-NOT-FOUND (head res))))
 
-    0)
+    0
