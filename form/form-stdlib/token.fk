@@ -31,21 +31,18 @@
 ; here (~10–20 bytes) one mint/verify is ~one sha256 recipe pass.
 ; Future Form→host-asm JIT lifts the same recipe to native speed.
 
-;; --- Blueprint (substrate-resident NodeID) -------------------------
-;; Pkg/Level/Type chosen in the user-channel range (pkg=1, level=2,
-;; type=99); inst slot 1790 reserves the token family. Adjacent to
-;; the channel/query/router/hex/http-parse cluster (1700..1770).
-(let TOKEN (bp "TOKEN"))
-
 (do
+    ;; --- Blueprint (substrate-resident NodeID) ---------------------
+    ;; Pkg/Level/Type chosen in the user-channel range (pkg=1, level=2,
+    ;; type=99); inst slot 1790 reserves the token family. Adjacent to
+    ;; the channel/query/router/hex/http-parse cluster (1700..1770).
+    (let TOKEN (bp "TOKEN"))
+
     ;; ---- LIST / BYTE HELPERS ---------------------------------------
     ;; sha256.fk + hmac-sha256.fk already provide nil?, append-1,
     ;; append-list; we add only what's specific to token shape.
 
     (defn tk-nil? (xs) (eq (len xs) 0))
-
-    (defn tk-nth (xs i)
-        (if (eq i 0) (head xs) (tk-nth (tail xs) (sub i 1))))
 
     ;; Element-wise byte-list equality. 1 if both lists have the same
     ;; length and every byte matches; 0 otherwise. The verifier uses
@@ -97,11 +94,11 @@
             (list issuer holder capability expires-at mac)))
 
     ;; ---- ACCESSORS -------------------------------------------------
-    (defn token-issuer     (tok) (tk-nth tok 0))
-    (defn token-holder     (tok) (tk-nth tok 1))
-    (defn token-capability (tok) (tk-nth tok 2))
-    (defn token-expires-at (tok) (tk-nth tok 3))
-    (defn token-hmac       (tok) (tk-nth tok 4))
+    (defn token-issuer     (tok) (head tok))
+    (defn token-holder     (tok) (head (tail tok)))
+    (defn token-capability (tok) (head (tail (tail tok))))
+    (defn token-expires-at (tok) (head (tail (tail (tail tok)))))
+    (defn token-hmac       (tok) (head (tail (tail (tail (tail tok))))))
 
     ;; ---- VALIDATE --------------------------------------------------
     ;; (token-valid? token now-time secret) → 1 if HMAC checks AND

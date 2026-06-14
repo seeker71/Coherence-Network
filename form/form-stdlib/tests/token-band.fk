@@ -18,9 +18,6 @@
 
 (do
     (defn nil? (xs) (eq (len xs) 0))
-    (defn nth-tok (xs i)
-        (if (eq i 0) (head xs) (nth-tok (tail xs) (sub i 1))))
-
     (let issuer-id  1)
     (let holder-id  2)
     (let capability (list 114 101 97 100))
@@ -32,11 +29,11 @@
     (let ok-fresh    (token-valid? tok 500 secret))
     (let ok-expired  (token-valid? tok 2000 secret))
 
-    (let tampered (list (nth-tok tok 0)
+    (let tampered (list (token-issuer tok)
                         3
-                        (nth-tok tok 2)
-                        (nth-tok tok 3)
-                        (nth-tok tok 4)))
+                        (token-capability tok)
+                        (token-expires-at tok)
+                        (token-hmac tok)))
     (let ok-tampered (token-valid? tampered 500 secret))
 
     ;; Band verdict: 3 when every check lands where expected.
