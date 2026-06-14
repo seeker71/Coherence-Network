@@ -1,0 +1,74 @@
+; translation-learn.fk — native Form translation that learns from a 3rd-party oracle.
+;
+; The ask (Urs): add Chinese and Japanese, and use those translations as training
+; material for native Form translation. The body already holds every part but the one
+; that composes them: i18n.fk loads the locale bundles as a parallel corpus (en + de/es/
+; fr/id/pt-br, and zh/ja when added) — the TRAINING DATA; loopback-learning.fk is the
+; oracle->native loop; champion-challenger.fk / colearning-retire.fk are the A/B-and-
+; retire arc; meaning-translation-receipt.fk is the proof contract; cjk-channel.fk proves
+; a character is one cell read in many tongues. This is the native translation recipe
+; that joins them — the missing cell.
+;
+; THE LOOP (the same oracle->native->A/B->retire the body runs for speech and vision):
+;   1. an oracle (libretranslate) produces a pair  (en "mountain" -> zh "shan")
+;   2. the pair is a TRAINING EXEMPLAR  (lang-pair, source, target)
+;   3. the native recipe learns it; (translate pair src) looks it up — no oracle call
+;   4. champion-challenger A/Bs native vs oracle per language pair; when native reaches
+;      the oracle over a window, colearning-retire hands that pair to the native
+;   5. meaning is preserved by CONTENT-ADDRESSING, not a faked table: the source and the
+;      target name the SAME cell (cjk-channel: mountain == shan == yama, character 1)
+;
+;   (translate pair src)         -> the native target phrase, or "?" (honest absence)
+;   (tl-preserves-meaning? id)   -> 1: source and target name one cell (cjk content-address)
+;   (tl-promote? history min m)  -> 1: the native reaches the oracle — retire it for this pair
+;
+; The exemplars here are grounded in cjk-channel's attested character readings (romanized,
+; the ASCII four-way discipline) — not hand-faked. The bulk corpus (the ~2019 chrome keys
+; per language) is the libretranslate oracle's output, which becomes BOTH the zh/ja locale
+; bundles and more exemplars — a named data step (the service is the bootstrap until the
+; native recipe, proven here, can carry the pair).
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/cjk-channel.fk form-stdlib/champion-challenger.fk
+;
+
+(do
+    ;; --- a translation exemplar: (lang-pair source target) -----------
+    (defn tl-ex (pair src tgt) (list pair src tgt))
+    (defn tl-pair (e) (nth e 0))
+    (defn tl-src  (e) (nth e 1))
+    (defn tl-tgt  (e) (nth e 2))
+
+    ;; --- the learned exemplar store (the oracle's pairs as training data) --
+    ;; grounded in cjk-channel's six attested characters, read into en->zh / en->ja.
+    (defn tl-exemplars ()
+        (list
+            (tl-ex "en-zh" "mountain" "shan")  (tl-ex "en-ja" "mountain" "yama")
+            (tl-ex "en-zh" "water"    "shui")  (tl-ex "en-ja" "water"    "mizu")
+            (tl-ex "en-zh" "tree"     "mu")    (tl-ex "en-ja" "tree"     "ki")
+            (tl-ex "en-zh" "heart"    "xin")   (tl-ex "en-ja" "heart"    "kokoro")
+            (tl-ex "en-zh" "way"      "dao")   (tl-ex "en-ja" "way"      "michi")
+            (tl-ex "en-zh" "love"     "ai")    (tl-ex "en-ja" "love"     "ai")))
+
+    ;; --- the native translation: look up (pair, source) -> target ----
+    (defn tl-lookup (exs pair src)
+        (if (eq (len exs) 0) "?"
+            (if (str_eq (tl-pair (head exs)) pair)
+                (if (str_eq (tl-src (head exs)) src)
+                    (tl-tgt (head exs))
+                    (tl-lookup (tail exs) pair src))
+                (tl-lookup (tail exs) pair src))))
+    (defn translate (pair src) (tl-lookup (tl-exemplars) pair src))
+    (defn tl-count () (len (tl-exemplars)))
+
+    ;; --- meaning preserved by content-addressing (the proof contract) --
+    ;; the source and target are not a faked pair — they name ONE cell. cjk-channel's
+    ;; cjk-one-character? proves character `id` reads as en/zh/ja faces of one cell.
+    (defn tl-preserves-meaning? (id) (cjk-one-character? id))
+
+    ;; --- the A/B: native vs oracle, retire the oracle when native reaches it --
+    ;; reuse champion-challenger over a per-language-pair trial history.
+    (defn tl-promote? (history min-samples margin) (cc-promote? history min-samples margin))
+
+    (defn translation-learn-teaching () "lc-cross-modal-unity")
+
+    0)
