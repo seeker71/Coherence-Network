@@ -197,10 +197,10 @@
         (if (nil? ids) (empty)
             (do
                 (let got (gn-get-node carrier store (head ids)))
-                (let rest (gn-list-nodes-by-ids carrier store (tail ids)))
                 (if (eq (storage-found? got) 1)
-                    (cons (storage-value got) rest)
-                    rest))))
+                    (cons (storage-value got)
+                          (gn-list-nodes-by-ids carrier store (tail ids)))
+                    (gn-list-nodes-by-ids carrier store (tail ids))))))
 
     (defn gn-list-nodes (carrier store node-type)
         (gn-list-nodes-by-ids carrier store (gn-list-node-ids carrier store node-type)))

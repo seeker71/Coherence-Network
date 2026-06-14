@@ -1,0 +1,124 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/fourth-ideas-graph-projection-20260614",
+  "commit_scope": "Admit ideas graph projection over reopened file stores to the fourth-arm manifest.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "fourth-arm-ideas-graph-projection",
+    "graph-node-port",
+    "graph-node-file-carrier",
+    "connected-tissue-north-star",
+    "focused-testing-fast-release"
+  ],
+  "spec_ids": [
+    "fourth-arm-bands",
+    "fourth-arm-substrate-carriers",
+    "agent-start-packet",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "fourth-ideas-graph-projection-floor-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "floor-prioritization",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "recipe-repair",
+        "manifest-admission",
+        "north-star-retune",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "docs/coherence-substrate/fourth-arm-substrate-carriers.form",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-14_fourth_ideas_graph_projection.json",
+    "docs/system_audit/model_executor_run_ledger/fourth-ideas-graph-projection-floor-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/graph-node-port.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/fourth-arm-substrate-carriers.form",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-14_fourth_ideas_graph_projection.json",
+    "docs/system_audit/model_executor_run_ledger/fourth-ideas-graph-projection-floor-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/graph-node-port.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "coord claim \"fourth-ideas-graph-projection-floor: resolve ideas-graph-projection fourth-arm file/memory projection mismatch after graph-node mutation verdict; avoid response-header, native-training, BML, witness, Android lanes\"",
+      "cd form && bash scripts/fourth-arm-gate.sh ideas-graph-projection graph-node-mutation-carrier graph-node-mutation-file-verdict graph-node-port",
+      "cd form && ./validate.sh",
+      "python3 scripts/model_executor_proof_ledger.py sync-jsonl --output docs/system_audit/model_executor_runs.jsonl",
+      "python3 scripts/model_executor_proof_ledger.py check-jsonl",
+      "python3 scripts/model_executor_proof_ledger.py validate",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_fourth_ideas_graph_projection.json"
+    ],
+    "notes": "The focused gate returned PASS-4WAY for ideas-graph-projection, graph-node-mutation-carrier, graph-node-mutation-file-verdict, and graph-node-port. Full validation returned `fourth arm: 232 band(s) four-way` and `614 ok, 0 divergent`."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed when this evidence was written; CI had not run yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested for this fourth-arm ideas projection floor slice."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Ideas graph projection over reopened file-backed graph stores is now an explicit fourth-arm manifest row.",
+    "public_endpoints": [
+      "n/a: local Form runtime manifest admission"
+    ],
+    "test_flows": [
+      "cd form && bash scripts/fourth-arm-gate.sh ideas-graph-projection graph-node-mutation-carrier graph-node-mutation-file-verdict graph-node-port",
+      "cd form && ./validate.sh"
+    ]
+  },
+  "evidence_refs": [
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/graph-node-port.fk",
+    "docs/coherence-substrate/fourth-arm-substrate-carriers.form",
+    "docs/shared/agent-start-packet.md"
+  ],
+  "phase_gate": {
+    "phase": "fourth-ideas-graph-projection",
+    "gate": "Idea projection over reopened file-backed graph stores must pass before host-io mtime/scan and Postgres are the next carrier targets.",
+    "state": "local-four-way-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Resolve file_mtime, scan_run, or Postgres after CI merge."
+  },
+  "floor_update": {
+    "previous_observed_floor": "231 four-way bands / 614 ok / 0 divergent",
+    "current_observed_floor": "232 four-way bands / 614 ok / 0 divergent",
+    "new_bands": [
+      "ideas-graph-projection -> 11111 four-way"
+    ],
+    "retuned_north_star": [
+      "ideas-graph-file-projection moved to supported",
+      "next gate narrowed to file_mtime, scan_run, and Postgres"
+    ],
+    "blocked_trials": []
+  }
+}
