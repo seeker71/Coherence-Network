@@ -1,0 +1,106 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/fourth-record-carrier-focused-20260614",
+  "commit_scope": "Admit list-of-record-reduction to the fourth-arm manifest through the existing record carrier and _plus add lowering.",
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "fourth-arm-record-carrier-floor",
+    "focused-testing-fast-release"
+  ],
+  "spec_ids": [
+    "fourth-arm-bands",
+    "model-executor-proof-ledger",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "fourth-record-carrier-focused-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "focused-release-guidance"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/form-flatten.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/system_audit/commit_evidence_2026-06-14_record_carrier_plus_floor.json",
+    "docs/system_audit/model_executor_run_ledger/record-carrier-plus-floor-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/form-stdlib/form-flatten.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/system_audit/commit_evidence_2026-06-14_record_carrier_plus_floor.json",
+    "docs/system_audit/model_executor_run_ledger/record-carrier-plus-floor-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "form/fourth-arm-bands.txt#list-of-record-reduction",
+    "docs/system_audit/model_executor_run_ledger/record-carrier-plus-floor-20260614.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "coord claim fourth-record-carrier-focused \"focused record carrier ratchet after sibling-node merge: inspect _plus and record_blueprint for list-of-record-reduction/record; avoid BML/Hati, FMF constructors, doc/concept/dns/session, route-stream, Android mesh\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/list-of-record-reduction-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/record-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/record-fold-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/record-field-access-band.fk",
+      "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/list-of-record-reduction-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh list-of-record-reduction record-fold record-field-access",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_record_carrier_plus_floor.json",
+      "python3 scripts/model_executor_proof_ledger.py validate",
+      "python3 - <<'PY'\nimport json\nfrom pathlib import Path\nfor i, line in enumerate(Path('docs/system_audit/model_executor_runs.jsonl').read_text().splitlines(), 1):\n    json.loads(line)\nprint('OK jsonl rows', i)\nPY",
+      "git diff --check"
+    ],
+    "notes": "The focused release keeps only the proven _plus lowering to the existing add arm. record_blueprint was inspected but left out because record-band still needs a separate flattening/blueprint ratchet."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No public deploy performed for this focused Form manifest slice."
+  },
+  "phase_gate": {
+    "phase": "record-carrier-plus-floor",
+    "gate": "list-of-record-reduction validates across Go, Rust, TypeScript, and fkwu while existing record-fold and record-field-access remain four-way.",
+    "state": "local-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Ship focused PR, then leave full record/record_blueprint and method/field-model-form for separate ratchets."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The focused fourth-arm manifest floor moves to 194 admitted rows by admitting list-of-record-reduction at verdict 22 on top of the current sister floors. The broader record band remains a named residual rather than being bundled into this release.",
+    "public_endpoints": [
+      "local:form-fourth-arm-manifest",
+      "local:record-carrier-plus-floor",
+      "local:model-executor-proof-ledger"
+    ],
+    "test_flows": [
+      "list-of-record-reduction validates at 22 and surveys as single-pass 22/22.",
+      "fourth-arm-gate reports PASS-4WAY for list-of-record-reduction, record-fold, and record-field-access.",
+      "record-band remains 3-kernel passing at 176 but is not admitted because the record_blueprint/flattening residual needs its own focused slice."
+    ]
+  }
+}
