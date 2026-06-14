@@ -32,6 +32,9 @@
 #     surfaces beyond the explicit make_nodeid, category/pkg/level/type/inst
 #     projection, and generic/doc/concept/dns/session floor
 #   host io family        — file_mtime, scan_run, and broader write/read recipes
+#   effect-once let       — fkwu inlines a let, re-walking its value at every
+#     use; the gate for write_file_text and the durable file/Postgres carriers
+#     (whose store-threading binds effectful values through let)
 #   multi-line output     — bands that print mid-walk (the walker answers
 #     one value through fk_pr)
 #
@@ -95,7 +98,16 @@
 # through the storage port and reading the SAME content key back across a
 # functional carrier — and crosses four-way too. fourth_band_srcs anchors its
 # core.fk filter to a path boundary so sibling-named preludes (substrate-core.fk,
-# bmf-core.fk) keep their place instead of vanishing as substrings. Connected
+# bmf-core.fk) keep their place instead of vanishing as substrings. Effect-once
+# holds on the fourth arm: bare do-statements sequence through tag 69 so each
+# fires exactly once in order (do-effect-seq), and eq/lt are native single-walk
+# arms (tags 102/103) that evaluate each operand exactly once (eq-effect-once).
+# Host io opens with temp_dir (tag 101, fk_tempdir reads $TMPDIR): hostio-roundtrip
+# writes bytes to a real file and reads them back four-way deterministically.
+# North star — the durable file/Postgres carriers: substrate-core threaded over
+# the segmented-FILE carrier crosses once effect-once let lands (the carrier
+# store-threading binds effectful values through let, which fkwu still inlines).
+# Connected
 # external HTTP now crosses the emitted arm through http_get tag 105: the fkwu
 # binary owns DNS/TCP/socket/read/write for http:// and runtime-loaded
 # OpenSSL-compatible TLS for https://, returning the same status/body/error/
