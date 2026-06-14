@@ -110,6 +110,9 @@ set, has, keys, predicate, blueprint access, folds, field access,
 list-of-record reduction, and full `record-band` mutable aliasing. The band
 source walker snapshots top-level lets once, so reads taken before `record_set`
 keep their source-time value and `record_new` keeps shared mutable identity.
+Nested `do` lets with effecting carrier values also snapshot once through
+`fk-store`/`fk-load`, so side-effecting bindings can be read repeatedly without
+re-walking host effects while pure recursive/local bindings keep inline lowering.
 The next honest record-shaped gaps are object/class construction and method
 dispatch surfaces that still need to lower their broader BML/Hati tissue.
 

@@ -45,8 +45,8 @@
 # record-blueprint rows among its focused four-way rows, and
 # android-mesh-learning now carries
 # active mic/camera/GPU sample rows at focused verdict 32767. The latest
-# completed full `cd form && ./validate.sh` on this branch reads 204
-# four-way bands and 604 total passing workloads with 0 residual divergent
+# completed full `cd form && ./validate.sh` on this branch reads 208
+# four-way bands and 611 total passing workloads with 0 residual divergent
 # bands; refresh the full aggregate on a quiet host after focused release
 # rather than spending repeated validation cycles under shared-runner
 # contention. Literal bp registry aliases now fold through make_nodeid for the
@@ -330,10 +330,13 @@ substrate-core fks 11111
 # operand twice — so a side-effecting operand under eq/lt fires exactly once
 # (eq-effect-once appends one byte inside an eq and reads len 1). The Form
 # meta-circular walkers (fk-walk-lowered, fkm-walk-lowered) carry the same arms,
-# keeping the spec consistent with the emitted fkwu. The one remaining effect-once
-# piece is let: fkwu inlines a let binding (re-walks its value at every use), so
-# write_file_text/file_mtime/scan_run and the segmented-FILE and Postgres carriers
-# wait on let-effect-once reaching fkwu.
+# keeping the spec consistent with the emitted fkwu. Third piece crossed:
+# nested do-lets now snapshot effecting values through fk-store/fk-load, not only
+# record_new, so a side-effecting binding is walked once and read many times
+# (let-effect-once appends one byte, checks the bound size twice, and reads len
+# 1). write_file_text/file_mtime/scan_run and segmented-FILE/Postgres carriers
+# can now build on effect-once let discipline instead of working around
+# re-walked bindings.
 hostio-roundtrip fks 111
 do-effect-seq fks 2
 doc-xpath fks 10
@@ -355,3 +358,4 @@ translation-learn fks 1111111
 translation-quality fks 1111111
 chart-cast fks 1111111
 eq-effect-once fks 1
+let-effect-once fks 111

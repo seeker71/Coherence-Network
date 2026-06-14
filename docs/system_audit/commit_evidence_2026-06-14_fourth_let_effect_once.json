@@ -1,0 +1,157 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/fourth-let-effect-once-20260614",
+  "commit_scope": "Move the fourth-arm nested do-let effect-once floor across fkwu without disturbing pure recursive/local lowering.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "fourth-arm-effect-once",
+    "host-io-carrier-floor",
+    "focused-testing-fast-release",
+    "connected-tissue-north-star"
+  ],
+  "spec_ids": [
+    "fourth-arm-bands",
+    "bml-native-north-star",
+    "agent-start-packet",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "fourth-let-effect-once-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "floor-prioritization",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-14_fourth_let_effect_once.json",
+    "docs/system_audit/model_executor_run_ledger/fourth-let-effect-once-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/tests/let-effect-once-band.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-14_fourth_let_effect_once.json",
+    "docs/system_audit/model_executor_run_ledger/fourth-let-effect-once-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/tests/let-effect-once-band.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "coord claim \"fourth-let-effect-once: close remaining effect-once residual after eq/lt single-walk; avoid witness, TypeScript http_get, and BML/Hati lanes\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/let-effect-once-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh let-effect-once eq-effect-once do-effect-seq hostio-roundtrip record",
+      "cd form && ./validate.sh",
+      "python3 scripts/model_executor_proof_ledger.py sync-jsonl --output docs/system_audit/model_executor_runs.jsonl",
+      "python3 scripts/model_executor_proof_ledger.py check-jsonl",
+      "python3 scripts/model_executor_proof_ledger.py validate",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_fourth_let_effect_once.json"
+    ],
+    "notes": "Focused validation returned 111 with `fourth arm: 1 band(s) four-way` and `1 ok, 0 divergent`. The host/effect/record manifest gate returned PASS-4WAY for let-effect-once, eq-effect-once, do-effect-seq, hostio-roundtrip, and record. Full validation returned `fourth arm: 208 band(s) four-way` and `611 ok, 0 divergent`."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed when this evidence was written; CI had not run yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested for this Form lowering/fourth-arm floor slice."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "A nested do-let whose value touches a host/effect carrier is evaluated once by the emitted fourth-arm walker and later references load the same observed value, matching Go/Rust/TypeScript semantics.",
+    "public_endpoints": [
+      "n/a: local Form runtime lowering"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/let-effect-once-band.fk",
+      "cd form && ./validate.sh"
+    ]
+  },
+  "evidence_refs": [
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/tests/let-effect-once-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/shared/agent-start-packet.md",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/system_audit/model_executor_run_ledger/fourth-let-effect-once-20260614.json"
+  ],
+  "phase_gate": {
+    "phase": "fourth-let-effect-once",
+    "gate": "Side-effecting nested do-let bindings must walk once and be readable many times before host carrier families build on fkwu effect discipline.",
+    "state": "local-four-way-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Admit the next carrier op family, such as write_file_text/file_mtime/scan_run, with focused fourth-arm bands and full-suite proof."
+  },
+  "validation": {
+    "status": "pass",
+    "commands": [
+      {
+        "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/let-effect-once-band.fk",
+        "result": "pass",
+        "summary": "let-effect-once returned 111 with `fourth arm: 1 band(s) four-way` and `1 ok, 0 divergent`."
+      },
+      {
+        "command": "cd form && bash scripts/fourth-arm-gate.sh let-effect-once eq-effect-once do-effect-seq hostio-roundtrip record",
+        "result": "pass",
+        "summary": "PASS-4WAY for let-effect-once, eq-effect-once, do-effect-seq, hostio-roundtrip, and record."
+      },
+      {
+        "command": "cd form && ./validate.sh",
+        "result": "pass",
+        "summary": "Full Form sibling suite returned `fourth arm: 208 band(s) four-way` and `611 ok, 0 divergent`."
+      }
+    ],
+    "negative_probe": {
+      "command": "cd form && ./validate.sh",
+      "result": "failed-before-fix",
+      "summary": "A broad intermediate attempt that stored every nested do-let caused 64 divergences by making pure recursive/local bindings contend on global fkwu RAM slots. The shipped fix stores only effecting carrier values plus record_new, leaving pure inline lowering intact."
+    }
+  },
+  "floor_update": {
+    "previous_observed_floor": "205 four-way bands / 605 ok / 0 divergent after eq/lt single-walk on main",
+    "current_observed_floor": "208 four-way bands / 611 ok / 0 divergent",
+    "new_band": "form/form-stdlib/tests/let-effect-once-band.fk -> 111 four-way"
+  },
+  "north_star_alignment": {
+    "current_floor": "Nested do-let bindings whose value is an effecting carrier op now lower through fk-store/fk-load, so the value walks once and later reads load the same observed result.",
+    "connected_tissue": "The fourth-arm manifest, agent start packet, BML native north-star cell, commit evidence, and native proof-ledger record all name the same let-effect-once floor.",
+    "remaining_gap": "write_file_text/file_mtime/scan_run and segmented-FILE/Postgres carriers can build on effect-once let discipline, but unsupported op rows still need their own fourth-arm carrier admission before they enter the manifest."
+  },
+  "coordination": {
+    "claim": "fourth-let-effect-once",
+    "overlap_checked": true,
+    "adjacent_active_lanes": [
+      "witness live oracle emission",
+      "typescript non-shell http_get carrier"
+    ]
+  }
+}

@@ -1,0 +1,19 @@
+; let-effect-once-band.fk — a nested do-let value must be evaluated once.
+;
+; preludes: form-stdlib/core.fk
+;
+; The band source walker already snapshots top-level lets. This proof reaches
+; the nested do-expression path used by let-in-defn and do-in-do. A side-effecting
+; let value appends one byte, then the bound name is read twice. Reference
+; kernels evaluate the binding once and load it twice, so the file length is 1
+; and both equality checks see the original size. An inlining fourth-arm
+; flattener re-walks the append at each name use and diverges.
+(do
+    (let dir (temp_dir))
+    (let path (str_concat dir "/fk-let-effect-once.txt"))
+    (fs_remove path)
+    (do
+        (let wrote (file_append_bytes path (list 65)))
+        (add (if (eq wrote 1) 10 0)
+             (add (if (eq wrote 1) 100 0)
+                  (str_len (read_file path))))))
