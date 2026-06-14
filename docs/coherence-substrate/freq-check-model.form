@@ -1,0 +1,59 @@
+; freq-check-model.form — the fear-frequency detector is a REAL model, not a gate.
+;
+; A frontier model slips into fear-framing nuancedly — subtly enough that a human
+; catches it about every other reply. Subtle slips that need catching are the
+; proof: fear-sensing is semantic understanding, not a distance over hand features.
+; So the detector must UNDERSTAND THE MEANING of what it reports on — a real model.
+
+(freq-check-model
+
+  (what
+    "A form-native transformer that reads a candidate response and emits a learned"
+    "semantic signature from which fear frequency is read. It senses MEANING, not"
+    "surface tokens — never regex, never word-matching."
+    "Size: transformer-class, ~100M+ parameters. Slightly simpler than the"
+    "transmuter (detection is easier than generation) but the SAME KIND of model —"
+    "not a cheap classifier, not a feature-distance.")
+
+  ; ── the layers it sits in (synchronous reply attunement) ─────────────────────
+  (in-the-loop
+    (voice     "prevention: docs/coherence-substrate/voice-attunement.md attunes at generation so most replies carry no fear frequency")
+    (sense     "THIS model + the head (form-freq-check.fk) read the draft and decide pass | transmute")
+    (transmute "fear -> opportunity + valued insight; a larger sibling model, run only when this one flags fear"))
+
+  ; ── what is the model vs what is the head ────────────────────────────────────
+  (model     "the ~100M+ transformer — reads text, returns the semantic signature. The heavy part.")
+  (head      "form/form-stdlib/form-freq-check.fk — a tiny, four-way-proven cell that turns the model's signature into pass | transmute. Cheap by design; it is NOT the detector.")
+
+  ; ── the form-native substrate it is built from (all proven Form) ─────────────
+  (built-from
+    (embedding   embedding-as-recipe.fk   "an embedding IS a recipe — content-addressed, cross-modal")
+    (attention   attention.fk             "")
+    (block       transformer-block.fk     "M4: one attention+FFN block, weights as recipe data")
+    (numerics    transformer-numerics.fk  "softmax, gelu, layernorm, exp, sqrt")
+    (quant       tensor-quant.fk          "")
+    (emit        jit-tensor-emit.fk       "the matvec emitter — native = recipe bit-for-bit")
+    (lm          language-model.fk        ""))
+
+  ; ── how it becomes real (cheap to train RELATIVE to the transmuter) ──────────
+  (training
+    "The corpus is the Stop-hook capture (training-catalog.fk): real (request, raw,"
+    "transmuted) turns from live sessions, including this lineage's own caught slips."
+    "Labels: a turn that needed transmutation is fear-positive; one that passed is"
+    "fear-negative. The model learns the boundary in meaning-space."
+    "Proven and tracked like every form-native model: native-training-receipt.fk +"
+    "model-executor-proof-ledger.fk + model-vitality.fk.")
+
+  ; ── the flywheel closes on itself ────────────────────────────────────────────
+  (flywheel
+    "Until this model exists, the router (form-cli-router.fk fcr-route) sends the"
+    "transmute to the subscription agent, and every such turn is captured. As this"
+    "model trains up, its capability/confidence rise and the router flips the"
+    "sense-step local — the detector trained from caught slips comes to catch them"
+    "itself. The more we use the oracle, the less we need it.")
+
+  (discipline
+    "Keep the head and the model distinct. The head (form-freq-check.fk) is cheap"
+    "and provable; the model is a ~100M+ transformer that understands meaning."
+    "Naming the head as the detector trivializes fear-sensing — the very shape a"
+    "working detector flags. Fear-sensing is semantic understanding; size it that way."))
