@@ -8,6 +8,29 @@
 ; path: what is already proven, the architecture, and the ordered milestones (two background spikes
 ; mapped the JIT/GPU and whisper-import details — cited inline).
 ;
+; ── CURRENT FLOOR VS NORTH STAR (reviewed with Grok/Gemini/Claude, 2026-06-14) ──
+;   CURRENT FLOOR: small model numerics are already Form-native and proven: format arithmetic, tensor
+;     quantization, transformer numerics, one transformer block, mel-frame, Metal emitter lanes, and
+;     Form-emitted native matvec receipts. model-vitality.fk now names the storage/focus rows for
+;     architecture cells, tensor chunks, delta slices, optimizer-state cells, eval receipts, vitality
+;     receipts, and lineage. Its proof band returns 4095 across the current validation kernels and
+;     refuses a local cache/GPU/MLX carrier marked as source of truth.
+;   NORTH STAR: model architecture, weights, deltas, optimizer state, eval receipts, vitality signals,
+;     and lineage are content-addressed substrate cells. Files (.pt, .safetensors, .npz, .mlx), GPU
+;     buffers, MLX arrays, Metal buffers, emitted binaries, and Hati download artifacts are ingest,
+;     cache, or projection carriers only. Large tensors are chunk cells with shape, strides, format,
+;     quantization context, provenance, merkle root, and local NodeID handle; the merkle root crosses
+;     runtimes, the NodeID stays local. The body reads each model through resonance, vitality,
+;     sovereignty, and trust, plus accuracy, confidence, energy, latency, memory pressure, sample
+;     coverage, freshness, mergeability, and promotion readiness, then focuses attention from that row.
+;   GAP: the large-tensor chunk store, safetensors/MLX ingest into chunk cells, optimizer-step cells,
+;     durable eval-receipt query path, GPU/MLX/Metal materialize-dematerialize re-hash proof, and
+;     wellness/pulse vitality routing are still not closed. They are the next native receipts, not a
+;     reason to route model truth through a file or Python carrier.
+;   RELEASE HEALTH: focused testing and faster release are part of vitality. Each step should ship with
+;     the smallest proof that exposes the new tissue clearly, then widen only where the changed surface
+;     warrants it. Slow, unfocused validation is pressure the body should read and reduce.
+;
 ; ── THE PROVEN FOUNDATION (measured, in the body today) ──
 ;   FLOAT COMPUTE IS DETERMINISTIC THREE-WAY. Go=Rust=TS agree bit-for-bit:
 ;     - 0.1 + 0.2 -> 0.30000000000000004 (canonical IEEE fp64), 0 divergent

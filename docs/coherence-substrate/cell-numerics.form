@@ -4,6 +4,34 @@
 #
 # Companion to docs/vision-kb/concepts/lc-one-kernel-many-tongues.md.
 #
+# CURRENT FLOOR VS NORTH STAR (reviewed with Grok/Gemini/Claude, 2026-06-14)
+#
+# CURRENT FLOOR:
+#   This file keeps the small transparent numerics floor: vectors are lists,
+#   matrices are lists of row-vectors, and recipes such as vector_add,
+#   scalar_mul, matvec, exp, tanh, sigmoid, slices, and adapter_forward are
+#   readable Form compositions. This is enough to prove tiny model math,
+#   deterministic LoRA/task-vector deltas, and small eval fixtures.
+#
+# NORTH STAR:
+#   The same math is lifted onto tensor cells and tensor-chunk cells. A tensor
+#   chunk carries (tensor-id, chunk-index, shape, strides, format, quantization
+#   context, provenance, merkle-root, elements, bytes). The list-of-lists shape
+#   remains the reference semantics; chunked operations compose over content-
+#   addressed cells and materialize into CPU/GPU/MLX/Metal carriers only as
+#   cache/projection buffers. Optimizer updates (sgd, momentum, adam moments),
+#   format casts, quant/dequant, and adapter_forward all become recipes over
+#   the same row shape, so a local carrier can be fast while the body still
+#   knows the source truth.
+#
+# GAP:
+#   Chunked matvec, chunked adapter_forward, format-cast rows, optimizer-step
+#   rows, and carrier materialize-dematerialize re-hash proofs are not present
+#   in this file yet. model-vitality.fk names the model-side rows and proves
+#   that cache carriers are not source truth; the next numerics proof should
+#   show chunk -> reference list -> chunk roundtrip equality and then chunked
+#   matvec parity.
+#
 # cosine.form closed the first gap: organ._cosine as a Form-native
 # recipe. This file continues the walk by composing the next layer of
 # cell-mechanics numerics from cosine.form's primitives (pairwise_multiply,
