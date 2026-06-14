@@ -1,0 +1,144 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/real-mesh-training-emitters-20260615",
+  "commit_scope": "Add Form-native real mesh training emitter receipts and a host carrier that writes active or blocked machine evidence.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "real-mesh-training",
+    "android-mesh-learning",
+    "native-training-receipts",
+    "local-model-runners",
+    "focused-testing-fast-release"
+  ],
+  "spec_ids": [
+    "fourth-arm-bands",
+    "commit-evidence-contract",
+    "agent-start-packet"
+  ],
+  "task_ids": [
+    "real-mesh-training-emitters-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-correction",
+        "meaningful-scope-demand"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@real-mesh-training-emitters-20260615",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "form-recipe-authoring",
+        "host-carrier-authoring",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "docs/coherence-substrate/real-mesh-training-carrier.form",
+    "docs/system_audit/commit_evidence_2026-06-15_real_mesh_training_emitters.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "experiments/coherence-sense-android/README.md",
+    "form/form-stdlib/real-mesh-training-emitter.fk",
+    "form/form-stdlib/tests/real-mesh-training-emitter-band.fk",
+    "form/fourth-arm-bands.txt",
+    "MANIFEST.md",
+    "scripts/INDEX.md",
+    "scripts/real_mesh_training_emitters.sh"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/real-mesh-training-carrier.form",
+    "docs/system_audit/commit_evidence_2026-06-15_real_mesh_training_emitters.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "experiments/coherence-sense-android/README.md",
+    "form/form-stdlib/real-mesh-training-emitter.fk",
+    "form/form-stdlib/tests/real-mesh-training-emitter-band.fk",
+    "form/fourth-arm-bands.txt",
+    "MANIFEST.md",
+    "scripts/INDEX.md",
+    "scripts/real_mesh_training_emitters.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim \"real mesh training emitters\"",
+      "bash -n scripts/real_mesh_training_emitters.sh",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/pareto.fk form-stdlib/autoresearch-loop.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/native-training-receipt.fk form-stdlib/real-mesh-training-carrier.fk form-stdlib/real-mesh-training-emitter.fk form-stdlib/tests/real-mesh-training-emitter-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh real-mesh-training-emitter",
+      "scripts/real_mesh_training_emitters.sh --out .cache/real-mesh-training/windows/probe-20260615",
+      "scripts/real_mesh_training_emitters.sh --run-models --ollama-model llama3.2:3b --out .cache/real-mesh-training/windows/proof-20260615-run-models"
+    ],
+    "notes": "real-mesh-training-emitter validates at verdict 255 with fourth arm: 1 band(s) four-way and 1 ok, 0 divergent. The focused fourth-arm gate returns PASS-4WAY real-mesh-training-emitter. The host carrier writes blocked receipts instead of pretending when the machine lacks data floor inputs. The run-models probe observed live witness HTTP sources, macOS TTS output bytes, and two completed local Ollama llama3.2:3b process receipts."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed when this evidence was written; CI had not run yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested for this Form and host-carrier slice."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The mesh can now produce a real machine receipt for Mac/Android/model training emitters and keep the window blocked until adb, data volume, heldout, labels, and configured STT/model lanes are present.",
+    "public_endpoints": [
+      "n/a: local Form and host-carrier proof"
+    ],
+    "test_flows": [
+      "scripts/real_mesh_training_emitters.sh --run-models --ollama-model llama3.2:3b --out .cache/real-mesh-training/windows/proof-20260615-run-models"
+    ]
+  },
+  "evidence_refs": [
+    "form/form-stdlib/real-mesh-training-emitter.fk",
+    "form/form-stdlib/tests/real-mesh-training-emitter-band.fk",
+    "scripts/real_mesh_training_emitters.sh",
+    "docs/coherence-substrate/real-mesh-training-carrier.form",
+    "experiments/coherence-sense-android/README.md",
+    "form/fourth-arm-bands.txt",
+    ".cache/real-mesh-training/windows/proof-20260615-run-models/real-mesh-training-window.json"
+  ],
+  "phase_gate": {
+    "phase": "real-mesh-training-emitters",
+    "gate": "Host carriers must emit real active or blocked receipts from machine-observed HTTP, adb, data-root, and local model evidence.",
+    "state": "local-four-way-proof-pass-with-blocked-machine-receipt",
+    "can_move_next_phase": false,
+    "next": "After PR CI, provide adb-visible Android and large train/heldout roots, configure Whisper, then run the emitter with --require-active and feed the receipt into the dashboard."
+  },
+  "floor_update": {
+    "previous_observed_floor": "The carrier recipe could define the hard real-window authority floor, but no local host command emitted the matching pass/block receipt from live machine state.",
+    "current_observed_floor": "A Form recipe validates emitter receipts, the fourth-arm manifest admits the row at 255, and a no-Python host carrier emits live witness/source/process receipts with explicit blocks for missing adb, Whisper, train bytes, heldout bytes, or labels.",
+    "new_bands": [
+      "real-mesh-training-emitter -> 255 four-way"
+    ],
+    "retuned_north_star": [
+      "continuous Mac/Android capture roots feed the emitter until the active floor is met",
+      "local Whisper, TTS, Ollama, vision, multimodal, AutoML, and autoresearch processes write comparable receipts",
+      "dashboard and route choice read the same Form-native active/blocked receipt"
+    ],
+    "blocked_trials": [
+      {
+        "trial": "local run-models probe",
+        "receipt": ".cache/real-mesh-training/windows/proof-20260615-run-models/real-mesh-training-window.json",
+        "blocks": [
+          "adb_device_missing",
+          "whisper_model_not_configured",
+          "below_training_floor",
+          "below_heldout_floor",
+          "below_label_floor"
+        ]
+      }
+    ]
+  }
+}

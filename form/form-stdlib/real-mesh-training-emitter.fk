@@ -1,0 +1,86 @@
+; real-mesh-training-emitter.fk - receipt shape for host/device/model emitters.
+;
+; Host carriers may touch curl, adb, audio, local model CLIs, and filesystems.
+; This Form row decides whether the carrier established the hard training floor
+; or produced an honest blocked receipt.
+;
+; Proven by: form-stdlib/tests/real-mesh-training-emitter-band.fk
+
+(do
+    (defn rmt-emitter-block (code detail)
+        (list code detail))
+    (defn rmt-emitter-block-code (row) (nth row 0))
+    (defn rmt-emitter-block-detail (row) (nth row 1))
+    (defn rmt-emitter-block-real? (row)
+        (if (str_eq (rmt-emitter-block-code row) "") 0
+            (if (str_eq (rmt-emitter-block-detail row) "") 0 1)))
+    (defn rmt-emitter-blocks-real? (rows)
+        (if (eq (len rows) 0) 1
+            (if (eq (rmt-emitter-block-real? (head rows)) 1)
+                (rmt-emitter-blocks-real? (tail rows))
+                0)))
+
+    (defn rmt-emitter-source (name transport status bytes samples merkle)
+        (list name transport status bytes samples merkle))
+    (defn rmt-emitter-source-name (row) (nth row 0))
+    (defn rmt-emitter-source-transport (row) (nth row 1))
+    (defn rmt-emitter-source-status (row) (nth row 2))
+    (defn rmt-emitter-source-bytes (row) (nth row 3))
+    (defn rmt-emitter-source-samples (row) (nth row 4))
+    (defn rmt-emitter-source-merkle (row) (nth row 5))
+    (defn rmt-emitter-source-live? (row)
+        (if (str_eq (rmt-emitter-source-name row) "") 0
+            (if (str_eq (rmt-emitter-source-transport row) "") 0
+                (if (not (str_eq (rmt-emitter-source-status row) "live")) 0
+                    (if (le (rmt-emitter-source-bytes row) 0) 0
+                        (if (le (rmt-emitter-source-samples row) 0) 0
+                            (if (str_eq (rmt-emitter-source-merkle row) "") 0 1)))))))
+    (defn rmt-emitter-sources-live? (rows)
+        (if (eq (len rows) 0) 1
+            (if (eq (rmt-emitter-source-live? (head rows)) 1)
+                (rmt-emitter-sources-live? (tail rows))
+                0)))
+    (defn rmt-emitter-source-bytes-sum (rows)
+        (if (eq (len rows) 0) 0
+            (add (rmt-emitter-source-bytes (head rows)) (rmt-emitter-source-bytes-sum (tail rows)))))
+
+    (defn rmt-emitter-window (id status train-bytes heldout-bytes label-count sources processes lanes blocks dataset-merkle)
+        (list id status train-bytes heldout-bytes label-count sources processes lanes blocks dataset-merkle))
+    (defn rmt-emitter-window-id (row) (nth row 0))
+    (defn rmt-emitter-window-status (row) (nth row 1))
+    (defn rmt-emitter-window-train-bytes (row) (nth row 2))
+    (defn rmt-emitter-window-heldout-bytes (row) (nth row 3))
+    (defn rmt-emitter-window-label-count (row) (nth row 4))
+    (defn rmt-emitter-window-sources (row) (nth row 5))
+    (defn rmt-emitter-window-processes (row) (nth row 6))
+    (defn rmt-emitter-window-lanes (row) (nth row 7))
+    (defn rmt-emitter-window-blocks (row) (nth row 8))
+    (defn rmt-emitter-window-dataset-merkle (row) (nth row 9))
+
+    (defn rmt-emitter-active? (row)
+        (if (not (str_eq (rmt-emitter-window-status row) "active")) 0
+            (if (lt (rmt-emitter-window-train-bytes row) (rmt-min-training-bytes)) 0
+                (if (lt (rmt-emitter-window-heldout-bytes row) (rmt-min-heldout-bytes)) 0
+                    (if (lt (rmt-emitter-window-label-count row) (rmt-min-labels)) 0
+                        (if (not (eq (rmt-emitter-sources-live? (rmt-emitter-window-sources row)) 1)) 0
+                            (if (not (eq (rmt-processes-real? (rmt-emitter-window-processes row)) 1)) 0
+                                (if (not (eq (rmt-all-required-lanes? (rmt-emitter-window-lanes row)) 1)) 0
+                                    (if (lt
+                                            (rmt-emitter-source-bytes-sum (rmt-emitter-window-sources row))
+                                            (add (rmt-emitter-window-train-bytes row) (rmt-emitter-window-heldout-bytes row)))
+                                        0
+                                        (if (str_eq (rmt-emitter-window-dataset-merkle row) "") 0 1))))))))))
+
+    (defn rmt-emitter-blocked? (row)
+        (if (not (str_eq (rmt-emitter-window-status row) "blocked")) 0
+            (if (eq (len (rmt-emitter-window-blocks row)) 0) 0
+                (rmt-emitter-blocks-real? (rmt-emitter-window-blocks row)))))
+
+    (defn rmt-emitter-verdict (row)
+        (if (eq (rmt-emitter-active? row) 1)
+            "active-real-window"
+            (if (eq (rmt-emitter-blocked? row) 1)
+                "blocked-honest-receipt"
+                "invalid-receipt")))
+
+    0)
