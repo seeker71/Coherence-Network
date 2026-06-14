@@ -56,7 +56,7 @@
 # record-blueprint rows among its focused four-way rows, and
 # android-mesh-learning now carries
 # active mic/camera/GPU sample rows at focused verdict 32767. The latest
-# completed full `cd form && ./validate.sh` on this branch reads 219
+# completed full `cd form && ./validate.sh` on this branch reads 222
 # four-way bands and 612 total passing workloads with 0 residual divergent
 # bands; refresh the full aggregate on a quiet host after focused release
 # rather than spending repeated validation cycles under shared-runner
@@ -208,6 +208,11 @@ recognition-router fks 127
 recognition-router-compute fks 63
 recognition-router-vision fks 31
 reference-packs fks 1023
+# Port-shape rows now cross the fourth arm without live external carriers:
+# resource cells, application graph SQL strings, and auth/header/hash wrappers.
+resource-port fks 1111111
+application-graph-node-port fks 1111
+auth-port fks 1111
 self-grounding-classifier fks 63
 self-translate-universal fks 15
 sequence-predictor fks 127

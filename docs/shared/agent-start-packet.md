@@ -121,6 +121,10 @@ windows; `ephemeris-planets` now reads list-returning call results repeatedly
 and crosses four-way at `1111111`.
 The BML-authored field-model Form runtime family also crosses four-way:
 runtime, conflict, intervention, and lift/project proof rows are manifest rows.
+Port-shape floor rows now cross too: `resource-port`,
+`application-graph-node-port`, and `auth-port` prove resource cells,
+application graph SQL carriers, and auth/header/hash wrappers through fkwu
+without live external carrier dependence.
 The next honest record-shaped gaps are object/class construction and method
 dispatch surfaces that still need to lower their broader BML/Hati tissue.
 

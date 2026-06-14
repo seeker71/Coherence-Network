@@ -1,0 +1,32 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord claim fourth-port-shape-floor",
+    "cd form && bash scripts/fourth-arm-gate.sh resource-port application-graph-node-port auth-port",
+    "cd form && ./validate.sh",
+    "python3 scripts/model_executor_proof_ledger.py sync-jsonl --output docs/system_audit/model_executor_runs.jsonl",
+    "python3 scripts/model_executor_proof_ledger.py check-jsonl",
+    "python3 scripts/model_executor_proof_ledger.py validate",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_fourth_port_shape_floor.json"
+  ],
+  "failure_reason": "Admitted three already-passing port-shape bands to the fourth-arm manifest: resource-port, application-graph-node-port, and auth-port. The focused gate returns PASS-4WAY for all three; full validation reports 222 four-way bands, 612 ok, 0 divergent.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "fourth-port-shape-floor-20260614",
+  "source": {
+    "kind": "codex-worktree",
+    "path": "/Users/ursmuff/.codex/worktrees/a3ec/Coherence-Network"
+  },
+  "thread_branch": "codex/fourth-port-shape-floor-20260614",
+  "validation": {
+    "commands": [
+      "cd form && bash scripts/fourth-arm-gate.sh resource-port application-graph-node-port auth-port",
+      "cd form && ./validate.sh"
+    ],
+    "status": "pass"
+  }
+}
