@@ -187,12 +187,28 @@ fourth_prepare_all() {
     fi
     local batch_max="${FOURTH_PREPARE_ALL_BATCH_MAX:-48}"
     if [[ "$missing" -gt "$batch_max" ]]; then
-        echo "  flattening $missing band tables for the fourth arm one-by-one (cold cache; batch cap $batch_max)..." >&2
+        # Cold cache: each band's flatten is independent and content-keyed, so
+        # they fan out across cores. A rolling worker pool keeps at most $jobs
+        # flatten processes alive — background each fourth_table, then while at
+        # capacity poll the live-job count (jobs -r) and yield until one
+        # finishes. Holds in bash 3.2 (macOS default, no wait -n). Each job is a
+        # subshell, so prepare_sources's prepared_args global stays isolated;
+        # cache writes already publish atomically (mv -f "$out.tmp" "$out",
+        # PR #3008), so concurrent flatten is safe. set -e is never tripped by a
+        # backgrounded miss — a band that can't flatten just leaves no table and
+        # runs three-kernel only, the suite stays green.
+        local jobs="${FOURTH_PREPARE_ALL_JOBS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)}"
+        [[ "$jobs" =~ ^[0-9]+$ && "$jobs" -ge 1 ]] || jobs=4
+        echo "  flattening $missing band tables for the fourth arm across $jobs cores (cold cache; batch cap $batch_max)..." >&2
         rm -rf "$d"
         local one
         for one in "${stems[@]}"; do
-            fourth_table "$one" >/dev/null
+            while (( $(jobs -r 2>/dev/null | wc -l) >= jobs )); do
+                wait "$(jobs -rp 2>/dev/null | head -1)" 2>/dev/null || true
+            done
+            fourth_table "$one" >/dev/null &
         done
+        wait || true
         return 0
     fi
     echo "  flattening $missing band tables for the fourth arm..." >&2
