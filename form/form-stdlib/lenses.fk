@@ -21,6 +21,13 @@
 ; actual audio render/recognise (TTS/STT) is host carrier tissue (speech-kernel
 ; -channel.fk), not a four-way recipe — named at the boundary, honestly.
 ;
+; KIN — these five are VALUE/PERCEPTION lenses (axes what IS projects onto). The body
+; also holds WORLDVIEW lenses (spec-181: api/app/routers/lenses.py + translate_service
+; .py — scientific/economic/spiritual/...), a Python translation carrier the lens-as-
+; recipe wants to absorb; and a SYMBOL/SOURCE naming lens (lenses/symbol-source.fk).
+; One mechanism (view/translate what IS), three families — see
+; docs/coherence-substrate/lenses-and-the-sound-boundary.form.
+;
 ; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/cjk-channel.fk
 ;
 
