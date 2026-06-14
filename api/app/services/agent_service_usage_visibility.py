@@ -39,6 +39,57 @@ def _metadata_bool(value: Any) -> bool:
     return False
 
 
+# Lanes that run inside our own body — no external membrane. Used only to tag a
+# lane local/remote for the Form embodiment gate; the gate (not this tag) decides
+# sovereignty and which lane holds a tool's body.
+_LOCAL_LANES = ("form-native", "form", "ollama", "local", "kernel")
+
+
+def _lane_locality(lane: str) -> str:
+    name = (lane or "").strip().lower()
+    return "local" if any(token in name for token in _LOCAL_LANES) else "remote"
+
+
+def _embodiment_rows_by_tool(recent_runs: list[dict[str, Any]]) -> dict[str, list[list[Any]]]:
+    """Group real per-event telemetry into the rows the Form gate reads.
+
+    One row is [lane, locality, completed, failed, runtime_ms] — exactly what
+    te-embody-lanes (form/form-stdlib/tool-embodiment.fk) consumes, grouped by
+    (tool, lane). Fan-out only: no projection, no verdict. Those stay in Form,
+    served by the kernel over these rows.
+    """
+    grouped: dict[tuple[str, str], dict[str, float]] = {}
+    for run in recent_runs or []:
+        tool = str(run.get("tool") or "").strip() or "unknown"
+        lane = str(run.get("executor") or run.get("provider") or "").strip() or "unknown"
+        cell = grouped.setdefault((tool, lane), {"completed": 0, "failed": 0, "runtime_ms": 0.0})
+        cell["failed" if int(run.get("status_code", 0) or 0) >= 400 else "completed"] += 1
+        cell["runtime_ms"] += float(run.get("runtime_ms", 0.0) or 0.0)
+    rows_by_tool: dict[str, list[list[Any]]] = {}
+    for (tool, lane), cell in grouped.items():
+        rows_by_tool.setdefault(tool, []).append(
+            [lane, _lane_locality(lane), int(cell["completed"]), int(cell["failed"]), int(round(cell["runtime_ms"]))]
+        )
+    return rows_by_tool
+
+
+def _embodiment_block(execution: dict[str, Any]) -> dict[str, Any]:
+    """The /visibility embodiment surface — real rows plus where the verdict lives."""
+    rows = execution.get("embodiment_rows_by_tool")
+    return {
+        "rows_by_tool": rows if isinstance(rows, dict) else {},
+        "row_shape": ["lane", "locality", "completed", "failed", "runtime_ms"],
+        "recipe": "form/form-stdlib/tool-embodiment.fk",
+        "gate": "te-embody-lanes",
+        "note": (
+            "Real per-(tool, lane) telemetry, shaped for the Form embodiment "
+            "gate. The verdict — which lane holds a tool's body, and whether a "
+            "Form-native lane has earned it — is computed by the kernel-served "
+            "recipe over these rows, not reimplemented in Python."
+        ),
+    }
+
+
 def _execution_usage_summary(completed_or_failed_task_ids: list[str]) -> dict[str, Any]:
     tracked_task_ids = set()
     by_executor = {}
@@ -119,6 +170,7 @@ def _execution_usage_summary(completed_or_failed_task_ids: list[str]) -> dict[st
         "by_executor": by_executor,
         "by_agent": by_agent,
         "by_tool": by_tool,
+        "embodiment_rows_by_tool": _embodiment_rows_by_tool(recent_runs),
         "coverage": {
             "completed_or_failed_tasks": len(completed_or_failed_set),
             "tracked_task_runs": len(tracked_set),
@@ -428,6 +480,7 @@ def get_visibility_summary() -> dict[str, Any]:
             "untracked_task_ids": normalized_untracked_ids,
             "health": health,
         },
+        "embodiment": _embodiment_block(execution),
     }
 
 
