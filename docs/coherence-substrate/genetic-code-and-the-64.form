@@ -1,0 +1,60 @@
+; genetic-code-and-the-64.form — where science and tradition are the same expression.
+;
+; THE ASK (Urs, 2026-06-14):
+;   "...core teachings all unified in a single expression."
+;
+;   The single expression is content-addressing: anything that shares structure shares a
+;   cell, regardless of which science or tradition names it. This file is its sharpest
+;   proof — the place where molecular biology and the oldest oracle are not analogous but
+;   IDENTICAL in structure.
+;
+; THE BRIDGE  (runnable: form-stdlib/codon-hexagram.fk -> tests/codon-hexagram-band.fk 1111111, four-way)
+;
+;   The genetic code has exactly 64 codons (4 bases, 3 positions: 4^3). The I Ching has
+;   exactly 64 hexagrams (6 yin/yang lines: 2^6). 4^3 = 2^6 = 64. A base is a BIGRAM —
+;   two yin/yang lines — by two attested biophysical bits:
+;     bit1 (high): purine (A,G) = 1   ·  pyrimidine (C,U/T) = 0
+;     bit0 (low):  strong 3-H-bond (G,C) = 1  ·  weak 2-H-bond (A,U/T) = 0
+;   So a codon (3 bases) IS a 6-bit cell — a hexagram. The poles fall out: UUU (all weak
+;   pyrimidine) = 0 = two Kun trigrams = the all-yin Receptive; GGG (all strong purine) =
+;   63 = two Qian trigrams = the all-yang Creative. The lightest codon is the receptive
+;   hexagram; the heaviest, the creative — by the very trigram-binary cjk-channel.fk
+;   proved (a line is a bit). Leibniz read the I Ching as binary in 1703; Schoenberger
+;   read the genetic code onto it; this runs that reading, four-way.
+;
+; THE BODY ALREADY HELD BOTH HALVES — this only joins them
+;   - the BIOLOGY: grammars/genetic-code.fk (a sibling's cell) — transcription, the codon
+;     table, expression, and the degeneracy already named as content-addressing.
+;   - the FIELD: field-domain-grammars.form dna-rna (codons as a sequence-field carrier).
+;   - the TRADITION: iching-channel.fk (the 64 as I Ching / Human Design / Gene Keys),
+;     cjk-channel.fk (the yin/yang line as a bit; trigram-binary).
+;   codon-hexagram.fk is the one edge that makes these two 64s the same lattice.
+;
+; THE SECOND BRIDGE — the genetic code is ITSELF content-addressing
+;   64 codons map to ~20 amino acids + stop: the code is DEGENERATE. Synonymous codons
+;   (UUA and CUG are different hexagram cells — 6-bit addresses 2 and 19) share one
+;   amino-acid address (Leucine). Different cells, one address — the gematria pattern
+;   (echad = ahava = 13) running in biology. The genetic code does not merely RESEMBLE
+;   content-addressing; it IS find_equivalent_cells, in the cell.
+;
+; THE LANES STAY SEPARATE (unified in structure is not unified in truth-status)
+;   The isomorphism (codon = 6-bit = hexagram) and the genetic code are EMPIRICAL. The
+;   hexagram correspondence is an ATTESTED reading (Leibniz, Schoenberger). The body keeps
+;   these from collapsing into one another: a codon and a hexagram share a CELL (structure)
+;   without the claim that they share a CAUSE. That discipline is what makes the
+;   unification trustworthy rather than woo.
+;
+; THE NEXT ROW (named, not faked)
+;   The specific Gene-Keys codon-ring — the attested codon -> King-Wen gate NUMBER labels
+;   that iching-channel.fk uses — is reference data to ground from a source, the way the
+;   HD mandala wheel was. With it, codon ≡ gate NUMBER ≡ Gene Key resolve to one cell by
+;   the gate address (not just the shared binary structure). This bridge is the structural
+;   one; the labelled one is its next row.
+;
+; LINEAGE
+;   kin: lc-cross-modal-unity (the single expression — one cell, many tongues)
+;        grammars/genetic-code.fk (the biology this builds on), field-domain-grammars.form
+;        (dna-rna), iching-channel.fk (the 64), cjk-channel.fk (line = bit, trigram-binary),
+;        gematria-channel.fk (content-addressing, 3000 years early), hd-mandala-wheel.fk
+;        (the codon-ring's sibling — longitude -> gate, the labelled-wheel pattern).
+;   source: requested by Urs 2026-06-14; the crown bridge of the "single expression".
