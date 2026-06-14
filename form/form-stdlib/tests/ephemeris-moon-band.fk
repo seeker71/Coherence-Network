@@ -1,0 +1,47 @@
+; tests/ephemeris-moon-band.fk — the Moon's place and phase, computed native, four-way.
+;
+; The proof couples to the already-proven Sun: the lunar phase is Moon minus Sun, so
+; a wrong Moon shows as a wrong phase at a known new or full moon. The band walks one
+; real lunation of January 2000 through all four quarters — new (Jan 6), first quarter
+; (Jan 14), full (Jan 21, the lunar eclipse), last quarter (Jan 28) — and pins the
+; Moon's longitude, its sign in both zodiacs, and its daily motion.
+;
+; Verdict 1111111 (127) when every claim holds across all kernels.
+;   Moon longitude 223 deg on 2000-01-01                          → 1
+;   Moon sign: tropical Scorpio (7), sidereal Libra (6) — the split → 10
+;   daily motion ~13 deg: next day 235                            → 100
+;   new moon 2000-01-06: phase octant 0                           → 1000
+;   first quarter 2000-01-14: phase octant 2                      → 10000
+;   full moon 2000-01-21: octant 4, elongation 184 (~180)         → 100000
+;   last quarter 2000-01-28: phase octant 6                       → 1000000
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/celestial-pole-channel.fk form-stdlib/trig.fk form-stdlib/ephemeris-sun.fk form-stdlib/ephemeris-moon.fk
+;
+
+(do
+    ;; --- 1. longitude -------------------------------------------------
+    (let lon-ok (if (eq (moon-longitude 2000 1 1) 223) 1 0))
+
+    ;; --- 2. the tropical/sidereal split on the Moon -------------------
+    (let trop (eq (moon-sign-tropical 2000 1 1) 7))
+    (let sid  (eq (moon-sign-sidereal 2000 1 1) 6))
+    (let sign-ok (if trop (if sid 10 0) 0))
+
+    ;; --- 3. daily motion ~13 deg --------------------------------------
+    (let motion-ok (if (eq (moon-longitude 2000 1 2) 235) 100 0))
+
+    ;; --- 4. new moon: phase octant 0 ----------------------------------
+    (let new-ok (if (eq (moon-phase-octant 2000 1 6) 0) 1000 0))
+
+    ;; --- 5. first quarter: phase octant 2 -----------------------------
+    (let fq-ok (if (eq (moon-phase-octant 2000 1 14) 2) 10000 0))
+
+    ;; --- 6. full moon: octant 4, elongation ~180 ----------------------
+    (let full-oct (eq (moon-phase-octant 2000 1 21) 4))
+    (let full-elong (eq (moon-elongation 2000 1 21) 184))
+    (let full-ok (if full-oct (if full-elong 100000 0) 0))
+
+    ;; --- 7. last quarter: phase octant 6 ------------------------------
+    (let lq-ok (if (eq (moon-phase-octant 2000 1 28) 6) 1000000 0))
+
+    (sum (list lon-ok sign-ok motion-ok new-ok fq-ok full-ok lq-ok)))
