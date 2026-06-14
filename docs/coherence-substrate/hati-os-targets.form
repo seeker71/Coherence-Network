@@ -4,11 +4,12 @@
   (lineage
     (rests-on hati-os.form tool-channel.form fourth-kernel-physical-lanes.form)
     (recipe form/form-stdlib/hati-os-targets.fk)
-    (proof form/form-stdlib/tests/hati-os-targets-band.fk -> 8191 four-way-fkwu)
+    (proof form/form-stdlib/tests/hati-os-targets-band.fk -> 16383 four-way-fkwu)
     (native-cli-emit-proof form/form-stdlib/tests/hati-os-native-cli-emit-band.fk -> 7 four-way-fkwu)
     (metal-emit-proof form/form-stdlib/tests/metal-emit-band.fk -> 31 four-way-fkwu)
     (form-macho-proof form/form-stdlib/tests/form-macho-band.fk -> 31 four-way-fkwu)
     (form-elf-proof form/form-stdlib/tests/form-elf-band.fk -> 31 four-way-fkwu)
+    (form-elf-exec-proof form/form-stdlib/tests/form-elf-exec-band.fk -> 63 four-way-fkwu)
     (asm-human-emit-proof form/form-stdlib/tests/asm-pl-human-emit-band.fk -> 31 four-way-fkwu)
     (jit-lane-proof form/form-stdlib/tests/jit-metal-lanes-band.fk -> 4095 four-way-fkwu)
     (oracle-learning-proof form/form-stdlib/tests/jit-oracle-learning-band.fk -> 1023 four-way-fkwu)
@@ -19,7 +20,7 @@
     "Cells and recipes can discover which host OS target carries a protocol, which capability it requires, and where its native binary is published.")
 
   (floor
-    "macOS arm64 and Android arm64 have target rows, clang target triples, relocatable assembly/object oracle surfaces, Form-native Mach-O and ELF/aarch64 object wrappers running four-way on fkwu, native CLI/metal emit rows running four-way on fkwu, third-party oracle rows, Form-native arm64 assembler runtime rows, lowered JIT residual rows running four-way on fkwu, numeric conversion/transcendental rows and tensor quantization running four-way on fkwu, measured oracle-learning choice rows, CPU/GPU/ML kernel emitter proof rows running four-way on fkwu, implementation rows for process, utilization, audio, video, sensor, GPU, DSP, and MLX/equivalent accelerator lanes, and hati.earth download coordinates. Android support does not require a runtime clang dependency for the minimum JIT floor."
+    "macOS arm64 and Android arm64 have target rows, clang target triples, relocatable assembly/object oracle surfaces, Form-native Mach-O and ELF/aarch64 object wrappers running four-way on fkwu, a Form-native Android ELF/aarch64 executable shape running four-way on fkwu, native CLI/metal emit rows running four-way on fkwu, third-party oracle rows, Form-native arm64 assembler runtime rows, lowered JIT residual rows running four-way on fkwu, numeric conversion/transcendental rows and tensor quantization running four-way on fkwu, measured oracle-learning choice rows, CPU/GPU/ML kernel emitter proof rows running four-way on fkwu, implementation rows for process, utilization, audio, video, sensor, GPU, DSP, and MLX/equivalent accelerator lanes, and hati.earth download coordinates. Android support does not require a runtime clang dependency for the minimum JIT floor."
     "GPU, DSP, and MLX are minimal floors today: discoverable protocol rows with capability names and target-specific implementation direction, not full native dispatch receipts.")
 
   (north-star
@@ -35,6 +36,7 @@
       (binary-format mach-o)
       (assembly-surface mach-o-relocatable+arm64-asm)
       (form-native-object form-macho)
+      (form-native-executable form-macho+ld)
       (jit-oracle clang)
       (jit-runtime form-native-arm64-assembler)
       (jit-model clang-oracle-sampled-form-native-recipe)
@@ -47,6 +49,7 @@
       (binary-format elf)
       (assembly-surface elf-relocatable+aarch64-asm)
       (form-native-object form-elf)
+      (form-native-executable form-elf-exec)
       (jit-oracle clang)
       (jit-runtime form-native-arm64-assembler)
       (jit-model clang-oracle-sampled-form-native-recipe)
@@ -99,6 +102,8 @@
     (binary-per-target)
     (clang-assembly-object-proof-per-target)
     (form-native-object-proof-per-target)
+    (form-native-android-executable-shape-proof)
+    (android-executable-runner-receipt-when-device-or-qemu-present)
     (form-native-jit-runtime-per-target)
     (lowered-jit-residual-proof-per-target)
     (android-jit-floor-without-runtime-clang)
@@ -120,4 +125,4 @@
     (north-star "automated per-target screenshot/video artifacts, accessibility pass, and signed review receipt are attached to the release evidence"))
 
   (next
-    "Grow the clang/driver/MLK oracle sample corpus beyond the current four-way Form-native per-lane proof into measured choice windows, evaluate whether an APK-shipped clang-like binary is small and trustworthy enough to act as an optional Android accelerator, then wire the release build to publish the macOS tarball and Android native kernel package at the catalog URLs with sha256 files, target assembly/source-map receipts, lowered-JIT receipts, and physical-lane summary JSON beside each binary. The APK remains a separate mesh-organ release artifact with its own screenshot and channel proof."))
+    "Grow the clang/driver/MLK oracle sample corpus beyond the current four-way Form-native per-lane proof into measured choice windows, attach a qemu-aarch64 or Android-device execution receipt for the Form-native ELF executable, evaluate whether an APK-shipped clang-like binary is small and trustworthy enough to act as an optional Android accelerator, then wire the release build to publish the macOS tarball and Android native kernel package at the catalog URLs with sha256 files, target assembly/source-map receipts, lowered-JIT receipts, and physical-lane summary JSON beside each binary. The APK remains a separate mesh-organ release artifact with its own screenshot and channel proof."))
