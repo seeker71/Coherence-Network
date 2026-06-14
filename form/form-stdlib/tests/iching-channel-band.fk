@@ -1,0 +1,43 @@
+; tests/iching-channel-band.fk — one cell, three tongues, proven.
+;
+; Gate 25 is the headline: Human Design's "Spirit of the Self", Gene Key 25's
+; Constriction->Acceptance->Universal Love, and I Ching hexagram 25's Innocence are
+; three DIFFERENT surfaces of ONE cell. The band proves each face speaks its own
+; tradition AND that the engine recognises them as the same cell by address.
+;
+; Verdict 1111111 (127) when every claim holds across all kernels.
+;   the I Ching face speaks hexagram 25 ("Innocence")             → 1
+;   the Human Design face speaks gate 25 ("Spirit of the Self")   → 10
+;   the Gene Keys face speaks key 25 ("Universal Love")           → 100
+;   the three faces are ONE cell at address 25                    → 1000
+;   the cross-modal class at gate 25 has all three faces           → 10000
+;   an unseeded gate (40) → honest absence on every face          → 100000
+;   coverage: 64 total, 5 seeded per face                         → 1000000
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/iching-channel.fk
+;
+
+(do
+    ;; --- 1..3: each face speaks its own tradition for gate 25 ----------
+    (let ic-ok (if (ge (str_find (ic-hexagram-speak 25) "Innocence" 0) 0) 1 0))
+    (let hd-ok (if (ge (str_find (hd-gate-speak 25) "Spirit of the Self" 0) 0) 10 0))
+    (let gk-ok (if (ge (str_find (gk-key-speak 25) "Universal Love" 0) 0) 100 0))
+
+    ;; --- 4: the three faces are ONE cell at address 25 ----------------
+    (let one-ok (if (eq (ic64-one-cell? 25) 1) 1000 0))
+
+    ;; --- 5: the cross-modal class at gate 25 carries all three --------
+    (let cls (ic64-equivalents 25))
+    (let class-ok (if (eq (len cls) 3) 10000 0))
+
+    ;; --- 6: an unseeded gate is honest absence on every face ----------
+    (let ic-absent (ge (str_find (ic-hexagram-speak 40) "honest absence" 0) 0))
+    (let hd-absent (ge (str_find (hd-gate-speak 40) "honest absence" 0) 0))
+    (let gk-absent (ge (str_find (gk-key-speak 40) "honest absence" 0) 0))
+    (let absence-ok
+        (if ic-absent (if hd-absent (if gk-absent 100000 0) 0) 0))
+
+    ;; --- 7: coverage is legible (64 total, 5 seeded per face) ---------
+    (let cov-ok (if (eq (ic64-total) 64) (if (eq (ic64-seeded) 5) 1000000 0) 0))
+
+    (sum (list ic-ok hd-ok gk-ok one-ok class-ok absence-ok cov-ok)))

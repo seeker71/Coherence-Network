@@ -1,0 +1,44 @@
+; tests/zodiac-channel-band.fk — twelve signs, two tongues, one set of cells.
+;
+; Verdict 1111111 (127) when every claim holds across all kernels.
+;   Western Aries speaks its element and ruler                   → 1
+;   Vedic Mesha speaks its rashi name and graha                  → 10
+;   Western Scorpio speaks transformation (a mid sign)           → 100
+;   Aries=Mesha and Pisces=Meena: Western and Vedic name one cell → 1000
+;   full coverage: 12 signs in each face                         → 10000
+;   the cross-tongue class at Virgo/Kanya (addr 5) = 2           → 100000
+;   honest absence for index 12                                  → 1000000
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/zodiac-channel.fk
+;
+
+(do
+    ;; --- 1. Western Aries ---------------------------------------------
+    (let aries-ok
+        (if (ge (str_find (western-sign-speak 0) "cardinal fire" 0) 0)
+            (if (ge (str_find (western-sign-speak 0) "Mars" 0) 0) 1 0) 0))
+
+    ;; --- 2. Vedic Mesha -----------------------------------------------
+    (let mesha-ok
+        (if (ge (str_find (vedic-rashi-speak 0) "Mesha" 0) 0)
+            (if (ge (str_find (vedic-rashi-speak 0) "Mangala" 0) 0) 10 0) 0))
+
+    ;; --- 3. a mid sign: Scorpio ---------------------------------------
+    (let scorpio-ok (if (ge (str_find (western-sign-speak 7) "transformation" 0) 0) 100 0))
+
+    ;; --- 4. Western and Vedic name one cell, at both ends -------------
+    (let ends-ok
+        (if (eq (zodiac-one-sign? 0) 1)
+            (if (eq (zodiac-one-sign? 11) 1) 1000 0) 0))
+
+    ;; --- 5. full coverage ---------------------------------------------
+    (let cov-ok (if (eq (zodiac-coverage) 12) 10000 0))
+
+    ;; --- 6. the cross-tongue class at Virgo/Kanya (address 5) --------
+    (let cls (zodiac-equivalents 5))
+    (let class-ok (if (eq (len cls) 2) 100000 0))
+
+    ;; --- 7. honest absence for a 13th sign ----------------------------
+    (let absent-ok (if (ge (str_find (western-sign-speak 12) "honest absence" 0) 0) 1000000 0))
+
+    (sum (list aries-ok mesha-ok scorpio-ok ends-ok cov-ok class-ok absent-ok)))

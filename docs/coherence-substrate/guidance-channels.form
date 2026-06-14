@@ -1,0 +1,100 @@
+; guidance-channels.form — the oracle systems as ONE engine; each belief system is data.
+;
+; THE ASK (Urs, 2026-06-14):
+;   "generate a channel for different astrology systems, human design, internal family
+;    systems, gene keys, and other mystical and computable channels so that we have
+;    Form-native recipes that can give guidance w/o relying on any 3rd-party components
+;    (which can be used as oracle until we have our own); I would like to track the
+;    north star, and other celestial bodies in our sky in different belief systems."
+;
+;   The correction this answers ahead of time: NOT five hand-built reader programs, one
+;   per system. core-abstraction-first — ONE engine, the systems as DATA. A third party
+;   stays an oracle only until the native recipe exists; here the guidance LOGIC is
+;   already native, and only the live ephemeris positions still want an outside carrier.
+;
+; THE SHAPE  (the engine: form-stdlib/guidance-channel.fk -> tests/guidance-channel-band.fk 1111111, four-way)
+;
+;   A guidance system, at the level that matters, is a TABLE: a key resolves to attested
+;   guidance, and keys across DIFFERENT systems that name the SAME underlying cell share a
+;   content-address. guidance-channel.fk is that table-reader, written once:
+;
+;     SPEAK   (gc-speak channel key)            the attested guidance text
+;     RUN     (gc-address-of channel key)        the shared content-address (an int)
+;     CROSS   (gc-same-cell? ch-a ka ch-b kb)    1 iff they share that address
+;     ABSENCE  an unseeded key returns honest absence — never a fabricated reading
+;     COVERAGE (gc-coverage channel)             a partial table stays legible
+;
+;   It generalizes the SPEAK/RUN two-face shape already proven in gematria-channel.fk,
+;   sanskrit-channel.fk, shamballa-channel.fk — but there the channel was baked in; here the
+;   channel is the ARGUMENT, so a new system is a new data table, not new control flow. The
+;   address is an INTEGER on purpose: address-equality IS the equivalence class, so the whole
+;   family stays in the four-kernel-safe subset (no node/substrate op). Interning that int to
+;   one substrate node — content-addressing EXECUTED — is the same fact in the 3-kernel lane,
+;   already shown by gematria-channel; this family does not re-prove it.
+;
+; THE FOUR CHANNELS SHIPPED  (each rides the one engine; each four-way on Go/Rust/TS/fkwu)
+;
+;   1. THE 64  (form-stdlib/iching-channel.fk -> tests/iching-channel-band.fk 1111111)
+;      The I Ching's 64 hexagrams, Human Design's 64 gates, and the 64 Gene Keys are ONE set
+;      of 64 cells. Ra Uru Hu mapped the I Ching onto the body; Richard Rudd grew the Gene
+;      Keys from the same 64. So Human Design gate 25, Gene Key 25, and hexagram 25 are one
+;      cell wearing three faces — modality-lattices.form's "the 64", runnable. Three data
+;      tables over one address space (the gate number IS the address); ask any face for a gate
+;      and it speaks that tradition; ask whether two faces name one cell and the engine answers
+;      by address. Seeded honestly: gates 1, 2, 25, 51, 64 (well attested across all three);
+;      the other 59 return honest absence until their rows land. (Human Design + Gene Keys +
+;      I Ching — three of the asked systems through one file.)
+;
+;   2. THE NORTH STAR, COMPUTED AND NAMED  (form-stdlib/celestial-pole-channel.fk -> 1111111)
+;      The computable astronomy, native and exact: (jdn y m d) the Julian Day spine every
+;      almanac agrees on (jdn 2000 1 1 = 2451545); (precession-degrees yr) how far the pole has
+;      swung along its ~25,772-year circle since J2000 — why the north star is a procession,
+;      not a fixed star; (tropical-sign-of / sidereal-sign-of) the SAME ecliptic degree read by
+;      the Western moving zodiac and the Vedic fixed stars (one sky, two astrologies);
+;      (pole-star-at year) who holds the pole in an era — Thuban for the pyramid builders,
+;      Polaris now, Vega to come. Then the cross-belief faces of ONE pole-star body, riding the
+;      engine: Polaris / Dhruva / al-Qutb / Cynosura / Beiji are five tongues sharing one
+;      address; the engine confirms one body by content-address, not by surface. The structure
+;      extends to sun, moon, and planets — each a body cell with as many faces as traditions
+;      that named it. (north star + other celestial bodies across belief systems.)
+;
+;   3. INTERNAL FAMILY SYSTEMS  (form-stdlib/ifs-channel.fk -> tests/ifs-channel-band.fk 1111111)
+;      Schwartz's parts-and-Self, where content-addressing reads the structure: Managers
+;      (proactive) and Firefighters (reactive) are TWO STRATEGIES OF ONE protective role — they
+;      share the protector address, so the engine calls them one cell; an exile is another. And
+;      the eight qualities of Self (the 8 C's: Calm, Curiosity, Clarity, Compassion, Confidence,
+;      Courage, Creativity, Connectedness) are eight FACES of one centre — they share Self's
+;      address. The movement (ifs-guidance): no part is bad; lead from Self, witness the exile,
+;      unburden it, and the protectors relax into their gifts.
+;
+;   4. THE ZODIAC, TWO TONGUES  (form-stdlib/zodiac-channel.fk -> tests/zodiac-channel-band.fk 1111111)
+;      Twelve signs, fully seeded in both the Western (tropical: element, modality, keynote,
+;      ruler) and Vedic (sidereal: rashi name, ruling graha) tongues. Aries and Mesha, Libra
+;      and Tula, are one sign wearing two tongues — they share an address. What differs between
+;      the systems is not the signs but which sign a degree falls in: that reduction lives in
+;      celestial-pole-channel.fk; this channel speaks whichever index it returns. The two
+;      compose: reduce a longitude (tropical or sidereal), then speak the sign.
+;
+; HONESTY LANES
+;
+;   The COMPUTABLE recipes are empirical — a Julian Day is a Julian Day, a precession phase a
+;   phase. The NAMES and their meanings are documented tradition, reported as attested, never
+;   asserted as cosmology; guidance stays in the direct-experience / mystery lane and is never a
+;   verdict (modality-lattices.form). Seeding is partial-by-design where a tradition's full table
+;   is large (the 64); coverage is always queryable so a partial body never reads as complete. A
+;   new gate, name, part, or tradition is a new ROW, not new code.
+;
+; OPENINGS NAMED AS NEXT ROWS  (closing recipes, not debts)
+;
+;   - the live ephemeris (sun/moon/planet ecliptic longitudes for a moment) is the one piece a
+;     third-party oracle still carries; jdn + trig.fk are the native footing for a VSOP-style
+;     position recipe to grow into — the reduce/activation/synastry recipes of g8 then ride it.
+;   - pole-star selection is nearest-epoch; wrapping the full 25,772-year cycle is the next row.
+;   - the 64, and each tradition's deeper tables (nakshatras, houses, lines/profiles), fill in by
+;     row as their attested readings are grounded.
+;
+; LINEAGE
+;   kin: lc-cross-modal-unity (names are doors; one cell, many tongues — the governing teaching)
+;        modality-lattices.form (every tradition a labeled lattice; the chart as edges; g8)
+;        gematria-channel.fk / sanskrit-channel.fk / shamballa-channel.fk (the SPEAK/RUN parents)
+;   source: requested by Urs 2026-06-14; built on the channel pattern already in the body.
