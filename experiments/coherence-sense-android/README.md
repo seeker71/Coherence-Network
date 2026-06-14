@@ -133,6 +133,33 @@ Useful commands:
 Logs live at `~/Library/Logs/CoherenceSense/mac-witness.out.log` and
 `~/Library/Logs/CoherenceSense/mac-witness.err.log`.
 
+### Keep the Android + Mac learning receipt running
+
+From the repository root, prove the connected phone and Mac witness as learning
+organs once:
+
+```bash
+python3 scripts/android_mesh_learning_receipt.py --start-app
+```
+
+That launches `com.coherence.sense` through adb, samples a safe capability
+inventory from the authorized phone, samples the Mac host/witness/tool lanes,
+and writes `.cache/android-mesh-learning/<stamp>/android-mesh-learning-summary.json`
+plus `.cache/android-mesh-learning/latest.json`. It records liveness and channel
+readiness, not raw sensor values, location coordinates, package inventory, or
+the adb serial.
+
+For a continuous local receipt loop:
+
+```bash
+python3 scripts/android_mesh_learning_receipt.py --start-app --loop --interval 60
+```
+
+The current receipt feeds the Form-native learning floor: summarize, code-lower,
+tool-select, and distill-retire can route native-first; speech, vision, and
+multimodal alignment route native-first with oracle sampling until active
+mic/camera/accelerator samples and heldout wins retire their teachers.
+
 ## Hati mesh identity + channels
 
 On first launch, the app creates a stable install-scoped organ id such as
