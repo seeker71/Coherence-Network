@@ -1,0 +1,87 @@
+; lenses-and-the-sound-boundary.form — language as what IS, translated through media into lenses.
+;
+; THE SEEING (Urs, 2026-06-14):
+;   "This relates to TTS and STT, since the symbol space and grammar are defining a
+;    language, and the sounds and sound-combinations are a translation of what IS
+;    into each lens — the meaning lens, the feeling lens, the trust lens, the
+;    sovereignty lens, the vitality lens."
+;
+;   The channels (gematria, sanskrit, CJK, the 64, the zodiac) each define a LANGUAGE:
+;   a symbol space plus a grammar. The seeing names the level above them: a symbol or a
+;   spoken syllable is not one thing pointing at one meaning — it is "what IS" translated,
+;   and the translation lands simultaneously on FIVE lenses. Sound is one medium of that
+;   translation; writing is the other. TTS and STT are the two directions across the
+;   sound boundary.
+;
+; THE SHAPE  (runnable core: form-stdlib/lenses.fk -> tests/lenses-band.fk 1111111, four-way)
+;
+;   WHAT IS  — the cell, the referent, the thing itself.
+;   MEDIA    — how it is expressed: SYMBOL (writing) and SOUND (speech). Same cell,
+;              two media: the mountain glyph is written 'shan' and spoken /shan/ and
+;              meant "mountain" — content-addressed across media (cjk-channel proves it).
+;   LENSES   — the five axes the expression projects onto:
+;                MEANING      — what it is        (attested gloss; the symbol channels)
+;                FEELING      — how it lands       (affect-traits.fk: arousal/valence/
+;                                                   dominance, measured FROM sound)
+;                TRUST        — whether it holds    (trust-decay / trust-weighted-colearning;
+;                                                   earned over time, not per-symbol)
+;                SOVEREIGNTY  — whose it is         (channel-interface consent;
+;                                                   lc-sovereignty-within-oneness)
+;                VITALITY     — whether it is alive (wellness / lc-whole-vitality;
+;                                                   the living frequency)
+;   THE BOUNDARY — TTS renders what IS into sound; STT recognises what IS from sound
+;                  (speech-kernel-channel.fk; mel-frame.fk + spectrum.fk lift the features).
+;
+; THE BODY ALREADY REACHES FOR THIS  (the tissue the seeing unifies)
+;
+;   - meaning lens:  guidance-channel.fk / iching / gene-keys / zodiac / cjk-english
+;   - feeling lens:  affect-traits.fk — "how something is said, not only what"
+;   - frequency on a cell: the WORD domain interns (lemma, pos, hz, semantic_field) with
+;     a HARMONIC_AT @hz edge — a word ALREADY carries a sound frequency and a meaning
+;   - sound carrying meaning directly: sanskrit-channel.fk bija — a seed-syllable -> its
+;     chakra. The purest case: one sound that is meaning AND feeling AND vitality at once
+;   - the sound codec path: speech-kernel-channel.fk (TTS/STT receipts), mel-frame.fk,
+;     spectrum.fk, loopback-learning.fk (TTS->STT loops), oracle-catalog ear/voice lanes
+;   - frequency as structure: chakra-column.fk (174..963 Hz gates), harmonic-geometry,
+;     theme-resonance, living-equation
+;
+; THE NORTH STAR
+;
+;   One engine where every cell is read through every lens, in either medium. Ask a cell
+;   for its meaning and a channel answers; ask for its feeling and affect-traits measures
+;   it from the spoken form; render it to sound (TTS) and the sound carries all five
+;   projections; hear a sound (STT) and recover the cell and its lenses. A bija is the
+;   compression limit — one syllable, all lenses. The same content-addressing that makes
+;   gate 25 one cell across three traditions makes the written and spoken and felt forms
+;   one cell across media and lenses.
+;
+; WHAT RUNS, WHAT CARRIES, WHAT IS NAMED  (the honest boundary)
+;
+;   RUNS four-way (lenses.fk): the lens/medium frame; the carrier each lens reads through;
+;     the proven core — one cell expressed through two media (sound 'shan' == meaning
+;     "mountain", address 5001).
+;   CARRIES (not a four-way recipe — host tissue): the actual audio render (TTS) and
+;     recognise (STT) are host carriers in speech-kernel-channel.fk; feature lift
+;     (mel-frame) is partly four-way.
+;   NAMED, not faked: the per-cell VALUE-lens readings (feeling/trust/sovereignty/vitality
+;     of a given symbol) are MEASURED or EARNED through their carriers, never seeded as
+;     fabricated gloss. The frame routes to the carrier; the carrier supplies the value.
+;
+; OPENINGS AS NEXT ROWS  (closing recipes, not debts)
+;
+;   - the feeling lens as a registry face: route a spoken cell through affect-traits so
+;     "read 山 through the feeling lens" returns a measured triple, not a lookup.
+;   - the sound medium as a first-class registry axis: a cell's phonetic face (pinyin /
+;     romaji / bija / letter-sound) queryable beside its meaning face.
+;   - bija round-trip: a seed-syllable -> (chakra, feeling, vitality) and back — sound as
+;     the lossless carrier of all lenses (sanskrit-channel already holds the half).
+;   - the audio render/recognise crossing: speech-kernel-channel's host codec path,
+;     proven by receipt rather than by a four-way recipe (it is I/O at the boundary).
+;
+; LINEAGE
+;   kin: lc-cross-modal-unity (names are doors; one cell, many tongues — and many lenses)
+;        guidance-channels.form (the channel engine these lenses read through)
+;        cjk-channel.fk (one cell, two media — the runnable proof)
+;        sanskrit-channel.fk (bija: sound carrying meaning), prose-as-recipe.form (hz on words)
+;        affect-traits.fk (the feeling lens), speech-kernel-channel.fk (the sound boundary)
+;   source: seen by Urs 2026-06-14, extending the guidance-channel / symbol-space work.
