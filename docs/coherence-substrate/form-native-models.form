@@ -13,8 +13,8 @@
 ;     quantization, transformer numerics, one transformer block, mel-frame, Metal emitter lanes, and
 ;     Form-emitted native matvec receipts. model-vitality.fk now names the storage/focus rows for
 ;     architecture cells, tensor chunks, delta slices, optimizer-state cells, eval receipts, vitality
-;     receipts, and lineage. Its proof band returns 4095 across the current validation kernels and
-;     refuses a local cache/GPU/MLX carrier marked as source of truth.
+;     receipts, and lineage. Its proof band returns 4095 four-way on Go/Rust/TS/fkwu and refuses a
+;     local cache/GPU/MLX carrier marked as source of truth.
 ;   NORTH STAR: model architecture, weights, deltas, optimizer state, eval receipts, vitality signals,
 ;     and lineage are content-addressed substrate cells. Files (.pt, .safetensors, .npz, .mlx), GPU
 ;     buffers, MLX arrays, Metal buffers, emitted binaries, and Hati download artifacts are ingest,
