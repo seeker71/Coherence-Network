@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 273
+**Total files**: 274
 
 | File | Purpose |
 |---|---|
@@ -146,6 +146,7 @@
 | [test_meeting_resonance_capture.py](test_meeting_resonance_capture.py) | Meeting resonance capture flow tests. |
 | [test_modality_blueprints.py](test_modality_blueprints.py) | Tests for the cross-modal canonical-shape interner. |
 | [test_model_executor_proof_ledger.py](test_model_executor_proof_ledger.py) | _no top-of-file purpose_ |
+| [test_models_learning_dashboard.py](test_models_learning_dashboard.py) | _no top-of-file purpose_ |
 | [test_monitor_pipeline_stale_running.py](test_monitor_pipeline_stale_running.py) | Stale-running pipeline monitoring tests. |
 | [test_monitor_resolution.py](test_monitor_resolution.py) | Tests for heal-completion-issue-resolution spec (047). |
 | [test_morning_coherence_brief.py](test_morning_coherence_brief.py) | _no top-of-file purpose_ |
