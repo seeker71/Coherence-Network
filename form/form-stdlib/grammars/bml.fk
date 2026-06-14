@@ -5588,10 +5588,10 @@
         "original BML/BMF/Form compiler sources compile themselves into versioned .fkb images and Hati fourth-kernel native binaries with full class, template, generic, method, state, exception, and physical-lane support")
 
     (defn bml-hati-native-floor ()
-        "supported native subsets include lexical const/name binding, one- and two-argument method parameter binding, known method calls, method-scope class field read/write through record-backed self, named class method dispatch, class construction defaults, arity-aware overload dispatch, template/generic metadata, clang oracle assembly receipts, and Form-native JIT runtime model rows for macos-arm64 and android-arm64; they must produce loadable Hati tables with parity proof; unsupported BML shapes, including unresolved names, unbound calls, arity mismatch, missing class methods, full class construction syntax, and template/generic specialization, must be named before table emission and never silently become a valid zero result")
+        "supported native subsets include lexical const/name binding, one- and two-argument method parameter binding, known method calls, method-scope class field read/write through record-backed self, named class method dispatch, class construction defaults, arity-aware overload dispatch, arity-selected compiled overload calls, template/generic metadata, clang oracle assembly receipts, and Form-native JIT runtime model rows for macos-arm64 and android-arm64; they must produce loadable Hati tables with parity proof; unsupported BML shapes, including unresolved names, unbound calls, arity mismatch, missing class methods, full class construction syntax, type/generic overload resolution, and template/generic specialization, must be named before table emission and never silently become a valid zero result")
 
     (defn bml-hati-native-next-step ()
-        "lift full class construction syntax, template/generic specialization, ambiguous overload resolution, and broader multi-argument call families on the method parameter/call binding floor")
+        "lift full class construction syntax, template/generic specialization, type/generic overload resolution, and broader multi-argument call families on the method parameter/call binding floor")
 
     (defn bml-hati-lower-result (expr pool)
         (list "bml-hati-lower-result" expr pool))
@@ -5761,6 +5761,29 @@
                 (node_value (bml-node-child (head (tail (node_children arg))) 0))
                 1)))
 
+    (defn bml-hati-method-binding-for-arity (env name arity)
+        (if (nil? env)
+            (empty)
+            (do
+                (let binding (head env))
+                (let value (bml-local-binding-value binding))
+                (if (str_eq (bml-local-binding-name binding) name)
+                    (if (bml-hati-method-ref? value)
+                        (if (eq (bml-hati-method-ref-arity value) arity)
+                            binding
+                            (bml-hati-method-binding-for-arity
+                                (tail env)
+                                name
+                                arity))
+                        (bml-hati-method-binding-for-arity
+                            (tail env)
+                            name
+                            arity))
+                    (bml-hati-method-binding-for-arity
+                        (tail env)
+                        name
+                        arity)))))
+
     (defn bml-hati-bind-methods (methods env index)
         (if (nil? methods)
             env
@@ -5874,13 +5897,15 @@
                 (if (nil? binding)
                     (list "call/unbound")
                 (if (bml-hati-method-ref? (bml-local-binding-value binding))
-                    (if (eq
-                            (bml-hati-method-ref-arity (bml-local-binding-value binding))
-                            (len (bml-call-args node)))
+                    (if (nil?
+                            (bml-hati-method-binding-for-arity
+                                env
+                                (bml-call-name node)
+                                (len (bml-call-args node))))
+                        (list "call/arity")
                         (bml-hati-unsupported-call-args-in
                             (bml-call-args node)
-                            env)
-                        (list "call/arity"))
+                            env))
                     (list "call/not-method")))))))))
 
     (defn bml-hati-unsupported-call-args-in (args env)
@@ -6069,6 +6094,27 @@
                     pool
                     (bml-local-binding-env binding)))))))
 
+    (defn bml-hati-lower-method-ref-call (node method-ref pool env)
+        (do
+            (let arg
+                (bml-hati-lower-node-in-env
+                    (bml-call-arg node)
+                    pool
+                    env))
+            (bml-hati-lower-result
+                (if (le (bml-hati-method-ref-arity method-ref) 1)
+                    (fk-call
+                        (bml-hati-method-ref-index method-ref)
+                        (bml-hati-lower-expr arg))
+                    (fk-icall
+                        (fk-cons
+                            (fk-lit (bml-hati-method-ref-index method-ref))
+                            (fk-cons
+                                (fk-lit (bml-hati-method-ref-arity method-ref))
+                                (fk-empty)))
+                        (bml-hati-lower-expr arg)))
+                (bml-hati-lower-pool arg))))
+
     (defn bml-hati-lower-call-in (node pool env)
         (if (bml-hati-arg-node? node)
             (bml-hati-lower-result (fk-arg) pool)
@@ -6105,32 +6151,18 @@
                     (bml-hati-lower-result (fk-lit 0) pool)
                 (if (bml-hati-method-ref? (bml-local-binding-value binding))
                     (do
-                        (let arg
-                            (bml-hati-lower-node-in-env
-                                (bml-call-arg node)
+                        (let method-binding
+                            (bml-hati-method-binding-for-arity
+                                env
+                                (bml-call-name node)
+                                (len (bml-call-args node))))
+                        (if (nil? method-binding)
+                            (bml-hati-lower-result (fk-lit 0) pool)
+                            (bml-hati-lower-method-ref-call
+                                node
+                                (bml-local-binding-value method-binding)
                                 pool
-                                env))
-                        (bml-hati-lower-result
-                            (if (le
-                                    (bml-hati-method-ref-arity
-                                        (bml-local-binding-value binding))
-                                    1)
-                                (fk-call
-                                    (bml-hati-method-ref-index
-                                        (bml-local-binding-value binding))
-                                    (bml-hati-lower-expr arg))
-                                (fk-icall
-                                    (fk-cons
-                                        (fk-lit
-                                            (bml-hati-method-ref-index
-                                                (bml-local-binding-value binding)))
-                                        (fk-cons
-                                            (fk-lit
-                                                (bml-hati-method-ref-arity
-                                                    (bml-local-binding-value binding)))
-                                            (fk-empty)))
-                                    (bml-hati-lower-expr arg)))
-                            (bml-hati-lower-pool arg)))
+                                env)))
                     (bml-hati-lower-result (fk-lit 0) pool)))))))))
 
     (defn bml-hati-lower-array-in (nodes pool env)

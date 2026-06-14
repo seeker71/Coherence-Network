@@ -28,7 +28,7 @@
 #     one value through fk_pr)
 #
 # Current floor (2026-06-14 record carrier admission): full
-# `cd form && ./validate.sh` reaches 139 four-way bands and 559 total passing
+# `cd form && ./validate.sh` reaches 139 four-way bands and 560 total passing
 # workloads, with 0 residual divergent bands. Record field access now rides a
 # native fourth-arm record carrier: record_new lowers to a packed entry packet,
 # then fkwu tags 64/65/67/68/99 carry construction, get, has, record?, and keys
