@@ -34,11 +34,11 @@
 ;     returned by kernel-native http_get into native capture rows, parses pulse JSON in Form, reads
 ;     runtime authority headers case-insensitively, rejects transport failure, and rejects Python-authority
 ;     runtime rows. scripts/model_vitality_native_http_capture_probe.sh source-compiles core and runs live
-;     Go/Rust HTTPS captures against the public pulse/runtime endpoints without curl; on
-;     2026-06-14T09:26:06Z both native kernels returned verdict 127, API pulse status=200 with nonzero
-;     body bytes and kernel-native-http-get authority, and runtime-summary was native-kernel with
-;     x-form-python-authority=false. TypeScript http_get still shells through curl and is named as a
-;     carrier gap, not native capture evidence.
+;     Go/Rust/TypeScript HTTPS captures against the public pulse/runtime endpoints without curl; on
+;     2026-06-14T09:46:56Z all three native kernels returned verdict 127, API pulse status=200 with
+;     nonzero body bytes and kernel-native-http-get authority, and runtime-summary was native-kernel with
+;     x-form-python-authority=false. The remaining external-HTTPS carrier gap is fourth-arm channel
+;     support.
 ;   NORTH STAR: model architecture, weights, deltas, optimizer state, eval receipts, vitality signals,
 ;     and lineage are content-addressed substrate cells. Files (.pt, .safetensors, .npz, .mlx), GPU
 ;     buffers, MLX arrays, Metal buffers, emitted binaries, and Hati download artifacts are ingest,
@@ -48,11 +48,11 @@
 ;     sovereignty, and trust, plus accuracy, confidence, energy, latency, memory pressure, sample
 ;     coverage, freshness, mergeability, and promotion readiness, then focuses attention from that row.
 ;   GAP: arbitrary safetensors header parsing, full MLX package ingest into many chunk cells,
-;     optimizer-step cells, durable eval-receipt query path, non-shell TypeScript/fourth-arm external
-;     HTTPS capture, and mesh-scale merkle slice sharing are still not closed.
+;     optimizer-step cells, durable eval-receipt query path, fourth-arm external HTTPS capture, and
+;     mesh-scale merkle slice sharing are still not closed.
 ;     The small multi-chunk ingest floor, physical GPU/MLX/Metal returned-byte re-hash proof, local
-;     live-row route read, production pulse/runtime row ingestion, and Go/Rust kernel-native HTTPS capture
-;     are now closed receipts, not future claims.
+;     live-row route read, production pulse/runtime row ingestion, and Go/Rust/TypeScript kernel-native
+;     HTTPS capture are now closed receipts, not future claims.
 ;   RELEASE HEALTH: focused testing and faster release are part of vitality. Each step should ship with
 ;     the smallest proof that exposes the new tissue clearly, then widen only where the changed surface
 ;     warrants it. Slow, unfocused validation is pressure the body should read and reduce.

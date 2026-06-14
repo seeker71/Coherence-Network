@@ -28,11 +28,10 @@
 ; same live model-vitality store read. Shell probes may capture public slices,
 ; but the body-readable grammar, validity gates, and focus route live here.
 ;
-; Native HTTP capture floor: the Go and Rust kernels already expose http_get as
+; Native HTTP capture floor: the Go, Rust, and TypeScript kernels expose http_get as
 ; a blocking kernel-native HTTPS client returning a Form dict. This file lifts
-; that dict into model-vitality rows. TypeScript still offers http_get through a
-; curl shell projection; that projection is a named gap for native capture proof,
-; not a truth source.
+; that dict into model-vitality rows. Fourth-arm external HTTPS channel support
+; remains the named gap for all-kernel native capture proof.
 
 (do
     (defn mv-kind-model-architecture () "model/architecture")
