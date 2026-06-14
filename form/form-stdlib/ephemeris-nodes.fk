@@ -1,0 +1,37 @@
+; ephemeris-nodes.fk — the lunar nodes (Rahu / Ketu), the karmic axis, computed natively.
+;
+; Where the Moon's orbit crosses the ecliptic: the ascending node is Rahu (the north
+; node), the descending node Ketu (the south node), always 180 deg opposite. In Vedic
+; astrology they are the karmic axis; in Human Design and Western they carry the same
+; line. The mean node REGRESSES — it moves backward through the zodiac, one full turn
+; in ~18.6 years — so its longitude only ever decreases. A clean linear element, no
+; periodic terms, four-way on the jdn + sign-reduction footing:
+;
+;   d     = JD - 2451545
+;   Omega = 125.0445 - 0.05295377 d     mean ascending node (deg, retrograde)
+;   Rahu  = Omega        (north node)
+;   Ketu  = Omega + 180  (south node)
+;
+;   (rahu-longitude y m d) / (ketu-longitude y m d)   -> integer deg in [0,360)
+;   (rahu-sign-tropical ...) / (rahu-sign-sidereal ...) / (ketu-sign-tropical ...)
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/celestial-pole-channel.fk form-stdlib/trig.fk form-stdlib/ephemeris-sun.fk
+;
+
+(do
+    ;; the mean ascending node (degrees), retrograde
+    (defn node-omega-raw (d) (sub 125.0445 (mul 0.05295377 d)))
+
+    (defn rahu-longitude (y m d)
+        (round (fnorm360 (node-omega-raw (ephem-n y m d)))))
+    (defn ketu-longitude (y m d)
+        (round (fnorm360 (add (node-omega-raw (ephem-n y m d)) 180.0))))
+
+    (defn rahu-sign-tropical (y m d) (tropical-sign-of (rahu-longitude y m d)))
+    (defn rahu-sign-sidereal (y m d) (sidereal-sign-of (rahu-longitude y m d) (lahiri-ayanamsa-2000)))
+    (defn ketu-sign-tropical (y m d) (tropical-sign-of (ketu-longitude y m d)))
+    (defn ketu-sign-sidereal (y m d) (sidereal-sign-of (ketu-longitude y m d) (lahiri-ayanamsa-2000)))
+
+    (defn ephemeris-nodes-teaching () "lc-cross-modal-unity")
+
+    0)

@@ -241,3 +241,5 @@ url-encode fks 16
 uuid fks 15
 ephemeris-sun fks 1111111
 lenses fks 1111111
+ephemeris-moon fks 1111111
+ephemeris-nodes fks 111111
