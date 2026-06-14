@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 269
+**Total files**: 270
 
 | File | Purpose |
 |---|---|
@@ -131,6 +131,7 @@
 | [test_instance_pulse.py](test_instance_pulse.py) | Acceptance tests for instance-pulse — per-instance breath sharing. |
 | [test_interest_registration.py](test_interest_registration.py) | Flow-centric tests for interest registration — privacy-first community gathering. |
 | [test_investments.py](test_investments.py) | Flow-centric tests for the investment surface — covers preview, portfolio, |
+| [test_io_match_capture.py](test_io_match_capture.py) | io-match capture carrier: real tool calls become content-addressed records. |
 | [test_ip_registration.py](test_ip_registration.py) | Flow tests for ip_registration_service — story-protocol-integration R1, R7. |
 | [test_kernel_attribution_report.py](test_kernel_attribution_report.py) | Regression tests for kernel attribution parity sensing. |
 | [test_kernel_conformance_harness.py](test_kernel_conformance_harness.py) | Executable kernel conformance harness for Form question effects. |
