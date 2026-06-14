@@ -17,7 +17,8 @@
     "Planning is currently proven for summarize, tool-select, tool-execute, and code-lower. Unknown requests return `feature/no-plan` with floor/north-star guidance."
     "The summarize plan composes `text-summary-learning.fk`, so a below-floor summary cannot route as ready. Metric gates prove ready and deny outcomes."
     "Oracle mapping is explicit: summarize uses local LLM receipts, code-lower uses compiler evidence, cite-ground uses source grounding, and tool-execute uses execution-proof lanes."
-    "The Android/Mac mesh-learning receipt now supplies physical capability and liveness rows for speech, vision, multimodal alignment, code-lower, summarize, tool-select, and distill-retire routing. Speech, vision, and multimodal alignment are native-first with oracle sampling until active physical sample receipts and heldout wins graduate them.")
+    "The Android/Mac mesh-learning floor now supplies physical capability and liveness rows for speech, vision, multimodal alignment, code-lower, summarize, tool-select, and distill-retire routing."
+    "Active mic RMS, camera luma, and GPU EGL readback summaries are Form-native sample rows. When all three lanes are present, speech, vision, and multimodal alignment can route native-first; heldout wins are still required before retiring external teachers.")
 
   (north-star
     "The LLM surface becomes grammar-level Form tissue: retrieval, generation, planning, code lowering, tool use, dialogue, memory, speech, vision, and multimodal alignment are native channels with typed receipts."
@@ -62,5 +63,5 @@
     (generate "race Form-native and local/remote model candidates over real heldout tasks")
     (tool-execute "bind actual execution receipts from tool-channel into the feature row")
     (code-lower "prove natural-language -> Form/BML/domain grammar -> binary -> host-native ASM on real programs")
-    (speech-vision "feed real audio/video frames from the sensing lanes into the catalog rows; capability/liveness receipt exists, active sample receipts remain")
+    (speech-vision "feed active mic RMS/camera luma/GPU summary rows into heldout speech, vision, and multimodal learners; live unlocked-phone receipt and frame/audio feature learners remain")
     (distill-retire "record enough heldout wins to retire an oracle on one narrow lane")))
