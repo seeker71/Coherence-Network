@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
-"""Claude Code Stop hook — the flywheel inside every session.
+"""Claude Code Stop hook — TRAINING-CORPUS capture (not reply attunement).
 
-On every completed turn, transmute the response (fear/control -> discernment +
-opportunity) and capture the (request, raw, transmuted) pair into the form-cli
-training catalog. Usage becomes capability: the corpus trains the form-native
-lane the router (form-cli-router.fk) graduates to over time.
+A Stop hook fires AFTER the reply is shown, so it cannot attune what the human
+already saw. Reply attunement is synchronous and lives elsewhere: the voice
+(docs/coherence-substrate/voice-attunement.md) prevents fear at generation, and
+the cheap freq-check (form-freq-check.fk) gates a synchronous transmute in the
+form-cli loop / the agent's own draft-check.
 
-A hook CAN reason — it just must not BLOCK. So this hook does NO reasoning inline:
-it extracts the turn, spawns a DETACHED worker (capture_worker.py) that transmutes
-via the routed reasoner and writes the full pair, and returns immediately. The
-agent is never slowed. Any error is swallowed; the hook exits 0.
+What this hook does is fill the TRAINING CORPUS: on every completed turn it hands
+the (request, raw) pair to a DETACHED worker (capture_worker.py) that produces a
+transmuted counterpart and records the pair (training-catalog.fk). That corpus is
+what trains the freq-check and the transmuter cheaper over time — so usage becomes
+capability. Because it is training, not the live reply, it runs async: the hook
+spawns the worker and returns immediately. The agent is never slowed; any error is
+swallowed; the hook exits 0.
 """
 
 from __future__ import annotations

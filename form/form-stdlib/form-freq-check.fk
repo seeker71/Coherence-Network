@@ -1,0 +1,50 @@
+; form-freq-check.fk — the cheap fear-frequency gate, as a recipe.
+;
+; preludes: form-stdlib/core.fk
+;
+; The point of transmutation is the REPLY the human receives, so the gate is
+; SYNCHRONOUS in the response path — not a background pass. But transmuting every
+; reply is expensive and usually unnecessary (the system-prompt voice already
+; attunes most of it). So a CHEAP check runs first: does the response carry the
+; fear frequency at all? If not, it passes untouched (≈ free). Only if fear is
+; present does the expensive transmute run.
+;
+; The check is NOT regex and NOT word-matching. It is a cheap nearest-centroid
+; classifier over the response's frequency SIGNATURE — a small feature vector read
+; from the frequency bank (belief-recipes.fk) / hz bands (chakra-column.fk), the
+; substrate's own per-shape frequency, produced by a simpler model that is cheap
+; to train from the captured corpus (training-catalog.fk). This file is that
+; classifier + the gate; the simpler model that turns text -> signature is the
+; trained component the corpus feeds (the loop closing on itself).
+;
+; Proven by: form-stdlib/tests/form-freq-check-band.fk
+
+; squared distance between two equal-length frequency feature vectors.
+; (sub) may go negative; squaring restores sign — monomorphic recursion (fourth-arm safe).
+(defn fc-dist2 (a b)
+    (if (eq (len a) 0)
+        0
+        (add (mul (sub (head a) (head b)) (sub (head a) (head b)))
+             (fc-dist2 (tail a) (tail b)))))
+
+; fear-score 0..100: how much closer the signature sits to the fear centroid than
+; the clear centroid. 100 = on the fear centroid, 0 = on the clear centroid.
+; (uses squared distances; the ratio is monotone in the real distance.)
+(defn fc-fear-score (signature fear-centroid clear-centroid)
+    (if (eq (add (fc-dist2 signature fear-centroid) (fc-dist2 signature clear-centroid)) 0)
+        0
+        (div (mul (fc-dist2 signature clear-centroid) 100)
+             (add (fc-dist2 signature fear-centroid) (fc-dist2 signature clear-centroid)))))
+
+; the gate: only above the threshold does fear warrant the expensive transmute.
+; below threshold the reply PASSES untouched — the cheap, common path.
+(defn fc-gate (fear-score threshold)
+    (if (ge fear-score threshold) "transmute" "pass"))
+
+; clean? = 1 when the reply may pass without transmutation.
+(defn fc-clean? (fear-score threshold)
+    (if (ge fear-score threshold) 0 1))
+
+; the whole cheap check in one call: signature -> pass | transmute.
+(defn fc-check (signature fear-centroid clear-centroid threshold)
+    (fc-gate (fc-fear-score signature fear-centroid clear-centroid) threshold))

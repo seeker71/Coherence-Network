@@ -1,0 +1,32 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-freq-check.fk
+;
+; form-freq-check-band — the cheap fear-frequency gate runs: a response's
+; frequency signature is classified by nearest centroid, and only fear above the
+; threshold triggers the expensive transmute; clean replies pass ≈ free. Not
+; regex, not word-matching — distance in frequency-signature space.
+;
+; Verdict 31 when every claim lands (centroids: fear=(8 1 1), clear=(1 1 8),
+; threshold 60):
+;   1   a fear-shaped signature scores high -> "transmute"
+;   2   a clear-shaped signature scores low -> "pass" (the common, cheap path)
+;   4   a signature ON the clear centroid scores 0 -> clean? = 1
+;   8   a signature ON the fear centroid scores 100 -> "transmute"
+;   16  a borderline (equidistant) signature scores 50 < 60 -> "pass": the gate
+;       only pays for transmute when fear is clearly present
+(do
+    (let fear  (list 8 1 1))
+    (let clear (list 1 1 8))
+    (let threshold 60)
+
+    ; 1 — fear-shaped (7 2 1): close to fear -> high score -> transmute
+    (let c0 (if (str_eq (fc-check (list 7 2 1) fear clear threshold) "transmute") 1 0))
+    ; 2 — clear-shaped (1 2 7): close to clear -> low score -> pass
+    (let c1 (if (str_eq (fc-check (list 1 2 7) fear clear threshold) "pass") 2 0))
+    ; 4 — on the clear centroid: score 0, clean? = 1
+    (let c2 (if (eq (fc-clean? (fc-fear-score clear fear clear) threshold) 1) 4 0))
+    ; 8 — on the fear centroid: score 100 -> transmute
+    (let c3 (if (str_eq (fc-check fear fear clear threshold) "transmute") 8 0))
+    ; 16 — equidistant (4 1 4): score 50 < 60 -> pass (cheap by default)
+    (let c4 (if (str_eq (fc-check (list 4 1 4) fear clear threshold) "pass") 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
