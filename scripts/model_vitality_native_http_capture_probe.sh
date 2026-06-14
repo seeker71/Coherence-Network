@@ -10,9 +10,10 @@
 #
 # North star: every kernel captures external HTTPS directly into the same Form
 # row grammar, with no shell projection. The current all-kernel floor is
-# plaintext external HTTP plus verified TLS body capture; Go/Rust/TypeScript
-# already carry direct HTTPS production headers. The next lift is fourth-arm
-# response-header row capture.
+# plaintext external HTTP plus verified TLS body capture, and the fourth arm
+# carries direct HTTPS production response headers into model-vitality rows.
+# Next floor: request-header forwarding, measured duration, larger body policy,
+# and streaming/backpressure receipt rows.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -227,25 +228,32 @@ run_http_kernel() {
     }
 }
 
-run_fourth_http() {
-    local src="$1"
-    local out="$2"
-    local err="$3"
+run_fourth_sources() {
+    local out="$1"
+    local err="$2"
+    shift 2
     local driver="$out_dir/$(basename "$out").driver.fk"
     local table="$out_dir/$(basename "$out").table.txt"
     cat "${FOURTH_CHAIN[@]}" > "$driver"
-    fourth_flatten_expr fks "$src" >> "$driver"
+    fourth_flatten_expr fks "$@" >> "$driver"
     "$GO_BIN" "$driver" > "$table" 2> "$err.flatten" || {
-        echo "FAIL fourth all-kernel-http flatten failed"
+        echo "FAIL fourth flatten failed"
         cat "$err.flatten"
         exit 1
     }
     "$FKWU" "$table" 0 > "$out.full" 2> "$err" || {
-        echo "FAIL fourth all-kernel-http fkwu failed"
+        echo "FAIL fourth fkwu failed"
         cat "$err"
         exit 1
     }
     head -n 1 "$out.full" > "$out"
+}
+
+run_fourth_http() {
+    local src="$1"
+    local out="$2"
+    local err="$3"
+    run_fourth_sources "$out" "$err" "$src"
 }
 
 run_http_kernel http-go "$GO_BIN"
@@ -274,6 +282,53 @@ run_https_kernel https-rust "$RS_BIN"
 run_https_kernel https-typescript run_ts
 run_fourth_http "$all_https_fk" "$out_dir/https-fourth.https.verdict" "$out_dir/https-fourth.https.verdict.err"
 run_fourth_http "$all_https_detail_fk" "$out_dir/https-fourth.https.detail" "$out_dir/https-fourth.https.detail.err"
+
+fourth_runtime_fk="$out_dir/fourth-runtime-authority-verdict.fk"
+fourth_runtime_detail_fk="$out_dir/fourth-runtime-authority-detail.fk"
+cat > "$fourth_runtime_fk" <<'FK'
+(do
+    (let floor (mv-floor))
+    (let north (mv-north-star))
+    (let runtime-url "https://api.coherencycoin.com/api/runtime/endpoints/summary?limit=5")
+    (let headers (list (mv-http-header "Accept" "application/json")))
+    (let response (http_get runtime-url headers 8000))
+    (let runtime (mv-native-http-runtime-telemetry runtime-url response floor north))
+    (let c0 (if (eq (mv-production-runtime-status runtime) 200) 1 0))
+    (let c1 (if (mv-production-runtime-valid? runtime) 2 0))
+    (let c2 (if (str_eq (mv-production-runtime-router runtime) "native-kernel") 4 0))
+    (let c3 (if (str_eq (mv-production-runtime-python-authority runtime) "false") 8 0))
+    (let c4 (if (str_eq (mv-production-runtime-handler runtime) "api_runtime_endpoints_summary") 16 0))
+    (let c5 (if (gt (mv-production-runtime-body-bytes runtime) 0) 32 0))
+    (let c6 (if (gt (len (mv-native-http-capture-headers (mv-native-http-capture runtime-url response floor north))) 0) 64 0))
+    (sum (list c0 c1 c2 c3 c4 c5 c6)))
+FK
+
+cat > "$fourth_runtime_detail_fk" <<'FK'
+(do
+    (let floor (mv-floor))
+    (let north (mv-north-star))
+    (let runtime-url "https://api.coherencycoin.com/api/runtime/endpoints/summary?limit=5")
+    (let headers (list (mv-http-header "Accept" "application/json")))
+    (let response (http_get runtime-url headers 8000))
+    (let capture (mv-native-http-capture runtime-url response floor north))
+    (let runtime (mv-native-http-runtime-telemetry runtime-url response floor north))
+    (str_concat
+        (str_concat
+            (str_concat "runtime_status=" (int_to_str (mv-production-runtime-status runtime)))
+            (str_concat " runtime_headers=" (int_to_str (len (mv-native-http-capture-headers capture)))))
+        (str_concat
+            (str_concat " runtime_router=" (mv-production-runtime-router runtime))
+            (str_concat
+                (str_concat " runtime_handler=" (mv-production-runtime-handler runtime))
+                (str_concat
+                    (str_concat " runtime_python_authority=" (mv-production-runtime-python-authority runtime))
+                    (str_concat " runtime_bytes=" (int_to_str (mv-production-runtime-body-bytes runtime))))))))
+FK
+
+run_fourth_sources "$out_dir/fourth-runtime-authority.verdict" "$out_dir/fourth-runtime-authority.verdict.err" \
+    form-stdlib/model-vitality.fk "$fourth_runtime_fk"
+run_fourth_sources "$out_dir/fourth-runtime-authority.detail" "$out_dir/fourth-runtime-authority.detail.err" \
+    form-stdlib/model-vitality.fk "$fourth_runtime_detail_fk"
 
 go_v="$(cat "$out_dir/go.verdict")"
 rust_v="$(cat "$out_dir/rust.verdict")"
@@ -312,6 +367,13 @@ if [[ "$https_go_v" != "63" || "$https_rust_v" != "63" || "$https_ts_v" != "63" 
     exit 1
 fi
 
+fourth_runtime_v="$(cat "$out_dir/fourth-runtime-authority.verdict")"
+if [[ "$fourth_runtime_v" != "127" ]]; then
+    echo "FAIL fourth-runtime-authority verdict fourth=$fourth_runtime_v cache=$out_dir"
+    echo "fourth runtime detail: $(cat "$out_dir/fourth-runtime-authority.detail" 2>/dev/null || true)"
+    exit 1
+fi
+
 cat > "$out_dir/native-http-capture-summary.txt" <<EOF
 https_model_vitality:
 go: $(cat "$out_dir/go.detail")
@@ -327,7 +389,8 @@ go: $(cat "$out_dir/https-go.https.detail")
 rust: $(cat "$out_dir/https-rust.https.detail")
 typescript: $(cat "$out_dir/https-typescript.https.detail")
 fourth: $(cat "$out_dir/https-fourth.https.detail")
-fourth_arm_header_gap: HTTPS/TLS body capture is native; response-header rows are not yet captured by fkwu.
+fourth_runtime_authority:
+fourth: $(cat "$out_dir/fourth-runtime-authority.detail")
 EOF
 
 echo "PASS native-http-capture go=127 rust=127 typescript=127 cache=$out_dir/native-http-capture-summary.txt"
@@ -345,4 +408,4 @@ echo "PASS https-rust $(cat "$out_dir/https-rust.https.detail")"
 echo "PASS https-typescript $(cat "$out_dir/https-typescript.https.detail")"
 echo "PASS https-fourth $(cat "$out_dir/https-fourth.https.detail")"
 echo "PASS fourth-arm-https native-tls=openssl-dlopen verified=true"
-echo "GAP fourth-arm-headers native-header-list=empty next=fourth-kernel-header-row-capture"
+echo "PASS fourth-runtime-authority fourth=127 $(cat "$out_dir/fourth-runtime-authority.detail")"
