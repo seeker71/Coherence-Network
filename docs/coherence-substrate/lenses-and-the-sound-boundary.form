@@ -78,8 +78,28 @@
 ;   - the audio render/recognise crossing: speech-kernel-channel's host codec path,
 ;     proven by receipt rather than by a four-way recipe (it is I/O at the boundary).
 ;
+; TWO FAMILIES OF LENS IN THE BODY  (read the body's attestation first)
+;
+;   The body already holds "lens" in two distinct senses; these five join as a third,
+;   under one mechanism — a lens is a way of viewing / translating what IS:
+;     1. WORLDVIEW lenses (spec-181: api/app/routers/lenses.py + translate_service.py):
+;        scientific · economic · spiritual · artistic · philosophical · libertarian ·
+;        systems-engineer — DISCIPLINE FRAMINGS a concept is reframed through. Currently
+;        a Python translation carrier; the lens-as-translation mechanism wants to be
+;        Form-native, and lenses.fk is a step on that path (the recipe under the route).
+;     2. SYMBOL/SOURCE lens (form-stdlib/lenses/symbol-source.fk): binds a NodeID to a
+;        (symbol, source-span) for emitters — a NAMING lens, a different sense.
+;     3. VALUE / PERCEPTION lenses (here): meaning · feeling · trust · sovereignty ·
+;        vitality — the AXES what IS projects onto, orthogonal to worldview. A worldview
+;        lens chooses the framing; a value lens reads an axis of the same cell. They
+;        compose: the spiritual worldview emphasises the meaning + vitality axes; the
+;        systems-engineer worldview the trust + sovereignty (trade-off) axes.
+;   The honest next row: the worldview-lens translation (Python) and these value lenses
+;   meet in one Form-native lens engine — translation as a recipe, not a service.
+;
 ; LINEAGE
 ;   kin: lc-cross-modal-unity (names are doors; one cell, many tongues — and many lenses)
+;        spec-181 worldview lens registry (translate_service.py — the sibling lens family)
 ;        guidance-channels.form (the channel engine these lenses read through)
 ;        cjk-channel.fk (one cell, two media — the runnable proof)
 ;        sanskrit-channel.fk (bija: sound carrying meaning), prose-as-recipe.form (hz on words)
