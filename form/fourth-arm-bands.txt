@@ -96,11 +96,13 @@
 # functional carrier — and crosses four-way too. fourth_band_srcs anchors its
 # core.fk filter to a path boundary so sibling-named preludes (substrate-core.fk,
 # bmf-core.fk) keep their place instead of vanishing as substrings. Connected
-# external plaintext HTTP now crosses the emitted arm through http_get tag 105:
-# the fkwu binary owns DNS/TCP/socket/read/write and returns the same dict field
-# shape as the Go/Rust/TypeScript carriers. Floor: http:// external fetches are
-# native and non-shell. North star: fourth-arm TLS/HTTPS joins the same carrier
-# so all kernels can fetch secure public lanes without a shell or Python carrier.
+# external HTTP now crosses the emitted arm through http_get tag 105: the fkwu
+# binary owns DNS/TCP/socket/read/write for http:// and runtime-loaded
+# OpenSSL-compatible TLS for https://, returning the same status/body/error/
+# duration dict field shape as the Go/Rust/TypeScript carriers. Floor: plaintext
+# and verified TLS body fetches are native and non-shell. North star:
+# fourth-arm response-header rows join the same carrier so production authority
+# headers can be proven without a shell or Python carrier.
 # tissue north star: the manifest, substrate north-star nodes, native proof-run
 # ledger, JSONL compatibility export, and commit evidence all tell the same
 # floor story. Legacy proof JSONL rows are imported into native per-run records

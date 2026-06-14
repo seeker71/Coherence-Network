@@ -2,16 +2,17 @@
 # model_vitality_native_http_capture_probe.sh — prove public pulse/runtime capture through kernel-native http_get.
 #
 # Floor: run Form code through the Go, Rust, TypeScript, and emitted fkwu
-# kernels so public HTTP bytes are fetched by each kernel's native http_get
-# carrier. Go/Rust/TypeScript also fetch the public HTTPS pulse/runtime lanes
-# and lift them through model-vitality.fk into production rows. This script
-# orchestrates the kernels and records their stdout; it does not use curl for
-# the HTTP capture.
+# kernels so public HTTP/HTTPS bytes are fetched by each kernel's native
+# http_get carrier. Go/Rust/TypeScript also fetch the public HTTPS pulse/runtime
+# lanes and lift them through model-vitality.fk into production rows. This
+# script orchestrates the kernels and records their stdout; it does not use curl
+# for the HTTP capture.
 #
 # North star: every kernel captures external HTTPS directly into the same Form
 # row grammar, with no shell projection. The current all-kernel floor is
-# plaintext external HTTP; Go/Rust/TypeScript already carry direct HTTPS. The
-# next lift is fourth-arm TLS/HTTPS channel support.
+# plaintext external HTTP plus verified TLS body capture; Go/Rust/TypeScript
+# already carry direct HTTPS production headers. The next lift is fourth-arm
+# response-header row capture.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -143,9 +144,11 @@ run_kernel go ./form-kernel-go/bin-go
 run_kernel rust ./form-kernel-rust/target/release/form-kernel-rust
 run_kernel typescript run_ts
 
-all_http_fk="$out_dir/all-kernel-http-verdict.fk"
-all_http_detail_fk="$out_dir/all-kernel-http-detail.fk"
-cat > "$all_http_fk" <<'FK'
+write_external_http_band() {
+    local target_url="$1"
+    local verdict_path="$2"
+    local detail_path="$3"
+    cat > "$verdict_path" <<FK
 (do
     (defn dict-get-pairs (xs key)
         (if (eq (len xs) 0)
@@ -164,7 +167,7 @@ cat > "$all_http_fk" <<'FK'
         (and (eq (ord (char_at s 5)) 116)
         (and (eq (ord (char_at s 6)) 95)
              (eq (ord (char_at s 7)) 95))))))))))
-    (let response (http_get "http://example.com/" (list) 8000))
+    (let response (http_get "$target_url" (list) 8000))
     (let status (dict-get response "status_code"))
     (let body (dict-get response "body"))
     (let err (dict-get response "error"))
@@ -178,7 +181,7 @@ cat > "$all_http_fk" <<'FK'
     (sum (list c0 c1 c2 c3 c4 c5)))
 FK
 
-cat > "$all_http_detail_fk" <<'FK'
+    cat > "$detail_path" <<FK
 (do
     (defn dict-get-pairs (xs key)
         (if (eq (len xs) 0)
@@ -187,7 +190,7 @@ cat > "$all_http_detail_fk" <<'FK'
                 (head (tail xs))
                 (dict-get-pairs (tail (tail xs)) key))))
     (defn dict-get (d key) (dict-get-pairs (tail d) key))
-    (let response (http_get "http://example.com/" (list) 8000))
+    (let response (http_get "$target_url" (list) 8000))
     (let status (dict-get response "status_code"))
     (let body (dict-get response "body"))
     (let err (dict-get response "error"))
@@ -196,10 +199,18 @@ cat > "$all_http_detail_fk" <<'FK'
         (str_concat
             (str_concat "status=" (int_to_str status))
             (str_concat " bytes=" (int_to_str (str_len body))))
-        (str_concat
-            (str_concat " error=" err)
-            (str_concat " duration_ms=" (int_to_str duration)))))
+            (str_concat
+                (str_concat " error=" err)
+                (str_concat " duration_ms=" (int_to_str duration)))))
 FK
+}
+
+all_http_fk="$out_dir/all-kernel-http-verdict.fk"
+all_http_detail_fk="$out_dir/all-kernel-http-detail.fk"
+all_https_fk="$out_dir/all-kernel-https-verdict.fk"
+all_https_detail_fk="$out_dir/all-kernel-https-detail.fk"
+write_external_http_band "http://example.com/" "$all_http_fk" "$all_http_detail_fk"
+write_external_http_band "https://example.com/" "$all_https_fk" "$all_https_detail_fk"
 
 run_http_kernel() {
     local name="$1"
@@ -243,6 +254,27 @@ run_http_kernel http-typescript run_ts
 run_fourth_http "$all_http_fk" "$out_dir/http-fourth.http.verdict" "$out_dir/http-fourth.http.verdict.err"
 run_fourth_http "$all_http_detail_fk" "$out_dir/http-fourth.http.detail" "$out_dir/http-fourth.http.detail.err"
 
+run_https_kernel() {
+    local name="$1"
+    shift
+    "$@" "$compiled_core" "$all_https_fk" > "$out_dir/$name.https.verdict" 2> "$out_dir/$name.https.verdict.err" || {
+        echo "FAIL $name all-kernel-https verdict failed"
+        cat "$out_dir/$name.https.verdict.err"
+        exit 1
+    }
+    "$@" "$compiled_core" "$all_https_detail_fk" > "$out_dir/$name.https.detail" 2> "$out_dir/$name.https.detail.err" || {
+        echo "FAIL $name all-kernel-https detail failed"
+        cat "$out_dir/$name.https.detail.err"
+        exit 1
+    }
+}
+
+run_https_kernel https-go "$GO_BIN"
+run_https_kernel https-rust "$RS_BIN"
+run_https_kernel https-typescript run_ts
+run_fourth_http "$all_https_fk" "$out_dir/https-fourth.https.verdict" "$out_dir/https-fourth.https.verdict.err"
+run_fourth_http "$all_https_detail_fk" "$out_dir/https-fourth.https.detail" "$out_dir/https-fourth.https.detail.err"
+
 go_v="$(cat "$out_dir/go.verdict")"
 rust_v="$(cat "$out_dir/rust.verdict")"
 ts_v="$(cat "$out_dir/typescript.verdict")"
@@ -267,6 +299,19 @@ if [[ "$http_go_v" != "63" || "$http_rust_v" != "63" || "$http_ts_v" != "63" || 
     exit 1
 fi
 
+https_go_v="$(cat "$out_dir/https-go.https.verdict")"
+https_rust_v="$(cat "$out_dir/https-rust.https.verdict")"
+https_ts_v="$(cat "$out_dir/https-typescript.https.verdict")"
+https_fourth_v="$(cat "$out_dir/https-fourth.https.verdict")"
+if [[ "$https_go_v" != "63" || "$https_rust_v" != "63" || "$https_ts_v" != "63" || "$https_fourth_v" != "63" ]]; then
+    echo "FAIL all-kernel-https verdict go=$https_go_v rust=$https_rust_v typescript=$https_ts_v fourth=$https_fourth_v cache=$out_dir"
+    echo "https go detail: $(cat "$out_dir/https-go.https.detail" 2>/dev/null || true)"
+    echo "https rust detail: $(cat "$out_dir/https-rust.https.detail" 2>/dev/null || true)"
+    echo "https typescript detail: $(cat "$out_dir/https-typescript.https.detail" 2>/dev/null || true)"
+    echo "https fourth detail: $(cat "$out_dir/https-fourth.https.detail" 2>/dev/null || true)"
+    exit 1
+fi
+
 cat > "$out_dir/native-http-capture-summary.txt" <<EOF
 https_model_vitality:
 go: $(cat "$out_dir/go.detail")
@@ -277,7 +322,12 @@ go: $(cat "$out_dir/http-go.http.detail")
 rust: $(cat "$out_dir/http-rust.http.detail")
 typescript: $(cat "$out_dir/http-typescript.http.detail")
 fourth: $(cat "$out_dir/http-fourth.http.detail")
-fourth_arm_tls_gap: HTTPS/TLS channel support is not accepted as native capture evidence for fkwu yet.
+all_kernel_verified_https:
+go: $(cat "$out_dir/https-go.https.detail")
+rust: $(cat "$out_dir/https-rust.https.detail")
+typescript: $(cat "$out_dir/https-typescript.https.detail")
+fourth: $(cat "$out_dir/https-fourth.https.detail")
+fourth_arm_header_gap: HTTPS/TLS body capture is native; response-header rows are not yet captured by fkwu.
 EOF
 
 echo "PASS native-http-capture go=127 rust=127 typescript=127 cache=$out_dir/native-http-capture-summary.txt"
@@ -289,4 +339,10 @@ echo "PASS http-go $(cat "$out_dir/http-go.http.detail")"
 echo "PASS http-rust $(cat "$out_dir/http-rust.http.detail")"
 echo "PASS http-typescript $(cat "$out_dir/http-typescript.http.detail")"
 echo "PASS http-fourth $(cat "$out_dir/http-fourth.http.detail")"
-echo "GAP fourth-arm-https native-tls=missing next=fourth-kernel-tls-channel-support"
+echo "PASS all-kernel-external-https go=63 rust=63 typescript=63 fourth=63 url=https://example.com/"
+echo "PASS https-go $(cat "$out_dir/https-go.https.detail")"
+echo "PASS https-rust $(cat "$out_dir/https-rust.https.detail")"
+echo "PASS https-typescript $(cat "$out_dir/https-typescript.https.detail")"
+echo "PASS https-fourth $(cat "$out_dir/https-fourth.https.detail")"
+echo "PASS fourth-arm-https native-tls=openssl-dlopen verified=true"
+echo "GAP fourth-arm-headers native-header-list=empty next=fourth-kernel-header-row-capture"

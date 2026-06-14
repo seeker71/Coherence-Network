@@ -29,10 +29,11 @@
 ; but the body-readable grammar, validity gates, and focus route live here.
 ;
 ; Native HTTP capture floor: all kernels expose http_get as a non-shell native
-; external HTTP carrier returning a Form dict. Go, Rust, and TypeScript already
-; carry HTTPS; the emitted fourth arm carries plaintext http:// through its own
-; DNS/TCP/socket/read/write path. This file lifts that dict into model-vitality
-; rows. Fourth-arm TLS/HTTPS remains the named gap for all-kernel secure capture.
+; external HTTP carrier returning a Form dict. The emitted fourth arm carries
+; plaintext http:// through DNS/TCP/socket/read/write and verified https://
+; through runtime-loaded OpenSSL/BoringSSL-compatible TLS. This file lifts that
+; dict into model-vitality rows. Fourth-arm response-header row capture remains
+; the named gap for production HTTPS authority receipts.
 
 (do
     (defn mv-kind-model-architecture () "model/architecture")

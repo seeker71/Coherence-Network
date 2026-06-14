@@ -1,0 +1,31 @@
+{
+  "ledger_schema": "model_executor_proof_run/v1",
+  "run_id": "fourth-arm-native-tls-http-20260614",
+  "thread_branch": "codex/fourth-arm-native-tls-20260614",
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord claim \"fourth-arm native TLS HTTPS carrier\"",
+    "scripts/model_vitality_native_http_capture_probe.sh",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-native-http-band.fk"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Lifted verified HTTPS body capture into the emitted fourth kernel http_get carrier without shell or Python runtime workarounds. The live probe source-compiled core, ran Go/Rust/TypeScript/fkwu against https://example.com/, and returned all-kernel verdict 63 with status=200 and 559 body bytes. fkwu uses runtime-loaded OpenSSL-compatible TLS for https:// and keeps plaintext DNS/TCP/socket/read/write for http://. The remaining fourth-arm gap is response-header row capture for production authority receipts.",
+  "source": {
+    "kind": "codex-worktree",
+    "path": "/Users/ursmuff/.codex/worktrees/1bc1/Coherence-Network"
+  },
+  "validation": {
+    "status": "pass",
+    "commands": [
+      "scripts/model_vitality_native_http_capture_probe.sh",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-native-http-band.fk"
+    ]
+  }
+}
