@@ -28,13 +28,13 @@
 #   multi-line output     — bands that print mid-walk (the walker answers
 #     one value through fk_pr)
 #
-# Current floor (2026-06-14 token recipe + Form-native object floor): full
-# `cd form && ./validate.sh` reaches 148 four-way bands and 566 total passing
+# Current floor (2026-06-14 url/uuid literal floor): full
+# `cd form && ./validate.sh` reaches 152 four-way bands and 568 total passing
 # workloads, with 0 residual divergent bands. Literal bp registry aliases now
-# fold through make_nodeid for the audit-log, hex, and token rows. Token's
-# blueprint reservation now lives inside its module body so fkwu executes the
-# recipe verdict, and its fixed positional accessors use direct projections.
-# Record field access now rides a
+# fold through make_nodeid for the audit-log, hex, token, url-encode, and uuid
+# rows. Token's blueprint reservation now lives inside its module body so fkwu
+# executes the recipe verdict, and its fixed positional accessors use direct
+# projections. Record field access now rides a
 # native fourth-arm record carrier: record_new lowers to a packed entry packet,
 # then fkwu tags 64/65/67/68/99 carry construction, get, has, record?, and keys
 # without aliasing ints, lists, nodes, or floats. BranchOutcome carries
@@ -222,3 +222,5 @@ record-field-access fks 16
 audit-log fks 4
 hex fks 14
 token fks 3
+url-encode fks 16
+uuid fks 15
