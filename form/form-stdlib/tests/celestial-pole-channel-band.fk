@@ -1,0 +1,59 @@
+; tests/celestial-pole-channel-band.fk — the north star, computed and named.
+;
+; The astronomy is empirical and checkable; the names are attested tradition. The
+; band pins both: the J2000 Julian Day every almanac agrees on, the precession that
+; makes the pole star move, the tropical/sidereal split that separates Western from
+; Vedic astrology, who holds the pole across eras, and that five tongues name one
+; body.
+;
+; Verdict 1111111 (127) when every claim holds across all kernels.
+;   jdn(2000,1,1) = 2451545 (the J2000 anchor)                    → 1
+;   precession: 0 deg at 2000, ~90 deg a quarter-cycle later      → 10
+;   tropical 5deg = Aries(0); sidereal 5deg = Pisces(11)          → 100
+;   the pole star moves: Thuban (-2700), Polaris (2024), Vega (14000) → 1000
+;   one body, many tongues: Polaris(1) speaks; Dhruva(2) is same cell → 10000
+;   coverage: 5 traditions, 7 pole-star epochs                    → 100000
+;   honest absence: an unseeded tradition key (9)                 → 1000000
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/celestial-pole-channel.fk
+;
+
+(do
+    ;; --- 1. Julian Day anchor -----------------------------------------
+    (let jdn-ok (if (eq (jdn 2000 1 1) 2451545) 1 0))
+
+    ;; --- 2. precession: zero now, a quarter turn ~6443 years on -------
+    ;; (2000 + 25772/4 = 8443) → ~90 degrees of swing.
+    (let prec-now  (eq (precession-degrees 2000) 0))
+    (let prec-quarter (eq (precession-degrees 8443) 90))
+    (let prec-ok (if prec-now (if prec-quarter 10 0) 0))
+
+    ;; --- 3. tropical vs sidereal divergence ---------------------------
+    ;; 5 deg of ecliptic longitude: early Aries to the West, late Pisces
+    ;; to the Vedic sky (ayanamsa 24).
+    (let trop-ok (eq (tropical-sign-of 5) 0))
+    (let sid-ok  (eq (sidereal-sign-of 5 (lahiri-ayanamsa-2000)) 11))
+    (let zodiac-ok (if trop-ok (if sid-ok 100 0) 0))
+
+    ;; --- 4. the pole star MOVES across eras ---------------------------
+    (let thuban (ge (str_find (pole-star-at -2700) "Thuban" 0) 0))
+    (let polaris (ge (str_find (pole-star-at 2024) "Polaris" 0) 0))
+    (let vega (ge (str_find (pole-star-at 14000) "Vega" 0) 0))
+    (let moves-ok (if thuban (if polaris (if vega 1000 0) 0) 0))
+
+    ;; --- 5. one body, many tongues ------------------------------------
+    (let speaks (ge (str_find (pole-star-name 1) "Polaris" 0) 0))
+    (let dhruva (ge (str_find (pole-star-name 2) "Dhruva" 0) 0))
+    (let one-body (eq (pole-star-one-body?) 1))
+    (let named-ok (if speaks (if dhruva (if one-body 10000 0) 0) 0))
+
+    ;; --- 6. coverage is legible ---------------------------------------
+    (let cov-ok
+        (if (eq (pole-star-traditions) 5)
+            (if (eq (pole-star-epoch-count) 7) 100000 0) 0))
+
+    ;; --- 7. honest absence for an unseeded tradition ------------------
+    (let absent-ok
+        (if (ge (str_find (pole-star-name 9) "honest absence" 0) 0) 1000000 0))
+
+    (sum (list jdn-ok prec-ok zodiac-ok moves-ok named-ok cov-ok absent-ok)))

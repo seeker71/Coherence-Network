@@ -1,0 +1,70 @@
+; zodiac-channel.fk — the twelve signs, in the Western and Vedic tongues.
+;
+; The zodiac is twelve cells. Western (tropical) astrology and Vedic (sidereal)
+; jyotisha both read those same twelve — so Aries and Mesha, Libra and Tula, are
+; ONE sign wearing two tongues; they share an address and the engine confirms it.
+; What differs between the systems is not the signs but WHICH sign a given degree
+; falls in: that reduction (tropical-sign-of / sidereal-sign-of) lives in
+; celestial-pole-channel.fk; this channel SPEAKS whichever index it returns.
+;
+;   (western-sign-speak i)  → element, modality, keynote, ruler (i = 0 Aries .. 11 Pisces)
+;   (vedic-rashi-speak i)   → the rashi's Sanskrit name and ruling graha
+;   (zodiac-read i)         → both tongues of sign i
+;   (zodiac-one-sign? i)    → 1: Western sign i and Vedic rashi i are one cell
+;
+; Both faces are fully seeded (all twelve are confidently attested). Held as
+; documented tradition, reported as attested; the reading stays in the
+; direct-experience lane, never a verdict (lc-cross-modal-unity).
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk
+;
+
+(do
+    ;; --- the Western (tropical) face: element, modality, keynote, ruler --
+    (defn western-signs ()
+        (list
+            (gc-entry 0  0  "Aries — cardinal fire; initiative and courage, the spark of beginning (ruler Mars)" "lc-cross-modal-unity")
+            (gc-entry 1  1  "Taurus — fixed earth; steadiness and the senses, holding what has value (ruler Venus)" "lc-cross-modal-unity")
+            (gc-entry 2  2  "Gemini — mutable air; curiosity and exchange, the many voices (ruler Mercury)" "lc-cross-modal-unity")
+            (gc-entry 3  3  "Cancer — cardinal water; care and belonging, the protective shell (ruler Moon)" "lc-cross-modal-unity")
+            (gc-entry 4  4  "Leo — fixed fire; radiance and the heart's expression, play (ruler Sun)" "lc-cross-modal-unity")
+            (gc-entry 5  5  "Virgo — mutable earth; discernment and service, refining the work (ruler Mercury)" "lc-cross-modal-unity")
+            (gc-entry 6  6  "Libra — cardinal air; balance and relationship, the weighing of fairness (ruler Venus)" "lc-cross-modal-unity")
+            (gc-entry 7  7  "Scorpio — fixed water; depth and transformation, what is hidden (ruler Mars/Pluto)" "lc-cross-modal-unity")
+            (gc-entry 8  8  "Sagittarius — mutable fire; the quest and meaning, the far horizon (ruler Jupiter)" "lc-cross-modal-unity")
+            (gc-entry 9  9  "Capricorn — cardinal earth; structure and mastery, the long climb (ruler Saturn)" "lc-cross-modal-unity")
+            (gc-entry 10 10 "Aquarius — fixed air; the future and the collective, the unexpected (ruler Saturn/Uranus)" "lc-cross-modal-unity")
+            (gc-entry 11 11 "Pisces — mutable water; dissolution and compassion, the ocean of feeling (ruler Jupiter/Neptune)" "lc-cross-modal-unity")))
+
+    ;; --- the Vedic (sidereal) face: rashi name and ruling graha --------
+    (defn vedic-rashis ()
+        (list
+            (gc-entry 0  0  "Mesha (Aries) — ruled by Mangala (Mars); pioneering fire" "lc-cross-modal-unity")
+            (gc-entry 1  1  "Vrishabha (Taurus) — ruled by Shukra (Venus); rooted endurance" "lc-cross-modal-unity")
+            (gc-entry 2  2  "Mithuna (Gemini) — ruled by Budha (Mercury); dual-natured exchange" "lc-cross-modal-unity")
+            (gc-entry 3  3  "Karka (Cancer) — ruled by Chandra (Moon); nurturing tides" "lc-cross-modal-unity")
+            (gc-entry 4  4  "Simha (Leo) — ruled by Surya (Sun); regal radiance" "lc-cross-modal-unity")
+            (gc-entry 5  5  "Kanya (Virgo) — ruled by Budha (Mercury); discerning service" "lc-cross-modal-unity")
+            (gc-entry 6  6  "Tula (Libra) — ruled by Shukra (Venus); weighing harmony" "lc-cross-modal-unity")
+            (gc-entry 7  7  "Vrishchika (Scorpio) — ruled by Mangala (Mars); piercing depth" "lc-cross-modal-unity")
+            (gc-entry 8  8  "Dhanu (Sagittarius) — ruled by Guru (Jupiter); the seeker's arrow" "lc-cross-modal-unity")
+            (gc-entry 9  9  "Makara (Capricorn) — ruled by Shani (Saturn); disciplined ascent" "lc-cross-modal-unity")
+            (gc-entry 10 10 "Kumbha (Aquarius) — ruled by Shani (Saturn); the collective vessel" "lc-cross-modal-unity")
+            (gc-entry 11 11 "Meena (Pisces) — ruled by Guru (Jupiter); the ocean of surrender" "lc-cross-modal-unity")))
+
+    ;; --- the faces, delegating to the one engine ----------------------
+    (defn western-sign-speak (i) (gc-speak (western-signs) i))
+    (defn vedic-rashi-speak  (i) (gc-speak (vedic-rashis) i))
+    (defn zodiac-read (i) (list (western-sign-speak i) (vedic-rashi-speak i)))
+
+    ;; --- the structural fact: Western sign i and Vedic rashi i are one cell --
+    (defn zodiac-one-sign? (i)
+        (if (eq (gc-same-cell? (western-signs) i (vedic-rashis) i) 1) 1 0))
+    (defn zodiac-equivalents (i)
+        (gc-equivalents (list (western-signs) (vedic-rashis)) i))
+
+    ;; --- coverage -----------------------------------------------------
+    (defn zodiac-coverage () (gc-coverage (western-signs)))
+    (defn zodiac-channel-teaching () "lc-cross-modal-unity")
+
+    0)

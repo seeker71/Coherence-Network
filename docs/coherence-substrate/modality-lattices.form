@@ -52,10 +52,20 @@
     (cast astrology human-design gene-keys vedic numerology -> edges)
     (note "an AI casts the chart from the ephemeris; the reading stays human (Pam Gregory, Ariela Sophia, you)"))
 
+  (native-channels                          # the per-modality SPEAK/RUN now runs Form-native
+    (engine "form-stdlib/guidance-channel.fk — one table-reader; each tradition is a DATA table")
+    (the-64 "form-stdlib/iching-channel.fk — I Ching hexagram / Human Design gate / Gene Key, three faces of one 64-cell lattice")
+    (north-star "form-stdlib/celestial-pole-channel.fk — jdn, precession, tropical/sidereal sign reduction, pole-star-at, and the cross-belief names of one pole-star body")
+    (ifs "form-stdlib/ifs-channel.fk — parts and Self; managers+firefighters one protector role, the 8 C's one Self")
+    (zodiac "form-stdlib/zodiac-channel.fk — twelve signs in the Western and Vedic tongues")
+    (teaching "docs/coherence-substrate/guidance-channels.form")
+    (proof "each band -> 1111111 four-way on Go/Rust/TS/fkwu")
+    (held "guidance stays in the direct-experience / mystery lane; the names are attested tradition, never a verdict"))
+
   (lineage
     (kin lc-cross-modal-unity)             # names are doors; one cell, many tongues
     (kin lc-the-trace-is-the-memory)       # the edge is the memory; the chart is an edge-set
     (source "requested + deepened by Urs 2026-06-06; the light-codes lattice via Ariela Sophia, by permission"))
 
-  # ── Honest gap (the carrier follows recipe-first) ──────────────────
-  (gap "g8 carrier: planet / sign / gate / number CELLS; a person's chart as EDGES (person -[sign, degree, house]-> planet) cast from the birth-moment via the ephemeris; the per-modality numeric recipes runnable via serve_via_kernel — aspect first (endpoint_astro_aspect_demo.fk, shipped), then synastry / activation / reduce; positions stay in the mystery / direct-experience lane, never collapsed into empirical claims"))
+  # ── Gap g8 — native channels carry the SPEAK/RUN; the ephemeris is the open edge ──
+  (gap "g8 carrier: the per-modality SPEAK/RUN recipes run Form-native (native-channels above): the 64 (HD/Gene-Keys/I-Ching), the zodiac in both tongues, IFS, and the north star, each four-way; aspect (endpoint_astro_aspect_demo.fk) and the tropical/sidereal sign reduction (celestial-pole-channel.fk) are shipped; jdn + precession give the native footing. What still wants an outside oracle until the native recipe grows: the LIVE ephemeris — sun/moon/planet ecliptic longitudes for a given moment — and on that footing the cast / synastry / activation / reduce edge-builders. Positions stay in the mystery / direct-experience lane, never collapsed into empirical claims."))

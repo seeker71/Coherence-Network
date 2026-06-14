@@ -1,0 +1,56 @@
+; tests/guidance-channel-band.fk — the one engine SPEAKS, RUNS, and crosses systems.
+;
+; Two toy channels share an address space. Channel A key 1 and channel B key 7
+; both sit at address 100 — DIFFERENT systems, DIFFERENT surface text, SAME cell.
+; The band proves the engine reads the table, speaks attested guidance, stays
+; honest where unseeded, and recognises the shared cell by address alone.
+;
+; Verdict 1111111 (127) when every claim holds across all kernels.
+;   speak returns the seeded guidance ("alpha")                  → 1
+;   unseeded key → honest absence (text says so AND address -1)   → 10
+;   cross-system: A·1 ≡ B·7 (addr 100), A·2 ≢ B·7 (200 vs 100)    → 100
+;   teaching resolves seeded ("lc-a"), "" when absent             → 1000
+;   coverage = seeded count                                       → 10000
+;   equivalents across both channels at addr 100 = {A·1, B·7}     → 100000
+;   address-of returns the seeded int address                     → 1000000
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk
+;
+
+(do
+    (let chan-a
+        (list (gc-entry 1 100 "A-one alpha guidance" "lc-a")
+              (gc-entry 2 200 "A-two guidance"       "lc-a2")))
+    (let chan-b
+        (list (gc-entry 7 100 "B-seven beta guidance" "lc-b")))
+
+    ;; --- 1. SPEAK the seeded guidance -----------------------------------
+    (let speak-ok (if (ge (str_find (gc-speak chan-a 1) "alpha" 0) 0) 1 0))
+
+    ;; --- 2. honest absence: text says so AND address is -1 --------------
+    (let absent-spoke (ge (str_find (gc-speak chan-a 99) "honest absence" 0) 0))
+    (let absent-addr  (eq (gc-address-of chan-a 99) -1))
+    (let absence-ok (if absent-spoke (if absent-addr 10 0) 0))
+
+    ;; --- 3. cross-system holography: same address ⇒ same cell ----------
+    ;; A·1 and B·7 both at address 100 → same cell; A·2 (200) ≠ B·7 (100).
+    (let same-ok (eq (gc-same-cell? chan-a 1 chan-b 7) 1))
+    (let diff-ok (eq (gc-same-cell? chan-a 2 chan-b 7) 0))
+    (let cross-ok (if same-ok (if diff-ok 100 0) 0))
+
+    ;; --- 4. teaching resolves seeded, "" when absent -------------------
+    (let teach-hit (str_eq (gc-teaching chan-a 1) "lc-a"))
+    (let teach-miss (str_eq (gc-teaching chan-a 99) ""))
+    (let teach-ok (if teach-hit (if teach-miss 1000 0) 0))
+
+    ;; --- 5. coverage = seeded count ------------------------------------
+    (let cov-ok (if (eq (gc-coverage chan-a) 2) 10000 0))
+
+    ;; --- 6. equivalents across both channels at the shared address -----
+    (let cls (gc-equivalents (list chan-a chan-b) 100))
+    (let equiv-ok (if (eq (len cls) 2) 100000 0))
+
+    ;; --- 7. address-of returns the seeded int address ------------------
+    (let addr-ok (if (eq (gc-address-of chan-a 1) 100) 1000000 0))
+
+    (sum (list speak-ok absence-ok cross-ok teach-ok cov-ok equiv-ok addr-ok)))

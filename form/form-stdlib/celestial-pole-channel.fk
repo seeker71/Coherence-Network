@@ -1,0 +1,120 @@
+; celestial-pole-channel.fk — the north star, tracked, and named in every tongue.
+;
+; Two things the body could only point at before (modality-lattices.form gap g8:
+; "positions … via the ephemeris") now run natively, with no third-party component:
+;
+;   COMPUTABLE (deterministic astronomy, exact integer/float recipes):
+;     (jdn y m d)              → the Julian Day Number — the spine of every ephemeris
+;     (precession-degrees yr)  → how far the celestial pole has swung along its
+;                                ~25,772-year circle since J2000 — the reason the
+;                                "north star" is not one fixed star but a procession
+;     (tropical-sign-of lon)   → Western (tropical) zodiac sign of an ecliptic degree
+;     (sidereal-sign-of lon a) → Vedic (sidereal) sign — the SAME degree, shifted by
+;                                the ayanamsa: one sky, two astrologies
+;     (pole-star-at year)      → the bright star nearest the pole in that era. Thuban
+;                                held it for the pyramid builders; Polaris holds it
+;                                now; Vega will. The north star MOVES — this names who.
+;
+;   NAMED ACROSS BELIEF SYSTEMS (the cross-belief faces of one body, riding
+;   guidance-channel.fk): Polaris / Dhruva / al-Qutb / Cynosura / Beiji are five
+;   tongues for ONE pole-star cell — they share one address, so the engine confirms
+;   they are the same body by content-address, not by matching surface text
+;   (lc-cross-modal-unity). The structure extends to sun, moon, and planets — each a
+;   body cell with as many faces as there are traditions that named it.
+;
+; Held honestly: the COMPUTABLE recipes are empirical (a Julian Day is a Julian
+; Day); the NAMES and their meanings are documented tradition, reported as attested,
+; never asserted as cosmology. The ayanamsa is the Lahiri approximation (~23.85 deg
+; at J2000, carried here as the integer 24 at degree resolution). The pole-star
+; epochs are the attested years of closest approach; selection is nearest-epoch and
+; does not yet wrap the full cycle — the next row of honest refinement.
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk
+;
+
+(do
+    ;; ================================================================
+    ;; COMPUTABLE — the deterministic astronomy
+    ;; ================================================================
+
+    ;; --- Julian Day Number (Fliegel & Van Flandern, exact integer) ----
+    ;; jdn(2000,1,1) = 2451545, the J2000 anchor every almanac agrees on.
+    (defn jdn-a  (m)   (div (sub 14 m) 12))
+    (defn jdn-y2 (y a) (add (sub y a) 4800))
+    (defn jdn-m2 (m a) (sub (add m (mul 12 a)) 3))
+    (defn jdn (y m d)
+        (do
+            (let a  (jdn-a m))
+            (let y2 (jdn-y2 y a))
+            (let m2 (jdn-m2 m a))
+            (sub (add (add (add (add d (div (add (mul 153 m2) 2) 5))
+                                (mul 365 y2))
+                           (div y2 4))
+                      (div y2 400))
+                 (add (div y2 100) 32045))))
+
+    ;; --- precession of the pole: degrees swung since J2000 ------------
+    ;; The north celestial pole circles the ecliptic pole once in ~25,772
+    ;; years; this is the phase of that swing — why Thuban, then Polaris,
+    ;; then Vega each take the pole in turn. (Phase = this value mod 360.)
+    (defn precession-cycle-years () 25772)
+    (defn precession-degrees (year)
+        (round (div (mul (sub year 2000) 360) 25772.0)))
+
+    ;; --- tropical vs sidereal: one sky, two astrologies ---------------
+    ;; sign index 0=Aries … 11=Pisces. lon is an ecliptic degree 0..359.
+    ;; Western reads the moving (tropical) zodiac; Vedic subtracts the
+    ;; ayanamsa to read the fixed (sidereal) stars — so a degree that is
+    ;; early Aries to a Western chart is late Pisces to a Vedic one.
+    (defn lahiri-ayanamsa-2000 () 24)
+    (defn tropical-sign-of (lon) (div (mod lon 360) 30))
+    (defn sidereal-sign-of (lon ayan) (div (mod (add (sub lon ayan) 360) 360) 30))
+
+    ;; --- the pole star moves: who holds the pole in a given era -------
+    ;; Each row is (epoch-year, attested star). Epoch = year of closest
+    ;; approach to the celestial pole.
+    (defn ps-epochs ()
+        (list
+            (list -2787 "Thuban (Alpha Draconis) — pole star of the pyramid builders")
+            (list -1050 "Kochab (Beta Ursae Minoris) — a Guardian of the Pole")
+            (list 2102  "Polaris (Alpha Ursae Minoris) — our era's north star, ~0.45 deg off the pole")
+            (list 4000  "Errai (Gamma Cephei) — the coming north star")
+            (list 7500  "Alderamin (Alpha Cephei) — a future north star")
+            (list 9800  "Deneb (Alpha Cygni) — a broad northern marker")
+            (list 13727 "Vega (Alpha Lyrae) — the next great north star")))
+    (defn ps-dist (year row) (abs (sub year (head row))))
+    (defn ps-select (rows year best)
+        (if (eq (len rows) 0) best
+            (if (gt (ps-dist year best) (ps-dist year (head rows)))
+                (ps-select (tail rows) year (head rows))
+                (ps-select (tail rows) year best))))
+    (defn pole-star-row-at (year) (ps-select (tail (ps-epochs)) year (head (ps-epochs))))
+    (defn pole-star-at (year) (head (tail (pole-star-row-at year))))
+    (defn pole-star-epoch-count () (len (ps-epochs)))
+
+    ;; ================================================================
+    ;; NAMED — the cross-belief faces of one pole-star body
+    ;; ================================================================
+    ;; Five traditions, one address (7001 = the pole-star body cell): the
+    ;; engine recognises them as the same body by address, though every
+    ;; surface differs. Key = tradition (1 Latin · 2 Sanskrit · 3 Arabic ·
+    ;; 4 Greek · 5 Chinese); a sixth tradition is a sixth row.
+    (defn pole-star-body () 7001)
+    (defn pole-star-names ()
+        (list
+            (gc-entry 1 7001 "Polaris (Latin) — Stella Polaris, the Pole Star; the steady guide of navigators, the Little Bear's tail" "lc-cross-modal-unity")
+            (gc-entry 2 7001 "Dhruva (Sanskrit) — the immovable one; the devoted child fixed at the unwavering axis, Dhruva Tara" "lc-cross-modal-unity")
+            (gc-entry 3 7001 "al-Qutb (Arabic) — the axis, the pivot; also the spiritual pole around whom the turning world is held" "lc-cross-modal-unity")
+            (gc-entry 4 7001 "Cynosura (Greek) — the dog's tail; the guide that draws the eye, root of the word cynosure" "lc-cross-modal-unity")
+            (gc-entry 5 7001 "Beiji (Chinese) — the celestial pivot; the still north the heavens revolve around, the Emperor's seat" "lc-cross-modal-unity")))
+    (defn pole-star-name (tradition) (gc-speak (pole-star-names) tradition))
+    (defn pole-star-traditions () (gc-coverage (pole-star-names)))
+    ;; the structural fact: every tongue names ONE body (share address 7001)
+    (defn pole-star-one-body? ()
+        (if (eq (gc-same-cell? (pole-star-names) 1 (pole-star-names) 2) 1)
+            (if (eq (gc-same-cell? (pole-star-names) 2 (pole-star-names) 5) 1) 1 0)
+            0))
+    ;; the governing teaching, queryable in the substrate
+    (defn celestial-pole-teaching () "lc-cross-modal-unity")
+
+    0)

@@ -1,0 +1,85 @@
+; iching-channel.fk — the 64 gates, read through three tongues at once.
+;
+; The I Ching's 64 hexagrams, the Human Design 64 gates, and the 64 Gene Keys are
+; the SAME 64 cells. Ra Uru Hu mapped the I Ching onto the body; Richard Rudd grew
+; the Gene Keys from the same 64. So gate 25 in Human Design, Gene Key 25, and I
+; Ching hexagram 25 are ONE cell wearing three faces — exactly modality-lattices
+; .form's "the 64 … two identical positions across people share it — content-
+; addressed." This channel makes that runnable: three DATA tables over one address
+; space (the gate number IS the address), all riding guidance-channel.fk. Ask any
+; face for a gate and it speaks that tradition's guidance; ask whether two faces
+; name the same cell and the engine answers by address alone.
+;
+;   (ic-hexagram-speak g)   → the I Ching hexagram's name + image
+;   (hd-gate-speak g)       → the Human Design gate's keynote
+;   (gk-key-speak g)        → the Gene Key's Shadow -> Gift -> Siddhi
+;   (ic64-read g)           → all three faces of gate g (one cell, three tongues)
+;   (ic64-one-cell? g)      → 1: the three faces share address g (lc-cross-modal-unity)
+;
+; SEEDED, not fabricated: five gates whose readings are well attested across all
+; three traditions (1, 2, 25, 51, 64). The 59 unseeded gates return honest absence
+; until their attested rows land — coverage is queryable, never hidden, and a new
+; gate is a new row in three tables, not new control flow. Held as documented
+; tradition; the guidance stays in the direct-experience lane, never a verdict.
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk
+;
+
+(do
+    ;; the structural teaching every gate grounds in (one cell, three tongues)
+    (defn ic64-teaching () "lc-cross-modal-unity")
+
+    ;; --- FACE 1: the I Ching hexagram (name + image) --------------------
+    (defn ic-hexagrams ()
+        (list
+            (gc-entry 1  1  "Hexagram 1 Qian / The Creative — heaven doubled; pure initiating force, act from clarity" "lc-cross-modal-unity")
+            (gc-entry 2  2  "Hexagram 2 Kun / The Receptive — earth doubled; devoted yielding that carries and completes" "lc-cross-modal-unity")
+            (gc-entry 25 25 "Hexagram 25 Wu Wang / Innocence — move in accord with the unexpected, free of calculation" "lc-cross-modal-unity")
+            (gc-entry 51 51 "Hexagram 51 Zhen / The Arousing — thunder; the shock that wakes and brings reverent clarity" "lc-cross-modal-unity")
+            (gc-entry 64 64 "Hexagram 64 Wei Ji / Before Completion — order not yet arrived; careful steps near the ford" "lc-cross-modal-unity")))
+
+    ;; --- FACE 2: the Human Design gate (keynote) ------------------------
+    (defn hd-gates ()
+        (list
+            (gc-entry 1  1  "Gate 1 Self-Expression — the creative role model; individual creative drive (channel 1-8)" "lc-cross-modal-unity")
+            (gc-entry 2  2  "Gate 2 Direction of the Self — the driver, keeper of direction; the receptive ground (channel 2-14)" "lc-cross-modal-unity")
+            (gc-entry 25 25 "Gate 25 Spirit of the Self — innocence; universal love through the body (channel 25-51)" "lc-cross-modal-unity")
+            (gc-entry 51 51 "Gate 51 Shock — the gate of initiation and competition; rouses spirit through challenge (channel 25-51)" "lc-cross-modal-unity")
+            (gc-entry 64 64 "Gate 64 Confusion — mental pressure of unresolved images seeking sense (channel 64-47)" "lc-cross-modal-unity")))
+
+    ;; --- FACE 3: the Gene Key (Shadow -> Gift -> Siddhi) ---------------
+    (defn gk-keys ()
+        (list
+            (gc-entry 1  1  "Gene Key 1 — Shadow Entropy -> Gift Freshness -> Siddhi Beauty" "lc-cross-modal-unity")
+            (gc-entry 2  2  "Gene Key 2 — Shadow Dislocation -> Gift Orientation -> Siddhi Unity" "lc-cross-modal-unity")
+            (gc-entry 25 25 "Gene Key 25 — Shadow Constriction -> Gift Acceptance -> Siddhi Universal Love" "lc-cross-modal-unity")
+            (gc-entry 51 51 "Gene Key 51 — Shadow Agitation -> Gift Initiative -> Siddhi Awakening" "lc-cross-modal-unity")
+            (gc-entry 64 64 "Gene Key 64 — Shadow Confusion -> Gift Imagination -> Siddhi Illumination" "lc-cross-modal-unity")))
+
+    ;; --- the three faces, each delegating to the one engine ------------
+    (defn ic-hexagram-speak (g) (gc-speak (ic-hexagrams) g))
+    (defn hd-gate-speak      (g) (gc-speak (hd-gates) g))
+    (defn gk-key-speak       (g) (gc-speak (gk-keys) g))
+
+    ;; --- the holographic read: one cell, three tongues ----------------
+    (defn ic64-read (g)
+        (list (ic-hexagram-speak g) (hd-gate-speak g) (gk-key-speak g)))
+
+    ;; --- the structural fact: the three faces ARE one cell ------------
+    ;; All three faces address gate g at address g, so the engine confirms
+    ;; Human Design gate g and Gene Key g name the same cell — by address,
+    ;; not by matching their (deliberately different) surface text.
+    (defn ic64-one-cell? (g)
+        (if (eq (gc-same-cell? (hd-gates) g (gk-keys) g) 1)
+            (if (eq (gc-same-cell? (gk-keys) g (ic-hexagrams) g) 1) 1 0)
+            0))
+
+    ;; --- the cross-modal class: every face that names gate g ----------
+    (defn ic64-equivalents (g)
+        (gc-equivalents (list (ic-hexagrams) (hd-gates) (gk-keys)) g))
+
+    ;; --- coverage: 64 total, this many seeded per face ----------------
+    (defn ic64-total () 64)
+    (defn ic64-seeded () (gc-coverage (ic-hexagrams)))
+
+    0)

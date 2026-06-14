@@ -1,0 +1,111 @@
+; guidance-channel.fk — the ONE engine every oracle/guidance channel rides.
+;
+; A belief system that gives guidance — astrology, Human Design, Gene Keys, the
+; I Ching, Internal Family Systems, the pole-star names across cultures — is, at
+; the level that matters here, a TABLE: a key resolves to attested guidance, and
+; keys across DIFFERENT systems that name the SAME underlying cell share a
+; content-address. This file is that table-reader, written ONCE; a new system is
+; a new DATA table fed to these recipes, never new control flow. (core-abstraction
+; -first: one engine, the cases are data — feedback_core_abstraction_first.)
+;
+; It generalizes the SPEAK / RUN two-face shape already proven in
+; gematria-channel.fk, sanskrit-channel.fk, shamballa-channel.fk — but where those
+; carry one bespoke RUN op each, here the channel itself is the argument:
+;
+;   SPEAK   (gc-speak channel key)            → the attested guidance text
+;   RUN     (gc-address-of channel key)       → the shared content-address (an int):
+;                                               two keys in two channels with the
+;                                               same address ARE the same cell.
+;   CROSS   (gc-same-cell? ch-a ka ch-b kb)    → 1 iff they share that address —
+;                                               Human Design gate 25 ≡ Gene Key 25
+;                                               ≡ I Ching hexagram 25, content-
+;                                               addressed (lc-cross-modal-unity).
+;
+; An entry the channel does not hold returns HONEST ABSENCE — it never fabricates
+; an undocumented reading (the shamballa-channel discipline). Coverage is queryable
+; so a partial table is legible, never hidden.
+;
+; The address is an INTEGER on purpose: address-equality IS the equivalence class,
+; so the whole engine and every channel built on it stay in the four-kernel-safe
+; subset (no node/substrate op). Interning that int to a single substrate node —
+; content-addressing EXECUTED — is the same fact in the 3-kernel substrate lane,
+; already shown by gematria-channel.fk; this engine does not re-prove it.
+;
+; Held as documented tradition: the channel reports attested meanings and the
+; structural fact that two systems name one cell; it asserts no cosmology and
+; collapses no position into an empirical claim — guidance stays in the
+; direct-experience / mystery lane (modality-lattices.form).
+;
+; preludes: form-stdlib/core.fk
+;
+
+(do
+    ;; --- an ENTRY: (key address speak teaching) ------------------------
+    ;; key      — the query within this channel (gate, sign-index, code, part)
+    ;; address  — the SHARED content-address; same address across channels = same cell
+    ;; speak    — the attested guidance text
+    ;; teaching — a vision-kb concept id grounding it, or "" (honest absence)
+    (defn gc-entry (key address speak teaching) (list key address speak teaching))
+    (defn gc-entry-key      (e) (nth e 0))
+    (defn gc-entry-address  (e) (nth e 1))
+    (defn gc-entry-speak    (e) (nth e 2))
+    (defn gc-entry-teaching (e) (nth e 3))
+
+    ;; --- resolve a key → a 0-or-1-element list (honest absence is empty) --
+    (defn gc-resolve (channel key)
+        (if (eq (len channel) 0) (empty)
+            (if (eq (gc-entry-key (head channel)) key)
+                (list (head channel))
+                (gc-resolve (tail channel) key))))
+    (defn gc-found? (channel key)
+        (if (eq (len (gc-resolve channel key)) 1) 1 0))
+
+    ;; --- SPEAK: the attested guidance, or honest absence ----------------
+    (defn gc-speak (channel key)
+        (if (eq (gc-found? channel key) 0)
+            "unknown — not yet seeded in this channel; honest absence, not fabricated"
+            (gc-entry-speak (head (gc-resolve channel key)))))
+
+    ;; --- TEACHING: the grounding concept id, or "" ----------------------
+    (defn gc-teaching (channel key)
+        (if (eq (gc-found? channel key) 0) ""
+            (gc-entry-teaching (head (gc-resolve channel key)))))
+
+    ;; --- ADDRESS (RUN): the shared content-address, or -1 for absence ---
+    ;; The keys/addresses real channels use are positive (gate 1..64, sign 0..11,
+    ;; …), so -1 is an unambiguous "no address" sentinel.
+    (defn gc-address-of (channel key)
+        (if (eq (gc-found? channel key) 0) -1
+            (gc-entry-address (head (gc-resolve channel key)))))
+
+    ;; --- CROSS: do two keys in two channels name the SAME cell? ----------
+    ;; The headline: same address ⇒ same lattice cell, regardless of system or
+    ;; surface text. Gate 25 (Human Design) and Gene Key 25 share address 25.
+    (defn gc-same-cell? (channel-a key-a channel-b key-b)
+        (do
+            (let a (gc-address-of channel-a key-a))
+            (let b (gc-address-of channel-b key-b))
+            (if (eq a -1) 0 (if (eq b -1) 0 (if (eq a b) 1 0)))))
+
+    ;; --- COVERAGE: seeded count, so a partial table is legible -----------
+    (defn gc-coverage (channel) (len channel))
+
+    ;; --- EQUIVALENTS across many channels at one address ----------------
+    ;; Collect every entry, in any of `channels`, that sits at `address` — the
+    ;; cross-modal class of one cell read through every system that names it.
+    ;; (gc-equiv-in defined before gc-equiv-walk: helpers precede users.)
+    (defn gc-equiv-in (channel address acc)
+        (if (eq (len channel) 0) acc
+            (if (eq (gc-entry-address (head channel)) address)
+                (gc-equiv-in (tail channel) address (cons (head channel) acc))
+                (gc-equiv-in (tail channel) address acc))))
+    (defn gc-equiv-walk (channels address acc)
+        (if (eq (len channels) 0) acc
+            (gc-equiv-walk (tail channels) address
+                (gc-equiv-in (head channels) address acc))))
+    (defn gc-equivalents (channels address) (gc-equiv-walk channels address (empty)))
+
+    ;; --- the governing teaching, queryable in the substrate -------------
+    (defn guidance-channel-teaching () "lc-cross-modal-unity")
+
+    0)
