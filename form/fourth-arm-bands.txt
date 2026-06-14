@@ -31,7 +31,7 @@
 #     field constructors, float NodeIDs, and deeper content-addressed lattice
 #     surfaces beyond the explicit make_nodeid, category/pkg/level/type/inst
 #     projection, and generic/doc/concept/dns/session floor
-#   host io family        — file_mtime, scan_run, and broader read/scan recipes.
+#   host io family        — Postgres carriers and broader source-scan recipes.
 #     Full floor/north-star for this arc:
 #     docs/coherence-substrate/fourth-arm-substrate-carriers.form
 #   multi-line output     — bands that print mid-walk (the walker answers
@@ -55,8 +55,8 @@
 # record-blueprint rows among its focused four-way rows, and
 # android-mesh-learning now carries
 # active mic/camera/GPU sample rows at focused verdict 32767. The latest
-# completed full `cd form && ./validate.sh` on this branch reads 232
-# four-way bands and 614 total passing workloads with 0 residual divergent
+# completed full `cd form && ./validate.sh` on this branch reads 234
+# four-way bands and 615 total passing workloads with 0 residual divergent
 # bands; refresh the full aggregate on a quiet host after focused release
 # rather than spending repeated validation cycles under shared-runner
 # contention. Literal bp registry aliases now fold through make_nodeid for the
@@ -366,7 +366,9 @@ substrate-core fks 11111
 # real filesystem io was 3-kernel-only (the named "host io" wall). temp_dir is
 # now a native fkwu arm (tag 101, fk_tempdir reads $TMPDIR), joining the existing
 # fs carriers (tags 55..63). hostio-roundtrip writes "ABC" then reads it back
-# over the live filesystem and crosses four-way deterministically. Effect-once
+# over the live filesystem and crosses four-way deterministically. Host
+# observation now crosses too: file_mtime gives freshness over real files and
+# scan_run gives the lexer/string stride the read/scan recipes need. Effect-once
 # is the remaining ground, and one piece of it is now crossed: bare do-statements
 # (top-level and nested) sequence through tag 69, so each fires exactly once in
 # order (do-effect-seq writes two bytes through two bare appends and reads len 2).
@@ -379,7 +381,7 @@ substrate-core fks 11111
 # nested do-lets now snapshot effecting values through fk-store/fk-load, not only
 # record_new, so a side-effecting binding is walked once and read many times
 # (let-effect-once appends one byte, checks the bound size twice, and reads len
-# 1). file_mtime/scan_run and segmented-FILE/Postgres carriers can now build on
+# 1). segmented-FILE/Postgres carriers can now build on
 # effect-once let discipline instead of working around re-walked bindings.
 # The next host-io carrier rows are now admitted too: write_file_text rides fkwu
 # tag 104 with overwrite/truncate semantics, and file-append rides the native
@@ -390,12 +392,14 @@ substrate-core fks 11111
 # port shape is four-way, memory mutation carrier is four-way, the file carrier
 # reopen proof survives, the full graph mutation/file verdict crosses, and ideas
 # graph projection over reopened file stores now crosses too. The next carrier
-# gap narrows to broader host-io observation (file_mtime/scan_run) and Postgres.
+# gap narrows to Postgres and broader source-scan recipes.
 # Pure call lets in non-recursive function bodies now snapshot through
 # per-function RAM windows, and the emitted fkwu RAM organ widened to 4096
 # cells. That lets list-returning pure calls be read more than once without
 # re-walking: ephemeris-planets now crosses four-way at 1111111.
 hostio-roundtrip fks 111
+hostio-observation fks 63
+go-jit-value-helper fks 4
 do-effect-seq fks 2
 doc-xpath fks 10
 concept-xpath fks 9

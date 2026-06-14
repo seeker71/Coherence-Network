@@ -78,6 +78,7 @@
           (list "write_file_text" 2 104)
           (list "http_get" 3 105)
           (list "_get" 2 106)
+          (list "file_mtime" 1 107) (list "scan_run" 3 108)
           (list "record_get" 2 65) (list "record_set" 3 66)
           (list "record_has" 2 67) (list "record?" 1 68)
           (list "record_keys" 1 99) (list "record_blueprint" 1 100)
