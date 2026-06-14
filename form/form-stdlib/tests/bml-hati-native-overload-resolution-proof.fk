@@ -1,0 +1,93 @@
+; tests/bml-hati-native-overload-resolution-proof.fk
+;
+; preludes: form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk
+;
+; Proves that BML/Hati compiled calls select overloaded methods by arity,
+; not just by the first name binding in the method environment.
+
+(do
+    (defn score-bool (actual)
+        (if actual 1 0))
+
+    (defn score-int (actual expected)
+        (if (eq actual expected) 1 0))
+
+    (defn score-str (actual expected)
+        (if (nil? actual)
+            0
+            (if (str_eq actual expected) 1 0)))
+
+    (defn str-contains? (haystack needle)
+        (ge (str_find haystack needle 0) 0))
+
+    (defn overload-program (methods expr)
+        (bml-ast-block
+            (append methods (list (bml-ast-return expr)))))
+
+    (let pick-zero-method
+        (bml-ast-method
+            "Pick"
+            (bml-ast-return
+                (bml-ast-add (bml-ast-int 20) (bml-ast-int 1)))))
+
+    (let pick-one-source
+        "int Pick(int x) { return x + 2; }\n")
+    (let pick-one-parsed
+        (bml-source-parse-executable-stream
+            (bml-source-scan-text pick-one-source)))
+    (let pick-one-method
+        (head (bml-source-exec-parse-nodes pick-one-parsed)))
+
+    (let pick-two-source
+        "int Pick(int a, int b) { return a + b; }\n")
+    (let pick-two-parsed
+        (bml-source-parse-executable-stream
+            (bml-source-scan-text pick-two-source)))
+    (let pick-two-method
+        (head (bml-source-exec-parse-nodes pick-two-parsed)))
+
+    (let methods (list pick-zero-method pick-one-method pick-two-method))
+    (let zero-node
+        (overload-program methods (bml-ast-call-args "Pick" (empty))))
+    (let one-node
+        (overload-program methods (bml-ast-call "Pick" (bml-ast-int 40))))
+    (let two-node
+        (overload-program
+            methods
+            (bml-ast-call-args "Pick" (list (bml-ast-int 19) (bml-ast-int 23)))))
+    (let bad-node
+        (overload-program
+            methods
+            (bml-ast-call-args
+                "Pick"
+                (list (bml-ast-int 1) (bml-ast-int 2) (bml-ast-int 3)))))
+
+    (let zero-image (bml-hati-compile-image zero-node))
+    (let one-image (bml-hati-compile-image one-node))
+    (let two-image (bml-hati-compile-image two-node))
+    (let bad-image (bml-hati-compile-image bad-node))
+    (let zero-table (bml-hati-table-file zero-image))
+    (let two-table (bml-hati-table-file two-image))
+    (let bad-table (bml-hati-table-file bad-image))
+
+    (sum
+        (list
+            (score-str (bml-method-node-name pick-zero-method) "Pick")
+            (score-bool (bml-source-exec-parse-ok? pick-one-parsed))
+            (score-bool (bml-source-exec-parse-ok? pick-two-parsed))
+            (score-str (bml-method-node-name pick-one-method) "Pick")
+            (score-str (bml-method-node-name pick-two-method) "Pick")
+            (score-int (len (bml-method-node-parameters pick-zero-method)) 0)
+            (score-int (len (bml-method-node-parameters pick-one-method)) 1)
+            (score-int (len (bml-method-node-parameters pick-two-method)) 2)
+            (score-bool (bml-hati-image-supported? zero-image))
+            (score-bool (bml-hati-image-supported? one-image))
+            (score-bool (bml-hati-image-supported? two-image))
+            (score-bool (not (bml-hati-image-supported? bad-image)))
+            (score-int (bml-hati-run-value zero-node) 21)
+            (score-int (bml-hati-run-value one-node) 42)
+            (score-int (bml-hati-run-value two-node) 42)
+            (score-str (head (bml-hati-image-unsupported bad-image)) "call/arity")
+            (score-bool (not (str-contains? zero-table "BML-HATI-UNSUPPORTED")))
+            (score-bool (str-contains? two-table "44"))
+            (score-bool (str-contains? bad-table "BML-HATI-UNSUPPORTED call/arity")))))
