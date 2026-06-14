@@ -81,7 +81,7 @@
       (jit-runtime form-native-arm64-assembler)
       (distribution https://hati.earth/downloads/hati-os/android/arm64/hati-os-android-arm64.tar.zst)
       (resource-implementations procfs+ActivityManager-permission-gated procfs+BatteryManager+Debug+SensorManager AAudio+AudioRecord+AudioTrack Camera2+MediaProjection-permission-gated SensorManager+LocationManager+GNSS-permission-gated Vulkan+OpenGL-ES NNAPI+vendor-DSP-delegates unsupported-MLX)
-      (floor "Android executable shape is Form-native and inspectable; Docker Linux/arm64 executes the image for stdout/stderr/exit; Android device/emulator receipt still requires granted permissions")))
+      (floor "Android executable shape is Form-native and inspectable; Docker Linux/arm64 executes the image for stdout/stderr/exit; an authorized Android arm64 device executes the same image through adb with stdout/stderr/exit receipt")))
 
   (missing-physical-samples
     (tts-stt-loopback
@@ -120,8 +120,8 @@
       (floor "target row, clang oracle assembly/object proof, four-way Form-native JIT runtime row, Form-native Mach-O object proof, and hati.earth URL are proven")
       (missing "published tarball, sha256, source map, and physical-lane summary JSON at the catalog URL"))
     (android-arm64
-      (floor "target row, clang oracle assembly/object proof, four-way Form-native JIT runtime row, Form-native ELF/aarch64 object proof, Form-native ELF/aarch64 executable shape proof, Docker Linux/arm64 stdout/stderr/exit receipt, and hati.earth URL are proven")
-      (missing "Android device/emulator execution receipt for the Form-native ELF executable, published Android native kernel package, sha256, source map, and Android device/emulator physical-lane summary JSON at the catalog URL; APK proof remains separate until the app shell announces to hati.mesh and carries organ channels")))
+      (floor "target row, clang oracle assembly/object proof, four-way Form-native JIT runtime row, Form-native ELF/aarch64 object proof, Form-native ELF/aarch64 executable shape proof, Docker Linux/arm64 stdout/stderr/exit receipt, Android adb stdout/stderr/exit receipt, and hati.earth URL are proven")
+      (missing "published Android native kernel package, sha256, source map, and Android device/emulator physical-lane summary JSON at the catalog URL; APK proof remains separate until the app shell announces to hati.mesh and carries organ channels")))
 
   (invariant
     (no-mock-data)

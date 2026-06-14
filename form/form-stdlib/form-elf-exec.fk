@@ -2,8 +2,9 @@
 ; minimal aarch64 ELF EXECUTABLE image carrying its own Linux/Android syscall
 ; entry code. This is the next floor after form-elf.fk's relocatable object:
 ; Form now emits an ET_EXEC image directly, without clang as compiler,
-; assembler, or linker. Running the image needs an Android device or qemu-aarch64
-; carrier; the local proof always validates executable shape and bytes.
+; assembler, or linker. Running the image uses an authorized Android adb device,
+; qemu-aarch64, or Docker Linux/arm64 when available; the local proof always
+; validates executable shape and bytes.
 
 (do
     (defn elfx-nil? (xs) (eq (len xs) 0))
