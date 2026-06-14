@@ -98,6 +98,10 @@ type LearningDashboardData = {
     native_accuracy_ppm: number;
     oracle_accuracy_ppm: number;
     continuous_cycle_count: number;
+    cycle_receipt_count: number;
+    latest_cycle_seq?: number | null;
+    training_source?: string | null;
+    larger_heldout_window_pass: boolean;
     proof_status: string;
     native_beats_oracle: boolean;
     observed_at?: string | null;
@@ -501,10 +505,17 @@ export default function DashboardPage() {
                           <StatusPill value={artifact.proof_status} />
                           <StatusPill value={artifact.status} />
                           {artifact.native_beats_oracle && <StatusPill value="native beats oracle" />}
+                          {artifact.larger_heldout_window_pass && <StatusPill value="larger heldout" />}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {artifact.model_family} · cycle {artifact.continuous_cycle_count} · samples {artifact.sample_count} · heldout {artifact.heldout_count}
+                          {artifact.model_family} · cycles {artifact.continuous_cycle_count} · receipts {artifact.cycle_receipt_count} · samples {artifact.sample_count} · heldout {artifact.heldout_count}
                         </p>
+                        {artifact.latest_cycle_seq && (
+                          <p className="text-xs text-muted-foreground">
+                            Latest witness cycle {artifact.latest_cycle_seq}
+                            {artifact.training_source ? ` · ${artifact.training_source}` : ""}
+                          </p>
+                        )}
                         <p className="text-xs">
                           <span className="text-muted-foreground">Eval: </span>
                           native {ppmToPercent(artifact.native_accuracy_ppm)} · oracle {ppmToPercent(artifact.oracle_accuracy_ppm)} · {artifact.correct_count}/{artifact.heldout_count} correct

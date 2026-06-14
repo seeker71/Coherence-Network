@@ -26,6 +26,10 @@ class NativeTrainingArtifact(BaseModel):
     native_accuracy_ppm: int
     oracle_accuracy_ppm: int
     continuous_cycle_count: int
+    cycle_receipt_count: int
+    latest_cycle_seq: int | None = None
+    training_source: str | None = None
+    larger_heldout_window_pass: bool
     proof_status: str
     native_beats_oracle: bool
     observed_at: str | None = None
@@ -107,6 +111,8 @@ def collect_native_training_artifacts(
         eval_data = record.get("eval") if isinstance(record.get("eval"), dict) else {}
         training = record.get("training") if isinstance(record.get("training"), dict) else {}
         validation = record.get("validation") if isinstance(record.get("validation"), dict) else {}
+        cycle_receipts = record.get("cycle_receipts") if isinstance(record.get("cycle_receipts"), list) else []
+        latest_cycle = cycle_receipts[-1] if cycle_receipts and isinstance(cycle_receipts[-1], dict) else {}
         artifacts.append(
             NativeTrainingArtifact(
                 artifact_id=_receipt_string(record, "artifact_id", path.stem),
@@ -125,6 +131,10 @@ def collect_native_training_artifacts(
                 native_accuracy_ppm=_receipt_int(eval_data, "native_accuracy_ppm"),
                 oracle_accuracy_ppm=_receipt_int(eval_data, "oracle_accuracy_ppm"),
                 continuous_cycle_count=_receipt_int(record, "continuous_cycle_count"),
+                cycle_receipt_count=len(cycle_receipts),
+                latest_cycle_seq=_receipt_int(latest_cycle, "seq") or None,
+                training_source=_receipt_string(training, "source") or None,
+                larger_heldout_window_pass=bool(training.get("larger_heldout_window_pass")),
                 proof_status=_receipt_string(validation, "status", "unknown"),
                 native_beats_oracle=bool(training.get("native_beats_oracle")),
                 observed_at=_receipt_string(record, "observed_at") or None,
