@@ -1,0 +1,17 @@
+; hostio-observation-band.fk -- observe real files and scan strings four-way.
+;
+; The first durable carrier floor wrote and read real files. This band admits
+; the observation pair the next carriers need: file_mtime for freshness and
+; scan_run for host-side lexical strides.
+
+(do
+    (let path (str_concat (temp_dir) "/hostio-observation-band.txt"))
+    (let absent (str_concat (temp_dir) "/hostio-observation-band.absent"))
+    (let wrote (write_file_text path "  123abc\n"))
+    (let c0 (if (gt wrote 0) 1 0))
+    (let c1 (if (eq (scan_run "  123abc\n" 0 0) 2) 2 0))
+    (let c2 (if (eq (scan_run "  123abc\n" 2 1) 5) 4 0))
+    (let c3 (if (eq (scan_run "  123abc\n" 5 2) 8) 8 0))
+    (let c4 (if (gt (file_mtime path) 0) 16 0))
+    (let c5 (if (eq (file_mtime absent) -1) 32 0))
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))

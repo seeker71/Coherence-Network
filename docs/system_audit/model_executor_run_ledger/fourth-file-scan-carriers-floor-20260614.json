@@ -1,0 +1,34 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord claim fourth-file-scan-carriers-floor",
+    "cd form && bash scripts/fourth-arm-gate.sh hostio-observation go-jit-value-helper hostio-roundtrip write-file-text file-append",
+    "scripts/bml_form_jit_metal_planes_audit.sh",
+    "cd form && ./validate.sh",
+    "python3 scripts/model_executor_proof_ledger.py sync-jsonl --output docs/system_audit/model_executor_runs.jsonl",
+    "python3 scripts/model_executor_proof_ledger.py check-jsonl",
+    "python3 scripts/model_executor_proof_ledger.py validate",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_fourth_hostio_observation_scan.json"
+  ],
+  "failure_reason": "Added fkwu lowering for file_mtime tag 107 and scan_run tag 108, admitted hostio-observation and go-jit-value-helper four-way, and preserved Android target-object validation by avoiding a hard sys/stat.h dependency when the Android sysroot is unavailable. Full validation reports 234 four-way bands, 615 ok, 0 divergent.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "fourth-file-scan-carriers-floor-20260614",
+  "source": {
+    "kind": "codex-worktree",
+    "path": "/Users/ursmuff/.codex/worktrees/a3ec/Coherence-Network"
+  },
+  "thread_branch": "codex/fourth-file-scan-carriers-20260614",
+  "validation": {
+    "commands": [
+      "cd form && bash scripts/fourth-arm-gate.sh hostio-observation go-jit-value-helper hostio-roundtrip write-file-text file-append",
+      "scripts/bml_form_jit_metal_planes_audit.sh",
+      "cd form && ./validate.sh"
+    ],
+    "status": "pass"
+  }
+}
