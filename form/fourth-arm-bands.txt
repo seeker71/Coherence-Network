@@ -55,8 +55,8 @@
 # record-blueprint rows among its focused four-way rows, and
 # android-mesh-learning now carries
 # active mic/camera/GPU sample rows at focused verdict 32767. The latest
-# completed full `cd form && ./validate.sh` on this branch reads 234
-# four-way bands and 615 total passing workloads with 0 residual divergent
+# completed full `cd form && ./validate.sh` on this branch reads 238
+# four-way bands and 620 total passing workloads with 0 residual divergent
 # bands; refresh the full aggregate on a quiet host after focused release
 # rather than spending repeated validation cycles under shared-runner
 # contention. Literal bp registry aliases now fold through make_nodeid for the
@@ -386,11 +386,18 @@ substrate-core fks 11111
 # (eq-effect-once appends one byte inside an eq and reads len 1). The Form
 # meta-circular walkers (fk-walk-lowered, fkm-walk-lowered) carry the same arms,
 # keeping the spec consistent with the emitted fkwu. Third piece crossed:
-# nested do-lets now snapshot effecting values through fk-store/fk-load, not only
-# record_new, so a side-effecting binding is walked once and read many times
-# (let-effect-once appends one byte, checks the bound size twice, and reads len
-# 1). segmented-FILE/Postgres carriers can now build on
-# effect-once let discipline instead of working around re-walked bindings.
+# nested do-lets bind effecting values once on a RESERVED per-call frame block.
+# Each function reserves K local slots at entry (RESERVE tag 111, K = its source
+# let count); a stored let writes fk_vs[fp+offset] (LETF tag 109) and reads it
+# back frame-relative (FARG tag 110). Because the block is reserved before any
+# argument-packing scratch and each call gets its own fp, a side-effecting
+# binding is walked once, survives a recursive descent, and is immune to
+# argument-position scratch (let-effect-once reads len 1; recursive-let-clobber
+# descends three frames, each binding the file length it saw before recursing,
+# and the outermost correctly reads 1 — the global-RAM-slot binding it replaced
+# clobbered all frames to the deepest length 3). segmented-FILE/Postgres carriers
+# now build on recursion-safe effect-once let discipline instead of working
+# around re-walked or clobbered bindings.
 # The next host-io carrier rows are now admitted too: write_file_text rides fkwu
 # tag 104 with overwrite/truncate semantics, and file-append rides the native
 # append carrier. Text emitters no longer need to materialize byte lists for the
@@ -432,6 +439,7 @@ chart-cast fks 1111111
 native-training-receipt fks 16383
 eq-effect-once fks 1
 let-effect-once fks 111
+recursive-let-clobber fks 1
 write-file-text fks 1111
 file-append fks 11111
 storage-port fks 11111
