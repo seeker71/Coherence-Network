@@ -1,0 +1,47 @@
+; tests/hd-mandala-wheel-band.fk — the gate wheel, against attested anchors and end to end.
+;
+; The wheel is reference data, so the band pins it to the anchors the sources agree on,
+; then walks the full activation chain: a date becomes the Sun's longitude, the longitude
+; a gate, the gate its Human Design keynote.
+;
+; Verdict 1111111 (127) when every claim holds across all kernels.
+;   0 deg Aries falls in Gate 25                                  → 1
+;   the HD New Year anchor: 302 deg (2 Aquarius) is Gate 41        → 10
+;   10 deg Aries is Gate 21 (the corrected Jovian example)        → 100
+;   the wheel is complete: 64 gates, 0 deg Libra is Gate 46        → 1000
+;   the wheel closes: index 63 is Gate 36                         → 10000
+;   end to end: the Sun on 2000-01-01 (280 deg Cap) is Gate 38    → 100000
+;   full chain: the spring-equinox Sun is Gate 25, "Spirit of the Self" → 1000000
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/celestial-pole-channel.fk form-stdlib/trig.fk form-stdlib/ephemeris-sun.fk form-stdlib/iching-channel.fk form-stdlib/hd-mandala-wheel.fk
+;
+
+(do
+    ;; --- 1. 0 deg Aries -> Gate 25 ------------------------------------
+    (let aries0-ok (if (eq (gate-at-longitude 0) 25) 1 0))
+
+    ;; --- 2. the anchor: 302 deg -> Gate 41 (HD New Year) -------------
+    (let anchor-ok (if (eq (gate-at-longitude 302) 41) 10 0))
+
+    ;; --- 3. 10 deg Aries -> Gate 21 (not 25 — the corrected example) -
+    (let ten-ok (if (eq (gate-at-longitude 10) 21) 100 0))
+
+    ;; --- 4. complete wheel; 0 deg Libra -> Gate 46 -------------------
+    (let libra-ok (eq (gate-at-longitude 180) 46))
+    (let count-ok (eq (len (hd-wheel)) 64))
+    (let mid-ok (if libra-ok (if count-ok 1000 0) 0))
+
+    ;; --- 5. the wheel closes: last index is Gate 36 -----------------
+    (let close-ok (if (eq (nth (hd-wheel) 63) 36) 10000 0))
+
+    ;; --- 6. end to end: date -> Sun longitude -> gate ---------------
+    (let e2e-ok (if (eq (sun-gate 2000 1 1) 38) 100000 0))
+
+    ;; --- 7. full chain to the seeded meaning ------------------------
+    ;; the spring-equinox Sun sits at 0 deg Aries -> Gate 25, whose Human
+    ;; Design keynote ("Spirit of the Self") iching-channel speaks.
+    (let gate25 (eq (sun-gate 2000 3 20) 25))
+    (let speaks (ge (str_find (sun-gate-speak 2000 3 20) "Spirit of the Self" 0) 0))
+    (let chain-ok (if gate25 (if speaks 1000000 0) 0))
+
+    (sum (list aries0-ok anchor-ok ten-ok mid-ok close-ok e2e-ok chain-ok)))

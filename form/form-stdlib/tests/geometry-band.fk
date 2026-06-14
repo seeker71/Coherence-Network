@@ -1,0 +1,50 @@
+; tests/geometry-band.fk — depth, shape, light and shadow, computed from geometry, four-way.
+;
+; A camera at the origin looks down +z at a unit sphere centred at (0,0,5). The band
+; proves the three perceptions that underlie a rendered frame: DEPTH (how far to the
+; surface), SHAPE (whether the ray hits the silhouette at all), and LIGHT/SHADOW (how
+; bright the lit surface is, and that a face turned from the light goes dark).
+;
+; Verdict 1111111 (127) when every claim holds across all kernels.
+;   DEPTH: the ray hits the sphere's front face at distance 4               → 1
+;   SHAPE: a ray that misses the sphere returns -1 (no surface)             → 10
+;   LIGHT: a surface facing the light head-on is full bright (100)          → 100
+;   EDGE:  a surface side-on to the light is dark (0)                       → 1000
+;   SHADOW: a face turned AWAY from the light clamps to 0, never negative   → 10000
+;   RENDER: one ray-traced pixel of the lit sphere is bright (100)          → 100000
+;   BACKGROUND: a pixel whose ray misses is 0                              → 1000000
+;
+; preludes: form-stdlib/core.fk form-stdlib/trig.fk form-stdlib/geometry.fk
+;
+
+(do
+    ;; the scene: camera at origin, sphere of radius 1 at (0,0,5)
+    (let cam   (v3 0.0 0.0 0.0))
+    (let fwd   (v3 0.0 0.0 1.0))   ; ray straight ahead (+z)
+    (let aside (v3 0.0 1.0 0.0))   ; ray that misses (+y)
+    (let c     (v3 0.0 0.0 5.0))
+    (let r     1.0)
+    (let light (v3 0.0 0.0 -1.0))  ; light shining back toward the camera (-z)
+
+    ;; --- 1. DEPTH: front face at distance 4 ---------------------------
+    (let depth-ok (if (eq (round (ray-sphere-t cam fwd c r)) 4) 1 0))
+
+    ;; --- 2. SHAPE: a miss is no surface -------------------------------
+    (let miss-ok (if (eq (round (ray-sphere-t cam aside c r)) -1) 10 0))
+
+    ;; --- 3. LIGHT: facing the light head-on -> full bright ------------
+    (let head-ok (if (eq (round (mul 100.0 (lambert (v3 0.0 0.0 -1.0) light))) 100) 100 0))
+
+    ;; --- 4. EDGE: side-on to the light -> dark ------------------------
+    (let edge-ok (if (eq (round (mul 100.0 (lambert (v3 1.0 0.0 0.0) light))) 0) 1000 0))
+
+    ;; --- 5. SHADOW: turned away -> clamped to 0 (no negative light) ---
+    (let shadow-ok (if (eq (round (mul 100.0 (lambert (v3 0.0 0.0 1.0) light))) 0) 10000 0))
+
+    ;; --- 6. RENDER: the lit sphere's pixel is bright ------------------
+    (let render-ok (if (eq (round (mul 100.0 (render-pixel cam fwd c r light))) 100) 100000 0))
+
+    ;; --- 7. BACKGROUND: a missed pixel is 0 --------------------------
+    (let bg-ok (if (eq (round (mul 100.0 (render-pixel cam aside c r light))) 0) 1000000 0))
+
+    (sum (list depth-ok miss-ok head-ok edge-ok shadow-ok render-ok bg-ok)))
