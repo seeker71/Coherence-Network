@@ -10,6 +10,12 @@
 ; cells with merkle roots; mesh peers share slices by merkle; the body reads a
 ; model-vitality row and focuses attention on the next needed teaching step.
 ; Focused proof and fast release are vitality signals, not afterthoughts.
+;
+; Real chunk storage floor: when loaded with cell-log-store.fk and sha256.fk,
+; this file can store a tensor chunk payload in the segmented file carrier,
+; reopen it, read the bytes back, and verify the content digest. GPU/MLX/Metal
+; carrier rows are cache/projection receipts: a carrier must return bytes whose
+; re-hash matches the source chunk digest before the body treats it as faithful.
 
 (do
     (defn mv-kind-model-architecture () "model/architecture")
@@ -19,6 +25,9 @@
     (defn mv-kind-eval-receipt () "model/eval-receipt")
     (defn mv-kind-vitality () "model/vitality")
     (defn mv-kind-lineage () "model/lineage")
+    (defn mv-kind-chunk-storage () "model/chunk-storage")
+    (defn mv-kind-carrier-projection () "model/carrier-projection")
+    (defn mv-kind-vitality-route () "model/vitality-route")
 
     (defn mv-floor () (list
         "floor"
@@ -306,5 +315,163 @@
                 (and
                     (mv-nonempty? (mv-body-read-focus value))
                     (ge (mv-body-read-score value) 0)))
+            false))
+
+    ;; ---- real chunk storage receipts -------------------------------------
+    ;; These functions intentionally depend on sha256.fk + cell-log-store.fk
+    ;; when called. model-vitality-band stays pure/four-way; the real storage
+    ;; band loads those carrier files and proves physical file-backed storage.
+    (defn mv-bytes-eq? (a b)
+        (if (eq (len a) 0)
+            (if (eq (len b) 0) 1 0)
+            (if (eq (len b) 0) 0
+                (if (eq (head a) (head b))
+                    (mv-bytes-eq? (tail a) (tail b))
+                    0))))
+
+    (defn mv-payload-digest (payload)
+        (sha256 (cls-str-bytes payload)))
+
+    (defn mv-chunk-storage-key (chunk)
+        (str_concat "model-chunk:" (mv-chunk-merkle chunk)))
+
+    (defn mv-store-chunk (store chunk payload)
+        (do
+            (let key (mv-chunk-storage-key chunk))
+            (let digest (mv-payload-digest payload))
+            (let next-store (cls-put store key payload))
+            (list
+                "model-chunk-store-receipt"
+                next-store
+                key
+                (mv-chunk-merkle chunk)
+                digest
+                (str_len payload)
+                "stored")))
+    (defn mv-store-chunk-receipt? (value) (mv-row? value "model-chunk-store-receipt" 7))
+    (defn mv-store-chunk-store (r) (nth r 1))
+    (defn mv-store-chunk-key (r) (nth r 2))
+    (defn mv-store-chunk-merkle (r) (nth r 3))
+    (defn mv-store-chunk-digest (r) (nth r 4))
+    (defn mv-store-chunk-bytes (r) (nth r 5))
+    (defn mv-store-chunk-status (r) (nth r 6))
+    (defn mv-store-chunk-valid? (r)
+        (if (mv-store-chunk-receipt? r)
+            (and (mv-nonempty? (mv-store-chunk-key r))
+            (and (mv-nonempty? (mv-store-chunk-merkle r))
+            (and (gt (len (mv-store-chunk-digest r)) 0)
+            (and (gt (mv-store-chunk-bytes r) 0)
+                 (str_eq (mv-store-chunk-status r) "stored")))))
+            false))
+
+    (defn mv-read-stored-chunk (store receipt)
+        (do
+            (let got (cls-get store (mv-store-chunk-key receipt)))
+            (let found (cls-found? got))
+            (let payload (if (eq found 1) (cls-value got) ""))
+            (let digest (if (eq found 1) (mv-payload-digest payload) (list)))
+            (list
+                "model-chunk-read-receipt"
+                (mv-store-chunk-key receipt)
+                found
+                digest
+                (str_len payload)
+                (mv-store-chunk-digest receipt))))
+    (defn mv-read-stored-chunk? (value) (mv-row? value "model-chunk-read-receipt" 6))
+    (defn mv-read-chunk-key (r) (nth r 1))
+    (defn mv-read-chunk-found (r) (nth r 2))
+    (defn mv-read-chunk-digest (r) (nth r 3))
+    (defn mv-read-chunk-bytes (r) (nth r 4))
+    (defn mv-read-chunk-expected-digest (r) (nth r 5))
+    (defn mv-read-stored-chunk-valid? (r)
+        (if (mv-read-stored-chunk? r)
+            (and (eq (mv-read-chunk-found r) 1)
+            (and (gt (mv-read-chunk-bytes r) 0)
+                 (eq (mv-bytes-eq? (mv-read-chunk-digest r) (mv-read-chunk-expected-digest r)) 1)))
+            false))
+
+    ;; ---- carrier projection re-hash receipts -----------------------------
+    (defn mv-carrier-known? (carrier)
+        (if (str_eq carrier "cpu:buffer") 1
+            (if (str_eq carrier "gpu:buffer") 1
+                (if (str_eq carrier "mlx:array") 1
+                    (if (str_eq carrier "metal:buffer") 1 0)))))
+
+    (defn mv-carrier-projection-rehash (carrier codec chunk source-digest returned-payload)
+        (do
+            (let returned-digest (mv-payload-digest returned-payload))
+            (list
+                "model-carrier-projection-rehash"
+                carrier
+                codec
+                (mv-chunk-merkle chunk)
+                source-digest
+                returned-digest
+                (str_len returned-payload)
+                (if (eq (mv-bytes-eq? source-digest returned-digest) 1)
+                    "rehash-ok"
+                    "rehash-mismatch"))))
+    (defn mv-carrier-projection-rehash? (value)
+        (mv-row? value "model-carrier-projection-rehash" 8))
+    (defn mv-carrier-projection-carrier (r) (nth r 1))
+    (defn mv-carrier-projection-codec (r) (nth r 2))
+    (defn mv-carrier-projection-merkle (r) (nth r 3))
+    (defn mv-carrier-projection-source-digest (r) (nth r 4))
+    (defn mv-carrier-projection-returned-digest (r) (nth r 5))
+    (defn mv-carrier-projection-bytes (r) (nth r 6))
+    (defn mv-carrier-projection-status (r) (nth r 7))
+    (defn mv-carrier-projection-valid? (r)
+        (if (mv-carrier-projection-rehash? r)
+            (and (eq (mv-carrier-known? (mv-carrier-projection-carrier r)) 1)
+            (and (mv-nonempty? (mv-carrier-projection-codec r))
+            (and (mv-nonempty? (mv-carrier-projection-merkle r))
+            (and (gt (mv-carrier-projection-bytes r) 0)
+            (and (str_eq (mv-carrier-projection-status r) "rehash-ok")
+                 (eq (mv-bytes-eq?
+                        (mv-carrier-projection-source-digest r)
+                        (mv-carrier-projection-returned-digest r)) 1))))))
+            false))
+
+    ;; ---- wellness/pulse routing over model vitality ----------------------
+    (defn mv-vitality-route-focus (body-read wellness-state pulse-state release-state)
+        (if (str_eq (mv-body-read-focus body-read) "teach-trust")
+            "teach-trust"
+            (if (str_eq (mv-body-read-focus body-read) "restore-sovereignty")
+                "restore-sovereignty"
+                (if (str_eq wellness-state "deploy-lag")
+                    "release-health"
+                    (if (str_eq pulse-state "silent")
+                        "restore-pulse"
+                        (if (str_eq release-state "slow")
+                            "focus-proof"
+                            (mv-body-read-focus body-read)))))))
+
+    (defn mv-vitality-route (body-read wellness-state pulse-state release-state)
+        (list
+            "model-vitality-route"
+            (nth body-read 1)
+            (mv-body-read-focus body-read)
+            wellness-state
+            pulse-state
+            release-state
+            (mv-vitality-route-focus body-read wellness-state pulse-state release-state)
+            (mv-body-read-score body-read)))
+    (defn mv-vitality-route? (value) (mv-row? value "model-vitality-route" 8))
+    (defn mv-vitality-route-model (r) (nth r 1))
+    (defn mv-vitality-route-source-focus (r) (nth r 2))
+    (defn mv-vitality-route-wellness (r) (nth r 3))
+    (defn mv-vitality-route-pulse (r) (nth r 4))
+    (defn mv-vitality-route-release (r) (nth r 5))
+    (defn mv-vitality-route-focus-result (r) (nth r 6))
+    (defn mv-vitality-route-score (r) (nth r 7))
+    (defn mv-vitality-route-valid? (r)
+        (if (mv-vitality-route? r)
+            (and (mv-nonempty? (mv-vitality-route-model r))
+            (and (mv-nonempty? (mv-vitality-route-source-focus r))
+            (and (mv-nonempty? (mv-vitality-route-wellness r))
+            (and (mv-nonempty? (mv-vitality-route-pulse r))
+            (and (mv-nonempty? (mv-vitality-route-release r))
+            (and (mv-nonempty? (mv-vitality-route-focus-result r))
+                 (ge (mv-vitality-route-score r) 0)))))))
             false))
 )

@@ -1,0 +1,92 @@
+; preludes: form-stdlib/core.fk form-stdlib/sha256.fk form-stdlib/cell-log-store.fk form-stdlib/model-vitality.fk
+;
+; model-vitality-storage-band - real chunk storage, carrier re-hash, and
+; wellness/pulse routing proof.
+;
+; Floor: this band uses the segmented file carrier to write a tensor chunk
+; payload, reopen the store, read the bytes back, and verify the sha256 digest.
+; It also proves the carrier projection re-hash receipt shape for returned CPU,
+; GPU, MLX, and Metal buffer bytes. The CPU/store path is physical in this band;
+; GPU/MLX/Metal physical execution remains a named next receipt.
+;
+; North star: every tensor chunk lives in the substrate cell store, every native
+; accelerator carrier must re-hash returned bytes against the source chunk, and
+; wellness/pulse reads model vitality rows to choose the next focused release.
+;
+; Verdict 8191 when all current floor claims hold across host-I/O kernels.
+
+(do
+    (let dir (str_concat (temp_dir) "/model-vitality-storage-band.d"))
+    (fs_rmdir dir)
+    (fs_rmdir (str_concat dir ".compact"))
+
+    (let chunk (mv-tensor-chunk
+        "tensor:encoder.w1"
+        0
+        (list 2 2)
+        (list 2 1)
+        "fp32"
+        "ingested-safetensors:sha256:abc"
+        "merkle:chunk-a"
+        4
+        16
+        0))
+    (let payload "0.25,-0.50,1.00,2.00")
+
+    (let st0 (cls-open dir))
+    (let write (mv-store-chunk st0 chunk payload))
+    (let st1 (mv-store-chunk-store write))
+    (let c0 (if (mv-store-chunk-valid? write) 1 0))
+
+    (let read-now (mv-read-stored-chunk st1 write))
+    (let c1 (if (mv-read-stored-chunk-valid? read-now) 2 0))
+
+    ;; Reopen from disk to prove the chunk survives through the real carrier.
+    (let st-reopen (cls-open dir))
+    (let read-reopen (mv-read-stored-chunk st-reopen write))
+    (let c2 (if (mv-read-stored-chunk-valid? read-reopen) 4 0))
+
+    (let c3 (if (eq (fs_exists (cls-seg-path dir 0)) 1) 8 0))
+
+    (let source-digest (mv-store-chunk-digest write))
+    (let cpu-proj (mv-carrier-projection-rehash "cpu:buffer" "bytes:f32-text" chunk source-digest payload))
+    (let gpu-proj (mv-carrier-projection-rehash "gpu:buffer" "bytes:f32-text" chunk source-digest payload))
+    (let mlx-proj (mv-carrier-projection-rehash "mlx:array" "bytes:f32-text" chunk source-digest payload))
+    (let metal-proj (mv-carrier-projection-rehash "metal:buffer" "bytes:f32-text" chunk source-digest payload))
+    (let c4 (if (mv-carrier-projection-valid? cpu-proj) 16 0))
+    (let c5 (if (mv-carrier-projection-valid? gpu-proj) 32 0))
+    (let c6 (if (mv-carrier-projection-valid? mlx-proj) 64 0))
+    (let c7 (if (mv-carrier-projection-valid? metal-proj) 128 0))
+
+    (let tampered (mv-carrier-projection-rehash "cpu:buffer" "bytes:f32-text" chunk source-digest "0.25,-0.50,1.00,9.00"))
+    (let c8 (if (not (mv-carrier-projection-valid? tampered)) 256 0))
+
+    (let good (mv-eval-receipt
+        "model:tiny-transformer"
+        "merkle:dataset-a"
+        88 86 90 87 88 91 20 18 30 82 93 84 90 64
+        "merkle:eval-good"))
+    (let good-read (mv-body-read (mv-vitality-receipt good)))
+    (let release-route (mv-vitality-route good-read "deploy-lag" "breathing" "fast"))
+    (let c9 (if (mv-vitality-route-valid? release-route)
+                (if (str_eq (mv-vitality-route-focus-result release-route) "release-health") 512 0)
+                0))
+
+    (let low-trust (mv-eval-receipt
+        "model:tiny-transformer"
+        "merkle:dataset-a"
+        88 86 40 87 88 91 20 18 30 82 93 84 90 64
+        "merkle:eval-trust"))
+    (let trust-route (mv-vitality-route (mv-body-read (mv-vitality-receipt low-trust)) "clear" "breathing" "fast"))
+    (let c10 (if (mv-vitality-route-valid? trust-route)
+                (if (str_eq (mv-vitality-route-focus-result trust-route) "teach-trust") 1024 0)
+                0))
+
+    (let slow-route (mv-vitality-route good-read "clear" "breathing" "slow"))
+    (let c11 (if (str_eq (mv-vitality-route-focus-result slow-route) "focus-proof") 2048 0))
+
+    (let pulse-route (mv-vitality-route good-read "clear" "silent" "fast"))
+    (let c12 (if (str_eq (mv-vitality-route-focus-result pulse-route) "restore-pulse") 4096 0))
+
+    (fs_rmdir dir)
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12)))
