@@ -1,0 +1,212 @@
+; real-mesh-training-carrier.fk - hard floor for live mesh training receipts.
+;
+; This is the non-toy gate for Mac + Android + model/oracle training loops. A
+; receipt that only proves shape, tiny samples, fixtures, or summary-only rows
+; does not pass. Real training starts when capture resources, process receipts,
+; model lanes, heldout bytes, labels, and AutoML/autoresearch all agree.
+;
+; Proven by: form-stdlib/tests/real-mesh-training-carrier-band.fk
+
+(do
+    (defn rmt-min-training-bytes () 314572800) ; 300 MiB
+    (defn rmt-min-heldout-bytes () 104857600) ; 100 MiB
+    (defn rmt-min-labels () 10000)
+    (defn rmt-min-resource-bytes () 10485760) ; 10 MiB per live carrier
+    (defn rmt-min-process-output-bytes () 32)
+
+    (defn rmt-floor ()
+        (list
+            "real mesh training windows require hundreds of MiB of captured local data"
+            "STT TTS sentiment conviction confidence NL-to-NL vision multimodal AutoML and autoresearch lanes are first-class"
+            "fixtures mocks toy rows summary-only windows and hidden provider authority are refused"
+            "host carriers may perform IO, but Form owns receipt validity route choice and model authority"))
+    (defn rmt-north-star ()
+        (list
+            "Mac and Android run continuous live witness training cycles over real local data"
+            "native recipes compete against sampled third-party oracles across every supported lane"
+            "AutoML and autoresearch mutate candidates under heldout proof before routing authority changes"
+            "dashboard and mesh agents read the same Form-native receipts rather than sidecar scripts"))
+
+    (defn rmt-required-lanes ()
+        (list
+            "speech-to-text"
+            "text-to-speech"
+            "sentiment"
+            "conviction"
+            "confidence"
+            "nl-to-nl"
+            "vision-describe"
+            "multimodal-align"
+            "automl-router"
+            "autoresearch"))
+
+    (defn rmt-known-lane? (lane)
+        (if (eq (len (rmt-required-lanes)) 0) 0
+            (rmt-known-lane-loop? lane (rmt-required-lanes))))
+    (defn rmt-known-lane-loop? (lane lanes)
+        (if (eq (len lanes) 0) 0
+            (if (str_eq lane (head lanes))
+                1
+                (rmt-known-lane-loop? lane (tail lanes)))))
+    (defn rmt-known-lane-count (lanes)
+        (if (eq (len lanes) 0) 0
+            (add (rmt-known-lane? (head lanes)) (rmt-known-lane-count (tail lanes)))))
+    (defn rmt-all-required-lanes? (lanes)
+        (eq (rmt-known-lane-count lanes) (len (rmt-required-lanes))))
+
+    (defn rmt-bad-source? (value)
+        (if (str_eq value "fixture") 1
+            (if (str_eq value "mock") 1
+                (if (str_eq value "toy") 1
+                    (if (str_eq value "synthetic-only") 1 0)))))
+
+    (defn rmt-resource (id kind device transport status trust bytes samples capture-policy merkle)
+        (list id kind device transport status trust bytes samples capture-policy merkle))
+    (defn rmt-resource-id (row) (nth row 0))
+    (defn rmt-resource-kind (row) (nth row 1))
+    (defn rmt-resource-device (row) (nth row 2))
+    (defn rmt-resource-transport (row) (nth row 3))
+    (defn rmt-resource-status (row) (nth row 4))
+    (defn rmt-resource-trust (row) (nth row 5))
+    (defn rmt-resource-bytes (row) (nth row 6))
+    (defn rmt-resource-samples (row) (nth row 7))
+    (defn rmt-resource-capture-policy (row) (nth row 8))
+    (defn rmt-resource-merkle (row) (nth row 9))
+    (defn rmt-resource-real? (row)
+        (if (rmt-bad-source? (rmt-resource-device row)) 0
+            (if (not (str_eq (rmt-resource-status row) "live")) 0
+                (if (lt (rmt-resource-trust row) 70) 0
+                    (if (lt (rmt-resource-bytes row) (rmt-min-resource-bytes)) 0
+                        (if (le (rmt-resource-samples row) 0) 0
+                            (if (str_eq (rmt-resource-capture-policy row) "summary-only") 0
+                                (if (str_eq (rmt-resource-merkle row) "") 0 1))))))))
+    (defn rmt-resources-real? (rows)
+        (if (eq (len rows) 0) 1
+            (if (eq (rmt-resource-real? (head rows)) 1)
+                (rmt-resources-real? (tail rows))
+                0)))
+    (defn rmt-resource-byte-sum (rows)
+        (if (eq (len rows) 0) 0
+            (add (rmt-resource-bytes (head rows)) (rmt-resource-byte-sum (tail rows)))))
+
+    (defn rmt-process (task command provider model exit-code stdout-bytes stderr-bytes duration-ms status)
+        (list task command provider model exit-code stdout-bytes stderr-bytes duration-ms status))
+    (defn rmt-process-task (row) (nth row 0))
+    (defn rmt-process-command (row) (nth row 1))
+    (defn rmt-process-provider (row) (nth row 2))
+    (defn rmt-process-model (row) (nth row 3))
+    (defn rmt-process-exit-code (row) (nth row 4))
+    (defn rmt-process-stdout-bytes (row) (nth row 5))
+    (defn rmt-process-stderr-bytes (row) (nth row 6))
+    (defn rmt-process-duration-ms (row) (nth row 7))
+    (defn rmt-process-status (row) (nth row 8))
+    (defn rmt-process-real? (row)
+        (if (str_eq (rmt-process-command row) "") 0
+            (if (rmt-bad-source? (rmt-process-provider row)) 0
+                (if (str_eq (rmt-process-model row) "") 0
+                    (if (not (eq (rmt-process-exit-code row) 0)) 0
+                        (if (lt (rmt-process-stdout-bytes row) (rmt-min-process-output-bytes)) 0
+                            (if (lt (rmt-process-stderr-bytes row) 0) 0
+                                (if (le (rmt-process-duration-ms row) 0) 0
+                                    (if (str_eq (rmt-process-status row) "completed") 1 0)))))))))
+    (defn rmt-processes-real? (rows)
+        (if (eq (len rows) 0) 1
+            (if (eq (rmt-process-real? (head rows)) 1)
+                (rmt-processes-real? (tail rows))
+                0)))
+
+    (defn rmt-eval-row (lane native-score oracle-score confidence conviction correct)
+        (list lane native-score oracle-score confidence conviction correct))
+    (defn rmt-eval-lane (row) (nth row 0))
+    (defn rmt-eval-native-score (row) (nth row 1))
+    (defn rmt-eval-oracle-score (row) (nth row 2))
+    (defn rmt-eval-confidence (row) (nth row 3))
+    (defn rmt-eval-conviction (row) (nth row 4))
+    (defn rmt-eval-correct? (row) (nth row 5))
+    (defn rmt-eval-real? (row)
+        (if (not (eq (rmt-known-lane? (rmt-eval-lane row)) 1)) 0
+            (if (le (rmt-eval-native-score row) 0) 0
+                (if (le (rmt-eval-oracle-score row) 0) 0
+                    (if (lt (rmt-eval-confidence row) 70) 0
+                        (if (lt (rmt-eval-conviction row) 60) 0 1))))))
+    (defn rmt-eval-real-count (rows)
+        (if (eq (len rows) 0) 0
+            (add (rmt-eval-real? (head rows)) (rmt-eval-real-count (tail rows)))))
+    (defn rmt-eval-correct-count (rows)
+        (if (eq (len rows) 0) 0
+            (add (rmt-eval-correct? (head rows)) (rmt-eval-correct-count (tail rows)))))
+    (defn rmt-evals-real? (rows)
+        (if (eq (len rows) 0) 1
+            (if (eq (rmt-eval-real? (head rows)) 1)
+                (rmt-evals-real? (tail rows))
+                0)))
+
+    (defn rmt-window (id resources processes lanes train-bytes heldout-bytes label-count evals dataset-merkle status)
+        (list id resources processes lanes train-bytes heldout-bytes label-count evals dataset-merkle status))
+    (defn rmt-window-id (row) (nth row 0))
+    (defn rmt-window-resources (row) (nth row 1))
+    (defn rmt-window-processes (row) (nth row 2))
+    (defn rmt-window-lanes (row) (nth row 3))
+    (defn rmt-window-train-bytes (row) (nth row 4))
+    (defn rmt-window-heldout-bytes (row) (nth row 5))
+    (defn rmt-window-label-count (row) (nth row 6))
+    (defn rmt-window-evals (row) (nth row 7))
+    (defn rmt-window-dataset-merkle (row) (nth row 8))
+    (defn rmt-window-status (row) (nth row 9))
+    (defn rmt-window-real? (row)
+        (if (not (str_eq (rmt-window-status row) "active")) 0
+            (if (lt (rmt-window-train-bytes row) (rmt-min-training-bytes)) 0
+                (if (lt (rmt-window-heldout-bytes row) (rmt-min-heldout-bytes)) 0
+                    (if (lt (rmt-window-label-count row) (rmt-min-labels)) 0
+                        (if (not (eq (rmt-resources-real? (rmt-window-resources row)) 1)) 0
+                            (if (not (eq (rmt-processes-real? (rmt-window-processes row)) 1)) 0
+                                (if (not (eq (rmt-evals-real? (rmt-window-evals row)) 1)) 0
+                                    (if (not (eq (rmt-all-required-lanes? (rmt-window-lanes row)) 1)) 0
+                                        (if (lt
+                                                (rmt-resource-byte-sum (rmt-window-resources row))
+                                                (add (rmt-window-train-bytes row) (rmt-window-heldout-bytes row)))
+                                            0
+                                            (if (str_eq (rmt-window-dataset-merkle row) "") 0 1)))))))))))
+
+    (defn rmt-native-accuracy-ppm (window)
+        (div (mul (rmt-eval-correct-count (rmt-window-evals window)) 1000000) (len (rmt-window-evals window))))
+    (defn rmt-training-receipt (window weights-merkle eval-merkle)
+        (ntr-row
+            (rmt-window-id window)
+            "real-mesh-training-window"
+            "form/form-stdlib/real-mesh-training-carrier.fk"
+            weights-merkle
+            (rmt-window-dataset-merkle window)
+            eval-merkle
+            1
+            (rmt-window-label-count window)
+            (len (rmt-window-evals window))
+            (rmt-eval-correct-count (rmt-window-evals window))
+            (sub (len (rmt-window-evals window)) (rmt-eval-correct-count (rmt-window-evals window)))
+            (rmt-native-accuracy-ppm window)
+            750000
+            "active"))
+
+    (defn rmt-route-choice (window lane native-cost oracle-cost trust)
+        (if (and
+                (eq (rmt-window-real? window) 1)
+                (and
+                    (eq (rmt-known-lane? lane) 1)
+                    (and
+                        (lt native-cost oracle-cost)
+                        (ge trust 70))))
+            "native-first-with-oracle-sampling"
+            "collect-real-window-before-authority"))
+
+    (defn rmt-automl-run (window genome budget)
+        (list window (auto-experiment genome budget)))
+    (defn rmt-automl-window (row) (nth row 0))
+    (defn rmt-automl-experiment (row) (nth row 1))
+    (defn rmt-automl-real? (row)
+        (if (and
+                (eq (rmt-window-real? (rmt-automl-window row)) 1)
+                (auto-improved? (rmt-automl-experiment row)))
+            1
+            0))
+
+    0)

@@ -1,0 +1,142 @@
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/pareto.fk form-stdlib/autoresearch-loop.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/native-training-receipt.fk form-stdlib/real-mesh-training-carrier.fk
+;
+; real-mesh-training-carrier-band - non-toy mesh training receipt floor.
+;
+; Verdict 65535:
+;   1     floor and north star are declared
+;   2     all required model lanes are present
+;   4     live local resources are valid
+;   8     real process receipts are valid
+;   16    real eval rows cover the lanes
+;   32    full window validates at hundreds-of-MiB scale
+;   64    tiny windows are rejected
+;   128   fixture providers are rejected
+;   256   summary-only capture windows are rejected
+;   512   heldout floor is at least 100 MiB
+;   1024  label floor is at least 10k labels
+;   2048  resource byte total covers train + heldout bytes
+;   4096  native receipt derived from the window is trained
+;   8192  native receipt beats the oracle floor
+;   16384 routing chooses native-first with oracle sampling
+;   32768 AutoML/autoresearch improves under the real window
+
+(do
+    (let lanes (rmt-required-lanes))
+    (let resources
+        (list
+            (rmt-resource "mic-window-001" "audio-pcm16" "macos-local-device" "coreaudio" "live" 86 125829120 6400000 "consented-local-raw+derived" "sha256:mic-window-001")
+            (rmt-resource "camera-window-001" "video-rgba" "android-usb-device" "adb+coherence-sense" "live" 84 209715200 18000 "consented-local-raw+derived" "sha256:camera-window-001")
+            (rmt-resource "sensor-window-001" "sensor-vector" "android-usb-device" "adb+coherence-sense" "live" 82 83886080 420000 "consented-local-raw+derived" "sha256:sensor-window-001")
+            (rmt-resource "gpu-window-001" "tensor-buffer" "macos-local-device" "metal-readback" "live" 80 104857600 32000 "consented-local-raw+derived" "sha256:gpu-window-001")))
+    (let summary-resource
+        (rmt-resource "summary-window" "audio-summary" "macos-local-device" "coreaudio" "live" 82 125829120 6400000 "summary-only" "sha256:summary-window"))
+    (let processes
+        (list
+            (rmt-process "speech-to-text" "whisper.cpp --model local-small --json" "local-whisper" "whisper.cpp-local" 0 4096 0 3200 "completed")
+            (rmt-process "text-to-speech" "piper --model local-voice --output" "local-piper" "piper-local" 0 2048 0 2100 "completed")
+            (rmt-process "sentiment" "local-affect --dimensional" "local-affect" "wav2vec2-affect-local" 0 2048 0 1700 "completed")
+            (rmt-process "nl-to-nl" "local-llm --rewrite --json" "local-llm" "ollama-local" 0 8192 0 5100 "completed")
+            (rmt-process "automl-router" "form-kernel automl-search" "form-native" "pareto-autoresearch" 0 4096 0 900 "completed")))
+    (let fixture-processes
+        (list
+            (rmt-process "speech-to-text" "fixture-stt" "fixture" "toy-model" 0 4096 0 5 "completed")))
+    (let evals
+        (list
+            (rmt-eval-row "speech-to-text" 870000 810000 86 78 1)
+            (rmt-eval-row "text-to-speech" 840000 800000 83 76 1)
+            (rmt-eval-row "sentiment" 820000 790000 81 72 1)
+            (rmt-eval-row "conviction" 800000 780000 80 70 1)
+            (rmt-eval-row "confidence" 830000 780000 82 71 1)
+            (rmt-eval-row "nl-to-nl" 850000 810000 84 75 1)
+            (rmt-eval-row "vision-describe" 810000 795000 80 70 1)
+            (rmt-eval-row "multimodal-align" 825000 790000 82 74 1)
+            (rmt-eval-row "automl-router" 860000 800000 86 80 1)
+            (rmt-eval-row "autoresearch" 880000 815000 88 82 1)))
+    (let real-window
+        (rmt-window
+            "real-mesh-window-001"
+            resources
+            processes
+            lanes
+            367001600
+            125829120
+            12000
+            evals
+            "sha256:real-mesh-window-001-dataset"
+            "active"))
+    (let tiny-window
+        (rmt-window
+            "tiny-window"
+            resources
+            processes
+            lanes
+            1048576
+            1048576
+            12
+            evals
+            "sha256:tiny"
+            "active"))
+    (let fixture-window
+        (rmt-window
+            "fixture-window"
+            resources
+            fixture-processes
+            lanes
+            367001600
+            125829120
+            12000
+            evals
+            "sha256:fixture"
+            "active"))
+    (let summary-window
+        (rmt-window
+            "summary-window"
+            (list summary-resource)
+            processes
+            lanes
+            367001600
+            125829120
+            12000
+            evals
+            "sha256:summary"
+            "active"))
+    (let receipt
+        (rmt-training-receipt
+            real-window
+            "sha256:real-mesh-window-001-weights"
+            "sha256:real-mesh-window-001-eval"))
+    (let genome
+        (list
+            (pareto-candidate 10 100)
+            (pareto-candidate 50 60)
+            (pareto-candidate 100 20)))
+    (let automl (rmt-automl-run real-window genome 100))
+
+    (let c0 (if (and (gt (len (rmt-floor)) 0) (gt (len (rmt-north-star)) 0)) 1 0))
+    (let c1 (if (eq (rmt-all-required-lanes? lanes) 1) 2 0))
+    (let c2 (if (eq (rmt-resources-real? resources) 1) 4 0))
+    (let c3 (if (eq (rmt-processes-real? processes) 1) 8 0))
+    (let c4 (if (eq (rmt-evals-real? evals) 1) 16 0))
+    (let c5 (if (eq (rmt-window-real? real-window) 1) 32 0))
+    (let c6 (if (eq (rmt-window-real? tiny-window) 0) 64 0))
+    (let c7 (if (eq (rmt-window-real? fixture-window) 0) 128 0))
+    (let c8 (if (eq (rmt-window-real? summary-window) 0) 256 0))
+    (let c9 (if (ge (rmt-window-heldout-bytes real-window) (rmt-min-heldout-bytes)) 512 0))
+    (let c10 (if (ge (rmt-window-label-count real-window) (rmt-min-labels)) 1024 0))
+    (let c11
+        (if (ge
+                (rmt-resource-byte-sum resources)
+                (add (rmt-window-train-bytes real-window) (rmt-window-heldout-bytes real-window)))
+            2048
+            0))
+    (let c12 (if (ntr-trained? receipt) 4096 0))
+    (let c13 (if (ntr-beats-oracle? receipt) 8192 0))
+    (let c14
+        (if (str_eq
+                (rmt-route-choice real-window "nl-to-nl" 12 90 82)
+                "native-first-with-oracle-sampling")
+            16384
+            0))
+    (let c15 (if (eq (rmt-automl-real? automl) 1) 32768 0))
+
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15)))
