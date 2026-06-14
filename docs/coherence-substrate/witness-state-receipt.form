@@ -4,8 +4,8 @@
   (lineage
     (rests-on android-mesh-learning.form llm-feature-channel-floor.form)
     (recipe form/form-stdlib/witness-state-receipt.fk)
-    (proof form/form-stdlib/tests/witness-state-receipt-band.fk -> 65535)
-    (fourth-arm form/fourth-arm-bands.txt -> witness-state-receipt fks 65535))
+    (proof form/form-stdlib/tests/witness-state-receipt-band.fk -> 1048575)
+    (fourth-arm form/fourth-arm-bands.txt -> witness-state-receipt fks 1048575))
 
   (purpose
     "Turn live Mac witness /state counters into deterministic Form-native receipt rows."
@@ -17,6 +17,7 @@
     "The recipe validates live presence, summary-only privacy, active mic/camera/GPU organs, count floors, and Form-native exporter source."
     "The row lowers into android-mesh-learning active sample rows, then proves speech-transcribe, vision-describe, and multimodal-align route native-first when all three active lanes are present."
     "The receipt now emits heldout learner rows for speech, vision, multimodal, and GPU readback lanes, scores challenger/champion trials, keeps too-few samples on the oracle teacher, and retires one narrow teacher only after enough native wins.")
+    "Native witness export rows and oracle-label rows now form the source-backed teacher membrane: raw-media exports are rejected, fixture providers are rejected, and source-backed labels can create heldout rows that retire a narrow teacher only after a long enough native-win window.")
 
   (north-star
     "The Mac witness exports native receipt cells continuously into the substrate/native recipe ledger."
@@ -35,7 +36,14 @@
     (authority "third-party until min-samples and native reaches the oracle")
     (retirement "native only after a long enough heldout window"))
 
+  (oracle-label-export
+    (export-source "native-witness-export")
+    (transport "substrate:receipt-cell")
+    (teacher-protocols oracle:stt oracle:vision oracle:multimodal oracle:gpu)
+    (rejects fixture raw-media)
+    (retirement-gate "source-backed labels plus long-window native wins"))
+
   (remaining-gaps
-    (teacher-labels "feed real STT, vision, multimodal, and GPU oracle labels into the heldout rows instead of fixture labels")
-    (continuous-export "wire the running witness to emit native receipt cells directly, with JSON only as an export/cache")
+    (physical-teacher-runs "connect the live STT, vision, multimodal, and GPU oracle processes to emit these source-backed label rows")
+    (continuous-export "wire the running witness service to write native receipt cells directly, with JSON only as an export/cache")
     (accelerator-depth "extend EGL readback summaries to Vulkan/NNAPI/Metal parity receipts compared with CPU/oracle lanes")))
