@@ -6,11 +6,11 @@
 ; retires the oracle for a pair only when the native reaches it.
 ;
 ; Verdict 1111111 (127) when every claim holds across all four kernels.
-;   native en->zh: mountain -> shan                                -> 1
-;   native en->ja: mountain -> yama, heart -> kokoro               -> 10
+;   native en->zh: mountain -> shan, fire -> huo (a grown pair)    -> 1
+;   native en->ja: mountain -> yama, heart -> kokoro, moon -> tsuki -> 10
 ;   honest absence: an unlearned phrase -> "?"                     -> 100
-;   meaning preserved: source and target are one cell (cjk)        -> 1000
-;   coverage: 12 learned pairs (6 chars x 2 languages)             -> 10000
+;   meaning preserved: source and target are one cell (cjk) — old + grown -> 1000
+;   coverage: 28 learned pairs (14 chars x 2 languages)            -> 10000
 ;   A/B promotes when the native reaches the oracle                -> 100000
 ;   A/B holds the oracle when the native lags                      -> 1000000
 ;
@@ -18,23 +18,29 @@
 ;
 
 (do
-    ;; --- 1. native en->zh ---------------------------------------------
-    (let zh-ok (if (str_eq (translate "en-zh" "mountain") "shan") 1 0))
+    ;; --- 1. native en->zh (a seed pair AND a grown one) ---------------
+    (let zh-ok
+        (if (str_eq (translate "en-zh" "mountain") "shan")
+            (if (str_eq (translate "en-zh" "fire") "huo") 1 0) 0))
 
-    ;; --- 2. native en->ja ---------------------------------------------
+    ;; --- 2. native en->ja (seed pairs AND a grown one) ----------------
     (let ja-ok
         (if (str_eq (translate "en-ja" "mountain") "yama")
-            (if (str_eq (translate "en-ja" "heart") "kokoro") 10 0) 0))
+            (if (str_eq (translate "en-ja" "heart") "kokoro")
+                (if (str_eq (translate "en-ja" "moon") "tsuki") 10 0) 0) 0))
 
     ;; --- 3. honest absence for an unlearned phrase --------------------
     (let absent-ok (if (str_eq (translate "en-zh" "quantum") "?") 100 0))
 
     ;; --- 4. meaning preserved by content-addressing -------------------
-    ;; mountain (character 1) reads as en/zh/ja faces of ONE cell.
-    (let meaning-ok (if (eq (tl-preserves-meaning? 1) 1) 1000 0))
+    ;; mountain (char 1, seed) AND fire (char 10, grown) each read as en/zh/ja
+    ;; faces of ONE cell — the grown characters carry the same content-address.
+    (let meaning-ok
+        (if (eq (tl-preserves-meaning? 1) 1)
+            (if (eq (tl-preserves-meaning? 10) 1) 1000 0) 0))
 
-    ;; --- 5. coverage --------------------------------------------------
-    (let cover-ok (if (eq (tl-count) 12) 10000 0))
+    ;; --- 5. coverage: the model grew from 12 to 28 pairs --------------
+    (let cover-ok (if (eq (tl-count) 28) 10000 0))
 
     ;; --- 6. the A/B promotes when native reaches the oracle ----------
     ;; three trials where both oracle and native were correct; margin 0.
