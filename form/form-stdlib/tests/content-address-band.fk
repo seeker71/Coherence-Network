@@ -1,0 +1,46 @@
+; content-address-band.fk — the substrate's headline, proven on every kernel:
+; intern_node is CONTENT-ADDRESSED. Two nodes of the same structural shape
+; (same category, same children) intern to the SAME NodeID — so cross-document,
+; cross-domain equivalence comes for free and node_eq is structural identity.
+;
+; The fourth kernel (fkwu) earns this through dedup in its intern arm: a fresh
+; intern_node scans the live node table and returns the existing cell when the
+; (category, children) shape already lives there — the C-level image of the Go
+; kernel's byHash content address. Trivial interns dedup the same way, so the
+; flattener's let-inlining (which re-walks a bound value at every use) keeps the
+; substrate bounded instead of growing a fresh cell per re-walk.
+;
+; Every claim is RELATIVE or structural — never an absolute NodeID inst, which
+; counts each kernel's own parse-time interns and is not portable across the
+; siblings. What IS portable: same-shape identity, distinct-shape difference,
+; and the projections that read a node back. Self-contained, kernel verbs only.
+;
+; Band verdict: 1023 when content-addressing holds across all four kernels.
+;   node_eq same shape → equal                 → 1
+;   node_eq different shape → not equal         → 10
+;   same shape → same inst (the content address) → 100
+;   different shape → different inst             → 1000
+;   composite pkg is 0                           → 10000
+;   type inherited from category                 → 100000
+;   level inherited from category                → 1000000
+;   category projects back to the field          → 10000000
+;   children length is preserved                 → 100000000
+;   a child's value reads back                   → 1000000000
+(do
+    (let FIELD (make_nodeid 1 2 99 1742))
+    (defn mk-shape (val)
+        (intern_node FIELD (list (intern_trivial_string "problem")
+                                 (intern_trivial_string val))))
+    (let a (mk-shape "ideas-need-a-pipeline"))
+    (let b (mk-shape "ideas-need-a-pipeline"))   ; identical shape → same NodeID
+    (let c (mk-shape "something-else"))           ; different shape → different NodeID
+    (add (mul (if (node_eq a b) 1 0) 1)
+    (add (mul (if (node_eq a c) 0 1) 10)
+    (add (mul (if (eq (node_inst a) (node_inst b)) 1 0) 100)
+    (add (mul (if (eq (node_inst a) (node_inst c)) 0 1) 1000)
+    (add (mul (if (eq (node_pkg a) 0) 1 0) 10000)
+    (add (mul (if (eq (node_type a) (node_type FIELD)) 1 0) 100000)
+    (add (mul (if (eq (node_level a) (node_level FIELD)) 1 0) 1000000)
+    (add (mul (if (node_eq (node_category a) FIELD) 1 0) 10000000)
+    (add (mul (if (eq (len (node_children a)) 2) 1 0) 100000000)
+         (mul (if (str_eq (node_value (head (node_children a))) "problem") 1 0) 1000000000)))))))))))
