@@ -1,0 +1,32 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord claim fourth-field-model-runtime-floor",
+    "cd form && bash scripts/fourth-arm-gate.sh field-model-form-runtime field-model-form-runtime-conflict field-model-form-runtime-intervene field-model-form-runtime-lift",
+    "cd form && ./validate.sh",
+    "python3 scripts/model_executor_proof_ledger.py sync-jsonl --output docs/system_audit/model_executor_runs.jsonl",
+    "python3 scripts/model_executor_proof_ledger.py check-jsonl",
+    "python3 scripts/model_executor_proof_ledger.py validate",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_fourth_field_model_runtime_floor.json"
+  ],
+  "failure_reason": "Admitted four already-passing BML-authored field-model Form runtime bands to the fourth-arm manifest: field-model-form-runtime, field-model-form-runtime-conflict, field-model-form-runtime-intervene, and field-model-form-runtime-lift. The focused gate returns PASS-4WAY for all four; full validation reports 219 four-way bands, 612 ok, 0 divergent.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "fourth-field-model-runtime-floor-20260614",
+  "source": {
+    "kind": "codex-worktree",
+    "path": "/Users/ursmuff/.codex/worktrees/a3ec/Coherence-Network"
+  },
+  "thread_branch": "codex/fourth-field-model-runtime-floor-20260614",
+  "validation": {
+    "commands": [
+      "cd form && bash scripts/fourth-arm-gate.sh field-model-form-runtime field-model-form-runtime-conflict field-model-form-runtime-intervene field-model-form-runtime-lift",
+      "cd form && ./validate.sh"
+    ],
+    "status": "pass"
+  }
+}
