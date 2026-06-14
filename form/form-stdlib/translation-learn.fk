@@ -39,7 +39,8 @@
     (defn tl-tgt  (e) (nth e 2))
 
     ;; --- the learned exemplar store (the oracle's pairs as training data) --
-    ;; grounded in cjk-channel's six attested characters, read into en->zh / en->ja.
+    ;; grounded in cjk-channel's fourteen attested characters, read into en->zh / en->ja.
+    ;; ja targets are the kun reading (the native Japanese meaning-reading).
     (defn tl-exemplars ()
         (list
             (tl-ex "en-zh" "mountain" "shan")  (tl-ex "en-ja" "mountain" "yama")
@@ -47,7 +48,15 @@
             (tl-ex "en-zh" "tree"     "mu")    (tl-ex "en-ja" "tree"     "ki")
             (tl-ex "en-zh" "heart"    "xin")   (tl-ex "en-ja" "heart"    "kokoro")
             (tl-ex "en-zh" "way"      "dao")   (tl-ex "en-ja" "way"      "michi")
-            (tl-ex "en-zh" "love"     "ai")    (tl-ex "en-ja" "love"     "ai")))
+            (tl-ex "en-zh" "love"     "ai")    (tl-ex "en-ja" "love"     "ai")
+            (tl-ex "en-zh" "fire"     "huo")   (tl-ex "en-ja" "fire"     "hi")
+            (tl-ex "en-zh" "moon"     "yue")   (tl-ex "en-ja" "moon"     "tsuki")
+            (tl-ex "en-zh" "person"   "ren")   (tl-ex "en-ja" "person"   "hito")
+            (tl-ex "en-zh" "river"    "chuan") (tl-ex "en-ja" "river"    "kawa")
+            (tl-ex "en-zh" "power"    "li")    (tl-ex "en-ja" "power"    "chikara")
+            (tl-ex "en-zh" "big"      "da")    (tl-ex "en-ja" "big"      "oo")
+            (tl-ex "en-zh" "middle"   "zhong") (tl-ex "en-ja" "middle"   "naka")
+            (tl-ex "en-zh" "field"    "tian")  (tl-ex "en-ja" "field"    "ta")))
 
     ;; --- the native translation: look up (pair, source) -> target ----
     (defn tl-lookup (exs pair src)
