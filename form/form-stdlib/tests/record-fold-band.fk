@@ -5,14 +5,11 @@
 ; preludes: form-stdlib/core.fk
 ;
 ; record_new / record_get are kernel natives on the three walkers; on the
-; fourth arm they ride the records-as-arena-tissue carrier — record_new lowers
-; to a cons-chain of (cons key val) entries (form-flatten.fk's special form,
-; blueprint discarded) and record_get is a recipe that walks the chain
-; (fourth-shim.fk). No new walker tags: records reuse the arena arms (18..23)
-; and the string-pool lane (str_eq = content equality). This is the
-; integer-field, identity-free half of the API_KERNEL_READINESS record gate —
-; the float-field and mutable-aliasing halves stay with the float and
-; mutable-cell lanes (grounded-cost / list-of-record / record / method bands).
+; fourth arm record_new lowers to a first-order entry packet that tag 64
+; installs in the emitted record table, while record_get rides native tag 65.
+; This is the integer-field, identity-free half of the API_KERNEL_READINESS
+; record gate — the broader list reduction, blueprint equality, and
+; mutable-aliasing halves stay with the list-of-record / record / method bands.
 ;
 ; The strange-minimal edge that covers the most: a single record read at two
 ; DISTINCT keys (key matching, not position), a fold that READS a named field

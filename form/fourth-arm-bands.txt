@@ -27,9 +27,12 @@
 #   multi-line output     — bands that print mid-walk (the walker answers
 #     one value through fk_pr)
 #
-# Current floor (2026-06-14 form lowering pass admission): full
-# `cd form && ./validate.sh` reaches 138 four-way bands and 559 total passing
-# workloads, with 0 residual divergent bands. BranchOutcome carries
+# Current floor (2026-06-14 record carrier admission): full
+# `cd form && ./validate.sh` reaches 139 four-way bands and 559 total passing
+# workloads, with 0 residual divergent bands. Record field access now rides a
+# native fourth-arm record carrier: record_new lowers to a packed entry packet,
+# then fkwu tags 64/65/67/68/99 carry construction, get, has, record?, and keys
+# without aliasing ints, lists, nodes, or floats. BranchOutcome carries
 # ok/reject/condition results and learnable rejected evidence through the
 # fourth arm; the BML protocol/capability and runtime-choice rows ride the
 # choice floor, raising channel-protocol-choice-floor to 262143. The JIT native
@@ -184,14 +187,12 @@ ulid fks 4
 witness-theorem fks 31
 witness-to-co-regulate fks 127
 
-# ── records lane — read-only RECORD family as ARENA TISSUE (zero new tags) ──
-# record_new lowers (form-flatten.fk special form, blueprint discarded) to a
-# cons-chain of (list key val) entries; record_get (fourth-shim.fk) walks the
-# chain by interned-key match. Records reuse the arena arms (18..23) + the
-# string-pool lane — no new walker tags claimed (66..69 stay free). The
-# record-fold band proves the integer-field, identity-free half of the
-# API_KERNEL_READINESS record gate: construction, field read at distinct keys,
-# a fold over a LIST of records, a field predicate, the empty-fold identity.
-# The remaining record bands wait on record introspection, mutable aliasing,
-# and blueprint/method lanes rather than the numeric float carrier.
+# ── records lane — native record-table carrier (packeted by arena tissue) ──
+# record_new lowers (form-flatten.fk special form) to a cons-chain packet with a
+# -1 blueprint sentinel plus (key value) entries. The emitted fourth walker
+# initializes a distinct negative-even record carrier from that packet, so
+# record?, record_get, record_has, and record_keys no longer collide with ints,
+# lists, nodes, or float boxes. The remaining record bands wait on broader
+# mutable aliasing, blueprint equality, and list-of-record reduction parity.
 record-fold fks 31
+record-field-access fks 16

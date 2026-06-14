@@ -1,0 +1,117 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/fourth-residual-node-record-20260614",
+  "commit_scope": "Teach the fourth-arm lowering and emitted fkwu walker a distinct native record carrier, then admit record-field-access to the fourth-arm manifest.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "form-native-jit",
+    "fourth-arm-floor",
+    "record-carrier"
+  ],
+  "spec_ids": [
+    "fourth-arm-floor",
+    "jit-lowering-residuals",
+    "record-structure-access"
+  ],
+  "task_ids": [
+    "fourth-residual-node-record-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "android-floor-guidance"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/fourth-shim.fk",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/tests/record-fold-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/system_audit/commit_evidence_2026-06-14_fourth_record_carrier_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/fourth-shim.fk",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/tests/record-fold-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/system_audit/commit_evidence_2026-06-14_fourth_record_carrier_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "form/form-stdlib/tests/record-field-access-band.fk",
+    "form/form-stdlib/tests/record-fold-band.fk",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/.cache/fourth-survey/results.tsv",
+    "form/form-stdlib/.cache/fourth-survey/band-missing-ops.tsv",
+    "scripts/bml_form_jit_metal_planes_audit.sh"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord view",
+      "coord claim fourth residual record/native cluster: inspect and, if bounded, teach fkwu record_new/get/set/has/keys/record? parity; avoid socket IO, BML class construction/dispatch, and broad substrate intern_node/bp rewrites unless required",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/record-field-access-band.fk",
+      "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/record-field-access-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh record-field-access",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/record-fold-band.fk",
+      "cd form && ./validate.sh",
+      "cd form && bash scripts/fourth-arm-survey.sh",
+      "cd form && python3 scripts/fourth-arm-gap-analysis.py",
+      "bash scripts/bml_form_jit_metal_planes_audit.sh"
+    ],
+    "notes": "Focused record-field-access validates four-way at 16. The focused gate returns PASS-4WAY record-field-access. Full Form validation returns 'fourth arm: 139 band(s) four-way' and '559 ok, 0 divergent'. The refreshed fourth-arm survey reports 139 in-manifest, 31 single-pass, 33 bml-pass, 27 multi-pass, 28 single-mismatch, 7 multi-mismatch, and 2 bml-mismatch. Fresh gap analysis leaves make_nodeid, bp, intern_node, intern_trivial_int/string, node_eq, node_children, node_value, and socket families as the larger residual blockers; record_new/get drop to 3 blocked bands and record_has/record?/record_blueprint each appear in one residual band."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed yet. GitHub checks will be monitored after PR creation."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deployment triggered by this commit. Android validation is local Form-native metal-plane/object evidence, not proof of an APK-shipped clang binary."
+  },
+  "phase_gate": {
+    "phase": "fourth-arm-record-carrier-floor",
+    "gate": "Record field access must pass Go, Rust, TypeScript, and fkwu with a distinct fourth-arm record carrier.",
+    "state": "local-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Push PR, wait for checks, merge when checks allow, then continue to the next non-overlapping fourth-arm residual: node/substrate vocabulary reconciliation or the remaining list-of-record mismatch. Separate follow-on: move model_executor_runs JSONL into a native substrate proof-run ledger with JSONL kept as export/cache, reducing append-only merge conflicts while preserving the existing evidence contract."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The fourth-arm fkwu walker now represents records as negative-even record-table carriers initialized from packed record_new entries, so record?, record_get, record_has, and record_keys no longer alias integers, lists, nodes, or float boxes.",
+    "public_endpoints": [
+      "local:form-fourth-arm-fkwu",
+      "local:macos-arm64-object-receipt",
+      "local:android-arm64-object-receipt"
+    ],
+    "test_flows": [
+      "record-field-access validates four-way at 16 and is admitted to form/fourth-arm-bands.txt.",
+      "record-fold remains four-way at 31 after the carrier change.",
+      "Full form validate.sh reports 139 fourth-arm bands and 559 ok / 0 divergent across Go, Rust, TypeScript, and covered fkwu bands.",
+      "Metal-plane audit reports macOS arm64 Mach-O objects and Android arm64 ELF relocatable objects for bml-hati, form-jit, and form-jit-lowered."
+    ],
+    "summary": "The record/native cluster moved one bounded floor row. Android remains at the Form-native recipe/table and generated ELF evidence floor unless a future APK-bundled compiler binary is proven separately."
+  }
+}

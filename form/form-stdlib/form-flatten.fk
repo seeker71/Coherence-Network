@@ -63,6 +63,9 @@
           (list "fs_remove" 1 58) (list "fs_rename" 2 59) (list "file_size" 1 60)
           (list "file_append_bytes" 2 61) (list "read_file_slice" 3 62)
           (list "read_file" 1 63)
+          (list "record_get" 2 65) (list "record_set" 3 66)
+          (list "record_has" 2 67) (list "record?" 1 68)
+          (list "record_keys" 1 99)
           (list "div" 2 10) (list "mod" 2 11)
           (list "band" 2 34) (list "bor" 2 35) (list "bxor" 2 36)
           (list "shl_u32" 2 37) (list "shr_u32" 2 38) (list "rotr_u32" 2 39)
@@ -249,12 +252,17 @@
     (list (fk-ssub a (nth be 0) (fk-add (nth be 0) (fk-lit 1)))
           (fp-close s (nth be 1))))
 
-; record_new lowers to arena tissue for the fourth arm: ignore the
-; blueprint identity value, then fold key/value pairs into
-; ((key value) ...). record_get lives in fourth-shim.fk and walks this
-; first-order chain by string key.
+; record_new lowers to a packed entry list consumed by fkwu tag 64. The
+; blueprint identity is stored in a sentinel entry whose key is -1, then field
+; key/value pairs follow as ((key value) ...). The emitted walker initializes a
+; real record-table carrier from this first-order packet.
 (defn flt-record-new (s pos fns env)
-    (flt-record-new-fields s (nth (flt-expr s pos fns env) 1) fns env))
+    (flt-record-new-blueprint s (flt-expr s pos fns env) fns env))
+(defn flt-record-new-blueprint (s be fns env)
+    (flt-record-new-tag (flt-record-new-wrap (nth be 0) (flt-record-new-fields s (nth be 1) fns env))))
+(defn flt-record-new-tag (re) (list (fk-node 64 (nth re 0)) (nth re 1)))
+(defn flt-record-new-wrap (bp re)
+    (list (fk-cons (flt-record-entry (fk-lit (sub 0 1)) bp) (nth re 0)) (nth re 1)))
 (defn flt-record-new-fields (s pos fns env)
     (if (eq (fp-at s (fp-skip s pos)) 41) (list (fk-empty) (add (fp-skip s pos) 1))
         (flt-record-new-key s (flt-expr s pos fns env) fns env)))
