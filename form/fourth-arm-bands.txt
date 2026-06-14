@@ -29,16 +29,18 @@
 #   multi-line output     — bands that print mid-walk (the walker answers
 #     one value through fk_pr)
 #
-# Current floor (2026-06-14 guidance + Form-native executable floor): full
-# `cd form && ./validate.sh` reaches 179 four-way bands and 585 total passing
-# workloads, with 0 residual divergent bands. Literal bp registry aliases now
-# fold through make_nodeid for the audit-log, hex, token, url-encode, uuid,
-# and generic xpath rows. Token's blueprint reservation now lives inside its
-# module body so fkwu executes the recipe verdict, and its fixed positional
-# accessors use direct projections. Generic xpath now proves a registered
-# NodeID constructor/query floor for path-style substrate traversal while the
-# doc/concept/dns/symbol siblings remain named residuals. Record field access
-# now rides a
+# Current floor (2026-06-14 guidance + Form-native executable floor): the
+# admitted manifest now contains 180 focused four-way rows after
+# android-mesh-learning passed the manifest gate. The latest completed full
+# `cd form && ./validate.sh` reading before this row reached 179 four-way bands
+# and 585 total passing workloads, with 0 residual divergent bands; refresh the
+# full aggregate on a quiet host. Literal bp registry aliases now fold through
+# make_nodeid for the audit-log, hex, token, url-encode, uuid, and generic xpath
+# rows. Token's blueprint reservation now lives inside its module body so fkwu
+# executes the recipe verdict, and its fixed positional accessors use direct
+# projections. Generic xpath now proves a registered NodeID constructor/query
+# floor for path-style substrate traversal while the doc/concept/dns/symbol
+# siblings remain named residuals. Record field access now rides a
 # native fourth-arm record carrier: record_new lowers to a packed entry packet,
 # then fkwu tags 64/65/67/68/99 carry construction, get, has, record?, and keys
 # without aliasing ints, lists, nodes, or floats. BranchOutcome carries
@@ -91,6 +93,7 @@ code-tool-learning fks 131071
 tool-embodiment fks 63
 text-summary-learning fks 262143
 llm-feature-channel-floor fks 131071
+android-mesh-learning fks 4095
 bml-route-source-object fks 2047
 bml-protocol-capability-row fks 65535
 bml-choice-routing-metadata fks 4095
