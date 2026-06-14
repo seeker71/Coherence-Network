@@ -1,0 +1,49 @@
+{
+  "ledger_schema": "model_executor_proof_run/v1",
+  "run_id": "fourth-residual-pass-cluster-20260614",
+  "thread_branch": "codex/fourth-residual-pass-cluster-20260614",
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord view",
+    "coord claim fourth-residual-pass-cluster",
+    "cd form && bash scripts/fourth-arm-survey.sh",
+    "cd form && python3 scripts/fourth-arm-gap-analysis.py",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/protocol-beliefs.fk form-stdlib/tests/protocol-beliefs-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/shared-heart.fk form-stdlib/tests/shared-heart-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sqlite-read.fk form-stdlib/tests/sqlite-read-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/wav-sense.fk form-stdlib/tests/wav-sense-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/self-translate-universal.fk form-stdlib/tests/self-translate-universal-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/voice-traits.fk form-stdlib/tests/voice-traits-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/voiced.fk form-stdlib/tests/voiced-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh protocol-beliefs shared-heart sqlite-read wav-sense self-translate-universal voice-traits voiced",
+    "cd form && VALIDATE_JOBS=4 FOURTH_PREPARE_ALL_BATCH_MAX=0 ./validate.sh",
+    "bash scripts/bml_form_jit_metal_planes_audit.sh",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_fourth_residual_pass_cluster.json",
+    "python3 scripts/model_executor_proof_ledger.py validate",
+    "python3 - <<'PY'\nimport json\nfrom pathlib import Path\nfor i, line in enumerate(Path('docs/system_audit/model_executor_runs.jsonl').read_text().splitlines(), 1):\n    json.loads(line)\nprint('OK jsonl rows', i)\nPY",
+    "git diff --check"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Admitted seven already-four-way residual pass rows to the manifest: protocol-beliefs, shared-heart, sqlite-read, wav-sense, self-translate-universal, voice-traits, and voiced. Focused validation with source files passed, fourth-arm-gate returned PASS-4WAY for all seven, and rebased full Form validation reached 168 four-way bands with 578 ok and 0 divergent. The metal-plane audit passed macOS arm64 Mach-O, Android arm64 ELF object, Android ELF executable-shape, and lowered JIT receipts. Remaining residuals are mainly the node/substrate constructor family plus other pass rows left for smaller follow-on ratchets.",
+  "source": {
+    "kind": "native-ledger-record",
+    "path": "docs/system_audit/model_executor_run_ledger/fourth-residual-pass-cluster-20260614.json"
+  },
+  "validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && bash scripts/fourth-arm-gate.sh protocol-beliefs shared-heart sqlite-read wav-sense self-translate-universal voice-traits voiced",
+      "cd form && VALIDATE_JOBS=4 FOURTH_PREPARE_ALL_BATCH_MAX=0 ./validate.sh",
+      "bash scripts/bml_form_jit_metal_planes_audit.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_fourth_residual_pass_cluster.json",
+      "python3 scripts/model_executor_proof_ledger.py validate",
+      "python3 - <<'PY'\nimport json\nfrom pathlib import Path\nfor i, line in enumerate(Path('docs/system_audit/model_executor_runs.jsonl').read_text().splitlines(), 1):\n    json.loads(line)\nprint('OK jsonl rows', i)\nPY",
+      "git diff --check"
+    ]
+  }
+}
