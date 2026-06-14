@@ -1,0 +1,167 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/fourth-arm-response-headers-20260614",
+  "commit_scope": "Close fourth-arm native response-header row capture so fkwu can carry production runtime authority receipts by itself.",
+  "files_owned": [
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/hati-os-kernel.fk",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/model-vitality.fk",
+    "scripts/model_vitality_native_http_capture_probe.sh",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/coherence-substrate/model-vitality.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/model_executor_run_ledger/2026-06-14_fourth_arm_response_headers.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      {
+        "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk",
+        "result": "pass",
+        "output": "core.fk+model-vitality.fk+model-vitality-band.fk -> 4095; fourth arm: 1 band(s) four-way; 1 ok, 0 divergent."
+      },
+      {
+        "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-native-http-band.fk",
+        "result": "pass",
+        "output": "core.fk+json.fk+model-vitality.fk+model-vitality-native-http-band.fk -> 4095; 1 ok, 0 divergent."
+      },
+      {
+        "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/form-parse.fk form-stdlib/form-flatten.fk form-stdlib/tests/hati-os-band.fk",
+        "result": "pass",
+        "output": "core.fk+minimal-surface.fk+hati-os-kernel.fk+hati-os-kernel-emit.fk+form-parse.fk+form-flatten.fk+hati-os-band.fk -> 9; 1 ok, 0 divergent."
+      },
+      {
+        "command": "scripts/model_vitality_native_http_capture_probe.sh",
+        "result": "pass",
+        "output": "PASS native-http-capture go=127 rust=127 typescript=127; PASS all-kernel-external-http go=63 rust=63 typescript=63 fourth=63; PASS all-kernel-external-https go=63 rust=63 typescript=63 fourth=63; PASS fourth-arm-https native-tls=openssl-dlopen verified=true; PASS fourth-runtime-authority fourth=127 runtime_status=200 runtime_headers=14 runtime_router=native-kernel runtime_handler=api_runtime_endpoints_summary runtime_python_authority=false runtime_bytes=2348.",
+        "cache": ".cache/model-vitality-native-http/20260614T114338Z/native-http-capture-summary.txt"
+      }
+    ]
+  },
+  "live_native_http_probe": {
+    "status": "pass",
+    "observed_at": "2026-06-14T11:43:38Z",
+    "cache": ".cache/model-vitality-native-http/20260614T114338Z/native-http-capture-summary.txt",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/pulse/now",
+      "https://api.coherencycoin.com/api/runtime/endpoints/summary?limit=5",
+      "http://example.com/",
+      "https://example.com/"
+    ],
+    "fourth_runtime_authority": {
+      "verdict": 127,
+      "runtime_status": 200,
+      "runtime_headers": 14,
+      "runtime_router": "native-kernel",
+      "runtime_handler": "api_runtime_endpoints_summary",
+      "runtime_python_authority": "false",
+      "runtime_bytes": 2348
+    },
+    "all_kernel_external_http": {
+      "go": 63,
+      "rust": 63,
+      "typescript": 63,
+      "fourth": 63
+    },
+    "all_kernel_external_https": {
+      "go": 63,
+      "rust": 63,
+      "typescript": 63,
+      "fourth": 63
+    },
+    "named_gaps": [
+      "request-header forwarding",
+      "measured fourth-arm duration",
+      "larger native HTTP body policy",
+      "streaming/backpressure receipts"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI not run yet in this local evidence record."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "No deploy was performed by this branch; live public endpoints were read through kernel-native carriers."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Focused Form proof and live fkwu production authority probe passed locally; PR/CI and deploy freshness remain pending after push."
+  },
+  "idea_ids": [
+    "form-native-model-data-as-cells",
+    "body-readable-model-vitality",
+    "kernel-native-http-capture",
+    "fourth-arm-production-authority-receipts"
+  ],
+  "spec_ids": [
+    "coherence-substrate-model-vitality",
+    "coherence-substrate-fourth-kernel"
+  ],
+  "task_ids": [
+    "2026-06-14-fourth-arm-response-headers"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/model-vitality-band.fk -> 4095 with fourth-arm four-way proof",
+    "form/form-stdlib/tests/model-vitality-native-http-band.fk -> 4095 deterministic native HTTP row proof",
+    "form/form-stdlib/tests/hati-os-band.fk -> 9 walker/lowering proof",
+    "scripts/model_vitality_native_http_capture_probe.sh -> all-kernel HTTP/HTTPS and fkwu fourth-runtime-authority production header witness",
+    ".cache/model-vitality-native-http/20260614T114338Z/native-http-capture-summary.txt"
+  ],
+  "change_files": [
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/hati-os-kernel.fk",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/model-vitality.fk",
+    "scripts/model_vitality_native_http_capture_probe.sh",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/coherence-substrate/model-vitality.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_fourth_arm_response_headers.json",
+    "docs/system_audit/model_executor_run_ledger/2026-06-14_fourth_arm_response_headers.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The emitted fourth-arm fkwu binary now parses native HTTP/TLS response headers into the same http_get dict shape as sibling kernels and can read those receipts through native _get, allowing model-vitality rows to prove production runtime authority without Go/Rust/TypeScript assistance.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/runtime/endpoints/summary?limit=5",
+      "https://example.com/"
+    ],
+    "test_flows": [
+      "Focused Form bands prove model-vitality row semantics and Hati-OS walker/lowering still agree.",
+      "Live probe builds fkwu, fetches public HTTP and HTTPS through every kernel, and verifies fkwu TLS is native.",
+      "Live probe has fkwu fetch the production runtime endpoint, count 14 response headers, and read native-kernel plus x-form-python-authority=false through model-vitality rows."
+    ]
+  }
+}

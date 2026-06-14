@@ -38,9 +38,12 @@
 ; the current fourth-floor registry names fold onto make_nodeid packets; the
 ; full generated bp table remains a follow-on lift.
 ;
-; Native carrier floor: http_get lowers to tag 105 so external http:// can cross
-; the emitted fourth arm as a non-shell carrier. North star: the same lowering
-; carries TLS/HTTPS once the fourth arm owns a native TLS channel.
+; Native carrier floor: http_get lowers to tag 105 so external http:// and
+; verified https:// cross the emitted fourth arm as non-shell carriers. _get
+; lowers to tag 106 so source recipes can read the returned dict/list receipts,
+; including response-header rows, inside fkwu. North star: the same lowering
+; carries request headers, response headers, timing, status, body, and errors
+; across every host implementation through explicit native channels.
 
 ; ── walker-carried ops as DATA rows (name arity tag) — one generic engine ──
 ; (div/mod ride the m4d tags 10/11; the figure-ops family rides 34..42 —
@@ -74,6 +77,7 @@
           (list "read_file" 1 63) (list "temp_dir" 0 101)
           (list "write_file_text" 2 104)
           (list "http_get" 3 105)
+          (list "_get" 2 106)
           (list "record_get" 2 65) (list "record_set" 3 66)
           (list "record_has" 2 67) (list "record?" 1 68)
           (list "record_keys" 1 99) (list "record_blueprint" 1 100)

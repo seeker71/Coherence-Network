@@ -54,14 +54,16 @@
 ;   and rejects failed transport or Python-authority rows. Live native witness:
 ;   scripts/model_vitality_native_http_capture_probe.sh source-compiles core,
 ;   runs the Go, Rust, TypeScript, and emitted fkwu kernels. On
-;   2026-06-14T10:53:21Z Go/Rust/TypeScript fetched the public API pulse and
+;   2026-06-14T11:43:38Z Go/Rust/TypeScript fetched the public API pulse and
 ;   runtime-summary HTTPS endpoints with native http_get and returned verdict
 ;   127; all four kernels fetched http://example.com/ through native http_get
 ;   and returned verdict 63. All four kernels also fetched
 ;   https://example.com/ through native http_get and returned verdict 63; fkwu
-;   used runtime-loaded OpenSSL-compatible TLS, not a shell/Python carrier.
-;   Fourth-arm response-header row capture is still the named production
-;   authority gap.
+;   used runtime-loaded OpenSSL-compatible TLS, not a shell/Python carrier. The
+;   same probe now proves fourth-runtime-authority -> 127: fkwu fetched the
+;   production runtime-summary endpoint, captured 14 response headers, read the
+;   native-kernel router and x-form-python-authority=false header through
+;   model-vitality rows, and carried the production authority receipt by itself.
 ;
 ; NORTH STAR:
 ;   Model architecture, weights, deltas, optimizer state, eval receipts,
@@ -85,9 +87,10 @@
 ;   Production ingestion rule: public pulse and runtime/front-door readings are
 ;   rows with attribution, observed timestamp, byte count, latency, and authority
 ;   headers. Go, Rust, TypeScript, and the emitted fourth arm now prove direct
-;   kernel-native HTTP and verified HTTPS body capture into the same dict field
-;   shape. The fourth arm still needs response-header row capture before it can
-;   carry production runtime authority receipts alone.
+;   kernel-native HTTP and verified HTTPS body plus response-header capture into
+;   the same dict field shape. The next carrier lift is request-header
+;   forwarding, measured fourth-arm duration, larger body policy, and streaming
+;   backpressure receipts.
 ;
 ; REVIEW TRACE:
 ;   The 2026-06-14 architecture review used local Grok, Gemini, and Claude CLI
@@ -107,7 +110,8 @@
 ;   production pulse/runtime telemetry rows.
 ;   Remaining gaps: full safetensors header parsing for arbitrary model files,
 ;   real MLX tensor package ingest beyond the tiny carrier witness,
-;   fourth-arm response-header row capture, and large multi-segment model
+;   request-header forwarding, measured fourth-arm duration, larger native HTTP
+;   body policy, streaming/backpressure receipts, and large multi-segment model
 ;   sharing by merkle across mesh peers.
 
 (model-vitality-surface
