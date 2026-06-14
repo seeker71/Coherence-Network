@@ -1,48 +1,51 @@
 ; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk form-stdlib/tool-embodiment.fk form-stdlib/io-match.fk
 ;
-; io-match-band — captured LLM I/O becomes learning, and a candidate that learns
-; to reproduce the output earns the body.
+; io-match-band — captured LLM/tool usage becomes learning by EFFICACY, not by
+; copying the teacher. The learning signal generalizes: a Form-native candidate
+; earns the body by its own output working, cheaper and sovereign.
 ;
-; The strange-minimal edge: one input, one recorded LLM output ("OUT"), and a
-; Form-native candidate replayed on that input. When the candidate reproduces
-; "OUT" 8 of 10 times (local, cheap) it takes the body from the costly remote
-; LLM; at 6 of 10 the LLM keeps it. The flip is the moment usage stops being
-; only paid for and starts being learned from.
+; The keystone (claim 4): two different wordings of the SAME Form node — exact
+; byte-match REJECTS the correct re-wording, structural Blueprint-match ACCEPTS
+; it. That is why exact-match overfits and outcome/structural generalize.
 ;
 ; Verdict 31 when every claim lands:
-;   1   exact content match scores 1, a miss scores 0
-;   2   matches are counted across a candidate's replayed outputs
-;   4   a candidate's match record becomes a (lane locality completed failed rt) row
-;   8   a candidate that matches 8/10 — cheaper and sovereign — takes the body
-;   16  a candidate that matches 6/10 leaves the body with the LLM
+;   1   outcome scoring: a candidate's OWN successes are counted (8 of 10), no LLM compare
+;   2   structural match accepts same-blueprint, rejects different-blueprint
+;   4   OVERFIT SHOWN: same node, different bytes — exact says no, structural says yes
+;   8   outcome-default: a candidate that WORKS 8/10, local and cheap, takes the body
+;   16  a candidate that works only 6/10 leaves the body with the LLM
 (do
-    (let recorded "OUT")
-    ; the LLM incumbent's own row: it always matches itself (10/0), but remote and costly.
-    (let llm-row (list "external:claude" "remote" 10 0 1200))
-    ; a learned candidate replayed on the same input — two ripeness states.
-    (let ripe  (list "OUT" "OUT" "OUT" "OUT" "OUT" "OUT" "OUT" "OUT" "X" "X"))
-    (let young (list "OUT" "OUT" "OUT" "OUT" "OUT" "OUT" "X" "X" "X" "X"))
+    (let S (cr-outcome-success))
+    (let F (cr-outcome-fail))
+    ; a candidate replayed 10 times — its OWN outcomes, two ripeness states.
+    (let ripe-outcomes  (list S S S S S S S S F F))
+    (let young-outcomes (list S S S S S S F F F F))
 
-    ; 1 — exact content match.
+    ; 1 — outcome scoring counts the candidate's own successes, never the LLM's.
     (let c0
-        (if (and (eq (iom-match? "OUT" recorded) 1) (eq (iom-match? "X" recorded) 0))
+        (if (and (eq (iom-pass-count ripe-outcomes) 8) (eq (iom-fail-count ripe-outcomes) 2))
             1 0))
-    ; 2 — matches counted across replayed outputs.
+    ; 2 — structural match: same canonical node passes, a different node fails.
     (let c1
-        (if (and (eq (iom-matches recorded ripe) 8) (eq (iom-matches recorded young) 6))
+        (if (and (eq (iom-structural? "bp:add(2,3)" "bp:add(2,3)") 1)
+                 (eq (iom-structural? "bp:sub(2,3)" "bp:add(2,3)") 0))
             2 0))
-    ; 3 — match record becomes a 5-field telemetry row (completed = matches).
-    (let row (iom-candidate-row "form-native:gen" "local" recorded ripe 400))
+    ; 4 — the correction made concrete: "add(2,3)" and "(+ 2 3)" are different bytes
+    ;     but the SAME Form node. exact rejects the correct re-wording; structural
+    ;     (the canonical blueprint they share) accepts it.
     (let c2
-        (if (and (eq (len row) 5) (and (eq (nth row 2) 8) (eq (nth row 3) 2)))
+        (if (and (eq (iom-exact? "add(2,3)" "(+ 2 3)") 0)
+                 (eq (iom-structural? "bp:add(2,3)" "bp:add(2,3)") 1))
             4 0))
-    ; 8 — a candidate that learned to match 8/10, cheaper and sovereign, embodies.
+    ; the costly remote LLM incumbent (always works, but remote + expensive).
+    (let llm-row (list "external:claude" "remote" 10 0 1200))
+    ; 8 — a candidate that WORKS 8/10 (its own outcomes), local and cheap, embodies.
+    (let ripe-row (iom-candidate-row "form-native:gen" "local" ripe-outcomes 400))
     (let c3
-        (if (str_eq (iom-embodied-path llm-row "form-native:gen" "local" recorded ripe 400) "form-native:gen")
-            8 0))
-    ; 16 — a candidate that matches only 6/10 has not earned it; the LLM keeps the body.
+        (if (str_eq (iom-embodied-path llm-row ripe-row) "form-native:gen") 8 0))
+    ; 16 — a candidate that works only 6/10 has not earned it; the LLM keeps the body.
+    (let young-row (iom-candidate-row "form-native:gen" "local" young-outcomes 400))
     (let c4
-        (if (str_eq (iom-embodied-path llm-row "form-native:gen" "local" recorded young 400) "external:claude")
-            16 0))
+        (if (str_eq (iom-embodied-path llm-row young-row) "external:claude") 16 0))
 
     (add c0 (add c1 (add c2 (add c3 c4)))))

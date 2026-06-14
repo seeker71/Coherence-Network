@@ -1,69 +1,95 @@
-; io-match.fk — content-addressed input/output capture so LLM/tool usage becomes
-; LEARNABLE, not just paid for.
+; io-match.fk — capture real LLM/tool usage so it becomes LEARNABLE, not just paid for.
 ;
 ; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk form-stdlib/tool-embodiment.fk
 ;
 ; Today usage is paid for and discarded: automation_usage counts tokens, the
-; learning sample carries only a feature-vector — never the actual (input,
-; output) pair. So we cannot LEARN to reproduce what the LLM did; we just pay
-; for it again. This file closes that: one captured call is an io-match record
-;   (input-sig output-sig lane tokens outcome)
-; where input-sig / output-sig are content addresses (sha256.fk over the real
-; prompt and completion bytes; structural equivalence via the substrate is the
-; richer match). The Mac binary channel (form-macho.fk emits the native arm64
-; binary) is the carrier that intercepts the agent's real reasoning/tool calls
-; and writes these records; this recipe is the body that turns them into learning.
+; learning sample carries only a feature-vector — never the actual (input, output)
+; pair. So we cannot LEARN the capability; we just pay for it again. This file
+; closes that. One captured call is an io-match record
+;   (input-sig output-sig output-bp lane tokens outcome)
+; input-sig / output-sig are content addresses (sha256.fk) of the real prompt and
+; output; output-bp is the output's Blueprint NodeID when it is a structured Form
+; node (its canonical structural identity); outcome is whether the call WORKED.
 ;
-; The bridge to embodiment: a Form-native candidate is REPLAYED on the same
-; input-sig, and scored by whether it reproduces the LLM's output-sig. Its
-; match-rate becomes its trust in the embodiment gate (tool-embodiment.fk):
-; completed = outputs that matched the LLM, failed = mismatches. A lane that
-; learns to match — cheaper (0 external tokens) and sovereign (local) — earns
-; the body and replaces the LLM it learned from. That is how we keep the
+; The learning signal is NOT "reproduce the LLM's exact output." That overfits and
+; does not generalize: the LLM's wording is one of many good outputs, and demanding
+; identity memorizes the teacher instead of learning the capability. A Form-native
+; candidate earns trust by its OWN efficacy. Three modes, by what "succeeded" means
+; for the lane:
+;
+;   outcome    (DEFAULT, generalizes): the candidate's output WORKED — its proof
+;              passed / its tool call succeeded. This is aliveness, not syntax
+;              (code-tool-learning: "moves the living task instead of only matching
+;              syntax"). Scored on the candidate's OWN outcomes, never on the LLM.
+;   structural (natural-language -> Form node): the candidate's output shares the
+;              target's canonical Blueprint NodeID. Content-addressed, so two
+;              different wordings that parse to the same node BOTH pass — the one
+;              place matching a target is principled (the substrate's premise:
+;              same shape -> same NodeID).
+;   exact      (NARROW): identical output bytes. Overfits except where the output is
+;              itself canonical; never the default — kept only to name the floor it is.
+;
+; The bridge to embodiment (tool-embodiment.fk): a candidate's pass/fail becomes a
+; (lane locality completed failed runtime-ms) row; its pass-rate is its measured
+; trust. A lane that works — cheaper (0 external tokens) and sovereign (local) —
+; earns the body and replaces the LLM it learned from. That is how we keep the
 ; capability when the model cost is no longer maintainable.
 ;
 ; Proven by: form-stdlib/tests/io-match-band.fk
 
-; one captured call: content-addressed in/out, the lane, its cost, its outcome.
-(defn iom-record (input-sig output-sig lane tokens outcome)
-    (list input-sig output-sig lane tokens outcome))
+; one captured call: content-addressed in/out, the output's structural blueprint
+; (when it is a Form node), the lane, its cost, and whether it WORKED.
+(defn iom-record (input-sig output-sig output-bp lane tokens outcome)
+    (list input-sig output-sig output-bp lane tokens outcome))
 (defn iom-in (r) (nth r 0))
 (defn iom-out (r) (nth r 1))
-(defn iom-lane (r) (nth r 2))
-(defn iom-tokens (r) (nth r 3))
-(defn iom-outcome (r) (nth r 4))
+(defn iom-bp (r) (nth r 2))
+(defn iom-lane (r) (nth r 3))
+(defn iom-tokens (r) (nth r 4))
+(defn iom-outcome (r) (nth r 5))
 
-; did a candidate reproduce the recorded output? exact content match is the
-; floor; substrate Blueprint equivalence is the richer match the carrier can use.
-(defn iom-match? (candidate-out recorded-out)
+; ── mode 1: outcome (DEFAULT, generalizes) ───────────────────────────────────
+; a candidate attempt passes when ITS OWN output worked — not when it equals the
+; LLM. outcomes is the list of the candidate's own results (success/fail/silence).
+(defn iom-outcome-pass? (outcome) (if (str_eq outcome (cr-outcome-success)) 1 0))
+(defn iom-pass-count (outcomes)
+    (if (nil? outcomes)
+        0
+        (add (iom-outcome-pass? (head outcomes)) (iom-pass-count (tail outcomes)))))
+(defn iom-fail-count (outcomes) (sub (len outcomes) (iom-pass-count outcomes)))
+
+; ── mode 2: structural (natural-language -> Form node) ────────────────────────
+; canonical-structure match: same Blueprint NodeID, regardless of wording. This is
+; where matching a target generalizes — two correct parses share the node.
+(defn iom-structural? (candidate-bp target-bp)
+    (if (str_eq candidate-bp target-bp) 1 0))
+(defn iom-structural-passes (target-bp candidate-bps)
+    (if (nil? candidate-bps)
+        0
+        (add (iom-structural? (head candidate-bps) target-bp)
+             (iom-structural-passes target-bp (tail candidate-bps)))))
+
+; ── mode 3: exact (NARROW, overfits) ─────────────────────────────────────────
+; identical output bytes. Strictly stronger than structural and almost always
+; wrong as a learning target: it rejects a correct answer worded differently.
+(defn iom-exact? (candidate-out recorded-out)
     (if (str_eq candidate-out recorded-out) 1 0))
 
-; over a candidate's outputs for ONE input, how many matched the LLM's output.
-; explicit recursion (named callee, no function-as-argument) so it crosses the
-; fourth arm.
-(defn iom-matches (recorded-out candidate-outs)
-    (if (nil? candidate-outs)
-        0
-        (add (iom-match? (head candidate-outs) recorded-out)
-             (iom-matches recorded-out (tail candidate-outs)))))
-(defn iom-attempts (candidate-outs) (len candidate-outs))
-(defn iom-mismatches (recorded-out candidate-outs)
-    (sub (iom-attempts candidate-outs) (iom-matches recorded-out candidate-outs)))
+; ── bridge to the embodiment gate ────────────────────────────────────────────
+; DEFAULT: a candidate's OWN outcomes become its trust — completed = worked,
+; failed = did not. Generalizes; no reference to the LLM's tokens.
+(defn iom-candidate-row (lane locality outcomes runtime-ms)
+    (list lane locality (iom-pass-count outcomes) (iom-fail-count outcomes) runtime-ms))
 
-; the bridge: a candidate lane's match record becomes a telemetry row the
-; embodiment gate reads — (lane locality completed failed runtime-ms) — where
-; completed = matches against the LLM, failed = mismatches. Its match-rate IS
-; its measured trust.
-(defn iom-candidate-row (lane locality recorded-out candidate-outs runtime-ms)
+; natural-language -> Form node: structural matches against the canonical target
+; node become trust (same structure, any wording).
+(defn iom-structural-row (lane locality target-bp candidate-bps runtime-ms)
     (list lane locality
-        (iom-matches recorded-out candidate-outs)
-        (iom-mismatches recorded-out candidate-outs)
+        (iom-structural-passes target-bp candidate-bps)
+        (sub (len candidate-bps) (iom-structural-passes target-bp candidate-bps))
         runtime-ms))
 
-; the full verdict: given the LLM incumbent's own row and a learned candidate's
-; match record, which lane holds the body now? (te-embody-lanes runs the proven
-; gate; the LLM keeps the body until the candidate learns to match cheaply and
-; sovereignly.)
-(defn iom-embodied-path (llm-row lane locality recorded-out candidate-outs runtime-ms)
-    (te-embody-lanes
-        (list llm-row (iom-candidate-row lane locality recorded-out candidate-outs runtime-ms))))
+; the verdict over [llm-incumbent, candidate]: te-embody-lanes runs the proven
+; gate; the LLM keeps the body until the candidate works, cheaply and sovereignly.
+(defn iom-embodied-path (llm-row candidate-row)
+    (te-embody-lanes (list llm-row candidate-row)))
