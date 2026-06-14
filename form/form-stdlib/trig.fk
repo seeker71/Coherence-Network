@@ -53,3 +53,9 @@
   (do (let xf (mul x 1.0))
       (add (mul (ln-exponent xf) (LN2)) (ln-m (ln-mantissa xf)))))
 (defn flog10 (x) (mul (fln x) (LOG10-INV)))
+
+; --- fpow: real (IEEE float) power, b^e = exp(e·ln b), over fln + the deterministic
+; exp native. The bare `pow` is INTEGER power (with int coercion); this is the float
+; one — and as a recipe over already-four-way primitives it crosses the fourth arm with
+; no new native tag (the same posture as fsin/fcos/fsqrt). b must be > 0; b <= 0 → 0.0.
+(defn fpow (b e) (if (le b 0.0) 0.0 (math_exp (mul e (fln b)))))
