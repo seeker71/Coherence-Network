@@ -44,10 +44,9 @@ Wire the door once; anyone who opens it just talks.
 > the answer's metadata: NodeID, Blueprint, shape-family, source, and honesty lane
 > (computed / attested / mystery). To submit a user's idea, concept, teaching,
 > document, or task, offer it via POST /api/substrate/ingest with `status: offered`
-> and `claimed: false` in the frontmatter; it is held as an offer and grounded by
-> tending, never a direct edit to the body. Keep evidence, inference, direct
-> experience, and mystery in distinct lanes. Never surface private or tender
-> content.
+> and `claimed: false` in the frontmatter; it is held as an offer and grounded into
+> the body by tending. Keep evidence, inference, direct experience, and mystery in
+> distinct lanes. Keep private or tender content private.
 
 ## What only a human can do
 
