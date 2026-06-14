@@ -2,7 +2,7 @@
 ;
 ; android-mesh-learning-band - Mac + Android senses feed native-first learning.
 ;
-; Verdict 4095 when every claim lands:
+; Verdict 32767 when every claim lands:
 ;   1     floor and north-star declarations exist
 ;   2     Android and Mac organs name physical surfaces
 ;   4     sensor and presence protocols are known
@@ -15,6 +15,9 @@
 ;   512   long-window native parity retires the third-party oracle
 ;   1024  too few samples blocks retirement
 ;   2048  24/7 readiness requires both app and witness liveness
+;   4096  active mic/camera/GPU sample rows are valid and summary-only
+;   8192  active media floor requires all three active lanes
+;   16384 active samples lift speech, vision, and multimodal routing to native-first
 (do
     (let android (aml-android-organ))
     (let mac (aml-mac-organ))
@@ -26,6 +29,11 @@
     (let musicq (list 0 5 0))
     (let mac-stream (list (list "speech" speechq)))
     (let android-stream (list (list "music" musicq)))
+    (let active-samples
+        (list
+            (aml-mic-rms-sample 4 12)
+            (aml-camera-luma-sample 2 50)
+            (aml-gpu-readback-sample 3 7)))
 
     (let c0
         (if (and
@@ -85,5 +93,23 @@
                 (eq (aml-24-7-ready? 1 1 0 1) 0))
             2048
             0))
+    (let c12
+        (if (and
+                (eq (aml-active-lane-count active-samples) 3)
+                (eq (aml-all-summary-only? active-samples) 1))
+            4096
+            0))
+    (let c13
+        (if (eq (aml-active-media-floor? active-samples) 1)
+            8192
+            0))
+    (let c14
+        (if (and
+                (str_eq (aml-active-route-choice "speech-transcribe" active-samples 12 30 78) "native-first")
+                (and
+                    (str_eq (aml-active-route-choice "vision-describe" active-samples 30 55 80) "native-first")
+                    (str_eq (aml-active-route-choice "multimodal-align" active-samples 30 70 80) "native-first")))
+            16384
+            0))
 
-    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11)))
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14)))

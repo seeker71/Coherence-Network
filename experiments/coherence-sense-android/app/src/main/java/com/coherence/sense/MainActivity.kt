@@ -14,8 +14,14 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.ImageFormat
+import android.hardware.camera2.CameraCaptureSession
+import android.hardware.camera2.CameraDevice
+import android.hardware.camera2.CameraManager
+import android.hardware.camera2.CaptureRequest
 import android.media.AudioFormat
 import android.media.AudioManager
+import android.media.ImageReader
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.hardware.Sensor
@@ -32,8 +38,15 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
+import android.os.HandlerThread
 import android.os.Looper
 import android.os.StatFs
+import android.opengl.EGL14
+import android.opengl.EGLConfig
+import android.opengl.EGLContext
+import android.opengl.EGLDisplay
+import android.opengl.EGLSurface
+import android.opengl.GLES20
 import android.provider.Settings
 import android.text.Editable
 import android.text.TextWatcher
@@ -57,6 +70,7 @@ import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import java.nio.ByteBuffer
 import java.security.MessageDigest
 import java.util.Locale
 import java.util.UUID
@@ -91,7 +105,16 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var inferenceErrorCount = 0L
     private var micRms = 0.0
     private var micSamples = 0L
+    private var cameraLuma = 0.0
+    private var cameraSamples = 0L
+    private var gpuPixel = 0
+    private var gpuLatencyMs = 0.0
+    private var gpuSamples = 0L
     private var audioRecord: AudioRecord? = null
+    private var cameraThread: HandlerThread? = null
+    private var cameraReader: ImageReader? = null
+    private var cameraDevice: CameraDevice? = null
+    private var cameraSession: CameraCaptureSession? = null
     private var nsdManager: NsdManager? = null
     private var discoveryListener: NsdManager.DiscoveryListener? = null
     private var resolvingWitness = false
@@ -106,6 +129,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var updateSha256 = ""
     @Volatile private var updateInFlight = false
     @Volatile private var micLoopRunning = false
+    @Volatile private var cameraLoopRunning = false
+    @Volatile private var gpuLoopRunning = false
     @Volatile private var snapshotInFlight = false
     @Volatile private var meshRefreshInFlight = false
     private var dashboardRenderScheduled = false
@@ -271,6 +296,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         registerSensor(Sensor.TYPE_MAGNETIC_FIELD)
         requestOptionalPermissions()
         startMicSamplingIfAllowed()
+        startCameraSamplingIfAllowed()
+        startGpuSampling()
         connectBtn.text = "Pause sharing"
         lastMacState = "connecting to $base"
         status.text = "Sharing senses. Mac lane: $lastMacState"
@@ -287,6 +314,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         handler.removeCallbacks(loop)
         handler.removeCallbacks(meshLoop)
         stopMicSampling()
+        stopCameraSampling()
+        stopGpuSampling()
         connectBtn.text = "Start sharing"
         lastMacState = "paused"
         status.text = message
@@ -503,6 +532,15 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         latest[Sensor.TYPE_LIGHT]?.let { snap.put("light", it[0].toDouble()) }
         latest[Sensor.TYPE_MAGNETIC_FIELD]?.let { snap.put("mag", arr(it)) }
         if (micSamples > 0) snap.put("mic_rms", micRms)
+        if (cameraSamples > 0) {
+            snap.put("camera_luma", cameraLuma)
+            snap.put("camera_samples", cameraSamples)
+        }
+        if (gpuSamples > 0) {
+            snap.put("gpu_pixel", gpuPixel)
+            snap.put("gpu_latency_ms", gpuLatencyMs)
+            snap.put("gpu_samples", gpuSamples)
+        }
         snap.put("organs_active", JSONArray(activeOrgans()))
         snap.put("channels_offered", JSONArray(offeredTransports()))
         snap.put("body_state", bodyStateJson())
@@ -995,6 +1033,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
         if (cachedGpsState.contains(",")) organs.add("gps")
         if (micSamples > 0) organs.add("mic")
+        if (cameraSamples > 0) organs.add("camera")
+        if (gpuSamples > 0) organs.add("gpu")
         return organs.distinct().sorted()
     }
 
@@ -1012,6 +1052,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             "sensor:signal",
             "audio:pcm16",
             "video:rgba-time",
+            "gpu:compute",
             "screen:write",
             "network:http",
             "bluetooth:presence",
@@ -1034,7 +1075,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .put("present_peers", presentPeers)
             .put("surprise_count", surpriseCount)
             .put("error_count", inferenceErrorCount)
-            .put("sample_count", sentSamples + micSamples)
+            .put("sample_count", sentSamples + micSamples + cameraSamples + gpuSamples)
     }
 
     private fun jsonArrayHas(array: JSONArray?, value: String): Boolean {
@@ -1090,7 +1131,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun readCameraState(): String {
         val hardware = if (packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)) "available" else "unavailable"
-        return "$hardware / ${permissionState(Manifest.permission.CAMERA)} / offered-not-sampling"
+        val permission = permissionState(Manifest.permission.CAMERA)
+        return if (cameraSamples > 0) {
+            "$hardware / $permission / luma=${"%.3f".format(Locale.US, cameraLuma)}"
+        } else {
+            "$hardware / $permission / offered-not-sampling"
+        }
     }
 
     private fun micState(): String {
@@ -1164,6 +1210,185 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         audioRecord = null
     }
 
+    private fun startCameraSamplingIfAllowed() {
+        if (cameraLoopRunning) return
+        if (!packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)) return
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) return
+        val manager = getSystemService(CAMERA_SERVICE) as CameraManager
+        val cameraId = try {
+            manager.cameraIdList.firstOrNull() ?: return
+        } catch (_: Exception) {
+            return
+        }
+        val thread = HandlerThread("coherence-camera-sample").also { it.start() }
+        val cameraHandler = Handler(thread.looper)
+        val reader = ImageReader.newInstance(160, 120, ImageFormat.YUV_420_888, 2)
+        cameraThread = thread
+        cameraReader = reader
+        cameraLoopRunning = true
+        reader.setOnImageAvailableListener({ imageReader ->
+            val image = try {
+                imageReader.acquireLatestImage()
+            } catch (_: Exception) {
+                null
+            } ?: return@setOnImageAvailableListener
+            try {
+                val yPlane = image.planes.firstOrNull()
+                val buffer = yPlane?.buffer
+                if (buffer != null) {
+                    val duplicate = buffer.duplicate()
+                    var sum = 0L
+                    var count = 0
+                    val step = 16
+                    while (duplicate.hasRemaining()) {
+                        sum += duplicate.get().toInt() and 0xff
+                        count += 1
+                        val skip = minOf(step - 1, duplicate.remaining())
+                        duplicate.position(duplicate.position() + skip)
+                    }
+                    if (count > 0) {
+                        cameraLuma = sum.toDouble() / (count.toDouble() * 255.0)
+                        cameraSamples += 1
+                        requestDashboardRender()
+                    }
+                }
+            } finally {
+                image.close()
+            }
+        }, cameraHandler)
+        try {
+            manager.openCamera(cameraId, object : CameraDevice.StateCallback() {
+                override fun onOpened(camera: CameraDevice) {
+                    cameraDevice = camera
+                    try {
+                        val target = reader.surface
+                        val request = camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW).apply {
+                            addTarget(target)
+                        }
+                        camera.createCaptureSession(listOf(target), object : CameraCaptureSession.StateCallback() {
+                            override fun onConfigured(session: CameraCaptureSession) {
+                                cameraSession = session
+                                try {
+                                    session.setRepeatingRequest(request.build(), null, cameraHandler)
+                                } catch (_: Exception) {
+                                    stopCameraSampling()
+                                }
+                            }
+
+                            override fun onConfigureFailed(session: CameraCaptureSession) {
+                                stopCameraSampling()
+                            }
+                        }, cameraHandler)
+                    } catch (_: Exception) {
+                        stopCameraSampling()
+                    }
+                }
+
+                override fun onDisconnected(camera: CameraDevice) {
+                    stopCameraSampling()
+                }
+
+                override fun onError(camera: CameraDevice, error: Int) {
+                    stopCameraSampling()
+                }
+            }, cameraHandler)
+        } catch (_: SecurityException) {
+            stopCameraSampling()
+        } catch (_: Exception) {
+            stopCameraSampling()
+        }
+    }
+
+    private fun stopCameraSampling() {
+        cameraLoopRunning = false
+        try {
+            cameraSession?.close()
+        } catch (_: Exception) {
+        }
+        try {
+            cameraDevice?.close()
+        } catch (_: Exception) {
+        }
+        try {
+            cameraReader?.close()
+        } catch (_: Exception) {
+        }
+        try {
+            cameraThread?.quitSafely()
+        } catch (_: Exception) {
+        }
+        cameraSession = null
+        cameraDevice = null
+        cameraReader = null
+        cameraThread = null
+    }
+
+    private fun startGpuSampling() {
+        if (gpuLoopRunning) return
+        gpuLoopRunning = true
+        Thread {
+            var display: EGLDisplay = EGL14.EGL_NO_DISPLAY
+            var context: EGLContext = EGL14.EGL_NO_CONTEXT
+            var surface: EGLSurface = EGL14.EGL_NO_SURFACE
+            try {
+                display = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY)
+                val version = IntArray(2)
+                if (!EGL14.eglInitialize(display, version, 0, version, 1)) return@Thread
+                val configAttribs = intArrayOf(
+                    EGL14.EGL_RENDERABLE_TYPE, EGL14.EGL_OPENGL_ES2_BIT,
+                    EGL14.EGL_RED_SIZE, 8,
+                    EGL14.EGL_GREEN_SIZE, 8,
+                    EGL14.EGL_BLUE_SIZE, 8,
+                    EGL14.EGL_ALPHA_SIZE, 8,
+                    EGL14.EGL_NONE,
+                )
+                val configs = arrayOfNulls<EGLConfig>(1)
+                val numConfigs = IntArray(1)
+                if (!EGL14.eglChooseConfig(display, configAttribs, 0, configs, 0, 1, numConfigs, 0)) return@Thread
+                val config = configs[0] ?: return@Thread
+                val contextAttribs = intArrayOf(EGL14.EGL_CONTEXT_CLIENT_VERSION, 2, EGL14.EGL_NONE)
+                context = EGL14.eglCreateContext(display, config, EGL14.EGL_NO_CONTEXT, contextAttribs, 0)
+                val surfaceAttribs = intArrayOf(EGL14.EGL_WIDTH, 1, EGL14.EGL_HEIGHT, 1, EGL14.EGL_NONE)
+                surface = EGL14.eglCreatePbufferSurface(display, config, surfaceAttribs, 0)
+                if (!EGL14.eglMakeCurrent(display, surface, surface, context)) return@Thread
+                val pixel = ByteBuffer.allocateDirect(4)
+                while (gpuLoopRunning) {
+                    val start = System.nanoTime()
+                    val phase = ((gpuSamples % 17).toFloat() / 16.0f)
+                    GLES20.glViewport(0, 0, 1, 1)
+                    GLES20.glClearColor(phase, 0.25f, 1.0f - phase, 1.0f)
+                    GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
+                    pixel.position(0)
+                    GLES20.glReadPixels(0, 0, 1, 1, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, pixel)
+                    gpuLatencyMs = (System.nanoTime() - start).toDouble() / 1_000_000.0
+                    gpuPixel = (pixel.get(0).toInt() and 0xff) or
+                        ((pixel.get(1).toInt() and 0xff) shl 8) or
+                        ((pixel.get(2).toInt() and 0xff) shl 16) or
+                        ((pixel.get(3).toInt() and 0xff) shl 24)
+                    gpuSamples += 1
+                    requestDashboardRender()
+                    Thread.sleep(1000)
+                }
+            } catch (_: Exception) {
+                gpuLoopRunning = false
+            } finally {
+                try {
+                    if (display != EGL14.EGL_NO_DISPLAY) {
+                        EGL14.eglMakeCurrent(display, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_CONTEXT)
+                        if (surface != EGL14.EGL_NO_SURFACE) EGL14.eglDestroySurface(display, surface)
+                        if (context != EGL14.EGL_NO_CONTEXT) EGL14.eglDestroyContext(display, context)
+                        EGL14.eglTerminate(display)
+                    }
+                } catch (_: Exception) {
+                }
+            }
+        }.start()
+    }
+
+    private fun stopGpuSampling() {
+        gpuLoopRunning = false
+    }
+
     private fun renderDashboard() {
         refreshResourceCacheIfStale()
         val (samplesPerSecond, bytesPerSecond) = flowRates()
@@ -1193,7 +1418,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             "VIDEO",
             "camera $cachedCameraState",
             "screen QR/write active",
-            "frames offered",
+            "frames $cameraSamples",
         ).joinToString("\n")
         networkLane.text = listOf(
             "NETWORK",
@@ -1214,8 +1439,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             "peers $presentPeers",
             "surprises $surpriseCount",
             "errors $inferenceErrorCount",
-            "samples ${sentSamples + micSamples}",
-            "fidelity receipt next",
+            "samples ${sentSamples + micSamples + cameraSamples + gpuSamples}",
+            "gpu $gpuSamples latency=${"%.2f".format(Locale.US, gpuLatencyMs)}ms",
         ).joinToString("\n")
         dashboard.text = listOf(
             "floor: active samples, silence, unavailable hardware, and not-granted lanes are visible signals",
@@ -1228,9 +1453,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             "update: $updateState",
             "body-state: organs=${bodyState.optInt("organs_active")} peers=${bodyState.optInt("present_peers")} surprises=${bodyState.optLong("surprise_count")} errors=${bodyState.optLong("error_count")} samples=${bodyState.optLong("sample_count")}",
             "identity: organ id automatic; phone/email label remains opt-in until Android consent flow is wired",
-            "screen: active dashboard + QR offer; video frames require camera permission and frame session",
+            "screen: active dashboard + QR offer; camera frames emit luma receipts only",
             "disk: $cachedDiskState",
-            "pressure: cpu cores=${Runtime.getRuntime().availableProcessors()} ram=${memoryState()} gpu=floor:cataloged dsp=floor:cataloged mlx=unsupported-on-android",
+            "pressure: cpu cores=${Runtime.getRuntime().availableProcessors()} ram=${memoryState()} gpu=samples:$gpuSamples pixel:$gpuPixel dsp=floor:cataloged mlx=unsupported-on-android",
             "cells: created=$innerCellsCreated updated=$innerCellsUpdated freed=$innerCellsFreed",
             "flow: sensor %.2f samples/s %.0f B/s".format(Locale.US, samplesPerSecond, bytesPerSecond),
         ).joinToString("\n")
@@ -1372,7 +1597,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 17 && connected) startMicSamplingIfAllowed()
+        if (requestCode == 17 && connected) {
+            startMicSamplingIfAllowed()
+            startCameraSamplingIfAllowed()
+            startGpuSampling()
+        }
         resourceCacheAt = 0L
         requestDashboardRender()
     }
@@ -1393,6 +1622,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             handler.removeCallbacks(loop)
             handler.removeCallbacks(meshLoop)
             stopMicSampling()
+            stopCameraSampling()
+            stopGpuSampling()
         }
     }
 

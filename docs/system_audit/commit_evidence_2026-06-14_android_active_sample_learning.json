@@ -1,0 +1,124 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/android-active-sample-learning-20260614",
+  "commit_scope": "Convert Android active mic, camera, and accelerator sample learning into the Form-native android-mesh-learning floor and carrier.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "hati-mesh",
+    "android-sense-organ",
+    "native-learning-surface",
+    "llm-feature-channel-floor"
+  ],
+  "spec_ids": [
+    "android-mesh-learning",
+    "hati-mesh",
+    "form-native-learning",
+    "channel-protocol-choice-floor"
+  ],
+  "task_ids": [
+    "android-active-sample-learning-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "experiments/coherence-sense-android/app/src/main/java/com/coherence/sense/MainActivity.kt",
+    "experiments/coherence-sense-android/README.md",
+    "form/form-stdlib/android-mesh-learning.fk",
+    "form/form-stdlib/tests/android-mesh-learning-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/android-mesh-learning.form",
+    "docs/coherence-substrate/hati-mesh.form",
+    "docs/coherence-substrate/llm-feature-channel-floor.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_android_active_sample_learning.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "experiments/coherence-sense-android/app/src/main/java/com/coherence/sense/MainActivity.kt",
+    "experiments/coherence-sense-android/README.md",
+    "form/form-stdlib/android-mesh-learning.fk",
+    "form/form-stdlib/tests/android-mesh-learning-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/android-mesh-learning.form",
+    "docs/coherence-substrate/hati-mesh.form",
+    "docs/coherence-substrate/llm-feature-channel-floor.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_android_active_sample_learning.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "form/form-stdlib/android-mesh-learning.fk",
+    "form/form-stdlib/tests/android-mesh-learning-band.fk",
+    "form/fourth-arm-bands.txt",
+    "experiments/coherence-sense-android/app/src/main/java/com/coherence/sense/MainActivity.kt",
+    "docs/coherence-substrate/android-mesh-learning.form",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord join && coord claim \"android active mic camera accelerator samples\"",
+      "adb devices -l",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/tests/android-mesh-learning-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh android-mesh-learning",
+      "cd experiments/coherence-sense-android && ANDROID_HOME=/Users/ursmuff/.android-sdk-codex JAVA_HOME=/opt/homebrew/opt/openjdk@21 ./gradlew assembleDebug",
+      "git diff --check"
+    ],
+    "notes": "Prompt guide passed and wellness had no task-blocking local failure. The Form-native android-mesh-learning proof now returns 32767 with validate.sh output: fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent. The fourth-arm manifest gate returns PASS-4WAY android-mesh-learning. The Android debug APK builds successfully after pointing Gradle at the local SDK path. No Python carrier was added or modified for active sample learning; Python use in this record is limited to repository evidence validation. The authorized SM-S918U1 was visible through adb, but the phone was PIN-locked during live receipt capture, so the app could not be tapped into Start sharing and the Mac witness still reported zero live frames. The live nonzero active-counter receipt remains the next physical proof gap."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed when this evidence was written; CI had not run yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No public deploy was requested or performed in this slice."
+  },
+  "phase_gate": {
+    "phase": "android-active-sample-learning",
+    "gate": "Active mic, camera, and accelerator samples must be represented as Form-native learning rows before routing speech, vision, or multimodal work native-first.",
+    "state": "local-four-way-proof-pass-plus-android-carrier-compile",
+    "can_move_next_phase": false,
+    "next": "Unlock the phone, tap Start sharing, capture a receipt with nonzero mic RMS, camera luma, and GPU readback counters, then extend the GPU summary floor toward Vulkan/NNAPI kernel parity receipts."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Coherence Sense can sample mic RMS, camera luma, and GPU EGL readback summaries while sharing and expose those counters through snapshots/body state without storing raw audio, frames, or GPU buffers. Form recipes can consume summary-only active sample rows and route speech, vision, and multimodal lanes native-first when mic/camera/GPU are active.",
+    "public_endpoints": [
+      "local:form/validate.sh:android-mesh-learning-band",
+      "local:form/fourth-arm-bands.txt:android-mesh-learning",
+      "local:experiments/coherence-sense-android:assembleDebug"
+    ],
+    "test_flows": [
+      "Active samples are represented by aml-active-sample rows with lane, protocol, codec, count, metric, trust, privacy, and active flag.",
+      "Valid mic RMS, camera luma, and GPU readback rows are summary-only and satisfy the active media floor.",
+      "Speech, vision, and multimodal routes become native-first only when their required active sample lanes are present.",
+      "The Android carrier compiles with Camera2 luma sampling and OpenGL ES/EGL readback sampling."
+    ],
+    "summary": "The established floor is Form-native active media sample learning plus a compiling Android carrier. The remaining gap is not grammar or Python conversion; it is a live unlocked-phone sharing receipt with nonzero active counters, followed by richer heldout learners and Vulkan/NNAPI receipts."
+  }
+}

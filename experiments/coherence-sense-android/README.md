@@ -156,9 +156,11 @@ python3 scripts/android_mesh_learning_receipt.py --start-app --loop --interval 6
 ```
 
 The current receipt feeds the Form-native learning floor: summarize, code-lower,
-tool-select, and distill-retire can route native-first; speech, vision, and
-multimodal alignment route native-first with oracle sampling until active
-mic/camera/accelerator samples and heldout wins retire their teachers.
+tool-select, and distill-retire can route native-first. When the app is
+unlocked, sharing, and permissioned, mic RMS, camera luma, and GPU EGL readback
+summary counters can lift speech, vision, and multimodal alignment to
+native-first routing; heldout wins are still required before retiring their
+teachers.
 
 ## Hati mesh identity + channels
 
@@ -176,9 +178,10 @@ When you connect, the app announces itself to `hati.mesh` through the public API
 
 The current APK actively streams and measures `sensor:signal` flow, announces / heartbeats on
 `hati.mesh:presence`, and displays mesh silence as channel data. It declares and displays offerable
-`screen:write`, `audio:pcm16`, `video:rgba-time`, `network:http`, and `bluetooth:presence` channels.
-The mic lane has an active RMS floor when permission is granted; camera/video and speaker output remain
-explicit offered lanes until frame/playback sessions carry active physical samples.
+`screen:write`, `network:http`, and `bluetooth:presence` channels. The mic lane has an active RMS
+summary floor, the camera lane has an active luma summary floor, and the GPU lane has an active
+OpenGL ES/EGL readback summary floor when sharing is active and permissions are granted. The app
+does not retain raw audio, camera frames, or GPU buffers.
 
 The local Mac witness is also a discoverable channel. Both `mac-witness-server.py` and
 `coherence-sense-eval.py` advertise `_hati-witness._tcp` on the LAN and serve
@@ -186,8 +189,8 @@ The local Mac witness is also a discoverable channel. Both `mac-witness-server.p
 URLs. The floor is zero-typed setup on a normal same-WiFi LAN; the north star is signed organ
 heartbeats negotiating the highest-fidelity carrier without hidden ambient host access.
 
-The resource dashboard also makes accelerator floors visible. GPU and DSP/NPU are cataloged lanes,
-but this APK does not yet emit active native compute samples for them. MLX is explicit unsupported
+The resource dashboard also makes accelerator floors visible. GPU now has a summary readback floor;
+DSP/NPU remains cataloged until NNAPI/vendor delegate receipts are added. MLX is explicit unsupported
 on Android; the north-star Android equivalent is GPU/NNAPI, while macOS carries the Apple MLX lane.
 
 Before release, capture actual screenshots of the Android app and the matching macOS/web service
