@@ -86,8 +86,12 @@
 ;    the band file itself stays unmodified) ────────────────────────────────
 (defn flt-gt (a b) (fk-if (fk-le a b) (fk-lit 0) (fk-lit 1)))
 (defn flt-ge (a b) (fk-le b a))
-(defn flt-lt (a b) (fk-if (fk-le a b) (fk-if (fk-le b a) (fk-lit 0) (fk-lit 1)) (fk-lit 0)))
-(defn flt-eq (a b) (fk-if (fk-le a b) (fk-if (fk-le b a) (fk-lit 1) (fk-lit 0)) (fk-lit 0)))
+; eq/lt are native single-walk walker arms (tags 102/103): each operand is
+; evaluated exactly once, matching le (tag 5) and the reference kernels. The
+; old (le a b)&&(le b a) lowering walked each operand twice — re-firing side
+; effects and doubling the operand sub-tree in the table.
+(defn flt-lt (a b) (fk-node 103 (ms-intern a b)))
+(defn flt-eq (a b) (fk-node 102 (ms-intern a b)))
 (defn flt-and (a b) (fk-if a (fk-if b (fk-lit 1) (fk-lit 0)) (fk-lit 0)))
 (defn flt-or (a b) (fk-if a (fk-lit 1) (fk-if b (fk-lit 1) (fk-lit 0))))
 ; unary lowerings: ord rides SCHAR at byte 0; not is the IF flip
