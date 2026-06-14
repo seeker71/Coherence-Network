@@ -1,0 +1,113 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/witness-oracle-label-export-20260614",
+  "commit_scope": "Add source-backed native witness export and oracle-label rows to the witness heldout learning floor.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "hati-mesh",
+    "android-sense-organ",
+    "native-learning-surface",
+    "llm-feature-channel-floor"
+  ],
+  "spec_ids": [
+    "android-mesh-learning",
+    "witness-state-receipt",
+    "form-native-learning",
+    "channel-protocol-choice-floor"
+  ],
+  "task_ids": [
+    "witness-oracle-label-export-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/witness-state-receipt.fk",
+    "form/form-stdlib/tests/witness-state-receipt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/witness-state-receipt.form",
+    "docs/coherence-substrate/android-mesh-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_witness_oracle_label_export_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/form-stdlib/witness-state-receipt.fk",
+    "form/form-stdlib/tests/witness-state-receipt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/witness-state-receipt.form",
+    "docs/coherence-substrate/android-mesh-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_witness_oracle_label_export_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "form/form-stdlib/witness-state-receipt.fk",
+    "form/form-stdlib/tests/witness-state-receipt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/witness-state-receipt.form",
+    "docs/coherence-substrate/android-mesh-learning.form"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord join && coord claim \"witness oracle label export floor\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/witness-state-receipt.fk form-stdlib/tests/witness-state-receipt-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh witness-state-receipt"
+    ],
+    "notes": "Focused validation returned 1048575 with `fourth arm: 1 band(s) four-way` and `1 ok, 0 divergent`. The manifest gate returned `PASS-4WAY witness-state-receipt`. The recipe now validates native-witness-export rows, rejects raw-media exports, validates oracle-label rows for STT, vision, multimodal, and GPU teacher protocols, rejects fixture providers, creates heldout rows from source-backed labels, and gates native retirement on source-backed labels plus long-window native wins. No Python receipt helper was extended."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed when this evidence was written; CI had not run yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested for this Form recipe slice."
+  },
+  "phase_gate": {
+    "phase": "witness-oracle-label-export-floor",
+    "gate": "Oracle teacher labels must be source-backed by native witness export rows before native candidates can retire a teacher.",
+    "state": "local-four-way-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Connect live STT, vision, multimodal, and GPU oracle processes to emit these source-backed label rows continuously."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Heldout learner rows now distinguish source-backed oracle labels from fixtures. Fixture providers and raw-media exports are rejected, while native witness export receipts plus real teacher-label protocol rows can create heldout histories and retire a narrow teacher only after enough native wins.",
+    "public_endpoints": [
+      "local:form/validate.sh:witness-state-receipt-band",
+      "local:form/fourth-arm-bands.txt:witness-state-receipt"
+    ],
+    "test_flows": [
+      "Native witness export rows require source, transport, sequence, frames, sample count, checksum, and summary-only privacy.",
+      "Oracle labels require non-fixture provider, protocol, label value, confidence, export sequence match, sample reference, and summary-only privacy.",
+      "Source-backed labels produce valid heldout rows.",
+      "Native retirement requires source-backed labels plus a long enough native-win window."
+    ],
+    "summary": "The established floor is source-backed oracle-label/export validation for witness heldout learning. Remaining gaps are live oracle process integration and continuous native witness service export."
+  }
+}

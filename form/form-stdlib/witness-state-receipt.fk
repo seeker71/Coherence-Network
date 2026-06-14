@@ -16,7 +16,8 @@
             "live witness state counters have a Form-native receipt row"
             "mic camera and gpu counters lower into summary-only active sample rows"
             "the exporter source is Form-native; Python remains only a compatibility helper"
-            "heldout learner rows score native challengers against explicit oracle teachers"))
+            "heldout learner rows score native challengers against explicit oracle teachers"
+            "oracle teacher labels must be backed by native witness export receipts, not fixtures"))
     (defn wsr-north-star ()
         (list
             "Mac witness writes native receipt cells continuously"
@@ -194,6 +195,105 @@
         (if (and
                 (eq (wsr-heldout-retire? rows min-samples margin) 1)
                 (str_eq (wsr-heldout-authority rows min-samples margin) "native"))
+            1
+            0))
+
+    (defn wsr-export-row (source transport seq frames sample-count checksum privacy)
+        (list source transport seq frames sample-count checksum privacy))
+    (defn wsr-export-source (row) (nth row 0))
+    (defn wsr-export-transport (row) (nth row 1))
+    (defn wsr-export-seq (row) (nth row 2))
+    (defn wsr-export-frames (row) (nth row 3))
+    (defn wsr-export-sample-count (row) (nth row 4))
+    (defn wsr-export-checksum (row) (nth row 5))
+    (defn wsr-export-privacy (row) (nth row 6))
+    (defn wsr-export-valid? (row)
+        (if (and
+                (str_eq (wsr-export-source row) "native-witness-export")
+                (and
+                    (not (str_eq (wsr-export-transport row) ""))
+                    (and
+                        (gt (wsr-export-seq row) 0)
+                        (and
+                            (gt (wsr-export-frames row) 0)
+                            (and
+                                (gt (wsr-export-sample-count row) 0)
+                                (and
+                                    (not (str_eq (wsr-export-checksum row) ""))
+                                    (not (str_eq (wsr-export-privacy row) "raw-media"))))))))
+            1
+            0))
+
+    (defn wsr-oracle-label (feature provider protocol label confidence export-seq sample-ref privacy)
+        (list feature provider protocol label confidence export-seq sample-ref privacy))
+    (defn wsr-oracle-feature (label) (nth label 0))
+    (defn wsr-oracle-provider (label) (nth label 1))
+    (defn wsr-oracle-protocol (label) (nth label 2))
+    (defn wsr-oracle-label-value (label) (nth label 3))
+    (defn wsr-oracle-confidence (label) (nth label 4))
+    (defn wsr-oracle-export-seq (label) (nth label 5))
+    (defn wsr-oracle-sample-ref (label) (nth label 6))
+    (defn wsr-oracle-privacy (label) (nth label 7))
+    (defn wsr-oracle-label-valid? (label export)
+        (if (and
+                (eq (wsr-export-valid? export) 1)
+                (and
+                    (not (str_eq (wsr-oracle-provider label) "fixture"))
+                    (and
+                        (not (str_eq (wsr-oracle-protocol label) ""))
+                        (and
+                            (not (str_eq (wsr-oracle-label-value label) ""))
+                            (and
+                                (ge (wsr-oracle-confidence label) 70)
+                                (and
+                                    (eq (wsr-oracle-export-seq label) (wsr-export-seq export))
+                                    (and
+                                        (not (str_eq (wsr-oracle-sample-ref label) ""))
+                                        (not (str_eq (wsr-oracle-privacy label) "raw-media")))))))))
+            1
+            0))
+    (defn wsr-heldout-from-oracle-label (label state native-score challenger-correct)
+        (wsr-heldout-from-state
+            (wsr-oracle-feature label)
+            state
+            native-score
+            (wsr-oracle-confidence label)
+            1
+            challenger-correct))
+    (defn wsr-oracle-heldout-valid? (row label export)
+        (if (and
+                (eq (wsr-heldout-valid? row) 1)
+                (and
+                    (eq (wsr-oracle-label-valid? label export) 1)
+                    (str_eq (wsr-heldout-feature row) (wsr-oracle-feature label))))
+            1
+            0))
+    (defn wsr-oracle-label-count (labels export)
+        (if (eq (len labels) 0) 0
+            (add
+                (wsr-oracle-label-valid? (head labels) export)
+                (wsr-oracle-label-count (tail labels) export))))
+    (defn wsr-oracle-labels-all-valid? (labels export)
+        (if (eq (len labels) 0) 1
+            (if (eq (wsr-oracle-label-valid? (head labels) export) 1)
+                (wsr-oracle-labels-all-valid? (tail labels) export)
+                0)))
+    (defn wsr-source-backed-learning-floor? (state export labels rows)
+        (if (and
+                (eq (wsr-learning-ready? state) 1)
+                (and
+                    (eq (wsr-export-valid? export) 1)
+                    (and
+                        (eq (wsr-oracle-labels-all-valid? labels export) 1)
+                        (and
+                            (ge (wsr-oracle-label-count labels export) 4)
+                            (eq (wsr-heldout-learning-floor? state rows) 1)))))
+            1
+            0))
+    (defn wsr-source-backed-native-wins? (state export labels rows min-samples margin)
+        (if (and
+                (eq (wsr-source-backed-learning-floor? state export labels rows) 1)
+                (eq (wsr-heldout-native-wins? rows min-samples margin) 1))
             1
             0))
 
