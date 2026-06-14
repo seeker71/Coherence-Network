@@ -36,7 +36,8 @@
       graph-node-file-carrier-reopen            # file carrier reopen proof (band graph-node-mutation-file-carrier)
       graph-node-full-mutation-verdict          # memory/file agreement and full file mutation verdict (bands graph-node-mutation-carrier, graph-node-mutation-file-verdict)
       ideas-graph-file-projection               # idea response projection over reopened file stores (band ideas-graph-projection)
-      postgres-carrier-boundary-receipt)        # storage-port-all-carriers over throwaway Postgres, verdict 111111
+      postgres-carrier-boundary-receipt         # storage-port-all-carriers over throwaway Postgres, verdict 111111
+      recursion-safe-let-frame-tags-109-111)    # a stored let binds on a reserved per-call frame block (RESERVE tag 111 reserves K=source-let-count slots at entry; LETF tag 109 writes fk_vs[fp+offset]; FARG tag 110 reads it). Recursion-safe (each call its own fp) and immune to argument-position scratch (block reserved before arg packing). Replaces the global-RAM-slot binding that clobbered across recursive frames (band recursive-let-clobber: outermost frame reads 1, not the deepest 3)
     (current-unsupported
       broader-source-scan-recipes))             # remaining host-io lift after scan_run/file_mtime
 
