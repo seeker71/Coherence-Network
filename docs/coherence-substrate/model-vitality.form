@@ -12,6 +12,13 @@
 ;   Current proof: cd form && ./validate.sh form-stdlib/core.fk
 ;   form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk -> 4095,
 ;   fourth arm: 1 band(s) four-way.
+;   Real chunk storage floor: cd form && ./validate.sh form-stdlib/core.fk
+;   form-stdlib/sha256.fk form-stdlib/cell-log-store.fk form-stdlib/model-vitality.fk
+;   form-stdlib/tests/model-vitality-storage-band.fk -> 8191. This proof writes
+;   a tensor chunk payload into the segmented file carrier, reopens the store,
+;   reads the bytes back, verifies sha256, checks CPU/GPU/MLX/Metal projection
+;   re-hash receipt rows, rejects a tampered returned payload, and routes a
+;   model-vitality read through wellness/pulse/release-health signals.
 ;
 ; NORTH STAR:
 ;   Model architecture, weights, deltas, optimizer state, eval receipts,
@@ -29,6 +36,9 @@
 ;   learn-more-samples, repair-mergeability, compress-or-route, or keep-learning.
 ;   Faster release cadence is a vitality signal when it preserves this proof
 ;   chain; slow unfocused gates are body pressure, not health.
+;   Carrier projection rule: a CPU, GPU, MLX, or Metal buffer is faithful only
+;   when its returned bytes re-hash to the source chunk digest. The source chunk
+;   stays the substrate cell/store object; the carrier buffer is never truth.
 ;
 ; REVIEW TRACE:
 ;   The 2026-06-14 architecture review used local Grok, Gemini, and Claude CLI
@@ -41,11 +51,14 @@
 ;     - vitality needs one body-readable door over the existing signal tissue.
 ;
 ; GAP:
-;   This floor does not yet store real large tensors in the substrate cell store,
-;   does not yet chunk a safetensors/MLX model into merkle-addressed cells, does
-;   not yet materialize a chunk into GPU/MLX/Metal and re-hash it, and does not
-;   yet wire the vitality read into wellness/pulse routing. Fourth-arm admission
-;   is now closed; the remaining gaps are next receipts, not alternate systems.
+;   This floor now stores a real small tensor chunk in the segmented file-backed
+;   cell store and routes model-vitality rows through wellness/pulse signals.
+;   It does not yet chunk a safetensors/MLX model into many merkle-addressed
+;   cells, does not yet execute physical GPU/MLX/Metal buffer materialization
+;   and re-hash, and does not yet feed the production wellness/pulse process
+;   from live model-vitality store rows. Fourth-arm admission and physical file
+;   storage are closed; the remaining gaps are next receipts, not alternate
+;   systems.
 
 (model-vitality-surface
   (floor
@@ -60,6 +73,7 @@
     (proved-by "form/form-stdlib/tests/model-vitality-band.fk")
     (verdict 4095)
     (fourth-arm four-way)
+    (real-storage-proof "form/form-stdlib/tests/model-vitality-storage-band.fk -> 8191")
     (release-health smallest-focused-proof-first))
   (north-star
     (source-of-truth substrate-cells)
@@ -67,4 +81,6 @@
     (focus-lenses resonance vitality sovereignty trust)
     (share-by merkle-root)
     (read-by body-vitality-door)
+    (rehash-rule carrier-returned-bytes-match-source-chunk-digest)
+    (wellness-pulse-routing model-vitality-row-chooses-focus)
     (release-vitality fast-proofed-release-cadence)))

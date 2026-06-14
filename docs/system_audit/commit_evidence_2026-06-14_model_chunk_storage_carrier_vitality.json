@@ -1,0 +1,102 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/model-chunk-carrier-vitality-20260614",
+  "commit_scope": "Add real tensor chunk storage, carrier projection re-hash receipts, and wellness/pulse routing over model-vitality rows.",
+  "files_owned": [
+    "form/form-stdlib/model-vitality.fk",
+    "form/form-stdlib/tests/model-vitality-storage-band.fk",
+    "docs/coherence-substrate/model-vitality.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      {
+        "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk",
+        "result": "pass",
+        "output": "✓ core.fk+model-vitality.fk+model-vitality-band.fk -> 4095; fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent — kernels agree on every sample."
+      },
+      {
+        "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sha256.fk form-stdlib/cell-log-store.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-storage-band.fk",
+        "result": "pass",
+        "output": "✓ core.fk+sha256.fk+cell-log-store.fk+model-vitality.fk+model-vitality-storage-band.fk -> 8191; 1 ok, 0 divergent — kernels agree on every sample.",
+        "kernel_scope": "host-I/O kernels; physical segmented file-store write/reopen/read uses file carrier natives, so no fourth-arm claim is made for this band"
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Not run before local evidence creation; PR/CI gate will cover after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Docs/Form proof only; no deploy performed yet."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof passed; CI/deploy not yet run for this branch."
+  },
+  "idea_ids": [
+    "form-native-model-data-as-cells",
+    "body-readable-model-vitality",
+    "real-tensor-chunk-storage"
+  ],
+  "spec_ids": [
+    "coherence-substrate-model-vitality"
+  ],
+  "task_ids": [
+    "2026-06-14-model-chunk-storage-carrier-vitality"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "release-vitality"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/model-vitality-band.fk -> 4095 four-way",
+    "form/form-stdlib/tests/model-vitality-storage-band.fk -> 8191 host-I/O",
+    "docs/coherence-substrate/model-vitality.form"
+  ],
+  "change_files": [
+    "form/form-stdlib/model-vitality.fk",
+    "form/form-stdlib/tests/model-vitality-storage-band.fk",
+    "docs/coherence-substrate/model-vitality.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Model-vitality can now store a tensor chunk payload in the real segmented file carrier, verify it by sha256 after reopen, produce carrier projection re-hash receipts, and route vitality through wellness/pulse signals.",
+    "public_endpoints": [
+      "n/a: Form stdlib proof surface"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sha256.fk form-stdlib/cell-log-store.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-storage-band.fk"
+    ]
+  }
+}
