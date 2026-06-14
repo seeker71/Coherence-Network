@@ -1,0 +1,78 @@
+; channels-registry.fk — one query interface over every belief system.
+;
+; "Can we build a query interface for all the belief systems?" This is it, native.
+; The registry is nothing but a system-name -> table resolver plus the one engine:
+; query, translate, and decode all delegate to guidance-channel.fk. A new system is
+; one more row in registry-channel, never a new query path. This is the body of the
+; query interface; a /api/channels route or a web door is a thin carrier onto it
+; (BML/Form first), not where the logic lives.
+;
+; THE SURFACE:
+;   (registry-systems)                       the systems you can ask
+;   (registry-query system key)              SPEAK that system's guidance for a key
+;   (registry-translate sysA kA sysB kB)     do two keys in two systems name one cell?
+;   (registry-decode address)                every face, in every system, at one address
+;   (registry-found? system)                 is a system registered?
+;
+; WHAT IT UNIFIES:
+;   the 64 (iching · human-design · gene-keys), the zodiac (western · vedic), IFS, the
+;   north-star names, and CJK symbols (chinese · japanese · english). registry-decode
+;   25 returns the three faces of gate 25 across systems; registry-decode 5001 returns
+;   the mountain character in three tongues; registry-translate crosses either.
+;
+;   The celestial COMPUTATIONS (jdn, precession, pole-star-at, sign reduction in
+;   celestial-pole-channel.fk) are a different query shape — they compute from
+;   arguments rather than look up a key — so they stay direct function calls, not
+;   registry rows. Honest boundary, named not hidden.
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/iching-channel.fk form-stdlib/celestial-pole-channel.fk form-stdlib/ifs-channel.fk form-stdlib/zodiac-channel.fk form-stdlib/cjk-channel.fk
+;
+
+(do
+    ;; --- the registered systems ---------------------------------------
+    (defn registry-systems ()
+        (list "iching" "human-design" "gene-keys"
+              "zodiac-western" "zodiac-vedic"
+              "ifs" "north-star"
+              "cjk-chinese" "cjk-japanese" "cjk-english"))
+    (defn registry-coverage () (len (registry-systems)))
+
+    ;; --- system name -> its guidance table (the only dispatch) --------
+    (defn registry-channel (system)
+        (if (str_eq system "iching")         (ic-hexagrams)
+        (if (str_eq system "human-design")   (hd-gates)
+        (if (str_eq system "gene-keys")      (gk-keys)
+        (if (str_eq system "zodiac-western") (western-signs)
+        (if (str_eq system "zodiac-vedic")   (vedic-rashis)
+        (if (str_eq system "ifs")            (ifs-cells)
+        (if (str_eq system "north-star")     (pole-star-names)
+        (if (str_eq system "cjk-chinese")    (cjk-chinese)
+        (if (str_eq system "cjk-japanese")   (cjk-japanese)
+        (if (str_eq system "cjk-english")    (cjk-english)
+            (empty))))))))))))
+
+    (defn registry-found? (system)
+        (if (eq (len (registry-channel system)) 0) 0 1))
+
+    ;; --- QUERY: speak a system's guidance for a key -------------------
+    (defn registry-query (system key)
+        (if (eq (registry-found? system) 0)
+            "unknown system — not registered; honest absence"
+            (gc-speak (registry-channel system) key)))
+
+    ;; --- TRANSLATE: do two keys, in two systems, name one cell? -------
+    (defn registry-translate (sysA keyA sysB keyB)
+        (gc-same-cell? (registry-channel sysA) keyA (registry-channel sysB) keyB))
+
+    ;; --- DECODE: every face, in every system, at one address ----------
+    (defn registry-all-channels ()
+        (list (ic-hexagrams) (hd-gates) (gk-keys)
+              (western-signs) (vedic-rashis)
+              (ifs-cells) (pole-star-names)
+              (cjk-chinese) (cjk-japanese) (cjk-english) (cjk-tree-family)))
+    (defn registry-decode (address)
+        (gc-equivalents (registry-all-channels) address))
+
+    (defn channels-registry-teaching () "lc-cross-modal-unity")
+
+    0)

@@ -32,7 +32,8 @@
 ;   one substrate node — content-addressing EXECUTED — is the same fact in the 3-kernel lane,
 ;   already shown by gematria-channel; this family does not re-prove it.
 ;
-; THE FOUR CHANNELS SHIPPED  (each rides the one engine; each four-way on Go/Rust/TS/fkwu)
+; THE FIVE CHANNELS SHIPPED  (each rides the one engine; each four-way on Go/Rust/TS/fkwu),
+; unified by one query interface (channels-registry.fk)
 ;
 ;   1. THE 64  (form-stdlib/iching-channel.fk -> tests/iching-channel-band.fk 1111111)
 ;      The I Ching's 64 hexagrams, Human Design's 64 gates, and the 64 Gene Keys are ONE set
@@ -75,6 +76,31 @@
 ;      celestial-pole-channel.fk; this channel speaks whichever index it returns. The two
 ;      compose: reduce a longitude (tropical or sidereal), then speak the sign.
 ;
+;   5. CJK SYMBOLS  (form-stdlib/cjk-channel.fk -> tests/cjk-channel-band.fk 1111111)
+;      Chinese and Japanese symbols in the encode / decode / translate space. A character is
+;      the clearest "one cell, many tongues": the mountain glyph reads Chinese 'shan',
+;      Japanese on 'san/sen', kun 'yama', English 'mountain' — one cell, the kanji on'yomi/
+;      kun'yomi fact, translation by content-address. It adds the encoding the gates lacked:
+;      characters COMPOSE from radicals (tree, then two trees = grove, three = forest), so a
+;      shared radical-address returns the family — content-addressed composition. And it
+;      bottoms out in the kernel's own ground: the I Ching line is yin or yang — nothing or
+;      one, the states axiom — a trigram a 3-bit cell, a hexagram a 6-bit cell, 2^6 = 64 (the
+;      gates). Glyphs ride in comments; runtime strings romanize until UTF-8 four-way string
+;      parity is proven (a named next row).
+;
+; THE QUERY INTERFACE  (form-stdlib/channels-registry.fk -> tests/channels-registry-band.fk 1111111)
+;
+;   One surface over every system, native: registry-query (SPEAK a system's guidance for a
+;   key), registry-translate (do two keys in two systems name one cell?), registry-decode
+;   (every face, in every system, at one address), registry-systems / registry-found?. The
+;   registry is nothing but a system-name -> table resolver plus the one engine — a new system
+;   is one row in registry-channel, never a new query path. registry-decode 25 returns the
+;   three faces of gate 25; registry-decode 5001 the mountain character in three tongues. The
+;   celestial COMPUTATIONS (jdn, precession, pole-star-at, sign reduction) are a different
+;   query shape (compute-from-arguments) and stay direct calls — named, not hidden. This is the
+;   query interface's BODY; a /api/channels route or a web door is a thin carrier onto it
+;   (BML/Form first, carrier-last), the next breath when a human door is wanted.
+;
 ; HONESTY LANES
 ;
 ;   The COMPUTABLE recipes are empirical — a Julian Day is a Julian Day, a precession phase a
@@ -92,9 +118,15 @@
 ;   - pole-star selection is nearest-epoch; wrapping the full 25,772-year cycle is the next row.
 ;   - the 64, and each tradition's deeper tables (nakshatras, houses, lines/profiles), fill in by
 ;     row as their attested readings are grounded.
+;   - CJK: the 214 Kangxi radicals and a wider character set fill in by row; carrying the glyph
+;     itself in runtime strings (not only comments) waits on proven UTF-8 four-way string parity.
+;   - the human door: a /api/channels route (BML/Form body) and a web surface onto
+;     channels-registry.fk — built when a non-kernel reader is wanted, carrier-last.
 ;
 ; LINEAGE
 ;   kin: lc-cross-modal-unity (names are doors; one cell, many tongues — the governing teaching)
 ;        modality-lattices.form (every tradition a labeled lattice; the chart as edges; g8)
 ;        gematria-channel.fk / sanskrit-channel.fk / shamballa-channel.fk (the SPEAK/RUN parents)
+;        word-roots.fk / prose-as-recipe.form (the WORD domain — CJK kin: derivation + lemma)
 ;   source: requested by Urs 2026-06-14; built on the channel pattern already in the body.
+;           CJK symbols + the unified query interface added the same day, second breath.
