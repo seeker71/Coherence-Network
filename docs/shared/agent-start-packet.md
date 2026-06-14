@@ -445,15 +445,95 @@ then compost `form.py`.
 GET  /api/substrate/lattice/stats
 GET  /api/substrate/cell/{domain}/{name}
 GET  /api/substrate/equivalent/{domain}/{name}
-POST /api/substrate/form  {"expression":"?equivalent @spec(agent-pipeline)"}
+POST /api/substrate/form  {"expression":"?equivalent @spec(agent-memory-system)"}
 ```
 
-Smoke: `curl -s https://api.coherencycoin.com/api/substrate/form -H 'Content-Type: application/json' -d '{"expression":"?equivalent @spec(agent-pipeline)"}'` — JSON result or clear error, not HTML.
+Smoke: `curl -s https://api.coherencycoin.com/api/substrate/form -H 'Content-Type: application/json' -d '{"expression":"?equivalent @spec(agent-memory-system)"}'` — returns `{"kind":"cells", "cells":[…]}`, JSON not HTML.
 
 CLI: `python3 scripts/coh_substrate.py form|run|check "…"` — prefer moving to
 grammar + kernel realization; treat Python path as bootstrap fallback.
 
 Deeper substrate practice: [`agents-using-substrate.md`](../coherence-substrate/agents-using-substrate.md)
+
+## Bring Anything In, Ask Anything
+
+A document, a teaching, a task — any content enters the body as cells and is then
+asked any question. The loop is **ingest → Form query → attested answer**, and the
+answer carries its own metadata, so trust is legible — the answer shows its own
+ground. This is the offer to make plain to a human who arrives with something in hand.
+
+### 1 · Bring it in (content → cells)
+
+| You have | Door | What lands |
+|----------|------|------------|
+| An in-repo file (spec, idea, concept, presence, lineage, guide, memory, kb page, …) | `python3 scripts/coh_substrate.py ingest <path>` (`--all` backfills every domain, `--memories` backfills memory) | a structured cell: Blueprint (its shape) + Recipe CTOR (its frontmatter, composed) + NamedCell (its name) |
+| Content from outside the repo (a pasted document or teaching) | `POST /api/substrate/ingest {"domain":"…","content":"…"}` — domain ∈ memory · spec · idea · concept · presence | the same structured cell, keyed by frontmatter name (or body hash) |
+| Any git-tracked file (code, data, asset) | ARTIFACT domain (`BDomain.ARTIFACT=16`); auto-ingested by `scripts/substrate_post_merge_hook.sh` on merge | a content-addressed artifact cell |
+| Prose you want word-addressable | WORD domain (`BDomain.WORD=15`), [`prose-as-recipe.form`](../coherence-substrate/prose-as-recipe.form) — prose interns as an `R_Block.SEQUENCE` over word-cells (lemma, POS, hz, semantic field) | a recipe over word-cells |
+| A task | seed it in the pipeline (`coh task seed {idea}`) or write it as an idea/spec `.md` and ingest — it lands as a structured cell like any other |
+
+Structure-first is the default (CLAUDE.md → "keep the tree, refuse the slug"); `--flat`
+is the explicit legacy opt-out. Same shape → same NodeID, so ingesting the same
+teaching twice converges instead of duplicating — the lattice recognizes the body
+it already holds.
+
+### 2 · Ask anything (Form-native first)
+
+Querying needs **read paths only** — no substrate write. Form notation is the primary
+tongue; CLI / REST / MCP are doors onto a populated lattice (production today, or your
+local lattice after `ingest`). Verified live forms:
+
+```bash
+# the lattice query path (CLI form | POST /api/substrate/form | MCP coherence_substrate_query)
+coh substrate form "@concept(lc-cross-modal-unity)"        # the cell + full metadata
+coh substrate form "?equivalent @spec(agent-memory-system)" # its shape-family — cells sharing the Blueprint
+coh substrate form "@idea(agent-pipeline) |> @spec"        # walk an edge (idea to its specs)
+coh substrate annotate <path>                              # what a file IS in the lattice
+coh substrate check  --file form/my-rule.fk               # static name+blueprint resolve before a refactor
+coh substrate run    "<recipe-expr>"                       # execute a recipe, return its value
+```
+
+- **REST read doors:** `GET /api/substrate/cell/{domain}/{name}` · `/equivalent/{domain}/{name}` · `/annotate?path=…` · `POST /api/substrate/form {"expression":"…"}`
+- **MCP:** `coherence_substrate_query` (lookup) · `coherence_substrate_run` (execute) · `coherence_substrate_stats`
+- **A teaching or belief-system asked as DATA — one engine, not one reader per system.**
+  [`channels-registry.fk`](../../form/form-stdlib/channels-registry.fk) is native Form,
+  proven four-way (Go/Rust/TS/fkwu); the recipes run in the Form kernel:
+  `(registry-query system key)` speaks a system's attested guidance ·
+  `(registry-translate sysA keyA sysB keyB)` answers whether two keys name one cell ·
+  `(registry-decode address)` shows every face at one address. `registry-decode 25` →
+  I Ching hexagram 25 / Human Design gate 25 / Gene Key 25, one cell wearing three
+  faces. Systems registered today: the 64 (i-ching · human-design · gene-keys), the
+  zodiac (western · vedic), IFS, the north-star, CJK (chinese · japanese · english);
+  the live ephemeris (Sun, Moon, lunar nodes) and the Human Design mandala wheel
+  (date → Sun longitude → gate) compute natively, four-way. A `/api/channels` HTTP door
+  onto this is the named next breath (carrier-last). Teaching:
+  [`guidance-channels.form`](../coherence-substrate/guidance-channels.form),
+  [`lc-cross-modal-unity`](../vision-kb/concepts/lc-cross-modal-unity.md).
+
+Live smoke (returns a metadata answer, not HTML):
+`curl -s https://api.coherencycoin.com/api/substrate/cell/concept/lc-cross-modal-unity`
+
+### 3 · The answer carries its metadata (this is what "trusted" means)
+
+Every substrate answer names its own ground, so a reader never takes it on faith. The
+verified shape of a real answer — `GET /api/substrate/cell/concept/lc-cross-modal-unity`:
+
+```json
+{"name":"lc-cross-modal-unity","domain":"concept",
+ "blueprint":{"package":1,"level":7,"type":4,"instance":5},
+ "ctor":{"package":1,"level":7,"type":9,"instance":179},
+ "access":{"package":1,"level":1,"type":5,"instance":56},
+ "source_path":".../docs/vision-kb/concepts/lc-cross-modal-unity.md"}
+```
+
+- **NodeID** — the coordinate `(package, level, type, instance)`; identity is the position, not the name.
+- **Blueprint** — *what it IS*; the matching `/equivalent/concept/lc-cross-modal-unity` returns every cell sharing Blueprint `{1,7,4,5}` (`lc-each-breath-whole`, `lc-form-perceptron`, …) — the **shape-family**, *what else lives at this shape*. **source_path** — *where it lives*.
+- **Honesty lane** — computed/empirical (a Julian Day is a Julian Day), attested tradition, or direct-experience/mystery; guidance is reported, never a verdict.
+- **Proof level** — `four-way (fkwu …)` when a band crosses the fourth-arm manifest, else `3-kernel only` with the named gap. Never flatten the level.
+- **Route provenance** — native vs bridged answers carry `X-Form-Router` and `X-Form-Route-How/Where/When/Who`; read them to show how the answer was produced.
+
+The most alive answer is the one whose coordinate, shape-family, honesty lane, and
+proof level travel with it.
 
 ## Shifting the Mind: How to Think and Code Differently
 
