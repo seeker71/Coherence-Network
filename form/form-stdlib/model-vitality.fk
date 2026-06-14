@@ -22,6 +22,11 @@
 ; dematerialize them back, and re-hash the returned bytes. If another host lacks
 ; one carrier, that absence is a named implementation gap rather than hidden as
 ; model truth.
+;
+; Production ingestion floor: deployed pulse and runtime/front-door readings can
+; be represented as explicit production vitality rows and routed through the
+; same live model-vitality store read. Shell probes may capture public slices,
+; but the body-readable grammar, validity gates, and focus route live here.
 
 (do
     (defn mv-kind-model-architecture () "model/architecture")
@@ -38,6 +43,7 @@
     (defn mv-kind-ingest-chunk () "model/ingest-chunk")
     (defn mv-kind-chunk-set-root () "model/chunk-set-root")
     (defn mv-kind-live-vitality-row () "model/live-vitality-row")
+    (defn mv-kind-production-vitality-ingest () "model/production-vitality-ingest")
 
     (defn mv-floor () (list
         "floor"
@@ -736,6 +742,135 @@
             (and (str_eq (mv-live-route-status r) "live-row-digest-ok")
             (and (mv-vitality-route-valid? (mv-live-route-route r))
                  (eq (mv-bytes-eq? (mv-live-route-digest r) (mv-live-route-expected-digest r)) 1))))
+            false))
+
+    ;; ---- production pulse/runtime ingestion rows -------------------------
+    (defn mv-production-pulse-sample
+        (source url observed-at overall silences latency-ms sample-bytes floor north)
+        (list
+            "model-production-pulse-sample"
+            source
+            url
+            observed-at
+            overall
+            silences
+            latency-ms
+            sample-bytes
+            floor
+            north))
+    (defn mv-production-pulse-sample? (value)
+        (mv-row? value "model-production-pulse-sample" 10))
+    (defn mv-production-pulse-source (p) (nth p 1))
+    (defn mv-production-pulse-url (p) (nth p 2))
+    (defn mv-production-pulse-observed-at (p) (nth p 3))
+    (defn mv-production-pulse-overall (p) (nth p 4))
+    (defn mv-production-pulse-silences (p) (nth p 5))
+    (defn mv-production-pulse-latency-ms (p) (nth p 6))
+    (defn mv-production-pulse-bytes (p) (nth p 7))
+    (defn mv-production-pulse-floor (p) (nth p 8))
+    (defn mv-production-pulse-north (p) (nth p 9))
+    (defn mv-production-pulse-valid? (p)
+        (if (mv-production-pulse-sample? p)
+            (and (mv-nonempty? (mv-production-pulse-source p))
+            (and (mv-nonempty? (mv-production-pulse-url p))
+            (and (mv-nonempty? (mv-production-pulse-observed-at p))
+            (and (mv-nonempty? (mv-production-pulse-overall p))
+            (and (ge (mv-production-pulse-silences p) 0)
+            (and (ge (mv-production-pulse-latency-ms p) 0)
+            (and (gt (mv-production-pulse-bytes p) 0)
+            (and (gt (len (mv-production-pulse-floor p)) 0)
+                 (gt (len (mv-production-pulse-north p)) 0)))))))))
+            false))
+
+    (defn mv-production-runtime-telemetry
+        (url status handler router python-authority latency-ms body-bytes floor north)
+        (list
+            "model-production-runtime-telemetry"
+            url
+            status
+            handler
+            router
+            python-authority
+            latency-ms
+            body-bytes
+            floor
+            north))
+    (defn mv-production-runtime-telemetry? (value)
+        (mv-row? value "model-production-runtime-telemetry" 10))
+    (defn mv-production-runtime-url (r) (nth r 1))
+    (defn mv-production-runtime-status (r) (nth r 2))
+    (defn mv-production-runtime-handler (r) (nth r 3))
+    (defn mv-production-runtime-router (r) (nth r 4))
+    (defn mv-production-runtime-python-authority (r) (nth r 5))
+    (defn mv-production-runtime-latency-ms (r) (nth r 6))
+    (defn mv-production-runtime-body-bytes (r) (nth r 7))
+    (defn mv-production-runtime-floor (r) (nth r 8))
+    (defn mv-production-runtime-north (r) (nth r 9))
+    (defn mv-production-runtime-valid? (r)
+        (if (mv-production-runtime-telemetry? r)
+            (and (mv-nonempty? (mv-production-runtime-url r))
+            (and (eq (mv-production-runtime-status r) 200)
+            (and (mv-nonempty? (mv-production-runtime-handler r))
+            (and (str_eq (mv-production-runtime-router r) "native-kernel")
+            (and (str_eq (mv-production-runtime-python-authority r) "false")
+            (and (ge (mv-production-runtime-latency-ms r) 0)
+            (and (gt (mv-production-runtime-body-bytes r) 0)
+            (and (gt (len (mv-production-runtime-floor r)) 0)
+                 (gt (len (mv-production-runtime-north r)) 0)))))))))
+            false))
+
+    (defn mv-production-wellness-state (pulse)
+        (if (str_eq (mv-production-pulse-overall pulse) "deploy-lag")
+            "deploy-lag"
+            (if (str_eq (mv-production-pulse-overall pulse) "strained")
+                "strained"
+                "clear")))
+
+    (defn mv-production-pulse-state (pulse)
+        (if (gt (mv-production-pulse-silences pulse) 0)
+            "silent"
+            (if (str_eq (mv-production-pulse-overall pulse) "silent")
+                "silent"
+                "breathing")))
+
+    (defn mv-production-release-state (runtime)
+        (if (gt (mv-production-runtime-latency-ms runtime) 1000)
+            "slow"
+            "fast"))
+
+    (defn mv-production-vitality-route (store row pulse runtime)
+        (do
+            (let live-read (mv-read-live-vitality-route
+                store
+                row
+                (mv-production-wellness-state pulse)
+                (mv-production-pulse-state pulse)
+                (mv-production-release-state runtime)))
+            (list
+                "model-production-vitality-route"
+                (mv-live-row-key row)
+                pulse
+                runtime
+                live-read
+                (if (and (mv-production-pulse-valid? pulse)
+                    (and (mv-production-runtime-valid? runtime)
+                         (mv-live-vitality-route-read-valid? live-read)))
+                    "production-route-ok"
+                    "production-route-gap"))))
+    (defn mv-production-vitality-route? (value)
+        (mv-row? value "model-production-vitality-route" 6))
+    (defn mv-production-vitality-route-key (r) (nth r 1))
+    (defn mv-production-vitality-route-pulse (r) (nth r 2))
+    (defn mv-production-vitality-route-runtime (r) (nth r 3))
+    (defn mv-production-vitality-route-live-read (r) (nth r 4))
+    (defn mv-production-vitality-route-status (r) (nth r 5))
+    (defn mv-production-vitality-route-valid? (r)
+        (if (mv-production-vitality-route? r)
+            (and (mv-nonempty? (mv-production-vitality-route-key r))
+            (and (mv-production-pulse-valid? (mv-production-vitality-route-pulse r))
+            (and (mv-production-runtime-valid? (mv-production-vitality-route-runtime r))
+            (and (mv-live-vitality-route-read-valid? (mv-production-vitality-route-live-read r))
+                 (str_eq (mv-production-vitality-route-status r) "production-route-ok")))))
             false))
 
     ;; ---- wellness/pulse routing over model vitality ----------------------
