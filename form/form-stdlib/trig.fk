@@ -59,3 +59,36 @@
 ; one — and as a recipe over already-four-way primitives it crosses the fourth arm with
 ; no new native tag (the same posture as fsin/fcos/fsqrt). b must be > 0; b <= 0 → 0.0.
 (defn fpow (b e) (if (le b 0.0) 0.0 (math_exp (mul e (fln b)))))
+
+; --- fatan/fatan2: arctangent as a Form recipe — the inverse-trig surface that completes
+; sin/cos/sqrt/ln/exp/pow. Same posture: a recipe over the four-way primitives, no kernel
+; native. Range-reduce any x to |z| <= tan(15deg): first x>1 → π/2 − atan(1/x), then
+; x>tan15 → π/6 + atan((x√3−1)/(x+√3)) — where the Taylor series atan(z)=z−z³/3+z⁵/5−…
+; reaches fp64 depth in 16 terms. fatan2 places the angle in the right quadrant in (−π,π].
+; This is what every geocentric longitude, ascendant, and coordinate transform needs.
+(defn PI () 3.141592653589793)
+(defn PI-6 () 0.5235987755982988)
+(defn TAN15 () 0.26794919243112270)
+(defn SQRT3 () 1.7320508075688772)
+; Taylor for small |z|: term_{k+1} = term_k · (−z²) · (2k+1)/(2k+3)
+(defn atan-ser (z2 term k acc n)
+  (if (ge k n) acc
+      (atan-ser z2
+                (div (mul (mul term (mul -1.0 z2)) (add (mul 2 k) 1)) (add (mul 2 k) 3))
+                (add k 1) (add acc term) n)))
+(defn atan-small (z) (atan-ser (mul z z) z 0 0.0 16))
+(defn atan-unit (x)
+  (if (gt x (TAN15))
+      (add (PI-6) (atan-small (div (sub (mul x (SQRT3)) 1.0) (add x (SQRT3)))))
+      (atan-small x)))
+(defn atan-pos (x)
+  (if (gt x 1.0) (sub (HALF-PI) (atan-unit (div 1.0 x))) (atan-unit x)))
+(defn fatan (x)
+  (if (lt x 0.0) (mul -1.0 (atan-pos (mul -1.0 x))) (atan-pos (mul x 1.0))))
+(defn fatan2 (y x)
+  (if (gt x 0.0) (fatan (div (mul y 1.0) x))
+  (if (lt x 0.0)
+      (do (let a (fatan (div (mul y 1.0) x)))
+          (if (ge y 0.0) (add a (PI)) (sub a (PI))))
+  (if (gt y 0.0) (HALF-PI)
+  (if (lt y 0.0) (mul -1.0 (HALF-PI)) 0.0)))))
