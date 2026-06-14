@@ -21,7 +21,7 @@ the substrate trinity *is* that answer:
 
 | | Structure | Interface |
 |---|---|---|
-| Trinity phase | **Blueprint (ice)** — what something IS | **Recipe / View (water)** — how it BEHAVES when seen a certain way |
+| Trinity (substance / kind) | **Blueprint** — what something IS (rests ice) | **Recipe / View** — how it BEHAVES when seen a certain way (rests water) |
 | BML reference | `object_id` / `this` (structural base) | `interface_id` / `self` (behavioral base) |
 | In the body today | a Record's fields; a table-blueprint; a NodeID by shape | `\|>` projection (`@memory(x) \|> @presence`); `form-capability-contract` |
 | Identity | content-addressed, unaliasable | attachable to *any* structurally-compatible structure, swappable |

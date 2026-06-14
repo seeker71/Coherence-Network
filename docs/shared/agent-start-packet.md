@@ -398,11 +398,13 @@ Everything else is a **theorem**: the trinity, organs, the kernel-offer protocol
 
 ### Trinity (one substance, three phases)
 
-| Phase | Role | Agent shorthand |
+| Substance (kind) | Role | Agent shorthand |
 |-------|------|-----------------|
-| **Blueprint** (ice) | What something **is** — structural identity | `@1.5.4.1`, shape |
-| **Recipe** (water) | What something **does** — operational expression | Rules that intern then **realize** |
-| **NamedCell** (gas) | Where something **lives** — ctor + access | `@memory(name)`, `@spec(slug)` |
+| **Blueprint** | What something **is** — structural identity (rests ice) | `@1.5.4.1`, shape |
+| **Recipe** | What something **does** — operational expression (rests water) | Rules that intern then **realize** |
+| **NamedCell** | Where something **lives** — ctor + access (rests gas) | `@memory(name)`, `@spec(slug)` |
+
+SUBSTANCE (the kind, above) is orthogonal to STATE (the ice/water/gas phase, set by the counts degree/population/churn). Any kind can be in any state — "rests …" is each kind's resting tendency (the diagonal), never a caste: a canonical Recipe is ice, a Blueprint can be gas. Canonical: `docs/coherence-substrate/substrate-thermodynamics.form`.
 
 Names are **query keys**. **NodeIDs** carry identity. Same shape → same NodeID
 (content-addressing).

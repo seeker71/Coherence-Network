@@ -202,7 +202,9 @@ named precisely for this model:
 
 ## Sources to walk further
 
-- **The substrate trinity** — Blueprint (ice) / Recipe (water) / NamedCell (gas);
+- **The substrate trinity** — Blueprint / Recipe / NamedCell (the SUBSTANCE axis — the *kind*);
+  the ice/water/gas woven through the equation above are each kind's *resting tendency*, not a
+  caste — STATE is an orthogonal phase axis (any kind in any state; `substrate-thermodynamics.form`).
   `docs/coherence-substrate/`. The left side of the equation read as the trinity.
 - **Michael Levin (Tufts)** — bioelectric pattern as the determinant of form
   (structure-first); [`lc-bioelectric-pattern`](lc-bioelectric-pattern.md).
