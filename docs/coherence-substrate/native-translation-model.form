@@ -1,0 +1,79 @@
+; native-translation-model.form — OUR translation learning model, COMPOSED from the body's
+; existing native-ML tissue, with the data kept OUTSIDE the recipe. A design + assembly cell;
+; the stages below are the build, each a four-way band for its pure compute.
+;
+; THE ASK (Urs, 2026-06-14):
+;   "A transformer is one solution; Google research showed adding diffusion can improve the
+;    model ~10x; we have features no other ML runtime has — try them with auto-research and
+;    auto-ml; come up with OUR OWN translation learning model, and keep the data OUTSIDE the
+;    recipe."
+;
+; READ THE BODY FIRST — the pieces already exist; this composes them, it does not reinvent:
+;   - form-native-llm.form          [INFER] the native-ML shape, and it IS "the features no
+;       other runtime has": embedding = a content-addressed COORDINATE (the NodeID is the
+;       embedding); attention = choice/fail/cut/stop sparse retrieval (a wrong path is O(1) to
+;       abandon); `nothing` = honest abstain; layers = recipes that dedup holographically and
+;       can rewrite themselves (architecture-as-data). Companion: form-native-models.form
+;       proves a standard transformer runs deterministically in Form.
+;   - ml-diffusion-model-flow.form  native diffusion denoising steps + embeddings + attention
+;       as content-addressed Recipes — the diffusion the ask points at, already modelled here.
+;   - metabolic-learning.form / geometric-learning.form  the LEARNING loop: ONE weighted
+;       gather (gl-step over (i j w) edge data) carries diffusion, convolution, message-passing,
+;       and embedding; the weights enter as DATA. SHIPPED (bands 4095 / 8388607).
+;   - embedding-as-recipe.fk        the runnable embedding primitive — content-addressed,
+;       node_eq (exact identity), embedding-distance (graded L1) — now real-float-capable
+;       (the IEEE-float surface + trig + fatan2 crossed four-way).
+;   - cjk-channel.fk                translation = one cell, many tongues, by content-address;
+;       the meaning-as-shared-cell insight this model makes LEARNED and DYNAMIC.
+;
+; WHAT IS ACTUALLY MISSING (the gap this cell closes):
+;   the TRANSLATION assembly of those pieces, and the data living OUTSIDE the recipe.
+;   translation-learn.fk uses NONE of them — it is a hardcoded lookup, a seed lexicon.
+;
+; THE TRANSLATION MODEL = a composition, not a new engine:
+;   encode   source faces -> content-addressed embeddings            (embedding-as-recipe)
+;   denoise  start from a noised target-side embedding field; refine ALL positions in
+;            parallel; each step SNAPS toward interned meaning-cells in the lattice
+;            (ml-diffusion-model-flow + the discrete-attractor move content-addressing uniquely
+;            allows: denoising falls toward interned cells instead of wandering a continuous
+;            space — fewer steps, sharper meaning)
+;   render   resolved meaning-cells -> target-tongue faces
+;   learn    the weighted-gather loop trains encode/denoise/render   (metabolic / geometric)
+;   gate     accept by essence/vitality/trust >= floor (translation-quality.fk), not exact
+;            equality; meaning preserved == convergence to the shared cell (node_eq) — so the
+;            generator and the acceptance check share ONE substrate.
+;
+; DATA OUTSIDE THE RECIPE (the constraint, and its honest seam):
+;   - corpus pairs (oracle output + attested seeds) AND learned weights (embeddings, denoiser,
+;     render maps) live as content-addressed SUBSTRATE CELLS through the storage ports — NOT
+;     in the .fk source. The recipe is the ENGINE; it LOADS data/weights at runtime. Editing
+;     the model = learning, not typing rows.
+;   - HONEST SEAM: the loader is a carrier (read_file / substrate node ops are fkwu standing
+;     walls today, so the loader is 3-kernel). The model's COMPUTE (encode, denoise,
+;     embedding-distance, gate) is the body and stays four-way. Carrier loads; engine proves.
+;
+; AUTO-RESEARCH + AUTO-ML (the model improves itself, no human typing rows):
+;   the architecture is recipe-data, so auto-ml SEARCHES architecture space: variants
+;   (denoising schedule, attractor radius, embedding arity, render map) are candidate recipes;
+;   champion-challenger.fk A/Bs them; model-vitality.fk + translation-quality.fk score them;
+;   colearning-retire.fk promotes the winner. field-auto-research.fk frames the open questions
+;   as question -> source cells -> evidence -> FMF -> answer -> residual questions.
+;
+; STAGES (each a four-way band for its pure compute; data external from S1):
+;   S1 data-out  move the corpus out of tl-exemplars() into substrate cells; the recipe reads
+;                pairs from the store. The lookup still works, but the DATA is external.
+;   S2 embed     encode faces as embedding-as-recipe vectors; translate by nearest-embedding
+;                retrieval (loopback-learning.fk's nearest-shape learner is the bootstrap);
+;                generalises to unseen faces by similarity.
+;   S3 denoise   the content-address-snapping parallel denoiser (ml-diffusion-model-flow).
+;   S4 auto-ml   architecture variants searched, scored, and promoted natively.
+;
+; OPEN QUESTIONS (for auto-research + sister consensus — named, not yet answered):
+;   - the snap rule: node_eq is exact, embedding-distance is graded — what attractor radius
+;     preserves essence without collapsing distinct meanings into one cell?
+;   - does the lattice's discreteness let us denoise in FEWER steps than continuous diffusion?
+;   - do learned render maps (argmax over candidate faces) stay four-way deterministic?
+;
+; SUPERSEDES the loopback toy framing (native-translation-loopback.form); translation-learn.fk
+; is honestly a SEED LEXICON, not a model.
+; teaching: lc-cross-modal-unity
