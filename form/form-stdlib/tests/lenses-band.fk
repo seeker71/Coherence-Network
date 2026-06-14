@@ -1,0 +1,43 @@
+; tests/lenses-band.fk — what IS, translated through media into lenses.
+;
+; Verdict 1111111 (127) when every claim holds across all kernels.
+;   the five lenses are named                                     → 1
+;   the two media are named                                       → 10
+;   one cell expressed two ways: sound 'shan', meaning 'mountain' → 100
+;   the two expressions are one cell (content-addressed)          → 1000
+;   the feeling lens routes to affect-traits (measured from sound)→ 10000
+;   the sound boundary: render TTS, recognise STT                 → 100000
+;   meaning routes to the channels; an unknown lens is refused    → 1000000
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/cjk-channel.fk form-stdlib/lenses.fk
+;
+
+(do
+    ;; --- 1. five lenses -----------------------------------------------
+    (let lens-ok (if (eq (len (lenses)) 5) 1 0))
+
+    ;; --- 2. two media -------------------------------------------------
+    (let media-ok (if (eq (len (media)) 2) 10 0))
+
+    ;; --- 3. one cell, two expressions ---------------------------------
+    (let sound-ok (ge (str_find (express-sound 1) "shan" 0) 0))
+    (let mean-ok  (ge (str_find (express-meaning 1) "mountain" 0) 0))
+    (let express-ok (if sound-ok (if mean-ok 100 0) 0))
+
+    ;; --- 4. the two expressions are one cell --------------------------
+    (let one-ok (if (eq (one-cell-many-expressions? 1) 1) 1000 0))
+
+    ;; --- 5. the feeling lens is measured from sound -------------------
+    (let feel-ok (if (ge (str_find (lens-carrier "feeling") "affect-traits" 0) 0) 10000 0))
+
+    ;; --- 6. the sound boundary: TTS render, STT recognise -------------
+    (let render-ok (str_eq (lens-render) "TTS"))
+    (let recog-ok  (str_eq (lens-recognise) "STT"))
+    (let boundary-ok (if render-ok (if recog-ok 100000 0) 0))
+
+    ;; --- 7. meaning routes to the channels; unknown lens refused ------
+    (let mean-carrier (ge (str_find (lens-carrier "meaning") "guidance-channel" 0) 0))
+    (let unknown (ge (str_find (lens-carrier "telepathy") "unknown lens" 0) 0))
+    (let route-ok (if mean-carrier (if unknown 1000000 0) 0))
+
+    (sum (list lens-ok media-ok express-ok one-ok feel-ok boundary-ok route-ok)))
