@@ -17,6 +17,11 @@
 ;
 ; A node is pair(tag-leaf, body); binary bodies are pair(a, b); IF's body
 ; is pair(c, pair(t, e)). fk-run walks a program against one argument.
+;
+; Native carrier floor: tag 105 represents http_get as a planned three-arg
+; kernel call rather than a shell/Python workaround. In the current fourth arm
+; this proves plaintext http://; north star is the same node carrying TLS/HTTPS
+; through a native channel on every host implementation.
 
 (defn fk-node (tag body) (ms-intern (ms-cell tag) body))
 (defn fk-tag  (n) (ms-value (ms-child n 0)))
@@ -105,6 +110,7 @@
 (defn fk-str-to-float (s) (fk-node 53 s))
 (defn fk-float-to-int (x) (fk-node 54 x))
 (defn fk-sequence (a b) (fk-node 69 (ms-intern a b)))
+(defn fk-http-get (url headers timeout-ms) (fk-node 105 (ms-intern url (ms-intern headers timeout-ms))))
 
 (defn fk-f64-digit? (ch)
     (do
@@ -215,6 +221,10 @@
                                              (fkm-walk fns (ms-child (fk-body node) 1) arg))
     (if (eq (fk-tag node) 53) (fk-parse-f64 (fkm-walk fns (fk-body node) arg))
     (if (eq (fk-tag node) 54) (float_to_int (fkm-walk fns (fk-body node) arg))
+    (if (eq (fk-tag node) 105) (http_get
+                                    (fkm-walk fns (ms-child (fk-body node) 0) arg)
+                                    (fkm-walk fns (ms-child (ms-child (fk-body node) 1) 0) arg)
+                                    (fkm-walk fns (ms-child (ms-child (fk-body node) 1) 1) arg))
     (if (ge (fk-tag node) 70) (fkm-walk-lowered fns node arg)
     ; list arms 18..23 — the arena family on the RECIPE side: lists are the
     ; host kernel's own lists, so a packed-args program (m4e4 multi-param)
@@ -247,7 +257,7 @@
     (if (eq (fk-tag node) 31) (str_to_int (fkm-walk fns (fk-body node) arg))
     (if (eq (fk-tag node) 32) (int_to_str (fkm-walk fns (fk-body node) arg))
     (if (eq (fk-tag node) 33) (byte_to_str (fkm-walk fns (fk-body node) arg))
-        (fkm-walk-fig fns node arg)))))))))))))))))))))))))))))))))))))))))
+        (fkm-walk-fig fns node arg))))))))))))))))))))))))))))))))))))))))))
 
 ; figure-ops arms (tags 10/11 + 34..42) on the RECIPE side: each arm calls the
 ; walking kernel's own native (band/bor/bxor/shl_u32/shr_u32/rotr_u32/add_u32/

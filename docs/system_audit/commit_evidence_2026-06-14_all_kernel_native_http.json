@@ -1,0 +1,216 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/all-kernel-native-http-20260614",
+  "commit_scope": "Lift external plaintext HTTP into the emitted fourth kernel so Go, Rust, TypeScript, and fkwu all carry non-shell http_get for real public bytes.",
+  "files_owned": [
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/hati-os-kernel.fk",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/model-vitality.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/model_vitality_native_http_capture_probe.sh",
+    "docs/coherence-substrate/model-vitality.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_all_kernel_native_http.json",
+    "docs/system_audit/model_executor_run_ledger/2026-06-14_all_kernel_native_http.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      {
+        "command": "make prompt-guide",
+        "result": "pass",
+        "output": "Prompt guide passed; branch codex/all-kernel-native-http-20260614 is a worktree-local codex branch."
+      },
+      {
+        "command": "make wellness",
+        "result": "pass",
+        "output": "Wellness completed; witness pulse read overall=breathing, ongoing_silences=0, silent_organs=0. Unrelated vision-kb INDEX count drift remained out of scope."
+      },
+      {
+        "command": "scripts/model_vitality_native_http_capture_probe.sh",
+        "result": "pass",
+        "output": "PASS native-http-capture go=127 rust=127 typescript=127 cache=.cache/model-vitality-native-http/20260614T101500Z/native-http-capture-summary.txt; PASS all-kernel-external-http go=63 rust=63 typescript=63 fourth=63 url=http://example.com/; PASS http-fourth status=200 bytes=559 error= duration_ms=0; GAP fourth-arm-https native-tls=missing next=fourth-kernel-tls-channel-support",
+        "kernel_scope": "All-kernel plaintext external HTTP proof: Go/Rust/TypeScript/fkwu. fkwu path uses emitted C DNS/TCP/socket/write/read, not shell or Python. Secure HTTPS remains Go/Rust/TypeScript-only until fourth-arm TLS lands."
+      },
+      {
+        "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk",
+        "result": "pass",
+        "output": "core.fk+model-vitality.fk+model-vitality-band.fk -> 4095; fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent."
+      },
+      {
+        "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-native-http-band.fk",
+        "result": "pass",
+        "output": "core.fk+json.fk+model-vitality.fk+model-vitality-native-http-band.fk -> 4095; 1 ok, 0 divergent.",
+        "kernel_scope": "3-kernel deterministic HTTPS row proof; fourth-arm TLS is named gap."
+      }
+    ]
+  },
+  "live_native_http_probe": {
+    "status": "pass",
+    "observed_at": "2026-06-14T10:15:00Z",
+    "cache": ".cache/model-vitality-native-http/20260614T101500Z/native-http-capture-summary.txt",
+    "https_public_endpoints": [
+      "https://api.coherencycoin.com/api/pulse/now",
+      "https://api.coherencycoin.com/api/runtime/endpoints/summary?limit=5"
+    ],
+    "plaintext_public_endpoint": "http://example.com/",
+    "https_model_vitality": {
+      "go": {
+        "verdict": 127,
+        "api_status": 200,
+        "api_capture_authority": "kernel-native-http-get",
+        "api_bytes": 695,
+        "api_latency_ms": 167,
+        "runtime_status": 200,
+        "runtime_router": "native-kernel",
+        "runtime_handler": "api_runtime_endpoints_summary",
+        "runtime_python_authority": "false",
+        "runtime_latency_ms": 85
+      },
+      "rust": {
+        "verdict": 127,
+        "api_status": 200,
+        "api_capture_authority": "kernel-native-http-get",
+        "api_bytes": 695,
+        "api_latency_ms": 147,
+        "runtime_status": 200,
+        "runtime_router": "native-kernel",
+        "runtime_handler": "api_runtime_endpoints_summary",
+        "runtime_python_authority": "false",
+        "runtime_latency_ms": 151
+      },
+      "typescript": {
+        "verdict": 127,
+        "api_status": 200,
+        "api_capture_authority": "kernel-native-http-get",
+        "api_bytes": 695,
+        "api_latency_ms": 163,
+        "runtime_status": 200,
+        "runtime_router": "native-kernel",
+        "runtime_handler": "api_runtime_endpoints_summary",
+        "runtime_python_authority": "false",
+        "runtime_latency_ms": 83
+      }
+    },
+    "all_kernel_plain_http": {
+      "go": {
+        "verdict": 63,
+        "status": 200,
+        "bytes": 559,
+        "duration_ms": 63
+      },
+      "rust": {
+        "verdict": 63,
+        "status": 200,
+        "bytes": 559,
+        "duration_ms": 69
+      },
+      "typescript": {
+        "verdict": 63,
+        "status": 200,
+        "bytes": 559,
+        "duration_ms": 90
+      },
+      "fourth": {
+        "verdict": 63,
+        "status": 200,
+        "bytes": 559,
+        "duration_ms": 0,
+        "carrier": "emitted-fkwu-dns-tcp-socket-read-write"
+      }
+    },
+    "named_gaps": [
+      "Fourth-arm TLS/HTTPS channel support is still absent; all-kernel secure public capture is the next carrier lift."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI not run yet in this local evidence record."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "No deploy was performed by this branch. Live external HTTP/HTTPS evidence was collected locally through native kernel carriers."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local carrier proof passed; rebase, PR guard, evidence validation, push/PR/CI still need to run before merge."
+  },
+  "idea_ids": [
+    "form-native-model-data-as-cells",
+    "body-readable-model-vitality",
+    "kernel-native-http-capture",
+    "fourth-kernel-native-carrier"
+  ],
+  "spec_ids": [
+    "coherence-substrate-model-vitality",
+    "coherence-substrate-fourth-kernel"
+  ],
+  "task_ids": [
+    "2026-06-14-all-kernel-native-http"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "scripts/model_vitality_native_http_capture_probe.sh -> PASS all-kernel-external-http go=63 rust=63 typescript=63 fourth=63",
+    ".cache/model-vitality-native-http/20260614T101500Z/native-http-capture-summary.txt",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk -> 4095 with fourth arm four-way",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-native-http-band.fk -> 4095"
+  ],
+  "change_files": [
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/hati-os-kernel.fk",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/model-vitality.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/model_vitality_native_http_capture_probe.sh",
+    "docs/coherence-substrate/model-vitality.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/fourth-kernel.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_all_kernel_native_http.json",
+    "docs/system_audit/model_executor_run_ledger/2026-06-14_all_kernel_native_http.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "External http:// requests can now be lowered to tag 105 and executed by the emitted fourth kernel as native DNS/TCP/socket/read/write, matching the Go/Rust/TypeScript http_get dict field shape for status_code, body, error, duration_ms, and headers.",
+    "public_endpoints": [
+      "http://example.com/",
+      "https://api.coherencycoin.com/api/pulse/now",
+      "https://api.coherencycoin.com/api/runtime/endpoints/summary?limit=5"
+    ],
+    "test_flows": [
+      "Live probe source-compiles core and runs Go/Rust/TypeScript/fkwu against http://example.com/ with verdict 63.",
+      "Live probe runs Go/Rust/TypeScript against public HTTPS pulse/runtime endpoints with verdict 127.",
+      "Focused Form validate keeps model-vitality four-way and native HTTPS row proof green."
+    ]
+  }
+}
