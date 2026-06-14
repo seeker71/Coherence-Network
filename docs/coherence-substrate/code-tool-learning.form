@@ -4,7 +4,7 @@
   (lineage
     (rests-on nearest-shape.fk classifier-eval.fk tool-channel.fk choice-receipt.fk branch-choice-order.fk choice-receipt-learning.fk oracle-catalog.fk)
     (recipe form/form-stdlib/code-tool-learning.fk)
-    (proof form/form-stdlib/tests/code-tool-learning-band.fk -> 16383 four-way))
+    (proof form/form-stdlib/tests/code-tool-learning-band.fk -> 131071 four-way))
 
   (purpose
     "Every coding action can leave native training data: the intent that was sensed, the tool that was planned, the branch that executed, the receipt that came back, and the metadata that made the result trustworthy enough to learn from."

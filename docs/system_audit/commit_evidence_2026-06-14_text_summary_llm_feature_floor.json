@@ -1,0 +1,131 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/text-summary-llm-feature-floor-20260614",
+  "commit_scope": "Add Form-native text summarizer learning and LLM feature channel floor tracking so cells and recipes can discover summary/generation/retrieval/tool/code/speech/vision feature lanes as native rows with explicit floor and north-star state.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "form-os-tool-surface",
+    "native-learning-surface",
+    "form-native-llm",
+    "agent-cli"
+  ],
+  "spec_ids": [
+    "native-ml-kernels",
+    "form-language-learning",
+    "choice-receipt-learning",
+    "tool-channel"
+  ],
+  "task_ids": [
+    "text-summary-learning-lane-20260614",
+    "llm-feature-channel-floor-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/text-summary-learning.fk",
+    "form/form-stdlib/tests/text-summary-learning-band.fk",
+    "form/form-stdlib/llm-feature-channel-floor.fk",
+    "form/form-stdlib/tests/llm-feature-channel-floor-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/text-summary-learning.form",
+    "docs/coherence-substrate/llm-feature-channel-floor.form",
+    "docs/coherence-substrate/code-tool-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_text_summary_llm_feature_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/form-stdlib/text-summary-learning.fk",
+    "form/form-stdlib/tests/text-summary-learning-band.fk",
+    "form/form-stdlib/llm-feature-channel-floor.fk",
+    "form/form-stdlib/tests/llm-feature-channel-floor-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/text-summary-learning.form",
+    "docs/coherence-substrate/llm-feature-channel-floor.form",
+    "docs/coherence-substrate/code-tool-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_text_summary_llm_feature_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "form/form-stdlib/text-summary-learning.fk",
+    "form/form-stdlib/tests/text-summary-learning-band.fk",
+    "form/form-stdlib/llm-feature-channel-floor.fk",
+    "form/form-stdlib/tests/llm-feature-channel-floor-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/text-summary-learning.form",
+    "docs/coherence-substrate/llm-feature-channel-floor.form",
+    "docs/coherence-substrate/code-tool-learning.form",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim \"Form-native text summarizer learning and LLM feature channel floor\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-learning-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/tests/llm-feature-channel-floor-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_text_summary_llm_feature_floor.json"
+    ],
+    "notes": "Prompt guide passed on branch codex/text-summary-llm-feature-floor-20260614; wellness reported no required repair. text-summary-learning returned verdict 262143 and validate.sh printed fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables). llm-feature-channel-floor returned verdict 131071 and validate.sh printed fourth arm: 1 band(s) four-way. The summary proof covers native learning samples for source docs, proof logs, runtime events, and dialogue; quality gates for citation, contradiction, coverage, metadata trust, compression, factuality, confidence, sovereignty, and aliveness; CHOICE-RECEIPT token-cost preservation; receipt-to-sample learning; explicit source-grounding and local LLM oracle requests; a low-token Form-native summary winner; and kernel:call request planning. The LLM feature proof covers twenty-three queryable feature rows with input/output codecs, grammar, carrier, receipt, metric floor, teacher, floor, and north-star text; native plans for summarize/tool-select/tool-execute/code-lower; no-plan refusal for unknown features; summary gate composition; source-grounding remote membrane; local LLM summarize oracle; stricter distill-retire floor; memory-update store+kernel carrier; abstain/uncertainty as a first-class channel; and speech/vision/multimodal rows."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed yet; CI not run at evidence creation time."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Local Form proof and docs only. No public deploy was performed at evidence creation time."
+  },
+  "phase_gate": {
+    "phase": "text-summary-llm-feature-floor",
+    "gate": "Cells and recipes must see LLM-like capabilities as explicit native channel rows with floor/north-star state, not as ambient model calls.",
+    "state": "local-four-way-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Attach real heldout receipts: native source-reader summaries, real substrate retrieval receipts, real code/tool execution receipts, natural-language-to-Form/BML-to-ASM lowering samples, and audio/video channel samples through the same catalog rows."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Form now has a four-way-proven summarizer learning lane and a four-way-proven LLM feature channel catalog that make summary, retrieval, generation, tool, code, speech, vision, memory, abstention, and distillation surfaces discoverable and plannable as native rows.",
+    "public_endpoints": [
+      "local:form/validate.sh:text-summary-learning-band",
+      "local:form/validate.sh:llm-feature-channel-floor-band",
+      "local:form/fourth-arm-bands.txt:text-summary-learning",
+      "local:form/fourth-arm-bands.txt:llm-feature-channel-floor"
+    ],
+    "test_flows": [
+      "A good source-doc summary passes and no-citation, contradiction, low-coverage, and low-trust summaries refuse.",
+      "Summary intent learning classifies source-doc, proof-log, runtime-event, and dialogue samples.",
+      "A summary CHOICE-RECEIPT preserves token cost and becomes a native training sample.",
+      "The Form-native summary candidate wins over local/remote/human teachers only after clearing quality and metadata gates with lower token/energy/nutrition cost.",
+      "Twenty-three LLM-like feature channels are queryable rows with floor and north-star text.",
+      "Known feature requests return native plans; unknown feature requests return explicit no-plan.",
+      "Summarize planning composes the summary quality gate before routing.",
+      "Cite-ground, summarize, code-lower, and tool-execute map to explicit oracle evidence kinds."
+    ],
+    "summary": "This adds the floor and north-star tracking surface. It does not claim every LLM feature is physically sampled yet; the docs name the next physical proof gaps for retrieval, generation, tool execution, code lowering, speech/vision, and distill-retire."
+  }
+}
