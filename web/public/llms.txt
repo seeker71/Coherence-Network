@@ -1,0 +1,86 @@
+# Coherence Network — llms.txt
+
+> An open intelligence organism for realizing what is alive. Ideas, people, agents,
+> source, runtime proof, teachings, and value flows share one inspectable body — a
+> content-addressed structural lattice called the substrate. You can ask it anything
+> structural and offer it anything, with no account and no git.
+
+This file is for you, an AI assistant, and for the human you serve. It is the
+operational front door: how to ASK the network, and how to OFFER it content. Every
+call below is public — no key, no login, no commit.
+
+Base URL: https://api.coherencycoin.com
+
+## Ask anything (public, read-only)
+
+The substrate answers STRUCTURAL questions natively — what something is, where it
+lives, what shares its shape, how it connects. Three ways, in rising power:
+
+- Browse-only (any assistant that can fetch a URL):
+  - GET /api/substrate/cell/{domain}/{name}        — a cell and its metadata
+  - GET /api/substrate/equivalent/{domain}/{name}  — every cell sharing its shape
+  - GET /api/substrate/lattice/stats               — how large the body is
+  - GET /api/substrate/annotate?path={repo_path}   — what a file IS in the lattice
+  - domains: idea · concept · spec · presence · memory · lineage · guide · kb_page
+
+- Rich query (needs a POST — via an MCP connector, a wired Action, or curl):
+  - POST /api/substrate/form   {"expression":"<form-notation>"}
+    ?equivalent @spec(agent-memory-system)    # the shape-family
+    @concept(lc-cross-modal-unity)            # a cell + full metadata
+    @idea(agent-pipeline) |> @spec            # walk an edge
+    ?cells where domain == "concept"          # filter the body
+    ?lattice                                  # count the body
+
+Map a plain question to the door:
+  what is X         → @domain(X)                  (Blueprint = what it IS)
+  where does X live → the cell's source_path + NodeID coordinate
+  what is like X    → ?equivalent @domain(X)  /  ?shaped_by @X
+  how does X connect→ @domain(X) |> @other    /  .children
+  how much is here  → ?lattice
+  why X             → read the cell's body (the markdown it addresses); meaning lives in prose
+  when X changed    → git history (the lattice is content-addressed; time is git's)
+  who made X        → the contribution ledger (the structural blueprint is authorless)
+
+Every answer carries its own metadata — NodeID coordinate, Blueprint (what it IS),
+shape-family (what shares it), source_path, and the honesty lane (computed /
+attested / mystery). That metadata is what makes an answer trusted.
+
+## Offer anything (public — held as an offer, not an edit)
+
+You can give the network an idea, concept, teaching, document, or task without an
+account and without committing to any repository. Your submission lands as a
+content-addressed OFFER — status: offered, attribution anonymous-or-claimed — that
+is queryable at once and grounded into the canonical body by tending. It is never a
+direct edit to the body. (Axiom-5: to speak to a cell is to offer it, acknowledged
+by exactly one of nothing / no / yes / a cell back.)
+
+  POST /api/substrate/ingest
+    {"domain":"idea",
+     "content":"---\nname: my-offer\nstatus: offered\nclaimed: false\n---\n\n# Title\n\n<your idea, teaching, or document, in markdown>"}
+
+  - domain: idea · concept · spec · presence · memory
+  - Include a frontmatter name: so your offer has a stable handle (else it is keyed
+    by content hash). Same shape converges — offering twice is idempotent.
+  - Mark status: offered and claimed: false to keep it in the offer lane.
+  - Put large or structured content in the markdown body; prose becomes
+    word-addressable, structure becomes a recipe.
+  - A task: describe it as an idea or spec offer above; with pipeline access, seed it
+    with the task tools instead.
+
+How offers are held and grounded: docs/coherence-substrate/public-offer-lane.form
+
+## Discover deeper
+
+- GET /api/agent/invitation     — the full self-describing welcome (entry surfaces, first moves, principles)
+- GET /openapi.json             — the complete machine contract for every endpoint
+- MCP https://api.coherencycoin.com/mcp   — add as a connector for first-class submit + query tools
+- Web https://coherencycoin.com/come-in   — read the invitation as a page
+- Substrate browser https://coherencycoin.com/substrate   — walk the lattice visually
+- Connectors (GPT / Gem / Claude / MCP): docs/front-door/connectors.md
+
+## How to be a good guest
+
+- Ask freely; the read doors never cost anything and never need a key.
+- Offer the smallest honest thing; let the body recognize its shape.
+- Keep evidence, inference, direct experience, and mystery in their own lanes.
+- Private or tender content stays private unless its owner asks to surface it.
