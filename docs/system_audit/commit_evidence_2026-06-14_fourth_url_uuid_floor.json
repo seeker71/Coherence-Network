@@ -1,0 +1,114 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/fourth-node-value-eq-floor-20260614",
+  "commit_scope": "Admit url-encode and uuid to the fourth-arm manifest after the literal/value equality survey showed fkwu parity.",
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "fourth-arm-floor",
+    "literal-blueprint-floor",
+    "node-value-equality-floor"
+  ],
+  "spec_ids": [
+    "fourth-arm-bands",
+    "form-validation-floor"
+  ],
+  "task_ids": [
+    "fourth-node-value-eq-floor-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/fourth-arm-bands.txt",
+    "docs/system_audit/commit_evidence_2026-06-14_fourth_url_uuid_floor.json",
+    "docs/system_audit/model_executor_run_ledger/fourth-url-uuid-floor-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/fourth-arm-bands.txt",
+    "docs/system_audit/commit_evidence_2026-06-14_fourth_url_uuid_floor.json",
+    "docs/system_audit/model_executor_run_ledger/fourth-url-uuid-floor-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "form/fourth-arm-bands.txt#url-encode",
+    "form/fourth-arm-bands.txt#uuid",
+    "form/form-stdlib/.cache/fourth-survey/r-url-encode.tsv",
+    "form/form-stdlib/.cache/fourth-survey/r-uuid.tsv",
+    "docs/system_audit/model_executor_run_ledger/fourth-url-uuid-floor-20260614.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord view",
+      "coord claim fourth-node-value-eq-floor \"inspect smallest non-overlapping fourth-arm substrate equality slice after #3023; target node/value equality or already-mapped node projection floor only, avoid Android ELF executable and BML/Hati active lanes\"",
+      "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/eq-shape-band.fk",
+      "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/url-encode-band.fk",
+      "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/uuid-band.fk",
+      "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/session-band.fk",
+      "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/symbols-band.fk",
+      "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/xpath-band.fk",
+      "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/record-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/url-encode.fk form-stdlib/tests/url-encode-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/uuid.fk form-stdlib/tests/uuid-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh url-encode uuid",
+      "cd form && VALIDATE_JOBS=4 FOURTH_PREPARE_ALL_BATCH_MAX=0 ./validate.sh",
+      "bash scripts/bml_form_jit_metal_planes_audit.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_fourth_url_uuid_floor.json",
+      "python3 scripts/model_executor_proof_ledger.py validate",
+      "python3 - <<'PY'\nimport json\nfrom pathlib import Path\nfor i, line in enumerate(Path('docs/system_audit/model_executor_runs.jsonl').read_text().splitlines(), 1):\n    json.loads(line)\nprint('OK jsonl rows', i)\nPY",
+      "git diff --check"
+    ],
+    "notes": "The refreshed fourth-arm survey showed url-encode single-pass at 16 and uuid single-pass at 15. Focused validation after admission reported fourth arm: 1 band(s) four-way for each row, and fourth-arm-gate returned PASS-4WAY for url-encode and uuid. After rebasing over PR #3024's text-summary and LLM feature rows, full Form validation reports fourth arm: 152 band(s) four-way with 568 ok and 0 divergent. The metal-plane audit passes macOS arm64 Mach-O and Android arm64 ELF receipts. Session, symbols, xpath, and record remain outside this ratchet because their refreshed survey rows still mismatch."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No public deploy performed for this Form manifest floor slice."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local focused, full, and macOS/Android validation passed; CI, review, merge, and deploy remain pending."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "url-encode and uuid now count in the fourth-arm manifest. No recipe implementation changed; after rebasing over PR #3024, the behavioral delta is the validated floor moving from 150 to 152 four-way bands while the suite remains 568 ok and 0 divergent.",
+    "public_endpoints": [
+      "local:form-fourth-arm-manifest",
+      "local:url-encode-band",
+      "local:uuid-band"
+    ],
+    "test_flows": [
+      "Survey url-encode and uuid through fkwu and confirm single-pass verdicts 16 and 15.",
+      "Validate each admitted band through validate.sh and fourth-arm-gate.",
+      "Run full Form validation and confirm fourth arm: 152 band(s) four-way, 568 ok, 0 divergent.",
+      "Run bml_form_jit_metal_planes_audit.sh and confirm macOS arm64 Mach-O plus Android arm64 ELF receipts."
+    ]
+  }
+}
