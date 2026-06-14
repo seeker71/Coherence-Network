@@ -1,0 +1,149 @@
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk
+;
+; text-summary-real-source-band - real source-file summary receipt floor.
+;
+; Floor: the band reads docs/coherence-substrate/text-summary-learning.form
+; through kernel-native file primitives, validates exact byte slices as
+; citations, gates the summary, and turns the result into a CHOICE-RECEIPT.
+; This is real host file data, not checked-in mock source text.
+;
+; North star: every durable source, store row, route body, stream event, and
+; memory cell can feed summary claim spans directly through native codecs; host
+; file I/O is one explicit capability lane, never a shell or Python carrier.
+;
+; Verdict 8191 when every claim lands:
+;   1    floor and north-star declarations include the real source step
+;   2    real file read validates size, text length, carrier, and prefix
+;   4    four citations are present and every quote matches read_file_slice
+;   8    purpose citation is an exact byte slice from the source file
+;   16   floor citation is an exact byte slice from the source file
+;   32   north-star citation is an exact byte slice from the source file
+;   64   real-source summary passes existing summary quality gates
+;   128  summary is linked to the source path and citation count
+;   256  real-source CHOICE-RECEIPT is valid and keeps token cost
+;   512  receipt becomes a native training sample
+;   1024 output envelope carries read receipt, citations, summary, receipt, and metadata
+;   2048 text:summarize-file plans through explicit host:file capability
+;   4096 proof level names host I/O as 3-kernel until fourth arm admits read_file
+(do
+    (let meta
+        (tsl-meta
+            88
+            86
+            61
+            76
+            (tsl-spectrum 78 90 73 10 36 96)
+            94
+            88
+            85))
+    (let read (tsl-real-source-read))
+    (let citations (tsl-real-source-citations (tsl-real-source-path)))
+    (let summary (tsl-real-source-summary meta))
+    (let receipt (tsl-real-source-receipt summary meta))
+    (let receipt-sample (tsl-receipt-sample receipt "summary:real-source-receipt"))
+    (let output (tsl-real-source-output read citations summary receipt meta))
+    (let file-plan (tsl-plan-request "text:summarize-file"))
+
+    (let c0
+        (if (and
+                (eq (len (tsl-floor)) 4)
+                (eq (len (tsl-north-star)) 4))
+            1
+            0))
+    (let c1
+        (if (and
+                (eq
+                    (tsl-source-read-valid?
+                        read
+                        "# text-summary-learning.form - native text summarizer learning lane"
+                        4000)
+                    1)
+                (str_eq (tsl-source-read-carrier read) "kernel-native-file"))
+            2
+            0))
+    (let c2
+        (if (and
+                (eq (len citations) 4)
+                (eq (tsl-citations-match? citations) 1))
+            4
+            0))
+    (let c3
+        (if (and
+                (str_eq
+                    (tsl-citation-file-slice (nth citations 1))
+                    "Make summarization a native learning lane instead of an opaque LLM side effect.")
+                (eq (tsl-citation-line (nth citations 1)) 11))
+            8
+            0))
+    (let c4
+        (if (and
+                (str_eq
+                    (tsl-citation-file-slice (nth citations 2))
+                    "A summary passes only when it has claims")
+                (eq (tsl-citation-line (nth citations 2)) 17))
+            16
+            0))
+    (let c5
+        (if (and
+                (str_eq
+                    (tsl-citation-file-slice (nth citations 3))
+                    "External LLMs, source search, model committees")
+                (eq (tsl-citation-line (nth citations 3)) 25))
+            32
+            0))
+    (let c6
+        (if (eq (tsl-summary-pass? summary) 1)
+            64
+            0))
+    (let c7
+        (if (and
+                (str_eq (tsl-summary-source-id summary) (tsl-real-source-path))
+                (and
+                    (eq (tsl-summary-source-claims summary) 4)
+                    (eq (tsl-summary-citations summary) (len citations))))
+            128
+            0))
+    (let c8
+        (if (and
+                (cr-choice-receipt-valid? receipt)
+                (eq (cr-receipt-cost receipt) 96))
+            256
+            0))
+    (let c9
+        (if (and
+                (str_eq (tsl-label receipt-sample) "form-native:summary")
+                (eq (len (tsl-feature receipt-sample)) 6))
+            512
+            0))
+    (let c10
+        (if (and
+                (str_eq
+                    (tsl-source-read-path (tsl-real-source-output-read output))
+                    (tsl-real-source-path))
+                (and
+                    (eq (len (tsl-real-source-output-citations output)) 4)
+                    (and
+                        (str_eq
+                            (tsl-summary-kind (tsl-real-source-output-summary output))
+                            "real-source-summary")
+                        (and
+                            (str_eq
+                                (cr-receipt-expression (tsl-real-source-output-receipt output))
+                                "summarize-real-source-file")
+                            (eq (tsl-meta-trust (tsl-real-source-output-meta output)) 88)))))
+            1024
+            0))
+    (let c11
+        (if (and
+                (str_eq (tsl-plan-status file-plan) "summary/plan")
+                (and
+                    (str_eq (tsl-plan-protocol file-plan) "host:file")
+                    (str_eq (tsl-plan-capability file-plan) "cap.host.file.read")))
+            2048
+            0))
+    (let c12
+        (if (str_eq (tsl-real-source-proof-level) "3-kernel-host-io-read-file")
+            4096
+            0))
+
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12)))
