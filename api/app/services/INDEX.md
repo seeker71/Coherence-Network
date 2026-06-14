@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 246
+**Total files**: 247
 
 | File | Purpose |
 |---|---|
@@ -170,6 +170,7 @@
 | [meta_service.py](meta_service.py) | Metadata self-discovery service. |
 | [metrics_service.py](metrics_service.py) | Task metrics: persistence and aggregation. Spec 026 Phase 1. |
 | [mvp_baseline_service.py](mvp_baseline_service.py) | Helpers for local MVP baseline artifact discovery. |
+| [native_training_receipts.py](native_training_receipts.py) | Load committed native training receipt artifacts for model dashboards. |
 | [news_ingestion_service.py](news_ingestion_service.py) | News ingestion service: fetches RSS feeds and caches results. |
 | [news_resonance_service.py](news_resonance_service.py) | News resonance service: matches news items to ideas using keyword-based resonance scoring. |
 | [node_identity_service.py](node_identity_service.py) | Node identity derivation and local persistence. |

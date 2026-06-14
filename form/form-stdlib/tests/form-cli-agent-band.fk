@@ -1,0 +1,55 @@
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk form-stdlib/tool-embodiment.fk form-stdlib/io-match.fk form-stdlib/form-cli-loop.fk form-stdlib/form-cli-agent.fk
+;
+; form-cli-agent-band — the agent loop step runs: it decides the SHAPE of one
+; step (reason | run a channel | finish), routing local-first and validating
+; every tool against the real channel catalog. This is the trunk that makes
+; form-cli a drop-in for codex/claude/grok/gemini — and the interior that makes
+; it categorically different (local-first, learned).
+;
+; Verdict 31 when every claim lands:
+;   1   a named, capability-carrying tool resolves to a real planned channel
+;   2   the lane gate works per step: low confidence -> oracle, high -> local
+;   4   a "done" step ends the loop (fca-done?) and carries no channel
+;   8   a tool whose channel does NOT carry the capability is honest: tool/no-plan
+;   16  an uncertain step with no tool is an oracle consult (kind+lane "oracle")
+(do
+    (let S (cr-outcome-success))
+    (let F (cr-outcome-fail))
+    (let threshold 70)
+
+    ; 1 — a learned tool step over a real capability resolves to a planned channel.
+    (let a-tool (fca-next "tool" 8 10 threshold "exec" "cap.host.exec"))
+    (let c0
+        (if (and (str_eq (fca-action-kind a-tool) "tool")
+                 (and (str_eq (fca-action-tool a-tool) "exec")
+                      (str_eq (fca-action-status a-tool) "tool/plan")))
+            1 0))
+
+    ; 2 — the lane gate: the SAME tool step routes oracle when unlearned, local
+    ;     when learned. (the flywheel, per step.)
+    (let a-low  (fca-next "tool" 4 10 threshold "exec" "cap.host.exec"))
+    (let c1
+        (if (and (str_eq (fca-action-lane a-low) "oracle")
+                 (str_eq (fca-action-lane a-tool) "local"))
+            2 0))
+
+    ; 4 — a "done" step ends the loop and names no channel.
+    (let a-done (fca-next "done" 8 10 threshold "" ""))
+    (let c2
+        (if (and (eq (fca-done? a-done) 1)
+                 (str_eq (fca-action-tool a-done) ""))
+            4 0))
+
+    ; 8 — a tool whose channel does not carry the asked capability is honest.
+    ;     exec carries cap.host.exec, NOT cap.host.file -> tool/no-plan.
+    (let a-bad (fca-next "tool" 8 10 threshold "exec" "cap.host.file"))
+    (let c3 (if (str_eq (fca-action-status a-bad) "tool/no-plan") 8 0))
+
+    ; 16 — an uncertain step with no tool consults the oracle.
+    (let a-or (fca-next "reason" 4 10 threshold "" ""))
+    (let c4
+        (if (and (str_eq (fca-action-kind a-or) "oracle")
+                 (str_eq (fca-action-lane a-or) "oracle"))
+            16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))

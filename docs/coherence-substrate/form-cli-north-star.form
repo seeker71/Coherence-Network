@@ -13,6 +13,27 @@
     "It uses local resources as native as the host allows (form-macho/form-elf emit the runnable binary; GPU/DSP/MLX lanes are tool-channel protocols) and keeps capability choice sovereign and inspectable."
     "Its purpose is to shift LLM cost into internal learning: each oracle call is a teacher whose result is captured, so future flows of the same shape run local. Usage decreases as the body learns.")
 
+  ; ── the trunk: the agent loop that makes it a DROP-IN (the first stone) ───────
+  ; ask/capture/transmute/embody are interior organs. The thing they hang off — the
+  ; thing that earns the name "agent CLI" — is the loop that DOES the work: reason,
+  ; run a tool, observe, repeat, answer. That is the ground to stand on: a CLI you
+  ; can run in place of codex/claude/grok/gemini/cursor. The interior is what makes
+  ; it categorically different (local-first routing, every oracle call captured and
+  ; learned from), but the loop only counts once it does the work.
+  (trunk
+    (loop-shape "reason -> run a tool-channel -> observe -> repeat -> answer — the same loop every agent CLI runs, so form-cli is a drop-in for the work, not just a logger.")
+    (step-recipe form/form-stdlib/form-cli-agent.fk
+        "fca-next decides the SHAPE of one step (run a channel | consult the oracle | finish), composing the proven organs: fcl-route (who answers — local|oracle) + tc-plan (the named tool is a real host channel). The carrier never decides these; it serves the action this recipe returns. Proof: tests/form-cli-agent-band.fk -> 31 four-way.")
+    (channels tool-channel.fk "the tools are real named channels: bash (host:exec), read_file/write_file (host:file), search (stream:read/grep). tool-channel plans; the carrier executes the plan.")
+    (oracle-ladder
+        "north-star order, the loop identical at each rung, only the backend differs:"
+        "1 form-native — a local Form recipe handles the step (the destination; empty until the lane learns)"
+        "2 ollama — a local model, no key, sovereign (the default oracle while the native lane learns — most aligned)"
+        "3 openrouter — frontier models; the auto-research 'try >= 2 models' rung"
+        "4 cli:<claude|codex|gemini|grok> — wrap an installed agent CLI: 'the cli you are using' as the oracle")
+    (running "Demonstrated live on ollama llama3.2:3b (local, no key): the loop wrote a file, read it back, finished, and captured the run — a coding agent on local hardware + local model. Bootstrap carrier scripts/form_cli.py (subcommand `agent`); the native form-macho binary running this loop directly is the destination.")
+    (every-call-learns "Each step writes an io-match row; each run's final answer is captured raw AND transmuted (training-catalog.fk). The drop-in agent IS the data source: every use fills the corpus that trains the local lane toward rung 1."))
+
   ; ── what no other agent CLI can do (the real differentiator) ─────────────────
   ; The host-tool reflexes other models are trained into are crutches, not the
   ; destination. We do not make them Form-native; we transcend the need for them.

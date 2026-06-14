@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 242
+**Total files**: 243
 
 | File | Purpose |
 |---|---|
@@ -86,6 +86,7 @@
 | [form_map_demo.sh](form_map_demo.sh) | form_map_demo.sh — the FULL asm-to-source mapping for a native 4th-kernel |
 | [form_mut_demo.sh](form_mut_demo.sh) | form_mut_demo.sh — the MUTATION channel live: track cell creation (heap CONS) |
 | [form_native_grammar_contract.py](form_native_grammar_contract.py) | Audit Form-native grammar status without counting host parser bridges as done. |
+| [form_native_training_receipt.py](form_native_training_receipt.py) | Emit/check a deterministic native training receipt. |
 | [form_os_channel_demo.sh](form_os_channel_demo.sh) | form_os_channel_demo.sh — the MINIMAL living surface. Emit a native binary from |
 | [form_provenance_demo.sh](form_provenance_demo.sh) | form_provenance_demo.sh — CELL PROVENANCE, the full chain live: a running |
 | [form_symbol_demo.sh](form_symbol_demo.sh) | form_symbol_demo.sh — SOURCE-SYMBOL LOOKUP FROM FRAMEBUFFER INSPECTION. The spy |

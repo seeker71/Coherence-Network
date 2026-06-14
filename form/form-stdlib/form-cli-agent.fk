@@ -1,0 +1,66 @@
+; form-cli-agent.fk — the agent loop STEP, as a recipe.
+;
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk form-stdlib/tool-embodiment.fk form-stdlib/io-match.fk form-stdlib/form-cli-loop.fk
+;
+; This is the TRUNK the organs hang off: the thing that makes form-cli a drop-in
+; for codex / claude / grok / gemini / cursor. Those CLIs run an agent loop —
+; reason, call a tool, observe, repeat, answer. So does this. The categorical
+; difference lives in the interior (fcl-route runs local-first; every oracle step
+; is captured and learned from), but the loop only earns the name "agent CLI"
+; once it DOES the work. This recipe decides the SHAPE of one step; the carrier
+; drives the loop (calls the oracle, executes the planned channel, observes,
+; captures). It composes the proven organs rather than inventing a dispatcher:
+;   fcl-route-learned  (form-cli-loop) — who answers this step: local lane | oracle
+;   tc-plan-tool       (tool-channel)  — is the named tool a real host channel
+; The carrier never decides those; it serves the action this recipe returns.
+;
+; Proven by: form-stdlib/tests/form-cli-agent-band.fk
+
+; an action is (kind, lane, tool, op, status):
+;   kind   "tool" run a host channel | "oracle" consult the LLM | "done" end
+;   lane   "local" (Form-native, ~0 tokens) | "oracle" (remote/host model)
+;   tool   the channel name (tool-channel word), "" when none
+;   op     the channel op, "" when none
+;   status "tool/plan" planned | "tool/no-plan" missing channel | "end" | "consult"
+(defn fca-action (kind lane tool op status)
+    (list kind lane tool op status))
+(defn fca-action-kind (a) (nth a 0))
+(defn fca-action-lane (a) (nth a 1))
+(defn fca-action-tool (a) (nth a 2))
+(defn fca-action-op (a) (nth a 3))
+(defn fca-action-status (a) (nth a 4))
+
+; the lane for this step: the same confidence gate the loop uses. As the local
+; lane's accumulated pass-rate (oracle-taught) crosses the threshold, the step
+; flips oracle -> local — the flywheel, applied per step.
+(defn fca-lane (passes attempts threshold)
+    (fcl-route-learned passes attempts threshold))
+
+; validate the tool the step names is a real planned channel (tool-channel
+; never executes; it returns a plan or tool/no-plan). capability is the cap.*
+; the tool must carry.
+(defn fca-plan (tool-name capability)
+    (tc-plan-tool tool-name capability))
+
+; build a tool action from a resolved lane and a tool-channel plan.
+(defn fca-tool-action (lane plan)
+    (fca-action "tool" lane (tc-plan-tool-name plan) (tc-plan-op plan) (tc-plan-status plan)))
+
+; the next action for this step. kind is what the loop proposes (the oracle
+; named a tool, or it is done, or the step itself is an oracle consult):
+;   "done"   -> end the loop
+;   "tool"   -> route the lane, then validate the named channel
+;   else     -> an oracle consult for the uncertain step
+(defn fca-next (kind passes attempts threshold tool-name capability)
+    (if (str_eq kind "done")
+        (fca-action "done" (fca-lane passes attempts threshold) "" "" "end")
+        (if (str_eq kind "tool")
+            (fca-tool-action (fca-lane passes attempts threshold)
+                             (fca-plan tool-name capability))
+            (fca-action "oracle" "oracle" "" "" "consult"))))
+
+; the loop ends when the action is "done".
+(defn fca-done? (a) (if (str_eq (fca-action-kind a) "done") 1 0))
+
+; a step is sovereign (no external tokens) when its lane is local.
+(defn fca-sovereign? (a) (if (str_eq (fca-action-lane a) "local") 1 0))
