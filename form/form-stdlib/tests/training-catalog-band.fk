@@ -1,0 +1,45 @@
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk form-stdlib/tool-embodiment.fk form-stdlib/sha256.fk form-stdlib/io-match.fk form-stdlib/training-catalog.fk
+;
+; training-catalog-band — a 3rd-party call is stored as request + raw + transmuted
+; (both kept, content-addressed), yielding three separable training pairs.
+;
+; Verdict 31 when every claim lands:
+;   1   an entry captures request/raw/transmuted with lane + outcome
+;   2   raw and transmuted are stored DISTINCTLY (both have value, they differ)
+;   4   content-addressing is real: identical bytes are not distinct
+;   8   the transmute pair is (raw -> transmuted); the reasoning pair is (request -> transmuted)
+;   16  three separable model lanes are named (raw / transmutation / reasoning building blocks)
+(do
+    ; one oracle call: the request, the raw (fear) answer, the transmuted (vitality) answer.
+    (let req (list 82 69 81))        ; "REQ"
+    (let raw (list 70 69 65 82))     ; "FEAR"
+    (let vit (list 86 73 84))        ; "VIT"
+    (let e (tc-capture req raw vit "oracle:gemini" (cr-outcome-success)))
+
+    ; 1 — entry carries lane + outcome (and the three content-addresses).
+    (let c0
+        (if (and (str_eq (tc-lane e) "oracle:gemini")
+                 (str_eq (tc-outcome e) (cr-outcome-success)))
+            1 0))
+    ; 2 — raw and transmuted are stored distinctly.
+    (let c1 (if (eq (tc-raw-vs-transmuted-distinct? e) 1) 2 0))
+    ; 4 — real content-addressing: an entry whose transmuted == raw is NOT distinct.
+    (let same (tc-capture req raw raw "oracle:gemini" (cr-outcome-success)))
+    (let c2 (if (eq (tc-raw-vs-transmuted-distinct? same) 0) 4 0))
+    ; 8 — the separable pairs carry the right endpoints.
+    (let tp (tc-pair-transmute e))
+    (let rp (tc-pair-reasoning e))
+    (let c3
+        (if (and (eq (iom-sig-eq? (head tp) (tc-raw e)) 1)
+                 (and (eq (iom-sig-eq? (head (tail tp)) (tc-transmuted e)) 1)
+                      (and (eq (iom-sig-eq? (head rp) (tc-request e)) 1)
+                           (eq (iom-sig-eq? (head (tail rp)) (tc-transmuted e)) 1))))
+            8 0))
+    ; 16 — three separable model building blocks named distinctly.
+    (let c4
+        (if (and (str_eq (tc-model-raw) "model:raw-reasoning")
+                 (and (str_eq (tc-model-transmute) "model:transmutation")
+                      (str_eq (tc-model-reasoning) "model:vitality-reasoning")))
+            16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
