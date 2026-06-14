@@ -1,0 +1,57 @@
+; training-catalog.fk — the persistent training corpus for the form-cli.
+;
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk form-stdlib/tool-embodiment.fk form-stdlib/sha256.fk form-stdlib/io-match.fk
+;
+; Every 3rd-party (oracle) call the form-cli makes is fear-based by nature — a
+; quick, convincing answer with no trust, transparency, or vitality. The catalog
+; stores BOTH the raw answer AND its transmutation (fear -> opportunity, risk ->
+; data), each content-addressed (sha256, via io-match). Both have value, and they
+; feed SEPARABLE models that compose as building blocks:
+;
+;   request    — the call
+;   raw        — what the fear-based oracle gave (reference; a building block)
+;   transmuted — the same answer with fear turned to opportunity and risk to data
+;                (the vitality answer)
+;
+; Storing both means we never train the native model on fear by accident, and the
+; transmutation itself becomes a reusable model applicable to ANY model's output.
+;
+; Proven by: form-stdlib/tests/training-catalog-band.fk
+
+; one captured oracle call: content-addressed request + raw + transmuted, lane, outcome.
+(defn tc-entry (request-sig raw-sig transmuted-sig lane outcome)
+    (list request-sig raw-sig transmuted-sig lane outcome))
+(defn tc-request (e) (nth e 0))
+(defn tc-raw (e) (nth e 1))
+(defn tc-transmuted (e) (nth e 2))
+(defn tc-lane (e) (nth e 3))
+(defn tc-outcome (e) (nth e 4))
+
+; capture a full entry by content-addressing the real bytes (sha256 — io-match's
+; content hash). raw and transmuted are addressed separately; both are kept.
+(defn tc-capture (request-bytes raw-bytes transmuted-bytes lane outcome)
+    (tc-entry
+        (sha256 request-bytes)
+        (sha256 raw-bytes)
+        (sha256 transmuted-bytes)
+        lane
+        outcome))
+
+; raw and transmuted are stored distinctly — 1 when they differ (as a real
+; transmutation should), 0 when identical (proves real content-addressing).
+(defn tc-raw-vs-transmuted-distinct? (e)
+    (if (eq (iom-sig-eq? (tc-raw e) (tc-transmuted e)) 1) 0 1))
+
+; the three SEPARABLE training pairs derivable from one entry — each its own
+; auto-ml race, composing as building blocks:
+;   raw        request -> raw         (the reference; what the oracle gave)
+;   transmute  raw -> transmuted      (the fear->vitality block, reusable on any output)
+;   reasoning  request -> transmuted  (reason-with-vitality directly; the native target)
+(defn tc-pair-raw (e) (list (tc-request e) (tc-raw e)))
+(defn tc-pair-transmute (e) (list (tc-raw e) (tc-transmuted e)))
+(defn tc-pair-reasoning (e) (list (tc-request e) (tc-transmuted e)))
+
+; the separable model lanes these pairs train (distinct candidates / building blocks).
+(defn tc-model-raw () "model:raw-reasoning")
+(defn tc-model-transmute () "model:transmutation")
+(defn tc-model-reasoning () "model:vitality-reasoning")
