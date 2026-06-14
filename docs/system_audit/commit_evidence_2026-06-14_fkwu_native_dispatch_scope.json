@@ -1,7 +1,7 @@
 {
   "date": "2026-06-14",
   "thread_branch": "claude/fkwu-native-dispatch-scope",
-  "commit_scope": "Scope the fkwu (fourth kernel) native-dispatch I/O boundary — the one unbuilt seam between 'fkwu walks request-handling logic correctly' and 'fkwu serves a real route'. Grounds the current two-pathway native resolution (fourth-shim Form mirrors + emitted-C walker tags incl. the fenced file-I/O seam), the already-four-way carrier-dispatch seed (substrate-core's first-class indirect carrier call; the channel-* functional-carrier proof pattern), and recommends one host-native vector over per-op inlined tags, with the proof discipline that keeps route logic four-way while contracting the I/O boundary. Design doc only; no runtime change.",
+  "commit_scope": "Scope the fkwu (fourth kernel) native-dispatch I/O boundary to its end, with every named gap closed. After an independent Grok review of the emitter internals, the design rides the storage-port carrier the body already proves four-way: the carrier IS the capability-contract (bounded vtable), substrate-core proves functional-vs-live substitutability, and persistence.fk's write_form_binary/read_form_binary IS the marshalling ABI. Primary path: offload a route's pure shape_tree+json_emit slice to fkwu (value-tree in, value out, no host call, no reentrancy/capability surface), the carrier (Go) owning the listener and live I/O. Deferred facility: a host-bound carrier whose ops resolve through one capability-scoped seam, closing capability scoping (carrier handle, not global name), reentrancy (host op is a leaf), cancellation (host-enforced deadline returns an error-value), determinism (substrate-core substitutability), and re-emit blast radius (one arm). Design doc only; no runtime change.",
   "change_intent": "docs_only",
   "idea_ids": [
     "kernel-native-api-readiness",
@@ -37,6 +37,13 @@
         "diagnosis",
         "implementation"
       ]
+    },
+    {
+      "contributor_id": "agent:grok",
+      "contributor_type": "machine",
+      "roles": [
+        "review"
+      ]
     }
   ],
   "agent": {
@@ -55,7 +62,8 @@
     "commands": [
       "Grounded the scope against source: fourth-shim.fk (Form mirrors), hati-os-kernel-emit.fk (walker tags 3..63 incl. inlined file-I/O syscalls + socket externs), form-flatten.fk (flt-ops; native/user calls indistinguishable by tag), fourth-arm-bands.txt (kernel-http/route bands four-way; host-io family fenced; substrate-core durable I/O four-way via first-class carrier dispatch)",
       "Confirmed Go + Rust carrier native tables (registerNative / register_native) already hold pg_connect/pg_query_rows/http_get/fs_*/file_*",
-      "Confirmed the Rust kernel-router image ships no toolchain (JIT cannot fire in prod) and the Go JIT subset covers lists/strings/floats/closures"
+      "Confirmed the Rust kernel-router image ships no toolchain (JIT cannot fire in prod) and the Go JIT subset covers lists/strings/floats/closures",
+      "Grounded the gap-closure in the body's existing four-way patterns: storage-port.fk (carrier = capability-contract, bounded vtable, indirect dispatch), substrate-core.fk (functional-vs-live carrier substitutability), persistence.fk (write_form_binary/read_form_binary = the marshalling ABI)"
     ],
     "notes": "Scope/design doc grounded in the actual emit recipes and band manifest; no code path changed."
   },
