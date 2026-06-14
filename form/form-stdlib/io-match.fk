@@ -1,6 +1,6 @@
 ; io-match.fk — capture real LLM/tool usage so it becomes LEARNABLE, not just paid for.
 ;
-; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk form-stdlib/tool-embodiment.fk
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk form-stdlib/tool-embodiment.fk form-stdlib/sha256.fk
 ;
 ; Today usage is paid for and discarded: automation_usage counts tokens, the
 ; learning sample carries only a feature-vector — never the actual (input, output)
@@ -47,6 +47,24 @@
 (defn iom-lane (r) (nth r 3))
 (defn iom-tokens (r) (nth r 4))
 (defn iom-outcome (r) (nth r 5))
+
+; ── capture: content-address a real call into a record ────────────────────────
+; The channel's defining act. Given the real input/output BYTES of a call, address
+; them with sha256.fk (the Form-native content hash — the same content-addressing
+; the substrate is built on) and build the record. Identity comes for free: the
+; same input always yields the same sig, so repeat calls group and dedup, and the
+; structural mode can ask "is this the canonical node?" against output-bp.
+(defn iom-capture (input-bytes output-bytes output-bp lane tokens outcome)
+    (iom-record (sha256 input-bytes) (sha256 output-bytes) output-bp lane tokens outcome))
+
+; sig equality over the sha256 digest (a byte list) — element-wise monomorphic
+; recursion, so it crosses the fourth arm (no list-eq primitive, no fn-argument).
+(defn iom-sig-eq? (a b)
+    (if (nil? a)
+        (if (nil? b) 1 0)
+        (if (nil? b)
+            0
+            (if (eq (head a) (head b)) (iom-sig-eq? (tail a) (tail b)) 0))))
 
 ; ── mode 1: outcome (DEFAULT, generalizes) ───────────────────────────────────
 ; a candidate attempt passes when ITS OWN output worked — not when it equals the
