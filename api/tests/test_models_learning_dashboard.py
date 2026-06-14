@@ -112,18 +112,27 @@ def test_learning_dashboard_counts_committed_native_training_receipts(tmp_path: 
             "recipe_path": "form/form-stdlib/native-training-receipt.fk",
             "proof_band_path": "form/form-stdlib/tests/native-training-receipt-band.fk",
             "observed_at": "2026-06-14T00:00:00Z",
-            "continuous_cycle_count": 1,
+            "continuous_cycle_count": 3,
+            "cycle_receipts": [
+                {"seq": 1523},
+                {"seq": 1524},
+                {"seq": 1525},
+            ],
             "weights": {"hash": "sha256:weights"},
-            "data": {"hash": "sha256:data", "sample_count": 6},
+            "data": {"hash": "sha256:data", "sample_count": 12},
             "eval": {
                 "hash": "sha256:eval",
-                "heldout_count": 4,
-                "correct_count": 4,
+                "heldout_count": 12,
+                "correct_count": 12,
                 "wrong_count": 0,
                 "native_accuracy_ppm": 1000000,
                 "oracle_accuracy_ppm": 750000,
             },
-            "training": {"native_beats_oracle": True},
+            "training": {
+                "source": "Form-native receipt floor",
+                "native_beats_oracle": True,
+                "larger_heldout_window_pass": True,
+            },
             "validation": {"status": "pass"},
         },
     )
@@ -150,4 +159,7 @@ def test_learning_dashboard_counts_committed_native_training_receipts(tmp_path: 
     assert dashboard.summary.trained_native_model_count == 1
     assert dashboard.native_training_artifacts[0].artifact_id == "form-native-nearest-shape-v0"
     assert dashboard.native_training_artifacts[0].weights_hash == "sha256:weights"
+    assert dashboard.native_training_artifacts[0].cycle_receipt_count == 3
+    assert dashboard.native_training_artifacts[0].latest_cycle_seq == 1525
+    assert dashboard.native_training_artifacts[0].larger_heldout_window_pass is True
     assert dashboard.native_training_artifacts[0].native_beats_oracle is True
