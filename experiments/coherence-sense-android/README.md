@@ -169,8 +169,39 @@ cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-s
 
 That proves summary-only STT, vision, multimodal, and GPU label rows from
 active counters, and it classifies stale or non-increasing cycles as blocked in
-Form. The remaining host gap is direct Form HTTP/resource sampling of
-`http://localhost:8800/state` and direct Form process/device carriers for adb.
+Form.
+
+To emit a real host/device/model training-window receipt from the Mac side:
+
+```bash
+scripts/real_mesh_training_emitters.sh \
+  --run-models \
+  --ollama-model llama3.2:3b \
+  --whisper-model ~/whisper-models/ggml-large-v3-turbo.bin \
+  --data-root /path/to/content-addressed/train \
+  --heldout-root /path/to/content-addressed/heldout
+```
+
+The receipt is written under `.cache/real-mesh-training/windows/...` unless
+`--out` is supplied. The carrier samples `http://localhost:8800/state`,
+`http://localhost:8799/state`, `adb devices`, bounded file roots, macOS TTS,
+and optional local Ollama/Whisper probes. It reports `blocked` until the hard
+Form floor is real: at least 300 MiB of training bytes, 100 MiB of heldout
+bytes, 10k labels, live hashed sources, completed local process receipts, and
+all required lanes. Use `--require-active` when a release job should fail
+unless that floor is met.
+
+The receipt shape is validated by:
+
+```bash
+cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/pareto.fk form-stdlib/autoresearch-loop.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/native-training-receipt.fk form-stdlib/real-mesh-training-carrier.fk form-stdlib/real-mesh-training-emitter.fk form-stdlib/tests/real-mesh-training-emitter-band.fk
+cd form && bash scripts/fourth-arm-gate.sh real-mesh-training-emitter
+```
+
+This closes the previous direct host gap at the receipt boundary: Form now owns
+the pass/block authority for direct HTTP/resource sampling and adb/process
+carriers, while the shell remains only the physical IO emitter until those host
+operations are carried directly by the native kernel.
 
 ## Hati mesh identity + channels
 

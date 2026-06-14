@@ -4,7 +4,7 @@
 > purpose comes from the top docstring/comment of the file. To update
 > a description, edit the file's first line and re-run the script.
 
-**Total files**: 239
+**Total files**: 240
 
 | File | Purpose |
 |---|---|
@@ -152,6 +152,7 @@
 | [protocol_beliefs_demo.sh](protocol_beliefs_demo.sh) | protocol_beliefs_demo.sh — one binary carrying the core belief system of the |
 | [publish_snapshot.py](publish_snapshot.py) | Publish the weekly verification snapshot — public-verification-framework R2 CLI. |
 | [quantum_physics_recipe_proof.py](quantum_physics_recipe_proof.py) | quantum_physics_recipe_proof.py — quantum primitives compose into Recipes |
+| [real_mesh_training_emitters.sh](real_mesh_training_emitters.sh) | real_mesh_training_emitters.sh - host/device/model carrier for real mesh training. |
 | [reclassify_presence_types.py](reclassify_presence_types.py) | Move presences to their honest node types. |
 | [register_providers.py](register_providers.py) | Register renderers and complex asset types as tracked provider nodes in the graph DB. |
 | [reset_seed_demo_mvp_local.sh](reset_seed_demo_mvp_local.sh) | _no top-of-file purpose_ |
