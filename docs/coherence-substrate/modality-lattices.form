@@ -58,6 +58,8 @@
     (north-star "form-stdlib/celestial-pole-channel.fk — jdn, precession, tropical/sidereal sign reduction, pole-star-at, and the cross-belief names of one pole-star body")
     (ifs "form-stdlib/ifs-channel.fk — parts and Self; managers+firefighters one protector role, the 8 C's one Self")
     (zodiac "form-stdlib/zodiac-channel.fk — twelve signs in the Western and Vedic tongues")
+    (cjk "form-stdlib/cjk-channel.fk — Chinese/Japanese symbols: readings (translate), radical families (encode), yin/yang trigram as the 0/1 axiom")
+    (query-interface "form-stdlib/channels-registry.fk — registry-query / registry-translate / registry-decode over every system; a system is one resolver row")
     (teaching "docs/coherence-substrate/guidance-channels.form")
     (proof "each band -> 1111111 four-way on Go/Rust/TS/fkwu")
     (held "guidance stays in the direct-experience / mystery lane; the names are attested tradition, never a verdict"))
