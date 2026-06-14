@@ -10,7 +10,8 @@
 ;   Focused testing is part of the floor: the smallest meaningful proof should
 ;   run first, before broader release gates.
 ;   Current proof: cd form && ./validate.sh form-stdlib/core.fk
-;   form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk -> 4095.
+;   form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk -> 4095,
+;   fourth arm: 1 band(s) four-way.
 ;
 ; NORTH STAR:
 ;   Model architecture, weights, deltas, optimizer state, eval receipts,
@@ -43,8 +44,8 @@
 ;   This floor does not yet store real large tensors in the substrate cell store,
 ;   does not yet chunk a safetensors/MLX model into merkle-addressed cells, does
 ;   not yet materialize a chunk into GPU/MLX/Metal and re-hash it, and does not
-;   yet wire the vitality read into wellness/pulse routing. Those are next
-;   receipts, not alternate systems.
+;   yet wire the vitality read into wellness/pulse routing. Fourth-arm admission
+;   is now closed; the remaining gaps are next receipts, not alternate systems.
 
 (model-vitality-surface
   (floor
@@ -58,6 +59,7 @@
       lineage)
     (proved-by "form/form-stdlib/tests/model-vitality-band.fk")
     (verdict 4095)
+    (fourth-arm four-way)
     (release-health smallest-focused-proof-first))
   (north-star
     (source-of-truth substrate-cells)

@@ -1,0 +1,98 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/model-vitality-fourth-20260614",
+  "commit_scope": "Admit the model-vitality proof band to the fourth-arm manifest and update model-vitality floor docs to four-way.",
+  "files_owned": [
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/model-vitality.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      {
+        "command": "cd form && bash scripts/fourth-arm-gate.sh model-vitality",
+        "result": "pass",
+        "output": "PASS-4WAY model-vitality"
+      },
+      {
+        "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk",
+        "result": "pass",
+        "output": "✓ core.fk+model-vitality.fk+model-vitality-band.fk -> 4095; fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables); 1 ok, 0 divergent — kernels agree on every sample."
+      }
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Not run before local evidence creation; PR/CI gate will cover after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Docs/Form manifest proof only; no deploy performed yet."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local proof passed; CI/deploy not yet run for this branch."
+  },
+  "idea_ids": [
+    "form-native-model-data-as-cells",
+    "body-readable-model-vitality"
+  ],
+  "spec_ids": [
+    "coherence-substrate-model-vitality"
+  ],
+  "task_ids": [
+    "2026-06-14-model-vitality-fourth-arm"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "release-vitality"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/fourth-arm-bands.txt: model-vitality fks 4095",
+    "cd form && bash scripts/fourth-arm-gate.sh model-vitality -> PASS-4WAY",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk -> 4095 with fourth arm: 1 band(s) four-way"
+  ],
+  "change_files": [
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/model-vitality.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The model-vitality band is now admitted to the fourth-arm manifest and validates four-way on fkwu.",
+    "public_endpoints": [
+      "n/a: Form stdlib manifest proof"
+    ],
+    "test_flows": [
+      "cd form && bash scripts/fourth-arm-gate.sh model-vitality",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk"
+    ]
+  }
+}
