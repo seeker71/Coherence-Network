@@ -78,11 +78,18 @@
         (if (ntr-trained? row)
             (gt (ntr-native-accuracy-ppm row) (ntr-oracle-accuracy-ppm row))
             0))
+    (defn ntr-larger-heldout-window? (row min-heldout min-cycles)
+        (if (ntr-trained? row)
+            (if (ge (ntr-heldout-count row) min-heldout)
+                (if (ge (ntr-cycle-count row) min-cycles) 1 0)
+                0)
+            0))
 
     (defn ntr-floor ()
         (list
             "native artifact receipts must name weights, data, eval, and recipe"
             "trained_native_model_count is receipt-derived, never route-derived"
-            "continuous cycles append new receipts with comparable eval rows"))
+            "continuous cycles append new receipts with comparable eval rows"
+            "larger heldout windows gate native authority beyond the first tiny proof"))
 
     0)

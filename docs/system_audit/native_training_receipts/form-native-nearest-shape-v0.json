@@ -1,24 +1,50 @@
 {
   "artifact_id": "form-native-nearest-shape-v0",
   "artifact_kind": "nearest-shape-prototype",
-  "continuous_cycle_count": 1,
+  "continuous_cycle_count": 3,
+  "cycle_receipts": [
+    {
+      "export_checksum": "sha256:witness-summary-1523",
+      "label_count": 4,
+      "labels_hash": "sha256:fc879167c36e0df0dcedbe4bcf626c1d6ca1f42434942718787f663bce33a9dd",
+      "sample_count": 55620,
+      "seq": 1523
+    },
+    {
+      "export_checksum": "sha256:witness-summary-1524",
+      "label_count": 4,
+      "labels_hash": "sha256:fc879167c36e0df0dcedbe4bcf626c1d6ca1f42434942718787f663bce33a9dd",
+      "sample_count": 55625,
+      "seq": 1524
+    },
+    {
+      "export_checksum": "sha256:witness-summary-1525",
+      "label_count": 4,
+      "labels_hash": "sha256:fc879167c36e0df0dcedbe4bcf626c1d6ca1f42434942718787f663bce33a9dd",
+      "sample_count": 55631,
+      "seq": 1525
+    }
+  ],
   "data": {
     "format": "summary-only-feature-vectors",
-    "hash": "sha256:bd2044ddcde57f6a5c1596dbe9749423440630dc403c781424633fda6a182047",
-    "heldout_count": 4,
+    "hash": "sha256:bdaa8aaa572502cf926e9165fa2f17c52ba0848c11120830256af38b178de1df",
+    "heldout_count": 12,
+    "min_heldout_window": 12,
     "privacy": "summary-only; no raw mic/camera/sensor payloads",
-    "sample_count": 6
+    "sample_count": 12
   },
   "eval": {
-    "correct_count": 4,
-    "hash": "sha256:bbd6c35cb32c6bdc350421e01115a14d7530ca0c704120394b8b196492042074",
-    "heldout_count": 4,
+    "correct_count": 12,
+    "hash": "sha256:c2906980a00a66efe59a5a3c982e365652db12761f14232bb9a8ca969a6213d1",
+    "heldout_count": 12,
     "native_accuracy_ppm": 1000000,
     "oracle_accuracy_ppm": 750000,
     "predictions": [
       {
-        "actual": "speech",
-        "predicted": "speech",
+        "actual": "speech-present",
+        "cycle_seq": 1523,
+        "feature": "speech-transcribe",
+        "predicted": "speech-present",
         "vector": [
           5,
           0,
@@ -26,8 +52,10 @@
         ]
       },
       {
-        "actual": "music",
-        "predicted": "music",
+        "actual": "scene-present",
+        "cycle_seq": 1523,
+        "feature": "vision-describe",
+        "predicted": "scene-present",
         "vector": [
           0,
           5,
@@ -35,8 +63,21 @@
         ]
       },
       {
-        "actual": "quiet",
-        "predicted": "quiet",
+        "actual": "aligned",
+        "cycle_seq": 1523,
+        "feature": "multimodal-align",
+        "predicted": "aligned",
+        "vector": [
+          5,
+          5,
+          5
+        ]
+      },
+      {
+        "actual": "readback-ok",
+        "cycle_seq": 1523,
+        "feature": "gpu-readback-kernel",
+        "predicted": "readback-ok",
         "vector": [
           0,
           0,
@@ -44,12 +85,91 @@
         ]
       },
       {
-        "actual": "speech",
-        "predicted": "speech",
+        "actual": "speech-present",
+        "cycle_seq": 1524,
+        "feature": "speech-transcribe",
+        "predicted": "speech-present",
         "vector": [
           5,
           0,
           0
+        ]
+      },
+      {
+        "actual": "scene-present",
+        "cycle_seq": 1524,
+        "feature": "vision-describe",
+        "predicted": "scene-present",
+        "vector": [
+          0,
+          5,
+          0
+        ]
+      },
+      {
+        "actual": "aligned",
+        "cycle_seq": 1524,
+        "feature": "multimodal-align",
+        "predicted": "aligned",
+        "vector": [
+          5,
+          5,
+          5
+        ]
+      },
+      {
+        "actual": "readback-ok",
+        "cycle_seq": 1524,
+        "feature": "gpu-readback-kernel",
+        "predicted": "readback-ok",
+        "vector": [
+          0,
+          0,
+          5
+        ]
+      },
+      {
+        "actual": "speech-present",
+        "cycle_seq": 1525,
+        "feature": "speech-transcribe",
+        "predicted": "speech-present",
+        "vector": [
+          5,
+          0,
+          0
+        ]
+      },
+      {
+        "actual": "scene-present",
+        "cycle_seq": 1525,
+        "feature": "vision-describe",
+        "predicted": "scene-present",
+        "vector": [
+          0,
+          5,
+          0
+        ]
+      },
+      {
+        "actual": "aligned",
+        "cycle_seq": 1525,
+        "feature": "multimodal-align",
+        "predicted": "aligned",
+        "vector": [
+          5,
+          5,
+          5
+        ]
+      },
+      {
+        "actual": "readback-ok",
+        "cycle_seq": 1525,
+        "feature": "gpu-readback-kernel",
+        "predicted": "readback-ok",
+        "vector": [
+          0,
+          0,
+          5
         ]
       }
     ],
@@ -62,10 +182,11 @@
   "recipe_path": "form/form-stdlib/native-training-receipt.fk",
   "status": "active",
   "training": {
+    "larger_heldout_window_pass": true,
     "native_beats_oracle": true,
     "next_cycle": "append a new receipt when live witness samples update weights or heldout eval",
     "source": "Form-native receipt floor",
-    "strategy": "prototype admission over summary feature vectors"
+    "strategy": "prototype admission over continuous live witness emission cycles"
   },
   "validation": {
     "commands": [
@@ -77,10 +198,11 @@
   },
   "weights": {
     "format": "prototype-vector-list",
-    "hash": "sha256:8b34af7a10d9160469d7fe3367c22b6aef0a4d762e44e80c1ea4e9492c7b04ab",
+    "hash": "sha256:11c30e257616249f1b887050e816e7128be7f9a1783efb1a63887929e850228a",
     "rows": [
       {
-        "label": "speech",
+        "feature": "speech-transcribe",
+        "label": "speech-present",
         "vector": [
           5,
           0,
@@ -88,7 +210,8 @@
         ]
       },
       {
-        "label": "music",
+        "feature": "vision-describe",
+        "label": "scene-present",
         "vector": [
           0,
           5,
@@ -96,7 +219,17 @@
         ]
       },
       {
-        "label": "quiet",
+        "feature": "multimodal-align",
+        "label": "aligned",
+        "vector": [
+          5,
+          5,
+          5
+        ]
+      },
+      {
+        "feature": "gpu-readback-kernel",
+        "label": "readback-ok",
         "vector": [
           0,
           0,

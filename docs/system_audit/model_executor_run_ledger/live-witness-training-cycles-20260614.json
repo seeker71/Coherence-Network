@@ -1,0 +1,39 @@
+{
+  "ledger_schema": "model_executor_proof_run/v1",
+  "run_id": "live-witness-training-cycles-20260614",
+  "thread_branch": "codex/live-witness-training-cycles-20260614",
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "python3 scripts/form_native_training_receipt.py --check --output docs/system_audit/native_training_receipts/form-native-nearest-shape-v0.json --observed-at 2026-06-14T00:00:00Z",
+    "python3 -m py_compile scripts/form_native_training_receipt.py api/app/services/native_training_receipts.py api/app/routers/models.py",
+    "python3 -m pytest -q api/tests/test_form_native_training_receipt.py api/tests/test_models_learning_dashboard.py",
+    "python3 -m ruff check scripts/form_native_training_receipt.py api/app/services/native_training_receipts.py api/tests/test_form_native_training_receipt.py api/tests/test_models_learning_dashboard.py",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/native-training-receipt.fk form-stdlib/tests/native-training-receipt-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh native-training-receipt",
+    "PYTHONPATH=api python3 - <<'PY'\nimport asyncio\nfrom app.routers import models\nr=asyncio.run(models.get_learning_dashboard())\na=r.native_training_artifacts[0]\nprint(r.summary.trained_native_model_count, a.artifact_id, a.continuous_cycle_count, a.cycle_receipt_count, a.latest_cycle_seq, a.heldout_count, a.larger_heldout_window_pass)\nPY",
+    "python3 scripts/witness_oracle_emission_ledger.py --cycles 3 --interval 1 --print-record --no-write >/tmp/live-witness-probe.json; rc=$?; test \"$rc\" -eq 2; python3 - <<'PY'\nimport json\nr=json.load(open('/tmp/live-witness-probe.json'))\nassert r['status'] == 'blocked'\nassert 'emission cycles are not increasing' in r['block_reasons']\nprint(r['status'], r['seqs'])\nPY",
+    "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --fail-on-regression",
+    "cd web && npm ci --cache ../.cache/npm --prefer-offline && npm run build"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Established continuous witness-cycle native training receipt windows with a 3-cycle/12-heldout Form proof and dashboard visibility; live localhost witness was reachable but stale/present=false, so no false live cycle was committed.",
+  "source": {
+    "kind": "native-training-receipt",
+    "path": "docs/system_audit/native_training_receipts/form-native-nearest-shape-v0.json"
+  },
+  "validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/form_native_training_receipt.py --check --output docs/system_audit/native_training_receipts/form-native-nearest-shape-v0.json --observed-at 2026-06-14T00:00:00Z",
+      "python3 -m pytest -q api/tests/test_form_native_training_receipt.py api/tests/test_models_learning_dashboard.py",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/native-training-receipt.fk form-stdlib/tests/native-training-receipt-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh native-training-receipt",
+      "PYTHONPATH=api python3 - <<'PY'\nimport asyncio\nfrom app.routers import models\nr=asyncio.run(models.get_learning_dashboard())\na=r.native_training_artifacts[0]\nprint(r.summary.trained_native_model_count, a.artifact_id, a.continuous_cycle_count, a.cycle_receipt_count, a.latest_cycle_seq, a.heldout_count, a.larger_heldout_window_pass)\nPY"
+    ]
+  }
+}

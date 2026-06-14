@@ -1,0 +1,135 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/live-witness-training-cycles-20260614",
+  "commit_scope": "Move native training receipts from one static proof into continuous witness-cycle windows with a larger heldout gate.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "form-native-model-data-as-cells",
+    "native-learning-surface",
+    "witness-state-receipt",
+    "oracle-retirement-receipts"
+  ],
+  "spec_ids": [
+    "form-native-learning",
+    "native-training-receipt",
+    "witness-state-receipt",
+    "learning-dashboard"
+  ],
+  "task_ids": [
+    "live-witness-training-cycles-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "scripts/form_native_training_receipt.py",
+    "docs/system_audit/native_training_receipts/form-native-nearest-shape-v0.json",
+    "form/form-stdlib/native-training-receipt.fk",
+    "form/form-stdlib/tests/native-training-receipt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "api/app/services/native_training_receipts.py",
+    "api/tests/test_form_native_training_receipt.py",
+    "api/tests/test_models_learning_dashboard.py",
+    "web/app/dashboard/page.tsx",
+    "docs/system_audit/commit_evidence_2026-06-14_live_witness_training_cycles.json",
+    "docs/system_audit/model_executor_run_ledger/live-witness-training-cycles-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "scripts/form_native_training_receipt.py",
+    "docs/system_audit/native_training_receipts/form-native-nearest-shape-v0.json",
+    "form/form-stdlib/native-training-receipt.fk",
+    "form/form-stdlib/tests/native-training-receipt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "api/app/services/native_training_receipts.py",
+    "api/tests/test_form_native_training_receipt.py",
+    "api/tests/test_models_learning_dashboard.py",
+    "web/app/dashboard/page.tsx",
+    "docs/system_audit/commit_evidence_2026-06-14_live_witness_training_cycles.json",
+    "docs/system_audit/model_executor_run_ledger/live-witness-training-cycles-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "docs/system_audit/native_training_receipts/form-native-nearest-shape-v0.json",
+    "scripts/form_native_training_receipt.py",
+    "form/form-stdlib/native-training-receipt.fk",
+    "form/form-stdlib/tests/native-training-receipt-band.fk",
+    "api/app/services/native_training_receipts.py",
+    "web/app/dashboard/page.tsx",
+    "local:http://localhost:8800/state"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord join && coord claim \"continuous live witness training cycles\"",
+      "python3 scripts/form_native_training_receipt.py --check --output docs/system_audit/native_training_receipts/form-native-nearest-shape-v0.json --observed-at 2026-06-14T00:00:00Z",
+      "python3 -m py_compile scripts/form_native_training_receipt.py api/app/services/native_training_receipts.py api/app/routers/models.py",
+      "python3 -m pytest -q api/tests/test_form_native_training_receipt.py api/tests/test_models_learning_dashboard.py",
+      "python3 -m ruff check scripts/form_native_training_receipt.py api/app/services/native_training_receipts.py api/tests/test_form_native_training_receipt.py api/tests/test_models_learning_dashboard.py",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/native-training-receipt.fk form-stdlib/tests/native-training-receipt-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh native-training-receipt",
+      "PYTHONPATH=api python3 - <<'PY'\nimport asyncio\nfrom app.routers import models\nr=asyncio.run(models.get_learning_dashboard())\na=r.native_training_artifacts[0]\nprint(r.summary.trained_native_model_count, a.artifact_id, a.continuous_cycle_count, a.cycle_receipt_count, a.latest_cycle_seq, a.heldout_count, a.larger_heldout_window_pass)\nPY",
+      "python3 scripts/witness_oracle_emission_ledger.py --cycles 3 --interval 1 --print-record --no-write >/tmp/live-witness-probe.json; rc=$?; test \"$rc\" -eq 2; python3 - <<'PY'\nimport json\nr=json.load(open('/tmp/live-witness-probe.json'))\nassert r['status'] == 'blocked'\nassert 'emission cycles are not increasing' in r['block_reasons']\nprint(r['status'], r['seqs'])\nPY",
+      "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --fail-on-regression",
+      "cd web && npm ci --cache ../.cache/npm --prefer-offline && npm run build",
+      "git diff --check"
+    ],
+    "notes": "The native training receipt now carries 3 witness cycle receipts, latest seq 1525, 12 heldout rows, 12 correct predictions, and larger_heldout_window_pass=true. Focused Form validation returned 2047 with `fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)` and `1 ok, 0 divergent`; the manifest gate returned `PASS-4WAY native-training-receipt`. The dashboard read returned `1 form-native-nearest-shape-v0 3 3 1525 12 True`. The live witness probe reached localhost:8800 but correctly refused to claim a live cycle because present=false and all sampled cycles stayed at seq 1522; this keeps stale live state out of trained receipts."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed when this evidence was written; CI has not run yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested for this native receipt/dashboard slice."
+  },
+  "phase_gate": {
+    "phase": "continuous-witness-training-window-floor",
+    "gate": "Native training artifacts must be built from comparable witness emission cycle windows and a larger heldout gate before claiming progress beyond the first receipt.",
+    "state": "local-four-way-proof-pass-live-source-stale",
+    "can_move_next_phase": false,
+    "next": "Restore or restart the live witness stream so localhost:8800 reports present=true with increasing seq values, then generate the receipt from a pass-status witness emission record instead of the deterministic proof window."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The training receipt lane can now ingest pass-status witness oracle emission records, derive prototype weights and heldout rows from cycle labels, and expose the resulting cycle window on the dashboard. The committed floor proves a 3-cycle/12-heldout window and refuses stale live witness state.",
+    "public_endpoints": [
+      "local:/api/models/learning-dashboard",
+      "local:web/app/dashboard/page.tsx",
+      "local:form/validate.sh:native-training-receipt-band",
+      "local:scripts/witness_oracle_emission_ledger.py"
+    ],
+    "test_flows": [
+      "Default receipt generation produces 3 cycle receipts and 12 heldout rows.",
+      "Receipt generation can consume a pass-status witness emission record.",
+      "The dashboard exposes cycle_receipt_count, latest_cycle_seq, heldout_count, and larger_heldout_window_pass.",
+      "The Form band proves the same larger heldout window four-way.",
+      "The live witness probe blocks stale/non-increasing local state instead of adding a false live receipt."
+    ],
+    "summary": "The established floor is a continuous-cycle receipt generator and dashboard surface with a 3-cycle/12-heldout Form-native proof. The remaining physical gap is a fresh live witness stream with increasing seq values."
+  }
+}
