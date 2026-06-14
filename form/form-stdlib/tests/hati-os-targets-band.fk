@@ -1,9 +1,9 @@
 ; preludes: form-stdlib/core.fk form-stdlib/hati-os-targets.fk
 ;
 ; hati-os-targets-band - host OS implementation and distribution catalog proof.
-; Verdict 8191 when macOS and Android target rows, clang oracle surfaces,
-; Form-native object emitters, Form-native JIT runtime rows, implementation
-; rows, and hati.earth download coordinates are discoverable.
+; Verdict 16383 when macOS and Android target rows, clang oracle surfaces,
+; Form-native object/executable emitters, Form-native JIT runtime rows,
+; implementation rows, and hati.earth download coordinates are discoverable.
 
 (do
     (let c0 (if (eq (len (hos-targets)) 2)
@@ -63,5 +63,8 @@
     (let c12 (if (str_eq (hos-target-form-native-object mac) "form-macho")
                 (if (str_eq (hos-target-form-native-object android) "form-elf") 4096 0)
                 0))
+    (let c13 (if (str_eq (hos-target-form-native-executable mac) "form-macho+ld")
+                (if (str_eq (hos-target-form-native-executable android) "form-elf-exec") 8192 0)
+                0))
 
-    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 (add c11 c12)))))))))))))
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 (add c11 (add c12 c13))))))))))))))

@@ -1,0 +1,94 @@
+; form-elf-exec.fk — the ELF64 executable wrapper: a Form recipe that emits a
+; minimal aarch64 ELF EXECUTABLE image carrying its own Linux/Android syscall
+; entry code. This is the next floor after form-elf.fk's relocatable object:
+; Form now emits an ET_EXEC image directly, without clang as compiler,
+; assembler, or linker. Running the image needs an Android device or qemu-aarch64
+; carrier; the local proof always validates executable shape and bytes.
+
+(do
+    (defn elfx-nil? (xs) (eq (len xs) 0))
+    (defn elfx-app (xs ys) (if (elfx-nil? xs) ys (cons (head xs) (elfx-app (tail xs) ys))))
+    (defn elfx-cat (xss) (if (eq (len xss) 1) (head xss) (elfx-app (head xss) (elfx-cat (tail xss)))))
+
+    (defn elfx-u16 (n) (list (mod n 256) (mod (div n 256) 256)))
+    (defn elfx-u32 (n) (list (mod n 256) (mod (div n 256) 256)
+                             (mod (div n 65536) 256) (mod (div n 16777216) 256)))
+    (defn elfx-u64 (n) (elfx-app (elfx-u32 n) (list 0 0 0 0)))
+
+    (defn elfx-base () 4194304)      ; 0x400000
+    (defn elfx-text-off () 120)      ; ELF header 64 + one program header 56
+    (defn elfx-entry () (add (elfx-base) (elfx-text-off)))
+    (defn elfx-total (clen) (add (elfx-text-off) clen))
+
+    (defn elfx-header (clen)
+        (elfx-cat (list
+            (list 127 69 76 70 2 1 1 0 0 0 0 0 0 0 0 0) ; ELF64, little-endian
+            (elfx-u16 2)                     ; ET_EXEC
+            (elfx-u16 183)                   ; EM_AARCH64
+            (elfx-u32 1)                     ; EV_CURRENT
+            (elfx-u64 (elfx-entry))          ; e_entry
+            (elfx-u64 64)                    ; e_phoff
+            (elfx-u64 0)                     ; no section table in this floor
+            (elfx-u32 0)                     ; e_flags
+            (elfx-u16 64)                    ; e_ehsize
+            (elfx-u16 56) (elfx-u16 1)       ; one ELF64 program header
+            (elfx-u16 0) (elfx-u16 0)        ; no section headers
+            (elfx-u16 0))))
+
+    (defn elfx-phdr (clen)
+        (elfx-cat (list
+            (elfx-u32 1)                     ; PT_LOAD
+            (elfx-u32 5)                     ; PF_R | PF_X
+            (elfx-u64 0)                     ; p_offset
+            (elfx-u64 (elfx-base))           ; p_vaddr
+            (elfx-u64 (elfx-base))           ; p_paddr
+            (elfx-u64 (elfx-total clen))     ; p_filesz
+            (elfx-u64 (elfx-total clen))     ; p_memsz
+            (elfx-u64 4096))))               ; page alignment
+
+    ; movz x<rd>, #imm16. The high-bit base 0xd2800000 is emitted as byte fields
+    ; instead of a large literal so all kernels keep the same integer behavior.
+    (defn elfx-movz-field (rd imm) (add (mul imm 32) rd))
+    (defn elfx-movz-x (rd imm)
+        (list (mod (elfx-movz-field rd imm) 256)
+              (mod (div (elfx-movz-field rd imm) 256) 256)
+              (add 128 (mod (div (elfx-movz-field rd imm) 65536) 32))
+              210))
+
+    ; adr x<rd>, #off for the small positive PC-relative offsets used here.
+    (defn elfx-adr-immlo (off) (mod off 4))
+    (defn elfx-adr-immhi (off) (div off 4))
+    (defn elfx-adr-field (rd off) (add (mul (elfx-adr-immhi off) 32) rd))
+    (defn elfx-adr-x (rd off)
+        (list (mod (elfx-adr-field rd off) 256)
+              (mod (div (elfx-adr-field rd off) 256) 256)
+              (mod (div (elfx-adr-field rd off) 65536) 256)
+              (add 16 (mul (elfx-adr-immlo off) 32))))
+
+    (defn elfx-svc0 () (list 1 0 0 212))
+
+    (defn elf-exec (code)
+        (elfx-cat (list (elfx-header (len code)) (elfx-phdr (len code)) code)))
+
+    ; _start: write(1, msg, len(msg)); exit(exit-code).
+    ; The ADR runs at instruction offset 4 and the message begins after 8
+    ; instructions, so the PC-relative byte offset to the message is 28.
+    (defn elf-exec-write-exit-code (msg exit-code)
+        (elfx-cat (list
+            (elfx-movz-x 0 1)                ; x0 = stdout
+            (elfx-adr-x 1 28)                ; x1 = message address
+            (elfx-movz-x 2 (len msg))        ; x2 = message length
+            (elfx-movz-x 8 64)               ; x8 = __NR_write
+            (elfx-svc0)
+            (elfx-movz-x 0 exit-code)        ; x0 = exit status
+            (elfx-movz-x 8 93)               ; x8 = __NR_exit
+            (elfx-svc0)
+            msg)))
+
+    (defn elf-exec-exit-code (exit-code)
+        (elfx-cat (list
+            (elfx-movz-x 0 exit-code)
+            (elfx-movz-x 8 93)
+            (elfx-svc0))))
+
+    0)
