@@ -123,8 +123,10 @@ crosses too through `graph-node-mutation-carrier` and
 `graph-node-mutation-file-verdict`; idea projection over reopened file stores
 now crosses through `ideas-graph-projection`. Host-io observation now crosses
 through `file_mtime` and `scan_run`, and `go-jit-value-helper` proves the scan
-stride inside the JIT helper path. The next carrier gap is Postgres, with
-broader source-scan recipes building on the admitted `scan_run` floor.
+stride inside the JIT helper path. The next carrier gap is Postgres as a
+first-class host carrier boundary, not as a database engine inside the pure
+fourth kernel; broader source-scan recipes build on the admitted `scan_run`
+floor.
 Non-recursive direct-call `do` lets also snapshot once through per-function RAM
 windows; `ephemeris-planets` now reads list-returning call results repeatedly
 and crosses four-way at `1111111`.
