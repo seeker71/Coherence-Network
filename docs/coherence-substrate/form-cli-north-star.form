@@ -1,0 +1,44 @@
+; form-cli-north-star.form — the ground-floor binary: a Form-native CLI agent that
+; does what codex / claude / grok / gemini CLIs do, running local Form-native and
+; local hardware as much as possible, and reaching for a remote LLM oracle ONLY
+; when the internal flow state is uncertain (the choice-feedback-receipt confidence
+; is below threshold). Every oracle call is captured and learned from, so the cost
+; shifts from tokens into internal capability — the more we use LLMs, the less we
+; need them.
+
+(form-cli-north-star
+
+  (destination
+    "One native binary — the form-cli — is a coding/agent CLI on par with codex, claude, grok, and gemini, but its body is Form: recipes, grammars, and learned local candidates run first; remote LLMs are oracles of last resort, not the engine."
+    "It uses local resources as native as the host allows (form-macho/form-elf emit the runnable binary; GPU/DSP/MLX lanes are tool-channel protocols) and keeps capability choice sovereign and inspectable."
+    "Its purpose is to shift LLM cost into internal learning: each oracle call is a teacher whose result is captured, so future flows of the same shape run local. Usage decreases as the body learns.")
+
+  ; ── the decision loop (running, proven) ──────────────────────────────────────
+  (loop
+    (sense   "for an input, read the local lane's choice-feedback-receipt confidence — its accumulated pass-rate on this shape of work")
+    (route   "confidence >= threshold -> run local Form-native (sovereign, ~0 external tokens); else -> consult a remote LLM oracle for the uncertain flow state")
+    (capture "every oracle call is an io-match record (input/output content-addressed, the output's Blueprint when it is a Form node, the outcome) — usage becomes learning, not just spend")
+    (learn   "the captured result trains the local candidate; its pass-rate rises, so the same shape crosses the threshold next time and routes local")
+    (embody  "when the local lane works cheaper and sovereign at the trust gate, it embodies — replacing the oracle for that shape entirely")
+    (recipe  form/form-stdlib/form-cli-loop.fk)
+    (proof   form/form-stdlib/tests/form-cli-loop-band.fk -> 31 four-way))
+
+  ; ── the organs, each already proven four-way ─────────────────────────────────
+  (organs
+    (surfaces       tool-channel.form          "host/file/http/kernel/stream/store/accelerator/model as one native protocol catalog")
+    (routing        channel-protocol-choice-floor.form "trusted receipt metadata runs the fast local route; low-trust escalates to a slower oracle — bml-route-choice-runtime.fk")
+    (receipt        choice-receipt.fk          "the choice-feedback-receipt: outcome, confidence, trust the route turns on")
+    (learning       code-tool-learning.fk      "tool/LLM usage becomes training data; candidates race beside Codex/Claude/Grok/Gemini/Ollama")
+    (capture        io-match.fk                "captured I/O learned by EFFICACY (did the candidate's output work), structural Blueprint-match for natural-language->Form-node, exact only where canonical")
+    (embodiment     tool-embodiment.fk         "a local lane embodies — replaces the external lane — only when ready (sovereignty/trust/confidence >= 70) AND cheaper")
+    (oracles        oracle-catalog.fk          "remote LLMs are sampled teachers and baselines, not hidden authority")
+    (binary         form-macho.fk              "the native arm64 ground-floor binary, zero clang (form-elf.fk for Linux/Android)"))
+
+  (flywheel
+    "Today an LLM call is pure spend: pay tokens, discard the I/O. Here it is a teacher: the result is captured, the local candidate learns, its confidence rises, the next same-shape flow routes local. Cost moves from per-call tokens into a one-time learning that keeps paying. The asymptote is a form-cli that needs the oracle only for genuinely novel uncertainty.")
+
+  (why
+    "The model cost is not maintainable, and access to the highest-value LLM is not guaranteed. A form-cli that learns from every call keeps the capability sovereign — it survives the external lane becoming unaffordable or unavailable, because by then the body carries what it learned.")
+
+  (next-step
+    "The loop and every organ run four-way; the remaining carrier is the Mac binary channel itself — form-macho.fk emits the binary that intercepts the agent's real reasoning/tool calls, content-addresses each (input, output), runs the local candidate through the same downstream check, and writes io-match records. The boundary it wraps (the LLM-reasoning call, the tool call, or both) is the one open choice; everything it feeds is proven."))

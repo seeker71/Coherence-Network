@@ -1,0 +1,41 @@
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk form-stdlib/tool-embodiment.fk form-stdlib/io-match.fk form-stdlib/form-cli-loop.fk
+;
+; form-cli-loop-band — the form-cli decision loop runs: local by default, oracle
+; only when uncertain, learning from every oracle call so the oracle is needed
+; less. The flywheel made executable.
+;
+; Verdict 31 when every claim lands:
+;   1   learned confidence is the local lane's measured pass-rate
+;   2   low confidence routes to the oracle; high confidence routes local
+;   4   THE FLYWHEEL: as accumulated passes rise (oracle-taught), the same class
+;       flips oracle -> local — the more we use LLMs, the less we need them
+;   8   a learned local lane (works 8/10, cheap, sovereign) takes the body from the oracle
+;   16  an unlearned local lane (6/10) leaves the body with the oracle — the gate is real
+(do
+    (let S (cr-outcome-success))
+    (let F (cr-outcome-fail))
+    (let threshold 70)
+
+    ; 1 — confidence is the measured pass-rate.
+    (let c0 (if (and (eq (fcl-confidence 8 10) 80) (eq (fcl-confidence 4 10) 40)) 1 0))
+    ; 2 — the routing rule: low -> oracle, high -> local.
+    (let c1
+        (if (and (str_eq (fcl-route-learned 4 10 threshold) "oracle")
+                 (str_eq (fcl-route-learned 8 10 threshold) "local"))
+            2 0))
+    ; 4 — the flywheel: the SAME class, with more learned passes, flips oracle -> local.
+    (let c2
+        (if (and (str_eq (fcl-route-learned 6 10 threshold) "oracle")
+                 (str_eq (fcl-route-learned 8 10 threshold) "local"))
+            4 0))
+
+    ; the costly remote oracle incumbent vs the local lane's earned row (io-match).
+    (let oracle-row (list "external:claude" "remote" 10 0 1200))
+    (let learned   (iom-candidate-row "form-native:local" "local" (list S S S S S S S S F F) 400))
+    (let unlearned (iom-candidate-row "form-native:local" "local" (list S S S S S S F F F F) 400))
+    ; 8 — a learned local lane takes the body from the oracle.
+    (let c3 (if (str_eq (fcl-verdict oracle-row learned) "form-native:local") 8 0))
+    ; 16 — an unlearned local lane leaves the body with the oracle.
+    (let c4 (if (str_eq (fcl-verdict oracle-row unlearned) "external:claude") 16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))

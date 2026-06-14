@@ -74,5 +74,8 @@
     (carrier "the Mac binary channel — form-macho.fk emits the native arm64 binary — intercepts the agent's real reasoning/tool calls, content-addresses each (input, output), runs the candidate's output through the same downstream check, and writes io-match records; that interception carrier is authored last, the learning body is here")
     (why "the model cost is not maintainable; switching tool and LLM use to Form-native, learned by efficacy from real usage, is how we keep access to the highest-value capability when the external lane is no longer affordable"))
 
+  (synthesis
+    "form-cli-north-star.form names the destination this sideband serves: the form-cli ground-floor binary that runs local Form-native first and a remote LLM oracle only when confidence is low, learning from every oracle call so the oracle is needed less. Its decision loop runs as form-cli-loop.fk (proof tests/form-cli-loop-band.fk -> 31 four-way).")
+
   (next-step
     "io-match.fk turns captured I/O into a learnable efficacy score that feeds the embodiment gate; the remaining carrier is the Mac binary channel (form-macho.fk) that intercepts the agent's real reasoning/tool calls and writes io-match records, plus the read door that runs te-verdict over live rows — then heldout lanes for search/edit/proof/review/deploy graduate to Form-native by pass-rate, cost, and sovereignty before any important flow routes to them by default."))
