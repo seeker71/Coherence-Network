@@ -1,0 +1,212 @@
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/cell-log-store.fk form-stdlib/text-summary-learning.fk
+;
+; text-summary-multi-source-band - dynamic source-coordinate summary floor.
+;
+; Floor: file and file-backed store sources both emit the same native
+; source-coordinate receipt shape. The file lane reads a real checked-in source
+; byte slice; the store lane writes to a temporary segmented cell-log store and
+; reads the value back through the store query path before learning.
+;
+; North star: file, store, route, and stream sources all feed one summary
+; learner through dynamic coordinates: protocol, capability, locator, selector,
+; offset, length, codec, carrier, floor, and north star. Route and stream stay
+; planned in this band until their native source readers exist.
+;
+; Verdict 65535 when every claim lands:
+;   1     expanded floor and north-star declarations name source coordinates
+;   2     file coordinate is ready host:file with dynamic slice coordinates
+;   4     file receipt is valid and reads the real source prefix
+;   8     store coordinate is ready store:query with dynamic key coordinates
+;   16    store receipt is read from a real temporary segmented store
+;   32    ready receipts are valid and aggregate claims/citations
+;   64    route coordinate is planned, not falsely executed
+;   128   stream coordinate is planned, not falsely executed
+;   256   file/store/route/stream request plans expose protocols and caps
+;   512   multi-source summary passes existing summary quality gates
+;   1024  summary claim and citation counts equal aggregated receipts
+;   2048  multi-source CHOICE-RECEIPT is valid and keeps token cost
+;   4096  receipt becomes a native training sample
+;   8192  output envelope carries coordinates, receipts, summary, receipt, and metadata
+;   16384 proof level names file/store physical floor plus route/stream planning
+;   32768 two coordinates are ready and two remain planned
+(do
+    (let meta
+        (tsl-meta
+            89
+            87
+            58
+            74
+            (tsl-spectrum 79 91 75 9 42 97)
+            95
+            89
+            86))
+
+    (let file-coordinate (tsl-file-source-coordinate (tsl-real-source-path) 0 67))
+    (let file-value
+        (read_file_slice
+            (tsl-source-coordinate-locator file-coordinate)
+            (tsl-source-coordinate-offset file-coordinate)
+            (tsl-source-coordinate-length file-coordinate)))
+    (let file-receipt
+        (tsl-source-data-receipt
+            file-coordinate
+            file-value
+            (str_len file-value)
+            1
+            1
+            "file byte-slice matched coordinate"))
+
+    (let store-dir (str_concat (temp_dir) "/text-summary-multi-source-store.d"))
+    (fs_rmdir store-dir)
+    (let store-value
+        "Store source receipt carries dynamic coordinate, claim count, citation count, and learning eligibility.")
+    (let st0 (cls-open store-dir))
+    (let st1 (cls-put st0 "summary/source/multi" store-value))
+    (let store-read (cls-value (cls-get st1 "summary/source/multi")))
+    (let store-coordinate (tsl-store-source-coordinate store-dir "summary/source/multi"))
+    (let store-receipt
+        (tsl-source-data-receipt
+            store-coordinate
+            store-read
+            (str_len store-read)
+            2
+            2
+            "cell-log-store cls-get returned the stored source value"))
+
+    (let route-coordinate (tsl-route-source-coordinate "/api/runtime/events?limit=1" "body"))
+    (let stream-coordinate (tsl-stream-source-coordinate "runtime/events" "cursor:latest"))
+    (let coordinates (list file-coordinate store-coordinate route-coordinate stream-coordinate))
+    (let ready-receipts (list file-receipt store-receipt))
+    (let summary (tsl-multi-source-summary ready-receipts meta))
+    (let receipt (tsl-multi-source-receipt summary meta))
+    (let receipt-sample (tsl-receipt-sample receipt "summary:multi-source-receipt"))
+    (let output (tsl-multi-source-output coordinates ready-receipts summary receipt meta))
+
+    (let file-plan (tsl-plan-request "text:summarize-file"))
+    (let store-plan (tsl-plan-request "text:summarize-store"))
+    (let route-plan (tsl-plan-request "text:summarize-route"))
+    (let stream-plan (tsl-plan-request "text:summarize-stream"))
+
+    (let c0
+        (if (and
+                (eq (len (tsl-floor)) 5)
+                (eq (len (tsl-north-star)) 5))
+            1
+            0))
+    (let c1
+        (if (and
+                (str_eq (tsl-source-coordinate-protocol file-coordinate) "host:file")
+                (and
+                    (eq (tsl-source-coordinate-ready? file-coordinate) 1)
+                    (and
+                        (eq (tsl-source-coordinate-offset file-coordinate) 0)
+                        (eq (tsl-source-coordinate-length file-coordinate) 67))))
+            2
+            0))
+    (let c2
+        (if (and
+                (eq (tsl-source-data-valid? file-receipt) 1)
+                (str_eq file-value "# text-summary-learning.form - native text summarizer learning lane"))
+            4
+            0))
+    (let c3
+        (if (and
+                (str_eq (tsl-source-coordinate-protocol store-coordinate) "store:query")
+                (and
+                    (eq (tsl-source-coordinate-ready? store-coordinate) 1)
+                    (str_eq (tsl-source-coordinate-selector store-coordinate) "summary/source/multi")))
+            8
+            0))
+    (let c4
+        (if (and
+                (str_eq store-read store-value)
+                (eq (tsl-source-data-valid? store-receipt) 1))
+            16
+            0))
+    (let c5
+        (if (and
+                (eq (tsl-source-data-all-valid? ready-receipts) 1)
+                (and
+                    (eq (tsl-source-data-claims-total ready-receipts) 3)
+                    (eq (tsl-source-data-citations-total ready-receipts) 3)))
+            32
+            0))
+    (let c6
+        (if (and
+                (str_eq (tsl-source-coordinate-protocol route-coordinate) "kernel:route")
+                (and
+                    (eq (tsl-source-coordinate-planned? route-coordinate) 1)
+                    (str_eq (tsl-source-coordinate-carrier route-coordinate) "pending-kernel-route-source-reader")))
+            64
+            0))
+    (let c7
+        (if (and
+                (str_eq (tsl-source-coordinate-protocol stream-coordinate) "stream:read")
+                (and
+                    (eq (tsl-source-coordinate-planned? stream-coordinate) 1)
+                    (str_eq (tsl-source-coordinate-carrier stream-coordinate) "pending-stream-cursor-reader")))
+            128
+            0))
+    (let c8
+        (if (and
+                (str_eq (tsl-plan-protocol file-plan) "host:file")
+                (and
+                    (str_eq (tsl-plan-capability store-plan) "cap.store.query")
+                    (and
+                        (str_eq (tsl-plan-protocol route-plan) "kernel:route")
+                        (str_eq (tsl-plan-capability stream-plan) "cap.stream.read"))))
+            256
+            0))
+    (let c9
+        (if (eq (tsl-summary-pass? summary) 1)
+            512
+            0))
+    (let c10
+        (if (and
+                (eq (tsl-summary-claims summary) (tsl-source-data-claims-total ready-receipts))
+                (eq (tsl-summary-citations summary) (tsl-source-data-citations-total ready-receipts)))
+            1024
+            0))
+    (let c11
+        (if (and
+                (cr-choice-receipt-valid? receipt)
+                (eq (cr-receipt-cost receipt) 120))
+            2048
+            0))
+    (let c12
+        (if (and
+                (str_eq (tsl-label receipt-sample) "form-native:summary")
+                (eq (len (tsl-feature receipt-sample)) 6))
+            4096
+            0))
+    (let c13
+        (if (and
+                (eq (len (tsl-multi-source-output-coordinates output)) 4)
+                (and
+                    (eq (len (tsl-multi-source-output-receipts output)) 2)
+                    (and
+                        (str_eq
+                            (tsl-summary-kind (tsl-multi-source-output-summary output))
+                            "multi-source-summary")
+                        (and
+                            (str_eq
+                                (cr-receipt-expression (tsl-multi-source-output-receipt output))
+                                "summarize-multi-source-receipts")
+                            (eq (tsl-meta-trust (tsl-multi-source-output-meta output)) 89)))))
+            8192
+            0))
+    (let c14
+        (if (str_eq
+                (tsl-multi-source-proof-level)
+                "3-kernel-host-io-file-store-plus-planned-route-stream")
+            16384
+            0))
+    (let c15
+        (if (and
+                (eq (tsl-source-coordinates-ready-count coordinates) 2)
+                (eq (tsl-source-coordinates-planned-count coordinates) 2))
+            32768
+            0))
+
+    (fs_rmdir store-dir)
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15)))

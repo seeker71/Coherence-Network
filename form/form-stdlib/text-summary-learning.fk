@@ -7,6 +7,8 @@
 ; samples without a Python carrier or ambient LLM authority. The current real
 ; source floor can read an actual repo file through kernel-native file natives,
 ; verify byte slices as citations, and bind those citations to a summary receipt.
+; It also names typed file/store/route/stream source coordinates so each new
+; carrier can land as the same receipt shape instead of a parallel summarizer.
 ;
 ; North star: summarization becomes a native two-way teaching channel. Text,
 ; code, proof logs, runtime events, dialogue, and memory cells lower through
@@ -16,6 +18,8 @@
 ; aliveness with fewer LLM tokens, less energy, and less nutrition.
 ;
 ; Proven by: form-stdlib/tests/text-summary-learning-band.fk
+;            form-stdlib/tests/text-summary-real-source-band.fk
+;            form-stdlib/tests/text-summary-multi-source-band.fk
 
 (do
     (defn tsl-floor ()
@@ -23,13 +27,15 @@
             "source, summary, citation, quality, metadata, receipt, and oracle rows are Form data"
             "a summary passes only with coverage, factuality, citations, compression, confidence, trust, sovereignty, and no contradiction"
             "successful summary receipts become native training samples"
-            "real source files can be read through kernel-native file natives and cited by byte slice"))
+            "real source files can be read through kernel-native file natives and cited by byte slice"
+            "file and file-backed store sources can emit the same coordinate receipt shape while route and stream coordinates remain explicit planned lanes"))
     (defn tsl-north-star ()
         (list
             "native summary grammars and kernels summarize text, code, proof logs, runtime events, dialogue, and memory cells"
             "external LLMs and source-search lanes are teachers until Form-native summaries win heldout receipts"
             "the winning summary candidate uses fewer tokens and less energy while carrying more sovereignty, trust, and aliveness"
-            "file, store, route, and stream sources lower into claim spans without host-tool execution"))
+            "file, store, route, and stream sources lower into claim spans without host-tool execution"
+            "every source carrier produces coordinate receipts with dynamic locators, selectors, offsets, lengths, codecs, and capability gates"))
 
     (defn tsl-spectrum (token-frequency meaning-impact expression-rhythm uncertainty novelty source-grounding)
         (list token-frequency meaning-impact expression-rhythm uncertainty novelty source-grounding))
@@ -291,6 +297,33 @@
                 "read_file+read_file_slice"
                 "file size, text length, prefix, and citation slices must match before learning"
                 "native source grammar extracts claim spans directly from file, store, route, or stream sources")
+            (if (str_eq request "text:summarize-store")
+            (tsl-plan
+                "summary/plan"
+                request
+                "store:query"
+                "cap.store.query"
+                "cell-log-store:cls-get+read_file_slice"
+                "store query returns a value receipt before summary learning"
+                "kernel-owned stores emit source claim spans with snapshot ids and rollback receipts")
+            (if (str_eq request "text:summarize-route")
+            (tsl-plan
+                "summary/plan"
+                request
+                "kernel:route"
+                "cap.kernel.route.read"
+                "pending-kernel-route-source-reader"
+                "route body summaries remain planned until route response bodies are native source receipts"
+                "kernel routes feed summary claim spans from response bodies, headers, trace, and authority rows")
+            (if (str_eq request "text:summarize-stream")
+            (tsl-plan
+                "summary/plan"
+                request
+                "stream:read"
+                "cap.stream.read"
+                "pending-stream-cursor-reader"
+                "stream summaries remain planned until cursor windows are native source receipts"
+                "ordered events lower into summary claim spans with cursor, backpressure, and replay receipts")
             (if (str_eq request "text:summarize")
             (tsl-plan
                 "summary/plan"
@@ -307,7 +340,191 @@
                 "none"
                 "none"
                 "unknown summary request refused"
-                "add a typed request row before execution"))))
+                "add a typed request row before execution")))))))
+
+    (defn tsl-source-coordinate (kind protocol capability locator selector offset length codec status carrier floor north-star)
+        (list kind protocol capability locator selector offset length codec status carrier floor north-star))
+    (defn tsl-source-coordinate-kind (coordinate) (nth coordinate 0))
+    (defn tsl-source-coordinate-protocol (coordinate) (nth coordinate 1))
+    (defn tsl-source-coordinate-capability (coordinate) (nth coordinate 2))
+    (defn tsl-source-coordinate-locator (coordinate) (nth coordinate 3))
+    (defn tsl-source-coordinate-selector (coordinate) (nth coordinate 4))
+    (defn tsl-source-coordinate-offset (coordinate) (nth coordinate 5))
+    (defn tsl-source-coordinate-length (coordinate) (nth coordinate 6))
+    (defn tsl-source-coordinate-codec (coordinate) (nth coordinate 7))
+    (defn tsl-source-coordinate-status (coordinate) (nth coordinate 8))
+    (defn tsl-source-coordinate-carrier (coordinate) (nth coordinate 9))
+    (defn tsl-source-coordinate-floor (coordinate) (nth coordinate 10))
+    (defn tsl-source-coordinate-north-star (coordinate) (nth coordinate 11))
+    (defn tsl-source-coordinate-ready? (coordinate)
+        (if (str_eq (tsl-source-coordinate-status coordinate) "ready") 1 0))
+    (defn tsl-source-coordinate-planned? (coordinate)
+        (if (str_eq (tsl-source-coordinate-status coordinate) "planned") 1 0))
+    (defn tsl-source-coordinate-native-option? (coordinate)
+        (if (str_eq (tsl-source-coordinate-protocol coordinate) "host:file") 1
+            (if (str_eq (tsl-source-coordinate-protocol coordinate) "store:query") 1
+                (if (str_eq (tsl-source-coordinate-protocol coordinate) "kernel:route") 1
+                    (if (str_eq (tsl-source-coordinate-protocol coordinate) "stream:read") 1 0)))))
+
+    (defn tsl-file-source-coordinate (path offset length)
+        (tsl-source-coordinate
+            "file"
+            "host:file"
+            "cap.host.file.read"
+            path
+            "byte-slice"
+            offset
+            length
+            "text/utf8"
+            "ready"
+            "read_file+read_file_slice"
+            "file size and byte slices must match before learning"
+            "file claim spans become source-coordinate rows without host tool execution"))
+    (defn tsl-store-source-coordinate (store-locator key)
+        (tsl-source-coordinate
+            "store"
+            "store:query"
+            "cap.store.query"
+            store-locator
+            key
+            0
+            0
+            "text/utf8"
+            "ready"
+            "cell-log-store:cls-get+read_file_slice"
+            "query returns a stored value receipt before learning"
+            "kernel-owned stores feed summaries with snapshot and rollback receipts"))
+    (defn tsl-route-source-coordinate (route selector)
+        (tsl-source-coordinate
+            "route"
+            "kernel:route"
+            "cap.kernel.route.read"
+            route
+            selector
+            0
+            0
+            "application/json"
+            "planned"
+            "pending-kernel-route-source-reader"
+            "route response bodies are visible as coordinates before they are learnable receipts"
+            "route summaries carry response body, headers, trace, authority, and timing receipts"))
+    (defn tsl-stream-source-coordinate (stream cursor)
+        (tsl-source-coordinate
+            "stream"
+            "stream:read"
+            "cap.stream.read"
+            stream
+            cursor
+            0
+            0
+            "event/list"
+            "planned"
+            "pending-stream-cursor-reader"
+            "stream windows are visible as coordinates before they are learnable receipts"
+            "stream summaries carry cursor, replay, backpressure, and event-order receipts"))
+
+    (defn tsl-source-data-receipt (coordinate value byte-count claim-count citation-count evidence)
+        (list
+            coordinate
+            value
+            byte-count
+            claim-count
+            citation-count
+            evidence
+            "ready source values must carry bytes, claims, citations, and matching capability coordinates"
+            "all source protocols emit the same receipt shape and differ only by carrier"))
+    (defn tsl-source-data-coordinate (receipt) (nth receipt 0))
+    (defn tsl-source-data-value (receipt) (nth receipt 1))
+    (defn tsl-source-data-bytes (receipt) (nth receipt 2))
+    (defn tsl-source-data-claims (receipt) (nth receipt 3))
+    (defn tsl-source-data-citations (receipt) (nth receipt 4))
+    (defn tsl-source-data-evidence (receipt) (nth receipt 5))
+    (defn tsl-source-data-floor (receipt) (nth receipt 6))
+    (defn tsl-source-data-north-star (receipt) (nth receipt 7))
+    (defn tsl-source-data-valid? (receipt)
+        (if (and
+                (eq (tsl-source-coordinate-ready? (tsl-source-data-coordinate receipt)) 1)
+                (and
+                    (gt (tsl-source-data-bytes receipt) 0)
+                    (and
+                        (eq (tsl-source-data-bytes receipt) (str_len (tsl-source-data-value receipt)))
+                        (and
+                            (gt (tsl-source-data-claims receipt) 0)
+                            (gt (tsl-source-data-citations receipt) 0)))))
+            1
+            0))
+    (defn tsl-source-data-all-valid? (receipts)
+        (if (eq (len receipts) 0) 1
+            (if (eq (tsl-source-data-valid? (head receipts)) 1)
+                (tsl-source-data-all-valid? (tail receipts))
+                0)))
+    (defn tsl-source-data-claims-total (receipts)
+        (if (eq (len receipts) 0) 0
+            (add
+                (tsl-source-data-claims (head receipts))
+                (tsl-source-data-claims-total (tail receipts)))))
+    (defn tsl-source-data-citations-total (receipts)
+        (if (eq (len receipts) 0) 0
+            (add
+                (tsl-source-data-citations (head receipts))
+                (tsl-source-data-citations-total (tail receipts)))))
+    (defn tsl-source-data-bytes-total (receipts)
+        (if (eq (len receipts) 0) 0
+            (add
+                (tsl-source-data-bytes (head receipts))
+                (tsl-source-data-bytes-total (tail receipts)))))
+    (defn tsl-source-coordinates-ready-count (coordinates)
+        (if (eq (len coordinates) 0) 0
+            (add
+                (tsl-source-coordinate-ready? (head coordinates))
+                (tsl-source-coordinates-ready-count (tail coordinates)))))
+    (defn tsl-source-coordinates-planned-count (coordinates)
+        (if (eq (len coordinates) 0) 0
+            (add
+                (tsl-source-coordinate-planned? (head coordinates))
+                (tsl-source-coordinates-planned-count (tail coordinates)))))
+    (defn tsl-multi-source-summary (receipts meta)
+        (tsl-summary
+            "summary:multi-source"
+            "form-native:summary"
+            "multi-source-summary"
+            (tsl-source-data-claims-total receipts)
+            (tsl-source-data-claims-total receipts)
+            (tsl-source-data-citations-total receipts)
+            70
+            91
+            89
+            0
+            87
+            120
+            meta
+            "summary learns only from source data receipts that passed coordinate, byte, claim, and citation gates"
+            "file, store, route, and stream source receipts all feed one native summary learner"))
+    (defn tsl-multi-source-receipt (summary meta)
+        (cr-choice-receipt
+            "summarize-multi-source-receipts"
+            "text-summary-learning"
+            "summary-multi-source"
+            (tsl-choice-candidate-rows (tsl-summary-candidates) "summary-multi-source")
+            (tsl-summary-candidate summary)
+            (cr-outcome-success)
+            (tsl-summary-confidence summary)
+            (tsl-choice-value meta)
+            "ready file and store receipts matched source coordinates; route and stream stayed planned"
+            "text-summary-learning"
+            "summary:multi-source"
+            20260614
+            (tsl-summary-token-cost summary)
+            (cr-choice-trace 4 1 0 0)))
+    (defn tsl-multi-source-output (coordinates receipts summary receipt meta)
+        (list coordinates receipts summary receipt meta))
+    (defn tsl-multi-source-output-coordinates (output) (nth output 0))
+    (defn tsl-multi-source-output-receipts (output) (nth output 1))
+    (defn tsl-multi-source-output-summary (output) (nth output 2))
+    (defn tsl-multi-source-output-receipt (output) (nth output 3))
+    (defn tsl-multi-source-output-meta (output) (nth output 4))
+    (defn tsl-multi-source-proof-level ()
+        "3-kernel-host-io-file-store-plus-planned-route-stream")
 
     (defn tsl-source-read (path)
         (list
@@ -366,25 +583,25 @@
                 1)
             (tsl-source-citation
                 path
-                494
+                593
                 79
                 "Make summarization a native learning lane instead of an opaque LLM side effect."
                 "purpose rejects opaque LLM side effects"
-                11)
+                12)
             (tsl-source-citation
                 path
-                1047
+                1146
                 40
                 "A summary passes only when it has claims"
                 "floor requires summary quality gates"
-                17)
+                18)
             (tsl-source-citation
                 path
-                2328
+                2690
                 46
                 "External LLMs, source search, model committees"
                 "north star keeps teachers explicit"
-                25)))
+                27)))
     (defn tsl-real-source-path ()
         "../docs/coherence-substrate/text-summary-learning.form")
     (defn tsl-real-source-read ()
