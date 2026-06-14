@@ -1,0 +1,120 @@
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/witness-state-receipt.fk
+;
+; witness-state-receipt-band - live witness counters as Form-native receipts.
+;
+; Verdict 4095 when every claim lands:
+;   1    floor and north-star declarations exist
+;   2    live witness present with frames
+;   4    mic counter and organ are active
+;   8    camera counter and samples are active
+;   16   GPU readback counter and latency are active
+;   32   receipt is summary-only and rejects raw-media privacy
+;   64   observed live sample counters clear the count floor
+;   128  exporter source is Form-native and not the Python helper
+;   256  active samples lower into three valid android-mesh-learning rows
+;   512  active media floor requires mic, camera, and GPU
+;   1024 speech, vision, and multimodal routes become native-first
+;   2048 heldout oracle retirement still requires enough samples
+(do
+    (let organs (list "accelerometer" "camera" "gps" "gpu" "gyroscope" "light" "magnetometer" "mic" "network" "screen"))
+    (let live-state
+        (wsr-state
+            "form-native-witness-state"
+            1
+            141
+            7045
+            28054
+            2367
+            99
+            1412
+            5084
+            organs
+            "summary-only/no-raw-audio-frame-buffer"))
+    (let raw-state
+        (wsr-state
+            "form-native-witness-state"
+            1
+            141
+            7045
+            28054
+            2367
+            99
+            1412
+            5084
+            organs
+            "raw-media"))
+    (let missing-gpu
+        (wsr-state
+            "form-native-witness-state"
+            1
+            141
+            7045
+            28054
+            2367
+            0
+            0
+            5084
+            (list "camera" "mic")
+            "summary-only/no-raw-audio-frame-buffer"))
+    (let few (list (list 0 1) (list 0 1) (list 1 1)))
+
+    (let c0
+        (if (and
+                (gt (len (wsr-floor)) 0)
+                (gt (len (wsr-north-star)) 0))
+            1
+            0))
+    (let c1
+        (if (eq (wsr-live? live-state) 1)
+            2
+            0))
+    (let c2
+        (if (eq (wsr-mic-active? live-state) 1)
+            4
+            0))
+    (let c3
+        (if (eq (wsr-camera-active? live-state) 1)
+            8
+            0))
+    (let c4
+        (if (eq (wsr-gpu-active? live-state) 1)
+            16
+            0))
+    (let c5
+        (if (and
+                (eq (wsr-summary-only? live-state) 1)
+                (eq (wsr-summary-only? raw-state) 0))
+            32
+            0))
+    (let c6
+        (if (eq (wsr-count-floor? live-state 141 2367 99 5084) 1)
+            64
+            0))
+    (let c7
+        (if (eq (wsr-export-native? live-state) 1)
+            128
+            0))
+    (let c8
+        (if (and
+                (eq (aml-active-lane-count (wsr-active-samples live-state)) 3)
+                (eq (aml-all-summary-only? (wsr-active-samples live-state)) 1))
+            256
+            0))
+    (let c9
+        (if (and
+                (eq (wsr-active-media-floor? live-state) 1)
+                (eq (wsr-active-media-floor? missing-gpu) 0))
+            512
+            0))
+    (let c10
+        (if (eq (wsr-routes-native-first? live-state) 1)
+            1024
+            0))
+    (let c11
+        (if (and
+                (eq (wsr-learning-ready? live-state) 1)
+                (eq (wsr-heldout-retirement-ready? few 12 0) 0))
+            2048
+            0))
+
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11)))
