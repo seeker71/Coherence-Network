@@ -1,0 +1,69 @@
+# text-summary-learning.form - native text summarizer learning lane
+
+(text-summary-learning
+  (lineage
+    (rests-on nearest-shape.fk classifier-eval.fk choice-receipt.fk branch-choice-order.fk choice-receipt-learning.fk oracle-catalog.fk)
+    (recipe form/form-stdlib/text-summary-learning.fk)
+    (proof form/form-stdlib/tests/text-summary-learning-band.fk -> 262143 four-way))
+
+  (purpose
+    "Make summarization a native learning lane instead of an opaque LLM side effect."
+    "A summary sample carries source identity, claim counts, citations, compression, factuality, coverage, contradiction, confidence, token cost, high-dimensional metadata, candidate identity, and a CHOICE-RECEIPT."
+    "The lane is planning and learning tissue. It does not execute tools, call a model, or claim authority without receipts.")
+
+  (floor
+    "The Form proof trains four summary-intent exemplars: source docs, proof logs, runtime events, and dialogue."
+    "A summary passes only when it has claims, citations, compression >= 50, factuality >= 80, coverage >= 80, contradiction = 0, confidence >= 70, and metadata that clears conviction, confidence, sovereignty, trust, aliveness, and meaning/impact floors."
+    "The band proves three refusals: missing citations, contradiction, and low coverage. It also proves low-trust metadata refuses learning even when the surface metrics look good."
+    "A valid CHOICE-RECEIPT preserves token cost and becomes a native training sample. The current candidate race shows `form-native:summary` winning over remote-model and local-LLM teachers because it clears quality gates with lower token, energy, and nutrition cost."
+    "Oracle lanes are explicit: source grounding crosses a remote membrane, and local Ollama is a local LLM receipt teacher. Neither is ambient authority.")
+
+  (north-star
+    "Every durable text surface, code patch, proof log, runtime event stream, dialogue, and memory cell can distill into native summary claim rows with source coordinates and citations."
+    "External LLMs, source search, model committees, and optional humans teach the lane only through receipt rows. They retire per category when native heldout receipts win."
+    "Summaries become retrieval and memory food: claim rows update cells, route planning, agent context, and future learning with traceable floor/north-star preservation."
+    "The lowest-token sovereign native summarizer wins only when factuality, coverage, confidence, trust, aliveness, and abstention behavior stay above the floor.")
+
+  (metadata-channel
+    (conviction "numeric support for the summary choice")
+    (confidence "receipt-backed certainty")
+    (mood "numeric affect bucket carried as data, not prose authority")
+    (expression "numeric expression/rhythm bucket")
+    (spectrum
+      (token-frequency "shape of repeated terms")
+      (meaning-impact "semantic and consequence strength")
+      (expression-rhythm "style/prosody rhythm")
+      (uncertainty "how much the lane should ask or abstain")
+      (novelty "how much new information entered")
+      (source-grounding "source/citation strength"))
+    (sovereignty "how locally ownable and capability-explicit the candidate is")
+    (trust "whether the receipts are strong enough to learn from")
+    (aliveness "whether the summary helps the living task move"))
+
+  (proved-contract
+    (native-learning
+      (samples source-doc proof-log runtime-events dialogue)
+      (classifier nearest-shape)
+      (accuracy 4/4))
+    (quality-gates
+      (pass source-doc-summary)
+      (refuse no-citation contradiction low-coverage low-trust))
+    (receipt-learning
+      (receipt choice-receipt)
+      (selected form-native:summary)
+      (token-cost 180)
+      (sample summary:receipt))
+    (candidate-race
+      (teachers remote-model-committee ollama:local human:optional)
+      (native form-native:summary)
+      (winner form-native:summary)
+      (reason "quality clears floor with lower token/energy/nutrition and higher sovereignty"))
+    (request-planning
+      (text:summarize kernel:call cap.summary.receipt)
+      (unknown summary/no-plan)))
+
+  (next-physical-proof-gaps
+    (source-reader "load real source text through a native file/source codec instead of checking a source-id row into the band")
+    (heldout-corpus "run real source/doc/proof/event summaries through local LLM and Form-native candidates with retained receipts")
+    (memory-update "write passing summary claim rows into native memory cells with rollback and compost receipts")
+    (abstention "prove low-evidence summaries ask for source grounding rather than generating plausible prose")))

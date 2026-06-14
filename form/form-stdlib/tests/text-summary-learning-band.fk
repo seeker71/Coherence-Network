@@ -1,0 +1,261 @@
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk
+;
+; text-summary-learning-band - Form-native text summarizer learning floor.
+;
+; Floor: the band proves native summary samples, candidate choice, quality
+; refusal, receipt learning, oracle requests, and metadata channels as Form
+; data. It executes no host tool and calls no LLM.
+;
+; North star: every text/code/proof/runtime/dialogue summary becomes a typed
+; native learning lane whose external teachers retire only after heldout native
+; receipts win with lower token, energy, and nutrition cost.
+;
+; Verdict 262143 when every claim lands:
+;   1      floor and north-star declarations are present
+;   2      a good source-doc summary passes every quality gate
+;   4      a citation-free summary is refused
+;   8      a contradictory summary is refused
+;   16     a low-coverage summary is refused
+;   32     source-doc summary intent is learned as a native exemplar
+;   64     all four summary-intent exemplars are classified
+;   128    CHOICE-RECEIPT is valid and preserves token cost
+;   256    receipt becomes a native training sample
+;   512    source-grounding oracle is an explicit remote membrane
+;   1024   local LLM receipt oracle is installed and explicit
+;   2048   Form-native candidate wins on lower token/energy/nutrition after passing quality gates
+;   4096   low-sovereignty human candidate is not auto-ready despite zero LLM tokens
+;   8192   high-dimensional spectrum carries meaning/impact/expression/source grounding
+;   16384  output envelope carries source, summary, receipt, winner, and metadata
+;   32768  low-trust metadata refuses the summary floor
+;   65536  request planning returns a kernel-native summary plan
+;   131072 unknown summary request returns no-plan with floor/north-star text
+(do
+    (let good-meta
+        (tsl-meta
+            86
+            84
+            62
+            78
+            (tsl-spectrum 77 88 72 12 43 91)
+            92
+            86
+            83))
+    (let low-trust-meta
+        (tsl-meta
+            86
+            84
+            62
+            78
+            (tsl-spectrum 77 88 72 12 43 91)
+            92
+            40
+            83))
+    (let source (tsl-repo-code-tool-source))
+    (let good-summary (tsl-repo-code-tool-summary good-meta))
+    (let no-citation
+        (tsl-summary
+            (tsl-summary-source-id good-summary)
+            "form-native:summary"
+            "surface-summary"
+            5
+            6
+            0
+            68
+            91
+            88
+            0
+            86
+            180
+            good-meta
+            "must cite source"
+            "citations become native grounding receipts"))
+    (let contradiction
+        (tsl-summary
+            (tsl-summary-source-id good-summary)
+            "form-native:summary"
+            "surface-summary"
+            5
+            6
+            3
+            68
+            91
+            88
+            1
+            86
+            180
+            good-meta
+            "must not contradict source"
+            "contradiction gates train abstain and revise lanes"))
+    (let low-coverage
+        (tsl-summary
+            (tsl-summary-source-id good-summary)
+            "form-native:summary"
+            "surface-summary"
+            5
+            6
+            3
+            68
+            91
+            60
+            0
+            86
+            180
+            good-meta
+            "must cover enough source claims"
+            "coverage gates teach summarizers to ask for more context"))
+    (let low-trust-summary
+        (tsl-summary
+            (tsl-summary-source-id good-summary)
+            "form-native:summary"
+            "surface-summary"
+            5
+            6
+            3
+            68
+            91
+            88
+            0
+            86
+            180
+            low-trust-meta
+            "must clear trust floor"
+            "trust gates protect learning from attractive but weak summaries"))
+    (let model (tsl-summary-model))
+    (let rows
+        (list
+            (tsl-row (tsl-source-doc-feature) "summary:source-doc")
+            (tsl-row (tsl-proof-log-feature) "summary:proof-log")
+            (tsl-row (tsl-runtime-event-feature) "summary:runtime-events")
+            (tsl-row (tsl-dialogue-feature) "summary:dialogue")))
+    (let receipt
+        (tsl-summary-receipt
+            "form-native:summary"
+            good-meta
+            180))
+    (let receipt-sample (tsl-receipt-sample receipt "summary:receipt"))
+    (let source-oracle (tsl-oracle-request "source-grounding"))
+    (let llm-oracle (tsl-oracle-request "llm-receipt"))
+    (let winner (tsl-winner (tsl-summary-candidates)))
+    (let human (nth (tsl-summary-candidates) 3))
+    (let output
+        (tsl-output
+            source
+            good-summary
+            receipt
+            winner
+            good-meta))
+    (let plan (tsl-plan-request "text:summarize"))
+    (let no-plan (tsl-plan-request "text:invent"))
+
+    (let c0
+        (if (and
+                (gt (len (tsl-floor)) 0)
+                (gt (len (tsl-north-star)) 0))
+            1
+            0))
+    (let c1
+        (if (eq (tsl-summary-pass? good-summary) 1)
+            2
+            0))
+    (let c2
+        (if (eq (tsl-summary-pass? no-citation) 0)
+            4
+            0))
+    (let c3
+        (if (eq (tsl-summary-pass? contradiction) 0)
+            8
+            0))
+    (let c4
+        (if (eq (tsl-summary-pass? low-coverage) 0)
+            16
+            0))
+    (let c5
+        (if (str_eq
+                (ns-label (tsl-source-doc-feature) model)
+                "summary:source-doc")
+            32
+            0))
+    (let c6
+        (if (eq (tsl-correct model rows) 4)
+            64
+            0))
+    (let c7
+        (if (and
+                (cr-choice-receipt-valid? receipt)
+                (eq (cr-receipt-cost receipt) 180))
+            128
+            0))
+    (let c8
+        (if (and
+                (str_eq (tsl-label receipt-sample) "form-native:summary")
+                (eq (len (tsl-feature receipt-sample)) 6))
+            256
+            0))
+    (let c9
+        (if (and
+                (str_eq (oc-ev-trust source-oracle) "remote-membrane")
+                (str_eq (oc-ev-state source-oracle) "protocol-pending"))
+            512
+            0))
+    (let c10
+        (if (and
+                (str_eq (oc-ev-name llm-oracle) "ollama-local")
+                (str_eq (oc-ev-state llm-oracle) "installed"))
+            1024
+            0))
+    (let c11
+        (if (and
+                (str_eq (tsl-candidate-path winner) "form-native:summary")
+                (and
+                    (eq (tsl-candidate-tokens winner) 160)
+                    (eq (tsl-candidate-ready? winner) 1)))
+            2048
+            0))
+    (let c12
+        (if (eq (tsl-candidate-ready? human) 0)
+            4096
+            0))
+    (let c13
+        (if (and
+                (ge (tsl-spectrum-meaning-impact (tsl-meta-spectrum good-meta)) 80)
+                (and
+                    (ge (tsl-spectrum-expression-rhythm (tsl-meta-spectrum good-meta)) 70)
+                    (ge (tsl-spectrum-source-grounding (tsl-meta-spectrum good-meta)) 90)))
+            8192
+            0))
+    (let c14
+        (if (and
+                (str_eq (tsl-source-id (tsl-output-source output)) "docs/coherence-substrate/code-tool-learning.form")
+                (and
+                    (str_eq (tsl-summary-candidate (tsl-output-summary output)) "form-native:summary")
+                    (and
+                        (str_eq (cr-receipt-selected-path (tsl-output-receipt output)) "form-native:summary")
+                        (and
+                            (str_eq (tsl-candidate-path (tsl-output-winner output)) "form-native:summary")
+                            (eq (tsl-meta-trust (tsl-output-meta output)) 86)))))
+            16384
+            0))
+    (let c15
+        (if (and
+                (eq (tsl-meta-floor? low-trust-meta) 0)
+                (eq (tsl-summary-pass? low-trust-summary) 0))
+            32768
+            0))
+    (let c16
+        (if (and
+                (str_eq (tsl-plan-status plan) "summary/plan")
+                (and
+                    (str_eq (tsl-plan-protocol plan) "kernel:call")
+                    (str_eq (tsl-plan-capability plan) "cap.summary.receipt")))
+            65536
+            0))
+    (let c17
+        (if (and
+                (str_eq (tsl-plan-status no-plan) "summary/no-plan")
+                (and
+                    (str_eq (tsl-plan-protocol no-plan) "none")
+                    (gt (len (tsl-plan-north-star no-plan)) 0)))
+            131072
+            0))
+
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15 c16 c17)))
