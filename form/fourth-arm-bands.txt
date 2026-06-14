@@ -53,7 +53,7 @@
 # record-blueprint rows among its focused four-way rows, and
 # android-mesh-learning now carries
 # active mic/camera/GPU sample rows at focused verdict 32767. The latest
-# completed full `cd form && ./validate.sh` on this branch reads 215
+# completed full `cd form && ./validate.sh` on this branch reads 219
 # four-way bands and 612 total passing workloads with 0 residual divergent
 # bands; refresh the full aggregate on a quiet host after focused release
 # rather than spending repeated validation cycles under shared-runner
@@ -146,6 +146,10 @@ llm-feature-channel-floor fks 131071
 android-mesh-learning fks 32767
 witness-state-receipt fks 16777215
 model-vitality fks 4095
+field-model-form-runtime fks 63
+field-model-form-runtime-conflict fks 1
+field-model-form-runtime-intervene fks 1
+field-model-form-runtime-lift fks 1
 bml-route-source-object fks 2047
 bml-protocol-capability-row fks 65535
 bml-choice-routing-metadata fks 4095

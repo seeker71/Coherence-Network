@@ -1,0 +1,116 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/fourth-field-model-runtime-floor-20260614",
+  "commit_scope": "Admit the BML-authored field-model Form runtime family to the fourth-arm manifest.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "fourth-arm-field-model-runtime",
+    "field-model-form-runtime",
+    "focused-testing-fast-release",
+    "connected-tissue-north-star"
+  ],
+  "spec_ids": [
+    "fourth-arm-bands",
+    "bml-native-north-star",
+    "agent-start-packet",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "fourth-field-model-runtime-floor-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "floor-prioritization",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "manifest-admission",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-14_fourth_field_model_runtime_floor.json",
+    "docs/system_audit/model_executor_run_ledger/fourth-field-model-runtime-floor-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-14_fourth_field_model_runtime_floor.json",
+    "docs/system_audit/model_executor_run_ledger/fourth-field-model-runtime-floor-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "coord claim \"fourth-field-model-runtime-floor: admit field-model-form-runtime pass family to fourth manifest; avoid HTTP/witness/BML/learning-dashboard lanes\"",
+      "cd form && bash scripts/fourth-arm-gate.sh field-model-form-runtime field-model-form-runtime-conflict field-model-form-runtime-intervene field-model-form-runtime-lift",
+      "cd form && ./validate.sh",
+      "python3 scripts/model_executor_proof_ledger.py sync-jsonl --output docs/system_audit/model_executor_runs.jsonl",
+      "python3 scripts/model_executor_proof_ledger.py check-jsonl",
+      "python3 scripts/model_executor_proof_ledger.py validate",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_fourth_field_model_runtime_floor.json"
+    ],
+    "notes": "The focused gate returned PASS-4WAY for field-model-form-runtime, field-model-form-runtime-conflict, field-model-form-runtime-intervene, and field-model-form-runtime-lift. Full validation returned `fourth arm: 219 band(s) four-way` and `612 ok, 0 divergent`."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed when this evidence was written; CI had not run yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested for this fourth-arm manifest floor slice."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The BML-authored field-model Form runtime proof family is now admitted as four-way floor rows: runtime, conflict, intervention, and lift/project proofs.",
+    "public_endpoints": [
+      "n/a: local Form runtime manifest admission"
+    ],
+    "test_flows": [
+      "cd form && bash scripts/fourth-arm-gate.sh field-model-form-runtime field-model-form-runtime-conflict field-model-form-runtime-intervene field-model-form-runtime-lift",
+      "cd form && ./validate.sh"
+    ]
+  },
+  "evidence_refs": [
+    "form/fourth-arm-bands.txt",
+    "docs/shared/agent-start-packet.md",
+    "docs/coherence-substrate/bml-native-north-star.form"
+  ],
+  "phase_gate": {
+    "phase": "fourth-field-model-runtime-floor",
+    "gate": "Field-model Form runtime rows must be explicit fourth-arm manifest rows before runtime/conflict/intervention/lift claims can say all kernels.",
+    "state": "local-four-way-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Continue the fourth-arm residual survey with another unclaimed, coherent pass family after CI merge."
+  },
+  "floor_update": {
+    "previous_observed_floor": "215 four-way bands / 612 ok / 0 divergent",
+    "current_observed_floor": "219 four-way bands / 612 ok / 0 divergent",
+    "new_bands": [
+      "field-model-form-runtime -> 63 four-way",
+      "field-model-form-runtime-conflict -> 1 four-way",
+      "field-model-form-runtime-intervene -> 1 four-way",
+      "field-model-form-runtime-lift -> 1 four-way"
+    ]
+  }
+}
