@@ -1,0 +1,112 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/form-native-elf-adb-runner-20260614",
+  "commit_scope": "Execute the Form-native ELF64/aarch64 executable on an authorized Android arm64 adb device and record stdout/stderr/exit proof.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "form-native-asm",
+    "form-native-executable-floor",
+    "bml-native-north-star"
+  ],
+  "spec_ids": [
+    "bml-native-north-star",
+    "form-to-asm",
+    "hati-os-targets",
+    "fourth-kernel-physical-lanes"
+  ],
+  "task_ids": [
+    "form-native-elf-adb-runner-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "android-device-runner"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "scripts/bml_form_jit_metal_planes_audit.sh",
+    "form/form-stdlib/form-elf-exec.fk",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/form-to-asm.form",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_form_native_elf_adb_runner.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "scripts/bml_form_jit_metal_planes_audit.sh",
+    "form/form-stdlib/form-elf-exec.fk",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/form-to-asm.form",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_form_native_elf_adb_runner.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "scripts/bml_form_jit_metal_planes_audit.sh#runner=adb",
+    "form/form-stdlib/form-elf-exec.fk#ELF64-aarch64-ET_EXEC",
+    "docs/coherence-substrate/form-to-asm.form#android-executable-shape-realized",
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form#android-arm64",
+    "docs/coherence-substrate/hati-os-targets.form#release-contract"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord join && coord claim \"form-native Android adb executable receipt\"",
+      "adb devices -l",
+      "adb shell getprop ro.product.model; adb shell getprop ro.product.cpu.abi; adb shell getprop ro.build.version.release",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-elf-exec.fk form-stdlib/tests/form-elf-exec-band.fk",
+      "FORM_ELF_EXEC_REQUIRE_ANDROID=1 bash scripts/bml_form_jit_metal_planes_audit.sh"
+    ],
+    "notes": "An authorized Samsung SM-S918U1 Android 16 arm64-v8a device was available through adb. Focused Form validation returned 63 with `fourth arm: 1 band(s) four-way` and `1 ok, 0 divergent`. The metal-plane audit writes the Form-emitted ELF64/aarch64 ET_EXEC image, file(1) reports an ARM aarch64 statically linked executable, pushes it to /data/local/tmp, chmods it, executes it through adb shell, and validates stdout FORM ELF, empty stderr, and exit 42. The same audit still proves Form-native JIT lanes, Mach-O/ELF object floors, form-elf-exec, lowered residuals, oracle learning, and clang-oracle macOS/Android object receipts through fkwu-covered gates."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No public deploy performed for this local Android device runner receipt slice."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local Android adb runner proof passed; CI, review, merge, and deploy remain pending."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The metal-plane audit now treats an authorized Android arm64 adb device as a first-class executable runner before qemu/Docker fallback. It executes the Form-native ELF64/aarch64 image on the target device and validates stdout FORM ELF, empty stderr, and exit 42.",
+    "public_endpoints": [
+      "local:bml-form-jit-metal-planes-audit",
+      "local:adb-android-arm64-device"
+    ],
+    "test_flows": [
+      "Detect one authorized adb device or a requested FORM_ELF_EXEC_ADB_SERIAL.",
+      "Verify the adb device ABI is arm64.",
+      "Emit the Form-native ELF executable bytes from form-elf-exec.",
+      "Inspect the executable shape with file(1).",
+      "Push the executable to /data/local/tmp, run it through adb shell, and require stdout FORM ELF, empty stderr, and exit 42."
+    ]
+  }
+}

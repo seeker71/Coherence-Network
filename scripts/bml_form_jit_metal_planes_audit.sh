@@ -13,6 +13,11 @@
 # arm64 assembler/lowerer lane, Form-native Mach-O/ELF object wrappers, and the
 # Form-native Android ELF executable shape before checking clang output.
 #
+# Android execution runner selection:
+#   FORM_ELF_EXEC_REQUIRE_ANDROID=1  require an authorized adb arm64 device
+#   FORM_ELF_EXEC_ADB_SERIAL=<id>    select one adb device when several are live
+#   FORM_ELF_EXEC_RUNNER=<command>   force a qemu-like command runner
+#
 # Both native C surfaces are exercised against the oracle:
 #   - BML source -> Hati loadable table -> universal C binary
 #   - Form recipe -> jit_emit_c -> target assembly/object
@@ -382,9 +387,73 @@ printf 'PASS  plane=android-arm64 surface=form-native-executable emitter=form-el
 elf_exec_runner="${FORM_ELF_EXEC_RUNNER:-}"
 elf_exec_runner_kind=""
 elf_exec_docker_image="${FORM_ELF_EXEC_DOCKER_IMAGE:-alpine:3.20}"
+elf_exec_adb_serial="${FORM_ELF_EXEC_ADB_SERIAL:-}"
+elf_exec_adb_selected=""
+elf_exec_adb_reason=""
 elf_exec_skip_reason="runner=qemu-aarch64 unavailable; executable shape inspected"
-if [[ -n "$elf_exec_runner" ]]; then
+
+select_adb_device() {
+  elf_exec_adb_selected=""
+  elf_exec_adb_reason=""
+  if ! command -v adb >/dev/null 2>&1; then
+    elf_exec_adb_reason="adb unavailable"
+    return 1
+  fi
+  if [[ -n "$elf_exec_adb_serial" ]]; then
+    local state
+    state="$(adb -s "$elf_exec_adb_serial" get-state 2>/dev/null || true)"
+    if [[ "$state" == "device" ]]; then
+      elf_exec_adb_selected="$elf_exec_adb_serial"
+      return 0
+    fi
+    elf_exec_adb_reason="adb serial=$elf_exec_adb_serial state=${state:-missing}"
+    return 1
+  fi
+
+  local devices
+  devices="$(adb devices | awk 'NR > 1 && $2 == "device" { print $1 }')"
+  local count
+  count="$(printf '%s\n' "$devices" | sed '/^$/d' | wc -l | tr -d ' ')"
+  if [[ "$count" == "1" ]]; then
+    elf_exec_adb_selected="$(printf '%s\n' "$devices" | sed -n '1p')"
+    return 0
+  fi
+  if [[ "$count" == "0" ]]; then
+    elf_exec_adb_reason="adb has no authorized device"
+  else
+    elf_exec_adb_reason="adb has $count authorized devices; set FORM_ELF_EXEC_ADB_SERIAL"
+  fi
+  return 1
+}
+
+mask_adb_serial() {
+  local serial="$1"
+  local len="${#serial}"
+  if (( len <= 4 )); then
+    printf '****'
+  else
+    printf '****%s' "${serial: -4}"
+  fi
+}
+
+elf_exec_adb_requested=0
+if [[ "${FORM_ELF_EXEC_ADB:-0}" == "1" || "${FORM_ELF_EXEC_REQUIRE_ANDROID:-0}" == "1" || "$elf_exec_runner" == "adb" || "$elf_exec_runner" == "android-adb" ]]; then
+  elf_exec_adb_requested=1
+fi
+
+if [[ "$elf_exec_adb_requested" == "1" ]]; then
+  if select_adb_device; then
+    elf_exec_runner_kind="adb"
+    elf_exec_runner="adb"
+  else
+    echo "FAIL: Form-native ELF executable requested Android adb runner but $elf_exec_adb_reason" >&2
+    exit 1
+  fi
+elif [[ -n "$elf_exec_runner" ]]; then
   elf_exec_runner_kind="command"
+elif select_adb_device; then
+  elf_exec_runner_kind="adb"
+  elf_exec_runner="adb"
 else
   elf_exec_runner="$(command -v qemu-aarch64 || command -v qemu-aarch64-static || true)"
   if [[ -n "$elf_exec_runner" ]]; then
@@ -411,6 +480,30 @@ if [[ "$elf_exec_runner_kind" == "command" ]]; then
     exit 1
   fi
   echo "PASS  plane=android-arm64 surface=form-native-executable runner=$elf_exec_runner stdout='FORM ELF' stderr='' exit=42"
+elif [[ "$elf_exec_runner_kind" == "adb" ]]; then
+  elf_exec_model="$(adb -s "$elf_exec_adb_selected" shell getprop ro.product.model | tr -d '\r')"
+  elf_exec_android="$(adb -s "$elf_exec_adb_selected" shell getprop ro.build.version.release | tr -d '\r')"
+  elf_exec_abi="$(adb -s "$elf_exec_adb_selected" shell getprop ro.product.cpu.abi | tr -d '\r')"
+  if ! grep -q "arm64" <<<"$elf_exec_abi"; then
+    echo "FAIL: Form-native ELF executable adb device abi='$elf_exec_abi' is not arm64" >&2
+    exit 1
+  fi
+  elf_exec_remote="/data/local/tmp/form-native-android-arm64-$$.elf"
+  elf_exec_remote_stdout="/data/local/tmp/form-native-android-arm64-$$.stdout"
+  elf_exec_remote_stderr="/data/local/tmp/form-native-android-arm64-$$.stderr"
+  elf_exec_remote_rc="/data/local/tmp/form-native-android-arm64-$$.rc"
+  adb -s "$elf_exec_adb_selected" push "$elf_exec_native" "$elf_exec_remote" >/dev/null 2>&1
+  adb -s "$elf_exec_adb_selected" shell "chmod 755 '$elf_exec_remote'"
+  adb -s "$elf_exec_adb_selected" shell "rm -f '$elf_exec_remote_stdout' '$elf_exec_remote_stderr' '$elf_exec_remote_rc'; '$elf_exec_remote' >'$elf_exec_remote_stdout' 2>'$elf_exec_remote_stderr'; echo \$? >'$elf_exec_remote_rc'" >/dev/null
+  elf_exec_stdout="$(adb -s "$elf_exec_adb_selected" shell "cat '$elf_exec_remote_stdout' 2>/dev/null" | tr -d '\r')"
+  elf_exec_stderr="$(adb -s "$elf_exec_adb_selected" shell "cat '$elf_exec_remote_stderr' 2>/dev/null" | tr -d '\r')"
+  elf_exec_rc="$(adb -s "$elf_exec_adb_selected" shell "cat '$elf_exec_remote_rc' 2>/dev/null" | tr -d '\r[:space:]')"
+  adb -s "$elf_exec_adb_selected" shell "rm -f '$elf_exec_remote' '$elf_exec_remote_stdout' '$elf_exec_remote_stderr' '$elf_exec_remote_rc'" >/dev/null || true
+  if [[ "$elf_exec_rc" != "42" || "$elf_exec_stdout" != "FORM ELF" || -n "$elf_exec_stderr" ]]; then
+    echo "FAIL: Form-native ELF executable runner=adb device=$(mask_adb_serial "$elf_exec_adb_selected") rc=$elf_exec_rc stdout='$elf_exec_stdout' stderr='$elf_exec_stderr'" >&2
+    exit 1
+  fi
+  echo "PASS  plane=android-arm64 surface=form-native-executable runner=adb device=$(mask_adb_serial "$elf_exec_adb_selected") model='$elf_exec_model' android=$elf_exec_android abi=$elf_exec_abi stdout='FORM ELF' stderr='' exit=42"
 elif [[ "$elf_exec_runner_kind" == "docker" ]]; then
   set +e
   elf_exec_stdout="$(docker run --rm --platform linux/arm64 -v "$work:/work:ro" "$elf_exec_docker_image" "/work/$(basename "$elf_exec_native")" 2>"$work/form-native-elf-exec.stderr")"
@@ -469,4 +562,4 @@ compile_surface "android-arm64" "aarch64-linux-android" "ELF 64-bit.*(ARM aarch6
 compile_surface "android-arm64" "aarch64-linux-android" "ELF 64-bit.*(ARM aarch64|AArch64)" \
   "form-jit-lowered" "$lowered_c" "fk_walk|_fk_walk"
 
-echo "ok — Form-native JIT lane proof holds four-way; Form-native Mach-O/ELF object floors and Android ELF executable shape hold four-way; Android ELF execution receipt runs when a live runner is available; lowered residual cluster holds five-band four-way; oracle learning choice floor holds four-way; clang oracle assembly/object receipts cover every supported metal plane including lowered JIT"
+echo "ok — Form-native JIT lane proof holds four-way; Form-native Mach-O/ELF object floors and Android ELF executable shape hold four-way; Android ELF execution receipt runs through adb/qemu/Docker when a live runner is available; lowered residual cluster holds five-band four-way; oracle learning choice floor holds four-way; clang oracle assembly/object receipts cover every supported metal plane including lowered JIT"
