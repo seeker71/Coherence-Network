@@ -1,0 +1,138 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/frontdoor-backpressure-20260614",
+  "commit_scope": "Extend the Form-native text summary source lane with production front-door telemetry receipts and producer pacing receipts against live backpressure.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "hati-os",
+    "form-native-summary-learning",
+    "production-front-door-telemetry"
+  ],
+  "spec_ids": [
+    "form-native-source-coordinates",
+    "frontdoor-telemetry",
+    "backpressure-aware-streams"
+  ],
+  "task_ids": [
+    "frontdoor-backpressure-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "constraints"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/text-summary-learning.fk",
+    "form/form-stdlib/tests/text-summary-multi-source-band.fk",
+    "docs/coherence-substrate/text-summary-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_frontdoor_backpressure.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/form-stdlib/text-summary-learning.fk",
+    "form/form-stdlib/tests/text-summary-multi-source-band.fk",
+    "docs/coherence-substrate/text-summary-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_frontdoor_backpressure.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "form/form-stdlib/text-summary-learning.fk",
+    "form/form-stdlib/tests/text-summary-multi-source-band.fk",
+    "docs/coherence-substrate/text-summary-learning.form",
+    "docs/coherence-substrate/INDEX.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim \"production front-door telemetry and producer pacing\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/cell-log-store.fk form-stdlib/http-parse.fk form-stdlib/kernel-http.fk form-stdlib/http-request.fk form-stdlib/http-render.fk form-stdlib/http-server.fk form-stdlib/http-socket.fk form-stdlib/channel.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-multi-source-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-real-source-band.fk",
+      "curl -sS --max-time 12 -w '\\nCURL_HTTP_CODE=%{http_code}\\nCURL_TIME_TOTAL=%{time_total}\\nCURL_SIZE_DOWNLOAD=%{size_download}\\n' -D /tmp/hati-frontdoor-headers.txt -o /tmp/hati-frontdoor-body.json -H 'Accept: application/json' 'https://api.coherencycoin.com/api/runtime/endpoints/summary?limit=5'",
+      "curl -sS --max-time 12 -w '\\nCURL_HTTP_CODE=%{http_code}\\nCURL_TIME_TOTAL=%{time_total}\\nCURL_SIZE_DOWNLOAD=%{size_download}\\n' -D /tmp/hati-ideas-gate-headers.txt -o /tmp/hati-ideas-gate-body.json -H 'Accept: application/json' -H 'X-Form-Native-Public-Gate: 1' 'https://api.coherencycoin.com/api/ideas?limit=1&sort=marginal_cc'",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_frontdoor_backpressure.json"
+    ],
+    "notes": "Focused Form proof returns 65535 on Go/Rust/TypeScript with file/store/socket route/production-front-door telemetry/stream producer-pacing rows. This is explicitly 3-kernel only: the fourth-arm gap remains host I/O/socket/channel natives and live external HTTP capture in fkwu. Real-source proof remains 8191 after updating the exact citation offset moved by documentation edits."
+  },
+  "live_frontdoor_probe": {
+    "status": "pass",
+    "url": "https://api.coherencycoin.com/api/runtime/endpoints/summary?limit=5",
+    "observed_at": "2026-06-14T05:19:35Z",
+    "http_code": 200,
+    "curl_time_total_seconds": 0.226394,
+    "body_bytes": 2347,
+    "headers": {
+      "content-type": "application/json",
+      "content-length": "2347",
+      "x-form-handler": "api_runtime_endpoints_summary",
+      "x-form-python-authority": "false",
+      "x-form-router": "native-kernel",
+      "cf-ray": "a0b6e186bc298998-SIN"
+    }
+  },
+  "residual_route_pressure": {
+    "status": "observed",
+    "url": "https://api.coherencycoin.com/api/ideas?limit=1&sort=marginal_cc",
+    "header": "X-Form-Native-Public-Gate: 1",
+    "observed_at": "2026-06-14T05:19:44Z",
+    "http_code": 500,
+    "body_bytes": 52,
+    "headers": {
+      "x-form-router": "native-kernel",
+      "content-type": "application/json"
+    },
+    "body": {
+      "error": "persistence",
+      "detail": "idea query failed"
+    },
+    "next": "Keep the healthy runtime-summary route as this telemetry carrier and debug native ideas persistence separately."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "CI not run yet in this evidence record."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Production route probe performed against the existing public front door; code changes are not deployed until this branch is merged and production deploy catches up."
+  },
+  "phase_gate": {
+    "phase": "frontdoor-backpressure",
+    "gate": "Source receipts carry production front-door telemetry rows and producer pacing against channel backpressure as native Form data.",
+    "state": "local-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Lower the production HTTP probe into all-kernel-native external HTTP capture and extend producer pacing into adaptive rate control with measured queue depth, ack latency, and replay lag."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No public API behavior is changed by this stdlib/doc slice. Form source receipts now expose production-front-door telemetry and producer pacing rows for summarizer learning.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/runtime/endpoints/summary?limit=5"
+    ],
+    "test_flows": [
+      "The focused multi-source Form band proves the route lane through socket_listen/socket_connect/socket_send/kh-serve-listener/socket_recv plus a production front-door telemetry sample row.",
+      "The stream lane writes a .fkb channel, reads two payloads before ack, records one deferred payload, advances ack cursor 3, appends the deferred payload after ack, and reads it back from the replay cursor.",
+      "The public runtime summary endpoint returned native-kernel headers and matching body byte count."
+    ],
+    "summary": "Local Form proof passed and public front-door telemetry probe returned native-kernel route evidence."
+  }
+}
