@@ -1,0 +1,58 @@
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk form-stdlib/tool-embodiment.fk
+;
+; tool-embodiment-band — real per-tool telemetry, projected into the proven
+; embodiment gate, decides WHEN a Form-native lane replaces an external tool.
+;
+; The strange-minimal edge: one tool ("search"), two lanes — a remote
+; incumbent and a Form-native challenger — and the moment the challenger's
+; measured success rate crosses the trust gate (70). Below it the external
+; lane keeps the body; above it the Form-native lane embodies. The flip IS
+; "embodied when vitality asks for it," computed from measurement, not asserted.
+;
+; Verdict 63 when every claim lands:
+;   1   remote telemetry projects to a costed, low-sovereignty oracle row
+;   2   local telemetry projects to a zero-token, high-sovereignty oracle row
+;   4   a Form-native lane below the trust gate has NOT earned embodiment
+;   8   the same lane above the trust gate HAS earned embodiment
+;   16  the verdict flips external -> form-native exactly as trust crosses the gate
+;   32  the multi-lane winner (te-verdict) agrees: incumbent keeps the body
+;       under a young challenger, the ripe challenger takes it
+(do
+    ; one external incumbent: 9/10 terminal successes, 1200ms, remote membrane.
+    (let ext (te-telemetry-oracle "external:claude" "remote" 9 1 1200))
+    ; the same tool's Form-native challenger, two ripeness states (local lane).
+    ; young: 6/10 -> trust 60 (below gate). ripe: 8/10 -> trust 80 (above gate).
+    (let fn-young (te-telemetry-oracle "form-native:search" "local" 6 4 400))
+    (let fn-ripe  (te-telemetry-oracle "form-native:search" "local" 8 2 400))
+
+    ; 1 — remote projection: terminal 10 * 60 tokens, sovereignty 40 (borrowed).
+    (let c0
+        (if (and (eq (ctl-fo-tokens ext) 600) (eq (ctl-fo-sovereignty ext) 40))
+            1 0))
+    ; 2 — local projection: zero external tokens, sovereignty 90 (own body).
+    (let c1
+        (if (and (eq (ctl-fo-tokens fn-ripe) 0) (eq (ctl-fo-sovereignty fn-ripe) 90))
+            2 0))
+    ; 4 — a young Form-native lane (trust 60) has not earned readiness.
+    (let c2
+        (if (eq (te-ready? fn-young) 0) 4 0))
+    ; 8 — the ripe Form-native lane (trust 80, conf 80, sov 90) is ready.
+    (let c3
+        (if (eq (te-ready? fn-ripe) 1) 8 0))
+    ; 16 — the embodiment decision flips as trust crosses the gate:
+    ;      young challenger does NOT embody; ripe challenger DOES.
+    (let c4
+        (if (and
+                (eq (te-embodies? ext fn-young) 0)
+                (eq (te-embodies? ext fn-ripe) 1))
+            16 0))
+    ; 32 — the multi-lane winner over [incumbent, challenger] agrees with the
+    ;      pairwise gate: young challenger leaves the body with the incumbent;
+    ;      the ripe challenger takes it.
+    (let c5
+        (if (and
+                (str_eq (te-embodied-path (list ext fn-young)) "external:claude")
+                (str_eq (te-embodied-path (list ext fn-ripe)) "form-native:search"))
+            32 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))

@@ -1,0 +1,87 @@
+; tool-embodiment.fk — project REAL per-tool telemetry into the proven
+; embodiment gate, so a Form-native lane replaces an external tool only
+; when its measured receipts earn it.
+;
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk
+;
+; The live agent runner already emits, per real tool call, a RuntimeEvent
+; (endpoint "tool:<name>", status_code, runtime_ms, model). Summed per lane
+; that is (lane, locality, completed, failed, runtime-ms). code-tool-learning.fk
+; proved the embodiment GATE over hand-written floor-oracle rows; the missing
+; link was a recipe that DERIVES those rows from real measurement. This file is
+; that link: it turns one telemetry lane-row into a ctl-floor-oracle row —
+; the six axes (cost, nutrition, sovereignty, trust, confidence) read honestly
+; off telemetry — then asks the proven gate whether a Form-native challenger
+; has earned embodiment over the incumbent it would replace.
+;
+; The discipline is "embodied when vitality asks": a Form-native lane displaces
+; an external tool only when ctl-fo-ready? (sovereignty/trust/confidence >= 70)
+; AND it is cheaper than the incumbent. Until its measured success rate crosses
+; the gate, the external lane keeps the body. No assertion replaces a tool;
+; only a measured receipt does.
+;
+; Proven by: form-stdlib/tests/tool-embodiment-band.fk
+
+; floor token cost charged to each REMOTE invocation; local lanes spend none.
+; Exact provider tokens come from automation_usage later; this is the honest
+; structural floor — a remote membrane costs tokens, a local recipe does not.
+(defn te-token-unit () 60)
+; wall-clock ms that count as one unit of energy (measured runtime / unit).
+(defn te-energy-unit () 100)
+
+(defn te-local? (locality) (if (str_eq locality "local") 1 0))
+
+; terminal outcomes are the honest denominator — completed work, not in-flight.
+(defn te-terminal (completed failed) (add completed failed))
+
+; success rate in 0..100 from measured terminal outcomes (guarded for none).
+(defn te-success-rate (completed failed)
+    (if (eq (te-terminal completed failed) 0)
+        0
+        (div (mul completed 100) (te-terminal completed failed))))
+
+; confidence grows with evidence volume: full weight needs >= 5 terminal runs,
+; so a 100%-but-tiny sample cannot vault a lane through the gate on one lucky call.
+(defn te-min5 (n) (if (gt n 5) 5 n))
+(defn te-confidence (completed failed)
+    (div
+        (mul (te-success-rate completed failed) (te-min5 (te-terminal completed failed)))
+        5))
+
+; project one telemetry lane-row into a measured floor-oracle row.
+;   tokens      0 for local lanes; terminal * token-unit for remote membranes
+;   energy      measured runtime-ms / energy-unit
+;   nutrition   terminal invocations consumed (cost tie-break)
+;   sovereignty structural: local 90, remote 40 (a membrane is borrowed sense)
+;   trust       measured success rate
+;   confidence  success rate weighted by evidence volume
+(defn te-telemetry-oracle (lane locality completed failed runtime-ms)
+    (ctl-floor-oracle
+        lane
+        (if (eq (te-local? locality) 1)
+            0
+            (mul (te-terminal completed failed) (te-token-unit)))
+        (div runtime-ms (te-energy-unit))
+        (te-terminal completed failed)
+        (if (eq (te-local? locality) 1) 90 40)
+        (te-success-rate completed failed)
+        (te-confidence completed failed)))
+
+; has THIS lane, on its own measured axes, cleared the readiness gate?
+(defn te-ready? (row) (ctl-fo-ready? row))
+
+; the pairwise embodiment decision: does the challenger EARN the body the
+; incumbent currently holds? Ready on its own axes AND cheaper than incumbent.
+; Order is explicit (incumbent first) — no reliance on list position.
+(defn te-embodies? (incumbent challenger)
+    (if (and
+            (eq (ctl-fo-ready? challenger) 1)
+            (eq (ctl-fo-lower-cost? challenger incumbent) 1))
+        1
+        0))
+
+; the embodiment verdict over many lanes for one tool. Order the list
+; incumbent-first; the proven ctl-floor-winner keeps the incumbent until a
+; ready, cheaper challenger displaces it.
+(defn te-verdict (rows) (ctl-floor-winner rows))
+(defn te-embodied-path (rows) (ctl-fo-path (te-verdict rows)))
