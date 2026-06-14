@@ -1,0 +1,48 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_web_api_deploy.sh scripts/test_hostinger_deploy_form_paths.sh",
+    "./scripts/test_hostinger_deploy_form_paths.sh",
+    "PUBLIC_API_BASE_URL=https://api.coherencycoin.com PUBLIC_WEB_BASE_URL=https://coherencycoin.com VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -lc 'source scripts/verify_web_api_deploy.sh; check_promoted_bml_read_routes_native'",
+    "public curl header probes for five promoted BML endpoints",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-10_bml_promoted_route_proof_headers.json",
+    "git diff --check",
+    "PUBLIC_API_BASE_URL=https://api.coherencycoin.com PUBLIC_WEB_BASE_URL=https://coherencycoin.com ./scripts/verify_web_api_deploy.sh"
+  ],
+  "failure_reason": "Corrected the promoted BML read-route proof contract after production showed native routing without per-handler metadata. The Hostinger canary and public verifier now require HTTP 2xx plus X-Form-Router: native-kernel for those promoted reads, retain handler/authority as optional diagnostics, and keep stricter handler checks on older native canaries. Targeted and full public verifier proof passed against the deployed ingress state.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 310,
+    "row_sha256": "47572ac086dbf2f9a9d075d865a90435e56417666c1f735373457c8831f9b91f",
+    "summary": "corrected-the-promoted-bml-read-route-proof-cont"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0310-47572ac086db",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L310"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_web_api_deploy.sh scripts/test_hostinger_deploy_form_paths.sh",
+      "./scripts/test_hostinger_deploy_form_paths.sh",
+      "PUBLIC_API_BASE_URL=https://api.coherencycoin.com PUBLIC_WEB_BASE_URL=https://coherencycoin.com VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -lc 'source scripts/verify_web_api_deploy.sh; check_promoted_bml_read_routes_native'",
+      "public curl header probes for five promoted BML endpoints",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-10_bml_promoted_route_proof_headers.json",
+      "git diff --check",
+      "PUBLIC_API_BASE_URL=https://api.coherencycoin.com PUBLIC_WEB_BASE_URL=https://coherencycoin.com ./scripts/verify_web_api_deploy.sh"
+    ],
+    "status": "pass"
+  }
+}

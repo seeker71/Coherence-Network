@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "python scripts/start_gate.py",
+    "python scripts/worktree_continuity_guard.py --fail-on-risk",
+    "node cli/bin/cc.mjs inbox",
+    "node cli/bin/cc.mjs msg broadcast \"Working on visible contribution recognition and growth tracking spec: drafting complete, running validation and commit prep\"",
+    "python scripts/validate_spec_quality.py --file specs/task_db6bddf6664e5db0.md",
+    "git fetch origin main && git rebase origin/main",
+    "python scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "python scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-28_visible-contribution-recognition-growth-tracking.json"
+  ],
+  "failure_reason": "Wrote the simplified spec and passed spec-quality validation, but fetch/rebase and followthrough gates were blocked by sandbox restrictions on the parent gitdir and outbound GitHub access, so the full commit contract could not complete in this environment.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 56,
+    "row_sha256": "9ad5e963912280e4e9fabe3863643808a6f707dd62e40b50380c5aa2a6acbff6",
+    "summary": "wrote-the-simplified-spec-and-passed-spec-qualit"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "fail",
+  "run_id": "legacy-jsonl-0056-9ad5e9639122",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L56"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "python scripts/start_gate.py",
+      "python scripts/worktree_continuity_guard.py --fail-on-risk",
+      "node cli/bin/cc.mjs inbox",
+      "node cli/bin/cc.mjs msg broadcast \"Working on visible contribution recognition and growth tracking spec: drafting complete, running validation and commit prep\"",
+      "python scripts/validate_spec_quality.py --file specs/task_db6bddf6664e5db0.md",
+      "git fetch origin main && git rebase origin/main",
+      "python scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-28_visible-contribution-recognition-growth-tracking.json"
+    ],
+    "status": "fail"
+  }
+}

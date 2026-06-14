@@ -1,0 +1,48 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord join && coord claim \"android active mic camera accelerator samples\"",
+    "adb devices -l",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/tests/android-mesh-learning-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh android-mesh-learning",
+    "cd experiments/coherence-sense-android && ANDROID_HOME=/Users/ursmuff/.android-sdk-codex JAVA_HOME=/opt/homebrew/opt/openjdk@21 ./gradlew assembleDebug",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_android_active_sample_learning.json",
+    "python3 scripts/model_executor_proof_ledger.py validate",
+    "git diff --check"
+  ],
+  "failure_reason": "Converted the active mic/camera/accelerator learning floor into Form-native android-mesh-learning rows instead of adding a Python carrier. The band now proves aml-active-sample rows for mic RMS, camera luma, and GPU EGL readback summaries, summary-only privacy, active media floor, and native-first speech/vision/multimodal routing at 32767 across Go/Rust/TypeScript/fkwu. The fourth-arm manifest row was lifted to 32767 and PASS-4WAY. The Android carrier compiles with Camera2 luma sampling and OpenGL ES/EGL readback sampling. The authorized SM-S918U1 was visible through adb, but the phone was PIN-locked during live capture, so a live receipt with nonzero active counters remains the next physical proof gap.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 391,
+    "row_sha256": "e7d5a3f21a5a7c9c21cbc379271593192a1c1380c74479cf6ba1acfe14573168",
+    "summary": "converted-the-active-mic-camera-accelerator-lear"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0391-e7d5a3f21a5a",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L391"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord join && coord claim \"android active mic camera accelerator samples\"",
+      "adb devices -l",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/tests/android-mesh-learning-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh android-mesh-learning",
+      "cd experiments/coherence-sense-android && ANDROID_HOME=/Users/ursmuff/.android-sdk-codex JAVA_HOME=/opt/homebrew/opt/openjdk@21 ./gradlew assembleDebug",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_android_active_sample_learning.json",
+      "python3 scripts/model_executor_proof_ledger.py validate",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

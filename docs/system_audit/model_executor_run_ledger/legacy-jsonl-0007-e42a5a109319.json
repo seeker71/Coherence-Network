@@ -1,0 +1,40 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make start-gate",
+    "cd api && ruff check app/services/automation_usage_service.py",
+    "cd api && pytest -q tests/test_automation_usage_api.py",
+    "git fetch origin main && git rebase origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "Provider telemetry tracked OpenAI and Codex as separate buckets despite Codex using OpenAI backend; normalized canonical provider mapping so openai-codex rolls up under openai while preserving alias compatibility.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 7,
+    "row_sha256": "e42a5a10931978eaa6f1e6f4a500db3a69a43e3e65e7d0f2f5b4ce5f567cc471",
+    "summary": "provider-telemetry-tracked-openai-and-codex-as-s"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0007-e42a5a109319",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L7"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make start-gate",
+      "cd api && ruff check app/services/automation_usage_service.py",
+      "cd api && pytest -q tests/test_automation_usage_api.py",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

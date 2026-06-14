@@ -1,0 +1,44 @@
+{
+  "attempts": 2,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "cd api && python3 -m pytest -q tests/test_ideas_router_form.py tests/test_runtime_surface_native_routes.py",
+    "cd api && python3 -m ruff check tests/test_ideas_router_form.py tests/test_runtime_surface_native_routes.py",
+    "python3 scripts/runtime_surface_report.py --json",
+    "cd form && ./validate.sh ../deploy/kernel-router/production-routes.fk",
+    "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --host 127.0.0.1 --port 19171 --workers 1 --routes ../../deploy/kernel-router/production-routes.fk --stdlib ../form-stdlib --upstream http://127.0.0.1:9; curl -i http://127.0.0.1:19171/api/ideas/router-structure",
+    "python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expression.md"
+  ],
+  "failure_reason": "Moved the ideas-router Form expression one step closer to the north star by adding a native kernel-router structure route at /api/ideas/router-structure. The first kernel-router smoke exposed a pre-existing production manifest blocker: routes referenced health_route_from_class from a source-language section, which served as a known red in Rust tests and prevented manifest boot. Replaced the live /health route-table row with a plain Form handler so the manifest boots, then proved the new ideas route returns HTTP 200, application/json, X-Form-Router: native-kernel, and source-backed JSON. form/validate.sh still text-diverges on closure-table output because sibling kernels render closure identities differently; the carrier smoke is the route-level proof.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 238,
+    "row_sha256": "ba670481441521c6966f03afade7293f873543a81bebd3c769044bf11c33df5b",
+    "summary": "moved-the-ideas-router-form-expression-one-step-"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0238-ba6704814415",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L238"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd api && python3 -m pytest -q tests/test_ideas_router_form.py tests/test_runtime_surface_native_routes.py",
+      "cd api && python3 -m ruff check tests/test_ideas_router_form.py tests/test_runtime_surface_native_routes.py",
+      "python3 scripts/runtime_surface_report.py --json",
+      "cd form && ./validate.sh ../deploy/kernel-router/production-routes.fk",
+      "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --host 127.0.0.1 --port 19171 --workers 1 --routes ../../deploy/kernel-router/production-routes.fk --stdlib ../form-stdlib --upstream http://127.0.0.1:9; curl -i http://127.0.0.1:19171/api/ideas/router-structure",
+      "python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expression.md"
+    ],
+    "status": "pass"
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "bash -n scripts/verify_web_api_deploy.sh",
+    "bash -n scripts/test_verify_web_api_pulse_witness.sh",
+    "bash scripts/test_verify_web_api_pulse_witness.sh",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-08_pulse_strain_healing.json",
+    "git diff --check",
+    "git fetch origin main && git rebase --autostash origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "The public deploy verifier could leave overall=strained with zero ongoing silences as a vague warning. This task keeps that condition non-blocking, but prints strained organ details from /pulse/now and rechecks once after the witness cycle so operators know whether the strain settled or remained soft. Ongoing silences still fail the deploy contract. Local PR guard passed with ready_for_push=True and stale PR follow-through found zero stale Codex PRs.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 141,
+    "row_sha256": "690a5a2b7ba4ba99f11a53181db17ca7ae42bbd29ac357ccf8c470e696fde348",
+    "summary": "the-public-deploy-verifier-could-leave-overall-s"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0141-690a5a2b7ba4",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L141"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "bash -n scripts/verify_web_api_deploy.sh",
+      "bash -n scripts/test_verify_web_api_pulse_witness.sh",
+      "bash scripts/test_verify_web_api_pulse_witness.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-08_pulse_strain_healing.json",
+      "git diff --check",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

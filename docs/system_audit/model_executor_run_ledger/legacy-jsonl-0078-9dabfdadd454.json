@@ -1,0 +1,40 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "generated web/content/presence-walk/{en,de,es,id}.json from existing TS data and locale overrides",
+    "cd web && npm run build",
+    "curl -sS 'http://127.0.0.1:3125/presence-walk/person?lang=de' | rg -o 'Pr\u00e4senzgang|Verzeichnis betreten|Quellkonzept ansehen|Geschichte|Pfad|Vision' | sort -u",
+    "curl -sS 'http://127.0.0.1:3125/presence-walk/node/anne-tucker?lang=id' | rg -o 'Silsilah|Keselarasan visual|Saudara alami|Sumber|Jelajahi simpul' | sort -u",
+    "curl -sS 'http://127.0.0.1:3125/people?lang=es' | rg -o 'Presencias|Todo lo que el campo recuerda|Recorrer cada punto de vista' | sort -u"
+  ],
+  "failure_reason": "Follow-up feedback clarified that TypeScript data constants were still code hardcoding and not i18n. The presence catalog, people directory data, page copy, visual configuration, brand/source visuals, motif layers, and fallback text were moved to external locale JSON; route code now resolves the request locale, deep-merges locale overrides over English, and renders dynamic localized presence pages.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 78,
+    "row_sha256": "9dabfdadd454266525b2d32ead38a4f4d78e06046b3a781a63f4e4d9cbe2643b",
+    "summary": "follow-up-feedback-clarified-that-typescript-dat"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0078-9dabfdadd454",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L78"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "generated web/content/presence-walk/{en,de,es,id}.json from existing TS data and locale overrides",
+      "cd web && npm run build",
+      "curl -sS 'http://127.0.0.1:3125/presence-walk/person?lang=de' | rg -o 'Pr\u00e4senzgang|Verzeichnis betreten|Quellkonzept ansehen|Geschichte|Pfad|Vision' | sort -u",
+      "curl -sS 'http://127.0.0.1:3125/presence-walk/node/anne-tucker?lang=id' | rg -o 'Silsilah|Keselarasan visual|Saudara alami|Sumber|Jelajahi simpul' | sort -u",
+      "curl -sS 'http://127.0.0.1:3125/people?lang=es' | rg -o 'Presencias|Todo lo que el campo recuerda|Recorrer cada punto de vista' | sort -u"
+    ],
+    "status": "pass"
+  }
+}

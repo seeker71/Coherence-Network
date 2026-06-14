@@ -1,0 +1,44 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord claim form-lower-cond-map fourth-arm pass admission",
+    "cd form && bash scripts/fourth-arm-survey.sh",
+    "cd form && bash scripts/fourth-arm-gate.sh form-lower-cond form-lower-map",
+    "cd form && ./validate.sh",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_form_lower_cond_map_fourth_floor.json",
+    "git diff --check"
+  ],
+  "failure_reason": "Admitted the already-surveyed form-lower-cond and form-lower-map bands to the fourth-arm manifest. The post-PR #3010 survey classified both as multi-pass at 31/31 before admission; the focused gate returns PASS-4WAY for both after admission; full Form validation returns fourth arm: 138 band(s) four-way, 556 ok, and 0 divergent. No runtime code changes were needed.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 360,
+    "row_sha256": "0ed18f98c574451fee18cabc6d1be563e28142942b8500e12cceddcab2a6f31d",
+    "summary": "admitted-the-already-surveyed-form-lower-cond-an"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0360-0ed18f98c574",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L360"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim form-lower-cond-map fourth-arm pass admission",
+      "cd form && bash scripts/fourth-arm-survey.sh",
+      "cd form && bash scripts/fourth-arm-gate.sh form-lower-cond form-lower-map",
+      "cd form && ./validate.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_form_lower_cond_map_fourth_floor.json",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

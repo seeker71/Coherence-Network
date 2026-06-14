@@ -1,0 +1,52 @@
+{
+  "attempts": 2,
+  "commands_run": [
+    "make wellness",
+    "make prompt-guide",
+    "python3 scripts/generate_repo_indexes.py",
+    "cd api && python3 -m pytest -q tests/test_ideas_router_form.py tests/test_governance_health.py",
+    "cd api && python3 -m ruff check tests/test_ideas_router_form.py",
+    "python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expression.md",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-08_ideas_router_form_expression.json",
+    "git rev-parse --abbrev-ref HEAD && git fetch origin main && git rebase --autostash origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "git diff --check"
+  ],
+  "failure_reason": "Expressed api/app/routers/ideas.py as docs/coherence-substrate/ideas-router.form with route shapes, ten shifted route recipe families, spec, tests, and evidence while leaving the live router behavior untouched. Initial proof commands used unavailable python instead of python3 and the spec was missing the required Gaps section; fixed. Ruff on the touched router exposed a pre-existing duplicate handler name, so the embodiment was moved to Form/spec/test without modifying api/app. Final focused tests, proof-file ruff, spec quality, index freshness, evidence validation, rebase, follow-through, diff check, and worktree_pr_guard pass.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 237,
+    "row_sha256": "0fb1a416305773b03d164b96ea347d68a74011dc6cb927cc4c55a7d72f43f665",
+    "summary": "expressed-api-app-routers-ideas-py-as-docs-coher"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0237-0fb1a4163057",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L237"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make wellness",
+      "make prompt-guide",
+      "python3 scripts/generate_repo_indexes.py",
+      "cd api && python3 -m pytest -q tests/test_ideas_router_form.py tests/test_governance_health.py",
+      "cd api && python3 -m ruff check tests/test_ideas_router_form.py",
+      "python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expression.md",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-08_ideas_router_form_expression.json",
+      "git rev-parse --abbrev-ref HEAD && git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

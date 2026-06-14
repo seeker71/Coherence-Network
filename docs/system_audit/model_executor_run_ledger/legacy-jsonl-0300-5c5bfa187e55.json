@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_web_api_deploy.sh",
+    "VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -c 'source scripts/verify_web_api_deploy.sh https://api.example https://web.example'",
+    "cd form/form-kernel-rust && cargo build --release",
+    "git diff --check",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "cd form/form-kernel-rust && ./target/release/form-kernel-rust check --routes ../../deploy/front-door/api.bml --stdlib ../form-stdlib",
+    "cd form/form-kernel-rust && git show origin/main:deploy/front-door/api.bml > /tmp/origin-main-repair2-api.bml && ./target/release/form-kernel-rust check --routes /tmp/origin-main-repair2-api.bml --stdlib ../form-stdlib"
+  ],
+  "failure_reason": "Second repair for native contribution reads: the released contributors handler still returned total=169 with items=[] and the strengthened Hostinger canary failed as intended. The BML handlers now ask Postgres to return jsonb_agg page rows as a single items_json field and emit that parsed JSON node directly, bypassing the row-list projection that returned an empty page. Full catalog check remains identical to origin/main with the same 14 unresolved names.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 300,
+    "row_sha256": "5c5bfa187e559abe9f1e8f53cfe60e716bc3725dde1780b24b7eefcb2ec094bd",
+    "summary": "second-repair-for-native-contribution-reads-the-"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0300-5c5bfa187e55",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L300"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_web_api_deploy.sh",
+      "VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -c 'source scripts/verify_web_api_deploy.sh https://api.example https://web.example'",
+      "cd form/form-kernel-rust && cargo build --release",
+      "git diff --check",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "cd form/form-kernel-rust && ./target/release/form-kernel-rust check --routes ../../deploy/front-door/api.bml --stdlib ../form-stdlib",
+      "cd form/form-kernel-rust && git show origin/main:deploy/front-door/api.bml > /tmp/origin-main-repair2-api.bml && ./target/release/form-kernel-rust check --routes /tmp/origin-main-repair2-api.bml --stdlib ../form-stdlib"
+    ],
+    "status": "pass"
+  }
+}

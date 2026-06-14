@@ -1,0 +1,42 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "grok --single '<read-only architecture review prompt>'",
+    "gemini --prompt '<read-only architecture review prompt>'",
+    "claude --print '<read-only architecture review prompt>'",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_model_vitality_north_star.json"
+  ],
+  "failure_reason": "Recorded the peer-reviewed model-data north star and added a Form-native model vitality floor. model-vitality.fk names architecture, tensor chunks, delta slices, optimizer state, eval receipts, vitality receipts, and lineage rows; it refuses cache carriers as source truth and reads resonance/vitality/sovereignty/trust focus lanes. The focused Form band returns 4095 on Go/Rust/TypeScript; fourth-arm manifest admission remains explicit future work.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 388,
+    "row_sha256": "a2c2cb2e896164bc172c96a1b00a812db05d85b906d976aae2671c4beffa9681",
+    "summary": "recorded-the-peer-reviewed-model-data-north-star"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0388-a2c2cb2e8961",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L388"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "grok --single '<read-only architecture review prompt>'",
+      "gemini --prompt '<read-only architecture review prompt>'",
+      "claude --print '<read-only architecture review prompt>'",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_model_vitality_north_star.json"
+    ],
+    "status": "pass"
+  }
+}

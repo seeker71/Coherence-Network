@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "language scan for stale receipt-frequency phrases",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_receipt_frequency_language.json",
+    "git diff --check",
+    "git fetch origin main",
+    "git rebase --autostash origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "Corrected durable route-choice floor and audit wording so receipts-before-trust is named as a runtime practice carried through choices. No runtime behavior changed; remaining route-choice work stays recipe-library callers, broader BML protocol/capability grammar, runtime dynamic capability registry, and receipts-before-trust carried through every runtime choice.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 340,
+    "row_sha256": "1acd4f964e476db2bca1dd72d12b234def150bbc5b20d76f657d46da4d62f4c8",
+    "summary": "corrected-durable-route-choice-floor-and-audit-w"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0340-1acd4f964e47",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L340"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "language scan for stale receipt-frequency phrases",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_receipt_frequency_language.json",
+      "git diff --check",
+      "git fetch origin main",
+      "git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

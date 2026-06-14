@@ -1,0 +1,52 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "python3 /Users/ursmuff/.codex/skills/youtube-watcher/scripts/get_transcript.py 'https://youtu.be/SPWo2D1Ue60?si=XPX67TlirdfnbJe2'",
+    "yt-dlp --print '%(title)s\\n%(channel)s\\n%(webpage_url)s' 'https://youtu.be/SPWo2D1Ue60?si=XPX67TlirdfnbJe2'",
+    "python3 -m json.tool docs/lineage/urs-contribution-profile.graph.json >/tmp/urs_manifest_validated.json",
+    "jq '{presences:(.presences|length), edges:(.edges|length)}' docs/lineage/urs-contribution-profile.graph.json",
+    "python3 scripts/import_lineage.py docs/lineage/urs-contribution-profile.graph.json --api http://localhost:8000 --source contributor:seeker71 --dry-run",
+    "python3 scripts/validate_spec_quality.py --file specs/orion-architect-sovereign-ai-digest.md",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-06_orion_architect_sovereign_ai_digest.json",
+    "git diff --check",
+    "git fetch origin main && git rebase --autostash origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "Urs asked to ingest and digest the ORION Architect YouTube video. This task stores a source-backed summary, graph artifact, extracted sovereign-AI concepts, and explicit claim boundaries for technical security assertions.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 124,
+    "row_sha256": "6d5c9e736782111db660a19d82872a4da2e27a43684a42b3a8526b4259978443",
+    "summary": "urs-asked-to-ingest-and-digest-the-orion-archite"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0124-6d5c9e736782",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L124"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "python3 /Users/ursmuff/.codex/skills/youtube-watcher/scripts/get_transcript.py 'https://youtu.be/SPWo2D1Ue60?si=XPX67TlirdfnbJe2'",
+      "yt-dlp --print '%(title)s\\n%(channel)s\\n%(webpage_url)s' 'https://youtu.be/SPWo2D1Ue60?si=XPX67TlirdfnbJe2'",
+      "python3 -m json.tool docs/lineage/urs-contribution-profile.graph.json >/tmp/urs_manifest_validated.json",
+      "jq '{presences:(.presences|length), edges:(.edges|length)}' docs/lineage/urs-contribution-profile.graph.json",
+      "python3 scripts/import_lineage.py docs/lineage/urs-contribution-profile.graph.json --api http://localhost:8000 --source contributor:seeker71 --dry-run",
+      "python3 scripts/validate_spec_quality.py --file specs/orion-architect-sovereign-ai-digest.md",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-06_orion_architect_sovereign_ai_digest.json",
+      "git diff --check",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

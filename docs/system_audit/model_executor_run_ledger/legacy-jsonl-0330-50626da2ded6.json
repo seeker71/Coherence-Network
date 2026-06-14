@@ -1,0 +1,54 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "COORD_AGENT=codex@a3ec coord join",
+    "COORD_AGENT=codex@a3ec coord ping \"a3ec continues broad JIT residual code/docs/floor lane; tag reconciliation and four-kernel evidence are local here; avoiding cf56 manifest-only overlap unless board redirects\"",
+    "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+    "make wellness",
+    "bash form/scripts/fourth-arm-gate.sh jit-lower jit-lower-program full-jit-lower jit-lower-bmf jit-lower-emit",
+    "bash scripts/bml_form_jit_metal_planes_audit.sh",
+    "cd form && ./validate.sh > /tmp/coherence-form-validate-full-jit-lower-residuals-rebased-20260613.log 2>&1",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_jit_lowering_residuals.json",
+    "git fetch origin main",
+    "git stash push -u -m codex-jit-lowering-residuals-pre-rebase && git rebase origin/main && git stash pop",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "git diff --check"
+  ],
+  "failure_reason": "Reconciled lowered JIT tags away from the Hati/BML 44..46 collision by moving the residual lane to 70..79, added fourth-arm walk/emit support and node carrier rooting needed by the lowered bands, and validated jit-lower, jit-lower-program, full-jit-lower, jit-lower-bmf, and jit-lower-emit on Go/Rust/TypeScript/fkwu. The metal-plane audit passed with macOS arm64 Mach-O and Android arm64 ELF receipts for bml-hati, form-jit, and form-jit-lowered. Full form validation remains a known diagnostic rc=1 with fourth arm: 104 band(s) four-way, 539 ok, and 5 non-target divergent bands.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 330,
+    "row_sha256": "50626da2ded69cc34f2bd6a928140d50fc203229906fba6bc1bad32e18c51701",
+    "summary": "reconciled-lowered-jit-tags-away-from-the-hati-b"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0330-50626da2ded6",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L330"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "COORD_AGENT=codex@a3ec coord join",
+      "COORD_AGENT=codex@a3ec coord ping \"a3ec continues broad JIT residual code/docs/floor lane; tag reconciliation and four-kernel evidence are local here; avoiding cf56 manifest-only overlap unless board redirects\"",
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "bash form/scripts/fourth-arm-gate.sh jit-lower jit-lower-program full-jit-lower jit-lower-bmf jit-lower-emit",
+      "bash scripts/bml_form_jit_metal_planes_audit.sh",
+      "cd form && ./validate.sh > /tmp/coherence-form-validate-full-jit-lower-residuals-rebased-20260613.log 2>&1",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_jit_lowering_residuals.json",
+      "git fetch origin main",
+      "git stash push -u -m codex-jit-lowering-residuals-pre-rebase && git rebase origin/main && git stash pop",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

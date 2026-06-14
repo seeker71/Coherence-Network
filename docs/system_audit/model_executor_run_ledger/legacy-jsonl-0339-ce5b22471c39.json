@@ -1,0 +1,60 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make wellness",
+    "make prompt-guide",
+    "git switch -c codex/fix-prompt-gate-sibling-worktrees",
+    "make prompt-guide",
+    "python3 -m py_compile scripts/worktree_continuity_guard.py",
+    "python3 -m pytest api/tests/test_worktree_continuity_guard.py -v",
+    "python3 scripts/worktree_continuity_guard.py --fail-on-blocking-risk",
+    "python3 -m ruff check scripts/worktree_continuity_guard.py api/tests/test_worktree_continuity_guard.py",
+    "make prompt-guide",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_prompt_gate_sibling_guidance.json",
+    "git diff --check",
+    "make wellness",
+    "git fetch origin main",
+    "git rebase --autostash origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "Detached sibling worktrees now remain visible as continuity guidance without stopping prompt entry. The current worktree detached-head stop remains in prompt_entry_gate.sh; the sibling continuity guard now reserves blocking status for fresh ahead-without-upstream sibling history. The live prompt guide passed without PROMPT_GATE_SKIP_CONTINUITY while reporting the detached sibling as severity=guidance and blocking_risk_count=0. Rebase onto origin/main succeeded; the append-only model executor JSONL conflict was resolved by preserving both new lines. Local PR guard reported ready_for_push=True and follow-through reported stale_codex_prs=0.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 339,
+    "row_sha256": "ce5b22471c3992cbebec1a645cf041387984e35d633547174cebef7a718b3688",
+    "summary": "detached-sibling-worktrees-now-remain-visible-as"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0339-ce5b22471c39",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L339"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make wellness",
+      "make prompt-guide",
+      "git switch -c codex/fix-prompt-gate-sibling-worktrees",
+      "make prompt-guide",
+      "python3 -m py_compile scripts/worktree_continuity_guard.py",
+      "python3 -m pytest api/tests/test_worktree_continuity_guard.py -v",
+      "python3 scripts/worktree_continuity_guard.py --fail-on-blocking-risk",
+      "python3 -m ruff check scripts/worktree_continuity_guard.py api/tests/test_worktree_continuity_guard.py",
+      "make prompt-guide",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_prompt_gate_sibling_guidance.json",
+      "git diff --check",
+      "make wellness",
+      "git fetch origin main",
+      "git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

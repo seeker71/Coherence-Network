@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "python3 -m json.tool docs/field/urs/trace/influence_teaching_translator.json",
+    "python3 -m py_compile api/app/services/influence_teaching_translator_service.py api/app/routers/field_stories.py api/app/services/field_story_mcp_tools.py scripts/influence_teaching_translator.py",
+    "cd api && python3 -m pytest -q tests/test_field_story_trace_index.py::test_influence_teaching_translator_links_lessons_to_frequency_shape_and_cc",
+    "python3 scripts/influence_teaching_translator.py --slug urs-field-story --limit 5 | jq '{policy_id, totals, rows: [.rows[] | {name,current_cc,frequency_translation,network_shape: .network_shape[0:2]}]}'",
+    "cd api && python3 -m pytest -q tests/test_field_story_trace_index.py tests/test_field_story_agent_surface.py",
+    "cd api && python3 -m ruff check app/services/influence_teaching_translator_service.py app/routers/field_stories.py app/services/field_story_mcp_tools.py tests/test_field_story_trace_index.py",
+    "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.influence_teaching_translator.json --fail-on-regression",
+    "git diff --check"
+  ],
+  "failure_reason": "Major influence lessons were present only as conversational interpretation. This task adds a compact influence teaching translator artifact and API/MCP/CLI access that joins lesson atoms, frequency translations, desired network shape, trace refs, attribution recipients, and current organism influence CC.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 151,
+    "row_sha256": "dbf6149e328834e0495f269977e39ea7d1017ba6c864d424239f4697c9caa227",
+    "summary": "major-influence-lessons-were-present-only-as-con"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0151-dbf6149e3288",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L151"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "python3 -m json.tool docs/field/urs/trace/influence_teaching_translator.json",
+      "python3 -m py_compile api/app/services/influence_teaching_translator_service.py api/app/routers/field_stories.py api/app/services/field_story_mcp_tools.py scripts/influence_teaching_translator.py",
+      "cd api && python3 -m pytest -q tests/test_field_story_trace_index.py::test_influence_teaching_translator_links_lessons_to_frequency_shape_and_cc",
+      "python3 scripts/influence_teaching_translator.py --slug urs-field-story --limit 5 | jq '{policy_id, totals, rows: [.rows[] | {name,current_cc,frequency_translation,network_shape: .network_shape[0:2]}]}'",
+      "cd api && python3 -m pytest -q tests/test_field_story_trace_index.py tests/test_field_story_agent_surface.py",
+      "cd api && python3 -m ruff check app/services/influence_teaching_translator_service.py app/routers/field_stories.py app/services/field_story_mcp_tools.py tests/test_field_story_trace_index.py",
+      "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.influence_teaching_translator.json --fail-on-regression",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

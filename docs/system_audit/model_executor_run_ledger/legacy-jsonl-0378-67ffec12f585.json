@@ -1,0 +1,44 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "bash scripts/agent-coord.sh claim form-native-elf-docker-runner \"close runner gap: execute Form-native Android/aarch64 ELF under Docker Linux/arm64 and record stdout/stderr/exit receipt\"",
+    "docker run --rm --platform linux/arm64 alpine:3.20 uname -m",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-elf-exec.fk form-stdlib/tests/form-elf-exec-band.fk",
+    "bash scripts/bml_form_jit_metal_planes_audit.sh",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_form_native_elf_docker_runner.json",
+    "git diff --check"
+  ],
+  "failure_reason": "Closed the Form-native ELF executable runner gap on this host. Docker Desktop was started and Docker Linux/arm64 reported aarch64; the audit now falls back from qemu-aarch64 to Docker when the daemon is live and the image is present or pull is explicitly enabled. The Form-emitted ELF64/aarch64 ET_EXEC image still passes the focused 63 four-way proof, file(1) reports an ARM aarch64 ELF executable, and Docker Linux/arm64 runs it with stdout FORM ELF, empty stderr, and exit 42. Android device/emulator execution remains a separate target-specific receipt.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 378,
+    "row_sha256": "67ffec12f5854c10be60edfea7dba7d975036b0fcf68e11e0e3e6dd2f7fa855b",
+    "summary": "closed-the-form-native-elf-executable-runner-gap"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0378-67ffec12f585",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L378"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "bash scripts/agent-coord.sh claim form-native-elf-docker-runner \"close runner gap: execute Form-native Android/aarch64 ELF under Docker Linux/arm64 and record stdout/stderr/exit receipt\"",
+      "docker run --rm --platform linux/arm64 alpine:3.20 uname -m",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-elf-exec.fk form-stdlib/tests/form-elf-exec-band.fk",
+      "bash scripts/bml_form_jit_metal_planes_audit.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_form_native_elf_docker_runner.json",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

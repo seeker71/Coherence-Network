@@ -1,0 +1,56 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "cd web && npm test -- tests/homepage-presence-lineage.test.ts",
+    "cd web && npm ci --cache .cache/npm",
+    "cd web && npm test -- tests/homepage-presence-lineage.test.ts",
+    "cd web && npm run build",
+    "cd web && npm test -- tests/homepage-presence-lineage.test.ts",
+    "cd web && npm run build",
+    "for f in web/messages/*.json web/content/presence-walk/*.json; do jq empty \"$f\" || exit 1; done",
+    "git diff --check",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-08_home_presence_traces.json",
+    "git fetch origin main && git rebase --autostash origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+  ],
+  "failure_reason": "The home living-lineage presences were still a hardcoded page array despite force-dynamic rendering. This task moves the card order, images, trace labels, trace hrefs, metrics, sources, and explanations into presence-walk data; adds a server projection helper; adds PORTAL as a presence-walk node; and renders the card image/profile separately from the trace link. The first test run found missing fresh-worktree dependencies, resolved by npm ci. The first build found a TypeScript narrowing issue in the projection helper, resolved with an explicit loop and source visual image helper. The first worktree PR guard saw a transient local API matrix timing miss; the direct verifier rerun passed with no failures, and the rerun PR guard returned ready_for_push=True.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 143,
+    "row_sha256": "021ed7d306ca6d022a18f356f96d0bf58668dd393feadca6acccf90d6115edf3",
+    "summary": "the-home-living-lineage-presences-were-still-a-h"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0143-021ed7d306ca",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L143"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "cd web && npm test -- tests/homepage-presence-lineage.test.ts",
+      "cd web && npm ci --cache .cache/npm",
+      "cd web && npm test -- tests/homepage-presence-lineage.test.ts",
+      "cd web && npm run build",
+      "cd web && npm test -- tests/homepage-presence-lineage.test.ts",
+      "cd web && npm run build",
+      "for f in web/messages/*.json web/content/presence-walk/*.json; do jq empty \"$f\" || exit 1; done",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-08_home_presence_traces.json",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ],
+    "status": "pass"
+  }
+}

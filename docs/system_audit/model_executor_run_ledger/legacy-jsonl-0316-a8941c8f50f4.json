@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "cd form/form-kernel-go && go build -o bin-go .",
+    "cd form/form-kernel-rust && cargo build --release",
+    "cd form/form-kernel-ts/seedbank/python-adapter && ./scripts/parity_suite.sh",
+    "cd form/form-kernel-ts/seedbank/python-adapter && ITERS=1 ./scripts/perf_compare.sh examples/python_demo.py",
+    "bash -n form/form-kernel-ts/seedbank/python-adapter/scripts/parity_suite.sh form/form-kernel-ts/seedbank/python-adapter/scripts/perf_compare.sh form/form-kernel-ts/seedbank/python-adapter/scripts/kernel-bmf-compile form/form-kernel-ts/seedbank/python-adapter/scripts/kernel-bmf-run",
+    "python3 -m py_compile scripts/wellness_check.py scripts/kernel_readiness_harness.py scripts/grounded_cost_endpoint_probe.py form/form-kernel-ts/scripts/viz_kernel_trace.py",
+    "git diff --check"
+  ],
+  "failure_reason": "Released the Python adapter bootstrap tissue onto the Form-native kernel-bmf path. parity_suite now compares CPython, compiled Rust .fk, and kernel-bmf-run with canonical numeric comparison and passed 38/38. perf_compare requires equal runtime results before timing and showed compiled Rust at 0.38x CPython time for python_demo.py. The compiler now preserves params, local loop helpers, class constructors, polymorphic plus, and round_ndigits lowering.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 316,
+    "row_sha256": "a8941c8f50f4ed36b6b32be16be3b5ea2062df410927c899269d05bdb4d5aec7",
+    "summary": "released-the-python-adapter-bootstrap-tissue-ont"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0316-a8941c8f50f4",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L316"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form/form-kernel-go && go build -o bin-go .",
+      "cd form/form-kernel-rust && cargo build --release",
+      "cd form/form-kernel-ts/seedbank/python-adapter && ./scripts/parity_suite.sh",
+      "cd form/form-kernel-ts/seedbank/python-adapter && ITERS=1 ./scripts/perf_compare.sh examples/python_demo.py",
+      "bash -n form/form-kernel-ts/seedbank/python-adapter/scripts/parity_suite.sh form/form-kernel-ts/seedbank/python-adapter/scripts/perf_compare.sh form/form-kernel-ts/seedbank/python-adapter/scripts/kernel-bmf-compile form/form-kernel-ts/seedbank/python-adapter/scripts/kernel-bmf-run",
+      "python3 -m py_compile scripts/wellness_check.py scripts/kernel_readiness_harness.py scripts/grounded_cost_endpoint_probe.py form/form-kernel-ts/scripts/viz_kernel_trace.py",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

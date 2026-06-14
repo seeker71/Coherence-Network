@@ -1,0 +1,42 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "python3 docs/field/urs/tools/source_crypto_trace.py",
+    "python3 -m py_compile docs/field/urs/tools/source_crypto_trace.py",
+    "python3 crypto trace invariant check",
+    "cd api && python3 -m pytest -q tests/test_field_story_trace_index.py::test_source_crypto_trace_registers_hash_roots_for_dynamic_access",
+    "cd api && python3 -m pytest -q tests/test_field_story_trace_index.py",
+    "git diff --check"
+  ],
+  "failure_reason": "The field trace had normalized data and API slices but no compact cryptographic source-body proof. This task adds a source crypto trace builder and registered API artifact with SHA-256 hashes for source bodies and derived repo artifacts, a Merkle root over 69,082 canonical normalized event rows, and a combined trace root for efficient future verification. It also documents the truth boundary: exact per-slice row-to-source proof should add source_body_id and event_hash during ingestion.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 144,
+    "row_sha256": "8f226ce5dcc567af4b3dcc282b910f6fbb8c5ed55ced4b6387ecd654b0b4a478",
+    "summary": "the-field-trace-had-normalized-data-and-api-slic"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0144-8f226ce5dcc5",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L144"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "python3 docs/field/urs/tools/source_crypto_trace.py",
+      "python3 -m py_compile docs/field/urs/tools/source_crypto_trace.py",
+      "python3 crypto trace invariant check",
+      "cd api && python3 -m pytest -q tests/test_field_story_trace_index.py::test_source_crypto_trace_registers_hash_roots_for_dynamic_access",
+      "cd api && python3 -m pytest -q tests/test_field_story_trace_index.py",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

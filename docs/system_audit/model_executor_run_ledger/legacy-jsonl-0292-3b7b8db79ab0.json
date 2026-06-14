@@ -1,0 +1,60 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "curl pulse witness",
+    "COORD_AGENT=codex scripts/agent-coord.sh claim fix Form full-suite divergences",
+    "cd form && ./validate.sh",
+    "focused validate.sh runs for the 11 formerly divergent Form workloads",
+    "cd form && bash -o pipefail -c '/usr/bin/time -p ./validate.sh 2>&1 | tee ../.cache/form-suite/validate_after_20260609.txt'",
+    "git fetch origin main && git rebase origin/main",
+    "cd form && bash -o pipefail -c '/usr/bin/time -p ./validate.sh 2>&1 | tee ../.cache/form-suite/validate_rebased_20260609.txt'",
+    "git fetch origin main && git rebase origin/main",
+    "cd form && bash -o pipefail -c '/usr/bin/time -p ./validate.sh 2>&1 | tee ../.cache/form-suite/validate_final_20260609.txt'",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260609_form_suite_divergence_repair.json",
+    "git diff --check",
+    "make wellness",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "Resolved the active Form sibling-kernel full-suite divergences. Baseline full suite reported 341 ok / 11 divergent. Repairs aligned Go/Rust value_eq with existing deep equality, made audit phase-held comparison kind-aware, renamed BML helper params named match, and normalized split prelude headers. Focused validation passed every former divergent workload. Full after-runs reported 352 ok / 0 divergent, then 386 ok / 0 divergent after rebase, then a final 398 ok / 0 divergent on the current origin/main base in real 4585.72 seconds. Evidence validation, git diff --check, wellness, local PR guard, and followthrough guard passed.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 292,
+    "row_sha256": "3b7b8db79ab0a151dffa31377160d6bbd814484266209ef8877e30e2fe066c8d",
+    "summary": "resolved-the-active-form-sibling-kernel-full-sui"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0292-3b7b8db79ab0",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L292"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "curl pulse witness",
+      "COORD_AGENT=codex scripts/agent-coord.sh claim fix Form full-suite divergences",
+      "cd form && ./validate.sh",
+      "focused validate.sh runs for the 11 formerly divergent Form workloads",
+      "cd form && bash -o pipefail -c '/usr/bin/time -p ./validate.sh 2>&1 | tee ../.cache/form-suite/validate_after_20260609.txt'",
+      "git fetch origin main && git rebase origin/main",
+      "cd form && bash -o pipefail -c '/usr/bin/time -p ./validate.sh 2>&1 | tee ../.cache/form-suite/validate_rebased_20260609.txt'",
+      "git fetch origin main && git rebase origin/main",
+      "cd form && bash -o pipefail -c '/usr/bin/time -p ./validate.sh 2>&1 | tee ../.cache/form-suite/validate_final_20260609.txt'",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260609_form_suite_divergence_repair.json",
+      "git diff --check",
+      "make wellness",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

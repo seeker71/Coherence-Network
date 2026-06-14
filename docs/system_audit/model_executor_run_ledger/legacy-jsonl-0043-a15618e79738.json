@@ -1,0 +1,34 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "PATH=\"/opt/homebrew/bin:$PATH\" make prompt-gate",
+    "cd web && npm run build",
+    "npx -y playwright screenshot --device='Desktop Chrome' https://coherence-network.vercel.app/ideas /tmp/coherence-ideas-2026-03-03-fixed.png"
+  ],
+  "failure_reason": "Adjusted ideas row/table breakpoint from lg to md so users on common desktop/laptop widths see row-based layout with sticky numeric headers.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 43,
+    "row_sha256": "a15618e79738238a3fca02f3e4528379fdf2337a0836b86cba02909a02cdea4a",
+    "summary": "adjusted-ideas-row-table-breakpoint-from-lg-to-m"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0043-a15618e79738",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L43"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "PATH=\"/opt/homebrew/bin:$PATH\" make prompt-gate",
+      "cd web && npm run build",
+      "npx -y playwright screenshot --device='Desktop Chrome' https://coherence-network.vercel.app/ideas /tmp/coherence-ideas-2026-03-03-fixed.png"
+    ],
+    "status": "pass"
+  }
+}

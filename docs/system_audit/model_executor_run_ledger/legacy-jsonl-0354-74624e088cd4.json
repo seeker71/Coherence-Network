@@ -1,0 +1,40 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord claim recipe-choice-runtime-fourth \"close recipe-choice-runtime fourth-arm mismatch from full Form validation after PR #3004; keep compiler-lens/http-server divergences separate unless they share the same cause\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/choice-receipt.fk form-stdlib/bml-source.fk form-stdlib/branch-choice-order.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/recipe-choice-runtime.fk form-stdlib/tests/recipe-choice-runtime-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh recipe-choice-runtime",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/choice-outcome-learning.fk form-stdlib/bml-source.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/channel-protocol-choice-floor.fk form-stdlib/tests/channel-protocol-choice-floor-band.fk"
+  ],
+  "failure_reason": "Aligned recipe-choice-runtime wrapper validity with the layer it owns: a valid recipe choice plus an inspectable nested route-choice signature shape. The deeper brcr candidate validity remains proven by bml-route-choice-runtime. Focused validation reproduces the prior mismatch at 233/169, then returns recipe-choice-runtime -> 233 with fourth arm included after the fix; the manifest check returns PASS-4WAY and the channel-protocol-choice floor remains 262143 four-way.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 354,
+    "row_sha256": "74624e088cd4eb73227ececfe31c63a69a48424bb937f83eb4d1bbcaeb0f9c5b",
+    "summary": "aligned-recipe-choice-runtime-wrapper-validity-w"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0354-74624e088cd4",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L354"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim recipe-choice-runtime-fourth \"close recipe-choice-runtime fourth-arm mismatch from full Form validation after PR #3004; keep compiler-lens/http-server divergences separate unless they share the same cause\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/choice-receipt.fk form-stdlib/bml-source.fk form-stdlib/branch-choice-order.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/recipe-choice-runtime.fk form-stdlib/tests/recipe-choice-runtime-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh recipe-choice-runtime",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/choice-outcome-learning.fk form-stdlib/bml-source.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/channel-protocol-choice-floor.fk form-stdlib/tests/channel-protocol-choice-floor-band.fk"
+    ],
+    "status": "pass"
+  }
+}

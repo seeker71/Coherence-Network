@@ -1,0 +1,32 @@
+{
+  "attempts": 2,
+  "commands_run": [
+    "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py::test_ensure_cli_for_command_does_not_promote_cursor_binary_when_root tests/test_agent_runner_tool_failure_telemetry.py::test_ensure_cursor_node_shim_writes_compat_wrapper_when_node_lacks_use_system_ca tests/test_agent_runner_tool_failure_telemetry.py::test_configure_codex_cli_environment_preserves_existing_oauth_session_when_b64_present",
+    "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py"
+  ],
+  "failure_reason": "Cursor installer produced ~/.local/bin/agent with relative runtime assets, but root-path promotion copied it to /usr/local/bin and broke module resolution (/usr/local/bin/index.js missing). Runner now skips binary promotion for cursor while keeping shim compatibility and oauth relogin protections.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 30,
+    "row_sha256": "66aa1745884eaae4acefc09b895df525bd7d3dd7bceb1fe3a0c80832ca40ff42",
+    "summary": "cursor-installer-produced-local-bin-agent-with-r"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0030-66aa1745884e",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L30"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py::test_ensure_cli_for_command_does_not_promote_cursor_binary_when_root tests/test_agent_runner_tool_failure_telemetry.py::test_ensure_cursor_node_shim_writes_compat_wrapper_when_node_lacks_use_system_ca tests/test_agent_runner_tool_failure_telemetry.py::test_configure_codex_cli_environment_preserves_existing_oauth_session_when_b64_present",
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py"
+    ],
+    "status": "pass"
+  }
+}

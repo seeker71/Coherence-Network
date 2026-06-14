@@ -1,0 +1,40 @@
+{
+  "attempts": 2,
+  "commands_run": [
+    "gh pr view 1011 --repo seeker71/Coherence-Network --json number,title,state,isDraft,mergeable,statusCheckRollup",
+    "gh pr merge 1011 --repo seeker71/Coherence-Network --squash --delete-branch",
+    "git fetch origin main && git rebase origin/main",
+    "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --write-baseline",
+    "PATH=\"$PWD/api/.venv/bin:$PATH\" python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "Deploy follow-through initially blocked on stale Codex PR #1011 and local guard environment resolved pytest to a system interpreter without project dependencies. PR #1011 was mergeable with green checks, so it was squash-merged, this branch was rebased on the updated mainline, audit conflicts were reconciled, and the local PR guard was rerun with the repo venv first in PATH.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 70,
+    "row_sha256": "1d6752ccf95e4332b4ef6ed330c29424e5597c564628cb313367cc6e5f7e6a5c",
+    "summary": "deploy-follow-through-initially-blocked-on-stale"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0070-1d6752ccf95e",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L70"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "gh pr view 1011 --repo seeker71/Coherence-Network --json number,title,state,isDraft,mergeable,statusCheckRollup",
+      "gh pr merge 1011 --repo seeker71/Coherence-Network --squash --delete-branch",
+      "git fetch origin main && git rebase origin/main",
+      "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --write-baseline",
+      "PATH=\"$PWD/api/.venv/bin:$PATH\" python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

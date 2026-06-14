@@ -1,0 +1,44 @@
+{
+  "attempts": 2,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/search-harness.fk form-stdlib/tests/search-harness-compact-proof.fk",
+    "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/search-harness.fk form-stdlib/tests/search-harness-compact-proof.fk",
+    "wc -l form/form-stdlib/search-harness.fk form/form-stdlib/tests/search-harness-compact-proof.fk scripts/verify_kernel_conformance.py api/tests/test_kernel_conformance_harness.py docs/coherence-substrate/kernel-conformance/*.json",
+    "wc -c form/form-stdlib/search-harness.fk form/form-stdlib/tests/search-harness-compact-proof.fk scripts/verify_kernel_conformance.py api/tests/test_kernel_conformance_harness.py docs/coherence-substrate/kernel-conformance/*.json",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-09_harness1_compact_proof.json",
+    "git diff --check"
+  ],
+  "failure_reason": "Added a compact Form proof of the Harness-1 state-externalized search architecture. Initial BML-section implementation exposed a Go source-compiler slice-bounds corner; converted the cell to direct Form syntax and reran source and binary proofs to pass at 16777215. The proof carries candidate, curated, evidence, verification, observation, stop, dedup, budget rendering, and selected-branch receipt signatures. Measured compact Form proof footprint is 229 lines / 10,182 bytes versus the local Python conformance harness plus vectors at 1,182 lines / 38,416 bytes.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 259,
+    "row_sha256": "301b9bfcc6d8275d8b990ec08c6afba3c57807b78ae33b8b56f92bca70d5d46b",
+    "summary": "added-a-compact-form-proof-of-the-harness-1-stat"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0259-301b9bfcc6d8",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L259"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/search-harness.fk form-stdlib/tests/search-harness-compact-proof.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/search-harness.fk form-stdlib/tests/search-harness-compact-proof.fk",
+      "wc -l form/form-stdlib/search-harness.fk form/form-stdlib/tests/search-harness-compact-proof.fk scripts/verify_kernel_conformance.py api/tests/test_kernel_conformance_harness.py docs/coherence-substrate/kernel-conformance/*.json",
+      "wc -c form/form-stdlib/search-harness.fk form/form-stdlib/tests/search-harness-compact-proof.fk scripts/verify_kernel_conformance.py api/tests/test_kernel_conformance_harness.py docs/coherence-substrate/kernel-conformance/*.json",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-09_harness1_compact_proof.json",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

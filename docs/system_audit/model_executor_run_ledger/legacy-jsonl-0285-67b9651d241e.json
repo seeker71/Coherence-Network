@@ -1,0 +1,42 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "cd form/form-kernel-rust && cargo fmt --check && cargo build --release && python3 test_serve.py",
+    "cd form/form-kernel-go && go test ./...",
+    "python3 scripts/validate_spec_quality.py --file specs/kernel-router-fanout-native-invitation.md",
+    "python3 scripts/generate_repo_indexes.py",
+    "git diff --check"
+  ],
+  "failure_reason": "Loosened the non-Form fanout boundary without promoting unproven routes. Rust and Go bridges now stamp fanout responses and upstream requests with native invitation headers that name Form/BML route recipe, selected path fanout-python, native_invitation_declined, and X-Form-Python-Fallback. Router-owned headers are filtered from client and upstream traffic so the bridge decision cannot be clobbered, while response body/status semantics remain unchanged.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 285,
+    "row_sha256": "67b9651d241ea403429bc173538301eebaabcf738a7d551c3580e9436a2586dc",
+    "summary": "loosened-the-non-form-fanout-boundary-without-pr"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0285-67b9651d241e",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L285"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form/form-kernel-rust && cargo fmt --check && cargo build --release && python3 test_serve.py",
+      "cd form/form-kernel-go && go test ./...",
+      "python3 scripts/validate_spec_quality.py --file specs/kernel-router-fanout-native-invitation.md",
+      "python3 scripts/generate_repo_indexes.py",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

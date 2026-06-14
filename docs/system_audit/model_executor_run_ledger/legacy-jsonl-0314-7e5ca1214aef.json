@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "./scripts/agent-coord.sh claim \"native-first front door smoke gate\"",
+    "bash -n scripts/test_hostinger_deploy_form_paths.sh scripts/verify_kernel_canary_public_gate.sh deploy/hostinger/auto-deploy.sh scripts/kernel_front_door_local_preflight.sh scripts/verify_web_api_deploy.sh",
+    "./scripts/test_hostinger_deploy_form_paths.sh",
+    "python3 scripts/runtime_surface_report.py --json",
+    "./scripts/kernel_front_door_local_preflight.sh",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "git diff --check"
+  ],
+  "failure_reason": "Moved the deploy overlay from narrow Python-first canaries to native-first API host routing. Added a Traefik Host(api.coherencycoin.com) router targeting the production manifest kernel-router with priority below explicit native/BML routes and above the base API router; added static deploy-path assertions and a public no-header /api/attention/kernel-runtime verifier. Local preflight proved native value handling, native attention metrics, and fanout-python tail behavior. Current public before-deploy probe remains 404 from Python, giving a clear after-deploy target of 34 manifest routes served kernel-first.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 314,
+    "row_sha256": "7e5ca1214aef8ed266970894f2c4d6210eb26f9bf327e37bf7c253cf44c2065d",
+    "summary": "moved-the-deploy-overlay-from-narrow-python-firs"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0314-7e5ca1214aef",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L314"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "./scripts/agent-coord.sh claim \"native-first front door smoke gate\"",
+      "bash -n scripts/test_hostinger_deploy_form_paths.sh scripts/verify_kernel_canary_public_gate.sh deploy/hostinger/auto-deploy.sh scripts/kernel_front_door_local_preflight.sh scripts/verify_web_api_deploy.sh",
+      "./scripts/test_hostinger_deploy_form_paths.sh",
+      "python3 scripts/runtime_surface_report.py --json",
+      "./scripts/kernel_front_door_local_preflight.sh",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

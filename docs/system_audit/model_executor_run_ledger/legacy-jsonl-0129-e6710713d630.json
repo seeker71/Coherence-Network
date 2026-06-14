@@ -1,0 +1,38 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "git apply identity-attunement sibling diff for AGENT.md, scripts/arrival.py, scripts/prompt_entry_gate.sh",
+    "bash -n scripts/prompt_entry_gate.sh",
+    "python3 -m py_compile scripts/arrival.py",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-07_identity_attunement_ingest.json"
+  ],
+  "failure_reason": "After the main ingestion merge, one remaining dirty sibling held process guidance for lineage-first lookup, least-energy flow, and softer living wording. This task integrates that guidance instead of leaving the sibling worktree as residue.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 129,
+    "row_sha256": "e6710713d6305aabe214b1e7e2931a0114b6cab9134a9e6ea58dbb90eb0d2ceb",
+    "summary": "after-the-main-ingestion-merge-one-remaining-dir"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0129-e6710713d630",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L129"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "git apply identity-attunement sibling diff for AGENT.md, scripts/arrival.py, scripts/prompt_entry_gate.sh",
+      "bash -n scripts/prompt_entry_gate.sh",
+      "python3 -m py_compile scripts/arrival.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-07_identity_attunement_ingest.json"
+    ],
+    "status": "pass"
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "bash -n deploy/hostinger/auto-deploy.sh",
+    "rg -n 'refs/heads/\\$\\{BRANCH\\}:refs/remotes/origin/\\$\\{BRANCH\\}|git fetch origin \"\\$TARGET_SHA\"|--unshallow' deploy/hostinger/auto-deploy.sh",
+    "python3 scripts/validate_spec_quality.py --file specs/hostinger-deploy-target-fetch.md",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-06_hostinger_deploy_target_fetch.json"
+  ],
+  "failure_reason": "Manual Hostinger dispatch failed before build because the VPS deploy script did not reliably fetch the explicit target SHA into the repository object database. This task replaces the ambiguous branch fetch with a remote-tracking refspec and adds explicit target and shallow-clone fallback fetches before final commit validation.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 122,
+    "row_sha256": "35e9fc37e183453352d623dadf08ebd2aa8e451779208744eb243cd558de31d9",
+    "summary": "manual-hostinger-dispatch-failed-before-build-be"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0122-35e9fc37e183",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L122"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "bash -n deploy/hostinger/auto-deploy.sh",
+      "rg -n 'refs/heads/\\$\\{BRANCH\\}:refs/remotes/origin/\\$\\{BRANCH\\}|git fetch origin \"\\$TARGET_SHA\"|--unshallow' deploy/hostinger/auto-deploy.sh",
+      "python3 scripts/validate_spec_quality.py --file specs/hostinger-deploy-target-fetch.md",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-06_hostinger_deploy_target_fetch.json"
+    ],
+    "status": "pass"
+  }
+}

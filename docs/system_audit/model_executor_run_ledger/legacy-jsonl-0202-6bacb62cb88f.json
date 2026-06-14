@@ -1,0 +1,42 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-perturbation-band.fk",
+    "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-perturbation-band.fk",
+    "cd web && npm install",
+    "cd web && npm test -- form-kernel-client.test.ts",
+    "python3 scripts/validate_spec_quality.py --file specs/field-model-form-v0.md",
+    "python3 scripts/generate_repo_indexes.py"
+  ],
+  "failure_reason": "Added a Form-native observation-to-perturbation loop over FMF auto research. The proof observes wildtype GAG count 2, applies a receipt-backed GAG->GTG field delta, observes GAG count 1, reverses to the source sequence, and emits a sharper hypothesis-labeled residual question; source and binary artifacts return 255 across sibling kernels.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 202,
+    "row_sha256": "6bacb62cb88fe43132f7d2a575fe6fc29da6b5c45c8fa85b043c7ebb5d050631",
+    "summary": "added-a-form-native-observation-to-perturbation-"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0202-6bacb62cb88f",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L202"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-perturbation-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-perturbation-band.fk",
+      "cd web && npm install",
+      "cd web && npm test -- form-kernel-client.test.ts",
+      "python3 scripts/validate_spec_quality.py --file specs/field-model-form-v0.md",
+      "python3 scripts/generate_repo_indexes.py"
+    ],
+    "status": "pass"
+  }
+}

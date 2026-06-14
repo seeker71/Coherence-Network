@@ -1,0 +1,48 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "bash -n scripts/verify_web_api_deploy.sh",
+    "python3 scripts/validate_spec_quality.py --file specs/field-model-form-v0.md",
+    "cd web && npx tsx -e '<FMF local example returns 93 and marker field-model-form-public-proof:93>'",
+    "cd form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk",
+    "cd web && npm install",
+    "cd web && npm run build",
+    "cd web && npm test -- form-kernel-client.test.ts",
+    "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD",
+    "git diff --check"
+  ],
+  "failure_reason": "Closed the FMF public playground proof gap locally by making the browser-local example carry a stable 93-point marker and making deploy verification scan the public Form page plus Next.js chunks for the FMF proof source. Public pass remains gated on merge and Hostinger web rebuild.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 181,
+    "row_sha256": "e545aef207d7c8e8b9c5dbbc798902c212a822a4fe9c409afabcf6ae2f1a4b21",
+    "summary": "closed-the-fmf-public-playground-proof-gap-local"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0181-e545aef207d7",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L181"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "bash -n scripts/verify_web_api_deploy.sh",
+      "python3 scripts/validate_spec_quality.py --file specs/field-model-form-v0.md",
+      "cd web && npx tsx -e '<FMF local example returns 93 and marker field-model-form-public-proof:93>'",
+      "cd form && ./validate.sh form-stdlib/field-model-form.fk form-stdlib/tests/field-model-form-band.fk",
+      "cd web && npm install",
+      "cd web && npm run build",
+      "cd web && npm test -- form-kernel-client.test.ts",
+      "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "git log --since=2026-02-16 --date=short --name-only --pretty=format:__COMMIT__",
+    "python3 scripts/context_budget.py --token-budget 50000 api/scripts/local_runner.py api/scripts/agent_runner.py api/app/services/automation_usage_service.py api/app/services/idea_service.py api/app/services/inventory_service.py web/app/vision/[conceptId]/page.tsx web/app/vision/page.tsx web/app/ideas/page.tsx cli/bin/cc.mjs scripts/start_gate.py .github/workflows/public-deploy-contract.yml",
+    "cd api && pytest -q tests/test_runtime_mode_and_events.py tests/test_agent_task_claims.py tests/test_flow_core_api.py",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+  ],
+  "failure_reason": "The two-month scan exposed three recurrent root-cause seams in recently changed code: runtime telemetry had a latent NameError and a broken normalize_endpoint call path, while several hot app services still relied on environment variables for test/debug branching despite the repo's config-only contract. I fixed the runtime event/cache defects, introduced a config-backed app-mode helper, and added regression tests around the exact paths that were brittle.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 67,
+    "row_sha256": "e104b2e572a259e9a7155ec3b8b9f44c1be2183d24cf49eb4a9d7ba2573ff2e4",
+    "summary": "the-two-month-scan-exposed-three-recurrent-root-"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0067-e104b2e572a2",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L67"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "git log --since=2026-02-16 --date=short --name-only --pretty=format:__COMMIT__",
+      "python3 scripts/context_budget.py --token-budget 50000 api/scripts/local_runner.py api/scripts/agent_runner.py api/app/services/automation_usage_service.py api/app/services/idea_service.py api/app/services/inventory_service.py web/app/vision/[conceptId]/page.tsx web/app/vision/page.tsx web/app/ideas/page.tsx cli/bin/cc.mjs scripts/start_gate.py .github/workflows/public-deploy-contract.yml",
+      "cd api && pytest -q tests/test_runtime_mode_and_events.py tests/test_agent_task_claims.py tests/test_flow_core_api.py",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ],
+    "status": "pass"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "python3 scripts/agent_status.py --json",
+    "web search for Paradiso Ubud, 5Rhythms Ubud, DISSOLVE Ubud, Jungle Club Ubud, Awakened Dreamers",
+    "rg scan for existing local lineage references",
+    "git diff --check",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-26_ubud_embodied_lineage.json"
+  ],
+  "failure_reason": "Urs clarified that Paradiso Ubud, 5Rhythms, DISSOLVE, The Jungle Club, and Awakened Dreamers were directly attended and are part of the lineage. I added a public lineage record, corrected fuzzy history wording, linked the KB resource index, and recorded the direct DISSOLVE Saturday/Tuesday rhythm while treating public ticket schedules as changeable.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 99,
+    "row_sha256": "971f62fd1c9227cc9d7159690bf1682417fe8400ff315d2a8c3d765e224b45f3",
+    "summary": "urs-clarified-that-paradiso-ubud-5rhythms-dissol"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0099-971f62fd1c92",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L99"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "python3 scripts/agent_status.py --json",
+      "web search for Paradiso Ubud, 5Rhythms Ubud, DISSOLVE Ubud, Jungle Club Ubud, Awakened Dreamers",
+      "rg scan for existing local lineage references",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-26_ubud_embodied_lineage.json"
+    ],
+    "status": "pass"
+  }
+}

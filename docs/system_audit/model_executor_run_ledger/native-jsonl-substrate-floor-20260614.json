@@ -1,0 +1,36 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord claim native-jsonl-substrate-floor",
+    "python3 -m py_compile scripts/model_executor_proof_ledger.py",
+    "python3 -m pytest -q api/tests/test_model_executor_proof_ledger.py",
+    "python3 scripts/model_executor_proof_ledger.py import-jsonl",
+    "python3 scripts/model_executor_proof_ledger.py sync-jsonl --output docs/system_audit/model_executor_runs.jsonl",
+    "python3 scripts/model_executor_proof_ledger.py check-jsonl",
+    "python3 scripts/model_executor_proof_ledger.py validate",
+    "cd form && ./validate.sh"
+  ],
+  "failure_reason": "Moved the executor proof JSONL cache into native per-run ledger records. The proof-ledger tool now imports legacy JSONL rows losslessly, syncs the compatibility cache from native records, and checks both sides as matching projection multisets. Historical pending and empty-reason rows remain exactly representable instead of being coerced.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "native-jsonl-substrate-floor-20260614",
+  "source": {
+    "kind": "codex-worktree",
+    "path": "/Users/ursmuff/.codex/worktrees/a3ec/Coherence-Network"
+  },
+  "thread_branch": "codex/native-jsonl-substrate-floor-20260614",
+  "validation": {
+    "commands": [
+      "python3 -m py_compile scripts/model_executor_proof_ledger.py",
+      "python3 -m pytest -q api/tests/test_model_executor_proof_ledger.py",
+      "python3 scripts/model_executor_proof_ledger.py validate",
+      "python3 scripts/model_executor_proof_ledger.py check-jsonl",
+      "cd form && ./validate.sh"
+    ],
+    "status": "pass"
+  }
+}

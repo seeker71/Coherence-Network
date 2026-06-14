@@ -1,0 +1,40 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest -q tests/test_external_proof_demo.py",
+    "python3 scripts/external_proof_demo.py --dry-run",
+    "/opt/homebrew/bin/ruff check scripts/external_proof_demo.py api/tests/test_external_proof_demo.py",
+    "git diff --check",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-01_external_proof_rollout_404.json"
+  ],
+  "failure_reason": "Classified upstream rollout gateway text 404 pages from the external production proof as transient advisory exits while preserving JSON API 404 responses as real failures. Focused proof covers both behaviors after main run 26739034630 hit a non-API 404 page during rollout.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 187,
+    "row_sha256": "a1a385ff59a62368c5a10304a158dd660b102cc5f1bd7d94c0e83a4dafecebcf",
+    "summary": "classified-upstream-rollout-gateway-text-404-pag"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0187-a1a385ff59a6",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L187"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest -q tests/test_external_proof_demo.py",
+      "python3 scripts/external_proof_demo.py --dry-run",
+      "/opt/homebrew/bin/ruff check scripts/external_proof_demo.py api/tests/test_external_proof_demo.py",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-01_external_proof_rollout_404.json"
+    ],
+    "status": "pass"
+  }
+}

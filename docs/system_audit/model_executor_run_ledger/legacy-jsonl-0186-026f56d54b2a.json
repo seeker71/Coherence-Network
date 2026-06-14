@@ -1,0 +1,40 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/grammar-chars.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-source-rule-to-runtime-band.fk",
+    "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/grammar-chars.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-source-rule-to-runtime-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/grammar-chars.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-component-runtime-exec-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/grammar-chars.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-compiler-runtime.fk",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-01_bmf_source_rule_runtime.json"
+  ],
+  "failure_reason": "Broadened BMF source-object composition so range/call items and optional/bounded/star/plus item methods can flow into full BMFRule expressions. The new proof compiles source-shaped BMF objects for start ::= $letters: letter+ \"!\" into comp-bmf runtime rules and executes them at 1023 in source and binary sibling-kernel modes.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 186,
+    "row_sha256": "026f56d54b2a129a70bc0a2b8ffefc9271a24f89ea20f50d442e033fe5ef27e7",
+    "summary": "broadened-bmf-source-object-composition-so-range"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0186-026f56d54b2a",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L186"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/grammar-chars.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-source-rule-to-runtime-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/grammar-chars.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-source-rule-to-runtime-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/grammar-chars.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-component-runtime-exec-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/grammar-chars.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-compiler-runtime.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-01_bmf_source_rule_runtime.json"
+    ],
+    "status": "pass"
+  }
+}

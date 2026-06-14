@@ -1,0 +1,44 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk form-stdlib/ideas-graph-projection.fk form-stdlib/tests/ideas-graph-projection-band.fk",
+    "cd api && python3 -m pytest -q tests/test_ideas_graph_projection_form.py tests/test_graph_node_form_port.py tests/test_ideas_router_form.py tests/test_runtime_surface_native_routes.py tests/test_commit_evidence_validator.py",
+    "cd api && python3 -m ruff check tests/test_ideas_graph_projection_form.py tests/test_graph_node_form_port.py tests/test_ideas_router_form.py",
+    "python3 scripts/validate_spec_quality.py --file specs/ideas-graph-projection-form.md --file specs/graph-node-form-port.md --file specs/ideas-router-form-expression.md",
+    "python3 scripts/generate_repo_indexes.py",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "make wellness"
+  ],
+  "failure_reason": "Added the Form schema projection layer after graph-node-port. ideas-graph-projection.fk reads type=idea nodes through gn-list-nodes and emits an IdeaPortfolioResponse-shaped JSON body with required IdeaWithScore defaults, summary counts, and pagination. The proof band returned 11111 across memory and durable file carriers, including reopen projection. The remaining boundary is binding this proven projection into the self-contained production route manifest and then connecting a live storage carrier.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 241,
+    "row_sha256": "bdc852a68c827a56f15f4459c78e704840553a8906385838093b2610263ce6c5",
+    "summary": "added-the-form-schema-projection-layer-after-gra"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0241-bdc852a68c82",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L241"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/cell-log-store.fk form-stdlib/storage-port.fk form-stdlib/storage-port-file.fk form-stdlib/graph-node-port.fk form-stdlib/ideas-graph-projection.fk form-stdlib/tests/ideas-graph-projection-band.fk",
+      "cd api && python3 -m pytest -q tests/test_ideas_graph_projection_form.py tests/test_graph_node_form_port.py tests/test_ideas_router_form.py tests/test_runtime_surface_native_routes.py tests/test_commit_evidence_validator.py",
+      "cd api && python3 -m ruff check tests/test_ideas_graph_projection_form.py tests/test_graph_node_form_port.py tests/test_ideas_router_form.py",
+      "python3 scripts/validate_spec_quality.py --file specs/ideas-graph-projection-form.md --file specs/graph-node-form-port.md --file specs/ideas-router-form-expression.md",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "make wellness"
+    ],
+    "status": "pass"
+  }
+}

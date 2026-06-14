@@ -1,0 +1,44 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "python3 -m py_compile scripts/native_route_goal_loop.py",
+    "cd api && python3 -m pytest -q tests/test_runtime_web_api_provenance.py",
+    "python3 scripts/validate_spec_quality.py --file specs/native-mutation-public-gate.md",
+    "cd api && python3 -m ruff check ../scripts/native_route_goal_loop.py tests/test_runtime_web_api_provenance.py",
+    "python3 scripts/runtime_surface_report.py --json",
+    "direct native_route_goal_loop route_status check for bounded mutable ideas/spec routes"
+  ],
+  "failure_reason": "Released a false non-Form route-goal classification. native_route_goal_loop.py now parses kh-route and raw 43004 method-specific Form route cells from deploy/kernel-router/production-routes.fk, so bounded ordinary mutation defaults for ideas/specs count as kernel-native-form-needs-source-lift and native_executable=true instead of python-fanout. Live /goal fetch was not used as pass evidence because the public runtime summary fallback returned HTTP 404 during this slice.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 288,
+    "row_sha256": "2bdf063dc827ebeb2883720a040954af031072e057ab040a98120a9eed1d0b71",
+    "summary": "released-a-false-non-form-route-goal-classificat"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0288-2bdf063dc827",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L288"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 -m py_compile scripts/native_route_goal_loop.py",
+      "cd api && python3 -m pytest -q tests/test_runtime_web_api_provenance.py",
+      "python3 scripts/validate_spec_quality.py --file specs/native-mutation-public-gate.md",
+      "cd api && python3 -m ruff check ../scripts/native_route_goal_loop.py tests/test_runtime_web_api_provenance.py",
+      "python3 scripts/runtime_surface_report.py --json",
+      "direct native_route_goal_loop route_status check for bounded mutable ideas/spec routes"
+    ],
+    "status": "pass"
+  }
+}

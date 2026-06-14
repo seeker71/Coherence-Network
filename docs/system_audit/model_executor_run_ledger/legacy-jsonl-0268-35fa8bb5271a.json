@@ -1,0 +1,42 @@
+{
+  "attempts": 2,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "cd pulse && python3 -m pytest -q",
+    "python3 -m ruff check pulse/pulse_app/analysis.py pulse/pulse_app/main.py pulse/pulse_app/storage.py pulse/tests/test_analysis.py pulse/tests/test_main.py",
+    "python3 scripts/validate_spec_quality.py --file specs/pulse-silence-boundary-repair.md",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "git diff --check"
+  ],
+  "failure_reason": "Turned Boundary Repair Protocol into an executable pulse witness proof. Open silences now close through boundary_repair_protocol notes when durable samples show at least three consecutive breathing samples; /pulse/now reconciles before returning and refuses overall=breathing while unresolved silences remain. The first route test attempt used old fixed timestamps and correctly exercised staleness instead of repair, so the fixture moved to live-relative samples and the focused pulse suite passed with 73 tests.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 268,
+    "row_sha256": "35fa8bb5271a8d5bc1136d7155bd330e4859dabccc66ff947abae7e0e61712d0",
+    "summary": "turned-boundary-repair-protocol-into-an-executab"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0268-35fa8bb5271a",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L268"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd pulse && python3 -m pytest -q",
+      "python3 -m ruff check pulse/pulse_app/analysis.py pulse/pulse_app/main.py pulse/pulse_app/storage.py pulse/tests/test_analysis.py pulse/tests/test_main.py",
+      "python3 scripts/validate_spec_quality.py --file specs/pulse-silence-boundary-repair.md",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

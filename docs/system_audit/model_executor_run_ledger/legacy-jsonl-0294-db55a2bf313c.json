@@ -1,0 +1,50 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "python3 -m py_compile api/app/services/form_kernel_bridge.py api/app/routers/ideas.py api/app/routers/household.py",
+    "rg scans for serve_via_kernel fallback callsites and stale fallback labels",
+    "cargo build --release --bin form-kernel-rust",
+    "cd api && python3 -m pytest -q tests/test_form_kernel_bridge_structure_access.py tests/test_kernel_inline_latency.py tests/test_household_service_board.py tests/test_discord_votes_heard.py tests/test_idea_standing_questions.py",
+    "git diff --check",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260609_release_dead_kernel_fallback_hooks.json",
+    "git fetch origin main && git rebase origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "Released dead Python fallback tissue from Form-kernel served API decisions. serve_via_kernel no longer accepts a fallback callable, and household/ideas route-local helper bodies that only existed as ignored fallbacks were removed. Focused tests first failed without the kernel binary, then passed 39/3 skipped after building form-kernel-rust, proving these endpoint decisions require the kernel carrier instead of silently resuming Python ownership.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 294,
+    "row_sha256": "db55a2bf313cb603644273694595a75aa9217851a00a8d83996bfbb2f46b5d0d",
+    "summary": "released-dead-python-fallback-tissue-from-form-k"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0294-db55a2bf313c",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L294"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 -m py_compile api/app/services/form_kernel_bridge.py api/app/routers/ideas.py api/app/routers/household.py",
+      "rg scans for serve_via_kernel fallback callsites and stale fallback labels",
+      "cargo build --release --bin form-kernel-rust",
+      "cd api && python3 -m pytest -q tests/test_form_kernel_bridge_structure_access.py tests/test_kernel_inline_latency.py tests/test_household_service_board.py tests/test_discord_votes_heard.py tests/test_idea_standing_questions.py",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260609_release_dead_kernel_fallback_hooks.json",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

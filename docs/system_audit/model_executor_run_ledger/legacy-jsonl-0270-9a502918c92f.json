@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "scripts/agent-coord.sh claim \"kernel-image-proposal public proof route\"",
+    "python3 scripts/generate_repo_indexes.py",
+    "python3 scripts/context_budget.py --token-budget 50000 api/app/routers/substrate.py api/tests/test_substrate_kernel_image_proposals.py form/form-stdlib/kernel-image-proposal.fk form/form-stdlib/tests/kernel-image-proposal-band.fk specs/kernel-image-proposal-public-interface.md",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-image-proposal.fk form-stdlib/tests/kernel-image-proposal-band.fk",
+    "cd api && python3 -m pytest -q tests/test_substrate_kernel_image_proposals.py",
+    "cd api && python3 -m ruff check app/routers/substrate.py tests/test_substrate_kernel_image_proposals.py",
+    "python3 scripts/validate_spec_quality.py --file specs/kernel-image-proposal-public-interface.md"
+  ],
+  "failure_reason": "Added a preview-only public kernel-image proposal route and Form trust membrane. The route accepts BML source, returns source/canonical/image hashes, candidate KERNEL-CORE-IMAGE counts, proof trace, count deltas, and a trust envelope; requested_action=apply is carried as intent while mutation_allowed=false and mutation_performed=false. Focused API tests passed 3/3 and the Form sibling proof returned 11111 with 1 ok, 0 divergent.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 270,
+    "row_sha256": "9a502918c92f66dbcf1acd9cbcc7b0cfdb813fea18f9e39b746117b1492bb3f4",
+    "summary": "added-a-preview-only-public-kernel-image-proposa"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0270-9a502918c92f",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L270"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "scripts/agent-coord.sh claim \"kernel-image-proposal public proof route\"",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/context_budget.py --token-budget 50000 api/app/routers/substrate.py api/tests/test_substrate_kernel_image_proposals.py form/form-stdlib/kernel-image-proposal.fk form/form-stdlib/tests/kernel-image-proposal-band.fk specs/kernel-image-proposal-public-interface.md",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-image-proposal.fk form-stdlib/tests/kernel-image-proposal-band.fk",
+      "cd api && python3 -m pytest -q tests/test_substrate_kernel_image_proposals.py",
+      "cd api && python3 -m ruff check app/routers/substrate.py tests/test_substrate_kernel_image_proposals.py",
+      "python3 scripts/validate_spec_quality.py --file specs/kernel-image-proposal-public-interface.md"
+    ],
+    "status": "pass"
+  }
+}

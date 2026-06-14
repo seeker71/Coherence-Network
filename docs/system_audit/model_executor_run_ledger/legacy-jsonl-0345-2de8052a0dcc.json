@@ -1,0 +1,42 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+    "make wellness",
+    "COORD_AGENT=codex@a3ec ./scripts/agent-coord.sh claim \"native route next breath: promote GET /api/workspaces/{workspace_id}/vitality from API source into existing front-door route catalog; avoiding codex-bml dynamic-choice and learning-fabric lanes\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/kernel-http.fk form-stdlib/language-model.fk form-stdlib/tests/source-language-route-class-template-band.fk",
+    "python3 scripts/native_route_goal_loop.py /goal --source api --seconds 86400 --limit 2000 --write-state",
+    "cd form/form-kernel-go && go test -run TestKernelReadRoutePromotionsSelectNatively",
+    "python3 scripts/native_route_goal_loop.py /goal --source api --seconds 86400 --limit 2000 --json | python3 -c '<extract vitality route status>'"
+  ],
+  "failure_reason": "Normalized the workspace vitality BML route to GET /api/workspaces/{workspace_id}/vitality, derives workspace_id from KernelHTTPRequest, and keeps Form JSON emission in the BML handler. Focused Form route-class band passes at 8389697 with 1 ok and 0 divergent. The API-source goal loop now counts the vitality template route as kernel-native-high-grammar with handler api_workspace_vitality. Focused Go route-selection proof passes. A broader go test ./... attempt is not counted for this pass because pre-existing TestHealthRouteNativeOperationalShape expects smart_reap_available:false while this workstation reports true.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 345,
+    "row_sha256": "2de8052a0dcc1edb6a920c9c4be856dd2f3e6586d5d426b1e94c3f52dae71af4",
+    "summary": "normalized-the-workspace-vitality-bml-route-to-g"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0345-2de8052a0dcc",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L345"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "COORD_AGENT=codex@a3ec ./scripts/agent-coord.sh claim \"native route next breath: promote GET /api/workspaces/{workspace_id}/vitality from API source into existing front-door route catalog; avoiding codex-bml dynamic-choice and learning-fabric lanes\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/kernel-http.fk form-stdlib/language-model.fk form-stdlib/tests/source-language-route-class-template-band.fk",
+      "python3 scripts/native_route_goal_loop.py /goal --source api --seconds 86400 --limit 2000 --write-state",
+      "cd form/form-kernel-go && go test -run TestKernelReadRoutePromotionsSelectNatively",
+      "python3 scripts/native_route_goal_loop.py /goal --source api --seconds 86400 --limit 2000 --json | python3 -c '<extract vitality route status>'"
+    ],
+    "status": "pass"
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "python3 scripts/scan_form_blueprints.py --check",
+    "cd form && ./validate.sh",
+    "git diff --check"
+  ],
+  "failure_reason": "Resolved Form Blueprint scanner name-drift warnings by renaming reused test-local NodeID bindings to proof-specific symbols while preserving every coordinate. Blueprint scan now emits no drift block and 0 unregistered type-99 entries; wellness passes; every touched band passed during full sibling validation. Full validate still reports 339 ok / 11 unrelated divergent unchanged bands, recorded as residual suite drift outside this task.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 280,
+    "row_sha256": "651a0d569b0060298e0b7566b6170f6f02d5e32ce9f913c3fe2d0d8c8f7e6d6b",
+    "summary": "resolved-form-blueprint-scanner-name-drift-warni"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0280-651a0d569b00",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L280"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/scan_form_blueprints.py --check",
+      "cd form && ./validate.sh",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

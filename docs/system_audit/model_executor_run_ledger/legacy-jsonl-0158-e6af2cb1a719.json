@@ -1,0 +1,54 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "python3 /Users/ursmuff/.codex/skills/youtube-watcher/scripts/get_transcript.py https://youtu.be/PPDK8N2FFMw?si=ISeFAKYY_2h89g3q",
+    "yt-dlp --dump-json --skip-download https://youtu.be/PPDK8N2FFMw?si=ISeFAKYY_2h89g3q",
+    "python3 -m json.tool docs/lineage/urs-contribution-profile.graph.json >/tmp/urs_manifest_validated.json",
+    "jq '{presences:(.presences|length), edges:(.edges|length)}' docs/lineage/urs-contribution-profile.graph.json",
+    "python3 scripts/import_lineage.py docs/lineage/urs-contribution-profile.graph.json --api http://localhost:8000 --source contributor:seeker71 --dry-run",
+    "python3 scripts/coh_substrate.py ingest docs/vision-kb/resources/geometry-of-stability-loraine-jezak-2026-05-21.md specs/geometry-of-stability-loraine-jezak-ingest.md docs/lineage/formative-transmissions.md",
+    "python3 scripts/coh_substrate.py equivalent resource geometry-of-stability-loraine-jezak-2026-05-21",
+    "python3 scripts/coh_substrate.py form '?equivalent @resource(geometry-of-stability-loraine-jezak-2026-05-21)'",
+    "python3 scripts/validate_spec_quality.py --file specs/geometry-of-stability-loraine-jezak-ingest.md",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-21_geometry_of_stability_loraine_jezak_ingest.json",
+    "git diff --check"
+  ],
+  "failure_reason": "Geometry of Stability captions were fetched as working material only; repo ingest stores Form-shaped summary, caption hash, extracted graph concepts, source boundaries, and substrate-ingested resource/spec/lineage cells without full caption text. Path annotation currently normalizes to absolute paths while the new resource cell stores a relative source path, so substrate proof uses resource equivalence and Form lookup instead of path annotate.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 158,
+    "row_sha256": "e6af2cb1a719409cd1966ee06d848c81141b52d93c9ceb34614a0c7b96402822",
+    "summary": "geometry-of-stability-captions-were-fetched-as-w"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0158-e6af2cb1a719",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L158"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 /Users/ursmuff/.codex/skills/youtube-watcher/scripts/get_transcript.py https://youtu.be/PPDK8N2FFMw?si=ISeFAKYY_2h89g3q",
+      "yt-dlp --dump-json --skip-download https://youtu.be/PPDK8N2FFMw?si=ISeFAKYY_2h89g3q",
+      "python3 -m json.tool docs/lineage/urs-contribution-profile.graph.json >/tmp/urs_manifest_validated.json",
+      "jq '{presences:(.presences|length), edges:(.edges|length)}' docs/lineage/urs-contribution-profile.graph.json",
+      "python3 scripts/import_lineage.py docs/lineage/urs-contribution-profile.graph.json --api http://localhost:8000 --source contributor:seeker71 --dry-run",
+      "python3 scripts/coh_substrate.py ingest docs/vision-kb/resources/geometry-of-stability-loraine-jezak-2026-05-21.md specs/geometry-of-stability-loraine-jezak-ingest.md docs/lineage/formative-transmissions.md",
+      "python3 scripts/coh_substrate.py equivalent resource geometry-of-stability-loraine-jezak-2026-05-21",
+      "python3 scripts/coh_substrate.py form '?equivalent @resource(geometry-of-stability-loraine-jezak-2026-05-21)'",
+      "python3 scripts/validate_spec_quality.py --file specs/geometry-of-stability-loraine-jezak-ingest.md",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-21_geometry_of_stability_loraine_jezak_ingest.json",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

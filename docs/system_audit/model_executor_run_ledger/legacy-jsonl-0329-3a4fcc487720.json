@@ -1,0 +1,42 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+    "make wellness",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/form-parse.fk form-stdlib/form-flatten.fk form-stdlib/tests/form-flatten-band.fk",
+    "bash form/scripts/fourth-arm-gate.sh form-lower form-lower-rec jit-metal-lanes jit-oracle-learning",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-os-targets.fk form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/jit-tensor-emit.fk form-stdlib/tests/jit-metal-lanes-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/jit-oracle-learning-band.fk",
+    "scripts/bml_form_jit_metal_planes_audit.sh"
+  ],
+  "failure_reason": "Closed the fourth-arm gap for the supported JIT oracle-learning and metal-lane floor. The Form flattener now pre-registers same-source function signatures before lowering bodies, so forward helper calls and mutual recursion lower into the same function table as the regular walkers. form-lower, form-lower-rec, jit-metal-lanes, and jit-oracle-learning now pass the fkwu fourth-arm gate; the metal-plane audit requires those four-way proofs before emitting macOS arm64 Mach-O and Android arm64 ELF clang oracle receipts.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 329,
+    "row_sha256": "3a4fcc487720f73ddbbff140ac3a26c11ae3d03483de511ca5207975e52b7be7",
+    "summary": "closed-the-fourth-arm-gap-for-the-supported-jit-"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0329-3a4fcc487720",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L329"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/form-parse.fk form-stdlib/form-flatten.fk form-stdlib/tests/form-flatten-band.fk",
+      "bash form/scripts/fourth-arm-gate.sh form-lower form-lower-rec jit-metal-lanes jit-oracle-learning",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-os-targets.fk form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/jit-tensor-emit.fk form-stdlib/tests/jit-metal-lanes-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/jit-oracle-learning-band.fk",
+      "scripts/bml_form_jit_metal_planes_audit.sh"
+    ],
+    "status": "pass"
+  }
+}

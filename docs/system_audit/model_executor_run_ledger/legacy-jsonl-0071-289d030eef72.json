@@ -1,0 +1,38 @@
+{
+  "attempts": 2,
+  "commands_run": [
+    "git fetch origin main",
+    "git rebase origin/main",
+    "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --write-baseline",
+    "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+    "PATH=\"$PWD/api/.venv/bin:$PATH\" python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+  ],
+  "failure_reason": "After PR #1070 landed on main, the branch had to rebase again. Clean origin/main reproduced the maintainability audit drift, so the baseline was refreshed to the deployed mainline values; the local runtime guard then exposed stale home navigation expectations, and /pipeline plus /nodes links were restored to satisfy the deployment UI contract.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 71,
+    "row_sha256": "289d030eef7246b1df1fbda5b3e47f8e29659c755121a8f3867d4ad498141891",
+    "summary": "after-pr-1070-landed-on-main-the-branch-had-to-r"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0071-289d030eef72",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L71"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "git fetch origin main",
+      "git rebase origin/main",
+      "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --write-baseline",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+      "PATH=\"$PWD/api/.venv/bin:$PATH\" python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ],
+    "status": "pass"
+  }
+}

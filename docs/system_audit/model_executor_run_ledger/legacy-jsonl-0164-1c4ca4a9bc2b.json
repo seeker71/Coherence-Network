@@ -1,0 +1,52 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "python3 scripts/active_recipe_trace_index.py --cell efficacy-probe --since current_breath --json",
+    "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest -q tests/test_active_recipe_trace_index.py tests/test_active_recipe_tracing_form.py tests/test_trace_symbol_spaces_form.py",
+    "cd api && /opt/homebrew/bin/ruff check tests/test_active_recipe_trace_index.py tests/test_active_recipe_tracing_form.py tests/test_trace_symbol_spaces_form.py ../scripts/active_recipe_trace_index.py ../scripts/wellness_check.py",
+    "python3 scripts/validate_spec_quality.py --file specs/trace-symbol-spaces-form.md",
+    "python3 scripts/validate_spec_quality.py --file specs/active-recipe-tracing-form.md",
+    "python3 scripts/generate_repo_indexes.py",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-21_trace_symbol_spaces_form.json",
+    "git diff --check",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "Closed the file-backed active-recipe trace gap by adding scripts/active_recipe_trace_index.py. The bridge answers ?active_recipe_traces @cell since current_breath from _field_traces.jsonl and hydrates the five active recipes for efficacy-probe with source path, node id, active counts, lifetime counts, weak-signal confidence, and top-band deltas. First-class ORM indexing remains the field-altitude gap.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 164,
+    "row_sha256": "1c4ca4a9bc2bd818311ccecb4580ec28d3ad486621297fbbb29c7ee78f2f67e3",
+    "summary": "closed-the-file-backed-active-recipe-trace-gap-b"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0164-1c4ca4a9bc2b",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L164"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "python3 scripts/active_recipe_trace_index.py --cell efficacy-probe --since current_breath --json",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest -q tests/test_active_recipe_trace_index.py tests/test_active_recipe_tracing_form.py tests/test_trace_symbol_spaces_form.py",
+      "cd api && /opt/homebrew/bin/ruff check tests/test_active_recipe_trace_index.py tests/test_active_recipe_tracing_form.py tests/test_trace_symbol_spaces_form.py ../scripts/active_recipe_trace_index.py ../scripts/wellness_check.py",
+      "python3 scripts/validate_spec_quality.py --file specs/trace-symbol-spaces-form.md",
+      "python3 scripts/validate_spec_quality.py --file specs/active-recipe-tracing-form.md",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-21_trace_symbol_spaces_form.json",
+      "git diff --check",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

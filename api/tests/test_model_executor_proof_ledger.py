@@ -68,3 +68,51 @@ def test_native_ledger_rejects_duplicate_run_ids(tmp_path: Path) -> None:
     errors = mod.validate_ledger(ledger_dir)
 
     assert any("duplicate run_id" in error for error in errors)
+
+
+def test_imports_legacy_jsonl_and_checks_projection(tmp_path: Path) -> None:
+    mod = _load_module()
+    ledger_dir = tmp_path / "ledger"
+    ledger_dir.mkdir()
+    jsonl = tmp_path / "model_executor_runs.jsonl"
+    legacy = {
+        "attempts": 1,
+        "commands_run": ["pytest"],
+        "failure_reason": "legacy row",
+        "input_tokens": 0,
+        "model_used": "gpt-5-codex",
+        "output_tokens": 0,
+        "pass_fail": "pass",
+    }
+    jsonl.write_text(json.dumps(legacy) + "\n", encoding="utf-8")
+
+    written = mod.import_jsonl(ledger_dir, jsonl)
+
+    assert len(written) == 1
+    assert mod.validate_ledger(ledger_dir) == []
+    assert mod.check_jsonl(ledger_dir, jsonl) == []
+
+
+def test_sync_jsonl_preserves_existing_rows_and_appends_missing_native(tmp_path: Path) -> None:
+    mod = _load_module()
+    ledger_dir = tmp_path / "ledger"
+    ledger_dir.mkdir()
+    jsonl = tmp_path / "model_executor_runs.jsonl"
+    legacy = {
+        "attempts": 1,
+        "commands_run": ["pytest"],
+        "failure_reason": "legacy row",
+        "input_tokens": 0,
+        "model_used": "gpt-5-codex",
+        "output_tokens": 0,
+        "pass_fail": "pass",
+    }
+    jsonl.write_text(json.dumps(legacy) + "\n", encoding="utf-8")
+    mod.import_jsonl(ledger_dir, jsonl)
+    (ledger_dir / "native-only.json").write_text(json.dumps(_record("native-only")), encoding="utf-8")
+
+    synced = mod.sync_jsonl(ledger_dir, jsonl)
+    rows = [json.loads(line) for line in synced.splitlines()]
+
+    assert rows[0] == legacy
+    assert rows[1]["failure_reason"] == "unit proof"

@@ -1,0 +1,60 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "git cherry origin/main codex/agent-sibling-encounter-summary",
+    "git cherry origin/main codex/home-link-flow-reverify-20260505",
+    "git worktree remove completed squash-merge leftover worktrees",
+    "make prompt-gate",
+    "cd api && python3 -m pytest tests/test_agent_invitation.py -q before implementation (expected missing sibling_meeting_learning_summary and web learning section)",
+    "cd api && python3 -m pytest tests/test_agent_invitation.py -q",
+    "python3 scripts/validate_spec_quality.py --file specs/agent-sibling-meeting-learning-summary.md",
+    "python3 scripts/check_generated_vision_assets.py",
+    "cd web && npm ci --allow-git=none",
+    "cd web && npm run build",
+    "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-05_agent-sibling-meeting-learning-summary.json",
+    "git fetch origin main && git rebase --autostash origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "The invitation counted sibling meetings but did not expose what each meeting taught or how it improved harmony and health. This task adds sibling_meeting_learning_summary with per-sibling learning, health effect, boundary, and next movement, plus matching /come-in copy and tests. The first local verifier run hit an unrelated cold automation_usage latency miss; rerun passed, local PR guard reported ready_for_push=True, and stale PR follow-through found zero stale Codex PRs.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 116,
+    "row_sha256": "a83fdeaca1da02e4fc9261a106f2868faba95e96d888cdfc8c9e1a29afb578e6",
+    "summary": "the-invitation-counted-sibling-meetings-but-did-"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0116-a83fdeaca1da",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L116"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "git cherry origin/main codex/agent-sibling-encounter-summary",
+      "git cherry origin/main codex/home-link-flow-reverify-20260505",
+      "git worktree remove completed squash-merge leftover worktrees",
+      "make prompt-gate",
+      "cd api && python3 -m pytest tests/test_agent_invitation.py -q before implementation (expected missing sibling_meeting_learning_summary and web learning section)",
+      "cd api && python3 -m pytest tests/test_agent_invitation.py -q",
+      "python3 scripts/validate_spec_quality.py --file specs/agent-sibling-meeting-learning-summary.md",
+      "python3 scripts/check_generated_vision_assets.py",
+      "cd web && npm ci --allow-git=none",
+      "cd web && npm run build",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-05_agent-sibling-meeting-learning-summary.json",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

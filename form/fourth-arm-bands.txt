@@ -90,7 +90,9 @@
 # bmf-core.fk) keep their place instead of vanishing as substrings. Connected
 # tissue north star: the manifest, substrate north-star nodes, native proof-run
 # ledger, JSONL compatibility export, and commit evidence all tell the same
-# floor story. Every stdlib band is either listed here and validated four-way,
+# floor story. Legacy proof JSONL rows are imported into native per-run records
+# and checked as a projection cache, so coordination does not depend on shared
+# append-file edits. Every stdlib band is either listed here and validated four-way,
 # or its 3-kernel-only blocker is explicitly named in commit evidence;
 # suite-level residuals stay at zero while source-section bands move toward
 # fourth-arm eligibility.

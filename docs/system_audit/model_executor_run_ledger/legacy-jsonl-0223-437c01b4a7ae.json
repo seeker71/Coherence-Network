@@ -1,0 +1,48 @@
+{
+  "attempts": 2,
+  "commands_run": [
+    "make prompt-guide",
+    "cd form/form-kernel-rust && cargo build",
+    "cd form/form-kernel-go && env GOCACHE=/private/tmp/coherence-go-build-bml-generic-source-scanner go build -o /private/tmp/form-kernel-go-bml-generic-source-scanner ./...",
+    "cd form/form-kernel-ts && npm ci --cache /private/tmp/coherence-npm-cache-bml-generic-source-scanner",
+    "cd form/form-kernel-ts && npm run check",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-generic-source-scanner-boundary-proof.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-file-execution-proof.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-char-escapes-source-proof.fk",
+    "python3 scripts/audit_bml_bmf_kernel_natives.py",
+    "git diff --check"
+  ],
+  "failure_reason": "Moved native BML file scanning to a generic source_scan_file(path, lexicon) boundary across Go/Rust/TypeScript. Initial Go build attempts exposed sandbox cache/output placement, fixed by using /private/tmp. The generic scanner proof returns 511 and proves alternate Form lexicons change token classes; file forward/backward and char escape proofs remain green at 131071 and 2147483647. The native audit now forbids bml_scan_file and hard-coded BML scanner tables while requiring source_scan_file.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 223,
+    "row_sha256": "437c01b4a7ae2e9fdf79963394cebfb5dd3a519c50e549271e5dab7fde38bf21",
+    "summary": "moved-native-bml-file-scanning-to-a-generic-sour"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0223-437c01b4a7ae",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L223"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "cd form/form-kernel-rust && cargo build",
+      "cd form/form-kernel-go && env GOCACHE=/private/tmp/coherence-go-build-bml-generic-source-scanner go build -o /private/tmp/form-kernel-go-bml-generic-source-scanner ./...",
+      "cd form/form-kernel-ts && npm ci --cache /private/tmp/coherence-npm-cache-bml-generic-source-scanner",
+      "cd form/form-kernel-ts && npm run check",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-generic-source-scanner-boundary-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-file-execution-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-char-escapes-source-proof.fk",
+      "python3 scripts/audit_bml_bmf_kernel_natives.py",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

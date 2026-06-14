@@ -1,0 +1,48 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "cargo build --release --bin form-kernel-rust",
+    "cd form/form-kernel-ts && ./seedbank/ts-adapter/scripts/parity_suite.sh",
+    "git check-ignore --no-index -v form/form-kernel-ts/seedbank/ts-adapter/examples/ts_arith_demo.fk",
+    "git diff --check",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260609_ts_adapter_fk_artifacts_removed.json",
+    "git fetch origin main && git rebase origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "Released actual non-Form tissue by removing the five tracked TypeScript adapter generated .fk artifacts. The TS parity suite regenerated them from tracked .ts inputs and passed 5/5, proving the files are emitter output rather than source. examples/.gitignore now keeps regenerated .fk files out of git.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 289,
+    "row_sha256": "bcb733974745267ef36416606ebb0e74a2e2d5a55daadb6e290c047543d23d7e",
+    "summary": "released-actual-non-form-tissue-by-removing-the-"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0289-bcb733974745",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L289"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cargo build --release --bin form-kernel-rust",
+      "cd form/form-kernel-ts && ./seedbank/ts-adapter/scripts/parity_suite.sh",
+      "git check-ignore --no-index -v form/form-kernel-ts/seedbank/ts-adapter/examples/ts_arith_demo.fk",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260609_ts_adapter_fk_artifacts_removed.json",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

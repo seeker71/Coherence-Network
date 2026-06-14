@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make start-gate",
+    "curl -sS https://coherence-network-production.up.railway.app/api/agent/pipeline-status | jq",
+    "curl -sS https://coherence-network-production.up.railway.app/api/agent/monitor-issues | jq",
+    "curl -sS https://coherence-network-production.up.railway.app/api/agent/effectiveness | jq",
+    "cd api && pytest -q tests/test_openclaw_executor_integration.py",
+    "cd api && ruff check app/services/agent_routing_service.py tests/test_openclaw_executor_integration.py",
+    "git fetch origin main && git rebase origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "Production smoke showed codex model override failures when model_override carried openai/ prefix; normalized codex model argument and added regression test to prevent recurrence.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 5,
+    "row_sha256": "4fa781ac01e82b396eb0c8f5cab38c71ef8391ac7124a44210551f2c07ad74ef",
+    "summary": "production-smoke-showed-codex-model-override-fai"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0005-4fa781ac01e8",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L5"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make start-gate",
+      "curl -sS https://coherence-network-production.up.railway.app/api/agent/pipeline-status | jq",
+      "curl -sS https://coherence-network-production.up.railway.app/api/agent/monitor-issues | jq",
+      "curl -sS https://coherence-network-production.up.railway.app/api/agent/effectiveness | jq",
+      "cd api && pytest -q tests/test_openclaw_executor_integration.py",
+      "cd api && ruff check app/services/agent_routing_service.py tests/test_openclaw_executor_integration.py",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

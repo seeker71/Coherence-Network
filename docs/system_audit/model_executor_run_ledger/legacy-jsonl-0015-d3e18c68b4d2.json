@@ -1,0 +1,34 @@
+{
+  "attempts": 3,
+  "commands_run": [
+    "cd api && ruff check app/services/automation_usage_service.py",
+    "cd api && pytest -q tests/test_automation_usage_api.py -k \"provider_auto_heal_runs_cli_install_strategy_when_enabled or provider_auto_heal_requires_cli_binary_when_install_mode_enabled\"",
+    "POST /api/automation/usage/provider-heal/run?required_providers=openai,claude-code,cursor&enable_cli_installs=true"
+  ],
+  "failure_reason": "Host runner lacked curl/npm, so install strategy failed despite strict CLI gating; added package-manager bootstrap commands before cursor/claude CLI installers.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 15,
+    "row_sha256": "d3e18c68b4d2495ad42bb4473ae602edf4ef3ff30b3a152b28dc83aa827b033a",
+    "summary": "host-runner-lacked-curl-npm-so-install-strategy-"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0015-d3e18c68b4d2",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L15"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "cd api && ruff check app/services/automation_usage_service.py",
+      "cd api && pytest -q tests/test_automation_usage_api.py -k \"provider_auto_heal_runs_cli_install_strategy_when_enabled or provider_auto_heal_requires_cli_binary_when_install_mode_enabled\"",
+      "POST /api/automation/usage/provider-heal/run?required_providers=openai,claude-code,cursor&enable_cli_installs=true"
+    ],
+    "status": "pass"
+  }
+}

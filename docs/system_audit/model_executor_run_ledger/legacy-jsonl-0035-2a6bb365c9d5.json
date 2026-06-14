@@ -1,0 +1,38 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python scripts/cursor_fact_report.py --output ../docs/system_audit/cursor_fact_report_2026-03-01.json",
+    "curl -s -X POST https://coherence-network-production.up.railway.app/api/agent/tasks",
+    "curl -s https://coherence-network-production.up.railway.app/api/agent/tasks/task_1036c1bb08b06666",
+    "curl -s https://coherence-network-production.up.railway.app/api/runtime/endpoints/summary",
+    "curl -s https://coherence-network-production.up.railway.app/api/runtime/events"
+  ],
+  "failure_reason": "None",
+  "input_tokens": 21022,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 35,
+    "row_sha256": "2a6bb365c9d502348b9f8105f9c1f283220d396c014a62eff3a4c2c407b7bb60",
+    "summary": "none"
+  },
+  "model_used": "openclaw/gpt-4o-mini",
+  "output_tokens": 2546,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0035-2a6bb365c9d5",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L35"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python scripts/cursor_fact_report.py --output ../docs/system_audit/cursor_fact_report_2026-03-01.json",
+      "curl -s -X POST https://coherence-network-production.up.railway.app/api/agent/tasks",
+      "curl -s https://coherence-network-production.up.railway.app/api/agent/tasks/task_1036c1bb08b06666",
+      "curl -s https://coherence-network-production.up.railway.app/api/runtime/endpoints/summary",
+      "curl -s https://coherence-network-production.up.railway.app/api/runtime/events"
+    ],
+    "status": "pass"
+  }
+}

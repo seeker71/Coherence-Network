@@ -1,0 +1,36 @@
+{
+  "attempts": 2,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "python3 scripts/context_budget.py form/form-stdlib/source-compiler.fk form/form-stdlib/compiler.fk form/form-stdlib/grammars/bml.fk form/form-stdlib/tests/kernel-core-self-proof.fk form/form-stdlib/bml/kernel-core.bml",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/kernel-core-self.fk form-stdlib/tests/kernel-core-image-compiler-proof.fk"
+  ],
+  "failure_reason": "Continued the kernel-core self-hosting path by adding a named Form compiler surface for KERNEL-CORE-IMAGE. The first proof attempt exposed that KernelCoreSelf method bodies are BodySource token carriers, not executable AST nodes; the implementation now derives source-declared counts from bml-body-source-values with str_to_int. A second strictness issue corrected write_form_binary native attribution from WITNESS to CALL. The final sibling-kernel proof returns 34 with 1 ok, 0 divergent.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 265,
+    "row_sha256": "5fa54aad460d461c4ea24c64cdbf74c67f5816d7f6828de8d736f58b490e3f2b",
+    "summary": "continued-the-kernel-core-self-hosting-path-by-a"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0265-5fa54aad460d",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L265"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/context_budget.py form/form-stdlib/source-compiler.fk form/form-stdlib/compiler.fk form/form-stdlib/grammars/bml.fk form/form-stdlib/tests/kernel-core-self-proof.fk form/form-stdlib/bml/kernel-core.bml",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/kernel-core-self.fk form-stdlib/tests/kernel-core-image-compiler-proof.fk"
+    ],
+    "status": "pass"
+  }
+}

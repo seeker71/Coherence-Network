@@ -1,0 +1,44 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord join && coord claim \"android mac mesh learning receipts\"",
+    "python3 -m py_compile scripts/android_mesh_learning_receipt.py",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/tests/android-mesh-learning-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh android-mesh-learning",
+    "python3 scripts/android_mesh_learning_receipt.py --start-app",
+    "cd form && VALIDATE_JOBS=4 FOURTH_PREPARE_ALL_BATCH_MAX=0 ./validate.sh"
+  ],
+  "failure_reason": "Added a physical Android/Mac mesh-learning receipt and Form-native routing floor. android-mesh-learning returns 4095 with fourth arm: 1 band(s) four-way and 1 ok, 0 divergent; fourth-arm-gate returns PASS-4WAY. The adb receipt launches Coherence Sense on SM-S918U1 Android 16 arm64-v8a, records safe capability/liveness summaries with the app running, 39 hardware sensors, camera, microphone, GPS, WiFi, Bluetooth LE, NFC, Vulkan compute, and Mac witness liveness. Routes are native-first for summarize/code-lower/tool-select/distill-retire and native-first-sample-oracle for speech/vision/multimodal. The attempted full-suite aggregate validate was externally SIGTERM-terminated while run_one_indexed child jobs were active, so no full-suite pass is claimed.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 387,
+    "row_sha256": "46bd4beb21cabaa0130a63e7e49f612a84a89d075ce7658f84a3b9665dd5de73",
+    "summary": "added-a-physical-android-mac-mesh-learning-recei"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0387-46bd4beb21ca",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L387"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord join && coord claim \"android mac mesh learning receipts\"",
+      "python3 -m py_compile scripts/android_mesh_learning_receipt.py",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/tests/android-mesh-learning-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh android-mesh-learning",
+      "python3 scripts/android_mesh_learning_receipt.py --start-app",
+      "cd form && VALIDATE_JOBS=4 FOURTH_PREPARE_ALL_BATCH_MAX=0 ./validate.sh"
+    ],
+    "status": "pass"
+  }
+}
