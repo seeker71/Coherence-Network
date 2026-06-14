@@ -1,0 +1,30 @@
+{
+  "ledger_schema": "model_executor_proof_run/v1",
+  "run_id": "native-proof-ledger-20260614",
+  "thread_branch": "codex/native-proof-ledger-20260614",
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord claim native-proof-ledger-jsonl-to-substrate",
+    "python3 scripts/model_executor_proof_ledger.py validate",
+    "python3 scripts/model_executor_proof_ledger.py export-jsonl",
+    "python3 -m pytest -q api/tests/test_model_executor_proof_ledger.py"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Moved the model executor proof record toward a native substrate ledger by adding a Form-native proof-run contract, per-run record home, and JSONL export/validation bridge. Existing docs/system_audit/model_executor_runs.jsonl remains a compatibility cache while new native run records avoid append-only merge contention.",
+  "source": {
+    "kind": "native-ledger-record",
+    "path": "docs/system_audit/model_executor_run_ledger/native-proof-ledger-20260614.json"
+  },
+  "validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/model_executor_proof_ledger.py validate",
+      "python3 scripts/model_executor_proof_ledger.py export-jsonl",
+      "python3 -m pytest -q api/tests/test_model_executor_proof_ledger.py"
+    ]
+  }
+}
