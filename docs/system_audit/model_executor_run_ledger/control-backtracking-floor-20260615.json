@@ -1,0 +1,36 @@
+{
+  "ledger_schema": "model_executor_proof_run/v1",
+  "run_id": "control-backtracking-floor-20260615",
+  "thread_branch": "codex/control-backtracking-floor-20260615",
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord claim control-backtracking-floor \"Unblock BML/native control-backtracking floor: fail/cut/save/restore/while/try surface; avoid mutable-locals and interface-package lanes\"",
+    "make wellness",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-control-backtracking-floor-proof.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-executor-proof-ledger.fk form-stdlib/tests/model-executor-proof-ledger-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh model-executor-proof-ledger",
+    "python3 -m json.tool docs/system_audit/model_executor_run_ledger/control-backtracking-floor-20260615.json",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-15_control_backtracking_floor.json",
+    "git diff --check"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Added a focused source-originated BML control/backtracking proof for save/discard plus try/throw/catch, retuned the BML native north-star to move only proven focused slices into the supported floor, and kept arbitrary control-block lowering/source-restore spelling as explicit gaps.",
+  "source": {
+    "kind": "native-ledger-record",
+    "path": "docs/system_audit/model_executor_run_ledger/control-backtracking-floor-20260615.json"
+  },
+  "validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-control-backtracking-floor-proof.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-executor-proof-ledger.fk form-stdlib/tests/model-executor-proof-ledger-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh model-executor-proof-ledger",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-15_control_backtracking_floor.json",
+      "git diff --check"
+    ]
+  }
+}

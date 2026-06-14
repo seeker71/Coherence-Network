@@ -1,0 +1,122 @@
+{
+  "date": "2026-06-15",
+  "thread_branch": "codex/interface-package-import-floor-20260615",
+  "commit_scope": "Add a narrow BML/native interface, package, and import metadata floor.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "bml-native-interface-package-import-floor",
+    "connected-tissue-north-star",
+    "focused-testing-fast-release"
+  ],
+  "spec_ids": [
+    "bml-native-north-star",
+    "fourth-arm-bands",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "interface-package-import-floor-20260615"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "lane-scope",
+        "floor-prioritization"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/ports-interface-and-structure.md",
+    "docs/system_audit/commit_evidence_2026-06-15_interface_package_import_floor.json",
+    "docs/system_audit/model_executor_run_ledger/interface-package-import-floor-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/bml-native-interface-package-import.fk",
+    "form/form-stdlib/tests/bml-native-interface-package-import-band.fk"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/ports-interface-and-structure.md",
+    "docs/system_audit/commit_evidence_2026-06-15_interface_package_import_floor.json",
+    "docs/system_audit/model_executor_run_ledger/interface-package-import-floor-20260615.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/bml-native-interface-package-import.fk",
+    "form/form-stdlib/tests/bml-native-interface-package-import-band.fk"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/tests/bml-native-interface-package-import-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh bml-native-interface-package-import",
+      "python3 - <<'PY' # parse docs/system_audit/model_executor_runs.jsonl and native run JSON records",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-15_interface_package_import_floor.json",
+      "git diff --check"
+    ],
+    "notes": "Focused validate returned verdict 255 with `fourth arm: 1 band(s) four-way` and `1 ok, 0 divergent`. The fourth-arm gate returned `PASS-4WAY  bml-native-interface-package-import`. The JSONL cache was rebuilt from the committed cache plus native run records and parsed successfully at 437 rows."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "No push or PR requested for this lane."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Package, import, and interface declarations have an executable Form metadata row target with source receipts and port-shape linkage.",
+    "public_endpoints": [
+      "n/a: local Form runtime proof"
+    ],
+    "test_flows": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/resource-port.fk form-stdlib/bml-native-interface-package-import.fk form-stdlib/tests/bml-native-interface-package-import-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh bml-native-interface-package-import"
+    ]
+  },
+  "evidence_refs": [
+    "form/form-stdlib/bml-native-interface-package-import.fk",
+    "form/form-stdlib/tests/bml-native-interface-package-import-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/ports-interface-and-structure.md",
+    "docs/system_audit/model_executor_run_ledger/interface-package-import-floor-20260615.json"
+  ],
+  "phase_gate": {
+    "phase": "interface-package-import-metadata-floor",
+    "gate": "BML/native interface, package, and import claims need executable data cells before compiler lowering can resolve namespaces or dispatch methods.",
+    "state": "local-four-way-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Implement native namespace/import/interface lowering at form/form-stdlib/grammars/bml.fk:bml-source-declaration-model -> native namespace/import/interface lowering."
+  },
+  "floor_update": {
+    "previous_observed_floor": "BML reference compiler recognizes Package, Import, and Interface inside broad compiler proof; no dedicated native metadata row target.",
+    "current_observed_floor": "Dedicated bml-native-interface-package-import row proves package/import/interface metadata as executable Form data with port-shape linkage.",
+    "new_bands": [
+      "bml-native-interface-package-import -> 255 four-way"
+    ],
+    "not_claimed": [
+      "package namespace resolution",
+      "import symbol execution",
+      "interface method dispatch lowering",
+      "mutable locals",
+      "control/backtracking"
+    ]
+  }
+}
