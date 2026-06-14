@@ -23,7 +23,9 @@
 ; are vocabulary rows — the checksum bands' unlock. Scope held honestly:
 ; PURE bands — defn bodies that see only their params + do-lets, top-level
 ; lets, one verdict expression. eq/and lowering and let-inlining re-evaluate
-; pure operands. Packed args ride the emitted walker's VALUE STACK
+; pure operands. Non-recursive direct-call do-lets snapshot once through
+; per-function RAM windows, so list-returning calls can be read more than once
+; without re-walking. Packed args ride the emitted walker's VALUE STACK
 ; (hati-os-kernel-emit.fk: ARG reads fk_vs[fp], the melt roots and
 ; relocates every stack slot), so band-scale allocation melts safely
 ; mid-call — feature-vector's crossing is the witness (audit section 24).
@@ -79,6 +81,13 @@
     (if (eq (len rows) 0) (list)
         (if (str_eq (nth (head rows) 0) name) (head rows)
             (flt-assoc name (tail rows)))))
+
+(defn flt-recq () "(defn-recursive)")
+(defn flt-fidxq () "(defn-index)")
+(defn flt-env-row-value (row dflt) (if (eq (len row) 0) dflt (nth row 1)))
+(defn flt-current-recursive (env) (flt-env-row-value (flt-assoc (flt-recq) env) 0))
+(defn flt-current-fidx (env) (flt-env-row-value (flt-assoc (flt-fidxq) env) 0))
+(defn flt-slot (env) (fk-lit (add 128 (add (mul (flt-current-fidx env) 32) (len env)))))
 
 (defn flt-mkop (row a b)
     (if (eq (nth row 1) 1) (fk-node (nth row 2) a)
@@ -217,10 +226,10 @@
 
 ; ── nested (do ...) as an EXPRESSION (let-in-defn, do-in-do) ──────────────
 ; The same structural recursion as the top-level do-walker, scoped to a
-; value position: an effecting (let name v) walks v once, stores it in a RAM
-; slot, and binds a load cell into env for the REST of the do; pure values keep
-; the old inline lowering so recursive/local compute does not contend on global
-; slots. The
+; value position: an effecting (let name v), and a non-recursive direct-call
+; pure let, walks v once, stores it in a per-function RAM slot, and binds a
+; load cell into env for the REST of the do. Other pure values keep the old
+; inline lowering so recursive/local compute does not contend on global slots. The
 ; last expression is the do's value. Nesting falls out of flt-expr — a
 ; child that is itself (do ...) re-enters here with its own env tail.
 (defn flt-do (s pos fns env val) (flt-do2 s (fp-skip s pos) fns env val))
@@ -258,10 +267,14 @@
     (if (str_eq op "file_byte_at") 1
     (if (str_eq op "scan_run") 1 0))))))))))))))
 (defn flt-do-let-done (name op s ve fns env val)
-    (if (eq (flt-do-let-effect-op op) 1)
-        (flt-do-let-store name s ve fns env val (fk-lit (add 128 (len env))))
+    (if (eq (flt-do-let-store-op op fns env) 1)
+        (flt-do-let-store name s ve fns env val (flt-slot env))
         (flt-do2 s (fp-skip s (fp-close s (nth ve 1))) fns
                  (cons (list name (nth ve 0)) env) val)))
+(defn flt-do-let-store-op (op fns env)
+    (if (eq (flt-do-let-effect-op op) 1) 1
+        (if (eq (flt-current-recursive env) 1) 0
+            (if (eq (len (flt-assoc op fns)) 0) 0 1))))
 (defn flt-do-let-store (name s ve fns env val slot)
     (flt-do-let-store-rest
         (fk-store slot (nth ve 0))
@@ -485,6 +498,24 @@
     (if (eq (len front) 0) back
         (cons (head front) (flt-env-append (tail front) back))))
 
+(defn flt-expr-end (s pos)
+    (flt-expr-end2 s (fp-skip s pos)))
+(defn flt-expr-end2 (s pos)
+    (if (ge pos (fp-len s)) pos
+        (if (eq (fp-at s pos) 40) (fp-close s pos)
+            (if (eq (fp-at s pos) 34) (add (flt-strend s (add pos 1)) 1)
+                (fp-sym-end s pos)))))
+(defn flt-calls-name (name s pos end)
+    (if (ge pos end) 0
+        (if (eq (fp-at s pos) 34)
+            (flt-calls-name name s (add (flt-strend s (add pos 1)) 1) end)
+            (if (and (eq (fp-at s pos) 40)
+                     (str_eq (flt-word s (fp-skip s (add pos 1))) name))
+                1
+                (flt-calls-name name s (add pos 1) end)))))
+(defn flt-defn-recursive (name s pos)
+    (flt-calls-name name s (fp-skip s pos) (flt-expr-end s pos)))
+
 (defn flt-defn (s pos fns rbodies env main)
     (flt-defn-n s (fp-skip s (fp-sym-end s (fp-skip s (add pos 1)))) fns rbodies env main))
 (defn flt-defn-n (s pos fns rbodies env main)
@@ -505,7 +536,8 @@
                 (flt-defn-fns row fns)
                 (flt-env-append
                     (flt-penv (nth pe 0) (len (nth pe 0)) 0)
-                    env)
+                    (cons (list (flt-recq) (flt-defn-recursive name s (nth pe 1)))
+                          (cons (list (flt-fidxq) (nth row 1)) env)))
                 rbodies env main))
 (defn flt-defn-b (s pos fns benv rbodies env main)
     (flt-defn-done s (flt-expr s pos fns benv) fns rbodies env main))
@@ -555,7 +587,8 @@
                   (flt-defn-fns row fns)
                   (flt-env-append
                       (flt-penv (nth pe 0) (len (nth pe 0)) 0)
-                      env)
+                      (cons (list (flt-recq) (flt-defn-recursive name s (nth pe 1)))
+                            (cons (list (flt-fidxq) (nth row 1)) env)))
                   rbodies env main))
 (defn flt-defn-b-s (s pos fns benv rbodies env main)
     (flt-defn-done-s s (flt-expr s pos fns benv) fns rbodies env main))
@@ -566,7 +599,7 @@
 (defn flt-let-n-s (s pos fns rbodies env main)
     (flt-let-v-s (flt-word s pos) s (fp-sym-end s pos) fns rbodies env main))
 (defn flt-let-v-s (name s pos fns rbodies env main)
-    (flt-let-store-s name s (flt-expr s pos fns env) fns rbodies env main (fk-lit (add 128 (len env)))))
+    (flt-let-store-s name s (flt-expr s pos fns env) fns rbodies env main (flt-slot env)))
 (defn flt-let-store-s (name s ve fns rbodies env main slot)
     (flt-let-store-rest-s
         (fk-store slot (nth ve 0))
