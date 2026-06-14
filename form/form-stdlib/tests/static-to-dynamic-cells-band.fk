@@ -1,6 +1,6 @@
 ; static-to-dynamic-cells-band.fk - proof for static memory release cells.
 ;
-; preludes: form-stdlib/static-to-dynamic-cells.fk
+; preludes: form-stdlib/core.fk form-stdlib/static-to-dynamic-cells.fk
 ;
 ; Band verdict: 262143 when the four formerly-attention static surfaces all
 ; project into live dynamic successor cells with proof commands and release gates.
