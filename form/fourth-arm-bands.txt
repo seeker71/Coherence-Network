@@ -53,7 +53,7 @@
 # record-blueprint rows among its focused four-way rows, and
 # android-mesh-learning now carries
 # active mic/camera/GPU sample rows at focused verdict 32767. The latest
-# completed full `cd form && ./validate.sh` on this branch reads 210
+# completed full `cd form && ./validate.sh` on this branch reads 215
 # four-way bands and 612 total passing workloads with 0 residual divergent
 # bands; refresh the full aggregate on a quiet host after focused release
 # rather than spending repeated validation cycles under shared-runner
@@ -172,6 +172,15 @@ mesh-gradient fks 127
 mesh-relay fks 127
 nearest-shape fks 127
 native-route-goal-cells fks 1048575
+# Native mutation receipts now ride the same fourth-arm floor as the route-goal
+# attention cell: durable side-effect SQL, route side-effect binding, public
+# gate receipts, trust envelopes, and idea valuation audit-ledger parity all
+# survey and gate four-way without touching live carriers.
+native-mutation-side-effects fks 11111
+native-mutation-route-side-effects fks 11111
+native-mutation-public-gate fks 11111111
+native-mutation-trust-envelope fks 11111
+native-idea-valuation-audit-ledger fks 111111
 novelty fks 63
 online-accuracy fks 63
 predictor-train fks 63

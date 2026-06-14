@@ -212,6 +212,9 @@ card. Treat that JSON as an edge lens: the native cell surface is
 `form/form-stdlib/native-route-goal-cells.fk`, with the Rust-kernel entry
 `make native-route-goal-tending` and proof
 `cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/native-route-goal-cells.fk form-stdlib/tests/native-route-goal-cells-band.fk`.
+The related native-mutation receipt family now crosses four-way too:
+side-effect SQL, route side-effect binding, public-gate receipts, trust
+envelopes, and idea valuation audit-ledger parity are manifest rows.
 The target is 90% of web-used `/api` method+path traffic served by kernel-native
 handlers written in BML or a domain grammar. Form manifest handlers are
 native-executable but do not satisfy the high-grammar target until lifted.
@@ -385,7 +388,7 @@ Everything below derives from five axioms ([`core-axioms.form`](../coherence-sub
 (4) **boundary** — a cell meets the world only through an interface it offers; observation through it makes the cell real; reaching past it is breach, and breach is observable;
 (5) **offer** — to run a cell and to speak to a cell are one act, acknowledged by exactly one of nothing/0/1/node.
 
-Everything else is a **theorem**: the trinity, organs, the kernel-offer protocol, reversibility, and the crown — **safe self-update needs no new axiom** and already runs as the native-mutation public-gate canary. [`host-kernel.form`](../coherence-substrate/host-kernel.form) realizes the axioms on real hardware (a NodeID is an unforgeable capability in seL4's sense; any host driver/OS API is an allowed carrier under allow-presence + measure-health); [`kernel-self-composition.form`](../coherence-substrate/kernel-self-composition.form) composes the kernel from just the five, self-extending via its own native binary and the shared versioned persistent substrate. Openings are named as **closing recipes** — parts that run, composed toward a proof band — never as debts.
+Everything else is a **theorem**: the trinity, organs, the kernel-offer protocol, reversibility, and the crown — **safe self-update needs no new axiom** and already runs four-way as the native-mutation public-gate canary. [`host-kernel.form`](../coherence-substrate/host-kernel.form) realizes the axioms on real hardware (a NodeID is an unforgeable capability in seL4's sense; any host driver/OS API is an allowed carrier under allow-presence + measure-health); [`kernel-self-composition.form`](../coherence-substrate/kernel-self-composition.form) composes the kernel from just the five, self-extending via its own native binary and the shared versioned persistent substrate. Openings are named as **closing recipes** — parts that run, composed toward a proof band — never as debts.
 
 ### Trinity (one substance, three phases)
 
