@@ -1,0 +1,111 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/summary-route-stream-receipts-20260614",
+  "commit_scope": "Move the Form-native text summary source-reader floor from planned route and stream coordinates to ready source-data receipts carried by native kernel-http response bodies and .fkb channel cursor windows.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "form-native-llm",
+    "native-learning-surface",
+    "real-source-receipts",
+    "form-os-tool-surface"
+  ],
+  "spec_ids": [
+    "form-language-learning",
+    "choice-receipt-learning",
+    "tool-channel",
+    "native-source-codecs"
+  ],
+  "task_ids": [
+    "summary-route-stream-receipts-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/text-summary-learning.fk",
+    "form/form-stdlib/tests/text-summary-multi-source-band.fk",
+    "docs/coherence-substrate/text-summary-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_summary_route_stream_receipts.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/form-stdlib/text-summary-learning.fk",
+    "form/form-stdlib/tests/text-summary-multi-source-band.fk",
+    "docs/coherence-substrate/text-summary-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_summary_route_stream_receipts.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "form/form-stdlib/text-summary-learning.fk",
+    "form/form-stdlib/tests/text-summary-multi-source-band.fk",
+    "docs/coherence-substrate/text-summary-learning.form",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim \"summary route stream physical receipts\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/cell-log-store.fk form-stdlib/kernel-http.fk form-stdlib/channel.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-multi-source-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-real-source-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-learning-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_summary_route_stream_receipts.json"
+    ],
+    "notes": "Prompt guide and wellness passed before editing. The focused text-summary-multi-source-band returned 65535 as a 3-kernel only host-I/O/value proof: it reads a real checked-in file slice, writes and reads a real segmented cell-log-store value, lowers a kernel-http route choice into a kh-response body receipt, writes and reads a .fkb channel cursor window through channel-read-since, and aggregates all four ready source-data receipts into one summary CHOICE-RECEIPT. Existing real-source remains 8191. Existing text-summary-learning remains 262143 with fourth arm: 1 band(s) four-way."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed yet; CI not run at evidence creation time."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Local Form proof and docs only. Public deployment is checked after merge by the deploy verifier."
+  },
+  "phase_gate": {
+    "phase": "summary-route-stream-receipts",
+    "gate": "Cells and recipes can discover and learn from file, store, route, and stream source receipts without Python carriers or ambient host access.",
+    "state": "local-route-stream-receipt-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Move kernel:route from native kh-response body receipts to socket-served front-door traces, and move stream:read from .fkb cursor windows to backpressure-aware event streams."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Form now exposes ready source-data receipts for kernel:route and stream:read summary inputs. Route receipts are gated by status/header/body data from native kernel-http response values; stream receipts are gated by ordered payloads and cursor counts from .fkb channel-read-since windows.",
+    "public_endpoints": [
+      "local:form/validate.sh:text-summary-multi-source-band",
+      "local:form/validate.sh:text-summary-real-source-band",
+      "local:form/validate.sh:text-summary-learning-band"
+    ],
+    "test_flows": [
+      "text:summarize-route plans through kernel:route with cap.kernel.route.read and kernel-http:kh-response-body.",
+      "text:summarize-stream plans through stream:read with cap.stream.read and channel:read-since+cursor-window.",
+      "The multi-source proof reads file and store sources, computes a kernel-http route choice and kh-response body, reads a .fkb channel cursor window, and learns only from receipts that pass byte, claim, citation, status, header, event, and cursor gates.",
+      "The proof remains honest about the next gap: route is not yet a socket-served front-door trace and stream is not yet a backpressure-aware native event stream."
+    ],
+    "summary": "This moves route and stream out of placeholder/planned status into physically evaluated native Form value and file-backed channel receipts while preserving the next north-star pressure explicitly."
+  }
+}
