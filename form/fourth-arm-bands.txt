@@ -103,9 +103,13 @@
 # arms (tags 102/103) that evaluate each operand exactly once (eq-effect-once).
 # Host io opens with temp_dir (tag 101, fk_tempdir reads $TMPDIR): hostio-roundtrip
 # writes bytes to a real file and reads them back four-way deterministically.
-# North star — the durable file/Postgres carriers: substrate-core threaded over
-# the segmented-FILE carrier crosses once effect-once let lands (the carrier
-# store-threading binds effectful values through let, which fkwu still inlines).
+# North star — durable carriers through one storage-port contract: memory and
+# segmented-FILE stay in the pure deterministic four-way floor, while Postgres
+# is first-class at the host carrier boundary with rollback-safe native evidence,
+# not a database engine embedded inside the pure fourth kernel. substrate-core
+# threaded over the segmented-FILE carrier crosses once effect-once let lands
+# (the carrier store-threading binds effectful values through let, which fkwu
+# still inlines).
 # Connected
 # external HTTP now crosses the emitted arm through http_get tag 105: the fkwu
 # binary owns DNS/TCP/socket/read/write for http:// and runtime-loaded
