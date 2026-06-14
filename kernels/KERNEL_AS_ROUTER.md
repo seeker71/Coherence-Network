@@ -1128,6 +1128,7 @@ door is FastAPI.
 ## Cross-references
 
 - [`API_KERNEL_READINESS.md`](API_KERNEL_READINESS.md) — the topology this inverts; the queue of native-eligible routes.
+- [`FKWU_NATIVE_DISPATCH.md`](FKWU_NATIVE_DISPATCH.md) — the I/O boundary that lets the fourth kernel (fkwu) serve a real route, on the storage-port carrier already proven four-way: offload the pure slice first (carrier owns I/O), with a deferred capability-scoped host-bound-carrier seam for whole handlers, and the build order toward Go-owns-the-door + fkwu-as-accelerator.
 - [`SUBSTRATE_AS_DEPLOYMENT_RUNTIME.md`](SUBSTRATE_AS_DEPLOYMENT_RUNTIME.md) — the deeper destination: the substrate as the runtime, of which the kernel-router is the request-handling face.
 - [`README.md`](README.md) — the three sibling kernels; the front door is a role any sibling carrier can serve.
 - [`lc-native-kernel-binary`](../docs/vision-kb/concepts/lc-native-kernel-binary.md) — the native binary, its serve primitive, and the per-process / concurrency honesty this build must answer.
