@@ -234,10 +234,19 @@
 (defn flt-do-let-n (s pos fns env val)
     (flt-do-let-v (flt-word s pos) s (fp-sym-end s pos) fns env val))
 (defn flt-do-let-v (name s pos fns env val)
-    (flt-do-let-done name s (flt-expr s pos fns env) fns env val))
-(defn flt-do-let-done (name s ve fns env val)
-    (flt-do2 s (fp-skip s (fp-close s (nth ve 1))) fns
-             (cons (list name (nth ve 0)) env) val))
+    (flt-do-let-done name (flt-peek s (fp-skip s pos)) s (flt-expr s pos fns env) fns env val))
+(defn flt-do-let-done (name op s ve fns env val)
+    (if (str_eq op "record_new")
+        (flt-do-let-record name s ve fns env val (fk-lit (add 128 (len env))))
+        (flt-do2 s (fp-skip s (fp-close s (nth ve 1))) fns
+                 (cons (list name (nth ve 0)) env) val)))
+(defn flt-do-let-record (name s ve fns env val slot)
+    (flt-do-let-record-rest
+        (fk-store slot (nth ve 0))
+        (flt-do2 s (fp-skip s (fp-close s (nth ve 1))) fns
+                 (cons (list name (fk-load slot)) env) val)))
+(defn flt-do-let-record-rest (store rest)
+    (list (flt-sequence store (nth rest 0)) (nth rest 1)))
 
 ; two operands, then the lowering picked by selector k (lowerings are rules,
 ; not tag rows — they BUILD shapes instead of naming one)
@@ -491,6 +500,59 @@
 (defn flt-let-done (name s ve fns rbodies env main)
     (flt-items s (fp-close s (nth ve 1)) fns rbodies (cons (list name (nth ve 0)) env) main))
 
+; The band source's top-level do is an ordered program, not a module constant
+; carrier. Snapshot each top-level let once so reads before record_set keep
+; their source-time value while module top-level constants still inline above.
+(defn flt-items-s (s pos fns rbodies env main)
+    (flt-items2-s s (fp-skip s pos) fns rbodies env main))
+(defn flt-items2-s (s pos fns rbodies env main)
+    (if (ge pos (fp-len s)) (list fns rbodies main pos env)
+    (if (eq (fp-at s pos) 41) (list fns rbodies main (add pos 1) env)
+    (if (str_eq (flt-peek s pos) "defn") (flt-defn-s s pos fns rbodies env main)
+    (if (str_eq (flt-peek s pos) "let") (flt-let-s s pos fns rbodies env main)
+        (flt-main-s s (flt-expr s pos fns env) fns rbodies env))))))
+(defn flt-main-s (s ee fns rbodies env)
+    (flt-main-next-s s ee (fp-skip s (nth ee 1)) fns rbodies env))
+(defn flt-main-next-s (s ee pos fns rbodies env)
+    (if (or (ge pos (fp-len s)) (eq (fp-at s pos) 41))
+        (flt-items-s s (nth ee 1) fns rbodies env (nth ee 0))
+        (flt-main-seq-s (nth ee 0) (flt-items-s s pos fns rbodies env (nth ee 0)))))
+(defn flt-main-seq-s (val rest)
+    (list (nth rest 0) (nth rest 1) (flt-sequence val (nth rest 2)) (nth rest 3) (nth rest 4)))
+(defn flt-defn-s (s pos fns rbodies env main)
+    (flt-defn-n-s s (fp-skip s (fp-sym-end s (fp-skip s (add pos 1)))) fns rbodies env main))
+(defn flt-defn-n-s (s pos fns rbodies env main)
+    (flt-defn-p-s (flt-word s pos) s (fp-sym-end s pos) fns rbodies env main))
+(defn flt-defn-p-s (name s pos fns rbodies env main)
+    (flt-defn-p2-s name s (flt-params s (add (fp-skip s pos) 1)) fns rbodies env main))
+(defn flt-defn-p2-s (name s pe fns rbodies env main)
+    (flt-defn-p3-s name s pe fns rbodies env main
+                   (flt-defn-sig name (len (nth pe 0)) fns)))
+(defn flt-defn-p3-s (name s pe fns rbodies env main row)
+    (flt-defn-b-s s (nth pe 1)
+                  (flt-defn-fns row fns)
+                  (flt-env-append
+                      (flt-penv (nth pe 0) (len (nth pe 0)) 0)
+                      env)
+                  rbodies env main))
+(defn flt-defn-b-s (s pos fns benv rbodies env main)
+    (flt-defn-done-s s (flt-expr s pos fns benv) fns rbodies env main))
+(defn flt-defn-done-s (s be fns rbodies env main)
+    (flt-items-s s (fp-close s (nth be 1)) fns (cons (nth be 0) rbodies) env main))
+(defn flt-let-s (s pos fns rbodies env main)
+    (flt-let-n-s s (fp-skip s (fp-sym-end s (fp-skip s (add pos 1)))) fns rbodies env main))
+(defn flt-let-n-s (s pos fns rbodies env main)
+    (flt-let-v-s (flt-word s pos) s (fp-sym-end s pos) fns rbodies env main))
+(defn flt-let-v-s (name s pos fns rbodies env main)
+    (flt-let-store-s name s (flt-expr s pos fns env) fns rbodies env main (fk-lit (add 128 (len env)))))
+(defn flt-let-store-s (name s ve fns rbodies env main slot)
+    (flt-let-store-rest-s
+        (fk-store slot (nth ve 0))
+        (flt-items-s s (fp-close s (nth ve 1)) fns rbodies
+                     (cons (list name (fk-load slot)) env) main)))
+(defn flt-let-store-rest-s (store rest)
+    (list (nth rest 0) (nth rest 1) (flt-sequence store (nth rest 2)) (nth rest 3) (nth rest 4)))
+
 ; one source file's (do ...) — returns (fns rbodies main endpos env); env is
 ; seeded with the program's string pool under the quote-name, then threaded
 ; across module sources so top-level constants remain visible to bands.
@@ -522,6 +584,11 @@
 (defn flt-top2 (s pos fns rbodies pool env)
     (flt-items s (flt-top-pos s pos) fns rbodies
                (flt-env-append (list (list (flt-poolq) pool)) env) (fk-lit 0)))
+(defn flt-top-env-snap (s fns rbodies pool env)
+    (flt-top2-snap s (fp-skip s 0) (flt-sig-scan s 0 fns) rbodies pool env))
+(defn flt-top2-snap (s pos fns rbodies pool env)
+    (flt-items-s s (flt-top-pos s pos) fns rbodies
+                 (flt-env-append (list (list (flt-poolq) pool)) env) (fk-lit 0)))
 (defn flt-top-pos (s pos)
     (if (ge pos (fp-len s)) pos
         (if (and (eq (fp-at s pos) 40)
@@ -582,7 +649,7 @@
 (defn flt-band-fns2 (modsrc bandsrc pool)
     (flt-band2 (flt-top modsrc (list) (list) pool) bandsrc pool))
 (defn flt-band2 (mr bandsrc pool)
-    (flt-band3 (flt-top-env bandsrc (nth mr 0) (nth mr 1) pool (nth mr 4))))
+    (flt-band3 (flt-top-env-snap bandsrc (nth mr 0) (nth mr 1) pool (nth mr 4))))
 (defn flt-band3 (br)
     (cons (nth br 2) (flt-rev (nth br 1) (list))))
 (defn flt-modsrcs-top (modsrcs fns rbodies pool)

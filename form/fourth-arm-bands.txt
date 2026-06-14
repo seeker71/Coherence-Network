@@ -41,11 +41,12 @@
 #
 # Current floor (2026-06-14 content-address + sibling-node floor): the admitted
 # manifest carries content-address, durable substrate-core, and the doc-xpath,
-# concept-xpath, dns, session, list-of-record-reduction, and record-blueprint
-# rows among its focused four-way rows, and android-mesh-learning now carries
+# concept-xpath, dns, session, record, list-of-record-reduction, and
+# record-blueprint rows among its focused four-way rows, and
+# android-mesh-learning now carries
 # active mic/camera/GPU sample rows at focused verdict 32767. The latest
-# completed full `cd form && ./validate.sh` on a quiet sibling branch read 183
-# four-way bands and 587 total passing workloads with 0 residual divergent
+# completed full `cd form && ./validate.sh` on this branch reads 204
+# four-way bands and 604 total passing workloads with 0 residual divergent
 # bands; refresh the full aggregate on a quiet host after focused release
 # rather than spending repeated validation cycles under shared-runner
 # contention. Literal bp registry aliases now fold through make_nodeid for the
@@ -56,8 +57,10 @@
 # registered NodeID constructor/query floors after lifting module-level function
 # wrappers to the same top-level shape as xpath.fk. list-of-record-reduction
 # now rides the same record carrier after _plus lowers to the existing add arm,
-# and record_blueprint lowers to emitted record-table tag 100. Symbol wire
-# serialization remains the named sibling residual. Record field access now rides a
+# record_blueprint lowers to emitted record-table tag 100, and full record
+# mutation/aliasing crosses after band top-level lets snapshot source-order
+# values through the fourth-arm flattener. Symbol wire serialization remains
+# the named sibling residual. Record field access now rides a
 # native fourth-arm record carrier: record_new lowers to a packed entry packet,
 # then fkwu tags 64/65/66/67/68/99/100 carry construction, get, set, has,
 # record?, keys, and blueprint access without aliasing ints, lists, nodes, or
@@ -270,9 +273,11 @@ witness-to-co-regulate fks 127
 # initializes a distinct negative-even record carrier from that packet, so
 # record?, record_get, record_set, record_has, record_keys, and
 # record_blueprint no longer collide with ints, lists, nodes, or float boxes.
-# The remaining full record band waits on let-bound mutable identity; the
-# current flattener intentionally inlines pure lets, which re-evaluates
-# record_new instead of preserving an aliasable record cell.
+# Full record-band now preserves source-order top-level let snapshots in the
+# band source: record_new keeps shared mutable identity, and reads captured
+# before record_set keep their source-time value. Module constants still inline
+# across source files so the existing env-threaded prelude contract remains.
+record fks 176
 record-blueprint fks 7
 record-fold fks 31
 record-field-access fks 16

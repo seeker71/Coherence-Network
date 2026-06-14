@@ -1,0 +1,41 @@
+{
+  "ledger_schema": "model_executor_proof_run/v1",
+  "run_id": "record-aliasing-floor-20260614",
+  "thread_branch": "codex/fourth-record-aliasing-floor-20260614",
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord join",
+    "coord view",
+    "coord doing",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/record-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/form-parse.fk form-stdlib/form-flatten.fk form-stdlib/tests/form-flatten-indirect-call-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh record record-blueprint record-fold record-field-access list-of-record-reduction",
+    "cd form && bash scripts/fourth-arm-gate.sh higher-order-fn-arg branch-choice-order channel-interface jit-lower full-jit-lower model-vitality record",
+    "cd form && ./validate.sh",
+    "git diff --check"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Admitted full record-band to the fourth-arm floor at 176 by snapshotting band-source top-level lets once through the RAM organ. Mutable record identity, pre-mutation reads, blueprint access, folds, field access, list-of-record reduction, and representative JIT/top-level rows are PASS-4WAY; full Form validation reports 204 fourth-arm bands, 604 ok, 0 divergent.",
+  "source": {
+    "kind": "native-ledger-record",
+    "path": "docs/system_audit/model_executor_run_ledger/record-aliasing-floor-20260614.json"
+  },
+  "validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/record-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/form-parse.fk form-stdlib/form-flatten.fk form-stdlib/tests/form-flatten-indirect-call-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh record record-blueprint record-fold record-field-access list-of-record-reduction",
+      "cd form && bash scripts/fourth-arm-gate.sh higher-order-fn-arg branch-choice-order channel-interface jit-lower full-jit-lower model-vitality record",
+      "cd form && ./validate.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_record_aliasing_floor.json",
+      "python3 scripts/model_executor_proof_ledger.py validate",
+      "python3 - <<'PY'\nimport json\nfrom pathlib import Path\nfor i, line in enumerate(Path('docs/system_audit/model_executor_runs.jsonl').read_text().splitlines(), 1):\n    json.loads(line)\nprint('OK jsonl rows', i)\nPY",
+      "git diff --check"
+    ]
+  }
+}
