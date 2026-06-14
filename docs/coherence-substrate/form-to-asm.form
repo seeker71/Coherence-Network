@@ -176,12 +176,12 @@
   # ELF header + one RX PT_LOAD program header + _start bytes. The first program
   # writes "FORM ELF\n" through syscall 64, then exits 42 through syscall 93.
   # Local proof writes and inspects the executable, then executes it through
-  # Docker Linux/arm64 when that runner is live. Android device/emulator
-  # execution remains the target-specific physical receipt.
+  # Docker Linux/arm64 when that runner is live, and on an authorized Android
+  # arm64 device through adb for the target-specific physical receipt.
   (android-executable-shape-realized
     (executable "form-elf-exec.fk -> ELF64/aarch64 ET_EXEC with _start write+exit bytes")
     (inspect "scripts/bml_form_jit_metal_planes_audit.sh writes the executable and verifies ELF/aarch64 executable shape")
-    (runner "Docker Linux/arm64 executes stdout='FORM ELF', stderr='', exit=42; Android device/emulator receipt remains next")
+    (runner "Docker Linux/arm64 and Android adb arm64 device execution both prove stdout='FORM ELF', stderr='', exit=42")
     (fourth-arm "tests/form-elf-exec-band.fk is in the fourth-arm manifest and passes fkwu four-way at 63")
     (zero-clang "Form emits the executable bytes; no clang, assembler, or linker is used for this executable floor"))
 
