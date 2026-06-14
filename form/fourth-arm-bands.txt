@@ -34,7 +34,8 @@
 #   host io family        — file_mtime, scan_run, and broader write/read recipes
 #   effect-once let       — fkwu inlines a let, re-walking its value at every
 #     use; the gate for write_file_text and the durable file/Postgres carriers
-#     (whose store-threading binds effectful values through let)
+#     (whose store-threading binds effectful values through let). Full floor/
+#     north-star for this arc: docs/coherence-substrate/fourth-arm-substrate-carriers.form
 #   multi-line output     — bands that print mid-walk (the walker answers
 #     one value through fk_pr)
 #
