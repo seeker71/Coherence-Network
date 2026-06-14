@@ -66,6 +66,7 @@
           (list "fs_remove" 1 58) (list "fs_rename" 2 59) (list "file_size" 1 60)
           (list "file_append_bytes" 2 61) (list "read_file_slice" 3 62)
           (list "read_file" 1 63) (list "temp_dir" 0 101)
+          (list "write_file_text" 2 104)
           (list "record_get" 2 65) (list "record_set" 3 66)
           (list "record_has" 2 67) (list "record?" 1 68)
           (list "record_keys" 1 99) (list "record_blueprint" 1 100)

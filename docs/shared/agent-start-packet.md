@@ -113,6 +113,9 @@ keep their source-time value and `record_new` keeps shared mutable identity.
 Nested `do` lets with effecting carrier values also snapshot once through
 `fk-store`/`fk-load`, so side-effecting bindings can be read repeatedly without
 re-walking host effects while pure recursive/local bindings keep inline lowering.
+`write_file_text` now rides the fourth arm as tag 104 with overwrite/truncate
+semantics, giving text emitters a direct four-way write floor without byte-list
+materialization.
 The next honest record-shaped gaps are object/class construction and method
 dispatch surfaces that still need to lower their broader BML/Hati tissue.
 
