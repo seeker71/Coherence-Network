@@ -9,7 +9,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from app.main import app
+from app.main import app, _full_route_template
 from app.models.runtime import RuntimeEventCreate
 from app.services import idea_service, runtime_service
 
@@ -84,6 +84,52 @@ def test_dynamic_idea_route_records_route_template_after_dispatch(monkeypatch, s
     assert event.endpoint == "/api/ideas/{idea_id}"
     assert event.raw_endpoint == "/api/ideas/runtime-route-template-proof"
     assert event.method == "GET"
+
+
+class _ScopeRequest:
+    """Minimal request stand-in carrying only the routing scope the signature
+    reconstruction reads — enough to pin the template contract without a live
+    router."""
+
+    def __init__(self, scope: dict):
+        self.scope = scope
+
+
+def test_full_route_template_rebuilds_prefix_across_inclusion_styles():
+    """The recorded endpoint must be the full ``/api/…`` template regardless of
+    whether FastAPI flattens ``include_router(prefix=…)`` (older versions: the
+    matched ``route.path`` already carries ``/api/…``) or nests it (newer
+    versions: ``route.path`` is the deepest router-relative tail). The
+    reconstruction derives the template from the concrete path, so it survives
+    arbitrary nesting depth and ``{name:path}`` converters that defeat naive
+    prefix-prepending or segment counting."""
+    # Static route, no params: the concrete path is already the template.
+    assert (
+        _full_route_template(_ScopeRequest({"route": object()}), "/api/ping")
+        == "/api/ping"
+    )
+    # Multi-level nesting (`/api` + `/agent`): the leaf route.path is only
+    # `/tasks/{task_id}`, so prepending just `/api` would yield the wrong
+    # `/api/tasks/{task_id}` and collide with the real `/api/tasks`. Rebuilding
+    # from the concrete path preserves the intermediate `/agent` segment.
+    assert (
+        _full_route_template(
+            _ScopeRequest({"route": object(), "path_params": {"task_id": "task_x"}}),
+            "/api/agent/tasks/task_x",
+        )
+        == "/api/agent/tasks/{task_id}"
+    )
+    # `:path` param spanning multiple segments, mid-path, with its value ("ping")
+    # also appearing in the prefix — right-anchored replacement keeps the prefix.
+    assert (
+        _full_route_template(
+            _ScopeRequest({"route": object(), "path_params": {"place_id": "ping/a/b"}}),
+            "/api/ping/places/ping/a/b/presences",
+        )
+        == "/api/ping/places/{place_id}/presences"
+    )
+    # No matched route (the pre-dispatch call site): leave the raw path untouched.
+    assert _full_route_template(_ScopeRequest({}), "/api/ping") == "/api/ping"
 
 
 def test_runtime_endpoint_summary_filters_web_api_source(set_config):
