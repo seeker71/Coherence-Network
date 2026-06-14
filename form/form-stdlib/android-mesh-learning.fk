@@ -194,6 +194,56 @@
                         (eq witness-running 1))))
             1
             0))
+    (defn aml-capability-receipt (android-present app-installed app-running mac-present witness-running sensor-count camera microphone wifi bluetooth-le vulkan-compute)
+        (list
+            android-present
+            app-installed
+            app-running
+            mac-present
+            witness-running
+            sensor-count
+            camera
+            microphone
+            wifi
+            bluetooth-le
+            vulkan-compute))
+    (defn aml-cap-android-present? (row) (nth row 0))
+    (defn aml-cap-app-installed? (row) (nth row 1))
+    (defn aml-cap-app-running? (row) (nth row 2))
+    (defn aml-cap-mac-present? (row) (nth row 3))
+    (defn aml-cap-witness-running? (row) (nth row 4))
+    (defn aml-cap-sensor-count (row) (nth row 5))
+    (defn aml-cap-camera? (row) (nth row 6))
+    (defn aml-cap-microphone? (row) (nth row 7))
+    (defn aml-cap-wifi? (row) (nth row 8))
+    (defn aml-cap-bluetooth-le? (row) (nth row 9))
+    (defn aml-cap-vulkan-compute? (row) (nth row 10))
+    (defn aml-capability-floor? (row)
+        (if (and
+                (eq (aml-cap-android-present? row) 1)
+                (and
+                    (eq (aml-cap-mac-present? row) 1)
+                    (and
+                        (eq (aml-cap-app-installed? row) 1)
+                        (and
+                            (ge (aml-cap-sensor-count row) 3)
+                            (and
+                                (eq (aml-cap-camera? row) 1)
+                                (and
+                                    (eq (aml-cap-microphone? row) 1)
+                                    (and
+                                        (eq (aml-cap-wifi? row) 1)
+                                        (eq (aml-cap-bluetooth-le? row) 1))))))))
+            1
+            0))
+    (defn aml-capability-learning-ready? (row)
+        (if (and
+                (eq (aml-capability-floor? row) 1)
+                (and
+                    (eq (aml-cap-app-running? row) 1)
+                    (eq (aml-cap-witness-running? row) 1)))
+            1
+            0))
 
     (defn aml-floor-proven? ()
         (if (and

@@ -2,7 +2,7 @@
 ;
 ; witness-state-receipt-band - live witness counters as Form-native receipts.
 ;
-; Verdict 16777215 when every claim lands:
+; Verdict 67108863 when every claim lands:
 ;   1    floor and north-star declarations exist
 ;   2    live witness present with frames
 ;   4    mic counter and organ are active
@@ -27,6 +27,8 @@
 ;   2097152 source-backed labels must be covered by their live process rows
 ;   4194304 one emission cycle carries export, labels, processes, and heldout rows
 ;   8388608 continuous emission requires increasing export cycles
+;   16777216 emission record status is pass for live increasing cycles
+;   33554432 emission record status blocks stale cycles
 (do
     (let organs (list "accelerometer" "camera" "gps" "gpu" "gyroscope" "light" "magnetometer" "mic" "network" "screen"))
     (let live-state
@@ -298,5 +300,13 @@
                 (eq (wsr-emission-cycles-increasing? (list emission-cycle stale-emission-cycle)) 0))
             8388608
             0))
+    (let c24
+        (if (eq (wsr-emission-record-pass? live-state (list emission-cycle next-emission-cycle)) 1)
+            16777216
+            0))
+    (let c25
+        (if (str_eq (wsr-emission-record-status live-state (list emission-cycle stale-emission-cycle)) "blocked")
+            33554432
+            0))
 
-    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15 c16 c17 c18 c19 c20 c21 c22 c23)))
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15 c16 c17 c18 c19 c20 c21 c22 c23 c24 c25)))

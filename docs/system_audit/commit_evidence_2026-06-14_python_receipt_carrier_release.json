@@ -1,0 +1,176 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/android-mac-witness-link-20260614",
+  "commit_scope": "Release Python receipt and proof-ledger carriers into Form-native recipes and proof bands.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "form-native-runtime",
+    "android-mesh-learning",
+    "witness-state-receipt",
+    "native-training-receipts",
+    "focused-testing-fast-release"
+  ],
+  "spec_ids": [
+    "fourth-arm-bands",
+    "commit-evidence-contract",
+    "agent-start-packet"
+  ],
+  "task_ids": [
+    "python-receipt-carrier-release-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star-correction",
+        "python-release-request"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@android-mac-witness-link-20260614",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "carrier-release",
+        "form-recipe-authoring",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "api/app/main.py",
+    "api/tests/test_form_native_training_receipt.py",
+    "api/tests/test_model_executor_proof_ledger.py",
+    "api/tests/test_witness_oracle_emission_ledger.py",
+    "docs/coherence-substrate/android-mesh-learning.form",
+    "docs/coherence-substrate/model-executor-proof-ledger.form",
+    "docs/coherence-substrate/witness-state-receipt.form",
+    "docs/system_audit/commit_evidence_2026-06-14_python_receipt_carrier_release.json",
+    "docs/system_audit/model_executor_run_ledger/python-receipt-carrier-release-20260614.json",
+    "form/form-stdlib/android-mesh-learning.fk",
+    "form/form-stdlib/model-executor-proof-ledger.fk",
+    "form/form-stdlib/native-training-receipt.fk",
+    "form/form-stdlib/tests/android-mesh-learning-band.fk",
+    "form/form-stdlib/tests/model-executor-proof-ledger-band.fk",
+    "form/form-stdlib/tests/native-training-receipt-band.fk",
+    "form/form-stdlib/tests/witness-state-receipt-band.fk",
+    "form/form-stdlib/witness-state-receipt.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/android_mesh_learning_receipt.py",
+    "scripts/form_native_training_receipt.py",
+    "scripts/model_executor_proof_ledger.py",
+    "scripts/witness_oracle_emission_ledger.py"
+  ],
+  "change_files": [
+    "MANIFEST.md",
+    "api/app/main.py",
+    "api/app/services/INDEX.md",
+    "api/tests/INDEX.md",
+    "api/tests/test_form_native_training_receipt.py",
+    "api/tests/test_model_executor_proof_ledger.py",
+    "api/tests/test_witness_oracle_emission_ledger.py",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/coherence-substrate/android-mesh-learning.form",
+    "docs/coherence-substrate/hati-mesh.form",
+    "docs/coherence-substrate/model-executor-proof-ledger.form",
+    "docs/coherence-substrate/witness-state-receipt.form",
+    "docs/system_audit/commit_evidence_2026-06-14_python_receipt_carrier_release.json",
+    "docs/system_audit/model_executor_run_ledger/README.md",
+    "docs/system_audit/model_executor_run_ledger/python-receipt-carrier-release-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "docs/system_audit/native_training_receipts/form-native-nearest-shape-v0.json",
+    "experiments/coherence-sense-android/README.md",
+    "form/form-stdlib/android-mesh-learning.fk",
+    "form/form-stdlib/model-executor-proof-ledger.fk",
+    "form/form-stdlib/native-training-receipt.fk",
+    "form/form-stdlib/tests/android-mesh-learning-band.fk",
+    "form/form-stdlib/tests/model-executor-proof-ledger-band.fk",
+    "form/form-stdlib/tests/native-training-receipt-band.fk",
+    "form/form-stdlib/tests/witness-state-receipt-band.fk",
+    "form/form-stdlib/witness-state-receipt.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/INDEX.md",
+    "scripts/android_mesh_learning_receipt.py",
+    "scripts/form_native_training_receipt.py",
+    "scripts/model_executor_proof_ledger.py",
+    "scripts/witness_oracle_emission_ledger.py"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim \"release python receipt carriers into form native\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-executor-proof-ledger.fk form-stdlib/tests/model-executor-proof-ledger-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/native-training-receipt.fk form-stdlib/tests/native-training-receipt-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/witness-state-receipt.fk form-stdlib/tests/android-mesh-learning-band.fk form-stdlib/tests/witness-state-receipt-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh native-training-receipt model-executor-proof-ledger android-mesh-learning witness-state-receipt",
+      "python3 -m pytest -q api/tests/test_models_learning_dashboard.py",
+      "python3 -m pytest -q api/tests/test_runtime_web_api_provenance.py api/tests/test_models_learning_dashboard.py",
+      "python3 -m ruff check api/app/routers/models.py api/app/services/native_training_receipts.py api/tests/test_models_learning_dashboard.py",
+      "python3 -m ruff check api/app/main.py api/app/routers/models.py api/app/services/native_training_receipts.py api/tests/test_runtime_web_api_provenance.py api/tests/test_models_learning_dashboard.py",
+      "python3 -m py_compile api/app/services/native_training_receipts.py api/app/routers/models.py",
+      "python3 -m py_compile api/app/main.py api/app/services/native_training_receipts.py api/app/routers/models.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_python_receipt_carrier_release.json"
+    ],
+    "notes": "Deleted four standalone Python receipt/ledger scripts and their Python tests. Replaced their authority with Form-native proof bands: model-executor-proof-ledger 4095 four-way, native-training-receipt 16383 four-way, android-mesh-learning 131071 four-way, witness-state-receipt 67108863 four-way. Focused validate output included `fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)` and `1 ok, 0 divergent`; the combined manifest gate returned PASS-4WAY for native-training-receipt, model-executor-proof-ledger, android-mesh-learning, and witness-state-receipt. The remaining API Python is the dashboard compatibility reader over committed receipt JSON, not the proof/generation carrier. CI provenance failure exposed a bridge-only route signature drift, so api/app/main.py now preserves the observed /api or /v1 namespace when FastAPI reports mount-local route templates."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Initial PR run failed API provenance assertions because middleware recorded /ping and /ideas/{idea_id} instead of the observed /api namespace; focused local provenance tests now pass after the scoped bridge normalization fix."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested for this carrier-release slice."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Receipt and proof-ledger authority is now Form-native; dashboard still reads committed native receipt artifacts.",
+    "public_endpoints": [
+      "n/a: local Form/runtime proof and dashboard service tests"
+    ],
+    "test_flows": [
+      "cd form && bash scripts/fourth-arm-gate.sh native-training-receipt model-executor-proof-ledger android-mesh-learning witness-state-receipt",
+      "python3 -m pytest -q api/tests/test_runtime_web_api_provenance.py api/tests/test_models_learning_dashboard.py",
+      "python3 -m pytest -q api/tests/test_models_learning_dashboard.py"
+    ]
+  },
+  "evidence_refs": [
+    "form/form-stdlib/model-executor-proof-ledger.fk",
+    "form/form-stdlib/native-training-receipt.fk",
+    "form/form-stdlib/android-mesh-learning.fk",
+    "form/form-stdlib/witness-state-receipt.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/system_audit/model_executor_run_ledger/python-receipt-carrier-release-20260614.json"
+  ],
+  "phase_gate": {
+    "phase": "python-receipt-carrier-release",
+    "gate": "Standalone Python receipt/ledger carriers must no longer be the proof authority for witness, Android, native training, or executor ledger lanes.",
+    "state": "local-four-way-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Move remaining host IO gaps into Form resource/process carriers: adb/device sampling, HTTP /state sampling, and JSON compatibility export."
+  },
+  "floor_update": {
+    "previous_observed_floor": "Receipt lanes depended on standalone Python scripts for JSON materialization, live witness polling, adb capability receipts, and proof-ledger export/checks.",
+    "current_observed_floor": "Receipt lanes are proven by Form-native recipes and fourth-arm bands; standalone Python receipt scripts are deleted.",
+    "new_bands": [
+      "model-executor-proof-ledger -> 4095 four-way",
+      "native-training-receipt -> 16383 four-way",
+      "android-mesh-learning -> 131071 four-way",
+      "witness-state-receipt -> 67108863 four-way"
+    ],
+    "retuned_north_star": [
+      "Python is compatibility bridge only where the web/API still requires it",
+      "Form resource/process carriers are the next release point for adb, HTTP /state, and JSON export"
+    ],
+    "blocked_trials": []
+  }
+}
