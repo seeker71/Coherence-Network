@@ -413,27 +413,47 @@ def _slow_request_ms_threshold() -> float:
     return max(25.0, get_float("api", "slow_request_ms", 1500.0))
 
 
+def _full_route_template(request, raw_path: str) -> str:
+    """Full route template (e.g. ``/api/ideas/{idea_id}``) for the matched route.
+
+    Built from the concrete request path by replacing each matched path-param
+    value with its ``{name}`` placeholder. This is independent of how the
+    installed FastAPI/Starlette version structures ``include_router(prefix=…)``:
+    older versions flatten inclusion so ``scope["route"].path`` already carries
+    the full ``/api/…`` path, while newer versions keep routers nested (a route
+    is reached through an ``_IncludedRouter``) so ``route.path`` is only the
+    deepest router-relative tail (``/tasks`` for ``/api/agent/tasks`` — note the
+    ``/agent`` level is dropped too, so simply prepending ``/api`` would mis-file
+    nested routes and collide them with top-level ones). Reconstructing from the
+    concrete path — which always carries the full prefix at any nesting depth —
+    keeps the recorded endpoint stable as ``/api/…`` across both, and handles
+    ``{name:path}`` converters that span multiple segments. Param values are
+    replaced from the right because route params always live in the trailing
+    portion of the path.
+    """
+    if request.scope.get("route") is None:
+        return raw_path
+    template = raw_path
+    # Right-to-left: path_params is ordered left-to-right (regex group order),
+    # so substituting the rightmost param first keeps `rpartition`'s
+    # last-occurrence anchor on the correct segment even when two params share
+    # the same concrete value.
+    for name, value in reversed(list((request.scope.get("path_params") or {}).items())):
+        text = str(value)
+        if not text:
+            continue
+        head, sep, tail = template.rpartition(text)
+        if sep:
+            template = f"{head}{{{name}}}{tail}"
+    return template
+
+
 def _build_route_signature(request) -> tuple[str, str, str]:
     route = request.scope.get("route")
-    route_path = ""
-    route_name = ""
-    if route is not None:
-        route_path = str(getattr(route, "path", "") or "")
-        route_name = str(getattr(route, "name", "") or "")
+    route_name = str(getattr(route, "name", "") or "") if route is not None else ""
     raw_path = request.url.path
-    request_path = route_path if route_path else raw_path
-    request_path = _restore_observed_api_prefix(request_path, raw_path)
+    request_path = _full_route_template(request, raw_path)
     return request_path, route_name, raw_path
-
-
-def _restore_observed_api_prefix(path: str, raw_path: str) -> str:
-    """Keep runtime route signatures in the externally observed API namespace."""
-    if not path or path.startswith(("/api", "/v1")):
-        return path
-    for prefix in ("/api", "/v1"):
-        if raw_path == prefix or raw_path.startswith(f"{prefix}/"):
-            return f"{prefix}{path}" if path.startswith("/") else f"{prefix}/{path}"
-    return path
 
 
 def _query_summary(query_params) -> tuple[int, list[dict[str, str]], dict[str, str]]:
