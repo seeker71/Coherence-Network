@@ -1,0 +1,48 @@
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/tool-channel.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/code-tool-learning.fk form-stdlib/tool-embodiment.fk form-stdlib/io-match.fk
+;
+; io-match-band — captured LLM I/O becomes learning, and a candidate that learns
+; to reproduce the output earns the body.
+;
+; The strange-minimal edge: one input, one recorded LLM output ("OUT"), and a
+; Form-native candidate replayed on that input. When the candidate reproduces
+; "OUT" 8 of 10 times (local, cheap) it takes the body from the costly remote
+; LLM; at 6 of 10 the LLM keeps it. The flip is the moment usage stops being
+; only paid for and starts being learned from.
+;
+; Verdict 31 when every claim lands:
+;   1   exact content match scores 1, a miss scores 0
+;   2   matches are counted across a candidate's replayed outputs
+;   4   a candidate's match record becomes a (lane locality completed failed rt) row
+;   8   a candidate that matches 8/10 — cheaper and sovereign — takes the body
+;   16  a candidate that matches 6/10 leaves the body with the LLM
+(do
+    (let recorded "OUT")
+    ; the LLM incumbent's own row: it always matches itself (10/0), but remote and costly.
+    (let llm-row (list "external:claude" "remote" 10 0 1200))
+    ; a learned candidate replayed on the same input — two ripeness states.
+    (let ripe  (list "OUT" "OUT" "OUT" "OUT" "OUT" "OUT" "OUT" "OUT" "X" "X"))
+    (let young (list "OUT" "OUT" "OUT" "OUT" "OUT" "OUT" "X" "X" "X" "X"))
+
+    ; 1 — exact content match.
+    (let c0
+        (if (and (eq (iom-match? "OUT" recorded) 1) (eq (iom-match? "X" recorded) 0))
+            1 0))
+    ; 2 — matches counted across replayed outputs.
+    (let c1
+        (if (and (eq (iom-matches recorded ripe) 8) (eq (iom-matches recorded young) 6))
+            2 0))
+    ; 3 — match record becomes a 5-field telemetry row (completed = matches).
+    (let row (iom-candidate-row "form-native:gen" "local" recorded ripe 400))
+    (let c2
+        (if (and (eq (len row) 5) (and (eq (nth row 2) 8) (eq (nth row 3) 2)))
+            4 0))
+    ; 8 — a candidate that learned to match 8/10, cheaper and sovereign, embodies.
+    (let c3
+        (if (str_eq (iom-embodied-path llm-row "form-native:gen" "local" recorded ripe 400) "form-native:gen")
+            8 0))
+    ; 16 — a candidate that matches only 6/10 has not earned it; the LLM keeps the body.
+    (let c4
+        (if (str_eq (iom-embodied-path llm-row "form-native:gen" "local" recorded young 400) "external:claude")
+            16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
