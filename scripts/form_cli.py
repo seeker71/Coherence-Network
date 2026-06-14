@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""form_cli.py — Form-native CLI: generate, execute, convert.
+"""form_cli.py — Form-native CLI: ask, generate, execute, convert.
 
 The CLI Urs named: kernel + binary library + Language cells, end-to-end.
 Uses ONLY the seedbank/local-llm-cell-v0/form_native.py recipes and
@@ -9,6 +9,16 @@ through the Form-native composition (Newton sqrt, Taylor exp, recursive
 list ops) verified by parity_check.py.
 
 Subcommands:
+
+    form_cli ask <request...>
+        The front door — ask this FIRST. Serves the request Form-native when it
+        can (v0: a Form expression is computed on the kernel, zero tokens, no
+        python), else routes to an oracle (the agent's own LLM / agent CLI) with
+        exit code 3. Every call is captured as an io-match record so usage
+        becomes learning. Benefit twice: tokens saved now, capability next time.
+            form_cli ask '(mul 17 23)'        # -> 391  (Form-native, 0 tokens)
+            form_cli ask "summarize this"     # -> route: oracle (exit 3)
+        Agents script it as:  form_cli ask "$req" || <handle with my LLM>
 
     form_cli list <library>
         Print library meta + per-recipe summary.
@@ -43,9 +53,14 @@ Examples:
 from __future__ import annotations
 
 import argparse
+import datetime
+import hashlib
 import json
+import os
 import re
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -941,6 +956,110 @@ def cmd_generate(args: argparse.Namespace) -> int:
     return 0
 
 
+# ─── subcommand: ask (the front door) ────────────────────────────────────
+#
+# The thing an agent asks FIRST. Before reaching for its own LLM, an agent asks
+# the form-cli to handle a request. The form-cli serves what it can Form-native
+# (v0: Form-expression compute via the kernel — math + logic, zero tokens, no
+# python, no external interpreter) and routes the rest to an oracle (the agent's
+# own LLM / agent CLI), so capabilities are never lost. Every call is captured as
+# an io-match record (content-addressed in/out + lane + outcome), so usage
+# becomes learning and the local lane grows over time. We benefit twice: tokens
+# saved on what runs locally now, capability gained for next time.
+#
+# This is the bootstrap front door; the routing decision (form-cli-loop.fk), the
+# compute (the Form kernel), and the learning shape (io-match.fk) are Form. The
+# destination is the native form-macho binary running this loop directly
+# (docs/coherence-substrate/form-cli-north-star.form).
+
+_KERNEL_BIN = Path(
+    os.environ.get("FORM_KERNEL_RUST_BIN")
+    or (REPO_ROOT / "form" / "form-kernel-rust" / "target" / "release" / "form-kernel-rust")
+)
+_ASK_CAPTURE = Path(
+    os.environ.get("FORM_CLI_CAPTURE") or (REPO_ROOT / "logs" / "form_cli_io_match.jsonl")
+)
+
+
+def _io_sig(text: str) -> str:
+    """Content-address a request or result — the same sha256 io-match.fk uses."""
+    return hashlib.sha256((text or "").encode("utf-8")).hexdigest()
+
+
+def _is_form_expr(request: str) -> bool:
+    """v0 local-handler test: a Form expression is the compute lane."""
+    return request.strip().startswith("(")
+
+
+def _kernel_eval(expr: str) -> tuple[str | None, str | None]:
+    """Evaluate a Form expression on the kernel (builtins: math, logic, lists).
+    Returns (value, None) on success or (None, reason) on failure."""
+    if not (_KERNEL_BIN.is_file() and os.access(_KERNEL_BIN, os.X_OK)):
+        return None, "kernel-unavailable"
+    with tempfile.NamedTemporaryFile("w", suffix=".fk", delete=False) as f:
+        f.write(f"(do {expr})\n")
+        path = f.name
+    try:
+        proc = subprocess.run([str(_KERNEL_BIN), path], capture_output=True, text=True, timeout=10)
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return None, f"kernel-error:{e}"
+    finally:
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
+    if proc.returncode != 0:
+        stderr = (proc.stderr or "").strip().splitlines()
+        return None, stderr[-1] if stderr else "kernel-error"
+    out = (proc.stdout or "").rstrip("\n").splitlines()
+    return (out[-1] if out else ""), None
+
+
+def ask_handle(request: str) -> dict:
+    """Serve Form-native if we can; else route to the oracle. Never lose capability."""
+    if _is_form_expr(request):
+        value, err = _kernel_eval(request)
+        if err is None:
+            return {"result": value, "lane": "form-native:compute", "outcome": "success", "tokens": 0}
+        return {"result": None, "lane": "oracle", "outcome": "route", "tokens": None,
+                "note": f"local compute failed ({err}); route to oracle"}
+    return {"result": None, "lane": "oracle", "outcome": "route", "tokens": None,
+            "note": "no local handler; route to oracle (agent's LLM / agent CLI)"}
+
+
+def ask_capture(request: str, res: dict) -> dict:
+    """Record the call as an io-match row so usage becomes learning."""
+    rec = {
+        "ts": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "input_sig": _io_sig(request),
+        "output_sig": _io_sig(str(res.get("result") or "")),
+        "lane": res.get("lane"),
+        "outcome": res.get("outcome"),
+        "tokens": res.get("tokens"),
+    }
+    _ASK_CAPTURE.parent.mkdir(parents=True, exist_ok=True)
+    with _ASK_CAPTURE.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(rec) + "\n")
+    return rec
+
+
+def cmd_ask(args: argparse.Namespace) -> int:
+    request = " ".join(args.request).strip()
+    if not request and not sys.stdin.isatty():
+        request = sys.stdin.read().strip()
+    if not request:
+        _die("ask: empty request (give a Form expr to compute, or any request to route)")
+    res = ask_handle(request)
+    if not args.no_capture:
+        ask_capture(request, res)
+    if str(res["lane"]).startswith("form-native"):
+        print(res["result"])
+        print(f"[form-cli] served Form-native ({res['lane']}, {res['tokens']} tokens)", file=sys.stderr)
+        return 0
+    print(f"[form-cli] route: {res['lane']} — {res.get('note', '')}", file=sys.stderr)
+    return 3  # caller should handle via its own LLM / agent CLI
+
+
 # ─── argparser ───────────────────────────────────────────────────────────
 
 
@@ -979,6 +1098,14 @@ def main() -> int:
     p_gen.add_argument("--name", help="library name (default: source stem)")
     p_gen.add_argument("--out", help="output .recipelib path")
     p_gen.set_defaults(func=cmd_generate)
+
+    p_ask = sub.add_parser(
+        "ask",
+        help="the front door: serve Form-native if possible, else route to oracle; capture for learning",
+    )
+    p_ask.add_argument("request", nargs="+", help="a Form expr to compute, or any request to route")
+    p_ask.add_argument("--no-capture", action="store_true", help="do not write an io-match capture record")
+    p_ask.set_defaults(func=cmd_ask)
 
     args = parser.parse_args()
     return args.func(args)
