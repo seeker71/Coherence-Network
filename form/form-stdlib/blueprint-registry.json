@@ -5643,6 +5643,21 @@
     "form/form-stdlib/install-leaf.fk"
    ],
    "curated": true
+  },
+  {
+   "pkg": 1,
+   "level": 2,
+   "type": 99,
+   "inst": 9320,
+   "name": "BML-MUTABLE-LOCAL-FRAME",
+   "meaning": "BML-native mutable local frame record: source receipt plus mutable named slots for declare/assign/read lowering.",
+   "aliases": [],
+   "reuse": 2,
+   "defined_in": [
+    "form/form-stdlib/bml-native-mutable-locals.fk",
+    "form/form-stdlib/tests/bml-native-mutable-locals-band.fk"
+   ],
+   "curated": true
   }
  ]
 }

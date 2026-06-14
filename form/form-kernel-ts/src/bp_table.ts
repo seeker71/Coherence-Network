@@ -74,6 +74,7 @@ export const BP_TABLE: Record<string, [number, number, number, number]> = {
   "BML-COMPILER-SOURCE-LOWERING-FLOW": [1, 2, 99, 9265],
   "BML-CONSTRUCTOR-INSTANCE": [1, 2, 99, 9240],
   "BML-CTOR-ENV": [1, 2, 99, 9202],
+  "BML-MUTABLE-LOCAL-FRAME": [1, 2, 99, 9320],
   "BML-PARSE-STACK-CONSTRUCTOR": [1, 2, 99, 9241],
   "BML-PARSED-SOURCE-PARSER": [1, 2, 99, 9263],
   "BML-SOURCE-CARRIER": [1, 2, 99, 9262],

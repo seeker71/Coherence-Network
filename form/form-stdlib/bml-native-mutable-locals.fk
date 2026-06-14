@@ -1,0 +1,44 @@
+; bml-native-mutable-locals.fk - mutable local frame carrier for BML lowering.
+;
+; This is the minimum executable row that general BML assignment lowering can
+; target: a method/frame-local mutable environment with source receipts, named
+; slots, assignment, reads, aliasing, and frame isolation.
+;
+; preludes: form-stdlib/core.fk form-stdlib/form-ontology-loader.fk
+;
+(do
+    (defn bnml-source (language path line)
+        (list "source" language path line))
+    (defn bnml-source-language (source) (nth source 1))
+    (defn bnml-source-path (source) (nth source 2))
+    (defn bnml-source-line (source) (nth source 3))
+
+    (defn bnml-frame-bp ()
+        (bp "BML-MUTABLE-LOCAL-FRAME"))
+
+    (defn bnml-frame (source)
+        (record_new (bnml-frame-bp) "__source" source))
+
+    (defn bnml-frame-source (frame)
+        (record_get frame "__source"))
+
+    (defn bnml-has? (frame name)
+        (record_has frame name))
+
+    (defn bnml-read (frame name)
+        (record_get frame name))
+
+    (defn bnml-declare (frame name value)
+        (do
+            (record_set frame name value)
+            frame))
+
+    (defn bnml-assign (frame name value)
+        (do
+            (record_set frame name value)
+            frame))
+
+    (defn bnml-next-code-point ()
+        "form/form-stdlib/grammars/bml.fk:general assignment/reassign source nodes -> bnml frame operations")
+
+    0)
