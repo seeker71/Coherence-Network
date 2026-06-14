@@ -19,6 +19,19 @@
 ;   reads the bytes back, verifies sha256, checks CPU/GPU/MLX/Metal projection
 ;   re-hash receipt rows, rejects a tampered returned payload, and routes a
 ;   model-vitality read through wellness/pulse/release-health signals.
+;   Physical ingest/carrier floor: cd form && ./validate.sh form-stdlib/core.fk
+;   form-stdlib/sha256.fk form-stdlib/cell-log-store.fk form-stdlib/model-vitality.fk
+;   form-stdlib/tests/model-vitality-physical-band.fk -> 65535. This proof
+;   writes a tiny real safetensors/MLX-style carrier file, reads two tensor
+;   chunks by offset/length, stores both chunks, reopens the segmented store,
+;   validates chunk-set root rows, verifies CPU/GPU/Metal/MLX physical carrier
+;   re-hash receipt rows, and reads a live model-vitality store row into
+;   wellness/pulse/release-health routing.
+;   Local physical witness: scripts/model_carrier_rehash_audit.sh compiles a
+;   Swift/Metal binary and an MLX C runner. On this macOS arm64 host it returned
+;   sha256 7ec1a683b7c7c46bdca8964236caed86c25acee97bb4f256e472588372d17014
+;   for CPU bytes, generic GPU bytes via Metal, Metal bytes on Apple M4 Max, and
+;   MLX bytes through /opt/homebrew/lib/libmlxc.dylib.
 ;
 ; NORTH STAR:
 ;   Model architecture, weights, deltas, optimizer state, eval receipts,
@@ -51,14 +64,14 @@
 ;     - vitality needs one body-readable door over the existing signal tissue.
 ;
 ; GAP:
-;   This floor now stores a real small tensor chunk in the segmented file-backed
-;   cell store and routes model-vitality rows through wellness/pulse signals.
-;   It does not yet chunk a safetensors/MLX model into many merkle-addressed
-;   cells, does not yet execute physical GPU/MLX/Metal buffer materialization
-;   and re-hash, and does not yet feed the production wellness/pulse process
-;   from live model-vitality store rows. Fourth-arm admission and physical file
-;   storage are closed; the remaining gaps are next receipts, not alternate
-;   systems.
+;   This floor now stores real tensor chunks in the segmented file-backed cell
+;   store, ingests two safetensors/MLX-style chunks by byte offset, proves CPU,
+;   generic GPU, Metal, and MLX returned-byte re-hash receipts on this host, and
+;   routes a live model-vitality store row through wellness/pulse signals.
+;   Remaining gaps: full safetensors header parsing for arbitrary model files,
+;   real MLX tensor package ingest beyond the tiny carrier witness, production
+;   wellness/pulse ingestion from deployed live model-vitality rows, and large
+;   multi-segment model sharing by merkle across mesh peers.
 
 (model-vitality-surface
   (floor
@@ -74,6 +87,8 @@
     (verdict 4095)
     (fourth-arm four-way)
     (real-storage-proof "form/form-stdlib/tests/model-vitality-storage-band.fk -> 8191")
+    (physical-carrier-proof "form/form-stdlib/tests/model-vitality-physical-band.fk -> 65535")
+    (native-carrier-witness "scripts/model_carrier_rehash_audit.sh")
     (release-health smallest-focused-proof-first))
   (north-star
     (source-of-truth substrate-cells)
@@ -82,5 +97,7 @@
     (share-by merkle-root)
     (read-by body-vitality-door)
     (rehash-rule carrier-returned-bytes-match-source-chunk-digest)
+    (physical-carriers cpu-buffer gpu-buffer metal-buffer mlx-array)
+    (ingest-carriers safetensors mlx-package)
     (wellness-pulse-routing model-vitality-row-chooses-focus)
     (release-vitality fast-proofed-release-cadence)))

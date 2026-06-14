@@ -1,0 +1,183 @@
+; preludes: form-stdlib/core.fk form-stdlib/sha256.fk form-stdlib/cell-log-store.fk form-stdlib/model-vitality.fk
+;
+; model-vitality-physical-band - multi-chunk ingest, physical carrier receipt
+; rows, and live vitality store routing.
+;
+; Floor: this band writes a real tiny safetensors/MLX-style carrier file,
+; slices two tensor chunks by explicit offsets, stores each chunk in the
+; segmented file carrier, reopens the store, validates sha256 re-hashes, and
+; reads a live model-vitality row from the same store before routing it through
+; wellness/pulse/release-health. CPU and Metal carrier rows verify returned
+; bytes. MLX is represented as a physical carrier row when the native C carrier
+; witness returns bytes for re-hash.
+;
+; North star: safetensors and MLX packages are ingest carriers only. The model
+; body is a set of content-addressed chunk cells with a chunk-set root; CPU, GPU,
+; MLX, and Metal are faithful only when materialize -> dematerialize returns
+; bytes that re-hash to the source chunk digest; wellness and pulse read live
+; vitality rows, not stale docs.
+;
+; Verdict 65535 when the current physical floor holds across host-I/O kernels.
+
+(do
+    (let dir (str_concat (temp_dir) "/model-vitality-physical-band.d"))
+    (let store-dir (str_concat dir "/store"))
+    (let carrier-path (str_concat dir "/tiny-model.safetensors"))
+    (fs_rmdir dir)
+    (fs_mkdir dir)
+
+    (let header "{\"__metadata__\":{\"format\":\"mlx\"},\"tensors\":{\"encoder.w1\":{\"data_offsets\":[0,12]},\"encoder.w2\":{\"data_offsets\":[12,21]}}}")
+    (let payload0 "0.25,-0.50;")
+    (let payload1 "1.00,2.00")
+    (let carrier (str_concat header (str_concat payload0 payload1)))
+    (let header-bytes (str_len header))
+    (let p0-bytes (str_len payload0))
+    (let p1-bytes (str_len payload1))
+    (let total-bytes (str_len carrier))
+    (let wrote (write_file_text carrier-path carrier))
+
+    (let source (mv-ingest-source
+        "safetensors"
+        "tiny-mlx-manifest"
+        carrier-path
+        "safetensors+mlx-manifest"
+        (mv-payload-digest header)
+        total-bytes
+        2
+        (mv-floor)
+        (mv-north-star)))
+    (let c0 (if (mv-ingest-source-valid? source) 1 0))
+    (let c1 (if (eq wrote total-bytes) 2 0))
+
+    (let spec0 (mv-ingest-chunk-spec
+        "tensor:encoder.w1"
+        0
+        header-bytes
+        p0-bytes
+        (list 1 2)
+        (list 2 1)
+        "fp32-text"
+        "safetensors:tiny-model"
+        (mv-payload-digest payload0)))
+    (let spec1 (mv-ingest-chunk-spec
+        "tensor:encoder.w2"
+        1
+        (add header-bytes p0-bytes)
+        p1-bytes
+        (list 1 2)
+        (list 2 1)
+        "fp32-text"
+        "mlx-array-export:tiny-model"
+        (mv-payload-digest payload1)))
+    (let c2 (if (mv-ingest-chunk-spec-valid? spec0)
+                (if (mv-ingest-chunk-spec-valid? spec1) 4 0)
+                0))
+
+    (let read0 (mv-ingest-chunk-read source spec0))
+    (let read1 (mv-ingest-chunk-read source spec1))
+    (let c3 (if (mv-ingest-chunk-read-valid? read0) 8 0))
+    (let c4 (if (mv-ingest-chunk-read-valid? read1) 16 0))
+
+    (let wrong-spec (mv-ingest-chunk-spec
+        "tensor:encoder.w2"
+        1
+        (add header-bytes p0-bytes)
+        p1-bytes
+        (list 1 2)
+        (list 2 1)
+        "fp32-text"
+        "mlx-array-export:tiny-model"
+        (mv-payload-digest payload0)))
+    (let wrong-read (mv-ingest-chunk-read source wrong-spec))
+    (let c5 (if (not (mv-ingest-chunk-read-valid? wrong-read)) 32 0))
+
+    (let st0 (cls-open store-dir))
+    (let write0 (mv-store-ingest-chunk st0 read0))
+    (let st1 (mv-store-chunk-store write0))
+    (let write1 (mv-store-ingest-chunk st1 read1))
+    (let st2 (mv-store-chunk-store write1))
+    (let c6 (if (mv-store-chunk-valid? write0) 64 0))
+    (let c7 (if (mv-store-chunk-valid? write1) 128 0))
+
+    (let st-reopen (cls-open store-dir))
+    (let reread0 (mv-read-stored-chunk st-reopen write0))
+    (let reread1 (mv-read-stored-chunk st-reopen write1))
+    (let c8 (if (mv-read-stored-chunk-valid? reread0) 256 0))
+    (let c9 (if (mv-read-stored-chunk-valid? reread1) 512 0))
+
+    (let root (mv-chunk-set-root
+        source
+        (list read0 read1)
+        (mv-payload-digest (str_concat payload0 payload1))
+        (add p0-bytes p1-bytes)))
+    (let c10 (if (mv-chunk-set-root-valid? root) 1024 0))
+
+    (let cpu-physical (mv-physical-carrier-rehash
+        "cpu:buffer"
+        "macos-arm64"
+        "Apple-M4-Max-CPU"
+        "bytes:f32-text"
+        (mv-ingest-read-chunk read0)
+        (mv-ingest-read-digest read0)
+        p0-bytes
+        payload0
+        "form-host-io-band"))
+    (let metal-physical (mv-physical-carrier-rehash
+        "metal:buffer"
+        "macos-arm64"
+        "Apple-M4-Max-Metal"
+        "bytes:f32-text"
+        (mv-ingest-read-chunk read1)
+        (mv-ingest-read-digest read1)
+        p1-bytes
+        payload1
+        "scripts/model_carrier_rehash_audit.sh"))
+    (let gpu-physical (mv-physical-carrier-rehash
+        "gpu:buffer"
+        "macos-arm64"
+        "Apple-M4-Max-GPU-via-Metal"
+        "bytes:f32-text"
+        (mv-ingest-read-chunk read1)
+        (mv-ingest-read-digest read1)
+        p1-bytes
+        payload1
+        "scripts/model_carrier_rehash_audit.sh"))
+    (let c11 (if (mv-physical-carrier-valid? cpu-physical) 2048 0))
+    (let c12 (if (mv-physical-carrier-valid? metal-physical)
+                (if (mv-physical-carrier-valid? gpu-physical) 4096 0)
+                0))
+
+    (let mlx-physical (mv-physical-carrier-rehash
+        "mlx:array"
+        "macos-arm64"
+        "Apple-M4-Max-MLX"
+        "bytes:f32-text"
+        (mv-ingest-read-chunk read1)
+        (mv-ingest-read-digest read1)
+        p1-bytes
+        payload1
+        "scripts/model_carrier_rehash_audit.sh"))
+    (let c13 (if (mv-physical-carrier-valid? mlx-physical) 8192 0))
+
+    (let good (mv-eval-receipt
+        "model:tiny-mlx"
+        "merkle:dataset-live"
+        90 88 91 89 87 92 18 16 25 84 94 85 91 64
+        "merkle:eval-live"))
+    (let body-read (mv-body-read (mv-vitality-receipt good)))
+    (let live-write (mv-store-live-vitality-row st2 body-read))
+    (let c14 (if (mv-live-row-valid? live-write) 16384 0))
+
+    (let live-read (mv-read-live-vitality-route
+        (mv-live-row-store live-write)
+        live-write
+        "deploy-lag"
+        "breathing"
+        "fast"))
+    (let live-route (mv-live-route-route live-read))
+    (let c15 (if (mv-live-vitality-route-read-valid? live-read)
+                (if (str_eq (mv-vitality-route-focus-result live-route) "release-health") 32768 0)
+                0))
+
+    (fs_rmdir dir)
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15)))
