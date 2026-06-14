@@ -1,0 +1,142 @@
+; preludes: form-stdlib/core.fk form-stdlib/model-vitality.fk
+;
+; model-vitality-band - body-readable model data and focus proof.
+; Verdict 4095 when model cells, chunks, eval receipts, lineage, and
+; resonance/vitality/sovereignty/trust focus reads hold.
+
+(do
+    (let floor (mv-floor))
+    (let north (mv-north-star))
+    (let c0 (if (eq (len floor) 7)
+                (if (eq (len north) 7) 1 0)
+                0))
+
+    (let arch (mv-cell-ref
+        (mv-kind-model-architecture)
+        "model:tiny-transformer"
+        "merkle:arch-a"
+        "node:local-arch-a"
+        floor
+        north))
+    (let opt (mv-cell-ref
+        (mv-kind-optimizer-state)
+        "optimizer:adam-a"
+        "merkle:opt-a"
+        "node:local-opt-a"
+        floor
+        north))
+    (let delta (mv-cell-ref
+        (mv-kind-delta-slice)
+        "delta:lora-a"
+        "merkle:delta-a"
+        "node:local-delta-a"
+        floor
+        north))
+    (let c1 (if (mv-cell-ref-valid? arch)
+                (if (mv-cell-ref-valid? opt)
+                    (if (mv-cell-ref-valid? delta) 2 0)
+                    0)
+                0))
+
+    (let chunk (mv-tensor-chunk
+        "tensor:encoder.w1"
+        0
+        (list 2 2)
+        (list 2 1)
+        "fp32"
+        "ingested-safetensors:sha256:abc"
+        "merkle:chunk-a"
+        4
+        16
+        0))
+    (let cache-as-truth (mv-tensor-chunk
+        "tensor:encoder.w1"
+        1
+        (list 2 2)
+        (list 2 1)
+        "fp32"
+        "mlx-buffer-cache"
+        "merkle:chunk-cache"
+        4
+        16
+        1))
+    (let c2 (if (mv-tensor-chunk-valid? chunk)
+                (if (not (mv-tensor-chunk-valid? cache-as-truth)) 4 0)
+                0))
+
+    (let good (mv-eval-receipt
+        "model:tiny-transformer"
+        "merkle:dataset-a"
+        88
+        86
+        90
+        87
+        88
+        91
+        20
+        18
+        30
+        82
+        93
+        84
+        90
+        64
+        "merkle:eval-good"))
+    (let good-v (mv-vitality-receipt good))
+    (let good-read (mv-body-read good-v))
+    (let c3 (if (mv-eval-receipt-valid? good)
+                (if (mv-vitality-valid? good-v)
+                    (if (mv-body-read-valid? good-read) 8 0)
+                    0)
+                0))
+    (let c4 (if (str_eq (mv-vitality-focus good-v) "serve-and-watch")
+                (if (str_eq (mv-body-read-focus good-read) "serve-and-watch") 16 0)
+                0))
+
+    (let low-trust (mv-eval-receipt
+        "model:tiny-transformer" "merkle:dataset-a"
+        88 86 40 87 88 91 20 18 30 82 93 84 90 64 "merkle:eval-trust"))
+    (let c5 (if (str_eq (mv-focus low-trust) "teach-trust") 32 0))
+
+    (let low-sovereignty (mv-eval-receipt
+        "model:tiny-transformer" "merkle:dataset-a"
+        88 86 90 87 88 42 20 18 30 82 93 84 90 64 "merkle:eval-sovereignty"))
+    (let c6 (if (str_eq (mv-focus low-sovereignty) "restore-sovereignty") 64 0))
+
+    (let low-resonance (mv-eval-receipt
+        "model:tiny-transformer" "merkle:dataset-a"
+        88 86 90 43 88 91 20 18 30 82 93 84 90 64 "merkle:eval-resonance"))
+    (let c7 (if (str_eq (mv-focus low-resonance) "seek-resonance") 128 0))
+
+    (let low-vitality (mv-eval-receipt
+        "model:tiny-transformer" "merkle:dataset-a"
+        88 86 90 87 44 91 20 18 30 82 93 84 90 64 "merkle:eval-vitality"))
+    (let c8 (if (str_eq (mv-focus low-vitality) "restore-vitality") 256 0))
+
+    (let low-coverage (mv-eval-receipt
+        "model:tiny-transformer" "merkle:dataset-a"
+        88 86 90 87 88 91 20 18 30 41 93 84 90 64 "merkle:eval-coverage"))
+    (let c9 (if (str_eq (mv-focus low-coverage) "learn-more-samples") 512 0))
+
+    (let low-merge (mv-eval-receipt
+        "model:tiny-transformer" "merkle:dataset-a"
+        88 86 90 87 88 91 20 18 30 82 93 40 90 64 "merkle:eval-merge"))
+    (let c10 (if (str_eq (mv-focus low-merge) "repair-mergeability") 1024 0))
+
+    (let pressured (mv-eval-receipt
+        "model:tiny-transformer" "merkle:dataset-a"
+        88 86 90 87 88 91 90 85 88 82 93 84 90 64 "merkle:eval-pressure"))
+    (let lineage (mv-lineage
+        arch
+        (list chunk)
+        (list delta)
+        opt
+        (list good)
+        good-v
+        (list "merkle:parent-a")))
+    (let c11 (if (str_eq (mv-focus pressured) "compress-or-route")
+                (if (mv-lineage-valid? lineage) 2048 0)
+                0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 (add c5 (add c6 (add c7 (add c8 (add c9 (add c10 c11)))))))))))
+)

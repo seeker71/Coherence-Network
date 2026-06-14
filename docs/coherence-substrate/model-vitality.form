@@ -1,0 +1,68 @@
+; model-vitality.form - current floor and north star for body-readable model focus.
+;
+; FLOOR (2026-06-14):
+;   form-stdlib/model-vitality.fk is a pure Form planning/receipt surface. It
+;   names model architecture, tensor chunks, delta slices, optimizer state, eval
+;   receipts, vitality receipts, and lineage as explicit rows. A focused proof
+;   band verifies that a tensor chunk with a local cache carrier marked as source
+;   is refused, that an eval receipt can become a body-readable vitality row,
+;   and that focus is chosen from resonance, vitality, sovereignty, and trust.
+;   Focused testing is part of the floor: the smallest meaningful proof should
+;   run first, before broader release gates.
+;   Current proof: cd form && ./validate.sh form-stdlib/core.fk
+;   form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk -> 4095.
+;
+; NORTH STAR:
+;   Model architecture, weights, deltas, optimizer state, eval receipts,
+;   vitality signals, and lineage are content-addressed substrate cells.
+;   Files, safetensors, GPU buffers, MLX arrays, Metal buffers, emitted
+;   binaries, and download packages are cache/projection carriers only. Large
+;   tensors are chunk cells with format, shape, stride, provenance, and merkle
+;   roots. Mesh peers share and merge slices by content address. The body reads
+;   every candidate model through the same lens tuple:
+;     resonance, vitality, sovereignty, trust,
+;     accuracy, confidence, energy, latency, memory, coverage,
+;     freshness, mergeability, readiness.
+;   That tuple tells the body where to focus next: serve-and-watch,
+;   teach-trust, restore-sovereignty, seek-resonance, restore-vitality,
+;   learn-more-samples, repair-mergeability, compress-or-route, or keep-learning.
+;   Faster release cadence is a vitality signal when it preserves this proof
+;   chain; slow unfocused gates are body pressure, not health.
+;
+; REVIEW TRACE:
+;   The 2026-06-14 architecture review used local Grok, Gemini, and Claude CLI
+;   lanes. Their shared findings were:
+;     - content-addressed cells, not files, are the right source of truth;
+;     - tensor chunking must be explicit before large model sharing grows;
+;     - eval receipts must be durable/queryable and tied to exact model roots;
+;     - optimizer state must have a named cell home;
+;     - merge receipts must preserve ancestry to prevent double counting;
+;     - vitality needs one body-readable door over the existing signal tissue.
+;
+; GAP:
+;   This floor does not yet store real large tensors in the substrate cell store,
+;   does not yet chunk a safetensors/MLX model into merkle-addressed cells, does
+;   not yet materialize a chunk into GPU/MLX/Metal and re-hash it, and does not
+;   yet wire the vitality read into wellness/pulse routing. Those are next
+;   receipts, not alternate systems.
+
+(model-vitality-surface
+  (floor
+    (rows
+      model-architecture
+      tensor-chunk
+      delta-slice
+      optimizer-state
+      eval-receipt
+      vitality-receipt
+      lineage)
+    (proved-by "form/form-stdlib/tests/model-vitality-band.fk")
+    (verdict 4095)
+    (release-health smallest-focused-proof-first))
+  (north-star
+    (source-of-truth substrate-cells)
+    (carrier-cache-only files gpu-buffers mlx-arrays metal-buffers emitted-binaries)
+    (focus-lenses resonance vitality sovereignty trust)
+    (share-by merkle-root)
+    (read-by body-vitality-door)
+    (release-vitality fast-proofed-release-cadence)))
