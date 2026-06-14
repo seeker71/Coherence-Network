@@ -1,0 +1,40 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/tests/application-graph-node-port-band.fk",
+    "cd api && python3 -m pytest -q tests/test_application_graph_node_port_form.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_native_auth_parity_form.py tests/test_graph_node_mutation_carrier_form.py",
+    "cd api && python3 -m ruff check tests/test_application_graph_node_port_form.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_native_auth_parity_form.py tests/test_graph_node_mutation_carrier_form.py",
+    "python3 scripts/generate_repo_indexes.py"
+  ],
+  "failure_reason": "Added a Form-native application graph table SQL carrier for mutable routes. application-graph-node-port.fk emits create/update/delete SQL over graph_nodes, graph_node_revisions, and graph_edges; create records a __create__ revision snapshot, update merges properties and advances the per-node revision number, and delete clears connected edges before deleting the node. Public mutable front-door routes intentionally remain FastAPI until method-specific route rows bind request bodies, response projection, cache invalidation, and live DB execution proof.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 247,
+    "row_sha256": "16f36e7e051ef6e5d21db8552d5fb0e176fe04d0ed0445447ab2a002f8fc9775",
+    "summary": "added-a-form-native-application-graph-table-sql-"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0247-16f36e7e051e",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L247"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/tests/application-graph-node-port-band.fk",
+      "cd api && python3 -m pytest -q tests/test_application_graph_node_port_form.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_native_auth_parity_form.py tests/test_graph_node_mutation_carrier_form.py",
+      "cd api && python3 -m ruff check tests/test_application_graph_node_port_form.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_native_auth_parity_form.py tests/test_graph_node_mutation_carrier_form.py",
+      "python3 scripts/generate_repo_indexes.py"
+    ],
+    "status": "pass"
+  }
+}

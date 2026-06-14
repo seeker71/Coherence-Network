@@ -1,0 +1,42 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make start-gate",
+    "cd api && pytest -q tests/test_collect_ai_agent_intel.py",
+    "cd api && python3 scripts/collect_ai_agent_intel.py --window-days 14 --output ../docs/system_audit/ai_agent_biweekly_sources_2026-03-02.json --security-output ../docs/system_audit/ai_agent_security_watch_2026-03-02.json",
+    "cd api && python3 scripts/build_ai_agent_improvement_plan.py --intel ../docs/system_audit/ai_agent_biweekly_sources_2026-03-02.json --output ../docs/system_audit/ai_agent_10_point_plan_2026-03-02.json",
+    "git fetch origin main && git rebase origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "Mandatory local preflight did not fully pass because rebase was blocked by unstaged changes; PR guard reported local_preflight=fail and n8n_security_floor=skipped_rebase_failed.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 38,
+    "row_sha256": "e502945f6c17dd0bc44120276ccb0fe0b4d418d91d84dc70828a5481035e041f",
+    "summary": "mandatory-local-preflight-did-not-fully-pass-bec"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "fail",
+  "run_id": "legacy-jsonl-0038-e502945f6c17",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L38"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make start-gate",
+      "cd api && pytest -q tests/test_collect_ai_agent_intel.py",
+      "cd api && python3 scripts/collect_ai_agent_intel.py --window-days 14 --output ../docs/system_audit/ai_agent_biweekly_sources_2026-03-02.json --security-output ../docs/system_audit/ai_agent_security_watch_2026-03-02.json",
+      "cd api && python3 scripts/build_ai_agent_improvement_plan.py --intel ../docs/system_audit/ai_agent_biweekly_sources_2026-03-02.json --output ../docs/system_audit/ai_agent_10_point_plan_2026-03-02.json",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "fail"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "attempts": 2,
+  "commands_run": [
+    "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py::test_cursor_node_shim_path_uses_realpath_target tests/test_agent_runner_tool_failure_telemetry.py::test_ensure_cursor_node_shim_writes_compat_wrapper_when_node_lacks_use_system_ca tests/test_agent_runner_tool_failure_telemetry.py::test_resolve_cursor_cli_binary_prefers_path_with_runtime_layout",
+    "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py"
+  ],
+  "failure_reason": "Cursor script resolves its own path with realpath, so node shim was being created beside /usr/bin/agent while runtime used /usr/local/bin/agent. Shim path now follows the resolved cursor binary target to patch the effective node location.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 33,
+    "row_sha256": "13c44024ac54fa3a88ab787fdf0d7cf38cec6c883285c8b1fa983eb23f810e9a",
+    "summary": "cursor-script-resolves-its-own-path-with-realpat"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0033-13c44024ac54",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L33"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py::test_cursor_node_shim_path_uses_realpath_target tests/test_agent_runner_tool_failure_telemetry.py::test_ensure_cursor_node_shim_writes_compat_wrapper_when_node_lacks_use_system_ca tests/test_agent_runner_tool_failure_telemetry.py::test_resolve_cursor_cli_binary_prefers_path_with_runtime_layout",
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py"
+    ],
+    "status": "pass"
+  }
+}

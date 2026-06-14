@@ -1,0 +1,36 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "curl production X-Form-Native-Public-Gate POST /api/ideas -> 503 native-kernel stage pg_exec with fixed revision id SQL",
+    "python3 -m py_compile deploy/kernel-router/mutation_public_gate_harness.py",
+    "form/form-kernel-rust/target/release/form-kernel-rust check --routes deploy/kernel-router/production-routes.fk --stdlib form/form-stdlib",
+    "python3 deploy/kernel-router/mutation_public_gate_harness.py --json"
+  ],
+  "failure_reason": "Repaired the public canary failure exposed after PR #2670. Native kernel routing and config carrier were active, but graph_node_revisions.id used fixed route-level values such as rev-native-public-gate-create-idea, which collide under repeated production creates. production-routes.fk now emits revision ids as route-prefix:node-id:revision-number, and mutation_public_gate_harness.py proves repeated no-reset default and public-gate creates produce distinct revision ids.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 276,
+    "row_sha256": "87468a0dfaddf847938bd49c532d70318b544daa2261bd2f1fa5e2c0797ef5bb",
+    "summary": "repaired-the-public-canary-failure-exposed-after"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0276-87468a0dfadd",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L276"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "curl production X-Form-Native-Public-Gate POST /api/ideas -> 503 native-kernel stage pg_exec with fixed revision id SQL",
+      "python3 -m py_compile deploy/kernel-router/mutation_public_gate_harness.py",
+      "form/form-kernel-rust/target/release/form-kernel-rust check --routes deploy/kernel-router/production-routes.fk --stdlib form/form-stdlib",
+      "python3 deploy/kernel-router/mutation_public_gate_harness.py --json"
+    ],
+    "status": "pass"
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "python3 scripts/native_route_goal_loop.py /loop --source web_api --seconds 86400 --write-state",
+    "cd form/form-kernel-rust && cargo build --release",
+    "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_web_api_deploy.sh",
+    "VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -c 'source scripts/verify_web_api_deploy.sh https://api.example https://web.example'",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "git diff --check",
+    "form/form-kernel-rust/target/release/form-kernel-rust check --routes deploy/front-door/api.bml --stdlib form/form-stdlib",
+    "git show origin/main:deploy/front-door/api.bml > /tmp/origin-main-api.bml && form/form-kernel-rust/target/release/form-kernel-rust check --routes /tmp/origin-main-api.bml --stdlib form/form-stdlib",
+    "form/form-kernel-rust/target/release/form-kernel-rust serve --host 127.0.0.1 --port 19185 --workers 1 --routes deploy/front-door/api.bml --stdlib form/form-stdlib --upstream http://127.0.0.1:9",
+    "curl -fsS -D /tmp/agent-active.headers -o /tmp/agent-active.body http://127.0.0.1:19185/api/agent/tasks/active -H 'Accept: application/json'",
+    "curl -fsS -D /tmp/agent-activity.headers -o /tmp/agent-activity.body 'http://127.0.0.1:19185/api/agent/tasks/activity?limit=50&offset=0' -H 'Accept: application/json'"
+  ],
+  "failure_reason": "Moved the observed public task activity read paths into the BML front door. Local serve proof returned native-kernel headers with X-Form-Handler:api_agent_tasks_active for /api/agent/tasks/active and X-Form-Handler:api_agent_tasks_activity for /api/agent/tasks/activity, preserving the empty-public bodies [] and {items:[],total:0,limit:50,offset:0}. Route-goal state now classifies both endpoints as kernel-native-high-grammar. The full catalog check still fails with the same 14 unresolved names on origin/main and this branch; the writer/SSE task activity paths remain the next Python-backed surface.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 297,
+    "row_sha256": "fd7477695f76600d6d076ee0535f4bb0c53b1b24d4223a9cd480cace45d9f662",
+    "summary": "moved-the-observed-public-task-activity-read-pat"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0297-fd7477695f76",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L297"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/native_route_goal_loop.py /loop --source web_api --seconds 86400 --write-state",
+      "cd form/form-kernel-rust && cargo build --release",
+      "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_web_api_deploy.sh",
+      "VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -c 'source scripts/verify_web_api_deploy.sh https://api.example https://web.example'",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check",
+      "form/form-kernel-rust/target/release/form-kernel-rust check --routes deploy/front-door/api.bml --stdlib form/form-stdlib",
+      "git show origin/main:deploy/front-door/api.bml > /tmp/origin-main-api.bml && form/form-kernel-rust/target/release/form-kernel-rust check --routes /tmp/origin-main-api.bml --stdlib form/form-stdlib",
+      "form/form-kernel-rust/target/release/form-kernel-rust serve --host 127.0.0.1 --port 19185 --workers 1 --routes deploy/front-door/api.bml --stdlib form/form-stdlib --upstream http://127.0.0.1:9",
+      "curl -fsS -D /tmp/agent-active.headers -o /tmp/agent-active.body http://127.0.0.1:19185/api/agent/tasks/active -H 'Accept: application/json'",
+      "curl -fsS -D /tmp/agent-activity.headers -o /tmp/agent-activity.body 'http://127.0.0.1:19185/api/agent/tasks/activity?limit=50&offset=0' -H 'Accept: application/json'"
+    ],
+    "status": "pass"
+  }
+}

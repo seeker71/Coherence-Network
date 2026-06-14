@@ -1,0 +1,52 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+    "make wellness",
+    "COORD_AGENT=codex@a3ec coord claim fkwu numeric native fourth-arm residual",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/float-conversions-band.fk",
+    "cd form && scripts/fourth-arm-survey.sh --one form-stdlib/tests/float-conversions-band.fk",
+    "cd form && scripts/fourth-arm-survey.sh --one form-stdlib/tests/trig-band.fk",
+    "cd form && scripts/fourth-arm-survey.sh --one form-stdlib/tests/tensor-quant-band.fk",
+    "cd form && scripts/fourth-arm-survey.sh --one form-stdlib/tests/transcendental-natives-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh float-conversions trig tensor-quant transcendental-natives",
+    "cd form && bash scripts/fourth-arm-gate.sh bml-protocol-runtime-choice recipe-choice-runtime channel-protocol-choice-floor float-conversions trig tensor-quant transcendental-natives",
+    "cd form && ./validate.sh",
+    "bash scripts/bml_form_jit_metal_planes_audit.sh"
+  ],
+  "failure_reason": "Taught fkwu numeric conversion/transcendental rows by wiring floor/round/ceil/math_ceil/math_exp/math_log, adding local exp/log helpers, moving boxed floats into a far negative sentinel range so negative ints no longer collide with float slots, and lifting fkwu float slot capacity for tensor quantization, and wiring the universal loader to fkc-universal-node-slots so rebased route-choice tables no longer overflow the hardcoded node array. Focused survey rows pass at 31, 127, 4095, and 16; manifest gate returns PASS-4WAY for all four; rebased combined gate returns PASS-4WAY for bml-protocol-runtime-choice, recipe-choice-runtime, channel-protocol-choice-floor, float-conversions, trig, tensor-quant, and transcendental-natives; full Form validation returns fourth arm: 129 band(s) four-way, 555 ok, and 0 divergent. The metal-plane audit passes macOS arm64 Mach-O and Android arm64 ELF receipts while Android's minimum JIT floor remains Form-native recipe/table execution rather than a required runtime clang binary.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 355,
+    "row_sha256": "55b5fc59ded3b77819bbf701f3f5b289d6faa253f319ec601f763e53815316f6",
+    "summary": "taught-fkwu-numeric-conversion-transcendental-ro"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0355-55b5fc59ded3",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L355"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "COORD_AGENT=codex@a3ec coord claim fkwu numeric native fourth-arm residual",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/float-conversions-band.fk",
+      "cd form && scripts/fourth-arm-survey.sh --one form-stdlib/tests/float-conversions-band.fk",
+      "cd form && scripts/fourth-arm-survey.sh --one form-stdlib/tests/trig-band.fk",
+      "cd form && scripts/fourth-arm-survey.sh --one form-stdlib/tests/tensor-quant-band.fk",
+      "cd form && scripts/fourth-arm-survey.sh --one form-stdlib/tests/transcendental-natives-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh float-conversions trig tensor-quant transcendental-natives",
+      "cd form && bash scripts/fourth-arm-gate.sh bml-protocol-runtime-choice recipe-choice-runtime channel-protocol-choice-floor float-conversions trig tensor-quant transcendental-natives",
+      "cd form && ./validate.sh",
+      "bash scripts/bml_form_jit_metal_planes_audit.sh"
+    ],
+    "status": "pass"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "COORD_AGENT=codex@a3ec ./scripts/agent-coord.sh view",
+    "COORD_AGENT=codex@a3ec ./scripts/agent-coord.sh claim \"form-mut fourth-arm residual after PR #2975: diagnose 31/31/31/29 divergence without touching cf56 JIT-lower lane\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/tests/form-mut-band.fk",
+    "bash form/scripts/fourth-arm-gate.sh form-mut",
+    "cd form && ./validate.sh > /tmp/coherence-form-validate-form-mut-fourth-arm-20260613.log 2>&1",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_form_mut_fourth_arm.json"
+  ],
+  "failure_reason": "Raised the fourth-arm floor by fixing fkwu universal table loading for large fks images. form-mut's table is 283601 bytes, so the old 262143-byte read truncated the string pool tail and made direct string literal lengths read as zero. Increasing the emitted table-loader buffer/read limit to 1 MiB makes form-mut pass 31 four-way; the manifest gate prints PASS-4WAY form-mut; full validation remains diagnostic rc=1 with fourth arm: 105 band(s) four-way, 540 ok, and 4 unrelated divergent bands.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 333,
+    "row_sha256": "bc24dd986b17eafbdb3e22c2c3c5172b2b5e4efbf7ad27e4f4fe1b95c6039f84",
+    "summary": "raised-the-fourth-arm-floor-by-fixing-fkwu-unive"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0333-bc24dd986b17",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L333"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "COORD_AGENT=codex@a3ec ./scripts/agent-coord.sh view",
+      "COORD_AGENT=codex@a3ec ./scripts/agent-coord.sh claim \"form-mut fourth-arm residual after PR #2975: diagnose 31/31/31/29 divergence without touching cf56 JIT-lower lane\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/tests/form-mut-band.fk",
+      "bash form/scripts/fourth-arm-gate.sh form-mut",
+      "cd form && ./validate.sh > /tmp/coherence-form-validate-form-mut-fourth-arm-20260613.log 2>&1",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_form_mut_fourth_arm.json"
+    ],
+    "status": "pass"
+  }
+}

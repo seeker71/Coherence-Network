@@ -1,0 +1,60 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-idea-valuation-audit-ledger.fk form-stdlib/tests/native-idea-valuation-audit-ledger-band.fk",
+    "form/scripts/native-idea-valuation-audit-ledger-test.sh",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/native-idea-valuation-audit-ledger.fk form-stdlib/native-mutation-public-gate.fk form-stdlib/tests/native-mutation-public-gate-band.fk",
+    "form/scripts/native-mutation-public-gate-test.sh",
+    "cd api && python3 -m pytest -q tests/test_native_idea_valuation_audit_ledger.py tests/test_native_mutation_side_effect_ledger.py tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py tests/test_native_mutation_route_bindings.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py",
+    "python3 deploy/kernel-router/mutation_ab_observation_harness.py --json",
+    "python3 deploy/kernel-router/mutation_public_gate_harness.py --json",
+    "cd api && python3 -m ruff check tests/test_native_idea_valuation_audit_ledger.py tests/test_native_mutation_side_effect_ledger.py tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py",
+    "python3 scripts/validate_spec_quality.py --file specs/native-idea-valuation-audit-ledger.md --file specs/native-mutation-side-effect-ledger.md --file specs/native-mutation-side-effects.md --file specs/native-mutation-route-side-effect-binding.md --file specs/native-mutation-public-gate.md --file specs/ideas-router-form-expression.md --file specs/spec-registry-source-native.md",
+    "python3 scripts/generate_repo_indexes.py",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "git diff --check",
+    "make wellness",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/codex/native-mutation-side-effect-ledger-20260609"
+  ],
+  "failure_reason": "Shipped Form-native idea valuation audit-ledger parity. The new carrier appends hash-chained VALUATION_CHANGE rows to audit_ledger and the live proof returned 11111111. The public-gate live proof now returns 111111111 after executing idea update audit parity plus rollback receipt. A/B and public-gate harnesses remain confidence 1.0 with no ordinary no-header flip, and local PR guard passed against the stacked base.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 257,
+    "row_sha256": "3c4775db2ef48c57bb114d2c6b776a0a73cabf7903354d996d0844d395fd7ee7",
+    "summary": "shipped-form-native-idea-valuation-audit-ledger-"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0257-3c4775db2ef4",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L257"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-idea-valuation-audit-ledger.fk form-stdlib/tests/native-idea-valuation-audit-ledger-band.fk",
+      "form/scripts/native-idea-valuation-audit-ledger-test.sh",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/native-idea-valuation-audit-ledger.fk form-stdlib/native-mutation-public-gate.fk form-stdlib/tests/native-mutation-public-gate-band.fk",
+      "form/scripts/native-mutation-public-gate-test.sh",
+      "cd api && python3 -m pytest -q tests/test_native_idea_valuation_audit_ledger.py tests/test_native_mutation_side_effect_ledger.py tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py tests/test_native_mutation_route_bindings.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py",
+      "python3 deploy/kernel-router/mutation_ab_observation_harness.py --json",
+      "python3 deploy/kernel-router/mutation_public_gate_harness.py --json",
+      "cd api && python3 -m ruff check tests/test_native_idea_valuation_audit_ledger.py tests/test_native_mutation_side_effect_ledger.py tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py",
+      "python3 scripts/validate_spec_quality.py --file specs/native-idea-valuation-audit-ledger.md --file specs/native-mutation-side-effect-ledger.md --file specs/native-mutation-side-effects.md --file specs/native-mutation-route-side-effect-binding.md --file specs/native-mutation-public-gate.md --file specs/ideas-router-form-expression.md --file specs/spec-registry-source-native.md",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check",
+      "make wellness",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/codex/native-mutation-side-effect-ledger-20260609"
+    ],
+    "status": "pass"
+  }
+}

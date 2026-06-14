@@ -1,0 +1,54 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "bash -n scripts/verify_web_api_deploy.sh",
+    "VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 source scripts/verify_web_api_deploy.sh",
+    "mock native canary retries missing X-Form-Router then settles",
+    "mock hard canary does not retry body-contract failure",
+    "PUBLIC_API_BASE_URL=https://api.coherencycoin.com PUBLIC_WEB_BASE_URL=https://coherencycoin.com ./scripts/verify_web_api_deploy.sh",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-10_native_canary_rollout_retry.json",
+    "git diff --check",
+    "git fetch origin main && git rebase --autostash origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "Hardened public deploy verification across native-route rollout races. Native canaries now retry the whole semantic check during the rollout window when the response shape shows missing native front-door headers or native proof fields, while real body-contract failures still return immediately. The full public verifier passed against settled production at 6885b2a5, and rebase, local PR guard, and follow-through guard passed.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 305,
+    "row_sha256": "f6868433e38b39a2e0852cf12f084c36e7890d02b2208ea7cae051a4689e951e",
+    "summary": "hardened-public-deploy-verification-across-nativ"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0305-f6868433e38b",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L305"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "bash -n scripts/verify_web_api_deploy.sh",
+      "VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 source scripts/verify_web_api_deploy.sh",
+      "mock native canary retries missing X-Form-Router then settles",
+      "mock hard canary does not retry body-contract failure",
+      "PUBLIC_API_BASE_URL=https://api.coherencycoin.com PUBLIC_WEB_BASE_URL=https://coherencycoin.com ./scripts/verify_web_api_deploy.sh",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-10_native_canary_rollout_retry.json",
+      "git diff --check",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

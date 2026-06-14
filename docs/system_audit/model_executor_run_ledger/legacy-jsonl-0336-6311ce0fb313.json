@@ -1,0 +1,42 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/tests/kernel-http-band.fk",
+    "cd form && scripts/fourth-arm-survey.sh --one form-stdlib/tests/kernel-http-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/bml-source.fk form-stdlib/branch-choice-order.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/tests/bml-route-choice-runtime-band.fk",
+    "cd form && scripts/fourth-arm-survey.sh --one form-stdlib/tests/bml-route-choice-runtime-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh bml-route-choice-runtime kernel-http",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/kernel-http.fk form-stdlib/channel-flow.fk form-stdlib/tool-channel.fk form-stdlib/channel-loopback.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/bml-source.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/channel-protocol-choice-floor.fk form-stdlib/tests/channel-protocol-choice-floor-band.fk",
+    "cd form && scripts/fourth-arm-survey.sh --one form-stdlib/tests/channel-protocol-choice-floor-band.fk"
+  ],
+  "failure_reason": "Made BML choiceReceipt route selection executable. bml-route-choice-runtime consumes trusted BML choice metadata, resolves it to a real kernel-http kh-route-candidate, escalates low-trust local metadata to an oracle route, and returns an inspectable signature. kernel-http passes 536965066 four-way and bml-route-choice-runtime passes 32767 four-way; the large composite floor passes 32767 on Go/Rust/TS and remains an explicit fourth-arm mismatch at fkwu=15.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 336,
+    "row_sha256": "6311ce0fb313f136ad4680fff923cb771a7e99fc8ffa94efc231d37eb4051225",
+    "summary": "made-bml-choicereceipt-route-selection-executabl"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0336-6311ce0fb313",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L336"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/tests/kernel-http-band.fk",
+      "cd form && scripts/fourth-arm-survey.sh --one form-stdlib/tests/kernel-http-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/bml-source.fk form-stdlib/branch-choice-order.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/tests/bml-route-choice-runtime-band.fk",
+      "cd form && scripts/fourth-arm-survey.sh --one form-stdlib/tests/bml-route-choice-runtime-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh bml-route-choice-runtime kernel-http",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/kernel-http.fk form-stdlib/channel-flow.fk form-stdlib/tool-channel.fk form-stdlib/channel-loopback.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/bml-source.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/channel-protocol-choice-floor.fk form-stdlib/tests/channel-protocol-choice-floor-band.fk",
+      "cd form && scripts/fourth-arm-survey.sh --one form-stdlib/tests/channel-protocol-choice-floor-band.fk"
+    ],
+    "status": "pass"
+  }
+}

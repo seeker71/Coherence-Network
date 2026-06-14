@@ -1,0 +1,38 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "cd api && pytest -q tests/test_meeting_resonance_capture.py",
+    "cd api && pytest -q tests/test_flow_vitality.py tests/test_meeting_resonance_capture.py",
+    "cd api && ruff check app/routers/meetings.py app/services/meeting_service.py tests/test_meeting_resonance_capture.py",
+    "python3 scripts/validate_spec_quality.py --file specs/meeting-resonance-capture.md"
+  ],
+  "failure_reason": "The existing meeting API only sensed a current viewer/content meeting and could not preserve who resonated with which part of a concept. This task adds graph-backed meeting capture for people and agents plus recall filters for concept, participant, participant kind, and meeting.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 117,
+    "row_sha256": "c5168a91be418c77ecab67c71ca1667339d092d4ba2518f1f0c137bd64bb53e0",
+    "summary": "the-existing-meeting-api-only-sensed-a-current-v"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0117-c5168a91be41",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L117"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "cd api && pytest -q tests/test_meeting_resonance_capture.py",
+      "cd api && pytest -q tests/test_flow_vitality.py tests/test_meeting_resonance_capture.py",
+      "cd api && ruff check app/routers/meetings.py app/services/meeting_service.py tests/test_meeting_resonance_capture.py",
+      "python3 scripts/validate_spec_quality.py --file specs/meeting-resonance-capture.md"
+    ],
+    "status": "pass"
+  }
+}

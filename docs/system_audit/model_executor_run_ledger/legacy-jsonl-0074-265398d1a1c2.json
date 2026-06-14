@@ -1,0 +1,36 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "cd web && npm run build",
+    "Playwright screenshot sweep on http://localhost:3125 for all 24 /presence-walk/node/{slug} routes",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-24_presence-perspectives.json"
+  ],
+  "failure_reason": "User feedback showed Anne Tucker and Liquid Bloom still read as source images placed inside a Coherence template rather than as their own visual languages. Anne's entry now follows the source site's beach portrait, white curve, spaced nav, coral account/free-healing language, and healer copy. Liquid Bloom now follows the source site's blue patterned header, white logo, long nav, translucent biography block, horizontal rule, and three release covers.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 74,
+    "row_sha256": "265398d1a1c2fac908988632cd87b40199456dc74f1b6784b2f3dba4db6e5ba2",
+    "summary": "user-feedback-showed-anne-tucker-and-liquid-bloo"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0074-265398d1a1c2",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L74"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "cd web && npm run build",
+      "Playwright screenshot sweep on http://localhost:3125 for all 24 /presence-walk/node/{slug} routes",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-24_presence-perspectives.json"
+    ],
+    "status": "pass"
+  }
+}

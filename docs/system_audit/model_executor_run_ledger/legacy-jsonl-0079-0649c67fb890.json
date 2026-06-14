@@ -1,0 +1,38 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "cd web && npm run build",
+    "rg scan for @/content JSON imports and PRESENCE_/PEOPLE_ data-store constants in presence/people TypeScript",
+    "write temporary ~/.coherence-network/content/presence-walk/de.json override and curl /presence-walk/person?lang=de",
+    "remove/restore runtime override and curl /presence-walk/person?lang=de again"
+  ],
+  "failure_reason": "Follow-up feedback clarified that build-bundled JSON is still static. The presence loader now reads JSON at request time from a configured runtime content directory, defaulting to ~/.coherence-network/content/presence-walk, with repo JSON only as fallback. noStore prevents page caching from masking data updates, and a temporary runtime override changed rendered copy without repo edits or rebuild.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 79,
+    "row_sha256": "0649c67fb8902d625ca6c178e8f73695ab466784155082b9665fb3de2aaf8fbb",
+    "summary": "follow-up-feedback-clarified-that-build-bundled-"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0079-0649c67fb890",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L79"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "cd web && npm run build",
+      "rg scan for @/content JSON imports and PRESENCE_/PEOPLE_ data-store constants in presence/people TypeScript",
+      "write temporary ~/.coherence-network/content/presence-walk/de.json override and curl /presence-walk/person?lang=de",
+      "remove/restore runtime override and curl /presence-walk/person?lang=de again"
+    ],
+    "status": "pass"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "python3 scripts/scan_form_blueprints.py register KERNEL-CORE-IMAGE",
+    "python3 scripts/gen_bp_table.py",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/kernel-core-self-proof.fk",
+    "git fetch origin main && git rebase origin/main",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260609_kernel_core_self.json",
+    "git diff --check",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "make wellness"
+  ],
+  "failure_reason": "Added a minimal kernel-core self expressed as BML source plus a Form sibling-kernel proof. The proof parses the source body, resolves KERNEL-CORE-IMAGE through generated bp tables, executes math/compare/logic/conditional/block recipes, observes native blueprint attribution and NodeID/category/child identity, and round-trips /tmp/kernel-core-self-image.fkb with the focused validation returning 43.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 261,
+    "row_sha256": "3218242cae5ab4da0865eb79e155d1a78e3d5659f57ce1a1cb73a9fc2c59d2ba",
+    "summary": "added-a-minimal-kernel-core-self-expressed-as-bm"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0261-3218242cae5a",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L261"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/scan_form_blueprints.py register KERNEL-CORE-IMAGE",
+      "python3 scripts/gen_bp_table.py",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/kernel-core-self-proof.fk",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260609_kernel_core_self.json",
+      "git diff --check",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "make wellness"
+    ],
+    "status": "pass"
+  }
+}

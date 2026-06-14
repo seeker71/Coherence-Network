@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_web_api_deploy.sh",
+    "VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -c 'source scripts/verify_web_api_deploy.sh https://api.example https://web.example'",
+    "git diff --check",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "cd form/form-kernel-rust && cargo build --release",
+    "cd form/form-kernel-rust && ./target/release/form-kernel-rust check --routes ../../deploy/front-door/api.bml --stdlib ../form-stdlib",
+    "cd form/form-kernel-rust && git show origin/main:deploy/front-door/api.bml > /tmp/origin-main-repair-api.bml && ./target/release/form-kernel-rust check --routes /tmp/origin-main-repair-api.bml --stdlib ../form-stdlib"
+  ],
+  "failure_reason": "Repaired the native contributors page projection after public release showed native headers with total=169 and items=[]. The BML fallback UUID recipe now uses md5(id::text), matching Postgres md5(text) for UUID graph node ids. Public and Hostinger deploy checks now require contributor row objects when total is nonzero, so the empty-page regression cannot pass canary again. The full catalog check still reports the same 14 unresolved names on origin/main and this branch.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 299,
+    "row_sha256": "f341cc79cd1a800efbb55d2e5bda82ef0e0eee29fdd8657e055a4d5c83f0966c",
+    "summary": "repaired-the-native-contributors-page-projection"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0299-f341cc79cd1a",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L299"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_web_api_deploy.sh",
+      "VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -c 'source scripts/verify_web_api_deploy.sh https://api.example https://web.example'",
+      "git diff --check",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "cd form/form-kernel-rust && cargo build --release",
+      "cd form/form-kernel-rust && ./target/release/form-kernel-rust check --routes ../../deploy/front-door/api.bml --stdlib ../form-stdlib",
+      "cd form/form-kernel-rust && git show origin/main:deploy/front-door/api.bml > /tmp/origin-main-repair-api.bml && ./target/release/form-kernel-rust check --routes /tmp/origin-main-repair-api.bml --stdlib ../form-stdlib"
+    ],
+    "status": "pass"
+  }
+}

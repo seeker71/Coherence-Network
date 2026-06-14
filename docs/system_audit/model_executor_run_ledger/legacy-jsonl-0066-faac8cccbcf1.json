@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "gh pr view 1008 --repo seeker71/Coherence-Network --json state,mergedAt,mergeCommit,url",
+    "gh run list --repo seeker71/Coherence-Network --branch main --limit 8",
+    "gh run watch 24536964884 --repo seeker71/Coherence-Network",
+    "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com",
+    "git fetch origin main",
+    "python3 scripts/validate_workflow_references.py",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-16_public-deploy-contract-paths.json"
+  ],
+  "failure_reason": "After the Node 24 workflow fix merged cleanly, the live deploy verified successfully but the Public Deploy Contract workflow did not run. The root cause was its push path filter: it ignored .github/workflows changes and the public deploy verifier script, so CI-only and deploy-contract-only merges could bypass automatic public verification. I expanded the trigger paths so future workflow and deploy-verification changes on main are sensed by the same public contract.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 66,
+    "row_sha256": "faac8cccbcf15b6a4c77865598271067d9824d48bd3662878120f3e6ff373b80",
+    "summary": "after-the-node-24-workflow-fix-merged-cleanly-th"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0066-faac8cccbcf1",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L66"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "gh pr view 1008 --repo seeker71/Coherence-Network --json state,mergedAt,mergeCommit,url",
+      "gh run list --repo seeker71/Coherence-Network --branch main --limit 8",
+      "gh run watch 24536964884 --repo seeker71/Coherence-Network",
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com",
+      "git fetch origin main",
+      "python3 scripts/validate_workflow_references.py",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-16_public-deploy-contract-paths.json"
+    ],
+    "status": "pass"
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "curl -sS --max-time 5 https://pulse.coherencycoin.com/pulse/now | jq '{overall, silences: (.ongoing_silences | length), silent_organs: [.organs[] | select(.status != \"breathing\") | .name]}'",
+    "python3 scripts/tessera_external_witness_probe.py --range-bytes 4096",
+    "python3 -m py_compile scripts/tessera_external_witness_probe.py",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/earth-witness-question.fk form-stdlib/tessera-external-witness.fk form-stdlib/tests/tessera-external-witness-band.fk",
+    "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/earth-witness-question.fk form-stdlib/tessera-external-witness.fk form-stdlib/tests/tessera-external-witness-band.fk",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-09_tessera_external_witness.json",
+    "git diff --check"
+  ],
+  "failure_reason": "Added Tessera as a compact external witness. The live probe reads the public v1.1/cambridge manifest and sample tile through anonymous S3, hashes the first 4096 returned embedding bytes, and emits a JSON witness. The Form proof returns 67108863 from source and binary artifacts, preserving source, manifest, tile, range hash, what/where/when/who/how/why answers, and trace-preserving CHOICE-RECEIPT signatures.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 262,
+    "row_sha256": "71a25796452a4997b00fbd5e89c0ae6e20672f8081a0540fe0d46b0326d8b630",
+    "summary": "added-tessera-as-a-compact-external-witness-the-"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0262-71a25796452a",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L262"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "curl -sS --max-time 5 https://pulse.coherencycoin.com/pulse/now | jq '{overall, silences: (.ongoing_silences | length), silent_organs: [.organs[] | select(.status != \"breathing\") | .name]}'",
+      "python3 scripts/tessera_external_witness_probe.py --range-bytes 4096",
+      "python3 -m py_compile scripts/tessera_external_witness_probe.py",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/earth-witness-question.fk form-stdlib/tessera-external-witness.fk form-stdlib/tests/tessera-external-witness-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/earth-witness-question.fk form-stdlib/tessera-external-witness.fk form-stdlib/tests/tessera-external-witness-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-09_tessera_external_witness.json",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

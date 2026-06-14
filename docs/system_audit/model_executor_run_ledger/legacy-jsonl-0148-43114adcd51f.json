@@ -1,0 +1,40 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "python3 -m py_compile api/app/services/field_view_attribution_service.py api/app/services/field_view_attribution_adjustment_service.py api/app/routers/field_stories.py api/app/services/unified_models.py",
+    "cd api && python3 -m pytest -q tests/test_field_story_trace_index.py::test_field_story_view_attribution_allows_living_append_only_adjustments",
+    "cd api && python3 -m pytest -q tests/test_field_story_trace_index.py",
+    "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.living_attribution.json --fail-on-regression",
+    "git diff --check"
+  ],
+  "failure_reason": "Attribution receipts were immutable and truthful, but flow could not yet breathe after the initial policy split. This task adds append-only living adjustments with paired negative and positive ledger rows, policy discovery, receipt effective-flow readback, and circulation sensing that reports active living adjustment while preserving the original receipt and base flow.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 148,
+    "row_sha256": "43114adcd51f910572458015b96194ea73be067c0d0e75037dfe6bd0bca28c3c",
+    "summary": "attribution-receipts-were-immutable-and-truthful"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0148-43114adcd51f",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L148"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "python3 -m py_compile api/app/services/field_view_attribution_service.py api/app/services/field_view_attribution_adjustment_service.py api/app/routers/field_stories.py api/app/services/unified_models.py",
+      "cd api && python3 -m pytest -q tests/test_field_story_trace_index.py::test_field_story_view_attribution_allows_living_append_only_adjustments",
+      "cd api && python3 -m pytest -q tests/test_field_story_trace_index.py",
+      "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.living_attribution.json --fail-on-regression",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

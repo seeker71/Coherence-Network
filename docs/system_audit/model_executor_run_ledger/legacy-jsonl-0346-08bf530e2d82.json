@@ -1,0 +1,38 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "gh run list --branch main --limit 4 --json databaseId,workflowName,status,conclusion,headSha,url",
+    "PUBLIC_API_BASE_URL=https://api.coherencycoin.com PUBLIC_WEB_BASE_URL=https://coherencycoin.com ./scripts/verify_web_api_deploy.sh",
+    "bash -n scripts/verify_web_api_deploy.sh deploy/hostinger/auto-deploy.sh",
+    "bash scripts/test_hostinger_deploy_form_paths.sh",
+    "PUBLIC_API_BASE_URL=https://api.coherencycoin.com PUBLIC_WEB_BASE_URL=https://coherencycoin.com ./scripts/verify_web_api_deploy.sh"
+  ],
+  "failure_reason": "Follow-up verifier fix after PR #2996: Hostinger Auto Deploy run 27464620212 failed on stale expected handler api_vitality_coherence_network, while production returned native-kernel/api_workspace_vitality/python_authority=false. Updated public and Hostinger verifier expectations to api_workspace_vitality and widened kernel-router ingress coverage to the workspace vitality template plus missing BML GET/read routes. Syntax check passed, Hostinger path test reports 61 covered BML GET/read routes and PASS, and the public verifier passes end to end against deployed SHA f6659da15b56151ec45b4b20215674550b04f50d.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 346,
+    "row_sha256": "08bf530e2d827730072bdda84c7cf0c0483782453144ee338629ef7fefb390e0",
+    "summary": "follow-up-verifier-fix-after-pr-2996-hostinger-a"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0346-08bf530e2d82",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L346"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "gh run list --branch main --limit 4 --json databaseId,workflowName,status,conclusion,headSha,url",
+      "PUBLIC_API_BASE_URL=https://api.coherencycoin.com PUBLIC_WEB_BASE_URL=https://coherencycoin.com ./scripts/verify_web_api_deploy.sh",
+      "bash -n scripts/verify_web_api_deploy.sh deploy/hostinger/auto-deploy.sh",
+      "bash scripts/test_hostinger_deploy_form_paths.sh",
+      "PUBLIC_API_BASE_URL=https://api.coherencycoin.com PUBLIC_WEB_BASE_URL=https://coherencycoin.com ./scripts/verify_web_api_deploy.sh"
+    ],
+    "status": "pass"
+  }
+}

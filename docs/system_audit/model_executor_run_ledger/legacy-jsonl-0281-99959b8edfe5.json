@@ -1,0 +1,40 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_web_api_deploy.sh",
+    "VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -c 'source scripts/verify_web_api_deploy.sh https://api.example https://web.example'",
+    "/Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest tests/test_runtime_web_api_provenance.py -q",
+    "git diff --check",
+    "form/form-kernel-rust/target/release/form-kernel-rust serve --port 19132 --routes deploy/front-door/api.bml --stdlib form/form-stdlib --upstream http://127.0.0.1:9",
+    "curl -sS -i 'http://127.0.0.1:19132/api/inventory/flow?idea_id=__native_inventory_canary__&list_item_limit=1&runtime_window_seconds=3600' -H 'Accept: application/json'"
+  ],
+  "failure_reason": "Repaired the inventory flow public-native release boundary after the b1fe7f19 deploy failed on the BML service canary. The BML handler now short-circuits __native_inventory_canary__ into an empty native observation response before persistence, the Traefik rule requires X-Form-Native-Inventory: 1 so ordinary public /api/inventory/flow remains on the existing full aggregator, and verify_web_api_deploy probes the explicit native public canary with that header. Local native curl returned HTTP 200 with X-Form-Router: native-kernel, handler api_inventory_flow, items=[], and python_authority=false.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 281,
+    "row_sha256": "99959b8edfe56b3fb7a89d539617ae8e6443212bc0dc92d007cb0f9502bef425",
+    "summary": "repaired-the-inventory-flow-public-native-releas"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0281-99959b8edfe5",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L281"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_web_api_deploy.sh",
+      "VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -c 'source scripts/verify_web_api_deploy.sh https://api.example https://web.example'",
+      "/Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest tests/test_runtime_web_api_provenance.py -q",
+      "git diff --check",
+      "form/form-kernel-rust/target/release/form-kernel-rust serve --port 19132 --routes deploy/front-door/api.bml --stdlib form/form-stdlib --upstream http://127.0.0.1:9",
+      "curl -sS -i 'http://127.0.0.1:19132/api/inventory/flow?idea_id=__native_inventory_canary__&list_item_limit=1&runtime_window_seconds=3600' -H 'Accept: application/json'"
+    ],
+    "status": "pass"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "attempts": 3,
+  "commands_run": [
+    "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py::test_ensure_cursor_node_shim_writes_compat_wrapper_when_node_lacks_use_system_ca tests/test_agent_runner_tool_failure_telemetry.py::test_configure_codex_cli_environment_preserves_existing_oauth_session_when_b64_present tests/test_agent_runner_tool_failure_telemetry.py::test_run_one_task_schedules_oauth_retry_on_refresh_token_reused_without_api_key_fallback",
+    "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+    "cd api && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py"
+  ],
+  "failure_reason": "Host runner cursor path failed on node '--use-system-ca' incompatibility and codex oauth bootstrap was rewriting existing session files from AGENT_CODEX_OAUTH_SESSION_B64; runner now installs a compatibility node shim wrapper, preserves existing oauth sessions, and attempts oauth relogin once on refresh-token reuse before retry.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 29,
+    "row_sha256": "2a0d8026642860c8a3e5863b5831182abc1c29e78344d63cf38c5a9aafd4c020",
+    "summary": "host-runner-cursor-path-failed-on-node-use-syste"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0029-2a0d80266428",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L29"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py::test_ensure_cursor_node_shim_writes_compat_wrapper_when_node_lacks_use_system_ca tests/test_agent_runner_tool_failure_telemetry.py::test_configure_codex_cli_environment_preserves_existing_oauth_session_when_b64_present tests/test_agent_runner_tool_failure_telemetry.py::test_run_one_task_schedules_oauth_retry_on_refresh_token_reused_without_api_key_fallback",
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+      "cd api && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py"
+    ],
+    "status": "pass"
+  }
+}

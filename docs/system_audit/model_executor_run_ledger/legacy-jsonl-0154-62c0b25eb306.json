@@ -1,0 +1,44 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-08_full_influence_teaching_translator.json",
+    "python3 -m py_compile api/app/services/influence_teaching_translator_service.py scripts/influence_teaching_translator.py",
+    "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.full_influence_teaching_translator.json --fail-on-regression",
+    "git diff --check",
+    "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+    "git fetch origin main && git rebase origin/main --autostash",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "Final local delivery validation for the full influence teaching translator passed. The first runtime verifier warmed automation usage slowly, the rerun passed; rebase reapplied the work cleanly, local PR guard returned ready_for_push=True, and follow-through found zero stale Codex PRs.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 154,
+    "row_sha256": "62c0b25eb3069ba4ba99dfe1278bbb0d094e548dbfeb067124a81efb2fc9076d",
+    "summary": "final-local-delivery-validation-for-the-full-inf"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0154-62c0b25eb306",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L154"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-08_full_influence_teaching_translator.json",
+      "python3 -m py_compile api/app/services/influence_teaching_translator_service.py scripts/influence_teaching_translator.py",
+      "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.full_influence_teaching_translator.json --fail-on-regression",
+      "git diff --check",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+      "git fetch origin main && git rebase origin/main --autostash",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

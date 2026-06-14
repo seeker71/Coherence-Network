@@ -1,0 +1,40 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "gh run view 27185413718 --job 80253162187 --log",
+    "bash -n deploy/hostinger/auto-deploy.sh",
+    "python3 -m pytest -q api/tests/test_native_mutation_public_gate.py",
+    "python3 -m ruff check api/tests/test_native_mutation_public_gate.py",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-09_kernel_canary_startup_retry.json",
+    "git diff --check"
+  ],
+  "failure_reason": "Repaired Hostinger kernel canary startup after the deploy run failed before public verification. The log showed stale kernel-router compose containers, fallback recreate, and an immediate local 127.0.0.1:8080 probe before the listener accepted connections. ensure_kernel_router_canary now clears stale canary containers, retries with force-recreate, falls back to compose rm plus clean up, waits for both local listeners, and retries the local public-gate and BML-front-door receipt probes.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 277,
+    "row_sha256": "56c4c9ea141aa1901305f4998cfa9eaf7a34fb865a7f57a2caeb1957b50c9329",
+    "summary": "repaired-hostinger-kernel-canary-startup-after-t"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0277-56c4c9ea141a",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L277"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "gh run view 27185413718 --job 80253162187 --log",
+      "bash -n deploy/hostinger/auto-deploy.sh",
+      "python3 -m pytest -q api/tests/test_native_mutation_public_gate.py",
+      "python3 -m ruff check api/tests/test_native_mutation_public_gate.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-09_kernel_canary_startup_retry.json",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

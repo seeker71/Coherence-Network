@@ -1,0 +1,62 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "python3 scripts/native_route_goal_loop.py /loop --source web_api --seconds 86400 --write-state",
+    "cd form/form-kernel-rust && cargo build --release --bin form-kernel-rust",
+    "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_runtime_web_api_provenance.py tests/test_runtime_surface_native_routes.py tests/test_translations_router.py tests/test_source_artifact_sensing_graph.py",
+    "cd api && /opt/homebrew/bin/ruff check tests/test_runtime_web_api_provenance.py tests/test_runtime_surface_native_routes.py ../scripts/runtime_surface_report.py",
+    "make native-route-goal-tending",
+    "python3 scripts/runtime_surface_report.py --json",
+    "form/form-kernel-rust/target/release/form-kernel-rust serve --host 127.0.0.1 --port 19161 --routes deploy/front-door/api.bml --stdlib form/form-stdlib --upstream http://127.0.0.1:9",
+    "curl /api/sensings native smoke",
+    "curl /api/sensings?kind=bad native validation smoke",
+    "curl /api/translations/page/flow native smoke",
+    "curl /api/deploy/log/stream fanout smoke",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "bash -n scripts/test_hostinger_deploy_form_paths.sh scripts/verify_web_api_deploy.sh deploy/hostinger/auto-deploy.sh",
+    "git diff --check",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-11_form_native_endpoint_parallel.json"
+  ],
+  "failure_reason": "Moved the next observed web API route families into the BML native front door. GET /api/sensings, GET /api/sensings/{sensing_id}, and GET /api/translations/{entity_type}/{entity_id} now have BML handlers and RouteCell bindings. route-goal web_api high-grammar native share moved from 89.10% to 90.50%, with next_route null for the observed web window and bml_routes=53. runtime_surface_report now counts both the Form manifest and BML catalog, reporting 86 local capable native handlers while reading 45 deployed native routes from the public kernel-runtime probe. Local native smoke proved native-kernel dispatch for the new families and fanout-python remains explicit for deploy SSE. Strict BML unresolved names are unchanged from origin/main at 14.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 317,
+    "row_sha256": "58756bfbc5d7a75e313ae00c9cc05820786906e2206effa16dc64671e5995edc",
+    "summary": "moved-the-next-observed-web-api-route-families-i"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0317-58756bfbc5d7",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L317"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/native_route_goal_loop.py /loop --source web_api --seconds 86400 --write-state",
+      "cd form/form-kernel-rust && cargo build --release --bin form-kernel-rust",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_runtime_web_api_provenance.py tests/test_runtime_surface_native_routes.py tests/test_translations_router.py tests/test_source_artifact_sensing_graph.py",
+      "cd api && /opt/homebrew/bin/ruff check tests/test_runtime_web_api_provenance.py tests/test_runtime_surface_native_routes.py ../scripts/runtime_surface_report.py",
+      "make native-route-goal-tending",
+      "python3 scripts/runtime_surface_report.py --json",
+      "form/form-kernel-rust/target/release/form-kernel-rust serve --host 127.0.0.1 --port 19161 --routes deploy/front-door/api.bml --stdlib form/form-stdlib --upstream http://127.0.0.1:9",
+      "curl /api/sensings native smoke",
+      "curl /api/sensings?kind=bad native validation smoke",
+      "curl /api/translations/page/flow native smoke",
+      "curl /api/deploy/log/stream fanout smoke",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "bash -n scripts/test_hostinger_deploy_form_paths.sh scripts/verify_web_api_deploy.sh deploy/hostinger/auto-deploy.sh",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-11_form_native_endpoint_parallel.json"
+    ],
+    "status": "pass"
+  }
+}

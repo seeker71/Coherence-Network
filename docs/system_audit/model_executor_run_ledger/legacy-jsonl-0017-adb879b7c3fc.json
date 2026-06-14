@@ -1,0 +1,34 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "cd api && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py",
+    "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+  ],
+  "failure_reason": "Host runner claimed cursor tasks but failed at runtime with /bin/sh: 1: agent: not found; added runner-side CLI auto-install/bootstrap for cursor/claude/codex before command execution.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 17,
+    "row_sha256": "adb879b7c3fc8e2e7fd098c60e795ee9653c413e03f0cf3dd6f8df520a6560ee",
+    "summary": "host-runner-claimed-cursor-tasks-but-failed-at-r"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0017-adb879b7c3fc",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L17"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "cd api && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py",
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ],
+    "status": "pass"
+  }
+}

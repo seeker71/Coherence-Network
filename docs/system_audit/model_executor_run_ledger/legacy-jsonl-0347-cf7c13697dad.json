@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord claim recipe-choice-fourth: close recipe-choice-runtime fourth walker mismatch 35 vs 233 on fresh main",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/indirect-call-runtime-probe-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/choice-receipt.fk form-stdlib/bml-source.fk form-stdlib/branch-choice-order.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/recipe-choice-runtime.fk form-stdlib/tests/recipe-choice-runtime-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh recipe-choice-runtime indirect-call-runtime-probe",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/bml-source.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/channel-protocol-choice-floor.fk form-stdlib/tests/channel-protocol-choice-floor-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh channel-protocol-choice-floor",
+    "cd form && ./validate.sh > /tmp/coherence-form-validate-recipe-choice-fourth-20260613.log 2>&1"
+  ],
+  "failure_reason": "Closed the recipe-choice-runtime fourth walker mismatch by adding value_eq lowering to the existing equality opcode, teaching the recipe-side fourth walker tag 80, widening the universal table/node capacities, and mirroring core cell constructors/accessors in fourth-shim. Added indirect-call-runtime-probe-band to cover function values recovered from ordinary list carriers. Focused validations pass four-way at 7, 233, and 32767; manifest checks return PASS-4WAY; full Form validation returns fourth arm: 120 band(s) four-way, 552 ok, and 0 divergent.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 347,
+    "row_sha256": "cf7c13697dad056d890efaa3c8391780e6e73bb5081bd013ab768af6373b2a4f",
+    "summary": "closed-the-recipe-choice-runtime-fourth-walker-m"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0347-cf7c13697dad",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L347"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim recipe-choice-fourth: close recipe-choice-runtime fourth walker mismatch 35 vs 233 on fresh main",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/indirect-call-runtime-probe-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/choice-receipt.fk form-stdlib/bml-source.fk form-stdlib/branch-choice-order.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/recipe-choice-runtime.fk form-stdlib/tests/recipe-choice-runtime-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh recipe-choice-runtime indirect-call-runtime-probe",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/bml-source.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/channel-protocol-choice-floor.fk form-stdlib/tests/channel-protocol-choice-floor-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh channel-protocol-choice-floor",
+      "cd form && ./validate.sh > /tmp/coherence-form-validate-recipe-choice-fourth-20260613.log 2>&1"
+    ],
+    "status": "pass"
+  }
+}

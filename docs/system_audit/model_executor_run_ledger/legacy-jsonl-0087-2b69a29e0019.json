@@ -1,0 +1,38 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "git fetch origin main && git rebase --autostash origin/main",
+    "cd api && .venv/bin/pytest -q tests/test_vision_content.py",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-24_presence-perspectives.json",
+    "cd web && npm run build"
+  ],
+  "failure_reason": "After the /vision/realize DB-backed slice, the local guard found the branch behind origin/main by five commits. I rebased with autostash, the stash applied cleanly, and I reran the focused API test, evidence validation, and web build successfully.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 87,
+    "row_sha256": "2b69a29e00198266c04d8ed4ffdc8a2abdd8750c5ba57fc67796386c1c586f97",
+    "summary": "after-the-vision-realize-db-backed-slice-the-loc"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0087-2b69a29e0019",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L87"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "cd api && .venv/bin/pytest -q tests/test_vision_content.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-24_presence-perspectives.json",
+      "cd web && npm run build"
+    ],
+    "status": "pass"
+  }
+}

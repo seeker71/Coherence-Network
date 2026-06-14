@@ -1,0 +1,40 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make start-gate",
+    "cd api && ruff check app/services/idea_service.py app/services/inventory_service.py tests/test_ideas.py tests/test_inventory_api.py",
+    "cd api && pytest -q tests/test_ideas.py tests/test_inventory_api.py::test_flow_inventory_counts_spec_registry_specs_for_idea tests/test_inventory_api.py::test_flow_canonicalizes_discovery_ids_and_keeps_named_public_e2e_idea",
+    "git fetch origin main && git rebase origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "Narrowed transient public-e2e aliasing, canonicalized inventory flow idea IDs across discovery sources, and added regressions to preserve named real ideas while filtering synthetic IDs.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 39,
+    "row_sha256": "37e49d522dc931a0aa1b7a2015f8d08e8f4d0e691061ae80f7bd9f54fccae348",
+    "summary": "narrowed-transient-public-e2e-aliasing-canonical"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0039-37e49d522dc9",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L39"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make start-gate",
+      "cd api && ruff check app/services/idea_service.py app/services/inventory_service.py tests/test_ideas.py tests/test_inventory_api.py",
+      "cd api && pytest -q tests/test_ideas.py tests/test_inventory_api.py::test_flow_inventory_counts_spec_registry_specs_for_idea tests/test_inventory_api.py::test_flow_canonicalizes_discovery_ids_and_keeps_named_public_e2e_idea",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

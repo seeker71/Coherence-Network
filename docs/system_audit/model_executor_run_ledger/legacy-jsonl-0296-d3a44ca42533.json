@@ -1,0 +1,44 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "cd form/form-kernel-rust && cargo build --release",
+    "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_web_api_deploy.sh",
+    "VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -c 'source scripts/verify_web_api_deploy.sh https://api.example https://web.example'",
+    "form/form-kernel-rust/target/release/form-kernel-rust check --routes deploy/front-door/api.bml --stdlib form/form-stdlib",
+    "git show origin/main:deploy/front-door/api.bml >/tmp/coherence-api-origin-main.bml && form/form-kernel-rust/target/release/form-kernel-rust check --routes /tmp/coherence-api-origin-main.bml --stdlib form/form-stdlib",
+    "form/form-kernel-rust/target/release/form-kernel-rust serve --host 127.0.0.1 --port 19183 --workers 1 --routes deploy/front-door/api.bml --stdlib form/form-stdlib --upstream http://127.0.0.1:9",
+    "curl -fsS -D /tmp/kernel-status-front-door.headers -o /tmp/kernel-status-front-door.body http://127.0.0.1:19183/api/utils/kernel_status -H 'Accept: application/json'"
+  ],
+  "failure_reason": "Moved /api/utils/kernel_status into the public BML front-door path. The focused local serve proof returned HTTP 200 with X-Form-Router:native-kernel, X-Form-Handler:api_kernel_status, X-Form-Python-Authority:false, and body active=native-kernel/router=native-kernel/python_authority=false. The full check --routes command still reports the same 14 unresolved names on origin/main and this branch, so it is recorded as a baseline catalog-wide limitation rather than pass evidence for this route.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 296,
+    "row_sha256": "d3a44ca42533ca08a97e9f308570afe650abbbbc3f71c506360a70a1b60f5274",
+    "summary": "moved-api-utils-kernel-status-into-the-public-bm"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0296-d3a44ca42533",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L296"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "cd form/form-kernel-rust && cargo build --release",
+      "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_web_api_deploy.sh",
+      "VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -c 'source scripts/verify_web_api_deploy.sh https://api.example https://web.example'",
+      "form/form-kernel-rust/target/release/form-kernel-rust check --routes deploy/front-door/api.bml --stdlib form/form-stdlib",
+      "git show origin/main:deploy/front-door/api.bml >/tmp/coherence-api-origin-main.bml && form/form-kernel-rust/target/release/form-kernel-rust check --routes /tmp/coherence-api-origin-main.bml --stdlib form/form-stdlib",
+      "form/form-kernel-rust/target/release/form-kernel-rust serve --host 127.0.0.1 --port 19183 --workers 1 --routes deploy/front-door/api.bml --stdlib form/form-stdlib --upstream http://127.0.0.1:9",
+      "curl -fsS -D /tmp/kernel-status-front-door.headers -o /tmp/kernel-status-front-door.body http://127.0.0.1:19183/api/utils/kernel_status -H 'Accept: application/json'"
+    ],
+    "status": "pass"
+  }
+}

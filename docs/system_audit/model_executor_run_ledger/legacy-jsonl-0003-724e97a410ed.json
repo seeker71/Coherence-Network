@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make start-gate",
+    "cd api && pytest -q tests/test_inventory_api.py -k \"prioritizes_no_spec_ideas_and_chunks_spec_tasks_for_cheap_model\"",
+    "cd api && pytest -q tests/test_inventory_api.py -k \"sync_roi_progress_tasks\"",
+    "cd api && pytest -q tests/test_inventory_api.py",
+    "cd api && ruff check app/services/inventory_service.py tests/test_inventory_api.py app/routers/inventory.py",
+    "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --fail-on-regression",
+    "git fetch origin main && git rebase origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "Initial behavior prioritized covered ideas by ROI only and emitted broad spec tasks; updated selection to prioritize no-spec idea gaps and chunked spec tasks for cheap-model constraints.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 3,
+    "row_sha256": "724e97a410ed9e7b0b50840330d1c11f9d370e5b98ae4fefb0c641b78afefbcc",
+    "summary": "initial-behavior-prioritized-covered-ideas-by-ro"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0003-724e97a410ed",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L3"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make start-gate",
+      "cd api && pytest -q tests/test_inventory_api.py -k \"prioritizes_no_spec_ideas_and_chunks_spec_tasks_for_cheap_model\"",
+      "cd api && pytest -q tests/test_inventory_api.py -k \"sync_roi_progress_tasks\"",
+      "cd api && pytest -q tests/test_inventory_api.py",
+      "cd api && ruff check app/services/inventory_service.py tests/test_inventory_api.py app/routers/inventory.py",
+      "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --fail-on-regression",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

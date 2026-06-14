@@ -1,0 +1,36 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-08_influence_teaching_translator.json"
+  ],
+  "failure_reason": "Final local delivery validation for influence teaching translator passed after direct runtime verification and aggregate PR guard rerun. The guard report returned ready_for_push=True and follow-through found no stale Codex PRs.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 152,
+    "row_sha256": "ffb5a0ddb723a66c0264761a17ef603af7c2394c36bd29d3866c0e45e80920d0",
+    "summary": "final-local-delivery-validation-for-influence-te"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0152-ffb5a0ddb723",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L152"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-08_influence_teaching_translator.json"
+    ],
+    "status": "pass"
+  }
+}

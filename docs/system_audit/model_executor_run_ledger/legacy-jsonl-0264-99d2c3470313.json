@@ -1,0 +1,30 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "bash -n deploy/hostinger/auto-deploy.sh"
+  ],
+  "failure_reason": "Repaired the Hostinger deploy race observed after the header-gated canary merge. Static-only deploys now force the rebuild path when the running API health/SHA cannot be read, and kernel-router canary startup uses docker compose up --no-deps so the canary service no longer rebuilds or recreates the API dependency.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 264,
+    "row_sha256": "99d2c347031314f950870a0d460c8928e353eddbd00c8c4a52c8f457bac98a9d",
+    "summary": "repaired-the-hostinger-deploy-race-observed-afte"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0264-99d2c3470313",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L264"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "bash -n deploy/hostinger/auto-deploy.sh"
+    ],
+    "status": "pass"
+  }
+}

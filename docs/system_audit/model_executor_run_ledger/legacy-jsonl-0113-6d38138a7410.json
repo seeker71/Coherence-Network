@@ -1,0 +1,34 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "cd web && npx tsc --noEmit --pretty false --incremental false",
+    "cd web && npm run build"
+  ],
+  "failure_reason": "Strict public deploy verification after the deploy config stamp still showed web.deployed_sha=unknown, while the same health-proxy payload included the live API deployed SHA. The web health proxy now reports api.deployed_sha as the labeled fallback when local web config is unavailable.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 113,
+    "row_sha256": "6d38138a74102ece6297facf918dd1c3e70d1c0079ba8d7e0b28387d88d5f9f0",
+    "summary": "strict-public-deploy-verification-after-the-depl"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0113-6d38138a7410",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L113"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "cd web && npx tsc --noEmit --pretty false --incremental false",
+      "cd web && npm run build"
+    ],
+    "status": "pass"
+  }
+}

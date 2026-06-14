@@ -1,0 +1,58 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "python3 scripts/native_route_goal_loop.py /goal --source api --seconds 604800 --limit 2000 --json",
+    "scripts/kernel_front_door_local_preflight.sh",
+    "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --port 19122 --routes ../../deploy/front-door/api.bml --stdlib ../form-stdlib",
+    "jq -Rs '{expression: ., grammar:\"bml\", source_label:\"native-front-door-proof\"}' form/form-stdlib/bml/kernel-core.bml | curl -sS -i -X POST http://127.0.0.1:19122/api/substrate/kernel-image/proposals -H 'Accept: application/json' -H 'Content-Type: application/json' --data-binary @-",
+    "curl -sS -i -X POST http://127.0.0.1:19122/api/substrate/kernel-image/proposals -H 'Accept: application/json' -H 'Content-Type: application/json' -d '{\"expression\":\"class SomethingElse {}\",\"grammar\":\"bml\"}'",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-image-proposal.fk form-stdlib/tests/kernel-image-proposal-band.fk",
+    "cd api && python3 -m pytest -q tests/test_substrate_kernel_image_proposals.py tests/test_runtime_web_api_provenance.py",
+    "cd api && python3 -m ruff check tests/test_runtime_web_api_provenance.py",
+    "python3 scripts/validate_spec_quality.py --file specs/kernel-image-proposal-public-interface.md",
+    "python3 scripts/generate_repo_indexes.py",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260609_kernel_image_form_carrier.json",
+    "git diff --check"
+  ],
+  "failure_reason": "Moved kernel-image proposal authority into the BML front-door carrier. POST /api/substrate/kernel-image/proposals is now declared by SubstrateKernelImageProposalRoute and handled by api_substrate_kernel_image_proposals, which recomputes source hashes, count proof, candidate image, trust envelope, mutation refusal, and native_observation.python_authority=false. The Rust native front-door accepted canonical kernel-core BML and rejected unproven source with native router headers; Python remains compatibility proof only, with no new application Python authority added.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 273,
+    "row_sha256": "032261ee057b4f734476dc48b6829a1911ec26579a37d876e1c2f8ddc3846eae",
+    "summary": "moved-kernel-image-proposal-authority-into-the-b"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0273-032261ee057b",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L273"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/native_route_goal_loop.py /goal --source api --seconds 604800 --limit 2000 --json",
+      "scripts/kernel_front_door_local_preflight.sh",
+      "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --port 19122 --routes ../../deploy/front-door/api.bml --stdlib ../form-stdlib",
+      "jq -Rs '{expression: ., grammar:\"bml\", source_label:\"native-front-door-proof\"}' form/form-stdlib/bml/kernel-core.bml | curl -sS -i -X POST http://127.0.0.1:19122/api/substrate/kernel-image/proposals -H 'Accept: application/json' -H 'Content-Type: application/json' --data-binary @-",
+      "curl -sS -i -X POST http://127.0.0.1:19122/api/substrate/kernel-image/proposals -H 'Accept: application/json' -H 'Content-Type: application/json' -d '{\"expression\":\"class SomethingElse {}\",\"grammar\":\"bml\"}'",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/kernel-image-proposal.fk form-stdlib/tests/kernel-image-proposal-band.fk",
+      "cd api && python3 -m pytest -q tests/test_substrate_kernel_image_proposals.py tests/test_runtime_web_api_provenance.py",
+      "cd api && python3 -m ruff check tests/test_runtime_web_api_provenance.py",
+      "python3 scripts/validate_spec_quality.py --file specs/kernel-image-proposal-public-interface.md",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260609_kernel_image_form_carrier.json",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

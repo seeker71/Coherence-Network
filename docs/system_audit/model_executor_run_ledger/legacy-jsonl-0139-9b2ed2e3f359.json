@@ -1,0 +1,38 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "python3 docs/field/urs/tools/youtube_podcast_spectrum.py --field-dir docs/field/urs --events docs/field/urs/output/ten_year_events.jsonl",
+    "python3 -m py_compile docs/field/urs/tools/youtube_podcast_spectrum.py",
+    "python3 youtube podcast spectrum invariant check",
+    "git diff --check"
+  ],
+  "failure_reason": "Podcast influence was implicit inside the YouTube history body and could not yet be queried as a month, channel, or work duration wave. This task derives a YouTube podcast spectrum from normalized history, uses direct video duration where available, marks episode-length estimates where Takeout lacks duration, and leaves RSS-era subscriptions as a future recovery source instead of the current source body.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 139,
+    "row_sha256": "9b2ed2e3f35978ebeb1279d8585b1880cb2905637ddc19c6a38a5c7177c31c2f",
+    "summary": "podcast-influence-was-implicit-inside-the-youtub"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0139-9b2ed2e3f359",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L139"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "python3 docs/field/urs/tools/youtube_podcast_spectrum.py --field-dir docs/field/urs --events docs/field/urs/output/ten_year_events.jsonl",
+      "python3 -m py_compile docs/field/urs/tools/youtube_podcast_spectrum.py",
+      "python3 youtube podcast spectrum invariant check",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

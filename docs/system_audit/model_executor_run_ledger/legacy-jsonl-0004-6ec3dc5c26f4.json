@@ -1,0 +1,48 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make start-gate",
+    "/opt/homebrew/bin/gh pr merge 334 --merge --delete-branch=false --auto=false",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict --auto-merge-ready-stale --auto-merge-dry-run",
+    "ruff check scripts/check_pr_followthrough.py",
+    "python3 -m py_compile scripts/check_pr_followthrough.py",
+    "cd api && pytest -q tests/test_check_pr_followthrough.py",
+    "git fetch origin main && git rebase origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "Stale codex PR followthrough blocked progress; merged stale PR #334 and added opt-in auto-merge logic for merge-ready stale PRs to prevent repeat blocks.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 4,
+    "row_sha256": "6ec3dc5c26f4ebd84316d0b6dde5a390667e7ee2c9647c890c07a8c737d286d5",
+    "summary": "stale-codex-pr-followthrough-blocked-progress-me"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0004-6ec3dc5c26f4",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L4"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make start-gate",
+      "/opt/homebrew/bin/gh pr merge 334 --merge --delete-branch=false --auto=false",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict --auto-merge-ready-stale --auto-merge-dry-run",
+      "ruff check scripts/check_pr_followthrough.py",
+      "python3 -m py_compile scripts/check_pr_followthrough.py",
+      "cd api && pytest -q tests/test_check_pr_followthrough.py",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

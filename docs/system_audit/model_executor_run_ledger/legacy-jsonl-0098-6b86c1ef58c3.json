@@ -1,0 +1,44 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "python3 -m json.tool api/config/prompt_templates.json",
+    "python3 -m json.tool api/config/prompt_templates_b.json",
+    "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest -q tests/test_flow_enforcement.py",
+    "cd api && PROMPT_VARIANT=a /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest -q tests/test_flow_enforcement.py::test_create_task_enforcement_gates",
+    "cd api && PROMPT_VARIANT=b /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest -q tests/test_flow_enforcement.py::test_create_task_enforcement_gates",
+    "ruff check api/app/services/agent_routing/prompt_templates_loader.py api/app/services/agent_service_crud.py api/tests/test_flow_enforcement.py",
+    "NPM_CACHE=/tmp/coherence-npm-cache THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh"
+  ],
+  "failure_reason": "Live monitor showed weak_task_card flags on generated spec tasks. The repair adds config-driven task-card defaults for spec tasks across prompt variants A and B, applies them during task creation before validation, and proves spec tasks with idea_id context now validate at score 1.0 without weak_task_card hygiene flags. The first local web/API contract retry hit npm ETIMEDOUT and then a cold automation_usage latency miss; after dependency/cache warm-up, the full local API/web contract passed.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 98,
+    "row_sha256": "6b86c1ef58c3d72e3af31fbfabcade2ca0d01e7971709e2279db4c80fed0bc66",
+    "summary": "live-monitor-showed-weak-task-card-flags-on-gene"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0098-6b86c1ef58c3",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L98"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "python3 -m json.tool api/config/prompt_templates.json",
+      "python3 -m json.tool api/config/prompt_templates_b.json",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest -q tests/test_flow_enforcement.py",
+      "cd api && PROMPT_VARIANT=a /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest -q tests/test_flow_enforcement.py::test_create_task_enforcement_gates",
+      "cd api && PROMPT_VARIANT=b /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest -q tests/test_flow_enforcement.py::test_create_task_enforcement_gates",
+      "ruff check api/app/services/agent_routing/prompt_templates_loader.py api/app/services/agent_service_crud.py api/tests/test_flow_enforcement.py",
+      "NPM_CACHE=/tmp/coherence-npm-cache THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh"
+    ],
+    "status": "pass"
+  }
+}

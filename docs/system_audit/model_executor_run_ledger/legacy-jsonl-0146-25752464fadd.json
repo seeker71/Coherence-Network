@@ -1,0 +1,40 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "python3 docs/field/urs/tools/build_trace_indexes.py --input docs/field/urs/output/ten_year_events.jsonl --output-dir docs/field/urs/trace",
+    "python3 -m py_compile docs/field/urs/tools/build_trace_indexes.py",
+    "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_field_story_trace_index.py",
+    "git diff --check",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-08_field_event_rich_trace_shape.json"
+  ],
+  "failure_reason": "Field events were still too count-shaped for resonance work. This task enriches generated field trace slices with volume, influence_spectrum, source_mix, and public-safe backtrace_samples. A first duration assertion exposed missing duration on Mose's dated YouTube Takeout trace; the builder now backfills missing duration from existing event traces by YouTube video id, then author/work, then work title, producing 623 duration-backed Mose events and 77.61 known hours from authenticated YouTube Music MyActivity without exposing raw private source bodies.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 146,
+    "row_sha256": "25752464fadd33942d0f1fc7ef7aa5cadf7686ad84163f62fb73f5e366d741fc",
+    "summary": "field-events-were-still-too-count-shaped-for-res"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0146-25752464fadd",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L146"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "python3 docs/field/urs/tools/build_trace_indexes.py --input docs/field/urs/output/ten_year_events.jsonl --output-dir docs/field/urs/trace",
+      "python3 -m py_compile docs/field/urs/tools/build_trace_indexes.py",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_field_story_trace_index.py",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-08_field_event_rich_trace_shape.json"
+    ],
+    "status": "pass"
+  }
+}

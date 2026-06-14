@@ -1,0 +1,40 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord claim bml-protocol-runtime-choice \"lower BML protocol/capability rows into existing route-choice runtime selection; prove four-way and fold into channel-protocol-choice floor; avoid host-IO dynamic registry and production caller lanes\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/bml-source.fk form-stdlib/branch-choice-order.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/tests/bml-protocol-runtime-choice-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/choice-outcome-learning.fk form-stdlib/bml-source.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/channel-protocol-choice-floor.fk form-stdlib/tests/channel-protocol-choice-floor-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh bml-protocol-runtime-choice channel-protocol-choice-floor"
+  ],
+  "failure_reason": "Lowered BML protocol(...) and capability(...) source rows into the existing bml-route-choice-runtime path. Compatible rows now build a protocol-choice receipt row and select kernelRoute through brcr-realize-protocol-capability; mismatched rows route through the same receipt shape to slowOracle with an inspectable bml-protocol-route-choice-signature. Focused validation returns bml-protocol-runtime-choice -> 65535 and channel-protocol-choice-floor -> 262143 with fourth arm included, and the manifest check returns PASS-4WAY for both rows.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 353,
+    "row_sha256": "ab7ff60896b6b0a253ebfffd399ee2903ba0dfc060d32791cc2bef03e0a76005",
+    "summary": "lowered-bml-protocol-and-capability-source-rows-"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0353-ab7ff60896b6",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L353"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim bml-protocol-runtime-choice \"lower BML protocol/capability rows into existing route-choice runtime selection; prove four-way and fold into channel-protocol-choice floor; avoid host-IO dynamic registry and production caller lanes\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/bml-source.fk form-stdlib/branch-choice-order.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/tests/bml-protocol-runtime-choice-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/choice-outcome-learning.fk form-stdlib/bml-source.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/channel-protocol-choice-floor.fk form-stdlib/tests/channel-protocol-choice-floor-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh bml-protocol-runtime-choice channel-protocol-choice-floor"
+    ],
+    "status": "pass"
+  }
+}

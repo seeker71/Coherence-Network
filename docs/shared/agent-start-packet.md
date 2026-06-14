@@ -101,8 +101,9 @@ next fourth-arm gap instead of flattening the proof level.
 Connected tissue north star: keep sister nodes in agreement. The fourth-arm
 manifest carries the current Form/BML floor; substrate north-star `.form` cells
 carry the direction; native executor ledger records carry proof-run coordination;
-JSONL is only the compatibility export/cache; commit evidence ties the current
-breath to exact validation output.
+JSONL is only the compatibility export/cache; the proof-ledger import/sync/check
+commands keep old rows native-addressable without making agents contend on one
+append file; commit evidence ties the current breath to exact validation output.
 
 Record carrier boundary: the fourth arm now carries record construction, get,
 set, has, keys, predicate, blueprint access, folds, field access,

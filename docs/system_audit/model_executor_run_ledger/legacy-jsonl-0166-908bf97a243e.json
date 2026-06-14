@@ -1,0 +1,44 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/rust-bmf.fk form-stdlib/tests/bmf-generic-language-scanner-band.fk",
+    "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/rust-bmf.fk form-stdlib/tests/bmf-generic-language-scanner-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/tests/bmf-source-scanner-rule-band.fk",
+    "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/tests/bmf-source-scanner-rule-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/source-compiler.fk form-stdlib/tests/bmf-byte-cursor-source-band.fk",
+    "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/source-compiler.fk form-stdlib/tests/bmf-byte-cursor-source-band.fk",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-23_python_form_bmf_runtime.json"
+  ],
+  "failure_reason": "Refactored the Form source scanner into dialect-described runtime data. Python, TypeScript, Go, and Rust source snippets now flow through one scanner path into BMF source objects, then each language BMF rule emits native Form nodes with source and binary sibling-kernel parity.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 166,
+    "row_sha256": "908bf97a243efb200ca2bbfcb389b2564ad9b721f9e5b4bf075e1854207d3969",
+    "summary": "refactored-the-form-source-scanner-into-dialect-"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0166-908bf97a243e",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L166"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/rust-bmf.fk form-stdlib/tests/bmf-generic-language-scanner-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/grammars/typescript-bmf.fk form-stdlib/grammars/go-bmf.fk form-stdlib/grammars/rust-bmf.fk form-stdlib/tests/bmf-generic-language-scanner-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/tests/bmf-source-scanner-rule-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/tests/bmf-source-scanner-rule-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/source-compiler.fk form-stdlib/tests/bmf-byte-cursor-source-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/source-compiler.fk form-stdlib/tests/bmf-byte-cursor-source-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-23_python_form_bmf_runtime.json"
+    ],
+    "status": "pass"
+  }
+}

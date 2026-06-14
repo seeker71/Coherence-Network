@@ -1,0 +1,54 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_edge_cases_regression.py::test_wellness_kernel_live_probe_covers_kernel_served_recipe_ledger",
+    "cd api && /opt/homebrew/bin/ruff check ../scripts/wellness_check.py tests/test_edge_cases_regression.py",
+    "python3 -m py_compile scripts/wellness_check.py",
+    "curl -fsS https://api.coherencycoin.com/api/health | python3 -m json.tool",
+    "python3 sense_kernel_api direct probe",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-10_kernel_live_stability_coverage.json",
+    "git diff --check",
+    "git fetch origin main && git rebase --autostash origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "Expanded wellness kernel-live stability sensing from the stale seven-route map to the full KERNEL_SERVED_RECIPES ledger. The pure regression test proves every ledger route maps to a live endpoint path, and the direct kernel sensor reports production kernel_runtime inline with checked 22/22 kernel-served endpoints and no fallback. Evidence validation, index check, diff check, rebase, PR guard, and follow-through guard passed.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 304,
+    "row_sha256": "8ec236883530b582f2db1c2172f8d208c2ac50a9c5b5dfc7aac2e281885eab32",
+    "summary": "expanded-wellness-kernel-live-stability-sensing-"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0304-8ec236883530",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L304"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_edge_cases_regression.py::test_wellness_kernel_live_probe_covers_kernel_served_recipe_ledger",
+      "cd api && /opt/homebrew/bin/ruff check ../scripts/wellness_check.py tests/test_edge_cases_regression.py",
+      "python3 -m py_compile scripts/wellness_check.py",
+      "curl -fsS https://api.coherencycoin.com/api/health | python3 -m json.tool",
+      "python3 sense_kernel_api direct probe",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-10_kernel_live_stability_coverage.json",
+      "git diff --check",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

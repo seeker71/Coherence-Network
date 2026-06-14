@@ -1,0 +1,34 @@
+{
+  "attempts": 7,
+  "commands_run": [
+    "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+    "cd api && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py",
+    "POST /api/agent/tasks (claude dangerous-flag smoke)"
+  ],
+  "failure_reason": "Runner update removed low-UID fallback and exposed root-only host with no eligible non-root account; add auto-provisioned non-root user creation path when AGENT_RUN_AS_AUTO_CREATE is enabled.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 23,
+    "row_sha256": "9c72fdfa6107df805908e6434ffcfc44ccfbd8f1c1c12fc04d09981441c73a28",
+    "summary": "runner-update-removed-low-uid-fallback-and-expos"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0023-9c72fdfa6107",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L23"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+      "cd api && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py",
+      "POST /api/agent/tasks (claude dangerous-flag smoke)"
+    ],
+    "status": "pass"
+  }
+}

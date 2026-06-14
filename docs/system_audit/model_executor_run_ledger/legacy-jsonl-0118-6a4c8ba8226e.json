@@ -1,0 +1,38 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "python3 -m pytest -v api/tests/test_frequency_profile_contributor_alias.py",
+    "python3 -m pytest -v api/tests/test_import_lineage_edges.py",
+    "python3 -m json.tool docs/lineage/urs-contribution-profile.graph.json >/tmp/urs_manifest_validated.json && jq '{presences:(.presences|length), edges:(.edges|length)}' docs/lineage/urs-contribution-profile.graph.json",
+    "python3 scripts/import_lineage.py docs/lineage/urs-contribution-profile.graph.json --api http://localhost:8000 --source contributor:seeker71 --dry-run"
+  ],
+  "failure_reason": "The profile UI fetches bare contributor ids while the graph profile data is keyed as contributor-prefixed nodes, and the lineage importer did not replay explicit edges. This task adds generic contributor id resolution, source-backed graph manifest data, and CLI/API edge replay so frequencies derive from ordinary contribution graph records.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 118,
+    "row_sha256": "6a4c8ba8226e4960f5d6d26504af536373aeaf4ffc9cc7f93ce2c050e37415fd",
+    "summary": "the-profile-ui-fetches-bare-contributor-ids-whil"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0118-6a4c8ba8226e",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L118"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "python3 -m pytest -v api/tests/test_frequency_profile_contributor_alias.py",
+      "python3 -m pytest -v api/tests/test_import_lineage_edges.py",
+      "python3 -m json.tool docs/lineage/urs-contribution-profile.graph.json >/tmp/urs_manifest_validated.json && jq '{presences:(.presences|length), edges:(.edges|length)}' docs/lineage/urs-contribution-profile.graph.json",
+      "python3 scripts/import_lineage.py docs/lineage/urs-contribution-profile.graph.json --api http://localhost:8000 --source contributor:seeker71 --dry-run"
+    ],
+    "status": "pass"
+  }
+}

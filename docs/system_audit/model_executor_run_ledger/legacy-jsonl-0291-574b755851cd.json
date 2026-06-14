@@ -1,0 +1,44 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "make native-route-goal-tending",
+    "cd form/form-kernel-rust && cargo fmt --check && cargo build --release",
+    "cd form/form-kernel-rust && cargo test source_compiled_workload_executes_bml_tending_cells --release",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-09_rust_source_workload_runner.json",
+    "cd form/form-kernel-rust && cargo test --release",
+    "git diff --check"
+  ],
+  "failure_reason": "Added a Rust kernel `run --stdlib <dir> <file.fk...>` binding that source-compiles section-authored Form/BML workload files through the existing Form source compiler and executes the resulting Form object directly. `make native-route-goal-tending` now uses this native source-aware runner and returns the route-goal Form object instead of failing in the raw S-expression parser on BML source syntax. No Python fallback was added.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 291,
+    "row_sha256": "574b755851cdeb822048d191901c57bb1031953c1bcc276a33a5a0e69246e4f2",
+    "summary": "added-a-rust-kernel-run-stdlib-dir-file-fk-bindi"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0291-574b755851cd",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L291"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "make native-route-goal-tending",
+      "cd form/form-kernel-rust && cargo fmt --check && cargo build --release",
+      "cd form/form-kernel-rust && cargo test source_compiled_workload_executes_bml_tending_cells --release",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-09_rust_source_workload_runner.json",
+      "cd form/form-kernel-rust && cargo test --release",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

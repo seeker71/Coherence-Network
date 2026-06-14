@@ -1,0 +1,34 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "bash -n deploy/hostinger/auto-deploy.sh",
+    "python3 scripts/validate_workflow_references.py"
+  ],
+  "failure_reason": "Hostinger Auto Deploy failed twice in the remote roll-forward step while docker compose output was hidden in the VPS deploy log. The workflow now preserves the remote exit status, streams compose build/up output, and tails the remote deploy log on failure so deployment blockers expose exact output.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 110,
+    "row_sha256": "81d9297563643be4d29beec480690bd45aaf87924bb36de342f60394df13bb6e",
+    "summary": "hostinger-auto-deploy-failed-twice-in-the-remote"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0110-81d929756364",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L110"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "bash -n deploy/hostinger/auto-deploy.sh",
+      "python3 scripts/validate_workflow_references.py"
+    ],
+    "status": "pass"
+  }
+}

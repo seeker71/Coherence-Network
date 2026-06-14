@@ -1,0 +1,36 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "npx -y playwright screenshot --device='Desktop Chrome' https://coherence-network.vercel.app/flow /tmp/flow-vercel-after-fix.png",
+    "curl -sS https://coherence-network-production.up.railway.app/api/contributors?limit=150",
+    "curl -sS https://coherence-network-production.up.railway.app/api/contributions?limit=400",
+    "cd web && npm run build"
+  ],
+  "failure_reason": "Detected production /flow still sourcing contributors/contributions from non-canonical API base and pinned production fetches to the canonical Railway API URL.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 41,
+    "row_sha256": "c0b632b88a5e851a780a21ccc1e4922e5c1c1830153523e60cdf6840092dc8c9",
+    "summary": "detected-production-flow-still-sourcing-contribu"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0041-c0b632b88a5e",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L41"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "npx -y playwright screenshot --device='Desktop Chrome' https://coherence-network.vercel.app/flow /tmp/flow-vercel-after-fix.png",
+      "curl -sS https://coherence-network-production.up.railway.app/api/contributors?limit=150",
+      "curl -sS https://coherence-network-production.up.railway.app/api/contributions?limit=400",
+      "cd web && npm run build"
+    ],
+    "status": "pass"
+  }
+}

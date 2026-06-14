@@ -1,0 +1,34 @@
+{
+  "attempts": 3,
+  "commands_run": [
+    "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py::test_resolve_node_binary_prefers_non_shim_candidate tests/test_agent_runner_tool_failure_telemetry.py::test_resolve_node_binary_falls_back_to_shim_when_no_concrete_binary tests/test_agent_runner_tool_failure_telemetry.py::test_configure_codex_cli_environment_bootstraps_oauth_session_from_b64",
+    "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+    "cd api && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py"
+  ],
+  "failure_reason": "Post-deploy host runner still failed: cursor linked /usr/local/bin/node to /mise/shims/node (recursive shim) and codex kept stale /root/.codex/auth.json despite AGENT_CODEX_OAUTH_SESSION_B64 being available. Runner now prefers concrete node binaries and hydrates oauth session file from AGENT_CODEX_OAUTH_SESSION_B64.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 27,
+    "row_sha256": "1ed2e2541da30c2f6bd7beed44febfc300ce3470e6eb959a298c97c29ec1b3af",
+    "summary": "post-deploy-host-runner-still-failed-cursor-link"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0027-1ed2e2541da3",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L27"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py::test_resolve_node_binary_prefers_non_shim_candidate tests/test_agent_runner_tool_failure_telemetry.py::test_resolve_node_binary_falls_back_to_shim_when_no_concrete_binary tests/test_agent_runner_tool_failure_telemetry.py::test_configure_codex_cli_environment_bootstraps_oauth_session_from_b64",
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+      "cd api && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py"
+    ],
+    "status": "pass"
+  }
+}

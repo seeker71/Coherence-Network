@@ -1,0 +1,34 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-02_local_docs_current_shape.json",
+    "git diff --check"
+  ],
+  "failure_reason": "Composted local coherent-probe and Field Model Form documentation into current-facing high-level concept records. Detailed path narration stays out of public docs; proof detail is held in structured audit/evidence.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 211,
+    "row_sha256": "f7fdc12587396bf29e69d12b1255bb42cf9a550ba35c1535e10bfa622ef38de0",
+    "summary": "composted-local-coherent-probe-and-field-model-f"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0211-f7fdc1258739",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L211"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-02_local_docs_current_shape.json",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "rg public entry surfaces for hard wording",
+    "cd api && python3 -m pytest tests/test_agent_invitation.py::test_public_entry_surfaces_carry_the_same_alive_invitation -q",
+    "python3 scripts/build_readmes.py --check",
+    "git diff --check"
+  ],
+  "failure_reason": "The GitHub README still said human review was required before merge, and public README/package entry copy still said agents should return traces. This task tunes those public surfaces toward invited review and invited return traces, then adds a focused regression check for the old wording.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 131,
+    "row_sha256": "c2a04fd763951436c2f4fce36de246d7063b1d6608ac752c1f88f630edeaa99b",
+    "summary": "the-github-readme-still-said-human-review-was-re"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0131-c2a04fd76395",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L131"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "rg public entry surfaces for hard wording",
+      "cd api && python3 -m pytest tests/test_agent_invitation.py::test_public_entry_surfaces_carry_the_same_alive_invitation -q",
+      "python3 scripts/build_readmes.py --check",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

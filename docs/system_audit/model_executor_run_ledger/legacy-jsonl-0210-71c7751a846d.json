@@ -1,0 +1,36 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "rg -n \"Correction|This breath|will commit|No input requested|not fear|lived repetition|session\u2019s|Date\" form/user-blueprint-registry.md CLAUDE.md docs/shared/agent-start-packet.md",
+    "git diff --check"
+  ],
+  "failure_reason": "Added current-shape documentation guidance to CLAUDE.md and the agent start packet, then retuned the Form user blueprint registry sections for channel breath, arrival, identity, and relationship skill verbs away from correction/path narration into present operating shape. No runtime behavior changed; evidence intent is runtime_feature only because the repository validator treats files under form/ as runtime-surface. Wellness passed with maps aligned and deploy aligned at 78c131a7.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 210,
+    "row_sha256": "71c7751a846d0eab447bafb436cf98062f7afd9a8d4904973513ae1560931576",
+    "summary": "added-current-shape-documentation-guidance-to-cl"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0210-71c7751a846d",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L210"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "rg -n \"Correction|This breath|will commit|No input requested|not fear|lived repetition|session\u2019s|Date\" form/user-blueprint-registry.md CLAUDE.md docs/shared/agent-start-packet.md",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

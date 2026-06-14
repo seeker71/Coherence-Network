@@ -1,0 +1,38 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "git fetch origin main && git rebase --autostash origin/main",
+    "resolve web/app/people/page.tsx conflict",
+    "cd api && .venv/bin/pytest -q tests/test_vision_content.py",
+    "cd web && npm run build"
+  ],
+  "failure_reason": "The local guard found the branch was behind origin/main by three commits. I rebased with autostash, resolved the single people-page conflict by preserving data-driven copy/filter rules and upstream asset-noise filtering, then reran the focused API test and web build successfully.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 81,
+    "row_sha256": "b5f77948a2d19306ba56d84c054cbd826a97cf8bc314afd42a44baa8045a8282",
+    "summary": "the-local-guard-found-the-branch-was-behind-orig"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0081-b5f77948a2d1",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L81"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "resolve web/app/people/page.tsx conflict",
+      "cd api && .venv/bin/pytest -q tests/test_vision_content.py",
+      "cd web && npm run build"
+    ],
+    "status": "pass"
+  }
+}

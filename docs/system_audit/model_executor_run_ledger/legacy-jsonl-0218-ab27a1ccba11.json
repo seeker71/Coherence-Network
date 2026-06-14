@@ -1,0 +1,34 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "bash -lc 'set -e; retry_remote() { local attempt=1; local max_attempts=1; while :; do if \"$@\"; then return 0; else rc=$?; fi; if [ \"$attempt\" -ge \"$max_attempts\" ]; then return \"$rc\"; fi; attempt=$((attempt + 1)); done; }; set +e; retry_remote bash -c \"exit 7\"; observed=$?; set -e; test \"$observed\" -eq 7'",
+    "bash -lc 'set -e; retry_remote() { local attempt=1; local max_attempts=1; while :; do if \"$@\"; then return 0; else rc=$?; fi; if [ \"$attempt\" -ge \"$max_attempts\" ]; then return \"$rc\"; fi; attempt=$((attempt + 1)); done; }; retry_remote bash -c \"exit 0\"'"
+  ],
+  "failure_reason": "Fixed Hostinger deploy retry_remote status capture by reading the tested command status inside the else branch. The shell reproduction preserves a failing status of 7 and accepts status 0, preventing the rc=0 false-failure loop seen in the PR #2381 deploy.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 218,
+    "row_sha256": "ab27a1ccba11662cc4f0e42439f96e59942367e1c88633d4517228c8d2bb0cc9",
+    "summary": "fixed-hostinger-deploy-retry-remote-status-captu"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0218-ab27a1ccba11",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L218"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "bash -lc 'set -e; retry_remote() { local attempt=1; local max_attempts=1; while :; do if \"$@\"; then return 0; else rc=$?; fi; if [ \"$attempt\" -ge \"$max_attempts\" ]; then return \"$rc\"; fi; attempt=$((attempt + 1)); done; }; set +e; retry_remote bash -c \"exit 7\"; observed=$?; set -e; test \"$observed\" -eq 7'",
+      "bash -lc 'set -e; retry_remote() { local attempt=1; local max_attempts=1; while :; do if \"$@\"; then return 0; else rc=$?; fi; if [ \"$attempt\" -ge \"$max_attempts\" ]; then return \"$rc\"; fi; attempt=$((attempt + 1)); done; }; retry_remote bash -c \"exit 0\"'"
+    ],
+    "status": "pass"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "cd form/form-kernel-rust && cargo build --release",
+    "cd api && .venv/bin/pytest tests/test_runtime_web_api_provenance.py -q",
+    "/Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest tests/test_runtime_web_api_provenance.py -q",
+    "form/form-kernel-rust/target/release/form-kernel-rust check --routes deploy/front-door/api.bml --stdlib form/form-stdlib",
+    "git show origin/main:deploy/front-door/api.bml > /tmp/coherence-api-origin-main.bml && form/form-kernel-rust/target/release/form-kernel-rust check --routes /tmp/coherence-api-origin-main.bml --stdlib form/form-stdlib",
+    "python3 direct native_route_goal_loop route_status check for GET /api/inventory/flow"
+  ],
+  "failure_reason": "Created a BML front-door inventory lineage grammar for GET /api/inventory/flow. The native route now projects ideas through spec, process, implementation, validation, contributors, contributions, assets, chain, interdependencies, unblock queue, and idea signals from graph_nodes, spec_registry_entries, runtime_events, contribution_ledger, and graph_edges, with native_observation.python_authority=false. Focused provenance tests passed; direct route_status returned kernel-native-high-grammar BML. Worktree-local .venv pytest was absent, so the focused test was rerun through the existing repo venv from the worktree. Full api.bml check still reports the same 14 unresolved names as origin/main, unchanged by this branch.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 278,
+    "row_sha256": "6721e81cf65fafed85c76ab08dd8501893f3d45876315779ee2e80a93bd6829c",
+    "summary": "created-a-bml-front-door-inventory-lineage-gramm"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0278-6721e81cf65f",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L278"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form/form-kernel-rust && cargo build --release",
+      "cd api && .venv/bin/pytest tests/test_runtime_web_api_provenance.py -q",
+      "/Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest tests/test_runtime_web_api_provenance.py -q",
+      "form/form-kernel-rust/target/release/form-kernel-rust check --routes deploy/front-door/api.bml --stdlib form/form-stdlib",
+      "git show origin/main:deploy/front-door/api.bml > /tmp/coherence-api-origin-main.bml && form/form-kernel-rust/target/release/form-kernel-rust check --routes /tmp/coherence-api-origin-main.bml --stdlib form/form-stdlib",
+      "python3 direct native_route_goal_loop route_status check for GET /api/inventory/flow"
+    ],
+    "status": "pass"
+  }
+}

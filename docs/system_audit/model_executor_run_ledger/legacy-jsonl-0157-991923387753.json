@@ -1,0 +1,72 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "for id in lc-perception-as-interface lc-play lc-field-sensing lc-expressing lc-inner-travel lc-trust-as-gateway lc-presence-over-protection lc-assemblage-point lc-relationships-as-mirrors; do test -f docs/vision-kb/concepts/$id.md; done",
+    "rg -n \"lc-sacred-imagination|Sacred Imagination\" docs/vision-kb/INDEX.md docs/vision-kb/LOG.md docs/vision-kb/resources/sacred-imagination-emilio-ortiz-2026-05-14.md",
+    "python3 scripts/sync_kb_to_db.py lc-sacred-imagination --dry-run",
+    "python3 scripts/sync_kb_to_db.py lc-sacred-imagination --api-key dev-key",
+    "python3 scripts/coh_substrate.py ingest --concepts",
+    "python3 scripts/coh_substrate.py annotate docs/vision-kb/concepts/lc-sacred-imagination.md",
+    "python3 scripts/coh_substrate.py equivalent concept lc-sacred-imagination",
+    "python3 -m py_compile scripts/coh_substrate.py",
+    "python3 scripts/coh_substrate.py kb-sync-audit",
+    "python3 scripts/coh_substrate.py kb-sync-audit --prune-stale",
+    "python3 scripts/coh_substrate.py kb-sync-audit --strict",
+    "python3 scripts/coh_substrate.py --json kb-sync-audit",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "python3 scripts/validate_spec_quality.py --file specs/sacred-imagination-embodiment.md",
+    "python3 scripts/validate_spec_quality.py --file specs/kb-substrate-sync-discipline.md",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-14_sacred_imagination_embodiment.json",
+    "git diff --check",
+    "git fetch origin main && git rebase origin/main --autostash",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "Sacred Imagination source moved from digest into embodied KB practice and substrate concept cell. KB/substrate audit discipline now reports missing, stale, path-drift, wrong-domain, duplicate-id, and unmodeled KB surfaces; strict audit is clean for 114 canonical concepts, with resources/transmissions/language views named as follow-up modeling gaps.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 157,
+    "row_sha256": "9919233877534b1beb222ba2add13e01c93434696d94f621e39ddceb455e77da",
+    "summary": "sacred-imagination-source-moved-from-digest-into"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0157-991923387753",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L157"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "for id in lc-perception-as-interface lc-play lc-field-sensing lc-expressing lc-inner-travel lc-trust-as-gateway lc-presence-over-protection lc-assemblage-point lc-relationships-as-mirrors; do test -f docs/vision-kb/concepts/$id.md; done",
+      "rg -n \"lc-sacred-imagination|Sacred Imagination\" docs/vision-kb/INDEX.md docs/vision-kb/LOG.md docs/vision-kb/resources/sacred-imagination-emilio-ortiz-2026-05-14.md",
+      "python3 scripts/sync_kb_to_db.py lc-sacred-imagination --dry-run",
+      "python3 scripts/sync_kb_to_db.py lc-sacred-imagination --api-key dev-key",
+      "python3 scripts/coh_substrate.py ingest --concepts",
+      "python3 scripts/coh_substrate.py annotate docs/vision-kb/concepts/lc-sacred-imagination.md",
+      "python3 scripts/coh_substrate.py equivalent concept lc-sacred-imagination",
+      "python3 -m py_compile scripts/coh_substrate.py",
+      "python3 scripts/coh_substrate.py kb-sync-audit",
+      "python3 scripts/coh_substrate.py kb-sync-audit --prune-stale",
+      "python3 scripts/coh_substrate.py kb-sync-audit --strict",
+      "python3 scripts/coh_substrate.py --json kb-sync-audit",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/validate_spec_quality.py --file specs/sacred-imagination-embodiment.md",
+      "python3 scripts/validate_spec_quality.py --file specs/kb-substrate-sync-discipline.md",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-14_sacred_imagination_embodiment.json",
+      "git diff --check",
+      "git fetch origin main && git rebase origin/main --autostash",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

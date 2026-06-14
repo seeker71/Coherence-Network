@@ -1,0 +1,36 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "git fetch origin main && git rebase origin/main",
+    "if rg -n \"node\\.slug ===|anne-tucker|liquid-bloom|Liquid Bloom|Anne Tucker|Click for Free Healing|Latests Releases|visuals/brand/liquid\" 'web/app/presence-walk/node/[slug]/page.tsx'; then exit 1; else echo OK; fi",
+    "cd web && npm run build",
+    "Playwright screenshot sweep on http://localhost:3125 for all 24 /presence-walk/node/{slug} routes"
+  ],
+  "failure_reason": "Follow-up feedback rejected slug-specific hardcoding in the route. The Anne Tucker and Liquid Bloom source layouts were moved into typed presence source-visual data, and the route now renders reusable source-visual templates without checking either slug or embedding their copy/assets in the page component.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 75,
+    "row_sha256": "f4d0924d6ffa60237aabfa768e08cf0eb3e9a6aee9cbdfb16c539d9dca54902a",
+    "summary": "follow-up-feedback-rejected-slug-specific-hardco"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0075-f4d0924d6ffa",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L75"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "git fetch origin main && git rebase origin/main",
+      "if rg -n \"node\\.slug ===|anne-tucker|liquid-bloom|Liquid Bloom|Anne Tucker|Click for Free Healing|Latests Releases|visuals/brand/liquid\" 'web/app/presence-walk/node/[slug]/page.tsx'; then exit 1; else echo OK; fi",
+      "cd web && npm run build",
+      "Playwright screenshot sweep on http://localhost:3125 for all 24 /presence-walk/node/{slug} routes"
+    ],
+    "status": "pass"
+  }
+}

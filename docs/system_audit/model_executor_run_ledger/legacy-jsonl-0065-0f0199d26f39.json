@@ -1,0 +1,42 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "git fetch origin main",
+    "git rebase --autostash origin/main",
+    "cd api && pytest -q tests/test_check_generated_vision_assets.py",
+    "python3 scripts/check_generated_vision_assets.py",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+  ],
+  "failure_reason": "The process-memory update exposed a second root cause: translated concept files such as lc-nourishing.de.md were being mapped to non-existent localized story image names by the generated-asset checker. I corrected the checker to derive story asset names from frontmatter concept ids and added a regression test so localized concept files no longer block deploy guards with false missing-asset reports.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 65,
+    "row_sha256": "0f0199d26f396d22ffb54541f5f2c38312f6f471b201b418fcf4990f7dd98c9c",
+    "summary": "the-process-memory-update-exposed-a-second-root-"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0065-0f0199d26f39",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L65"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "git fetch origin main",
+      "git rebase --autostash origin/main",
+      "cd api && pytest -q tests/test_check_generated_vision_assets.py",
+      "python3 scripts/check_generated_vision_assets.py",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ],
+    "status": "pass"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "gh workflow run hostinger-auto-deploy.yml --repo seeker71/Coherence-Network -r main -f sha=e2e0645a56a982b9460754f90b6755e47e348d8e",
+    "bash -n scripts/settle_public_deploy.sh scripts/test_settle_public_deploy_dispatch.sh scripts/test_settle_public_deploy_stale_target_dispatch.sh",
+    "perl -e 'alarm shift; exec @ARGV' 20 bash scripts/test_settle_public_deploy_dispatch.sh",
+    "perl -e 'alarm shift; exec @ARGV' 20 bash scripts/test_settle_public_deploy_stale_target_dispatch.sh",
+    "gh run watch 26892572855 --repo seeker71/Coherence-Network --exit-status --interval 10"
+  ],
+  "failure_reason": "Added stale-target dispatch to settle_public_deploy: when main advances to a SHA with no Hostinger deploy run and the latest Hostinger run targets an older SHA, the settle command dispatches the current main SHA once instead of waiting indefinitely. Focused tests pass. Manual deploy run 26892572855 for e2e0645a56a982b9460754f90b6755e47e348d8e still failed at ssh-keyscan/scp timeout to 187.77.152.42:22, so public deploy remains externally blocked.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 232,
+    "row_sha256": "f2ce3bead5446ee7adffad3b39253e453c6ebb16ab4000c37b2512570e6a7836",
+    "summary": "added-stale-target-dispatch-to-settle-public-dep"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0232-f2ce3bead544",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L232"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "gh workflow run hostinger-auto-deploy.yml --repo seeker71/Coherence-Network -r main -f sha=e2e0645a56a982b9460754f90b6755e47e348d8e",
+      "bash -n scripts/settle_public_deploy.sh scripts/test_settle_public_deploy_dispatch.sh scripts/test_settle_public_deploy_stale_target_dispatch.sh",
+      "perl -e 'alarm shift; exec @ARGV' 20 bash scripts/test_settle_public_deploy_dispatch.sh",
+      "perl -e 'alarm shift; exec @ARGV' 20 bash scripts/test_settle_public_deploy_stale_target_dispatch.sh",
+      "gh run watch 26892572855 --repo seeker71/Coherence-Network --exit-status --interval 10"
+    ],
+    "status": "pass"
+  }
+}

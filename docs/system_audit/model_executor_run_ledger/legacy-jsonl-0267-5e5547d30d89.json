@@ -1,0 +1,52 @@
+{
+  "attempts": 2,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "COORD_AGENT=codex scripts/agent-coord.sh protocol",
+    "COORD_AGENT=codex scripts/agent-coord.sh view",
+    "COORD_AGENT=codex scripts/agent-coord.sh claim \"satsang flip witness: form/form-stdlib/satsang.fk docs/coherence-substrate/satsang-circle.form evidence\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-flip-witness.fk form-stdlib/tests/satsang-flip-witness-band.fk",
+    "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-flip-witness.fk form-stdlib/tests/satsang-flip-witness-band.fk",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-09_satsang_flip_witness.json",
+    "git diff --check",
+    "git fetch origin main && git rebase origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "Added a Form-native satsang flip witness cell. The first source proof exposed a sibling-kernel truthiness mismatch: Go returned 4031 while Rust and TypeScript returned 4095; changing sat-welcome to an explicit equality check made source and binary proofs return 4095 across all sibling kernels. The witness binds agent-board claim/share discipline, treatment native-kernel, no-header fanout-python control, rollback and decision receipts, ordinary_traffic_flip_performed=false, visible dissent/silence, dropped projection, and 0/1/silence/protocol/fail/stop/BMA markers.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 267,
+    "row_sha256": "5e5547d30d8916216621c55ad4da3f9754e6ce54a72d3e903b52b7c2bb029fb6",
+    "summary": "added-a-form-native-satsang-flip-witness-cell-th"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0267-5e5547d30d89",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L267"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "COORD_AGENT=codex scripts/agent-coord.sh protocol",
+      "COORD_AGENT=codex scripts/agent-coord.sh view",
+      "COORD_AGENT=codex scripts/agent-coord.sh claim \"satsang flip witness: form/form-stdlib/satsang.fk docs/coherence-substrate/satsang-circle.form evidence\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-flip-witness.fk form-stdlib/tests/satsang-flip-witness-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/channel-interface.fk form-stdlib/satsang.fk form-stdlib/satsang-flip-witness.fk form-stdlib/tests/satsang-flip-witness-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-09_satsang_flip_witness.json",
+      "git diff --check",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

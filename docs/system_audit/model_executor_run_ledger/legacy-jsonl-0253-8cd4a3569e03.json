@@ -1,0 +1,58 @@
+{
+  "attempts": 2,
+  "commands_run": [
+    "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/tests/native-mutation-side-effects-band.fk",
+    "form/scripts/native-mutation-side-effects-test.sh",
+    "cd api && python3 -m pytest -q tests/test_native_mutation_side_effects_form.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py",
+    "cd api && python3 -m ruff check tests/test_native_mutation_side_effects_form.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py",
+    "python3 scripts/validate_spec_quality.py --file specs/native-mutation-side-effects.md",
+    "python3 scripts/validate_spec_quality.py --file specs/native-mutation-trust-envelope.md",
+    "python3 scripts/validate_spec_quality.py --file specs/native-mutation-response-projection.md",
+    "python3 scripts/validate_spec_quality.py --file specs/native-mutation-ab-observation-gate.md",
+    "python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expression.md",
+    "python3 scripts/validate_spec_quality.py --file specs/spec-registry-source-native.md",
+    "python3 scripts/validate_spec_quality.py --file specs/method-specific-native-mutation-preview-bindings.md",
+    "python3 scripts/validate_spec_quality.py --file specs/native-graph-mutation-live-db-proof.md",
+    "python3 scripts/generate_repo_indexes.py",
+    "python3 scripts/generate_repo_indexes.py --check"
+  ],
+  "failure_reason": "Added a Form-native side-effect execution carrier for native mutation trust-envelope intents. The first validation exposed an extra closing paren in native-mutation-side-effects.fk, which returned a closure and made the TypeScript kernel reject the module; the structural fix made the sibling band return 11111. The live script then returned verdict 11111111 after executing cache-invalidation receipt, parent-edge repair, contributor-key audit, and rollback receipt against throwaway Postgres. Public mutation traffic remains FastAPI by default, with the next boundary now route-runner binding and a reversible public gate.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 253,
+    "row_sha256": "8cd4a3569e0377700c872d76c66ae63539c5377c4f381df350f404cef1c8d393",
+    "summary": "added-a-form-native-side-effect-execution-carrie"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0253-8cd4a3569e03",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L253"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/tests/native-mutation-side-effects-band.fk",
+      "form/scripts/native-mutation-side-effects-test.sh",
+      "cd api && python3 -m pytest -q tests/test_native_mutation_side_effects_form.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py",
+      "cd api && python3 -m ruff check tests/test_native_mutation_side_effects_form.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py",
+      "python3 scripts/validate_spec_quality.py --file specs/native-mutation-side-effects.md",
+      "python3 scripts/validate_spec_quality.py --file specs/native-mutation-trust-envelope.md",
+      "python3 scripts/validate_spec_quality.py --file specs/native-mutation-response-projection.md",
+      "python3 scripts/validate_spec_quality.py --file specs/native-mutation-ab-observation-gate.md",
+      "python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expression.md",
+      "python3 scripts/validate_spec_quality.py --file specs/spec-registry-source-native.md",
+      "python3 scripts/validate_spec_quality.py --file specs/method-specific-native-mutation-preview-bindings.md",
+      "python3 scripts/validate_spec_quality.py --file specs/native-graph-mutation-live-db-proof.md",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check"
+    ],
+    "status": "pass"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "ruby -e 'require \"yaml\"; YAML.load_file(\".github/workflows/hostinger-auto-deploy.yml\"); puts \"yaml ok\"'",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-01_hostinger_ssh_accept_new.json"
+  ],
+  "failure_reason": "Patched Hostinger Auto Deploy so repeated ssh-keyscan timeout no longer blocks deployment before the SSH attempt. After five keyscan failures the workflow writes a host-specific OpenSSH config with StrictHostKeyChecking=accept-new, keeping noninteractive host-key handling while allowing the deploy connection to proceed.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 196,
+    "row_sha256": "b923342006721a72a781bae43be3f86360448310e849521673815f8d3ffe58b3",
+    "summary": "patched-hostinger-auto-deploy-so-repeated-ssh-ke"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0196-b92334200672",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L196"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "ruby -e 'require \"yaml\"; YAML.load_file(\".github/workflows/hostinger-auto-deploy.yml\"); puts \"yaml ok\"'",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-01_hostinger_ssh_accept_new.json"
+    ],
+    "status": "pass"
+  }
+}

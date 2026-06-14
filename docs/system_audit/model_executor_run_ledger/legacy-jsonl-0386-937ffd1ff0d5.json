@@ -1,0 +1,44 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord claim \"production front-door telemetry and producer pacing\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/cell-log-store.fk form-stdlib/http-parse.fk form-stdlib/kernel-http.fk form-stdlib/http-request.fk form-stdlib/http-render.fk form-stdlib/http-server.fk form-stdlib/http-socket.fk form-stdlib/channel.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-multi-source-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-real-source-band.fk",
+    "curl -sS --max-time 12 -w '\\nCURL_HTTP_CODE=%{http_code}\\nCURL_TIME_TOTAL=%{time_total}\\nCURL_SIZE_DOWNLOAD=%{size_download}\\n' -D /tmp/hati-frontdoor-headers.txt -o /tmp/hati-frontdoor-body.json -H 'Accept: application/json' 'https://api.coherencycoin.com/api/runtime/endpoints/summary?limit=5'",
+    "curl -sS --max-time 12 -w '\\nCURL_HTTP_CODE=%{http_code}\\nCURL_TIME_TOTAL=%{time_total}\\nCURL_SIZE_DOWNLOAD=%{size_download}\\n' -D /tmp/hati-ideas-gate-headers.txt -o /tmp/hati-ideas-gate-body.json -H 'Accept: application/json' -H 'X-Form-Native-Public-Gate: 1' 'https://api.coherencycoin.com/api/ideas?limit=1&sort=marginal_cc'",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_frontdoor_backpressure.json"
+  ],
+  "failure_reason": "Added production front-door telemetry and producer pacing rows to the Form-native summary source lane. The multi-source band returns 65535 on Go/Rust/TypeScript with a sampled production runtime-summary telemetry receipt, socket-served local route trace, and .fkb producer pacing that reads two payloads before ack, holds one deferred payload, advances ack cursor 3, appends after ack, and reads the deferred payload back. The live public runtime-summary probe returned HTTP 200, X-Form-Router native-kernel, X-Form-Handler api_runtime_endpoints_summary, X-Form-Python-Authority false, 2347 body bytes, and 0.226394s total time; the native-public-gated ideas route remains residual pressure with HTTP 500 persistence.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 386,
+    "row_sha256": "937ffd1ff0d5bd68a8a4e1eb9b6695646884fab27226b089f2a9d7d58386e8f3",
+    "summary": "added-production-front-door-telemetry-and-produc"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0386-937ffd1ff0d5",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L386"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim \"production front-door telemetry and producer pacing\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/cell-log-store.fk form-stdlib/http-parse.fk form-stdlib/kernel-http.fk form-stdlib/http-request.fk form-stdlib/http-render.fk form-stdlib/http-server.fk form-stdlib/http-socket.fk form-stdlib/channel.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-multi-source-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-real-source-band.fk",
+      "curl -sS --max-time 12 -w '\\nCURL_HTTP_CODE=%{http_code}\\nCURL_TIME_TOTAL=%{time_total}\\nCURL_SIZE_DOWNLOAD=%{size_download}\\n' -D /tmp/hati-frontdoor-headers.txt -o /tmp/hati-frontdoor-body.json -H 'Accept: application/json' 'https://api.coherencycoin.com/api/runtime/endpoints/summary?limit=5'",
+      "curl -sS --max-time 12 -w '\\nCURL_HTTP_CODE=%{http_code}\\nCURL_TIME_TOTAL=%{time_total}\\nCURL_SIZE_DOWNLOAD=%{size_download}\\n' -D /tmp/hati-ideas-gate-headers.txt -o /tmp/hati-ideas-gate-body.json -H 'Accept: application/json' -H 'X-Form-Native-Public-Gate: 1' 'https://api.coherencycoin.com/api/ideas?limit=1&sort=marginal_cc'",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_frontdoor_backpressure.json"
+    ],
+    "status": "pass"
+  }
+}

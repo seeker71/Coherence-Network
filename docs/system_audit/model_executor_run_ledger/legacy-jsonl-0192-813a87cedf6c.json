@@ -1,0 +1,34 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "python3 scripts/audit_bml_bmf_kernel_natives.py",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+  ],
+  "failure_reason": "Added a BML/BMF host-native inventory guard and wired it into worktree_pr_guard. The guard reports only the documented compatibility shims bml_scan_file and deprecated bmf_apply_rule_native across Go, Rust, and TypeScript kernels, blocking silent expansion of language semantics in host code.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 192,
+    "row_sha256": "813a87cedf6c462f14f973521642279b6d8b46a2b455e89672bcf85c5a92c1ae",
+    "summary": "added-a-bml-bmf-host-native-inventory-guard-and-"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0192-813a87cedf6c",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L192"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "python3 scripts/audit_bml_bmf_kernel_natives.py",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ],
+    "status": "pass"
+  }
+}

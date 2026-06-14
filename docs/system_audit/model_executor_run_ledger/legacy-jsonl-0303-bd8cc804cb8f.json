@@ -1,0 +1,56 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "cd form/form-kernel-rust && cargo build --release",
+    "python3 scripts/kernel_attribution_report.py --json summary",
+    "python3 -m py_compile scripts/kernel_attribution_report.py",
+    "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_kernel_attribution_report.py",
+    "cd api && /opt/homebrew/bin/ruff check ../scripts/kernel_attribution_report.py tests/test_kernel_attribution_report.py",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-10_kernel_attribution_numeric_parity.json",
+    "git diff --check",
+    "make wellness",
+    "git fetch origin main && git rebase --autostash origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "Repaired kernel attribution value-parity sensing. The report now compares parsed display literals before declaring drift, so equivalent numeric renderings such as 2 versus 2.0 and 0 versus 0.0 inside lists no longer produce false accuracy breaks. The focused test, ruff, py_compile, index check, evidence validation, diff check, rebase, PR guard, and follow-through guard passed. The attribution report reaches 22/22 recipes with parity_breaks=0, and wellness reports kernel-native API accuracy 22/22.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 303,
+    "row_sha256": "bd8cc804cb8f0044b99d64d8a0ca608a75137ef87f2ab9639412aa7ab895ab8e",
+    "summary": "repaired-kernel-attribution-value-parity-sensing"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0303-bd8cc804cb8f",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L303"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form/form-kernel-rust && cargo build --release",
+      "python3 scripts/kernel_attribution_report.py --json summary",
+      "python3 -m py_compile scripts/kernel_attribution_report.py",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_kernel_attribution_report.py",
+      "cd api && /opt/homebrew/bin/ruff check ../scripts/kernel_attribution_report.py tests/test_kernel_attribution_report.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-10_kernel_attribution_numeric_parity.json",
+      "git diff --check",
+      "make wellness",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

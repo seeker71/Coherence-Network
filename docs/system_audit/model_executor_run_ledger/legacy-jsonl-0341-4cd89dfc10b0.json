@@ -1,0 +1,56 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "cd form && ./validate.sh ... recipe-capsule-abi-band.fk",
+    "cd form && ./validate.sh ... runtime-dynamic-capability-registry-band.fk",
+    "cd form && ./validate.sh ... runtime-real-grammar-capsules-band.fk",
+    "cd form && ./validate.sh ... recipe-choice-runtime-band.fk",
+    "cd form && ./validate.sh ... channel-protocol-choice-floor-band.fk",
+    "cd form && scripts/fourth-arm-survey.sh --one form-stdlib/tests/recipe-choice-runtime-band.fk",
+    "receipt-practice wording scan",
+    "git fetch origin main",
+    "git rebase --autostash origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "git diff --check"
+  ],
+  "failure_reason": "Added recipe registry receipt/signature companion helpers without changing existing run-flex return values. Added recipe-choice-runtime to carry recipe choices into brcr-realize and proved the wrapper on Go/Rust/TS at 233; the fourth walker currently returns 35 for that nested wrapper, so the gap is recorded before four-way manifest admission. The composite channel/protocol choice floor remains four-way at 32767 and local PR checks reported ready_for_push=True.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 341,
+    "row_sha256": "4cd89dfc10b068d39c71352ad722eb4c1fb30f2ebb54f545dbf0c81c69498c2b",
+    "summary": "added-recipe-registry-receipt-signature-companio"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0341-4cd89dfc10b0",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L341"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh ... recipe-capsule-abi-band.fk",
+      "cd form && ./validate.sh ... runtime-dynamic-capability-registry-band.fk",
+      "cd form && ./validate.sh ... runtime-real-grammar-capsules-band.fk",
+      "cd form && ./validate.sh ... recipe-choice-runtime-band.fk",
+      "cd form && ./validate.sh ... channel-protocol-choice-floor-band.fk",
+      "cd form && scripts/fourth-arm-survey.sh --one form-stdlib/tests/recipe-choice-runtime-band.fk",
+      "receipt-practice wording scan",
+      "git fetch origin main",
+      "git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

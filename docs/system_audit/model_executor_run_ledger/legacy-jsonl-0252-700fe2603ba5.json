@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/native-mutation-trust-envelope.fk form-stdlib/tests/native-mutation-trust-envelope-band.fk",
+    "python3 deploy/kernel-router/mutation_ab_observation_harness.py --json",
+    "cd api && python3 -m pytest -q tests/test_native_mutation_route_bindings.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_application_graph_response_projection.py tests/test_specs_source_native_route.py tests/test_runtime_surface_native_routes.py",
+    "cd api && python3 -m ruff check tests/test_native_mutation_route_bindings.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_application_graph_response_projection.py tests/test_specs_source_native_route.py tests/test_runtime_surface_native_routes.py",
+    "python3 scripts/validate_spec_quality.py --file specs/native-mutation-trust-envelope.md --file specs/method-specific-native-mutation-preview-bindings.md --file specs/native-mutation-ab-observation-gate.md --file specs/native-mutation-response-projection.md --file specs/ideas-router-form-expression.md --file specs/spec-registry-source-native.md",
+    "python3 scripts/generate_repo_indexes.py",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "make wellness"
+  ],
+  "failure_reason": "Moved native mutation preview trust from an unstructured remaining-gap string into a Form-native trust envelope. native-mutation-trust-envelope.fk returns 11111 across sibling kernels for prediction residual, side-effect intents, choice_success=1 with silence/protocol/fail/stop/BMA markers, and reversible gate state. production-routes.fk embeds the same envelope in preview responses; the A/B harness observed 5/5 passing cases with all envelope checks true, confidence 1.0, and ordinary traffic unflipped. The next native boundary is side-effect execution and a narrow reversible public gate with rollback receipt.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 252,
+    "row_sha256": "700fe2603ba5b072248fe39fd5a5852c00b60d907f0eee54770d0563d4c24965",
+    "summary": "moved-native-mutation-preview-trust-from-an-unst"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0252-700fe2603ba5",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L252"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/native-mutation-trust-envelope.fk form-stdlib/tests/native-mutation-trust-envelope-band.fk",
+      "python3 deploy/kernel-router/mutation_ab_observation_harness.py --json",
+      "cd api && python3 -m pytest -q tests/test_native_mutation_route_bindings.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_application_graph_response_projection.py tests/test_specs_source_native_route.py tests/test_runtime_surface_native_routes.py",
+      "cd api && python3 -m ruff check tests/test_native_mutation_route_bindings.py tests/test_native_mutation_ab_observation.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py tests/test_application_graph_response_projection.py tests/test_specs_source_native_route.py tests/test_runtime_surface_native_routes.py",
+      "python3 scripts/validate_spec_quality.py --file specs/native-mutation-trust-envelope.md --file specs/method-specific-native-mutation-preview-bindings.md --file specs/native-mutation-ab-observation-gate.md --file specs/native-mutation-response-projection.md --file specs/ideas-router-form-expression.md --file specs/spec-registry-source-native.md",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "make wellness"
+    ],
+    "status": "pass"
+  }
+}

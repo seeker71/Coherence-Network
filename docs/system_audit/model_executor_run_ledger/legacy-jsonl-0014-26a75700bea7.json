@@ -1,0 +1,34 @@
+{
+  "attempts": 2,
+  "commands_run": [
+    "cd api && pytest -q tests/test_automation_usage_api.py -k \"provider_auto_heal_runs_cli_install_strategy_when_enabled or provider_auto_heal_requires_cli_binary_when_install_mode_enabled or provider_auto_heal_run_endpoint_passes_query_arguments\"",
+    "cd api && ruff check app/services/automation_usage_service.py tests/test_automation_usage_api.py",
+    "cd api && pytest -q tests/test_automation_usage_api.py"
+  ],
+  "failure_reason": "Provider heal accepted runtime_usage_no_cli as success, preventing CLI install attempts on host runner; enforced cli_binary_required in install mode and added regression coverage.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 14,
+    "row_sha256": "26a75700bea78c6a9efc332524fc2f417ab54e18fc7ae8da96e1b3b65b87e772",
+    "summary": "provider-heal-accepted-runtime-usage-no-cli-as-s"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0014-26a75700bea7",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L14"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "cd api && pytest -q tests/test_automation_usage_api.py -k \"provider_auto_heal_runs_cli_install_strategy_when_enabled or provider_auto_heal_requires_cli_binary_when_install_mode_enabled or provider_auto_heal_run_endpoint_passes_query_arguments\"",
+      "cd api && ruff check app/services/automation_usage_service.py tests/test_automation_usage_api.py",
+      "cd api && pytest -q tests/test_automation_usage_api.py"
+    ],
+    "status": "pass"
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-band.fk",
+    "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-band.fk",
+    "cd web && npm install",
+    "cd web && npm test -- form-kernel-client.test.ts",
+    "python3 scripts/validate_spec_quality.py --file specs/field-model-form-v0.md",
+    "python3 scripts/generate_repo_indexes.py"
+  ],
+  "failure_reason": "Added a Form-native BML auto-research layer over Field Model Form. The proof compiles a research question, source cell, evidence cells, FMF execution receipt, residual, and residual-to-question continuation into the existing field runtime and returns 127 from source and binary artifacts across sibling kernels.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 197,
+    "row_sha256": "ca5b00e389a49eb4975b6306edea0ac77ed1d65202229909845af0cd14d0690b",
+    "summary": "added-a-form-native-bml-auto-research-layer-over"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0197-ca5b00e389a4",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L197"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/field-auto-research.fk form-stdlib/tests/field-auto-research-band.fk",
+      "cd web && npm install",
+      "cd web && npm test -- form-kernel-client.test.ts",
+      "python3 scripts/validate_spec_quality.py --file specs/field-model-form-v0.md",
+      "python3 scripts/generate_repo_indexes.py"
+    ],
+    "status": "pass"
+  }
+}
