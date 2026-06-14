@@ -1,0 +1,112 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/real-summary-receipt-floor-20260614",
+  "commit_scope": "Move the Form-native summary lane from synthetic source-id rows toward real source receipts by reading a checked-in .form file through kernel-native file primitives, validating exact citation byte slices, and binding the result to a summary CHOICE-RECEIPT.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "form-native-llm",
+    "native-learning-surface",
+    "real-source-receipts",
+    "form-os-tool-surface"
+  ],
+  "spec_ids": [
+    "form-language-learning",
+    "choice-receipt-learning",
+    "tool-channel",
+    "native-source-codecs"
+  ],
+  "task_ids": [
+    "real-summary-receipt-floor-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/text-summary-learning.fk",
+    "form/form-stdlib/tests/text-summary-real-source-band.fk",
+    "docs/coherence-substrate/text-summary-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_real_summary_receipt_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/form-stdlib/text-summary-learning.fk",
+    "form/form-stdlib/tests/text-summary-real-source-band.fk",
+    "docs/coherence-substrate/text-summary-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_real_summary_receipt_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "form/form-stdlib/text-summary-learning.fk",
+    "form/form-stdlib/tests/text-summary-real-source-band.fk",
+    "docs/coherence-substrate/text-summary-learning.form",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim \"real source summary receipt floor\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-real-source-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-learning-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tool-channel.fk form-stdlib/code-tool-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/tests/llm-feature-channel-floor-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_real_summary_receipt_floor.json"
+    ],
+    "notes": "Prompt guide passed on branch codex/real-summary-receipt-floor-20260614 and wellness reported no required repair. The new real-source band returned verdict 8191 on Go/Rust/TypeScript host-I/O kernels after repairing the read path from repo-root relative to form-working-directory relative. The existing summary learning band still returned 262143 and validate.sh printed fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables), proving the host-I/O helper did not disturb the pure four-way summary lane. The dependent llm-feature-channel-floor band still returned 131071 with fourth arm: 1 band(s) four-way."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed yet; CI not run at evidence creation time."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Local Form proof and docs only. No public deploy was performed at evidence creation time."
+  },
+  "phase_gate": {
+    "phase": "real-summary-receipt-floor",
+    "gate": "A summary receipt must prove actual source bytes before learning from source claims.",
+    "state": "local-host-io-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Broaden the source-reader from one checked-in .form file to multiple file, store, route, and stream sources with dynamic source coordinates and retained receipts."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Form now has a native source-read summary floor: a cell can plan text:summarize-file through host:file, read a real checked-in .form file via kernel-native file primitives, validate exact byte slices as citations, gate the summary, and turn the result into a CHOICE-RECEIPT training sample.",
+    "public_endpoints": [
+      "local:form/validate.sh:text-summary-real-source-band",
+      "local:form/validate.sh:text-summary-learning-band",
+      "local:form/validate.sh:llm-feature-channel-floor-band"
+    ],
+    "test_flows": [
+      "text:summarize-file returns an explicit host:file plan with cap.host.file.read and read_file+read_file_slice as the carrier.",
+      "The real-source proof reads docs/coherence-substrate/text-summary-learning.form through kernel-native file primitives from the form working directory.",
+      "Four citation rows match exact read_file_slice byte spans before the summary receipt is accepted.",
+      "The real-source summary passes existing summary quality gates and records citation count, token cost, source path, metadata, and receipt trace.",
+      "The existing four-way text-summary-learning proof and dependent LLM feature floor remain unchanged in behavior."
+    ],
+    "summary": "This is a real local file-data floor, not a shell, Python, or LLM carrier. It is intentionally 3-kernel host-I/O proof until the fourth arm admits read_file/read_file_slice."
+  }
+}
