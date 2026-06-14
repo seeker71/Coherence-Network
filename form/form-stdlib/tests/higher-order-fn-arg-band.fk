@@ -1,0 +1,51 @@
+; higher-order-fn-arg-band.fk — the higher-order wall, crossed four-way.
+;
+; preludes: form-stdlib/core.fk
+;
+; The named wall (fourth-arm-bands.txt): "higher-order calls — foldl/map/
+; filter with function arguments." A higher-order recipe takes a function as
+; an ARGUMENT and calls it inside its body. The three reference kernels run
+; core.fk's generic map/filter/foldl directly; this band proves the SAME
+; generic recipes also walk on the emitted fourth kernel (fkwu), with no
+; special-casing — one engine.
+;
+; How it crosses: a band-local function name in argument position lowers to a
+; function-ref value (cons of (fn-index, arity)) via the flattener's flt-fref
+; path; the higher-order body's call to its function PARAMETER lowers to an
+; indirect call (tag 44), which evaluates the function-value, reads
+; (fn-index, arity), and dispatches — arity 1 reads the single arg, arity ≥ 2
+; rides the packed-args list exactly like a direct call. map/filter pass the
+; function-value forward through self-recursion; foldl calls it with two args.
+;
+; Verdict 1111 when every higher-order shape holds across all four kernels:
+;   map with a 1-arg function argument        (dbl over a list)       →    1
+;   filter with a 1-arg predicate argument     (evenp over a list)     →   10
+;   foldl with a 2-arg function argument        (plus2 reducing)        →  100
+;   map composed with filter (function args threaded twice)            → 1000
+
+(do
+    ;; band-local functions passed BY NAME into the generic higher-order
+    ;; recipes from core.fk (map/filter/foldl). Each name in argument
+    ;; position lowers to a function-ref the indirect-call arm dispatches.
+    (defn dbl (n) (mul n 2))
+    (defn evenp (n) (if (eq (mod n 2) 0) 1 0))
+    (defn plus2 (a b) (add a b))
+
+    ;; map: a 1-arg function applied across a list, rebuilt by cons.
+    ;; (dbl 1)+(dbl 2)+(dbl 3) = 2+4+6 = 12
+    (let map-score (if (eq (sum (map dbl (list 1 2 3))) 12) 1 0))
+
+    ;; filter: a 1-arg predicate selects elements.
+    ;; even of 1..6 = 2+4+6 = 12
+    (let filter-score (if (eq (sum (filter evenp (list 1 2 3 4 5 6))) 12) 10 0))
+
+    ;; foldl: a 2-arg function reduces the list (the packed-args indirect call).
+    ;; 0+1+2+3+4+5 = 15
+    (let foldl-score (if (eq (foldl plus2 0 (list 1 2 3 4 5)) 15) 100 0))
+
+    ;; map ∘ filter: the function argument threads through two higher-order
+    ;; layers — double every even of 1..6 = 2*(2+4+6) = 24
+    (let compose-score
+        (if (eq (sum (map dbl (filter evenp (list 1 2 3 4 5 6)))) 24) 1000 0))
+
+    (add map-score (add filter-score (add foldl-score compose-score))))
