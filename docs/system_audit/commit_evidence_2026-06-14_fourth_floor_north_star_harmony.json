@@ -1,0 +1,119 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/fourth-floor-north-star-harmony-20260614",
+  "commit_scope": "Harmonize the fourth-arm floor, connected-tissue north star, sister-node orientation, and native-ledger proof source after the token and Form-native object floors.",
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "fourth-arm-floor",
+    "connected-tissue-north-star",
+    "native-proof-ledger"
+  ],
+  "spec_ids": [
+    "fourth-arm-bands",
+    "bml-native-north-star",
+    "model-executor-proof-ledger"
+  ],
+  "task_ids": [
+    "fourth-floor-north-star-harmony-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "documentation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/fourth-arm-bands.txt",
+    "CLAUDE.md",
+    "README.md",
+    "docs/shared/agent-start-packet.md",
+    "docs/VISION.md",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/model-executor-proof-ledger.form",
+    "docs/system_audit/commit_evidence_2026-06-14_fourth_floor_north_star_harmony.json",
+    "docs/system_audit/model_executor_run_ledger/fourth-floor-north-star-harmony-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/fourth-arm-bands.txt",
+    "CLAUDE.md",
+    "README.md",
+    "docs/shared/agent-start-packet.md",
+    "docs/VISION.md",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/model-executor-proof-ledger.form",
+    "docs/system_audit/commit_evidence_2026-06-14_fourth_floor_north_star_harmony.json",
+    "docs/system_audit/model_executor_run_ledger/fourth-floor-north-star-harmony-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "form/fourth-arm-bands.txt#current-floor",
+    "CLAUDE.md#connected-tissue-stays-aligned",
+    "README.md#current-north-star",
+    "docs/shared/agent-start-packet.md#current-north-star",
+    "docs/VISION.md#sovereign-cells",
+    "docs/coherence-substrate/bml-native-north-star.form#connected-tissue",
+    "docs/coherence-substrate/model-executor-proof-ledger.form#sister_node_rule",
+    "docs/system_audit/model_executor_run_ledger/fourth-floor-north-star-harmony-20260614.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord view",
+      "coord claim fourth-floor-north-star-harmony \"harmonize fourth-arm floor/north-star text and sister node references after token floor; docs/evidence only unless stale references require tiny metadata update\"",
+      "cd form && VALIDATE_JOBS=4 FOURTH_PREPARE_ALL_BATCH_MAX=0 ./validate.sh",
+      "bash scripts/bml_form_jit_metal_planes_audit.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_fourth_floor_north_star_harmony.json",
+      "python3 scripts/model_executor_proof_ledger.py validate",
+      "python3 - <<'PY'\nimport json\nfrom pathlib import Path\nfor i, line in enumerate(Path('docs/system_audit/model_executor_runs.jsonl').read_text().splitlines(), 1):\n    json.loads(line)\nprint('OK jsonl rows', i)\nPY",
+      "git diff --check"
+    ],
+    "notes": "Full Form validation passed with fourth arm: 148 band(s) four-way, 566 ok, and 0 divergent. The metal-plane audit passed Form-native JIT lane proof, Form-native Mach-O and Android ELF object floors, lowered residual cluster, oracle learning choice floor, and macOS/Android clang oracle assembly/object receipts. The doc alignment states that the fourth-arm manifest is the Form/BML floor source, substrate north-star cells carry direction, native ledger records are the executor proof coordination source, JSONL is an export/cache, and commit evidence names any 3-kernel-only blockers."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No public deploy performed for this floor/north-star documentation and manifest metadata slice."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local four-kernel validation, macOS/Android evidence, and local evidence validators passed or are being recorded; CI, review, merge, and deploy remain pending."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The current fourth-arm floor and north-star guidance are aligned across the manifest, shared agent instructions, public README, vision, BML native compiler north-star cell, and model executor proof ledger cell. No recipe verdict changed; the suite still validates 148 four-way bands and 566 total passing workloads with zero divergent bands.",
+    "public_endpoints": [
+      "local:form-fourth-arm-manifest",
+      "local:bml-native-north-star",
+      "local:model-executor-proof-ledger"
+    ],
+    "test_flows": [
+      "Run full Form validation and confirm Go/Rust/TypeScript/fkwu agree with fourth arm: 148 band(s) four-way, 566 ok, 0 divergent.",
+      "Run bml_form_jit_metal_planes_audit.sh and confirm macOS arm64 Mach-O and Android arm64 ELF receipts remain present.",
+      "Validate the commit evidence, native proof ledger, JSONL compatibility cache, and whitespace diff."
+    ]
+  }
+}

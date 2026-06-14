@@ -192,10 +192,16 @@ then lift them into simpler generic Form/BML teachings. Hot paths are the first
 teachers: route timing, JIT hit/miss data, framebuffer traces, carrier-tissue
 reads, edge-category counts, wellness output, and source repetition shall pull
 work toward reusable blueprints, grammars, recipes, cells, and proof bands.
-When you author a stdlib recipe + band, read [`form/form-stdlib/AUTHORING.md`](../../form/form-stdlib/AUTHORING.md)
+When you author a stdlib recipe + band, read [`form/form-stdlib/AUTHORING.md`](form/form-stdlib/AUTHORING.md)
 first — the primitive set, the proof-band shape, the validate invocation, and the
 traps that diverge across kernels (chief among them: `and`/`or` are binary, never
 `(and a b c)`).
+
+Connected tissue north star: sister nodes should tell one floor story. The
+fourth-arm manifest is the source for Form/BML four-way coverage, substrate
+north-star `.form` cells name the direction, native executor ledger records are
+the coordination source for proof runs, JSONL remains an export/cache shape, and
+commit evidence names any band that is still `3-kernel only`.
 
 Cell voice rule: before serving a doorway, page, API route, concept, edge,
 source file, or runtime cell, ask what it can declare about its soul, purpose,

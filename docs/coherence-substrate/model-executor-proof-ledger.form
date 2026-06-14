@@ -46,6 +46,7 @@ defn model_executor_proof_ledger_contract() = {
     legacy_cache: "docs/system_audit/model_executor_runs.jsonl",
     import_rule: "Each run has a stable run_id and its own record file, so unrelated agents do not contend on one append-only file.",
     export_rule: "scripts/model_executor_proof_ledger.py export-jsonl emits canonical JSONL for legacy readers.",
+    sister_node_rule: "Evidence, PR text, and floor manifests should cite the native ledger record first; JSONL rows stay aligned as compatibility exports.",
     required_fields: [
         "run_id",
         "thread_branch",
