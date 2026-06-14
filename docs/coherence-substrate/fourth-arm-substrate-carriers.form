@@ -32,13 +32,13 @@
       graph-node-port-four-way                  # graph-node port shape over storage carriers (band graph-node-port)
       graph-node-memory-mutation-carrier        # graph mutation over memory carrier (band graph-node-mutation-memory-carrier)
       graph-node-file-carrier-reopen            # file carrier reopen proof (band graph-node-mutation-file-carrier)
-      graph-node-full-mutation-verdict)         # memory/file agreement and full file mutation verdict (bands graph-node-mutation-carrier, graph-node-mutation-file-verdict)
+      graph-node-full-mutation-verdict          # memory/file agreement and full file mutation verdict (bands graph-node-mutation-carrier, graph-node-mutation-file-verdict)
+      ideas-graph-file-projection)              # idea response projection over reopened file stores (band ideas-graph-projection)
     (current-unsupported
       file_mtime scan_run                       # broader host-io read/scan recipes
-      ideas-graph-file-projection               # fkwu projection over reopened file carrier is not yet parity
       postgres-carrier-four-way))               # gated on the broader host-io recipes
 
   (next-step
-    (sentence "Close the remaining file-backed ideas projection mismatch, land host-io mtime/scan recipes, then Postgres.")
-    (gate ideas-graph-file-projection file_mtime scan_run)
-    (why "Statement-level effects already fire once (sequenced bare-do, tag 69), operand-level effects already fire once (single-walk eq/lt, tags 102/103), nested do-lets snapshot effecting values, the minimum write floor includes write_file_text plus append, storage-port proves memory/file substitutability with durability, and full graph mutation now crosses over the file carrier. The next carrier proof is the ideas projection layer over reopened file stores, plus mtime/scan observation, before the Postgres carrier can inherit the same content-key discipline.")))
+    (sentence "Land host-io mtime/scan recipes, then Postgres.")
+    (gate file_mtime scan_run)
+    (why "Statement-level effects already fire once (sequenced bare-do, tag 69), operand-level effects already fire once (single-walk eq/lt, tags 102/103), nested do-lets snapshot effecting values, the minimum write floor includes write_file_text plus append, storage-port proves memory/file substitutability with durability, full graph mutation crosses over the file carrier, and ideas projection now crosses over reopened file stores. The next carrier proof is mtime/scan observation before the Postgres carrier can inherit the same content-key discipline.")))
