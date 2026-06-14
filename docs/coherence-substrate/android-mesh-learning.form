@@ -18,7 +18,7 @@
     "The receipt records device model/ABI/Android release, battery summary, safe capability inventory, sensor-category inventory, Coherence Sense installed/running state, Mac host/tool summary, Mac witness service state, typed channel rows, and high-cost feature route decisions."
     "The Android carrier can emit active mic RMS, camera luma, and GPU EGL readback summaries while sharing; it does not store raw audio, frames, or GPU buffers."
     "The current live physical floor observed an unlocked SM-S918U1 sharing to the Mac witness with 141 witness frames, nonzero mic RMS, nonzero camera luma, 2367 camera luma samples, 99 GPU EGL readback samples, and body sample_count 5084."
-    "Those live witness counters now have a Form-native receipt row in witness-state-receipt.fk, with integer-scaled summary metrics, heldout learner rows, and a four-way proof at verdict 65535."
+    "Those live witness counters now have a Form-native receipt row in witness-state-receipt.fk, with integer-scaled summary metrics, heldout learner rows, source-backed oracle label/export rows, and a four-way proof at verdict 1048575."
     "The Form recipe proves the deterministic route surface: native-first, native-first with oracle sampling, oracle-teacher-until-physical-samples, stream merging, per-category oracle retirement, and active mic/camera/GPU sample rows that lift speech, vision, and multimodal routing to native-first when those lanes are present.")
 
   (north-star
@@ -65,8 +65,8 @@
     (handoff "running service should write native substrate ledger records continuously, with JSON summaries as export/cache"))
 
   (next-physical-gaps
-    (mic "RMS summaries joined to real speech-transcribe oracle labels across enough heldout samples")
-    (camera "luma summaries joined to real vision-describe oracle labels across enough heldout samples")
-    (accelerator "EGL readback summaries extended to real Vulkan/NNAPI kernel receipts compared with CPU/oracle lanes")
+    (mic "live speech-transcribe oracle process emits source-backed labels across enough heldout samples")
+    (camera "live vision-describe oracle process emits source-backed labels across enough heldout samples")
+    (accelerator "EGL readback summaries extended to live Vulkan/NNAPI kernel receipts compared with CPU/oracle lanes")
     (stream "Mac witness event stream joined to app flow counters and native substrate receipt cells")
     (retirement "one narrow category with enough heldout native wins to stop sampling the teacher")))

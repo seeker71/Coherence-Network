@@ -2,7 +2,7 @@
 ;
 ; witness-state-receipt-band - live witness counters as Form-native receipts.
 ;
-; Verdict 65535 when every claim lands:
+; Verdict 1048575 when every claim lands:
 ;   1    floor and north-star declarations exist
 ;   2    live witness present with frames
 ;   4    mic counter and organ are active
@@ -19,6 +19,10 @@
 ;   8192 heldout rows score a challenger/champion history
 ;   16384 too few heldout rows keep the oracle teacher
 ;   32768 enough heldout native wins retire one narrow teacher
+;   65536 native witness export rows are valid and summary-only
+;   131072 fixture oracle labels are rejected
+;   262144 source-backed oracle labels produce valid heldout rows
+;   524288 source-backed native wins can retire one narrow teacher
 (do
     (let organs (list "accelerometer" "camera" "gps" "gpu" "gyroscope" "light" "magnetometer" "mic" "network" "screen"))
     (let live-state
@@ -73,6 +77,46 @@
             win-row win-row win-row win-row
             win-row win-row win-row win-row
             win-row win-row win-row win-row))
+    (let native-export
+        (wsr-export-row
+            "native-witness-export"
+            "substrate:receipt-cell"
+            42
+            141
+            5084
+            "sha256:live-summary-5084"
+            "summary-only/no-raw-audio-frame-buffer"))
+    (let raw-export
+        (wsr-export-row
+            "native-witness-export"
+            "substrate:receipt-cell"
+            42
+            141
+            5084
+            "sha256:live-summary-5084"
+            "raw-media"))
+    (let speech-label (wsr-oracle-label "speech-transcribe" "whisper-oracle" "oracle:stt" "speech-present" 84 42 "mic:141" "summary-only/no-raw-audio-frame-buffer"))
+    (let vision-label (wsr-oracle-label "vision-describe" "vision-oracle" "oracle:vision" "scene-present" 83 42 "camera:2367" "summary-only/no-frame"))
+    (let multimodal-label (wsr-oracle-label "multimodal-align" "multimodal-oracle" "oracle:multimodal" "aligned" 82 42 "body:5084" "summary-only/no-raw-audio-frame-buffer"))
+    (let gpu-label (wsr-oracle-label "gpu-readback-kernel" "gpu-oracle" "oracle:gpu" "readback-ok" 88 42 "gpu:99" "summary-only/no-buffer"))
+    (let fixture-label (wsr-oracle-label "speech-transcribe" "fixture" "oracle:stt" "speech-present" 84 42 "mic:141" "summary-only/no-raw-audio-frame-buffer"))
+    (let oracle-labels (list speech-label vision-label multimodal-label gpu-label))
+    (let oracle-speech-row (wsr-heldout-from-oracle-label speech-label live-state 86 1))
+    (let oracle-vision-row (wsr-heldout-from-oracle-label vision-label live-state 86 1))
+    (let oracle-multimodal-row (wsr-heldout-from-oracle-label multimodal-label live-state 86 1))
+    (let oracle-gpu-row (wsr-heldout-from-oracle-label gpu-label live-state 90 1))
+    (let oracle-heldout-rows (list oracle-speech-row oracle-vision-row oracle-multimodal-row oracle-gpu-row))
+    (let oracle-win-row (wsr-heldout-from-oracle-label speech-label live-state 86 1))
+    (let oracle-reached-heldout
+        (list
+            oracle-win-row oracle-win-row oracle-win-row oracle-win-row
+            oracle-win-row oracle-win-row oracle-win-row oracle-win-row
+            oracle-win-row oracle-win-row oracle-win-row oracle-win-row))
+    (let oracle-reached-labels
+        (list
+            speech-label speech-label speech-label speech-label
+            speech-label speech-label speech-label speech-label
+            speech-label speech-label speech-label speech-label))
 
     (let c0
         (if (and
@@ -154,5 +198,29 @@
         (if (eq (wsr-heldout-native-wins? reached-heldout 12 0) 1)
             32768
             0))
+    (let c16
+        (if (and
+                (eq (wsr-export-valid? native-export) 1)
+                (eq (wsr-export-valid? raw-export) 0))
+            65536
+            0))
+    (let c17
+        (if (and
+                (eq (wsr-oracle-label-valid? speech-label native-export) 1)
+                (eq (wsr-oracle-label-valid? fixture-label native-export) 0))
+            131072
+            0))
+    (let c18
+        (if (and
+                (eq (wsr-source-backed-learning-floor? live-state native-export oracle-labels oracle-heldout-rows) 1)
+                (and
+                    (eq (wsr-oracle-heldout-valid? oracle-speech-row speech-label native-export) 1)
+                    (eq (wsr-oracle-label-count oracle-labels native-export) 4)))
+            262144
+            0))
+    (let c19
+        (if (eq (wsr-source-backed-native-wins? live-state native-export oracle-reached-labels oracle-reached-heldout 12 0) 1)
+            524288
+            0))
 
-    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15)))
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15 c16 c17 c18 c19)))
