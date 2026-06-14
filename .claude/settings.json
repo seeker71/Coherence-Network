@@ -14,6 +14,17 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 $CLAUDE_PROJECT_DIR/mcp-server/coherence_mcp_server/capture_hook.py"
+          }
+        ]
+      }
     ]
   }
 }
