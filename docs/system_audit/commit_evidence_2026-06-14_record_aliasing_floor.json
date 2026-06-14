@@ -1,0 +1,111 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/fourth-record-aliasing-floor-20260614",
+  "commit_scope": "Admit full mutable record aliasing to the fourth-arm floor by preserving band-source top-level let snapshots.",
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "fourth-arm-record-carrier-floor",
+    "connected-tissue-north-star",
+    "focused-testing-fast-release"
+  ],
+  "spec_ids": [
+    "fourth-arm-bands",
+    "agent-start-packet",
+    "model-executor-proof-ledger",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "fourth-record-aliasing-floor-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "focused-release-guidance",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/form-flatten.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-14_record_aliasing_floor.json",
+    "docs/system_audit/model_executor_run_ledger/record-aliasing-floor-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/form-stdlib/form-flatten.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-14_record_aliasing_floor.json",
+    "docs/system_audit/model_executor_run_ledger/record-aliasing-floor-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "form/fourth-arm-bands.txt#record",
+    "docs/shared/agent-start-packet.md#record-carrier-boundary",
+    "docs/system_audit/model_executor_run_ledger/record-aliasing-floor-20260614.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "coord join",
+      "coord view",
+      "coord doing",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/record-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/form-parse.fk form-stdlib/form-flatten.fk form-stdlib/tests/form-flatten-indirect-call-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh record record-blueprint record-fold record-field-access list-of-record-reduction",
+      "cd form && bash scripts/fourth-arm-gate.sh higher-order-fn-arg branch-choice-order channel-interface jit-lower full-jit-lower model-vitality record",
+      "cd form && ./validate.sh",
+      "git diff --check"
+    ],
+    "notes": "macOS local validation passed. record-band now returns 176 across Go, Rust, TypeScript, and fkwu with validate.sh reporting fourth arm: 1 band(s) four-way and 1 ok / 0 divergent. The record family gate reports PASS-4WAY for record, record-blueprint, record-fold, record-field-access, and list-of-record-reduction. Adjacent top-level snapshot-sensitive and JIT rows also remained PASS-4WAY. The full aggregate validate run reports fourth arm: 204 band(s) four-way, 604 ok, 0 divergent. One earlier focused validate run printed a non-fatal cache rename warning while exiting 0 and proving the four-way result; an earlier aggregate attempt exposed form-flatten-indirect-call regression from over-broad single-source snapshots, which was repaired by restoring flt-src-fns to the inline path and then revalidated."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No public deploy performed for this focused Form manifest slice. No Android physical validation is claimed here; the active Android receipt lane is separate and this change is in the Form fourth-arm source flattener."
+  },
+  "phase_gate": {
+    "phase": "record-aliasing-floor",
+    "gate": "Full record-band validates across Go, Rust, TypeScript, and fkwu while existing record carrier rows and representative JIT/top-level rows remain four-way.",
+    "state": "local-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Carry record-shaped object/class construction and method dispatch through the BML/Hati lanes without reopening the record carrier floor."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The fourth-arm manifest floor moves to 204 admitted rows by admitting full record-band at verdict 176, and the full Form suite now reports 604 ok / 0 divergent. The band-source top-level walker now snapshots lets once through the RAM organ, so reads before record_set keep their source-time value and record_new preserves shared mutable identity. Module top-level constants and flt-src-fns single-source self-tests continue to inline, preserving the existing prelude/env and flattener-test contracts.",
+    "public_endpoints": [
+      "local:form-fourth-arm-manifest",
+      "local:record-aliasing-floor",
+      "local:model-executor-proof-ledger"
+    ],
+    "test_flows": [
+      "record-band validates at 176 with fourth arm: 1 band four-way and 0 divergent.",
+      "fourth-arm-gate reports PASS-4WAY for record, record-blueprint, record-fold, record-field-access, and list-of-record-reduction.",
+      "representative adjacent gates report PASS-4WAY for higher-order-fn-arg, branch-choice-order, channel-interface, jit-lower, full-jit-lower, model-vitality, and record.",
+      "full validate reports fourth arm: 204 band(s) four-way; 604 ok, 0 divergent."
+    ]
+  }
+}
