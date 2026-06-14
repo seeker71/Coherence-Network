@@ -1,0 +1,34 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord claim fourth-hostio-write-mtime",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/write-file-text-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh write-file-text let-effect-once hostio-roundtrip file-append",
+    "cd form && ./validate.sh",
+    "python3 scripts/model_executor_proof_ledger.py sync-jsonl --output docs/system_audit/model_executor_runs.jsonl",
+    "python3 scripts/model_executor_proof_ledger.py check-jsonl",
+    "python3 scripts/model_executor_proof_ledger.py validate",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_fourth_write_file_text_floor.json"
+  ],
+  "failure_reason": "write_file_text now lowers to fkwu tag 104 with overwrite/truncate semantics. The focused band passes four-way at 1111 and the full Form suite reports 209 four-way bands, 612 ok, 0 divergent.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "fourth-write-file-text-floor-20260614",
+  "source": {
+    "kind": "codex-worktree",
+    "path": "/Users/ursmuff/.codex/worktrees/a3ec/Coherence-Network"
+  },
+  "thread_branch": "codex/fourth-hostio-write-mtime-20260614",
+  "validation": {
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/write-file-text-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh write-file-text let-effect-once hostio-roundtrip file-append",
+      "cd form && ./validate.sh"
+    ],
+    "status": "pass"
+  }
+}
