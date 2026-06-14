@@ -21,7 +21,8 @@
   (lineage
     (foundation    form-stdlib/form-asm.fk)            # arm64 instruction encoding -> byte image
     (compiler      form-stdlib/form-lower.fk)           # the lowering: an expression TREE -> instruction sequence
-    (wrapper       form-stdlib/form-macho.fk)           # the Mach-O object emitter -> a runnable artifact
+    (wrapper       form-stdlib/form-macho.fk            # the Mach-O object emitter -> macOS object/link floor
+                   form-stdlib/form-elf.fk)             # the ELF64/aarch64 object emitter -> Android object floor
     (gate          byte-conviction)                     # the witness theorem on bytes
     (witness-law   witness-theorem.form)                # 1 agree / 0 refute / nothing silent
     (licenses      form-os-channel.form)                # clang external -> internalized only through the gate
@@ -29,7 +30,8 @@
                    tests/form-lower-band.fk             # 31 four-way — tree compiles to assembler-identical bytes
                    tests/form-lower-cond-band.fk        # 31 — CONTROL FLOW: branches + offsets + selection
                    tests/form-lower-rec-band.fk         # 31 four-way — CALL: recursion, frame, high-base bl
-                   tests/form-macho-band.fk)            # 31 — the emitted Mach-O object is well-formed
+                   tests/form-macho-band.fk             # 31 — the emitted Mach-O object is well-formed
+                   tests/form-elf-band.fk)              # 31 four-way — the emitted ELF64/aarch64 object is well-formed
     (live-witness  scripts/form_asm_conviction_demo.sh  # Form instruction bytes == assembler bytes
                    scripts/form_lower_demo.sh           # Form COMPILES a tree to assembler-identical bytes
                    scripts/form_macho_demo.sh           # Form -> .o -> ld -> a RUNNABLE binary, exit 40, ZERO clang
@@ -155,14 +157,27 @@
     (runs     "the binary executes; its exit code IS the program's value ((40+1)-1 = 40)")
     (zero-clang "Form + ld only — clang's compiler and assembler are no longer in the path"))
 
+  # ── The ELF wrapper — REALIZED: Android/aarch64 relocatable object, zero clang ──
+  # form-elf.fk emits a valid ELF64/aarch64 relocatable OBJECT (ELF header +
+  # .text + .symtab + .strtab + .shstrtab), computing offsets from the same
+  # Form-lowered code length. The metal-plane audit writes the bytes to disk and
+  # `file` recognizes them as ARM aarch64 ELF. This is an object floor, not yet
+  # an Android linked/executed receipt.
+  (android-object-realized
+    (object "form-elf.fk -> a valid ELF64/aarch64 .o carrying the Form-compiled code")
+    (inspect "scripts/bml_form_jit_metal_planes_audit.sh writes the object and verifies ELF/aarch64 shape")
+    (fourth-arm "tests/form-elf-band.fk is in the fourth-arm manifest and passes fkwu four-way at 31")
+    (zero-clang "Form emits the ELF object bytes; clang remains only as oracle for broader C surfaces"))
+
   # ── Closing cells — what remains beyond the realized runnable path ───
   (closing-cells
     (general-encoder "the field-into-byte encoder for high-base instructions (branches, loads,
                       stores) with carry — so any instruction encodes without a > 2^31 word")
     (richer-lowering "general register allocation and multi-argument calling conventions — beyond
                       the one-argument w19/w20 scheme realized for the recursive fib shape")
-    (self-link       "emit a linked Mach-O EXECUTABLE directly (dyld load commands + LC_MAIN +
-                      LC_CODE_SIGNATURE), retiring ld too — leaving only the platform's signature")
+    (self-link       "emit linked Mach-O and Android ELF EXECUTABLES directly (dyld/LC_MAIN/LC_CODE_SIGNATURE
+                      on macOS; ELF program headers/dynamic linker or static path on Android), retiring host
+                      linkers where platform policy permits")
     (kernel-int      "a kernel finding surfaced here: integer literals > 2^31 wrap to signed int32
                       across all three kernels (e.g. 0xd65f03c0). The byte-image emitter sidesteps
                       it; a kernel-level wider/unsigned integer is the deeper fix."))
