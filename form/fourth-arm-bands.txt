@@ -430,6 +430,7 @@ translation-quality fks 1111111
 translation-engine fks 1111111
 chart-cast fks 1111111
 native-training-receipt fks 16383
+real-mesh-training-carrier fks 65535
 eq-effect-once fks 1
 let-effect-once fks 111
 write-file-text fks 1111
