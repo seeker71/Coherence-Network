@@ -1,0 +1,140 @@
+; android-mesh-learning.fk - Mac + Android physical senses as native learning rows.
+;
+; Floor: a connected Android phone and Mac host are represented as organs with
+; typed channels, high-cost feature routes, stream-merge helpers, and
+; champion/challenger oracle-retirement decisions. This is the deterministic
+; recipe shape used by the physical adb receipt script.
+;
+; North star: Mac and Android run the receipt loop continuously, feeding sensor,
+; audio, video, host, GPU, and model receipts into Form-native learners. External
+; LLM/model/compiler oracles become sampled teachers until native recipes win per
+; category and retire them.
+;
+; Proven by: form-stdlib/tests/android-mesh-learning-band.fk
+
+(do
+    (defn aml-floor ()
+        (list
+            "android and mac organs have typed learning channels"
+            "high-cost LLM-like features route native-first when quality/trust/cost gates pass"
+            "third-party oracles retire through the existing champion/challenger long-window gate"))
+    (defn aml-north-star ()
+        (list
+            "24/7 mac plus android receipts feed native learners across sensor audio video host gpu and model lanes"
+            "external model/compiler/media oracles are sampled teachers, not hidden authority"
+            "native Form recipes win on quality cost trust sovereignty vitality and measured heldout proof"))
+
+    (defn aml-organ (name kind surface status trust)
+        (list name kind surface status trust))
+    (defn aml-organ-name (organ) (nth organ 0))
+    (defn aml-organ-kind (organ) (nth organ 1))
+    (defn aml-organ-surface (organ) (nth organ 2))
+    (defn aml-organ-status (organ) (nth organ 3))
+    (defn aml-organ-trust (organ) (nth organ 4))
+
+    (defn aml-channel (from to protocol codec sample-rate native-ready oracle-pressure)
+        (list from to protocol codec sample-rate native-ready oracle-pressure))
+    (defn aml-channel-from (channel) (nth channel 0))
+    (defn aml-channel-to (channel) (nth channel 1))
+    (defn aml-channel-protocol (channel) (nth channel 2))
+    (defn aml-channel-codec (channel) (nth channel 3))
+    (defn aml-channel-sample-rate (channel) (nth channel 4))
+    (defn aml-channel-native-ready? (channel) (nth channel 5))
+    (defn aml-channel-oracle-pressure (channel) (nth channel 6))
+
+    (defn aml-android-organ ()
+        (aml-organ "android-phone" "android-phone" "adb+coherence-sense" "physical-device" 80))
+    (defn aml-mac-organ ()
+        (aml-organ "macos-binary" "macos-binary" "launchagent+form-kernel" "host-witness" 82))
+
+    (defn aml-channels ()
+        (list
+            (aml-channel "android-phone" "macos-binary" "sensor:signal" "json:int-vector" 60 1 "low")
+            (aml-channel "android-phone" "macos-binary" "audio:pcm16" "pcm16" 16000 0 "medium")
+            (aml-channel "android-phone" "macos-binary" "video:rgba-time" "rgba-frame" 30 0 "high")
+            (aml-channel "android-phone" "macos-binary" "gpu:compute" "tensor-buffer" 0 0 "medium")
+            (aml-channel "macos-binary" "android-phone" "hati.mesh:presence" "json" 1 1 "low")))
+
+    (defn aml-ready-channel-count (channels)
+        (if (eq (len channels) 0) 0
+            (add
+                (if (eq (aml-channel-native-ready? (head channels)) 1) 1 0)
+                (aml-ready-channel-count (tail channels)))))
+    (defn aml-protocol-known? (channels protocol)
+        (if (eq (len channels) 0) 0
+            (if (str_eq (aml-channel-protocol (head channels)) protocol)
+                1
+                (aml-protocol-known? (tail channels) protocol))))
+
+    (defn aml-high-cost-features ()
+        (list
+            "summarize"
+            "generate"
+            "critique"
+            "dialogue"
+            "memory-update"
+            "tool-select"
+            "tool-execute"
+            "code-lower"
+            "cite-ground"
+            "speech-transcribe"
+            "vision-describe"
+            "multimodal-align"
+            "distill-retire"))
+    (defn aml-known-feature-count (names)
+        (if (eq (len names) 0) 0
+            (add
+                (lfcf-known? (head names))
+                (aml-known-feature-count (tail names)))))
+
+    (defn aml-native-first? (feature observed-quality native-cost oracle-cost trust)
+        (if (and
+                (eq (lfcf-known? feature) 1)
+                (and
+                    (ge observed-quality (lfcf-metric-floor (lfcf-channel-by-name feature)))
+                    (and
+                        (lt native-cost oracle-cost)
+                        (ge trust 70))))
+            1
+            0))
+    (defn aml-route-choice (feature observed-quality native-cost oracle-cost trust)
+        (if (eq (aml-native-first? feature observed-quality native-cost oracle-cost trust) 1)
+            "native-first"
+            (if (and
+                    (eq (lfcf-known? feature) 1)
+                    (and
+                        (ge observed-quality 70)
+                        (lt native-cost oracle-cost)))
+                "native-first-sample-oracle"
+                "oracle-teacher-until-physical-samples")))
+
+    (defn aml-retire? (history min-samples margin)
+        (clr-retire? history min-samples margin))
+    (defn aml-authority (history min-samples margin)
+        (clr-authority history min-samples margin))
+    (defn aml-merged-breadth (stream-a stream-b)
+        (cls-merged-breadth stream-a stream-b))
+
+    (defn aml-24-7-ready? (android-present mac-present app-running witness-running)
+        (if (and
+                (eq android-present 1)
+                (and
+                    (eq mac-present 1)
+                    (and
+                        (eq app-running 1)
+                        (eq witness-running 1))))
+            1
+            0))
+
+    (defn aml-floor-proven? ()
+        (if (and
+                (eq (aml-protocol-known? (aml-channels) "sensor:signal") 1)
+                (and
+                    (eq (aml-protocol-known? (aml-channels) "hati.mesh:presence") 1)
+                    (and
+                        (ge (aml-ready-channel-count (aml-channels)) 2)
+                        (eq (aml-known-feature-count (aml-high-cost-features)) 13))))
+            1
+            0))
+
+    0)
