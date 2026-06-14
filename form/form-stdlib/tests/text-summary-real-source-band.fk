@@ -46,8 +46,8 @@
 
     (let c0
         (if (and
-                (eq (len (tsl-floor)) 4)
-                (eq (len (tsl-north-star)) 4))
+                (eq (len (tsl-floor)) 5)
+                (eq (len (tsl-north-star)) 5))
             1
             0))
     (let c1
@@ -72,7 +72,7 @@
                 (str_eq
                     (tsl-citation-file-slice (nth citations 1))
                     "Make summarization a native learning lane instead of an opaque LLM side effect.")
-                (eq (tsl-citation-line (nth citations 1)) 11))
+                (eq (tsl-citation-line (nth citations 1)) 12))
             8
             0))
     (let c4
@@ -80,7 +80,7 @@
                 (str_eq
                     (tsl-citation-file-slice (nth citations 2))
                     "A summary passes only when it has claims")
-                (eq (tsl-citation-line (nth citations 2)) 17))
+                (eq (tsl-citation-line (nth citations 2)) 18))
             16
             0))
     (let c5
@@ -88,7 +88,7 @@
                 (str_eq
                     (tsl-citation-file-slice (nth citations 3))
                     "External LLMs, source search, model committees")
-                (eq (tsl-citation-line (nth citations 3)) 25))
+                (eq (tsl-citation-line (nth citations 3)) 27))
             32
             0))
     (let c6

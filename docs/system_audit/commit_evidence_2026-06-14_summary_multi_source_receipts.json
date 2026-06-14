@@ -1,0 +1,117 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/summary-multi-source-receipts-20260614",
+  "commit_scope": "Broaden the Form-native summary source-reader floor from one checked-in file to dynamic source-coordinate rows across file, store, route, and stream protocols, with physical file and file-backed store receipts plus explicit planned route and stream lanes.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "form-native-llm",
+    "native-learning-surface",
+    "real-source-receipts",
+    "form-os-tool-surface"
+  ],
+  "spec_ids": [
+    "form-language-learning",
+    "choice-receipt-learning",
+    "tool-channel",
+    "native-source-codecs"
+  ],
+  "task_ids": [
+    "summary-multi-source-receipts-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/text-summary-learning.fk",
+    "form/form-stdlib/tests/text-summary-real-source-band.fk",
+    "form/form-stdlib/tests/text-summary-multi-source-band.fk",
+    "docs/coherence-substrate/text-summary-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_summary_multi_source_receipts.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/form-stdlib/text-summary-learning.fk",
+    "form/form-stdlib/tests/text-summary-real-source-band.fk",
+    "form/form-stdlib/tests/text-summary-multi-source-band.fk",
+    "docs/coherence-substrate/text-summary-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_summary_multi_source_receipts.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "form/form-stdlib/text-summary-learning.fk",
+    "form/form-stdlib/tests/text-summary-multi-source-band.fk",
+    "form/form-stdlib/tests/text-summary-real-source-band.fk",
+    "docs/coherence-substrate/text-summary-learning.form",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim \"multi-source summary receipt floor\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/cell-log-store.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-multi-source-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-real-source-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-learning-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tool-channel.fk form-stdlib/code-tool-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/tests/llm-feature-channel-floor-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_summary_multi_source_receipts.json"
+    ],
+    "notes": "Prompt guide passed on branch codex/summary-multi-source-receipts-20260614 and wellness reported no required repair before editing. The new text-summary-multi-source-band returned 65535 on Go/Rust/TypeScript as a 3-kernel only host-I/O proof: it read a real checked-in file slice, wrote a real temporary segmented cell-log store row, read the store value back through cls-get, aggregated both ready source-data receipts, and kept route and stream as explicit planned coordinates. The existing text-summary-real-source-band returned 8191 after updating self-documenting byte offsets. The existing text-summary-learning-band still returned 262143 and validate.sh printed fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables). The dependent llm-feature-channel-floor band still returned 131071 with fourth arm: 1 band(s) four-way."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed yet; CI not run at evidence creation time."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Local Form proof and docs only. No public deploy was performed at evidence creation time."
+  },
+  "phase_gate": {
+    "phase": "summary-multi-source-receipts",
+    "gate": "Cells and recipes can plan source summaries through typed file, store, route, and stream coordinates, and only ready physical receipts can feed learning.",
+    "state": "local-host-io-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Add physical route response body receipts and stream cursor window receipts so kernel:route and stream:read move from planned coordinates to ready source-data receipts."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Form now exposes source-coordinate rows for file, store, route, and stream summary inputs. File and file-backed store inputs can produce ready source-data receipts and aggregate into one summary CHOICE-RECEIPT; route and stream inputs are discoverable planned lanes until native readers are added.",
+    "public_endpoints": [
+      "local:form/validate.sh:text-summary-multi-source-band",
+      "local:form/validate.sh:text-summary-real-source-band",
+      "local:form/validate.sh:text-summary-learning-band",
+      "local:form/validate.sh:llm-feature-channel-floor-band"
+    ],
+    "test_flows": [
+      "text:summarize-file, text:summarize-store, text:summarize-route, and text:summarize-stream return explicit protocol and capability plans.",
+      "A file coordinate reads an exact source byte slice through read_file_slice and becomes a valid source-data receipt.",
+      "A store coordinate writes and reads a source value through the real segmented cell-log store before becoming a valid source-data receipt.",
+      "Route and stream coordinates are represented as planned native options and do not masquerade as executed data.",
+      "Ready file and store receipts aggregate claims and citations into a multi-source summary and CHOICE-RECEIPT training sample."
+    ],
+    "summary": "This keeps physical proof honest: file and store are locally executed host-I/O receipts; route and stream are native coordinate plans awaiting kernel source readers, not placeholders or mock execution."
+  }
+}

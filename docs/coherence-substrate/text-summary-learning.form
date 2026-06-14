@@ -5,7 +5,8 @@
     (rests-on nearest-shape.fk classifier-eval.fk choice-receipt.fk branch-choice-order.fk choice-receipt-learning.fk oracle-catalog.fk)
     (recipe form/form-stdlib/text-summary-learning.fk)
     (proof form/form-stdlib/tests/text-summary-learning-band.fk -> 262143 four-way)
-    (proof form/form-stdlib/tests/text-summary-real-source-band.fk -> 8191 three-kernel-host-io))
+    (proof form/form-stdlib/tests/text-summary-real-source-band.fk -> 8191 three-kernel-host-io)
+    (proof form/form-stdlib/tests/text-summary-multi-source-band.fk -> 65535 three-kernel-host-io))
 
   (purpose
     "Make summarization a native learning lane instead of an opaque LLM side effect."
@@ -18,7 +19,8 @@
     "The band proves three refusals: missing citations, contradiction, and low coverage. It also proves low-trust metadata refuses learning even when the surface metrics look good."
     "A valid CHOICE-RECEIPT preserves token cost and becomes a native training sample. The current candidate race shows `form-native:summary` winning over remote-model and local-LLM teachers because it clears quality gates with lower token, energy, and nutrition cost."
     "Oracle lanes are explicit: source grounding crosses a remote membrane, and local Ollama is a local LLM receipt teacher. Neither is ambient authority."
-    "The real-source floor reads this checked-in .form file through kernel-native `read_file`, `file_size`, and `read_file_slice`, verifies exact byte slices as citations, and only then emits the summary receipt.")
+    "The real-source floor reads this checked-in .form file through kernel-native `read_file`, `file_size`, and `read_file_slice`, verifies exact byte slices as citations, and only then emits the summary receipt."
+    "The multi-source floor adds dynamic source-coordinate rows for file, store, route, and stream sources. File and file-backed store receipts are physically read today; route and stream coordinates are explicit planned lanes until native source readers exist.")
 
   (north-star
     "Every durable text surface, code patch, proof log, runtime event stream, dialogue, and memory cell can distill into native summary claim rows with source coordinates and citations."
@@ -62,6 +64,14 @@
       (token-cost 96)
       (proof-level three-kernel-host-io)
       (sample summary:real-source-receipt))
+    (multi-source-reader
+      (ready-sources host:file store:query)
+      (planned-sources kernel:route stream:read)
+      (coordinate-fields protocol capability locator selector offset length codec carrier)
+      (carrier read_file_slice cell-log-store)
+      (token-cost 120)
+      (proof-level three-kernel-host-io)
+      (sample summary:multi-source-receipt))
     (candidate-race
       (teachers remote-model-committee ollama:local human:optional)
       (native form-native:summary)
@@ -72,7 +82,7 @@
       (unknown summary/no-plan)))
 
   (next-physical-proof-gaps
-    (source-reader "broaden the proven source-reader from one checked-in .form file to multiple file, store, route, and stream sources with dynamic source coordinates")
+    (source-reader "extend dynamic source-coordinate receipts from file and file-backed store to physical kernel route response bodies and stream cursor windows")
     (heldout-corpus "run real source/doc/proof/event summaries through local LLM and Form-native candidates with retained receipts")
     (memory-update "write passing summary claim rows into native memory cells with rollback and compost receipts")
     (abstention "prove low-evidence summaries ask for source grounding rather than generating plausible prose")))
