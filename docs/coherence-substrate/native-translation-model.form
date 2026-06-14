@@ -78,7 +78,11 @@
 ;                pairs from the store. The lookup still works, but the DATA is external.
 ;   S2 embed     encode faces as embedding-as-recipe vectors; translate by nearest-embedding
 ;                retrieval (loopback-learning.fk's nearest-shape learner is the bootstrap);
-;                generalises to unseen faces by similarity.
+;                generalises to unseen faces by similarity. REALIZED: translation-engine.fk
+;                + tests/translation-engine-band.fk (1111111 four-way) — ANY modality -> ANY
+;                modality (NL<->NL/Code/ASM, text<->image, audio as a face) through the shared
+;                meaning space, corpus passed in as data, seed scale. OPEN: the learned
+;                surface->embedding encoder and the generative decoder (S3 diffusion).
 ;   S3 denoise   the content-address-snapping parallel denoiser (ml-diffusion-model-flow).
 ;   S4 auto-ml   architecture variants searched, scored, and promoted natively.
 ;
