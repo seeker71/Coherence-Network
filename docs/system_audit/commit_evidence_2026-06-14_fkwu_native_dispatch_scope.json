@@ -1,0 +1,74 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "claude/fkwu-native-dispatch-scope",
+  "commit_scope": "Scope the fkwu (fourth kernel) native-dispatch I/O boundary — the one unbuilt seam between 'fkwu walks request-handling logic correctly' and 'fkwu serves a real route'. Grounds the current two-pathway native resolution (fourth-shim Form mirrors + emitted-C walker tags incl. the fenced file-I/O seam), the already-four-way carrier-dispatch seed (substrate-core's first-class indirect carrier call; the channel-* functional-carrier proof pattern), and recommends one host-native vector over per-op inlined tags, with the proof discipline that keeps route logic four-way while contracting the I/O boundary. Design doc only; no runtime change.",
+  "change_intent": "docs_only",
+  "idea_ids": [
+    "kernel-native-api-readiness",
+    "bml-front-door"
+  ],
+  "spec_ids": [
+    "kernel-native-api-readiness",
+    "native-front-door-deploy"
+  ],
+  "task_ids": [
+    "fkwu-native-dispatch-scope-20260614"
+  ],
+  "files_owned": [
+    "kernels/FKWU_NATIVE_DISPATCH.md"
+  ],
+  "change_files": [
+    "kernels/FKWU_NATIVE_DISPATCH.md",
+    "kernels/KERNEL_AS_ROUTER.md",
+    "kernels/README.md"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "kernels/FKWU_NATIVE_DISPATCH.md",
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/fourth-shim.fk",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/form-flatten.fk"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "Grounded the scope against source: fourth-shim.fk (Form mirrors), hati-os-kernel-emit.fk (walker tags 3..63 incl. inlined file-I/O syscalls + socket externs), form-flatten.fk (flt-ops; native/user calls indistinguishable by tag), fourth-arm-bands.txt (kernel-http/route bands four-way; host-io family fenced; substrate-core durable I/O four-way via first-class carrier dispatch)",
+      "Confirmed Go + Rust carrier native tables (registerNative / register_native) already hold pg_connect/pg_query_rows/http_get/fs_*/file_*",
+      "Confirmed the Rust kernel-router image ships no toolchain (JIT cannot fire in prod) and the Go JIT subset covers lists/strings/floats/closures"
+    ],
+    "notes": "Scope/design doc grounded in the actual emit recipes and band manifest; no code path changed."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "PR checks run after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Docs-only; no deploy artifact. The build steps it scopes (Value ABI, host-native vector, carrier seam) are separate future PRs."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Scope only. Next phase is the Value ABI across the fkwu-C <-> carrier boundary, then the host-native vector emit, then a functional-carrier four-way route band."
+  }
+}
