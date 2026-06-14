@@ -1,0 +1,99 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/android-live-active-receipt-20260614",
+  "commit_scope": "Record the first live Android active mic, camera, and GPU witness receipt after installing the Form-native active sample carrier.",
+  "change_intent": "docs_only",
+  "idea_ids": [
+    "hati-mesh",
+    "android-sense-organ",
+    "native-learning-surface"
+  ],
+  "spec_ids": [
+    "android-mesh-learning",
+    "hati-mesh",
+    "llm-feature-channel-floor"
+  ],
+  "task_ids": [
+    "android-live-active-receipt-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "phone-unlock",
+        "direction",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "validation",
+        "evidence",
+        "documentation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "docs/coherence-substrate/android-mesh-learning.form",
+    "docs/coherence-substrate/hati-mesh.form",
+    "docs/coherence-substrate/llm-feature-channel-floor.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_android_live_active_receipt.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/android-mesh-learning.form",
+    "docs/coherence-substrate/hati-mesh.form",
+    "docs/coherence-substrate/llm-feature-channel-floor.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_android_live_active_receipt.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "docs/coherence-substrate/android-mesh-learning.form",
+    "docs/coherence-substrate/hati-mesh.form",
+    "docs/coherence-substrate/llm-feature-channel-floor.form",
+    "docs/coherence-substrate/INDEX.md",
+    "local:http://localhost:8800/state",
+    ".cache/android-mesh-learning/latest.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord join && coord claim \"android live active sample receipt\"",
+      "adb devices -l",
+      "cd experiments/coherence-sense-android && ANDROID_HOME=/Users/ursmuff/.android-sdk-codex JAVA_HOME=/opt/homebrew/opt/openjdk@21 ./gradlew installDebug",
+      "adb shell am start -n com.coherence.sense/.MainActivity",
+      "adb shell input tap 506 810",
+      "adb shell input tap 720 1458 && adb shell input text 'http://192.168.0.7:8800'",
+      "adb shell input tap 506 886",
+      "curl -sS --max-time 2 http://localhost:8800/state | jq '{frames, present, latest: {mic_rms: .latest.mic_rms, camera_luma: .latest.camera_luma, camera_samples: .latest.camera_samples, gpu_pixel: .latest.gpu_pixel, gpu_samples: .latest.gpu_samples, gpu_latency_ms: .latest.gpu_latency_ms, sample_count: .latest.body_state.sample_count, organs_active: .latest.organs_active}, checks, challenger: .challenger, chal_agree, chal_checks}'",
+      "python3 scripts/android_mesh_learning_receipt.py --start-app"
+    ],
+    "notes": "The current debug APK installed successfully on SM-S918U1 Android 16 arm64-v8a. Runtime permissions for CAMERA and RECORD_AUDIO were granted. The phone was unlocked and adb-visible. mDNS discovery did not resolve the Mac witness, so the witness URL was entered manually as http://192.168.0.7:8800. The Mac witness then reported present=true, frames=141, nonzero mic_rms=0.007045886313547694, nonzero camera_luma=0.02805499733188006, camera_samples=2367, gpu_pixel=-13614897, gpu_samples=99, gpu_latency_ms=1.412917, body_state.sample_count=5084, checks=136, chal_agree=138, chal_checks=138, and active organs including accelerometer, camera, gps, gpu, gyroscope, light, magnetometer, mic, network, and screen. The existing Python receipt helper wrote capability/liveness JSON to .cache/android-mesh-learning/latest.json, but it does not yet export live witness counters; this slice records the live counter proof in durable docs/evidence and leaves Form-native witness-state export as the next receipt-export gap."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed when written."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested for this proof-only slice."
+  },
+  "phase_gate": {
+    "phase": "android-live-active-receipt",
+    "gate": "The active mic/camera/GPU sample carrier must be witnessed on a real unlocked Android phone before speech, vision, and multimodal lanes treat active physical samples as established.",
+    "state": "local-live-witness-pass",
+    "can_move_next_phase": false,
+    "next": "Build a Form-native witness-state receipt exporter, then feed active summaries into heldout speech, vision, and multimodal learners; extend GPU from EGL readback summaries to Vulkan/NNAPI parity receipts."
+  }
+}
