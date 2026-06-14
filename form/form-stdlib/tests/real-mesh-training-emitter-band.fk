@@ -1,0 +1,123 @@
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/pareto.fk form-stdlib/autoresearch-loop.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/native-training-receipt.fk form-stdlib/real-mesh-training-carrier.fk form-stdlib/real-mesh-training-emitter.fk
+;
+; real-mesh-training-emitter-band - real host emitter pass/block receipt floor.
+;
+; Verdict 255:
+;   1   live sources with hashes are accepted
+;   2   complete active emitter window passes the hard floor
+;   4   blocked windows with explicit reasons are accepted as honest
+;   8   below-floor active claims are rejected
+;   16  active claims with incomplete lanes are rejected
+;   32  active claims with weak process receipts are rejected
+;   64  source byte sum must cover train + heldout bytes
+;   128 invalid blocked receipts without reasons are rejected
+
+(do
+    (let lanes (rmt-required-lanes))
+    (let sources
+        (list
+            (rmt-emitter-source "mac-witness-http-state" "http-localhost" "live" 125829120 120000 "sha256:mac-witness-http-state")
+            (rmt-emitter-source "android-witness-state" "adb+wifi" "live" 209715200 480000 "sha256:android-witness-state")
+            (rmt-emitter-source "heldout-resource-store" "file-content-addressed" "live" 104857600 12000 "sha256:heldout-resource-store")))
+    (let processes
+        (list
+            (rmt-process "speech-to-text" "whisper-cli -m local -f capture.wav" "local-whisper" "whisper.cpp-local" 0 4096 128 3200 "completed")
+            (rmt-process "text-to-speech" "say -o sample.aiff text" "macos-say" "say-system-voice" 0 2048 0 900 "completed")
+            (rmt-process "nl-to-nl" "ollama run llama3.2:3b" "local-ollama" "llama3.2:3b" 0 8192 256 5100 "completed")))
+    (let active-window
+        (rmt-emitter-window
+            "real-host-window-001"
+            "active"
+            314572800
+            104857600
+            10000
+            sources
+            processes
+            lanes
+            (list)
+            "sha256:real-host-window-001"))
+    (let blocked-window
+        (rmt-emitter-window
+            "blocked-host-window-001"
+            "blocked"
+            83886080
+            0
+            12
+            (list (rmt-emitter-source "mac-witness-http-state" "http-localhost" "live" 4096 4 "sha256:tiny-state"))
+            (list)
+            lanes
+            (list
+                (rmt-emitter-block "adb_device_missing" "adb devices listed no attached Android device")
+                (rmt-emitter-block "below_training_floor" "captured bytes are below 300 MiB"))
+            "sha256:blocked-host-window-001"))
+    (let tiny-active
+        (rmt-emitter-window
+            "tiny-active"
+            "active"
+            1048576
+            1048576
+            12
+            sources
+            processes
+            lanes
+            (list)
+            "sha256:tiny-active"))
+    (let incomplete-lanes
+        (rmt-emitter-window
+            "incomplete-lanes"
+            "active"
+            314572800
+            104857600
+            10000
+            sources
+            processes
+            (list "speech-to-text" "text-to-speech")
+            (list)
+            "sha256:incomplete-lanes"))
+    (let weak-process
+        (rmt-emitter-window
+            "weak-process"
+            "active"
+            314572800
+            104857600
+            10000
+            sources
+            (list (rmt-process "nl-to-nl" "ollama run tiny" "local-ollama" "llama3.2:3b" 0 4 0 1 "completed"))
+            lanes
+            (list)
+            "sha256:weak-process"))
+    (let weak-source-sum
+        (rmt-emitter-window
+            "weak-source-sum"
+            "active"
+            314572800
+            104857600
+            10000
+            (list (rmt-emitter-source "short-store" "file" "live" 10485760 10000 "sha256:short-store"))
+            processes
+            lanes
+            (list)
+            "sha256:weak-source-sum"))
+    (let empty-blocked
+        (rmt-emitter-window
+            "empty-blocked"
+            "blocked"
+            0
+            0
+            0
+            (list)
+            (list)
+            lanes
+            (list)
+            "sha256:empty-blocked"))
+
+    (let c0 (if (eq (rmt-emitter-sources-live? sources) 1) 1 0))
+    (let c1 (if (eq (rmt-emitter-active? active-window) 1) 2 0))
+    (let c2 (if (str_eq (rmt-emitter-verdict blocked-window) "blocked-honest-receipt") 4 0))
+    (let c3 (if (eq (rmt-emitter-active? tiny-active) 0) 8 0))
+    (let c4 (if (eq (rmt-emitter-active? incomplete-lanes) 0) 16 0))
+    (let c5 (if (eq (rmt-emitter-active? weak-process) 0) 32 0))
+    (let c6 (if (eq (rmt-emitter-active? weak-source-sum) 0) 64 0))
+    (let c7 (if (str_eq (rmt-emitter-verdict empty-blocked) "invalid-receipt") 128 0))
+
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7)))
