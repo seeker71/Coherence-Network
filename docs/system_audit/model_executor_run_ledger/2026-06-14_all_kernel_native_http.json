@@ -1,0 +1,31 @@
+{
+  "ledger_schema": "model_executor_proof_run/v1",
+  "run_id": "all-kernel-native-http-20260614",
+  "thread_branch": "codex/all-kernel-native-http-20260614",
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord claim \"all-kernel non-shell external HTTP carrier\"",
+    "scripts/model_vitality_native_http_capture_probe.sh",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-native-http-band.fk"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Lifted plaintext external http_get into the emitted fourth kernel as tag 105 with a native DNS/TCP/socket/write/read carrier. The live probe source-compiled core, ran Go/Rust/TypeScript/fkwu against http://example.com/, and returned all-kernel verdict 63 with status=200 and 559 body bytes. The same probe kept Go/Rust/TypeScript HTTPS model-vitality capture green at verdict 127. Fourth-arm TLS/HTTPS remains the named next carrier gap.",
+  "source": {
+    "kind": "codex-worktree",
+    "path": "/Users/ursmuff/.codex/worktrees/1bc1/Coherence-Network"
+  },
+  "validation": {
+    "status": "pass",
+    "commands": [
+      "scripts/model_vitality_native_http_capture_probe.sh",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-native-http-band.fk"
+    ]
+  }
+}
