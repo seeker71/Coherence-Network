@@ -59,5 +59,11 @@
     (sovereignty "whether the result keeps capability choice explicit and locally ownable")
     (trust "whether the result has enough receipt evidence to learn from or execute"))
 
+  (embodiment
+    "tool-embodiment.fk projects REAL per-tool runner telemetry (lane, locality, completed, failed, runtime-ms) into ctl-floor-oracle rows, deriving cost, nutrition, sovereignty, trust, and confidence honestly off measurement, then asks this sideband's proven gate which lane holds the body."
+    (recipe form/form-stdlib/tool-embodiment.fk)
+    (proof form/form-stdlib/tests/tool-embodiment-band.fk -> 63 four-way)
+    (rule "a Form-native lane embodies — replaces the external tool — only when ctl-fo-ready? clears sovereignty/trust/confidence >= 70 AND it is cheaper than the incumbent; until its measured success rate crosses the gate, the external lane keeps the body. No assertion replaces a tool; only a measured receipt does."))
+
   (next-step
-    "Attach this sideband to the agent execution loop so each real patch/tool/proof turn emits a code-tool receipt, then train heldout lanes for search/edit/proof/review/deploy before routing any important flow to a Form-native candidate by default."))
+    "tool-embodiment.fk turns the live runner's per-tool telemetry into a measured embodiment verdict. The remaining carrier is a read door that runs te-verdict over the current get_usage_summary() by-tool rows, then trains heldout lanes for search/edit/proof/review/deploy before routing any important flow to a Form-native candidate by default."))
