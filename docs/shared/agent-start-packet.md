@@ -115,7 +115,7 @@ Nested `do` lets with effecting carrier values also snapshot once through
 re-walking host effects while pure recursive/local bindings keep inline lowering.
 `write_file_text` now rides the fourth arm as tag 104 with overwrite/truncate
 semantics, giving text emitters a direct four-way write floor without byte-list
-materialization.
+materialization. `file-append` also crosses as an append-log write floor.
 Non-recursive direct-call `do` lets also snapshot once through per-function RAM
 windows; `ephemeris-planets` now reads list-returning call results repeatedly
 and crosses four-way at `1111111`.

@@ -31,11 +31,9 @@
 #     field constructors, float NodeIDs, and deeper content-addressed lattice
 #     surfaces beyond the explicit make_nodeid, category/pkg/level/type/inst
 #     projection, and generic/doc/concept/dns/session floor
-#   host io family        — file_mtime, scan_run, and broader write/read recipes
-#   effect-once let       — fkwu inlines a let, re-walking its value at every
-#     use; the gate for write_file_text and the durable file/Postgres carriers
-#     (whose store-threading binds effectful values through let). Full floor/
-#     north-star for this arc: docs/coherence-substrate/fourth-arm-substrate-carriers.form
+#   host io family        — file_mtime, scan_run, and broader read/scan recipes.
+#     Full floor/north-star for this arc:
+#     docs/coherence-substrate/fourth-arm-substrate-carriers.form
 #   multi-line output     — bands that print mid-walk (the walker answers
 #     one value through fk_pr)
 #
@@ -57,7 +55,7 @@
 # record-blueprint rows among its focused four-way rows, and
 # android-mesh-learning now carries
 # active mic/camera/GPU sample rows at focused verdict 32767. The latest
-# completed full `cd form && ./validate.sh` on this branch reads 222
+# completed full `cd form && ./validate.sh` on this branch reads 223
 # four-way bands and 612 total passing workloads with 0 residual divergent
 # bands; refresh the full aggregate on a quiet host after focused release
 # rather than spending repeated validation cycles under shared-runner
@@ -380,12 +378,12 @@ substrate-core fks 11111
 # nested do-lets now snapshot effecting values through fk-store/fk-load, not only
 # record_new, so a side-effecting binding is walked once and read many times
 # (let-effect-once appends one byte, checks the bound size twice, and reads len
-# 1). write_file_text/file_mtime/scan_run and segmented-FILE/Postgres carriers
-# can now build on effect-once let discipline instead of working around
-# re-walked bindings.
-# The next host-io carrier row is now admitted too: write_file_text rides fkwu
-# tag 104 with overwrite/truncate semantics, so text emitters no longer need to
-# materialize byte lists for the minimum fourth-arm write floor.
+# 1). file_mtime/scan_run and segmented-FILE/Postgres carriers can now build on
+# effect-once let discipline instead of working around re-walked bindings.
+# The next host-io carrier rows are now admitted too: write_file_text rides fkwu
+# tag 104 with overwrite/truncate semantics, and file-append rides the native
+# append carrier. Text emitters no longer need to materialize byte lists for the
+# minimum fourth-arm write floor, and append logs now have the same floor.
 # Pure call lets in non-recursive function bodies now snapshot through
 # per-function RAM windows, and the emitted fkwu RAM organ widened to 4096
 # cells. That lets list-returning pure calls be read more than once without
@@ -414,3 +412,4 @@ chart-cast fks 1111111
 eq-effect-once fks 1
 let-effect-once fks 111
 write-file-text fks 1111
+file-append fks 11111
