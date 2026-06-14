@@ -1,0 +1,28 @@
+; recursive-let-clobber.fk — an effecting let bound PER FRAME of a recursive
+; function, read AFTER the recursive descent. The strange-minimal witness for
+; recursion-safe let binding on the fourth arm.
+;
+; preludes: form-stdlib/core.fk
+;
+; descend appends one byte per frame; file_append_bytes returns the new total
+; length, so len_here is THIS frame's length (1 at the outermost call, deeper
+; frames see 2 then 3). It then recurses for effect and finally returns
+; len_here. Lexical scope (Go/Rust/TS interpret the source) keeps each frame's
+; own len_here, so the OUTERMOST frame returns 1 — it saw length 1 before any
+; deeper append. A flattener that binds effecting lets to a GLOBAL per-function
+; slot clobbers len_here across frames: every frame's read returns the DEEPEST
+; frame's length (3), because all frames share one constant slot. len_here is
+; the FIRST statement, so there is no prior-statement ordering confound — the
+; only thing under test is whether the binding survives the recursive descent.
+; Correct four-way verdict: 1. A clobbering fourth arm answers 3.
+(defn descend (path n)
+    (do
+        (let len_here (file_append_bytes path (list 65)))
+        (do
+            (if (le n 1) 0 (descend path (sub n 1)))
+            len_here)))
+(do
+    (let dir (temp_dir))
+    (let path (str_concat dir "/fk-recursive-let-clobber.txt"))
+    (fs_remove path)
+    (descend path 3))

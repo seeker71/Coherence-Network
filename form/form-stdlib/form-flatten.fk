@@ -99,6 +99,30 @@
 (defn flt-current-fidx (env) (flt-env-row-value (flt-assoc (flt-fidxq) env) 0))
 (defn flt-slot (env) (fk-lit (add 128 (add (mul (flt-current-fidx env) 32) (len env)))))
 
+; ── recursion-safe let binding on a RESERVED per-call frame block ──
+; A stored let lives at fk_vs[fp+offset] in a block the function reserves at
+; entry (RESERVE), so argument-packing scratch lands ABOVE the block and can
+; never shift a frame let's slot. Each call gets its own fp, so a recursive
+; re-entry reserves its own block — the deepest frame cannot clobber an outer
+; binding. ARG is offset 0; the k-th frame let is offset k = letdepth+1.
+(defn flt-letdepth-q () "(defn-letdepth)")
+(defn flt-current-letdepth (env) (flt-env-row-value (flt-assoc (flt-letdepth-q) env) 0))
+(defn fk-farg (off) (fk-node 110 (fk-lit off)))
+(defn fk-letf (off value body) (fk-node 109 (ms-intern (fk-lit off) (ms-intern value body))))
+(defn fk-reserve (k body) (fk-node 111 (ms-intern (fk-lit k) body)))
+; K = how many frame slots a function reserves. We count "(let " occurrences in
+; the function's SOURCE span — a linear, robust upper bound on the max frame-let
+; offset (sequential do-lets take incrementing offsets, so the deepest chain's
+; let count bounds it; inline/branch lets only over-reserve, never under). This
+; replaces a recipe-tree walk that crashed (as_nid: null) on source-compiled
+; module recipes. Over-reserving is safe: the slots cost value-stack space only.
+(defn flt-count-lets (s pos end) (flt-count-lets-go s (str_find s "(let " pos) end 0))
+(defn flt-count-lets-go (s found end acc)
+    (if (lt found 0) acc
+        (if (ge found end) acc
+            (flt-count-lets-go s (str_find s "(let " (add found 5)) end (add acc 1)))))
+(defn flt-reserve-wrap-k (k body) (if (eq k 0) body (fk-reserve k body)))
+
 (defn flt-mkop (row a b)
     (if (eq (nth row 1) 1) (fk-node (nth row 2) a)
         (fk-node (nth row 2) (ms-intern a b))))
@@ -279,20 +303,25 @@
     (if (str_eq op "http_get") 1 0)))))))))))))))
 (defn flt-do-let-done (name op s ve fns env val)
     (if (eq (flt-do-let-store-op op fns env) 1)
-        (flt-do-let-store name s ve fns env val (flt-slot env))
+        (flt-do-let-frame name s ve fns env val (add (flt-current-letdepth env) 1))
         (flt-do2 s (fp-skip s (fp-close s (nth ve 1))) fns
                  (cons (list name (nth ve 0)) env) val)))
 (defn flt-do-let-store-op (op fns env)
     (if (eq (flt-do-let-effect-op op) 1) 1
         (if (eq (flt-current-recursive env) 1) 0
             (if (eq (len (flt-assoc op fns)) 0) 0 1))))
-(defn flt-do-let-store (name s ve fns env val slot)
-    (flt-do-let-store-rest
-        (fk-store slot (nth ve 0))
+; A stored let lowers to LETF: walk the value once, write it to the reserved
+; frame slot fp+offset, walk the rest of the do with a frame-relative FARG
+; binding. No fk_vsp push — the slot is pre-reserved, so it survives sub-calls
+; and a recursive re-entry that reserves its own block higher up the stack.
+(defn flt-do-let-frame (name s ve fns env val offset)
+    (flt-do-let-frame-rest offset (nth ve 0)
         (flt-do2 s (fp-skip s (fp-close s (nth ve 1))) fns
-                 (cons (list name (fk-load slot)) env) val)))
-(defn flt-do-let-store-rest (store rest)
-    (list (flt-sequence store (nth rest 0)) (nth rest 1)))
+                 (cons (list name (fk-farg offset))
+                       (cons (list (flt-letdepth-q) offset) env))
+                 val)))
+(defn flt-do-let-frame-rest (offset value rest)
+    (list (fk-letf offset value (nth rest 0)) (nth rest 1)))
 
 ; two operands, then the lowering picked by selector k (lowerings are rules,
 ; not tag rows — they BUILD shapes instead of naming one)
@@ -551,9 +580,11 @@
                           (cons (list (flt-fidxq) (nth row 1)) env)))
                 rbodies env main))
 (defn flt-defn-b (s pos fns benv rbodies env main)
-    (flt-defn-done s (flt-expr s pos fns benv) fns rbodies env main))
-(defn flt-defn-done (s be fns rbodies env main)
-    (flt-items s (fp-close s (nth be 1)) fns (cons (nth be 0) rbodies) env main))
+    (flt-defn-b2 s pos (flt-expr s pos fns benv) fns rbodies env main))
+(defn flt-defn-b2 (s pos be fns rbodies env main)
+    (flt-defn-done s (flt-count-lets s pos (fp-close s (nth be 1))) be fns rbodies env main))
+(defn flt-defn-done (s k be fns rbodies env main)
+    (flt-items s (fp-close s (nth be 1)) fns (cons (flt-reserve-wrap-k k (nth be 0)) rbodies) env main))
 
 ; (let name value) — the value cell binds into env and inlines at each use
 (defn flt-let (s pos fns rbodies env main)
@@ -602,9 +633,11 @@
                             (cons (list (flt-fidxq) (nth row 1)) env)))
                   rbodies env main))
 (defn flt-defn-b-s (s pos fns benv rbodies env main)
-    (flt-defn-done-s s (flt-expr s pos fns benv) fns rbodies env main))
-(defn flt-defn-done-s (s be fns rbodies env main)
-    (flt-items-s s (fp-close s (nth be 1)) fns (cons (nth be 0) rbodies) env main))
+    (flt-defn-b2-s s pos (flt-expr s pos fns benv) fns rbodies env main))
+(defn flt-defn-b2-s (s pos be fns rbodies env main)
+    (flt-defn-done-s s (flt-count-lets s pos (fp-close s (nth be 1))) be fns rbodies env main))
+(defn flt-defn-done-s (s k be fns rbodies env main)
+    (flt-items-s s (fp-close s (nth be 1)) fns (cons (flt-reserve-wrap-k k (nth be 0)) rbodies) env main))
 (defn flt-let-s (s pos fns rbodies env main)
     (flt-let-n-s s (fp-skip s (fp-sym-end s (fp-skip s (add pos 1)))) fns rbodies env main))
 (defn flt-let-n-s (s pos fns rbodies env main)
@@ -715,9 +748,10 @@
 (defn flt-band-fns2 (modsrc bandsrc pool)
     (flt-band2 (flt-top modsrc (list) (list) pool) bandsrc pool))
 (defn flt-band2 (mr bandsrc pool)
-    (flt-band3 (flt-top-env-snap bandsrc (nth mr 0) (nth mr 1) pool (nth mr 4))))
-(defn flt-band3 (br)
-    (cons (nth br 2) (flt-rev (nth br 1) (list))))
+    (flt-band3 bandsrc (flt-top-env-snap bandsrc (nth mr 0) (nth mr 1) pool (nth mr 4))))
+(defn flt-band3 (bandsrc br)
+    (cons (flt-reserve-wrap-k (flt-count-lets bandsrc 0 (str_len bandsrc)) (nth br 2))
+          (flt-rev (nth br 1) (list))))
 (defn flt-modsrcs-top (modsrcs fns rbodies pool)
     (flt-modsrcs-top-env modsrcs fns rbodies pool (list)))
 (defn flt-modsrcs-top-env (modsrcs fns rbodies pool env)
@@ -744,4 +778,4 @@
         (flt-band-sources-fns (flt-srcs-mods srcs (list)) (flt-srcs-last srcs))))
 
 ; single-source door (prelude-free bands, mini programs)
-(defn flt-src-fns (src) (flt-band3 (flt-top src (list) (list) (flt-src-pool src))))
+(defn flt-src-fns (src) (flt-band3 src (flt-top src (list) (list) (flt-src-pool src))))
