@@ -1,0 +1,72 @@
+; bml-native-interface-package-import.fk - metadata floor for source boundaries.
+;
+; This is not the full BML compiler lowering for namespaces, imports, or
+; interface dispatch. It is the executable data-carried floor those lowerers can
+; target: package, import, and interface declarations become explicit rows with
+; source receipts and optional port-shape linkage.
+;
+; preludes: form-stdlib/core.fk form-stdlib/resource-port.fk
+;
+(do
+    (defn bnii-source (language path line)
+        (list "source" language path line))
+    (defn bnii-source-language (source) (nth source 1))
+    (defn bnii-source-path (source) (nth source 2))
+    (defn bnii-source-line (source) (nth source 3))
+
+    (defn bnii-package (name source)
+        (list "bml-native-package" name source))
+    (defn bnii-package? (row)
+        (if (eq (len row) 3)
+            (str_eq (nth row 0) "bml-native-package")
+            0))
+    (defn bnii-package-name (row) (nth row 1))
+    (defn bnii-package-source (row) (nth row 2))
+
+    (defn bnii-import (module selector source)
+        (list "bml-native-import" module selector source))
+    (defn bnii-import? (row)
+        (if (eq (len row) 4)
+            (str_eq (nth row 0) "bml-native-import")
+            0))
+    (defn bnii-import-module (row) (nth row 1))
+    (defn bnii-import-selector (row) (nth row 2))
+    (defn bnii-import-source (row) (nth row 3))
+    (defn bnii-import-star? (row)
+        (if (str_eq (bnii-import-selector row) ".*") 1 0))
+
+    (defn bnii-interface (name parent members port source)
+        (list "bml-native-interface" name parent members port source))
+    (defn bnii-interface? (row)
+        (if (eq (len row) 6)
+            (str_eq (nth row 0) "bml-native-interface")
+            0))
+    (defn bnii-interface-name (row) (nth row 1))
+    (defn bnii-interface-parent (row) (nth row 2))
+    (defn bnii-interface-members (row) (nth row 3))
+    (defn bnii-interface-port (row) (nth row 4))
+    (defn bnii-interface-source (row) (nth row 5))
+    (defn bnii-interface-uses-port? (row port)
+        (if (node_eq (bnii-interface-port row) port) 1 0))
+
+    (defn bnii-unit (package imports interfaces)
+        (list "bml-native-interface-package-import-unit" package imports interfaces))
+    (defn bnii-unit? (row)
+        (if (eq (len row) 4)
+            (str_eq (nth row 0) "bml-native-interface-package-import-unit")
+            0))
+    (defn bnii-unit-package (row) (nth row 1))
+    (defn bnii-unit-imports (row) (nth row 2))
+    (defn bnii-unit-interfaces (row) (nth row 3))
+
+    (defn bnii-unit-import-count (unit)
+        (len (bnii-unit-imports unit)))
+    (defn bnii-unit-interface-count (unit)
+        (len (bnii-unit-interfaces unit)))
+    (defn bnii-unit-package-name (unit)
+        (bnii-package-name (bnii-unit-package unit)))
+
+    (defn bnii-next-code-point ()
+        "form/form-stdlib/grammars/bml.fk:bml-source-declaration-model -> native namespace/import/interface lowering")
+
+    0)

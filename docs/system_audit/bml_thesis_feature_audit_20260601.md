@@ -85,6 +85,12 @@ What is proven today:
   lowers it into BMA ops, runs forward, and replays backward to the empty VM
   state. General statement-body lowering for arbitrary `if_fail` /
   `while_success` blocks remains a gap.
+- Source-originated save/discard and try/throw/catch now have a focused
+  control/backtracking floor: `bml-thesis-control-backtracking-floor-proof.fk`
+  parses `bml-thesis-forward-backward-demo.bml`, lowers it into BMA save,
+  push-int, discard, and try ops, returns through the catch handler, clears
+  snapshots, and replays forward/backward to the empty VM state. Source-level
+  restore spelling and arbitrary try/throw/while block lowering remain gaps.
 - Source-originated `operator==` execution from `container-Rule.bml` now covers
   its final positive return path: `return m_hItem == hOther.Item;` parses from
   the real method body, evaluates direct member equality, runs through the
@@ -154,7 +160,7 @@ is not complete rule-for-rule.
 | Lexical conventions: nested comments, keywords, identifiers, operators, int/hex/bin/float/char/string | `backtracking-model-languages.txt:243-253`; `source-samples/BMF-grammar.bml:47-69` | native-executed for focused file scanner subset | Current proofs cover line/block comments, keywords, properties, identifiers, operators, decimal/hex/bin ints, decimal/exponent floats, thesis char escapes, strings, and large-file scanning through a generic sibling-native scanner fed by a Form-defined BML lexicon. `bml-generic-source-scanner-boundary-proof.fk` proves the native scanner is lexicon-driven by scanning the same `.bml` file with BML and alternate token-kind lexicons. `bml-thesis-numeric-literals-source-proof.fk` proves `0x`, `0X`, `0b`, and `0B` integer spellings. `bml-thesis-float-literals-source-proof.fk` proves focused decimal/exponent float spellings from native file scan and Form text scan into BMA execution plus backward replay. `bml-thesis-char-escapes-source-proof.fk` proves `\\`, `\'`, `"`, `\n`, `\t`, `\r`, and `\0` from native file scan and Form text scan into BMA execution plus backward replay. Complete signed float folding remains a gap. |
 | Binary types, structures, lvalue/rvalue | `backtracking-model-languages.txt:271-275` | grammar-manifest | No full binary layout/get-put code generation proof yet. |
 | Expressions, casts, member access, calls, `instanceof`, arrays, operators, assignment | `backtracking-model-languages.txt:292-594` | grammar-manifest with growing executable expression subset | `method-return-add`, `char-lit`, `return-char`, and `array-int` execute. `bml-thesis-char-escapes-source-proof.fk` proves char-literal return execution and backward replay. `bml-thesis-rule-body-execution-proof.fk` proves simple name assignment bodies from `container-Rule.bml` execute against native records. Focused `container-Rule.bml` proofs now execute `HashCode()` member-add returns, `operator==` `instanceof` guard, typed cast binding, direct/chained member inequality guards, and the final `m_hItem == hOther.Item` return through native method dispatch. Full precedence, overload, cast, bitwise, logical, member dispatch, and general assignment lowering remain gaps. |
-| Statements: if/select/switch/while/do/loop/for/break/continue/return/choice/try/throw/fail/with | `backtracking-model-languages.txt:596-636` | native-executed for selected BMA subset; grammar-manifest for most source forms | return/break/continue/throw/try/fail/cut/mark/choice/choose execute in proof tests. `bml-thesis-control-primitives-source-proof.fk` adds source-originated `if_fail` fallback and guarded `while_success` execution. Full arbitrary control-flow lowering remains a gap. |
+| Statements: if/select/switch/while/do/loop/for/break/continue/return/choice/try/throw/fail/with | `backtracking-model-languages.txt:596-636` | native-executed for selected BMA subset; source-executed for focused control/backtracking forms; grammar-manifest for most source forms | return/break/continue/throw/try/fail/cut/mark/choice/choose execute in proof tests. `bml-thesis-control-primitives-source-proof.fk` adds source-originated `if_fail` fallback and guarded `while_success` execution. `bml-thesis-control-backtracking-floor-proof.fk` adds source-originated save/discard plus try/throw/catch execution with forward/backward restoration. Full arbitrary control-flow lowering and source-level restore spelling remain gaps. |
 | Companion backtracking syntax: `choose`, `if_fail`, `while_success`, `cut`, `mark` | `companion/bml-search-algorithms.txt:49-78` | native-executed for focused source forms | `choose`, `fail`, `cut`, and `mark` execute in thesis exit proof; `if_fail` and `while_success` now parse from `.bml`, lower to BMA, run forward, and replay backward for the focused fallback/fail-loop forms. General block lowering remains incomplete. |
 | Local and anonymous functions / blocks with context | `companion/bml-search-algorithms.txt:81-89`, `:212-218`; `backtracking-model-languages.txt:234` | grammar-manifest | Closure capture and block execution semantics remain gaps. |
 | Properties and attributes | `backtracking-model-languages.txt:640-689` | component-proven for many helpers; thesis-deferred for several attrs | Tests prove access/class/default/final/deferred/delegate/shared/get/put/strict/relaxed flags as data. Runtime enforcement/codegen is incomplete; thesis itself defers unique, singleton, delegate, shared, strict/relaxed, nostate, const/cost/default/final/inline, out/inout/cast, and access enforcement in lines `651-685`. |
@@ -217,8 +223,10 @@ source subset:
   `bml-thesis-rule-operator-final-return-proof.fk` proves the parsed
   `operator==` body reaches and executes its final `m_hItem == hOther.Item`
   return for matching values and returns false for mismatching final items.
-  Executable lowering for the complex control-flow and expression bodies
-  remains a gap.
+  `bml-thesis-control-backtracking-floor-proof.fk` proves focused source
+  save/discard and try/throw/catch execution with forward/backward restoration.
+  Executable lowering for the complex control-flow and expression bodies, plus
+  source-level restore spelling, remains a gap.
 
 ## Exit Criteria For The FULL Claim
 
@@ -272,6 +280,7 @@ cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cac
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-rule-self-constructor-proof.fk
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-rule-method-dispatch-proof.fk
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-rule-operator-final-return-proof.fk
+cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-control-backtracking-floor-proof.fk
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/tests/source-compiler-runtime.fk
 cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/tests/source-compiler-multi-dialect-band.fk
 ```
