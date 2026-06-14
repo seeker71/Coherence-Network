@@ -1,0 +1,32 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord claim fourth-ideas-graph-projection-floor",
+    "cd form && bash scripts/fourth-arm-gate.sh ideas-graph-projection graph-node-mutation-carrier graph-node-mutation-file-verdict graph-node-port",
+    "cd form && ./validate.sh",
+    "python3 scripts/model_executor_proof_ledger.py sync-jsonl --output docs/system_audit/model_executor_runs.jsonl",
+    "python3 scripts/model_executor_proof_ledger.py check-jsonl",
+    "python3 scripts/model_executor_proof_ledger.py validate",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_fourth_ideas_graph_projection.json"
+  ],
+  "failure_reason": "Moved gn-list-nodes-by-ids to consume the current storage read before tail recursion so recursive calls cannot overwrite the current source-order read slot. ideas-graph-projection now passes four-way over reopened file-backed graph stores. Full validation reports 232 four-way bands, 614 ok, 0 divergent.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "fourth-ideas-graph-projection-floor-20260614",
+  "source": {
+    "kind": "codex-worktree",
+    "path": "/Users/ursmuff/.codex/worktrees/a3ec/Coherence-Network"
+  },
+  "thread_branch": "codex/fourth-ideas-graph-projection-20260614",
+  "validation": {
+    "commands": [
+      "cd form && bash scripts/fourth-arm-gate.sh ideas-graph-projection graph-node-mutation-carrier graph-node-mutation-file-verdict graph-node-port",
+      "cd form && ./validate.sh"
+    ],
+    "status": "pass"
+  }
+}
