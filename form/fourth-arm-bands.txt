@@ -409,6 +409,7 @@ offer-lane fks 1111111
 translation-learn fks 1111111
 translation-quality fks 1111111
 chart-cast fks 1111111
+native-training-receipt fks 511
 eq-effect-once fks 1
 let-effect-once fks 111
 write-file-text fks 1111

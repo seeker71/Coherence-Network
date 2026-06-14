@@ -1,0 +1,38 @@
+{
+  "ledger_schema": "model_executor_proof_run/v1",
+  "run_id": "native-training-receipts-20260614",
+  "thread_branch": "codex/native-training-receipts-20260614",
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "python3 scripts/form_native_training_receipt.py --check --output docs/system_audit/native_training_receipts/form-native-nearest-shape-v0.json --observed-at 2026-06-14T00:00:00Z",
+    "python3 -m py_compile scripts/form_native_training_receipt.py api/app/routers/models.py api/app/services/native_training_receipts.py",
+    "python3 -m pytest -q api/tests/test_models_learning_dashboard.py api/tests/test_form_native_training_receipt.py",
+    "python3 -m ruff check api/app/routers/models.py api/app/services/native_training_receipts.py api/tests/test_models_learning_dashboard.py api/tests/test_form_native_training_receipt.py scripts/form_native_training_receipt.py",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/native-training-receipt.fk form-stdlib/tests/native-training-receipt-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh native-training-receipt",
+    "cd web && npm run build",
+    "python3 - <<'PY'\nimport asyncio\nfrom api.app.routers import models\nr=asyncio.run(models.get_learning_dashboard())\nprint('trained_native_model_count', r.summary.trained_native_model_count)\nprint('native_training_artifacts', len(r.native_training_artifacts))\nif r.native_training_artifacts:\n    a=r.native_training_artifacts[0]\n    print(a.artifact_id, a.weights_hash, a.native_accuracy_ppm, a.oracle_accuracy_ppm)\nPY",
+    "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --fail-on-regression"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Established the first concrete native training receipt floor: a Form-native nearest-shape artifact with committed weight/data/eval hashes, focused API/dashboard exposure, and a four-way Form proof band.",
+  "source": {
+    "kind": "native-training-receipt",
+    "path": "docs/system_audit/native_training_receipts/form-native-nearest-shape-v0.json"
+  },
+  "validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/form_native_training_receipt.py --check --output docs/system_audit/native_training_receipts/form-native-nearest-shape-v0.json --observed-at 2026-06-14T00:00:00Z",
+      "python3 -m pytest -q api/tests/test_models_learning_dashboard.py api/tests/test_form_native_training_receipt.py",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/native-training-receipt.fk form-stdlib/tests/native-training-receipt-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh native-training-receipt",
+      "cd web && npm run build"
+    ]
+  }
+}

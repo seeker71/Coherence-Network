@@ -1,0 +1,136 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/native-training-receipts-20260614",
+  "commit_scope": "Attach actual native weight, data, and eval receipts for the first continuously trainable Form-native artifact and expose them on the learning dashboard.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "form-native-model-data-as-cells",
+    "native-learning-surface",
+    "oracle-retirement-receipts",
+    "model-vitality-dashboard"
+  ],
+  "spec_ids": [
+    "form-native-learning",
+    "coherence-substrate-model-vitality",
+    "native-training-receipt",
+    "learning-dashboard"
+  ],
+  "task_ids": [
+    "native-training-receipts-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "api/app/routers/models.py",
+    "api/app/services/native_training_receipts.py",
+    "api/tests/test_models_learning_dashboard.py",
+    "api/tests/test_form_native_training_receipt.py",
+    "web/app/dashboard/page.tsx",
+    "form/form-stdlib/native-training-receipt.fk",
+    "form/form-stdlib/tests/native-training-receipt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/form_native_training_receipt.py",
+    "docs/system_audit/native_training_receipts/form-native-nearest-shape-v0.json",
+    "docs/system_audit/commit_evidence_2026-06-14_native_training_receipts.json",
+    "docs/system_audit/model_executor_run_ledger/native-training-receipts-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "api/app/routers/models.py",
+    "api/app/services/native_training_receipts.py",
+    "api/tests/test_models_learning_dashboard.py",
+    "api/tests/test_form_native_training_receipt.py",
+    "web/app/dashboard/page.tsx",
+    "form/form-stdlib/native-training-receipt.fk",
+    "form/form-stdlib/tests/native-training-receipt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/form_native_training_receipt.py",
+    "docs/system_audit/native_training_receipts/form-native-nearest-shape-v0.json",
+    "docs/system_audit/commit_evidence_2026-06-14_native_training_receipts.json",
+    "docs/system_audit/model_executor_run_ledger/native-training-receipts-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "docs/system_audit/native_training_receipts/form-native-nearest-shape-v0.json",
+    "form/form-stdlib/native-training-receipt.fk",
+    "form/form-stdlib/tests/native-training-receipt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/form_native_training_receipt.py",
+    "api/app/routers/models.py",
+    "api/app/services/native_training_receipts.py",
+    "web/app/dashboard/page.tsx"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/form_native_training_receipt.py --check --output docs/system_audit/native_training_receipts/form-native-nearest-shape-v0.json --observed-at 2026-06-14T00:00:00Z",
+      "python3 -m py_compile scripts/form_native_training_receipt.py api/app/routers/models.py api/app/services/native_training_receipts.py",
+      "python3 -m pytest -q api/tests/test_models_learning_dashboard.py api/tests/test_form_native_training_receipt.py",
+      "python3 -m ruff check api/app/routers/models.py api/app/services/native_training_receipts.py api/tests/test_models_learning_dashboard.py api/tests/test_form_native_training_receipt.py scripts/form_native_training_receipt.py",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/native-training-receipt.fk form-stdlib/tests/native-training-receipt-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh native-training-receipt",
+      "cd web && npm run build",
+      "python3 - <<'PY'\nimport asyncio\nfrom api.app.routers import models\nr=asyncio.run(models.get_learning_dashboard())\nprint('trained_native_model_count', r.summary.trained_native_model_count)\nprint('native_training_artifacts', len(r.native_training_artifacts))\nif r.native_training_artifacts:\n    a=r.native_training_artifacts[0]\n    print(a.artifact_id, a.weights_hash, a.native_accuracy_ppm, a.oracle_accuracy_ppm)\nPY",
+      "python3 scripts/model_executor_proof_ledger.py validate && python3 scripts/model_executor_proof_ledger.py check-jsonl",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_native_training_receipts.json",
+      "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --fail-on-regression",
+      "git diff --check"
+    ],
+    "notes": "Focused Form validation returned 511 with `fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables)` and `1 ok, 0 divergent`; the manifest gate returned `PASS-4WAY native-training-receipt`. The committed receipt names weights hash sha256:8b34af7a10d9160469d7fe3367c22b6aef0a4d762e44e80c1ea4e9492c7b04ab, data hash sha256:bd2044ddcde57f6a5c1596dbe9749423440630dc403c781424633fda6a182047, eval hash sha256:bbd6c35cb32c6bdc350421e01115a14d7530ca0c704120394b8b196492042074, 6 summary-only samples, 4 heldout rows, and 4 correct native predictions. The API counts native trained models only from active passing receipts with closed eval counts. `cd web && npm run build` passed after local dependency install, with existing Next/Turbopack warnings unrelated to this slice. Receipt loading was extracted into api/app/services/native_training_receipts.py, and the maintainability audit reports regression: no."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed when this evidence was written; CI has not run yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested for this native receipt/dashboard slice."
+  },
+  "phase_gate": {
+    "phase": "native-training-receipt-floor",
+    "gate": "Native trained artifacts must have inspectable weight, data, eval, and recipe receipts before the dashboard counts them as trained.",
+    "state": "local-four-way-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Append recurring live witness training cycles to this receipt lane, then compare native artifact choice against oracle routes over larger heldout windows."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The learning dashboard no longer has only a zero placeholder for native trained artifacts. It reads committed native training receipts, exposes the artifact hashes and eval metadata, and increments the native trained count only when the receipt proves weights, data, eval, and passing validation.",
+    "public_endpoints": [
+      "local:/api/models/learning-dashboard",
+      "local:web/app/dashboard/page.tsx",
+      "local:form/validate.sh:native-training-receipt-band"
+    ],
+    "test_flows": [
+      "An empty native receipt directory reports trained_native_model_count 0.",
+      "An active passing receipt with weights/data/eval hashes reports trained_native_model_count 1 and exposes the artifact metadata.",
+      "A pending receipt does not count.",
+      "The Form band proves the same artifact's prototype weights, heldout eval counts, and native-beats-oracle gate four-way."
+    ],
+    "summary": "The established floor is one real Form-native nearest-shape artifact receipt with weight/data/eval hashes and four-way proof. The next gap is continuous append/update from live witness samples and larger heldout windows."
+  }
+}
