@@ -1,0 +1,60 @@
+; tests/codon-hexagram-band.fk — DNA and the I Ching are one 64-cell lattice, proven.
+;
+; The bridge between the sibling's genetic-code grammar (the biology) and the channels'
+; 64 (the I Ching / Human Design): a codon is a 6-bit cell, a hexagram is a 6-bit cell,
+; and they are the same cell. The band lands the poles (DNA's heaviest/lightest codon =
+; the Creative/Receptive trigram, by the very trigram-binary cjk-channel proved), reuses
+; the sibling's codon table, and shows the genetic code's degeneracy as content-addressing
+; over hexagram cells.
+;
+; Verdict 1111111 (127) when every claim holds across all four kernels.
+;   the biophysical bigram: U=0, C=1, A=2, G=3                     -> 1
+;   a codon is a 6-bit cell: AUG -> 35                              -> 10
+;   the poles: UUU -> 0 (Kun), GGG -> 63 (Qian)                     -> 100
+;   the I Ching bridge: GGG's upper trigram = Qian(7), UUU's = Kun(0) -> 1000
+;   the sibling's code: AUG -> M (start), Leucine degeneracy = 6     -> 10000
+;   degeneracy = content-addressing: UUA != CUG cells, same amino L  -> 100000
+;   the lattice is whole: 64 codons (4^3 = 2^6)                      -> 1000000
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/cjk-channel.fk form-stdlib/grammars/genetic-code.fk form-stdlib/codon-hexagram.fk
+;
+
+(do
+    ;; --- 1. the biophysical bigram ------------------------------------
+    (let enc-ok
+        (if (eq (ch-base-bits "U") 0)
+            (if (eq (ch-base-bits "C") 1)
+                (if (eq (ch-base-bits "A") 2)
+                    (if (eq (ch-base-bits "G") 3) 1 0) 0) 0) 0))
+
+    ;; --- 2. a codon is a 6-bit cell -----------------------------------
+    (let cell-ok (if (eq (codon-hexagram "AUG") 35) 10 0))
+
+    ;; --- 3. the poles of the lattice ----------------------------------
+    (let poles-ok
+        (if (eq (codon-hexagram "UUU") 0)
+            (if (eq (codon-hexagram "GGG") 63) 100 0) 0))
+
+    ;; --- 4. the I Ching bridge (via cjk-channel's trigram-binary) ------
+    ;; GGG's upper trigram IS Qian; UUU's IS Kun — DNA's poles are the
+    ;; Creative and the Receptive, by the same binary the channel walks.
+    (let bridge-ok
+        (if (eq (codon-upper-trigram "GGG") (trigram-binary "qian"))
+            (if (eq (codon-upper-trigram "UUU") (trigram-binary "kun")) 1000 0) 0))
+
+    ;; --- 5. the sibling's genetic code reused -------------------------
+    (let code-ok
+        (if (str_eq (gc-codon-amino "AUG") "M")
+            (if (eq (gc-degeneracy "L") 6) 10000 0) 0))
+
+    ;; --- 6. degeneracy IS content-addressing --------------------------
+    ;; UUA and CUG are DIFFERENT hexagram cells (different 6-bit addresses)
+    ;; that share the Leucine amino-acid address — biology's content-addressing.
+    (let diff-cells (eq (codon-same-hexagram? "UUA" "CUG") 0))
+    (let same-amino (str_eq (gc-codon-amino "UUA") (gc-codon-amino "CUG")))
+    (let degen-ok (if diff-cells (if same-amino 100000 0) 0))
+
+    ;; --- 7. the lattice is whole: 64 codons = the 64 -----------------
+    (let whole-ok (if (eq (len (gc-all-codons)) 64) 1000000 0))
+
+    (sum (list enc-ok cell-ok poles-ok bridge-ok code-ok degen-ok whole-ok)))
