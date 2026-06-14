@@ -1,20 +1,21 @@
-; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/cell-log-store.fk form-stdlib/kernel-http.fk form-stdlib/channel.fk form-stdlib/text-summary-learning.fk
+; preludes: form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/cell-log-store.fk form-stdlib/http-parse.fk form-stdlib/kernel-http.fk form-stdlib/http-request.fk form-stdlib/http-render.fk form-stdlib/http-server.fk form-stdlib/http-socket.fk form-stdlib/channel.fk form-stdlib/text-summary-learning.fk
 ;
 ; text-summary-multi-source-band - dynamic source-coordinate summary floor.
 ;
-; Floor: file, file-backed store, kernel route response, and stream cursor
-; windows all emit the same native source-coordinate receipt shape. The file
+; Floor: file, file-backed store, socket-served route trace, and stream
+; pressure windows all emit the same native source-coordinate receipt shape. The file
 ; lane reads a real checked-in source byte slice; the store lane writes to a
 ; temporary segmented cell-log store and reads the value back; the route lane
-; lowers a kernel-http route choice into a kh-response body; the stream lane
-; writes and reads a .fkb channel cursor window.
+; sends a real TCP loopback request through kh-serve-listener and reads the
+; native-kernel wire response; the stream lane writes and reads a .fkb channel
+; cursor window with capacity and deferred-count pressure.
 ;
 ; North star: file, store, route, and stream sources all feed one summary
 ; learner through dynamic coordinates: protocol, capability, locator, selector,
 ; offset, length, codec, carrier, floor, and north star. The current floor still
-; names the next pressure honestly: route is a native value/body receipt, not
-; yet a socket-served front-door trace; stream is a file-backed channel cursor,
-; not yet a backpressure-aware event stream.
+; names the next pressure honestly: route is a loopback socket-served front-door
+; trace, not yet production front-door telemetry; stream is a measured
+; backpressure read window, not yet producer pacing and ack.
 ;
 ; Verdict 65535 when every claim lands:
 ;   1     expanded floor and north-star declarations name source coordinates
@@ -23,8 +24,8 @@
 ;   8     store coordinate is ready store:query with dynamic key coordinates
 ;   16    store receipt is read from a real temporary segmented store
 ;   32    ready receipts are valid and aggregate claims/citations
-;   64    route coordinate and receipt are ready from kernel-http response body
-;   128   stream coordinate and receipt are ready from channel-read-since window
+;   64    route coordinate and receipt are ready from socket-served wire trace
+;   128   stream coordinate and receipt are ready from backpressure-aware window
 ;   256   file/store/route/stream request plans expose protocols and caps
 ;   512   multi-source summary passes existing summary quality gates
 ;   1024  summary claim and citation counts equal aggregated receipts
@@ -33,6 +34,19 @@
 ;   8192  output envelope carries coordinates, receipts, summary, receipt, and metadata
 ;   16384 proof level names file/store/route/stream physical source floor
 ;   32768 all four coordinates are ready and none remain planned
+(defn tsms-runtime-events-handler (request)
+    (kh-response
+        200
+        (list
+            (kh-header "Content-Type" "application/json")
+            (kh-header "X-Form-Route" "runtime-events-summary"))
+        (str_concat
+            "{\"route\":\"runtime-events-summary\",\"handler\":\"tsms-runtime-events-handler\",\"request\":\""
+            (str_concat (kh-request-path request) "\"}"))))
+(defn tsms-contains (s needle) (ge (str_find s needle 0) 0))
+(defn tsms-starts (s prefix)
+    (if (lt (str_len s) (str_len prefix)) false (str_eq (substring s 0 (str_len prefix)) prefix)))
+
 (do
     (let meta
         (tsl-meta
@@ -77,67 +91,50 @@
             2
             "cell-log-store cls-get returned the stored source value"))
 
-    (let route-request
-        (kh-request
-            "GET"
-            "/api/runtime/events"
-            (list
-                (kh-header "Accept" "application/json")
-                (kh-header "Host" "localhost"))
-            (list (kh-field "limit" "2"))
-            ""))
+    (let route-request-wire
+        "GET /api/runtime/events HTTP/1.1\r\nHost: 127.0.0.1\r\nAccept: application/json\r\n\r\n")
     (let route-exact
         (kh-route
             "runtime-events-summary"
             "GET"
             "/api/runtime/events"
             9
-            "kh-runtime-events-summary"
+            "tsms-runtime-events-handler"
             "Accept"
             25))
-    (let route-fallback
-        (kh-route
-            "runtime-api-fallback"
-            "ANY"
-            "/api/runtime/*"
-            1
-            "kh-runtime-api-fallback"
-            ""
-            80))
-    (let route-choice (kh-route-choice-for-request (list route-fallback route-exact) route-request))
-    (let selected-route (kh-route-candidate-route (kh-route-choice-selected route-choice)))
-    (let route-body
-        (str_concat
-            "{\"route\":\""
-            (str_concat
-                (kh-route-name selected-route)
-                (str_concat
-                    "\",\"handler\":\""
-                    (str_concat
-                        (kh-route-handler selected-route)
-                        (str_concat
-                            "\",\"request\":\""
-                            (str_concat (kh-request-path route-request) "\"}")))))))
-    (let route-response
-        (kh-response
+    (let route-registry (list (list "tsms-runtime-events-handler" tsms-runtime-events-handler)))
+    (let srv (socket_listen 0))
+    (let port (socket_port srv))
+    (let cli (socket_connect "127.0.0.1" port))
+    (let route-request-bytes (socket_send cli route-request-wire))
+    (let route-served (kh-serve-listener srv (list route-exact) route-registry 1))
+    (let route-wire (socket_recv cli 65536))
+    (socket_close cli)
+    (socket_close srv)
+    (let route-body (tsl-http-wire-body route-wire))
+    (let route-trace
+        (tsl-socket-route-trace
+            "GET"
+            "/api/runtime/events"
+            "runtime-events-summary"
+            "tsms-runtime-events-handler"
             200
-            (list
-                (kh-header "Content-Type" "application/json")
-                (kh-header "X-Form-Route" (kh-route-name selected-route)))
-            route-body))
+            route-request-bytes
+            (str_len route-wire)
+            (str_len route-body)
+            "native-kernel"))
     (let route-coordinate
         (tsl-route-source-coordinate
-            (kh-request-path route-request)
-            (kh-route-handler selected-route)))
+            "/api/runtime/events"
+            "tsms-runtime-events-handler"))
     (let route-receipt
-        (tsl-route-source-data-receipt
+        (tsl-socket-route-source-data-receipt
             route-coordinate
-            (kh-response-body route-response)
-            (kh-response-status route-response)
-            (len (kh-response-headers route-response))
+            route-body
+            route-trace
             2
             1
-            "kernel-http route choice selected a native route and produced a response body"))
+            "socket_listen/connect/send/serve/recv produced a native-kernel route wire trace"))
 
     (let stream-path (str_concat (temp_dir) "/text-summary-multi-source-stream.fkb"))
     (fs_remove stream-path)
@@ -145,21 +142,36 @@
     (channel-append stream-path (channel-message (intern_trivial_string "warmup event before cursor")))
     (channel-append stream-path (channel-message (intern_trivial_string "runtime route response became summary source")))
     (channel-append stream-path (channel-message (intern_trivial_string "stream cursor window became summary source")))
-    (let stream-window (channel-read-since stream-path 1))
-    (let stream-event-a (node_value (channel-msg-payload (head stream-window))))
-    (let stream-event-b (node_value (channel-msg-payload (head (tail stream-window)))))
+    (channel-append stream-path (channel-message (intern_trivial_string "deferred stream event stayed behind capacity")))
+    (let stream-all (channel-read-since stream-path 1))
+    (let stream-window-count 2)
+    (let stream-capacity 2)
+    (let stream-deferred (sub (len stream-all) stream-window-count))
+    (let stream-event-a (node_value (channel-msg-payload (head stream-all))))
+    (let stream-event-b (node_value (channel-msg-payload (head (tail stream-all)))))
     (let stream-body (str_concat stream-event-a (str_concat "\n" stream-event-b)))
-    (let stream-next-cursor (add 1 (len stream-window)))
+    (let stream-next-cursor (add 1 stream-window-count))
     (let stream-coordinate (tsl-stream-source-coordinate stream-path "cursor:1"))
+    (let stream-pressure
+        (tsl-stream-pressure-receipt
+            stream-path
+            "cursor:1"
+            (len stream-all)
+            stream-window-count
+            stream-capacity
+            stream-deferred
+            stream-deferred
+            "backpressure/defer"
+            "defer-over-capacity"))
     (let stream-receipt
-        (tsl-stream-source-data-receipt
+        (tsl-backpressure-stream-source-data-receipt
             stream-coordinate
             stream-body
-            (len stream-window)
+            stream-pressure
             stream-next-cursor
             2
             2
-            "channel-read-since returned two ordered payloads after cursor 1"))
+            "channel-read-since returned three payloads after cursor 1, consumed two, and deferred one over capacity"))
     (let coordinates (list file-coordinate store-coordinate route-coordinate stream-coordinate))
     (let ready-receipts (list file-receipt store-receipt route-receipt stream-receipt))
     (let summary (tsl-multi-source-summary ready-receipts meta))
@@ -222,10 +234,16 @@
                 (and
                     (eq (tsl-source-coordinate-ready? route-coordinate) 1)
                     (and
-                        (str_eq (tsl-source-coordinate-carrier route-coordinate) "kernel-http:kh-response-body")
+                        (str_eq (tsl-source-coordinate-carrier route-coordinate) "socket:kh-serve-listener+wire-trace")
                         (and
-                            (kh-response-valid? route-response)
-                            (eq (tsl-source-data-valid? route-receipt) 1)))))
+                            (eq route-served 0)
+                            (and
+                                (tsms-starts route-wire "HTTP/1.1 200 OK\r\n")
+                                (and
+                                    (tsms-contains route-wire "X-Form-Router: native-kernel\r\n")
+                                    (and
+                                        (eq (tsl-socket-route-trace-valid? route-trace) 1)
+                                        (eq (tsl-source-data-valid? route-receipt) 1))))))))
             64
             0))
     (let c7
@@ -234,10 +252,14 @@
                 (and
                     (eq (tsl-source-coordinate-ready? stream-coordinate) 1)
                     (and
-                        (str_eq (tsl-source-coordinate-carrier stream-coordinate) "channel:read-since+cursor-window")
+                        (str_eq (tsl-source-coordinate-carrier stream-coordinate) "channel:read-since+pressure-window")
                         (and
-                            (eq (len stream-window) 2)
-                            (eq (tsl-source-data-valid? stream-receipt) 1)))))
+                            (eq (len stream-all) 3)
+                            (and
+                                (eq (tsl-stream-pressure-ready? stream-pressure) 1)
+                                (and
+                                    (eq (tsl-stream-pressure-deferred-count stream-pressure) 1)
+                                    (eq (tsl-source-data-valid? stream-receipt) 1)))))))
             128
             0))
     (let c8
@@ -246,8 +268,8 @@
                 (and
                     (str_eq (tsl-plan-capability store-plan) "cap.store.query")
                     (and
-                        (str_eq (tsl-plan-carrier route-plan) "kernel-http:kh-response-body")
-                        (str_eq (tsl-plan-carrier stream-plan) "channel:read-since+cursor-window"))))
+                        (str_eq (tsl-plan-carrier route-plan) "socket:kh-serve-listener+wire-trace")
+                        (str_eq (tsl-plan-carrier stream-plan) "channel:read-since+pressure-window"))))
             256
             0))
     (let c9
@@ -291,7 +313,7 @@
     (let c14
         (if (str_eq
                 (tsl-multi-source-proof-level)
-                "3-kernel-host-io-file-store-route-stream")
+                "3-kernel-host-io-file-store-socket-route-backpressure-stream")
             16384
             0))
     (let c15
