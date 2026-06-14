@@ -1,0 +1,86 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "claude/cranky-diffie-8c9ab4",
+  "commit_scope": "Fix native /api/ideas 500 (persistence: idea query failed). The include_internal SQL flag is still produced as a boolean by kh-query-bool-or, but #2958 changed the summary and page SQL to cast it as $2::bigint = 1. PostgreSQL cannot cast boolean to bigint, so the summary aggregate erred on every request, pg_query_rows returned nil, and the handler returned 500. Convert include_internal to a 0/1 integer flag (new idea-internal-flag helper), matching the same-commit inventory-flow fix and the graph-node-edges/inventory-flow sibling routes that already pass 0/1 integers to $N::bigint = 1.",
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "kernel-native-api-readiness",
+    "bml-front-door"
+  ],
+  "spec_ids": [
+    "kernel-native-api-readiness",
+    "native-front-door-deploy"
+  ],
+  "task_ids": [
+    "ideas-native-include-internal-flag-20260614"
+  ],
+  "files_owned": [
+    "deploy/front-door/api.bml"
+  ],
+  "change_files": [
+    "deploy/front-door/api.bml"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "deploy/front-door/api.bml",
+    "https://api.coherencycoin.com/api/ideas",
+    "docs/PRODUCTION-SUBSTRATE.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "curl -sS -D - https://api.coherencycoin.com/api/ideas -> HTTP 500 {\"error\":\"persistence\",\"detail\":\"idea query failed\"} x-form-router: native-kernel (pre-fix repro)",
+      "psql 'SELECT true::bigint' -> ERROR: cannot cast type boolean to bigint (root cause confirmed against prod Postgres)",
+      "Ran the full api-ideas-summary-sql with $2 bound as integer 1 against prod Postgres -> 1 row, total_ideas=1554 (data clean; param type was the sole fault)",
+      "Ran the full api-ideas-page-sql with $2=1, $9=200 -> 200 rows",
+      "git diff deploy/front-door/api.bml -> include_internal now flows through idea-internal-flag(request) = if ... then 1 else 0 into $2::bigint = 1"
+    ],
+    "notes": "Root cause and fix proven at the SQL/data layer against production Postgres. The integer cast works; the 3 graph nodes Python flags as string_too_short do not affect the native count query. Full local Go-kernel serve was not run because the source-compiler path for the whole front-door catalog is slow/unreliable in this checkout; the CI three-way validate and the live deploy curl are the end-to-end proof."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "PR checks run after push."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Hostinger Auto Deploy rebuilds the kernel-router from the BML front-door catalog; verified live after merge."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "GET https://api.coherencycoin.com/api/ideas returns HTTP 200 with x-form-router: native-kernel and a populated ideas list + summary, instead of HTTP 500 persistence: idea query failed.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/ideas",
+      "https://api.coherencycoin.com/api/ideas?limit=1",
+      "https://api.coherencycoin.com/api/ideas?include_internal=false&limit=2"
+    ],
+    "test_flows": [
+      "Hostinger Auto Deploy: BML front-door kernel-router rebuild",
+      "curl -i -sS --max-time 25 https://api.coherencycoin.com/api/ideas?limit=1"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Pending PR CI and post-merge live deploy verification of the native /api/ideas 200."
+  }
+}
