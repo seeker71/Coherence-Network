@@ -1,0 +1,121 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/fourth-native-mutation-floor-20260614",
+  "commit_scope": "Admit the native mutation receipt family to the fourth-arm manifest.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "fourth-arm-native-mutation",
+    "native-mutation-receipts",
+    "focused-testing-fast-release",
+    "connected-tissue-north-star"
+  ],
+  "spec_ids": [
+    "fourth-arm-bands",
+    "bml-native-north-star",
+    "agent-start-packet",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "fourth-native-mutation-floor-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "floor-prioritization",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "manifest-admission",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-14_fourth_native_mutation_floor.json",
+    "docs/system_audit/model_executor_run_ledger/fourth-native-mutation-floor-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/tests/native-mutation-side-effects-band.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-14_fourth_native_mutation_floor.json",
+    "docs/system_audit/model_executor_run_ledger/fourth-native-mutation-floor-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/tests/native-mutation-side-effects-band.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "coord claim \"fourth-native-mutation-floor: admit already-passing native mutation receipt bands to the fourth manifest; avoid HTTP/witness/BML/learning-dashboard lanes\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/tests/native-mutation-side-effects-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh native-mutation-side-effects native-mutation-route-side-effects native-mutation-public-gate native-mutation-trust-envelope native-idea-valuation-audit-ledger native-route-goal-cells",
+      "cd form && ./validate.sh",
+      "python3 scripts/model_executor_proof_ledger.py sync-jsonl --output docs/system_audit/model_executor_runs.jsonl",
+      "python3 scripts/model_executor_proof_ledger.py check-jsonl",
+      "python3 scripts/model_executor_proof_ledger.py validate",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_fourth_native_mutation_floor.json"
+    ],
+    "notes": "The focused gate returned PASS-4WAY for native-mutation-side-effects, native-mutation-route-side-effects, native-mutation-public-gate, native-mutation-trust-envelope, native-idea-valuation-audit-ledger, and the already-manifest native-route-goal-cells control row. Full validation returned `fourth arm: 215 band(s) four-way` and `612 ok, 0 divergent`."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed when this evidence was written; CI had not run yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested for this fourth-arm manifest floor slice."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Native mutation receipt surfaces are now admitted as four-way floor rows: durable side-effect SQL, route side-effect binding, public gate receipt, trust envelope, and idea valuation audit-ledger parity.",
+    "public_endpoints": [
+      "n/a: local Form runtime manifest admission"
+    ],
+    "test_flows": [
+      "cd form && bash scripts/fourth-arm-gate.sh native-mutation-side-effects native-mutation-route-side-effects native-mutation-public-gate native-mutation-trust-envelope native-idea-valuation-audit-ledger native-route-goal-cells",
+      "cd form && ./validate.sh"
+    ]
+  },
+  "evidence_refs": [
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/tests/native-mutation-side-effects-band.fk",
+    "docs/shared/agent-start-packet.md",
+    "docs/coherence-substrate/bml-native-north-star.form"
+  ],
+  "phase_gate": {
+    "phase": "fourth-native-mutation-floor",
+    "gate": "Native mutation receipt rows must be explicit fourth-arm manifest rows before public-gate and audit-ledger claims can say all kernels.",
+    "state": "local-four-way-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Continue the fourth-arm residual survey with another unclaimed, coherent pass family after CI merge."
+  },
+  "floor_update": {
+    "previous_observed_floor": "210 four-way bands / 612 ok / 0 divergent",
+    "current_observed_floor": "215 four-way bands / 612 ok / 0 divergent",
+    "new_bands": [
+      "native-mutation-side-effects -> 11111 four-way",
+      "native-mutation-route-side-effects -> 11111 four-way",
+      "native-mutation-public-gate -> 11111111 four-way",
+      "native-mutation-trust-envelope -> 11111 four-way",
+      "native-idea-valuation-audit-ledger -> 111111 four-way"
+    ]
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord claim fourth-native-mutation-floor",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/tests/native-mutation-side-effects-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh native-mutation-side-effects native-mutation-route-side-effects native-mutation-public-gate native-mutation-trust-envelope native-idea-valuation-audit-ledger native-route-goal-cells",
+    "cd form && ./validate.sh",
+    "python3 scripts/model_executor_proof_ledger.py sync-jsonl --output docs/system_audit/model_executor_runs.jsonl",
+    "python3 scripts/model_executor_proof_ledger.py check-jsonl",
+    "python3 scripts/model_executor_proof_ledger.py validate",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_fourth_native_mutation_floor.json"
+  ],
+  "failure_reason": "Admitted five already-passing native mutation receipt bands to the fourth-arm manifest: native-mutation-side-effects, native-mutation-route-side-effects, native-mutation-public-gate, native-mutation-trust-envelope, and native-idea-valuation-audit-ledger. The focused gate returns PASS-4WAY for all five plus the existing native-route-goal-cells row; full validation reports 215 four-way bands, 612 ok, 0 divergent.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "fourth-native-mutation-floor-20260614",
+  "source": {
+    "kind": "codex-worktree",
+    "path": "/Users/ursmuff/.codex/worktrees/a3ec/Coherence-Network"
+  },
+  "thread_branch": "codex/fourth-native-mutation-floor-20260614",
+  "validation": {
+    "commands": [
+      "cd form && bash scripts/fourth-arm-gate.sh native-mutation-side-effects native-mutation-route-side-effects native-mutation-public-gate native-mutation-trust-envelope native-idea-valuation-audit-ledger native-route-goal-cells",
+      "cd form && ./validate.sh"
+    ],
+    "status": "pass"
+  }
+}

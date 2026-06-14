@@ -1,6 +1,6 @@
 ; native-mutation-side-effects-band.fk
 ;
-; preludes: form-stdlib/native-mutation-side-effects.fk
+; preludes: form-stdlib/core.fk form-stdlib/native-mutation-side-effects.fk
 ;
 ; Band verdict: 11111 when durable side-effect SQL exists for receipts,
 ; cache-invalidation receipt, parent-edge repair, contributor-key audit, and
