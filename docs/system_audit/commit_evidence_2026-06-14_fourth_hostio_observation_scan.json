@@ -1,0 +1,151 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/fourth-file-scan-carriers-20260614",
+  "commit_scope": "Admit host-io file_mtime/scan_run observation and scan_run JIT helper coverage to the fourth-arm manifest.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "fourth-arm-hostio-observation",
+    "jit-scan-run-helper",
+    "android-minimum-jit-floor",
+    "connected-tissue-north-star",
+    "focused-testing-fast-release"
+  ],
+  "spec_ids": [
+    "fourth-arm-bands",
+    "fourth-arm-substrate-carriers",
+    "agent-start-packet",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "fourth-file-scan-carriers-floor-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "floor-prioritization",
+        "north-star-alignment",
+        "android-jit-floor-guidance"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "fourth-arm-lowering",
+        "manifest-admission",
+        "north-star-retune",
+        "macos-android-validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "docs/coherence-substrate/fourth-arm-substrate-carriers.form",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-14_fourth_hostio_observation_scan.json",
+    "docs/system_audit/model_executor_run_ledger/fourth-file-scan-carriers-floor-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/tests/hostio-observation-band.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/fourth-arm-substrate-carriers.form",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-14_fourth_hostio_observation_scan.json",
+    "docs/system_audit/model_executor_run_ledger/fourth-file-scan-carriers-floor-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/tests/hostio-observation-band.fk",
+    "form/fourth-arm-bands.txt"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "coord claim \"fourth-file-scan-carriers-floor: inspect and move the next carrier gaps around file_mtime / scan_run after ideas-graph-projection; avoid response-header, native-training, BML, witness, Android, and Postgres lanes\"",
+      "cd form && bash scripts/fourth-arm-gate.sh hostio-observation go-jit-value-helper hostio-roundtrip write-file-text file-append",
+      "scripts/bml_form_jit_metal_planes_audit.sh",
+      "cd form && ./validate.sh"
+    ],
+    "notes": "Focused gate returned PASS-4WAY for hostio-observation, go-jit-value-helper, hostio-roundtrip, write-file-text, and file-append. Full validation returned `fourth arm: 234 band(s) four-way` and `615 ok, 0 divergent`."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed when this evidence was written; CI had not run yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested for this fourth-arm host-io/JIT scan floor slice."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "fkwu now lowers file_mtime as tag 107 and scan_run as tag 108. hostio-observation proves real file freshness presence plus string scan stride four-way; go-jit-value-helper proves scan_run inside the JIT helper path four-way.",
+    "public_endpoints": [
+      "n/a: local Form runtime manifest admission"
+    ],
+    "test_flows": [
+      "cd form && bash scripts/fourth-arm-gate.sh hostio-observation go-jit-value-helper hostio-roundtrip write-file-text file-append",
+      "scripts/bml_form_jit_metal_planes_audit.sh",
+      "cd form && ./validate.sh"
+    ]
+  },
+  "evidence_refs": [
+    "form/fourth-arm-bands.txt",
+    "form/form-stdlib/form-flatten.fk",
+    "form/form-stdlib/hati-os-kernel-emit.fk",
+    "form/form-stdlib/tests/hostio-observation-band.fk",
+    "docs/coherence-substrate/fourth-arm-substrate-carriers.form",
+    "docs/shared/agent-start-packet.md"
+  ],
+  "phase_gate": {
+    "phase": "fourth-hostio-observation-scan",
+    "gate": "file_mtime and scan_run must cross fkwu before Postgres inherits the carrier floor.",
+    "state": "local-four-way-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Resolve Postgres carrier four-way, with broader source-scan recipes building on the admitted scan_run floor."
+  },
+  "floor_update": {
+    "previous_observed_floor": "232 four-way bands / 614 ok / 0 divergent",
+    "current_observed_floor": "234 four-way bands / 615 ok / 0 divergent",
+    "new_bands": [
+      "hostio-observation -> 63 four-way",
+      "go-jit-value-helper -> 4 four-way"
+    ],
+    "retuned_north_star": [
+      "file_mtime and scan_run moved to supported as host-io observation floor",
+      "JIT scan helper moved to supported",
+      "next carrier gate narrowed to Postgres; broader source-scan recipes build on scan_run"
+    ],
+    "blocked_trials": [
+      "Initial emitted C used #include <sys/stat.h>, which failed Android target-object audit without an Android sysroot.",
+      "Emitter now uses real st_mtime when sys/stat.h is available and a compile-safe positive existence floor when the Android cross target lacks that header."
+    ]
+  },
+  "macos_android_evidence": {
+    "macos_arm64": [
+      "PASS plane=macos-arm64 surface=form-native-object emitter=form-macho object=Mach-O 64-bit object arm64",
+      "PASS plane=macos-arm64 surface=bml-hati target=arm64-apple-macosx object=Mach-O 64-bit object arm64",
+      "PASS plane=macos-arm64 surface=form-jit target=arm64-apple-macosx object=Mach-O 64-bit object arm64",
+      "PASS plane=macos-arm64 surface=form-jit-lowered target=arm64-apple-macosx object=Mach-O 64-bit object arm64"
+    ],
+    "android_arm64": [
+      "PASS plane=android-arm64 surface=form-native-object emitter=form-elf object=ELF 64-bit LSB relocatable, ARM aarch64",
+      "PASS plane=android-arm64 surface=form-native-executable emitter=form-elf-exec executable=ELF 64-bit LSB executable, ARM aarch64",
+      "SKIP plane=android-arm64 surface=form-native-executable runner=qemu-aarch64 unavailable; docker unavailable; executable shape inspected",
+      "PASS plane=android-arm64 surface=bml-hati target=aarch64-linux-android object=ELF 64-bit LSB relocatable, ARM aarch64",
+      "PASS plane=android-arm64 surface=form-jit target=aarch64-linux-android object=ELF 64-bit LSB relocatable, ARM aarch64",
+      "PASS plane=android-arm64 surface=form-jit-lowered target=aarch64-linux-android object=ELF 64-bit LSB relocatable, ARM aarch64"
+    ],
+    "android_floor": "Android remains supported at the minimum Form-native recipe/table, target-object, and ELF executable-shape floor in this slice. Shipping a clang-like compiler binary inside the APK remains optional future acceleration/oracle work; this commit does not require that binary for the supported JIT floor."
+  }
+}
