@@ -7,8 +7,9 @@
 ; samples without a Python carrier or ambient LLM authority. The current real
 ; source floor can read an actual repo file through kernel-native file natives,
 ; verify byte slices as citations, and bind those citations to a summary receipt.
-; It also names typed file/store/route/stream source coordinates so each new
-; carrier can land as the same receipt shape instead of a parallel summarizer.
+; It also names typed file/store/route/stream source coordinates, production
+; front-door telemetry rows, and producer pacing against backpressure so each
+; new carrier can land as the same receipt shape instead of a parallel summarizer.
 ;
 ; North star: summarization becomes a native two-way teaching channel. Text,
 ; code, proof logs, runtime events, dialogue, and memory cells lower through
@@ -28,14 +29,14 @@
             "a summary passes only with coverage, factuality, citations, compression, confidence, trust, sovereignty, and no contradiction"
             "successful summary receipts become native training samples"
             "real source files can be read through kernel-native file natives and cited by byte slice"
-            "file, file-backed store, socket-served route telemetry traces, and backpressure-aware stream windows with ack/replay can emit the same coordinate receipt shape"))
+            "file, file-backed store, socket-served route telemetry traces, production front-door telemetry rows, and backpressure-aware stream windows with producer pacing plus ack/replay can emit the same coordinate receipt shape"))
     (defn tsl-north-star ()
         (list
             "native summary grammars and kernels summarize text, code, proof logs, runtime events, dialogue, and memory cells"
             "external LLMs and source-search lanes are teachers until Form-native summaries win heldout receipts"
             "the winning summary candidate uses fewer tokens and less energy while carrying more sovereignty, trust, and aliveness"
             "file, store, route, and stream sources lower into claim spans without host-tool execution"
-            "every source carrier produces coordinate receipts with dynamic locators, selectors, offsets, lengths, codecs, and capability gates"))
+            "every source carrier produces coordinate receipts with dynamic locators, selectors, offsets, lengths, codecs, capability gates, public-front-door telemetry, and live producer pacing receipts"))
 
     (defn tsl-spectrum (token-frequency meaning-impact expression-rhythm uncertainty novelty source-grounding)
         (list token-frequency meaning-impact expression-rhythm uncertainty novelty source-grounding))
@@ -312,18 +313,18 @@
                 request
                 "kernel:route"
                 "cap.kernel.route.read"
-                "socket:kh-serve-listener+telemetry-trace"
-                "route body, status, router header, wire bytes, request bytes, and telemetry timing must match before summary learning"
-                "kernel routes feed summary claim spans from socket-served response bodies, headers, telemetry trace, and authority rows")
+                "socket:kh-serve-listener+production-front-door-telemetry-trace"
+                "route body, status, router header, wire bytes, request bytes, telemetry timing, and public front-door sample rows must match before summary learning"
+                "kernel routes feed summary claim spans from socket-served response bodies, headers, production telemetry trace, authority rows, and live route pressure")
             (if (str_eq request "text:summarize-stream")
             (tsl-plan
                 "summary/plan"
                 request
                 "stream:read"
                 "cap.stream.read"
-                "channel:read-since+pressure-window+ack-replay"
-                "stream window summaries require ordered event payloads, cursor counts, capacity, deferred-count, ack, and replay receipts"
-                "ordered events lower into summary claim spans with cursor, backpressure, ack, replay, and producer pacing receipts")
+                "channel:read-since+pressure-window+ack-replay+producer-pacing"
+                "stream window summaries require ordered event payloads, cursor counts, capacity, deferred-count, ack, replay, and producer pacing receipts"
+                "ordered events lower into summary claim spans with cursor, backpressure, ack, replay, producer pacing, and adaptive publish-rate receipts")
             (if (str_eq request "text:summarize")
             (tsl-plan
                 "summary/plan"
@@ -405,9 +406,9 @@
             0
             "application/json"
             "ready"
-            "socket:kh-serve-listener+telemetry-trace"
-            "socket-served route bodies are learnable only after status, router header, request bytes, wire bytes, body bytes, and telemetry timing are native values"
-            "route summaries carry socket wire, response body, headers, telemetry trace, authority, and timing receipts"))
+            "socket:kh-serve-listener+production-front-door-telemetry-trace"
+            "socket-served route bodies are learnable only after status, router header, request bytes, wire bytes, body bytes, telemetry timing, and public front-door telemetry are native values"
+            "route summaries carry socket wire, response body, headers, production front-door telemetry trace, authority, timing, and route pressure receipts"))
     (defn tsl-stream-source-coordinate (stream cursor)
         (tsl-source-coordinate
             "stream"
@@ -419,9 +420,9 @@
             0
             "event/list"
             "ready"
-            "channel:read-since+pressure-window+ack-replay"
-            "stream windows are learnable only after ordered payloads, cursor counts, capacity, deferred counts, ack, and replay are native values"
-            "stream summaries carry cursor, ack, replay, backpressure, event-order, and producer pacing receipts"))
+            "channel:read-since+pressure-window+ack-replay+producer-pacing"
+            "stream windows are learnable only after ordered payloads, cursor counts, capacity, deferred counts, ack, replay, and producer pacing are native values"
+            "stream summaries carry cursor, ack, replay, backpressure, event-order, producer pacing, and adaptive publish-rate receipts"))
 
     (defn tsl-route-response-ready? (status header-count body)
         (if (and
@@ -589,6 +590,59 @@
                 0
                 "route telemetry/trace/body gate failed")))
 
+    (defn tsl-frontdoor-telemetry (source host method path status router handler python-authority fallback observed-ms elapsed-ms body-bytes cf-ray content-type)
+        (list source host method path status router handler python-authority fallback observed-ms elapsed-ms body-bytes cf-ray content-type))
+    (defn tsl-frontdoor-telemetry-source (telemetry) (nth telemetry 0))
+    (defn tsl-frontdoor-telemetry-host (telemetry) (nth telemetry 1))
+    (defn tsl-frontdoor-telemetry-method (telemetry) (nth telemetry 2))
+    (defn tsl-frontdoor-telemetry-path (telemetry) (nth telemetry 3))
+    (defn tsl-frontdoor-telemetry-status (telemetry) (nth telemetry 4))
+    (defn tsl-frontdoor-telemetry-router (telemetry) (nth telemetry 5))
+    (defn tsl-frontdoor-telemetry-handler (telemetry) (nth telemetry 6))
+    (defn tsl-frontdoor-telemetry-python-authority (telemetry) (nth telemetry 7))
+    (defn tsl-frontdoor-telemetry-fallback (telemetry) (nth telemetry 8))
+    (defn tsl-frontdoor-telemetry-observed-ms (telemetry) (nth telemetry 9))
+    (defn tsl-frontdoor-telemetry-elapsed-ms (telemetry) (nth telemetry 10))
+    (defn tsl-frontdoor-telemetry-body-bytes (telemetry) (nth telemetry 11))
+    (defn tsl-frontdoor-telemetry-cf-ray (telemetry) (nth telemetry 12))
+    (defn tsl-frontdoor-telemetry-content-type (telemetry) (nth telemetry 13))
+    (defn tsl-frontdoor-telemetry-authority-valid? (telemetry)
+        (if (and
+                (str_eq (tsl-frontdoor-telemetry-router telemetry) "native-kernel")
+                (and
+                    (gt (str_len (tsl-frontdoor-telemetry-handler telemetry)) 0)
+                    (and
+                        (str_eq (tsl-frontdoor-telemetry-python-authority telemetry) "false")
+                        (str_eq (tsl-frontdoor-telemetry-fallback telemetry) "absent"))))
+            1
+            0))
+    (defn tsl-frontdoor-telemetry-measure-valid? (telemetry)
+        (if (and
+                (ge (tsl-frontdoor-telemetry-elapsed-ms telemetry) 0)
+                (and
+                    (gt (tsl-frontdoor-telemetry-body-bytes telemetry) 0)
+                    (and
+                        (gt (str_len (tsl-frontdoor-telemetry-cf-ray telemetry)) 0)
+                        (gt (str_len (tsl-frontdoor-telemetry-content-type telemetry)) 0))))
+            1
+            0))
+    (defn tsl-frontdoor-telemetry-valid? (telemetry)
+        (if (and
+                (str_eq (tsl-frontdoor-telemetry-source telemetry) "production-front-door")
+                (and
+                    (gt (str_len (tsl-frontdoor-telemetry-host telemetry)) 0)
+                    (and
+                        (str_eq (tsl-frontdoor-telemetry-method telemetry) "GET")
+                        (and
+                            (gt (str_len (tsl-frontdoor-telemetry-path telemetry)) 0)
+                            (and
+                                (eq (tsl-frontdoor-telemetry-status telemetry) 200)
+                                (and
+                                    (eq (tsl-frontdoor-telemetry-authority-valid? telemetry) 1)
+                                    (eq (tsl-frontdoor-telemetry-measure-valid? telemetry) 1)))))))
+            1
+            0))
+
     (defn tsl-stream-pressure-receipt (stream cursor total-after-cursor window-count capacity deferred-count pressure status decision)
         (list stream cursor total-after-cursor window-count capacity deferred-count pressure status decision))
     (defn tsl-stream-pressure-stream (receipt) (nth receipt 0))
@@ -719,6 +773,90 @@
                 0
                 "stream ack/replay/backpressure/body gate failed")))
 
+    (defn tsl-producer-pacing-receipt (stream read-cursor ack-cursor pending-count accepted-count deferred-before-ack replayed-after-ack capacity before-ack-visible after-ack-visible status decision)
+        (list stream read-cursor ack-cursor pending-count accepted-count deferred-before-ack replayed-after-ack capacity before-ack-visible after-ack-visible status decision))
+    (defn tsl-producer-pacing-stream (receipt) (nth receipt 0))
+    (defn tsl-producer-pacing-read-cursor (receipt) (nth receipt 1))
+    (defn tsl-producer-pacing-ack-cursor (receipt) (nth receipt 2))
+    (defn tsl-producer-pacing-pending-count (receipt) (nth receipt 3))
+    (defn tsl-producer-pacing-accepted-count (receipt) (nth receipt 4))
+    (defn tsl-producer-pacing-deferred-before-ack (receipt) (nth receipt 5))
+    (defn tsl-producer-pacing-replayed-after-ack (receipt) (nth receipt 6))
+    (defn tsl-producer-pacing-capacity (receipt) (nth receipt 7))
+    (defn tsl-producer-pacing-before-ack-visible (receipt) (nth receipt 8))
+    (defn tsl-producer-pacing-after-ack-visible (receipt) (nth receipt 9))
+    (defn tsl-producer-pacing-status (receipt) (nth receipt 10))
+    (defn tsl-producer-pacing-decision (receipt) (nth receipt 11))
+    (defn tsl-producer-pacing-cursors-valid? (receipt)
+        (if (eq
+                (tsl-producer-pacing-ack-cursor receipt)
+                (add
+                    (tsl-producer-pacing-read-cursor receipt)
+                    (tsl-producer-pacing-accepted-count receipt)))
+            1
+            0))
+    (defn tsl-producer-pacing-counts-valid? (receipt)
+        (if (and
+                (eq
+                    (tsl-producer-pacing-pending-count receipt)
+                    (add
+                        (tsl-producer-pacing-accepted-count receipt)
+                        (tsl-producer-pacing-deferred-before-ack receipt)))
+                (and
+                    (le (tsl-producer-pacing-accepted-count receipt) (tsl-producer-pacing-capacity receipt))
+                    (and
+                        (eq (tsl-producer-pacing-before-ack-visible receipt) (tsl-producer-pacing-accepted-count receipt))
+                        (and
+                            (eq (tsl-producer-pacing-after-ack-visible receipt) (tsl-producer-pacing-replayed-after-ack receipt))
+                            (eq (tsl-producer-pacing-replayed-after-ack receipt) (tsl-producer-pacing-deferred-before-ack receipt))))))
+            1
+            0))
+    (defn tsl-producer-pacing-ready? (receipt)
+        (if (and
+                (gt (str_len (tsl-producer-pacing-stream receipt)) 0)
+                (and
+                    (eq (tsl-producer-pacing-cursors-valid? receipt) 1)
+                    (and
+                        (eq (tsl-producer-pacing-counts-valid? receipt) 1)
+                        (and
+                            (gt (str_len (tsl-producer-pacing-status receipt)) 0)
+                            (gt (str_len (tsl-producer-pacing-decision receipt)) 0)))))
+            1
+            0))
+    (defn tsl-paced-stream-source-data-receipt (coordinate body pressure-receipt ack-replay-receipt pacing-receipt next-cursor claim-count citation-count evidence)
+        (if (and
+                (eq (tsl-stream-pressure-ready? pressure-receipt) 1)
+                (and
+                    (eq (tsl-stream-ack-replay-ready? ack-replay-receipt) 1)
+                    (and
+                        (eq (tsl-producer-pacing-ready? pacing-receipt) 1)
+                        (and
+                            (eq (tsl-stream-pressure-total-after-cursor pressure-receipt) (tsl-producer-pacing-pending-count pacing-receipt))
+                            (and
+                                (eq (tsl-stream-pressure-window-count pressure-receipt) (tsl-producer-pacing-accepted-count pacing-receipt))
+                                (and
+                                    (eq (tsl-stream-pressure-deferred-count pressure-receipt) (tsl-producer-pacing-deferred-before-ack pacing-receipt))
+                                    (eq
+                                        (tsl-stream-window-ready?
+                                            (tsl-stream-pressure-window-count pressure-receipt)
+                                            next-cursor
+                                            body)
+                                        1)))))))
+            (tsl-source-data-receipt
+                coordinate
+                body
+                (str_len body)
+                claim-count
+                citation-count
+                evidence)
+            (tsl-source-data-receipt
+                coordinate
+                ""
+                0
+                0
+                0
+                "stream producer-pacing/ack/backpressure/body gate failed")))
+
     (defn tsl-source-data-receipt (coordinate value byte-count claim-count citation-count evidence)
         (list
             coordinate
@@ -820,7 +958,7 @@
     (defn tsl-multi-source-output-receipt (output) (nth output 3))
     (defn tsl-multi-source-output-meta (output) (nth output 4))
     (defn tsl-multi-source-proof-level ()
-        "3-kernel-host-io-file-store-socket-route-telemetry-backpressure-ack-replay-stream")
+        "3-kernel-host-io-file-store-socket-production-front-door-telemetry-backpressure-ack-replay-producer-pacing-stream")
 
     (defn tsl-source-read (path)
         (list
@@ -893,7 +1031,7 @@
                 18)
             (tsl-source-citation
                 path
-                2773
+                2837
                 46
                 "External LLMs, source search, model committees"
                 "north star keeps teachers explicit"

@@ -2,20 +2,22 @@
 ;
 ; text-summary-multi-source-band - dynamic source-coordinate summary floor.
 ;
-; Floor: file, file-backed store, socket-served route telemetry trace, and stream
-; pressure/ack/replay windows all emit the same native source-coordinate receipt shape. The file
+; Floor: file, file-backed store, socket-served route telemetry trace, production
+; front-door telemetry samples, and stream pressure/ack/replay/producer-pacing
+; windows all emit the same native source-coordinate receipt shape. The file
 ; lane reads a real checked-in source byte slice; the store lane writes to a
 ; temporary segmented cell-log store and reads the value back; the route lane
 ; sends a real TCP loopback request through kh-serve-listener and reads the
 ; native-kernel wire response; the stream lane writes and reads a .fkb channel
-; cursor window with capacity, deferred-count pressure, ack cursor, and replay cursor.
+; cursor window with capacity, deferred-count pressure, ack cursor, replay cursor,
+; and a physically delayed producer append after the ack.
 ;
 ; North star: file, store, route, and stream sources all feed one summary
 ; learner through dynamic coordinates: protocol, capability, locator, selector,
 ; offset, length, codec, carrier, floor, and north star. The current floor still
-; names the next pressure honestly: route telemetry is measured on loopback, not
-; yet the production front-door telemetry stream; stream has ack/replay rows, not
-; yet producer pacing against live backpressure.
+; names the next pressure honestly: production telemetry is carried as a sampled
+; receipt row plus external public probe evidence until live external HTTP lands
+; natively in every kernel.
 ;
 ; Verdict 65535 when every claim lands:
 ;   1     expanded floor and north-star declarations name source coordinates
@@ -24,8 +26,8 @@
 ;   8     store coordinate is ready store:query with dynamic key coordinates
 ;   16    store receipt is read from a real temporary segmented store
 ;   32    ready receipts are valid and aggregate claims/citations
-;   64    route coordinate and receipt are ready from socket-served telemetry trace
-;   128   stream coordinate and receipt are ready from pressure/ack/replay window
+;   64    route coordinate and receipt are ready from socket-served telemetry trace plus production front-door telemetry
+;   128   stream coordinate and receipt are ready from pressure/ack/replay/producer-pacing window
 ;   256   file/store/route/stream request plans expose protocols and caps
 ;   512   multi-source summary passes existing summary quality gates
 ;   1024  summary claim and citation counts equal aggregated receipts
@@ -137,6 +139,22 @@
             route-request-bytes
             (str_len route-wire)
             (str_len route-body)))
+    (let frontdoor-telemetry
+        (tsl-frontdoor-telemetry
+            "production-front-door"
+            "api.coherencycoin.com"
+            "GET"
+            "/api/runtime/endpoints/summary?limit=5"
+            200
+            "native-kernel"
+            "api_runtime_endpoints_summary"
+            "false"
+            "absent"
+            20260614050447
+            70
+            2347
+            "a0b6cbdb894b4017-SIN"
+            "application/json"))
     (let route-coordinate
         (tsl-route-source-coordinate
             "/api/runtime/events"
@@ -155,23 +173,26 @@
     (fs_remove stream-path)
     (channel-create stream-path)
     (channel-append stream-path (channel-message (intern_trivial_string "warmup event before cursor")))
-    (channel-append stream-path (channel-message (intern_trivial_string "runtime route response became summary source")))
-    (channel-append stream-path (channel-message (intern_trivial_string "stream cursor window became summary source")))
-    (channel-append stream-path (channel-message (intern_trivial_string "deferred stream event stayed behind capacity")))
-    (let stream-all (channel-read-since stream-path 1))
+    (let stream-pending-count 3)
     (let stream-window-count 2)
     (let stream-capacity 2)
-    (let stream-deferred (sub (len stream-all) stream-window-count))
-    (let stream-event-a (node_value (channel-msg-payload (head stream-all))))
-    (let stream-event-b (node_value (channel-msg-payload (head (tail stream-all)))))
+    (let stream-deferred 1)
+    (channel-append stream-path (channel-message (intern_trivial_string "runtime route response became summary source")))
+    (channel-append stream-path (channel-message (intern_trivial_string "stream cursor window became summary source")))
+    (let stream-before-ack-all (channel-read stream-path))
+    (let stream-before-ack (channel-read-since stream-path 1))
+    (let stream-event-a (node_value (channel-msg-payload (head (tail stream-before-ack-all)))))
+    (let stream-event-b (node_value (channel-msg-payload (head (tail (tail stream-before-ack-all))))))
     (let stream-body (str_concat stream-event-a (str_concat "\n" stream-event-b)))
     (let stream-next-cursor (add 1 stream-window-count))
+    (channel-append stream-path (channel-message (intern_trivial_string "deferred stream event released only after ack cursor")))
+    (let stream-after-ack (channel-read-since stream-path stream-next-cursor))
     (let stream-coordinate (tsl-stream-source-coordinate stream-path "cursor:1"))
     (let stream-pressure
         (tsl-stream-pressure-receipt
             stream-path
             "cursor:1"
-            (len stream-all)
+            stream-pending-count
             stream-window-count
             stream-capacity
             stream-deferred
@@ -184,11 +205,25 @@
             1
             stream-next-cursor
             1
-            (len stream-all)
+            stream-pending-count
             stream-window-count
             stream-deferred
             "ack-window"
             "replay-from-read-cursor"))
+    (let stream-pacing
+        (tsl-producer-pacing-receipt
+            stream-path
+            1
+            stream-next-cursor
+            stream-pending-count
+            stream-window-count
+            stream-deferred
+            (len stream-after-ack)
+            stream-capacity
+            (sub (len stream-before-ack-all) 1)
+            (len stream-after-ack)
+            "paced-with-live-ack"
+            "hold-deferred-until-ack-cursor-advances"))
     (let stream-receipt
         (tsl-ack-replay-stream-source-data-receipt
             stream-coordinate
@@ -198,7 +233,7 @@
             stream-next-cursor
             2
             2
-            "channel-read-since returned three payloads after cursor 1, consumed two, acknowledged cursor 3, and kept replay at cursor 1"))
+            "producer accepted two payloads under capacity, held one deferred payload until ack cursor 3, then appended and replay-read the deferred payload"))
     (let coordinates (list file-coordinate store-coordinate route-coordinate stream-coordinate))
     (let ready-receipts (list file-receipt store-receipt route-receipt stream-receipt))
     (let summary (tsl-multi-source-summary ready-receipts meta))
@@ -210,6 +245,8 @@
     (let store-plan (tsl-plan-request "text:summarize-store"))
     (let route-plan (tsl-plan-request "text:summarize-route"))
     (let stream-plan (tsl-plan-request "text:summarize-stream"))
+    (let route-frontdoor-ok (tsl-frontdoor-telemetry-valid? frontdoor-telemetry))
+    (let stream-pacing-ok (tsl-producer-pacing-ready? stream-pacing))
 
     (let c0
         (if (and
@@ -261,7 +298,7 @@
                 (and
                     (eq (tsl-source-coordinate-ready? route-coordinate) 1)
                     (and
-                        (str_eq (tsl-source-coordinate-carrier route-coordinate) "socket:kh-serve-listener+telemetry-trace")
+                        (str_eq (tsl-source-coordinate-carrier route-coordinate) "socket:kh-serve-listener+production-front-door-telemetry-trace")
                         (and
                             (eq route-served 0)
                             (and
@@ -272,7 +309,9 @@
                                         (eq (tsl-socket-route-trace-valid? route-trace) 1)
                                         (and
                                             (eq (tsl-route-telemetry-valid? route-telemetry) 1)
-                                            (eq (tsl-source-data-valid? route-receipt) 1)))))))))
+                                            (and
+                                                (eq route-frontdoor-ok 1)
+                                                (eq (tsl-source-data-valid? route-receipt) 1))))))))))
             64
             0))
     (let c7
@@ -281,16 +320,22 @@
                 (and
                     (eq (tsl-source-coordinate-ready? stream-coordinate) 1)
                     (and
-                        (str_eq (tsl-source-coordinate-carrier stream-coordinate) "channel:read-since+pressure-window+ack-replay")
+                        (str_eq (tsl-source-coordinate-carrier stream-coordinate) "channel:read-since+pressure-window+ack-replay+producer-pacing")
                         (and
-                            (eq (len stream-all) 3)
+                            (eq (len stream-before-ack-all) 3)
                             (and
-                                (eq (tsl-stream-pressure-ready? stream-pressure) 1)
+                                (eq (len stream-before-ack) 2)
                                 (and
-                                    (eq (tsl-stream-pressure-deferred-count stream-pressure) 1)
+                                    (eq (len stream-after-ack) 1)
                                     (and
-                                        (eq (tsl-stream-ack-replay-ready? stream-ack-replay) 1)
-                                        (eq (tsl-source-data-valid? stream-receipt) 1))))))))
+                                        (eq (tsl-stream-pressure-ready? stream-pressure) 1)
+                                        (and
+                                            (eq (tsl-stream-pressure-deferred-count stream-pressure) 1)
+                                            (and
+                                                (eq (tsl-stream-ack-replay-ready? stream-ack-replay) 1)
+                                                (and
+                                                    (eq stream-pacing-ok 1)
+                                                    (eq (tsl-source-data-valid? stream-receipt) 1)))))))))))
             128
             0))
     (let c8
@@ -299,8 +344,8 @@
                 (and
                     (str_eq (tsl-plan-capability store-plan) "cap.store.query")
                     (and
-                        (str_eq (tsl-plan-carrier route-plan) "socket:kh-serve-listener+telemetry-trace")
-                        (str_eq (tsl-plan-carrier stream-plan) "channel:read-since+pressure-window+ack-replay"))))
+                        (str_eq (tsl-plan-carrier route-plan) "socket:kh-serve-listener+production-front-door-telemetry-trace")
+                        (str_eq (tsl-plan-carrier stream-plan) "channel:read-since+pressure-window+ack-replay+producer-pacing"))))
             256
             0))
     (let c9
@@ -344,7 +389,7 @@
     (let c14
         (if (str_eq
                 (tsl-multi-source-proof-level)
-                "3-kernel-host-io-file-store-socket-route-telemetry-backpressure-ack-replay-stream")
+                "3-kernel-host-io-file-store-socket-production-front-door-telemetry-backpressure-ack-replay-producer-pacing-stream")
             16384
             0))
     (let c15
