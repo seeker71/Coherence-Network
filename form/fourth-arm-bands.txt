@@ -29,7 +29,7 @@
 #     one value through fk_pr)
 #
 # Current floor (2026-06-14 guidance + Form-native executable floor): full
-# `cd form && ./validate.sh` reaches 158 four-way bands and 574 total passing
+# `cd form && ./validate.sh` reaches 168 four-way bands and 578 total passing
 # workloads, with 0 residual divergent bands. Literal bp registry aliases now
 # fold through make_nodeid for the audit-log, hex, token, url-encode, and uuid
 # rows. Token's blueprint reservation now lives inside its module body so fkwu
@@ -120,6 +120,7 @@ recognition-router fks 127
 recognition-router-compute fks 63
 recognition-router-vision fks 31
 self-grounding-classifier fks 63
+self-translate-universal fks 15
 sequence-predictor fks 127
 shared-sensing fks 127
 surprise-salience fks 127
@@ -189,15 +190,18 @@ metal-emit fks 31
 oracle-catalog fks 16383
 perception-pipeline fks 127
 predictor-sampling fks 127
+protocol-beliefs fks 31
 rate-limit fks 6
 sanskrit-roots fks 111111
 satsang fks 127
 schema fks 10
 sha256 fks 2
+shared-heart fks 31
 shamballa-codes fks 11111
 shamballa-light-codes fks 111111
 silence-floor fks 31
 slice-update-roundtrip fks 127
+sqlite-read fks 31
 speech-kernel-channel fks 511
 speech-model-learning fks 16383
 string-membership fks 9
@@ -207,6 +211,9 @@ trust-weighted-colearning fks 127
 tree-diff fks 13
 turn-taking fks 127
 ulid fks 4
+voice-traits fks 1023
+voiced fks 511
+wav-sense fks 63
 witness-theorem fks 31
 witness-to-co-regulate fks 127
 
