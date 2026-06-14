@@ -1,0 +1,48 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/static-to-dynamic-cells.fk form-stdlib/tests/static-to-dynamic-cells-band.fk",
+    "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/static-to-dynamic-cells.fk form-stdlib/tests/static-to-dynamic-cells-band.fk",
+    "make static-to-dynamic-tending",
+    "python3 -m py_compile scripts/wellness_check.py",
+    "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_edge_cases_regression.py -k static_to_dynamic",
+    "python3 scripts/build_readmes.py --check",
+    "python3 scripts/scan_form_blueprints.py --check",
+    "git diff --check"
+  ],
+  "failure_reason": "Moved the static-to-dynamic wellness lane to live Form successor cells. The new Form band proves four static source surfaces project into active dynamic successor cells with registered Blueprints, proof commands, evidence counts, and release gates; source and binary validation both returned 262143. Wellness now reports dynamic_successor rows plus lane_end_state: 4/4 dynamic successors live and what_wants_attention: none, with a regression test preventing the old wants_dynamic attention row from returning.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 319,
+    "row_sha256": "a6bea51cbf0e51803fa51e6da4bb82e0bf948b732ccc42bfd9819d6459a2bb32",
+    "summary": "moved-the-static-to-dynamic-wellness-lane-to-liv"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0319-a6bea51cbf0e",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L319"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/static-to-dynamic-cells.fk form-stdlib/tests/static-to-dynamic-cells-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/static-to-dynamic-cells.fk form-stdlib/tests/static-to-dynamic-cells-band.fk",
+      "make static-to-dynamic-tending",
+      "python3 -m py_compile scripts/wellness_check.py",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_edge_cases_regression.py -k static_to_dynamic",
+      "python3 scripts/build_readmes.py --check",
+      "python3 scripts/scan_form_blueprints.py --check",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

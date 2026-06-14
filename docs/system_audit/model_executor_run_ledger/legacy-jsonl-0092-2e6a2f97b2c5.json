@@ -1,0 +1,32 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "gh pr checks 1146 --repo seeker71/Coherence-Network --watch --interval 10",
+    "gh run view 24899227761 --repo seeker71/Coherence-Network --job 72912171141 --log"
+  ],
+  "failure_reason": "Initial PR check validate-thread-process failed on spec quality, not runtime behavior: the new specs were missing required Known Gaps/Risks sections under CI validation, and commit evidence needed to list api/scripts/local_runner.py for the PR-base diff.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 92,
+    "row_sha256": "2e6a2f97b2c53322da8a961302eb9c593815e305f0ba81300ad07dfacea399f1",
+    "summary": "initial-pr-check-validate-thread-process-failed-"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "fail",
+  "run_id": "legacy-jsonl-0092-2e6a2f97b2c5",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L92"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "gh pr checks 1146 --repo seeker71/Coherence-Network --watch --interval 10",
+      "gh run view 24899227761 --repo seeker71/Coherence-Network --job 72912171141 --log"
+    ],
+    "status": "fail"
+  }
+}

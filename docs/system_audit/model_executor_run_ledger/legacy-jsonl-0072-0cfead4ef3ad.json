@@ -1,0 +1,60 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-gate",
+    "/opt/homebrew/bin/python3.11 -m venv api/.venv && api/.venv/bin/python -m pip install -e 'api[dev]'",
+    "cd api && pytest -q tests/test_agent_memory_loop.py::test_recall_synthesis_has_no_timestamps tests/test_agent_memory_loop.py::test_consolidation_shrinks_token_count tests/test_agent_memory_loop.py::test_consolidation_earned_conclusion_surfaces_in_recall",
+    "cd api && ruff check app/routers/practice.py",
+    "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --fail-on-regression",
+    "cd web && npm ci --cache ../.cache/npm --allow-git=none",
+    "cd web && npm run build",
+    "cd api && pytest -q",
+    "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "/usr/bin/curl -fsS http://localhost:3118/presence-walk/person",
+    "/usr/bin/curl -fsS http://localhost:3118/presence-walk/place",
+    "/usr/bin/curl -fsS http://localhost:3118/presence-walk/practice",
+    "/usr/bin/curl -fsS http://localhost:3118/presence-walk/community",
+    "/usr/bin/curl -fsS http://localhost:3118/presence-walk/event"
+  ],
+  "failure_reason": "Initial prompt gate blocked on agent-memory loop regressions and then on a sibling dirty continuity candidate. The memory service was repaired without weakening tests, the repo continuation override was used for the sibling-only blocker, a repo-local API venv restored the declared pywebpush runtime dependency, and the requested person/place/practice/community/event presence-walk surfaces were built, compiled, route-checked, captured with Playwright screenshots, and kept within the maintainability baseline by splitting the existing practice-center builder into data plus a compact constructor.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 72,
+    "row_sha256": "0cfead4ef3adc7ba2b5b16eab43c351122462ff3f8338d5cbd21d1c8b7c05924",
+    "summary": "initial-prompt-gate-blocked-on-agent-memory-loop"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0072-0cfead4ef3ad",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L72"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-gate",
+      "/opt/homebrew/bin/python3.11 -m venv api/.venv && api/.venv/bin/python -m pip install -e 'api[dev]'",
+      "cd api && pytest -q tests/test_agent_memory_loop.py::test_recall_synthesis_has_no_timestamps tests/test_agent_memory_loop.py::test_consolidation_shrinks_token_count tests/test_agent_memory_loop.py::test_consolidation_earned_conclusion_surfaces_in_recall",
+      "cd api && ruff check app/routers/practice.py",
+      "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --fail-on-regression",
+      "cd web && npm ci --cache ../.cache/npm --allow-git=none",
+      "cd web && npm run build",
+      "cd api && pytest -q",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "/usr/bin/curl -fsS http://localhost:3118/presence-walk/person",
+      "/usr/bin/curl -fsS http://localhost:3118/presence-walk/place",
+      "/usr/bin/curl -fsS http://localhost:3118/presence-walk/practice",
+      "/usr/bin/curl -fsS http://localhost:3118/presence-walk/community",
+      "/usr/bin/curl -fsS http://localhost:3118/presence-walk/event"
+    ],
+    "status": "pass"
+  }
+}

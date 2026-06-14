@@ -1,0 +1,42 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "/opt/homebrew/bin/gh run view 22468228404 --log-failed",
+    "cd api && pytest -q tests/test_automation_usage_api.py::test_provider_readiness_reports_blocking_required_provider_gaps",
+    "cd api && ruff check app/services/automation_usage_service.py tests/test_automation_usage_api.py",
+    "cd api && pytest -q tests/test_automation_usage_api.py",
+    "git fetch origin main && git rebase origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "CI readiness test expected missing OpenAI keys to always produce critical severity; canonical OpenAI+Codex OAuth fallback made the test env-dependent. Added explicit test controls to disable OAuth/runtime fallback for deterministic severity assertions.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 8,
+    "row_sha256": "cb6aa855d84eb478951da02b014414c72469710af7eee615481f447537f9ff8d",
+    "summary": "ci-readiness-test-expected-missing-openai-keys-t"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0008-cb6aa855d84e",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L8"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "/opt/homebrew/bin/gh run view 22468228404 --log-failed",
+      "cd api && pytest -q tests/test_automation_usage_api.py::test_provider_readiness_reports_blocking_required_provider_gaps",
+      "cd api && ruff check app/services/automation_usage_service.py tests/test_automation_usage_api.py",
+      "cd api && pytest -q tests/test_automation_usage_api.py",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

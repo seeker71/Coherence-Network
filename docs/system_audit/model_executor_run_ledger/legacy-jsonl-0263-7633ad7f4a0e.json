@@ -1,0 +1,54 @@
+{
+  "attempts": 2,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_kernel_canary_public_gate.sh",
+    "scripts/check_route_manifests.sh",
+    "scripts/kernel_front_door_local_preflight.sh",
+    "python3 deploy/kernel-router/mutation_public_gate_harness.py --json",
+    "python3 deploy/kernel-router/mutation_ab_observation_harness.py --json",
+    "cd api && python3 -m pytest -q tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py tests/test_native_mutation_route_side_effect_binding.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py",
+    "cd api && python3 -m ruff check tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py tests/test_native_mutation_route_side_effect_binding.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py ../deploy/kernel-router/mutation_public_gate_harness.py ../deploy/kernel-router/mutation_ab_observation_harness.py",
+    "python3 -m py_compile deploy/kernel-router/mutation_public_gate_harness.py deploy/kernel-router/mutation_ab_observation_harness.py",
+    "python3 scripts/validate_spec_quality.py --file specs/native-mutation-public-gate.md",
+    "python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expression.md",
+    "python3 scripts/validate_spec_quality.py --file specs/native-mutation-side-effects.md"
+  ],
+  "failure_reason": "Added the deployed header-gated kernel-router canary path for X-Form-Native-Public-Gate and X-Form-Native-Preview while preserving ordinary no-header FastAPI routing. The local front-door preflight exposed a typed KernelHTTPRequest constraint for structured router metrics, so the active attention route now uses the alist route that carries live router observations. Public-gate and A/B harnesses both passed 5/5 at confidence 1.0 with ordinary_traffic_flip_performed=false; public production verifier is wired for deploy observation before any no-header flip.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 263,
+    "row_sha256": "7633ad7f4a0ee3dc236afa90cf193c2ec5c8dcb3b44a9a906844f6b2a5e7bbf0",
+    "summary": "added-the-deployed-header-gated-kernel-router-ca"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0263-7633ad7f4a0e",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L263"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_kernel_canary_public_gate.sh",
+      "scripts/check_route_manifests.sh",
+      "scripts/kernel_front_door_local_preflight.sh",
+      "python3 deploy/kernel-router/mutation_public_gate_harness.py --json",
+      "python3 deploy/kernel-router/mutation_ab_observation_harness.py --json",
+      "cd api && python3 -m pytest -q tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py tests/test_native_mutation_route_side_effect_binding.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py",
+      "cd api && python3 -m ruff check tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py tests/test_native_mutation_route_side_effect_binding.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py ../deploy/kernel-router/mutation_public_gate_harness.py ../deploy/kernel-router/mutation_ab_observation_harness.py",
+      "python3 -m py_compile deploy/kernel-router/mutation_public_gate_harness.py deploy/kernel-router/mutation_ab_observation_harness.py",
+      "python3 scripts/validate_spec_quality.py --file specs/native-mutation-public-gate.md",
+      "python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expression.md",
+      "python3 scripts/validate_spec_quality.py --file specs/native-mutation-side-effects.md"
+    ],
+    "status": "pass"
+  }
+}

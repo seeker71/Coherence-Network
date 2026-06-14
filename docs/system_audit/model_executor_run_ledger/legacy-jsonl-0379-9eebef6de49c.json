@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord claim \"multi-source summary receipt floor\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/cell-log-store.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-multi-source-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-real-source-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-learning-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tool-channel.fk form-stdlib/code-tool-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/tests/llm-feature-channel-floor-band.fk",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_summary_multi_source_receipts.json",
+    "git diff --check"
+  ],
+  "failure_reason": "Broadened the summary source-reader floor from one checked-in file to dynamic source-coordinate rows for file, store, route, and stream inputs. The new multi-source band returns 65535 on Go/Rust/TypeScript as a 3-kernel only host-I/O proof: it reads a real source file slice, writes and reads a real temporary segmented cell-log-store value through cls-get, aggregates both ready source-data receipts into a summary CHOICE-RECEIPT, and keeps route plus stream as planned coordinates until native source readers exist. Existing real-source remains 8191, text-summary-learning remains 262143 four-way, and llm-feature-channel-floor remains 131071 four-way.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 379,
+    "row_sha256": "9eebef6de49c6e69afcb6758d1c6a26281d06223cd26e524613bbc4225a851ed",
+    "summary": "broadened-the-summary-source-reader-floor-from-o"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0379-9eebef6de49c",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L379"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim \"multi-source summary receipt floor\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/cell-log-store.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-multi-source-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-real-source-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-learning-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tool-channel.fk form-stdlib/code-tool-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/tests/llm-feature-channel-floor-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_summary_multi_source_receipts.json",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

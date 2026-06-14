@@ -1,0 +1,38 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+    "python3 scripts/wellness_check.py",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tool-channel.fk form-stdlib/channel-loopback.fk form-stdlib/tests/channel-loopback-band.fk",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_channel_loopback.json"
+  ],
+  "failure_reason": "Added a Form-native channel loopback planner. The proof band returned 255 across Go/Rust/TS, covering resource expression floors and north stars, reciprocal TTS/STT loopbacks, cross-modal video generation/classification loopbacks, language-level declarations, and capability refusal.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 322,
+    "row_sha256": "bc2acc8bd6e191748a54bb590deb98f6ce91128f0a1dee3bb542f6ea9d17b886",
+    "summary": "added-a-form-native-channel-loopback-planner-the"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0322-bc2acc8bd6e1",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L322"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "python3 scripts/wellness_check.py",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tool-channel.fk form-stdlib/channel-loopback.fk form-stdlib/tests/channel-loopback-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-13_channel_loopback.json"
+    ],
+    "status": "pass"
+  }
+}

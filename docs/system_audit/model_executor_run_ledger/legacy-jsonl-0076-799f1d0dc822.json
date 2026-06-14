@@ -1,0 +1,42 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "git stash push --include-untracked -m codex-presence-perspectives-pre-rebase-2-20260424",
+    "git fetch origin main && git rebase origin/main",
+    "git stash apply stash@{0}",
+    "cd api && .venv/bin/pytest -q tests/test_agent_memory_loop.py",
+    "/opt/homebrew/bin/ruff check api/app/services/memory_service.py api/app/routers/practice.py",
+    "cd web && npm run build",
+    "Playwright screenshot sweep on http://localhost:3125 for all 24 /presence-walk/node/{slug} routes"
+  ],
+  "failure_reason": "Origin main advanced during the no-hardcoding refactor. The dirty work was preserved through stash, the branch rebased onto current origin/main, the one-line memory-service wording conflict was resolved, and the affected API and web validations were rerun successfully.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 76,
+    "row_sha256": "799f1d0dc8224996c143f9ca37eb87e0703dd6ae9778ce443abd61b631fb33e0",
+    "summary": "origin-main-advanced-during-the-no-hardcoding-re"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0076-799f1d0dc822",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L76"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "git stash push --include-untracked -m codex-presence-perspectives-pre-rebase-2-20260424",
+      "git fetch origin main && git rebase origin/main",
+      "git stash apply stash@{0}",
+      "cd api && .venv/bin/pytest -q tests/test_agent_memory_loop.py",
+      "/opt/homebrew/bin/ruff check api/app/services/memory_service.py api/app/routers/practice.py",
+      "cd web && npm run build",
+      "Playwright screenshot sweep on http://localhost:3125 for all 24 /presence-walk/node/{slug} routes"
+    ],
+    "status": "pass"
+  }
+}

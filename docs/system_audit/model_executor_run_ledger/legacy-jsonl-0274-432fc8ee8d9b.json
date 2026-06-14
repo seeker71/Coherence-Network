@@ -1,0 +1,62 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "COORD_AGENT=codex scripts/agent-coord.sh claim \"native HTTP mutation persistence default\"",
+    "cd form/form-kernel-rust && cargo build --release --bin form-kernel-rust",
+    "form/form-kernel-rust/target/release/form-kernel-rust check --routes deploy/kernel-router/production-routes.fk --stdlib form/form-stdlib",
+    "python3 deploy/kernel-router/mutation_public_gate_harness.py --json",
+    "python3 deploy/kernel-router/mutation_ab_observation_harness.py --json",
+    "python3 -m pytest -q api/tests/test_native_mutation_public_gate.py api/tests/test_native_mutation_ab_observation.py api/tests/test_native_mutation_route_bindings.py api/tests/test_ideas_router_form.py api/tests/test_spec_registry_router_form.py",
+    "python3 -m ruff check focused native HTTP mutation tests and harnesses",
+    "python3 scripts/validate_spec_quality.py --file specs/native-mutation-public-gate.md --file specs/native-mutation-ab-observation-gate.md",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "scripts/check_route_manifests.sh",
+    "form/scripts/native-mutation-public-gate-test.sh",
+    "sh -n deploy/kernel-router/entrypoint.sh",
+    "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_kernel_canary_public_gate.sh form/scripts/native-mutation-public-gate-test.sh",
+    "python3 -m py_compile deploy/kernel-router/mutation_public_gate_harness.py deploy/kernel-router/mutation_ab_observation_harness.py",
+    "git diff --check"
+  ],
+  "failure_reason": "Moved mutable HTTP native routes from receipt-only SQL to Form-native persistence execution through config_database_url, pg_connect, pg_exec, and pg_close. Public-gate and A/B harnesses self-provision throwaway Postgres and both passed 5/5 at confidence 1.0 with native persistence readback; preview remains executes:false and X-Form-Python-Fallback remains fanout-python. Deployment now mounts /root/.coherence-network/config.json into kernel-router and public verification requires executes:true while no-header public traffic remains FastAPI until deployed canary verification.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 274,
+    "row_sha256": "432fc8ee8d9b71b727c63ab717b5d85e955a911ab4a8572dbdac8f772c72e61c",
+    "summary": "moved-mutable-http-native-routes-from-receipt-on"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0274-432fc8ee8d9b",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L274"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "COORD_AGENT=codex scripts/agent-coord.sh claim \"native HTTP mutation persistence default\"",
+      "cd form/form-kernel-rust && cargo build --release --bin form-kernel-rust",
+      "form/form-kernel-rust/target/release/form-kernel-rust check --routes deploy/kernel-router/production-routes.fk --stdlib form/form-stdlib",
+      "python3 deploy/kernel-router/mutation_public_gate_harness.py --json",
+      "python3 deploy/kernel-router/mutation_ab_observation_harness.py --json",
+      "python3 -m pytest -q api/tests/test_native_mutation_public_gate.py api/tests/test_native_mutation_ab_observation.py api/tests/test_native_mutation_route_bindings.py api/tests/test_ideas_router_form.py api/tests/test_spec_registry_router_form.py",
+      "python3 -m ruff check focused native HTTP mutation tests and harnesses",
+      "python3 scripts/validate_spec_quality.py --file specs/native-mutation-public-gate.md --file specs/native-mutation-ab-observation-gate.md",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "scripts/check_route_manifests.sh",
+      "form/scripts/native-mutation-public-gate-test.sh",
+      "sh -n deploy/kernel-router/entrypoint.sh",
+      "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_kernel_canary_public_gate.sh form/scripts/native-mutation-public-gate-test.sh",
+      "python3 -m py_compile deploy/kernel-router/mutation_public_gate_harness.py deploy/kernel-router/mutation_ab_observation_harness.py",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

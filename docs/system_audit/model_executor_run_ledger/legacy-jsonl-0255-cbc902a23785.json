@@ -1,0 +1,60 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/native-mutation-public-gate.fk form-stdlib/tests/native-mutation-public-gate-band.fk",
+    "form/scripts/native-mutation-public-gate-test.sh",
+    "python3 deploy/kernel-router/mutation_public_gate_harness.py --json",
+    "python3 deploy/kernel-router/mutation_ab_observation_harness.py --json",
+    "cd api && python3 -m pytest -q tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py tests/test_native_mutation_route_side_effect_binding.py tests/test_native_mutation_route_bindings.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py",
+    "cd api && python3 -m ruff check tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py tests/test_native_mutation_route_side_effect_binding.py tests/test_native_mutation_route_bindings.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py",
+    "python3 scripts/validate_spec_quality.py --file specs/native-mutation-public-gate.md --file specs/native-mutation-route-side-effect-binding.md --file specs/native-mutation-ab-observation-gate.md --file specs/native-mutation-side-effects.md",
+    "python3 scripts/validate_spec_quality.py --file specs/native-mutation-trust-envelope.md --file specs/native-mutation-response-projection.md --file specs/native-graph-mutation-live-db-proof.md --file specs/method-specific-native-mutation-preview-bindings.md",
+    "python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expression.md --file specs/spec-registry-source-native.md",
+    "python3 scripts/generate_repo_indexes.py",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-08_native_mutation_public_gate.json",
+    "git diff --check",
+    "make wellness"
+  ],
+  "failure_reason": "Added a reversible X-Form-Native-Public-Gate for native mutable idea/spec routes. The Form public-gate runner persists route-local rollback receipts in throwaway Postgres and returned 11111111; the HTTP public-gate harness observed five mutation shapes with no-header fanout, preview-header non-executing preview, public-gate native selection, both-header public-gate priority, confidence 1.0, and ordinary_traffic_flip_performed=false. The next boundary is a deployed header-gated public canary before any no-header flip.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 255,
+    "row_sha256": "cbc902a23785cf67976f01abcdf285c8b0ea12d07d1f0ef9c271243cbe8f123e",
+    "summary": "added-a-reversible-x-form-native-public-gate-for"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0255-cbc902a23785",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L255"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/application-graph-node-port.fk form-stdlib/native-mutation-side-effects.fk form-stdlib/native-mutation-route-side-effects.fk form-stdlib/native-mutation-public-gate.fk form-stdlib/tests/native-mutation-public-gate-band.fk",
+      "form/scripts/native-mutation-public-gate-test.sh",
+      "python3 deploy/kernel-router/mutation_public_gate_harness.py --json",
+      "python3 deploy/kernel-router/mutation_ab_observation_harness.py --json",
+      "cd api && python3 -m pytest -q tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py tests/test_native_mutation_route_side_effect_binding.py tests/test_native_mutation_route_bindings.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py",
+      "cd api && python3 -m ruff check tests/test_native_mutation_public_gate.py tests/test_native_mutation_ab_observation.py tests/test_native_mutation_route_side_effect_binding.py tests/test_native_mutation_route_bindings.py tests/test_ideas_router_form.py tests/test_spec_registry_router_form.py",
+      "python3 scripts/validate_spec_quality.py --file specs/native-mutation-public-gate.md --file specs/native-mutation-route-side-effect-binding.md --file specs/native-mutation-ab-observation-gate.md --file specs/native-mutation-side-effects.md",
+      "python3 scripts/validate_spec_quality.py --file specs/native-mutation-trust-envelope.md --file specs/native-mutation-response-projection.md --file specs/native-graph-mutation-live-db-proof.md --file specs/method-specific-native-mutation-preview-bindings.md",
+      "python3 scripts/validate_spec_quality.py --file specs/ideas-router-form-expression.md --file specs/spec-registry-source-native.md",
+      "python3 scripts/generate_repo_indexes.py",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-08_native_mutation_public_gate.json",
+      "git diff --check",
+      "make wellness"
+    ],
+    "status": "pass"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "cd web && npm test -- tests/homepage-presence-lineage.test.ts",
+    "cd web && npm run build",
+    "cd web && npm ci --cache .cache/npm",
+    "cd web && npm test -- tests/homepage-presence-lineage.test.ts",
+    "cd web && npm run build",
+    "git diff --check",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-08_home_presence_live_traces.json",
+    "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+  ],
+  "failure_reason": "Public smoke after the trace-backed home merge showed Liquid Bloom and Mose event counts had already drifted from the JSON fallback because the trace indexes changed on main. This task keeps the data-backed card order and trace hrefs in presence-walk JSON, but resolves field-story metrics from the live trace API during server render so the home card count follows the trace source when available. The first test/build attempt in the fresh worktree found missing web dependencies; npm ci resolved it. The shared local verifier had a transient automation_usage timing miss, then passed on direct rerun; final worktree PR guard returned ready_for_push=True.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 145,
+    "row_sha256": "7f5e4c2a700b8d0878f2211c86ba88ace6362b33e97d0da85dad65c7835c6dd8",
+    "summary": "public-smoke-after-the-trace-backed-home-merge-s"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0145-7f5e4c2a700b",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L145"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "cd web && npm test -- tests/homepage-presence-lineage.test.ts",
+      "cd web && npm run build",
+      "cd web && npm ci --cache .cache/npm",
+      "cd web && npm test -- tests/homepage-presence-lineage.test.ts",
+      "cd web && npm run build",
+      "git diff --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-08_home_presence_live_traces.json",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ],
+    "status": "pass"
+  }
+}

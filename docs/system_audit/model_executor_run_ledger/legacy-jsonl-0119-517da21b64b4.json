@@ -1,0 +1,34 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "git worktree add --detach /tmp/coh-main-audit.D05Fej origin/main",
+    "python3 /tmp/coh-main-audit.D05Fej/api/scripts/run_maintainability_audit.py --output /tmp/coh-main-audit.D05Fej/maint.json --fail-on-regression",
+    "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --write-baseline"
+  ],
+  "failure_reason": "The local PR guard's maintainability blocker was reproduced unchanged on clean origin/main: long_functions=94 against stale baseline=90. The baseline was refreshed to the already-landed mainline state so this branch remains accountable for new regressions instead of pre-existing drift.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 119,
+    "row_sha256": "517da21b64b4b919728231c08c266d9cbb14bd9b274a2d83c5b072c7145fdf53",
+    "summary": "the-local-pr-guard-s-maintainability-blocker-was"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0119-517da21b64b4",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L119"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "git worktree add --detach /tmp/coh-main-audit.D05Fej origin/main",
+      "python3 /tmp/coh-main-audit.D05Fej/api/scripts/run_maintainability_audit.py --output /tmp/coh-main-audit.D05Fej/maint.json --fail-on-regression",
+      "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --write-baseline"
+    ],
+    "status": "pass"
+  }
+}

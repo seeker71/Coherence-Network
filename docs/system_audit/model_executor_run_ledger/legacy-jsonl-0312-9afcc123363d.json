@@ -1,0 +1,42 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "bash -n scripts/verify_web_api_deploy.sh",
+    "PUBLIC_API_BASE_URL=https://api.coherencycoin.com PUBLIC_WEB_BASE_URL=https://coherencycoin.com VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -lc 'source scripts/verify_web_api_deploy.sh; check_promoted_bml_read_routes_native'",
+    "PUBLIC_API_BASE_URL=https://api.coherencycoin.com PUBLIC_WEB_BASE_URL=https://coherencycoin.com ./scripts/verify_web_api_deploy.sh",
+    "git fetch origin main && git rebase --autostash origin/main",
+    "git diff --check"
+  ],
+  "failure_reason": "Ratchet the public deploy verifier from router-only promoted BML proof to full native proof headers. The promoted read route table now carries expected handler names and requires X-Form-Router: native-kernel, matching X-Form-Handler, and X-Form-Python-Authority: false. The full public verifier passed against production at 842ef637 after one rollout boundary settled.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 312,
+    "row_sha256": "9afcc123363da944e7058712167e19bcc879e78b87d39b70c05c6b217a28090a",
+    "summary": "ratchet-the-public-deploy-verifier-from-router-o"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0312-9afcc123363d",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L312"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "bash -n scripts/verify_web_api_deploy.sh",
+      "PUBLIC_API_BASE_URL=https://api.coherencycoin.com PUBLIC_WEB_BASE_URL=https://coherencycoin.com VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -lc 'source scripts/verify_web_api_deploy.sh; check_promoted_bml_read_routes_native'",
+      "PUBLIC_API_BASE_URL=https://api.coherencycoin.com PUBLIC_WEB_BASE_URL=https://coherencycoin.com ./scripts/verify_web_api_deploy.sh",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

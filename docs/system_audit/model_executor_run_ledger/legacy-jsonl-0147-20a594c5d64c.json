@@ -1,0 +1,38 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "python3 -m py_compile api/app/services/field_view_attribution_service.py api/app/routers/field_stories.py api/app/services/unified_models.py",
+    "cd api && python3 -m pytest -q tests/test_field_story_trace_index.py::test_field_story_view_attribution_records_compact_receipt_and_cc_flow",
+    "cd api && python3 -m pytest -q tests/test_field_story_trace_index.py",
+    "git diff --check"
+  ],
+  "failure_reason": "The field trace could be read publicly but a presence/work view did not yet persist a compact receipt or real CC circulation rows. This task adds field view receipt and flow tables, records a signed receipt rooted in the source crypto trace, mirrors six policy flow rows into the existing contribution ledger, and exposes a circulation summary for sensing flow, vitality, tension points, flexibility, and friction.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 147,
+    "row_sha256": "20a594c5d64cf09f3c135b12cc6b0a66045f4b8a04a1dc4db39b6a4cc6a15704",
+    "summary": "the-field-trace-could-be-read-publicly-but-a-pre"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0147-20a594c5d64c",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L147"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "python3 -m py_compile api/app/services/field_view_attribution_service.py api/app/routers/field_stories.py api/app/services/unified_models.py",
+      "cd api && python3 -m pytest -q tests/test_field_story_trace_index.py::test_field_story_view_attribution_records_compact_receipt_and_cc_flow",
+      "cd api && python3 -m pytest -q tests/test_field_story_trace_index.py",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

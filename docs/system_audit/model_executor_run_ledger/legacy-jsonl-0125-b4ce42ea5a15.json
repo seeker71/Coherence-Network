@@ -1,0 +1,52 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "cd api && python3 -m pytest tests/test_mcp_remote_no_oauth.py tests/test_agent_control_plane.py -q",
+    "cd api && python3 -m ruff check app/main.py app/routers/mcp_remote.py app/services/maintainability_audit_service.py app/services/agent_service_pipeline_status.py tests/test_mcp_remote_no_oauth.py tests/test_agent_control_plane.py",
+    "cd api && python3 -m py_compile app/main.py app/routers/mcp_remote.py app/services/maintainability_audit_service.py app/services/agent_service_pipeline_status.py tests/test_mcp_remote_no_oauth.py tests/test_agent_control_plane.py",
+    "cd mcp-server && npm pack --dry-run",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-07_mcp_no_oauth.json",
+    "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --fail-on-regression",
+    "cd web && npm ci --allow-git=none && npm run build",
+    "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+    "git fetch origin main && git rebase origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "Custom connector setup was prompting for OAuth because there was no hosted no-auth MCP contract. This task adds unauthenticated read-only MCP JSON-RPC endpoints at /mcp and /api/mcp, bumps coherence-mcp-server to 0.5.2 for npm publication, and fixes publish guard blockers for maintainability, home-route links, literal route labels, and the duplicate people slug route conflict.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 125,
+    "row_sha256": "b4ce42ea5a15b23a00ccb5425021468abf47de99378ffd092c115dc8f0000413",
+    "summary": "custom-connector-setup-was-prompting-for-oauth-b"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0125-b4ce42ea5a15",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L125"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "cd api && python3 -m pytest tests/test_mcp_remote_no_oauth.py tests/test_agent_control_plane.py -q",
+      "cd api && python3 -m ruff check app/main.py app/routers/mcp_remote.py app/services/maintainability_audit_service.py app/services/agent_service_pipeline_status.py tests/test_mcp_remote_no_oauth.py tests/test_agent_control_plane.py",
+      "cd api && python3 -m py_compile app/main.py app/routers/mcp_remote.py app/services/maintainability_audit_service.py app/services/agent_service_pipeline_status.py tests/test_mcp_remote_no_oauth.py tests/test_agent_control_plane.py",
+      "cd mcp-server && npm pack --dry-run",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-07_mcp_no_oauth.json",
+      "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --fail-on-regression",
+      "cd web && npm ci --allow-git=none && npm run build",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

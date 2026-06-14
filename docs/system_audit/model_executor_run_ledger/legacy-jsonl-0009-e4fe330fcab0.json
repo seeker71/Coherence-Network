@@ -1,0 +1,40 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make start-gate",
+    "cd api && ruff check app/services/automation_usage_service.py tests/test_automation_usage_api.py",
+    "cd api && pytest -q tests/test_automation_usage_api.py",
+    "git fetch origin main && git rebase origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "Supabase was still tracked and required by default despite Railway-only runtime; changed defaults to remove Supabase and made Supabase snapshot tracking opt-in via AUTOMATION_TRACK_SUPABASE.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 9,
+    "row_sha256": "e4fe330fcab07275d126eabf4838d4d6dc8b9db04d3889a1354d29019bc94600",
+    "summary": "supabase-was-still-tracked-and-required-by-defau"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0009-e4fe330fcab0",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L9"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make start-gate",
+      "cd api && ruff check app/services/automation_usage_service.py tests/test_automation_usage_api.py",
+      "cd api && pytest -q tests/test_automation_usage_api.py",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

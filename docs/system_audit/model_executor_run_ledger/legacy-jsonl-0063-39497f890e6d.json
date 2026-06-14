@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "git fetch origin main",
+    "git rebase --autostash origin/main",
+    "gh run list --repo seeker71/Coherence-Network --branch main --limit 5",
+    "gh run watch 24535400609 --repo seeker71/Coherence-Network",
+    "gh run watch 24535400468 --repo seeker71/Coherence-Network",
+    "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+  ],
+  "failure_reason": "The rollout friction was not a failed deploy but a sensing gap: I treated the expected SHA lag between /api/gates/main-head and /api/health during Hostinger rollout as if it needed repeated fresh diagnosis. I corrected the operating memory by codifying a post-merge watch sequence that waits on the main push workflows first and reruns public verification only after host rollout settles.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 63,
+    "row_sha256": "39497f890e6d587c03263e747f85b63a865db0f65178a60a1fd2e6efe264c396",
+    "summary": "the-rollout-friction-was-not-a-failed-deploy-but"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0063-39497f890e6d",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L63"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "git fetch origin main",
+      "git rebase --autostash origin/main",
+      "gh run list --repo seeker71/Coherence-Network --branch main --limit 5",
+      "gh run watch 24535400609 --repo seeker71/Coherence-Network",
+      "gh run watch 24535400468 --repo seeker71/Coherence-Network",
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ],
+    "status": "pass"
+  }
+}

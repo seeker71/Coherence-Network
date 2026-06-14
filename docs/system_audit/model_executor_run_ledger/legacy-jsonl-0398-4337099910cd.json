@@ -1,0 +1,38 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord join && coord claim \"witness heldout learning floor\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/witness-state-receipt.fk form-stdlib/tests/witness-state-receipt-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh witness-state-receipt"
+  ],
+  "failure_reason": "Joined Form-native witness-state receipt summaries to heldout learner rows. witness-state-receipt.fk now emits speech-transcribe, vision-describe, multimodal-align, and gpu-readback-kernel heldout rows, turns them into champion/challenger history, keeps too-few samples on the third-party teacher, and proves a long enough native-win window returns native authority. Focused validate returns 65535 with fourth arm: 1 band(s) four-way and 1 ok, 0 divergent; the manifest gate returns PASS-4WAY witness-state-receipt. No Python receipt helper was extended.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 398,
+    "row_sha256": "4337099910cd51ebb960c28518a5c87163f495c39576bfec12cf8cef4ac8f2b5",
+    "summary": "joined-form-native-witness-state-receipt-summari"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0398-4337099910cd",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L398"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord join && coord claim \"witness heldout learning floor\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/witness-state-receipt.fk form-stdlib/tests/witness-state-receipt-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh witness-state-receipt"
+    ],
+    "status": "pass"
+  }
+}

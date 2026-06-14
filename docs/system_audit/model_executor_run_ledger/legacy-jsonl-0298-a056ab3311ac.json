@@ -1,0 +1,54 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "python3 scripts/native_route_goal_loop.py /loop --source web_api --seconds 86400 --write-state",
+    "cd form/form-kernel-rust && cargo build --release",
+    "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_web_api_deploy.sh",
+    "VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -c 'source scripts/verify_web_api_deploy.sh https://api.example https://web.example'",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "git diff --check",
+    "cd form/form-kernel-rust && ./target/release/form-kernel-rust check --routes ../../deploy/front-door/api.bml --stdlib ../form-stdlib",
+    "cd form/form-kernel-rust && git show origin/main:deploy/front-door/api.bml > /tmp/origin-main-api.bml && ./target/release/form-kernel-rust check --routes /tmp/origin-main-api.bml --stdlib ../form-stdlib",
+    "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --routes ../../deploy/front-door/api.bml --stdlib ../form-stdlib --host 127.0.0.1 --port 19186",
+    "curl -sS -D /tmp/contributors-19186.headers -o /tmp/contributors-19186.json 'http://127.0.0.1:19186/api/contributors?limit=5&offset=0' -H 'Accept: application/json'",
+    "curl -sS -D /tmp/contributions-19186.headers -o /tmp/contributions-19186.json 'http://127.0.0.1:19186/api/contributions?limit=5&offset=0' -H 'Accept: application/json'"
+  ],
+  "failure_reason": "Moved the observed public contribution registry read paths into the BML front door. The route catalog now loads 45 native routes and lists GET /api/contributors and GET /api/contributions as native handlers. Route-goal state classifies both endpoints as kernel-native-high-grammar and raises bml_routes from 43 to 45 with goal_native_share 0.946. Local DB-backed body proof is deferred to deploy because this worktree has no running local Postgres socket; local curls still prove native dispatch reached the router and returned database-unavailable from the BML handler path. The full catalog check still fails with the same 14 unresolved names on origin/main and this branch; /api/assets remains Python fanout until Form/Rust has exact UUID5/SHA1 ID parity.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 298,
+    "row_sha256": "a056ab3311ac6ea6752e29036d2d2e1cc3a1eae6f5341dbc0a8f8504e94b5147",
+    "summary": "moved-the-observed-public-contribution-registry-"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0298-a056ab3311ac",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L298"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/native_route_goal_loop.py /loop --source web_api --seconds 86400 --write-state",
+      "cd form/form-kernel-rust && cargo build --release",
+      "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_web_api_deploy.sh",
+      "VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -c 'source scripts/verify_web_api_deploy.sh https://api.example https://web.example'",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "git diff --check",
+      "cd form/form-kernel-rust && ./target/release/form-kernel-rust check --routes ../../deploy/front-door/api.bml --stdlib ../form-stdlib",
+      "cd form/form-kernel-rust && git show origin/main:deploy/front-door/api.bml > /tmp/origin-main-api.bml && ./target/release/form-kernel-rust check --routes /tmp/origin-main-api.bml --stdlib ../form-stdlib",
+      "cd form/form-kernel-rust && ./target/release/form-kernel-rust serve --routes ../../deploy/front-door/api.bml --stdlib ../form-stdlib --host 127.0.0.1 --port 19186",
+      "curl -sS -D /tmp/contributors-19186.headers -o /tmp/contributors-19186.json 'http://127.0.0.1:19186/api/contributors?limit=5&offset=0' -H 'Accept: application/json'",
+      "curl -sS -D /tmp/contributions-19186.headers -o /tmp/contributions-19186.json 'http://127.0.0.1:19186/api/contributions?limit=5&offset=0' -H 'Accept: application/json'"
+    ],
+    "status": "pass"
+  }
+}

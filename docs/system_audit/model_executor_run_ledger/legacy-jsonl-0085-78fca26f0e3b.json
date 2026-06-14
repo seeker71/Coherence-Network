@@ -1,0 +1,32 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "After the /vision hub DB-backed slice and second rebase, the full local PR guard passed with ready_for_push=True and follow-through remained clear with no stale codex PRs.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 85,
+    "row_sha256": "78fca26f0e3b900ba1ac994077fa8fed5dd975288a7fb4776b2e56dcc08cf5d4",
+    "summary": "after-the-vision-hub-db-backed-slice-and-second-"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0085-78fca26f0e3b",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L85"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

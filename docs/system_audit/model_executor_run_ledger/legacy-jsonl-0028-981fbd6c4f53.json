@@ -1,0 +1,34 @@
+{
+  "attempts": 4,
+  "commands_run": [
+    "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py::test_configure_codex_cli_environment_bootstraps_oauth_session_from_nested_b64_tokens tests/test_agent_runner_tool_failure_telemetry.py::test_resolve_node_binary_prefers_non_shim_candidate tests/test_agent_runner_tool_failure_telemetry.py::test_resolve_node_binary_falls_back_to_shim_when_no_concrete_binary",
+    "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+    "cd api && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py"
+  ],
+  "failure_reason": "Hosted codex oauth session secret was nested under tokens.* and cursor runtime needed a modern non-recursive node binary. Runner now extracts nested access/refresh tokens into auth.json and resolves mise/asdf shim targets to concrete node executables.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 28,
+    "row_sha256": "981fbd6c4f536a5f77d16ce168083266c7aa110e392af40fd63c40e2e83f6ea3",
+    "summary": "hosted-codex-oauth-session-secret-was-nested-und"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0028-981fbd6c4f53",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L28"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py::test_configure_codex_cli_environment_bootstraps_oauth_session_from_nested_b64_tokens tests/test_agent_runner_tool_failure_telemetry.py::test_resolve_node_binary_prefers_non_shim_candidate tests/test_agent_runner_tool_failure_telemetry.py::test_resolve_node_binary_falls_back_to_shim_when_no_concrete_binary",
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+      "cd api && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py"
+    ],
+    "status": "pass"
+  }
+}

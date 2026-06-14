@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "bash scripts/agent-coord.sh claim form-native-elf-exec-floor \"walk Android ELF executable floor: Form-native ELF64/aarch64 executable wrapper plus four-way shape proof and optional runner receipt\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-elf-exec.fk form-stdlib/tests/form-elf-exec-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-os-targets.fk form-stdlib/tests/hati-os-targets-band.fk",
+    "bash scripts/bml_form_jit_metal_planes_audit.sh",
+    "cd form && VALIDATE_JOBS=4 FOURTH_PREPARE_ALL_BATCH_MAX=0 ./validate.sh",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_form_native_elf_exec_floor.json",
+    "git diff --check"
+  ],
+  "failure_reason": "Added a Form-native ELF64/aarch64 executable-shape floor. form-elf-exec emits an ET_EXEC image with one RX PT_LOAD segment and _start syscall bytes that write FORM ELF and exit 42, without clang as compiler, assembler, or linker. Focused executable proof returns 63 four-way; Hati target proof returns 16383 four-way; the metal-plane audit writes the executable and file(1) reports ELF 64-bit LSB executable, ARM aarch64, statically linked, no section header. This host has no qemu-aarch64 runner, so execution is explicitly recorded as skipped and remains the next physical receipt. Rebased full Form validation returns fourth arm: 158 band(s) four-way with 574 ok and 0 divergent.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 375,
+    "row_sha256": "fa08bcad15a01c9ca5115da93718d3f452d6772f2bb9a7a8905735d0550c7ad4",
+    "summary": "added-a-form-native-elf64-aarch64-executable-sha"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0375-fa08bcad15a0",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L375"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "bash scripts/agent-coord.sh claim form-native-elf-exec-floor \"walk Android ELF executable floor: Form-native ELF64/aarch64 executable wrapper plus four-way shape proof and optional runner receipt\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-elf-exec.fk form-stdlib/tests/form-elf-exec-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-os-targets.fk form-stdlib/tests/hati-os-targets-band.fk",
+      "bash scripts/bml_form_jit_metal_planes_audit.sh",
+      "cd form && VALIDATE_JOBS=4 FOURTH_PREPARE_ALL_BATCH_MAX=0 ./validate.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_form_native_elf_exec_floor.json",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

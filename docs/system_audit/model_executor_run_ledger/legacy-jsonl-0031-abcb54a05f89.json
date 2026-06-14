@@ -1,0 +1,32 @@
+{
+  "attempts": 2,
+  "commands_run": [
+    "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py::test_resolve_cursor_cli_binary_prefers_path_with_runtime_layout tests/test_agent_runner_tool_failure_telemetry.py::test_ensure_cli_for_command_installs_cursor_when_missing tests/test_agent_runner_tool_failure_telemetry.py::test_ensure_cli_for_command_does_not_promote_cursor_binary_when_root",
+    "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py"
+  ],
+  "failure_reason": "Cursor runtime still selected broken promoted copies (/usr/bin/agent, /usr/local/bin/agent) that lacked colocated index.js/node assets. Runner now resolves cursor binaries by runtime-layout health and only accepts/installs paths with required assets before shim health checks.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 31,
+    "row_sha256": "abcb54a05f89c0cb0966898a6c8a9920ec07a340f8615c7bf304d2bebb4a1461",
+    "summary": "cursor-runtime-still-selected-broken-promoted-co"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0031-abcb54a05f89",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L31"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py::test_resolve_cursor_cli_binary_prefers_path_with_runtime_layout tests/test_agent_runner_tool_failure_telemetry.py::test_ensure_cli_for_command_installs_cursor_when_missing tests/test_agent_runner_tool_failure_telemetry.py::test_ensure_cli_for_command_does_not_promote_cursor_binary_when_root",
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py"
+    ],
+    "status": "pass"
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "bash scripts/agent-coord.sh claim form-native-arm64-object-floor \"walk next Form-native JIT/object floor: emit and inspect macOS Mach-O plus Android ELF arm64 objects without clang as compiler or assembler\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/form-elf.fk form-stdlib/tests/form-elf-band.fk",
+    "bash scripts/bml_form_jit_metal_planes_audit.sh",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-os-targets.fk form-stdlib/tests/hati-os-targets-band.fk",
+    "cd form && VALIDATE_JOBS=4 FOURTH_PREPARE_ALL_BATCH_MAX=0 ./validate.sh",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_form_native_arm64_object_floor.json",
+    "git diff --check"
+  ],
+  "failure_reason": "Added a Form-native ELF64/aarch64 relocatable object wrapper and wired supported target rows to per-plane Form-native object emitters: macOS uses form-macho and Android uses form-elf. Focused ELF proof returns 31 four-way; target proof returns 8191 four-way; metal-plane audit writes Mach-O and ELF object bytes, and file(1) reports Mach-O 64-bit object arm64 plus ELF 64-bit LSB relocatable ARM aarch64. Rebased full Form validation returns fourth arm: 148 band(s) four-way with 566 ok and 0 divergent. This is a real Form-native object floor, not a full 100 percent Form-native BML/Hati/JIT replacement yet; broader BML/Hati and Form JIT C surfaces still use clang as oracle while Android's minimum JIT/object floor no longer depends on runtime clang.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 371,
+    "row_sha256": "051c39bbf1f9a243a54999dc77d0392966a70e5ed3d9fd3ae8a1a1994ffb396d",
+    "summary": "added-a-form-native-elf64-aarch64-relocatable-ob"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0371-051c39bbf1f9",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L371"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "bash scripts/agent-coord.sh claim form-native-arm64-object-floor \"walk next Form-native JIT/object floor: emit and inspect macOS Mach-O plus Android ELF arm64 objects without clang as compiler or assembler\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/form-elf.fk form-stdlib/tests/form-elf-band.fk",
+      "bash scripts/bml_form_jit_metal_planes_audit.sh",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-os-targets.fk form-stdlib/tests/hati-os-targets-band.fk",
+      "cd form && VALIDATE_JOBS=4 FOURTH_PREPARE_ALL_BATCH_MAX=0 ./validate.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_form_native_arm64_object_floor.json",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

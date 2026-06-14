@@ -1,0 +1,50 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord claim recipe-choice-callers \"carry recipe-choice-runtime wrapper into real caller surface after PR #2998; avoid dynamic-choice and learning-fabric sibling lanes\"",
+    "python3 scripts/view_recipe_library.py --recipe cosine --tongue form --choice-receipt | python3 -m json.tool",
+    "python3 scripts/view_recipe_library.py --choice-receipt --recipe cosine",
+    "python3 -m py_compile scripts/view_recipe_library.py api/tests/test_view_recipe_library_choice.py",
+    "cd api && python3 -m pytest -q tests/test_view_recipe_library_choice.py -vv",
+    "python3 scripts/view_recipe_library.py --recipe cosine --tongue form --choice-receipt >/tmp/view-recipe-choice-receipt.json && python3 -m json.tool /tmp/view-recipe-choice-receipt.json >/tmp/view-recipe-choice-receipt.pretty && rg -n \"form-recipe-route-choice-runtime|form-recipe-choice-signature|bml-route-choice-runtime-signature|tree-render:form\" /tmp/view-recipe-choice-receipt.pretty",
+    "python3 scripts/view_recipe_library.py --list | sed -n '1,20p'",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/bml-source.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/channel-protocol-choice-floor.fk form-stdlib/tests/channel-protocol-choice-floor-band.fk",
+    "cd api && python3 -m ruff check ../scripts/view_recipe_library.py tests/test_view_recipe_library_choice.py"
+  ],
+  "failure_reason": "Added --choice-receipt to scripts/view_recipe_library.py so the host recipe-library viewer emits an inspectable recipe-choice-runtime-compatible JSON receipt for a selected recipe/tongue path. The receipt carries form-recipe-choice-signature, bml-route-choice-runtime-signature, and form-recipe-route-choice-runtime-signature rows, names cache candidates plus the not-yet-implemented tree-render path, and leaves default list/tongue/recipe output intact. Focused pytest, py_compile, ruff, direct stdout/stderr inspection, and the channel-protocol-choice floor band passed.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 348,
+    "row_sha256": "ecf881b7db2fe0d5d532b14f03e5f7e72ee5629c52e175eb691e265da2cee300",
+    "summary": "added-choice-receipt-to-scripts-view-recipe-libr"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0348-ecf881b7db2f",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L348"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim recipe-choice-callers \"carry recipe-choice-runtime wrapper into real caller surface after PR #2998; avoid dynamic-choice and learning-fabric sibling lanes\"",
+      "python3 scripts/view_recipe_library.py --recipe cosine --tongue form --choice-receipt | python3 -m json.tool",
+      "python3 scripts/view_recipe_library.py --choice-receipt --recipe cosine",
+      "python3 -m py_compile scripts/view_recipe_library.py api/tests/test_view_recipe_library_choice.py",
+      "cd api && python3 -m pytest -q tests/test_view_recipe_library_choice.py -vv",
+      "python3 scripts/view_recipe_library.py --recipe cosine --tongue form --choice-receipt >/tmp/view-recipe-choice-receipt.json && python3 -m json.tool /tmp/view-recipe-choice-receipt.json >/tmp/view-recipe-choice-receipt.pretty && rg -n \"form-recipe-route-choice-runtime|form-recipe-choice-signature|bml-route-choice-runtime-signature|tree-render:form\" /tmp/view-recipe-choice-receipt.pretty",
+      "python3 scripts/view_recipe_library.py --list | sed -n '1,20p'",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/bml-source.fk form-stdlib/kernel-http.fk form-stdlib/bml-route-choice-runtime.fk form-stdlib/channel-protocol-choice-floor.fk form-stdlib/tests/channel-protocol-choice-floor-band.fk",
+      "cd api && python3 -m ruff check ../scripts/view_recipe_library.py tests/test_view_recipe_library_choice.py"
+    ],
+    "status": "pass"
+  }
+}

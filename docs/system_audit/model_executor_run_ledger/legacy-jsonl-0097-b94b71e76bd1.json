@@ -1,0 +1,38 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "cd api && .venv/bin/pytest -q tests/test_external_proof_demo.py",
+    "python3 scripts/external_proof_demo.py --dry-run",
+    "python3 scripts/validate_spec_quality.py --file specs/external-repo-milestone.md",
+    "/opt/homebrew/bin/ruff check api/tests/test_external_proof_demo.py scripts/external_proof_demo.py"
+  ],
+  "failure_reason": "After contributor-key auth and current lifecycle endpoints were deployed, External proof run 24911130684 reached coherence validation and failed with HTTP 404 because the public route is GET /api/coherence/score. The remediation codifies that route with a dry-run endpoint assertion and spec contract update.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 97,
+    "row_sha256": "b94b71e76bd1a896c6ea5aa16338e0cd0d0537415609c1f551b36049628c6ae2",
+    "summary": "after-contributor-key-auth-and-current-lifecycle"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0097-b94b71e76bd1",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L97"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "cd api && .venv/bin/pytest -q tests/test_external_proof_demo.py",
+      "python3 scripts/external_proof_demo.py --dry-run",
+      "python3 scripts/validate_spec_quality.py --file specs/external-repo-milestone.md",
+      "/opt/homebrew/bin/ruff check api/tests/test_external_proof_demo.py scripts/external_proof_demo.py"
+    ],
+    "status": "pass"
+  }
+}

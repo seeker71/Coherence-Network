@@ -1,0 +1,60 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "git rev-parse --abbrev-ref HEAD",
+    "git status --short",
+    "python scripts/worktree_continuity_guard.py --fail-on-risk",
+    "gh auth status -h github.com",
+    "python scripts/validate_spec_quality.py --file specs/task_ce07a558035576f9.md",
+    "node cli/bin/cc.mjs inbox",
+    "curl.exe -s -X POST https://api.coherencycoin.com/api/agent/tasks/task_ce07a558035576f9/activity -H \"Content-Type: application/json\" -d \"{...}\"",
+    "git fetch origin main",
+    "git rebase origin/main",
+    "python scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "cmd /c \"(echo *.pyc& echo __pycache__/& echo .task-*& echo data/coherence.db) >> .gitignore\"",
+    "git add -A",
+    "git diff --cached --stat",
+    "git commit -m \"spec(belief-systems-translation-idea-lens-engine): define minimal lens translation contract\"",
+    "python scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-29_belief-systems-translation-idea-lens-engine-minimal.json"
+  ],
+  "failure_reason": "Wrote and validated the minimal belief-systems translation spec, but linked-worktree git metadata was outside the writable sandbox and outbound GitHub/network access was restricted, so fetch, add, and commit could not complete.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 58,
+    "row_sha256": "d012033caa5871a4155710b0c61775f1be929ad0407aa8352bb614b96a32a8b3",
+    "summary": "wrote-and-validated-the-minimal-belief-systems-t"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "fail",
+  "run_id": "legacy-jsonl-0058-d012033caa58",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L58"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "git rev-parse --abbrev-ref HEAD",
+      "git status --short",
+      "python scripts/worktree_continuity_guard.py --fail-on-risk",
+      "gh auth status -h github.com",
+      "python scripts/validate_spec_quality.py --file specs/task_ce07a558035576f9.md",
+      "node cli/bin/cc.mjs inbox",
+      "curl.exe -s -X POST https://api.coherencycoin.com/api/agent/tasks/task_ce07a558035576f9/activity -H \"Content-Type: application/json\" -d \"{...}\"",
+      "git fetch origin main",
+      "git rebase origin/main",
+      "python scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "cmd /c \"(echo *.pyc& echo __pycache__/& echo .task-*& echo data/coherence.db) >> .gitignore\"",
+      "git add -A",
+      "git diff --cached --stat",
+      "git commit -m \"spec(belief-systems-translation-idea-lens-engine): define minimal lens translation contract\"",
+      "python scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-29_belief-systems-translation-idea-lens-engine-minimal.json"
+    ],
+    "status": "fail"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "cd web && npm run build",
+    "cd web && npx tsc --noEmit --pretty false --incremental false"
+  ],
+  "failure_reason": "Hostinger Docker build exposed a current-main home page type error from plain Link usages without an import. Replacing those with AttributedInternalLink keeps navigation attribution intact and makes both the production web build and standalone type check pass.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 111,
+    "row_sha256": "d299f983a8f020a674c4bc66f2f6cd6359c368af3a15265e835791ede169cb07",
+    "summary": "hostinger-docker-build-exposed-a-current-main-ho"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0111-d299f983a8f0",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L111"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "cd web && npm run build",
+      "cd web && npx tsc --noEmit --pretty false --incremental false"
+    ],
+    "status": "pass"
+  }
+}

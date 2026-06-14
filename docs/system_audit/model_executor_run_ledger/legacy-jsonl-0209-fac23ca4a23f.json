@@ -1,0 +1,42 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/channel.fk form-stdlib/tests/channel-breath-band.fk",
+    "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/channel.fk form-stdlib/tests/channel-breath-band.fk",
+    "cd web && npm test -- form-kernel-channel.test.ts",
+    "cd web && npm ci --allow-git=none && npm run build",
+    "python3 scripts/scan_form_blueprints.py --check",
+    "python3 scripts/generate_repo_indexes.py"
+  ],
+  "failure_reason": "Added CHANNEL-BREATH-GIFT and CHANNEL-RESONANCE-RECEIPT to channel.fk, registered offer and attune in the web channel kernel/UI, and proved gift transport, resonance receipt validity, receipt transport, and duplicate payload recognition. Source and binary Form proofs both returned 500; the web channel tests passed 10 tests and the production web build passed.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 209,
+    "row_sha256": "fac23ca4a23fe7d5d6463a2983ef9a28108301622b2daa2d678e9e843a6164f5",
+    "summary": "added-channel-breath-gift-and-channel-resonance-"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0209-fac23ca4a23f",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L209"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/channel.fk form-stdlib/tests/channel-breath-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/channel.fk form-stdlib/tests/channel-breath-band.fk",
+      "cd web && npm test -- form-kernel-channel.test.ts",
+      "cd web && npm ci --allow-git=none && npm run build",
+      "python3 scripts/scan_form_blueprints.py --check",
+      "python3 scripts/generate_repo_indexes.py"
+    ],
+    "status": "pass"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "git fetch origin main && git rebase origin/main",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/choice-receipt.fk form-stdlib/bmf-choice-receipts.fk form-stdlib/tests/bmf-choice-receipt-band.fk",
+    "cd form && /usr/bin/time -p ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-runtime.fk",
+    "cd form && /usr/bin/time -p ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/tests/python-bmf-full-file-band.fk",
+    "cd form && /usr/bin/time -p ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-bmf-compile-source-proof.fk",
+    "cd form && mkdir -p ../.cache/bmf-choice-path-perf && bash -o pipefail -c '/usr/bin/time -p ./validate.sh 2>&1 | tee ../.cache/bmf-choice-path-perf/validate_full_20260609.txt'"
+  ],
+  "failure_reason": "Confirmed BMF choice can use choose_any for literal-only order-insensitive alternatives and choose_best for indexed compiler rule dispatch. Added branch-prediction research guidance and optimized apply-object-rule-buckets to execute exact/wild bucket entries as known candidates without rechecking object-rule-index-entry-candidate?. Focused sibling-kernel proof passed; timing samples show BML runtime and Python-BMF wall-clock improvements, choice receipt neutral, thesis source proof roughly neutral/slightly slower. Full Form sibling-kernel suite also passed: 398 ok / 0 divergent in real 4921.28 seconds.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 301,
+    "row_sha256": "b3f269054b6255e5897aaacc95d83f6fc3c83275992eede206aa999aa3200b75",
+    "summary": "confirmed-bmf-choice-can-use-choose-any-for-lite"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0301-b3f269054b62",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L301"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "git fetch origin main && git rebase origin/main",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/choice-receipt.fk form-stdlib/bmf-choice-receipts.fk form-stdlib/tests/bmf-choice-receipt-band.fk",
+      "cd form && /usr/bin/time -p ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-runtime.fk",
+      "cd form && /usr/bin/time -p ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/python-bmf.fk form-stdlib/tests/python-bmf-full-file-band.fk",
+      "cd form && /usr/bin/time -p ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-thesis-bmf-compile-source-proof.fk",
+      "cd form && mkdir -p ../.cache/bmf-choice-path-perf && bash -o pipefail -c '/usr/bin/time -p ./validate.sh 2>&1 | tee ../.cache/bmf-choice-path-perf/validate_full_20260609.txt'"
+    ],
+    "status": "pass"
+  }
+}

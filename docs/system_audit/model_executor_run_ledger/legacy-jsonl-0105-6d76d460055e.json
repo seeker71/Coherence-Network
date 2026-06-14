@@ -1,0 +1,42 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "cd api && python3 -m pytest tests/test_on_demand_attunement.py -q",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-27_vision-i18n-pending-summary.json",
+    "git diff --check",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "git fetch origin main && git rebase --autostash origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+  ],
+  "failure_reason": "Live German concept pages still showed English title/description after story fallback was hidden, so this task adds glossary-backed pending summaries for core Living Collective concepts.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 105,
+    "row_sha256": "6d76d460055efce2dd216ac9fa73365060bdb5c6a3699e39b963ded10f0a24fe",
+    "summary": "live-german-concept-pages-still-showed-english-t"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0105-6d76d460055e",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L105"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "cd api && python3 -m pytest tests/test_on_demand_attunement.py -q",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-27_vision-i18n-pending-summary.json",
+      "git diff --check",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ],
+    "status": "pass"
+  }
+}

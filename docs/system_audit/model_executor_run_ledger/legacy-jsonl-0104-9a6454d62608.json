@@ -1,0 +1,44 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "cd api && python3 -m pytest tests/test_on_demand_attunement.py -q",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-27_vision-i18n-no-english-fallback.json",
+    "git diff --check",
+    "cd web && npm run build",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "git fetch origin main && git rebase --autostash origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+  ],
+  "failure_reason": "Concept pages requested in non-English locales no longer render English story bodies while translation is pending; the API clears pending story_content and the web page renders a localized pending panel instead.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 104,
+    "row_sha256": "9a6454d626087cefa15f52cf5ddf6b48c18200e6b3340c352b2ca2e0045028f6",
+    "summary": "concept-pages-requested-in-non-english-locales-n"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0104-9a6454d62608",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L104"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "cd api && python3 -m pytest tests/test_on_demand_attunement.py -q",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-27_vision-i18n-no-english-fallback.json",
+      "git diff --check",
+      "cd web && npm run build",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ],
+    "status": "pass"
+  }
+}

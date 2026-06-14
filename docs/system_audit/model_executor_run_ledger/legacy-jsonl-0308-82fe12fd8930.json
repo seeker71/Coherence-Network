@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "public curl header probes for promoted BML endpoints",
+    "cargo fmt --check",
+    "cargo test route_spec_tests::kernel_http_route_selection_honors_template_segments -- --nocapture",
+    "cargo test route_spec_tests::source_bml_catalog_template_routes_select_natively_in_rust -- --nocapture",
+    "./scripts/test_hostinger_deploy_form_paths.sh",
+    "git diff --check",
+    "python3 scripts/generate_repo_indexes.py --check"
+  ],
+  "failure_reason": "Investigated the public no-header gap after BML read-route promotion. Production returned HTTP 200 without X-Form-Router for promoted BML endpoints while /api/utils/kernel_status was native, pointing at Rust kernel-router route selection. Added Rust path-template matching for {name} and :name segments, proved exact/template/wildcard pressure ordering, proved the source-compiled deploy/front-door/api.bml catalog selects the promoted template routes when Accept is present, and added deploy/front-door/** workflow triggers with a deploy-path test proving Dockerfile.kernel-router carries /routes/api.bml.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 308,
+    "row_sha256": "82fe12fd8930f69f5a40f8ad5742e1cf050420cdcc176e76ec1decf3e8fb13a2",
+    "summary": "investigated-the-public-no-header-gap-after-bml-"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0308-82fe12fd8930",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L308"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "public curl header probes for promoted BML endpoints",
+      "cargo fmt --check",
+      "cargo test route_spec_tests::kernel_http_route_selection_honors_template_segments -- --nocapture",
+      "cargo test route_spec_tests::source_bml_catalog_template_routes_select_natively_in_rust -- --nocapture",
+      "./scripts/test_hostinger_deploy_form_paths.sh",
+      "git diff --check",
+      "python3 scripts/generate_repo_indexes.py --check"
+    ],
+    "status": "pass"
+  }
+}

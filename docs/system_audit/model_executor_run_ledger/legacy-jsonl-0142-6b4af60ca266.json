@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "python3 docs/field/urs/tools/ten_year_field_cluster.py",
+    "python3 docs/field/urs/tools/youtube_podcast_spectrum.py",
+    "python3 docs/field/urs/tools/build_trace_indexes.py --input docs/field/urs/output/ten_year_events.jsonl --output-dir docs/field/urs/trace",
+    "python3 docs/field/urs/tools/digital_influence_inventory.py",
+    "python3 -m py_compile docs/field/urs/tools/ten_year_field_cluster.py docs/field/urs/tools/digital_influence_inventory.py docs/field/urs/tools/youtube_podcast_spectrum.py docs/field/urs/tools/build_trace_indexes.py",
+    "python3 trace invariant check",
+    "cd api && python3 -m pytest -q tests/test_field_story_trace_index.py::test_digital_influence_inventory_registers_full_history_attention",
+    "git diff --check"
+  ],
+  "failure_reason": "The YouTube field trace was still shaped around the former two-year window. This task uses the full available history-only Google Takeout watch body, adds YouTube search history back to 2011-12-31, regenerates the normalized event stream, monthly/author/work query indexes, digital inventory, and podcast duration spectrum, and preserves legacy inventory keys as aliases for existing API readers. Running the whole trace-index test file also surfaced a separate Audible schema assertion already outside this YouTube change.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 142,
+    "row_sha256": "6b4af60ca26681fe69fe92037b7214feeed9625d416e933602e0d9a828306cd5",
+    "summary": "the-youtube-field-trace-was-still-shaped-around-"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0142-6b4af60ca266",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L142"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "python3 docs/field/urs/tools/ten_year_field_cluster.py",
+      "python3 docs/field/urs/tools/youtube_podcast_spectrum.py",
+      "python3 docs/field/urs/tools/build_trace_indexes.py --input docs/field/urs/output/ten_year_events.jsonl --output-dir docs/field/urs/trace",
+      "python3 docs/field/urs/tools/digital_influence_inventory.py",
+      "python3 -m py_compile docs/field/urs/tools/ten_year_field_cluster.py docs/field/urs/tools/digital_influence_inventory.py docs/field/urs/tools/youtube_podcast_spectrum.py docs/field/urs/tools/build_trace_indexes.py",
+      "python3 trace invariant check",
+      "cd api && python3 -m pytest -q tests/test_field_story_trace_index.py::test_digital_influence_inventory_registers_full_history_attention",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

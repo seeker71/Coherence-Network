@@ -1,0 +1,34 @@
+{
+  "attempts": 6,
+  "commands_run": [
+    "make start-gate",
+    "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+    "cd api && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py"
+  ],
+  "failure_reason": "Root demotion auto-discovery could select low-UID system accounts (for example sync) when preserving --dangerously-skip-permissions; enforce AGENT_RUN_AS_MIN_UID default 1000 and add resolver regression tests.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 22,
+    "row_sha256": "13c980c6d7509cd8482a36c3b99a71fa3220a2b86af5895bb39f2856cfdd8e45",
+    "summary": "root-demotion-auto-discovery-could-select-low-ui"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0022-13c980c6d750",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L22"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make start-gate",
+      "cd api && pytest -q tests/test_agent_runner_tool_failure_telemetry.py",
+      "cd api && ruff check scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py"
+    ],
+    "status": "pass"
+  }
+}

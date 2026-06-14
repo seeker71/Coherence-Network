@@ -1,0 +1,50 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "cd web && npm test -- tests/homepage-presence-lineage.test.ts",
+    "cd web && npm ci --allow-git=none",
+    "cd web && npm test -- tests/homepage-presence-lineage.test.ts",
+    "for f in web/messages/*.json; do jq empty \"$f\" || exit 1; done",
+    "git diff --check",
+    "cd web && npm run build",
+    "curl local homepage HTML for leaked i18n keys, stock image URLs, and restored homepage section markers",
+    "playwright-cli open http://127.0.0.1:3114/ and full-page screenshot sanity check",
+    "cd web && npm test -- tests/homepage-presence-lineage.test.ts tests/homepage-readability.test.ts",
+    "cd web && npm run build"
+  ],
+  "failure_reason": "The public homepage had two coupled regressions: the English message bundle was accidentally truncated to a homepage-only object, leaking common/header/nav/homeBreath i18n keys, and the homepage body had collapsed into a presence-only surface with stock/TODO hero images. This task restores the full homepage story, keeps the presence lineage as a lower supporting section, replaces stock placeholders with local source-grounded public assets, and adds a static guard for bundle shape, supported locale keys, existing presence assets, and absence of stock/TODO URLs. The first focused test pass found missing fresh-worktree dependencies; npm ci resolved it. Browser console showed local dev proxy 500s for optional API calls, while the page rendered and production build passed.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 137,
+    "row_sha256": "c80677cab976a123a1355da71ba4f136b7619bf9768ca82c5131b6acceade742",
+    "summary": "the-public-homepage-had-two-coupled-regressions-"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0137-c80677cab976",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L137"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "cd web && npm test -- tests/homepage-presence-lineage.test.ts",
+      "cd web && npm ci --allow-git=none",
+      "cd web && npm test -- tests/homepage-presence-lineage.test.ts",
+      "for f in web/messages/*.json; do jq empty \"$f\" || exit 1; done",
+      "git diff --check",
+      "cd web && npm run build",
+      "curl local homepage HTML for leaked i18n keys, stock image URLs, and restored homepage section markers",
+      "playwright-cli open http://127.0.0.1:3114/ and full-page screenshot sanity check",
+      "cd web && npm test -- tests/homepage-presence-lineage.test.ts tests/homepage-readability.test.ts",
+      "cd web && npm run build"
+    ],
+    "status": "pass"
+  }
+}

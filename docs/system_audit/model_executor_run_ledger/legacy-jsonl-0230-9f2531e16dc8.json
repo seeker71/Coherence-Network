@@ -1,0 +1,44 @@
+{
+  "attempts": 2,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-concrete-source-lowerer-proof.fk",
+    "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-source-picture-proof.fk",
+    "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-source-lowering-carrier-proof.fk",
+    "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-runtime.fk",
+    "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-reference-compiler-runtime.fk",
+    "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-bml-compiler-picture-band.fk"
+  ],
+  "failure_reason": "Added the concrete BML source-lowering layer in high-level BML: typed source declarations, a BMLSourceParser bootstrap adapter interface, typed carriers, a concrete declaration-lowering stage, and BMLCompilerSourceLoweringFlow wired into ModernBMLCompiler. Initial concrete proof returned 30 because the bootstrap parser exposed the interface shell but not ParseDeclarations; added narrowly scoped interface body parsing and method-signature parsing. Final concrete proof returns 31 across Go/Rust/TypeScript; source picture remains 42, carrier proof remains 41, BML compiler runtime remains 68, reference runtime remains 524488, and the original compiler picture remains 112251.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 230,
+    "row_sha256": "9f2531e16dc8b8d15f5254e61dc79cda04ba09fd56bed6a653bf76bd474a515e",
+    "summary": "added-the-concrete-bml-source-lowering-layer-in-"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0230-9f2531e16dc8",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L230"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-concrete-source-lowerer-proof.fk",
+      "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-source-picture-proof.fk",
+      "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-source-lowering-carrier-proof.fk",
+      "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-runtime.fk",
+      "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-reference-compiler-runtime.fk",
+      "cd form && env PATH=\"/usr/bin:/bin:/usr/sbin:/sbin:$PATH\" ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/tests/bmf-bml-compiler-picture-band.fk"
+    ],
+    "status": "pass"
+  }
+}

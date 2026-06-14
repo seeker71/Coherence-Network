@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "python3 -m py_compile scripts/run_real_loopback_learning_samples.py",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/loopback-learning.fk form-stdlib/tests/loopback-learning-band.fk",
+    "python3 scripts/run_real_loopback_learning_samples.py",
+    "curl --fail --location --continue-at - --output /Users/ursmuff/whisper-models/ggml-large-v3.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin",
+    "python3 scripts/run_real_loopback_learning_samples.py --model /Users/ursmuff/whisper-models/ggml-large-v3.bin",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_loopback_learning.json",
+    "git diff --check"
+  ],
+  "failure_reason": "Added a Form-native loopback-learning surface and generated real local TTS/STT proof runner. Focused Form proof returns 65535 with fourth arm four-way and 1 ok, 0 divergent. The real runner generates six macOS say WAV samples, transcribes locally with whisper-cli, extracts feature receipts, writes a generated Form band, and validates that band at 63. The existing large-v3-turbo model and newly downloaded full ggml-large-v3 model both produced six 100 percent token-overlap transcripts and generated-band verdict 63; full large-v3 sha256=64d182b440b98d5203c4f9bd541544d84c605196c4f7b845dfa11fb23594d1e2.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 366,
+    "row_sha256": "0b8d2b361f87937f11965441a7e394c5517872dce03dc9e8c44fb90fe1f199e9",
+    "summary": "added-a-form-native-loopback-learning-surface-an"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0366-0b8d2b361f87",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L366"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 -m py_compile scripts/run_real_loopback_learning_samples.py",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/loopback-learning.fk form-stdlib/tests/loopback-learning-band.fk",
+      "python3 scripts/run_real_loopback_learning_samples.py",
+      "curl --fail --location --continue-at - --output /Users/ursmuff/whisper-models/ggml-large-v3.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin",
+      "python3 scripts/run_real_loopback_learning_samples.py --model /Users/ursmuff/whisper-models/ggml-large-v3.bin",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_loopback_learning.json",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

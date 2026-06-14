@@ -1,0 +1,36 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "gh pr checks 2722 --watch",
+    "cd api && python3 -m pytest -q tests/test_agent_invitation.py::test_homepage_invites_anyone_or_anything_to_canonical_paths",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260609_release_dead_kernel_fallback_hooks.json",
+    "git diff --check"
+  ],
+  "failure_reason": "Remote Thread Gates exposed a stale homepage invitation assertion that searched web/app/page.tsx for English copy after the homepage moved that public copy into web/messages/en.json. The test now observes page translation-key wiring plus canonical English message content, and the focused pytest passes locally.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 295,
+    "row_sha256": "7766a22c5d62dec5b3bc6c6a86d0a3877d1eb23b733a4250afd1ab4f99456155",
+    "summary": "remote-thread-gates-exposed-a-stale-homepage-inv"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0295-7766a22c5d62",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L295"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "gh pr checks 2722 --watch",
+      "cd api && python3 -m pytest -q tests/test_agent_invitation.py::test_homepage_invites_anyone_or_anything_to_canonical_paths",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260609_release_dead_kernel_fallback_hooks.json",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "python3 -m json.tool docs/lineage/urs-contribution-profile.graph.json >/tmp/urs_manifest_validated.json",
+    "python3 scripts/import_lineage.py docs/lineage/urs-contribution-profile.graph.json --api https://api.coherencycoin.com --source contributor:seeker71",
+    "curl -sS https://api.coherencycoin.com/api/graph/nodes/contributor%3Aseeker71 | jq '{id,name,description,domains,keywords}'",
+    "curl -sS 'https://api.coherencycoin.com/api/profile/contributor%3Aseeker71/verify?hash=refresh'",
+    "curl -sS https://api.coherencycoin.com/api/profile/seeker71",
+    "curl -sS https://api.coherencycoin.com/api/profile/contributor%3Aseeker71"
+  ],
+  "failure_reason": "Production contributor properties contained stale name/description values that shadowed column updates in graph node serialization. The manifest now carries the corrected display name and narrative in ordinary graph properties too, and production replay verifies the public node plus bare/prefixed profiles converge on the same contribution-derived hash.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 120,
+    "row_sha256": "63c70632b84cba71c25f77ea18e2eabf1712be729b254624b7ab3137dad20d3f",
+    "summary": "production-contributor-properties-contained-stal"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0120-63c70632b84c",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L120"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "python3 -m json.tool docs/lineage/urs-contribution-profile.graph.json >/tmp/urs_manifest_validated.json",
+      "python3 scripts/import_lineage.py docs/lineage/urs-contribution-profile.graph.json --api https://api.coherencycoin.com --source contributor:seeker71",
+      "curl -sS https://api.coherencycoin.com/api/graph/nodes/contributor%3Aseeker71 | jq '{id,name,description,domains,keywords}'",
+      "curl -sS 'https://api.coherencycoin.com/api/profile/contributor%3Aseeker71/verify?hash=refresh'",
+      "curl -sS https://api.coherencycoin.com/api/profile/seeker71",
+      "curl -sS https://api.coherencycoin.com/api/profile/contributor%3Aseeker71"
+    ],
+    "status": "pass"
+  }
+}

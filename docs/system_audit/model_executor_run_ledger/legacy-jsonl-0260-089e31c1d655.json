@@ -1,0 +1,42 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/earth-witness-question.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/earth-witness-question.fk form-stdlib/tests/earth-witness-question-band.fk",
+    "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/earth-witness-question.fk form-stdlib/tests/earth-witness-question-band.fk",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-09_earth_witness_question.json",
+    "git diff --check"
+  ],
+  "failure_reason": "Added a Form-native Earth witness question feature. The initial module had one extra fixture-closing parenthesis; source validation exposed the TypeScript reader divergence and the fix made all sibling kernels agree. The proof returns 67108863 from source and binary artifacts, answering what/where/when/who/how/why for the Tessera public Earth-observation source, preserving six principle traces, returning silence for an unknown question, and compressing answered plus silent question choices into valid CHOICE-RECEIPT signatures.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 260,
+    "row_sha256": "089e31c1d655b5476568fc25fd49e4e9c5a42db91f438a6e7a9f81226bbf7d0b",
+    "summary": "added-a-form-native-earth-witness-question-featu"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0260-089e31c1d655",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L260"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/earth-witness-question.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/earth-witness-question.fk form-stdlib/tests/earth-witness-question-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/earth-witness-question.fk form-stdlib/tests/earth-witness-question-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-09_earth_witness_question.json",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

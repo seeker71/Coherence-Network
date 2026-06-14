@@ -1,0 +1,36 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "sub-agent research packets per named node in four batches",
+    "cd web && npm run build",
+    "Playwright screenshot sweep for /presence-walk/node/{slug}",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-24_presence-perspectives.json"
+  ],
+  "failure_reason": "The first node view over-standardized the presences by overlaying explanatory sections. The page was reworked so each named node has node-specific presentation data, official or brand-source imagery where verified, short source phrases, and focus language on the first screen, with story/style/message/presence moved below the fold as secondary attunement notes.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 73,
+    "row_sha256": "5d774ca9e373692e4fb090ccc25eb823b74b1342401f2bd205f6f8054a3945b0",
+    "summary": "the-first-node-view-over-standardized-the-presen"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0073-5d774ca9e373",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L73"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "sub-agent research packets per named node in four batches",
+      "cd web && npm run build",
+      "Playwright screenshot sweep for /presence-walk/node/{slug}",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-24_presence-perspectives.json"
+    ],
+    "status": "pass"
+  }
+}

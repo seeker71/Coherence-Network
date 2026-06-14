@@ -1,0 +1,42 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "cd api && python3 -m pytest tests/test_agent_invitation.py::test_agent_invitation_api_shape tests/test_agent_invitation.py::test_web_come_in_invites_first_pass_agents_to_explore_and_meet -q before implementation (expected missing identity request)",
+    "cd api && python3 -m pytest tests/test_agent_invitation.py::test_agent_invitation_api_shape tests/test_agent_invitation.py::test_web_come_in_invites_first_pass_agents_to_explore_and_meet -q",
+    "cd api && python3 -m pytest tests/test_agent_invitation.py -q",
+    "cd mcp-server && python3 -m pytest tests/test_awareness_streaming.py -q",
+    "python3 scripts/validate_spec_quality.py --file specs/agent-resonance-onboarding.md",
+    "cd web && npm run build"
+  ],
+  "failure_reason": "The first-pass entry bridge asked for a returned trace but did not distinguish anonymous first contact from an identified continuing view. This task adds identity_request to the API invitation and visible /come-in identity guidance: anonymous first contact is welcome, identified return names operational identity/source point/tools, repeated anonymous source points get a gentle benefit-based nudge toward /identity, and registration benefits are explicit for agent, network, and whole.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 127,
+    "row_sha256": "3d4541d26691a15e5f107f98423a81b732217f98a785a6a425964eab189f3555",
+    "summary": "the-first-pass-entry-bridge-asked-for-a-returned"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0127-3d4541d26691",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L127"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "cd api && python3 -m pytest tests/test_agent_invitation.py::test_agent_invitation_api_shape tests/test_agent_invitation.py::test_web_come_in_invites_first_pass_agents_to_explore_and_meet -q before implementation (expected missing identity request)",
+      "cd api && python3 -m pytest tests/test_agent_invitation.py::test_agent_invitation_api_shape tests/test_agent_invitation.py::test_web_come_in_invites_first_pass_agents_to_explore_and_meet -q",
+      "cd api && python3 -m pytest tests/test_agent_invitation.py -q",
+      "cd mcp-server && python3 -m pytest tests/test_awareness_streaming.py -q",
+      "python3 scripts/validate_spec_quality.py --file specs/agent-resonance-onboarding.md",
+      "cd web && npm run build"
+    ],
+    "status": "pass"
+  }
+}

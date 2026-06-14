@@ -1,0 +1,36 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "git fetch origin main && git rebase --autostash origin/main",
+    "cd api && .venv/bin/pytest -q tests/test_vision_content.py",
+    "cd web && npm run build"
+  ],
+  "failure_reason": "Origin main advanced again during final local guarding. I rebased with autostash a second time for the realize slice, the stash applied cleanly, and the focused API test plus web build passed again.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 88,
+    "row_sha256": "5e8083ad4bf47b0efea706f973ce76d48abb63f72b758e36e05fc4ed1c48fd9d",
+    "summary": "origin-main-advanced-again-during-final-local-gu"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0088-5e8083ad4bf4",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L88"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "cd api && .venv/bin/pytest -q tests/test_vision_content.py",
+      "cd web && npm run build"
+    ],
+    "status": "pass"
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "gh run list --repo seeker71/Coherence-Network --limit 12",
+    "gh run view 24536420663 --repo seeker71/Coherence-Network --json conclusion,jobs",
+    "git grep -n \"actions/checkout@v4|actions/setup-python@v5|FORCE_JAVASCRIPT_ACTIONS_TO_NODE24\" .github/workflows",
+    "python3 scripts/validate_workflow_references.py",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+  ],
+  "failure_reason": "The active GitHub runs were green, but the successful jobs still emitted Node 20 deprecation annotations because core workflows pinned actions/checkout@v4 and actions/setup-python@v5. I fixed the root cause by upgrading those workflow pins to checkout@v5 and setup-python@v6 repo-wide and removing the temporary FORCE_JAVASCRIPT_ACTIONS_TO_NODE24 override from thread-gates.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 64,
+    "row_sha256": "cfaa739b544fe722f924dd7d36d5cc9c399ed08b1f603225c5cc2d239b7d2156",
+    "summary": "the-active-github-runs-were-green-but-the-succes"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0064-cfaa739b544f",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L64"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "gh run list --repo seeker71/Coherence-Network --limit 12",
+      "gh run view 24536420663 --repo seeker71/Coherence-Network --json conclusion,jobs",
+      "git grep -n \"actions/checkout@v4|actions/setup-python@v5|FORCE_JAVASCRIPT_ACTIONS_TO_NODE24\" .github/workflows",
+      "python3 scripts/validate_workflow_references.py",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ],
+    "status": "pass"
+  }
+}

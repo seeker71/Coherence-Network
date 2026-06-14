@@ -1,0 +1,42 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "curl -sS https://coherence-network-production.up.railway.app/api/health | jq",
+    "curl -sS https://coherence-network-production.up.railway.app/api/agent/pipeline-status | jq",
+    "cd api && pytest -q tests/test_openclaw_executor_integration.py",
+    "cd api && ruff check app/services/agent_service.py tests/test_openclaw_executor_integration.py",
+    "git fetch origin main && git rebase origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "After model normalization landed, production smoke still encountered OAuth refresh-token churn; defaulting openclaw task runner auth mode to api_key removes that avoidable failure path while preserving explicit overrides.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 6,
+    "row_sha256": "539b33308cb6ee82ab235b1e507146ad46d050fb388bc117efed858fd557a5b4",
+    "summary": "after-model-normalization-landed-production-smok"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0006-539b33308cb6",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L6"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "curl -sS https://coherence-network-production.up.railway.app/api/health | jq",
+      "curl -sS https://coherence-network-production.up.railway.app/api/agent/pipeline-status | jq",
+      "cd api && pytest -q tests/test_openclaw_executor_integration.py",
+      "cd api && ruff check app/services/agent_service.py tests/test_openclaw_executor_integration.py",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

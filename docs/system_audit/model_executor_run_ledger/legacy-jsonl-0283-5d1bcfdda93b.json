@@ -1,0 +1,48 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_web_api_deploy.sh",
+    "VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -c 'source scripts/verify_web_api_deploy.sh https://api.example https://web.example'",
+    "/Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest tests/test_runtime_web_api_provenance.py -q",
+    "cargo build --release --bin form-kernel-rust",
+    "git diff --check",
+    "form/form-kernel-rust/target/release/form-kernel-rust serve --port 19133 --routes deploy/front-door/api.bml --stdlib form/form-stdlib --upstream http://127.0.0.1:9",
+    "curl local GET /api/_form/inventory-flow-observation with X-Form-Observe and __native_inventory_canary__",
+    "curl local GET /api/inventory/flow with __native_inventory_canary__"
+  ],
+  "failure_reason": "Lifted inventory flow into a native BML observation surface. /api/_form/inventory-flow-observation is header-gated by X-Form-Observe, invokes api_inventory_flow, and reports observed_handler, observed_canary, status, body_bytes, handler_total_ms, framebuffer_event_rows, event sample, jit_rows, and native_observation.python_authority=false. The underlying inventory flow native_observation now points at the observation route/header. Auto-deploy and public verifier scripts now check this observation proof.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 283,
+    "row_sha256": "5d1bcfdda93b17f8441e571d98256836a0605596d5e973f6121e1c77ccbaeb8f",
+    "summary": "lifted-inventory-flow-into-a-native-bml-observat"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0283-5d1bcfdda93b",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L283"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "bash -n deploy/hostinger/auto-deploy.sh scripts/verify_web_api_deploy.sh",
+      "VERIFY_WEB_API_DEPLOY_SOURCE_ONLY=1 bash -c 'source scripts/verify_web_api_deploy.sh https://api.example https://web.example'",
+      "/Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest tests/test_runtime_web_api_provenance.py -q",
+      "cargo build --release --bin form-kernel-rust",
+      "git diff --check",
+      "form/form-kernel-rust/target/release/form-kernel-rust serve --port 19133 --routes deploy/front-door/api.bml --stdlib form/form-stdlib --upstream http://127.0.0.1:9",
+      "curl local GET /api/_form/inventory-flow-observation with X-Form-Observe and __native_inventory_canary__",
+      "curl local GET /api/inventory/flow with __native_inventory_canary__"
+    ],
+    "status": "pass"
+  }
+}

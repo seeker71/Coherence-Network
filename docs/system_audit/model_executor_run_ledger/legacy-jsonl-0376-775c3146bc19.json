@@ -1,0 +1,44 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord claim \"real source summary receipt floor\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-real-source-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-learning-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tool-channel.fk form-stdlib/code-tool-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/tests/llm-feature-channel-floor-band.fk",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_real_summary_receipt_floor.json",
+    "git diff --check"
+  ],
+  "failure_reason": "Moved the text-summary learning lane toward physical source data by adding a kernel-native file read/citation proof. text:summarize-file now plans through host:file with cap.host.file.read, read_file+read_file_slice. The new real-source band reads docs/coherence-substrate/text-summary-learning.form through the form working directory, verifies file size/text length/prefix and four exact citation byte slices, gates the summary, and turns the result into a CHOICE-RECEIPT training sample at verdict 8191 on Go/Rust/TypeScript. Existing text-summary-learning remains 262143 four-way on fkwu and the dependent llm-feature-channel-floor remains 131071 four-way.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 376,
+    "row_sha256": "775c3146bc191c07f01e75355dd091cbc9023eb262ec2b54d47c5459880b3380",
+    "summary": "moved-the-text-summary-learning-lane-toward-phys"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0376-775c3146bc19",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L376"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim \"real source summary receipt floor\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-real-source-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-learning-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tool-channel.fk form-stdlib/code-tool-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/tests/llm-feature-channel-floor-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_real_summary_receipt_floor.json",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

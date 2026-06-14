@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "cd web && npm test -- tests/bali-land-path-static.test.ts tests/homepage-presence-lineage.test.ts tests/aligned-communities-static.test.ts",
+    "cd web && npm ci --allow-git=none",
+    "cd web && npm test -- tests/bali-land-path-static.test.ts tests/homepage-presence-lineage.test.ts tests/aligned-communities-static.test.ts",
+    "for f in web/messages/*.json; do jq empty \"$f\" || exit 1; done",
+    "git diff --check",
+    "cd web && npm run build",
+    "PORT=3116 NEXT_PUBLIC_API_URL=http://127.0.0.1:18116 npm run dev",
+    "Playwright rendered local / and /come-in and found the new /silence/built entry copy"
+  ],
+  "failure_reason": "The land-developer path existed but was too deep: /come-in pointed to /silence, and /silence only exposed /silence/built near the bottom. This task adds direct /silence/built doors from the public home ground band and /come-in, localizes the lower /come-in door keys, and guards that Bumi Sehat is not used as a community-living route for this land path. The first focused test found missing fresh-worktree dependencies; npm ci resolved it. Local rendered checks passed with expected dev API connection-refused noise because the API was not running for the visual pass.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 138,
+    "row_sha256": "4bd495debc1dc18d8040777602408329f98ed334da94576ec4e2dd1e7b7cb875",
+    "summary": "the-land-developer-path-existed-but-was-too-deep"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0138-4bd495debc1d",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L138"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "cd web && npm test -- tests/bali-land-path-static.test.ts tests/homepage-presence-lineage.test.ts tests/aligned-communities-static.test.ts",
+      "cd web && npm ci --allow-git=none",
+      "cd web && npm test -- tests/bali-land-path-static.test.ts tests/homepage-presence-lineage.test.ts tests/aligned-communities-static.test.ts",
+      "for f in web/messages/*.json; do jq empty \"$f\" || exit 1; done",
+      "git diff --check",
+      "cd web && npm run build",
+      "PORT=3116 NEXT_PUBLIC_API_URL=http://127.0.0.1:18116 npm run dev",
+      "Playwright rendered local / and /come-in and found the new /silence/built entry copy"
+    ],
+    "status": "pass"
+  }
+}

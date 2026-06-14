@@ -1,0 +1,52 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "bash -n scripts/verify_web_api_deploy.sh scripts/settle_public_deploy.sh scripts/test_verify_web_api_sha_patience.sh scripts/test_settle_public_deploy_dispatch.sh scripts/test_settle_public_deploy_stale_target_dispatch.sh",
+    "bash scripts/test_verify_web_api_sha_patience.sh",
+    "perl -e 'alarm shift; exec @ARGV' 20 bash scripts/test_settle_public_deploy_dispatch.sh",
+    "perl -e 'alarm shift; exec @ARGV' 20 bash scripts/test_settle_public_deploy_stale_target_dispatch.sh",
+    "bash scripts/test_verify_web_api_css_assets.sh",
+    "bash scripts/test_verify_web_api_pulse_witness.sh",
+    "ruby -e 'require \"yaml\"; ARGV.each { |path| YAML.load_file(path); puts \"OK #{path}\" }' .github/workflows/hostinger-auto-deploy.yml .github/workflows/hostinger-api-native-deploy.yml",
+    "python3 scripts/generate_repo_indexes.py --check",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-10_deploy_sha_settle_required.json",
+    "git diff --check"
+  ],
+  "failure_reason": "Hardened deploy SHA trust in the strict public deploy path. API and web SHA parity checks now retry bounded rollout mismatches before failing, settle_public_deploy promotes both SHA checks to required mode once the API runtime reaches the target SHA, and Hostinger deploy workflows run strict SHA parity with a three-minute patience window. The new mock test proves old-SHA then target-SHA rollout settling for both API and web checks.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 306,
+    "row_sha256": "60acce61b023e72ac8cf61e612e2b8bb53ee66ea8526499384904c45bac4407a",
+    "summary": "hardened-deploy-sha-trust-in-the-strict-public-d"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0306-60acce61b023",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L306"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "bash -n scripts/verify_web_api_deploy.sh scripts/settle_public_deploy.sh scripts/test_verify_web_api_sha_patience.sh scripts/test_settle_public_deploy_dispatch.sh scripts/test_settle_public_deploy_stale_target_dispatch.sh",
+      "bash scripts/test_verify_web_api_sha_patience.sh",
+      "perl -e 'alarm shift; exec @ARGV' 20 bash scripts/test_settle_public_deploy_dispatch.sh",
+      "perl -e 'alarm shift; exec @ARGV' 20 bash scripts/test_settle_public_deploy_stale_target_dispatch.sh",
+      "bash scripts/test_verify_web_api_css_assets.sh",
+      "bash scripts/test_verify_web_api_pulse_witness.sh",
+      "ruby -e 'require \"yaml\"; ARGV.each { |path| YAML.load_file(path); puts \"OK #{path}\" }' .github/workflows/hostinger-auto-deploy.yml .github/workflows/hostinger-api-native-deploy.yml",
+      "python3 scripts/generate_repo_indexes.py --check",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-10_deploy_sha_settle_required.json",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

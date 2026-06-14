@@ -1,0 +1,40 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/runtime-grammar.fk form-stdlib/tests/runtime-grammar-selector-registry-band.fk",
+    "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/runtime-grammar.fk form-stdlib/tests/runtime-grammar-selector-registry-band.fk",
+    "rg -n \"python|typescript|go|rust|image|audio|video|document|natural|\\.py|\\.rs|\\.svg|dynspark|runtime-loaded|load-for-file|plugin-path\" form/form-stdlib/runtime-grammar.fk form/form-stdlib/tests/runtime-grammar-selector-registry-band.fk || true",
+    "rg -n \"FORM-RUNTIME|form-runtime-grammar|form-runtime-manifest|dynspark|load-for-file|selector\" form/form-stdlib/engine.fk || true",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-23_python_form_bmf_runtime.json"
+  ],
+  "failure_reason": "Moved grammar selection out of engine.fk and out of language-specific .fk code. runtime-grammar.fk now loads a grammar path from a runtime config mapping extension to grammar file, registers that grammar plugin dynamically, and parses by source filename extension with no built-in language selectors. Source and binary sibling kernels pass at 2100.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 171,
+    "row_sha256": "e81bac0f681233efec1864d58581654deae056bcf4875a4c8a3bf7a5cbc2b2ea",
+    "summary": "moved-grammar-selection-out-of-engine-fk-and-out"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0171-e81bac0f6812",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L171"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/runtime-grammar.fk form-stdlib/tests/runtime-grammar-selector-registry-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/engine.fk form-stdlib/runtime-grammar.fk form-stdlib/tests/runtime-grammar-selector-registry-band.fk",
+      "rg -n \"python|typescript|go|rust|image|audio|video|document|natural|\\.py|\\.rs|\\.svg|dynspark|runtime-loaded|load-for-file|plugin-path\" form/form-stdlib/runtime-grammar.fk form/form-stdlib/tests/runtime-grammar-selector-registry-band.fk || true",
+      "rg -n \"FORM-RUNTIME|form-runtime-grammar|form-runtime-manifest|dynspark|load-for-file|selector\" form/form-stdlib/engine.fk || true",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-23_python_form_bmf_runtime.json"
+    ],
+    "status": "pass"
+  }
+}

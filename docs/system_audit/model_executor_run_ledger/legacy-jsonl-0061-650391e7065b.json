@@ -1,0 +1,38 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence",
+    "git fetch origin main && git rebase --autostash origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+  ],
+  "failure_reason": "Prompt entry was blocked because both changed commit evidence files only described partial slices of the full branch diff. I repaired the root cause by making both evidence records cumulative for the branch's runtime and concept changes, restoring truthful audit coverage before merge.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 61,
+    "row_sha256": "650391e7065b3f76883518a6b96e3d6ce2152088617c279f69d191097e409e39",
+    "summary": "prompt-entry-was-blocked-because-both-changed-co"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0061-650391e7065b",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L61"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ],
+    "status": "pass"
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord claim fourth-record-blueprint-floor",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/record-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh record record-fold record-field-access list-of-record-reduction",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/record-blueprint-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh record-blueprint record-fold record-field-access list-of-record-reduction",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_record_blueprint_floor.json",
+    "python3 scripts/model_executor_proof_ledger.py validate",
+    "python3 - <<'PY'\nimport json\nfrom pathlib import Path\nfor i, line in enumerate(Path('docs/system_audit/model_executor_runs.jsonl').read_text().splitlines(), 1):\n    json.loads(line)\nprint('OK jsonl rows', i)\nPY",
+    "git diff --check"
+  ],
+  "failure_reason": "Lowered record_blueprint to emitted record-table tag 100 and admitted the focused record-blueprint band at 7. record-fold, record-field-access, and list-of-record-reduction remain PASS-4WAY. Full record-band remains outside the manifest because the diagnostic gate still reports fourth=0 when let-bound record_new is re-evaluated instead of preserving mutable alias identity.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 394,
+    "row_sha256": "733111e7ce99685265657d6fa54fb4925ee61a25ab86ec9d2e522ac66fc2e20c",
+    "summary": "lowered-record-blueprint-to-emitted-record-table"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0394-733111e7ce99",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L394"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "coord claim fourth-record-blueprint-floor",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/record-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh record record-fold record-field-access list-of-record-reduction",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/record-blueprint-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh record-blueprint record-fold record-field-access list-of-record-reduction",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_record_blueprint_floor.json",
+      "python3 scripts/model_executor_proof_ledger.py validate",
+      "python3 - <<'PY'\nimport json\nfrom pathlib import Path\nfor i, line in enumerate(Path('docs/system_audit/model_executor_runs.jsonl').read_text().splitlines(), 1):\n    json.loads(line)\nprint('OK jsonl rows', i)\nPY",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

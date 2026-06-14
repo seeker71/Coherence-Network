@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+    "make wellness",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-os-targets.fk form-stdlib/tests/hati-os-targets-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-os-targets.fk form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/jit-tensor-emit.fk form-stdlib/tests/jit-metal-lanes-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/jit-oracle-learning-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/tests/form-lower-rec-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-floor-proof.fk",
+    "scripts/bml_form_jit_metal_planes_audit.sh"
+  ],
+  "failure_reason": "Validated the supported CPU/GPU/ML hardware-lane JIT floor and the measurable oracle-learning choice floor. Hati target rows now carry clang oracle triples, Form-native JIT runtime rows, and assembly surfaces for macOS arm64 and Android arm64; hati-os-targets-band returns 4095, jit-metal-lanes-band returns 4095, jit-oracle-learning-band returns 1023, form-lower-rec-band returns 31, and bml-hati-native-floor-proof returns 16. The audit proves Form-native CPU/GPU/ML emitter lanes and oracle/native choice samples first, then uses clang as oracle to emit Mach-O arm64 and ELF aarch64 object receipts for BML/Hati and Form jit_emit_c.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 327,
+    "row_sha256": "9f5385dc0729642d83a3b2d6ab556aae987ebfe009a60a482b8d2eeccffdacd7",
+    "summary": "validated-the-supported-cpu-gpu-ml-hardware-lane"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0327-9f5385dc0729",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L327"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-guide",
+      "make wellness",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-os-targets.fk form-stdlib/tests/hati-os-targets-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-os-targets.fk form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/jit-tensor-emit.fk form-stdlib/tests/jit-metal-lanes-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/jit-oracle-learning-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/tests/form-lower-rec-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/minimal-surface.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/hati-os-kernel.fk form-stdlib/hati-os-kernel-emit.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-hati-native-floor-proof.fk",
+      "scripts/bml_form_jit_metal_planes_audit.sh"
+    ],
+    "status": "pass"
+  }
+}

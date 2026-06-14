@@ -1,0 +1,52 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "python3 -m py_compile scripts/native_route_goal_loop.py scripts/form_validate_shards.py",
+    "cd api && python3 -m ruff check ../scripts/native_route_goal_loop.py ../scripts/form_validate_shards.py tests/test_runtime_web_api_provenance.py",
+    "cd api && python3 -m pytest -q tests/test_runtime_web_api_provenance.py",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/branch-choice-order.fk form-stdlib/tests/branch-choice-order-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/tests/choice-receipt-learning-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/choice-receipt.fk form-stdlib/bmf-choice-receipts.fk form-stdlib/tests/bmf-choice-receipt-band.fk",
+    "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-fkb-image-proof.fk",
+    "python3 scripts/form_validate_shards.py --jobs 1 --regex '^(closure|fact)\\\\.fk|stdlib/(branch-choice-order-band|choice-receipt-learning-band|sequence-predictor-band|online-accuracy-band)\\\\.fk'",
+    "python3 scripts/form_validate_shards.py --jobs 4 --regex '^(closure|fact)\\\\.fk|stdlib/(branch-choice-order-band|choice-receipt-learning-band|sequence-predictor-band|online-accuracy-band)\\\\.fk'",
+    "python3 scripts/native_route_goal_loop.py /loop --source api --seconds 86400 --limit 2000 --write-state --json"
+  ],
+  "failure_reason": "Parallel north-star pass shipped local proof slices: branch-choice short/long feedback cells (511), receipt-to-feedback learning (255), source-aware native-route task cards preserving --source api/all, a validate.sh-preserving Form shard runner with 2.19x focused subset wall-clock improvement (22.74s to 10.39s), and a BML compiler .fkb image ratchet whose loaded executable witness runs after readback (binary verdict 29). Full-suite validation was intentionally not rerun in this slice; prior full suite cost was about 4921s.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 302,
+    "row_sha256": "5de7be900d4a9669da34124c42832a182dfdad245f068428e34cd0d296b39085",
+    "summary": "parallel-north-star-pass-shipped-local-proof-sli"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0302-5de7be900d4a",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L302"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 -m py_compile scripts/native_route_goal_loop.py scripts/form_validate_shards.py",
+      "cd api && python3 -m ruff check ../scripts/native_route_goal_loop.py ../scripts/form_validate_shards.py tests/test_runtime_web_api_provenance.py",
+      "cd api && python3 -m pytest -q tests/test_runtime_web_api_provenance.py",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/branch-choice-order.fk form-stdlib/tests/branch-choice-order-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/tests/choice-receipt-learning-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/grammars/bml.fk form-stdlib/choice-receipt.fk form-stdlib/bmf-choice-receipts.fk form-stdlib/tests/bmf-choice-receipt-band.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/engine.fk form-stdlib/compiler.fk form-stdlib/source-compiler.fk form-stdlib/grammars/bml.fk form-stdlib/tests/bml-compiler-fkb-image-proof.fk",
+      "python3 scripts/form_validate_shards.py --jobs 1 --regex '^(closure|fact)\\\\.fk|stdlib/(branch-choice-order-band|choice-receipt-learning-band|sequence-predictor-band|online-accuracy-band)\\\\.fk'",
+      "python3 scripts/form_validate_shards.py --jobs 4 --regex '^(closure|fact)\\\\.fk|stdlib/(branch-choice-order-band|choice-receipt-learning-band|sequence-predictor-band|online-accuracy-band)\\\\.fk'",
+      "python3 scripts/native_route_goal_loop.py /loop --source api --seconds 86400 --limit 2000 --write-state --json"
+    ],
+    "status": "pass"
+  }
+}

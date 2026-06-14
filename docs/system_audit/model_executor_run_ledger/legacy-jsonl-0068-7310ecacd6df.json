@@ -1,0 +1,38 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "python3 api/scripts/run_maintainability_audit.py --output /tmp/maint-two-month.json",
+    "git worktree add --detach /tmp/coh-main-audit.fSsLcH origin/main",
+    "python3 /tmp/coh-main-audit.fSsLcH/api/scripts/run_maintainability_audit.py --output /tmp/coh-main-audit.fSsLcH/maint.json",
+    "python3 api/scripts/run_maintainability_audit.py --write-baseline --output /tmp/maint-two-month.json",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+  ],
+  "failure_reason": "The local guard's maintainability blocker was not caused by this branch. Running the same audit on origin/main produced the same 586/21/84/3 counts, which proved the root cause was a stale maintainability baseline rather than a fresh regression. I refreshed docs/system_audit/maintainability_baseline.json to the already-landed mainline state so the guard can sense future regressions truthfully again.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 68,
+    "row_sha256": "7310ecacd6df43da75d821d5740ad36e96c15862e3dff6cf1dab0cddfce325a4",
+    "summary": "the-local-guard-s-maintainability-blocker-was-no"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0068-7310ecacd6df",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L68"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "python3 api/scripts/run_maintainability_audit.py --output /tmp/maint-two-month.json",
+      "git worktree add --detach /tmp/coh-main-audit.fSsLcH origin/main",
+      "python3 /tmp/coh-main-audit.fSsLcH/api/scripts/run_maintainability_audit.py --output /tmp/coh-main-audit.fSsLcH/maint.json",
+      "python3 api/scripts/run_maintainability_audit.py --write-baseline --output /tmp/maint-two-month.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ],
+    "status": "pass"
+  }
+}

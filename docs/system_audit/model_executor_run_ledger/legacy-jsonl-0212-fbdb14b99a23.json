@@ -1,0 +1,38 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/coherent-probe-fmf-proof.fk",
+    "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/coherent-probe-fmf-proof.fk",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-02_coherent_probe_fmf_proof.json",
+    "git diff --check"
+  ],
+  "failure_reason": "Composted loose coherent-probe examples into one Form-native FMF proof. The proof demonstrates forward intervention, receipt, residual, trace emission, and reverse restoration in source and binary sibling-kernel modes.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 212,
+    "row_sha256": "fbdb14b99a23d4ffb4d7bb7748c4bc9df6ee8e0e6c006866638104bdec48112b",
+    "summary": "composted-loose-coherent-probe-examples-into-one"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0212-fbdb14b99a23",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L212"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/coherent-probe-fmf-proof.fk",
+      "cd form && ./validate.sh --binary form-stdlib/core.fk form-stdlib/field-model-form-runtime.fk form-stdlib/tests/coherent-probe-fmf-proof.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-02_coherent_probe_fmf_proof.json",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

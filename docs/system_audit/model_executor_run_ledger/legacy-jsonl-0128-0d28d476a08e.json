@@ -1,0 +1,52 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "git apply dirty sibling worktree diffs for agent lineage and external agent encounters",
+    "copy presence invitation tests/spec and implement graph-backed invitation service",
+    "copy silence built design-log route and presentation assets",
+    "python3 scripts/validate_spec_quality.py --file specs/external-agent-encounter-records.md --file specs/presence-invitation-surface.md",
+    "cd api && python3 -m venv .venv && .venv/bin/pip install -e \".[dev]\"",
+    "cd web && npm ci --allow-git=none",
+    "cd api && .venv/bin/pytest -q tests/test_presence_invitation.py tests/test_external_agent_encounters.py tests/test_agent_invitation.py",
+    "cd web && npm test -- tests/presence-page-static.test.ts",
+    "cd web && npm run build",
+    "cd api && .venv/bin/python -m pytest -q tests/test_worktree_continuity_guard.py tests/test_commit_evidence_validator.py",
+    "cd api && .venv/bin/ruff check app/routers/agent_external_encounters.py app/routers/presence.py app/services/presence_invitation_service.py tests/test_external_agent_encounters.py tests/test_presence_invitation.py"
+  ],
+  "failure_reason": "Dirty sibling worktrees held living work that had not been integrated: agent lineage terms, external-agent encounter records, graph-backed presence invitations, profile source/graph exits, and the Brahmavihara design log. This task consolidates those nutrients into one branch and validates the new API/web surfaces.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 128,
+    "row_sha256": "0d28d476a08e5c2072bd3c002c45492c302f25000c1ff12db6e5bcbed34c4d17",
+    "summary": "dirty-sibling-worktrees-held-living-work-that-ha"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0128-0d28d476a08e",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L128"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "git apply dirty sibling worktree diffs for agent lineage and external agent encounters",
+      "copy presence invitation tests/spec and implement graph-backed invitation service",
+      "copy silence built design-log route and presentation assets",
+      "python3 scripts/validate_spec_quality.py --file specs/external-agent-encounter-records.md --file specs/presence-invitation-surface.md",
+      "cd api && python3 -m venv .venv && .venv/bin/pip install -e \".[dev]\"",
+      "cd web && npm ci --allow-git=none",
+      "cd api && .venv/bin/pytest -q tests/test_presence_invitation.py tests/test_external_agent_encounters.py tests/test_agent_invitation.py",
+      "cd web && npm test -- tests/presence-page-static.test.ts",
+      "cd web && npm run build",
+      "cd api && .venv/bin/python -m pytest -q tests/test_worktree_continuity_guard.py tests/test_commit_evidence_validator.py",
+      "cd api && .venv/bin/ruff check app/routers/agent_external_encounters.py app/routers/presence.py app/services/presence_invitation_service.py tests/test_external_agent_encounters.py tests/test_presence_invitation.py"
+    ],
+    "status": "pass"
+  }
+}

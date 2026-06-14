@@ -1,0 +1,38 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "cd api && .venv/bin/pytest -q tests/test_vision_content.py before implementation (expected missing realize expansion keys)",
+    "cd api && .venv/bin/pytest -q tests/test_vision_content.py",
+    "cd web && npm run build",
+    "rg scan for removed /vision/realize expansion inline arrays"
+  ],
+  "failure_reason": "The next DB migration slice moved the remaining repeatable /vision/realize card/list groups out of JSX arrays. The realize endpoint now returns fastest opportunities, shell transformations, seasons, abundance flows, existing structures, and seeds from scoped graph nodes, and the page renders those payload groups with empty states.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 89,
+    "row_sha256": "24d448d55e8011b57de02ac0eb25407746d729719c3c57c8133b0838dae6684c",
+    "summary": "the-next-db-migration-slice-moved-the-remaining-"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0089-24d448d55e80",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L89"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "cd api && .venv/bin/pytest -q tests/test_vision_content.py before implementation (expected missing realize expansion keys)",
+      "cd api && .venv/bin/pytest -q tests/test_vision_content.py",
+      "cd web && npm run build",
+      "rg scan for removed /vision/realize expansion inline arrays"
+    ],
+    "status": "pass"
+  }
+}

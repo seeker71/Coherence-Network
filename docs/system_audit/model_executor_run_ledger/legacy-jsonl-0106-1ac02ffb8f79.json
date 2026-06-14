@@ -1,0 +1,46 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "cd api && .venv/bin/python -m pytest tests/test_entity_view_attribution.py -q",
+    "cd api && .venv/bin/python -m pytest tests/test_entity_view_attribution.py tests/test_concept_views.py tests/test_translations_router.py tests/test_views_and_wallets.py -q",
+    "node --check cli/lib/commands/content.mjs && node --check cli/bin/coh.mjs",
+    "cd web && npx tsc --noEmit --pretty false --incremental false",
+    "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+    "python3 scripts/validate_spec_quality.py --file specs/home-content-contribution-attribution.md",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-05_home_content_contribution_attribution.json",
+    "git diff --check"
+  ],
+  "failure_reason": "Home-page-reachable content now has attributed write/read paths: entity views record source contributions, page views and idea/concept reads credit attention, CLI content edits use the same API, and external developer links send asset click pings backed by asset attribution tests. Local runtime verification required making the optional lc-pulse home-card fetch quiet when verifier seed data lacks that concept.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 106,
+    "row_sha256": "1ac02ffb8f79a6acdb7f7d51b8afe846995a693de3a90ad30db2581baba74316",
+    "summary": "home-page-reachable-content-now-has-attributed-w"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0106-1ac02ffb8f79",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L106"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "cd api && .venv/bin/python -m pytest tests/test_entity_view_attribution.py -q",
+      "cd api && .venv/bin/python -m pytest tests/test_entity_view_attribution.py tests/test_concept_views.py tests/test_translations_router.py tests/test_views_and_wallets.py -q",
+      "node --check cli/lib/commands/content.mjs && node --check cli/bin/coh.mjs",
+      "cd web && npx tsc --noEmit --pretty false --incremental false",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+      "python3 scripts/validate_spec_quality.py --file specs/home-content-contribution-attribution.md",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-05_home_content_contribution_attribution.json",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

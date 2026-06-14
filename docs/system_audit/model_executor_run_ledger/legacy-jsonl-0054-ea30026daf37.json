@@ -1,0 +1,40 @@
+{
+  "attempts": 2,
+  "commands_run": [
+    "make prompt-gate",
+    "cc inbox",
+    "node cli/bin/cc.mjs inbox",
+    "python -m pytest api/tests/test_idea_concept_resonance.py -q",
+    "python -m py_compile api/app/models/idea.py api/app/routers/ideas.py api/app/services/idea_service.py api/app/services/contracts/idea_contract.py api/tests/test_idea_concept_resonance.py",
+    "python scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-28_fractal-concept-resonance.json"
+  ],
+  "failure_reason": "Implemented a minimal cross-domain idea concept resonance endpoint and test artifact. Compile-time validation passed; runtime API validation was blocked because the local Python environment lacks fastapi/pytest and there is no repo-local .venv in this worktree.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 54,
+    "row_sha256": "ea30026daf37815d97776891be53605ac97364cd7e96e7136e4603c0dc03df5e",
+    "summary": "implemented-a-minimal-cross-domain-idea-concept-"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0054-ea30026daf37",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L54"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "cc inbox",
+      "node cli/bin/cc.mjs inbox",
+      "python -m pytest api/tests/test_idea_concept_resonance.py -q",
+      "python -m py_compile api/app/models/idea.py api/app/routers/ideas.py api/app/services/idea_service.py api/app/services/contracts/idea_contract.py api/tests/test_idea_concept_resonance.py",
+      "python scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-28_fractal-concept-resonance.json"
+    ],
+    "status": "pass"
+  }
+}

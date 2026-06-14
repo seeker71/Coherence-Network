@@ -1,0 +1,44 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord claim native metal/emit fourth-arm pass cluster",
+    "cd form && bash scripts/fourth-arm-survey.sh",
+    "cd form && python3 scripts/fourth-arm-gap-analysis.py",
+    "cd form && bash scripts/fourth-arm-gate.sh asm-pl-human-emit hati-os-native-cli-emit hati-os-targets metal-emit form-macho",
+    "cd form && ./validate.sh",
+    "bash scripts/bml_form_jit_metal_planes_audit.sh"
+  ],
+  "failure_reason": "Refreshed the post-#3006 fourth-arm survey and admitted the non-overlapping native metal/emit pass cluster: asm-pl-human-emit, hati-os-native-cli-emit, hati-os-targets, metal-emit, and form-macho. Focused gate returns PASS-4WAY for all five. Full Form validation returns fourth arm: 134 band(s) four-way, 555 ok, and 0 divergent. The metal-plane audit passes macOS arm64 Mach-O and Android arm64 ELF receipts; Android's floor remains Form-native recipe/table execution, with a packaged compiler binary treated only as optional future oracle/acceleration evidence.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 356,
+    "row_sha256": "75c017bd0bb29293b86e4f440b34a76b377837b2f9e8de3bc9da5892d256e8e1",
+    "summary": "refreshed-the-post-3006-fourth-arm-survey-and-ad"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0356-75c017bd0bb2",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L356"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim native metal/emit fourth-arm pass cluster",
+      "cd form && bash scripts/fourth-arm-survey.sh",
+      "cd form && python3 scripts/fourth-arm-gap-analysis.py",
+      "cd form && bash scripts/fourth-arm-gate.sh asm-pl-human-emit hati-os-native-cli-emit hati-os-targets metal-emit form-macho",
+      "cd form && ./validate.sh",
+      "bash scripts/bml_form_jit_metal_planes_audit.sh"
+    ],
+    "status": "pass"
+  }
+}

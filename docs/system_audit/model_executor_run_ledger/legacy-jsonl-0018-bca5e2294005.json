@@ -1,0 +1,34 @@
+{
+  "attempts": 2,
+  "commands_run": [
+    "cd api && ruff check app/services/agent_service.py tests/test_agent_executor_policy.py scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py",
+    "cd api && pytest -q tests/test_agent_executor_policy.py tests/test_agent_runner_tool_failure_telemetry.py",
+    "curl -X POST /api/agent/tasks (explicit executors)"
+  ],
+  "failure_reason": "API node rewrote explicit claude/cursor tasks to openclaw due local binary checks; explicit executor now forced by default (with env opt-out) so host-runner capabilities control execution.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 18,
+    "row_sha256": "bca5e2294005f527376561d3dd0efe7fdf249d1e11dff6500b5d5eefb292eb9c",
+    "summary": "api-node-rewrote-explicit-claude-cursor-tasks-to"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0018-bca5e2294005",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L18"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "cd api && ruff check app/services/agent_service.py tests/test_agent_executor_policy.py scripts/agent_runner.py tests/test_agent_runner_tool_failure_telemetry.py",
+      "cd api && pytest -q tests/test_agent_executor_policy.py tests/test_agent_runner_tool_failure_telemetry.py",
+      "curl -X POST /api/agent/tasks (explicit executors)"
+    ],
+    "status": "pass"
+  }
+}

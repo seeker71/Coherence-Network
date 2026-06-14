@@ -1,0 +1,52 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "git rev-parse --abbrev-ref HEAD",
+    "git status --short",
+    "python scripts/worktree_continuity_guard.py --json",
+    "python scripts/validate_spec_quality.py --file specs/172-fractal-self-balance.md",
+    "python scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-28_fractal-self-balance-spec.json",
+    "git fetch origin main",
+    "git rebase origin/main",
+    "git rebase --autostash origin/main",
+    "echo \"*.pyc\\n__pycache__/\\n.task-*\\ndata/coherence.db\" >> .gitignore",
+    "git add -A",
+    "git diff --cached --stat",
+    "git commit -m \"spec(fractal-self-balance): define minimal graph health contract\""
+  ],
+  "failure_reason": "Authored and validated the minimal self-balancing graph spec plus audit artifacts, but linked-worktree git metadata was not writable in this sandbox, so fetch, add, and commit failed with Permission denied on FETCH_HEAD and index.lock.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 57,
+    "row_sha256": "e2e1cd725fb17eaad310c8ddb023c402bb2074437ccb62dec29755243f9c43a4",
+    "summary": "authored-and-validated-the-minimal-self-balancin"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "fail",
+  "run_id": "legacy-jsonl-0057-e2e1cd725fb1",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L57"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "git rev-parse --abbrev-ref HEAD",
+      "git status --short",
+      "python scripts/worktree_continuity_guard.py --json",
+      "python scripts/validate_spec_quality.py --file specs/172-fractal-self-balance.md",
+      "python scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-28_fractal-self-balance-spec.json",
+      "git fetch origin main",
+      "git rebase origin/main",
+      "git rebase --autostash origin/main",
+      "echo \"*.pyc\\n__pycache__/\\n.task-*\\ndata/coherence.db\" >> .gitignore",
+      "git add -A",
+      "git diff --cached --stat",
+      "git commit -m \"spec(fractal-self-balance): define minimal graph health contract\""
+    ],
+    "status": "fail"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord claim \"model chunk storage carrier rehash vitality routing\"",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sha256.fk form-stdlib/cell-log-store.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-storage-band.fk",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_model_chunk_storage_carrier_vitality.json"
+  ],
+  "failure_reason": "Added the first physical model chunk storage receipt and routing floor. The pure model-vitality band remains 4095 four-way. The new storage band returns 8191 on host-I/O kernels by writing a tensor chunk payload to the segmented file carrier, reopening the store, reading bytes back, verifying sha256, proving CPU/GPU/MLX/Metal carrier projection re-hash receipt rows over returned bytes, rejecting a tampered payload, and routing model vitality through wellness/pulse/release-health signals. Remaining physical receipts: multi-chunk safetensors/MLX ingest, actual GPU/MLX/Metal buffer materialize-dematerialize, and production wellness/pulse ingestion of live model-vitality store rows.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 393,
+    "row_sha256": "23729228833c383be60a1f88ee49012683a329b8f1423db16a755170d134cd44",
+    "summary": "added-the-first-physical-model-chunk-storage-rec"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0393-23729228833c",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L393"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord claim \"model chunk storage carrier rehash vitality routing\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sha256.fk form-stdlib/cell-log-store.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-storage-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_model_chunk_storage_carrier_vitality.json"
+    ],
+    "status": "pass"
+  }
+}

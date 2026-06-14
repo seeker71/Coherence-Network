@@ -1,0 +1,44 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-gate",
+    "cd web && npm run test -- tests/integration/living-signal.test.ts",
+    "cd web && npm run build",
+    "cd api && .venv/bin/pytest -q tests/test_source_artifact_sensing_graph.py",
+    "cd api && .venv/bin/pytest -q tests/test_source_artifact_sensing_graph.py tests/test_concept_story_crud.py tests/test_knowledge_resonance.py",
+    "cd api && /opt/homebrew/bin/ruff check app/services/graph_service.py app/routers/sensings.py app/services/frequency_profile_service.py tests/test_source_artifact_sensing_graph.py",
+    "python3 scripts/validate_spec_quality.py --file specs/living-signal-layer.md --file specs/source-artifact-sensing-graph-integration.md",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-22_source-artifact-sensing-graph.json"
+  ],
+  "failure_reason": "Included all Codex work on the branch: the living-signal /signals UI instrument and tests, the source artifact sensing graph contract, the provenance-edge helper, source-backed sensing edge creation, source dimensions in frequency profiles, and regression coverage for the artifact-to-sensing-to-concept path.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 69,
+    "row_sha256": "020d20b549482cffa1962f890b901f2f43892c43c16ede23fae6435867033527",
+    "summary": "included-all-codex-work-on-the-branch-the-living"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0069-020d20b54948",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L69"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-gate",
+      "cd web && npm run test -- tests/integration/living-signal.test.ts",
+      "cd web && npm run build",
+      "cd api && .venv/bin/pytest -q tests/test_source_artifact_sensing_graph.py",
+      "cd api && .venv/bin/pytest -q tests/test_source_artifact_sensing_graph.py tests/test_concept_story_crud.py tests/test_knowledge_resonance.py",
+      "cd api && /opt/homebrew/bin/ruff check app/services/graph_service.py app/routers/sensings.py app/services/frequency_profile_service.py tests/test_source_artifact_sensing_graph.py",
+      "python3 scripts/validate_spec_quality.py --file specs/living-signal-layer.md --file specs/source-artifact-sensing-graph-integration.md",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-22_source-artifact-sensing-graph.json"
+    ],
+    "status": "pass"
+  }
+}

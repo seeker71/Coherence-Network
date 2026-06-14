@@ -1,0 +1,40 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "python3 docs/field/urs/tools/audible_history_spectrum.py --field-dir docs/field/urs --analysis-root /Users/ursmuff/CoherenceFieldAnalysis",
+    "python3 -m py_compile docs/field/urs/tools/audible_history_spectrum.py",
+    "python3 invariant check for effective Audible listening trace",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-08_audible_purchase_approx.json",
+    "git diff --check"
+  ],
+  "failure_reason": "Audible web exposes 50 direct listen-history rows, while purchase history carries a longer dated field-entry body. This task keeps raw source rows intact and adds an effective listening trace where direct visible listens win and purchase dates approximate works without direct listen rows.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 134,
+    "row_sha256": "822ff810fedd1ca69b21ce8f249632bb81b025a0806cca651a9648ec35c2bc24",
+    "summary": "audible-web-exposes-50-direct-listen-history-row"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0134-822ff810fedd",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L134"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "python3 docs/field/urs/tools/audible_history_spectrum.py --field-dir docs/field/urs --analysis-root /Users/ursmuff/CoherenceFieldAnalysis",
+      "python3 -m py_compile docs/field/urs/tools/audible_history_spectrum.py",
+      "python3 invariant check for effective Audible listening trace",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-05-08_audible_purchase_approx.json",
+      "git diff --check"
+    ],
+    "status": "pass"
+  }
+}

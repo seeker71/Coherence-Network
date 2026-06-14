@@ -1,0 +1,36 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "cd web && npm install",
+    "cd web && npm test -- form-kernel-client.test.ts form-kernel-field-runtime.test.ts",
+    "bash -n scripts/verify_web_api_deploy.sh"
+  ],
+  "failure_reason": "Public Form playground now carries the browser FMF runtime proof marker field-model-form-browser-runtime-proof:4 plus sequence-lift-project-fieldStep, and deploy verification requires both tokens from public HTML or Next chunks.",
+  "input_tokens": 1200,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 188,
+    "row_sha256": "668ce6c2a9f32e90125062d3de2c8c21b952ff827da479770a566c7d863826c8",
+    "summary": "public-form-playground-now-carries-the-browser-f"
+  },
+  "model_used": "gpt-5",
+  "output_tokens": 300,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0188-668ce6c2a9f3",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L188"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "cd web && npm install",
+      "cd web && npm test -- form-kernel-client.test.ts form-kernel-field-runtime.test.ts",
+      "bash -n scripts/verify_web_api_deploy.sh"
+    ],
+    "status": "pass"
+  }
+}

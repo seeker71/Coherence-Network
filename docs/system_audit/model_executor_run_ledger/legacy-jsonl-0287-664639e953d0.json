@@ -1,0 +1,44 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "gh run view 27193995954 --job 80280907000 --log",
+    "bash -n deploy/hostinger/auto-deploy.sh",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260609_hostinger_cursor_parent_dir.json",
+    "git diff --check",
+    "git fetch origin main && git rebase origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "failure_reason": "Self-healed the Hostinger deploy failure after PR #2704. The failed run showed docker compose cp could not find /app/.cursor while copying repo/.cursor/skills into the recreated API container. The deploy script now copies repo/.cursor into existing /app, avoiding the missing-parent race while preserving registry validator assets.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 287,
+    "row_sha256": "664639e953d05d46a52ed226ea78172d2f4dbe6fe353e38c32ed97b68db3b8c3",
+    "summary": "self-healed-the-hostinger-deploy-failure-after-p"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0287-664639e953d0",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L287"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "gh run view 27193995954 --job 80280907000 --log",
+      "bash -n deploy/hostinger/auto-deploy.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_20260609_hostinger_cursor_parent_dir.json",
+      "git diff --check",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "status": "pass"
+  }
+}

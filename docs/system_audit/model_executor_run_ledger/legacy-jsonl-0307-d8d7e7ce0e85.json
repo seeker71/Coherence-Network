@@ -1,0 +1,44 @@
+{
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "python3 scripts/native_route_goal_loop.py /goal --source api --seconds 86400 --limit 2000 --json",
+    "python3 scripts/native_route_goal_loop.py /goal --source web_api --seconds 86400 --limit 2000 --json",
+    "go test . -run TestKernelReadRoutePromotionsSelectNatively -count=1",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/kernel-http.fk form-stdlib/language-model.fk form-stdlib/tests/source-language-route-class-template-band.fk",
+    "python3 scripts/native_route_goal_loop.py /goal --source web_api --seconds 86400 --limit 2000 --write-state --json",
+    "python3 scripts/native_route_goal_loop.py /goal --source api --seconds 86400 --limit 2000 --write-state --json"
+  ],
+  "failure_reason": "Promoted five live read-pressure routes into the BML front-door catalog: GET /api/runtime/events, GET /api/views/stats/{asset_id}, GET /api/reactions/concept/{entity_id}/summary, GET /api/reactions/concept/{entity_id}/threads, and GET /api/concepts/{concept_id}/voices. The focused Go route-selection proof passed in 34.921s, Form cross-kernel validation passed with 1049665 and 0 divergent, and live web_api native share reached about 0.8755 in the 2000-event window. API remains led by the larger locale-aware GET /api/concepts/domain/living-collective lift.",
+  "input_tokens": 0,
+  "ledger_schema": "model_executor_proof_run/v1",
+  "legacy": {
+    "jsonl_path": "docs/system_audit/model_executor_runs.jsonl",
+    "line": 307,
+    "row_sha256": "d8d7e7ce0e859381a670c2333e88783c9025207dd7cf7a49df7c8179765ae945",
+    "summary": "promoted-five-live-read-pressure-routes-into-the"
+  },
+  "model_used": "gpt-5-codex",
+  "output_tokens": 0,
+  "pass_fail": "pass",
+  "run_id": "legacy-jsonl-0307-d8d7e7ce0e85",
+  "source": {
+    "kind": "legacy-jsonl-import",
+    "path": "docs/system_audit/model_executor_runs.jsonl#L307"
+  },
+  "thread_branch": "legacy-jsonl-import",
+  "validation": {
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "python3 scripts/native_route_goal_loop.py /goal --source api --seconds 86400 --limit 2000 --json",
+      "python3 scripts/native_route_goal_loop.py /goal --source web_api --seconds 86400 --limit 2000 --json",
+      "go test . -run TestKernelReadRoutePromotionsSelectNatively -count=1",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/cache.fk form-stdlib/form-ontology-loader.fk form-stdlib/source-compiler.fk form-stdlib/kernel-http.fk form-stdlib/language-model.fk form-stdlib/tests/source-language-route-class-template-band.fk",
+      "python3 scripts/native_route_goal_loop.py /goal --source web_api --seconds 86400 --limit 2000 --write-state --json",
+      "python3 scripts/native_route_goal_loop.py /goal --source api --seconds 86400 --limit 2000 --write-state --json"
+    ],
+    "status": "pass"
+  }
+}
