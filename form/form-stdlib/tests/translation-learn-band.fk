@@ -1,0 +1,49 @@
+; tests/translation-learn-band.fk — native translation learned from the oracle's pairs.
+;
+; The loop, proven: the native recipe translates en->zh and en->ja from the learned
+; pairs (no oracle call), stays honest where it has not learned, preserves meaning by
+; content-addressing (source and target name one cell), and the champion-challenger A/B
+; retires the oracle for a pair only when the native reaches it.
+;
+; Verdict 1111111 (127) when every claim holds across all four kernels.
+;   native en->zh: mountain -> shan                                -> 1
+;   native en->ja: mountain -> yama, heart -> kokoro               -> 10
+;   honest absence: an unlearned phrase -> "?"                     -> 100
+;   meaning preserved: source and target are one cell (cjk)        -> 1000
+;   coverage: 12 learned pairs (6 chars x 2 languages)             -> 10000
+;   A/B promotes when the native reaches the oracle                -> 100000
+;   A/B holds the oracle when the native lags                      -> 1000000
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/cjk-channel.fk form-stdlib/champion-challenger.fk form-stdlib/translation-learn.fk
+;
+
+(do
+    ;; --- 1. native en->zh ---------------------------------------------
+    (let zh-ok (if (str_eq (translate "en-zh" "mountain") "shan") 1 0))
+
+    ;; --- 2. native en->ja ---------------------------------------------
+    (let ja-ok
+        (if (str_eq (translate "en-ja" "mountain") "yama")
+            (if (str_eq (translate "en-ja" "heart") "kokoro") 10 0) 0))
+
+    ;; --- 3. honest absence for an unlearned phrase --------------------
+    (let absent-ok (if (str_eq (translate "en-zh" "quantum") "?") 100 0))
+
+    ;; --- 4. meaning preserved by content-addressing -------------------
+    ;; mountain (character 1) reads as en/zh/ja faces of ONE cell.
+    (let meaning-ok (if (eq (tl-preserves-meaning? 1) 1) 1000 0))
+
+    ;; --- 5. coverage --------------------------------------------------
+    (let cover-ok (if (eq (tl-count) 12) 10000 0))
+
+    ;; --- 6. the A/B promotes when native reaches the oracle ----------
+    ;; three trials where both oracle and native were correct; margin 0.
+    (let reached (list (list 1 1) (list 1 1) (list 1 1)))
+    (let promote-ok (if (eq (tl-promote? reached 3 0) 1) 100000 0))
+
+    ;; --- 7. the A/B holds the oracle when native lags ---------------
+    ;; three trials where the oracle was correct and the native was not.
+    (let lagging (list (list 1 0) (list 1 0) (list 1 0)))
+    (let hold-ok (if (eq (tl-promote? lagging 3 0) 0) 1000000 0))
+
+    (sum (list zh-ok ja-ok absent-ok meaning-ok cover-ok promote-ok hold-ok)))

@@ -1,0 +1,56 @@
+; native-translation-loopback.form — the locale's translations become the body's own.
+;
+; THE ASK (Urs, 2026-06-14):
+;   "add chinese and japanese as core concept / node / cell / web-chrome locales so that
+;    we can use those translations as training material for our native Form translations."
+;
+;   The deep shape: a third-party translator is the BOOTSTRAP oracle; its output is BOTH
+;   the locale bundles AND the training material; a native Form recipe learns from it and,
+;   once proven, carries the pair itself — the oracle->native->A/B->retire pattern the body
+;   already runs for speech (TTS<->STT) and vision, turned toward language.
+;
+; THE BODY ALREADY HELD EVERY PART BUT ONE (read first, compose, do not duplicate):
+;   - i18n.fk loads the locale bundles (en + de/es/fr/id/pt-br, zh/ja when added) as a
+;     PARALLEL CORPUS — the training data, ~2019 keys per tongue.
+;   - the locale system auto-discovers from files: a locale is web/messages/<code>.json +
+;     cli/lib/messages/<code>.json; the manifest, middleware, API, and CLI all find it.
+;   - loopback-learning.fk is the oracle->native loop (a French->Form lane already runs).
+;   - champion-challenger.fk + colearning-retire.fk are the A/B-and-retire arc (parity-
+;     first, jit-oracle-learning.form): the native takes a pair only when it reaches the
+;     oracle over a window.
+;   - meaning-translation-receipt.fk is the proof contract (axiom / encoder / equivalence
+;     witnesses; refuse, do not fabricate).
+;   - cjk-channel.fk proves a character is ONE cell read in many tongues — translation as
+;     content-addressing, not a lookup table.
+;
+; THE MISSING CELL, NOW BUILT  (form-stdlib/translation-learn.fk -> tests/translation-learn-band.fk 1111111, four-way)
+;   The native translation recipe that joins them: (translate pair src) looks up the
+;   target from learned pairs (no oracle call); honest absence where it has not learned;
+;   meaning preserved by content-addressing — the source and target name ONE cell
+;   (cjk-channel: mountain == shan == yama); and tl-promote? (champion-challenger) retires
+;   the oracle for a pair when the native reaches it. Seeded from cjk-channel's six
+;   attested character readings (romanized, the ASCII four-way discipline) — not faked.
+;
+; THE DATA STEP — the zh/ja chrome bundles (named, the carrier-last piece)
+;   Adding zh/ja as locales is a pure data operation: drop web/messages/{zh,ja}.json (+ the
+;   cli copies), regenerate the manifest (npm run prebuild), pass wellness parity (2019
+;   keys, matching en). The strings are the libretranslate ORACLE's output — the same way
+;   the existing six non-en bundles were machine-translated, each carrying _attunement
+;   metadata that invites human re-attunement. So the oracle's bundle IS the corpus
+;   translation-learn.fk trains on, and the native recipe replaces the oracle pair by pair
+;   as it proves out. (libretranslate runs in production but not in this local checkout, so
+;   the 2019-key generation is the named follow-on, not a hand-faked file — the discipline
+;   that held all session: ground the data from the translator, never invent it.)
+;
+; HONESTY LANES: the native recipe is exact (a learned lookup, content-addressed); the
+; oracle's bulk translations are a first pass inviting human attunement; the glyph itself
+; rides the oracle until UTF-8 four-way string parity is proven (cjk-channel's named row).
+;
+; LINEAGE
+;   kin: lc-cross-modal-unity (one cell, many tongues — translation IS this), cjk-channel.fk
+;        (the proof), loopback-learning.fk / champion-challenger.fk / colearning-retire.fk
+;        (the loop and A/B), meaning-translation-receipt.fk (the proof contract), i18n.fk
+;        (the corpus), oracle-catalog.fk (where the libretranslate teacher registers next),
+;        lenses.fk (sound/symbol media — translation across them), prose-as-recipe.form
+;        (the WORD domain: a pair as a content-addressed word-cell edge).
+;   source: requested by Urs 2026-06-14; the native side of the locale's translations.
