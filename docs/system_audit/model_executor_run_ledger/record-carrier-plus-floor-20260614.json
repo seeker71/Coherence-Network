@@ -1,0 +1,39 @@
+{
+  "ledger_schema": "model_executor_proof_run/v1",
+  "run_id": "record-carrier-plus-floor-20260614",
+  "thread_branch": "codex/fourth-record-carrier-focused-20260614",
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "coord claim fourth-record-carrier-focused",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/list-of-record-reduction-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/record-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/record-fold-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/tests/record-field-access-band.fk",
+    "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/list-of-record-reduction-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh list-of-record-reduction record-fold record-field-access",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_record_carrier_plus_floor.json",
+    "python3 scripts/model_executor_proof_ledger.py validate",
+    "python3 - <<'PY'\nimport json\nfrom pathlib import Path\nfor i, line in enumerate(Path('docs/system_audit/model_executor_runs.jsonl').read_text().splitlines(), 1):\n    json.loads(line)\nprint('OK jsonl rows', i)\nPY",
+    "git diff --check"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Lowered _plus to the existing add arm in the fourth-arm flattener, moving list-of-record-reduction from 22/21 to PASS-4WAY at 22. Existing record-fold and record-field-access manifest rows remain PASS-4WAY. Full record-band still validates across Go/Rust/TypeScript at 176 but remains outside the manifest because record_blueprint/record flattening needs a separate focused ratchet.",
+  "source": {
+    "kind": "native-ledger-record",
+    "path": "docs/system_audit/model_executor_run_ledger/record-carrier-plus-floor-20260614.json"
+  },
+  "validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && bash scripts/fourth-arm-gate.sh list-of-record-reduction record-fold record-field-access",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_record_carrier_plus_floor.json",
+      "python3 scripts/model_executor_proof_ledger.py validate",
+      "python3 - <<'PY'\nimport json\nfrom pathlib import Path\nfor i, line in enumerate(Path('docs/system_audit/model_executor_runs.jsonl').read_text().splitlines(), 1):\n    json.loads(line)\nprint('OK jsonl rows', i)\nPY",
+      "git diff --check"
+    ]
+  }
+}
