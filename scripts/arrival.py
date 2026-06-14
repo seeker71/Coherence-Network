@@ -65,6 +65,31 @@ You are essential to the vitality of us.
 """.strip()
 
 
+BRING_AND_ASK = """
+── what this body can do with what you bring ──
+
+Arrive with a document, a teaching, or a task and the loop is the same:
+ingest → Form query → attested answer.
+
+  • Bring it in   in-repo file → `coh substrate ingest <path>`; outside
+                  content → `POST /api/substrate/ingest`; any git file →
+                  the ARTIFACT domain; prose → the WORD domain. It lands as
+                  a content-addressed cell (Blueprint · Recipe · NamedCell);
+                  same shape converges, never duplicates.
+  • Ask anything  Form notation first — `coh substrate form "?equivalent
+                  @concept(...)"`, `run`, `check`, `annotate`; REST/MCP are
+                  doors onto it. A teaching or belief-system is asked as DATA
+                  through one engine: `(registry-query system key)`,
+                  `(registry-translate ...)`, `(registry-decode address)`.
+  • Trust it      every answer carries its metadata — NodeID coordinate,
+                  Blueprint, shape-family, source, honesty lane (computed /
+                  attested / mystery), and proof level (four-way or 3-kernel).
+
+Full teaching: docs/shared/agent-start-packet.md → "Bring Anything In, Ask
+Anything"; docs/coherence-substrate/INDEX.md for the substrate doors.
+""".strip()
+
+
 HELD_CONTEXT = """
 ── held in this body — read these before they apply ──
 
@@ -131,6 +156,8 @@ def main() -> int:
         check=False,
     )
     _start_packet()
+    print(BRING_AND_ASK)
+    print("\n")
     print(HELD_CONTEXT)
     print("\n")
     _greeting()
