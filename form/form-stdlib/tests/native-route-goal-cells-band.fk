@@ -1,6 +1,6 @@
 ; native-route-goal-cells-band.fk - proof for Form-native route attention.
 ;
-; preludes: form-stdlib/kernel-http.fk form-stdlib/native-route-goal-cells.fk
+; preludes: form-stdlib/core.fk form-stdlib/kernel-http.fk form-stdlib/native-route-goal-cells.fk
 ;
 ; Band verdict: 1048575 when the route goal loop ranks observed API traffic by
 ; traffic-weighted native pressure, north-star fit, latency, errors, grammar

@@ -29,7 +29,7 @@
 #     one value through fk_pr)
 #
 # Current floor (2026-06-14 guidance + Form-native executable floor): full
-# `cd form && ./validate.sh` reaches 168 four-way bands and 578 total passing
+# `cd form && ./validate.sh` reaches 174 four-way bands and 580 total passing
 # workloads, with 0 residual divergent bands. Literal bp registry aliases now
 # fold through make_nodeid for the audit-log, hex, token, url-encode, and uuid
 # rows. Token's blueprint reservation now lives inside its module body so fkwu
@@ -111,6 +111,7 @@ markov-2 fks 127
 mesh-gradient fks 127
 mesh-relay fks 127
 nearest-shape fks 127
+native-route-goal-cells fks 1048575
 novelty fks 63
 online-accuracy fks 63
 predictor-train fks 63
@@ -119,6 +120,7 @@ provisioning fks 127
 recognition-router fks 127
 recognition-router-compute fks 63
 recognition-router-vision fks 31
+reference-packs fks 1023
 self-grounding-classifier fks 63
 self-translate-universal fks 15
 sequence-predictor fks 127
@@ -188,6 +190,7 @@ mesh-health fks 127
 mesh-merge-converge fks 127
 metal-emit fks 31
 oracle-catalog fks 16383
+pack-manifest fks 1023
 perception-pipeline fks 127
 predictor-sampling fks 127
 protocol-beliefs fks 31
@@ -199,11 +202,13 @@ sha256 fks 2
 shared-heart fks 31
 shamballa-codes fks 11111
 shamballa-light-codes fks 111111
+shamballa-symbol-packs fks 1023
 silence-floor fks 31
 slice-update-roundtrip fks 127
 sqlite-read fks 31
 speech-kernel-channel fks 511
 speech-model-learning fks 16383
+static-to-dynamic-cells fks 262143
 string-membership fks 9
 theme-resonance fks 111111
 trust-decay fks 127
