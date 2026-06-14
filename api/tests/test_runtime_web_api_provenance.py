@@ -465,3 +465,76 @@ def test_bml_front_door_captures_query_errors_before_pg_close():
     assert "let query_failed = gt(str_len(query_error), 0);" in route_text
     assert 'if query_failed then api-service-unavailable("persistence", "' not in route_text
     assert 'if query_failed then api-service-unavailable("persistence", query_error)' in route_text
+
+
+# ---- inventory route discovery: full /api template survives FastAPI nesting ----
+#
+# Companion to the request-time middleware proof above. The endpoint
+# traceability inventory enumerates routes *statically* from the route tree
+# (no concrete request to substitute params back from), so it must reconstruct
+# each route's full `/api/...` path by accumulating prefixes down the tree.
+# Older FastAPI (< ~0.135) flattened `include_router(prefix=…)` so every leaf
+# already carried its full path; FastAPI 0.137+ / Starlette 1.x keeps routers
+# nested behind `_IncludedRouter`, so a leaf `APIRoute.path` is only the
+# router-relative tail. These two tests pin the reconstruction on whichever
+# FastAPI CI happens to install — detected by structure, not a pinned version.
+
+
+def test_iter_api_route_leaves_reconstructs_full_path_across_inclusion_styles():
+    """The static walker yields full `/api/...` paths regardless of how routers
+    were composed: include-time prefix, nested include with prefix, an
+    APIRouter's own constructor prefix, and a top-level decorated route. On old
+    FastAPI these flatten; on new FastAPI they nest behind `_IncludedRouter` —
+    the asserted set is identical either way."""
+    from fastapi import APIRouter, FastAPI
+
+    from app.services.inventory_service import _iter_api_route_leaves
+
+    leaf = APIRouter()
+    leaf.add_api_route("/ping", lambda: {}, methods=["GET"])
+    leaf.add_api_route("/ideas/{idea_id}", lambda idea_id: {}, methods=["GET"])
+
+    nested = APIRouter()  # included with its own prefix (mirrors agent.py)
+    nested.add_api_route("/tasks", lambda: {}, methods=["GET"])
+
+    own = APIRouter(prefix="/own")  # prefix baked into the router itself
+    own.add_api_route("/widget", lambda: {}, methods=["GET"])
+
+    parent = APIRouter()
+    parent.include_router(leaf)
+    parent.include_router(nested, prefix="/agent")
+    parent.include_router(own)
+
+    test_app = FastAPI()
+    test_app.include_router(parent, prefix="/api")
+    test_app.add_api_route("/api/toplevel", lambda: {}, methods=["GET"])
+
+    discovered = {full_path for full_path, _route in _iter_api_route_leaves(test_app.router.routes)}
+
+    assert {
+        "/api/ping",
+        "/api/ideas/{idea_id}",
+        "/api/agent/tasks",
+        "/api/own/widget",
+        "/api/toplevel",
+    } <= discovered
+
+
+def test_runtime_endpoint_discovery_enumerates_nested_api_routes():
+    """Against the real app, runtime discovery must surface known nested routes
+    with their full `/api/...` template, not the router-relative tail. The
+    pre-fix nested-only filter collapsed to ~1 endpoint on FastAPI 0.137; assert
+    a substantial count so that regression fails loudly."""
+    from app.services.inventory_service import _discover_api_endpoints_from_runtime
+
+    rows = _discover_api_endpoints_from_runtime()
+    paths = {row["path"] for row in rows}
+
+    assert "/api/ping" in paths
+    assert "/api/ideas/{idea_id}" in paths
+    # Multi-level nesting (app /api → agent.py /agent) must resolve too.
+    assert any(p.startswith("/api/agent/") for p in paths)
+    # Every discovered path carries the externally observed namespace.
+    assert all(p.startswith("/api") or p.startswith("/v1") for p in paths)
+    # Guard the nested-collapse regression: the real app serves hundreds.
+    assert len(rows) > 100
