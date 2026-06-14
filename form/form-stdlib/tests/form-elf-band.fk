@@ -1,0 +1,43 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-asm.fk form-stdlib/form-lower.fk form-stdlib/form-elf.fk
+;
+; form-elf-band — the Android/aarch64 object wrapper floor. A Form recipe wraps
+; the kernel's own compiled arm64 machine code into a valid ELF64 relocatable
+; object with .text, .symtab, .strtab, and .shstrtab. This proves object shape
+; without clang as compiler or assembler; executable Android linking/emulation is
+; a later physical receipt.
+;
+; The program ((40 + 1) - 1) compiles to 16 bytes; the object is 488 bytes:
+;   header 64 + code 16 + symtab 48 + strtab 6 + shstrtab 33 + pad 1 + 5 shdrs.
+;
+; Verdict 31 when the emitted object is well-formed:
+;   1   MAGIC — ELF64 little-endian header starts 0x7f 'E' 'L' 'F'
+;   2   TARGET — ET_REL plus EM_AARCH64 in the ELF header
+;   4   SIZE + CODE PLACEMENT — total 488 bytes; compiled code starts at 64
+;   8   SECTION TABLE — e_shoff is 168 and .symtab header points at offset 80
+;   16  STRINGS — section and symbol string tables carry .text and main
+(do
+    (let code (lo-compile (list (list 1 40 0 0) (list 1 1 0 0) (list 3 0 1 0)
+                                (list 1 1 0 0) (list 4 2 3 0)) 4))
+    (let obj (elf-object code))
+
+    (let c0 (if (eq (nth obj 0) 127) (if (eq (nth obj 1) 69)
+            (if (eq (nth obj 2) 76) (if (eq (nth obj 3) 70) 1 0) 0) 0) 0))
+    (let c1 (if (eq (nth obj 16) 1)
+            (if (eq (nth obj 18) 183) 2 0) 0))
+    ; code at offset 64 == form-lower's bytes (00 05 80 52 = movz w0,#40)
+    (let c2 (if (eq (len obj) 488)
+            (if (eq (nth obj 64) 0)
+            (if (eq (nth obj 65) 5)
+            (if (eq (nth obj 67) 82) 4 0) 0) 0) 0))
+    ; e_shoff at header byte 40 is 168; .symtab section header starts at 296,
+    ; and its sh_offset field at 320 points to 80.
+    (let c3 (if (eq (nth obj 40) 168)
+            (if (eq (nth obj 320) 80) 8 0) 0))
+    ; .shstrtab begins at 134; .text starts one byte in. .strtab begins at 128;
+    ; main starts one byte in.
+    (let c4 (if (eq (nth obj 135) 46)
+            (if (eq (nth obj 136) 116)
+            (if (eq (nth obj 129) 109)
+            (if (eq (nth obj 132) 110) 16 0) 0) 0) 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))

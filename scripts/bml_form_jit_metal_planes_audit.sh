@@ -8,9 +8,10 @@
 #   macos-arm64    arm64-apple-macosx      Mach-O relocatable + arm64 assembly
 #   android-arm64  aarch64-linux-android   ELF relocatable + aarch64 assembly
 #
-# Clang is an oracle/sample generator for these lanes. Runtime JIT on Android
-# must not depend on clang, so this audit also proves the Form-native arm64
-# assembler/lowerer lane before checking clang output.
+# Clang is an oracle/sample generator for the broad C surfaces. Runtime JIT on
+# Android must not depend on clang, so this audit also proves the Form-native
+# arm64 assembler/lowerer lane and Form-native Mach-O/ELF object wrappers before
+# checking clang output.
 #
 # Both native C surfaces are exercised against the oracle:
 #   - BML source -> Hati loadable table -> universal C binary
@@ -77,6 +78,50 @@ if ! grep -q "fourth arm: 1" "$native_rec_out"; then
   exit 1
 fi
 echo "PASS  form-native-recursive-lowerer: recursive arm64 byte image -> 31 four-way"
+
+native_macho_out="$work/form-native-macho.out"
+(
+  cd "$FORM"
+  ./validate.sh \
+    form-stdlib/core.fk \
+    form-stdlib/form-asm.fk \
+    form-stdlib/form-lower.fk \
+    form-stdlib/form-macho.fk \
+    form-stdlib/tests/form-macho-band.fk > "$native_macho_out"
+)
+if ! grep -q "31" "$native_macho_out"; then
+  cat "$native_macho_out"
+  echo "FAIL: Form-native Mach-O object proof did not return 31" >&2
+  exit 1
+fi
+if ! grep -q "fourth arm: 1" "$native_macho_out"; then
+  cat "$native_macho_out"
+  echo "FAIL: Form-native Mach-O object proof did not run four-way on fkwu" >&2
+  exit 1
+fi
+echo "PASS  form-native-macho-object: arm64 bytes -> Mach-O relocatable object -> 31 four-way"
+
+native_elf_out="$work/form-native-elf.out"
+(
+  cd "$FORM"
+  ./validate.sh \
+    form-stdlib/core.fk \
+    form-stdlib/form-asm.fk \
+    form-stdlib/form-lower.fk \
+    form-stdlib/form-elf.fk \
+    form-stdlib/tests/form-elf-band.fk > "$native_elf_out"
+)
+if ! grep -q "31" "$native_elf_out"; then
+  cat "$native_elf_out"
+  echo "FAIL: Form-native ELF object proof did not return 31" >&2
+  exit 1
+fi
+if ! grep -q "fourth arm: 1" "$native_elf_out"; then
+  cat "$native_elf_out"
+  echo "FAIL: Form-native ELF object proof did not run four-way on fkwu" >&2
+  exit 1
+fi
+echo "PASS  form-native-elf-object: arm64 bytes -> ELF64/aarch64 relocatable object -> 31 four-way"
 
 oracle_learning_out="$work/jit-oracle-learning.out"
 (
@@ -252,6 +297,56 @@ if [[ "$lowered_5" != "1" || "$lowered_11" != "0" ]]; then
 fi
 echo "PASS  host-form-jit-lowered: lowered guard arg5=1 arg11=0"
 
+native_obj_driver="$work/form-native-objects.fk"
+native_obj_out="$work/form-native-objects.out"
+cat > "$native_obj_driver" <<'FK'
+(do
+    (defn hx1 (n) (nth (list "0" "1" "2" "3" "4" "5" "6" "7" "8" "9" "a" "b" "c" "d" "e" "f") n))
+    (defn hx2 (b) (str_concat (hx1 (div b 16)) (hx1 (mod b 16))))
+    (defn hxb (bs) (if (eq (len bs) 0) "" (str_concat (hx2 (head bs)) (hxb (tail bs)))))
+    (let prog (list (list 1 40 0 0) (list 1 1 0 0) (list 3 0 1 0) (list 1 1 0 0) (list 4 2 3 0)))
+    (let code (lo-compile prog 4))
+    (print (str_concat "MACHO_NATIVE " (hxb (mo-object code))))
+    (print (str_concat "ELF_NATIVE " (hxb (elf-object code))))
+    0)
+FK
+
+(
+  cd "$FORM"
+  "$GO" \
+    "$compiled_core" \
+    form-stdlib/form-asm.fk \
+    form-stdlib/form-lower.fk \
+    form-stdlib/form-macho.fk \
+    form-stdlib/form-elf.fk \
+    "$native_obj_driver" > "$native_obj_out"
+)
+
+macho_native_hex="$(grep '^MACHO_NATIVE ' "$native_obj_out" | sed 's/^MACHO_NATIVE //')"
+elf_native_hex="$(grep '^ELF_NATIVE ' "$native_obj_out" | sed 's/^ELF_NATIVE //')"
+if [[ -z "$macho_native_hex" || -z "$elf_native_hex" ]]; then
+  cat "$native_obj_out"
+  echo "FAIL: Form-native object emitter did not return Mach-O and ELF hex rows" >&2
+  exit 1
+fi
+
+macho_native_obj="$work/form-native-macos-arm64.o"
+elf_native_obj="$work/form-native-android-arm64.o"
+printf '%s' "$macho_native_hex" | xxd -r -p > "$macho_native_obj"
+printf '%s' "$elf_native_hex" | xxd -r -p > "$elf_native_obj"
+macho_native_desc="$(file "$macho_native_obj")"
+elf_native_desc="$(file "$elf_native_obj")"
+if ! grep -Eq "Mach-O.*arm64" <<<"$macho_native_desc"; then
+  echo "FAIL: Form-native Mach-O object shape '$macho_native_desc' missing Mach-O arm64" >&2
+  exit 1
+fi
+if ! grep -Eq "ELF 64-bit.*(ARM aarch64|AArch64)" <<<"$elf_native_desc"; then
+  echo "FAIL: Form-native ELF object shape '$elf_native_desc' missing ELF aarch64" >&2
+  exit 1
+fi
+printf 'PASS  plane=macos-arm64 surface=form-native-object emitter=form-macho object=%s\n' "$macho_native_desc"
+printf 'PASS  plane=android-arm64 surface=form-native-object emitter=form-elf object=%s\n' "$elf_native_desc"
+
 compile_surface() {
   local plane="$1"
   local triple="$2"
@@ -295,4 +390,4 @@ compile_surface "android-arm64" "aarch64-linux-android" "ELF 64-bit.*(ARM aarch6
 compile_surface "android-arm64" "aarch64-linux-android" "ELF 64-bit.*(ARM aarch64|AArch64)" \
   "form-jit-lowered" "$lowered_c" "fk_walk|_fk_walk"
 
-echo "ok — Form-native JIT lane proof holds four-way; lowered residual cluster holds five-band four-way; oracle learning choice floor holds four-way; clang oracle assembly/object receipts cover every supported metal plane including lowered JIT"
+echo "ok — Form-native JIT lane proof holds four-way; Form-native Mach-O/ELF object floors hold four-way; lowered residual cluster holds five-band four-way; oracle learning choice floor holds four-way; clang oracle assembly/object receipts cover every supported metal plane including lowered JIT"
