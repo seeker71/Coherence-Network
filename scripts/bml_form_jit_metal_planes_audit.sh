@@ -380,10 +380,27 @@ printf 'PASS  plane=android-arm64 surface=form-native-object emitter=form-elf ob
 printf 'PASS  plane=android-arm64 surface=form-native-executable emitter=form-elf-exec executable=%s\n' "$elf_exec_native_desc"
 
 elf_exec_runner="${FORM_ELF_EXEC_RUNNER:-}"
-if [[ -z "$elf_exec_runner" ]]; then
-  elf_exec_runner="$(command -v qemu-aarch64 || command -v qemu-aarch64-static || true)"
-fi
+elf_exec_runner_kind=""
+elf_exec_docker_image="${FORM_ELF_EXEC_DOCKER_IMAGE:-alpine:3.20}"
+elf_exec_skip_reason="runner=qemu-aarch64 unavailable; executable shape inspected"
 if [[ -n "$elf_exec_runner" ]]; then
+  elf_exec_runner_kind="command"
+else
+  elf_exec_runner="$(command -v qemu-aarch64 || command -v qemu-aarch64-static || true)"
+  if [[ -n "$elf_exec_runner" ]]; then
+    elf_exec_runner_kind="command"
+  elif command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+    if [[ "${FORM_ELF_EXEC_DOCKER_PULL:-0}" == "1" ]] || docker image inspect "$elf_exec_docker_image" >/dev/null 2>&1; then
+      elf_exec_runner_kind="docker"
+      elf_exec_runner="docker"
+    else
+      elf_exec_skip_reason="runner=qemu-aarch64 unavailable; docker image=$elf_exec_docker_image missing (set FORM_ELF_EXEC_DOCKER_PULL=1 to pull); executable shape inspected"
+    fi
+  else
+    elf_exec_skip_reason="runner=qemu-aarch64 unavailable; docker unavailable; executable shape inspected"
+  fi
+fi
+if [[ "$elf_exec_runner_kind" == "command" ]]; then
   set +e
   elf_exec_stdout="$("$elf_exec_runner" "$elf_exec_native" 2>"$work/form-native-elf-exec.stderr")"
   elf_exec_rc=$?
@@ -394,8 +411,19 @@ if [[ -n "$elf_exec_runner" ]]; then
     exit 1
   fi
   echo "PASS  plane=android-arm64 surface=form-native-executable runner=$elf_exec_runner stdout='FORM ELF' stderr='' exit=42"
+elif [[ "$elf_exec_runner_kind" == "docker" ]]; then
+  set +e
+  elf_exec_stdout="$(docker run --rm --platform linux/arm64 -v "$work:/work:ro" "$elf_exec_docker_image" "/work/$(basename "$elf_exec_native")" 2>"$work/form-native-elf-exec.stderr")"
+  elf_exec_rc=$?
+  set -e
+  elf_exec_stderr="$(cat "$work/form-native-elf-exec.stderr")"
+  if [[ "$elf_exec_rc" -ne 42 || "$elf_exec_stdout" != "FORM ELF" || -n "$elf_exec_stderr" ]]; then
+    echo "FAIL: Form-native ELF executable runner=docker image=$elf_exec_docker_image rc=$elf_exec_rc stdout='$elf_exec_stdout' stderr='$elf_exec_stderr'" >&2
+    exit 1
+  fi
+  echo "PASS  plane=android-arm64 surface=form-native-executable runner=docker-linux-arm64 image=$elf_exec_docker_image stdout='FORM ELF' stderr='' exit=42"
 else
-  echo "SKIP  plane=android-arm64 surface=form-native-executable runner=qemu-aarch64 unavailable; executable shape inspected"
+  echo "SKIP  plane=android-arm64 surface=form-native-executable $elf_exec_skip_reason"
 fi
 
 compile_surface() {
@@ -441,4 +469,4 @@ compile_surface "android-arm64" "aarch64-linux-android" "ELF 64-bit.*(ARM aarch6
 compile_surface "android-arm64" "aarch64-linux-android" "ELF 64-bit.*(ARM aarch64|AArch64)" \
   "form-jit-lowered" "$lowered_c" "fk_walk|_fk_walk"
 
-echo "ok — Form-native JIT lane proof holds four-way; Form-native Mach-O/ELF object floors and Android ELF executable shape hold four-way; lowered residual cluster holds five-band four-way; oracle learning choice floor holds four-way; clang oracle assembly/object receipts cover every supported metal plane including lowered JIT"
+echo "ok — Form-native JIT lane proof holds four-way; Form-native Mach-O/ELF object floors and Android ELF executable shape hold four-way; Android ELF execution receipt runs when a live runner is available; lowered residual cluster holds five-band four-way; oracle learning choice floor holds four-way; clang oracle assembly/object receipts cover every supported metal plane including lowered JIT"
