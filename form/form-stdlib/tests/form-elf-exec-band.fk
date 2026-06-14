@@ -1,0 +1,47 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-elf-exec.fk
+;
+; form-elf-exec-band — the Android/aarch64 executable floor. A Form recipe emits
+; a minimal ELF64 ET_EXEC image with one loadable RX segment and syscall-based
+; entry code. The local floor proves executable shape and byte placement without
+; clang as compiler, assembler, or linker; qemu/Android execution is a physical
+; receipt when a runner is present.
+;
+; The program writes "FORM ELF\n" to stdout and exits 42. It is 161 bytes:
+;   ELF header 64 + program header 56 + 8 aarch64 instructions 32 + data 9.
+;
+; Verdict 63:
+;   1   MAGIC — ELF64 little-endian header starts 0x7f 'E' 'L' 'F'
+;   2   TARGET — ET_EXEC plus EM_AARCH64 in the ELF header
+;   4   ENTRY + PROGRAM HEADER — e_entry is 0x400078 and phoff is 64
+;   8   LOAD SEGMENT — PT_LOAD, RX flags, vaddr 0x400000, filesz 161
+;   16  TEXT BYTES — code starts at offset 120 with mov x0,#1 and adr x1,msg
+;   32  SYSCALL + DATA — write syscall, exit syscall, and "FORM ELF\n" bytes exist
+(do
+    (let msg (list 70 79 82 77 32 69 76 70 10))
+    (let img (elf-exec (elf-exec-write-exit-code msg 42)))
+
+    (let c0 (if (eq (nth img 0) 127) (if (eq (nth img 1) 69)
+            (if (eq (nth img 2) 76) (if (eq (nth img 3) 70) 1 0) 0) 0) 0))
+    (let c1 (if (eq (nth img 16) 2)
+            (if (eq (nth img 18) 183) 2 0) 0))
+    (let c2 (if (eq (nth img 24) 120)
+            (if (eq (nth img 26) 64)
+            (if (eq (nth img 32) 64) 4 0) 0) 0))
+    (let c3 (if (eq (nth img 64) 1)
+            (if (eq (nth img 68) 5)
+            (if (eq (nth img 80) 0)
+            (if (eq (nth img 82) 64)
+            (if (eq (nth img 96) 161) 8 0) 0) 0) 0) 0))
+    (let c4 (if (eq (len img) 161)
+            (if (eq (nth img 120) 32)
+            (if (eq (nth img 123) 210)
+            (if (eq (nth img 124) 225)
+            (if (eq (nth img 127) 16) 16 0) 0) 0) 0) 0))
+    (let c5 (if (eq (nth img 132) 8)
+            (if (eq (nth img 133) 8)
+            (if (eq (nth img 144) 168)
+            (if (eq (nth img 145) 11)
+            (if (eq (nth img 152) 70)
+            (if (eq (nth img 160) 10) 32 0) 0) 0) 0) 0) 0))
+
+    (add c0 (add c1 (add c2 (add c3 (add c4 c5))))))

@@ -13,6 +13,7 @@
     (oracle clang-and-host-driver-samples)
     (runtime form-native-recipes)
     (object-floor form-native-macho-and-elf-recipes)
+    (executable-floor form-native-elf-exec-recipe)
     (choice measured-oracle-learning-samples)
     (hardware-classes cpu gpu ml)
     (proof form/form-stdlib/tests/jit-metal-lanes-band.fk -> 4095 four-way-fkwu)
@@ -23,7 +24,7 @@
     "The probe emits C from Form, compiles native Hati binaries with clang, and runs those binaries against local host resources.")
 
   (floor
-    "The local proof emits native Hati binaries, runs the Form-native JIT and Form-native Mach-O/ELF object proofs through fkwu as a fourth sibling, and records real host/resource stdout or artifacts for the currently available physical lanes.")
+    "The local proof emits native Hati binaries, runs the Form-native JIT, Form-native Mach-O/ELF object proofs, and Form-native Android ELF executable shape through fkwu as a fourth sibling, and records real host/resource stdout or artifacts for the currently available physical lanes.")
 
   (north-star
     "Every resource and channel row has a locally inspectable physical receipt, with the most native available codec first and third-party carriers kept explicit until a kernel-native codec replaces them.")
@@ -75,11 +76,12 @@
       (binary-format elf)
       (assembly-surface elf-relocatable+aarch64-asm)
       (form-native-object form-elf)
+      (form-native-executable form-elf-exec)
       (jit-oracle clang)
       (jit-runtime form-native-arm64-assembler)
       (distribution https://hati.earth/downloads/hati-os/android/arm64/hati-os-android-arm64.tar.zst)
       (resource-implementations procfs+ActivityManager-permission-gated procfs+BatteryManager+Debug+SensorManager AAudio+AudioRecord+AudioTrack Camera2+MediaProjection-permission-gated SensorManager+LocationManager+GNSS-permission-gated Vulkan+OpenGL-ES NNAPI+vendor-DSP-delegates unsupported-MLX)
-      (floor "Android receipts require an Android device or emulator with granted permissions")))
+      (floor "Android executable shape is Form-native and inspectable; execution receipts require qemu-aarch64 or an Android device/emulator with granted permissions")))
 
   (missing-physical-samples
     (tts-stt-loopback
@@ -118,8 +120,8 @@
       (floor "target row, clang oracle assembly/object proof, four-way Form-native JIT runtime row, Form-native Mach-O object proof, and hati.earth URL are proven")
       (missing "published tarball, sha256, source map, and physical-lane summary JSON at the catalog URL"))
     (android-arm64
-      (floor "target row, clang oracle assembly/object proof, four-way Form-native JIT runtime row, Form-native ELF/aarch64 object proof, and hati.earth URL are proven")
-      (missing "published Android native kernel package, sha256, source map, and Android device/emulator physical-lane summary JSON at the catalog URL; APK proof remains separate until the app shell announces to hati.mesh and carries organ channels")))
+      (floor "target row, clang oracle assembly/object proof, four-way Form-native JIT runtime row, Form-native ELF/aarch64 object proof, Form-native ELF/aarch64 executable shape proof, and hati.earth URL are proven")
+      (missing "qemu-aarch64 or Android device execution receipt for the Form-native ELF executable, published Android native kernel package, sha256, source map, and Android device/emulator physical-lane summary JSON at the catalog URL; APK proof remains separate until the app shell announces to hati.mesh and carries organ channels")))
 
   (invariant
     (no-mock-data)

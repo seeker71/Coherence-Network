@@ -1,0 +1,123 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/form-native-elf-exec-floor-20260614",
+  "commit_scope": "Add a Form-native ELF64/aarch64 executable-shape floor for Android arm64.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "form-native-asm",
+    "form-native-executable-floor",
+    "bml-native-north-star"
+  ],
+  "spec_ids": [
+    "bml-native-north-star",
+    "form-to-asm",
+    "hati-os-targets",
+    "fourth-kernel-physical-lanes"
+  ],
+  "task_ids": [
+    "form-native-elf-exec-floor-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/form-elf-exec.fk",
+    "form/form-stdlib/tests/form-elf-exec-band.fk",
+    "form/form-stdlib/hati-os-targets.fk",
+    "form/form-stdlib/tests/hati-os-targets-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/bml_form_jit_metal_planes_audit.sh",
+    "docs/coherence-substrate/form-to-asm.form",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_form_native_elf_exec_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/form-stdlib/form-elf-exec.fk",
+    "form/form-stdlib/tests/form-elf-exec-band.fk",
+    "form/form-stdlib/hati-os-targets.fk",
+    "form/form-stdlib/tests/hati-os-targets-band.fk",
+    "form/fourth-arm-bands.txt",
+    "scripts/bml_form_jit_metal_planes_audit.sh",
+    "docs/coherence-substrate/form-to-asm.form",
+    "docs/coherence-substrate/hati-os-targets.form",
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form",
+    "docs/coherence-substrate/bml-native-north-star.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_form_native_elf_exec_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "form/form-stdlib/form-elf-exec.fk#elf-exec-write-exit-code",
+    "form/form-stdlib/tests/form-elf-exec-band.fk",
+    "form/form-stdlib/tests/hati-os-targets-band.fk",
+    "form/fourth-arm-bands.txt#form-elf-exec",
+    "scripts/bml_form_jit_metal_planes_audit.sh#ELF_EXEC_NATIVE",
+    "docs/coherence-substrate/form-to-asm.form#android-executable-shape-realized",
+    "docs/coherence-substrate/fourth-kernel-physical-lanes.form#android-arm64"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "bash scripts/agent-coord.sh claim form-native-elf-exec-floor \"walk Android ELF executable floor: Form-native ELF64/aarch64 executable wrapper plus four-way shape proof and optional runner receipt\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/form-elf-exec.fk form-stdlib/tests/form-elf-exec-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hati-os-targets.fk form-stdlib/tests/hati-os-targets-band.fk",
+      "bash scripts/bml_form_jit_metal_planes_audit.sh",
+      "cd form && VALIDATE_JOBS=4 FOURTH_PREPARE_ALL_BATCH_MAX=0 ./validate.sh",
+      "git diff --check"
+    ],
+    "notes": "Focused ELF executable proof returns 63 with fourth arm: 1 band(s) four-way and 1 ok, 0 divergent. Hati target catalog proof returns 16383 with fourth arm included. The metal-plane audit writes Form-emitted executable bytes to disk and file(1) reports an ELF 64-bit LSB executable, ARM aarch64, statically linked, no section header. The emitted executable is a _start program that writes FORM ELF to stdout and exits 42 when qemu-aarch64 or an Android runner is present; this host lacks qemu-aarch64, so the audit explicitly records runner=qemu-aarch64 unavailable and treats execution as the next physical receipt. Rebased full Form validation returns fourth arm: 158 band(s) four-way and 574 ok, 0 divergent."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Pending push, PR, and GitHub checks."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "No public deploy performed for this Form-native executable-shape slice."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local Form proof, executable inspection, and full validation passed; CI, review, merge, and deploy remain pending."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Form now emits a target executable image for the Android arm64 metal plane: form-elf-exec writes an ELF64/aarch64 ET_EXEC image with one RX PT_LOAD segment and _start write+exit syscall bytes without clang as compiler, assembler, or linker. The target catalog exposes the Android form-native executable emitter while physical stdout/stderr/exit execution remains runner-gated until qemu-aarch64 or an Android device is present.",
+    "public_endpoints": [
+      "local:form-native-elf-executable",
+      "local:bml-form-jit-metal-planes-audit",
+      "local:hati-os-targets-band"
+    ],
+    "test_flows": [
+      "Emit _start bytes that write FORM ELF and exit 42 through Linux/Android aarch64 syscalls.",
+      "Wrap those bytes with a Form-emitted ELF64 executable header and PT_LOAD program header.",
+      "Write the executable bytes to disk and verify file(1) reports an ARM aarch64 ELF executable.",
+      "Run the same executable under qemu-aarch64 or Android when available and expect stdout FORM ELF, empty stderr, and exit 42."
+    ]
+  }
+}

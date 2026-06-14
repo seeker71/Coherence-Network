@@ -22,7 +22,8 @@
     (foundation    form-stdlib/form-asm.fk)            # arm64 instruction encoding -> byte image
     (compiler      form-stdlib/form-lower.fk)           # the lowering: an expression TREE -> instruction sequence
     (wrapper       form-stdlib/form-macho.fk            # the Mach-O object emitter -> macOS object/link floor
-                   form-stdlib/form-elf.fk)             # the ELF64/aarch64 object emitter -> Android object floor
+                   form-stdlib/form-elf.fk              # the ELF64/aarch64 object emitter -> Android object floor
+                   form-stdlib/form-elf-exec.fk)        # the ELF64/aarch64 executable emitter -> Android executable shape floor
     (gate          byte-conviction)                     # the witness theorem on bytes
     (witness-law   witness-theorem.form)                # 1 agree / 0 refute / nothing silent
     (licenses      form-os-channel.form)                # clang external -> internalized only through the gate
@@ -31,7 +32,8 @@
                    tests/form-lower-cond-band.fk        # 31 — CONTROL FLOW: branches + offsets + selection
                    tests/form-lower-rec-band.fk         # 31 four-way — CALL: recursion, frame, high-base bl
                    tests/form-macho-band.fk             # 31 — the emitted Mach-O object is well-formed
-                   tests/form-elf-band.fk)              # 31 four-way — the emitted ELF64/aarch64 object is well-formed
+                   tests/form-elf-band.fk               # 31 four-way — the emitted ELF64/aarch64 object is well-formed
+                   tests/form-elf-exec-band.fk)         # 63 four-way — the emitted ELF64/aarch64 executable is well-formed
     (live-witness  scripts/form_asm_conviction_demo.sh  # Form instruction bytes == assembler bytes
                    scripts/form_lower_demo.sh           # Form COMPILES a tree to assembler-identical bytes
                    scripts/form_macho_demo.sh           # Form -> .o -> ld -> a RUNNABLE binary, exit 40, ZERO clang
@@ -169,15 +171,28 @@
     (fourth-arm "tests/form-elf-band.fk is in the fourth-arm manifest and passes fkwu four-way at 31")
     (zero-clang "Form emits the ELF object bytes; clang remains only as oracle for broader C surfaces"))
 
+  # ── The ELF executable — REALIZED: Android/aarch64 executable shape, zero clang ──
+  # form-elf-exec.fk emits a minimal ELF64/aarch64 ET_EXEC image directly:
+  # ELF header + one RX PT_LOAD program header + _start bytes. The first program
+  # writes "FORM ELF\n" through syscall 64, then exits 42 through syscall 93.
+  # Local proof writes and inspects the executable; execution is a physical
+  # receipt when qemu-aarch64 or an Android device carrier is present.
+  (android-executable-shape-realized
+    (executable "form-elf-exec.fk -> ELF64/aarch64 ET_EXEC with _start write+exit bytes")
+    (inspect "scripts/bml_form_jit_metal_planes_audit.sh writes the executable and verifies ELF/aarch64 executable shape")
+    (runner "qemu-aarch64 or Android device executes stdout='FORM ELF', stderr='', exit=42 when present")
+    (fourth-arm "tests/form-elf-exec-band.fk is in the fourth-arm manifest and passes fkwu four-way at 63")
+    (zero-clang "Form emits the executable bytes; no clang, assembler, or linker is used for this executable floor"))
+
   # ── Closing cells — what remains beyond the realized runnable path ───
   (closing-cells
     (general-encoder "the field-into-byte encoder for high-base instructions (branches, loads,
                       stores) with carry — so any instruction encodes without a > 2^31 word")
     (richer-lowering "general register allocation and multi-argument calling conventions — beyond
                       the one-argument w19/w20 scheme realized for the recursive fib shape")
-    (self-link       "emit linked Mach-O and Android ELF EXECUTABLES directly (dyld/LC_MAIN/LC_CODE_SIGNATURE
-                      on macOS; ELF program headers/dynamic linker or static path on Android), retiring host
-                      linkers where platform policy permits")
+    (self-link       "extend direct Mach-O and Android ELF executable emission into richer programs
+                      (dyld/LC_MAIN/LC_CODE_SIGNATURE on macOS; dynamic linker or broader static path on Android),
+                      retiring host linkers where platform policy permits")
     (kernel-int      "a kernel finding surfaced here: integer literals > 2^31 wrap to signed int32
                       across all three kernels (e.g. 0xd65f03c0). The byte-image emitter sidesteps
                       it; a kernel-level wider/unsigned integer is the deeper fix."))

@@ -28,8 +28,8 @@
 #   multi-line output     — bands that print mid-walk (the walker answers
 #     one value through fk_pr)
 #
-# Current floor (2026-06-14 url/uuid literal floor): full
-# `cd form && ./validate.sh` reaches 152 four-way bands and 568 total passing
+# Current floor (2026-06-14 guidance + Form-native executable floor): full
+# `cd form && ./validate.sh` reaches 158 four-way bands and 574 total passing
 # workloads, with 0 residual divergent bands. Literal bp registry aliases now
 # fold through make_nodeid for the audit-log, hex, token, url-encode, and uuid
 # rows. Token's blueprint reservation now lives inside its module body so fkwu
@@ -45,8 +45,8 @@
 # tags 81..86; numeric conversion/transcendental rows now carry
 # round/ceil/exp/log through tags 87..90, and the tensor emitter-as-recipe rides
 # the manifest floor at 7. Native target/metal emit rows now carry Hati target
-# coordinates, human-readable asm emission, Mach-O/ELF object shape, native CLI
-# emit, and generic metal emit through the fourth arm. Schema/tree-diff now carry explicit
+# coordinates, human-readable asm emission, Mach-O/ELF object shape, Android
+# ELF executable shape, native CLI emit, and generic metal emit through the fourth arm. Schema/tree-diff now carry explicit
 # NodeID construction/projection plus lexical top-level constant capture across
 # source modules through the fourth arm. Conditional and map lowering bands now
 # ride the same fourth-arm floor as the core and recursive lowerer. Connected
@@ -153,6 +153,7 @@ form-lower-map fks 31
 form-lower-rec fks 31
 form-macho fks 31
 form-elf fks 31
+form-elf-exec fks 63
 form-mut fks 31
 form-spy fks 31
 gematria fks 11111
@@ -160,7 +161,7 @@ go-jit fks 8
 go-jit-value-list fks 4
 harmonic-geometry fks 111111
 hati-os-native-cli-emit fks 7
-hati-os-targets fks 8191
+hati-os-targets fks 16383
 heartbeat fks 5
 hmac-sha256 fks 2
 int-literal-width fks 9
