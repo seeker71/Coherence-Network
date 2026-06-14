@@ -1,0 +1,35 @@
+# witness-state-receipt.form - Form-native live witness counter receipts
+
+(witness-state-receipt
+  (lineage
+    (rests-on android-mesh-learning.form llm-feature-channel-floor.form)
+    (recipe form/form-stdlib/witness-state-receipt.fk)
+    (proof form/form-stdlib/tests/witness-state-receipt-band.fk -> 4095)
+    (fourth-arm form/fourth-arm-bands.txt -> witness-state-receipt fks 4095))
+
+  (purpose
+    "Turn live Mac witness /state counters into deterministic Form-native receipt rows."
+    "Use the receipt rows to feed Android/Mac active sample learning without extending the Python JSON helper.")
+
+  (floor
+    "The live witness receipt row carries source, present flag, frame count, mic RMS summary, camera luma summary, camera sample count, GPU readback count, GPU latency summary, total sample count, active organs, and privacy mode."
+    "The current observed values are represented with integer-scaled metrics: frames 141, mic_rms_ppm 7045, camera_luma_ppm 28054, camera_samples 2367, gpu_samples 99, gpu_latency_us 1412, and sample_count 5084."
+    "The recipe validates live presence, summary-only privacy, active mic/camera/GPU organs, count floors, and Form-native exporter source."
+    "The row lowers into android-mesh-learning active sample rows, then proves speech-transcribe, vision-describe, and multimodal-align route native-first when all three active lanes are present."
+    "Heldout oracle retirement remains closed until enough challenger/champion samples exist; the receipt establishes learning readiness, not retirement.")
+
+  (north-star
+    "The Mac witness exports native receipt cells continuously into the substrate/native recipe ledger."
+    "Speech, vision, multimodal, GPU, and model learners consume those receipt cells as first-class samples."
+    "Raw audio, frames, and GPU buffers stay out of durable receipt storage; only typed summaries, counters, and provenance are retained.")
+
+  (receipt-row
+    (source "form-native-witness-state")
+    (privacy "summary-only/no-raw-audio-frame-buffer")
+    (active-organs accelerometer camera gps gpu gyroscope light magnetometer mic network screen)
+    (metrics frames mic_rms_ppm camera_luma_ppm camera_samples gpu_samples gpu_latency_us sample_count))
+
+  (remaining-gaps
+    (heldout-learning "join mic/camera/GPU summaries to speech, vision, multimodal, and GPU heldout learners")
+    (continuous-export "wire the running witness to emit native receipt cells directly, with JSON only as an export/cache")
+    (accelerator-depth "extend EGL readback summaries to Vulkan/NNAPI/Metal parity receipts compared with CPU/oracle lanes")))

@@ -5,6 +5,7 @@
     (rests-on hati-mesh.form channel-loopback.form co-learning-stream.form colearning-retire.form llm-feature-channel-floor.form oracle-catalog.form)
     (recipe form/form-stdlib/android-mesh-learning.fk)
     (proof form/form-stdlib/tests/android-mesh-learning-band.fk -> 32767)
+    (witness-receipt witness-state-receipt.form)
     (physical-receipt scripts/android_mesh_learning_receipt.py))
 
   (purpose
@@ -17,6 +18,7 @@
     "The receipt records device model/ABI/Android release, battery summary, safe capability inventory, sensor-category inventory, Coherence Sense installed/running state, Mac host/tool summary, Mac witness service state, typed channel rows, and high-cost feature route decisions."
     "The Android carrier can emit active mic RMS, camera luma, and GPU EGL readback summaries while sharing; it does not store raw audio, frames, or GPU buffers."
     "The current live physical floor observed an unlocked SM-S918U1 sharing to the Mac witness with 141 witness frames, nonzero mic RMS, nonzero camera luma, 2367 camera luma samples, 99 GPU EGL readback samples, and body sample_count 5084."
+    "Those live witness counters now have a Form-native receipt row in witness-state-receipt.fk, with integer-scaled summary metrics and a four-way proof at verdict 4095."
     "The Form recipe proves the deterministic route surface: native-first, native-first with oracle sampling, oracle-teacher-until-physical-samples, stream merging, per-category oracle retirement, and active mic/camera/GPU sample rows that lift speech, vision, and multimodal routing to native-first when those lanes are present.")
 
   (north-star
@@ -59,12 +61,12 @@
     (mac-witness "experiments/coherence-sense-android/macos-witness-service.sh install --mode recognition --port 8800")
     (android-app "adb shell am start -n com.coherence.sense/.MainActivity")
     (receipt-loop "python3 scripts/android_mesh_learning_receipt.py --start-app --loop --interval 60")
-    (handoff "future service should write native substrate ledger records, with JSON summaries as export/cache"))
+    (form-native-receipt "form/form-stdlib/witness-state-receipt.fk")
+    (handoff "running service should write native substrate ledger records continuously, with JSON summaries as export/cache"))
 
   (next-physical-gaps
     (mic "RMS summaries joined to speech-transcribe heldout learning beyond route readiness")
     (camera "luma summaries joined to vision-describe heldout learning beyond route readiness")
     (accelerator "EGL readback summaries extended to Vulkan/NNAPI kernel receipts compared with CPU/oracle lanes")
-    (receipt-export "replace the Python JSON receipt helper with a Form-native witness-state export path")
-    (stream "Mac witness event stream joined to app flow counters and Form-native source-data receipts")
+    (stream "Mac witness event stream joined to app flow counters and native substrate receipt cells")
     (retirement "one narrow category with enough heldout native wins to stop sampling the teacher")))
