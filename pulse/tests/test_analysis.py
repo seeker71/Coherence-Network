@@ -75,6 +75,19 @@ def test_status_last_sample_slow_is_strained():
     assert status_from_last_sample(slow_sample) == "strained"
 
 
+def test_status_last_sample_fell_back_is_strained():
+    """A native route served by the Python fan-out reads as strained, not silent:
+    the surface breathed (ok=True), but off its native carrier."""
+    fell_back = Sample(
+        ts=iso_utc(),
+        organ="endpoint_ideas",
+        ok=True,
+        latency_ms=120,
+        detail="fell back: expected native-kernel, got fanout-python",
+    )
+    assert status_from_last_sample(fell_back) == "strained"
+
+
 def test_status_last_sample_detail_other_than_slow_is_still_breathing():
     weird_sample = Sample(
         ts=iso_utc(),

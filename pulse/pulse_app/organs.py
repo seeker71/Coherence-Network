@@ -59,6 +59,19 @@ class Organ:
                                        # detail is set, so the current
                                        # status reads as "strained" while
                                        # the historical uptime stays at 100%
+    expected_router: str | None = None  # When set, the organ's response must
+                                       # carry `x-form-router: <this>` (e.g.
+                                       # "native-kernel"). A native route served
+                                       # by the Python fan-out fallback (kernel-
+                                       # router unhealthy → Traefik failover)
+                                       # still returns 200 with a valid body, so
+                                       # status+shape checks miss it; this makes
+                                       # probe._apply flag a "fell back: …"
+                                       # strain naming the carrier actually seen.
+                                       # Declarative like latency_threshold_ms —
+                                       # the check lives once in _apply, so a new
+                                       # native-promoted route opts in with one
+                                       # field, no per-extractor code.
 
 
 # --- upstream labels ------------------------------------------------------
@@ -278,7 +291,13 @@ def extract_web_vitality(r: "UpstreamResult") -> OrganVerdict:
 
 
 def extract_api_ideas(r: "UpstreamResult") -> OrganVerdict:
-    """/api/ideas returns a dict with an 'ideas' list (the prod shape)."""
+    """/api/ideas returns a dict with an 'ideas' list (the prod shape).
+
+    The carrier-path check (native-kernel vs fanout-python via the
+    `x-form-router` header) is applied generically by probe._apply from the
+    organ's `expected_router`, not here — so it covers any native-promoted
+    route without per-extractor code.
+    """
     if not _is_ok(r.status):
         return OrganVerdict(False, f"HTTP {r.status}")
     body = _require_body(r)
@@ -445,6 +464,13 @@ ORGANS: list[Organ] = [
         upstream=UPSTREAM_API_IDEAS,
         extractor=extract_api_ideas,
         latency_threshold_ms=1500,
+        # /api/ideas is a native-promoted route — its body runs in the Go
+        # form-kernel and the response carries `x-form-router: native-kernel`.
+        # If the kernel-router is unhealthy, Traefik fails over to the Python
+        # fan-out (`x-form-router: fanout-python`), which returns 200 and masks
+        # a native-route regression (the #3087 boolean::bigint 500). Declaring
+        # the expected carrier makes the witness flag that failover as strain.
+        expected_router="native-kernel",
     ),
     Organ(
         name="endpoint_vitality",

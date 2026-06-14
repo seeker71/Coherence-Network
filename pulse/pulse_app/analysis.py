@@ -251,15 +251,24 @@ def latency_percentiles(samples: list[Sample]) -> tuple[int | None, int | None]:
 
 # --- current status -------------------------------------------------------
 
+# Detail prefixes that mark an ok=True sample as "strained" rather than fully
+# breathing: the surface answered, but a measured signal is off. Producers live
+# in probe.py / organs.py:
+#   "slow: "      — latency over the organ threshold (also reused for recent
+#                   5xx/4xx pressure on the api organ)
+#   "fell back: " — a native-promoted route served by the Python fan-out
+#                   instead of its kernel-router carrier (x-form-router check)
+STRAIN_DETAIL_PREFIXES = ("slow: ", "fell back: ")
+
+
 def status_from_last_sample(sample: Sample | None) -> str:
     if sample is None:
         return "unknown"
     if not sample.ok:
         return "silent"
-    # A successful probe with a "slow:" detail was flagged by probe._apply
-    # because its latency crossed the organ's threshold. It breathes, but
-    # it's straining.
-    if sample.detail and sample.detail.startswith("slow: "):
+    # A successful probe whose detail begins with a strain marker breathes,
+    # but it's straining (see STRAIN_DETAIL_PREFIXES).
+    if sample.detail and sample.detail.startswith(STRAIN_DETAIL_PREFIXES):
         return "strained"
     return "breathing"
 
