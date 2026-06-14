@@ -61,6 +61,53 @@ type PulseData = {
   ideas: { total_in_portfolio: number; without_spec: number; full_cycle: unknown[]; advancing: unknown[]; stuck: unknown[] };
 };
 
+type LearningDashboardData = {
+  summary: {
+    routed_model_count: number;
+    proof_run_count: number;
+    proof_pass_count: number;
+    learning_surface_count: number;
+    trained_native_model_count: number;
+    proven_floor_count: number;
+    blocked_or_pending_count: number;
+  };
+  north_star: string;
+  floor: string;
+  models: {
+    executor: string;
+    model_id: string;
+    tiers: string[];
+    fallback_rank?: number | null;
+    task_types: string[];
+    role: string;
+  }[];
+  learning_surfaces: {
+    surface_id: string;
+    title: string;
+    kind: string;
+    state: string;
+    proof_status: string;
+    training_metadata: {
+      commands?: string[];
+      evidence_refs?: string[];
+      trained_native_weights?: boolean;
+      note?: string;
+    };
+    north_star_alignment: string;
+    next_step?: string | null;
+    evidence_path: string;
+  }[];
+  recent_proof_runs: {
+    run_id: string;
+    model_used: string;
+    pass_fail: string;
+    attempts: number;
+    commands_run: string[];
+    source_path?: string | null;
+  }[];
+  guidance: string[];
+};
+
 type SSEEvent = {
   event_type: string;
   timestamp: string;
@@ -102,6 +149,22 @@ function StreakDots({ last10 }: { last10: string[] }) {
           {r === "ok" ? "✓" : r === "fail" ? "✗" : "T"}
         </span>
       ))}
+    </span>
+  );
+}
+
+function StatusPill({ value }: { value: string }) {
+  const normalized = value.toLowerCase();
+  const cls = normalized.includes("pass") || normalized.includes("proven") || normalized.includes("ready")
+    ? "bg-green-500/15 text-green-600"
+    : normalized.includes("pending") || normalized.includes("local")
+      ? "bg-amber-500/15 text-amber-600"
+      : normalized.includes("block") || normalized.includes("fail")
+        ? "bg-red-500/15 text-red-600"
+        : "bg-muted text-muted-foreground";
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${cls}`}>
+      {value.replace(/_/g, " ")}
     </span>
   );
 }
@@ -220,16 +283,18 @@ export default function DashboardPage() {
   const [nodes, setNodes] = useState<NodeInfo[]>([]);
   const [tasks, setTasks] = useState<RunningTask[]>([]);
   const [pulse, setPulse] = useState<PulseData | null>(null);
+  const [learning, setLearning] = useState<LearningDashboardData | null>(null);
   const [activeTab, setActiveTab] = useState<string>("");
   const [lastRefresh, setLastRefresh] = useState(Date.now());
 
   const refresh = useCallback(async () => {
     try {
       const workspaceId = readActiveWorkspaceFromCookie();
-      const [nodesRes, tasksRes, pulseRes] = await Promise.all([
+      const [nodesRes, tasksRes, pulseRes, learningRes] = await Promise.all([
         fetch(`${API}/api/federation/nodes`, { cache: "no-store" }),
         fetch(withWorkspaceScope(`${API}/api/agent/tasks?status=running&limit=20`, workspaceId), { cache: "no-store" }),
         fetch(`${API}/api/pipeline/pulse`, { cache: "no-store" }),
+        fetch(`${API}/api/models/learning-dashboard`, { cache: "no-store" }),
       ]);
       if (nodesRes.ok) setNodes(await nodesRes.json());
       if (tasksRes.ok) {
@@ -237,6 +302,7 @@ export default function DashboardPage() {
         setTasks(d.tasks || []);
       }
       if (pulseRes.ok) setPulse(await pulseRes.json());
+      if (learningRes.ok) setLearning(await learningRes.json());
       setLastRefresh(Date.now());
     } catch {}
   }, []);
@@ -261,7 +327,7 @@ export default function DashboardPage() {
     "No single phase is dominating the backlog right now.";
 
   return (
-    <main className="min-h-screen bg-background text-foreground p-4 space-y-4 max-w-7xl mx-auto">
+    <main className="min-h-screen bg-background text-foreground p-4 pb-24 md:pb-4 space-y-4 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">{t("dashboard.title")}</h1>
@@ -332,6 +398,153 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Learning Direction */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold">Learning direction</h2>
+            <p className="text-xs text-muted-foreground">
+              Models, receipts, and next moves toward native learning.
+            </p>
+          </div>
+          {learning && <StatusPill value={`${learning.summary.proven_floor_count} proven floors`} />}
+        </div>
+
+        {learning ? (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-3 text-center">
+              <div className="rounded-xl border border-border/20 bg-card/40 p-3">
+                <p className="text-2xl font-bold">{learning.summary.trained_native_model_count}</p>
+                <p className="text-[10px] text-muted-foreground">native trained</p>
+              </div>
+              <div className="rounded-xl border border-border/20 bg-card/40 p-3">
+                <p className="text-2xl font-bold">{learning.summary.routed_model_count}</p>
+                <p className="text-[10px] text-muted-foreground">routed models</p>
+              </div>
+              <div className="rounded-xl border border-border/20 bg-card/40 p-3">
+                <p className="text-2xl font-bold">{learning.summary.learning_surface_count}</p>
+                <p className="text-[10px] text-muted-foreground">learning surfaces</p>
+              </div>
+              <div className="rounded-xl border border-border/20 bg-card/40 p-3">
+                <p className="text-2xl font-bold text-green-500">{learning.summary.proof_pass_count}</p>
+                <p className="text-[10px] text-muted-foreground">recent proofs</p>
+              </div>
+              <div className="rounded-xl border border-border/20 bg-card/40 p-3">
+                <p className="text-2xl font-bold text-green-500">{learning.summary.proven_floor_count}</p>
+                <p className="text-[10px] text-muted-foreground">proven floors</p>
+              </div>
+              <div className="rounded-xl border border-border/20 bg-card/40 p-3">
+                <p className="text-2xl font-bold text-amber-500">{learning.summary.blocked_or_pending_count}</p>
+                <p className="text-[10px] text-muted-foreground">open gates</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+              <div className="rounded-xl border border-border/20 bg-card/40 p-4 space-y-3 lg:col-span-2">
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">North star</p>
+                  <p className="text-sm leading-relaxed">{learning.north_star}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Current floor</p>
+                  <p className="text-sm leading-relaxed">{learning.floor}</p>
+                </div>
+              </div>
+              <div className="rounded-xl border border-border/20 bg-card/40 p-4 space-y-2">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Guidance</p>
+                {learning.guidance.slice(0, 3).map(item => (
+                  <p key={item} className="text-xs leading-relaxed text-muted-foreground">
+                    {item}
+                  </p>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+              <div className="rounded-xl border border-border/20 bg-card/40 overflow-hidden">
+                <div className="px-4 py-3 border-b border-border/10">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Proof surfaces</p>
+                </div>
+                <div className="divide-y divide-border/10">
+                  {learning.learning_surfaces.slice(0, 6).map(surface => (
+                    <div key={surface.surface_id} className="p-4 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-medium">{surface.title}</p>
+                        <StatusPill value={surface.proof_status} />
+                        <StatusPill value={surface.state} />
+                      </div>
+                      <p className="text-xs text-muted-foreground">{surface.kind} · {surface.north_star_alignment}</p>
+                      <p className="text-xs text-muted-foreground">{surface.training_metadata.note}</p>
+                      {surface.next_step && (
+                        <p className="text-xs">
+                          <span className="text-muted-foreground">Next: </span>
+                          {surface.next_step}
+                        </p>
+                      )}
+                      <p className="text-[10px] text-muted-foreground font-mono break-all">{surface.evidence_path}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border/20 bg-card/40 overflow-hidden">
+                <div className="px-4 py-3 border-b border-border/10">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Routed models</p>
+                </div>
+                <div className="divide-y divide-border/10">
+                  {learning.models.slice(0, 8).map(model => (
+                    <div key={`${model.executor}-${model.model_id}`} className="p-4 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-medium font-mono break-all">{model.model_id}</p>
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                          {model.executor}
+                        </span>
+                        {model.fallback_rank && (
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                            fallback #{model.fallback_rank}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {model.role} · {model.tiers.length > 0 ? model.tiers.join(", ") : "no tier"} · {model.task_types.length > 0 ? model.task_types.join(", ") : "no task binding"}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-border/20 bg-card/40 overflow-hidden">
+              <div className="px-4 py-3 border-b border-border/10">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Recent proof runs</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-border/10">
+                {learning.recent_proof_runs.slice(0, 6).map(run => (
+                  <div key={run.run_id} className="bg-card p-4 space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-medium">{run.run_id}</p>
+                      <StatusPill value={run.pass_fail} />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {run.model_used} · attempts {run.attempts}
+                    </p>
+                    {run.commands_run[0] && (
+                      <p className="text-[10px] text-muted-foreground font-mono break-all">
+                        {run.commands_run[0]}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="rounded-xl border border-border/20 bg-card/40 p-4">
+            <p className="text-xs text-muted-foreground">{t("common.loading")}</p>
+          </div>
+        )}
+      </section>
 
       {/* Node Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

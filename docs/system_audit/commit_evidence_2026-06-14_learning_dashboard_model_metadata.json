@@ -1,0 +1,118 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/learning-dashboard-20260614",
+  "commit_scope": "Expose model training, routing, proof-run, and learning-surface metadata on the dashboard.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "form-native-model-data-as-cells",
+    "body-readable-model-vitality",
+    "native-learning-surface"
+  ],
+  "spec_ids": [
+    "coherence-substrate-model-vitality",
+    "form-native-learning",
+    "channel-protocol-choice-floor"
+  ],
+  "task_ids": [
+    "learning-dashboard-model-metadata-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "api/app/routers/models.py",
+    "api/tests/test_models_learning_dashboard.py",
+    "web/app/dashboard/page.tsx",
+    "api/tests/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-06-14_learning_dashboard_model_metadata.json",
+    "docs/system_audit/model_executor_run_ledger/learning-dashboard-model-metadata-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "api/app/routers/models.py",
+    "api/tests/test_models_learning_dashboard.py",
+    "web/app/dashboard/page.tsx",
+    "api/tests/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-06-14_learning_dashboard_model_metadata.json",
+    "docs/system_audit/model_executor_run_ledger/learning-dashboard-model-metadata-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "GET /api/models/learning-dashboard",
+    "web/app/dashboard/page.tsx: Learning direction",
+    "docs/system_audit/model_executor_run_ledger/*.json",
+    "docs/system_audit/commit_evidence_*.json",
+    "api/config/model_routing.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord join && coord claim \"learning dashboard model metadata floor\"",
+      "python3 -m py_compile api/app/routers/models.py",
+      "python3 -m pytest -q api/tests/test_models_learning_dashboard.py",
+      "cd web && npm ci",
+      "cd web && npm run build",
+      "python3 -m uvicorn app.main:app --port 18120",
+      "curl -sS http://localhost:18120/api/models/learning-dashboard",
+      "Browser desktop render: /dashboard shows 0 native trained, 11 routed models, 14 learning surfaces, 10 recent proofs, 3 proven floors, and no console errors.",
+      "Browser mobile render at 390px: learning section visible, no horizontal overflow, no console errors."
+    ],
+    "notes": "The dashboard intentionally reports trained_native_model_count=0 until a ledger receipt names native weights. Current routed providers and learning proof floors are visible separately."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI not run when this local evidence was written."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy was requested for this slice."
+  },
+  "phase_gate": {
+    "phase": "learning-dashboard-model-metadata",
+    "gate": "Dashboard must show routed models, training metadata, proof receipts, and next-step guidance without claiming nonexistent native weights.",
+    "state": "local-proof-pass",
+    "can_move_next_phase": false,
+    "reason": "Local API, build, and browser proof passed; CI/deploy proof has not run for this branch yet.",
+    "next": "Attach actual native weight/data/eval receipts as soon as the first continuously trained Form-native model artifact exists."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The dashboard now exposes a Learning direction section backed by /api/models/learning-dashboard, separating configured third-party routes from proven learning surfaces and native trained weight artifacts.",
+    "public_endpoints": [
+      "local:http://localhost:18120/api/models/learning-dashboard",
+      "local:http://localhost:3120/dashboard"
+    ],
+    "test_flows": [
+      "Focused API tests prove current and legacy routing config shapes normalize into dashboard rows.",
+      "Focused API tests prove evidence and proof-ledger receipts produce dashboard surfaces and recent proof runs.",
+      "Next production build proves the dashboard TypeScript and route graph.",
+      "Browser render checks prove the section appears on desktop and mobile without console errors."
+    ],
+    "summary": "The established floor is a body-readable learning dashboard. It shows 0 trained native weight artifacts honestly, while exposing routed models, proof surfaces, metadata, evidence paths, north star, floor, guidance, and next gaps."
+  }
+}
