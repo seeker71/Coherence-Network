@@ -1,0 +1,38 @@
+{
+  "ledger_schema": "model_executor_proof_run/v1",
+  "run_id": "fourth-floor-north-star-harmony-20260614",
+  "thread_branch": "codex/fourth-floor-north-star-harmony-20260614",
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord view",
+    "coord claim fourth-floor-north-star-harmony",
+    "cd form && VALIDATE_JOBS=4 FOURTH_PREPARE_ALL_BATCH_MAX=0 ./validate.sh",
+    "bash scripts/bml_form_jit_metal_planes_audit.sh",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_fourth_floor_north_star_harmony.json",
+    "python3 scripts/model_executor_proof_ledger.py validate",
+    "python3 - <<'PY'\nimport json\nfrom pathlib import Path\nfor i, line in enumerate(Path('docs/system_audit/model_executor_runs.jsonl').read_text().splitlines(), 1):\n    json.loads(line)\nprint('OK jsonl rows', i)\nPY",
+    "git diff --check"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Aligned the fourth-arm floor and connected-tissue north star across sister nodes without changing recipe behavior. form/fourth-arm-bands.txt now names the current 148 four-way / 566 ok / 0 divergent floor after token and Form-native object admission, and the shared guide, README, vision, BML native north-star cell, and model executor proof-ledger cell all point to the same source hierarchy: fourth-arm manifest for Form/BML floor, substrate north-star cells for direction, native ledger records for executor proof coordination, JSONL as compatibility export/cache, and commit evidence for exact blockers. Full Form validation and the macOS/Android metal-plane audit passed.",
+  "source": {
+    "kind": "native-ledger-record",
+    "path": "docs/system_audit/model_executor_run_ledger/fourth-floor-north-star-harmony-20260614.json"
+  },
+  "validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && VALIDATE_JOBS=4 FOURTH_PREPARE_ALL_BATCH_MAX=0 ./validate.sh",
+      "bash scripts/bml_form_jit_metal_planes_audit.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_fourth_floor_north_star_harmony.json",
+      "python3 scripts/model_executor_proof_ledger.py validate",
+      "python3 - <<'PY'\nimport json\nfrom pathlib import Path\nfor i, line in enumerate(Path('docs/system_audit/model_executor_runs.jsonl').read_text().splitlines(), 1):\n    json.loads(line)\nprint('OK jsonl rows', i)\nPY",
+      "git diff --check"
+    ]
+  }
+}

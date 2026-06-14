@@ -28,7 +28,7 @@
 #   multi-line output     — bands that print mid-walk (the walker answers
 #     one value through fk_pr)
 #
-# Current floor (2026-06-14 token recipe + object admission): full
+# Current floor (2026-06-14 token recipe + Form-native object floor): full
 # `cd form && ./validate.sh` reaches 148 four-way bands and 566 total passing
 # workloads, with 0 residual divergent bands. Literal bp registry aliases now
 # fold through make_nodeid for the audit-log, hex, and token rows. Token's
@@ -49,11 +49,13 @@
 # emit, and generic metal emit through the fourth arm. Schema/tree-diff now carry explicit
 # NodeID construction/projection plus lexical top-level constant capture across
 # source modules through the fourth arm. Conditional and map lowering bands now
-# ride the same fourth-arm floor as the core and recursive lowerer. North star:
-# every stdlib band is either
-# listed here and validated four-way, or its 3-kernel-only blocker is explicitly
-# named in commit evidence; suite-level residuals stay at zero while
-# source-section bands move toward fourth-arm eligibility.
+# ride the same fourth-arm floor as the core and recursive lowerer. Connected
+# tissue north star: the manifest, substrate north-star nodes, native proof-run
+# ledger, JSONL compatibility export, and commit evidence all tell the same
+# floor story. Every stdlib band is either listed here and validated four-way,
+# or its 3-kernel-only blocker is explicitly named in commit evidence;
+# suite-level residuals stay at zero while source-section bands move toward
+# fourth-arm eligibility.
 learning-trend fkc 127
 cooldown fkc 63
 alert-gate fkc 127

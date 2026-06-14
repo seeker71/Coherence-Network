@@ -98,6 +98,12 @@ when the output includes `fourth arm: ... four-way (fkwu + pre-flattened tables)
 When a band has not crossed that manifest, record `3-kernel only` and name the
 next fourth-arm gap instead of flattening the proof level.
 
+Connected tissue north star: keep sister nodes in agreement. The fourth-arm
+manifest carries the current Form/BML floor; substrate north-star `.form` cells
+carry the direction; native executor ledger records carry proof-run coordination;
+JSONL is only the compatibility export/cache; commit evidence ties the current
+breath to exact validation output.
+
 Blueprint symbol-section rule: do not add `(bp "NAME")` string literals inside
 executable stdlib logic. Seedbank code keeps those names in
 `form/form-stdlib/seedbank/blueprint-symbol-sections.fk`; load that prelude
