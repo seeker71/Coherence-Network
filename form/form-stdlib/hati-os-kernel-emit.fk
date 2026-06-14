@@ -416,7 +416,7 @@
                 (str_concat (fkc-record-field-arms-text)
                 (str_concat (fkc-record-blueprint-arms-text)
                 (str_concat (fkc-jit-lower-arms-text)
-                            "if (t == 69) { fk_walk(fk_node[i][1], fp); return fk_walk(fk_node[i][2], fp); } return 0; } ")))))))))))))
+                            "if (t == 69) { fk_walk(fk_node[i][1], fp); return fk_walk(fk_node[i][2], fp); } if (t == 102) { long long ae = fk_walk(fk_node[i][1], fp); long long be = fk_walk(fk_node[i][2], fp); if (fk_num(ae) == fk_num(be)) { return 2; } return 0; } if (t == 103) { long long al = fk_walk(fk_node[i][1], fp); long long bl = fk_walk(fk_node[i][2], fp); if (fk_num(al) < fk_num(bl)) { return 2; } return 0; } return 0; } ")))))))))))))
 
 ; figure-ops arms (tags 34..42), emitted: each mirrors the walking kernels'
 ; native bit-for-bit — band/bor/bxor/mul are int64 ops; the *_u32 family

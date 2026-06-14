@@ -322,10 +322,15 @@ substrate-core fks 11111
 # is the remaining ground, and one piece of it is now crossed: bare do-statements
 # (top-level and nested) sequence through tag 69, so each fires exactly once in
 # order (do-effect-seq writes two bytes through two bare appends and reads len 2).
-# Still open: fkwu inlines let (re-walks a bound value at every use) and flt-eq/
-# flt-lt lower an operand twice — so write_file_text/file_mtime/scan_run and the
-# segmented-FILE and Postgres carriers wait on let-effect-once and single-walk
-# eq/lt reaching fkwu.
+# Second piece crossed: eq and lt are now native single-walk walker arms (tags
+# 102/103) instead of the old (le a b)&&(le b a) lowering that walked each
+# operand twice — so a side-effecting operand under eq/lt fires exactly once
+# (eq-effect-once appends one byte inside an eq and reads len 1). The Form
+# meta-circular walkers (fk-walk-lowered, fkm-walk-lowered) carry the same arms,
+# keeping the spec consistent with the emitted fkwu. The one remaining effect-once
+# piece is let: fkwu inlines a let binding (re-walks its value at every use), so
+# write_file_text/file_mtime/scan_run and the segmented-FILE and Postgres carriers
+# wait on let-effect-once reaching fkwu.
 hostio-roundtrip fks 111
 do-effect-seq fks 2
 doc-xpath fks 10
@@ -345,3 +350,4 @@ ratio-bridge fks 1111111
 translation-learn fks 1111111
 translation-quality fks 1111111
 chart-cast fks 1111111
+eq-effect-once fks 1

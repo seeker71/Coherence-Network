@@ -1,0 +1,15 @@
+; eq-effect-once-band.fk — an eq operand must be evaluated exactly once.
+;
+; preludes: form-stdlib/core.fk
+;
+; flt-eq lowered (eq a b) to (le a b)&&(le b a), walking each operand TWICE.
+; Here the left operand is a side effect: file_append_bytes returns the file's
+; new size. After a clean slate, one append makes the file 1 byte. If eq walked
+; the append once the file holds 1 byte; if twice, 2. The reference kernels walk
+; it once, so the portable answer is 1.
+(do
+    (let dir (temp_dir))
+    (let path (str_concat dir "/fk-eq-effect-once.txt"))
+    (fs_remove path)
+    (eq (file_append_bytes path (list 65)) 1)
+    (str_len (read_file path)))
