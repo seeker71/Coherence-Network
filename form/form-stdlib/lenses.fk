@@ -1,0 +1,61 @@
+; lenses.fk — what IS, translated through two media into five lenses.
+;
+; The symbol space and grammar define a LANGUAGE; sound (and writing) is how "what
+; IS" gets translated into it. Each expression — a glyph, a spoken syllable — carries
+; the cell's projection onto five lenses: MEANING, FEELING, TRUST, SOVEREIGNTY,
+; VITALITY. Two media carry the projection: SYMBOL (writing) and SOUND (speech). The
+; sound boundary has two directions: TTS renders what IS into sound; STT recognises
+; what IS from sound. A bija syllable is the purest case — one sound carrying meaning
+; and feeling and vitality at once (sanskrit-channel: seed-syllable -> chakra).
+;
+; This is the engine the channels were already building, named at the next level up:
+; gate 25 read as I Ching / Human Design / Gene Keys are three MEANING-lens tongues;
+; the mountain glyph spoken (pinyin) vs meant (mountain) are SOUND vs MEANING media
+; of one cell. The value lenses (feeling/trust/sovereignty/vitality) are not looked
+; up per symbol — they are MEASURED or EARNED, so each routes to its carrier (named,
+; never faked): the feeling lens reads from sound via affect-traits.fk; trust is
+; earned over time; sovereignty is held by consent; vitality is the living frequency.
+;
+; What is runnable and proven here: the lens/medium frame, and its core — one cell
+; expressed through two media. What each value lens MEASURES rides its carrier; the
+; actual audio render/recognise (TTS/STT) is host carrier tissue (speech-kernel
+; -channel.fk), not a four-way recipe — named at the boundary, honestly.
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/cjk-channel.fk
+;
+
+(do
+    ;; the five lenses "what IS" projects onto
+    (defn lenses () (list "meaning" "feeling" "trust" "sovereignty" "vitality"))
+    ;; the two media that carry the projection
+    (defn media () (list "symbol" "sound"))
+
+    ;; the sound boundary, two directions
+    (defn lens-render ()    "TTS")   ; what IS -> sound   (speech-kernel-channel.fk)
+    (defn lens-recognise () "STT")   ; sound -> what IS   (mel-frame.fk + speech-kernel-channel.fk)
+
+    ;; where each lens's VALUE is read — its carrier. Meaning is a lookup; the rest
+    ;; are measured or earned, so they point at the tissue that measures them.
+    (defn lens-carrier (lens)
+        (if (str_eq lens "meaning")     "attested gloss via the symbol channels (guidance-channel.fk)"
+        (if (str_eq lens "feeling")     "affect-traits.fk — arousal/valence/dominance, measured from sound"
+        (if (str_eq lens "trust")       "trust-decay.fk / trust-weighted-colearning.fk — earned over time"
+        (if (str_eq lens "sovereignty") "channel-interface.fk consent — lc-sovereignty-within-oneness"
+        (if (str_eq lens "vitality")    "wellness / lc-whole-vitality — the living frequency"
+            "unknown lens"))))))
+
+    ;; --- the runnable core: one cell, expressed through two media -------
+    ;; The mountain character is SPOKEN (pinyin 'shan') and MEANT ('mountain'); the
+    ;; sound expression and the meaning lens are the same cell (address 5001). That
+    ;; is "what IS, translated" — content-addressed across media.
+    (defn express-sound   (id) (cjk-chinese-speak id))   ; the sound expression (how it is said)
+    (defn express-meaning (id) (cjk-english-speak id))    ; the meaning lens (what it is)
+    (defn one-cell-many-expressions? (id)
+        (if (eq (gc-same-cell? (cjk-chinese) id (cjk-english) id) 1) 1 0))
+
+    ;; the bija pointer — the purest sound-carries-all case, in sanskrit-channel
+    (defn purest-sound-carrier () "sanskrit-channel.fk bija: a seed-syllable -> its chakra")
+
+    (defn lenses-teaching () "lc-cross-modal-unity")
+
+    0)
