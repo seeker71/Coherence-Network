@@ -76,7 +76,7 @@
 | [form-convert.sh](form-convert.sh) | form-convert — the machine-native kernel-cli for the goal Urs named: |
 | [form_asm_conviction_demo.sh](form_asm_conviction_demo.sh) | form_asm_conviction_demo.sh — the byte-conviction gate that licenses dropping |
 | [form_branch_demo.sh](form_branch_demo.sh) | form_branch_demo.sh — the FULL asm-pl-human program, compiled by Form and run on |
-| [form_cli.py](form_cli.py) | form_cli.py — Form-native CLI: generate, execute, convert. |
+| [form_cli.py](form_cli.py) | form_cli.py — Form-native CLI: ask, generate, execute, convert. |
 | [form_cli_demo.sh](form_cli_demo.sh) | form_cli_demo.sh — exercise every form_cli subcommand end-to-end. |
 | [form_debug_demo.sh](form_debug_demo.sh) | form_debug_demo.sh — LIVE DEBUGGING: the value trace joined with provenance. |
 | [form_diagnose_demo.sh](form_diagnose_demo.sh) | form_diagnose_demo.sh — the live-diagnosis organ on REAL channels. One fib |
