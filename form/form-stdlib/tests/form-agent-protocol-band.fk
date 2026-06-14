@@ -1,0 +1,36 @@
+; preludes: form-stdlib/core.fk form-stdlib/form-agent-protocol.fk
+;
+; form-agent-protocol-band — the universal agent shape (borrowed from where
+; opencode / OpenClaw / Hermes converge) runs: messages of typed parts, tool
+; calls and results keyed by id, and the loop decision execute | done | halt.
+;
+; Verdict 31 when every claim lands:
+;   1   an assistant message carrying a tool_call -> the loop says "execute"
+;   2   an assistant message with only text -> the loop says "done"
+;   4   step budget spent -> "halt" even when tools were requested (the step cap)
+;   8   a tool_result round-trips by (id, name, content)
+;   16  a tool_call round-trips by (id, name, arguments); doom-guard sees identity
+(do
+    (let tc       (ap-tool-call "c1" "bash" "echo hi"))
+    (let tc-again (ap-tool-call "c2" "bash" "echo hi"))
+    (let tr       (ap-tool-result "c1" "bash" "hi"))
+    (let asst-tools (ap-msg "assistant" (list (ap-thinking "run that") tc)))
+    (let asst-final (ap-msg "assistant" (list (ap-text "done — output was hi"))))
+
+    ; 1 — assistant with a tool_call, budget remaining -> execute
+    (let c0 (if (str_eq (ap-next asst-tools 1 8) "execute") 1 0))
+    ; 2 — assistant text-only -> done
+    (let c1 (if (str_eq (ap-next asst-final 1 8) "done") 2 0))
+    ; 4 — step >= max -> halt even with tool calls
+    (let c2 (if (str_eq (ap-next asst-tools 8 8) "halt") 4 0))
+    ; 8 — tool_result round-trips
+    (let c3 (if (and (str_eq (ap-tr-id tr) "c1")
+                     (and (str_eq (ap-tr-name tr) "bash") (str_eq (ap-tr-content tr) "hi")))
+                8 0))
+    ; 16 — tool_call round-trips AND the doom-guard sees two same-signature calls as identical
+    (let c4 (if (and (str_eq (ap-tc-name tc) "bash")
+                     (and (str_eq (ap-tc-args tc) "echo hi")
+                          (eq (ap-same-call? tc tc-again) 1)))
+                16 0))
+
+    (add c0 (add c1 (add c2 (add c3 c4)))))
