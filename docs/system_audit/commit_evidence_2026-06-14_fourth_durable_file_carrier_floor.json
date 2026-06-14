@@ -1,0 +1,129 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/fourth-carrier-next-20260614",
+  "commit_scope": "Admit durable storage-port and graph-node file carrier rows to the fourth-arm manifest.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "fourth-arm-durable-file-carrier-floor",
+    "storage-port",
+    "graph-node-port",
+    "graph-node-file-carrier",
+    "connected-tissue-north-star",
+    "focused-testing-fast-release"
+  ],
+  "spec_ids": [
+    "fourth-arm-bands",
+    "fourth-arm-substrate-carriers",
+    "agent-start-packet",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "fourth-durable-file-carrier-floor-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "floor-prioritization",
+        "north-star-alignment"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "manifest-admission",
+        "north-star-retune",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "docs/coherence-substrate/fourth-arm-substrate-carriers.form",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-14_fourth_durable_file_carrier_floor.json",
+    "docs/system_audit/model_executor_run_ledger/fourth-durable-file-carrier-floor-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt"
+  ],
+  "change_files": [
+    "docs/coherence-substrate/fourth-arm-substrate-carriers.form",
+    "docs/shared/agent-start-packet.md",
+    "docs/system_audit/commit_evidence_2026-06-14_fourth_durable_file_carrier_floor.json",
+    "docs/system_audit/model_executor_run_ledger/fourth-durable-file-carrier-floor-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "form/fourth-arm-bands.txt"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "coord claim \"fourth-durable-file-carrier-floor: test/admit storage-port and graph-node file carrier rows to fourth manifest; retune carrier north-star if they pass; avoid response-header, native-training, BML, witness, Android lanes\"",
+      "cd form && bash scripts/fourth-arm-gate.sh storage-port graph-node-port graph-node-mutation-memory-carrier graph-node-mutation-file-carrier graph-node-mutation-carrier graph-node-mutation-file-verdict ideas-graph-projection",
+      "cd form && ./validate.sh",
+      "python3 scripts/model_executor_proof_ledger.py sync-jsonl --output docs/system_audit/model_executor_runs.jsonl",
+      "python3 scripts/model_executor_proof_ledger.py check-jsonl",
+      "python3 scripts/model_executor_proof_ledger.py validate",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_fourth_durable_file_carrier_floor.json"
+    ],
+    "notes": "The focused gate returned PASS-4WAY for storage-port, graph-node-port, graph-node-mutation-memory-carrier, and graph-node-mutation-file-carrier. Rebased full validation returned `fourth arm: 229 band(s) four-way` and `614 ok, 0 divergent`. The additional floor/workload comes from sister rows already present on origin/main."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed when this evidence was written; CI had not run yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested for this fourth-arm carrier floor slice."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Durable storage-port memory/file substitutability, graph-node port shape, memory mutation carrier, and file-carrier reopen proof are now explicit fourth-arm manifest rows.",
+    "public_endpoints": [
+      "n/a: local Form runtime manifest admission"
+    ],
+    "test_flows": [
+      "cd form && bash scripts/fourth-arm-gate.sh storage-port graph-node-port graph-node-mutation-memory-carrier graph-node-mutation-file-carrier graph-node-mutation-carrier graph-node-mutation-file-verdict ideas-graph-projection",
+      "cd form && ./validate.sh"
+    ]
+  },
+  "evidence_refs": [
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/fourth-arm-substrate-carriers.form",
+    "docs/shared/agent-start-packet.md"
+  ],
+  "phase_gate": {
+    "phase": "fourth-durable-file-carrier-floor",
+    "gate": "Storage-port and graph-node file carrier claims must be explicit fourth-arm manifest rows before file-backed graph mutation/projection can be the next carrier target.",
+    "state": "local-four-way-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Resolve graph-node-full-mutation-verdict, ideas-graph-file-projection, file_mtime, scan_run, or Postgres after CI merge."
+  },
+  "floor_update": {
+    "previous_observed_floor": "225 four-way bands / 614 ok / 0 divergent",
+    "current_observed_floor": "229 four-way bands / 614 ok / 0 divergent",
+    "new_bands": [
+      "storage-port -> 11111 four-way",
+      "graph-node-port -> 11111 four-way",
+      "graph-node-mutation-memory-carrier -> 1 four-way",
+      "graph-node-mutation-file-carrier -> 11 four-way"
+    ],
+    "retuned_north_star": [
+      "segmented-file-carrier-four-way moved to supported through storage-port",
+      "graph-node port and memory/file carrier reopen proofs moved to supported",
+      "next gate narrowed to graph-node-full-mutation-verdict, ideas-graph-file-projection, file_mtime, scan_run, and Postgres"
+    ],
+    "blocked_trials": [
+      "graph-node-mutation-carrier",
+      "graph-node-mutation-file-verdict",
+      "ideas-graph-projection"
+    ]
+  }
+}
