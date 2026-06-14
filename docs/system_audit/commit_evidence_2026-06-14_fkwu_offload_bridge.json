@@ -1,0 +1,86 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "claude/fkwu-offload-build",
+  "commit_scope": "Build step 1a of the FKWU_NATIVE_DISPATCH offload path: the carrier→fkwu→value loop. FkwuEval (form/form-kernel-go/fkwu_bridge.go) hands the emitted fourth kernel a pre-flattened band node-table plus a scalar input (argv[2] → fk_vs[0]) and returns fkwu's walked value. fkwu_bridge_test.go proves it end to end — emit fkwu C in-process, clang it, flatten the four-way content-address band, run fkwu, and confirm its value equals the in-process Go walker bit-for-bit — skipping where clang is absent (the runs-or-skips-when-tools-missing pattern). The Go serving kernel can now offload a pure computation to fkwu. Next (1b): the argv[3]→fk_src structured-input channel and the /api/ideas shape/emit slice authored as a flattened band.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "kernel-native-api-readiness",
+    "bml-front-door"
+  ],
+  "spec_ids": [
+    "kernel-native-api-readiness",
+    "native-front-door-deploy"
+  ],
+  "task_ids": [
+    "fkwu-offload-bridge-20260614"
+  ],
+  "files_owned": [
+    "form/form-kernel-go/fkwu_bridge.go",
+    "form/form-kernel-go/fkwu_bridge_test.go"
+  ],
+  "change_files": [
+    "form/form-kernel-go/fkwu_bridge.go",
+    "form/form-kernel-go/fkwu_bridge_test.go",
+    "kernels/FKWU_NATIVE_DISPATCH.md"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction"
+      ]
+    },
+    {
+      "contributor_id": "agent:claude",
+      "contributor_type": "machine",
+      "roles": [
+        "diagnosis",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude",
+    "version": "claude-opus-4-8"
+  },
+  "evidence_refs": [
+    "form/form-kernel-go/fkwu_bridge.go",
+    "form/form-kernel-go/fkwu_bridge_test.go",
+    "form/fourth-arm-bands.txt",
+    "kernels/FKWU_NATIVE_DISPATCH.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "go build ./... -> OK; go vet . -> OK (form/form-kernel-go)",
+      "go test -run TestFkwuOffloadBridge -v . -> PASS (1.34s): emit fkwu C in-process, clang -O2, flatten content-address band, FkwuEval(table,0)=='1111111111' == in-process walker verdict",
+      "Manual repro: clang-built fkwu on the flattened content-address table prints 1111111111 — the manifest's four-way verdict (content-address fks 1111111111)"
+    ],
+    "notes": "No new band and no walker-logic change: content-address is already four-way in form/fourth-arm-bands.txt; this adds the Go carrier seam that invokes it and proves the bridge value-matches the walker. The bridge is carrier glue, not a band — its proof is value-parity with the walker, not a new four-way claim."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "PR checks run after push. validate.sh four-way is unaffected (no band/walker change); the Go bridge test runs where clang is present and skips otherwise."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "Not wired into the serving path yet — no deploy. The bridge is the foundation; route wiring is step 1b+."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The Go kernel can offload a pure Form computation to the emitted fourth kernel (fkwu) at runtime and receive the same value the sibling walkers compute — the carrier→fkwu→value loop the offload path needs. Proven on the four-way content-address band; not yet wired to a public route.",
+    "public_endpoints": [
+      "local-only: Go kernel offload bridge proven on the content-address four-way band; no public HTTP endpoint changed yet"
+    ],
+    "test_flows": [
+      "go test -run TestFkwuOffloadBridge . -> PASS: FkwuEval == in-process walker on content-address",
+      "form/validate.sh content-address -> four-way (Go/Rust/TS/fkwu agree on 1111111111), unchanged by this carrier addition"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "notes": "Step 1a (the carrier→fkwu→value loop) landed. Next is 1b: the fk_src structured-input channel and the /api/ideas pure slice as a flattened band."
+  }
+}

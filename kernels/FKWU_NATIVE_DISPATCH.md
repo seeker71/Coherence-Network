@@ -159,6 +159,16 @@ carried by the storage-port carrier — functional for proof, live for serve.
    `json_emit` slice with a `write_form_binary` bundle; fkwu returns the JSON.
    Needs: fkwu reads the form-binary input format; the slice flattened as a band.
    Smallest honest step, harvests the measured ~87 ms.
+   - **1a — landed:** the carrier→fkwu→value loop is real. `FkwuEval` in
+     [`form/form-kernel-go/fkwu_bridge.go`](../form/form-kernel-go/fkwu_bridge.go)
+     hands fkwu a pre-flattened band table + scalar input and returns the walked
+     value; `fkwu_bridge_test.go` proves it bit-for-bit against the in-process
+     walker on the four-way `content-address` band (emit → clang → flatten →
+     run, skipping where clang is absent). The Go serving kernel can now offload
+     a pure computation to fkwu.
+   - **1b — next:** the `argv[3] → fk_src` structured-input channel so the
+     offloaded slice can read request+rows, and the `/api/ideas` shape/emit slice
+     authored as a flattened band.
 2. **Value-binary ABI parity** — confirm/seat `read_form_binary`/`write_form_binary`
    on the emitted walker so the bundle round-trips bit-for-bit with Go and Rust.
 3. **Host-bound carrier seam** — `host_carrier_op(handle, op_id, argv)` in
