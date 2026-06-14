@@ -1,0 +1,108 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/fourth-node-vocab-floor-20260614",
+  "commit_scope": "Resolve the bounded fourth-arm literal blueprint floor by lowering current registry aliases to NodeID packets.",
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "fourth-arm-node-vocab-floor",
+    "literal-bp-nodeid-floor",
+    "jit-lowering-residual-cluster"
+  ],
+  "spec_ids": [
+    "fourth-arm-bands",
+    "model-executor-proof-ledger",
+    "commit-evidence-contract"
+  ],
+  "task_ids": [
+    "fourth-node-vocab-floor-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "android-jit-floor-guidance",
+        "native-ledger-guidance"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex@a3ec",
+      "contributor_type": "machine",
+      "roles": [
+        "coordination",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/form-flatten.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/system_audit/commit_evidence_2026-06-14_fourth_bp_literal_floor.json",
+    "docs/system_audit/model_executor_run_ledger/fourth-bp-literal-floor-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/form-stdlib/form-flatten.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/system_audit/commit_evidence_2026-06-14_fourth_bp_literal_floor.json",
+    "docs/system_audit/model_executor_run_ledger/fourth-bp-literal-floor-20260614.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "docs/system_audit/model_executor_run_ledger/fourth-bp-literal-floor-20260614.json",
+    ".cache/validate_bp_literal_full.log",
+    "form/form-stdlib/.cache/fourth-survey/band-missing-ops.tsv"
+  ],
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Fourth-arm table emission now resolves the admitted literal bp aliases to NodeID packets, so audit-log and hex execute as manifest-covered fkwu rows while the full Form suite remains divergence-free.",
+    "public_endpoints": [
+      "local:form/validate.sh",
+      "local:scripts/bml_form_jit_metal_planes_audit.sh",
+      "local:form/scripts/fourth-arm-gap-analysis.py"
+    ],
+    "test_flows": [
+      "form:core+sha256+audit-log+audit-log-band -> fkwu fourth row returns 4",
+      "form:core+hex+hex-band -> fkwu fourth row returns 14",
+      "form:full validate.sh -> 146 fourth-arm bands, 565 ok, 0 divergent",
+      "metal-plane audit -> macOS arm64 Mach-O and Android arm64 ELF receipts pass"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord view",
+      "coord claim fourth-node-vocab-floor",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sha256.fk form-stdlib/audit-log.fk form-stdlib/tests/audit-log-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/hex.fk form-stdlib/tests/hex-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/sha256.fk form-stdlib/hmac-sha256.fk form-stdlib/token.fk form-stdlib/tests/token-band.fk",
+      "cd form && FOURTH_PREPARE_ALL_BATCH_MAX=999 ./validate.sh",
+      "./scripts/bml_form_jit_metal_planes_audit.sh",
+      "cd form && python3 scripts/fourth-arm-gap-analysis.py"
+    ],
+    "notes": "audit-log and hex now run as true fourth-leg rows at 4 and 14. Full validation reports fourth arm: 146 band(s) four-way, 565 ok, 0 divergent after rebasing over the current speech/model/oracle and BML/Hati floor. A temporary token manifest admission diverged with fourth=1 while Go/Rust/TypeScript returned 3, so token remains a named recipe-composition residual rather than a bp-literal floor admission. Metal-plane audit passes macOS arm64 Mach-O and Android arm64 ELF receipts."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed yet. GitHub checks will be monitored after PR creation."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deployment triggered by this Form-native floor commit."
+  },
+  "phase_gate": {
+    "phase": "fourth-node-vocab-floor",
+    "gate": "Current literal bp registry aliases needed by audit-log and hex lower to NodeID packets before fkwu execution.",
+    "state": "local-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Lift token mint/validate divergence and then replace the literal alias list with the generated BP table when the broader node vocabulary floor is ready."
+  }
+}
