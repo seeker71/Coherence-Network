@@ -10,7 +10,7 @@
   (north-star
     (sentence "The content-addressed substrate is durable across REAL carriers on all four kernels: the same substrate-core module crosses four-way over the in-memory, segmented-FILE, and Postgres carriers, so content-addressing survives a process and persistence boundary, not only memory — one engine, no parallel paths.")
     (connected-tissue "Harmonizes with form/fourth-arm-bands.txt (the floor source for four-way coverage), hati-os.form (the kernel surface), the native executor proof ledger, and commit evidence so the sister nodes name one current floor and one next gap.")
-    (must-carry content-addressed-intern durable-named-cells memory-carrier file-carrier postgres-carrier effect-once-let single-walk-comparison sequenced-effects native-host-io native-text-write native-file-append)
+    (must-carry content-addressed-intern durable-named-cells memory-carrier file-carrier postgres-carrier effect-once-let recursion-safe-let single-walk-comparison sequenced-effects native-host-io native-text-write native-file-append)
     (proof-shape same-shape-same-nodeid durable-content-key-roundtrip four-way-0-divergent))
 
   (floor
@@ -27,13 +27,14 @@
       host-io-fs-carriers-tags-55-63            # open/read/write/close/lseek/mkdir/rmdir/unlink/rename/size/append/slice
       host-io-real-roundtrip                    # real filesystem write -> read crosses four-way deterministically (band hostio-roundtrip)
       native-write-file-text-tag-104            # overwrite/truncate text write floor (band write-file-text)
-      native-file-append)                       # append log write floor (band file-append)
+      native-file-append                        # append log write floor (band file-append)
+      recursion-safe-let-frame-tags-106-107)    # a stored let binds on the call's value stack (LETF push + FARG read), so a recursive re-entry stores to its own frame and the deepest frame cannot clobber an outer binding read after the descent (band recursive-let-clobber)
     (current-unsupported
       file_mtime scan_run                       # broader host-io read/scan recipes
-      segmented-file-carrier-four-way           # gated on threaded carrier-store receipts beyond the minimum write floor
+      segmented-file-carrier-four-way           # gated on the threaded carrier-store band itself; the binding that threads effectful values through a recursive carrier loop is now recursion-safe (frame let)
       postgres-carrier-four-way))               # gated on the broader host-io recipes
 
   (next-step
     (sentence "Land the remaining host-io read/scan recipes, then substrate-core threaded over the segmented-FILE carrier crosses four-way, then Postgres.")
     (gate file_mtime scan_run segmented-file-carrier-four-way)
-    (why "Statement-level effects already fire once (sequenced bare-do, tag 69), operand-level effects already fire once (single-walk eq/lt, tags 102/103), nested do-lets snapshot effecting values, and the minimum write floor now includes write_file_text plus append. The next carrier proof is no longer basic writing; it is threaded durable file-store receipts, mtime/scan observation, and then the Postgres carrier over the same content-key discipline the memory carrier already proves four-way.")))
+    (why "Statement-level effects already fire once (sequenced bare-do, tag 69), operand-level effects already fire once (single-walk eq/lt, tags 102/103), nested do-lets bind effecting values once on the call's value stack so they survive a recursive descent (frame let, tags 106/107), and the minimum write floor now includes write_file_text plus append. The next carrier proof is no longer basic writing or recursion-safe binding; it is threaded durable file-store receipts, mtime/scan observation, and then the Postgres carrier over the same content-key discipline the memory carrier already proves four-way.")))

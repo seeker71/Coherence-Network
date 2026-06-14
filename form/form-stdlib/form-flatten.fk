@@ -94,6 +94,19 @@
 (defn flt-current-fidx (env) (flt-env-row-value (flt-assoc (flt-fidxq) env) 0))
 (defn flt-slot (env) (fk-lit (add 128 (add (mul (flt-current-fidx env) 32) (len env)))))
 
+; Frame-relative let binding — the recursion-safe successor to the global RAM
+; slot. A stored let pushes its value ONCE onto the call's value stack (the same
+; fk_vs frame the packed ARG already rides) and binds a frame-relative read
+; (FARG offset) for the rest of the do. Because every call gets its own frame
+; pointer, a recursive re-entry stores to its OWN slot — the deepest frame can no
+; longer clobber an outer frame's binding. ARG is FARG offset 0; the k-th frame
+; let lives at offset k. flt-current-letdepth counts the frame lets already
+; active in this frame, so the next one binds at depth+1.
+(defn flt-letdepth-q () "(defn-letdepth)")
+(defn flt-current-letdepth (env) (flt-env-row-value (flt-assoc (flt-letdepth-q) env) 0))
+(defn fk-farg (off) (fk-node 106 (fk-lit off)))
+(defn fk-letf (value body) (fk-node 107 (ms-intern value body)))
+
 (defn flt-mkop (row a b)
     (if (eq (nth row 1) 1) (fk-node (nth row 2) a)
         (fk-node (nth row 2) (ms-intern a b))))
@@ -274,20 +287,26 @@
     (if (str_eq op "http_get") 1 0)))))))))))))))
 (defn flt-do-let-done (name op s ve fns env val)
     (if (eq (flt-do-let-store-op op fns env) 1)
-        (flt-do-let-store name s ve fns env val (flt-slot env))
+        (flt-do-let-frame name s ve fns env val (add (flt-current-letdepth env) 1))
         (flt-do2 s (fp-skip s (fp-close s (nth ve 1))) fns
                  (cons (list name (nth ve 0)) env) val)))
 (defn flt-do-let-store-op (op fns env)
     (if (eq (flt-do-let-effect-op op) 1) 1
         (if (eq (flt-current-recursive env) 1) 0
             (if (eq (len (flt-assoc op fns)) 0) 0 1))))
-(defn flt-do-let-store (name s ve fns env val slot)
-    (flt-do-let-store-rest
-        (fk-store slot (nth ve 0))
+; The stored let lowers to a scoped frame push: LETF walks the value once, holds
+; it on the call's value stack, walks the rest of the do with a frame-relative
+; binding, then pops. Recursion-safe by construction — the outer frame's slot is
+; below the callee's frame pointer, so a deeper re-entry cannot overwrite it.
+(defn flt-do-let-frame (name s ve fns env val offset)
+    (flt-do-let-frame-rest
+        (nth ve 0)
         (flt-do2 s (fp-skip s (fp-close s (nth ve 1))) fns
-                 (cons (list name (fk-load slot)) env) val)))
-(defn flt-do-let-store-rest (store rest)
-    (list (flt-sequence store (nth rest 0)) (nth rest 1)))
+                 (cons (list name (fk-farg offset))
+                       (cons (list (flt-letdepth-q) offset) env))
+                 val)))
+(defn flt-do-let-frame-rest (value rest)
+    (list (fk-letf value (nth rest 0)) (nth rest 1)))
 
 ; two operands, then the lowering picked by selector k (lowerings are rules,
 ; not tag rows — they BUILD shapes instead of naming one)
