@@ -62,7 +62,7 @@
   (embodiment
     "tool-embodiment.fk projects REAL per-tool runner telemetry (lane, locality, completed, failed, runtime-ms) into ctl-floor-oracle rows, deriving cost, nutrition, sovereignty, trust, and confidence honestly off measurement, then asks this sideband's proven gate which lane holds the body."
     (recipe form/form-stdlib/tool-embodiment.fk)
-    (proof form/form-stdlib/tests/tool-embodiment-band.fk -> 63 four-way)
+    (proof form/form-stdlib/tests/tool-embodiment-band.fk -> 127 four-way)
     (rule "a Form-native lane embodies — replaces the external tool — only when ctl-fo-ready? clears sovereignty/trust/confidence >= 70 AND it is cheaper than the incumbent; until its measured success rate crosses the gate, the external lane keeps the body. No assertion replaces a tool; only a measured receipt does."))
 
   (next-step

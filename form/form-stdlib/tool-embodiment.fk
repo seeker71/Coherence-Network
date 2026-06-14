@@ -85,3 +85,23 @@
 ; ready, cheaper challenger displaces it.
 (defn te-verdict (rows) (ctl-floor-winner rows))
 (defn te-embodied-path (rows) (ctl-fo-path (te-verdict rows)))
+
+; --- carrier entry: consume the (tool, lane) telemetry rows the runner emits ---
+; The live agent runner, grouped per lane, yields one row per lane shaped
+;   (lane locality completed failed runtime-ms)
+; — exactly RuntimeEvent telemetry summed by (tool, executor). The carrier
+; (Python fan-out) only groups the events into these rows; the projection and
+; the verdict stay here in Form. te-row->oracle lifts one raw row; te-rows lifts
+; a whole list; te-embody-lanes returns which lane holds the body; and
+; te-lanes-ready? says whether that lane is a sovereign (ready) one.
+(defn te-row->oracle (r)
+    (te-telemetry-oracle (nth r 0) (nth r 1) (nth r 2) (nth r 3) (nth r 4)))
+; explicit monomorphic recursion — NOT (map te-row->oracle rows): a function
+; passed to map does not cross the fourth arm (fkwu) yet, so the walk names its
+; callee directly and stays four-way.
+(defn te-rows (rows)
+    (if (nil? rows)
+        (empty)
+        (cons (te-row->oracle (head rows)) (te-rows (tail rows)))))
+(defn te-embody-lanes (rows) (te-embodied-path (te-rows rows)))
+(defn te-lanes-ready? (rows) (te-ready? (te-verdict (te-rows rows))))
