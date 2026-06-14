@@ -1,0 +1,152 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/model-vitality-native-http-capture-20260614",
+  "commit_scope": "Add kernel-native HTTP capture rows to model-vitality, a focused Form proof band, and a live Go/Rust native HTTPS probe for public pulse/runtime row evidence.",
+  "files_owned": [
+    "form/form-stdlib/model-vitality.fk",
+    "form/form-stdlib/tests/model-vitality-native-http-band.fk",
+    "scripts/model_vitality_native_http_capture_probe.sh",
+    "docs/coherence-substrate/model-vitality.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/INDEX.md",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/model_executor_run_ledger/2026-06-14_model_vitality_native_http_capture.json",
+    "docs/system_audit/model_executor_run_ledger/legacy-jsonl-0404-8c3acd211636.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      {
+        "command": "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/json.fk form-stdlib/model-vitality.fk form-stdlib/tests/model-vitality-native-http-band.fk",
+        "result": "pass",
+        "output": "core.fk+json.fk+model-vitality.fk+model-vitality-native-http-band.fk -> 4095; 1 ok, 0 divergent.",
+        "kernel_scope": "3-kernel only Go/Rust/TypeScript sibling kernels; deterministic no-network grammar proof; fourth-arm external HTTP carrier is a named gap"
+      },
+      {
+        "command": "scripts/model_vitality_native_http_capture_probe.sh",
+        "result": "pass",
+        "output": "PASS native-http-capture go=127 rust=127 cache=.cache/model-vitality-native-http/20260614T092606Z/native-http-capture-summary.txt; PASS go api_status=200 api_capture_authority=kernel-native-http-get api_bytes=695 api_latency_ms=152 runtime_status=200 runtime_router=native-kernel runtime_handler=api_runtime_endpoints_summary runtime_python_authority=false runtime_latency_ms=77; PASS rust api_status=200 api_capture_authority=kernel-native-http-get api_bytes=695 api_latency_ms=146 runtime_status=200 runtime_router=native-kernel runtime_handler=api_runtime_endpoints_summary runtime_python_authority=false runtime_latency_ms=138; GAP typescript-http-get native-carrier=missing current=culled-shell-projection next=non-shell-node-or-kernel-http-client",
+        "kernel_scope": "live Go/Rust native http_get over public HTTPS; TypeScript/fourth-arm non-shell external HTTP named as gap"
+      }
+    ]
+  },
+  "live_native_http_probe": {
+    "status": "pass",
+    "observed_at": "2026-06-14T09:26:06Z",
+    "cache": ".cache/model-vitality-native-http/20260614T092606Z/native-http-capture-summary.txt",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/pulse/now",
+      "https://api.coherencycoin.com/api/runtime/endpoints/summary?limit=5"
+    ],
+    "go": {
+      "verdict": 127,
+      "api_status": 200,
+      "api_capture_authority": "kernel-native-http-get",
+      "api_bytes": 695,
+      "api_latency_ms": 152,
+      "runtime_status": 200,
+      "runtime_router": "native-kernel",
+      "runtime_handler": "api_runtime_endpoints_summary",
+      "runtime_python_authority": "false",
+      "runtime_latency_ms": 77
+    },
+    "rust": {
+      "verdict": 127,
+      "api_status": 200,
+      "api_capture_authority": "kernel-native-http-get",
+      "api_bytes": 695,
+      "api_latency_ms": 146,
+      "runtime_status": 200,
+      "runtime_router": "native-kernel",
+      "runtime_handler": "api_runtime_endpoints_summary",
+      "runtime_python_authority": "false",
+      "runtime_latency_ms": 138
+    },
+    "named_gaps": [
+      "TypeScript http_get currently shells through curl and is not accepted as native HTTPS capture evidence.",
+      "Fourth-arm external HTTPS channel support is still absent from this proof."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "CI not run yet in this local evidence record."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [],
+    "notes": "Live public endpoints were read by Go/Rust kernel-native http_get. No deploy was performed by this branch yet."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local deterministic Form proof and live Go/Rust native HTTPS probe passed; PR/CI and deploy catch-up still need to run after push."
+  },
+  "idea_ids": [
+    "form-native-model-data-as-cells",
+    "body-readable-model-vitality",
+    "kernel-native-http-capture"
+  ],
+  "spec_ids": [
+    "coherence-substrate-model-vitality"
+  ],
+  "task_ids": [
+    "2026-06-14-model-vitality-native-http-capture"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5-codex"
+  },
+  "evidence_refs": [
+    "form/form-stdlib/tests/model-vitality-native-http-band.fk -> 4095 sibling-kernel deterministic proof",
+    "scripts/model_vitality_native_http_capture_probe.sh -> Go/Rust kernel-native http_get public HTTPS witness",
+    ".cache/model-vitality-native-http/20260614T092606Z/native-http-capture-summary.txt"
+  ],
+  "change_files": [
+    "form/form-stdlib/model-vitality.fk",
+    "form/form-stdlib/tests/model-vitality-native-http-band.fk",
+    "scripts/model_vitality_native_http_capture_probe.sh",
+    "docs/coherence-substrate/model-vitality.form",
+    "docs/coherence-substrate/form-native-models.form",
+    "docs/coherence-substrate/INDEX.md",
+    "scripts/INDEX.md",
+    "MANIFEST.md",
+    "docs/system_audit/commit_evidence_2026-06-14_model_vitality_native_http_capture.json",
+    "docs/system_audit/model_executor_run_ledger/2026-06-14_model_vitality_native_http_capture.json",
+    "docs/system_audit/model_executor_run_ledger/legacy-jsonl-0404-8c3acd211636.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Model-vitality can now represent kernel-native HTTP response dicts as explicit Form capture rows, derive production pulse/runtime rows from live HTTPS responses, and prove public capture through Go/Rust native http_get without curl or Python as the data carrier.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/pulse/now",
+      "https://api.coherencycoin.com/api/runtime/endpoints/summary?limit=5"
+    ],
+    "test_flows": [
+      "Focused deterministic Form band proves native HTTP capture row validation, JSON lifting, case-insensitive header reads, and refusal cases.",
+      "Live public probe source-compiles core, invokes Go and Rust kernels, and has each kernel fetch public HTTPS with native http_get."
+    ]
+  }
+}

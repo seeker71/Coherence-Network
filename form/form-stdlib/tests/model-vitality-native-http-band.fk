@@ -1,0 +1,95 @@
+; preludes: form-stdlib/core.fk form-stdlib/json.fk form-stdlib/model-vitality.fk
+;
+; model-vitality-native-http-band - kernel-native HTTP capture row proof.
+;
+; Floor: model-vitality can lift the dict shape returned by kernel-native
+; http_get into explicit capture rows, then derive production pulse and runtime
+; telemetry rows from captured body/header data. This band uses deterministic
+; response dicts so all sibling kernels prove the grammar without reaching the
+; public network.
+;
+; North star: external HTTPS slices enter the body as kernel-native channel
+; receipts with attribution, status, headers, latency, byte count, and payload.
+; Shell and CLI probes can orchestrate a witness run, but the data row and route
+; semantics belong to Form/kernel tissue.
+;
+; Verdict 4095 when native HTTP capture grammar holds.
+
+(do
+    (let floor (mv-floor))
+    (let north (mv-north-star))
+    (let pulse-url "https://api.coherencycoin.com/api/pulse/now")
+    (let runtime-url "https://api.coherencycoin.com/api/runtime/endpoints/summary?limit=5")
+    (let pulse-body "{\"instance_id\":\"local\",\"overall\":\"strained\",\"silences\":2,\"as_of\":\"2026-06-14T09:12:00Z\",\"sample_duration_ms\":54}")
+    (let runtime-body "{\"window_seconds\":3600,\"endpoints\":[]}")
+
+    (let pulse-response (_dict_new
+        "status_code" 200
+        "body" pulse-body
+        "error" ""
+        "duration_ms" 54
+        "headers" (list (mv-http-header "content-type" "application/json"))))
+    (let runtime-response (_dict_new
+        "status_code" 200
+        "body" runtime-body
+        "error" ""
+        "duration_ms" 145
+        "headers" (list
+            (mv-http-header "X-Form-Handler" "api_runtime_endpoints_summary")
+            (mv-http-header "X-Form-Router" "native-kernel")
+            (mv-http-header "X-Form-Python-Authority" "false")
+            (mv-http-header "Content-Type" "application/json"))))
+
+    (let capture (mv-native-http-capture pulse-url pulse-response floor north))
+    (let c0 (if (mv-native-http-capture-valid? capture) 1 0))
+    (let c1 (if (eq (mv-native-http-capture-status capture) 200)
+                (if (gt (mv-native-http-capture-body-bytes capture) 0) 2 0)
+                0))
+
+    (let pulse (mv-native-http-pulse-sample "api-pulse" pulse-url pulse-response floor north))
+    (let c2 (if (mv-production-pulse-valid? pulse) 4 0))
+    (let c3 (if (str_eq (mv-production-pulse-state pulse) "silent") 8 0))
+    (let c4 (if (str_eq (mv-production-wellness-state pulse) "strained") 16 0))
+
+    (let runtime (mv-native-http-runtime-telemetry runtime-url runtime-response floor north))
+    (let c5 (if (mv-production-runtime-valid? runtime) 32 0))
+    (let c6 (if (str_eq (mv-production-runtime-router runtime) "native-kernel")
+                (if (str_eq (mv-production-runtime-python-authority runtime) "false") 64 0)
+                0))
+    (let c7 (if (str_eq (mv-production-release-state runtime) "fast") 128 0))
+
+    (let bad-status (_dict_new
+        "status_code" 0
+        "body" ""
+        "error" "dns failure"
+        "duration_ms" 12
+        "headers" (list)))
+    (let bad-capture (mv-native-http-capture pulse-url bad-status floor north))
+    (let c8 (if (not (mv-native-http-capture-valid? bad-capture)) 256 0))
+
+    (let bad-runtime-response (_dict_new
+        "status_code" 200
+        "body" runtime-body
+        "error" ""
+        "duration_ms" 145
+        "headers" (list
+            (mv-http-header "x-form-handler" "api_runtime_endpoints_summary")
+            (mv-http-header "x-form-router" "native-kernel")
+            (mv-http-header "x-form-python-authority" "true"))))
+    (let bad-runtime (mv-native-http-runtime-telemetry runtime-url bad-runtime-response floor north))
+    (let c9 (if (not (mv-production-runtime-valid? bad-runtime)) 512 0))
+
+    (let slow-response (_dict_new
+        "status_code" 200
+        "body" runtime-body
+        "error" ""
+        "duration_ms" 1501
+        "headers" (list
+            (mv-http-header "x-form-handler" "api_runtime_endpoints_summary")
+            (mv-http-header "x-form-router" "native-kernel")
+            (mv-http-header "x-form-python-authority" "false"))))
+    (let slow-runtime (mv-native-http-runtime-telemetry runtime-url slow-response floor north))
+    (let c10 (if (str_eq (mv-production-release-state slow-runtime) "slow") 1024 0))
+    (let c11 (if (str_eq (mv-kind-native-http-capture) "model/native-http-capture") 2048 0))
+
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11)))
