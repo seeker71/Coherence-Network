@@ -1,0 +1,59 @@
+; chart-cast.fk — cast a natal chart (the edge-set) from a birth-moment.
+;
+; modality-lattices.form's deepest line: a chart is not properties ON a cell — it is the
+; EDGES between the person-cell and the planet / sign / gate cells. "Sun in Capricorn at
+; 10 deg, Gate 38" is an edge. The body now computes the luminaries and the karmic axis
+; (ephemeris-sun/moon/nodes), reduces a longitude to a sign (tropical + sidereal), and
+; places it on a gate (hd-mandala-wheel). This is the one recipe that composes them — the
+; CAST g8 named — turning a date into the edge-set.
+;
+;   (cast-chart y m d)  -> the placements: for Sun, Moon, Rahu, Ketu, each a tuple
+;                          (body, ecliptic-longitude, tropical-sign, sidereal-sign, gate)
+;   (sun-placement ...) / (moon-placement ...) / (rahu-placement ...) / (ketu-placement ...)
+;   (moon-gate / rahu-gate / ketu-gate y m d)  -> each body's activated gate (via the wheel)
+;   (chart-phase y m d) -> the lunar phase octant (0 new .. 4 full)
+;
+; The bodies it casts are the ones the body computes natively today (the two luminaries +
+; the nodes). The planets (Mercury..Saturn) join as their ephemeris rows land — geocentric
+; longitude wants heliocentric Earth+planet and an atan2, a named next row. Positions stay
+; in the direct-experience / mystery lane; the cast is the empirical edge-set, the reading
+; stays human.
+;
+; preludes: form-stdlib/core.fk form-stdlib/guidance-channel.fk form-stdlib/celestial-pole-channel.fk form-stdlib/trig.fk form-stdlib/ephemeris-sun.fk form-stdlib/ephemeris-moon.fk form-stdlib/ephemeris-nodes.fk form-stdlib/iching-channel.fk form-stdlib/hd-mandala-wheel.fk
+;
+
+(do
+    ;; the gate each body activates — its longitude placed on the rave mandala wheel
+    (defn moon-gate (y m d) (gate-at-longitude (moon-longitude y m d)))
+    (defn rahu-gate (y m d) (gate-at-longitude (rahu-longitude y m d)))
+    (defn ketu-gate (y m d) (gate-at-longitude (ketu-longitude y m d)))
+
+    ;; a placement edge: (body, longitude, tropical-sign, sidereal-sign, gate)
+    (defn placement (body lon trop sid gate) (list body lon trop sid gate))
+    (defn pl-body (p) (nth p 0))
+    (defn pl-lon  (p) (nth p 1))
+    (defn pl-trop (p) (nth p 2))
+    (defn pl-sid  (p) (nth p 3))
+    (defn pl-gate (p) (nth p 4))
+
+    ;; each body's placement
+    (defn sun-placement (y m d)
+        (placement "Sun"  (sun-longitude y m d) (sun-sign-tropical y m d) (sun-sign-sidereal y m d) (sun-gate y m d)))
+    (defn moon-placement (y m d)
+        (placement "Moon" (moon-longitude y m d) (moon-sign-tropical y m d) (moon-sign-sidereal y m d) (moon-gate y m d)))
+    (defn rahu-placement (y m d)
+        (placement "Rahu" (rahu-longitude y m d) (rahu-sign-tropical y m d) (rahu-sign-sidereal y m d) (rahu-gate y m d)))
+    (defn ketu-placement (y m d)
+        (placement "Ketu" (ketu-longitude y m d) (ketu-sign-tropical y m d) (ketu-sign-sidereal y m d) (ketu-gate y m d)))
+
+    ;; the cast — the edge-set of the birth-moment
+    (defn cast-chart (y m d)
+        (list (sun-placement y m d) (moon-placement y m d) (rahu-placement y m d) (ketu-placement y m d)))
+    (defn chart-bodies () 4)
+
+    ;; the lunar phase, part of the chart
+    (defn chart-phase (y m d) (moon-phase-octant y m d))
+
+    (defn chart-cast-teaching () "lc-cross-modal-unity")
+
+    0)

@@ -117,8 +117,10 @@
 ;     (the Moon's longitude, sign, and lunar phase — verified at a real lunation's four
 ;     quarters), ephemeris-nodes.fk (Rahu/Ketu, retrograde, 180 apart). Gate activation lands
 ;     too: hd-mandala-wheel.fk carries the attested rave-mandala wheel (longitude -> gate),
-;     closing date -> Sun longitude -> gate -> meaning. The planets (Mercury..Saturn) are the
-;     next rows (more terms, same trig.fk footing); then cast / synastry.
+;     closing date -> Sun longitude -> gate -> meaning. And the CAST is native: chart-cast.fk
+;     composes the ephemeris + wheel + sign reduction into a date's edge-set (Sun/Moon/nodes
+;     placed in signs and on gates, plus the lunar phase). The planets (Mercury..Saturn) are
+;     the next rows (geocentric wants atan2); then synastry (two casts relating).
 ;   - pole-star selection is nearest-epoch; wrapping the full 25,772-year cycle is the next row.
 ;   - the 64, and each tradition's deeper tables (nakshatras, houses, lines/profiles), fill in by
 ;     row as their attested readings are grounded.
