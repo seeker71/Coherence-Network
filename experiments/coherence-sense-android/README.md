@@ -162,6 +162,19 @@ summary counters can lift speech, vision, and multimodal alignment to
 native-first routing; heldout wins are still required before retiring their
 teachers.
 
+To write source-backed oracle emission cycles from the live witness counters:
+
+```bash
+python3 scripts/witness_oracle_emission_ledger.py --cycles 2 --interval 1
+```
+
+That reads `http://localhost:8800/state`, derives summary-only STT, vision,
+multimodal, and GPU label rows from the active counters, writes
+`.cache/witness-oracle-emissions/records/*.json`, and updates
+`.cache/witness-oracle-emissions/latest.json`. If the phone is not actively
+sharing (`present=false`) or any mic/camera/GPU counter is missing, it writes a
+blocked receipt and exits non-zero instead of storing a pretend teacher sample.
+
 ## Hati mesh identity + channels
 
 On first launch, the app creates a stable install-scoped organ id such as

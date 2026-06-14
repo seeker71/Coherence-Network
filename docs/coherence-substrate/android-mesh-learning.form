@@ -29,8 +29,10 @@
   (receipt-command
     (once "python3 scripts/android_mesh_learning_receipt.py --start-app")
     (continuous "python3 scripts/android_mesh_learning_receipt.py --start-app --loop --interval 60")
+    (oracle-emission "python3 scripts/witness_oracle_emission_ledger.py --cycles 2 --interval 1")
     (output ".cache/android-mesh-learning/<stamp>/android-mesh-learning-summary.json")
-    (latest ".cache/android-mesh-learning/latest.json"))
+    (latest ".cache/android-mesh-learning/latest.json")
+    (oracle-latest ".cache/witness-oracle-emissions/latest.json"))
 
   (organs
     (android-phone adb coherence-sense sensor audio video gpu network location)
@@ -61,12 +63,13 @@
     (mac-witness "experiments/coherence-sense-android/macos-witness-service.sh install --mode recognition --port 8800")
     (android-app "adb shell am start -n com.coherence.sense/.MainActivity")
     (receipt-loop "python3 scripts/android_mesh_learning_receipt.py --start-app --loop --interval 60")
+    (oracle-emission-loop "python3 scripts/witness_oracle_emission_ledger.py --cycles 2 --interval 1")
     (form-native-receipt "form/form-stdlib/witness-state-receipt.fk")
     (handoff "running service should write native substrate ledger records continuously, with JSON summaries as export/cache"))
 
   (next-physical-gaps
-    (mic "actual whisper/STT carrier runs under the Form process-row contract across enough heldout samples")
-    (camera "actual vision carrier runs under the Form process-row contract across enough heldout samples")
+    (mic "full whisper/STT carrier labels raw-free summary windows under the existing process-row contract")
+    (camera "full vision carrier labels raw-free summary windows under the existing process-row contract")
     (accelerator "EGL readback summaries extended to live Vulkan/NNAPI kernel receipts compared with CPU/oracle lanes")
-    (stream "Mac witness event stream writes the proven emission-cycle rows as native substrate receipt cells")
+    (stream "install the oracle emission loop beside the Mac witness service for 24/7 records")
     (retirement "one narrow category with enough heldout native wins to stop sampling the teacher")))
