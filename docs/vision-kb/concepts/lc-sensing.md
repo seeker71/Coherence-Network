@@ -112,4 +112,4 @@ These are not questions to answer but questions to carry in the body:
 
 ## Connected Frequencies
 
-→ lc-pulse, lc-attunement, lc-stillness, lc-vitality, lc-field-sensing, lc-instruments, lc-sense-organ-ripening
+→ lc-pulse, lc-attunement, lc-stillness, lc-vitality, lc-field-sensing, lc-instruments
