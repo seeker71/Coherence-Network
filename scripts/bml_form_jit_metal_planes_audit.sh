@@ -6,12 +6,12 @@
 # catalog and proves the two committed metal planes:
 #
 #   macos-arm64    arm64-apple-macosx      Mach-O relocatable + arm64 assembly
-#   android-arm64  aarch64-linux-android   ELF relocatable + aarch64 assembly
+#   android-arm64  aarch64-linux-android   ELF relocatable/executable + aarch64 assembly
 #
 # Clang is an oracle/sample generator for the broad C surfaces. Runtime JIT on
 # Android must not depend on clang, so this audit also proves the Form-native
-# arm64 assembler/lowerer lane and Form-native Mach-O/ELF object wrappers before
-# checking clang output.
+# arm64 assembler/lowerer lane, Form-native Mach-O/ELF object wrappers, and the
+# Form-native Android ELF executable shape before checking clang output.
 #
 # Both native C surfaces are exercised against the oracle:
 #   - BML source -> Hati loadable table -> universal C binary
@@ -122,6 +122,26 @@ if ! grep -q "fourth arm: 1" "$native_elf_out"; then
   exit 1
 fi
 echo "PASS  form-native-elf-object: arm64 bytes -> ELF64/aarch64 relocatable object -> 31 four-way"
+
+native_elf_exec_out="$work/form-native-elf-exec.out"
+(
+  cd "$FORM"
+  ./validate.sh \
+    form-stdlib/core.fk \
+    form-stdlib/form-elf-exec.fk \
+    form-stdlib/tests/form-elf-exec-band.fk > "$native_elf_exec_out"
+)
+if ! grep -q "63" "$native_elf_exec_out"; then
+  cat "$native_elf_exec_out"
+  echo "FAIL: Form-native ELF executable proof did not return 63" >&2
+  exit 1
+fi
+if ! grep -q "fourth arm: 1" "$native_elf_exec_out"; then
+  cat "$native_elf_exec_out"
+  echo "FAIL: Form-native ELF executable proof did not run four-way on fkwu" >&2
+  exit 1
+fi
+echo "PASS  form-native-elf-executable: _start write+exit bytes -> ELF64/aarch64 executable -> 63 four-way"
 
 oracle_learning_out="$work/jit-oracle-learning.out"
 (
@@ -308,6 +328,7 @@ cat > "$native_obj_driver" <<'FK'
     (let code (lo-compile prog 4))
     (print (str_concat "MACHO_NATIVE " (hxb (mo-object code))))
     (print (str_concat "ELF_NATIVE " (hxb (elf-object code))))
+    (print (str_concat "ELF_EXEC_NATIVE " (hxb (elf-exec (elf-exec-write-exit-code (list 70 79 82 77 32 69 76 70 10) 42)))))
     0)
 FK
 
@@ -319,23 +340,29 @@ FK
     form-stdlib/form-lower.fk \
     form-stdlib/form-macho.fk \
     form-stdlib/form-elf.fk \
+    form-stdlib/form-elf-exec.fk \
     "$native_obj_driver" > "$native_obj_out"
 )
 
 macho_native_hex="$(grep '^MACHO_NATIVE ' "$native_obj_out" | sed 's/^MACHO_NATIVE //')"
 elf_native_hex="$(grep '^ELF_NATIVE ' "$native_obj_out" | sed 's/^ELF_NATIVE //')"
-if [[ -z "$macho_native_hex" || -z "$elf_native_hex" ]]; then
+elf_exec_native_hex="$(grep '^ELF_EXEC_NATIVE ' "$native_obj_out" | sed 's/^ELF_EXEC_NATIVE //')"
+if [[ -z "$macho_native_hex" || -z "$elf_native_hex" || -z "$elf_exec_native_hex" ]]; then
   cat "$native_obj_out"
-  echo "FAIL: Form-native object emitter did not return Mach-O and ELF hex rows" >&2
+  echo "FAIL: Form-native emitter did not return Mach-O object, ELF object, and ELF executable hex rows" >&2
   exit 1
 fi
 
 macho_native_obj="$work/form-native-macos-arm64.o"
 elf_native_obj="$work/form-native-android-arm64.o"
+elf_exec_native="$work/form-native-android-arm64.elf"
 printf '%s' "$macho_native_hex" | xxd -r -p > "$macho_native_obj"
 printf '%s' "$elf_native_hex" | xxd -r -p > "$elf_native_obj"
+printf '%s' "$elf_exec_native_hex" | xxd -r -p > "$elf_exec_native"
+chmod +x "$elf_exec_native"
 macho_native_desc="$(file "$macho_native_obj")"
 elf_native_desc="$(file "$elf_native_obj")"
+elf_exec_native_desc="$(file "$elf_exec_native")"
 if ! grep -Eq "Mach-O.*arm64" <<<"$macho_native_desc"; then
   echo "FAIL: Form-native Mach-O object shape '$macho_native_desc' missing Mach-O arm64" >&2
   exit 1
@@ -344,8 +371,32 @@ if ! grep -Eq "ELF 64-bit.*(ARM aarch64|AArch64)" <<<"$elf_native_desc"; then
   echo "FAIL: Form-native ELF object shape '$elf_native_desc' missing ELF aarch64" >&2
   exit 1
 fi
+if ! grep -Eq "ELF 64-bit.*executable.*(ARM aarch64|AArch64)" <<<"$elf_exec_native_desc"; then
+  echo "FAIL: Form-native ELF executable shape '$elf_exec_native_desc' missing ELF executable aarch64" >&2
+  exit 1
+fi
 printf 'PASS  plane=macos-arm64 surface=form-native-object emitter=form-macho object=%s\n' "$macho_native_desc"
 printf 'PASS  plane=android-arm64 surface=form-native-object emitter=form-elf object=%s\n' "$elf_native_desc"
+printf 'PASS  plane=android-arm64 surface=form-native-executable emitter=form-elf-exec executable=%s\n' "$elf_exec_native_desc"
+
+elf_exec_runner="${FORM_ELF_EXEC_RUNNER:-}"
+if [[ -z "$elf_exec_runner" ]]; then
+  elf_exec_runner="$(command -v qemu-aarch64 || command -v qemu-aarch64-static || true)"
+fi
+if [[ -n "$elf_exec_runner" ]]; then
+  set +e
+  elf_exec_stdout="$("$elf_exec_runner" "$elf_exec_native" 2>"$work/form-native-elf-exec.stderr")"
+  elf_exec_rc=$?
+  set -e
+  elf_exec_stderr="$(cat "$work/form-native-elf-exec.stderr")"
+  if [[ "$elf_exec_rc" -ne 42 || "$elf_exec_stdout" != "FORM ELF" || -n "$elf_exec_stderr" ]]; then
+    echo "FAIL: Form-native ELF executable runner=$elf_exec_runner rc=$elf_exec_rc stdout='$elf_exec_stdout' stderr='$elf_exec_stderr'" >&2
+    exit 1
+  fi
+  echo "PASS  plane=android-arm64 surface=form-native-executable runner=$elf_exec_runner stdout='FORM ELF' stderr='' exit=42"
+else
+  echo "SKIP  plane=android-arm64 surface=form-native-executable runner=qemu-aarch64 unavailable; executable shape inspected"
+fi
 
 compile_surface() {
   local plane="$1"
@@ -390,4 +441,4 @@ compile_surface "android-arm64" "aarch64-linux-android" "ELF 64-bit.*(ARM aarch6
 compile_surface "android-arm64" "aarch64-linux-android" "ELF 64-bit.*(ARM aarch64|AArch64)" \
   "form-jit-lowered" "$lowered_c" "fk_walk|_fk_walk"
 
-echo "ok — Form-native JIT lane proof holds four-way; Form-native Mach-O/ELF object floors hold four-way; lowered residual cluster holds five-band four-way; oracle learning choice floor holds four-way; clang oracle assembly/object receipts cover every supported metal plane including lowered JIT"
+echo "ok — Form-native JIT lane proof holds four-way; Form-native Mach-O/ELF object floors and Android ELF executable shape hold four-way; lowered residual cluster holds five-band four-way; oracle learning choice floor holds four-way; clang oracle assembly/object receipts cover every supported metal plane including lowered JIT"
