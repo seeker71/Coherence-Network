@@ -306,6 +306,18 @@ xpath fks 9
 # (storage-put → (carrier-put carrier) indirect call) both ride the fourth arm.
 content-address fks 1111111111
 substrate-core fks 11111
+
+# ── host-io lane — first real-carrier round-trip on the fourth arm ──
+# substrate-core proved durable interning four-way over the in-memory carrier;
+# real filesystem io was 3-kernel-only (the named "host io" wall). temp_dir is
+# now a native fkwu arm (tag 101, fk_tempdir reads $TMPDIR), joining the existing
+# fs carriers (tags 55..63). hostio-roundtrip writes "ABC" then reads it back
+# over the live filesystem and crosses four-way deterministically. The remaining
+# wall is effect-once semantics: fkwu inlines let and drops bare do-statements,
+# and eq/and walk an operand twice, so a side-effecting op re-fires unless walked
+# exactly once — write_file_text/file_mtime/scan_run and the segmented-FILE and
+# Postgres carriers wait on let-effect-once / do-sequencing reaching fkwu.
+hostio-roundtrip fks 111
 doc-xpath fks 10
 concept-xpath fks 9
 dns fks 5
