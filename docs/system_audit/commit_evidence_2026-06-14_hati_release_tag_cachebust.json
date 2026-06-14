@@ -1,0 +1,99 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/hati-release-tag-cachebust-20260614",
+  "commit_scope": "Route Hati OS public downloads through a fresh versioned GitHub release tag so public asset verification is not blocked by stale release-asset CDN redirects.",
+  "change_intent": "runtime_fix",
+  "idea_ids": [
+    "hati-os",
+    "hati-mesh",
+    "public-hati-assets"
+  ],
+  "spec_ids": [
+    "public-hati-assets",
+    "signed-mobile-release"
+  ],
+  "task_ids": [
+    "hati-release-tag-cachebust-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "release-publication"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "web/app/downloads/hati-os/[os]/[arch]/[name]/route.ts",
+    "docs/system_audit/commit_evidence_2026-06-14_hati_release_tag_cachebust.json"
+  ],
+  "change_files": [
+    "web/app/downloads/hati-os/[os]/[arch]/[name]/route.ts",
+    "docs/system_audit/commit_evidence_2026-06-14_hati_release_tag_cachebust.json"
+  ],
+  "evidence_refs": [
+    "https://github.com/seeker71/Coherence-Network/releases/tag/hati-os-v0.2.0-20260614",
+    ".cache/hati-os-public-assets/20260613T164434Z/hati-os-public-assets-summary.json",
+    "https://hati.earth/downloads/hati-os/macos/arm64/hati-os-macos-arm64.tar.zst",
+    "https://hati.earth/downloads/hati-os/android/arm64/hati-os-android-arm64.tar.zst",
+    "https://hati.earth/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-release.apk"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "gh release create hati-os-v0.2.0-20260614 --repo seeker71/Coherence-Network --target bb5998a44d9159bb043326d8c23489ffa6ae3a54 ...",
+      "gh release view hati-os-v0.2.0-20260614 --repo seeker71/Coherence-Network --json assets",
+      "curl -sSI -L https://github.com/seeker71/Coherence-Network/releases/download/hati-os-v0.2.0-20260614/hati-os-macos-arm64.tar.zst",
+      "npm run build"
+    ],
+    "notes": "The previous Hati route used the reused release tag hati-os-v0.1.0-20260613. GitHub release metadata showed the new assets after --clobber, but the plain release download URL still redirected to the old cached blob while a cache-busted query reached the new blob. A fresh tag avoids stale release-asset redirects. The new release contains macOS tarball size 2858 sha256 a9188bf37158bd85111141cef05de739b5eceaeecd87318d1cdcd9580f5b6cac, Android tarball size 2556719 sha256 63111afa8d25a48cdfef8eaa98b553d05b0e1ef2f97e3877d7f42bbd136fcd87, debug APK size 3567172 sha256 9466306a88c44d7042b990fd5054ce196aac5b2189fcfdf0dd51be29ddab37e9, and release APK size 2756021 sha256 c1f00e1468266f73095eaf63015b3bb1be2311c1d647c6810c586320caf726fe. Direct header probe against the new macOS release URL returned status 200, content-length 2858, and content-type application/octet-stream."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Branch not pushed at evidence creation time."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "The route points to a fresh release tag with the verified assets. Public verification requires deploy of this route change, then scripts/verify_hati_earth_public_assets.sh."
+  },
+  "phase_gate": {
+    "phase": "public-hati-assets",
+    "gate": "hati.earth downloads resolve to versioned release assets with expected lengths and MIME types.",
+    "state": "local-release-published-route-patch-ready",
+    "can_move_next_phase": false,
+    "next": "Push, merge, deploy, and rerun scripts/verify_hati_earth_public_assets.sh against hati.earth."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The public Hati download route redirects to the cache-safe v0.2.0 release tag, avoiding stale blobs on the reused v0.1.0 release URL.",
+    "public_endpoints": [
+      "https://hati.earth/downloads/hati-os/macos/arm64/hati-os-macos-arm64.tar.zst",
+      "https://hati.earth/downloads/hati-os/android/arm64/hati-os-android-arm64.tar.zst",
+      "https://hati.earth/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-release.apk"
+    ],
+    "test_flows": [
+      "Release metadata shows assets at the committed verifier sizes.",
+      "Next route build succeeds with the updated release tag.",
+      "After deploy, public Hati verifier passes DNS, asset headers, and app door checks."
+    ],
+    "summary": "The source fix is ready and the versioned public release exists. The final public proof lands after deploy."
+  }
+}
