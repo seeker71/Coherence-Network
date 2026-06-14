@@ -4,8 +4,8 @@ info:
   description: >
     Ask the Coherence Network's content-addressed substrate anything structural,
     and offer it ideas, concepts, teachings, documents, or tasks — no account,
-    no git. Reads are public; an offer is held as `offered` and grounded by
-    tending, never a direct edit to the body. Paste this schema into a Custom
+    no git. Reads are public; an offer is held as `offered` and grounded into the
+    body by tending. Paste this schema into a Custom
     GPT's Actions (Authentication: None).
   version: "2026-06-14"
 servers:
@@ -78,7 +78,7 @@ paths:
       description: >
         The submission is held as a content-addressed offer. Include
         `status: offered` and `claimed: false` in the markdown frontmatter; it is
-        grounded into the canonical body by tending, never a direct edit.
+        grounded into the canonical body by a tending act.
       requestBody:
         required: true
         content:
