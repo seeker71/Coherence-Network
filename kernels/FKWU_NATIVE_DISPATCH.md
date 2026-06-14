@@ -155,30 +155,50 @@ carried by the storage-port carrier — functional for proof, live for serve.
 
 ## Build order
 
-1. **Pure-slice offload** — Go invokes fkwu on the `/api/ideas` `shape_tree` +
-   `json_emit` slice with a `write_form_binary` bundle; fkwu returns the JSON.
-   Needs: fkwu reads the form-binary input format; the slice flattened as a band.
-   Smallest honest step, harvests the measured ~87 ms.
-   - **1a — landed:** the carrier→fkwu→value loop is real. `FkwuEval` in
-     [`form/form-kernel-go/fkwu_bridge.go`](../form/form-kernel-go/fkwu_bridge.go)
-     hands fkwu a pre-flattened band table + scalar input and returns the walked
-     value; `fkwu_bridge_test.go` proves it bit-for-bit against the in-process
-     walker on the four-way `content-address` band (emit → clang → flatten →
-     run, skipping where clang is absent). The Go serving kernel can now offload
-     a pure computation to fkwu.
-   - **1b — next:** the `argv[3] → fk_src` structured-input channel so the
-     offloaded slice can read request+rows, and the `/api/ideas` shape/emit slice
-     authored as a flattened band.
-2. **Value-binary ABI parity** — confirm/seat `read_form_binary`/`write_form_binary`
-   on the emitted walker so the bundle round-trips bit-for-bit with Go and Rust.
-3. **Host-bound carrier seam** — `host_carrier_op(handle, op_id, argv)` in
-   [`hati-os-kernel-emit.fk`](../form/form-stdlib/hati-os-kernel-emit.fk), one arm,
-   capability-scoped through the injected carrier handle; Go serves it from
-   `registerNative`.
-4. **Functional-carrier four-way band** — one DB-shaped handler authored against a
-   storage-port carrier, crossing four-way with the memory/functional carrier.
-5. **Live serve** — swap the injected carrier to the host-bound pg carrier behind
-   `X-Form-Native-Preview` in the kernel-router shadow lane. No front-door flip.
+The input ABI is **bytes in `fk_src`**, read by the offloaded program with
+`fk-buf` (tag 17 — "the BMF cursor's eye", [`hati-os-kernel.fk`](../form/form-stdlib/hati-os-kernel.fk)).
+fk_src is the transient byte organ the server main already stages a socket
+request into; a serialized request+rows bundle rides the same buffer. Text
+parsed in-recipe via [`form-parse.fk`](../form/form-stdlib/form-parse.fk) (already
+in fkwu's chain) is the first ABI — *not* the durable `write_form_binary` format,
+which would need a new fkwu read arm and its own round-trip proof. (Grok review,
+2026-06-14.)
+
+1. **Carrier→fkwu loop + input channel — landed.**
+   - **1a:** `FkwuEval` ([`form/form-kernel-go/fkwu_bridge.go`](../form/form-kernel-go/fkwu_bridge.go))
+     hands fkwu a pre-flattened table + scalar input; `TestFkwuOffloadBridge`
+     proves it bit-for-bit against the in-process walker on the four-way
+     `content-address` band.
+   - **1b-input:** `FkwuEvalWithInput` stages a byte bundle into `fk_src`
+     (argv[3]); `TestFkwuOffloadInput` proves a program that reads it with
+     `fk-buf` (`fkcount`) returns a value that DEPENDS on the bundle (0→0, 11→11,
+     26→26). The structured-input channel is real.
+2. **Persistent fkwu-server — the production shape.** Subprocess invocation
+   re-pays process spawn + table load per call, so it is the carrier proof, not
+   the hot path. Stand up `fkc-emit-server-universal` (load the table once, read
+   each request into `fk_src` over a socket); Go forwards the bundle to a
+   long-lived fkwu process and measures the true round-trip. (Grok: subprocess on
+   a hot route is theater.)
+3. **Input-carrying four-way proof harness — the honest gate.** An input-dependent
+   program cannot be proven four-way today: `form/validate.sh` invokes
+   `fkwu <table> 0` with no bundle, and `fk-buf`/tag-17 reads a settable buffer
+   only on fkwu. The gate: give Go/Rust/TS the same settable-input read, and feed
+   `validate.sh` the *identical* bundle to all four legs, comparing the result.
+   **Baking a fixed test input into the band is a trap** — the program proven
+   would not be the program served; the sibling value-identity contract demands
+   the same expression on the same input across all four. (Grok.)
+4. **The `/api/ideas` pure slice as such a program — profile first.** The
+   `shape_tree`+`json_emit` slice measured ~87 ms at limit=20 (scales with rows;
+   the committed 8 ms figure was limit=2). Before authoring, re-profile and
+   confirm that materializing rows *into the fk_src bundle* does not cost what
+   shaping them would — if marshalling ≈ shaping, the offload wins nothing and Go's
+   own JIT on that slice is the better path. (Grok's sharpest caveat.)
+5. **Live serve** — the offloaded slice behind `X-Form-Native-Preview` in the
+   kernel-router shadow lane. No front-door flip.
+
+(Steps 3–5 of the *host-bound carrier* facility — one capability-scoped seam for
+whole-handler-on-fkwu — remain as scoped above; the offload path here serves the
+latency goal first and needs no host call.)
 
 First route targets: a pure-compute `/api/utils/*` handler proves the loop with no
 I/O; `/api/ideas` is the first DB-backed route — offload first (step 1), whole-band

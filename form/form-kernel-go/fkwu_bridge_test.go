@@ -1,10 +1,12 @@
 // fkwu_bridge_test.go — proves the offload bridge end to end.
 //
-// The Go kernel emits + compiles fkwu in-process, flattens a real four-way band
-// (content-address) to a node-table, hands the table to fkwu via FkwuEval, and
-// confirms fkwu's value equals the in-process walker's. This is the carrier ->
-// fkwu -> value loop the offload path needs, proven on a band already in the
-// fourth-arm manifest.
+// The Go kernel emits + compiles fkwu in-process, then proves two things the
+// offload path needs, both against the emitted fourth kernel:
+//   - TestFkwuOffloadBridge: the carrier->fkwu->value loop on a real four-way
+//     band (content-address) matches the in-process walker bit-for-bit.
+//   - TestFkwuOffloadInput: the structured-input channel — a program that reads
+//     fk_src via fk-buf (here fkcount, which counts the staged bytes) returns a
+//     value that DEPENDS on the bundle the carrier passes (argv[3] -> fk_src).
 //
 // Skips when clang is absent (the toolchain that builds fkwu) — the repo's
 // runs-or-skips-when-tools-missing pattern, so the proof runs where the
@@ -46,30 +48,26 @@ func readFiles(t *testing.T, paths ...string) string {
 	return b.String()
 }
 
-func TestFkwuOffloadBridge(t *testing.T) {
-	clang, err := exec.LookPath("clang")
-	if err != nil {
-		t.Skip("clang not available — fkwu offload bridge proof skipped")
-	}
-
-	stdlib := filepath.Join("..", "form-stdlib")
+// emitChain returns the three sources whose walk emits fkwu and carries the
+// hati-os program/flatten surface (fkc-emit-universal, fkc-table-file,
+// fkcount-fns), skipping the test if any is missing.
+func emitChain(t *testing.T, stdlib string) (minimal, hatiKernel, hatiEmit string) {
+	t.Helper()
 	mustExist := func(p string) string {
 		if _, err := os.Stat(p); err != nil {
 			t.Skipf("missing source %s: %v", p, err)
 		}
 		return p
 	}
-	minimal := mustExist(filepath.Join(stdlib, "minimal-surface.fk"))
-	hatiKernel := mustExist(filepath.Join(stdlib, "hati-os-kernel.fk"))
-	hatiEmit := mustExist(filepath.Join(stdlib, "hati-os-kernel-emit.fk"))
-	formParse := mustExist(filepath.Join(stdlib, "form-parse.fk"))
-	formFlatten := mustExist(filepath.Join(stdlib, "form-flatten.fk"))
-	shim := mustExist(filepath.Join(stdlib, "fourth-shim.fk"))
-	band := mustExist(filepath.Join(stdlib, "tests", "content-address-band.fk"))
+	return mustExist(filepath.Join(stdlib, "minimal-surface.fk")),
+		mustExist(filepath.Join(stdlib, "hati-os-kernel.fk")),
+		mustExist(filepath.Join(stdlib, "hati-os-kernel-emit.fk"))
+}
 
-	dir := t.TempDir()
-
-	// 1. Emit the universal fkwu C source in-process, then compile it.
+// buildFkwu emits the universal fkwu C source in-process and compiles it,
+// returning the binary path. Requires clang.
+func buildFkwu(t *testing.T, clang, dir, minimal, hatiKernel, hatiEmit string) string {
+	t.Helper()
 	_, cSrc := runFormSource(t, readFiles(t, minimal, hatiKernel, hatiEmit)+"\n(fkc-emit-universal)\n")
 	if len(strings.TrimSpace(cSrc)) < 1000 {
 		t.Fatalf("fkwu emit produced suspiciously small C source (%d bytes)", len(cSrc))
@@ -82,8 +80,31 @@ func TestFkwuOffloadBridge(t *testing.T) {
 	if out, err := exec.Command(clang, "-O2", "-o", fkwuBin, cPath).CombinedOutput(); err != nil {
 		t.Fatalf("clang fkwu: %v\n%s", err, out)
 	}
+	return fkwuBin
+}
 
-	// 2. Flatten the band to a node-table in-process (fks: string-pool variant).
+func requireClang(t *testing.T) string {
+	t.Helper()
+	clang, err := exec.LookPath("clang")
+	if err != nil {
+		t.Skip("clang not available — fkwu proof skipped")
+	}
+	return clang
+}
+
+func TestFkwuOffloadBridge(t *testing.T) {
+	clang := requireClang(t)
+	stdlib := filepath.Join("..", "form-stdlib")
+	minimal, hatiKernel, hatiEmit := emitChain(t, stdlib)
+	formParse := filepath.Join(stdlib, "form-parse.fk")
+	formFlatten := filepath.Join(stdlib, "form-flatten.fk")
+	shim := filepath.Join(stdlib, "fourth-shim.fk")
+	band := filepath.Join(stdlib, "tests", "content-address-band.fk")
+
+	dir := t.TempDir()
+	fkwuBin := buildFkwu(t, clang, dir, minimal, hatiKernel, hatiEmit)
+
+	// Flatten the band to a node-table in-process (fks: string-pool variant).
 	flattenExpr := "(fks-table-file " +
 		"(flt-band-sources-fns (list (read_file \"" + shim + "\")) (read_file \"" + band + "\")) " +
 		"(flt-band-sources-pool (list (read_file \"" + shim + "\")) (read_file \"" + band + "\")))"
@@ -96,11 +117,10 @@ func TestFkwuOffloadBridge(t *testing.T) {
 		t.Fatalf("write table: %v", err)
 	}
 
-	// 3. The in-process walker's verdict for the same band — the truth fkwu must match.
+	// The in-process walker's verdict for the same band — the truth fkwu must match.
 	_, walked := runFormSource(t, readFiles(t, minimal, shim, band))
 	want := strings.TrimSpace(walked)
 
-	// 4. Offload to fkwu and confirm the value matches the walker.
 	got, err := FkwuEval(fkwuBin, tablePath, 0)
 	if err != nil {
 		t.Fatalf("FkwuEval: %v", err)
@@ -110,5 +130,44 @@ func TestFkwuOffloadBridge(t *testing.T) {
 	}
 	if got == "" {
 		t.Fatal("offload produced empty verdict")
+	}
+}
+
+func TestFkwuOffloadInput(t *testing.T) {
+	clang := requireClang(t)
+	stdlib := filepath.Join("..", "form-stdlib")
+	minimal, hatiKernel, hatiEmit := emitChain(t, stdlib)
+
+	dir := t.TempDir()
+	fkwuBin := buildFkwu(t, clang, dir, minimal, hatiKernel, hatiEmit)
+
+	// fkcount: a program that reads the staged input (fk_src) via fk-buf and
+	// returns its byte count — the minimal input-dependent fourth-kernel program.
+	_, table := runFormSource(t, readFiles(t, minimal, hatiKernel, hatiEmit)+"\n(fkc-table-file (fkcount-fns))\n")
+	if len(strings.TrimSpace(table)) < 20 {
+		t.Fatalf("fkcount flatten produced suspiciously small table (%d bytes)", len(table))
+	}
+	tablePath := filepath.Join(dir, "fkcount-table.txt")
+	if err := os.WriteFile(tablePath, []byte(table), 0o644); err != nil {
+		t.Fatalf("write table: %v", err)
+	}
+
+	// The value fkwu returns must DEPEND on the bundle the carrier passes.
+	cases := []struct {
+		input []byte
+		want  string
+	}{
+		{[]byte(""), "0"},
+		{[]byte("hello world"), "11"},
+		{[]byte("abcdefghijklmnopqrstuvwxyz"), "26"},
+	}
+	for _, c := range cases {
+		got, err := FkwuEvalWithInput(fkwuBin, tablePath, 0, c.input)
+		if err != nil {
+			t.Fatalf("FkwuEvalWithInput(%q): %v", c.input, err)
+		}
+		if got != c.want {
+			t.Fatalf("fk_src input channel: input %d bytes -> fkwu=%q want=%q", len(c.input), got, c.want)
+		}
 	}
 }
