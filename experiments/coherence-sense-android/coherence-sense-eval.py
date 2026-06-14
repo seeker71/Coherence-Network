@@ -15,7 +15,8 @@ the label out. ~5ms per recognition through the kernel.
 
 Run from the repo (it needs the kernel binary + form-stdlib):
     cd experiments/coherence-sense-android && python3 coherence-sense-eval.py
-Open the dashboard:  http://localhost:8800     Point the phone at:  http://<mac-LAN-IP>:8800
+Open the dashboard:  http://localhost:8800
+The Android app discovers this Mac over _hati-witness._tcp; the dashboard also shows fallback URLs.
 """
 import json
 import os
@@ -23,10 +24,13 @@ import re
 import subprocess
 import tempfile
 import time
+from argparse import ArgumentParser
 from collections import deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-PORT = 8800
+from hati_witness_discovery import start_mdns_advertisement, witness_descriptor
+
+DEFAULT_PORT = 8800
 # the kernel binary + the form-stdlib live in the repo, three dirs up from here.
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 FORM = os.path.join(REPO, "form")
@@ -46,6 +50,7 @@ state = {
     "organs": [], "latest": {}, "events": [], "present": False,
     "recognized": "—", "predicted": "—", "errors": 0, "checks": 0, "kernel_ok": os.path.exists(KERNEL),
     "challenger": "—", "chal_agree": 0, "chal_checks": 0, "protos": 0,   # the live learning arc
+    "witness": {},
 }
 accel_window = deque(maxlen=WINDOW)   # rounded vertical-ish accel magnitude per frame
 state_history = deque(maxlen=12)       # recent still/moving labels (oldest -> newest)
@@ -171,6 +176,8 @@ class Server(BaseHTTPRequestHandler):
             if was and not state["present"]:
                 _event("peer", f"{state['device']} went quiet")
             return self._send(200, json.dumps(state))
+        if self.path.startswith("/.well-known/hati-witness") or self.path.startswith("/discover"):
+            return self._send(200, json.dumps(state["witness"]))
         return self._send(200, DASHBOARD, "text/html; charset=utf-8")
 
     def do_POST(self):
@@ -215,6 +222,7 @@ DASHBOARD = """<!doctype html><html><head><meta charset=utf-8><title>Coherence S
  .big{font-size:26px;color:#eaf0f6} .dim{color:#7a8696} .accent{color:#86efac}
  .organ{display:inline-block;background:#1b2a1f;color:#86efac;border:1px solid #2c4a35;border-radius:6px;padding:2px 9px;margin:2px 4px 2px 0}
  .organ.off{background:#1a1d22;color:#566;border-color:#262b32}
+ .pill{display:inline-block;background:#182430;color:#9ad6ca;border:1px solid #28475c;border-radius:999px;padding:2px 9px;margin:2px 4px 2px 0}
  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;vertical-align:middle}
  .on{background:#34d399;box-shadow:0 0 8px #34d399} .gone{background:#5b6470}
  table{width:100%;border-collapse:collapse} td{padding:2px 0} td.k{color:#7a8696;width:64px}
@@ -228,6 +236,7 @@ DASHBOARD = """<!doctype html><html><head><meta charset=utf-8><title>Coherence S
  <div class=card><h2>recognition (kernel)</h2><div class=big id=recog>&mdash;</div><div class=dim>predicts next: <span class=accent id=pred>&mdash;</span></div><div class=dim id=err></div></div>
  <div class=card><h2>learning — challenger vs champion</h2><div class=big id=chal>&mdash;</div><div class=dim id=chalrate></div></div>
  <div class=card><h2>organs active</h2><div id=organs></div></div>
+ <div class=card><h2>nearby discovery</h2><div id=discovery></div><div class=dim>Android listens for _hati-witness._tcp; fallback URLs stay visible here.</div></div>
  <div class=card><h2>events / surprises</h2><div id=events></div></div>
  <div class=card style="grid-column:1/3"><h2>field (latest)</h2><table id=field></table></div>
 </div>
@@ -248,6 +257,8 @@ async function tick(){
  document.getElementById("chal").textContent=s.challenger||"—";
  document.getElementById("chalrate").textContent=s.chal_checks?("agrees with champion "+crate+"%  ("+s.chal_agree+"/"+s.chal_checks+")  · "+(s.protos||0)+" exemplars learned"):("learning… ("+(s.protos||0)+" exemplars)");
  document.getElementById("organs").innerHTML=ALL.map(o=>'<span class="organ'+(s.organs&&s.organs.includes(o)?"":" off")+'">'+o+'</span>').join("");
+ const w=s.witness||{};
+ document.getElementById("discovery").innerHTML='<div class=dim>'+((w.service_type||"_hati-witness._tcp")+" · "+(w.mode||"recognition"))+'</div>'+((w.urls||[]).map(u=>'<span class=pill>'+u+'</span>').join("")||'<span class=dim>waiting for LAN address</span>');
  const f=s.latest||{}; document.getElementById("field").innerHTML=ALL.filter(o=>o in f).map(o=>'<tr><td class=k>'+o+'</td><td>'+vec(f[o])+'</td></tr>').join("")||'<tr><td class=dim>no field yet</td></tr>';
  document.getElementById("events").innerHTML=(s.events||[]).map(e=>'<div class="ev '+e.kind+'"><span class=t>'+e.t+'</span> '+e.detail+'</div>').join("")||'<div class=dim>waiting…</div>';
 }
@@ -256,14 +267,23 @@ setInterval(tick,800); tick();
 
 
 if __name__ == "__main__":
+    parser = ArgumentParser(description="Run the Coherence Sense Mac recognition witness.")
+    parser.add_argument("--port", type=int, default=DEFAULT_PORT)
+    args = parser.parse_args()
     if not state["kernel_ok"]:
         print(f"NOTE: kernel binary not built at {KERNEL}")
         print("  build it once:  cd form && ./validate.sh form-stdlib/core.fk form-stdlib/signal-derivative.fk form-stdlib/tests/signal-derivative-band.fk")
-    srv = ThreadingHTTPServer(("0.0.0.0", PORT), Server)
-    print(f"Coherence Sense — LIVE RECOGNITION on 0.0.0.0:{PORT}  (kernel: {'ready' if state['kernel_ok'] else 'MISSING'})")
-    print(f"  open the dashboard:  http://localhost:{PORT}")
-    print(f"  point the phone at:  http://<this-mac-LAN-IP>:{PORT}")
+    state["witness"] = witness_descriptor(args.port, "recognition")
+    mdns = start_mdns_advertisement(args.port, "recognition")
+    srv = ThreadingHTTPServer(("0.0.0.0", args.port), Server)
+    print(f"Coherence Sense — LIVE RECOGNITION on 0.0.0.0:{args.port}  (kernel: {'ready' if state['kernel_ok'] else 'MISSING'})")
+    print(f"  open the dashboard:  http://localhost:{args.port}")
+    print(f"  Android auto-discovers: {state['witness']['service_type']} ({'active' if mdns.active else mdns.reason})")
+    for url in state["witness"]["urls"]:
+        print(f"  fallback URL: {url}")
     try:
         srv.serve_forever()
     except KeyboardInterrupt:
         print(f"\n{state['frames']} frames; last recognized {state['recognized']}; prediction {state['checks']-state['errors']}/{state['checks']} right")
+    finally:
+        mdns.stop()

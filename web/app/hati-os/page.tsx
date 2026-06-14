@@ -15,10 +15,10 @@ const downloads = [
   },
   {
     target: "Android app",
-    artifact: "Hati mesh sensing-organ APK",
-    href: "/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-debug.apk",
-    checksum: "/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-debug.apk.sha256",
-    proof: "Debug APK builds locally, creates a stable organ id, announces to hati.mesh, polls organ/channel rows, and displays sensor flow rates.",
+    artifact: "Hati mesh sensing-organ release APK",
+    href: "/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-release.apk",
+    checksum: "/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-release.apk.sha256",
+    proof: "Release APK is signed with the Hati mesh app key, verified by apksigner, announces to hati.mesh, and checks signed update metadata.",
   },
 ];
 

@@ -181,17 +181,31 @@ if [[ -f "$ANDROID_TARBALL.sha256" ]]; then
 fi
 apk_status="absent"
 apk_sha=""
+apk_version_code=""
+apk_version_name=""
+release_apk_status="absent"
+release_apk_sha=""
 APK_SRC="$ROOT/experiments/coherence-sense-android/app/build/outputs/apk/debug/app-debug.apk"
+RELEASE_APK_SRC="$ROOT/experiments/coherence-sense-android/app/build/outputs/apk/release/app-release.apk"
+APK_GRADLE="$ROOT/experiments/coherence-sense-android/app/build.gradle.kts"
 if [[ -f "$APK_SRC" ]]; then
     cp "$APK_SRC" "$OUT/coherence-sense-hati-mesh-debug.apk"
     shasum -a 256 "$OUT/coherence-sense-hati-mesh-debug.apk" | sed "s#$OUT/##" > "$OUT/coherence-sense-hati-mesh-debug.apk.sha256"
     apk_sha="$(cut -d' ' -f1 "$OUT/coherence-sense-hati-mesh-debug.apk.sha256")"
+    apk_version_code="$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' "$APK_GRADLE" | head -1)"
+    apk_version_name="$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' "$APK_GRADLE" | head -1)"
     apk_status="pass"
 fi
+if [[ -f "$RELEASE_APK_SRC" ]]; then
+    cp "$RELEASE_APK_SRC" "$OUT/coherence-sense-hati-mesh-release.apk"
+    shasum -a 256 "$OUT/coherence-sense-hati-mesh-release.apk" | sed "s#$OUT/##" > "$OUT/coherence-sense-hati-mesh-release.apk.sha256"
+    release_apk_sha="$(cut -d' ' -f1 "$OUT/coherence-sense-hati-mesh-release.apk.sha256")"
+    release_apk_status="pass"
+fi
 
-python3 - "$OUT/hati-os-public-assets-summary.json" "$STAMP" "$mac_sha" "$android_status" "$android_sha" "$android_reason" "$mac_file" "$android_file_bin" "$android_file_so" "$apk_status" "$apk_sha" <<'PY'
+python3 - "$OUT/hati-os-public-assets-summary.json" "$STAMP" "$mac_sha" "$android_status" "$android_sha" "$android_reason" "$mac_file" "$android_file_bin" "$android_file_so" "$apk_status" "$apk_sha" "$apk_version_code" "$apk_version_name" "$release_apk_status" "$release_apk_sha" <<'PY'
 import json, pathlib, sys
-summary_path, stamp, mac_sha, android_status, android_sha, android_reason, mac_file, android_file_bin, android_file_so, apk_status, apk_sha = sys.argv[1:]
+summary_path, stamp, mac_sha, android_status, android_sha, android_reason, mac_file, android_file_bin, android_file_so, apk_status, apk_sha, apk_version_code, apk_version_name, release_apk_status, release_apk_sha = sys.argv[1:]
 assets = [
     {
         "target": "macos-arm64",
@@ -219,8 +233,24 @@ assets.append({
     "name": "coherence-sense-hati-mesh-debug.apk",
     "sha256": apk_sha,
     "status": apk_status,
+    "version_code": int(apk_version_code) if apk_version_code else None,
+    "version_name": apk_version_name or None,
+    "download_url": "https://hati.earth/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-debug.apk",
+    "update_protocol": "apk-download-user-consent-installer",
     "proof": "Android app debug APK built by Gradle; announces stable organ identity to hati.mesh, heartbeats while listening, displays dashboard/resource/flow rows, and offers QR identity pairing.",
     "note": "Debug-signed app shell; native kernel package remains the Hati-OS target artifact.",
+})
+assets.append({
+    "target": "android-arm64",
+    "name": "coherence-sense-hati-mesh-release.apk",
+    "sha256": release_apk_sha,
+    "status": release_apk_status,
+    "version_code": int(apk_version_code) if apk_version_code else None,
+    "version_name": apk_version_name or None,
+    "download_url": "https://hati.earth/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-release.apk",
+    "update_protocol": "signed-apk-download-user-consent-installer",
+    "proof": "Android app release APK built by Gradle with a local non-committed signing key and verified by apksigner.",
+    "note": "First migration from a debug-signed install requires uninstall/reinstall because Android rejects updates signed by a different key.",
 })
 data = {
     "stamp": stamp,

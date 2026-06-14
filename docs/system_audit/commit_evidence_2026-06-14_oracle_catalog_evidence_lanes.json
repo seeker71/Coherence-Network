@@ -1,0 +1,112 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/hati-earth-public-assets-proof-command-20260613",
+  "commit_scope": "Expand the Form-native oracle catalog with explicit third-party evidence lanes for code, tool, speech, media, data, package, source-grounding, model-judge, API, and CI learning loops.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "native-learning-surface",
+    "form-os-tool-surface",
+    "agent-cli"
+  ],
+  "spec_ids": [
+    "native-ml-kernels",
+    "choice-receipt-learning",
+    "tool-channel",
+    "form-language-learning"
+  ],
+  "task_ids": [
+    "oracle-evidence-lanes-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star",
+        "acceptance"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/oracle-catalog.fk",
+    "form/form-stdlib/tests/oracle-catalog-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/oracle-catalog.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_oracle_catalog_evidence_lanes.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/form-stdlib/oracle-catalog.fk",
+    "form/form-stdlib/tests/oracle-catalog-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/oracle-catalog.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_oracle_catalog_evidence_lanes.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "form/form-stdlib/oracle-catalog.fk",
+    "form/form-stdlib/tests/oracle-catalog-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/oracle-catalog.form",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "for x in clang swiftc ffmpeg ollama git rg npm node adb whisper-cli xmllint jq curl; do printf '%-12s ' \"$x\"; command -v \"$x\" || true; done",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/oracle-catalog.fk form-stdlib/tests/oracle-catalog-band.fk",
+      "cd form && scripts/fourth-arm-survey.sh --one form-stdlib/tests/oracle-catalog-band.fk",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_oracle_catalog_evidence_lanes.json"
+    ],
+    "notes": "Host probe found clang, swiftc, ffmpeg, ollama, git, rg, npm, node, whisper-cli, xmllint, jq, and curl on PATH; adb was not on PATH. oracle-catalog returned verdict 16383 and validate.sh printed fourth arm: 1 band(s) four-way (fkwu + pre-flattened tables). The proof covers teacher rows, installed and remote counts, unknown-lane refusal, fifteen evidence lanes, installed/remote evidence counts, compiler/package evidence grounding, source/CI remote membrane flags, and unknown evidence-kind refusal."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed; CI not run."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "Local Form proof only. No public deploy was requested or performed in this step."
+  },
+  "phase_gate": {
+    "phase": "oracle-evidence-lanes",
+    "gate": "Learning loops must name outside evidence providers explicitly before sampling them or treating them as authority.",
+    "state": "local-four-way-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Wire code-tool-learning, speech-model-learning, package/dependency lanes, and release gates to request evidence rows from this catalog and emit CHOICE-RECEIPT outcomes for champion/challenger retirement."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Cells and recipes now have a four-way-proven oracle evidence catalog for selecting external evidence lanes by learning kind without hiding remote membranes or installed-state claims.",
+    "public_endpoints": [
+      "local:form/validate.sh:oracle-catalog-band",
+      "local:form/fourth-arm-bands.txt:oracle-catalog"
+    ],
+    "test_flows": [
+      "Installed local teacher rows remain queryable.",
+      "Unknown teacher lanes and unknown evidence kinds return absent rows.",
+      "Compiler and package-registry evidence lanes stay distinct.",
+      "Source-grounding and CI-provider lanes are remote membranes.",
+      "Installed and remote evidence counts are walked through the catalog."
+    ],
+    "summary": "This adds the menu of external evidence lanes. It does not yet execute each oracle; execution remains a separate explicit capability/request/receipt step per learning loop."
+  }
+}

@@ -35,11 +35,15 @@ through the kernel, not in Python.
 
 ## Install the APK
 
-1. Download the current Hati mesh build (debug-signed):
-   **https://hati.earth/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-debug.apk**
-   (release asset: `coherence-sense-hati-mesh-debug.apk` on `hati-os-v0.1.0-20260613`).
+1. Download the current Hati mesh build (release-signed):
+   **https://hati.earth/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-release.apk**
+   (release asset: `coherence-sense-hati-mesh-release.apk` on `hati-os-v0.1.0-20260613`).
 2. On the phone: Settings → allow installing from your browser/files app ("unknown sources").
 3. Open the APK; install; launch **Coherence Sense**.
+
+If a debug-signed build is already installed, Android will reject the release-signed APK as an update
+because the signing keys differ. Uninstall the debug build once, then install the release-signed APK.
+After that, signed updates with the same local Hati release key can replace the app normally.
 
 From the repository root, rebuild + prove the public asset and mesh handshake after changes:
 
@@ -47,7 +51,7 @@ From the repository root, rebuild + prove the public asset and mesh handshake af
 scripts/verify_android_sense_public_handshake.sh
 ```
 
-That command builds the debug-signed APK, builds the Hati public asset bundle, starts the Mac witness
+That command builds the debug APK and signed release APK, builds the Hati public asset bundle, starts the Mac witness
 surface, starts a local Hati mesh API, proves announce / heartbeat / list / offer / list, and writes
 `.cache/android-sense-public-handshake/<stamp>/android-sense-public-handshake-summary.json`.
 
@@ -57,10 +61,27 @@ Publish only after the local proof passes:
 scripts/verify_android_sense_public_handshake.sh --publish
 ```
 
-That uploads the macOS package, Android native package, APK, checksums, and asset summary to
+That uploads the macOS package, Android native package, debug APK, signed release APK, checksums, and asset summary to
 `hati-os-v0.1.0-20260613` with `gh release upload --clobber`.
 
-It's a **debug-signed** build (no Play Store) — fine for trying it on your own device.
+The release APK is signed by a local Hati release key generated under
+`~/.coherence-network/android/coherence-sense-release.jks`; the private key and
+`experiments/coherence-sense-android/signing.properties` are not committed. This is still a direct
+APK install, not a Play Store install.
+
+## App self-update floor
+
+The app checks `https://hati.earth/downloads/hati-os/hati-os-public-assets-summary.json` on launch.
+It prefers the published signed `coherence-sense-hati-mesh-release.apk` SHA-256 and falls back to the
+debug APK only if the signed release asset is not present yet. It compares that SHA with the APK currently
+installed on the phone. If a newer APK is published, **Settings → Install update** downloads it from
+`https://hati.earth/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-release.apk`, verifies the
+hash, and opens Android's package installer.
+
+Android still requires human consent for sideloaded APK replacement unless the app is installed as a
+privileged/device-owner updater. That is the honest floor. The north star is a signed Hati app update
+lane where the mesh can announce releases, verify signatures and hashes, and route the update through
+the highest-trust installer available on that host.
 
 ## Run
 
@@ -70,13 +91,14 @@ It's a **debug-signed** build (no Play Store) — fine for trying it on your own
    python3 coherence-sense-eval.py          # builds drivers, runs form-kernel-rust per frame, 0.0.0.0:8800
    # or the bare witness (no kernel needed, runs anywhere):
    python3 mac-witness-server.py            # 0.0.0.0:8800
-   ipconfig getifaddr en0                   # your Mac's LAN IP, e.g. 192.168.1.23
    ```
    (The eval server needs the kernel built once: `cd ../../form && ./validate.sh form-stdlib/core.fk
    form-stdlib/signal-derivative.fk form-stdlib/tests/signal-derivative-band.fk` — it cross-checks the
    recipe three-way and leaves `form-kernel-rust` in `target/release/`.)
-2. In the app, leave the mesh API as `https://api.coherencycoin.com/api`, set the witness address
-   to `http://<that-IP>:8800`, and tap **Connect + share senses**.
+2. Open the app. It listens for the Mac's `_hati-witness._tcp` service and fills the witness lane
+   automatically. Leave the mesh API as `https://api.coherencycoin.com/api` and tap **Start sharing**.
+   If you tap before the Mac appears, the button waits and starts sharing when discovery resolves.
+   Manual IP entry lives behind **Settings** only as a fallback when the local network blocks mDNS.
 3. **Open the live dashboard** in a Mac browser: `http://localhost:8800` — a dark console showing
    *presence* (is the body here, how many frames, how long alive), *recognition* (still / moving, the
    kernel's call, with the next-state prediction and the running prediction-accuracy — error is the
@@ -84,6 +106,32 @@ It's a **debug-signed** build (no Play Store) — fine for trying it on your own
    *events / surprises* log (an organ coming online or going quiet, a prediction-miss). Set the phone
    down — it reads **still**; pick it up and move — it flips to **moving**, and the miss at the
    transition shows up as a surprise. That flip is Form recipes recognizing your motion through the kernel.
+
+### Keep the Mac witness always running
+
+Install the macOS user service once:
+
+```bash
+cd experiments/coherence-sense-android
+chmod +x macos-witness-service.sh
+./macos-witness-service.sh install --mode recognition --port 8800
+```
+
+That writes `~/Library/LaunchAgents/earth.hati.coherence-sense.mac-witness.plist`, starts the Mac
+recognition witness now, restarts it after a crash, and starts it again at login. The dashboard remains
+`http://localhost:8800`; Android discovers the same service as `_hati-witness._tcp`.
+
+Useful commands:
+
+```bash
+./macos-witness-service.sh status
+./macos-witness-service.sh open-dashboard
+./macos-witness-service.sh restart
+./macos-witness-service.sh uninstall
+```
+
+Logs live at `~/Library/Logs/CoherenceSense/mac-witness.out.log` and
+`~/Library/Logs/CoherenceSense/mac-witness.err.log`.
 
 ## Hati mesh identity + channels
 
@@ -105,6 +153,12 @@ The current APK actively streams and measures `sensor:signal` flow, announces / 
 The mic lane has an active RMS floor when permission is granted; camera/video and speaker output remain
 explicit offered lanes until frame/playback sessions carry active physical samples.
 
+The local Mac witness is also a discoverable channel. Both `mac-witness-server.py` and
+`coherence-sense-eval.py` advertise `_hati-witness._tcp` on the LAN and serve
+`/.well-known/hati-witness` / `/discover` with service name, mode, port, sample paths, and fallback
+URLs. The floor is zero-typed setup on a normal same-WiFi LAN; the north star is signed organ
+heartbeats negotiating the highest-fidelity carrier without hidden ambient host access.
+
 The resource dashboard also makes accelerator floors visible. GPU and DSP/NPU are cataloged lanes,
 but this APK does not yet emit active native compute samples for them. MLX is explicit unsupported
 on Android; the north-star Android equivalent is GPU/NNAPI, while macOS carries the Apple MLX lane.
@@ -124,4 +178,8 @@ cd experiments/coherence-sense-android
 echo "sdk.dir=/opt/homebrew/share/android-commandlinetools" > local.properties
 JAVA_HOME=/opt/homebrew/opt/openjdk@21 ./gradlew assembleDebug
 # -> app/build/outputs/apk/debug/app-debug.apk
+
+# signed release APK (creates a local non-committed key on first run)
+./build_signed_release.sh
+# -> app/build/outputs/apk/release/app-release.apk
 ```

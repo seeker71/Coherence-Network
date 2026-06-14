@@ -9,6 +9,8 @@ package com.coherence.sense
 import android.Manifest
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -22,6 +24,10 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.location.LocationManager
 import android.net.TrafficStats
+import android.net.Uri
+import android.net.nsd.NsdManager
+import android.net.nsd.NsdServiceInfo
+import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
@@ -39,11 +45,14 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.appcompat.app.AppCompatActivity
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
+import java.io.FileOutputStream
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
@@ -58,6 +67,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var sm: SensorManager
     private val latest = HashMap<Int, FloatArray>()
     private val handler = Handler(Looper.getMainLooper())
+    private val witnessServiceType = "_hati-witness._tcp."
+    private val updateSummaryUrl = "https://hati.earth/downloads/hati-os/hati-os-public-assets-summary.json"
+    private val releaseApkName = "coherence-sense-hati-mesh-release.apk"
+    private val debugApkName = "coherence-sense-hati-mesh-debug.apk"
+    private val releaseApkUrl = "https://hati.earth/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-release.apk"
+    private val debugApkUrl = "https://hati.earth/downloads/hati-os/android/arm64/coherence-sense-hati-mesh-debug.apk"
     private var connected = false
     private var tick = 0
     private var sentBytes = 0L
@@ -77,6 +92,19 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private var micRms = 0.0
     private var micSamples = 0L
     private var audioRecord: AudioRecord? = null
+    private var nsdManager: NsdManager? = null
+    private var discoveryListener: NsdManager.DiscoveryListener? = null
+    private var resolvingWitness = false
+    private var pendingStartAfterDiscovery = false
+    private var manualWitnessOverride = false
+    private var settingWitnessUrl = false
+    private var discoveredWitnessUrl = ""
+    private var discoveryState = "looking for nearby Mac witness"
+    private var multicastLock: WifiManager.MulticastLock? = null
+    private var updateState = "update check pending"
+    private var updateDownloadUrl = ""
+    private var updateSha256 = ""
+    @Volatile private var updateInFlight = false
     @Volatile private var micLoopRunning = false
     @Volatile private var snapshotInFlight = false
     @Volatile private var meshRefreshInFlight = false
@@ -100,6 +128,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var stewardField: EditText
     private lateinit var connectBtn: Button
     private lateinit var settingsBtn: Button
+    private lateinit var updateBtn: Button
     private lateinit var settingsPanel: LinearLayout
     private lateinit var meshSummary: TextView
     private lateinit var sensorLane: TextView
@@ -124,6 +153,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         stewardField = findViewById(R.id.stewardField)
         connectBtn = findViewById(R.id.connectBtn)
         settingsBtn = findViewById(R.id.settingsBtn)
+        updateBtn = findViewById(R.id.updateBtn)
         settingsPanel = findViewById(R.id.settingsPanel)
         meshSummary = findViewById(R.id.meshSummaryView)
         sensorLane = findViewById(R.id.sensorLaneView)
@@ -133,6 +163,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         bluetoothLane = findViewById(R.id.bluetoothLaneView)
         resourceLane = findViewById(R.id.resourceLaneView)
         sm = getSystemService(SENSOR_SERVICE) as SensorManager
+        nsdManager = getSystemService(Context.NSD_SERVICE) as NsdManager
         organId = loadOrganId()
         renderIdentity("local identity ready")
         renderFirstFrame()
@@ -148,6 +179,23 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             }
             override fun afterTextChanged(s: Editable?) = Unit
         })
+        urlField.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                if (!settingWitnessUrl) {
+                    manualWitnessOverride = !s.isNullOrBlank()
+                    discoveryState = if (manualWitnessOverride) {
+                        "manual witness override"
+                    } else {
+                        "looking for nearby Mac witness"
+                    }
+                }
+                renderQr()
+                renderIdentity(meshState)
+                requestDashboardRender()
+            }
+            override fun afterTextChanged(s: Editable?) = Unit
+        })
         stewardField.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = renderIdentity(meshState)
@@ -157,14 +205,17 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         settingsBtn.setOnClickListener {
             settingsPanel.visibility = if (settingsPanel.visibility == View.VISIBLE) View.GONE else View.VISIBLE
         }
+        updateBtn.setOnClickListener { onUpdateButton() }
+        startWitnessDiscovery()
+        handler.postDelayed({ checkForAppUpdate(false) }, 1600)
     }
 
     private fun renderFirstFrame() {
-        meshSummary.text = "state: local identity ready\npresent peers: 0  connected channels: 0  offered: 0\nbest shared carrier: network:http"
+        meshSummary.text = "state: local identity ready\nwitness: $discoveryState\npresent peers: 0  connected channels: 0  offered: 0\nbest shared carrier: network:http"
         sensorLane.text = "SENSORS\nfloor visible\nmotion waiting\ngps not-granted"
         audioLane.text = "AUDIO\nmic offered\nspeaker visible"
         videoLane.text = "VIDEO\ncamera offered\nscreen QR/write"
-        networkLane.text = "NETWORK\nmesh waiting\nflow 0.00/s"
+        networkLane.text = "NETWORK\n$discoveryState\nmesh waiting\nupdate $updateState\nflow 0.00/s"
         bluetoothLane.text = "BLUETOOTH\ncarrier visible\nBLE heartbeat buildable"
         resourceLane.text = "BODY STATE\npeers 0\nsamples 0\nfidelity receipt next"
         dashboard.text = "floor: visible local lanes first; north-star: measured, negotiated sense channels"
@@ -186,32 +237,61 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun toggle() {
-        connected = !connected
         if (connected) {
-            flowWindowStarted = System.currentTimeMillis()
-            registerSensor(Sensor.TYPE_ACCELEROMETER)
-            registerSensor(Sensor.TYPE_GYROSCOPE)
-            registerSensor(Sensor.TYPE_LIGHT)
-            registerSensor(Sensor.TYPE_MAGNETIC_FIELD)
-            requestOptionalPermissions()
-            startMicSamplingIfAllowed()
-            connectBtn.text = "Pause sharing"
-            lastMacState = "connecting to ${urlField.text}"
-            status.text = "Sharing senses. Mac lane: $lastMacState"
-            announcePresence()
-            handler.post(meshLoop)
-            handler.post(loop)
-        } else {
-            sm.unregisterListener(this)
-            handler.removeCallbacks(loop)
-            handler.removeCallbacks(meshLoop)
-            stopMicSampling()
-            connectBtn.text = "Start sharing"
-            lastMacState = "paused"
-            status.text = "Paused. Senses held."
-            innerCellsFreed += 1
-            renderDashboard()
+            stopSharing()
+            return
         }
+        if (effectiveWitnessBase().isBlank()) {
+            pendingStartAfterDiscovery = true
+            connectBtn.text = "Waiting for Mac"
+            discoveryState = "looking for nearby Mac witness"
+            status.text = "Looking for a nearby Mac witness. Sharing starts when it appears."
+            startWitnessDiscovery()
+            renderIdentity(meshState)
+            requestDashboardRender()
+            return
+        }
+        pendingStartAfterDiscovery = false
+        startSharing()
+    }
+
+    private fun startSharing() {
+        val base = effectiveWitnessBase()
+        if (base.isBlank()) {
+            pendingStartAfterDiscovery = true
+            startWitnessDiscovery()
+            return
+        }
+        if (connected) return
+        connected = true
+        flowWindowStarted = System.currentTimeMillis()
+        registerSensor(Sensor.TYPE_ACCELEROMETER)
+        registerSensor(Sensor.TYPE_GYROSCOPE)
+        registerSensor(Sensor.TYPE_LIGHT)
+        registerSensor(Sensor.TYPE_MAGNETIC_FIELD)
+        requestOptionalPermissions()
+        startMicSamplingIfAllowed()
+        connectBtn.text = "Pause sharing"
+        lastMacState = "connecting to $base"
+        status.text = "Sharing senses. Mac lane: $lastMacState"
+        announcePresence()
+        handler.post(meshLoop)
+        handler.post(loop)
+        requestDashboardRender()
+    }
+
+    private fun stopSharing(message: String = "Paused. Senses held.") {
+        connected = false
+        pendingStartAfterDiscovery = false
+        sm.unregisterListener(this)
+        handler.removeCallbacks(loop)
+        handler.removeCallbacks(meshLoop)
+        stopMicSampling()
+        connectBtn.text = "Start sharing"
+        lastMacState = "paused"
+        status.text = message
+        innerCellsFreed += 1
+        renderDashboard()
     }
 
     private fun requestOptionalPermissions() {
@@ -234,6 +314,166 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
     }
 
+    private fun effectiveWitnessBase(): String {
+        val manual = urlField.text.toString().trim().removeSuffix("/")
+        return if (manual.isNotBlank()) manual else discoveredWitnessUrl.trim().removeSuffix("/")
+    }
+
+    private fun startWitnessDiscovery() {
+        if (discoveryListener != null) return
+        val manager = nsdManager ?: return
+        acquireMulticastLock()
+        discoveryState = "looking for nearby Mac witness"
+        val listener = object : NsdManager.DiscoveryListener {
+            override fun onDiscoveryStarted(regType: String) {
+                runOnUiThread {
+                    discoveryState = "looking for nearby Mac witness"
+                    renderIdentity(meshState)
+                    requestDashboardRender()
+                }
+            }
+
+            override fun onServiceFound(serviceInfo: NsdServiceInfo) {
+                val serviceType = serviceInfo.serviceType ?: ""
+                val serviceName = serviceInfo.serviceName ?: ""
+                if (serviceType.equals(witnessServiceType, ignoreCase = true) ||
+                    serviceName.contains("Hati", ignoreCase = true)
+                ) {
+                    resolveWitness(serviceInfo)
+                }
+            }
+
+            override fun onServiceLost(serviceInfo: NsdServiceInfo) {
+                runOnUiThread {
+                    discoveryState = "nearby Mac witness went quiet; looking again"
+                    renderIdentity(meshState)
+                    requestDashboardRender()
+                }
+            }
+
+            override fun onDiscoveryStopped(serviceType: String) {
+                discoveryListener = null
+                releaseMulticastLock()
+            }
+
+            override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {
+                runOnUiThread {
+                    discoveryState = "auto-discovery unavailable ($errorCode); Settings can hold a fallback URL"
+                    renderIdentity(meshState)
+                    requestDashboardRender()
+                }
+                stopWitnessDiscovery()
+            }
+
+            override fun onStopDiscoveryFailed(serviceType: String, errorCode: Int) {
+                discoveryListener = null
+                releaseMulticastLock()
+            }
+        }
+        discoveryListener = listener
+        try {
+            manager.discoverServices(witnessServiceType, NsdManager.PROTOCOL_DNS_SD, listener)
+        } catch (e: Exception) {
+            discoveryListener = null
+            releaseMulticastLock()
+            discoveryState = "auto-discovery unavailable — ${e.message}"
+            renderIdentity(meshState)
+            requestDashboardRender()
+        }
+    }
+
+    private fun resolveWitness(serviceInfo: NsdServiceInfo) {
+        if (resolvingWitness) return
+        val manager = nsdManager ?: return
+        resolvingWitness = true
+        try {
+            manager.resolveService(serviceInfo, object : NsdManager.ResolveListener {
+                override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
+                    resolvingWitness = false
+                    runOnUiThread {
+                        discoveryState = "found Mac witness; resolve failed ($errorCode)"
+                        requestDashboardRender()
+                    }
+                }
+
+                override fun onServiceResolved(resolved: NsdServiceInfo) {
+                    resolvingWitness = false
+                    val host = resolved.host?.hostAddress ?: return
+                    val url = httpUrlForHost(host, resolved.port)
+                    val name = resolved.serviceName?.ifBlank { "Mac witness" } ?: "Mac witness"
+                    runOnUiThread { setWitnessUrlFromDiscovery(url, name) }
+                }
+            })
+        } catch (e: Exception) {
+            resolvingWitness = false
+            discoveryState = "found Mac witness; resolve blocked — ${e.message}"
+            runOnUiThread {
+                renderIdentity(meshState)
+                requestDashboardRender()
+            }
+        }
+    }
+
+    private fun httpUrlForHost(hostAddress: String, port: Int): String {
+        val host = if (hostAddress.contains(":") && !hostAddress.startsWith("[")) "[$hostAddress]" else hostAddress
+        return "http://$host:$port"
+    }
+
+    private fun setWitnessUrlFromDiscovery(url: String, serviceName: String) {
+        discoveredWitnessUrl = url.removeSuffix("/")
+        discoveryState = "nearby Mac witness: $serviceName at $discoveredWitnessUrl"
+        if (!manualWitnessOverride) {
+            settingWitnessUrl = true
+            urlField.setText(discoveredWitnessUrl)
+            settingWitnessUrl = false
+        }
+        status.text = if (connected) {
+            "Sharing senses. Mac lane: $lastMacState"
+        } else {
+            "Nearby Mac witness found. Tap Start sharing."
+        }
+        renderIdentity(meshState)
+        renderQr()
+        requestDashboardRender()
+        if (pendingStartAfterDiscovery && !connected) {
+            pendingStartAfterDiscovery = false
+            startSharing()
+        }
+    }
+
+    private fun acquireMulticastLock() {
+        if (multicastLock?.isHeld == true) return
+        try {
+            val wifi = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+            multicastLock = wifi.createMulticastLock("hati-witness-discovery").apply {
+                setReferenceCounted(false)
+                acquire()
+            }
+        } catch (_: Exception) {
+            multicastLock = null
+        }
+    }
+
+    private fun releaseMulticastLock() {
+        try {
+            if (multicastLock?.isHeld == true) multicastLock?.release()
+        } catch (_: Exception) {
+        }
+        multicastLock = null
+    }
+
+    private fun stopWitnessDiscovery() {
+        val listener = discoveryListener
+        discoveryListener = null
+        if (listener != null) {
+            try {
+                nsdManager?.stopServiceDiscovery(listener)
+            } catch (_: Exception) {
+            }
+        }
+        releaseMulticastLock()
+    }
+
     private val loop = object : Runnable {
         override fun run() {
             if (!connected) return
@@ -246,8 +486,16 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun sendSnapshot() {
         if (snapshotInFlight) return
+        val base = effectiveWitnessBase()
+        if (base.isBlank()) {
+            pendingStartAfterDiscovery = true
+            discoveryState = "looking for nearby Mac witness"
+            status.text = "Looking for nearby Mac witness before sending samples."
+            startWitnessDiscovery()
+            requestDashboardRender()
+            return
+        }
         snapshotInFlight = true
-        val base = urlField.text.toString().trim().removeSuffix("/")
         val snap = JSONObject()
         snap.put("organ_id", organId)
         latest[Sensor.TYPE_ACCELEROMETER]?.let { snap.put("accel", arr(it)) }
@@ -319,7 +567,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                     .put("cap.http.request")
                     .put("cap.bluetooth.presence")
                     .put("cap.network.presence")
-                    .put("cap.mesh.presence"),
+                    .put("cap.mesh.presence")
+                    .put("cap.app.update"),
             )
             .put(
                 "lanes",
@@ -439,11 +688,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     }
 
     private fun renderQr() {
+        val witness = effectiveWitnessBase()
         val payload = JSONObject()
             .put("mesh", "hati.mesh")
             .put("organ_id", organId)
             .put("offer", "identify-and-open-channel")
             .put("api", meshField.text.toString().trim())
+            .put("local_discovery", witnessServiceType)
+            .put("witness", if (witness.isBlank()) JSONObject.NULL else witness)
             .toString()
         Thread {
             try {
@@ -459,6 +711,194 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 runOnUiThread { qr.setImageBitmap(null) }
             }
         }.start()
+    }
+
+    private fun onUpdateButton() {
+        if (updateInFlight) return
+        if (updateDownloadUrl.isNotBlank() && updateSha256.isNotBlank()) {
+            downloadAndInstallUpdate(updateDownloadUrl, updateSha256)
+        } else {
+            checkForAppUpdate(true)
+        }
+    }
+
+    private fun checkForAppUpdate(userRequested: Boolean) {
+        if (updateInFlight) return
+        updateInFlight = true
+        updateState = "checking public APK"
+        updateBtn.isEnabled = false
+        updateBtn.text = "Checking..."
+        requestDashboardRender()
+        Thread {
+            try {
+                val conn = (URL(updateSummaryUrl).openConnection() as HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    connectTimeout = 6000
+                    readTimeout = 6000
+                }
+                val code = conn.responseCode
+                val body = (if (code in 200..299) conn.inputStream else conn.errorStream)
+                    ?.bufferedReader()?.readText() ?: ""
+                conn.disconnect()
+                if (code !in 200..299) throw IllegalStateException("summary replied $code")
+                val asset = findApkAsset(JSONObject(body))
+                    ?: throw IllegalStateException("APK asset missing from summary")
+                val remoteSha = asset.optString("sha256").trim()
+                val remoteName = asset.optString("name").trim()
+                val remoteUrl = asset.optString("download_url").ifBlank { apkDownloadUrl(remoteName) }
+                if (remoteSha.isBlank()) throw IllegalStateException("APK sha missing from summary")
+                val localSha = sha256File(File(applicationInfo.sourceDir))
+                runOnUiThread {
+                    if (remoteSha.equals(localSha, ignoreCase = true)) {
+                        updateDownloadUrl = ""
+                        updateSha256 = ""
+                        updateState = "up to date v${appVersionName()}"
+                    } else {
+                        updateDownloadUrl = remoteUrl
+                        updateSha256 = remoteSha
+                        updateState = "update available"
+                    }
+                    refreshUpdateButton()
+                    requestDashboardRender()
+                    if (userRequested && updateDownloadUrl.isNotBlank()) {
+                        downloadAndInstallUpdate(updateDownloadUrl, updateSha256)
+                    }
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    updateState = "update check failed — ${e.message}"
+                    refreshUpdateButton()
+                    requestDashboardRender()
+                }
+            } finally {
+                updateInFlight = false
+                runOnUiThread { refreshUpdateButton() }
+            }
+        }.start()
+    }
+
+    private fun findApkAsset(summary: JSONObject): JSONObject? {
+        val assets = summary.optJSONArray("assets") ?: return null
+        var debugAsset: JSONObject? = null
+        for (i in 0 until assets.length()) {
+            val row = assets.optJSONObject(i) ?: continue
+            when (row.optString("name")) {
+                releaseApkName -> return row
+                debugApkName -> debugAsset = row
+            }
+        }
+        return debugAsset
+    }
+
+    private fun apkDownloadUrl(name: String): String {
+        return when (name) {
+            releaseApkName -> releaseApkUrl
+            debugApkName -> debugApkUrl
+            else -> releaseApkUrl
+        }
+    }
+
+    private fun appVersionName(): String =
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                packageManager.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0)).versionName ?: "unknown"
+            } else {
+                @Suppress("DEPRECATION")
+                packageManager.getPackageInfo(packageName, 0).versionName ?: "unknown"
+            }
+        } catch (_: Exception) {
+            "unknown"
+        }
+
+    private fun sha256File(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input ->
+            val buffer = ByteArray(64 * 1024)
+            while (true) {
+                val read = input.read(buffer)
+                if (read <= 0) break
+                digest.update(buffer, 0, read)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    private fun downloadAndInstallUpdate(apkUrl: String, expectedSha: String) {
+        if (updateInFlight) return
+        updateInFlight = true
+        updateState = "downloading update"
+        updateBtn.isEnabled = false
+        updateBtn.text = "Downloading..."
+        requestDashboardRender()
+        Thread {
+            try {
+                val dir = File(cacheDir, "updates")
+                dir.mkdirs()
+                val apk = File(dir, "coherence-sense-update.apk")
+                val conn = (URL(apkUrl).openConnection() as HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    connectTimeout = 10000
+                    readTimeout = 20000
+                }
+                val code = conn.responseCode
+                if (code !in 200..299) throw IllegalStateException("download replied $code")
+                conn.inputStream.use { input ->
+                    FileOutputStream(apk).use { output -> input.copyTo(output) }
+                }
+                conn.disconnect()
+                val actualSha = sha256File(apk)
+                if (!expectedSha.equals(actualSha, ignoreCase = true)) {
+                    apk.delete()
+                    throw IllegalStateException("download hash mismatch")
+                }
+                runOnUiThread {
+                    updateState = "download verified; installer opening"
+                    refreshUpdateButton()
+                    requestDashboardRender()
+                    launchApkInstaller(apk)
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    updateState = "update failed — ${e.message}"
+                    refreshUpdateButton()
+                    requestDashboardRender()
+                }
+            } finally {
+                updateInFlight = false
+                runOnUiThread { refreshUpdateButton() }
+            }
+        }.start()
+    }
+
+    private fun launchApkInstaller(apk: File) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !packageManager.canRequestPackageInstalls()) {
+            updateState = "allow app updates, then tap Install update again"
+            val intent = Intent(
+                Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                Uri.parse("package:$packageName"),
+            )
+            startActivity(intent)
+            refreshUpdateButton()
+            requestDashboardRender()
+            return
+        }
+        val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", apk)
+        val intent = Intent(Intent.ACTION_VIEW)
+            .setDataAndType(uri, "application/vnd.android.package-archive")
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        startActivity(intent)
+    }
+
+    private fun refreshUpdateButton() {
+        if (!::updateBtn.isInitialized) return
+        updateBtn.isEnabled = !updateInFlight
+        updateBtn.text = when {
+            updateInFlight -> "Updating..."
+            updateDownloadUrl.isNotBlank() -> "Install update"
+            updateState.startsWith("up to date") -> "Up to date"
+            else -> "Check for update"
+        }
     }
 
     private fun permissionState(permission: String): String =
@@ -532,10 +972,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun renderIdentity(meshLine: String) {
         val steward = stewardInput().ifBlank { "unbound" }
+        val witness = effectiveWitnessBase().ifBlank { "auto-discovery pending" }
         identity.text = listOf(
             "organ: ...${organId.takeLast(24)}",
             "steward: $steward",
             "identity: organ id auto; contact opt-in",
+            "witness: $witness",
+            "discovery: $discoveryState",
             "mesh: $meshLine",
         ).joinToString("\n")
     }
@@ -572,6 +1015,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             "screen:write",
             "network:http",
             "bluetooth:presence",
+            "app:update",
         )
 
     private fun heartbeatJson(): JSONObject =
@@ -581,6 +1025,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             .put("channels", JSONArray(offeredTransports()))
             .put("beat", tick)
             .put("best_shared", bestSharedChannel)
+            .put("update", updateState)
 
     private fun bodyStateJson(): JSONObject {
         val presentPeers = if (connected) peerCount + 1 else 0
@@ -725,8 +1170,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val active = activeOrgans()
         val bodyState = bodyStateJson()
         val presentPeers = bodyState.optInt("present_peers")
+        val witness = effectiveWitnessBase().ifBlank { "auto-discovery pending" }
         meshSummary.text = listOf(
             "state: $meshState",
+            "witness: $witness",
+            "discovery: $discoveryState",
             "present peers: $peerCount  connected channels: $connectedChannelCount  offered: $offeredChannelCount",
             "best shared carrier: $bestSharedChannel",
         ).joinToString("\n")
@@ -749,8 +1197,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         ).joinToString("\n")
         networkLane.text = listOf(
             "NETWORK",
+            discoveryState,
             cachedNetworkState,
             "mesh $meshState",
+            "update $updateState",
             "flow %.2f/s %.0f B/s".format(Locale.US, samplesPerSecond, bytesPerSecond),
         ).joinToString("\n")
         bluetoothLane.text = listOf(
@@ -773,6 +1223,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             "learned from sister work: signals are information, not verdicts; silence is evidence",
             "sense-organ ripening: current app gathers receipts; complete native hearing/seeing remains a measured challenger, not a claim",
             "sensed: ${if (active.isEmpty()) "none" else active.joinToString(",")}",
+            "witness: $witness",
+            "discovery: $discoveryState",
+            "update: $updateState",
             "body-state: organs=${bodyState.optInt("organs_active")} peers=${bodyState.optInt("present_peers")} surprises=${bodyState.optLong("surprise_count")} errors=${bodyState.optLong("error_count")} samples=${bodyState.optLong("sample_count")}",
             "identity: organ id automatic; phone/email label remains opt-in until Android consent flow is wired",
             "screen: active dashboard + QR offer; video frames require camera permission and frame session",
@@ -933,9 +1386,18 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     override fun onPause() {
         super.onPause()
-        sm.unregisterListener(this)
-        handler.removeCallbacks(loop)
-        handler.removeCallbacks(meshLoop)
-        stopMicSampling()
+        if (connected || pendingStartAfterDiscovery) {
+            stopSharing()
+        } else {
+            sm.unregisterListener(this)
+            handler.removeCallbacks(loop)
+            handler.removeCallbacks(meshLoop)
+            stopMicSampling()
+        }
+    }
+
+    override fun onDestroy() {
+        stopWitnessDiscovery()
+        super.onDestroy()
     }
 }

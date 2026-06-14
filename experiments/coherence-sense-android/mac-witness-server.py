@@ -14,12 +14,14 @@ placeholder until those recipes are wired into the live loop through a persisten
 
 Run:  python3 mac-witness-server.py            # binds 0.0.0.0:8800
 Open the dashboard on the Mac:  http://localhost:8800
-Point the phone app at:         http://<this-mac-LAN-IP>:8800   (ipconfig getifaddr en0)
+The Android app discovers this Mac over _hati-witness._tcp; the dashboard also shows fallback URLs.
 """
 import json
 import time
 from argparse import ArgumentParser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+from hati_witness_discovery import start_mdns_advertisement, witness_descriptor
 
 DEFAULT_PORT = 8800
 ORGAN_KEYS = ("accel", "gyro", "light", "mag")
@@ -35,6 +37,7 @@ state = {
     "latest": {},            # the most recent snapshot
     "events": [],            # field-change events (most recent first)
     "present": False,
+    "witness": {},
 }
 
 
@@ -61,6 +64,8 @@ class Witness(BaseHTTPRequestHandler):
             if was and not state["present"]:
                 _event("peer", f"{state['device']} went quiet")
             return self._send(200, json.dumps(state))
+        if self.path.startswith("/.well-known/hati-witness") or self.path.startswith("/discover"):
+            return self._send(200, json.dumps(state["witness"]))
         return self._send(200, DASHBOARD, "text/html; charset=utf-8")
 
     def do_POST(self):
@@ -117,6 +122,7 @@ DASHBOARD = """<!doctype html><html><head><meta charset=utf-8>
  .big{font-size:26px;color:#eaf0f6} .dim{color:#7a8696}
  .organ{display:inline-block;background:#1b2a1f;color:#86efac;border:1px solid #2c4a35;border-radius:6px;padding:2px 9px;margin:2px 4px 2px 0}
  .organ.off{background:#1a1d22;color:#566;border-color:#262b32}
+ .pill{display:inline-block;background:#182430;color:#9ad6ca;border:1px solid #28475c;border-radius:999px;padding:2px 9px;margin:2px 4px 2px 0}
  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;vertical-align:middle}
  .on{background:#34d399;box-shadow:0 0 8px #34d399} .gone{background:#5b6470}
  table{width:100%;border-collapse:collapse} td{padding:2px 0} td.k{color:#7a8696;width:64px}
@@ -129,6 +135,7 @@ DASHBOARD = """<!doctype html><html><head><meta charset=utf-8>
 <div class=grid>
  <div class=card><h2>presence</h2><div class=big id=presence>&mdash;</div><div class=dim id=frames></div></div>
  <div class=card><h2>organs active</h2><div id=organs></div></div>
+ <div class=card><h2>nearby discovery</h2><div id=discovery></div><div class=dim>Android listens for _hati-witness._tcp; fallback URLs stay visible here.</div></div>
  <div class=card><h2>field (latest)</h2><table id=field></table></div>
  <div class=card><h2>events / surprises</h2><div id=events></div></div>
  <div class=note id=note>recognition &middot; prediction &middot; inference-error &mdash; the Form recipes are proven three-way; wiring them into this live loop (a persistent kernel eval server) is the next carrier step. For now this window shows the senses and the sync, honestly.</div>
@@ -143,6 +150,8 @@ async function tick(){
  const dur=s.first_ts&&s.last_ts?Math.round(s.last_ts-s.first_ts):0;
  document.getElementById("frames").textContent=(s.frames||0)+" frames witnessed · "+dur+"s alive";
  document.getElementById("organs").innerHTML=ALL.map(o=>'<span class="organ'+(s.organs&&s.organs.includes(o)?"":" off")+'">'+o+'</span>').join("");
+ const w=s.witness||{};
+ document.getElementById("discovery").innerHTML='<div class=dim>'+((w.service_type||"_hati-witness._tcp")+" · "+(w.mode||"witness"))+'</div>'+((w.urls||[]).map(u=>'<span class=pill>'+u+'</span>').join("")||'<span class=dim>waiting for LAN address</span>');
  const f=s.latest||{}; document.getElementById("field").innerHTML=ALL.filter(o=>o in f).map(o=>'<tr><td class=k>'+o+'</td><td>'+vec(f[o])+'</td></tr>').join("")||'<tr><td class=dim>no field yet</td></tr>';
  document.getElementById("events").innerHTML=(s.events||[]).map(e=>'<div class="ev '+e.kind+'"><span class=t>'+e.t+'</span> '+e.detail+'</div>').join("")||'<div class=dim>waiting…</div>';
 }
@@ -154,14 +163,20 @@ def main():
     parser = ArgumentParser(description="Run the Coherence Sense Mac witness server.")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     args = parser.parse_args()
+    state["witness"] = witness_descriptor(args.port, "witness")
+    mdns = start_mdns_advertisement(args.port, "witness")
     srv = ThreadingHTTPServer(("0.0.0.0", args.port), Witness)
     print(f"Coherence Sense — Mac witness + dashboard on 0.0.0.0:{args.port}")
     print(f"  open the dashboard:  http://localhost:{args.port}")
-    print(f"  point the phone at:  http://<this-mac-LAN-IP>:{args.port}   (ipconfig getifaddr en0)")
+    print(f"  Android auto-discovers: {state['witness']['service_type']} ({'active' if mdns.active else mdns.reason})")
+    for url in state["witness"]["urls"]:
+        print(f"  fallback URL: {url}")
     try:
         srv.serve_forever()
     except KeyboardInterrupt:
         print(f"\nwitnessed {state['frames']} frames; last organs: {state['organs']}")
+    finally:
+        mdns.stop()
 
 
 if __name__ == "__main__":

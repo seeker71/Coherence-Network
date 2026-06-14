@@ -1,4 +1,12 @@
-; oracle-catalog.fk — the 3rd-party oracle TEACHERS installed on this host, as Form data.
+; oracle-catalog.fk — 3rd-party oracle teachers and evidence lanes as Form data.
+;
+; Floor: installed local teachers and consent-crossing remote membranes are explicit rows that learning
+; loops can count, query, and refuse. Evidence lanes cover code lowering, app builds, patch history,
+; source search, package/builds, JSON/XML shape, HTTP/API probes, STT, media codecs, local LLM receipts,
+; remote model committees, public source search, package registries, and CI providers.
+;
+; North star: every learning loop can ask for outside evidence by kind, compare it with native candidates,
+; learn from receipts, and retire the oracle per lane only after Form-native behavior reaches it.
 ;
 ; A teacher is a borrowed sense the body samples while it grows its own (lc-sense-organ-ripening,
 ; sensing-lanes.form). This catalog names the teachers actually installed, so a sensing lane can pick one
@@ -14,11 +22,11 @@
 ;   trust : "local" | "remote-membrane"      — local = on-device, no membrane crossed; remote = a consented membrane
 ;   state : "installed" | "source-pending" | "absent"
 ;
-; Probe-verified on this host 2026-06-13: whisper-cli (whisper.cpp 1.8.6, Metal+BLAS), macOS say (184 voices),
-; ollama 0.23.2 (5 local models + cloud), ffmpeg 8.1.1; the Apple SoundAnalysis/Vision/ShazamKit Swift
-; sources present (source-pending = compile-when-a-run-needs-them, don't-build-ahead-of-need).
+; Probe-verified on this host 2026-06-14: clang, swiftc, ffmpeg, ollama, git, rg, npm, node,
+; whisper-cli, xmllint, jq, and curl are present. adb is not on PATH. Remote lanes are named as
+; remote-membrane/protocol-pending unless the local invocation is itself the installed carrier.
 ;
-; Proven by: form-stdlib/tests/oracle-catalog-band.fk (three-way at validate.sh).
+; Proven by: form-stdlib/tests/oracle-catalog-band.fk (four-way at validate.sh).
 (do
     (defn oc-teacher (organ lane invocation role trust state)
         (list organ lane invocation role trust state))
@@ -41,6 +49,171 @@
             (oc-teacher "inner-voice" "remote-llm"   "ollama-cloud"          "generate" "remote-membrane" "installed")
             (oc-teacher "media"       "ground-truth" "ffmpeg"                "both"     "local"           "installed")))
 
+    (defn oc-evidence-lane (name learning-kind modality invocation evidence trust state floor north-star)
+        (list name learning-kind modality invocation evidence trust state floor north-star))
+    (defn oc-ev-name (lane) (nth lane 0))
+    (defn oc-ev-kind (lane) (nth lane 1))
+    (defn oc-ev-modality (lane) (nth lane 2))
+    (defn oc-ev-invocation (lane) (nth lane 3))
+    (defn oc-ev-evidence (lane) (nth lane 4))
+    (defn oc-ev-trust (lane) (nth lane 5))
+    (defn oc-ev-state (lane) (nth lane 6))
+    (defn oc-ev-floor (lane) (nth lane 7))
+    (defn oc-ev-north-star (lane) (nth lane 8))
+
+    (defn oc-evidence-catalog ()
+        (list
+            (oc-evidence-lane
+                "clang-compiler"
+                "code-lowering"
+                "code"
+                "clang"
+                "asm-object-diagnostic"
+                "local"
+                "installed"
+                "compile and compare object/diagnostic receipts"
+                "Form-native lowerers beat compiler oracle samples lane by lane")
+            (oc-evidence-lane
+                "swiftc-compiler"
+                "app-build"
+                "code"
+                "swiftc"
+                "compile-diagnostic"
+                "local"
+                "installed"
+                "build and diagnostic receipt"
+                "macOS and Android app services prove native UI/resource lanes before release")
+            (oc-evidence-lane
+                "git-history"
+                "code-change"
+                "patch"
+                "git"
+                "diff-history"
+                "local"
+                "installed"
+                "patch and lineage receipt"
+                "native agent learns from accepted/reverted patch history")
+            (oc-evidence-lane
+                "ripgrep-search"
+                "tool-selection"
+                "text"
+                "rg"
+                "match-lines"
+                "local"
+                "installed"
+                "source search receipt"
+                "Form-native source index replaces repeated host search calls")
+            (oc-evidence-lane
+                "node-npm"
+                "web-build"
+                "package"
+                "npm+node"
+                "build-test-package"
+                "local"
+                "installed"
+                "package build/test receipt"
+                "native dependency and build grammar learns from package manager oracles")
+            (oc-evidence-lane
+                "jq-json"
+                "data-shape"
+                "json"
+                "jq"
+                "schema-projection"
+                "local"
+                "installed"
+                "json projection receipt"
+                "Form-native JSON/query recipes retire jq for stable lanes")
+            (oc-evidence-lane
+                "xmllint-xml"
+                "tree-query"
+                "xml"
+                "xmllint"
+                "path-validation"
+                "local"
+                "installed"
+                "XML path receipt"
+                "kernel tree/path recipes retire XML shell applets for stable lanes")
+            (oc-evidence-lane
+                "curl-http"
+                "api-evidence"
+                "http"
+                "curl"
+                "status-headers-body"
+                "remote-membrane"
+                "installed"
+                "HTTP status/header/body receipt"
+                "kernel HTTP and route lanes learn from external API evidence with consent")
+            (oc-evidence-lane
+                "whisper-cli"
+                "speech-stt"
+                "audio"
+                "whisper-cli"
+                "transcript-confidence"
+                "local"
+                "installed"
+                "local transcript receipt"
+                "Form-native STT candidates retire oracle per audio category")
+            (oc-evidence-lane
+                "ffmpeg-codec"
+                "media-codec"
+                "audio-video"
+                "ffmpeg"
+                "codec-probe-transcode"
+                "local"
+                "installed"
+                "codec/probe/transcode receipt"
+                "native audio/video codec lanes learn from ffmpeg until they can parse directly")
+            (oc-evidence-lane
+                "ollama-local"
+                "llm-receipt"
+                "text"
+                "ollama"
+                "label-generate-embed"
+                "local"
+                "installed"
+                "local LLM label/generation receipt"
+                "Form-native code/text/speech learners use local LLM receipts with optional human review")
+            (oc-evidence-lane
+                "remote-model-committee"
+                "model-judge"
+                "text"
+                "external-llm-api"
+                "plurality-receipt"
+                "remote-membrane"
+                "protocol-pending"
+                "multi-model comparison receipt"
+                "remote model committees become sampled teachers, not hidden authority")
+            (oc-evidence-lane
+                "public-doc-search"
+                "source-grounding"
+                "web"
+                "search+fetch"
+                "citation-source-date"
+                "remote-membrane"
+                "protocol-pending"
+                "source citation and freshness receipt"
+                "learning loops ground claims in current primary sources when local memory is stale")
+            (oc-evidence-lane
+                "package-registry"
+                "dependency-evidence"
+                "package"
+                "registry-api"
+                "version-vulnerability-license"
+                "remote-membrane"
+                "protocol-pending"
+                "version, vulnerability, and license receipt"
+                "dependency choices learn from registry evidence before install or release")
+            (oc-evidence-lane
+                "ci-provider"
+                "execution-proof"
+                "build-log"
+                "github-actions"
+                "status-log-artifact"
+                "remote-membrane"
+                "protocol-pending"
+                "status/log/artifact receipt"
+                "release choices learn from external CI outcomes and local proof together")))
+
     ; Count rows whose state is "installed" — the same evidence-counting spine as active-inference's ai-hit-count.
     (defn oc-installed-count (rows)
         (if (eq (len rows) 0) 0
@@ -58,5 +231,31 @@
         (if (eq (len rows) 0) (oc-teacher "none" lane "none" "none" "none" "absent")
             (if (str_eq (oc-lane (head rows)) lane) (head rows)
                 (oc-for-lane (tail rows) lane))))
+
+    (defn oc-evidence-state-count (rows state)
+        (if (eq (len rows) 0) 0
+            (add
+                (if (str_eq (oc-ev-state (head rows)) state) 1 0)
+                (oc-evidence-state-count (tail rows) state))))
+    (defn oc-evidence-remote-count (rows)
+        (if (eq (len rows) 0) 0
+            (add
+                (if (str_eq (oc-ev-trust (head rows)) "remote-membrane") 1 0)
+                (oc-evidence-remote-count (tail rows)))))
+    (defn oc-evidence-for-kind (rows kind)
+        (if (eq (len rows) 0)
+            (oc-evidence-lane
+                "none"
+                kind
+                "none"
+                "none"
+                "none"
+                "none"
+                "absent"
+                "none"
+                "none")
+            (if (str_eq (oc-ev-kind (head rows)) kind)
+                (head rows)
+                (oc-evidence-for-kind (tail rows) kind))))
 
     0)

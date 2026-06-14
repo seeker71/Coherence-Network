@@ -1,0 +1,39 @@
+# oracle-catalog.form - third-party oracle evidence lanes for native learning loops
+
+(oracle-catalog
+  (lineage
+    (recipe form/form-stdlib/oracle-catalog.fk)
+    (proof form/form-stdlib/tests/oracle-catalog-band.fk -> 16383 four-way))
+
+  (purpose
+    "Name outside evidence sources as explicit native rows so learning loops can sample them, compare them, and retire them per lane once Form-native candidates have earned the route."
+    "A third-party oracle is a teacher or witness, not ambient authority. Each row carries its invocation, trust membrane, state, floor, and north star.")
+
+  (floor
+    "Installed local teacher rows cover whisper-cli, macOS say, Ollama, ffmpeg, and source-pending Apple SoundAnalysis/Vision/ShazamKit classifiers."
+    "Evidence lanes cover clang, swiftc, git, rg, npm+node, jq, xmllint, curl, whisper-cli, ffmpeg, Ollama, remote model committees, public source search, package registries, and CI providers."
+    "The proof walks counts for installed rows, remote membranes, unknown-lane refusal, compiler/package grounding, source/CI membrane flags, and absent rows.")
+
+  (north-star
+    "Every learning loop has an explicit evidence menu: code generation can ask compiler/static/CI oracles, tool selection can ask search/history/API oracles, speech can ask STT/TTS/media oracles, data work can ask JSON/XML/package oracles, and claim grounding can ask public source oracles."
+    "Remote oracles remain consented membranes with receipts. Local oracles remain replaceable teachers. Native candidates retire each oracle only per proven category, with continuing exploration cadence.")
+
+  (evidence-lanes
+    (code-lowering clang "assembly, object, and diagnostic receipts teach Form-to-ASM/native lowering")
+    (app-build swiftc "build and diagnostic receipts teach app-service release gates")
+    (code-change git "diff and history receipts teach patch acceptance and rollback signals")
+    (tool-selection rg "source search receipts teach native source indexing and search choices")
+    (web-build npm+node "package build/test receipts teach dependency and build grammar choices")
+    (data-shape jq "JSON projection receipts teach Form-native JSON/query recipes")
+    (tree-query xmllint "XML path receipts teach kernel tree/path recipes")
+    (api-evidence curl "HTTP status/header/body receipts teach kernel HTTP and route behavior")
+    (speech-stt whisper-cli "transcript/confidence receipts teach STT and speech loopback")
+    (media-codec ffmpeg "codec/probe/transcode receipts teach audio/video codec lanes")
+    (llm-receipt ollama "local LLM label/generation receipts teach code/text/speech loops")
+    (model-judge external-llm-api "remote multi-model comparison receipts teach without hidden authority")
+    (source-grounding search+fetch "current citation/source/date receipts teach claim freshness")
+    (dependency-evidence registry-api "version, vulnerability, and license receipts teach dependency choices")
+    (execution-proof github-actions "status, log, and artifact receipts teach release choices"))
+
+  (next-step
+    "Wire code-tool-learning, speech-model-learning, package/dependency lanes, and release gates to emit oracle evidence requests and CHOICE-RECEIPT outcomes from this catalog, then train champion/challenger retirement per category."))
