@@ -20,7 +20,7 @@
     "A valid CHOICE-RECEIPT preserves token cost and becomes a native training sample. The current candidate race shows `form-native:summary` winning over remote-model and local-LLM teachers because it clears quality gates with lower token, energy, and nutrition cost."
     "Oracle lanes are explicit: source grounding crosses a remote membrane, and local Ollama is a local LLM receipt teacher. Neither is ambient authority."
     "The real-source floor reads this checked-in .form file through kernel-native `read_file`, `file_size`, and `read_file_slice`, verifies exact byte slices as citations, and only then emits the summary receipt."
-    "The multi-source floor adds dynamic source-coordinate rows for file, store, route, and stream sources. File slices, file-backed store reads, socket-served kernel route traces, and .fkb channel windows with explicit capacity/deferred pressure are physically read into the same source receipt shape.")
+    "The multi-source floor adds dynamic source-coordinate rows for file, store, route, and stream sources. File slices, file-backed store reads, socket-served kernel route telemetry traces, and .fkb channel windows with explicit capacity, deferred pressure, ack cursor, and replay cursor are physically read into the same source receipt shape.")
 
   (north-star
     "Every durable text surface, code patch, proof log, runtime event stream, dialogue, and memory cell can distill into native summary claim rows with source coordinates and citations."
@@ -67,9 +67,9 @@
     (multi-source-reader
       (ready-sources host:file store:query kernel:route stream:read)
       (coordinate-fields protocol capability locator selector offset length codec carrier)
-      (carrier read_file_slice cell-log-store socket-kh-serve-listener channel-read-since-pressure)
+      (carrier read_file_slice cell-log-store socket-kh-serve-listener-telemetry channel-read-since-pressure-ack-replay)
       (token-cost 120)
-      (proof-level three-kernel-host-io-file-store-socket-route-backpressure-stream)
+      (proof-level three-kernel-host-io-file-store-socket-route-telemetry-backpressure-ack-replay-stream)
       (sample summary:multi-source-receipt))
     (candidate-race
       (teachers remote-model-committee ollama:local human:optional)
@@ -81,7 +81,7 @@
       (unknown summary/no-plan)))
 
   (next-physical-proof-gaps
-    (source-reader "move the socket route trace from single-process loopback to production front-door telemetry, and move stream pressure from measured read-window defer receipts to producer pacing, ack, and replay receipts")
+    (source-reader "move route telemetry from single-process loopback to production front-door telemetry, and move stream pressure/ack/replay from measured read-window receipts to producer pacing against live backpressure")
     (heldout-corpus "run real source/doc/proof/event summaries through local LLM and Form-native candidates with retained receipts")
     (memory-update "write passing summary claim rows into native memory cells with rollback and compost receipts")
     (abstention "prove low-evidence summaries ask for source grounding rather than generating plausible prose")))

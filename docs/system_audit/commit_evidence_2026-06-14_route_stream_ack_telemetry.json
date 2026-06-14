@@ -1,0 +1,106 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/route-stream-ack-telemetry-20260614",
+  "commit_scope": "Extend text summary source receipts with socket route telemetry rows and stream ack/replay rows on top of the existing backpressure window.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "hati-os",
+    "form-os-native-tool-surface",
+    "route-telemetry",
+    "stream-ack-replay"
+  ],
+  "spec_ids": [
+    "form-native-source-coordinates",
+    "kernel-route-traces",
+    "stream-backpressure"
+  ],
+  "task_ids": [
+    "route-stream-ack-telemetry-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/text-summary-learning.fk",
+    "form/form-stdlib/tests/text-summary-multi-source-band.fk",
+    "docs/coherence-substrate/text-summary-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_route_stream_ack_telemetry.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/form-stdlib/text-summary-learning.fk",
+    "form/form-stdlib/tests/text-summary-multi-source-band.fk",
+    "docs/coherence-substrate/text-summary-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_route_stream_ack_telemetry.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "form/form-stdlib/text-summary-learning.fk",
+    "form/form-stdlib/tests/text-summary-multi-source-band.fk",
+    "docs/coherence-substrate/text-summary-learning.form",
+    "docs/coherence-substrate/INDEX.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "git fetch origin main",
+      "git switch -c codex/route-stream-ack-telemetry-20260614 origin/main",
+      "coord claim \"route stream ack telemetry\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/cell-log-store.fk form-stdlib/http-parse.fk form-stdlib/kernel-http.fk form-stdlib/http-request.fk form-stdlib/http-render.fk form-stdlib/http-server.fk form-stdlib/http-socket.fk form-stdlib/channel.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-multi-source-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-real-source-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/tests/text-summary-learning-band.fk"
+    ],
+    "notes": "Prompt guide passed and wellness reported deploy aligned at origin/main 898a5ca8. The focused multi-source band passed as a 3-kernel only host-I/O proof with verdict 65535 and 1 ok, 0 divergent. It now records route telemetry with source, route, path, start/end/elapsed ms from now_unix_ms, serve result, and request/wire/body byte counts; that telemetry must match the socket route trace before the source-data receipt is valid. It also records stream ack/replay with read cursor 1, ack cursor 3, replay cursor 1, total-after-cursor 3, window count 2, and deferred count 1; those fields must match the pressure receipt before the stream source-data receipt is valid. The real-source band passed with verdict 8191 after citation offsets were updated, and base summary-learning passed with verdict 262143 plus fourth arm: 1 band(s) four-way."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "CI not run yet in this evidence record."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy performed yet. This is a local Form stdlib and documentation slice."
+  },
+  "phase_gate": {
+    "phase": "route-stream-ack-telemetry",
+    "gate": "Cells and recipes can inspect route telemetry and stream ack/replay as native source-coordinate receipt gates before summary learning.",
+    "state": "local-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Move route telemetry from loopback socket proof into production front-door telemetry, and move stream ack/replay from read-window receipts into producer pacing against live backpressure."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "No public API behavior changed. Form-native summary source receipts now require route telemetry and stream ack/replay rows in the focused source-coordinate proof.",
+    "public_endpoints": [
+      "local:form-text-summary-learning"
+    ],
+    "test_flows": [
+      "The multi-source band drives a real local TCP request through kh-serve-listener and validates telemetry against socket trace bytes and route timing.",
+      "The stream lane reads real .fkb channel data and validates pressure, ack cursor, replay cursor, total-after-cursor, window count, and deferred count before learning.",
+      "The existing summary and real-source bands remain green."
+    ],
+    "summary": "Local Form proof passed; no public endpoint changed."
+  }
+}

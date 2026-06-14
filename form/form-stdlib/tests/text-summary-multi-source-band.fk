@@ -2,20 +2,20 @@
 ;
 ; text-summary-multi-source-band - dynamic source-coordinate summary floor.
 ;
-; Floor: file, file-backed store, socket-served route trace, and stream
-; pressure windows all emit the same native source-coordinate receipt shape. The file
+; Floor: file, file-backed store, socket-served route telemetry trace, and stream
+; pressure/ack/replay windows all emit the same native source-coordinate receipt shape. The file
 ; lane reads a real checked-in source byte slice; the store lane writes to a
 ; temporary segmented cell-log store and reads the value back; the route lane
 ; sends a real TCP loopback request through kh-serve-listener and reads the
 ; native-kernel wire response; the stream lane writes and reads a .fkb channel
-; cursor window with capacity and deferred-count pressure.
+; cursor window with capacity, deferred-count pressure, ack cursor, and replay cursor.
 ;
 ; North star: file, store, route, and stream sources all feed one summary
 ; learner through dynamic coordinates: protocol, capability, locator, selector,
 ; offset, length, codec, carrier, floor, and north star. The current floor still
-; names the next pressure honestly: route is a loopback socket-served front-door
-; trace, not yet production front-door telemetry; stream is a measured
-; backpressure read window, not yet producer pacing and ack.
+; names the next pressure honestly: route telemetry is measured on loopback, not
+; yet the production front-door telemetry stream; stream has ack/replay rows, not
+; yet producer pacing against live backpressure.
 ;
 ; Verdict 65535 when every claim lands:
 ;   1     expanded floor and north-star declarations name source coordinates
@@ -24,8 +24,8 @@
 ;   8     store coordinate is ready store:query with dynamic key coordinates
 ;   16    store receipt is read from a real temporary segmented store
 ;   32    ready receipts are valid and aggregate claims/citations
-;   64    route coordinate and receipt are ready from socket-served wire trace
-;   128   stream coordinate and receipt are ready from backpressure-aware window
+;   64    route coordinate and receipt are ready from socket-served telemetry trace
+;   128   stream coordinate and receipt are ready from pressure/ack/replay window
 ;   256   file/store/route/stream request plans expose protocols and caps
 ;   512   multi-source summary passes existing summary quality gates
 ;   1024  summary claim and citation counts equal aggregated receipts
@@ -107,7 +107,9 @@
     (let port (socket_port srv))
     (let cli (socket_connect "127.0.0.1" port))
     (let route-request-bytes (socket_send cli route-request-wire))
+    (let route-start-ms (now_unix_ms))
     (let route-served (kh-serve-listener srv (list route-exact) route-registry 1))
+    (let route-end-ms (now_unix_ms))
     (let route-wire (socket_recv cli 65536))
     (socket_close cli)
     (socket_close srv)
@@ -123,18 +125,31 @@
             (str_len route-wire)
             (str_len route-body)
             "native-kernel"))
+    (let route-telemetry
+        (tsl-route-telemetry
+            "loopback-front-door"
+            "runtime-events-summary"
+            "/api/runtime/events"
+            route-start-ms
+            route-end-ms
+            (sub route-end-ms route-start-ms)
+            route-served
+            route-request-bytes
+            (str_len route-wire)
+            (str_len route-body)))
     (let route-coordinate
         (tsl-route-source-coordinate
             "/api/runtime/events"
             "tsms-runtime-events-handler"))
     (let route-receipt
-        (tsl-socket-route-source-data-receipt
+        (tsl-telemetry-route-source-data-receipt
             route-coordinate
             route-body
             route-trace
+            route-telemetry
             2
             1
-            "socket_listen/connect/send/serve/recv produced a native-kernel route wire trace"))
+            "socket_listen/connect/send/serve/recv produced a native-kernel route telemetry trace"))
 
     (let stream-path (str_concat (temp_dir) "/text-summary-multi-source-stream.fkb"))
     (fs_remove stream-path)
@@ -163,15 +178,27 @@
             stream-deferred
             "backpressure/defer"
             "defer-over-capacity"))
+    (let stream-ack-replay
+        (tsl-stream-ack-replay-receipt
+            stream-path
+            1
+            stream-next-cursor
+            1
+            (len stream-all)
+            stream-window-count
+            stream-deferred
+            "ack-window"
+            "replay-from-read-cursor"))
     (let stream-receipt
-        (tsl-backpressure-stream-source-data-receipt
+        (tsl-ack-replay-stream-source-data-receipt
             stream-coordinate
             stream-body
             stream-pressure
+            stream-ack-replay
             stream-next-cursor
             2
             2
-            "channel-read-since returned three payloads after cursor 1, consumed two, and deferred one over capacity"))
+            "channel-read-since returned three payloads after cursor 1, consumed two, acknowledged cursor 3, and kept replay at cursor 1"))
     (let coordinates (list file-coordinate store-coordinate route-coordinate stream-coordinate))
     (let ready-receipts (list file-receipt store-receipt route-receipt stream-receipt))
     (let summary (tsl-multi-source-summary ready-receipts meta))
@@ -234,7 +261,7 @@
                 (and
                     (eq (tsl-source-coordinate-ready? route-coordinate) 1)
                     (and
-                        (str_eq (tsl-source-coordinate-carrier route-coordinate) "socket:kh-serve-listener+wire-trace")
+                        (str_eq (tsl-source-coordinate-carrier route-coordinate) "socket:kh-serve-listener+telemetry-trace")
                         (and
                             (eq route-served 0)
                             (and
@@ -243,7 +270,9 @@
                                     (tsms-contains route-wire "X-Form-Router: native-kernel\r\n")
                                     (and
                                         (eq (tsl-socket-route-trace-valid? route-trace) 1)
-                                        (eq (tsl-source-data-valid? route-receipt) 1))))))))
+                                        (and
+                                            (eq (tsl-route-telemetry-valid? route-telemetry) 1)
+                                            (eq (tsl-source-data-valid? route-receipt) 1)))))))))
             64
             0))
     (let c7
@@ -252,14 +281,16 @@
                 (and
                     (eq (tsl-source-coordinate-ready? stream-coordinate) 1)
                     (and
-                        (str_eq (tsl-source-coordinate-carrier stream-coordinate) "channel:read-since+pressure-window")
+                        (str_eq (tsl-source-coordinate-carrier stream-coordinate) "channel:read-since+pressure-window+ack-replay")
                         (and
                             (eq (len stream-all) 3)
                             (and
                                 (eq (tsl-stream-pressure-ready? stream-pressure) 1)
                                 (and
                                     (eq (tsl-stream-pressure-deferred-count stream-pressure) 1)
-                                    (eq (tsl-source-data-valid? stream-receipt) 1)))))))
+                                    (and
+                                        (eq (tsl-stream-ack-replay-ready? stream-ack-replay) 1)
+                                        (eq (tsl-source-data-valid? stream-receipt) 1))))))))
             128
             0))
     (let c8
@@ -268,8 +299,8 @@
                 (and
                     (str_eq (tsl-plan-capability store-plan) "cap.store.query")
                     (and
-                        (str_eq (tsl-plan-carrier route-plan) "socket:kh-serve-listener+wire-trace")
-                        (str_eq (tsl-plan-carrier stream-plan) "channel:read-since+pressure-window"))))
+                        (str_eq (tsl-plan-carrier route-plan) "socket:kh-serve-listener+telemetry-trace")
+                        (str_eq (tsl-plan-carrier stream-plan) "channel:read-since+pressure-window+ack-replay"))))
             256
             0))
     (let c9
@@ -313,7 +344,7 @@
     (let c14
         (if (str_eq
                 (tsl-multi-source-proof-level)
-                "3-kernel-host-io-file-store-socket-route-backpressure-stream")
+                "3-kernel-host-io-file-store-socket-route-telemetry-backpressure-ack-replay-stream")
             16384
             0))
     (let c15
