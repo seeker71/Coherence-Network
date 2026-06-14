@@ -1,0 +1,46 @@
+{
+  "ledger_schema": "model_executor_proof_run/v1",
+  "run_id": "fourth-url-uuid-floor-20260614",
+  "thread_branch": "codex/fourth-node-value-eq-floor-20260614",
+  "model_used": "gpt-5-codex",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "attempts": 1,
+  "commands_run": [
+    "make prompt-guide",
+    "make wellness",
+    "coord view",
+    "coord claim fourth-node-value-eq-floor",
+    "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/url-encode-band.fk",
+    "cd form && bash scripts/fourth-arm-survey.sh --one form-stdlib/tests/uuid-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/url-encode.fk form-stdlib/tests/url-encode-band.fk",
+    "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/uuid.fk form-stdlib/tests/uuid-band.fk",
+    "cd form && bash scripts/fourth-arm-gate.sh url-encode uuid",
+    "cd form && VALIDATE_JOBS=4 FOURTH_PREPARE_ALL_BATCH_MAX=0 ./validate.sh",
+    "bash scripts/bml_form_jit_metal_planes_audit.sh",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_fourth_url_uuid_floor.json",
+    "python3 scripts/model_executor_proof_ledger.py validate",
+    "python3 - <<'PY'\nimport json\nfrom pathlib import Path\nfor i, line in enumerate(Path('docs/system_audit/model_executor_runs.jsonl').read_text().splitlines(), 1):\n    json.loads(line)\nprint('OK jsonl rows', i)\nPY",
+    "git diff --check"
+  ],
+  "pass_fail": "pass",
+  "failure_reason": "Admitted url-encode and uuid to the fourth-arm manifest at verdicts 16 and 15 after refreshed survey rows showed fkwu single-pass. Focused validate returned fourth arm: 1 band(s) four-way for both bands, fourth-arm-gate returned PASS-4WAY, and rebased full Form validation reached 152 four-way bands with 568 ok and 0 divergent after PR #3024's upstream text-summary and LLM feature rows. The metal-plane audit passed macOS arm64 Mach-O and Android arm64 ELF receipts. Deeper session/symbols/xpath/record rows remain outside the manifest because they still mismatch.",
+  "source": {
+    "kind": "native-ledger-record",
+    "path": "docs/system_audit/model_executor_run_ledger/fourth-url-uuid-floor-20260614.json"
+  },
+  "validation": {
+    "status": "pass",
+    "commands": [
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/url-encode.fk form-stdlib/tests/url-encode-band.fk",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/uuid.fk form-stdlib/tests/uuid-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh url-encode uuid",
+      "cd form && VALIDATE_JOBS=4 FOURTH_PREPARE_ALL_BATCH_MAX=0 ./validate.sh",
+      "bash scripts/bml_form_jit_metal_planes_audit.sh",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-06-14_fourth_url_uuid_floor.json",
+      "python3 scripts/model_executor_proof_ledger.py validate",
+      "python3 - <<'PY'\nimport json\nfrom pathlib import Path\nfor i, line in enumerate(Path('docs/system_audit/model_executor_runs.jsonl').read_text().splitlines(), 1):\n    json.loads(line)\nprint('OK jsonl rows', i)\nPY",
+      "git diff --check"
+    ]
+  }
+}
