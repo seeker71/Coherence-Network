@@ -1,0 +1,310 @@
+; model-vitality.fk - body-readable model data and vitality rows.
+;
+; Floor: planning and receipt rows only. Model architecture, tensors, deltas,
+; optimizer state, eval receipts, lineage, and vitality are explicit Form data;
+; local files, GPU buffers, MLX arrays, and emitted binaries are cache/projection
+; carriers and cannot be named as source of truth here.
+;
+; North star: every model cell can express its resonance, vitality, sovereignty,
+; and trust through content-addressed substrate rows. Large tensors are chunk
+; cells with merkle roots; mesh peers share slices by merkle; the body reads a
+; model-vitality row and focuses attention on the next needed teaching step.
+; Focused proof and fast release are vitality signals, not afterthoughts.
+
+(do
+    (defn mv-kind-model-architecture () "model/architecture")
+    (defn mv-kind-tensor-chunk () "model/tensor-chunk")
+    (defn mv-kind-delta-slice () "model/delta-slice")
+    (defn mv-kind-optimizer-state () "model/optimizer-state")
+    (defn mv-kind-eval-receipt () "model/eval-receipt")
+    (defn mv-kind-vitality () "model/vitality")
+    (defn mv-kind-lineage () "model/lineage")
+
+    (defn mv-floor () (list
+        "floor"
+        "explicit-model-data-rows"
+        "chunk-cells-with-merkle"
+        "eval-receipts"
+        "body-readable-vitality"
+        "carrier-cache-not-truth"
+        "smallest-focused-proof"))
+
+    (defn mv-north-star () (list
+        "north-star"
+        "architecture-weights-deltas-optimizer-evals-lineage-are-cells"
+        "resonance-vitality-sovereignty-trust-guide-focus"
+        "mesh-shares-content-addressed-slices"
+        "gpu-mlx-metal-are-materialized-carriers"
+        "promotion-is-earned-by-receipts"
+        "fast-release-cadence-is-vitality"))
+
+    (defn mv-score-valid? (score) (and (ge score 0) (le score 100)))
+    (defn mv-nonempty? (value) (gt (str_len value) 0))
+    (defn mv-row? (value tag arity)
+        (if (eq (len value) arity) (str_eq (nth value 0) tag) false))
+
+    (defn mv-cell-ref (kind id merkle local-node floor north)
+        (list "model-cell-ref" kind id merkle local-node floor north))
+    (defn mv-cell-ref? (value) (mv-row? value "model-cell-ref" 7))
+    (defn mv-cell-kind (ref) (nth ref 1))
+    (defn mv-cell-id (ref) (nth ref 2))
+    (defn mv-cell-merkle (ref) (nth ref 3))
+    (defn mv-cell-local-node (ref) (nth ref 4))
+    (defn mv-cell-floor (ref) (nth ref 5))
+    (defn mv-cell-north-star (ref) (nth ref 6))
+    (defn mv-cell-ref-text-valid? (ref)
+        (and (mv-nonempty? (mv-cell-kind ref))
+        (and (mv-nonempty? (mv-cell-id ref))
+        (and (mv-nonempty? (mv-cell-merkle ref))
+             (mv-nonempty? (mv-cell-local-node ref))))))
+    (defn mv-cell-ref-guidance-valid? (ref)
+        (and (gt (len (mv-cell-floor ref)) 0)
+             (gt (len (mv-cell-north-star ref)) 0)))
+    (defn mv-cell-ref-valid? (ref)
+        (if (mv-cell-ref? ref)
+            (and (mv-cell-ref-text-valid? ref)
+                 (mv-cell-ref-guidance-valid? ref))
+            false))
+
+    (defn mv-tensor-chunk
+        (tensor-id chunk-index shape strides format provenance merkle elements bytes cache-source)
+        (list
+            "model-tensor-chunk"
+            tensor-id
+            chunk-index
+            shape
+            strides
+            format
+            provenance
+            merkle
+            elements
+            bytes
+            cache-source))
+    (defn mv-tensor-chunk? (chunk) (mv-row? chunk "model-tensor-chunk" 11))
+    (defn mv-chunk-tensor-id (chunk) (nth chunk 1))
+    (defn mv-chunk-index (chunk) (nth chunk 2))
+    (defn mv-chunk-shape (chunk) (nth chunk 3))
+    (defn mv-chunk-strides (chunk) (nth chunk 4))
+    (defn mv-chunk-format (chunk) (nth chunk 5))
+    (defn mv-chunk-provenance (chunk) (nth chunk 6))
+    (defn mv-chunk-merkle (chunk) (nth chunk 7))
+    (defn mv-chunk-elements (chunk) (nth chunk 8))
+    (defn mv-chunk-bytes (chunk) (nth chunk 9))
+    (defn mv-chunk-cache-source (chunk) (nth chunk 10))
+    (defn mv-cache-is-source? (chunk) (eq (mv-chunk-cache-source chunk) 1))
+    (defn mv-tensor-chunk-text-valid? (chunk)
+        (and (mv-nonempty? (mv-chunk-tensor-id chunk))
+        (and (mv-nonempty? (mv-chunk-format chunk))
+        (and (mv-nonempty? (mv-chunk-provenance chunk))
+             (mv-nonempty? (mv-chunk-merkle chunk))))))
+    (defn mv-tensor-chunk-shape-valid? (chunk)
+        (and (ge (mv-chunk-index chunk) 0)
+        (and (gt (len (mv-chunk-shape chunk)) 0)
+        (and (gt (len (mv-chunk-strides chunk)) 0)
+        (and (gt (mv-chunk-elements chunk) 0)
+             (gt (mv-chunk-bytes chunk) 0))))))
+    (defn mv-tensor-chunk-valid? (chunk)
+        (if (mv-tensor-chunk? chunk)
+            (and (mv-tensor-chunk-text-valid? chunk)
+            (and (mv-tensor-chunk-shape-valid? chunk)
+                 (not (mv-cache-is-source? chunk))))
+            false))
+
+    (defn mv-eval-receipt
+        (model-id dataset-merkle accuracy confidence trust resonance vitality sovereignty energy latency memory coverage freshness mergeability readiness samples eval-merkle)
+        (list
+            "model-eval-receipt"
+            model-id
+            dataset-merkle
+            accuracy
+            confidence
+            trust
+            resonance
+            vitality
+            sovereignty
+            energy
+            latency
+            memory
+            coverage
+            freshness
+            mergeability
+            readiness
+            samples
+            eval-merkle))
+    (defn mv-eval-receipt? (receipt) (mv-row? receipt "model-eval-receipt" 18))
+    (defn mv-eval-model-id (r) (nth r 1))
+    (defn mv-eval-dataset (r) (nth r 2))
+    (defn mv-eval-accuracy (r) (nth r 3))
+    (defn mv-eval-confidence (r) (nth r 4))
+    (defn mv-eval-trust (r) (nth r 5))
+    (defn mv-eval-resonance (r) (nth r 6))
+    (defn mv-eval-vitality (r) (nth r 7))
+    (defn mv-eval-sovereignty (r) (nth r 8))
+    (defn mv-eval-energy (r) (nth r 9))
+    (defn mv-eval-latency (r) (nth r 10))
+    (defn mv-eval-memory (r) (nth r 11))
+    (defn mv-eval-coverage (r) (nth r 12))
+    (defn mv-eval-freshness (r) (nth r 13))
+    (defn mv-eval-mergeability (r) (nth r 14))
+    (defn mv-eval-readiness (r) (nth r 15))
+    (defn mv-eval-samples (r) (nth r 16))
+    (defn mv-eval-merkle (r) (nth r 17))
+
+    (defn mv-scores-valid? (scores)
+        (if (eq (len scores) 0)
+            true
+            (and (mv-score-valid? (head scores))
+                 (mv-scores-valid? (tail scores)))))
+
+    (defn mv-eval-signals-valid? (r)
+        (mv-scores-valid? (list
+            (mv-eval-accuracy r)
+            (mv-eval-confidence r)
+            (mv-eval-trust r)
+            (mv-eval-resonance r)
+            (mv-eval-vitality r)
+            (mv-eval-sovereignty r)
+            (mv-eval-energy r)
+            (mv-eval-latency r)
+            (mv-eval-memory r)
+            (mv-eval-coverage r)
+            (mv-eval-freshness r)
+            (mv-eval-mergeability r)
+            (mv-eval-readiness r))))
+
+    (defn mv-eval-receipt-valid? (r)
+        (if (mv-eval-receipt? r)
+            (and
+                (mv-nonempty? (mv-eval-model-id r))
+                (and
+                    (mv-nonempty? (mv-eval-dataset r))
+                    (and
+                        (mv-nonempty? (mv-eval-merkle r))
+                        (and
+                            (gt (mv-eval-samples r) 0)
+                            (mv-eval-signals-valid? r)))))
+            false))
+
+    (defn mv-quality-score (r)
+        (div
+            (add
+                (mv-eval-accuracy r)
+                (add
+                    (mv-eval-confidence r)
+                    (add
+                        (mv-eval-trust r)
+                        (add
+                            (mv-eval-resonance r)
+                            (add
+                                (mv-eval-vitality r)
+                                (add
+                                    (mv-eval-sovereignty r)
+                                    (add
+                                        (mv-eval-coverage r)
+                                        (add
+                                            (mv-eval-freshness r)
+                                            (add
+                                                (mv-eval-mergeability r)
+                                                (mv-eval-readiness r))))))))))
+            10))
+
+    (defn mv-pressure-score (r)
+        (div (add (mv-eval-energy r) (add (mv-eval-latency r) (mv-eval-memory r))) 3))
+
+    (defn mv-vitality-score (r)
+        (sub (mv-quality-score r) (div (mv-pressure-score r) 2)))
+
+    (defn mv-focus (r)
+        (if (lt (mv-eval-trust r) 70)
+            "teach-trust"
+            (if (lt (mv-eval-sovereignty r) 70)
+                "restore-sovereignty"
+                (if (lt (mv-eval-resonance r) 70)
+                    "seek-resonance"
+                    (if (lt (mv-eval-vitality r) 70)
+                        "restore-vitality"
+                        (if (lt (mv-eval-coverage r) 70)
+                            "learn-more-samples"
+                            (if (lt (mv-eval-mergeability r) 70)
+                                "repair-mergeability"
+                                (if (gt (mv-pressure-score r) 70)
+                                    "compress-or-route"
+                                    (if (ge (mv-eval-readiness r) 80)
+                                        "serve-and-watch"
+                                        "keep-learning")))))))))
+
+    (defn mv-vitality-receipt (r)
+        (list
+            "model-vitality-receipt"
+            (mv-eval-model-id r)
+            (mv-eval-merkle r)
+            (mv-quality-score r)
+            (mv-pressure-score r)
+            (mv-vitality-score r)
+            (mv-focus r)
+            (list
+                "resonance" (mv-eval-resonance r)
+                "vitality" (mv-eval-vitality r)
+                "sovereignty" (mv-eval-sovereignty r)
+                "trust" (mv-eval-trust r))
+            (mv-floor)
+            (mv-north-star)))
+    (defn mv-vitality-receipt? (v) (mv-row? v "model-vitality-receipt" 10))
+    (defn mv-vitality-model-id (v) (nth v 1))
+    (defn mv-vitality-eval-merkle (v) (nth v 2))
+    (defn mv-vitality-quality (v) (nth v 3))
+    (defn mv-vitality-pressure (v) (nth v 4))
+    (defn mv-vitality-score-value (v) (nth v 5))
+    (defn mv-vitality-focus (v) (nth v 6))
+    (defn mv-vitality-lenses (v) (nth v 7))
+    (defn mv-vitality-valid? (v)
+        (if (mv-vitality-receipt? v)
+            (and (mv-nonempty? (mv-vitality-model-id v))
+            (and (mv-nonempty? (mv-vitality-eval-merkle v))
+            (and (mv-score-valid? (mv-vitality-quality v))
+            (and (ge (mv-vitality-pressure v) 0)
+            (and (mv-nonempty? (mv-vitality-focus v))
+                 (gt (len (mv-vitality-lenses v)) 0))))))
+            false))
+
+    (defn mv-lineage (architecture weights deltas optimizer evals vitality ancestors)
+        (list "model-lineage" architecture weights deltas optimizer evals vitality ancestors))
+    (defn mv-lineage? (value) (mv-row? value "model-lineage" 8))
+    (defn mv-lineage-architecture (l) (nth l 1))
+    (defn mv-lineage-weights (l) (nth l 2))
+    (defn mv-lineage-deltas (l) (nth l 3))
+    (defn mv-lineage-optimizer (l) (nth l 4))
+    (defn mv-lineage-evals (l) (nth l 5))
+    (defn mv-lineage-vitality (l) (nth l 6))
+    (defn mv-lineage-ancestors (l) (nth l 7))
+    (defn mv-lineage-valid? (l)
+        (if (mv-lineage? l)
+            (and (mv-cell-ref-valid? (mv-lineage-architecture l))
+            (and (gt (len (mv-lineage-weights l)) 0)
+            (and (gt (len (mv-lineage-deltas l)) 0)
+            (and (mv-cell-ref-valid? (mv-lineage-optimizer l))
+            (and (gt (len (mv-lineage-evals l)) 0)
+            (and (mv-vitality-valid? (mv-lineage-vitality l))
+                 (gt (len (mv-lineage-ancestors l)) 0)))))))
+            false))
+
+    (defn mv-body-read (v)
+        (list
+            "body-read-model-vitality"
+            (mv-vitality-model-id v)
+            (mv-vitality-focus v)
+            (mv-vitality-score-value v)
+            (mv-vitality-lenses v)
+            (mv-vitality-eval-merkle v)))
+    (defn mv-body-read? (value) (mv-row? value "body-read-model-vitality" 6))
+    (defn mv-body-read-focus (value) (nth value 2))
+    (defn mv-body-read-score (value) (nth value 3))
+    (defn mv-body-read-valid? (value)
+        (if (mv-body-read? value)
+            (and
+                (mv-nonempty? (nth value 1))
+                (and
+                    (mv-nonempty? (mv-body-read-focus value))
+                    (ge (mv-body-read-score value) 0)))
+            false))
+)

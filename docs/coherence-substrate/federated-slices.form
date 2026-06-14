@@ -6,6 +6,23 @@
 ; float-averaging PyTorch federation cannot promise). The model improves across the whole field without
 ; any cell ever degrading what it serves now.
 ;
+; ── CURRENT FLOOR VS NORTH STAR (reviewed with Grok/Gemini/Claude, 2026-06-14) ──
+;   CURRENT FLOOR: slice-merge.fk proves TIES sign-election plus trust-weighted FedAvg over integer
+;     deltas; slice-update-roundtrip proves a model-delta update survives the mesh by re-addressing;
+;     mesh-merge-converge proves merge order/path convergence; model-vitality.fk now adds explicit
+;     delta-slice, eval-receipt, vitality, optimizer-state, and lineage rows for the model side of the
+;     federation. These are still small rows and proofs, not a real large-model chunk exchange.
+;   NORTH STAR: every federated update is a content-addressed slice over a known base merkle root:
+;     (base-merkle, layer-ref, tensor-chunk-range, format-ref, quantization-context, delta-cell,
+;     optimizer-state-delta, eval-receipt-ref, vitality-ref, n-samples, origin, ancestor-merge-refs).
+;     Mergeability is a recipe returning (can-merge?, reason) from base equivalence, shape/format
+;     compatibility, provenance compatibility, freshness, resonance, vitality, sovereignty, and trust.
+;     Merge receipts record the elected sign, weight inputs, ancestor set, and output merkle root so the
+;     mesh can avoid double counting and explain refusal without hidden policy.
+;   GAP: chunk-aware slice transport, optimizer-state deltas, durable eval-receipt trust inputs,
+;     merge-receipt ancestry, and body-readable vitality routing are not yet real mesh payloads. The
+;     next proof should merge one tensor chunk slice, emit a merge receipt, and update model vitality.
+;
 ; ── THE SPLIT (shared slice vs cell-local), grounded in proven research ──
 ;   Three literatures converge on ONE shape: a stable shared core + small plastic shareable DELTAS.
 ;     - LoRA / adapters (ΔW = B·A): the shareable unit shrinks from d·k to r·(d+k) numbers; the base
@@ -25,13 +42,17 @@
 ;   only where their base NodeID matches (?equivalent / merkle-root is the check).
 ;
 ; ── THE UPDATE OVER THE MESH (a delta as a content-addressed cell) ──
-;   slice-update = (base-addr, layer-ref, format-ref, delta-cell, n-samples, origin). It rides the mesh
+;   FLOOR slice-update = (base-addr, layer-ref, format-ref, delta-cell, n-samples, origin). It rides the mesh
 ;   the body already has: cell-sync.fk offers merkle-root(delta-cell), a peer pulls only what it lacks
 ;   (cs-missing) and VERIFIES BY RE-ADDRESSING (cs-authentic?) — a forged delta fails its own address, so
 ;   the channel need not be trusted; mesh-relay.fk floods it (managed flooding, deduped on the content-
 ;   address, not an (src,seq) pair); friend-node.fk holds it for a sleeping peer; trust-decay.fk's
 ;   grace-band gives the per-peer trust weight. Gossip/decentralized-SGD IS managed-flooding + pairwise
 ;   merge — the body's mesh is gossip without ever calling it that.
+;   NORTH-STAR slice-update extends the floor with tensor chunk ranges, optimizer-state deltas,
+;   eval-receipt refs, vitality refs, and ancestor merge refs. The update carries enough resonance,
+;   vitality, sovereignty, and trust evidence for the receiving body to plan: merge now, ask for more
+;   samples, repair compatibility, or hold the slice without degrading the local champion.
 ;
 ; ── THE MERGE (proven strategy, as a Form recipe — slice-merge.fk, PROVEN three-way → 127) ──
 ;   trust-weighted FedAvg with TIES sign-election, division-free:
