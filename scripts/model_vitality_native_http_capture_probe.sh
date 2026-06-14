@@ -1,17 +1,15 @@
 #!/usr/bin/env bash
 # model_vitality_native_http_capture_probe.sh — prove public pulse/runtime capture through kernel-native http_get.
 #
-# Floor: run Form code through the Go and Rust kernels so public HTTPS bytes are
+# Floor: run Form code through the Go, Rust, and TypeScript kernels so public HTTPS bytes are
 # fetched by each kernel's native http_get carrier, then lifted by
 # model-vitality.fk into production pulse/runtime rows. This script orchestrates
 # the kernels and records their stdout; it does not use curl for the HTTP
-# capture. The TypeScript http_get shell projection is named as a gap and is not
-# accepted as native capture evidence here.
+# capture.
 #
 # North star: every kernel captures external HTTPS directly into the same Form
-# row grammar, with no shell projection. The current native floor is Go+Rust
-# direct HTTPS; the next lift is a non-shell TypeScript carrier and fourth-arm
-# channel support.
+# row grammar, with no shell projection. The current native floor is Go+Rust+TS
+# direct HTTPS; the next lift is fourth-arm channel support.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -24,6 +22,23 @@ fi
 if [[ ! -x form-kernel-rust/target/release/form-kernel-rust ]]; then
     (cd form-kernel-rust && cargo build --release --quiet)
 fi
+ts_bundle="form-kernel-ts/dist/main.mjs"
+ts_stale=0
+if [[ ! -f "$ts_bundle" ]]; then
+    ts_stale=1
+else
+    for f in form-kernel-ts/src/*.ts; do
+        [[ "$f" -nt "$ts_bundle" ]] && { ts_stale=1; break; }
+    done
+fi
+if [[ "$ts_stale" == "1" ]]; then
+    npx --yes esbuild form-kernel-ts/src/main.ts --bundle --platform=node \
+        --format=esm --outfile="$ts_bundle" --log-level=warning >/dev/null
+fi
+
+run_ts() {
+    node --stack_size=262144 "$ts_bundle" "$@"
+}
 
 stamp="$(date -u +"%Y%m%dT%H%M%SZ")"
 out_dir="$ROOT/.cache/model-vitality-native-http/$stamp"
@@ -114,23 +129,28 @@ run_kernel() {
 
 run_kernel go ./form-kernel-go/bin-go
 run_kernel rust ./form-kernel-rust/target/release/form-kernel-rust
+run_kernel typescript run_ts
 
 go_v="$(cat "$out_dir/go.verdict")"
 rust_v="$(cat "$out_dir/rust.verdict")"
-if [[ "$go_v" != "127" || "$rust_v" != "127" ]]; then
-    echo "FAIL native-http verdict go=$go_v rust=$rust_v cache=$out_dir"
+ts_v="$(cat "$out_dir/typescript.verdict")"
+if [[ "$go_v" != "127" || "$rust_v" != "127" || "$ts_v" != "127" ]]; then
+    echo "FAIL native-http verdict go=$go_v rust=$rust_v typescript=$ts_v cache=$out_dir"
     echo "go detail: $(cat "$out_dir/go.detail")"
     echo "rust detail: $(cat "$out_dir/rust.detail")"
+    echo "typescript detail: $(cat "$out_dir/typescript.detail")"
     exit 1
 fi
 
 cat > "$out_dir/native-http-capture-summary.txt" <<EOF
 go: $(cat "$out_dir/go.detail")
 rust: $(cat "$out_dir/rust.detail")
-typescript_gap: http_get currently shells through curl and is not accepted as native HTTPS capture evidence.
+typescript: $(cat "$out_dir/typescript.detail")
+fourth_arm_gap: external HTTPS channel support is not accepted as native capture evidence here yet.
 EOF
 
-echo "PASS native-http-capture go=127 rust=127 cache=$out_dir/native-http-capture-summary.txt"
+echo "PASS native-http-capture go=127 rust=127 typescript=127 cache=$out_dir/native-http-capture-summary.txt"
 echo "PASS go $(cat "$out_dir/go.detail")"
 echo "PASS rust $(cat "$out_dir/rust.detail")"
-echo "GAP typescript-http-get native-carrier=missing current=culled-shell-projection next=non-shell-node-or-kernel-http-client"
+echo "PASS typescript $(cat "$out_dir/typescript.detail")"
+echo "GAP fourth-arm-http-get native-carrier=missing next=fourth-kernel-channel-support"

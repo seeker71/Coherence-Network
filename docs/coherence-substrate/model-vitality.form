@@ -53,9 +53,9 @@
 ;   parses pulse JSON in Form, reads runtime authority headers case-insensitively,
 ;   and rejects failed transport or Python-authority rows. Live native witness:
 ;   scripts/model_vitality_native_http_capture_probe.sh source-compiles core,
-;   runs the Go and Rust kernels, and has each kernel fetch the public API pulse
+;   runs the Go, Rust, and TypeScript kernels, and has each kernel fetch the public API pulse
 ;   and runtime-summary HTTPS endpoints with native http_get. On
-;   2026-06-14T09:26:06Z both kernels returned verdict 127, API pulse
+;   2026-06-14T09:46:56Z all three kernels returned verdict 127, API pulse
 ;   status=200 with nonzero body bytes and kernel-native-http-get authority,
 ;   and runtime-summary returned native-kernel with x-form-python-authority=false
 ;   and handler api_runtime_endpoints_summary.
@@ -81,9 +81,9 @@
 ;   stays the substrate cell/store object; the carrier buffer is never truth.
 ;   Production ingestion rule: public pulse and runtime/front-door readings are
 ;   rows with attribution, observed timestamp, byte count, latency, and authority
-;   headers. Go and Rust already prove direct kernel-native HTTPS capture into
-;   that row shape; TypeScript and the fourth arm still need non-shell external
-;   network carriers before "all kernels" can claim this floor.
+;   headers. Go, Rust, and TypeScript already prove direct kernel-native HTTPS
+;   capture into that row shape; the fourth arm still needs external network
+;   channel support before "all kernels" can claim this floor.
 ;
 ; REVIEW TRACE:
 ;   The 2026-06-14 architecture review used local Grok, Gemini, and Claude CLI
@@ -103,8 +103,8 @@
 ;   production pulse/runtime telemetry rows.
 ;   Remaining gaps: full safetensors header parsing for arbitrary model files,
 ;   real MLX tensor package ingest beyond the tiny carrier witness,
-;   non-shell TypeScript/fourth-arm external HTTPS capture, and large
-;   multi-segment model sharing by merkle across mesh peers.
+;   fourth-arm external HTTPS capture, and large multi-segment model sharing by
+;   merkle across mesh peers.
 
 (model-vitality-surface
   (floor
@@ -138,6 +138,6 @@
     (ingest-carriers safetensors mlx-package)
     (wellness-pulse-routing model-vitality-row-chooses-focus)
     (production-ingestion pulse-runtime-frontdoor-rows)
-    (external-https-floor go-rust-kernel-native-http-get)
+    (external-https-floor go-rust-typescript-kernel-native-http-get)
     (external-https-north-star all-kernels-non-shell-native-capture)
     (release-vitality fast-proofed-release-cadence)))

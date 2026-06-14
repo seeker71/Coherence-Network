@@ -27,7 +27,6 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { execFileSync } from "node:child_process";
 import { join, relative, resolve } from "node:path";
 import { Worker } from "node:worker_threads";
 import { BP_TABLE } from "./bp_table";
@@ -699,6 +698,128 @@ export function shutdownSocketWorker(): void {
     _sockWorker = undefined;
     _sockCtrl = undefined;
     _sockData = undefined;
+  }
+}
+
+// --- Synchronous HTTP shim — Node-native client, no shell projection -------
+// The walker is synchronous, but Node's HTTP client is asynchronous. Mirror
+// the socket shim: a worker owns the HTTP request, writes one JSON result into
+// shared memory, and wakes the walker. The returned Form shape matches the
+// Go/Rust http_get carrier: __dict__ {status_code, body, error, duration_ms,
+// headers}. Host shell tools are not involved in the data lane.
+const KH_TAG_HEADER_TS = 43001;
+const HTTP_MAX_BODY_BYTES = 25 << 20;
+const HTTP_RESULT_BYTES = 64 << 20;
+let _httpWorker: Worker | undefined;
+let _httpCtrl: Int32Array | undefined; // [0]=ready-flag, [1]=json byte length or negative
+let _httpData: Buffer | undefined;
+
+const HTTP_WORKER_SRC = `
+import { parentPort, workerData } from "node:worker_threads";
+import http from "node:http";
+import https from "node:https";
+const ctrl = new Int32Array(workerData.ctrl);
+const dataBuf = Buffer.from(workerData.data);
+const MAX_BODY = workerData.maxBody;
+function doneLen(n){ Atomics.store(ctrl,1,n); Atomics.store(ctrl,0,1); Atomics.notify(ctrl,0); }
+function writeResult(result){
+  const encoded = Buffer.from(JSON.stringify(result), "utf8");
+  if(encoded.length > dataBuf.length){
+    const fallback = Buffer.from(JSON.stringify({
+      statusCode: result.statusCode || 0,
+      body: "",
+      error: "http_get: response result exceeded shared buffer",
+      durationMs: result.durationMs || 0,
+      headers: result.headers || []
+    }), "utf8");
+    fallback.copy(dataBuf, 0, 0, Math.min(fallback.length, dataBuf.length));
+    doneLen(Math.min(fallback.length, dataBuf.length));
+    return;
+  }
+  encoded.copy(dataBuf, 0);
+  doneLen(encoded.length);
+}
+function headerRows(headers){
+  const out = [];
+  for(const name of Object.keys(headers).sort()){
+    const raw = headers[name];
+    if(raw === undefined) continue;
+    const vals = Array.isArray(raw) ? raw.slice().sort() : [String(raw)];
+    for(const value of vals) out.push([43001, name, value]);
+  }
+  return out;
+}
+parentPort.on("message", (m) => {
+  const started = Date.now();
+  try {
+    const u = new URL(m.url);
+    const client = u.protocol === "https:" ? https : http;
+    const req = client.request(u, { method: "GET", headers: m.headers || {}, timeout: m.timeoutMs || 30000 }, (res) => {
+      const chunks = [];
+      let size = 0;
+      let tooLarge = false;
+      res.on("data", (chunk) => {
+        if (size < MAX_BODY) {
+          const remaining = MAX_BODY - size;
+          const take = chunk.length > remaining ? chunk.subarray(0, remaining) : chunk;
+          chunks.push(take);
+          size += take.length;
+        }
+        if (size >= MAX_BODY && chunk.length > 0) tooLarge = true;
+      });
+      res.on("end", () => {
+        writeResult({
+          statusCode: res.statusCode || 0,
+          body: Buffer.concat(chunks).toString("utf8"),
+          error: tooLarge ? "http_get: response body exceeded " + MAX_BODY + " bytes" : "",
+          durationMs: Date.now() - started,
+          headers: headerRows(res.headers)
+        });
+      });
+    });
+    req.on("timeout", () => req.destroy(new Error("http_get: timeout")));
+    req.on("error", (err) => {
+      writeResult({ statusCode: 0, body: "", error: String(err && err.message ? err.message : err), durationMs: Date.now() - started, headers: [] });
+    });
+    req.end();
+  } catch (err) {
+    writeResult({ statusCode: 0, body: "", error: String(err && err.message ? err.message : err), durationMs: Date.now() - started, headers: [] });
+  }
+});
+`;
+
+function ensureHTTPWorker(): void {
+  if (_httpWorker) return;
+  const ctrlSab = new SharedArrayBuffer(8);
+  const dataSab = new SharedArrayBuffer(HTTP_RESULT_BYTES);
+  _httpCtrl = new Int32Array(ctrlSab);
+  _httpData = Buffer.from(dataSab);
+  _httpWorker = new Worker(HTTP_WORKER_SRC, {
+    eval: true,
+    workerData: { ctrl: ctrlSab, data: dataSab, maxBody: HTTP_MAX_BODY_BYTES },
+  });
+  _httpWorker.unref();
+}
+
+function httpCall(op: globalThis.Record<string, unknown>): unknown {
+  ensureHTTPWorker();
+  const ctrl = _httpCtrl!;
+  Atomics.store(ctrl, 0, 0);
+  _httpWorker!.postMessage(op);
+  Atomics.wait(ctrl, 0, 0);
+  const n = Atomics.load(ctrl, 1);
+  if (n <= 0) {
+    return { statusCode: 0, body: "", error: "http_get: worker failed", durationMs: 0, headers: [] };
+  }
+  return JSON.parse(_httpData!.subarray(0, n).toString("utf8"));
+}
+
+export function shutdownHTTPWorker(): void {
+  if (_httpWorker) {
+    void _httpWorker.terminate();
+    _httpWorker = undefined;
+    _httpCtrl = undefined;
+    _httpData = undefined;
   }
 }
 
@@ -1714,7 +1835,7 @@ export class Kernel {
     // a float. Total: a non-number -> 0. Sibling parity with Go and Rust.
     this.registerNative("float_to_int", catMethod(), (_k, args) => {
       const v = args[0];
-      const f = v.kind === "f32" || v.kind === "f64" ? v.float : v.kind === "int" ? v.int : 0;
+      const f = v?.kind === "f32" || v?.kind === "f64" ? v.float : v?.kind === "int" ? v.int : 0;
       return { kind: "int", int: Math.trunc(f) };
     });
     this.registerNative("ord", catAccess(), (_k, args) => {
@@ -1943,28 +2064,72 @@ export class Kernel {
       return { kind: "bool", bool: false };
     });
     // --- Substrate read primitives — kernel reaches the REST surface ----
-    // Sibling-parity with the Rust kernel's http_get + _json_get + _json_to_dict.
-    // The kernel walker is synchronous, so HTTP rides on curl via execFileSync
-    // rather than on Node's async fetch. Matches Rust's blocking ureq path.
-    // Surface stays /api/substrate/* shaped (public read, no credentials).
+    // Sibling-parity with the Go/Rust http_get carrier. The walker remains
+    // synchronous through a worker-backed Node HTTP client; no shell/curl
+    // projection participates in the data lane.
     //
-    // http_get(url) → str|null. null on transport error so Form-side caller
-    // can match and decide.
+    // http_get(url, headers?, timeout_ms?) → __dict__:
+    // status_code, body, error, duration_ms, headers.
     this.registerNative("http_get", catCall(), (_k, args) => {
       const url = argStr(args, 0);
-      try {
-        // -sS: silent but show errors; --fail: non-2xx exits non-zero.
-        const out = execFileSync("curl", ["-sS", "--fail", "--max-time", "30", url], {
-          encoding: "utf8",
-          maxBuffer: 64 * 1024 * 1024, // 64 MB — enough for the substrate's
-                                         // largest read surfaces (histograms,
-                                         // cell lists) without truncation.
-          stdio: ["ignore", "pipe", "ignore"],
-        });
-        return { kind: "str", str: out };
-      } catch {
-        return { kind: "null" };
+      const headers: globalThis.Record<string, string[]> = {};
+      if (args[1]?.kind === "list") {
+        for (const row of args[1].list) {
+          if (row.kind !== "list" || row.list.length !== 3) continue;
+          const [tag, name, value] = row.list;
+          if (
+            tag?.kind !== "int" ||
+            tag.int !== KH_TAG_HEADER_TS ||
+            name?.kind !== "str" ||
+            value?.kind !== "str" ||
+            name.str.trim() === ""
+          ) {
+            continue;
+          }
+          const key = name.str.trim();
+          headers[key] = [...(headers[key] ?? []), value.str];
+        }
       }
+      const timeoutMs = args[2] ? Math.min(Math.max(argInt(args, 2), 1), 60000) : 30000;
+      const result = httpCall({ url, headers, timeoutMs }) as {
+        statusCode?: unknown;
+        body?: unknown;
+        error?: unknown;
+        durationMs?: unknown;
+        headers?: unknown;
+      };
+      const headerRows: Value[] = [];
+      if (Array.isArray(result.headers)) {
+        for (const row of result.headers) {
+          if (!Array.isArray(row) || row.length !== 3) continue;
+          const [tag, name, value] = row;
+          if (tag !== KH_TAG_HEADER_TS || typeof name !== "string" || typeof value !== "string") continue;
+          headerRows.push({
+            kind: "list",
+            list: [
+              { kind: "int", int: KH_TAG_HEADER_TS },
+              { kind: "str", str: name },
+              { kind: "str", str: value },
+            ],
+          });
+        }
+      }
+      return {
+        kind: "list",
+        list: [
+          { kind: "str", str: "__dict__" },
+          { kind: "str", str: "status_code" },
+          { kind: "int", int: typeof result.statusCode === "number" ? result.statusCode : 0 },
+          { kind: "str", str: "body" },
+          { kind: "str", str: typeof result.body === "string" ? result.body : "" },
+          { kind: "str", str: "error" },
+          { kind: "str", str: typeof result.error === "string" ? result.error : "" },
+          { kind: "str", str: "duration_ms" },
+          { kind: "int", int: typeof result.durationMs === "number" ? result.durationMs : 0 },
+          { kind: "str", str: "headers" },
+          { kind: "list", list: headerRows },
+        ],
+      };
     });
     // _json_get(json_str, key) → str|int|float|bool|null. Parse a top-level
     // JSON object and extract obj[key]. Returns null on miss / parse error.
