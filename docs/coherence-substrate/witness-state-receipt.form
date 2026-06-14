@@ -4,8 +4,8 @@
   (lineage
     (rests-on android-mesh-learning.form llm-feature-channel-floor.form)
     (recipe form/form-stdlib/witness-state-receipt.fk)
-    (proof form/form-stdlib/tests/witness-state-receipt-band.fk -> 1048575)
-    (fourth-arm form/fourth-arm-bands.txt -> witness-state-receipt fks 1048575))
+    (proof form/form-stdlib/tests/witness-state-receipt-band.fk -> 16777215)
+    (fourth-arm form/fourth-arm-bands.txt -> witness-state-receipt fks 16777215))
 
   (purpose
     "Turn live Mac witness /state counters into deterministic Form-native receipt rows."
@@ -16,8 +16,9 @@
     "The current observed values are represented with integer-scaled metrics: frames 141, mic_rms_ppm 7045, camera_luma_ppm 28054, camera_samples 2367, gpu_samples 99, gpu_latency_us 1412, and sample_count 5084."
     "The recipe validates live presence, summary-only privacy, active mic/camera/GPU organs, count floors, and Form-native exporter source."
     "The row lowers into android-mesh-learning active sample rows, then proves speech-transcribe, vision-describe, and multimodal-align route native-first when all three active lanes are present."
-    "The receipt now emits heldout learner rows for speech, vision, multimodal, and GPU readback lanes, scores challenger/champion trials, keeps too-few samples on the oracle teacher, and retires one narrow teacher only after enough native wins.")
-    "Native witness export rows and oracle-label rows now form the source-backed teacher membrane: raw-media exports are rejected, fixture providers are rejected, and source-backed labels can create heldout rows that retire a narrow teacher only after a long enough native-win window.")
+    "The receipt emits heldout learner rows for speech, vision, multimodal, and GPU readback lanes, scores challenger/champion trials, keeps too-few samples on the oracle teacher, and retires one narrow teacher only after enough native wins."
+    "Native witness export rows and oracle-label rows form the source-backed teacher membrane: raw-media exports are rejected, fixture providers are rejected, and source-backed labels can create heldout rows that retire a narrow teacher only after a long enough native-win window."
+    "Live oracle process rows and emission-cycle rows now express continuous source-backed teacher flow: STT, vision, multimodal, and GPU processes must be running, must cover each label by provider/protocol/feature, and must emit across increasing witness export cycles.")
 
   (north-star
     "The Mac witness exports native receipt cells continuously into the substrate/native recipe ledger."
@@ -43,7 +44,13 @@
     (rejects fixture raw-media)
     (retirement-gate "source-backed labels plus long-window native wins"))
 
+  (oracle-process-emission
+    (process-row feature provider protocol status confidence-floor privacy)
+    (cycle-row seq export labels processes heldout-rows privacy)
+    (requires "running processes cover every label; cycle seq matches export seq; next cycles increase seq and do not regress frames/sample_count")
+    (rejects "fixture providers and raw-media process/cycle privacy"))
+
   (remaining-gaps
-    (physical-teacher-runs "connect the live STT, vision, multimodal, and GPU oracle processes to emit these source-backed label rows")
-    (continuous-export "wire the running witness service to write native receipt cells directly, with JSON only as an export/cache")
+    (physical-teacher-runs "start the actual STT, vision, multimodal, and GPU oracle carriers under this process-row contract")
+    (continuous-export "wire the running witness service to write these emission cycles as native receipt cells directly, with JSON only as an export/cache")
     (accelerator-depth "extend EGL readback summaries to Vulkan/NNAPI/Metal parity receipts compared with CPU/oracle lanes")))

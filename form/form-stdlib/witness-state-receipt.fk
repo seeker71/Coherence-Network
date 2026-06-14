@@ -17,7 +17,8 @@
             "mic camera and gpu counters lower into summary-only active sample rows"
             "the exporter source is Form-native; Python remains only a compatibility helper"
             "heldout learner rows score native challengers against explicit oracle teachers"
-            "oracle teacher labels must be backed by native witness export receipts, not fixtures"))
+            "oracle teacher labels must be backed by native witness export receipts, not fixtures"
+            "live oracle processes emit source-backed label rows across increasing witness export cycles"))
     (defn wsr-north-star ()
         (list
             "Mac witness writes native receipt cells continuously"
@@ -294,6 +295,117 @@
         (if (and
                 (eq (wsr-source-backed-learning-floor? state export labels rows) 1)
                 (eq (wsr-heldout-native-wins? rows min-samples margin) 1))
+            1
+            0))
+
+    (defn wsr-oracle-process (feature provider protocol status confidence-floor privacy)
+        (list feature provider protocol status confidence-floor privacy))
+    (defn wsr-process-feature (row) (nth row 0))
+    (defn wsr-process-provider (row) (nth row 1))
+    (defn wsr-process-protocol (row) (nth row 2))
+    (defn wsr-process-status (row) (nth row 3))
+    (defn wsr-process-confidence-floor (row) (nth row 4))
+    (defn wsr-process-privacy (row) (nth row 5))
+    (defn wsr-oracle-process-valid? (row)
+        (if (and
+                (not (str_eq (wsr-process-feature row) ""))
+                (and
+                    (not (str_eq (wsr-process-provider row) "fixture"))
+                    (and
+                        (not (str_eq (wsr-process-protocol row) ""))
+                        (and
+                            (str_eq (wsr-process-status row) "running")
+                            (and
+                                (ge (wsr-process-confidence-floor row) 70)
+                                (not (str_eq (wsr-process-privacy row) "raw-media")))))))
+            1
+            0))
+    (defn wsr-process-covers-label? (process label export)
+        (if (and
+                (eq (wsr-oracle-process-valid? process) 1)
+                (and
+                    (eq (wsr-oracle-label-valid? label export) 1)
+                    (and
+                        (str_eq (wsr-process-feature process) (wsr-oracle-feature label))
+                        (and
+                            (str_eq (wsr-process-provider process) (wsr-oracle-provider label))
+                            (and
+                                (str_eq (wsr-process-protocol process) (wsr-oracle-protocol label))
+                                (ge (wsr-oracle-confidence label) (wsr-process-confidence-floor process)))))))
+            1
+            0))
+    (defn wsr-label-has-process? (label export processes)
+        (if (eq (len processes) 0) 0
+            (if (eq (wsr-process-covers-label? (head processes) label export) 1)
+                1
+                (wsr-label-has-process? label export (tail processes)))))
+    (defn wsr-labels-covered? (labels export processes)
+        (if (eq (len labels) 0) 1
+            (if (eq (wsr-label-has-process? (head labels) export processes) 1)
+                (wsr-labels-covered? (tail labels) export processes)
+                0)))
+    (defn wsr-process-valid-count (processes)
+        (if (eq (len processes) 0) 0
+            (add
+                (wsr-oracle-process-valid? (head processes))
+                (wsr-process-valid-count (tail processes)))))
+
+    (defn wsr-emission-cycle (sequence export labels processes rows privacy)
+        (list sequence export labels processes rows privacy))
+    (defn wsr-emission-seq (cycle) (nth cycle 0))
+    (defn wsr-emission-export (cycle) (nth cycle 1))
+    (defn wsr-emission-labels (cycle) (nth cycle 2))
+    (defn wsr-emission-processes (cycle) (nth cycle 3))
+    (defn wsr-emission-rows (cycle) (nth cycle 4))
+    (defn wsr-emission-privacy (cycle) (nth cycle 5))
+    (defn wsr-emission-cycle-valid? (state cycle)
+        (if (and
+                (eq (wsr-emission-seq cycle) (wsr-export-seq (wsr-emission-export cycle)))
+                (and
+                    (not (str_eq (wsr-emission-privacy cycle) "raw-media"))
+                    (and
+                        (eq (wsr-source-backed-learning-floor?
+                                state
+                                (wsr-emission-export cycle)
+                                (wsr-emission-labels cycle)
+                                (wsr-emission-rows cycle)) 1)
+                        (and
+                            (eq (wsr-labels-covered?
+                                    (wsr-emission-labels cycle)
+                                    (wsr-emission-export cycle)
+                                    (wsr-emission-processes cycle)) 1)
+                            (ge (wsr-process-valid-count (wsr-emission-processes cycle)) 4)))))
+            1
+            0))
+    (defn wsr-emission-next? (previous next)
+        (if (and
+                (gt (wsr-emission-seq next) (wsr-emission-seq previous))
+                (and
+                    (ge
+                        (wsr-export-frames (wsr-emission-export next))
+                        (wsr-export-frames (wsr-emission-export previous)))
+                    (ge
+                        (wsr-export-sample-count (wsr-emission-export next))
+                        (wsr-export-sample-count (wsr-emission-export previous)))))
+            1
+            0))
+    (defn wsr-emission-cycles-all-valid? (state cycles)
+        (if (eq (len cycles) 0) 1
+            (if (eq (wsr-emission-cycle-valid? state (head cycles)) 1)
+                (wsr-emission-cycles-all-valid? state (tail cycles))
+                0)))
+    (defn wsr-emission-cycles-increasing? (cycles)
+        (if (eq (len cycles) 0) 1
+            (if (eq (len (tail cycles)) 0) 1
+                (if (eq (wsr-emission-next? (head cycles) (head (tail cycles))) 1)
+                    (wsr-emission-cycles-increasing? (tail cycles))
+                    0))))
+    (defn wsr-continuous-emission-floor? (state cycles)
+        (if (and
+                (ge (len cycles) 2)
+                (and
+                    (eq (wsr-emission-cycles-all-valid? state cycles) 1)
+                    (eq (wsr-emission-cycles-increasing? cycles) 1)))
             1
             0))
 

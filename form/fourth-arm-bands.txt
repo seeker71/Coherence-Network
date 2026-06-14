@@ -131,7 +131,7 @@ form-cli-loop fks 31
 text-summary-learning fks 262143
 llm-feature-channel-floor fks 131071
 android-mesh-learning fks 32767
-witness-state-receipt fks 1048575
+witness-state-receipt fks 16777215
 model-vitality fks 4095
 bml-route-source-object fks 2047
 bml-protocol-capability-row fks 65535

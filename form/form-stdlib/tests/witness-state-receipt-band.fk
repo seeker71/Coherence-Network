@@ -2,7 +2,7 @@
 ;
 ; witness-state-receipt-band - live witness counters as Form-native receipts.
 ;
-; Verdict 1048575 when every claim lands:
+; Verdict 16777215 when every claim lands:
 ;   1    floor and north-star declarations exist
 ;   2    live witness present with frames
 ;   4    mic counter and organ are active
@@ -23,6 +23,10 @@
 ;   131072 fixture oracle labels are rejected
 ;   262144 source-backed oracle labels produce valid heldout rows
 ;   524288 source-backed native wins can retire one narrow teacher
+;   1048576 live oracle process rows are valid and reject fixtures
+;   2097152 source-backed labels must be covered by their live process rows
+;   4194304 one emission cycle carries export, labels, processes, and heldout rows
+;   8388608 continuous emission requires increasing export cycles
 (do
     (let organs (list "accelerometer" "camera" "gps" "gpu" "gyroscope" "light" "magnetometer" "mic" "network" "screen"))
     (let live-state
@@ -117,6 +121,56 @@
             speech-label speech-label speech-label speech-label
             speech-label speech-label speech-label speech-label
             speech-label speech-label speech-label speech-label))
+    (let speech-process (wsr-oracle-process "speech-transcribe" "whisper-oracle" "oracle:stt" "running" 80 "summary-only/no-raw-audio-frame-buffer"))
+    (let vision-process (wsr-oracle-process "vision-describe" "vision-oracle" "oracle:vision" "running" 80 "summary-only/no-frame"))
+    (let multimodal-process (wsr-oracle-process "multimodal-align" "multimodal-oracle" "oracle:multimodal" "running" 80 "summary-only/no-raw-audio-frame-buffer"))
+    (let gpu-process (wsr-oracle-process "gpu-readback-kernel" "gpu-oracle" "oracle:gpu" "running" 80 "summary-only/no-buffer"))
+    (let fixture-process (wsr-oracle-process "speech-transcribe" "fixture" "oracle:stt" "running" 80 "summary-only/no-raw-audio-frame-buffer"))
+    (let oracle-processes (list speech-process vision-process multimodal-process gpu-process))
+    (let emission-cycle
+        (wsr-emission-cycle
+            42
+            native-export
+            oracle-labels
+            oracle-processes
+            oracle-heldout-rows
+            "summary-only/no-raw-audio-frame-buffer"))
+    (let next-export
+        (wsr-export-row
+            "native-witness-export"
+            "substrate:receipt-cell"
+            43
+            142
+            5100
+            "sha256:live-summary-5100"
+            "summary-only/no-raw-audio-frame-buffer"))
+    (let next-speech-label (wsr-oracle-label "speech-transcribe" "whisper-oracle" "oracle:stt" "speech-present" 84 43 "mic:142" "summary-only/no-raw-audio-frame-buffer"))
+    (let next-vision-label (wsr-oracle-label "vision-describe" "vision-oracle" "oracle:vision" "scene-present" 83 43 "camera:2380" "summary-only/no-frame"))
+    (let next-multimodal-label (wsr-oracle-label "multimodal-align" "multimodal-oracle" "oracle:multimodal" "aligned" 82 43 "body:5100" "summary-only/no-raw-audio-frame-buffer"))
+    (let next-gpu-label (wsr-oracle-label "gpu-readback-kernel" "gpu-oracle" "oracle:gpu" "readback-ok" 88 43 "gpu:100" "summary-only/no-buffer"))
+    (let next-labels (list next-speech-label next-vision-label next-multimodal-label next-gpu-label))
+    (let next-heldout-rows
+        (list
+            (wsr-heldout-from-oracle-label next-speech-label live-state 86 1)
+            (wsr-heldout-from-oracle-label next-vision-label live-state 86 1)
+            (wsr-heldout-from-oracle-label next-multimodal-label live-state 86 1)
+            (wsr-heldout-from-oracle-label next-gpu-label live-state 90 1)))
+    (let next-emission-cycle
+        (wsr-emission-cycle
+            43
+            next-export
+            next-labels
+            oracle-processes
+            next-heldout-rows
+            "summary-only/no-raw-audio-frame-buffer"))
+    (let stale-emission-cycle
+        (wsr-emission-cycle
+            41
+            native-export
+            oracle-labels
+            oracle-processes
+            oracle-heldout-rows
+            "summary-only/no-raw-audio-frame-buffer"))
 
     (let c0
         (if (and
@@ -222,5 +276,27 @@
         (if (eq (wsr-source-backed-native-wins? live-state native-export oracle-reached-labels oracle-reached-heldout 12 0) 1)
             524288
             0))
+    (let c20
+        (if (and
+                (eq (wsr-oracle-process-valid? speech-process) 1)
+                (eq (wsr-oracle-process-valid? fixture-process) 0))
+            1048576
+            0))
+    (let c21
+        (if (and
+                (eq (wsr-labels-covered? oracle-labels native-export oracle-processes) 1)
+                (eq (wsr-labels-covered? (list fixture-label) native-export oracle-processes) 0))
+            2097152
+            0))
+    (let c22
+        (if (eq (wsr-emission-cycle-valid? live-state emission-cycle) 1)
+            4194304
+            0))
+    (let c23
+        (if (and
+                (eq (wsr-continuous-emission-floor? live-state (list emission-cycle next-emission-cycle)) 1)
+                (eq (wsr-emission-cycles-increasing? (list emission-cycle stale-emission-cycle)) 0))
+            8388608
+            0))
 
-    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15 c16 c17 c18 c19)))
+    (sum (list c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15 c16 c17 c18 c19 c20 c21 c22 c23)))

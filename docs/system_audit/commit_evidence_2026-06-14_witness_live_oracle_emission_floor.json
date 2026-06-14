@@ -1,0 +1,113 @@
+{
+  "date": "2026-06-14",
+  "thread_branch": "codex/witness-live-oracle-emission-20260614",
+  "commit_scope": "Add live oracle process and continuous emission-cycle rows to the witness receipt floor.",
+  "change_intent": "runtime_feature",
+  "idea_ids": [
+    "hati-mesh",
+    "android-sense-organ",
+    "native-learning-surface",
+    "llm-feature-channel-floor"
+  ],
+  "spec_ids": [
+    "android-mesh-learning",
+    "witness-state-receipt",
+    "form-native-learning",
+    "channel-protocol-choice-floor"
+  ],
+  "task_ids": [
+    "witness-live-oracle-emission-20260614"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "acceptance",
+        "north-star"
+      ]
+    },
+    {
+      "contributor_id": "agent:codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "evidence"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "files_owned": [
+    "form/form-stdlib/witness-state-receipt.fk",
+    "form/form-stdlib/tests/witness-state-receipt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/witness-state-receipt.form",
+    "docs/coherence-substrate/android-mesh-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_witness_live_oracle_emission_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "form/form-stdlib/witness-state-receipt.fk",
+    "form/form-stdlib/tests/witness-state-receipt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/witness-state-receipt.form",
+    "docs/coherence-substrate/android-mesh-learning.form",
+    "docs/coherence-substrate/INDEX.md",
+    "docs/system_audit/commit_evidence_2026-06-14_witness_live_oracle_emission_floor.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "evidence_refs": [
+    "form/form-stdlib/witness-state-receipt.fk",
+    "form/form-stdlib/tests/witness-state-receipt-band.fk",
+    "form/fourth-arm-bands.txt",
+    "docs/coherence-substrate/witness-state-receipt.form",
+    "docs/coherence-substrate/android-mesh-learning.form"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-guide",
+      "make wellness",
+      "coord join && coord claim \"witness live oracle emission floor\"",
+      "cd form && ./validate.sh form-stdlib/core.fk form-stdlib/nearest-shape.fk form-stdlib/classifier-eval.fk form-stdlib/co-learning.fk form-stdlib/co-learning-stream.fk form-stdlib/champion-challenger.fk form-stdlib/colearning-retire.fk form-stdlib/choice-receipt.fk form-stdlib/branch-choice-order.fk form-stdlib/choice-receipt-learning.fk form-stdlib/oracle-catalog.fk form-stdlib/text-summary-learning.fk form-stdlib/llm-feature-channel-floor.fk form-stdlib/android-mesh-learning.fk form-stdlib/witness-state-receipt.fk form-stdlib/tests/witness-state-receipt-band.fk",
+      "cd form && bash scripts/fourth-arm-gate.sh witness-state-receipt"
+    ],
+    "notes": "Focused validation returned 16777215 with `fourth arm: 1 band(s) four-way` and `1 ok, 0 divergent`. The manifest gate returned `PASS-4WAY witness-state-receipt`. The recipe now validates live oracle process rows, rejects fixture process providers, requires source-backed labels to be covered by running process rows, validates emission cycles carrying export, labels, processes, and heldout rows, and proves continuous emission only across increasing witness export cycles."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Not pushed when this evidence was written; CI had not run yet."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "summary": "No deploy requested for this Form recipe slice. Public pulse was strained at start with web not breathing, so no public health claim is made."
+  },
+  "phase_gate": {
+    "phase": "witness-live-oracle-emission-floor",
+    "gate": "Live oracle teacher labels must be emitted by running non-fixture process rows across increasing native witness export cycles.",
+    "state": "local-four-way-proof-pass",
+    "can_move_next_phase": false,
+    "next": "Start the actual STT, vision, multimodal, and GPU oracle carriers under this Form process-row contract and write emission cycles into the native substrate ledger."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The witness receipt floor now distinguishes one-off source-backed labels from continuous live-process emission. Labels must be covered by running teacher processes, each cycle must bind export, labels, process rows, and heldout rows, and continuity requires increasing export sequences without frame/sample regressions.",
+    "public_endpoints": [
+      "local:form/validate.sh:witness-state-receipt-band",
+      "local:form/fourth-arm-bands.txt:witness-state-receipt"
+    ],
+    "test_flows": [
+      "Oracle process rows require feature, non-fixture provider, protocol, running status, confidence floor, and summary-only privacy.",
+      "Source-backed labels must be covered by a matching provider/protocol/feature process row.",
+      "Emission cycles bind export, labels, process rows, and heldout rows under the source-backed learning floor.",
+      "Continuous emission requires at least two valid cycles with increasing witness export sequences and non-regressing frame/sample counts."
+    ],
+    "summary": "The established floor is continuous live-process oracle emission as Form-native witness receipt rows. Remaining gaps are physical carrier startup and native substrate-ledger writing from the running witness service."
+  }
+}
